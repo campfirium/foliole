@@ -8,6 +8,7 @@ import type {
   NativeTextImportArgs,
   NativeTextImportResult
 } from '../../lib/platform/nativeContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadExternalSearchMirrorImportSource } from '../database/externalSearchMirrorRead.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 import { logMainProcessOperationFailure } from '../diagnostics/mainProcessDiagnostics.js';
@@ -86,22 +87,19 @@ export async function runImportForFilePath(filePath: string, args?: NativeTextIm
         })
       );
     }
-    return toNativeTextImportResult(
-      runPreparedImport(
-        await loadPreparedImportRecord(source, {
-          highlightPolicy,
-          importedAt,
-          sourceTrackingMode: 'untracked',
-          ...importTargetParentNodeProps(args),
-          titleStrategy
-        })
-      )
-    );
+    const prepared = await loadPreparedImportRecord(source, {
+      highlightPolicy,
+      importedAt,
+      sourceTrackingMode: 'untracked',
+      ...importTargetParentNodeProps(args),
+      titleStrategy
+    });
+    return toNativeTextImportResult(await runWithDatabaseConnectionOwner(() => runPreparedImport(prepared)));
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
     logMainProcessOperationFailure('import_file', { source_kind: source.kind }, error, 'Import failed');
     return toNativeTextImportResult(
-      recordPreparedImportFailure(
+      await runWithDatabaseConnectionOwner(() => recordPreparedImportFailure(
         buildPreparedImportRecord(source, {
           content: '',
           highlightPolicy,
@@ -111,7 +109,7 @@ export async function runImportForFilePath(filePath: string, args?: NativeTextIm
           titleStrategy
         }),
         failureReason
-      )
+      ))
     );
   }
 }
@@ -160,7 +158,8 @@ export async function runTextFileImport(
 ): Promise<NativeTextImportResult | null> {
   if (typeof args?.file_path === 'string' && args.file_path.trim()) {
     const filePath = await assertAuthorizedImportFilePath(args.file_path);
-    const result = withTextImportNodeMutationPatch(await runImportForFilePath(filePath, args));
+    const imported = await runImportForFilePath(filePath, args);
+    const result = await runWithDatabaseConnectionOwner(() => withTextImportNodeMutationPatch(imported));
     if (result?.import_id) {
       notifyManagedInboxUpdated(result.import_id, result.node_mutation_patch);
     }
@@ -178,11 +177,13 @@ export async function runTextFileImport(
       results.push(lastResult);
     }
   }
-  const patchedResult = withTextImportNodeMutationPatch(lastResult);
-  if (patchedResult?.import_id) {
-    const nodeMutationPatch = buildImportNodeMutationPatch(results);
-    notifyManagedInboxUpdated(patchedResult.import_id, nodeMutationPatch);
-    return nodeMutationPatch ? { ...patchedResult, node_mutation_patch: nodeMutationPatch } : patchedResult;
-  }
-  return patchedResult;
+  return runWithDatabaseConnectionOwner(() => {
+    const patchedResult = withTextImportNodeMutationPatch(lastResult);
+    if (patchedResult?.import_id) {
+      const nodeMutationPatch = buildImportNodeMutationPatch(results);
+      notifyManagedInboxUpdated(patchedResult.import_id, nodeMutationPatch);
+      return nodeMutationPatch ? { ...patchedResult, node_mutation_patch: nodeMutationPatch } : patchedResult;
+    }
+    return patchedResult;
+  });
 }

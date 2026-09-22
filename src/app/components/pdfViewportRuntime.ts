@@ -36,10 +36,10 @@ function handleSearchTextLayerRender(args: {
     return;
   }
   const shell = args.pageElementsRef.current[args.pageNumber] ?? null;
-  if (!shouldRefreshTextLayer({ pageNumber: args.pageNumber, previousSignatures: args.previousSignatures, shell })) {
-    return;
-  }
-  args.previousSignatures[args.pageNumber] = resolveTextLayerRefreshSignature(shell) ?? '';
+  const signature = resolveTextLayerRefreshSignature(shell);
+  if (!signature) return;
+  // A rebuilt text layer can have identical text but new geometry.
+  args.previousSignatures[args.pageNumber] = signature;
   refreshSearchRevision(args.setSearchRevision);
   scheduleSearchReflowRefresh(() => refreshSearchRevision(args.setSearchRevision));
 }

@@ -181,3 +181,25 @@ it('rejects close during owned work and isolates a reopened connection', async (
   opened.push(reopened);
   expect(reopened.prepare('SELECT 1 AS ok').get()).toEqual({ ok: 1 });
 });
+
+
+it.each(['deferred', 'immediate', 'exclusive'] as const)('preserves rollback and owner checks for %s transactions', async (mode) => {
+  const { portA, sqlite } = createFixture();
+  const transaction = sqlite.transaction((id: string) => {
+    sqlite.prepare('INSERT INTO items (id, value) VALUES (?, ?)').run(id, 'value');
+    if (id === 'failed') throw new Error('rollback');
+  });
+  const run = transaction[mode];
+  run('saved');
+  expect(() => run('failed')).toThrow('rollback');
+  expect(sqlite.prepare('SELECT id FROM items').all()).toEqual([{ id: 'saved' }]);
+  const gate = barrier();
+  const active = portA.transaction(async () => { gate.signal(); await gate.wait; });
+  await gate.entered;
+  try {
+    expect(() => run('foreign')).toThrow(SqliteConnectionOwnerError);
+  } finally {
+    gate.release();
+    await active;
+  }
+});

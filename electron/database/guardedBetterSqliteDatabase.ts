@@ -145,17 +145,18 @@ function guardTransactionFactory(
 }
 
 function guardCallable(target: Callable, coordinator: SqliteConnectionCoordinator): Callable {
-  return new Proxy(target, {
-    apply(callable, thisArg, args) {
-      coordinator.assertAccess();
-      return Reflect.apply(callable, thisArg, args) as unknown;
-    },
-    get(callable, property) {
-      const value = Reflect.get(callable, property, callable) as unknown;
+  const guarded = function (this: unknown, ...args: unknown[]) {
+    coordinator.assertAccess();
+    return Reflect.apply(target, this, args) as unknown;
+  };
+  // The native transaction function has immutable mode properties, so proxy our wrapper.
+  return new Proxy(guarded, {
+    get(_callable, property) {
+      const value = Reflect.get(target, property, target) as unknown;
       if (typeof value !== 'function') return value;
       return (...args: unknown[]) => {
         coordinator.assertAccess();
-        return Reflect.apply(value, callable, args) as unknown;
+        return Reflect.apply(value, target, args) as unknown;
       };
     }
   });

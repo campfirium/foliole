@@ -4,10 +4,12 @@ import { isPdfAnchorLocator, type Node } from '../../features/nodes/model/nodeTy
 import { requestPdfAnchorJump } from '../../features/pdf/model/pdfSystemRegistry';
 import { definedProps } from '../../shared/lib/definedProps';
 import { LIST_WIDTH_DEFAULT, RIGHT_SIDEBAR_WIDTH_DEFAULT } from '../../store/workspaceLayoutDomain';
+import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
 import type { NodeViewState } from '../../store/workspaceStore';
 
 import type { BuildControllerLayoutPropsArgs } from './appControllerLayoutProps';
 import { requestReadingPositionApply } from './readingPositionRequests';
+import { createReadingProgressPayload } from './useReadingProgressSyncSupport';
 
 function writeNodeReadingPosition(args: BuildControllerLayoutPropsArgs, selection: EditorSelection) {
   if (!args.ws.activeNodeId) {
@@ -204,6 +206,9 @@ export function createPersistPdfViewState(args: BuildControllerLayoutPropsArgs) 
       return;
     }
     args.ws.setNodeViewState(nodeId, viewState);
+    syncReadingProgressToRuntime(createReadingProgressPayload(
+      args.ws.activeNodeId, { [nodeId]: viewState }, [nodeId]
+    ));
   };
 }
 

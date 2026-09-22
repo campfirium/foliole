@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
-const { requestPdfAnchorJump } = vi.hoisted(() => ({
-  requestPdfAnchorJump: vi.fn()
+const { requestPdfAnchorJump, syncReadingProgressToRuntime } = vi.hoisted(() => ({
+  requestPdfAnchorJump: vi.fn(), syncReadingProgressToRuntime: vi.fn()
+}));
+
+vi.mock('../../store/workspaceRuntimeSync', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../store/workspaceRuntimeSync')>(), syncReadingProgressToRuntime
 }));
 
 vi.mock('../../features/pdf/model/pdfSystemBridge', () => ({
@@ -196,6 +200,7 @@ it('applies nearest selection reveal through the shared reading request path', (
 
 describe('createPersistPdfViewState', () => {
   it('writes pdf view state for the provided node', () => {
+    syncReadingProgressToRuntime.mockClear();
     const setNodeViewState = vi.fn();
     const runtimeState = createRuntimeState();
     const persistPdfViewState = createPersistPdfViewState(createControllerLayoutArgs({
@@ -217,9 +222,14 @@ describe('createPersistPdfViewState', () => {
       scrollTop: 7,
       selection: { from: 7, to: 120 }
     });
+    expect(syncReadingProgressToRuntime).toHaveBeenCalledWith(expect.objectContaining({
+      nodeViewStates: [{ nodeId: 'node-7', scrollTop: 7, selectionFrom: 7, selectionTo: 120 }],
+      source: 'user-scroll', updatedAt: expect.any(String)
+    }));
   });
 
   it('skips persistence when viewing trash node', () => {
+    syncReadingProgressToRuntime.mockClear();
     const setNodeViewState = vi.fn();
     const runtimeState = createRuntimeState();
     const persistPdfViewState = createPersistPdfViewState(createControllerLayoutArgs({
@@ -238,5 +248,6 @@ describe('createPersistPdfViewState', () => {
     });
 
     expect(setNodeViewState).not.toHaveBeenCalled();
+    expect(syncReadingProgressToRuntime).not.toHaveBeenCalled();
   });
 });

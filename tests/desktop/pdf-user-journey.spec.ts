@@ -74,6 +74,9 @@ function getPdfReaderRegion(desktopWindow: Page) {
 }
 
 async function openImportedPdf(desktopWindow: Page, nodeId: string) {
+  await expect.poll(() => desktopWindow.evaluate((id) =>
+    globalThis.window?.__folioleWorkspaceDebug?.getNode?.(id)?.id ?? null, nodeId
+  )).toBe(nodeId);
   const opened = await desktopWindow.evaluate(async (targetNodeId) => {
     return globalThis.window?.__folioleWorkspaceDebug?.openNode?.(targetNodeId) ?? false;
   }, nodeId);

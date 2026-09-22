@@ -165,7 +165,10 @@ function linkPreparedLocalizedImages(record: PersistedImportRecord, prepared: Pr
 }
 
 export function runPreparedImport(input: PreparedImportRecord, options?: RunPreparedImportOptions) {
-  const record = rewriteMarkdownLocalImages(runPreparedImportViaDriver(openDatabaseConnection().driver, input, options), input);
+  const { driver, sqlite } = openDatabaseConnection();
+  // Reserve the SQLite writer before import lookups establish a read snapshot.
+  const imported = sqlite.transaction(() => runPreparedImportViaDriver(driver, input, options)).immediate();
+  const record = rewriteMarkdownLocalImages(imported, input);
   linkPreparedLocalizedImages(record, input);
   if (input.sourceKind !== 'pdf' || !record.nodeId || record.resultStatus === 'failed') {
     return record;
@@ -176,5 +179,6 @@ export function runPreparedImport(input: PreparedImportRecord, options?: RunPrep
 }
 
 export function recordPreparedImportFailure(input: PreparedImportRecord, failureReason: string) {
-  return recordPreparedImportFailureViaDriver(openDatabaseConnection().driver, input, failureReason);
+  const { driver, sqlite } = openDatabaseConnection();
+  return sqlite.transaction(() => recordPreparedImportFailureViaDriver(driver, input, failureReason)).immediate();
 }
