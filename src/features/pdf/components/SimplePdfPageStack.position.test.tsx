@@ -17,9 +17,9 @@ function MockPage(props: { pageNumber: number; cropBox: { bottom: number } | nul
   }, [props.pageNumber]);
   return <div data-page-height={props.cropBox ? 80 : 560}>Page {props.pageNumber}</div>;
 }
-function Harness() {
+function Harness({ initialPage = 35 }: { initialPage?: number }) {
   const ref = useRef<HTMLDivElement>(null);
-  return <div ref={ref} data-testid="scroll"><SimplePdfPageStack initialPage={35} totalPages={40} pageWidth={400} scrollRef={ref} /></div>;
+  return <div ref={ref} data-testid="scroll"><SimplePdfPageStack initialPage={initialPage} totalPages={40} pageWidth={400} scrollRef={ref} /></div>;
 }
 function rowHeight(row: HTMLElement) {
   const page = row.querySelector<HTMLElement>('[data-page-height]');
@@ -28,7 +28,7 @@ function rowHeight(row: HTMLElement) {
 }
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
-function installLayout() {
+function installLayout(bounded = false) {
   const frames = new Map<number, FrameRequestCallback>();
   const scrollEvents = new Set<HTMLElement>();
   const offsets = new WeakMap<HTMLElement, number>();
@@ -37,12 +37,20 @@ function installLayout() {
   vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => { frames.delete(id); });
   vi.spyOn(HTMLElement.prototype, 'scrollTop', 'get').mockImplementation(function (this: HTMLElement) { return offsets.get(this) ?? 0; });
   vi.spyOn(HTMLElement.prototype, 'scrollTop', 'set').mockImplementation(function (this: HTMLElement, value) {
+    if (bounded) value = Math.max(0, Math.min(value, this.scrollHeight - this.clientHeight));
     if (value !== this.scrollTop) { offsets.set(this, value); scrollEvents.add(this); }
   });
   vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (this: HTMLElement) { return this.hasAttribute('data-index') ? rowHeight(this) : 600; });
   vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(375);
   vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
-  vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(1240000);
+  vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLElement) {
+    if (!bounded) return 1240000;
+    const list = this.querySelector<HTMLElement>('[data-virtual-list]');
+    const padding = list?.parentElement?.style.paddingBottom ?? '0';
+    // jsdom has no CSS layout; resolve the existing viewport-relative spacer as a browser would.
+    const extra = padding.startsWith('calc') ? window.innerHeight - 12 * 16 : Number.parseFloat(padding);
+    return Number.parseFloat(list?.style.height ?? '0') + extra;
+  });
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
     const scroll = this.closest<HTMLElement>('[data-testid="scroll"]');
     const row = this.closest<HTMLElement>('[data-index]');
@@ -109,5 +117,31 @@ it.each([0, 4])('keeps the deep search page visible after delayed target and nei
     const rect = target.getBoundingClientRect();
     expect(rect.top).toBeGreaterThanOrEqual(-1);
     expect(rect.top).toBeLessThan(600);
+  } finally { layout.restore(); }
+});
+
+it.each([35, 40])('keeps the final short page visible after opening page %i and scrolling to the bottom', async (initialPage) => {
+  vi.useFakeTimers();
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('iPhone');
+  vi.stubGlobal('innerHeight', 874);
+  const layout = installLayout(true);
+  const deliverResize = installResizeObserver();
+  try {
+    render(<Harness initialPage={initialPage} />);
+    const scroll = screen.getByTestId('scroll');
+    for (let step = 0; step < 400; step++) {
+      await act(async () => {
+        if (step === 250 || step === 300) { fireEvent.touchStart(scroll); scroll.scrollTop += 100000; }
+        const events = [...layout.scrollEvents]; layout.scrollEvents.clear();
+        for (const target of events) fireEvent.scroll(target);
+        const callbacks = [...layout.frames.values()]; layout.frames.clear();
+        for (const callback of callbacks) callback(step * 16);
+        deliverResize();
+        await vi.advanceTimersByTimeAsync(16);
+      });
+    }
+    const rect = screen.getByText('Page 40').getBoundingClientRect();
+    expect(rect.bottom).toBeGreaterThan(0);
+    expect(rect.top).toBeCloseTo(0, 0);
   } finally { layout.restore(); }
 });
