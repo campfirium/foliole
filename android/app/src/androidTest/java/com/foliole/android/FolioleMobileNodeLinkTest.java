@@ -115,7 +115,8 @@ public class FolioleMobileNodeLinkTest {
                 "JSON.stringify({topic:document.querySelector('[data-companion-readable-document]')" +
                 "?.getAttribute('data-node-id')||'',rejected:!!document.querySelector('[data-mobile-link-error]')," +
                 "reason:document.querySelector('[data-mobile-link-error]')?.getAttribute('data-mobile-link-error')||''," +
-                "surface:document.body.innerText.slice(0,1000)})");
+                "readyState:document.readyState,bodyReady:!!document.body," +
+                "surface:(document.body?.innerText||'').slice(0,1000)})");
             if (topic.equals(observed.optString("topic")) && rejected == observed.optBoolean("rejected")) return;
             Thread.sleep(100);
         }
