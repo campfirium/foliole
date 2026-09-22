@@ -72,6 +72,7 @@ export function WorkspaceDemoRailBottomActions({
         icon={<MessageSquareWarning aria-hidden="true" size={16} strokeWidth={1.75} />}
         label={t('settings.rail.item.feedback')}
         onClick={() => onRunRailAction?.(APP_COMMAND_IDS.sendFeedback)}
+        preserveFocusOnClick
       />
       <DemoRailActionButton
         className={`${RAIL_BUTTON_CLASS_NAME} disabled:opacity-45`}

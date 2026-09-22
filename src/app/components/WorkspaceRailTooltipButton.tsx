@@ -14,6 +14,7 @@ import {
 
 type WorkspaceRailTooltipButtonProps = ComponentPropsWithoutRef<typeof AppIconButton> & {
   forceTooltipOpen?: boolean;
+  preserveFocusOnClick?: boolean;
 };
 
 export const WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME =
@@ -21,6 +22,7 @@ export const WORKSPACE_RAIL_BUTTON_FOCUS_CLASS_NAME =
 
 export function WorkspaceRailTooltipButton({
   forceTooltipOpen = false,
+  preserveFocusOnClick = false,
   onClick,
   onPointerDown,
   ...props
@@ -33,9 +35,9 @@ export function WorkspaceRailTooltipButton({
   }, [closeTooltip, onPointerDown]);
   const handleClick = useCallback((event: MouseEvent<HTMLButtonElement>) => {
     closeTooltip();
-    event.currentTarget.blur();
+    if (!preserveFocusOnClick) event.currentTarget.blur();
     onClick?.(event);
-  }, [closeTooltip, onClick]);
+  }, [closeTooltip, onClick, preserveFocusOnClick]);
 
   return (
     <AppTooltip

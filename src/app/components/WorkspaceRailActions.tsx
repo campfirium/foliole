@@ -60,6 +60,7 @@ function RailCommandButton({
         icon={<RailItemIcon commandId={item.commandId} {...(item.iconId ? { iconId: item.iconId } : {})} />}
         label={getWorkspaceRailItemLabel(item, t)}
         onClick={() => onRun(item.commandId)}
+        preserveFocusOnClick={item.commandId === APP_COMMAND_IDS.sendFeedback}
         aria-keyshortcuts={formatAriaKeyShortcuts(shortcutMap[item.commandId as AppCommandId])}
       />
     </div>

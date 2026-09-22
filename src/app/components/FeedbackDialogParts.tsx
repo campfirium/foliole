@@ -1,4 +1,4 @@
-import type { RefObject } from 'react';
+import { useRef, type RefObject } from 'react';
 
 import {
   FEEDBACK_LIMITS,
@@ -33,7 +33,7 @@ export interface FeedbackDraft {
   message: string;
 }
 
-export function FeedbackDialogContent(props: {
+type FeedbackDialogContentProps = {
   attachments: FeedbackAttachmentPayload[];
   attachmentWarning: boolean;
   appVersion: string;
@@ -53,25 +53,42 @@ export function FeedbackDialogContent(props: {
   state: SubmitState;
   turnstileContainerRef: RefObject<HTMLDivElement>;
   turnstileSiteKey?: string | undefined;
-}) {
-  if (props.state === 'sent') {
-    return (
-      <FeedbackSuccessContent
-        attachmentWarning={props.attachmentWarning}
-        onClose={props.onClose}
-      />
-    );
-  }
+};
+
+export function FeedbackDialogContent(props: FeedbackDialogContentProps) {
+  const sourceRef = useRef<HTMLElement | null>(null);
   return (
     <AppDialogContent
-      className={appShelllessSurfaceClassName('flex w-[min(92vw,41.25rem)] flex-col overflow-hidden p-0')}
+      className={props.state === 'sent'
+        ? 'flex w-[min(92vw,22rem)] flex-col gap-4 p-5'
+        : appShelllessSurfaceClassName('flex w-[min(92vw,41.25rem)] flex-col overflow-hidden p-0')}
+      onOpenAutoFocus={() => {
+        sourceRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      }}
+      onCloseAutoFocus={(event) => {
+        event.preventDefault();
+        if (sourceRef.current?.isConnected && document.activeElement === document.body) {
+          sourceRef.current.focus({ preventScroll: true });
+        }
+      }}
       onPaste={(event) => {
+        if (props.state === 'sent') return;
         const files = getPastedFiles(event.clipboardData);
         if (!files.length) return;
         event.preventDefault();
         void props.onPasteFiles(files);
       }}
     >
+      {props.state === 'sent' ? (
+        <FeedbackSuccessContent attachmentWarning={props.attachmentWarning} onClose={props.onClose} />
+      ) : <FeedbackFormContent {...props} />}
+    </AppDialogContent>
+  );
+}
+
+function FeedbackFormContent(props: FeedbackDialogContentProps) {
+  return (
+    <>
       <div className="px-[var(--app-shellless-content-inline-padding)]">
         <FeedbackTextField message={props.message} onMessageChange={props.onMessageChange} />
         <FeedbackContactFields contact={props.contact} onContactChange={props.onContactChange} />
@@ -86,7 +103,7 @@ export function FeedbackDialogContent(props: {
         />
       </div>
       <FeedbackActions appVersion={props.appVersion} canSubmit={props.canSubmit} onSubmit={props.onSubmit} state={props.state} />
-    </AppDialogContent>
+    </>
   );
 }
 
