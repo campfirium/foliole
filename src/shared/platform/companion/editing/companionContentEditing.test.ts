@@ -136,3 +136,25 @@ it('rejects an input whose parent was moved to trash before the writer ran', asy
   await expect(saveCompanionContentEdit(edit('Protected draft'))).rejects.toThrow('cannot be edited');
   expect(database.prepare('SELECT content FROM nodes WHERE id = ?').get('topic')).toEqual({ content: baseline });
 });
+
+
+it('opens editable content promptly with ten thousand visible topics', async () => {
+  const add = database.prepare(`INSERT INTO nodes
+    (id, parent_id, kind, title, content, created_at, updated_at)
+    VALUES (?, ?, 'topic', 'Capacity topic', '', ?, ?)`);
+  database.transaction(() => {
+    for (let index = 0; index < 9999; index += 1) {
+      add.run(`capacity-${index}`, index < 100 ? null : `capacity-${index % 100}`, now, now);
+    }
+  })();
+  const started = performance.now();
+  expect(await readCompanionContentSource('topic')).toEqual({ content: baseline, versionId: 'base' });
+  expect(performance.now() - started).toBeLessThan(1000);
+}, 15000);
+
+it('rejects reading editable content below a trashed ancestor', async () => {
+  await insert(node({ id: 'folder', kind: 'folder', content: '' }), 'folder-base');
+  database.prepare('UPDATE nodes SET parent_id = ? WHERE id = ?').run('folder', 'topic');
+  database.prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?').run(now, 'folder');
+  await expect(readCompanionContentSource('topic')).rejects.toThrow('cannot be edited');
+});

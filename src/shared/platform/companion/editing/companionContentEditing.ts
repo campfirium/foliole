@@ -1,4 +1,4 @@
-import { VISIBLE_NODES_CTE_SQL } from '../../../../../lib/core/database/workspaceVisibleNodesSql';
+import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from '../../../../../lib/core/database/workspaceVisibleNodesSql';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalContentEdit } from '../../../../../lib/core/sync/localContentEdit';
 import { loadCurrentSyncNodeRecord, loadStoredSyncNodeVersionRecord } from '../../../../../lib/core/sync/syncNodeGraph';
