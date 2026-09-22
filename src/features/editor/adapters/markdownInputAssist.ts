@@ -76,7 +76,8 @@ function exitCodeBlockOnEnter(view: EditorView, from: number, to: number, text: 
   const closingFence = `${openingFenceIndent}\`\`\``;
   view.dispatch({
     changes: { from, to, insert: `\n${closingFence}\n` },
-    selection: { anchor: from + closingFence.length + 2 }
+    selection: { anchor: from + closingFence.length + 2 },
+    userEvent: 'input.complete'
   });
   return true;
 }
@@ -106,7 +107,8 @@ export const markdownInputAssist = EditorView.inputHandler.of((view, from, to, t
     },
     selection: {
       anchor: line.from + completion.selectionOffset
-    }
+    },
+    userEvent: 'input.complete'
   });
   return true;
 });

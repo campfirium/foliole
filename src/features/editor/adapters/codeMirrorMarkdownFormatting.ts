@@ -53,7 +53,10 @@ function toggleMarkdownInlineFormat(marker: string): Command {
   return (view) => {
     if (view.state.readOnly) return false;
     const content = view.state.doc.toString();
-    view.dispatch(view.state.changeByRange((range) => createFormattingChange(content, range, marker)));
+    view.dispatch({
+      ...view.state.changeByRange((range) => createFormattingChange(content, range, marker)),
+      userEvent: 'input.format'
+    });
     return true;
   };
 }
