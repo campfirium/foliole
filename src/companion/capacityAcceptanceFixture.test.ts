@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
 import { expect, it } from 'vitest';
@@ -37,6 +38,10 @@ it('prepares representative metadata against the real companion schema', async (
       .toEqual({ state: 'active', repetition_count: 0 });
     expect(sqlite.prepare('SELECT scroll_top, source FROM node_view_state LIMIT 1').get())
       .toEqual({ scroll_top: 100, source: 'user-scroll' });
+    const blob = sqlite.prepare('SELECT hash, data, typeof(data) AS storage FROM content_blob_data LIMIT 1').get()!;
+    expect(blob.storage).toBe('blob');
+    expect(blob.data).toHaveLength(4096);
+    expect(createHash('sha256').update(blob.data as Uint8Array).digest('hex')).toBe(blob.hash);
   } finally {
     sqlite.close();
   }

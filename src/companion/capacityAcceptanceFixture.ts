@@ -53,7 +53,7 @@ async function capacityNodeRecords(index: number, bytes: number, hostName: strin
     order: [id, index] satisfies DbValue[],
     blob: blob ? [hash, hash, 'text', body.length, body.length, hash, hash,
       missing ? 'missing' : 'ready', time] satisfies DbValue[] : null,
-    blobData: blob && !missing ? [hash, new TextEncoder().encode(body)] satisfies DbValue[] : null,
+    blobData: blob && !missing ? [hash, body] satisfies DbValue[] : null,
     metadata: index % 5 === 0 ? capacityMetadata(id, hostName) : null
   };
 }
@@ -67,7 +67,9 @@ function capacityMetadata(id: string, hostName: string) {
 async function insertRows(db: DbPort, table: string, width: number, rows: DbValue[][]) {
   for (let offset = 0; offset < rows.length; offset += insertBatchSize) {
     const batch = rows.slice(offset, offset + insertBatchSize);
-    const placeholders = batch.map(() => `(${Array(width).fill('?').join(',')})`).join(',');
+    // The fixed fixture bodies are UTF-8 text; SQLite materializes their identical blob bytes.
+    const rowSql = table === 'content_blob_data' ? '(?, CAST(? AS BLOB))' : `(${Array(width).fill('?').join(',')})`;
+    const placeholders = batch.map(() => rowSql).join(',');
     await db.run(`INSERT INTO ${table} VALUES ${placeholders}`, batch.flat());
   }
 }
