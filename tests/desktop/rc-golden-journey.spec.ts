@@ -47,9 +47,8 @@ async function insertEditorContent(windowPage: WindowPage, content: string) {
 }
 
 async function openNode(windowPage: WindowPage, nodeId: string) {
-  await windowPage.evaluate(async (targetNodeId) => {
-    await globalThis.window?.__folioleWorkspaceDebug?.openNode?.(targetNodeId);
-  }, nodeId);
+  await windowPage.locator(`[role="treeitem"][data-node-id="${nodeId}"]`).click();
+  await expectActiveNode(windowPage, nodeId);
 }
 
 async function expectActiveNode(windowPage: WindowPage, nodeId: string) {
@@ -72,9 +71,10 @@ async function expectFormulaRegionPresentation(
 }
 
 async function collectNodeContent(windowPage: WindowPage, nodeId: string) {
-  return windowPage.evaluate((targetNodeId) =>
-    globalThis.window?.__folioleWorkspaceDebug?.getNode?.(targetNodeId)?.content ?? null,
-  nodeId);
+  return windowPage.evaluate(async (targetNodeId) => {
+    const document = await globalThis.window?.electronAPI?.invoke('load_node_document', { nodeId: targetNodeId });
+    return typeof document?.content === 'string' ? document.content : null;
+  }, nodeId);
 }
 
 async function collectEditorContent(windowPage: WindowPage) {

@@ -40,7 +40,6 @@ async function scrollActivePromptEditor(desktopWindow: Page) {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     return {
       activeNodeId: api?.getActiveNodeId?.() ?? null,
-      nodeViewState: api?.getNodeViewState?.('playwright-switch-node-a') ?? null,
       scrollTop: scroller.scrollTop
     };
   });
@@ -60,7 +59,9 @@ test('restores reading position after switching away and back', async ({ desktop
   await expectWorkspaceShell(desktopWindow);
   await seedNodeSwitchWorkspace(desktopWindow);
 
-  await expect(desktopWindow.getByRole('button', { name: 'Playwright Switch Node A', exact: true })).toBeVisible();
+  const nodeA = desktopWindow.getByRole('treeitem', { name: 'Playwright Switch Node A', exact: true });
+  const nodeB = desktopWindow.getByRole('treeitem', { name: 'Playwright Switch Node B', exact: true });
+  await expect(nodeA).toHaveAttribute('aria-selected', 'true');
   const beforeSwitch = await scrollActivePromptEditor(desktopWindow);
   await testInfo.attach('node-switch-before', {
     body: JSON.stringify(beforeSwitch, null, 2),
@@ -68,15 +69,11 @@ test('restores reading position after switching away and back', async ({ desktop
   });
 
   expect(beforeSwitch.scrollTop).toBeGreaterThan(0);
-  expect(beforeSwitch.nodeViewState?.scrollTop).toBeGreaterThan(0);
 
-  await desktopWindow.evaluate(async () => {
-    const api = globalThis.window?.__folioleWorkspaceDebug;
-    await api?.openNode?.('playwright-switch-node-b');
-    await api?.openNode?.('playwright-switch-node-a');
-  });
+  await nodeB.click();
+  await nodeA.click();
 
-  await expect(desktopWindow.getByRole('button', { name: 'Playwright Switch Node A', exact: true })).toBeVisible();
+  await expect(nodeA).toHaveAttribute('aria-selected', 'true');
   await desktopWindow.waitForTimeout(800);
 
   const afterSwitch = await collectPromptState(desktopWindow);
