@@ -78,7 +78,7 @@ export function CompanionSelectionNotePanel(props: {
         disabled={props.disabled}
         autoFocus
         className={cn(
-          'min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-sm leading-5 text-foreground placeholder:text-foreground/45',
+          'min-h-16 w-full resize-none border-0 bg-transparent px-1 py-1 text-ui-input leading-5 text-foreground placeholder:text-foreground/45',
           appInputFocusVisibleClassName
         )}
         data-testid="companion-selection-note-text"
