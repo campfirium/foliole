@@ -19,7 +19,6 @@ import type {
 import { NodeListRows } from './NodeListTreeRows';
 import type { NodeSelectModifiers } from './NodeListTreeState';
 import { resolveNodeTreeClassName } from './NodeTreeRowStyle';
-import { useNodeListVisibleDocumentPrefetch } from './useNodeListVisibleDocumentPrefetch';
 import { useNodeTreeActiveItemScroll } from './useNodeTreeActiveItemScroll';
 
 interface NodeListPanelProps {
@@ -154,13 +153,6 @@ function useNodeListPanelEffects(
     scrollContainerRef
   });
 
-  useNodeListVisibleDocumentPrefetch({
-    activeNodeId: props.activeNodeId,
-    activeRows: props.activeRows,
-    isTrashViewOpen: props.isTrashViewOpen,
-    isVirtualViewOpen: props.isVirtualViewOpen,
-    scrollContainerRef
-  });
 }
 
 export function NodeListPanel(props: NodeListPanelProps) {

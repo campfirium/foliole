@@ -1,9 +1,6 @@
 import {
-  getVisibleWorkspaceNodeDocumentPrefetchNodeIds,
-  listWorkspaceNodeDocumentPrefetchCandidates,
   readCachedWorkspaceNodeDocument,
-  resetWorkspaceNodeDocumentCacheForTest,
-  setVisibleWorkspaceNodeDocumentPrefetchNodeIds
+  resetWorkspaceNodeDocumentCacheForTest
 } from './workspaceNodeDocumentCache';
 import {
   hasPendingNodeDocumentLoad,
@@ -11,8 +8,8 @@ import {
   resetWorkspaceNodeDocumentLoaderForTest,
   shouldSkipNodeDocumentPreparation
 } from './workspaceNodeDocumentLoader';
-import { useWorkspaceStore } from './workspaceStore';
 
+const MAX_QUEUED_NODE_DOCUMENT_PREFETCHES = 2;
 const queuedNodeDocumentPrefetchIds: string[] = [];
 
 let queuedNodeDocumentPrefetchIdSet = new Set<string>();
@@ -45,7 +42,7 @@ async function runQueuedNodeDocumentPrefetch() {
       if (shouldSkipNodeDocumentPreparation(nodeId) || readCachedWorkspaceNodeDocument(nodeId)) {
         continue;
       }
-      await loadWorkspaceNodeDocument(nodeId, {});
+      await loadWorkspaceNodeDocument(nodeId, {}).catch(() => null);
       break;
     }
   } finally {
@@ -56,22 +53,8 @@ async function runQueuedNodeDocumentPrefetch() {
   }
 }
 
-export function setVisibleWorkspaceNodeDocumentPrefetchIds(nodeIds: string[]) {
-  setVisibleWorkspaceNodeDocumentPrefetchNodeIds(nodeIds);
-}
-
-export function requestWorkspaceNodeDocumentPreload() {
-  const state = useWorkspaceStore.getState();
-  const nextNodeIds = listWorkspaceNodeDocumentPrefetchCandidates({
-    activeNodeId: state.activeNodeId,
-    navigationBackStack: state.navigation.backStack,
-    nodeOrder: state.nodeOrder,
-    nodesById: state.nodesById,
-    reviewQueueNodeIds: state.reviewSession.queueNodeIds,
-    visibleNodeIds: getVisibleWorkspaceNodeDocumentPrefetchNodeIds()
-  });
-
-  for (const nodeId of nextNodeIds) {
+export function requestWorkspaceNodeDocumentPreload(nodeIds: readonly string[]) {
+  for (const nodeId of new Set(nodeIds.filter(Boolean))) {
     if (
       queuedNodeDocumentPrefetchIdSet.has(nodeId) ||
       hasPendingNodeDocumentLoad(nodeId) ||
@@ -82,6 +65,13 @@ export function requestWorkspaceNodeDocumentPreload() {
     }
     queuedNodeDocumentPrefetchIds.push(nodeId);
     queuedNodeDocumentPrefetchIdSet.add(nodeId);
+  }
+
+  while (queuedNodeDocumentPrefetchIds.length > MAX_QUEUED_NODE_DOCUMENT_PREFETCHES) {
+    const retiredNodeId = queuedNodeDocumentPrefetchIds.shift();
+    if (retiredNodeId) {
+      queuedNodeDocumentPrefetchIdSet.delete(retiredNodeId);
+    }
   }
 
   if (queuedNodeDocumentPrefetchIds.length > 0) {

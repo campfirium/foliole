@@ -8,8 +8,7 @@ import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
 import {
   requestWorkspaceNodeDocumentPreload,
-  resetWorkspaceNodeDocumentPrefetchForTest,
-  setVisibleWorkspaceNodeDocumentPrefetchIds
+  resetWorkspaceNodeDocumentPrefetchForTest
 } from './workspaceNodeDocumentPrefetch';
 import {
   ensureWorkspaceNodeDocumentReady,
@@ -189,7 +188,7 @@ it('reopens a trimmed node from the renderer cache without invoking the runtime 
   });
 });
 
-it('preloads recent history, active neighbors, and visible rows without merging them into the store', async () => {
+it('preloads only explicitly requested documents without merging them into the store', async () => {
   const invoke = vi.fn().mockImplementation((command: string, payload?: { nodeId?: string }) => {
     if (command !== 'load_node_document' || !payload?.nodeId) {
       return Promise.resolve(null);
@@ -221,14 +220,12 @@ it('preloads recent history, active neighbors, and visible rows without merging 
       'node-5': { ...state.nodesById['node-1']!, id: 'node-5', title: 'Node 5', parentNodeId: null, content: '', hasContent: true, reveal: null, hasReveal: false }
     }
   }));
-  setVisibleWorkspaceNodeDocumentPrefetchIds(['node-5']);
-
-  requestWorkspaceNodeDocumentPreload();
+  requestWorkspaceNodeDocumentPreload(['node-3', 'node-5']);
   await vi.waitFor(() => {
     const userNodeLoads = invoke.mock.calls
       .map(([, payload]) => payload?.nodeId)
       .filter((nodeId) => nodeId?.startsWith('node-'));
-    expect(userNodeLoads).toEqual(['node-1', 'node-3', 'node-5', 'node-4']);
+    expect(userNodeLoads).toEqual(['node-3', 'node-5']);
   });
   expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({ content: '' });
   expect(useWorkspaceStore.getState().nodesById['node-4']!).toMatchObject({ content: '' });

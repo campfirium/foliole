@@ -42,7 +42,7 @@ beforeEach(() => {
   seedReviewQueueWorkspaceState();
 });
 
-it('preloads upcoming review queue documents before active neighbors', async () => {
+it('retires the oldest pending strong-intent request when the two-item queue is full', async () => {
   const invoke = vi.fn().mockImplementation((command: string, payload?: { nodeId?: string }) => {
     if (command !== 'load_node_document' || !payload?.nodeId) {
       return Promise.resolve(null);
@@ -57,11 +57,33 @@ it('preloads upcoming review queue documents before active neighbors', async () 
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  requestWorkspaceNodeDocumentPreload();
+  requestWorkspaceNodeDocumentPreload(['node-2', 'node-3', 'node-4']);
 
   await vi.waitFor(() => {
-    expect(invoke.mock.calls.map(([, payload]) => payload?.nodeId).slice(0, 2)).toEqual(['node-3', 'node-4']);
+    expect(invoke.mock.calls.map(([, payload]) => payload?.nodeId)).toEqual(['node-3', 'node-4']);
   });
   expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({ content: '' });
   expect(useWorkspaceStore.getState().nodesById['node-4']!).toMatchObject({ content: '' });
+});
+
+it('continues with the next strong-intent request after a prefetch failure', async () => {
+  const invoke = vi.fn().mockImplementation((_command: string, payload?: { nodeId?: string }) => {
+    if (payload?.nodeId === 'node-2') {
+      return Promise.reject(new Error('controlled prefetch failure'));
+    }
+    return Promise.resolve({
+      content: `Loaded ${payload?.nodeId} body`,
+      hideTitleHeading: false,
+      kind: 'topic',
+      reveal: null,
+      virtualFilter: null
+    });
+  });
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  requestWorkspaceNodeDocumentPreload(['node-2', 'node-3']);
+
+  await vi.waitFor(() => {
+    expect(invoke.mock.calls.map(([, payload]) => payload?.nodeId)).toEqual(['node-2', 'node-3']);
+  });
 });

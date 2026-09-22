@@ -1,5 +1,7 @@
 import { memo, useMemo, useRef } from 'react';
 
+import { useNodeDocumentIntentPrefetch } from '../../features/nodes/components/useNodeDocumentIntentPrefetch';
+import { INBOX_NODE_ID } from '../../features/nodes/model/specialNodes';
 import type { WorkspaceListNodesById } from '../../features/nodes/model/workspaceListNode';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -97,12 +99,49 @@ function resolveWorkspaceTopicTreeScrollState(
   };
 }
 
+function resolveInboxNextPrefetchNodeId(
+  activeFolderId: string,
+  activeNodeId: string | null,
+  visibleRows: ReturnType<typeof useWorkspaceTopicTreeData>['lazyModel']['rows']
+) {
+  if (activeFolderId !== INBOX_NODE_ID) {
+    return null;
+  }
+  const activeIndex = activeNodeId
+    ? visibleRows.findIndex((row) => row.node.id === activeNodeId)
+    : -1;
+  return visibleRows[activeIndex + 1]?.node.id ?? null;
+}
+
 function useWorkspaceTopicTreeContext(props: WorkspaceTopicTreeProps) {
   const t = useTranslation();
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const treeData = useWorkspaceTopicTreeData(props);
   useWorkspaceTopicTreeRenderDiagnostic(props, treeData);
   return { scrollContainerRef, t, treeData };
+}
+
+function useWorkspaceTopicTreeEffects(
+  props: WorkspaceTopicTreeProps,
+  focusedNodeId: string | null,
+  focusedRowIndex: number,
+  reviewScroll: ReturnType<typeof resolveWorkspaceTopicTreeScrollState>['reviewScroll'],
+  visibleRows: ReturnType<typeof useWorkspaceTopicTreeData>['lazyModel']['rows'],
+  scrollContainerRef: ReturnType<typeof useWorkspaceTopicTreeContext>['scrollContainerRef']
+) {
+  useWorkspaceTopicTreeAutoScroll({
+    activeFolderId: props.activeFolderId,
+    focusedNodeId,
+    focusedRowIndex,
+    placement: reviewScroll.placement,
+    scrollContainerRef,
+    scrollNodeId: reviewScroll.scrollNodeId,
+    visibleRowsLength: visibleRows.length
+  });
+  useNodeDocumentIntentPrefetch({
+    automaticNodeId: resolveInboxNextPrefetchNodeId(props.activeFolderId, props.activeNodeId, visibleRows),
+    scrollContainerRef
+  });
 }
 
 export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: WorkspaceTopicTreeProps) {
@@ -129,15 +168,7 @@ export const WorkspaceTopicTree = memo(function WorkspaceTopicTree(props: Worksp
     onSelectNode: props.onSelectNode,
     rowIds: visibleRows.map((row) => row.node.id)
   });
-  useWorkspaceTopicTreeAutoScroll({
-    activeFolderId: props.activeFolderId,
-    focusedNodeId,
-    focusedRowIndex,
-    placement: reviewScroll.placement,
-    scrollContainerRef,
-    scrollNodeId: reviewScroll.scrollNodeId,
-    visibleRowsLength: visibleRows.length
-  });
+  useWorkspaceTopicTreeEffects(props, focusedNodeId, focusedRowIndex, reviewScroll, visibleRows, scrollContainerRef);
 
   return renderWorkspaceTopicTreeShell({
     activeFolderId: props.creationParentNodeId ?? props.activeFolderId,
