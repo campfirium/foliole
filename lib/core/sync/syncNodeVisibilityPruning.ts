@@ -1,4 +1,4 @@
-import { VISIBLE_NODES_CTE_SQL } from '../database/workspaceVisibleNodesSql.js';
+import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from '../database/workspaceVisibleNodesSql.js';
 
 import type { DbPort } from './dbPort.js';
 
