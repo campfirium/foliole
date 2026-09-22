@@ -5,6 +5,7 @@ import { hasMatchingBoundaryPreservedFields } from './workspaceSnapshotFieldMani
 
 interface FocusedRendererBoundaryArgs {
   activeNodeId: string | null;
+  currentActiveNodeId: string | null;
   currentKeepNodeIds: ReadonlySet<string>;
   currentNodesById: Record<string, Node>;
   documentWorksetNodeIds: readonly string[];
@@ -55,6 +56,9 @@ export function reconcileFocusedRendererBoundaryNodes(args: FocusedRendererBound
   ]);
   if (args.activeNodeId) {
     affectedNodeIds.add(args.activeNodeId);
+  }
+  if (args.currentActiveNodeId) {
+    affectedNodeIds.add(args.currentActiveNodeId);
   }
 
   let changed = false;

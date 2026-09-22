@@ -6,6 +6,37 @@ import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import type { WorkspaceState } from './workspaceStore';
 import { useWorkspaceStore } from './workspaceStore';
 
+it('trims the previous active document when selection and target document change together', () => {
+  const currentState = createTestWorkspaceState({
+    activeNodeId: 'node-1',
+    nodesById: {
+      'node-1': {
+        ...useWorkspaceStore.getState().nodesById['node-1']!,
+        content: 'Previous body',
+        hasContent: true,
+        id: 'node-1'
+      },
+      'node-2': {
+        ...useWorkspaceStore.getState().nodesById['node-1']!,
+        content: '',
+        hasContent: true,
+        id: 'node-2'
+      }
+    }
+  });
+
+  const nextState = enforceWorkspaceRendererBoundary({
+    activeNodeId: 'node-2',
+    nodesById: {
+      ...currentState.nodesById,
+      'node-2': { ...currentState.nodesById['node-2']!, content: 'Next body' }
+    }
+  }, currentState) as WorkspaceState;
+
+  expect(nextState.nodesById['node-1']?.content).toBe('');
+  expect(nextState.nodesById['node-2']?.content).toBe('Next body');
+});
+
 it('falls back to full reconciliation when node ids change but counts match', () => {
   const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
   const currentState = createTestWorkspaceState({

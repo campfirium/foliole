@@ -198,6 +198,7 @@ export function enforceWorkspaceRendererBoundary<T extends WorkspaceRendererBoun
       ? reconcileFocusedRendererBoundaryNodes(
           {
             activeNodeId: nextActiveNodeId,
+            currentActiveNodeId: currentState.activeNodeId,
             currentKeepNodeIds: new Set(currentState.rendererBoundaryKeepNodeIds ?? []),
             currentNodesById: currentState.nodesById,
             documentWorksetNodeIds,
