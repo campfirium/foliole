@@ -7,6 +7,7 @@ import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
 
 export function CompanionFolderArticleList(props: {
   items: CompanionFolderListEntry[];
+  nodeId?: string;
   onSelectNode(nodeId: string): void;
   snapshot: WorkspaceSnapshot | null;
 }) {
@@ -14,6 +15,7 @@ export function CompanionFolderArticleList(props: {
   const directory = useCompanionExternalDirectory();
   return <CompanionDirectoryList
     directory={directory}
+    viewKey={`folder:${props.nodeId ?? ''}`}
     emptyLabel={t('companion.directory.emptyShell')}
     onSelectItem={(item) => props.onSelectNode(item.nodeId)}
     sections={props.items.length ? [{ id: 'current', items: props.items.map((item) => ({ ...item, id: item.nodeId, source: 'internal' })) }] : []}

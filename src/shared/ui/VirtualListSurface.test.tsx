@@ -1,8 +1,17 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { useRef, type ReactNode } from 'react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { resolveComfortScrollTop, shouldVirtualizeList, VirtualListSurface } from './VirtualListSurface';
+
+beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(288);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(300);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+    return new DOMRect(0, 0, 300, this.dataset.testid === 'scroll-container' ? 288 : 24);
+  });
+});
+afterEach(() => vi.restoreAllMocks());
 
 function VirtualListHarness(props: {
   children?: ReactNode;

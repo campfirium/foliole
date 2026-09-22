@@ -6,6 +6,7 @@ import type { CompanionRecentArticle } from '../shared/platform/companionReadabl
 import { AppEmptyState } from '../shared/ui';
 
 import { CompanionEmptyStateIcon } from './CompanionEmptyStateIcon';
+import { CompanionListViewport } from './CompanionListViewport';
 import { CompanionTopicListMenu } from './CompanionTopicListMenu';
 
 const RECENT_ARTICLE_TEXT_LINE_BUDGET = 4;
@@ -128,14 +129,10 @@ export function RecentArticleList(props: {
 
   return (
     <section>
-      {props.recentArticles.map((article) => (
-        <RecentArticleRow
-          article={article}
-          currentArticleId={props.currentArticleId}
-          key={article.nodeId}
-          onSelectArticle={props.onSelectArticle}
-        />
-      ))}
+      <CompanionListViewport viewKey="recent" items={props.recentArticles}
+        getItemKey={(article) => article.nodeId} estimateSize={() => 124}
+        renderItem={(article) => <RecentArticleRow article={article}
+          currentArticleId={props.currentArticleId} onSelectArticle={props.onSelectArticle} />} />
     </section>
   );
 }

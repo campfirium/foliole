@@ -2,24 +2,21 @@ import { useMemo } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { FolderListSortDirection, FolderListSortKey } from '../features/nodes/model/folderListOrdering';
-import { definedProps } from '../shared/lib/definedProps';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
   resolveCompanionFolderViewByNodeId,
-  resolveCompanionRootDirectoryView,
-  resolveCompanionTrashFolderViewByNodeId,
-  resolveCompanionTrashView
+  resolveCompanionTrashFolderViewByNodeId
 } from '../shared/platform/companionBrowseLists';
 
 import { toReadableExternalArticle } from './CompanionDirectoryExternalArticle';
 import { CompanionDirectoryList } from './CompanionDirectoryListSurface';
 import {
   type CompanionDirectorySelection,
-  type DirectoryListItem,
-  resolveDirectorySections
+  type DirectoryListItem
 } from './CompanionDirectoryModel';
 import { resolveDirectoryParentSelection } from './CompanionDirectoryParentModel';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
+import { useCompanionDirectorySections } from './useCompanionDirectorySections';
 import { useCompanionExternalDirectory, useCompanionExternalDocument } from './useCompanionExternalDirectory';
 
 export type { CompanionDirectorySelection } from './CompanionDirectoryModel';
@@ -32,38 +29,6 @@ interface CompanionDirectoryContentProps {
   snapshot: WorkspaceSnapshot | null;
   sortDirection: FolderListSortDirection;
   sortKey: FolderListSortKey;
-}
-
-function useCompanionDirectorySections(args: {
-  directory: ReturnType<typeof useCompanionExternalDirectory>;
-  selection: CompanionDirectorySelection;
-  snapshot: WorkspaceSnapshot | null;
-  sortDirection: FolderListSortDirection;
-  sortKey: FolderListSortKey;
-}) {
-  const currentNodeId = args.selection.kind === 'internal' ? args.selection.nodeId : null;
-  const virtualNodeId = args.selection.kind === 'virtual' ? args.selection.nodeId : null;
-  const trashFolderNodeId = args.selection.kind === 'trashFolder' ? args.selection.nodeId : null;
-  const folderView = resolveCompanionFolderViewByNodeId(args.snapshot, currentNodeId, args.sortKey, args.sortDirection);
-  const virtualView = resolveCompanionFolderViewByNodeId(args.snapshot, virtualNodeId, args.sortKey, args.sortDirection);
-  const rootView = resolveCompanionRootDirectoryView(args.snapshot, args.sortKey, args.sortDirection);
-  const trashView = trashFolderNodeId
-    ? resolveCompanionTrashFolderViewByNodeId(args.snapshot, trashFolderNodeId, args.sortKey, args.sortDirection)
-    : resolveCompanionTrashView(args.snapshot, args.sortKey, args.sortDirection);
-  const sections = useMemo(
-    () =>
-      resolveDirectorySections({
-        directory: args.directory,
-        folderView: folderView ?? virtualView,
-        rootView,
-        selection: args.selection,
-        snapshot: args.snapshot,
-        ...definedProps({ trashView: trashView ?? undefined })
-      }),
-    [args.directory, args.selection, args.snapshot, folderView, rootView, trashView, virtualView]
-  );
-
-  return { sections };
 }
 
 function resolveItemSelection(item: DirectoryListItem): CompanionDirectorySelection {
@@ -105,6 +70,7 @@ function isDirectoryContainer(
 function CompanionDirectoryListContent(props: {
   directory: ReturnType<typeof useCompanionExternalDirectory>;
   handleSelectItem(item: DirectoryListItem): void;
+  viewKey: string;
   sections: ReturnType<typeof useCompanionDirectorySections>['sections'];
   snapshot: WorkspaceSnapshot | null;
 }) {
@@ -113,6 +79,7 @@ function CompanionDirectoryListContent(props: {
     <section>
       <CompanionDirectoryList
         directory={props.directory}
+        viewKey={props.viewKey}
         emptyLabel={t('companion.directory.emptyFolder')}
         onSelectItem={props.handleSelectItem}
         sections={props.sections}
@@ -165,6 +132,7 @@ export function CompanionDirectoryContent(props: CompanionDirectoryContentProps)
 
   return <CompanionDirectoryListContent
     directory={directory}
+    viewKey={`directory:${JSON.stringify(props.selection)}`}
     handleSelectItem={handleSelectItem}
     sections={sections}
     snapshot={props.snapshot}

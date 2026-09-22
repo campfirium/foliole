@@ -1,12 +1,18 @@
 import { defaultRangeExtractor, useVirtualizer, type Range, type VirtualItem, type Virtualizer } from '@tanstack/react-virtual';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, type MutableRefObject, type ReactNode, type RefObject } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode, type RefObject } from 'react';
 
+import { useVirtualListPosition } from './useVirtualListPosition';
+import { useVirtualListScrollMargin } from './useVirtualListScrollMargin';
+import type { VirtualListPosition } from './virtualListPosition';
 import { resolveComfortScrollTop } from './virtualListScrollModel';
 import type { VirtualListRenderMeta } from './VirtualListSurface';
 import { useVirtualListViewportRemeasure } from './virtualListViewportRemeasure';
 
 interface VirtualListSurfaceVirtualProps<TItem> {
   autoScroll: boolean;
+  accountForOffset?: boolean;
+  position?: VirtualListPosition;
+  pinnedItemKey?: string | null;
   className?: string;
   estimateSize: (index: number) => number;
   getItemKey: (item: TItem) => string;
@@ -23,6 +29,7 @@ function renderVirtualItems<TItem>(
   items: readonly TItem[],
   virtualItems: VirtualItem[],
   renderItem: (item: TItem, meta: VirtualListRenderMeta) => ReactNode,
+  scrollMargin: number,
   measureElement?: (element: Element | null) => void
 ) {
   return virtualItems.map((virtualItem) => {
@@ -30,9 +37,10 @@ function renderVirtualItems<TItem>(
     return (
       <div
         data-index={virtualItem.index}
+        data-list-position-index={virtualItem.index}
         key={virtualItem.key}
         ref={measureElement}
-        style={{ left: 0, position: 'absolute', top: 0, transform: `translateY(${virtualItem.start}px)`, width: '100%' }}
+        style={{ left: 0, position: 'absolute', top: 0, transform: `translateY(${virtualItem.start - scrollMargin}px)`, width: '100%' }}
       >
         {renderItem(item, {
           ariaPosInSet: virtualItem.index + 1,
@@ -50,7 +58,7 @@ function useVirtualListEndPin(args: {
   scrollElementRef: RefObject<HTMLElement | null>;
 }): MutableRefObject<boolean> {
   const pinnedToEndRef = useRef(false);
-  useLayoutEffect(() => {
+  useEffect(() => {
     const scrollElement = args.scrollElementRef.current;
     if (!args.enabled || !scrollElement) return;
     const updatePinnedState = () => {
@@ -142,33 +150,42 @@ function useComfortVirtualListScroll(args: {
   }, [args.autoScroll, args.scrollAnchorIndex, args.scrollElementRef, args.scrollToIndex, args.scrollToKey, args.virtualizer]);
 }
 
+function usePinnedRange(count: number, indexes: Array<number | null | undefined>) {
+  const [target, anchor, interaction] = indexes;
+  return useMemo(() => (range: Range) => {
+    const pins = [target, anchor, interaction].filter((index): index is number =>
+      index !== null && index !== undefined && index >= 0 && index < count);
+    return [...new Set([...defaultRangeExtractor(range), ...pins])].sort((a, b) => a - b);
+  }, [count, target, anchor, interaction]);
+}
+
 export function VirtualListSurfaceVirtual<TItem>(props: VirtualListSurfaceVirtualProps<TItem>) {
-  const getScrollElement = useCallback(() => props.scrollElementRef.current, [props.scrollElementRef]);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const scrollMargin = useVirtualListScrollMargin(rootRef, props.scrollElementRef, props.accountForOffset ?? false);
+  const keys = useMemo(() => props.items.map(props.getItemKey), [props.items, props.getItemKey]);
+  const getVirtualItemKey = useCallback((index: number) => keys[index]!, [keys]);
+  const interactionIndex = props.pinnedItemKey ? keys.indexOf(props.pinnedItemKey) : -1;
+  const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null);
+  useEffect(() => { setScrollElement(props.scrollElementRef.current); }, [props.scrollElementRef]);
+  const getScrollElement = useCallback(() => scrollElement, [scrollElement]);
   const pinnedToEndRef = useVirtualListEndPin({
-    enabled: props.measureItems,
+    enabled: props.measureItems && !props.position,
     scrollElementRef: props.scrollElementRef
   });
-  const rangeExtractor = useMemo(
-    () => (range: Range) => {
-      const indexes = defaultRangeExtractor(range);
-      const pinnedIndexes = [props.scrollToIndex, props.scrollAnchorIndex].filter(
-        (index): index is number => index !== null && index !== undefined && index >= 0
-      );
-      return pinnedIndexes.length === 0 ? indexes : [...new Set([...indexes, ...pinnedIndexes])].sort((a, b) => a - b);
-    },
-    [props.scrollAnchorIndex, props.scrollToIndex]
-  );
+  const rangeExtractor = usePinnedRange(props.items.length, [props.scrollToIndex, props.scrollAnchorIndex, interactionIndex]);
   const virtualizer = useVirtualizer({
     count: props.items.length,
+    scrollMargin,
     estimateSize: props.estimateSize,
-    getItemKey: (index) => props.getItemKey(props.items[index] as TItem),
+    getItemKey: getVirtualItemKey,
     getScrollElement,
     initialRect: { height: props.estimateSize(0) * 12, width: 0 },
-    onChange: () => scheduleEndPin(props.measureItems, pinnedToEndRef, props.scrollElementRef),
+    onChange: () => scheduleEndPin(props.measureItems && !props.position, pinnedToEndRef, props.scrollElementRef),
     overscan: props.overscan,
     rangeExtractor,
     useAnimationFrameWithResizeObserver: true
   });
+  useVirtualListPosition({ keys, position: props.position, rootRef, scrollElementRef: props.scrollElementRef, virtualizer });
   const scrollToKey =
     props.scrollToIndex !== null && props.scrollToIndex !== undefined && props.scrollToIndex >= 0 && props.scrollToIndex < props.items.length
       ? props.getItemKey(props.items[props.scrollToIndex] as TItem)
@@ -186,11 +203,12 @@ export function VirtualListSurfaceVirtual<TItem>(props: VirtualListSurfaceVirtua
   const totalSize = virtualizer.getTotalSize();
 
   return (
-    <div className={props.className} data-virtual-list="true" style={{ height: `${totalSize}px`, position: 'relative', width: '100%' }}>
+    <div ref={rootRef} className={props.className} data-virtual-list="true" style={{ height: `${totalSize}px`, position: 'relative', width: '100%' }}>
       {renderVirtualItems(
         props.items,
         virtualizer.getVirtualItems(),
         props.renderItem,
+        scrollMargin,
         props.measureItems ? virtualizer.measureElement : undefined
       )}
     </div>

@@ -61,6 +61,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
         <CompanionFolderArticleList
           snapshot={props.workspaceSync.state.workspace_snapshot}
           items={props.surface.browsedFolder.items}
+          nodeId={props.surface.browsedFolder.nodeId}
           onSelectNode={props.surface.handleSelectBrowseNode}
         />
       </>

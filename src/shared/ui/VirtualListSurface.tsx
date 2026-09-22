@@ -1,6 +1,8 @@
 import type { VirtualItem } from '@tanstack/react-virtual';
-import { Fragment, type ReactNode, type RefObject } from 'react';
+import { Fragment, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 
+import { useVirtualListPosition } from './useVirtualListPosition';
+import type { VirtualListPosition } from './virtualListPosition';
 import { VirtualListSurfaceVirtual } from './VirtualListSurfaceVirtual';
 export { resolveComfortScrollTop } from './virtualListScrollModel';
 
@@ -23,6 +25,9 @@ interface VirtualListSurfaceProps<TItem> {
   className?: string;
   enabled?: boolean;
   measureItems?: boolean;
+  position?: VirtualListPosition;
+  accountForOffset?: boolean;
+  pinnedItemKey?: string | null;
   overscan?: number;
   scrollAnchorIndex?: number | null;
   scrollToIndex?: number | null;
@@ -69,6 +74,9 @@ export function VirtualListSurface<TItem>({
   getItemKey,
   items,
   measureItems = false,
+  position,
+  accountForOffset = false,
+  pinnedItemKey,
   overscan = DEFAULT_VIRTUAL_LIST_OVERSCAN,
   renderItem,
   scrollAnchorIndex,
@@ -79,12 +87,17 @@ export function VirtualListSurface<TItem>({
   const isVirtual = enabled && shouldVirtualizeList(items.length, threshold);
 
   if (!isVirtual) {
-    return <>{renderStaticItems(items, estimateSize, getItemKey, renderItem)}</>;
+    return position ? <PositionedStaticList items={items} getItemKey={getItemKey} position={position}
+      scrollElementRef={scrollElementRef} renderItem={(item, meta) => renderItem(item, meta)} estimateSize={estimateSize} />
+      : <>{renderStaticItems(items, estimateSize, getItemKey, renderItem)}</>;
   }
 
   return (
     <VirtualListSurfaceVirtual
       autoScroll={autoScroll}
+      accountForOffset={accountForOffset}
+      {...(position ? { position } : {})}
+      {...(pinnedItemKey !== undefined ? { pinnedItemKey } : {})}
       estimateSize={estimateSize}
       getItemKey={getItemKey}
       items={items}
@@ -97,4 +110,13 @@ export function VirtualListSurface<TItem>({
       {...(scrollToIndex !== undefined ? { scrollToIndex } : {})}
     />
   );
+}
+
+function PositionedStaticList<TItem>(props: Pick<VirtualListSurfaceProps<TItem>,
+  'items' | 'getItemKey' | 'position' | 'scrollElementRef' | 'renderItem' | 'estimateSize'>) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const keys = useMemo(() => props.items.map(props.getItemKey), [props.items, props.getItemKey]);
+  useVirtualListPosition({ keys, position: props.position, rootRef, scrollElementRef: props.scrollElementRef });
+  return <div ref={rootRef}>{renderStaticItems(props.items, props.estimateSize, props.getItemKey,
+    (item, meta) => <div data-list-position-index={meta.index}>{props.renderItem(item, meta)}</div>)}</div>;
 }

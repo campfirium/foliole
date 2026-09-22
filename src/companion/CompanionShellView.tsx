@@ -1,9 +1,12 @@
+import { useRef } from 'react';
+
 import {
   companionMainBottomInsetClassName,
   companionMobileRailClassName,
   companionReviewBottomInsetClassName,
   companionViewportHeightClassName
 } from './companionCssCompatibility';
+import { CompanionListViewportProvider } from './CompanionListViewport';
 import type { CompanionShellModel } from './CompanionShell';
 import { renderCompanionShellContent } from './CompanionShellContent';
 import { CompanionShellOverlays } from './CompanionShellOverlays';
@@ -87,19 +90,25 @@ function isReadableArticleImmersive(model: CompanionShellModel) {
 
 export function CompanionShellView(props: { model: CompanionShellModel }) {
   const { model } = props;
+  const scrollRef = useRef<HTMLDivElement>(null);
   return (
     <>
       <main className={`${companionViewportHeightClassName} bg-companion-base text-foreground`}>
         <div
           className={`${companionViewportHeightClassName} overflow-y-auto`}
           data-testid="companion-scroll-container"
+          ref={scrollRef}
           onClick={model.handleContentTap}
           onScroll={model.handleContainerScroll}
           onTouchEnd={model.floatingBar.handleTouchEnd}
           onTouchMove={model.floatingBar.handleTouchMove}
           onTouchStart={model.floatingBar.handleTouchStart}
         >
-          {renderCompanionMainContent(model)}
+          <CompanionListViewportProvider scrollRef={scrollRef}
+            key={model.workspaceSync.state.endpoint_url ?? 'local'}
+            sortIdentity={`${model.browseSortKey}:${model.browseSortDirection}`}>
+            {renderCompanionMainContent(model)}
+          </CompanionListViewportProvider>
         </div>
       </main>
       <CompanionShellOverlays

@@ -1,14 +1,21 @@
 import { MoreHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { CompanionBottomSheet } from './CompanionBottomSheet';
+import { useCompanionListInteraction } from './CompanionListViewport';
 
 export function CompanionTopicListMenu(props: { title: string; metadata: string; onOpen(): void }) {
   const t = useTranslation();
   const [open, setOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const interaction = useCompanionListInteraction();
+  useEffect(() => {
+    if (!open && !infoOpen) return;
+    interaction(true);
+    return () => interaction(false);
+  }, [open, infoOpen, interaction]);
   return (
     <>
       <button aria-label={`${t('companion.browse.more')}: ${props.title}`} className="companion-topic-more" onClick={() => setOpen(true)} type="button">

@@ -1,9 +1,7 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
-import { normalizeWorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshotContract';
-import { resolveVirtualNodeResultIds } from '../../lib/core/nodes/virtualNodeResults';
 import type { Translate } from '../shared/localization/LocalizationProvider';
+import { countCompanionExternalDirectoryEntries, resolveCompanionDirectoryCounts } from '../shared/platform/companionDirectoryCounts';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
-import { selectCanonicalTrashedNodeIds, selectCanonicalVisibleNodeIds } from '../shared/workspaceCanonicalSelectors';
 
 import type { DirectoryListItem, DirectorySection } from './CompanionDirectoryModel';
 
@@ -19,31 +17,9 @@ export function resolveDirectoryItemCount(sections: DirectorySection[]) {
   return sections.reduce((count, section) => count + section.items.length, 0);
 }
 
-function countDirectChildren(snapshot: WorkspaceSnapshot | null, parentNodeId: string, mode: 'trash' | 'visible') {
-  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
-  if (!normalizedSnapshot) return null;
-  const nodeIds = mode === 'trash'
-    ? selectCanonicalTrashedNodeIds(normalizedSnapshot)
-    : selectCanonicalVisibleNodeIds(normalizedSnapshot);
-  return nodeIds.filter((nodeId) => normalizedSnapshot.nodesById[nodeId]?.parentNodeId === parentNodeId).length;
-}
-
 function formatRowCount(count: number | null) {
   if (!count) return null;
   return String(count);
-}
-
-function countVirtualResults(snapshot: WorkspaceSnapshot | null, virtualNodeId: string) {
-  const normalizedSnapshot = snapshot ? normalizeWorkspaceSnapshot(snapshot) : null;
-  const virtualNode = normalizedSnapshot?.nodesById[virtualNodeId];
-  if (!normalizedSnapshot || !virtualNode?.virtualFilter) return null;
-  return (normalizedSnapshot.virtualResultIdsByNodeId?.[virtualNode.id] ?? resolveVirtualNodeResultIds({
-    activeNodeId: virtualNode.id,
-    filter: virtualNode.virtualFilter,
-    manualChildOrder: virtualNode.manualChildOrder,
-    nodeOrder: selectCanonicalVisibleNodeIds(normalizedSnapshot),
-    nodesById: normalizedSnapshot.nodesById
-  })).length;
 }
 
 export function resolveDirectoryRowMeta(args: {
@@ -52,31 +28,27 @@ export function resolveDirectoryRowMeta(args: {
   snapshot: WorkspaceSnapshot | null;
 }) {
   if (args.item.source === 'trashRoot') {
-    const count = args.snapshot ? selectCanonicalTrashedNodeIds(normalizeWorkspaceSnapshot(args.snapshot)).length : null;
+    const count = args.snapshot ? resolveCompanionDirectoryCounts(args.snapshot).trashCount : null;
     return formatRowCount(count);
   }
   if (args.item.source === 'trash' && args.item.kind === 'folder') {
-    const count = countDirectChildren(args.snapshot, args.item.nodeId, 'trash');
+    const count = args.snapshot ? resolveCompanionDirectoryCounts(args.snapshot).countChildren(args.item.nodeId, 'trash') : null;
     return formatRowCount(count);
   }
   if (args.item.source === 'virtual' && args.item.kind === 'folder') {
-    const virtualCount = countVirtualResults(args.snapshot, args.item.nodeId);
-    const count = virtualCount ?? countDirectChildren(args.snapshot, args.item.nodeId, 'visible');
+    const virtualCount = args.snapshot ? resolveCompanionDirectoryCounts(args.snapshot).countVirtualResults(args.item.nodeId) : null;
+    const count = virtualCount ?? (args.snapshot ? resolveCompanionDirectoryCounts(args.snapshot).countChildren(args.item.nodeId, 'visible') : null);
     return formatRowCount(count);
   }
   if (args.item.source === 'internal' && args.item.kind === 'folder') {
-    const count = countDirectChildren(args.snapshot, args.item.nodeId, 'visible');
+    const count = args.snapshot ? resolveCompanionDirectoryCounts(args.snapshot).countChildren(args.item.nodeId, 'visible') : null;
     return formatRowCount(count);
   }
   if (args.item.source === 'externalFolder') {
-    return formatRowCount(args.directory.entries.filter((entry) => entry.folderId === args.item.nodeId).length);
+    return formatRowCount(countCompanionExternalDirectoryEntries(args.directory.entries, args.item.nodeId));
   }
   if (args.item.source === 'externalDirectory') {
-    const prefix = args.item.directoryPath ? `${args.item.directoryPath}/` : '';
-    const folderId = args.item.folderId;
-    const count = args.directory.entries.filter(
-      (entry) => entry.folderId === folderId && entry.relativePath.startsWith(prefix)
-    ).length;
+    const count = countCompanionExternalDirectoryEntries(args.directory.entries, args.item.folderId, args.item.directoryPath);
     return formatRowCount(count);
   }
   return null;

@@ -8,6 +8,7 @@ import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionTrashFolderViewByNodeId
 } from '../shared/platform/companionBrowseLists';
+import { resolveCompanionBrowseSnapshot } from '../shared/platform/companionBrowseSnapshot';
 import {
   resolveReadableCompanionArticleByNodeId,
   resolveReadableCompanionTrashArticleByNodeId
@@ -26,6 +27,7 @@ export function useCompanionBrowseSelection(
     sortKey: DEFAULT_FOLDER_LIST_SORT_KEY
   }
 ) {
+  const browseSnapshot = resolveCompanionBrowseSnapshot(snapshot);
   const [selectedBrowseNodeId, setSelectedBrowseNodeId] = useState<string | null>(null);
   const resolvedReadableArticle = useMemo(
     () => {
@@ -41,9 +43,9 @@ export function useCompanionBrowseSelection(
     [readableArticle, selectedBrowseNodeId, snapshot]
   );
   const browsedFolder = useMemo(
-    () => resolveCompanionFolderViewByNodeId(snapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection) ??
-      resolveCompanionTrashFolderViewByNodeId(snapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection),
-    [selectedBrowseNodeId, snapshot, sort.sortDirection, sort.sortKey]
+    () => resolveCompanionFolderViewByNodeId(browseSnapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection) ??
+      resolveCompanionTrashFolderViewByNodeId(browseSnapshot, selectedBrowseNodeId, sort.sortKey, sort.sortDirection),
+    [selectedBrowseNodeId, browseSnapshot, sort.sortDirection, sort.sortKey]
   );
 
   useEffect(() => {
