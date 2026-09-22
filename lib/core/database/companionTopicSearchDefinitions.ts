@@ -2,7 +2,7 @@ import {
   androidBodyStatusExpression,
   androidSearchExcerptExpression
 } from './androidCompanionDerivedReadSql.js';
-import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
+import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 const INLINE_CONTENT = 'n.content';
 const BLOB_DATA = 'CAST(cbd.data AS TEXT)';
