@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render } from '@testing-library/react';
+import { act, cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { onWindowEscape } from '../../shared/platform/keyboard';
@@ -117,7 +117,7 @@ it('lets an open Escape surface close before leaving review editing', () => {
   expect(readReviewTopic).toHaveBeenCalledTimes(1);
 });
 
-it('runs review shortcuts after focus moves from the editor to a panel button', () => {
+it('runs review shortcuts after focus moves from the editor to a panel button', async () => {
   const readReviewTopic = vi.fn(async () => true);
   const closeSurface = vi.fn();
   render(<ReviewShortcutHarness readReviewTopic={readReviewTopic} />);
@@ -132,9 +132,9 @@ it('runs review shortcuts after focus moves from the editor to a panel button', 
   fireEvent.focusIn(panelButton);
   const unlistenSurface = onWindowEscape(closeSurface);
 
-  fireEvent.keyDown(window, { key: 'r' });
+  await act(async () => { fireEvent.keyDown(window, { key: 'r' }); });
   fireEvent.keyDown(panelButton, { key: 'Escape' });
-  fireEvent.keyDown(window, { key: 'r' });
+  await act(async () => { fireEvent.keyDown(window, { key: 'r' }); });
   unlistenSurface();
 
   expect(readReviewTopic).toHaveBeenCalledTimes(2);

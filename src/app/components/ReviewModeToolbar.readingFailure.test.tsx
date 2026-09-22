@@ -2,11 +2,14 @@ import { act, fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
+import { ReviewShortcutHarness } from '../hooks/useReviewKeyboardShortcuts.testUtils';
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 
-function renderReadingToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}) {
+function renderReadingToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}, shortcutRead?: () => Promise<boolean>) {
   return renderWithLocalization(
+    <>
+    {shortcutRead && <ReviewShortcutHarness reviewCurrentNodeId="reading-1" readingReadShortcuts={{ primary: { key: 'f' } }} readReviewTopic={shortcutRead} />}
     <ReviewModeToolbar
       isAnswerRevealed={false}
       isCurrentItemGradable={false}
@@ -32,6 +35,7 @@ function renderReadingToolbar(overrides: Partial<Parameters<typeof ReviewModeToo
       reviewStatus="awaiting-answer"
       {...overrides}
     />
+    </>
   );
 }
 
@@ -78,4 +82,48 @@ it('disables reading actions while a save is pending', async () => {
   });
 
   expect(screen.getByRole('button', { name: 'Read' })).not.toBeDisabled();
+});
+
+it.each(['false', 'throw'])('shows a retry for an F save returning %s without submitting twice', async (failure) => {
+  let completeSave: ((value: boolean) => void) | undefined;
+  const shortcutRead = vi.fn().mockImplementationOnce(async () => {
+    if (failure === 'throw') throw new Error('save failed');
+    return false;
+  }).mockImplementationOnce(() => new Promise<boolean>((resolve) => { completeSave = resolve; }));
+  const buttonRead = vi.fn(async () => true);
+  renderReadingToolbar({ onReadReviewTopic: buttonRead }, shortcutRead);
+  await act(async () => { fireEvent.keyDown(window, { key: 'f' }); });
+  expect(screen.getByText('Failed to save. Please retry.')).toBeVisible();
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    fireEvent.keyDown(window, { key: 'f' });
+    fireEvent.keyDown(window, { key: 'f' });
+  });
+  expect(shortcutRead).toHaveBeenCalledTimes(2);
+  expect(buttonRead).not.toHaveBeenCalled();
+  expect(screen.getByRole('button', { name: 'Read' })).toBeDisabled();
+  await act(async () => { completeSave?.(true); });
+  expect(screen.queryByText('Failed to save. Please retry.')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+});
+
+it('clears a failed shortcut when the toolbar leaves the reading topic', async () => {
+  const shortcutRead = vi.fn(async () => false);
+  const view = renderReadingToolbar({}, shortcutRead);
+  await act(async () => { fireEvent.keyDown(window, { key: 'f' }); });
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeVisible();
+  view.unmount();
+  renderReadingToolbar({ reviewCurrentNodeId: 'reading-2' });
+  expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+});
+
+it('ignores a late failure after leaving its reading topic', async () => {
+  let completeSave: ((value: boolean) => void) | undefined;
+  const shortcutRead = vi.fn(() => new Promise<boolean>((resolve) => { completeSave = resolve; }));
+  const view = renderReadingToolbar({}, shortcutRead);
+  await act(async () => { fireEvent.keyDown(window, { key: 'f' }); });
+  view.unmount();
+  renderReadingToolbar({ reviewCurrentNodeId: 'reading-2' });
+  await act(async () => { completeSave?.(false); });
+  expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
 });

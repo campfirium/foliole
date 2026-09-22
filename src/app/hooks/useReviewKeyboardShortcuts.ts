@@ -4,6 +4,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { CommandShortcutSet } from '../../shared/commands/types';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 
+import { submitReadingReviewFeedback } from './readingReviewFeedbackState';
 import { tryRunDeleteSourceTopicShortcut, tryRunReviewNavigation, tryRunShortcut } from './reviewKeyboardNavigation';
 import { useReviewEditingEscapeHandler } from './useReviewEditingEscapeHandler';
 import { keepReviewNavigationInHotkeyMode, useReviewEditingState } from './useReviewNavigationHotkeyMode';
@@ -170,7 +171,7 @@ function handleVisibleReviewItemKeydown(event: KeyboardEvent, args: UseReviewKey
     if (tryRunShortcut(event, args.readingLaterShortcuts, () => void args.postponeReviewTopic())) {
       return;
     }
-    if (tryRunShortcut(event, args.readingReadShortcuts, () => void args.readReviewTopic())) {
+    if (tryRunShortcut(event, args.readingReadShortcuts, () => void submitReadingReviewFeedback(args.reviewCurrentNodeId, args.readReviewTopic))) {
       return;
     }
     if (tryRunShortcut(event, args.readingDismissShortcuts, () => void args.dismissReviewTopic())) {

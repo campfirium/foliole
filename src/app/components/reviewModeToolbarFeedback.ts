@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { ReviewGrade } from '../../features/review/model/reviewTypes';
+import { resetReadingReviewFeedback, submitReadingReviewFeedback, useReadingReviewFeedbackState } from '../hooks/readingReviewFeedbackState';
 
 type ReviewActionSubmitter<T> = (action: T) => Promise<boolean>;
 
@@ -99,16 +100,16 @@ export function useReadingReviewFeedback(args: {
     },
     [onDismissReviewTopic, onPostponeReviewTopic, onReadReviewTopic, onRevisitReviewTopicSoon]
   );
-  const feedback = useReviewActionFeedback({
-    failureMessage: 'Failed to save. Please retry.',
-    isActive: args.isReadingActive,
-    onSubmit: submitReadingAction,
-    resetKey: args.reviewCurrentNodeId
-  });
+  const feedback = useReadingReviewFeedbackState(args.reviewCurrentNodeId);
+  useEffect(() => {
+    resetReadingReviewFeedback();
+    return resetReadingReviewFeedback;
+  }, [args.isReadingActive, args.reviewCurrentNodeId]);
   return {
     errorMessage: feedback.errorMessage,
     isSubmitting: feedback.isSubmitting,
-    retryReadingAction: feedback.retryAction,
-    submitReadingAction: feedback.submitAction
+    retryReadingAction: feedback.retryReadingAction,
+    submitReadingAction: (action: ReadingReviewFeedbackAction) =>
+      submitReadingReviewFeedback(args.reviewCurrentNodeId, () => submitReadingAction(action))
   };
 }
