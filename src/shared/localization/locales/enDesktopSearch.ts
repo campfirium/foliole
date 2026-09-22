@@ -19,6 +19,8 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.editorPreview.openTable': 'Open table preview',
   'desktop.editorPreview.openDiagram': 'Open diagram preview',
   'desktop.editorPreview.openImage': 'Open image preview',
+  'desktop.editor.imagePasteFailed': 'Could not paste the image. Please try again.',
+  'desktop.editor.imagePasteCanceled': 'Image paste canceled. Please paste again.',
   'desktop.editorPreview.copyCode': 'Copy code',
   'desktop.editorPreview.copiedCode': 'Code copied',
   'desktop.editorPreview.tableTitle': 'Table preview',

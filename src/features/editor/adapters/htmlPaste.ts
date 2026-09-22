@@ -2,8 +2,6 @@ import type { EditorView } from '@codemirror/view';
 
 import { decideClipboardPasteSource } from '../../../../lib/clipboard/clipboardPasteSource';
 import { convertHtmlToMarkdownCompatible } from '../../../../lib/core/import/htmlToMarkdownCompatible';
-import { buildAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
-import { importClipboardImageAttachment } from '../../../shared/platform/attachmentImports';
 import {
   extractMarkedTextAnchorRanges,
   parseStructuredClipboardPayload
@@ -11,15 +9,10 @@ import {
 
 import { FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
 
+export { handleClipboardImagePaste } from './clipboardImagePaste';
+
 interface ClipboardLike {
   getData: (format: string) => string;
-  items?: Iterable<ClipboardItemLike> | ArrayLike<ClipboardItemLike>;
-}
-
-interface ClipboardItemLike {
-  kind: string;
-  type: string;
-  getAsFile?: () => File | null;
 }
 
 function dispatchInsertedText(view: EditorView, content: string) {
@@ -90,74 +83,5 @@ export function handleMarkdownCompatibleHtmlPaste(clipboard: ClipboardLike | nul
   }
 
   dispatchInsertedText(view, converted);
-  return true;
-}
-
-function collectClipboardImageFiles(clipboard: ClipboardLike | null) {
-  const items = clipboard?.items ? Array.from(clipboard.items) : [];
-  if (items.length === 0) {
-    return [];
-  }
-
-  return items
-    .filter((item) => item.kind === 'file' && item.type.startsWith('image/'))
-    .map((item) => item.getAsFile?.())
-    .filter((file): file is File => file instanceof File);
-}
-
-function createImagePastePlaceholder() {
-  return `<!-- foliole-image-paste:${crypto.randomUUID()} -->`;
-}
-
-function replaceDocumentRange(view: EditorView, from: number, to: number, content: string) {
-  view.dispatch({
-    changes: { from, to, insert: content },
-    selection: { anchor: from + content.length }
-  });
-}
-
-function replacePlaceholder(view: EditorView, placeholder: string, content: string) {
-  const currentContent = view.state.doc.toString();
-  const markerIndex = currentContent.indexOf(placeholder);
-  if (markerIndex < 0) {
-    return false;
-  }
-  replaceDocumentRange(view, markerIndex, markerIndex + placeholder.length, content);
-  return true;
-}
-
-function createMarkdownImageLine(storageKey: string, originalName: string) {
-  const baseName = originalName.replace(/\.[^.]+$/, '').trim();
-  const altText = baseName.length > 0 ? baseName : 'Pasted image';
-  return `![${altText}](${buildAssetMarkdownUrl(storageKey)})`;
-}
-
-export function handleClipboardImagePaste(clipboard: ClipboardLike | null, view: EditorView, nodeId: string | null) {
-  if (!nodeId) {
-    return false;
-  }
-
-  const imageFiles = collectClipboardImageFiles(clipboard);
-  if (imageFiles.length === 0) {
-    return false;
-  }
-
-  const { from, to } = view.state.selection.main;
-  const placeholder = createImagePastePlaceholder();
-  replaceDocumentRange(view, from, to, placeholder);
-
-  void (async () => {
-    const importedLines: string[] = [];
-
-    for (const imageFile of imageFiles) {
-      const result = await importClipboardImageAttachment(nodeId, imageFile);
-      if (result?.status === 'imported') {
-        importedLines.push(createMarkdownImageLine(result.storage_key, result.original_name));
-      }
-    }
-
-    replacePlaceholder(view, placeholder, importedLines.join('\n'));
-  })();
-
   return true;
 }

@@ -4,18 +4,10 @@ import { createMockEditorView, type MockEditorView } from '../../../test/codeMir
 import { serializeStructuredClipboardPayload } from '../model/anchorClipboardPayload';
 
 import { FOLIOLE_CLIPBOARD_MIME } from './clipboardInterop';
-import { handleClipboardImagePaste, handleInternalClipboardPaste, handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
+import { handleInternalClipboardPaste, handleMarkdownCompatibleHtmlPaste } from './htmlPaste';
 import { activeNodeIdFacet, pastedAnchorsFacet } from './liveMarkdownState';
 
-const { importClipboardImageAttachment } = vi.hoisted(() => ({
-  importClipboardImageAttachment: vi.fn()
-}));
-
 const IMAGE_HASH = 'a'.repeat(64);
-
-vi.mock('../../../shared/platform/attachmentImports', () => ({
-  importClipboardImageAttachment
-}));
 
 function createPasteView(overrides?: {
   facet?: (facet: unknown) => unknown;
@@ -167,48 +159,6 @@ function runExternalMarkedTextCase() {
   expect(onPastedAnchors).not.toHaveBeenCalled();
 }
 
-async function runClipboardImageCase() {
-  const placeholder = '<!-- foliole-image-paste:00000000-0000-0000-0000-000000000000 -->';
-  const dispatch = vi.fn();
-  const view = createMockEditorView({
-    dispatch,
-    state: { doc: { toString: () => placeholder }, selection: { main: { from: 0, to: 0 } } }
-  });
-  const file = new File(['png-bytes'], 'clip.png', { type: 'image/png' });
-  const randomUUIDSpy = vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue('00000000-0000-0000-0000-000000000000');
-
-  importClipboardImageAttachment.mockResolvedValue({
-    status: 'imported',
-    attachment_id: 'attachment-1',
-    attachment_record: 'created',
-    created_at: '2026-03-30T00:00:00.000Z',
-    hash: IMAGE_HASH,
-    mime_type: 'image/png',
-    original_name: 'clip.png',
-    size_bytes: 9,
-    storage_key: `${IMAGE_HASH}.png`,
-    stored_file: 'created'
-  });
-
-  expect(
-    handleClipboardImagePaste(
-      { getData: () => '', items: [{ kind: 'file', type: 'image/png', getAsFile: () => file }] },
-      view,
-      'node-1'
-    )
-  ).toBe(true);
-
-  await Promise.resolve();
-  await Promise.resolve();
-
-  expect(dispatch).toHaveBeenNthCalledWith(1, expect.objectContaining({ changes: { from: 0, to: 0, insert: placeholder } }));
-  expect(dispatch).toHaveBeenNthCalledWith(
-    2,
-    expect.objectContaining({ changes: { from: 0, to: placeholder.length, insert: `![clip](asset://${IMAGE_HASH}.png)` } })
-  );
-  randomUUIDSpy.mockRestore();
-}
-
 describe('handleInternalClipboardPaste', () => {
   it('restores the internal markdown payload when the custom clipboard mime exists', runStructuredClipboardCase);
   it('falls back to inserting raw internal clipboard text when no structured payload exists', runRawClipboardCase);
@@ -220,8 +170,4 @@ describe('handleMarkdownCompatibleHtmlPaste', () => {
   it('keeps degraded HTML structures visible during rich text paste', runHtmlDegradedCase);
   it('keeps VS Code copied markdown tables as plain markdown', runVsCodeMarkdownTableCase);
   it('converts external marked text into editable plain text without recreating child anchors', runExternalMarkedTextCase);
-});
-
-describe('handleClipboardImagePaste', () => {
-  it('imports pasted image files and rewrites the placeholder into attachment markdown', runClipboardImageCase);
 });
