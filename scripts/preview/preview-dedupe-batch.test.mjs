@@ -159,7 +159,14 @@ describe('preview-dedupe batching', () => {
       const first = await runDedupe(repoRoot, 'first', env);
       await writeFile(path.join(repoRoot, 'src', 'app', 'App.tsx'), 'export const app = 3;\n', 'utf8');
       const second = runFailingDedupe(repoRoot, 'second', env);
-      await delay(1_000);
+      await vi.waitFor(async () => {
+        const state = JSON.parse(await readFile(
+          path.join(repoRoot, '.lab/internal/runtime/windows-preview.state.json'), 'utf8'
+        ));
+        expect(Object.values(state.runs).some((run) =>
+          run.status === 'waiting-success' && run.lastExitCode === 7
+        )).toBe(true);
+      }, { timeout: 10_000 });
       const earlyResult = await Promise.race([
         second.then(() => 'settled'),
         delay(40).then(() => 'waiting')
@@ -178,7 +185,7 @@ describe('preview-dedupe batching', () => {
     } finally {
       await rm(repoRoot, { force: true, maxRetries: 5, recursive: true, retryDelay: 100 });
     }
-  }, 10_000);
+  }, INTEGRATION_TIMEOUT_MS);
 
   it('returns failed windows preview requests by default without waiting for a later success', async () => {
     const repoRoot = await createRepo();
