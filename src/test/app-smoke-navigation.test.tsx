@@ -115,7 +115,9 @@ it('moves selected nodes as one drag group and preserves selection order', async
   }
 
   fireEvent.click(node2Button);
+  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2'));
   fireEvent.click(node3Button, { ctrlKey: true });
+  await waitFor(() => expect(useWorkspaceStore.getState().activeNodeId).toBe('node-3'));
   const dataTransfer = {
     dropEffect: 'move',
     effectAllowed: 'move',
@@ -140,9 +142,10 @@ it('moves selected nodes as one drag group and preserves selection order', async
   fireEvent.dragEnd(dragRow, { dataTransfer });
   rectSpy.mockRestore();
 
-  if (useWorkspaceStore.getState().nodesById['node-2']?.parentNodeId !== 'node-4') {
-    await useWorkspaceStore.getState().moveNodes(['node-2', 'node-3'], 'node-4', 'child');
-  }
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().nodesById['node-2']?.parentNodeId).toBe('node-4');
+    expect(useWorkspaceStore.getState().nodesById['node-3']?.parentNodeId).toBe('node-4');
+  });
   const state = useWorkspaceStore.getState();
   expect(state.nodesById['node-3']?.parentNodeId).toBe('node-4');
   expect(state.nodesById['node-2']?.parentNodeId).toBe('node-4');
