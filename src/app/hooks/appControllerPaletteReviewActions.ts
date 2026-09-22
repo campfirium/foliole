@@ -9,6 +9,7 @@ import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/fol
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { submitReadingReviewFeedback } from './readingReviewFeedbackState';
+import { submitReviewGradeFeedback } from './reviewGradeFeedbackState';
 import { scrollReviewReadingSurface } from './reviewReadingScrollCommand';
 
 export function resolveReviewDeleteTargetNodeId(ws: ReturnType<typeof useWorkspaceSelectors>) {
@@ -74,7 +75,8 @@ export function createPaletteReviewActions(args: {
       args.ws.reviewSession.currentNodeId, () => args.ws.dismissReviewTopic(getDemoRuntimeNowIso())
     ),
     exitReviewSession: args.ws.exitReviewSession,
-    gradeReviewCard: (grade: 1 | 2 | 3 | 4) => args.ws.gradeReviewCard(grade, getDemoRuntimeNowIso()),
+    gradeReviewCard: (grade: 1 | 2 | 3 | 4) =>
+      submitReviewGradeFeedback(args.ws.reviewSession.currentNodeId, () => args.ws.gradeReviewCard(grade, getDemoRuntimeNowIso())),
     reviewNavigateDown: createSelectReviewNodeCommand({
       nav: args.nav,
       nodeId: activeNodeId ? resolveReviewFirstChildNodeId(activeNodeId, navigationSource) : null

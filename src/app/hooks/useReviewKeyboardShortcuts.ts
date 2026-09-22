@@ -5,6 +5,7 @@ import type { CommandShortcutSet } from '../../shared/commands/types';
 import { onWindowKeydown } from '../../shared/platform/keyboard';
 
 import { submitReadingReviewFeedback } from './readingReviewFeedbackState';
+import { submitReviewGradeFeedback } from './reviewGradeFeedbackState';
 import { tryRunDeleteSourceTopicShortcut, tryRunReviewNavigation, tryRunShortcut } from './reviewKeyboardNavigation';
 import { useReviewEditingEscapeHandler } from './useReviewEditingEscapeHandler';
 import { keepReviewNavigationInHotkeyMode, useReviewEditingState } from './useReviewNavigationHotkeyMode';
@@ -189,16 +190,16 @@ function handleVisibleReviewItemKeydown(event: KeyboardEvent, args: UseReviewKey
     return;
   }
 
-  if (tryRunShortcut(event, args.gradeAgainShortcuts, () => void args.gradeReviewCard(1))) {
+  if (tryRunShortcut(event, args.gradeAgainShortcuts, () => void submitReviewGradeFeedback(args.reviewCurrentNodeId, () => args.gradeReviewCard(1)))) {
     return;
   }
-  if (tryRunShortcut(event, args.gradeHardShortcuts, () => void args.gradeReviewCard(2))) {
+  if (tryRunShortcut(event, args.gradeHardShortcuts, () => void submitReviewGradeFeedback(args.reviewCurrentNodeId, () => args.gradeReviewCard(2)))) {
     return;
   }
-  if (tryRunShortcut(event, args.gradeGoodShortcuts, () => void args.gradeReviewCard(3))) {
+  if (tryRunShortcut(event, args.gradeGoodShortcuts, () => void submitReviewGradeFeedback(args.reviewCurrentNodeId, () => args.gradeReviewCard(3)))) {
     return;
   }
-  if (tryRunShortcut(event, args.gradeEasyShortcuts, () => void args.gradeReviewCard(4))) {
+  if (tryRunShortcut(event, args.gradeEasyShortcuts, () => void submitReviewGradeFeedback(args.reviewCurrentNodeId, () => args.gradeReviewCard(4)))) {
     return;
   }
   handleReviewReadingScrollKeydown(event, args);
