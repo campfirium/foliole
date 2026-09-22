@@ -1,4 +1,4 @@
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
@@ -11,7 +11,8 @@ vi.mock('../../shared/platform/runtimeInvoke', () => ({
   getRuntimeInvoke: vi.fn()
 }));
 
-function HookHarness({ activeNodeId }: { activeNodeId: string | null }) {
+function HookHarness() {
+  const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
   useWorkspaceActiveNodeDocument(activeNodeId);
   return null;
 }
@@ -68,21 +69,21 @@ async function expectTrimmedNode(nodeId: string, hasReveal: boolean) {
   });
 }
 
-async function reopenLongDocument(view: ReturnType<typeof render>, longDocument: string) {
-  useWorkspaceStore.getState().setActiveNode('node-2');
-  view.rerender(<HookHarness activeNodeId="node-2" />);
-  await expectNodeDocument('node-2', 'Loaded node 2 body', null);
-  await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({ content: longDocument, reveal: null });
+async function reopenLongDocument(longDocument: string) {
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-2');
   });
+  await expectNodeDocument('node-2', 'Loaded node 2 body', null);
+  await expectTrimmedNode('node-1', false);
   await waitFor(() => {
     expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({ content: '', reveal: null });
   });
   await expectNodeDocument('node-2', 'Loaded node 2 body', null);
 
   useWorkspaceStore.getState().setNodeViewState('node-1', { scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } });
-  useWorkspaceStore.getState().setActiveNode('node-1');
-  view.rerender(<HookHarness activeNodeId="node-1" />);
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-1');
+  });
   await expectNodeDocument('node-1', longDocument, null);
 }
 
@@ -93,7 +94,7 @@ beforeEach(() => {
   seedTrimmedWorkspaceState();
 });
 
-it('keeps the last inactive document warm after switching once', async () => {
+it('trims inactive store payloads while retaining the document for reopening', async () => {
   const invoke = createDocumentLoader({
     'node-1': { content: 'Loaded node 1 body', reveal: 'Loaded node 1 answer' },
     'node-2': { content: 'Loaded node 2 body', reveal: 'Loaded node 2 answer' },
@@ -102,18 +103,16 @@ it('keeps the last inactive document warm after switching once', async () => {
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const view = render(<HookHarness activeNodeId="node-1" />);
+  render(<HookHarness />);
   await expectNodeDocument('node-1', 'Loaded node 1 body', 'Loaded node 1 answer');
   expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({ content: '', reveal: null });
 
-  useWorkspaceStore.getState().setActiveNode('node-2');
-  view.rerender(<HookHarness activeNodeId="node-2" />);
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-2');
+  });
 
   await expectNodeDocument('node-2', 'Loaded node 2 body', 'Loaded node 2 answer');
-  expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
-    content: 'Loaded node 1 body',
-    reveal: 'Loaded node 1 answer'
-  });
+  await expectTrimmedNode('node-1', true);
   expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
     ['load_node_document', { nodeId: 'node-1' }],
     ['load_node_document', { nodeId: 'node-2' }]
@@ -129,32 +128,26 @@ it('reopens a recently visited document without loading it again', async () => {
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const view = render(<HookHarness activeNodeId="node-1" />);
+  render(<HookHarness />);
   await expectNodeDocument('node-1', 'Loaded node 1 body', 'Loaded node 1 answer');
 
-  useWorkspaceStore.getState().setActiveNode('node-2');
-  view.rerender(<HookHarness activeNodeId="node-2" />);
-  await expectNodeDocument('node-2', 'Loaded node 2 body', 'Loaded node 2 answer');
-  expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({
-    content: 'Loaded node 1 body',
-    reveal: 'Loaded node 1 answer'
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-2');
   });
+  await expectNodeDocument('node-2', 'Loaded node 2 body', 'Loaded node 2 answer');
+  await expectTrimmedNode('node-1', true);
 
-  useWorkspaceStore.getState().setActiveNode('node-3');
-  view.rerender(<HookHarness activeNodeId="node-3" />);
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-3');
+  });
   await expectNodeDocument('node-3', 'Loaded node 3 body', 'Loaded node 3 answer');
 
-  useWorkspaceStore.getState().setActiveNode('node-1');
-  view.rerender(<HookHarness activeNodeId="node-1" />);
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-1');
+  });
   await expectNodeDocument('node-1', 'Loaded node 1 body', 'Loaded node 1 answer');
-  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
-    content: 'Loaded node 2 body',
-    reveal: 'Loaded node 2 answer'
-  });
-  expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({
-    content: 'Loaded node 3 body',
-    reveal: 'Loaded node 3 answer'
-  });
+  await expectTrimmedNode('node-2', true);
+  await expectTrimmedNode('node-3', true);
   expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
     ['load_node_document', { nodeId: 'node-1' }],
     ['load_node_document', { nodeId: 'node-2' }],
@@ -162,7 +155,7 @@ it('reopens a recently visited document without loading it again', async () => {
   ]);
 });
 
-it('trims the oldest inactive document once the recent cache limit is exceeded', async () => {
+it('keeps several recent documents reusable without pinning inactive store payloads', async () => {
   const invoke = createDocumentLoader({
     'node-1': { content: 'Loaded node 1 body', reveal: 'Loaded node 1 answer' },
     'node-2': { content: 'Loaded node 2 body', reveal: 'Loaded node 2 answer' },
@@ -171,33 +164,35 @@ it('trims the oldest inactive document once the recent cache limit is exceeded',
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const view = render(<HookHarness activeNodeId="node-1" />);
+  render(<HookHarness />);
   await expectNodeDocument('node-1', 'Loaded node 1 body', 'Loaded node 1 answer');
 
-  useWorkspaceStore.getState().setActiveNode('node-2');
-  view.rerender(<HookHarness activeNodeId="node-2" />);
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-2');
+  });
   await expectNodeDocument('node-2', 'Loaded node 2 body', 'Loaded node 2 answer');
 
-  useWorkspaceStore.getState().setActiveNode('node-3');
-  view.rerender(<HookHarness activeNodeId="node-3" />);
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-3');
+  });
   await expectNodeDocument('node-3', 'Loaded node 3 body', 'Loaded node 3 answer');
 
-  useWorkspaceStore.getState().setActiveNode('node-4');
-  view.rerender(<HookHarness activeNodeId="node-4" />);
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-4');
+  });
   await expectNodeDocument('node-4', 'Loaded node 4 body', 'Loaded node 4 answer');
   await expectTrimmedNode('node-1', true);
-  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
-    content: 'Loaded node 2 body',
-    reveal: 'Loaded node 2 answer'
+  await expectTrimmedNode('node-2', true);
+  await expectTrimmedNode('node-3', true);
+  expect(useWorkspaceStore.getState().rendererBoundaryKeepNodeIds).toEqual([]);
+  act(() => {
+    useWorkspaceStore.getState().setActiveNode('node-1');
   });
-  expect(useWorkspaceStore.getState().nodesById['node-3']!).toMatchObject({
-    content: 'Loaded node 3 body',
-    reveal: 'Loaded node 3 answer'
-  });
-  expect(useWorkspaceStore.getState().rendererBoundaryKeepNodeIds).toEqual(['node-3', 'node-2']);
+  await expectNodeDocument('node-1', 'Loaded node 1 body', 'Loaded node 1 answer');
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toHaveLength(4);
 });
 
-it('reopens the same long document without reloading while it is still warm', async () => {
+it('reloads an oversized document after switching while preserving its reading position', async () => {
   const longDocument = createLongDocument();
   const invoke = createDocumentLoader({
     'node-1': { content: longDocument, reveal: null },
@@ -207,21 +202,19 @@ it('reopens the same long document without reloading while it is still warm', as
   });
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const view = render(<HookHarness activeNodeId="node-1" />);
+  render(<HookHarness />);
   await expectNodeDocument('node-1', longDocument, null);
-  await reopenLongDocument(view, longDocument);
+  await reopenLongDocument(longDocument);
 
   expect(useWorkspaceStore.getState().nodeViewById['node-1']).toMatchObject({
     scrollTop: 5_400,
     selection: { from: 48_000, to: 48_024 }
   });
-  expect(useWorkspaceStore.getState().nodesById['node-2']!).toMatchObject({
-    content: 'Loaded node 2 body',
-    reveal: null
-  });
+  await expectTrimmedNode('node-2', false);
   expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
     ['load_node_document', { nodeId: 'node-1' }],
-    ['load_node_document', { nodeId: 'node-2' }]
+    ['load_node_document', { nodeId: 'node-2' }],
+    ['load_node_document', { nodeId: 'node-1' }]
   ]);
 });
 

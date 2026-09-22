@@ -63,9 +63,15 @@ it('keeps the previous node document warm after switching once', async () => {
     expect(useWorkspaceStore.getState().nodesById['node-2']?.content).toBe('Loaded node 2 body');
   });
   await waitFor(() => {
-    expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Loaded node 1 body');
+    expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('');
   });
   expect(useWorkspaceStore.getState().nodesById['node-1']?.hasContent).toBe(true);
-  expect(useWorkspaceStore.getState().rendererBoundaryKeepNodeIds).toEqual(['node-1']);
+  fireEvent.click(getCurrentFolderTreeItem('Node 1'));
+  await waitFor(() => {
+    expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe('Loaded node 1 body');
+  });
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
+    ['load_node_document', { nodeId: 'node-2' }]
+  ]);
   expect(invoke).toHaveBeenCalledWith('load_node_document', { nodeId: 'node-2' });
 });

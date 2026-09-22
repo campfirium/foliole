@@ -73,6 +73,7 @@ it('restores the application sqlite state from an online backup snapshot', async
     nodesById: {
       'node-1': {
         attachments: [],
+        authorText: null,
         id: 'node-1',
         imageSources: {},
         parentNodeId: null,
@@ -128,6 +129,7 @@ it('restores review history, node lifecycle state, and backup truth after later 
     ...restored,
     nodesById: Object.fromEntries(Object.entries(restored.nodesById).map(([nodeId, node]) => [nodeId, {
       ...node,
+      authorText: null,
       imageSources: {},
       importContentFingerprint: null,
       importSourceFingerprint: null,
