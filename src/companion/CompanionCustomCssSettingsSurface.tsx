@@ -25,7 +25,7 @@ function CustomCssSettingsHeader(props: Pick<
 >) {
   const t = useTranslation();
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
       <div>
         <h3 className="text-base font-semibold text-foreground">{t('companion.settings.appearance.css.title')}</h3>
         <p className="mt-2 text-sm leading-6 text-companion-text-secondary">

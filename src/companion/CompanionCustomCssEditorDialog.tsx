@@ -34,7 +34,7 @@ function CustomCssEditorFields(props: Pick<EditorDialogProps, 'draft' | 'error' 
       </label>
       <label className="block text-sm font-medium text-foreground">
         <span>{t('companion.settings.appearance.css.source')}</span>
-        <AppTextarea className="mt-2 min-h-48 font-mono text-sm" onChange={(event) => props.onChange({ ...draft, sourceCss: event.currentTarget.value })} spellCheck={false} value={draft.sourceCss} />
+        <AppTextarea className="mt-2 min-h-48 font-mono" onChange={(event) => props.onChange({ ...draft, sourceCss: event.currentTarget.value })} spellCheck={false} value={draft.sourceCss} />
       </label>
       {props.error ? <p className="text-sm leading-6 text-error" role="alert">{props.error}</p> : null}
       <div className="flex items-center justify-between gap-4 border-t border-companion-divider pt-4">
