@@ -41,4 +41,5 @@ export function useVirtualListViewportRemeasure(args: {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [args.isVirtual, scheduleMeasure]);
+  return animationFrameRef;
 }

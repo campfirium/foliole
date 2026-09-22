@@ -185,7 +185,9 @@ export function VirtualListSurfaceVirtual<TItem>(props: VirtualListSurfaceVirtua
     rangeExtractor,
     useAnimationFrameWithResizeObserver: true
   });
-  useVirtualListPosition({ keys, position: props.position, rootRef, scrollElementRef: props.scrollElementRef, virtualizer });
+  const remeasureFrame = useVirtualListViewportRemeasure({ isVirtual: true, virtualizer });
+  useVirtualListPosition({ keys, position: props.position, rootRef, scrollElementRef: props.scrollElementRef,
+    virtualizer, measureItems: props.measureItems, remeasureFrame });
   const scrollToKey =
     props.scrollToIndex !== null && props.scrollToIndex !== undefined && props.scrollToIndex >= 0 && props.scrollToIndex < props.items.length
       ? props.getItemKey(props.items[props.scrollToIndex] as TItem)
@@ -199,7 +201,6 @@ export function VirtualListSurfaceVirtual<TItem>(props: VirtualListSurfaceVirtua
     scrollToKey,
     virtualizer
   });
-  useVirtualListViewportRemeasure({ isVirtual: true, virtualizer });
   const totalSize = virtualizer.getTotalSize();
 
   return (
