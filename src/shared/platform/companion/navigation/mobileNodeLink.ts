@@ -17,7 +17,8 @@ export function canOpenMobileNodeLink(snapshot: WorkspaceSnapshot | null, nodeId
   if (!snapshot) return false;
   const normalized = normalizeWorkspaceSnapshot(snapshot);
   if (!normalized.nodeOrder.includes(nodeId)) return false;
-  return Boolean(resolveCompanionFolderViewByNodeId(normalized, nodeId) ||
+  return Boolean(normalized.nodesById[nodeId]?.hasContent ||
+    resolveCompanionFolderViewByNodeId(normalized, nodeId) ||
     resolveReadableCompanionArticleByNodeId(normalized, nodeId));
 }
 

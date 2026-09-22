@@ -60,8 +60,17 @@ describe('mobile external navigation', () => {
 });
 
 describe('mobile link visibility and cancellation', () => {
-  it('uses normalized visibility before the readable selector', () => {
+  it('rejects a deleted metadata-only topic', () => {
     const state = snapshot();
+    state.nodesById['topic-A']!.content = '';
+    state.nodesById['topic-A']!.hasContent = true;
+    state.nodesById['topic-A']!.deletedAt = '2026-09-20';
+    expect(canOpenMobileNodeLink(state, 'topic-A')).toBe(false);
+  });
+  it('rejects a metadata-only topic below a deleted ancestor', () => {
+    const state = snapshot();
+    state.nodesById['topic-A']!.content = '';
+    state.nodesById['topic-A']!.hasContent = true;
     state.nodesById['topic-A']!.parentNodeId = 'folder-A';
     state.nodesById['folder-A']!.deletedAt = '2026-09-20';
     expect(canOpenMobileNodeLink(state, 'topic-A')).toBe(false);
@@ -72,6 +81,13 @@ describe('mobile link visibility and cancellation', () => {
     const state = snapshot();
     state.nodesById['topic-A']!.content = '';
     state.nodesById['topic-A']!.bodyStatus = 'missing';
+    expect(canOpenMobileNodeLink(state, 'topic-A')).toBe(true);
+  });
+  it('opens a metadata-only topic whose body is loaded on demand', () => {
+    const state = snapshot();
+    state.nodesById['topic-A']!.content = '';
+    state.nodesById['topic-A']!.bodyStatus = 'ready';
+    state.nodesById['topic-A']!.hasContent = true;
     expect(canOpenMobileNodeLink(state, 'topic-A')).toBe(true);
   });
   it('ignores obsolete async completions and checks the current snapshot', async () => {
