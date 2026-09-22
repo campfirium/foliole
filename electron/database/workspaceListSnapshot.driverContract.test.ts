@@ -39,7 +39,7 @@ const workspaceListRow = {
   is_title_manual: 1,
   hide_title_heading: 1,
   virtual_filter: null,
-  collection_source_content: '---\ncollections:\n  - "Guide"\n---\nBody',
+  collection_source_content: '---\nauthor: Ada\ncollections:\n  - "Guide"\n---\nBody',
   opening_text: 'The first body paragraph.',
   body_status: 'ready',
   has_content: 1,
@@ -81,7 +81,7 @@ const expectedWorkspaceListSnapshot = {
       title: 'Node 1',
       isTitleManual: true,
       hideTitleHeading: true,
-      imageSources: {},
+      authorText: 'Ada',
       bodyBlobHash: null,
       bodyStatus: 'ready',
       collections: ['Guide'],
@@ -138,6 +138,7 @@ it('projects collection names without retaining long-lived content bodies', () =
   expect(workspaceListSql).toContain('AS has_reveal');
   expect(workspaceListSql).toContain('n.opening_text,');
   expect(workspaceListSql).toContain('n.content AS collection_source_content');
+  expect(workspaceListSql).not.toContain('n.image_sources');
   expect(workspaceListSql).not.toContain('content_blob_data');
   expect(workspaceListSql).toContain('LEFT JOIN content_blobs cb');
   expect(workspaceListSql).toContain('node_reading_host_state');

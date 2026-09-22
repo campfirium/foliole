@@ -33,6 +33,7 @@ export interface NativeWorkspaceNodeSnapshot {
     role: string;
     storageKey?: string;
   }>;
+  authorText?: string | null;
   id: string;
   parentNodeId: string | null;
   kind: NodeKind;

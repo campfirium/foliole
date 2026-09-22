@@ -18,6 +18,7 @@ export const WORKSPACE_NODE_BOUNDARY_PRESERVED_FIELDS = [
   'bodyBlobHash',
   'bodyStatus',
   'openingText',
+  'authorText',
   'currentVersionId',
   'anchorLink',
   'imageRegions',

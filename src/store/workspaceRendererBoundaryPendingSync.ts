@@ -1,5 +1,6 @@
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
+import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
 import { setPendingNodeSyncResolvedListener } from './workspacePendingNodeSync';
 import { toRendererBoundaryNode } from './workspaceRendererBoundary';
 import type { WorkspaceState } from './workspaceStore';
@@ -22,6 +23,7 @@ export function registerPendingNodeSyncRendererBoundary(workspaceStore: Workspac
       if (!node || (node.content === '' && node.reveal === null)) {
         return state;
       }
+      syncWorkspaceNodeDocumentCacheFromNode(node);
       return {
         nodesById: {
           ...state.nodesById,

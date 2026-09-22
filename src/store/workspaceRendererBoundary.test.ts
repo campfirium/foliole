@@ -6,6 +6,10 @@ vi.mock('../shared/platform/runtimeInvoke', () => ({
 
 import { getRuntimeInvoke } from '../shared/platform/runtimeInvoke';
 
+import {
+  readCachedWorkspaceNodeDocument,
+  resetWorkspaceNodeDocumentCacheForTest
+} from './workspaceNodeDocumentCache';
 import { enforceWorkspaceRendererBoundary } from './workspaceRendererBoundary';
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
 
@@ -38,6 +42,7 @@ function createLoadedNodes() {
 }
 
 beforeEach(() => {
+  resetWorkspaceNodeDocumentCacheForTest();
   window.localStorage.clear();
   vi.restoreAllMocks();
   vi.mocked(getRuntimeInvoke).mockReset();
@@ -126,7 +131,7 @@ it('reuses unaffected node references when only the active node changes', () => 
   expect(state.nodesById['node-4']!).toBe(beforeNode4);
 });
 
-it('keeps the previously active node warm when navigation opens another node', async () => {
+it('moves the previously active node from the store into the warm cache', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn(() => new Promise(() => undefined)));
 
   useWorkspaceStore.setState({
@@ -146,21 +151,27 @@ it('keeps the previously active node warm when navigation opens another node', a
 
   useWorkspaceStore.getState().updateNodeContent('node-1', 'Locally edited body');
   await Promise.resolve();
+  expect(useWorkspaceStore.getState().activeNodeId).toBe('node-2');
+  expect(useWorkspaceStore.getState().nodesById['node-2']?.content).toBe('Second node body');
   useWorkspaceStore.getState().openNode('node-1');
 
   const state = useWorkspaceStore.getState();
+  expect(state.rendererBoundaryKeepNodeIds).toEqual([]);
   expect(state.activeNodeId).toBe('node-1');
   expect(state.nodesById['node-1']!).toMatchObject({
     content: '',
     hasContent: true
   });
   expect(state.nodesById['node-2']!).toMatchObject({
-    content: 'Second node body',
+    content: '',
     hasContent: true,
-    reveal: 'Second answer',
+    reveal: null,
     hasReveal: true
   });
-  expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-2']);
+  expect(readCachedWorkspaceNodeDocument('node-2')).toMatchObject({
+    content: 'Second node body',
+    reveal: 'Second answer'
+  });
 });
 
 it('keeps direct nodesById patches trimmed against the active-node boundary', () => {

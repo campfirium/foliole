@@ -1,3 +1,4 @@
+import { readNodeAuthorText } from '../nodes/nodeAuthorFrontmatter.js';
 import { readTopicCollections } from '../nodes/topicCollectionsFrontmatter.js';
 
 import type { DatabaseRow } from './driver.js';
@@ -70,8 +71,11 @@ export function buildWorkspaceListNodesById(rows: WorkspaceNodeRow[]) {
       content: '',
       reveal: null
     });
+    const listNode = { ...node };
+    delete listNode.imageSources;
     nodesById[row.id] = {
-      ...node,
+      ...listNode,
+      authorText: readNodeAuthorText(row.collection_source_content ?? ''),
       collections: readCollections(row.collection_source_content),
       ...(isWorkspaceBodyStatus(row.body_status) ? { bodyStatus: row.body_status } : {}),
       hasContent: row.has_content === 1,

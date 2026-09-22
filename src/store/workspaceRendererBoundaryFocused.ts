@@ -7,37 +7,12 @@ interface FocusedRendererBoundaryArgs {
   activeNodeId: string | null;
   currentKeepNodeIds: ReadonlySet<string>;
   currentNodesById: Record<string, Node>;
-  documentWorksetNodeIds: string[];
+  documentWorksetNodeIds: readonly string[];
   isBoundaryProjectionReusable: (currentNode: Node | undefined, sourceNode: Node, keepDocument: boolean) => boolean;
   keepNodeIds: ReadonlySet<string>;
   nextNodesById: Record<string, Node>;
   shouldKeepNodeDocument: (nodeId: string, activeNodeId: string | null, keepNodeIds: ReadonlySet<string>) => boolean;
   toRendererBoundaryNode: (node: Node, keepDocument: boolean) => Node;
-}
-
-function listActiveFolderChildNodeIds(activeNodeId: string | null, nodesById: Record<string, Node>) {
-  if (!activeNodeId) {
-    return [];
-  }
-  const activeNode = nodesById[activeNodeId];
-  if (!activeNode || activeNode.kind !== 'folder' || activeNode.specialKind === 'inbox') {
-    return [];
-  }
-  return Object.values(nodesById)
-    .filter((node) => node.parentNodeId === activeNodeId)
-    .map((node) => node.id);
-}
-
-function collectBoundaryKeepNodeIds(
-  activeNodeId: string | null,
-  nodesById: Record<string, Node>,
-  keepNodeIds: ReadonlySet<string>
-) {
-  const nextKeepNodeIds = new Set(keepNodeIds);
-  for (const nodeId of listActiveFolderChildNodeIds(activeNodeId, nodesById)) {
-    nextKeepNodeIds.add(nodeId);
-  }
-  return nextKeepNodeIds;
 }
 
 export function hasMatchingNodeIds(
@@ -73,19 +48,9 @@ export function listDocumentWorksetNodeIds(
 }
 
 export function reconcileFocusedRendererBoundaryNodes(args: FocusedRendererBoundaryArgs) {
-  const previousKeepNodeIds = collectBoundaryKeepNodeIds(
-    args.activeNodeId,
-    args.currentNodesById,
-    args.currentKeepNodeIds
-  );
-  const nextKeepNodeIds = collectBoundaryKeepNodeIds(
-    args.activeNodeId,
-    args.nextNodesById,
-    args.keepNodeIds
-  );
   const affectedNodeIds = new Set<string>([
-    ...previousKeepNodeIds,
-    ...nextKeepNodeIds,
+    ...args.currentKeepNodeIds,
+    ...args.keepNodeIds,
     ...args.documentWorksetNodeIds
   ]);
   if (args.activeNodeId) {
@@ -103,7 +68,7 @@ export function reconcileFocusedRendererBoundaryNodes(args: FocusedRendererBound
       }
       continue;
     }
-    const keepDocument = args.shouldKeepNodeDocument(nodeId, args.activeNodeId, nextKeepNodeIds);
+    const keepDocument = args.shouldKeepNodeDocument(nodeId, args.activeNodeId, args.keepNodeIds);
     const currentNode = args.currentNodesById[nodeId];
     if (args.isBoundaryProjectionReusable(currentNode, sourceNode, keepDocument)) {
       continue;

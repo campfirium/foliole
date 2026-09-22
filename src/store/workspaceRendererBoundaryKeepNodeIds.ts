@@ -3,26 +3,17 @@ import type { WorkspaceState } from './workspaceStore';
 
 export const RECENT_RENDERER_BOUNDARY_NODE_LIMIT = 2;
 
-function appendRecentKeepNodeId(
-  keepNodeIds: readonly string[],
-  nodeId: string | null,
-  limit = RECENT_RENDERER_BOUNDARY_NODE_LIMIT
-) {
-  if (!nodeId) {
-    return keepNodeIds.slice(0, limit);
-  }
-  return [nodeId, ...keepNodeIds.filter((keepNodeId) => keepNodeId !== nodeId)].slice(0, limit);
-}
-
 export function resolveRendererBoundaryKeepNodeIds(
   state: WorkspaceState | Partial<WorkspaceState>,
   currentState: WorkspaceState
 ) {
   if ('activeNodeId' in state && state.activeNodeId !== currentState.activeNodeId) {
-    return appendRecentKeepNodeId(
-      currentState.rendererBoundaryKeepNodeIds.filter((nodeId) => nodeId !== state.activeNodeId),
-      currentState.activeNodeId
-    );
+    const requestedKeepNodeIds = 'rendererBoundaryKeepNodeIds' in state
+      ? state.rendererBoundaryKeepNodeIds ?? currentState.rendererBoundaryKeepNodeIds
+      : currentState.rendererBoundaryKeepNodeIds;
+    return requestedKeepNodeIds
+      .filter((nodeId) => nodeId !== currentState.activeNodeId && nodeId !== state.activeNodeId)
+      .slice(0, RECENT_RENDERER_BOUNDARY_NODE_LIMIT);
   }
 
   if ('rendererBoundaryKeepNodeIds' in state) {

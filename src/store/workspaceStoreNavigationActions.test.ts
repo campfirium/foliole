@@ -62,7 +62,7 @@ it('keeps review paused when re-opening an already active queued topic', () => {
   expect(state.reviewSession.queueNodeIds).toEqual(['reading-1', 'fsrs-1']);
 });
 
-it('keeps the previous document warm when opening another node through navigation', () => {
+it('does not pin the previous document when opening another node through navigation', () => {
   const seedNode = useWorkspaceStore.getState().nodesById['node-1']!;
 
   useWorkspaceStore.setState({
@@ -98,7 +98,7 @@ it('keeps the previous document warm when opening another node through navigatio
   const state = useWorkspaceStore.getState();
   expect(state.activeNodeId).toBe('node-2');
   expect(state.nodesById['node-1']!).toMatchObject({ content: 'First node body', reveal: null });
-  expect(state.rendererBoundaryKeepNodeIds).toEqual(['node-1']);
+  expect(state.rendererBoundaryKeepNodeIds).toEqual([]);
 });
 
 it('records a parent open without a loaded document when navigating to parent', () => {

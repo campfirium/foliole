@@ -112,6 +112,7 @@ interface NodeAttachment {
 }
 
 export interface Node {
+  authorText?: string | null;
   id: string;
   parentNodeId: string | null;
   kind: NodeKind;

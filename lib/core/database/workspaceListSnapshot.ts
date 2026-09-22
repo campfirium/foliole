@@ -52,7 +52,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
        CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
        CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE n.anchor_link END AS anchor_link,
-       n.image_regions, n.image_sources,
+       n.image_regions,
        n.import_content_fingerprint,
        n.import_source_fingerprint,
        n.created_at,

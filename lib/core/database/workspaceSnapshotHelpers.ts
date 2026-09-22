@@ -1,4 +1,5 @@
 import { parseManualChildOrder } from '../nodes/manualChildOrder.js';
+import { readNodeAuthorText } from '../nodes/nodeAuthorFrontmatter.js';
 import { isNodeKind, type NodeKind } from '../nodes/nodeKind.js';
 import { parseVirtualNodeFilter, type VirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { normalizeReadwiseRemoteLifecycle, type ReadwiseRemoteLifecycleState } from '../readwise/readwiseRemoteLifecycle.js';
@@ -33,6 +34,7 @@ interface WorkspaceReadingProfile {
 
 export interface WorkspaceNodeSnapshot {
   attachments?: WorkspaceNodeAttachmentSnapshot[];
+  authorText?: string | null;
   bodyBlobHash?: string | null;
   bodyStatus?: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
   collections?: string[];
@@ -171,6 +173,7 @@ function toReviewProfile(row: WorkspaceNodeRowShape): WorkspaceReviewProfile | n
 export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): WorkspaceNodeSnapshot {
   const imageRegions = parseStoredImageRegions(row.image_regions);
   const node: WorkspaceNodeSnapshot = {
+    authorText: readNodeAuthorText(row.content),
     id: row.id,
     imageSources: parseImageSources(row.image_sources),
     parentNodeId: row.parent_id,

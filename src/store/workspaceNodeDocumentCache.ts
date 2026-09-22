@@ -1,7 +1,7 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
-import { createBoundedCache } from '../shared/lib/boundedCache';
 
-import { isNodeDocumentLoaded, type WorkspaceNodeDocument } from './workspaceRendererBoundary';
+import { WorkspaceNodeDocumentRetentionCache } from './workspaceNodeDocumentRetentionCache';
+import { isNodeDocumentLoaded, type WorkspaceNodeDocument } from './workspaceRendererBoundaryDocument';
 
 const MAX_CACHED_NODE_DOCUMENT_BYTES = 200 * 1024;
 const MAX_CACHED_NODE_DOCUMENTS = 256;
@@ -10,8 +10,13 @@ const ACTIVE_NEIGHBOR_PREFETCH_LIMIT = 24;
 const ACTIVE_ANCESTOR_PREFETCH_LIMIT = 8;
 const VISIBLE_NODE_PREFETCH_LIMIT = 24;
 const REVIEW_QUEUE_PREFETCH_LIMIT = 12;
-
-const cachedNodeDocumentById = createBoundedCache<string, WorkspaceNodeDocument>(MAX_CACHED_NODE_DOCUMENTS);
+const MAX_CACHED_NODE_DOCUMENT_TOTAL_BYTES = MAX_CACHED_NODE_DOCUMENTS * MAX_CACHED_NODE_DOCUMENT_BYTES;
+const cachedNodeDocumentById = new WorkspaceNodeDocumentRetentionCache(
+  MAX_CACHED_NODE_DOCUMENTS,
+  MAX_CACHED_NODE_DOCUMENT_BYTES,
+  MAX_CACHED_NODE_DOCUMENT_TOTAL_BYTES,
+  measureNodeDocumentBytes
+);
 
 let visiblePrefetchNodeIds: string[] = [];
 
@@ -21,10 +26,8 @@ function uniqueNodeIds(nodeIds: string[]) {
 
 function measureNodeDocumentBytes(document: WorkspaceNodeDocument) {
   const encoder = typeof TextEncoder === 'function' ? new TextEncoder() : null;
-  const encodeLength = (value: string | null | undefined) =>
-    encoder ? encoder.encode(value ?? '').length : (value ?? '').length * 2;
-
-  return encodeLength(document.content) + encodeLength(document.reveal);
+  const serialized = JSON.stringify(document);
+  return encoder ? encoder.encode(serialized).length : serialized.length * 2;
 }
 
 export function shouldCacheWorkspaceNodeDocument(document: WorkspaceNodeDocument) {
@@ -40,8 +43,7 @@ export function writeCachedWorkspaceNodeDocument(nodeId: string, document: Works
     cachedNodeDocumentById.delete(nodeId);
     return false;
   }
-  cachedNodeDocumentById.set(nodeId, document);
-  return true;
+  return cachedNodeDocumentById.set(nodeId, document);
 }
 
 export function removeCachedWorkspaceNodeDocument(nodeId: string) {
@@ -70,6 +72,20 @@ export function syncWorkspaceNodeDocumentCacheFromNode(node: Node | null | undef
     return;
   }
   writeCachedWorkspaceNodeDocument(node.id, toWorkspaceNodeDocument(node));
+}
+
+export function updateWorkspaceNodeDocumentRetentionPins(
+  nodesById: Record<string, Node>,
+  pinnedNodeIds: ReadonlySet<string>
+) {
+  const documents = new Map<string, WorkspaceNodeDocument>();
+  for (const nodeId of pinnedNodeIds) {
+    const node = nodesById[nodeId];
+    if (node && isNodeDocumentLoaded(node)) {
+      documents.set(nodeId, toWorkspaceNodeDocument(node));
+    }
+  }
+  cachedNodeDocumentById.setPinnedDocuments(documents);
 }
 
 export function setVisibleWorkspaceNodeDocumentPrefetchNodeIds(nodeIds: string[]) {

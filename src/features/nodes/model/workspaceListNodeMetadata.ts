@@ -1,38 +1,16 @@
+import { readNodeAuthorText } from '../../../../lib/core/nodes/nodeAuthorFrontmatter';
 import { extractNodeOpeningPreview, NODE_OPENING_PREVIEW_FALLBACK } from '../../../../lib/core/nodes/nodeOpeningPreview';
 
 import { projectMarkdownDisplayText } from './nodeListLabelProjection';
 import type { Node } from './nodeTypes';
 
 const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
-const FRONTMATTER_KEY_VALUE_PATTERN = /^([^:#\s][^:]*?)(\s*:\s*)(.*)$/;
-const FRONTMATTER_LIST_ITEM_PATTERN = /^(\s*)-\s+(.*)$/;
-const WIKILINK_WRAPPER_PATTERN = /\[\[([^\]]+)\]\]/g;
-
 export const WORKSPACE_LIST_SUMMARY_FALLBACK = 'No summary yet.';
 export const WORKSPACE_LIST_OPENING_FALLBACK = NODE_OPENING_PREVIEW_FALLBACK;
 export const WORKSPACE_LIST_DATE_FALLBACK = 'Unknown date';
 const WORKSPACE_LIST_LAST_OPENED_FALLBACK = 'Never opened';
 
 const WORKSPACE_LIST_SUMMARY_MAX_LENGTH = 160;
-
-function normalizeFrontmatterValue(value: string) {
-  return value.replace(WIKILINK_WRAPPER_PATTERN, '$1').trim();
-}
-
-function getFrontmatterLines(content: string) {
-  const lines = content.split('\n');
-  if (lines.length < 3 || !FRONTMATTER_DELIMITER_PATTERN.test(lines[0] ?? '')) {
-    return [];
-  }
-
-  for (let index = 1; index < lines.length; index += 1) {
-    if (FRONTMATTER_DELIMITER_PATTERN.test(lines[index] ?? '')) {
-      return lines.slice(1, index);
-    }
-  }
-
-  return [];
-}
 
 function stripLeadingFrontmatter(content: string) {
   const lines = content.split('\n');
@@ -47,40 +25,6 @@ function stripLeadingFrontmatter(content: string) {
   }
 
   return content;
-}
-
-function getFrontmatterEntryValues(content: string, targetKey: string) {
-  const lines = getFrontmatterLines(content);
-  const values: string[] = [];
-  let currentKey = '';
-
-  for (const line of lines) {
-    const keyMatch = line.match(FRONTMATTER_KEY_VALUE_PATTERN);
-    if (keyMatch) {
-      currentKey = keyMatch[1]?.trim().toLocaleLowerCase() ?? '';
-      if (currentKey !== targetKey) {
-        continue;
-      }
-
-      const value = normalizeFrontmatterValue(keyMatch[3] ?? '');
-      if (value) {
-        values.push(value);
-      }
-      continue;
-    }
-
-    const listMatch = line.match(FRONTMATTER_LIST_ITEM_PATTERN);
-    if (!listMatch || currentKey !== targetKey) {
-      continue;
-    }
-
-    const value = normalizeFrontmatterValue(listMatch[2] ?? '');
-    if (value) {
-      values.push(value);
-    }
-  }
-
-  return values;
 }
 
 function normalizeText(value: string) {
@@ -154,17 +98,18 @@ function resolveWorkspaceListLastOpenedTimestamp(openState: { lastOpenedAt?: str
   }
   return null;
 }
-export function getWorkspaceListNodeAuthor(node: Pick<Node, 'content'>) {
-  const authorValues = getFrontmatterEntryValues(node.content, 'author').map(normalizeText).filter(Boolean);
-  if (authorValues.length === 0) {
-    return null;
+export function getWorkspaceListNodeAuthor(
+  node: Pick<Node, 'authorText' | 'bodyStatus' | 'content' | 'hasContent'>
+) {
+  if (node.content.trim() || node.hasContent === false || node.bodyStatus === 'empty') {
+    return readNodeAuthorText(node.content);
   }
-  return authorValues.join(', ');
+  return node.authorText ?? null;
 }
 
 export function compareWorkspaceListNodeAuthor(
-  left: Pick<Node, 'content' | 'title'>,
-  right: Pick<Node, 'content' | 'title'>
+  left: Pick<Node, 'authorText' | 'bodyStatus' | 'content' | 'hasContent' | 'title'>,
+  right: Pick<Node, 'authorText' | 'bodyStatus' | 'content' | 'hasContent' | 'title'>
 ) {
   const compareText = (leftValue: string, rightValue: string) =>
     leftValue.localeCompare(rightValue, undefined, { numeric: true, sensitivity: 'base' });
