@@ -4,7 +4,7 @@ import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppEmptyState, VirtualListSurface } from '../../shared/ui';
 
-const FOLDER_LIST_ROW_ESTIMATE_PX = 188;
+import { FOLDER_LIST_ROW_HEIGHT_PX } from './FolderListItemRow';
 
 export function FolderListBody({
   filteredNodes,
@@ -43,7 +43,7 @@ export function FolderListBody({
   return (
     <div aria-label={t('desktop.workspace.folderContents')} role="list">
       <VirtualListSurface
-        estimateSize={() => FOLDER_LIST_ROW_ESTIMATE_PX}
+        estimateSize={() => FOLDER_LIST_ROW_HEIGHT_PX}
         getItemKey={(node) => node.id}
         items={filteredNodes}
         renderItem={(node) => onRenderItem(node)}

@@ -44,5 +44,8 @@ it('virtualizes dense folder contents instead of mounting every row', () => {
 
   expect(screen.getByTestId('folder-list-count')).toHaveTextContent('160');
   expect(screen.queryAllByTestId(/folder-list-title-node-/).length).toBeLessThan(160);
-  expect(screen.getByRole('button', { name: 'Open Child topic 000' }).closest('li')).toHaveClass('list-none');
+  const firstRow = screen.getByRole('button', { name: 'Open Child topic 000' }).closest('li');
+  expect(firstRow).toHaveClass('list-none');
+  expect(firstRow).toHaveStyle({ height: '188px' });
+  expect(document.querySelector('[data-virtual-list="true"]')).toHaveStyle({ height: `${children.length * 188}px` });
 });

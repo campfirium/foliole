@@ -2,6 +2,8 @@ import type { MouseEvent as ReactMouseEvent } from 'react';
 
 import { TruncatedTextTooltip } from '../../shared/ui';
 
+export const FOLDER_LIST_ROW_HEIGHT_PX = 188;
+
 interface FolderListTextItemProps {
   active?: boolean | undefined;
   ariaLabel: string;
@@ -16,11 +18,14 @@ interface FolderListTextItemProps {
 
 export function FolderListTextItem(props: FolderListTextItemProps) {
   return (
-    <li className="list-none border-b border-[var(--workspace-region-main-document-content-divider)]">
+    <li
+      className="box-border list-none border-b border-[var(--workspace-region-main-document-content-divider)]"
+      style={{ height: FOLDER_LIST_ROW_HEIGHT_PX }}
+    >
       <button
         aria-label={props.ariaLabel}
         data-node-bulk-selected={props.isBulkSelectionActive ? 'true' : undefined}
-        className={`-mx-4 flex h-[188px] w-[calc(100%+2rem)] flex-col gap-3 overflow-hidden rounded-md px-4 py-5 text-left transition-colors focus-visible:outline-none ${
+        className={`-mx-4 flex h-full w-[calc(100%+2rem)] flex-col gap-3 overflow-hidden rounded-md px-4 py-5 text-left transition-colors focus-visible:outline-none ${
           props.active || props.isBulkSelectionActive
             ? 'bg-[var(--app-surface-control-bg)]'
             : 'hover:bg-[var(--app-surface-control-hover-bg)] focus-visible:bg-[var(--app-surface-control-bg)]'
