@@ -141,6 +141,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "T219 topic editor is unavailable.")
         let token = "T219 refreshed \(target)"
         editor.tap()
+        dismissCapacityWirelessDataPrompt()
         editor.typeText("\n\n\(token)")
         let refreshStarted = CFAbsoluteTimeGetCurrent()
         tap("Done", in: app, timeout: 30)
@@ -176,6 +177,24 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         let passage = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
         passage.tap()
         tap("Exit", in: app, timeout: 30)
+    }
+
+    private func dismissCapacityWirelessDataPrompt() {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let alert = springboard.alerts.matching(NSPredicate(
+            format: "label CONTAINS %@", "Foliole.t219capacity"
+        )).firstMatch
+        guard alert.waitForExistence(timeout: 3) else { return }
+        let wirelessOnly = alert.buttons.matching(NSPredicate(
+            format: "label IN %@", ["WLAN Only", "Wi-Fi Only", "仅限无线局域网"]
+        )).firstMatch
+        guard wirelessOnly.exists else { return }
+        let deny = alert.buttons.matching(NSPredicate(
+            format: "label IN %@", ["Don’t Allow", "Don't Allow", "不允许"]
+        )).firstMatch
+        XCTAssertTrue(deny.exists, "The isolated capacity app network decision is unavailable.")
+        deny.tap()
+        XCTAssertFalse(alert.exists, "The capacity app network prompt remained open.")
     }
 
     private func tap(_ label: String, in app: XCUIApplication, timeout: TimeInterval) {
