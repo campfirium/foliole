@@ -145,8 +145,8 @@ extension FoliolePhysicalSyncGroupUITests {
             overflow.tap()
         }
         tapButton(named: "Highlight", in: app, timeout: 30)
-        XCTAssertFalse(app.buttons["Highlight"].waitForExistence(timeout: 3),
-                       "The selection annotation toolbar remained open after saving.")
+        waitForDisappearance(app.buttons["Highlight"], timeout: 30,
+                             message: "The selection annotation toolbar remained open after saving.")
     }
 
     func addCommentToHighlight(text: String, comment: String, in app: XCUIApplication) {
