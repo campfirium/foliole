@@ -86,6 +86,7 @@ function mockCompanionWorkspaceSync(runtimeKind: 'android-capacitor' | 'ios-capa
     },
     pairingStatus: 'idle',
     pullFromDesktop: vi.fn(),
+    openReadableArticle: vi.fn().mockResolvedValue(null),
     readableArticle: null,
     removeRememberedTarget: vi.fn(),
     replaceSnapshot: vi.fn(),

@@ -1,10 +1,16 @@
 import { screen } from '@testing-library/react';
-import { expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { FolderListView } from './FolderListView';
+
+beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(800);
+});
+afterEach(() => vi.restoreAllMocks());
 
 function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node {
   return {

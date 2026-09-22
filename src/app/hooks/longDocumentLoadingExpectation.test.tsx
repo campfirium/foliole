@@ -1,10 +1,11 @@
-import { render, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
+import { resetWorkspaceNodeDocumentPrefetchForTest } from '../../store/workspaceNodeDocumentPrefetch';
 import { workspacePersistStorage } from '../../store/workspacePersistStorage';
 import { readWorkspaceNodesFromPayload } from '../../store/workspacePersistStorage.test-support';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
@@ -70,13 +71,18 @@ vi.mock('../../features/editor/adapters/CodeMirrorEditorAdapter', () => ({
   }
 }));
 
-function HookHarness({ activeNodeId }: { activeNodeId: string | null }) {
+function HookHarness() {
+  const activeNodeId = useWorkspaceStore((state) => state.activeNodeId);
   useWorkspaceActiveNodeDocument(activeNodeId);
   return null;
 }
 
-function createLongDocument() {
-  return Array.from({ length: 2_500 }, (_, index) => `Paragraph ${index}: ${'Long document body. '.repeat(4)}`).join('\n\n');
+function selectNode(nodeId: string) {
+  act(() => useWorkspaceStore.getState().setActiveNode(nodeId));
+}
+
+function createLongDocument(paragraphs = 2_500) {
+  return Array.from({ length: paragraphs }, (_, index) => `Paragraph ${index}: ${'Long document body. '.repeat(4)}`).join('\n\n');
 }
 
 function createHydrateInvoke(longDocument: string) {
@@ -163,6 +169,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(getRuntimeInvoke).mockReset();
   window.localStorage.clear();
+  resetWorkspaceNodeDocumentPrefetchForTest();
   mockSetSelection.mockClear();
   mockRevealSelection.mockClear();
   mockRestoreSelection.mockClear();
@@ -183,20 +190,18 @@ it('allows first open of a long document to read the full body from local persis
 });
 
 it('reopens the same long document from the warm cache after switching away once', async () => {
-  const longDocument = createLongDocument();
+  const longDocument = createLongDocument(1_000);
   const invoke = createDocumentLoader(longDocument);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const view = render(<HookHarness activeNodeId="node-1" />);
+  render(<HookHarness />);
   await expectNodeDocument('node-1', longDocument);
 
-  useWorkspaceStore.getState().setActiveNode('node-2');
-  view.rerender(<HookHarness activeNodeId="node-2" />);
+  selectNode('node-2');
   await expectNodeDocument('node-2', 'Loaded node 2 body');
-  expect(useWorkspaceStore.getState().nodesById['node-1']!).toMatchObject({ content: longDocument, reveal: null });
+  await expectTrimmedNode('node-1');
 
-  useWorkspaceStore.getState().setActiveNode('node-1');
-  view.rerender(<HookHarness activeNodeId="node-1" />);
+  selectNode('node-1');
   await expectNodeDocument('node-1', longDocument);
 
   expect(invoke.mock.calls.filter(([command]) => command === 'load_node_document')).toEqual([
@@ -205,26 +210,23 @@ it('reopens the same long document from the warm cache after switching away once
   ]);
 });
 
-it('restores a mid-document reading position after the recent cache is eventually trimmed', async () => {
+it('restores a mid-document reading position after an oversized document is released and reloaded', async () => {
   const longDocument = createLongDocument();
   const invoke = createDocumentLoader(longDocument);
   vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
 
-  const view = render(<HookHarness activeNodeId="node-1" />);
+  render(<HookHarness />);
   await expectNodeDocument('node-1', longDocument);
 
   useWorkspaceStore.getState().setNodeViewState('node-1', { scrollTop: 5_400, selection: { from: 48_000, to: 48_024 } });
-  useWorkspaceStore.getState().setActiveNode('node-2');
-  view.rerender(<HookHarness activeNodeId="node-2" />);
+  selectNode('node-2');
   await expectNodeDocument('node-2', 'Loaded node 2 body');
-  expect(useWorkspaceStore.getState().nodesById['node-1']?.content).toBe(longDocument);
+  await expectTrimmedNode('node-1');
 
-  useWorkspaceStore.getState().setActiveNode('node-3');
-  view.rerender(<HookHarness activeNodeId="node-3" />);
+  selectNode('node-3');
   await expectNodeDocument('node-3', 'Loaded node 3 body');
 
-  useWorkspaceStore.getState().setActiveNode('node-4');
-  view.rerender(<HookHarness activeNodeId="node-4" />);
+  selectNode('node-4');
   await expectNodeDocument('node-4', 'Loaded node 4 body');
   await expectTrimmedNode('node-1');
 
@@ -233,9 +235,10 @@ it('restores a mid-document reading position after the recent cache is eventuall
     selection: { from: 48_000, to: 48_024 }
   });
 
-  useWorkspaceStore.getState().setActiveNode('node-1');
-  view.rerender(<HookHarness activeNodeId="node-1" />);
+  selectNode('node-1');
   await expectNodeDocument('node-1', longDocument);
+  expect(invoke.mock.calls.filter(([command, payload]) =>
+    command === 'load_node_document' && payload?.nodeId === 'node-1')).toHaveLength(2);
 
   renderEditor(
     <MarkdownEditor
