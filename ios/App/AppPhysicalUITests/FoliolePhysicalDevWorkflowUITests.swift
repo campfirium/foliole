@@ -146,6 +146,9 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         editor.typeText("\n\n\(token)")
         let refreshStarted = CFAbsoluteTimeGetCurrent()
         tap("Done", in: app, timeout: 30)
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"), object: editor
+        )], timeout: 30), .completed, "The topic editor did not finish saving.")
         XCTAssertTrue(app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS %@", token)
         ).firstMatch.waitForExistence(timeout: 60), "T219 edit did not visibly refresh.")
@@ -179,8 +182,10 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
     }
 
     private func revealAndExitReading(in app: XCUIApplication, matching text: String) {
-        let passage = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
-        passage.tap()
+        if !app.buttons["Exit"].exists {
+            let passage = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+            passage.tap()
+        }
         tap("Exit", in: app, timeout: 30)
     }
 
