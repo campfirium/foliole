@@ -8,6 +8,7 @@ import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime'
 import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
+import { submitReadingReviewFeedback } from './readingReviewFeedbackState';
 import { scrollReviewReadingSurface } from './reviewReadingScrollCommand';
 
 export function resolveReviewDeleteTargetNodeId(ws: ReturnType<typeof useWorkspaceSelectors>) {
@@ -58,14 +59,20 @@ export function createPaletteReviewActions(args: {
   };
   const activeNodeId = args.ws.activeNodeId;
   return {
-    readReviewTopic: () => args.ws.readReviewTopic(getDemoRuntimeNowIso()),
-    postponeReviewTopic: () => args.ws.postponeReviewTopic(getDemoRuntimeNowIso()),
+    readReviewTopic: () => submitReadingReviewFeedback(
+      args.ws.reviewSession.currentNodeId, () => args.ws.readReviewTopic(getDemoRuntimeNowIso())
+    ),
+    postponeReviewTopic: () => submitReadingReviewFeedback(
+      args.ws.reviewSession.currentNodeId, () => args.ws.postponeReviewTopic(getDemoRuntimeNowIso())
+    ),
     deleteCurrentReviewItem: createDeleteCurrentReviewItemCommand({ ws: args.ws }),
     deleteReviewSourceTopic: () => {
       const nodeId = activeNodeId ? resolveReviewSourceTopicNodeId(activeNodeId, navigationSource) : null;
       return nodeId ? args.requestDeleteSourceTopic(nodeId) : false;
     },
-    dismissReviewTopic: () => args.ws.dismissReviewTopic(getDemoRuntimeNowIso()),
+    dismissReviewTopic: () => submitReadingReviewFeedback(
+      args.ws.reviewSession.currentNodeId, () => args.ws.dismissReviewTopic(getDemoRuntimeNowIso())
+    ),
     exitReviewSession: args.ws.exitReviewSession,
     gradeReviewCard: (grade: 1 | 2 | 3 | 4) => args.ws.gradeReviewCard(grade, getDemoRuntimeNowIso()),
     reviewNavigateDown: createSelectReviewNodeCommand({

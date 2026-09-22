@@ -6,10 +6,10 @@ import { ReviewShortcutHarness } from '../hooks/useReviewKeyboardShortcuts.testU
 
 import { ReviewModeToolbar } from './ReviewModeToolbar';
 
-function renderReadingToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}, shortcutRead?: () => Promise<boolean>) {
+function renderReadingToolbar(overrides: Partial<Parameters<typeof ReviewModeToolbar>[0]> = {}, shortcutRead?: () => Promise<boolean>, shortcutOverrides: Parameters<typeof ReviewShortcutHarness>[0] = {}) {
   return renderWithLocalization(
     <>
-    {shortcutRead && <ReviewShortcutHarness reviewCurrentNodeId="reading-1" readingReadShortcuts={{ primary: { key: 'f' } }} readReviewTopic={shortcutRead} />}
+    {shortcutRead && <ReviewShortcutHarness reviewCurrentNodeId="reading-1" readingReadShortcuts={{ primary: { key: 'f' } }} readReviewTopic={shortcutRead} {...shortcutOverrides} />}
     <ReviewModeToolbar
       isAnswerRevealed={false}
       isCurrentItemGradable={false}
@@ -127,3 +127,31 @@ it('ignores a late failure after leaving its reading topic', async () => {
   await act(async () => { completeSave?.(false); });
   expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
 });
+
+for (const [key, actionProp] of [['2', 'postponeReviewTopic'], ['4', 'dismissReviewTopic']] as const) {
+  it.each(['false', 'throw'])(`reports ${actionProp} shortcut failure (%s) and retries the same action`, async (failure) => {
+    let completeSave: ((value: boolean) => void) | undefined;
+    const action = vi.fn().mockImplementationOnce(async () => {
+      if (failure === 'throw') throw new Error('save failed');
+      return false;
+    }).mockImplementationOnce(() => new Promise<boolean>((resolve) => { completeSave = resolve; }));
+    const read = vi.fn(async () => true);
+    renderReadingToolbar({}, read, {
+      [actionProp]: action,
+      readingLaterShortcuts: { primary: { key: '2' } },
+      readingDismissShortcuts: { primary: { key: '4' } }
+    });
+    await act(async () => { fireEvent.keyDown(window, { key }); });
+    expect(screen.getByText('Failed to save. Please retry.')).toBeVisible();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      fireEvent.keyDown(window, { key });
+      fireEvent.keyDown(window, { key: 'f' });
+    });
+    expect(action).toHaveBeenCalledTimes(2);
+    expect(read).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Read' })).toBeDisabled();
+    await act(async () => { completeSave?.(true); });
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+}

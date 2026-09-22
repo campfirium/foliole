@@ -55,13 +55,13 @@ interface PaletteCommandRunnerArgs
   reimportSelectedTopic: () => Promise<boolean>;
   resetImportData: () => Promise<boolean>;
   toggleDevReviewStatusBarPersistence: () => void;
-  readReviewTopic: () => Promise<boolean>;
+  readReviewTopic: () => Promise<boolean | void>;
   deleteCurrentReviewItem: () => boolean;
   deleteReviewSourceTopic: () => boolean;
   demoOperationTranslate: Parameters<typeof runDemoCommandPreview>[1];
-  postponeReviewTopic: () => Promise<boolean>;
+  postponeReviewTopic: () => Promise<boolean | void>;
   openPostponeTopicPanel: () => void;
-  dismissReviewTopic: () => Promise<boolean>;
+  dismissReviewTopic: () => Promise<boolean | void>;
   revisitReviewTopicSoon: () => Promise<boolean>;
   redoWorkspaceAction: () => boolean;
   isReviewMode: boolean;

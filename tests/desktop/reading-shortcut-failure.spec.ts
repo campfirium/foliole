@@ -6,7 +6,7 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-const output = path.resolve('.tmp/artifacts/t244-reading-feedback');
+const output = path.resolve('.tmp/artifacts/f1-reading-entry-repair/native');
 type SaveProbe = { calls: number; release?: () => void };
 type ProbeGlobal = typeof globalThis & { readingSaveProbe: SaveProbe };
 
@@ -65,28 +65,49 @@ async function expectFailed(page: Page, before: Awaited<ReturnType<typeof readSt
   expect(await readState(page)).toEqual(before);
 }
 
-for (const entry of ['keyboard', 'button'] as const) {
-test(`${entry} reports save failure and retries without advancing twice`, async ({ desktopApp, desktopWindow }) => {
+async function triggerReading(page: Page, entry: string, label: string, key: string) {
+  if (entry === 'palette') {
+    await page.keyboard.press('Meta+Shift+P');
+    const dialog = page.getByRole('dialog', { name: 'Command palette' });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('textbox', { name: 'Search commands' }).fill(`Reading: ${label}`);
+    await dialog.getByRole('button', { name: `Reading: ${label}`, exact: true }).click();
+    await expect(dialog).toBeHidden();
+  } else if (entry === 'keyboard') {
+    await page.getByRole('button', { name: /^Read$/ }).focus();
+    await page.keyboard.press(key);
+  } else {
+    await page.getByRole('button', { name: label, exact: true }).click();
+  }
+}
+
+async function persistedReading(page: Page, nodeId: string) {
+  return page.evaluate(async (id) =>
+    (await window.electronAPI.invoke('load_workspace_snapshot', {})).nodesById[id]?.reading, nodeId);
+}
+
+for (const [label, key] of [['Read', 'f'], ['Later', '2'], ['Dismiss', '4']] as const) {
+for (const entry of ['keyboard', 'button', 'palette'] as const) {
+test(`${label} ${entry} reports failure and retries once through persistence and reload`, async ({ desktopApp, desktopWindow }) => {
   fs.mkdirSync(output, { recursive: true });
   await prepareReading(desktopWindow);
   await installSaveProbe(desktopApp);
   const before = await readState(desktopWindow);
+  const nodeId = before.currentNodeId!;
+  const otherId = nodeId === 'reading-failure-a' ? 'reading-failure-b' : 'reading-failure-a';
+  const diskBefore = await persistedReading(desktopWindow, nodeId);
+  const otherBefore = await persistedReading(desktopWindow, otherId);
   expect(before.queue).toHaveLength(2);
   expect(before.readTopicCount).toBe(0);
-  const read = desktopWindow.getByRole('button', { name: /^Read$/ });
-  if (entry === 'keyboard') {
-    await read.focus();
-    await desktopWindow.keyboard.press('f');
-  } else {
-    await read.click();
-  }
+  await triggerReading(desktopWindow, entry, label, key);
   await expectFailed(desktopWindow, before);
+  expect(await persistedReading(desktopWindow, nodeId)).toEqual(diskBefore);
   expect(await saveCalls(desktopApp)).toBe(1);
-  await desktopWindow.screenshot({ path: path.join(output, `${entry}-failed.png`) });
+  await desktopWindow.screenshot({ path: path.join(output, `${label}-${entry}-failed.png`) });
   await desktopWindow.getByRole('button', { name: /^Retry$/ }).click();
   await expect.poll(() => saveCalls(desktopApp)).toBe(2);
-  await expect(read).toBeDisabled();
-  await desktopWindow.keyboard.press('f');
+  await expect(desktopWindow.getByRole('button', { name: /^Read$/ })).toBeDisabled();
+  await desktopWindow.keyboard.press(key);
   await desktopWindow.keyboard.press('f');
   expect(await saveCalls(desktopApp)).toBe(2);
   expect(await readState(desktopWindow)).toEqual(before);
@@ -95,9 +116,19 @@ test(`${entry} reports save failure and retries without advancing twice`, async 
   await expect.poll(async () => (await readState(desktopWindow)).readTopicCount).toBe(1);
   const after = await readState(desktopWindow);
   expect(after.queue).toHaveLength(1);
-  expect(after.currentNodeId).not.toBe(before.currentNodeId);
+  expect(after.currentNodeId).not.toBe(nodeId);
   expect(await saveCalls(desktopApp)).toBe(2);
-  await desktopWindow.screenshot({ path: path.join(output, `${entry}-retry-restored.png`) });
-  fs.writeFileSync(path.join(output, `${entry}-native-result.json`), JSON.stringify({ before, after, saveCalls: 2 }, null, 2));
+  const diskAfter = await persistedReading(desktopWindow, nodeId);
+  expect(diskAfter).not.toEqual(diskBefore);
+  expect(await persistedReading(desktopWindow, otherId)).toEqual(otherBefore);
+  await desktopWindow.screenshot({ path: path.join(output, `${label}-${entry}-restored.png`) });
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await expect.poll(() => desktopWindow.evaluate((id) =>
+    window.__folioleWorkspaceDebug?.getNode(id)?.reading, nodeId)).toEqual(diskAfter);
+  fs.writeFileSync(path.join(output, `${label}-${entry}-result.json`), JSON.stringify({
+    before, after, nodeId, diskBefore, diskAfter, otherBefore, saveCalls: 2, hydrated: true
+  }, null, 2));
 });
+}
 }

@@ -168,13 +168,13 @@ function handleVisibleReviewItemKeydown(event: KeyboardEvent, args: UseReviewKey
     if (tryRunShortcut(event, args.readingSoonShortcuts, () => void args.revisitReviewTopicSoon())) {
       return;
     }
-    if (tryRunShortcut(event, args.readingLaterShortcuts, () => void args.postponeReviewTopic())) {
+    if (tryRunShortcut(event, args.readingLaterShortcuts, () => void submitReadingReviewFeedback(args.reviewCurrentNodeId, args.postponeReviewTopic))) {
       return;
     }
     if (tryRunShortcut(event, args.readingReadShortcuts, () => void submitReadingReviewFeedback(args.reviewCurrentNodeId, args.readReviewTopic))) {
       return;
     }
-    if (tryRunShortcut(event, args.readingDismissShortcuts, () => void args.dismissReviewTopic())) {
+    if (tryRunShortcut(event, args.readingDismissShortcuts, () => void submitReadingReviewFeedback(args.reviewCurrentNodeId, args.dismissReviewTopic))) {
       return;
     }
     handleReviewReadingScrollKeydown(event, args);
