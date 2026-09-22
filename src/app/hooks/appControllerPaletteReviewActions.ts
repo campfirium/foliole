@@ -4,8 +4,11 @@ import {
   resolveReviewSiblingNodeId,
   resolveReviewSourceTopicNodeId
 } from '../../features/review/model/reviewGameNavigation';
+import { getReviewItemKind } from '../../features/review/model/reviewItemKind';
 import { getDemoRuntimeNowIso } from '../../shared/platform/runtime/demoRuntime';
 import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
+import { findEnabledSequentialReadingSourceId } from '../../store/workspaceSequentialReading';
+import { isReadActionAdvanceReadyFromMetrics } from '../components/readActionAdvanceState';
 
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import { submitReadingReviewFeedback } from './readingReviewFeedbackState';
@@ -47,12 +50,31 @@ function createSelectReviewNodeCommand(args: {
   };
 }
 
-export function createPaletteReviewActions(args: {
+type PaletteReviewArgs = {
+  isStudyMode: boolean;
+  externalView: ReturnType<typeof useWorkspaceControllerState>['externalView'];
+  virtualView: ReturnType<typeof useWorkspaceControllerState>['virtualView'];
+  trash: ReturnType<typeof useWorkspaceControllerState>['trash'];
   nav: ReturnType<typeof useWorkspaceControllerState>['nav'];
   requestDeleteSourceTopic: (nodeId: string) => boolean;
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
+};
+
+function readReviewTopic(args: PaletteReviewArgs) {
+  const nodeId = args.ws.reviewSession.currentNodeId;
+  const editor = args.runtime.editorRef.current;
+  const releaseSequentialReading = Boolean(
+    args.isStudyMode && !args.trash.isTrashViewOpen && nodeId && args.ws.activeNodeId === nodeId &&
+    !args.externalView.isExternalViewOpen && !args.virtualView.isVirtualViewOpen && !args.runtime.isViewingTrashNode &&
+    getReviewItemKind(args.ws.nodesById[nodeId]) !== 'fsrs' &&
+    findEnabledSequentialReadingSourceId(nodeId, args.ws.nodesById) && editor &&
+    isReadActionAdvanceReadyFromMetrics(editor.getScrollMetrics())
+  );
+  return submitReadingReviewFeedback(nodeId, () => args.ws.readReviewTopic(getDemoRuntimeNowIso(), { releaseSequentialReading }));
+}
+
+export function createPaletteReviewActions(args: PaletteReviewArgs) {
   const navigationSource = {
     nodeOrder: args.ws.nodeOrder,
     nodesById: args.ws.nodesById,
@@ -60,9 +82,7 @@ export function createPaletteReviewActions(args: {
   };
   const activeNodeId = args.ws.activeNodeId;
   return {
-    readReviewTopic: () => submitReadingReviewFeedback(
-      args.ws.reviewSession.currentNodeId, () => args.ws.readReviewTopic(getDemoRuntimeNowIso())
-    ),
+    readReviewTopic: () => readReviewTopic(args),
     postponeReviewTopic: () => submitReadingReviewFeedback(
       args.ws.reviewSession.currentNodeId, () => args.ws.postponeReviewTopic(getDemoRuntimeNowIso())
     ),

@@ -34,7 +34,7 @@ function createActions(save: () => Promise<boolean>, name: ReadingAction) {
       reviewSession: { currentNodeId: 'reading-1' },
       readReviewTopic: otherSave, postponeReviewTopic: otherSave, dismissReviewTopic: otherSave, [name]: save
     },
-    nav: {}, runtime: {}, requestDeleteSourceTopic: () => false
+    nav: {}, runtime: { editorRef: { current: null } }, isStudyMode: false, requestDeleteSourceTopic: () => false
   } as unknown as Parameters<typeof createPaletteReviewActions>[0]);
   return { actions, otherSave };
 }
@@ -57,7 +57,8 @@ for (const name of ['readReviewTopic', 'postponeReviewTopic', 'dismissReviewTopi
     });
     expect(save).toHaveBeenCalledTimes(2);
     expect(otherSave).not.toHaveBeenCalled();
-    expect(save.mock.calls).toEqual([[NOW], [NOW]]);
+    const expected = name === 'readReviewTopic' ? [NOW, { releaseSequentialReading: false }] : [NOW];
+    expect(save.mock.calls).toEqual([expected, expected]);
     expect(screen.getByRole('button', { name: 'Read' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Later' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Dismiss' })).toBeDisabled();

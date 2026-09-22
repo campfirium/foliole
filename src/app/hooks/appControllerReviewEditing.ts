@@ -1,5 +1,7 @@
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { requestFoliolePublishedDelete } from '../../shared/platform/runtime/foliolePublishedManagement';
+import { findEnabledSequentialReadingSourceId } from '../../store/workspaceSequentialReading';
+import { isReadActionAdvanceReadyFromMetrics } from '../components/readActionAdvanceState';
 
 import { resolveReviewDeleteTargetNodeId } from './appControllerPaletteReviewActions';
 import type { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
@@ -33,7 +35,8 @@ function buildReviewShortcutBindings(shortcutMap: ReviewShortcutMap) {
   };
 }
 
-function useReviewEditingState(args: {
+type ReviewEditingArgs = {
+  isTrashViewOpen: boolean;
   isExternalViewOpen: boolean;
   hotkeys: ReturnType<typeof useCommandShortcutState>;
   isCurrentReviewItemGradable: boolean;
@@ -46,7 +49,24 @@ function useReviewEditingState(args: {
   onRequestDeleteSourceTopic: (nodeId: string) => boolean;
   runtime: ReturnType<typeof useWorkspaceControllerState>['runtime'];
   ws: ReturnType<typeof useWorkspaceSelectors>;
-}) {
+};
+
+function readReviewTopic(args: ReviewEditingArgs, isVisible: boolean) {
+  const nodeId = args.ws.reviewSession.currentNodeId;
+  const editor = args.runtime.editorRef.current;
+  const releaseSequentialReading = Boolean(
+    args.isStudyMode && isVisible && !args.isTrashViewOpen && !args.isCurrentReviewItemGradable && nodeId &&
+    findEnabledSequentialReadingSourceId(nodeId, args.ws.nodesById) && editor &&
+    isReadActionAdvanceReadyFromMetrics(editor.getScrollMetrics())
+  );
+  return args.ws.readReviewTopic(args.nowIso, { releaseSequentialReading });
+}
+
+function useReviewEditingState(args: ReviewEditingArgs) {
+  const isCurrentReviewItemVisible = Boolean(
+    args.ws.reviewSession.currentNodeId && args.ws.activeNodeId === args.ws.reviewSession.currentNodeId &&
+    !args.isExternalViewOpen && !args.isVirtualViewOpen && !args.runtime.isViewingTrashNode
+  );
   return useReviewKeyboardShortcuts({
     isStudyMode: args.isStudyMode,
     isImmersiveMode: args.runtime.isImmersiveMode,
@@ -58,18 +78,12 @@ function useReviewEditingState(args: {
     nodesById: args.ws.nodesById,
     trashedNodeIds: args.ws.trashedNodeIds,
     reviewCurrentNodeId: args.ws.reviewSession.currentNodeId,
-    isCurrentReviewItemVisible: Boolean(
-      args.ws.reviewSession.currentNodeId &&
-        args.ws.activeNodeId === args.ws.reviewSession.currentNodeId &&
-        !args.isExternalViewOpen &&
-        !args.isVirtualViewOpen &&
-        !args.runtime.isViewingTrashNode
-    ),
+    isCurrentReviewItemVisible,
     isAnswerRevealed: args.ws.reviewSession.isAnswerRevealed,
     isCurrentItemGradable: args.isCurrentReviewItemGradable,
     ...buildReviewShortcutBindings(args.hotkeys.shortcutMap),
     isSourceTopicDeleteDialogOpen: args.isSourceTopicDeleteDialogOpen,
-    readReviewTopic: () => args.ws.readReviewTopic(args.nowIso),
+    readReviewTopic: () => readReviewTopic(args, isCurrentReviewItemVisible),
     postponeReviewTopic: () => args.ws.postponeReviewTopic(args.nowIso),
     deleteCurrentReviewItem: () => {
       const nodeId = resolveReviewDeleteTargetNodeId(args.ws);
@@ -108,6 +122,7 @@ export function useAppControllerReviewEditing(args: {
   ws: ReturnType<typeof useWorkspaceSelectors>;
 }) {
   return useReviewEditingState({
+    isTrashViewOpen: args.controller.trash.isTrashViewOpen,
     hotkeys: args.hotkeys,
     isExternalViewOpen: args.controller.externalView.isExternalViewOpen,
     isCurrentReviewItemGradable: args.isCurrentReviewItemGradable,
