@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Document } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -10,11 +10,11 @@ import {
   resolveRuntimeAttachmentResource
 } from '../../../shared/platform/attachmentResources';
 import { AppButton, AppEmptyState } from '../../../shared/ui';
-import type { PdfCropBox } from '../model/pdfAutoCrop';
 import { PDF_DOCUMENT_OPTIONS } from '../model/pdfDocumentOptions';
 import { configurePdfWorker } from '../model/pdfWorker';
 
-import { SimplePdfPageStack, SimplePdfToolbar, useElementWidth } from './SimplePdfDocumentLayout';
+import { SimplePdfToolbar, useElementWidth } from './SimplePdfDocumentLayout';
+import { SimplePdfPageStack } from './SimplePdfPageStack';
 
 configurePdfWorker();
 
@@ -53,9 +53,10 @@ function useAttachmentPdfSource(
         try {
           await onMissingResource(attachmentId);
         } catch {
-          setState('missing');
+          if (!cancelled) setState('missing');
           return;
         }
+        if (cancelled) return;
         if (description) invalidateAttachmentResourceResolution(description.storageKey);
         await resolvePdfSource();
         return;
@@ -97,45 +98,6 @@ function PdfDocumentFallback(props: {
   );
 }
 
-function useInitialPdfPageJump(args: {
-  cropBoxes: Record<number, PdfCropBox | null>;
-  initialPage: number | undefined;
-  scrollContainerRef: RefObject<HTMLDivElement | null>;
-  source: string | null;
-  totalPages: number | null;
-}) {
-  const jumpedTargetRef = useRef<string | null>(null);
-  useLayoutEffect(() => {
-    const page = Math.min(Math.max(args.initialPage ?? 1, 1), args.totalPages ?? 1);
-    if (!args.source || !args.totalPages || page === 1) return;
-    const targetKey = `${args.source}:${page}`;
-    const targetPagesReady = Array.from(
-      { length: page },
-      (_, index) => Object.prototype.hasOwnProperty.call(args.cropBoxes, index + 1)
-    ).every(Boolean);
-    if (!targetPagesReady || jumpedTargetRef.current === targetKey) return undefined;
-    let frame = 0;
-    let attempts = 0;
-    const jumpWhenPositioned = () => {
-      const scrollContainer = args.scrollContainerRef.current;
-      if (!scrollContainer) return;
-      const target = scrollContainer.querySelector<HTMLElement>(`[data-pdf-page="${page}"]`);
-      if (!target) return;
-      const top = target.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top + scrollContainer.scrollTop;
-      if (top > 0) {
-        scrollContainer.scrollTo({ top });
-        jumpedTargetRef.current = targetKey;
-        return;
-      }
-      attempts += 1;
-      if (attempts < 6) frame = window.requestAnimationFrame(jumpWhenPositioned);
-    };
-    frame = window.requestAnimationFrame(jumpWhenPositioned);
-    return () => window.cancelAnimationFrame(frame);
-  }, [args.cropBoxes, args.initialPage, args.scrollContainerRef, args.source, args.totalPages]);
-}
-
-
 export function SimplePdfDocument(props: {
   attachmentId: string;
   backLabel?: string;
@@ -151,22 +113,19 @@ export function SimplePdfDocument(props: {
   const [loadFailed, setLoadFailed] = useState(false);
   const [totalPages, setTotalPages] = useState<number | null>(null);
   const [zoom, setZoom] = useState(100);
-  const [cropBoxes, setCropBoxes] = useState<Record<number, PdfCropBox | null>>({});
   const pageWidth = width > 0 ? Math.floor((width * PDF_DEFAULT_FIT_RATIO * zoom) / 100) : undefined;
 
   useEffect(() => {
     setLoadFailed(false);
-    setCropBoxes({});
-  }, [source, zoom]);
-
-  useInitialPdfPageJump({ cropBoxes, initialPage: props.initialPage, scrollContainerRef, source, totalPages });
+    setTotalPages(null);
+  }, [source]);
 
   if (state !== 'ready' || !source || loadFailed) {
     return <PdfDocumentFallback backLabel={props.backLabel} isLoading={state === 'loading' && !loadFailed} onBack={props.onBackToText} />;
   }
 
   return (
-    <section aria-label={t('desktop.pdf.simple.readerLabel', { title: props.title })} className="pdf-document-surface flex min-h-[calc(100dvh-9rem)] flex-col" ref={ref}>
+    <section aria-label={t('desktop.pdf.simple.readerLabel', { title: props.title })} className="pdf-document-surface flex h-[calc(100vh-9rem)] min-h-0 flex-col supports-[height:100dvh]:h-[calc(100dvh-9rem)]" ref={ref}>
       <SimplePdfToolbar
         {...(props.backLabel ? { backLabel: props.backLabel } : {})}
         {...(props.onBackToText ? { onBack: props.onBackToText } : {})}
@@ -177,6 +136,7 @@ export function SimplePdfDocument(props: {
       />
       <div className="min-h-0 flex-1 overflow-auto py-3" ref={scrollContainerRef}>
         <Document
+          key={source}
           file={source}
           loading={<AppEmptyState description={t('desktop.pdf.simple.preparing.page')} title={t('desktop.pdf.simple.preparing.title')} />}
           noData={<AppEmptyState description={t('desktop.pdf.simple.noFile.description')} title={t('desktop.pdf.simple.noFile.title')} />}
@@ -186,13 +146,13 @@ export function SimplePdfDocument(props: {
           }}
           options={PDF_DOCUMENT_OPTIONS}
         >
-          <SimplePdfPageStack
-            cropBoxes={cropBoxes}
+          {pageWidth && totalPages ? <SimplePdfPageStack
+            key={source}
             initialPage={props.initialPage}
             pageWidth={pageWidth}
-            setCropBoxes={setCropBoxes}
+            scrollRef={scrollContainerRef}
             totalPages={totalPages}
-          />
+          /> : null}
         </Document>
       </div>
     </section>

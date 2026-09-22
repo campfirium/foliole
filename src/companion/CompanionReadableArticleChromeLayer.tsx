@@ -1,3 +1,5 @@
+import { useMemo } from 'react';
+
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
 import { CompanionDocumentSearchSheet } from './CompanionDocumentSearchSheet';
@@ -117,10 +119,10 @@ function ReadingSheetsLayer(props: {
   readableArticle: ReadableArticle;
   textAlternative?: TextAlternativeState;
 }) {
-  const highlights = buildCompanionHighlightPanelItems({
+  const highlights = useMemo(() => props.openReadingSheet === 'highlight' ? buildCompanionHighlightPanelItems({
     content: props.readableArticle.content,
     textAnchorDecorations: props.readableArticle.textAnchorDecorations
-  });
+  }) : [], [props.openReadingSheet, props.readableArticle.content, props.readableArticle.textAnchorDecorations]);
   const selectHighlight = (item: { from: number; to: number }) => {
     props.onSelectOutlineItem(item);
     props.onOpenReadingSheet(null);

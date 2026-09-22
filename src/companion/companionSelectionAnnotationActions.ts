@@ -6,7 +6,6 @@ import {
   deriveNodeTitleForCloze,
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
-import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { runCompanionOptionalHighValueMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import {
   applyCompanionLocalNodeVersions,
@@ -29,7 +28,7 @@ import { createNewItemReviewProfiles } from '../store/newItemReviewSlots';
 import {
   toCompanionNativeNodeVersion
 } from './companionAnnotationNodeVersion';
-import { appendCompanionExistingHighlightNote } from './companionExistingHighlightActions';
+export { addNoteToCompanionExistingHighlight, deleteCompanionExistingHighlight } from './companionExistingHighlightPersistence';
 
 interface PersistSelectionAnnotationArgs {
   deviceId: string;
@@ -148,78 +147,5 @@ async function persistNativeSelectionAnnotation(args: PersistSelectionAnnotation
       throw new Error('companion_annotation_snapshot_not_converged');
     }
     return { nodeId: draft.node.id, snapshot: nextSnapshot };
-  });
-}
-
-async function persistExistingHighlightNode(args: {
-  deviceId: string;
-  node: WorkspaceNodeSnapshot;
-  snapshot: WorkspaceSnapshot;
-  update: (node: WorkspaceNodeSnapshot, timestamp: string) => WorkspaceNodeSnapshot;
-}) {
-  const sourceNode = await hydrateNativeNodeContent(args.node);
-  const node = args.update(sourceNode, new Date().toISOString());
-  const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
-  const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
-  await applyCompanionLocalNodeVersions([nodeVersion]);
-  return {
-    nodeId: versionedNode.id,
-    snapshot: {
-      ...args.snapshot,
-      trashedNodeIds: versionedNode.deletedAt
-        ? [...new Set([...args.snapshot.trashedNodeIds, versionedNode.id])]
-        : args.snapshot.trashedNodeIds,
-      nodesById: { ...args.snapshot.nodesById, [versionedNode.id]: versionedNode }
-    }
-  };
-}
-
-async function hydrateNativeNodeContent(node: WorkspaceNodeSnapshot) {
-  if (!isAvailableNativeCompanionRuntime()) return node;
-  const current = await loadCompanionWorkspaceNode(node.id);
-  if (!current) throw new Error('companion_highlight_node_unavailable');
-  if (current.currentVersionId !== node.currentVersionId) {
-    throw new Error('companion_highlight_node_changed');
-  }
-  return current;
-}
-
-export async function addNoteToCompanionExistingHighlight(args: {
-  deviceId: string;
-  nodeId: string;
-  note: string;
-  originalText: string;
-  snapshot: WorkspaceSnapshot | null;
-}) {
-  const node = args.snapshot?.nodesById[args.nodeId];
-  if (!args.snapshot || !node || args.snapshot.trashedNodeIds.includes(args.nodeId)) return null;
-  return persistExistingHighlightNode({
-    deviceId: args.deviceId,
-    node,
-    snapshot: args.snapshot,
-    update: (current, timestamp) => ({
-      ...current,
-      content: appendCompanionExistingHighlightNote({ node: current, note: args.note, originalText: args.originalText }),
-      updatedAt: timestamp
-    })
-  });
-}
-
-export async function deleteCompanionExistingHighlight(args: {
-  deviceId: string;
-  nodeId: string;
-  snapshot: WorkspaceSnapshot | null;
-}) {
-  const node = args.snapshot?.nodesById[args.nodeId];
-  if (!args.snapshot || !node || args.snapshot.trashedNodeIds.includes(args.nodeId)) return null;
-  return persistExistingHighlightNode({
-    deviceId: args.deviceId,
-    node,
-    snapshot: args.snapshot,
-    update: (current, timestamp) => ({
-      ...current,
-      deletedAt: timestamp,
-      updatedAt: timestamp
-    })
   });
 }

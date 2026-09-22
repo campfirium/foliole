@@ -1,6 +1,6 @@
 import { Highlighter, Info, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
-import { useState } from 'react';
-import type { ReactNode } from 'react';
+import { useRef, useState } from 'react';
+import type { ReactNode, MutableRefObject } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
@@ -11,15 +11,17 @@ import type { CompanionReadingTypographySettings } from './companionReadingTypog
 
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
 import { AppEmptyState } from '@/shared/ui';
+import { VirtualListSurface } from '@/shared/ui/VirtualListSurface';
 
 export function ReadingBottomSheet(props: {
   children: ReactNode;
+  scrollElementRef?: MutableRefObject<HTMLDivElement | null> | undefined;
   onOpenChange(open: boolean): void;
   open: boolean;
   title: string;
 }) {
   return (
-    <CompanionBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={props.title}>
+    <CompanionBottomSheet scrollElementRef={props.scrollElementRef} onOpenChange={props.onOpenChange} open={props.open} title={props.title}>
       {props.children}
     </CompanionBottomSheet>
   );
@@ -158,6 +160,8 @@ export function ReadingFontSheet(props: {
   );
 }
 
+const highlightKey = (highlight: CompanionHighlightPanelItem) => highlight.nodeId ?? `${highlight.from}-${highlight.to}`;
+
 export function ReadingHighlightSheet(props: {
   highlights: readonly CompanionHighlightPanelItem[];
   onOpenChange(open: boolean): void;
@@ -165,10 +169,12 @@ export function ReadingHighlightSheet(props: {
   open: boolean;
 }) {
   const t = useTranslation();
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   return (
-    <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.highlight')}>
+    <ReadingBottomSheet scrollElementRef={scrollRef} onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.highlight')}>
       <div className="border-t border-companion-divider">
-        {props.highlights.length > 0 ? props.highlights.map((highlight) => (
+        {props.highlights.length > 0 ? <VirtualListSurface items={props.highlights} getItemKey={highlightKey} estimateSize={() => 64}
+          scrollElementRef={scrollRef} accountForOffset measureItems overscan={4} renderItem={(highlight) => (
           <button
             className="block w-full border-b border-companion-divider py-3 text-left text-sm text-foreground active:bg-companion-subtle/80"
             key={highlight.nodeId ?? `${highlight.from}-${highlight.to}`}
@@ -177,7 +183,7 @@ export function ReadingHighlightSheet(props: {
           >
             <span className="line-clamp-2">{highlight.text}</span>
           </button>
-        )) : (
+        )} /> : (
           <AppEmptyState
             className="min-h-0 items-start py-5 text-left text-companion-text-secondary"
             description={t('companion.reading.noHighlights.description')}

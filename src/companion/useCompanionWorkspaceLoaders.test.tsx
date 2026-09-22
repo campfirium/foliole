@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 import { useState } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { CompanionReadingSnapshotChanged } from '../shared/platform/companion/reading/companionReadingDemand';
 import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 
@@ -25,7 +26,7 @@ it('does not publish a stale catalog refresh after changing the database lifetim
   let finish!: (state: typeof initial) => void;
   mocks.refresh.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
   const { result } = renderHook(() => {
-    const [state, setState] = useState(initial);
+    const [state, setState] = useState<NativeCompanionWorkspaceSyncState>(initial);
     const [, setArticle] = useState(null);
     const loaders = useCompanionWorkspaceLoaders({ state, setState, setReadableArticle: setArticle as () => void, setError: vi.fn() });
     return { state, ...loaders };

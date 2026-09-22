@@ -30,5 +30,9 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
   'companion.reading.alternative.dismiss': '忽略',
   'companion.reading.alternative.setAsBody': '设为正文',
   'companion.reading.alternative.setting': '正在设置...',
-  'companion.reading.alternative.error': '暂时无法更新这份正文，请重试。'
+  'companion.reading.alternative.error': '暂时无法更新这份正文，请重试。',
+  'companion.selection.loading': '正在读取批注…',
+  'companion.selection.loadError': '暂时无法读取这条批注。',
+  'companion.selection.saveError': '更改未能保存，你的备注仍保留在这里。',
+  'companion.selection.retry': '重试'
 };

@@ -2,8 +2,17 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 
 import { subscribeNativeAppBackground, subscribeNativeAppForeground } from '../shared/platform/appLifecycle';
 import { ContentDraftSession } from '../shared/platform/companion/editing/contentDraftSession';
+import { HighlightDraftStore } from '../shared/platform/companion/editing/highlightDraftSession';
 
 type Drafts = Map<string, ContentDraftSession>;
+const HighlightDraftContext = createContext<HighlightDraftStore | null>(null);
+
+export function useCompanionHighlightDrafts() {
+  const shared = useContext(HighlightDraftContext);
+  const [local] = useState(() => new HighlightDraftStore());
+  return shared ?? local;
+}
+
 const DraftContext = createContext<Drafts | null>(null);
 
 export function useCompanionDrafts() {
@@ -13,6 +22,7 @@ export function useCompanionDrafts() {
 }
 
 export function CompanionDraftProvider({ children }: { children: ReactNode }) {
+  const [highlightDrafts] = useState(() => new HighlightDraftStore());
   const [drafts] = useState<Drafts>(() => new Map());
   useEffect(() => {
     let disposed = false;
@@ -36,5 +46,7 @@ export function CompanionDraftProvider({ children }: { children: ReactNode }) {
       flush();
     };
   }, [drafts]);
-  return <DraftContext.Provider value={drafts}>{children}</DraftContext.Provider>;
+  return <DraftContext.Provider value={drafts}>
+    <HighlightDraftContext.Provider value={highlightDrafts}>{children}</HighlightDraftContext.Provider>
+  </DraftContext.Provider>;
 }

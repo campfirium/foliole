@@ -28,5 +28,9 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.reading.alternative.dismiss': 'Ignore',
   'companion.reading.alternative.setAsBody': 'Set as body',
   'companion.reading.alternative.setting': 'Setting...',
-  'companion.reading.alternative.error': 'This text version could not be updated. Try again.'
+  'companion.reading.alternative.error': 'This text version could not be updated. Try again.',
+  'companion.selection.loading': 'Loading annotation…',
+  'companion.selection.loadError': 'This annotation could not be loaded.',
+  'companion.selection.saveError': 'Changes could not be saved. Your note is still here.',
+  'companion.selection.retry': 'Retry'
 };

@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 import {
@@ -9,6 +9,7 @@ import {
 } from '../../../test/attachmentResourceTestSupport';
 
 const resourceMock = vi.hoisted(() => ({
+  pages: 2,
   invalidateAttachmentResourceResolution: vi.fn(),
   resolveRuntimeAttachmentResource: vi.fn()
 }));
@@ -29,7 +30,7 @@ vi.mock('react-pdf', async () => {
     onLoadSuccess?: (payload: { numPages: number }) => void;
   }) => {
     React.useEffect(() => {
-      onLoadSuccess?.({ numPages: 2 });
+      onLoadSuccess?.({ numPages: resourceMock.pages });
     }, [onLoadSuccess]);
     return <div data-file={file}>{children}</div>;
   },
@@ -56,6 +57,9 @@ import { SimplePdfDocument } from './SimplePdfDocument';
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resourceMock.pages = 2;
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(600);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400);
   resetTestAttachmentResources();
   registerTestAttachmentResource({ attachmentId: 'pdf-attachment-1', mimeType: 'application/pdf' });
   globalThis.ResizeObserver = class {
@@ -65,9 +69,11 @@ beforeEach(() => {
   };
   HTMLElement.prototype.scrollTo = vi.fn();
   HTMLElement.prototype.getBoundingClientRect = vi.fn(function (this: HTMLElement) {
-    return { top: this.dataset.pdfPage === '2' ? 100 : 0 } as DOMRect;
+    return new DOMRect(0, 0, 400, 600);
   });
 });
+
+afterEach(() => vi.restoreAllMocks());
 
 describe('SimplePdfDocument', () => {
   it('resolves the attachment resource before rendering the continuous PDF pages', async () => {
@@ -108,10 +114,25 @@ describe('SimplePdfDocument', () => {
 
     renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" initialPage={2} title="Paper" />);
 
-    await waitFor(() => expect(HTMLElement.prototype.scrollTo).toHaveBeenCalledWith({ top: 100 }));
+    await waitFor(() => expect(document.querySelector('[data-pdf-page="2"]')).toBeInTheDocument());
+    await waitFor(() => expect(HTMLElement.prototype.scrollTo).toHaveBeenCalled());
     expect(document.querySelector('[data-pdf-page="2"]')).toHaveAttribute('aria-current', 'page');
-    expect(document.querySelector('[data-pdf-page="1"]')).not.toHaveAttribute('aria-current');
+
     expect(document.querySelector('[data-pdf-page="2"] > span')).toHaveTextContent('PDF page 2');
+  });
+
+  it('keeps a long PDF window bounded while immediately including a deep search target', async () => {
+    resourceMock.pages = 10000;
+    resourceMock.resolveRuntimeAttachmentResource.mockResolvedValue({ resource_url: 'capacitor://pdf-file', status: 'ready' });
+    const view = renderWithLocalization(<SimplePdfDocument attachmentId="pdf-attachment-1" initialPage={9000} title="Long paper" />);
+    await waitFor(() => expect(document.querySelector('[data-pdf-page="9000"]')).toBeInTheDocument());
+    expect(document.querySelectorAll('[data-pdf-page]').length).toBeLessThan(30);
+    expect(document.querySelector('[data-pdf-page="4500"]')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '+' }));
+    await waitFor(() => expect(document.querySelector('[data-pdf-page="9000"]')).toBeInTheDocument());
+    expect(document.querySelectorAll('[data-pdf-page]').length).toBeLessThan(30);
+    view.unmount();
+    expect(document.querySelectorAll('[data-pdf-page]')).toHaveLength(0);
   });
 
   it('retries resolving after the caller syncs a missing PDF resource', async () => {

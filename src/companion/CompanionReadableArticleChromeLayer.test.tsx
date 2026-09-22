@@ -1,11 +1,13 @@
 import { render } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+const highlightModelMock = vi.hoisted(() => vi.fn(() => []));
+
 const readingActionsSheetMock = vi.hoisted(() => vi.fn<(props: Record<string, unknown>) => null>(() => null));
 
 vi.mock('./CompanionDocumentSearchSheet', () => ({ CompanionDocumentSearchSheet: () => null }));
 vi.mock('./CompanionReadingChrome', () => ({ ReadingChrome: () => null }));
-vi.mock('./companionHighlightPanelModel', () => ({ buildCompanionHighlightPanelItems: () => [] }));
+vi.mock('./companionHighlightPanelModel', () => ({ buildCompanionHighlightPanelItems: highlightModelMock }));
 vi.mock('./CompanionReadingSheets', () => ({
   OutlineSheet: () => null,
   ReadingActionsSheet: (props: Record<string, unknown>) => readingActionsSheetMock(props),
@@ -17,7 +19,7 @@ vi.mock('./CompanionReadingSheets', () => ({
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import { DEFAULT_READING_TYPOGRAPHY_SETTINGS } from './companionReadingTypographySettings';
 
-function renderChrome(onRestoreFromTrash?: (nodeId: string) => void) {
+function renderChrome(onRestoreFromTrash?: (nodeId: string) => void, sheet: 'highlight' | null = null) {
   render(
     <ImmersiveChromeLayer
       actionsOpen
@@ -33,7 +35,7 @@ function renderChrome(onRestoreFromTrash?: (nodeId: string) => void) {
       onReadingTypographySettingsChange={vi.fn()}
       onSelectOutlineItem={vi.fn()}
       onToggleContentEditing={vi.fn()}
-      openReadingSheet={null}
+      openReadingSheet={sheet}
       outlineOpen={false}
       readableArticle={{ isTrashed: true, nodeId: 'topic-1', title: 'Topic' } as never}
       readingTypographySettings={DEFAULT_READING_TYPOGRAPHY_SETTINGS}
@@ -45,6 +47,7 @@ function renderChrome(onRestoreFromTrash?: (nodeId: string) => void) {
 
 beforeEach(() => {
   readingActionsSheetMock.mockClear();
+  highlightModelMock.mockClear();
 });
 
 it('does not recreate a trash restore action when the host omitted the handler', () => {
@@ -61,4 +64,11 @@ it('keeps trash restore reachable when the host provides the handler', () => {
   const props = readingActionsSheetMock.mock.calls[0]?.[0] as { onRestoreFromTrash(): void };
   props.onRestoreFromTrash();
   expect(onRestoreFromTrash).toHaveBeenCalledWith('topic-1');
+});
+
+it('does not derive the hidden highlight sheet and derives it when requested', () => {
+  renderChrome();
+  expect(highlightModelMock).not.toHaveBeenCalled();
+  renderChrome(undefined, 'highlight');
+  expect(highlightModelMock).toHaveBeenCalledTimes(1);
 });

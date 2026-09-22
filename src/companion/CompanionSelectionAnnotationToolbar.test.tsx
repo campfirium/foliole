@@ -159,19 +159,19 @@ it('applies a highlight when Android ends the toolbar activation as touchend', (
   expect(onApply).toHaveBeenCalledWith('highlight', payload, undefined);
 });
 
-it('deletes an existing highlight and closes immediately', () => {
+it('deletes an existing highlight and closes after writing', async () => {
   const { onClose, onDeleteExistingHighlight } = renderExistingToolbar();
 
   const button = screen.getByRole('button', { name: 'Close Highlight' });
   expect(fireEvent.pointerDown(button)).toBe(false);
   fireEvent.pointerUp(button);
 
-  expect(onDeleteExistingHighlight).toHaveBeenCalledWith('highlight-1');
+  await waitFor(() => expect(onDeleteExistingHighlight).toHaveBeenCalledWith('highlight-1', undefined));
   expect(onClose).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole('button', { name: 'Cloze' })).toBeNull();
 });
 
-it('adds a note to an existing highlight and closes immediately', () => {
+it('adds a note to an existing highlight and closes after writing', async () => {
   const { onAddExistingHighlightNote, onClose } = renderExistingToolbar();
 
   fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
@@ -180,7 +180,7 @@ it('adds a note to an existing highlight and closes immediately', () => {
   });
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
-  expect(onAddExistingHighlightNote).toHaveBeenCalledWith('highlight-1', 'Beta', 'Existing note');
+  await waitFor(() => expect(onAddExistingHighlightNote).toHaveBeenCalledWith('highlight-1', 'Beta', 'Existing note', undefined));
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 

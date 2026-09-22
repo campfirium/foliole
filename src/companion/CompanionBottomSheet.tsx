@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, MutableRefObject } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import {
@@ -14,6 +14,7 @@ import { companionMobileRailClassName } from './companionCssCompatibility';
 
 export function CompanionBottomSheet(props: {
   children: ReactNode;
+  scrollElementRef?: MutableRefObject<HTMLDivElement | null> | undefined;
   leadingAction?: ReactNode;
   onOpenChange(open: boolean): void;
   open: boolean;
@@ -35,7 +36,7 @@ export function CompanionBottomSheet(props: {
                 {t('common.cancel')}
               </AppDialogClose>
             </div>
-            <div className="min-h-0 overflow-y-auto">{props.children}</div>
+            <div className="min-h-0 overflow-y-auto" ref={props.scrollElementRef}>{props.children}</div>
           </div>
         </AppDialogContent>
       </AppDialogPortal>

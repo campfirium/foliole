@@ -13,7 +13,6 @@ interface Annotation extends DbRow {
   current_version_id: string | null;
   body_blob_hash: string | null;
   anchor_link: string | null;
-  content: string;
 }
 
 function matchesAnnotations(snapshot: WorkspaceSnapshot, nodeId: string, rows: Annotation[]) {
@@ -44,9 +43,8 @@ export function readCompanionArticle(
     );
     if (!document) return null;
     const annotations = await db.query<Annotation>(
-      `SELECT n.id, n.current_version_id, n.body_blob_hash, n.anchor_link,
-        COALESCE(CAST(cbd.data AS TEXT), n.content, '') AS content
-       FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+      `SELECT n.id, n.current_version_id, n.body_blob_hash, n.anchor_link
+       FROM nodes n
        WHERE n.parent_id = ? AND n.anchor_link IS NOT NULL AND n.deleted_at IS NULL
          AND COALESCE(n.anchor_resolution_status, '') NOT LIKE 'unmapped_%'`, [nodeId]
     );
@@ -56,7 +54,6 @@ export function readCompanionArticle(
       (snapshot.nodesById[nodeId]?.deletedAt ?? null) !== (document.deleted_at ?? null) ||
       (snapshot.nodesById[nodeId]?.parentNodeId ?? null) !== (document.parent_id ?? null) ||
       !matchesAnnotations(snapshot, nodeId, annotations)) throw new CompanionReadingSnapshotChanged();
-    return resolveLoadedCompanionArticle(snapshot, document,
-      Object.fromEntries(annotations.map((row) => [row.id, row.content])));
+    return resolveLoadedCompanionArticle(snapshot, document);
   });
 }

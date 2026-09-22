@@ -30,17 +30,19 @@ describe('consistent companion body reading', () => {
       task({ query: mocks.query } as unknown as DbPort));
   });
 
-  it('reads body, its own version and annotations inside one owner operation', async () => {
+  it('reads the parent body and matches lightweight annotations without retaining their bodies', async () => {
     const source = snapshot();
     const anchor = { id: 'anchor-1', kind: 'highlight' as const, locator: { from: 0, to: 7, originalText: 'Current' } };
     source.nodesById.note = { ...source.nodesById['node-1']!, id: 'note', parentNodeId: 'node-1',
-      kind: 'item', currentVersionId: 'note-v1', anchorLink: anchor };
+      kind: 'topic', currentVersionId: 'note-v1', anchorLink: anchor };
     mocks.query.mockResolvedValueOnce([document()]).mockResolvedValueOnce([
-      { id: 'note', current_version_id: 'note-v1', body_blob_hash: null, anchor_link: JSON.stringify(anchor), content: 'Note body' }
+      { id: 'note', current_version_id: 'note-v1', body_blob_hash: null, anchor_link: JSON.stringify(anchor) }
     ]);
     const article = await readCompanionArticle(source, 'node-1', () => true);
     expect(mocks.read).toHaveBeenCalledTimes(1);
-    expect(article).toMatchObject({ content: 'Current body', currentVersionId: 'v1', loadedNodeContentById: { note: 'Note body' } });
+    expect(article).toMatchObject({ content: 'Current body', currentVersionId: 'v1' });
+    expect(article).not.toHaveProperty('loadedNodeContentById');
+    expect(article?.textAnchorDecorations).toContainEqual({ from: 0, to: 7, kind: 'highlight', nodeId: 'note' });
   });
 
   it('does not label a newer body with the old catalog version', async () => {
@@ -50,7 +52,7 @@ describe('consistent companion body reading', () => {
 
   it('rejects annotations added since the catalog even if the parent version is unchanged', async () => {
     mocks.query.mockResolvedValueOnce([document()]).mockResolvedValueOnce([
-      { id: 'new-note', current_version_id: 'note-v1', body_blob_hash: null, anchor_link: '{}', content: 'New note' }
+      { id: 'new-note', current_version_id: 'note-v1', body_blob_hash: null, anchor_link: '{}' }
     ]);
     await expect(readCompanionArticle(snapshot(), 'node-1', () => true)).rejects.toBeInstanceOf(CompanionReadingSnapshotChanged);
   });

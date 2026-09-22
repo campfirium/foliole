@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
+
 import {
   createCompanionPendingTextAnchorDecorations,
   mergeCompanionPendingTextAnchorDecorations,
@@ -84,4 +86,30 @@ export function useCompanionPendingReadableArticle<T extends PendingReadableArti
     stageDeletedHighlight,
     stageSelectionAnnotation
   };
+}
+
+export function createPendingAnnotationActions(
+  props: {
+    onCreateSelectionAnnotation?: (kind: CompanionSelectionAnnotationKind, payload: SelectionCommandPayload, note?: string) => Promise<string | null> | string | null;
+    onDeleteExistingHighlight?: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
+  },
+  pendingReadableArticle: ReturnType<typeof useCompanionPendingReadableArticle>
+) {
+  function createSelectionAnnotation(
+    kind: CompanionSelectionAnnotationKind,
+    payload: SelectionCommandPayload,
+    note?: string
+  ) {
+    pendingReadableArticle.stageSelectionAnnotation(kind, payload);
+    return props.onCreateSelectionAnnotation?.(kind, payload, note) ?? null;
+  }
+  function deleteExistingHighlight(nodeId: string, guard?: CompanionHighlightReadGuard) {
+    pendingReadableArticle.stageDeletedHighlight(nodeId);
+    const result = props.onDeleteExistingHighlight?.(nodeId, guard) ?? null;
+    return Promise.resolve(result).catch((error) => {
+      pendingReadableArticle.restoreDeletedHighlight(nodeId);
+      throw error;
+    });
+  }
+  return { createSelectionAnnotation, deleteExistingHighlight };
 }

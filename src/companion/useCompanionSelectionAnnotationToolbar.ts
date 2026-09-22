@@ -140,12 +140,23 @@ function useClearSelectionAndCloseToolbar(args: {
   }, [editorRef, lastPayloadRef, scheduler, setSelectionToolbar]);
 }
 
+function useOwnedSelectionToolbar(nodeId: string) {
+  const [ownedToolbar, setOwnedToolbar] = useState<{ nodeId: string; state: CompanionSelectionAnnotationToolbarState | null } | null>(null);
+  const activeNode = useRef(nodeId);
+  activeNode.current = nodeId;
+  const setSelectionToolbar = useCallback((state: CompanionSelectionAnnotationToolbarState | null) => {
+    if (activeNode.current === nodeId) setOwnedToolbar({ nodeId, state });
+  }, [nodeId]);
+  const selectionToolbar = ownedToolbar?.nodeId === nodeId ? ownedToolbar.state : null;
+  return [selectionToolbar, setSelectionToolbar] as const;
+}
+
 export function useCompanionSelectionAnnotationToolbar(props: {
   canCreateAnnotation: boolean;
   nodeId: string;
   snapshot: WorkspaceSnapshot | null;
 }) {
-  const [selectionToolbar, setSelectionToolbar] = useState<CompanionSelectionAnnotationToolbarState | null>(null);
+  const [selectionToolbar, setSelectionToolbar] = useOwnedSelectionToolbar(props.nodeId);
   const editorRef = useRef<EditorAdapter | null>(null);
   const lastPayloadRef = useRef<CompanionSelectionAnnotationToolbarState['payload']>(null);
   const scheduler = useCompanionSelectionAnnotationScheduler({

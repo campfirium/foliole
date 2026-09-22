@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
+import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 
 import { companionMobileRailClassName } from './companionCssCompatibility';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
@@ -13,9 +14,8 @@ import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnot
 import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionImmersiveScrollPosition } from './useCompanionImmersiveScrollPosition';
-import { useCompanionLoadedNodeSnapshot } from './useCompanionLoadedNodeSnapshot';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
-import { useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
+import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
@@ -33,8 +33,8 @@ interface ImmersiveReadableArticleProps {
     payload: SelectionCommandPayload,
     note?: string
   ) => Promise<string | null> | string | null;
-  onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string) => Promise<string | null> | string | null;
-  onDeleteExistingHighlight?: (nodeId: string) => Promise<string | null> | string | null;
+  onAddExistingHighlightNote?: (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
+  onDeleteExistingHighlight?: (nodeId: string, guard?: CompanionHighlightReadGuard) => Promise<string | null> | string | null;
   onExit(): void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   onSaveArticleContent?: CompanionContentSaveHandler;
@@ -75,7 +75,7 @@ function ImmersiveArticleContent(props: {
 
 function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) {
   const reading = useImmersiveReadableArticleState();
-  const snapshot = useCompanionLoadedNodeSnapshot(props.snapshot, props.readableArticle);
+  const snapshot = props.snapshot;
   const toolbar = useCompanionSelectionAnnotationToolbar({
     canCreateAnnotation: Boolean(props.onCreateSelectionAnnotation) && !reading.isContentEditing,
     nodeId: props.readableArticle.nodeId,
@@ -168,22 +168,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
   const scrollPosition = useCompanionImmersiveScrollPosition(
     props.readableArticle.nodeId, props.readableArticle.persistedNodeViewState?.scrollTop ?? 0, props.onScrollTopChange
   );
-  function createSelectionAnnotation(
-    kind: CompanionSelectionAnnotationKind,
-    payload: SelectionCommandPayload,
-    note?: string
-  ) {
-    pendingReadableArticle.stageSelectionAnnotation(kind, payload);
-    return props.onCreateSelectionAnnotation?.(kind, payload, note) ?? null;
-  }
-  function deleteExistingHighlight(nodeId: string) {
-    pendingReadableArticle.stageDeletedHighlight(nodeId);
-    const result = props.onDeleteExistingHighlight?.(nodeId) ?? null;
-    return Promise.resolve(result).catch((error) => {
-      pendingReadableArticle.restoreDeletedHighlight(nodeId);
-      throw error;
-    });
-  }
+  const { createSelectionAnnotation, deleteExistingHighlight } = createPendingAnnotationActions(props, pendingReadableArticle);
   return (
     <section
       className={model.surfaceClassName}
@@ -209,6 +194,8 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
         })}
       />
       <SelectionAnnotationToolbarLayer
+        key={props.readableArticle.nodeId}
+        snapshot={props.snapshot}
         onClose={model.toolbar.clearSelectionAndCloseToolbar}
         resolveSelectionPayload={model.toolbar.resolveSelectionPayload}
         state={model.toolbar.selectionToolbar}

@@ -128,3 +128,21 @@ describe('ReadingFontSheet', () => {
     });
   });
 });
+
+it('windows a dense highlight list and keeps row actions bound to the highlight identity', async () => {
+  const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(300);
+  const width = vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(400);
+  const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 300));
+  const highlights = Array.from({ length: 1000 }, (_, index) => ({ from: index * 10, to: index * 10 + 8, nodeId: `note-${index}`, text: `Passage ${index}` }));
+  const onSelect = vi.fn();
+  const view = render(<ReadingHighlightSheet highlights={highlights} onOpenChange={vi.fn()} onSelect={onSelect} open />);
+  try {
+    const first = await screen.findByRole('button', { name: 'Passage 0' });
+    expect(screen.getAllByRole('button', { name: /Passage/ }).length).toBeLessThan(30);
+    expect(screen.queryByRole('button', { name: 'Passage 999' })).toBeNull();
+    fireEvent.click(first);
+    expect(onSelect).toHaveBeenCalledWith(highlights[0]);
+  } finally {
+    view.unmount(); height.mockRestore(); width.mockRestore(); rect.mockRestore();
+  }
+});

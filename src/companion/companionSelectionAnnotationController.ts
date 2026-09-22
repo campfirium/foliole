@@ -1,4 +1,5 @@
 import { definedProps } from '../shared/lib/definedProps';
+import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 
 import {
   addNoteToCompanionExistingHighlight,
@@ -30,10 +31,11 @@ export function createCompanionSelectionAnnotationHandler(workspaceSync: ReturnT
 }
 
 export function createCompanionExistingHighlightNoteHandler(workspaceSync: ReturnTypeOfUseCompanionWorkspaceSync) {
-  return async (nodeId: string, originalText: string, note: string) => {
+  return async (nodeId: string, originalText: string, note: string, guard?: CompanionHighlightReadGuard) => {
     const result = await addNoteToCompanionExistingHighlight({
       deviceId: workspaceSync.bootstrapState.device_id,
       nodeId,
+      ...definedProps({ guard }),
       note,
       originalText,
       snapshot: workspaceSync.state.workspace_snapshot
@@ -45,10 +47,11 @@ export function createCompanionExistingHighlightNoteHandler(workspaceSync: Retur
 }
 
 export function createCompanionExistingHighlightDeleteHandler(workspaceSync: ReturnTypeOfUseCompanionWorkspaceSync) {
-  return async (nodeId: string) => {
+  return async (nodeId: string, guard?: CompanionHighlightReadGuard) => {
     const result = await deleteCompanionExistingHighlight({
       deviceId: workspaceSync.bootstrapState.device_id,
       nodeId,
+      ...definedProps({ guard }),
       snapshot: workspaceSync.state.workspace_snapshot
     });
     if (!result) return null;
