@@ -62,20 +62,17 @@ export function PdfViewportDocument(props: PdfViewportDocumentProps) {
     .map(([pageNumber, dimensions]) => `${pageNumber}:${dimensions.width}x${dimensions.height}`)
     .join('|');
   const previousPdfSourceRef = useRef(props.pdfSource);
-  const previousPersistedPageDimensionsKeyRef = useRef(persistedPageDimensionsKey);
 
   useEffect(() => {
-    if (
-      previousPdfSourceRef.current === props.pdfSource &&
-      previousPersistedPageDimensionsKeyRef.current === persistedPageDimensionsKey
-    ) {
-      return;
-    }
+    if (previousPdfSourceRef.current === props.pdfSource) return;
     previousPdfSourceRef.current = props.pdfSource;
-    previousPersistedPageDimensionsKeyRef.current = persistedPageDimensionsKey;
     setPageDimensionsByNumber(persistedPageDimensions);
     setIsDocumentLoaded(false);
-  }, [persistedPageDimensionsKey, props.pdfSource]);
+  }, [persistedPageDimensions, props.pdfSource]);
+
+  useEffect(() => {
+    setPageDimensionsByNumber((current) => ({ ...current, ...persistedPageDimensions }));
+  }, [persistedPageDimensionsKey]);
 
   useEffect(() => {
     props.onLayoutReadyChange(isLayoutReady);

@@ -84,53 +84,59 @@ import { PdfVisualExcerptRuntimeProvider } from './PdfVisualExcerptRuntime';
 function PdfDocumentViewportSearchActivationHarness() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchStatus, setSearchStatus] = useState({ current: 0, hasQuery: false, total: 0 });
+  const [persistedPageDimensions, setPersistedPageDimensions] = useState({ 1: { height: 1131, width: 800 } });
 
   return (
-    <PdfVisualExcerptRuntimeProvider currentPage={1} locators={[]} nodeId="pdf-1" rotation={0} source="/tmp/sample.pdf">
-      <PdfDocumentViewport
-        clearPageJumpRequest={() => undefined}
-        highlightLocators={[]}
-        loadError={null}
-        maxPage={1}
-        nodeId="pdf-1"
-        onClearSearch={() => undefined}
-        onContextMenu={() => undefined}
-        onLoadError={() => undefined}
-        onLoadSuccess={() => undefined}
-        onRetryLoad={() => undefined}
-        onNextPage={() => undefined}
-        onPageChange={() => undefined}
-        onPreviousPage={() => undefined}
-        onRotateClockwise={() => undefined}
-        onSearchQueryChange={setSearchQuery}
-        onSearchRequest={() => undefined}
-        onSearchRequestHandled={() => undefined}
-        onSearchStatusChange={setSearchStatus}
-        onSearchTargetHandled={() => undefined}
-        onSetFitWidth={() => undefined}
-        onSetZoom={() => undefined}
-        onZoomIn={() => undefined}
-        onZoomOut={() => undefined}
-        visiblePage={1}
-        page={1}
-        pageJumpRequest={null}
-        persistedPageCount={1}
-        persistedPageDimensions={{ 1: { height: 1131, width: 800 } }}
-        pdfSelectionLocator={undefined}
-        pdfSource="/tmp/sample.pdf"
-        pdfIndexStatus="ready"
-        rotation={0}
-        searchIndexingHint={null}
-        searchQuery={searchQuery}
-        searchRequest={null}
-        searchTarget={null}
-        searchStatus={searchStatus}
-        setVisibleLocation={() => undefined}
-        totalPages={1}
-        zoomMode="fit-width"
-        zoom={100}
-      />
-    </PdfVisualExcerptRuntimeProvider>
+    <>
+      <button type="button" onClick={() => setPersistedPageDimensions({ 1: { height: 1132, width: 801 } })}>
+        Refresh persisted PDF metrics
+      </button>
+      <PdfVisualExcerptRuntimeProvider currentPage={1} locators={[]} nodeId="pdf-1" rotation={0} source="/tmp/sample.pdf">
+        <PdfDocumentViewport
+          clearPageJumpRequest={() => undefined}
+          highlightLocators={[]}
+          loadError={null}
+          maxPage={1}
+          nodeId="pdf-1"
+          onClearSearch={() => undefined}
+          onContextMenu={() => undefined}
+          onLoadError={() => undefined}
+          onLoadSuccess={() => undefined}
+          onRetryLoad={() => undefined}
+          onNextPage={() => undefined}
+          onPageChange={() => undefined}
+          onPreviousPage={() => undefined}
+          onRotateClockwise={() => undefined}
+          onSearchQueryChange={setSearchQuery}
+          onSearchRequest={() => undefined}
+          onSearchRequestHandled={() => undefined}
+          onSearchStatusChange={setSearchStatus}
+          onSearchTargetHandled={() => undefined}
+          onSetFitWidth={() => undefined}
+          onSetZoom={() => undefined}
+          onZoomIn={() => undefined}
+          onZoomOut={() => undefined}
+          visiblePage={1}
+          page={1}
+          pageJumpRequest={null}
+          persistedPageCount={1}
+          persistedPageDimensions={persistedPageDimensions}
+          pdfSelectionLocator={undefined}
+          pdfSource="/tmp/sample.pdf"
+          pdfIndexStatus="ready"
+          rotation={0}
+          searchIndexingHint={null}
+          searchQuery={searchQuery}
+          searchRequest={null}
+          searchTarget={null}
+          searchStatus={searchStatus}
+          setVisibleLocation={() => undefined}
+          totalPages={1}
+          zoomMode="fit-width"
+          zoom={100}
+        />
+      </PdfVisualExcerptRuntimeProvider>
+    </>
   );
 }
 
@@ -171,5 +177,16 @@ describe('PdfDocumentViewport search activation', () => {
     await waitFor(() => {
       expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 1');
     });
+  });
+
+  it('keeps the loaded document ready when persisted page metrics arrive later', async () => {
+    renderWithLocalization(<PdfDocumentViewportSearchActivationHarness />);
+    await waitFor(() => expect(screen.getByLabelText('PDF search')).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh persisted PDF metrics' }));
+
+    await waitFor(() => expect(screen.getByLabelText('PDF search')).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText('PDF search'), { target: { value: 'keyword' } });
+    await waitFor(() => expect(screen.getByTestId('pdf-search-status')).toHaveTextContent('1 / 1'));
   });
 });
