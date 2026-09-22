@@ -36,7 +36,8 @@ function installLayout() {
   vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
     const scroll = this.closest<HTMLElement>('[data-testid="scroll"]');
     const row = this.closest<HTMLElement>('[data-index]');
-    const top = this === scroll ? 0 : Number(row?.style.transform.match(/translateY\(([-\d.]+)px\)/)?.[1] ?? 0) - (scroll?.scrollTop ?? 0);
+    const rowTop = Number.parseFloat(row?.style.top || '0') + Number(row?.style.transform.match(/translateY\(([-\d.]+)px\)/)?.[1] ?? 0);
+    const top = this === scroll ? 0 : rowTop - (scroll?.scrollTop ?? 0);
     const height = row ? 83 : 600;
     return { top, bottom: top + height, height, width: 375, left: 0, right: 375, x: 0, y: top, toJSON() {} };
   });

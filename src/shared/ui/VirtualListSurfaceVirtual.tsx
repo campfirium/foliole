@@ -40,7 +40,7 @@ function renderVirtualItems<TItem>(
         data-list-position-index={virtualItem.index}
         key={virtualItem.key}
         ref={measureElement}
-        style={{ left: 0, position: 'absolute', top: 0, transform: `translateY(${virtualItem.start - scrollMargin}px)`, width: '100%' }}
+        style={{ left: 0, position: 'absolute', top: virtualItem.start - scrollMargin, width: '100%' }}
       >
         {renderItem(item, {
           ariaPosInSet: virtualItem.index + 1,
