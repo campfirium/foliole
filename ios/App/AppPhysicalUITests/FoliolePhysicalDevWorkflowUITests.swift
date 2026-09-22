@@ -95,7 +95,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
             app.launch()
             dismissCapacityWirelessDataPrompt()
             results.append(try measureWorkspaceStage(target, in: app))
-            app.terminate()
+            if target == 1000 { app.terminate() }
         }
         let result: [String: Any] = ["status": "passed", "platform": "ios",
             "appId": "com.foliole.ios.t219capacity", "scenario": "library-capacity-workspace",
@@ -130,6 +130,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         let readStarted = CFAbsoluteTimeGetCurrent()
         tap("Directory", in: app, timeout: 60)
         tap("Open folder Topic 0", in: app, timeout: 60)
+        attachScreenshot(named: "T219-\(target)-directory")
         tap("Open topic Topic 1", in: app, timeout: 60)
         let body = app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS %@", "Synthetic measurement node 1.")
@@ -153,23 +154,31 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
             NSPredicate(format: "label CONTAINS %@", token)
         ).firstMatch.waitForExistence(timeout: 60), "T219 edit did not visibly refresh.")
         let refreshMs = elapsedMilliseconds(since: refreshStarted)
+        attachScreenshot(named: "T219-\(target)-saved-topic")
         revealAndExitReading(in: app, matching: token)
         tap("Search", in: app, timeout: 30)
         let search = app.searchFields["Search synced topics"]
         XCTAssertTrue(search.waitForExistence(timeout: 30), "T219 search is unavailable.")
         search.tap()
+        let searchStarted = CFAbsoluteTimeGetCurrent()
         search.typeText("Synthetic measurement node 1")
         XCTAssertTrue(app.buttons.matching(NSPredicate(
             format: "label BEGINSWITH %@", "Topic 1\n"
         )).firstMatch.waitForExistence(timeout: 60))
+        let searchMs = elapsedMilliseconds(since: searchStarted)
         let keyboardDone = app.toolbars.buttons["Done"]
         if keyboardDone.exists { keyboardDone.tap() }
+        attachScreenshot(named: "T219-\(target)-search")
+        let flowStarted = CFAbsoluteTimeGetCurrent()
         tap("Flow", in: app, timeout: 30)
         XCTAssertTrue(app.staticTexts.matching(
             NSPredicate(format: "label CONTAINS %@", "Synthetic measurement node")
         ).firstMatch.waitForExistence(timeout: 60), "T219 review flow is unavailable.")
+        let flowMs = elapsedMilliseconds(since: flowStarted)
+        attachScreenshot(named: "T219-\(target)-flow")
         return ["fixtureCount": target, "startupMs": startupMs,
-                "readMs": readMs, "refreshMs": refreshMs]
+                "readMs": readMs, "refreshMs": refreshMs,
+                "searchMs": searchMs, "flowMs": flowMs]
     }
 
     private func waitForWorkspaceStartup(in app: XCUIApplication) throws {
