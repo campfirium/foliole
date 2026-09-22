@@ -1,4 +1,4 @@
-import { createJSONStorage, type PersistOptions } from 'zustand/middleware';
+import type { PersistOptions } from 'zustand/middleware';
 
 import { resolveWorkspaceSnapshotActiveNodeId } from '../../lib/core/database/workspaceSnapshotContract';
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
@@ -8,9 +8,7 @@ import { createEmptyWorkspaceActionHistory } from './workspaceActionHistory';
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { mergeHydratedWorkspaceMembership, mergeNodeOpenStateById } from './workspaceHydrateObjectMerge';
 import { parsePersistedWorkspaceState } from './workspacePersistedStateParser';
-import { workspacePersistStorage } from './workspacePersistStorage';
-import { trimWorkspaceNodesForRendererBoundary } from './workspaceRendererBoundary';
-import { collectRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryKeepNodeIds';
+import { workspacePersistStoreStorage } from './workspacePersistStorage';
 import { resolveReviewSessionModePreference } from './workspaceReviewSessionModePreference';
 import { reconcileReviewSession } from './workspaceReviewSessionSync';
 import type { WorkspacePersistedState, WorkspaceState } from './workspaceStore';
@@ -42,13 +40,9 @@ function toPersistedReviewSession(reviewSession: WorkspaceState['reviewSession']
 }
 
 function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedState {
-  const nodesById = hasWorkspaceRuntimeRepository()
-    ? trimWorkspaceNodesForRendererBoundary(
-        state.activeNodeId,
-        state.nodesById,
-        collectRendererBoundaryKeepNodeIds(state, state)
-      )
-    : state.nodesById;
+  if (hasWorkspaceRuntimeRepository()) {
+    return state;
+  }
 
   return {
     activeNodeId: state.activeNodeId,
@@ -58,7 +52,7 @@ function partializeWorkspaceState(state: WorkspaceState): WorkspacePersistedStat
     nodeOpenStateById: state.nodeOpenStateById,
     nodeViewById: state.nodeViewById,
     nodeOrder: state.nodeOrder,
-    nodesById,
+    nodesById: state.nodesById,
     rendererBoundaryKeepNodeIds: state.rendererBoundaryKeepNodeIds,
     reviewSession: toPersistedReviewSession(state.reviewSession),
     reviewSessionMode: state.reviewSessionMode,
@@ -76,7 +70,7 @@ export function createWorkspaceStorePersistConfig(
   return {
     name: 'foliole-workspace-v1',
     skipHydration: true,
-    storage: createJSONStorage<WorkspacePersistedState>(() => workspacePersistStorage),
+    storage: workspacePersistStoreStorage,
     partialize: partializeWorkspaceState,
     merge: (persistedState, current) => {
       const persisted = parsePersistedWorkspaceState(persistedState);

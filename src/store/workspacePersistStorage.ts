@@ -1,4 +1,4 @@
-import type { StateStorage } from 'zustand/middleware';
+import type { PersistStorage, StateStorage } from 'zustand/middleware';
 
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
 
@@ -8,6 +8,7 @@ import {
   writeFallbackWorkspaceState
 } from './workspacePersistStorageFallback';
 import { getRuntimeWorkspaceState } from './workspacePersistStorageRuntimeHydrate';
+import type { WorkspacePersistedState } from './workspaceStore';
 
 const runtimeWorkspaceStatePromises = new Map<string, Promise<string | null>>();
 
@@ -42,5 +43,21 @@ export const workspacePersistStorage: StateStorage = {
       return;
     }
     removeFallbackWorkspaceState(name);
+  }
+};
+
+export const workspacePersistStoreStorage: PersistStorage<WorkspacePersistedState> = {
+  async getItem(name) {
+    const value = await workspacePersistStorage.getItem(name);
+    return value ? JSON.parse(value) : null;
+  },
+  setItem(name, value) {
+    if (hasWorkspaceRuntimeRepository()) {
+      return;
+    }
+    return workspacePersistStorage.setItem(name, JSON.stringify(value));
+  },
+  removeItem(name) {
+    return workspacePersistStorage.removeItem(name);
   }
 };

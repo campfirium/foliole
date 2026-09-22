@@ -32,10 +32,14 @@ function getStringItemId(nodeId: string) {
   return nodeId;
 }
 
+export function filterRootIdsByCandidates(rootIds: string[], candidateIds: string[]) {
+  const candidates = new Set(candidateIds);
+  return rootIds.filter((nodeId) => candidates.has(nodeId));
+}
+
 export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModelArgs) {
   const [searchQuery, setSearchQuery] = useState('');
   const contentSort = normalizeWorkspaceContentSort(args.sort, ['modifiedAt', 'lastOpenedAt', 'importedAt', 'name', 'manual']);
-  const refreshKey = resolveTopicTreeSortRefreshKey(args, contentSort);
   const sortRootIds = useCallback(
     (ids: string[]) =>
       sortWorkspaceContentNodeIds(ids, args.nodesById, contentSort, args.nodeOpenStateById, args.manualChildOrder),
@@ -44,14 +48,15 @@ export function useWorkspaceTopicTreeLazyModel(args: WorkspaceTopicTreeLazyModel
   const rootIds = useStableWorkspaceContentItems({
     getItemId: getStringItemId,
     items: args.itemIds,
-    refreshKey,
+    refreshKey: resolveTopicTreeSortRefreshKey(args, contentSort),
     scopeKey: `${args.activeFolderId}:root`,
     sort: contentSort,
     sortItems: sortRootIds
   });
   const sortIds = useCallback(
-    (parentId: string | null, ids: string[]) =>
-      parentId === null ? rootIds.filter((nodeId) => ids.includes(nodeId)) : sortWorkspaceContentChildNodeIds(ids, args.nodesById),
+    (parentId: string | null, ids: string[]) => parentId === null
+      ? filterRootIdsByCandidates(rootIds, ids)
+      : sortWorkspaceContentChildNodeIds(ids, args.nodesById),
     [args.nodesById, rootIds]
   );
   const initialCollapsibleNodeIds = useMemo(

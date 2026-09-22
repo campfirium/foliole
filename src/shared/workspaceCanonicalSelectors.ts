@@ -1,3 +1,8 @@
+import {
+  canReuseCanonicalMembershipPatch,
+  canReuseReviewQueuePatch
+} from './workspaceCanonicalPatchReuse';
+
 export interface WorkspaceCanonicalNode {
   deletedAt?: string | null;
   id: string;
@@ -23,6 +28,25 @@ interface CachedReviewQueueSource {
 }
 
 let cachedReviewQueueSource: CachedReviewQueueSource | null = null;
+
+interface CachedWorkspaceMembershipView {
+  nodeOrder: readonly string[];
+  nodesById: Record<string, WorkspaceCanonicalNode | undefined>;
+  result: {
+    nodeOrder: string[];
+    reviewQueueSource: {
+      nodeOrder: string[];
+      nodesById: Record<string, WorkspaceCanonicalNode>;
+      trashedNodeIds: string[];
+    };
+    trashedNodeDeletedAtById: Record<string, string>;
+    trashedNodeIds: string[];
+  };
+  trashedNodeDeletedAtById: Record<string, string | undefined> | undefined;
+  trashedNodeIds: readonly string[] | undefined;
+}
+
+let cachedWorkspaceMembershipView: CachedWorkspaceMembershipView | null = null;
 
 function uniqueIds(ids: readonly string[]) {
   return [...new Set(ids)];
@@ -130,6 +154,20 @@ export function selectCanonicalReviewQueueSource<TNode extends WorkspaceCanonica
       trashedNodeIds: string[];
     };
   }
+  if (
+    cachedReviewQueueSource &&
+    cachedReviewQueueSource.nodeOrder === source.nodeOrder &&
+    cachedReviewQueueSource.trashedNodeDeletedAtById === source.trashedNodeDeletedAtById &&
+    cachedReviewQueueSource.trashedNodeIds === source.trashedNodeIds &&
+    canReuseReviewQueuePatch(source.nodesById, cachedReviewQueueSource.nodesById)
+  ) {
+    cachedReviewQueueSource = { ...cachedReviewQueueSource, nodesById: source.nodesById };
+    return cachedReviewQueueSource.result as {
+      nodeOrder: string[];
+      nodesById: Record<string, TNode>;
+      trashedNodeIds: string[];
+    };
+  }
   const visibleNodeIds = selectCanonicalVisibleNodeIds(source);
   const trashedNodeIds = selectCanonicalTrashedNodeIds(source);
   const result = {
@@ -152,6 +190,41 @@ export function selectCanonicalReviewQueueSource<TNode extends WorkspaceCanonica
 }
 
 export function selectCanonicalWorkspaceMembershipView<TNode extends WorkspaceCanonicalNode>(
+  source: WorkspaceCanonicalSource<TNode>
+) {
+  const cached = cachedWorkspaceMembershipView;
+  if (
+    cached &&
+    cached.nodeOrder === source.nodeOrder &&
+    cached.trashedNodeDeletedAtById === source.trashedNodeDeletedAtById &&
+    cached.trashedNodeIds === source.trashedNodeIds &&
+    (cached.nodesById === source.nodesById ||
+      canReuseCanonicalMembershipPatch(source.nodesById, cached.nodesById))
+  ) {
+    const reviewQueueSource = cached.result.reviewQueueSource.nodesById === source.nodesById
+      ? cached.result.reviewQueueSource
+      : {
+          ...cached.result.reviewQueueSource,
+          nodesById: source.nodesById as Record<string, TNode>
+        };
+    const result = reviewQueueSource === cached.result.reviewQueueSource
+      ? cached.result
+      : { ...cached.result, reviewQueueSource };
+    cachedWorkspaceMembershipView = { ...cached, nodesById: source.nodesById, result };
+    return result;
+  }
+  const result = buildCanonicalWorkspaceMembershipView(source);
+  cachedWorkspaceMembershipView = {
+    nodeOrder: source.nodeOrder,
+    nodesById: source.nodesById,
+    result,
+    trashedNodeDeletedAtById: source.trashedNodeDeletedAtById,
+    trashedNodeIds: source.trashedNodeIds
+  };
+  return result;
+}
+
+function buildCanonicalWorkspaceMembershipView<TNode extends WorkspaceCanonicalNode>(
   source: WorkspaceCanonicalSource<TNode>
 ) {
   const nodeOrder = selectCanonicalVisibleNodeIds(source);

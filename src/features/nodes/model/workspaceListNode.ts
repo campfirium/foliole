@@ -1,5 +1,6 @@
 import { projectImageOnlyMarkdownLabel } from '../../../../lib/core/import/markdownImageLabel';
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
+import { readWorkspaceRecordPatch } from '../../../shared/workspaceRecordPatch';
 
 import { UNTITLED_NODE_TITLE } from './deriveNodeTitle';
 import type {
@@ -44,6 +45,8 @@ export interface WorkspaceListNode {
 }
 
 export type WorkspaceListNodesById = Record<string, WorkspaceListNode | undefined>;
+
+const projectionSources = new WeakMap<WorkspaceListNodesById, Record<string, Node | undefined>>();
 
 function resolveWorkspaceListNodeTitle(node: Node) {
   if (node.anchorLink?.kind !== 'highlight' || node.title !== UNTITLED_NODE_TITLE) {
@@ -120,6 +123,22 @@ export function projectWorkspaceListNodesById(
   previousProjection?: WorkspaceListNodesById
 ): WorkspaceListNodesById {
   const previous = previousProjection ?? {};
+  const previousSource = projectionSources.get(previous);
+  const changedNodeIds = previousSource
+    ? readWorkspaceRecordPatch(nodesById, previousSource)
+    : null;
+  if (changedNodeIds) {
+    let nextProjection = previous;
+    changedNodeIds.forEach((nodeId) => {
+      const node = nodesById[nodeId];
+      const previousNode = previous[nodeId];
+      if (isWorkspaceListProjectionReusable(previousNode, node)) return;
+      if (nextProjection === previous) nextProjection = { ...previous };
+      nextProjection[nodeId] = node ? toWorkspaceListNode(node) : undefined;
+    });
+    projectionSources.set(nextProjection, nodesById);
+    return nextProjection;
+  }
   let changed = Object.keys(previous).length !== Object.keys(nodesById).length;
   const nextProjection: WorkspaceListNodesById = {};
 
@@ -134,7 +153,9 @@ export function projectWorkspaceListNodesById(
     changed = true;
   }
 
-  return changed ? nextProjection : previous;
+  const result = changed ? nextProjection : previous;
+  projectionSources.set(result, nodesById);
+  return result;
 }
 
 export type WorkspaceListReviewItemKind = 'none' | 'reading' | 'fsrs';

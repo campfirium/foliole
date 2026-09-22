@@ -1,4 +1,5 @@
 import { markNodeSelectionApplied } from '../shared/platform/performanceDiagnosticsProbe';
+import { patchWorkspaceRecord } from '../shared/workspaceRecordPatch';
 
 import {
   resolveWorkspaceBrowseRootForTarget,
@@ -39,10 +40,9 @@ function mergePreparedNodeDocument(
     }
 
     return {
-      nodesById: {
-        ...state.nodesById,
+      nodesById: patchWorkspaceRecord(state.nodesById, {
         [nodeId]: mergeWorkspaceNodeDocument(nextNode, document)
-      },
+      }),
       ...(options.keepWarm
         ? {
             rendererBoundaryKeepNodeIds: [
@@ -62,7 +62,7 @@ function buildPreparedOpenState(
   nodeId: string,
   document: WorkspaceNodeDocument | null,
   options: EnsureWorkspaceNodeDocumentReadyOptions
-): WorkspaceState {
+): WorkspaceState | Partial<WorkspaceState> {
   const targetNode = state.nodesById[nodeId];
   if (!targetNode || !isWorkspaceNodeVisible(state, nodeId)) {
     return state;
@@ -75,10 +75,7 @@ function buildPreparedOpenState(
   const nextNodesById =
     mergedTargetNode === targetNode
       ? state.nodesById
-      : {
-          ...state.nodesById,
-          [nodeId]: mergedTargetNode
-        };
+      : patchWorkspaceRecord(state.nodesById, { [nodeId]: mergedTargetNode });
   const nextBrowseRootNodeId = resolveWorkspaceBrowseRootForTarget({
     browseRootNodeId: state.browseRootNodeId,
     intent: options.browseRootIntent ?? 'target-context',
@@ -91,7 +88,6 @@ function buildPreparedOpenState(
     return nextNodesById === state.nodesById && nextBrowseRootNodeId === state.browseRootNodeId
       ? state
       : {
-          ...state,
           browseRootNodeId: nextBrowseRootNodeId,
           nodesById: nextNodesById
         };
@@ -100,7 +96,6 @@ function buildPreparedOpenState(
   markNodeSelectionApplied(nodeId, nextNodesById);
 
   return {
-    ...state,
     activeNodeId: nodeId,
     browseRootNodeId: nextBrowseRootNodeId,
     navigation: state.activeNodeId

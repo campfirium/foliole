@@ -1,5 +1,6 @@
 import { ensureInboxNodeInSnapshot } from '../features/nodes/model/specialNodes';
 import { hasWorkspaceRuntimeRepository } from '../shared/platform/workspaceRuntimeRepository';
+import { readWorkspaceRecordPatch } from '../shared/workspaceRecordPatch';
 
 import { resolveWorkspaceBrowseRootNodeId } from './workspaceBrowseRoot';
 import { isCanonicalVisibleNodeId } from './workspaceCanonicalSelectors';
@@ -43,6 +44,19 @@ function withWorkspaceSpecialRoots<T extends WorkspaceState | Partial<WorkspaceS
   if (!('activeNodeId' in state) && !('browseRootNodeId' in state) && !('nodeOrder' in state) && !('nodesById' in state) && !('reviewSession' in state) && !('trashedNodeIds' in state)) {
     return state;
   }
+  const sourceNodesById = 'nodesById' in state ? state.nodesById ?? {} : currentState.nodesById;
+  const changedNodeIds = readWorkspaceRecordPatch(sourceNodesById, currentState.nodesById);
+  const canReuseNormalizedMembership =
+    !('nodeOrder' in state) &&
+    !('trashedNodeIds' in state) &&
+    changedNodeIds !== null &&
+    changedNodeIds.every((nodeId) => !nodeId.startsWith('special-'));
+  if (!('nodeOrder' in state) && !('nodesById' in state) && !('trashedNodeIds' in state)) {
+    return withWorkspaceNavigationRoots(state, currentState, currentState.nodesById);
+  }
+  if (canReuseNormalizedMembership) {
+    return withWorkspaceNavigationRoots(state, currentState, sourceNodesById);
+  }
   const normalized = ensureInboxNodeInSnapshot({
     activeNodeId: resolveVisibleActiveNodeId(state, currentState),
     nodeOrder: 'nodeOrder' in state ? state.nodeOrder ?? [] : currentState.nodeOrder,
@@ -70,6 +84,38 @@ function withWorkspaceSpecialRoots<T extends WorkspaceState | Partial<WorkspaceS
   return {
     ...state,
     ...normalized,
+    browseRootNodeId: alignedBrowseRootNodeId
+  };
+}
+
+function withWorkspaceNavigationRoots<T extends WorkspaceState | Partial<WorkspaceState>>(
+  state: T,
+  currentState: WorkspaceState,
+  nodesById: WorkspaceState['nodesById']
+): T {
+  const navigationState = { ...currentState, ...state, nodesById };
+  const activeNodeId = resolveVisibleActiveNodeId(navigationState, currentState);
+  const browseRootNodeId = resolveWorkspaceBrowseRootNodeId({
+    browseRootNodeId: 'browseRootNodeId' in state
+      ? state.browseRootNodeId
+      : currentState.browseRootNodeId,
+    nodesById,
+    trashedNodeIds: navigationState.trashedNodeIds
+  });
+  const reviewSession = 'reviewSession' in state
+    ? state.reviewSession ?? currentState.reviewSession
+    : currentState.reviewSession;
+  const alignedBrowseRootNodeId = activeNodeId && activeNodeId === reviewSession.currentNodeId
+    ? resolveReviewActiveBrowseRootNodeId({
+        activeNodeId,
+        browseRootNodeId,
+        nodesById,
+        trashedNodeIds: navigationState.trashedNodeIds
+      })
+    : browseRootNodeId;
+  return {
+    ...state,
+    ...('activeNodeId' in state ? { activeNodeId } : {}),
     browseRootNodeId: alignedBrowseRootNodeId
   };
 }

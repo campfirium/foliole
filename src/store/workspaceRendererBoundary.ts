@@ -1,4 +1,8 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import {
+  readWorkspaceRecordPatch,
+  recordWorkspaceRecordPatch
+} from '../shared/workspaceRecordPatch';
 
 import { collectActiveFolderRendererBoundaryKeepNodeIds } from './workspaceRendererBoundaryActiveFolder';
 import {
@@ -140,7 +144,9 @@ function reconcileActiveNodeBoundaryChange(
     changed = true;
   }
 
-  return changed ? nextNodesById : currentState.nodesById;
+  return changed
+    ? recordWorkspaceRecordPatch(currentState.nodesById, nextNodesById, [...affectedNodeIds])
+    : currentState.nodesById;
 }
 
 export function enforceWorkspaceRendererBoundary<T extends WorkspaceRendererBoundaryStateLike>(
@@ -154,16 +160,21 @@ export function enforceWorkspaceRendererBoundary<T extends WorkspaceRendererBoun
 
   const nextActiveNodeId = 'activeNodeId' in state ? state.activeNodeId ?? null : currentState.activeNodeId;
   const nextNodesById = 'nodesById' in state ? state.nodesById ?? currentState.nodesById : currentState.nodesById;
+  const changedNodeIds = readWorkspaceRecordPatch(nextNodesById, currentState.nodesById);
   const nextKeepNodeIds = new Set(keepNodeIds);
   const shouldPreserveDocumentWorkset = !('activeNodeId' in state);
+  const canUsePatchReconcile = Boolean(
+    changedNodeIds?.every((nodeId) => nodeId in currentState.nodesById && nodeId in nextNodesById)
+  );
   const canUseFocusedReconcile =
     'activeNodeId' in state &&
     'nodesById' in state &&
-    hasMatchingNodeIds(currentState.nodesById, nextNodesById);
+    (changedNodeIds?.every((nodeId) => nodeId in currentState.nodesById && nodeId in nextNodesById) ??
+      hasMatchingNodeIds(currentState.nodesById, nextNodesById));
   const documentWorksetNodeIds =
-    shouldPreserveDocumentWorkset || canUseFocusedReconcile
+    changedNodeIds ?? (shouldPreserveDocumentWorkset || canUseFocusedReconcile
       ? listDocumentWorksetNodeIds(currentState.nodesById, nextNodesById)
-      : [];
+      : []);
 
   if (shouldPreserveDocumentWorkset) {
     for (const nodeId of documentWorksetNodeIds) {
@@ -172,7 +183,7 @@ export function enforceWorkspaceRendererBoundary<T extends WorkspaceRendererBoun
   }
 
   const reconciledNodesById =
-    canUseFocusedReconcile && documentWorksetNodeIds.length <= 4
+    (canUseFocusedReconcile || canUsePatchReconcile) && documentWorksetNodeIds.length <= 4
       ? reconcileFocusedRendererBoundaryNodes(
           {
             activeNodeId: nextActiveNodeId,

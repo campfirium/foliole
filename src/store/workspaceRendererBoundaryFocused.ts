@@ -1,4 +1,5 @@
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { recordWorkspaceRecordPatch } from '../shared/workspaceRecordPatch';
 
 import { hasMatchingBoundaryPreservedFields } from './workspaceSnapshotFieldManifest';
 
@@ -111,5 +112,7 @@ export function reconcileFocusedRendererBoundaryNodes(args: FocusedRendererBound
     changed = true;
   }
 
-  return changed ? nextBoundaryNodesById : args.currentNodesById;
+  return changed
+    ? recordWorkspaceRecordPatch(args.currentNodesById, nextBoundaryNodesById, [...affectedNodeIds])
+    : args.currentNodesById;
 }
