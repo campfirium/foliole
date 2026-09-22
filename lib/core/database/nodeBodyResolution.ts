@@ -1,6 +1,8 @@
 import { decodeTextBodyBlobData } from './contentBodyBlobs.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 
+export { buildNodeBodyContentSql } from './nodeBodySql.js';
+
 export interface NodeBodyRow extends DatabaseRow {
   body_blob_data: unknown;
   body_blob_hash: string | null;
@@ -20,14 +22,6 @@ export class NodeBodyUnavailableError extends Error {
     this.name = 'NodeBodyUnavailableError';
     this.nodeIds = nodeIds;
   }
-}
-
-export function buildNodeBodyContentSql(nodeAlias = 'n', dataAlias = 'cbd') {
-  return `CASE
-    WHEN NULLIF(TRIM(${nodeAlias}.body_blob_hash), '') IS NULL THEN ${nodeAlias}.content
-    WHEN ${dataAlias}.hash IS NOT NULL THEN CAST(${dataAlias}.data AS TEXT)
-    ELSE ''
-  END`;
 }
 
 export function resolveNodeBody(row: NodeBodyRow): NodeBodyResolution {

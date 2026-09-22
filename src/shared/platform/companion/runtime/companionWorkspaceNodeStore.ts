@@ -1,4 +1,4 @@
-import { buildNodeBodyContentSql } from '../../../../../lib/core/database/nodeBodyResolution';
+import { buildNodeBodyContentSql } from '../../../../../lib/core/database/nodeBodySql';
 import { buildWorkspaceSnapshotNode, type WorkspaceNodeRowShape } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 
