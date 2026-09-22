@@ -15,7 +15,7 @@ vi.mock('../../../shared/platform/remoteImageSourceRecovery', () => ({
   saveRemoteImageSourceWebsite: sourceContext.save
 }));
 
-import { createMarkdownImageWidgetDom } from './liveMarkdownImages';
+import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from './liveMarkdownImages';
 
 function createWidget() {
   const widget = createMarkdownImageWidgetDom({
@@ -87,4 +87,21 @@ it('falls back to a direct request when context loading fails', async () => {
   expect(url.searchParams.get('origin')).toBeNull();
   expect(url.searchParams.get('provenance')).toBeNull();
   expect(sourceContext.load).toHaveBeenCalledTimes(1);
+});
+
+it('does not assign a remote source after the widget is disposed', async () => {
+  let finishContext: ((value: unknown) => void) | null = null;
+  sourceContext.load.mockReturnValue(new Promise((resolve) => {
+    finishContext = resolve;
+  }));
+  const widget = createWidget();
+  await waitFor(() => expect(sourceContext.load).toHaveBeenCalledOnce());
+
+  disposeMarkdownImageWidgetDom(widget);
+  finishContext?.({
+    imageHost: 'cdn.example', learnedSourceOrigin: null, source: 'none', sourceOrigin: null
+  });
+  await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+  expect(widget.querySelector<HTMLImageElement>('.cm-md-image-element')?.getAttribute('src')).toBeNull();
 });

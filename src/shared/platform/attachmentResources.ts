@@ -34,6 +34,23 @@ const attachmentResourceResolutionCache = createBoundedCache<
   string,
   Promise<NativeAttachmentResourceResolution | null>
 >(MAX_ATTACHMENT_RESOURCE_RESOLUTIONS);
+const attachmentResourceResolutionsInFlight = new Map<
+  string,
+  Promise<NativeAttachmentResourceResolution | null>
+>();
+
+function trackAttachmentResourceResolution(
+  storageKey: string,
+  resolution: Promise<NativeAttachmentResourceResolution | null>
+) {
+  attachmentResourceResolutionsInFlight.set(storageKey, resolution);
+  void resolution.finally(() => {
+    if (attachmentResourceResolutionsInFlight.get(storageKey) === resolution) {
+      attachmentResourceResolutionsInFlight.delete(storageKey);
+    }
+  }).catch(() => undefined);
+  return resolution;
+}
 
 export { registerAttachmentResourceDescriptions };
 
@@ -41,10 +58,12 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string, opti
   const storageKey = parseAssetMarkdownUrl(resourceUrl);
   const parsed = storageKey ? parseCanonicalAttachmentStorageKey(storageKey) : null;
   if (!storageKey || !parsed) return null;
+  const inFlight = attachmentResourceResolutionsInFlight.get(storageKey);
+  if (inFlight) return inFlight;
   if (options?.refresh) attachmentResourceResolutionCache.delete(storageKey);
 
   if (isNativeCompanionAttachmentResourceRuntime()) {
-    return resolveNativeAttachmentResource(parsed);
+    return trackAttachmentResourceResolution(storageKey, resolveNativeAttachmentResource(parsed));
   }
 
   const runtimeInvoke = getRuntimeInvoke();
@@ -88,7 +107,7 @@ export async function resolveRuntimeAttachmentResource(resourceUrl: string, opti
 
   attachmentResourceResolutionCache.set(storageKey, resolutionPromise);
   updateImageCacheStats({ entries: attachmentResourceResolutionCache.size, hit: false });
-  return resolutionPromise;
+  return trackAttachmentResourceResolution(storageKey, resolutionPromise);
 }
 
 async function resolveNativeAttachmentResource(
@@ -172,5 +191,6 @@ export function invalidateAttachmentResourceResolution(resourceIdentity: string)
 
 export function resetAttachmentResourceResolutionCacheForTest() {
   attachmentResourceResolutionCache.clear();
+  attachmentResourceResolutionsInFlight.clear();
   clearAttachmentResourceDescriptions();
 }

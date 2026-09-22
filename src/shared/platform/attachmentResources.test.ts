@@ -188,3 +188,23 @@ it('checks the current file when display requests a fresh resolution', async () 
   expect((await resolveRuntimeAttachmentResource(resource.assetUrl))?.status).toBe('ready');
   expect((await resolveRuntimeAttachmentResource(resource.assetUrl, { refresh: true }))?.status).toBe('missing_file');
 });
+
+it('shares one in-flight desktop resolution across concurrent refresh requests', async () => {
+  capacitorMock.isNativePlatform.mockReturnValue(false);
+  const resource = createTestAttachmentResource({ attachmentId: 'att-desktop-concurrent' });
+  let finishResolution: ((value: unknown) => void) | null = null;
+  const invoke = vi.fn(() => new Promise((resolve) => {
+    finishResolution = resolve;
+  }));
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  const first = resolveRuntimeAttachmentResource(resource.assetUrl, { refresh: true });
+  const second = resolveRuntimeAttachmentResource(resource.assetUrl, { refresh: true });
+  expect(invoke).toHaveBeenCalledTimes(1);
+  finishResolution?.({ status: 'ready', resource_url: 'file:///attachments/shared.png', mime_type: 'image/png' });
+
+  await expect(Promise.all([first, second])).resolves.toEqual([
+    { status: 'ready', resource_url: 'file:///attachments/shared.png', mime_type: 'image/png' },
+    { status: 'ready', resource_url: 'file:///attachments/shared.png', mime_type: 'image/png' }
+  ]);
+});

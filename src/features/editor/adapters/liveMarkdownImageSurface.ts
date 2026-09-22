@@ -15,6 +15,7 @@ export function createImageSurface(
     onError?: (() => void) | null;
     onLoad?: (() => void) | null;
     requestMeasure?: RequestEditorMeasure;
+    isActive?: () => boolean;
   } = {}
 ) {
   const presentation = getImageClozeEditorPresentation(editorNodeId);
@@ -34,7 +35,8 @@ export function createImageSurface(
       onError: imageOptions.onError ?? null,
       onLoad: imageOptions.onLoad ?? null,
       requestMeasure: imageOptions.requestMeasure ?? null,
-      source
+      source,
+      ...(imageOptions.isActive ? { isActive: imageOptions.isActive } : {})
     }),
     previewAlt: imageMatch.alt,
     previewPresentation: imagePresentation,

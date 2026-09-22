@@ -12,12 +12,19 @@ function buildLocalAttachmentRetrySource(source: string) {
   return url.toString();
 }
 
-function assignImageSource(image: HTMLImageElement, source: string, deferSource: boolean) {
+function assignImageSource(
+  image: HTMLImageElement,
+  source: string,
+  deferSource: boolean,
+  isActive: () => boolean
+) {
   if (!deferSource) {
-    image.src = source;
+    if (isActive()) image.src = source;
     return;
   }
-  if (source) queueMicrotask(() => { image.src = source; });
+  if (source) queueMicrotask(() => {
+    if (isActive()) image.src = source;
+  });
 }
 
 export function createMarkdownImageElement(args: {
@@ -29,8 +36,10 @@ export function createMarkdownImageElement(args: {
   linkHref?: string;
   requestMeasure?: RequestEditorMeasure;
   source: string;
+  isActive?: () => boolean;
 }) {
   const image = document.createElement('img');
+  const isActive = args.isActive ?? (() => true);
   const locale = getStoredAppLocale();
   image.alt = args.alt || translate(locale, 'desktop.editor.image.altFallback');
   image.loading = 'lazy';
@@ -47,10 +56,11 @@ export function createMarkdownImageElement(args: {
     let didReportError = false;
     let didRetryLocalAttachment = false;
     image.addEventListener('error', () => {
+      if (!isActive()) return;
       if (args.source.startsWith('foliole-asset://') && !didRetryLocalAttachment) {
         didRetryLocalAttachment = true;
         setTimeout(() => {
-          image.src = buildLocalAttachmentRetrySource(args.source);
+          if (isActive()) image.src = buildLocalAttachmentRetrySource(args.source);
         }, LOCAL_ATTACHMENT_RETRY_DELAY_MS);
         return;
       }
@@ -62,6 +72,7 @@ export function createMarkdownImageElement(args: {
   }
   if (args.onLoad || args.requestMeasure) {
     image.addEventListener('load', () => {
+      if (!isActive()) return;
       args.onLoad?.();
       args.requestMeasure?.();
     }, { once: true });
@@ -70,6 +81,6 @@ export function createMarkdownImageElement(args: {
     image.dataset.mdLinkUrl = args.linkHref;
     image.title = translate(locale, 'desktop.editor.openInBrowserHint');
   }
-  assignImageSource(image, args.source, args.deferSource ?? false);
+  assignImageSource(image, args.source, args.deferSource ?? false, isActive);
   return image;
 }

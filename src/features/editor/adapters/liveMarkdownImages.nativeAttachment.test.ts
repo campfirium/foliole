@@ -19,7 +19,7 @@ vi.mock('../../../shared/platform/attachmentResources', () => ({
   resolveRuntimeAttachmentResource: attachmentMock.resolve
 }));
 
-import { createMarkdownImageWidgetDom } from './liveMarkdownImages';
+import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from './liveMarkdownImages';
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -52,4 +52,27 @@ it('resolves iOS attachment images through the shared native resource capability
     );
   });
   expect(attachmentMock.resolve).toHaveBeenCalledWith(source, { refresh: true });
+});
+
+it('ignores an attachment resolution that arrives after the widget is disposed', async () => {
+  const hash = 'b'.repeat(64);
+  const source = `asset://${hash}.png`;
+  let finishResolution: ((value: unknown) => void) | null = null;
+  attachmentMock.resolve.mockReturnValue(new Promise((resolve) => {
+    finishResolution = resolve;
+  }));
+  const requestMeasure = vi.fn();
+  const widget = createMarkdownImageWidgetDom({
+    alt: 'Disposed attachment', attachmentId: hash, display: 'block', from: 0, source, to: 38
+  }, null, null, requestMeasure);
+
+  disposeMarkdownImageWidgetDom(widget);
+  finishResolution?.({
+    mime_type: 'image/png', resource_url: 'foliole-asset://attachment/disposed', status: 'ready'
+  });
+  await Promise.resolve();
+  await Promise.resolve();
+
+  expect(widget.querySelector('.cm-md-image-element')).toBeNull();
+  expect(requestMeasure).not.toHaveBeenCalled();
 });
