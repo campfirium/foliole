@@ -13,7 +13,7 @@ test('recovers when a local attachment arrives after its image is first rendered
   const sourceBytes = sourceBuffer.toString('base64');
 
   await desktopWindow.waitForFunction(() => Array.from(
-    document.querySelectorAll<HTMLImageElement>('.cm-md-image-element-block')
+    document.querySelectorAll<HTMLImageElement>('.cm-md-image-element')
   ).some((image) => image.complete && image.naturalWidth > 0));
   await desktopWindow.evaluate(async ({ attachmentId: id, nodeId }) => {
     const debug = window.__folioleWorkspaceDebug;
@@ -26,7 +26,7 @@ test('recovers when a local attachment arrives after its image is first rendered
     await debug?.openNode?.(nodeId);
   }, { attachmentId, nodeId: NODE_ID });
 
-  const image = desktopWindow.locator('.cm-md-image-element-block');
+  const image = desktopWindow.locator('.cm-md-image-element');
   await expect(image).toHaveCount(1);
   await desktopWindow.evaluate(async ({ nodeId, sourceBytes: bytes }) => {
     await window.__folioleWorkspaceDebug?.importClipboardImageAttachment?.({
