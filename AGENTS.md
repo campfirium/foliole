@@ -16,6 +16,8 @@
 - 正式发布只使用短期 `release` 分支，并按 `foliole-release` skill 执行；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。每个 release 只由一个 pinned 发布主任务持有，公开必须由用户确认。
 - 人工创建或交接 Foliole Codex 任务时，使用 saved project 的 local environment；有正式编号时，标题必须原样使用当前工作单元的编号并按实际结果命名，不得退化为 owning plan 总标题；没有正式编号时不得编造编号，直接按实际工作内容命名。同一编号与阶段已有未归档任务时继续原任务，不重复创建。完整提示可读且活动回合已建立后才算交付。自动 monitor 的 paused handoff 只按 `codex-desktop-handoff` skill 执行，根不复述其传输协议。
 - 单次交付一个可运行、可验证、可回退的能力闭环；闭环按用户结果、数据语义或迁移语义划分，不按文件、测试、平台、提交数或耗时拆分，也不混入无关重构。
+- 产品任务不附带控制面建设。控制面按用途指管理开发、验证、验收或代理执行的 validator、controller、orchestrator、gate、monitor、协议、扫描器与通用工作流，不包括产品运行必需的输入校验、业务控制器或 bridge。新增或扩展控制面，须由用户当次明确要求，或已批准方案明确列为可独立命名、说明收益和验收的交付结果；“完善验证、保证闭环”等泛称不构成授权。本条由根统一拥有，来源为用户对产品与控制面授权的分离；主要成本是控制面缺口可能使验收待完成，明确授权该结果后按其范围执行。
+- 产品闭环可运行已有入口、补充最小行为测试及必要 fixture，并修复本轮引入的工具回归以恢复原合同；不借修复扩展工具职责。若删除拟新增的控制机制仍不影响产品目标及数据/安全不变量，其收益应独立说明，不能借“必要实现”带入。每项改动须直接服务用户结果、必要实现或最小行为验证，无须另建归因台账。未授权控制面缺口只作独立待办，需落库时使用 task-seed；可继续的产品工作继续，确实阻断验收时报告待验与具体缺口，不擅建控制面或宣称通过。
 - 共享目标是“共享核心 + 薄宿主适配”；平台差异进入 `src/shared/platform/**` 或对应宿主，不在 feature/store/editor 业务逻辑中复制平台分支。正式图标、菜单与命令必须同源、同名。
 
 ## AGENTS Routing
@@ -62,7 +64,7 @@
 - 每个 `/3` 闭环默认完成相关窄验证与必要宿主验收后才勾选。只有用户或已批准方案明确选择延后验收时才采用 `final-batch`，清楚记录交给 `/4` 的剩余验证，不以开发完成冒充最终通过。
 - 使用 `npm` 与 `package.json` 中登记的入口，不用不存在的 `npm test` 兜底，也不得降低检查标准。普通本地优先 `npm run quality:fast`，或显式 `npm run test:files -- <files>`、`npm run test:sqlite:electron -- <files>`、`npm run lint:files -- <files>`。
 - `test:changed`、`quality:desktop`、`quality:android`、`quality:shared`、`quality:full`、`quality:release`、`quality:ios*` 只在 hosted lane 执行。`scripts/quality/quality-command-contracts.mjs` 是命令分类真相；dev hosted recheck 只用 `npm run quality:remote -- --scope <desktop|shared|android|ios|full>`。
-- 新增或改变可观察行为时维护独立于实现方式仍需长期成立的测试 contract；不以 DOM 顺序、坐标、像素、当前文案分组或文件数量固化偶然结构。纯文案/视觉若无稳定自动化 contract，按宿主规则做可见验收并说明跳过测试原因。
+- 新增或改变可观察行为时维护最小、独立于实现方式的测试 contract；证明本次差异的测试应因旧行为不符合目标而失败、因新行为符合目标而通过，不能以缺少新 helper 或文件代替行为失败。保护未改变行为的回归测试可以前后都通过；无法安全复跑旧版时如实说明证据限制。不以 DOM 顺序、坐标、像素、当前文案分组或文件数量固化偶然结构，也不由测试合同推导控制面建设授权。纯文案/视觉若无稳定自动化 contract，按宿主规则做可见验收并说明跳过测试原因。
 - 运行时或用户可见行为改动必须先完成相关窄验证，再按局部规则完成受影响宿主的可见验收。文档、agent 规则、只读诊断、测试或脚本内部改动且不改变运行时行为时可跳过宿主验收，并在最终汇报说明。
 - 本机开发、诊断和提交前宿主试跑可消费当前工作区。最终验收若方案或宿主入口要求冻结候选，必须绑定精确 revision；多宿主结论绑定同一 accepted tip，不得拼接不同 revision 的局部证据。源码、成功判据或会影响结论的基线变化，只使受影响证据失效并从新基线复验；具体方案可明确要求整轮重跑。
 - 改 sync-pack 相关 manifest/schema/apply 或登记路径时先跑 `npm run test:sync-pack`。新增/拆分文件或修复规模问题时先跑 `node scripts/check-file-budget.mjs <files>` 再跑窄 lint。新增/升级依赖由 hosted `deps:hardening:check` 覆盖；已点名漏洞可定向绕过 release-age 窗口并用 `npm ls` 与 `npm audit --omit=dev` 复验。
