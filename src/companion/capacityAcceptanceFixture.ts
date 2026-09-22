@@ -29,9 +29,11 @@ export async function seedCapacityNodes(db: DbPort, start: number, count: number
       (hash,storage_key,kind,original_size_bytes,stored_size_bytes,original_sha256,stored_sha256,availability,created_at)`,
     9, records.flatMap((record) => record.blob ? [record.blob] : []));
     await insertRows(tx, 'content_blob_data', 2, records.flatMap((record) => record.blobData ? [record.blobData] : []));
-    await insertRows(tx, 'node_review', 2, records.flatMap((record) => record.metadata?.review ?? []));
-    await insertRows(tx, 'node_reading', 3, records.flatMap((record) => record.metadata?.reading ?? []));
-    await insertRows(tx, 'node_view_state', 4, records.flatMap((record) => record.metadata?.viewState ?? []));
+    await insertRows(tx, 'node_review (node_id,due)', 2, records.flatMap((record) => record.metadata?.review ?? []));
+    await insertRows(tx, 'node_reading (node_id,last_handled_at,next_at)', 3,
+      records.flatMap((record) => record.metadata?.reading ?? []));
+    await insertRows(tx, 'node_view_state (node_id,host_name,scroll_top,updated_at)', 4,
+      records.flatMap((record) => record.metadata?.viewState ?? []));
     await insertRows(tx, 'node_open_state', 2, records.flatMap((record) => record.metadata?.openState ?? []));
     await insertRows(tx, 'attachments', 5, records.flatMap((record) => record.metadata?.attachment ?? []));
     await insertRows(tx, 'node_attachments', 3, records.flatMap((record) => record.metadata?.nodeAttachment ?? []));
