@@ -52,3 +52,36 @@ test('recovers when a local attachment arrives after its image is first rendered
   await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
   await expect(desktopWindow.locator('[data-md-image-status="unavailable"]')).toHaveCount(0);
 });
+
+test('leaving a pending local image and returning shows the recovered attachment', async ({ desktopWindow }, testInfo) => {
+  const sourceBuffer = fs.readFileSync(SOURCE_IMAGE_PATH);
+  const attachmentId = createHash('sha256').update(sourceBuffer).digest('hex');
+  const pendingId = 'pending-image-navigation';
+  const otherId = 'pending-image-other';
+  await desktopWindow.evaluate(async ({ attachmentId: id, pendingId, otherId }) => {
+    await window.__folioleWorkspaceDebug?.seedNodes?.([
+      { content: `![Pending navigation image](asset://${id}.png)`, id: pendingId, kind: 'topic', title: 'Pending navigation image' },
+      { content: 'Unrelated document remains readable.', id: otherId, kind: 'topic', title: 'Other navigation document' }
+    ], { persist: true });
+  }, { attachmentId, pendingId, otherId });
+  await desktopWindow.getByRole('treeitem', { name: 'Pending navigation image', exact: true }).click();
+  const widget = desktopWindow.locator(`[data-md-image-editor-node-id="${pendingId}"]`);
+  await expect(widget).toHaveCount(1);
+  expect(await widget.locator('img').evaluateAll((images: HTMLImageElement[]) =>
+    images.every((image) => image.naturalWidth === 0))).toBe(true);
+  await desktopWindow.getByRole('treeitem', { name: 'Other navigation document', exact: true }).click();
+  await expect(widget).toHaveCount(0);
+  await desktopWindow.evaluate(async ({ nodeId, bytes }) => {
+    await window.__folioleWorkspaceDebug?.importClipboardImageAttachment?.({
+      bytesBase64: bytes, mimeType: 'image/png', nodeId, originalName: 'pending-navigation.png'
+    });
+  }, { nodeId: pendingId, bytes: sourceBuffer.toString('base64') });
+  await expect(desktopWindow.locator('.cm-content')).toContainText('Unrelated document remains readable.');
+  await expect(desktopWindow.locator('[data-md-image-status="unavailable"]')).toHaveCount(0);
+  await desktopWindow.getByRole('treeitem', { name: 'Pending navigation image', exact: true }).click();
+  const image = widget.locator('img');
+  await expect(image).toHaveCount(1);
+  await expect.poll(() => image.evaluate((element: HTMLImageElement) => element.naturalWidth)).toBeGreaterThan(0);
+  await expect(desktopWindow.locator('[data-md-image-status="unavailable"]')).toHaveCount(0);
+  await desktopWindow.screenshot({ path: testInfo.outputPath('recovered-after-navigation.png') });
+});
