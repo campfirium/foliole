@@ -93,6 +93,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         var results: [[String: Any]] = []
         for target in [1000, 10000] {
             app.launch()
+            dismissCapacityWirelessDataPrompt()
             results.append(try measureWorkspaceStage(target, in: app))
             app.terminate()
         }
