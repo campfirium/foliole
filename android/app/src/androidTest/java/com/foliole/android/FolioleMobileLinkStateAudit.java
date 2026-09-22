@@ -25,7 +25,7 @@ final class FolioleMobileLinkStateAudit {
     }
 
     JSONArray verify(Context context, List<String> topics) throws Exception {
-        Map<String, Map<String, JSONObject>> after = read(context);
+        Map<String, Map<String, JSONObject>> after = readCurrentSnapshot(context);
         JSONArray changes = new JSONArray();
         for (String table : before.keySet()) {
             Map<String, JSONObject> previous = before.get(table);
@@ -130,9 +130,22 @@ final class FolioleMobileLinkStateAudit {
         return result.toString();
     }
 
+    private static Map<String, Map<String, JSONObject>> readCurrentSnapshot(Context context) throws Exception {
+        FolioleCompanionSyncGroupSnapshot snapshots = new FolioleCompanionSyncGroupSnapshot(
+            context, FolioleCompanionSyncGroupDataBridge.current());
+        try {
+            return snapshots.refresh("mobile-link-state-audit", FolioleMobileLinkStateAudit::read);
+        } finally {
+            snapshots.close();
+        }
+    }
+
     private static Map<String, Map<String, JSONObject>> read(Context context) throws Exception {
+        return read(context.getDatabasePath("foliole-companionSQLite.db").getAbsolutePath());
+    }
+
+    private static Map<String, Map<String, JSONObject>> read(String path) throws Exception {
         Map<String, Map<String, JSONObject>> result = new TreeMap<>();
-        String path = context.getDatabasePath("foliole-companionSQLite.db").getAbsolutePath();
         try (SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY)) {
             for (String table : new String[] { "companion_meta", "workspace_meta", "node_open_state", "node_view_state", "sync_object_state" }) {
                 Map<String, JSONObject> rows = new TreeMap<>();
