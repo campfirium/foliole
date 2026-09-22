@@ -175,7 +175,7 @@ function createFallbackFlowWindow(
 function renderHighlightsPanel(
   props: Pick<
     WorkspaceRightSidebarPanelProps,
-    'activeNodeId' | 'nodeOrder' | 'trashedNodeIds' | 'nodesById' | 'onSelectNode'
+    'activeNodeId' | 'nodeOrder' | 'trashedNodeIds' | 'nodesById' | 'onSelectNode' | 'scrollElementRef'
   >
 ) {
   return (
@@ -185,6 +185,7 @@ function renderHighlightsPanel(
       trashedNodeIds={props.trashedNodeIds}
       nodesById={props.nodesById}
       onRevealHighlight={(nodeId) => revealHighlight(props, nodeId)}
+      {...(props.scrollElementRef ? { scrollElementRef: props.scrollElementRef } : {})}
     />
   );
 }

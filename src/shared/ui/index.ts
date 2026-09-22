@@ -34,6 +34,7 @@ export { ActionHelpCard, type ActionHelpCardCopy } from './ActionHelpCard';
 export { InspectorSection } from './InspectorSection';
 export {
   InspectorList,
+  inspectorListDividerBorderClassName,
   InspectorListHeading,
   InspectorListRow,
   inspectorDefinitionListClassName,

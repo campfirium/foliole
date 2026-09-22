@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, type RefObject } from 'react';
 
 import { findAnchorSelection } from '../../features/editor/model/anchorNavigation';
 import { projectNodeListLabel } from '../../features/nodes/model/nodeListLabelProjection';
@@ -11,13 +11,14 @@ import {
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import {
   AppErrorState,
-  InspectorList,
   InspectorListHeading,
-  InspectorListRow,
-  inspectorListBodyClassName,
-  inspectorListDividerClassName,
   inspectorListInsetClassName
 } from '../../shared/ui';
+
+import {
+  WorkspaceRightSidebarHighlightsList,
+  type SidebarHighlightItem
+} from './WorkspaceRightSidebarHighlightsList';
 
 interface WorkspaceRightSidebarHighlightsPanelProps {
   activeNodeId: string | null;
@@ -25,16 +26,11 @@ interface WorkspaceRightSidebarHighlightsPanelProps {
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;
   onRevealHighlight: (nodeId: string) => void;
+  scrollElementRef?: RefObject<HTMLElement>;
 }
 
 function isHighlightPanelTopic(node: Node) {
   return node.kind === 'topic' && !node.anchorLink && !node.specialKind;
-}
-
-interface NodeHighlightItem {
-  kind: 'cloze' | 'highlight';
-  nodeId: string;
-  text: string;
 }
 
 function collectOrderedSubtreeNodeIds(
@@ -139,7 +135,7 @@ function collectSubtreeHighlights(
   listNodesById: WorkspaceListNodesById,
   nodesById: Record<string, Node>,
   trashedNodeIds: string[]
-): NodeHighlightItem[] {
+): SidebarHighlightItem[] {
   const subtreeNodeIds = collectOrderedSubtreeNodeIds(
     activeNodeId,
     nodeOrder,
@@ -147,7 +143,7 @@ function collectSubtreeHighlights(
     nodesById,
     trashedNodeIds
   );
-  const highlights: NodeHighlightItem[] = [];
+  const highlights: SidebarHighlightItem[] = [];
 
   for (const nodeId of subtreeNodeIds) {
     if (nodeId === activeNodeId) {
@@ -175,6 +171,7 @@ function collectSubtreeHighlights(
 
 export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSidebarHighlightsPanelProps) {
   const t = useTranslation();
+  const fallbackScrollElementRef = useRef<HTMLElement>(null);
   const previousListNodesByIdRef = useRef<WorkspaceListNodesById>({});
   const listNodesById = useMemo(() => {
     const nextProjection = projectWorkspaceListNodesById(
@@ -217,21 +214,12 @@ export function WorkspaceRightSidebarHighlightsPanel(props: WorkspaceRightSideba
       <InspectorListHeading>
         {t('desktop.rightPanel.highlights.count', { count: highlights.length })}
       </InspectorListHeading>
-      <InspectorList ariaLabel={t('desktop.rightPanel.highlights.list')}>
-        {highlights.map((highlight) => (
-          <li className={`min-w-0 ${inspectorListDividerClassName}`} key={highlight.nodeId}>
-            <InspectorListRow
-              className="flex-col items-start px-0 py-4"
-              onClick={() => props.onRevealHighlight(highlight.nodeId)}
-              type="button"
-            >
-              <span className={`${inspectorListBodyClassName} max-w-full whitespace-normal break-words leading-7 text-foreground`}>
-                {highlight.text}
-              </span>
-            </InspectorListRow>
-          </li>
-        ))}
-      </InspectorList>
+      <WorkspaceRightSidebarHighlightsList
+        ariaLabel={t('desktop.rightPanel.highlights.list')}
+        highlights={highlights}
+        onRevealHighlight={props.onRevealHighlight}
+        scrollElementRef={props.scrollElementRef ?? fallbackScrollElementRef}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, type RefObject } from 'react';
 
 import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nativeAssistantContract';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
@@ -43,6 +43,7 @@ export interface WorkspaceRightSidebarPanelProps {
   reviewFlowWindow?: ReviewFlowWindow;
   reviewQueueNodeIds: string[];
   reviewSchedulerSettings: ReviewSchedulerSettings;
+  scrollElementRef?: RefObject<HTMLDivElement>;
   trashedNodeIds: string[];
 }
 

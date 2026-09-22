@@ -22,6 +22,7 @@ interface VirtualListSurfaceProps<TItem> {
   autoScroll?: boolean;
   className?: string;
   enabled?: boolean;
+  measureItems?: boolean;
   overscan?: number;
   scrollAnchorIndex?: number | null;
   scrollToIndex?: number | null;
@@ -67,6 +68,7 @@ export function VirtualListSurface<TItem>({
   estimateSize,
   getItemKey,
   items,
+  measureItems = false,
   overscan = DEFAULT_VIRTUAL_LIST_OVERSCAN,
   renderItem,
   scrollAnchorIndex,
@@ -86,6 +88,7 @@ export function VirtualListSurface<TItem>({
       estimateSize={estimateSize}
       getItemKey={getItemKey}
       items={items}
+      measureItems={measureItems}
       overscan={overscan}
       renderItem={renderItem}
       scrollElementRef={scrollElementRef}

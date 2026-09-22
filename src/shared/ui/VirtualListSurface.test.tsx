@@ -1,12 +1,13 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { useRef, type ReactNode } from 'react';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { resolveComfortScrollTop, shouldVirtualizeList, VirtualListSurface } from './VirtualListSurface';
 
 function VirtualListHarness(props: {
   children?: ReactNode;
   items: readonly string[];
+  measureItems?: boolean;
   scrollToIndex?: number | null;
   threshold?: number;
 }) {
@@ -23,6 +24,7 @@ function VirtualListHarness(props: {
           </div>
         )}
         scrollElementRef={scrollRef}
+        {...(props.measureItems !== undefined ? { measureItems: props.measureItems } : {})}
         {...(props.scrollToIndex !== undefined ? { scrollToIndex: props.scrollToIndex } : {})}
         {...(props.threshold !== undefined ? { threshold: props.threshold } : {})}
       />
@@ -63,6 +65,20 @@ it('allows callers to override the virtualization threshold', () => {
 
   expect(getVirtualList()).toBeInTheDocument();
   expect(screen.queryByText('Item 29')).not.toBeInTheDocument();
+});
+
+it('uses measured row heights when variable-size measurement is enabled', async () => {
+  const offsetHeight = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(48);
+  const items = Array.from({ length: 200 }, (_, index) => `Item ${index}`);
+
+  render(<VirtualListHarness items={items} measureItems />);
+
+  await waitFor(() => {
+    const virtualList = getVirtualList() as HTMLElement;
+    expect(Number.parseFloat(virtualList.style.height)).toBeGreaterThan(items.length * 24);
+  });
+  expect(offsetHeight).toHaveBeenCalled();
+  offsetHeight.mockRestore();
 });
 
 it('keeps already visible scroll targets in place', () => {

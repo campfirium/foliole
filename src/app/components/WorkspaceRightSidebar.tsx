@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useRef } from 'react';
 
 import { toRightPanelScaleId } from '../../features/settings/model/displayScaleSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -72,7 +72,11 @@ function renderActivePanelSurface(
       label={getWorkspaceRightPanelDefinition(props.activePanelId).menuLabel}
       panelId={toRightPanelScaleId(props.activePanelId)}
     >
-      <div className={contentClassName} data-panel-content-root={props.activePanelId}>
+      <div
+        className={contentClassName}
+        data-panel-content-root={props.activePanelId}
+        ref={panelProps.scrollElementRef}
+      >
         {renderWorkspaceRightSidebarPanel(panelProps)}
       </div>
     </PanelScaleSurface>
@@ -81,6 +85,7 @@ function renderActivePanelSurface(
 
 export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: WorkspaceRightSidebarProps) {
   const t = useTranslation();
+  const scrollElementRef = useRef<HTMLDivElement>(null);
   recordComponentRender('rightSidebar');
   useWorkspaceRenderDiagnostic('workspace-right-sidebar-render', {
     activeNodeId: props.activeNodeId,
@@ -91,7 +96,8 @@ export const WorkspaceRightSidebar = memo(function WorkspaceRightSidebar(props: 
   });
   const panelProps = {
     ...props,
-    outlineActivePosition: props.outlineActivePosition ?? 0
+    outlineActivePosition: props.outlineActivePosition ?? 0,
+    scrollElementRef
   };
   return (
     <AppPanel

@@ -6,7 +6,8 @@ const inspectorListClassName = 'flex min-w-0 flex-col';
 export const inspectorListInsetClassName = 'mx-inspector-list-inset';
 export const inspectorListInsetPaddingClassName = 'px-inspector-list-inset';
 export const inspectorPanelSectionClassName = `${inspectorListInsetClassName} bg-transparent shadow-none [border-color:transparent] [border-width:0]`;
-export const inspectorListDividerClassName = 'border-b border-border/40 last:border-b-0';
+export const inspectorListDividerBorderClassName = 'border-b border-border/40';
+export const inspectorListDividerClassName = `${inspectorListDividerBorderClassName} last:border-b-0`;
 export const inspectorListDividerLineClassName = 'bg-border/40';
 export const inspectorListTopDividerClassName = 'border-t border-border/40 first:border-t-0';
 export const inspectorListHeadingClassName = 'pb-2 text-ui-sm font-medium uppercase tracking-wide text-foreground/55';
@@ -19,6 +20,7 @@ export const inspectorDefinitionValueClassName = 'min-w-[4.75rem] whitespace-now
 
 interface InspectorListProps {
   ariaLabel?: string;
+  as?: 'div' | 'ol';
   children: ReactNode;
   className?: string;
 }
@@ -33,11 +35,15 @@ interface InspectorListRowProps extends Omit<ButtonHTMLAttributes<HTMLButtonElem
   children: ReactNode;
 }
 
-export function InspectorList({ ariaLabel, children, className }: InspectorListProps) {
+export function InspectorList({ ariaLabel, as: Component = 'ol', children, className }: InspectorListProps) {
   return (
-    <ol aria-label={ariaLabel} className={cn(inspectorListClassName, className)}>
+    <Component
+      aria-label={ariaLabel}
+      className={cn(inspectorListClassName, className)}
+      role={Component === 'div' ? 'list' : undefined}
+    >
       {children}
-    </ol>
+    </Component>
   );
 }
 
