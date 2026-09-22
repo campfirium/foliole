@@ -99,7 +99,6 @@ test('keeps order, relearn, and latest reading position across an immediate clos
     ));
     await testInfo.attach('permanent-state-fast-close-traces', { body: JSON.stringify(readingTraces, null, 2), contentType: 'application/json' });
     expect(readingTraces.some((trace) => trace.event === 'reading-progress.capture-scroll')).toBe(true);
-    await desktopWindow.getByRole('button', { name: /^(Close|关闭)$/ }).click();
     await desktopSession.electronApp.close();
 
     secondSession = await launchDesktopSession({ env: desktopSession.launchOptions.env });
