@@ -119,7 +119,7 @@ export async function protectData(paths, env, mode, manifest, backupRoot) {
   return result;
 }
 
-async function captureAnnotation(
+export async function captureAnnotation(
   paths, buildIdentity = captureIdentity, markMutationBoundary = () => {}, buildAction = build
 ) {
   assertFixedA5(paths);
@@ -130,13 +130,20 @@ async function captureAnnotation(
   const env = macosA5GradleEnv();
   markMutationBoundary();
   const { runA5CaptureAnnotation } = await import('./android-a5-capture-annotation-action.mjs');
+  let failure;
   const result = await runA5CaptureAnnotation({
     adbPort: '5037', buildIdentity: runId, env, evidenceRoot, execute, paths: {
       adbPath: paths.adb, buildRoot: paths.buildRoot
     },
     protectData: (mode, manifest, backupRoot) => protectData(paths, env, mode, manifest, backupRoot),
     serial: A5_SERIAL
-  });
+  }).catch((error) => { failure = error; });
+  try { launchAndVerify(paths); }
+  catch (error) {
+    if (!failure) throw error;
+    failure.foregroundRestoreError = error;
+  }
+  if (failure) throw failure;
   process.stdout.write(result.output);
   console.log(`[macos-a5-dev] capture-annotation evidence=${result.captureAnnotation.manifestPath}`);
 }
