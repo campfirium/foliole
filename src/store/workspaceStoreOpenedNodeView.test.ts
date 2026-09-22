@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { HOME_NODE_ID } from '../features/nodes/model/specialNodes';
 import { saveNodeOpenStateToRuntime } from '../shared/platform/runtime/nodeOpenStateRuntimeRepository';
 
 import { createInitialWorkspaceState, useWorkspaceStore } from './workspaceStore';
@@ -30,6 +31,7 @@ function createNode(id: string, title: string): Node {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   localStorage.clear();
   resetWorkspaceStore();
   vi.useFakeTimers();
@@ -91,4 +93,12 @@ it('preserves view state when recording a later open', async () => {
     lastOpenedAt: '2026-04-30T12:00:00.000Z',
     nodeId: 'node-1'
   });
+});
+
+it('does not persist open state for the synthetic Home root', async () => {
+  useWorkspaceStore.getState().setActiveNode(HOME_NODE_ID);
+  await vi.runAllTimersAsync();
+
+  expect(useWorkspaceStore.getState().activeNodeId).toBe(HOME_NODE_ID);
+  expect(saveNodeOpenStateToRuntime).not.toHaveBeenCalled();
 });
