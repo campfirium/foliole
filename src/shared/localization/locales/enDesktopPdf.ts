@@ -2,6 +2,8 @@ export const EN_DESKTOP_PDF_TRANSLATIONS = {
   'desktop.pdf.search.aria': 'PDF search',
   'desktop.pdf.search.placeholder': 'Search PDF...',
   'desktop.pdf.search.noMatches': 'No matches',
+  'desktop.pdf.search.indexing': 'Preparing search',
+  'desktop.pdf.search.indexUnavailable': 'Search index unavailable',
   'desktop.pdf.search.previousMatch': 'Previous match',
   'desktop.pdf.search.nextMatch': 'Next match',
   'desktop.pdf.search.clear': 'Clear search',

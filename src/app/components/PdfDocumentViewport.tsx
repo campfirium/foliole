@@ -15,6 +15,7 @@ interface PdfDocumentViewportProps {
   onContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
   loadError: string | null;
   maxPage: number;
+  nodeId: string | null;
   onNextPage: () => void;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
@@ -39,6 +40,7 @@ interface PdfDocumentViewportProps {
   persistedPageDimensions: Record<number, PdfPageDimensions>;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
+  pdfIndexStatus: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   rotation: number;
   searchIndexingHint: string | null;
   searchQuery: string;
@@ -95,6 +97,7 @@ function resolveViewportContentProps(
     highlightLocators: args.highlightLocators,
     isToolbarVisible: args.isToolbarVisible,
     maxPage: args.maxPage,
+    nodeId: args.nodeId,
     ...resolveViewportActionProps(args),
     onTextContentLoad: args.handleTextContentLoad,
     onTextLayerRender: args.handleTextLayerRender,
@@ -109,6 +112,7 @@ function resolveViewportContentProps(
     persistedPageDimensions: args.persistedPageDimensions,
     pdfSelectionLocator: args.pdfSelectionLocator,
     pdfSource: args.pdfSource,
+    pdfIndexStatus: args.pdfIndexStatus,
     rotation: args.rotation,
     scrollContainerRef: args.scrollContainerRef,
     searchHighlights: args.searchHighlights,

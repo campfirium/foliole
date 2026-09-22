@@ -5,6 +5,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { usePdfSearchEffect } from './PdfDocumentSearch';
 
+const TARGET_MATCHES = [{ fragments: [{ end: 17, page: 2, start: 11 }], id: '2:11:0', matchStart: 11, page: 2 }];
+
 function configurePageElement(
   element: HTMLDivElement | null,
   pageElementsRef: MutableRefObject<Record<number, HTMLDivElement | null>>,
@@ -43,6 +45,7 @@ function PdfSearchSingleTargetScrollHarness() {
   }, []);
 
   usePdfSearchEffect({
+    matches: TARGET_MATCHES,
     onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: () => undefined,
     onSearchRequestHandled: () => undefined,
@@ -121,6 +124,7 @@ function PdfSearchDeferredTargetScrollHarness() {
   }, []);
 
   usePdfSearchEffect({
+    matches: TARGET_MATCHES,
     onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: () => undefined,
     onSearchRequestHandled: () => undefined,

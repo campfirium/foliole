@@ -7,6 +7,7 @@ import {
   loadNodeTextAlternativePreview,
   promoteNodeTextAlternative
 } from '../database/nodeTextAlternatives.js';
+import { searchCurrentPdfDocument } from '../database/pdfDocumentSearch.js';
 import { searchWorkspace } from '../database/workspaceSearch.js';
 import { reimportCurrentTopicSource } from '../import/currentSourceReimport.js';
 import {
@@ -90,6 +91,18 @@ export async function handleStorageCommand(
 async function handleStorageReadCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.searchWorkspace) {
     return searchWorkspace(asString(args.query, 'query'));
+  }
+  if (command === NATIVE_COMMANDS.searchPdfDocument) {
+    const result = searchCurrentPdfDocument(asString(args.node_id, 'node_id'), asString(args.query, 'query'));
+    return {
+      matches: result.matches.map((match) => ({
+        fragments: match.fragments,
+        id: match.id,
+        match_start: match.matchStart,
+        page: match.page
+      })),
+      status: result.status
+    };
   }
   if (command === NATIVE_COMMANDS.loadImportOverview) {
     return toNativeImportOverview();

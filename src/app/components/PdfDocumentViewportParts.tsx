@@ -100,6 +100,7 @@ interface PdfDocumentViewportContentProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   isToolbarVisible: boolean;
   maxPage: number;
+  nodeId: string | null;
   onClearSearch: () => void;
   onLoadError: (message: string) => void;
   onLoadSuccess: (numPages: number) => void;
@@ -132,6 +133,7 @@ interface PdfDocumentViewportContentProps {
   persistedPageDimensions: Record<number, PdfPageDimensions>;
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSource: string;
+  pdfIndexStatus: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   rotation: number;
   searchIndexingHint: string | null;
   searchHighlights: PdfSearchVisualHighlight[];
@@ -159,7 +161,9 @@ function renderPdfViewportContentBody(
     | 'onSearchRequestHandled'
     | 'onSearchStatusChange'
     | 'onSearchTargetHandled'
+    | 'nodeId'
     | 'pageTextByNumberRef'
+    | 'pdfIndexStatus'
     | 'searchRequest'
     | 'searchRevision'
     | 'searchTarget'
@@ -175,8 +179,10 @@ function resolvePdfSearchRuntimeArgs(props: PdfDocumentViewportContentProps) {
     onSearchRequestHandled: props.onSearchRequestHandled,
     onSearchStatusChange: props.onSearchStatusChange,
     onSearchTargetHandled: props.onSearchTargetHandled,
+    nodeId: props.nodeId,
     pageElementsRef: props.pageElementsRef,
     pageTextByNumberRef: props.pageTextByNumberRef,
+    pdfIndexStatus: props.pdfIndexStatus,
     scrollContainerRef: props.scrollContainerRef,
     searchQuery: props.searchQuery,
     searchRequest: props.searchRequest,
@@ -195,7 +201,9 @@ function resolveViewportContentBodyProps(
   | 'onSearchRequestHandled'
   | 'onSearchStatusChange'
   | 'onSearchTargetHandled'
+  | 'nodeId'
   | 'pageTextByNumberRef'
+  | 'pdfIndexStatus'
   | 'searchRequest'
   | 'searchRevision'
   | 'searchTarget'

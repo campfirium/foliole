@@ -22,22 +22,17 @@ export function resolveInitialReadyPageNumbers(args: ResolvePageNumberArgs) {
   if (args.searchQuery.trim()) return [args.page];
   const pageNumbers = new Set<number>([args.page]);
   addRenderablePage(pageNumbers, args.pdfSelectionLocator?.page, args.totalPages);
-  args.highlightLocators.forEach((locator) => addRenderablePage(pageNumbers, locator.page, args.totalPages));
   return Array.from(pageNumbers);
 }
 
 export function resolveRenderablePageNumbers(args: ResolvePageNumberArgs) {
-  if (args.searchQuery.trim()) {
-    return Array.from({ length: args.totalPages }, (_, index) => index + PDF_PAGE_MIN);
-  }
   const firstPage = Math.max(PDF_PAGE_MIN, args.page - PDF_INITIAL_RENDER_RADIUS);
   const lastPage = Math.min(args.totalPages, args.page + PDF_INITIAL_RENDER_RADIUS);
   const pageNumbers = new Set<number>();
   for (let pageNumber = firstPage; pageNumber <= lastPage; pageNumber += 1) pageNumbers.add(pageNumber);
   addRenderablePage(pageNumbers, args.pendingPage, args.totalPages);
   addRenderablePage(pageNumbers, args.pdfSelectionLocator?.page, args.totalPages);
-  args.highlightLocators.forEach((locator) => addRenderablePage(pageNumbers, locator.page, args.totalPages));
-  args.searchHighlights.forEach((highlight) => {
+  args.searchHighlights.filter((highlight) => highlight.isActive).forEach((highlight) => {
     addRenderablePage(pageNumbers, highlight.page, args.totalPages);
     highlight.fragments?.forEach((fragment) => addRenderablePage(pageNumbers, fragment.page, args.totalPages));
   });

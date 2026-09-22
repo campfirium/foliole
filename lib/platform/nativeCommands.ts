@@ -148,6 +148,7 @@ export const NATIVE_COMMANDS = {
   loadWorkspaceListSnapshot: 'load_workspace_list_snapshot',
   loadNodeDocument: 'load_node_document',
   loadNodeBacklinks: 'load_node_backlinks',
+  searchPdfDocument: 'search_pdf_document',
   searchWorkspace: 'search_workspace',
   loadWorkspaceSnapshot: 'load_workspace_snapshot',
   loadEditorOperationHistory: 'load_editor_operation_history',

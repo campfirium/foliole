@@ -16,6 +16,7 @@ import type { NativeNodeCreationMutationSpec, NativeNodeSnapshotBatchMutationSpe
 import type { NativeNodeOpenStateResult, NativeSaveNodeOpenStateArgs } from './nativeNodeOpenStateContract.js';
 import type { NativeSaveNodeReadingStateArgs } from './nativeNodeReadingStateContract.js';
 import type { NativeSaveNodeReviewStateArgs } from './nativeNodeReviewStateContract.js';
+import type { NativePdfDocumentSearchCommandMap } from './nativePdfDocumentSearchContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
 import type { NativeSearchIndexCommandMap } from './nativeSearchIndexCommandMap.js';
@@ -52,7 +53,7 @@ export type * from './nativeAssistantImageContract.js';
 export type * from './nativeAssistantModelSettingsContract.js';
 export type * from './nativeBackupSearchContract.js';
 
-export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeBackupSearchCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeEditorOperationHistoryCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeInitialLibrarySetupCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & NativeSplitTopicPreferencesCommandMap & {
+export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageCommandMap & NativeBackupSearchCommandMap & NativeDesktopUpdateCommandMap & NativeDisplayScaleCommandMap & NativeEditorOperationHistoryCommandMap & NativeUtilityCommandMap & NativeReadwiseCommandMap & NativeExternalSearchCommandMap & NativeFoliolePublishCommandMap & NativeDiscoursePublishCommandMap & NativeWordPressPublishCommandMap & NativeLocalFileCommandMap & NativeSearchIndexCommandMap & NativeSyncCommandMap & NativeImportCommandMap & NativeInitialLibrarySetupCommandMap & NativeRemoteImageCommandMap & NativeMoveCommandMap & NativeTrashCommandMap & NativeSplitTopicPreferencesCommandMap & NativePdfDocumentSearchCommandMap & {
   [NATIVE_COMMANDS.bootReport]: {
     args: {
       stage: string;

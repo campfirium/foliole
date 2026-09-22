@@ -153,6 +153,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadWorkspaceListSnapshot, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadNodeDocument, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadNodeBacklinks, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.searchPdfDocument, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.searchWorkspace, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadWorkspaceSnapshot, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadEditorOperationHistory, route: 'storage', capability: 'read' },

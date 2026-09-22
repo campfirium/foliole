@@ -2,6 +2,8 @@
   "desktop.pdf.search.aria": "PDF Suche",
   "desktop.pdf.search.placeholder": "Suche PDF...",
   "desktop.pdf.search.noMatches": "Keine Übereinstimmungen",
+  "desktop.pdf.search.indexing": "Suche wird vorbereitet",
+  "desktop.pdf.search.indexUnavailable": "Suchindex nicht verfügbar",
   "desktop.pdf.search.previousMatch": "Vorheriges Spiel",
   "desktop.pdf.search.nextMatch": "Nächste Übereinstimmung",
   "desktop.pdf.search.clear": "Suche löschen",

@@ -4,6 +4,11 @@ import { describe, expect, it } from 'vitest';
 
 import { usePdfSearchEffect, type PdfSearchVisualHighlight } from './PdfDocumentSearch';
 
+const CROSS_PAGE_MATCHES = [{
+  fragments: [{ end: 9, page: 1, start: 6 }, { end: 3, page: 2, start: 0 }],
+  id: 'cross:1-2:6:0', matchStart: 6, page: 1
+}];
+
 function PdfSearchCrossPageHarness() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
@@ -12,6 +17,7 @@ function PdfSearchCrossPageHarness() {
   const [searchHighlights, setSearchHighlights] = useState<PdfSearchVisualHighlight[]>([]);
 
   usePdfSearchEffect({
+    matches: CROSS_PAGE_MATCHES,
     onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: setSearchHighlights,
     onSearchStatusChange: setSearchStatus,

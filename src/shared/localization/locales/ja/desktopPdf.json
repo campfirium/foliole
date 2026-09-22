@@ -2,6 +2,8 @@
   "desktop.pdf.search.aria": "PDF 検索",
   "desktop.pdf.search.placeholder": "PDF を検索...",
   "desktop.pdf.search.noMatches": "一致するものはありません",
+  "desktop.pdf.search.indexing": "検索を準備しています",
+  "desktop.pdf.search.indexUnavailable": "検索インデックスを利用できません",
   "desktop.pdf.search.previousMatch": "前回の一致",
   "desktop.pdf.search.nextMatch": "次の試合",
   "desktop.pdf.search.clear": "検索をクリア",

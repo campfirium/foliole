@@ -26,6 +26,7 @@ export function createDocumentPanelPdfCache(args: {
       activeNodeId={args.activeNodeId}
       activePersistedPageCount={getActivePersistedPageCount(args.pdfDocumentSurface)}
       activePersistedPageDimensions={activePersistedPageDimensions}
+      activePdfIndexStatus={args.pdfDocumentSurface?.pdfIndexStatus ?? null}
       activePdfState={args.pdfDocumentSurface?.state ?? null}
       activeSourceHint={args.pdfDocumentSurface?.sourceHint ?? null}
       editorNodeId={args.bodyProps.editorNodeId}

@@ -2,6 +2,8 @@
   "desktop.pdf.search.aria": "Pesquisa PDF",
   "desktop.pdf.search.placeholder": "Pesquisar PDF...",
   "desktop.pdf.search.noMatches": "Nenhuma correspondência",
+  "desktop.pdf.search.indexing": "Preparando a pesquisa",
+  "desktop.pdf.search.indexUnavailable": "Índice de pesquisa indisponível",
   "desktop.pdf.search.previousMatch": "Partida anterior",
   "desktop.pdf.search.nextMatch": "Próxima partida",
   "desktop.pdf.search.clear": "Limpar pesquisa",

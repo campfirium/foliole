@@ -29,6 +29,20 @@ vi.mock('./useNodeSourceUpdatePreview', () => ({
 
 const { useNodeSourceDetails } = vi.hoisted(() => ({ useNodeSourceDetails: vi.fn() }));
 vi.mock('./useNodeSourceDetails', () => ({ useNodeSourceDetails }));
+const { searchRuntimePdfDocument } = vi.hoisted(() => ({
+  searchRuntimePdfDocument: vi.fn(async (_nodeId: string, query: string) => ({
+    matches: query === 'keyword'
+      ? Array.from({ length: 9 }, (_, index) => ({
+          fragments: [{ end: 7, page: index + 1, start: 0 }],
+          id: `${index + 1}:0:0`,
+          matchStart: 0,
+          page: index + 1
+        }))
+      : [],
+    status: 'ready' as const
+  }))
+}));
+vi.mock('../../shared/platform/desktop/pdfDocumentSearchRuntimeRepository', () => ({ searchRuntimePdfDocument }));
 
 const RELEASE_GATE_TEST_TIMEOUT_MS = 15_000;
 const RELEASE_GATE_WAIT_OPTIONS = { timeout: RELEASE_GATE_TEST_TIMEOUT_MS };
@@ -85,6 +99,7 @@ function createPdfSourceDetails() {
         lastContentFingerprint: 'fingerprint-1',
         lastImportedAt: '2026-04-04T14:00:00.000Z',
         latestNodeId: 'node-1',
+        pdfIndexStatus: 'ready',
         provider: 'desktop_text_file',
         sourceFingerprint: 'source-1',
         sourceKind: 'pdf',

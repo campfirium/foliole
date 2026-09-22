@@ -2,6 +2,8 @@
   "desktop.pdf.search.aria": "PDF搜尋",
   "desktop.pdf.search.placeholder": "搜尋PDF...",
   "desktop.pdf.search.noMatches": "沒有匹配項",
+  "desktop.pdf.search.indexing": "正在準備搜尋",
+  "desktop.pdf.search.indexUnavailable": "搜尋索引無法使用",
   "desktop.pdf.search.previousMatch": "上一場比賽",
   "desktop.pdf.search.nextMatch": "下一場比賽",
   "desktop.pdf.search.clear": "清除搜尋",

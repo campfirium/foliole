@@ -4,6 +4,8 @@ export const ZH_HANS_DESKTOP_PDF_TRANSLATIONS: Partial<Record<TranslationKey, st
   'desktop.pdf.search.aria': 'PDF 搜索',
   'desktop.pdf.search.placeholder': '搜索 PDF...',
   'desktop.pdf.search.noMatches': '没有匹配项',
+  'desktop.pdf.search.indexing': '正在准备搜索',
+  'desktop.pdf.search.indexUnavailable': '搜索索引不可用',
   'desktop.pdf.search.previousMatch': '上一个匹配项',
   'desktop.pdf.search.nextMatch': '下一个匹配项',
   'desktop.pdf.search.clear': '清除搜索',

@@ -5,6 +5,7 @@ import 'react-pdf/dist/Page/TextLayer.css';
 import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import { configurePdfWorker } from '../../features/pdf/model/pdfWorker';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
+import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import { markNodePositionReady } from '../../shared/platform/performanceDiagnosticsProbe';
 import type { NodeViewState } from '../../store/workspaceStore';
@@ -61,6 +62,7 @@ export function PdfDocumentSurface({
   pdfIndexStatus,
   sourceHint
 }: PdfDocumentSurfaceProps) {
+  const t = useTranslation();
   const pdfSystem = usePdfSystemController(nodeViewState, onPersistViewState, sourceHint, isVisible, persistedPageCount);
   const selectionState = usePdfSelectionContextMenu({
     nodeId,
@@ -76,13 +78,13 @@ export function PdfDocumentSurface({
     isVisible
   );
 
-  const searchIndexingHint = searchState.searchQuery.trim() && (pdfIndexStatus === 'pending' || pdfIndexStatus === 'indexing')
-    ? 'Indexing in progress'
+  const searchIndexingHint = searchState.searchQuery.trim()
+    ? resolvePdfSearchIndexHint(pdfIndexStatus, t)
     : null;
 
   const textHighlightLocators = highlightLocators.filter((locator) => locator.kind === 'highlight');
   const layoutProps = {
-    ...buildPdfSurfaceLayoutProps(nodeId, textHighlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint, onOpenExternalLink),
+    ...buildPdfSurfaceLayoutProps(nodeId, pdfIndexStatus, textHighlightLocators, pdfSystem, selectionState, searchState, searchIndexingHint, onOpenExternalLink),
     persistedPageCount,
     persistedPageDimensions
   };
@@ -100,8 +102,18 @@ export function PdfDocumentSurface({
   );
 }
 
+function resolvePdfSearchIndexHint(
+  status: PdfDocumentSurfaceProps['pdfIndexStatus'],
+  t: ReturnType<typeof useTranslation>
+) {
+  if (status === 'pending' || status === 'indexing') return t('desktop.pdf.search.indexing');
+  if (status === 'failed') return t('desktop.pdf.search.indexUnavailable');
+  return null;
+}
+
 function buildPdfSurfaceLayoutProps(
   nodeId: string | null,
+  pdfIndexStatus: PdfDocumentSurfaceProps['pdfIndexStatus'],
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>,
   pdfSystem: ReturnType<typeof usePdfSystemController>,
   selectionState: ReturnType<typeof usePdfSelectionContextMenu>,
@@ -112,6 +124,8 @@ function buildPdfSurfaceLayoutProps(
   return {
     ...resolvePdfSurfaceHandlers(nodeId, pdfSystem, selectionState, searchState, onOpenExternalLink),
     highlightLocators,
+    nodeId,
+    pdfIndexStatus,
     pdfSelectionContextMenu: renderPdfSelectionMenu(selectionState),
     searchIndexingHint
   };

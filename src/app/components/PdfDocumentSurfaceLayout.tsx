@@ -17,6 +17,7 @@ interface PdfDocumentSurfaceLayoutProps {
   highlightLocators: Array<{ id: string; page: number; x: number | null; y: number | null }>;
   loadError: string | null;
   maxPage: number;
+  nodeId: string | null;
   page: number;
   pageJumpRequest: PdfJumpRequest | null;
   persistedPageCount: number | null;
@@ -24,6 +25,7 @@ interface PdfDocumentSurfaceLayoutProps {
   pdfSelectionLocator: { page: number; rects?: Array<{ height: number; width: number; x: number; y: number }>; x: number; y: number } | undefined;
   pdfSelectionContextMenu: JSX.Element;
   pdfSource: string;
+  pdfIndexStatus: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   reportLoadError: (message: string | null) => void;
   reportLoadSuccess: (numPages: number) => void;
   requestPageChange: (value: number) => void;
@@ -55,6 +57,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       highlightLocators={props.highlightLocators}
       loadError={props.loadError}
       maxPage={props.maxPage}
+      nodeId={props.nodeId}
       onClearSearch={() => props.setSearchQuery('')}
       onContextMenu={props.handleContextMenu}
       onLoadError={(message) => props.reportLoadError(message)}
@@ -81,6 +84,7 @@ function renderViewport(props: Omit<PdfDocumentSurfaceLayoutProps, 'pdfSelection
       persistedPageDimensions={props.persistedPageDimensions}
       pdfSelectionLocator={props.pdfSelectionLocator}
       pdfSource={props.pdfSource}
+      pdfIndexStatus={props.pdfIndexStatus}
       rotation={props.rotation}
       searchQuery={props.searchQuery}
       searchRequest={props.searchRequest}

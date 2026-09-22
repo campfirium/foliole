@@ -86,12 +86,14 @@ export function resetSearchCursorState(args: {
   cursorRef: { current: number };
   lastHandledTargetIdRef: { current: number | null };
   lastRequestIdRef: { current: number | null };
+  lastScrolledMatchIdRef?: { current: string | null };
   lastQueryRef: { current: string };
   query: string;
 }) {
   args.cursorRef.current = 0;
   args.lastHandledTargetIdRef.current = null;
   args.lastRequestIdRef.current = null;
+  if (args.lastScrolledMatchIdRef) args.lastScrolledMatchIdRef.current = null;
   args.lastQueryRef.current = args.query;
 }
 

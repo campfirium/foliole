@@ -111,6 +111,7 @@ function createSourceDetails(sourceKind: 'pdf' | 'markdown', sourceLocator: stri
         lastImportedAt: '2026-04-04T14:00:00.000Z',
         latestNodeId: 'node-1',
         provider: 'desktop_text_file',
+        pdfIndexStatus: sourceKind === 'pdf' ? 'ready' : null,
         sourceFingerprint: 'source-1',
         sourceKind,
         sourceLocator,
@@ -142,6 +143,7 @@ it('keeps a cached pdf view visible when revisiting the same node during source 
 
   rendered.rerender(<DocumentPanelSection {...defaultProps} activeNodeId="node-2" editorNodeId="node-2" />);
   expect(screen.getByTestId('document-panel-content-body')).toBeInTheDocument();
+  expect(screen.queryByTestId('pdf-document-surface')).not.toBeInTheDocument();
 
   sourceDetailsByNodeId['node-1'] = { isLoading: true, value: null };
   rendered.rerender(<DocumentPanelSection {...defaultProps} activeNodeId="node-1" editorNodeId="node-1" />);

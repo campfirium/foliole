@@ -7,6 +7,14 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 const { collectTextSegmentsSpy } = vi.hoisted(() => ({
   collectTextSegmentsSpy: vi.fn()
 }));
+const { searchRuntimePdfDocument } = vi.hoisted(() => ({
+  searchRuntimePdfDocument: vi.fn(async () => ({
+    matches: [{ fragments: [{ end: 7, page: 1, start: 0 }], id: '1:0:0', matchStart: 0, page: 1 }],
+    status: 'ready' as const
+  }))
+}));
+
+vi.mock('../../shared/platform/desktop/pdfDocumentSearchRuntimeRepository', () => ({ searchRuntimePdfDocument }));
 
 vi.mock('react-pdf', async () => {
   const React = await import('react');
@@ -84,6 +92,7 @@ function PdfDocumentViewportSearchActivationHarness() {
         highlightLocators={[]}
         loadError={null}
         maxPage={1}
+        nodeId="pdf-1"
         onClearSearch={() => undefined}
         onContextMenu={() => undefined}
         onLoadError={() => undefined}
@@ -109,6 +118,7 @@ function PdfDocumentViewportSearchActivationHarness() {
         persistedPageDimensions={{ 1: { height: 1131, width: 800 } }}
         pdfSelectionLocator={undefined}
         pdfSource="/tmp/sample.pdf"
+        pdfIndexStatus="ready"
         rotation={0}
         searchIndexingHint={null}
         searchQuery={searchQuery}

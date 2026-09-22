@@ -4,6 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 import { usePdfSearchEffect } from './PdfDocumentSearch';
 
+const REOPEN_MATCHES = [0, 'keyword bridge '.length].map((matchStart, index) => ({
+  fragments: [{ end: matchStart + 'keyword'.length, page: 1, start: matchStart }],
+  id: `1:${matchStart}:${index}`,
+  matchStart,
+  page: 1
+}));
+
 function PdfSearchReopenConsistencyHarness() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
@@ -12,6 +19,7 @@ function PdfSearchReopenConsistencyHarness() {
   const [searchTarget] = useState({ id: 9, matchStart: 'keyword bridge '.length, page: 1 });
 
   usePdfSearchEffect({
+    matches: REOPEN_MATCHES,
     onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: () => undefined,
     onSearchStatusChange: setSearchStatus,

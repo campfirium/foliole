@@ -2,6 +2,8 @@
   "desktop.pdf.search.aria": "PDF поиск",
   "desktop.pdf.search.placeholder": "Искать PDF...",
   "desktop.pdf.search.noMatches": "Нет совпадений",
+  "desktop.pdf.search.indexing": "Подготовка поиска",
+  "desktop.pdf.search.indexUnavailable": "Индекс поиска недоступен",
   "desktop.pdf.search.previousMatch": "Предыдущий матч",
   "desktop.pdf.search.nextMatch": "Следующий матч",
   "desktop.pdf.search.clear": "Очистить поиск",

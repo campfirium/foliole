@@ -4,6 +4,20 @@ import { describe, expect, it } from 'vitest';
 
 import { usePdfSearchEffect } from './PdfDocumentSearch';
 
+function pageMatches(page: number, starts: number[]) {
+  return starts.map((matchStart, index) => ({
+    fragments: [{ end: matchStart + 7, page, start: matchStart }],
+    id: `${page}:${matchStart}:${index}`,
+    matchStart,
+    page
+  }));
+}
+
+const LATE_MATCHES = pageMatches(1, [0]);
+const SINGLE_REQUEST_MATCHES = pageMatches(1, [0, 8]);
+const LINKED_MATCHES = [...pageMatches(1, [0]), ...pageMatches(2, [0, 15])];
+const DUAL_MATCHES = pageMatches(1, [0, 15]);
+
 function PdfSearchLateTextLayerHarness() {
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const pageElementsRef = useRef<Record<number, HTMLDivElement | null>>({});
@@ -24,6 +38,7 @@ function PdfSearchLateTextLayerHarness() {
   }, []);
 
   usePdfSearchEffect({
+    matches: LATE_MATCHES,
     onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: () => undefined,
     onSearchStatusChange: setSearchStatus,
@@ -66,6 +81,7 @@ function PdfSearchSingleRequestHarness() {
   const [searchRequest, setSearchRequest] = useState<{ direction: 'next' | 'previous'; id: number } | null>(null);
 
   usePdfSearchEffect({
+    matches: SINGLE_REQUEST_MATCHES,
     onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: (highlights) => {
       setSearchHighlights({ active: highlights.filter((item) => item.isActive).length, total: highlights.length });
@@ -119,6 +135,7 @@ function PdfSearchLinkedEntryHarness() {
   const [searchTarget, setSearchTarget] = useState<{ id: number; matchStart: number; page: number } | null>(null);
 
   usePdfSearchEffect({
+    matches: LINKED_MATCHES,
     onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: () => undefined,
     onSearchStatusChange: setSearchStatus,
@@ -175,6 +192,7 @@ function PdfSearchDualHighlightHarness() {
   const [searchHighlights, setSearchHighlights] = useState<{ active: number; total: number }>({ active: 0, total: 0 });
 
   usePdfSearchEffect({
+    matches: DUAL_MATCHES,
     onSearchDebugChange: () => undefined,
     onSearchHighlightsChange: (highlights) => {
       setSearchHighlights({ active: highlights.filter((item) => item.isActive).length, total: highlights.length });

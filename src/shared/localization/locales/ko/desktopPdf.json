@@ -2,6 +2,8 @@
   "desktop.pdf.search.aria": "PDF 검색",
   "desktop.pdf.search.placeholder": "PDF 검색...",
   "desktop.pdf.search.noMatches": "일치하는 항목 없음",
+  "desktop.pdf.search.indexing": "검색 준비 중",
+  "desktop.pdf.search.indexUnavailable": "검색 색인을 사용할 수 없음",
   "desktop.pdf.search.previousMatch": "이전 경기",
   "desktop.pdf.search.nextMatch": "다음 경기",
   "desktop.pdf.search.clear": "검색 지우기",

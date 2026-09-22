@@ -5,6 +5,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 const { loadNodeSourceDetails } = vi.hoisted(() => ({
   loadNodeSourceDetails: vi.fn()
 }));
+const { searchCurrentPdfDocument } = vi.hoisted(() => ({
+  searchCurrentPdfDocument: vi.fn()
+}));
 const { loadNodeSourceUpdatePreview } = vi.hoisted(() => ({
   loadNodeSourceUpdatePreview: vi.fn()
 }));
@@ -23,6 +26,7 @@ const { loadImportManagerSettings } = vi.hoisted(() => ({
   loadImportManagerSettings: vi.fn()
 }));
 vi.mock('../database/nodeSourceDetails.js', () => ({ loadNodeSourceDetails }));
+vi.mock('../database/pdfDocumentSearch.js', () => ({ searchCurrentPdfDocument }));
 vi.mock('../database/importOverview.js', () => ({ loadImportOverview: vi.fn() }));
 vi.mock('../database/importMaintenance.js', () => ({ resetImportData: vi.fn() }));
 vi.mock('../database/nodeMutations.js', () => ({
@@ -115,6 +119,19 @@ it('returns node source update preview payloads', async () => {
     updated_highlight_count: 3,
     updated_content: 'Updated content'
   });
+});
+
+it('serializes current PDF document search matches', async () => {
+  searchCurrentPdfDocument.mockReturnValue({
+    matches: [{ fragments: [{ end: 7, page: 2, start: 3 }], id: '2:3', matchStart: 3, page: 2 }],
+    status: 'ready'
+  });
+
+  await expect(handleStorageCommand('search_pdf_document', { node_id: 'node-1', query: 'needle' })).resolves.toEqual({
+    matches: [{ fragments: [{ end: 7, page: 2, start: 3 }], id: '2:3', match_start: 3, page: 2 }],
+    status: 'ready'
+  });
+  expect(searchCurrentPdfDocument).toHaveBeenCalledWith('node-1', 'needle');
 });
 
 it('accepts incoming updates and notifies workspace refresh channels', async () => {

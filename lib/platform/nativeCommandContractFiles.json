@@ -16,6 +16,7 @@
   "lib/platform/nativeInitialLibrarySetupContract.ts",
   "lib/platform/nativeLocalFileCommandMap.ts",
   "lib/platform/nativeMoveCommandMap.ts",
+  "lib/platform/nativePdfDocumentSearchContract.ts",
   "lib/platform/nativeReadwiseCommandMap.ts",
   "lib/platform/nativeRemoteImageCommandMap.ts",
   "lib/platform/nativeSearchIndexCommandMap.ts",

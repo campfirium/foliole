@@ -161,10 +161,10 @@ function createDocumentLoadSuccessHandler(
   return (document: { getPage?: (pageNumber: number) => Promise<unknown>; numPages: number }) => {
     setIsDocumentLoaded(true);
     props.onLoadSuccess(document.numPages);
-    if (Object.keys(props.persistedPageDimensions ?? {}).length > 0) {
+    if (Object.keys(props.persistedPageDimensions ?? {}).length >= document.numPages) {
       return;
     }
-    void collectPdfPageDimensions(document).then((pageDimensions) => {
+    void collectPdfPageDimensions(document, props.persistedPageDimensions).then((pageDimensions) => {
       setPageDimensionsByNumber(pageDimensions);
     });
   };

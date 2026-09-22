@@ -17,6 +17,7 @@ const PdfDocumentSurface = lazy(() =>
 
 interface CachedPdfSurface {
   nodeId: string;
+  pdfIndexStatus: 'failed' | 'indexing' | 'pending' | 'ready' | null;
   persistedPageCount: number | null;
   persistedPageDimensions: Record<number, PdfPageDimensions>;
   sourceHint: string;
@@ -40,6 +41,7 @@ function resolveRenderEntries(
   activePdfState: PdfDocumentSurfaceState | null,
   activePersistedPageCount: number | null,
   activePersistedPageDimensions: Record<number, PdfPageDimensions>,
+  activePdfIndexStatus: CachedPdfSurface['pdfIndexStatus'],
   activeSourceHint: string | null,
   editorNodeId: string | null
 ) {
@@ -48,6 +50,7 @@ function resolveRenderEntries(
   }
   return upsertCachedSurface(cachedSurfaces, {
     nodeId: editorNodeId,
+    pdfIndexStatus: activePdfIndexStatus,
     persistedPageCount: activePersistedPageCount,
     persistedPageDimensions: activePersistedPageDimensions,
     sourceHint: activeSourceHint
@@ -58,6 +61,7 @@ export function PdfDocumentSurfaceCache(props: {
   activeNodeId: string | null;
   activePersistedPageCount: number | null;
   activePersistedPageDimensions: Record<number, PdfPageDimensions>;
+  activePdfIndexStatus: CachedPdfSurface['pdfIndexStatus'];
   activePdfState: PdfDocumentSurfaceState | null;
   activeSourceHint: string | null;
   editorNodeId: string | null;
@@ -78,25 +82,28 @@ export function PdfDocumentSurfaceCache(props: {
     setCachedSurfaces((current) =>
       upsertCachedSurface(current, {
         nodeId: editorNodeId,
+        pdfIndexStatus: props.activePdfIndexStatus,
         persistedPageCount: props.activePersistedPageCount,
         persistedPageDimensions: props.activePersistedPageDimensions,
         sourceHint: activeSourceHint
       })
     );
-  }, [props.activePdfState, props.activePersistedPageCount, props.activePersistedPageDimensions, props.activeSourceHint, props.editorNodeId]);
+  }, [props.activePdfIndexStatus, props.activePdfState, props.activePersistedPageCount, props.activePersistedPageDimensions, props.activeSourceHint, props.editorNodeId]);
 
   const renderEntries = resolveRenderEntries(
     cachedSurfaces,
     props.activePdfState,
     props.activePersistedPageCount,
     props.activePersistedPageDimensions,
+    props.activePdfIndexStatus,
     props.activeSourceHint,
     props.editorNodeId
   );
+  const mountedEntries = renderEntries.filter((entry) => entry.nodeId === props.activeNodeId);
 
   useEffect(() => {
-    updatePdfSurfaceCacheStats({ entries: renderEntries.length });
-  }, [renderEntries.length]);
+    updatePdfSurfaceCacheStats({ entries: mountedEntries.length });
+  }, [mountedEntries.length]);
 
   useLayoutEffect(() => {
     const visible = renderEntries.some((entry) =>
@@ -105,13 +112,13 @@ export function PdfDocumentSurfaceCache(props: {
     props.onActiveCacheVisibilityChange(visible);
   }, [props.activeNodeId, props.activePdfState, props.onActiveCacheVisibilityChange, renderEntries]);
 
-  if (renderEntries.length === 0) {
+  if (mountedEntries.length === 0) {
     return null;
   }
 
   return (
     <>
-      {renderEntries.map((entry) => renderCachedSurfaceEntry(entry, props))}
+      {mountedEntries.map((entry) => renderCachedSurfaceEntry(entry, props))}
     </>
   );
 }
@@ -138,7 +145,7 @@ function renderCachedSurfaceEntry(
           }}
           persistedPageCount={entry.persistedPageCount}
           persistedPageDimensions={entry.persistedPageDimensions}
-          pdfIndexStatus={null}
+          pdfIndexStatus={entry.pdfIndexStatus}
           sourceHint={entry.sourceHint}
         />
       </Suspense>
