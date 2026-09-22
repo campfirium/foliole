@@ -50,7 +50,7 @@ export async function measureAndroidWorkspaceMemory({ adb, appId, env, execute, 
   const peakRss = samples.reduce((peak, sample) => sample.rssKb > peak.rssKb ? sample : peak);
   return { value, memory: {
     command: `dumpsys meminfo ${appId}`,
-    definition: 'Observed target App process PSS/RSS during the complete instrumentation method.',
+    definition: 'Observed target App process PSS/RSS during the supplied measurement window.',
     limitation: 'Includes instrumentation overhead and WebView memory charged to the target App process; Android isolated WebView renderer processes are not reliably attributable and are excluded.',
     peakPssKb: peakPss.pssKb, peakPssAtMs: peakPss.elapsedMs,
     peakRssKb: peakRss.rssKb, peakRssAtMs: peakRss.elapsedMs,

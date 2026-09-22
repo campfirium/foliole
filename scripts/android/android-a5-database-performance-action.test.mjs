@@ -141,16 +141,20 @@ it('runs normal workspace capacity in two clean instrumentation processes', asyn
     }
   });
   const instrumentation = calls.filter(args => args.includes('instrument'));
-  expect(instrumentation).toHaveLength(2);
+  expect(instrumentation).toHaveLength(4);
   expect(instrumentation[0]).toContain(`${WORKSPACE_TEST}#measuresNormalCompanionWorkspaceAtOneThousand`);
-  expect(instrumentation[1]).toContain(`${WORKSPACE_TEST}#measuresNormalCompanionWorkspaceAtTenThousand`);
+  expect(instrumentation[1]).toContain(`${WORKSPACE_TEST}#measuresNormalCompanionWorkspaceAtOneThousand`);
+  expect(instrumentation[2]).toContain(`${WORKSPACE_TEST}#measuresNormalCompanionWorkspaceAtTenThousand`);
+  expect(instrumentation[3]).toContain(`${WORKSPACE_TEST}#measuresNormalCompanionWorkspaceAtTenThousand`);
   const evidence = JSON.parse(fs.readFileSync(outcome.evidencePath));
   expect(evidence).toMatchObject({ ...result, fixtureResetBeforeRun: true,
     results: [{ fixtureCount: 1000, fresh: true }, { fixtureCount: 10000, fresh: true }],
     memory: { stages: [
-      { fixtureCount: 1000, peakPssKb: 12345, peakRssKb: 67890 },
-      { fixtureCount: 10000, peakPssKb: 12345, peakRssKb: 67890 }
-    ] } });
+      { fixtureCount: 1000, phase: 'normal-workspace-journey-after-fixture-ready',
+        peakPssKb: 12345, peakRssKb: 67890 },
+      { fixtureCount: 10000, phase: 'normal-workspace-journey-after-fixture-ready',
+        peakPssKb: 12345, peakRssKb: 67890 }
+    ] }, memoryLimitation: expect.stringContaining('isolated WebView renderer processes are excluded') });
   expect(calls.findIndex(args => args.includes('uninstall')
     && args.at(-1) === 'com.foliole.android.acceptance'))
     .toBeLessThan(calls.findIndex(args => args.includes('install')));

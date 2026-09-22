@@ -50,6 +50,15 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
       for (const [fixtureCount, method] of [[1000,
         'measuresNormalCompanionWorkspaceAtOneThousand'], [10000,
         'measuresNormalCompanionWorkspaceAtTenThousand']]) {
+        const preparation = await checked(execute, paths.adb, [
+          '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class',
+          `${WORKSPACE_CAPACITY_TEST_CLASS}#${method}`, RUNNER
+        ], options);
+        output.push(preparation.output);
+        fs.writeFileSync(path.join(evidenceRoot,
+          `android-workspace-capacity-${method}-preparation.log`), preparation.output);
+        assertSingleInstrumentationPassed(preparation.output,
+          `${WORKSPACE_CAPACITY_TEST_CLASS}#${method} preparation`);
         const measured = await measureAndroidWorkspaceMemory({
           adb: paths.adb, appId: APP_ID, env, execute, serial
         }, () => checked(execute, paths.adb, [
@@ -57,7 +66,8 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
           `${WORKSPACE_CAPACITY_TEST_CLASS}#${method}`, RUNNER
         ], options));
         result = measured.value;
-        workspaceMemory.push({ fixtureCount, ...measured.memory });
+        workspaceMemory.push({ fixtureCount,
+          phase: 'normal-workspace-journey-after-fixture-ready', ...measured.memory });
         output.push(result.output);
         fs.writeFileSync(path.join(evidenceRoot, `android-workspace-capacity-${method}.log`), result.output);
         assertSingleInstrumentationPassed(result.output, `${WORKSPACE_CAPACITY_TEST_CLASS}#${method}`);
@@ -110,7 +120,9 @@ async function saveWorkspaceCapacityEvidence(args) {
   const evidence = { ...parsed,
     fixtureResetBeforeRun: resetFixture === '1',
     results: parsed.results.map(item => ({ ...item, fresh: resetFixture === '1' })),
-    memory: { stages: workspaceMemory }, identities };
+    memory: { stages: workspaceMemory },
+    memoryLimitation: 'Observed peaks cover the target App process only; instrumentation overhead is included and isolated WebView renderer processes are excluded.',
+    identities };
   fs.writeFileSync(evidencePath, `${JSON.stringify(evidence, null, 2)}\n`);
   return { evidencePath, output: output.join('') };
 }
