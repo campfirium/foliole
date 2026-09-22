@@ -1,12 +1,12 @@
 import { afterEach, expect, it, vi } from 'vitest';
 
-import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
-import * as snapshotContract from '../../../lib/core/database/workspaceSnapshotContract';
-import * as virtualResults from '../../../lib/core/nodes/virtualNodeResults';
-import { resolveDirectoryRowMeta } from '../../companion/CompanionDirectoryVisualModel';
+import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
+import * as snapshotContract from '../../../../../lib/core/database/workspaceSnapshotContract';
+import * as virtualResults from '../../../../../lib/core/nodes/virtualNodeResults';
+import { resolveDirectoryRowMeta } from '../../../../companion/CompanionDirectoryVisualModel';
+import type { CompanionExternalDirectory } from '../../companionExternalDocuments';
 
 import { countCompanionExternalDirectoryEntries, resolveCompanionDirectoryCounts } from './companionDirectoryCounts';
-import type { CompanionExternalDirectory } from './companionExternalDocuments';
 
 function node(id: string, parentNodeId: string | null = null): WorkspaceSnapshot['nodesById'][string] {
   return {

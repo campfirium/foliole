@@ -4,12 +4,10 @@ import {
   syncCompanionObjectsFromDesktop,
   type CompanionDesktopSyncProgress
 } from '../shared/platform/companionDesktopSyncObjects';
-import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import {
   statusForSyncRunResult
 } from '../shared/platform/companionSyncActivityEvents';
 import {
-  loadCompanionReadableArticle,
   recordCompanionWorkspaceSyncEvent,
   resolveReachableCompanionWorkspaceSyncEndpoints
 } from '../shared/platform/companionWorkspaceSync';
@@ -40,7 +38,6 @@ export interface RunCompanionStreamSyncArgs {
   endpointUrl: string;
   runId: string;
   startedAt: string;
-  setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
@@ -53,7 +50,6 @@ export interface RunCompanionStreamSyncArgs {
 export interface TryForegroundAutoSyncArgs {
   cancelled: () => boolean;
   setError(error: string | null): void;
-  setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
@@ -65,18 +61,12 @@ export interface TryForegroundAutoSyncArgs {
   triggerReason?: SyncTriggerReason;
 }
 
-export async function syncReadableArticle(snapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot']) {
-  return loadCompanionReadableArticle(snapshot);
-}
-
 async function showCompletedStructure(args: {
-  setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   state: NativeCompanionWorkspaceSyncState;
   workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
 }) {
   args.setState({ ...args.state, workspace_snapshot: args.workspaceSnapshot });
-  args.setReadableArticle(await syncReadableArticle(args.workspaceSnapshot));
 }
 
 function applyRemainingProgress(args: {
@@ -94,14 +84,12 @@ function applyRemainingProgress(args: {
 async function refreshVisibleStructure(args: {
   cancelled: () => boolean;
   fallbackSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
-  setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
 }) {
   const refreshedState = await loadCompanionStateAfterStructureSync(args.fallbackSnapshot);
   const workspaceSnapshot = refreshedState?.workspace_snapshot ?? args.fallbackSnapshot;
   if (!args.cancelled() && refreshedState) {
     args.setState(refreshedState);
-    args.setReadableArticle(await syncReadableArticle(workspaceSnapshot));
   }
   return workspaceSnapshot;
 }
@@ -114,7 +102,6 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     latestWorkspaceSnapshot = await refreshVisibleStructure({
       cancelled: args.cancelled,
       fallbackSnapshot: latestWorkspaceSnapshot,
-      setReadableArticle: args.setReadableArticle,
       setState: args.setState
     });
   };
@@ -145,7 +132,6 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     triggerReason: args.triggerReason
   });
   await showCompletedStructure({
-    setReadableArticle: args.setReadableArticle,
     setState: args.setState,
     state: completedState,
     workspaceSnapshot: latestWorkspaceSnapshot

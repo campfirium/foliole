@@ -31,7 +31,7 @@ async function renderAutoSyncHook(
   }));
   const { useForegroundAutoSync } = await import('./useCompanionWorkspaceAutoSync');
   const hook = renderHook(({ pairingReady, syncState }) =>
-    useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), vi.fn(), setStatus, pairingReady, syncState, tryForegroundAutoSync),
+    useForegroundAutoSync(vi.fn(), vi.fn(), vi.fn(), setStatus, pairingReady, syncState, tryForegroundAutoSync),
     { initialProps: { pairingReady: isPairingReady, syncState: createSyncState(endpointUrl) } }
   );
   return { backgroundHandlers, foregroundHandlers, hook, setStatus, subscribeNativeAppForeground,

@@ -20,7 +20,6 @@ async function testRecordsBacklogBytesWithoutFastRetry() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -59,7 +58,6 @@ async function testRecordsDownloadedResourcesForPass() {
     cancelled: () => false,
     onContinuationModeChange,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress,
     setStatus: vi.fn(),
@@ -99,7 +97,6 @@ async function testKeepsResourceErrorsVisibleWithoutFastRetry() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress,
     setStatus: vi.fn(),
@@ -151,7 +148,6 @@ async function testKeepsProgressVisibleWhenBacklogRemains() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress,
     setStatus: vi.fn(),
@@ -187,7 +183,6 @@ async function testUsesResourceOnlyContinuationMode() {
     cancelled: () => false,
     continuationMode: 'resources-only',
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -207,7 +202,6 @@ async function testClearsProgressWhenBacklogIsDone() {
   await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress,
     setStatus: vi.fn(),

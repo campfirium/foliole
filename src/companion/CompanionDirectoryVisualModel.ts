@@ -1,6 +1,6 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { Translate } from '../shared/localization/LocalizationProvider';
-import { countCompanionExternalDirectoryEntries, resolveCompanionDirectoryCounts } from '../shared/platform/companionDirectoryCounts';
+import { countCompanionExternalDirectoryEntries, resolveCompanionDirectoryCounts } from '../shared/platform/companion/browse/companionDirectoryCounts';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 
 import type { DirectoryListItem, DirectorySection } from './CompanionDirectoryModel';

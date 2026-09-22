@@ -40,7 +40,7 @@ const state = {
 function renderMutationSchedule() {
   const run = vi.fn(async () => 'completed' as const);
   const hook = renderHook(() => useForegroundAutoSync(
-    vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), true, state, run
+    vi.fn(), vi.fn(), vi.fn(), vi.fn(), true, state, run
   ));
   return { hook, run };
 }
@@ -91,7 +91,7 @@ it('retains an active-run mutation across background and syncs it on foreground'
     .mockReturnValueOnce(activeRun)
     .mockResolvedValue('completed' as const);
   const hook = renderHook(() => useForegroundAutoSync(
-    vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), true, state, run
+    vi.fn(), vi.fn(), vi.fn(), vi.fn(), true, state, run
   ));
   await act(async () => Promise.resolve());
 

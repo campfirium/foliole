@@ -16,7 +16,6 @@ async function testKeepsUnreachableDesktopQuiet() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError,
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus,
@@ -44,7 +43,6 @@ async function testRecordsStructureApplyFailureCause() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -68,7 +66,6 @@ async function testRecordsNativeBridgeFailureCause() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -90,7 +87,6 @@ async function testRecordsMissingFailureDetails() {
   await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -114,7 +110,6 @@ async function testSurfacesMissingAnchorBeforeSyncStarts() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError,
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus,

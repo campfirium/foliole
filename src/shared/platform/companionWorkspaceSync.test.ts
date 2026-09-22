@@ -17,6 +17,8 @@ const capacitorMock = vi.hoisted(() => ({
   }
 }));
 const clearActiveData = vi.hoisted(() => vi.fn());
+const readArticle = vi.hoisted(() => vi.fn());
+vi.mock('./companion/reading/companionArticleRead', () => ({ readCompanionArticle: readArticle }));
 const nativeWorkspaceState = vi.hoisted(() => ({
   load: vi.fn(),
   save: vi.fn(async (state) => state)
@@ -230,11 +232,13 @@ function registerReadableArticleTest() {
       content: 'Body only',
       kind: 'topic'
     };
+    readArticle.mockResolvedValue({ content: 'Body from database', currentVersionId: 'db-version' });
 
     const article = await loadCompanionReadableArticle(snapshot);
 
     expect(capacitorMock.plugin.loadReadableArticle).not.toHaveBeenCalled();
-    expect(article?.contentPaddingTop).toBe('calc(var(--editor-space-xs) + var(--editor-space-md) + 2.485em + var(--editor-space-xs))');
+    expect(readArticle).toHaveBeenCalledWith(snapshot, 'node-1', expect.any(Function));
+    expect(article).toMatchObject({ content: 'Body from database', currentVersionId: 'db-version' });
   });
 }
 

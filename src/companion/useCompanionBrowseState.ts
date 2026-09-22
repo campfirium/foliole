@@ -6,11 +6,11 @@ import {
   type FolderListSortDirection,
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
+import { resolveCompanionBrowseSnapshot } from '../shared/platform/companion/browse/companionBrowseSnapshot';
 import {
   type CompanionRecentArticle,
   resolveCompanionRecentArticles
 } from '../shared/platform/companionBrowseLists';
-import { resolveCompanionBrowseSnapshot } from '../shared/platform/companionBrowseSnapshot';
 
 import { resolveCompanionReviewSession } from './companionReviewSession';
 import { useCompanionBrowseSelection } from './useCompanionBrowseSelection';

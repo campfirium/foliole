@@ -3,7 +3,6 @@ import type { MutableRefObject } from 'react';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
-import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
 import { shouldRunForegroundAutoSyncCheck } from './companionAutoSync';
@@ -24,7 +23,6 @@ export type TryForegroundAutoSync = (args: {
   continuationMode?: CompanionSyncContinuationMode;
   onContinuationModeChange?(mode: CompanionSyncContinuationMode): void;
   setError(error: string | null): void;
-  setReadableArticle(article: CompanionReadableArticle | null): void;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
   setStatus(status: CompanionWorkspaceSyncStatus): void;
@@ -44,7 +42,6 @@ type ForegroundSyncRunnerArgs = {
   retryAttemptRef: MutableRefObject<number>;
   retryTimerRef: MutableRefObject<ReturnType<typeof setTimeout> | null>;
   setError: (error: string | null) => void;
-  setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
   setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
   setStatus: (status: CompanionWorkspaceSyncStatus) => void;
@@ -134,7 +131,6 @@ function startForegroundSync(
       args.resourceContinuationModeRef.current = mode;
     },
     setError: args.setError,
-    setReadableArticle: args.setReadableArticle,
     setState: args.setState,
     setSyncProgress: args.setSyncProgress,
     setStatus: args.setStatus,

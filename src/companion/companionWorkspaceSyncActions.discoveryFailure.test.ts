@@ -23,7 +23,7 @@ vi.mock('../shared/platform/companionSyncObjects', () => ({
 
 it('shows a failure that occurs before any member sync run can start', async () => {
   const callbacks = {
-    setError: vi.fn(), setReadableArticle: vi.fn(), setState: vi.fn(),
+    setError: vi.fn(), setState: vi.fn(),
     setStatus: vi.fn(), setSyncConflictCount: vi.fn(), setSyncProgress: vi.fn()
   };
   const state = {

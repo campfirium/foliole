@@ -20,7 +20,6 @@ async function testRecordsPushFailureWithoutFailingPull() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -55,7 +54,6 @@ async function testRecordsPushConflictWithoutCompleting() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -87,7 +85,6 @@ async function testContinuesAfterPullResolvesPushConflict() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),

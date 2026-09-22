@@ -9,7 +9,6 @@ import {
 } from '../shared/platform/appLifecycle';
 import { subscribeCompanionHighValueMutation } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
-import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
 import {
   clearRetryTimer,
@@ -87,7 +86,6 @@ function subscribeForegroundSyncEvents(
 
 export function useForegroundAutoSync(
   setError: (error: string | null) => void,
-  setReadableArticle: (article: CompanionReadableArticle | null) => void,
   setState: (state: NativeCompanionWorkspaceSyncState) => void,
   setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void,
   setStatus: (status: CompanionWorkspaceSyncStatus) => void,
@@ -112,7 +110,6 @@ export function useForegroundAutoSync(
       cancelled: () => cancelled,
       ...refs,
       setError,
-      setReadableArticle,
       setState,
       setSyncProgress,
       setStatus,
@@ -135,7 +132,7 @@ export function useForegroundAutoSync(
       clearRetryTimer(refs.retryTimerRef);
       unsubscribe();
     };
-  }, [refs, setError, setReadableArticle, setState, setStatus, tryForegroundAutoSync]);
+  }, [refs, setError, setState, setStatus, tryForegroundAutoSync]);
 
   useEffect(() => {
     const lastActualSyncAt = state.last_synced_at ? Date.parse(state.last_synced_at) : undefined;

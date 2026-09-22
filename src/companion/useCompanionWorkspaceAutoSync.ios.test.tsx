@@ -32,7 +32,6 @@ it('confirms current iOS state before a failed retry and syncs again on resume',
     .mockResolvedValueOnce('completed' as const);
   const stableCallbacks = {
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setStatus: vi.fn(),
     setSyncProgress: vi.fn()
@@ -40,7 +39,6 @@ it('confirms current iOS state before a failed retry and syncs again on resume',
 
   renderHook(() => useForegroundAutoSync(
     stableCallbacks.setError,
-    stableCallbacks.setReadableArticle,
     stableCallbacks.setState,
     stableCallbacks.setSyncProgress,
     stableCallbacks.setStatus,

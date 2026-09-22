@@ -177,7 +177,6 @@ describe('companion sync run owner', () => {
     const setManualSyncAction = vi.fn();
     const actions = createWorkspaceSnapshotActions({
       setError: vi.fn(),
-      setReadableArticle: vi.fn(),
       setState: vi.fn(),
       setSyncConflictCount: vi.fn(),
       setSyncProgress: vi.fn(),
@@ -189,7 +188,6 @@ describe('companion sync run owner', () => {
     const autoSync = tryForegroundAutoSync({
       cancelled: () => false,
       setError: vi.fn(),
-      setReadableArticle: vi.fn(),
       setState: vi.fn(),
       setSyncProgress: vi.fn(),
       setStatus: vi.fn(),
@@ -224,7 +222,7 @@ describe('companion manual sync target selection', () => {
     syncObjectsMock.syncCompanionObjectsFromDesktop.mockResolvedValueOnce(syncResult());
     const setManualSyncAction = vi.fn();
     const actions = createWorkspaceSnapshotActions({
-      setError: vi.fn(), setReadableArticle: vi.fn(), setState: vi.fn(),
+      setError: vi.fn(), setState: vi.fn(),
       setSyncConflictCount: vi.fn(), setSyncProgress: vi.fn(), setStatus: vi.fn(),
       setManualSyncAction,
       state: syncState()

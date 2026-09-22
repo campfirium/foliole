@@ -36,6 +36,7 @@ export interface CompanionReadableArticle {
 }
 
 export interface CompanionNodeDocument {
+  current_version_id?: string | null;
   body_blob_hash: string | null;
   content: string;
   content_status: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
@@ -131,6 +132,7 @@ export function resolveLoadedCompanionArticle(
       [document.id]: {
         ...node,
         bodyBlobHash: document.body_blob_hash,
+        currentVersionId: document.current_version_id ?? null,
         bodyStatus: document.content_status,
         content: document.content,
         reveal: document.reveal,

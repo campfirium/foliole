@@ -35,7 +35,6 @@ function loadArticle(args: CompanionActionStateArgs, nodeId: string) {
     }
     return;
   }
-  void Promise.resolve(args.workspaceSync.openReadableArticle(nodeId)).catch(() => undefined);
 }
 
 export function useCompanionActionState(args: CompanionActionStateArgs) {

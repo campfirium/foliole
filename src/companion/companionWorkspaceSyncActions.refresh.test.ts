@@ -31,7 +31,7 @@ describe('companion workspace manual sync refresh', () => {
       workspace_snapshot: syncedSnapshot
     }));
 
-    expect(workspaceSyncMock.loadCompanionReadableArticle).toHaveBeenCalledWith(syncedSnapshot);
+    expect(workspaceSyncMock.loadCompanionReadableArticle).not.toHaveBeenCalled();
     expect(callbacks.setState).toHaveBeenLastCalledWith(expect.objectContaining({
       workspace_snapshot: syncedSnapshot
     }));
@@ -71,4 +71,19 @@ describe('companion workspace manual sync refresh', () => {
       'http://192.168.0.11:38641', expect.any(Object)
     );
   });
+});
+
+it('refreshes and replaces snapshots without reading a default article', async () => {
+  resetSyncActionMocks();
+  const { actions, callbacks } = createActions();
+  const snapshot = createSnapshot('changed-topic');
+  const state = createSyncState({ workspace_snapshot: snapshot });
+  workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(state);
+  workspaceSyncMock.persistCompanionWorkspaceSnapshot.mockResolvedValue(state);
+
+  await expect(actions.refreshFromDevice()).resolves.toEqual(state);
+  await expect(actions.replaceSnapshot(snapshot, 'changed-topic')).resolves.toEqual(state);
+
+  expect(callbacks.setState).toHaveBeenLastCalledWith(state);
+  expect(workspaceSyncMock.loadCompanionReadableArticle).not.toHaveBeenCalled();
 });

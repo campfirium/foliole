@@ -1,11 +1,9 @@
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { definedProps } from '../shared/lib/definedProps';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
-import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
 import {
-  loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
   persistCompanionWorkspaceSnapshot,
   removeCompanionWorkspaceSyncRememberedTarget,
@@ -27,7 +25,6 @@ import type { CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow'
 
 interface WorkspaceSnapshotActionArgs {
   setError: (message: string | null) => void;
-  setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setSyncConflictCount: (count: number) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
   setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
@@ -37,13 +34,11 @@ interface WorkspaceSnapshotActionArgs {
 }
 
 async function refreshConflictAwareState(args: {
-  setReadableArticle: (article: CompanionReadableArticle | null) => void;
   setSyncConflictCount: (count: number) => void;
   setState: (state: NativeCompanionWorkspaceSyncState) => void;
 }) {
   const nextState = await loadCompanionWorkspaceSyncState();
   args.setState(nextState);
-  args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
   args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
   await hydrateCompanionReviewSchedulerSettings().catch(() => null);
   await hydrateCompanionSystemEntryDisplayNames().catch(() => null);
@@ -65,7 +60,6 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
           syncFailure = message;
           args.setError(message);
         },
-        setReadableArticle: args.setReadableArticle,
         setState: args.setState,
         setSyncProgress: args.setSyncProgress,
         setStatus: args.setStatus,
@@ -107,7 +101,6 @@ async function replaceCompanionWorkspaceSnapshot(
     ...definedProps({ changedNodeId })
   });
   args.setState(nextState);
-  args.setReadableArticle(await loadCompanionReadableArticle(nextState.workspace_snapshot));
   return nextState;
 }
 

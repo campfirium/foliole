@@ -4,11 +4,11 @@ import {
   DEFAULT_FOLDER_LIST_SORT_DIRECTION,
   DEFAULT_FOLDER_LIST_SORT_KEY
 } from '../features/nodes/model/folderListOrdering';
+import { resolveCompanionBrowseSnapshot } from '../shared/platform/companion/browse/companionBrowseSnapshot';
 import {
   resolveCompanionFolderViewByNodeId,
   resolveCompanionTrashFolderViewByNodeId
 } from '../shared/platform/companionBrowseLists';
-import { resolveCompanionBrowseSnapshot } from '../shared/platform/companionBrowseSnapshot';
 import {
   resolveReadableCompanionArticleByNodeId,
   resolveReadableCompanionTrashArticleByNodeId

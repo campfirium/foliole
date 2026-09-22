@@ -123,7 +123,6 @@ export function createSyncResult(): CompanionDesktopSyncResult {
 export function createActions() {
   const callbacks = {
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setSyncConflictCount: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),

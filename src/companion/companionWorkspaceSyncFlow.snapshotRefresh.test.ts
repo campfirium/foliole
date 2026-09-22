@@ -18,7 +18,6 @@ vi.mock('./companionReviewSchedulerSettingsHydration', () => ({
 async function testRefreshesVisibleWorkspaceSnapshotAfterStructureSync() {
   const { tryForegroundAutoSync } = await import('./companionWorkspaceSyncFlow');
   const syncedSnapshot = createWorkspaceSnapshot('synced-topic');
-  const setReadableArticle = vi.fn();
   const setState = vi.fn();
   syncPlatformMock.loadCompanionWorkspaceSyncState.mockResolvedValue(createSyncState({
     workspace_snapshot: syncedSnapshot
@@ -31,7 +30,6 @@ async function testRefreshesVisibleWorkspaceSnapshotAfterStructureSync() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle,
     setState,
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -40,7 +38,7 @@ async function testRefreshesVisibleWorkspaceSnapshotAfterStructureSync() {
 
   expect(outcome).toBe('completed');
   expect(syncPlatformMock.loadCompanionWorkspaceSyncState).toHaveBeenCalled();
-  expect(syncPlatformMock.loadCompanionReadableArticle).toHaveBeenCalledWith(syncedSnapshot);
+  expect(syncPlatformMock.loadCompanionReadableArticle).not.toHaveBeenCalled();
   expect(setState).toHaveBeenLastCalledWith(expect.objectContaining({
     workspace_snapshot: syncedSnapshot
   }));
@@ -59,7 +57,6 @@ async function testDoesNotLeaveForegroundSyncStuckWhenSnapshotRefreshStalls() {
     const outcome = tryForegroundAutoSync({
       cancelled: () => false,
       setError: vi.fn(),
-      setReadableArticle: vi.fn(),
       setState: vi.fn(),
       setSyncProgress: vi.fn(),
       setStatus: vi.fn(),
@@ -87,7 +84,6 @@ async function testDoesNotFastRetryWhileTimedOutResourceStageMayStillBeClosingNa
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -115,7 +111,6 @@ async function testKeepsStructureSnapshotWhenResourceStageFailsAfterStructureSyn
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState,
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),

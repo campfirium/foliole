@@ -154,7 +154,7 @@ function renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync: typeof impo
   }));
 }
 
-async function testManualSyncRefreshesReadableArticle() {
+async function testManualSyncRefreshesSnapshotWithoutLoadingArticle() {
   const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
   const { result } = renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync);
 
@@ -170,7 +170,9 @@ async function testManualSyncRefreshesReadableArticle() {
   );
   expect(workspaceSyncMock.loadCompanionWorkspaceSyncState).toHaveBeenCalled();
   expect(schedulerSettingsMock.hydrate).toHaveBeenCalled();
-  expect(result.current.readableArticle?.nodeId).toBe('topic-1');
+  expect(result.current.state.workspace_snapshot?.nodesById['topic-1']).toBeDefined();
+  expect(result.current.readableArticle).toBeNull();
+  expect(workspaceSyncMock.loadCompanionReadableArticle).not.toHaveBeenCalled();
   expect(result.current.status).toBe('idle');
 }
 
@@ -211,7 +213,7 @@ async function testManualSyncRefreshesConflictCount() {
 describe('useCompanionWorkspaceSync', () => {
   beforeEach(resetCompanionWorkspaceSyncMocks);
 
-  it('refreshes local state and readable article after manual stream sync', testManualSyncRefreshesReadableArticle);
+  it('refreshes local state without loading a default article after manual stream sync', testManualSyncRefreshesSnapshotWithoutLoadingArticle);
 
   it('refreshes the visible sync conflict count after manual sync', testManualSyncRefreshesConflictCount);
 

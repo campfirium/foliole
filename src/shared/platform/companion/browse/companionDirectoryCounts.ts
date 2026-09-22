@@ -1,9 +1,8 @@
-import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
-import { normalizeWorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshotContract';
-import { createVirtualNodeResultResolver } from '../../../lib/core/nodes/virtualNodeResults';
-import { selectCanonicalTrashedNodeIds, selectCanonicalVisibleNodeIds } from '../workspaceCanonicalSelectors';
-
-import type { CompanionExternalDirectory } from './companionExternalDocuments';
+import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
+import { normalizeWorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshotContract';
+import { createVirtualNodeResultResolver } from '../../../../../lib/core/nodes/virtualNodeResults';
+import { selectCanonicalTrashedNodeIds, selectCanonicalVisibleNodeIds } from '../../../workspaceCanonicalSelectors';
+import type { CompanionExternalDirectory } from '../../companionExternalDocuments';
 
 interface DirectoryCounts {
   countChildren: (parentNodeId: string, mode: 'trash' | 'visible') => number;

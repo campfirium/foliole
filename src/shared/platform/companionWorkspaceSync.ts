@@ -1,9 +1,6 @@
 import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from '../../../lib/platform/nativeCompanionSyncContract';
 
-import {
-  loadIosCompanionAnnotationContents,
-  loadIosCompanionNodeDocument
-} from './companion/runtime/iosCompanionActiveDatabaseReads';
+import { readCompanionArticle } from './companion/reading/companionArticleRead';
 import {
   publishCompanionSyncMutationRevision
 } from './companion/sync/mutation/companionSyncMutationRevision';
@@ -12,7 +9,6 @@ import {
   saveIosCompanionWorkspaceSyncState
 } from './companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore';
 import {
-  resolveLoadedCompanionArticle,
   resolveReadableCompanionArticle,
   resolveReadableCompanionArticleByNodeId
 } from './companionReadableArticle';
@@ -148,7 +144,8 @@ export async function recordCompanionWorkspaceSyncEvent(args: {
 
 export async function loadCompanionReadableArticle(
   snapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
-  nodeId?: string | null
+  nodeId?: string | null,
+  isCurrent: () => boolean = () => true
 ) {
   if (usesSharedOwner()) {
     const currentSnapshot = snapshot ?? (await loadIosCompanionWorkspaceSyncState()).workspace_snapshot;
@@ -156,14 +153,8 @@ export async function loadCompanionReadableArticle(
       const node = currentSnapshot.nodesById[id];
       return Boolean(node?.hasContent || node?.bodyStatus === 'empty' || node?.bodyStatus === 'missing');
     }) ?? null;
-    if (!targetNodeId) return null;
-    const inMemoryArticle = resolveReadableCompanionArticleByNodeId(currentSnapshot, targetNodeId);
-    if (inMemoryArticle?.content.trim()) return inMemoryArticle;
-    const [document, annotationContents] = await Promise.all([
-      loadIosCompanionNodeDocument(targetNodeId),
-      loadIosCompanionAnnotationContents(targetNodeId)
-    ]);
-    return resolveLoadedCompanionArticle(currentSnapshot, document, annotationContents);
+    if (!targetNodeId || !currentSnapshot) return null;
+    return readCompanionArticle(currentSnapshot, targetNodeId, isCurrent);
   }
   const currentSnapshot = snapshot ?? readWebSyncState().workspace_snapshot;
   return nodeId

@@ -40,7 +40,6 @@ it('does not continue a backlog after automatic sync is paused', async () => {
     retryAttemptRef: { current: 0 },
     retryTimerRef: { current: null },
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus,

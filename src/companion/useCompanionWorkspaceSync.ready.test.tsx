@@ -64,15 +64,17 @@ describe('useCompanionWorkspaceSync ready gate', () => {
 
     await waitFor(() => expect(result.current.isWorkspaceSyncStateReady).toBe(true));
     expect(result.current.status).toBe('idle');
+    expect(workspaceSyncMock.loadCompanionReadableArticle).not.toHaveBeenCalled();
   });
 
-  it('does not keep the shell loading when bootstrap readable article loading fails', async () => {
-    workspaceSyncMock.loadCompanionReadableArticle.mockRejectedValue(new Error('readable failed'));
+  it('marks bootstrap ready without requesting a default readable article', async () => {
+
     const { useCompanionWorkspaceSync } = await import('./useCompanionWorkspaceSync');
     const { result } = renderReadyHook(useCompanionWorkspaceSync);
 
     await waitFor(() => expect(result.current.isWorkspaceSyncStateReady).toBe(true));
     expect(result.current.status).toBe('idle');
+    expect(workspaceSyncMock.loadCompanionReadableArticle).not.toHaveBeenCalled();
   });
 
   it('does not keep the shell loading when bootstrap conflict count loading fails', async () => {

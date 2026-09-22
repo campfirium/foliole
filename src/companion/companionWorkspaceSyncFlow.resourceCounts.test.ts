@@ -19,7 +19,6 @@ async function testUnknownResourceCountsDoNotDriveFastBacklogRetry() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress,
     setStatus: vi.fn(),
@@ -47,7 +46,6 @@ async function testProgressWithUnknownResourceCountsDoesNotDriveFastRetry() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),

@@ -4,10 +4,21 @@ import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnap
 
 import { resolveCompanionRecentArticles } from './companionBrowseLists';
 import {
+  resolveLoadedCompanionArticle,
   resolveReadableCompanionArticleByNodeId
 } from './companionReadableArticle';
 
 type SnapshotNode = WorkspaceSnapshot['nodesById'][string];
+
+it('uses the version returned with the body instead of the catalog version', () => {
+  const snapshot = createSnapshot();
+  snapshot.nodesById['topic-1']!.currentVersionId = 'old-catalog-version';
+  const article = resolveLoadedCompanionArticle(snapshot, {
+    id: 'topic-1', current_version_id: 'read-version', body_blob_hash: null,
+    content: 'Read body', content_status: 'ready', pdf_attachment_id: null, reveal: null, title: 'Title'
+  });
+  expect(article).toMatchObject({ content: 'Read body', currentVersionId: 'read-version' });
+});
 
 function createNodeRecord(overrides: Partial<SnapshotNode> = {}): SnapshotNode {
   return {

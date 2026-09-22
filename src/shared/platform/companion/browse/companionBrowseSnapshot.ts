@@ -1,4 +1,4 @@
-import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
+import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
 
 const previousInputs = new WeakMap<WorkspaceSnapshot['nodesById'], WorkspaceSnapshot>();
 

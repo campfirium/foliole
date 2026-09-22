@@ -163,15 +163,19 @@ export function useCompanionArticleSurface(
     reviewSession: browseState.reviewSession,
     snapshot: browseState.snapshot
   });
+  const demandNodeId = options.isOnlyReviewOpen || activeAction === 'review'
+    ? reviewSessions.effectiveReviewSession.currentCard?.nodeId ?? null
+    : activeAction === 'recent' && !browseState.browsedFolder ? browseState.selectedBrowseNodeId : null;
+  const readyDemandNodeId = workspaceSync.isWorkspaceSyncStateReady ? demandNodeId : null;
   useEffect(() => {
-    const nodeId = reviewSessions.effectiveReviewSession.currentCard?.nodeId;
-    if (activeAction === 'review' && nodeId) {
-      void Promise.resolve(workspaceSync.openReadableArticle(nodeId)).catch(() => undefined);
-    }
-  }, [activeAction, reviewSessions.effectiveReviewSession.currentCard?.nodeId, workspaceSync.openReadableArticle]);
+    void Promise.resolve(workspaceSync.openReadableArticle(readyDemandNodeId)).catch(() => undefined);
+  }, [readyDemandNodeId, workspaceSync.openReadableArticle]);
+  const candidateArticle = options.isOnlyReviewOpen || activeAction === 'review'
+    ? workspaceSync.readableArticle : browseState.readableArticle;
+  const currentArticle = candidateArticle?.nodeId === readyDemandNodeId ? candidateArticle : null;
   const effectiveReviewSession = useMemo(
-    () => hydrateCompanionReviewSession(reviewSessions.effectiveReviewSession, workspaceSync.readableArticle),
-    [reviewSessions.effectiveReviewSession, workspaceSync.readableArticle]
+    () => hydrateCompanionReviewSession(reviewSessions.effectiveReviewSession, currentArticle),
+    [reviewSessions.effectiveReviewSession, currentArticle]
   );
   const handleViewScroll = useCompanionViewStateSync({
     activeAction,
@@ -189,9 +193,9 @@ export function useCompanionArticleSurface(
     workspaceSync
   );
 
-  const missingBodySync = useCompanionMissingBodySync({ readableArticle: browseState.readableArticle, workspaceSync });
+  const missingBodySync = useCompanionMissingBodySync({ readableArticle: currentArticle, workspaceSync });
   const readableArticle = useReadableArticleWithBodySyncStatus(
-    browseState.readableArticle,
+    currentArticle,
     missingBodySync.fetchingBodyKey
   );
 
@@ -201,8 +205,8 @@ export function useCompanionArticleSurface(
     readableArticle,
     recentArticles: browseState.recentArticles,
     effectiveReviewSession,
-    onlyReviewSession: reviewSessions.onlyReviewSession,
-    reviewSession: browseState.reviewSession,
+    onlyReviewSession: options.isOnlyReviewOpen ? effectiveReviewSession : reviewSessions.onlyReviewSession,
+    reviewSession: options.isOnlyReviewOpen ? browseState.reviewSession : effectiveReviewSession,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId,
     handleViewScroll,
     ...interactionState

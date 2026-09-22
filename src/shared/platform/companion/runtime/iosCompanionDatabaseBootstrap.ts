@@ -4,6 +4,7 @@ import type {
   NativeCompanionBootstrapPayload,
   NativeCompanionBootstrapState
 } from '../../../../../lib/platform/nativeCompanionContract';
+import { invalidateCompanionReadingScope } from '../reading/companionReadingScope';
 
 import {
   CapacitorCompanionDatabaseOwner,
@@ -26,6 +27,7 @@ export function getIosCompanionDatabaseOwner() {
 export async function closeIosCompanionDatabase() {
   const owner = activeOwner;
   activeOwner = null;
+  invalidateCompanionReadingScope();
   await owner?.close();
 }
 
@@ -43,6 +45,7 @@ export async function initializeIosCompanionDatabase(
     ...(options.afterRepair ? { beforeVersionCommit: () => options.afterRepair?.(0) } : {})
   });
   activeOwner = owner;
+  invalidateCompanionReadingScope();
   return {
     ...nativeState,
     database_path: result.databasePath,

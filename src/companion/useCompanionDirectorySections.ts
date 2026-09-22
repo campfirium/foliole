@@ -3,11 +3,11 @@ import { useMemo } from 'react';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { FolderListSortDirection, FolderListSortKey } from '../features/nodes/model/folderListOrdering';
 import { useLocalization } from '../shared/localization/LocalizationProvider';
+import { resolveCompanionBrowseSnapshot } from '../shared/platform/companion/browse/companionBrowseSnapshot';
 import {
   resolveCompanionFolderViewByNodeId, resolveCompanionRootDirectoryView,
   resolveCompanionTrashFolderViewByNodeId, resolveCompanionTrashView
 } from '../shared/platform/companionBrowseLists';
-import { resolveCompanionBrowseSnapshot } from '../shared/platform/companionBrowseSnapshot';
 import type { CompanionExternalDirectory } from '../shared/platform/companionExternalDocuments';
 
 import { resolveDirectorySections, type CompanionDirectorySelection } from './CompanionDirectoryModel';

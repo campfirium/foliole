@@ -15,7 +15,6 @@ describe('manual companion workspace sync', () => {
     await tryForegroundAutoSync({
       cancelled: () => false,
       setError: vi.fn(),
-      setReadableArticle: vi.fn(),
       setState: vi.fn(),
       setSyncProgress: vi.fn(),
       setStatus: vi.fn(),

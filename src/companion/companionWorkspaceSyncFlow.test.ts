@@ -19,7 +19,6 @@ async function testUsesStreamSyncDirectly() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState,
     setSyncProgress: vi.fn(),
     setStatus,
@@ -48,7 +47,6 @@ async function testUsesRememberedSyncTarget() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -79,7 +77,6 @@ async function testRepairsStaleEmulatorEndpoint() {
   await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -106,7 +103,7 @@ async function testSyncsEveryReachableGroupMember() {
     cancelled: () => false,
     continuationMode: 'resources-only',
     onContinuationModeChange: vi.fn(),
-    setError: vi.fn(), setReadableArticle: vi.fn(), setState: vi.fn(),
+    setError: vi.fn(), setState: vi.fn(),
     setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState()
   });
 
@@ -135,7 +132,7 @@ async function testContinuesAfterOneGroupMemberFails() {
     .mockResolvedValueOnce(createSyncObjectsResult());
 
   const outcome = await tryForegroundAutoSync({
-    cancelled: () => false, setError: vi.fn(), setReadableArticle: vi.fn(), setState: vi.fn(),
+    cancelled: () => false, setError: vi.fn(), setState: vi.fn(),
     setSyncProgress: vi.fn(), setStatus: vi.fn(), state: createSyncState()
   });
 
@@ -152,7 +149,6 @@ async function testRecordsStructureLagWithoutCompleting() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
@@ -180,7 +176,6 @@ async function testKeepsProgressVisibleWhenStructureLagRemains() {
   await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress,
     setStatus: vi.fn(),
@@ -208,7 +203,6 @@ async function testDoesNotCompleteWhileLocalWorkIsWaiting() {
   const outcome = await tryForegroundAutoSync({
     cancelled: () => false,
     setError: vi.fn(),
-    setReadableArticle: vi.fn(),
     setState: vi.fn(),
     setSyncProgress: vi.fn(),
     setStatus: vi.fn(),
