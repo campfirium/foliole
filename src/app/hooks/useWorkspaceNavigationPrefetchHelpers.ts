@@ -11,9 +11,10 @@ import {
   resolveForwardNavigationTarget,
   resolveParentNavigationTarget
 } from '../../store/workspaceNavigationTargets';
-import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+
+import { loadDesktopNodeDocument } from './desktopNodeDocumentLoad';
 
 export function useNavigationTargetResolvers() {
   const resolveBackTargetNodeId = useCallback(() => {
@@ -47,7 +48,7 @@ export function useNodeDocumentPrefetch() {
       return;
     }
 
-    await ensureWorkspaceNodeDocumentReady(nodeId, {
+    await loadDesktopNodeDocument(nodeId, {
       keepWarm: true,
       onDocumentMerged: (document) => {
         markNodeDocumentMerged(nodeId, `content:${document.content.length}`);

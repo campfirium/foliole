@@ -8,9 +8,10 @@ import {
   markNodeDocumentLoadStarted
 } from '../../shared/platform/performanceDiagnosticsProbe';
 import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
-import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { getNodeDocumentStatus, isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+
+import { loadDesktopNodeDocument } from './desktopNodeDocumentLoad';
 
 interface UseWorkspaceActiveNodeDocumentOptions {
   includeTrashed?: boolean;
@@ -38,7 +39,7 @@ export function useWorkspaceActiveNodeDocument(
     }
 
     let cancelled = false;
-    void ensureWorkspaceNodeDocumentReady(activeNodeId, {
+    void loadDesktopNodeDocument(activeNodeId, {
       onDocumentMerged: (document) => {
         if (!cancelled) {
           markNodeDocumentMerged(activeNodeId, `content:${document.content.length}`);
@@ -55,7 +56,7 @@ export function useWorkspaceActiveNodeDocument(
         }
       },
       ...definedProps({ includeTrashed: options.includeTrashed, keepWarm: options.keepWarm })
-    });
+    }, () => !cancelled);
 
     return () => {
       cancelled = true;

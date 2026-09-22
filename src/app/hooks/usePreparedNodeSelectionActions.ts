@@ -9,9 +9,10 @@ import {
 import { hasWorkspaceRuntimeRepository } from '../../shared/platform/workspaceRuntimeRepository';
 import type { WorkspaceBrowseRootIntent } from '../../store/workspaceBrowseRoot';
 import { resolveAncestorAnchorLink, type NodeNavigationResult } from '../../store/workspaceNavigation';
-import { ensureWorkspaceNodeDocumentReady } from '../../store/workspaceNodePreparation';
 import { isNodeDocumentLoaded } from '../../store/workspaceRendererBoundary';
 import { useWorkspaceStore } from '../../store/workspaceStore';
+
+import { loadDesktopNodeDocument } from './desktopNodeDocumentLoad';
 
 export function usePreparedOpenNodeAction(
   action: (nodeId: string, browseRootIntent?: WorkspaceBrowseRootIntent) => NodeNavigationResult | null,
@@ -47,7 +48,7 @@ export function usePreparedOpenNodeAction(
       const requestToken = requestTokenRef.current + 1;
       requestTokenRef.current = requestToken;
 
-      await ensureWorkspaceNodeDocumentReady(nodeId, {
+      await loadDesktopNodeDocument(nodeId, {
         onDocumentMerged: (document) => {
           if (requestTokenRef.current === requestToken) {
             markNodeDocumentMerged(nodeId, `content:${document.content.length}`);
@@ -63,7 +64,7 @@ export function usePreparedOpenNodeAction(
             markNodeDocumentLoadStarted(nodeId);
           }
         }
-      });
+      }, () => requestTokenRef.current === requestToken && useWorkspaceStore.getState().activeNodeId === nodeId);
     },
     [action, finalize, flushActiveEditorTransaction, flushPendingEditorDraft, flushPendingEditorDraftImmediately, markRequested, prepareForNavigation]
   );
