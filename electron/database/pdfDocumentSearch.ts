@@ -1,10 +1,16 @@
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { searchPdfDocumentText } from '../../lib/core/pdf/pdfDocumentTextSearch.js';
 
 import { openDatabaseConnection } from './connection.js';
 
-interface PdfAttachmentRow {
+interface PdfAttachmentRow extends DatabaseRow {
   attachment_id: string;
   pdf_index_status: 'failed' | 'indexing' | 'pending' | 'ready' | null;
+}
+
+interface PdfPageTextRow extends DatabaseRow {
+  page: number;
+  text: string;
 }
 
 function findPdfAttachment(nodeId: string) {
@@ -33,7 +39,7 @@ export function searchCurrentPdfDocument(nodeId: string, query: string) {
   if (!attachment || status !== 'ready' || !query.trim()) {
     return { matches: [], status };
   }
-  const pages = openDatabaseConnection().driver.queryAll<{ page: number; text: string }>(
+  const pages = openDatabaseConnection().driver.queryAll<PdfPageTextRow>(
     `SELECT page, text
      FROM pdf_page_text
      WHERE attachment_id = ?

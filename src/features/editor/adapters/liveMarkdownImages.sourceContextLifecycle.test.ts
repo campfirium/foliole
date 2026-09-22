@@ -90,7 +90,7 @@ it('falls back to a direct request when context loading fails', async () => {
 });
 
 it('does not assign a remote source after the widget is disposed', async () => {
-  let finishContext: ((value: unknown) => void) | null = null;
+  let finishContext: (value: unknown) => void = () => undefined;
   sourceContext.load.mockReturnValue(new Promise((resolve) => {
     finishContext = resolve;
   }));
@@ -98,7 +98,7 @@ it('does not assign a remote source after the widget is disposed', async () => {
   await waitFor(() => expect(sourceContext.load).toHaveBeenCalledOnce());
 
   disposeMarkdownImageWidgetDom(widget);
-  finishContext?.({
+  finishContext({
     imageHost: 'cdn.example', learnedSourceOrigin: null, source: 'none', sourceOrigin: null
   });
   await new Promise((resolve) => window.setTimeout(resolve, 0));

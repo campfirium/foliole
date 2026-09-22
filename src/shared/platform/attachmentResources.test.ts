@@ -192,7 +192,7 @@ it('checks the current file when display requests a fresh resolution', async () 
 it('shares one in-flight desktop resolution across concurrent refresh requests', async () => {
   capacitorMock.isNativePlatform.mockReturnValue(false);
   const resource = createTestAttachmentResource({ attachmentId: 'att-desktop-concurrent' });
-  let finishResolution: ((value: unknown) => void) | null = null;
+  let finishResolution: (value: unknown) => void = () => undefined;
   const invoke = vi.fn(() => new Promise((resolve) => {
     finishResolution = resolve;
   }));
@@ -201,7 +201,7 @@ it('shares one in-flight desktop resolution across concurrent refresh requests',
   const first = resolveRuntimeAttachmentResource(resource.assetUrl, { refresh: true });
   const second = resolveRuntimeAttachmentResource(resource.assetUrl, { refresh: true });
   expect(invoke).toHaveBeenCalledTimes(1);
-  finishResolution?.({ status: 'ready', resource_url: 'file:///attachments/shared.png', mime_type: 'image/png' });
+  finishResolution({ status: 'ready', resource_url: 'file:///attachments/shared.png', mime_type: 'image/png' });
 
   await expect(Promise.all([first, second])).resolves.toEqual([
     { status: 'ready', resource_url: 'file:///attachments/shared.png', mime_type: 'image/png' },

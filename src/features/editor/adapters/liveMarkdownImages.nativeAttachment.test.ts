@@ -57,7 +57,7 @@ it('resolves iOS attachment images through the shared native resource capability
 it('ignores an attachment resolution that arrives after the widget is disposed', async () => {
   const hash = 'b'.repeat(64);
   const source = `asset://${hash}.png`;
-  let finishResolution: ((value: unknown) => void) | null = null;
+  let finishResolution: (value: unknown) => void = () => undefined;
   attachmentMock.resolve.mockReturnValue(new Promise((resolve) => {
     finishResolution = resolve;
   }));
@@ -67,7 +67,7 @@ it('ignores an attachment resolution that arrives after the widget is disposed',
   }, null, null, requestMeasure);
 
   disposeMarkdownImageWidgetDom(widget);
-  finishResolution?.({
+  finishResolution({
     mime_type: 'image/png', resource_url: 'foliole-asset://attachment/disposed', status: 'ready'
   });
   await Promise.resolve();
