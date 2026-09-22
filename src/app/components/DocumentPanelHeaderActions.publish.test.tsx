@@ -26,6 +26,13 @@ function PublishHeaderActions(props: {
     <DocumentHeaderMenuSettingsContext.Provider
       value={{
         items: props.menuItems ?? DEFAULT_DOCUMENT_HEADER_MENU_ITEMS,
+        contextItems: [],
+        onAddContextItem: vi.fn(),
+        onMoveContextItem: vi.fn(),
+        onRemoveContextItem: vi.fn(),
+        onResetContextMenu: vi.fn(),
+        onToggleContextItem: vi.fn(),
+        onToggleContextSeparator: vi.fn(),
         onAddMenuItem: vi.fn(),
         onMoveMenuItem: vi.fn(),
         onRemoveMenuItem: vi.fn(),

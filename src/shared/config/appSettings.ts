@@ -22,6 +22,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   publishingExpandedSections: 'foliole-publishing-expanded-sections',
   workspaceRailItems: 'foliole-workspace-rail-items',
   documentHeaderMenuItems: 'foliole-document-header-menu-items',
+  editorContextMenuItems: 'foliole-editor-context-menu-items',
   appLanguage: 'foliole-app-language',
   customCopyOverrides: 'foliole-custom-copy-overrides-v1',
   formatCleanup: 'foliole-format-cleanup-v1',

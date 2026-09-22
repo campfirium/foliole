@@ -68,17 +68,18 @@ function normalizeSeparatorBoundaries(items: StoredDocumentHeaderMenuItemConfig[
   });
 }
 
-export function normalizeDocumentHeaderMenuItems(items: StoredDocumentHeaderMenuItemConfig[] = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
+export function normalizeDocumentHeaderMenuItems(items: StoredDocumentHeaderMenuItemConfig[] = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS, defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
   const storedById = new Map(items.map((item) => [item.id, item]));
-  const defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS.map((defaultItem) => ({
+  const systemItems = defaults.map((defaultItem) => ({
     ...defaultItem,
     ...(storedById.get(defaultItem.id) ?? {}),
     commandId: defaultItem.commandId,
     source: 'system' as const
   }));
-  const custom = items.filter((item) => item.source === 'user' && !SYSTEM_ITEM_IDS.has(item.id));
+  const systemIds = defaults === DEFAULT_DOCUMENT_HEADER_MENU_ITEMS ? SYSTEM_ITEM_IDS : new Set(defaults.map((item) => item.id));
+  const custom = items.filter((item) => item.source === 'user' && !systemIds.has(item.id));
   const seen = new Set<string>();
-  const filtered = [...defaults, ...custom].filter((item) => {
+  const filtered = [...systemItems, ...custom].filter((item) => {
     if (!item.id || !item.commandId || seen.has(item.id)) return false;
     seen.add(item.id);
     return true;
@@ -90,16 +91,16 @@ export function resetDocumentHeaderMenuItems() {
   return normalizeDocumentHeaderMenuItems(DEFAULT_DOCUMENT_HEADER_MENU_ITEMS);
 }
 
-export function toggleDocumentHeaderMenuItemVisibility(items: DocumentHeaderMenuItemConfig[], itemId: string, visible: boolean) {
-  return normalizeDocumentHeaderMenuItems(items.map((item) => (item.id === itemId ? { ...item, visible } : item)));
+export function toggleDocumentHeaderMenuItemVisibility(items: DocumentHeaderMenuItemConfig[], itemId: string, visible: boolean, defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
+  return normalizeDocumentHeaderMenuItems(items.map((item) => (item.id === itemId ? { ...item, visible } : item)), defaults);
 }
 
-export function toggleDocumentHeaderMenuItemSeparator(items: DocumentHeaderMenuItemConfig[], itemId: string, separatorBefore: boolean) {
-  return normalizeDocumentHeaderMenuItems(items.map((item) => (item.id === itemId ? { ...item, separatorBefore } : item)));
+export function toggleDocumentHeaderMenuItemSeparator(items: DocumentHeaderMenuItemConfig[], itemId: string, separatorBefore: boolean, defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
+  return normalizeDocumentHeaderMenuItems(items.map((item) => (item.id === itemId ? { ...item, separatorBefore } : item)), defaults);
 }
 
-export function moveDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[], itemId: string, order: number) {
-  const normalized = normalizeDocumentHeaderMenuItems(items);
+export function moveDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[], itemId: string, order: number, defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
+  const normalized = normalizeDocumentHeaderMenuItems(items, defaults);
   const target = normalized.find((item) => item.id === itemId);
   if (!target) return normalized;
   const nextOrder = Number.isFinite(order) ? Math.max(0, Math.floor(order)) : 0;
@@ -109,19 +110,19 @@ export function moveDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[]
     ...otherItems.slice(0, insertAt),
     target,
     ...otherItems.slice(insertAt)
-  ].map((item, nextItemOrder) => ({ ...item, order: nextItemOrder })));
+  ].map((item, nextItemOrder) => ({ ...item, order: nextItemOrder })), defaults);
 }
 
 function createUserMenuItemId(commandId: string) {
   return `user.${commandId.replace(/[^a-zA-Z0-9]+/g, '-')}`;
 }
 
-export function addDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[], command: { commandId: string; label: string }) {
-  const normalized = normalizeDocumentHeaderMenuItems(items);
+export function addDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[], command: { commandId: string; label: string }, defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
+  const normalized = normalizeDocumentHeaderMenuItems(items, defaults);
   const existing = normalized.find((item) => item.commandId === command.commandId);
   if (existing) {
     return normalizeDocumentHeaderMenuItems(
-      normalized.map((item) => item.id === existing.id ? { ...item, labelOverride: command.label, visible: true } : item)
+      normalized.map((item) => item.id === existing.id ? { ...item, labelOverride: command.label, visible: true } : item), defaults
     );
   }
   return normalizeDocumentHeaderMenuItems([
@@ -134,30 +135,30 @@ export function addDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[],
       source: 'user',
       visible: true
     }
-  ]);
+  ], defaults);
 }
 
-export function removeDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[], itemId: string) {
-  const target = normalizeDocumentHeaderMenuItems(items).find((item) => item.id === itemId);
-  if (!target) return normalizeDocumentHeaderMenuItems(items);
-  if (target.source === 'system') return toggleDocumentHeaderMenuItemVisibility(items, itemId, false);
-  return normalizeDocumentHeaderMenuItems(items.filter((item) => item.id !== itemId));
+export function removeDocumentHeaderMenuItem(items: DocumentHeaderMenuItemConfig[], itemId: string, defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
+  const target = normalizeDocumentHeaderMenuItems(items, defaults).find((item) => item.id === itemId);
+  if (!target) return normalizeDocumentHeaderMenuItems(items, defaults);
+  if (target.source === 'system') return toggleDocumentHeaderMenuItemVisibility(items, itemId, false, defaults);
+  return normalizeDocumentHeaderMenuItems(items.filter((item) => item.id !== itemId), defaults);
 }
 
-export function loadDocumentHeaderMenuItems() {
-  const raw = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.documentHeaderMenuItems);
-  if (!raw) return resetDocumentHeaderMenuItems();
+export function loadDocumentHeaderMenuItems(storageKey: string = APP_SETTINGS_STORAGE_KEYS.documentHeaderMenuItems, defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
+  const raw = getWhitelistedLocalStorageItem(storageKey);
+  if (!raw) return normalizeDocumentHeaderMenuItems(defaults, defaults);
   try {
     const parsed = JSON.parse(raw);
-    return normalizeDocumentHeaderMenuItems(Array.isArray(parsed) ? parsed.map(sanitizeStoredItem).filter(Boolean) as DocumentHeaderMenuItemConfig[] : []);
+    return normalizeDocumentHeaderMenuItems(Array.isArray(parsed) ? parsed.map(sanitizeStoredItem).filter(Boolean) as DocumentHeaderMenuItemConfig[] : [], defaults);
   } catch {
-    return resetDocumentHeaderMenuItems();
+    return normalizeDocumentHeaderMenuItems(defaults, defaults);
   }
 }
 
-export function saveDocumentHeaderMenuItems(items: DocumentHeaderMenuItemConfig[]) {
+export function saveDocumentHeaderMenuItems(items: DocumentHeaderMenuItemConfig[], storageKey: string = APP_SETTINGS_STORAGE_KEYS.documentHeaderMenuItems, defaults = DEFAULT_DOCUMENT_HEADER_MENU_ITEMS) {
   setWhitelistedLocalStorageItem(
-    APP_SETTINGS_STORAGE_KEYS.documentHeaderMenuItems,
-    JSON.stringify(normalizeDocumentHeaderMenuItems(items))
+    storageKey,
+    JSON.stringify(normalizeDocumentHeaderMenuItems(items, defaults))
   );
 }

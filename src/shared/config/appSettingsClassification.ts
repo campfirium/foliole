@@ -37,6 +37,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'publishingExpandedSections',
   'workspaceRailItems',
   'documentHeaderMenuItems',
+  'editorContextMenuItems',
   'appLanguage',
   'customCopyOverrides',
   'formatCleanup',

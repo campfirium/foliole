@@ -154,14 +154,33 @@ function AddActionDialog(props: {
   );
 }
 
+function selectMenuAction(args: {
+  item: HotkeySettingItem;
+  requireIcon: boolean;
+  onAdd: (command: { commandId: string; iconId?: string; label: string }) => void;
+  closePicker: () => void;
+  setSelectedAction: (item: HotkeySettingItem) => void;
+  setStep: (step: PickerStep) => void;
+}) {
+  if (!args.requireIcon) {
+    args.onAdd({ commandId: args.item.commandId, label: args.item.title });
+    args.closePicker();
+    return;
+  }
+  args.setSelectedAction(args.item);
+  args.setStep('icon');
+}
+
 export function AddRailActionRow({
   actionItems,
   currentCommandIds,
-  onAdd
+  onAdd,
+  requireIcon = true
 }: {
   actionItems: HotkeySettingItem[];
   currentCommandIds: Set<string>;
   onAdd: (command: { commandId: string; iconId?: string; label: string }) => void;
+  requireIcon?: boolean;
 }) {
   const t = useTranslation();
   const [open, setOpen] = useState(false);
@@ -198,10 +217,7 @@ export function AddRailActionRow({
         onBack={() => setStep('action')}
         onIconQueryChange={setIconQuery}
         onOpenChange={closePicker}
-        onSelectAction={(item) => {
-          setSelectedAction(item);
-          setStep('icon');
-        }}
+        onSelectAction={(item) => selectMenuAction({ item, requireIcon, onAdd, closePicker, setSelectedAction, setStep })}
         onSelectIcon={(iconId, action) => {
           onAdd({ commandId: action.commandId, iconId, label: action.title });
           closePicker(false);

@@ -23,6 +23,7 @@ export interface EditorContextMenuProps {
   onOpenExistingHighlight: () => void;
   onRepairTable?: () => void;
   onConfigureFormatCleanup?: () => void;
+  onRunCommand?: (commandId: string) => void;
   onCreateCloze: (options?: LongClozeGuardOptions) => void;
   onCreateClozeFromPayload: (payload: SelectionCommandPayload, options?: LongClozeGuardOptions) => string | null;
   onCreateHighlightFromPayload: (payload: SelectionCommandPayload) => string | null;

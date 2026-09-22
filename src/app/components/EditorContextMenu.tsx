@@ -186,6 +186,7 @@ export function EditorContextMenu(props: EditorContextMenuProps) {
         {...definedProps({
           onRepairTable: props.onRepairTable,
           onConfigureFormatCleanup: props.onConfigureFormatCleanup,
+          onRunCommand: props.onRunCommand,
           repairTableAvailable: props.repairTableAvailable
         })}
       />

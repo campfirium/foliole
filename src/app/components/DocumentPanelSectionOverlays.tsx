@@ -112,6 +112,7 @@ export function DocumentPanelSectionOverlays(args: DocumentPanelSectionOverlaysP
           props.onCloseContextMenu();
           props.onRunDocumentCommand?.(APP_COMMAND_IDS.configureCleanFormatting);
         }}
+        {...(props.onRunDocumentCommand ? { onRunCommand: props.onRunDocumentCommand } : {})}
         onCutImage={props.onCutImage}
         onDeleteImage={props.onDeleteImage}
         onExportImage={props.onExportImage}

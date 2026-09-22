@@ -62,7 +62,7 @@ function DocumentMenuSeparatorButton(props: {
   );
 }
 
-function DocumentMenuManagerRow(props: {
+export function DocumentMenuManagerRow(props: {
   item: DocumentHeaderMenuItemConfig;
   label: string;
   onDragStart: (itemId: string) => void;

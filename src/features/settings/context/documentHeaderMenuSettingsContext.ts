@@ -4,6 +4,13 @@ import type { DocumentHeaderMenuItemConfig } from '../model/documentHeaderMenuSe
 
 export interface DocumentHeaderMenuSettingsValue {
   items: DocumentHeaderMenuItemConfig[];
+  contextItems: DocumentHeaderMenuItemConfig[];
+  onAddContextItem: (command: { commandId: string; label: string }) => void;
+  onMoveContextItem: (itemId: string, order: number) => void;
+  onRemoveContextItem: (itemId: string) => void;
+  onResetContextMenu: () => void;
+  onToggleContextItem: (itemId: string, visible: boolean) => void;
+  onToggleContextSeparator: (itemId: string, separatorBefore: boolean) => void;
   onAddMenuItem: (command: { commandId: string; label: string }) => void;
   onMoveMenuItem: (itemId: string, order: number) => void;
   onRemoveMenuItem: (itemId: string) => void;

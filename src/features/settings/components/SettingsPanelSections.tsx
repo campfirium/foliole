@@ -192,7 +192,7 @@ export function SettingsCategoryContent(props: SettingsCategoryContentProps) {
         />
       );
     case 'web-lookup':
-      return <SettingsWebLookupSection />;
+      return <SettingsWebLookupSection actionItems={props.hotkeyItems} {...definedProps({ resolveDocumentMenuLabel: props.desktopAdapters?.resolveDocumentMenuLabel })} />;
     case 'publishing':
       return (
         <SettingsPublishingSection

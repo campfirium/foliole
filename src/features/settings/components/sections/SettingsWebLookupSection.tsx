@@ -15,7 +15,10 @@ import {
   settingsFieldClassName,
   SettingsSection
 } from '../../../../shared/ui';
+import type { HotkeySettingItem } from '../../model/hotkeySettings';
+import type { SettingsDesktopAdapters } from '../../model/settingsDesktopAdapters';
 
+import { SettingsEditorContextMenuCommands } from './SettingsEditorContextMenuCommands';
 import {
   AddMenuItemRow,
   DragHandle,
@@ -81,8 +84,7 @@ function MenuItemRow(props: {
   );
 }
 
-export function SettingsWebLookupSection() {
-  const t = useTranslation();
+function useWebLookupEntryControls() {
   const [entries, setEntries] = useState(() => getWebLookupEntries());
   const [draggedEntryId, setDraggedEntryId] = useState<string | null>(null);
   const [dragTargetEntryId, setDragTargetEntryId] = useState<string | null>(null);
@@ -107,35 +109,48 @@ export function SettingsWebLookupSection() {
     setDraggedEntryId(entryId);
     setDragTargetEntryId(null);
   };
+  const handleDragEnd = () => {
+    draggedEntryIdRef.current = null;
+    setDraggedEntryId(null);
+    setDragTargetEntryId(null);
+  };
+  return { draggedEntryId, dragTargetEntryId, entries, handleDragEnd, handleDragStart, handleDrop, handleRemove, handleUpdate, setDragTargetEntryId, setEntries };
+}
+
+export function SettingsWebLookupSection(props: {
+  actionItems?: HotkeySettingItem[];
+  resolveDocumentMenuLabel?: SettingsDesktopAdapters['resolveDocumentMenuLabel'];
+} = {}) {
+  const t = useTranslation();
+  const controls = useWebLookupEntryControls();
 
   return (
-    <SettingsSection
-      ariaLabel={t('settings.webLookup.sectionAria')}
-      description={t('settings.webLookup.description')}
-      title={t('settings.webLookup.title')}
-    >
-      <div className={settingsActionTableClassName()} role="table" aria-label={t('settings.webLookup.tableAria')}>
-        <MenuItemHeader />
-        {entries.map((entry) => (
-          <MenuItemRow
-            dragTargetEntryId={dragTargetEntryId}
-            draggedEntryId={draggedEntryId}
-            entry={entry}
-            key={entry.id}
-            onDragEnd={() => {
-              draggedEntryIdRef.current = null;
-              setDraggedEntryId(null);
-              setDragTargetEntryId(null);
-            }}
-            onDragEnter={setDragTargetEntryId}
-            onDragStart={handleDragStart}
-            onDrop={handleDrop}
-            onRemove={handleRemove}
-            onUpdate={handleUpdate}
-          />
-        ))}
-        <AddMenuItemRow onAdd={() => setEntries(addWebLookupEntry())} />
-      </div>
-    </SettingsSection>
+    <>
+      {props.resolveDocumentMenuLabel ? <SettingsEditorContextMenuCommands actionItems={props.actionItems ?? []} resolveDocumentMenuLabel={props.resolveDocumentMenuLabel} /> : null}
+      <SettingsSection
+        ariaLabel={t('settings.webLookup.sectionAria')}
+        description={t('settings.webLookup.description')}
+        title={t('settings.webLookup.title')}
+      >
+        <div className={settingsActionTableClassName()} role="table" aria-label={t('settings.webLookup.tableAria')}>
+          <MenuItemHeader />
+          {controls.entries.map((entry) => (
+            <MenuItemRow
+              dragTargetEntryId={controls.dragTargetEntryId}
+              draggedEntryId={controls.draggedEntryId}
+              entry={entry}
+              key={entry.id}
+              onDragEnd={controls.handleDragEnd}
+              onDragEnter={controls.setDragTargetEntryId}
+              onDragStart={controls.handleDragStart}
+              onDrop={controls.handleDrop}
+              onRemove={controls.handleRemove}
+              onUpdate={controls.handleUpdate}
+            />
+          ))}
+          <AddMenuItemRow onAdd={() => controls.setEntries(addWebLookupEntry())} />
+        </div>
+      </SettingsSection>
+    </>
   );
 }

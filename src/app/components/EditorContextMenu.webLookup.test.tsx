@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 
@@ -77,6 +78,29 @@ it('renders enabled web lookup entries from the live selection payload', () => {
 
   fireEvent.click(screen.getByRole('menuitem', { name: 'Chat with ChatGPT' }));
   expect(openExternalUrl).toHaveBeenCalledWith('https://chatgpt.com/?prompt=Selected%20text%20that%20should%20be%20a%20highlight%EF%BC%88%E3%80%8AMy%20Topic%E3%80%8B%EF%BC%89');
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it('runs a configured editor command through the existing command callback', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuItems, JSON.stringify([
+    { id: 'user.find', commandId: APP_COMMAND_IDS.findInTopic, order: 2, source: 'user', visible: true }
+  ]));
+  const onRunCommand = vi.fn();
+  const onClose = vi.fn();
+
+  render(
+    <EditorContextMenu
+      kind="selection"
+      left={16}
+      mode="context-menu"
+      top={24}
+      webLookupDocumentText="Topic text"
+      {...requiredActionProps({ onClose, onRunCommand })}
+    />
+  );
+
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Find in Topic' }));
+  expect(onRunCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.findInTopic);
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 

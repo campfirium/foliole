@@ -1,4 +1,4 @@
-import { CheckCircle2, Eraser, MessageCircle, Search, Table, XCircle } from 'lucide-react';
+import { CheckCircle2, MessageCircle, Search, XCircle } from 'lucide-react';
 import { useState, type MouseEvent, type PointerEvent } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -11,6 +11,8 @@ import {
 import { AppButton, appFloatingStateSurfaceClassName, AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { SelectionCommandPayload } from '../contextCommands';
 
+import { EditorContextCommandItems, hasEditorContextCommandItems } from './EditorContextCommandItems';
+
 type WebLookupActionEntry = NonNullable<ReturnType<typeof resolveWebLookupAction>>;
 type Translate = ReturnType<typeof useTranslation>;
 
@@ -20,6 +22,7 @@ interface WebLookupSelectionMenuProps {
   onClose: () => void;
   onRepairTable?: () => void;
   onConfigureFormatCleanup?: () => void;
+  onRunCommand?: (commandId: string) => void;
   repairTableAvailable?: boolean;
   selectionPayload?: SelectionCommandPayload | null | undefined;
   titleText?: string | null | undefined;
@@ -165,7 +168,8 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
   const selectionText = props.selectionPayload?.selectionText.trim() ?? '';
   const entries = resolveWebLookupEntries(props, selectionText);
 
-  if (entries.length === 0 && !props.repairTableAvailable && !props.onConfigureFormatCleanup) {
+  const hasCommands = hasEditorContextCommandItems(props);
+  if (entries.length === 0 && !hasCommands) {
     return null;
   }
 
@@ -197,23 +201,8 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
           onContinue={() => continueWebLookup(confirmation.url)}
         />
       ) : null}
-      {!confirmation && props.repairTableAvailable ? (
-        <AppSelectionDropdownMenuItem
-          onClick={() => {
-            props.onRepairTable?.();
-          }}
-        >
-          <Table aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} />
-          <span className="min-w-0 truncate">{t('desktop.webLookup.repairTable')}</span>
-        </AppSelectionDropdownMenuItem>
-      ) : null}
-      {!confirmation && props.onConfigureFormatCleanup ? (
-        <AppSelectionDropdownMenuItem onClick={props.onConfigureFormatCleanup}>
-          <Eraser aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} />
-          <span className="min-w-0 truncate">{t('desktop.command.configureCleanFormatting')}</span>
-        </AppSelectionDropdownMenuItem>
-      ) : null}
-      {!confirmation && (props.repairTableAvailable || props.onConfigureFormatCleanup) && entries.length > 0 ? <SelectionMenuSeparator /> : null}
+      {!confirmation ? <EditorContextCommandItems onClose={props.onClose} {...(props.onRepairTable ? { onRepairTable: props.onRepairTable } : {})} {...(props.onConfigureFormatCleanup ? { onConfigureFormatCleanup: props.onConfigureFormatCleanup } : {})} {...(props.onRunCommand ? { onRunCommand: props.onRunCommand } : {})} {...(props.repairTableAvailable ? { repairTableAvailable: props.repairTableAvailable } : {})} /> : null}
+      {!confirmation && hasCommands && entries.length > 0 ? <SelectionMenuSeparator /> : null}
       {!confirmation ? <WebLookupActionItems entries={entries} onSelect={(action) => void handleWebLookupClick(action)} /> : null}
       {!confirmation && notice && entries.length > 0 ? <SelectionMenuSeparator /> : null}
       {!confirmation && notice ? <WebLookupNotice message={notice.message} tone={notice.tone} /> : null}
