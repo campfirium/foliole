@@ -1,10 +1,20 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { createDraftImportSource } from './importSourceWorkspaceModel';
 import { ImportSourceTable } from './ImportSourceWorkspaceTable';
+
+beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(384);
+  vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(300);
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() =>
+    new DOMRect(0, 0, 300, 384)
+  );
+});
+
+afterEach(() => vi.restoreAllMocks());
 
 function createSources(count: number) {
   return Array.from({ length: count }, (_, index) => ({
@@ -57,11 +67,11 @@ it('keeps short import source lists directly rendered', () => {
   expect(screen.getByRole('button', { name: 'Add source' })).toBeEnabled();
 });
 
-it('virtualizes large import source lists', () => {
+it('virtualizes large import source lists', async () => {
   renderTable(200);
 
   expect(document.querySelector('[data-virtual-list="true"]')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Original folder draft-import-source-0' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Original folder draft-import-source-0' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Original folder draft-import-source-199' })).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Add source' })).toBeEnabled();
 });
