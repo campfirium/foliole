@@ -4,6 +4,8 @@ import { resolveNativeMenuAccelerator } from '../../shared/commands/nativeAccele
 import type { CommandPaletteItem } from '../../shared/commands/types';
 import { onNativeMenuCommand, syncNativeMenuState } from '../../shared/platform/commandMenu';
 
+import { runFocusedTextHistory } from './commandTextHistory';
+
 export function useNativeCommandMenu(items: CommandPaletteItem[], onRunCommand: (id: string) => void) {
   useEffect(() => {
     void syncNativeMenuState({
@@ -22,6 +24,7 @@ export function useNativeCommandMenu(items: CommandPaletteItem[], onRunCommand: 
     let unlisten: (() => void) | null = null;
 
     void onNativeMenuCommand((commandId) => {
+      if (runFocusedTextHistory(commandId)) return;
       onRunCommand(commandId);
     }).then((nextUnlisten) => {
       if (disposed) {
