@@ -5,7 +5,7 @@ const DATABASE_RESTORE_LIFECYCLE_CONTRACT_TESTS = [
 export const DATABASE_RESTORE_CRITICAL_TEST_ROUTES = [
   {
     triggers: [
-      /^electron\/database\/(?:backupRestore|connection|databaseBackupRestoration|databaseRestoreRecovery|guardedBetterSqliteDatabase|sqliteBackupRestore|sqliteConnectionCoordinator)\.ts$/u,
+      /^electron\/database\/(?:backupRestore|connection|databaseBackupRestoration|databaseRestoreArtifacts|databaseRestoreRecovery|guardedBetterSqliteDatabase|sqliteBackupRestore|sqliteConnectionCoordinator)\.ts$/u,
       /^electron\/ipc\/commands\.ts$/u
     ],
     tests: DATABASE_RESTORE_LIFECYCLE_CONTRACT_TESTS

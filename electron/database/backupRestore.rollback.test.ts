@@ -9,6 +9,24 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 let mockedAppDataDir = '/tmp/foliole-backup-restore-rollback';
 const initializeState = vi.hoisted(() => ({ failNext: false }));
 const backupSettingsState = vi.hoisted(() => ({ failNextReapply: false }));
+const searchState = vi.hoisted(() => ({ failNext: false }));
+
+vi.mock('../../lib/core/database/workspaceSearchSidecar.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../lib/core/database/workspaceSearchSidecar.js')>();
+  return {
+    ...original,
+    initializeWorkspaceSearchSidecar: (...args: Parameters<typeof original.initializeWorkspaceSearchSidecar>) => {
+      if (searchState.failNext) {
+        searchState.failNext = false;
+        throw new Error('injected current library reopening failure');
+      }
+      return original.initializeWorkspaceSearchSidecar(...args);
+    }
+  };
+});
+vi.mock('./backupFileDisposition.js', () => ({
+  moveManagedBackupToTrash: (filePath: string) => fs.rm(filePath)
+}));
 
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -45,12 +63,14 @@ vi.mock('./backupSettings.js', async (importOriginal) => {
   };
 });
 
+import { listManagedDatabaseBackups } from './backupCatalog.js';
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { loadBackupSettings, saveBackupSettings } from './backupSettings.js';
 import {
   clearDatabaseConnectionUnavailable,
   closeDatabaseConnection
 } from './connection.js';
+import { assertManagedSafetySnapshotIntegrity } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import { saveReadwiseDeviceConnection, loadReadwiseDeviceConnection } from './readwiseDeviceConnection.js';
@@ -68,6 +88,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  searchState.failNext = false;
   initializeState.failNext = false;
   backupSettingsState.failNextReapply = false;
   clearDatabaseConnectionUnavailable();
@@ -85,6 +106,8 @@ it('rolls back to the current library when restored database initialization fail
     .rejects.toThrow('Your current library has been restored');
 
   expect(currentContent()).toBe('# current');
+  expect((await fs.readdir(path.dirname(backup.sourcePath)))
+    .filter((name) => name.startsWith('.foliole-restore-'))).toEqual([]);
 });
 
 it('disables database access when restored initialization and rollback both fail', async () => {
@@ -93,9 +116,13 @@ it('disables database access when restored initialization and rollback both fail
   seedNode('# current');
   const originalRename = fs.rename.bind(fs);
   let renameCount = 0;
+  let failedCandidate = '';
   const renameSpy = vi.spyOn(fs, 'rename').mockImplementation(async (sourcePath, targetPath) => {
     renameCount += 1;
-    if (renameCount === 2) throw new Error('injected rollback replacement failure');
+    if (renameCount === 2) {
+      failedCandidate = String(sourcePath);
+      throw new Error('injected rollback replacement failure');
+    }
     await originalRename(sourcePath, targetPath);
   });
   initializeState.failNext = true;
@@ -104,6 +131,46 @@ it('disables database access when restored initialization and rollback both fail
     await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath }))
       .rejects.toThrow('restart Foliole before making more changes');
     expect(() => currentContent()).toThrow('could not reopen the current library');
+    await assertManagedSafetySnapshotIntegrity(backup.destinationPath);
+    const snapshots = (await listManagedDatabaseBackups(path.dirname(backup.destinationPath)))
+      .filter((entry) => entry.kind === 'snapshot');
+    expect(snapshots.length).toBeGreaterThan(0);
+    for (const snapshot of snapshots) await assertManagedSafetySnapshotIntegrity(snapshot.filePath);
+    const diagnosticFiles = (await fs.readdir(path.dirname(backup.sourcePath)))
+      .filter((fileName) => fileName.startsWith('.foliole-restore-') && fileName.endsWith('.db'));
+    expect(diagnosticFiles.length).toBeGreaterThan(0);
+    await assertManagedSafetySnapshotIntegrity(failedCandidate);
+    for (const fileName of diagnosticFiles) {
+      await assertManagedSafetySnapshotIntegrity(path.join(path.dirname(backup.sourcePath), fileName));
+    }
+  } finally {
+    renameSpy.mockRestore();
+  }
+});
+
+it('retains safety and diagnostic databases when replacement and reopening both fail', async () => {
+  seedNode('# backup');
+  const backup = await createApplicationDatabaseBackup();
+  seedNode('# current');
+  let failedCandidate = '';
+  const renameSpy = vi.spyOn(fs, 'rename').mockImplementation(async (sourcePath) => {
+    failedCandidate = String(sourcePath);
+    searchState.failNext = true;
+    throw new Error('injected initial replacement failure');
+  });
+  try {
+    await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath }))
+      .rejects.toThrow('could not reopen the current library');
+    expect(() => currentContent()).toThrow('could not reopen the current library');
+    await assertManagedSafetySnapshotIntegrity(backup.destinationPath);
+    const snapshots = (await listManagedDatabaseBackups(path.dirname(backup.destinationPath)))
+      .filter((entry) => entry.kind === 'snapshot');
+    expect(snapshots).toHaveLength(1);
+    await assertManagedSafetySnapshotIntegrity(snapshots[0]!.filePath);
+    const diagnosticFiles = (await fs.readdir(path.dirname(backup.sourcePath)))
+      .filter((name) => name.startsWith('.foliole-restore-') && name.endsWith('.db'));
+    expect(diagnosticFiles.length).toBeGreaterThan(0);
+    await assertManagedSafetySnapshotIntegrity(failedCandidate);
   } finally {
     renameSpy.mockRestore();
   }

@@ -31,6 +31,7 @@ export interface BackupSqliteDatabaseOptions {
 }
 
 export interface RestoreSqliteDatabaseOptions {
+  onTemporaryDatabase?: (databasePath: string) => void;
   sourcePath: string;
   sourceVerified?: boolean;
   targetPath: string;
@@ -92,6 +93,7 @@ export async function backupSqliteDatabase({
 }
 
 export async function restoreSqliteDatabase({
+  onTemporaryDatabase,
   sourcePath,
   sourceVerified = false,
   targetPath
@@ -110,6 +112,7 @@ export async function restoreSqliteDatabase({
     path.dirname(resolvedTargetPath),
     `.foliole-restore-${randomUUID()}.db`
   );
+  onTemporaryDatabase?.(tempTargetPath);
 
   const sqlite = new BetterSqlite3(resolvedSourcePath, { fileMustExist: true, readonly: true });
   let metadata: Awaited<ReturnType<import('better-sqlite3').Database['backup']>>;
@@ -124,7 +127,7 @@ export async function restoreSqliteDatabase({
     await removeSqliteSidecars(resolvedTargetPath);
     await fs.rename(tempTargetPath, resolvedTargetPath);
   } catch (error) {
-    await fs.rm(tempTargetPath, { force: true });
+    if (!onTemporaryDatabase) await fs.rm(tempTargetPath, { force: true });
     throw error;
   }
 

@@ -3,20 +3,16 @@ import path from 'node:path';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 
 import {
-  discardRestoreSafetySnapshot,
-  settleRestoreSafetySnapshots
-} from './backupSafetyRetention.js';
-import {
   loadBackupSettings,
   reapplyBackupSettingsAfterRestore,
   resolveManagedBackupDirectory
 } from './backupSettings.js';
-import { materializeCompressedSqliteBackup } from './compressedSqliteBackup.js';
 import {
   clearDatabaseConnectionUnavailable,
   closeDatabaseConnection,
   openDatabaseConnection
 } from './connection.js';
+import { createDatabaseRestoreArtifacts } from './databaseRestoreArtifacts.js';
 import { recoverCurrentDatabaseAfterRestoreFailure } from './databaseRestoreRecovery.js';
 import {
   createManagedSafetySnapshotWithBackup,
@@ -36,13 +32,13 @@ export async function restoreDatabaseBackupInMaintenance(
   const targetPath = connection.dbPath;
   const backupSettings = loadBackupSettings();
   const backupDirectory = resolveManagedBackupDirectory(backupSettings);
-  let materialized: Awaited<ReturnType<typeof materializeCompressedSqliteBackup>> | null = null;
+  const artifacts = createDatabaseRestoreArtifacts();
   let safetySnapshot: ManagedSafetySnapshot | null = null;
   let connectionClosed = false;
   let replacementComplete = false;
   try {
-    materialized = await materializeCompressedSqliteBackup(sourcePath, path.dirname(targetPath));
-    verifySqliteDatabaseFile(materialized.databasePath);
+    const databasePath = await artifacts.materialize(sourcePath, path.dirname(targetPath));
+    verifySqliteDatabaseFile(databasePath);
     safetySnapshot = await createManagedSafetySnapshotWithBackup({
       destinationDirectory: backupDirectory,
       reason: 'pre-restore',
@@ -51,7 +47,9 @@ export async function restoreDatabaseBackupInMaintenance(
     });
     closeDatabaseConnection();
     connectionClosed = true;
-    const result = await restoreSqliteDatabase({ sourcePath: materialized.databasePath, targetPath });
+    const result = await restoreSqliteDatabase({
+      sourcePath: databasePath, targetPath, onTemporaryDatabase: artifacts.trackCandidate
+    });
     replacementComplete = true;
     initializeWorkspaceSearchSidecar(initializeDatabase(), { requireCurrentSource: true });
     reapplyBackupSettingsAfterRestore(backupSettings);
@@ -63,6 +61,7 @@ export async function restoreDatabaseBackupInMaintenance(
       throw new Error('The selected backup was not restored. Your current library is unchanged.');
     }
     await recoverCurrentDatabaseAfterRestoreFailure({
+      artifacts,
       error,
       replacementComplete,
       safetySnapshot,
@@ -70,16 +69,9 @@ export async function restoreDatabaseBackupInMaintenance(
     });
     throw new Error('The selected backup was not restored. Your current library has been restored.');
   } finally {
-    await materialized?.cleanup();
-    if (safetySnapshot) {
-      if (replacementComplete) {
-        await settleRestoreSafetySnapshots(safetySnapshot, sourcePath, {
-          backupDirectory,
-          settings: backupSettings
-        });
-      } else {
-        await discardRestoreSafetySnapshot(safetySnapshot);
-      }
-    }
+    await artifacts.finish({
+      backupDirectory, replacementComplete, settings: backupSettings,
+      snapshot: safetySnapshot, sourcePath
+    });
   }
 }

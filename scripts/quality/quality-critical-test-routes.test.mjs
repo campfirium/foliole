@@ -125,6 +125,7 @@ describe('quality critical test routes', () => {
     'electron/database/guardedBetterSqliteDatabase.ts',
     'electron/database/backupRestore.ts',
     'electron/database/databaseBackupRestoration.ts',
+    'electron/database/databaseRestoreArtifacts.ts',
     'electron/database/databaseRestoreRecovery.ts',
     'electron/database/sqliteBackupRestore.ts'
   ])('routes %s to the real backup restore lifecycle contract', (trigger) => {
