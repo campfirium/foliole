@@ -14,11 +14,13 @@ export function loadEditorContextMenuOrder(links: WebLookupEntry[], commands: Do
   try { stored = raw ? JSON.parse(raw) : null; } catch { stored = null; }
   if (!Array.isArray(stored)) return available;
   const seen = new Set<string>();
-  return stored.filter((key): key is string => {
+  const ordered = stored.filter((key): key is string => {
     if (typeof key !== 'string' || !available.includes(key) || seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+  const chatGptKey = webLookupMenuKey('chatgpt');
+  return available.includes(chatGptKey) && !seen.has(chatGptKey) ? [chatGptKey, ...ordered] : ordered;
 }
 
 export function saveEditorContextMenuOrder(order: string[]) {

@@ -45,6 +45,7 @@ function useContextMenuRows() {
     if (added) commitOrder([...orderedKeys, webLookupMenuKey(added.id)]);
   };
   const removeLink = (id: string) => {
+    if (id === 'chatgpt' && links.some((entry) => entry.id === id && entry.builtIn)) return;
     if (!links.find((entry) => entry.id === id)?.builtIn) setLinks(removeWebLookupEntry(id));
     commitOrder(orderedKeys.filter((key) => key !== webLookupMenuKey(id)));
   };

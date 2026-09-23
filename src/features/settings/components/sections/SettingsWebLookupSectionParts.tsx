@@ -93,6 +93,10 @@ export function MenuItemRemoveAction(props: {
 }) {
   const t = useTranslation();
 
+  if (props.entry.id === 'chatgpt' && props.entry.builtIn) {
+    return <span aria-hidden="true" className="size-9" />;
+  }
+
   return (
     <button
       aria-label={t('settings.webLookup.remove', { label: props.entry.label })}
