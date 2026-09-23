@@ -49,7 +49,6 @@ export function EditorContextCommandItem({ item, ...props }: { item: DocumentHea
   return <AppSelectionDropdownMenuItem onClick={() => runItem(item, { ...props, source: item.source })}>
         {item.commandId === APP_COMMAND_IDS.repairTable ? <Table aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} /> : null}
         {item.commandId === APP_COMMAND_IDS.configureCleanFormatting ? <Eraser aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} /> : null}
-        {item.source === 'user' ? <span aria-hidden="true" className="mr-2 size-[15px] shrink-0" /> : null}
         <span className="min-w-0 truncate">{labelFor(item, t)}</span>
       </AppSelectionDropdownMenuItem>;
 }
