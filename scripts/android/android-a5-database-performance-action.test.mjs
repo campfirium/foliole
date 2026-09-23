@@ -9,14 +9,21 @@ import { runA5DatabasePerformance } from './android-a5-database-performance-acti
 
 const created = [];
 
+function createEvidenceRoot(prefix) {
+  const parent = path.join(process.cwd(), '.tmp', 'artifacts');
+  fs.mkdirSync(parent, { recursive: true });
+  const directory = fs.mkdtempSync(path.join(parent, prefix));
+  created.push(directory);
+  return directory;
+}
+
 afterEach(() => {
   for (const directory of created.splice(0)) fs.rmSync(directory, { force: true, recursive: true });
 });
 
 describe('fixed A5 database performance action', () => {
   it('runs the fixed performance and lifecycle contracts and persists passing evidence', async () => {
-    const evidenceRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-performance-test-'));
-    created.push(evidenceRoot);
+    const evidenceRoot = createEvidenceRoot('a5-performance-test-');
     const calls = [];
     const execute = async (command, args) => {
       calls.push([command, args]);
@@ -73,8 +80,7 @@ it('refuses a mismatched APK before any device command', async () => {
 });
 
 it.each([false, true])('runs capacity with explicit reset=%s and restores the isolated activity', async (reset) => {
-  const evidenceRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-capacity-test-'));
-  created.push(evidenceRoot);
+  const evidenceRoot = createEvidenceRoot('a5-capacity-test-');
   const calls = [];
   const result = { status: 'passed', scenario: 'library-capacity', appId: 'com.foliole.android.acceptance',
     platform: 'android', results: [1000, 10000].map(count => ({
@@ -117,8 +123,7 @@ it.each([false, true])('runs capacity with explicit reset=%s and restores the is
 });
 
 it('runs normal workspace capacity in two clean instrumentation processes', async () => {
-  const evidenceRoot = fs.mkdtempSync(path.join(process.cwd(), '.tmp/artifacts/a5-workspace-capacity-test-'));
-  created.push(evidenceRoot);
+  const evidenceRoot = createEvidenceRoot('a5-workspace-capacity-test-');
   const calls = [];
   const result = { status: 'passed', scenario: 'library-capacity-workspace',
     results: [{ fixtureCount: 1000 }, { fixtureCount: 10000 }] };

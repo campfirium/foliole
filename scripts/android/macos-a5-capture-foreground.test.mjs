@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('./macos-a5-process.mjs', () => ({
@@ -26,7 +27,9 @@ beforeEach(() => {
 it('restores and verifies the main Activity after successful capture', async () => {
   await run();
   expect(restored()).toBe(true);
-  expect(checked.mock.calls.at(-1)[1]).toContain('/candidate/scripts/android/verify-android-launch.mjs');
+  expect(checked.mock.calls.at(-1)[1]).toContain(
+    path.join(paths.buildRoot, 'scripts/android/verify-android-launch.mjs')
+  );
 });
 
 it.each(['instrumentation', 'capture-database-audit', 'capture-cleanup'])(
