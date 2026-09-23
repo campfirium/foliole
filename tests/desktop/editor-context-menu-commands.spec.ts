@@ -23,12 +23,13 @@ test('adds an editor command to the right-click menu and runs it', async ({ desk
   const settings = await openSettingsDialog(desktopWindow);
   await settings.getByRole('button', { name: 'Right-click menu' }).click();
   await settings.getByRole('button', { name: 'Restore default right-click menu items' }).click();
-  await settings.getByRole('button', { name: 'Add action' }).click();
-  await desktopWindow.getByRole('button', { name: 'Find in Topic' }).click();
-  await settings.getByText('Find in Topic').scrollIntoViewIfNeeded();
+  await expect(settings.getByText('Clean formatting...')).toBeVisible();
+  await expect(settings.getByText('Repair Table')).toHaveCount(0);
   await mkdir(path.dirname(SETTINGS_SCREENSHOT_PATH), { recursive: true });
   await desktopWindow.screenshot({ path: SETTINGS_SCREENSHOT_PATH });
   await testInfo.attach('editor-context-menu-settings', { contentType: 'image/png', path: SETTINGS_SCREENSHOT_PATH });
+  await settings.getByRole('button', { name: 'Add action' }).click();
+  await desktopWindow.getByRole('button', { name: 'Find in Topic' }).click();
   await desktopWindow.keyboard.press('Escape');
   await expect(getSettingsDialog(desktopWindow)).toBeHidden();
 

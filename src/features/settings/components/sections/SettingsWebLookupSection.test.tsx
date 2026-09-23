@@ -30,6 +30,18 @@ it('shows built-in right-click menu items with DuckDuckGo disabled by default', 
     .toContain('{title}');
 });
 
+it('defaults to Clean formatting as the only right-click action', () => {
+  expect(loadEditorContextMenuItems().map((item) => item.commandId)).toEqual([APP_COMMAND_IDS.configureCleanFormatting]);
+});
+
+it('drops the former Repair Table default from saved right-click settings', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuItems, JSON.stringify([
+    { id: 'system.repair-table', commandId: APP_COMMAND_IDS.repairTable, order: 0, source: 'system', visible: true },
+    { id: 'system.clean-formatting', commandId: APP_COMMAND_IDS.configureCleanFormatting, order: 1, source: 'system', visible: true }
+  ]));
+  expect(loadEditorContextMenuItems().map((item) => item.commandId)).toEqual([APP_COMMAND_IDS.configureCleanFormatting]);
+});
+
 it('toggles whether an entry appears in the context menu', () => {
   renderWithLocalization(<SettingsWebLookupSection />);
 
@@ -71,16 +83,16 @@ it('adds and removes a custom menu item', () => {
 it('removes other built-in links and commands from the menu, then restores defaults', () => {
   renderWithLocalization(<DocumentHeaderMenuSettingsProvider><SettingsWebLookupSection resolveDocumentMenuLabel={settingsDesktopAdapters.resolveDocumentMenuLabel} /></DocumentHeaderMenuSettingsProvider>);
   fireEvent.click(screen.getByRole('button', { name: 'Remove Search with Google' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Remove Repair Table' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Clean formatting...' }));
 
   expect(screen.queryByTestId('web-lookup-row-google')).toBeNull();
-  expect(screen.queryByTestId('context-command-row-system.repair-table')).toBeNull();
+  expect(screen.queryByTestId('context-command-row-system.clean-formatting')).toBeNull();
   expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems())).not.toContain('lookup:google');
-  expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems())).not.toContain('command:system.repair-table');
+  expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems())).not.toContain('command:system.clean-formatting');
 
   fireEvent.click(screen.getByRole('button', { name: 'Restore default right-click menu items' }));
   expect(screen.getByTestId('web-lookup-row-google')).toBeInTheDocument();
-  expect(screen.getByTestId('context-command-row-system.repair-table')).toBeInTheDocument();
+  expect(screen.getByTestId('context-command-row-system.clean-formatting')).toBeInTheDocument();
 });
 
 it('restores the protected ChatGPT row when an earlier saved order omitted it', () => {
@@ -104,12 +116,12 @@ it('reorders menu items by dragging the handle', () => {
 it('places a command among links in the same list and saves that order', () => {
   renderWithLocalization(<DocumentHeaderMenuSettingsProvider><SettingsWebLookupSection /></DocumentHeaderMenuSettingsProvider>);
   fireEvent.drop(screen.getByTestId('web-lookup-row-google'), {
-    dataTransfer: { getData: () => 'command:system.repair-table' }
+    dataTransfer: { getData: () => 'command:system.clean-formatting' }
   });
   expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems()).slice(0, 3)).toEqual([
-    'lookup:chatgpt', 'command:system.repair-table', 'lookup:google'
+    'lookup:chatgpt', 'command:system.clean-formatting', 'lookup:google'
   ]);
-  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuOrder)).toContain('command:system.repair-table');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuOrder)).toContain('command:system.clean-formatting');
 });
 
 it('adds an existing action at the end of the shared list', () => {

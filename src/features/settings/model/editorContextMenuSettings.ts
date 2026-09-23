@@ -9,8 +9,7 @@ import {
 } from './documentHeaderMenuSettings';
 
 export const DEFAULT_EDITOR_CONTEXT_MENU_ITEMS: DocumentHeaderMenuItemConfig[] = [
-  { id: 'system.repair-table', commandId: APP_COMMAND_IDS.repairTable, order: 0, source: 'system', visible: true },
-  { id: 'system.clean-formatting', commandId: APP_COMMAND_IDS.configureCleanFormatting, order: 1, source: 'system', visible: true }
+  { id: 'system.clean-formatting', commandId: APP_COMMAND_IDS.configureCleanFormatting, order: 0, source: 'system', visible: true }
 ];
 
 export function loadEditorContextMenuItems() {
