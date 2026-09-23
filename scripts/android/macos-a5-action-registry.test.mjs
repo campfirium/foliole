@@ -52,11 +52,12 @@ it.each([
   'device-profile', 'leave-sync-group', 'pair-credentials',
   'system-entry-sync', 'sync-existing',
   'sync-group-join-prepare', 'sync-group-rejoin',
-  'sync-group-rejoin-recover', 'sync-group-stopped-status'
+  'sync-group-rejoin-recover', 'sync-group-stopped-status', 't234-webview-session'
 ])('requires the fixed A5 mutation lease for %s', (action) => {
   expect(assertRegisteredMacosA5Action(action)).toMatchObject({
     deviceLeaseMode: 'mutation',
-    formalSourceClass: action === 'sync-group-stopped-status' ? 'ordinary-only' : 'frozen-build',
+    formalSourceClass: ['sync-group-stopped-status', 't234-webview-session'].includes(action)
+      ? 'ordinary-only' : 'frozen-build',
     mutatesFixedA5: true
   });
 });

@@ -31,6 +31,7 @@ const ACTION_OVERRIDES = Object.freeze({
     requiresHiddenDesktopRuntime: true },
   's220-resource-diagnostic': { formalSourceClass: 'ordinary-only' },
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
+  't234-webview-session': { formalSourceClass: 'ordinary-only' },
   'leave-sync-group': { requiresHiddenDesktopRuntime: true },
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
   'single-principal-sync-group': { formalEvidenceRetention: 'latest-terminal-per-task',
@@ -77,7 +78,8 @@ const MACOS_A5_ACTIONS = new Set([
   's220-offline', 's220-offline-edit', 's220-converge', 's220-resource-verify',
   's220-resource-diagnostic',
   'sync-group-join-prepare', 'sync-group-rejoin', 'sync-group-rejoin-recover',
-  'sync-group-stopped-status', 'sync-now', 'single-principal-sync-group'
+  'sync-group-stopped-status', 'sync-now', 'single-principal-sync-group',
+  't234-webview-session'
 ]);
 
 export function assertRegisteredMacosA5Action(action) {

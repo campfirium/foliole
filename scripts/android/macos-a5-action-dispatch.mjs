@@ -125,6 +125,11 @@ export async function dispatchMacosA5Action({
   if (action === 'database-performance') await runMacosA5DatabasePerformanceEntry({
     assertFixed: () => assertFixed(paths), buildIdentity, checked, captured,
     env, execute, markMutationBoundary, paths, serial });
+  if (action === 't234-webview-session') {
+    const { runT234WebViewSession } = await import('./macos-a5-t234-webview-session.mjs');
+    await runT234WebViewSession({ assertFixed: () => assertFixed(paths), buildIdentity,
+      captured, checked, paths, serial });
+  }
   if (action === 'device-profile') {
     const { runMacosA5DeviceProfileEntry } = await import('./macos-a5-device-profile-action.mjs');
     await runMacosA5DeviceProfileEntry({
