@@ -73,6 +73,7 @@ const controlledElectronSqliteTests = [
   'electron/sync/syncPackNodeOpenLineageApply.test.ts',
   'electron/sync/syncPackGroupFactsExecutor.test.ts',
   'electron/sync/syncPackPushAcksExecutor.test.ts',
+  'electron/sync/syncNodeVisibilityPruning.test.ts',
   'electron/sync/watchedFolderPayloadIsolation.test.ts',
   'scripts/demo/export-demo-pack.test.mjs',
   'scripts/android/schema-inventory.test.mjs',
