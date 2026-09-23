@@ -154,7 +154,9 @@ async function saveCapacityEvidence({ evidenceRoot, identities, result, output, 
 }
 
 function assertInstrumentationPassed(output, testClass) {
-  if (/FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(output) || !/OK \(2 tests\)/u.test(output)) {
+  const expectedTests = testClass === BATCH_DATA_PLANE_TEST_CLASS ? 3 : 2;
+  if (/FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(output)
+    || !output.includes(`OK (${expectedTests} tests)`)) {
     throw new Error(`Android lifecycle plugin contract failed: ${testClass}`);
   }
 }

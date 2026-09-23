@@ -27,10 +27,19 @@ describe('fixed A5 database performance action', () => {
     const calls = [];
     const execute = async (command, args) => {
       calls.push([command, args]);
-      const isContract = args.includes('com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest')
-        || args.includes('com.foliole.android.FolioleCompanionBatchDataPlaneTest');
+      const isLifecycleContract = args.includes('com.foliole.android.FolioleCompanionDatabaseLifecyclePluginContractTest');
+      const isBatchContract = args.includes('com.foliole.android.FolioleCompanionBatchDataPlaneTest');
       const isInstrumentation = args.includes('instrument');
-      const output = args.includes('dumpsys') ? 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}' : isContract ? 'OK (2 tests)\n' : isInstrumentation ? performanceOutput() : 'Success\n';
+      let output = 'Success\n';
+      if (args.includes('dumpsys')) {
+        output = 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}';
+      } else if (isBatchContract) {
+        output = 'OK (3 tests)\n';
+      } else if (isLifecycleContract) {
+        output = 'OK (2 tests)\n';
+      } else if (isInstrumentation) {
+        output = performanceOutput();
+      }
       return { code: 0, output, stderr: '', stdout: '' };
     };
     const result = await runA5DatabasePerformance({
