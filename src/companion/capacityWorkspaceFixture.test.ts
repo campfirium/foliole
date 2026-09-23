@@ -30,13 +30,13 @@ it('refuses unrelated acceptance-container content before writing', async () => 
 
 it('accepts only the exact PDF sample beside the complete 10k fixture', async () => {
   const nodes = Array.from({ length: 10000 }, (_, index) => ({ id: `node-${index}`, title: `Topic ${index}` }));
-  const pdf = [{ id: 'node-2701728c-a699-46fe-81df-681f70eb0244', title: 'working-set',
+  const pdf = { id: 'node-2701728c-a699-46fe-81df-681f70eb0244', title: 'working-set',
     kind: 'topic', parent_id: 'special-inbox',
-    attachment_id: '436bf9594496c48a9952cccc8af5e3c480eaa534febc2d8b3aebb1469f55bad1' }];
-  await expect(inspectCapacityWorkspace(port({ nodes, pdf }))).resolves.toBe(10000);
-  await expect(inspectCapacityWorkspace(port({ nodes: nodes.slice(0, 1000), pdf })))
+    attachment_id: '436bf9594496c48a9952cccc8af5e3c480eaa534febc2d8b3aebb1469f55bad1' };
+  await expect(inspectCapacityWorkspace(port({ nodes, pdf: [pdf] }))).resolves.toBe(10000);
+  await expect(inspectCapacityWorkspace(port({ nodes: nodes.slice(0, 1000), pdf: [pdf] })))
     .rejects.toThrow('T234 PDF fixture mismatch');
-  await expect(inspectCapacityWorkspace(port({ nodes, pdf: [{ ...pdf[0], attachment_id: 'wrong' }] })))
+  await expect(inspectCapacityWorkspace(port({ nodes, pdf: [{ ...pdf, attachment_id: 'wrong' }] })))
     .rejects.toThrow('T234 PDF fixture mismatch');
 });
 
