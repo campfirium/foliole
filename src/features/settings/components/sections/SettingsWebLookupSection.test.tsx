@@ -1,8 +1,14 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { beforeEach, expect, it } from 'vitest';
 
+import { settingsDesktopAdapters } from '../../../../app/components/settingsDesktopAdapters';
+import { APP_COMMAND_IDS } from '../../../../shared/commands/ids';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../../../shared/config/appSettings';
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
-import { getEnabledWebLookupEntries } from '../../../../shared/platform/webLookupEntries';
+import { getEnabledWebLookupEntries, getWebLookupEntries } from '../../../../shared/platform/webLookupEntries';
+import { DocumentHeaderMenuSettingsProvider } from '../../context/DocumentHeaderMenuSettingsProvider';
+import { loadEditorContextMenuOrder } from '../../model/editorContextMenuOrder';
+import { loadEditorContextMenuItems } from '../../model/editorContextMenuSettings';
 
 import { SettingsWebLookupSection } from './SettingsWebLookupSection';
 
@@ -13,7 +19,7 @@ beforeEach(() => {
 it('shows built-in right-click menu items with DuckDuckGo disabled by default', () => {
   renderWithLocalization(<SettingsWebLookupSection />);
 
-  expect(screen.getByRole('heading', { name: 'Right-click menu items' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Right-click menu' })).toBeInTheDocument();
   expect(screen.getByDisplayValue('Chat with ChatGPT')).toBeInTheDocument();
   expect(screen.getByDisplayValue('Search with Google')).toBeInTheDocument();
   expect(screen.getByDisplayValue('Search with DuckDuckGo')).toBeInTheDocument();
@@ -65,8 +71,31 @@ it('reorders menu items by dragging the handle', () => {
   renderWithLocalization(<SettingsWebLookupSection />);
 
   fireEvent.drop(screen.getByTestId('web-lookup-row-chatgpt'), {
-    dataTransfer: { getData: () => 'google' }
+    dataTransfer: { getData: () => 'lookup:google' }
   });
 
-  expect(getEnabledWebLookupEntries().map((entry) => entry.id)).toEqual(['google', 'chatgpt']);
+  expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems()).slice(0, 2)).toEqual(['lookup:google', 'lookup:chatgpt']);
+});
+
+it('places a command among links in the same list and saves that order', () => {
+  renderWithLocalization(<DocumentHeaderMenuSettingsProvider><SettingsWebLookupSection /></DocumentHeaderMenuSettingsProvider>);
+  fireEvent.drop(screen.getByTestId('web-lookup-row-google'), {
+    dataTransfer: { getData: () => 'command:system.repair-table' }
+  });
+  expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems()).slice(0, 3)).toEqual([
+    'lookup:chatgpt', 'command:system.repair-table', 'lookup:google'
+  ]);
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuOrder)).toContain('command:system.repair-table');
+});
+
+it('adds an existing action at the end of the shared list', () => {
+  renderWithLocalization(<DocumentHeaderMenuSettingsProvider><SettingsWebLookupSection
+    actionItems={[{ commandId: APP_COMMAND_IDS.findInTopic, isCustomized: false, primaryShortcutLabel: '', secondaryShortcutLabel: '', shortcutSummaryLabel: '', title: 'Find in Topic' }]}
+    resolveDocumentMenuLabel={settingsDesktopAdapters.resolveDocumentMenuLabel}
+  /></DocumentHeaderMenuSettingsProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'Add action' }));
+  fireEvent.click(screen.getByRole('button', { name: /Find in Topic/ }));
+  expect(screen.getByTestId('context-command-row-user.document-findInTopic')).toBeInTheDocument();
+  expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems()).at(-1)).toBe('command:user.document-findInTopic');
+  expect(window.localStorage.getItem(APP_SETTINGS_STORAGE_KEYS.documentHeaderMenuItems)).toBeNull();
 });

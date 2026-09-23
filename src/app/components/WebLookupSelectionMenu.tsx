@@ -1,17 +1,19 @@
 import { CheckCircle2, MessageCircle, Search, XCircle } from 'lucide-react';
-import { useState, type MouseEvent, type PointerEvent } from 'react';
+import { Fragment, useState, type MouseEvent, type PointerEvent } from 'react';
 
+import { commandMenuKey, loadEditorContextMenuOrder, webLookupMenuKey } from '../../features/settings/model/editorContextMenuOrder';
+import { loadEditorContextMenuItems } from '../../features/settings/model/editorContextMenuSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { openExternalUrl } from '../../shared/platform/runtimeExternalNavigation';
 import {
-  getEnabledWebLookupEntries,
+  getWebLookupEntries,
   resolveWebLookupAction,
   type WebLookupEntry
 } from '../../shared/platform/webLookupEntries';
 import { AppButton, appFloatingStateSurfaceClassName, AppSelectionDropdownMenu, AppSelectionDropdownMenuItem } from '../../shared/ui';
 import type { SelectionCommandPayload } from '../contextCommands';
 
-import { EditorContextCommandItems, hasEditorContextCommandItems } from './EditorContextCommandItems';
+import { EditorContextCommandItem, isEditorContextCommandShown } from './EditorContextCommandItems';
 
 type WebLookupActionEntry = NonNullable<ReturnType<typeof resolveWebLookupAction>>;
 type Translate = ReturnType<typeof useTranslation>;
@@ -57,7 +59,7 @@ function getCopiedNoticeMessage(action: WebLookupActionEntry, t: Translate) {
 }
 
 function resolveWebLookupEntries(props: WebLookupSelectionMenuProps, selectionText: string) {
-  return getEnabledWebLookupEntries()
+  return getWebLookupEntries().filter((entry) => entry.enabled)
     .map((entry) => ({
       entry,
       action: resolveWebLookupAction(entry, {
@@ -167,10 +169,14 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
   const [notice, setNotice] = useState<{ message: string; tone: 'error' | 'success' } | null>(null);
   const selectionText = props.selectionPayload?.selectionText.trim() ?? '';
   const entries = resolveWebLookupEntries(props, selectionText);
-
-  const hasSystemCommands = hasEditorContextCommandItems({ ...props, source: 'system' });
-  const hasUserCommands = hasEditorContextCommandItems({ ...props, source: 'user' });
-  if (entries.length === 0 && !hasSystemCommands && !hasUserCommands) {
+  const links = getWebLookupEntries();
+  const commands = loadEditorContextMenuItems();
+  const linksByKey = new Map(entries.map((entry) => [webLookupMenuKey(entry.entry.id), entry]));
+  const commandsByKey = new Map(commands.filter((item) => isEditorContextCommandShown(item, props)).map((item) => [commandMenuKey(item.id), item]));
+  const ordered = loadEditorContextMenuOrder(links, commands)
+    .map((key) => ({ key, link: linksByKey.get(key), command: commandsByKey.get(key) }))
+    .filter((item) => item.link || item.command);
+  if (ordered.length === 0) {
     return null;
   }
 
@@ -202,12 +208,12 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
           onContinue={() => continueWebLookup(confirmation.url)}
         />
       ) : null}
-      {!confirmation ? <EditorContextCommandItems {...props} source="system" /> : null}
-      {!confirmation && hasSystemCommands && (entries.length > 0 || hasUserCommands) ? <SelectionMenuSeparator /> : null}
-      {!confirmation ? <WebLookupActionItems entries={entries} onSelect={(action) => void handleWebLookupClick(action)} /> : null}
-      {!confirmation && entries.length > 0 && hasUserCommands ? <SelectionMenuSeparator /> : null}
-      {!confirmation ? <EditorContextCommandItems {...props} source="user" /> : null}
-      {!confirmation && notice && entries.length > 0 ? <SelectionMenuSeparator /> : null}
+      {!confirmation ? ordered.map(({ key, link, command }, index) => <Fragment key={key}>
+        {index > 0 && command?.separatorBefore ? <SelectionMenuSeparator /> : null}
+        {link ? <WebLookupActionItems entries={[link]} onSelect={(action) => void handleWebLookupClick(action)} /> : null}
+        {command ? <EditorContextCommandItem item={command} {...props} /> : null}
+      </Fragment>) : null}
+      {!confirmation && notice && ordered.length > 0 ? <SelectionMenuSeparator /> : null}
       {!confirmation && notice ? <WebLookupNotice message={notice.message} tone={notice.tone} /> : null}
     </AppSelectionDropdownMenu>
   );

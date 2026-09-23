@@ -108,6 +108,20 @@ it('runs a configured editor command through the existing command callback', () 
   expect(onClose).toHaveBeenCalledTimes(1);
 });
 
+it('renders links and configured actions in the shared right-click order', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuItems, JSON.stringify([
+    { id: 'user.find', commandId: APP_COMMAND_IDS.findInTopic, order: 2, source: 'user', visible: true }
+  ]));
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuOrder, JSON.stringify([
+    'lookup:chatgpt', 'command:user.find', 'lookup:google'
+  ]));
+  const payload = createSelectionPayload();
+  render(<EditorContextMenu kind="selection" left={16} mode="context-menu" selectionPayload={payload} top={24} webLookupDocumentText="Topic text" webLookupPayload={payload} {...requiredActionProps({ onRunCommand: vi.fn() })} />);
+  expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+    'Chat with ChatGPT', 'Find in Topic', 'Search with Google'
+  ]);
+});
+
 it('keeps hidden web lookup entries out of the selection context menu', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.webLookupEntries, JSON.stringify([
     { id: 'chatgpt', enabled: false },

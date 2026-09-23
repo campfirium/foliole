@@ -38,6 +38,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'workspaceRailItems',
   'documentHeaderMenuItems',
   'editorContextMenuItems',
+  'editorContextMenuOrder',
   'appLanguage',
   'customCopyOverrides',
   'formatCleanup',

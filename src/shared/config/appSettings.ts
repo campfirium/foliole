@@ -23,6 +23,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   workspaceRailItems: 'foliole-workspace-rail-items',
   documentHeaderMenuItems: 'foliole-document-header-menu-items',
   editorContextMenuItems: 'foliole-editor-context-menu-items',
+  editorContextMenuOrder: 'foliole-editor-context-menu-order',
   appLanguage: 'foliole-app-language',
   customCopyOverrides: 'foliole-custom-copy-overrides-v1',
   formatCleanup: 'foliole-format-cleanup-v1',

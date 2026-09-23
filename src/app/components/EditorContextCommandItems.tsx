@@ -18,7 +18,7 @@ interface EditorContextCommandItemsProps {
   repairTableAvailable?: boolean;
 }
 
-function isShown(item: DocumentHeaderMenuItemConfig, props: EditorContextCommandItemsProps) {
+export function isEditorContextCommandShown(item: DocumentHeaderMenuItemConfig, props: Omit<EditorContextCommandItemsProps, 'source'>) {
   if (!item.visible) return false;
   if (item.commandId === APP_COMMAND_IDS.repairTable) return Boolean(props.repairTableAvailable && props.onRepairTable);
   if (item.commandId === APP_COMMAND_IDS.configureCleanFormatting) return Boolean(props.onConfigureFormatCleanup);
@@ -44,22 +44,24 @@ function runItem(item: DocumentHeaderMenuItemConfig, props: EditorContextCommand
   props.onClose();
 }
 
-export function EditorContextCommandItems(props: EditorContextCommandItemsProps) {
+export function EditorContextCommandItem({ item, ...props }: { item: DocumentHeaderMenuItemConfig } & Omit<EditorContextCommandItemsProps, 'source'>) {
   const t = useTranslation();
-  const items = loadEditorContextMenuItems().filter((item) => item.source === props.source && isShown(item, props));
-  return <>
-    {items.map((item, index) => <Fragment key={item.id}>
-      {index > 0 && item.separatorBefore ? <div aria-hidden="true" className="my-1 h-px bg-border/10" role="separator" /> : null}
-      <AppSelectionDropdownMenuItem onClick={() => runItem(item, props)}>
+  return <AppSelectionDropdownMenuItem onClick={() => runItem(item, { ...props, source: item.source })}>
         {item.commandId === APP_COMMAND_IDS.repairTable ? <Table aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} /> : null}
         {item.commandId === APP_COMMAND_IDS.configureCleanFormatting ? <Eraser aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} /> : null}
         {item.source === 'user' ? <span aria-hidden="true" className="mr-2 size-[15px] shrink-0" /> : null}
         <span className="min-w-0 truncate">{labelFor(item, t)}</span>
-      </AppSelectionDropdownMenuItem>
-    </Fragment>)}
-  </>;
+      </AppSelectionDropdownMenuItem>;
+}
+
+export function EditorContextCommandItems(props: EditorContextCommandItemsProps) {
+  const items = loadEditorContextMenuItems().filter((item) => item.source === props.source && isEditorContextCommandShown(item, props));
+  return <>{items.map((item, index) => <Fragment key={item.id}>
+    {index > 0 && item.separatorBefore ? <div aria-hidden="true" className="my-1 h-px bg-border/10" role="separator" /> : null}
+    <EditorContextCommandItem item={item} {...props} />
+  </Fragment>)}</>;
 }
 
 export function hasEditorContextCommandItems(props: EditorContextCommandItemsProps) {
-  return loadEditorContextMenuItems().some((item) => item.source === props.source && isShown(item, props));
+  return loadEditorContextMenuItems().some((item) => item.source === props.source && isEditorContextCommandShown(item, props));
 }
