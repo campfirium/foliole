@@ -24,6 +24,7 @@ function createNode(overrides: Partial<Node> & Pick<Node, 'id' | 'title'>): Node
 
 function DefaultFolderListSelectionHarness(props: { onSelectNode?: (nodeId: string) => void }) {
   const [activeNodeId, setActiveNodeId] = useState<string | null>(null);
+  const [reversed, setReversed] = useState(false);
   const folderNode = createNode({ id: 'folder-1', kind: 'folder', parentNodeId: null, title: 'Library root' });
   const first = createNode({ id: 'node-1', parentNodeId: 'folder-1', title: 'First topic' });
   const second = createNode({ id: 'node-2', parentNodeId: 'folder-1', title: 'Second topic' });
@@ -35,16 +36,20 @@ function DefaultFolderListSelectionHarness(props: { onSelectNode?: (nodeId: stri
   };
 
   return (
-    <FolderListView
-      activeNodeId={activeNodeId}
-      nodes={[first, second, third]}
-      nodesById={nodesById}
-      onSelectNode={handleSelectNode}
-    />
+    <>
+      <button onClick={() => setReversed((value) => !value)} type="button">Reverse input order</button>
+      <FolderListView
+        activeNodeId={activeNodeId}
+        nodes={reversed ? [third, second, first] : [first, second, third]}
+        nodesById={nodesById}
+        onSelectNode={handleSelectNode}
+        sortKey="manual"
+      />
+    </>
   );
 }
 
-it('keeps the original anchor when shift-selecting default cards', () => {
+it('keeps the original range anchor and selected objects when default cards reorder', () => {
   const onSelectNode = vi.fn();
   renderWithLocalization(<DefaultFolderListSelectionHarness onSelectNode={onSelectNode} />);
 
@@ -58,6 +63,15 @@ it('keeps the original anchor when shift-selecting default cards', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Open Second topic' }), { shiftKey: true });
 
+  expect(screen.getByRole('button', { name: 'Open First topic' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(screen.getByRole('button', { name: 'Open Second topic' })).toHaveAttribute('data-node-bulk-selected', 'true');
+  expect(screen.getByRole('button', { name: 'Open Third topic' })).not.toHaveAttribute('data-node-bulk-selected');
+  expect(onSelectNode).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(screen.getByRole('button', { name: 'Reverse input order' }));
+
+  expect(screen.getAllByRole('button', { name: /^Open .* topic$/ }).map((button) => button.getAttribute('aria-label')))
+    .toEqual(['Open Third topic', 'Open Second topic', 'Open First topic']);
   expect(screen.getByRole('button', { name: 'Open First topic' })).toHaveAttribute('data-node-bulk-selected', 'true');
   expect(screen.getByRole('button', { name: 'Open Second topic' })).toHaveAttribute('data-node-bulk-selected', 'true');
   expect(screen.getByRole('button', { name: 'Open Third topic' })).not.toHaveAttribute('data-node-bulk-selected');

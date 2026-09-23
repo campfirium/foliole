@@ -97,3 +97,35 @@ for (const count of [99, 152]) {
     await testInfo.attach('folder-after-returning', { body: await page.screenshot(), contentType: 'image/png' });
   });
 }
+
+test('opens the sort menu from a deep folder position and returns to the chosen sorted card', async ({ desktopWindow: page }, testInfo) => {
+  await seedFolder(page, 152);
+  await deepPosition(page, 152);
+  await folderList(page).getByRole('button', { name: /^(Sort list by .+|按.+排序列表)$/ }).click();
+  const nameOption = page.getByRole('menuitem', { name: /^(Name|名称)$/ });
+  await expect(nameOption).toBeVisible();
+  await expect.poll(() => nameOption.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    return box.width > 0 && box.height > 0 && box.left >= 0 && box.top >= 0
+      && box.right <= innerWidth && box.bottom <= innerHeight;
+  })).toBe(true);
+  await testInfo.attach('deep-folder-sort-menu', { body: await page.screenshot(), contentType: 'image/png' });
+  await nameOption.click();
+  await expect(folderList(page).getByRole('button', { name: /^(Sort list by Name|按名称排序列表)$/ })).toBeVisible();
+  const before = await deepPosition(page, 152);
+  await folderList(page).getByTestId(`folder-list-title-${before.id}`).click();
+  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId())).toBe(before.id);
+  await page.getByRole('button', { name: /^(Go back|后退)$/ }).click();
+  await expect(folderList(page)).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId())).toBe(FOLDER_ID);
+  await expect.poll(async () => (await readPosition(folderList(page))).id).toBe(before.id);
+  await expect.poll(async () => {
+    const current = await readPosition(folderList(page));
+    return current.offset === null || before.offset === null ? Infinity : Math.abs(current.offset - before.offset);
+  }).toBeLessThan(1);
+  await testInfo.attach('sorted-folder-return-position', {
+    body: JSON.stringify({ before, returned: await readPosition(folderList(page)) }, null, 2),
+    contentType: 'application/json'
+  });
+  await testInfo.attach('sorted-folder-after-returning', { body: await page.screenshot(), contentType: 'image/png' });
+});

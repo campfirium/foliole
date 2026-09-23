@@ -14,6 +14,7 @@ interface PositionArgs {
 }
 
 export function useVirtualListPosition(args: PositionArgs) {
+  const keyOrder = JSON.stringify(args.keys);
   const latest = useRef(args);
   latest.current = args;
   const restoreAfterLayout = useRef<(() => void) | null>(null);
@@ -68,7 +69,7 @@ export function useVirtualListPosition(args: PositionArgs) {
       scroll.removeEventListener('wheel', release);
       scroll.removeEventListener('keydown', release);
     };
-  }, [args.position, args.rootRef, args.scrollElementRef, args.keys, args.virtualizer]);
+  }, [args.position, args.rootRef, args.scrollElementRef, keyOrder, args.virtualizer]);
 }
 
 function capturePosition(args: PositionArgs, scroll: HTMLElement, root: HTMLElement, position: VirtualListPosition) {
