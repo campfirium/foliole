@@ -45,9 +45,12 @@ async function openNode(windowPage: WindowPage, nodeId: string) {
 }
 
 async function collectNodeContents(windowPage: WindowPage, nodeIds: string[]) {
-  return windowPage.evaluate((nodeIds) => {
-    const api = globalThis.window?.__folioleWorkspaceDebug;
-    return Object.fromEntries(nodeIds.map((nodeId) => [nodeId, api?.getNode?.(nodeId)?.content ?? null]));
+  return windowPage.evaluate(async (nodeIds) => {
+    const entries = await Promise.all(nodeIds.map(async (nodeId) => {
+      const document = await window.electronAPI.invoke('load_node_document', { nodeId });
+      return [nodeId, document?.content ?? null];
+    }));
+    return Object.fromEntries(entries);
   }, nodeIds);
 }
 
@@ -87,7 +90,7 @@ test('consecutive created topic bodies survive switching and relaunch', async ({
 
     await openNode(desktopWindow, 'special-inbox');
     await expect.poll(() => collectNodeContents(desktopWindow, nodeIds), {
-      message: 'consecutive created topic bodies should reach renderer node state before relaunch'
+      message: 'consecutive created topic bodies should persist before relaunch'
     }).toEqual(expectedContents);
 
     for (const nodeId of nodeIds) {
