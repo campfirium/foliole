@@ -1,47 +1,43 @@
-import type { ElectronApplication } from '@playwright/test';
+import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
 
-async function seedMirrorCases(desktopApp: ElectronApplication) {
-  return desktopApp.evaluate(async (_, cwd) => {
-    const moduleApi = process.getBuiltinModule('module')!;
+async function seedMirrorCases(desktopApp: ElectronApplication, page: Page) {
+  const volume = await desktopApp.evaluate(() => {
     const pathApi = process.getBuiltinModule('path')!;
     const fsApi = process.getBuiltinModule('fs')!;
     const libraryHome = process.env.FOLIOLE_LIBRARY_HOME;
     if (!libraryHome) throw new Error('Missing isolated library home');
-    const require = moduleApi.createRequire(pathApi.join(cwd, 'package.json'));
-    const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
-    const { upsertNodeSnapshot } = require(pathApi.join(cwd, 'dist/electron/database/nodeMutations.js'));
     const probe = pathApi.join(libraryHome, 'T216-Case-Probe');
     fsApi.writeFileSync(probe, 'case sensitivity probe');
     const caseInsensitive = fsApi.existsSync(pathApi.join(libraryHome, 't216-case-probe'));
     fsApi.unlinkSync(probe);
-    await connection.runWithDatabaseConnectionOwner(() => {
-      const nodes = [
-        ['t216-folder-a', 'Issue', null, 'folder'],
-        ['t216-folder-b', 'issue', null, 'folder'],
-        ['t216-nested-a', 'Nested', 't216-folder-a', 'folder'],
-        ['t216-nested-b', 'nested', 't216-folder-b', 'folder'],
-        ['t216-first', '面包机sd-P1000', 't216-nested-a', 'topic'],
-        ['t216-second', '面包机SD-P1000', 't216-nested-a', 'topic'],
-        ['t216-third', '面包机sd-P1000', 't216-nested-b', 'topic']
-      ];
-      nodes.forEach(([id, title, parent, kind], position) => upsertNodeSnapshot({
-        nodeId: id, title, parentNodeId: parent, kind, position, content: `Body for ${id}.`,
-        isTitleManual: true, hideTitleHeading: false, reveal: null, anchorLink: null,
-        createdAt: '2026-03-30T08:00:00.000Z', updatedAt: '2026-03-30T08:00:00.000Z'
-      }));
-    });
     return { caseInsensitive, libraryHome };
-  }, process.cwd());
+  });
+  await page.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
+  await page.evaluate(async () => {
+    const nodes = [
+      ['t216-folder-a', 'Issue', null, 'folder'],
+      ['t216-folder-b', 'issue', null, 'folder'],
+      ['t216-nested-a', 'Nested', 't216-folder-a', 'folder'],
+      ['t216-nested-b', 'nested', 't216-folder-b', 'folder'],
+      ['t216-first', '面包机sd-P1000', 't216-nested-a', 'topic'],
+      ['t216-second', '面包机SD-P1000', 't216-nested-a', 'topic'],
+      ['t216-third', '面包机sd-P1000', 't216-nested-b', 'topic']
+    ] as const;
+    await window.__folioleWorkspaceDebug!.seedNodes(nodes.map(([id, title, parentNodeId, kind]) => ({
+      id, title, parentNodeId, kind, content: `Body for ${id}.`
+    })), { persist: true });
+  });
+  return volume;
 }
 
 test('exports case-only articles and nested folders without overwriting and keeps repeated paths stable', async ({
   desktopApp, desktopWindow
 }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
-  const seed = await seedMirrorCases(desktopApp);
+  const seed = await seedMirrorCases(desktopApp, desktopWindow);
   expect(seed.caseInsensitive).toBe(true);
 
   const outputs: unknown[] = [];
