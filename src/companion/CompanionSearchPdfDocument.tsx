@@ -38,7 +38,7 @@ export function CompanionSearchPdfDocument(props: {
     await syncCompanionAttachmentResourceFromDesktop(props.syncEndpointUrl, attachmentId);
   }, [props.syncEndpointUrl]);
   return (
-    <section className={`fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-hidden bg-companion-base ${companionMobileRailClassName} pt-[env(safe-area-inset-top)] text-foreground`}>
+    <section className={`fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-hidden bg-companion-base ${companionMobileRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)] text-foreground`}>
       <Suspense fallback={<CompanionSearchPdfLoadingState onExit={props.onExit} />}>
         <SimplePdfDocument
           attachmentId={props.result.attachment_id}
