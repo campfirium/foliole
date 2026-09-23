@@ -6,6 +6,7 @@ import { addWebLookupEntry, getWebLookupEntries, removeWebLookupEntry, updateWeb
 import { AppIconButton, settingsActionTableAddButtonClassName, settingsActionTableClassName, settingsResetButtonClassName, SettingsSection } from '../../../../shared/ui';
 import { DocumentHeaderMenuSettingsContext } from '../../context/documentHeaderMenuSettingsContext';
 import { commandMenuKey, loadEditorContextMenuOrder, moveEditorContextMenuKey, saveEditorContextMenuOrder, webLookupMenuKey } from '../../model/editorContextMenuOrder';
+import { resetEditorContextMenuItems } from '../../model/editorContextMenuSettings';
 import type { HotkeySettingItem } from '../../model/hotkeySettings';
 import type { SettingsDesktopAdapters } from '../../model/settingsDesktopAdapters';
 
@@ -44,19 +45,23 @@ function useContextMenuRows() {
     if (added) commitOrder([...orderedKeys, webLookupMenuKey(added.id)]);
   };
   const removeLink = (id: string) => {
-    setLinks(removeWebLookupEntry(id));
+    if (!links.find((entry) => entry.id === id)?.builtIn) setLinks(removeWebLookupEntry(id));
     commitOrder(orderedKeys.filter((key) => key !== webLookupMenuKey(id)));
   };
   return { menu, links, orderedKeys, drag, addLink, removeLink,
     updateLink: (id: string, patch: Partial<Pick<WebLookupEntry, 'enabled' | 'label' | 'urlTemplate'>>) => setLinks(updateWebLookupEntry(id, patch)),
     addCommand: (command: { commandId: string; label: string }) => {
       menu?.onAddContextItem(command);
-      const id = `user.${command.commandId.replace(/[^a-zA-Z0-9]+/g, '-')}`;
+      const id = menu?.contextItems.find((item) => item.commandId === command.commandId)?.id ?? `user.${command.commandId.replace(/[^a-zA-Z0-9]+/g, '-')}`;
       commitOrder([...orderedKeys, commandMenuKey(id)]);
     },
     removeCommand: (id: string) => {
       menu?.onRemoveContextItem(id);
       commitOrder(orderedKeys.filter((key) => key !== commandMenuKey(id)));
+    },
+    reset: () => {
+      menu?.onResetContextMenu();
+      commitOrder([...links.map((entry) => webLookupMenuKey(entry.id)), ...resetEditorContextMenuItems().map((item) => commandMenuKey(item.id))]);
     }
   };
 }
@@ -69,9 +74,9 @@ export function SettingsWebLookupSection(props: {
   const rows = useContextMenuRows();
   const links = new Map(rows.links.map((entry) => [webLookupMenuKey(entry.id), entry]));
   const commands = new Map(rows.menu?.contextItems.map((item) => [commandMenuKey(item.id), item]) ?? []);
-  const currentCommandIds = new Set(rows.menu?.contextItems.map((item) => item.commandId) ?? []);
+  const currentCommandIds = new Set(rows.menu?.contextItems.filter((item) => rows.orderedKeys.includes(commandMenuKey(item.id))).map((item) => item.commandId) ?? []);
   return <SettingsSection
-    actions={rows.menu ? <AppIconButton className={settingsResetButtonClassName()} icon={<RotateCcw aria-hidden="true" size={16} />} label={t('settings.webLookup.resetActions')} onClick={rows.menu.onResetContextMenu} /> : undefined}
+    actions={rows.menu ? <AppIconButton className={settingsResetButtonClassName()} icon={<RotateCcw aria-hidden="true" size={16} />} label={t('settings.webLookup.resetActions')} onClick={rows.reset} /> : undefined}
     ariaLabel={t('settings.webLookup.sectionAria')}
     description={t('settings.webLookup.description')}
     title={t('settings.webLookup.title')}
@@ -87,7 +92,7 @@ export function SettingsWebLookupSection(props: {
         return <CommandMenuRow drag={rows.drag} item={item} itemKey={key} key={key} label={label} onRemove={rows.removeCommand} onToggle={rows.menu.onToggleContextItem} />;
       })}
       <div className="grid grid-cols-2 gap-3 px-4 pb-3 pt-1">
-        <button className={settingsActionTableAddButtonClassName('col-span-1')} onClick={rows.addLink} type="button"><Plus aria-hidden="true" size={15} />{t('settings.webLookup.add')}</button>
+        <button className={settingsActionTableAddButtonClassName('col-span-1 w-full')} onClick={rows.addLink} type="button"><Plus aria-hidden="true" size={15} />{t('settings.webLookup.add')}</button>
         {rows.menu ? <AddRailActionRow actionItems={props.actionItems ?? []} compact currentCommandIds={currentCommandIds} onAdd={rows.addCommand} requireIcon={false} /> : null}
       </div>
     </div>

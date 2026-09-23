@@ -7,7 +7,8 @@ import {
   AppDialogContent,
   AppDialogOverlay,
   AppDialogPortal,
-  AppDialogTitle
+  AppDialogTitle,
+  settingsActionTableAddButtonClassName
 } from '../../../../shared/ui';
 import type { HotkeySettingItem } from '../../model/hotkeySettings';
 
@@ -143,12 +144,12 @@ export function AddRailActionRow({
   return (
     <>
       <button
-        className={`${compact ? 'h-9 w-full' : 'mx-5 my-3 min-h-12 w-[calc(100%-2.5rem)]'} flex items-center justify-center gap-2 rounded-md border border-dashed border-settings-control-border bg-transparent px-4 text-ui-md text-foreground/60 transition-colors hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45`}
+        className={compact ? settingsActionTableAddButtonClassName('col-span-1 w-full') : 'mx-5 my-3 flex min-h-12 w-[calc(100%-2.5rem)] items-center justify-center gap-2 rounded-md border border-dashed border-settings-control-border bg-transparent px-4 text-ui-md text-foreground/60 transition-colors hover:border-settings-control-border-hover hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45'}
         disabled={!availableActions.length}
         onClick={() => setOpen(true)}
         type="button"
       >
-        <Plus aria-hidden="true" size={18} />
+        <Plus aria-hidden="true" size={compact ? 15 : 18} />
         <span>{t('settings.rail.addAction')}</span>
       </button>
       <AddActionDialog

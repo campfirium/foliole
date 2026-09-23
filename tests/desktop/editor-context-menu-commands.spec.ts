@@ -22,7 +22,7 @@ test('adds an editor command to the right-click menu and runs it', async ({ desk
 
   const settings = await openSettingsDialog(desktopWindow);
   await settings.getByRole('button', { name: 'Right-click menu' }).click();
-  await settings.getByRole('button', { name: 'Restore default right-click actions' }).click();
+  await settings.getByRole('button', { name: 'Restore default right-click menu items' }).click();
   await settings.getByRole('button', { name: 'Add action' }).click();
   await desktopWindow.getByRole('button', { name: 'Find in Topic' }).click();
   await settings.getByText('Find in Topic').scrollIntoViewIfNeeded();

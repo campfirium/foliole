@@ -10,12 +10,12 @@ export const commandMenuKey = (id: string) => `command:${id}`;
 export function loadEditorContextMenuOrder(links: WebLookupEntry[], commands: DocumentHeaderMenuItemConfig[]) {
   const available = [...links.map((entry) => webLookupMenuKey(entry.id)), ...commands.map((item) => commandMenuKey(item.id))];
   const raw = getWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuOrder);
-  let stored: unknown;
-  try { stored = raw ? JSON.parse(raw) : []; } catch { stored = []; }
-  const valid = Array.isArray(stored) ? stored.filter((key): key is string => typeof key === 'string') : [];
+  let stored: unknown = null;
+  try { stored = raw ? JSON.parse(raw) : null; } catch { stored = null; }
+  if (!Array.isArray(stored)) return available;
   const seen = new Set<string>();
-  return [...valid, ...available].filter((key) => {
-    if (!available.includes(key) || seen.has(key)) return false;
+  return stored.filter((key): key is string => {
+    if (typeof key !== 'string' || !available.includes(key) || seen.has(key)) return false;
     seen.add(key);
     return true;
   });

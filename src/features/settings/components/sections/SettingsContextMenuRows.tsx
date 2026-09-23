@@ -60,8 +60,8 @@ export function CommandMenuRow(props: {
   return <RowFrame drag={props.drag} itemKey={props.itemKey} testId={`context-command-row-${props.item.id}`}>
     <DragHandle id={props.itemKey} label={props.label} onDragEnd={props.drag.onDragEnd} onDragStart={props.drag.onDragStart} />
     <span className="min-w-0 truncate text-ui-md text-foreground">{props.label}</span>
-    <span className="truncate text-ui-sm text-foreground/50">{t('settings.webLookup.commandItem')}</span>
+    <span aria-hidden="true" />
     <div className="flex justify-center"><button aria-checked={props.item.visible} aria-label={t(props.item.visible ? 'settings.webLookup.hideMenuItem' : 'settings.webLookup.showMenuItem', { label: props.label })} className={settingsSwitchClassName(props.item.visible)} onClick={() => props.onToggle(props.item.id, !props.item.visible)} role="switch" type="button"><span aria-hidden="true" className={settingsSwitchKnobClassName(props.item.visible)} /></button></div>
-    <div className="flex justify-end">{props.item.source === 'user' ? <button aria-label={t('settings.webLookup.remove', { label: props.label })} className={settingsUtilityIconButtonClassName(false)} onClick={() => props.onRemove(props.item.id)} type="button"><Trash2 aria-hidden="true" size={15} /></button> : <span aria-hidden="true" className="size-9" />}</div>
+    <div className="flex justify-end"><button aria-label={t('settings.webLookup.remove', { label: props.label })} className={settingsUtilityIconButtonClassName(false)} onClick={() => props.onRemove(props.item.id)} type="button"><Trash2 aria-hidden="true" size={15} /></button></div>
   </RowFrame>;
 }

@@ -122,6 +122,17 @@ it('renders links and configured actions in the shared right-click order', () =>
   ]);
 });
 
+it('keeps removed built-in items out of the right-click menu', () => {
+  window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.editorContextMenuOrder, JSON.stringify(['lookup:google']));
+  const payload = createSelectionPayload();
+  render(<EditorContextMenu
+    kind="selection" left={16} mode="context-menu" selectionPayload={payload} top={24}
+    webLookupDocumentText="Topic text" webLookupPayload={payload}
+    {...requiredActionProps({ onRepairTable: vi.fn(), repairTableAvailable: true })}
+  />);
+  expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Search with Google']);
+});
+
 it('keeps hidden web lookup entries out of the selection context menu', () => {
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.webLookupEntries, JSON.stringify([
     { id: 'chatgpt', enabled: false },

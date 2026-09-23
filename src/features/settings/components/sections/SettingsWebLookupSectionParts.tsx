@@ -50,7 +50,7 @@ export function MenuItemHeader() {
       {headers.map((header) => (
         <span key={header.key} className={header.className}>{t(header.key)}</span>
       ))}
-      <span className="text-right">{t('settings.webLookup.header.action')}</span>
+      <span aria-hidden="true" />
     </div>
   );
 }
@@ -93,9 +93,6 @@ export function MenuItemRemoveAction(props: {
 }) {
   const t = useTranslation();
 
-  if (props.entry.builtIn) {
-    return <span aria-hidden="true" className="size-9" />;
-  }
   return (
     <button
       aria-label={t('settings.webLookup.remove', { label: props.entry.label })}

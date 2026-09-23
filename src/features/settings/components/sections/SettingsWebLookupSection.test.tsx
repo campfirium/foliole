@@ -24,7 +24,7 @@ it('shows built-in right-click menu items with DuckDuckGo disabled by default', 
   expect(screen.getByDisplayValue('Search with Google')).toBeInTheDocument();
   expect(screen.getByDisplayValue('Search with DuckDuckGo')).toBeInTheDocument();
   expect(screen.getByRole('switch', { name: 'Show menu item: Search with DuckDuckGo' })).toHaveAttribute('aria-checked', 'false');
-  expect(screen.queryByRole('button', { name: 'Remove Chat with ChatGPT' })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Remove Chat with ChatGPT' })).toBeInTheDocument();
   expect(screen.getByRole<HTMLInputElement>('textbox', { name: 'Chat with ChatGPT link' }).value)
     .toContain('{title}');
 });
@@ -65,6 +65,21 @@ it('adds and removes a custom menu item', () => {
 
   fireEvent.click(screen.getByRole('button', { name: 'Remove New menu item' }));
   expect(screen.queryByDisplayValue('New menu item')).toBeNull();
+});
+
+it('removes built-in links and commands from the menu, then restores defaults', () => {
+  renderWithLocalization(<DocumentHeaderMenuSettingsProvider><SettingsWebLookupSection resolveDocumentMenuLabel={settingsDesktopAdapters.resolveDocumentMenuLabel} /></DocumentHeaderMenuSettingsProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Chat with ChatGPT' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Remove Repair Table' }));
+
+  expect(screen.queryByTestId('web-lookup-row-chatgpt')).toBeNull();
+  expect(screen.queryByTestId('context-command-row-system.repair-table')).toBeNull();
+  expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems())).not.toContain('lookup:chatgpt');
+  expect(loadEditorContextMenuOrder(getWebLookupEntries(), loadEditorContextMenuItems())).not.toContain('command:system.repair-table');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Restore default right-click menu items' }));
+  expect(screen.getByTestId('web-lookup-row-chatgpt')).toBeInTheDocument();
+  expect(screen.getByTestId('context-command-row-system.repair-table')).toBeInTheDocument();
 });
 
 it('reorders menu items by dragging the handle', () => {
