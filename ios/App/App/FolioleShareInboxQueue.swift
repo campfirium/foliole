@@ -18,7 +18,6 @@ struct FolioleShareInboxItem: Codable {
 }
 
 enum FolioleShareInboxQueue {
-    static let appGroupIdentifier = "group.com.foliole.ios.share"
     private static let fileName = "foliole-share-inbox.json"
 
     static func load() throws -> [FolioleShareInboxItem] {
@@ -48,6 +47,11 @@ enum FolioleShareInboxQueue {
     }
 
     private static func queueDirectory() throws -> URL {
+        guard let appGroupIdentifier = Bundle.main.object(forInfoDictionaryKey: "FolioleShareAppGroup") as? String,
+              appGroupIdentifier.hasPrefix("group."), !appGroupIdentifier.contains("$(") else {
+            throw NSError(domain: "FolioleShareInbox", code: 2,
+                          userInfo: [NSLocalizedDescriptionKey: "Share App Group configuration is missing or unresolved."])
+        }
         guard let directory = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: appGroupIdentifier
         ) else { throw NSError(domain: "FolioleShareInbox", code: 1) }
