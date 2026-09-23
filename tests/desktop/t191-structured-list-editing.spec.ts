@@ -22,7 +22,7 @@ async function seedTopic(page: WindowPage, content: string) {
   await page.waitForFunction(() => Boolean(window.__folioleWorkspaceDebug));
   await page.evaluate(async ({ content, nodeId }) => {
     const api = window.__folioleWorkspaceDebug;
-    await api?.seedNodes?.([{ content, id: nodeId, kind: 'topic', title: 'T191 structured list' }]);
+    await api?.seedNodes?.([{ content, id: nodeId, kind: 'topic', title: 'T191 structured list' }], { persist: true });
     await api?.openNode?.(nodeId);
   }, { content, nodeId: NODE_ID });
   await expect.poll(() => getContent(page)).toBe(content);
@@ -51,6 +51,25 @@ test('edits list structure, task state, and undo history without losing editor f
   await expect.poll(() => getContent(desktopWindow)).toBe('- parent\n  - child\n\nplain');
   await desktopWindow.keyboard.press(undo);
   await expect.poll(() => getContent(desktopWindow)).toBe(BASE_CONTENT);
+
+  const redo = process.platform === 'darwin' ? 'Meta+Shift+Z' : 'Control+Shift+Z';
+  for (const expected of [
+    '- parent\n  - child\n\nplain',
+    '- parent\n  - [ ] child\n\nplain',
+    '- parent\n  - [x] child\n\nplain'
+  ]) {
+    await desktopWindow.keyboard.press(redo);
+    await expect.poll(() => getContent(desktopWindow)).toBe(expected);
+  }
+  expect(await desktopWindow.evaluate(() => window.__folioleFlushPendingEditorDraftBeforeClose?.())).toBe(true);
+  const saved = '- parent\n  - [x] child\n\nplain';
+  await expect.poll(() => desktopWindow.evaluate(async (nodeId) =>
+    (await window.electronAPI.invoke('load_node_document', { nodeId }))?.content, NODE_ID)).toBe(saved);
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await desktopWindow.evaluate((nodeId) => window.__folioleWorkspaceDebug!.openNode(nodeId), NODE_ID);
+  await expect.poll(() => getContent(desktopWindow)).toBe(saved);
+  await desktopWindow.screenshot({ path: '.tmp/artifacts/desktop-acceptance/t191-restored-markdown.png' });
 });
 
 test('promotes then exits an empty nested list item one Enter at a time', async ({ desktopWindow }) => {
