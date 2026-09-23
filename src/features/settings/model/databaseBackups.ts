@@ -6,6 +6,9 @@ import {
   type RuntimeSqliteBackupResult,
   type RuntimeSqliteRestoreResult
 } from '../../../shared/platform/settingsRuntimeRepository';
+
+import { readDatabaseRestoreFailureMessage } from './databaseRestoreFailureMessage';
+
 export {
   exportSourceDispositions,
   importSourceDispositions,
@@ -218,10 +221,10 @@ export async function restoreDatabaseBackup(sourcePath: string): Promise<Databas
   try {
     const result = normalizeSqliteRestoreResult(await restoreDatabaseBackupInRuntime(sourcePath));
     if (!result) {
-      return { ok: false, errorMessage: 'Restore completed but returned an invalid payload.' };
+      return { ok: false, errorMessage: readDatabaseRestoreFailureMessage('invalid payload') };
     }
     return { ok: true, value: result };
   } catch (error) {
-    return { ok: false, errorMessage: readErrorMessage(error) };
+    return { ok: false, errorMessage: readDatabaseRestoreFailureMessage(readErrorMessage(error)) };
   }
 }
