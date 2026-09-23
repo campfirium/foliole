@@ -76,6 +76,18 @@ function installPromiseAllSettledPolyfill() {
   });
 }
 
+function installPromiseWithResolversPolyfill() {
+  defineMissingProperty(Promise, 'withResolvers', function withResolvers<T>(this: PromiseConstructor) {
+    let resolve!: (value: T | PromiseLike<T>) => void;
+    let reject!: (reason?: unknown) => void;
+    const promise = new this<T>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+    return { promise, resolve, reject };
+  });
+}
+
 function installPromiseFinallyPolyfill() {
   defineMissingProperty(Promise.prototype, 'finally', function promiseFinally<T>(
     this: Promise<T>,
@@ -102,6 +114,16 @@ function installObjectFromEntriesPolyfill() {
   });
 }
 
+function installUrlParsePolyfill() {
+  defineMissingProperty(URL, 'parse', function parse(url: string | URL, base?: string | URL) {
+    try {
+      return new URL(url, base);
+    } catch {
+      return null;
+    }
+  });
+}
+
 function cloneFallback<T>(value: T): T {
   if (value == null || typeof value !== 'object') {
     return value;
@@ -123,7 +145,9 @@ export function installCompanionWebViewCompatibilityPolyfills() {
   installArrayAtPolyfill();
   installStringReplaceAllPolyfill();
   installObjectFromEntriesPolyfill();
+  installUrlParsePolyfill();
   installPromiseAllSettledPolyfill();
+  installPromiseWithResolversPolyfill();
   installPromiseFinallyPolyfill();
   installStructuredCloneFallback();
 }

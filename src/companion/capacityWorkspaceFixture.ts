@@ -7,19 +7,33 @@ import { requireValue, sha256 } from './capacityAcceptanceSafety';
 export type CapacityWorkspaceStage = 0 | 1000 | 10000;
 
 const stamp = '2026-09-20T00:00:00.000Z';
+const PDF_NODE_ID = 'node-2701728c-a699-46fe-81df-681f70eb0244';
+const PDF_ATTACHMENT_ID = '436bf9594496c48a9952cccc8af5e3c480eaa534febc2d8b3aebb1469f55bad1';
 
 export async function inspectCapacityWorkspace(db: DbPort): Promise<CapacityWorkspaceStage> {
   const unexpected = await db.query<{ id: string }>(
-    "SELECT id FROM nodes WHERE id <> ? AND id NOT GLOB 'node-[0-9]*' LIMIT 1", [INBOX_NODE_ID]
+    "SELECT id FROM nodes WHERE id NOT IN (?, ?) AND id NOT GLOB 'node-[0-9]*' LIMIT 1",
+    [INBOX_NODE_ID, PDF_NODE_ID]
   );
   requireValue(unexpected.length === 0, `Refusing non-T219 workspace content: ${unexpected[0]?.id ?? 'unknown'}`);
   const rows = await db.query<{ id: string; title: string }>(
-    "SELECT id, title FROM nodes WHERE id GLOB 'node-[0-9]*' ORDER BY CAST(substr(id, 6) AS INTEGER)"
+    "SELECT id, title FROM nodes WHERE id GLOB 'node-[0-9]*' AND id <> ? ORDER BY CAST(substr(id, 6) AS INTEGER)",
+    [PDF_NODE_ID]
   );
   requireValue([0, 1000, 10000].includes(rows.length), `Unsupported T219 workspace stage: ${rows.length}`);
   rows.forEach((row, index) => {
     requireValue(row.id === `node-${index}` && row.title === `Topic ${index}`, `T219 fixture mismatch: ${index}`);
   });
+  const pdf = await db.query<{ attachment_id: string | null; id: string; kind: string; parent_id: string | null; title: string }>(
+    `SELECT n.id, n.title, n.kind, n.parent_id, na.attachment_id FROM nodes n
+     LEFT JOIN node_attachments na ON na.node_id = n.id AND na.role = 'reference'
+     WHERE n.id = ?`, [PDF_NODE_ID]
+  );
+  if (pdf.length > 0) {
+    requireValue(rows.length === 10000 && pdf.length === 1 && pdf[0].title === 'working-set'
+      && pdf[0].kind === 'topic' && pdf[0].parent_id === INBOX_NODE_ID
+      && pdf[0].attachment_id === PDF_ATTACHMENT_ID, 'T234 PDF fixture mismatch');
+  }
   const [inbox] = await db.query<{ count: number }>('SELECT COUNT(*) AS count FROM nodes WHERE id = ?', [INBOX_NODE_ID]);
   requireValue(Number(inbox?.count) === 1, 'Normal companion Inbox is missing');
   return rows.length as CapacityWorkspaceStage;
