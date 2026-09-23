@@ -179,6 +179,7 @@ export function FolderListViewLayout(props: {
           emptyState={props.emptyState}
           filteredNodes={props.filteredNodes}
           onRenderItem={props.onRenderItem}
+          searchQuery={props.searchQuery}
           scrollElementRef={props.scrollElementRef}
         />
       </section>

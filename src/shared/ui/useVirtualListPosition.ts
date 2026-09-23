@@ -45,7 +45,8 @@ export function useVirtualListPosition(args: PositionArgs) {
     const finishWhenMeasured = () => {
       if (!restoring) return;
       restore();
-      if (latest.current.remeasureFrame?.current == null && rowsAreMeasured(latest.current, root)) {
+      const attached = !virtualizer || virtualizer.scrollElement === scroll;
+      if (attached && latest.current.remeasureFrame?.current == null && rowsAreMeasured(latest.current, root)) {
         release();
         capture();
       }

@@ -15,6 +15,7 @@ import { createDocumentPanelPdfCache } from './documentPanelPdfCache';
 import { resolvePdfDocumentSurface } from './documentPanelPdfView';
 import { isLikelyPdfSourceReference } from './documentPanelSourceHelpers';
 import { resolveDocumentPanelContentBody } from './documentPanelSpecialContent';
+import { FolderListPositionProvider } from './FolderListPosition';
 import type { LinkPanelRecord } from './linkPanelState';
 import { collectPdfHighlightLocators, type PdfHighlightLocator } from './pdfHighlightLocators';
 import { useNodeSourceDetails } from './useNodeSourceDetails';
@@ -222,5 +223,8 @@ export function DocumentPanelContent(props: DocumentPanelContentProps) {
     })
   );
   finishDiagnostic({ hasPdfSurface: Boolean(pdfDocumentSurface), shouldRenderEditorBody });
-  return props.children({ content, isPdfSurface: Boolean(pdfDocumentSurface) });
+  return props.children({
+    content: <FolderListPositionProvider>{content}</FolderListPositionProvider>,
+    isPdfSurface: Boolean(pdfDocumentSurface)
+  });
 }

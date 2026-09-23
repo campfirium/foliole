@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react';
 import type { FolderListSortDirection, FolderListSortKey } from '../../features/nodes/model/folderListOrdering';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 
+import { FolderListPositionScope } from './FolderListPosition';
 import { FolderListView } from './FolderListView';
 
 function normalizeFolderListSort(
@@ -47,20 +48,22 @@ export function DocumentPanelFolderContent({
   return (
     <>
       {pdfCache}
-      <FolderListView
-        folderNodeId={activeNodeId}
-        folderTitle={folderTitle}
-        mouseGesturesEnabled
-        nodeOrder={nodeOrder}
-        nodesById={nodesById}
-        onChangeSortDirection={onChangeFolderListSortDirection}
-        onChangeSortKey={onChangeFolderListSortKey}
-        {...(onOpenMoveToNode ? { onOpenMoveToNode } : {})}
-        onSelectNode={onSelectNode}
-        sortDirection={normalizedSort.direction}
-        sortKey={normalizedSort.key}
-        trashedNodeIds={trashedNodeIds}
-      />
+      <FolderListPositionScope folderId={activeNodeId}>
+        <FolderListView
+          folderNodeId={activeNodeId}
+          folderTitle={folderTitle}
+          mouseGesturesEnabled
+          nodeOrder={nodeOrder}
+          nodesById={nodesById}
+          onChangeSortDirection={onChangeFolderListSortDirection}
+          onChangeSortKey={onChangeFolderListSortKey}
+          {...(onOpenMoveToNode ? { onOpenMoveToNode } : {})}
+          onSelectNode={onSelectNode}
+          sortDirection={normalizedSort.direction}
+          sortKey={normalizedSort.key}
+          trashedNodeIds={trashedNodeIds}
+        />
+      </FolderListPositionScope>
     </>
   );
 }

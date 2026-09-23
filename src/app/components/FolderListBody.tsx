@@ -5,11 +5,16 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { AppEmptyState, VirtualListSurface } from '../../shared/ui';
 
 import { FOLDER_LIST_ROW_HEIGHT_PX } from './FolderListItemRow';
+import { useFolderListPosition } from './FolderListPosition';
+
+const getItemKey = (node: Node) => node.id;
+const estimateSize = () => FOLDER_LIST_ROW_HEIGHT_PX;
 
 export function FolderListBody({
   filteredNodes,
   emptyState,
   onRenderItem,
+  searchQuery = '',
   scrollElementRef
 }: {
   emptyState?: {
@@ -18,9 +23,11 @@ export function FolderListBody({
   } | undefined;
   filteredNodes: Node[];
   onRenderItem: (node: Node) => ReactNode;
+  searchQuery?: string;
   scrollElementRef: RefObject<HTMLDivElement | null>;
 }) {
   const t = useTranslation();
+  const position = useFolderListPosition(searchQuery);
   if (filteredNodes.length === 0) {
     if (emptyState) {
       return (
@@ -32,7 +39,7 @@ export function FolderListBody({
     return <div aria-hidden="true" className="min-h-[240px] flex-1" />;
   }
 
-  if (filteredNodes.length < 100) {
+  if (filteredNodes.length < 100 && !position) {
     return (
       <ul aria-label={t('desktop.workspace.folderContents')} className="flex flex-col">
         {filteredNodes.map((node) => onRenderItem(node))}
@@ -43,9 +50,11 @@ export function FolderListBody({
   return (
     <div aria-label={t('desktop.workspace.folderContents')} role="list">
       <VirtualListSurface
-        estimateSize={() => FOLDER_LIST_ROW_HEIGHT_PX}
-        getItemKey={(node) => node.id}
+        accountForOffset
+        estimateSize={estimateSize}
+        getItemKey={getItemKey}
         items={filteredNodes}
+        {...(position ? { position } : {})}
         renderItem={(node) => onRenderItem(node)}
         scrollElementRef={scrollElementRef}
         threshold={100}
