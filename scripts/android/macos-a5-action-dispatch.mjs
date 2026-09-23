@@ -130,6 +130,16 @@ export async function dispatchMacosA5Action({
     await runT234WebViewSession({ assertFixed: () => assertFixed(paths), buildIdentity,
       captured, checked, paths, serial });
   }
+  if (action === 'acceptance-sync-events') {
+    const { readA5AcceptanceSyncEvents } = await import('./macos-a5-acceptance-sync-events.mjs');
+    await readA5AcceptanceSyncEvents({ assertFixed: () => assertFixed(paths),
+      buildIdentity, checked, env, execute, paths, serial });
+  }
+  if (action === 't250-dense-session') {
+    const { runT250DenseSession } = await import('./macos-a5-t250-dense-session.mjs');
+    await runT250DenseSession({ assertFixed: () => assertFixed(paths), buildIdentity,
+      captured, checked, env, execute, markMutationBoundary, paths, serial });
+  }
   if (action === 'device-profile') {
     const { runMacosA5DeviceProfileEntry } = await import('./macos-a5-device-profile-action.mjs');
     await runMacosA5DeviceProfileEntry({

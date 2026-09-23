@@ -114,6 +114,7 @@ function ReadableArticleTextDocument(props: {
   editorState: ReturnType<typeof useCompanionTopicEditAutosave>;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   readableArticle: ReadableArticle;
+  readingRestoreCommandId?: string | null;
   readingSelection?: EditorSelection | null;
   readingTypographySettings: CompanionReadingTypographySettings;
   scrollContainer?: 'editor' | 'outer';
@@ -141,6 +142,7 @@ function ReadableArticleTextDocument(props: {
           nodeViewState: toEditorViewState(props.readableArticle),
           onChange: props.canEdit ? props.editorState.handleChange : undefined,
           onEditorReady: props.onEditorReady,
+          readingRestoreCommandId: props.readingRestoreCommandId,
           readingSelection: props.readingSelection,
           scrollContainer: props.scrollContainer
         })}
@@ -156,6 +158,7 @@ export function ReadableArticleDocument(props: {
   onSaveContent?: CompanionContentSaveHandler;
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
+  readingRestoreCommandId?: string | null;
   readingSelection?: EditorSelection | null;
   scrollContainer?: 'editor' | 'outer';
   syncEndpointUrl?: string | null;
@@ -201,6 +204,7 @@ export function ReadableArticleDocument(props: {
         syncMissingAttachmentResource={syncMissingAttachmentResource}
         {...definedProps({
           onEditorReady: props.onEditorReady,
+          readingRestoreCommandId: props.readingRestoreCommandId,
           readingSelection: props.readingSelection,
           scrollContainer: props.scrollContainer
         })}

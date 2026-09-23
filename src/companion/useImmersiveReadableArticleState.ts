@@ -1,5 +1,5 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 
@@ -10,7 +10,8 @@ export function useImmersiveReadableArticleState() {
   const [isContentEditing, setIsContentEditing] = useState(false);
   const [isSearchSheetOpen, setIsSearchSheetOpen] = useState(false);
   const [openReadingSheet, setOpenReadingSheet] = useState<'font' | 'highlight' | 'info' | null>(null);
-  const [readingSelection, setReadingSelection] = useState<EditorSelection | null>(null);
+  const [readingTarget, setReadingTarget] = useState<{ selection: EditorSelection; commandId: string } | null>(null);
+  const nextReadingCommandId = useRef(0);
 
   function handleSurfaceClick(event: ReactMouseEvent<HTMLElement>) {
     if ((event.target as HTMLElement).closest('button, a, input, textarea, select')) {
@@ -20,7 +21,11 @@ export function useImmersiveReadableArticleState() {
   }
 
   function handleSelectOutlineItem(item: { from: number; to: number }) {
-    setReadingSelection({ from: item.from, to: item.to });
+    nextReadingCommandId.current += 1;
+    setReadingTarget({
+      selection: { from: item.from, to: item.to },
+      commandId: `companion-reading-${nextReadingCommandId.current}`
+    });
     setIsOutlineOpen(false);
   }
 
@@ -52,7 +57,8 @@ export function useImmersiveReadableArticleState() {
     isSearchSheetOpen,
     openDocumentSearch,
     openReadingSheet,
-    readingSelection,
+    readingRestoreCommandId: readingTarget?.commandId ?? null,
+    readingSelection: readingTarget?.selection ?? null,
     setIsActionsSheetOpen,
     setIsOutlineOpen,
     setIsSearchSheetOpen,

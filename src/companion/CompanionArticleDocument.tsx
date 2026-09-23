@@ -27,6 +27,7 @@ export function CompanionArticleDocument(props: {
   onChange?: (content: string) => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
   onMissingAttachmentResource?: EditorMissingAttachmentResourceHandler;
+  readingRestoreCommandId?: string | null;
   readingSelection?: EditorSelection | null;
   readingTargetViewportMode?: EditorViewportMode | null;
   scrollContainer?: 'editor' | 'outer';
@@ -61,6 +62,7 @@ export function CompanionArticleDocument(props: {
           onBlurCapture: props.onBlurCapture,
           onMissingAttachmentResource: props.onMissingAttachmentResource,
           onReady: props.onEditorReady,
+          readingRestoreCommandId: props.readingRestoreCommandId,
           readingSelection: props.readingSelection,
           readingTargetViewportMode: props.readingTargetViewportMode,
           scrollContainer: props.scrollContainer,

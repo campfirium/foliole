@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { pairSyncHostPort, PAIR_SYNC_PORT } from '../sync-group/pair-sync-transport.mjs';
+import {
+  removeA5AcceptanceTestApplication, removeT250TestApplication
+} from './macos-a5-acceptance-package-cleanup.mjs';
 
 const APP_ID = 'com.foliole.android';
 const TEST_APK = 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk';
@@ -206,7 +209,11 @@ export async function runMacosA5InstrumentationMechanics({
     if (reverseCreated) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`],
       options, 'transport cleanup')).output);
-    if (testInstalled) output.push((await checked(execute, paths.adb,
+    if (testInstalled && appId === 'com.foliole.android.acceptance') {
+      await removeA5AcceptanceTestApplication({ execute, paths, serial }, options);
+    } else if (testInstalled && appId === 'com.foliole.android.t250dense') {
+      await removeT250TestApplication({ execute, paths, serial }, options);
+    } else if (testInstalled) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'uninstall', `${appId}.test`], options, 'test cleanup')).output);
   }
   if (restartApp) output.push((await checked(execute, paths.adb,

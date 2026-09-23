@@ -23,6 +23,9 @@ final class FolioleAcceptanceSyncEventProjection {
             String identity = scalar(database,
                 "SELECT local_device_identity_key FROM sync_group_local_state " +
                     "WHERE singleton_id = 1 AND state = 'active' LIMIT 1");
+            String groupId = scalar(database,
+                "SELECT group_id FROM sync_group_local_state " +
+                    "WHERE singleton_id = 1 AND state = 'active' LIMIT 1");
             if (identity.isEmpty()) {
                 throw new IllegalStateException("acceptance_sync_projection_device_missing");
             }
@@ -31,9 +34,22 @@ final class FolioleAcceptanceSyncEventProjection {
                     "WHERE key = 'workspace_sync_events' LIMIT 1"));
             JSONArray events = new JSONArray();
             JSONArray sourceRuns = new JSONArray();
+            JSONArray diagnosticEvents = new JSONArray();
             for (int index = 0; index < source.length(); index += 1) {
                 JSONObject event = source.optJSONObject(index);
                 if (event == null) continue;
+                String kind = event.optString("kind");
+                if (diagnosticEvents.length() < 16 &&
+                    ("run_finished".equals(kind) || "stage_finished".equals(kind))) {
+                    diagnosticEvents.put(new JSONObject()
+                        .put("kind", kind)
+                        .put("run_id", event.optString("run_id"))
+                        .put("trigger_reason", event.optString("trigger_reason"))
+                        .put("status", event.optString("status"))
+                        .put("result", event.optString("result"))
+                        .put("occurred_at", event.optString("occurred_at"))
+                        .put("message", boundedMessage(event.optString("message"))));
+                }
                 if (!event.optString("run_id").isEmpty()) {
                     sourceRuns.put(new JSONObject()
                         .put("kind", event.optString("kind"))
@@ -55,19 +71,52 @@ final class FolioleAcceptanceSyncEventProjection {
                 }
                 events.put(projected);
             }
-            return new JSONObject().put("application_id", context.getPackageName())
+            JSONObject result = new JSONObject().put("application_id", context.getPackageName())
+                .put("group_id", groupId).put("diagnostic_events", diagnosticEvents)
                 .put("events", events).put("source_runs", sourceRuns)
                 .put("syncEventsProjected", true);
+            if ("com.foliole.android.t250dense".equals(context.getPackageName())) {
+                result.put("dense_facts", denseFacts(database));
+            }
+            return result;
         }
+    }
+
+    private static JSONObject denseFacts(SQLiteDatabase database) throws Exception {
+        String articleId = scalar(database, "SELECT id FROM nodes WHERE " +
+            "title='T234 Dense Annotation Fixture 20260924' AND deleted_at IS NULL LIMIT 1");
+        if (articleId.isEmpty()) throw new IllegalStateException("t250_dense_article_missing");
+        String[] article = { articleId };
+        String children = scalar(database,
+            "SELECT COUNT(*) FROM nodes WHERE parent_id=? AND deleted_at IS NULL", article);
+        String readyBodies = scalar(database,
+            "SELECT COUNT(*) FROM nodes n LEFT JOIN content_blob_data cbd " +
+                "ON cbd.hash=n.body_blob_hash WHERE n.parent_id=? AND n.deleted_at IS NULL " +
+                "AND (n.body_blob_hash IS NULL OR cbd.hash IS NOT NULL)", article);
+        String targetNote = scalar(database,
+            "SELECT CASE WHEN COALESCE(CAST(cbd.data AS TEXT), n.content) " +
+                "LIKE '%※ T250 note 0175%' THEN 'true' ELSE 'false' END " +
+                "FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash " +
+                "WHERE n.parent_id=? AND n.title='T234 unique passage 0175' LIMIT 1", article);
+        return new JSONObject().put("article_id", articleId)
+            .put("node_count", Integer.parseInt(scalar(database, "SELECT COUNT(*) FROM nodes")))
+            .put("child_count", Integer.parseInt(children))
+            .put("ready_child_body_count", Integer.parseInt(readyBodies))
+            .put("target_note_matches", "true".equals(targetNote));
     }
 
     static boolean isAcceptancePackage(String packageName) {
         return "com.foliole.android.acceptance".equals(packageName)
-            || "com.foliole.android.s220acceptance".equals(packageName);
+            || "com.foliole.android.s220acceptance".equals(packageName)
+            || "com.foliole.android.t250dense".equals(packageName);
     }
 
     private static String scalar(SQLiteDatabase database, String sql) {
-        try (Cursor cursor = database.rawQuery(sql, null)) {
+        return scalar(database, sql, null);
+    }
+
+    private static String scalar(SQLiteDatabase database, String sql, String[] args) {
+        try (Cursor cursor = database.rawQuery(sql, args)) {
             return cursor.moveToFirst() && !cursor.isNull(0) ? cursor.getString(0) : "";
         }
     }
@@ -81,5 +130,9 @@ final class FolioleAcceptanceSyncEventProjection {
 
     private static void copy(JSONObject source, JSONObject target, String key) throws Exception {
         if (source.has(key) && !source.isNull(key)) target.put(key, source.get(key));
+    }
+
+    private static String boundedMessage(String message) {
+        return message.length() <= 240 ? message : message.substring(0, 240);
     }
 }

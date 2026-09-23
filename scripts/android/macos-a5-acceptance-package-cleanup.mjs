@@ -1,4 +1,5 @@
 const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
+const T250_APP_ID = 'com.foliole.android.t250dense';
 
 async function removeUserPackage(args, packageId, options) {
   await args.execute(args.paths.adb,
@@ -21,6 +22,14 @@ export async function removeA5AcceptanceApplication(args) {
     timeoutMs: 60_000 };
   await removeUserPackage(args, `${ACCEPTANCE_APP_ID}.test`, options);
   await removeUserPackage(args, ACCEPTANCE_APP_ID, options);
+}
+
+export async function removeA5AcceptanceTestApplication(args, options) {
+  await removeUserPackage(args, `${ACCEPTANCE_APP_ID}.test`, options);
+}
+
+export async function removeT250TestApplication(args, options) {
+  await removeUserPackage(args, `${T250_APP_ID}.test`, options);
 }
 
 export { ACCEPTANCE_APP_ID };

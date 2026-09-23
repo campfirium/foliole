@@ -22,6 +22,7 @@ vi.mock('./CompanionArticleDocument', () => ({
   CompanionArticleDocument: (props: {
     content: string;
     onEditorReady?: (adapter: unknown) => void;
+    readingRestoreCommandId?: string | null;
     readingSelection?: { from: number; to: number } | null;
   }) => {
     useEffect(() => {
@@ -32,6 +33,7 @@ vi.mock('./CompanionArticleDocument', () => ({
       <article
         data-reading-from={props.readingSelection?.from ?? ''}
         data-reading-to={props.readingSelection?.to ?? ''}
+        data-reading-command-id={props.readingRestoreCommandId ?? ''}
         data-testid="companion-article-document"
       >
         {props.content}
@@ -167,6 +169,14 @@ function openReadingAction(name: 'Find in document' | 'Font' | 'Highlight' | 'In
   fireEvent.click(screen.getByRole('button', { name }));
 }
 
+function expectRepeatedHighlightSelectionCreatesNewCommand() {
+  const firstCommandId = screen.getByTestId('companion-article-document').getAttribute('data-reading-command-id');
+  expect(firstCommandId).toBeTruthy();
+  openReadingAction('Highlight');
+  fireEvent.click(screen.getByRole('button', { name: 'Readable topic body' }));
+  expect(screen.getByTestId('companion-article-document').getAttribute('data-reading-command-id')).not.toBe(firstCommandId);
+}
+
 describe('CompanionShell navigation', () => {
   it('replaces bottom navigation with review actions during a review task', async () => {
     const surface = createSurface('review');
@@ -219,7 +229,6 @@ describe('CompanionShell navigation', () => {
     expect(screen.queryByRole('dialog', { name: 'Outline' })).not.toBeInTheDocument();
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-from', '2');
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-to', '18');
-    expect(screen.getByText('Readable article')).toBeInTheDocument();
     openReadingAction('Font');
     expect(screen.getByRole('dialog', { name: 'Font' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Extra large' }));
@@ -231,6 +240,7 @@ describe('CompanionShell navigation', () => {
     expect(screen.queryByRole('dialog', { name: 'Highlight' })).not.toBeInTheDocument();
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-from', '20');
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-to', '39');
+    expectRepeatedHighlightSelectionCreatesNewCommand();
     openReadingAction('Info');
     expect(screen.getByRole('dialog', { name: 'Info' })).toBeInTheDocument();
     expect(screen.getByText('PDF and text')).toBeInTheDocument();

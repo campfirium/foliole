@@ -32,6 +32,8 @@ const ACTION_OVERRIDES = Object.freeze({
   's220-resource-diagnostic': { formalSourceClass: 'ordinary-only' },
   'sync-group-stopped-status': { formalSourceClass: 'ordinary-only' },
   't234-webview-session': { formalSourceClass: 'ordinary-only' },
+  'acceptance-sync-events': { formalSourceClass: 'ordinary-only', mutatesFixedA5: false },
+  't250-dense-session': { requiresHiddenDesktopRuntime: true },
   'leave-sync-group': { requiresHiddenDesktopRuntime: true },
   'pair-credentials': { requiresHiddenDesktopRuntime: true },
   'single-principal-sync-group': { formalEvidenceRetention: 'latest-terminal-per-task',
@@ -64,7 +66,8 @@ const FORMAL_EVIDENCE = Object.freeze({
   'sync-group-rejoin': { kind: 'run-directory', root: 'a5-sync-group-rejoin' },
   'sync-group-rejoin-recover': {
     kind: 'run-directory', root: 'a5-sync-group-rejoin-recovery'
-  }
+  },
+  't250-dense-session': { kind: 'run-directory', root: 't250-dense-annotation/a5-session' }
 });
 const MACOS_A5_ACTIONS = new Set([
   ...Object.keys(ACTION_OVERRIDES),
@@ -79,7 +82,7 @@ const MACOS_A5_ACTIONS = new Set([
   's220-resource-diagnostic',
   'sync-group-join-prepare', 'sync-group-rejoin', 'sync-group-rejoin-recover',
   'sync-group-stopped-status', 'sync-now', 'single-principal-sync-group',
-  't234-webview-session'
+  't234-webview-session', 'acceptance-sync-events', 't250-dense-session'
 ]);
 
 export function assertRegisteredMacosA5Action(action) {

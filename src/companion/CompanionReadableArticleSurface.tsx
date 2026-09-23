@@ -51,6 +51,7 @@ function ImmersiveArticleContent(props: {
   onSaveArticleContent?: CompanionContentSaveHandler;
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
+  readingRestoreCommandId: string | null;
   readingSelection: EditorSelection | null;
   syncEndpointUrl?: string | null;
 }) {
@@ -61,6 +62,7 @@ function ImmersiveArticleContent(props: {
         onEditorReady={props.onEditorReady}
         readableArticle={props.readableArticle}
         readingTypographySettings={props.readingTypographySettings}
+        readingRestoreCommandId={props.readingRestoreCommandId}
         readingSelection={props.readingSelection}
         scrollContainer="outer"
         {...definedProps({
@@ -186,6 +188,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
         onEditorReady={model.toolbar.handleEditorReady}
         readableArticle={pendingReadableArticle.readableArticle}
         readingTypographySettings={readingTypography.settings}
+        readingRestoreCommandId={model.reading.readingRestoreCommandId}
         readingSelection={model.reading.readingSelection}
         {...definedProps({
           onAttachmentResourceSynced: props.onAttachmentResourceSynced,
