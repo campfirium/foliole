@@ -10,6 +10,7 @@ import { APP_PALETTE_COMMANDS } from '../hooks/appPaletteCommandList';
 import { localizePaletteCommandTitle } from '../hooks/appPaletteCommandLocalization';
 
 interface EditorContextCommandItemsProps {
+  source: DocumentHeaderMenuItemConfig['source'];
   onClose: () => void;
   onConfigureFormatCleanup?: () => void;
   onRepairTable?: () => void;
@@ -45,13 +46,14 @@ function runItem(item: DocumentHeaderMenuItemConfig, props: EditorContextCommand
 
 export function EditorContextCommandItems(props: EditorContextCommandItemsProps) {
   const t = useTranslation();
-  const items = loadEditorContextMenuItems().filter((item) => isShown(item, props));
+  const items = loadEditorContextMenuItems().filter((item) => item.source === props.source && isShown(item, props));
   return <>
     {items.map((item, index) => <Fragment key={item.id}>
       {index > 0 && item.separatorBefore ? <div aria-hidden="true" className="my-1 h-px bg-border/10" role="separator" /> : null}
       <AppSelectionDropdownMenuItem onClick={() => runItem(item, props)}>
         {item.commandId === APP_COMMAND_IDS.repairTable ? <Table aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} /> : null}
         {item.commandId === APP_COMMAND_IDS.configureCleanFormatting ? <Eraser aria-hidden="true" className="mr-2 shrink-0 text-foreground/62" size={15} strokeWidth={1.9} /> : null}
+        {item.source === 'user' ? <span aria-hidden="true" className="mr-2 size-[15px] shrink-0" /> : null}
         <span className="min-w-0 truncate">{labelFor(item, t)}</span>
       </AppSelectionDropdownMenuItem>
     </Fragment>)}
@@ -59,5 +61,5 @@ export function EditorContextCommandItems(props: EditorContextCommandItemsProps)
 }
 
 export function hasEditorContextCommandItems(props: EditorContextCommandItemsProps) {
-  return loadEditorContextMenuItems().some((item) => isShown(item, props));
+  return loadEditorContextMenuItems().some((item) => item.source === props.source && isShown(item, props));
 }

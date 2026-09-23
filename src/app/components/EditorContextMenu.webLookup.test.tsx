@@ -99,6 +99,10 @@ it('runs a configured editor command through the existing command callback', () 
     />
   );
 
+  expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+    'Chat with ChatGPT',
+    'Find in Topic'
+  ]);
   fireEvent.click(screen.getByRole('menuitem', { name: 'Find in Topic' }));
   expect(onRunCommand).toHaveBeenCalledWith(APP_COMMAND_IDS.findInTopic);
   expect(onClose).toHaveBeenCalledTimes(1);

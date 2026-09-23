@@ -182,6 +182,7 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.webLookup.sectionAria': '右键菜单项设置区',
   'settings.webLookup.title': '右键菜单项',
   'settings.webLookup.actionsTitle': '操作',
+  'settings.webLookup.addedActionsTitle': '添加的操作',
   'settings.webLookup.resetActions': '恢复默认右键操作',
   'settings.webLookup.description': '配置每个菜单项的名称和链接。用 {selection} 表示当前文本，用 {title} 表示当前主题标题。',
   'settings.webLookup.tableAria': '右键菜单项',

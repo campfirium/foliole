@@ -180,6 +180,7 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.webLookup.sectionAria': 'Right-click menu items settings section',
   'settings.webLookup.title': 'Right-click menu items',
   'settings.webLookup.actionsTitle': 'Actions',
+  'settings.webLookup.addedActionsTitle': 'Added actions',
   'settings.webLookup.resetActions': 'Restore default right-click actions',
   'settings.webLookup.description': 'Configure each menu label and link. Use {selection} for the current text and {title} for the current topic title.',
   'settings.webLookup.tableAria': 'Right-click menu items',

@@ -168,8 +168,9 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
   const selectionText = props.selectionPayload?.selectionText.trim() ?? '';
   const entries = resolveWebLookupEntries(props, selectionText);
 
-  const hasCommands = hasEditorContextCommandItems(props);
-  if (entries.length === 0 && !hasCommands) {
+  const hasSystemCommands = hasEditorContextCommandItems({ ...props, source: 'system' });
+  const hasUserCommands = hasEditorContextCommandItems({ ...props, source: 'user' });
+  if (entries.length === 0 && !hasSystemCommands && !hasUserCommands) {
     return null;
   }
 
@@ -201,9 +202,11 @@ export function WebLookupSelectionMenu(props: WebLookupSelectionMenuProps) {
           onContinue={() => continueWebLookup(confirmation.url)}
         />
       ) : null}
-      {!confirmation ? <EditorContextCommandItems onClose={props.onClose} {...(props.onRepairTable ? { onRepairTable: props.onRepairTable } : {})} {...(props.onConfigureFormatCleanup ? { onConfigureFormatCleanup: props.onConfigureFormatCleanup } : {})} {...(props.onRunCommand ? { onRunCommand: props.onRunCommand } : {})} {...(props.repairTableAvailable ? { repairTableAvailable: props.repairTableAvailable } : {})} /> : null}
-      {!confirmation && hasCommands && entries.length > 0 ? <SelectionMenuSeparator /> : null}
+      {!confirmation ? <EditorContextCommandItems {...props} source="system" /> : null}
+      {!confirmation && hasSystemCommands && (entries.length > 0 || hasUserCommands) ? <SelectionMenuSeparator /> : null}
       {!confirmation ? <WebLookupActionItems entries={entries} onSelect={(action) => void handleWebLookupClick(action)} /> : null}
+      {!confirmation && entries.length > 0 && hasUserCommands ? <SelectionMenuSeparator /> : null}
+      {!confirmation ? <EditorContextCommandItems {...props} source="user" /> : null}
       {!confirmation && notice && entries.length > 0 ? <SelectionMenuSeparator /> : null}
       {!confirmation && notice ? <WebLookupNotice message={notice.message} tone={notice.tone} /> : null}
     </AppSelectionDropdownMenu>

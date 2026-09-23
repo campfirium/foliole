@@ -126,7 +126,7 @@ export function SettingsWebLookupSection(props: {
 
   return (
     <>
-      {props.resolveDocumentMenuLabel ? <SettingsEditorContextMenuCommands actionItems={props.actionItems ?? []} resolveDocumentMenuLabel={props.resolveDocumentMenuLabel} /> : null}
+      {props.resolveDocumentMenuLabel ? <SettingsEditorContextMenuCommands actionItems={props.actionItems ?? []} resolveDocumentMenuLabel={props.resolveDocumentMenuLabel} source="system" /> : null}
       <SettingsSection
         ariaLabel={t('settings.webLookup.sectionAria')}
         description={t('settings.webLookup.description')}
@@ -151,6 +151,7 @@ export function SettingsWebLookupSection(props: {
           <AddMenuItemRow onAdd={() => controls.setEntries(addWebLookupEntry())} />
         </div>
       </SettingsSection>
+      {props.resolveDocumentMenuLabel ? <SettingsEditorContextMenuCommands actionItems={props.actionItems ?? []} resolveDocumentMenuLabel={props.resolveDocumentMenuLabel} source="user" /> : null}
     </>
   );
 }

@@ -5,6 +5,7 @@ import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, getSettingsDialog, openSettingsDialog } from './harness/settings';
 
 const SCREENSHOT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/editor-context-menu-commands.png');
+const SETTINGS_SCREENSHOT_PATH = path.resolve('.tmp/artifacts/desktop-acceptance/editor-context-menu-settings.png');
 
 test('adds an editor command to the right-click menu and runs it', async ({ desktopWindow }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
@@ -24,6 +25,10 @@ test('adds an editor command to the right-click menu and runs it', async ({ desk
   await settings.getByRole('button', { name: 'Restore default right-click actions' }).click();
   await settings.getByRole('button', { name: 'Add action' }).click();
   await desktopWindow.getByRole('button', { name: 'Find in Topic' }).click();
+  await settings.getByText('Find in Topic').scrollIntoViewIfNeeded();
+  await mkdir(path.dirname(SETTINGS_SCREENSHOT_PATH), { recursive: true });
+  await desktopWindow.screenshot({ path: SETTINGS_SCREENSHOT_PATH });
+  await testInfo.attach('editor-context-menu-settings', { contentType: 'image/png', path: SETTINGS_SCREENSHOT_PATH });
   await desktopWindow.keyboard.press('Escape');
   await expect(getSettingsDialog(desktopWindow)).toBeHidden();
 

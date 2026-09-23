@@ -24,6 +24,7 @@ it('adds an existing command to the editor right-click menu without changing the
           title: 'Find in Topic'
         }]}
         resolveDocumentMenuLabel={settingsDesktopAdapters.resolveDocumentMenuLabel}
+        source="user"
       />
     </DocumentHeaderMenuSettingsProvider>
   );

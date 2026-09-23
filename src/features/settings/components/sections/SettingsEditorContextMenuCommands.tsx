@@ -11,29 +11,31 @@ import type { SettingsDesktopAdapters } from '../../model/settingsDesktopAdapter
 import { DocumentMenuManagerRow } from './SettingsDocumentMenuSection';
 import { AddRailActionRow } from './SettingsRailAddActionRow';
 
-export function SettingsEditorContextMenuCommands({ actionItems, resolveDocumentMenuLabel }: {
+export function SettingsEditorContextMenuCommands({ actionItems, resolveDocumentMenuLabel, source }: {
   actionItems: HotkeySettingItem[];
   resolveDocumentMenuLabel: SettingsDesktopAdapters['resolveDocumentMenuLabel'];
+  source: DocumentHeaderMenuItemConfig['source'];
 }) {
   const t = useTranslation();
   const menu = useDocumentHeaderMenuSettings();
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const currentCommandIds = new Set(menu.contextItems.map((item) => item.commandId));
+  const items = menu.contextItems.filter((item) => item.source === source);
 
   function dropOnItem(item: DocumentHeaderMenuItemConfig, droppedItemId?: string) {
     const itemId = droppedItemId || draggedItemId;
-    if (!itemId) return;
+    if (!itemId || !items.some((candidate) => candidate.id === itemId)) return;
     menu.onMoveContextItem(itemId, item.order);
     setDraggedItemId(null);
   }
 
   return (
     <SettingsSection
-      actions={<AppIconButton className={settingsResetButtonClassName()} icon={<RotateCcw aria-hidden="true" size={16} />} label={t('settings.webLookup.resetActions')} onClick={menu.onResetContextMenu} />}
-      ariaLabel={t('settings.webLookup.actionsTitle')}
-      title={t('settings.webLookup.actionsTitle')}
+      actions={source === 'system' ? <AppIconButton className={settingsResetButtonClassName()} icon={<RotateCcw aria-hidden="true" size={16} />} label={t('settings.webLookup.resetActions')} onClick={menu.onResetContextMenu} /> : undefined}
+      ariaLabel={t(source === 'system' ? 'settings.webLookup.actionsTitle' : 'settings.webLookup.addedActionsTitle')}
+      title={t(source === 'system' ? 'settings.webLookup.actionsTitle' : 'settings.webLookup.addedActionsTitle')}
     >
-      {menu.contextItems.map((item, index) => (
+      {items.map((item, index) => (
         <DocumentMenuManagerRow
           item={item}
           key={item.id}
@@ -46,12 +48,12 @@ export function SettingsEditorContextMenuCommands({ actionItems, resolveDocument
           showSeparatorControl={index > 0}
         />
       ))}
-      <AddRailActionRow
+      {source === 'user' ? <AddRailActionRow
         actionItems={actionItems}
         currentCommandIds={currentCommandIds}
         onAdd={(command) => menu.onAddContextItem({ commandId: command.commandId, label: command.label })}
         requireIcon={false}
-      />
+      /> : null}
     </SettingsSection>
   );
 }
