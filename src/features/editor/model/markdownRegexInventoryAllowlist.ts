@@ -88,8 +88,8 @@ export const allowedRegexInventory = [
     owner: 'single-line annotation prefix setting'
   },
   {
-    path: 'src/features/editor/adapters/htmlPaste.ts',
-    line: "const baseName = originalName.replace(/\\.[^.]+$/, '').trim();",
+    path: 'src/features/editor/adapters/clipboardImagePaste.ts',
+    line: "const alt = result.original_name.replace(/\\.[^.]+$/, '').trim() || 'Pasted image';",
     owner: 'clipboard image filename cleanup'
   },
   { path: 'src/features/editor/adapters/liveMarkdownFrontmatterWidget.ts', line: 'if (!/^[^\\s:/?#]+\\.[^\\s:/?#]+(?:[/?#].*)?$/.test(text)) return null;', owner: 'frontmatter link widget', reason: 'Recognizes bare host-like values before rendering an external link widget.' },

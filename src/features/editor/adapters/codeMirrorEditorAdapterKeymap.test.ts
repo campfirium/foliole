@@ -42,6 +42,7 @@ vi.mock('@codemirror/state', () => ({
 }));
 
 vi.mock('@codemirror/view', () => ({
+  ViewPlugin: { fromClass: vi.fn(() => 'pending-image-pastes') },
   Decoration: { none: 'decoration-none' },
   EditorView: {
     decorations: { of: vi.fn((value) => value) },
