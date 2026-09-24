@@ -12,10 +12,10 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 function loadSceneLifecycleState() {
   const infoPlist = read('ios/App/App/Info.plist');
-  const appDelegate = read('ios/App/App/AppDelegate.swift');
   return {
-    hasConfigurationDelegate: /configurationForConnecting/.test(appDelegate),
-    hasSceneManifest: /UIApplicationSceneManifest/.test(infoPlist)
+    hasSceneManifest: /UIApplicationSceneManifest/.test(infoPlist),
+    hasSceneDelegate: /UISceneDelegateClassName/.test(infoPlist),
+    hasSceneStoryboard: /UISceneStoryboardFile/.test(infoPlist)
   };
 }
 
@@ -32,13 +32,14 @@ function loadIphoneOsSdkMajor() {
 describe('iOS scene lifecycle host contract', () => {
   it('does not allow a partial UIScene migration', () => {
     const state = loadSceneLifecycleState();
-    expect(state.hasConfigurationDelegate).toBe(state.hasSceneManifest);
+    expect(state.hasSceneDelegate).toBe(state.hasSceneManifest);
+    expect(state.hasSceneStoryboard).toBe(state.hasSceneManifest);
   });
 
   it('requires UIScene before building with the iOS 27 SDK', () => {
     const sdkMajor = loadIphoneOsSdkMajor();
     const state = loadSceneLifecycleState();
-    if (sdkMajor >= 27 && (!state.hasSceneManifest || !state.hasConfigurationDelegate)) {
+    if (sdkMajor >= 27 && (!state.hasSceneManifest || !state.hasSceneDelegate || !state.hasSceneStoryboard)) {
       throw new Error('iOS 27 SDK requires a complete UIScene lifecycle migration before Foliole can launch.');
     }
   }, 15_000);

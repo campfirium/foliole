@@ -15,7 +15,7 @@ describe('iOS bridge controller host contract', () => {
     const storyboard = read('ios/App/App/Base.lproj/Main.storyboard');
     const controller = read('ios/App/App/FolioleBridgeViewController.swift');
 
-    expect(infoPlist).toContain('<key>UIMainStoryboardFile</key>\n\t<string>Main</string>');
+    expect(infoPlist).toContain('<key>UISceneStoryboardFile</key>\n\t\t\t\t\t<string>Main</string>');
     expect(storyboard).toContain('initialViewController="BYZ-38-t0r"');
     expect(storyboard).toContain(
       'id="BYZ-38-t0r" customClass="FolioleBridgeViewController" customModule="App"'

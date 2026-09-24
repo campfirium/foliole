@@ -1,6 +1,9 @@
 package com.foliole.android;
 
 import android.content.Context;
+import android.system.ErrnoException;
+import android.system.Os;
+import android.system.OsConstants;
 import android.util.Base64;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
@@ -10,7 +13,6 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.file.Files;
 import java.security.MessageDigest;
 
 final class FolioleRemoteImageFiles {
@@ -52,7 +54,13 @@ final class FolioleRemoteImageFiles {
         File root = new File(context.getFilesDir(), "attachments");
         if (!root.isDirectory() && !root.mkdirs()) throw new IllegalStateException("Image directory unavailable");
         File target = new File(root, key);
-        if (Files.isSymbolicLink(target.toPath())) throw new IllegalArgumentException("Image path is a symbolic link");
+        try {
+            if (OsConstants.S_ISLNK(Os.lstat(target.getPath()).st_mode)) {
+                throw new IllegalArgumentException("Image path is a symbolic link");
+            }
+        } catch (ErrnoException error) {
+            if (error.errno != OsConstants.ENOENT) throw error;
+        }
         if (target.exists()) {
             if (!hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, target))) {
                 throw new IllegalArgumentException("Existing image differs");
@@ -62,7 +70,7 @@ final class FolioleRemoteImageFiles {
         File temporary = File.createTempFile("image-", ".part", root);
         try {
             try (FileOutputStream stream = new FileOutputStream(temporary)) { stream.write(bytes); stream.getFD().sync(); }
-            Files.move(temporary.toPath(), target.toPath());
+            Os.link(temporary.getPath(), target.getPath());
         } finally { temporary.delete(); }
         return new JSObject().put("storedFile", "created");
     }

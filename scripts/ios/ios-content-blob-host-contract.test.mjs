@@ -20,7 +20,7 @@ describe('iOS content blob host contract', () => {
       expect(plugin).not.toContain(`CAPPluginMethod(name: "${retired}"`);
       expect(plugin).not.toContain(`@objc func ${retired}`);
     }
-    expect(plugin).toContain('FolioleCompanionContentBlobPack.create(parts: parts)');
+    expect(plugin).toContain('FolioleCompanionContentBlobPack.create(parts: validated.accepted)');
     expect(plugin).not.toContain('FolioleCompanionDatabaseLocation');
   });
 

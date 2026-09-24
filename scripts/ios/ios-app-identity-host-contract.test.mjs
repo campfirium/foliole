@@ -23,7 +23,9 @@ describe('iOS app identity host contract', () => {
       '"com.foliole.ios.physical-uitests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
       '"com.foliole.ios.physical-uitests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
       '"com.foliole.ios.acceptance-projection-tests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
-      '"com.foliole.ios.acceptance-projection-tests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"'
+      '"com.foliole.ios.acceptance-projection-tests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
+      '"com.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).share"',
+      '"com.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).share"'
     ]);
     expect(project).not.toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX =');
   });

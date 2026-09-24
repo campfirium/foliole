@@ -32,10 +32,11 @@ describe('iOS active database ownership', () => {
       'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest', 'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState',
-      'loadSyncParticipationState', 'rejectSyncGroupJoinRequest', 'resolveAttachmentResource',
+      'loadSyncParticipationState', 'maintainAttachmentFiles', 'readRemoteImageResponse',
+      'rejectSyncGroupJoinRequest', 'resolveAttachmentResource',
       'resolveSyncGroupDataRequest', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
       'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
-      'stopDiscoverySession', 'stopSyncGroupProvider'
+      'stopDiscoverySession', 'stopSyncGroupProvider', 'writeImageAttachment'
     ].sort());
   });
 

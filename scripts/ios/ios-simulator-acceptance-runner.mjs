@@ -30,7 +30,7 @@ export function createSimulatorAcceptanceBuildArgs(options) {
     '-derivedDataPath', options.derivedData,
     '-packageCachePath', path.join(options.derivedData, 'PackageCache'),
     ...options.resourceArgs,
-    `PRODUCT_BUNDLE_IDENTIFIER=${options.bundleId}`,
+    `FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX=${options.bundleId.slice('com.foliole.ios'.length)}`,
     'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) FOLIOLE_IOS_BRIDGE_ACCEPTANCE',
     'build'
   ];

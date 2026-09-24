@@ -48,13 +48,15 @@ function validatePrivacyContract(manifest, sources) {
 }
 
 describe('iOS privacy manifest host contract', () => {
-  it('declares only the app-local UserDefaults required reason', () => {
+  it('declares reasons for app-local UserDefaults and file metadata', () => {
     const manifest = read('ios/App/App/PrivacyInfo.xcprivacy');
 
     expect(manifest).toContain('<key>NSPrivacyAccessedAPITypes</key>');
     expect(manifest).toContain('<string>NSPrivacyAccessedAPICategoryUserDefaults</string>');
     expect(manifest).toContain('<string>CA92.1</string>');
-    expect(manifest.match(/NSPrivacyAccessedAPICategory/g)).toHaveLength(1);
+    expect(manifest).toContain('<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>');
+    expect(manifest).toContain('<string>C617.1</string>');
+    expect(manifest.match(/NSPrivacyAccessedAPICategory/g)).toHaveLength(2);
     expect(manifest).not.toContain('NSPrivacyTracking');
     expect(manifest).not.toContain('NSPrivacyCollectedDataTypes');
   });
@@ -75,11 +77,12 @@ describe('iOS privacy manifest host contract', () => {
 
     expect(() => validatePrivacyContract(manifest, sources)).not.toThrow();
     expect(combinedSource).toMatch(/\bUserDefaults\.standard\b/);
+    expect(combinedSource).toMatch(/\.creationDate\b/);
   });
 
   it('fails when all app-owned UserDefaults usage is removed', () => {
     const manifest = read('ios/App/App/PrivacyInfo.xcprivacy');
-    const sources = [{ path: 'ios/App/App/AppDelegate.swift', source: 'import UIKit' }];
+    const sources = [{ path: 'ios/App/App/AppDelegate.swift', source: 'let date = file.creationDate' }];
 
     expect(() => validatePrivacyContract(manifest, sources))
       .toThrow('Privacy manifest categories without app-owned use: NSPrivacyAccessedAPICategoryUserDefaults');

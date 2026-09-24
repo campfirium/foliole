@@ -43,7 +43,8 @@ describe('iOS bootstrap acceptance contract', () => {
   it('keeps Simulator acceptance locally signed', () => {
     const args = createAcceptanceBuildArgs('SIM-1');
 
-    expect(args).toContain('PRODUCT_BUNDLE_IDENTIFIER=com.foliole.ios.bootstrap-acceptance');
+    expect(args).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX=.bootstrap-acceptance');
+    expect(args).not.toContain('PRODUCT_BUNDLE_IDENTIFIER=com.foliole.ios.bootstrap-acceptance');
     expect(args).toContain('platform=iOS Simulator,id=SIM-1');
     expect(args).toContain(path.join(
       process.cwd(), '.cache/ios-acceptance-build/DerivedData/PackageCache'

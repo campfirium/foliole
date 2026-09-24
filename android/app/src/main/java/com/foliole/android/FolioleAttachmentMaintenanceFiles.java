@@ -2,25 +2,30 @@ package com.foliole.android;
 
 import android.content.Context;
 import android.system.Os;
+import android.system.OsConstants;
 import android.system.StructStat;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.LinkOption;
 
 final class FolioleAttachmentMaintenanceFiles {
     static JSObject execute(Context context, PluginCall call) throws Exception {
         String operation = call.getString("operation", "");
         File state = new File(context.getFilesDir(), "attachment-observations.json");
         if (operation.equals("read-state")) return new JSObject().put("state", state.exists()
-            ? new String(Files.readAllBytes(state.toPath()), StandardCharsets.UTF_8) : org.json.JSONObject.NULL);
+            ? readState(state) : org.json.JSONObject.NULL);
         if (operation.equals("write-state")) {
             File temporary = new File(context.getFilesDir(), "attachment-observations.partial");
-            Files.write(temporary.toPath(), call.getString("state", "").getBytes(StandardCharsets.UTF_8));
-            if (!temporary.renameTo(state)) throw new IllegalStateException("observation_save_failed");
+            try (FileOutputStream output = new FileOutputStream(temporary)) {
+                output.write(call.getString("state", "").getBytes(StandardCharsets.UTF_8));
+                output.getFD().sync();
+            }
+            Os.rename(temporary.getPath(), state.getPath());
             return new JSObject();
         }
         if (operation.equals("generation")) return generation(context, call.getString("databasePath", ""));
@@ -33,7 +38,7 @@ final class FolioleAttachmentMaintenanceFiles {
         else if (operation.equals("remove-trash")) {
             File file = new File(directory(context, true), key);
             requireFile(file);
-            Files.delete(file.toPath());
+            Os.unlink(file.getPath());
         } else throw new IllegalArgumentException("invalid_attachment_operation");
         return new JSObject();
     }
@@ -58,8 +63,11 @@ final class FolioleAttachmentMaintenanceFiles {
                 || !hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, destination))) {
                 throw new IllegalStateException("attachment_destination_conflict");
             }
-            Files.delete(source.toPath());
-        } else Files.move(source.toPath(), destination.toPath());
+            Os.unlink(source.getPath());
+        } else {
+            Os.link(source.getPath(), destination.getPath());
+            Os.unlink(source.getPath());
+        }
     }
 
     private static JSArray inventory(File root) throws Exception {
@@ -85,8 +93,21 @@ final class FolioleAttachmentMaintenanceFiles {
     }
 
     private static void requireFile(File file) {
-        if (!Files.isRegularFile(file.toPath(), LinkOption.NOFOLLOW_LINKS)) {
+        try {
+            if (OsConstants.S_ISREG(Os.lstat(file.getPath()).st_mode)) return;
+        } catch (Exception ignored) {
             throw new IllegalStateException("attachment_file_unsafe");
+        }
+        throw new IllegalStateException("attachment_file_unsafe");
+    }
+
+    private static String readState(File state) throws Exception {
+        try (FileInputStream input = new FileInputStream(state);
+             ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int count;
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+            return new String(output.toByteArray(), StandardCharsets.UTF_8);
         }
     }
 }
