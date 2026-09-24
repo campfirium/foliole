@@ -26,7 +26,9 @@ final class FoliolePhysicalT111LinkUITests: XCTestCase {
 
         let missing = URL(string: "foliole://node/v1?group=\(group)&id=missing-t111-node")!
         let malformed = URL(string: "foliole://node/v1?group=\(group)&id=\(node)&extra=1")!
-        for (name, url) in [("missing", missing), ("malformed", malformed)] {
+        let wrongGroup = URL(string: "foliole://node/v1?group=t111-other-group&id=\(node)")!
+        for (name, url) in [("missing", missing), ("malformed", malformed),
+                            ("wrong-group", wrongGroup)] {
             app.open(url)
             let rejection = app.staticTexts["This link cannot be opened in this library."]
             XCTAssertTrue(rejection.waitForExistence(timeout: 45),
@@ -34,6 +36,11 @@ final class FoliolePhysicalT111LinkUITests: XCTestCase {
             XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
             attachScreenshot(named: "T111-Fri-\(name)-rejected")
         }
+
+        app.open(target)
+        XCTAssertTrue(app.staticTexts[expectedText].waitForExistence(timeout: 45),
+                      "Opening the same target again did not show its text.")
+        attachScreenshot(named: "T111-Fri-reopened-target")
     }
 
     @available(iOS 16.4, *)
