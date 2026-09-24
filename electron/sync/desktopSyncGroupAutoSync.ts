@@ -1,4 +1,5 @@
 import { isDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { isDesktopSyncGroupDeviceBlocked } from '../database/syncGroupMemberStateStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
@@ -102,7 +103,7 @@ function resumeMobileGuideRoute(route: DesktopSyncGroupPeer) {
 }
 
 async function runDesktopManualSync() {
-  const group = loadDesktopSyncGroup();
+  const group = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
   if (!group) return runDesktopSyncCoordinator('manual');
   await exchangeAllDesktopSyncGroupMemberStates();
   if (loadDesktopAnchorTopologyState().role === 'anchor') {
@@ -122,7 +123,7 @@ async function runDesktopManualSync() {
     && value.provider_device_id !== group.local_device_identity_key
     && !['android-capacitor', 'ios-capacitor'].includes(value.provider_platform.toLowerCase()));
   if (!candidate) return runDesktopSyncCoordinator('manual');
-  const route = routeFromCandidate(group, candidate);
+  const route = await runWithDatabaseConnectionOwner(() => routeFromCandidate(group, candidate));
   if (!route) return runDesktopSyncCoordinator('manual');
   saveDesktopSyncGroupRoute(route);
   try {
@@ -132,7 +133,7 @@ async function runDesktopManualSync() {
   }
 }
 
-function activateAnchorRoute(
+async function activateAnchorRoute(
   group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
   target: DesktopAnchorTarget,
   requireSyncBeforeDemote = false
@@ -140,8 +141,8 @@ function activateAnchorRoute(
   if (loadDesktopAnchorTopologyState().role === 'anchor' && !requireSyncBeforeDemote) {
     return Promise.resolve(false);
   }
-  const route = routeFromTarget(group, target);
-  if (!route) return Promise.resolve(false);
+  const route = await runWithDatabaseConnectionOwner(() => routeFromTarget(group, target));
+  if (!route) return false;
   saveDesktopSyncGroupRoute(route);
   updateDesktopSyncFreshness(true);
   const active = inFlight.get(target.peerDeviceId);

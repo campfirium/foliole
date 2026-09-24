@@ -10,6 +10,8 @@ const runtime = vi.hoisted(() => ({
     onMemberLost(deviceId: string): void;
   },
   notifyOverviewChanged: vi.fn(),
+  owned: false,
+  requireOwner: false,
   group: {
     devices: [
       { device_identity_key: 'desktop-a', device_name: 'Mac', platform: 'darwin', state: 'active' },
@@ -25,7 +27,16 @@ const runtime = vi.hoisted(() => ({
   updateRole: vi.fn(async () => undefined)
 }));
 
-vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => runtime.group }));
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: async <T>(execute: () => Promise<T> | T) => {
+    runtime.owned = true;
+    try { return await execute(); } finally { runtime.owned = false; }
+  }
+}));
+vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => {
+  if (runtime.requireOwner && !runtime.owned) throw new Error('sqlite owner required');
+  return runtime.group;
+} }));
 vi.mock('../database/syncGroupMemberStateStore.js', () => ({
   isDesktopSyncGroupDeviceBlocked: () => false
 }));
@@ -83,6 +94,7 @@ beforeEach(() => {
   runtime.sessionArgs = null;
   runtime.memberSessionArgs = null;
   runtime.memberEndpoints = [];
+  runtime.requireOwner = false;
   runtime.discovery.mockResolvedValue([]);
 });
 
@@ -223,4 +235,11 @@ it('does not use a discovered anchor as a member route', async () => {
 
   await expect(runDesktopManualSyncWithDiscovery()).resolves.toBeNull();
   expect(runtime.coordinator).not.toHaveBeenCalled();
+});
+
+it('owns the group read when manual sync overlaps another database transaction', async () => {
+  runtime.role = 'anchor';
+  runtime.requireOwner = true;
+
+  await expect(runDesktopManualSyncWithDiscovery()).resolves.toBeNull();
 });
