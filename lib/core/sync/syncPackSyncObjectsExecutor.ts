@@ -4,6 +4,7 @@ import { buildSyncPackApplyableRowsSql, type SyncPackApplyableRowsOptions } from
 
 export interface SyncPackSyncObjectsOptions extends SyncPackApplyableRowsOptions {
   hostName?: string;
+  onSettingApplied?: (port: DbPort, record: SyncPackSyncObjectRecord) => Promise<void>;
 }
 
 export interface SyncPackSyncObjectRecord {
@@ -43,7 +44,10 @@ export async function applySyncPackSettingObjectsWithDbPort(
   const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
     .filter((record) => record.object_type === 'setting');
   for (const record of records) {
-    await applySyncObjectPayloadWithDbPort(port, record, options.hostName ? { hostName: options.hostName } : {});
+    const applied = await applySyncObjectPayloadWithDbPort(
+      port, record, options.hostName ? { hostName: options.hostName } : {}
+    );
+    if (applied !== false) await options.onSettingApplied?.(port, record);
   }
   return records.length;
 }

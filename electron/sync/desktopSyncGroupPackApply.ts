@@ -7,6 +7,7 @@ import { assertSyncPackManifestMatchesDatabase } from '../../lib/core/sync/syncP
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { materializeDesktopSettingRecord } from '../database/desktopSettingMaterializer.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 
 import type { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
@@ -113,7 +114,8 @@ export async function applyDesktopSyncGroupPack(
     const result = await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.after, hostName,
       incomingAlias: 'inc', sourceHostName: sourceDeviceName,
-      sourcePeerId: args.peer.peer_device_id
+      sourcePeerId: args.peer.peer_device_id,
+      onSettingApplied: materializeDesktopSettingRecord
     });
     cursor = result.toStateSeq;
     event = await collectSyncPackAppliedEvent(port, result);

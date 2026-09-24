@@ -33,6 +33,7 @@ import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObje
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
   hostName: string;
+  onSettingApplied?: (port: DbPort, record: import('./syncPackSyncObjectsExecutor.js').SyncPackSyncObjectRecord) => Promise<void>;
   sourceHostName?: string;
   sourcePeerId?: string;
 }
