@@ -38,7 +38,7 @@ final class FolioleAttachmentMaintenanceFiles {
         else if (operation.equals("remove-trash")) {
             File file = new File(directory(context, true), key);
             requireFile(file);
-            Os.unlink(file.getPath());
+            if (!file.delete()) throw new IllegalStateException("attachment_remove_failed");
         } else throw new IllegalArgumentException("invalid_attachment_operation");
         return new JSObject();
     }
@@ -63,10 +63,10 @@ final class FolioleAttachmentMaintenanceFiles {
                 || !hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, destination))) {
                 throw new IllegalStateException("attachment_destination_conflict");
             }
-            Os.unlink(source.getPath());
+            if (!source.delete()) throw new IllegalStateException("attachment_remove_failed");
         } else {
             Os.link(source.getPath(), destination.getPath());
-            Os.unlink(source.getPath());
+            if (!source.delete()) throw new IllegalStateException("attachment_move_failed");
         }
     }
 

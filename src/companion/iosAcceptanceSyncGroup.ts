@@ -8,6 +8,7 @@ import {
   parseSyncProtocolTxt,
   syncProtocolVersionHintMatchesDescriptor
 } from '../../lib/platform/syncProtocolContract';
+import { waitForCompanionDesktopAdvertisements } from '../shared/platform/companion/companionDesktopDiscoveryWait';
 import {
   loadCompanionSyncGroup,
   loadCompanionSyncGroupWorkgroupKey
@@ -24,7 +25,10 @@ import { FolioleCompanionSync } from '../shared/platform/companionWorkspaceRunti
 
 export async function discoverIosHostedProvider() {
   const payload = await FolioleCompanionSync.loadDiscoveryCandidates();
-  const candidates = (payload.candidates ?? []).filter((candidate) => candidate.source === 'nsd')
+  const nativeCandidates = payload.candidates?.length
+    ? payload.candidates
+    : await waitForCompanionDesktopAdvertisements(FolioleCompanionSync, undefined, IOS_HOSTED_SYNC_GROUP_ID);
+  const candidates = nativeCandidates.filter((candidate) => candidate.source === 'nsd')
     .map((candidate) => ({
       endpointUrl: candidate.endpoint_url,
       protocolTxt: candidate.protocol_txt ?? null,

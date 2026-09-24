@@ -8,8 +8,8 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         let definitions = try FolioleCompanionSyncPackProviderDefinitions.load()
         try definitions.validate()
         XCTAssertEqual(definitions.format, "foliole.sync-pack")
-        XCTAssertEqual(definitions.formatVersion, 12)
-        XCTAssertEqual(definitions.schemaVersion, 85)
+        XCTAssertEqual(definitions.formatVersion, 13)
+        XCTAssertEqual(definitions.schemaVersion, 86)
         XCTAssertTrue(definitions.copyStatements.contains { $0.contains("sync_group_devices") })
         XCTAssertFalse(definitions.copyStatements.contains { $0.contains("sync_group_members") })
     }

@@ -9,7 +9,8 @@ import {
   serializeSyncProtocolTxt
 } from '../../lib/platform/syncProtocolContract';
 
-const runtime = vi.hoisted(() => ({ deriveTag: vi.fn(), discover: vi.fn(), group: vi.fn(), key: vi.fn(), load: vi.fn() }));
+const runtime = vi.hoisted(() => ({ deriveTag: vi.fn(), discover: vi.fn(), group: vi.fn(), key: vi.fn(),
+  load: vi.fn(), wait: vi.fn() }));
 
 vi.mock('../../lib/core/sync/workgroupAead', () => ({ deriveWorkgroupTag: runtime.deriveTag }));
 vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
@@ -17,6 +18,9 @@ vi.mock('../shared/platform/companionWorkspaceRuntimeRepository', () => ({
 }));
 vi.mock('../shared/platform/companionWorkspaceDiscovery', () => ({
   loadCompanionDiscoveryCandidates: runtime.load
+}));
+vi.mock('../shared/platform/companion/companionDesktopDiscoveryWait', () => ({
+  waitForCompanionDesktopAdvertisements: runtime.wait
 }));
 vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
   loadCompanionSyncGroup: runtime.group,
@@ -54,6 +58,7 @@ beforeEach(() => {
     endpoint_url: endpointUrl, protocol_txt: protocolTxt, source: 'nsd'
   }] });
   runtime.load.mockResolvedValue([{ discovery, endpointUrl }]);
+  runtime.wait.mockResolvedValue([]);
   runtime.group.mockResolvedValue(null);
   runtime.key.mockResolvedValue(null);
   runtime.deriveTag.mockResolvedValue(groupTag);
@@ -64,6 +69,13 @@ it('accepts exactly one Network.framework candidate whose TXT and HTTP identity 
   expect(runtime.load).toHaveBeenCalledWith([{
     endpointUrl, protocolTxt, source: 'nsd'
   }]);
+});
+
+it('uses the existing discovery session when the initial native snapshot is empty', async () => {
+  runtime.discover.mockResolvedValue({ candidates: [] });
+  runtime.wait.mockResolvedValue([{ endpoint_url: endpointUrl, protocol_txt: protocolTxt, source: 'nsd' }]);
+  await expect(discoverIosHostedProvider()).resolves.toMatchObject({ discovery, endpointUrl });
+  expect(runtime.wait).toHaveBeenCalledWith(expect.anything(), undefined, IOS_HOSTED_SYNC_GROUP_ID);
 });
 
 it.each([

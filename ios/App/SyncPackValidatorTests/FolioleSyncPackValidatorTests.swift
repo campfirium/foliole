@@ -76,7 +76,8 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
     }
 
     func testRejectsLegacyAndUnknownFormatGenerationsBeforeSQLiteWrite() throws {
-        for formatVersion in [11, 13] {
+        let contract = try FolioleCompanionContractStore(bundle: .module).syncPackContract()
+        for formatVersion in [contract.formatVersion - 1, contract.formatVersion + 1] {
             var entries = try fixtureEntries()
             var manifest = try XCTUnwrap(JSONSerialization.jsonObject(
                 with: try XCTUnwrap(entries["manifest.json"])
