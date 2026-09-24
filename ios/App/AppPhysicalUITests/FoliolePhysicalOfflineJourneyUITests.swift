@@ -46,6 +46,22 @@ extension FoliolePhysicalSyncGroupUITests {
         print("[foliole-fri] s220-online-batch-complete attempt=\(s220AttemptId)")
     }
 
+    func testS220ExistingAttemptSurvivesOfflineRelaunch() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 30),
+                      "Fri did not retain the isolated S220 Sync Group.")
+        print("[foliole-fri] s220-offline-existing-attempt-ready attempt=\(s220AttemptId)")
+        waitForExternalOfflineSignal()
+        app.activate()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 30),
+                      "Fri did not return to the foreground after the external offline switch.")
+        assertPublicSyncNowFailsOffline(in: app)
+        assertS220LocalState(in: app, afterRelaunch: true)
+        print("[foliole-fri] s220-offline-existing-attempt-restored attempt=\(s220AttemptId)")
+    }
+
     private var s220AttemptId: String {
         String(requiredEnvironment("FOLIOLE_PHYSICAL_SYNC_GROUP_ID").suffix(12))
     }
