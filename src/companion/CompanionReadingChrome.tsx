@@ -57,13 +57,49 @@ function EditingChrome(props: {
 }) {
   const t = useTranslation();
   return (
-    <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)]`}>
+    <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-0 supports-[padding-top:max(0px)]:pt-[env(safe-area-inset-top)]`}>
       <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
         <ReadingChromeTextButton label={t('companion.reading.cancelEditing')} onClick={props.onToggleContentEditing} />
         <span className="min-w-0 flex-1 text-center text-[17px] font-normal text-foreground">
           {t('companion.reading.editContent')}
         </span>
         <ReadingChromeTextButton label={t('companion.reading.doneEditing')} onClick={props.onToggleContentEditing} primary={true} testId="companion-reading-edit-done" />
+      </div>
+    </div>
+  );
+}
+
+function ReadingTopChrome(props: {
+  controlsVisible: boolean;
+  onExit(): void;
+  onOpenAlternative?: () => void;
+  onOpenOutline(): void;
+  title: string;
+}) {
+  const t = useTranslation();
+  return (
+    <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-0 supports-[padding-top:max(0px)]:pt-[env(safe-area-inset-top)]`}>
+      <div className="relative mx-auto flex max-w-[760px] items-center">
+        {props.controlsVisible ? (
+          <>
+            <div className="flex items-center">
+              <ReadingChromeButton icon={ChevronLeft} label={t('companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
+              <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
+            </div>
+            <span className="pointer-events-none absolute left-1/2 w-[calc(100%-12.25rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
+              {props.title}
+            </span>
+            {props.onOpenAlternative ? (
+              <div className="ml-auto">
+                <ReadingChromeButton
+                  icon={RefreshCw}
+                  label={t('companion.reading.alternative.open')}
+                  onClick={props.onOpenAlternative}
+                />
+              </div>
+            ) : null}
+          </>
+        ) : <ChromeSpacer />}
       </div>
     </div>
   );
@@ -87,26 +123,13 @@ export function ReadingChrome(props: {
   const controlsVisible = props.visible !== false;
   return (
     <>
-      <div className={`fixed inset-x-0 top-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} pt-10 supports-[padding-top:max(0px)]:pt-[max(env(safe-area-inset-top),40px)]`}>
-        <div className={`mx-auto flex max-w-[760px] items-center ${companionFlexRowGap2ClassName}`}>
-          {controlsVisible ? (
-            <>
-              <ReadingChromeButton icon={ChevronLeft} label={t('companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
-              <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
-              <span className="min-w-0 max-w-[52vw] flex-1 truncate pl-2 text-left text-sm font-medium text-foreground sm:max-w-sm">
-                {props.title}
-              </span>
-              {props.onOpenAlternative ? (
-                <ReadingChromeButton
-                  icon={RefreshCw}
-                  label={t('companion.reading.alternative.open')}
-                  onClick={props.onOpenAlternative}
-                />
-              ) : null}
-            </>
-          ) : <ChromeSpacer />}
-        </div>
-      </div>
+      <ReadingTopChrome
+        controlsVisible={controlsVisible}
+        onExit={props.onExit}
+        onOpenOutline={props.onOpenOutline}
+        title={props.title}
+        {...(props.onOpenAlternative ? { onOpenAlternative: props.onOpenAlternative } : {})}
+      />
       <div className={`fixed inset-x-0 bottom-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} py-2 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),8px)]`}>
         <div className={`mx-auto flex max-w-[760px] items-center justify-end ${companionFlexRowGap2ClassName}`}>
           {controlsVisible ? (

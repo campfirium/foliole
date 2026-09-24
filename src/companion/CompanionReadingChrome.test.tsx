@@ -15,12 +15,14 @@ function renderChrome() {
 }
 
 describe('ReadingChrome', () => {
-  it('keeps fixed reading controls spaced without relying only on flex gap', () => {
+  it('groups reading navigation and centers the title in the toolbar', () => {
     renderChrome();
 
-    const topRow = screen.getByRole('button', { name: 'Exit' }).closest('div');
-    expect(topRow?.className).toContain('gap-2');
-    expect(topRow?.className).toContain('[&>*+*]:ml-2');
+    const navigation = screen.getByRole('button', { name: 'Exit' }).parentElement;
+    expect(navigation).toContainElement(screen.getByRole('button', { name: 'Outline' }));
+    expect(navigation?.className).not.toContain('gap-');
+    expect(screen.getByText('Long reading title').className).toContain('left-1/2');
+    expect(screen.getByText('Long reading title').className).toContain('text-center');
 
     const bottomRow = screen.getByRole('button', { name: 'More reading actions' }).parentElement;
     expect(bottomRow?.className).toContain('gap-2');
@@ -44,10 +46,10 @@ describe('ReadingChrome', () => {
   it('keeps reading controls compact and clear of Android safe areas', () => {
     renderChrome();
 
-    expect(screen.getByRole('button', { name: 'Exit' }).closest('div')?.parentElement?.className).toContain('pt-10');
+    expect(screen.getByRole('button', { name: 'Exit' }).closest('div')?.parentElement?.parentElement?.className).toContain('pt-0');
     expect(screen.getByRole('button', { name: 'Exit' }).className).toContain('h-11');
     expect(screen.getByRole('button', { name: 'Exit' }).className).not.toContain('ring-companion-divider');
-    expect(screen.getByText('Long reading title').className).toContain('text-left');
+    expect(screen.getByText('Long reading title').className).toContain('text-center');
     expect(screen.getByText('Long reading title').closest('div')?.parentElement?.className).toContain('px-2.5');
     expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.className).toContain('justify-end');
     expect(screen.getByRole('button', { name: 'More reading actions' }).parentElement?.parentElement?.className).toContain('bottom-0');

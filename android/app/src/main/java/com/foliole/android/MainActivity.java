@@ -1,15 +1,21 @@
 package com.foliole.android;
 
 import android.annotation.SuppressLint;
-import android.content.SharedPreferences;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.TypedArray;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.getcapacitor.BridgeActivity;
 import com.getcapacitor.community.database.sqlite.CapacitorSQLitePlugin;
@@ -44,12 +50,27 @@ public class MainActivity extends BridgeActivity {
             webView.post(() -> webView.loadUrl(refreshUrl));
         }
 
-        // Draw behind the status bar and navigation bar so the WebView gets
-        // real env(safe-area-inset-*) values. Capacitor surfaces these to the
-        // page automatically once the decor fits-system-windows flag is off.
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        // On older Android versions, let the window keep the WebView below
+        // system bars. Android 15 enforces edge-to-edge, so inset its content.
+        boolean edgeToEdgeRequired = Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM;
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), !edgeToEdgeRequired);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        if (edgeToEdgeRequired) applySystemBarInsets();
+    }
+
+    private void applySystemBarInsets() {
+        ViewGroup container = findViewById(android.R.id.content);
+        TypedArray colors = getTheme().obtainStyledAttributes(new int[] { android.R.attr.colorBackground });
+        container.setBackgroundColor(colors.getColor(0, Color.WHITE));
+        colors.recycle();
+        ViewCompat.setOnApplyWindowInsetsListener(container, (view, windowInsets) -> {
+            Insets safe = windowInsets.getInsets(
+                WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout());
+            view.setPadding(safe.left, safe.top, safe.right, safe.bottom);
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(container);
     }
 
     @Override

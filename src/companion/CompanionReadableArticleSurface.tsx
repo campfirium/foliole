@@ -113,7 +113,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     if (isCompanionArticleInteractiveTarget(event.target)) return;
     toolbar.openSelectionToolbar(event);
   }
-  const chromeReservedSpacing = 'pt-24 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+6rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
+  const chromeReservedSpacing = 'pt-14 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+3.5rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
   const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${chromeReservedSpacing} text-foreground`;
   return {
     closeToolbarFromArticlePointer,
