@@ -4,6 +4,7 @@ const runtime = vi.hoisted(() => ({
   coordinator: vi.fn(async () => ({ status: 'completed' })),
   discovery: vi.fn(),
   freshness: vi.fn(),
+  memberEndpoints: [] as Array<Record<string, unknown>>,
   memberSessionArgs: null as null | {
     onMember(peer: Record<string, unknown>): Promise<boolean>;
     onMemberLost(deviceId: string): void;
@@ -57,6 +58,7 @@ vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
 }));
 vi.mock('./desktopSyncGroupMemberStateSession.js', () => ({
   exchangeAllDesktopSyncGroupMemberStates: vi.fn(async () => false),
+  loadDesktopSyncGroupMemberEndpoints: () => runtime.memberEndpoints,
   startDesktopSyncGroupMemberStateSession: (_group: unknown, _onChanged: unknown,
     onMember: (peer: Record<string, unknown>) => Promise<boolean>,
     onMemberLost: (deviceId: string) => void) => {
@@ -80,6 +82,7 @@ beforeEach(() => {
   runtime.role = 'observing';
   runtime.sessionArgs = null;
   runtime.memberSessionArgs = null;
+  runtime.memberEndpoints = [];
   runtime.discovery.mockResolvedValue([]);
 });
 
@@ -192,4 +195,32 @@ it('checks collected desktop members when the anchor runs Sync Now', async () =>
   await runDesktopManualSyncWithDiscovery();
 
   expect(runtime.coordinator).toHaveBeenCalledWith('manual');
+});
+
+it('checks a discovered desktop member even when its automatic route was not activated', async () => {
+  runtime.role = 'anchor';
+  runtime.memberEndpoints = [{
+    endpoint_url: 'http://windows:38641', group_id: 'group-1',
+    local_device_id: 'desktop-a', peer_device_id: 'desktop-b',
+    peer_device_name: 'Windows', peer_platform: 'win32', route_kind: 'member'
+  }];
+
+  await runDesktopManualSyncWithDiscovery();
+
+  expect(runtime.coordinator).toHaveBeenCalledWith('manual');
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([expect.objectContaining({
+    peer_device_id: 'desktop-b', route_kind: 'member'
+  })]);
+});
+
+it('does not use a discovered anchor as a member route', async () => {
+  runtime.role = 'anchor';
+  runtime.memberEndpoints = [{
+    endpoint_url: 'http://other-anchor:38641', group_id: 'group-1',
+    local_device_id: 'desktop-a', peer_device_id: 'desktop-b',
+    peer_device_name: 'Windows', peer_platform: 'win32', route_kind: 'anchor'
+  }];
+
+  await expect(runDesktopManualSyncWithDiscovery()).resolves.toBeNull();
+  expect(runtime.coordinator).not.toHaveBeenCalled();
 });

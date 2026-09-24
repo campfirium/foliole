@@ -15,6 +15,7 @@ import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
 import {
   exchangeAllDesktopSyncGroupMemberStates,
+  loadDesktopSyncGroupMemberEndpoints,
   startDesktopSyncGroupMemberStateSession
 } from './desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
@@ -105,8 +106,14 @@ async function runDesktopManualSync() {
   if (!group) return runDesktopSyncCoordinator('manual');
   await exchangeAllDesktopSyncGroupMemberStates();
   if (loadDesktopAnchorTopologyState().role === 'anchor') {
-    return loadDesktopSyncGroupRoutes(group.group_id).some((route) => route.route_kind === 'member')
-      ? runDesktopSyncCoordinator('manual') : null;
+    const memberRoutes = loadDesktopSyncGroupRoutes(group.group_id)
+      .filter((route) => route.route_kind === 'member');
+    for (const peer of loadDesktopSyncGroupMemberEndpoints(group.group_id)) {
+      if (peer.route_kind !== 'member' || !isDesktopSyncGroupPlatform(peer.peer_platform)) continue;
+      if (memberRoutes.some((route) => route.peer_device_id === peer.peer_device_id)) continue;
+      memberRoutes.push(saveDesktopSyncGroupRoute(peer));
+    }
+    return memberRoutes.length ? runDesktopSyncCoordinator('manual') : null;
   }
   const current = loadDesktopSyncGroupRoutes(group.group_id)[0];
   if (current) return runDesktopSyncCoordinator('manual', current);
