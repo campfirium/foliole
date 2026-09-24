@@ -12,6 +12,11 @@ export async function applySyncPackVersionedNodesWithDbPort(
   incomingAlias = 'inc'
 ) {
   const alias = quoteIdentifier(incomingAlias);
+  const skipped = await port.query<{ id: string }>(
+    `SELECT node.id FROM ${alias}.nodes node
+     JOIN main.node_sync_tombstones tomb ON tomb.node_id = node.id`
+  );
+  const skippedNodeIds = skipped.map((row) => row.id);
   const rows = await port.query<SyncPackNodeRow & { position: number | null }>(
     `SELECT node.*, node_order.position
      FROM ${alias}.nodes node
@@ -20,6 +25,7 @@ export async function applySyncPackVersionedNodesWithDbPort(
        ON state.object_type = 'node' AND state.object_id = node.id
      WHERE node.current_version_id IS NOT NULL
        AND node.id NOT IN ('special-inbox', 'special-virtual-root')
+       AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = node.id)
      ORDER BY state.state_seq ASC, node.id ASC`
   );
   const records: NativeSyncNodeRecord[] = [];
@@ -39,7 +45,7 @@ export async function applySyncPackVersionedNodesWithDbPort(
   }
   if (records.length === 0) {
     return { appliedNodeCount: 0, handledConflictCount: 0, newNodeIds: [],
-      processedNodeIds: SPECIAL_ROOT_NODE_IDS };
+      processedNodeIds: [...SPECIAL_ROOT_NODE_IDS, ...skippedNodeIds] };
   }
   const result = await applyConvergentSyncNodesWithDbPort(port, records);
   for (const record of records) {
@@ -49,7 +55,9 @@ export async function applySyncPackVersionedNodesWithDbPort(
       [hostName, record.object_id, record.version_id]
     );
   }
-  return { ...result, processedNodeIds: [...new Set([...result.processedNodeIds, ...SPECIAL_ROOT_NODE_IDS])] };
+  return { ...result, processedNodeIds: [...new Set([
+    ...result.processedNodeIds, ...SPECIAL_ROOT_NODE_IDS, ...skippedNodeIds
+  ])] };
 }
 
 async function buildCurrentSnapshot(

@@ -24,6 +24,13 @@ it('rejects the fixed illegal DAG oracle with its missing-parent error', async (
     'scripts/ios/fixtures/acceptance-contract-corpus/sync-pack-runtime/illegal-dag.syncpack'
   );
   await fs.writeFile(incomingPath, oracle.database);
+  const incoming = new Database(incomingPath);
+  incoming.exec(`CREATE TABLE node_sync_tombstones (
+    node_id TEXT PRIMARY KEY, version_id TEXT NOT NULL, parent_version_id TEXT,
+    host_name TEXT NOT NULL, content_hash TEXT NOT NULL, snapshot_json TEXT NOT NULL,
+    deleted_at TEXT NOT NULL, created_at TEXT NOT NULL
+  )`);
+  incoming.close();
   const main = new Database(':memory:');
   initializeDatabaseSchema(main);
   const port = createBetterSqliteDbPort(main, { name: 'sync-pack-illegal-dag-oracle-test' });

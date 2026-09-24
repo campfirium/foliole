@@ -41,7 +41,7 @@ describe('syncProtocolContract', () => {
       missing_capabilities: [
         'article-image-sources-v1', 'attachment-metadata-only-v1', 'author-host-snapshots-v1', 'canonical-attachment-storage-key-v1',
         'complete-member-data-plane', 'desktop-soft-anchor-v1', 'device-delivery-receipts-v1',
-      'device-sync-groups-v1', 'group-key-routing-v1', 'lan-sync-v1', 'opaque-sync-refs-v1',
+      'device-sync-groups-v1', 'group-key-routing-v1', 'lan-sync-v1', 'node-tombstone-pack-v1', 'opaque-sync-refs-v1',
       'readwise-library-source-mode-v1',
       'resource-availability-v1',
       'source-host-ownership-v1', 'sync-group-device-facts-v1', 'sync-group-member-state-v1',
@@ -96,6 +96,14 @@ it('rejects peers that cannot preserve article image sources', () => {
     .filter((capability) => capability !== 'article-image-sources-v1') });
   expect(evaluateSyncProtocolCompatibility(oldPeer)).toMatchObject({
     status: 'incompatible', reason: 'required_capability_missing', missing_capabilities: ['article-image-sources-v1']
+  });
+});
+
+it('rejects peers that cannot transfer permanent node deletions', () => {
+  const oldPeer = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
+    .filter((capability) => capability !== 'node-tombstone-pack-v1') });
+  expect(evaluateSyncProtocolCompatibility(oldPeer)).toMatchObject({
+    status: 'incompatible', reason: 'required_capability_missing', missing_capabilities: ['node-tombstone-pack-v1']
   });
 });
 

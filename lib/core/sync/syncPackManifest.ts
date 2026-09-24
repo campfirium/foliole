@@ -4,6 +4,7 @@ export type SyncPackTableName =
   | 'node_attachments'
   | 'node_order'
   | 'node_sync_versions'
+  | 'node_sync_tombstones'
   | 'node_sync_version_parents'
   | 'nodes'
   | 'review_log'
@@ -19,6 +20,7 @@ export const SYNC_PACK_TABLE_NAMES: SyncPackTableName[] = [
   'sync_objects',
   'nodes',
   'node_sync_versions',
+  'node_sync_tombstones',
   'node_sync_version_parents',
   'node_order',
   'node_attachments',

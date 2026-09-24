@@ -11,6 +11,7 @@
       "device-sync-groups-v1",
       "group-key-routing-v1",
       "lan-sync-v1",
+      "node-tombstone-pack-v1",
       "opaque-sync-refs-v1",
       "readwise-library-source-mode-v1",
       "resource-availability-v1",
@@ -75,7 +76,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 13,
+    "formatVersion": 14,
     "forbiddenDeviceIdentityKeys": [
       "canonical_library_path",
       "device_anchor",
@@ -105,6 +106,7 @@
       "sync_objects",
       "nodes",
       "node_sync_versions",
+      "node_sync_tombstones",
       "node_sync_version_parents",
       "node_order",
       "node_attachments",
@@ -112,8 +114,8 @@
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 86,
-    "minimumSchemaVersion": 86,
+    "maximumSchemaVersion": 87,
+    "minimumSchemaVersion": 87,
     "sqliteTableRequirements": {
       "pack_manifest": [
         "key",
@@ -180,6 +182,16 @@
         "content_hash",
         "body_text",
         "snapshot_json"
+      ],
+      "node_sync_tombstones": [
+        "node_id",
+        "version_id",
+        "parent_version_id",
+        "host_name",
+        "content_hash",
+        "snapshot_json",
+        "deleted_at",
+        "created_at"
       ],
       "node_sync_version_parents": [
         "version_id",

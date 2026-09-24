@@ -54,13 +54,17 @@ export async function fetchDesktopSyncGroupPackBody(args: {
 }
 
 export async function collectSyncPackAppliedEvent(port: DbPort, result: ApplyResult) {
-  if (!result.applied) return { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };
+  if (!result.applied) return {
+    appliedNodeIds: result.appliedTombstoneNodeIds,
+    appliedObjectIds: [],
+    appliedReviewOpIds: []
+  };
   const nodes = await port.query<{ id: string }>('SELECT id FROM inc.nodes');
   const objects = await port.query<{ object_id: string; object_type: string }>(
     'SELECT object_id, object_type FROM inc.sync_objects'
   );
   return {
-    appliedNodeIds: [...new Set(nodes.map((row) => row.id))],
+    appliedNodeIds: [...new Set([...nodes.map((row) => row.id), ...result.appliedTombstoneNodeIds])],
     appliedObjectIds: [...new Set(objects.map((row) => `${row.object_type}:${row.object_id}`))],
     appliedReviewOpIds: result.appliedReviewOpIds
   };

@@ -54,6 +54,16 @@ export const PACK_SCHEMA = [
     body_text TEXT,
     snapshot_json TEXT NOT NULL
   )`,
+  `CREATE TABLE node_sync_tombstones (
+    node_id TEXT PRIMARY KEY,
+    version_id TEXT NOT NULL,
+    parent_version_id TEXT,
+    host_name TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    snapshot_json TEXT NOT NULL,
+    deleted_at TEXT NOT NULL,
+    created_at TEXT NOT NULL
+  )`,
   `CREATE TABLE node_sync_version_parents (
     version_id TEXT NOT NULL,
     parent_version_id TEXT NOT NULL,

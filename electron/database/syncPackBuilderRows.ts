@@ -48,6 +48,7 @@ export function writePackManifest(
         node_attachments: rows.nodeAttachments,
         node_order: rows.nodeOrder,
         node_sync_versions: rows.nodeVersions,
+        node_sync_tombstones: rows.nodeTombstones,
         node_sync_version_parents: rows.nodeVersionParents,
         nodes: rows.nodes,
         review_log: rows.reviewLog,
@@ -102,6 +103,12 @@ function writeCorePackRows(db: import('better-sqlite3').Database, rows: LoadedDe
 }
 
 function writeNodePackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
+  copyRows({
+    db, table: 'node_sync_tombstones',
+    columns: ['node_id', 'version_id', 'parent_version_id', 'host_name', 'content_hash',
+      'snapshot_json', 'deleted_at', 'created_at'],
+    rows: rows.nodeTombstones
+  });
   copyRows({
     db,
     table: 'node_sync_versions',
