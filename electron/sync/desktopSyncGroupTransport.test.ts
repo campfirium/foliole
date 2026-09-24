@@ -7,6 +7,7 @@ const runtime = vi.hoisted(() => ({
   downloadResources: vi.fn(),
   exchangeMemberState: vi.fn(),
   getPeerCursor: vi.fn(),
+  reconcileBodies: vi.fn(),
   refreshAdvertisement: vi.fn(),
   reportCursor: vi.fn(),
   setPeerCursor: vi.fn()
@@ -19,6 +20,9 @@ vi.mock('../../lib/core/database/syncState.js', () => ({
 vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: () => ({ driver: { kind: 'test' } }),
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
+}));
+vi.mock('../database/syncBodyProjectionReconcile.js', () => ({
+  reconcileVersionedInlineBodies: runtime.reconcileBodies
 }));
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: vi.fn() }));
 vi.mock('./companionMdnsAdvertisement.js', () => ({
@@ -67,6 +71,7 @@ beforeEach(() => {
   runtime.reportCursor.mockResolvedValue(undefined);
   runtime.assertCompatible.mockResolvedValue(undefined);
   runtime.exchangeMemberState.mockResolvedValue({ localExited: false, peerBlocked: false });
+  runtime.reconcileBodies.mockReturnValue(0);
 });
 
 it('stops before content when member state marks the peer removed', async () => {
@@ -95,4 +100,20 @@ it('does not re-advertise after consuming a peer change', async () => {
   });
   expect(runtime.downloadResources).toHaveBeenCalledWith(peer, ['article']);
   expect(runtime.refreshAdvertisement).not.toHaveBeenCalled();
+});
+
+it('reconciles already-versioned bodies before committing an automatic receive cursor', async () => {
+  const sequence: string[] = [];
+  runtime.reconcileBodies.mockImplementation(() => { sequence.push('body'); return 439; });
+  runtime.setPeerCursor.mockImplementation(() => { sequence.push('cursor'); });
+
+  await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: true, cursor: 4 });
+  expect(sequence).toEqual(['body', 'cursor']);
+});
+
+it('does not commit a receive cursor when body reconciliation fails', async () => {
+  runtime.reconcileBodies.mockImplementation(() => { throw new Error('sync_body_projection_changed'); });
+
+  await expect(continueDesktopSyncGroupSync(peer)).rejects.toThrow('sync_body_projection_changed');
+  expect(runtime.setPeerCursor).not.toHaveBeenCalled();
 });
