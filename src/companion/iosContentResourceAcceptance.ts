@@ -6,10 +6,13 @@ import { syncCompanionAttachmentResourceRequestsFromDesktop } from '../shared/pl
 import { pullMissingContentBlobs } from '../shared/platform/companionDesktopSyncContentBlobs';
 import { loadCompanionExternalDocument } from '../shared/platform/companionExternalDocuments';
 import { searchCompanionFullText } from '../shared/platform/companionFullTextSearch';
-import { resolveReadableCompanionArticleByNodeId } from '../shared/platform/companionReadableArticle';
 import { loadCompanionPdfPageText } from '../shared/platform/companionSyncObjects';
 import { applyCompanionDesktopSyncPack } from '../shared/platform/companionSyncPackApply';
-import { loadCompanionWorkspaceSyncState, saveCompanionWorkspaceSyncEndpoint } from '../shared/platform/companionWorkspaceSync';
+import {
+  loadCompanionReadableArticle,
+  loadCompanionWorkspaceSyncState,
+  saveCompanionWorkspaceSyncEndpoint
+} from '../shared/platform/companionWorkspaceSync';
 
 import { ensureIosAcceptanceSyncGroup } from './iosAcceptanceSyncGroup';
 import { postResult } from './iosBridgeAcceptance';
@@ -45,10 +48,11 @@ async function applyStructure(endpoint: string, peer: { sourceHostName: string; 
 
 async function loadReadEvidence() {
   const workspace = await loadCompanionWorkspaceSyncState();
-  const topic = resolveReadableCompanionArticleByNodeId(workspace.workspace_snapshot, IDS.topic);
-  const corruptBody = resolveReadableCompanionArticleByNodeId(workspace.workspace_snapshot, 'ios-content-corrupt');
-  const missingBody = resolveReadableCompanionArticleByNodeId(workspace.workspace_snapshot, 'ios-content-missing');
-  const [pdfPages, external, topicSearch, pdfSearch, externalSearch, valid, corrupt, failed, missing] = await Promise.all([
+  const [topic, corruptBody, missingBody, pdfPages, external, topicSearch, pdfSearch, externalSearch,
+    valid, corrupt, failed, missing] = await Promise.all([
+    loadCompanionReadableArticle(workspace.workspace_snapshot, IDS.topic),
+    loadCompanionReadableArticle(workspace.workspace_snapshot, 'ios-content-corrupt'),
+    loadCompanionReadableArticle(workspace.workspace_snapshot, 'ios-content-missing'),
     loadCompanionPdfPageText(IDS.valid),
     loadCompanionExternalDocument(IDS.external),
     searchCompanionFullText(TOKENS.topic),

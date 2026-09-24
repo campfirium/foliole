@@ -3,8 +3,8 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   apply: vi.fn(), ensureGroup: vi.fn(), loadBootstrap: vi.fn(), loadExternal: vi.fn(), loadGroup: vi.fn(),
-  loadPdf: vi.fn(), loadWorkspace: vi.fn(), postResult: vi.fn(), pullAttachments: vi.fn(),
-  pullContent: vi.fn(), resolveArticle: vi.fn(), resolveResource: vi.fn(),
+  loadArticle: vi.fn(), loadPdf: vi.fn(), loadWorkspace: vi.fn(), postResult: vi.fn(), pullAttachments: vi.fn(),
+  pullContent: vi.fn(), resolveResource: vi.fn(),
   saveEndpoint: vi.fn(), search: vi.fn(), sign: vi.fn()
 }));
 
@@ -19,10 +19,10 @@ vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({ loadCompani
 vi.mock('../shared/platform/companionSyncObjects', () => ({ loadCompanionPdfPageText: mocks.loadPdf }));
 vi.mock('../shared/platform/companionSyncPackApply', () => ({ applyCompanionDesktopSyncPack: mocks.apply }));
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
+  loadCompanionReadableArticle: mocks.loadArticle,
   loadCompanionWorkspaceSyncState: mocks.loadWorkspace,
   saveCompanionWorkspaceSyncEndpoint: mocks.saveEndpoint
 }));
-vi.mock('../shared/platform/companionReadableArticle', () => ({ resolveReadableCompanionArticleByNodeId: mocks.resolveArticle }));
 vi.mock('./iosBridgeAcceptance', () => ({ postResult: mocks.postResult }));
 vi.mock('./iosAcceptanceSyncGroup', () => ({
   ensureIosAcceptanceSyncGroup: mocks.ensureGroup
@@ -41,7 +41,7 @@ beforeEach(() => {
   mocks.pullContent.mockResolvedValue({ syncedContentBlobHashes: ['topic', 'external'] });
   mocks.pullAttachments.mockResolvedValue({ syncedAttachmentIds: ['7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d'] });
   mocks.loadWorkspace.mockResolvedValue({ workspace_snapshot: { nodesById: {} } });
-  mocks.resolveArticle.mockImplementation((_snapshot: unknown, nodeId: string) => nodeId === 'ios-content-topic'
+  mocks.loadArticle.mockImplementation((_snapshot: unknown, nodeId: string) => nodeId === 'ios-content-topic'
     ? { bodyStatus: 'ready', content: 'topic-amber-token', nodeId }
     : { bodyStatus: 'failed', content: '', nodeId });
   mocks.loadPdf.mockResolvedValue([{ attachment_id: '7febd27ca8a54d7ceba45645ce394b49bc41d926ac176265d04996b7e9da8d2d', page: 1, text: 'pdf-cobalt-token' }]);
@@ -69,6 +69,7 @@ it('joins, applies, downloads resources, and reads all three domains on the firs
   });
   expect(mocks.pullContent).toHaveBeenCalledOnce();
   expect(mocks.pullAttachments).toHaveBeenCalledOnce();
+  expect(mocks.loadArticle).toHaveBeenCalledWith({ nodesById: {} }, 'ios-content-topic');
   expect(mocks.resolveResource).toHaveBeenCalledTimes(4);
   expect(mocks.resolveResource.mock.calls.map(([url]) => url)).toEqual(expect.arrayContaining([
     expect.stringMatching(/^asset:\/\/[a-f0-9]{64}\.pdf$/u),
@@ -77,6 +78,7 @@ it('joins, applies, downloads resources, and reads all three domains on the firs
   expect(mocks.postResult).toHaveBeenCalledWith(expect.objectContaining({
     evidence: expect.objectContaining({
       body_failures: { corrupt: 'failed', missing: 'failed' },
+      topic: { body_status: 'ready', content: 'topic-amber-token', node_id: 'ios-content-topic' },
       resources: expect.objectContaining({ valid: expect.objectContaining({ status: 'ready' }) })
     }),
     phase: 'resources-synced', scenario: 'content-resource-read', status: 'passed'
