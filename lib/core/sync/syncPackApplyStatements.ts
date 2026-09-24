@@ -3,6 +3,7 @@ import {
   SYNC_PACK_NODE_COLUMNS,
   type SyncPackNodeColumn
 } from './syncPackNodeFields.js';
+import { readwiseOwnerEpochFilter } from './syncPackReadwiseOwnerFilter.js';
 
 export interface SyncPackApplyableRowsOptions {
   excludedNodeIds?: readonly string[] | undefined;
@@ -56,17 +57,21 @@ function acceptedDeliveryFilter(options: SyncPackApplyableRowsOptions) {
 
 export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOptions = {}) {
   const alias = incomingAlias(options);
+  const ownerEpochFilter = options.objectType && options.objectType !== 'setting'
+    ? '0' : readwiseOwnerEpochFilter(alias);
   return `(SELECT incoming.object_type, incoming.object_id, incoming.state_seq, incoming.content_hash, ` +
     `incoming.last_modified_by_host_name, incoming.updated_at, incoming.deleted_at ` +
     `FROM ${alias}.sync_object_state incoming ` +
     `LEFT JOIN main.sync_object_state current ON current.object_type = incoming.object_type ` +
     `AND current.object_id = incoming.object_id WHERE ` +
-    `(current.object_id IS NULL OR incoming.object_type IN ('node', 'node_reading', 'node_review', 'view_state') OR (` +
+    `(current.object_id IS NULL OR (${ownerEpochFilter}) OR (` +
+    `incoming.object_type <> 'setting' OR incoming.object_id <> 'user_space:windows:desktop:*:readwise_active_host'` +
+    `) AND (incoming.object_type IN ('node', 'node_reading', 'node_review', 'view_state') OR (` +
     `(current.updated_at < incoming.updated_at OR (current.updated_at = incoming.updated_at ` +
     `AND (current.content_hash < incoming.content_hash OR (current.content_hash = incoming.content_hash ` +
     `AND incoming.deleted_at IS NOT NULL)))) ` +
     `AND (current.sync_dirty <> 1 OR ` +
-    `${acceptedDeliveryFilter(options)})))` +
+    `${acceptedDeliveryFilter(options)}))))` +
     ` AND (incoming.object_type <> 'node' OR incoming.deleted_at IS NOT NULL OR EXISTS (` +
     `SELECT 1 FROM ${alias}.nodes node_payload WHERE node_payload.id = incoming.object_id))` +
     typeFilter(options.objectType) +
