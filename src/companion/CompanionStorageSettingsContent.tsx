@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { SettingsAttachmentStorageSection } from '../features/settings/components/sections/SettingsAttachmentStorageSection';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { clearCompanionAppData } from '../shared/platform/companionAppData';
+import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
 import { AppSpinner } from '../shared/ui';
 import {
   AppDialog,
@@ -67,6 +68,7 @@ export function CompanionStorageSettingsContent() {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const canClearAppData = supportsCompanionAppDataClear();
 
   async function handleClearAppData() {
     setIsClearing(true);
@@ -84,7 +86,7 @@ export function CompanionStorageSettingsContent() {
   return (
     <section className="px-5 py-5">
       <SettingsAttachmentStorageSection />
-      <div className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
+      {canClearAppData ? <div className="rounded-2xl border border-companion-divider bg-companion-content px-5 py-5">
         <h3 className="text-base font-semibold text-foreground">{t('companion.settings.storage.appData')}</h3>
         <p className="mt-2 text-sm leading-6 text-companion-text-secondary">
           {t('companion.settings.storage.description')}
@@ -101,13 +103,13 @@ export function CompanionStorageSettingsContent() {
           <span>{t(isClearing ? 'companion.settings.storage.clearing' : 'companion.settings.storage.clear')}</span>
         </button>
         {error ? <p className="mt-3 text-sm leading-6 text-error">{error}</p> : null}
-      </div>
-      <ClearAppDataDialog
+      </div> : null}
+      {canClearAppData ? <ClearAppDataDialog
         isClearing={isClearing}
         isOpen={isConfirmOpen}
         onClear={() => void handleClearAppData()}
         onOpenChange={setIsConfirmOpen}
-      />
+      /> : null}
     </section>
   );
 }

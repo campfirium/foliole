@@ -10,6 +10,39 @@ final class FoliolePhysicalArticleImageUITests: XCTestCase {
     func testFailedSourcePreservesArticle() throws { try verifyImageCase("failed", available: false) }
     func testLocalImageWithoutSourceRemainsMissing() throws { try verifyImageCase("local", available: false) }
 
+    func testAttachmentSettingsPersistAcrossRestart() throws {
+        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.s203acceptance")
+        app.launchArguments = ["--foliole-physical-acceptance", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        openAttachmentSettings(in: app)
+        let threshold = app.textFields["Cleanup threshold"]
+        XCTAssertTrue(threshold.waitForExistence(timeout: 30))
+        threshold.tap()
+        let oldValue = try XCTUnwrap(threshold.value as? String)
+        threshold.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: oldValue.count) + "3")
+        app.staticTexts["Local attachments"].tap()
+        XCTAssertEqual(threshold.value as? String, "3")
+        let automatic = app.switches["Automatic cleanup"]
+        XCTAssertTrue(automatic.waitForExistence(timeout: 15))
+        if automatic.value as? String != "1" { automatic.tap() }
+        XCTAssertEqual(automatic.value as? String, "1")
+        screenshot("S203-attachment-settings-before-restart")
+        app.terminate()
+        app.launch()
+        openAttachmentSettings(in: app)
+        XCTAssertEqual(app.textFields["Cleanup threshold"].value as? String, "3")
+        XCTAssertEqual(app.switches["Automatic cleanup"].value as? String, "1")
+        screenshot("S203-attachment-settings-after-restart")
+    }
+
+    private func openAttachmentSettings(in app: XCUIApplication) {
+        tap("Settings", in: app)
+        let storage = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Storage ")).firstMatch
+        XCTAssertTrue(storage.waitForExistence(timeout: 30), "Attachment storage settings are unavailable.")
+        storage.tap()
+        XCTAssertTrue(app.staticTexts["Local attachments"].waitForExistence(timeout: 30))
+    }
+
     private func verifyImageCase(_ scenario: String, available: Bool) throws {
         let environment = ProcessInfo.processInfo.environment
         XCTAssertEqual(environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"], ".s203acceptance",

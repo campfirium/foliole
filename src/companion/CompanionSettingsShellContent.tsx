@@ -1,5 +1,6 @@
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
+import { getCompanionRuntimeCapability } from '../shared/platform/companionRuntimeCapabilities';
 
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
 import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
@@ -67,7 +68,8 @@ function CompanionAppearanceSettingsDetail(props: Pick<CompanionSettingsContentP
 
 function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
   const t = useTranslation();
-  const showStorage = supportsCompanionAppDataClear();
+  const showStorage = supportsCompanionAppDataClear()
+    || getCompanionRuntimeCapability().kind === 'ios-native';
   if (props.settingsPage === 'list' || (props.settingsPage === 'storage' && !showStorage)) {
     return (
       <CompanionSettingsList

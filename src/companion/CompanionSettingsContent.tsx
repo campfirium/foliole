@@ -2,6 +2,7 @@ import { Bug, Database, Palette, RefreshCw, type LucideIcon } from 'lucide-react
 import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDataRuntimeRepository';
 
 import { CompanionListRow, CompanionListSection } from './CompanionListSurface';
 import type { CompanionSettingsPage } from './useCompanionSyncSettingsPage';
@@ -42,7 +43,8 @@ function DataAppearanceSettingsSection(props: {
       {props.showStorage ? (
         <SettingsListItem
           Icon={Database}
-          detail={t('companion.settings.storage.detail')}
+          detail={t(supportsCompanionAppDataClear()
+            ? 'companion.settings.storage.detail' : 'settings.attachments.title')}
           onClick={props.onOpenStorage}
           testId="companion-settings-storage"
           title={t('companion.settings.storage.title')}

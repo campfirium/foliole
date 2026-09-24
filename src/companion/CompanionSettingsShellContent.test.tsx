@@ -64,13 +64,12 @@ describe('CompanionSettingsShellContent', () => {
     expect(screen.getByText('Diagnostics')).toBeInTheDocument();
   });
 
-  it('hides storage on iOS until native app-data clear is complete', () => {
+  it('keeps app-data clearing unavailable on a runtime without its native capability', () => {
     appDataRuntime.supportsClear.mockReturnValue(false);
 
     render(<SettingsHarness />);
 
     expect(screen.queryByText('3 sections')).not.toBeInTheDocument();
-    expect(screen.queryByText('Storage')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
   });
 });

@@ -13,7 +13,7 @@ import { supportsCompanionAppDataClear } from '../shared/platform/companionAppDa
 
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 
-it('keeps incomplete app-data clearing out of the iOS settings surface', () => {
+it('shows iOS attachment storage without exposing incomplete app-data clearing', () => {
   expect(supportsCompanionAppDataClear()).toBe(false);
 
   const props = {
@@ -26,8 +26,12 @@ it('keeps incomplete app-data clearing out of the iOS settings surface', () => {
   const view = render(renderCompanionSettingsContent(props));
 
   expect(screen.queryByText('3 sections')).not.toBeInTheDocument();
-  expect(screen.queryByText('Storage')).not.toBeInTheDocument();
+  expect(screen.getByText('Storage')).toBeInTheDocument();
+  expect(screen.getByText('Local attachments')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Clear local app data/ })).not.toBeInTheDocument();
+  view.rerender(renderCompanionSettingsContent({ ...props, settingsPage: 'storage' }));
+  expect(screen.queryByText('App data')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Clear App Data' })).not.toBeInTheDocument();
   view.rerender(renderCompanionSettingsContent({ ...props, settingsPage: 'appearance' }));
   expect(screen.getByText('Custom styles are not available on this device')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Add snippet' })).not.toBeInTheDocument();
