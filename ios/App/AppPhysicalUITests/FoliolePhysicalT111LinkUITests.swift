@@ -49,6 +49,8 @@ final class FoliolePhysicalT111LinkUITests: XCTestCase {
         app.launchArguments = ["--foliole-physical-acceptance",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         let url = URL(string: "foliole://node/v1?group=\(group)&id=\(folder)")!
+        app.terminate()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 15))
         app.open(url)
 
         XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 45),
