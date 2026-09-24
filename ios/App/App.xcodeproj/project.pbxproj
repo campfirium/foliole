@@ -74,6 +74,7 @@
 		50F220111FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F220121FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift */; };
 		50F100211FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100221FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift */; };
 		50F203011FED79650016851F /* FoliolePhysicalArticleImageUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F203021FED79650016851F /* FoliolePhysicalArticleImageUITests.swift */; };
+		50F204011FED79650016851F /* FoliolePhysicalT111LinkUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F204021FED79650016851F /* FoliolePhysicalT111LinkUITests.swift */; };
 		50F110011FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */; };
 		50F203111FED79650016851F /* FolioleArticleImageProjectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F203121FED79650016851F /* FolioleArticleImageProjectionTests.swift */; };
 		50F110111FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F110121FED79650016851F /* FolioleAcceptanceGroupDiscoveryTests.swift */; };
@@ -193,6 +194,7 @@
 		50F220121FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalOfflineJourneyUITests.swift; sourceTree = "<group>"; };
 		50F100221FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalDevWorkflowUITests.swift; sourceTree = "<group>"; };
 		50F203021FED79650016851F /* FoliolePhysicalArticleImageUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalArticleImageUITests.swift; sourceTree = "<group>"; };
+		50F204021FED79650016851F /* FoliolePhysicalT111LinkUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalT111LinkUITests.swift; sourceTree = "<group>"; };
 		50F100031FED79650016851F /* AppPhysicalUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AppPhysicalUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		50F110021FED79650016851F /* FolioleAcceptanceSyncEventProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAcceptanceSyncEventProjectionTests.swift; sourceTree = "<group>"; };
 		50F203121FED79650016851F /* FolioleArticleImageProjectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleArticleImageProjectionTests.swift; sourceTree = "<group>"; };
@@ -354,6 +356,7 @@
 			children = (
 				50F100221FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift */,
 				50F203021FED79650016851F /* FoliolePhysicalArticleImageUITests.swift */,
+				50F204021FED79650016851F /* FoliolePhysicalT111LinkUITests.swift */,
 				50F100421FED79650016851F /* FoliolePhysicalPermissionUITests.swift */,
 				50F220121FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift */,
 				50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */,
@@ -624,6 +627,7 @@
 			files = (
 				50F100211FED79650016851F /* FoliolePhysicalDevWorkflowUITests.swift in Sources */,
 				50F203011FED79650016851F /* FoliolePhysicalArticleImageUITests.swift in Sources */,
+				50F204011FED79650016851F /* FoliolePhysicalT111LinkUITests.swift in Sources */,
 				50F100411FED79650016851F /* FoliolePhysicalPermissionUITests.swift in Sources */,
 				50F220111FED79650016851F /* FoliolePhysicalOfflineJourneyUITests.swift in Sources */,
 				50F100311FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift in Sources */,

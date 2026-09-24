@@ -50,3 +50,63 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
 }
+
+final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
+    var window: UIWindow?
+    private var coldURLObserver: NSObjectProtocol?
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession,
+               options connectionOptions: UIScene.ConnectionOptions) {
+        guard !connectionOptions.urlContexts.isEmpty || !connectionOptions.userActivities.isEmpty else {
+            return
+        }
+        coldURLObserver = NotificationCenter.default.addObserver(
+            forName: .capacitorViewDidAppear, object: nil, queue: .main
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.removeColdURLObserver()
+            self.scene(scene, openURLContexts: connectionOptions.urlContexts)
+            for activity in connectionOptions.userActivities {
+                self.scene(scene, continue: activity)
+            }
+        }
+    }
+
+    func scene(_ scene: UIScene, openURLContexts contexts: Set<UIOpenURLContext>) {
+        for context in contexts {
+            _ = ApplicationDelegateProxy.shared.application(
+                UIApplication.shared, open: context.url,
+                options: Self.applicationOptions(from: context.options)
+            )
+        }
+    }
+
+    func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
+        _ = ApplicationDelegateProxy.shared.application(
+            UIApplication.shared, continue: userActivity, restorationHandler: { _ in }
+        )
+    }
+
+    func sceneDidDisconnect(_ scene: UIScene) {
+        removeColdURLObserver()
+    }
+
+    private func removeColdURLObserver() {
+        guard let coldURLObserver else { return }
+        NotificationCenter.default.removeObserver(coldURLObserver)
+        self.coldURLObserver = nil
+    }
+
+    private static func applicationOptions(
+        from options: UIScene.OpenURLOptions
+    ) -> [UIApplication.OpenURLOptionsKey: Any] {
+        var result: [UIApplication.OpenURLOptionsKey: Any] = [.openInPlace: options.openInPlace]
+        if let source = options.sourceApplication {
+            result[.sourceApplication] = source
+        }
+        if let annotation = options.annotation {
+            result[.annotation] = annotation
+        }
+        return result
+    }
+}
