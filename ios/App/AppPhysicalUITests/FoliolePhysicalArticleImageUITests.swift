@@ -15,6 +15,7 @@ final class FoliolePhysicalArticleImageUITests: XCTestCase {
         app.launchArguments = ["--foliole-physical-acceptance", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         openAttachmentSettings(in: app)
+        allowWirelessDataForAcceptanceApp()
         let threshold = app.textFields["Cleanup threshold"]
         XCTAssertTrue(threshold.waitForExistence(timeout: 30))
         threshold.tap()
@@ -41,6 +42,18 @@ final class FoliolePhysicalArticleImageUITests: XCTestCase {
         XCTAssertTrue(storage.waitForExistence(timeout: 30), "Attachment storage settings are unavailable.")
         storage.tap()
         XCTAssertTrue(app.staticTexts["Local attachments"].waitForExistence(timeout: 30))
+    }
+
+    private func allowWirelessDataForAcceptanceApp() {
+        let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        let alert = springboard.alerts.firstMatch
+        guard alert.waitForExistence(timeout: 5) else { return }
+        let wirelessOnly = alert.buttons.matching(NSPredicate(
+            format: "label IN %@", ["WLAN Only", "Wi-Fi Only", "仅限无线局域网"]
+        )).firstMatch
+        XCTAssertTrue(wirelessOnly.exists, "The isolated app wireless-data choice is unavailable.")
+        wirelessOnly.tap()
+        XCTAssertFalse(alert.exists)
     }
 
     private func verifyImageCase(_ scenario: String, available: Bool) throws {
