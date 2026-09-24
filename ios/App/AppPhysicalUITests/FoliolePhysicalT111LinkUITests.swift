@@ -67,6 +67,42 @@ final class FoliolePhysicalT111LinkUITests: XCTestCase {
         attachScreenshot(named: "T111-Fri-exact-folder")
     }
 
+    @available(iOS 16.4, *)
+    func testDeletedTopicLinkIsRejected() throws {
+        guard let group = ProcessInfo.processInfo.environment["FOLIOLE_T111_GROUP_ID"] else {
+            throw XCTSkip("T111 requires the isolated library's group identity.")
+        }
+        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.t219capacity")
+        app.launchArguments = ["--foliole-physical-acceptance",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        app.launch()
+        let exit = app.buttons["Exit"]
+        if exit.waitForExistence(timeout: 3) { exit.tap() }
+        let directory = app.buttons["Directory"].firstMatch
+        if directory.waitForExistence(timeout: 5) {
+            directory.tap()
+        } else {
+            let browse = app.buttons["Browse"]
+            XCTAssertTrue(browse.waitForExistence(timeout: 30))
+            browse.tap()
+        }
+        let trash = app.buttons["Open folder Trash"]
+        XCTAssertTrue(trash.waitForExistence(timeout: 30))
+        trash.tap()
+        let deletedTopic = app.buttons["Open topic Topic 49"]
+        guard deletedTopic.waitForExistence(timeout: 30) else {
+            throw XCTSkip("The isolated device does not show Topic 49 in Trash.")
+        }
+        attachScreenshot(named: "T111-Fri-deleted-topic-in-trash")
+
+        let deleted = URL(string: "foliole://node/v1?group=\(group)&id=node-49")!
+        app.open(deleted)
+        XCTAssertTrue(app.staticTexts["This link cannot be opened in this library."].waitForExistence(timeout: 45),
+                      "A real deleted topic link did not show a rejection.")
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+        attachScreenshot(named: "T111-Fri-deleted-topic-rejected")
+    }
+
     private func attachScreenshot(named name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
