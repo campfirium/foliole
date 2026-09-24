@@ -36,6 +36,28 @@ final class FoliolePhysicalT111LinkUITests: XCTestCase {
         }
     }
 
+    @available(iOS 16.4, *)
+    func testFolderLinkShowsExactDestination() throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let group = environment["FOLIOLE_T111_GROUP_ID"],
+              let folder = environment["FOLIOLE_T111_FOLDER_ID"],
+              let title = environment["FOLIOLE_T111_FOLDER_TITLE"] else {
+            throw XCTSkip("T111 requires an isolated library's folder identity and title.")
+        }
+
+        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.t219capacity")
+        app.launchArguments = ["--foliole-physical-acceptance",
+                               "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
+        let url = URL(string: "foliole://node/v1?group=\(group)&id=\(folder)")!
+        app.open(url)
+
+        XCTAssertTrue(app.staticTexts[title].waitForExistence(timeout: 45),
+                      "The system URL did not identify the requested folder.")
+        XCTAssertTrue(app.buttons["Open topic working-set"].waitForExistence(timeout: 30),
+                      "The requested folder did not show its known topic.")
+        attachScreenshot(named: "T111-Fri-exact-folder")
+    }
+
     private func attachScreenshot(named name: String) {
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name

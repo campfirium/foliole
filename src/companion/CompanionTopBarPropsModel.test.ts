@@ -74,4 +74,16 @@ describe('CompanionTopBarPropsModel', () => {
 
     expect(topBarProps).toMatchObject({ density: 'compact' });
   });
+
+  it('shows the selected folder name on the browse surface', () => {
+    const surface = { activeAction: 'recent', browsedFolder: { title: 'Inbox' } } as never;
+    const args = [
+      (key: string, params?: never) => translate('en', key as never, params), surface,
+      'list', false, false, { kind: 'root' }, 'dateLastOpened', 'desc',
+      vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn(), undefined,
+      false, undefined, vi.fn(), vi.fn(), vi.fn(), vi.fn(), vi.fn()
+    ] as Parameters<typeof resolveCompanionTopBarProps>;
+
+    expect(resolveCompanionTopBarProps(...args)).toMatchObject({ title: 'Inbox' });
+  });
 });

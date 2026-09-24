@@ -45,6 +45,7 @@ export function resolveCompanionTopBarProps(
     return resolveBrowseTopBar({
       browseSortDirection,
       browseSortKey,
+      folderTitle: surface.browsedFolder?.title,
       directorySelection,
       isBrowseDirectoryOpen,
       onBackDirectorySelection,
@@ -84,6 +85,7 @@ function resolveSettingsTopBar(
 function resolveBrowseTopBar(args: {
   browseSortDirection: FolderListSortDirection;
   browseSortKey: FolderListSortKey;
+  folderTitle: string | undefined;
   directorySelection: CompanionDirectorySelection;
   isBrowseDirectoryOpen: boolean;
   onBackDirectorySelection: () => void;
@@ -116,7 +118,7 @@ function resolveBrowseTopBar(args: {
       : { backLabel: args.t('companion.back'), onBack: args.onBackDirectorySelection, rightSlot, title: args.t('companion.directory.title') };
   }
   return {
-    title: args.t('companion.browse.title'),
+    title: args.folderTitle ?? args.t('companion.browse.title'),
     leftAction: { icon: FolderTree, label: args.t('companion.browse.directory'), onClick: args.onOpenBrowseDirectory },
     rightSlot
   };
