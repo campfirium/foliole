@@ -18,7 +18,7 @@ final class FoliolePhysicalArticleImageUITests: XCTestCase {
         allowWirelessDataForAcceptanceApp()
         let threshold = app.textFields["Cleanup threshold"]
         XCTAssertTrue(threshold.waitForExistence(timeout: 30))
-        threshold.tap()
+        threshold.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
         let oldValue = try XCTUnwrap(threshold.value as? String)
         threshold.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: oldValue.count) + "3")
         app.staticTexts["Local attachments"].tap()
