@@ -181,7 +181,7 @@ function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
     `SELECT node_order.node_id, node_order.position
      FROM node_order
      JOIN nodes ON nodes.id = node_order.node_id
-     ORDER BY node_order.position ASC`
+     ORDER BY node_order.position ASC, node_order.node_id ASC`
   );
 }
 

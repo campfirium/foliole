@@ -21,7 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { moveNodes, replaceNodeOrder, upsertNodeSnapshot } from './nodeMutations.js';
+import { moveNodes, replaceNodeOrder, upsertNodeSnapshot, upsertNodeSnapshotWithOrder } from './nodeMutations.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 import { readPackRowsFromZip } from './syncPackZipReaderTestSupport.js';
@@ -147,4 +147,43 @@ it('versions the shifted sibling when a different node moves', () => {
   expect(openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
     'SELECT sync_dirty FROM nodes WHERE id = ?', ['node-2']
   )?.sync_dirty).toBe(1);
+});
+
+it('versions existing nodes shifted by creating a new node', () => {
+  upsertTestNode('node-1', 0);
+  upsertTestNode('node-2', 1);
+  flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z');
+
+  upsertNodeSnapshotWithOrder({
+    nodeId: 'node-3', parentNodeId: null, kind: 'folder', title: 'node-3',
+    isTitleManual: true, content: '', reveal: null, anchorLink: null,
+    imageRegions: null, position: 0,
+    createdAt: '2026-04-21T10:02:00.000Z', updatedAt: '2026-04-21T10:02:00.000Z'
+  }, ['node-3', 'node-1', 'node-2']);
+
+  const driver = openDatabaseConnection().driver;
+  expect(driver.queryAll<{ id: string }>(
+    `SELECT id FROM nodes WHERE sync_dirty = 1 AND id IN ('node-1', 'node-2') ORDER BY id`
+  ).map((row) => row.id)).toEqual(['node-1', 'node-2']);
+});
+
+it('includes an existing unversioned position change in the next automatic pack', async () => {
+  upsertTestNode('node-1', 0);
+  flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z');
+  const driver = openDatabaseConnection().driver;
+  const previousSeq = driver.queryOne<{ value: number }>(
+    'SELECT MAX(state_seq) AS value FROM sync_object_state'
+  )!.value;
+  driver.execute('UPDATE node_order SET position = 7 WHERE node_id = ?', ['node-1']);
+
+  const packPath = path.join(tempRoot, 'stale-order.syncpack');
+  const pack = await buildDesktopSyncPack({
+    createdAt: '2026-04-21T10:02:00.000Z', fromPeerId: 'mac', fromStateSeq: previousSeq,
+    outputPath: packPath, packId: 'stale-order-pack', toPeerId: 'windows'
+  });
+  const rows = readPackRowsFromZip(packPath, tempRoot);
+  expect(pack.toStateSeq).toBeGreaterThan(previousSeq);
+  expect((rows.nodeVersions as Array<{ object_id: string; snapshot_json: string }>).some(
+    (row) => row.object_id === 'node-1' && JSON.parse(row.snapshot_json).position === 7
+  )).toBe(true);
 });

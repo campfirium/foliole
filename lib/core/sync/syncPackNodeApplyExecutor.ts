@@ -1,6 +1,7 @@
 import { CORE_INDEX_SCHEMA_STATEMENTS } from '../database/coreIndexSchemaStatements.js';
 
 import type { DbPort } from './dbPort.js';
+import { restoreMissingIncomingNodeOrder, restoreMissingNodeOrderFromCurrentVersions } from './syncNodeOrderRecovery.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import {
   buildSyncPackNodeAttachmentDeleteSql,
@@ -168,6 +169,8 @@ async function applySyncPackSurfaceInTransaction(
   };
   await applySyncPackNodeRowsWithDbPort(port, remainingNodeOptions);
   await applySyncPackNodeOrderRowsWithDbPort(port, remainingNodeOptions);
+  await restoreMissingNodeOrderFromCurrentVersions(port);
+  await restoreMissingIncomingNodeOrder(port, options.incomingAlias);
   await pruneLearningRowsWithoutVisibleNodes(port);
   await applySyncPackExternalDocumentsWithDbPort(port, options);
   await applySyncPackSettingObjectsWithDbPort(port, options);
@@ -205,6 +208,7 @@ async function applyReplayPackTombstones(
   toStateSeq: number
 ) {
   const appliedTombstoneNodeIds = await applySyncPackNodeTombstonesWithDbPort(port, options.incomingAlias);
+  await restoreMissingNodeOrderFromCurrentVersions(port);
   await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
   return {
     appliedBlobCount: 0,
