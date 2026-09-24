@@ -27,7 +27,8 @@ for (const recovery of ['notice', 'trash'] as const) {
     await insertEditorText(desktopWindow, ' 5-6');
     await desktopWindow.keyboard.press(undoShortcut());
     await expect.poll(() => collectNode(desktopWindow, CONTEXT_A_ID)).toMatchObject({ content: `${CONTEXT_A_CONTENT} 1-2` });
-    await expect.poll(() => collectNode(desktopWindow, CONTEXT_B_ID)).toMatchObject({ content: `${CONTEXT_B_CONTENT} 3-4` });
+    await expect.poll(async () => (await loadNodeDocument(desktopWindow, CONTEXT_B_ID))?.content)
+      .toBe(`${CONTEXT_B_CONTENT} 3-4`);
     await expect.poll(() => collectNode(desktopWindow, WORKSPACE_TARGET_ID)).toMatchObject({ trashed: true });
     await clickNativeHistoryCommand(desktopApp, desktopWindow, 'app.redo');
     await expect.poll(() => collectNode(desktopWindow, CONTEXT_A_ID)).toMatchObject({ content: `${CONTEXT_A_CONTENT} 1-2 5-6` });
@@ -42,7 +43,8 @@ for (const recovery of ['notice', 'trash'] as const) {
     await openNode(desktopWindow, CONTEXT_A_ID);
     await focusEditor(desktopWindow);
     await expect.poll(() => collectNode(desktopWindow, CONTEXT_A_ID)).toMatchObject({ content: `${CONTEXT_A_CONTENT} 1-2 5-6` });
-    await expect.poll(() => collectNode(desktopWindow, CONTEXT_B_ID)).toMatchObject({ content: `${CONTEXT_B_CONTENT} 3-4` });
+    await expect.poll(async () => (await loadNodeDocument(desktopWindow, CONTEXT_B_ID))?.content)
+      .toBe(`${CONTEXT_B_CONTENT} 3-4`);
     await expect.poll(async () => (await loadNodeDocument(desktopWindow, CONTEXT_A_ID))?.content)
       .toBe(`${CONTEXT_A_CONTENT} 1-2 5-6`);
     await expect.poll(async () => (await loadNodeDocument(desktopWindow, CONTEXT_B_ID))?.content)
@@ -50,6 +52,7 @@ for (const recovery of ['notice', 'trash'] as const) {
     await desktopWindow.reload();
     await expectWorkspaceShell(desktopWindow);
     await desktopWindow.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated?.());
+    await openNode(desktopWindow, CONTEXT_A_ID);
     await expect.poll(() => collectNode(desktopWindow, WORKSPACE_TARGET_ID)).toMatchObject({ trashed: false });
     await expect.poll(() => collectNode(desktopWindow, CONTEXT_A_ID)).toMatchObject({ content: `${CONTEXT_A_CONTENT} 1-2 5-6` });
     await openNode(desktopWindow, CONTEXT_B_ID);

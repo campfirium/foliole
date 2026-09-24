@@ -33,6 +33,7 @@ import {
   STRUCTURE_TARGET_ID
 } from './harness/contextualWorkspaceHistory';
 import { expect, test } from './harness/fixtures';
+import { loadNodeDocument } from './harness/localDataFileAcceptance';
 import { expectWorkspaceShell } from './harness/settings';
 
 const EVIDENCE_ROOT = path.resolve('.tmp/artifacts/desktop-acceptance');
@@ -82,16 +83,23 @@ async function exerciseImmediateMixedHistory(page: Parameters<typeof focusEditor
 
 async function exerciseTopicPartition(page: Parameters<typeof focusEditor>[0], immediateText: string) {
   await insertEditorText(page, ' A-latest');
-  await openNode(page, CONTEXT_B_ID);
+  await page.locator(`[role="treeitem"][data-node-id="${CONTEXT_B_ID}"]`).click();
+  await expect.poll(() => collectActiveEditorState(page, CONTEXT_B_ID)).toMatchObject({
+    editorContent: CONTEXT_B_CONTENT, nodeContent: CONTEXT_B_CONTENT
+  });
   await insertEditorText(page, ' B-latest');
-  await openNode(page, CONTEXT_A_ID);
+  await page.locator(`[role="treeitem"][data-node-id="${CONTEXT_A_ID}"]`).click();
+  await expect.poll(() => collectActiveEditorState(page, CONTEXT_A_ID)).toMatchObject({
+    editorContent: `${CONTEXT_A_CONTENT}${immediateText} A-latest`
+  });
   await focusEditor(page);
   await pressUndo(page);
   await expect.poll(() => collectActiveEditorState(page, CONTEXT_A_ID)).toMatchObject({
     editorContent: `${CONTEXT_A_CONTENT}${immediateText}`,
     nodeContent: `${CONTEXT_A_CONTENT}${immediateText}`
   });
-  expect((await collectNode(page, CONTEXT_B_ID))?.content).toBe(`${CONTEXT_B_CONTENT} B-latest`);
+  await expect.poll(async () => (await loadNodeDocument(page, CONTEXT_B_ID))?.content)
+    .toBe(`${CONTEXT_B_CONTENT} B-latest`);
   await pressRedo(page);
   await expect.poll(() => collectNode(page, CONTEXT_A_ID)).toMatchObject({
     content: `${CONTEXT_A_CONTENT}${immediateText} A-latest`
