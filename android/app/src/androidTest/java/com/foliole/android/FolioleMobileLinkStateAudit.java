@@ -146,7 +146,7 @@ final class FolioleMobileLinkStateAudit {
 
     private static Map<String, Map<String, JSONObject>> read(String path) throws Exception {
         Map<String, Map<String, JSONObject>> result = new TreeMap<>();
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY)) {
+        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE)) {
             for (String table : new String[] { "companion_meta", "workspace_meta", "node_open_state", "node_view_state", "sync_object_state" }) {
                 Map<String, JSONObject> rows = new TreeMap<>();
                 try (Cursor cursor = db.rawQuery("SELECT * FROM " + table, null)) {

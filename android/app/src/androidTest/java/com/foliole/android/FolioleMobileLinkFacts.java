@@ -22,7 +22,7 @@ final class FolioleMobileLinkFacts {
 
     static FolioleMobileLinkFacts read(Context context) {
         String path = context.getDatabasePath("foliole-companionSQLite.db").getAbsolutePath();
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY)) {
+        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE)) {
             String group;
             try (Cursor cursor = db.rawQuery(
                 "SELECT group_id FROM sync_group_local_state WHERE singleton_id=1 AND state='active'", null)) {
@@ -45,7 +45,7 @@ final class FolioleMobileLinkFacts {
     static String protectedFingerprint(Context context) throws Exception {
         String path = context.getDatabasePath("foliole-companionSQLite.db").getAbsolutePath();
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY)) {
+        try (SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READWRITE)) {
             for (String table : new String[] { "nodes", "node_order", "attachments", "node_attachments",
                 "content_blobs", "content_blob_data", "sync_groups", "sync_group_devices", "sync_group_local_state",
                 "node_reading", "node_review", "review_log", "setting_records", "external_documents",
