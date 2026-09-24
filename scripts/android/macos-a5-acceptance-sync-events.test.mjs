@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import path from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 import { assertRegisteredMacosA5Action } from './macos-a5-action-registry.mjs';
@@ -29,7 +31,7 @@ it('reads only the acceptance package and restores the main foreground', async (
   expect(input.assertFixed).toHaveBeenCalledOnce();
   expect(input.checked).toHaveBeenCalledWith('/repo/android/gradlew',
     ['--no-daemon', 'assembleDebugAndroidTest'], expect.objectContaining({
-      cwd: '/repo/android', env: expect.objectContaining({
+      cwd: path.join(input.paths.buildRoot, 'android'), env: expect.objectContaining({
         FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: 'com.foliole.android.acceptance'
       })
     }));
