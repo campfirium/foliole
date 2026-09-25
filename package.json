@@ -278,6 +278,9 @@
   },
   "folioleBuildChannel": "mas",
   "overrides": {
-    "katex": "$katex"
+    "katex": "$katex",
+    "xcode": {
+      "uuid": "11.1.1"
+    }
   }
 }
