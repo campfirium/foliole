@@ -12,6 +12,10 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
         app.launch()
 
         let browse = app.buttons["Browse"]
+        if !browse.waitForExistence(timeout: 5) {
+            let exit = app.buttons["Exit"]
+            if exit.waitForExistence(timeout: 5) { exit.tap() }
+        }
         XCTAssertTrue(browse.waitForExistence(timeout: 45),
                       "Browse did not become available on the iPhone development build.")
         browse.tap()
