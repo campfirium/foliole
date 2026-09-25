@@ -64,7 +64,9 @@ vi.mock('./desktopSyncGroupHttp.js', () => ({
   }
 }));
 vi.mock('./readwiseOwnerHandoff.js', () => ({
-  activateReadwiseWithHandoff: async () => { calls.activate(); return { is_active: true }; }
+  activateReadwiseWithHandoff: async (options: unknown) => {
+    calls.activate(options); return { is_active: true };
+  }
 }));
 vi.mock('./workgroupKeyStore.js', () => ({
   loadDesktopWorkgroupKey: () => ({ group_key: 'secret' })
@@ -116,6 +118,14 @@ it('asks when a second capable desktop joins an automatically assigned owner', a
   state.owner = 'mac'; state.autoOwner = true;
   await expect(resolveReadwiseJoinDecision()).resolves.toMatchObject({ kind: 'choose' });
   expect(calls.activate).not.toHaveBeenCalled();
+});
+
+it('does not restart an already active automatic owner when another device retries', async () => {
+  state.owner = 'mac'; state.autoOwner = true;
+  await handleReadwiseGroupSetup(JSON.stringify({ action: 'activate', automatic: true }), 'win');
+  expect(calls.activate).toHaveBeenCalledWith({
+    forceCurrent: false, selectionSource: 'automatic'
+  });
 });
 
 it('requires a completed migration proof before replacing relay mode', async () => {

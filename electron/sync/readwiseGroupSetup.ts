@@ -58,7 +58,8 @@ export async function handleReadwiseGroupSetup(bodyText: string, senderId: strin
       throw new Error('readwise_group_setup_invalid');
     }
     const assignment = loadReadwiseHostAssignment();
-    return activateReadwiseWithHandoff({ forceCurrent: assignment.is_active && isAutomaticOwner(),
+    return activateReadwiseWithHandoff({ forceCurrent: !request.automatic &&
+      assignment.is_active && isAutomaticOwner(),
       selectionSource: request.automatic ? 'automatic' : 'chosen' });
   }
   throw new Error('readwise_group_setup_invalid');
