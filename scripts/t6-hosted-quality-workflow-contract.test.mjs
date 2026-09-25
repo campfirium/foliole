@@ -181,6 +181,7 @@ describe('T6 hosted quality workflow contracts', () => {
       .toBe('${{ needs.linux-responsiveness.result }}');
     expect(workflows.linuxResponsiveness.jobs['linux-responsiveness'].steps
       .some((step) => step.run?.includes('sync-pack-load-responsiveness.spec.ts'))).toBe(true);
+    expect(workflows.linuxResponsiveness.on.workflow_dispatch.inputs.target_sha.required).toBe(true);
     expect(gate.steps[0].env.PORTABLE_RESULT).toBeUndefined();
     expect(gate.steps[0].env.PORTABLE_SHA).toBeUndefined();
   });

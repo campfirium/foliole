@@ -1,6 +1,12 @@
 name: Hosted Linux Responsiveness
 
 on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact dev commit to validate independently
+        required: true
+        type: string
   workflow_call:
     inputs:
       execution_lane: { required: true, type: string }
@@ -20,7 +26,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     concurrency:
-      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-full-linux-responsiveness
+      group: quality-${{ inputs.execution_lane || 'dev-perf' }}-${{ inputs.trigger_ref || github.ref }}-full-linux-responsiveness
       cancel-in-progress: false
     outputs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
@@ -28,6 +34,9 @@ jobs:
       CI: "true"
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
+      - name: Require dev for independent validation
+        if: inputs.execution_lane == ''
+        run: test "$GITHUB_REF" = refs/heads/dev
       - name: Check out target snapshot
         uses: actions/checkout@v4
         with: { ref: "${{ env.TARGET_SHA }}", fetch-depth: 1, persist-credentials: false }
