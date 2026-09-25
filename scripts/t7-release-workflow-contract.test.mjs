@@ -7,6 +7,8 @@ import { parse } from 'yaml';
 const source = fs.readFileSync('.github/workflows/t7-release.yml', 'utf8');
 const assemblySource = fs.readFileSync('.github/workflows/release-assembly.yml', 'utf8');
 const qualityRecheckSource = fs.readFileSync('.github/workflows/release-quality-recheck.yml', 'utf8');
+const linuxResponsiveness = parse(fs.readFileSync(
+  '.github/workflows/hosted-quality-linux-responsiveness.yml', 'utf8'));
 const workflow = parse(source);
 const assembly = parse(assemblySource);
 const qualityRecheck = parse(qualityRecheckSource);
@@ -56,6 +58,16 @@ describe('T7 release workflow contract', () => {
     expect(jobs.quality_bucket_recheck.if)
       .toBe("startsWith(inputs.stage, 't5-') || startsWith(inputs.stage, 't6-')");
     expect(Object.keys(qualityRecheck.jobs)).toEqual(qualityStages);
+    expect(qualityRecheck.jobs['t6-linux-responsiveness'].uses)
+      .toBe('./.github/workflows/hosted-quality-linux-responsiveness.yml');
+    const linuxSteps = linuxResponsiveness.jobs['linux-responsiveness'].steps;
+    expect(linuxSteps.some((step) => step.run?.includes('sync-pack-load-responsiveness.spec.ts')))
+      .toBe(true);
+    expect(linuxSteps.findIndex((step) => step.name === 'Verify SHA-bound responsiveness evidence'))
+      .toBeLessThan(linuxSteps.findIndex((step) => step.name === 'Export accepted SHA'));
+    expect(linuxResponsiveness.on.workflow_dispatch.inputs.target_sha.required).toBe(true);
+    expect(linuxResponsiveness.on.workflow_dispatch.inputs.inject_block_ms.options)
+      .toEqual(['0', '1200']);
     for (const stage of qualityStages) {
       expect(qualityRecheck.jobs[stage].if).toBe(`inputs.stage == '${stage}'`);
       expect(qualityRecheck.jobs[stage].with.target_sha).toBe('${{ inputs.target_sha }}');

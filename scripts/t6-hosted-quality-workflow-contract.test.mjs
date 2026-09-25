@@ -18,7 +18,6 @@ const sources = {
   electron: read('.github/workflows/hosted-quality-electron.yml'),
   full: read('.github/workflows/hosted-quality-full.yml'),
   ios: read('.github/workflows/hosted-quality-ios.yml'),
-  linuxResponsiveness: read('.github/workflows/hosted-quality-linux-responsiveness.yml'),
   portableDomain: read('.github/workflows/hosted-quality-portable-domain.yml'),
   remote: read('.github/workflows/remote-quality.yml'),
   scopedStatic: read('.github/workflows/hosted-quality-scoped-static.yml'),
@@ -175,15 +174,8 @@ describe('T6 hosted quality workflow contracts', () => {
       'desktop-build', 'android-web-build', 'windows-acceptance',
       'linux-responsiveness', 'android-host', 'ios-full'
     ]);
-    expect(workflows.full.jobs['linux-responsiveness'].uses)
-      .toBe('./.github/workflows/hosted-quality-linux-responsiveness.yml');
     expect(gate.steps[0].env.LINUX_RESPONSIVENESS_RESULT)
       .toBe('${{ needs.linux-responsiveness.result }}');
-    expect(workflows.linuxResponsiveness.jobs['linux-responsiveness'].steps
-      .some((step) => step.run?.includes('sync-pack-load-responsiveness.spec.ts'))).toBe(true);
-    expect(workflows.linuxResponsiveness.on.workflow_dispatch.inputs.target_sha.required).toBe(true);
-    expect(workflows.linuxResponsiveness.on.workflow_dispatch.inputs.inject_block_ms.options)
-      .toEqual(['0', '1200']);
     expect(gate.steps[0].env.PORTABLE_RESULT).toBeUndefined();
     expect(gate.steps[0].env.PORTABLE_SHA).toBeUndefined();
   });
