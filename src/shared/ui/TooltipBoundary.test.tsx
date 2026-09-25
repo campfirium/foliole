@@ -18,11 +18,11 @@ it('keeps truncated tooltip token overrides inside the shared tooltip wrapper', 
     </AppTooltipProvider>
   );
 
-  const tooltip = screen.getByRole('tooltip').parentElement;
-  expect(tooltip?.className).toContain('border-transparent');
-  expect(tooltip?.className).toContain('bg-transparent');
-  expect(tooltip?.className).toContain('[--app-tooltip-padding-x:0.75rem]');
-  expect(tooltip?.className).toContain('[--app-tooltip-shadow:var(--shadow-panel)]');
+  const tooltip = screen.getByRole('tooltip');
+  expect(tooltip.className).toContain('border-transparent');
+  expect(tooltip.className).toContain('bg-transparent');
+  expect(tooltip.className).toContain('[--app-tooltip-padding-x:0.75rem]');
+  expect(tooltip.className).toContain('[--app-tooltip-shadow:var(--shadow-panel)]');
 });
 
 it('keeps truncated tooltip callers off private tooltip token overrides', () => {

@@ -39,6 +39,7 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     applied_review_op_ids: [],
     appliedObjectCount: 0,
     appliedReviewOpIds: [],
+    appliedTombstoneNodeIds: [],
     fromStateSeq: 0,
     handled_conflict_count: 0,
     handledConflictCount: 0,
@@ -58,7 +59,9 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   expect(connection.run).toHaveBeenLastCalledWith('DETACH DATABASE inc', [], false);
   expect(connection.close).not.toHaveBeenCalled();
   expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
-  expect(connection.run).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO main.nodes'), [], false);
+  expect(connection.run).toHaveBeenCalledWith(
+    expect.stringContaining('INSERT OR REPLACE INTO sync_object_state'), expect.any(Array), false
+  );
 });
 
 it.each([{ appliedFactCount: 0, handledConflictCount: 1 }, { appliedFactCount: 3, handledConflictCount: 0 }])(

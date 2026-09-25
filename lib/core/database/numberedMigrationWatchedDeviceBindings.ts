@@ -101,6 +101,7 @@ function requeueWatchedBinding(sqlite: DatabaseMigrationTarget, bindingId: strin
 export function migrateWatchedDeviceBindings(sqlite: DatabaseMigrationTarget) {
   if (!tableExists(sqlite, 'watched_folder_bindings') || !tableExists(sqlite, 'desktop_sources')) return;
   addColumnIfMissing(sqlite, 'watched_folder_bindings', 'owner_device_identity_key', 'TEXT');
+  addColumnIfMissing(sqlite, 'watched_folder_bindings', 'reported_path', "TEXT NOT NULL DEFAULT ''");
   const local = localDeviceId(sqlite);
   const sources = sqlite.prepare(`SELECT source_ref, config_ref, host_name, updated_at
     FROM desktop_sources WHERE source_type = 'watched' ORDER BY source_ref`).all() as SourceRow[];

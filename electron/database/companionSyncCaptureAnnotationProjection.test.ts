@@ -39,8 +39,11 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-capture-annotation-projection-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabaseConnection(openDatabaseConnection());
+  const connection = openDatabaseConnection();
+  initializeDatabaseConnection(connection);
   saveJsonSetting('device_id', 'desktop-test', '2026-08-12T00:00:00.000Z');
+  connection.driver.execute("INSERT INTO settings (key, value, updated_at) VALUES ('host_name', ?, ?)",
+    ['"desktop-test"', '2026-08-12T00:00:00.000Z']);
   seedProjectionParents();
   vi.spyOn(crypto, 'randomUUID')
     .mockReturnValueOnce('00000000-0000-4000-8000-000000000101')
@@ -138,12 +141,12 @@ async function expectNextSyncPack() {
     outputPath: path.join(tempRoot, 'android-capture-annotation.syncpack'),
     packId: 'android-capture-annotation'
   });
-  expect(pack).toMatchObject({ objectCount: 4, toStateSeq: 4 });
+  expect(pack).toMatchObject({ objectCount: 5, toStateSeq: 5 });
   expect(Object.fromEntries(pack.manifest.tables.map((table) => [table.name, table.row_count]))).toMatchObject({
-    nodes: 3,
-    node_sync_versions: 3,
+    nodes: 4,
+    node_sync_versions: 4,
     sync_objects: 1,
-    sync_object_state: 4
+    sync_object_state: 5
   });
 }
 

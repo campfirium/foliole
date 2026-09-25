@@ -18,11 +18,11 @@ import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDesktopHostProfile } from './hostProfile.js';
 
 const BASELINE = {
-  companionSchema: 38,
-  desktopSchema: 99,
-  protocol: 9,
-  syncPack: 13,
-  syncPackPayloadSchema: 86
+  companionSchema: 39,
+  desktopSchema: 100,
+  protocol: 10,
+  syncPack: 15,
+  syncPackPayloadSchema: 88
 } as const;
 
 it('freezes the Host-state cutover versions and generated protocol assets', () => {

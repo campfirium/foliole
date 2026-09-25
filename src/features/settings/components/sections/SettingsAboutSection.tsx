@@ -56,7 +56,7 @@ function FeedbackRow(props: { onRunSupportCommand?: ((commandId: string) => void
               {t('settings.about.emailSupport')}
             </button>
           </AppTooltipTrigger>
-          <AppTooltipContent className="[z-index:var(--z-dropdown)]" side="top">hello@foliole.app</AppTooltipContent>
+          <AppTooltipContent layer="dropdown" side="top">hello@foliole.app</AppTooltipContent>
         </AppTooltip>
       </SettingsControlSlot>
     </SettingsRow>

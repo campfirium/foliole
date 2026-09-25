@@ -52,7 +52,7 @@ it('builds and applies a desktop learning-state pack after its node row', async 
       applied: true,
       appliedObjectCount: 2,
       fromStateSeq: 0,
-      toStateSeq: 2
+      toStateSeq: 3
     });
   } finally {
     await port.run('DETACH DATABASE inc');
@@ -84,7 +84,7 @@ it('prunes packed learning rows for live children hidden under deleted parents',
     })).resolves.toMatchObject({
       applied: true,
       fromStateSeq: 0,
-      toStateSeq: 3
+      toStateSeq: 5
     });
   } finally {
     await port.run('DETACH DATABASE inc');
@@ -99,7 +99,10 @@ it('prunes packed learning rows for live children hidden under deleted parents',
 
 async function buildLearningOnlyDesktopPack() {
   mockedAppDataDir = path.join(tempRoot, 'source-app-data');
-  initializeDatabaseConnection(openDatabaseConnection());
+  const connection = openDatabaseConnection();
+  initializeDatabaseConnection(connection);
+  connection.driver.execute("INSERT INTO settings (key, value, updated_at) VALUES ('host_name', ?, ?)",
+    ['"desktop-source"', '2026-05-06T10:00:00.000Z']);
   insertSourceLearningState();
   const packPath = path.join(tempRoot, 'desktop-learning-only.syncpack');
   await buildDesktopSyncPack({
@@ -116,7 +119,10 @@ async function buildLearningOnlyDesktopPack() {
 
 async function buildHiddenChildLearningDesktopPack() {
   mockedAppDataDir = path.join(tempRoot, 'hidden-source-app-data');
-  initializeDatabaseConnection(openDatabaseConnection());
+  const connection = openDatabaseConnection();
+  initializeDatabaseConnection(connection);
+  connection.driver.execute("INSERT INTO settings (key, value, updated_at) VALUES ('host_name', ?, ?)",
+    ['"desktop-source"', '2026-05-06T11:00:00.000Z']);
   insertHiddenChildLearningState();
   const packPath = path.join(tempRoot, 'desktop-hidden-child-learning.syncpack');
   await buildDesktopSyncPack({

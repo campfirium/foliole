@@ -64,8 +64,8 @@ export async function migrateCompanionDatabase(
   }
   await repairCompanionDatabase(db);
   if (currentVersion < 37 && targetVersion >= 37) await retireCompanionAttachmentManifest(db);
-  if (currentVersion < 38 && targetVersion >= 38) await migrateCompanionWatchedBindings(db);
   if (currentVersion < 39 && targetVersion >= 39) await migrateCompanionWatchedDisplayPath(db);
+  if (currentVersion < 38 && targetVersion >= 38) await migrateCompanionWatchedBindings(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

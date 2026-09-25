@@ -9,6 +9,7 @@ import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion.js';
 import { buildWorkspaceSnapshotNode, type WorkspaceNodeRowShape } from '../../lib/core/database/workspaceSnapshotHelpers.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { IOS_SYNC_PACK_RESTORE_VERSION_ID } from '../../lib/platform/iosSyncPackAcceptanceContract.js';
 
@@ -29,6 +30,7 @@ export async function seedHostedSourceFromOracle(args: {
   writeFileSync(oraclePath, pack.database, { flag: 'wx' });
   args.source.prepare('ATTACH DATABASE ? AS oracle_seed').run(oraclePath);
   try {
+    ensureOracleNodeTombstones(args.source);
     ensureOracleExternalReferenceColumns(args.source);
     canonicalizeOracleAttachmentPayloads(args.source);
     // The successor predicts this scenario's new restore, not a historical user version.
@@ -57,6 +59,15 @@ export async function seedHostedSourceFromOracle(args: {
   } finally {
     args.source.exec('DETACH DATABASE oracle_seed');
   }
+}
+
+function ensureOracleNodeTombstones(database: SqliteDatabase) {
+  const statement = PACK_SCHEMA.find((sql) => sql.startsWith('CREATE TABLE node_sync_tombstones ('));
+  if (!statement) throw new Error('ios_hosted_oracle_tombstone_schema_missing');
+  database.exec(statement.replace(
+    'CREATE TABLE node_sync_tombstones',
+    'CREATE TABLE IF NOT EXISTS oracle_seed.node_sync_tombstones'
+  ));
 }
 
 interface ScenarioRestoreVersionRow {

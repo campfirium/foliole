@@ -89,8 +89,8 @@ it('keeps the top toolbar sort tooltip above the trigger', async () => {
 
   const tooltip = await screen.findByRole('tooltip');
   expect(tooltip).toHaveTextContent('Sort list by Last opened: Newest first');
-  expect(tooltip.parentElement).toHaveAttribute('data-side', 'top');
-  expect(tooltip.parentElement).not.toHaveAttribute('data-side', 'bottom');
+  expect(tooltip).toHaveAttribute('data-side', 'top');
+  expect(tooltip).not.toHaveAttribute('data-side', 'bottom');
 });
 
 it('keeps last opened order fixed to newest first', () => {
@@ -180,8 +180,8 @@ it('keeps the top toolbar focus tooltip above the trigger', async () => {
 
   const tooltip = await screen.findByRole('tooltip');
   expect(tooltip).toHaveTextContent('Hide dismissed and shelved topics');
-  expect(tooltip.parentElement).toHaveAttribute('data-side', 'top');
-  expect(tooltip.parentElement).not.toHaveAttribute('data-side', 'bottom');
+  expect(tooltip).toHaveAttribute('data-side', 'top');
+  expect(tooltip).not.toHaveAttribute('data-side', 'bottom');
 });
 
 it('disables topic focus in views where it does not apply', () => {
@@ -233,6 +233,6 @@ it('shows the focus tooltip as the next toggle action when focus is active', asy
 
   const tooltip = await screen.findByRole('tooltip');
   expect(tooltip).toHaveTextContent('Show all topics');
-  expect(tooltip.parentElement).toHaveAttribute('data-side', 'top');
-  expect(tooltip.parentElement).not.toHaveAttribute('data-side', 'bottom');
+  expect(tooltip).toHaveAttribute('data-side', 'top');
+  expect(tooltip).not.toHaveAttribute('data-side', 'bottom');
 });

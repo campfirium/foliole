@@ -26,17 +26,26 @@ it('upgrades v66 while preserving source history and isolating watched connectio
     watched_binding_id: null,
     watched_relative_path: null
   });
-  expect(sqlite.prepare(`SELECT binding_id, connection_status, owner_device_identity_key
-    FROM watched_folder_bindings`).all()).toEqual([{
-    binding_id: 'draft-import-source-1', connection_status: 'needs-folder', owner_device_identity_key: 'Mac A'
+  const bindings = sqlite.prepare(`SELECT binding_id, connection_status, owner_device_identity_key,
+    local_rule_id, reported_path, source_ref FROM watched_folder_bindings`).all() as Array<{
+    binding_id: string; source_ref: string;
+  }>;
+  expect(bindings).toMatchObject([{
+    connection_status: 'needs-folder', local_rule_id: 'draft-import-source-1',
+    owner_device_identity_key: 'Mac A', reported_path: '/Library/Drafts'
   }]);
+  expect(bindings[0]?.binding_id).toMatch(/^watched-[0-9a-f-]{36}$/u);
   expectMigratedSourceSettings(sqlite);
   expect(sqlite.prepare(`SELECT source_type, config_ref, host_name, root_path FROM desktop_sources
-    ORDER BY source_type, config_ref`).all()).toEqual([
+    WHERE source_type != 'watched' ORDER BY source_type, config_ref`).all()).toEqual([
     { config_ref: 'external-1', host_name: 'Windows PC', root_path: '/Library/External', source_type: 'external' },
-    { config_ref: 'readwise-articles', host_name: 'Mac A', root_path: '/Library/Readwise/Articles', source_type: 'readwise' },
-    { config_ref: 'draft-import-source-1', host_name: 'Mac A', root_path: '/Library/Drafts', source_type: 'watched' }
+    { config_ref: 'readwise-articles', host_name: 'Mac A', root_path: '/Library/Readwise/Articles', source_type: 'readwise' }
   ]);
+  expect(sqlite.prepare(`SELECT source_type, config_ref, host_name, root_path FROM desktop_sources
+    WHERE source_ref = ?`).get(bindings[0]!.source_ref)).toEqual({
+    config_ref: bindings[0]!.binding_id, host_name: 'Mac A',
+    root_path: '/Library/Drafts', source_type: 'watched'
+  });
   expect(sqlite.prepare(`SELECT type_settings_json FROM desktop_sources
     WHERE source_type = 'readwise' AND config_ref = 'readwise-articles'`).get()).toEqual({
     type_settings_json: JSON.stringify({
