@@ -1,5 +1,5 @@
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
-import { flushUntrackedDirtyNodeSyncVersions } from './nodeSyncVersions.js';
+import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
 import {
   buildDesktopSyncPackFromDriver,
   type BuildDesktopSyncPackInput
@@ -11,7 +11,7 @@ export type { BuildDesktopSyncPackInput } from './syncPackBuilderFromDriver.js';
 export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
   const createdAt = input.createdAt ?? new Date().toISOString();
   return runWithDatabaseConnectionOwner(() => {
-    flushUntrackedDirtyNodeSyncVersions(createdAt);
+    flushDirtyNodeSyncVersions(createdAt);
     return buildDesktopSyncPackFromDriver({
       ...input, createdAt, fromPeerId: input.fromPeerId
     }, openDatabaseConnection().driver);

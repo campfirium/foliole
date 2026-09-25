@@ -89,7 +89,10 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
     `INSERT INTO node_sync_versions SELECT v.version_id, v.object_id, v.parent_version_id, v.host_name,
        v.created_at, v.content_hash, v.body_text, v.snapshot_json
      FROM source.node_sync_versions v JOIN nodes n
-       ON n.id = v.object_id AND n.current_version_id = v.version_id`,
+     ON n.id = v.object_id AND n.current_version_id = v.version_id`,
+    `INSERT INTO node_sync_tombstones SELECT t.node_id, t.version_id, t.parent_version_id,
+       t.host_name, t.content_hash, t.snapshot_json, t.deleted_at, t.created_at
+     FROM source.node_sync_tombstones t`,
     `INSERT INTO node_sync_version_parents SELECT p.version_id, p.parent_version_id, p.ordinal
      FROM source.node_sync_version_parents p
      WHERE p.version_id IN (SELECT version_id FROM node_sync_versions)

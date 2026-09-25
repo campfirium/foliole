@@ -99,7 +99,8 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
     `SELECT ${SYNC_PACK_NODE_COLUMNS.map((column) => incomingNodeColumnExpression(column, options)).join(', ')} ` +
     `FROM ${alias}.nodes incoming ` +
     `INNER JOIN (SELECT id, MIN(depth) AS depth FROM node_depth GROUP BY id) sorted ON sorted.id = incoming.id ` +
-    `WHERE true ORDER BY sorted.depth ASC, incoming.updated_at ASC, incoming.id ASC ` +
+    `WHERE NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = incoming.id) ` +
+    `ORDER BY sorted.depth ASC, incoming.updated_at ASC, incoming.id ASC ` +
     (options.preserveExistingNodes
       ? 'ON CONFLICT(id) DO NOTHING'
       : `ON CONFLICT(id) DO UPDATE SET ${SYNC_PACK_NODE_UPDATE_COLUMNS.map((column) => `${column} = excluded.${column}`).join(', ')}`);

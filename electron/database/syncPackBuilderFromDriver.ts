@@ -25,6 +25,7 @@ import {
   loadSyncPackNodeVersionRows
 } from './syncPackNodeVersionRows.js';
 import { loadMaxStateSeq, loadPackRows } from './syncPackRows.js';
+import { loadSyncPackTombstoneRows } from './syncPackTombstoneRows.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -66,6 +67,7 @@ function buildContainerManifest(args: {
       node_attachments: args.rows.nodeAttachments,
       node_order: args.rows.nodeOrder,
       node_sync_versions: args.rows.nodeVersions,
+      node_sync_tombstones: args.rows.nodeTombstones,
       node_sync_version_parents: args.rows.nodeVersionParents,
       nodes: args.rows.nodes,
       review_log: args.rows.reviewLog,
@@ -117,6 +119,7 @@ export async function buildDesktopSyncPackFromDriver(
       groupDevices: groupRows.devices,
       groups: groupRows.groups,
       nodeVersions,
+      nodeTombstones: loadSyncPackTombstoneRows(sourceDriver),
       nodeVersionParents: loadSyncPackNodeVersionParentRows(sourceDriver, nodeVersions)
     };
     const packToStateSeq = Math.max(

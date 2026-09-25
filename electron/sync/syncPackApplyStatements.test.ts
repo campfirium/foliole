@@ -53,7 +53,7 @@ it('builds node and attachment pack apply statements against an incoming alias',
 
   expect(nodeSql).not.toContain('INSERT OR REPLACE INTO main.nodes');
   expect(nodeSql).toContain('INSERT INTO main.nodes');
-  expect(nodeSql).toContain('WHERE true ORDER BY sorted.depth ASC');
+  expect(nodeSql).toContain('WHERE NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones');
   expect(nodeSql).toContain('ON CONFLICT(id) DO UPDATE SET');
   expect(nodeSql).toContain('title = excluded.title');
   expect(nodeSql).toContain('reveal = excluded.reveal');

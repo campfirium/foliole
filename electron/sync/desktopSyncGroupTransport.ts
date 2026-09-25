@@ -1,5 +1,6 @@
 import { getPeerCursor, setPeerCursor } from '../../lib/core/database/syncState.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { reconcileVersionedInlineBodies } from '../database/syncBodyProjectionReconcile.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorCommit.js';
@@ -42,6 +43,8 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
   if (memberState.peerBlocked) return { complete: false, cursor: 0 };
   const cursor = await runWithDatabaseConnectionOwner(() => loadReceiveCursor(target.peer_device_id));
   const pack = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
+  await runWithDatabaseConnectionOwner(() =>
+    reconcileVersionedInlineBodies(openDatabaseConnection().driver));
   const nextCursor = pack.cursor;
   await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
   await reportDesktopSyncGroupCursorCommitted({

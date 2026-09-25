@@ -108,15 +108,17 @@ async function probe(group: SyncGroupPayload, deviceId: string, endpointUrl: str
   const discovery = await response.json() as Record<string, unknown>;
   if (discovery.group_id !== group.group_id || discovery.provider_device_id !== deviceId ||
       evaluateSyncProtocolCompatibility(discovery.protocol).status !== 'compatible') return null;
+  const role = parseDesktopAnchorRole(discovery.topology_role);
   return { peer: {
     endpoint_url: endpointUrl,
     group_id: group.group_id,
     local_device_id: group.local_device_identity_key,
     peer_device_id: deviceId,
     peer_device_name: text(discovery.provider_device_name) ?? deviceId,
-    peer_platform: text(discovery.provider_platform) ?? 'desktop'
+    peer_platform: text(discovery.provider_platform) ?? 'desktop',
+    ...(role === 'member' || role === 'anchor' ? { route_kind: role } : {})
   } satisfies DesktopSyncGroupPeer,
-  role: parseDesktopAnchorRole(discovery.topology_role) };
+  role };
 }
 
 function text(value: unknown) {

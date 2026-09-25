@@ -27,8 +27,8 @@ export async function applyConvergentSyncNodesWithDbPort(
     }
     resolvedNodeIds.push((await resolveTopicConflict(port, group)).object_id);
   }
-  if (result.blockedIds.length > 0 || result.tombstoneBlockedIds.length > 0) {
-    throw new Error(`sync_node_apply_blocked:${[...result.blockedIds, ...result.tombstoneBlockedIds].join(',')}`);
+  if (result.blockedIds.length > 0) {
+    throw new Error(`sync_node_apply_blocked:${result.blockedIds.join(',')}`);
   }
   return {
     appliedNodeCount: new Set([

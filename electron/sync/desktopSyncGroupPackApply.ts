@@ -54,13 +54,17 @@ export async function fetchDesktopSyncGroupPackBody(args: {
 }
 
 export async function collectSyncPackAppliedEvent(port: DbPort, result: ApplyResult) {
-  if (!result.applied) return { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] };
+  if (!result.applied) return {
+    appliedNodeIds: result.appliedTombstoneNodeIds,
+    appliedObjectIds: [],
+    appliedReviewOpIds: []
+  };
   const nodes = await port.query<{ id: string }>('SELECT id FROM inc.nodes');
   const objects = await port.query<{ object_id: string; object_type: string }>(
     'SELECT object_id, object_type FROM inc.sync_objects'
   );
   return {
-    appliedNodeIds: [...new Set(nodes.map((row) => row.id))],
+    appliedNodeIds: [...new Set([...nodes.map((row) => row.id), ...result.appliedTombstoneNodeIds])],
     appliedObjectIds: [...new Set(objects.map((row) => `${row.object_type}:${row.object_id}`))],
     appliedReviewOpIds: result.appliedReviewOpIds
   };
@@ -103,26 +107,29 @@ export async function applyDesktopSyncGroupPack(
     expectedSourcePeerId: args.peer.peer_device_id, outputPath: incomingPath
   });
   if (manifest.toStateSeq < args.after) throw new Error('sync_pack_provider_frontier_rollback');
-  const hostName = await runWithDatabaseConnectionOwner(() => loadOrCreateDesktopHostName());
-  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-pack-apply' });
-  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
-  let event;
-  let cursor: number;
-  let participatingArticleIds: string[] = [];
-  try {
-    await assertSyncPackManifestMatchesDatabase(port, manifest);
-    const result = await applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: args.after, hostName,
-      incomingAlias: 'inc', sourceHostName: sourceDeviceName,
-      sourcePeerId: args.peer.peer_device_id,
-      onSettingApplied: materializeDesktopSettingRecord
+  const { cursor, event, participatingArticleIds } = await runWithDatabaseConnectionOwner(async () => {
+    const hostName = loadOrCreateDesktopHostName();
+    const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, {
+      name: 'desktop-sync-group-pack-apply'
     });
-    cursor = result.toStateSeq;
-    event = await collectSyncPackAppliedEvent(port, result);
-    participatingArticleIds = result.participatingArticleIds;
-  } finally {
-    await port.run('DETACH DATABASE inc');
-  }
+    await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+    try {
+      await assertSyncPackManifestMatchesDatabase(port, manifest);
+      const result = await applySyncPackNodeSurfaceWithDbPort(port, {
+        currentCursor: args.after, hostName,
+        incomingAlias: 'inc', sourceHostName: sourceDeviceName,
+        sourcePeerId: args.peer.peer_device_id,
+        onSettingApplied: materializeDesktopSettingRecord
+      });
+      return {
+        cursor: result.toStateSeq,
+        event: await collectSyncPackAppliedEvent(port, result),
+        participatingArticleIds: result.participatingArticleIds
+      };
+    } finally {
+      await port.run('DETACH DATABASE inc');
+    }
+  });
   notifyWorkspaceSyncApplied(event);
   return { cursor, participatingArticleIds };
 }

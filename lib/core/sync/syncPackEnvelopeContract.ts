@@ -7,8 +7,8 @@ import {
 } from './syncPackNodeFields.js';
 
 export const SYNC_PACK_FORMAT = 'foliole.sync-pack';
-export const SYNC_PACK_FORMAT_VERSION = 13;
-export const SYNC_PACK_PAYLOAD_SCHEMA_VERSION = 86;
+export const SYNC_PACK_FORMAT_VERSION = 14;
+export const SYNC_PACK_PAYLOAD_SCHEMA_VERSION = 87;
 export const SYNC_PACK_COMPRESSION = 'zlib';
 export const SYNC_PACK_DATABASE_ENTRY = 'incoming.db.deflate';
 export const SYNC_PACK_MINIMUM_SCHEMA_VERSION = SYNC_PACK_PAYLOAD_SCHEMA_VERSION;
@@ -38,6 +38,10 @@ export const SYNC_PACK_SQLITE_TABLE_REQUIREMENTS = {
   node_sync_versions: [
     'version_id', 'object_id', 'parent_version_id', 'host_name',
     'created_at', 'content_hash', 'body_text', 'snapshot_json'
+  ],
+  node_sync_tombstones: [
+    'node_id', 'version_id', 'parent_version_id', 'host_name', 'content_hash',
+    'snapshot_json', 'deleted_at', 'created_at'
   ],
   node_sync_version_parents: ['version_id', 'parent_version_id', 'ordinal'],
   node_order: ['node_id', 'position'],

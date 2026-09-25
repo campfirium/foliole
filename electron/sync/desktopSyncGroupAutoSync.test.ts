@@ -4,11 +4,14 @@ const runtime = vi.hoisted(() => ({
   coordinator: vi.fn(async () => ({ status: 'completed' })),
   discovery: vi.fn(),
   freshness: vi.fn(),
+  memberEndpoints: [] as Array<Record<string, unknown>>,
   memberSessionArgs: null as null | {
     onMember(peer: Record<string, unknown>): Promise<boolean>;
     onMemberLost(deviceId: string): void;
   },
   notifyOverviewChanged: vi.fn(),
+  owned: false,
+  requireOwner: false,
   group: {
     devices: [
       { device_identity_key: 'desktop-a', device_name: 'Mac', platform: 'darwin', state: 'active' },
@@ -24,7 +27,16 @@ const runtime = vi.hoisted(() => ({
   updateRole: vi.fn(async () => undefined)
 }));
 
-vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => runtime.group }));
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: async <T>(execute: () => Promise<T> | T) => {
+    runtime.owned = true;
+    try { return await execute(); } finally { runtime.owned = false; }
+  }
+}));
+vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => {
+  if (runtime.requireOwner && !runtime.owned) throw new Error('sqlite owner required');
+  return runtime.group;
+} }));
 vi.mock('../database/syncGroupMemberStateStore.js', () => ({
   isDesktopSyncGroupDeviceBlocked: () => false
 }));
@@ -57,6 +69,7 @@ vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
 }));
 vi.mock('./desktopSyncGroupMemberStateSession.js', () => ({
   exchangeAllDesktopSyncGroupMemberStates: vi.fn(async () => false),
+  loadDesktopSyncGroupMemberEndpoints: () => runtime.memberEndpoints,
   startDesktopSyncGroupMemberStateSession: (_group: unknown, _onChanged: unknown,
     onMember: (peer: Record<string, unknown>) => Promise<boolean>,
     onMemberLost: (deviceId: string) => void) => {
@@ -80,6 +93,8 @@ beforeEach(() => {
   runtime.role = 'observing';
   runtime.sessionArgs = null;
   runtime.memberSessionArgs = null;
+  runtime.memberEndpoints = [];
+  runtime.requireOwner = false;
   runtime.discovery.mockResolvedValue([]);
 });
 
@@ -192,4 +207,39 @@ it('checks collected desktop members when the anchor runs Sync Now', async () =>
   await runDesktopManualSyncWithDiscovery();
 
   expect(runtime.coordinator).toHaveBeenCalledWith('manual');
+});
+
+it('checks a discovered desktop member even when its automatic route was not activated', async () => {
+  runtime.role = 'anchor';
+  runtime.memberEndpoints = [{
+    endpoint_url: 'http://windows:38641', group_id: 'group-1',
+    local_device_id: 'desktop-a', peer_device_id: 'desktop-b',
+    peer_device_name: 'Windows', peer_platform: 'win32', route_kind: 'member'
+  }];
+
+  await runDesktopManualSyncWithDiscovery();
+
+  expect(runtime.coordinator).toHaveBeenCalledWith('manual');
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([expect.objectContaining({
+    peer_device_id: 'desktop-b', route_kind: 'member'
+  })]);
+});
+
+it('does not use a discovered anchor as a member route', async () => {
+  runtime.role = 'anchor';
+  runtime.memberEndpoints = [{
+    endpoint_url: 'http://other-anchor:38641', group_id: 'group-1',
+    local_device_id: 'desktop-a', peer_device_id: 'desktop-b',
+    peer_device_name: 'Windows', peer_platform: 'win32', route_kind: 'anchor'
+  }];
+
+  await expect(runDesktopManualSyncWithDiscovery()).resolves.toBeNull();
+  expect(runtime.coordinator).not.toHaveBeenCalled();
+});
+
+it('owns the group read when manual sync overlaps another database transaction', async () => {
+  runtime.role = 'anchor';
+  runtime.requireOwner = true;
+
+  await expect(runDesktopManualSyncWithDiscovery()).resolves.toBeNull();
 });

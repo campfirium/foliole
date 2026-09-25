@@ -45,6 +45,7 @@ it('packs attachment metadata as a generic sync object', async () => {
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 0 },
         { name: 'node_sync_versions', row_count: 0 },
+        { name: 'node_sync_tombstones', row_count: 0 },
         { name: 'node_sync_version_parents', row_count: 0 },
         { name: 'node_order', row_count: 0 },
         { name: 'node_attachments', row_count: 0 },
@@ -119,13 +120,13 @@ it('packs review log rows with changed node review state', async () => {
 
   const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-review-log-1', fromStateSeq: 0 });
 
-  expect(result).toMatchObject({ objectCount: 2, packId: 'pack-review-log-1', toStateSeq: 6 });
+  expect(result).toMatchObject({ objectCount: 2, packId: 'pack-review-log-1', toStateSeq: 7 });
   expect(readPackRows(packPath)).toMatchObject({
     manifest: expect.objectContaining({ tables: expect.arrayContaining([{ name: 'review_log', row_count: 1 }]) }),
     reviewLog: [{ grade: 3, node_id: 'node-review-1', op_id: 'op-1' }],
     stateRows: [
-      { object_id: 'node-review-1', object_type: 'node', state_seq: 1 },
-      { object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 }
+      { object_id: 'node-review-1', object_type: 'node_review', state_seq: 6 },
+      { object_id: 'node-review-1', object_type: 'node', state_seq: 7 }
     ],
     syncObjects: [expect.objectContaining({
       object_id: 'node-review-1',
@@ -141,12 +142,12 @@ it('packs node reading state as a generic sync object', async () => {
 
   const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-node-reading-1', fromStateSeq: 0 });
 
-  expect(result).toMatchObject({ objectCount: 2, packId: 'pack-node-reading-1', toStateSeq: 8 });
+  expect(result).toMatchObject({ objectCount: 2, packId: 'pack-node-reading-1', toStateSeq: 9 });
   expect(readPackRows(packPath)).toMatchObject({
     nodes: [expect.objectContaining({ id: 'node-reading-1' })],
     stateRows: [
-      { object_id: 'node-reading-1', object_type: 'node', state_seq: 1 },
-      { object_id: 'node-reading-1', object_type: 'node_reading', state_seq: 8 }
+      { object_id: 'node-reading-1', object_type: 'node_reading', state_seq: 8 },
+      { object_id: 'node-reading-1', object_type: 'node', state_seq: 9 }
     ],
     syncObjects: [expect.objectContaining({
       object_id: 'node-reading-1',
@@ -167,9 +168,9 @@ it('omits stale node reading state without a backing reading row', async () => {
     fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-stale-node-reading-1', fromStateSeq: 0
   });
 
-  expect(result).toMatchObject({ objectCount: 1, toStateSeq: 8 });
+  expect(result).toMatchObject({ objectCount: 1, toStateSeq: 9 });
   expect(readPackRows(packPath)).toMatchObject({
-    stateRows: [{ object_id: 'node-reading-1', object_type: 'node', state_seq: 1 }],
+    stateRows: [{ object_id: 'node-reading-1', object_type: 'node', state_seq: 9 }],
     syncObjects: []
   });
 });

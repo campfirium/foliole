@@ -16,6 +16,7 @@ export const SYNC_PACK_CONTRACT_TABLES = [
   { name: 'sync_objects', row_count: 2 },
   { name: 'nodes', row_count: 1 },
   { name: 'node_sync_versions', row_count: 1 },
+  { name: 'node_sync_tombstones', row_count: 0 },
   { name: 'node_sync_version_parents', row_count: 0 },
   { name: 'node_order', row_count: 1 },
   { name: 'node_attachments', row_count: 1 },
