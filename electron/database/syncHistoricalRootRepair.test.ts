@@ -93,6 +93,35 @@ it('ignores a known older folder version after the local folder has advanced', a
   expect(readCurrentNode().current_version_id).toBe('remote-head');
 });
 
+it('ignores an older live folder version after the local folder was deleted', async () => {
+  seedHistoricalRoots('same-root-hash', 0);
+  const driver = openDatabaseConnection().driver;
+  const deletedAt = '2026-07-04T00:00:00.000Z';
+  driver.execute(
+    `UPDATE nodes SET current_version_id = 'deleted-head', deleted_at = ?
+     WHERE id = 'shared-folder'`,
+    [deletedAt]
+  );
+  driver.execute(
+    `INSERT INTO node_sync_versions (
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
+     ) VALUES ('deleted-head', 'shared-folder', 'remote-head', 'test-host', ?,
+       'deleted-head-hash', 'Current remote body', ?)`,
+    [deletedAt, JSON.stringify({ ...snapshot('Current remote body', 'Current remote folder', deletedAt), deleted_at: deletedAt })]
+  );
+  driver.execute(
+    `INSERT INTO node_sync_version_parents (version_id, parent_version_id, ordinal)
+     VALUES ('deleted-head', 'remote-head', 0)`
+  );
+
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'older-than-deletion' });
+  const result = await applyConvergentSyncNodesWithDbPort(port, [incomingFolder()]);
+
+  expect(result.handledConflictCount).toBe(0);
+  expect(driver.queryOne(`SELECT current_version_id, deleted_at FROM nodes WHERE id = 'shared-folder'`))
+    .toEqual({ current_version_id: 'deleted-head', deleted_at: deletedAt });
+});
+
 it('does not repair over an unversioned local change', async () => {
   seedHistoricalRoots('same-root-hash', 1);
 

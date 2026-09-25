@@ -112,12 +112,13 @@ async function decideNodeApply(
   record: NativeSyncNodeRecord,
   operation: SyncNodeApplyOperation | undefined
 ) {
-  const decision = decideIncomingNodeApply(localNode, record, operation);
-  if (decision !== 'record_conflict' || localNode?.sync_dirty !== 0) return decision;
-  if (localNode.current_version_id && record.version_id &&
-      await isStoredAncestorVersion(port, record.version_id, localNode.current_version_id)) {
+  if (localNode?.sync_dirty === 0 && localNode.current_version_id && record.version_id
+      && record.version_id !== localNode.current_version_id
+      && await isStoredAncestorVersion(port, record.version_id, localNode.current_version_id)) {
     return 'skip_stale';
   }
+  const decision = decideIncomingNodeApply(localNode, record, operation);
+  if (decision !== 'record_conflict' || localNode?.sync_dirty !== 0) return decision;
   return await hasContentEquivalentIncomingLineage(port, localNode.current_version_id, record)
     ? 'apply_fast_forward'
     : decision;
