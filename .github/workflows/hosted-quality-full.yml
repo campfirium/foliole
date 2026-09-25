@@ -45,6 +45,14 @@ jobs:
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
 
+  linux-responsiveness:
+    name: Linux workload responsiveness
+    uses: ./.github/workflows/hosted-quality-linux-responsiveness.yml
+    with:
+      execution_lane: ${{ inputs.execution_lane }}
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
+
   android-host:
     name: Android host quality
     uses: ./.github/workflows/hosted-quality-android-host.yml
@@ -65,7 +73,7 @@ jobs:
   full-admission:
     name: Full quality admission
     if: ${{ always() }}
-    needs: [desktop-build, android-web-build, windows-acceptance, android-host, ios-full]
+    needs: [desktop-build, android-web-build, windows-acceptance, linux-responsiveness, android-host, ios-full]
     runs-on: ubuntu-latest
     outputs:
       accepted_sha: ${{ steps.require-jobs.outputs.accepted_sha }}
@@ -77,6 +85,7 @@ jobs:
           ANDROID_WEB_BUILD_RESULT: ${{ needs.android-web-build.result }}
           DESKTOP_BUILD_RESULT: ${{ needs.desktop-build.result }}
           IOS_RESULT: ${{ needs.ios-full.result }}
+          LINUX_RESPONSIVENESS_RESULT: ${{ needs.linux-responsiveness.result }}
           TARGET_SHA: ${{ inputs.target_sha }}
           WINDOWS_RESULT: ${{ needs.windows-acceptance.result }}
         run: |

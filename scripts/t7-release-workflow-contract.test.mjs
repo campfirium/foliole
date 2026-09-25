@@ -13,7 +13,8 @@ const qualityRecheck = parse(qualityRecheckSource);
 const qualityStages = [
   't5-static', 't5-desktop-static', 't5-dependency-hardening', 't5-windows-core',
   't5-shared', 't5-android-source', 't5-desktop-source', 't5-electron', 't5-tooling',
-  't6-desktop-build', 't6-android-web-build', 't6-windows-acceptance', 't6-android-host',
+  't6-desktop-build', 't6-android-web-build', 't6-windows-acceptance',
+  't6-linux-responsiveness', 't6-android-host',
   't6-ios-contract', 't6-ios-sync-group-content', 't6-ios-state-writeback',
   't6-ios-sync-pack', 't6-ios-foreground'
 ];

@@ -22,6 +22,7 @@ on:
           - t6-desktop-build
           - t6-android-web-build
           - t6-windows-acceptance
+          - t6-linux-responsiveness
           - t6-android-host
           - t6-ios-contract
           - t6-ios-sync-group-content

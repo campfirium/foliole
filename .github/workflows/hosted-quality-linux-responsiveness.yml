@@ -1,0 +1,69 @@
+name: Hosted Linux Responsiveness
+
+on:
+  workflow_call:
+    inputs:
+      execution_lane: { required: true, type: string }
+      target_sha: { required: true, type: string }
+      trigger_ref: { required: true, type: string }
+    outputs:
+      accepted_sha:
+        description: Exact commit accepted by Linux workload responsiveness
+        value: ${{ jobs.linux-responsiveness.outputs.accepted_sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  linux-responsiveness:
+    name: Linux workload responsiveness
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    concurrency:
+      group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-full-linux-responsiveness
+      cancel-in-progress: false
+    outputs:
+      accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
+    env:
+      CI: "true"
+      TARGET_SHA: ${{ inputs.target_sha }}
+    steps:
+      - name: Check out target snapshot
+        uses: actions/checkout@v4
+        with: { ref: "${{ env.TARGET_SHA }}", fetch-depth: 1, persist-credentials: false }
+      - name: Verify target SHA
+        run: test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Activate pinned npm
+        run: node scripts/quality/pinned-npm.mjs activate
+      - name: Install dependencies
+        run: node scripts/quality/hosted-npm-ci.mjs
+      - name: Install Linux display dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libnss3 libatk1.0-0 libatk-bridge2.0-0 libxss1 libasound2t64
+      - name: Rebuild Electron native ABI
+        run: |
+          npm run electron:rebuild:native
+          node scripts/quality/hosted-electron-sqlite-preflight.mjs
+      - name: Build desktop application
+        run: |
+          npm run build:vite-only
+          npm run electron:compile
+      - name: Measure sync pack workload responsiveness
+        run: npm run test:e2e:desktop:agent -- tests/desktop/sync-pack-load-responsiveness.spec.ts
+      - name: Upload SHA-bound responsiveness evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-responsiveness-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
+          path: |
+            .tmp/playwright-results/desktop
+            .tmp/playwright-report/desktop
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Export accepted SHA
+        id: accepted
+        run: echo "accepted_sha=${TARGET_SHA}" >> "$GITHUB_OUTPUT"

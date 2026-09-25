@@ -97,6 +97,13 @@ jobs:
       execution_lane: release-t7-recheck
       target_sha: ${{ inputs.target_sha }}
       trigger_ref: ${{ inputs.trigger_ref }}
+  t6-linux-responsiveness:
+    if: inputs.stage == 't6-linux-responsiveness'
+    uses: ./.github/workflows/hosted-quality-linux-responsiveness.yml
+    with:
+      execution_lane: release-t7-recheck
+      target_sha: ${{ inputs.target_sha }}
+      trigger_ref: ${{ inputs.trigger_ref }}
   t6-android-host:
     if: inputs.stage == 't6-android-host'
     uses: ./.github/workflows/hosted-quality-android-host.yml
