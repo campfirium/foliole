@@ -80,10 +80,10 @@ it('shows the dynamic import device and one switch action on another desktop', a
   expect(activate).not.toHaveBeenCalled();
 });
 
-it('shows the ordinary setup when a library has no import device yet', async () => {
+it('shows the ordinary setup before this device has an API connection', async () => {
   load.mockResolvedValue(assignment({
     active_host_name: null, active_device_identity_key: null,
-    legacy_unassigned: true, activation_blocked_reason: 'group-quiescence-required'
+    legacy_unassigned: true, activation_blocked_reason: 'connection-unavailable'
   }));
   const settings = createDefaultImportManagerSettings();
   renderWithLocalization(
@@ -92,6 +92,27 @@ it('shows the ordinary setup when a library has no import device yet', async () 
   );
   expect(await screen.findByText('Readwise Reader Import')).toBeInTheDocument();
   expect(screen.queryByText('Import device')).not.toBeInTheDocument();
+});
+
+it('offers the existing switch action for a connected legacy library without an import device', async () => {
+  load.mockResolvedValue(assignment({
+    active_host_name: null, active_device_identity_key: null,
+    legacy_unassigned: true, activation_blocked_reason: 'group-quiescence-required'
+  }));
+  activate.mockResolvedValue(assignment({
+    active_host_name: 'This Mac', active_device_identity_key: 'mac-device',
+    is_active: true, activation_blocked_reason: null
+  }));
+  const settings = createDefaultImportManagerSettings();
+  renderWithLocalization(
+    <SettingsReadwiseReaderContent config={settings.readwiseReaderConfig} onSave={vi.fn()}
+      readwiseRootPath={settings.readwiseRootPath} readwiseSources={settings.readwiseSources}
+      readwiseSourceMode="api" />
+  );
+  expect(await screen.findByText('No device selected')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Switch to this device' }));
+  await waitFor(() => expect(activate).toHaveBeenCalledOnce());
+  expect(await screen.findByRole('button', { name: 'Connect Readwise' })).toBeInTheDocument();
 });
 
 it('keeps automatic activation disabled after a local handoff survives library rollback', async () => {

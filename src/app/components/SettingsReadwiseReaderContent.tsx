@@ -143,7 +143,9 @@ export function SettingsReadwiseReaderContent(props: SettingsReadwiseReaderConte
   const hasActiveSyncGroup = useActiveSyncGroup();
   if (hasActiveSyncGroup && hostAssignment.assignment?.is_active === false &&
       (hostAssignment.assignment.active_host_name !== null ||
-        hostAssignment.assignment.activation_blocked_reason === 'guard-history')) {
+        hostAssignment.assignment.activation_blocked_reason === 'guard-history' ||
+        (hostAssignment.assignment.legacy_unassigned &&
+          hostAssignment.assignment.activation_blocked_reason !== 'connection-unavailable'))) {
     return (
       <>
         <ReadwiseHostAssignmentRow
