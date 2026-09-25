@@ -28,6 +28,8 @@ test('creates a persistent Sync Group from desktop settings', async ({ desktopWi
   await syncSwitch.click();
   await expect(syncSwitch).toHaveAttribute('aria-checked', 'false');
   await expect(syncNow).toBeEnabled();
+  await expect(devices.getByText(/^(Sync off|同步已关闭)$/)).toBeVisible();
+  await expect(devices.getByText(/^(Finding sync anchor…|正在查找同步锚点…)$/)).toHaveCount(0);
 
   const offScreenshot = await section.screenshot({ path: path.join(SCREENSHOT_DIR, 'settings-sync-group-off.png') });
   await testInfo.attach('settings-sync-group-off', { body: offScreenshot, contentType: 'image/png' });

@@ -9,11 +9,25 @@ export function SettingsSyncGroupDeviceRow(props: {
   onRemove(device: SyncGroupDevicePayload): void;
   onTogglePause(): void;
   removing: boolean;
+  syncEnabled: boolean;
   syncPaused: boolean;
   topologyLabel: string | undefined;
 }) {
   const t = useTranslation();
   const local = props.device.device_identity_key === props.group.local_device_identity_key;
+  if (local && !props.syncEnabled) {
+    return (
+      <div className="flex min-h-16 items-center justify-between gap-7 py-3.5" role="listitem">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <span className="truncate text-ui-md font-normal text-foreground">{props.device.device_name}</span>
+          <span className="shrink-0 text-ui-sm text-muted-foreground">{displaySyncGroupPlatform(props.device.platform)}</span>
+        </div>
+        <span className="shrink-0 text-ui-sm text-muted-foreground">
+          {t('settings.companionSync.group.sync.off')}
+        </span>
+      </div>
+    );
+  }
   const label = local && props.topologyLabel
     ? props.topologyLabel
     : local

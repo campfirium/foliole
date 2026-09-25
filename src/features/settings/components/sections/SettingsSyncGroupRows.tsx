@@ -148,6 +148,7 @@ type SettingsSyncGroupRowsProps = {
   onRequestJoin(endpointUrl: string): void;
   onTogglePause(): void;
   joinRequests: DesktopSyncGroupJoinRequestSummaryPayload[];
+  syncEnabled: boolean;
   syncPaused: boolean;
   removingDeviceIds: string[];
   topologyRole: 'anchor' | 'member' | 'observing';
@@ -165,7 +166,7 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
   if (!props.group) return <EmptySyncGroupRow {...props} />;
   const group = props.group;
   const groupHeadingId = `sync-group-${group.group_id}-heading`;
-  const topologyKey = topologyMessageKey(props);
+  const topologyKey = props.syncEnabled && !props.syncPaused ? topologyMessageKey(props) : null;
   return (
     <>
       <div className="px-settings-panel-x pt-1">
@@ -188,9 +189,10 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
               <SettingsSyncGroupDeviceRow device={device} disabled={props.isBusy} group={group}
                 key={device.device_identity_key} onRemove={props.onRemove}
                 onTogglePause={props.onTogglePause} syncPaused={props.syncPaused}
+                syncEnabled={props.syncEnabled}
                 removing={props.removingDeviceIds.includes(device.device_identity_key)}
                 topologyLabel={device.device_identity_key === group.local_device_identity_key
-                  ? t(topologyKey) : undefined} />
+                  ? topologyKey ? t(topologyKey) : undefined : undefined} />
             ))}
           </div>
         </section>
