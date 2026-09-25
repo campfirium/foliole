@@ -19,6 +19,7 @@ import {
   SYNC_GROUP_MEMBER_STATE_PATH
 } from './desktopSyncGroupMemberState.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { handleReadwiseGroupSetup, READWISE_GROUP_SETUP_PATH } from './readwiseGroupSetup.js';
 import { handleReadwiseOwnerStop, READWISE_OWNER_STOP_PATH } from './readwiseOwnerStop.js';
 import { loadResourceAvailability } from './resourceAvailability.js';
 import { decryptWorkgroupRequestBody } from './workgroupHttpCrypto.js';
@@ -32,6 +33,7 @@ type WriteJson = (
 ) => void;
 
 function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
+  if (parsedRequestUrl.pathname === READWISE_GROUP_SETUP_PATH) return 'readwise-group-setup';
   if (parsedRequestUrl.pathname === READWISE_OWNER_STOP_PATH) return 'readwise-owner-stop';
   if (parsedRequestUrl.pathname === RESOURCE_AVAILABILITY_PATH) return 'resource-availability';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
@@ -68,7 +70,9 @@ async function handleAuthenticatedRoute(args: {
   writeJson: WriteJson;
 }) {
   const { auth, bodyText, request, response, route, writeJson } = args;
-  if (route === 'readwise-owner-stop') {
+  if (route === 'readwise-group-setup') {
+    await writeReadwiseGroupSetupResponse(args);
+  } else if (route === 'readwise-owner-stop') {
     try {
       writeJson(request, response, 200, handleReadwiseOwnerStop(bodyText, auth.device_id), 'POST, OPTIONS');
     } catch (error) {
@@ -114,6 +118,23 @@ async function handleAuthenticatedRoute(args: {
         error: error instanceof Error ? error.message : 'sync_group_member_state_invalid'
       }, 'POST, OPTIONS');
     }
+  }
+}
+
+async function writeReadwiseGroupSetupResponse(args: {
+  auth: Extract<ReturnType<typeof authenticateCompanionRequest>, { ok: true }>;
+  bodyText: string;
+  request: http.IncomingMessage;
+  response: http.ServerResponse;
+  writeJson: WriteJson;
+}) {
+  const { auth, bodyText, request, response, writeJson } = args;
+  try {
+    writeJson(request, response, 200, await handleReadwiseGroupSetup(bodyText, auth.device_id), 'POST, OPTIONS');
+  } catch (error) {
+    writeJson(request, response, 409, {
+      error: error instanceof Error ? error.message : 'readwise_group_setup_failed'
+    }, 'POST, OPTIONS');
   }
 }
 

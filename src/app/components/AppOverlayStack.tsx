@@ -4,6 +4,7 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { useAppController } from '../hooks/useAppController';
 
 import { EpubImportReleaseModeDialog } from './EpubImportReleaseModeDialog';
+import { ReadwiseImportDeviceDialog } from './ReadwiseImportDeviceDialog';
 import { SyncGroupJoinRequestsDialog } from './SyncGroupJoinRequestsDialog';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
@@ -108,6 +109,7 @@ export function AppOverlayStack({
   return (
     <>
       <SyncGroupJoinRequestsDialog />
+      <ReadwiseImportDeviceDialog />
       <EpubImportReleaseModeDialog />
       <Suspense fallback={null}>
         {controller.paletteState.isOpen ? <CommandPalette {...controller.paletteState} /> : null}

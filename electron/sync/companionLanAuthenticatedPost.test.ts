@@ -34,6 +34,7 @@ const memberStateMock = vi.hoisted(() => ({
   accept: vi.fn(() => ({ localExited: false, state: { contract_version: 1 } }))
 }));
 const readwiseStopMock = vi.hoisted(() => ({ handle: vi.fn() }));
+const readwiseSetupMock = vi.hoisted(() => ({ handle: vi.fn() }));
 const workgroupHttpMock = vi.hoisted(() => ({
   decryptWorkgroupRequestBody: vi.fn((_request, body: string) => Buffer.from(body)),
   writeWorkgroupBinary: vi.fn()
@@ -65,6 +66,10 @@ vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
 vi.mock('./readwiseOwnerStop.js', () => ({
   READWISE_OWNER_STOP_PATH: '/companion/readwise-owner-stop',
   handleReadwiseOwnerStop: readwiseStopMock.handle
+}));
+vi.mock('./readwiseGroupSetup.js', () => ({
+  READWISE_GROUP_SETUP_PATH: '/companion/readwise-group-setup',
+  handleReadwiseGroupSetup: readwiseSetupMock.handle
 }));
 vi.mock('./companionLanResponses.js', () => ({
   writeWorkgroupBinary: workgroupHttpMock.writeWorkgroupBinary
@@ -130,6 +135,23 @@ it('routes Readwise stop only after member authentication and decryption', async
   expect(readwiseStopMock.handle).toHaveBeenCalledWith(requestBody, 'candidate');
   expect(writeJson).toHaveBeenCalledWith(request, response, 200,
     { status: 'stopped', requestId: 'request-one' }, 'POST, OPTIONS');
+});
+
+it('routes Readwise setup through member authentication and encrypted body', async () => {
+  authMock.authenticateCompanionRequest.mockReturnValue({
+    device_id: 'candidate', device_name: 'Candidate', ok: true
+  } as never);
+  readwiseSetupMock.handle.mockResolvedValue({ deviceId: 'local', mode: 'api' });
+  const response = createResponse();
+  const writeJson = createWriteJson();
+  const requestBody = JSON.stringify({ action: 'inspect' });
+  const request = Readable.from([requestBody]) as http.IncomingMessage;
+  request.headers = {}; request.method = 'POST'; request.url = '/companion/readwise-group-setup';
+  await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
+  expect(authMock.authenticateCompanionRequest).toHaveBeenCalledWith({
+    allowUnknownDevice: false, bodyText: requestBody, request, requireMemberState: true
+  });
+  expect(readwiseSetupMock.handle).toHaveBeenCalledWith(requestBody, 'candidate');
 });
 
 function createResponse() {

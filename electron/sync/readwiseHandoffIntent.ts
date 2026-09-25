@@ -12,6 +12,8 @@ export interface ReadwiseHandoffIntent {
   ownerId: string | null;
   epoch: number;
   targetId: string;
+  selectionSource?: 'automatic' | 'chosen';
+  forceCurrent?: boolean;
 }
 
 interface Registry {
@@ -62,6 +64,8 @@ export function loadReadwiseHandoffIntent(groupId: string): ReadwiseHandoffInten
       !['api', 'relay'].includes(intent.mode) ||
       !Number.isSafeInteger(intent.epoch) || intent.epoch < 0 ||
       !(intent.ownerId === null || typeof intent.ownerId === 'string') ||
+      (intent.selectionSource !== undefined && !['automatic', 'chosen'].includes(intent.selectionSource)) ||
+      (intent.forceCurrent !== undefined && typeof intent.forceCurrent !== 'boolean') ||
       typeof intent.targetId !== 'string' || !intent.targetId) {
     throw new Error('readwise_handoff_intent_invalid');
   }

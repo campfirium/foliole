@@ -17,3 +17,9 @@ export interface NativeReadwiseHostAssignment {
     | 'handoff-required' | 'handoff-in-progress' | 'group-quiescence-required'
     | 'connection-unavailable' | 'guard-unavailable' | 'guard-history' | null;
 }
+
+export interface NativeReadwiseJoinDecision {
+  kind: 'none' | 'waiting' | 'choose' | 'switching';
+  devices: Array<{ device_id: string; device_name: string }>;
+  reason?: string;
+}

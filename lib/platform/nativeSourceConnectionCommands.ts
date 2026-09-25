@@ -7,6 +7,8 @@ export const NATIVE_SOURCE_CONNECTION_COMMANDS = {
   disconnectExternalSearchFolder: 'disconnect_external_search_folder',
   disconnectReadwiseApi: 'disconnect_readwise_api',
   loadReadwiseHostAssignment: 'load_readwise_host_assignment',
+  resolveReadwiseJoinDecision: 'resolve_readwise_join_decision',
+  selectReadwiseImportDevice: 'select_readwise_import_device',
   loadReadwiseApiConnection: 'load_readwise_api_connection',
   loadReadwiseApiScheduleStatus: 'load_readwise_api_schedule_status',
   previewReadwiseSourceCutover: 'preview_readwise_source_cutover',

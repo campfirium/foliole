@@ -42,6 +42,7 @@ import {
   loadReviewSchedulerSettings,
   saveReviewSchedulerSettings
 } from '../reviewSchedulerSettings.js';
+import { resolveReadwiseJoinDecision, selectReadwiseImportDevice } from '../sync/readwiseGroupSetup.js';
 import { activateReadwiseWithHandoff } from '../sync/readwiseOwnerHandoff.js';
 
 import { asBoolean, asLiteralUnion, asNullableString, asString } from './commandParsers.js';
@@ -130,6 +131,9 @@ async function handleReadwiseHostCommand(command: string, args: Record<string, u
   const cutoverResult = await handleReadwiseCutoverCommand(command, window);
   if (cutoverResult !== undefined) return cutoverResult;
   if (command === NATIVE_COMMANDS.loadReadwiseHostAssignment) return loadReadwiseHostAssignment();
+  if (command === NATIVE_COMMANDS.resolveReadwiseJoinDecision) return resolveReadwiseJoinDecision();
+  if (command === NATIVE_COMMANDS.selectReadwiseImportDevice)
+    return selectReadwiseImportDevice(asString(args.device_id, 'device_id'));
   if (command === NATIVE_COMMANDS.activateReadwiseOnThisHost) {
     const result = await activateReadwiseWithHandoff();
     refreshReadwiseApiScheduler();

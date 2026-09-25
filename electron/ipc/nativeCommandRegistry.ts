@@ -158,6 +158,8 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadWorkspaceSnapshot, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadEditorOperationHistory, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadSyncGroupOverview, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.resolveReadwiseJoinDecision, route: 'storage', capability: 'settingsMutation' },
+  { command: NATIVE_COMMANDS.selectReadwiseImportDevice, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.createSyncGroup, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.leaveSyncGroup, route: 'storage', capability: 'settingsMutation' },
   { command: NATIVE_COMMANDS.removeSyncGroupDevice, route: 'storage', capability: 'settingsMutation' },

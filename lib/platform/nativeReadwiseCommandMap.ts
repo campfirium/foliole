@@ -29,7 +29,7 @@ import type {
   NativeReadwiseSourceResyncActionState,
   NativeReadwiseSourceResyncResult
 } from './nativeReadwiseContract.js';
-import type { NativeReadwiseHostAssignment } from './nativeReadwiseHostContract.js';
+import type { NativeReadwiseHostAssignment, NativeReadwiseJoinDecision } from './nativeReadwiseHostContract.js';
 import type {
   NativeReadwiseIdentityBindingPreview,
   NativeReadwiseIdentityBindingResult
@@ -78,6 +78,14 @@ export type NativeReadwiseCommandMap = {
   };
   [NATIVE_COMMANDS.activateReadwiseOnThisHost]: {
     args: undefined;
+    result: NativeReadwiseHostAssignment;
+  };
+  [NATIVE_COMMANDS.resolveReadwiseJoinDecision]: {
+    args: undefined;
+    result: NativeReadwiseJoinDecision;
+  };
+  [NATIVE_COMMANDS.selectReadwiseImportDevice]: {
+    args: { device_id: string };
     result: NativeReadwiseHostAssignment;
   };
   [NATIVE_COMMANDS.inspectReadwiseReaderSetup]: {

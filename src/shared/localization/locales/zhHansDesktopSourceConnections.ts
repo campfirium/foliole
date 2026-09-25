@@ -43,5 +43,9 @@ export const ZH_HANS_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS: Partial<Record<Tran
   'desktop.readwise.host.restoreGuard': 'Readwise 已暂停，请重新连接此设备。',
   'desktop.readwise.host.guardHistory': '此设备留有上次交接记录。恢复执行权之前，Readwise 将保持暂停。',
   'desktop.readwise.host.retry': '切换未完成，请重试。',
-  'desktop.readwise.host.connectFirst': '请先在此设备连接 Readwise。'
+  'desktop.readwise.host.connectFirst': '请先在此设备连接 Readwise。',
+  'desktop.readwise.join.title': 'Readwise 导入设备',
+  'desktop.readwise.join.choose': '选择由哪台设备导入 Readwise。',
+  'desktop.readwise.join.waiting': '等待设备连接完成后继续。',
+  'desktop.readwise.join.later': '稍后'
 };

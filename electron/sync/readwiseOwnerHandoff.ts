@@ -30,8 +30,10 @@ function resumePreparedActivation() {
   const guard = loadReadwiseOwnerGuard(current.group.group_id);
   if (!guard || guard.state !== 'active' || guard.ownerId !== localId ||
       guard.mode !== current.mode || guard.epoch !== current.assignment.active_owner_epoch + 1) return null;
+  const selectionSource = loadReadwiseHandoffIntent(current.group.group_id)?.selectionSource ?? 'chosen';
   saveJsonSetting('readwise_active_host', { device_identity_key: localId,
-    epoch: guard.epoch, host_name: current.assignment.current_host_name });
+    epoch: guard.epoch, host_name: current.assignment.current_host_name,
+    selection_source: selectionSource });
   resumeReadwiseExecutionAfterActivation();
   return loadReadwiseHostAssignment();
 }
@@ -121,7 +123,8 @@ function sameIntent(left: ReadwiseHandoffIntent, right: ReadwiseHandoffIntent) {
   return left.dbPath === right.dbPath && left.groupId === right.groupId &&
     left.mode === right.mode &&
     left.ownerId === right.ownerId && left.epoch === right.epoch &&
-    left.targetId === right.targetId;
+    left.targetId === right.targetId && left.selectionSource === right.selectionSource &&
+    left.forceCurrent === right.forceCurrent;
 }
 
 async function runHandoff(intent: ReadwiseHandoffIntent) {
@@ -150,15 +153,18 @@ function singleFlight(intent: ReadwiseHandoffIntent) {
   return promise;
 }
 
-export async function activateReadwiseWithHandoff() {
+export async function activateReadwiseWithHandoff(options: {
+  forceCurrent?: boolean; selectionSource?: 'automatic' | 'chosen'
+} = {}) {
   const initial = await runWithDatabaseConnectionOwner(snapshot);
-  if (!initial.group || initial.assignment.is_active) return initial.assignment;
+  if (!initial.group || (initial.assignment.is_active && !options.forceCurrent)) return initial.assignment;
   const intent: ReadwiseHandoffIntent = { dbPath: initial.dbPath,
     groupId: initial.group.group_id,
     mode: initial.mode as 'api' | 'relay',
     ownerId: initial.assignment.active_device_identity_key,
     epoch: initial.assignment.active_owner_epoch,
-    targetId: initial.group.local_device_identity_key };
+    targetId: initial.group.local_device_identity_key,
+    selectionSource: options.selectionSource ?? 'chosen', forceCurrent: options.forceCurrent ?? false };
   if (activeHandoff && !sameIntent(activeHandoff.intent, intent)) {
     throw new Error('readwise_handoff_in_progress');
   }
@@ -176,7 +182,7 @@ async function performHandoff(intent: ReadwiseHandoffIntent) {
   const resumed = await runWithDatabaseConnectionOwner(resumePreparedActivation);
   if (resumed) return resumed;
   const initial = await runWithDatabaseConnectionOwner(snapshot);
-  if (!initial.group || initial.assignment.is_active) return initial.assignment;
+  if (!initial.group || (initial.assignment.is_active && !intent.forceCurrent)) return initial.assignment;
   const localId = initial.group.local_device_identity_key;
   const groupId = initial.group.group_id;
   const ownerId = initial.assignment.active_device_identity_key;
@@ -211,7 +217,8 @@ async function performHandoff(intent: ReadwiseHandoffIntent) {
     saveReadwiseOwnerGuard({ epoch: nextEpoch, groupId, mode: request.mode,
       ownerId: localId, state: 'active', targetId: null });
     saveJsonSetting('readwise_active_host', { device_identity_key: localId,
-      epoch: nextEpoch, host_name: current.assignment.current_host_name });
+      epoch: nextEpoch, host_name: current.assignment.current_host_name,
+      selection_source: intent.selectionSource ?? 'chosen' });
     resumeReadwiseExecutionAfterActivation();
     return loadReadwiseHostAssignment();
   });

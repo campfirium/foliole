@@ -41,5 +41,9 @@ export const EN_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.host.restoreGuard': 'Readwise is paused until this device is reconnected.',
   'desktop.readwise.host.guardHistory': 'A previous handoff is recorded on this device. Readwise stays paused until ownership is recovered.',
   'desktop.readwise.host.retry': 'The switch did not complete. Try again.',
-  'desktop.readwise.host.connectFirst': 'Connect Readwise on this device first.'
+  'desktop.readwise.host.connectFirst': 'Connect Readwise on this device first.',
+  'desktop.readwise.join.title': 'Readwise import device',
+  'desktop.readwise.join.choose': 'Choose which device imports from Readwise.',
+  'desktop.readwise.join.waiting': 'Readwise is waiting for the devices to finish connecting.',
+  'desktop.readwise.join.later': 'Later'
 } as const;

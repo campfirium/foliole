@@ -110,6 +110,16 @@ it('writes a new owner only after an exact stop ACK from the old desktop', async
   expect(writes.resume).toHaveBeenCalledTimes(1);
 });
 
+it('confirms an automatic current owner through a stopped self handoff', async () => {
+  state.ownerId = state.localId;
+  await expect(activateReadwiseWithHandoff({
+    forceCurrent: true, selectionSource: 'chosen'
+  })).resolves.toMatchObject({ is_active: true });
+  expect(stopOrder).toEqual(['local']);
+  expect(writes.owner).toHaveBeenCalledWith('readwise_active_host',
+    expect.objectContaining({ epoch: 1, selection_source: 'chosen' }));
+});
+
 it('keeps the old owner and a durable intent when the old desktop is offline', async () => {
   state.remoteReachable = false;
   await expect(activateReadwiseWithHandoff()).resolves.toMatchObject({ is_active: false });
