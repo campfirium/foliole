@@ -8,10 +8,59 @@ updates:
       interval: daily
       time: "09:00"
       timezone: Asia/Shanghai
-    open-pull-requests-limit: 1
+    open-pull-requests-limit: 10
     allow:
       - dependency-name: electron
       - dependency-name: better-sqlite3
+      - dependency-name: "*"
+        dependency-type: direct
+        update-types:
+          - version-update:semver-patch
+          - version-update:semver-minor
+    groups:
+      mobile-host:
+        patterns:
+          - "@capacitor/*"
+          - "@capacitor-community/sqlite"
+        update-types: [patch, minor]
+      editor:
+        patterns:
+          - "@codemirror/*"
+          - "@lezer/*"
+        update-types: [patch, minor]
+      interface:
+        patterns:
+          - "@radix-ui/*"
+          - "@tanstack/react-virtual"
+          - tailwind-merge
+          - lucide-react
+        update-types: [patch, minor]
+      development:
+        dependency-type: development
+        patterns: ["*"]
+        exclude-patterns:
+          - electron
+          - "@electron/*"
+          - "@capacitor/*"
+        update-types: [patch, minor]
+      runtime-support:
+        dependency-type: production
+        patterns: ["*"]
+        exclude-patterns:
+          - better-sqlite3
+          - ts-fsrs
+          - "@noble/hashes"
+          - "@capacitor/*"
+          - "@capacitor-community/sqlite"
+          - "@codemirror/*"
+          - "@lezer/*"
+          - "@radix-ui/*"
+          - "@tanstack/react-virtual"
+          - tailwind-merge
+          - lucide-react
+          - react-pdf
+          - pdfjs-dist
+        update-types: [patch, minor]
     labels:
       - dependencies
     commit-message:

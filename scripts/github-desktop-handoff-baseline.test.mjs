@@ -67,8 +67,8 @@ describe('GitHub desktop handoff baselines', () => {
     expect(first).toHaveLength(1);
     expect(first[0]).toMatchObject({
       dedupeKey: 'pr:42:local',
-      handlingMode: 'automatic-local-implementation',
-      title: 'PR #42 local Dependabot implementation'
+      handlingMode: 'classify-then-handle',
+      title: 'PR #42 Dependabot update'
     });
     state.submitted[first[0].dedupeKey] = { emittedAt: '2026-07-20T04:00:00Z' };
     state.prs['42'] = first[0].eventId;

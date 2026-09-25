@@ -50,9 +50,9 @@ describe('GitHub desktop handoff title data', () => {
       headRefOid: 'dependabot-head-sha'
     }, []);
 
-    expect(data.handoffTitle).toBe('PR #42 local Dependabot implementation');
-    expect(data.failingChecks).toBe('Automatic local implementation');
-    expect(data.handlingMode).toBe('automatic-local-implementation');
+    expect(data.handoffTitle).toBe('PR #42 Dependabot update');
+    expect(data.failingChecks).toBe('Dependabot update proposal');
+    expect(data.handlingMode).toBe('classify-then-handle');
     expect(data.eventId).toBe('42:local');
 
     const rebased = buildPrHandoffData(config, {
@@ -75,6 +75,9 @@ describe('GitHub desktop handoff title data', () => {
     expect(rendered).toContain('Treat this as a PR handling task, not only a check inspection.');
     expect(rendered).toContain('standing authorization');
     expect(rendered).toContain('owns the implementation result');
+    expect(rendered).toContain('ordinary nonsecurity, non-Electron update');
+    expect(rendered).toContain('review signal only');
+    expect(rendered).toContain('Do not edit, commit, push, or close the PR until the user explicitly asks to adopt it.');
     expect(rendered).toContain('at most 25 hours from that first observation');
     expect(rendered).toContain('major releases wait 24 hours');
     expect(rendered).toContain('minor and patch releases wait 4 hours');

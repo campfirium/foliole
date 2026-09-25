@@ -2,13 +2,13 @@ import { getPrCheckSignal } from './github-monitor-gh.mjs';
 
 export function buildPrHandoffData(config, pr, checks) {
   const number = String(pr.number);
-  const autoImplement = (config.autoImplementAuthors ?? []).includes(pr.author?.login);
-  const checkSignal = autoImplement
-    ? { eventSuffix: 'local', label: 'Automatic local implementation' }
+  const dependabotHandoff = (config.autoImplementAuthors ?? []).includes(pr.author?.login);
+  const checkSignal = dependabotHandoff
+    ? { eventSuffix: 'local', label: 'Dependabot update proposal' }
     : getPrCheckSignal(config, checks);
   const noChecks = checkSignal.eventSuffix === 'no-checks';
-  const handoffTitle = autoImplement
-    ? `PR #${number} local Dependabot implementation`
+  const handoffTitle = dependabotHandoff
+    ? `PR #${number} Dependabot update`
     : noChecks
     ? `PR #${number} needs PR handling`
     : `PR #${number} failed: ${checkSignal.label}`;
@@ -19,7 +19,7 @@ export function buildPrHandoffData(config, pr, checks) {
     checkSignalSuffix: checkSignal.eventSuffix,
     eventId: `${number}:${checkSignal.eventSuffix}`,
     failingChecks: checkSignal.label,
-    handlingMode: autoImplement ? 'automatic-local-implementation' : 'review',
+    handlingMode: dependabotHandoff ? 'classify-then-handle' : 'review',
     handoffTitle,
     headRefName: pr.headRefName,
     number,

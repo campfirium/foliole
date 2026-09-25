@@ -69,7 +69,7 @@ describe('github desktop handoff monitor workspace binding', () => {
       eventId: '42:local',
       number: '42',
       source: 'foliole/github-pr',
-      title: 'PR #42 local Dependabot implementation'
+      title: 'PR #42 Dependabot update'
     };
     const state = { dependabotAlerts: {}, prs: {}, submitted: {} };
 
