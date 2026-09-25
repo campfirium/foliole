@@ -78,7 +78,9 @@ it('packs every retained branch of the current merge lineage', () => {
   } as never]);
 
   expect(versions.map((version) => version.version_id)).toEqual(['base', 'fri', 'macos', 'merged']);
-  expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual(parentRows);
+  expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual([
+    parentRows[1], parentRows[0], parentRows[2], parentRows[3]
+  ]);
 });
 
 it('keeps only pack-internal parent edges for the same node object', () => {
@@ -92,6 +94,22 @@ it('keeps only pack-internal parent edges for the same node object', () => {
     { ...parent, object_id: 'other-node' },
     head
   ])).toThrow('sync_pack_node_version_cross_object:desktop#head');
+});
+
+it('loads a large lineage without exceeding a bounded SQL parameter count', () => {
+  const versions = Array.from({ length: 1801 }, (_, index) =>
+    createVersion({ version_id: `version-${String(index).padStart(4, '0')}` }));
+  const rows = [
+    { ordinal: 0, parent_version_id: versions[0]!.version_id, version_id: versions[900]!.version_id },
+    { ordinal: 0, parent_version_id: versions[900]!.version_id, version_id: versions[1800]!.version_id }
+  ];
+  const driver = createDriver({ parentRows: rows, versions: [] });
+
+  expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual(rows);
+  for (const [, params] of vi.mocked(driver.queryAll).mock.calls) {
+    expect(params!.length).toBeLessThanOrEqual(900);
+  }
+  expect(vi.mocked(driver.queryAll).mock.calls.length).toBe(3);
 });
 
 it('still rejects a missing current head row', () => {

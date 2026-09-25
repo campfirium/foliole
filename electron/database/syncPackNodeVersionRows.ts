@@ -8,6 +8,8 @@ import {
 
 import type { NodePackRow } from './syncPackRows.js';
 
+const VERSION_PARENT_QUERY_BATCH_SIZE = 900;
+
 export function loadSyncPackNodeVersionRows(
   driver: DatabaseDriver,
   nodes: NodePackRow[]
@@ -27,12 +29,16 @@ export function loadSyncPackNodeVersionParentRows(
   if (versions.length === 0) return [];
   const ids = versions.map((row) => row.version_id);
   const objectIds = new Map(versions.map((row) => [row.version_id, row.object_id]));
-  const rows = driver.queryAll<SyncPackNodeVersionParentRow>(
-    `SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents
-     WHERE version_id IN (${ids.map(() => '?').join(', ')})
-     ORDER BY version_id ASC, ordinal ASC`,
-    ids
-  );
+  const rows: SyncPackNodeVersionParentRow[] = [];
+  for (let index = 0; index < ids.length; index += VERSION_PARENT_QUERY_BATCH_SIZE) {
+    const batch = ids.slice(index, index + VERSION_PARENT_QUERY_BATCH_SIZE);
+    rows.push(...driver.queryAll<SyncPackNodeVersionParentRow>(
+      `SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents
+       WHERE version_id IN (${batch.map(() => '?').join(', ')})
+       ORDER BY version_id ASC, ordinal ASC`,
+      batch
+    ));
+  }
   return rows.filter((row) => {
     const parentObjectId = objectIds.get(row.parent_version_id);
     if (parentObjectId === undefined) return false;
@@ -40,7 +46,7 @@ export function loadSyncPackNodeVersionParentRows(
       throw new Error(`sync_pack_node_version_cross_object:${row.version_id}`);
     }
     return true;
-  });
+  }).sort((left, right) => left.version_id.localeCompare(right.version_id) || left.ordinal - right.ordinal);
 }
 
 function loadVersionLineage(
