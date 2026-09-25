@@ -3,6 +3,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import type { DbPort } from './dbPort.js';
 import { reviveDeletedFoldersForLaterChildren } from './syncFolderChildRevival.js';
 import { resolveFolderConflict } from './syncFolderResolution.js';
+import { resolveItemConflict } from './syncItemResolution.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord, loadMergeBase } from './syncNodeGraph.js';
 import {
@@ -26,6 +27,10 @@ export async function applyConvergentSyncNodesWithDbPort(
   for (const group of conflicts) {
     if (group.every((record) => record.snapshot.kind === 'folder')) {
       resolvedNodeIds.push((await resolveFolderConflict(port, group)).object_id);
+      continue;
+    }
+    if (group.every((record) => record.snapshot.kind === 'item')) {
+      resolvedNodeIds.push((await resolveItemConflict(port, group)).object_id);
       continue;
     }
     if (group.some((record) => record.snapshot.kind !== 'topic')) {
