@@ -197,10 +197,10 @@
     "sync:sql-surface:scan": "node scripts/quality/quality-command-contracts.mjs allow sync:sql-surface:scan && node scripts/sync/sql-surface-scan.mjs"
   },
   "dependencies": {
-    "@capacitor-community/sqlite": "8.1.0",
-    "@capacitor/app": "8.1.0",
-    "@capacitor/core": "8.4.1",
-    "@capacitor/local-notifications": "8.2.0",
+    "@capacitor-community/sqlite": "8.1.1",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/local-notifications": "8.3.1",
     "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/language": "6.12.4",
@@ -239,9 +239,9 @@
     "@foliole/macos-security-bookmarks": "file:electron/native/foliole-macos-security-bookmarks"
   },
   "devDependencies": {
-    "@capacitor/android": "8.4.1",
-    "@capacitor/cli": "8.4.1",
-    "@capacitor/ios": "8.4.1",
+    "@capacitor/android": "8.5.2",
+    "@capacitor/cli": "8.5.2",
+    "@capacitor/ios": "8.5.2",
     "@electron/asar": "3.4.1",
     "@electron/get": "5.1.0",
     "@electron/osx-sign": "1.3.3",
