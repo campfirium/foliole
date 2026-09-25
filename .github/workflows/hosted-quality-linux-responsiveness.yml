@@ -7,6 +7,12 @@ on:
         description: Exact dev commit to validate independently
         required: true
         type: string
+      inject_block_ms:
+        description: Test-only main-process stall for proving rejection
+        required: true
+        type: choice
+        options: ['0', '1200']
+        default: '0'
   workflow_call:
     inputs:
       execution_lane: { required: true, type: string }
@@ -32,6 +38,7 @@ jobs:
       accepted_sha: ${{ steps.accepted.outputs.accepted_sha }}
     env:
       CI: "true"
+      FOLIOLE_PERF_TEST_BLOCK_MS: ${{ inputs.inject_block_ms || '0' }}
       TARGET_SHA: ${{ inputs.target_sha }}
     steps:
       - name: Require dev for independent validation
