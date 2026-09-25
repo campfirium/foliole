@@ -48,7 +48,7 @@ const payloadPlans = [
     WHERE s.object_type = 'view_state' AND s.object_id NOT LIKE '%:active_node'` },
   { objectType: 'watched_folder', sql: `SELECT b.binding_id __object_id, b.binding_id,
     s.host_name, s.host_platform, b.owner_device_identity_key, b.connection_status, b.action_mode,
-    b.highlight_mode, b.created_at, b.updated_at, b.source_ref
+    b.highlight_mode, b.reported_path, b.created_at, b.updated_at, b.source_ref
     FROM source.watched_folder_bindings b JOIN source.desktop_sources s ON s.source_ref = b.source_ref` }
 ] as const;
 

@@ -23,9 +23,10 @@ function record(payload: Record<string, unknown>): SyncPackSyncObjectRecord {
 
 const shared = { action_mode: 'keep', binding_id: 'watched-a', connection_status: 'connected',
   created_at: 'now', highlight_mode: 'split', host_name: 'Remote Mac', host_platform: 'macOS',
-  owner_device_identity_key: 'remote-device', source_ref: 'watched:watched-a' };
+  owner_device_identity_key: 'remote-device', reported_path: '/remote/private',
+  source_ref: 'watched:watched-a' };
 
-it('keeps local path evidence but cannot accept remote path fields', async () => {
+it('keeps local execution paths while accepting the remote display path', async () => {
   db.prepare(`INSERT INTO desktop_sources
     (source_ref, source_type, config_ref, host_name, host_platform, root_path,
      path_flavor, type_settings_json, created_at, updated_at)
@@ -42,9 +43,10 @@ it('keeps local path evidence but cannot accept remote path fields', async () =>
     WHERE source_ref = 'watched:watched-a'`).get()).toEqual({
     root_path: '/local/private', type_settings_json: '{"highlightPath":"/local/highlights"}'
   });
-  expect(db.prepare(`SELECT owner_device_identity_key, primary_path FROM watched_folder_bindings
+  expect(db.prepare(`SELECT owner_device_identity_key, primary_path, reported_path FROM watched_folder_bindings
     WHERE binding_id = 'watched-a'`).get()).toEqual({
-    owner_device_identity_key: 'remote-device', primary_path: '/local/private'
+    owner_device_identity_key: 'remote-device', primary_path: '/local/private',
+    reported_path: '/remote/private'
   });
   await expect(applyWatchedFolderObject(port, record({ ...shared, primary_path: '/remote/private' })))
     .rejects.toThrow('invalid_watched_folder_payload');

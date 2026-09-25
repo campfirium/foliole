@@ -5,6 +5,10 @@ import type { SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifie
 import { desktopWorkgroupTag } from '../sync/workgroupKeyStore.js';
 
 import { openDatabaseConnection } from './connection.js';
+import {
+  loadStandaloneWatchedDeviceId,
+  retagLocalWatchedFolderBindings
+} from './watchedGroupOwnershipTransition.js';
 
 interface GroupRow {
   [key: string]: null | number | string;
@@ -125,6 +129,8 @@ export function leaveDesktopSyncGroupDevice(deviceIdentityKey: string, leftAt = 
     );
     if (local?.local_device_identity_key === deviceIdentityKey) {
       driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
+      retagLocalWatchedFolderBindings(driver, deviceIdentityKey,
+        loadStandaloneWatchedDeviceId(driver) ?? deviceIdentityKey, leftAt);
       driver.execute('DELETE FROM sync_delivery_receipts');
       driver.execute('DELETE FROM sync_peer_cursors');
       driver.execute('DELETE FROM sync_group_nonce_ledger');
@@ -145,6 +151,7 @@ function writeGroupAndLocalDevice(args: {
   workgroupKey: string;
 }) {
   const driver = openDatabaseConnection().driver;
+  const previousDeviceId = loadStandaloneWatchedDeviceId(driver);
   driver.transaction(() => {
     driver.execute(
       `INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
@@ -164,6 +171,8 @@ function writeGroupAndLocalDevice(args: {
        VALUES (1, ?, ?, 'active', ?)`,
       [args.device.group_id, args.device.identity_key, args.createdAt]
     );
+    retagLocalWatchedFolderBindings(driver, previousDeviceId, args.device.identity_key,
+      args.createdAt);
   });
 }
 

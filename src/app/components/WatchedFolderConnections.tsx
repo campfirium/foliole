@@ -156,8 +156,7 @@ export function WatchedFolderConnections() {
   };
 
   const remoteBindings = state?.bindings.filter((binding) => (
-    binding.owner_device_identity_key !== state.current_device_identity_key ||
-    binding.connection_status === 'needs-folder'
+    binding.owner_device_identity_key !== state.current_device_identity_key
   )) ?? [];
   if (!hasActiveSyncGroup || !remoteBindings.length) return null;
   return (

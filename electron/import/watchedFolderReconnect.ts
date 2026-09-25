@@ -4,6 +4,7 @@ import {
   loadWatchedFolderBindings,
   upsertChangedWatchedFolderSource
 } from '../database/watchedFolderBindings.js';
+import { loadLocalWatchedRuleId } from '../database/watchedLocalSource.js';
 import { discoverDirectoryImportSources } from '../ipc/importSourcePipeline.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
 import { loadManagedPathCandidates } from '../managedPathSafety.js';
@@ -55,6 +56,7 @@ export async function confirmWatchedFolderReconnect(args: {
   const preview = await previewWatchedFolderReconnect(args.bindingId, args.folderPath);
   const binding = preview.binding;
   const settings = loadImportManagerSettings();
+  const ruleId = loadLocalWatchedRuleId(binding.binding_id) ?? binding.binding_id;
   const source = {
     actionMode: binding.action_mode,
     archivePath: binding.archive_path,
@@ -62,12 +64,12 @@ export async function confirmWatchedFolderReconnect(args: {
     highlightPath: binding.highlight_mode === 'split'
       ? args.highlightPath?.trim() || binding.highlight_path
       : '',
-    id: binding.binding_id,
+    id: ruleId,
     keepPreview: null,
     keepState: 'enabled' as const,
     primaryPath: preview.folder_path
   };
-  const currentIndex = settings.sources.findIndex((item) => item.id === binding.binding_id);
+  const currentIndex = settings.sources.findIndex((item) => item.id === ruleId);
   const sources = currentIndex < 0
     ? [...settings.sources, source]
     : settings.sources.map((item, index) => index === currentIndex ? source : item);

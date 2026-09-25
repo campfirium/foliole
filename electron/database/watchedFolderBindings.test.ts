@@ -198,7 +198,7 @@ it('preserves the original topic identity and surfaces its update after reconnec
   disconnectWatchedFolderBinding(binding.binding_id);
   await confirmWatchedFolderReconnect({ bindingId: binding.binding_id, folderPath: nextPath });
   const reconnectRun = await runKeepImportRule({
-    directoryPath: nextPath, highlightPolicy: 'reference_only', ruleId: binding.binding_id, sourceType: 'generic'
+    directoryPath: nextPath, highlightPolicy: 'reference_only', ruleId: source.id, sourceType: 'generic'
   });
   expect(reconnectRun).toEqual(expect.arrayContaining([
     expect.objectContaining({ action: 'skipped', previewStatus: 'updated', sourcePath: 'note.md' }),

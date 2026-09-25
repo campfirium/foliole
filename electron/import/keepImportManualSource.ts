@@ -6,6 +6,7 @@ import {
   resolveDesktopSourceAddress,
   upsertDesktopSource
 } from '../database/desktopSources.js';
+import { loadLocalWatchedSourceByRuleId } from '../database/watchedLocalSource.js';
 import { resolveImportKind, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -45,13 +46,16 @@ export async function buildKeepImportSourceDescriptor(
   sourcePath: string
 ): Promise<DirectoryImportSourceDescriptor> {
   const sourceType = config.sourceType === 'readwise' ? 'readwise' : 'watched';
-  const persisted = loadDesktopSourceByConfig(sourceType, config.ruleId) ?? upsertDesktopSource({
-    configRef: config.ruleId,
-    rootPath: config.directoryPath,
-    sourceType,
-    typeSettings: { highlightDirectoryPath: config.highlightDirectoryPath ?? '' },
-    updatedAt: new Date().toISOString()
-  });
+  const persisted = sourceType === 'watched'
+    ? loadLocalWatchedSourceByRuleId(config.ruleId)
+    : loadDesktopSourceByConfig(sourceType, config.ruleId) ?? upsertDesktopSource({
+      configRef: config.ruleId,
+      rootPath: config.directoryPath,
+      sourceType,
+      typeSettings: { highlightDirectoryPath: config.highlightDirectoryPath ?? '' },
+      updatedAt: new Date().toISOString()
+    });
+  if (!persisted) throw new Error('watched_folder_not_connected');
   const location = path.isAbsolute(sourcePath) ? path.relative(config.directoryPath, sourcePath) : sourcePath;
   const filePath = resolveDesktopSourceAddress(persisted.source_ref, location);
   if (!filePath) throw new Error('source_location_unavailable');

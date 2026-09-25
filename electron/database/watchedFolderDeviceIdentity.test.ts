@@ -32,7 +32,7 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
-it('keeps same-named remote paths private and renames only the local binding', async () => {
+it('shows a same-named remote path without treating it as locally executable', async () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(`INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
     VALUES ('group', 'Group', 'key', 'now', 'now')`);
@@ -58,14 +58,14 @@ it('keeps same-named remote paths private and renames only the local binding', a
     VALUES ('watched:remote', 'watched', 'remote', 'Shared Name', 'macOS',
       '/remote/private', 'posix', '{}', 'now', 'now')`);
   driver.execute(`INSERT INTO watched_folder_bindings
-    (binding_id, connection_status, action_mode, highlight_mode, primary_path,
+    (binding_id, connection_status, action_mode, highlight_mode, primary_path, reported_path,
      created_at, updated_at, source_ref, owner_device_identity_key)
-    VALUES ('remote', 'connected', 'keep', 'merged', '/remote/private',
+    VALUES ('remote', 'connected', 'keep', 'merged', '/remote/private', '/remote/private',
       'now', 'now', 'watched:remote', 'remote-device')`);
   expect(resolveExecutableWatchedBinding('local', folder).executable).toBe(true);
   expect(resolveExecutableWatchedBinding('remote', '/remote/private').executable).toBe(false);
   expect(loadWatchedFolderBindings().find((item) => item.binding_id === 'remote')).toMatchObject({
-    primary_path: '', connection_status: 'needs-folder'
+    primary_path: '/remote/private', connection_status: 'needs-folder'
   });
   updateLocalDesktopSourceHosts({ currentHostName: 'Renamed Mac', currentHostPlatform: 'darwin',
     driver, previousHostName: 'Shared Name', updatedAt: 'later' });

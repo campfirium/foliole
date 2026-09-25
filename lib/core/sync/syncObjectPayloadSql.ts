@@ -56,7 +56,7 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'binding_id', b.binding_id, 'host_name', s.host_name, 'host_platform', s.host_platform,
     'owner_device_identity_key', b.owner_device_identity_key,
     'connection_status', b.connection_status, 'action_mode', b.action_mode,
-    'highlight_mode', b.highlight_mode,
+    'highlight_mode', b.highlight_mode, 'reported_path', b.reported_path,
     'created_at', b.created_at, 'updated_at', b.updated_at, 'source_ref', b.source_ref
   ) AS payload_json FROM watched_folder_bindings b
     JOIN desktop_sources s ON s.source_ref = b.source_ref WHERE b.binding_id = ?`

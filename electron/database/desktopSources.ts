@@ -11,6 +11,7 @@ import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectP
 
 import { openDatabaseConnection } from './connection.js';
 import { loadDesktopDeviceId } from './deviceIdentity.js';
+import { loadLocalWatchedSourceByRuleId } from './watchedLocalSource.js';
 
 export type DesktopSourceType = 'external' | 'readwise' | 'watched';
 
@@ -79,13 +80,11 @@ export function upsertDesktopSource(input: {
 }
 
 function hydrateSource(sourceType: 'readwise' | 'watched', source: ImportManagerSourceDraft) {
-  const persisted = loadDesktopSourceByConfig(sourceType, source.id);
+  const persisted = sourceType === 'watched'
+    ? loadLocalWatchedSourceByRuleId(source.id)
+    : loadDesktopSourceByConfig(sourceType, source.id);
   if (sourceType === 'watched') {
-    const binding = persisted && openDatabaseConnection().driver.queryOne<{
-      owner_device_identity_key: string | null
-    }>('SELECT owner_device_identity_key FROM watched_folder_bindings WHERE source_ref = ?', [persisted.source_ref]);
-    const localId = loadDesktopDeviceId();
-    if (!localId || !binding || binding.owner_device_identity_key !== localId) {
+    if (!persisted) {
       return { ...source, archivePath: '', highlightPath: '', primaryPath: '' };
     }
   }

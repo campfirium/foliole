@@ -136,7 +136,7 @@ it('applies import source and Source Host payload records', async () => {
         object_type: 'watched_folder',
         payload_json: JSON.stringify({ action_mode: 'keep', binding_id: 'watched-1',
           connection_status: 'connected', host_name: 'Desktop Host', host_platform: 'darwin',
-          owner_device_identity_key: 'desktop-device', source_ref: 'watched:watched-1' }),
+          owner_device_identity_key: 'desktop-device', reported_path: '/library/watched', source_ref: 'watched:watched-1' }),
         updated_at: '2026-05-04T02:02:00.000Z'
       }
     ]),

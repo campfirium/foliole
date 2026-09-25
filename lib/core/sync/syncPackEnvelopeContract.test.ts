@@ -19,7 +19,7 @@ it('defines the shared sync pack envelope and actual sqlite requirements', () =>
     compression: 'zlib',
     databaseEntry: 'incoming.db.deflate',
     format: 'foliole.sync-pack',
-    formatVersion: 14,
+    formatVersion: 15,
     forbiddenDeviceIdentityKeys: [
       'canonical_library_path', 'device_anchor', 'device_identity_key', 'device_key', 'identity_key'
     ],
@@ -34,7 +34,7 @@ it('defines the shared sync pack envelope and actual sqlite requirements', () =>
 });
 
 it('only accepts the exact independent sync pack payload schema', () => {
-  expect(SYNC_PACK_PAYLOAD_SCHEMA_VERSION).toBe(87);
+  expect(SYNC_PACK_PAYLOAD_SCHEMA_VERSION).toBe(88);
   expect(() => assertSyncPackSchemaVersion(SYNC_PACK_PAYLOAD_SCHEMA_VERSION)).not.toThrow();
   expect(() => assertSyncPackSchemaVersion(SYNC_PACK_PAYLOAD_SCHEMA_VERSION - 1))
     .toThrow('unsupported_sync_pack_schema_version');

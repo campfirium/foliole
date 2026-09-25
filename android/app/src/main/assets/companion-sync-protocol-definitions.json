@@ -20,11 +20,12 @@
       "sync-group-member-state-v1",
       "system-entry-display-names-v1",
       "watched-device-binding-v1",
+      "watched-source-identity-and-path-v1",
       "workgroup-aead-v1"
     ],
-    "max_supported_version": 9,
-    "min_supported_version": 9,
-    "version": 9
+    "max_supported_version": 10,
+    "min_supported_version": 10,
+    "version": 10
   },
   "pushAck": {
     "clientOpIdKeys": [
@@ -76,7 +77,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 14,
+    "formatVersion": 15,
     "forbiddenDeviceIdentityKeys": [
       "canonical_library_path",
       "device_anchor",
@@ -114,8 +115,8 @@
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 87,
-    "minimumSchemaVersion": 87,
+    "maximumSchemaVersion": 88,
+    "minimumSchemaVersion": 88,
     "sqliteTableRequirements": {
       "pack_manifest": [
         "key",

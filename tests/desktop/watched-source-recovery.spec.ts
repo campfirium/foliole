@@ -26,6 +26,8 @@ async function runWatchedRecoveryJourney(desktopApp: ElectronApplication) {
     const connection = require(pathApi.join(cwd, 'dist/electron/database/connection.js'));
     const bindings = require(pathApi.join(cwd, 'dist/electron/database/watchedFolderBindings.js'));
     const importer = require(pathApi.join(cwd, 'dist/electron/import/keepImportService.js'));
+    const manager = require(pathApi.join(cwd, 'dist/electron/import/importManagerSettings.js'));
+    const settingStore = require(pathApi.join(cwd, 'dist/electron/database/settingsStore.js'));
     const reconnect = require(pathApi.join(cwd, 'dist/electron/import/watchedFolderReconnect.js'));
     const reimport = require(pathApi.join(cwd, 'dist/electron/import/currentSourceReimport.js'));
     return connection.runWithDatabaseConnectionOwner(async () => {
@@ -34,6 +36,7 @@ async function runWatchedRecoveryJourney(desktopApp: ElectronApplication) {
         id: sourceId, keepPreview: null, keepState: 'enabled', primaryPath: firstRoot
       };
       const binding = bindings.upsertChangedWatchedFolderSource(source, '2026-08-22T11:20:00.000Z');
+      settingStore.saveJsonSetting('import_manager_settings', { ...manager.loadImportManagerSettings(), sources: [source] });
       await importer.runKeepImportRule({
         directoryPath: firstRoot, highlightPolicy: 'reference_only', ruleId: source.id, sourceType: 'generic'
       });
@@ -51,7 +54,7 @@ async function runWatchedRecoveryJourney(desktopApp: ElectronApplication) {
       const preview = await reconnect.previewWatchedFolderReconnect(binding.binding_id, nextRoot);
       await reconnect.confirmWatchedFolderReconnect({ bindingId: binding.binding_id, folderPath: nextRoot });
       await importer.runKeepImportRule({
-        directoryPath: nextRoot, highlightPolicy: 'reference_only', ruleId: binding.binding_id, sourceType: 'generic'
+        directoryPath: nextRoot, highlightPolicy: 'reference_only', ruleId: source.id, sourceType: 'generic'
       });
       const reimported = await reimport.reimportCurrentTopicSource(original.latest_node_id);
       const mappings = driver.queryAll(

@@ -40,13 +40,13 @@ function binding(id: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-it('shows remote and waiting sources above the unchanged local settings', async () => {
+it('shows other devices and unassigned sources, but not this device, above local settings', async () => {
   load.mockResolvedValue({
     bindings: [
       binding('local'),
       binding('remote', {
         host_name: 'Office PC', host_platform: 'win32', owner_device_identity_key: 'remote-device',
-        primary_path: ''
+        primary_path: 'D:\\Notes\\Articles'
       }),
       binding('waiting', {
         host_name: '', host_platform: '', connection_status: 'needs-folder',
@@ -64,16 +64,19 @@ it('shows remote and waiting sources above the unchanged local settings', async 
   const region = await screen.findByRole('region', { name: 'Watched folders in this workgroup' });
   const remoteGroup = screen.getByRole('group', { name: 'Office PC' });
   const waitingGroup = screen.getByRole('group', { name: 'Waiting for a folder' });
-  const replacedGroup = screen.getByRole('group', { name: 'This Mac' });
   expect(within(region).getByText('Path')).toBeInTheDocument();
   expect(within(remoteGroup).getByText('Windows')).toBeInTheDocument();
-  expect(within(remoteGroup).getByRole('button', { name: 'More actions for Watched folder' })).toBeInTheDocument();
+  expect(within(remoteGroup).getByText('D:\\Notes\\Articles')).toBeInTheDocument();
+  expect(within(remoteGroup).getByRole('button', { name: 'More actions for D:\\Notes\\Articles' })).toBeInTheDocument();
   expect(within(waitingGroup).getByRole('button', { name: 'More actions for Watched folder' })).toBeInTheDocument();
-  expect(within(replacedGroup).getByRole('button', { name: 'More actions for /source/replaced' })).toBeInTheDocument();
+  expect(within(region).queryByRole('group', { name: 'This Mac' })).not.toBeInTheDocument();
 });
 
 it('does not add an empty workgroup block before local watched-folder settings', async () => {
-  load.mockResolvedValue({ bindings: [], current_host_name: 'This Mac', current_device_identity_key: 'local-device' });
+  load.mockResolvedValue({
+    bindings: [binding('local-needs-folder', { connection_status: 'needs-folder' })],
+    current_host_name: 'This Mac', current_device_identity_key: 'local-device'
+  });
 
   renderWithLocalization(<WatchedFolderConnections />);
 

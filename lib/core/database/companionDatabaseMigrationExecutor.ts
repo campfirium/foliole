@@ -65,8 +65,19 @@ export async function migrateCompanionDatabase(
   await repairCompanionDatabase(db);
   if (currentVersion < 37 && targetVersion >= 37) await retireCompanionAttachmentManifest(db);
   if (currentVersion < 38 && targetVersion >= 38) await migrateCompanionWatchedBindings(db);
+  if (currentVersion < 39 && targetVersion >= 39) await migrateCompanionWatchedDisplayPath(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
+}
+
+async function migrateCompanionWatchedDisplayPath(db: DbPort) {
+  const columns = await db.query<{ name: string }>("PRAGMA table_info('watched_folder_bindings')");
+  if (!columns.some((column) => column.name === 'local_rule_id')) {
+    await db.run('ALTER TABLE watched_folder_bindings ADD COLUMN local_rule_id TEXT');
+  }
+  if (!columns.some((column) => column.name === 'reported_path')) {
+    await db.run("ALTER TABLE watched_folder_bindings ADD COLUMN reported_path TEXT NOT NULL DEFAULT ''");
+  }
 }
 
 export async function createCompanionDatabase(

@@ -1,10 +1,8 @@
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
-import {
-  recordReadwiseImportSourceMapping,
-  recordWatchedImportSourceMapping
-} from '../database/watchedFolderBindings.js';
+import { recordReadwiseImportSourceMapping } from '../database/readwiseSourceMapping.js';
+import { recordWatchedImportSourceMapping } from '../database/watchedFolderBindings.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { persistAutomaticDuplicateNoop } from './keepImportDuplicateNoop.js';
