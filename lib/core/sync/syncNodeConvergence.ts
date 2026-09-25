@@ -1,6 +1,8 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
+import { reviveDeletedFoldersForLaterChildren } from './syncFolderChildRevival.js';
+import { resolveFolderConflict } from './syncFolderResolution.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord, loadMergeBase } from './syncNodeGraph.js';
 import {
@@ -22,14 +24,21 @@ export async function applyConvergentSyncNodesWithDbPort(
   const conflicts = groupByObjectId(result.conflictNodes);
   const resolvedNodeIds: string[] = [];
   for (const group of conflicts) {
+    if (group.every((record) => record.snapshot.kind === 'folder')) {
+      resolvedNodeIds.push((await resolveFolderConflict(port, group)).object_id);
+      continue;
+    }
     if (group.some((record) => record.snapshot.kind !== 'topic')) {
-      throw new Error(`sync_node_conflict_requires_topic:${group[0]!.object_id}`);
+      throw new Error(`sync_node_conflict_kind_mismatch:${group[0]!.object_id}`);
     }
     resolvedNodeIds.push((await resolveTopicConflict(port, group)).object_id);
   }
   if (result.blockedIds.length > 0) {
     throw new Error(`sync_node_apply_blocked:${result.blockedIds.join(',')}`);
   }
+  await reviveDeletedFoldersForLaterChildren(
+    port, records, new Set([...result.appliedIds, ...resolvedNodeIds])
+  );
   return {
     appliedNodeCount: new Set([
       ...result.appliedIds,
@@ -67,8 +76,15 @@ export async function resolveTopicConflict(
   let body = local.body_text ?? local.snapshot.content ?? '';
   let winner = local;
   let alternative: NativeSyncNodeRecord | null = null;
+  let parent = { value: local.snapshot.parent_id, source: local };
+  let position = { value: local.snapshot.position, source: local };
+  let deletion = { value: local.snapshot.deleted_at, source: local };
   for (const incoming of ordered) {
     const base = await loadMergeBase(port, local.version_id, incoming.version_id!);
+    const baseSnapshot = base ? JSON.parse(base.snapshot_json) as NativeSyncNodeRecord['snapshot'] : null;
+    parent = selectOperationValue(baseSnapshot?.parent_id, parent, incoming.snapshot.parent_id, incoming);
+    position = selectOperationValue(baseSnapshot?.position, position, incoming.snapshot.position, incoming);
+    deletion = selectOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
     const baseBody = base?.body_text ?? '';
     const incomingBody = incoming.body_text ?? incoming.snapshot.content ?? '';
     const merge = base?.body_text == null
@@ -84,7 +100,12 @@ export async function resolveTopicConflict(
     winner = projection.winner;
     alternative = projection.loser;
   }
-  const resolution = buildResolutionRecord([local, ...ordered], winner, body);
+  const resolution = buildResolutionRecord([local, ...ordered], winner, body, {
+    ...winner.snapshot,
+    deleted_at: deletion.value,
+    parent_id: parent.value,
+    position: position.value
+  });
   const applied = await applySyncNodesWithDbPort(port, [resolution], {
     enqueueSearchInvalidations: false,
     includeAlreadyApplied: true,
@@ -95,6 +116,21 @@ export async function resolveTopicConflict(
   }
   await reconcileResolutionAlternatives(port, resolution, alternative);
   return resolution;
+}
+
+function selectOperationValue<T>(
+  base: T | undefined,
+  current: { source: NativeSyncNodeRecord; value: T },
+  incomingValue: T,
+  incoming: NativeSyncNodeRecord
+) {
+  if (base !== undefined) {
+    if (current.value === base && incomingValue !== base) return { value: incomingValue, source: incoming };
+    if (incomingValue === base) return current;
+  }
+  const currentKey = `${current.source.version_created_at ?? ''}\n${current.source.version_id ?? ''}`;
+  const incomingKey = `${incoming.version_created_at ?? ''}\n${incoming.version_id ?? ''}`;
+  return incomingKey > currentKey ? { value: incomingValue, source: incoming } : current;
 }
 
 function groupByObjectId(records: NativeSyncNodeRecord[]) {

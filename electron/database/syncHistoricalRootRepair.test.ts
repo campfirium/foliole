@@ -53,17 +53,50 @@ it('fast-forwards a folder when its local root matches an incoming ancestor by c
   )).toEqual({ content_hash: 'same-root-hash' });
 });
 
-it('keeps a folder conflict when the historical root contents differ', async () => {
+it('automatically resolves independent folder histories using the later operation', async () => {
   seedHistoricalRoots('different-local-hash', 0);
 
-  await expect(applyIncomingFolder()).rejects.toThrow('sync_node_conflict_requires_topic:shared-folder');
-  expect(readCurrentNode().current_version_id).toBe('local-root');
+  const result = await applyIncomingFolder();
+
+  expect(result.handledConflictCount).toBe(1);
+  expect(readCurrentNode()).toMatchObject({
+    content: 'Current remote body',
+    title: 'Current remote folder'
+  });
+  expect(readCurrentNode().current_version_id).not.toBe('local-root');
+});
+
+it('ignores a known older folder version after the local folder has advanced', async () => {
+  seedHistoricalRoots('same-root-hash', 0);
+  const driver = openDatabaseConnection().driver;
+  driver.execute(
+    `UPDATE nodes SET current_version_id = 'remote-head', title = 'Current remote folder',
+       content = 'Current remote body' WHERE id = 'shared-folder'`
+  );
+  const older = {
+    ...incomingFolder(),
+    ancestor_version_ids: [],
+    body_text: 'Historical body',
+    content_hash: 'same-root-hash',
+    parent_version_id: null,
+    parent_version_ids: [],
+    snapshot: snapshot('Historical body', 'Historical folder', '2026-07-02T00:00:00.000Z'),
+    updated_at: '2026-07-02T00:00:00.000Z',
+    version_created_at: '2026-07-02T00:00:00.000Z',
+    version_id: 'remote-root'
+  };
+
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'known-older-folder' });
+  const result = await applyConvergentSyncNodesWithDbPort(port, [older]);
+
+  expect(result.handledConflictCount).toBe(0);
+  expect(readCurrentNode().current_version_id).toBe('remote-head');
 });
 
 it('does not repair over an unversioned local change', async () => {
   seedHistoricalRoots('same-root-hash', 1);
 
-  await expect(applyIncomingFolder()).rejects.toThrow('sync_node_conflict_requires_topic:shared-folder');
+  await expect(applyIncomingFolder()).rejects.toThrow('sync_folder_local_change_unversioned:shared-folder');
   expect(readCurrentNode().current_version_id).toBe('local-root');
 });
 

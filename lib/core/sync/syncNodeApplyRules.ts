@@ -12,6 +12,7 @@ export type IncomingNodeApplyDecision =
   | 'apply_missing_local'
   | 'apply_fast_forward'
   | 'already_applied'
+  | 'skip_stale'
   | 'block_incoming'
   | 'record_conflict';
 

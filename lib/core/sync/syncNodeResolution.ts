@@ -53,11 +53,12 @@ export function chooseProjection(
 export function buildResolutionRecord(
   records: NativeSyncNodeRecord[],
   winner: NativeSyncNodeRecord,
-  body: string
+  body: string,
+  resolvedSnapshot?: NativeSyncNodeRecord['snapshot']
 ): NativeSyncNodeRecord {
   const parents = [...new Set(records.map((record) => record.version_id!))].sort();
   const createdAt = nextResolutionTimestamp(records);
-  const snapshot = normalizeResolutionSnapshot(winner.snapshot, body, createdAt);
+  const snapshot = normalizeResolutionSnapshot(resolvedSnapshot ?? winner.snapshot, body, createdAt);
   const contentHash = hashText(canonicalResolutionJson({ body, snapshot }));
   const identity = hashText(`${winner.object_id}\n${parents.join('\n')}\n${contentHash}`);
   return {

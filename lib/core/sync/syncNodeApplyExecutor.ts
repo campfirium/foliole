@@ -17,6 +17,7 @@ import {
   type SyncNodeApplyOperation
 } from './syncNodeApplyRules.js';
 import { toSyncNodeConflictRecord } from './syncNodeConflictRecord.js';
+import { isStoredAncestorVersion } from './syncNodeGraph.js';
 import { hasContentEquivalentIncomingLineage } from './syncNodeLineageEquivalence.js';
 import { prepareSyncNodeTextBodyHashes } from './syncNodePreparedTextBodyHashes.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
@@ -113,6 +114,10 @@ async function decideNodeApply(
 ) {
   const decision = decideIncomingNodeApply(localNode, record, operation);
   if (decision !== 'record_conflict' || localNode?.sync_dirty !== 0) return decision;
+  if (localNode.current_version_id && record.version_id &&
+      await isStoredAncestorVersion(port, record.version_id, localNode.current_version_id)) {
+    return 'skip_stale';
+  }
   return await hasContentEquivalentIncomingLineage(port, localNode.current_version_id, record)
     ? 'apply_fast_forward'
     : decision;
@@ -161,6 +166,7 @@ export async function applySyncNodesWithDbPort(
         }
         continue;
       }
+      if (decision === 'skip_stale') continue;
       if (decision === 'block_incoming') {
         result.blockedIds.push(record.object_id);
         continue;

@@ -69,6 +69,10 @@ export async function loadMergeBase(port: DbPort, leftId: string, rightId: strin
   return row ?? null;
 }
 
+export async function isStoredAncestorVersion(port: DbPort, ancestorId: string, currentId: string) {
+  return (await loadAncestorDistances(port, currentId)).has(ancestorId);
+}
+
 async function storedVersionToRecord(
   port: DbPort,
   row: StoredSyncNodeVersionRow,
