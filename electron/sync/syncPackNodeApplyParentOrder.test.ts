@@ -59,6 +59,53 @@ it('applies parent nodes before children when the pack rows arrive child-first',
   ]);
 });
 
+it('rejects a missing parent before inserting any nodes', async () => {
+  const incoming = new Database(incomingPath);
+  incoming.prepare("UPDATE nodes SET parent_id = 'missing' WHERE id = 'child-1'").run();
+  incoming.close();
+  await expect(applyIncomingNodes()).rejects.toThrow('sync_pack_node_parent_missing:child-1');
+  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM nodes').get()).toEqual({ count: 0 });
+});
+
+it('rejects a cycle among new nodes before inserting any nodes', async () => {
+  const incoming = new Database(incomingPath);
+  incoming.prepare("UPDATE nodes SET parent_id = 'child-1' WHERE id = 'parent-1'").run();
+  incoming.close();
+  await expect(applyIncomingNodes()).rejects.toThrow('sync_pack_node_parent_cycle');
+  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM nodes').get()).toEqual({ count: 0 });
+});
+
+it('inserts a new parent before moving an existing node beneath it', async () => {
+  openDatabaseConnection().sqlite.prepare(`INSERT INTO nodes
+    (id, kind, title, content, created_at, updated_at)
+    VALUES ('child-1', 'topic', 'Local child', '', '2026-05-28', '2026-05-28')`).run();
+  await applyIncomingNodes();
+  expect(openDatabaseConnection().sqlite.prepare('SELECT parent_id FROM nodes WHERE id = ?').get('child-1'))
+    .toEqual({ parent_id: 'parent-1' });
+});
+
+it('rejects a cycle through an existing node without changing its parent', async () => {
+  openDatabaseConnection().sqlite.prepare(`INSERT INTO nodes
+    (id, kind, title, content, created_at, updated_at)
+    VALUES ('child-1', 'topic', 'Local child', '', '2026-05-28', '2026-05-28')`).run();
+  const incoming = new Database(incomingPath);
+  incoming.prepare("UPDATE nodes SET parent_id = 'child-1' WHERE id = 'parent-1'").run();
+  incoming.close();
+  await expect(applyIncomingNodes()).rejects.toThrow('sync_pack_node_parent_cycle');
+  expect(openDatabaseConnection().sqlite.prepare('SELECT id, parent_id FROM nodes').all())
+    .toEqual([{ id: 'child-1', parent_id: null }]);
+});
+
+async function applyIncomingNodes() {
+  const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await applySyncPackNodesWithDbPort(port);
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+}
+
 function createIncomingPack(filePath: string) {
   const db = new Database(filePath);
   try {

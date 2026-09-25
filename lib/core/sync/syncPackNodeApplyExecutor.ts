@@ -1,5 +1,3 @@
-import { CORE_INDEX_SCHEMA_STATEMENTS } from '../database/coreIndexSchemaStatements.js';
-
 import type { DbPort } from './dbPort.js';
 import { restoreMissingIncomingNodeOrder, restoreMissingNodeOrderFromCurrentVersions } from './syncNodeOrderRecovery.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
@@ -8,7 +6,6 @@ import {
   buildSyncPackNodeAttachmentInsertSql,
   buildSyncPackNodeOrderDeleteSql,
   buildSyncPackNodeOrderUpsertSql,
-  buildSyncPackNodeUpsertSql,
   type SyncPackNodeApplyOptions
 } from './syncPackApplyStatements.js';
 import { applySyncPackAttachmentObjectsWithDbPort } from './syncPackAttachmentObjectsExecutor.js';
@@ -18,6 +15,7 @@ import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocu
 import { applySyncPackGroupFactsWithDbPort } from './syncPackGroupFactsExecutor.js';
 import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
 import { applySyncPackVersionedNodesWithDbPort } from './syncPackNodeConvergence.js';
+import { applySyncPackNodeRowsWithDbPort } from './syncPackNodeRowsApply.js';
 import { applySyncPackNodeTombstonesWithDbPort } from './syncPackNodeTombstoneExecutor.js';
 import { applySyncPackNodeVersionsWithDbPort } from './syncPackNodeVersionApplyExecutor.js';
 import { clearConfirmedSyncPackPushAcks } from './syncPackPushAckClear.js';
@@ -56,60 +54,6 @@ async function applySyncPackNodeOrderRowsWithDbPort(
 ) {
   await port.run(buildSyncPackNodeOrderDeleteSql(options));
   await port.run(buildSyncPackNodeOrderUpsertSql(options));
-}
-
-async function applySyncPackNodeRowsWithDbPort(
-  port: DbPort,
-  options: SyncPackNodeApplyOptions = {}
-) {
-  const resolvedOptions = await resolveSyncPackNodeApplyOptions(port, options);
-  await ensureSyncPackSpecialRootParents(port, options.incomingAlias);
-  await dropNodeIndexes(port);
-  try {
-    await port.run(buildSyncPackNodeUpsertSql(resolvedOptions));
-  } finally {
-    await createNodeIndexes(port);
-  }
-}
-
-async function resolveSyncPackNodeApplyOptions(
-  port: DbPort,
-  options: SyncPackNodeApplyOptions
-): Promise<SyncPackNodeApplyOptions> {
-  if (options.incomingNodeColumns !== undefined) return options;
-  return {
-    ...options,
-    incomingNodeColumns: await loadIncomingNodeColumns(port, options.incomingAlias ?? 'inc')
-  };
-}
-
-async function loadIncomingNodeColumns(port: DbPort, alias: string) {
-  const schemaName = alias.replaceAll('"', '""');
-  const rows = await port.query<{ name: unknown }>(`PRAGMA "${schemaName}".table_info(nodes)`);
-  return rows.map((row) => row.name).filter((name): name is string => typeof name === 'string');
-}
-
-const NODE_INDEX_NAMES = [
-  'idx_nodes_parent_id',
-  'idx_nodes_dirty_or_unversioned_updated',
-  'idx_nodes_deleted_at',
-  'idx_nodes_body_blob_hash'
-] as const;
-
-const NODE_INDEX_SCHEMA_STATEMENTS = CORE_INDEX_SCHEMA_STATEMENTS.filter((statement) => (
-  NODE_INDEX_NAMES.some((indexName) => statement.includes(indexName))
-));
-
-async function dropNodeIndexes(port: DbPort) {
-  for (const indexName of NODE_INDEX_NAMES) {
-    await port.run(`DROP INDEX IF EXISTS ${indexName}`);
-  }
-}
-
-async function createNodeIndexes(port: DbPort) {
-  for (const statement of NODE_INDEX_SCHEMA_STATEMENTS) {
-    await port.run(statement);
-  }
 }
 
 async function applySyncPackNodeAttachmentsWithDbPort(

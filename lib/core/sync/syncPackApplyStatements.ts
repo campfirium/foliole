@@ -87,20 +87,13 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
     objectType: 'node',
     sourcePeerId: options.sourcePeerId
   });
-  return `WITH RECURSIVE applyable_node_ids(id) AS (` +
-    `SELECT object_id FROM ${applyableRowsSql}` +
-    `), node_depth(id, depth) AS (` +
-    `SELECT incoming.id, 0 FROM ${alias}.nodes incoming WHERE incoming.id IN (SELECT id FROM applyable_node_ids) ` +
-    `AND (incoming.parent_id IS NULL OR EXISTS (SELECT 1 FROM main.nodes parent WHERE parent.id = incoming.parent_id)) ` +
-    `UNION SELECT child.id, parent.depth + 1 FROM ${alias}.nodes child ` +
-    `INNER JOIN node_depth parent ON parent.id = child.parent_id ` +
-    `WHERE child.id IN (SELECT id FROM applyable_node_ids)` +
-    `) INSERT INTO main.nodes (${SYNC_PACK_NODE_COLUMNS.join(', ')}) ` +
+  return `INSERT INTO main.nodes (${SYNC_PACK_NODE_COLUMNS.join(', ')}) ` +
     `SELECT ${SYNC_PACK_NODE_COLUMNS.map((column) => incomingNodeColumnExpression(column, options)).join(', ')} ` +
     `FROM ${alias}.nodes incoming ` +
-    `INNER JOIN (SELECT id, MIN(depth) AS depth FROM node_depth GROUP BY id) sorted ON sorted.id = incoming.id ` +
+    `INNER JOIN json_each(?) sorted ON sorted.value = incoming.id ` +
     `WHERE NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = incoming.id) ` +
-    `ORDER BY sorted.depth ASC, incoming.updated_at ASC, incoming.id ASC ` +
+    `AND incoming.id IN (SELECT object_id FROM ${applyableRowsSql}) ` +
+    `ORDER BY CAST(sorted.key AS INTEGER) ` +
     (options.preserveExistingNodes
       ? 'ON CONFLICT(id) DO NOTHING'
       : `ON CONFLICT(id) DO UPDATE SET ${SYNC_PACK_NODE_UPDATE_COLUMNS.map((column) => `${column} = excluded.${column}`).join(', ')}`);
