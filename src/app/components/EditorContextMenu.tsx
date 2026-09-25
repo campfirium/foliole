@@ -129,7 +129,7 @@ function AnnotationToolbar(props: AnnotationToolbarProps) {
         <AnnotationToolbarButton label="Highlight" onClick={props.onCreateHighlight}>
           <Highlighter aria-hidden="true" size={19} strokeWidth={2} />
         </AnnotationToolbarButton>
-        <AnnotationToolbarButton label="Add Comment" onClick={() => setIsNoteOpen(true)}>
+        <AnnotationToolbarButton label="Add Annotation" onClick={() => setIsNoteOpen(true)}>
           <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
         </AnnotationToolbarButton>
         <ClozeToolbarButton

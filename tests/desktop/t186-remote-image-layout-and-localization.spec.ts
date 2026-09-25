@@ -146,7 +146,7 @@ async function localizeAndExcerptSecond(page: Page) {
   await page.mouse.down();
   await page.mouse.move(bounds.x + bounds.width * 0.6, bounds.y + bounds.height * 0.6, { steps: 8 });
   await page.mouse.up();
-  const note = page.getByRole('textbox', { name: /Add a comment|添加批注/ });
+  const note = page.getByRole('textbox', { name: /Add an annotation|添加批注/ });
   await expect(note).toBeVisible();
   await note.fill('T186 excerpt');
   await page.getByRole('button', { name: /Save|保存/, exact: true }).click();

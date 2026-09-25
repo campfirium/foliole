@@ -27,7 +27,7 @@ async function selectExcerptOutline(desktopWindow: Page, nodeId?: string) {
   await desktopWindow.mouse.click(bounds.x + 1, bounds.y + bounds.height / 2);
   const toolbar = desktopWindow.locator('[data-annotation-toolbar="true"]');
   await expect(toolbar).toBeVisible();
-  await expect(toolbar.getByRole('button', { name: /^(Add Comment|添加批注)$/ })).toBeVisible();
+  await expect(toolbar.getByRole('button', { name: /^(Add Annotation|添加批注)$/ })).toBeVisible();
 }
 
 async function requestPdfAnnotationFromPalette(desktopWindow: Page) {
@@ -48,7 +48,7 @@ test('PDF annotation command @pdf creates one annotated image excerpt after a vi
 
   await requestPdfAnnotationFromPalette(desktopWindow);
   await dragExcerptRegion(desktopWindow);
-  const noteInput = desktopWindow.getByRole('textbox', { name: /Add a comment|添加批注/ });
+  const noteInput = desktopWindow.getByRole('textbox', { name: /Add an annotation|添加批注/ });
   await expect(noteInput).toBeVisible();
   await expect(desktopWindow.getByRole('treeitem', { name: /Excerpt 1/ })).toHaveCount(0);
   await noteInput.fill('Diagram thought');
@@ -70,8 +70,8 @@ test('PDF annotation command @pdf creates one annotated image excerpt after a vi
   await expect(desktopWindow.locator(`[data-pdf-image-excerpt-node-id="${excerptNodeId}"]`)).toBeVisible();
   await selectExcerptOutline(desktopWindow, excerptNodeId);
   await desktopWindow.locator('[data-annotation-toolbar="true"]')
-    .getByRole('button', { name: /^(Add Comment|添加批注)$/ }).click();
-  await expect(desktopWindow.getByRole('textbox', { name: /Add a comment|添加批注/ })).toHaveValue('Diagram thought');
+    .getByRole('button', { name: /^(Add Annotation|添加批注)$/ }).click();
+  await expect(desktopWindow.getByRole('textbox', { name: /Add an annotation|添加批注/ })).toHaveValue('Diagram thought');
 });
 
 test('PDF image excerpt @pdf creates a normal image and opens it from the source outline', async ({

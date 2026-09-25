@@ -145,7 +145,7 @@ test('creates an annotated image excerpt bound to one repeated image occurrence'
   await requestAnnotation(desktopWindow);
   await dragSecondImageRegion(desktopWindow);
 
-  const noteInput = desktopWindow.getByRole('textbox', { name: /Add a comment|添加批注/ });
+  const noteInput = desktopWindow.getByRole('textbox', { name: /Add an annotation|添加批注/ });
   await expect(noteInput).toBeVisible();
   await noteInput.fill('Occurrence detail');
   await desktopWindow.getByRole('button', { name: /Save|保存/, exact: true }).click();

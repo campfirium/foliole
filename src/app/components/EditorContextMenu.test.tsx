@@ -74,7 +74,7 @@ it('renders selection annotation actions as a floating toolbar', () => {
 
   expect(screen.getByRole('toolbar')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Highlight' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Add Comment' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add Annotation' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Cloze' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
 });
@@ -176,8 +176,8 @@ it('saves add note text from the floating note panel', () => {
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
-  const noteInput = screen.getByPlaceholderText('Add a comment...');
+  fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+  const noteInput = screen.getByPlaceholderText('Add an annotation...');
   expect(noteInput.closest('[data-annotation-toolbar="true"]')).toHaveStyle({ left: '48px', top: '96px' });
   fireEvent.change(noteInput, { target: { value: 'My note' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
@@ -200,7 +200,7 @@ it('renders existing highlight actions without cloze', () => {
   );
 
   expect(screen.getByRole('button', { name: 'Close Highlight' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Add Comment' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Add Annotation' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Open' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'More' })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Cloze' })).toBeNull();
@@ -226,19 +226,19 @@ it('prefills an existing excerpt comment and keeps cancel, blank, and failed sav
     />
   );
 
-  fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
-  const input = screen.getByPlaceholderText('Add a comment...');
+  fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+  const input = screen.getByPlaceholderText('Add an annotation...');
   expect(input).toHaveValue('First thought');
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   expect(onCreateNote).not.toHaveBeenCalled();
 
-  fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
-  fireEvent.change(screen.getByPlaceholderText('Add a comment...'), { target: { value: '   ' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add Annotation' }));
+  fireEvent.change(screen.getByPlaceholderText('Add an annotation...'), { target: { value: '   ' } });
   expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
-  fireEvent.change(screen.getByPlaceholderText('Add a comment...'), { target: { value: 'Revised thought' } });
+  fireEvent.change(screen.getByPlaceholderText('Add an annotation...'), { target: { value: 'Revised thought' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
   await waitFor(() => expect(onCreateNote).toHaveBeenCalledWith('Revised thought'));
-  expect(screen.getByPlaceholderText('Add a comment...')).toBeInTheDocument();
+  expect(screen.getByPlaceholderText('Add an annotation...')).toBeInTheDocument();
   expect(onClose).not.toHaveBeenCalled();
 });
