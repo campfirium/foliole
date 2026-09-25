@@ -41,12 +41,8 @@ it('renders tooltip content with shared tooltip tokens', () => {
     </AppTooltipProvider>
   );
 
-  const tooltip = screen.getByRole('tooltip').parentElement;
-  expect(screen.getByRole('tooltip')).toBeInTheDocument();
-  expect(tooltip).not.toBeNull();
-  if (!tooltip) {
-    throw new Error('Tooltip content wrapper missing');
-  }
+  const tooltip = screen.getByRole('tooltip');
+  expect(tooltip).toBeInTheDocument();
   expect(tooltip.className).toContain('rounded-[var(--app-tooltip-radius)]');
   expect(tooltip.className).toContain('bg-[var(--app-tooltip-bg)]');
   expect(tooltip.className).toContain('border-[var(--app-tooltip-border-color)]');
@@ -164,14 +160,13 @@ it('draws truncated title tooltip as one measured bubble path', async () => {
     fireEvent.pointerMove(trigger, { pointerType: 'mouse' });
     fireEvent.pointerEnter(trigger, { pointerType: 'mouse' });
 
-    const tooltipContent = await screen.findByRole('tooltip');
-    const tooltip = tooltipContent.parentElement;
-    expect(tooltip?.className).toContain('border-transparent');
-    expect(tooltip?.className).toContain('bg-transparent');
-    expect(tooltip?.className).toContain('max-w-[min(15rem,calc(100vw-2rem))]');
-    expect(tooltip?.className).toContain('[--app-tooltip-padding-x:0.75rem]');
-    expect(tooltip?.className).toContain('[--app-tooltip-padding-y:0.5rem]');
-    expect(tooltip?.className).not.toContain('before:border-r-[var(--app-tooltip-border-color)]');
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip.className).toContain('border-transparent');
+    expect(tooltip.className).toContain('bg-transparent');
+    expect(tooltip.className).toContain('max-w-[min(15rem,calc(100vw-2rem))]');
+    expect(tooltip.className).toContain('[--app-tooltip-padding-x:0.75rem]');
+    expect(tooltip.className).toContain('[--app-tooltip-padding-y:0.5rem]');
+    expect(tooltip.className).not.toContain('before:border-r-[var(--app-tooltip-border-color)]');
     const arrow = document.querySelector('svg[aria-hidden="true"]');
     expect(arrow).not.toBeNull();
     expect(arrow).toHaveClass('left-[-8px]');
