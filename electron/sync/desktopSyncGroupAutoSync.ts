@@ -12,7 +12,7 @@ import {
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import type { DesktopDnsSdSession } from './desktopDnsSd.js';
 import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
-import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
+import { runDesktopSyncCoordinator, subscribeDesktopSyncCompleted } from './desktopSyncCoordinator.js';
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
 import {
   exchangeAllDesktopSyncGroupMemberStates,
@@ -28,9 +28,11 @@ import {
   saveDesktopSyncGroupRoute,
   type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
+import { continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
 let runtime: DesktopDnsSdSession | null = null;
 let memberStateRuntime: DesktopDnsSdSession | null = null;
+let stopReadwiseContinuation: (() => void) | null = null;
 let manualRun: Promise<unknown> | null = null;
 const inFlight = new Map<string, Promise<boolean>>();
 
@@ -38,6 +40,7 @@ export function startDesktopSyncGroupAutoSync() {
   if (!isDesktopCompanionSyncParticipating() || runtime) return;
   const group = loadDesktopSyncGroup();
   if (!group) return;
+  stopReadwiseContinuation = subscribeDesktopSyncCompleted(resumeReadwiseHandoff);
   runtime = startDesktopAnchorTopologySession({
     group,
     onAnchor: (target, requireSyncBeforeDemote) => (
@@ -57,7 +60,7 @@ export function startDesktopSyncGroupAutoSync() {
   });
   memberStateRuntime = startDesktopSyncGroupMemberStateSession(
     group,
-    () => notifyDesktopSyncGroupOverviewChanged(),
+    () => { notifyDesktopSyncGroupOverviewChanged(); resumeReadwiseHandoff(); },
     (peer) => activateMemberRoute(group, peer),
     (deviceId) => {
       removeDesktopSyncGroupRoute(deviceId);
@@ -69,12 +72,20 @@ export function startDesktopSyncGroupAutoSync() {
 }
 
 export function stopDesktopSyncGroupAutoSync() {
+  stopReadwiseContinuation?.();
+  stopReadwiseContinuation = null;
   runtime?.stop();
   runtime = null;
   memberStateRuntime?.stop();
   memberStateRuntime = null;
   clearDesktopSyncGroupRoutes();
   updateDesktopSyncFreshness(false);
+}
+
+function resumeReadwiseHandoff() {
+  void continuePendingReadwiseHandoff().then((result) => {
+    if (result?.is_active) notifyDesktopSyncGroupOverviewChanged();
+  }).catch((error) => console.info('[readwise] handoff remains pending', error));
 }
 
 export function runDesktopManualSyncWithDiscovery() {

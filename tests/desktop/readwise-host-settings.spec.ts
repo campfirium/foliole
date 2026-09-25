@@ -19,6 +19,7 @@ async function seedIsolatedLibrary(app: ElectronApplication, sourceRoot: string)
     const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
     const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
+    const settings = require(pathApi.join(process.cwd(), 'dist/electron/database/settingsStore.js'));
     const imports = require(pathApi.join(process.cwd(), 'dist/electron/import/importManagerSettings.js'));
     const defaults = require(pathApi.join(process.cwd(), 'dist/lib/core/import/importManagerSettings.js'));
     fs.mkdirSync(fixture.root, { recursive: true });
@@ -46,6 +47,9 @@ async function seedIsolatedLibrary(app: ElectronApplication, sourceRoot: string)
       imports.saveImportManagerSettings({ ...current, readwiseRootPath: fixture.root,
         readwiseSources: sources.map((source: { kind?: string; keepState: string }, index: number) =>
           index === 0 ? { ...source, keepState: 'draft' } : source) });
+      settings.saveJsonSetting('readwise_active_host', {
+        device_identity_key: fixture.remoteId, epoch: 0, host_name: 'Offline Desktop'
+      });
     });
   }, { groupId: GROUP_ID, localId: LOCAL_ID, remoteId: REMOTE_ID, root: sourceRoot });
 }
@@ -65,23 +69,7 @@ async function readOwnerFacts(app: ElectronApplication) {
   }, GROUP_ID);
 }
 
-async function updateGroup(app: ElectronApplication, action: 'leave-remote' | 'rollback-owner') {
-  await app.evaluate((_electron, fixture) => {
-    const pathApi = process.getBuiltinModule('path')!;
-    const require = process.getBuiltinModule('module')!.createRequire(pathApi.join(process.cwd(), 'package.json'));
-    const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
-    const settings = require(pathApi.join(process.cwd(), 'dist/electron/database/settingsStore.js'));
-    connection.runWithDatabaseConnectionOwner(() => {
-      if (fixture.action === 'leave-remote') {
-        connection.openDatabaseConnection().driver.execute(
-          "UPDATE sync_group_devices SET state='left' WHERE device_identity_key=?", [fixture.remoteId]
-        );
-      } else settings.saveJsonSetting('readwise_active_host', null);
-    });
-  }, { action, remoteId: REMOTE_ID });
-}
-
-test('keeps an unassigned library paused, survives offline retry, and rejects owner rollback', async ({
+test('shows the import device and keeps an offline switch pending', async ({
   desktopApp, desktopSession, desktopWindow
 }) => {
   test.setTimeout(180_000);
@@ -91,31 +79,17 @@ test('keeps an unassigned library paused, survives offline retry, and rejects ow
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
   let dialog = await openSettingsCategory(desktopWindow, 'ReadwiseReader');
-  const host = dialog.getByRole('region', { name: /^(Current active host|当前生效主机)$/ });
-  await expect(host.getByText(/^(No device selected|尚未指定设备)$/)).toBeVisible();
-  await expect(dialog.getByRole('button', { name: /^(Readwise root folder|Readwise 根文件夹)$/ })).toBeVisible();
+  const host = dialog.getByRole('region', { name: /^(Import device|导入设备)$/ });
+  await expect(host.getByText('Offline Desktop')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /^(Readwise root folder|Readwise 根文件夹)$/ })).toHaveCount(0);
   await expect(dialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toHaveCount(0);
-  await host.getByRole('button', { name: /^(Use this device|由此设备负责)$/ }).click();
-  await expect(host.getByText(/Could not change|未能切换/)).toBeVisible();
-  expect((await readOwnerFacts(desktopApp)).guard).toMatchObject({
-    epoch: 0, ownerId: LOCAL_ID, state: 'relinquished', targetId: LOCAL_ID
-  });
-
-  await updateGroup(desktopApp, 'leave-remote');
+  await host.getByRole('button', { name: /^(Switch to this device|切换到此设备)$/ }).click();
+  await expect(host.getByRole('button', { name: /^(Switching…|切换中…)$/ })).toBeDisabled();
+  expect((await readOwnerFacts(desktopApp)).assignment.active_device_identity_key).toBe(REMOTE_ID);
+  expect((await readOwnerFacts(desktopApp)).guard).toBeNull();
   await desktopWindow.reload();
   dialog = await openSettingsCategory(desktopWindow, 'ReadwiseReader');
-  await dialog.getByRole('button', { name: /^(Use this device|由此设备负责)$/ }).click();
-  await expect(dialog.getByText(/^(Readwise Reader Import|Readwise Reader 导入)$/)).toBeVisible();
-  const active = await readOwnerFacts(desktopApp);
-  expect(active.assignment.is_active).toBe(true);
-  expect(active.guard).toMatchObject({ epoch: 1, ownerId: LOCAL_ID, state: 'active' });
-  expect(active.canRun).toBe(false);
-
-  await updateGroup(desktopApp, 'rollback-owner');
-  await desktopWindow.reload();
-  dialog = await openSettingsCategory(desktopWindow, 'ReadwiseReader');
-  await expect(dialog.getByRole('button', { name: /^(Use this device|由此设备负责)$/ })).toBeDisabled();
-  expect((await readOwnerFacts(desktopApp)).assignment.activation_blocked_reason).toBe('guard-history');
+  await expect(dialog.getByRole('button', { name: /^(Switching…|切换中…)$/ })).toBeDisabled();
   await mkdir(ARTIFACT_DIR, { recursive: true });
-  await dialog.screenshot({ path: path.join(ARTIFACT_DIR, 'readwise-owner-rollback.png') });
+  await dialog.screenshot({ path: path.join(ARTIFACT_DIR, 'readwise-switch-pending.png') });
 });

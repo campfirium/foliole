@@ -8,6 +8,7 @@ import {
 
 const state = vi.hoisted(() => ({
   active: true,
+  legacyUnassigned: false,
   remoteSource: null as null | { connectionRef: string },
   secret: '',
   secure: true,
@@ -19,7 +20,8 @@ const invalidateCutover = vi.hoisted(() => vi.fn());
 
 vi.mock('electron', () => ({ clipboard: { readText: clipboardRead } }));
 vi.mock('../database/readwiseHostAssignment.js', () => ({
-  loadReadwiseHostAssignment: () => ({ current_host_name: 'This Mac', is_active: state.active })
+  loadReadwiseHostAssignment: () => ({ current_host_name: 'This Mac', is_active: state.active,
+    legacy_unassigned: state.legacyUnassigned })
 }));
 vi.mock('../database/readwiseSourceMode.js', () => ({
   loadReadwiseSourceModeState: () => ({
@@ -70,6 +72,7 @@ import {
 
 beforeEach(() => {
   state.active = true;
+  state.legacyUnassigned = false;
   state.remoteSource = null;
   state.secret = '';
   state.secure = true;
@@ -95,6 +98,14 @@ it('validates and stores a clipboard token without returning or persisting it', 
   expect(state.settings).toMatchObject({
     secretRef: expect.stringMatching(/^readwise-api-/), state: 'connected'
   });
+});
+
+it('allows initial API connection before an import device has been assigned', async () => {
+  state.active = false;
+  state.legacyUnassigned = true;
+  const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+  await expect(connectReadwiseApiFromClipboard({ fetchImpl }))
+    .resolves.toMatchObject({ status: 'connected' });
 });
 
 it('blocks non-active Hosts before reading the clipboard or sending a request', async () => {

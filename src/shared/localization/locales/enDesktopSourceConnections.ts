@@ -26,11 +26,13 @@ export const EN_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS = {
   'desktop.watchedFolder.remove.description': 'Foliole will stop managing this source. Existing topics and original files will be kept.',
   'desktop.watchedFolder.remove.cancel': 'Cancel',
   'desktop.watchedFolder.remove.confirm': 'Remove',
-  'desktop.readwise.host.title': 'Current active host',
+  'desktop.readwise.host.title': 'Import device',
   'desktop.readwise.host.path': 'Path',
   'desktop.readwise.host.unavailable': 'Host unavailable',
   'desktop.readwise.host.pathUnavailable': 'Path unavailable',
-  'desktop.readwise.host.switch': 'Switch to this host',
+  'desktop.readwise.host.switch': 'Switch to this device',
+  'desktop.readwise.host.switching': 'Switching…',
+  'desktop.readwise.host.switchingDescription': 'The current device keeps importing until the switch completes.',
   'desktop.readwise.host.notSelected': 'No device selected',
   'desktop.readwise.host.useThisDevice': 'Use this device',
   'desktop.readwise.host.waitForDevices': 'Readwise is paused. Both desktops must be available to choose a device.',
@@ -38,6 +40,6 @@ export const EN_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS = {
   'desktop.readwise.host.handoffInProgress': 'This device has stopped. Complete the switch on the other desktop.',
   'desktop.readwise.host.restoreGuard': 'Readwise is paused until this device is reconnected.',
   'desktop.readwise.host.guardHistory': 'A previous handoff is recorded on this device. Readwise stays paused until ownership is recovered.',
-  'desktop.readwise.host.retry': 'Could not change the responsible device. Check both desktops and try again.',
+  'desktop.readwise.host.retry': 'The switch did not complete. Try again.',
   'desktop.readwise.host.connectFirst': 'Connect Readwise on this device first.'
 } as const;

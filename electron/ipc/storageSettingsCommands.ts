@@ -142,6 +142,10 @@ async function handleReadwiseHostCommand(command: string, args: Record<string, u
       {},
       args.connection_intent === 'migration' ? 'migration' : 'normal'
     );
+    if (result.status === 'connected' && args.connection_intent !== 'migration' &&
+        loadReadwiseHostAssignment().legacy_unassigned) {
+      await activateReadwiseWithHandoff();
+    }
     refreshReadwiseApiScheduler();
     return result;
   }

@@ -79,7 +79,8 @@ export function loadReadwiseApiConnection() {
 }
 
 function canPrepareLocalConnection() {
-  return loadReadwiseHostAssignment().is_active || Boolean(loadReadwiseRemoteSource());
+  const assignment = loadReadwiseHostAssignment();
+  return assignment.is_active || assignment.legacy_unassigned || Boolean(loadReadwiseRemoteSource());
 }
 
 export async function connectReadwiseApiFromClipboard(

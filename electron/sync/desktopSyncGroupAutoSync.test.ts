@@ -6,10 +6,13 @@ const runtime = vi.hoisted(() => ({
   freshness: vi.fn(),
   memberEndpoints: [] as Array<Record<string, unknown>>,
   memberSessionArgs: null as null | {
+    onChanged(): void;
     onMember(peer: Record<string, unknown>): Promise<boolean>;
     onMemberLost(deviceId: string): void;
   },
   notifyOverviewChanged: vi.fn(),
+  readwiseContinue: vi.fn(async () => null),
+  syncCompleted: null as null | (() => void),
   owned: false,
   requireOwner: false,
   group: {
@@ -62,7 +65,11 @@ vi.mock('./companionMdnsAdvertisement.js', () => ({
   updateCompanionMdnsAdvertisementRole: runtime.updateRole
 }));
 vi.mock('./desktopMemberSyncCadence.js', () => ({ updateDesktopSyncFreshness: runtime.freshness }));
-vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: runtime.coordinator }));
+vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: runtime.coordinator,
+  subscribeDesktopSyncCompleted: (callback: () => void) => {
+    runtime.syncCompleted = callback;
+    return () => { runtime.syncCompleted = null; };
+  } }));
 vi.mock('./desktopSyncGroupDiscovery.js', () => ({ discoverDesktopSyncGroups: runtime.discovery }));
 vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
   notifyDesktopSyncGroupOverviewChanged: runtime.notifyOverviewChanged
@@ -70,12 +77,15 @@ vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
 vi.mock('./desktopSyncGroupMemberStateSession.js', () => ({
   exchangeAllDesktopSyncGroupMemberStates: vi.fn(async () => false),
   loadDesktopSyncGroupMemberEndpoints: () => runtime.memberEndpoints,
-  startDesktopSyncGroupMemberStateSession: (_group: unknown, _onChanged: unknown,
+  startDesktopSyncGroupMemberStateSession: (_group: unknown, onChanged: () => void,
     onMember: (peer: Record<string, unknown>) => Promise<boolean>,
     onMemberLost: (deviceId: string) => void) => {
-    runtime.memberSessionArgs = { onMember, onMemberLost };
+    runtime.memberSessionArgs = { onChanged, onMember, onMemberLost };
     return { stop: vi.fn() };
   }
+}));
+vi.mock('./readwiseOwnerHandoff.js', () => ({
+  continuePendingReadwiseHandoff: runtime.readwiseContinue
 }));
 
 import {
@@ -96,6 +106,13 @@ beforeEach(() => {
   runtime.memberEndpoints = [];
   runtime.requireOwner = false;
   runtime.discovery.mockResolvedValue([]);
+});
+
+it('continues a pending Readwise switch when the old desktop appears or sync completes', async () => {
+  startDesktopSyncGroupAutoSync();
+  runtime.memberSessionArgs?.onChanged();
+  runtime.syncCompleted?.();
+  await vi.waitFor(() => expect(runtime.readwiseContinue).toHaveBeenCalledTimes(2));
 });
 
 it('resumes an interrupted mobile guide route after restart and clears it on success', async () => {

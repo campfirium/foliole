@@ -23,7 +23,7 @@ const HOST_ASSIGNMENT = {
   active_host_name: 'Mac', active_device_identity_key: 'mac-device',
   active_owner_epoch: 1,
   current_host_name: 'Mac', current_device_identity_key: 'mac-device',
-  hosts: [], legacy_unassigned: false, activation_blocked_reason: null
+  hosts: [], legacy_unassigned: false, handoff_pending: false, activation_blocked_reason: null
 };
 
 function updateCandidateProgress(progress: ReturnType<typeof candidateProgress>, completed: number, total: number, failed = 0) {

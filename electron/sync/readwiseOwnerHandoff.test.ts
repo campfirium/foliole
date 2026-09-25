@@ -9,11 +9,13 @@ const state = vi.hoisted(() => ({
     ownerId: string; state: 'active' | 'relinquished'; targetId: string | null }
 }));
 const writes = vi.hoisted(() => ({ guard: vi.fn(), owner: vi.fn(), resume: vi.fn() }));
+const intent = vi.hoisted(() => ({ current: null as null | Record<string, unknown> }));
 const stopOrder = vi.hoisted(() => [] as string[]);
 const PEER = { endpoint_url: 'http://old-device', group_id: 'group',
   local_device_id: 'new-device', peer_device_id: 'old-device', peer_device_name: 'Old', peer_platform: 'macOS' };
 
 vi.mock('../database/connection.js', () => ({
+  openDatabaseConnection: () => ({ dbPath: '/test/library.db' }),
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
 }));
 vi.mock('../database/readwiseHostAssignment.js', () => ({
@@ -71,8 +73,12 @@ vi.mock('./readwiseOwnerStop.js', () => ({
 vi.mock('./workgroupKeyStore.js', () => ({
   loadDesktopWorkgroupKey: () => ({ group_key: 'group-key' })
 }));
+vi.mock('./readwiseHandoffIntent.js', () => ({
+  loadReadwiseHandoffIntent: () => intent.current,
+  saveReadwiseHandoffIntent: (value: Record<string, unknown> | null) => { intent.current = value; }
+}));
 
-import { activateReadwiseWithHandoff } from './readwiseOwnerHandoff.js';
+import { activateReadwiseWithHandoff, continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
 beforeEach(() => {
   state.ownerId = 'old-device';
@@ -81,6 +87,7 @@ beforeEach(() => {
   state.stopStatus = 'stopped';
   state.blockedReason = null;
   state.guard = null;
+  intent.current = null;
   stopOrder.length = 0;
   Object.values(writes).forEach((mock) => mock.mockReset());
   vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => {
@@ -103,12 +110,16 @@ it('writes a new owner only after an exact stop ACK from the old desktop', async
   expect(writes.resume).toHaveBeenCalledTimes(1);
 });
 
-it('keeps the old owner when the old desktop cannot confirm stopping', async () => {
+it('keeps the old owner and a durable intent when the old desktop is offline', async () => {
   state.remoteReachable = false;
-  await expect(activateReadwiseWithHandoff()).rejects.toThrow('offline');
+  await expect(activateReadwiseWithHandoff()).resolves.toMatchObject({ is_active: false });
   expect(state.ownerId).toBe('old-device');
   expect(writes.owner).not.toHaveBeenCalled();
   expect(writes.guard).not.toHaveBeenCalled();
+  expect(intent.current).toMatchObject({ targetId: 'new-device', ownerId: 'old-device' });
+  state.remoteReachable = true;
+  await expect(continuePendingReadwiseHandoff()).resolves.toMatchObject({ is_active: true });
+  expect(intent.current).toBeNull();
 });
 
 it('requires every member stop confirmation for an unassigned legacy group', async () => {

@@ -6,6 +6,7 @@ import type {
 import { isDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
 import { isStoredReadwiseApiConnectionReady } from '../import/readwiseApiConnectionState.js';
 import { isReadwiseExecutionStopping } from '../import/readwiseExecutionBarrier.js';
+import { loadReadwiseHandoffIntent } from '../sync/readwiseHandoffIntent.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { isDesktopSourceExecutable, loadCurrentHostDesktopSources } from './desktopSources.js';
@@ -136,6 +137,7 @@ export function loadReadwiseHostAssignment(): NativeReadwiseHostAssignment {
       : !unassigned ? 'handoff-required'
       : group.members.length !== 1 || group.members[0]?.device_identity_key !== group.localId
         ? 'group-quiescence-required' : null;
+  const intent = group.groupId ? loadReadwiseHandoffIntent(group.groupId) : null;
   return {
     active_host_name: activeHost,
     active_device_identity_key: activeId,
@@ -144,6 +146,8 @@ export function loadReadwiseHostAssignment(): NativeReadwiseHostAssignment {
     current_device_identity_key: group.localId,
     hosts: readWorkgroupDesktopHosts(currentHost, activeHost),
     is_active: isActive,
+    handoff_pending: !isActive && intent?.targetId === group.localId &&
+      intent.ownerId === activeId && intent.epoch === owner.epoch,
     legacy_unassigned: unassigned,
     activation_blocked_reason: blockedReason
   };

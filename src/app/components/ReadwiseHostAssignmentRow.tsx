@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type {
-  NativeReadwiseHostAssignment,
-  NativeReadwiseWorkgroupHost
+  NativeReadwiseHostAssignment
 } from '../../../lib/platform/nativeReadwiseHostContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
+import { onDesktopSyncGroupOverviewChanged } from '../../shared/platform/desktopSyncGroupRuntimeRepository';
 import {
   activateReadwiseOnThisHostInRuntime,
   loadReadwiseHostAssignmentFromRuntime
@@ -16,8 +16,6 @@ import {
   SettingsRow,
   SettingsSection
 } from '../../shared/ui';
-
-const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', linux: 'Linux', win32: 'Windows' };
 
 export function useReadwiseHostAssignment() {
   const [assignment, setAssignment] = useState<NativeReadwiseHostAssignment | null>(null);
@@ -33,6 +31,9 @@ export function useReadwiseHostAssignment() {
     });
     return () => { active = false; };
   }, []);
+  useEffect(() => onDesktopSyncGroupOverviewChanged(() => {
+    void refresh();
+  }) ?? undefined, [refresh]);
   return {
     assignment,
     error,
@@ -48,14 +49,6 @@ export function useReadwiseHostAssignment() {
   };
 }
 
-function activeHost(assignment: NativeReadwiseHostAssignment): NativeReadwiseWorkgroupHost | null {
-  if (!assignment.active_host_name) return null;
-  return assignment.hosts.find((host) => host.host_name === assignment.active_host_name) ?? {
-    host_name: assignment.active_host_name,
-    platform: null
-  };
-}
-
 export function ReadwiseHostAssignmentRow(props: {
   assignment: NativeReadwiseHostAssignment | null;
   error?: boolean;
@@ -65,34 +58,26 @@ export function ReadwiseHostAssignmentRow(props: {
   const t = useTranslation();
   if (!props.assignment || props.assignment.is_active) return null;
 
-  const host = activeHost(props.assignment);
-  const unavailable = !host || (
-    host.host_name === props.assignment.active_host_name && host.platform === null
-  );
   const reason = props.assignment.activation_blocked_reason;
-  const description = props.error ? t('desktop.readwise.host.retry')
-    : reason === 'group-quiescence-required'
-    ? t('desktop.readwise.host.waitForDevices')
-    : reason === 'handoff-required' ? t('desktop.readwise.host.waitForHandoff')
-      : reason === 'handoff-in-progress' ? t('desktop.readwise.host.handoffInProgress')
-      : reason === 'guard-unavailable' ? t('desktop.readwise.host.restoreGuard')
+  const description = props.assignment.handoff_pending
+    ? t('desktop.readwise.host.switchingDescription')
+    : props.error ? t('desktop.readwise.host.retry')
       : reason === 'guard-history' ? t('desktop.readwise.host.guardHistory')
-      : reason === 'connection-unavailable' ? t('desktop.readwise.host.connectFirst')
-        : !unavailable && host?.platform ? PLATFORM_NAMES[host.platform] ?? host.platform : undefined;
+        : reason === 'guard-unavailable' ? t('desktop.readwise.host.restoreGuard')
+          : reason === 'handoff-in-progress' ? t('desktop.readwise.host.handoffInProgress')
+            : undefined;
   return (
     <SettingsSection ariaLabel={t('desktop.readwise.host.title')} title={t('desktop.readwise.host.title')}>
       <SettingsRow
         description={description}
-        title={props.assignment.legacy_unassigned ? t('desktop.readwise.host.notSelected')
-          : !unavailable && host ? host.host_name : t('desktop.readwise.host.unavailable')}
+        title={props.assignment.active_host_name ?? t('desktop.readwise.host.notSelected')}
       >
         <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-          <AppButton disabled={props.pending || reason === 'connection-unavailable' ||
-            reason === 'guard-history' ||
-            reason === 'handoff-in-progress'}
+          <AppButton disabled={props.pending || props.assignment.handoff_pending ||
+            reason === 'guard-history' || reason === 'handoff-in-progress'}
             loading={Boolean(props.pending)} onClick={props.onActivate} size="sm">
-            {props.assignment.legacy_unassigned
-              ? t('desktop.readwise.host.useThisDevice') : t('desktop.readwise.host.switch')}
+            {props.assignment.handoff_pending
+              ? t('desktop.readwise.host.switching') : t('desktop.readwise.host.switch')}
           </AppButton>
         </SettingsControlSlot>
       </SettingsRow>
