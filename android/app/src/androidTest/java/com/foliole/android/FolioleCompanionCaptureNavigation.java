@@ -53,7 +53,8 @@ final class FolioleCompanionCaptureNavigation {
             if (hasTestId(instrumentation, webView, TOP_BAR_LEFT_ACTION)) return TOP_BAR_LEFT_ACTION;
             Thread.sleep(100);
         }
-        throw new IllegalStateException("Timed out waiting for Browse navigation entry");
+        throw new IllegalStateException("Timed out waiting for Browse navigation entry; semantic="
+            + FolioleCompanionWebViewSemanticAdapter.snapshot(instrumentation, webView));
     }
 
     static void openDirectorySurface(
