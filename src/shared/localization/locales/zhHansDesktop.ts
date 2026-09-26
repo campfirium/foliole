@@ -53,6 +53,7 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.annotation.comment.placeholder': '添加批注...',
   'desktop.annotation.cancel': '取消',
   'desktop.annotation.save': '保存',
+  'desktop.annotation.saveFailed': '批注未能保存，请重试。',
   'desktop.editor.frontmatter.close': '关闭',
   'desktop.highlightToolbar.close': '关闭高亮',
   'desktop.highlightToolbar.addComment': '添加批注',

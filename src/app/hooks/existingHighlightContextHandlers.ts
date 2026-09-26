@@ -28,8 +28,8 @@ export function createExistingHighlightHandlers(args: ExistingHighlightHandlerAr
         return false;
       }
       if (!existingHighlight) {
-        args.selectionHandlers.handleCreateNote(note);
-        return false;
+        const payload = args.contextMenu?.kind === 'selection' ? args.contextMenu.payload : null;
+        return payload ? args.selectionHandlers.handleSaveNoteFromPayload(payload, note) : false;
       }
       const node = args.nodesById[existingHighlight.nodeId];
       if (!node) {

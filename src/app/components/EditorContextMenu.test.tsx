@@ -161,8 +161,8 @@ it('converts a long cloze front from the floating toolbar when conversion mode i
   expect(screen.queryByText('Long cloze')).toBeNull();
 });
 
-it('saves add note text from the floating note panel', () => {
-  const onCreateNote = vi.fn();
+it('saves add note text from the floating note panel', async () => {
+  const onCreateNote = vi.fn(async () => true);
   const onClose = vi.fn();
   renderWithLocalization(
     <EditorContextMenu
@@ -183,7 +183,7 @@ it('saves add note text from the floating note panel', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Save' }));
 
   expect(onCreateNote).toHaveBeenCalledWith('My note');
-  expect(onClose).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 });
 
 it('renders existing highlight actions without cloze', () => {
@@ -240,5 +240,6 @@ it('prefills an existing excerpt comment and keeps cancel, blank, and failed sav
 
   await waitFor(() => expect(onCreateNote).toHaveBeenCalledWith('Revised thought'));
   expect(screen.getByPlaceholderText('Add an annotation...')).toBeInTheDocument();
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not save annotation. Try again.');
   expect(onClose).not.toHaveBeenCalled();
 });

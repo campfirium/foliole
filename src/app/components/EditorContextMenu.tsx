@@ -13,6 +13,7 @@ import { AnnotationToolbarButton } from './AnnotationToolbarButton';
 import { ClozeGuardPanel } from './ClozeGuardPanel';
 import type { EditorContextMenuProps } from './editorContextMenuProps';
 import { ExistingHighlightToolbar } from './ExistingHighlightToolbar';
+import { useAnnotationNoteSave } from './useAnnotationNoteSave';
 import { WebLookupSelectionMenu } from './WebLookupSelectionMenu';
 
 function resolveNotePanelPosition(props: Pick<EditorContextMenuProps, 'left' | 'notePanelLeft' | 'notePanelTop' | 'top'>) {
@@ -60,24 +61,26 @@ function ClozeToolbarButton(props: Pick<AnnotationToolbarProps, 'onCreateCloze' 
 }
 
 function AnnotationToolbarPanels(props: AnnotationToolbarProps & {
+  error: string | null;
   isClozeGuardOpen: boolean;
   isNoteOpen: boolean;
   noteDraft: string;
   onChangeNote: (value: string) => void;
   onCloseNote: () => void;
+  onSaveNote: () => void;
+  saving: boolean;
 }) {
   return (
     <>
       {props.isNoteOpen ? (
         <AnnotationNotePanel
           draft={props.noteDraft}
+          error={props.error}
           {...resolveNotePanelPosition(props)}
           onCancel={props.onCloseNote}
           onChange={props.onChangeNote}
-          onSave={() => {
-            props.onCreateNote(props.noteDraft);
-            props.onClose();
-          }}
+          onSave={props.onSaveNote}
+          saving={props.saving}
         />
       ) : null}
       {props.isClozeGuardOpen ? (
@@ -108,6 +111,11 @@ function AnnotationToolbar(props: AnnotationToolbarProps) {
   const [noteDraft, setNoteDraft] = useState('');
   const [isNoteOpen, setIsNoteOpen] = useState(Boolean(props.initialNoteOpen));
   const [isClozeGuardOpen, setIsClozeGuardOpen] = useState(false);
+  const noteSave = useAnnotationNoteSave({
+    draft: noteDraft,
+    onClose: props.onClose,
+    onCreateNote: props.onCreateNote
+  });
 
   useEffect(() => {
     setIsNoteOpen(Boolean(props.initialNoteOpen));
@@ -146,11 +154,14 @@ function AnnotationToolbar(props: AnnotationToolbarProps) {
       </div>
       <AnnotationToolbarPanels
         {...props}
+        error={noteSave.error}
         isClozeGuardOpen={isClozeGuardOpen}
         isNoteOpen={isNoteOpen}
         noteDraft={noteDraft}
-        onChangeNote={setNoteDraft}
-        onCloseNote={() => setIsNoteOpen(false)}
+        onChangeNote={(value) => { setNoteDraft(value); noteSave.clearError(); }}
+        onCloseNote={() => { setIsNoteOpen(false); noteSave.clearError(); }}
+        onSaveNote={() => void noteSave.save()}
+        saving={noteSave.saving}
       />
     </div>,
     document.body

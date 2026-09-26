@@ -5,10 +5,12 @@ import { useDismissibleSurface } from '../../shared/ui/useDismissibleSurface';
 
 export function AnnotationNotePanel(props: {
   draft: string;
+  error?: string | null;
   left: number;
   onCancel: () => void;
   onChange: (value: string) => void;
   onSave: () => void;
+  saving?: boolean;
   top: number;
 }) {
   const t = useTranslation();
@@ -30,9 +32,10 @@ export function AnnotationNotePanel(props: {
         placeholder={t('desktop.annotation.comment.placeholder')}
         value={props.draft}
       />
+      {props.error ? <p className="px-1 text-xs text-destructive" role="alert">{props.error}</p> : null}
       <div className="mt-2 flex justify-end gap-2">
         <AppButton onClick={props.onCancel} size="sm" variant="ghost">{t('desktop.annotation.cancel')}</AppButton>
-        <AppButton disabled={!props.draft.trim()} onClick={props.onSave} size="sm">{t('desktop.annotation.save')}</AppButton>
+        <AppButton disabled={!props.draft.trim() || props.saving} onClick={props.onSave} size="sm">{t('desktop.annotation.save')}</AppButton>
       </div>
     </div>
   );

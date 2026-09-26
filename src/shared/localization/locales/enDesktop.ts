@@ -51,6 +51,7 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.annotation.comment.placeholder': 'Add an annotation...',
   'desktop.annotation.cancel': 'Cancel',
   'desktop.annotation.save': 'Save',
+  'desktop.annotation.saveFailed': 'Could not save annotation. Try again.',
   'desktop.editor.frontmatter.close': 'Close',
   'desktop.highlightToolbar.close': 'Close Highlight',
   'desktop.highlightToolbar.addComment': 'Add Annotation',

@@ -37,22 +37,22 @@ function createAnnotatedHighlightFactory(
   ) => Promise<string | null> | string | null
 ) {
   return (payload: SelectionCommandPayload, note: string) => {
-    void createHighlightNodeFromSelection(
+    return createHighlightNodeFromSelection(
       payload.parentNodeId,
       formatHighlightCardContent({ note, notePrefix: getHighlightAnnotationPrefix(), text: payload.selectionText }),
       payload.anchorId,
       createTextAnchorLink(payload, 'highlight'),
       payload.imageRegions
     );
-    return null;
   };
 }
 
 function createNoteFromPayloadHandler(args: {
-  createAnnotatedHighlight: (payload: SelectionCommandPayload, note: string) => string | null;
+  createAnnotatedHighlight: (payload: SelectionCommandPayload, note: string) => Promise<string | null> | string | null;
 }) {
   return (payload: SelectionCommandPayload, note = '') => {
-    return args.createAnnotatedHighlight(payload, note);
+    void args.createAnnotatedHighlight(payload, note);
+    return null;
   };
 }
 
@@ -144,6 +144,13 @@ function createHighlightHandlers(args: {
   });
 
   return {
+    async handleSaveNoteFromPayload(payload: SelectionCommandPayload, note: string) {
+      const normalizedNote = note.trim();
+      if (!normalizedNote || payload.entries.length === 0) return false;
+      args.flushPendingEditorDraft();
+      const createdNodeId = await createAnnotatedHighlight(payload, normalizedNote);
+      return Boolean(createdNodeId);
+    },
     handleCreateNote(note: string) {
       args.runSelectionCommand((payload) => {
         const normalizedNote = note.trim();
@@ -212,7 +219,8 @@ export function createSelectionHandlers(args: {
     },
     handleCreateHighlightFromPayload: highlightHandlers.handleCreateHighlightFromPayload,
     handleCreateNote: highlightHandlers.handleCreateNote,
-    handleCreateNoteFromPayload: highlightHandlers.handleCreateNoteFromPayload
+    handleCreateNoteFromPayload: highlightHandlers.handleCreateNoteFromPayload,
+    handleSaveNoteFromPayload: highlightHandlers.handleSaveNoteFromPayload
   };
 }
 
