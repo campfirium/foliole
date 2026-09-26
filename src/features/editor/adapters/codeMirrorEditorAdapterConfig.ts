@@ -16,6 +16,7 @@ import { markdownFormattingKeymap } from './codeMirrorMarkdownFormatting';
 import { syncParagraphMarkerSelectionVisibility } from './codeMirrorParagraphMarkerState';
 import { structuredListKeymap } from './codeMirrorStructuredListKeymap';
 import { createTextAnchorDecorationsExtension } from './codeMirrorTextAnchorState';
+import { preserveDevanagariConjunctPointerSelection } from './devanagariPointerSelection';
 import { editorDiffDecorationsStateField } from './lineDiffDecorations';
 import { createLiveMarkdownExtensions } from './liveMarkdown';
 import { createApplicationCutExtensions } from './liveMarkdownInteractions';
@@ -70,6 +71,7 @@ const escapeBlurKeymap = [{
 
 function createEditorInputExtensions(options: CodeMirrorEditorAdapterOptions) {
   return [
+    preserveDevanagariConjunctPointerSelection,
     Prec.highest(keymap.of(structuredListKeymap)),
     keymap.of([...escapeBlurKeymap, ...markdownFormattingKeymap, ...folioleDefaultKeymap]),
     ...createApplicationCutExtensions(options.applicationCutEnabled === true)
