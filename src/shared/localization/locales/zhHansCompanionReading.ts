@@ -4,7 +4,7 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
   'companion.reading.exit': '退出',
   'companion.reading.actions': '操作',
   'companion.reading.find': '在文档中查找',
-  'companion.reading.font': '字体',
+  'companion.reading.font': '外观',
   'companion.reading.highlight': '高亮',
   'companion.reading.info': '信息',
   'companion.reading.outline': '大纲',

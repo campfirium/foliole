@@ -229,8 +229,8 @@ describe('CompanionShell navigation', () => {
     expect(screen.queryByRole('dialog', { name: 'Outline' })).not.toBeInTheDocument();
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-from', '2');
     expect(screen.getByTestId('companion-article-document')).toHaveAttribute('data-reading-to', '18');
-    openReadingAction('Font');
-    expect(screen.getByRole('dialog', { name: 'Font' })).toBeInTheDocument();
+    openReadingAction('Appearance');
+    expect(screen.getByRole('dialog', { name: 'Appearance' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Extra large' }));
     expect(screen.getByTestId('companion-article-document').parentElement).toHaveAttribute('data-reading-font-size', 'xlarge');
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));

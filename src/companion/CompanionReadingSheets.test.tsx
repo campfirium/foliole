@@ -17,7 +17,7 @@ describe('ReadingActionsSheet', () => {
       />
     );
 
-    expect(screen.getByRole('button', { name: 'Font' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Appearance' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Highlight' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Info' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Restore from trash' })).not.toBeInTheDocument();
@@ -105,7 +105,7 @@ describe('ReadingHighlightSheet', () => {
 });
 
 describe('ReadingFontSheet', () => {
-  it('updates local reading typography settings from the Font sheet', () => {
+  it('updates local reading typography settings from the Appearance sheet', () => {
     const onChange = vi.fn();
 
     render(

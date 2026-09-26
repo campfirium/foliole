@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
   type CompanionReadingFont,
@@ -64,6 +64,7 @@ function useReadingCustomFonts(props: CustomFontProps) {
 export function CompanionReadingCustomFonts(props: CustomFontProps) {
   const t = useTranslation();
   const { busy, error, fonts, importFile, removeFont } = useReadingCustomFonts(props);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="border-b border-companion-divider pb-4">
@@ -91,19 +92,24 @@ export function CompanionReadingCustomFonts(props: CustomFontProps) {
           </button>
         </div>
       ))}
-      <label className="mt-2 flex min-h-10 cursor-pointer items-center justify-center rounded-md border border-companion-divider px-3 text-sm font-medium text-foreground">
+      <button
+        className="mt-2 flex min-h-10 w-full items-center justify-center rounded-md border border-companion-divider px-3 text-sm font-medium text-foreground"
+        disabled={busy}
+        onClick={() => fileInputRef.current?.click()}
+        type="button"
+      >
         {t('companion.reading.font.import')}
-        <input
-          accept=".ttf,.otf,font/ttf,font/otf"
-          className="sr-only"
-          disabled={busy}
-          onChange={(event) => {
-            void importFile(event.target.files?.[0]);
-            event.target.value = '';
-          }}
-          type="file"
-        />
-      </label>
+      </button>
+      <input
+        accept=".ttf,.otf,font/ttf,font/otf"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={(event) => {
+          void importFile(event.target.files?.[0]);
+          event.target.value = '';
+        }}
+        type="file"
+      />
       {error ? <p className="pt-2 text-sm text-error" role="alert">{t('companion.reading.font.importError')}</p> : null}
     </div>
   );

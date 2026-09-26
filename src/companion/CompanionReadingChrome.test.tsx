@@ -32,7 +32,7 @@ describe('ReadingChrome', () => {
   it('keeps secondary reading actions out of the narrow top chrome', () => {
     renderChrome();
 
-    expect(screen.queryByRole('button', { name: 'Font' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Appearance' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Highlight' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Info' })).not.toBeInTheDocument();
   });

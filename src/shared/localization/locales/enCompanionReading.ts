@@ -2,7 +2,7 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.reading.exit': 'Exit',
   'companion.reading.actions': 'Actions',
   'companion.reading.find': 'Find in document',
-  'companion.reading.font': 'Font',
+  'companion.reading.font': 'Appearance',
   'companion.reading.highlight': 'Highlight',
   'companion.reading.info': 'Info',
   'companion.reading.outline': 'Outline',
