@@ -5,10 +5,8 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { assertQualityCommandAllowed } from './quality-command-contracts.mjs';
-import { writeRemoteQualityReceipt } from './remote-quality-receipt.mjs';
 import {
   assertRemoteQualityRepositoryContext,
-  assertRemoteQualitySourceScope,
   assertRemoteQualitySourceContext,
   normalizeRemoteQualitySourceRef,
   parseRemoteBranchSha
@@ -37,7 +35,6 @@ export function parseRemoteQualityArgs(args) {
   if (!ALLOWED_SCOPES.has(result.scope)) {
     throw new Error('--scope must be desktop, shared, android, ios, or full');
   }
-  assertRemoteQualitySourceScope(result.sourceRef, result.scope);
   return result;
 }
 
@@ -185,10 +182,8 @@ export async function runRemoteQuality(options = {}) {
     'api', '-H', 'X-GitHub-Api-Version: 2026-03-10',
     `repos/${repoInfo.nameWithOwner}/git/ref/heads/${sourceBranch}`, '--jq', '.object.sha'
   ], { cwd }), sourceBranch);
-  const localHead = sourceBranch === 'sync'
-    ? await requireSuccess(runner, 'git', ['rev-parse', 'HEAD'], { cwd }) : targetSha;
   assertRemoteQualitySourceContext({ defaultBranch: repoInfo.defaultBranchRef.name,
-    localBranch: branch, localHead, remoteSha: targetSha, sourceRef: args.sourceRef });
+    localBranch: branch, sourceRef: args.sourceRef });
 
   const payload = JSON.stringify({
     inputs: { scope: args.scope, target_sha: targetSha },
@@ -221,9 +216,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   try {
     assertQualityCommandAllowed('runner:remote-quality');
     const result = await runRemoteQuality();
-    const receipt = writeRemoteQualityReceipt({ ...result, cwd: process.cwd() });
     console.log(`[remote-quality] ${result.scope} quality passed for ${result.sourceRef} `
-      + `at ${result.targetSha}${receipt ? ` receipt=${receipt}` : ''}`);
+      + `at ${result.targetSha}`);
   } catch (error) {
     console.error(`[remote-quality] ${error instanceof Error ? error.message : String(error)}`);
     process.exitCode = 1;

@@ -1,24 +1,12 @@
-const SOURCE_BRANCHES = new Map([
-  ['refs/heads/dev', 'dev'],
-  ['refs/heads/sync', 'sync']
-]);
-
 export function normalizeRemoteQualitySourceRef(value) {
   const sourceRef = value || 'refs/heads/dev';
-  if (!SOURCE_BRANCHES.has(sourceRef)) {
-    throw new Error('--source-ref must be refs/heads/dev or refs/heads/sync');
-  }
+  if (sourceRef !== 'refs/heads/dev') throw new Error('--source-ref must be refs/heads/dev');
   return sourceRef;
 }
 
-export function assertRemoteQualitySourceScope(sourceRef, scope) {
-  if (sourceRef === 'refs/heads/sync' && !['android', 'ios'].includes(scope)) {
-    throw new Error('Remote sync quality supports only android or ios scope');
-  }
-}
-
 export function remoteQualitySourceBranch(sourceRef) {
-  return SOURCE_BRANCHES.get(normalizeRemoteQualitySourceRef(sourceRef));
+  normalizeRemoteQualitySourceRef(sourceRef);
+  return 'dev';
 }
 
 export function parseRemoteBranchSha(value, branch) {
@@ -41,11 +29,8 @@ export function assertRemoteQualityRepositoryContext({ defaultBranch, localBranc
 }
 
 export function assertRemoteQualitySourceContext({
-  defaultBranch, localBranch, localHead, remoteSha, sourceRef
+  defaultBranch, localBranch, sourceRef
 }) {
   const sourceBranch = assertRemoteQualityRepositoryContext({ defaultBranch, localBranch, sourceRef });
-  if (sourceBranch === 'sync' && localHead !== remoteSha) {
-    throw new Error('Remote Quality requires local sync HEAD to exactly match origin/sync');
-  }
   return sourceBranch;
 }

@@ -16,16 +16,16 @@ describe('remote quality dispatcher', () => {
       scope: 'ios', sourceRef: 'refs/heads/dev'
     });
     expect(parseRemoteQualityArgs([
-      '--scope', 'ios', '--source-ref', 'refs/heads/sync'
-    ])).toEqual({ scope: 'ios', sourceRef: 'refs/heads/sync' });
+      '--scope', 'ios', '--source-ref', 'refs/heads/dev'
+    ])).toEqual({ scope: 'ios', sourceRef: 'refs/heads/dev' });
     expect(() => parseRemoteQualityArgs(['--scope', 'mid'])).toThrow('--scope must be');
     expect(() => parseRemoteQualityArgs(['--scope', 'ios', '--sha', SHA])).toThrow('Unknown argument');
     expect(() => parseRemoteQualityArgs([
       '--scope', 'ios', '--source-ref', 'refs/heads/main'
     ])).toThrow('--source-ref must be');
     expect(() => parseRemoteQualityArgs([
-      '--scope', 'full', '--source-ref', 'refs/heads/sync'
-    ])).toThrow('only android or ios');
+      '--scope', 'ios', '--source-ref', 'refs/heads/sync'
+    ])).toThrow('--source-ref must be refs/heads/dev');
     expect(() => parseRemoteQualityArgs(['--scope', 'ios', '--unknown'])).toThrow('Unknown argument');
   });
 
@@ -42,26 +42,6 @@ describe('remote quality dispatcher', () => {
     });
     expect(calls.some((call) => call.args.includes('.object.sha'))).toBe(true);
     expect(calls.some((call) => call.args.some((arg) => arg.includes('/actions/runs/42/jobs')))).toBe(true);
-  });
-
-  it('dispatches an exact pushed sync target through the dev workflow definition', async () => {
-    const { calls, runner } = createRunner({ branch: 'sync' });
-    await expect(runRemoteQuality({
-      args: ['--scope', 'ios', '--source-ref', 'refs/heads/sync'], runner
-    })).resolves.toMatchObject({ sourceRef: 'refs/heads/sync', targetSha: SHA });
-    const dispatch = calls.find((call) => call.args.includes('--method'));
-    expect(JSON.parse(dispatch.options.input)).toEqual({
-      inputs: { scope: 'ios', target_sha: SHA }, ref: 'dev'
-    });
-    expect(calls.some((call) => call.args.some((arg) => arg.endsWith('/git/ref/heads/sync')))).toBe(true);
-  });
-
-  it('rejects sync when local HEAD differs from origin sync', async () => {
-    const { calls, runner } = createRunner({ branch: 'sync', localHead: 'a'.repeat(40) });
-    await expect(runRemoteQuality({
-      args: ['--scope', 'ios', '--source-ref', 'refs/heads/sync'], runner
-    })).rejects.toThrow('exactly match origin/sync');
-    expect(calls.some((call) => call.args.some((arg) => arg.includes('/dispatches')))).toBe(false);
   });
 
   it('fails before dispatch when the pushed dev HEAD is not an exact SHA', async () => {
