@@ -10,7 +10,7 @@ const APP_ID = 'com.foliole.android';
 const TEST_CLASS = `${APP_ID}.FolioleCompanionJoinRequestProviderTest`;
 
 function validateProviderAcceptance({ evidencePath, stdout }) {
-  if (!/OK \(2 tests\)/u.test(stdout)) {
+  if (!/OK \(3 tests\)/u.test(stdout)) {
     throw Object.assign(new Error('A5 join request provider test did not pass.'), {
       evidenceRef: evidencePath, missingFact: 'join_request_provider_passed'
     });
