@@ -93,7 +93,8 @@ vi.mock('@codemirror/state', () => ({
     },
     readOnly: {
       of: mockReadOnlyOf
-    }
+    },
+    transactionFilter: { of: vi.fn((value) => value) }
   },
   RangeSetBuilder: mockRangeSetBuilder
 }));

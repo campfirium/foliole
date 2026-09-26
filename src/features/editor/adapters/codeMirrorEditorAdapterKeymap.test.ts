@@ -30,7 +30,8 @@ vi.mock('@codemirror/lang-markdown', () => ({
 
 vi.mock('@codemirror/state', () => ({
   EditorState: {
-    allowMultipleSelections: { of: vi.fn(() => 'allow-multiple-selections') }
+    allowMultipleSelections: { of: vi.fn(() => 'allow-multiple-selections') },
+    transactionFilter: { of: vi.fn((value) => value) }
   },
   Prec: { highest: vi.fn((value) => value) },
   StateEffect: {

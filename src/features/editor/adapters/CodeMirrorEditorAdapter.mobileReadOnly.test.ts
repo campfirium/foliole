@@ -23,7 +23,8 @@ vi.mock('@codemirror/lang-markdown', () => ({
 vi.mock('@codemirror/state', () => ({
   EditorState: {
     allowMultipleSelections: { of: vi.fn(() => 'multiple-selections') },
-    readOnly: { of: mockReadOnlyOf }
+    readOnly: { of: mockReadOnlyOf },
+    transactionFilter: { of: vi.fn((value) => value) }
   },
   Prec: {
     highest: vi.fn((value) => value)
