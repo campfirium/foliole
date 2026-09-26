@@ -34,6 +34,9 @@ export async function replayPendingWorkspaceNodeSync(): Promise<void> {
   if (!runtimeInvoke) {
     return;
   }
+  if (listPendingNodeSyncSnapshots().length === 0) {
+    return;
+  }
   const snapshot = toReplaySnapshot(
     await runtimeInvoke(NATIVE_COMMANDS.loadWorkspaceListSnapshot, undefined)
   );

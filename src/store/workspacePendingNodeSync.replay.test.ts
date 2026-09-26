@@ -23,6 +23,15 @@ beforeEach(() => {
   vi.mocked(getRuntimeInvoke).mockReset();
 });
 
+it('does not read the full workspace when there are no pending nodes to replay', async () => {
+  const invoke = vi.fn();
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  await replayPendingWorkspaceNodeSync();
+
+  expect(invoke).not.toHaveBeenCalled();
+});
+
 it('keeps orphan pending nodes out of merged runtime snapshots', () => {
   stagePendingNodeSync(
     createPendingNodeSnapshotFixture({ nodeId: 'node-orphan', parentNodeId: 'node-missing' })

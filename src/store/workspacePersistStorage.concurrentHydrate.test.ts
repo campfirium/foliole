@@ -51,6 +51,7 @@ it('coalesces concurrent runtime workspace hydrate reads by storage key', async 
     trashedNodeIds: []
   });
   const [firstValue, secondValue] = await Promise.all([firstRead, secondRead]);
+  expect(invoke.mock.calls.filter(([command]) => command === 'load_workspace_list_snapshot')).toHaveLength(1);
 
   expect(firstValue).toBe(secondValue);
   expect(invoke.mock.calls.filter(([command]) => command === 'load_reading_progress')).toHaveLength(1);
