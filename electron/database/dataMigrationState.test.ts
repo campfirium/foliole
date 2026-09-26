@@ -9,9 +9,12 @@ import {
 } from '../../lib/core/database/dataMigrationState.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
-it.each(['fresh', 'schema-86'] as const)('creates database-owned data migration state for %s databases', (source) => {
+it.each(['fresh', 'version-86'] as const)('creates database-owned data migration state for %s databases', (source) => {
   const sqlite = new Database(':memory:');
-  if (source === 'schema-86') sqlite.pragma('user_version = 86');
+  if (source === 'version-86') {
+    initializeDatabaseSchema(sqlite);
+    sqlite.pragma('user_version = 86');
+  }
 
   initializeDatabaseSchema(sqlite);
 
