@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, powerMonitor } from 'electron';
 
 import { stopAgentControlApiServer } from './agentControl/agentControlServer.js';
 import { resolveFolioleAppVersion } from './appVersion.js';
@@ -55,6 +55,7 @@ import type { RuntimeMode } from './runtimeMode.js';
 import { loadStartupErrorSurface } from './startupErrorSurface.js';
 import type { StartupRendererAppearance } from './startupRendererPreparation.js';
 import { isDesktopCompanionSyncParticipating } from './sync/desktopCompanionSyncPreference.js';
+import { recoverDesktopSyncGroupDiscovery } from './sync/desktopSyncGroupAutoSync.js';
 import { stopLanWorkspaceSyncServer } from './sync/lanWorkspaceSyncServer.js';
 
 export interface MainLifecycleArgs {
@@ -180,6 +181,16 @@ function createStartupMainWindow(
     : args.createMainWindow(appearance);
 }
 
+function installSyncGroupResumeRecovery() {
+  powerMonitor.on('resume', recoverDesktopSyncGroupDiscovery);
+  app.once('will-quit', () => powerMonitor.removeListener('resume', recoverDesktopSyncGroupDiscovery));
+}
+
+function installEarlyMainLifecycle(runtimeMode: RuntimeMode, argv: readonly string[]) {
+  installSingleInstanceGate(runtimeMode, argv);
+  installBeforeQuitLifecycle();
+}
+
 export function installMainLifecycle(args: MainLifecycleArgs) {
   const externalDocumentFileOpen = installExternalDocumentFileOpenLifecycle();
   const capturePanelLaunchIntent = createGlobalCapturePanelLaunchIntent(process.argv);
@@ -191,11 +202,11 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
     }
     return openOrCreateMainWindow(args, externalDocumentFileOpen.setReadyWindow);
   };
-  installSingleInstanceGate(args.runtimeMode, process.argv);
-  installBeforeQuitLifecycle();
+  installEarlyMainLifecycle(args.runtimeMode, process.argv);
   installActivateLifecycle(openMainWindow);
   installSecondInstanceLifecycle(capturePanelLaunchIntent.request, openMainWindow, externalDocumentFileOpen.enqueueFromArgv);
   app.whenReady().then(async () => {
+    installSyncGroupResumeRecovery();
     restoreDesktopSecurityScopedAccess();
     installAppProcessDiagnostics();
     args.installInvokeHandler();

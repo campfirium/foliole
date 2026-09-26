@@ -106,6 +106,7 @@ export function SettingsCompanionSyncSection() {
       <SettingsSyncGroupRows
         candidates={state.overview.join_candidates ?? []}
         discovery={state.discovery}
+        hostPlatform={state.overview.host_platform}
         currentDevice={state.overview.current_device ?? null}
         group={state.overview.sync_group ?? null}
         isBusy={!state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
@@ -115,6 +116,8 @@ export function SettingsCompanionSyncSection() {
         onTogglePause={() => void (state.overview.sync_paused ? state.resumeSync() : state.pauseSync())}
         onCreate={() => void state.createSyncGroup()}
         onDiscover={() => void state.discoverSyncGroups()}
+        onOpenSettings={() => void state.openNetworkSettings()}
+        onRecoverDiscovery={() => void state.recoverDiscovery()}
         onRequestJoin={(endpointUrl) => void state.requestSyncGroupJoin(endpointUrl)}
         onAccept={(id) => void state.acceptRequest(id)}
         onReject={(id) => void state.rejectRequest(id)}
@@ -123,6 +126,7 @@ export function SettingsCompanionSyncSection() {
         syncEnabled={state.overview.sync_enabled}
         topologyRole={state.overview.server_status.topology_role}
         topologyStatus={state.overview.server_status.topology_status}
+        discoveryError={state.overview.discovery_error}
         syncPaused={state.overview.sync_paused}
         removingDeviceIds={state.overview.removing_device_ids}
       />

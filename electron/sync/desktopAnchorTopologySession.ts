@@ -16,7 +16,10 @@ import {
   resetDesktopAnchorTopologyState,
   saveDesktopAnchorTopologyState
 } from './desktopAnchorTopologyRole.js';
-import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
+import type { DesktopDnsSdSession } from './desktopDnsSd.js';
+import {
+  startRecoverableDesktopDnsSdSession, type RecoverableDesktopDnsSdSession
+} from './desktopDnsSdRecoverySession.js';
 import {
   DESKTOP_SYNC_GROUP_DISCOVERY_GRACE_MS,
   DESKTOP_SYNC_GROUP_PROBE_TIMEOUT_MS
@@ -32,12 +35,15 @@ export interface DesktopAnchorTarget {
 }
 
 export interface DesktopAnchorTopologySession extends DesktopDnsSdSession {
+  recoverDiscovery(): void;
   resumePendingSync(): Promise<void>;
 }
 
 type SessionArgs = {
   fetchDiscovery?: typeof fetch;
   group: SyncGroupPayload;
+  onDiscoveryError?(error: Error): void;
+  onDiscoveryStarted?(): void;
   onAnchor(target: DesktopAnchorTarget, requireSyncBeforeDemote: boolean): Promise<boolean>;
   onAnchorLost(deviceId: string): void;
   onState(state: DesktopAnchorTopologyState): void;
@@ -51,9 +57,10 @@ class DesktopAnchorTopologyController {
   private active = true;
   private currentAnchor: { service: DesktopDnsSdService; target: DesktopAnchorTarget } | null = null;
   private discoveryGraceElapsed = false;
+  private discoveryRevision = 0;
   private observationTimer: ReturnType<typeof setTimeout> | null = null;
   private pendingAnchorProbes = 0;
-  private runtime: DesktopDnsSdSession | null = null;
+  private runtime: RecoverableDesktopDnsSdSession | null = null;
   private readonly fetchDiscovery: typeof fetch;
   private readonly localId: string;
 
@@ -65,12 +72,29 @@ class DesktopAnchorTopologyController {
   start(): DesktopAnchorTopologySession {
     resetDesktopAnchorTopologyState();
     this.args.onState(loadDesktopAnchorTopologyState());
-    this.observe();
-    this.runtime = startDesktopDnsSdSession({
-      onError: () => this.observe(),
+    this.runtime = startRecoverableDesktopDnsSdSession({
+      onError: (error) => {
+        this.suspendObservation();
+        this.args.onDiscoveryError?.(error);
+      },
+      onStarted: () => {
+        this.discoveryRevision += 1;
+        this.pendingAnchorProbes = 0;
+        this.observe();
+        const anchor = this.currentAnchor;
+        if (anchor) {
+          if (loadDesktopAnchorTopologyState().role === 'member') {
+            this.publish(this.transition({ incompatible_group_seen: false, observation_complete: false,
+              observed_desktops: [], previous_anchor_reachability: 'unknown' }));
+          }
+          void this.handleLost(anchor.service, anchor.target, this.discoveryRevision);
+        }
+        this.args.onDiscoveryStarted?.();
+      },
       onService: ({ kind, service }) => this.handleService(kind, service)
     });
-    return { stop: () => this.stop(), resumePendingSync: () => this.resumePendingSync() };
+    return { stop: () => this.stop(), recoverDiscovery: () => this.runtime?.recover(),
+      resumePendingSync: () => this.resumePendingSync() };
   }
 
   private async resumePendingSync() {
@@ -83,6 +107,7 @@ class DesktopAnchorTopologyController {
 
   private stop() {
     this.active = false;
+    this.discoveryRevision += 1;
     if (this.observationTimer) clearTimeout(this.observationTimer);
     this.runtime?.stop();
     resetDesktopAnchorTopologyState();
@@ -103,14 +128,23 @@ class DesktopAnchorTopologyController {
     const endpointUrl = resolveCompanionMdnsServiceEndpoints(service)[0];
     if (!endpointUrl) return;
     const target = { endpointUrl, groupId: this.args.group.group_id, peerDeviceId: deviceId };
-    if (kind === 'lost') void this.handleLost(service, target);
-    else void this.handleFound(service, target);
+    const revision = this.discoveryRevision;
+    if (kind === 'lost') void this.handleLost(service, target, revision);
+    else void this.handleFound(service, target, revision);
   }
 
-  private async handleLost(service: DesktopDnsSdService, target: DesktopAnchorTarget) {
+  private async handleLost(service: DesktopDnsSdService, target: DesktopAnchorTarget, revision: number) {
     if (this.currentAnchor?.target.peerDeviceId !== target.peerDeviceId) return;
-    if (await probeAnchor(this.fetchDiscovery, service, target.endpointUrl)) return;
-    if (!this.active) return;
+    const reachable = await probeAnchor(this.fetchDiscovery, service, target.endpointUrl);
+    if (!this.active || revision !== this.discoveryRevision) return;
+    if (reachable) {
+      if (loadDesktopAnchorTopologyState().status === 'waiting_anchor') {
+        this.publish(this.transition({ incompatible_group_seen: false, observation_complete: true,
+          observed_desktops: [{ device_id: target.peerDeviceId, reachable: true, role: 'anchor' }],
+          previous_anchor_reachability: 'reachable' }));
+      }
+      return;
+    }
     this.currentAnchor = null;
     this.args.onAnchorLost(target.peerDeviceId);
     this.publish(this.transition({ incompatible_group_seen: false, observation_complete: false,
@@ -118,10 +152,12 @@ class DesktopAnchorTopologyController {
     this.observe();
   }
 
-  private async handleFound(service: DesktopDnsSdService, target: DesktopAnchorTarget) {
+  private async handleFound(service: DesktopDnsSdService, target: DesktopAnchorTarget,
+    revision = this.discoveryRevision) {
     this.pendingAnchorProbes += 1;
     try {
-      if (!await probeAnchor(this.fetchDiscovery, service, target.endpointUrl) || !this.active) return;
+      if (!await probeAnchor(this.fetchDiscovery, service, target.endpointUrl) || !this.active
+          || revision !== this.discoveryRevision) return;
       this.currentAnchor = { service, target };
       if (this.observationTimer) clearTimeout(this.observationTimer);
       this.observationTimer = null;
@@ -131,14 +167,23 @@ class DesktopAnchorTopologyController {
       this.publish(next);
       const requireSync = next.status === 'sync_before_demote';
       const synced = await this.args.onAnchor(target, requireSync);
-      if (!this.active || !requireSync || !synced) return;
+      if (!this.active || revision !== this.discoveryRevision || !requireSync || !synced) return;
       this.publish(this.transition({ incompatible_group_seen: false, observation_complete: true,
         observed_desktops: observation, previous_anchor_reachability: 'reachable',
         sync_before_demote_completed: true }));
     } finally {
-      this.pendingAnchorProbes -= 1;
-      this.completeObservationIfSettled();
+      if (revision === this.discoveryRevision) {
+        this.pendingAnchorProbes -= 1;
+        this.completeObservationIfSettled();
+      }
     }
+  }
+
+  private suspendObservation() {
+    this.discoveryRevision += 1;
+    if (this.observationTimer) clearTimeout(this.observationTimer);
+    this.observationTimer = null;
+    this.discoveryGraceElapsed = false;
   }
 
   private observe() {

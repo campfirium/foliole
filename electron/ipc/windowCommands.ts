@@ -65,6 +65,13 @@ async function loadDesktopHostCapabilities() {
   return getDesktopHostCapabilities(process.platform, app.isPackaged, getGlobalClipShortcutStatus(), permission);
 }
 
+async function openSyncGroupLocalNetworkSettings() {
+  if (process.platform !== 'darwin') throw new Error('local_network_settings_unavailable');
+  const error = await shell.openPath('/System/Applications/System Settings.app');
+  if (error) throw new Error(error);
+  return null;
+}
+
 function handleCliInstallCommand(request: InvokeRequest, context?: InvokeContext) {
   if (request.command !== NATIVE_COMMANDS.folioleCliInstall) return undefined;
   const args = (request.args ?? {}) as Record<string, unknown>;
@@ -87,9 +94,7 @@ function handleUtilityCommand(request: InvokeRequest) {
   }
   if (request.command === NATIVE_COMMANDS.openExternalUrl) {
     const url = normalizeOpenExternalUrl(asString(args.url, 'url'));
-    if (!url) {
-      return null;
-    }
+    if (!url) return null;
     return shell.openExternal(url).then(() => null);
   }
   if (request.command === NATIVE_COMMANDS.openLocalPath) {
@@ -98,6 +103,9 @@ function handleUtilityCommand(request: InvokeRequest) {
       return null;
     }
     return shell.openPath(targetPath).then(() => null);
+  }
+  if (request.command === NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings) {
+    return openSyncGroupLocalNetworkSettings();
   }
   if (request.command === NATIVE_COMMANDS.resolveAppPaths) {
     return resolveAppPaths();

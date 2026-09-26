@@ -136,6 +136,8 @@ describe('electron-builder release packaging config', () => {
     expect(config.copyright).toContain('2026');
     expect(config.win.requestedExecutionLevel).toBe('asInvoker');
     expect(config.mac.category).toBe('public.app-category.education');
+    expect(config.mac.extendInfo.NSBonjourServices).toContain('_foliole-sync._tcp');
+    expect(config.mac.extendInfo.NSLocalNetworkUsageDescription).toMatch(/local network/u);
     expect(config.linux.category).toBe('Education');
     expect(config.linux.target).toEqual(['deb']);
     expect(config.linux.artifactName).toBe('${productName}-Linux-Experimental-amd64-${version}.${ext}');

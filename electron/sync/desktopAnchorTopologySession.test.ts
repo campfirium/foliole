@@ -4,12 +4,14 @@ import { serializePreparedAnchorTxt } from '../../lib/platform/syncAnchorTopolog
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 const runtime = vi.hoisted(() => ({
+  onError: null as null | ((error: Error) => void),
   onService: null as null | ((event: Record<string, unknown>) => void),
   stop: vi.fn()
 }));
 
 vi.mock('./desktopDnsSd.js', () => ({
   startDesktopDnsSdSession: (callbacks: typeof runtime) => {
+    runtime.onError = callbacks.onError;
     runtime.onService = callbacks.onService;
     return { stop: runtime.stop };
   }
@@ -38,6 +40,7 @@ function anchorService(deviceId = 'desktop-a') {
 beforeEach(() => {
   vi.useFakeTimers();
   vi.clearAllMocks();
+  runtime.onError = null;
   runtime.onService = null;
 });
 
@@ -54,6 +57,43 @@ it('declares the first desktop anchor only after the complete observation window
   expect(states.at(-1)?.role).toBe('observing');
   await vi.advanceTimersByTimeAsync(1);
   expect(states.at(-1)?.role).toBe('anchor');
+  session.stop();
+});
+
+it('waits for a rebuilt browse session instead of electing during its failure', async () => {
+  const states: Array<{ role: string }> = [];
+  const session = startDesktopAnchorTopologySession({
+    group, onAnchor: vi.fn(async () => true), onAnchorLost: vi.fn(),
+    onState: (state) => states.push(state)
+  });
+  const staleService = runtime.onService;
+  runtime.onError?.(new Error('browse failed'));
+  await vi.advanceTimersByTimeAsync(999);
+  expect(states.at(-1)?.role).toBe('observing');
+
+  await vi.advanceTimersByTimeAsync(1);
+  staleService?.({ kind: 'found', service: anchorService() });
+  expect(states.at(-1)?.role).toBe('observing');
+  session.stop();
+});
+
+it('rechecks an earlier anchor before claiming it is connected after browse recovery', async () => {
+  const fetchDiscovery = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({ group_id: 'group-1', group_tag: 'tag-1',
+      provider_device_id: 'desktop-a', provider_platform: 'darwin', topology_role: 'anchor',
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR })))
+    .mockRejectedValueOnce(new Error('offline'));
+  const states: Array<{ role: string; status: string }> = [];
+  const onAnchorLost = vi.fn();
+  const session = startDesktopAnchorTopologySession({ fetchDiscovery, group,
+    onAnchor: vi.fn(async () => true), onAnchorLost, onState: (state) => states.push(state) });
+  runtime.onService?.({ kind: 'found', service: anchorService() });
+  await vi.waitFor(() => expect(states.at(-1)?.status).toBe('ready'));
+  runtime.onError?.(new Error('browse failed'));
+  await vi.advanceTimersByTimeAsync(1_000);
+  expect(states).toContainEqual(expect.objectContaining({ role: 'member', status: 'waiting_anchor' }));
+  await vi.waitFor(() => expect(onAnchorLost).toHaveBeenCalledWith('desktop-a'));
+  expect(states.at(-1)?.status).toBe('waiting_anchor');
   session.stop();
 });
 

@@ -11,6 +11,8 @@ const runtime = vi.hoisted(() => ({
     onMemberLost(deviceId: string): void;
   },
   notifyOverviewChanged: vi.fn(),
+  recoverTopology: vi.fn(),
+  recoverMembers: vi.fn(),
   readwiseContinue: vi.fn(async () => null),
   syncCompleted: null as null | (() => void),
   owned: false,
@@ -58,7 +60,7 @@ vi.mock('./desktopAnchorTopologyRole.js', () => ({
 vi.mock('./desktopAnchorTopologySession.js', () => ({
   startDesktopAnchorTopologySession: (args: typeof runtime.sessionArgs) => {
     runtime.sessionArgs = args;
-    return { stop: runtime.stop };
+    return { recoverDiscovery: runtime.recoverTopology, stop: runtime.stop };
   }
 }));
 vi.mock('./desktopCompanionSyncPreference.js', () => ({
@@ -84,7 +86,7 @@ vi.mock('./desktopSyncGroupMemberStateSession.js', () => ({
     onMember: (peer: Record<string, unknown>) => Promise<boolean>,
     onMemberLost: (deviceId: string) => void) => {
     runtime.memberSessionArgs = { onChanged, onMember, onMemberLost };
-    return { stop: vi.fn() };
+    return { recover: runtime.recoverMembers, stop: vi.fn() };
   }
 }));
 vi.mock('./readwiseOwnerHandoff.js', () => ({
@@ -92,10 +94,12 @@ vi.mock('./readwiseOwnerHandoff.js', () => ({
 }));
 
 import {
+  recoverDesktopSyncGroupDiscovery,
   runDesktopManualSyncWithDiscovery,
   startDesktopSyncGroupAutoSync,
   stopDesktopSyncGroupAutoSync
 } from './desktopSyncGroupAutoSync.js';
+import { loadDesktopSyncGroupDiscoveryError } from './desktopSyncGroupDiscoveryStatus.js';
 import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
 
 beforeEach(() => {
@@ -156,6 +160,21 @@ it('invalidates the renderer overview whenever topology state changes', () => {
   onState({ role: 'member' });
 
   expect(runtime.notifyOverviewChanged).toHaveBeenCalledOnce();
+});
+
+it('reports discovery denial and coalesces simultaneous recovery requests', async () => {
+  startDesktopSyncGroupAutoSync();
+  const onError = runtime.sessionArgs?.onDiscoveryError as (error: Error) => void;
+  const onStarted = runtime.sessionArgs?.onDiscoveryStarted as () => void;
+  onError(new Error('EACCES'));
+  expect(loadDesktopSyncGroupDiscoveryError()).toBe('permission_required');
+  recoverDesktopSyncGroupDiscovery();
+  recoverDesktopSyncGroupDiscovery();
+  await Promise.resolve();
+  expect(runtime.recoverTopology).toHaveBeenCalledOnce();
+  expect(runtime.recoverMembers).toHaveBeenCalledOnce();
+  onStarted();
+  expect(loadDesktopSyncGroupDiscoveryError()).toBeNull();
 });
 
 it('does not make an anchor poll another anchor unless demotion requires a sync', async () => {

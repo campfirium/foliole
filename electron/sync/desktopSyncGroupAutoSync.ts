@@ -11,18 +11,23 @@ import {
   type DesktopAnchorTopologySession
 } from './desktopAnchorTopologySession.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
-import type { DesktopDnsSdSession } from './desktopDnsSd.js';
+import type { RecoverableDesktopDnsSdSession } from './desktopDnsSdRecoverySession.js';
 import { requestDesktopHighValueSync, updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
 import {
   loadActiveDesktopSyncRun, runDesktopSyncCoordinator, subscribeDesktopSyncCompleted
 } from './desktopSyncCoordinator.js';
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
 import {
+  clearDesktopSyncGroupDiscoveryErrors,
+  setDesktopSyncGroupDiscoveryError
+} from './desktopSyncGroupDiscoveryStatus.js';
+import {
   exchangeAllDesktopSyncGroupMemberStates,
   loadDesktopSyncGroupMemberEndpoints,
   startDesktopSyncGroupMemberStateSession
 } from './desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { resetDesktopSyncGroupRecovery, scheduleDesktopSyncGroupRecovery } from './desktopSyncGroupRecoveryScheduler.js';
 import { routeFromCandidate, routeFromTarget } from './desktopSyncGroupRouteCandidate.js';
 import {
   clearDesktopSyncGroupRoutes,
@@ -35,7 +40,7 @@ import {
 import { continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
 let runtime: DesktopAnchorTopologySession | null = null;
-let memberStateRuntime: DesktopDnsSdSession | null = null;
+let memberStateRuntime: RecoverableDesktopDnsSdSession | null = null;
 let stopReadwiseContinuation: (() => void) | null = null;
 let manualRun: Promise<unknown> | null = null;
 const inFlight = new Map<string, Promise<boolean>>();
@@ -44,9 +49,13 @@ export function startDesktopSyncGroupAutoSync() {
   if (!isDesktopCompanionSyncParticipating() || runtime) return;
   const group = loadDesktopSyncGroup();
   if (!group) return;
+  resetDesktopSyncGroupRecovery();
+  clearDesktopSyncGroupDiscoveryErrors();
   stopReadwiseContinuation = subscribeDesktopSyncCompleted(resumeReadwiseHandoff);
   runtime = startDesktopAnchorTopologySession({
     group,
+    onDiscoveryError: (error) => setDesktopSyncGroupDiscoveryError('topology', error),
+    onDiscoveryStarted: () => setDesktopSyncGroupDiscoveryError('topology', null),
     onAnchor: (target, requireSyncBeforeDemote) => (
       activateAnchorRoute(group, target, requireSyncBeforeDemote)
     ),
@@ -74,21 +83,33 @@ export function startDesktopSyncGroupAutoSync() {
       if (topology.role === 'member' && topology.anchor_device_id === deviceId) return;
       removeDesktopSyncGroupRoute(deviceId);
       updateFreshnessForRole(group.group_id);
-    }
+    },
+    (error) => setDesktopSyncGroupDiscoveryError('member', error)
   );
   const mobileGuide = restoreDesktopSyncGroupMobileGuideRoute(group.group_id);
   if (mobileGuide) resumeMobileGuideRoute(mobileGuide);
 }
 
 export function stopDesktopSyncGroupAutoSync() {
+  resetDesktopSyncGroupRecovery();
   stopReadwiseContinuation?.();
   stopReadwiseContinuation = null;
   runtime?.stop();
   runtime = null;
   memberStateRuntime?.stop();
   memberStateRuntime = null;
+  clearDesktopSyncGroupDiscoveryErrors();
   clearDesktopSyncGroupRoutes();
   updateDesktopSyncFreshness(false);
+}
+
+export function recoverDesktopSyncGroupDiscovery() {
+  if (!isDesktopCompanionSyncParticipating()) return;
+  scheduleDesktopSyncGroupRecovery(() => {
+    if (!isDesktopCompanionSyncParticipating()) return;
+    runtime?.recoverDiscovery();
+    memberStateRuntime?.recover();
+  });
 }
 
 function resumeReadwiseHandoff() {

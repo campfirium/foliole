@@ -32,10 +32,12 @@ import {
 } from '../sync/desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from '../sync/desktopCompanionSyncPreference.js';
 import {
+  recoverDesktopSyncGroupDiscovery,
   resumeDesktopSyncAfterWatchedDecision,
   runDesktopManualSyncWithDiscovery
 } from '../sync/desktopSyncGroupAutoSync.js';
 import { DesktopSyncGroupDiscoverySession } from '../sync/desktopSyncGroupDiscoverySession.js';
+import { loadDesktopSyncGroupDiscoveryError } from '../sync/desktopSyncGroupDiscoveryStatus.js';
 import { completeDesktopSyncGroupJoin, requestDesktopSyncGroupJoin } from '../sync/desktopSyncGroupJoin.js';
 import { loadDesktopSyncGroupJoinProvider } from '../sync/desktopSyncGroupJoinProvider.js';
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupCandidates } from '../sync/desktopSyncGroupJoinState.js';
@@ -65,6 +67,7 @@ const COMMANDS = new Set<string>([
   NATIVE_COMMANDS.leaveSyncGroup, NATIVE_COMMANDS.removeSyncGroupDevice,
   NATIVE_COMMANDS.discoverSyncGroups,
   NATIVE_COMMANDS.stopDiscoverSyncGroups, NATIVE_COMMANDS.requestSyncGroupJoin,
+  NATIVE_COMMANDS.recoverSyncGroupDiscovery,
   NATIVE_COMMANDS.completeSyncGroupJoin, NATIVE_COMMANDS.enableCompanionSync,
   NATIVE_COMMANDS.disableCompanionSync, NATIVE_COMMANDS.pauseCompanionSync,
   NATIVE_COMMANDS.resumeCompanionSync, NATIVE_COMMANDS.syncCompanionNow,
@@ -82,6 +85,8 @@ function overview() {
   const local = group ? resolveLocalSyncGroupDevice(group) : null;
   const join = loadDesktopSyncGroupJoinState();
   return {
+    discovery_error: loadDesktopSyncGroupDiscoveryError(),
+    host_platform: resolveDesktopPlatformLabel(),
     current_device: local ? { device_name: local.device_name, platform: local.platform } : null,
     watched_folder_conflicts: group ? loadPendingWatchedFolderConflicts() : [],
     join_candidates: join.candidates,
@@ -168,6 +173,10 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.leaveSyncGroup) return leaveGroup();
   if (command === NATIVE_COMMANDS.removeSyncGroupDevice) return removeGroupDevice(args);
   if (command === NATIVE_COMMANDS.discoverSyncGroups) return discovery.start();
+  if (command === NATIVE_COMMANDS.recoverSyncGroupDiscovery) {
+    recoverDesktopSyncGroupDiscovery();
+    return overview();
+  }
   if (command === NATIVE_COMMANDS.stopDiscoverSyncGroups) return discovery.stop();
   if (command === NATIVE_COMMANDS.requestSyncGroupJoin) {
     assertDesktopCompanionSyncParticipating();

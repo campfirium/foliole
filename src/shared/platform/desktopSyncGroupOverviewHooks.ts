@@ -10,6 +10,8 @@ import {
 import { isDesktopRuntime } from './runtime';
 
 export const EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW: DesktopSyncGroupOverviewPayload = {
+  discovery_error: null,
+  host_platform: null,
   current_device: null,
   watched_folder_conflicts: [],
   join_requests: [],

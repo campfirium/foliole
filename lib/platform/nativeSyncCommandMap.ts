@@ -79,6 +79,10 @@ export type NativeSyncCommandMap = {
     args: undefined;
     result: SyncGroupDiscoverySnapshot;
   };
+  [NATIVE_COMMANDS.recoverSyncGroupDiscovery]: {
+    args: undefined;
+    result: DesktopSyncGroupOverviewPayload;
+  };
   [NATIVE_COMMANDS.stopDiscoverSyncGroups]: {
     args: undefined;
     result: SyncGroupDiscoverySnapshot;

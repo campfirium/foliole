@@ -116,6 +116,8 @@ export interface DesktopSyncGroupJoinRequestPayload {
 }
 
 export interface DesktopSyncGroupOverviewPayload {
+  discovery_error: 'permission_required' | 'unavailable' | null;
+  host_platform: string | null;
   watched_folder_conflicts?: import('./watchedFolderConflictContract.js').WatchedFolderConflict[];
   current_device?: { device_name: string; platform: string } | null;
   join_candidates?: DesktopSyncGroupJoinCandidatePayload[];

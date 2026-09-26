@@ -27,7 +27,8 @@ export class DesktopSyncGroupDiscoverySession {
 
   constructor(
     private readonly emit: (snapshot: SyncGroupDiscoverySnapshot) => void,
-    private readonly fetchDiscovery: typeof fetch = fetch
+    private readonly fetchDiscovery: typeof fetch = fetch,
+    private readonly platform: NodeJS.Platform = process.platform
   ) {}
 
   start() {
@@ -114,7 +115,10 @@ export class DesktopSyncGroupDiscoverySession {
     this.runtime = null;
     this.services.clear();
     this.candidates.clear();
-    const denied = error instanceof Error && /EACCES|EPERM|permission/i.test(error.message);
+    const denied = error instanceof Error && (
+      /EACCES|EPERM|permission/i.test(error.message)
+      || (this.platform === 'darwin' && /desktop_dnssd_\w+_failed: -65570\b/u.test(error.message))
+    );
     this.emit({ ...this.snapshot('failed'), error_code: code,
       status: denied ? 'permission_required' : 'unavailable' });
   }

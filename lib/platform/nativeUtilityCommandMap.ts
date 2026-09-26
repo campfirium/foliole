@@ -74,6 +74,10 @@ export type NativeUtilityCommandMap = {
     args: { path: string };
     result: null;
   };
+  [NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings]: {
+    args: undefined;
+    result: null;
+  };
   [NATIVE_COMMANDS.openImportRoot]: {
     args: undefined;
     result: null;

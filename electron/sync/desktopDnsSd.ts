@@ -94,6 +94,10 @@ function beginResolve(state: SessionState, service: DesktopDnsSdService) {
     name: service.name }, (event) => {
     if (state.stopped || state.pending.get(key) !== token) return;
     if (event.kind === 'error') {
+      if (process.platform === 'darwin' && /(^|\D)-65570(\D|$)/u.test(event.message)) {
+        failSession(state, event);
+        return;
+      }
       scheduleResolveRetry(state, key, service, event);
       return;
     }

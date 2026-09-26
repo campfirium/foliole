@@ -29,6 +29,9 @@ function normalizeOverview(value: unknown): DesktopSyncGroupOverviewPayload {
   const currentDevice = current && typeof current.device_name === 'string' && typeof current.platform === 'string'
     ? { device_name: current.device_name, platform: current.platform } : null;
   return {
+    discovery_error: raw.discovery_error === 'permission_required' || raw.discovery_error === 'unavailable'
+      ? raw.discovery_error : null,
+    host_platform: typeof raw.host_platform === 'string' ? raw.host_platform : null,
     current_device: currentDevice,
     watched_folder_conflicts: Array.isArray(raw.watched_folder_conflicts)
       ? raw.watched_folder_conflicts.filter((item): item is WatchedFolderConflict => Boolean(
@@ -63,6 +66,7 @@ type SyncGroupCommand =
   | typeof NATIVE_COMMANDS.pauseCompanionSync
   | typeof NATIVE_COMMANDS.resumeCompanionSync
   | typeof NATIVE_COMMANDS.syncCompanionNow
+  | typeof NATIVE_COMMANDS.recoverSyncGroupDiscovery
   | typeof NATIVE_COMMANDS.acceptSyncGroupJoinRequest
   | typeof NATIVE_COMMANDS.rejectSyncGroupJoinRequest;
 
@@ -108,6 +112,16 @@ export function completeDesktopSyncGroupJoin() {
 export function syncDesktopCompanionNow() {
   if (!getRuntimeInvoke()) return Promise.reject(new Error('sync_trigger_bridge_unavailable'));
   return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.syncCompanionNow);
+}
+
+export function recoverDesktopSyncGroupDiscovery() {
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.recoverSyncGroupDiscovery);
+}
+
+export async function openDesktopSyncGroupLocalNetworkSettings() {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('local_network_settings_unavailable');
+  await invoke(NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings);
 }
 
 export function acceptDesktopSyncGroupJoinRequest(requestId: string) {

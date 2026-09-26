@@ -87,6 +87,18 @@ it('retries a failed service resolve without stopping discovery', () => {
   expect(onService).toHaveBeenCalledWith(expect.objectContaining({ kind: 'found' }));
 });
 
+it('surfaces a macOS local-network denial during resolve', () => {
+  if (process.platform !== 'darwin') return;
+  const onError = vi.fn();
+  startDesktopDnsSdSession({ onError, onService: vi.fn() });
+  runtime.browseCallback?.({ kind: 'found', service: unresolved });
+  runtime.resolveCallbacks[0]?.({ code: 'desktop_dnssd_resolve_failed', kind: 'error', message: '-65570' });
+
+  expect(onError).toHaveBeenCalledWith(new Error('desktop_dnssd_resolve_failed: -65570'));
+  expect(runtime.browseCancel).toHaveBeenCalledOnce();
+  expect(runtime.resolveCancels[0]).toHaveBeenCalledOnce();
+});
+
 it('cancels a pending resolve retry when the service is lost', () => {
   vi.useFakeTimers();
   const onService = vi.fn();

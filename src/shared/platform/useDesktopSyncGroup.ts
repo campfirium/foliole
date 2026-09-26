@@ -18,6 +18,8 @@ import {
 } from './desktopSyncGroupOverviewHooks';
 import {
   createDesktopSyncGroup,
+  openDesktopSyncGroupLocalNetworkSettings,
+  recoverDesktopSyncGroupDiscovery,
   onDesktopSyncGroupDiscoveryChanged,
   acceptDesktopSyncGroupJoinRequest,
   rejectDesktopSyncGroupJoinRequest,
@@ -166,6 +168,18 @@ export function useDesktopSyncGroup() {
   const actions = useSyncGroupMutationActions(state);
   const join = useDesktopSyncGroupJoinActions(state);
   const [discovery, setDiscovery] = useState(STOPPED_SYNC_GROUP_DISCOVERY);
+  const recoverDiscovery = useCallback(async () => {
+    const overview = await recoverDesktopSyncGroupDiscovery();
+    state.setOverview(overview);
+  }, [state.setOverview]);
+  const openNetworkSettings = useCallback(async () => {
+    try { await openDesktopSyncGroupLocalNetworkSettings(); }
+    catch (error) { state.setError(error instanceof Error ? error.message : String(error)); }
+  }, [state.setError]);
+  useEffect(() => {
+    window.addEventListener('online', recoverDiscovery);
+    return () => window.removeEventListener('online', recoverDiscovery);
+  }, [recoverDiscovery]);
   useEffect(() => onDesktopSyncGroupDiscoveryChanged((snapshot) => {
     setDiscovery(snapshot);
     state.setOverview((current) => ({ ...current, join_candidates: snapshot.candidates }));
@@ -189,15 +203,18 @@ export function useDesktopSyncGroup() {
       leaveSyncGroup: actions.device.leave,
       removeSyncGroupDevice: actions.device.remove,
       overview: state.overview,
+      openNetworkSettings,
       pauseSync: () => actions.togglePause(true),
       pendingActionId: state.pendingActionId,
       refresh,
+      recoverDiscovery,
       requestSyncGroupJoin: join.requestJoin,
       rejectRequest: (requestId: string) => actions.runAction(requestId, 'reject'),
       resumeSync: () => actions.togglePause(false),
       syncNow: actions.syncNow
     }),
-    [actions, discovery, join.completeJoin, join.discoverGroups, join.requestJoin, refresh, state.error, state.isLoading,
+    [actions, discovery, join.completeJoin, join.discoverGroups, join.requestJoin, openNetworkSettings,
+      recoverDiscovery, refresh, state.error, state.isLoading,
       state.overview, state.pendingActionId]
   );
 }

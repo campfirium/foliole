@@ -177,6 +177,13 @@ it('handles typed native utility commands', async () => {
 
   await expect(handleInvokeRequest(openExternalUrlRequest)).resolves.toBeNull();
   await expect(handleInvokeRequest(openLocalPathRequest)).resolves.toBeNull();
+  if (process.platform === 'darwin') {
+    const openSettingsRequest: NativeInvokeRequest<'open_sync_group_local_network_settings'> = {
+      command: 'open_sync_group_local_network_settings'
+    };
+    await expect(handleInvokeRequest(openSettingsRequest)).resolves.toBeNull();
+    expect(openPath).toHaveBeenCalledWith('/System/Applications/System Settings.app');
+  }
   await expect(handleInvokeRequest({
     command: 'sync_app_menu_state',
     args: { enabledCommandIds: ['node.create'], shortcutAccelerators: [] }

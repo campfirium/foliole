@@ -72,6 +72,21 @@ it('keeps incompatible and connection failures distinct from empty results', asy
   expect(snapshots.some(({ status }) => status === 'searching')).toBe(true);
 });
 
+it('reports a macOS local-network denial without calling an unknown browse error a denial', () => {
+  const snapshots: SyncGroupDiscoverySnapshot[] = [];
+  const session = new DesktopSyncGroupDiscoverySession((snapshot) => snapshots.push(snapshot),
+    fetch, 'darwin');
+
+  session.start();
+  runtime.onError?.(new Error('desktop_dnssd_browse_failed: -65570'));
+  expect(snapshots.at(-1)?.status).toBe('permission_required');
+
+  session.start();
+  runtime.onError?.(new Error('desktop_dnssd_browse_failed: -65537'));
+  expect(snapshots.at(-1)?.status).toBe('unavailable');
+  session.stop();
+});
+
 it('ends a failed resolved route without probing advertised address fallbacks', async () => {
   const snapshots: SyncGroupDiscoverySnapshot[] = [];
   const fetchDiscovery = vi.fn(async (url: string | URL | Request) => {

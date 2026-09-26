@@ -137,6 +137,10 @@
     "icon": "build/icon.icns",
     "target": ["dmg", "zip"],
     "category": "public.app-category.education",
+    "extendInfo": {
+      "NSBonjourServices": ["_foliole-sync._tcp"],
+      "NSLocalNetworkUsageDescription": "Foliole finds devices on your local network to join a Sync Group and keep them up to date."
+    },
     "fileAssociations": [
       {
         "ext": ["md", "markdown"],

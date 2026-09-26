@@ -20,32 +20,11 @@ import {
 } from '../../../../shared/ui';
 
 import { SettingsSyncGroupDeviceRow } from './SettingsSyncGroupDeviceRow';
+import { ActiveDiscoveryErrorRow, DiscoveryStatusRow } from './SettingsSyncGroupDiscoveryStatus';
 import { SettingsSyncGroupJoinRequests } from './SettingsSyncGroupJoinRequests';
 
 function discoveryMessageKey(status: Exclude<SyncGroupDiscoverySnapshot['status'], 'stopped'>) {
   return `settings.companionSync.group.discovery.${status}` as const;
-}
-
-function DiscoveryStatusRow(props: {
-  discovery: SyncGroupDiscoverySnapshot;
-  disabled: boolean;
-  onDiscover(): void;
-}) {
-  const t = useTranslation();
-  const { discovery } = props;
-  if (discovery.status === 'searching') {
-    return <span className="text-ui-sm text-muted-foreground">{t('settings.companionSync.group.discovery.searching')}</span>;
-  }
-  if (discovery.status === 'stopped') return null;
-  return (
-    <div className="flex w-full items-center justify-between gap-4">
-      <span className="text-ui-sm text-muted-foreground">{t(discoveryMessageKey(discovery.status))}</span>
-      <button className="shrink-0 rounded-sm py-1 text-ui-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        onClick={props.onDiscover} type="button">
-        {t('settings.companionSync.group.discovery.retry')}
-      </button>
-    </div>
-  );
 }
 
 function CurrentDeviceSummary(props: { device: { device_name: string; platform: string } }) {
@@ -117,7 +96,8 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
         ) : null}
         {hasDiscoveryStatus ? (
           <div className="flex min-h-14 items-center border-t border-settings-divider/65 py-2.5">
-            <DiscoveryStatusRow discovery={discovery} disabled={props.isBusy} onDiscover={props.onDiscover} />
+            <DiscoveryStatusRow discovery={discovery} disabled={props.isBusy} onDiscover={props.onDiscover}
+              onOpenSettings={props.onOpenSettings} platform={props.hostPlatform ?? undefined} />
           </div>
         ) : null}
         {props.joinRequest ? (
@@ -134,6 +114,8 @@ function EmptySyncGroupRow(props: Parameters<typeof SettingsSyncGroupRows>[0]) {
 type SettingsSyncGroupRowsProps = {
   candidates: DesktopSyncGroupJoinCandidatePayload[];
   discovery?: SyncGroupDiscoverySnapshot;
+  discoveryError: 'permission_required' | 'unavailable' | null;
+  hostPlatform: string | null;
   currentDevice: { device_name: string; platform: string } | null;
   group: SyncGroupPayload | null;
   isBusy: boolean;
@@ -142,6 +124,8 @@ type SettingsSyncGroupRowsProps = {
   onAccept(id: string): void;
   onCreate(): void;
   onDiscover(): void;
+  onOpenSettings(): void;
+  onRecoverDiscovery(): void;
   onLeave(): void;
   onRemove(device: SyncGroupDevicePayload): void;
   onReject(id: string): void;
@@ -166,7 +150,8 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
   if (!props.group) return <EmptySyncGroupRow {...props} />;
   const group = props.group;
   const groupHeadingId = `sync-group-${group.group_id}-heading`;
-  const topologyKey = props.syncEnabled && !props.syncPaused ? topologyMessageKey(props) : null;
+  const topologyKey = props.syncEnabled && !props.syncPaused && !props.discoveryError
+    ? topologyMessageKey(props) : null;
   return (
     <>
       <div className="px-settings-panel-x pt-1">
@@ -174,6 +159,7 @@ export function SettingsSyncGroupRows(props: SettingsSyncGroupRowsProps) {
           <h4 className="text-ui-md font-semibold text-foreground">{t('settings.companionSync.group.title')}</h4>
         </div>
         <section aria-labelledby={groupHeadingId} className="mt-5 border-b border-settings-divider/65 pb-5">
+          <ActiveDiscoveryErrorRow {...props} />
           <div className="flex min-h-12 items-center justify-between gap-7 pb-2">
             <h5 className="truncate text-ui-lg font-semibold text-foreground" id={groupHeadingId}>
               {t('settings.companionSync.group.named', { name: resolveSyncGroupDisplayDeviceName(props.group) })}
