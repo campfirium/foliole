@@ -6,6 +6,7 @@ import type { useAppController } from '../hooks/useAppController';
 import { EpubImportReleaseModeDialog } from './EpubImportReleaseModeDialog';
 import { ReadwiseImportDeviceDialog } from './ReadwiseImportDeviceDialog';
 import { SyncGroupJoinRequestsDialog } from './SyncGroupJoinRequestsDialog';
+import { WatchedFolderConflictDialog } from './WatchedFolderConflictDialog';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 type AppController = ReturnType<typeof useAppController>;
@@ -109,6 +110,7 @@ export function AppOverlayStack({
   return (
     <>
       <SyncGroupJoinRequestsDialog />
+      <WatchedFolderConflictDialog />
       <ReadwiseImportDeviceDialog />
       <EpubImportReleaseModeDialog />
       <Suspense fallback={null}>

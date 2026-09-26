@@ -11,6 +11,7 @@ import { isDesktopRuntime } from './runtime';
 
 export const EMPTY_DESKTOP_SYNC_GROUP_OVERVIEW: DesktopSyncGroupOverviewPayload = {
   current_device: null,
+  watched_folder_conflicts: [],
   join_requests: [],
   server_status: {
     active_device_count: 0,

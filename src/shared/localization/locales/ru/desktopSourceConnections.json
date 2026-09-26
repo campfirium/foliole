@@ -1,5 +1,5 @@
 {
-  "desktop.watchedFolder.connections.title": "Отслеживаемые папки в этой рабочей группе",
+  "desktop.watchedFolder.connections.title": "Другие устройства",
   "desktop.watchedFolder.connections.description": "Каждый источник остается доступным после отключения его папки. Существующие темы сохраняются.",
   "desktop.watchedFolder.connections.empty": "В эту рабочую группу еще не добавлены отслеживаемые папки.",
   "desktop.watchedFolder.connections.otherHosts": "Другие хосты",

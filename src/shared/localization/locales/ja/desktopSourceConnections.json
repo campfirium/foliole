@@ -1,5 +1,5 @@
 {
-  "desktop.watchedFolder.connections.title": "このワークグループの監視フォルダー",
+  "desktop.watchedFolder.connections.title": "ほかのデバイス",
   "desktop.watchedFolder.connections.description": "フォルダーを切断しても各ソースは引き続き利用できます。既存のトピックは保持されます。",
   "desktop.watchedFolder.connections.empty": "このワークグループには、まだ監視フォルダーが追加されていません。",
   "desktop.watchedFolder.connections.otherHosts": "その他のホスト",

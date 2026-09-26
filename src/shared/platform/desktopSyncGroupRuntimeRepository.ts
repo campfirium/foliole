@@ -4,6 +4,7 @@ import type {
   DesktopSyncGroupOverviewPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupDiscoverySnapshot } from '../../../lib/platform/syncGroupDiscoveryContract';
+import type { WatchedFolderConflict } from '../../../lib/platform/watchedFolderConflictContract';
 
 import { normalizeJoinCandidates, normalizeJoinRequest } from './desktop/syncGroupJoinNormalization';
 import { normalizeSyncGroup } from './desktop/syncGroupNormalization';
@@ -29,6 +30,11 @@ function normalizeOverview(value: unknown): DesktopSyncGroupOverviewPayload {
     ? { device_name: current.device_name, platform: current.platform } : null;
   return {
     current_device: currentDevice,
+    watched_folder_conflicts: Array.isArray(raw.watched_folder_conflicts)
+      ? raw.watched_folder_conflicts.filter((item): item is WatchedFolderConflict => Boolean(
+        item && typeof item === 'object' && typeof item.conflict_key === 'string' &&
+        typeof item.path === 'string' && Array.isArray(item.sources)
+      )) : [],
     join_candidates: normalizeJoinCandidates(raw.join_candidates),
     join_request: normalizeJoinRequest(raw.join_request),
     join_requests: Array.isArray(raw.join_requests)
@@ -46,6 +52,7 @@ function normalizeOverview(value: unknown): DesktopSyncGroupOverviewPayload {
 
 type SyncGroupCommand =
   | typeof NATIVE_COMMANDS.loadSyncGroupOverview
+  | typeof NATIVE_COMMANDS.saveWatchedFolderConflict
   | typeof NATIVE_COMMANDS.createSyncGroup
   | typeof NATIVE_COMMANDS.leaveSyncGroup
   | typeof NATIVE_COMMANDS.removeSyncGroupDevice
@@ -66,6 +73,14 @@ export async function invokeDesktopSyncGroupCommand(command: SyncGroupCommand, a
 
 export function loadDesktopSyncGroupOverview() {
   return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.loadSyncGroupOverview);
+}
+
+export function saveDesktopWatchedFolderConflict(
+  selections: Array<{ conflict_key: string; selected_binding_ids: string[] }>
+) {
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.saveWatchedFolderConflict, {
+    selections
+  });
 }
 
 export function createDesktopSyncGroup() {

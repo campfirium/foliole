@@ -20,12 +20,12 @@ import {
   settingsActionTableRowClassName
 } from '../../shared/ui';
 
+import { watchedFolderPlatformName } from './watchedFolderPlatformName';
 import {
   reconnectWatchedSource,
   removeWatchedSource
 } from './watchedSourceManagementActions';
 
-const PLATFORM_NAMES: Record<string, string> = { darwin: 'macOS', linux: 'Linux', win32: 'Windows' };
 const REMOTE_SOURCE_COLUMNS = '[grid-template-columns:16.25rem_minmax(0,1fr)]';
 
 function groupBindings(bindings: NativeWatchedFolderBinding[], waitingLabel: string) {
@@ -39,7 +39,7 @@ function groupBindings(bindings: NativeWatchedFolderBinding[], waitingLabel: str
     const group = groups.get(key) ?? {
       bindings: [],
       hostName: binding.host_name.trim() || waitingLabel,
-      platformName: binding.host_platform ? PLATFORM_NAMES[binding.host_platform] ?? null : null
+      platformName: binding.host_platform ? watchedFolderPlatformName(binding.host_platform) : null
     };
     group.bindings.push(binding);
     groups.set(key, group);

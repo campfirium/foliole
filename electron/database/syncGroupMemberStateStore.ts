@@ -13,6 +13,10 @@ import {
 
 import { openDatabaseConnection } from './connection.js';
 import { leaveDesktopSyncGroupDevice } from './syncGroupStore.js';
+import {
+  applyWatchedFolderGroupMemberState,
+  loadWatchedFolderGroupMemberState
+} from './watchedFolderGroupMemberState.js';
 
 type Row = Record<string, null | number | string>;
 
@@ -31,7 +35,8 @@ export function loadDesktopSyncGroupMemberState(args?: {
     devices: loadDevices(String(context.group_id)),
     group_id: String(context.group_id),
     removals: loadRemovals(String(context.group_id)),
-    sender_device_identity_key: String(context.local_device_identity_key)
+    sender_device_identity_key: String(context.local_device_identity_key),
+    ...loadWatchedFolderGroupMemberState()
   };
 }
 
@@ -73,6 +78,7 @@ export function applyDesktopSyncGroupMemberState(
   driver.transaction(() => {
     for (const removal of incoming.removals) mergeRemoval(incoming.group_id, removal);
     for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key);
+    applyWatchedFolderGroupMemberState(incoming, authenticatedDeviceId);
     for (const removal of loadRemovals(incoming.group_id)) {
       if (removal.superseded_at || removal.completed_at) continue;
       const targetsLocal = removal.target_device_identity_key === local.sender_device_identity_key;

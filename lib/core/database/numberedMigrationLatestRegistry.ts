@@ -17,6 +17,7 @@ import { migrateSourceHostOwnership } from './numberedMigrationSourceHostOwnersh
 import { migrateSyncGroupHosts } from './numberedMigrationSyncGroupHosts.js';
 import { repairSyncObjectStateBaseContentHash } from './numberedMigrationSyncStateBaseHash.js';
 import { migrateWatchedDeviceBindings } from './numberedMigrationWatchedDeviceBindings.js';
+import { createWatchedFolderConflictDecisions } from './numberedMigrationWatchedFolderConflicts.js';
 import { migrateWatchedSourceIdentity } from './numberedMigrationWatchedSourceIdentity.js';
 import { recoverWatchedSourcesAndPaths } from './numberedMigrationWatchedSourceRecovery.js';
 import { migrateReadwiseApiImport } from './readwiseApiImportMigration.js';
@@ -91,5 +92,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 98, migrate: retireAttachmentManifest },
   { version: 99, migrate: migrateWatchedDeviceBindings },
   { version: 100, migrate: migrateWatchedSourceIdentity },
-  { version: 101, migrate: recoverWatchedSourcesAndPaths }
+  { version: 101, migrate: recoverWatchedSourcesAndPaths },
+  { version: 102, migrate: createWatchedFolderConflictDecisions }
 ];

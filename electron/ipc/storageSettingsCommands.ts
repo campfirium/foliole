@@ -15,11 +15,7 @@ import {
   saveSystemEntryDisplayNames
 } from '../database/systemEntryDisplayNames.js';
 import { refreshGlobalClipShortcutFromSettings } from '../globalClipShortcut.js';
-import {
-  loadImportManagerSettings,
-  saveImportManagerSettings
-} from '../import/importManagerSettings.js';
-import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
+import { loadImportManagerSettings } from '../import/importManagerSettings.js';
 import { refreshManagedInboxMonitorFromSettings } from '../import/managedInboxMonitor.js';
 import {
   connectReadwiseApiFromClipboard,
@@ -61,6 +57,7 @@ import { exportSourceDispositions, importSourceDispositions } from './sourceDisp
 import { loadAppSettingsState, saveAppSettingsState } from './storage.js';
 import { readSettingsObject } from './storageCommandSupport.js';
 import { handleExternalSearchStorageCommand } from './storageExternalSearchCommands.js';
+import { saveImportManagerSettingsAndPublish } from './storageImportManagerSettingsCommand.js';
 import { handlePublishingStorageCommand } from './storagePublishingCommands.js';
 import { handleReadwiseCutoverCommand } from './storageReadwiseCutoverCommands.js';
 import { handleSourceManagementCommand } from './storageSourceManagementCommands.js';
@@ -214,12 +211,8 @@ export async function handleSettingsStorageCommand(
   }
   if (command === NATIVE_COMMANDS.saveBackupSettings)
     return saveBackupSettings(readSettingsObject(args.settings));
-  if (command === NATIVE_COMMANDS.saveImportManagerSettings) {
-    const result = saveImportManagerSettings(readSettingsObject(args.settings));
-    await refreshKeepImportMonitorFromSettings();
-    refreshReadwiseApiScheduler();
-    return result;
-  }
+  if (command === NATIVE_COMMANDS.saveImportManagerSettings)
+    return saveImportManagerSettingsAndPublish(args.settings);
   if (command === NATIVE_COMMANDS.loadReviewSchedulerSettings) return loadReviewSchedulerSettings();
   if (command === NATIVE_COMMANDS.saveReviewSchedulerSettings)
     return saveReviewSchedulerSettings(readSettingsObject(args.settings));

@@ -59,6 +59,10 @@ export type NativeSyncCommandMap = {
     args: undefined;
     result: DesktopSyncGroupOverviewPayload;
   };
+  [NATIVE_COMMANDS.saveWatchedFolderConflict]: {
+    args: { selections: Array<{ conflict_key: string; selected_binding_ids: string[] }> };
+    result: DesktopSyncGroupOverviewPayload;
+  };
   [NATIVE_COMMANDS.createSyncGroup]: {
     args: undefined;
     result: DesktopSyncGroupOverviewPayload;

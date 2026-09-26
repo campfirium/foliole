@@ -1,7 +1,9 @@
 import { parseDesktopAnchorRole } from '../../lib/platform/syncAnchorTopologyContract.js';
 import type { SyncGroupPayload } from '../../lib/platform/syncGroupContract.js';
 import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroupMemberState } from '../database/syncGroupMemberStateStore.js';
+import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { resolveCompanionMdnsServiceEndpoints } from './companionMdnsServiceEndpoints.js';
 import { startDesktopDnsSdSession, type DesktopDnsSdSession } from './desktopDnsSd.js';
@@ -11,6 +13,7 @@ import {
 } from './desktopSyncGroupMemberState.js';
 import { isCurrentGroupPeerService, readSyncGroupServiceDeviceId } from './desktopSyncGroupPeerService.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
+import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
 
 const endpoints = new Map<string, DesktopSyncGroupPeer>();
 const activatedMembers = new Map<string, string>();
@@ -64,6 +67,16 @@ export async function exchangeAllDesktopSyncGroupMemberStates() {
   const results = await Promise.allSettled([...endpoints.values()].map((peer) =>
     exchangeDesktopSyncGroupMemberState(peer)));
   return results.some((result) => result.status === 'fulfilled');
+}
+
+export async function publishWatchedFolderGroupMemberState() {
+  const group = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
+  if (!group) return;
+  const peers = new Map<string, DesktopSyncGroupPeer>();
+  for (const peer of [...endpoints.values(), ...loadDesktopSyncGroupRoutes(group.group_id)]) {
+    if (peer.group_id === group.group_id) peers.set(peer.peer_device_id, peer);
+  }
+  await Promise.allSettled([...peers.values()].map(exchangeDesktopSyncGroupMemberState));
 }
 
 export async function publishDesktopSyncGroupDeparture(groupId: string, senderDeviceId: string) {

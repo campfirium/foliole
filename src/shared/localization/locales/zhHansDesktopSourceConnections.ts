@@ -1,7 +1,12 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
-  'desktop.watchedFolder.connections.title': '工作组中的监听文件夹',
+  'desktop.watchedFolder.connections.title': '其他设备',
+  'desktop.watchedFolder.conflict.title': '监听文件夹冲突处理',
+  'desktop.watchedFolder.conflict.description': '以下监听文件夹的路径相同，可能发生冲突。请选择需要继续生效的文件夹。',
+  'desktop.watchedFolder.conflict.local': '本机',
+  'desktop.watchedFolder.conflict.save': '保存选择',
+  'desktop.watchedFolder.conflict.error': '保存失败，请重试。',
   'desktop.watchedFolder.connections.description': '文件夹断开后，来源仍会保留；已有主题不会被删除。',
   'desktop.watchedFolder.connections.empty': '这个工作组还没有添加监听文件夹。',
   'desktop.watchedFolder.connections.otherHosts': '其他主机',

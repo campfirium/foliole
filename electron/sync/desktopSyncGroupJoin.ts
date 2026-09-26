@@ -18,6 +18,8 @@ import {
   loadDesktopSyncGroupJoinState,
   saveDesktopSyncGroupPendingJoin
 } from './desktopSyncGroupJoinState.js';
+import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
+import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import {
   removeDesktopSyncGroupRoute, saveDesktopSyncGroupRoute, type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
@@ -116,6 +118,14 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
   });
   saveDesktopSyncGroupRoute(route);
   await options.onMembershipCommitted?.();
+  if (route.route_kind !== 'mobile_guide') {
+    await exchangeDesktopSyncGroupMemberState(route).catch((error) => {
+      console.info('[sync-group] watched source exchange will retry', {
+        error: error instanceof Error ? error.message : String(error)
+      });
+    });
+    notifyDesktopSyncGroupOverviewChanged();
+  }
   queueInitialSync(route);
   return runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
 }

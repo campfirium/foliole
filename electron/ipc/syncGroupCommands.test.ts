@@ -30,6 +30,10 @@ vi.mock('../database/syncGroupStore.js', () => ({
   }),
   newSyncGroupId: vi.fn()
 }));
+vi.mock('../database/watchedFolderConflictDecisions.js', () => ({
+  loadPendingWatchedFolderConflicts: () => [],
+  saveWatchedFolderConflictDecision: vi.fn()
+}));
 vi.mock('../deviceAnchorStore.js', () => ({ loadDesktopDeviceIdentity: vi.fn() }));
 vi.mock('../mainWindowRegistry.js', () => ({
   getMainWindow: () => ({ webContents: { send: runtime.send } })
@@ -74,7 +78,8 @@ vi.mock('../sync/desktopSyncGroupJoinState.js', () => ({
   saveDesktopSyncGroupCandidates: vi.fn()
 }));
 vi.mock('../sync/desktopSyncGroupMemberStateSession.js', () => ({
-  exchangeAllDesktopSyncGroupMemberStates: vi.fn(), publishDesktopSyncGroupDeparture: vi.fn()
+  exchangeAllDesktopSyncGroupMemberStates: vi.fn(), publishDesktopSyncGroupDeparture: vi.fn(),
+  publishWatchedFolderGroupMemberState: vi.fn()
 }));
 vi.mock('../sync/desktopSyncGroupRoutes.js', () => ({ removeDesktopSyncGroupRoute: vi.fn() }));
 vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({

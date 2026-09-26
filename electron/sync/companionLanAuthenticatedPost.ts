@@ -2,6 +2,7 @@ import type http from 'node:http';
 
 import { RESOURCE_AVAILABILITY_PATH } from '../../lib/platform/resourceAvailabilityContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
 import {
   acknowledgeCompanionContentBlobs,
@@ -109,6 +110,7 @@ async function handleAuthenticatedRoute(args: {
       const applied = acceptDesktopSyncGroupMemberState(bodyText, auth.device_id);
       writeJson(request, response, 200, applied.state, 'POST, OPTIONS');
       notifyDesktopSyncGroupOverviewChanged();
+      setImmediate(() => { void refreshKeepImportMonitorFromSettings(); });
       if (applied.localExited) setImmediate(() => {
         void import('./lanWorkspaceSyncServer.js').then(({ stopLanWorkspaceSyncServer }) =>
           stopLanWorkspaceSyncServer());

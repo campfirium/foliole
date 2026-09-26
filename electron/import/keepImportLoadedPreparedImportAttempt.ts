@@ -2,7 +2,11 @@ import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { recordReadwiseImportSourceMapping } from '../database/readwiseSourceMapping.js';
-import { recordWatchedImportSourceMapping } from '../database/watchedFolderBindings.js';
+import {
+  recordWatchedImportSourceMapping,
+  resolveExecutableWatchedBinding
+} from '../database/watchedFolderBindings.js';
+import { canRunWatchedFolderConflictSource } from '../database/watchedFolderConflictDecisions.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { persistAutomaticDuplicateNoop } from './keepImportDuplicateNoop.js';
@@ -126,6 +130,15 @@ function assertReadwiseOwner(config: KeepImportRuleConfig, signal?: AbortSignal)
   }
 }
 
+function assertCurrentImportOwner(config: KeepImportRuleConfig, signal?: AbortSignal) {
+  assertReadwiseOwner(config, signal);
+  if (config.sourceType === 'readwise') return;
+  const binding = resolveExecutableWatchedBinding(config.ruleId, config.directoryPath);
+  if (binding.bindingId && !canRunWatchedFolderConflictSource(binding.bindingId)) {
+    throw new Error('watched_folder_conflict_paused');
+  }
+}
+
 export async function runLoadedPreparedImportAttempt(input: {
   automaticDuplicateNoop: boolean;
   config: KeepImportRuleConfig;
@@ -139,7 +152,7 @@ export async function runLoadedPreparedImportAttempt(input: {
     primary: { mtimeMs: number; sizeBytes: number };
   };
 }) {
-  assertReadwiseOwner(input.config, input.signal);
+  assertCurrentImportOwner(input.config, input.signal);
   const highlightTotalCount = countPreparedImportHighlights(input.prepared);
   const duplicateNoop = input.automaticDuplicateNoop
     ? persistAutomaticDuplicateNoop({

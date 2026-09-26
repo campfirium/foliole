@@ -61,7 +61,7 @@ it('shows other devices and unassigned sources, but not this device, above local
 
   renderWithLocalization(<WatchedFolderConnections />);
 
-  const region = await screen.findByRole('region', { name: 'Watched folders in this workgroup' });
+  const region = await screen.findByRole('region', { name: 'Other devices' });
   const remoteGroup = screen.getByRole('group', { name: 'Office PC' });
   const waitingGroup = screen.getByRole('group', { name: 'Waiting for a folder' });
   expect(within(region).getByText('Path')).toBeInTheDocument();
@@ -80,5 +80,5 @@ it('does not add an empty workgroup block before local watched-folder settings',
 
   renderWithLocalization(<WatchedFolderConnections />);
 
-  expect(await screen.findByRole('region', { name: 'Watched folders in this workgroup' }).catch(() => null)).toBeNull();
+  expect(await screen.findByRole('region', { name: 'Other devices' }).catch(() => null)).toBeNull();
 });

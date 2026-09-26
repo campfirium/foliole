@@ -1,5 +1,5 @@
 {
-  "desktop.watchedFolder.connections.title": "Überwachte Ordner in dieser Arbeitsgruppe",
+  "desktop.watchedFolder.connections.title": "Andere Geräte",
   "desktop.watchedFolder.connections.description": "Jede Quelle bleibt verfügbar, wenn ihr Ordner getrennt wird. Bestehende Themen bleiben erhalten.",
   "desktop.watchedFolder.connections.empty": "Dieser Arbeitsgruppe wurden noch keine überwachten Ordner hinzugefügt.",
   "desktop.watchedFolder.connections.otherHosts": "Andere Hosts",

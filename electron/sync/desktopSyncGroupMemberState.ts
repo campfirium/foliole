@@ -6,6 +6,7 @@ import {
   isDesktopSyncGroupDeviceBlocked,
   loadDesktopSyncGroupMemberState
 } from '../database/syncGroupMemberStateStore.js';
+import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
 import { postDesktopWorkgroupJson } from './desktopSyncGroupHttp.js';
 import { markDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
@@ -35,7 +36,7 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     pathWithQuery: SYNC_GROUP_MEMBER_STATE_PATH,
     secret: request.secret
   });
-  return runWithDatabaseConnectionOwner(() => {
+  const result = await runWithDatabaseConnectionOwner(() => {
     const applied = applyDesktopSyncGroupMemberState(
       parseSyncGroupMemberState(payload), peer.peer_device_id
     );
@@ -44,6 +45,8 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
       peerBlocked: isDesktopSyncGroupDeviceBlocked(peer.group_id, peer.peer_device_id)
     };
   });
+  await refreshKeepImportMonitorFromSettings();
+  return result;
 }
 
 export async function publishDesktopSyncGroupMemberState(

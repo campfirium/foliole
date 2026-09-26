@@ -1,5 +1,5 @@
 {
-  "desktop.watchedFolder.connections.title": "Dossiers surveillés dans ce groupe de travail",
+  "desktop.watchedFolder.connections.title": "Autres appareils",
   "desktop.watchedFolder.connections.description": "Chaque source reste disponible lorsque son dossier est déconnecté. Les sujets existants sont conservés.",
   "desktop.watchedFolder.connections.empty": "Aucun dossier surveillé n’a encore été ajouté à ce groupe de travail.",
   "desktop.watchedFolder.connections.otherHosts": "Autres hôtes",

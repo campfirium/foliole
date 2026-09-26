@@ -1,5 +1,5 @@
 {
-  "desktop.watchedFolder.connections.title": "Obserwowane foldery w tej grupie roboczej",
+  "desktop.watchedFolder.connections.title": "Inne urządzenia",
   "desktop.watchedFolder.connections.description": "Każde źródło pozostaje dostępne po odłączeniu jego folderu. Istniejące tematy zostają zachowane.",
   "desktop.watchedFolder.connections.empty": "Do tej grupy roboczej nie dodano jeszcze żadnych obserwowanych folderów.",
   "desktop.watchedFolder.connections.otherHosts": "Inne hosty",

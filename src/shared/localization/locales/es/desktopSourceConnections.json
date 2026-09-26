@@ -1,5 +1,5 @@
 {
-  "desktop.watchedFolder.connections.title": "Carpetas vigiladas de este grupo de trabajo",
+  "desktop.watchedFolder.connections.title": "Otros dispositivos",
   "desktop.watchedFolder.connections.description": "Cada fuente sigue disponible cuando se desconecta su carpeta. Los temas existentes se conservan.",
   "desktop.watchedFolder.connections.empty": "Todavía no se han añadido carpetas vigiladas a este grupo de trabajo.",
   "desktop.watchedFolder.connections.otherHosts": "Otros hosts",

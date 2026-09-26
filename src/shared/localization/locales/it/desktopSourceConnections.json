@@ -1,5 +1,5 @@
 {
-  "desktop.watchedFolder.connections.title": "Cartelle monitorate in questo gruppo di lavoro",
+  "desktop.watchedFolder.connections.title": "Altri dispositivi",
   "desktop.watchedFolder.connections.description": "Ogni fonte rimane disponibile quando la relativa cartella viene disconnessa. Gli argomenti esistenti vengono conservati.",
   "desktop.watchedFolder.connections.empty": "Non sono ancora state aggiunte cartelle monitorate a questo gruppo di lavoro.",
   "desktop.watchedFolder.connections.otherHosts": "Altri host",

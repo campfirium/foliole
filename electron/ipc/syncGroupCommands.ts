@@ -14,6 +14,10 @@ import {
   loadDesktopSyncGroup,
   newSyncGroupId
 } from '../database/syncGroupStore.js';
+import {
+  loadPendingWatchedFolderConflicts,
+  saveWatchedFolderConflictDecision
+} from '../database/watchedFolderConflictDecisions.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 import { getMainWindow } from '../mainWindowRegistry.js';
 import { resolveDesktopHostName, resolveDesktopPlatformLabel } from '../sync/companionLanPayloads.js';
@@ -33,8 +37,10 @@ import { loadDesktopSyncGroupJoinProvider } from '../sync/desktopSyncGroupJoinPr
 import { loadDesktopSyncGroupJoinState, saveDesktopSyncGroupCandidates } from '../sync/desktopSyncGroupJoinState.js';
 import {
   exchangeAllDesktopSyncGroupMemberStates,
+  publishWatchedFolderGroupMemberState,
   publishDesktopSyncGroupDeparture
 } from '../sync/desktopSyncGroupMemberStateSession.js';
+import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
 
@@ -51,6 +57,7 @@ const discovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
 
 const COMMANDS = new Set<string>([
   NATIVE_COMMANDS.loadSyncGroupOverview, NATIVE_COMMANDS.createSyncGroup,
+  NATIVE_COMMANDS.saveWatchedFolderConflict,
   NATIVE_COMMANDS.leaveSyncGroup, NATIVE_COMMANDS.removeSyncGroupDevice,
   NATIVE_COMMANDS.discoverSyncGroups,
   NATIVE_COMMANDS.stopDiscoverSyncGroups, NATIVE_COMMANDS.requestSyncGroupJoin,
@@ -72,6 +79,7 @@ function overview() {
   const join = loadDesktopSyncGroupJoinState();
   return {
     current_device: local ? { device_name: local.device_name, platform: local.platform } : null,
+    watched_folder_conflicts: group ? loadPendingWatchedFolderConflicts() : [],
     join_candidates: join.candidates,
     join_request: join.pending?.request ?? null,
     join_requests: loadDesktopSyncGroupJoinProvider()?.pending() ?? [],
@@ -132,6 +140,22 @@ async function mutateJoinRequest(command: string, args: Record<string, unknown>)
 
 async function handleOwned(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.loadSyncGroupOverview) return overview();
+  if (command === NATIVE_COMMANDS.saveWatchedFolderConflict) {
+    if (!Array.isArray(args.selections) || !args.selections.length ||
+        args.selections.some((item) => !item || typeof item !== 'object' ||
+          typeof item.conflict_key !== 'string' || !Array.isArray(item.selected_binding_ids) ||
+          item.selected_binding_ids.some((id: unknown) => typeof id !== 'string'))) {
+      throw new Error('watched_conflict_selection_invalid');
+    }
+    await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.transaction(() => {
+      for (const item of args.selections as Array<{
+        conflict_key: string; selected_binding_ids: string[]
+      }>) saveWatchedFolderConflictDecision(item.conflict_key, item.selected_binding_ids);
+    }));
+    notifyDesktopSyncGroupOverviewChanged();
+    await publishWatchedFolderGroupMemberState();
+    return runWithDatabaseConnectionOwner(() => overview());
+  }
   if (command === NATIVE_COMMANDS.createSyncGroup) return createGroup();
   if (command === NATIVE_COMMANDS.leaveSyncGroup) return leaveGroup();
   if (command === NATIVE_COMMANDS.removeSyncGroupDevice) return removeGroupDevice(args);
@@ -166,7 +190,8 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
 export function handleSyncGroupCommand(command: string, args: Record<string, unknown>) {
   if (!COMMANDS.has(command)) return undefined;
   if (command === NATIVE_COMMANDS.completeSyncGroupJoin || command === NATIVE_COMMANDS.syncCompanionNow ||
-      command === NATIVE_COMMANDS.removeSyncGroupDevice) {
+      command === NATIVE_COMMANDS.removeSyncGroupDevice ||
+      command === NATIVE_COMMANDS.saveWatchedFolderConflict) {
     return handleOwned(command, args);
   }
   return runWithDatabaseConnectionOwner(() => handleOwned(command, args));

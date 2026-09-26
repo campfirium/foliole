@@ -6,8 +6,9 @@ import type { ElectronApplication } from '@playwright/test';
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 
-async function seedTwoDeviceWatchedSources(desktopApp: ElectronApplication) {
-  await desktopApp.evaluate(async (_, cwd) => {
+async function seedTwoDeviceWatchedSources(desktopApp: ElectronApplication, samePath = false) {
+  await desktopApp.evaluate(async (_, input) => {
+    const cwd = input.cwd;
     const cryptoApi = process.getBuiltinModule('crypto');
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
@@ -53,9 +54,10 @@ async function seedTwoDeviceWatchedSources(desktopApp: ElectronApplication) {
         (binding_id, connection_status, action_mode, highlight_mode, primary_path,
          reported_path, created_at, updated_at, source_ref, owner_device_identity_key)
         VALUES ('windows-source', 'needs-folder', 'keep', 'merged', '',
-          'D:\\Research\\Articles', 'now', 'now', 'watched:windows-source', 'windows-device')`);
+          ?, 'now', 'now', 'watched:windows-source', 'windows-device')`,
+      [input.samePath ? '/Users/test/Local Articles' : 'D:\\Research\\Articles']);
     });
-  }, process.cwd());
+  }, { cwd: process.cwd(), samePath });
 }
 
 test('shows only other devices above local watched-folder settings', async ({
@@ -66,7 +68,7 @@ test('shows only other devices above local watched-folder settings', async ({
   await expectWorkspaceShell(desktopWindow);
   const dialog = await openSettingsCategory(desktopWindow, 'Import');
   const groupList = dialog.getByRole('region', {
-    name: /^(Watched folders in this workgroup|工作组中的监听文件夹)$/
+    name: /^(Other devices|其他设备)$/
   });
   await expect(groupList.getByRole('group', { name: 'Office PC' })).toBeVisible();
   await expect(groupList.getByText('D:\\Research\\Articles', { exact: true })).toBeVisible();
@@ -77,4 +79,29 @@ test('shows only other devices above local watched-folder settings', async ({
   await fs.mkdir(path.dirname(screenshot), { recursive: true });
   await dialog.screenshot({ path: screenshot });
   await testInfo.attach('watched-workgroup-connections', { path: screenshot, contentType: 'image/png' });
+});
+
+test('shows one conflict dialog and saves the selected source in the native client', async ({
+  desktopApp, desktopWindow
+}, testInfo) => {
+  await seedTwoDeviceWatchedSources(desktopApp, true);
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  const dialog = desktopWindow.getByRole('dialog', { name: /Resolve watched folder conflicts|监听文件夹冲突处理/ });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('/Users/test/Local Articles', { exact: true })).toBeVisible();
+  const screenshot = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance',
+    'watched-folder-conflict-before.png');
+  await fs.mkdir(path.dirname(screenshot), { recursive: true });
+  await dialog.screenshot({ path: screenshot });
+  await testInfo.attach('watched-folder-conflict-before', { path: screenshot, contentType: 'image/png' });
+
+  await dialog.getByRole('checkbox').first().check();
+  await dialog.getByRole('button', { name: /Save choices|保存选择/ }).click();
+  await expect(dialog).toHaveCount(0);
+  const overview = await desktopWindow.evaluate(async () =>
+    globalThis.window?.electronAPI?.invoke('load_sync_group_overview')) as {
+      watched_folder_conflicts: unknown[];
+    };
+  expect(overview.watched_folder_conflicts).toEqual([]);
 });

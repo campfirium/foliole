@@ -1,6 +1,9 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceConnectionSchemaStatements.js';
+import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceSchemaStatements.js';
+import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from '../../lib/core/database/numberedMigrationWatchedFolderConflicts.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 
@@ -16,6 +19,7 @@ import {
   leaveDesktopSyncGroupDevice,
   registerSyncGroupDevice
 } from './syncGroupStore.js';
+import { loadPendingWatchedFolderConflicts } from './watchedFolderConflictDecisions.js';
 
 const connection = vi.hoisted(() => ({ current: null as unknown as { driver: unknown } }));
 vi.mock('./connection.js', () => ({ openDatabaseConnection: () => connection.current }));
@@ -114,10 +118,45 @@ it('retains a publishable member snapshot after the local Device leaves', () => 
   });
 });
 
+it('exchanges watched sources before article sync and finds an exact-path conflict on both devices', () => {
+  const a = deviceDatabase(0, [1]);
+  const b = deviceDatabase(1, [0]);
+  insertWatchedSource(a, identities[0]!.identity_key, 'a-source', '/Shared/Articles');
+  insertWatchedSource(b, identities[1]!.identity_key, 'b-source', '/Shared/Articles');
+
+  use(a);
+  const fromA = loadDesktopSyncGroupMemberState();
+  use(b);
+  const fromB = applyDesktopSyncGroupMemberState(fromA, identities[0]!.identity_key).state;
+  expect(loadPendingWatchedFolderConflicts()).toHaveLength(1);
+  use(a);
+  applyDesktopSyncGroupMemberState(fromB, identities[1]!.identity_key);
+  expect(loadPendingWatchedFolderConflicts()).toHaveLength(1);
+  expect(a.prepare('SELECT COUNT(*) AS count FROM watched_folder_bindings').get()).toEqual({ count: 2 });
+  expect(b.prepare('SELECT COUNT(*) AS count FROM watched_folder_bindings').get()).toEqual({ count: 2 });
+});
+
+function insertWatchedSource(database: Database.Database, ownerId: string, id: string, folder: string) {
+  database.prepare(`INSERT INTO desktop_sources
+    (source_ref, source_type, config_ref, host_name, host_platform, root_path,
+     path_flavor, type_settings_json, created_at, updated_at)
+    VALUES (?, 'watched', ?, ?, 'macOS', ?, 'posix', '{}', 'now', 'now')`)
+    .run(`watched:${id}`, id, id, folder);
+  database.prepare(`INSERT INTO watched_folder_bindings
+    (binding_id, connection_status, action_mode, highlight_mode, primary_path,
+     reported_path, created_at, updated_at, source_ref, owner_device_identity_key)
+    VALUES (?, 'connected', 'keep', 'merged', ?, ?, 'now', 'now', ?, ?)`)
+    .run(id, folder, folder, `watched:${id}`, ownerId);
+}
+
 function deviceDatabase(localIndex: number, remoteIndexes: number[]) {
   const database = new Database(':memory:');
   databases.push(database);
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) database.exec(statement);
+  for (const statement of [...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
+    ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS, ...WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS]) {
+    database.exec(statement);
+  }
   database.exec('CREATE TABLE sync_delivery_receipts (peer_id TEXT)');
   database.exec('CREATE TABLE sync_peer_cursors (peer_id TEXT)');
   use(database);

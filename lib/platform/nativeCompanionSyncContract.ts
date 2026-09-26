@@ -116,6 +116,7 @@ export interface DesktopSyncGroupJoinRequestPayload {
 }
 
 export interface DesktopSyncGroupOverviewPayload {
+  watched_folder_conflicts?: import('./watchedFolderConflictContract.js').WatchedFolderConflict[];
   current_device?: { device_name: string; platform: string } | null;
   join_candidates?: DesktopSyncGroupJoinCandidatePayload[];
   join_request?: DesktopSyncGroupJoinRequestPayload | null;

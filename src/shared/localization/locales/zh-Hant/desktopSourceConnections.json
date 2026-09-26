@@ -1,5 +1,5 @@
 {
-  "desktop.watchedFolder.connections.title": "工作群組中的監看資料夾",
+  "desktop.watchedFolder.connections.title": "其他裝置",
   "desktop.watchedFolder.connections.description": "資料夾中斷連線後，各個來源仍可使用；現有主題會保留。",
   "desktop.watchedFolder.connections.empty": "這個工作群組尚未加入監看資料夾。",
   "desktop.watchedFolder.connections.otherHosts": "其他主機",

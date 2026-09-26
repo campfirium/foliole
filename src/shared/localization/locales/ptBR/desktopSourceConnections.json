@@ -1,5 +1,5 @@
 {
-  "desktop.watchedFolder.connections.title": "Pastas monitoradas neste grupo de trabalho",
+  "desktop.watchedFolder.connections.title": "Outros dispositivos",
   "desktop.watchedFolder.connections.description": "Cada fonte continua disponível quando sua pasta é desconectada. Os tópicos existentes são mantidos.",
   "desktop.watchedFolder.connections.empty": "Nenhuma pasta monitorada foi adicionada a este grupo de trabalho ainda.",
   "desktop.watchedFolder.connections.otherHosts": "Outros hosts",

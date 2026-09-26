@@ -1,5 +1,10 @@
 export const EN_DESKTOP_SOURCE_CONNECTION_TRANSLATIONS = {
-  'desktop.watchedFolder.connections.title': 'Watched folders in this workgroup',
+  'desktop.watchedFolder.connections.title': 'Other devices',
+  'desktop.watchedFolder.conflict.title': 'Resolve watched folder conflicts',
+  'desktop.watchedFolder.conflict.description': 'These watched folders use the same path and may conflict. Choose the folders that should remain active.',
+  'desktop.watchedFolder.conflict.local': 'This device',
+  'desktop.watchedFolder.conflict.save': 'Save choices',
+  'desktop.watchedFolder.conflict.error': 'Could not save the choices. Try again.',
   'desktop.watchedFolder.connections.description': 'Each source stays available when its folder is disconnected. Existing topics are kept.',
   'desktop.watchedFolder.connections.empty': 'No watched folders have been added to this workgroup yet.',
   'desktop.watchedFolder.connections.otherHosts': 'Other hosts',

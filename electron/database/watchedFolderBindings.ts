@@ -11,6 +11,7 @@ import { openDatabaseConnection } from './connection.js';
 import { isDesktopSourceExecutable, loadDesktopSource, upsertDesktopSource } from './desktopSources.js';
 import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
+import { canRunWatchedFolderConflictSource } from './watchedFolderConflictDecisions.js';
 import { loadLocalWatchedSourceByRuleId } from './watchedLocalSource.js';
 
 interface WatchedFolderBindingRow extends DatabaseRow {
@@ -164,7 +165,8 @@ export function resolveExecutableWatchedBinding(ruleId: string, primaryPath: str
     executable: Boolean(loadDesktopDeviceId()) &&
       binding.owner_device_identity_key === loadDesktopDeviceId() &&
       binding.connection_status === 'connected' && isDesktopSourceExecutable(source) &&
-      source.root_path === primaryPath.trim()
+      source.root_path === primaryPath.trim() &&
+      canRunWatchedFolderConflictSource(binding.binding_id)
   };
 }
 

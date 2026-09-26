@@ -1,4 +1,8 @@
 import type { SyncGroupDevicePayload } from './syncGroupContract.js';
+import type {
+  WatchedFolderConflictDecision,
+  WatchedFolderGroupSource
+} from './watchedFolderConflictContract.js';
 
 export const SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION = 1 as const;
 
@@ -26,6 +30,8 @@ export interface SyncGroupMemberStatePayload {
   group_id: string;
   removals: SyncGroupRemovalDecisionPayload[];
   sender_device_identity_key: string;
+  watched_sources?: WatchedFolderGroupSource[];
+  watched_decisions?: WatchedFolderConflictDecision[];
 }
 
 export function parseSyncGroupMemberState(value: unknown): SyncGroupMemberStatePayload {
@@ -33,7 +39,9 @@ export function parseSyncGroupMemberState(value: unknown): SyncGroupMemberStateP
   const raw = value as Partial<SyncGroupMemberStatePayload>;
   if (raw.contract_version !== SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION ||
       !text(raw.group_id) || !text(raw.sender_device_identity_key) ||
-      !Array.isArray(raw.devices) || !Array.isArray(raw.removals)) return invalid();
+      !Array.isArray(raw.devices) || !Array.isArray(raw.removals) ||
+      (raw.watched_sources !== undefined && !Array.isArray(raw.watched_sources)) ||
+      (raw.watched_decisions !== undefined && !Array.isArray(raw.watched_decisions))) return invalid();
   return raw as SyncGroupMemberStatePayload;
 }
 
