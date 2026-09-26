@@ -10,7 +10,7 @@ function createController(args?: {
   now?: () => number;
   rebuild?: () => Promise<unknown>;
   refreshIntervalMs?: number;
-  readFolders?: () => Array<{ id: string }>;
+  readFolders?: () => Array<{ id: string }> | Promise<Array<{ id: string }>>;
   userTriggerMinIntervalMs?: number;
 }) {
   return createExternalSearchBackgroundRefreshController({
@@ -37,6 +37,41 @@ it('delays the startup refresh and skips work when no folders are configured', a
 
   expect(rebuild).not.toHaveBeenCalled();
   controller.stop();
+});
+
+it('waits for an owned folder read before starting the refresh', async () => {
+  vi.useFakeTimers();
+  let release!: (folders: Array<{ id: string }>) => void;
+  const folderRead = new Promise<Array<{ id: string }>>((resolve) => { release = resolve; });
+  const rebuild = vi.fn().mockResolvedValue(undefined);
+  const controller = createController({ readFolders: () => folderRead, rebuild });
+
+  controller.start();
+  await advanceStartupDelay();
+  expect(rebuild).not.toHaveBeenCalled();
+  release([{ id: 'folder-1' }]);
+  await vi.waitFor(() => expect(rebuild).toHaveBeenCalledOnce());
+  controller.stop();
+});
+
+it('contains a failed folder read and permits a later refresh', async () => {
+  vi.useFakeTimers();
+  const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+  const readFolders = vi.fn()
+    .mockRejectedValueOnce(new Error('folder read failed'))
+    .mockResolvedValueOnce([{ id: 'folder-1' }]);
+  const rebuild = vi.fn().mockResolvedValue(undefined);
+  const controller = createController({ readFolders, rebuild });
+  try {
+    controller.start();
+    await advanceStartupDelay();
+    expect(log).toHaveBeenCalledWith('[external-search] background refresh failed', expect.any(Error));
+    controller.refreshNow();
+    await vi.waitFor(() => expect(rebuild).toHaveBeenCalledOnce());
+  } finally {
+    controller.stop();
+    log.mockRestore();
+  }
 });
 
 it('runs a delayed refresh and avoids overlapping executions', async () => {

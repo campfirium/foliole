@@ -18,7 +18,7 @@ interface ExternalSearchBackgroundRefreshArgs {
   rebuild?: () => Promise<unknown>;
   refreshIntervalMs?: number;
   userTriggerMinIntervalMs?: number;
-  readFolders?: typeof loadExternalSearchFolders;
+  readFolders?: () => ReturnType<typeof loadExternalSearchFolders> | Promise<ReturnType<typeof loadExternalSearchFolders>>;
   scheduleInterval?: typeof globalThis.setInterval;
   scheduleTimeout?: typeof globalThis.setTimeout;
   clearIntervalHandle?: typeof globalThis.clearInterval;
@@ -38,20 +38,19 @@ function createRefreshRuntime() {
   return runtime;
 }
 
-function hasConfiguredFolders(readFolders: typeof loadExternalSearchFolders) {
-  return readFolders().length > 0;
-}
-
 function createRefreshRunner(args: {
   rebuild: () => Promise<unknown>;
-  readFolders: typeof loadExternalSearchFolders;
+  readFolders: NonNullable<ExternalSearchBackgroundRefreshArgs['readFolders']>;
   runtime: RefreshRuntime;
 }) {
   return async function runRefresh() {
-    if (args.runtime.disposed || args.runtime.refreshInFlight || !hasConfiguredFolders(args.readFolders)) {
+    if (args.runtime.disposed || args.runtime.refreshInFlight) {
       return args.runtime.refreshInFlight ?? undefined;
     }
-    args.runtime.refreshInFlight = Promise.resolve(args.rebuild())
+    const refresh = (async () => {
+      const folders = await args.readFolders();
+      if (!args.runtime.disposed && folders.length > 0) await args.rebuild();
+    })()
       .catch((error) => {
         console.error('[external-search] background refresh failed', error);
       })
@@ -59,7 +58,8 @@ function createRefreshRunner(args: {
       .finally(() => {
         args.runtime.refreshInFlight = null;
       });
-    return args.runtime.refreshInFlight;
+    args.runtime.refreshInFlight = refresh;
+    return refresh;
   };
 }
 

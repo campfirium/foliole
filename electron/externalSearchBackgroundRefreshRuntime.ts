@@ -1,9 +1,12 @@
 import { app, BrowserWindow } from 'electron';
 
+import { runWithDatabaseConnectionOwner } from './database/connection.js';
+import { loadExternalSearchFolders } from './database/externalSearchFolders.js';
 import { submitDesktopOperation } from './desktopOperations.js';
 import { createExternalSearchBackgroundRefreshController } from './externalSearchBackgroundRefresh.js';
 
 const externalSearchBackgroundRefresh = createExternalSearchBackgroundRefreshController({
+  readFolders: () => runWithDatabaseConnectionOwner(loadExternalSearchFolders),
   rebuild: () =>
     submitDesktopOperation('external-search-refresh', {
       failureLabel: '[external-search] background refresh failed',
