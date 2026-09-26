@@ -25,7 +25,9 @@ export function readPackRowsFromZip(packPath: string, tempRoot: string) {
       ).pluck().get())),
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
-      nodeTombstones: db.prepare('SELECT node_id, version_id, deleted_at FROM node_sync_tombstones').all(),
+      nodeTombstones: manifest.tables.some(({ name }: { name: string }) => name === 'node_sync_tombstones')
+        ? db.prepare('SELECT node_id, version_id, deleted_at FROM node_sync_tombstones').all()
+        : [],
       nodeVersionParents: db.prepare(
         'SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents ORDER BY version_id, ordinal'
       ).all(),
