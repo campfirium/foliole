@@ -61,20 +61,25 @@ beforeEach(() => {
   state.backupCode = 0;
 });
 
-it('quiesces the fixed app under its lease before validating backup and dispatching mutation', async () => {
+it('dispatches formal deploy without a pre-install backup', async () => {
   await runMacosA5Action('deploy', '/repo', { formal: true });
+  expect(state.events).toEqual(['lease', 'dispatch', 'cleanup']);
+});
+
+it('still protects other fixed-device mutations before dispatch', async () => {
+  await runMacosA5Action('device-profile', '/repo', { formal: true });
   expect(state.events).toEqual(['lease', 'stop', 'backup', 'backup-validated', 'dispatch', 'cleanup']);
 });
 
 it('does not back up or dispatch device changes when stopping the writer fails', async () => {
   state.failStop = true;
-  await expect(runMacosA5Action('deploy', '/repo', { formal: true })).rejects.toThrow('stop failed');
+  await expect(runMacosA5Action('device-profile', '/repo', { formal: true })).rejects.toThrow('stop failed');
   expect(state.events).toEqual(['lease', 'stop', 'cleanup']);
 });
 
 it('does not install or dispatch device changes when the protected backup fails', async () => {
   state.backupCode = 1;
-  await expect(runMacosA5Action('deploy', '/repo', { formal: true }))
+  await expect(runMacosA5Action('device-profile', '/repo', { formal: true }))
     .rejects.toThrow('Data protection backup failed');
   expect(state.events).toEqual(['lease', 'stop', 'backup', 'cleanup']);
 });

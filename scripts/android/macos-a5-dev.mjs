@@ -95,17 +95,11 @@ async function deploy(
   markMutationBoundary();
   const runId = buildIdentity();
   const evidenceRoot = path.join(paths.artifactsRoot, 'a5-deploy', runId);
-  const snapshotRoot = path.join(paths.deviceBackupRoot, runId);
-  const baselineManifest = path.join(evidenceRoot, 'baseline.json');
   mkdirSync(evidenceRoot, { recursive: true });
   checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
-  await protectData(paths, macosA5GradleEnv(), 'backup', baselineManifest, snapshotRoot);
   checked(paths.adb, ['-s', A5_SERIAL, 'install', '-r', paths.apk]);
   launchAndVerify(paths);
-  checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
-  await protectData(paths, macosA5GradleEnv(), 'check', baselineManifest, snapshotRoot);
-  launchAndVerify(paths);
-  console.log(`[macos-a5-dev] deploy evidence=${baselineManifest}`);
+  console.log(`[macos-a5-dev] deploy evidence=${evidenceRoot}`);
 }
 
 export async function protectData(paths, env, mode, manifest, backupRoot) {
@@ -180,7 +174,7 @@ export async function runMacosA5Action(action, repoRoot = process.cwd(), { forma
       if (receipt && mode === 'backup') recordFormalA5DataProtection(receipt, manifest);
       return result;
     };
-    if (receipt && actionContract.mutatesFixedA5) {
+    if (receipt && actionContract.mutatesFixedA5 && actionContract.requiresDataProtection !== false) {
       markFormalA5Stage(receipt, 'data-protection');
       assertFixedA5(paths);
       checked(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);

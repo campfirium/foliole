@@ -180,7 +180,7 @@ it('requires the registered target and evidence provenance', () => {
   })).toThrow('action provenance is incomplete');
 });
 
-it('refuses a wrong fixed device and a mutation without backup integrity', () => {
+it('requires the deploy mutation boundary but not a database backup', () => {
   const context = fixture('deploy', 'adadadad-adad-adad-adad-adadadadadad').context;
   expect(() => openFormalA5Receipt(context, {
     ...contract('deploy'), formalTargetIdentity: 'another-device'
@@ -189,7 +189,6 @@ it('refuses a wrong fixed device and a mutation without backup integrity', () =>
   const manager = openFormalA5Receipt(context, contract('deploy'));
   const lease = { owner: { acquiredAt: 'lease-start', mode: 'mutation', runId: context.runId } };
   recordFormalA5Lease(manager, lease);
-  markFormalA5MutationBoundary(manager);
   const paths = { apk: path.join(context.sourceRepoRoot, 'app-debug.apk') };
   fs.writeFileSync(paths.apk, 'apk');
   expect(() => prepareFormalA5ReceiptCompletion(manager, context, paths))
@@ -198,12 +197,15 @@ it('refuses a wrong fixed device and a mutation without backup integrity', () =>
   prepareFormalA5ReceiptCompletion(manager, context, paths);
   recordFormalA5LeaseReleased(manager, lease);
   recordFormalA5Cleanup(manager, 'complete');
-  expect(() => completeFormalA5Receipt(manager)).toThrow('mutation trust is incomplete');
+  expect(() => completeFormalA5Receipt(manager)).toThrow('mutation boundary is incomplete');
+  markFormalA5MutationBoundary(manager);
+  expect(completeFormalA5Receipt(manager).dataProtection)
+    .toMatchObject({ required: false, resultStatus: 'not-required' });
 });
 
 it('accepts trust facts without turning formal completion into sync success', () => {
-  const { context, root } = fixture('deploy', 'aeaeaeae-aeae-aeae-aeae-aeaeaeaeaeae');
-  const manager = openFormalA5Receipt(context, contract('deploy'));
+  const { context, root } = fixture('device-profile', 'aeaeaeae-aeae-aeae-aeae-aeaeaeaeaeae');
+  const manager = openFormalA5Receipt(context, contract('device-profile'));
   const lease = { owner: { acquiredAt: 'lease-start', mode: 'mutation', runId: context.runId } };
   recordFormalA5Lease(manager, lease);
   const manifest = path.join(root, 'baseline.json');
@@ -214,7 +216,7 @@ it('accepts trust facts without turning formal completion into sync success', ()
   const buildRoot = path.join(root, 'capsule');
   const paths = { apk: path.join(buildRoot, 'android/app-debug.apk') };
   fs.mkdirSync(path.dirname(paths.apk), { recursive: true }); fs.writeFileSync(paths.apk, 'apk');
-  fs.mkdirSync(path.join(context.artifactsRoot, 'a5-deploy', context.runId), { recursive: true });
+  fs.mkdirSync(path.join(context.artifactsRoot, 'a5-device-profile', context.runId), { recursive: true });
   prepareFormalA5ReceiptCompletion(manager, context, paths);
   recordFormalA5LeaseReleased(manager, lease); recordFormalA5Cleanup(manager, 'complete');
   const receipt = completeFormalA5Receipt(manager);

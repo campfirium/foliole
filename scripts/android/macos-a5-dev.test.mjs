@@ -180,14 +180,14 @@ describe('macOS fixed A5 development entry', () => {
     expect(settled.lastIndexOf("'force-stop'")).toBeLessThan(settled.indexOf('readiness(args.paths)'));
   });
 
-  it('protects data without requiring the Capture acceptance workspace during deploy', () => {
+  it('deploys without reading or backing up the device database', () => {
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     const deployBlock = source.slice(
       source.indexOf('async function deploy('), source.indexOf('export async function protectData')
     );
 
-    expect(deployBlock.indexOf("'backup'")).toBeLessThan(deployBlock.indexOf("'install', '-r'"));
-    expect(deployBlock.indexOf("'check'")).toBeGreaterThan(deployBlock.indexOf("'install', '-r'"));
+    expect(deployBlock).toContain("'install', '-r'");
+    expect(deployBlock).not.toContain('protectData');
     expect(deployBlock).not.toContain('readiness(paths)');
   });
 });

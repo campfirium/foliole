@@ -23,6 +23,12 @@ it('keeps build and status outside the fixed A5 mutation lease', () => {
   });
 });
 
+it('uses direct replacement for deploy without a data backup gate', () => {
+  expect(assertRegisteredMacosA5Action('deploy')).toMatchObject({
+    deviceLeaseMode: 'mutation', mutatesFixedA5: true, requiresDataProtection: false
+  });
+});
+
 it('keeps action evidence layout out of the generic formal receipt', () => {
   expect(assertRegisteredMacosA5Action('system-entry-sync').formalEvidence)
     .toEqual({ kind: 'run-directory', root: 'a5-system-entry-sync' });

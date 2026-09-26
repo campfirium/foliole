@@ -46,19 +46,21 @@ export function openFormalA5Receipt(context, actionContract, {
     throw new Error('Formal receipt fixed A5 identity is invalid.');
   }
   const accepted = acceptedSourceReceipt(context, executeGit);
+  const requiresDataProtection = actionContract.mutatesFixedA5
+    && actionContract.requiresDataProtection !== false;
   const receipt = {
     action: context.action,
     apk: null,
     cleanup: { completedAt: null, resultStatus: 'pending' },
-    dataProtection: { manifestDigest: null, required: actionContract.mutatesFixedA5,
-      resultStatus: actionContract.mutatesFixedA5 ? 'pending' : 'not-required' },
+    dataProtection: { manifestDigest: null, required: requiresDataProtection,
+      resultStatus: requiresDataProtection ? 'pending' : 'not-required' },
     diagnostics: { toolchain: null },
     evidence: { locator: formalReceiptPath(context), runId: context.runId, verifiedAt: null },
     failure: null,
     lockfileDigest: accepted.lockfileDigest,
     mutationBoundary: { crossed: false, crossedAt: null },
     integrity: { database: null,
-      resultStatus: actionContract.mutatesFixedA5 ? 'pending' : 'not-required' },
+      resultStatus: requiresDataProtection ? 'pending' : 'not-required' },
     lease: { acquiredAt: null, mode: actionContract.deviceLeaseMode,
       releasedAt: null, runId: null },
     resultStatus: 'pending',
@@ -218,9 +220,11 @@ export function completeFormalA5Receipt(manager) {
       || receipt.lease.runId !== receipt.runId)) {
     throw new Error('Formal receipt lease lifecycle is incomplete.');
   }
+  if (manager.actionContract.mutatesFixedA5 && receipt.mutationBoundary.crossed !== true) {
+    throw new Error('Formal receipt mutation boundary is incomplete.');
+  }
   if (receipt.dataProtection.required && (receipt.dataProtection.resultStatus !== 'complete'
-      || receipt.integrity.resultStatus !== 'complete'
-      || receipt.mutationBoundary.crossed !== true)) {
+      || receipt.integrity.resultStatus !== 'complete')) {
     throw new Error('Formal receipt mutation trust is incomplete.');
   }
   return update(manager, { completedAt: manager.now(), resultStatus: 'complete',

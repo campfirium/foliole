@@ -1,4 +1,5 @@
 const ACTION_OVERRIDES = Object.freeze({
+  deploy: { requiresDataProtection: false },
   build: { deviceLeaseMode: null, formalTarget: 'build-capsule',
     formalTargetIdentity: 'accepted-source-archive', mutatesFixedA5: false },
   'hidden-desktop-status': { deviceLeaseMode: null, mutatesFixedA5: false,
