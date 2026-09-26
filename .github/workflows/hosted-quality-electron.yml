@@ -24,7 +24,7 @@ jobs:
   electron-tests:
     name: ${{ matrix.host }} ${{ matrix.bucket }}
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: 30
     concurrency:
       group: quality-${{ inputs.execution_lane }}-${{ inputs.trigger_ref }}-electron-${{ matrix.host }}-${{ matrix.bucket }}
       cancel-in-progress: false
