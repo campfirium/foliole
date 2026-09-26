@@ -57,11 +57,13 @@ function applyRestoreResult(
   const nextState = {
     ...state,
     activeNodeId: targetNodeId,
+    nodeOrder: result.nodeOrder ?? state.nodeOrder,
     trashedNodeDeletedAtById: nextTrashedNodeDeletedAtById,
     trashedNodeIds: nextTrashedNodeIds
   };
   return {
     activeNodeId: targetNodeId,
+    nodeOrder: nextState.nodeOrder,
     reviewSession: reconcileReviewSession(nextState, targetNodeId),
     trashedNodeDeletedAtById: nextTrashedNodeDeletedAtById,
     trashedNodeIds: nextTrashedNodeIds

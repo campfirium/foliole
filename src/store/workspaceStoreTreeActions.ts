@@ -8,6 +8,7 @@ import {
   resolveNextParentNodeId,
   type NodeDropIntent
 } from './workspaceMoveNodes';
+import { captureMoveSiblingOrder } from './workspaceMoveScopedOrder';
 import { canMoveRootsIntoTarget } from './workspaceNodeKindRules';
 import { collectOrderedSubtreeIds } from './workspaceNodeTreeOrder';
 import type { WorkspaceState } from './workspaceStore';
@@ -38,8 +39,10 @@ export type MoveNodesTransaction = {
   movedActiveTopic: boolean;
   movedNodeIds: string[];
   rootNodeIds: string[];
-  sourceNodeOrder: string[];
+  sourceSiblingOrder: ReturnType<typeof captureMoveSiblingOrder>;
   sourceNodesById: Record<string, NodeSnapshot>;
+  targetNodeId: string | null;
+  intent: NodeDropIntent;
   patch: Pick<WorkspaceState, 'nodeOrder' | 'nodesById'>;
   runtimePayload: MoveNodesRuntimePayload;
 };
@@ -70,16 +73,6 @@ function resolveMovableRootNodeIds(
   return rootNodeIds;
 }
 
-function canMoveToTarget(
-  state: WorkspaceState,
-  rootNodeIds: string[],
-  movedNodeIds: string[],
-  targetNodeId: string | null,
-  intent: NodeDropIntent
-) {
-  return canMoveRootsIntoTarget(state, rootNodeIds, movedNodeIds, targetNodeId, intent);
-}
-
 function buildMovedState(
   state: WorkspaceState,
   rootNodeIds: string[],
@@ -95,7 +88,9 @@ function buildMovedState(
     if (!node) {
       continue;
     }
-    nextNodesById[rootNodeId] = { ...node, parentNodeId: nextParentNodeId, updatedAt: timestamp };
+    if (node.parentNodeId !== nextParentNodeId) {
+      nextNodesById[rootNodeId] = { ...node, parentNodeId: nextParentNodeId, updatedAt: timestamp };
+    }
   }
 
   const movedNodeIdSet = new Set(movedNodeIds);
@@ -137,7 +132,8 @@ function createMoveNodesPatch(
     collectOrderedSubtreeIds,
     state.nodesById
   );
-  if (movedNodeIds.length === 0 || !canMoveToTarget(state, rootNodeIds, movedNodeIds, targetNodeId, intent)) {
+  if (movedNodeIds.length === 0 ||
+      !canMoveRootsIntoTarget(state, rootNodeIds, movedNodeIds, targetNodeId, intent)) {
     return null;
   }
   return buildMovedState(state, rootNodeIds, movedNodeIds, targetNodeId, intent);
@@ -155,9 +151,12 @@ function prepareMoveNodesTransaction(
   const movedBlockNodeIds = collectMovedNodeBlock(
     rootNodeIds, state.nodeOrder, collectOrderedSubtreeIds, state.nodesById
   );
-  const sequentialState = applySequentialReadingMovedNodes({ patch: movePatch, rootNodeIds, state });
+  const changedParent = rootNodeIds.some((nodeId) =>
+    state.nodesById[nodeId]?.parentNodeId !== movePatch.nodesById[nodeId]?.parentNodeId);
+  const sequentialState = changedParent
+    ? applySequentialReadingMovedNodes({ patch: movePatch, rootNodeIds, state })
+    : { patch: movePatch };
   const syncNodeIds = [...new Set([
-    ...rootNodeIds,
     ...Object.keys(sequentialState.patch.nodesById).filter(
       (nodeId) => sequentialState.patch.nodesById[nodeId] !== state.nodesById[nodeId]
     )
@@ -172,10 +171,14 @@ function prepareMoveNodesTransaction(
     ),
     movedNodeIds: movedBlockNodeIds,
     rootNodeIds,
-    sourceNodeOrder: [...state.nodeOrder],
+    sourceSiblingOrder: captureMoveSiblingOrder(
+      state, rootNodeIds, movePatch.nodesById[rootNodeIds[0] ?? '']?.parentNodeId ?? null
+    ),
     sourceNodesById: Object.fromEntries(syncNodeIds.flatMap((nodeId) => state.nodesById[nodeId]
       ? [[nodeId, state.nodesById[nodeId]!]]
       : [])),
+    targetNodeId,
+    intent,
     patch: sequentialState.patch,
     runtimePayload: {
       nodeOrder: sequentialState.patch.nodeOrder,
@@ -212,8 +215,7 @@ export function createMoveNodesAction(
     const result = await onNodesMoved?.(preparedTransaction.runtimePayload);
     const expectedIds = preparedTransaction.runtimePayload.nodes.map((node) => node.nodeId);
     if (!result || result.movedNodeIds.length !== expectedIds.length ||
-        !result.movedNodeIds.every((nodeId) => expectedIds.includes(nodeId)) ||
-        result.nodeOrder.join('\0') !== preparedTransaction.runtimePayload.nodeOrder.join('\0')) return false;
+        !result.movedNodeIds.every((nodeId) => expectedIds.includes(nodeId))) return false;
 
     let applied = false;
     set((state) => {

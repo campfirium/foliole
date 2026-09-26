@@ -11,9 +11,9 @@ export interface SyncNodeStatement {
 export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
   id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
   content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources,
-  import_source_fingerprint, import_content_fingerprint, position,
+  import_source_fingerprint, import_content_fingerprint,
   current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
   kind = excluded.kind,
@@ -38,7 +38,6 @@ ON CONFLICT(id) DO UPDATE SET
   image_sources = excluded.image_sources,
   import_source_fingerprint = excluded.import_source_fingerprint,
   import_content_fingerprint = excluded.import_content_fingerprint,
-  position = excluded.position,
   current_version_id = excluded.current_version_id,
   last_modified_by_host_name = excluded.last_modified_by_host_name,
   sync_dirty = excluded.sync_dirty,
@@ -52,7 +51,7 @@ export const UPDATE_REMOTE_NODE_SQL = `UPDATE nodes SET
   is_title_manual = ?, hide_title_heading = ?, content = ?, body_blob_hash = ?,
   opening_text = ?, virtual_filter = ?, reveal = ?, anchor_link = ?,
   anchor_resolution_status = ?, anchor_source_version_id = ?, image_regions = ?, image_sources = ?,
-  import_source_fingerprint = ?, import_content_fingerprint = ?, position = ?,
+  import_source_fingerprint = ?, import_content_fingerprint = ?,
   current_version_id = ?, last_modified_by_host_name = ?, sync_dirty = ?,
   created_at = ?, updated_at = ?, deleted_at = ?
 WHERE id = ?`;
@@ -61,12 +60,6 @@ export const UPSERT_REMOTE_NODE_VERSION_SQL = `INSERT INTO node_sync_versions (
   version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(version_id) DO NOTHING`;
-
-export const DELETE_NODE_ORDER_SQL = 'DELETE FROM node_order WHERE node_id = ?';
-
-export const UPSERT_NODE_ORDER_SQL = `INSERT INTO node_order (node_id, position)
-VALUES (?, ?)
-ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`;
 
 export const DELETE_NODE_ATTACHMENTS_SQL = 'DELETE FROM node_attachments WHERE node_id = ?';
 
@@ -130,7 +123,6 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
       snapshot.image_sources ?? null,
       provenance.importSourceFingerprint,
       provenance.importContentFingerprint,
-      snapshot.position ?? null,
       record.version_id,
       record.host_name,
       syncDirty,
@@ -156,19 +148,6 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
       JSON.stringify(record.snapshot)
     ],
     sql: UPSERT_REMOTE_NODE_VERSION_SQL
-  };
-}
-
-export function buildNodeOrderReplace(record: NativeSyncNodeRecord): SyncNodeStatement {
-  if (typeof record.snapshot.position !== 'number') {
-    return {
-      params: [record.object_id],
-      sql: DELETE_NODE_ORDER_SQL
-    };
-  }
-  return {
-    params: [record.object_id, record.snapshot.position],
-    sql: UPSERT_NODE_ORDER_SQL
   };
 }
 

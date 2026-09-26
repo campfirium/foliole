@@ -92,6 +92,7 @@ export interface NativeMoveNodesResult {
 
 export interface NativeRestoreNodesResult {
   restoredNodeIds: string[];
+  nodeOrder?: string[];
   skippedConflicts: Array<{
     liveNodeId: string;
     trashNodeId: string;

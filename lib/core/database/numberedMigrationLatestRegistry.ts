@@ -7,6 +7,7 @@ import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthor
 import { addColumnIfMissing, tableExists } from './numberedMigrationHelpers.js';
 import { migrateHostPermanentState } from './numberedMigrationHostPermanentState.js';
 import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
+import { migrateParentChildOrder } from './numberedMigrationParentChildOrder.js';
 import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
 import { reopenReadwiseBoundOriginalFiles } from './numberedMigrationReadwiseBoundOriginalFiles.js';
 import { reopenIncompleteReadwiseCompletion } from './numberedMigrationReadwiseCompletionRepair.js';
@@ -99,5 +100,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 101, migrate: recoverWatchedSourcesAndPaths },
   { version: 102, migrate: createWatchedFolderConflictDecisions },
   { version: 103, migrate: addWatchedFolderConflictReconciliation },
-  { version: 104, migrate: addWatchedFolderConflictSourceRefs }
+  { version: 104, migrate: addWatchedFolderConflictSourceRefs },
+  { version: 105, migrate: migrateParentChildOrder }
 ];

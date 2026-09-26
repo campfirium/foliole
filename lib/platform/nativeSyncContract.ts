@@ -5,6 +5,7 @@ export type NativeSyncObjectType =
   | 'import_run'
   | 'import_source'
   | 'node'
+  | 'parent_child_order'
   | 'node_open_state'
   | 'node_reading'
   | 'node_review'
@@ -132,7 +133,7 @@ export interface NativeSyncNodeRecord {
     kind: string;
     opening_text: string | null;
     parent_id: string | null;
-    position: number | null;
+    position?: number | null;
     priority: number | null;
     reveal: string | null;
     title: string;

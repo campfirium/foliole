@@ -86,8 +86,8 @@ function readImportMaintenanceCounts(firstNodeId: string | null, secondNodeId: s
       .prepare('SELECT COUNT(*) AS count FROM nodes WHERE id IN (?, ?)')
       .get(firstNodeId, secondNodeId) as { count: number },
     nodeOrder: connection.sqlite
-      .prepare('SELECT node_id FROM node_order ORDER BY position ASC')
-      .all() as Array<{ node_id: string }>,
+      .prepare("SELECT child_ids_json FROM parent_child_order WHERE parent_id = 'parent-child-order:root'")
+      .get() as { child_ids_json: string } | undefined,
     activeNode: connection.sqlite
       .prepare(`SELECT value FROM workspace_meta WHERE key = 'active_node_id'`)
       .get() as { value: string } | undefined,
@@ -121,7 +121,9 @@ it('clears import tracking tables and imported node trees together', () => {
   expect(counts.importSources.count).toBe(0);
   expect(counts.keepImportItems.count).toBe(0);
   expect(counts.nodes.count).toBe(0);
-  expect(counts.nodeOrder).toEqual([{ node_id: 'special-inbox' }]);
+  expect(JSON.parse(counts.nodeOrder?.child_ids_json ?? '[]')).toContain('special-inbox');
+  expect(counts.nodeOrder?.child_ids_json).not.toContain(first.nodeId);
+  expect(counts.nodeOrder?.child_ids_json).not.toContain(second.nodeId);
   expect(counts.activeNode).toBeUndefined();
   expect(counts.nodeViewState.count).toBe(0);
 });

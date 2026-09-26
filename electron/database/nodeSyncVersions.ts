@@ -1,8 +1,7 @@
 import { SPECIAL_ROOT_NODE_IDS } from '../../lib/core/database/nodeMutationSpecialRoots.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadDesktopHostName, loadOrCreateDesktopHostName } from './hostProfile.js';
-import { markUnversionedNodeOrderDirty } from './nodeOrderVersionRepair.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 
@@ -20,8 +19,6 @@ export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOStrin
 
 export function flushDirtyNodeSyncVersions(now = new Date().toISOString()) {
   const driver = openDatabaseConnection().driver;
-  const hostName = loadDesktopHostName();
-  if (hostName) markUnversionedNodeOrderDirty(driver, hostName);
   const nodeIds = driver.queryAll<{ id: string }>(
     `SELECT id FROM nodes
      WHERE id NOT IN (?, ?) AND (sync_dirty = 1 OR current_version_id IS NULL)

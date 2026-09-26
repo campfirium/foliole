@@ -27,10 +27,12 @@ export function readSyncPackContractRows(packPath: string, tempRoot: string) {
         FROM sync_objects WHERE object_type = 'import_source'`).all(),
       manifest,
       nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
+      parentChildOrders: db.prepare(
+        "SELECT object_id, payload_json FROM sync_objects WHERE object_type = 'parent_child_order'"
+      ).all(),
       nodeVersions: db.prepare(
         'SELECT version_id, object_id, parent_version_id, host_name, content_hash, snapshot_json FROM node_sync_versions'
       ).all(),
-      nodeOrder: db.prepare('SELECT node_id, position FROM node_order').all(),
       nodes: db.prepare(
         `SELECT id, priority, desired_retention, enable_short_term, sequential_reading_enabled,
                 manual_child_order, virtual_filter, anchor_link, image_regions,

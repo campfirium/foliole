@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let appDataDir = '/tmp/foliole-sync-pack-order-tests';
@@ -17,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -33,6 +35,20 @@ beforeEach(async () => {
   initializeDatabaseConnection(openDatabaseConnection());
   installLocalNodeFixtures();
   createIncomingPack(incomingPath);
+  const incoming = new Database(incomingPath);
+  incoming.prepare("UPDATE pack_manifest SET value = ? WHERE key = 'manifest_json'")
+    .run(JSON.stringify({ from_state_seq: 0, to_state_seq: 3 }));
+  incoming.prepare(`INSERT INTO sync_object_state (
+    object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
+  ) VALUES ('parent_child_order', ?, 3, 'order-hash', 'desktop-host', '2026-05-04T01:02:00.000Z', NULL)`)
+    .run(ROOT_CHILD_ORDER_ID);
+  incoming.prepare(`INSERT INTO sync_objects (
+    object_type, object_id, content_hash, payload_json, updated_at, deleted_at
+  ) VALUES ('parent_child_order', ?, 'order-hash', ?, '2026-05-04T01:02:00.000Z', NULL)`)
+    .run(ROOT_CHILD_ORDER_ID, JSON.stringify({
+      parent_id: ROOT_CHILD_ORDER_ID, child_ids_json: '["node-1"]'
+    }));
+  incoming.close();
 });
 
 afterEach(async () => {
@@ -40,7 +56,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('keeps the order of a newly accepted versioned node', async () => {
+it('applies a parent sequence independently of the article version', async () => {
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'new-node-order' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
@@ -49,11 +65,11 @@ it('keeps the order of a newly accepted versioned node', async () => {
   } finally {
     await port.run('DETACH DATABASE inc');
   }
-  expect(connection.sqlite.prepare('SELECT position FROM node_order WHERE node_id = ?').get('node-1'))
-    .toEqual({ position: 5 });
+  expect(connection.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
+    .get(ROOT_CHILD_ORDER_ID)).toEqual({ child_ids_json: '["node-1"]' });
 });
 
-it('restores a missing order row from the accepted version during ordinary replay', async () => {
+it('does not reconstruct retired ranking from article history during replay', async () => {
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'replay-node-order' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
@@ -63,11 +79,11 @@ it('restores a missing order row from the accepted version during ordinary repla
       `UPDATE node_sync_versions SET snapshot_json = json_set(snapshot_json, '$.position', 5)
        WHERE version_id = 'desktop#1'`
     ).run();
-    connection.sqlite.prepare('DELETE FROM node_order WHERE node_id = ?').run('node-1');
-    await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 1, hostName: 'receiver' });
+    await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 3, hostName: 'receiver' });
   } finally {
     await port.run('DETACH DATABASE inc');
   }
-  expect(connection.sqlite.prepare('SELECT position FROM node_order WHERE node_id = ?').get('node-1'))
-    .toEqual({ position: 5 });
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_order').get()).toEqual({ count: 0 });
+  expect(connection.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
+    .get(ROOT_CHILD_ORDER_ID)).toEqual({ child_ids_json: '["node-1"]' });
 });

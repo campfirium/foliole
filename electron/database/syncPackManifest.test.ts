@@ -15,7 +15,7 @@ import {
 
 const EXPECTED_SYNC_PACK_TABLES = [
   'sync_groups', 'sync_group_devices', 'sync_object_state',
-  'sync_objects', 'nodes', 'node_sync_versions', 'node_sync_tombstones', 'node_sync_version_parents', 'node_order',
+  'sync_objects', 'nodes', 'node_sync_versions', 'node_sync_tombstones', 'node_sync_version_parents',
   'node_attachments', 'external_documents', 'content_blobs', 'review_log'
 ];
 
@@ -36,7 +36,6 @@ it('builds the pack manifest from the explicit table map', () => {
       content_blobs: [{}],
       external_documents: [],
       node_attachments: [{}],
-      node_order: [{}],
       node_sync_versions: [{}, {}, {}],
       node_sync_tombstones: [],
       node_sync_version_parents: [],
@@ -60,7 +59,6 @@ it('builds the pack manifest from the explicit table map', () => {
       { name: 'node_sync_versions', row_count: 3 },
       { name: 'node_sync_tombstones', row_count: 0 },
       { name: 'node_sync_version_parents', row_count: 0 },
-      { name: 'node_order', row_count: 1 },
       { name: 'node_attachments', row_count: 1 },
       { name: 'external_documents', row_count: 0 },
       { name: 'content_blobs', row_count: 1 },
@@ -79,6 +77,7 @@ it('declares the stage one payload object inventory explicitly', () => {
     'node_reading',
     'node_review',
     'node_text_alternative',
+    'parent_child_order',
     'pdf_page_text',
     'setting',
     'watched_folder',

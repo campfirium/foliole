@@ -20,6 +20,7 @@ import {
 import { migrateCompanionDeliveryAuthorizations } from './companionDeliveryAuthorizationMigration.js';
 import { migrateCompanionHostPermanentState } from './companionHostPermanentStateMigration.js';
 import { migrateCompanionOpaqueSyncRefs } from './companionOpaqueSyncRefsMigration.js';
+import { migrateCompanionParentChildOrder } from './companionParentChildOrderMigration.js';
 import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwnershipMigration.js';
 import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigration.js';
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
@@ -63,6 +64,7 @@ export async function migrateCompanionDatabase(
     }
   }
   await repairCompanionDatabase(db);
+  if (currentVersion < 40 && targetVersion >= 40) await migrateCompanionParentChildOrder(db);
   if (currentVersion < 37 && targetVersion >= 37) await retireCompanionAttachmentManifest(db);
   if (currentVersion < 39 && targetVersion >= 39) await migrateCompanionWatchedDisplayPath(db);
   if (currentVersion < 38 && targetVersion >= 38) await migrateCompanionWatchedBindings(db);

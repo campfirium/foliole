@@ -116,31 +116,6 @@ function incomingNodeColumnExpression(column: SyncPackNodeColumn, options: SyncP
   return `(SELECT existing.${column} FROM main.nodes existing WHERE existing.id = incoming.id)`;
 }
 
-export function buildSyncPackNodeOrderUpsertSql(options: SyncPackApplyableRowsOptions = {}) {
-  const alias = incomingAlias(options);
-  return `INSERT OR REPLACE INTO main.node_order (node_id, position) ` +
-    `SELECT incoming.node_id, incoming.position FROM ${alias}.node_order incoming ` +
-    `INNER JOIN main.nodes node ON node.id = incoming.node_id ` +
-    `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
-      incomingAlias: alias,
-      excludedNodeIds: options.excludedNodeIds,
-      objectType: 'node',
-      sourcePeerId: options.sourcePeerId
-    })})`;
-}
-
-export function buildSyncPackNodeOrderDeleteSql(options: SyncPackApplyableRowsOptions = {}) {
-  const alias = incomingAlias(options);
-  return `DELETE FROM main.node_order WHERE node_id IN (` +
-    `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
-      excludedNodeIds: options.excludedNodeIds,
-      incomingAlias: alias,
-      objectType: 'node',
-      sourcePeerId: options.sourcePeerId
-    })}) ` +
-    `AND node_id NOT IN (SELECT node_id FROM ${alias}.node_order)`;
-}
-
 export function buildSyncPackNodeAttachmentDeleteSql(options: SyncPackApplyableRowsOptions = {}) {
   return `DELETE FROM main.node_attachments WHERE node_id IN (` +
     `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ ...options, objectType: 'node' })})`;

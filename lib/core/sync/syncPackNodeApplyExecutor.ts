@@ -1,11 +1,8 @@
 import type { DbPort } from './dbPort.js';
-import { restoreMissingIncomingNodeOrder, restoreMissingNodeOrderFromCurrentVersions } from './syncNodeOrderRecovery.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import {
   buildSyncPackNodeAttachmentDeleteSql,
   buildSyncPackNodeAttachmentInsertSql,
-  buildSyncPackNodeOrderDeleteSql,
-  buildSyncPackNodeOrderUpsertSql,
   type SyncPackNodeApplyOptions
 } from './syncPackApplyStatements.js';
 import { applySyncPackAttachmentObjectsWithDbPort } from './syncPackAttachmentObjectsExecutor.js';
@@ -24,6 +21,7 @@ import { ensureSyncPackSpecialRootParents } from './syncPackSpecialRootApply.js'
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 import {
   applySyncPackMetadataObjectsWithDbPort,
+  applySyncPackParentChildOrdersWithDbPort,
   applySyncPackNodeOpenStatesWithDbPort,
   applySyncPackNodeTextAlternativesWithDbPort,
   applySyncPackSettingObjectsWithDbPort
@@ -44,16 +42,7 @@ export async function applySyncPackNodesWithDbPort(
 ) {
   await applySyncPackNodeRowsWithDbPort(port, options);
   await applySyncPackNodeVersionsWithDbPort(port, options);
-  await applySyncPackNodeOrderRowsWithDbPort(port, options);
   await applySyncPackNodeAttachmentsWithDbPort(port, options);
-}
-
-async function applySyncPackNodeOrderRowsWithDbPort(
-  port: DbPort,
-  options: SyncPackNodeApplyOptions = {}
-) {
-  await port.run(buildSyncPackNodeOrderDeleteSql(options));
-  await port.run(buildSyncPackNodeOrderUpsertSql(options));
 }
 
 async function applySyncPackNodeAttachmentsWithDbPort(
@@ -112,9 +101,7 @@ async function applySyncPackSurfaceInTransaction(
     excludedNodeIds: nodeConvergence.processedNodeIds
   };
   await applySyncPackNodeRowsWithDbPort(port, remainingNodeOptions);
-  await applySyncPackNodeOrderRowsWithDbPort(port, remainingNodeOptions);
-  await restoreMissingNodeOrderFromCurrentVersions(port);
-  await restoreMissingIncomingNodeOrder(port, options.incomingAlias);
+  await applySyncPackParentChildOrdersWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
   await applySyncPackExternalDocumentsWithDbPort(port, options);
   await applySyncPackSettingObjectsWithDbPort(port, options);
@@ -152,7 +139,6 @@ async function applyReplayPackTombstones(
   toStateSeq: number
 ) {
   const appliedTombstoneNodeIds = await applySyncPackNodeTombstonesWithDbPort(port, options.incomingAlias);
-  await restoreMissingNodeOrderFromCurrentVersions(port);
   await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
   return {
     appliedBlobCount: 0,
@@ -193,6 +179,7 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'node_review',
   'node_open_state',
   'node_text_alternative',
+  'parent_child_order',
   'attachment',
   'pdf_page_text',
   'view_state'

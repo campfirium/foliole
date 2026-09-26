@@ -1,3 +1,5 @@
+import { ROOT_CHILD_ORDER_ID, writeParentChildOrder } from '../../lib/core/database/parentChildOrder.js';
+
 import type { DatabaseConnection } from './connection.js';
 
 const INITIAL_INBOX_NODE_ID = 'special-inbox';
@@ -28,9 +30,8 @@ function insertVirtualRoot(connection: DatabaseConnection, timestamp: string) {
   );
 }
 
-function insertInitialOrder(connection: DatabaseConnection) {
-  connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_INBOX_NODE_ID, 0]);
-  connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', [INITIAL_VIRTUAL_ROOT_NODE_ID, 1]);
+function insertInitialOrder(connection: DatabaseConnection, timestamp: string) {
+  writeParentChildOrder(connection.driver, ROOT_CHILD_ORDER_ID, [INITIAL_INBOX_NODE_ID, INITIAL_VIRTUAL_ROOT_NODE_ID], timestamp);
 }
 
 export function seedInitialWorkspace(connection: DatabaseConnection) {
@@ -43,6 +44,6 @@ export function seedInitialWorkspace(connection: DatabaseConnection) {
     const transactionalConnection = { ...connection, driver };
     insertInboxRoot(transactionalConnection, timestamp);
     insertVirtualRoot(transactionalConnection, timestamp);
-    insertInitialOrder(transactionalConnection);
+    insertInitialOrder(transactionalConnection, timestamp);
   });
 }

@@ -13,6 +13,7 @@
       "lan-sync-v1",
       "node-tombstone-pack-v1",
       "opaque-sync-refs-v1",
+      "parent-child-order-v1",
       "readwise-library-source-mode-v1",
       "resource-availability-v1",
       "source-host-ownership-v1",
@@ -23,9 +24,9 @@
       "watched-source-identity-and-path-v1",
       "workgroup-aead-v1"
     ],
-    "max_supported_version": 10,
-    "min_supported_version": 10,
-    "version": 10
+    "max_supported_version": 11,
+    "min_supported_version": 11,
+    "version": 11
   },
   "pushAck": {
     "clientOpIdKeys": [
@@ -77,7 +78,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 15,
+    "formatVersion": 16,
     "forbiddenDeviceIdentityKeys": [
       "canonical_library_path",
       "device_anchor",
@@ -109,14 +110,13 @@
       "node_sync_versions",
       "node_sync_tombstones",
       "node_sync_version_parents",
-      "node_order",
       "node_attachments",
       "external_documents",
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 88,
-    "minimumSchemaVersion": 88,
+    "maximumSchemaVersion": 89,
+    "minimumSchemaVersion": 89,
     "sqliteTableRequirements": {
       "pack_manifest": [
         "key",
@@ -198,10 +198,6 @@
         "version_id",
         "parent_version_id",
         "ordinal"
-      ],
-      "node_order": [
-        "node_id",
-        "position"
       ],
       "node_attachments": [
         "node_id",
@@ -479,8 +475,7 @@
         "objectType": "node",
         "pushIssue": "review_required",
         "storage": [
-          "nodes",
-          "node_order"
+          "nodes"
         ],
         "userVisible": true
       },
@@ -488,11 +483,11 @@
         "category": "structure",
         "conflict": "lww",
         "scope": "workspace",
-        "key": "node_order",
-        "objectType": "node",
+        "key": "parent_child_order",
+        "objectType": "parent_child_order",
         "pushIssue": "review_required",
         "storage": [
-          "node_order"
+          "parent_child_order"
         ],
         "userVisible": true
       },
@@ -747,6 +742,7 @@
       "node_reading",
       "node_review",
       "node_text_alternative",
+      "parent_child_order",
       "pdf_page_text",
       "setting",
       "watched_folder"

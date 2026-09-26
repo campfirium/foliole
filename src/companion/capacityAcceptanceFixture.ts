@@ -1,4 +1,5 @@
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements';
+import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder';
 import type { DbPort, DbValue } from '../../lib/core/sync/dbPort';
 
 import { sha256 } from './capacityAcceptanceSafety';
@@ -24,7 +25,22 @@ export async function seedCapacityNodes(db: DbPort, start: number, count: number
     await insertRows(tx, `nodes
       (id,parent_id,title,content,body_blob_hash,created_at,updated_at,deleted_at)`, 8,
     records.map((record) => record.node));
-    await insertRows(tx, 'node_order', 2, records.map((record) => record.order));
+    const existing = (await tx.query<{ child_ids_json: string }>(
+      'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', ['node-0']
+    ))[0];
+    const childIds = [
+      ...(existing ? JSON.parse(existing.child_ids_json) as string[] : []),
+      ...records.map((record) => record.node[0] as string).filter((id) => id !== 'node-0')
+    ];
+    await tx.run(
+      `INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(parent_id) DO UPDATE SET child_ids_json = excluded.child_ids_json`,
+      ['node-0', JSON.stringify(childIds), time]
+    );
+    if (start === 0) await tx.run(
+      'INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)',
+      [ROOT_CHILD_ORDER_ID, '["node-0"]', time]
+    );
     await insertRows(tx, `content_blobs
       (hash,storage_key,kind,original_size_bytes,stored_size_bytes,original_sha256,stored_sha256,availability,created_at)`,
     9, records.flatMap((record) => record.blob ? [record.blob] : []));
@@ -50,7 +66,6 @@ async function capacityNodeRecords(index: number, bytes: number, hostName: strin
   return {
     node: [id, index === 0 ? null : 'node-0', `Topic ${index}`, blob ? '' : body,
       blob ? hash : null, time, time, deleted ? time : null] satisfies DbValue[],
-    order: [id, index] satisfies DbValue[],
     blob: blob ? [hash, hash, 'text', body.length, body.length, hash, hash,
       missing ? 'missing' : 'ready', time] satisfies DbValue[] : null,
     blobData: blob && !missing ? [hash, body] satisfies DbValue[] : null,

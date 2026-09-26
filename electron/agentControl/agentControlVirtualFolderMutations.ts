@@ -36,13 +36,10 @@ export function createAgentControlVirtualFolder(input: { title: string }) {
     ensureUniqueTitle(title);
     const now = new Date().toISOString();
     const id = randomUUID();
-    const positionRow = openDatabaseConnection().driver.queryOne<{ position: number } & DatabaseRow>(
-      'SELECT COALESCE(MAX(position), -1) AS position FROM node_order'
-    );
     upsertNodeSnapshot({
       anchorLink: null, content: '', createdAt: now, hideTitleHeading: false, imageRegions: null,
       isTitleManual: true, kind: 'folder', manualChildOrder: [], nodeId: id, parentNodeId: VIRTUAL_ROOT_NODE_ID,
-      position: (positionRow?.position ?? -1) + 1, reveal: null, title, updatedAt: now,
+      position: null, reveal: null, title, updatedAt: now,
       virtualFilter: createManualVirtualNodeFilter()
     });
     return { folder: { created_at: now, id, item_count: 0, title, updated_at: now }, folder_id: id };

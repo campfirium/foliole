@@ -27,7 +27,6 @@ interface SyncNodeRow extends DatabaseRow {
   opening_text: string | null;
   parent_id: string | null;
   parent_version_id: string | null;
-  position: number | null;
   priority: number | null;
   reveal: string | null;
   sequential_reading_enabled: number | null;
@@ -112,7 +111,6 @@ function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
     kind: row.kind,
     opening_text: row.opening_text,
     parent_id: row.parent_id,
-    position: row.position,
     priority: row.priority,
     reveal: row.reveal,
     sequential_reading_enabled: row.sequential_reading_enabled === null ? null : row.sequential_reading_enabled === 1,
@@ -172,7 +170,6 @@ const SYNC_NODE_SELECT_COLUMNS = `
   n.anchor_link,
   n.image_regions,
   n.image_sources,
-  node_order.position,
   n.current_version_id,
   n.created_at,
   n.updated_at,
@@ -203,7 +200,6 @@ export function loadSyncNodes(objectIds: string[]) {
     `SELECT
        ${SYNC_NODE_SELECT_COLUMNS}
      FROM nodes n
-     LEFT JOIN node_order ON node_order.node_id = n.id
      LEFT JOIN node_sync_versions v
        ON v.version_id = n.current_version_id
      WHERE n.id IN (${placeholders})
@@ -221,7 +217,6 @@ export function loadSyncNodeVersionsSince(cursor: { createdAt: string; versionId
     `SELECT
        ${SYNC_NODE_SELECT_COLUMNS}
      FROM nodes n
-     LEFT JOIN node_order ON node_order.node_id = n.id
      INNER JOIN node_sync_versions v
        ON v.object_id = n.id
      WHERE ${cursor ? '(v.created_at > ? OR (v.created_at = ? AND v.version_id > ?))' : '1 = 1'}

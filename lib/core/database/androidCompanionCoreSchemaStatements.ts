@@ -130,6 +130,11 @@ export const ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS = [
     node_id TEXT PRIMARY KEY REFERENCES nodes(id),
     position INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS parent_child_order (
+    parent_id TEXT PRIMARY KEY,
+    child_ids_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
   `CREATE TABLE IF NOT EXISTS workspace_meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,

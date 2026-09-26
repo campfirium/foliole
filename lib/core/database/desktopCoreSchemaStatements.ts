@@ -1,6 +1,7 @@
 import { CORE_INDEX_SCHEMA_STATEMENTS } from './coreIndexSchemaStatements.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS } from './nodeSyncTombstoneSchemaStatements.js';
+import { PARENT_CHILD_ORDER_SCHEMA_SQL } from './numberedMigrationParentChildOrder.js';
 
 export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS nodes (
@@ -140,6 +141,7 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     node_id TEXT PRIMARY KEY REFERENCES nodes(id),
     position INTEGER NOT NULL
   )`,
+  PARENT_CHILD_ORDER_SCHEMA_SQL,
   `CREATE TABLE IF NOT EXISTS workspace_meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,

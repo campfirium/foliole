@@ -82,13 +82,11 @@ export async function resolveTopicConflict(
   let winner = local;
   let alternative: NativeSyncNodeRecord | null = null;
   let parent = { value: local.snapshot.parent_id, source: local };
-  let position = { value: local.snapshot.position, source: local };
   let deletion = { value: local.snapshot.deleted_at, source: local };
   for (const incoming of ordered) {
     const base = await loadMergeBase(port, local.version_id, incoming.version_id!);
     const baseSnapshot = base ? JSON.parse(base.snapshot_json) as NativeSyncNodeRecord['snapshot'] : null;
     parent = selectOperationValue(baseSnapshot?.parent_id, parent, incoming.snapshot.parent_id, incoming);
-    position = selectOperationValue(baseSnapshot?.position, position, incoming.snapshot.position, incoming);
     deletion = selectOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
     const baseBody = base?.body_text ?? '';
     const incomingBody = incoming.body_text ?? incoming.snapshot.content ?? '';
@@ -105,11 +103,12 @@ export async function resolveTopicConflict(
     winner = projection.winner;
     alternative = projection.loser;
   }
+  const currentSnapshot = { ...winner.snapshot };
+  delete currentSnapshot.position;
   const resolution = buildResolutionRecord([local, ...ordered], winner, body, {
-    ...winner.snapshot,
+    ...currentSnapshot,
     deleted_at: deletion.value,
-    parent_id: parent.value,
-    position: position.value
+    parent_id: parent.value
   });
   const applied = await applySyncNodesWithDbPort(port, [resolution], {
     enqueueSearchInvalidations: false,

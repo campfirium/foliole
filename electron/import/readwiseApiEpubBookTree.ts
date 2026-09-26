@@ -1,5 +1,6 @@
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import {
   buildReadwiseApiEpubBookNodes,
@@ -53,9 +54,7 @@ function orderBookNodes(
   rootNodeId: string,
   nodeIds: string[]
 ) {
-  const current = driver.queryAll<{ node_id: string }>(
-    'SELECT node_id FROM node_order ORDER BY position ASC'
-  ).map((row) => row.node_id);
+  const current = loadDerivedNodeOrder(driver);
   const rootIndex = current.indexOf(rootNodeId);
   if (rootIndex < 0) return;
   const generated = new Set(driver.queryAll<{ id: string }>(

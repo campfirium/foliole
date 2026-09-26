@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from './workspaceBodyStatus.js';
 import {
@@ -12,10 +13,6 @@ import {
   resolveWorkspaceSnapshotActiveNodeId
 } from './workspaceSnapshotContract.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
-
-interface NodeOrderRow extends DatabaseRow {
-  node_id: string;
-}
 
 interface PdfOpeningRow extends DatabaseRow {
   node_id: string;
@@ -84,15 +81,6 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
   );
 }
 
-function queryNodeOrderRows(driver: DatabaseDriver) {
-  return driver.queryAll<NodeOrderRow>(
-    `SELECT node_order.node_id
-     FROM node_order
-     JOIN nodes ON nodes.id = node_order.node_id
-     ORDER BY node_order.position ASC, node_order.node_id ASC`
-  );
-}
-
 function queryPdfOpeningRows(driver: DatabaseDriver) {
   return driver.queryAll<PdfOpeningRow>(
     `SELECT
@@ -118,16 +106,9 @@ function loadPersistedActiveNodeId(driver: DatabaseDriver) {
 }
 
 function buildNodeOrder(driver: DatabaseDriver, rows: WorkspaceNodeRow[], nodesById: Record<string, unknown>) {
-  const nodeOrder = queryNodeOrderRows(driver)
-    .map((row) => row.node_id)
+  void rows;
+  return projectParentChildOrder(readOrderMembers(driver), readParentChildOrders(driver))
     .filter((nodeId) => Boolean(nodesById[nodeId]));
-  const orderedNodeIds = new Set(nodeOrder);
-  for (const row of rows) {
-    if (!orderedNodeIds.has(row.id)) {
-      nodeOrder.push(row.id);
-    }
-  }
-  return nodeOrder;
 }
 
 function resolveActiveNodeId(

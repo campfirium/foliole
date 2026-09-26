@@ -11,7 +11,6 @@ import {
   buildAttachmentExistsQuery,
   buildNodeAttachmentDelete,
   buildNodeAttachmentInsert,
-  buildNodeOrderReplace,
   buildRemoteNodeUpdate,
   buildRemoteNodeUpsert,
   buildRemoteNodeVersionUpsert
@@ -71,11 +70,6 @@ async function upsertRemoteNode(
   await port.run(statement.sql, statement.params);
 }
 
-async function replaceNodeOrder(port: DbPort, record: NativeSyncNodeRecord) {
-  const statement = buildNodeOrderReplace(record);
-  await port.run(statement.sql, statement.params);
-}
-
 async function replaceNodeAttachmentLinks(port: DbPort, record: NativeSyncNodeRecord) {
   const deleteStatement = buildNodeAttachmentDelete(record);
   await port.run(deleteStatement.sql, deleteStatement.params);
@@ -97,7 +91,6 @@ async function applyRemoteNode(
 ) {
   await upsertRemoteNode(port, record, preparedTextBodyHashes, nodeExists, syncDirty);
   await upsertRemoteVersion(port, record);
-  await replaceNodeOrder(port, record);
   await replaceNodeAttachmentLinks(port, record);
 }
 

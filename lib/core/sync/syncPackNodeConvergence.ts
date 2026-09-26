@@ -17,10 +17,9 @@ export async function applySyncPackVersionedNodesWithDbPort(
      JOIN main.node_sync_tombstones tomb ON tomb.node_id = node.id`
   );
   const skippedNodeIds = skipped.map((row) => row.id);
-  const rows = await port.query<SyncPackNodeRow & { position: number | null }>(
-    `SELECT node.*, node_order.position
+  const rows = await port.query<SyncPackNodeRow>(
+    `SELECT node.*
      FROM ${alias}.nodes node
-     LEFT JOIN ${alias}.node_order node_order ON node_order.node_id = node.id
      INNER JOIN ${alias}.sync_object_state state
        ON state.object_type = 'node' AND state.object_id = node.id
      WHERE node.current_version_id IS NOT NULL
@@ -63,7 +62,7 @@ export async function applySyncPackVersionedNodesWithDbPort(
 async function buildCurrentSnapshot(
   port: DbPort,
   alias: string,
-  row: SyncPackNodeRow & { position: number | null }
+  row: SyncPackNodeRow
 ): Promise<NativeSyncNodeRecord['snapshot']> {
   const attachments = await port.query<{ attachment_id: string; role: string }>(
     `SELECT attachment_id, role FROM ${alias}.node_attachments
@@ -92,7 +91,6 @@ async function buildCurrentSnapshot(
     manual_child_order: row.manual_child_order,
     opening_text: row.opening_text,
     parent_id: row.parent_id,
-    position: row.position,
     priority: row.priority,
     reveal: row.reveal,
     sequential_reading_enabled: row.sequential_reading_enabled === null

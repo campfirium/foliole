@@ -17,10 +17,13 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { moveNodes, replaceNodeOrder, upsertNodeSnapshot } from './nodeMutations.js';
-import { getNodeOrderRows, getNodeRow, seedNode } from './nodeMutations.test.helpers.js';
+import { moveNodes, replaceNodeOrder, restoreNodes, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
+import { getNodeRow, seedNode } from './nodeMutations.test.helpers.js';
+import { loadWorkspaceListSnapshot } from './workspaceListSnapshot.js';
 
 let tempRoot = '';
 
@@ -51,7 +54,14 @@ function seedFolderNode(nodeId: string, position: number) {
   });
 }
 
-it('rewrites node order without changing node updated_at or nodes.position', () => {
+function childIds(parentId: string) {
+  const row = openDatabaseConnection().sqlite.prepare(
+    'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?'
+  ).get(parentId) as { child_ids_json: string } | undefined;
+  return row ? (JSON.parse(row.child_ids_json) as string[]).filter((id) => !id.startsWith('special-')) : [];
+}
+
+it('reorders only the root sequence without creating article versions', () => {
   seedFolderNode('node-a', 0);
   seedFolderNode('node-b', 1);
   const connection = openDatabaseConnection();
@@ -61,38 +71,26 @@ it('rewrites node order without changing node updated_at or nodes.position', () 
 
   replaceNodeOrder(['node-b', 'node-a']);
 
-  expect(getNodeOrderRows()).toEqual([
-    { node_id: 'node-b', position: 0 },
-    { node_id: 'node-a', position: 1 }
-  ]);
+  expect(childIds(ROOT_CHILD_ORDER_ID)).toEqual(['node-b', 'node-a']);
   expect(
     connection.sqlite
-      .prepare(
-        `SELECT id, position, updated_at, sync_dirty, last_modified_by_host_name
-         FROM nodes
-         WHERE id IN (?, ?)
-         ORDER BY id ASC`
-      )
+      .prepare('SELECT id, updated_at, sync_dirty FROM nodes WHERE id IN (?, ?) ORDER BY id ASC')
       .all('node-a', 'node-b')
   ).toEqual([
     {
       id: 'node-a',
-      last_modified_by_host_name: expect.any(String),
-      position: null,
-      sync_dirty: 1,
+      sync_dirty: 0,
       updated_at: '2026-03-06T00:00:00.000Z'
     },
     {
       id: 'node-b',
-      last_modified_by_host_name: expect.any(String),
-      position: null,
-      sync_dirty: 1,
+      sync_dirty: 0,
       updated_at: '2026-03-06T00:00:00.000Z'
     }
   ]);
 });
 
-it('persists non-folder ids in order writes', () => {
+it('persists non-folder ids in their direct parent sequence', () => {
   seedFolderNode('folder-a', 0);
   seedNode('node-topic', null, 1);
   openDatabaseConnection().sqlite
@@ -101,10 +99,7 @@ it('persists non-folder ids in order writes', () => {
 
   replaceNodeOrder(['node-topic', 'folder-a']);
 
-  expect(getNodeOrderRows()).toEqual([
-    { node_id: 'node-topic', position: 0 },
-    { node_id: 'folder-a', position: 1 }
-  ]);
+  expect(childIds(ROOT_CHILD_ORDER_ID)).toEqual(['node-topic', 'folder-a']);
 });
 
 it('moves parent and order in one sqlite mutation without rewriting content', () => {
@@ -130,8 +125,22 @@ it('moves parent and order in one sqlite mutation without rewriting content', ()
   expect(openDatabaseConnection().sqlite.prepare('SELECT updated_at FROM nodes WHERE id = ?').get('node-topic')).toEqual({
     updated_at: '2026-03-06T00:05:00.000Z'
   });
-  expect(getNodeOrderRows()).toEqual([
-    { node_id: 'folder-a', position: 0 },
-    { node_id: 'node-topic', position: 1 }
-  ]);
+  expect(childIds(ROOT_CHILD_ORDER_ID)).toEqual(['folder-a']);
+  expect(childIds('folder-a')).toEqual(['node-topic']);
+});
+
+it('keeps a trashed child in its parent sequence and restores its current place', () => {
+  seedFolderNode('node-a', 0);
+  seedFolderNode('node-b', 1);
+  seedFolderNode('node-c', 2);
+  replaceNodeOrder(['node-a', 'node-b', 'node-c']);
+
+  softDeleteNodes({ nodeIds: ['node-b'], deletedAt: '2026-03-06T00:10:00.000Z' });
+  replaceNodeOrder(['node-c', 'node-a']);
+  expect(childIds(ROOT_CHILD_ORDER_ID)).toEqual(['node-c', 'node-b', 'node-a']);
+  expect(loadWorkspaceListSnapshot()?.nodeOrder).not.toContain('node-b');
+
+  restoreNodes({ nodeIds: ['node-b'] });
+  expect(loadWorkspaceListSnapshot()?.nodeOrder.filter((id) => id.startsWith('node-')))
+    .toEqual(['node-c', 'node-b', 'node-a']);
 });

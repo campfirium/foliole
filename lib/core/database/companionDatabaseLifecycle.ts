@@ -203,7 +203,8 @@ async function initializeFreshCompanionWorkspace(db: DbPort, now: string) {
      ) VALUES (?, NULL, 'folder', 'Inbox', 1, 0, '', 0, ?, ?, NULL)`,
     [INBOX_NODE_ID, now, now]
   );
-  await db.run('INSERT INTO node_order (node_id, position) VALUES (?, 0)', [INBOX_NODE_ID]);
+  await db.run('INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)',
+    ['parent-child-order:root', JSON.stringify([INBOX_NODE_ID]), now]);
 }
 
 function message(error: unknown) {

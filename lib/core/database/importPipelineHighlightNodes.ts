@@ -1,6 +1,8 @@
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
+import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
+import { loadDerivedNodeOrder } from './parentChildOrder.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 interface ExistingChildHighlightRow {
@@ -45,7 +47,6 @@ function deleteGeneratedImportedChildNodes(driver: DatabaseDriver, nodeIds: stri
   const deleteNodeReading = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
   const deleteNodeReadingHostState = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
   const deleteNodeViewState = driver.prepare('DELETE FROM node_view_state WHERE node_id = ?');
-  const deleteNodeOrder = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
   const deleteNode = driver.prepare('DELETE FROM nodes WHERE id = ?');
   nodeIds.forEach((nodeId) => {
     deleteReviewLog.run([nodeId]);
@@ -53,9 +54,9 @@ function deleteGeneratedImportedChildNodes(driver: DatabaseDriver, nodeIds: stri
     deleteNodeReading.run([nodeId]);
     deleteNodeReadingHostState.run([nodeId]);
     deleteNodeViewState.run([nodeId]);
-    deleteNodeOrder.run([nodeId]);
   });
   [...nodeIds].reverse().forEach((nodeId) => deleteNode.run([nodeId]));
+  rewriteExistingNodeOrder(driver, loadDerivedNodeOrder(driver));
 }
 
 export function replaceImportedHighlightNodes(input: {

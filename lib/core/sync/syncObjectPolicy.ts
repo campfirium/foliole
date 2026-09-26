@@ -22,8 +22,8 @@ export interface SyncObjectPolicy {
 }
 
 export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
-  policy('node', 'node', 'structure', 'workspace', 'lww', ['nodes', 'node_order'], true),
-  policy('node_order', 'node', 'structure', 'workspace', 'lww', ['node_order'], true),
+  policy('node', 'node', 'structure', 'workspace', 'lww', ['nodes'], true),
+  policy('parent_child_order', 'parent_child_order', 'structure', 'workspace', 'lww', ['parent_child_order'], true),
   policy('external_document', 'external_document', 'structure', 'workspace', 'lww', ['external_documents'], true),
   policy('external_folder', 'external_folder', 'structure', 'workspace', 'lww', ['external_search_folders'], true),
   policy('import_source', 'import_source', 'structure', 'workspace', 'lww', ['import_sources'], true),

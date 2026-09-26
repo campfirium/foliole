@@ -39,8 +39,8 @@ describe('fresh companion workspace initialization', () => {
     expect(fixture.sqlite.prepare(
       'SELECT id, kind, title, sync_dirty FROM nodes WHERE id = ?'
     ).get(INBOX_NODE_ID)).toEqual({ id: INBOX_NODE_ID, kind: 'folder', sync_dirty: 0, title: 'Inbox' });
-    expect(fixture.sqlite.prepare('SELECT node_id, position FROM node_order').get())
-      .toEqual({ node_id: INBOX_NODE_ID, position: 0 });
+    expect(fixture.sqlite.prepare('SELECT parent_id, child_ids_json FROM parent_child_order').get())
+      .toEqual({ parent_id: 'parent-child-order:root', child_ids_json: JSON.stringify([INBOX_NODE_ID]) });
     fixture.sqlite.close();
   });
 
@@ -58,6 +58,37 @@ describe('fresh companion workspace initialization', () => {
     });
 
     expect(fixture.sqlite.prepare('SELECT COUNT(*) FROM nodes').pluck().get()).toBe(0);
+    fixture.sqlite.close();
+  });
+
+  it('extracts existing direct-child order during the version 40 upgrade', async () => {
+    const fixture = emptyDatabase();
+    fixture.sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+    fixture.sqlite.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)')
+      .run('device_id', 'existing-device', '2026-09-01T00:00:00.000Z');
+    const insertNode = fixture.sqlite.prepare(
+      `INSERT INTO nodes (id, parent_id, kind, title, is_title_manual, content, created_at, updated_at)
+       VALUES (?, ?, 'topic', ?, 1, '', '2026-09-01T00:00:00.000Z', '2026-09-01T00:00:00.000Z')`
+    );
+    insertNode.run('parent', null, 'Parent');
+    insertNode.run('child-b', 'parent', 'B');
+    insertNode.run('child-a', 'parent', 'A');
+    const insertOrder = fixture.sqlite.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
+    insertOrder.run('parent', 0);
+    insertOrder.run('child-a', 1);
+    insertOrder.run('child-b', 2);
+    fixture.sqlite.pragma('user_version = 39');
+
+    await bootstrapCompanionDatabase(fixture.port, {
+      allowCreate: false, expectedHostName: 'A5', now: '2026-09-02T00:00:00.000Z'
+    });
+
+    const row = fixture.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
+      .get('parent') as { child_ids_json: string };
+    expect(JSON.parse(row.child_ids_json)).toEqual(['child-a', 'child-b']);
+    expect(fixture.sqlite.prepare(
+      "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'parent_child_order' AND object_id = 'parent'"
+    ).get()).toEqual({ sync_dirty: 1 });
     fixture.sqlite.close();
   });
 });

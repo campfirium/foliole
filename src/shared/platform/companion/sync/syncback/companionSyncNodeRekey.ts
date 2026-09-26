@@ -1,5 +1,7 @@
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 
+import { rekeyParentChildOrders } from './companionSyncNodeOrderRekey';
+
 const NODE_REFERENCES: Array<readonly [string, string]> = [
   ['nodes', 'parent_id'],
   ['node_review', 'node_id'],
@@ -10,7 +12,6 @@ const NODE_REFERENCES: Array<readonly [string, string]> = [
   ['node_sync_tombstones', 'node_id'],
   ['node_sync_conflicts', 'object_id'],
   ['node_text_alternatives', 'node_id'],
-  ['node_order', 'node_id'],
   ['node_view_state', 'node_id'],
   ['node_attachments', 'node_id']
 ];
@@ -24,7 +25,8 @@ export async function rekeyNodeObject(
 ) {
   const columns = await port.query<{ name: string }>('PRAGMA table_info(nodes)');
   const names = columns.map((row) => row.name).filter(Boolean);
-  const projection = names.map((name) => name === 'id' ? '? AS "id"' : quote(name)).join(', ');
+  const projection = names.map((name) => name === 'id' ? '? AS "id"' :
+    name === 'position' ? 'NULL AS "position"' : quote(name)).join(', ');
   const quoted = names.map(quote).join(', ');
   await port.run(
     `INSERT OR IGNORE INTO nodes (${quoted}) SELECT ${projection} FROM nodes WHERE id = ?`,
@@ -33,6 +35,7 @@ export async function rekeyNodeObject(
   for (const [table, column] of NODE_REFERENCES) {
     await port.run(`UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`, [canonicalId, sourceId]);
   }
+  await rekeyParentChildOrders(port, sourceId, canonicalId);
   await createCanonicalVersion(port, {
     canonicalId, canonicalVersionId, sourceVersionId
   });

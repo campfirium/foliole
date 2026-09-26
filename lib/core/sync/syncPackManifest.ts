@@ -2,7 +2,6 @@ export type SyncPackTableName =
   | 'content_blobs'
   | 'external_documents'
   | 'node_attachments'
-  | 'node_order'
   | 'node_sync_versions'
   | 'node_sync_tombstones'
   | 'node_sync_version_parents'
@@ -22,7 +21,6 @@ export const SYNC_PACK_TABLE_NAMES: SyncPackTableName[] = [
   'node_sync_versions',
   'node_sync_tombstones',
   'node_sync_version_parents',
-  'node_order',
   'node_attachments',
   'external_documents',
   'content_blobs',
@@ -48,6 +46,7 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'node_reading',
   'node_review',
   'node_text_alternative',
+  'parent_child_order',
   'pdf_page_text',
   'setting',
   'watched_folder',

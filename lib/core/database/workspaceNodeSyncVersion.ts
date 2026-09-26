@@ -33,7 +33,6 @@ export function canonicalWorkspaceNodePayload(node: WorkspaceNodeSnapshot) {
     kind: node.kind,
     openingText: node.openingText ?? null,
     parentId: node.parentNodeId,
-    position: node.position ?? null,
     priority: node.priority ?? null,
     reveal: node.reveal,
     title: node.title,

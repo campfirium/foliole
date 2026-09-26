@@ -3,6 +3,7 @@ import type { PersistedNodeViewState } from '../../platform/persistedNodeViewSta
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
 import { loadNodeOpenStateById, type NodeOpenState } from './nodeOpenState.js';
+import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from './workspaceSnapshotContract.js';
@@ -177,12 +178,8 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
 }
 
 function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
-  return driver.queryAll<NodeOrderRow>(
-    `SELECT node_order.node_id, node_order.position
-     FROM node_order
-     JOIN nodes ON nodes.id = node_order.node_id
-     ORDER BY node_order.position ASC, node_order.node_id ASC`
-  );
+  return projectParentChildOrder(readOrderMembers(driver), readParentChildOrders(driver))
+    .map((nodeId, position) => ({ node_id: nodeId, position }));
 }
 
 function buildSnapshotRows(

@@ -28,6 +28,8 @@ const payloadPlans = [
     remote_provider, remote_connection_ref, remote_document_id, remote_annotations_json, remote_import_state_json
     FROM source.import_sources` },
   { objectType: 'node_open_state', sql: `SELECT node_id __object_id, node_id, last_opened_at FROM source.node_open_state` },
+  { objectType: 'parent_child_order', sql: `SELECT parent_id __object_id, parent_id, child_ids_json, updated_at
+    FROM source.parent_child_order` },
   { objectType: 'node_reading', sql: `SELECT node_id __object_id, node_id, interval_duration_ms, interval_growth_factor,
     last_handled_at, next_at, priority, repetition_count, state FROM source.node_reading` },
   { objectType: 'node_review', sql: `SELECT node_id __object_id, node_id, due, last_review_at, state, stability, difficulty,
@@ -69,7 +71,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
           WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END
      FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN
        ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',
-        'node_review','node_text_alternative','pdf_page_text','setting','view_state','watched_folder')
+        'node_review','node_text_alternative','parent_child_order','pdf_page_text','setting','view_state','watched_folder')
        AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS
@@ -97,7 +99,6 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
      FROM source.node_sync_version_parents p
      WHERE p.version_id IN (SELECT version_id FROM node_sync_versions)
        AND p.parent_version_id IN (SELECT version_id FROM node_sync_versions)`,
-    `INSERT INTO node_order SELECT o.node_id, o.position FROM source.node_order o WHERE o.node_id IN (SELECT id FROM nodes)`,
     `INSERT INTO node_attachments SELECT a.node_id, a.attachment_id, a.role FROM source.node_attachments a
      WHERE a.node_id IN (SELECT id FROM nodes)`,
     `INSERT INTO external_documents SELECT d.document_id, d.folder_id, d.relative_path, d.file_name, d.extension,

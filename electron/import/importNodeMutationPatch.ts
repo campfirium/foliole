@@ -1,5 +1,6 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from '../../lib/core/database/workspaceBodyStatus.js';
 import { buildWorkspaceSnapshotNode } from '../../lib/core/database/workspaceSnapshotHelpers.js';
@@ -52,14 +53,6 @@ interface ImportedNodeRow extends DatabaseRow, NodeBodyRow {
   title: string;
   updated_at: string;
   virtual_filter: string | null;
-}
-
-interface NodeOrderRow extends DatabaseRow {
-  node_id: string;
-}
-
-interface NodeIdRow extends DatabaseRow {
-  id: string;
 }
 
 function hasPersistedNode(result: NativeTextImportResult) {
@@ -131,19 +124,7 @@ function readImportedNodeRows(driver: DatabaseDriver, nodeIds: string[]) {
 }
 
 function readNodeOrder(driver: DatabaseDriver) {
-  const nodeOrder = driver.queryAll<NodeOrderRow>(
-    `SELECT node_order.node_id
-     FROM node_order
-     JOIN nodes ON nodes.id = node_order.node_id
-     ORDER BY node_order.position ASC`
-  ).map((row) => row.node_id);
-  const orderedNodeIds = new Set(nodeOrder);
-  for (const row of driver.queryAll<NodeIdRow>('SELECT id FROM nodes WHERE deleted_at IS NULL ORDER BY created_at ASC')) {
-    if (!orderedNodeIds.has(row.id)) {
-      nodeOrder.push(row.id);
-    }
-  }
-  return nodeOrder;
+  return loadDerivedNodeOrder(driver);
 }
 
 function toNodeMutationSnapshot(row: ImportedNodeRow, nodeOrder: string[]): NativeNodeSnapshotArgs {

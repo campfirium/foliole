@@ -27,7 +27,6 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   kind: string;
   opening_text: string | null;
   parent_id: string | null;
-  position: number | null;
   priority: number | null;
   reveal: string | null;
   sync_dirty: number;
@@ -56,9 +55,8 @@ export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, node
        hide_title_heading, content, nodes.body_blob_hash, cbd.data AS body_blob_data,
        opening_text, virtual_filter, reveal,
        anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, import_content_fingerprint, import_source_fingerprint,
-       node_order.position AS position, current_version_id, sync_dirty, created_at, updated_at, deleted_at
+       current_version_id, sync_dirty, created_at, updated_at, deleted_at
      FROM nodes
-     LEFT JOIN node_order ON node_order.node_id = nodes.id
      LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash
      WHERE nodes.id = ?`,
     [nodeId]
@@ -94,7 +92,6 @@ export function buildNodeSyncSnapshotFromDriver(
     kind: row.kind,
     opening_text: row.opening_text,
     parent_id: row.parent_id,
-    position: row.position,
     priority: row.priority,
     reveal: row.reveal,
     title: row.title,
@@ -134,7 +131,6 @@ export function computeNodeSyncVersionHashFromDriver(
     kind: row.kind,
     openingText: row.opening_text,
     parentId: row.parent_id,
-    position: row.position,
     priority: row.priority,
     reveal: row.reveal,
     title: row.title,

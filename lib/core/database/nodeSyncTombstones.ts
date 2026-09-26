@@ -37,7 +37,6 @@ function snapshotHashInput(snapshot: NativeSyncNodeRecord['snapshot']) {
     kind: snapshot.kind,
     openingText: snapshot.opening_text,
     parentId: snapshot.parent_id,
-    position: snapshot.position,
     priority: snapshot.priority,
     reveal: snapshot.reveal,
     title: snapshot.title,
@@ -48,6 +47,7 @@ function snapshotHashInput(snapshot: NativeSyncNodeRecord['snapshot']) {
 
 function forceDeletedSnapshot(snapshotJson: string, deletedAt: string) {
   const snapshot = JSON.parse(snapshotJson) as NativeSyncNodeRecord['snapshot'];
+  delete snapshot.position;
   return {
     ...snapshot,
     deleted_at: deletedAt,

@@ -65,6 +65,16 @@ export async function applySyncPackMetadataObjectsWithDbPort(
   return records.length;
 }
 
+export async function applySyncPackParentChildOrdersWithDbPort(
+  port: DbPort,
+  options: SyncPackSyncObjectsOptions
+) {
+  const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
+    .filter((record) => record.object_type === 'parent_child_order');
+  for (const record of records) await applySyncObjectPayloadWithDbPort(port, record);
+  return records.length;
+}
+
 export async function applySyncPackNodeTextAlternativesWithDbPort(
   port: DbPort,
   options: SyncPackSyncObjectsOptions

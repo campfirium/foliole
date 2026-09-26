@@ -1,3 +1,4 @@
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import type { NativeResetImportDataResult } from '../../lib/platform/nativeStorageContract.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -10,10 +11,6 @@ interface CountRow {
 interface NodeEdgeRow {
   id: string;
   parent_id: string | null;
-}
-
-interface OrderedNodeRow {
-  node_id: string;
 }
 
 interface WorkspaceMetaRow {
@@ -78,18 +75,11 @@ function listImportedNodeIds(rootNodeIds: string[]) {
 }
 
 function listRemainingRootNodeIds(deletedNodeIds: Set<string>) {
-  const rows = openDatabaseConnection().sqlite
-    .prepare(
-      `SELECT nodes.id AS node_id, node_order.position AS position
-       FROM nodes
-       LEFT JOIN node_order ON node_order.node_id = nodes.id
-       WHERE nodes.kind = 'folder' AND nodes.deleted_at IS NULL
-       ORDER BY CASE WHEN node_order.position IS NULL THEN 1 ELSE 0 END,
-         node_order.position ASC,
-         nodes.title COLLATE NOCASE ASC`
-    )
-    .all() as OrderedNodeRow[];
-  return rows.map((row) => row.node_id).filter((nodeId) => !deletedNodeIds.has(nodeId));
+  const driver = openDatabaseConnection().driver;
+  const folders = new Set(driver.queryAll<{ id: string }>(
+    "SELECT id FROM nodes WHERE kind = 'folder' AND deleted_at IS NULL"
+  ).map((row) => row.id));
+  return loadDerivedNodeOrder(driver).filter((id) => folders.has(id) && !deletedNodeIds.has(id));
 }
 
 export function resetImportData(): NativeResetImportDataResult {

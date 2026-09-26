@@ -13,11 +13,11 @@ import type {
 import { ensureSpecialRootNodesForInput } from './nodeMutationSpecialRoots.js';
 import {
   createUpdateNodeAnchorLinkStatement,
-  createUpsertNodeOrderStatement,
   createUpsertNodeReadingHostStateStatement,
   createUpsertNodeReadingStatement,
   createUpsertNodeStatement
 } from './nodeMutationStatements.js';
+import { ensureNodeParentMembership } from './nodeOrderMutations.js';
 import { deleteNodesPermanently, type DeleteNodesPermanentlyInput } from './nodePermanentDeleteMutations.js';
 import { writeNodeReadingSnapshotWithSync } from './nodeReadingSyncState.js';
 import { resolveRestoreNodesResult, type RestoreNodesResult } from './nodeRestoreConflicts.js';
@@ -25,6 +25,7 @@ import { createUpsertNodeReviewStatement } from './nodeReviewMutationStatements.
 import { writeNodeReviewSnapshotWithSync } from './nodeReviewSyncState.js';
 import { prepareNodeSearchInvalidationForUpsert } from './nodeSearchInvalidationForMutation.js';
 import type { NodeSearchInvalidationOptions } from './nodeSearchInvalidationForMutation.js';
+import { parentOrderId, readParentChildOrders } from './parentChildOrder.js';
 import {
   enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds,
   enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds
@@ -100,7 +101,6 @@ function runNodeTableUpsert(
     toAnchorLinkValue(input.anchorLink),
     toImageRegionsValue(input.imageRegions),
     serializeImageSources(input.imageSources ?? {}),
-    null,
     input.hostName ?? null,
     input.createdAt,
     input.updatedAt
@@ -116,7 +116,6 @@ function createUpsertNodeSnapshotStatements(driver: DatabaseDriver) {
     deleteNodeReading: driver.prepare('DELETE FROM node_reading WHERE node_id = ?'),
     deleteNodeReadingHostState: driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?'),
     upsertNode: createUpsertNodeStatement(driver),
-    upsertNodeOrder: createUpsertNodeOrderStatement(driver),
     upsertNodeReading: createUpsertNodeReadingStatement(driver),
     upsertNodeReadingHostState: createUpsertNodeReadingHostStateStatement(driver),
     upsertNodeReview: createUpsertNodeReviewStatement(driver)
@@ -157,9 +156,7 @@ export function upsertNodeSnapshot(
     ensureSpecialRootNodesForInput(driver, input);
     const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt);
     runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
-    if (input.kind === 'folder' && typeof input.position === 'number') {
-      statements.upsertNodeOrder.run([input.nodeId, input.position]);
-    }
+    ensureNodeParentMembership(driver, input.nodeId);
     writeNodeReadingSnapshotWithSync(driver, input, {
       deleteDeviceState: statements.deleteNodeReadingHostState.run,
       deleteReading: statements.deleteNodeReading.run,
@@ -195,7 +192,8 @@ export function updateNodeAnchorLinks(driver: DatabaseDriver, inputs: UpdateNode
 }
 
 export function clearNodeOrder(driver: DatabaseDriver): void {
-  driver.execute('DELETE FROM node_order');
+  driver.execute('DELETE FROM parent_child_order');
+  driver.execute("DELETE FROM sync_object_state WHERE object_type = 'parent_child_order'");
 }
 
 export function softDeleteNodes(driver: DatabaseDriver, input: SoftDeleteNodesInput): void {
@@ -215,6 +213,15 @@ export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): 
 
   return driver.transaction(() => {
     const result = resolveRestoreNodesResult(driver, input.nodeIds);
+    const parentOrders = readParentChildOrders(driver);
+    for (const nodeId of result.restoredNodeIds) {
+      const row = driver.queryOne<{ parent_id: string | null }>(
+        'SELECT parent_id FROM nodes WHERE id = ?', [nodeId]
+      );
+      if (row && !parentOrders.get(parentOrderId(row.parent_id))?.includes(nodeId)) {
+        throw new Error(`unresolved_deleted_node_order:${nodeId}`);
+      }
+    }
     for (const nodeId of result.restoredNodeIds) {
       clearDeletedAtStatement.run([restoredAt, nodeId]);
     }

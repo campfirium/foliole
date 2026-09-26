@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { stableReadwiseEpubNodeId } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
@@ -93,8 +94,11 @@ function persist(titles: string[]) {
 }
 
 function readOrderedTitles() {
-  return openDatabaseConnection().driver.queryAll<{ title: string }>(
-    `SELECT nodes.title FROM node_order JOIN nodes ON nodes.id = node_order.node_id
-     WHERE nodes.deleted_at IS NULL ORDER BY node_order.position`
-  ).map((row) => row.title);
+  const driver = openDatabaseConnection().driver;
+  return loadDerivedNodeOrder(driver).flatMap((id) => {
+    const row = driver.queryOne<{ title: string }>(
+      'SELECT title FROM nodes WHERE id = ? AND deleted_at IS NULL', [id]
+    );
+    return row && !id.startsWith('special-') ? [row.title] : [];
+  });
 }

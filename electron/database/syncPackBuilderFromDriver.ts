@@ -65,7 +65,6 @@ function buildContainerManifest(args: {
       content_blobs: args.rows.contentBlobs,
       external_documents: args.rows.externalDocuments,
       node_attachments: args.rows.nodeAttachments,
-      node_order: args.rows.nodeOrder,
       node_sync_versions: args.rows.nodeVersions,
       node_sync_tombstones: args.rows.nodeTombstones,
       node_sync_version_parents: args.rows.nodeVersionParents,

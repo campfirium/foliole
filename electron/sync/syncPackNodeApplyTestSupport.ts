@@ -41,7 +41,6 @@ export function createIncomingPack(filePath: string) {
        ) VALUES ('desktop#1', 'node-1', NULL, 'desktop',
          '2026-05-04T01:00:00.000Z', 'hash-node-1', '{"id":"node-1","title":"Packed Node"}')`
     ).run();
-    db.prepare("INSERT INTO node_order (node_id, position) VALUES ('node-1', 5)").run();
     db.prepare(
       "INSERT INTO node_attachments (node_id, attachment_id, role) VALUES ('node-1', 'att-1', 'reference')"
     ).run();

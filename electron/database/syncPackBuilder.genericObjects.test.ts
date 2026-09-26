@@ -2,7 +2,10 @@ import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
 
+import { replaceNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+
 import { openDatabaseConnection } from './connection.js';
+import { flushDirtyNodeSyncVersions } from './nodeSyncVersions.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 import { insertImportSourceSyncState } from './syncPackBuilderImportSourceTestSupport.js';
 import {
@@ -29,6 +32,43 @@ vi.mock('../ipc/paths.js', () => ({
 
 setupSyncPackBuilderTestLifecycle();
 
+it('packs a changed direct-child sequence without node rows or article versions', async () => {
+  const driver = openDatabaseConnection().driver;
+  const now = '2026-09-27T00:00:00.000Z';
+  for (const id of ['node-a', 'node-b']) {
+    driver.execute(
+      `INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
+       VALUES (?, NULL, 'topic', ?, '', ?, ?)`, [id, id, now, now]
+    );
+  }
+  driver.execute("UPDATE nodes SET sync_dirty = 0 WHERE id IN ('node-a', 'node-b')");
+  replaceNodeOrder(driver, ['node-a', 'node-b']);
+  flushDirtyNodeSyncVersions(now);
+  const versionCount = driver.queryOne<{ value: number }>(
+    'SELECT COUNT(*) AS value FROM node_sync_versions'
+  )?.value ?? 0;
+  const fromStateSeq = driver.queryOne<{ value: number }>(
+    'SELECT COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state'
+  )?.value ?? 0;
+  replaceNodeOrder(driver, ['node-b', 'node-a']);
+  expect(driver.queryOne<{ value: number }>('SELECT COUNT(*) AS value FROM node_sync_versions')?.value).toBe(versionCount);
+  const packPath = resolveSyncPackPath('incoming-parent-order.db');
+
+  const result = await buildDesktopSyncPack({
+    fromPeerId: 'authorization-desktop', outputPath: packPath,
+    packId: 'pack-parent-order-1', fromStateSeq
+  });
+
+  expect(result.objectCount).toBe(1);
+  expect(readPackRows(packPath)).toMatchObject({
+    nodes: [],
+    stateRows: [expect.objectContaining({ object_type: 'parent_child_order' })],
+    syncObjects: [expect.objectContaining({
+      object_type: 'parent_child_order', payload_json: expect.stringContaining('node-b')
+    })]
+  });
+});
+
 it('packs attachment metadata as a generic sync object', async () => {
   insertAttachmentSyncState();
   const packPath = resolveSyncPackPath('incoming-attachment.db');
@@ -47,7 +87,6 @@ it('packs attachment metadata as a generic sync object', async () => {
         { name: 'node_sync_versions', row_count: 0 },
         { name: 'node_sync_tombstones', row_count: 0 },
         { name: 'node_sync_version_parents', row_count: 0 },
-        { name: 'node_order', row_count: 0 },
         { name: 'node_attachments', row_count: 0 },
         { name: 'external_documents', row_count: 0 },
         { name: 'content_blobs', row_count: 0 },

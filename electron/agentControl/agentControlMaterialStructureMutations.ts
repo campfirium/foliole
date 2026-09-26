@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import {
   HOME_NODE_ID,
   INBOX_NODE_ID,
@@ -106,10 +107,9 @@ function readNodes() {
 }
 
 function readActiveOrder() {
-  return openDatabaseConnection().driver.queryAll<{ node_id: string }>(
-    `SELECT no.node_id FROM node_order no JOIN nodes n ON n.id = no.node_id
-     WHERE n.deleted_at IS NULL ORDER BY no.position ASC`
-  ).map((row) => row.node_id);
+  const driver = openDatabaseConnection().driver;
+  const active = new Set(driver.queryAll<{ id: string }>('SELECT id FROM nodes WHERE deleted_at IS NULL').map((row) => row.id));
+  return loadDerivedNodeOrder(driver).filter((id) => active.has(id));
 }
 
 function requireActiveNode(nodes: NodeRow[], id: string) {

@@ -23,7 +23,6 @@ import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePu
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { markKeepImportItemsLocallyDeletedByNodeDeletedAt } from './keepImportItems.js';
-import { markChangedNodeOrderDirty, readNodeOrderPositions } from './nodeOrderSyncDirty.js';
 import { flushDirtyNodeSyncVersions, flushNodeSyncVersion } from './nodeSyncVersions.js';
 import {
   cleanupOrphanAttachments,
@@ -64,13 +63,11 @@ export function upsertNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, node
   const connection = openDatabaseConnection();
   const hostName = loadOrCreateDesktopHostName(input.updatedAt);
   withTransaction(connection.driver, () => {
-    const before = readNodeOrderPositions(connection.driver);
     upsertNodeSnapshotViaDriver(connection.driver, {
       ...input,
       hostName
     });
     replaceNodeOrderViaDriver(connection.driver, nodeOrder);
-    markChangedNodeOrderDirty(connection.driver, before, hostName);
   });
   if ('reading' in input) {
     if (input.reading?.state === 'dismissed') {
@@ -83,12 +80,8 @@ export function upsertNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, node
 
 export function replaceNodeOrder(nodeIds: string[]): void {
   const connection = openDatabaseConnection();
-  const now = new Date().toISOString();
-  const hostName = loadOrCreateDesktopHostName(now);
   withTransaction(connection.driver, () => {
-    const before = readNodeOrderPositions(connection.driver);
     replaceNodeOrderViaDriver(connection.driver, nodeIds);
-    markChangedNodeOrderDirty(connection.driver, before, hostName);
   });
 }
 
@@ -97,7 +90,6 @@ export function moveNodes(input: MoveNodesInput): MoveNodesResult {
   const now = new Date().toISOString();
   const hostName = loadOrCreateDesktopHostName(now);
   return withTransaction(connection.driver, () => {
-    const before = readNodeOrderPositions(connection.driver);
     const result = moveNodesViaDriver(connection.driver, {
       nodeOrder: input.nodeOrder,
       nodes: input.nodes.map((node) => ({ ...node, hostName }))
@@ -110,7 +102,6 @@ export function moveNodes(input: MoveNodesInput): MoveNodesResult {
         [hostName, node.nodeId]
       );
     }
-    markChangedNodeOrderDirty(connection.driver, before, hostName);
     return result;
   });
 }

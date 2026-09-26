@@ -17,6 +17,7 @@ export const ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS = [
   { table: 'node_view_state', statementName: 'appDataClearNodeViewState' },
   { table: 'node_reading_host_state', statementName: 'appDataClearNodeReadingHostState' },
   { table: 'node_order', statementName: 'appDataClearNodeOrder' },
+  { table: 'parent_child_order', statementName: 'appDataClearParentChildOrder' },
   { table: 'node_attachments', statementName: 'appDataClearNodeAttachments' },
   { table: 'attachments', statementName: 'appDataClearAttachments' },
   { table: 'pdf_page_text', statementName: 'appDataClearPdfPageText' },

@@ -11,7 +11,7 @@ export const COMPLETE_MEMBER_SHARED_POLICY_KEYS = [
   'import_source',
   'node',
   'node_open_state',
-  'node_order',
+  'parent_child_order',
   'node_reading',
   'node_review',
   'node_text_alternative',

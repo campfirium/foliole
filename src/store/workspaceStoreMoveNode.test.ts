@@ -187,6 +187,33 @@ it('moves selected root nodes before target and preserves relative order', async
   ]);
 });
 
+it('keeps a concurrent change in another parent while a move is pending', async () => {
+  const rootA = (await useWorkspaceStore.getState().createRootNode('A', 'folder'))!;
+  const rootB = (await useWorkspaceStore.getState().createRootNode('B', 'folder'))!;
+  const virtualA = (await useWorkspaceStore.getState().createVirtualNode())!;
+  const virtualB = (await useWorkspaceStore.getState().createVirtualNode())!;
+  let completeMove!: (value: unknown) => void;
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn((command, args?: unknown) => {
+    if (command !== 'move_nodes') return Promise.resolve(null);
+    return new Promise((resolve) => {
+      completeMove = () => resolve({
+        movedNodeIds: (args as { nodes: Array<{ nodeId: string }> }).nodes.map((node) => node.nodeId),
+        nodeOrder: (args as { nodeOrder: string[] }).nodeOrder
+      });
+    });
+  }));
+  const pending = useWorkspaceStore.getState().moveNodes([rootB], rootA, 'before');
+  useWorkspaceStore.setState((state) => ({
+    nodeOrder: state.nodeOrder.map((id) => id === virtualA ? virtualB : id === virtualB ? virtualA : id)
+  }));
+  completeMove(null);
+
+  expect(await pending).toBe(true);
+  const order = useWorkspaceStore.getState().nodeOrder;
+  expect(order.indexOf(rootB)).toBeLessThan(order.indexOf(rootA));
+  expect(order.indexOf(virtualB)).toBeLessThan(order.indexOf(virtualA));
+});
+
 it('moves nodes into inbox as the newest inbox children', async () => {
   const firstInboxChildId = (await useWorkspaceStore.getState().createChildNode(INBOX_NODE_ID, 'Old inbox item'))!;
   const rootId = (await useWorkspaceStore.getState().createRootNode('Moved into inbox', 'folder'))!;

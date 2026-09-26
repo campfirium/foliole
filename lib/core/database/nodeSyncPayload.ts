@@ -28,7 +28,7 @@ export interface NodeSyncHashInput {
   kind: string;
   openingText: string | null;
   parentId: string | null;
-  position: number | null;
+  position?: number | null;
   priority: number | null;
   reveal: string | null;
   title: string;
@@ -82,7 +82,6 @@ export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
     kind: input.kind,
     opening_text: normalizeNullableText(input.openingText),
     parent_id: normalizeNullableText(input.parentId),
-    position: input.position ?? null,
     priority: input.priority ?? null,
     reveal: normalizeNullableText(input.reveal),
     title: input.title,

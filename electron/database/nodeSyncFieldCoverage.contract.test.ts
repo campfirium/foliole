@@ -16,6 +16,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 const NODE_SYNC_METADATA_COLUMNS = ['current_version_id', 'last_modified_by_host_name', 'sync_dirty'];
 const NODE_HASH_SIDE_PAYLOAD_FIELDS = ['attachments'];
 const NODE_DERIVED_BODY_RESOURCE_IDENTITY_COLUMNS = ['body_blob_hash'];
+const RETIRED_NODE_ORDER_COLUMNS = ['position'];
 const SYNC_PACK_NODE_UPSERT_PENDING_COLUMNS = [
   'last_modified_by_host_name',
   'position',
@@ -61,7 +62,7 @@ it('keeps node sync field coverage explicit across schema, hash, snapshot, and a
   expect(androidColumns).toEqual(desktopColumns);
   expectComparableFields(canonicalHashFields(), expectedHashPayloadFields(desktopColumns));
   expectComparableFields(desktopSnapshotFields(), expectedSnapshotFields(desktopColumns));
-  expectComparableFields(remoteNodeUpsertColumns(), desktopColumns);
+  expectComparableFields(remoteNodeUpsertColumns(), withoutFields(desktopColumns, RETIRED_NODE_ORDER_COLUMNS));
   expectComparableFields(wireSnapshotFields(), expectedSnapshotFields(desktopColumns));
   expect(loadNodeColumns(PACK_SCHEMA)).toEqual([...SYNC_PACK_NODE_COLUMNS].sort());
   expect(SYNC_PACK_NODE_COLUMNS).not.toContain('position');
@@ -130,7 +131,6 @@ function desktopSnapshotFields() {
     'manual_child_order',
     'opening_text',
     'parent_id',
-    'position',
     'priority',
     'reveal',
     'sequential_reading_enabled',
@@ -142,7 +142,7 @@ function desktopSnapshotFields() {
 }
 
 function wireSnapshotFields() {
-  return [...WIRE_SNAPSHOT_FIELDS].sort();
+  return WIRE_SNAPSHOT_FIELDS.filter((field) => field !== 'position').sort();
 }
 
 function remoteNodeUpsertColumns() {
@@ -159,14 +159,15 @@ function syncPackNodeUpsertPendingColumns(schemaColumns: string[]) {
 
 function expectedHashPayloadFields(schemaColumns: string[]) {
   return [
-    ...withoutFields(schemaColumns, [...NODE_SYNC_METADATA_COLUMNS, ...NODE_DERIVED_BODY_RESOURCE_IDENTITY_COLUMNS]),
+    ...withoutFields(schemaColumns, [...NODE_SYNC_METADATA_COLUMNS,
+      ...NODE_DERIVED_BODY_RESOURCE_IDENTITY_COLUMNS, ...RETIRED_NODE_ORDER_COLUMNS]),
     ...NODE_HASH_SIDE_PAYLOAD_FIELDS
   ].sort();
 }
 
 function expectedSnapshotFields(schemaColumns: string[]) {
   return [
-    ...withoutFields(schemaColumns, NODE_SYNC_METADATA_COLUMNS),
+    ...withoutFields(schemaColumns, [...NODE_SYNC_METADATA_COLUMNS, ...RETIRED_NODE_ORDER_COLUMNS]),
     ...NODE_HASH_SIDE_PAYLOAD_FIELDS
   ].sort();
 }

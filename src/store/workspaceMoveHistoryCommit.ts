@@ -1,11 +1,12 @@
 import { pushWorkspaceUndoEntry } from './workspaceActionHistory';
 import { resolveWorkspaceBrowseRootForTarget } from './workspaceBrowseRoot';
+import { applyMoveToCurrentOrder, moveSiblingOrderUnchanged } from './workspaceMoveScopedOrder';
 import type { WorkspaceState } from './workspaceStore';
 import type { MoveNodesTransaction } from './workspaceStoreTreeActions';
 import { createStructureMoveEntry, isWorkspaceStructureKind } from './workspaceStructureHistoryEntries';
 
 function buildCommittedMovePatch(state: WorkspaceState, transaction: MoveNodesTransaction) {
-  if (state.nodeOrder.join('\0') !== transaction.sourceNodeOrder.join('\0') ||
+  if (!moveSiblingOrderUnchanged(state, transaction.sourceSiblingOrder) ||
       Object.entries(transaction.sourceNodesById).some(([nodeId, node]) => state.nodesById[nodeId] !== node)) {
     return null;
   }
@@ -14,7 +15,13 @@ function buildCommittedMovePatch(state: WorkspaceState, transaction: MoveNodesTr
     const nextNode = transaction.patch.nodesById[nodeId];
     if (nextNode) nodesById[nodeId] = nextNode;
   });
-  const targetPatch = { nodeOrder: transaction.patch.nodeOrder, nodesById };
+  const targetPatch = {
+    nodeOrder: applyMoveToCurrentOrder({
+      state, rootIds: transaction.rootNodeIds, targetNodeId: transaction.targetNodeId,
+      intent: transaction.intent, nodesById
+    }),
+    nodesById
+  };
   if (!transaction.movedActiveTopic || !transaction.activeNodeIdAtRequest ||
       state.activeNodeId !== transaction.activeNodeIdAtRequest ||
       state.browseRootNodeId !== transaction.browseRootNodeIdAtRequest) return targetPatch;

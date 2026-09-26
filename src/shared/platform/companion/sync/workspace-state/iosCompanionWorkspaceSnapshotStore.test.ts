@@ -31,7 +31,9 @@ it('loads the complete lightweight directory without transferring node bodies', 
     });
     const snapshot = await loadIosCompanionWorkspaceSnapshot(port);
     expect(Object.keys(snapshot!.nodesById)).toHaveLength(SNAPSHOT_NODE_COUNT);
-    expect(snapshot!.nodeOrder).toEqual(Array.from({ length: 1201 }, (_, index) => snapshotNodeId(1200 - index)));
+    expect(snapshot!.nodeOrder).toEqual([
+      snapshotNodeId(0), ...Array.from({ length: 1200 }, (_, index) => snapshotNodeId(1200 - index))
+    ]);
     expect(snapshot!.trashedNodeIds).toEqual([snapshotNodeId(1201)]);
     for (let index = 0; index < SNAPSHOT_NODE_COUNT; index++) {
       expect(snapshot!.nodesById[snapshotNodeId(index)]!.content).toBe('');

@@ -1,3 +1,4 @@
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import type {
   NativeReadwiseCleanupEntry,
   NativeReadwiseCleanupPreviewResult,
@@ -128,17 +129,9 @@ function buildCleanupPreview(previewedAt: string): NativeReadwiseCleanupPreviewR
 }
 
 function readRemainingNodeOrder(deletedIds: Set<string>) {
-  return (
-    openDatabaseConnection().sqlite
-      .prepare(
-        `SELECT node_order.node_id
-         FROM node_order
-         JOIN nodes ON nodes.id = node_order.node_id
-         WHERE nodes.kind = 'folder'
-         ORDER BY node_order.position ASC`
-      )
-      .all() as Array<{ node_id: string }>
-  ).map((row) => row.node_id).filter((nodeId) => !deletedIds.has(nodeId));
+  const driver = openDatabaseConnection().driver;
+  const folderIds = new Set(driver.queryAll<{ id: string }>("SELECT id FROM nodes WHERE kind = 'folder'").map((row) => row.id));
+  return loadDerivedNodeOrder(driver).filter((id) => folderIds.has(id) && !deletedIds.has(id));
 }
 
 function collectDeleteNodeIds(entries: NativeReadwiseCleanupEntry[]) {

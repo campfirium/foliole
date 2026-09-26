@@ -158,7 +158,7 @@ it('keeps fixed system roots outside user node version history', () => {
   )).toEqual({ count: 0 });
 });
 
-it('uses node_order as the sync snapshot position source', () => {
+it('omits retired ordering positions from new sync snapshots', () => {
   upsertTestNode();
   const connection = openDatabaseConnection();
   connection.driver.execute('UPDATE nodes SET kind = ?, position = NULL WHERE id = ?', ['folder', 'node-1']);
@@ -174,7 +174,7 @@ it('uses node_order as the sync snapshot position source', () => {
     [versionId ?? '']
   );
 
-  expect(JSON.parse(row?.snapshot_json ?? '{}')).toMatchObject({ position: 9 });
+  expect(JSON.parse(row?.snapshot_json ?? '{}')).not.toHaveProperty('position');
 });
 
 it('backfills sync state for already versioned nodes missing from sync_object_state', () => {

@@ -68,14 +68,14 @@ function readNodeVersion(versionId: string) {
   );
 }
 
-it('creates a position-only sync version without advancing updated_at', () => {
+it('keeps an article version unchanged after a pure reorder', () => {
   upsertTestNode('node-1', 0);
   upsertTestNode('node-2', 1);
   const initialVersionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z') ?? '';
   const initialVersion = readNodeVersion(initialVersionId);
 
   replaceNodeOrder(['node-2', 'node-1']);
-  expect(flushDirtyNodeSyncVersions('2026-04-21T10:02:00.000Z')).toContain('node-1');
+  expect(flushDirtyNodeSyncVersions('2026-04-21T10:02:00.000Z')).not.toContain('node-1');
 
   const current = openDatabaseConnection().driver.queryOne<{
     content_hash: string;
@@ -89,19 +89,16 @@ it('creates a position-only sync version without advancing updated_at', () => {
   const nextVersion = readNodeVersion(current?.current_version_id ?? '');
   const snapshot = JSON.parse(nextVersion?.snapshot_json ?? '{}') as Record<string, unknown>;
 
-  expect(nextVersion?.version_id).not.toBe(initialVersion?.version_id);
-  expect(nextVersion?.content_hash).not.toBe(initialVersion?.content_hash);
-  expect(snapshot).toMatchObject({
-    position: 1,
-    updated_at: '2026-04-21T10:00:00.000Z'
-  });
+  expect(nextVersion?.version_id).toBe(initialVersion?.version_id);
+  expect(nextVersion?.content_hash).toBe(initialVersion?.content_hash);
+  expect(snapshot).not.toHaveProperty('position');
   expect(current).toMatchObject({
     content_hash: nextVersion?.content_hash,
     updated_at: '2026-04-21T10:00:00.000Z'
   });
 });
 
-it('includes an ordinary order change in the next automatic pack without an editor close', async () => {
+it('packs an ordinary order change as one parent object without article rows', async () => {
   upsertTestNode('node-1', 0);
   upsertTestNode('node-2', 1);
   flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z');
@@ -119,23 +116,14 @@ it('includes an ordinary order change in the next automatic pack without an edit
   const rows = readPackRowsFromZip(packPath, tempRoot);
 
   expect(pack.toStateSeq).toBeGreaterThan(previousSeq);
-  expect(rows.manifest.tables).toEqual(expect.arrayContaining([
-    { name: 'node_order', row_count: 2 }
-  ]));
-  const latestPositions = new Map((rows.nodeVersions as Array<{
-    object_id: string; snapshot_json: string
-  }>).map((row) => [
-    row.object_id, JSON.parse(row.snapshot_json) as { position: number }
-  ]));
-  expect(latestPositions.get('node-1')?.position).toBe(1);
-  expect(latestPositions.get('node-2')?.position).toBe(0);
-  expect(rows.nodeVersions).toEqual(expect.arrayContaining([
-    expect.objectContaining({ object_id: 'node-1' }),
-    expect.objectContaining({ object_id: 'node-2' })
-  ]));
+  expect(rows.nodes).toEqual([]);
+  expect(rows.nodeVersions).toEqual([]);
+  expect(rows.syncObjects).toEqual([expect.objectContaining({
+    object_type: 'parent_child_order', payload_json: expect.stringContaining('node-2')
+  })]);
 });
 
-it('versions the shifted sibling when a different node moves', () => {
+it('leaves a shifted sibling clean when a different node moves', () => {
   upsertTestNode('node-1', 0);
   upsertTestNode('node-2', 1);
   upsertTestNode('node-3', 2);
@@ -146,10 +134,10 @@ it('versions the shifted sibling when a different node moves', () => {
   });
   expect(openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
     'SELECT sync_dirty FROM nodes WHERE id = ?', ['node-2']
-  )?.sync_dirty).toBe(1);
+  )?.sync_dirty).toBe(0);
 });
 
-it('versions existing nodes shifted by creating a new node', () => {
+it('leaves existing siblings clean when creating a new node', () => {
   upsertTestNode('node-1', 0);
   upsertTestNode('node-2', 1);
   flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z');
@@ -164,17 +152,17 @@ it('versions existing nodes shifted by creating a new node', () => {
   const driver = openDatabaseConnection().driver;
   expect(driver.queryAll<{ id: string }>(
     `SELECT id FROM nodes WHERE sync_dirty = 1 AND id IN ('node-1', 'node-2') ORDER BY id`
-  ).map((row) => row.id)).toEqual(['node-1', 'node-2']);
+  ).map((row) => row.id)).toEqual([]);
 });
 
-it('includes an existing unversioned position change in the next automatic pack', async () => {
+it('ignores obsolete ranking rows in the next automatic pack', async () => {
   upsertTestNode('node-1', 0);
   flushDirtyNodeSyncVersions('2026-04-21T10:01:00.000Z');
   const driver = openDatabaseConnection().driver;
   const previousSeq = driver.queryOne<{ value: number }>(
     'SELECT MAX(state_seq) AS value FROM sync_object_state'
   )!.value;
-  driver.execute('UPDATE node_order SET position = 7 WHERE node_id = ?', ['node-1']);
+  driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', ['node-1', 7]);
 
   const packPath = path.join(tempRoot, 'stale-order.syncpack');
   const pack = await buildDesktopSyncPack({
@@ -182,8 +170,6 @@ it('includes an existing unversioned position change in the next automatic pack'
     outputPath: packPath, packId: 'stale-order-pack', toPeerId: 'windows'
   });
   const rows = readPackRowsFromZip(packPath, tempRoot);
-  expect(pack.toStateSeq).toBeGreaterThan(previousSeq);
-  expect((rows.nodeVersions as Array<{ object_id: string; snapshot_json: string }>).some(
-    (row) => row.object_id === 'node-1' && JSON.parse(row.snapshot_json).position === 7
-  )).toBe(true);
+  expect(pack.toStateSeq).toBe(previousSeq);
+  expect(rows.nodeVersions).toEqual([]);
 });

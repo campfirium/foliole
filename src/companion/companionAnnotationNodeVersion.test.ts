@@ -29,7 +29,6 @@ function folderNode(): WorkspaceNodeSnapshot {
     manualChildOrder: ['child-b', 'child-a'],
     openingText: null,
     parentNodeId: null,
-    position: 37,
     priority: 4,
     reading: null,
     reveal: null,
@@ -115,7 +114,7 @@ it('keeps canonical empty relations explicit for new non-folder nodes', () => {
 
   expect(payload.attachments).toEqual([]);
   expect(payload.manual_child_order).toBeNull();
-  expect(payload.position).toBeNull();
+  expect(Object.hasOwn(payload, 'position')).toBe(false);
 });
 
 it('fails instead of persisting a non-SHA fallback hash', async () => {

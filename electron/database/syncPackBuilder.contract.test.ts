@@ -19,6 +19,8 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -73,7 +75,18 @@ function insertNodeSyncState() {
      ) VALUES ('ver_contract-v1', 'node-1', NULL, 'desktop',
        '2026-04-27T00:00:00.000Z', 'node-hash', '{"id":"node-1","title":"Node 1"}')`
   );
-  driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', ['node-1', 3]);
+  driver.execute(
+    'INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)',
+    [ROOT_CHILD_ORDER_ID, '["node-1"]', '2026-04-27T00:00:00.000Z']
+  );
+  driver.execute(
+    `INSERT INTO sync_object_state (
+       object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
+     ) VALUES ('parent_child_order', ?, 5, ?, 'desktop', '2026-04-27T00:00:00.000Z', 1)`,
+    [ROOT_CHILD_ORDER_ID, computeSyncContentHash('parent_child_order', {
+      parent_id: ROOT_CHILD_ORDER_ID, child_ids_json: '["node-1"]'
+    })]
+  );
   driver.execute(
     `INSERT INTO setting_records (
        key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at
@@ -170,13 +183,13 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
       tables: SYNC_PACK_CONTRACT_TABLES
     }),
     nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
+    parentChildOrders: [expect.objectContaining({ object_id: ROOT_CHILD_ORDER_ID })],
     importSources: SYNC_PACK_CONTRACT_IMPORT_SOURCES,
     nodeVersions: [expect.objectContaining({
       object_id: 'node-1',
       parent_version_id: null,
       version_id: 'ver_contract-v1'
     })],
-    nodeOrder: [{ node_id: 'node-1', position: 3 }],
     nodes: [expect.objectContaining({
       anchor_link: '{"id":"anchor-1","kind":"highlight"}',
       content: '',

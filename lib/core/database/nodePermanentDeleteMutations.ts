@@ -1,6 +1,9 @@
 import type { DatabaseDriver } from './driver.js';
 import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
 import { writeNodeSyncTombstonesForPermanentDelete } from './nodeSyncTombstones.js';
+import { readParentChildOrders } from './parentChildOrder.js';
+import { requireDatabaseHostName } from './syncHostIdentity.js';
+import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 import {
   advanceWorkspaceSearchSourceRevision,
   markWorkspaceSearchSourceIndexedIfSettled,
@@ -19,13 +22,13 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
   const deleteNodeReviewStatement = driver.prepare('DELETE FROM node_review WHERE node_id = ?');
   const deleteNodeReadingStatement = driver.prepare('DELETE FROM node_reading WHERE node_id = ?');
   const deleteNodeReadingHostStateStatement = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
-  const deleteNodeOrderStatement = driver.prepare('DELETE FROM node_order WHERE node_id = ?');
   const deleteNodeTextAlternativesStatement = driver.prepare('DELETE FROM node_text_alternatives WHERE node_id = ?');
   const deleteNodeOpenSyncStateStatement = driver.prepare(
     "DELETE FROM sync_object_state WHERE object_type = 'node_open_state' AND object_id = ?"
   );
   const deleteNodeStatement = driver.prepare('DELETE FROM nodes WHERE id = ?');
   driver.transaction(() => {
+    const ownedOrders = readParentChildOrders(driver);
     advanceWorkspaceSearchSourceRevision(driver);
     writeNodeSyncTombstonesForPermanentDelete(driver, input.nodeIds, input.deletedAt);
     deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver, input.nodeIds);
@@ -34,12 +37,25 @@ export function deleteNodesPermanently(driver: DatabaseDriver, input: DeleteNode
       deleteNodeReviewStatement.run([nodeId]);
       deleteNodeReadingStatement.run([nodeId]);
       deleteNodeReadingHostStateStatement.run([nodeId]);
-      deleteNodeOrderStatement.run([nodeId]);
       deleteNodeTextAlternativesStatement.run([nodeId]);
       deleteNodeOpenSyncStateStatement.run([nodeId]);
     }
     for (const nodeId of [...input.nodeIds].reverse()) {
       deleteNodeStatement.run([nodeId]);
+    }
+    const now = input.deletedAt ?? new Date().toISOString();
+    for (const nodeId of input.nodeIds) {
+      const childIds = ownedOrders.get(nodeId);
+      if (!childIds) continue;
+      driver.execute('DELETE FROM parent_child_order WHERE parent_id = ?', [nodeId]);
+      upsertSyncObjectState(driver, {
+        objectType: 'parent_child_order', objectId: nodeId,
+        contentHash: computeSyncContentHash('parent_child_order', {
+          parent_id: nodeId, child_ids_json: JSON.stringify(childIds)
+        }),
+        lastModifiedByHostName: requireDatabaseHostName(driver), updatedAt: now,
+        deletedAt: now, syncDirty: true
+      });
     }
     rewriteExistingNodeOrder(driver, input.nodeOrder);
     markWorkspaceSearchSourceRevisionQueued(driver);

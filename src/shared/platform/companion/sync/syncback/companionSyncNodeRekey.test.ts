@@ -38,8 +38,25 @@ it('moves a preserved source version onto the canonical object', async () => {
   expect(port.runs.some(([sql]) => sql.startsWith('INSERT INTO node_sync_versions ('))).toBe(false);
 });
 
+it('rekeys direct-child membership and publishes the changed parent sequence', async () => {
+  const port = new RecordingPort([{
+    parent_id: 'parent', child_ids_json: '["highlight-1","other"]'
+  }]);
+
+  await rekeyNodeObject(port, 'highlight-1', 'highlight-1~canonical', 'android#1', 'ver_canonical');
+
+  expect(port.runs).toContainEqual([
+    expect.stringContaining('INSERT INTO parent_child_order'),
+    ['parent', '["highlight-1~canonical","other"]', expect.any(String)]
+  ]);
+  expect(port.runs.some(([sql, params]) => sql.includes('INSERT OR REPLACE INTO sync_object_state')
+    && params[0] === 'parent_child_order' && params[1] === 'parent')).toBe(true);
+});
+
 class RecordingPort implements DbPort {
   readonly runs: Array<[string, DbParams]> = [];
+
+  constructor(private readonly orders: Array<{ parent_id: string; child_ids_json: string }> = []) {}
 
   async query<T extends DbRow = DbRow>(sql: string) {
     if (sql === 'PRAGMA table_info(nodes)') {
@@ -54,6 +71,8 @@ class RecordingPort implements DbPort {
         snapshot_json: JSON.stringify({ id: 'highlight-1', title: 'Selection' }),
       }] as unknown as T[];
     }
+    if (sql === 'SELECT parent_id, child_ids_json FROM parent_child_order') return this.orders as unknown as T[];
+    if (sql.includes("FROM companion_meta WHERE key = 'host_name'")) return [{ value: 'A5' }] as unknown as T[];
     return [];
   }
 

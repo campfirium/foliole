@@ -6,6 +6,7 @@ import {
 } from './androidCompanionDerivedReadSql.js';
 import { attachmentStorageKeySql } from './attachmentMetadataSql.js';
 import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.js';
+import { ROOT_CHILD_ORDER_ID } from './parentChildOrder.js';
 import { SNAPSHOT_VISIBLE_NODES_CTE_SQL, VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
@@ -109,9 +110,18 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
     resultKey: 'nodes',
     sql:
       `${SNAPSHOT_VISIBLE_NODES_CTE_SQL} ` +
-      'SELECT n.id FROM nodes n INNER JOIN visible_nodes visible ON visible.id = n.id LEFT JOIN node_order no ON no.node_id = n.id ' +
-      'ORDER BY COALESCE(no.position, 2147483647) ASC, ' +
-      'n.updated_at DESC, n.created_at DESC, n.id ASC',
+      `, ranked AS (
+        SELECT n.id, n.parent_id,
+          printf('%010d', COALESCE(CAST(j.key AS INTEGER), 999999999)) || ':' || n.created_at || ':' || n.id AS segment
+        FROM nodes n JOIN visible_nodes visible ON visible.id = n.id
+        LEFT JOIN parent_child_order p ON p.parent_id = COALESCE(n.parent_id, '${ROOT_CHILD_ORDER_ID}')
+        LEFT JOIN json_each(p.child_ids_json) j ON j.value = n.id
+      ), ordered(id, path) AS (
+        SELECT id, segment FROM ranked WHERE parent_id IS NULL
+        UNION ALL
+        SELECT child.id, parent.path || '/' || child.segment
+        FROM ranked child JOIN ordered parent ON child.parent_id = parent.id
+      ) SELECT id FROM ordered ORDER BY path`,
     columns: [{ key: 'id', source: 'id', type: 'string' }]
   },
   workspaceMetaValue: {
@@ -138,7 +148,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       "(SELECT json_extract(i.remote_import_state_json, '$.remoteLifecycle') FROM import_sources i " +
       "WHERE i.latest_node_id = n.id AND i.remote_provider = 'readwise' ORDER BY i.last_imported_at DESC LIMIT 1) AS readwise_remote_lifecycle, " +
       'n.created_at, n.updated_at, n.deleted_at, n.current_version_id, ' +
-      '(SELECT no.position FROM node_order no WHERE no.node_id = n.id) AS position, ' +
+      'NULL AS position, ' +
       'rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, ' +
       'rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, ' +
       'nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash ' +
@@ -146,8 +156,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL ' +
       'LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL ' +
       'LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ' +
-      'ORDER BY COALESCE((SELECT no.position FROM node_order no WHERE no.node_id = n.id), 2147483647), ' +
-      'n.updated_at DESC, n.created_at DESC, n.id ASC',
+      'ORDER BY n.created_at ASC, n.id ASC',
     columns: [
       { key: 'id', source: 'id', type: 'string' },
       { key: 'parent_id', source: 'parent_id', type: 'nullableString' },

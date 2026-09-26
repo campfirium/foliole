@@ -13,6 +13,7 @@ import {
   type SyncObjectPayloadApplyOptions
 } from './syncObjectLearningPayloadExecutor.js';
 import { applyNodeOpenStateObject } from './syncObjectOpenStatePayloadExecutor.js';
+import { applyParentChildOrderObject } from './syncObjectParentChildOrderPayload.js';
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
 import { applyWatchedFolderObject } from './syncObjectWatchedFolderPayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
@@ -33,6 +34,8 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyImportSourceObject(port, record);
     case 'node_open_state':
       return applyNodeOpenStateObject(port, record);
+    case 'parent_child_order':
+      return applyParentChildOrderObject(port, record);
     case 'node_reading':
       return applyNodeReadingObject(port, record, options);
     case 'node_review':

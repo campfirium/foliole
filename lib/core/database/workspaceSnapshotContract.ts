@@ -16,7 +16,7 @@ export const WORKSPACE_SNAPSHOT_FIELD_MANIFEST: readonly WorkspaceSnapshotFieldM
   { field: 'nodesById.*.authorText', kind: 'derived' },
   { field: 'nodesById.*.collections', kind: 'derived' },
   { field: 'nodesById.*.attachments', kind: 'entity' },
-  { field: 'nodesById.*.position', kind: 'entity' },
+  { field: 'nodesById.*.position', kind: 'derived' },
   { field: 'nodesById.*.currentVersionId', kind: 'entity' },
   { field: 'nodesById.*.importSourceFingerprint', kind: 'entity' },
   { field: 'nodesById.*.importContentFingerprint', kind: 'entity' },

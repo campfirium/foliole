@@ -50,12 +50,14 @@ function insertTombstone(db: Database.Database) {
     .run(JSON.stringify({ id: 'node-1', deleted_at: deletedAt }), deletedAt, deletedAt);
 }
 
-async function apply(currentCursor: number) {
+async function apply(currentCursor: number, enqueueSearchInvalidations = true) {
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-tombstone-apply' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   try {
-    return await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor, hostName: 'desktop' });
+    return await applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor, enqueueSearchInvalidations, hostName: 'desktop'
+    });
   } finally {
     await port.run('DETACH DATABASE inc');
   }
@@ -92,6 +94,25 @@ it('applies an old peer deletion even when the ordinary state cursor is already 
   expect(local.prepare("SELECT id FROM nodes WHERE id = 'node-1'").get()).toBeUndefined();
   expect(local.prepare("SELECT deleted_at FROM node_sync_tombstones WHERE node_id = 'node-1'").get())
     .toEqual({ deleted_at: deletedAt });
+});
+
+it('applies a deletion on a companion schema without desktop search tables', async () => {
+  const local = openDatabaseConnection().sqlite;
+  local.prepare(`INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+    VALUES ('node-1', 'topic', 'Old peer copy', '', ?, ?)`).run(deletedAt, deletedAt);
+  local.exec('DROP TABLE settings; DROP TABLE search_index_invalidations');
+  const incoming = new Database(incomingPath);
+  try {
+    incoming.exec("DELETE FROM nodes; DELETE FROM node_sync_versions; DELETE FROM sync_object_state WHERE object_type = 'node'");
+    insertTombstone(incoming);
+  } finally {
+    incoming.close();
+  }
+
+  await expect(apply(1, false)).resolves.toMatchObject({
+    applied: false, appliedTombstoneNodeIds: ['node-1']
+  });
+  expect(local.prepare("SELECT id FROM nodes WHERE id = 'node-1'").get()).toBeUndefined();
 });
 
 it('applies parent and child deletions in foreign-key-safe order', async () => {
