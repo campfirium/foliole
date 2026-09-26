@@ -11,6 +11,7 @@
   "companion.reading.font.family": "Carattere tipografico",
   "companion.reading.font.family.sans": "Sans",
   "companion.reading.font.family.serif": "Serif",
+  "companion.reading.font.system": "Caratteri del dispositivo",
   "companion.reading.font.import": "Aggiungi carattere",
   "companion.reading.font.remove": "Rimuovi",
   "companion.reading.font.importError": "Impossibile aggiungere questo carattere. Scegli un file TTF o OTF inferiore a 20 MB.",

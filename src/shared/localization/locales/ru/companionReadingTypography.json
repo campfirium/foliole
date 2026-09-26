@@ -11,6 +11,7 @@
   "companion.reading.font.family": "Гарнитура",
   "companion.reading.font.family.sans": "Санс",
   "companion.reading.font.family.serif": "с засечками",
+  "companion.reading.font.system": "Шрифты устройства",
   "companion.reading.font.import": "Добавить шрифт",
   "companion.reading.font.remove": "Удалить",
   "companion.reading.font.importError": "Не удалось добавить шрифт. Выберите файл TTF или OTF размером менее 20 МБ.",

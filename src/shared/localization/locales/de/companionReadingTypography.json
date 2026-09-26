@@ -11,6 +11,7 @@
   "companion.reading.font.family": "Schriftart",
   "companion.reading.font.family.sans": "Sans",
   "companion.reading.font.family.serif": "Serif",
+  "companion.reading.font.system": "Geräteschriften",
   "companion.reading.font.import": "Schrift hinzufügen",
   "companion.reading.font.remove": "Entfernen",
   "companion.reading.font.importError": "Diese Schrift konnte nicht hinzugefügt werden. Wähle eine TTF- oder OTF-Datei unter 20 MB.",

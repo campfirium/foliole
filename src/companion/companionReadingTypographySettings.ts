@@ -1,6 +1,6 @@
 export type CompanionReadingFontSize = 'small' | 'default' | 'large' | 'xlarge';
 export type CompanionReadingLineHeight = 'compact' | 'default' | 'relaxed';
-export type CompanionReadingFontFamily = 'sans' | 'serif' | `custom:${string}`;
+export type CompanionReadingFontFamily = 'sans' | 'serif' | `system:${string}` | `custom:${string}`;
 export type CompanionReadingContrast = 'default' | 'high';
 
 export interface CompanionReadingTypographySettings {
@@ -35,7 +35,9 @@ export function normalizeReadingTypographySettings(value: unknown): CompanionRea
   const record = value as Record<string, unknown>;
   return {
     contrast: pickEnum(record.contrast, CONTRASTS, DEFAULT_READING_TYPOGRAPHY_SETTINGS.contrast),
-    fontFamily: typeof record.fontFamily === 'string' && /^custom:[0-9a-f-]{36}$/.test(record.fontFamily)
+    fontFamily: typeof record.fontFamily === 'string' && (
+      /^custom:[0-9a-f-]{36}$/.test(record.fontFamily) || /^system:[\p{L}\p{N} ._-]{1,80}$/u.test(record.fontFamily)
+    )
       ? record.fontFamily as CompanionReadingFontFamily
       : pickEnum(record.fontFamily, FONT_FAMILIES, DEFAULT_READING_TYPOGRAPHY_SETTINGS.fontFamily),
     fontSize: pickEnum(record.fontSize, FONT_SIZES, DEFAULT_READING_TYPOGRAPHY_SETTINGS.fontSize),

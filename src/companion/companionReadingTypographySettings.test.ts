@@ -44,6 +44,12 @@ describe('companion reading typography settings', () => {
     expect(loadReadingTypographySettings()).toEqual(selected);
   });
 
+  it('keeps a device font choice across reloads', () => {
+    const selected = { ...DEFAULT_READING_TYPOGRAPHY_SETTINGS, fontFamily: 'system:Noto Sans SC' as const };
+    expect(saveReadingTypographySettings(selected)).toBe(true);
+    expect(loadReadingTypographySettings()).toEqual(selected);
+  });
+
   it('returns false instead of throwing when local persistence fails', () => {
     const storage = {
       setItem: () => {

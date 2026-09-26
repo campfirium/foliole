@@ -61,6 +61,14 @@ function renderReadableArticleDocument(props: Partial<Parameters<typeof Readable
 }
 
 describe('ReadableArticleDocument editing', () => {
+  it('uses a selected device font for readable content', () => {
+    const { container } = renderReadableArticleDocument({
+      readingTypographySettings: { ...defaultReadingTypographySettings, fontFamily: 'system:Noto Sans SC' }
+    });
+    expect(container.querySelector('[data-reading-font-family]'))
+      .toHaveStyle({ '--content-panel-font-family': '"Noto Sans SC", var(--font-family-sans)' });
+  });
+
   it('keeps the document read-only when no save handler exists', () => {
     renderReadableArticleDocument();
 

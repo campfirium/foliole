@@ -11,6 +11,7 @@
   "companion.reading.font.family": "Tipo de letra",
   "companion.reading.font.family.sans": "Sem",
   "companion.reading.font.family.serif": "Serif",
+  "companion.reading.font.system": "Fontes do dispositivo",
   "companion.reading.font.import": "Adicionar fonte",
   "companion.reading.font.remove": "Remover",
   "companion.reading.font.importError": "Não foi possível adicionar esta fonte. Escolha um arquivo TTF ou OTF com menos de 20 MB.",
