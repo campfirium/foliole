@@ -116,8 +116,12 @@ final class FolioleCompanionSyncGroupJoinScenario {
             return groupId;
         }
         long deadline = stageDeadline();
+        int candidateCount = 0;
+        int responseCount = 0;
+        String lastFailure = "none";
         while (System.nanoTime() < deadline) {
             for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
+                candidateCount += 1;
                 String endpointKey = FolioleCompanionHostBridgeContractDefinitions
                     .networkEndpointUrlCandidateKey(context);
                 String endpoint = candidate.optString(endpointKey);
@@ -127,6 +131,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
                     String bodyKey = FolioleCompanionHostBridgeContractDefinitions
                         .networkBodyResponseKey(context);
                     JSONObject discovery = new JSONObject(response.getString(bodyKey));
+                    responseCount += 1;
                     boolean idMatches = groupId.equals(discovery.optString("group_id"));
                     boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
                     if (idMatches && tagMatches) return groupId;
@@ -136,12 +141,14 @@ final class FolioleCompanionSyncGroupJoinScenario {
                 } catch (IllegalStateException identityMismatch) {
                     throw identityMismatch;
                 } catch (Exception unreachableProvider) {
+                    lastFailure = unreachableProvider.getClass().getSimpleName();
                     Log.i(LOG_TAG, "stage=provider-unreachable endpoint=" + endpoint);
                 }
             }
             Thread.sleep(500);
         }
-        throw new IllegalStateException("acceptance_group_identity_not_found");
+        throw new IllegalStateException("acceptance_group_identity_not_found candidates="
+            + candidateCount + " responses=" + responseCount + " lastFailure=" + lastFailure);
     }
 
     private static void assertEndpointIdentity(
