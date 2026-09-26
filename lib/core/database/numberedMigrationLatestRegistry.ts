@@ -18,6 +18,7 @@ import { migrateSyncGroupHosts } from './numberedMigrationSyncGroupHosts.js';
 import { repairSyncObjectStateBaseContentHash } from './numberedMigrationSyncStateBaseHash.js';
 import { migrateWatchedDeviceBindings } from './numberedMigrationWatchedDeviceBindings.js';
 import { migrateWatchedSourceIdentity } from './numberedMigrationWatchedSourceIdentity.js';
+import { recoverWatchedSourcesAndPaths } from './numberedMigrationWatchedSourceRecovery.js';
 import { migrateReadwiseApiImport } from './readwiseApiImportMigration.js';
 import { migrateReadwiseApiReconcile } from './readwiseApiReconcileMigration.js';
 import { migrateReadwiseAutoImportPolicy } from './readwiseAutoImportPolicyMigration.js';
@@ -89,5 +90,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 97, migrate: (sqlite) => addColumnIfMissing(sqlite, 'nodes', 'image_sources', 'TEXT') },
   { version: 98, migrate: retireAttachmentManifest },
   { version: 99, migrate: migrateWatchedDeviceBindings },
-  { version: 100, migrate: migrateWatchedSourceIdentity }
+  { version: 100, migrate: migrateWatchedSourceIdentity },
+  { version: 101, migrate: recoverWatchedSourcesAndPaths }
 ];

@@ -19,7 +19,7 @@ import { migrateDesktopHostProfile } from './hostProfile.js';
 
 const BASELINE = {
   companionSchema: 39,
-  desktopSchema: 100,
+  desktopSchema: 101,
   protocol: 10,
   syncPack: 15,
   syncPackPayloadSchema: 88
