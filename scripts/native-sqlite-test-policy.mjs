@@ -61,6 +61,7 @@ const controlledElectronSqliteTests = [
   'electron/database/syncGroupRemovalMigration.test.ts',
   'electron/database/systemEntryDisplayNamesSyncContract.test.ts',
   'electron/database/syncStateBaseContentHashMigration.test.ts',
+  'electron/database/watchedFolderConflictMigration.test.ts',
   'electron/database/watchedGroupOwnershipTransition.test.ts',
   'electron/database/watchedSourceIdentityMigration.test.ts',
   'electron/database/watchedSourceRecoveryMigration.test.ts',
