@@ -1,6 +1,7 @@
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
+import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
-import { openDatabaseConnection } from './connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
 
 export const SEARCH_INVALIDATION_IDLE_FLUSH_MS = 1000;
 export const SEARCH_INVALIDATION_MAX_FLUSH_MS = 5000;
@@ -24,10 +25,16 @@ function scheduleFlushTimers() {
   if (idleTimer) {
     clearTimeout(idleTimer);
   }
-  idleTimer = setTimeout(flushCoalescedWorkspaceSearchInvalidations, SEARCH_INVALIDATION_IDLE_FLUSH_MS);
+  idleTimer = setTimeout(flushFromTimer, SEARCH_INVALIDATION_IDLE_FLUSH_MS);
   if (!maxTimer) {
-    maxTimer = setTimeout(flushCoalescedWorkspaceSearchInvalidations, SEARCH_INVALIDATION_MAX_FLUSH_MS);
+    maxTimer = setTimeout(flushFromTimer, SEARCH_INVALIDATION_MAX_FLUSH_MS);
   }
+}
+
+function flushFromTimer() {
+  void flushCoalescedWorkspaceSearchInvalidations().catch((error) => {
+    appendMainProcessDiagnosticLog('search_index_invalidation_flush_failed', { error });
+  });
 }
 
 export function enqueueCoalescedWorkspaceSearchInvalidation(nodeIds: string[]) {
@@ -42,19 +49,18 @@ export function enqueueCoalescedWorkspaceSearchInvalidation(nodeIds: string[]) {
   }
 }
 
-export function flushCoalescedWorkspaceSearchInvalidations() {
-  if (pendingWorkspaceNodeIds.size === 0) {
-    clearFlushTimers();
-    return;
-  }
-  const nodeIds = [...pendingWorkspaceNodeIds];
-  pendingWorkspaceNodeIds.clear();
+export async function flushCoalescedWorkspaceSearchInvalidations() {
   clearFlushTimers();
-  enqueueWorkspaceSearchInvalidationForNodeIds(
-    openDatabaseConnection().driver,
-    nodeIds,
-    { advanceSourceRevision: false }
-  );
+  await runWithDatabaseConnectionOwner(() => {
+    if (pendingWorkspaceNodeIds.size === 0) return;
+    const nodeIds = [...pendingWorkspaceNodeIds];
+    enqueueWorkspaceSearchInvalidationForNodeIds(
+      openDatabaseConnection().driver,
+      nodeIds,
+      { advanceSourceRevision: false }
+    );
+    nodeIds.forEach((nodeId) => pendingWorkspaceNodeIds.delete(nodeId));
+  });
 }
 
 export function resetSearchInvalidationCoalescerForTests() {

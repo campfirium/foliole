@@ -96,10 +96,10 @@ function installBeforeQuitLifecycle() {
       void stopDevScreenshotServer().catch((error) => appendMainProcessDiagnosticLog('dev_screenshot_stop_failed', { error }));
       void stopAgentControlApiServer().catch((error) => appendMainProcessDiagnosticLog('agent_control_stop_failed', { error }));
       void stopLanWorkspaceSyncServer().catch((error) => appendMainProcessDiagnosticLog('lan_sync_stop_failed', { error }));
-      flushCoalescedWorkspaceSearchInvalidations();
     },
     flush: async () => {
       await flushReadingProgressForWindows(BrowserWindow.getAllWindows());
+      await flushCoalescedWorkspaceSearchInvalidations();
       await waitForApplicationDatabaseRestoreSettlement();
       await disposeBackupSearchSessions();
       await flushMirrorSync();

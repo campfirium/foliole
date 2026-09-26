@@ -5,11 +5,19 @@ import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagno
 import { notifyCurrentSearchIndexStatus } from '../ipc/searchIndexRebuild.js';
 import { runWorkspaceSearchMaintenanceInWorker } from '../ipc/searchIndexRebuildWorkerClient.js';
 
+import { runWithDatabaseConnectionOwner } from './connection.js';
+
 const BATCH_LIMIT = 500;
 
 let active: DesktopTaskHandle | null = null;
 let requested = false;
 let stopped = true;
+
+function notifyStatusWhenConnectionAvailable() {
+  void runWithDatabaseConnectionOwner(notifyCurrentSearchIndexStatus).catch((error) => {
+    appendMainProcessDiagnosticLog('search_index_status_notification_failed', { error });
+  });
+}
 
 export function startSearchIndexInvalidationScheduler() {
   stopped = false;
@@ -34,7 +42,7 @@ function scheduleSearchIndexInvalidationProcessing() {
     run: (context) => runWorkspaceSearchMaintenanceInWorker(BATCH_LIMIT, context.signal)
   });
   active = handle;
-  notifyCurrentSearchIndexStatus();
+  notifyStatusWhenConnectionAvailable();
   void handle.promise.then((value) => {
     const result = value as { failed: number; processed: number } | undefined;
     if (result?.failed) throw new Error(`Search indexing failed for ${result.failed} queued items.`);
@@ -42,7 +50,7 @@ function scheduleSearchIndexInvalidationProcessing() {
   }).catch((error) => {
     if (!stopped) appendMainProcessDiagnosticLog('search_index_invalidation_processing_failed', { error });
   }).finally(() => {
-    notifyCurrentSearchIndexStatus();
+    notifyStatusWhenConnectionAvailable();
     if (active === handle) active = null;
     if (requested && !stopped) scheduleSearchIndexInvalidationProcessing();
   });

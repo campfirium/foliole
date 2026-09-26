@@ -86,15 +86,17 @@ vi.mock('./ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(und
 vi.mock('./ipc/menu.js', () => ({ installAppMenu: vi.fn() }));
 vi.mock('./ipc/paths.js', () => ({ resolveAppPaths: vi.fn(() => ({ app_log_dir: '/logs' })) }));
 
-it('keeps the current window alive until restore settles before quitting', async () => {
+it('waits for search invalidations and restore settlement before quitting', async () => {
+  let finishFlush = () => {};
+  const flushSettlement = new Promise<void>((resolve) => {
+    finishFlush = resolve;
+  });
   let finishRestore = () => {};
   const restoreSettlement = new Promise<void>((resolve) => {
     finishRestore = resolve;
   });
   mocks.waitForApplicationDatabaseRestoreSettlement.mockReturnValueOnce(restoreSettlement);
-  mocks.flushCoalescedWorkspaceSearchInvalidations.mockImplementationOnce(() => {
-    throw new Error('sqlite connection is owned by restore maintenance');
-  });
+  mocks.flushCoalescedWorkspaceSearchInvalidations.mockReturnValueOnce(flushSettlement);
   const { installMainLifecycle } = await import('./mainLifecycle.js');
 
   installMainLifecycle({
@@ -111,9 +113,12 @@ it('keeps the current window alive until restore settles before quitting', async
   beforeQuitHandler?.({ preventDefault });
 
   expect(preventDefault).toHaveBeenCalledOnce();
-  expect(mocks.flushCoalescedWorkspaceSearchInvalidations).toHaveBeenCalledTimes(1);
+  await vi.waitFor(() => expect(mocks.flushCoalescedWorkspaceSearchInvalidations).toHaveBeenCalledTimes(1));
   expect(mocks.app.quit).not.toHaveBeenCalled();
+  expect(mocks.waitForApplicationDatabaseRestoreSettlement).not.toHaveBeenCalled();
 
+  finishFlush();
+  await vi.waitFor(() => expect(mocks.waitForApplicationDatabaseRestoreSettlement).toHaveBeenCalledOnce());
   finishRestore();
   await vi.waitFor(() => expect(mocks.app.quit).toHaveBeenCalledOnce());
 });

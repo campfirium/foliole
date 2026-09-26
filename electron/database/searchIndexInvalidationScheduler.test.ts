@@ -3,6 +3,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   appendLog: vi.fn(),
+  notify: vi.fn(),
+  owner: vi.fn((execute: () => unknown) => Promise.resolve().then(execute)),
   process: vi.fn(),
   setScheduler: vi.fn()
 }));
@@ -15,8 +17,9 @@ vi.mock('../ipc/searchIndexRebuildWorkerClient.js', () => ({
 vi.mock('../diagnostics/mainProcessDiagnostics.js', () => ({
   appendMainProcessDiagnosticLog: mocks.appendLog
 }));
+vi.mock('./connection.js', () => ({ runWithDatabaseConnectionOwner: mocks.owner }));
 vi.mock('../ipc/boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined) }));
-vi.mock('../ipc/searchIndexRebuild.js', () => ({ notifyCurrentSearchIndexStatus: vi.fn() }));
+vi.mock('../ipc/searchIndexRebuild.js', () => ({ notifyCurrentSearchIndexStatus: mocks.notify }));
 
 import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 
@@ -67,4 +70,18 @@ it('reports failures without repeatedly retrying the same failing backlog', asyn
   await vi.runAllTimersAsync();
   expect(mocks.process).toHaveBeenCalledOnce();
   expect(mocks.appendLog).toHaveBeenCalledWith('search_index_invalidation_processing_failed', expect.any(Object));
+});
+
+it('waits for a database owner before reading status after worker completion', async () => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  mocks.owner.mockImplementation(async (execute: () => unknown) => {
+    await gate;
+    return execute();
+  });
+  startSearchIndexInvalidationScheduler();
+  await vi.runAllTimersAsync();
+  expect(mocks.notify).not.toHaveBeenCalled();
+  release();
+  await vi.waitFor(() => expect(mocks.notify).toHaveBeenCalled());
 });

@@ -3,14 +3,16 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   driver: {},
-  enqueueWorkspaceSearchInvalidationForNodeIds: vi.fn()
+  enqueueWorkspaceSearchInvalidationForNodeIds: vi.fn(),
+  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => Promise.resolve().then(execute))
 }));
 
 vi.mock('../../lib/core/database/searchIndexInvalidations.js', () => ({
   enqueueWorkspaceSearchInvalidationForNodeIds: mocks.enqueueWorkspaceSearchInvalidationForNodeIds
 }));
 vi.mock('./connection.js', () => ({
-  openDatabaseConnection: () => ({ driver: mocks.driver })
+  openDatabaseConnection: () => ({ driver: mocks.driver }),
+  runWithDatabaseConnectionOwner: mocks.runWithDatabaseConnectionOwner
 }));
 
 beforeEach(() => {
@@ -69,7 +71,7 @@ it('flushes pending invalidations on demand', async () => {
   } = await import('./searchIndexInvalidationCoalescer.js');
 
   enqueueCoalescedWorkspaceSearchInvalidation(['node-1']);
-  flushCoalescedWorkspaceSearchInvalidations();
+  await flushCoalescedWorkspaceSearchInvalidations();
 
   expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledWith(
     mocks.driver,
@@ -78,4 +80,29 @@ it('flushes pending invalidations on demand', async () => {
   );
   await vi.runAllTimersAsync();
   expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledTimes(1);
+});
+
+it('waits for a connection owner and preserves pending nodes when the write fails', async () => {
+  const { enqueueCoalescedWorkspaceSearchInvalidation, flushCoalescedWorkspaceSearchInvalidations } =
+    await import('./searchIndexInvalidationCoalescer.js');
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  mocks.runWithDatabaseConnectionOwner.mockImplementationOnce(async (execute: () => unknown) => {
+    await gate;
+    return execute();
+  });
+  mocks.enqueueWorkspaceSearchInvalidationForNodeIds.mockImplementationOnce(() => {
+    throw new Error('write failed');
+  });
+
+  enqueueCoalescedWorkspaceSearchInvalidation(['node-1']);
+  const first = flushCoalescedWorkspaceSearchInvalidations();
+  await Promise.resolve();
+  expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).not.toHaveBeenCalled();
+  release();
+  await expect(first).rejects.toThrow('write failed');
+  await flushCoalescedWorkspaceSearchInvalidations();
+  expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenLastCalledWith(
+    mocks.driver, ['node-1'], { advanceSourceRevision: false }
+  );
 });
