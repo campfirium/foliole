@@ -18,9 +18,11 @@ import { resolveExecutableWatchedBinding, upsertChangedWatchedFolderSource } fro
 import {
   applyRemoteWatchedFolderConflictDecisions,
   loadPendingWatchedFolderConflicts,
+  markWatchedFolderConflictReconciled,
   saveWatchedFolderConflictDecision
 } from './watchedFolderConflictDecisions.js';
 import { applyRemoteWatchedFolderGroupSources } from './watchedFolderGroupSources.js';
+import { reconcileWatchedLegacyImportsAfterSync } from './watchedLegacyImportReconcile.js';
 
 let root = '';
 beforeEach(async () => {
@@ -78,6 +80,8 @@ it('pauses only a same-path conflict and applies the saved device choice without
   const decision = saveWatchedFolderConflictDecision(conflict!.conflict_key,
     [local.binding_id, 'remote-binding']);
   expect(loadPendingWatchedFolderConflicts()).toEqual([]);
+  expect(resolveExecutableWatchedBinding('local-rule', folder).executable).toBe(false);
+  markWatchedFolderConflictReconciled(decision.conflict_key, '2026-09-26T00:01:00.000Z');
   expect(resolveExecutableWatchedBinding('local-rule', folder).executable).toBe(true);
 
   applyRemoteWatchedFolderConflictDecisions([{
@@ -89,4 +93,71 @@ it('pauses only a same-path conflict and applies the saved device choice without
   expect(openDatabaseConnection().driver.queryOne(
     'SELECT binding_id FROM watched_folder_bindings WHERE binding_id = ?', [local.binding_id]
   )).toEqual({ binding_id: local.binding_id });
+});
+
+it('assigns one copied legacy import to the selected source without changing its article identity', async () => {
+  const folder = path.join(root, 'shared');
+  await fs.mkdir(folder);
+  const local = upsertChangedWatchedFolderSource({
+    actionMode: 'keep', archivePath: '', highlightMode: 'merged', highlightPath: '',
+    id: 'draft-import-source-102', keepPreview: null, keepState: 'enabled', primaryPath: folder
+  }, '2026-09-26T00:00:00.000Z')!;
+  applyRemoteWatchedFolderGroupSources([{
+    action_mode: 'keep', binding_id: 'remote-binding', connection_status: 'connected',
+    created_at: '2026-09-26T00:00:00.000Z', highlight_mode: 'merged',
+    host_name: 'Windows', host_platform: 'win32', legacy_rule_id: 'draft-import-source-102',
+    owner_device_identity_key: 'remote-device', reported_path: folder,
+    source_ref: 'watched:remote-binding', updated_at: '2026-09-26T00:00:00.000Z'
+  }], 'remote-device');
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO import_sources (source_fingerprint, provider, source_kind,
+    source_name, source_locator, first_imported_at, last_imported_at,
+    last_content_fingerprint, latest_node_id, source_ref, source_location)
+    VALUES ('old-fingerprint', 'markdown', 'file', 'note.md', ?, 'now', 'now',
+      'content-hash', 'old-node', 'watched:draft-import-source-102', 'note.md')`,
+  [path.join(folder, 'note.md')]);
+  const [conflict] = loadPendingWatchedFolderConflicts();
+  saveWatchedFolderConflictDecision(conflict!.conflict_key, ['remote-binding']);
+  expect(resolveExecutableWatchedBinding('draft-import-source-102', folder).executable).toBe(false);
+
+  reconcileWatchedLegacyImportsAfterSync('2026-09-26T00:01:00.000Z');
+  expect(driver.queryOne(`SELECT source_fingerprint, latest_node_id, watched_binding_id,
+    watched_relative_path, source_ref FROM import_sources WHERE source_fingerprint = 'old-fingerprint'`))
+    .toEqual({ source_fingerprint: 'old-fingerprint', latest_node_id: 'old-node',
+      watched_binding_id: 'remote-binding', watched_relative_path: 'note.md',
+      source_ref: 'watched:remote-binding' });
+  expect(driver.queryOne(`SELECT local_reconciled_at FROM watched_folder_conflict_decisions`))
+    .toEqual({ local_reconciled_at: '2026-09-26T00:01:00.000Z' });
+  expect(local.binding_id).not.toBe('remote-binding');
+});
+
+it('keeps both chosen folders active while assigning old history to one stable source', async () => {
+  const folder = path.join(root, 'both-active');
+  await fs.mkdir(folder);
+  const local = upsertChangedWatchedFolderSource({
+    actionMode: 'keep', archivePath: '', highlightMode: 'merged', highlightPath: '',
+    id: 'draft-import-source-102', keepPreview: null, keepState: 'enabled', primaryPath: folder
+  }, '2026-09-26T00:00:00.000Z')!;
+  applyRemoteWatchedFolderGroupSources([{
+    action_mode: 'keep', binding_id: 'remote-binding', connection_status: 'connected',
+    created_at: '2026-09-26T00:00:00.000Z', highlight_mode: 'merged',
+    host_name: 'Windows', host_platform: 'win32', legacy_rule_id: 'draft-import-source-102',
+    owner_device_identity_key: 'remote-device', reported_path: folder,
+    source_ref: 'watched:remote-binding', updated_at: '2026-09-26T00:00:00.000Z'
+  }], 'remote-device');
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO import_sources (source_fingerprint, provider, source_kind,
+    source_name, source_locator, first_imported_at, last_imported_at,
+    last_content_fingerprint, latest_node_id, source_ref, source_location)
+    VALUES ('old-both', 'markdown', 'file', 'note.md', ?, 'now', 'now',
+    'old-hash', 'old-node', 'watched:draft-import-source-102', 'note.md')`,
+  [path.join(folder, 'note.md')]);
+  const [conflict] = loadPendingWatchedFolderConflicts();
+  saveWatchedFolderConflictDecision(conflict!.conflict_key, [local.binding_id, 'remote-binding']);
+  reconcileWatchedLegacyImportsAfterSync();
+  expect(resolveExecutableWatchedBinding('draft-import-source-102', folder).executable).toBe(true);
+  expect(driver.queryOne(`SELECT watched_binding_id, latest_node_id FROM import_sources
+    WHERE source_fingerprint = 'old-both'`)).toEqual({
+    watched_binding_id: [local.binding_id, 'remote-binding'].sort()[0], latest_node_id: 'old-node'
+  });
 });

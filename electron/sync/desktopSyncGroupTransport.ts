@@ -2,6 +2,7 @@ import { getPeerCursor, setPeerCursor } from '../../lib/core/database/syncState.
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { reconcileVersionedInlineBodies } from '../database/syncBodyProjectionReconcile.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
+import { loadPendingWatchedFolderConflicts } from '../database/watchedFolderConflictDecisions.js';
 
 import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorCommit.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
@@ -41,6 +42,8 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
     throw new Error('sync_group_local_device_removed');
   }
   if (memberState.peerBlocked) return { complete: false, cursor: 0 };
+  const pendingConflicts = await runWithDatabaseConnectionOwner(() => loadPendingWatchedFolderConflicts());
+  if (pendingConflicts.length) return { complete: false, cursor: 0 };
   const cursor = await runWithDatabaseConnectionOwner(() => loadReceiveCursor(target.peer_device_id));
   const pack = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
   await runWithDatabaseConnectionOwner(() =>

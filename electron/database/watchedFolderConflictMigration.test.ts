@@ -21,3 +21,17 @@ it('adds durable watched conflict decisions to an existing version 101 library',
     db.close();
   }
 });
+
+it('adds a local reconciliation marker to an existing version 102 decision table', () => {
+  const db = new Database(':memory:');
+  try {
+    initializeDatabaseSchema(db);
+    db.exec(`ALTER TABLE watched_folder_conflict_decisions DROP COLUMN local_reconciled_at;
+      PRAGMA user_version = 102`);
+    initializeDatabaseSchema(db);
+    expect(db.prepare(`SELECT name FROM pragma_table_info('watched_folder_conflict_decisions')
+      WHERE name = 'local_reconciled_at'`).get()).toEqual({ name: 'local_reconciled_at' });
+  } finally {
+    db.close();
+  }
+});

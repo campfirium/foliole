@@ -4,6 +4,8 @@ import type { SyncTriggerReason, SyncTriggerResult } from '../../lib/platform/sy
 import { syncTriggerError } from '../../lib/platform/syncTriggerContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+import { reconcileWatchedLegacyImportsAfterSync } from '../database/watchedLegacyImportReconcile.js';
+import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
 import {
   continueDesktopSyncGroupSync,
@@ -95,6 +97,8 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
       if (!outcome?.complete) complete = false;
     }
     if (!complete) throw new Error('sync_group_sync_incomplete');
+    await runWithDatabaseConnectionOwner(() => reconcileWatchedLegacyImportsAfterSync());
+    await refreshKeepImportMonitorFromSettings();
     const result = await persistResult({ error: null, finished_at: new Date().toISOString(), reason,
       run_id: runId, started_at: startedAt, status: 'completed' });
     for (const listener of completedListeners) listener();

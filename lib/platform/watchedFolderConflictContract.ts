@@ -6,6 +6,7 @@ export interface WatchedFolderGroupSource {
   highlight_mode: 'merged' | 'split';
   host_name: string;
   host_platform: string;
+  legacy_rule_id?: string | null;
   owner_device_identity_key: string;
   reported_path: string;
   source_ref: string;
@@ -59,6 +60,8 @@ export function parseWatchedFolderGroupSource(value: unknown): WatchedFolderGrou
       !['merged', 'split'].includes(String(source.highlight_mode))) {
     throw new Error('watched_source_invalid');
   }
+  if (source.legacy_rule_id !== undefined && source.legacy_rule_id !== null &&
+      typeof source.legacy_rule_id !== 'string') throw new Error('watched_source_invalid');
   return source as unknown as WatchedFolderGroupSource;
 }
 

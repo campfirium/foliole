@@ -16,6 +16,7 @@ interface DecisionRow extends DatabaseRow {
   decided_by_device_identity_key: string;
   decision_id: string;
   group_id: string;
+  local_reconciled_at: string | null;
   selected_binding_ids_json: string;
 }
 
@@ -55,9 +56,32 @@ export function canRunWatchedFolderConflictSource(bindingId: string) {
   const conflict = groupWatchedFolderConflicts(loadWatchedFolderGroupSources())
     .find((item) => item.sources.some((source) => source.binding_id === bindingId));
   if (!conflict) return true;
-  const decision = loadWatchedFolderConflictDecisions()
-    .find((item) => item.conflict_key === conflict.conflict_key);
-  return Boolean(decision?.selected_binding_ids.includes(bindingId));
+  const group = groupContext();
+  if (!group) return false;
+  const row = openDatabaseConnection().driver.queryOne<DecisionRow>(
+    'SELECT * FROM watched_folder_conflict_decisions WHERE group_id = ? AND conflict_key = ?',
+    [group.group_id, conflict.conflict_key]
+  );
+  return Boolean(row?.local_reconciled_at && toDecision(row).selected_binding_ids.includes(bindingId));
+}
+
+export function loadUnreconciledWatchedFolderConflictDecisions() {
+  const group = groupContext();
+  if (!group) return [];
+  return openDatabaseConnection().driver.queryAll<DecisionRow>(
+    `SELECT * FROM watched_folder_conflict_decisions
+     WHERE group_id = ? AND local_reconciled_at IS NULL`, [group.group_id]
+  ).map(toDecision);
+}
+
+export function markWatchedFolderConflictReconciled(conflictKey: string, now: string) {
+  const group = groupContext();
+  if (!group) return;
+  openDatabaseConnection().driver.execute(
+    `UPDATE watched_folder_conflict_decisions SET local_reconciled_at = ?
+     WHERE group_id = ? AND conflict_key = ? AND local_reconciled_at IS NULL`,
+    [now, group.group_id, conflictKey]
+  );
 }
 
 export function saveWatchedFolderConflictDecision(conflictKey: string, selectedBindingIds: string[]) {
@@ -103,12 +127,13 @@ function decisionOrder(value: WatchedFolderConflictDecision) {
 function writeDecision(value: WatchedFolderConflictDecision) {
   openDatabaseConnection().driver.execute(
     `INSERT INTO watched_folder_conflict_decisions (group_id, conflict_key, decision_id,
-       decided_at, decided_by_device_identity_key, selected_binding_ids_json)
-     VALUES (?, ?, ?, ?, ?, ?)
+       decided_at, decided_by_device_identity_key, selected_binding_ids_json, local_reconciled_at)
+     VALUES (?, ?, ?, ?, ?, ?, NULL)
      ON CONFLICT(group_id, conflict_key) DO UPDATE SET decision_id = excluded.decision_id,
        decided_at = excluded.decided_at,
        decided_by_device_identity_key = excluded.decided_by_device_identity_key,
-       selected_binding_ids_json = excluded.selected_binding_ids_json`,
+       selected_binding_ids_json = excluded.selected_binding_ids_json,
+       local_reconciled_at = NULL`,
     [value.group_id, value.conflict_key, value.decision_id, value.decided_at,
       value.decided_by_device_identity_key, JSON.stringify(value.selected_binding_ids)]
   );

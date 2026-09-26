@@ -20,6 +20,7 @@ export function loadWatchedFolderGroupSources(localOnly = false): WatchedFolderG
   return driver.queryAll<SourceRow>(
     `SELECT b.binding_id, b.owner_device_identity_key, b.connection_status, b.action_mode,
        b.highlight_mode, b.reported_path, b.created_at, b.updated_at, b.source_ref,
+       b.local_rule_id AS legacy_rule_id,
        s.host_name, s.host_platform
      FROM watched_folder_bindings b JOIN desktop_sources s ON s.source_ref = b.source_ref
      JOIN sync_group_devices d ON d.device_identity_key = b.owner_device_identity_key
@@ -70,14 +71,17 @@ function upsertRemoteSource(source: WatchedFolderGroupSource) {
   );
   driver.execute(
     `INSERT INTO watched_folder_bindings (binding_id, connection_status, action_mode,
-       highlight_mode, created_at, updated_at, source_ref, owner_device_identity_key, reported_path)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+       highlight_mode, created_at, updated_at, source_ref, owner_device_identity_key,
+       reported_path, local_rule_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(binding_id) DO UPDATE SET connection_status = excluded.connection_status,
        action_mode = excluded.action_mode, highlight_mode = excluded.highlight_mode,
-       updated_at = excluded.updated_at, reported_path = excluded.reported_path
+       updated_at = excluded.updated_at, reported_path = excluded.reported_path,
+       local_rule_id = COALESCE(excluded.local_rule_id, watched_folder_bindings.local_rule_id)
      WHERE watched_folder_bindings.updated_at <= excluded.updated_at`,
     [source.binding_id, source.connection_status, source.action_mode,
       source.highlight_mode, source.created_at, source.updated_at,
-      source.source_ref, source.owner_device_identity_key, source.reported_path]
+      source.source_ref, source.owner_device_identity_key, source.reported_path,
+      source.legacy_rule_id ?? null]
   );
 }

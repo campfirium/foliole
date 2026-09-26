@@ -10,6 +10,10 @@ vi.mock('../database/settingsStore.js', () => settings);
 vi.mock('../database/connection.js', () => ({
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
 }));
+vi.mock('../database/watchedLegacyImportReconcile.js', () => ({
+  reconcileWatchedLegacyImportsAfterSync: vi.fn()
+}));
+vi.mock('../import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: vi.fn() }));
 vi.mock('./desktopSyncGroupTransport.js', () => transport);
 
 import {

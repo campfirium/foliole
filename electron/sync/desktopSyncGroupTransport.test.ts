@@ -7,6 +7,7 @@ const runtime = vi.hoisted(() => ({
   downloadResources: vi.fn(),
   exchangeMemberState: vi.fn(),
   getPeerCursor: vi.fn(),
+  loadPendingConflicts: vi.fn(),
   reconcileBodies: vi.fn(),
   refreshAdvertisement: vi.fn(),
   reportCursor: vi.fn(),
@@ -25,6 +26,9 @@ vi.mock('../database/syncBodyProjectionReconcile.js', () => ({
   reconcileVersionedInlineBodies: runtime.reconcileBodies
 }));
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: vi.fn() }));
+vi.mock('../database/watchedFolderConflictDecisions.js', () => ({
+  loadPendingWatchedFolderConflicts: runtime.loadPendingConflicts
+}));
 vi.mock('./companionMdnsAdvertisement.js', () => ({
   refreshCompanionMdnsAdvertisement: runtime.refreshAdvertisement
 }));
@@ -66,6 +70,7 @@ const peer = {
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.getPeerCursor.mockReturnValue('3');
+  runtime.loadPendingConflicts.mockReturnValue([]);
   runtime.downloadPack.mockResolvedValue({ cursor: 4, participatingArticleIds: ['article'] });
   runtime.downloadResources.mockResolvedValue(undefined);
   runtime.reportCursor.mockResolvedValue(undefined);
@@ -80,6 +85,15 @@ it('stops before content when member state marks the peer removed', async () => 
   await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: false, cursor: 0 });
   expect(runtime.downloadPack).not.toHaveBeenCalled();
   expect(runtime.downloadResources).not.toHaveBeenCalled();
+});
+
+it('exchanges sources but does not fetch articles while a watched conflict awaits a choice', async () => {
+  runtime.loadPendingConflicts.mockReturnValueOnce([{ conflict_key: 'same-path' }]);
+
+  await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: false, cursor: 0 });
+  expect(runtime.exchangeMemberState).toHaveBeenCalledOnce();
+  expect(runtime.downloadPack).not.toHaveBeenCalled();
+  expect(runtime.setPeerCursor).not.toHaveBeenCalled();
 });
 
 it('does not fetch or advance a cursor for an incompatible peer', async () => {
