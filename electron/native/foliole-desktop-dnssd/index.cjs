@@ -89,7 +89,7 @@ function normalizeEvent(event) {
 }
 
 function loadBackend() {
-  if (process.platform !== 'darwin' && process.platform !== 'win32') {
+  if (!['darwin', 'win32', 'linux'].includes(process.platform)) {
     throw new Error('desktop_dnssd_unavailable');
   }
   return require('./build/Release/foliole_desktop_dnssd.node');

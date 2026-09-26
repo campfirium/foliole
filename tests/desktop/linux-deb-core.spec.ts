@@ -41,4 +41,26 @@ test('runs the installed Linux DEB with Chromium sandbox and desktop core', asyn
   });
   await expect.poll(() => desktopWindow.evaluate(() =>
     globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.())).toBe('linux-deb-acceptance');
+  const dnsSdRegistered = await desktopSession.electronApp.evaluate(async () => {
+    // Electron evaluates this callback in its CommonJS main process.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const dnsSd = require('@foliole/desktop-dnssd') as typeof import('@foliole/desktop-dnssd');
+    let handle: ReturnType<typeof dnsSd.register> | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    try {
+      return await new Promise<boolean>((resolve, reject) => {
+        timer = setTimeout(() => reject(new Error('Linux DNS-SD registration timed out')), 5_000);
+        handle = dnsSd.register({ domain: 'local.', name: `FolioleLinux-${Date.now()}`,
+          port: 38649, txt: { device_id: 'linux-installed-smoke' },
+          type: '_foliole-sync._tcp' }, (event) => {
+          if (event.kind === 'registered') resolve(true);
+          if (event.kind === 'error') reject(new Error(`${event.code}: ${event.message}`));
+        });
+      });
+    } finally {
+      if (timer) clearTimeout(timer);
+      handle?.cancel();
+    }
+  });
+  expect(dnsSdRegistered).toBe(true);
 });

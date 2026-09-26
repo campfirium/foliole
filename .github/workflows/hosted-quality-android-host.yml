@@ -48,6 +48,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+      - name: Install Linux DNS-SD build headers
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
       - name: Run canonical Android host tail

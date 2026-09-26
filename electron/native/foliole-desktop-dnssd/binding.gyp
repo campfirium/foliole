@@ -7,6 +7,17 @@
       "defines": ["NAPI_CPP_EXCEPTIONS", "NAPI_VERSION=8"],
       "cflags_cc!": ["-fno-exceptions"],
       "conditions": [
+        ["OS=='linux'", {
+          "sources": [
+            "src/linux_operation.cc",
+            "src/linux_service.cc",
+            "src/linux_browse.cc",
+            "src/linux_registration.cc",
+            "src/linux_resolve.cc"
+          ],
+          "cflags_cc": ["-std=c++20"],
+          "libraries": ["-lavahi-client", "-lavahi-common"]
+        }],
         ["OS=='mac'", {
           "sources": ["src/macos_backend.cc", "src/macos_resolve.cc"],
           "xcode_settings": {

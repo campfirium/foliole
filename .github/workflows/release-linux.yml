@@ -107,7 +107,7 @@ jobs:
       - name: Install package and acceptance dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y apparmor apparmor-utils dbus-x11 gnome-keyring xvfb
+          sudo apt-get install -y apparmor apparmor-utils avahi-daemon dbus-x11 gnome-keyring libavahi-client-dev xvfb
           node scripts/quality/hosted-npm-ci.mjs
       - name: Build the Experimental DEB
         env:
