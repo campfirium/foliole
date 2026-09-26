@@ -1,12 +1,18 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
 
+import { publishWatchedFolderGroupMemberState } from '../sync/desktopSyncGroupMemberStateSession.js';
+
 import {
   handleInvokeRequest,
   refreshGlobalClipShortcutMock,
   resetCommandsSettingsTestDoubles
 } from './commands.settings.testSupport.js';
 import { openImportRoot, updateLibraryPathSetting } from './libraryPaths.js';
+
+vi.mock('../sync/desktopSyncGroupMemberStateSession.js', () => ({
+  publishWatchedFolderGroupMemberState: vi.fn()
+}));
 
 const RELEASE_GATE_TEST_TIMEOUT_MS = 30_000;
 
@@ -151,6 +157,7 @@ async function expectImportSettingsCommands() {
     titleStrategy: 'heading',
     updatedAt: '2026-03-25T00:05:00.000Z'
   });
+  expect(publishWatchedFolderGroupMemberState).toHaveBeenCalledOnce();
 }
 
 it('handles app, sync peer, library path, and import settings commands', async () => {
