@@ -63,6 +63,8 @@ export function startDesktopSyncGroupAutoSync() {
     () => { notifyDesktopSyncGroupOverviewChanged(); resumeReadwiseHandoff(); },
     (peer) => activateMemberRoute(group, peer),
     (deviceId) => {
+      const topology = loadDesktopAnchorTopologyState();
+      if (topology.role === 'member' && topology.anchor_device_id === deviceId) return;
       removeDesktopSyncGroupRoute(deviceId);
       updateFreshnessForRole(group.group_id);
     }

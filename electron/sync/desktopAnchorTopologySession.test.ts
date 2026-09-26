@@ -118,3 +118,50 @@ it('self-elects after the discovery grace and all candidate probes fail', async 
   await vi.waitFor(() => expect(states.at(-1)?.role).toBe('anchor'));
   session.stop();
 });
+
+it('keeps a connected anchor when a lost DNS-SD event passes the HTTP probe', async () => {
+  const service = anchorService();
+  const fetchDiscovery = vi.fn(async () => new Response(JSON.stringify({
+    group_id: 'group-1', group_tag: 'tag-1', provider_device_id: 'desktop-a',
+    provider_platform: 'darwin', topology_role: 'anchor',
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+  })));
+  const onAnchorLost = vi.fn();
+  const states: Array<{ role: string; status: string }> = [];
+  const session = startDesktopAnchorTopologySession({
+    fetchDiscovery, group, onAnchor: vi.fn(async () => true), onAnchorLost,
+    onState: (state) => states.push(state)
+  });
+
+  runtime.onService?.({ kind: 'found', service });
+  await vi.waitFor(() => expect(states.at(-1)).toMatchObject({ role: 'member', status: 'ready' }));
+  runtime.onService?.({ kind: 'lost', service });
+  await vi.waitFor(() => expect(fetchDiscovery).toHaveBeenCalledTimes(2));
+
+  expect(onAnchorLost).not.toHaveBeenCalled();
+  expect(states.at(-1)).toMatchObject({ role: 'member', status: 'ready' });
+  session.stop();
+});
+
+it('reports a lost anchor when the HTTP probe fails', async () => {
+  const service = anchorService();
+  const fetchDiscovery = vi.fn()
+    .mockResolvedValueOnce(new Response(JSON.stringify({
+      group_id: 'group-1', group_tag: 'tag-1', provider_device_id: 'desktop-a',
+      provider_platform: 'darwin', topology_role: 'anchor',
+      protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR
+    })))
+    .mockResolvedValueOnce(new Response(null, { status: 503 }));
+  const onAnchorLost = vi.fn();
+  const states: Array<{ role: string; status: string }> = [];
+  const session = startDesktopAnchorTopologySession({
+    fetchDiscovery, group, onAnchor: vi.fn(async () => true), onAnchorLost,
+    onState: (state) => states.push(state)
+  });
+
+  runtime.onService?.({ kind: 'found', service });
+  await vi.waitFor(() => expect(states.at(-1)).toMatchObject({ role: 'member', status: 'ready' }));
+  runtime.onService?.({ kind: 'lost', service });
+  await vi.waitFor(() => expect(onAnchorLost).toHaveBeenCalledWith('desktop-a'));
+  session.stop();
+});
