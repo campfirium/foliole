@@ -31,6 +31,72 @@ async function invoke<T>(page: Page, command: string, args: Record<string, unkno
     globalThis.window?.electronAPI?.invoke(input.command, input.args), { command, args }) as Promise<T>;
 }
 
+async function syncResult(app: ElectronApplication) {
+  return app.evaluate(({ app: electronApp }) => {
+    const moduleApi = process.getBuiltinModule('node:module');
+    const pathApi = process.getBuiltinModule('node:path');
+    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable');
+    const require = moduleApi.createRequire(pathApi.join(electronApp.getAppPath(), 'main.js'));
+    const connection = require(pathApi.join(electronApp.getAppPath(), 'database', 'connection.js'));
+    const coordinator = require(pathApi.join(electronApp.getAppPath(), 'sync', 'desktopSyncCoordinator.js'));
+    const topology = require(pathApi.join(electronApp.getAppPath(), 'sync', 'desktopAnchorTopologyRole.js'));
+    const routes = require(pathApi.join(electronApp.getAppPath(), 'sync', 'desktopSyncGroupRoutes.js'));
+    const members = require(pathApi.join(electronApp.getAppPath(), 'sync', 'desktopSyncGroupMemberStateSession.js'));
+    const groupStore = require(pathApi.join(electronApp.getAppPath(), 'database', 'syncGroupStore.js'));
+    return connection.runWithDatabaseConnectionOwner(() => ({
+      result: coordinator.loadDesktopSyncTriggerResult(),
+      active: Boolean(coordinator.loadActiveDesktopSyncRun()),
+      topology: topology.loadDesktopAnchorTopologyState(),
+      routes: routes.loadDesktopSyncGroupRoutes(groupStore.loadDesktopSyncGroup()?.group_id ?? ''),
+      endpoints: members.loadDesktopSyncGroupMemberEndpoints(groupStore.loadDesktopSyncGroup()?.group_id ?? '')
+    }));
+  });
+}
+
+async function expectBothSyncCompleted(provider: DesktopSession, member: DesktopSession) {
+  try {
+    for (const session of [provider, member]) {
+      await expect.poll(() => syncResult(session.electronApp), { timeout: 60_000 })
+        .toMatchObject({ result: { status: 'completed' } });
+    }
+  } catch (error) {
+    console.log('T254 sync snapshots', JSON.stringify({
+      provider: await syncResult(provider.electronApp), member: await syncResult(member.electronApp)
+    }));
+    throw error;
+  }
+}
+
+async function sourceDecisionState(app: ElectronApplication) {
+  return app.evaluate(({ app: electronApp }) => {
+    const moduleApi = process.getBuiltinModule('node:module');
+    const pathApi = process.getBuiltinModule('node:path');
+    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable');
+    const require = moduleApi.createRequire(pathApi.join(electronApp.getAppPath(), 'main.js'));
+    const connection = require(pathApi.join(electronApp.getAppPath(), 'database', 'connection.js'));
+    const decisions = require(pathApi.join(electronApp.getAppPath(), 'database',
+      'watchedFolderConflictDecisions.js'));
+    const mapping = require(pathApi.join(electronApp.getAppPath(), 'database',
+      'watchedHistoricalSourceMapping.js'));
+    return connection.runWithDatabaseConnectionOwner(() => {
+      const decision = decisions.loadWatchedFolderConflictDecisions()[0];
+      if (!decision) return null;
+      return {
+        selected: decision.selected_binding_ids,
+        aliases: decision.source_alias_refs,
+        resolved: decision.source_alias_refs.map((ref: string) =>
+          mapping.resolveWatchedHistoricalSourceRef(ref))
+      };
+    });
+  });
+}
+
+async function sharedFolder(testInfo: { outputPath(name: string): string }, browserName: string) {
+  const folder = testInfo.outputPath(`shared-articles-${browserName}`);
+  await fs.mkdir(folder, { recursive: true });
+  return folder;
+}
+
 async function addWatchedSource(app: ElectronApplication, folder: string, ruleId: string) {
   await app.evaluate(async ({ app: electronApp }, input) => {
     const moduleApi = process.getBuiltinModule('node:module');
@@ -89,10 +155,21 @@ async function moveProviderWatchedSource(page: Page, folder: string) {
   } });
 }
 
+async function expectProviderPathPropagated(providerPage: Page, memberPage: Page,
+  nextFolder: string) {
+  await fs.mkdir(nextFolder, { recursive: true });
+  await moveProviderWatchedSource(providerPage, nextFolder);
+  await expect.poll(async () => {
+    const state = await invoke<{ bindings: Array<{ primary_path: string }> }>(
+      memberPage, 'load_watched_folder_bindings'
+    );
+    return state.bindings.some((binding) => binding.primary_path === nextFolder);
+  }).toBe(true);
+}
+
 for (const savingSide of ['member', 'provider'] as const) test(
   `${savingSide} can resolve a join conflict and close both dialogs`, async ({ browserName }, testInfo) => {
-    const folder = testInfo.outputPath(`shared-articles-${browserName}`);
-    await fs.mkdir(folder, { recursive: true });
+    const folder = await sharedFolder(testInfo, browserName);
     const providerPort = await freePort();
     const memberPort = await freePort();
     let provider: DesktopSession | null = null;
@@ -138,15 +215,17 @@ for (const savingSide of ['member', 'provider'] as const) test(
       await expect(memberDialog).toHaveCount(0);
       await expect(providerDialog).toHaveCount(0);
 
+      await expectBothSyncCompleted(provider, member);
+      const providerSources = await sourceDecisionState(provider.electronApp);
+      const memberSources = await sourceDecisionState(member.electronApp);
+      expect(providerSources).toEqual(memberSources);
+      expect(providerSources?.selected).toHaveLength(1);
+      expect(providerSources?.aliases.length).toBeGreaterThan(0);
+      expect(providerSources?.resolved).toEqual(providerSources?.aliases.map(() =>
+        `watched:${providerSources.selected[0]}`));
+
       const nextFolder = testInfo.outputPath('provider-moved-articles');
-      await fs.mkdir(nextFolder, { recursive: true });
-      await moveProviderWatchedSource(providerPage, nextFolder);
-      await expect.poll(async () => {
-        const state = await invoke<{ bindings: Array<{ primary_path: string }> }>(
-          memberPage, 'load_watched_folder_bindings'
-        );
-        return state.bindings.some((binding) => binding.primary_path === nextFolder);
-      }).toBe(true);
+      await expectProviderPathPropagated(providerPage, memberPage, nextFolder);
     } finally {
       await member?.close();
       await provider?.close();

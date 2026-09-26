@@ -43,6 +43,9 @@ vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => {
 vi.mock('../database/syncGroupMemberStateStore.js', () => ({
   isDesktopSyncGroupDeviceBlocked: () => false
 }));
+vi.mock('../database/watchedFolderConflictDecisions.js', () => ({
+  loadUnreconciledWatchedFolderConflictDecisions: () => []
+}));
 vi.mock('../database/settingsStore.js', () => ({
   loadJsonSetting: () => runtime.persistedRoute,
   saveJsonSetting: (_key: string, value: null | Record<string, unknown>) => {

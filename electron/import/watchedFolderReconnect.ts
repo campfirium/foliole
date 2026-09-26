@@ -4,6 +4,8 @@ import {
   loadWatchedFolderBindings,
   upsertChangedWatchedFolderSource
 } from '../database/watchedFolderBindings.js';
+import { loadHistoricalRefsForWatchedBinding,
+  normalizeWatchedRelativeLocation } from '../database/watchedHistoricalSourceMapping.js';
 import { loadLocalWatchedRuleId } from '../database/watchedLocalSource.js';
 import { discoverDirectoryImportSources } from '../ipc/importSourcePipeline.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
@@ -30,10 +32,14 @@ export async function previewWatchedFolderReconnect(
   ]);
   const candidates = await discoverDirectoryImportSources(normalizedPath);
   const candidatePaths = new Set(candidates.map((item) => item.sourceName.replaceAll('\\', '/')));
-  const mappedPaths = new Set(openDatabaseConnection().driver.queryAll<{ watched_relative_path: string }>(
-    `SELECT watched_relative_path FROM import_sources
-     WHERE watched_binding_id = ? AND watched_relative_path IS NOT NULL`, [bindingId]
-  ).map((row) => row.watched_relative_path));
+  const refs = loadHistoricalRefsForWatchedBinding(bindingId);
+  const mappedPaths = new Set(openDatabaseConnection().driver.queryAll<{
+    watched_relative_path: string | null; source_location: string | null
+  }>(`SELECT watched_relative_path, source_location FROM import_sources
+     WHERE watched_binding_id = ?${refs.length
+    ? ` OR source_ref IN (${refs.map(() => '?').join(',')})` : ''}`, [bindingId, ...refs])
+    .map((row) => normalizeWatchedRelativeLocation(row.watched_relative_path ?? row.source_location))
+    .filter((value): value is string => Boolean(value)));
   let matchedCount = 0;
   mappedPaths.forEach((relativePath) => {
     if (candidatePaths.has(relativePath)) matchedCount += 1;

@@ -55,7 +55,10 @@ vi.mock('../sync/desktopCompanionSyncParticipation.js', () => ({
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({
   loadDesktopCompanionSyncParticipation: () => ({ enabled: true, paused: false })
 }));
-vi.mock('../sync/desktopSyncGroupAutoSync.js', () => ({ runDesktopManualSyncWithDiscovery: vi.fn() }));
+vi.mock('../sync/desktopSyncGroupAutoSync.js', () => ({
+  resumeDesktopSyncAfterWatchedDecision: vi.fn(async () => undefined),
+  runDesktopManualSyncWithDiscovery: vi.fn()
+}));
 vi.mock('../sync/desktopSyncGroupDiscoverySession.js', () => ({
   DesktopSyncGroupDiscoverySession: class {
     start() { return undefined; }

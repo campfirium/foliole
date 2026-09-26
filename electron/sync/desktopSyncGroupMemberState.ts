@@ -6,6 +6,7 @@ import {
   isDesktopSyncGroupDeviceBlocked,
   loadDesktopSyncGroupMemberState
 } from '../database/syncGroupMemberStateStore.js';
+import { loadUnreconciledWatchedFolderConflictDecisions } from '../database/watchedFolderConflictDecisions.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
 import { postDesktopWorkgroupJson } from './desktopSyncGroupHttp.js';
@@ -17,9 +18,29 @@ export const SYNC_GROUP_MEMBER_STATE_PATH = '/sync-group/member-state';
 
 export function acceptDesktopSyncGroupMemberState(bodyText: string, authenticatedDeviceId: string) {
   const incoming = parseSyncGroupMemberState(JSON.parse(bodyText));
-  const applied = applyDesktopSyncGroupMemberState(incoming, authenticatedDeviceId);
+  const applied = applyMemberStateWithDecisionChange(incoming, authenticatedDeviceId);
   markDesktopSyncGroupMemberStateReady(authenticatedDeviceId);
+  if (applied.watchedDecisionReceived && !applied.localExited) scheduleWatchedDecisionSync();
   return applied;
+}
+
+function applyMemberStateWithDecisionChange(
+  incoming: SyncGroupMemberStatePayload, authenticatedDeviceId: string
+) {
+  const before = new Set(loadUnreconciledWatchedFolderConflictDecisions().map((item) => item.decision_id));
+  const applied = applyDesktopSyncGroupMemberState(incoming, authenticatedDeviceId);
+  const watchedDecisionReceived = loadUnreconciledWatchedFolderConflictDecisions()
+    .some((item) => !before.has(item.decision_id));
+  return { ...applied, watchedDecisionReceived };
+}
+
+function scheduleWatchedDecisionSync() {
+  setImmediate(() => {
+    void import('./desktopSyncGroupAutoSync.js').then(({ resumeDesktopSyncAfterWatchedDecision }) =>
+      resumeDesktopSyncAfterWatchedDecision()).catch((error) => {
+      console.info('[sync-group] watched decision sync paused', error);
+    });
+  });
 }
 
 export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroupPeer) {
@@ -37,14 +58,16 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     secret: request.secret
   });
   const result = await runWithDatabaseConnectionOwner(() => {
-    const applied = applyDesktopSyncGroupMemberState(
+    const applied = applyMemberStateWithDecisionChange(
       parseSyncGroupMemberState(payload), peer.peer_device_id
     );
     return {
       localExited: applied.localExited,
-      peerBlocked: isDesktopSyncGroupDeviceBlocked(peer.group_id, peer.peer_device_id)
+      peerBlocked: isDesktopSyncGroupDeviceBlocked(peer.group_id, peer.peer_device_id),
+      watchedDecisionReceived: applied.watchedDecisionReceived
     };
   });
+  if (result.watchedDecisionReceived && !result.localExited) scheduleWatchedDecisionSync();
   await refreshKeepImportMonitorFromSettings();
   return result;
 }

@@ -20,6 +20,7 @@ export interface WatchedFolderConflictDecision {
   decision_id: string;
   group_id: string;
   selected_binding_ids: string[];
+  source_alias_refs?: string[];
 }
 
 export interface WatchedFolderConflict {
@@ -82,6 +83,13 @@ export function parseWatchedFolderConflictDecision(value: unknown): WatchedFolde
   if (!Array.isArray(key) || key.length !== 2 || typeof key[0] !== 'string' ||
       !Array.isArray(ids) || ids.some((id) => typeof id !== 'string') ||
       decision.selected_binding_ids.some((id) => !ids.includes(id))) {
+    throw new Error('watched_decision_invalid');
+  }
+  if (decision.source_alias_refs !== undefined &&
+      (!Array.isArray(decision.source_alias_refs) ||
+       decision.source_alias_refs.some((ref) => typeof ref !== 'string' ||
+         !(ref.startsWith('watched:draft-import-source-') ||
+           ids.includes(ref.slice('watched:'.length)))))) {
     throw new Error('watched_decision_invalid');
   }
   return decision as unknown as WatchedFolderConflictDecision;

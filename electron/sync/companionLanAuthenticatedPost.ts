@@ -109,8 +109,7 @@ async function handleAuthenticatedRoute(args: {
     try {
       const applied = acceptDesktopSyncGroupMemberState(bodyText, auth.device_id);
       writeJson(request, response, 200, applied.state, 'POST, OPTIONS');
-      notifyDesktopSyncGroupOverviewChanged();
-      setImmediate(() => { void refreshKeepImportMonitorFromSettings(); });
+      publishMemberStateEffects();
       if (applied.localExited) setImmediate(() => {
         void import('./lanWorkspaceSyncServer.js').then(({ stopLanWorkspaceSyncServer }) =>
           stopLanWorkspaceSyncServer());
@@ -121,6 +120,11 @@ async function handleAuthenticatedRoute(args: {
       }, 'POST, OPTIONS');
     }
   }
+}
+
+function publishMemberStateEffects() {
+  notifyDesktopSyncGroupOverviewChanged();
+  setImmediate(() => { void refreshKeepImportMonitorFromSettings(); });
 }
 
 async function writeReadwiseGroupSetupResponse(args: {

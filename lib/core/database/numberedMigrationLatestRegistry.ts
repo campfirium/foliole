@@ -18,6 +18,7 @@ import { migrateSyncGroupHosts } from './numberedMigrationSyncGroupHosts.js';
 import { repairSyncObjectStateBaseContentHash } from './numberedMigrationSyncStateBaseHash.js';
 import { migrateWatchedDeviceBindings } from './numberedMigrationWatchedDeviceBindings.js';
 import {
+  addWatchedFolderConflictSourceRefs,
   addWatchedFolderConflictReconciliation,
   createWatchedFolderConflictDecisions
 } from './numberedMigrationWatchedFolderConflicts.js';
@@ -97,5 +98,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 100, migrate: migrateWatchedSourceIdentity },
   { version: 101, migrate: recoverWatchedSourcesAndPaths },
   { version: 102, migrate: createWatchedFolderConflictDecisions },
-  { version: 103, migrate: addWatchedFolderConflictReconciliation }
+  { version: 103, migrate: addWatchedFolderConflictReconciliation },
+  { version: 104, migrate: addWatchedFolderConflictSourceRefs }
 ];

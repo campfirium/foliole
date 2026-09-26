@@ -12,6 +12,7 @@ import { isDesktopSourceExecutable, loadDesktopSource, upsertDesktopSource } fro
 import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { canRunWatchedFolderConflictSource } from './watchedFolderConflictDecisions.js';
+import { resolveWatchedHistoricalSourceRef } from './watchedHistoricalSourceMapping.js';
 import { loadLocalWatchedSourceByRuleId } from './watchedLocalSource.js';
 
 interface WatchedFolderBindingRow extends DatabaseRow {
@@ -183,6 +184,11 @@ export function recordWatchedImportSourceMapping(args: {
   if (!relativePath || relativePath === '..' || relativePath.startsWith('../')) return;
   const driver = openDatabaseConnection().driver;
   const source = loadLocalWatchedSourceByRuleId(args.ruleId);
+  const current = driver.queryOne<{ source_ref: string | null }>(
+    'SELECT source_ref FROM import_sources WHERE source_fingerprint = ?', [args.sourceFingerprint]
+  );
+  if (current?.source_ref && source && current.source_ref !== source.source_ref &&
+      resolveWatchedHistoricalSourceRef(current.source_ref) === source.source_ref) return;
   driver.execute(
     `UPDATE import_sources SET watched_binding_id = ?, watched_relative_path = ?, source_ref = ?, source_location = ?
      WHERE source_fingerprint = ?`,

@@ -31,6 +31,10 @@ export interface DesktopAnchorTarget {
   peerDeviceId: string;
 }
 
+export interface DesktopAnchorTopologySession extends DesktopDnsSdSession {
+  resumePendingSync(): Promise<void>;
+}
+
 type SessionArgs = {
   fetchDiscovery?: typeof fetch;
   group: SyncGroupPayload;
@@ -39,7 +43,7 @@ type SessionArgs = {
   onState(state: DesktopAnchorTopologyState): void;
 };
 
-export function startDesktopAnchorTopologySession(args: SessionArgs): DesktopDnsSdSession {
+export function startDesktopAnchorTopologySession(args: SessionArgs): DesktopAnchorTopologySession {
   return new DesktopAnchorTopologyController(args).start();
 }
 
@@ -58,7 +62,7 @@ class DesktopAnchorTopologyController {
     this.localId = args.group.local_device_identity_key;
   }
 
-  start(): DesktopDnsSdSession {
+  start(): DesktopAnchorTopologySession {
     resetDesktopAnchorTopologyState();
     this.args.onState(loadDesktopAnchorTopologyState());
     this.observe();
@@ -66,7 +70,15 @@ class DesktopAnchorTopologyController {
       onError: () => this.observe(),
       onService: ({ kind, service }) => this.handleService(kind, service)
     });
-    return { stop: () => this.stop() };
+    return { stop: () => this.stop(), resumePendingSync: () => this.resumePendingSync() };
+  }
+
+  private async resumePendingSync() {
+    const state = loadDesktopAnchorTopologyState();
+    const anchor = this.currentAnchor;
+    if (!this.active || state.status !== 'sync_before_demote' || !anchor ||
+        anchor.target.peerDeviceId !== state.pending_demote_to) return;
+    await this.handleFound(anchor.service, anchor.target);
   }
 
   private stop() {

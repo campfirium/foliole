@@ -19,6 +19,7 @@ import {
   saveWatchedFolderConflictDecision
 } from '../database/watchedFolderConflictDecisions.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
+import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { getMainWindow } from '../mainWindowRegistry.js';
 import { resolveDesktopHostName, resolveDesktopPlatformLabel } from '../sync/companionLanPayloads.js';
 import {
@@ -30,7 +31,10 @@ import {
   resumeDesktopCompanionSync
 } from '../sync/desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from '../sync/desktopCompanionSyncPreference.js';
-import { runDesktopManualSyncWithDiscovery } from '../sync/desktopSyncGroupAutoSync.js';
+import {
+  resumeDesktopSyncAfterWatchedDecision,
+  runDesktopManualSyncWithDiscovery
+} from '../sync/desktopSyncGroupAutoSync.js';
 import { DesktopSyncGroupDiscoverySession } from '../sync/desktopSyncGroupDiscoverySession.js';
 import { completeDesktopSyncGroupJoin, requestDesktopSyncGroupJoin } from '../sync/desktopSyncGroupJoin.js';
 import { loadDesktopSyncGroupJoinProvider } from '../sync/desktopSyncGroupJoinProvider.js';
@@ -154,6 +158,10 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
     }));
     notifyDesktopSyncGroupOverviewChanged();
     await publishWatchedFolderGroupMemberState();
+    await refreshKeepImportMonitorFromSettings();
+    void resumeDesktopSyncAfterWatchedDecision().catch((error) => {
+      console.info('[sync-group] watched decision sync paused', error);
+    });
     return runWithDatabaseConnectionOwner(() => overview());
   }
   if (command === NATIVE_COMMANDS.createSyncGroup) return createGroup();

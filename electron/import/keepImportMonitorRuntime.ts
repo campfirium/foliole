@@ -1,3 +1,4 @@
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { resolveExecutableWatchedBinding } from '../database/watchedFolderBindings.js';
 
@@ -43,11 +44,11 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
 const keepImportMonitor = createKeepImportMonitor(createDefaultKeepImportMonitorDeps());
 
 export async function startKeepImportMonitor() {
-  await keepImportMonitor.start();
+  await runWithDatabaseConnectionOwner(() => keepImportMonitor.start());
 }
 
 export async function refreshKeepImportMonitorFromSettings() {
-  await keepImportMonitor.refreshFromSettings();
+  await runWithDatabaseConnectionOwner(() => keepImportMonitor.refreshFromSettings());
 }
 
 export function isKeepImportMonitorSnapshotFresh(ruleId: string) {

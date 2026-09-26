@@ -11,6 +11,7 @@ import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectP
 
 import { openDatabaseConnection } from './connection.js';
 import { loadDesktopDeviceId } from './deviceIdentity.js';
+import { resolveWatchedHistoricalSourceRef } from './watchedHistoricalSourceMapping.js';
 import { loadLocalWatchedSourceByRuleId } from './watchedLocalSource.js';
 
 export type DesktopSourceType = 'external' | 'readwise' | 'watched';
@@ -121,7 +122,7 @@ export function resolveDesktopSourceAddress(
   location: string,
   options: { requireAvailableRoot?: boolean } = {}
 ) {
-  const source = loadDesktopSource(sourceRef);
+  const source = loadDesktopSource(resolveWatchedHistoricalSourceRef(sourceRef));
   if (!source || (options.requireAvailableRoot === false
     ? !isDesktopSourceConnected(source)
     : !isDesktopSourceExecutable(source))) return null;

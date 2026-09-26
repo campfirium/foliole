@@ -17,6 +17,7 @@ interface DecisionRow extends DatabaseRow {
   decision_id: string;
   group_id: string;
   local_reconciled_at: string | null;
+  source_alias_refs_json: string;
   selected_binding_ids_json: string;
 }
 
@@ -34,7 +35,8 @@ function toDecision(row: DecisionRow): WatchedFolderConflictDecision {
     decided_by_device_identity_key: row.decided_by_device_identity_key,
     decision_id: row.decision_id,
     group_id: row.group_id,
-    selected_binding_ids: JSON.parse(row.selected_binding_ids_json) as string[]
+    selected_binding_ids: JSON.parse(row.selected_binding_ids_json) as string[],
+    source_alias_refs: JSON.parse(row.source_alias_refs_json) as string[]
   };
 }
 
@@ -56,13 +58,9 @@ export function canRunWatchedFolderConflictSource(bindingId: string) {
   const conflict = groupWatchedFolderConflicts(loadWatchedFolderGroupSources())
     .find((item) => item.sources.some((source) => source.binding_id === bindingId));
   if (!conflict) return true;
-  const group = groupContext();
-  if (!group) return false;
-  const row = openDatabaseConnection().driver.queryOne<DecisionRow>(
-    'SELECT * FROM watched_folder_conflict_decisions WHERE group_id = ? AND conflict_key = ?',
-    [group.group_id, conflict.conflict_key]
-  );
-  return Boolean(row?.local_reconciled_at && toDecision(row).selected_binding_ids.includes(bindingId));
+  const decision = loadWatchedFolderConflictDecisions()
+    .find((item) => item.conflict_key === conflict.conflict_key);
+  return Boolean(decision?.selected_binding_ids.includes(bindingId));
 }
 
 export function loadUnreconciledWatchedFolderConflictDecisions() {
@@ -102,7 +100,12 @@ export function saveWatchedFolderConflictDecision(conflictKey: string, selectedB
     decided_by_device_identity_key: group.local_device_identity_key,
     decision_id: `watched-decision-${randomUUID()}`,
     group_id: group.group_id,
-    selected_binding_ids: [...new Set(selectedBindingIds)].sort()
+    selected_binding_ids: [...new Set(selectedBindingIds)].sort(),
+    source_alias_refs: [...new Set(conflict.sources.flatMap((source) => [
+      ...(!selectedBindingIds.includes(source.binding_id) ? [source.source_ref] : []),
+      ...(source.legacy_rule_id?.startsWith('draft-import-source-')
+        ? [`watched:${source.legacy_rule_id}`] : [])
+    ]))].sort()
   };
   writeDecision(decision);
   return decision;
@@ -127,14 +130,17 @@ function decisionOrder(value: WatchedFolderConflictDecision) {
 function writeDecision(value: WatchedFolderConflictDecision) {
   openDatabaseConnection().driver.execute(
     `INSERT INTO watched_folder_conflict_decisions (group_id, conflict_key, decision_id,
-       decided_at, decided_by_device_identity_key, selected_binding_ids_json, local_reconciled_at)
-     VALUES (?, ?, ?, ?, ?, ?, NULL)
+       decided_at, decided_by_device_identity_key, selected_binding_ids_json,
+       source_alias_refs_json, local_reconciled_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
      ON CONFLICT(group_id, conflict_key) DO UPDATE SET decision_id = excluded.decision_id,
        decided_at = excluded.decided_at,
        decided_by_device_identity_key = excluded.decided_by_device_identity_key,
        selected_binding_ids_json = excluded.selected_binding_ids_json,
+       source_alias_refs_json = excluded.source_alias_refs_json,
        local_reconciled_at = NULL`,
     [value.group_id, value.conflict_key, value.decision_id, value.decided_at,
-      value.decided_by_device_identity_key, JSON.stringify(value.selected_binding_ids)]
+      value.decided_by_device_identity_key, JSON.stringify(value.selected_binding_ids),
+      JSON.stringify(value.source_alias_refs ?? [])]
   );
 }

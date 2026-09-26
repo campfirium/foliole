@@ -15,11 +15,17 @@ import {
   type DesktopSourceRecord
 } from './desktopSources.js';
 import { loadDesktopDeviceId } from './deviceIdentity.js';
+import { loadHistoricalRefsForWatchedBinding,
+  resolveWatchedHistoricalSourceRef } from './watchedHistoricalSourceMapping.js';
 
 function topicCount(sourceRef: string) {
+  if (resolveWatchedHistoricalSourceRef(sourceRef) !== sourceRef) return 0;
+  const refs = sourceRef.startsWith('watched:')
+    ? [sourceRef, ...loadHistoricalRefsForWatchedBinding(sourceRef.slice('watched:'.length))]
+    : [sourceRef];
   return openDatabaseConnection().driver.queryOne<{ count: number }>(
     `SELECT COUNT(DISTINCT latest_node_id) AS count FROM import_sources
-     WHERE source_ref = ? AND latest_node_id IS NOT NULL`, [sourceRef]
+     WHERE source_ref IN (${refs.map(() => '?').join(',')}) AND latest_node_id IS NOT NULL`, refs
   )?.count ?? 0;
 }
 

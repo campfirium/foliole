@@ -76,7 +76,7 @@ export async function postDesktopWorkgroupJson(args: {
   pathWithQuery: string;
   secret: string;
 }) {
-  const encrypted = createDesktopWorkgroupPost(args);
+  const encrypted = await runWithDatabaseConnectionOwner(() => createDesktopWorkgroupPost(args));
   const response = await fetch(`${args.endpointUrl}${args.pathWithQuery}`, {
     body: encrypted.body, headers: encrypted.headers, method: 'POST'
   });

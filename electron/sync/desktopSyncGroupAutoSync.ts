@@ -1,18 +1,21 @@
 import { isDesktopSyncGroupPlatform } from '../../lib/platform/syncGroupPlatform.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { isDesktopSyncGroupDeviceBlocked } from '../database/syncGroupMemberStateStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
+import { loadUnreconciledWatchedFolderConflictDecisions } from '../database/watchedFolderConflictDecisions.js';
 
 import { updateCompanionMdnsAdvertisementRole } from './companionMdnsAdvertisement.js';
 import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import {
   startDesktopAnchorTopologySession,
-  type DesktopAnchorTarget
+  type DesktopAnchorTarget,
+  type DesktopAnchorTopologySession
 } from './desktopAnchorTopologySession.js';
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import type { DesktopDnsSdSession } from './desktopDnsSd.js';
-import { updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
-import { runDesktopSyncCoordinator, subscribeDesktopSyncCompleted } from './desktopSyncCoordinator.js';
+import { requestDesktopHighValueSync, updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
+import {
+  loadActiveDesktopSyncRun, runDesktopSyncCoordinator, subscribeDesktopSyncCompleted
+} from './desktopSyncCoordinator.js';
 import { discoverDesktopSyncGroups } from './desktopSyncGroupDiscovery.js';
 import {
   exchangeAllDesktopSyncGroupMemberStates,
@@ -20,6 +23,7 @@ import {
   startDesktopSyncGroupMemberStateSession
 } from './desktopSyncGroupMemberStateSession.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { routeFromCandidate, routeFromTarget } from './desktopSyncGroupRouteCandidate.js';
 import {
   clearDesktopSyncGroupRoutes,
   loadDesktopSyncGroupRoutes,
@@ -30,7 +34,7 @@ import {
 } from './desktopSyncGroupRoutes.js';
 import { continuePendingReadwiseHandoff } from './readwiseOwnerHandoff.js';
 
-let runtime: DesktopDnsSdSession | null = null;
+let runtime: DesktopAnchorTopologySession | null = null;
 let memberStateRuntime: DesktopDnsSdSession | null = null;
 let stopReadwiseContinuation: (() => void) | null = null;
 let manualRun: Promise<unknown> | null = null;
@@ -56,6 +60,9 @@ export function startDesktopSyncGroupAutoSync() {
       });
       updateFreshnessForRole(group.group_id);
       notifyDesktopSyncGroupOverviewChanged();
+      void resumeDesktopSyncAfterWatchedDecision().catch((error) => {
+        console.info('[sync-group] watched decision sync paused', error);
+      });
     }
   });
   memberStateRuntime = startDesktopSyncGroupMemberStateSession(
@@ -94,6 +101,37 @@ export function runDesktopManualSyncWithDiscovery() {
   if (manualRun) return manualRun;
   manualRun = runDesktopManualSync().finally(() => { manualRun = null; });
   return manualRun;
+}
+
+export async function resumeDesktopSyncAfterWatchedDecision() {
+  await loadActiveDesktopSyncRun()?.catch(() => undefined);
+  await Promise.allSettled([...inFlight.values()]);
+  const state = await runWithDatabaseConnectionOwner(() => ({
+    group: loadDesktopSyncGroup(), participating: isDesktopCompanionSyncParticipating(),
+    pending: loadUnreconciledWatchedFolderConflictDecisions().length > 0
+  }));
+  const group = state.group;
+  if (!group || !state.participating || !state.pending) return;
+  const topology = loadDesktopAnchorTopologyState();
+  if (topology.status === 'sync_before_demote') {
+    await runtime?.resumePendingSync();
+    return;
+  }
+  const peers = loadDesktopSyncGroupMemberEndpoints(group.group_id);
+  if (topology.role === 'anchor') {
+    const active = loadDesktopSyncGroupRoutes(group.group_id).some((peer) => peer.route_kind === 'member');
+    if (active) { await requestDesktopHighValueSync(); return; }
+    await Promise.all(peers.filter((peer) => peer.route_kind === 'member' &&
+      isDesktopSyncGroupPlatform(peer.peer_platform)).map((peer) => activateMemberRoute(group, peer)));
+  } else if (topology.role === 'member') {
+    const active = loadDesktopSyncGroupRoutes(group.group_id).some((peer) => peer.route_kind === 'anchor');
+    if (active) { await requestDesktopHighValueSync(); return; }
+    const anchor = peers.find((peer) => peer.route_kind === 'anchor');
+    if (anchor) await activateAnchorRoute(group, {
+      endpointUrl: anchor.endpoint_url, groupId: group.group_id,
+      peerDeviceId: anchor.peer_device_id
+    });
+  }
 }
 
 function resumeMobileGuideRoute(route: DesktopSyncGroupPeer) {
@@ -205,40 +243,4 @@ function updateFreshnessForRole(groupId: string) {
   updateDesktopSyncFreshness(routes.some((route) =>
     role === 'member' ? route.route_kind === 'anchor' : role === 'anchor' && route.route_kind === 'member'
   ));
-}
-
-function routeFromTarget(
-  group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
-  target: DesktopAnchorTarget
-) {
-  return routeFromCandidate(group, {
-    endpoint_url: target.endpointUrl,
-    group_id: target.groupId,
-    provider_device_id: target.peerDeviceId
-  });
-}
-
-function routeFromCandidate(
-  group: NonNullable<ReturnType<typeof loadDesktopSyncGroup>>,
-  candidate: {
-    endpoint_url: string;
-    group_id: string;
-    provider_device_id: string;
-    provider_device_name?: string;
-    provider_platform?: string;
-  }
-): DesktopSyncGroupPeer | null {
-  const remote = group.devices.find((device) =>
-    device.device_identity_key === candidate.provider_device_id && device.state === 'active');
-  if (candidate.group_id !== group.group_id ||
-      isDesktopSyncGroupDeviceBlocked(group.group_id, candidate.provider_device_id)) return null;
-  return {
-    endpoint_url: candidate.endpoint_url,
-    group_id: group.group_id,
-    local_device_id: group.local_device_identity_key,
-    peer_device_id: candidate.provider_device_id,
-    peer_device_name: remote?.device_name ?? candidate.provider_device_name ?? candidate.provider_device_id,
-    peer_platform: remote?.platform ?? candidate.provider_platform ?? 'desktop',
-    route_kind: 'anchor'
-  };
 }
