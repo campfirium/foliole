@@ -11,6 +11,9 @@
   "companion.reading.font.family": "Krój pisma",
   "companion.reading.font.family.sans": "Bez",
   "companion.reading.font.family.serif": "Szeryf",
+  "companion.reading.font.import": "Dodaj czcionkę",
+  "companion.reading.font.remove": "Usuń",
+  "companion.reading.font.importError": "Nie można dodać tej czcionki. Wybierz plik TTF lub OTF mniejszy niż 20 MB.",
   "companion.reading.font.contrast": "Kontrast ciała",
   "companion.reading.font.contrast.default": "Default",
   "companion.reading.font.contrast.high": "Wysoka"

@@ -11,6 +11,9 @@
   "companion.reading.font.family": "Tipo de letra",
   "companion.reading.font.family.sans": "Sin",
   "companion.reading.font.family.serif": "Serifa",
+  "companion.reading.font.import": "Añadir fuente",
+  "companion.reading.font.remove": "Eliminar",
+  "companion.reading.font.importError": "No se pudo añadir esta fuente. Elige un archivo TTF u OTF de menos de 20 MB.",
   "companion.reading.font.contrast": "Contraste corporal",
   "companion.reading.font.contrast.default": "Default",
   "companion.reading.font.contrast.high": "Alto"

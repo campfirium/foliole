@@ -35,6 +35,15 @@ describe('companion reading typography settings', () => {
     });
   });
 
+  it('keeps a stored imported font choice across reloads', () => {
+    const selected = {
+      ...DEFAULT_READING_TYPOGRAPHY_SETTINGS,
+      fontFamily: 'custom:12345678-1234-1234-1234-123456789abc' as const
+    };
+    expect(saveReadingTypographySettings(selected)).toBe(true);
+    expect(loadReadingTypographySettings()).toEqual(selected);
+  });
+
   it('returns false instead of throwing when local persistence fails', () => {
     const storage = {
       setItem: () => {

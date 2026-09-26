@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const syncObjectsMock = vi.hoisted(() => ({
@@ -6,6 +6,7 @@ const syncObjectsMock = vi.hoisted(() => ({
 }));
 
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectsMock);
+vi.mock('./companionReadingFonts', () => ({ activateReadingFont: vi.fn(async () => false) }));
 
 describe('useCompanionReadingTypographySettings', () => {
   afterEach(() => {
@@ -33,5 +34,16 @@ describe('useCompanionReadingTypographySettings', () => {
       lineHeight: 'relaxed'
     });
     expect(syncObjectsMock.saveCompanionSyncSettingRecord).not.toHaveBeenCalled();
+  });
+
+  it('returns to the system font when a previously selected import is missing', async () => {
+    window.localStorage.setItem('foliole-companion-reading-typography-settings', JSON.stringify({
+      fontFamily: 'custom:12345678-1234-1234-1234-123456789abc'
+    }));
+    const { useCompanionReadingTypographySettings } = await import('./useCompanionReadingTypographySettings');
+    const { result } = renderHook(() => useCompanionReadingTypographySettings());
+    await waitFor(() => expect(result.current.settings.fontFamily).toBe('sans'));
+    expect(JSON.parse(window.localStorage.getItem('foliole-companion-reading-typography-settings') ?? '{}').fontFamily)
+      .toBe('sans');
   });
 });

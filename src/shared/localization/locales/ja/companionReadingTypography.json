@@ -11,6 +11,9 @@
   "companion.reading.font.family": "書体",
   "companion.reading.font.family.sans": "サンズ",
   "companion.reading.font.family.serif": "セリフ",
+  "companion.reading.font.import": "フォントを追加",
+  "companion.reading.font.remove": "削除",
+  "companion.reading.font.importError": "このフォントを追加できません。20 MB 未満の TTF または OTF ファイルを選んでください。",
   "companion.reading.font.contrast": "ボディコントラスト",
   "companion.reading.font.contrast.default": "Default",
   "companion.reading.font.contrast.high": "高"

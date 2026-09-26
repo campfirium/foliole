@@ -1,3 +1,4 @@
+import { CompanionReadingCustomFonts } from './CompanionReadingCustomFonts';
 import type {
   CompanionReadingTypographySettings,
   CompanionReadingFontFamily,
@@ -79,8 +80,11 @@ export function CompanionReadingTypographyControls(props: {
         options={FONT_FAMILY_OPTIONS}
         settingKey="fontFamily"
         settings={props.settings}
-        valueLabel={(value) => t(`companion.reading.font.family.${value}`)}
+        valueLabel={(value) => value === 'sans' || value === 'serif'
+          ? t(`companion.reading.font.family.${value}`)
+          : value}
       />
+      <CompanionReadingCustomFonts onChange={props.onChange} settings={props.settings} />
       <ReadingTypographyOptionGroup
         label={t('companion.reading.font.contrast')}
         onChange={props.onChange}

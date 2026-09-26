@@ -8,6 +8,7 @@ import {
   CompanionPdfTextVersionToolbar,
   useCompanionPdfReadingEntry
 } from './CompanionPdfReadingEntry';
+import { readingFontCssFamily } from './companionReadingFonts';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionTopicEditAutosave } from './useCompanionTopicEditAutosave';
@@ -38,14 +39,15 @@ const LINE_HEIGHT_VALUES: Record<CompanionReadingTypographySettings['lineHeight'
 
 const PARAGRAPH_SPACING = '0.35em';
 
-const FONT_FAMILY_VALUES: Record<CompanionReadingTypographySettings['fontFamily'], string> = {
-  sans: 'var(--font-family-sans)',
-  serif: 'Georgia, "Times New Roman", serif'
-};
+function readingFontFamily(value: CompanionReadingTypographySettings['fontFamily']) {
+  if (value === 'serif') return 'Georgia, "Times New Roman", serif';
+  if (value === 'sans') return 'var(--font-family-sans)';
+  return `"${readingFontCssFamily(value.slice(7))}", var(--font-family-sans)`;
+}
 
 function typographyStyle(settings: CompanionReadingTypographySettings): CSSProperties {
   return {
-    '--content-panel-font-family': FONT_FAMILY_VALUES[settings.fontFamily],
+    '--content-panel-font-family': readingFontFamily(settings.fontFamily),
     '--content-panel-font-size': FONT_SIZE_VALUES[settings.fontSize],
     '--content-panel-line-height': LINE_HEIGHT_VALUES[settings.lineHeight],
     '--content-panel-paragraph-spacing': PARAGRAPH_SPACING,

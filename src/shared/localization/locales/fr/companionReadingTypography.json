@@ -11,6 +11,9 @@
   "companion.reading.font.family": "Police de caractères",
   "companion.reading.font.family.sans": "Sans",
   "companion.reading.font.family.serif": "Serif",
+  "companion.reading.font.import": "Ajouter une police",
+  "companion.reading.font.remove": "Supprimer",
+  "companion.reading.font.importError": "Impossible d’ajouter cette police. Choisissez un fichier TTF ou OTF de moins de 20 Mo.",
   "companion.reading.font.contrast": "Contraste du corps",
   "companion.reading.font.contrast.default": "Default",
   "companion.reading.font.contrast.high": "Élevé"

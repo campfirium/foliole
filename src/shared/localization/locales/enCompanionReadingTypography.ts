@@ -11,6 +11,9 @@ export const EN_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
   'companion.reading.font.family': 'Typeface',
   'companion.reading.font.family.sans': 'Sans',
   'companion.reading.font.family.serif': 'Serif',
+  'companion.reading.font.import': 'Add font',
+  'companion.reading.font.remove': 'Remove',
+  'companion.reading.font.importError': 'Could not add this font. Choose a TTF or OTF file under 20 MB.',
   'companion.reading.font.contrast': 'Body contrast',
   'companion.reading.font.contrast.default': 'Default',
   'companion.reading.font.contrast.high': 'High'

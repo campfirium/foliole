@@ -11,6 +11,9 @@ export const ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
   'companion.reading.font.family': '字体',
   'companion.reading.font.family.sans': '无衬线',
   'companion.reading.font.family.serif': '衬线',
+  'companion.reading.font.import': '添加字体',
+  'companion.reading.font.remove': '删除',
+  'companion.reading.font.importError': '无法添加此字体。请选择小于 20 MB 的 TTF 或 OTF 文件。',
   'companion.reading.font.contrast': '正文对比度',
   'companion.reading.font.contrast.default': 'Default',
   'companion.reading.font.contrast.high': '高'

@@ -11,6 +11,9 @@
   "companion.reading.font.family": "字體",
   "companion.reading.font.family.sans": "桑斯",
   "companion.reading.font.family.serif": "襯線",
+  "companion.reading.font.import": "新增字體",
+  "companion.reading.font.remove": "刪除",
+  "companion.reading.font.importError": "無法新增此字體。請選擇小於 20 MB 的 TTF 或 OTF 檔案。",
   "companion.reading.font.contrast": "身材對比",
   "companion.reading.font.contrast.default": "Default",
   "companion.reading.font.contrast.high": "高"
