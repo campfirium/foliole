@@ -1,6 +1,6 @@
 /* global process */
 
-import { mkdir, open, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, open, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 
@@ -84,7 +84,14 @@ async function removeStaleLock(lockFile) {
       await rm(lockFile, { force: true });
     }
   } catch {
-    await rm(lockFile, { force: true });
+    try {
+      const file = await stat(lockFile);
+      if (Date.now() - file.mtimeMs > STATE_STALE_MS) {
+        await rm(lockFile, { force: true });
+      }
+    } catch {
+      // Another process may still be creating or releasing the lock.
+    }
   }
 }
 

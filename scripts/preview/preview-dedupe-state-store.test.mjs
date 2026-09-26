@@ -1,8 +1,9 @@
 // @vitest-environment node
 
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -41,6 +42,25 @@ describe('preview-dedupe state store', () => {
       expect(value).toBe('ok');
       expect(state.runs.run.status).toBe('pending');
       expect(fsMock.rename).toHaveBeenCalledTimes(2);
+    } finally {
+      await rm(runtimeDir, { force: true, recursive: true });
+    }
+  });
+
+  it('keeps a newly created lock while its owner is still writing metadata', async () => {
+    const runtimeDir = await mkdtemp(path.join(os.tmpdir(), 'preview-state-store-'));
+    const lockFile = path.join(runtimeDir, 'windows-preview.state.lock');
+    try {
+      await writeFile(lockFile, '', 'utf8');
+      const request = withStateLock({
+        runtimeDir,
+        target: 'windows',
+        fn: () => ({ state: { runs: {} }, value: 'acquired' })
+      });
+
+      expect(await Promise.race([request, delay(150).then(() => 'waiting')])).toBe('waiting');
+      await rm(lockFile);
+      expect(await request).toBe('acquired');
     } finally {
       await rm(runtimeDir, { force: true, recursive: true });
     }
