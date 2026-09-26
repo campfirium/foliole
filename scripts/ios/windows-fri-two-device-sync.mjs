@@ -68,7 +68,7 @@ export async function runWindowsFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   const bundle = friAcceptanceBundle(process.env.FOLIOLE_ACCEPTANCE_TASK_ID);
   const provider = startWindowsSyncGroupProvider({ action: 'two-device-sync-provider',
     execute: executor(evidenceRoot, 'windows-provider'), repoRoot,
-    sourceRef: 'refs/heads/sync' });
+    sourceRef: 'refs/heads/dev' });
   let providerSettled = false;
   try {
     await provider.waitForProgress('provider-ready');

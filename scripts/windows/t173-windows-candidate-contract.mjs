@@ -1,9 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
-export const T173_WINDOWS_SOURCE_REF = 'refs/heads/sync';
-export const T173_WINDOWS_REPO_ROOT = 'D:\\C\\foliole-sync';
-export const T173_WINDOWS_REPO_ROOT_POSIX = 'D:/C/foliole-sync';
+export const T173_WINDOWS_SOURCE_REF = 'refs/heads/dev';
+export const T173_WINDOWS_REPO_ROOT = 'D:\\C\\foliole';
+export const T173_WINDOWS_REPO_ROOT_POSIX = 'D:/C/foliole';
 export const T173_WINDOWS_ACTIONS = new Set([
   'multi-device-sync-a-leave', 'multi-device-sync-a-rejoin', 'multi-device-sync-c',
   'multi-device-sync-from-zero', 'multi-device-sync-participation',
@@ -25,7 +25,7 @@ function normalizedRoot(value) {
 }
 
 export function assertT173CandidateBoundary(value) {
-  if (value?.branch !== 'sync' || value?.clean !== true || value?.committed !== true
+  if (value?.branch !== 'dev' || value?.clean !== true || value?.committed !== true
       || value?.sourceRef !== T173_WINDOWS_SOURCE_REF || !SHA.test(value.revision ?? '')
       || !SHA.test(value.treeDigest ?? '')
       || normalizedRoot(value.sourceRoot) !== T173_WINDOWS_REPO_ROOT_POSIX.toLowerCase()) {

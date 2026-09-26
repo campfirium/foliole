@@ -17,7 +17,6 @@ import { WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS } from
   '../windows/windows-sync-group-provider-release-control.mjs';
 
 const HOST = 'zephu@192.168.0.11';
-const GIT_HOST = `${HOST}:foliole-dev.git`;
 const REMOTE_ACTION = `${T173_WINDOWS_REPO_ROOT_POSIX}/scripts/windows/`
   + 't173-windows-candidate-action.ps1';
 const RECEIPTS = {
@@ -38,7 +37,7 @@ export function parseT173WindowsCandidateControlArgs(argv) {
   const allowed = new Set(['multi-device-sync-candidate', ...T173_WINDOWS_ACTIONS,
     ...Object.values(WINDOWS_SYNC_GROUP_PROVIDER_RELEASE_ACTIONS)]);
   if (args.length !== 1 || !allowed.has(action)
-      || normalizeCandidateSourceRef(sourceRef) !== 'refs/heads/sync') {
+      || normalizeCandidateSourceRef(sourceRef) !== 'refs/heads/dev') {
     throw new Error('T173 Windows candidate control arguments are invalid.');
   }
   return { action, sourceRef };
@@ -91,13 +90,8 @@ async function copy(key, remote, local, cwd) {
 }
 
 async function prepare(config, key, repoRoot) {
-  const gitKey = path.join(os.homedir(), '.ssh', 'agent', 'foliole-windows-android-lab-git');
-  await run('git', ['push', '--no-verify', '--porcelain', GIT_HOST,
-    'refs/heads/sync:refs/heads/sync'], { cwd: repoRoot, env: { ...process.env,
-      GIT_SSH_COMMAND: `ssh -i '${gitKey}' -o BatchMode=yes -o IdentitiesOnly=yes `
-        + '-o ConnectTimeout=15 -o StrictHostKeyChecking=yes' } });
-  await run(process.execPath, ['scripts/acceptance/windows-sync-client-control.mjs', 'align',
-    '--revision', config.revision], { cwd: repoRoot, stream: true });
+  await run(process.execPath, ['scripts/windows/windows-dev-control.mjs',
+    'multi-device-sync-candidate'], { cwd: repoRoot, stream: true });
   const output = await run('ssh', remoteArgs(key, config, 'prepare'), { cwd: repoRoot, stream: true });
   const remote = parseT173WindowsCandidateManifest(output, config, 'prepare');
   const local = path.join(repoRoot, '.tmp', 'artifacts', 'windows-candidate',
@@ -105,9 +99,9 @@ async function prepare(config, key, repoRoot) {
   await copy(key, remote, local, repoRoot);
   const receipt = JSON.parse(fs.readFileSync(local, 'utf8'));
   assertT173RuntimeIdentity(config.expected, receipt.runtimeIdentity);
-  const projected = { remoteBranch: 'sync', resultStatus: 'success',
-    revision: config.revision, schemaVersion: 1, sourceRef: 'refs/heads/sync',
-    targetRef: 'refs/heads/sync', treeDigest: config.treeDigest };
+  const projected = { remoteBranch: 'dev', resultStatus: 'success',
+    revision: config.revision, schemaVersion: 1, sourceRef: 'refs/heads/dev',
+    targetRef: 'refs/heads/dev', treeDigest: config.treeDigest };
   process.stdout.write(`[windows-dev-control] candidate-receipt=${JSON.stringify(projected)}\n`);
   return { evidenceRoot: path.dirname(local), manifestPath: local };
 }
@@ -171,7 +165,7 @@ export async function runT173WindowsCandidateControl({
   }
   const routeIdentity = active?.routeIdentity
     ?? `t173-sync-${candidate.revision.slice(0, 10)}-${randomUUID()}`;
-  const expected = { ...candidate, sourceRoot: 'D:\\C\\foliole-sync' };
+  const expected = { ...candidate, sourceRoot: 'D:\\C\\foliole' };
   const config = { ...candidate, action: request.action, expected, routeIdentity };
   const key = path.join(os.homedir(), '.ssh', 'agent', 'foliole-windows-android-lab');
   return request.action === 'multi-device-sync-candidate'

@@ -30,7 +30,7 @@ function parse(argv) {
   if (action !== 'prepare' && !T173_WINDOWS_ACTIONS.has(action) && !RELEASES[action]) {
     throw new Error('T173 Windows candidate action is invalid.');
   }
-  return { action, expected: { branch: 'sync', clean: true, committed: true, revision,
+  return { action, expected: { branch: 'dev', clean: true, committed: true, revision,
     sourceRef: T173_WINDOWS_SOURCE_REF, sourceRoot: T173_WINDOWS_REPO_ROOT, treeDigest },
   routeIdentity };
 }

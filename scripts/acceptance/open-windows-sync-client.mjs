@@ -14,7 +14,7 @@ import { pathToFileURL } from 'node:url';
 const executeFile = promisify(execFile);
 const CONTROL = 'scripts/acceptance/windows-sync-client-control.mjs';
 const CDP = 'http://127.0.0.1:19222/json/version';
-const GIT_HOST = 'zephu@192.168.0.11:foliole-dev.git';
+const DEV_CONTROL = 'scripts/windows/windows-dev-control.mjs';
 const PORT = '9222';
 const SSH_HOST = 'zephu@192.168.0.11';
 
@@ -27,9 +27,9 @@ async function currentCandidate(repoRoot, run) {
   const branch = (await run('git', ['branch', '--show-current'], { cwd: repoRoot })).trim();
   const dirty = (await run('git', ['status', '--short'], { cwd: repoRoot })).trim();
   const revision = (await run('git', ['rev-parse', 'HEAD'], { cwd: repoRoot })).trim();
-  if (branch !== 'sync') throw new Error(`expected sync branch, got ${branch || 'detached'}`);
-  if (dirty) throw new Error('sync worktree must be committed before opening Windows');
-  if (!/^[0-9a-f]{40}$/u.test(revision)) throw new Error('sync revision is invalid');
+  if (branch !== 'dev') throw new Error(`expected dev branch, got ${branch || 'detached'}`);
+  if (dirty) throw new Error('dev worktree must be committed before opening Windows');
+  if (!/^[0-9a-f]{40}$/u.test(revision)) throw new Error('dev revision is invalid');
   return revision;
 }
 
@@ -87,16 +87,15 @@ export async function openWindowsSyncClient({
   fetchApi = globalThis.fetch, portOpen = localPortOpen
 } = {}) {
   const revision = await currentCandidate(repoRoot, run);
-  const gitKey = path.join(os.homedir(), '.ssh', 'agent', 'foliole-windows-android-lab-git');
-  await run('git', ['push', '--no-verify', '--porcelain', GIT_HOST,
-    `sync:refs/heads/sync`], { cwd: repoRoot, env: {
-      ...process.env,
-      GIT_SSH_COMMAND: `ssh -i '${gitKey}' -o BatchMode=yes -o IdentitiesOnly=yes `
-        + '-o ConnectTimeout=15 -o StrictHostKeyChecking=yes'
-    } });
   const tunnelPid = await ensureTunnel({ launch, portOpen, repoRoot });
   await run(process.execPath, [CONTROL, 'stop', '--port', PORT], { cwd: repoRoot });
-  await run(process.execPath, [CONTROL, 'align', '--revision', revision], { cwd: repoRoot });
+  await run(process.execPath, [DEV_CONTROL, 'multi-device-sync-candidate'],
+    { cwd: repoRoot });
+  const facts = JSON.parse(await run(process.execPath, [CONTROL, 'facts'],
+    { cwd: repoRoot }));
+  if (facts.head !== revision || facts.branch !== 'dev' || facts.clean !== true) {
+    throw new Error('Windows DEV source does not match the Mac candidate');
+  }
   const logPath = path.join(repoRoot, '.tmp', 'artifacts', 'client-control-processes',
     `windows-${revision.slice(0, 10)}.log`);
   const pid = launch(process.execPath, [CONTROL, 'start', '--revision', revision,

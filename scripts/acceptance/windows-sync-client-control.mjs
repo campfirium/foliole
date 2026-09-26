@@ -10,10 +10,9 @@ import { parseArgs } from 'node:util';
 
 const HOST = 'zephu@192.168.0.11';
 const KEY = path.join(os.homedir(), '.ssh', 'agent', 'foliole-windows-android-lab');
-const ROOT = 'D:\\C\\foliole-sync';
+const ROOT = 'D:\\C\\foliole';
 const NODE = 'C:\\Program Files\\nodejs\\node.exe';
 const NPM = 'C:\\Program Files\\nodejs\\npm.cmd';
-const ELECTRON_INSTALL = path.win32.join(ROOT, 'node_modules', 'electron', 'install.js');
 
 function quote(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
@@ -21,8 +20,8 @@ function quote(value) {
 
 export function parseWindowsSyncClientArgs(argv) {
   const action = argv[0];
-  if (!['align', 'facts', 'start', 'stop'].includes(action)) {
-    throw new Error('action must be align, facts, start, or stop');
+  if (!['facts', 'start', 'stop'].includes(action)) {
+    throw new Error('action must be facts, start, or stop');
   }
   const { values } = parseArgs({ args: argv.slice(1), allowPositionals: false, strict: true,
     options: { instance: { type: 'string', default: 'a' }, port: { type: 'string', default: '9222' },
@@ -33,7 +32,6 @@ export function parseWindowsSyncClientArgs(argv) {
   if (action === 'stop') return { action, port };
   const revision = values.revision?.trim();
   if (!/^[0-9a-f]{40}$/u.test(revision ?? '')) throw new Error('revision must be a full commit hash');
-  if (action === 'align') return { action, revision };
   const instance = values.instance?.toLowerCase();
   if (!['a', 'b'].includes(instance)) throw new Error('instance must be a or b');
   return { action, instance, port, revision };
@@ -48,8 +46,8 @@ $head = (git rev-parse HEAD).Trim()
 $branch = (git branch --show-current).Trim()
 $dirty = @(git status --short)
 if ($LASTEXITCODE -ne 0) { throw 'git facts failed' }
-if ($root -ne 'D:/C/foliole-sync') { throw "wrong root: $root" }
-if ($branch -ne 'sync') { throw "wrong branch: $branch" }
+if ($root -ne 'D:/C/foliole') { throw "wrong root: $root" }
+if ($branch -ne 'dev') { throw "wrong branch: $branch" }
 ${revision ? `if ($head -ne ${quote(revision)}) { throw "wrong revision: $head" }` : ''}
 if ($dirty.Count -ne 0) { throw 'Windows sync checkout is dirty' }
 `;
@@ -59,29 +57,6 @@ function factsScript() {
   return `${preflight()}
 [ordered]@{ root = $root; head = $head; branch = $branch; clean = $true } |
   ConvertTo-Json -Compress
-`;
-}
-
-function alignScript(config) {
-  return `${preflight()}
-git fetch origin sync
-if ($LASTEXITCODE -ne 0) { throw 'Windows sync fetch failed' }
-$target = (git rev-parse FETCH_HEAD).Trim()
-if ($target -ne ${quote(config.revision)}) { throw "fetched wrong revision: $target" }
-git reset --hard $target
-if ($LASTEXITCODE -ne 0) { throw 'Windows sync exact alignment failed' }
-$head = (git rev-parse HEAD).Trim()
-$dirty = @(git status --short)
-if ($head -ne ${quote(config.revision)} -or $dirty.Count -ne 0) {
-  throw 'Windows sync checkout did not settle on the requested clean revision'
-}
-& ${quote(NPM)} ci
-if ($LASTEXITCODE -ne 0) { throw 'Windows sync dependencies failed to materialize' }
-& ${quote(NODE)} ${quote(ELECTRON_INSTALL)}
-if ($LASTEXITCODE -ne 0) { throw 'Windows sync Electron runtime failed to materialize' }
-& ${quote(NPM)} run electron:rebuild:native
-if ($LASTEXITCODE -ne 0) { throw 'Windows sync Electron native ABI rebuild failed' }
-Write-Output ("aligned=" + $head)
 `;
 }
 
@@ -121,7 +96,6 @@ Write-Output ("stopped=" + ($processIds -join ','))
 
 export function buildWindowsSyncClientPowerShell(config) {
   if (config.action === 'facts') return factsScript();
-  if (config.action === 'align') return alignScript(config);
   if (config.action === 'stop') return stopScript(config);
   return startScript(config);
 }

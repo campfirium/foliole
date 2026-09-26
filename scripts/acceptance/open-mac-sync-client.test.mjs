@@ -6,7 +6,7 @@ it('builds, replaces, and opens the committed sync client', async () => {
   const calls = [];
   const run = vi.fn(async (command, args) => {
     calls.push([command, ...args]);
-    if (args[0] === 'branch') return 'sync\n';
+    if (args[0] === 'branch') return 'dev\n';
     if (args[0] === 'status') return '';
     if (args[0] === 'rev-parse') return `${'a'.repeat(40)}\n`;
     return '';
@@ -28,8 +28,8 @@ it('builds, replaces, and opens the committed sync client', async () => {
     revision: 'a'.repeat(40) });
 });
 
-it('rejects an uncommitted sync worktree before building', async () => {
-  const outputs = ['sync\n', ' M src/app.ts\n', `${'a'.repeat(40)}\n`];
+it('rejects an uncommitted dev worktree before building', async () => {
+  const outputs = ['dev\n', ' M src/app.ts\n', `${'a'.repeat(40)}\n`];
   const run = vi.fn(async () => outputs.shift());
   await expect(openMacSyncClient({ repoRoot: '/repo', run }))
     .rejects.toThrow('must be committed');

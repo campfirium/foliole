@@ -150,11 +150,11 @@ it('accepts a task-owned sync candidate receipt before product mutation', async 
   const runId = 'run-windows-sync';
   const receiptRoot = path.join(repoRoot, '.tmp/artifacts/multi-device-sync/runs', runId);
   fs.mkdirSync(receiptRoot, { recursive: true });
-  const candidateBoundary = { branch: 'sync', revision: 'a'.repeat(40),
-    sourceRef: 'refs/heads/sync', treeDigest: 'b'.repeat(40) };
+  const candidateBoundary = { branch: 'dev', revision: 'a'.repeat(40),
+    sourceRef: 'refs/heads/dev', treeDigest: 'b'.repeat(40) };
   fs.writeFileSync(path.join(receiptRoot, 'candidate-preparation.json'), JSON.stringify({
     candidateBoundary, preparedHosts: ['windows-c'], resultStatus: 'success', runId,
-    windowsReceipt: { ...candidateBoundary, targetRef: 'refs/heads/sync' }
+    windowsReceipt: { ...candidateBoundary, targetRef: 'refs/heads/dev' }
   }));
   const execute = async (command) => command === 'ssh'
     ? '[multi-device-sync-readiness] status=ready\n' : '';

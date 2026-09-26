@@ -22,9 +22,9 @@ async function currentCandidate(repoRoot, run) {
   const branch = (await run('git', ['branch', '--show-current'], { cwd: repoRoot })).trim();
   const dirty = (await run('git', ['status', '--short'], { cwd: repoRoot })).trim();
   const revision = (await run('git', ['rev-parse', 'HEAD'], { cwd: repoRoot })).trim();
-  if (branch !== 'sync') throw new Error(`expected sync branch, got ${branch || 'detached'}`);
-  if (dirty) throw new Error('sync worktree must be committed before opening Mac');
-  if (!/^[0-9a-f]{40}$/u.test(revision)) throw new Error('sync revision is invalid');
+  if (branch !== 'dev') throw new Error(`expected dev branch, got ${branch || 'detached'}`);
+  if (dirty) throw new Error('dev worktree must be committed before opening Mac');
+  if (!/^[0-9a-f]{40}$/u.test(revision)) throw new Error('dev revision is invalid');
   return revision;
 }
 

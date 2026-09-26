@@ -27,9 +27,9 @@ function fixture() {
 }
 
 it('runs the Windows C Electron journey in the bounded interactive user task', async () => {
-  const candidateBoundary = { branch: 'sync', clean: true, committed: true,
-    revision: 'a'.repeat(40), sourceRef: 'refs/heads/sync',
-    sourceRoot: 'D:\\C\\foliole-sync', treeDigest: 'b'.repeat(40) };
+  const candidateBoundary = { branch: 'dev', clean: true, committed: true,
+    revision: 'a'.repeat(40), sourceRef: 'refs/heads/dev',
+    sourceRoot: 'D:\\C\\foliole', treeDigest: 'b'.repeat(40) };
   const options = { action: 'multi-device-sync-c', buildIdentity: 'candidate-1', candidateBoundary,
     execute: vi.fn(async () => ({ code: 0 })), ...fixture() };
   const installTask = vi.fn(async () => undefined);

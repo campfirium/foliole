@@ -56,11 +56,10 @@ it('forwards A-rejoin provider lifecycle progress from the nonce-bound worker', 
     return new Promise(() => {});
   });
   startWindowsARejoinProvider({ execute, reportProgress, repoRoot: process.cwd(),
-    sourceRef: 'refs/heads/sync' });
+    sourceRef: 'refs/heads/dev' });
   expect(reportProgress).toHaveBeenCalledWith('c-session-opened');
   expect(execute).toHaveBeenCalledWith(process.execPath, [
-    'scripts/acceptance/t173-windows-candidate-control.mjs', 'multi-device-sync-a-rejoin',
-    '--source-ref', 'refs/heads/sync'
+    'scripts/windows/windows-dev-control.mjs', 'multi-device-sync-a-rejoin'
   ], expect.any(Object));
 });
 
@@ -79,17 +78,15 @@ it('holds the joined Windows C provider until Android consumes its fact', async 
   expect(reportProgress).toHaveBeenCalledWith('c-provider-ready');
 });
 
-it('keeps a sync provider and its release on the same candidate controller', async () => {
+it('keeps a dev provider and its release on the same candidate controller', async () => {
   const execute = vi.fn((_command, args) => args[1] === 'multi-device-sync-provider-cancel'
     ? Promise.resolve({ code: 0 }) : new Promise(() => {}));
   const provider = startWindowsSyncGroupProvider({ action: 'multi-device-sync-c', execute,
-    repoRoot: process.cwd(), sourceRef: 'refs/heads/sync' });
+    repoRoot: process.cwd(), sourceRef: 'refs/heads/dev' });
   await provider.release('cancelled');
   expect(execute.mock.calls.map(([, args]) => args)).toEqual([
-    ['scripts/acceptance/t173-windows-candidate-control.mjs', 'multi-device-sync-c',
-      '--source-ref', 'refs/heads/sync'],
-    ['scripts/acceptance/t173-windows-candidate-control.mjs',
-      'multi-device-sync-provider-cancel', '--source-ref', 'refs/heads/sync']
+    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-c'],
+    ['scripts/windows/windows-dev-control.mjs', 'multi-device-sync-provider-cancel']
   ]);
 });
 
