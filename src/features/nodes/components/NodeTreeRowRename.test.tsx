@@ -87,6 +87,25 @@ it('submits with Enter and restores the tree origin', async () => {
   expect(focusBody).not.toHaveBeenCalled();
 });
 
+it('lets an IME Enter finish composition before Enter submits the rename', async () => {
+  const onRename = vi.fn(async () => true);
+  renderRow(onRename);
+  const { input } = beginRequestedRename();
+  fireEvent.compositionStart(input);
+  fireEvent.change(input, { target: { value: 'pin' } });
+  fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+  fireEvent.compositionEnd(input);
+
+  expect(input).toBeInTheDocument();
+  expect(onRename).not.toHaveBeenCalled();
+
+  fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 });
+  expect(onRename).not.toHaveBeenCalled();
+
+  fireEvent.keyDown(input, { key: 'Enter' });
+  await waitFor(() => expect(onRename).toHaveBeenCalledWith('node-1', 'pin'));
+});
+
 it('cancels with Escape and restores the tree origin without submitting', async () => {
   const onRename = vi.fn(async () => true);
   const row = renderRow(onRename);

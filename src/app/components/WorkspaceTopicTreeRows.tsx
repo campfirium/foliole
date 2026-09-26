@@ -1,5 +1,6 @@
-import { useMemo, type ReactNode, type RefObject } from 'react';
+import { useMemo, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 
+import { requestNodeListDelete } from '../../features/nodes/components/nodeListDeleteAction';
 import {
   resolveNodeTreeRowVirtualSize
 } from '../../features/nodes/components/nodeListRowSpacingSettings';
@@ -11,6 +12,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { VirtualListSurface } from '../../shared/ui';
+import { isEditableKeyboardTarget } from '../hooks/workspaceKeyboardTarget';
 
 import type { WorkspaceTopicTreeDragController } from './workspaceTopicTreeDrag';
 import { WorkspaceTopicTreeRowItem } from './WorkspaceTopicTreeRowItem';
@@ -24,6 +26,7 @@ interface WorkspaceTopicTreeRowsProps {
   drag: WorkspaceTopicTreeDragController;
   nodesById: WorkspaceListNodesById;
   onContextMenu: Parameters<typeof NodeTreeRowItem>[0]['onContextMenu'];
+  onDeleteNodes?: (nodeIds: string[]) => void;
   onFocusEditor?: (nodeId: string, origin: HTMLButtonElement) => boolean;
   onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: (nodeId: string, modifiers?: NodeSelectModifiers) => void;
@@ -127,16 +130,34 @@ function renderWorkspaceTopicTreeRowsSection(args: {
 
 function useWorkspaceTopicTreeKeydown(props: WorkspaceTopicTreeRowsProps) {
   return useMemo(
-    () => createNodeListRowKeydownHandler({
-      collapsedNodeIds: props.collapsedNodeIds,
-      ...(props.onFocusEditor ? {
-        onTab: (nodeId, event) => props.onFocusEditor?.(nodeId, event.currentTarget) ?? false
-      } : {}),
-      onSelect: props.onSelectNode,
-      onToggleCollapse: props.onToggleCollapse,
-      rows: props.rows
-    }),
-    [props.collapsedNodeIds, props.onFocusEditor, props.onSelectNode, props.onToggleCollapse, props.rows]
+    () => {
+      const handleNavigation = createNodeListRowKeydownHandler({
+        collapsedNodeIds: props.collapsedNodeIds,
+        ...(props.onFocusEditor ? {
+          onTab: (nodeId, event) => props.onFocusEditor?.(nodeId, event.currentTarget) ?? false
+        } : {}),
+        onSelect: props.onSelectNode,
+        onToggleCollapse: props.onToggleCollapse,
+        rows: props.rows
+      });
+      return (nodeId: string, event: KeyboardEvent<HTMLButtonElement>) => {
+        if (props.onDeleteNodes && event.key === 'Delete' && !event.defaultPrevented &&
+          !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey &&
+          !event.nativeEvent.isComposing && event.nativeEvent.keyCode !== 229 && !event.repeat &&
+          !isEditableKeyboardTarget(event.target)) {
+          const nodeIds = props.selectedNodeIds.includes(nodeId) ? props.selectedNodeIds : [nodeId];
+          event.preventDefault();
+          requestNodeListDelete({
+            deleteNodes: props.onDeleteNodes,
+            nodeIds,
+            visibleNodeIds: props.rows.map((row) => row.node.id)
+          });
+          return;
+        }
+        handleNavigation(nodeId, event);
+      };
+    },
+    [props.collapsedNodeIds, props.onDeleteNodes, props.onFocusEditor, props.onSelectNode, props.onToggleCollapse, props.rows, props.selectedNodeIds]
   );
 }
 
@@ -146,6 +167,7 @@ export function WorkspaceTopicTreeRows({
   drag,
   nodesById,
   onContextMenu,
+  onDeleteNodes,
   onFocusEditor,
   onRenameNode,
   onSelectNode,
@@ -165,7 +187,7 @@ export function WorkspaceTopicTreeRows({
     scrollPlacement,
     scrollTargetNodeId
   });
-  const onRowKeyDown = useWorkspaceTopicTreeKeydown({ activeNodeId, collapsedNodeIds, drag, nodesById, onContextMenu, onRenameNode, onSelectNode, onToggleCollapse, rows, scrollContainerRef, selectedNodeIds, ...definedProps({ onFocusEditor, scrollPlacement, scrollTargetNodeId, tabStopNodeId }) });
+  const onRowKeyDown = useWorkspaceTopicTreeKeydown({ activeNodeId, collapsedNodeIds, drag, nodesById, onContextMenu, onRenameNode, onSelectNode, onToggleCollapse, rows, scrollContainerRef, selectedNodeIds, ...definedProps({ onDeleteNodes, onFocusEditor, scrollPlacement, scrollTargetNodeId, tabStopNodeId }) });
 
   return renderWorkspaceTopicTreeRowsSection({
     ariaLabel: t('desktop.workspace.topicList'),

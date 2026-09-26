@@ -2,7 +2,8 @@ import { cn } from '../../../shared/lib/utils';
 import { TruncatedTextTooltip } from '../../../shared/ui';
 import { projectNodeListLabel } from '../model/nodeListLabelProjection';
 
-import { NodeRenameInput, type useRenameState } from './NodeTreeRowRename';
+import { NodeRenameInput } from './NodeRenameInput';
+import type { useRenameState } from './NodeTreeRowRename';
 
 export function renderNodeLabel(
   label: string,

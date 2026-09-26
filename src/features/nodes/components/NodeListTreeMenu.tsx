@@ -1,6 +1,5 @@
 import { resolveSystemEntryId } from '../../../shared/localization/systemEntryNames';
 import { mergeRuntimeReadwiseTopicHighlights } from '../../../shared/platform/readwiseTopicMerge';
-import { requestFoliolePublishedDelete } from '../../../shared/platform/runtime/foliolePublishedManagement';
 import { showAppRuntimeNotice } from '../../../shared/ui/AppRuntimeNotice';
 import { canNodeBeMoved } from '../model/nodeMovementRules';
 import { isHomeNode, isProtectedRootNode, isVirtualNode, isVirtualRootNode } from '../model/specialNodes';
@@ -8,9 +7,9 @@ import type { WorkspaceListNodesById } from '../model/workspaceListNode';
 
 import { NodeListContextMenu } from './NodeListContextMenu';
 import { canPostponeTopic, canToggleSequentialReading, hasDismissEntireTopicTargets, hasDismissTargets, hasReturnTargets, hasShelveTopicTarget, hasUnshelveTopicTarget } from './nodeListContextMenuReview';
+import { requestNodeListDelete } from './nodeListDeleteAction';
 import { createDismissEntireTopicAction, createDismissNodeAction, createReturnNodeAction, createShelveTopicAction, createToggleSequentialReadingAction, createUnshelveTopicAction } from './nodeListMenuActions';
 import { createOptionalNodeMenuHandler } from './nodeListMenuOpenHandlers';
-import { sortNodeIdsByVisibleOrder } from './nodeListMenuTargetOrder';
 import { createCreateNodeHandler, resolveCreateCommands, type NodeListCreateMenuSurface } from './NodeListTreeCreateMenu';
 import type { NodeListContextMenuController } from './NodeListTreeHooks';
 import type { NodeListState, NodeSelectModifiers } from './NodeListTreeState';
@@ -191,10 +190,10 @@ function buildNodeListContextMenuProps(
       props.contextMenu.closeContextMenu();
     },
     onDeleteNode: () => {
-      const nodeIds = sortNodeIdsByVisibleOrder(menuState.contextTargets, props.state.noteRowIds);
-      requestFoliolePublishedDelete({
-        nodeIds,
-        onAllowed: () => props.deleteNodes(nodeIds)
+      requestNodeListDelete({
+        deleteNodes: props.deleteNodes,
+        nodeIds: menuState.contextTargets,
+        visibleNodeIds: props.state.noteRowIds
       });
       props.contextMenu.closeContextMenu();
     },

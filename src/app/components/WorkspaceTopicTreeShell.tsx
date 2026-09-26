@@ -66,6 +66,7 @@ export function renderWorkspaceTopicTreeShell(args: WorkspaceTopicTreeShellArgs)
         drag: args.interaction.drag,
         ...definedProps({ emptyState: args.emptyState }),
         nodesById: args.nodesById,
+        onDeleteNodes: args.interaction.deleteNodes,
         ...definedProps({ onFocusEditor: args.onFocusEditor }),
         onRenameNode: args.interaction.updateNodeTitle,
         onSelectNode: args.interaction.handleSelectNode,

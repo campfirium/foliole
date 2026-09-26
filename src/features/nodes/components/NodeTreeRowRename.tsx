@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { onWindowPriorityEscape } from '../../../shared/platform/keyboard';
 import { UNTITLED_NODE_TITLE } from '../model/deriveNodeTitle';
 
 import { registerActiveNodeRenameCommit } from './nodeRenameCommitCapability';
@@ -13,7 +12,7 @@ interface NodeRenameRequestDetail {
   restoreOrigin?: () => void;
 }
 
-type RenameExitTarget = 'body' | 'none' | 'origin';
+export type RenameExitTarget = 'body' | 'none' | 'origin';
 type NodeRenameHandler = (nodeId: string, title: string) => boolean | void | Promise<boolean | void>;
 
 interface RenameState {
@@ -145,88 +144,4 @@ export function requestNodeRename(nodeId: string | null | undefined, focusBody?:
     detail: { nodeId, ...(focusBody ? { focusBody } : {}), ...(restoreOrigin ? { restoreOrigin } : {}) }
   }));
   return true;
-}
-
-interface NodeRenameInputProps {
-  draftTitle: string;
-  focusBodyOnTab: boolean;
-  label: string;
-  onCancel: () => void;
-  onChange: (value: string) => void;
-  onSubmit: (target: RenameExitTarget) => Promise<boolean>;
-}
-
-function useRenameEscape(args: {
-  inputRef: { current: HTMLInputElement | null };
-  onCancel: () => void;
-  skipNextBlurSubmitRef: { current: boolean };
-}) {
-  useEffect(() => onWindowPriorityEscape(() => {
-    if (document.activeElement !== args.inputRef.current) return false;
-    args.skipNextBlurSubmitRef.current = true;
-    args.onCancel();
-  }), [args]);
-}
-
-export function NodeRenameInput({
-  draftTitle,
-  focusBodyOnTab,
-  label,
-  onCancel,
-  onChange,
-  onSubmit
-}: NodeRenameInputProps) {
-  const skipNextBlurSubmitRef = useRef(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
-  useRenameEscape({ inputRef, onCancel, skipNextBlurSubmitRef });
-
-  const submit = (target: RenameExitTarget) => {
-    void onSubmit(target).then((succeeded) => {
-      if (!succeeded) inputRef.current?.focus();
-    });
-  };
-
-  return (
-    <input
-      aria-label={`Rename ${label}`}
-      autoFocus
-      className="box-border min-w-0 max-w-full flex-1 rounded-sm border border-border/35 bg-[var(--app-surface-control-bg)] px-1.5 py-0 text-foreground [font-size:var(--navigation-title-font-size)] [height:var(--navigation-title-line-height)] [line-height:var(--navigation-title-line-height)] focus:border-border/70 focus:bg-[var(--app-surface-control-hover-bg)] focus-visible:outline-none"
-      onBlur={() => {
-        if (skipNextBlurSubmitRef.current) {
-          skipNextBlurSubmitRef.current = false;
-          return;
-        }
-        submit('none');
-      }}
-      onChange={(event) => onChange(event.target.value)}
-      onClick={(event) => event.stopPropagation()}
-      onKeyDown={(event) => {
-        if (event.key === 'Tab' && focusBodyOnTab) {
-          event.preventDefault();
-          event.stopPropagation();
-          submit('body');
-          return;
-        }
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          event.stopPropagation();
-          submit('origin');
-          return;
-        }
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          event.stopPropagation();
-          skipNextBlurSubmitRef.current = true;
-          onCancel();
-        }
-      }}
-      ref={inputRef}
-      value={draftTitle}
-    />
-  );
 }

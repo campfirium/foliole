@@ -141,6 +141,19 @@ it('shows every ctrl-selected current-folder topic as selected', () => {
   expect(within(itemColumn).getByRole('treeitem', { name: 'Vue Notes' })).toHaveAttribute('data-node-bulk-selected', 'true');
 });
 
+it('deletes the selected topics together when Delete is pressed on the tree', () => {
+  const deleteNodes = vi.fn();
+  useWorkspaceStore.setState((state) => ({ ...state, deleteNodes }));
+  renderWithLocalization(<WorkspaceTopicTreeSelectionHarness />);
+
+  const tree = screen.getByRole('tree', { name: 'Topic list' });
+  const second = within(tree).getByRole('treeitem', { name: 'Vue Notes' });
+  fireEvent.click(second, { ctrlKey: true });
+  fireEvent.keyDown(second, { key: 'Delete' });
+
+  expect(deleteNodes).toHaveBeenCalledWith(['article-a', 'article-b']);
+});
+
 it('selects shift ranges by the sorted visible order in the item column without opening the target', () => {
   const onSelectNode = vi.fn();
   renderWithLocalization(<WorkspaceTopicTreeSortedSelectionHarness onSelectNode={onSelectNode} />);

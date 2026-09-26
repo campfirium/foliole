@@ -18,6 +18,7 @@ export function renderWorkspaceTopicTreeBody(args: {
   drag: WorkspaceTopicTreeDragController;
   emptyState?: { description: string; title: string };
   nodesById: WorkspaceListNodesById;
+  onDeleteNodes: (nodeIds: string[]) => void;
   onFocusEditor?: (nodeId: string, origin: HTMLButtonElement) => boolean;
   onRenameNode: (nodeId: string, title: string) => void;
   onSelectNode: ReturnType<typeof useNodeSelectionHandler>;
@@ -51,6 +52,7 @@ export function renderWorkspaceTopicTreeBody(args: {
           collapsedNodeIds={args.collapsedNodeIds}
           drag={args.drag}
           nodesById={args.nodesById}
+          onDeleteNodes={args.onDeleteNodes}
           {...definedProps({ onFocusEditor: args.onFocusEditor })}
           onContextMenu={args.contextMenu.openContextMenu}
           onRenameNode={args.onRenameNode}
