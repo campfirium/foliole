@@ -13,6 +13,8 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 final class FolioleCompanionSyncGroupJoinScenario {
@@ -119,6 +121,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
         int candidateCount = 0;
         int responseCount = 0;
         String lastFailure = "none";
+        Map<String, String> routes = new LinkedHashMap<>();
         while (System.nanoTime() < deadline) {
             for (JSObject candidate : FolioleCompanionNsdDiscovery.discoverCandidates(context)) {
                 candidateCount += 1;
@@ -132,6 +135,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
                         .networkBodyResponseKey(context);
                     JSONObject discovery = new JSONObject(response.getString(bodyKey));
                     responseCount += 1;
+                    routes.put(endpoint, "group:" + discovery.optString("group_id"));
                     boolean idMatches = groupId.equals(discovery.optString("group_id"));
                     boolean tagMatches = groupTag.equals(discovery.optString("group_tag"));
                     if (idMatches && tagMatches) return groupId;
@@ -142,13 +146,15 @@ final class FolioleCompanionSyncGroupJoinScenario {
                     throw identityMismatch;
                 } catch (Exception unreachableProvider) {
                     lastFailure = unreachableProvider.getClass().getSimpleName();
+                    routes.putIfAbsent(endpoint, lastFailure);
                     Log.i(LOG_TAG, "stage=provider-unreachable endpoint=" + endpoint);
                 }
             }
             Thread.sleep(500);
         }
         throw new IllegalStateException("acceptance_group_identity_not_found candidates="
-            + candidateCount + " responses=" + responseCount + " lastFailure=" + lastFailure);
+            + candidateCount + " responses=" + responseCount + " lastFailure=" + lastFailure
+            + " routes=" + routes);
     }
 
     private static void assertEndpointIdentity(
