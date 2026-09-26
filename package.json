@@ -16,6 +16,7 @@
     "appearance:colors:generate": "node --experimental-strip-types scripts/generate-appearance-colors.ts",
     "appearance:colors:check": "node --experimental-strip-types scripts/generate-appearance-colors.ts --check",
     "deps:scan": "node scripts/quality/quality-command-contracts.mjs allow deps:scan && knip --dependencies --reporter compact",
+    "maintenance:transitive-lockfile": "node scripts/refresh-transitive-dependencies.mjs",
     "deps:hardening:check": "node scripts/quality/quality-command-contracts.mjs allow deps:hardening:check && bash scripts/npm-hardening-check.sh",
     "check:native-contracts": "node scripts/check-native-command-contracts.mjs",
     "scripts:domains:check": "node scripts/check-script-domain-contract.mjs",
