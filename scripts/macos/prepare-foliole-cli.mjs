@@ -61,7 +61,7 @@ async function prepareSeaRuntime(nodePath) {
 }
 
 export function launcherSigningArgs(mode) {
-  if (mode === 'developer-id') {
+  if (mode === 'developer-id' || mode === 'source') {
     return ['CODE_SIGNING_ALLOWED=NO', 'CODE_SIGNING_REQUIRED=NO'];
   }
   if (mode === 'distribution') {
@@ -99,7 +99,12 @@ function buildLauncher(mode) {
     'platform=macOS,arch=arm64',
     '-derivedDataPath',
     XCODE_OUTPUT,
-    'DEVELOPMENT_TEAM=V589TQH334',
+    ...(mode === 'source' ? [
+      'GCC_PREPROCESSOR_DEFINITIONS=FOLIOLE_SOURCE_BUILD=1',
+      'PRODUCT_BUNDLE_IDENTIFIER=org.foliole.source.cli',
+      'INFOPLIST_KEY_CFBundleIdentifier=org.foliole.source.cli',
+      'DEVELOPMENT_TEAM='
+    ] : ['DEVELOPMENT_TEAM=V589TQH334']),
     ...launcherSigningArgs(mode),
     'clean',
     'build'
@@ -118,6 +123,12 @@ export function codesignArgs(identity, entitlements, target, mode) {
 
 async function assembleAndSign(runtimePath, launcherPath, options) {
   await cp(launcherPath, APP_OUTPUT, { recursive: true });
+  if (options.mode === 'source') {
+    runChecked('source CLI bundle identity', 'plutil', [
+      '-replace', 'CFBundleIdentifier', '-string', 'org.foliole.source.cli',
+      path.join(APP_OUTPUT, 'Contents/Info.plist')
+    ]);
+  }
   if (options.provisioningProfile) {
     await copyFile(
       options.provisioningProfile,
@@ -133,7 +144,8 @@ async function assembleAndSign(runtimePath, launcherPath, options) {
   if (options.productVersion) packageMetadata.version = options.productVersion;
   await writeFile(path.join(resources, 'package.json'), `${JSON.stringify(packageMetadata, null, 2)}\n`);
   const bundledRuntime = path.join(APP_OUTPUT, 'Contents/MacOS', RUNTIME_NAME);
-  const entitlementPrefix = options.mode === 'developer-id' ? '.developer-id' : '';
+  const entitlementPrefix = options.mode === 'source' ? '.source'
+    : options.mode === 'developer-id' ? '.developer-id' : '';
   await copyFile(runtimePath, bundledRuntime);
   await chmod(bundledRuntime, 0o755);
   runChecked('CLI runtime signature', 'codesign', codesignArgs(
@@ -148,7 +160,7 @@ async function assembleAndSign(runtimePath, launcherPath, options) {
 }
 
 export async function prepareFolioleCli(options = {}) {
-  const mode = ['developer-id', 'distribution'].includes(options.mode)
+  const mode = ['developer-id', 'distribution', 'source'].includes(options.mode)
     ? options.mode
     : 'development';
   if (process.platform !== 'darwin' || process.arch !== 'arm64') {
@@ -164,7 +176,7 @@ export async function prepareFolioleCli(options = {}) {
   if (mode === 'developer-id' && !options.provisioningProfile) {
     throw new Error('Developer ID CLI packaging requires its own provisioning profile');
   }
-  const identity = mode === 'developer-id'
+  const identity = mode === 'source' ? '-' : mode === 'developer-id'
     ? DEVELOPER_ID_IDENTITY
     : mode === 'distribution' ? DISTRIBUTION_IDENTITY : DEVELOPMENT_IDENTITY;
   await assembleAndSign(runtimePath, launcherPath, {

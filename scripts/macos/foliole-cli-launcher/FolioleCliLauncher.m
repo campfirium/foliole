@@ -21,6 +21,19 @@ static NSString *resolveCliContentsDirectory(void) {
 
 static BOOL configureRuntimeEnvironment(NSString *cliContentsDirectory) {
   NSFileManager *files = NSFileManager.defaultManager;
+#ifdef FOLIOLE_SOURCE_BUILD
+  NSURL *supportUrl = [files URLForDirectory:NSApplicationSupportDirectory
+                                    inDomain:NSUserDomainMask
+                           appropriateForURL:nil
+                                      create:YES
+                                       error:nil];
+  if (supportUrl == nil) return NO;
+  NSString *sourceRoot = [supportUrl.path stringByAppendingPathComponent:@"foliole-source"];
+  NSString *descriptor = [[sourceRoot stringByAppendingPathComponent:@"cache"]
+    stringByAppendingPathComponent:@"agent-control-session.json"];
+  NSString *backup = [[sourceRoot stringByAppendingPathComponent:@"cli"]
+    stringByAppendingPathComponent:@"backups"];
+#else
   NSURL *groupUrl = [files containerURLForSecurityApplicationGroupIdentifier:kAgentControlGroup];
   if (groupUrl == nil) return NO;
   NSURL *supportUrl = [files URLForDirectory:NSApplicationSupportDirectory
@@ -32,6 +45,7 @@ static BOOL configureRuntimeEnvironment(NSString *cliContentsDirectory) {
   NSString *descriptor = [groupUrl URLByAppendingPathComponent:@"agent-control-session.json"].path;
   NSString *backup = [[supportUrl URLByAppendingPathComponent:@"Foliole CLI"]
     URLByAppendingPathComponent:@"backups"].path;
+#endif
   NSString *metadata = [cliContentsDirectory stringByAppendingPathComponent:@"Resources/package.json"];
   NSString *agentScript = [cliContentsDirectory
     stringByAppendingPathComponent:@"Resources/scripts/agent-control/foliole-agent.mjs"];

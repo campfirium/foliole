@@ -35,6 +35,11 @@ export function resolveDesktopDeviceAnchorFilePath(options: DesktopDeviceAnchorO
     return pathApi.join(testStateRoot, 'device-identity', ANCHOR_FILE);
   }
   if (platform === 'darwin') {
+    if (env.FOLIOLE_BUILD_CHANNEL === 'source') {
+      const userData = env.FOLIOLE_USER_DATA_PATH?.trim();
+      if (!userData || !path.posix.isAbsolute(userData)) throw new Error('device_anchor_source_path_unavailable');
+      return path.posix.join(userData, 'device-identity', ANCHOR_FILE);
+    }
     const loaded = (options.loadAdapter ?? loadMacosSecurityScopedBookmarkAdapter)(platform);
     if (loaded.status !== 'ready') throw new Error(`device_anchor_store_unavailable:${loaded.status}`);
     const container = loaded.adapter.appGroupContainerPath(AGENT_CONTROL_APP_GROUP);

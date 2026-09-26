@@ -44,6 +44,16 @@ it('keeps Windows anchor outside channel-specific Roaming userData', () => {
   expect(resolveDesktopDeviceAnchorFilePath(options)).toBe(expected);
 });
 
+it('uses the source build data root without opening the Foliole App Group', () => {
+  const loadAdapter = vi.fn();
+  expect(resolveDesktopDeviceAnchorFilePath({
+    env: { FOLIOLE_BUILD_CHANNEL: 'source', FOLIOLE_USER_DATA_PATH: '/Users/me/Library/Application Support/foliole-source' },
+    loadAdapter,
+    platform: 'darwin'
+  })).toBe('/Users/me/Library/Application Support/foliole-source/device-identity/anchor-v1');
+  expect(loadAdapter).not.toHaveBeenCalled();
+});
+
 it('keeps desktop test device identity inside the isolated runtime root', () => {
   expect(resolveDesktopDeviceAnchorFilePath({
     env: { FOLIOLE_ELECTRON_TEST_STATE_ROOT: '/tmp/foliole-playwright-a' },

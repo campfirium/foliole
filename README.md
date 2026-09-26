@@ -122,6 +122,10 @@ Turns evolving Topics into content you can continue to update on your own site, 
   <img src="assets/screenshots/Publish%20Evolving%20Topics.png" alt="Foliole publishing settings for an evolving website." width="900">
 </p>
 
+## Building from Source
+
+See the [build guide](docs/BUILDING.md) for macOS, Windows, Linux, Android, and iOS. For everyday use, start from a [published release tag](https://github.com/campfirium/foliole/releases); `dev` contains unreleased changes that may affect normal use.
+
 ## Acknowledgements
 
 Special thanks to Piotr Woźniak and Jarrett Ye. Without SuperMemo, incremental reading, and FSRS, Foliole would not exist.

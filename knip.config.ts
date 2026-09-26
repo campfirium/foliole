@@ -29,6 +29,7 @@ const config = {
     'ditto',
     'git.exe',
     'netstat.exe',
+    'plutil',
     'powershell.exe',
     'ps',
     'python3',

@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
 import { expect, it, vi } from 'vitest';
@@ -72,4 +74,40 @@ it('keeps direct-distribution builds on the existing Foliole container data path
   expect(configured.appDataRoot).toBe(expectedRoot);
   expect(setPath).toHaveBeenCalledWith('userData', path.join(expectedRoot, FOLIOLE_APP_NAME));
   expect(setPath).toHaveBeenCalledWith('sessionData', path.join(expectedRoot, FOLIOLE_APP_NAME));
+});
+
+it('keeps a packaged source build out of the official data and library paths', () => {
+  const appDataRoot = '/Users/roamer/Library/Application Support';
+  const appPath = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-source-identity-'));
+  fs.writeFileSync(path.join(appPath, 'package.json'), JSON.stringify({ folioleBuildChannel: 'source' }));
+  const setPath = vi.fn();
+  const paths = { userData: path.join(appDataRoot, 'Electron'), sessionData: path.join(appDataRoot, 'Electron') };
+  const env: NodeJS.ProcessEnv = {
+    FOLIOLE_USER_DATA_PATH: '/Users/roamer/Library/Containers/com.campfirium.foliole/Data/Library/Application Support/foliole',
+    FOLIOLE_SESSION_DATA_PATH: '/Users/roamer/Library/Containers/com.campfirium.foliole/Data/Library/Application Support/foliole',
+    FOLIOLE_LIBRARY_HOME: '/Users/roamer/Documents/Foliole'
+  };
+  const app = {
+    getAppPath: () => appPath,
+    getName: () => FOLIOLE_APP_NAME,
+    getPath: (name: 'appData' | 'sessionData' | 'temp' | 'userData') =>
+      name === 'appData' ? appDataRoot : paths[name === 'userData' ? 'userData' : 'sessionData'],
+    isPackaged: true,
+    setName: vi.fn(),
+    setPath: (name: 'sessionData' | 'userData', value: string) => {
+      paths[name] = value;
+      setPath(name, value);
+    }
+  };
+  try {
+    const configured = configureRuntimeAppIdentity(app, vi.fn(), 'darwin', env);
+    expect(configured.userDataPath).toBe(path.join(appDataRoot, 'foliole-source'));
+    expect(configured.libraryHome).toBe(path.join(os.homedir(), 'Documents', 'Foliole Source'));
+    expect(setPath).toHaveBeenCalledWith('sessionData', configured.userDataPath);
+    expect(env.FOLIOLE_BUILD_CHANNEL).toBe('source');
+    expect(env.FOLIOLE_SESSION_DATA_PATH).toBe(configured.userDataPath);
+    expect(env.FOLIOLE_LIBRARY_HOME).toBe(configured.libraryHome);
+  } finally {
+    fs.rmSync(appPath, { force: true, recursive: true });
+  }
 });

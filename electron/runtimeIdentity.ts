@@ -11,7 +11,9 @@ import {
 } from '../scripts/agent-control/foliole-agent-runtime-paths.mjs';
 
 import { applyMacosDockPresentation } from './macosDevelopmentDockIcon.js';
+import { resolvePackagedMacosAppDataRoot } from './runtimeMacosAppData.js';
 import { resolvePreloadScriptPath, resolveRendererIndexPath } from './runtimePaths.js';
+import { prepareSourceBuildIdentity } from './sourceBuildIdentity.js';
 
 type ExistsSync = (filePath: string) => boolean;
 
@@ -21,6 +23,7 @@ type RmSync = (dirPath: string, options: { force: true; recursive: true }) => vo
 interface AppIdentityApi {
   dock?: { hide(): void; setIcon(image: string): void } | undefined;
   getName(): string;
+  getAppPath?(): string;
   getPath(name: 'appData' | 'sessionData' | 'temp' | 'userData'): string;
   isPackaged?: boolean;
   setAppUserModelId?(id: string): void;
@@ -98,19 +101,6 @@ function resolveRuntimeUserDataPath(args: {
   return resolveFolioleUserDataPaths(args);
 }
 
-function resolvePackagedMacosAppDataRoot(
-  appDataRoot: string,
-  platform: NodeJS.Platform,
-  isPackaged: boolean | undefined
-) {
-  if (platform !== 'darwin' || !isPackaged) return appDataRoot;
-  const containerSuffix = path.join(
-    'Containers', 'com.campfirium.foliole', 'Data', 'Library', 'Application Support'
-  );
-  if (appDataRoot.endsWith(containerSuffix)) return appDataRoot;
-  return path.join(path.dirname(appDataRoot), containerSuffix);
-}
-
 function resolveRuntimeAppDataRoot(app: AppIdentityApi, platform: NodeJS.Platform) {
   return resolvePackagedMacosAppDataRoot(app.getPath('appData'), platform, app.isPackaged);
 }
@@ -157,6 +147,7 @@ export function configureRuntimeAppIdentity(
   argv = process.argv,
   rmSync?: RmSync
 ): ConfiguredAppIdentity {
+  const sourceLibraryHome = prepareSourceBuildIdentity(app, platform, env);
   const runtimeAppName = resolveRuntimeAppName(app.getName(), env);
   const internalBuild = runtimeAppName === FOLIOLE_INTERNAL_APP_NAME;
   app.setName(internalBuild ? FOLIOLE_INTERNAL_PRODUCT_NAME : 'Foliole');
@@ -173,11 +164,11 @@ export function configureRuntimeAppIdentity(
     env.FOLIOLE_GUIDED_SAMPLE_LOCALE = sampleLocale;
   }
   const sandboxLibraryHome = sandboxRoot ? path.join(sandboxRoot, 'library') : null;
-  const libraryHome = resolveRuntimeLibraryHome({ argv, env, internalBuild, sandboxLibraryHome });
+  const libraryHome = resolveRuntimeLibraryHome({ argv, env, internalBuild, sandboxLibraryHome }) ?? sourceLibraryHome;
   if (libraryHome) {
     env.FOLIOLE_LIBRARY_HOME = libraryHome;
   }
-  const appDataRoot = resolveRuntimeAppDataRoot(app, platform);
+  const appDataRoot = sourceLibraryHome !== null ? app.getPath('appData') : resolveRuntimeAppDataRoot(app, platform);
   const { defaultUserDataPath, userDataPath } = resolveRuntimeUserDataPath({ appDataRoot, env, internalBuild, sandboxRoot });
   const sessionDataPath = resolvePathOverride(env.FOLIOLE_SESSION_DATA_PATH) ?? userDataPath;
   if (previewSandbox && env.FOLIOLE_PREVIEW_SANDBOX_RESET !== '0') {
