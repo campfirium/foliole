@@ -100,7 +100,7 @@ export function loadWatchedFolderBindingState() {
 }
 
 export function upsertChangedWatchedFolderSource(source: ImportManagerSourceDraft, now: string,
-  allowTransfer = false) {
+  allowTransfer = false, targetBindingId?: string) {
   if (!source.primaryPath.trim()) return null;
   const driver = openDatabaseConnection().driver;
   const profile = localHostProfile(now);
@@ -110,8 +110,10 @@ export function upsertChangedWatchedFolderSource(source: ImportManagerSourceDraf
     `SELECT binding.*, source.host_name, source.host_platform FROM watched_folder_bindings binding
      JOIN desktop_sources source ON source.source_ref = binding.source_ref
      WHERE binding.deleted_at IS NULL AND (binding.binding_id = ? OR binding.local_rule_id = ?)
-     ORDER BY binding.binding_id = ? DESC LIMIT 1`,
-    [source.id, source.id, source.id]
+       AND (? IS NULL OR binding.binding_id = ?)
+     ORDER BY binding.binding_id = ? DESC,
+       binding.owner_device_identity_key = ? DESC, binding.binding_id LIMIT 1`,
+    [source.id, source.id, targetBindingId ?? null, targetBindingId ?? null, source.id, localId]
   );
   if (!allowTransfer && existing && existing.owner_device_identity_key !== localId) return null;
   if (allowTransfer && existing && existing.owner_device_identity_key !== localId &&

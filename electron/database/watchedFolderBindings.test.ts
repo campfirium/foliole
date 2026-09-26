@@ -140,6 +140,29 @@ it('claims a remote watched Source only after its owner disconnects and explicit
   expect(resolveExecutableWatchedBinding(binding.binding_id, folderPath).executable).toBe(true);
 });
 
+it('updates the local binding when another Host shares its watched rule ID', () => {
+  const driver = openDatabaseConnection().driver;
+  const source = (id: string, primaryPath: string) => ({
+    actionMode: 'keep' as const, archivePath: '', highlightMode: 'merged' as const,
+    highlightPath: '', id, keepPreview: null, keepState: 'enabled' as const, primaryPath
+  });
+  const remote = upsertChangedWatchedFolderSource(source('shared-rule', '/remote'), '2026-08-18T00:00:00.000Z')!;
+  driver.execute(`UPDATE watched_folder_bindings SET owner_device_identity_key = 'remote-device'
+    WHERE binding_id = ?`, [remote.binding_id]);
+  const local = upsertChangedWatchedFolderSource(source('local-rule', '/old'), '2026-08-18T00:01:00.000Z')!;
+  driver.execute(`UPDATE watched_folder_bindings SET local_rule_id = 'shared-rule'
+    WHERE binding_id = ?`, [local.binding_id]);
+  disconnectWatchedFolderBinding(local.binding_id);
+
+  const updated = upsertChangedWatchedFolderSource(
+    source('shared-rule', '/new'), '2026-08-18T00:02:00.000Z'
+  );
+
+  expect(updated).toMatchObject({ binding_id: local.binding_id, connection_status: 'connected', primary_path: '/new' });
+  expect(driver.queryOne('SELECT owner_device_identity_key, primary_path FROM watched_folder_bindings WHERE binding_id = ?',
+    [remote.binding_id])).toEqual({ owner_device_identity_key: 'remote-device', primary_path: '/remote' });
+});
+
 it('removes only the watched connection record and keeps imported data', async () => {
   const folderPath = path.join(tempRoot, 'watched');
   await fs.mkdir(folderPath, { recursive: true });

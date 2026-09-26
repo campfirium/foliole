@@ -80,6 +80,6 @@ export async function confirmWatchedFolderReconnect(args: {
     ? [...settings.sources, source]
     : settings.sources.map((item, index) => index === currentIndex ? source : item);
   saveImportManagerSettings({ ...settings, sources });
-  const updated = upsertChangedWatchedFolderSource(source, new Date().toISOString(), true);
+  const updated = upsertChangedWatchedFolderSource(source, new Date().toISOString(), true, binding.binding_id);
   return { ...preview, binding: updated ?? binding };
 }
