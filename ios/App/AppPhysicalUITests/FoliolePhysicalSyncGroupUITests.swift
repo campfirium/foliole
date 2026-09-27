@@ -207,6 +207,10 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         attachScreenshot(named: "Fri-manual-sync-received")
     }
 
+    func testT262ManualSiblingOrderAfterSyncAndRelaunch() throws {
+        runT262ManualSiblingOrderAcceptance()
+    }
+
     func testResumesAutomaticSync() throws {
         let app = acceptanceApplication()
         app.launch()
