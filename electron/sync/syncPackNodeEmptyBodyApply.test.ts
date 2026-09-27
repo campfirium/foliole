@@ -127,3 +127,45 @@ it('keeps a full local body when a replay only carries ancestry', async () => {
   expect(connection.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
     .get('desktop#1')).toEqual({ body_text: 'Packed answer' });
 });
+
+it('restores a stripped common base supplied by a returning branch', async () => {
+  const connection = openDatabaseConnection();
+  insertLocalNode();
+  connection.sqlite.exec(`
+    UPDATE nodes SET current_version_id = 'local-head' WHERE id = 'node-1';
+    INSERT INTO node_sync_versions
+      (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
+    VALUES
+      ('shared-base', 'node-1', NULL, 'desktop', '2026-05-04T01:00:00.000Z',
+       'hash-base', NULL, '{"id":"node-1","content":null}'),
+      ('local-head', 'node-1', 'shared-base', 'desktop', '2026-05-04T02:00:00.000Z',
+       'hash-local', 'Local edit', '{"id":"node-1","content":"Local edit"}');
+    INSERT INTO node_sync_version_parents VALUES ('local-head', 'shared-base', 0);
+  `);
+  const incoming = new Database(incomingPath);
+  try {
+    incoming.exec(`
+      DELETE FROM node_sync_versions;
+      UPDATE nodes SET current_version_id = 'returning-head' WHERE id = 'node-1';
+      INSERT INTO node_sync_versions
+        (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
+      VALUES
+        ('shared-base', 'node-1', NULL, 'desktop', '2026-05-04T01:00:00.000Z',
+         'hash-base', 'Original body', '{"id":"node-1","content":"Original body"}'),
+        ('returning-head', 'node-1', 'shared-base', 'phone', '2026-05-04T03:00:00.000Z',
+         'hash-returning', 'Offline edit', '{"id":"node-1","content":"Offline edit"}');
+      INSERT INTO node_sync_version_parents VALUES ('returning-head', 'shared-base', 0);
+    `);
+  } finally {
+    incoming.close();
+  }
+  const port = createBetterSqliteDbPort(connection.sqlite);
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await applySyncPackNodeVersionsWithDbPort(port);
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+  expect(connection.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
+    .get('shared-base')).toEqual({ body_text: 'Original body' });
+});

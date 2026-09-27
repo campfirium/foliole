@@ -1,5 +1,6 @@
 import type { DbPort, DbRow } from './dbPort.js';
 import type { SyncPackNodeApplyOptions } from './syncPackApplyStatements.js';
+import { restoreIncomingNodeMergeBases } from './syncPackNodeMergeBaseRestore.js';
 import {
   assertValidNodeVersionSnapshot,
   SYNC_PACK_NODE_VERSION_COLUMNS,
@@ -59,6 +60,7 @@ export async function applySyncPackNodeVersionsWithDbPort(
      WHERE ${eligibleVersionFilter('version')}
      ON CONFLICT(version_id, parent_version_id) DO NOTHING`
   );
+  await restoreIncomingNodeMergeBases(port, alias);
 }
 
 async function rehydrateCurrentVersionBodies(port: DbPort, alias: string) {
