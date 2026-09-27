@@ -12,7 +12,7 @@ export interface PanelViewport {
   height: number;
 }
 
-const DEFAULT_PREFERENCE: AnnotationPanelPreference = { x: null, width: 240, height: 144 };
+const DEFAULT_PREFERENCE: AnnotationPanelPreference = { x: null, width: 278, height: 178 };
 const EDGE_GAP = 8;
 
 export function readAnnotationPanelPreference(): AnnotationPanelPreference {
@@ -22,8 +22,8 @@ export function readAnnotationPanelPreference(): AnnotationPanelPreference {
     const parsed = JSON.parse(raw) as Partial<AnnotationPanelPreference>;
     return {
       x: typeof parsed.x === 'number' && Number.isFinite(parsed.x) ? parsed.x : null,
-      width: validSize(parsed.width, DEFAULT_PREFERENCE.width, 180),
-      height: validSize(parsed.height, DEFAULT_PREFERENCE.height, 120)
+      width: validSize(parsed.width, DEFAULT_PREFERENCE.width, 190),
+      height: validSize(parsed.height, DEFAULT_PREFERENCE.height, 150)
     };
   } catch {
     return { ...DEFAULT_PREFERENCE };

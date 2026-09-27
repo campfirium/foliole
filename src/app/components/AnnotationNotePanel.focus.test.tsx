@@ -5,7 +5,7 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 
 import { AnnotationNotePanel } from './AnnotationNotePanel';
 
-it('keeps the annotation note textarea keyboard focus visible', () => {
+it('focuses the annotation editor when it opens', () => {
   renderWithLocalization(
     <AnnotationNotePanel
       draft=""
@@ -18,9 +18,7 @@ it('keeps the annotation note textarea keyboard focus visible', () => {
   );
 
   const textarea = screen.getByPlaceholderText('Add an annotation...');
-  expect(textarea.className).toContain('focus-visible:outline-none');
-  expect(textarea.className).toContain('focus-visible:ring-1');
-  expect(textarea.className).toContain('focus-visible:ring-ring');
+  expect(textarea).toHaveFocus();
 });
 
 it('cancels the annotation note panel on Escape', () => {

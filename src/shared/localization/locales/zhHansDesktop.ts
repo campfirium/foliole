@@ -50,6 +50,7 @@ export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string
   'desktop.webLookup.cancel': '取消',
   'desktop.webLookup.continue': '继续',
   'desktop.webLookup.repairTable': '修复表格',
+  'desktop.annotation.title': '批注',
   'desktop.annotation.comment.placeholder': '添加批注...',
   'desktop.annotation.followSelection': '跟随选区',
   'desktop.annotation.resize': '调整批注编辑器大小',

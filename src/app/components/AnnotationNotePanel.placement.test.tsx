@@ -66,19 +66,19 @@ it('keeps the resized panel visible when the window shrinks and preserves its si
   const first = openPanel(700, 300);
   drag(first.dragHandle, 50, 0);
   drag(screen.getByRole('separator', { name: 'Resize annotation editor' }), 100, 80);
-  expect(first.panel.style.width).toBe('340px');
-  expect(first.panel.style.height).toBe('224px');
+  expect(first.panel.style.width).toBe('378px');
+  expect(first.panel.style.height).toBe('258px');
 
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 500 });
   fireEvent.resize(window);
-  expect(first.panel.style.left).toBe('152px');
+  expect(first.panel.style.left).toBe('114px');
   first.unmount();
 
   const next = openPanel(20, 100);
-  expect(next.panel.style.left).toBe('152px');
-  expect(next.panel.style.width).toBe('340px');
-  expect(next.panel.style.height).toBe('224px');
+  expect(next.panel.style.left).toBe('114px');
+  expect(next.panel.style.width).toBe('378px');
+  expect(next.panel.style.height).toBe('258px');
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1200 });
   fireEvent.resize(window);
-  expect(next.panel.style.left).toBe('750px');
+  expect(next.panel.style.left).toBe('714px');
 });

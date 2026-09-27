@@ -33,7 +33,7 @@ function beginPanelPointerInteraction(
     moved = true;
     latest = clampPanelRect(kind === 'drag'
       ? { ...start.rect, x: start.rect.x + dx, y: start.rect.y + dy }
-      : { ...start.rect, width: Math.max(180, start.rect.width + dx), height: Math.max(120, start.rect.height + dy) },
+      : { ...start.rect, width: Math.max(190, start.rect.width + dx), height: Math.max(150, start.rect.height + dy) },
     panelViewport());
     state.setLiveRect(latest);
   };
