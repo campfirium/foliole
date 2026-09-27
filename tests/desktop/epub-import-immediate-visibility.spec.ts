@@ -30,7 +30,7 @@ async function importEpub(
   modeName: 'Free reading' | 'Sequential reading'
 ) {
   await installEpubSelection(desktopApp, fixturePath);
-  await desktopWindow.evaluate(() => window.dispatchEvent(new Event('foliole:file-import-request')));
+  await desktopWindow.getByRole('button', { name: 'Import', exact: true }).click();
   const modeDialog = desktopWindow.getByRole('dialog', { name: 'Choose reading mode' });
   await expect(modeDialog).toBeVisible();
   await modeDialog.getByRole('button', { name: new RegExp(`^${modeName}`) }).click();

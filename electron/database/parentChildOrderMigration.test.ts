@@ -41,6 +41,7 @@ function createNode(id: string) {
   upsertNodeSnapshot({
     nodeId: id, parentNodeId: null, kind: 'topic', title: id,
     isTitleManual: true, content: '', reveal: null, anchorLink: null,
+    position: null,
     createdAt: '2026-05-01T00:00:00.000Z', updatedAt: '2026-05-01T00:00:00.000Z'
   });
 }

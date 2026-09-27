@@ -4,7 +4,6 @@ import {
   buildAttachmentExistsQuery,
   buildNodeAttachmentDelete,
   buildNodeAttachmentInsert,
-  buildNodeOrderReplace,
   buildRemoteNodeUpdate,
   buildRemoteNodeUpsert,
   buildRemoteNodeVersionUpsert
@@ -39,7 +38,6 @@ function createNodeRecord(overrides: Partial<NativeSyncNodeRecord> = {}): Native
       kind: 'item',
       opening_text: 'remote opening',
       parent_id: null,
-      position: 4,
       priority: 2,
       reveal: 'answer',
       title: 'Remote Node',
@@ -82,7 +80,6 @@ it('builds the canonical remote node upsert params', () => {
     null,
     'source-a',
     'content-a',
-    4,
     'phone#1',
     'phone',
     0,
@@ -131,31 +128,6 @@ it('builds remote version upsert only for complete version metadata', () => {
     expect.stringContaining('"sequential_reading_enabled":false')
   ]);
   expect(buildRemoteNodeVersionUpsert(createNodeRecord({ version_id: null }))).toBeNull();
-});
-
-it('builds node order replace as upsert or delete', () => {
-  expect(buildNodeOrderReplace(createNodeRecord())).toMatchObject({
-    params: ['node-1', 4],
-    sql: `INSERT INTO node_order (node_id, position)
-VALUES (?, ?)
-ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`
-  });
-  expect(buildNodeOrderReplace(createNodeRecord({
-    snapshot: {
-      ...createNodeRecord().snapshot,
-      kind: 'folder'
-    }
-  })).params).toEqual(['node-1', 4]);
-  expect(buildNodeOrderReplace(createNodeRecord({
-    snapshot: {
-      ...createNodeRecord().snapshot,
-      kind: 'folder',
-      position: null
-    }
-  }))).toMatchObject({
-    params: ['node-1'],
-    sql: 'DELETE FROM node_order WHERE node_id = ?'
-  });
 });
 
 it('builds node attachment link statements without deciding existence', () => {

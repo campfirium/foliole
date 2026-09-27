@@ -36,6 +36,8 @@ vi.mock('../import/managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+
 import { resetImportPathAuthorizationForTests } from './importPathAuthorization.js';
 import { runTextFileImport, selectImportTextFile } from './importTextFile.js';
 
@@ -101,4 +103,22 @@ it('routes EPUB previews and imports through the dedicated extractor', async () 
   );
   expect(readFile).not.toHaveBeenCalled();
   expect(runPreparedImport).not.toHaveBeenCalled();
+});
+
+it('waits for an active database owner before importing an EPUB', async () => {
+  let releaseOwner: (() => void) | undefined;
+  const gate = new Promise<void>((resolve) => { releaseOwner = resolve; });
+  const activeOwner = runWithDatabaseConnectionOwner(() => gate);
+  try {
+    const importing = runTextFileImport();
+    await vi.waitFor(() => expect(showOpenDialog).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(runEpubImport).not.toHaveBeenCalled();
+    releaseOwner?.();
+    await activeOwner;
+    await expect(importing).resolves.toMatchObject({ node_id: 'node-import-epub' });
+    expect(runEpubImport).toHaveBeenCalledTimes(1);
+  } finally {
+    releaseOwner?.();
+  }
 });

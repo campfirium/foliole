@@ -80,11 +80,11 @@ export async function runImportForFilePath(filePath: string, args?: NativeTextIm
   try {
     if (source.kind === 'epub') {
       return toNativeTextImportResult(
-        await runEpubImport(source, importedAt, {
+        await runWithDatabaseConnectionOwner(() => runEpubImport(source, importedAt, {
           ...(args?.sequential_reading_mode === 'free' || args?.sequential_reading_mode === 'sequential'
             ? { sequentialReadingMode: args.sequential_reading_mode }
             : {})
-        })
+        }))
       );
     }
     const prepared = await loadPreparedImportRecord(source, {
