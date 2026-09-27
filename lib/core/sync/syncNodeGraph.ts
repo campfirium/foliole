@@ -12,6 +12,12 @@ export interface StoredSyncNodeVersionRow extends DbRow {
   version_id: string;
 }
 
+export function storedSyncNodeVersionBody(row: StoredSyncNodeVersionRow): string | null {
+  if (row.body_text !== null) return row.body_text;
+  const snapshot = JSON.parse(row.snapshot_json) as { content?: unknown };
+  return typeof snapshot?.content === 'string' ? snapshot.content : null;
+}
+
 export async function loadCurrentSyncNodeRecord(
   port: DbPort,
   objectId: string,
@@ -48,19 +54,27 @@ export async function isStoredVersionIdentical(port: DbPort, record: NativeSyncN
 }
 
 export async function loadMergeBase(port: DbPort, leftId: string, rightId: string) {
+  const parents = new Map<string, string[]>();
   const [left, right] = await Promise.all([
-    loadAncestorDistances(port, leftId),
-    loadAncestorDistances(port, rightId)
+    loadAncestorDistances(port, leftId, parents),
+    loadAncestorDistances(port, rightId, parents)
   ]);
-  const nearest = [...left.keys()].filter((id) => right.has(id)).sort((a, b) => {
-    const leftA = left.get(a)!;
-    const rightA = right.get(a)!;
-    const leftB = left.get(b)!;
-    const rightB = right.get(b)!;
-    return Math.max(leftA, rightA) - Math.max(leftB, rightB)
-      || leftA + rightA - leftB - rightB
-      || a.localeCompare(b);
-  })[0];
+  const common = [...left.keys()].filter((id) => right.has(id));
+  const maximal = new Set(common);
+  const visited = new Set<string>();
+  for (const candidate of common) {
+    if (!maximal.has(candidate)) continue;
+    const pending = [...await cachedParents(port, candidate, parents)];
+    while (pending.length) {
+      const ancestor = pending.pop()!;
+      if (visited.has(ancestor)) continue;
+      visited.add(ancestor);
+      maximal.delete(ancestor);
+      pending.push(...await cachedParents(port, ancestor, parents));
+    }
+  }
+  if (maximal.size > 1) throw new Error('sync_node_merge_base_ambiguous');
+  const nearest = maximal.values().next().value;
   if (!nearest) return null;
   const [row] = await port.query<StoredSyncNodeVersionRow>(
     'SELECT * FROM node_sync_versions WHERE version_id = ? LIMIT 1',
@@ -79,10 +93,12 @@ async function storedVersionToRecord(
   includeAncestors: boolean
 ): Promise<NativeSyncNodeRecord> {
   const snapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
+  const body = storedSyncNodeVersionBody(row);
+  if (body === null) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
   const parents = await loadParents(port, row.version_id);
   return {
     ancestor_version_ids: includeAncestors ? await loadAncestors(port, row.version_id) : [],
-    body_text: row.body_text ?? snapshot.content ?? '',
+    body_text: body,
     content_hash: row.content_hash,
     host_name: row.host_name,
     object_id: row.object_id,
@@ -114,12 +130,16 @@ async function loadAncestors(port: DbPort, versionId: string) {
   return [...(await loadAncestorDistances(port, versionId)).keys()].filter((id) => id !== versionId);
 }
 
-async function loadAncestorDistances(port: DbPort, versionId: string) {
+async function loadAncestorDistances(
+  port: DbPort,
+  versionId: string,
+  parents = new Map<string, string[]>()
+) {
   const distances = new Map<string, number>([[versionId, 0]]);
   const pending: Array<{ distance: number; id: string }> = [{ distance: 0, id: versionId }];
   while (pending.length > 0) {
     const current = pending.shift()!;
-    for (const parentId of await loadParents(port, current.id)) {
+    for (const parentId of await cachedParents(port, current.id, parents)) {
       const distance = current.distance + 1;
       if ((distances.get(parentId) ?? Number.POSITIVE_INFINITY) <= distance) continue;
       distances.set(parentId, distance);
@@ -127,4 +147,12 @@ async function loadAncestorDistances(port: DbPort, versionId: string) {
     }
   }
   return distances;
+}
+
+async function cachedParents(port: DbPort, versionId: string, cache: Map<string, string[]>) {
+  const stored = cache.get(versionId);
+  if (stored) return stored;
+  const parents = await loadParents(port, versionId);
+  cache.set(versionId, parents);
+  return parents;
 }

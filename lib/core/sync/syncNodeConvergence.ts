@@ -5,7 +5,7 @@ import { reviveDeletedFoldersForLaterChildren } from './syncFolderChildRevival.j
 import { resolveFolderConflict } from './syncFolderResolution.js';
 import { resolveItemConflict } from './syncItemResolution.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
-import { loadCurrentSyncNodeRecord, loadMergeBase } from './syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord, loadMergeBase, storedSyncNodeVersionBody } from './syncNodeGraph.js';
 import {
   buildResolutionRecord,
   chooseEvidenceProjection,
@@ -88,17 +88,17 @@ export async function resolveTopicConflict(
     const baseSnapshot = base ? JSON.parse(base.snapshot_json) as NativeSyncNodeRecord['snapshot'] : null;
     parent = selectOperationValue(baseSnapshot?.parent_id, parent, incoming.snapshot.parent_id, incoming);
     deletion = selectOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
-    const baseBody = base?.body_text ?? '';
+    const baseBody = base ? storedSyncNodeVersionBody(base) : '';
     const incomingBody = incoming.body_text ?? incoming.snapshot.content ?? '';
-    const merge = base?.body_text == null
+    const merge = baseBody === null || !base
       ? { kind: 'conflict' as const }
       : mergeSyncText(baseBody, body, incomingBody);
     if (merge.kind === 'merged') {
       body = merge.text;
-      winner = chooseProjection(winner, incoming, baseBody, 0, 0);
+      winner = chooseProjection(winner, incoming, baseBody!, 0, 0);
       continue;
     }
-    const projection = await chooseEvidenceProjection(port, winner, incoming, baseBody);
+    const projection = await chooseEvidenceProjection(port, winner, incoming, baseBody ?? '');
     body = projection.body;
     winner = projection.winner;
     alternative = projection.loser;

@@ -2,7 +2,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 
 import type { DbPort } from './dbPort.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
-import { loadCurrentSyncNodeRecord, loadMergeBase } from './syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord, loadMergeBase, storedSyncNodeVersionBody } from './syncNodeGraph.js';
 import { buildResolutionRecord } from './syncNodeResolution.js';
 import { mergeNodeSnapshot } from './syncNodeSnapshotMerge.js';
 
@@ -21,6 +21,9 @@ export async function resolveItemConflict(port: DbPort, incomingRecords: NativeS
   }
   for (const incoming of ordered) {
     const base = await loadMergeBase(port, local.version_id!, incoming.version_id!);
+    if (base && storedSyncNodeVersionBody(base) === null) {
+      throw new Error(`sync_item_merge_base_body_unavailable:${base.version_id}`);
+    }
     const baseSnapshot = base
       ? JSON.parse(base.snapshot_json) as NativeSyncNodeRecord['snapshot'] : null;
     const { snapshot, winner } = mergeNodeSnapshot(baseSnapshot, local, incoming, false);
