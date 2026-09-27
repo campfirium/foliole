@@ -1,4 +1,4 @@
-import type { Compartment } from '@codemirror/state';
+import type { Compartment, Extension } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import { createEmptyDecorationsEffect } from './codeMirrorEditorAdapterSupport';
@@ -112,7 +112,7 @@ export function readEditorScrollMetrics(view: EditorView) {
 }
 
 export function reconfigureDecorationCompartment(args: {
-  buildDecorations: () => ReturnType<typeof EditorView.decorations.of>;
+  buildDecorations: () => Extension;
   compartment: Compartment;
   fallbackLabel: string;
   view: EditorView;

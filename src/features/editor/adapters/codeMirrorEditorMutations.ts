@@ -2,6 +2,7 @@ import { Transaction, type Compartment } from '@codemirror/state';
 import { Decoration, EditorView } from '@codemirror/view';
 
 import { reconfigureDecorationCompartment } from './codeMirrorEditorAdapterView';
+import { createMappedDecorationsExtension } from './codeMirrorMappedDecorations';
 import { updateTextAnchorDecorations } from './codeMirrorTextAnchorState';
 import type { EditorSearchDecorations } from './EditorAdapter';
 import type { EditorTextAnchorDecoration } from './EditorAdapter';
@@ -57,7 +58,7 @@ export function applySearchDecorations(args: {
   view: EditorView;
 }) {
   reconfigureDecorationCompartment({
-    buildDecorations: () => EditorView.decorations.of(buildEditorSearchDecorations(args.view, args.searchDecorations)),
+    buildDecorations: () => createMappedDecorationsExtension(buildEditorSearchDecorations(args.view, args.searchDecorations)),
     compartment: args.compartment,
     fallbackLabel: '[editor] failed to apply search decorations, falling back to plain view',
     view: args.view

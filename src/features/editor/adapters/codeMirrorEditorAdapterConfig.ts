@@ -12,6 +12,7 @@ import {
   createReadOnlyExtensions,
   createLiveMarkdownReconfigureEffect
 } from './codeMirrorEditorAdapterSupport';
+import { createMappedDecorationsExtension } from './codeMirrorMappedDecorations';
 import { markdownFormattingKeymap } from './codeMirrorMarkdownFormatting';
 import { syncParagraphMarkerSelectionVisibility } from './codeMirrorParagraphMarkerState';
 import { structuredListKeymap } from './codeMirrorStructuredListKeymap';
@@ -139,8 +140,8 @@ export function createCodeMirrorEditorExtensions(args: {
     highlightActiveLine(),
     markdownInputAssist,
     args.diffDecorationsCompartment.of(editorDiffDecorationsStateField),
-    args.paragraphMarkerCompartment.of(EditorView.decorations.of(Decoration.none)),
-    args.searchDecorationsCompartment.of(EditorView.decorations.of(Decoration.none)),
+    args.paragraphMarkerCompartment.of(createMappedDecorationsExtension(Decoration.none)),
+    args.searchDecorationsCompartment.of(createMappedDecorationsExtension(Decoration.none)),
     args.textAnchorDecorationsCompartment.of(createTextAnchorDecorationsExtension(args.textAnchorDecorations)),
     args.liveMarkdownCompartment.of(args.options.liveMarkdownEnabled === false ? [] : createLiveMarkdownExtensions()),
     trailingDividerFacet.of(args.options.trailingDivider === true),

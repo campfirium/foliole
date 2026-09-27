@@ -2,6 +2,7 @@ import { type Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 
 import { reconfigureDecorationCompartment } from './codeMirrorEditorAdapterView';
+import { createMappedDecorationsExtension } from './codeMirrorMappedDecorations';
 import type { EditorSelection } from './EditorAdapter';
 import { buildParagraphMarkerDecorations } from './paragraphMarkerDecorations';
 
@@ -26,7 +27,7 @@ export function applyParagraphMarkerState(args: {
   }
   syncParagraphMarkerSelectionVisibility(args.view);
   reconfigureDecorationCompartment({
-    buildDecorations: () => EditorView.decorations.of(buildParagraphMarkerDecorations(args.view, args.selection)),
+    buildDecorations: () => createMappedDecorationsExtension(buildParagraphMarkerDecorations(args.view, args.selection)),
     compartment: args.compartment,
     fallbackLabel: '[editor] failed to apply paragraph marker decorations, falling back to plain selection',
     view: args.view
