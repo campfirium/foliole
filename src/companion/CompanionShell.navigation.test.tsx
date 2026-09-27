@@ -163,7 +163,7 @@ async function expectReadingDocumentSearch(surface: ReturnType<typeof createRead
   expect(surface.handleTabAction).not.toHaveBeenCalledWith('search');
 }
 
-function openReadingAction(name: 'Find in document' | 'Font' | 'Highlight' | 'Info') {
+function openReadingAction(name: 'Find in document' | 'Appearance' | 'Highlight' | 'Info') {
   fireEvent.click(screen.getByRole('button', { name: 'More reading actions' }));
   expect(screen.getByRole('dialog', { name: 'Actions' })).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name }));
