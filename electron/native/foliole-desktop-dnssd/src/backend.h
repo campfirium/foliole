@@ -42,9 +42,11 @@ class EventSink {
  public:
   explicit EventSink(Napi::ThreadSafeFunction callback);
   ~EventSink();
+  bool AcquireWorker();
   void Close();
   void DrainAndClose();
   void Emit(DnsSdEvent event);
+  void ReleaseWorker();
 
  private:
   std::atomic<bool> active_{true};

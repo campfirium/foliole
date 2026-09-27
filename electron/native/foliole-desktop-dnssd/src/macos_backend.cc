@@ -36,13 +36,23 @@ class MacBrowse final : public NativeOperation {
       sink_->DrainAndClose();
       return;
     }
-    std::thread([self = shared_from_this()] {
-      static_cast<MacBrowse*>(self.get())->Run();
-    }).detach();
+    if (!sink_->AcquireWorker()) {
+      active_ = false;
+      DNSServiceRefDeallocate(ref_);
+      ref_ = nullptr;
+      sink_->Close();
+      return;
+    }
+    worker_ = std::thread([self = shared_from_this()] {
+      auto* operation = static_cast<MacBrowse*>(self.get());
+      operation->Run();
+      operation->sink_->ReleaseWorker();
+    });
   }
 
   void Stop() override {
-    if (!active_.exchange(false)) return;
+    active_ = false;
+    if (worker_.joinable()) worker_.join();
     sink_->Close();
   }
 
@@ -92,6 +102,7 @@ class MacBrowse final : public NativeOperation {
   std::atomic<bool> active_{true};
   DnsSdInput input_;
   DNSServiceRef ref_ = nullptr;
+  std::thread worker_;
 };
 
 class MacRegistration final : public NativeOperation {
@@ -110,13 +121,23 @@ class MacRegistration final : public NativeOperation {
       sink_->DrainAndClose();
       return;
     }
-    std::thread([self = shared_from_this()] {
-      static_cast<MacRegistration*>(self.get())->Run();
-    }).detach();
+    if (!sink_->AcquireWorker()) {
+      active_ = false;
+      DNSServiceRefDeallocate(ref_);
+      ref_ = nullptr;
+      sink_->Close();
+      return;
+    }
+    worker_ = std::thread([self = shared_from_this()] {
+      auto* operation = static_cast<MacRegistration*>(self.get());
+      operation->Run();
+      operation->sink_->ReleaseWorker();
+    });
   }
 
   void Stop() override {
-    if (!active_.exchange(false)) return;
+    active_ = false;
+    if (worker_.joinable()) worker_.join();
     sink_->Close();
   }
 
@@ -165,6 +186,7 @@ class MacRegistration final : public NativeOperation {
   std::atomic<bool> active_{true};
   DnsSdInput input_;
   DNSServiceRef ref_ = nullptr;
+  std::thread worker_;
   std::vector<uint8_t> txt_;
 };
 

@@ -55,13 +55,23 @@ class MacResolve final : public NativeOperation {
       FinishError(error);
       return;
     }
-    std::thread([self = shared_from_this()] {
-      static_cast<MacResolve*>(self.get())->Run();
-    }).detach();
+    if (!sink_->AcquireWorker()) {
+      active_ = false;
+      DNSServiceRefDeallocate(ref_);
+      ref_ = nullptr;
+      sink_->Close();
+      return;
+    }
+    worker_ = std::thread([self = shared_from_this()] {
+      auto* operation = static_cast<MacResolve*>(self.get());
+      operation->Run();
+      operation->sink_->ReleaseWorker();
+    });
   }
 
   void Stop() override {
-    if (!active_.exchange(false)) return;
+    active_ = false;
+    if (worker_.joinable()) worker_.join();
     sink_->Close();
   }
 
@@ -142,6 +152,7 @@ class MacResolve final : public NativeOperation {
   std::atomic<bool> active_{true};
   DnsSdInput input_;
   DNSServiceRef ref_ = nullptr;
+  std::thread worker_;
   std::string regtype_;
   bool resolved_ = false;
   DNSServiceErrorType resolve_error_ = kDNSServiceErr_NoError;

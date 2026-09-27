@@ -4,6 +4,22 @@
 
 namespace {
 
+struct OperationHolder {
+  std::shared_ptr<NativeOperation> operation;
+#ifdef __APPLE__
+  napi_env env;
+  bool cleanup_registered = false;
+#endif
+};
+
+#ifdef __APPLE__
+void CleanupOperation(void* data) {
+  auto* holder = static_cast<OperationHolder*>(data);
+  holder->cleanup_registered = false;
+  holder->operation->Stop();
+}
+#endif
+
 std::string StringField(const Napi::Object& object, const char* key, bool optional = false) {
   Napi::Value value = object.Get(key);
   if (optional && (value.IsUndefined() || value.IsNull())) return {};
@@ -73,11 +89,26 @@ void DeliverEvent(Napi::Env env, Napi::Function callback, DnsSdEvent* event) {
 }
 
 Napi::Object WrapOperation(Napi::Env env, std::shared_ptr<NativeOperation> operation) {
-  auto* holder = new std::shared_ptr<NativeOperation>(operation);
+#ifdef __APPLE__
+  auto* holder = new OperationHolder{operation, env};
+  if (napi_add_env_cleanup_hook(env, CleanupOperation, holder) != napi_ok) {
+    operation->Stop();
+    delete holder;
+    throw Napi::Error::New(env, "desktop_dnssd_cleanup_unavailable");
+  }
+  holder->cleanup_registered = true;
+#else
+  auto* holder = new OperationHolder{operation};
+#endif
   Napi::Object result = Napi::Object::New(env);
-  auto external = Napi::External<std::shared_ptr<NativeOperation>>::New(env, holder,
-    [](Napi::Env, std::shared_ptr<NativeOperation>* value) {
-      (*value)->Stop();
+  auto external = Napi::External<OperationHolder>::New(env, holder,
+    [](Napi::Env, OperationHolder* value) {
+#ifdef __APPLE__
+      if (value->cleanup_registered) {
+        napi_remove_env_cleanup_hook(value->env, CleanupOperation, value);
+      }
+#endif
+      value->operation->Stop();
       delete value;
     });
   result.Set("_native", external);
@@ -92,6 +123,10 @@ Napi::Value Begin(const Napi::CallbackInfo& info, const std::string& kind) {
   DnsSdInput input = ReadInput(info, kind);
   auto callback = Napi::ThreadSafeFunction::New(
     info.Env(), info[1].As<Napi::Function>(), "foliole-desktop-dnssd", 64, 1);
+#ifdef __APPLE__
+  // Environment cleanup stops the worker before its callback is finalized.
+  callback.Unref(info.Env());
+#endif
   auto sink = std::make_shared<EventSink>(std::move(callback));
   auto operation = kind == "register" ? CreateRegistration(input, sink)
     : kind == "resolve" ? CreateResolve(input, sink) : CreateBrowse(input, sink);
@@ -103,6 +138,8 @@ Napi::Value Begin(const Napi::CallbackInfo& info, const std::string& kind) {
 
 EventSink::EventSink(Napi::ThreadSafeFunction callback) : callback_(std::move(callback)) {}
 EventSink::~EventSink() { Close(); }
+
+bool EventSink::AcquireWorker() { return callback_.Acquire() == napi_ok; }
 
 void EventSink::Emit(DnsSdEvent event) {
   if (!active_.load()) return;
@@ -120,6 +157,8 @@ void EventSink::DrainAndClose() {
   if (!active_.exchange(false)) return;
   callback_.Release();
 }
+
+void EventSink::ReleaseWorker() { callback_.Release(); }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set("browse", Napi::Function::New(env,
