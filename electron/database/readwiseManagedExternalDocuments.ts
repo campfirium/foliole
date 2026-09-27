@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { matchesFtsSearchText, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
+import { matchesFtsSearchFields, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
@@ -29,6 +29,7 @@ import {
   type ReadwiseExternalDocumentRow,
   type ReadwiseExternalFolderRow
 } from './readwiseExternalDocumentRows.js';
+import { toReadwiseSearchResult } from './readwiseSearchResult.js';
 
 export function buildReadwiseExternalDocumentId(kind: ReadwiseSourceKind, sourceName: string) {
   return `${buildReadwiseExternalFolderId(kind)}:${sourceName.replace(/\\/g, '/')}`;
@@ -236,25 +237,13 @@ export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan) {
     .filter((row) => readRemoteReference(row)
       ? !hasRemoteImportBinding(row)
       : isExternalDocumentVisible(resolveDocumentAbsolutePath(row), activeImportedLocators))
-    .filter((row) => matchesFtsSearchText([row.file_name, row.relative_path, row.content].join(' '), queryPlan))
-    .slice(0, 20)
-    .map((row) => ({
-      excerpt: row.opening_text ?? resolveNodeOpeningText(row.content, row.title) ?? '',
-      externalMatch: {
-        absolutePath: resolveDocumentKey(row),
-        folderId: row.folder_id,
-        folderPath: resolveReadwiseFolderPath(row.folder_id),
-        importedNodeId: readRemoteReference(row) ? null
-          : resolveImportedNodeIdForExternalDocument(resolveDocumentAbsolutePath(row), importedNodeIdsByLocator),
-        query: queryPlan.highlightQuery,
-        relativePath: row.relative_path,
-        sourceKind: 'external' as const
-      },
-      id: resolveDocumentKey(row),
-      kind: 'external',
-      nodeMatch: null,
-      pdfMatch: null,
-      title: row.file_name,
-      updatedAt: row.source_modified_at
+    .filter((row) => matchesFtsSearchFields([row.file_name, row.relative_path, row.content], queryPlan))
+    .map((row) => toReadwiseSearchResult({
+      absolutePath: resolveDocumentKey(row),
+      folderPath: resolveReadwiseFolderPath(row.folder_id),
+      importedNodeId: readRemoteReference(row) ? null
+        : resolveImportedNodeIdForExternalDocument(resolveDocumentAbsolutePath(row), importedNodeIdsByLocator),
+      plan: queryPlan,
+      row
     }));
 }

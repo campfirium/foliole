@@ -28,7 +28,7 @@ export function crossPagePdfRowMatchesShortTerms(row: WorkspacePdfCrossPageSearc
   return hasAllSearchTerms(`${row.text} ${row.next_text}`, shortTerms);
 }
 
-export function loadShortTermNodeRows(driver: DatabaseDriver, shortTerms: string[], limit: number) {
+export function loadShortTermNodeRows(driver: DatabaseDriver, shortTerms: string[]) {
   const bodySql = buildNodeBodyContentSql();
   const clauses = shortTerms.map(() => `instr(lower(COALESCE(n.title, '') || ' ' || ${bodySql}), ?) > 0`);
   return driver.queryAll<WorkspaceSearchRow>(
@@ -40,13 +40,12 @@ SELECT n.id, n.title, ${bodySql} AS content, n.updated_at, 200 AS rank
   LEFT JOIN content_blob_data cbd
     ON cbd.hash = n.body_blob_hash
   WHERE ${clauses.join(' AND ')}
-  ORDER BY n.updated_at DESC
-  LIMIT ?`,
-    [...shortTerms, limit]
+  ORDER BY n.updated_at DESC`,
+    shortTerms
   );
 }
 
-export function loadShortTermPdfRows(driver: DatabaseDriver, shortTerms: string[], limit: number) {
+export function loadShortTermPdfRows(driver: DatabaseDriver, shortTerms: string[]) {
   const clauses = shortTerms.map(() => `instr(lower(ppt.text), ?) > 0`);
   return driver.queryAll<WorkspacePdfSearchRow>(
     `${VISIBLE_NODES_CTE_SQL}
@@ -67,8 +66,7 @@ INNER JOIN visible_nodes visible ON visible.id = n.id
 WHERE a.mime_type = 'application/pdf'
   AND a.pdf_index_status = 'ready'
   AND ${clauses.join(' AND ')}
-ORDER BY n.updated_at DESC
-LIMIT ?`,
-    [...shortTerms, limit]
+ORDER BY n.updated_at DESC`,
+    shortTerms
   );
 }

@@ -1,4 +1,3 @@
-import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, MouseEvent as ReactMouseEvent } from 'react';
 
@@ -7,14 +6,12 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { appFloatingOverlayClassName, appFloatingSurfaceClassName } from '../../shared/ui';
 
 import { FloatingPaletteInput } from './FloatingPaletteInput';
+import { SearchAliasFilters } from './SearchAliasFilters';
 import { SearchPaletteEnhancementPrompt } from './SearchPaletteEnhancementPrompt';
 import { SearchPaletteIndexStatus } from './SearchPaletteIndexStatus';
 import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList } from './SearchPaletteResults';
 import { useOrderedSearchResults, useSearchResults } from './searchPaletteSearchState';
-import {
-  loadSearchPaletteShortcutsCollapsed,
-  saveSearchPaletteShortcutsCollapsed
-} from './searchPaletteShortcutsPreference';
+import { SearchPaletteShortcutsFooter, useSearchPaletteShortcuts } from './SearchPaletteShortcutsFooter';
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
 import { useFloatingDialogFocusTrap } from './useFloatingDialogFocusTrap';
 import { useFloatingPaletteEscape } from './useFloatingPaletteEscape';
@@ -39,10 +36,11 @@ export function SearchPalette(props: SearchPaletteProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const shortcuts = useSearchPaletteShortcuts();
   const searchState = useSearchResults(props, query, isComposingQuery);
-  const results = useOrderedSearchResults(searchState.results, props.nodesById);
+  const results = useOrderedSearchResults(searchState.results, props.nodesById, searchState.aliasSpellings.length > 0);
   const sourceDetailsByNodeId = useSearchResultSourceDetails(results);
   useSearchPaletteLifecycle(props.isOpen, activeIndex, results.length, setActiveIndex, setIsComposingQuery, setQuery);
   const openActiveNode = createOpenActiveSearchResultHandler(results, activeIndex, props.onOpenResult);
+  useSearchPaletteContinuation(activeIndex, results.length, searchState, setActiveIndex);
 
   if (!props.isOpen) return null;
 
@@ -61,32 +59,81 @@ export function SearchPalette(props: SearchPaletteProps) {
         onClick={(event) => event.stopPropagation()}
         ref={focusTrap.containerRef}
       >
-        <FloatingPaletteInput
-          inputLabel={t('desktop.search.input')}
+        <SearchPaletteInputAndFilters
+          isOpen={props.isOpen}
           onClose={props.onClose}
           onCompositionChange={setIsComposingQuery}
           onQueryChange={setQuery}
           onRunActive={openActiveNode}
           onSetActiveIndex={setActiveIndex}
-          placeholder={t('desktop.search.placeholder')}
           query={query}
+          searchState={searchState}
           totalItems={results.length}
         />
-        <SearchPaletteEnhancementPrompt />
-        <SearchPaletteIndexStatus isOpen={props.isOpen} />
         <SearchPaletteBody
           activeIndex={activeIndex}
           hasError={searchState.error}
+          hasMore={searchState.hasMore}
           nodesById={props.nodesById}
           onOpenResult={props.onOpenResult}
+          onLoadMore={searchState.loadMore}
           onSetActiveIndex={setActiveIndex}
           query={query}
           results={results}
+          selectedSpelling={searchState.selectedSpelling}
           sourceDetailsByNodeId={sourceDetailsByNodeId}
         />
         <SearchPaletteShortcutsFooter collapsed={shortcuts.collapsed} onToggle={shortcuts.toggle} />
       </div>
     </div>
+  );
+}
+
+function useSearchPaletteContinuation(
+  activeIndex: number,
+  resultCount: number,
+  state: ReturnType<typeof useSearchResults>,
+  setActiveIndex: (value: number) => void
+) {
+  useEffect(() => {
+    if (state.hasMore && resultCount > 0 && activeIndex >= resultCount - 2) state.loadMore();
+  }, [activeIndex, resultCount, state.hasMore, state.loadMore]);
+  useEffect(() => { setActiveIndex(0); }, [setActiveIndex, state.selectedSpelling]);
+}
+
+function SearchPaletteInputAndFilters(props: {
+  isOpen: boolean;
+  onClose: () => void;
+  onCompositionChange: (value: boolean) => void;
+  onQueryChange: (value: string) => void;
+  onRunActive: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
+  onSetActiveIndex: (update: (current: number) => number) => void;
+  query: string;
+  searchState: ReturnType<typeof useSearchResults>;
+  totalItems: number;
+}) {
+  const t = useTranslation();
+  return (
+    <>
+      <FloatingPaletteInput
+        inputLabel={t('desktop.search.input')}
+        onClose={props.onClose}
+        onCompositionChange={props.onCompositionChange}
+        onQueryChange={props.onQueryChange}
+        onRunActive={props.onRunActive}
+        onSetActiveIndex={props.onSetActiveIndex}
+        placeholder={t('desktop.search.placeholder')}
+        query={props.query}
+        totalItems={props.totalItems}
+      />
+      <SearchAliasFilters
+        onSelect={props.searchState.selectSpelling}
+        selectedSpelling={props.searchState.selectedSpelling}
+        spellings={props.searchState.aliasSpellings}
+      />
+      <SearchPaletteEnhancementPrompt />
+      <SearchPaletteIndexStatus isOpen={props.isOpen} />
+    </>
   );
 }
 
@@ -117,27 +164,17 @@ function createOpenActiveSearchResultHandler(
   };
 }
 
-function useSearchPaletteShortcuts() {
-  const [collapsed, setCollapsed] = useState(loadSearchPaletteShortcutsCollapsed);
-
-  return {
-    collapsed,
-    toggle: () => {
-      const nextCollapsed = !collapsed;
-      setCollapsed(nextCollapsed);
-      saveSearchPaletteShortcutsCollapsed(nextCollapsed);
-    }
-  };
-}
-
 function SearchPaletteBody(props: {
   activeIndex: number;
   hasError: boolean;
+  hasMore: boolean;
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
+  onLoadMore: () => void;
   onSetActiveIndex: (value: number | ((current: number) => number)) => void;
   query: string;
   results: WorkspaceSearchResult[];
+  selectedSpelling: string | null;
   sourceDetailsByNodeId: ReturnType<typeof useSearchResultSourceDetails>;
 }) {
   if (props.hasError) {
@@ -149,11 +186,14 @@ function SearchPaletteBody(props: {
   return (
     <SearchPaletteList
       activeIndex={props.activeIndex}
+      hasMore={props.hasMore}
       nodesById={props.nodesById}
       onOpenResult={props.onOpenResult}
+      onLoadMore={props.onLoadMore}
       onSetActiveIndex={props.onSetActiveIndex}
       query={props.query}
       results={props.results}
+      selectedSpelling={props.selectedSpelling}
       sourceDetailsByNodeId={props.sourceDetailsByNodeId}
     />
   );
@@ -182,50 +222,4 @@ function useSearchPaletteLifecycle(
     }
     if (activeIndex >= resultCount) setActiveIndex(resultCount - 1);
   }, [activeIndex, resultCount, setActiveIndex]);
-}
-
-function SearchPaletteShortcutsFooter(props: {
-  collapsed: boolean;
-  onToggle: () => void;
-}) {
-  const t = useTranslation();
-  return (
-    <footer className="relative flex min-h-11 items-center justify-center px-12 py-2.5 text-[11px] text-foreground/45">
-      {props.collapsed ? (
-        null
-      ) : (
-        <span className="flex min-w-0 flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-center">
-          <ShortcutHint keys={['Enter']} label={t('desktop.search.shortcuts.open')} />
-          <ShortcutHint keys={['Shift', 'Enter']} label={t('desktop.search.shortcuts.preview')} />
-          <ShortcutHint keys={['Shift', 'Click']} label={t('desktop.search.shortcuts.preview')} />
-        </span>
-      )}
-      <button
-        aria-label={props.collapsed ? t('desktop.search.shortcuts.show') : t('desktop.search.shortcuts.collapse')}
-        className="absolute right-5 top-1/2 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-sm text-foreground/32 transition-colors hover:text-foreground/58 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        onClick={props.onToggle}
-        type="button"
-      >
-        {props.collapsed ? <ChevronUp size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
-      </button>
-    </footer>
-  );
-}
-
-function ShortcutHint(props: {
-  keys: string[];
-  label: string;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-      <span className="inline-flex items-center gap-0.5">
-        {props.keys.map((key) => (
-          <kbd className="font-semibold leading-none text-foreground/55" key={key}>
-            {key}
-          </kbd>
-        ))}
-      </span>
-      <span>{props.label}</span>
-    </span>
-  );
 }

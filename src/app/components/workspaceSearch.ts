@@ -6,9 +6,17 @@ import { translate } from '../../shared/localization/translations';
 import type { RuntimeRemovedSourceEntry } from '../../shared/platform/removedSourcesRuntimeRepository';
 
 export interface WorkspaceSearchResult {
+  aliasMatches?: Array<{
+    excerpt: string;
+    externalMatch: WorkspaceSearchResult['externalMatch'];
+    nodeMatch: WorkspaceSearchResult['nodeMatch'];
+    pdfMatch: WorkspaceSearchResult['pdfMatch'];
+    spelling: string;
+  }>;
   excerpt: string;
   id: string;
   kind: 'external' | 'node' | 'pdf' | 'removed';
+  matchedOriginal?: boolean;
   externalMatch: {
     absolutePath: string;
     folderId: string;
@@ -38,7 +46,6 @@ export interface WorkspaceSearchResult {
   updatedAt: string;
 }
 
-const MAX_RESULTS = 40;
 const EXCERPT_PADDING = 36;
 const EXCERPT_LENGTH = 96;
 
@@ -91,7 +98,6 @@ export function buildRemovedWorkspaceSearchResults(
         value.toLowerCase().includes(normalizedQuery)
       )
     )
-    .slice(0, MAX_RESULTS)
     .map((entry) => ({
       excerpt: buildRemovedExcerpt(entry, normalizedQuery),
       externalMatch: null,
@@ -146,9 +152,6 @@ export function buildWorkspaceSearchResults(
       title,
       updatedAt: node.updatedAt
     });
-    if (results.length >= MAX_RESULTS) {
-      break;
-    }
   }
 
   return results;

@@ -12,6 +12,7 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
+import { searchSnapshot } from './searchPaletteTestSupport';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 function renderSearchPalette() {
@@ -51,7 +52,7 @@ function renderSearchPalette() {
 
 it('renders node search markdown as readable title and excerpt text', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(
-    vi.fn().mockResolvedValue([
+    vi.fn().mockResolvedValue(searchSnapshot([
       {
         externalMatch: null,
         excerpt: '...## **launch** checklist...',
@@ -62,7 +63,7 @@ it('renders node search markdown as readable title and excerpt text', async () =
         title: '## **Atlas** note',
         updatedAt: '2026-03-30T00:00:00.000Z'
       }
-    ] satisfies WorkspaceSearchResult[])
+    ] satisfies WorkspaceSearchResult[]))
   );
   renderSearchPalette();
 
@@ -77,7 +78,7 @@ it('renders node search markdown as readable title and excerpt text', async () =
 
 it('keeps markdown-symbol queries readable even when no display highlight remains', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(
-    vi.fn().mockResolvedValue([
+    vi.fn().mockResolvedValue(searchSnapshot([
       {
         externalMatch: null,
         excerpt: '...**Atlas** launch...',
@@ -88,7 +89,7 @@ it('keeps markdown-symbol queries readable even when no display highlight remain
         title: '**Atlas** note',
         updatedAt: '2026-03-30T00:00:00.000Z'
       }
-    ] satisfies WorkspaceSearchResult[])
+    ] satisfies WorkspaceSearchResult[]))
   );
   renderSearchPalette();
 

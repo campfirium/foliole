@@ -8,7 +8,7 @@ import {
   promoteNodeTextAlternative
 } from '../database/nodeTextAlternatives.js';
 import { searchCurrentPdfDocument } from '../database/pdfDocumentSearch.js';
-import { searchWorkspace } from '../database/workspaceSearch.js';
+import { beginWorkspaceSearch, loadWorkspaceSearchBatch, releaseWorkspaceSearch } from '../database/workspaceSearchSnapshot.js';
 import { reimportCurrentTopicSource } from '../import/currentSourceReimport.js';
 import {
   acceptPendingIncomingUpdate,
@@ -95,7 +95,17 @@ export async function handleStorageCommand(
 
 async function handleStorageReadCommand(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.searchWorkspace) {
-    return searchWorkspace(asString(args.query, 'query'));
+    return beginWorkspaceSearch(asString(args.query, 'query'));
+  }
+  if (command === NATIVE_COMMANDS.loadWorkspaceSearchBatch) {
+    return loadWorkspaceSearchBatch(
+      asString(args.snapshotId, 'snapshotId'), Number(args.offset),
+      args.spelling === undefined || args.spelling === null ? null : asString(args.spelling, 'spelling')
+    );
+  }
+  if (command === NATIVE_COMMANDS.releaseWorkspaceSearch) {
+    releaseWorkspaceSearch(asString(args.snapshotId, 'snapshotId'));
+    return null;
   }
   if (command === NATIVE_COMMANDS.searchPdfDocument) {
     const result = searchCurrentPdfDocument(asString(args.node_id, 'node_id'), asString(args.query, 'query'));

@@ -17,6 +17,7 @@ import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRu
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
+import { searchSnapshot } from './searchPaletteTestSupport';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 const nodesById = Object.fromEntries(
@@ -44,7 +45,7 @@ beforeEach(() => {
 it('scrolls the active search result into view when keyboard navigation changes it', async () => {
   const scrollIntoView = vi.fn();
   Element.prototype.scrollIntoView = scrollIntoView;
-  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(createResults()));
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot(createResults())));
   renderWithLocalization(
     <SearchPalette
       isOpen

@@ -11,6 +11,7 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
+import { searchSnapshot } from './searchPaletteTestSupport';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 const SEARCH_DEBOUNCE_MS = 400;
@@ -52,7 +53,7 @@ it('waits for a typing pause before running workspace search', async () => {
   window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   vi.useFakeTimers();
   try {
-    const runtimeInvoke = vi.fn().mockResolvedValue([]);
+    const runtimeInvoke = vi.fn().mockResolvedValue(searchSnapshot([]));
     vi.mocked(getRuntimeInvoke).mockReturnValue(runtimeInvoke);
 
     renderWithLocalization(
@@ -85,13 +86,13 @@ it('waits for a typing pause before running workspace search', async () => {
 
 it('clears stale runtime results immediately when the query changes', async () => {
   window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
-  const firstSearch = createDeferred<WorkspaceSearchResult[]>();
-  const secondSearch = createDeferred<WorkspaceSearchResult[]>();
+  const firstSearch = createDeferred<ReturnType<typeof searchSnapshot>>();
+  const secondSearch = createDeferred<ReturnType<typeof searchSnapshot>>();
   vi.mocked(getRuntimeInvoke).mockReturnValue(
     vi.fn().mockImplementation((_command: string, args: { query: string }) => {
       if (args.query === '确定信噪比') return firstSearch.promise;
       if (args.query === '测试') return secondSearch.promise;
-      return Promise.resolve([]);
+      return Promise.resolve(searchSnapshot([]));
     })
   );
 
@@ -109,12 +110,12 @@ it('clears stale runtime results immediately when the query changes', async () =
   expect(screen.getByRole('dialog', { name: 'Workspace search' })).toHaveAttribute('aria-modal', 'true');
   const input = screen.getByRole('textbox', { name: 'Search workspace' });
   fireEvent.change(input, { target: { value: '确定信噪比' } });
-  firstSearch.resolve([{ externalMatch: null, id: 'pdf-1', title: 'SuperMemoGuru 学习的乐趣.pdf', excerpt: 'Page 13 · ...Search for ExtraTerrestrial Intelligence 的缩写。', kind: 'pdf', nodeMatch: null, pdfMatch: { attachmentId: 'att-1', matchStart: 32, page: 13, pageTextLength: 300, query: 'ce' }, updatedAt: '2026-03-30T00:00:00.000Z' }]);
+  firstSearch.resolve(searchSnapshot([{ externalMatch: null, id: 'pdf-1', title: 'SuperMemoGuru 学习的乐趣.pdf', excerpt: 'Page 13 · ...Search for ExtraTerrestrial Intelligence 的缩写。', kind: 'pdf', nodeMatch: null, pdfMatch: { attachmentId: 'att-1', matchStart: 32, page: 13, pageTextLength: 300, query: 'ce' }, updatedAt: '2026-03-30T00:00:00.000Z' }]));
 
   await waitFor(() => expect(screen.getByRole('button', { name: /SuperMemoGuru 学习的乐趣\.pdf/i })).toBeInTheDocument());
   fireEvent.change(input, { target: { value: '测试' } });
   await waitFor(() => expect(screen.queryByRole('button', { name: /SuperMemoGuru 学习的乐趣\.pdf/i })).not.toBeInTheDocument());
-  secondSearch.resolve([]);
+  secondSearch.resolve(searchSnapshot([]));
   await waitFor(() => expect(screen.getByText('No matching results')).toBeInTheDocument());
 });
 
@@ -143,12 +144,12 @@ it('shows a search error instead of an empty result when runtime search fails', 
 
 it('orders internal, anchored, removed, opened, and external results in stable buckets', async () => {
   window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
-  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue([
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot([
     createSearchResult({ id: 'external-result', kind: 'external', sourceKind: 'external', title: 'External result' }),
     createSearchResult({ id: 'opened-result', kind: 'external', sourceKind: 'opened', title: 'Opened result' }),
     createSearchResult({ id: 'anchored-result', title: 'Anchored result' }),
     createSearchResult({ id: 'regular-result', title: 'Regular result' })
-  ]));
+  ])));
   removedSourcesMock.mockResolvedValueOnce({
     entries: [{
       content: 'Removed launch body',

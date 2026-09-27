@@ -13,6 +13,7 @@ import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRu
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
+import { searchSnapshot } from './searchPaletteTestSupport';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 function createWatchedSourceDetails(nodeId: string) {
@@ -65,7 +66,7 @@ function createPdfSearchResults(): WorkspaceSearchResult[] {
 
 it('shows a watched source badge on the right for matching results', async () => {
   window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
-  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(createPdfSearchResults()));
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot(createPdfSearchResults())));
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(createWatchedSourceDetails('pdf-1'));
 
   renderWithLocalization(

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { buildFtsSearchQueryPlan, matchesFtsSearchText } from '../../lib/core/database/ftsSearchQuery.js';
+import { buildFtsSearchQueryPlan, matchesFtsSearchFields, matchesFtsSearchText } from '../../lib/core/database/ftsSearchQuery.js';
 
 it('builds a quoted literal query and escapes embedded double quotes', () => {
   const plan = buildFtsSearchQueryPlan('Alpha "Bravo" c"d');
@@ -91,4 +91,27 @@ it('evaluates advanced text matches for non-FTS external document rows', () => {
 
   expect(matchesFtsSearchText('Atlas roadmap contains Launch notes.', plan)).toBe(true);
   expect(matchesFtsSearchText('Atlas roadmap only.', plan)).toBe(false);
+});
+
+it('groups aliases inside long and Boolean queries without matching word substrings', () => {
+  const groups = [['Obama', 'Barack Obama'], ['healthcare', 'health care']];
+  const plan = buildFtsSearchQueryPlan('Obama AND healthcare', groups);
+  expect(plan.advancedQuery).toBe('("obama" OR "barack obama") AND ("healthcare" OR "health care")');
+  expect(plan.aliasSpellings).toEqual(['obama', 'barack obama', 'healthcare', 'health care']);
+  expect(matchesFtsSearchText('Barack Obama proposed health care changes.', plan)).toBe(true);
+  expect(matchesFtsSearchText('Obama discussed education only.', plan)).toBe(false);
+  expect(buildFtsSearchQueryPlan('Obamacare', groups).aliasSpellings).toEqual([]);
+  expect(buildFtsSearchQueryPlan('new Barack Obama speech', groups).advancedQuery)
+    .toBe('"new" AND ("barack obama" OR "obama") AND "speech"');
+});
+
+it('keeps alias spellings that resemble operators as literal FTS phrases', () => {
+  const plan = buildFtsSearchQueryPlan('NASA', [['NASA', 'OR', 'NOT']]);
+  expect(plan.advancedQuery).toBe('"nasa" OR "or" OR "not"');
+});
+
+it('does not create a phrase by joining separate search fields', () => {
+  const plan = buildFtsSearchQueryPlan('USA', [['USA', 'United States']]);
+  expect(matchesFtsSearchFields(['United', 'States'], plan)).toBe(false);
+  expect(matchesFtsSearchFields(['United States', 'other content'], plan)).toBe(true);
 });

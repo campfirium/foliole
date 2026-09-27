@@ -11,11 +11,14 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_data_dir: appData, app_config_dir: path.join(appData, 'config')
 }) }));
 vi.mock('../sync/desktopMemberSyncCadence.js', () => ({ requestDesktopHighValueSync: vi.fn() }));
-vi.mock('electron', () => ({ Notification: class { static isSupported() { return false; } } }));
+vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: () => [] },
+  Notification: class { static isSupported() { return false; } }
+}));
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
-import { ensureSearchAliasFile, reconcileSearchAliasMirror, startSearchAliasMirror } from './searchAliasMirror.js';
+import { ensureSearchAliasFile, getEffectiveSearchAliases, reconcileSearchAliasMirror, startSearchAliasMirror } from './searchAliasMirror.js';
 import { searchAliasFilePath } from './searchAliasMirrorFiles.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
@@ -72,6 +75,7 @@ it('keeps an invalid file editable without changing the database', async () => {
   await fs.writeFile(filePath, 'bad |\n');
   await expect(reconcileSearchAliasMirror()).rejects.toThrow('Line 1');
   expect(content()).toBe('base | 基础\n');
+  expect(getEffectiveSearchAliases().groups).toEqual([['base', '基础']]);
   expect(await ensureSearchAliasFile()).toBe(filePath);
 });
 

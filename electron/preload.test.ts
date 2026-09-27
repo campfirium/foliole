@@ -118,6 +118,7 @@ const sanitizedCompletedReadwiseProgressPayload = {
         onSyncGroupDiscoveryChanged: expect.any(Function),
         onExternalDocumentFileOpened: expect.any(Function),
         onReadwiseReaderImportProgress: expect.any(Function),
+        onSearchAliasesChanged: expect.any(Function),
         onWorkspaceContentChanged: expect.any(Function),
         onWorkspaceSyncApplied: expect.any(Function),
         onWindowResized: expect.any(Function),
@@ -210,6 +211,18 @@ const sanitizedCompletedReadwiseProgressPayload = {
     expect(ipcOn).toHaveBeenCalledWith('foliole:workspace-content-changed', expect.any(Function));
     expect(handler).toHaveBeenNthCalledWith(1, { scope: 'workspace' });
     expect(handler).toHaveBeenNthCalledWith(2, { scope: '' });
+  });
+
+  it('exposes search alias revisions under sandbox-limited require', () => {
+    const { exposeInMainWorld, ipcOn } = executePreload();
+    const handler = vi.fn();
+    exposeInMainWorld.mock.calls[0]?.[1].onSearchAliasesChanged(handler);
+    const listener = ipcOn.mock.calls[0]?.[1];
+    listener({}, 4);
+    listener({}, { revision: 5 });
+    expect(ipcOn).toHaveBeenCalledWith('foliole:search-aliases-changed', expect.any(Function));
+    expect(handler).toHaveBeenCalledOnce();
+    expect(handler).toHaveBeenCalledWith(4);
   });
 
   it('forwards managed inbox update patches through preload', () => {

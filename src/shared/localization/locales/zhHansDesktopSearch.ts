@@ -3,6 +3,8 @@ import type { TranslationKey } from '../translations';
 export const ZH_HANS_DESKTOP_SEARCH_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'desktop.search.dialog': '工作区搜索',
   'desktop.search.input': '搜索工作区',
+  'desktop.search.aliases.all': '全部',
+  'desktop.search.aliases.aria': '按命中写法筛选',
   'desktop.search.placeholder': '搜索标题和正文...',
   'desktop.search.indexStatus.updating': '搜索结果仍在更新，当前结果可能不完整。',
   'desktop.search.indexStatus.failed': '搜索数据未能更新，部分主题可能不会出现在结果中。',

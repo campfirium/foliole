@@ -15,13 +15,14 @@ export interface FtsSearchExecutionAdapter<Candidate, Result = Candidate> {
 
 export function executeFtsSearchPlan<Candidate, Result = Candidate>(
   query: string,
-  adapter: FtsSearchExecutionAdapter<Candidate, Result>
+  adapter: FtsSearchExecutionAdapter<Candidate, Result>,
+  aliases: string[][] = []
 ) {
-  const queryPlan = buildFtsSearchQueryPlan(query);
+  const queryPlan = buildFtsSearchQueryPlan(query, aliases);
   if (!queryPlan.normalizedQuery) {
     return [];
   }
-  if (queryPlan.normalizedQuery.length <= 2) {
+  if (queryPlan.normalizedQuery.length <= 2 && !queryPlan.expandedExpression) {
     return adapter.finalizeResults(adapter.loadShortQueryMatches(queryPlan));
   }
   const literalMatches = adapter.loadLiteralMatches(queryPlan);

@@ -1,4 +1,6 @@
 export interface WorkspaceSearchResult {
+  aliasMatches?: SearchAliasResultMatch[] | undefined;
+  matchedOriginal?: boolean | undefined;
   excerpt: string;
   id: string;
   kind: 'external' | 'node' | 'pdf';
@@ -27,11 +29,20 @@ export interface WorkspaceSearchResult {
   updatedAt: string;
 }
 
+export interface SearchAliasResultMatch {
+  excerpt: string;
+  externalMatch: WorkspaceSearchResult['externalMatch'];
+  nodeMatch: WorkspaceSearchResult['nodeMatch'];
+  pdfMatch: WorkspaceSearchResult['pdfMatch'];
+  spelling: string;
+}
+
 export type WorkspaceExternalSearchSourceKind = 'external' | 'opened';
 
 export type WorkspaceSearchPathQuality = 'fallback' | 'literal' | 'pair' | 'term';
 
 export interface RankedWorkspaceSearchResult extends WorkspaceSearchResult {
+  matchedOriginal?: boolean | undefined;
   pathQuality: WorkspaceSearchPathQuality;
   rank: number;
 }
@@ -60,15 +71,32 @@ export function mergeRankedResults(results: RankedWorkspaceSearchResult[]) {
     }
     const pathQualityDiff = comparePathQuality(result, existing);
     if (pathQualityDiff < 0 || (pathQualityDiff === 0 && result.rank < existing.rank)) {
-      merged.set(key, { ...result, rank: Math.min(result.rank, existing.rank) });
+      merged.set(key, {
+        ...result,
+        aliasMatches: mergeAliasMatches(existing.aliasMatches, result.aliasMatches),
+        matchedOriginal: existing.matchedOriginal || result.matchedOriginal,
+        rank: Math.min(result.rank, existing.rank)
+      });
+    } else {
+      existing.aliasMatches = mergeAliasMatches(existing.aliasMatches, result.aliasMatches);
+      existing.matchedOriginal ||= result.matchedOriginal;
     }
   });
   return [...merged.values()];
 }
 
-export function sortAndLimitResults(results: RankedWorkspaceSearchResult[], maxResults: number) {
+function mergeAliasMatches(left: SearchAliasResultMatch[] = [], right: SearchAliasResultMatch[] = []) {
+  const merged = new Map(left.map((item) => [item.spelling, item]));
+  for (const item of right) if (!merged.has(item.spelling)) merged.set(item.spelling, item);
+  return [...merged.values()];
+}
+
+export function sortAndLimitResults(results: RankedWorkspaceSearchResult[]) {
   return results
     .sort((left, right) => {
+      if (Boolean(left.matchedOriginal) !== Boolean(right.matchedOriginal)) {
+        return left.matchedOriginal ? -1 : 1;
+      }
       const pathQualityDiff = comparePathQuality(left, right);
       if (pathQualityDiff !== 0) {
         return pathQualityDiff;
@@ -78,12 +106,13 @@ export function sortAndLimitResults(results: RankedWorkspaceSearchResult[], maxR
       }
       return right.updatedAt.localeCompare(left.updatedAt);
     })
-    .slice(0, maxResults)
     .map((result) => ({
+      aliasMatches: result.aliasMatches,
       excerpt: result.excerpt,
       externalMatch: result.externalMatch,
       id: result.id,
       kind: result.kind,
+      matchedOriginal: result.matchedOriginal,
       nodeMatch: result.nodeMatch,
       pdfMatch: result.pdfMatch,
       title: result.title,

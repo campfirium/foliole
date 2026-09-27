@@ -2,7 +2,10 @@ import { searchWorkspace as searchWorkspaceViaDriver } from '../../lib/core/data
 
 import { openDatabaseConnection } from './connection.js';
 import { searchExternalDocuments } from './externalSearchCache.js';
+import { getEffectiveSearchAliases } from './searchAliasMirror.js';
 
 export function searchWorkspace(query: string) {
-  return [...searchWorkspaceViaDriver(openDatabaseConnection().driver, query), ...searchExternalDocuments(query)];
+  const { groups } = getEffectiveSearchAliases();
+  const results = [...searchWorkspaceViaDriver(openDatabaseConnection().driver, query, groups), ...searchExternalDocuments(query, groups)];
+  return results.sort((left, right) => Number(Boolean(right.matchedOriginal)) - Number(Boolean(left.matchedOriginal)));
 }

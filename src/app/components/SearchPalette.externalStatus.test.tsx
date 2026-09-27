@@ -19,12 +19,13 @@ import { loadRuntimeExternalSearchFolders } from '../../shared/platform/external
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
+import { searchSnapshot } from './searchPaletteTestSupport';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 it('keeps external result labels inline without a section header', async () => {
   window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   vi.mocked(getRuntimeInvoke).mockReturnValue(
-    vi.fn().mockResolvedValue([
+    vi.fn().mockResolvedValue(searchSnapshot([
       {
         excerpt: '...spaced repetition...',
         externalMatch: {
@@ -41,7 +42,7 @@ it('keeps external result labels inline without a section header', async () => {
         title: 'History of spaced repetition (print).md',
         updatedAt: '2026-04-21T00:00:00.000Z'
       }
-    ] satisfies WorkspaceSearchResult[])
+    ] satisfies WorkspaceSearchResult[]))
   );
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([
     {

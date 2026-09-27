@@ -22,6 +22,7 @@ vi.mock('../../shared/platform/removedSourcesRuntimeRepository', () => ({
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { SearchPalette } from './SearchPalette';
+import { searchSnapshot } from './searchPaletteTestSupport';
 import { buildRemovedWorkspaceSearchResults } from './workspaceSearch';
 
 function createRemovedSource() {
@@ -67,7 +68,7 @@ function renderSearchPalette() {
 
 it('includes Removed source matches in workspace search', async () => {
   const entry = createRemovedSource();
-  mocks.getRuntimeInvoke.mockReturnValue(vi.fn().mockResolvedValue([]));
+  mocks.getRuntimeInvoke.mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot([])));
   mocks.loadRuntimeRemovedSources.mockResolvedValue({
     entries: [entry],
     loadedAt: '2026-05-13T00:00:00.000Z'

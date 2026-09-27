@@ -18,6 +18,7 @@ import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRu
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
+import { searchSnapshot } from './searchPaletteTestSupport';
 
 function renderSearchPalette() {
   return renderWithLocalization(
@@ -44,7 +45,7 @@ afterEach(() => {
 });
 
 it('waits until input settles before running workspace search', async () => {
-  const search = vi.fn().mockResolvedValue([]);
+  const search = vi.fn().mockResolvedValue(searchSnapshot([]));
   vi.mocked(getRuntimeInvoke).mockReturnValue(search);
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
@@ -63,7 +64,7 @@ it('waits until input settles before running workspace search', async () => {
 });
 
 it('does not run workspace search while IME composition is active', async () => {
-  const search = vi.fn().mockResolvedValue([]);
+  const search = vi.fn().mockResolvedValue(searchSnapshot([]));
   vi.mocked(getRuntimeInvoke).mockReturnValue(search);
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);

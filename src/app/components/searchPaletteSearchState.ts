@@ -4,11 +4,11 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { useLocalization } from '../../shared/localization/LocalizationProvider';
 import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNames';
 import {
-  hasWorkspaceSearchRuntimeRepository,
-  searchWorkspaceInRuntime
+  hasWorkspaceSearchRuntimeRepository
 } from '../../shared/platform/appRuntimeCommandRepository';
 import { loadRuntimeRemovedSources } from '../../shared/platform/removedSourcesRuntimeRepository';
 
+import { useRuntimeSearchSnapshot } from './useRuntimeSearchSnapshot';
 import {
   buildRemovedWorkspaceSearchResults,
   buildWorkspaceSearchResults,
@@ -42,34 +42,6 @@ function useSearchExecutionQuery(isOpen: boolean, query: string, isComposing: bo
   return executionQuery;
 }
 
-function useRuntimeSearchResults(isOpen: boolean, hasRuntime: boolean, query: string) {
-  const [runtimeResults, setRuntimeResults] = useState<WorkspaceSearchResult[]>([]);
-  const [runtimeError, setRuntimeError] = useState(false);
-  useEffect(() => {
-    if (!isOpen || !hasRuntime || !query.trim()) {
-      setRuntimeResults([]);
-      setRuntimeError(false);
-      return;
-    }
-
-    let cancelled = false;
-    setRuntimeResults([]);
-    setRuntimeError(false);
-    void searchWorkspaceInRuntime(query)
-      .then((results) => {
-        if (!cancelled) setRuntimeResults(results);
-      })
-      .catch(() => {
-        if (!cancelled) setRuntimeError(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [hasRuntime, isOpen, query]);
-  return { runtimeError, runtimeResults };
-}
-
 function useRemovedSearchResults(isOpen: boolean, query: string) {
   const [removedResults, setRemovedResults] = useState<WorkspaceSearchResult[]>([]);
   useEffect(() => {
@@ -95,6 +67,11 @@ function useRemovedSearchResults(isOpen: boolean, query: string) {
   return removedResults;
 }
 
+function applySelectedAliasMatch(result: WorkspaceSearchResult, spelling: string | null) {
+  const match = spelling ? result.aliasMatches?.find((item) => item.spelling === spelling) : null;
+  return match ? { ...result, ...match } : result;
+}
+
 export function useSearchResults(props: SearchSourceProps, query: string, isComposing = false) {
   const { locale } = useLocalization();
   const hasRuntime = hasWorkspaceSearchRuntimeRepository();
@@ -107,23 +84,33 @@ export function useSearchResults(props: SearchSourceProps, query: string, isComp
         : buildWorkspaceSearchResults(props.nodeOrder, props.nodesById, props.trashedNodeIds, executionQuery),
     [executionQuery, hasRuntime, props.nodeOrder, props.nodesById, props.trashedNodeIds]
   );
-  const { runtimeError, runtimeResults } = useRuntimeSearchResults(props.isOpen, hasRuntime, executionQuery);
+  const runtime = useRuntimeSearchSnapshot(props.isOpen, hasRuntime, executionQuery);
   const removedResults = useRemovedSearchResults(props.isOpen, executionQuery);
   const results = useMemo(
     () =>
       hasPendingQuery
         ? []
-        : (hasRuntime ? [...runtimeResults, ...removedResults] : [...localResults, ...removedResults]).map((result) =>
-          result.kind === 'node' ? { ...result, title: resolveNodeDisplayTitle(locale, result.id, result.title) } : result
-        ),
-    [hasPendingQuery, hasRuntime, localResults, locale, removedResults, runtimeResults]
+        : (hasRuntime ? [...runtime.results, ...(runtime.selectedSpelling ? [] : removedResults)] : [...localResults, ...removedResults]).map((result) => {
+          const selected = applySelectedAliasMatch(result, runtime.selectedSpelling);
+          return selected.kind === 'node' ? { ...selected, title: resolveNodeDisplayTitle(locale, selected.id, selected.title) } : selected;
+        }),
+    [hasPendingQuery, hasRuntime, localResults, locale, removedResults, runtime.results, runtime.selectedSpelling]
   );
-  return { error: hasRuntime ? runtimeError : false, results };
+  return {
+    aliasSpellings: hasPendingQuery ? [] : runtime.aliasSpellings,
+    error: hasRuntime ? runtime.error : false,
+    hasMore: hasPendingQuery ? false : runtime.hasMore,
+    loadMore: runtime.loadMore,
+    results,
+    selectedSpelling: runtime.selectedSpelling,
+    selectSpelling: runtime.selectSpelling
+  };
 }
 
 export function useOrderedSearchResults(
   results: WorkspaceSearchResult[],
-  nodesById: WorkspaceListNodesById
+  nodesById: WorkspaceListNodesById,
+  prioritizeOriginal = false
 ) {
   return useMemo(() => {
     const externalResults: WorkspaceSearchResult[] = [];
@@ -138,6 +125,9 @@ export function useOrderedSearchResults(
       else if (nodesById[result.id]?.anchorLink?.kind) anchoredResults.push(result);
       else regularResults.push(result);
     });
-    return [...regularResults, ...anchoredResults, ...removedResults, ...openedResults, ...externalResults];
-  }, [nodesById, results]);
+    const ordered = [...regularResults, ...anchoredResults, ...removedResults, ...openedResults, ...externalResults];
+    return prioritizeOriginal
+      ? ordered.sort((left, right) => Number(Boolean(right.matchedOriginal)) - Number(Boolean(left.matchedOriginal)))
+      : ordered;
+  }, [nodesById, prioritizeOriginal, results]);
 }

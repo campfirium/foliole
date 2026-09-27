@@ -21,6 +21,7 @@ vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
 
 import { SearchPalette } from './SearchPalette';
 import { openImportedExternalResult } from './searchPaletteImportResult';
+import { searchSnapshot } from './searchPaletteTestSupport';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 function createNodeResult() {
@@ -106,7 +107,7 @@ it('keeps a silent result area before the user types', () => {
 
 it('renders search results as title context and path rows', async () => {
   vi.mocked(getRuntimeInvoke).mockReturnValue(
-    vi.fn().mockResolvedValue(
+    vi.fn().mockResolvedValue(searchSnapshot(
       [
         createNodeResult(),
         {
@@ -124,7 +125,7 @@ it('renders search results as title context and path rows', async () => {
           updatedAt: '2026-03-30T00:00:00.000Z'
         }
       ] satisfies WorkspaceSearchResult[]
-    )
+    ))
   );
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
@@ -158,7 +159,7 @@ it('keeps available results visible while search coverage is still updating', as
       if (command === NATIVE_COMMANDS.loadSearchIndexRebuildStatus) {
         return Promise.resolve({ status: 'rebuilding', strategy: 'word-based' });
       }
-      return Promise.resolve([createNodeResult()]);
+      return Promise.resolve(searchSnapshot([createNodeResult()]));
     })
   );
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
@@ -175,7 +176,7 @@ it('keeps available results visible while search coverage is still updating', as
 });
 
 it('keeps the search input focused when pointer selection reaches a result row', async () => {
-  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue([createNodeResult()]));
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot([createNodeResult()])));
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
   renderSearchPalette();

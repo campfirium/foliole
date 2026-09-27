@@ -9,6 +9,7 @@ import {
   resolveImportedNodeIdForExternalDocument
 } from './externalDocumentImportVisibility.js';
 import { OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID } from './externalOpenedDocumentConstants.js';
+import { readAliasFallbackExternalRows } from './externalSearchAliasFallback.js';
 import { openExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
 import { type ExternalSearchRow, toExternalResult } from './externalSearchCacheSupport.js';
 import { searchExternalMirrorDocuments } from './externalSearchMirrorSearch.js';
@@ -36,8 +37,7 @@ function readShortExternalSearchRows(db: import('better-sqlite3').Database, norm
          AND (instr(lower(file_name), ?) > 0
           OR instr(lower(relative_path), ?) > 0
           OR instr(lower(content), ?) > 0)
-       ORDER BY modified_ms DESC
-       LIMIT 20`
+       ORDER BY modified_ms DESC`
     )
     .all(normalizedQuery, normalizedQuery, normalizedQuery) as ExternalSearchRow[];
 }
@@ -88,8 +88,7 @@ function readShortTermExternalSearchRows(db: import('better-sqlite3').Database, 
        FROM external_search_documents
        WHERE is_present = 1
          AND ${clauses.join(' AND ')}
-       ORDER BY modified_ms DESC
-       LIMIT 20`
+       ORDER BY modified_ms DESC`
     )
     .all(...queryPlan.shortTerms) as ExternalSearchRow[];
 }
@@ -119,8 +118,7 @@ function readCombinedTermFallbackExternalSearchRows(db: import('better-sqlite3')
        FROM external_search_documents
        WHERE is_present = 1
          AND ${clauses.join(' AND ')}
-       ORDER BY modified_ms DESC
-       LIMIT 20`
+       ORDER BY modified_ms DESC`
     )
     .all(...terms) as ExternalSearchRow[];
 }
@@ -137,20 +135,23 @@ function resolveCurrentExternalSearchRow(row: ExternalSearchRow) {
   return absolutePath ? { ...row, absolute_path: absolutePath, folder_path: source.root_path } : null;
 }
 
-export function searchExternalDocuments(query: string) {
+export function searchExternalDocuments(query: string, aliases: string[][] = []) {
   const db = openExternalSearchCacheDatabase();
-  const queryPlan = buildFtsSearchQueryPlan(query);
+  const queryPlan = buildFtsSearchQueryPlan(query, aliases);
   const rows = executeFtsSearchPlan(query, {
     finalizeResults: (results) => results,
     loadAdvancedMatches: (plan) => readAdvancedExternalSearchRows(db, plan.advancedQuery),
     loadLiteralMatches: (plan) => readExternalSearchFtsRows(db, plan.literalQuery),
     loadPairMatches: (plan) => readPairExternalSearchRows(db, plan),
-    loadPostTermFallbackMatches: (plan) => readCombinedTermFallbackExternalSearchRows(db, plan),
+    loadPostTermFallbackMatches: (plan) => [
+      ...readCombinedTermFallbackExternalSearchRows(db, plan),
+      ...readAliasFallbackExternalRows(db, plan)
+    ],
     loadShortQueryMatches: (plan) => readShortExternalSearchRows(db, plan.normalizedQuery),
     loadShortTermFallbackMatches: (plan) => readShortTermExternalSearchRows(db, plan),
     loadTermMatches: (plan) => readTermExternalSearchRows(db, plan),
     mergeResults: mergeExternalSearchRows
-  });
+  }, aliases);
   if (!queryPlan.normalizedQuery) {
     return [];
   }
@@ -164,10 +165,10 @@ export function searchExternalDocuments(query: string) {
     ...localRows
       .filter((row) => isExternalDocumentVisible(row.absolute_path, activeImportedLocators))
       .map((row) =>
-        toExternalResult(row, queryPlan.highlightQuery, resolveImportedNodeIdForExternalDocument(row.absolute_path, importedNodeIdsByLocator))
+        toExternalResult(row, queryPlan.highlightQuery, resolveImportedNodeIdForExternalDocument(row.absolute_path, importedNodeIdsByLocator), queryPlan)
       ),
-    ...searchExternalMirrorDocuments(queryPlan.normalizedQuery).map((row) =>
-      toExternalResult(row, queryPlan.highlightQuery)
+    ...searchExternalMirrorDocuments(queryPlan).map((row) =>
+      toExternalResult(row, queryPlan.highlightQuery, null, queryPlan)
     ),
     ...searchReadwiseExternalDocuments(queryPlan)
   ];

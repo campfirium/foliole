@@ -36,7 +36,6 @@ export interface WorkspacePdfCrossPageSearchRow extends DatabaseRow {
   updated_at: string;
 }
 
-export const MAX_RESULTS = 40;
 const NODE_BODY_CONTENT_SQL = buildNodeBodyContentSql();
 export const TITLE_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
 SELECT n.id, n.title, ${NODE_BODY_CONTENT_SQL} AS content, n.updated_at
@@ -46,8 +45,7 @@ SELECT n.id, n.title, ${NODE_BODY_CONTENT_SQL} AS content, n.updated_at
   LEFT JOIN content_blob_data cbd
     ON cbd.hash = n.body_blob_hash
   WHERE instr(lower(trim(n.title)), ?) > 0
-  ORDER BY n.updated_at DESC
-  LIMIT ?`;
+  ORDER BY n.updated_at DESC`;
 export const CONTENT_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
 SELECT n.id, n.title, ${NODE_BODY_CONTENT_SQL} AS content, n.updated_at
   FROM nodes n
@@ -57,16 +55,14 @@ SELECT n.id, n.title, ${NODE_BODY_CONTENT_SQL} AS content, n.updated_at
     ON cbd.hash = n.body_blob_hash
   WHERE instr(lower(trim(n.title)), ?) = 0
     AND instr(lower(${NODE_BODY_CONTENT_SQL}), ?) > 0
-  ORDER BY n.updated_at DESC
-  LIMIT ?`;
+  ORDER BY n.updated_at DESC`;
 export const NODE_FTS_SQL = `${VISIBLE_NODES_CTE_SQL}
 SELECT node_search.node_id AS id, title, path, content, updated_at, bm25(node_search, 8.0, 2.0, 1.0) AS rank
   FROM search.node_search AS node_search
   INNER JOIN visible_nodes visible
     ON visible.id = node_search.node_id
   WHERE node_search MATCH ?
-  ORDER BY rank ASC, updated_at DESC
-  LIMIT ?`;
+  ORDER BY rank ASC, updated_at DESC`;
 export const PDF_FTS_SQL = `${VISIBLE_NODES_CTE_SQL}
 SELECT
   pdf_search.node_id AS id,
@@ -82,8 +78,7 @@ FROM search.pdf_search AS pdf_search
 INNER JOIN visible_nodes visible
   ON visible.id = pdf_search.node_id
 WHERE pdf_search MATCH ?
-ORDER BY rank ASC, updated_at DESC
-LIMIT ?`;
+ORDER BY rank ASC, updated_at DESC`;
 export const PDF_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
 SELECT
   na.node_id AS id,
@@ -101,8 +96,7 @@ INNER JOIN visible_nodes visible ON visible.id = n.id
 WHERE a.mime_type = 'application/pdf'
   AND a.pdf_index_status = 'ready'
   AND instr(lower(ppt.text), ?) > 0
-ORDER BY n.updated_at DESC
-LIMIT ?`;
+ORDER BY n.updated_at DESC`;
 export const PDF_CROSS_PAGE_MATCH_SQL = `${VISIBLE_NODES_CTE_SQL},
 page_pairs AS (
   SELECT
@@ -143,5 +137,4 @@ SELECT
   attachment_id
 FROM page_pairs
 WHERE instr(lower(boundary_text), ?) > 0
-ORDER BY updated_at DESC
-LIMIT ?`;
+ORDER BY updated_at DESC`;

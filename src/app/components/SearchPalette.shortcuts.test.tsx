@@ -18,6 +18,7 @@ import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRu
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
+import { searchSnapshot } from './searchPaletteTestSupport';
 
 const node = {
   id: 'node-2',
@@ -46,7 +47,7 @@ function renderPalette(isOpen = true) {
 beforeEach(() => {
   window.localStorage.clear();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed, 'true');
-  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue([]));
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot([])));
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
 });

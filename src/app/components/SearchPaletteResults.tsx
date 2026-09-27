@@ -43,11 +43,14 @@ export function SearchPaletteErrorState() {
 
 export function SearchPaletteList(props: {
   activeIndex: number;
+  hasMore: boolean;
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
+  onLoadMore: () => void;
   onSetActiveIndex: (value: number | ((current: number) => number)) => void;
   query: string;
   results: WorkspaceSearchResult[];
+  selectedSpelling: string | null;
   sourceDetailsByNodeId: Record<string, RuntimeNodeSourceDetails | null | undefined>;
 }) {
   const t = useTranslation();
@@ -56,6 +59,12 @@ export function SearchPaletteList(props: {
     const activeRow = listRef.current?.querySelector('[data-search-result-active="true"]');
     activeRow?.scrollIntoView?.({ block: 'nearest' });
   }, [props.activeIndex]);
+  useEffect(() => {
+    if (listRef.current && props.hasMore && listRef.current.scrollHeight <= listRef.current.clientHeight + 20) {
+      props.onLoadMore();
+    }
+  }, [props.hasMore, props.onLoadMore, props.results.length]);
+  useEffect(() => { if (listRef.current) listRef.current.scrollTop = 0; }, [props.selectedSpelling]);
 
   if (!props.results.length) return null;
 
@@ -64,6 +73,10 @@ export function SearchPaletteList(props: {
       aria-label={t('desktop.search.results.aria')}
       className={appFloatingListClassName()}
       ref={listRef}
+      onScroll={(event) => {
+        const list = event.currentTarget;
+        if (props.hasMore && list.scrollHeight - list.scrollTop - list.clientHeight < 120) props.onLoadMore();
+      }}
       onWheel={(event) => {
         if (Math.abs(event.deltaY) < 12) return;
         props.onSetActiveIndex((current) =>
@@ -83,6 +96,7 @@ export function SearchPaletteList(props: {
           onSetActiveIndex={props.onSetActiveIndex}
           index={index}
           query={props.query}
+          selectedSpelling={props.selectedSpelling}
           sourceDetails={props.sourceDetailsByNodeId[item.id]}
         />
       ))}
@@ -98,10 +112,14 @@ function SearchPaletteResultItem(props: {
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
   onSetActiveIndex: (value: number | ((current: number) => number)) => void;
   query: string;
+  selectedSpelling: string | null;
   sourceDetails: RuntimeNodeSourceDetails | null | undefined;
 }) {
   const item = props.item;
   const projectResultText = item.kind === 'node';
+  const highlightQuery = props.selectedSpelling
+    ?? item.nodeMatch?.query ?? item.pdfMatch?.query ?? item.externalMatch?.query
+    ?? item.aliasMatches?.[0]?.spelling ?? props.query;
   return (
     <li className="relative">
       <button
@@ -114,10 +132,10 @@ function SearchPaletteResultItem(props: {
         type="button"
       >
         <span className="min-w-0 truncate text-[15px] font-semibold leading-5 text-foreground">
-          {renderSearchResultText(item.title, props.query, { project: projectResultText })}
+          {renderSearchResultText(item.title, highlightQuery, { project: projectResultText })}
         </span>
         <span className="line-clamp-2 text-[13px] leading-5 text-foreground/60">
-          {renderSearchResultText(resolveSearchResultContext(item), props.query, { project: projectResultText })}
+          {renderSearchResultText(resolveSearchResultContext(item), highlightQuery, { project: projectResultText })}
         </span>
         <SearchPaletteResultMeta
           item={item}

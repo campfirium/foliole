@@ -20,6 +20,7 @@ import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRu
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
+import { searchSnapshot } from './searchPaletteTestSupport';
 import type { WorkspaceSearchResult } from './workspaceSearch';
 
 function createExternalResult(): WorkspaceSearchResult {
@@ -43,7 +44,7 @@ function createExternalResult(): WorkspaceSearchResult {
 
 function renderExternalSearchPalette(onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void) {
   window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
-  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue([createExternalResult()]));
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot([createExternalResult()])));
   vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
   vi.mocked(loadExternalLibraryFolders).mockResolvedValue([]);
   renderWithLocalization(

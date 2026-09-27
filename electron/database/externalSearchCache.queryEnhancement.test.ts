@@ -120,3 +120,22 @@ it('marks opened-file search results separately from indexed external documents'
   expect(results.find((result) => result.id === externalPath)?.externalMatch?.sourceKind).toBe('external');
   expect(results.find((result) => result.id === openedPath)?.externalMatch?.sourceKind).toBe('opened');
 });
+
+it('finds alias spellings in indexed external files beyond the former 20 result limit', async () => {
+  const libraryRoot = path.join(tempRoot, 'library');
+  for (let index = 0; index < 25; index += 1) {
+    await writeTextFile(path.join(libraryRoot, `speech-${index}.md`), 'Barack Obama described health care.');
+  }
+  await writeTextFile(path.join(libraryRoot, 'short.md'), 'AI reports from China.');
+  saveExternalSearchFolders([{ attachment_mode: 'document_relative_first_then_fixed_root', attachment_root_path: null,
+    excluded_dirs: [], folder_path: libraryRoot, id: 'folder-1' }]);
+  await refreshExternalSearchIndexes();
+
+  const aliases = [['Obama', 'Barack Obama'], ['healthcare', 'health care']];
+  const results = searchExternalDocuments('Obama AND healthcare', aliases);
+  expect(results).toHaveLength(25);
+  expect(results[0]?.aliasMatches?.find((item) => item.spelling === 'barack obama')?.externalMatch?.query)
+    .toBe('Barack Obama');
+  expect(searchExternalDocuments('artificial intelligence', [['AI', 'artificial intelligence']])
+    .map((result) => result.id)).toContain(path.join(libraryRoot, 'short.md'));
+});

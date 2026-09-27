@@ -109,7 +109,15 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   };
   [NATIVE_COMMANDS.searchWorkspace]: {
     args: { query: string };
-    result: NativeWorkspaceSearchResult[];
+    result: { aliasSpellings: Array<{ key: string; label: string }>; hasMore: boolean; results: NativeWorkspaceSearchResult[]; revision: number; snapshotId: string };
+  };
+  [NATIVE_COMMANDS.loadWorkspaceSearchBatch]: {
+    args: { offset: number; snapshotId: string; spelling?: string | null };
+    result: { hasMore: boolean; results: NativeWorkspaceSearchResult[] };
+  };
+  [NATIVE_COMMANDS.releaseWorkspaceSearch]: {
+    args: { snapshotId: string };
+    result: null;
   };
   [NATIVE_COMMANDS.loadWorkspaceSnapshot]: {
     args: undefined;

@@ -1,6 +1,8 @@
 export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.search.dialog': 'Workspace search',
   'desktop.search.input': 'Search workspace',
+  'desktop.search.aliases.all': 'All',
+  'desktop.search.aliases.aria': 'Filter by matching spelling',
   'desktop.search.placeholder': 'Search titles and content...',
   'desktop.search.indexStatus.updating': 'Search results are still being updated and may be incomplete.',
   'desktop.search.indexStatus.failed': 'Some topics may be missing because search data could not be updated.',

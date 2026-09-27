@@ -97,6 +97,20 @@ it('searches enabled mirror content and removes it from results when disabled', 
   expect(searchExternalDocuments('body')).toEqual([]);
 });
 
+it('finds accent-folded alias spellings in a remote mirror document', () => {
+  openDatabaseConnection().driver.execute(
+    'UPDATE external_documents SET content = ? WHERE document_id = ?',
+    ['A café appeared here.', 'remote-doc']
+  );
+  const results = searchExternalDocuments('cafe', [['cafe', 'coffee']]);
+  expect(results).toEqual([
+    expect.objectContaining({
+      aliasMatches: [expect.objectContaining({ spelling: 'cafe' })],
+      externalMatch: expect.objectContaining({ absolutePath: 'mirror-document:remote-doc' })
+    })
+  ]);
+});
+
 it('keeps remote rows when local folder settings are saved and disables only this Host', () => {
   saveExternalSearchFolders([]);
   expect(loadExternalSearchFolders()).toEqual([expect.objectContaining({ access_mode: 'remote_mirror', id: 'remote-folder' })]);

@@ -94,6 +94,7 @@ export interface ElectronAPI {
   onSearchIndexRebuildStatus?: (handler: (payload: SearchIndexRebuildStatusPayload) => void) => () => void;
   onSystemColorModeChanged?: (handler: (mode: 'dark' | 'light') => void) => () => void;
   onWorkspaceContentChanged?: (handler: (payload: WorkspaceContentChangedPayload) => void) => () => void;
+  onSearchAliasesChanged?: (handler: (revision: number) => void) => () => void;
   onWorkspaceSyncApplied?: (handler: (payload: WorkspaceSyncAppliedPayload) => void) => () => void;
   onSyncGroupJoinRequestsChanged?: (handler: () => void) => () => void;
   onSyncGroupOverviewChanged?: (handler: () => void) => () => void;

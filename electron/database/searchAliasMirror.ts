@@ -6,6 +6,7 @@ import { parseSearchAliasDocument } from '../../lib/core/search/searchAliasDocum
 import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
 import { openDatabaseConnection, registerDatabaseConnectionCleanup, runWithDatabaseConnectionOwner } from './connection.js';
+import { notifySearchAliasesChanged } from './searchAliasEvents.js';
 import {
   preserveSearchAliasConflict,
   readOptionalText,
@@ -21,6 +22,8 @@ let watcher: FSWatcher | null = null;
 let timer: NodeJS.Timeout | null = null;
 let boundDatabasePath: string | null = null;
 let lastError: string | null = null;
+let effectiveGroups: string[][] = [];
+let effectiveRevision = 0;
 
 interface StoredDocument { version: 1; text: string }
 interface MirrorBaseline { version: 1; hash: string }
@@ -70,27 +73,38 @@ async function reconcileDocument(mode: 'normal' | 'restore') {
   const [source, baseline] = await Promise.all([
     readOptionalText(filePath), readBaseline(databasePath)
   ]);
-  const fileText = source === null ? null : parseSearchAliasDocument(source).text;
   const databaseText = readDatabaseDocument();
-  if (fileText === null && databaseText === null) return;
+  updateEffectiveGroups(databaseText ?? '');
+  const fileText = source === null ? null : parseSearchAliasDocument(source).text;
+  if (fileText === null && databaseText === null) {
+    updateEffectiveGroups('');
+    return;
+  }
   if (fileText === null) {
     await writeTextAtomically(filePath, databaseText!);
     await commitBaseline(databasePath, databaseText!);
+    updateEffectiveGroups(databaseText!);
     return;
   }
   if (databaseText === null) {
-    if (fileText === TEMPLATE && baseline === null) return;
+    if (fileText === TEMPLATE && baseline === null) {
+      updateEffectiveGroups('');
+      return;
+    }
     commitDocument(fileText);
     await commitBaseline(databasePath, fileText);
+    updateEffectiveGroups(fileText);
     return;
   }
   if (fileText === databaseText) {
     await commitBaseline(databasePath, fileText);
+    updateEffectiveGroups(fileText);
     return;
   }
   if (mode === 'restore' || hash(databaseText) === baseline) {
     commitDocument(fileText);
     await commitBaseline(databasePath, fileText);
+    updateEffectiveGroups(fileText);
     return;
   }
   if (hash(fileText) !== baseline) await preserveSearchAliasConflict(filePath);
@@ -99,6 +113,19 @@ async function reconcileDocument(mode: 'normal' | 'restore') {
   }
   await writeTextAtomically(filePath, databaseText);
   await commitBaseline(databasePath, databaseText);
+  updateEffectiveGroups(databaseText);
+}
+
+function updateEffectiveGroups(text: string) {
+  const groups = parseSearchAliasDocument(text).groups;
+  if (JSON.stringify(groups) === JSON.stringify(effectiveGroups)) return;
+  effectiveGroups = groups;
+  effectiveRevision += 1;
+  notifySearchAliasesChanged(effectiveRevision);
+}
+
+export function getEffectiveSearchAliases() {
+  return { groups: effectiveGroups, revision: effectiveRevision };
 }
 
 export async function reconcileSearchAliasMirror(mode: 'normal' | 'restore' = 'normal') {
@@ -138,6 +165,8 @@ export function stopSearchAliasMirror() {
   if (timer) clearTimeout(timer);
   timer = null;
   boundDatabasePath = null;
+  effectiveGroups = [];
+  effectiveRevision += 1;
 }
 
 export async function startSearchAliasMirror(mode: 'normal' | 'restore' = 'normal') {

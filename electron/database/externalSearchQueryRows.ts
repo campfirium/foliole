@@ -16,8 +16,7 @@ export function readExternalSearchFtsRows(db: SqliteDatabase, ftsQuery: string) 
         bm25(external_search_fts, 8.0, 5.0, 3.0, 1.0) AS rank
        FROM external_search_fts
        WHERE external_search_fts MATCH ?
-       ORDER BY rank ASC, modified_at DESC
-       LIMIT 20`
+       ORDER BY rank ASC, modified_at DESC`
     )
     .all(ftsQuery) as ExternalSearchRow[];
 }

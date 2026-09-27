@@ -1,4 +1,3 @@
-import type { WorkspaceExternalSearchSourceKind } from '../core/database/workspaceSearchResults.js';
 import type { NodeKind } from '../core/nodes/nodeKind.js';
 import type { VirtualNodeFilter } from '../core/nodes/virtualNodeFilter.js';
 import type { UnifiedPushQueueRules } from '../core/review/unifiedPushQueueRules.js';
@@ -94,34 +93,7 @@ export interface NativeWorkspaceBacklink {
   match_count: number;
 }
 
-export interface NativeWorkspaceSearchResult {
-  excerpt: string;
-  id: string;
-  kind: 'external' | 'node' | 'pdf';
-  externalMatch: {
-    absolutePath: string;
-    folderId: string;
-    folderPath: string;
-    importedNodeId?: string | null;
-    query: string;
-    relativePath: string;
-    sourceKind: WorkspaceExternalSearchSourceKind;
-  } | null;
-  nodeMatch: {
-    from: number;
-    query: string;
-    to: number;
-  } | null;
-  pdfMatch: {
-    attachmentId: string;
-    matchStart: number;
-    page: number;
-    pageTextLength: number;
-    query: string;
-  } | null;
-  title: string;
-  updatedAt: string;
-}
+export type { NativeWorkspaceSearchResult } from './nativeSearchContract.js';
 
 export type {
   NativeExternalSearchAttachmentMode,

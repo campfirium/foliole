@@ -1,4 +1,5 @@
 import { buildCrossPagePdfExcerpt } from './pdfCrossPageWorkspaceSearch.js';
+import { findSearchAliasSpans } from './searchAliasEvidence.js';
 import type { RankedWorkspaceSearchResult, WorkspaceSearchPathQuality } from './workspaceSearchResults.js';
 import type {
   WorkspacePdfCrossPageSearchRow,
@@ -13,7 +14,7 @@ function normalizeWhitespace(value: string) {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-function buildExcerpt(content: string, query: string) {
+export function buildExcerpt(content: string, query: string) {
   const normalizedContent = normalizeWhitespace(content);
   if (!normalizedContent) {
     return 'No content preview';
@@ -27,7 +28,7 @@ function buildExcerpt(content: string, query: string) {
   return `${start > 0 ? '...' : ''}${normalizedContent.slice(start, end)}${end < normalizedContent.length ? '...' : ''}`;
 }
 
-function buildPdfExcerpt(content: string, query: string, page: number) {
+export function buildPdfExcerpt(content: string, query: string, page: number) {
   const normalizedContent = normalizeWhitespace(content);
   if (!normalizedContent) {
     return `Page ${page}`;
@@ -53,14 +54,33 @@ function toFiniteRank(value: number | null | undefined, fallback: number) {
 export function buildNodeResult(
   row: WorkspaceSearchRow,
   query: string,
-  pathQuality: WorkspaceSearchPathQuality
+  pathQuality: WorkspaceSearchPathQuality,
+  aliasSpellings: string[] = [],
+  triggerSpellings: string[] = []
 ): RankedWorkspaceSearchResult {
+  const bodySpans = findSearchAliasSpans(row.content, aliasSpellings);
+  const titleSpans = findSearchAliasSpans(`${row.title} ${row.path ?? ''}`, aliasSpellings);
+  const aliasMatches = aliasSpellings.flatMap((spelling) => {
+    const bodySpan = bodySpans.find((span) => span.spelling === spelling);
+    const titleSpan = titleSpans.find((span) => span.spelling === spelling);
+    if (!bodySpan && !titleSpan) return [];
+    return [{
+      excerpt: bodySpan ? buildExcerpt(row.content, bodySpan.query) : buildExcerpt(row.content, ''),
+      externalMatch: null,
+      nodeMatch: bodySpan ? { from: bodySpan.from, query: bodySpan.query, to: bodySpan.to } : null,
+      pdfMatch: null,
+      spelling
+    }];
+  });
+  const primary = aliasMatches.find((item) => triggerSpellings.includes(item.spelling)) ?? aliasMatches[0];
   return {
-    excerpt: buildExcerpt(row.content, query),
+    aliasMatches: aliasMatches.length ? aliasMatches : undefined,
+    excerpt: primary?.excerpt ?? buildExcerpt(row.content, query),
     externalMatch: null,
     id: row.id,
     kind: 'node',
-    nodeMatch: resolveNodeContentMatch(row.content, query),
+    matchedOriginal: aliasSpellings.length ? aliasMatches.some((item) => triggerSpellings.includes(item.spelling)) : undefined,
+    nodeMatch: primary?.nodeMatch ?? resolveNodeContentMatch(row.content, query),
     pdfMatch: null,
     pathQuality,
     rank: toFiniteRank(row.rank, 1000),
@@ -72,22 +92,42 @@ export function buildNodeResult(
 export function buildPdfResult(
   row: WorkspacePdfSearchRow,
   query: string,
-  pathQuality: WorkspaceSearchPathQuality
+  pathQuality: WorkspaceSearchPathQuality,
+  aliasSpellings: string[] = [],
+  triggerSpellings: string[] = []
 ): RankedWorkspaceSearchResult | null {
   const page = Number.parseInt(row.page, 10) || 0;
   const pageTextLength = Number.parseInt(row.page_text_length, 10) || 0;
+  const pageSpans = findSearchAliasSpans(row.text, aliasSpellings);
+  const metadataSpans = findSearchAliasSpans(`${row.title} ${row.path ?? ''}`, aliasSpellings);
+  const aliasMatches = aliasSpellings.flatMap((spelling) => {
+    const span = pageSpans.find((item) => item.spelling === spelling);
+    const metadata = metadataSpans.find((item) => item.spelling === spelling);
+    if (!span && !metadata) return [];
+    return [{
+      excerpt: buildPdfExcerpt(row.text, span?.query ?? '', page),
+      externalMatch: null,
+      nodeMatch: null,
+      pdfMatch: span ? { attachmentId: row.attachment_id, matchStart: span.from, page, pageTextLength, query: span.query } : null,
+      spelling
+    }];
+  });
+  const primary = aliasMatches.find((item) => item.pdfMatch && triggerSpellings.includes(item.spelling))
+    ?? aliasMatches.find((item) => item.pdfMatch) ?? aliasMatches[0];
   const matchStart = row.text.toLowerCase().indexOf(query);
-  if (matchStart < 0) {
+  if (matchStart < 0 && !primary) {
     return null;
   }
   return {
-    excerpt: buildPdfExcerpt(row.text, query, page),
+    aliasMatches: aliasMatches.length ? aliasMatches : undefined,
+    excerpt: primary?.excerpt ?? buildPdfExcerpt(row.text, query, page),
     externalMatch: null,
     id: row.id,
     kind: 'pdf',
     nodeMatch: null,
+    matchedOriginal: aliasSpellings.length ? aliasMatches.some((item) => triggerSpellings.includes(item.spelling)) : undefined,
     pathQuality,
-    pdfMatch: {
+    pdfMatch: primary ? primary.pdfMatch : {
       attachmentId: row.attachment_id,
       matchStart: Math.max(0, matchStart),
       page,

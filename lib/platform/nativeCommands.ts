@@ -154,6 +154,8 @@ export const NATIVE_COMMANDS = {
   loadNodeBacklinks: 'load_node_backlinks',
   searchPdfDocument: 'search_pdf_document',
   searchWorkspace: 'search_workspace',
+  loadWorkspaceSearchBatch: 'load_workspace_search_batch',
+  releaseWorkspaceSearch: 'release_workspace_search',
   loadWorkspaceSnapshot: 'load_workspace_snapshot',
   loadEditorOperationHistory: 'load_editor_operation_history',
   loadSyncGroupOverview: 'load_sync_group_overview',

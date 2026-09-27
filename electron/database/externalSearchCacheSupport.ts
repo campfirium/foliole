@@ -1,6 +1,8 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import type { FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
+import { findSearchAliasSpans } from '../../lib/core/database/searchAliasEvidence.js';
 import type { WorkspaceExternalSearchSourceKind } from '../../lib/core/database/workspaceSearchResults.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
@@ -168,22 +170,45 @@ function buildExternalExcerpt(content: string, query: string) {
   return `${start > 0 ? '...' : ''}${normalized.slice(start, end)}${end < normalized.length ? '...' : ''}`;
 }
 
-export function toExternalResult(row: ExternalSearchRow, query: string, importedNodeId: string | null = null) {
+export function toExternalResult(
+  row: ExternalSearchRow,
+  query: string,
+  importedNodeId: string | null = null,
+  plan?: FtsSearchQueryPlan
+) {
+  const externalMatch = {
+    absolutePath: row.absolute_path,
+    folderId: row.folder_id,
+    folderPath: row.folder_path,
+    importedNodeId,
+    query,
+    relativePath: row.relative_path,
+    sourceKind: resolveExternalSearchSourceKind(row.folder_id)
+  };
+  const bodySpans = findSearchAliasSpans(row.text, plan?.aliasSpellings ?? []);
+  const metadataSpans = findSearchAliasSpans(`${row.file_name} ${row.relative_path}`, plan?.aliasSpellings ?? []);
+  const aliasMatches = plan?.aliasSpellings.flatMap((spelling) => {
+    const body = bodySpans.find((span) => span.spelling === spelling);
+    const metadata = metadataSpans.find((span) => span.spelling === spelling);
+    if (!body && !metadata) return [];
+    return [{
+      excerpt: buildExternalExcerpt(row.text, body?.query ?? ''),
+      externalMatch: { ...externalMatch, query: body?.query ?? '' },
+      nodeMatch: null,
+      pdfMatch: null,
+      spelling
+    }];
+  }) ?? [];
+  const primary = aliasMatches.find((item) => plan?.triggerSpellings.includes(item.spelling)) ?? aliasMatches[0];
   return {
-    excerpt: buildExternalExcerpt(row.text, query),
-    externalMatch: {
-      absolutePath: row.absolute_path,
-      folderId: row.folder_id,
-      folderPath: row.folder_path,
-      importedNodeId,
-      query,
-      relativePath: row.relative_path,
-      sourceKind: resolveExternalSearchSourceKind(row.folder_id)
-    },
+    aliasMatches: aliasMatches.length ? aliasMatches : undefined,
+    excerpt: primary?.excerpt ?? buildExternalExcerpt(row.text, query),
+    externalMatch: primary?.externalMatch ?? externalMatch,
     id: row.absolute_path,
     kind: 'external',
     nodeMatch: null,
     pdfMatch: null,
+    matchedOriginal: aliasMatches.some((item) => plan?.triggerSpellings.includes(item.spelling)),
     title: row.file_name,
     updatedAt: row.modified_at
   };

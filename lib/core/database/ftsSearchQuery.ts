@@ -1,22 +1,27 @@
+import { normalizeSearchAlias } from '../search/searchAliasDocument.js';
+
+import { indexSearchAliases } from './ftsSearchAliasIndex.js';
+import { compileSearchExpression, escapeFtsPhrase, evaluateSearchExpression, type SearchExpression } from './ftsSearchExpression.js';
+import { findSearchAliasSpan } from './searchAliasEvidence.js';
+
 const SEARCH_OPERATOR_TOKENS = new Set(['AND', 'OR', 'NOT']);
 const SEARCH_TERM_EDGE_PUNCTUATION = /^["'()[\]{}.,!?;:，。？！；：（）【】「」『』《》、]+|["'()[\]{}.,!?;:，。？！；：（）【】「」『』《》、]+$/g;
 const SEARCH_TOKEN_SEPARATOR_PUNCTUATION = /[，。？！；：、]+/g;
 const MIN_TRIGRAM_FTS_TERM_LENGTH = 3;
 const MAX_PAIR_QUERIES = 6;
 
-type SearchExpression =
-  | { kind: 'and'; left: SearchExpression; right: SearchExpression }
-  | { kind: 'not'; left: SearchExpression; right: SearchExpression }
-  | { kind: 'or'; left: SearchExpression; right: SearchExpression }
-  | { kind: 'term'; value: string };
-
 interface SearchParseState {
+  aliases: Map<string, string[][]>;
   index: number;
+  matchedGroups: string[][];
   tokens: string[];
 }
 
 export interface FtsSearchQueryPlan {
   advancedQuery: string | null;
+  aliasSpellings: string[];
+  triggerSpellings: string[];
+  expandedExpression: SearchExpression | null;
   ftsTerms: string[];
   highlightQuery: string;
   literalQuery: string;
@@ -71,10 +76,6 @@ function buildPairPhrases(tokens: string[], advancedQuery: string | null) {
   }).slice(0, MAX_PAIR_QUERIES);
 }
 
-function escapeFtsPhrase(value: string) {
-  return `"${value.replace(/"/g, '""')}"`;
-}
-
 function peek(state: SearchParseState) {
   return state.tokens[state.index];
 }
@@ -89,6 +90,21 @@ function parsePrimary(state: SearchParseState): SearchExpression | null {
   const token = peek(state);
   if (!token || isSearchOperatorToken(token)) {
     return null;
+  }
+  const first = normalizeSearchAlias(normalizeSearchToken(token));
+  const candidates = state.aliases.get(first) ?? [];
+  for (const group of candidates) {
+    const spelling = group[0];
+    if (!spelling) continue;
+    const words = spelling.split(' ');
+    const current = state.tokens.slice(state.index, state.index + words.length);
+    if (current.some(isSearchOperatorToken) || normalizeSearchAlias(current.map(normalizeSearchToken).join(' ')) !== spelling) continue;
+    state.index += words.length;
+    state.matchedGroups.push(group);
+    return group.slice(1).reduce<SearchExpression>(
+      (left, value) => ({ kind: 'or', left, right: { kind: 'term', value } }),
+      { kind: 'term', value: spelling }
+    );
   }
   const consumed = consume(state);
   if (!consumed) {
@@ -148,35 +164,13 @@ function parseOr(state: SearchParseState): SearchExpression | null {
   return expression;
 }
 
-function buildSearchExpression(tokens: string[]) {
-  const state = { index: 0, tokens };
+function buildSearchExpression(tokens: string[], aliases = new Map<string, string[][]>()) {
+  const state: SearchParseState = { aliases, index: 0, matchedGroups: [], tokens };
   const expression = parseOr(state);
-  return expression && state.index === tokens.length ? expression : null;
-}
-
-function compileSearchExpression(expression: SearchExpression): string {
-  if (expression.kind === 'term') {
-    return escapeFtsPhrase(expression.value);
-  }
-  if (expression.kind === 'not') {
-    return `${compileSearchExpression(expression.left)} NOT ${compileSearchExpression(expression.right)}`;
-  }
-  const left = compileSearchExpression(expression.left);
-  const right = compileSearchExpression(expression.right);
-  return `${left} ${expression.kind.toUpperCase()} ${right}`;
-}
-
-function evaluateSearchExpression(expression: SearchExpression, normalizedHaystack: string): boolean {
-  if (expression.kind === 'term') {
-    return normalizedHaystack.includes(expression.value);
-  }
-  if (expression.kind === 'not') {
-    return evaluateSearchExpression(expression.left, normalizedHaystack) && !evaluateSearchExpression(expression.right, normalizedHaystack);
-  }
-  if (expression.kind === 'and') {
-    return evaluateSearchExpression(expression.left, normalizedHaystack) && evaluateSearchExpression(expression.right, normalizedHaystack);
-  }
-  return evaluateSearchExpression(expression.left, normalizedHaystack) || evaluateSearchExpression(expression.right, normalizedHaystack);
+  return {
+    expression: expression && state.index === tokens.length ? expression : null,
+    matchedGroups: state.matchedGroups
+  };
 }
 
 function resolveHighlightQuery(tokens: string[], normalizedQuery: string, advancedQuery: string | null) {
@@ -198,15 +192,20 @@ function buildTermQuery(tokens: string[], advancedQuery: string | null) {
   return terms.map(escapeFtsPhrase).join(' AND ');
 }
 
-export function buildFtsSearchQueryPlan(query: string): FtsSearchQueryPlan {
+export function buildFtsSearchQueryPlan(query: string, aliases: string[][] = []): FtsSearchQueryPlan {
   const queryTokens = tokenizeSearchQuery(query);
   const normalizedQuery = normalizeSearchPhrase(queryTokens);
-  const expression = queryTokens.some(isSearchOperatorToken) ? buildSearchExpression(queryTokens) : null;
-  const advancedQuery = expression ? compileSearchExpression(expression) : null;
+  const { expression, matchedGroups } = buildSearchExpression(queryTokens, indexSearchAliases(aliases));
+  const expandedExpression = matchedGroups.length > 0 ? expression : null;
+  const advancedExpression = queryTokens.some(isSearchOperatorToken) || expandedExpression ? expression : null;
+  const advancedQuery = advancedExpression ? compileSearchExpression(advancedExpression) : null;
   const ftsTerms = advancedQuery ? [] : normalizeFtsSearchTerms(queryTokens);
   const pairPhrases = buildPairPhrases(queryTokens, advancedQuery);
   return {
     advancedQuery,
+    aliasSpellings: [...new Set(matchedGroups.flat())],
+    triggerSpellings: [...new Set(matchedGroups.flatMap((group) => group[0] ? [group[0]] : []))],
+    expandedExpression,
     ftsTerms,
     highlightQuery: resolveHighlightQuery(queryTokens, normalizedQuery, advancedQuery),
     literalQuery: normalizedQuery ? escapeFtsPhrase(normalizedQuery) : '',
@@ -219,11 +218,14 @@ export function buildFtsSearchQueryPlan(query: string): FtsSearchQueryPlan {
   };
 }
 
-export function matchesFtsSearchText(text: string, queryPlan: FtsSearchQueryPlan) {
+export function matchesFtsSearchText(text: string, queryPlan: FtsSearchQueryPlan): boolean {
   if (!queryPlan.normalizedQuery) {
     return false;
   }
   const normalizedHaystack = text.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (queryPlan.expandedExpression) {
+    return matchesFtsSearchFields([text], queryPlan);
+  }
   if (normalizedHaystack.includes(queryPlan.normalizedQuery)) {
     return true;
   }
@@ -231,6 +233,13 @@ export function matchesFtsSearchText(text: string, queryPlan: FtsSearchQueryPlan
   if (!queryPlan.advancedQuery && terms.length > 1 && terms.every((term) => normalizedHaystack.includes(term))) {
     return true;
   }
-  const expression = queryPlan.advancedQuery ? buildSearchExpression(queryPlan.queryTokens) : null;
+  const expression = queryPlan.expandedExpression ?? (queryPlan.advancedQuery ? buildSearchExpression(queryPlan.queryTokens).expression : null);
   return expression ? evaluateSearchExpression(expression, normalizedHaystack) : false;
+}
+
+export function matchesFtsSearchFields(fields: string[], queryPlan: FtsSearchQueryPlan): boolean {
+  if (!queryPlan.expandedExpression) return matchesFtsSearchText(fields.join(' '), queryPlan);
+  return evaluateSearchExpression(queryPlan.expandedExpression, '', (value) =>
+    fields.some((field) => Boolean(findSearchAliasSpan(field, value)))
+  );
 }
