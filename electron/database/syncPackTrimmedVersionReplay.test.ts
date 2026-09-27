@@ -1,0 +1,187 @@
+// @vitest-environment node
+
+import { promises as fs } from 'node:fs';
+import fsSync from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { inflateSync } from 'node:zlib';
+
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+let appDataDir = '/tmp/foliole-trimmed-version-replay';
+vi.mock('../ipc/paths.js', () => ({
+  resolveAppPaths: () => ({
+    app_cache_dir: path.join(appDataDir, 'cache'),
+    app_config_dir: path.join(appDataDir, 'config'),
+    app_data_dir: appDataDir,
+    app_log_dir: path.join(appDataDir, 'logs')
+  })
+}));
+
+import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
+import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { buildDesktopSyncPack } from './syncPackBuilder.js';
+
+const nodeId = 'offline-topic';
+const createdAt = '2026-09-27T00:00:00.000Z';
+const onlineIdentity = createSyncGroupDeviceIdentity({
+  device_anchor: 'a1111111-1111-4111-8111-111111111111',
+  group_id: 'group', library_path: '/online', path_flavor: 'posix'
+});
+const offlineIdentity = createSyncGroupDeviceIdentity({
+  device_anchor: 'b2222222-2222-4222-8222-222222222222',
+  group_id: 'group', library_path: '/offline', path_flavor: 'posix'
+});
+let tempRoot = '';
+
+beforeEach(async () => {
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-trimmed-replay-'));
+});
+
+afterEach(async () => {
+  closeDatabaseConnection();
+  await fs.rm(tempRoot, { force: true, recursive: true });
+});
+
+it('replays a trimmed A to E chain into an offline A to F branch', async () => {
+  openLibrary('online');
+  seedNode('E', 'left edited\nright one');
+  for (const [id, parent, content] of [
+    ['A', null, 'left one\nright one'],
+    ['B', 'A', 'left draft\nright one'],
+    ['C', 'B', 'left revised\nright one'],
+    ['D', 'C', 'left almost\nright one'],
+    ['E', 'D', 'left edited\nright one']
+  ] as const) insertVersion(id, parent, content);
+  installOfflineBaseProof();
+  const online = openDatabaseConnection();
+  expect(await collectNodeVersionPayloads(createBetterSqliteDbPort(online.sqlite), nodeId))
+    .toEqual({ released: 3, skipped: null });
+  expect(versionBodies()).toEqual([['A', 'left one\nright one'], ['B', null],
+    ['C', null], ['D', null], ['E', 'left edited\nright one']]);
+  const incomingPath = await buildIncomingPack();
+  closeDatabaseConnection();
+
+  openLibrary('offline');
+  seedNode('F', 'left one\nright edited');
+  insertVersion('A', null, 'left one\nright one');
+  insertVersion('F', 'A', 'left one\nright edited');
+  installGroup(offlineIdentity.identity_key);
+  const offline = openDatabaseConnection();
+  const port = createBetterSqliteDbPort(offline.sqlite);
+  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 0, hostName: 'offline-device', sourcePeerId: onlineIdentity.identity_key
+    })).resolves.toMatchObject({ applied: true, toStateSeq: 1 });
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
+  const current = offline.sqlite.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
+    .get(nodeId) as { content: string; current_version_id: string };
+  expect(current.content).toBe('left edited\nright edited');
+  expect(current.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
+  expect(versionBodies().slice(0, 6)).toEqual([['A', 'left one\nright one'],
+    ['B', null], ['C', null], ['D', null], ['E', 'left edited\nright one'],
+    ['F', 'left one\nright edited']]);
+  expect(offline.sqlite.prepare(`SELECT parent_version_id FROM node_sync_version_parents
+    WHERE version_id = ? ORDER BY ordinal`).all(current.current_version_id))
+    .toEqual([{ parent_version_id: 'E' }, { parent_version_id: 'F' }]);
+});
+
+function openLibrary(name: string) {
+  appDataDir = path.join(tempRoot, name);
+  initializeDatabaseConnection(openDatabaseConnection());
+  openDatabaseConnection().sqlite.exec(`CREATE TABLE IF NOT EXISTS sync_push_ack (
+    client_op_id TEXT PRIMARY KEY NOT NULL, object_type TEXT NOT NULL,
+    object_id TEXT NOT NULL, state_seq INTEGER, status TEXT NOT NULL, acked_at TEXT NOT NULL)`);
+}
+
+function seedNode(versionId: string, content: string) {
+  const db = openDatabaseConnection().sqlite;
+  db.prepare(`INSERT INTO nodes
+    (id, kind, title, is_title_manual, hide_title_heading, content,
+     current_version_id, created_at, updated_at)
+    VALUES (?, 'topic', 'Offline Topic', 1, 0, ?, ?, ?, ?)`)
+    .run(nodeId, content, versionId, createdAt, createdAt);
+  db.prepare(`INSERT INTO sync_object_state
+    (object_type, object_id, state_seq, current_version_id, content_hash,
+     last_modified_by_host_name, updated_at, sync_dirty)
+    VALUES ('node', ?, 1, ?, ?, 'online-device', ?, 1)`)
+    .run(nodeId, versionId, `hash-${versionId}`, createdAt);
+}
+
+function insertVersion(id: string, parent: string | null, content: string) {
+  const db = openDatabaseConnection().sqlite;
+  const snapshot = { anchor_link: null, attachments: [], content, created_at: createdAt,
+    deleted_at: null, desired_retention: null, hide_title_heading: false, id: nodeId,
+    image_regions: null, is_title_manual: true, kind: 'topic', opening_text: null,
+    parent_id: null, position: null, priority: null, reveal: null,
+    title: 'Offline Topic', updated_at: createdAt, virtual_filter: null };
+  db.prepare(`INSERT INTO node_sync_versions
+    (version_id, object_id, parent_version_id, host_name, created_at,
+     content_hash, body_text, snapshot_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
+    .run(id, nodeId, parent, id === 'F' ? 'offline-device' : 'online-device',
+      createdAt, `hash-${id}`, content, JSON.stringify(snapshot));
+  if (parent) db.prepare(`INSERT INTO node_sync_version_parents VALUES (?, ?, 0)`).run(id, parent);
+}
+
+function installOfflineBaseProof() {
+  installGroup(onlineIdentity.identity_key);
+  openDatabaseConnection().sqlite.prepare(`
+    INSERT INTO node_version_device_revisions VALUES
+      ('group', ?, 'epoch', 1, 'pack-A', NULL, 'now')`).run(offlineIdentity.identity_key);
+  openDatabaseConnection().sqlite.prepare(`INSERT INTO node_version_device_bases VALUES
+    ('group', ?, 'offline-topic', 'A', 'epoch', 1, 'pack-A', 'now')`)
+    .run(offlineIdentity.identity_key);
+}
+
+function installGroup(localDeviceId: string) {
+  const db = openDatabaseConnection().sqlite;
+  db.prepare(`
+    INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
+      VALUES ('group', 'Group', 'key', 'now', 'now')`).run();
+  db.prepare(`INSERT INTO sync_group_local_state VALUES (1, 'group', ?, 'active', 'now')`)
+    .run(localDeviceId);
+  const insert = db.prepare(`INSERT INTO sync_group_devices
+    (group_id, device_identity_key, device_anchor, canonical_library_path,
+     device_name, platform, state, joined_at, updated_at)
+    VALUES ('group', ?, ?, ?, ?, ?, 'active', 'now', 'now')`);
+  insert.run(onlineIdentity.identity_key, onlineIdentity.device_anchor,
+    onlineIdentity.canonical_library_path, 'Online', 'mac');
+  insert.run(offlineIdentity.identity_key, offlineIdentity.device_anchor,
+    offlineIdentity.canonical_library_path, 'Offline', 'android');
+}
+
+function versionBodies() {
+  return (openDatabaseConnection().sqlite.prepare(`SELECT version_id, body_text
+    FROM node_sync_versions WHERE object_id = ? ORDER BY version_id`).all(nodeId) as
+    Array<{ version_id: string; body_text: string | null }>).map(
+    (row) => [row.version_id, row.body_text]
+  );
+}
+
+async function buildIncomingPack() {
+  const packPath = path.join(tempRoot, 'online.syncpack');
+  await buildDesktopSyncPack({ createdAt, fromPeerId: onlineIdentity.identity_key, fromStateSeq: 0,
+    outputPath: packPath, packId: 'trimmed-pack', toPeerId: offlineIdentity.identity_key });
+  const bytes = fsSync.readFileSync(packPath);
+  let offset = 0;
+  while (bytes.readUInt32LE(offset) === 0x04034b50) {
+    const size = bytes.readUInt32LE(offset + 18);
+    const nameLength = bytes.readUInt16LE(offset + 26);
+    const contentStart = offset + 30 + nameLength + bytes.readUInt16LE(offset + 28);
+    if (bytes.subarray(offset + 30, offset + 30 + nameLength).toString() === 'incoming.db.deflate') {
+      const incomingPath = path.join(tempRoot, 'online.db');
+      fsSync.writeFileSync(incomingPath, inflateSync(bytes.subarray(contentStart, contentStart + size)));
+      return incomingPath;
+    }
+    offset = contentStart + size;
+  }
+  throw new Error('incoming_db_missing');
+}
