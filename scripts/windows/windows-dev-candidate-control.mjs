@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 import {
   DEFAULT_CANDIDATE_SOURCE_REF, normalizeCandidateSourceRef
@@ -8,6 +9,30 @@ import { currentAcceptanceCandidate } from '../sync-group/multi-device-sync-cand
 import { WINDOWS_DEV_EVIDENCE_PREFIX } from './windows-dev-paths.mjs';
 
 export const WINDOWS_DEV_TARGET_REF = 'refs/heads/dev';
+const REVISION = /^[0-9a-f]{40}$/u;
+
+export function extractCandidateRevision(args) {
+  const remaining = [...args];
+  const index = remaining.indexOf('--revision');
+  if (index < 0) return { args: remaining, revision: null };
+  const revision = remaining[index + 1];
+  if (!REVISION.test(revision ?? '')) throw new Error('Windows candidate revision must be a full SHA');
+  remaining.splice(index, 2);
+  return { args: remaining, revision };
+}
+
+export function assertPinnedDevRevision(repoRoot, revision, run = spawnSync) {
+  if (!REVISION.test(revision ?? '')) throw new Error('Windows candidate revision must be a full SHA');
+  const branch = run('git', ['branch', '--show-current'], { cwd: repoRoot, encoding: 'utf8' });
+  if (branch.status !== 0 || branch.stdout.trim() !== 'dev') {
+    throw new Error('Pinned Windows candidate requires Mac dev');
+  }
+  const ancestor = run('git', ['merge-base', '--is-ancestor', revision, 'refs/heads/dev'], {
+    cwd: repoRoot
+  });
+  if (ancestor.status !== 0) throw new Error('Pinned Windows candidate must belong to Mac dev');
+  return revision;
+}
 
 export function extractCandidateSourceRef(args) {
   const remaining = [...args];
@@ -19,17 +44,16 @@ export function extractCandidateSourceRef(args) {
   return { args: remaining, explicit: true, sourceRef };
 }
 
-export function windowsCandidatePushArgs(host, sourceRef = DEFAULT_CANDIDATE_SOURCE_REF) {
+export function windowsCandidatePushArgs(host, sourceRef = DEFAULT_CANDIDATE_SOURCE_REF, revision = null) {
   const normalized = normalizeCandidateSourceRef(sourceRef);
-  const source = normalized === DEFAULT_CANDIDATE_SOURCE_REF ? 'dev' : normalized;
+  if (revision && !REVISION.test(revision)) throw new Error('Windows candidate revision must be a full SHA');
+  const source = revision ?? (normalized === DEFAULT_CANDIDATE_SOURCE_REF ? 'dev' : normalized);
   return ['push', '--no-verify', '--porcelain', `${host}:foliole-dev.git`,
     `+${source}:${WINDOWS_DEV_TARGET_REF}`];
 }
 
 export function freezeWindowsCandidate(repoRoot, sourceRef) {
-  const candidate = currentAcceptanceCandidate(repoRoot, 'diagnostic', sourceRef);
-  if (!candidate.clean) throw new Error('Windows candidate requires a clean worktree');
-  return candidate;
+  return currentAcceptanceCandidate(repoRoot, 'diagnostic', sourceRef);
 }
 
 function remoteCandidateEvidence(output) {

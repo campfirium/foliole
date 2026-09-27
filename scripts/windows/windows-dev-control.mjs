@@ -14,7 +14,8 @@ import {
 } from './windows-dev-control-evidence.mjs';
 import { runWindowsSyncGroupControl } from './windows-sync-group-control-router.mjs';
 import {
-  collectWindowsCandidateControl, extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
+  assertPinnedDevRevision, collectWindowsCandidateControl, extractCandidateRevision,
+  extractCandidateSourceRef, freezeWindowsCandidate, windowsCandidatePushArgs
 } from './windows-dev-candidate-control.mjs';
 import { stopWindowsDevCandidateRuntime } from './windows-dev-candidate-runtime-control.mjs';
 import { WINDOWS_DEV_DEFAULT_SSH, windowsDevScpSpec, windowsDevSshSpec } from
@@ -64,7 +65,8 @@ function execute(command, args, options = {}) {
 
 export function parseWindowsDevControlArgs(argv, env = process.env) {
   const parsedSource = extractCandidateSourceRef(argv);
-  const args = parsedSource.args;
+  const parsedRevision = extractCandidateRevision(parsedSource.args);
+  const args = parsedRevision.args;
   const hostIndex = args.indexOf('--host');
   const host = hostIndex >= 0
     ? args.splice(hostIndex, 2)[1]
@@ -80,16 +82,20 @@ export function parseWindowsDevControlArgs(argv, env = process.env) {
   if (parsedSource.explicit && args[0] !== 'multi-device-sync-candidate') {
     throw new Error('Windows DEV source ref is only accepted for candidate preparation');
   }
+  if (parsedRevision.revision && !['internal-install', 'internal-open'].includes(args[0])) {
+    throw new Error('Pinned Windows revision is only accepted for Internal installation and opening');
+  }
   return { action: args[0], host,
-    ...(parsedSource.explicit ? { sourceRef: parsedSource.sourceRef } : {}) };
+    ...(parsedSource.explicit ? { sourceRef: parsedSource.sourceRef } : {}),
+    ...(parsedRevision.revision ? { revision: parsedRevision.revision } : {}) };
 }
 
-export function windowsDevPushSpec(host, env = process.env, home = os.homedir(), sourceRef) {
+export function windowsDevPushSpec(host, env = process.env, home = os.homedir(), sourceRef, revision) {
   const key = env.FOLIOLE_WINDOWS_DEV_GIT_SSH_KEY
     || path.join(home, '.ssh', 'agent', 'foliole-windows-android-lab-git');
   if (/['\0\r\n]/u.test(key)) throw new Error('Windows DEV Git key path contains unsupported characters');
   return {
-    args: windowsCandidatePushArgs(host, sourceRef),
+    args: windowsCandidatePushArgs(host, sourceRef, revision),
     env: {
       ...env,
       GIT_SSH_COMMAND: `ssh -i '${key}' -o BatchMode=yes -o IdentitiesOnly=yes `
@@ -116,7 +122,7 @@ export async function runWindowsDevControl({
   executeSsh = (args, options) => execute('ssh', args, options), fsApi = fs,
   repoRoot = process.cwd(), stdout = process.stdout
 } = {}) {
-  const { action, host, sourceRef = WINDOWS_DEV_SOURCE_REF } = parseWindowsDevControlArgs(argv, env);
+  const { action, host, revision, sourceRef = WINDOWS_DEV_SOURCE_REF } = parseWindowsDevControlArgs(argv, env);
   const buildScpSpec = (targetHost, remote, local) => windowsDevScpSpec(
     targetHost, remote, local, env, os.homedir(), fsApi);
   const buildSshSpec = (targetHost, targetAction) => windowsDevSshSpec(
@@ -134,7 +140,8 @@ export async function runWindowsDevControl({
   if (syncGroup) return syncGroup;
   const localCandidate = ['frozen-revision-preflight', 'multi-device-sync-candidate'].includes(action)
     ? freezeWindowsCandidate(repoRoot, sourceRef) : null;
-  const spec = windowsDevPushSpec(host, env, os.homedir(), sourceRef);
+  if (revision) assertPinnedDevRevision(repoRoot, revision);
+  const spec = windowsDevPushSpec(host, env, os.homedir(), sourceRef, revision);
   await executeGit(spec.args, { env: spec.env });
   if (action === 'multi-device-sync-candidate') {
     await stopWindowsDevCandidateRuntime({ env, executeSsh, host, stdout });

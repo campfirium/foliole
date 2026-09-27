@@ -40,8 +40,8 @@
 
 ## Windows Native Shell Policy
 
-- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 日常只通过 `scripts/windows/windows-dev-control.mjs` 调用 registry 当前登记的具名动作，将 Mac `dev` 精确覆盖到 LAN Git 同名镜像，再覆盖固定 `D:\C\foliole`。registry 是日常动作清单的机械真相，AGENTS 不复制枚举。Windows 不决定候选；trusted runtime revision 只证明产品 runtime 等价，最终验收源码 revision 仍取 controller 已同步的当前 Mac 完整提交。不得从 Windows 回传或合并源码。
-- 正式多端同步验收使用 Mac 与 Windows 各自已安装的 Internal 客户端及其原有数据根；Windows 打包源码仍由 Mac `dev` 的固定镜像入口精确对齐日常 `D:\C\foliole`，不建立第二份源码 checkout。先只读核对安装来源、运行身份、版本和数据根，再以产品操作写入本轮测试对象；不得改用 DEV、为验收清库、重置资料或另开隔离客户端。
+- Windows 开发机使用普通局域网 SSH 进入 PowerShell；Mac 日常只通过 `scripts/windows/windows-dev-control.mjs` 调用 registry 当前登记的具名动作，将 Mac `dev` 的已提交候选精确覆盖到 LAN Git 同名镜像，再覆盖固定 `D:\C\foliole`。registry 是日常动作清单的机械真相，AGENTS 不复制枚举。Windows 不决定候选；正式多端验收在本轮开始时记录 Mac 最新 `dev` 完整 SHA，后续 HEAD 前进也沿用该 SHA，trusted runtime revision 只证明产品 runtime 等价，最终验收源码 revision 取 controller 已同步的本轮 SHA。不得从 Windows 回传或合并源码。
+- 正式多端同步验收使用 Mac 与 Windows 各自已安装的 Internal 客户端及其原有数据根；Mac 未提交改动留在原工作区，不进入本轮安装包，也不要求清理或提交。Windows 打包源码仍由 Mac `dev` 的固定镜像入口精确对齐本轮 SHA 和日常 `D:\C\foliole`，不建立第二份源码 checkout。先只读核对安装来源、运行身份、版本和数据根，再以产品操作写入本轮测试对象；不得改用 DEV、为验收清库、重置资料或另开隔离客户端。
 - Windows DEV receiver 与 build 只允许使用 `C:\Program Files\nodejs\node.exe`，不得回退到 PATH 自动发现、portable Node 或其他 source/build 控制面。
 - A5 设备自动化必须由 Mac DEV controller 的具名 action 调用固定 device adapter，消费 Windows 单仓 pull 后的 `dev` 和固定 A5 identity。清数据、re-pair、既定数据根外读取、提权、防火墙或系统级修改必须在执行前返回 `approval_required`，不得提供 direct device CLI 或远程 approval bypass。
 - Windows 原生 Codex 会话可以使用 PowerShell 作为默认交互 shell，但 PowerShell 只用于短命令、文件读取、状态检查和运行已存在脚本；不得把 PowerShell 当成通用脚本语言来内联复杂流程。
