@@ -1,22 +1,21 @@
-labels: ["question"]
 body:
   - type: markdown
     attributes:
       value: |
-        Use polls to compare Foliole workflow preferences, priorities, or product tradeoffs.
+        Vote on requests whose value is unclear to help guide priority.
   - type: input
     id: question
     attributes:
       label: Poll question
-      description: What decision or preference should the poll clarify?
-      placeholder: Which workflow should Foliole optimize first?
+      description: Which request should people vote on?
+      placeholder: Should Foliole support this workflow?
     validations:
       required: true
   - type: textarea
     id: options
     attributes:
       label: Options
-      description: List the choices people should vote on.
+      description: List the choices people should vote on, including a way to vote against the request.
       value: |
         1.
         2.
@@ -26,7 +25,7 @@ body:
   - type: textarea
     id: context
     attributes:
-      label: Context
-      description: Explain the tradeoff or background.
+      label: Request context
+      description: Explain the request and what is unclear about its value.
     validations:
       required: false
