@@ -49,9 +49,13 @@ class MarkdownMathWidget extends WidgetType {
     wrapper.dataset.mdMathTo = String(this.mathRange.to);
     wrapper.dataset.mdMathTex = this.mathRange.tex;
     renderMath(wrapper, this.mathRange, getFormulaClozeEditorPresentation(this.editorNodeId), () => {
+      const { from, to, source } = this.mathRange;
+      if (from < 0 || to > view.state.doc.length || view.state.doc.sliceString(from, to) !== source) {
+        return;
+      }
       view.dispatch({
-        effects: setEditedMathRangeEffect.of({ from: this.mathRange.from, to: this.mathRange.to }),
-        selection: { anchor: Math.min(this.mathRange.from + 1, this.mathRange.to) },
+        effects: setEditedMathRangeEffect.of({ from, to }),
+        selection: { anchor: Math.min(from + 1, to) },
         scrollIntoView: false
       });
       view.focus();

@@ -7,15 +7,28 @@ export interface EditedMathRange {
 
 export const setEditedMathRangeEffect = StateEffect.define<EditedMathRange | null>();
 
+function normalizeEditedMathRange(value: EditedMathRange | null, docLength: number): EditedMathRange | null {
+  if (!value || !Number.isInteger(value.from) || !Number.isInteger(value.to) || value.from >= value.to) {
+    return null;
+  }
+  const from = Math.max(0, Math.min(value.from, docLength));
+  const to = Math.max(0, Math.min(value.to, docLength));
+  return from < to ? { from, to } : null;
+}
+
 export const editedMathRangeField = StateField.define<EditedMathRange | null>({
   create: () => null,
   update(value, transaction) {
-    let next = value
-      ? { from: transaction.changes.mapPos(value.from), to: transaction.changes.mapPos(value.to) }
+    const current = normalizeEditedMathRange(value, transaction.startState.doc.length);
+    let next = current
+      ? { from: transaction.changes.mapPos(current.from), to: transaction.changes.mapPos(current.to) }
       : null;
     for (const effect of transaction.effects) {
-      if (effect.is(setEditedMathRangeEffect)) next = effect.value;
+      if (effect.is(setEditedMathRangeEffect)) {
+        next = normalizeEditedMathRange(effect.value, transaction.newDoc.length);
+      }
     }
+    next = normalizeEditedMathRange(next, transaction.newDoc.length);
     if (next && transaction.selection) {
       const head = transaction.selection.main.head;
       if (head < next.from || head > next.to) next = null;

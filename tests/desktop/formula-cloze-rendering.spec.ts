@@ -49,7 +49,10 @@ async function openFormulaClozeChild(
 test('renders formula cloze outline on the parent and mask on the child', async ({ desktopWindow }, testInfo) => {
   await openSeededFormulaParent(desktopWindow);
 
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.()))
+    .toBe('playwright-formula-parent');
   await expect(desktopWindow.locator('.prompt-editor-host .cm-md-formula-cloze-region')).toHaveCount(1);
+  await expect.poll(() => collectFormulaRegionState(desktopWindow)).toMatchObject({ hidden: 'false', outlined: 'true' });
   const parentState = await collectFormulaRegionState(desktopWindow);
   expect(parentState.outlined).toBe('true');
   expect(parentState.hidden).toBe('false');
@@ -62,6 +65,7 @@ test('renders formula cloze outline on the parent and mask on the child', async 
   await expect.poll(() => desktopWindow.evaluate(() => globalThis.window?.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null))
     .toBe('playwright-formula-child');
   await expect(desktopWindow.locator('.prompt-editor-host .cm-md-formula-cloze-region')).toHaveCount(1);
+  await expect.poll(() => collectFormulaRegionState(desktopWindow)).toMatchObject({ hidden: 'true', outlined: 'false' });
   const childState = await collectFormulaRegionState(desktopWindow);
   await testInfo.attach('formula-cloze-region-state', {
     body: JSON.stringify({ childState, parentState }, null, 2),

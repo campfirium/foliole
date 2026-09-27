@@ -32,6 +32,7 @@ export function createFormulaClozeAnchor() {
 }
 
 export async function seedFormulaClozeWorkspace(desktopWindow: Page) {
+  await desktopWindow.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated?.());
   await desktopWindow.evaluate(async ({ anchorLink, formula }) => {
     const api = globalThis.window?.__folioleWorkspaceDebug;
     await api?.seedNodes?.([
