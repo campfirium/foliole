@@ -11,7 +11,7 @@ export function SyncProtocolIncompatibleDialog(props: { onClose(): void; open: b
         <AppDialogOverlay />
         <AppDialogContent className="w-dialog-notice" layout="task">
           <AppDialogTitle>{t('companion.sync.protocolMismatch.title')}</AppDialogTitle>
-          <AppDialogBody className="!min-h-dialog-notice-body flex items-center">
+          <AppDialogBody className="!min-h-dialog-notice-body">
             <AppDialogDescription>
               {t('companion.sync.protocolMismatch.description')}
             </AppDialogDescription>
