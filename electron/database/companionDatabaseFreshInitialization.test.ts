@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -60,7 +61,9 @@ describe('fresh companion workspace initialization', () => {
     expect(fixture.sqlite.prepare('SELECT COUNT(*) FROM nodes').pluck().get()).toBe(0);
     fixture.sqlite.close();
   });
+});
 
+describe('companion order migration', () => {
   it('extracts existing direct-child order during the version 40 upgrade', async () => {
     const fixture = emptyDatabase();
     fixture.sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
@@ -87,8 +90,13 @@ describe('fresh companion workspace initialization', () => {
       .get('parent') as { child_ids_json: string };
     expect(JSON.parse(row.child_ids_json)).toEqual(['child-a', 'child-b']);
     expect(fixture.sqlite.prepare(
-      "SELECT sync_dirty FROM sync_object_state WHERE object_type = 'parent_child_order' AND object_id = 'parent'"
-    ).get()).toEqual({ sync_dirty: 1 });
+      "SELECT content_hash, sync_dirty FROM sync_object_state WHERE object_type = 'parent_child_order' AND object_id = 'parent'"
+    ).get()).toEqual({
+      content_hash: computeSyncContentHash('parent_child_order', {
+        parent_id: 'parent', child_ids_json: row.child_ids_json
+      }),
+      sync_dirty: 1
+    });
     fixture.sqlite.close();
   });
 });

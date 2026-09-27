@@ -1,7 +1,7 @@
 import type { DbPort } from '../sync/dbPort.js';
 
+import { computeCompanionContentHash } from './companionHostStateHashes.js';
 import { ROOT_CHILD_ORDER_ID } from './parentChildOrder.js';
-import { computeSyncContentHash } from './syncState.js';
 
 const MIGRATED_ORDER_TIME = '1970-01-01T00:00:00.000Z';
 
@@ -29,7 +29,7 @@ export async function migrateCompanionParentChildOrder(db: DbPort) {
          last_modified_by_host_name, updated_at, sync_dirty, deleted_at)
        VALUES ('parent_child_order', ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state),
          ?, 'migration', ?, 1, NULL)`,
-      [parentId, computeSyncContentHash('parent_child_order', {
+      [parentId, computeCompanionContentHash({
         parent_id: parentId, child_ids_json: childIdsJson
       }), MIGRATED_ORDER_TIME]
     );
