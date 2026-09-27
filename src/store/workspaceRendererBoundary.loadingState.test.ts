@@ -46,13 +46,21 @@ it('treats empty content with unknown metadata as not yet loaded', () => {
 });
 
 it('resolves explicit body status before boolean content metadata', () => {
-  expect(getNodeDocumentStatus({ content: '', reveal: null, bodyStatus: 'empty', hasContent: true, hasReveal: false })).toBe('empty');
-  expect(isNodeDocumentLoaded({ content: '', reveal: null, bodyStatus: 'empty', hasContent: true, hasReveal: false })).toBe(true);
+  expect(getNodeDocumentStatus({ content: '', reveal: null, bodyStatus: 'empty', hasContent: true, hasReveal: false })).toBe('fetching');
+  expect(isNodeDocumentLoaded({ content: '', reveal: null, bodyStatus: 'empty', hasContent: true, hasReveal: false })).toBe(false);
   expect(getNodeDocumentStatus({ content: '', reveal: null, bodyStatus: 'failed', hasContent: true, hasReveal: false })).toBe('failed');
   expect(isNodeDocumentLoaded({ content: '', reveal: null, bodyStatus: 'failed', hasContent: true, hasReveal: false })).toBe(false);
   expect(getNodeDocumentStatus({ content: '', reveal: null, bodyStatus: 'missing', hasContent: true, hasReveal: false })).toBe('missing');
   expect(getNodeDocumentStatus({ content: '', reveal: null, bodyStatus: 'fetching', hasContent: true, hasReveal: false })).toBe('fetching');
   expect(getNodeDocumentStatus({ content: 'Ready body', reveal: null, bodyStatus: 'ready', hasContent: true, hasReveal: false })).toBe('ready');
+});
+
+it('reloads an edited topic whose old empty status survived renderer trimming', () => {
+  const edited = { content: 'Alpha Beta Gamma', reveal: null, bodyStatus: 'empty' as const, hasContent: true, hasReveal: false };
+  expect(getNodeDocumentStatus(edited)).toBe('ready');
+  const trimmed = { ...edited, content: '' };
+  expect(getNodeDocumentStatus(trimmed)).toBe('fetching');
+  expect(isNodeDocumentLoaded(trimmed)).toBe(false);
 });
 
 it('reloads an explicitly ready document when renderer trimming removed the body', () => {

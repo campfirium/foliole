@@ -49,6 +49,9 @@ export function getNodeDocumentStatus(node: WorkspaceDocumentStateNode | null | 
   if (node.bodyStatus === 'ready') {
     return resolveExplicitReadyStatus(node);
   }
+  if (node.bodyStatus === 'empty' && resolveNodeContentState(node) === true) {
+    return node.content.length > 0 && isRevealLoaded(node) ? 'ready' : 'fetching';
+  }
   if (isWorkspaceNodeDocumentStatus(node.bodyStatus)) {
     return node.bodyStatus;
   }
@@ -89,7 +92,9 @@ export function mergeWorkspaceNodeDocument<T extends object & { id?: string; upd
   const content = keepLocalContent ? stateNode.content : document.content;
   return {
     ...node,
-    bodyStatus: document.bodyStatus ?? (content.trim().length > 0 ? 'ready' : 'empty'),
+    bodyStatus: keepLocalContent
+      ? (content.trim().length > 0 ? 'ready' : 'empty')
+      : document.bodyStatus ?? (content.trim().length > 0 ? 'ready' : 'empty'),
     content,
     hasContent: content.trim().length > 0,
     hideTitleHeading: document.hideTitleHeading,

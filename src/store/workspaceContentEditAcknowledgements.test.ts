@@ -41,6 +41,21 @@ it('keeps pending input through hydration, then displays the confirmed merge', (
   expect(mergeHydratedNode(state.nodesById.topic, { ...remote, content: 'Later', updatedAt: '2026-09-20T00:03:00Z' }).content).toBe('Later');
 });
 
+it('replaces an old empty body status when a nonempty edit is confirmed', () => {
+  const emptyNode = { ...node, content: '', hasContent: false, bodyStatus: 'empty' as const };
+  const version = markNodeContentEdited(node.id);
+  let state: WorkspaceState = { ...createWorkspaceNodeActionsFixture(), nodesById: { topic: emptyNode } };
+  acknowledgeContentEdit({
+    edit: captureContentEdit(emptyNode), node: emptyNode, version,
+    result: {
+      nodes: [{ ...createWorkspaceRuntimeNodeSnapshot(node, 0), content: 'Confirmed body' }],
+      contentEdit: { currentVersionId: 'ver_confirmed', submittedVersionId: 'ver_local' }
+    },
+    set: (update) => { state = { ...state, ...(typeof update === 'function' ? update(state) : update) }; }
+  });
+  expect(state.nodesById.topic).toMatchObject({ bodyStatus: 'ready', content: 'Confirmed body' });
+});
+
 it('does not overwrite newer input and continues its local branch rather than the merged projection', () => {
   const version = markNodeContentEdited(node.id);
   markNodeContentEdited(node.id);

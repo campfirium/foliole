@@ -92,8 +92,9 @@ function prepareNextContentNode(
   args: { deriveTitle?: boolean | undefined; diagnosticsEnabled: boolean; metrics: UpdateNodeContentMetrics; preserveTitle?: boolean }
 ) {
   const nextNodeStartedAt = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() : 0;
-  const nextNode = {
+  const nextNode: WorkspaceNode = {
     ...node,
+    bodyStatus: content.trim().length > 0 ? 'ready' : 'empty',
     content,
     hasContent: content.trim().length > 0,
     hideTitleHeading: false,

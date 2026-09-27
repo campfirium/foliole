@@ -45,8 +45,9 @@ export function acknowledgeContentEdit(args: {
   args.set((state) => {
     const current = state.nodesById[args.node.id];
     if (!current) return {};
-    const node = isLatestNodeContentVersion(args.node.id, args.version) ? {
+    const node: Node = isLatestNodeContentVersion(args.node.id, args.version) ? {
       ...current,
+      bodyStatus: persisted.content.trim().length > 0 ? 'ready' : 'empty',
       content: persisted.content,
       currentVersionId: acknowledgement.currentVersionId,
       hasContent: persisted.content.trim().length > 0,
