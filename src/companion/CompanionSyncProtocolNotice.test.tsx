@@ -11,7 +11,7 @@ it('shows a background sync rejection outside the sync settings page only once',
   );
   expect(screen.getByText('Browse')).toBeInTheDocument();
   expect(screen.getByRole('dialog', { name: 'Cannot sync' })).toBeVisible();
-  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  fireEvent.keyDown(document, { key: 'Escape' });
   rerender(<CompanionSyncProtocolNotice error={null}><p>Browse</p></CompanionSyncProtocolNotice>);
   rerender(<CompanionSyncProtocolNotice error="protocol_incompatible"><p>Browse</p></CompanionSyncProtocolNotice>);
   expect(screen.queryByRole('dialog', { name: 'Cannot sync' })).not.toBeInTheDocument();

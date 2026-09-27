@@ -160,8 +160,12 @@ export default {
         'state-surface': '7.5rem'
       },
       height: { 'floating-workspace': '47.5rem' },
+      minHeight: { 'dialog-notice-body': '7.5rem' },
       maxHeight: { 'floating-workspace': 'calc(100dvh - 2rem)' },
-      width: { 'floating-workspace': '65rem' },
+      width: {
+        'dialog-notice': 'min(18.75rem, calc(100vw - 2rem))',
+        'floating-workspace': '65rem'
+      },
       maxWidth: { 'floating-workspace': 'calc(100vw - 2rem)' },
       gridTemplateColumns: { 'floating-workspace': 'minmax(0, var(--workspace-list-width, 18.75rem)) minmax(0, 1fr)' },
       boxShadow: {

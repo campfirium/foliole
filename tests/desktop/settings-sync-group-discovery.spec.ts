@@ -30,7 +30,8 @@ async function expectProtocolNotice(electronApp: ElectronApplication, page: Page
   await testInfo.attach('settings-sync-protocol-incompatible', {
     body: screenshot, contentType: 'image/png'
   });
-  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
+  await expect(dialog.getByRole('button', { name: /^(Close|关闭)$/ })).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await sendDiscovery(electronApp, protocolFailure);
   await expect(dialog).toBeHidden();
 }

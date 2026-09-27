@@ -171,7 +171,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.sync.discovery.connectionFailed': 'A Sync Group was found, but Foliole could not connect to it.',
   'companion.sync.discovery.error.incompatible': 'Update Foliole on both devices, then request to join again.',
   'companion.sync.protocolMismatch.title': 'Cannot sync',
-  'companion.sync.protocolMismatch.description': 'The syncing devices have different database versions. Update the app first.',
+  'companion.sync.protocolMismatch.description': 'The syncing devices have different database versions.\nUpdate the app first.',
   'companion.sync.discovery.desktopFallback': 'Desktop',
   'companion.sync.discovery.error.discoveryFailed': 'Could not look for Sync Groups.',
   'companion.sync.discovery.error.joinExpired': 'Join request expired. Request to join again.',
