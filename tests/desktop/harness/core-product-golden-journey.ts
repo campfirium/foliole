@@ -107,7 +107,7 @@ export async function openGoldenTopic(page: Page, nodeId: string) {
 export async function searchGoldenTopic(page: Page, nodeId: string) {
   await expect.poll(() => page.evaluate(async ({ id, needle }) => {
     const results = await window.electronAPI?.invoke('search_workspace', { query: needle });
-    return results?.find((result: { id?: string; nodeMatch?: unknown }) => result.id === id)?.nodeMatch ?? null;
+    return results?.results.find((result: { id?: string; nodeMatch?: unknown }) => result.id === id)?.nodeMatch ?? null;
   }, { id: nodeId, needle: GOLDEN_NEEDLE }), { timeout: 15_000 }).not.toBeNull();
   const promptExpected = await page.evaluate(() => (
     window.localStorage.getItem('foliole-search-enhancement-prompt-dismissed') !== 'true'

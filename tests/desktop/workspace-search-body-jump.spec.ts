@@ -109,7 +109,7 @@ async function waitForWorkspaceSearchHit(desktopWindow: Page) {
         desktopWindow.evaluate(async ({ needle, targetNodeId }) => {
           const results = await globalThis.window?.electronAPI?.invoke('search_workspace', { query: needle });
           return (
-            results?.find((result: { id?: string; nodeMatch?: { from: number; to: number } | null }) => result.id === targetNodeId)
+            results?.results.find((result: { id?: string; nodeMatch?: { from: number; to: number } | null }) => result.id === targetNodeId)
               ?.nodeMatch ?? null
           );
         }, { needle: NEEDLE, targetNodeId: TARGET_NODE_ID }),

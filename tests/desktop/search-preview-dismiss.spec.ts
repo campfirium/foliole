@@ -53,7 +53,7 @@ async function waitForPreviewSearchHit(desktopWindow: Page) {
       () =>
         desktopWindow.evaluate(async ({ nodeId, query }) => {
           const results = await globalThis.window?.electronAPI?.invoke('search_workspace', { query });
-          return Boolean(results?.some((result: { id?: string }) => result.id === nodeId));
+          return Boolean(results?.results.some((result: { id?: string }) => result.id === nodeId));
         }, { nodeId: PREVIEW_NODE_ID, query: PREVIEW_QUERY }),
       { message: 'waiting for workspace search index to include the preview hit', timeout: 15_000 }
     )

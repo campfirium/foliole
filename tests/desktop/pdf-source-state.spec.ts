@@ -30,7 +30,7 @@ test('partial PDF dimensions recover and workspace search opens the exact distan
   await expect.poll(async () => (await readHeavyPdfPages(desktopWindow)).length).toBeLessThanOrEqual(5);
   await expect.poll(() => desktopWindow.evaluate(async (id) => {
     const result = await window.electronAPI?.invoke('search_workspace', { query: 'page 35' });
-    return result?.some((entry) => entry.id === id && entry.pdfMatch?.page === 35) ?? false;
+    return result?.results.some((entry) => entry.id === id && entry.pdfMatch?.page === 35) ?? false;
   }, nodeId)).toBe(true);
   await pageInput.fill('1');
   await pageInput.press('Enter');

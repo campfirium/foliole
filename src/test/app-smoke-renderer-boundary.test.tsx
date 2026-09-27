@@ -31,7 +31,7 @@ it('keeps the previous node document warm after switching once', async () => {
       });
     }
     if (command === 'search_workspace') {
-      return Promise.resolve([]);
+      return Promise.resolve({ aliasSpellings: [], hasMore: false, results: [], revision: 0, snapshotId: 'smoke' });
     }
     return Promise.resolve(null);
   });

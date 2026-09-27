@@ -19,7 +19,7 @@ function createSearchRuntimeInvoke() {
   return vi.fn().mockImplementation((command: string, args?: { nodeId?: string; query?: string }) => {
     if (command === 'search_workspace') {
       expect(args).toEqual({ query: 'Atlas' });
-      return Promise.resolve([
+      return Promise.resolve({ aliasSpellings: [], hasMore: false, revision: 0, snapshotId: 'smoke', results: [
         {
           externalMatch: null,
           id: 'node-2',
@@ -44,7 +44,7 @@ function createSearchRuntimeInvoke() {
           pdfMatch: null,
           updatedAt: '2026-03-29T00:00:00.000Z'
         }
-      ]);
+      ] });
     }
     if (command === 'load_node_document' && args?.nodeId === 'node-3') {
       return Promise.resolve({

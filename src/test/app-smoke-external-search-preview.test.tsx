@@ -17,7 +17,7 @@ function createExternalSearchRuntimeInvoke() {
   return vi.fn().mockImplementation((command: string, args?: { absolute_path?: string; query?: string }) => {
     if (command === 'search_workspace') {
       expect(args).toEqual({ query: 'Atlas' });
-      return Promise.resolve([
+      return Promise.resolve({ aliasSpellings: [], hasMore: false, revision: 0, snapshotId: 'smoke', results: [
         {
           externalMatch: {
             absolutePath: '/library/atlas.md',
@@ -33,7 +33,7 @@ function createExternalSearchRuntimeInvoke() {
           pdfMatch: null,
           title: 'Atlas External'
         }
-      ]);
+      ] });
     }
     if (command === 'load_external_search_preview') {
       expect(args).toEqual({ absolute_path: '/library/atlas.md' });
