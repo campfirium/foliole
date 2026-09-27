@@ -38,6 +38,27 @@ afterEach(async () => {
   await fs.rm(root, { recursive: true, force: true });
 });
 
+it('creates a multilingual example without saving an untouched template', async () => {
+  await ensureSearchAliasFile();
+  expect(await fs.readFile(filePath, 'utf8')).toContain(
+    '# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好\n'
+  );
+  await reconcileSearchAliasMirror();
+  expect(content()).toBeNull();
+});
+
+it('does not save previous untouched examples as aliases', async () => {
+  for (const example of [
+    'Disney | 迪士尼',
+    'Incremental reading | 渐进阅读',
+    'Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好 | 哈囉'
+  ]) {
+    await fs.writeFile(filePath, `# One group per line. Separate spellings with |.\n# ${example}\n`);
+    await reconcileSearchAliasMirror();
+    expect(content()).toBeNull();
+  }
+});
+
 it('imports a saved document, regenerates a missing file, and syncs an explicit clear', async () => {
   await fs.writeFile(filePath, 'Disney | 迪士尼\n');
   await reconcileSearchAliasMirror();

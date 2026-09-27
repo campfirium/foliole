@@ -17,7 +17,12 @@ import {
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
 const SETTING_KEY = 'search_aliases_document';
-const TEMPLATE = '# One group per line. Separate spellings with |.\n# Disney | 迪士尼\n';
+const TEMPLATE = '# One group per line. Separate spellings with |.\n# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好\n';
+const PREVIOUS_TEMPLATES = [
+  '# One group per line. Separate spellings with |.\n# Disney | 迪士尼\n',
+  '# One group per line. Separate spellings with |.\n# Incremental reading | 渐进阅读\n',
+  '# One group per line. Separate spellings with |.\n# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好 | 哈囉\n'
+];
 let watcher: FSWatcher | null = null;
 let timer: NodeJS.Timeout | null = null;
 let boundDatabasePath: string | null = null;
@@ -87,7 +92,7 @@ async function reconcileDocument(mode: 'normal' | 'restore') {
     return;
   }
   if (databaseText === null) {
-    if (fileText === TEMPLATE && baseline === null) {
+    if ((fileText === TEMPLATE || PREVIOUS_TEMPLATES.includes(fileText)) && baseline === null) {
       updateEffectiveGroups('');
       return;
     }
