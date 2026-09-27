@@ -9,6 +9,14 @@ export interface NativeSearchIndexRebuildStatus {
 }
 
 export type NativeSearchIndexCommandMap = {
+  [NATIVE_COMMANDS.loadSearchAliasFileStatus]: {
+    args: undefined;
+    result: { error: string | null; path: string };
+  };
+  [NATIVE_COMMANDS.openSearchAliasFile]: {
+    args: undefined;
+    result: { error: string | null; path: string };
+  };
   [NATIVE_COMMANDS.loadSearchIndexRebuildStatus]: {
     args: undefined;
     result: NativeSearchIndexRebuildStatus | null;

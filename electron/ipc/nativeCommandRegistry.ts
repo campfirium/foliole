@@ -34,6 +34,8 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.openLocalPath, route: 'windowAndUtility', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.openSyncGroupLocalNetworkSettings, route: 'windowAndUtility', capability: 'externalOpen' },
   { command: NATIVE_COMMANDS.openImportRoot, route: 'storage', capability: 'filesystemOpen' },
+  { command: NATIVE_COMMANDS.loadSearchAliasFileStatus, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.openSearchAliasFile, route: 'storage', capability: 'filesystemOpen' },
   { command: NATIVE_COMMANDS.inspectReadwiseReaderSetup, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.previewReadwiseReaderImport, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.runReadwiseReaderImport, route: 'import', capability: 'importMutation' },

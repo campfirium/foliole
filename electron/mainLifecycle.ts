@@ -10,6 +10,7 @@ import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } fr
 import { waitForApplicationDatabaseRestoreSettlement } from './database/databaseRestoreSettlement.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
 import { initializeDatabase } from './database/migrate.js';
+import { startSearchAliasMirror, stopSearchAliasMirror } from './database/searchAliasMirror.js';
 import { flushCoalescedWorkspaceSearchInvalidations } from './database/searchIndexInvalidationCoalescer.js';
 import { stopSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
 import { restoreDesktopSecurityScopedAccess, stopDesktopSecurityScopedAccess } from './desktopSecurityScopedAccess.js';
@@ -91,6 +92,7 @@ function installBeforeQuitLifecycle() {
       devRendererReloadIntentWatcher?.close();
       stopExternalSearchBackgroundRefresh();
       stopSearchIndexInvalidationScheduler();
+      stopSearchAliasMirror();
       stopReadwiseBackgroundServices();
       stopDesktopSecurityScopedAccess();
       disposeAssistantCommandAdapter();
@@ -124,6 +126,7 @@ async function initializeRuntimeServices() {
       }));
     }, { deferSearchIndex: true });
     await appendBootEvent('database_initialize_call_complete');
+    await startSearchAliasMirror();
     refreshGlobalClipShortcutFromSettings();
     await appendBootEvent('database_init_complete');
     installAppMenu();

@@ -31,6 +31,7 @@ import { SettingsCaptureSection } from './SettingsCaptureSection';
 import { SettingsGeneralSystemSection } from './SettingsGeneralSystemSection';
 import { SettingsLanguageSection } from './SettingsLanguageSection';
 import { SettingsModelsSection } from './SettingsModelsSection';
+import { SettingsSearchAliasRow } from './SettingsSearchAliasRow';
 
 type Translate = ReturnType<typeof useTranslation>;
 
@@ -165,6 +166,7 @@ export function SettingsGeneralSection({
       <InterfaceBehaviorSection />
       <SettingsSection ariaLabel={t('settings.general.search.aria')} title={t('settings.general.search.section')}>
         <SearchEnhancementRow />
+        <SettingsSearchAliasRow preview={previewDesktopSettings} />
       </SettingsSection>
       <SettingsCaptureSection />
       <SettingsAideStorageSection preview={previewDesktopSettings} />

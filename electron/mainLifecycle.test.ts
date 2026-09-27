@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
     getVersion: vi.fn(() => '0.1.0-test'),
     isPackaged: false,
     on: vi.fn(),
+    once: vi.fn(),
     quit: vi.fn(),
     requestSingleInstanceLock: vi.fn(() => true),
     whenReady: vi.fn()
@@ -29,7 +30,8 @@ vi.mock('electron', () => ({
   BrowserWindow: {
     getAllWindows: vi.fn(() => [])
   },
-  app: mocks.app
+  app: mocks.app,
+  powerMonitor: { on: vi.fn(), removeListener: vi.fn() }
 }));
 vi.mock('./agentControl/agentControlServer.js', () => ({ ensureAgentControlApiServer: mocks.ensureAgentControlApiServer, stopAgentControlApiServer: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./attachments/attachmentProtocol.js', () => ({ registerAttachmentProtocol: mocks.registerAttachmentProtocol }));
@@ -42,6 +44,7 @@ vi.mock('./database/connection.js', async (importOriginal) => ({
 }));
 vi.mock('./database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop') }));
 vi.mock('./database/migrate.js', () => ({ initializeDatabase: mocks.initializeDatabase }));
+vi.mock('./database/searchAliasMirror.js', () => ({ startSearchAliasMirror: vi.fn().mockResolvedValue(undefined), stopSearchAliasMirror: vi.fn() }));
 vi.mock('./database/nodeMutations.js', () => ({ flushAllDirtyNodeSyncVersions: vi.fn() }));
 vi.mock('./database/pdfIndexing.js', () => ({ resumePendingPdfAttachmentIndexing: vi.fn() }));
 vi.mock('./database/syncGroupIdentityStore.js', () => ({ updateLocalSyncGroupHostName: vi.fn() }));

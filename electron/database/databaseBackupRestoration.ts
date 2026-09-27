@@ -19,6 +19,7 @@ import {
   type ManagedSafetySnapshot
 } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
+import { startSearchAliasMirror } from './searchAliasMirror.js';
 import {
   restoreSqliteDatabase,
   verifySqliteDatabaseFile,
@@ -53,6 +54,7 @@ export async function restoreDatabaseBackupInMaintenance(
     replacementComplete = true;
     initializeWorkspaceSearchSidecar(initializeDatabase(), { requireCurrentSource: true });
     reapplyBackupSettingsAfterRestore(backupSettings);
+    await startSearchAliasMirror('restore');
     clearDatabaseConnectionUnavailable();
     return { ...result, sourcePath: path.resolve(sourcePath) };
   } catch (error) {
@@ -67,6 +69,7 @@ export async function restoreDatabaseBackupInMaintenance(
       safetySnapshot,
       targetPath
     });
+    await startSearchAliasMirror();
     throw new Error('The selected backup was not restored. Your current library has been restored.');
   } finally {
     await artifacts.finish({

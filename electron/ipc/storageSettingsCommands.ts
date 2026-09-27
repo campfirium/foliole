@@ -1,9 +1,10 @@
-import type { BrowserWindow } from 'electron';
+import { shell, type BrowserWindow } from 'electron';
 
 import { LIBRARY_PATH_LOCATIONS } from '../../lib/platform/libraryPaths.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { loadBackupSettings, saveBackupSettings } from '../database/backupSettings.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
+import { ensureSearchAliasFile, searchAliasMirrorStatus, startSearchAliasMirror } from '../database/searchAliasMirror.js';
 import { restoreSourceDispositions } from '../database/sourceDispositionRestore.js';
 import {
   resetSourceDispositions,
@@ -78,6 +79,7 @@ function handleSourceDispositionCommand(command: string, window: BrowserWindow |
 async function refreshAfterLibraryHomeChange() {
   try {
     await rebuildMirrorAttachmentLinks();
+    await startSearchAliasMirror();
     await refreshManagedInboxMonitorFromSettings();
   } catch (error) {
     console.error('[library-paths] post Library Home update refresh failed', error);
@@ -162,6 +164,15 @@ async function handleReadwiseHostCommand(command: string, args: Record<string, u
   return undefined;
 }
 
+async function handleSearchAliasCommand(command: string) {
+  if (command === NATIVE_COMMANDS.loadSearchAliasFileStatus) return searchAliasMirrorStatus();
+  if (command !== NATIVE_COMMANDS.openSearchAliasFile) return undefined;
+  const filePath = await ensureSearchAliasFile();
+  const openError = await shell.openPath(filePath);
+  if (openError) throw new Error(openError);
+  return searchAliasMirrorStatus();
+}
+
 export async function handleSettingsStorageCommand(
   command: string,
   args: Record<string, unknown>,
@@ -181,6 +192,8 @@ export async function handleSettingsStorageCommand(
   if (appSettingsResult !== undefined) return appSettingsResult;
   if (command === NATIVE_COMMANDS.loadSearchIndexRebuildStatus)
     return loadSearchIndexRebuildStatus();
+  const aliasResult = await handleSearchAliasCommand(command);
+  if (aliasResult !== undefined) return aliasResult;
   if (command === NATIVE_COMMANDS.rebuildSearchIndex) {
     return requestSearchIndexRebuild(asFullTextSearchIndexStrategy(args.strategy));
   }

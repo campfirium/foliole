@@ -16,6 +16,7 @@ const USER_SPACE_KEYS = new Set([
   'readwise_source_cutover',
   'readwise_source_cutover_v2',
   'review_scheduler_settings',
+  'search_aliases_document',
   'system_entry_display_names'
 ]);
 const SESSION_RESUME_KEYS = new Set(['readwise_book_epub_picker_state', 'window_state']);

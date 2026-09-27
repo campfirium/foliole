@@ -186,6 +186,8 @@ export const NATIVE_COMMANDS = {
   saveSystemEntryDisplayNames: 'save_system_entry_display_names',
   loadSearchIndexRebuildStatus: 'load_search_index_rebuild_status',
   rebuildSearchIndex: 'rebuild_search_index',
+  loadSearchAliasFileStatus: 'load_search_alias_file_status',
+  openSearchAliasFile: 'open_search_alias_file',
   loadSyncPeers: 'load_sync_peers',
   saveSyncPeers: 'save_sync_peers',
   saveImportManagerSettings: 'save_import_manager_settings',
