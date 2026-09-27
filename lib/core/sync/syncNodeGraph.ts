@@ -15,7 +15,8 @@ export interface StoredSyncNodeVersionRow extends DbRow {
 export function storedSyncNodeVersionBody(row: StoredSyncNodeVersionRow): string | null {
   if (row.body_text !== null) return row.body_text;
   const snapshot = JSON.parse(row.snapshot_json) as { content?: unknown };
-  return typeof snapshot?.content === 'string' ? snapshot.content : null;
+  if (snapshot?.content === null) return null;
+  return typeof snapshot?.content === 'string' ? snapshot.content : '';
 }
 
 export async function loadCurrentSyncNodeRecord(

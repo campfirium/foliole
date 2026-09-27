@@ -14,7 +14,7 @@ function graph(parents: Record<string, string[]>, bodies: Record<string, string>
       return [{ parent_version_id: null }];
     }
     if (sql.includes('SELECT * FROM node_sync_versions')) {
-      return [{ version_id: id, body_text: bodies[id] ?? null, snapshot_json: '{}' }];
+      return [{ version_id: id, body_text: bodies[id] ?? null, snapshot_json: '{"content":null}' }];
     }
     throw new Error(`Unexpected query: ${sql}`);
   };
@@ -47,4 +47,16 @@ it('keeps a bodyless version available for ancestry without inventing its text',
 
   expect(base?.version_id).toBe('B');
   expect(storedSyncNodeVersionBody(base!)).toBeNull();
+});
+
+it('reads a legacy missing content field as an empty body', () => {
+  expect(storedSyncNodeVersionBody({
+    body_text: null,
+    content_hash: '',
+    created_at: '',
+    host_name: '',
+    object_id: 'node',
+    snapshot_json: '{}',
+    version_id: 'legacy'
+  })).toBe('');
 });
