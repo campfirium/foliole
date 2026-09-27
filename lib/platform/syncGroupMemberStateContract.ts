@@ -1,10 +1,11 @@
 import type { SyncGroupDevicePayload } from './syncGroupContract.js';
+import { parseSyncGroupRestoreEvent, type SyncGroupRestoreState } from './syncGroupRestoreContract.js';
 import type {
   WatchedFolderConflictDecision,
   WatchedFolderGroupSource
 } from './watchedFolderConflictContract.js';
 
-export const SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION = 2 as const;
+export const SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION = 3 as const;
 
 export type SyncGroupRemovalConfirmationKind = 'enforced' | 'target_exit';
 
@@ -32,6 +33,7 @@ export interface SyncGroupMemberStatePayload {
   proof_revision: number;
   source_proof_revisions: Record<string, number>;
   removals: SyncGroupRemovalDecisionPayload[];
+  restore: SyncGroupRestoreState | null;
   sender_device_identity_key: string;
   watched_sources?: WatchedFolderGroupSource[];
   watched_decisions?: WatchedFolderConflictDecision[];
@@ -46,6 +48,7 @@ export function parseSyncGroupMemberState(value: unknown): SyncGroupMemberStateP
       (raw.proof_revision ?? -1) < 0 ||
       !validSourceProofRevisions(raw.source_proof_revisions) ||
       !Array.isArray(raw.devices) || !Array.isArray(raw.removals) ||
+      !validRestoreState(raw.restore, raw.group_id) ||
       (raw.watched_sources !== undefined && !Array.isArray(raw.watched_sources)) ||
       (raw.watched_decisions !== undefined && !Array.isArray(raw.watched_decisions))) return invalid();
   return raw as SyncGroupMemberStatePayload;
@@ -59,6 +62,18 @@ function validSourceProofRevisions(value: unknown) {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value) &&
     Object.entries(value).every(([key, revision]) => text(key) &&
       Number.isSafeInteger(revision) && (revision as number) >= 0));
+}
+
+function validRestoreState(value: unknown, groupId: string | undefined) {
+  if (value === null) return true;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const raw = value as Partial<SyncGroupRestoreState>;
+  if (typeof raw.applied !== 'boolean') return false;
+  try {
+    return parseSyncGroupRestoreEvent(raw.event).group_id === groupId;
+  } catch {
+    return false;
+  }
 }
 
 function invalid(): never {

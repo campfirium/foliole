@@ -12,6 +12,7 @@ export const READWISE_LIBRARY_SOURCE_MODE_CAPABILITY = 'readwise-library-source-
 export const SYNC_GROUP_MEMBER_STATE_CAPABILITY = 'sync-group-member-state-v1';
 export const PARENT_CHILD_ORDER_CAPABILITY = 'parent-child-order-v1';
 export const NODE_VERSION_FRONTIER_RETENTION_CAPABILITY = 'node-version-frontier-retention-v1';
+export const WORKGROUP_RESTORE_CAPABILITY = 'workgroup-restore-v1';
 
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
@@ -37,11 +38,12 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'watched-device-binding-v1',
     'watched-source-identity-and-path-v1',
     COMPLETE_MEMBER_DATA_PLANE_CAPABILITY,
-    'workgroup-aead-v1'
+    'workgroup-aead-v1',
+    WORKGROUP_RESTORE_CAPABILITY
   ].sort()),
-  max_supported_version: 12,
-  min_supported_version: 12,
-  version: 12
+  max_supported_version: 13,
+  min_supported_version: 13,
+  version: 13
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

@@ -151,7 +151,8 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
     ],
     beforeVersion: 36
   },
-  { actions: [{ type: 'addWatchedBindingsOwnerIfMissing' }], beforeVersion: 38 }
+  { actions: [{ type: 'addWatchedBindingsOwnerIfMissing' }], beforeVersion: 38 },
+  step(41, 'installSchema', 'Failed to add companion Sync Group restore state.')
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

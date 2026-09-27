@@ -1,10 +1,17 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import {
+  loadLatestSyncGroupRestoreEvent,
+  receiveSyncGroupRestoreEvent
+} from '../../../../../lib/core/sync/syncGroupRestoreEvents';
 import type { SyncGroupDevicePayload } from '../../../../../lib/platform/syncGroupContract';
 import type {
   SyncGroupMemberStatePayload,
   SyncGroupRemovalDecisionPayload
 } from '../../../../../lib/platform/syncGroupMemberStateContract';
 import { SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION } from '../../../../../lib/platform/syncGroupMemberStateContract';
+import {
+  syncGroupRestorePeersReady
+} from '../../../../../lib/platform/syncGroupRestoreContract';
 import {
   createSyncGroupDeviceIdentity,
   devicePathFlavorFromCanonicalLibraryPath
@@ -35,6 +42,14 @@ export function applyCompanionSyncGroupMemberState(
           incoming.sender_device_identity_key !== authenticatedDeviceId) {
         throw new Error('sync_group_member_state_identity_mismatch');
       }
+      let localRestore = await loadLatestSyncGroupRestoreEvent(tx, context.groupId);
+      if (incoming.restore) {
+        localRestore = await receiveSyncGroupRestoreEvent(tx, incoming.restore.event);
+      }
+      const normalSyncReady = syncGroupRestorePeersReady(localRestore, incoming.restore);
+      if (!normalSyncReady) return {
+        local_exited: false, normal_sync_ready: false, state: await loadState(tx, context)
+      };
       await assertCompanionPeerProofFresh(tx, incoming, context.localDeviceId);
       for (const removal of incoming.removals) await mergeRemoval(tx, incoming.group_id, removal);
       for (const device of incoming.devices) await mergeDevice(tx, incoming.group_id, device, context.localDeviceId);
@@ -55,7 +70,7 @@ export function applyCompanionSyncGroupMemberState(
         }
       }
       await completeEligibleRemovals(tx, context, now);
-      return { local_exited: localExited, state: await loadState(tx, context) };
+      return { local_exited: localExited, normal_sync_ready: true, state: await loadState(tx, context) };
     })
   ));
 }
@@ -84,6 +99,7 @@ async function loadState(db: DbPort, context: Context): Promise<SyncGroupMemberS
     proof_revision: proof.proof_revision,
     source_proof_revisions: proof.source_proof_revisions,
     removals: await loadRemovals(db, context.groupId),
+    restore: await loadLatestSyncGroupRestoreEvent(db, context.groupId),
     sender_device_identity_key: context.localDeviceId
   };
 }

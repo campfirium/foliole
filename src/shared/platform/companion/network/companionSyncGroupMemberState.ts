@@ -15,7 +15,9 @@ import { prepareNativeCompanionWorkgroupRequest } from './signedRequest';
 export const COMPANION_SYNC_GROUP_MEMBER_STATE_PATH = '/sync-group/member-state';
 
 export async function exchangeCompanionSyncGroupMemberState(target: CompanionWorkspaceSyncTarget) {
-  if (!isNativeCompanionNetworkRuntime()) return { localExited: false, peerRemoved: false };
+  if (!isNativeCompanionNetworkRuntime()) return {
+    localExited: false, normalSyncReady: true, peerRemoved: false, restoreFromPeer: null
+  };
   if (!target.deviceId || !target.groupId) throw new Error('sync_group_member_state_target_missing');
   const state = await loadCompanionSyncGroupMemberState();
   const prepared = await prepareNativeCompanionWorkgroupRequest({
@@ -24,13 +26,17 @@ export async function exchangeCompanionSyncGroupMemberState(target: CompanionWor
   });
   const response = await post(target.endpointUrl, prepared.headers, prepared.body);
   if (response.status >= 400) throw new Error(`sync_group_member_state_failed_${response.status}`);
-  const applied = await applyCompanionSyncGroupMemberState(
-    parseSyncGroupMemberState(JSON.parse(response.body)) as SyncGroupMemberStatePayload,
-    target.deviceId
-  );
+  const incoming = parseSyncGroupMemberState(JSON.parse(response.body)) as SyncGroupMemberStatePayload;
+  const applied = await applyCompanionSyncGroupMemberState(incoming, target.deviceId);
+  const localRestore = applied.state.restore;
   return {
     localExited: applied.local_exited,
-    peerRemoved: await isCompanionSyncGroupDeviceBlocked(target.groupId, target.deviceId)
+    normalSyncReady: applied.normal_sync_ready,
+    peerRemoved: await isCompanionSyncGroupDeviceBlocked(target.groupId, target.deviceId),
+    restoreFromPeer: localRestore && !localRestore.applied && incoming.restore?.applied &&
+      incoming.restore.event.restore_id === localRestore.event.restore_id &&
+      localRestore.event.source_device_identity_key === target.deviceId
+      ? localRestore.event.restore_id : null
   };
 }
 

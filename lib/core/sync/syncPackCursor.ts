@@ -2,6 +2,7 @@ import type { DbPort, DbRow } from './dbPort.js';
 
 export interface SyncPackCursor {
   fromStateSeq: number;
+  restoreId?: string;
   toStateSeq: number;
 }
 
@@ -20,9 +21,16 @@ export async function readSyncPackCursorWithDbPort(
   if (!value?.trim()) {
     throw new Error('invalid_sync_pack_manifest');
   }
-  const manifest = JSON.parse(value) as { from_state_seq?: unknown; to_state_seq?: unknown };
+  const manifest = JSON.parse(value) as {
+    from_state_seq?: unknown; restore_id?: unknown; to_state_seq?: unknown
+  };
+  if (manifest.restore_id !== undefined &&
+      (typeof manifest.restore_id !== 'string' || !manifest.restore_id.trim())) {
+    throw new Error('invalid_sync_pack_manifest');
+  }
   return {
     fromStateSeq: normalizeSeq(manifest.from_state_seq),
+    ...(manifest.restore_id ? { restoreId: manifest.restore_id as string } : {}),
     toStateSeq: normalizeSeq(manifest.to_state_seq)
   };
 }

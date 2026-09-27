@@ -2,6 +2,8 @@ import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
+import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
+import { clearDesktopSyncGroupMemberStateReadiness } from '../sync/desktopSyncGroupMemberStateReadiness.js';
 
 import { commitAutomaticBackupWhenChanged } from './automaticBackupCandidate.js';
 import {
@@ -183,13 +185,18 @@ export async function restoreApplicationDatabaseBackup(
 ): Promise<SqliteRestoreResult> {
   const finishRestore = beginApplicationDatabaseRestore();
   let resumeLibraryTasks: (() => void) | null = null;
+  let completed = false;
   try {
     resumeLibraryTasks = await desktopTaskScheduler.pauseResource('library');
-    return await runWithDatabaseConnectionMaintenance(() =>
+    const result = await runWithDatabaseConnectionMaintenance(() =>
       restoreDatabaseBackupInMaintenance(options.sourcePath));
+    clearDesktopSyncGroupMemberStateReadiness();
+    completed = true;
+    return result;
   } finally {
     resumeLibraryTasks?.();
     finishRestore();
+    if (completed) void requestDesktopHighValueSync()?.catch(() => undefined);
   }
 }
 

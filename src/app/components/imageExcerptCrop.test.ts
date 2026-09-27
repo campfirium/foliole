@@ -22,8 +22,8 @@ it('exports a crop from an already CORS-enabled attachment image', async () => {
     arrayBuffer: async () => new Uint8Array([4, 5, 6]).buffer
   } as Blob));
   const createElement = document.createElement.bind(document);
-  vi.spyOn(document, 'createElement').mockImplementation((tagName, options) =>
-    tagName === 'canvas' ? canvas : createElement(tagName, options));
+  vi.spyOn(document, 'createElement').mockImplementation(((tagName: string, options?: ElementCreationOptions) =>
+    tagName === 'canvas' ? canvas : createElement(tagName, options)) as typeof document.createElement);
 
   await expect(renderImageExcerptCrop(image, { height: 0.4, width: 0.3, x: 0.1, y: 0.2 }))
     .resolves.toEqual(new Uint8Array([4, 5, 6]));

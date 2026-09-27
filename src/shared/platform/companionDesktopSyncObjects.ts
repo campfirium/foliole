@@ -34,9 +34,10 @@ export { ATTACHMENT_RESOURCE_BATCH_LIMIT, CONTENT_BLOB_BATCH_LIMIT, syncCompanio
 export type { CompanionDesktopSyncOptions, CompanionDesktopSyncProgress, CompanionDesktopSyncResult } from './companionDesktopSyncTypes';
 const inFlightSyncByEndpoint = new Map<string, Promise<CompanionDesktopSyncResult>>();
 
-function buildPackPath(cursor: number | null) {
+function buildPackPath(cursor: number | null, restoreId?: string) {
   const params = new URLSearchParams();
-  params.set('after_state_seq', String(cursor ?? 0));
+  params.set('after_state_seq', String(restoreId ? 0 : cursor ?? 0));
+  if (restoreId) params.set('restore_id', restoreId);
   return `${SYNC_PACK_PATH}?${params.toString()}`;
 }
 
@@ -44,13 +45,14 @@ function normalizeEndpointUrl(endpointUrl: string) {
   return endpointUrl.trim().replace(/\/+$/, '');
 }
 
-async function pullRemoteStructurePack(endpointUrl: string) {
+async function pullRemoteStructurePack(endpointUrl: string, restoreId?: string) {
   const startedAt = Date.now();
   const sourcePeerId = await resolveCompanionSyncPeerId(endpointUrl);
   const sourceHostName = await resolveCompanionSyncPeerHostName(endpointUrl);
-  const cursor = await loadCompanionSyncPackCursor(sourcePeerId);
-  const pathWithQuery = buildPackPath(cursor);
+  const cursor = restoreId ? 0 : await loadCompanionSyncPackCursor(sourcePeerId);
+  const pathWithQuery = buildPackPath(cursor, restoreId);
   const result = await applyCompanionDesktopSyncPack({
+    ...(restoreId ? { expectedRestoreId: restoreId } : {}),
     headers: await createSignedRequestHeaders({ endpointUrl, method: 'GET', pathWithQuery }),
     sourceHostName,
     sourcePeerId,
@@ -172,7 +174,7 @@ async function runCompanionObjectsSync(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions = {}
 ): Promise<CompanionDesktopSyncResult> {
-  const skipPush = options.resourcesOnly === true;
+  const skipPush = options.resourcesOnly === true || Boolean(options.restoreId);
   const pushed = skipPush
     ? createSkippedPushResult()
     : await withSyncStepTimeout('push_local_changes', pushLocalDirtyObjects(endpointUrl))
@@ -185,7 +187,7 @@ async function runCompanionObjectsSync(
       }));
   const pack = options.resourcesOnly
     ? createSkippedStructurePack()
-    : await withSyncStepTimeout('structure_pack_apply', pullRemoteStructurePack(endpointUrl));
+    : await withSyncStepTimeout('structure_pack_apply', pullRemoteStructurePack(endpointUrl, options.restoreId));
   if (!options.resourcesOnly) {
     options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
     await options.onStructureSynced?.();

@@ -69,6 +69,7 @@ async function runOwnedTarget(args: {
     const memberState = await exchangeCompanionSyncGroupMemberState(args.target);
     if (memberState.localExited) throw new Error('sync_group_local_device_removed');
     if (memberState.peerRemoved) return 'skipped';
+    if (memberState.normalSyncReady === false && !memberState.restoreFromPeer) return 'skipped';
     await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
     await recordCompanionWorkspaceSyncEvent({
       endpointUrl, kind: 'run_started', message: 'Sync started.',
@@ -78,6 +79,7 @@ async function runOwnedTarget(args: {
       ...args.syncArgs,
       endpointUrl,
       runId,
+      ...(memberState.restoreFromPeer ? { restoreId: memberState.restoreFromPeer } : {}),
       startedAt,
       triggerReason,
       workspaceSnapshot: args.syncArgs.state.workspace_snapshot

@@ -10,7 +10,8 @@ import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabase
 import { createIosCompanionSyncPackCursorStore } from '../cursor/iosCompanionSyncPackCursorStore';
 
 export async function applyIosCompanionSyncPackPath(
-  args: { deviceId: string; hostName: string; packPath: string; sourceHostName?: string; sourcePeerId: string },
+  args: { deviceId: string; expectedRestoreId?: string; hostName: string;
+    packPath: string; sourceHostName?: string; sourcePeerId: string },
   manager?: CompanionSqliteConnectionManager
 ) {
   const runtime = requireAvailableCompanionRuntime('sync-pack-apply');
@@ -23,10 +24,11 @@ export async function applyIosCompanionSyncPackPath(
     return runCompanionSyncWriterTask(() => applyCompanionSyncPackPathWithSharedCore(args, cursorStore, manager));
   }
   return runCompanionSyncWriterTask(async () => {
-    const currentCursor = await cursorStore.loadCursor() ?? 0;
+    const currentCursor = args.expectedRestoreId ? 0 : await cursorStore.loadCursor() ?? 0;
     const result = await getIosCompanionDatabaseOwner().runWriter((db) => applyCompanionSyncPackNodesWithDbPort({
       currentCursor, deviceId: args.deviceId, hostName: args.hostName,
       packPath: args.packPath, sourcePeerId: args.sourcePeerId,
+      ...(args.expectedRestoreId ? { expectedRestoreId: args.expectedRestoreId } : {}),
       ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName })
     }, db));
     assertSyncPackCursorAdvance({

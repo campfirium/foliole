@@ -38,6 +38,7 @@ import {
   migrateReadwiseSourceMode
 } from './readwiseSourceModeMigration.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
+import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 
 const SYNC_DELIVERY_TRIGGER_TARGETS = [
@@ -105,5 +106,8 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 105, migrate: migrateParentChildOrder },
   { version: 106, migrate: (sqlite) => {
     for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  } },
+  { version: 107, migrate: (sqlite) => {
+    for (const statement of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(statement);
   } }
 ];

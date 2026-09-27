@@ -28,7 +28,8 @@ extension FolioleCompanionSyncGroupJoinServer {
                 groupTag: try Self.requiredDiscovery(discovery, "group_tag"),
                 workgroupKey: provider.workgroupKey
             )
-            memberStateReady.insert(accepted.peer)
+            if accepted.normalSyncReady { memberStateReady[accepted.peer] = accepted.restoreId }
+            else { memberStateReady.removeValue(forKey: accepted.peer) }
             try sendWorkgroup(connection, request, "application/json; charset=utf-8", accepted.body)
             stateChanged()
             return
@@ -117,7 +118,14 @@ extension FolioleCompanionSyncGroupJoinServer {
             request, groupId: provider.groupId, workgroupKey: provider.workgroupKey,
             dataBridge: dataBridge
         )
-        guard memberStateReady.contains(peer) else {
+        guard let approvedRestore = memberStateReady[peer] else {
+            throw Self.invalid("sync_group_member_state_required")
+        }
+        let current = try dataBridge.request("load_member_state", [:])
+        let restore = current["restore"] as? [String: Any]
+        guard restore == nil || restore?["applied"] as? Bool == true,
+              approvedRestore == FolioleCompanionSyncGroupMemberStateEndpoint.restoreId(current) else {
+            memberStateReady.removeValue(forKey: peer)
             throw Self.invalid("sync_group_member_state_required")
         }
         return peer

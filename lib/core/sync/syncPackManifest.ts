@@ -73,6 +73,7 @@ export interface SyncPackTableManifest {
 export interface SyncPackManifestInput {
   fromStateSeq: number;
   packId: string;
+  restoreId?: string;
   tableRows: Record<SyncPackTableName, unknown[]>;
   toStateSeq: number;
 }
@@ -84,6 +85,7 @@ export function buildSyncPackManifest(input: SyncPackManifestInput) {
   }));
   return {
     pack_id: input.packId,
+    ...(input.restoreId ? { restore_id: input.restoreId } : {}),
     from_state_seq: input.fromStateSeq,
     to_state_seq: input.toStateSeq,
     tables

@@ -25,11 +25,16 @@ import {
   verifySqliteDatabaseFile,
   type SqliteRestoreResult
 } from './sqliteBackupRestore.js';
+import {
+  captureCurrentSyncGroupForBackupRestore,
+  finishSyncGroupBackupRestore
+} from './syncGroupBackupRestore.js';
 
 export async function restoreDatabaseBackupInMaintenance(
   sourcePath: string
 ): Promise<SqliteRestoreResult> {
   const connection = openDatabaseConnection();
+  const syncGroup = captureCurrentSyncGroupForBackupRestore(connection.driver);
   const targetPath = connection.dbPath;
   const backupSettings = loadBackupSettings();
   const backupDirectory = resolveManagedBackupDirectory(backupSettings);
@@ -52,7 +57,9 @@ export async function restoreDatabaseBackupInMaintenance(
       sourcePath: databasePath, targetPath, onTemporaryDatabase: artifacts.trackCandidate
     });
     replacementComplete = true;
-    initializeWorkspaceSearchSidecar(initializeDatabase(), { requireCurrentSource: true });
+    const restored = initializeDatabase();
+    finishSyncGroupBackupRestore(restored.driver, syncGroup);
+    initializeWorkspaceSearchSidecar(restored, { requireCurrentSource: true });
     reapplyBackupSettingsAfterRestore(backupSettings);
     await startSearchAliasMirror('restore');
     clearDatabaseConnectionUnavailable();

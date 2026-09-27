@@ -26,9 +26,9 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
       'source-host-ownership-v1', 'sync-group-device-facts-v1',
       'sync-group-member-state-v1',
       'system-entry-display-names-v1', 'watched-device-binding-v1',
-      'watched-source-identity-and-path-v1', 'workgroup-aead-v1'
+      'watched-source-identity-and-path-v1', 'workgroup-aead-v1', 'workgroup-restore-v1'
     ],
-    version: 12
+    version: 13
   });
   expect(definitions.payloadPlans).toContainEqual(expect.objectContaining({
     objectType: 'watched_folder', sql: expect.stringContaining('s.host_name')

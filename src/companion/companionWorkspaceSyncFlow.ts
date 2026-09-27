@@ -37,6 +37,7 @@ export interface RunCompanionStreamSyncArgs {
   cancelled: () => boolean;
   endpointUrl: string;
   runId: string;
+  restoreId?: string;
   startedAt: string;
   setState(state: NativeCompanionWorkspaceSyncState): void;
   setSyncProgress(progress: CompanionDesktopSyncProgress | null): void;
@@ -106,6 +107,7 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     });
   };
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
+    ...(args.restoreId ? { restoreId: args.restoreId } : {}),
     onProgress: args.setSyncProgress,
     onStructureSynced: refreshAfterStructureSync,
     resourcesOnly: args.continuationMode === 'resources-only'

@@ -4,7 +4,10 @@ import { isDesktopSyncGroupDeviceBlocked } from '../database/syncGroupMemberStat
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { verifyCompanionRequestSignature } from './companionRequestSignature.js';
-import { isDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
+import {
+  desktopSyncGroupMemberStateReadiness,
+  isDesktopSyncGroupMemberStateReady
+} from './desktopSyncGroupMemberStateReadiness.js';
 import { consumeDesktopWorkgroupNonce, loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 const AUTH_WINDOW_MS = 60 * 1000;
@@ -62,6 +65,14 @@ export function authenticateCompanionRequest(args: {
   if (!device && !args.allowUnknownDevice) return failure('sync_group_device_not_active', 401);
   if (device && args.requireMemberState && !isDesktopSyncGroupMemberStateReady(headers.deviceId)) {
     return failure('sync_group_member_state_required', 409);
+  }
+  if (device && args.requireMemberState &&
+      desktopSyncGroupMemberStateReadiness(headers.deviceId) === 'restore') {
+    const url = new URL(args.request.url ?? '/', 'http://localhost');
+    if (args.request.method !== 'GET' || url.pathname !== '/companion/sync-pack' ||
+        !url.searchParams.get('restore_id')) {
+      return failure('sync_group_member_state_required', 409);
+    }
   }
   return { device_id: headers.deviceId, device_name: device?.device_name ?? headers.deviceId, ok: true };
 }

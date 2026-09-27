@@ -14,7 +14,8 @@ const workgroup = vi.hoisted(() => ({
   loadDesktopWorkgroupKey: vi.fn((): { group_key: string } | null => ({ group_key: 'group-secret' }))
 }));
 const membership = vi.hoisted(() => ({ blocked: vi.fn(() => false) }));
-const readiness = vi.hoisted(() => ({ ready: vi.fn(() => false) }));
+const readiness = vi.hoisted(() => ({ ready: vi.fn(() => false),
+  mode: vi.fn((): 'normal' | 'restore' | null => null) }));
 
 vi.mock('../database/syncGroupMemberStateStore.js', () => ({
   isDesktopSyncGroupDeviceBlocked: membership.blocked
@@ -23,6 +24,7 @@ vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: () => ({ group_id: 'group-1', devices: group.devices })
 }));
 vi.mock('./desktopSyncGroupMemberStateReadiness.js', () => ({
+  desktopSyncGroupMemberStateReadiness: readiness.mode,
   isDesktopSyncGroupMemberStateReady: readiness.ready
 }));
 vi.mock('./workgroupKeyStore.js', () => workgroup);
@@ -44,25 +46,26 @@ afterEach(() => {
   workgroup.consumeDesktopWorkgroupNonce.mockReturnValue(true);
   membership.blocked.mockReturnValue(false);
   readiness.ready.mockReturnValue(false);
+  readiness.mode.mockReturnValue(null);
 });
 
-function signature(deviceId: string, nonce: string, secret = 'group-secret') {
+function signature(deviceId: string, nonce: string, secret = 'group-secret', path = PATH) {
   const bodyHash = crypto.createHash('sha256').update('').digest('hex');
-  const canonical = ['GET', PATH, TIMESTAMP, nonce, bodyHash].join('\n');
+  const canonical = ['GET', path, TIMESTAMP, nonce, bodyHash].join('\n');
   return crypto.createHmac('sha256', secret).update(canonical).digest('hex');
 }
 
-function request(deviceId: string, nonce: string, secret = 'group-secret') {
+function request(deviceId: string, nonce: string, secret = 'group-secret', path = PATH) {
   return {
     headers: {
       'x-device-id': deviceId,
       'x-nonce': nonce,
-      'x-signature': signature(deviceId, nonce, secret),
+      'x-signature': signature(deviceId, nonce, secret, path),
       'x-sync-group-id': 'group-1',
       'x-timestamp': TIMESTAMP
     },
     method: 'GET',
-    url: PATH
+    url: path
   } as unknown as http.IncomingMessage;
 }
 
@@ -109,6 +112,18 @@ describe('Sync Group member-state data gate', () => {
     expect(authenticateCompanionRequest({
       nowMs: NOW_MS, request: request('device-b', 'mobile'), requireMemberState: true
     })).toEqual({ error: 'sync_group_member_state_required', ok: false, status_code: 409 });
+  });
+
+  it('allows a pending peer to request only its chosen restore pack', () => {
+    readiness.ready.mockReturnValue(true);
+    readiness.mode.mockReturnValue('restore');
+    expect(authenticateCompanionRequest({ nowMs: NOW_MS,
+      request: request('device-b', 'normal-during-restore'), requireMemberState: true
+    })).toMatchObject({ error: 'sync_group_member_state_required', ok: false });
+    expect(authenticateCompanionRequest({ nowMs: NOW_MS,
+      request: request('device-b', 'restore-pack', 'group-secret',
+        '/companion/sync-pack?after_state_seq=0&restore_id=restore-1'), requireMemberState: true
+    })).toMatchObject({ device_id: 'device-b', ok: true });
   });
 });
 

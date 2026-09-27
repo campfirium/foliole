@@ -23,11 +23,12 @@
       "system-entry-display-names-v1",
       "watched-device-binding-v1",
       "watched-source-identity-and-path-v1",
-      "workgroup-aead-v1"
+      "workgroup-aead-v1",
+      "workgroup-restore-v1"
     ],
-    "max_supported_version": 12,
-    "min_supported_version": 12,
-    "version": 12
+    "max_supported_version": 13,
+    "min_supported_version": 13,
+    "version": 13
   },
   "pushAck": {
     "clientOpIdKeys": [

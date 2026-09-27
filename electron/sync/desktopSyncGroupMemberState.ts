@@ -10,7 +10,11 @@ import { loadUnreconciledWatchedFolderConflictDecisions } from '../database/watc
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
 import { postDesktopWorkgroupJson } from './desktopSyncGroupHttp.js';
-import { markDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
+import {
+  clearDesktopSyncGroupMemberStateReadiness,
+  markDesktopSyncGroupMemberStateReady,
+  revokeDesktopSyncGroupMemberStateReadiness
+} from './desktopSyncGroupMemberStateReadiness.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -19,9 +23,25 @@ export const SYNC_GROUP_MEMBER_STATE_PATH = '/sync-group/member-state';
 export function acceptDesktopSyncGroupMemberState(bodyText: string, authenticatedDeviceId: string) {
   const incoming = parseSyncGroupMemberState(JSON.parse(bodyText));
   const applied = applyMemberStateWithDecisionChange(incoming, authenticatedDeviceId);
-  markDesktopSyncGroupMemberStateReady(authenticatedDeviceId);
+  const restore = applied.state.restore;
+  const canSupplyRestore = restore?.applied && !incoming.restore?.applied &&
+    restore.event.restore_id === incoming.restore?.event.restore_id &&
+    restore.event.source_device_identity_key === applied.state.sender_device_identity_key;
+  if (applied.normalSyncReady) markDesktopSyncGroupMemberStateReady(authenticatedDeviceId);
+  else if (canSupplyRestore) markDesktopSyncGroupMemberStateReady(authenticatedDeviceId, 'restore');
+  else revokeDesktopSyncGroupMemberStateReadiness(authenticatedDeviceId);
   if (applied.watchedDecisionReceived && !applied.localExited) scheduleWatchedDecisionSync();
+  if (!applied.normalSyncReady && applied.state.restore && !applied.state.restore.applied) {
+    scheduleRestoreSync();
+  }
   return applied;
+}
+
+function scheduleRestoreSync() {
+  setImmediate(() => {
+    void import('./desktopMemberSyncCadence.js').then(({ requestDesktopHighValueSync }) =>
+      requestDesktopHighValueSync()?.catch(() => undefined));
+  });
 }
 
 function applyMemberStateWithDecisionChange(
@@ -58,12 +78,21 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     secret: request.secret
   });
   const result = await runWithDatabaseConnectionOwner(() => {
+    const incoming = parseSyncGroupMemberState(payload);
     const applied = applyMemberStateWithDecisionChange(
-      parseSyncGroupMemberState(payload), peer.peer_device_id
+      incoming, peer.peer_device_id
     );
+    const localRestore = applied.state.restore;
+    if (localRestore && !localRestore.applied) clearDesktopSyncGroupMemberStateReadiness();
     return {
       localExited: applied.localExited,
+      normalSyncReady: applied.normalSyncReady,
       peerBlocked: isDesktopSyncGroupDeviceBlocked(peer.group_id, peer.peer_device_id),
+      restoreFromPeer: localRestore && !localRestore.applied &&
+        incoming.restore?.applied &&
+        incoming.restore.event.restore_id === localRestore.event.restore_id &&
+        localRestore.event.source_device_identity_key === peer.peer_device_id
+        ? localRestore.event.restore_id : null,
       watchedDecisionReceived: applied.watchedDecisionReceived
     };
   });

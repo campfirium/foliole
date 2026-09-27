@@ -34,6 +34,7 @@ import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObje
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
+  expectedRestoreId?: string;
   enqueueSearchInvalidations?: boolean;
   hostName: string;
   onSettingApplied?: (port: DbPort, record: import('./syncPackSyncObjectsExecutor.js').SyncPackSyncObjectRecord) => Promise<void>;
@@ -64,6 +65,9 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   options: SyncPackNodeSurfaceApplyOptions
 ) {
   const cursor = await readSyncPackCursorWithDbPort(port, options.incomingAlias);
+  if (options.expectedRestoreId && cursor.restoreId !== options.expectedRestoreId) {
+    throw new Error('sync_group_restore_pack_mismatch');
+  }
   const shouldApply = assertContiguousSyncPackCursor(cursor, options.currentCursor);
   const result = await port.transaction((tx) => applySyncPackSurfaceInTransaction(tx, options, shouldApply, cursor.toStateSeq));
   const articles = shouldApply ? await port.query<{ object_id: string }>(

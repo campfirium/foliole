@@ -7,7 +7,7 @@ final class FolioleCompanionSyncGroupJoinServer {
     private let listener: NWListener
     let provider: FolioleCompanionSyncGroupJoinProvider
     let snapshots: FolioleCompanionSyncGroupSnapshot?
-    var memberStateReady = Set<String>()
+    var memberStateReady = [String: String]()
     private let queue = DispatchQueue(label: "com.foliole.ios.sync-group-provider")
     let stateChanged: () -> Void
     private(set) var port: UInt16?

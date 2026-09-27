@@ -3,6 +3,8 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { openDatabaseConnection } from '../database/connection.js';
+import { loadDesktopSyncGroupRestoreState } from '../database/syncGroupRestoreState.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { buildDesktopSyncPack } from '../database/syncPackBuilder.js';
 
@@ -32,6 +34,10 @@ export async function buildCompanionSyncPackResource(
   if (fromStateSeq == null) {
     return { error: 'invalid_after_state_seq', status: 'error', statusCode: 400 };
   }
+  const restoreId = parsedRequestUrl.searchParams.get('restore_id');
+  if (restoreId !== null && (!restoreId.trim() || fromStateSeq !== 0)) {
+    return { error: 'invalid_restore_pack_request', status: 'error', statusCode: 400 };
+  }
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-'));
   const packId = randomUUID();
   const outputPath = path.join(tempRoot, `${packId}.syncpack`);
@@ -39,9 +45,17 @@ export async function buildCompanionSyncPackResource(
     const group = loadDesktopSyncGroup();
     const local = group?.devices.find((device) =>
       device.device_identity_key === group.local_device_identity_key && device.state === 'active');
-    if (!local) throw new Error('sync_group_local_device_missing');
+    if (!group || !local) throw new Error('sync_group_local_device_missing');
+    if (restoreId) {
+      const restore = loadDesktopSyncGroupRestoreState(openDatabaseConnection().driver, group.group_id);
+      if (!restore?.applied || restore.event.restore_id !== restoreId ||
+          restore.event.source_device_identity_key !== local.device_identity_key) {
+        return { error: 'sync_group_restore_source_unavailable', status: 'error', statusCode: 409 };
+      }
+    }
     await buildDesktopSyncPack({
       fromPeerId: local.device_identity_key, fromStateSeq, outputPath, packId,
+      ...(restoreId ? { restoreId } : {}),
       toPeerId: authenticatedDeviceId, requireDeliveryHold: true
     });
     return {

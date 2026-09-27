@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
+  applyDb: vi.fn(async () => ({ applied: true, to_state_seq: 3,
+    applied_group_fact_count: 0, applied_object_count: 1, handled_conflict_count: 0 })),
   applyShared: vi.fn(async () => ({ applied: true, to_state_seq: 3 })),
   createCursorStore: vi.fn(() => ({ loadCursor: vi.fn(), saveCursor: vi.fn() })),
   requireRuntime: vi.fn(() => ({ kind: 'ios-native', platform: 'ios' })),
@@ -11,8 +13,14 @@ vi.mock('../../../companionRuntimeCapabilities', async (importOriginal) => ({
   ...await importOriginal<typeof import('../../../companionRuntimeCapabilities')>(),
   requireAvailableCompanionRuntime: mocks.requireRuntime
 }));
-vi.mock('../../../companionSyncPackNodes', () => ({ applyCompanionSyncPackPathWithSharedCore: mocks.applyShared }));
+vi.mock('../../../companionSyncPackNodes', () => ({
+  applyCompanionSyncPackNodesWithDbPort: mocks.applyDb,
+  applyCompanionSyncPackPathWithSharedCore: mocks.applyShared
+}));
 vi.mock('../../../companionSyncWriterQueue', () => ({ runCompanionSyncWriterTask: mocks.runWriter }));
+vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: () => ({ runWriter: (task: (db: object) => Promise<unknown>) => task({}) })
+}));
 vi.mock('../cursor/iosCompanionSyncPackCursorStore', () => ({
   createIosCompanionSyncPackCursorStore: mocks.createCursorStore
 }));
@@ -48,5 +56,16 @@ describe('iosCompanionSyncPackApply', () => {
     }, {} as never))
       .rejects.toMatchObject({ capability: 'sync-pack-apply', platform: 'web' });
     expect(mocks.applyShared).not.toHaveBeenCalled();
+  });
+
+  it('passes the restore ID to the active iOS database apply path', async () => {
+    const { applyIosCompanionSyncPackPath } = await import('./iosCompanionSyncPackApply');
+    await applyIosCompanionSyncPackPath({
+      deviceId: 'ios-device', expectedRestoreId: 'restore-2', hostName: 'ios-device',
+      packPath: '/Library/incoming.db', sourcePeerId: 'desktop-device'
+    });
+    expect(mocks.applyDb).toHaveBeenCalledWith(expect.objectContaining({
+      currentCursor: 0, expectedRestoreId: 'restore-2'
+    }), expect.any(Object));
   });
 });

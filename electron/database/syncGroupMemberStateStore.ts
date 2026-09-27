@@ -13,6 +13,11 @@ import {
 
 import { openDatabaseConnection } from './connection.js';
 import { assertDesktopPeerProofFresh, loadDesktopLocalNodeProof } from './nodeVersionPeerProof.js';
+import {
+  loadDesktopSyncGroupRestoreState,
+  receiveDesktopSyncGroupRestoreState,
+  syncGroupRestorePeersReady
+} from './syncGroupRestoreState.js';
 import { leaveDesktopSyncGroupDevice } from './syncGroupStore.js';
 import {
   applyWatchedFolderGroupMemberState,
@@ -42,6 +47,7 @@ export function loadDesktopSyncGroupMemberState(args?: {
     proof_revision: proof.proof_revision,
     source_proof_revisions: proof.source_proof_revisions,
     removals: loadRemovals(String(context.group_id)),
+    restore: loadDesktopSyncGroupRestoreState(driver, String(context.group_id)),
     sender_device_identity_key: String(context.local_device_identity_key),
     ...loadWatchedFolderGroupMemberState()
   };
@@ -82,7 +88,11 @@ export function applyDesktopSyncGroupMemberState(
   }
   const driver = openDatabaseConnection().driver;
   let localExited = false;
+  let normalSyncReady = false;
   driver.transaction(() => {
+    const localRestore = receiveDesktopSyncGroupRestoreState(driver, incoming.group_id, incoming.restore);
+    normalSyncReady = syncGroupRestorePeersReady(localRestore, incoming.restore);
+    if (!normalSyncReady) return;
     assertDesktopPeerProofFresh(incoming);
     for (const removal of incoming.removals) mergeRemoval(incoming.group_id, removal);
     for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key);
@@ -105,6 +115,7 @@ export function applyDesktopSyncGroupMemberState(
   });
   return {
     localExited,
+    normalSyncReady,
     state: loadDesktopSyncGroupMemberState({
       groupId: incoming.group_id,
       senderDeviceId: local.sender_device_identity_key

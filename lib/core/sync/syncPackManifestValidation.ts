@@ -20,7 +20,12 @@ export function parseSyncPackManifest(value: unknown) {
   const toStateSeq = sequence(manifest.to_state_seq);
   if (toStateSeq < fromStateSeq) throw new Error('invalid_sync_pack_manifest_field');
   const tables = parseTables(manifest.tables);
-  return { packId: manifest.pack_id.trim(), fromStateSeq, toStateSeq, tables };
+  const restoreId = manifest.restore_id;
+  if (restoreId !== undefined && (typeof restoreId !== 'string' || !restoreId.trim())) {
+    throw new Error('invalid_sync_pack_manifest_field');
+  }
+  return { packId: manifest.pack_id.trim(), fromStateSeq, toStateSeq,
+    ...(restoreId ? { restoreId: restoreId as string } : {}), tables };
 }
 
 function parseTables(value: unknown) {

@@ -5,6 +5,7 @@ import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from '../../lib/core/databas
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceSchemaStatements.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from '../../lib/core/database/numberedMigrationWatchedFolderConflicts.js';
+import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 
@@ -85,6 +86,31 @@ it('rejects a restored peer database before merging its member state', () => {
   use(source);
   expect(() => applyDesktopSyncGroupMemberState(stale, identities[1]!.identity_key))
     .toThrow('node_version_peer_restore_requires_rejoin');
+});
+
+it('keeps the later of two offline backup restores before ordinary member sync', () => {
+  const a = deviceDatabase(0, [1]);
+  const b = deviceDatabase(1, [0]);
+  const insert = (db: Database.Database, id: string, time: string, source: string) =>
+    db.prepare(`INSERT INTO sync_group_restore_events
+      (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
+      VALUES (?, 'group-1', ?, ?, ?, ?)`).run(id, time, source, time, time);
+  insert(a, 'restore-1', '2026-09-27T10:00:00.000Z', identities[0]!.identity_key);
+  insert(b, 'restore-2', '2026-09-27T11:00:00.000Z', identities[1]!.identity_key);
+  use(a);
+  const fromA = loadDesktopSyncGroupMemberState();
+  use(b);
+  const fromB = applyDesktopSyncGroupMemberState(fromA, identities[0]!.identity_key);
+  expect(fromB.normalSyncReady).toBe(false);
+  expect(fromB.state.restore?.event.restore_id).toBe('restore-2');
+  use(a);
+  const chosen = applyDesktopSyncGroupMemberState(fromB.state, identities[1]!.identity_key);
+  expect(chosen.normalSyncReady).toBe(false);
+  expect(chosen.state.restore).toMatchObject({ applied: false,
+    event: { restore_id: 'restore-2' } });
+  use(b);
+  applyDesktopSyncGroupMemberState(fromA, identities[0]!.identity_key);
+  expect(loadDesktopSyncGroupMemberState().restore?.event.restore_id).toBe('restore-2');
 });
 
 it('completes immediately when the target confirms its own exit', () => {
@@ -172,6 +198,7 @@ function deviceDatabase(localIndex: number, remoteIndexes: number[]) {
   const database = new Database(':memory:');
   databases.push(database);
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) database.exec(statement);
+  for (const statement of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) database.exec(statement);
   for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) database.exec(statement);
   for (const statement of [...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
     ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS, ...WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS]) {

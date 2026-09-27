@@ -12,6 +12,7 @@ import {
 } from './companionSyncPackTransfer';
 
 export async function applyCompanionDesktopSyncPack(args: {
+  expectedRestoreId?: string;
   headers: Record<string, string>;
   sourceHostName?: string;
   sourcePeerId: string;
@@ -28,7 +29,7 @@ export async function applyCompanionDesktopSyncPack(args: {
   const localDevice = group ? resolveLocalSyncGroupDevice(group) : null;
   if (!localDevice) throw new Error('sync_group_local_device_missing');
   const endpointUrl = new URL(args.url).origin;
-  await flushCompanionNodeVersionReceipts(endpointUrl, args.sourcePeerId);
+  if (!args.expectedRestoreId) await flushCompanionNodeVersionReceipts(endpointUrl, args.sourcePeerId);
   const packPath = await downloadCompanionDesktopSyncPack({
     ...args,
     expectedPeerId: localDevice.device_identity_key,
@@ -40,9 +41,10 @@ export async function applyCompanionDesktopSyncPack(args: {
   try {
     const result = await applyIosCompanionSyncPackPath({
       deviceId: localDevice.device_identity_key, hostName: bootstrap.host_name,
+      ...(args.expectedRestoreId ? { expectedRestoreId: args.expectedRestoreId } : {}),
       packPath, sourceHostName: args.sourceHostName, sourcePeerId: args.sourcePeerId
     });
-    await flushCompanionNodeVersionReceipts(endpointUrl, args.sourcePeerId);
+    if (!args.expectedRestoreId) await flushCompanionNodeVersionReceipts(endpointUrl, args.sourcePeerId);
     return result;
   } finally {
     await deleteCompanionDownloadedSyncPack(packPath);

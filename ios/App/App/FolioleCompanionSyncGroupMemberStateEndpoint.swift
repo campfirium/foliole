@@ -4,6 +4,8 @@ enum FolioleCompanionSyncGroupMemberStateEndpoint {
     struct Accepted {
         let body: Data
         let peer: String
+        let normalSyncReady: Bool
+        let restoreId: String
     }
 
     static func accept(
@@ -31,8 +33,16 @@ enum FolioleCompanionSyncGroupMemberStateEndpoint {
         }
         return try Accepted(
             body: JSONSerialization.data(withJSONObject: responseState, options: [.sortedKeys]),
-            peer: peer
+            peer: peer,
+            normalSyncReady: applied["normal_sync_ready"] as? Bool ?? false,
+            restoreId: restoreId(responseState)
         )
+    }
+
+    static func restoreId(_ state: [String: Any]) -> String {
+        let restore = state["restore"] as? [String: Any]
+        let event = restore?["event"] as? [String: Any]
+        return event?["restore_id"] as? String ?? ""
     }
 
     private static func invalid(_ message: String) -> NSError {

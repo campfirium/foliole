@@ -3,6 +3,7 @@ export interface CompanionDesktopSyncOptions {
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
   onStructureSynced?: () => Promise<void> | void;
   resourcesOnly?: boolean;
+  restoreId?: string;
 }
 
 export interface CompanionDesktopSyncProgress {

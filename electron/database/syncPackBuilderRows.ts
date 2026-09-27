@@ -7,6 +7,7 @@ import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
 interface BuildDesktopSyncPackRowsInput {
   fromStateSeq: number;
   packId: string;
+  restoreId?: string;
   toPeerId?: string;
 }
 
@@ -42,6 +43,7 @@ export function writePackManifest(
     buildSyncPackManifest({
       fromStateSeq,
       packId: input.packId,
+      ...(input.restoreId ? { restoreId: input.restoreId } : {}),
       tableRows: {
         content_blobs: rows.contentBlobs,
         external_documents: rows.externalDocuments,

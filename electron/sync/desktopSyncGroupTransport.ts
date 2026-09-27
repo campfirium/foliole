@@ -44,11 +44,17 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
     throw new Error('sync_group_local_device_removed');
   }
   if (memberState.peerBlocked) return { complete: false, cursor: 0 };
-  await flushDesktopSyncGroupVersionReceipts(target);
-  const pendingConflicts = await runWithDatabaseConnectionOwner(() => loadPendingWatchedFolderConflicts());
-  if (pendingConflicts.length) return { complete: false, cursor: 0 };
-  const cursor = await runWithDatabaseConnectionOwner(() => loadReceiveCursor(target.peer_device_id));
-  const pack = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
+  const restoreId = memberState.restoreFromPeer;
+  if (memberState.normalSyncReady === false && !restoreId) return { complete: false, cursor: 0 };
+  if (!restoreId) {
+    await flushDesktopSyncGroupVersionReceipts(target);
+    const pendingConflicts = await runWithDatabaseConnectionOwner(() => loadPendingWatchedFolderConflicts());
+    if (pendingConflicts.length) return { complete: false, cursor: 0 };
+  }
+  const cursor = restoreId ? 0 : await runWithDatabaseConnectionOwner(() =>
+    loadReceiveCursor(target.peer_device_id));
+  const pack = await runPeerSyncStage('sync_pack', () => restoreId
+    ? requestAndApply(target, 0, restoreId) : downloadAndApply(target, cursor));
   try {
     await runWithDatabaseConnectionOwner(() =>
       reconcileVersionedInlineBodies(openDatabaseConnection().driver));
@@ -86,9 +92,10 @@ async function downloadAndApply(peer: DesktopSyncGroupPeer, after: number) {
   }
 }
 
-function requestAndApply(peer: DesktopSyncGroupPeer, after: number) {
+function requestAndApply(peer: DesktopSyncGroupPeer, after: number, restoreId?: string) {
   return downloadAndApplyDesktopSyncGroupPack({
-    after, peer, createHeaders: createDesktopSyncGroupSignedHeaders
+    after, peer, createHeaders: createDesktopSyncGroupSignedHeaders,
+    ...(restoreId ? { restoreId } : {})
   });
 }
 

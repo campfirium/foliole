@@ -8,7 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Set;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,7 +23,7 @@ final class FolioleCompanionSyncGroupServer {
     private final ServerSocket server;
     private final FolioleCompanionSyncGroupSnapshot snapshots;
     private final Runnable stateChanged;
-    private final Set<String> memberStateReady = ConcurrentHashMap.newKeySet();
+    private final Map<String, String> memberStateReady = new ConcurrentHashMap<>();
     private volatile boolean running = true;
 
     FolioleCompanionSyncGroupServer(
@@ -141,7 +141,10 @@ final class FolioleCompanionSyncGroupServer {
         JSONObject incoming = new JSONObject(decryptRequest(request));
         JSONObject applied = dataBridge.request("apply_member_state", new JSONObject()
             .put("authenticated_device_id", peer).put("state", incoming));
-        memberStateReady.add(peer);
+        if (applied.optBoolean("normal_sync_ready", false)) {
+            memberStateReady.put(peer, restoreToken(applied.getJSONObject("state")));
+        }
+        else memberStateReady.remove(peer);
         workgroupJson(request, output, 200, applied.getJSONObject("state"));
         stateChanged.run();
     }
@@ -184,8 +187,25 @@ final class FolioleCompanionSyncGroupServer {
 
     private String authenticate(FolioleCompanionHttpRequest request) throws Exception {
         String peer = authenticate(request, false);
-        if (!memberStateReady.contains(peer)) throw new SecurityException("sync_group_member_state_required");
+        String approvedRestore = memberStateReady.get(peer);
+        if (approvedRestore == null) throw new SecurityException("sync_group_member_state_required");
+        JSONObject current = dataBridge.request("load_member_state", new JSONObject());
+        JSONObject restore = current.optJSONObject("restore");
+        if (restore != null && !restore.optBoolean("applied", false)) {
+            memberStateReady.remove(peer);
+            throw new SecurityException("sync_group_member_state_required");
+        }
+        if (!approvedRestore.equals(restoreToken(current))) {
+            memberStateReady.remove(peer);
+            throw new SecurityException("sync_group_member_state_required");
+        }
         return peer;
+    }
+
+    private static String restoreToken(JSONObject state) {
+        JSONObject restore = state.optJSONObject("restore");
+        JSONObject event = restore == null ? null : restore.optJSONObject("event");
+        return event == null ? "" : event.optString("restore_id", "");
     }
 
     private String authenticate(FolioleCompanionHttpRequest request, boolean allowUnknown) throws Exception {

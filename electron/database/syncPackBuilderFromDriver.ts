@@ -17,6 +17,7 @@ import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import { writeStoredZip } from '../diagnostics/zipStore.js';
 
 import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
+import { loadDesktopSyncGroupRestoreState } from './syncGroupRestoreState.js';
 import { writePackManifest, writePackRows } from './syncPackBuilderRows.js';
 import { loadSyncPackGroupRows } from './syncPackGroupRows.js';
 import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
@@ -40,6 +41,7 @@ export interface BuildDesktopSyncPackInput {
   toPeerId?: string;
   toStateSeq?: number;
   requireDeliveryHold?: boolean;
+  restoreId?: string;
 }
 
 function normalizeSeq(value: number) {
@@ -63,6 +65,7 @@ function buildContainerManifest(args: {
   const innerManifest = buildSyncPackManifest({
     fromStateSeq: args.fromStateSeq,
     packId: args.input.packId,
+    ...(args.input.restoreId ? { restoreId: args.input.restoreId } : {}),
     tableRows: {
       content_blobs: args.rows.contentBlobs,
       external_documents: args.rows.externalDocuments,
@@ -83,6 +86,7 @@ function buildContainerManifest(args: {
     format: SYNC_PACK_FORMAT,
     format_version: SYNC_PACK_FORMAT_VERSION,
     pack_id: args.input.packId,
+    ...(args.input.restoreId ? { restore_id: args.input.restoreId } : {}),
     from_peer_id: args.fromPeerId,
     to_peer_id: args.input.toPeerId ?? '*',
     schema_version: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
@@ -149,6 +153,14 @@ function loadSourceRowsAndStageHolds(
   fromStateSeq: number,
   createdAt: string
 ) {
+  if (input.restoreId) {
+    const groupId = driver.queryOne<{ group_id: string }>(`SELECT group_id FROM sync_group_local_state
+      WHERE singleton_id = 1 AND state = 'active'`)?.group_id;
+    const restore = groupId ? loadDesktopSyncGroupRestoreState(driver, groupId) : null;
+    if (!restore?.applied || restore.event.restore_id !== input.restoreId) {
+      throw new Error('sync_group_restore_source_changed');
+    }
+  }
   const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq(driver));
   const baseRows = loadPackRows(fromStateSeq, toStateSeq, driver);
   const groupRows = loadSyncPackGroupRows(driver);
