@@ -61,6 +61,7 @@ updates:
           - react-pdf
           - pdfjs-dist
         update-types: [patch, minor]
+    labels: []
     commit-message:
       prefix: deps
       prefix-development: deps-dev
