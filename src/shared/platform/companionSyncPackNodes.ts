@@ -33,7 +33,8 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     hostName: args.hostName,
     packPath: args.packPath,
     ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName }),
-    sourcePeerId: args.sourcePeerId
+    sourcePeerId: args.sourcePeerId,
+    recordVersionReceipt: true
   }, manager);
   assertSyncPackCursorAdvance({
     appliedFactCount: result.applied_group_fact_count,
@@ -55,6 +56,7 @@ export async function applyCompanionSyncPackNodesWithSharedCore(
     hostName: string;
     packPath: string;
     sourceHostName?: string;
+    recordVersionReceipt?: boolean;
     sourcePeerId: string;
   },
   manager: CompanionSqliteConnectionManager = new SQLiteConnection(CapacitorSQLite)
@@ -75,6 +77,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
     hostName: string;
     packPath: string;
     sourceHostName?: string;
+    recordVersionReceipt?: boolean;
     sourcePeerId: string;
   },
   port: DbPort
@@ -87,7 +90,8 @@ export async function applyCompanionSyncPackNodesWithDbPort(
       hostName: args.hostName,
       incomingAlias: INCOMING_PACK_ALIAS,
       ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName }),
-      sourcePeerId: args.sourcePeerId
+      sourcePeerId: args.sourcePeerId,
+      recordVersionReceipt: args.recordVersionReceipt === true
     }).then((result) => ({
       ...result,
       participating_article_ids: result.participatingArticleIds,

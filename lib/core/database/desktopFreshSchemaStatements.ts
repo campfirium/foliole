@@ -6,6 +6,7 @@ import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatement
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
 import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
 import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from './numberedMigrationWatchedFolderConflicts.js';
 import { READWISE_HOST_SETTINGS_VERSION_GUARDS } from './readwiseHostSettingsVersionMigration.js';
 import { SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS } from './searchIndexInvalidationSchemaStatements.js';
@@ -24,6 +25,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
   ...SYNC_SCHEMA_STATEMENTS,
   ...SYNC_GROUP_SCHEMA_STATEMENTS,
+  ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,
   ...SYNC_DELIVERY_TRIGGER_STATEMENTS,
   ...EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS,
   ...LOCAL_FILE_SCHEMA_STATEMENTS,

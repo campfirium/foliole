@@ -1,6 +1,7 @@
 import { retireAttachmentManifest } from './attachmentManifestRetirementMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { createDataMigrationStateTable } from './numberedMigrationDataState.js';
 import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthorizations.js';
@@ -101,5 +102,8 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 102, migrate: createWatchedFolderConflictDecisions },
   { version: 103, migrate: addWatchedFolderConflictReconciliation },
   { version: 104, migrate: addWatchedFolderConflictSourceRefs },
-  { version: 105, migrate: migrateParentChildOrder }
+  { version: 105, migrate: migrateParentChildOrder },
+  { version: 106, migrate: (sqlite) => {
+    for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  } }
 ];

@@ -2,6 +2,7 @@ export const COMPANION_SYNC_GROUP_DATA_CONTRACT = Object.freeze({
   eventName: 'syncGroupDataRequest',
   operations: Object.freeze({
     createSnapshot: 'create_snapshot',
+    confirmVersionPack: 'confirm_version_pack',
     applyMemberState: 'apply_member_state',
     loadCurrentCredential: 'load_current_credential',
     loadGroup: 'load_group',
@@ -9,7 +10,8 @@ export const COMPANION_SYNC_GROUP_DATA_CONTRACT = Object.freeze({
     registerDevice: 'register_device',
     verifyDevice: 'verify_device',
     recordSupplyCursor: 'record_supply_cursor',
-    saveSyncEndpoint: 'save_sync_endpoint'
+    saveSyncEndpoint: 'save_sync_endpoint',
+    stageVersionPack: 'stage_version_pack'
   }),
   requestKeys: Object.freeze({
     operation: 'operation',

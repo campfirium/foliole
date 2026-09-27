@@ -12,6 +12,7 @@
       "group-key-routing-v1",
       "lan-sync-v1",
       "node-tombstone-pack-v1",
+      "node-version-frontier-retention-v1",
       "opaque-sync-refs-v1",
       "parent-child-order-v1",
       "readwise-library-source-mode-v1",
@@ -24,9 +25,9 @@
       "watched-source-identity-and-path-v1",
       "workgroup-aead-v1"
     ],
-    "max_supported_version": 11,
-    "min_supported_version": 11,
-    "version": 11
+    "max_supported_version": 12,
+    "min_supported_version": 12,
+    "version": 12
   },
   "pushAck": {
     "clientOpIdKeys": [

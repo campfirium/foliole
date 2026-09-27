@@ -1,4 +1,8 @@
 import type { DbPort } from './dbPort.js';
+import {
+  prepareInboundNodeVersionReceipt,
+  recordInboundNodeVersionReceipt
+} from './nodeVersionInboundReceipt.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import {
   buildSyncPackNodeAttachmentDeleteSql,
@@ -33,6 +37,7 @@ export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOption
   enqueueSearchInvalidations?: boolean;
   hostName: string;
   onSettingApplied?: (port: DbPort, record: import('./syncPackSyncObjectsExecutor.js').SyncPackSyncObjectRecord) => Promise<void>;
+  recordVersionReceipt?: boolean;
   sourceHostName?: string;
   sourcePeerId?: string;
 }
@@ -89,6 +94,8 @@ async function applySyncPackSurfaceInTransaction(
   if (!shouldApply) {
     return applyReplayPackTombstones(port, options, toStateSeq);
   }
+  const preparedReceipt = options.recordVersionReceipt
+    ? await prepareInboundNodeVersionReceipt(port, options.incomingAlias ?? 'inc') : null;
   const applyOptions = options;
   const groupFacts = await applySyncPackGroupFactsWithDbPort(port, {
     ...(options.incomingAlias === undefined ? {} : { incomingAlias: options.incomingAlias }),
@@ -126,6 +133,7 @@ async function applySyncPackSurfaceInTransaction(
     objectTypes: SYNC_PACK_SURFACE_OBJECT_TYPES
   });
   await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
+  if (preparedReceipt) await saveVersionReceipt(port, preparedReceipt, options.sourcePeerId);
   return {
     appliedBlobCount,
     appliedGroupFactCount: groupFacts.appliedFactCount,
@@ -134,6 +142,15 @@ async function applySyncPackSurfaceInTransaction(
     handledConflictCount: nodeConvergence.handledConflictCount,
     appliedTombstoneNodeIds
   };
+}
+
+async function saveVersionReceipt(
+  port: DbPort,
+  prepared: import('./nodeVersionInboundReceipt.js').PreparedNodeVersionReceipt,
+  sourcePeerId?: string
+) {
+  if (!sourcePeerId) throw new Error('node_version_receipt_source_missing');
+  await recordInboundNodeVersionReceipt(port, prepared, sourcePeerId);
 }
 
 async function applyReplayPackTombstones(

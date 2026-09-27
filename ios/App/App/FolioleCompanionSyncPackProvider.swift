@@ -1,7 +1,7 @@
 import Foundation
 
 enum FolioleCompanionSyncPackProvider {
-    struct Result { let body: Data; let toSequence: Int }
+    struct Result { let body: Data; let toSequence: Int; let holds: [String: Any] }
 
     static func build(snapshot: URL, fromDevice: String, toDevice: String, fromSequence: Int) throws -> Result {
         let definitions = try FolioleCompanionSyncPackProviderDefinitions.load()
@@ -11,6 +11,7 @@ enum FolioleCompanionSyncPackProvider {
         defer { try? FileManager.default.removeItem(at: packURL) }
         let packId = UUID().uuidString.lowercased()
         let toSequence = try createDatabase(packURL, snapshot, definitions, fromSequence, packId)
+        let holds = try versionHolds(packURL, packId, toDevice)
         let database = try Data(contentsOf: packURL), compressed = try FolioleCompanionSyncPackArchive.deflate(database)
         let tables = try tableManifest(packURL, definitions.tableNames)
         let manifest: [String: Any] = [
@@ -26,7 +27,27 @@ enum FolioleCompanionSyncPackProvider {
         let manifestData = try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
         return Result(body: FolioleCompanionSyncPackArchive.zip(entries: [
             ("manifest.json", manifestData), (definitions.databaseEntry, compressed)
-        ]), toSequence: toSequence)
+        ]), toSequence: toSequence, holds: holds)
+    }
+
+    private static func versionHolds(_ url: URL, _ packId: String, _ peer: String) throws -> [String: Any] {
+        let database = try FolioleCompanionSyncPackSQLite(url: url, create: false)
+        let heads = try database.namedRows(
+            "SELECT id AS object_id, current_version_id AS version_id FROM nodes WHERE current_version_id IS NOT NULL"
+        )
+        let versions = try database.namedRows(
+            "SELECT object_id, version_id, body_text, snapshot_json FROM node_sync_versions"
+        )
+        let payloads = try versions.compactMap { row -> [String: Any]? in
+            guard let objectId = row["object_id"] as? String,
+                  let versionId = row["version_id"] as? String,
+                  let text = row["snapshot_json"] as? String,
+                  let snapshot = try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any]
+            else { throw NSError(domain: "FolioleCompanionSyncPackProvider", code: 1) }
+            if row["body_text"] is NSNull && snapshot["content"] is NSNull { return nil }
+            return ["object_id": objectId, "version_id": versionId]
+        }
+        return ["pack_id": packId, "peer_id": peer, "heads": heads, "payloads": payloads]
     }
 
     private static func createDatabase(

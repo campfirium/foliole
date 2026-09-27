@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/nodeVersionRetentionSchemaStatements';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
 import type { DbParams, DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
@@ -33,6 +34,7 @@ const provider = createSyncGroupDeviceIdentity({
 beforeEach(async () => {
   sqlite = new Database(':memory:');
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);
   sqlite.exec('CREATE TABLE sync_delivery_receipts (peer_id TEXT)');
   sqlite.exec('CREATE TABLE sync_peer_cursors (peer_id TEXT)');
   const driver: DbPort = {
@@ -62,6 +64,19 @@ beforeEach(async () => {
 });
 
 afterEach(() => sqlite.close());
+
+it('rejects an older proof revision from a restored provider database', async () => {
+  sqlite.prepare(`INSERT INTO node_version_device_revisions
+    (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
+    VALUES ('group-1', ?, 'peer-epoch', 7, 'pack-7', 'now')`)
+    .run(provider.identity_key);
+  const stale = { ...await loadCompanionSyncGroupMemberState(),
+    library_epoch: 'peer-epoch', proof_revision: 100,
+    source_proof_revisions: { [local.identity_key]: 6 },
+    sender_device_identity_key: provider.identity_key };
+  await expect(applyCompanionSyncGroupMemberState(stale, provider.identity_key))
+    .rejects.toThrow('node_version_peer_restore_requires_rejoin');
+});
 
 it('merges a Windows display platform using its canonical path flavor', async () => {
   const windows = createSyncGroupDeviceIdentity({

@@ -118,6 +118,7 @@ export async function applyDesktopSyncGroupPack(
         currentCursor: args.after, hostName,
         incomingAlias: 'inc', sourceHostName: sourceDeviceName,
         sourcePeerId: args.peer.peer_device_id,
+        recordVersionReceipt: true,
         onSettingApplied: materializeDesktopSettingRecord
       });
       return {

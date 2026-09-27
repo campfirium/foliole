@@ -28,8 +28,10 @@ final class FolioleCompanionSyncPackProvider {
         String packId = UUID.randomUUID().toString();
         SQLiteDatabase pack = SQLiteDatabase.openOrCreateDatabase(packDbFile, null);
         int toSeq;
+        JSONObject holds;
         try {
             toSeq = createPack(pack, definitions, snapshotPath, fromSeq);
+            holds = versionHolds(pack, packId, toPeerId);
             JSONObject tables = tableManifest(pack, definitions.tableNames());
             JSONObject inner = innerManifest(packId, fromSeq, toSeq, tables.getJSONArray("tables"));
             pack.execSQL("INSERT INTO pack_manifest (key, value) VALUES ('manifest_json', ?)", new Object[] { inner.toString() });
@@ -39,8 +41,29 @@ final class FolioleCompanionSyncPackProvider {
             byte[] compressed = deflate(database);
             JSONObject manifest = outerManifest(definitions, packId, fromPeerId, toPeerId, fromSeq, toSeq,
                 tableManifest(packDbFile, definitions.tableNames()).getJSONArray("tables"), database, compressed);
-            return new BuildResult(zip(manifest, definitions.databaseEntry(), compressed), toSeq);
+            return new BuildResult(zip(manifest, definitions.databaseEntry(), compressed), toSeq, holds);
         } finally { if (!packDbFile.delete()) packDbFile.deleteOnExit(); }
+    }
+
+    private static JSONObject versionHolds(SQLiteDatabase pack, String packId, String peer) throws Exception {
+        JSONArray heads = new JSONArray();
+        JSONArray payloads = new JSONArray();
+        try (Cursor cursor = pack.rawQuery(
+            "SELECT id, current_version_id FROM nodes WHERE current_version_id IS NOT NULL", null)) {
+            while (cursor.moveToNext()) heads.put(new JSONObject()
+                .put("object_id", cursor.getString(0)).put("version_id", cursor.getString(1)));
+        }
+        try (Cursor cursor = pack.rawQuery(
+            "SELECT object_id, version_id, body_text, snapshot_json FROM node_sync_versions", null)) {
+            while (cursor.moveToNext()) {
+                JSONObject snapshot = new JSONObject(cursor.getString(3));
+                if (cursor.isNull(2) && snapshot.has("content") && snapshot.isNull("content")) continue;
+                payloads.put(new JSONObject()
+                    .put("object_id", cursor.getString(0)).put("version_id", cursor.getString(1)));
+            }
+        }
+        return new JSONObject().put("pack_id", packId).put("peer_id", peer)
+            .put("heads", heads).put("payloads", payloads);
     }
 
     private static int createPack(SQLiteDatabase pack, FolioleCompanionSyncPackProviderDefinitions definitions,
@@ -128,6 +151,9 @@ final class FolioleCompanionSyncPackProvider {
     static final class BuildResult {
         final byte[] body;
         final int toSeq;
-        BuildResult(byte[] body, int toSeq) { this.body = body; this.toSeq = toSeq; }
+        final JSONObject holds;
+        BuildResult(byte[] body, int toSeq, JSONObject holds) {
+            this.body = body; this.toSeq = toSeq; this.holds = holds;
+        }
     }
 }

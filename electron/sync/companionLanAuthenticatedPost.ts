@@ -14,6 +14,10 @@ import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { writeWorkgroupBinary } from './companionLanResponses.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
 import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
+import {
+  acceptCompanionVersionPackReceipt,
+  VERSION_PACK_RECEIPT_PATH
+} from './companionLanVersionPackReceipt.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import {
   acceptDesktopSyncGroupMemberState,
@@ -40,6 +44,7 @@ function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
   if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
+  if (parsedRequestUrl.pathname === VERSION_PACK_RECEIPT_PATH) return 'version-pack-receipt';
   if (parsedRequestUrl.pathname === SYNC_GROUP_MEMBER_STATE_PATH) return 'member-state';
   if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
   return null;
@@ -71,6 +76,7 @@ async function handleAuthenticatedRoute(args: {
   writeJson: WriteJson;
 }) {
   const { auth, bodyText, request, response, route, writeJson } = args;
+  if (route === 'version-pack-receipt') return handleVersionPackReceipt(args);
   if (route === 'readwise-group-setup') {
     await writeReadwiseGroupSetupResponse(args);
   } else if (route === 'readwise-owner-stop') {
@@ -119,6 +125,23 @@ async function handleAuthenticatedRoute(args: {
         error: error instanceof Error ? error.message : 'sync_group_member_state_invalid'
       }, 'POST, OPTIONS');
     }
+  }
+}
+
+async function handleVersionPackReceipt(args: {
+  auth: Extract<ReturnType<typeof authenticateCompanionRequest>, { ok: true }>;
+  bodyText: string;
+  request: http.IncomingMessage;
+  response: http.ServerResponse;
+  writeJson: WriteJson;
+}) {
+  try {
+    args.writeJson(args.request, args.response, 200,
+      await acceptCompanionVersionPackReceipt(args.bodyText, args.auth.device_id), 'POST, OPTIONS');
+  } catch (error) {
+    args.writeJson(args.request, args.response, 409, {
+      error: error instanceof Error ? error.message : 'node_version_receipt_invalid'
+    }, 'POST, OPTIONS');
   }
 }
 

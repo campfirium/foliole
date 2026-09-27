@@ -75,6 +75,8 @@ final class FolioleCompanionSyncGroupServer {
         else if (request.method.equals("POST") && path.equals("/sync-group/join-acceptance")) collectAcceptance(request, output);
         else if (request.method.equals("POST") && path.equals("/sync-group/member-state")) memberState(request, output);
         else if (request.method.equals("GET") && path.equals("/companion/sync-pack")) syncPack(request, output);
+        else if (request.method.equals("POST") && path.equals("/companion/version-pack-receipt"))
+            versionPackReceipt(request, output);
         else if (request.method.equals("POST") && path.equals("/companion/resource-availability")) availability(request, output);
         else if (request.method.equals("POST") && path.equals("/companion/content-blobs")) contentBlobs(request, output);
         else if (request.method.equals("GET") && path.equals("/companion/content-blob")) contentBlob(request, output);
@@ -117,8 +119,21 @@ final class FolioleCompanionSyncGroupServer {
         FolioleCompanionSyncPackProvider.BuildResult pack = snapshots.refresh(
             peer, snapshot -> FolioleCompanionSyncPackProvider.build(
                 context, snapshot, config.getString("device_id"), peer, after));
+        dataBridge.request("stage_version_pack", pack.holds);
         FolioleCompanionSyncGroupDatabase.recordSupplyCursor(dataBridge, peer, after, pack.toSeq);
         workgroupBytes(request, output, "application/zip", pack.body);
+    }
+
+    private void versionPackReceipt(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
+        String peer = authenticate(request);
+        try {
+            JSONObject receipt = new JSONObject(decryptRequest(request));
+            JSONObject result = dataBridge.request("confirm_version_pack", new JSONObject()
+                .put("authenticated_device_id", peer).put("receipt", receipt));
+            workgroupJson(request, output, 200, result);
+        } catch (Exception error) {
+            workgroupJson(request, output, 409, error(error.getMessage()));
+        }
     }
 
     private void memberState(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {

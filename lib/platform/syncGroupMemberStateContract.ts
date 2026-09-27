@@ -4,7 +4,7 @@ import type {
   WatchedFolderGroupSource
 } from './watchedFolderConflictContract.js';
 
-export const SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION = 1 as const;
+export const SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION = 2 as const;
 
 export type SyncGroupRemovalConfirmationKind = 'enforced' | 'target_exit';
 
@@ -28,6 +28,9 @@ export interface SyncGroupMemberStatePayload {
   contract_version: typeof SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION;
   devices: SyncGroupDevicePayload[];
   group_id: string;
+  library_epoch: string;
+  proof_revision: number;
+  source_proof_revisions: Record<string, number>;
   removals: SyncGroupRemovalDecisionPayload[];
   sender_device_identity_key: string;
   watched_sources?: WatchedFolderGroupSource[];
@@ -39,6 +42,9 @@ export function parseSyncGroupMemberState(value: unknown): SyncGroupMemberStateP
   const raw = value as Partial<SyncGroupMemberStatePayload>;
   if (raw.contract_version !== SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION ||
       !text(raw.group_id) || !text(raw.sender_device_identity_key) ||
+      !text(raw.library_epoch) || !Number.isSafeInteger(raw.proof_revision) ||
+      (raw.proof_revision ?? -1) < 0 ||
+      !validSourceProofRevisions(raw.source_proof_revisions) ||
       !Array.isArray(raw.devices) || !Array.isArray(raw.removals) ||
       (raw.watched_sources !== undefined && !Array.isArray(raw.watched_sources)) ||
       (raw.watched_decisions !== undefined && !Array.isArray(raw.watched_decisions))) return invalid();
@@ -47,6 +53,12 @@ export function parseSyncGroupMemberState(value: unknown): SyncGroupMemberStateP
 
 function text(value: unknown) {
   return typeof value === 'string' && value.trim().length > 0;
+}
+
+function validSourceProofRevisions(value: unknown) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value) &&
+    Object.entries(value).every(([key, revision]) => text(key) &&
+      Number.isSafeInteger(revision) && (revision as number) >= 0));
 }
 
 function invalid(): never {

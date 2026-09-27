@@ -12,6 +12,8 @@ import {
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
+import { assertCompanionPeerProofFresh, loadCompanionLocalNodeProof } from './nodeVersionCompanionPeerProof';
+
 type Context = { groupId: string; localDeviceId: string };
 
 export function loadCompanionSyncGroupMemberState() {
@@ -33,6 +35,7 @@ export function applyCompanionSyncGroupMemberState(
           incoming.sender_device_identity_key !== authenticatedDeviceId) {
         throw new Error('sync_group_member_state_identity_mismatch');
       }
+      await assertCompanionPeerProofFresh(tx, incoming, context.localDeviceId);
       for (const removal of incoming.removals) await mergeRemoval(tx, incoming.group_id, removal);
       for (const device of incoming.devices) await mergeDevice(tx, incoming.group_id, device, context.localDeviceId);
       const now = new Date().toISOString();
@@ -72,10 +75,14 @@ async function loadContext(db: DbPort): Promise<Context | null> {
 }
 
 async function loadState(db: DbPort, context: Context): Promise<SyncGroupMemberStatePayload> {
+  const proof = await loadCompanionLocalNodeProof(db);
   return {
     contract_version: SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION,
     devices: await loadDevices(db, context.groupId),
     group_id: context.groupId,
+    library_epoch: proof.library_epoch,
+    proof_revision: proof.proof_revision,
+    source_proof_revisions: proof.source_proof_revisions,
     removals: await loadRemovals(db, context.groupId),
     sender_device_identity_key: context.localDeviceId
   };

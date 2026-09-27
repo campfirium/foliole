@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceConnectionSchemaStatements.js';
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceSchemaStatements.js';
+import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from '../../lib/core/database/numberedMigrationWatchedFolderConflicts.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
@@ -66,6 +67,24 @@ it('completes an offline target removal after every Device in the initiator list
     '2026-09-15T01:04:00.000Z');
   expect(loadDesktopSyncGroupMemberState().devices.find((device) =>
     device.device_identity_key === identities[2]!.identity_key)?.state).toBe('active');
+});
+
+it('rejects a restored peer database before merging its member state', () => {
+  const source = deviceDatabase(0, [1]);
+  const target = deviceDatabase(1, [0]);
+  use(source);
+  source.prepare(`INSERT INTO node_version_device_revisions
+    (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
+    VALUES ('group-1', ?, 'peer-epoch', 7, 'pack-7', 'now')`)
+    .run(identities[1]!.identity_key);
+  use(target);
+  const stale = loadDesktopSyncGroupMemberState();
+  stale.library_epoch = 'peer-epoch';
+  stale.proof_revision = 100;
+  stale.source_proof_revisions[identities[0]!.identity_key] = 6;
+  use(source);
+  expect(() => applyDesktopSyncGroupMemberState(stale, identities[1]!.identity_key))
+    .toThrow('node_version_peer_restore_requires_rejoin');
 });
 
 it('completes immediately when the target confirms its own exit', () => {
@@ -153,6 +172,7 @@ function deviceDatabase(localIndex: number, remoteIndexes: number[]) {
   const database = new Database(':memory:');
   databases.push(database);
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) database.exec(statement);
+  for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) database.exec(statement);
   for (const statement of [...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
     ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS, ...WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS]) {
     database.exec(statement);

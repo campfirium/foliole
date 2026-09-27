@@ -18,6 +18,7 @@ import {
   loadDesktopSyncGroupRoutes,
   type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
+import { flushDesktopSyncGroupVersionReceipts } from './desktopSyncGroupVersionReceipts.js';
 import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 export type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
@@ -43,6 +44,7 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
     throw new Error('sync_group_local_device_removed');
   }
   if (memberState.peerBlocked) return { complete: false, cursor: 0 };
+  await flushDesktopSyncGroupVersionReceipts(target);
   const pendingConflicts = await runWithDatabaseConnectionOwner(() => loadPendingWatchedFolderConflicts());
   if (pendingConflicts.length) return { complete: false, cursor: 0 };
   const cursor = await runWithDatabaseConnectionOwner(() => loadReceiveCursor(target.peer_device_id));
@@ -52,6 +54,7 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
       reconcileVersionedInlineBodies(openDatabaseConnection().driver));
     const nextCursor = pack.cursor;
     await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
+    await flushDesktopSyncGroupVersionReceipts(target);
     await reportDesktopSyncGroupCursorCommitted({
       cursor: nextCursor, peerAuthorizationId: target.peer_device_id
     });

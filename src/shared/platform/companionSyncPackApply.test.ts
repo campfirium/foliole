@@ -53,6 +53,7 @@ const syncGroupMock = vi.hoisted(() => ({
     display_name: 'Studio', group_id: 'group-1', local_device_identity_key: 'android-group-device'
   }))
 }));
+const receiptMock = vi.hoisted(() => ({ flush: vi.fn(async () => undefined) }));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -68,6 +69,9 @@ vi.mock('./companion/sync/pack-apply/iosCompanionSyncPackApply', () => ({
   applyIosCompanionSyncPackPath: iosSyncPackApplyMock.apply
 }));
 vi.mock('./companion/sync/syncGroupStore', () => ({ loadCompanionSyncGroup: syncGroupMock.load }));
+vi.mock('./companion/sync/companionNodeVersionReceiptDelivery', () => ({
+  flushCompanionNodeVersionReceipts: receiptMock.flush
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -111,6 +115,8 @@ it('downloads desktop packs before applying them through the shared database own
     sourcePeerId: 'desktop-test-device'
   });
   expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/downloaded-pack.db' });
+  expect(receiptMock.flush).toHaveBeenCalledTimes(2);
+  expect(receiptMock.flush).toHaveBeenCalledWith('http://desktop', 'desktop-test-device');
 });
 
 it('keeps pack apply inert outside native companion hosts', async () => {

@@ -12,11 +12,14 @@ import {
 } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { assertDesktopPeerProofFresh, loadDesktopLocalNodeProof } from './nodeVersionPeerProof.js';
 import { leaveDesktopSyncGroupDevice } from './syncGroupStore.js';
 import {
   applyWatchedFolderGroupMemberState,
   loadWatchedFolderGroupMemberState
 } from './watchedFolderGroupMemberState.js';
+
+export { loadPendingDesktopSyncGroupRemovalDeviceIds } from './syncGroupPendingRemovalReads.js';
 
 type Row = Record<string, null | number | string>;
 
@@ -30,10 +33,14 @@ export function loadDesktopSyncGroupMemberState(args?: {
     : driver.queryOne<Row>(`SELECT group_id, local_device_identity_key
         FROM sync_group_local_state WHERE singleton_id = 1 AND state = 'active'`);
   if (!context) throw new Error('sync_group_not_available');
+  const proof = loadDesktopLocalNodeProof();
   return {
     contract_version: SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION,
     devices: loadDevices(String(context.group_id)),
     group_id: String(context.group_id),
+    library_epoch: proof.library_epoch,
+    proof_revision: proof.proof_revision,
+    source_proof_revisions: proof.source_proof_revisions,
     removals: loadRemovals(String(context.group_id)),
     sender_device_identity_key: String(context.local_device_identity_key),
     ...loadWatchedFolderGroupMemberState()
@@ -76,6 +83,7 @@ export function applyDesktopSyncGroupMemberState(
   const driver = openDatabaseConnection().driver;
   let localExited = false;
   driver.transaction(() => {
+    assertDesktopPeerProofFresh(incoming);
     for (const removal of incoming.removals) mergeRemoval(incoming.group_id, removal);
     for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key);
     applyWatchedFolderGroupMemberState(incoming, authenticatedDeviceId);
@@ -102,13 +110,6 @@ export function applyDesktopSyncGroupMemberState(
       senderDeviceId: local.sender_device_identity_key
     })
   };
-}
-
-export function loadPendingDesktopSyncGroupRemovalDeviceIds(groupId: string) {
-  return openDatabaseConnection().driver.queryAll<Row>(`SELECT target_device_identity_key
-    FROM sync_group_removal_decisions
-    WHERE group_id = ? AND completed_at IS NULL AND superseded_at IS NULL`, [groupId])
-    .map((row) => String(row.target_device_identity_key));
 }
 
 export function isDesktopSyncGroupDeviceBlocked(groupId: string, deviceId: string) {

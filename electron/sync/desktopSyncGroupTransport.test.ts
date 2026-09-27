@@ -12,6 +12,7 @@ const runtime = vi.hoisted(() => ({
   reconcileBodies: vi.fn(),
   refreshAdvertisement: vi.fn(),
   reportCursor: vi.fn(),
+  flushVersionReceipts: vi.fn(),
   setPeerCursor: vi.fn()
 }));
 
@@ -51,6 +52,9 @@ vi.mock('./desktopSyncGroupPeerCompatibility.js', () => ({
 vi.mock('./desktopSyncGroupPeerSingleFlight.js', () => ({
   runDesktopSyncGroupPeerSingleFlight: (_id: string, execute: () => unknown) => execute()
 }));
+vi.mock('./desktopSyncGroupVersionReceipts.js', () => ({
+  flushDesktopSyncGroupVersionReceipts: runtime.flushVersionReceipts
+}));
 vi.mock('./desktopSyncGroupResources.js', () => ({
   assertDesktopSyncGroupResourcesComplete: runtime.assertResourcesComplete,
   downloadDesktopSyncGroupResources: runtime.downloadResources
@@ -80,6 +84,7 @@ beforeEach(() => {
   });
   runtime.downloadResources.mockResolvedValue(undefined);
   runtime.reportCursor.mockResolvedValue(undefined);
+  runtime.flushVersionReceipts.mockResolvedValue(undefined);
   runtime.assertCompatible.mockResolvedValue(undefined);
   runtime.exchangeMemberState.mockResolvedValue({ localExited: false, peerBlocked: false });
   runtime.reconcileBodies.mockReturnValue(0);

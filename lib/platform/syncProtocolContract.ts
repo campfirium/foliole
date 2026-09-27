@@ -11,6 +11,7 @@ export const DESKTOP_SOFT_ANCHOR_CAPABILITY = 'desktop-soft-anchor-v1';
 export const READWISE_LIBRARY_SOURCE_MODE_CAPABILITY = 'readwise-library-source-mode-v1';
 export const SYNC_GROUP_MEMBER_STATE_CAPABILITY = 'sync-group-member-state-v1';
 export const PARENT_CHILD_ORDER_CAPABILITY = 'parent-child-order-v1';
+export const NODE_VERSION_FRONTIER_RETENTION_CAPABILITY = 'node-version-frontier-retention-v1';
 
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
@@ -24,6 +25,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'group-key-routing-v1',
     'lan-sync-v1',
     'node-tombstone-pack-v1',
+    NODE_VERSION_FRONTIER_RETENTION_CAPABILITY,
     'opaque-sync-refs-v1',
     PARENT_CHILD_ORDER_CAPABILITY,
     'resource-availability-v1',
@@ -37,9 +39,9 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     COMPLETE_MEMBER_DATA_PLANE_CAPABILITY,
     'workgroup-aead-v1'
   ].sort()),
-  max_supported_version: 11,
-  min_supported_version: 11,
-  version: 11
+  max_supported_version: 12,
+  min_supported_version: 12,
+  version: 12
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

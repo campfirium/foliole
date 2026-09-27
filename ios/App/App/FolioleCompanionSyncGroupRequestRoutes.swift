@@ -44,10 +44,31 @@ extension FolioleCompanionSyncGroupJoinServer {
                     toDevice: peer, fromSequence: after
                 )
             }
+            _ = try dataBridge.request("stage_version_pack", result.holds)
             _ = try dataBridge.request("record_supply_cursor", [
                 "from_cursor": after, "peer_id": peer, "to_cursor": result.toSequence
             ])
             return try sendWorkgroup(connection, request, "application/zip", result.body)
+        }
+        if request.method == "POST" && route == "/companion/version-pack-receipt" {
+            guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
+            let peer = try authenticate(request)
+            let plaintext = try FolioleCompanionSyncGroupWorkgroup.decryptRequest(
+                request, groupTag: try Self.requiredDiscovery(discovery, "group_tag"),
+                workgroupKey: provider.workgroupKey
+            )
+            let receipt = try JSONSerialization.jsonObject(with: plaintext) as? [String: Any]
+            guard let receipt else { throw Self.invalid("node_version_receipt_invalid") }
+            do {
+                let result = try dataBridge.request("confirm_version_pack", [
+                    "authenticated_device_id": peer, "receipt": receipt
+                ])
+                let body = try JSONSerialization.data(withJSONObject: result)
+                return try sendWorkgroup(connection, request, "application/json; charset=utf-8", body)
+            } catch {
+                let body = try JSONSerialization.data(withJSONObject: ["error": error.localizedDescription])
+                return try sendWorkgroup(connection, request, "application/json; charset=utf-8", body, status: 409)
+            }
         }
         if request.method == "POST" && route == "/companion/resource-availability" {
             return try resourceAvailability(connection, request)

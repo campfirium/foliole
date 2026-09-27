@@ -236,12 +236,22 @@ function mockPackApplyQueries(
   connection.query.mockImplementation(async (sql: string) => {
     if (sql.includes('pack_manifest')) {
       return { values: [{ value: JSON.stringify({
+        pack_id: 'test-pack',
         from_peer_id: 'authorization-desktop', from_state_seq: args.fromStateSeq,
         to_peer_id: 'android-device', to_state_seq: args.toStateSeq
       }) }] };
     }
     if (sql.includes('COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq')) {
       return { values: [{ next_state_seq: 1 }] };
+    }
+    if (sql.includes('FROM sync_group_local_state')) {
+      return { values: [{ group_id: 'group', local_device_identity_key: 'android-device' }] };
+    }
+    if (sql.includes('FROM sync_group_devices')) {
+      return { values: [{ active: 1 }] };
+    }
+    if (sql.includes('FROM node_version_local_proof_state')) {
+      return { values: [{ library_epoch: 'test-library', proof_revision: 0 }] };
     }
     if (sql.includes('COUNT(*) AS count')) {
       return { values: [{ count: args.appliedCount }] };

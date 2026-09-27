@@ -220,6 +220,8 @@ export function loadSyncNodeVersionsSince(cursor: { createdAt: string; versionId
      INNER JOIN node_sync_versions v
        ON v.object_id = n.id
      WHERE ${cursor ? '(v.created_at > ? OR (v.created_at = ? AND v.version_id > ?))' : '1 = 1'}
+       AND (v.body_text IS NOT NULL OR json_type(v.snapshot_json, '$.content') = 'text'
+         OR json_type(v.snapshot_json, '$.content') IS NULL)
      ORDER BY v.created_at ASC, v.version_id ASC
      LIMIT ?`,
     cursor

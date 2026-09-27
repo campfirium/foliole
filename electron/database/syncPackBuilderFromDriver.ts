@@ -20,6 +20,7 @@ import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
 import { writePackManifest, writePackRows } from './syncPackBuilderRows.js';
 import { loadSyncPackGroupRows } from './syncPackGroupRows.js';
 import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
+import { stageDesktopSyncPackNodeHolds } from './syncPackNodeVersionHolds.js';
 import {
   loadSyncPackNodeVersionParentRows,
   loadSyncPackNodeVersionRows
@@ -38,6 +39,7 @@ export interface BuildDesktopSyncPackInput {
   fromStateSeq: number;
   toPeerId?: string;
   toStateSeq?: number;
+  requireDeliveryHold?: boolean;
 }
 
 function normalizeSeq(value: number) {
@@ -102,7 +104,6 @@ export async function buildDesktopSyncPackFromDriver(
   const fromStateSeq = normalizeSeq(input.fromStateSeq);
   const createdAt = input.createdAt ?? new Date().toISOString();
   backfillMissingNodeSyncState(sourceDriver);
-  const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq(sourceDriver));
   await fs.mkdir(path.dirname(input.outputPath), { recursive: true });
   await fs.rm(input.outputPath, { force: true });
   const incomingPath = `${input.outputPath}.incoming.db`;
@@ -110,21 +111,8 @@ export async function buildDesktopSyncPackFromDriver(
   const packDb = new BetterSqlite3(incomingPath);
   try {
     for (const statement of PACK_SCHEMA) packDb.exec(statement);
-    const baseRows = loadPackRows(fromStateSeq, toStateSeq, sourceDriver);
-    const groupRows = loadSyncPackGroupRows(sourceDriver);
-    const nodeVersions = loadSyncPackNodeVersionRows(sourceDriver, baseRows.nodes);
-    const rows: LoadedDesktopSyncPackRows = {
-      ...baseRows,
-      groupDevices: groupRows.devices,
-      groups: groupRows.groups,
-      nodeVersions,
-      nodeTombstones: loadSyncPackTombstoneRows(sourceDriver),
-      nodeVersionParents: loadSyncPackNodeVersionParentRows(sourceDriver, nodeVersions)
-    };
-    const packToStateSeq = Math.max(
-      rows.stateRows.at(-1)?.state_seq ?? fromStateSeq,
-      baseRows.consumedStateSeq
-    );
+    const { rows, packToStateSeq } = sourceDriver.transaction((tx) =>
+      loadSourceRowsAndStageHolds(tx, input, fromStateSeq, createdAt));
     const writePack = packDb.transaction(() => {
       writePackManifest(packDb, input, fromStateSeq, packToStateSeq, rows);
       writePackRows(packDb, rows);
@@ -153,4 +141,34 @@ export async function buildDesktopSyncPackFromDriver(
     packDb.close();
     await fs.rm(incomingPath, { force: true });
   }
+}
+
+function loadSourceRowsAndStageHolds(
+  driver: DatabaseDriver,
+  input: BuildDesktopSyncPackInput,
+  fromStateSeq: number,
+  createdAt: string
+) {
+  const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq(driver));
+  const baseRows = loadPackRows(fromStateSeq, toStateSeq, driver);
+  const groupRows = loadSyncPackGroupRows(driver);
+  const nodeVersions = loadSyncPackNodeVersionRows(driver, baseRows.nodes);
+  const rows: LoadedDesktopSyncPackRows = {
+    ...baseRows,
+    groupDevices: groupRows.devices,
+    groups: groupRows.groups,
+    nodeVersions,
+    nodeTombstones: loadSyncPackTombstoneRows(driver),
+    nodeVersionParents: loadSyncPackNodeVersionParentRows(driver, nodeVersions)
+  };
+  if (input.requireDeliveryHold) {
+    if (!input.toPeerId) throw new Error('node_version_pack_target_missing');
+    stageDesktopSyncPackNodeHolds({
+      createdAt, driver, fromPeerId: input.fromPeerId,
+      nodes: baseRows.nodes, packId: input.packId, toPeerId: input.toPeerId, versions: nodeVersions
+    });
+  }
+  return { rows, packToStateSeq: Math.max(
+    rows.stateRows.at(-1)?.state_seq ?? fromStateSeq, baseRows.consumedStateSeq
+  ) };
 }

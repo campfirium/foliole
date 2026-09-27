@@ -76,8 +76,15 @@ it('keeps the Android provider independent of optional SQLite JSON functions', (
   expect(definitions.payloadPlans.map((plan) => plan.sql).join('\n')).not.toContain('json_object');
 });
 
-it('packs current node heads without dangling historical parent edges', () => {
+it('packs full ancestry with original parent order for changed nodes', () => {
   source.exec(`
+    INSERT INTO node_sync_versions (
+      version_id, object_id, parent_version_id, host_name, created_at,
+      content_hash, body_text, snapshot_json
+    ) VALUES (
+      'android-b#1', 'node-1', NULL, 'android-b', '2026-08-07T00:00:00.000Z',
+      'base-hash', 'base body', '{"id":"node-1","content":"base body"}'
+    );
     INSERT INTO node_sync_versions (
       version_id, object_id, parent_version_id, host_name, created_at,
       content_hash, body_text, snapshot_json
@@ -89,9 +96,11 @@ it('packs current node heads without dangling historical parent edges', () => {
     UPDATE nodes SET current_version_id = 'android-b#2' WHERE id = 'node-1';
   `);
   const pack = buildPack(0);
-  expect(pack.prepare('SELECT version_id FROM node_sync_versions').all())
-    .toEqual([{ version_id: 'android-b#2' }]);
-  expect(pack.prepare('SELECT * FROM node_sync_version_parents').all()).toEqual([]);
+  expect(pack.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').all())
+    .toEqual([{ version_id: 'android-b#1' }, { version_id: 'android-b#2' }]);
+  expect(pack.prepare('SELECT * FROM node_sync_version_parents').all()).toEqual([
+    { version_id: 'android-b#2', parent_version_id: 'android-b#1', ordinal: 0 }
+  ]);
   pack.close();
 });
 

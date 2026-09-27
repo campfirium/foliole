@@ -227,4 +227,16 @@ describe('loadSyncNodes', () => {
       .toBe('Historical title');
   });
 
+  it('omits released historical bodies from the ordinary version stream', () => {
+    const connection = openDatabaseConnection();
+    insertSyncNodeFixture(connection);
+    connection.driver.execute(
+      `UPDATE node_sync_versions SET body_text = NULL, snapshot_json = ? WHERE version_id = ?`,
+      [JSON.stringify({ ...expectedSyncNodeRecord()[0]?.snapshot, content: null }), 'desktop#1']
+    );
+
+    expect(loadSyncNodeVersionsSince(null, 10).map((record) => record.version_id))
+      .toEqual(['desktop#0', 'desktop#2']);
+  });
+
 });

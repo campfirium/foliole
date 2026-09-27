@@ -42,7 +42,7 @@ export async function buildCompanionSyncPackResource(
     if (!local) throw new Error('sync_group_local_device_missing');
     await buildDesktopSyncPack({
       fromPeerId: local.device_identity_key, fromStateSeq, outputPath, packId,
-      toPeerId: authenticatedDeviceId
+      toPeerId: authenticatedDeviceId, requireDeliveryHold: true
     });
     return {
       body: await fs.readFile(outputPath),

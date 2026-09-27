@@ -1,6 +1,7 @@
 import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSyncContract';
 import { resolveLocalSyncGroupDevice } from '../../../lib/platform/syncGroupContract';
 
+import { flushCompanionNodeVersionReceipts } from './companion/sync/companionNodeVersionReceiptDelivery';
 import { applyIosCompanionSyncPackPath } from './companion/sync/pack-apply/iosCompanionSyncPackApply';
 import { loadCompanionSyncGroup } from './companion/sync/syncGroupStore';
 import { loadCompanionBootstrapState } from './companionBootstrap';
@@ -26,6 +27,8 @@ export async function applyCompanionDesktopSyncPack(args: {
   const group = await loadCompanionSyncGroup();
   const localDevice = group ? resolveLocalSyncGroupDevice(group) : null;
   if (!localDevice) throw new Error('sync_group_local_device_missing');
+  const endpointUrl = new URL(args.url).origin;
+  await flushCompanionNodeVersionReceipts(endpointUrl, args.sourcePeerId);
   const packPath = await downloadCompanionDesktopSyncPack({
     ...args,
     expectedPeerId: localDevice.device_identity_key,
@@ -35,10 +38,12 @@ export async function applyCompanionDesktopSyncPack(args: {
     return { applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 };
   }
   try {
-    return await applyIosCompanionSyncPackPath({
+    const result = await applyIosCompanionSyncPackPath({
       deviceId: localDevice.device_identity_key, hostName: bootstrap.host_name,
       packPath, sourceHostName: args.sourceHostName, sourcePeerId: args.sourcePeerId
     });
+    await flushCompanionNodeVersionReceipts(endpointUrl, args.sourcePeerId);
+    return result;
   } finally {
     await deleteCompanionDownloadedSyncPack(packPath);
   }
