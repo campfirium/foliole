@@ -84,7 +84,7 @@ it('shows an independent protocol notice while keeping the sync failure', () => 
   );
 
   expect(screen.getByRole('dialog', { name: 'Cannot sync' }))
-    .toHaveTextContent('The devices use different sync versions.');
+    .toHaveTextContent('The syncing devices have different database versions.');
   fireEvent.click(screen.getByRole('button', { name: 'Close' }));
   expect(screen.queryByRole('dialog', { name: 'Cannot sync' })).not.toBeInTheDocument();
   expect(screen.getByTestId('companion-sync-error')).toHaveTextContent('Update Foliole');
