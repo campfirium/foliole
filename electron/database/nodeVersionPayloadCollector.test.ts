@@ -9,6 +9,7 @@ import {
   confirmOutboundNodeVersionPack,
   stageOutboundNodeVersionHolds
 } from '../../lib/core/sync/nodeVersionDeliveryProof.js';
+import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion, loadMergeBase } from '../../lib/core/sync/syncNodeGraph.js';
 
@@ -142,6 +143,20 @@ it('keeps a pending edit base and a conflict reference', async () => {
   expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 1, skipped: null });
   expect(payloads().filter((row) => (row as { body_text: string | null }).body_text !== null)
     .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'B', 'D', 'E']);
+});
+
+it('protects an editor base until its hold is released', async () => {
+  proveBase('A');
+  await port.transaction((tx) => retainLocalEditBase(tx, {
+    holdId: 'editor-1', nodeId: 'node', versionId: 'B'
+  }));
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('B'))
+    .toEqual({ body_text: 'body-B' });
+  await releaseLocalEditBase(port, 'editor-1', 'node');
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 1, skipped: null });
+  await expect(retainLocalEditBase(port, { holdId: 'late-editor', nodeId: 'node', versionId: 'B' }))
+    .rejects.toThrow('content_edit_base_unavailable');
 });
 
 it('protects a version referenced by another node anchor', async () => {

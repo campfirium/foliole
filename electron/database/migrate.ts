@@ -103,6 +103,8 @@ function initializeSchemaWorkspaceAndSearch(
   const initializedConnection = initializeDatabaseConnection(connection, {
     beforeVersionCommit: () => migrateDesktopHostProfile(connection, currentHostName)
   });
+  // Renderer drafts and their retry queue do not survive a process restart.
+  initializedConnection.sqlite.prepare("DELETE FROM node_version_local_holds WHERE hold_id LIKE 'desktop:%'").run();
   const assetsDir = resolveRuntimeDataPaths().assetsDir;
   ensureReadwiseSourceModeInitialized();
   migrateLegacyReadwiseDeviceConnection();

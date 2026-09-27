@@ -10,3 +10,15 @@ export async function loadWorkspaceNodeDocumentFromRuntime(nodeId: string): Prom
   }
   return runtimeInvoke(NATIVE_COMMANDS.loadNodeDocument, { nodeId });
 }
+
+export async function retainWorkspaceEditorBase(nodeId: string, versionId: string, holdId: string) {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('workspace_editor_base_runtime_unavailable');
+  await invoke(NATIVE_COMMANDS.retainNodeEditorBase, { holdId, nodeId, versionId });
+}
+
+export async function releaseWorkspaceEditorBase(nodeId: string, holdId: string) {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('workspace_editor_base_runtime_unavailable');
+  await invoke(NATIVE_COMMANDS.releaseNodeEditorBase, { holdId, nodeId });
+}

@@ -33,11 +33,16 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
   if (session && args.onSaveContent) session.save = args.onSaveContent;
 
   useEffect(() => session?.subscribe(render), [session]);
-  useEffect(() => { void session?.refresh(); }, [session, args.initialContent, args.initialVersionId]);
+  useEffect(() => {
+    void session?.start().then(() => session.refresh()).catch(() => undefined);
+  }, [session, args.initialContent, args.initialVersionId]);
   useEffect(() => () => {
     if (!session) return;
-    void session.flush().then(() => {
-      if (!session.dirty && !session.attached && drafts.get(session.nodeId) === session) drafts.delete(session.nodeId);
+    void session.flush().then(async () => {
+      if (!session.dirty && !session.attached && drafts.get(session.nodeId) === session) {
+        await session.dispose();
+        drafts.delete(session.nodeId);
+      }
     }).catch(() => undefined);
   }, [drafts, session]);
   useEffect(() => {
@@ -49,5 +54,6 @@ export function useCompanionTopicEditAutosave(args: UseCompanionTopicEditAutosav
   }, [args.canEdit, session]);
   const flushPendingSave = useCallback(async () => { await session?.flush(); }, [session]);
   return { error: session?.error ?? null, flushPendingSave, handleChange,
+    ready: session?.ready ?? false,
     value: session?.value ?? args.initialContent };
 }

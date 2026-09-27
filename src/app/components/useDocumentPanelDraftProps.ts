@@ -5,6 +5,7 @@ import type { EditorDraftCommitOptions } from '../hooks/useEditorDraftFlushCallb
 import { useEditorDraftSync } from '../hooks/useEditorDraftSync';
 
 import type { DocumentPanelSectionProps } from './documentPanelSectionTypes';
+import { useWorkspaceEditorBaseHold } from './useWorkspaceEditorBaseHold';
 
 export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
   const draftNodeId = useMemo(() => {
@@ -32,6 +33,11 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
     ...(props.onFinalizeNodeTitle ? { onFinalizeNode: props.onFinalizeNodeTitle } : {}),
     ...(props.onRegisterEditorDraftFlush ? { onRegisterFlush: props.onRegisterEditorDraftFlush } : {})
   });
+  const holdReady = useWorkspaceEditorBaseHold({
+    flushDraft: editorDraft.flushDraftSynchronously,
+    nodeId: draftNodeId,
+    versionId: draftNodeId ? props.nodesById[draftNodeId]?.currentVersionId : null
+  });
   const handleEditorUndo = useCallback(() => {
     return props.onEditorUndo?.() ?? false;
   }, [props.onEditorUndo]);
@@ -43,11 +49,12 @@ export function useDocumentPanelDraftProps(props: DocumentPanelSectionProps) {
       ...props,
       editorContent: editorDraft.editorContent,
       editorNodeId: draftNodeId,
+      isEditorReadOnly: props.isEditorReadOnly || !holdReady,
       onEditorChange: editorDraft.handleEditorChange,
       onEditorInput: editorDraft.handleEditorInput,
       onEditorUndo: handleEditorUndo,
       onEditorRedo: handleEditorRedo
     }),
-    [draftNodeId, editorDraft.editorContent, editorDraft.handleEditorChange, editorDraft.handleEditorInput, handleEditorRedo, handleEditorUndo, props]
+    [draftNodeId, editorDraft.editorContent, editorDraft.handleEditorChange, editorDraft.handleEditorInput, handleEditorRedo, handleEditorUndo, holdReady, props]
   );
 }

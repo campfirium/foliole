@@ -109,7 +109,7 @@ function useReadableArticleEditorState(props: {
       onSaveContent: saveContent
     })
   });
-  return { canEdit, editorState };
+  return { canEdit: canEdit && editorState.ready, editorState };
 }
 
 function ReadableArticleTextDocument(props: {

@@ -95,6 +95,14 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
     args: { nodeId: string };
     result: NativeWorkspaceNodeDocument | null;
   };
+  [NATIVE_COMMANDS.retainNodeEditorBase]: {
+    args: { holdId: string; nodeId: string; versionId: string };
+    result: { retained: true };
+  };
+  [NATIVE_COMMANDS.releaseNodeEditorBase]: {
+    args: { holdId: string; nodeId: string };
+    result: { released: true };
+  };
   [NATIVE_COMMANDS.loadNodeBacklinks]: {
     args: { node_id: string };
     result: NativeWorkspaceBacklink[];

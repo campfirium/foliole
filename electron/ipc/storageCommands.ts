@@ -28,6 +28,7 @@ import { toNativeReadwiseBooksInventory } from './readwiseBooksInventoryPayload.
 import { loadRemovedSources } from './removedSourcesPayload.js';
 import { handleStorageAttachmentCommand } from './storageAttachmentCommands.js';
 import { handleSqliteMaintenanceCommand } from './storageCommandSupport.js';
+import { handleEditorHoldCommand } from './storageEditorHoldCommands.js';
 import { handleLocalFileStorageCommand } from './storageLocalFileCommands.js';
 import { handleNodeMutationCommand } from './storageNodeMutationCommands.js';
 import { handleStoragePdfImageExcerptCommand } from './storagePdfImageExcerptCommand.js';
@@ -42,6 +43,10 @@ export async function handleStorageCommand(
   window: Parameters<typeof handleStorageAttachmentCommand>[2] = null,
   owner?: WebContents
 ): Promise<unknown> {
+  if (command === NATIVE_COMMANDS.retainNodeEditorBase ||
+      command === NATIVE_COMMANDS.releaseNodeEditorBase) {
+    return handleEditorHoldCommand(command, args);
+  }
   const syncMutationResult = handleSyncMutationCommand(command, args);
   if (syncMutationResult !== undefined) {
     return syncMutationResult;

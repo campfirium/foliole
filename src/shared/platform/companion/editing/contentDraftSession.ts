@@ -6,6 +6,7 @@ import type { CompanionContentEdit, CompanionContentSaveHandler, CompanionConten
 export class ContentDraftSession {
   value: string;
   error: string | null = null;
+  ready: boolean;
   private sequence = 0;
   private acknowledged = 0;
   private pending: (CompanionContentEdit & { sequence: number }) | null = null;
@@ -13,10 +14,13 @@ export class ContentDraftSession {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private refreshSequence = 0;
   private listeners = new Set<() => void>();
+  private holdId: string | null = null;
+  private starting: Promise<void> | null = null;
 
   constructor(readonly nodeId: string, private base: CompanionContentSource,
     public save: CompanionContentSaveHandler, private delay = 1200) {
     this.value = base.content;
+    this.ready = !save.retainHold;
   }
 
   get dirty() { return this.sequence > this.acknowledged; }
@@ -29,22 +33,61 @@ export class ContentDraftSession {
 
   private publish() { for (const listener of this.listeners) listener(); }
 
+  start() {
+    if (this.ready) return Promise.resolve();
+    this.starting ??= this.acquireInitialBase().finally(() => { this.starting = null; });
+    return this.starting;
+  }
+
+  private async acquireInitialBase() {
+    try {
+      const holdId = `companion:${createCompanionUuid()}`;
+      const source = await this.save.readSource(this.nodeId, holdId);
+      this.holdId = holdId;
+      this.base = source;
+      this.value = source.content;
+      this.error = null;
+      this.ready = true;
+      this.publish();
+    } catch (error) {
+      this.error = error instanceof Error ? error.message : 'Could not open this topic.';
+      this.publish();
+      throw error;
+    }
+  }
+
+  async dispose() {
+    if (this.dirty || this.attached || this.running || !this.holdId) return;
+    const holdId = this.holdId;
+    await this.save.releaseHold?.(this.nodeId, holdId);
+    if (this.holdId === holdId) this.holdId = null;
+  }
+
   async refresh() {
+    if (!this.ready) return;
     const request = ++this.refreshSequence;
     const sequence = this.sequence;
     if (this.dirty || this.running) return;
     try {
       const source = await this.save.readSource(this.nodeId);
       if (request !== this.refreshSequence || sequence !== this.sequence || this.dirty || this.running) return;
+      const nextHoldId = this.holdId && source.versionId !== this.base.versionId
+        ? await this.stageNextBase(source.versionId) : null;
+      if (request !== this.refreshSequence || sequence !== this.sequence || this.dirty || this.running) {
+        if (nextHoldId) await this.save.releaseHold?.(this.nodeId, nextHoldId);
+        return;
+      }
       this.base = source;
       this.value = source.content;
       this.publish();
+      await this.replaceHold(nextHoldId);
     } catch {
       // A failed refresh must not replace the last known content or an unsaved draft.
     }
   }
 
   change(value: string) {
+    if (!this.ready) return;
     if (value === this.value) return;
     this.value = value;
     this.sequence += 1;
@@ -59,6 +102,7 @@ export class ContentDraftSession {
   }
 
   async flush() {
+    if (!this.ready) await this.start();
     this.clearTimer();
     const target = this.sequence;
     while (this.acknowledged < target) {
@@ -71,6 +115,7 @@ export class ContentDraftSession {
   private async commit() {
     const edit = this.pending ?? {
       nodeId: this.nodeId, content: this.value, baseVersionId: this.base.versionId,
+      ...(this.holdId ? { holdId: this.holdId } : {}),
       versionId: createOpaqueVersionRef(createCompanionUuid()),
       updatedAt: new Date().toISOString(), sequence: this.sequence
     };
@@ -81,8 +126,29 @@ export class ContentDraftSession {
       this.pending = null;
       this.error = null;
       if (this.sequence === edit.sequence) {
-        this.base = { content: ack.content, versionId: ack.currentVersionId };
-        this.value = ack.content;
+        let nextHoldId: string | null = null;
+        try {
+          nextHoldId = this.holdId && ack.currentVersionId !== ack.submittedVersionId
+            ? await this.stageNextBase(ack.currentVersionId) : null;
+          if (this.sequence === edit.sequence) {
+            this.base = { content: ack.content, versionId: ack.currentVersionId };
+            this.value = ack.content;
+            await this.replaceHold(nextHoldId);
+          }
+          else if (nextHoldId) await this.save.releaseHold?.(this.nodeId, nextHoldId);
+        } catch {
+          // The committed input remains protected; a later refresh may adopt the merged head.
+        }
+      }
+      if (this.sequence === edit.sequence) {
+        if (!this.holdId || ack.currentVersionId === ack.submittedVersionId ||
+            this.holdId !== edit.holdId) {
+          this.base = { content: ack.content, versionId: ack.currentVersionId };
+          this.value = ack.content;
+        } else {
+          this.base = { content: edit.content, versionId: ack.submittedVersionId };
+          this.value = edit.content;
+        }
       } else {
         this.base = { content: edit.content, versionId: ack.submittedVersionId };
       }
@@ -92,5 +158,18 @@ export class ContentDraftSession {
       this.publish();
       throw error;
     }
+  }
+
+  private async stageNextBase(versionId: string) {
+    const holdId = `companion:${createCompanionUuid()}`;
+    await this.save.retainHold?.(this.nodeId, versionId, holdId);
+    return holdId;
+  }
+
+  private async replaceHold(nextHoldId: string | null) {
+    if (!nextHoldId) return;
+    const previous = this.holdId;
+    this.holdId = nextHoldId;
+    if (previous) await this.save.releaseHold?.(this.nodeId, previous);
   }
 }

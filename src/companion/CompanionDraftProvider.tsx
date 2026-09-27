@@ -30,7 +30,9 @@ export function CompanionDraftProvider({ children }: { children: ReactNode }) {
     const flush = () => {
       for (const session of drafts.values()) {
         void session.flush().then(() => {
-          if (!session.dirty && !session.attached) drafts.delete(session.nodeId);
+          if (!session.dirty && !session.attached) {
+            void session.dispose().then(() => drafts.delete(session.nodeId));
+          }
         }).catch(() => undefined);
       }
     };

@@ -149,6 +149,8 @@ export const NATIVE_COMMANDS = {
   windowToggleMaximize: 'window_toggle_maximize',
   loadWorkspaceListSnapshot: 'load_workspace_list_snapshot',
   loadNodeDocument: 'load_node_document',
+  retainNodeEditorBase: 'retain_node_editor_base',
+  releaseNodeEditorBase: 'release_node_editor_base',
   loadNodeBacklinks: 'load_node_backlinks',
   searchPdfDocument: 'search_pdf_document',
   searchWorkspace: 'search_workspace',

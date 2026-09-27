@@ -7,6 +7,7 @@ export interface CompanionContentSource {
 
 export interface CompanionContentEdit extends LocalContentEdit {
   content: string;
+  holdId?: string;
   nodeId: string;
   updatedAt: string;
 }
@@ -19,5 +20,7 @@ export interface CompanionContentAcknowledgement {
 
 export interface CompanionContentSaveHandler {
   (nodeId: string, content: string, edit?: CompanionContentEdit): Promise<CompanionContentAcknowledgement>;
-  readSource(nodeId: string): Promise<CompanionContentSource>;
+  readSource(nodeId: string, holdId?: string): Promise<CompanionContentSource>;
+  retainHold?(nodeId: string, versionId: string, holdId: string): Promise<void>;
+  releaseHold?(nodeId: string, holdId: string): Promise<void>;
 }

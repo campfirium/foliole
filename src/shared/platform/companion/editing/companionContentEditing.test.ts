@@ -12,7 +12,7 @@ import { createFakeCapacitorConnection, installCompanionNodeSchema } from '../..
 import { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
 
 import type { CompanionContentEdit } from './companionContentEditContract';
-import { readCompanionContentSource, saveCompanionContentEdit } from './companionContentEditing';
+import { readCompanionContentSource, releaseCompanionContentBase, saveCompanionContentEdit } from './companionContentEditing';
 
 const state = vi.hoisted(() => ({ owner: null as CapacitorCompanionDatabaseOwner | null, platform: 'ios' }));
 vi.mock('@capacitor/core', () => ({ Capacitor: {
@@ -87,6 +87,61 @@ it('replays an uncertain acknowledgement without creating another input version'
   expect(replay).toEqual(first);
   expect(database.prepare('SELECT COUNT(*) AS n FROM node_sync_versions WHERE object_id = ?').get('topic')).toEqual({ n: 2 });
   await expect(saveCompanionContentEdit({ ...request, content: 'Different input' })).rejects.toThrow('content_edit_version_mismatch');
+});
+
+it('retains the opened base through remote advancement and atomically advances it on save', async () => {
+  const source = await readCompanionContentSource('topic', 'editor-session');
+  expect(source.versionId).toBe('base');
+  await insert(node({ content: 'Remote body', currentVersionId: 'base' }), 'remote');
+  expect(database.prepare('SELECT version_id FROM node_version_local_holds WHERE hold_id = ?')
+    .get('editor-session')).toEqual({ version_id: 'base' });
+
+  const result = await saveCompanionContentEdit({ ...edit('Local body'), holdId: 'editor-session' });
+  expect(database.prepare('SELECT version_id FROM node_version_local_holds WHERE hold_id = ?')
+    .get('editor-session')).toEqual({ version_id: result.submittedVersionId });
+  await releaseCompanionContentBase('topic', 'editor-session');
+  expect(database.prepare('SELECT version_id FROM node_version_local_holds WHERE hold_id = ?')
+    .get('editor-session')).toBeUndefined();
+});
+
+it('reclaims middle bodies during continued editing against an offline device base', async () => {
+  database.exec(`
+    INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
+      VALUES ('group', 'Group', 'key', 'now', 'now');
+    INSERT INTO sync_group_local_state VALUES (1, 'group', 'mobile', 'active', 'now');
+    INSERT INTO sync_group_devices
+      (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
+       platform, state, joined_at, updated_at)
+      VALUES ('group', 'mobile', 'mobile-anchor', '/mobile', 'Mobile', 'ios', 'active', 'now', 'now'),
+        ('group', 'offline', 'offline-anchor', '/offline', 'Offline', 'mac', 'active', 'now', 'now');
+    INSERT INTO node_version_device_revisions VALUES
+      ('group', 'offline', 'epoch', 1, 'pack-a', NULL, 'now');
+    INSERT INTO node_version_device_bases VALUES
+      ('group', 'offline', 'topic', 'base', 'epoch', 1, 'pack-a', 'now');
+  `);
+  await readCompanionContentSource('topic', 'editor-session');
+  let baseVersionId = 'base';
+  for (const [index, versionId] of ['B', 'C', 'D', 'E'].entries()) {
+    const ack = await saveCompanionContentEdit({
+      ...edit(`${baseline}${versionId}`, versionId, baseVersionId), holdId: 'editor-session',
+      updatedAt: `2026-09-20T01:00:0${index}.000Z`
+    });
+    baseVersionId = ack.submittedVersionId;
+  }
+  const rows = database.prepare('SELECT version_id, body_text FROM node_sync_versions WHERE object_id = ? ORDER BY version_id')
+    .all('topic') as { version_id: string; body_text: string | null }[];
+  expect(rows.filter((row) => row.body_text !== null).map((row) => row.version_id))
+    .toEqual(['E', 'base']);
+});
+
+it('drops an orphaned companion editor hold when its database owner reopens', async () => {
+  await readCompanionContentSource('topic', 'companion:abandoned');
+  expect(database.prepare('SELECT 1 FROM node_version_local_holds WHERE hold_id = ?')
+    .get('companion:abandoned')).toBeDefined();
+  await state.owner!.close();
+  await state.owner!.open({ expectedHostName: 'mobile', now });
+  expect(database.prepare('SELECT 1 FROM node_version_local_holds WHERE hold_id = ?')
+    .get('companion:abandoned')).toBeUndefined();
 });
 
 it('retains overlapping input as current content or an existing text alternative', async () => {

@@ -1,6 +1,7 @@
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import { parseStoredImageRegions } from '../../lib/core/database/imageRegionCodec.js';
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
@@ -30,6 +31,9 @@ export async function handleLocalContentEditCommand(args: Record<string, unknown
     updatedAt: parent.updatedAt
   }, () => {
     upsertVersionedNodeContentWithAnchors(parent, affectedAnchors, { versionId });
+  });
+  await collectNodeVersionPayloads(port, parent.nodeId).catch((error: unknown) => {
+    console.warn('[node-version-retention] local collection failed', error);
   });
   const children = await port.query<{ id: string; anchor_link: string | null; image_regions: string | null; updated_at: string }>(
     'SELECT id, anchor_link, image_regions, updated_at FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [parent.nodeId]

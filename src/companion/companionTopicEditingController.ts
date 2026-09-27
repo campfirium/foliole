@@ -1,6 +1,6 @@
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs';
 import type { CompanionContentEdit, CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
-import { readCompanionContentSource, saveCompanionContentEdit } from '../shared/platform/companion/editing/companionContentEditing';
+import { readCompanionContentSource, releaseCompanionContentBase, retainCompanionContentBase, saveCompanionContentEdit } from '../shared/platform/companion/editing/companionContentEditing';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
 import { isAvailableNativeCompanionRuntime } from '../shared/platform/companionWorkspaceRuntimeRepository';
 
@@ -11,8 +11,8 @@ type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
 export function createCompanionTopicContentSaveHandler(workspaceSync: CompanionWorkspaceSyncApi): CompanionContentSaveHandler {
   let previewSnapshot = workspaceSync.state.workspace_snapshot;
-  const readSource: CompanionContentSaveHandler['readSource'] = async (nodeId) => {
-    if (isAvailableNativeCompanionRuntime()) return readCompanionContentSource(nodeId);
+  const readSource: CompanionContentSaveHandler['readSource'] = async (nodeId, holdId) => {
+    if (isAvailableNativeCompanionRuntime()) return readCompanionContentSource(nodeId, holdId);
     const node = previewSnapshot?.nodesById[nodeId];
     if (!node?.currentVersionId) throw new Error('Topic edit requires a synced base version.');
     return { content: node.content, versionId: node.currentVersionId };
@@ -34,6 +34,14 @@ export function createCompanionTopicContentSaveHandler(workspaceSync: CompanionW
     await workspaceSync.replaceSnapshot(result.snapshot, result.nodeId);
     const currentVersionId = result.snapshot.nodesById[nodeId]!.currentVersionId!;
     return { content, currentVersionId, submittedVersionId: currentVersionId };
-  }, { readSource });
+  }, {
+    readSource,
+    retainHold: async (nodeId: string, versionId: string, holdId: string) => {
+      if (isAvailableNativeCompanionRuntime()) await retainCompanionContentBase(nodeId, versionId, holdId);
+    },
+    releaseHold: async (nodeId: string, holdId: string) => {
+      if (isAvailableNativeCompanionRuntime()) await releaseCompanionContentBase(nodeId, holdId);
+    }
+  });
   return save;
 }
