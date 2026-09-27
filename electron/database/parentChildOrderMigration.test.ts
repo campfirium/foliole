@@ -56,7 +56,7 @@ function prepareOldOrder(ids: string[]) {
   return db;
 }
 
-it('extracts each direct parent sequence and leaves old versions unchanged', () => {
+it('keeps old versions and appends a legacy trash node only when restored', () => {
   createNode('node-a');
   createNode('node-b');
   createNode('old-trash');
@@ -73,12 +73,25 @@ it('extracts each direct parent sequence and leaves old versions unchanged', () 
   expect(JSON.parse(rows.child_ids_json)).toEqual([
     'special-inbox', 'special-virtual-root', 'node-b', 'node-a'
   ]);
+  const beforeRestoreState = db.prepare(
+    "SELECT content_hash FROM sync_object_state WHERE object_type = 'parent_child_order' AND object_id = ?"
+  ).get(ROOT_CHILD_ORDER_ID) as { content_hash: string };
   expect(db.prepare("SELECT snapshot_json FROM node_sync_versions WHERE version_id = 'old-version'").get())
     .toEqual({ snapshot_json: '{"position":7}' });
-  expect(() => restoreNodes(openDatabaseConnection().driver, { nodeIds: ['old-trash'] }))
-    .toThrow('unresolved_deleted_node_order:old-trash');
+  expect(restoreNodes(openDatabaseConnection().driver, { nodeIds: ['old-trash'] }).restoredNodeIds)
+    .toEqual(['old-trash']);
+  const restoredOrder = db.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
+    .get(ROOT_CHILD_ORDER_ID) as { child_ids_json: string };
+  expect(JSON.parse(restoredOrder.child_ids_json)).toEqual([
+    'special-inbox', 'special-virtual-root', 'node-b', 'node-a', 'old-trash'
+  ]);
   expect(db.prepare("SELECT deleted_at FROM nodes WHERE id = 'old-trash'").get())
-    .toEqual({ deleted_at: '2026-05-02T00:00:00.000Z' });
+    .toEqual({ deleted_at: null });
+  const restoredState = db.prepare(
+    "SELECT content_hash, sync_dirty FROM sync_object_state WHERE object_type = 'parent_child_order' AND object_id = ?"
+  ).get(ROOT_CHILD_ORDER_ID) as { content_hash: string; sync_dirty: number };
+  expect(restoredState.content_hash).not.toBe(beforeRestoreState.content_hash);
+  expect(restoredState.sync_dirty).toBe(1);
   expect(db.pragma('user_version', { simple: true })).toBe(105);
 });
 

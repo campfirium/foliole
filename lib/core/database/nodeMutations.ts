@@ -25,7 +25,6 @@ import { createUpsertNodeReviewStatement } from './nodeReviewMutationStatements.
 import { writeNodeReviewSnapshotWithSync } from './nodeReviewSyncState.js';
 import { prepareNodeSearchInvalidationForUpsert } from './nodeSearchInvalidationForMutation.js';
 import type { NodeSearchInvalidationOptions } from './nodeSearchInvalidationForMutation.js';
-import { parentOrderId, readParentChildOrders } from './parentChildOrder.js';
 import {
   enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds,
   enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds
@@ -213,14 +212,8 @@ export function restoreNodes(driver: DatabaseDriver, input: RestoreNodesInput): 
 
   return driver.transaction(() => {
     const result = resolveRestoreNodesResult(driver, input.nodeIds);
-    const parentOrders = readParentChildOrders(driver);
     for (const nodeId of result.restoredNodeIds) {
-      const row = driver.queryOne<{ parent_id: string | null }>(
-        'SELECT parent_id FROM nodes WHERE id = ?', [nodeId]
-      );
-      if (row && !parentOrders.get(parentOrderId(row.parent_id))?.includes(nodeId)) {
-        throw new Error(`unresolved_deleted_node_order:${nodeId}`);
-      }
+      ensureNodeParentMembership(driver, nodeId);
     }
     for (const nodeId of result.restoredNodeIds) {
       clearDeletedAtStatement.run([restoredAt, nodeId]);
