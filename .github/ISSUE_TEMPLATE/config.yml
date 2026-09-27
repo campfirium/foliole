@@ -12,7 +12,3 @@ contact_links:
   - name: General discussion
     url: https://github.com/campfirium/foliole/discussions/categories/general
     about: Discuss incremental reading, local-first knowledge work, and Foliole workflows.
-
-  - name: Show and tell
-    url: https://github.com/campfirium/foliole/discussions/categories/show-and-tell
-    about: Share reading systems, review setups, screenshots, and workflow examples.
