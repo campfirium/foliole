@@ -22,7 +22,7 @@ function searchingSnapshot(event: CompanionNativeDiscoveryEvent): SyncGroupDisco
     && evaluateSyncProtocolVersionHint(parseSyncProtocolTxt(candidate.protocol_txt)).status === 'incompatible');
   const status = incompatible ? 'incompatible' : 'waiting_anchor';
   return { candidates: [], change: event.change,
-    error_code: incompatible ? 'incompatible' : null, status };
+    error_code: incompatible ? 'protocol_incompatible' : null, status };
 }
 
 function uniqueSyncGroups<T extends {
@@ -36,6 +36,11 @@ function uniqueSyncGroups<T extends {
       && isDesktopProvider(candidate.discovery.provider_platform))) groups.set(identity, candidate);
   }
   return [...groups.values()];
+}
+
+function discoveryErrorCode(status: SyncGroupDiscoverySnapshot['status']) {
+  return status === 'incompatible' ? 'protocol_incompatible'
+    : status === 'results' ? null : status;
 }
 
 export async function startCompanionSyncGroupDiscoverySession(
@@ -78,7 +83,7 @@ export async function startCompanionSyncGroupDiscoverySession(
         provider_platform: candidate.discovery.provider_platform
       })),
       change: status === 'results' ? event.change : 'failed',
-      error_code: status === 'results' ? null : status,
+      error_code: discoveryErrorCode(status),
       status
     });
   };

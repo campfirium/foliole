@@ -148,7 +148,8 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
       if (snapshot.status === 'permission_required' || snapshot.status === 'unavailable'
         || snapshot.status === 'incompatible' || snapshot.status === 'connection_failed'
         || snapshot.status === 'waiting_anchor') {
-        args.onError(`discovery_${snapshot.status}`); setStatus('idle');
+        args.onError(snapshot.error_code === 'protocol_incompatible'
+          ? 'protocol_incompatible' : `discovery_${snapshot.status}`); setStatus('idle');
       }
       const pending = pendingRequestRef.current;
       if (pending && snapshot.candidates.some((candidate) => matchesPending(candidate, pending))) {

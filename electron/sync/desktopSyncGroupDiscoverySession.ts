@@ -85,7 +85,8 @@ export class DesktopSyncGroupDiscoverySession {
       if (this.stopped || sessionId !== this.sessionId || this.services.get(service.fqdn) !== service) return;
       if (!result || result.status !== 'results') {
         const status = result?.status ?? 'connection_failed';
-        this.emit({ ...this.snapshot('failed'), error_code: status, status });
+        const errorCode = result && 'error_code' in result ? result.error_code : status;
+        this.emit({ ...this.snapshot('failed'), error_code: errorCode, status });
         return;
       }
       this.candidates.set(service.fqdn, result.candidate);
@@ -154,7 +155,7 @@ async function probeEndpoint(fetchDiscovery: typeof fetch, service: DesktopDnsSd
       return { status: 'incompatible' as const };
     }
     if (evaluateSyncProtocolCompatibility(payload.protocol).status !== 'compatible') {
-      return { status: 'incompatible' as const };
+      return { error_code: 'protocol_incompatible', status: 'incompatible' as const };
     }
     const providerPlatform = text(payload.provider_platform) ?? desktopKind(text(payload.desktop_platform) ?? '');
     if (!isMobile(providerPlatform)) {

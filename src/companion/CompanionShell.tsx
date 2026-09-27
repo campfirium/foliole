@@ -10,6 +10,7 @@ import { CompanionNodeLinkRuntime } from './CompanionNodeLinkRuntime';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
 import { CompanionShellView } from './CompanionShellView';
 import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
+import { CompanionSyncProtocolNotice } from './CompanionSyncProtocolNotice';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
@@ -215,7 +216,9 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
       <CompanionSyncGroupRuntime bootstrapState={props.bootstrapState} workspaceSync={model.workspaceSync}>
         <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
           <CompanionNodeLinkRuntime model={model}>
-            <CompanionShellView model={model} />
+            <CompanionSyncProtocolNotice error={model.workspaceSync.error}>
+              <CompanionShellView model={model} />
+            </CompanionSyncProtocolNotice>
           </CompanionNodeLinkRuntime>
         </CompanionHandoffReminderRuntime>
       </CompanionSyncGroupRuntime>

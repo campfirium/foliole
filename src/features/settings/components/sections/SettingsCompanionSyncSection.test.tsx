@@ -130,6 +130,18 @@ it('keeps creation available while discovery is searching', () => {
   expect(screen.getByText('Searching for Sync Groups…')).toBeVisible();
 });
 
+it('opens a separate notice for a rejected sync protocol', () => {
+  renderSyncSection(true, {
+    candidates: [], change: 'failed', error_code: 'protocol_incompatible', status: 'incompatible'
+  });
+
+  const dialog = screen.getByRole('dialog', { name: 'Sync could not continue' });
+  expect(dialog).toHaveTextContent('No data was synced.');
+  expect(dialog).toHaveTextContent('Update Foliole on both devices');
+  fireEvent.click(screen.getByRole('button', { name: 'OK' }));
+  expect(screen.queryByRole('dialog', { name: 'Sync could not continue' })).not.toBeInTheDocument();
+});
+
 it('does not describe anchor discovery while Sync is off', () => {
   const localDevice: SyncGroupDevicePayload = {
     canonical_library_path: '/library/local', contract_version: 1,

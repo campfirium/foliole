@@ -12,6 +12,8 @@ import {
   settingsSwitchClassName,
   settingsSwitchKnobClassName
 } from '../../../../shared/ui';
+import { SyncProtocolIncompatibleDialog } from '../../../../shared/ui/SyncProtocolIncompatibleDialog';
+import { isSyncProtocolIncompatibleError, useSyncProtocolIncompatibleNotice } from '../../../../shared/ui/useSyncProtocolIncompatibleNotice';
 
 import { SettingsSyncGroupRows } from './SettingsSyncGroupRows';
 
@@ -83,6 +85,9 @@ function useSyncGroupConfirmationActions(
 export function SettingsCompanionSyncSection() {
   const t = useTranslation();
   const state = useDesktopSyncGroup();
+  const protocolNotice = useSyncProtocolIncompatibleNotice(
+    state.discovery.error_code === 'protocol_incompatible' || isSyncProtocolIncompatibleError(state.error)
+  );
   const syncError = state.overview.server_status.last_error
     ? t('settings.companionSync.error.open', { error: state.overview.server_status.last_error })
     : undefined;
@@ -91,6 +96,7 @@ export function SettingsCompanionSyncSection() {
   const { confirmLeave, confirmRemove } = useSyncGroupConfirmationActions(state, groupName);
   return (
     <SettingsSection ariaLabel={t('settings.companionSync.sectionAria')}>
+      <SyncProtocolIncompatibleDialog open={protocolNotice.open} onClose={protocolNotice.close} />
       {syncError ? (
         <SettingsErrorState description={syncError} title={t('settings.companionSync.error.desktopUnavailable')} />
       ) : null}
@@ -101,7 +107,7 @@ export function SettingsCompanionSyncSection() {
       />
       <SyncNowRow
         disabled={!group || !state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
-        onSync={() => void state.syncNow()}
+        onSync={() => { protocolNotice.retry(); void state.syncNow(); }}
       />
       <SettingsSyncGroupRows
         candidates={state.overview.join_candidates ?? []}
@@ -115,7 +121,7 @@ export function SettingsCompanionSyncSection() {
         onRemove={(device) => void confirmRemove(device)}
         onTogglePause={() => void (state.overview.sync_paused ? state.resumeSync() : state.pauseSync())}
         onCreate={() => void state.createSyncGroup()}
-        onDiscover={() => void state.discoverSyncGroups()}
+        onDiscover={() => { protocolNotice.retry(); void state.discoverSyncGroups(); }}
         onOpenSettings={() => void state.openNetworkSettings()}
         onRecoverDiscovery={() => void state.recoverDiscovery()}
         onRequestJoin={(endpointUrl) => void state.requestSyncGroupJoin(endpointUrl)}

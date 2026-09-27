@@ -12,6 +12,7 @@ import { CompanionSyncDiscoveryDialog } from './CompanionSyncDiscoveryDialog';
 import type { CompanionSyncGroupDiscovery, PendingSyncGroupJoinRequest } from './companionSyncGroupJoinModel';
 import { CompanionSyncNowButton } from './CompanionSyncNowButton';
 import { CompanionSyncParticipationControls } from './CompanionSyncParticipationControls';
+import { useCompanionSyncProtocolNoticeRetry } from './CompanionSyncProtocolNotice';
 import { AwaitingApprovalState, EmptyDiscoveryState } from './CompanionSyncSetupStates';
 import { CompanionSyncStatusDetails } from './CompanionSyncStatusDetails';
 import type { CompanionSyncGroupJoinStatus } from './useCompanionSyncGroupJoin';
@@ -98,6 +99,7 @@ function ConnectedContent(props: CompanionSyncPanelProps & {
 
 export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
   const t = useTranslation();
+  const retryProtocolNotice = useCompanionSyncProtocolNoticeRetry();
   const endpointUrl = props.joinRequest?.endpointUrl ?? props.discoveries[0]?.endpointUrl
     ?? props.endpointUrl ?? EMULATOR_DEFAULT_ENDPOINT;
   const busy = props.joinStatus === 'requesting';
@@ -110,6 +112,7 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
         {!props.syncGroup && isNativeCompanionSyncParticipationRuntime()
           ? <CompanionSyncParticipationControls /> : null}
         {props.syncGroup ? <ConnectedContent {...props} endpointUrl={endpointUrl}
+          onPull={(url) => { retryProtocolNotice(); return props.onPull(url); }}
           manualSyncFailureDetail={formatManualSyncFailure(props.error, t)} />
           : props.joinRequest
             ? <AwaitingApprovalState expiresAt={props.joinRequest.expiresAt} onCancel={props.onCancelJoin} />
@@ -122,8 +125,11 @@ export function CompanionSyncPanel(props: CompanionSyncPanelProps) {
         ) : null}
         <CompanionSyncDiscoveryDialog groups={props.syncGroup || props.joinRequest ? [] : props.discoveries}
           disabled={busy} isConnecting={busy} isSearching={!props.syncGroup && !props.joinRequest && searching}
-          onJoin={(url) => void props.onRequestJoin(url).catch(() => undefined)}
-          onRefresh={() => void props.onDiscover()} />
+          onJoin={(url) => {
+            retryProtocolNotice();
+            void props.onRequestJoin(url).catch(() => undefined);
+          }}
+          onRefresh={() => { retryProtocolNotice(); void props.onDiscover(); }} />
       </div>
     </section>
   );

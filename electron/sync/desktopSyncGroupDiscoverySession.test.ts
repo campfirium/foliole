@@ -55,8 +55,8 @@ it('publishes found, changed, and lost until explicitly stopped', async () => {
   expect(runtime.stop).toHaveBeenCalledOnce();
 });
 
-it('keeps incompatible and connection failures distinct from empty results', async () => {
-  const snapshots: Array<{ status: string }> = [];
+it('identifies a protocol rejection during discovery', async () => {
+  const snapshots: SyncGroupDiscoverySnapshot[] = [];
   const incompatible = new DesktopSyncGroupDiscoverySession((snapshot: SyncGroupDiscoverySnapshot) => snapshots.push(snapshot),
     vi.fn(async () => new Response(JSON.stringify({
       group_id: 'group-1', group_tag: 'tag-1', protocol: null
@@ -67,6 +67,7 @@ it('keeps incompatible and connection failures distinct from empty results', asy
     name: 'Old', port: 1, type: '_foliole-sync._tcp',
     txt: { group_id: 'group-1', group_tag: 'tag-1', runtime_instance_id: 'remote' } } });
   await vi.waitFor(() => expect(snapshots.at(-1)?.status).toBe('incompatible'));
+  expect(snapshots.at(-1)?.error_code).toBe('protocol_incompatible');
 
   incompatible.stop();
   expect(snapshots.some(({ status }) => status === 'searching')).toBe(true);

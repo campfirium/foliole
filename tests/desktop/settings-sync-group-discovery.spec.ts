@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-import type { ElectronApplication } from '@playwright/test';
+import type { ElectronApplication, Page, TestInfo } from '@playwright/test';
 
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract';
 
@@ -11,10 +11,28 @@ import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 const EVIDENCE_DIR = path.join(process.cwd(), '.tmp/artifacts/desktop-acceptance');
 const SCREENSHOT_PATH = path.join(EVIDENCE_DIR, 'settings-sync-group-discovery.png');
 const FIND_SCREENSHOT_PATH = path.join(EVIDENCE_DIR, 'settings-sync-group-find.png');
+const INCOMPATIBLE_SCREENSHOT_PATH = path.join(EVIDENCE_DIR, 'settings-sync-protocol-incompatible.png');
 
 async function sendDiscovery(electronApp: ElectronApplication, snapshot: SyncGroupDiscoverySnapshot) {
   await electronApp.evaluate(({ BrowserWindow }, payload) => BrowserWindow.getAllWindows()
     .find((window) => !window.isDestroyed())?.webContents.send('foliole:sync-group-discovery-changed', payload), snapshot);
+}
+
+async function expectProtocolNotice(electronApp: ElectronApplication, page: Page, testInfo: TestInfo) {
+  const protocolFailure: SyncGroupDiscoverySnapshot = {
+    candidates: [], change: 'failed', error_code: 'protocol_incompatible', status: 'incompatible'
+  };
+  await sendDiscovery(electronApp, protocolFailure);
+  const dialog = page.getByRole('dialog', { name: /^(Sync could not continue|无法继续同步)$/ });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(/(No data was synced|本次未同步)/);
+  const screenshot = await page.screenshot({ path: INCOMPATIBLE_SCREENSHOT_PATH });
+  await testInfo.attach('settings-sync-protocol-incompatible', {
+    body: screenshot, contentType: 'image/png'
+  });
+  await dialog.getByRole('button', { name: /^(OK|知道了)$/ }).click();
+  await sendDiscovery(electronApp, protocolFailure);
+  await expect(dialog).toBeHidden();
 }
 
 test('keeps Find Sync Group explainable until the settings surface closes', async ({
@@ -74,4 +92,13 @@ test('keeps Find Sync Group explainable until the settings surface closes', asyn
   await expect.poll(() => desktopWindow.evaluate(() => (
     globalThis as typeof globalThis & { __syncGroupDiscoveryStatuses?: string[] }
   ).__syncGroupDiscoveryStatuses?.at(-1))).toBe('stopped');
+});
+
+test('shows and deduplicates a protocol rejection dialog', async ({
+  desktopSession, desktopWindow
+}, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  await openSettingsCategory(desktopWindow, 'Sync');
+  await mkdir(EVIDENCE_DIR, { recursive: true });
+  await expectProtocolNotice(desktopSession.electronApp, desktopWindow, testInfo);
 });
