@@ -163,7 +163,7 @@ export default {
       minHeight: { 'dialog-notice-body': '7.5rem' },
       maxHeight: { 'floating-workspace': 'calc(100dvh - 2rem)' },
       width: {
-        'dialog-notice': 'min(26.25rem, calc(100vw - 2rem))',
+        'dialog-notice': 'min(30rem, calc(100vw - 2rem))',
         'floating-workspace': '65rem'
       },
       maxWidth: { 'floating-workspace': 'calc(100vw - 2rem)' },

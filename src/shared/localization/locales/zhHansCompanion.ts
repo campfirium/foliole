@@ -170,7 +170,7 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.sync.discovery.connectionFailed': '已找到同步组，但 Foliole 无法连接。',
   'companion.sync.discovery.error.incompatible': '请更新两台设备上的 Foliole，然后重新申请加入。',
   'companion.sync.protocolMismatch.title': '无法同步',
-  'companion.sync.protocolMismatch.description': '同步设备的数据库版本不一致。\n请先更新应用。',
+  'companion.sync.protocolMismatch.description': '同步设备的数据库版本不一致。请先更新应用。',
   'companion.sync.discovery.desktopFallback': '桌面端',
   'companion.sync.discovery.error.discoveryFailed': '无法查找同步组。',
   'companion.sync.discovery.error.joinExpired': '加入请求已过期。请重新申请加入。',
