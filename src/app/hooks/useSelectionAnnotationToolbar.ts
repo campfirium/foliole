@@ -66,9 +66,10 @@ interface SelectionAnnotationToolbarArgs {
   trashedNodeIds: string[];
 }
 
-function createAnnotationToolbarMouseDownHandler(args: SelectionAnnotationToolbarArgs) {
-  return (event: MouseEvent) => {
-    if (isAnnotationToolbarTarget(event.target) || isHighlightRangeHandleTarget(event.target)) {
+function createAnnotationToolbarMouseDownHandler(args: SelectionAnnotationToolbarArgs, startedInToolbar: { current: boolean }) {
+  return (event: MouseEvent | PointerEvent) => {
+    startedInToolbar.current = isAnnotationToolbarTarget(event.target);
+    if (startedInToolbar.current || isHighlightRangeHandleTarget(event.target)) {
       return;
     }
     clearActiveHighlightElements();
@@ -115,8 +116,11 @@ function hasPdfTextSelection(target: EventTarget | null) {
     Boolean(selection && !selection.isCollapsed && selection.rangeCount > 0);
 }
 
-function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarArgs) {
+function createAnnotationToolbarMouseUpHandler(args: SelectionAnnotationToolbarArgs, startedInToolbar: { current: boolean }) {
   return (event: MouseEvent) => {
+    const cameFromToolbar = startedInToolbar.current;
+    startedInToolbar.current = false;
+    if (cameFromToolbar) return;
     if (!args.selectionToolbarEnabled || event.button !== 0 || args.isTrashViewOpen || !args.activeNodeId) {
       return;
     }
@@ -187,17 +191,20 @@ export function useSelectionAnnotationToolbar(args: SelectionAnnotationToolbarAr
   }, [args.selectionToolbarEnabled, args.setContextMenu]);
 
   useEffect(() => {
-    const handleMouseDown = createAnnotationToolbarMouseDownHandler(args);
-    const handleMouseUp = createAnnotationToolbarMouseUpHandler(args);
+    const startedInToolbar = { current: false };
+    const handleMouseDown = createAnnotationToolbarMouseDownHandler(args, startedInToolbar);
+    const handleMouseUp = createAnnotationToolbarMouseUpHandler(args, startedInToolbar);
     const handleKeyDown = createPdfHighlightKeyDownHandler(args);
     const handleDeletion = createSelectionToolbarDeletionHandler(args);
     document.addEventListener('keydown', handleDeletion, true);
     document.addEventListener('keydown', handleKeyDown, true);
     document.addEventListener('mousedown', handleMouseDown, true);
+    document.addEventListener('pointerdown', handleMouseDown, true);
     document.addEventListener('mouseup', handleMouseUp, true);
     return () => {
       document.removeEventListener('keydown', handleDeletion, true);
       document.removeEventListener('mousedown', handleMouseDown, true);
+      document.removeEventListener('pointerdown', handleMouseDown, true);
       document.removeEventListener('mouseup', handleMouseUp, true);
       document.removeEventListener('keydown', handleKeyDown, true);
     };
