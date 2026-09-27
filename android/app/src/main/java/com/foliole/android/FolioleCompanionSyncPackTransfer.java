@@ -18,8 +18,14 @@ final class FolioleCompanionSyncPackTransfer {
         String expectedPeerId,
         String expectedSourcePeerId
     ) throws Exception {
-        byte[] body = FolioleCompanionDesktopHttpClient.requestBytes(context, url, headers);
-        return storeDownloadedPack(context, body, expectedPeerId, expectedSourcePeerId);
+        File directory = ensureCacheDirectory(context);
+        File pack = File.createTempFile("sync-pack-download-", ".tmp", directory);
+        try {
+            FolioleCompanionDesktopHttpClient.downloadSyncPackToFile(context, url, headers, pack);
+            return storePackFile(context, pack, expectedPeerId, expectedSourcePeerId);
+        } finally {
+            if (!pack.delete()) pack.deleteOnExit();
+        }
     }
 
     static File storeDownloadedPack(
@@ -28,23 +34,25 @@ final class FolioleCompanionSyncPackTransfer {
         String expectedPeerId,
         String expectedSourcePeerId
     ) throws Exception {
-        FolioleCompanionSyncPackContract contract = FolioleCompanionSyncPackContract.load(context);
-        FolioleCompanionSyncPackEnvelopeValidator.PreparedEnvelope envelope =
-            FolioleCompanionSyncPackEnvelopeValidator.validate(
-                body,
-                contract,
-                expectedPeerId,
-                expectedSourcePeerId
-            );
-        File directory = cacheDirectory(context);
-        if (!directory.exists() && !directory.mkdirs()) {
-            throw new IllegalStateException("Failed to create sync pack cache.");
+        File pack = File.createTempFile("sync-pack-fixture-", ".tmp", ensureCacheDirectory(context));
+        try {
+            try (FileOutputStream output = new FileOutputStream(pack)) { output.write(body); }
+            return storePackFile(context, pack, expectedPeerId, expectedSourcePeerId);
+        } finally {
+            if (!pack.delete()) pack.deleteOnExit();
         }
+    }
+
+    private static File storePackFile(
+        Context context, File pack, String expectedPeerId, String expectedSourcePeerId
+    ) throws Exception {
+        File directory = ensureCacheDirectory(context);
         File file = new File(directory, UUID.randomUUID() + ".db");
         try {
-            try (FileOutputStream outputStream = new FileOutputStream(file)) {
-                outputStream.write(envelope.databaseBytes);
-            }
+            FolioleCompanionSyncPackEnvelopeValidator.PreparedEnvelope envelope =
+                FolioleCompanionSyncPackFileValidator.validate(
+                    pack, file, FolioleCompanionSyncPackContract.load(context),
+                    expectedPeerId, expectedSourcePeerId);
             FolioleCompanionSyncPackDatabaseValidator.validate(file, envelope);
             return file;
         } catch (Exception exception) {
@@ -65,6 +73,14 @@ final class FolioleCompanionSyncPackTransfer {
 
     private static File cacheDirectory(Context context) {
         return cacheDirectory(context.getCacheDir());
+    }
+
+    private static File ensureCacheDirectory(Context context) {
+        File directory = cacheDirectory(context);
+        if (!directory.exists() && !directory.mkdirs()) {
+            throw new IllegalStateException("Failed to create sync pack cache.");
+        }
+        return directory;
     }
 
     private static File cacheDirectory(File cacheRoot) {

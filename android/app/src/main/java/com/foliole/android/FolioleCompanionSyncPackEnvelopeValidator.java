@@ -77,7 +77,7 @@ final class FolioleCompanionSyncPackEnvelopeValidator {
         return entries;
     }
 
-    private static Map<String, Integer> validateManifest(
+    static Map<String, Integer> validateManifest(
         JSONObject manifest,
         FolioleCompanionSyncPackContract contract,
         String expectedPeerId,

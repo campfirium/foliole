@@ -7,6 +7,8 @@ import org.json.JSONObject;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.io.File;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -125,6 +127,33 @@ final class FolioleCompanionWorkgroupHttp {
         );
         consumeResponseNonce(context, envelope);
         return plaintext;
+    }
+
+    static void decryptResponseToFile(
+        Context context, HttpURLConnection connection, String method, String path,
+        InputStream body, File output
+    ) throws Exception {
+        if (!ENVELOPE_CONTENT_TYPE.equals(connection.getContentType())) {
+            throw new SecurityException("workgroup_aead_response_required");
+        }
+        String groupId = trim(connection.getRequestProperty("X-Sync-Group-Id"));
+        if (groupId == null) throw new SecurityException("sync_group_id_missing");
+        String groupKey = FolioleCompanionCurrentGroupCredential.load(groupId).workgroupKey;
+        String contentType = trim(connection.getHeaderField("X-Foliole-Original-Content-Type"));
+        if (contentType == null) contentType = "application/octet-stream";
+        File encoded = File.createTempFile("workgroup-encoded-", ".tmp", context.getCacheDir());
+        File decoded = File.createTempFile("workgroup-decoded-", ".tmp", context.getCacheDir());
+        try {
+            FolioleCompanionWorkgroupEnvelopeStream.Header header =
+                FolioleCompanionWorkgroupEnvelopeStream.extract(body, encoded);
+            FolioleCompanionWorkgroupFileDecrypt.decrypt(
+                encoded, decoded, output, groupKey, method, path, contentType, header);
+            consumeResponseNonce(context, new JSONObject()
+                .put("timestamp_ms", header.timestamp).put("nonce", header.nonce));
+        } finally {
+            if (!encoded.delete()) encoded.deleteOnExit();
+            if (!decoded.delete()) decoded.deleteOnExit();
+        }
     }
 
     static void writeJson(

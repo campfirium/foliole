@@ -82,6 +82,9 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncPackEnvelopeValidator.java',
       'FolioleCompanionSyncPackTransfer.java',
       'FolioleCompanionSyncParticipationStore.java',
+      'FolioleCompanionWorkgroupEnvelopeStream.java',
+      'FolioleCompanionWorkgroupFileDecrypt.java',
+      'FolioleCompanionWorkgroupGHash.java',
       'FolioleCompanionWorkgroupHttp.java',
       'FolioleCompanionWebView.java',
       'FolioleRemoteImageFiles.java',
@@ -103,6 +106,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionResourceAvailability.java',
       'FolioleCompanionSyncGroupContentBlobBatch.java',
       'FolioleCompanionSyncPackDatabaseValidator.java',
+      'FolioleCompanionSyncPackFileValidator.java',
       'FolioleCompanionSyncPackPayloadWriter.java',
       'FolioleCompanionSyncPackProvider.java'
     ]

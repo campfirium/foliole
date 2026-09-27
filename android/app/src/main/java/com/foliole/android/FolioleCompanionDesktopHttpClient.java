@@ -10,6 +10,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -108,6 +109,34 @@ final class FolioleCompanionDesktopHttpClient {
         try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(outputFile), COPY_BUFFER_BYTES)) {
             outputStream.write(body);
         }
+    }
+
+    static void downloadSyncPackToFile(Context context, String url, JSONObject headers, File outputFile) throws Exception {
+        FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
+            FolioleCompanionWorkgroupHttp.prepare(context, url, "GET", headers, null);
+        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+        connection.setReadTimeout(READ_TIMEOUT_MS);
+        connection.setRequestMethod("GET");
+        applyHeaders(connection, prepared.headers);
+        try {
+            int status = connection.getResponseCode();
+            if (status < 200 || status >= 300) {
+                byte[] error = readBytes(connection.getErrorStream());
+                throw binaryResourceError(status, readSafeErrorCode(error), "GET", prepared.path);
+            }
+            try (InputStream input = connection.getInputStream()) {
+                if (prepared.headers.has("X-Sync-Group-Id")) {
+                    FolioleCompanionWorkgroupHttp.decryptResponseToFile(
+                        context, connection, "GET", prepared.path, input, outputFile);
+                } else {
+                    try (OutputStream output = new BufferedOutputStream(
+                        new FileOutputStream(outputFile), COPY_BUFFER_BYTES)) {
+                        copy(input, output);
+                    }
+                }
+            }
+        } finally { connection.disconnect(); }
     }
 
     private static void applyHeaders(HttpURLConnection connection, JSONObject headers) throws Exception {

@@ -75,12 +75,12 @@ final class FolioleCompanionSyncGroupCrypto {
         }
     }
 
-    private static SecretKeySpec key(String groupKey, String groupTag, String direction) throws Exception {
+    static SecretKeySpec key(String groupKey, String groupTag, String direction) throws Exception {
         byte[] info = ("Foliole Workgroup AEAD v1\n" + direction).getBytes(StandardCharsets.UTF_8);
         return new SecretKeySpec(hkdf(decode(groupKey), groupTag.getBytes(StandardCharsets.UTF_8), info, 32), "AES");
     }
 
-    private static byte[] aad(
+    static byte[] aad(
         String groupTag, String method, String path, String direction, String contentType, long timestamp
     ) {
         return String.join("\n", VERSION, groupTag, method.toUpperCase(), path, direction,
