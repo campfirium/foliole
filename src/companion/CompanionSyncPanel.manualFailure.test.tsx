@@ -83,9 +83,9 @@ it('shows an independent protocol notice while keeping the sync failure', () => 
     /></CompanionSyncProtocolNotice>
   );
 
-  expect(screen.getByRole('dialog', { name: 'Sync could not continue' }))
-    .toHaveTextContent('No data was synced.');
-  fireEvent.click(screen.getByRole('button', { name: 'OK' }));
-  expect(screen.queryByRole('dialog', { name: 'Sync could not continue' })).not.toBeInTheDocument();
+  expect(screen.getByRole('dialog', { name: 'Cannot sync' }))
+    .toHaveTextContent('The devices use different sync versions.');
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  expect(screen.queryByRole('dialog', { name: 'Cannot sync' })).not.toBeInTheDocument();
   expect(screen.getByTestId('companion-sync-error')).toHaveTextContent('Update Foliole');
 });

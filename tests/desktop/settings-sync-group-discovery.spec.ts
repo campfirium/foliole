@@ -23,14 +23,14 @@ async function expectProtocolNotice(electronApp: ElectronApplication, page: Page
     candidates: [], change: 'failed', error_code: 'protocol_incompatible', status: 'incompatible'
   };
   await sendDiscovery(electronApp, protocolFailure);
-  const dialog = page.getByRole('dialog', { name: /^(Sync could not continue|无法继续同步)$/ });
+  const dialog = page.getByRole('dialog', { name: /^(Cannot sync|无法同步)$/ });
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText(/(No data was synced|本次未同步)/);
+  await expect(dialog).toContainText(/(different sync versions|同步版本不一致)/);
   const screenshot = await page.screenshot({ path: INCOMPATIBLE_SCREENSHOT_PATH });
   await testInfo.attach('settings-sync-protocol-incompatible', {
     body: screenshot, contentType: 'image/png'
   });
-  await dialog.getByRole('button', { name: /^(OK|知道了)$/ }).click();
+  await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   await sendDiscovery(electronApp, protocolFailure);
   await expect(dialog).toBeHidden();
 }

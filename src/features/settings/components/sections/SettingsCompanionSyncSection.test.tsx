@@ -135,11 +135,11 @@ it('opens a separate notice for a rejected sync protocol', () => {
     candidates: [], change: 'failed', error_code: 'protocol_incompatible', status: 'incompatible'
   });
 
-  const dialog = screen.getByRole('dialog', { name: 'Sync could not continue' });
-  expect(dialog).toHaveTextContent('No data was synced.');
+  const dialog = screen.getByRole('dialog', { name: 'Cannot sync' });
+  expect(dialog).toHaveTextContent('The devices use different sync versions.');
   expect(dialog).toHaveTextContent('Update Foliole on both devices');
-  fireEvent.click(screen.getByRole('button', { name: 'OK' }));
-  expect(screen.queryByRole('dialog', { name: 'Sync could not continue' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+  expect(screen.queryByRole('dialog', { name: 'Cannot sync' })).not.toBeInTheDocument();
 });
 
 it('does not describe anchor discovery while Sync is off', () => {

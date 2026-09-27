@@ -1,6 +1,8 @@
+import { X } from 'lucide-react';
+
 import { useTranslation } from '../localization/LocalizationProvider';
 
-import { AppDialog, AppDialogActions, AppDialogBody, AppDialogContent,
+import { AppDialog, AppDialogBody, AppDialogClose, AppDialogContent,
   AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
 
 export function SyncProtocolIncompatibleDialog(props: { onClose(): void; open: boolean }) {
@@ -11,15 +13,16 @@ export function SyncProtocolIncompatibleDialog(props: { onClose(): void; open: b
         <AppDialogOverlay />
         <AppDialogContent className="w-[min(420px,calc(100vw-32px))]" layout="task">
           <AppDialogTitle>{t('companion.sync.protocolMismatch.title')}</AppDialogTitle>
+          <AppDialogClose asChild>
+            <button aria-label={t('shared.close')}
+              className="absolute right-4 top-3 inline-flex size-8 items-center justify-center rounded-md text-foreground/70 hover:bg-foreground/5 hover:text-foreground"
+              type="button">
+              <X aria-hidden="true" size={16} />
+            </button>
+          </AppDialogClose>
           <AppDialogBody>
             <AppDialogDescription>{t('companion.sync.protocolMismatch.description')}</AppDialogDescription>
           </AppDialogBody>
-          <AppDialogActions>
-            <button className="rounded-md px-4 py-2 text-sm font-medium text-foreground"
-              onClick={props.onClose} type="button">
-              {t('companion.sync.protocolMismatch.close')}
-            </button>
-          </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
     </AppDialog>
