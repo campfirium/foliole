@@ -37,11 +37,12 @@ export async function applySyncPackVersionedNodesWithDbPort(
     if (!record || record.object_id !== row.id) {
       throw new Error(`sync_pack_node_current_record_invalid:${row.id}`);
     }
+    const bodyText = record.body_text ?? row.content;
     records.push({
       ...record,
       ancestor_version_ids: ancestry!.ancestorIds(versionId),
-      body_text: record.body_text ?? row.content,
-      snapshot: await buildCurrentSnapshot(port, alias, row),
+      body_text: bodyText,
+      snapshot: await buildCurrentSnapshot(port, alias, row, bodyText),
       updated_at: row.updated_at
     });
   }
@@ -65,7 +66,8 @@ export async function applySyncPackVersionedNodesWithDbPort(
 async function buildCurrentSnapshot(
   port: DbPort,
   alias: string,
-  row: SyncPackNodeRow
+  row: SyncPackNodeRow,
+  bodyText: string
 ): Promise<NativeSyncNodeRecord['snapshot']> {
   const attachments = await port.query<{ attachment_id: string; role: string }>(
     `SELECT attachment_id, role FROM ${alias}.node_attachments
@@ -78,7 +80,7 @@ async function buildCurrentSnapshot(
     anchor_source_version_id: row.anchor_source_version_id,
     attachments,
     body_blob_hash: row.body_blob_hash,
-    content: row.content,
+    content: bodyText,
     created_at: row.created_at,
     deleted_at: row.deleted_at,
     desired_retention: row.desired_retention,

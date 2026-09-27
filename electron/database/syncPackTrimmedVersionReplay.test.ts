@@ -64,7 +64,8 @@ it('replays a trimmed A to E chain into an offline A to F branch', async () => {
     .toEqual({ released: 3, skipped: null });
   expect(versionBodies()).toEqual([['A', 'left one\nright one'], ['B', null],
     ['C', null], ['D', null], ['E', 'left edited\nright one']]);
-  const incomingPath = await buildIncomingPack();
+  const incomingPath = await buildIncomingPack('online', onlineIdentity.identity_key,
+    offlineIdentity.identity_key);
   closeDatabaseConnection();
 
   openLibrary('offline');
@@ -92,7 +93,31 @@ it('replays a trimmed A to E chain into an offline A to F branch', async () => {
   expect(offline.sqlite.prepare(`SELECT parent_version_id FROM node_sync_version_parents
     WHERE version_id = ? ORDER BY ordinal`).all(current.current_version_id))
     .toEqual([{ parent_version_id: 'E' }, { parent_version_id: 'F' }]);
+  expect(offline.sqlite.prepare(`SELECT body_text,
+    json_extract(snapshot_json, '$.content') AS snapshot_content
+    FROM node_sync_versions WHERE version_id = ?`).get(current.current_version_id))
+    .toEqual({ body_text: current.content, snapshot_content: current.content });
+  await replayMergedVersionToOnline(current);
 });
+
+async function replayMergedVersionToOnline(current: { content: string; current_version_id: string }) {
+  const returnPath = await buildIncomingPack('offline', offlineIdentity.identity_key,
+    onlineIdentity.identity_key);
+  closeDatabaseConnection();
+  openLibrary('online');
+  const returned = openDatabaseConnection();
+  const returnPort = createBetterSqliteDbPort(returned.sqlite);
+  await returnPort.run(`ATTACH DATABASE '${returnPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    await expect(applySyncPackNodeSurfaceWithDbPort(returnPort, {
+      currentCursor: 0, hostName: 'online-device', sourcePeerId: offlineIdentity.identity_key
+    })).resolves.toMatchObject({ applied: true });
+  } finally {
+    await returnPort.run('DETACH DATABASE inc');
+  }
+  expect(returned.sqlite.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
+    .get(nodeId)).toEqual(current);
+}
 
 function openLibrary(name: string) {
   appDataDir = path.join(tempRoot, name);
@@ -166,10 +191,10 @@ function versionBodies() {
   );
 }
 
-async function buildIncomingPack() {
-  const packPath = path.join(tempRoot, 'online.syncpack');
-  await buildDesktopSyncPack({ createdAt, fromPeerId: onlineIdentity.identity_key, fromStateSeq: 0,
-    outputPath: packPath, packId: 'trimmed-pack', toPeerId: offlineIdentity.identity_key });
+async function buildIncomingPack(name: string, fromPeerId: string, toPeerId: string) {
+  const packPath = path.join(tempRoot, `${name}.syncpack`);
+  await buildDesktopSyncPack({ createdAt, fromPeerId, fromStateSeq: 0,
+    outputPath: packPath, packId: `${name}-pack`, toPeerId });
   const bytes = fsSync.readFileSync(packPath);
   let offset = 0;
   while (bytes.readUInt32LE(offset) === 0x04034b50) {
@@ -177,7 +202,7 @@ async function buildIncomingPack() {
     const nameLength = bytes.readUInt16LE(offset + 26);
     const contentStart = offset + 30 + nameLength + bytes.readUInt16LE(offset + 28);
     if (bytes.subarray(offset + 30, offset + 30 + nameLength).toString() === 'incoming.db.deflate') {
-      const incomingPath = path.join(tempRoot, 'online.db');
+      const incomingPath = path.join(tempRoot, `${name}.db`);
       fsSync.writeFileSync(incomingPath, inflateSync(bytes.subarray(contentStart, contentStart + size)));
       return incomingPath;
     }
