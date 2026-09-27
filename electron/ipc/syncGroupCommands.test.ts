@@ -1,10 +1,12 @@
 // @vitest-environment node
-import { expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
 const runtime = vi.hoisted(() => ({
   activate: vi.fn(async () => undefined),
+  enable: vi.fn(async () => undefined),
+  permission: vi.fn(async () => true),
   events: [] as string[],
   send: vi.fn()
 }));
@@ -48,7 +50,7 @@ vi.mock('../sync/desktopCompanionSyncParticipation.js', () => ({
   },
   assertDesktopCompanionSyncParticipating: vi.fn(),
   disableDesktopCompanionSync: vi.fn(),
-  enableDesktopCompanionSync: vi.fn(),
+  enableDesktopCompanionSync: runtime.enable,
   pauseDesktopCompanionSync: vi.fn(),
   resumeDesktopCompanionSync: vi.fn()
 }));
@@ -89,8 +91,19 @@ vi.mock('../sync/lanWorkspaceSyncServer.js', () => ({
   getLanWorkspaceSyncServerStatus: () => ({ state: 'running' }),
   stopLanWorkspaceSyncServer: vi.fn()
 }));
+vi.mock('../sync/windowsSyncNetworkPermission.js', () => ({
+  ensureWindowsSyncNetworkPermission: runtime.permission
+}));
 
 import { handleSyncGroupCommand } from './syncGroupCommands.js';
+
+beforeEach(() => {
+  runtime.activate.mockClear();
+  runtime.enable.mockClear();
+  runtime.permission.mockClear();
+  runtime.send.mockClear();
+  runtime.events.length = 0;
+});
 
 it('activates the member runtime before a committed join returns to the renderer', async () => {
   await handleSyncGroupCommand(NATIVE_COMMANDS.completeSyncGroupJoin, {});
@@ -98,4 +111,20 @@ it('activates the member runtime before a committed join returns to the renderer
   expect(runtime.events).toEqual(['membership-committed', 'runtime-active', 'join-returned']);
   expect(runtime.activate).toHaveBeenCalledOnce();
   expect(runtime.send).toHaveBeenCalledOnce();
+});
+
+it('checks network permission when Sync is switched on and does not enable after cancellation', async () => {
+  runtime.permission.mockResolvedValueOnce(false);
+  await handleSyncGroupCommand(NATIVE_COMMANDS.enableCompanionSync, {});
+  expect(runtime.permission).toHaveBeenCalledOnce();
+  expect(runtime.enable).not.toHaveBeenCalled();
+
+  await handleSyncGroupCommand(NATIVE_COMMANDS.enableCompanionSync, {});
+  expect(runtime.enable).toHaveBeenCalledOnce();
+});
+
+it('Sync Now never triggers the permission request', async () => {
+  const calls = runtime.permission.mock.calls.length;
+  await handleSyncGroupCommand(NATIVE_COMMANDS.syncCompanionNow, {});
+  expect(runtime.permission).toHaveBeenCalledTimes(calls);
 });

@@ -138,6 +138,13 @@ FunctionEnd
 !macroend
 
 !macro customUnInstall
+  ${IfNot} ${isUpdated}
+    IfFileExists "$INSTDIR\resources\sync-network-permission.ps1" 0 syncNetworkPermissionRemoved
+    ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$INSTDIR\resources\sync-network-permission.ps1" -Action Remove -ExecutablePath "$INSTDIR\${APP_EXECUTABLE_FILENAME}"' $0
+    IntCmp $0 0 syncNetworkPermissionRemoved
+    Abort "Foliole Sync network permission could not be removed. Try uninstalling again with administrator approval."
+  syncNetworkPermissionRemoved:
+  ${EndIf}
   Call un.RemoveFolioleCliFromUserPath
 !ifndef FOLIOLE_CLI_SMOKE_ONLY
   DeleteRegValue HKCU "Software\Classes\.md\OpenWithProgids" "Foliole.Markdown"

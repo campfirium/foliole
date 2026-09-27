@@ -49,6 +49,7 @@ import {
 import { notifyDesktopSyncGroupOverviewChanged } from '../sync/desktopSyncGroupOverviewNotifier.js';
 import { removeDesktopSyncGroupRoute } from '../sync/desktopSyncGroupRoutes.js';
 import { getLanWorkspaceSyncServerStatus, stopLanWorkspaceSyncServer } from '../sync/lanWorkspaceSyncServer.js';
+import { ensureWindowsSyncNetworkPermission } from '../sync/windowsSyncNetworkPermission.js';
 
 import { asString } from './commandParsers.js';
 import {
@@ -206,6 +207,14 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
 
 export function handleSyncGroupCommand(command: string, args: Record<string, unknown>) {
   if (!COMMANDS.has(command)) return undefined;
+  if (([NATIVE_COMMANDS.enableCompanionSync, NATIVE_COMMANDS.resumeCompanionSync,
+    NATIVE_COMMANDS.createSyncGroup, NATIVE_COMMANDS.completeSyncGroupJoin] as string[]).includes(command)) {
+    return ensureWindowsSyncNetworkPermission().then((allowed) => {
+      if (!allowed) return runWithDatabaseConnectionOwner(() => overview());
+      return command === NATIVE_COMMANDS.completeSyncGroupJoin
+        ? handleOwned(command, args) : runWithDatabaseConnectionOwner(() => handleOwned(command, args));
+    });
+  }
   if (command === NATIVE_COMMANDS.completeSyncGroupJoin || command === NATIVE_COMMANDS.syncCompanionNow ||
       command === NATIVE_COMMANDS.removeSyncGroupDevice ||
       command === NATIVE_COMMANDS.saveWatchedFolderConflict) {

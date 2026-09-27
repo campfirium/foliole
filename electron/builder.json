@@ -107,6 +107,12 @@
     "icon": "build/icon.ico",
     "target": ["nsis"],
     "requestedExecutionLevel": "asInvoker",
+    "extraResources": [
+      {
+        "from": "build/windows/sync-network-permission.ps1",
+        "to": "sync-network-permission.ps1"
+      }
+    ],
     "artifactName": "${productName}-Windows-${arch}-${version}.${ext}"
   },
   "nsis": {
