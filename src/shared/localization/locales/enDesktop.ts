@@ -49,6 +49,8 @@ export const EN_DESKTOP_TRANSLATIONS = {
   'desktop.webLookup.continue': 'Continue',
   'desktop.webLookup.repairTable': 'Repair table',
   'desktop.annotation.comment.placeholder': 'Add an annotation...',
+  'desktop.annotation.followSelection': 'Follow selection',
+  'desktop.annotation.resize': 'Resize annotation editor',
   'desktop.annotation.cancel': 'Cancel',
   'desktop.annotation.save': 'Save',
   'desktop.annotation.saveFailed': 'Could not save annotation. Try again.',

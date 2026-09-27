@@ -8,6 +8,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   frontmatterDisplayMode: 'foliole-frontmatter-display-mode',
   frontmatterMetaFields: 'foliole-frontmatter-meta-fields',
   highlightAnnotationPrefix: 'foliole-highlight-annotation-prefix',
+  annotationPanelPlacement: 'foliole-annotation-panel-placement',
   longClozeFrontGuardMode: 'foliole-long-cloze-front-guard-mode',
   longClozeFrontGuardSelectionMin: 'foliole-long-cloze-front-guard-selection-min',
   longClozeFrontGuardFrontMax: 'foliole-long-cloze-front-guard-front-max',

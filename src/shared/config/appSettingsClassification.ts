@@ -23,6 +23,7 @@ const RUNTIME_MIRRORED_APP_SETTING_NAMES = [
   'frontmatterDisplayMode',
   'frontmatterMetaFields',
   'highlightAnnotationPrefix',
+  'annotationPanelPlacement',
   'longClozeFrontGuardMode',
   'longClozeFrontGuardSelectionMin',
   'longClozeFrontGuardFrontMax',
