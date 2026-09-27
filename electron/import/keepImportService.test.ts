@@ -212,3 +212,29 @@ it('treats sidecar highlight changes as a separate refresh trigger when the body
     })
   ]);
 });
+
+it('retries a watched file that failed before creating a node without requiring a file edit', async () => {
+  const sourceDir = path.join(tempRoot, 'sources');
+  await fs.mkdir(sourceDir, { recursive: true });
+  const filePath = path.join(sourceDir, 'entry.md');
+  await fs.writeFile(filePath, '# Retry after failure\nBody\n', 'utf8');
+  const stat = await fs.stat(filePath);
+  const config = createGenericKeepImportConfig(sourceDir, 'draft-import-source-101');
+  openDatabaseConnection().sqlite.prepare(
+    `INSERT INTO keep_import_items (
+       rule_id, source_path, source_mtime_ms, source_size_bytes,
+       last_status, first_seen_at, last_seen_at, last_imported_at
+     ) VALUES (?, ?, ?, ?, 'failed', ?, ?, ?)`
+  ).run(config.ruleId, 'entry.md', stat.mtimeMs, stat.size,
+    '2026-09-27T07:00:00.000Z', '2026-09-27T07:00:00.000Z', '2026-09-27T07:00:00.000Z');
+
+  const preview = await previewKeepImportRule(config);
+  expect(preview.entries).toEqual([expect.objectContaining({ source_path: 'entry.md', status: 'new' })]);
+  await runKeepImportRule(config);
+  const recovered = openDatabaseConnection().sqlite.prepare(
+    `SELECT last_node_id, last_status FROM keep_import_items
+     WHERE rule_id = ? AND source_path = 'entry.md'`
+  ).get(config.ruleId) as { last_node_id: string | null; last_status: string };
+  expect(recovered.last_node_id).toMatch(/^node-/);
+  expect(recovered.last_status).toBe('imported');
+});

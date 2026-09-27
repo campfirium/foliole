@@ -40,7 +40,8 @@ export async function classifySource(
   const blockedState = isBlockedByDeletedNode(config.ruleId, sourcePath);
   const deleted = blockedState.deleted;
   const existingItem = blockedState.existingItem;
-  const notImported = existingItem?.last_status === 'discovered' && !existingItem.last_node_id;
+  const notImported = !existingItem?.last_node_id &&
+    (existingItem?.last_status === 'discovered' || existingItem?.last_status === 'failed');
   const primaryChanged = hasPrimarySourceChanged(existingItem, sourceSignature);
   const tracksHighlightSidecar = config.sourceType === 'readwise' || config.highlightMode === 'split';
   const highlightChanged = tracksHighlightSidecar ? hasHighlightSourceChanged(existingItem, sourceSignature) : false;
