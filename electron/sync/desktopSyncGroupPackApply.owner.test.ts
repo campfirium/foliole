@@ -50,7 +50,6 @@ vi.mock('./syncPackContainerReader.js', () => ({
 vi.mock('../database/desktopSettingMaterializer.js', () => ({
   materializeDesktopSettingRecord: vi.fn()
 }));
-vi.mock('./workspaceSyncAppliedEvents.js', () => ({ notifyWorkspaceSyncApplied: vi.fn() }));
 
 import { applyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
 
@@ -60,7 +59,9 @@ it('keeps the SQLite owner through incoming pack attachment and apply', async ()
     peer: { endpoint_url: 'http://member', group_id: 'group-1',
       local_device_id: 'desktop-a', peer_device_id: 'desktop-b', peer_device_name: 'Windows' }
   }, Buffer.from('pack'), '/tmp/pack-owner-test')).resolves.toEqual({
-    cursor: 1, participatingArticleIds: []
+    cursor: 1,
+    event: { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] },
+    participatingArticleIds: []
   });
   expect(runtime.run).toHaveBeenCalledWith(expect.stringContaining('ATTACH DATABASE'));
   expect(runtime.run).toHaveBeenCalledWith('DETACH DATABASE inc');

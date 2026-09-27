@@ -8,6 +8,7 @@ const runtime = vi.hoisted(() => ({
   exchangeMemberState: vi.fn(),
   getPeerCursor: vi.fn(),
   loadPendingConflicts: vi.fn(),
+  notifyApplied: vi.fn(),
   reconcileBodies: vi.fn(),
   refreshAdvertisement: vi.fn(),
   reportCursor: vi.fn(),
@@ -55,6 +56,7 @@ vi.mock('./desktopSyncGroupResources.js', () => ({
   downloadDesktopSyncGroupResources: runtime.downloadResources
 }));
 vi.mock('./desktopSyncGroupRoutes.js', () => ({ loadDesktopSyncGroupRoutes: vi.fn() }));
+vi.mock('./workspaceSyncAppliedEvents.js', () => ({ notifyWorkspaceSyncApplied: runtime.notifyApplied }));
 
 import { continueDesktopSyncGroupSync } from './desktopSyncGroupTransport.js';
 
@@ -71,7 +73,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   runtime.getPeerCursor.mockReturnValue('3');
   runtime.loadPendingConflicts.mockReturnValue([]);
-  runtime.downloadPack.mockResolvedValue({ cursor: 4, participatingArticleIds: ['article'] });
+  runtime.downloadPack.mockResolvedValue({
+    cursor: 4,
+    event: { appliedNodeIds: ['node-1'], appliedObjectIds: [], appliedReviewOpIds: [] },
+    participatingArticleIds: ['article']
+  });
   runtime.downloadResources.mockResolvedValue(undefined);
   runtime.reportCursor.mockResolvedValue(undefined);
   runtime.assertCompatible.mockResolvedValue(undefined);
@@ -123,6 +129,30 @@ it('reconciles already-versioned bodies before committing an automatic receive c
 
   await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: true, cursor: 4 });
   expect(sequence).toEqual(['body', 'cursor']);
+});
+
+it('refreshes an applied document only after its resources finish downloading', async () => {
+  let finishResources!: () => void;
+  runtime.downloadResources.mockImplementationOnce(() => new Promise<void>((resolve) => {
+    finishResources = resolve;
+  }));
+
+  const pending = continueDesktopSyncGroupSync(peer);
+  await vi.waitFor(() => expect(runtime.downloadResources).toHaveBeenCalledOnce());
+  expect(runtime.notifyApplied).not.toHaveBeenCalled();
+
+  finishResources();
+  await expect(pending).resolves.toEqual({ complete: true, cursor: 4 });
+  expect(runtime.notifyApplied).toHaveBeenCalledWith({
+    appliedNodeIds: ['node-1'], appliedObjectIds: [], appliedReviewOpIds: []
+  });
+});
+
+it('still refreshes an applied document when a resource transfer fails', async () => {
+  runtime.downloadResources.mockRejectedValueOnce(new Error('offline'));
+
+  await expect(continueDesktopSyncGroupSync(peer)).rejects.toThrow('sync_group_resources_failed: offline');
+  expect(runtime.notifyApplied).toHaveBeenCalledOnce();
 });
 
 it('does not commit a receive cursor when body reconciliation fails', async () => {

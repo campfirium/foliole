@@ -18,6 +18,7 @@ import {
   loadDesktopSyncGroupRoutes,
   type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
+import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 export type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 
@@ -46,16 +47,20 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
   if (pendingConflicts.length) return { complete: false, cursor: 0 };
   const cursor = await runWithDatabaseConnectionOwner(() => loadReceiveCursor(target.peer_device_id));
   const pack = await runPeerSyncStage('sync_pack', () => downloadAndApply(target, cursor));
-  await runWithDatabaseConnectionOwner(() =>
-    reconcileVersionedInlineBodies(openDatabaseConnection().driver));
-  const nextCursor = pack.cursor;
-  await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
-  await reportDesktopSyncGroupCursorCommitted({
-    cursor: nextCursor, peerAuthorizationId: target.peer_device_id
-  });
-  await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target, pack.participatingArticleIds));
-  const complete = await runWithDatabaseConnectionOwner(() => resourcesComplete());
-  return { complete, cursor: nextCursor };
+  try {
+    await runWithDatabaseConnectionOwner(() =>
+      reconcileVersionedInlineBodies(openDatabaseConnection().driver));
+    const nextCursor = pack.cursor;
+    await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
+    await reportDesktopSyncGroupCursorCommitted({
+      cursor: nextCursor, peerAuthorizationId: target.peer_device_id
+    });
+    await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target, pack.participatingArticleIds));
+    const complete = await runWithDatabaseConnectionOwner(() => resourcesComplete());
+    return { complete, cursor: nextCursor };
+  } finally {
+    notifyWorkspaceSyncApplied(pack.event);
+  }
 }
 
 async function runPeerSyncStage<T>(stage: 'member_state' | 'resources' | 'sync_pack', execute: () => Promise<T>) {

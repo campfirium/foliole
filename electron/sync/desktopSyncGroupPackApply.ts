@@ -14,7 +14,6 @@ import type { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp
 import { readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
 import { extractSyncPackDatabase } from './syncPackContainerReader.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
-import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 type Peer = {
   endpoint_url: string;
@@ -130,6 +129,5 @@ export async function applyDesktopSyncGroupPack(
       await port.run('DETACH DATABASE inc');
     }
   });
-  notifyWorkspaceSyncApplied(event);
-  return { cursor, participatingArticleIds };
+  return { cursor, event, participatingArticleIds };
 }
