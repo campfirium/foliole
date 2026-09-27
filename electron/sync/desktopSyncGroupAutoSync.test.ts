@@ -13,6 +13,7 @@ const runtime = vi.hoisted(() => ({
   notifyOverviewChanged: vi.fn(),
   recoverTopology: vi.fn(),
   recoverMembers: vi.fn(),
+  recoverAdvertisement: vi.fn(),
   readwiseContinue: vi.fn(async () => null),
   syncCompleted: null as null | (() => void),
   owned: false,
@@ -67,6 +68,7 @@ vi.mock('./desktopCompanionSyncPreference.js', () => ({
   isDesktopCompanionSyncParticipating: () => runtime.participating
 }));
 vi.mock('./companionMdnsAdvertisement.js', () => ({
+  recoverCompanionMdnsAdvertisement: runtime.recoverAdvertisement,
   updateCompanionMdnsAdvertisementRole: runtime.updateRole
 }));
 vi.mock('./desktopMemberSyncCadence.js', () => ({ updateDesktopSyncFreshness: runtime.freshness }));
@@ -173,6 +175,7 @@ it('reports discovery denial and coalesces simultaneous recovery requests', asyn
   await Promise.resolve();
   expect(runtime.recoverTopology).toHaveBeenCalledOnce();
   expect(runtime.recoverMembers).toHaveBeenCalledOnce();
+  expect(runtime.recoverAdvertisement).toHaveBeenCalledOnce();
   onStarted();
   expect(loadDesktopSyncGroupDiscoveryError()).toBeNull();
 });

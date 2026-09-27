@@ -3,7 +3,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadUnreconciledWatchedFolderConflictDecisions } from '../database/watchedFolderConflictDecisions.js';
 
-import { updateCompanionMdnsAdvertisementRole } from './companionMdnsAdvertisement.js';
+import { recoverCompanionMdnsAdvertisement, updateCompanionMdnsAdvertisementRole } from './companionMdnsAdvertisement.js';
 import { loadDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import {
   startDesktopAnchorTopologySession,
@@ -109,6 +109,7 @@ export function recoverDesktopSyncGroupDiscovery() {
     if (!isDesktopCompanionSyncParticipating()) return;
     runtime?.recoverDiscovery();
     memberStateRuntime?.recover();
+    recoverCompanionMdnsAdvertisement();
   });
 }
 

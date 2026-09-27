@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { serializeSyncProtocolTxt } from '../../lib/platform/syncProtocolContract.js';
 
@@ -24,6 +24,7 @@ vi.mock('./syncGroupRuntimeInstance.js', () => ({
 }));
 
 import {
+  recoverCompanionMdnsAdvertisement,
   startCompanionMdnsAdvertisement,
   stopCompanionMdnsAdvertisement,
   updateCompanionMdnsAdvertisementRole
@@ -41,6 +42,11 @@ beforeEach(() => {
   runtime.networkInterfaces.mockReturnValue({
     ethernet: [{ address: '192.168.0.11', family: 'IPv4', internal: false }]
   });
+});
+
+afterEach(() => {
+  stopCompanionMdnsAdvertisement();
+  vi.useRealTimers();
 });
 
 describe('desktop OS DNS-SD advertisement', () => {
@@ -71,7 +77,94 @@ describe('desktop OS DNS-SD advertisement', () => {
     expect(onWarning).toHaveBeenCalledOnce();
     expect(runtime.cancel).toHaveBeenCalledOnce();
   });
+});
 
+describe('desktop OS DNS-SD advertisement recovery', () => {
+  it('re-registers after a registered service fails without restarting the app', async () => {
+    vi.useFakeTimers();
+    const onWarning = vi.fn();
+    const onRecovered = vi.fn();
+    const ready = startCompanionMdnsAdvertisement({ ...input, onWarning, onRecovered });
+    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
+    await ready;
+
+    runtime.callbacks[0]?.({ code: 'desktop_dnssd_register_failed', kind: 'error',
+      message: 'network changed' });
+    expect(runtime.cancel).toHaveBeenCalledOnce();
+    expect(onWarning).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(runtime.register).toHaveBeenCalledTimes(2);
+    runtime.callbacks[1]?.({ kind: 'registered', service: {} });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(onRecovered).toHaveBeenCalledOnce();
+  });
+
+  it('does not re-register a failed service after synchronization stops', async () => {
+    vi.useFakeTimers();
+    const ready = startCompanionMdnsAdvertisement(input);
+    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
+    await ready;
+    runtime.callbacks[0]?.({ code: 'desktop_dnssd_register_failed', kind: 'error',
+      message: 'network changed' });
+
+    stopCompanionMdnsAdvertisement();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(runtime.register).toHaveBeenCalledOnce();
+  });
+
+  it('uses the latest topology role when retrying a failed registration', async () => {
+    vi.useFakeTimers();
+    const ready = startCompanionMdnsAdvertisement(input);
+    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
+    await ready;
+    runtime.callbacks[0]?.({ code: 'desktop_dnssd_register_failed', kind: 'error',
+      message: 'network changed' });
+    await updateCompanionMdnsAdvertisementRole('anchor');
+
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(runtime.register.mock.calls[1]?.[0]).toMatchObject({
+      txt: expect.objectContaining({ topology_role: 'anchor' })
+    });
+  });
+
+  it('limits retries when the system keeps rejecting registration', async () => {
+    vi.useFakeTimers();
+    const ready = startCompanionMdnsAdvertisement(input);
+    runtime.callbacks[0]?.({ kind: 'registered', service: {} });
+    await ready;
+    runtime.callbacks[0]?.({ code: 'desktop_dnssd_register_failed', kind: 'error',
+      message: 'network changed' });
+    for (const [index, delay] of [1_000, 3_000, 10_000].entries()) {
+      await vi.advanceTimersByTimeAsync(delay);
+      runtime.callbacks[index + 1]?.({ code: 'desktop_dnssd_register_failed', kind: 'error',
+        message: 'host unavailable' });
+      await vi.advanceTimersByTimeAsync(0);
+    }
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(runtime.register).toHaveBeenCalledTimes(4);
+  });
+});
+
+it('allows a later user or network recovery to retry exhausted publication', async () => {
+  vi.useFakeTimers();
+  const ready = startCompanionMdnsAdvertisement(input);
+  runtime.callbacks[0]?.({ kind: 'registered', service: {} });
+  await ready;
+  runtime.callbacks[0]?.({ code: 'desktop_dnssd_register_failed', kind: 'error',
+    message: 'network changed' });
+  for (const [index, delay] of [1_000, 3_000, 10_000].entries()) {
+    await vi.advanceTimersByTimeAsync(delay);
+    runtime.callbacks[index + 1]?.({ code: 'desktop_dnssd_register_failed', kind: 'error',
+      message: 'host unavailable' });
+    await vi.advanceTimersByTimeAsync(0);
+  }
+  recoverCompanionMdnsAdvertisement();
+  await vi.advanceTimersByTimeAsync(1_000);
+  expect(runtime.register).toHaveBeenCalledTimes(5);
+});
+
+describe('desktop OS DNS-SD advertisement roles and stop', () => {
   it('withdraws the old registration only when the topology role changes', async () => {
     const ready = startCompanionMdnsAdvertisement(input);
     runtime.callbacks[0]?.({ kind: 'registered', service: {} });

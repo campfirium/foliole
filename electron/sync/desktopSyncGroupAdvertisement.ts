@@ -10,6 +10,7 @@ import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 interface DesktopSyncGroupAdvertisementInput {
   appVersion: string;
   deviceId: string;
+  onRecovered?: () => void;
   onWarning: (error: unknown) => void;
   port: number;
 }
@@ -27,6 +28,7 @@ export async function advertiseDesktopSyncGroup(args: DesktopSyncGroupAdvertisem
     groupDisplayName: group.display_name,
     groupId: group.group_id,
     groupTag: workgroup.group_tag,
+    ...(args.onRecovered ? { onRecovered: args.onRecovered } : {}),
     onWarning: args.onWarning,
     port: args.port,
     role: loadDesktopAnchorTopologyState().role

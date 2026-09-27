@@ -24,6 +24,7 @@ import { advertiseDesktopSyncGroup } from './desktopSyncGroupAdvertisement.js';
 import { startDesktopSyncGroupAutoSync, stopDesktopSyncGroupAutoSync } from './desktopSyncGroupAutoSync.js';
 import { loadDesktopSyncGroupJoinProvider } from './desktopSyncGroupJoinProvider.js';
 import { clearDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
+import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { collectLanWorkspaceSyncUrls } from './lanWorkspaceSyncNetwork.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
@@ -160,6 +161,12 @@ export function applyLanSyncMdnsWarning(
 
 function recordMdnsWarning(error: unknown) {
   activeStatus = applyLanSyncMdnsWarning(activeStatus, error);
+  notifyDesktopSyncGroupOverviewChanged();
+}
+
+function clearMdnsWarning() {
+  activeStatus = { ...activeStatus, last_error: null };
+  notifyDesktopSyncGroupOverviewChanged();
 }
 
 async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
@@ -169,7 +176,7 @@ async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId:
   startDesktopSyncGroupAutoSync();
   if (activeServer) {
     if (activeStatus.port) await advertiseDesktopSyncGroup({ ...args,
-      onWarning: recordMdnsWarning, port: activeStatus.port });
+      onWarning: recordMdnsWarning, onRecovered: clearMdnsWarning, port: activeStatus.port });
     return activeStatus;
   }
 
@@ -178,7 +185,8 @@ async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId:
   try {
     await listenOnSyncPort(server, port);
     logDesktopDnsSdDiagnostic('http_listener_ready', { port });
-    await advertiseDesktopSyncGroup({ ...args, onWarning: recordMdnsWarning, port });
+    await advertiseDesktopSyncGroup({ ...args, onWarning: recordMdnsWarning,
+      onRecovered: clearMdnsWarning, port });
     activeServer = server;
     activeStatus = buildRunningStatus(port, groupStatus);
     logRunningStatus();
