@@ -27,7 +27,7 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
       });
     },
     async runCycle(config) {
-      await runKeepImportRule({
+      await runWithDatabaseConnectionOwner(() => runKeepImportRule({
         actionMode: config.actionMode,
         directoryPath: config.directoryPath,
         ...(config.highlightDirectoryPath ? { highlightDirectoryPath: config.highlightDirectoryPath } : {}),
@@ -35,7 +35,7 @@ function createDefaultKeepImportMonitorDeps(): KeepImportMonitorDeps {
         highlightPolicy: config.highlightPolicy,
         ruleId: config.adapterConfigId,
         sourceType: config.sourceType
-      });
+      }));
     },
     watch: watchKeepImportDirectory
   };
