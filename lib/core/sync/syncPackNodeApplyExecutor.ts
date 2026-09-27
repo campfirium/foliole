@@ -30,6 +30,7 @@ import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObje
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
+  enqueueSearchInvalidations?: boolean;
   hostName: string;
   onSettingApplied?: (port: DbPort, record: import('./syncPackSyncObjectsExecutor.js').SyncPackSyncObjectRecord) => Promise<void>;
   sourceHostName?: string;
@@ -94,7 +95,9 @@ async function applySyncPackSurfaceInTransaction(
     sourcePeerId: options.sourcePeerId ?? options.sourceHostName!
   });
   const appliedBlobCount = await applySyncPackContentBlobsWithDbPort(port, applyOptions);
-  const appliedTombstoneNodeIds = await applySyncPackNodeTombstonesWithDbPort(port, options.incomingAlias);
+  const appliedTombstoneNodeIds = await applySyncPackNodeTombstonesWithDbPort(
+    port, options.incomingAlias, options.enqueueSearchInvalidations !== false
+  );
   const nodeConvergence = await applyVersionedNodeStage(port, options);
   const remainingNodeOptions = {
     ...applyOptions,
@@ -138,7 +141,9 @@ async function applyReplayPackTombstones(
   options: SyncPackNodeSurfaceApplyOptions,
   toStateSeq: number
 ) {
-  const appliedTombstoneNodeIds = await applySyncPackNodeTombstonesWithDbPort(port, options.incomingAlias);
+  const appliedTombstoneNodeIds = await applySyncPackNodeTombstonesWithDbPort(
+    port, options.incomingAlias, options.enqueueSearchInvalidations !== false
+  );
   await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
   return {
     appliedBlobCount: 0,

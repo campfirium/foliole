@@ -40,7 +40,9 @@ function parseTombstone(row: PackTombstoneRow): NativeSyncNodeRecord {
   };
 }
 
-export async function applySyncPackNodeTombstonesWithDbPort(port: DbPort, incomingAlias = 'inc') {
+export async function applySyncPackNodeTombstonesWithDbPort(
+  port: DbPort, incomingAlias = 'inc', enqueueSearchInvalidations = true
+) {
   const alias = `"${incomingAlias.replaceAll('"', '""')}"`;
   const rows = await port.query<PackTombstoneRow>(
     `SELECT node_id, version_id, parent_version_id, host_name, content_hash,
@@ -67,7 +69,7 @@ export async function applySyncPackNodeTombstonesWithDbPort(port: DbPort, incomi
   };
   records.sort((left, right) => depth(right.object_id) - depth(left.object_id));
   for (const record of records) {
-    await applyRemoteNodeTombstone(port, record);
+    await applyRemoteNodeTombstone(port, record, enqueueSearchInvalidations);
   }
   return records.map((record) => record.object_id);
 }

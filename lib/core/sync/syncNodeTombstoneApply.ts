@@ -29,7 +29,9 @@ async function deleteLocalNodeRows(port: DbPort, nodeId: string) {
   await port.run('DELETE FROM nodes WHERE id = ?', [nodeId]);
 }
 
-export async function applyRemoteNodeTombstone(port: DbPort, record: NativeSyncNodeRecord) {
+export async function applyRemoteNodeTombstone(
+  port: DbPort, record: NativeSyncNodeRecord, enqueueSearchInvalidations = true
+) {
   if (!record.version_id || !record.host_name || !record.content_hash || !record.snapshot.deleted_at) {
     return false;
   }
@@ -66,6 +68,8 @@ export async function applyRemoteNodeTombstone(port: DbPort, record: NativeSyncN
   );
   await deleteLocalNodeRows(port, record.object_id);
   await upsertAppliedNodeSyncState(port, record);
-  await enqueueAppliedNodeDeleteSearchInvalidation(port, record.object_id, createdAt);
+  if (enqueueSearchInvalidations) {
+    await enqueueAppliedNodeDeleteSearchInvalidation(port, record.object_id, createdAt);
+  }
   return true;
 }

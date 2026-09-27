@@ -83,6 +83,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
   try {
     return await applySyncPackNodeSurfaceWithDbPort(port, {
       currentCursor: args.currentCursor,
+      enqueueSearchInvalidations: false,
       hostName: args.hostName,
       incomingAlias: INCOMING_PACK_ALIAS,
       ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName }),

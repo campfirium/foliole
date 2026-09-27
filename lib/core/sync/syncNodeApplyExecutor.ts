@@ -88,13 +88,16 @@ async function loadLocalNodeSyncState(port: DbPort, nodeId: string) {
 }
 
 async function handleTombstoneGuard(input: {
+  options: ApplySyncNodesWithDbPortOptions;
   record: NativeSyncNodeRecord;
   result: ApplySyncNodesWithDbPortResult;
   tx: DbPort;
 }) {
   const localTombstone = await loadNodeSyncTombstone(input.tx, input.record.object_id);
   if (input.record.is_tombstone) {
-    if (await applyRemoteNodeTombstone(input.tx, input.record)) {
+    if (await applyRemoteNodeTombstone(
+      input.tx, input.record, input.options.enqueueSearchInvalidations !== false
+    )) {
       input.result.appliedIds.push(input.record.object_id);
     }
     return true;
@@ -147,7 +150,7 @@ export async function applySyncNodesWithDbPort(
   await assertLocalRestoreCanApply(port, options.operation, ordered);
   await port.transaction(async (tx) => {
     for (const record of ordered) {
-      if (await handleTombstoneGuard({ record, result, tx })) {
+      if (await handleTombstoneGuard({ options, record, result, tx })) {
         continue;
       }
       const localNode = await loadLocalNodeSyncState(tx, record.object_id);
