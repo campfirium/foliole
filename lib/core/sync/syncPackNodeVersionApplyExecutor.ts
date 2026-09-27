@@ -1,4 +1,4 @@
-import type { DbPort, DbRow, DbValue } from './dbPort.js';
+import type { DbPort, DbRow } from './dbPort.js';
 import type { SyncPackNodeApplyOptions } from './syncPackApplyStatements.js';
 import {
   assertValidNodeVersionSnapshot,
@@ -7,7 +7,8 @@ import {
   type SyncPackNodeVersionRow
 } from './syncPackNodeVersions.js';
 
-const VERSION_PARENT_COLUMNS = ['version_id', 'parent_version_id', 'ordinal'] as const;
+const VERSION_BATCH_SIZE = 16;
+type VersionIdentity = Pick<SyncPackNodeVersionRow, 'version_id' | 'object_id'>;
 
 export async function applySyncPackNodeVersionsWithDbPort(
   port: DbPort,
@@ -15,10 +16,10 @@ export async function applySyncPackNodeVersionsWithDbPort(
 ) {
   const alias = quoteIdentifier(options.incomingAlias ?? 'inc');
   const incoming = (await port.query(
-    `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')} FROM ${alias}.node_sync_versions
+    `SELECT version_id, object_id FROM ${alias}.node_sync_versions
      WHERE object_id NOT IN ('special-inbox', 'special-virtual-root')
        AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = object_id)`
-  )).map(normalizeVersionRow);
+  )).map(normalizeVersionIdentity);
   const parents = (await port.query(
     `SELECT parent.version_id, parent.parent_version_id, parent.ordinal
      FROM ${alias}.node_sync_version_parents parent
@@ -28,23 +29,42 @@ export async function applySyncPackNodeVersionsWithDbPort(
   )).map(normalizeVersionParentRow);
   const ordered = validateIncomingDag(incoming, parents);
   await assertIncomingCurrentPointers(port, alias, new Map(ordered.map((row) => [row.version_id, row])));
-  for (const row of ordered) {
-    await assertExistingVersionMatches(port, row);
-    await port.run(
-      `INSERT INTO node_sync_versions (${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')})
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(version_id) DO NOTHING`,
-      SYNC_PACK_NODE_VERSION_COLUMNS.map((column) => row[column]) as DbValue[]
-    );
+  await assertExistingVersionsMatch(port, alias);
+  for (let offset = 0; offset < ordered.length; offset += VERSION_BATCH_SIZE) {
+    const identities = ordered.slice(offset, offset + VERSION_BATCH_SIZE);
+    const rows = (await port.query(
+      `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')} FROM ${alias}.node_sync_versions
+       WHERE version_id IN (SELECT value FROM json_each(?))`,
+      [JSON.stringify(identities.map((row) => row.version_id))]
+    )).map(normalizeVersionRow);
+    const byId = new Map(rows.map((row) => [row.version_id, row]));
+    for (const identity of identities) {
+      const row = byId.get(identity.version_id);
+      if (!row) throw new Error(`sync_pack_node_version_missing:${identity.version_id}`);
+    }
   }
-  for (const row of parents) {
-    await port.run(
-      `INSERT INTO node_sync_version_parents (${VERSION_PARENT_COLUMNS.join(', ')})
-       VALUES (?, ?, ?)
-       ON CONFLICT(version_id, parent_version_id) DO NOTHING`,
-      VERSION_PARENT_COLUMNS.map((column) => row[column]) as DbValue[]
-    );
-  }
+  await port.run(
+    `INSERT INTO main.node_sync_versions (${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')})
+     SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.map((column) => `incoming.${column}`).join(', ')}
+     FROM ${alias}.node_sync_versions incoming
+     WHERE ${eligibleVersionFilter('incoming')}
+     ON CONFLICT(version_id) DO NOTHING`
+  );
+  await port.run(
+    `INSERT INTO main.node_sync_version_parents (version_id, parent_version_id, ordinal)
+     SELECT parent.version_id, parent.parent_version_id, parent.ordinal
+     FROM ${alias}.node_sync_version_parents parent
+     JOIN ${alias}.node_sync_versions version ON version.version_id = parent.version_id
+     WHERE ${eligibleVersionFilter('version')}
+     ON CONFLICT(version_id, parent_version_id) DO NOTHING`
+  );
+}
+
+function normalizeVersionIdentity(row: DbRow): VersionIdentity {
+  return {
+    version_id: requireString(row.version_id, 'version_id'),
+    object_id: requireString(row.object_id, 'object_id')
+  };
 }
 
 function normalizeVersionRow(row: DbRow): SyncPackNodeVersionRow {
@@ -76,7 +96,7 @@ function normalizeVersionParentRow(row: DbRow): SyncPackNodeVersionParentRow {
 }
 
 function validateIncomingDag(
-  rows: SyncPackNodeVersionRow[],
+  rows: VersionIdentity[],
   parentRows: SyncPackNodeVersionParentRow[]
 ) {
   const byId = new Map(rows.map((row) => [row.version_id, row]));
@@ -86,10 +106,10 @@ function validateIncomingDag(
     entries.push(parentRow);
     parentsByVersion.set(parentRow.version_id, entries);
   }
-  const ordered: SyncPackNodeVersionRow[] = [];
+  const ordered: VersionIdentity[] = [];
   const visited = new Set<string>();
   const visiting = new Set<string>();
-  const visit = (row: SyncPackNodeVersionRow) => {
+  const visit = (row: VersionIdentity) => {
     if (visited.has(row.version_id)) return;
     if (visiting.has(row.version_id)) throw new Error(`sync_pack_node_version_cycle:${row.version_id}`);
     visiting.add(row.version_id);
@@ -113,7 +133,7 @@ function validateIncomingDag(
 async function assertIncomingCurrentPointers(
   port: DbPort,
   alias: string,
-  versions: Map<string, SyncPackNodeVersionRow>
+  versions: Map<string, VersionIdentity>
 ) {
   const nodes = await port.query<{ current_version_id: unknown; id: unknown }>(
     `SELECT id, current_version_id FROM ${alias}.nodes
@@ -130,17 +150,21 @@ async function assertIncomingCurrentPointers(
   }
 }
 
-async function assertExistingVersionMatches(port: DbPort, incoming: SyncPackNodeVersionRow) {
-  const [existing] = await port.query(
-    `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')}
-     FROM node_sync_versions WHERE version_id = ? LIMIT 1`,
-    [incoming.version_id]
+async function assertExistingVersionsMatch(port: DbPort, alias: string) {
+  const mismatch = SYNC_PACK_NODE_VERSION_COLUMNS
+    .filter((column) => column !== 'version_id')
+    .map((column) => `existing.${column} IS NOT incoming.${column}`).join(' OR ');
+  const [row] = await port.query<{ version_id: string }>(
+    `SELECT incoming.version_id FROM ${alias}.node_sync_versions incoming
+     JOIN main.node_sync_versions existing ON existing.version_id = incoming.version_id
+     WHERE ${eligibleVersionFilter('incoming')} AND (${mismatch}) LIMIT 1`
   );
-  if (!existing) return;
-  const normalized = normalizeVersionRow(existing);
-  if (SYNC_PACK_NODE_VERSION_COLUMNS.some((column) => normalized[column] !== incoming[column])) {
-    throw new Error(`sync_pack_node_version_immutable_mismatch:${incoming.version_id}`);
-  }
+  if (row) throw new Error(`sync_pack_node_version_immutable_mismatch:${row.version_id}`);
+}
+
+function eligibleVersionFilter(table: string) {
+  return `${table}.object_id NOT IN ('special-inbox', 'special-virtual-root')
+    AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = ${table}.object_id)`;
 }
 
 function requireString(value: unknown, field: string) {

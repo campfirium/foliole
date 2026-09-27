@@ -5,6 +5,7 @@ import type { DbPort } from './dbPort.js';
 import { applyConvergentSyncNodesWithDbPort } from './syncNodeConvergence.js';
 import { loadStoredSyncNodeVersionRecord } from './syncNodeGraph.js';
 import type { SyncPackNodeRow } from './syncPackNodeFields.js';
+import { loadSyncPackVersionAncestry } from './syncPackVersionAncestry.js';
 
 export async function applySyncPackVersionedNodesWithDbPort(
   port: DbPort,
@@ -27,16 +28,18 @@ export async function applySyncPackVersionedNodesWithDbPort(
        AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = node.id)
      ORDER BY state.state_seq ASC, node.id ASC`
   );
+  const ancestry = rows.length > 0 ? await loadSyncPackVersionAncestry(port) : null;
   const records: NativeSyncNodeRecord[] = [];
   for (const row of rows) {
     const versionId = row.current_version_id;
     if (!versionId) throw new Error(`sync_pack_node_current_record_invalid:${row.id}`);
-    const record = await loadStoredSyncNodeVersionRecord(port, versionId);
+    const record = await loadStoredSyncNodeVersionRecord(port, versionId, false);
     if (!record || record.object_id !== row.id) {
       throw new Error(`sync_pack_node_current_record_invalid:${row.id}`);
     }
     records.push({
       ...record,
+      ancestor_version_ids: ancestry!.ancestorIds(versionId),
       body_text: record.body_text ?? row.content,
       snapshot: await buildCurrentSnapshot(port, alias, row),
       updated_at: row.updated_at
