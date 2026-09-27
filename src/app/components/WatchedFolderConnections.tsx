@@ -1,15 +1,8 @@
 import { MoreHorizontal } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
-import type {
-  NativeWatchedFolderBinding,
-  NativeWatchedFolderBindingsState
-} from '../../../lib/platform/nativeWatchedFolderContract';
+import type { NativeWatchedFolderBinding } from '../../../lib/platform/nativeWatchedFolderContract';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useActiveSyncGroup } from '../../shared/platform/external/useActiveSyncGroup';
-import {
-  loadWatchedFolderBindingsFromRuntime,
-} from '../../shared/platform/import/watchedFolderRuntimeRepository';
 import {
   AppDropdownMenu,
   AppDropdownMenuContent,
@@ -20,6 +13,7 @@ import {
   settingsActionTableRowClassName
 } from '../../shared/ui';
 
+import { useWatchedFolderBindingState } from './useWatchedFolderBindingState';
 import { watchedFolderPlatformName } from './watchedFolderPlatformName';
 import {
   reconnectWatchedSource,
@@ -145,9 +139,7 @@ function WatchedFolderGroupList(props: {
 export function WatchedFolderConnections() {
   const t = useTranslation();
   const hasActiveSyncGroup = useActiveSyncGroup();
-  const [state, setState] = useState<NativeWatchedFolderBindingsState | null>(null);
-  const refresh = () => void loadWatchedFolderBindingsFromRuntime().then(setState).catch(() => undefined);
-  useEffect(refresh, []);
+  const { refresh, state } = useWatchedFolderBindingState();
 
   const reconnect = (bindingId: string) => reconnectWatchedSource(bindingId, refresh, t);
   const remove = (bindingId: string) => {

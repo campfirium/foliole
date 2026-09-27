@@ -6,6 +6,7 @@ import { SettingsControlSlot, SettingsRow, SettingsSection } from '../../shared/
 import type { DraftImportSource, DraftImportSourceField } from './importSourceWorkspaceModel';
 import { importSourceSelectClassName } from './importSourceWorkspaceModel';
 import { ImportSourceTable } from './ImportSourceWorkspaceTable';
+import { useWatchedFolderBindingState } from './useWatchedFolderBindingState';
 import { WatchedFolderConnections } from './WatchedFolderConnections';
 
 const IMPORT_NODE_TITLE_STRATEGIES = ['file_name', 'heading'] as const;
@@ -55,8 +56,11 @@ export function SettingsImportManagementContent(props: {
   sources: DraftImportSource[];
   titleStrategy: ImportNodeTitleStrategy;
 }) {
-  const lastSource = props.sources.at(-1);
   const t = useTranslation();
+  const { state } = useWatchedFolderBindingState();
+  const mergedRuleIds = new Set(state?.merged_local_rule_ids ?? []);
+  const visibleSources = props.sources.filter((source) => !mergedRuleIds.has(source.id));
+  const lastSource = visibleSources.at(-1);
 
   return (
     <div className="space-y-6">
@@ -77,7 +81,7 @@ export function SettingsImportManagementContent(props: {
             onDisableKeepImport={props.onDisableKeepImport}
             onDeleteSource={props.onDeleteSource}
             onPreviewKeepImport={props.onPreviewKeepImport}
-            sources={props.sources}
+            sources={visibleSources}
           />
         </div>
       </SettingsSection>

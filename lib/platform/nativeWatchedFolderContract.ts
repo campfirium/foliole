@@ -27,4 +27,5 @@ export interface NativeWatchedFolderBindingsState {
   bindings: NativeWatchedFolderBinding[];
   current_host_name: string;
   current_device_identity_key: string | null;
+  merged_local_rule_ids: string[];
 }

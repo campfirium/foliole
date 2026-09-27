@@ -19,7 +19,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { resolveDesktopSourceAddress } from './desktopSources.js';
 import { initializeDatabase } from './migrate.js';
 import { previewSourceManagement } from './sourceManagement.js';
-import { recordWatchedImportSourceMapping, resolveExecutableWatchedBinding,
+import { loadWatchedFolderBindingState, recordWatchedImportSourceMapping, resolveExecutableWatchedBinding,
   upsertChangedWatchedFolderSource } from './watchedFolderBindings.js';
 import {
   applyRemoteWatchedFolderConflictDecisions,
@@ -71,21 +71,30 @@ async function conflictingSources(localRule = 'draft-import-source-101',
   return { folder, local, conflict: loadPendingWatchedFolderConflicts()[0]! };
 }
 
-it('runs only the selected same-path watcher immediately and preserves both sources', async () => {
+it('shows one effective source after a choice and preserves historical bindings', async () => {
   const { folder, local, conflict } = await conflictingSources();
   expect(resolveExecutableWatchedBinding('draft-import-source-101', folder).executable).toBe(false);
   const decision = saveWatchedFolderConflictDecision(conflict.conflict_key, [local.binding_id]);
   expect(loadPendingWatchedFolderConflicts()).toEqual([]);
   expect(resolveExecutableWatchedBinding('draft-import-source-101', folder).executable).toBe(true);
+  expect(loadWatchedFolderBindingState()).toMatchObject({
+    bindings: [{ binding_id: local.binding_id }], merged_local_rule_ids: []
+  });
   expect(decision.source_alias_refs).toEqual([
     'watched:draft-import-source-101', 'watched:draft-import-source-102', 'watched:remote-binding'
   ]);
   applyRemoteWatchedFolderConflictDecisions([{
     ...decision, decided_at: '2026-09-25T00:00:00.000Z',
     decided_by_device_identity_key: 'remote-device', decision_id: 'earlier',
-    selected_binding_ids: ['remote-binding']
+    selected_binding_ids: ['remote-binding'],
+    source_alias_refs: ['watched:draft-import-source-101',
+      'watched:draft-import-source-102', local.source_ref]
   }]);
   expect(resolveExecutableWatchedBinding('draft-import-source-101', folder).executable).toBe(false);
+  expect(loadWatchedFolderBindingState()).toMatchObject({
+    bindings: [{ binding_id: 'remote-binding' }],
+    merged_local_rule_ids: ['draft-import-source-101']
+  });
   expect(openDatabaseConnection().driver.queryOne(
     'SELECT binding_id FROM watched_folder_bindings WHERE binding_id = ?', [local.binding_id]
   )).toEqual({ binding_id: local.binding_id });

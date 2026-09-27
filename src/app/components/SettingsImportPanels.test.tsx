@@ -8,13 +8,20 @@ import {
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 const folderSelection = vi.hoisted(() => ({ selectRuntimeFolder: vi.fn() }));
+const watchedBindings = vi.hoisted(() => ({ load: vi.fn() }));
 
 vi.mock('../../shared/platform/folderSelectionRuntimeRepository', () => folderSelection);
+vi.mock('../../shared/platform/import/watchedFolderRuntimeRepository', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../shared/platform/import/watchedFolderRuntimeRepository')>(),
+  loadWatchedFolderBindingsFromRuntime: watchedBindings.load
+}));
 
 import { SettingsImportManagementContent } from './SettingsImportManagementContent';
 import { SettingsReadwiseReaderContent } from './SettingsReadwiseReaderContent';
 
 it('shows watched folders directly in settings', () => {
+  watchedBindings.load.mockResolvedValue({ bindings: [], merged_local_rule_ids: [],
+    current_host_name: '', current_device_identity_key: null });
   const settings = createDefaultImportManagerSettings();
 
   renderWithLocalization(
@@ -40,6 +47,31 @@ it('shows watched folders directly in settings', () => {
   expect(screen.getByText('Handling')).toBeInTheDocument();
   expect(screen.getAllByRole('button', { name: /Original folder/ }).length).toBeGreaterThan(0);
   expect(screen.getAllByRole('button', { name: /Preview/ }).length).toBeGreaterThan(0);
+});
+
+it('shows a merged local watched source only through its selected workgroup source', async () => {
+  watchedBindings.load.mockResolvedValue({ bindings: [],
+    merged_local_rule_ids: ['draft-import-source-102'],
+    current_host_name: 'Mac', current_device_identity_key: 'mac' });
+  const settings = createDefaultImportManagerSettings();
+
+  renderWithLocalization(
+    <SettingsImportManagementContent
+      onChange={() => undefined}
+      onChangeAction={() => undefined}
+      onChangeTitleStrategy={() => undefined}
+      onChooseHighlightFolder={() => undefined}
+      onChoosePrimaryFolder={() => undefined}
+      onCopySource={() => undefined}
+      onDeleteSource={() => undefined}
+      onDisableKeepImport={() => undefined}
+      onPreviewKeepImport={() => undefined}
+      sources={settings.sources}
+      titleStrategy={settings.titleStrategy}
+    />
+  );
+
+  await waitFor(() => expect(screen.getAllByRole('button', { name: /Original folder/ })).toHaveLength(1));
 });
 
 it('shows the restored Readwise Reader setup directly in settings', () => {

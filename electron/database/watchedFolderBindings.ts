@@ -11,6 +11,7 @@ import { openDatabaseConnection } from './connection.js';
 import { isDesktopSourceExecutable, loadDesktopSource, upsertDesktopSource } from './desktopSources.js';
 import { loadDesktopDeviceId } from './deviceIdentity.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
+import { projectEffectiveWatchedSources } from './watchedEffectiveSourceProjection.js';
 import { canRunWatchedFolderConflictSource } from './watchedFolderConflictDecisions.js';
 import { resolveWatchedHistoricalSourceRef } from './watchedHistoricalSourceMapping.js';
 import { loadLocalWatchedSourceByRuleId } from './watchedLocalSource.js';
@@ -92,10 +93,11 @@ export function loadWatchedFolderBindings() {
 }
 
 export function loadWatchedFolderBindingState() {
+  const currentDeviceId = loadDesktopDeviceId();
   return {
-    bindings: loadWatchedFolderBindings(),
+    ...projectEffectiveWatchedSources(loadWatchedFolderBindings(), currentDeviceId),
     current_host_name: localHostProfile(new Date().toISOString()).hostName,
-    current_device_identity_key: loadDesktopDeviceId()
+    current_device_identity_key: currentDeviceId
   };
 }
 

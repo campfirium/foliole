@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises';
-import { createServer, type Server } from 'node:net';
 import process from 'node:process';
 
 import type { ElectronApplication, Page } from '@playwright/test';
@@ -7,24 +6,13 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import { launchDesktopSession } from '../../scripts/desktop/playwright-desktop-harness.mjs';
 
 import { expect, test, type DesktopSession } from './harness/fixtures';
+import { freePort } from './harness/freePort';
 import { expectWorkspaceShell } from './harness/settings';
 
 type Candidate = {
   endpoint_url: string; group_display_name: string; group_id: string; group_tag: string;
   provider_device_id: string; provider_device_name: string; provider_platform: string;
 };
-
-async function freePort() {
-  const server = await new Promise<Server>((resolve, reject) => {
-    const value = createServer();
-    value.once('error', reject);
-    value.listen(0, '127.0.0.1', () => resolve(value));
-  });
-  const address = server.address();
-  if (!address || typeof address === 'string') throw new Error('No test port');
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  return address.port;
-}
 
 async function invoke<T>(page: Page, command: string, args: Record<string, unknown> = {}) {
   return page.evaluate(async (input) =>
@@ -76,11 +64,17 @@ async function sourceDecisionState(app: ElectronApplication) {
     const connection = require(pathApi.join(electronApp.getAppPath(), 'database', 'connection.js'));
     const decisions = require(pathApi.join(electronApp.getAppPath(), 'database',
       'watchedFolderConflictDecisions.js'));
+    const bindings = require(pathApi.join(electronApp.getAppPath(), 'database',
+      'watchedFolderBindings.js'));
     const mapping = require(pathApi.join(electronApp.getAppPath(), 'database',
       'watchedHistoricalSourceMapping.js'));
     return connection.runWithDatabaseConnectionOwner(() => {
       const decision = decisions.loadWatchedFolderConflictDecisions()[0];
       if (!decision) return null;
+      const visible = bindings.loadWatchedFolderBindingState().bindings.map(
+        (binding: { binding_id: string }) => binding.binding_id);
+      if (JSON.stringify(visible) !== JSON.stringify(decision.selected_binding_ids))
+        throw new Error('Selected watched sources differ from the effective source list');
       return {
         selected: decision.selected_binding_ids,
         aliases: decision.source_alias_refs,
@@ -142,7 +136,7 @@ async function discoverCandidate(app: ElectronApplication, candidate: Candidate)
   }, candidate);
 }
 
-async function moveProviderWatchedSource(page: Page, folder: string) {
+async function moveSelectedWatchedSource(page: Page, folder: string, ruleId: string) {
   const settings = await invoke<{ sources: Array<Record<string, unknown>> }>(
     page, 'load_import_manager_settings'
   );
@@ -150,18 +144,27 @@ async function moveProviderWatchedSource(page: Page, folder: string) {
     ...settings,
     sources: [...settings.sources, {
       actionMode: 'keep', archivePath: '', highlightMode: 'merged', highlightPath: '',
-      id: 'provider-rule', keepPreview: null, keepState: 'enabled', primaryPath: folder
+      id: ruleId, keepPreview: null, keepState: 'enabled', primaryPath: folder
     }]
   } });
 }
 
-async function expectProviderPathPropagated(providerPage: Page, memberPage: Page,
-  nextFolder: string) {
+async function expectSelectedPathPropagated(providerPage: Page, memberPage: Page,
+  selectedId: string, nextFolder: string) {
   await fs.mkdir(nextFolder, { recursive: true });
-  await moveProviderWatchedSource(providerPage, nextFolder);
+  const providerState = await invoke<{
+    bindings: Array<{ binding_id: string; owner_device_identity_key: string }>;
+    current_device_identity_key: string;
+  }>(providerPage, 'load_watched_folder_bindings');
+  const selected = providerState.bindings.find((binding) => binding.binding_id === selectedId);
+  if (!selected) throw new Error('Selected watched source is missing');
+  const providerOwns = selected.owner_device_identity_key === providerState.current_device_identity_key;
+  const ownerPage = providerOwns ? providerPage : memberPage;
+  const otherPage = providerOwns ? memberPage : providerPage;
+  await moveSelectedWatchedSource(ownerPage, nextFolder, providerOwns ? 'provider-rule' : 'member-rule');
   await expect.poll(async () => {
     const state = await invoke<{ bindings: Array<{ primary_path: string }> }>(
-      memberPage, 'load_watched_folder_bindings'
+      otherPage, 'load_watched_folder_bindings'
     );
     return state.bindings.some((binding) => binding.primary_path === nextFolder);
   }).toBe(true);
@@ -223,9 +226,8 @@ for (const savingSide of ['member', 'provider'] as const) test(
       expect(providerSources?.aliases.length).toBeGreaterThan(0);
       expect(providerSources?.resolved).toEqual(providerSources?.aliases.map(() =>
         `watched:${providerSources.selected[0]}`));
-
-      const nextFolder = testInfo.outputPath('provider-moved-articles');
-      await expectProviderPathPropagated(providerPage, memberPage, nextFolder);
+      const nextFolder = testInfo.outputPath('selected-moved-articles');
+      await expectSelectedPathPropagated(providerPage, memberPage, providerSources?.selected[0] ?? '', nextFolder);
     } finally {
       await member?.close();
       await provider?.close();
