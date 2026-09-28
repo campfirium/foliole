@@ -53,11 +53,22 @@ it('packs only the new version when the receiver has the earlier 23 bodies and r
   const parents = Array.from({ length: 22 }, (_, index) =>
     JSON.stringify([`v${index + 2}`, index === 0 ? 'desktop#node-1-v1' : `v${index + 1}`, 0]));
   const outputPath = resolveSyncPackPath('missing-facts.syncpack');
+  const queriedBodies: string[] = [];
+  const queryOne = driver.queryOne.bind(driver);
+  const querySpy = vi.spyOn(driver, 'queryOne').mockImplementation((sql, params) => {
+    const row = queryOne(sql, params);
+    if (row && (typeof row.body_text === 'string' || typeof row.snapshot_json === 'string')) {
+      queriedBodies.push(String(row.version_id));
+    }
+    return row;
+  });
   await buildDesktopSyncPackFromDriver({
     fromPeerId: 'source', fromStateSeq: 0, toStateSeq: 1,
     outputPath, packId: 'missing-facts', pageBudget: DEFAULT_SYNC_PACK_PAGE_BUDGET,
     receiverFacts: { versions, parents, reviews: [] }
   }, driver);
+  querySpy.mockRestore();
+  expect(queriedBodies).toEqual(['v24']);
   const pack = readPackRows(outputPath);
   expect(pack.nodeVersions).toEqual([expect.objectContaining({ version_id: 'v24' })]);
   expect(pack.nodeVersionParents).toEqual([

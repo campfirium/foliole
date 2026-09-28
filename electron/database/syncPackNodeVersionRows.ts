@@ -12,19 +12,26 @@ const VERSION_PARENT_QUERY_BATCH_SIZE = 900;
 
 export function loadSyncPackNodeVersionRows(
   driver: DatabaseDriver,
-  nodes: NodePackRow[]
+  nodes: NodePackRow[],
+  knownVersionIds: readonly string[] = []
 ): SyncPackNodeVersionRow[] {
-  const ordered: SyncPackNodeVersionRow[] = [];
+  return [...iterateSyncPackNodeVersionRows(driver, nodes, knownVersionIds)];
+}
+
+export function* iterateSyncPackNodeVersionRows(
+  driver: DatabaseDriver, nodes: NodePackRow[], knownVersionIds: readonly string[] = [],
+  onIdentity?: (row: Pick<SyncPackNodeVersionRow, 'version_id' | 'object_id'>) => void
+): Generator<SyncPackNodeVersionRow> {
   const visited = new Map<string, string>();
+  const known = new Set(knownVersionIds);
   for (const node of [...nodes].sort((left, right) => left.id.localeCompare(right.id))) {
-    loadVersionLineage(driver, node.id, node.current_version_id, visited, ordered, true);
+    yield* loadVersionLineage(driver, node.id, node.current_version_id, visited, known, onIdentity, true);
   }
-  return ordered;
 }
 
 export function loadSyncPackNodeVersionParentRows(
   driver: DatabaseDriver,
-  versions: SyncPackNodeVersionRow[]
+  versions: Pick<SyncPackNodeVersionRow, 'version_id' | 'object_id'>[]
 ): SyncPackNodeVersionParentRow[] {
   if (versions.length === 0) return [];
   const ids = versions.map((row) => row.version_id);
@@ -49,41 +56,50 @@ export function loadSyncPackNodeVersionParentRows(
   }).sort((left, right) => left.version_id.localeCompare(right.version_id) || left.ordinal - right.ordinal);
 }
 
-function loadVersionLineage(
+function* loadVersionLineage(
   driver: DatabaseDriver,
   objectId: string,
   versionId: string | null,
   visited: Map<string, string>,
-  ordered: SyncPackNodeVersionRow[],
+  known: Set<string>,
+  onIdentity?: (row: Pick<SyncPackNodeVersionRow, 'version_id' | 'object_id'>) => void,
   required = false
-) {
+): Generator<SyncPackNodeVersionRow> {
   if (versionId === null) return;
   const visitedObjectId = visited.get(versionId);
   if (visitedObjectId !== undefined) {
     if (visitedObjectId !== objectId) throw new Error(`sync_pack_node_version_cross_object:${versionId}`);
     return;
   }
-  const row = driver.queryOne<SyncPackNodeVersionRow>(
-    `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')}
+  const identity = driver.queryOne<Pick<SyncPackNodeVersionRow,
+    'version_id' | 'object_id' | 'parent_version_id'>>(
+    `SELECT version_id, object_id, parent_version_id
      FROM node_sync_versions WHERE version_id = ?`,
     [versionId]
   );
-  if (!row) {
+  if (!identity) {
     if (required) throw new Error(`sync_pack_node_version_missing:${versionId}`);
     return;
   }
-  if (row.object_id !== objectId) {
+  if (identity.object_id !== objectId) {
     throw new Error(`sync_pack_node_version_cross_object:${versionId}`);
   }
-  assertValidNodeVersionSnapshot(row);
   visited.set(versionId, objectId);
-  for (const parentVersionId of loadParentVersionIds(driver, row)) {
-    loadVersionLineage(driver, objectId, parentVersionId, visited, ordered);
+  for (const parentVersionId of loadParentVersionIds(driver, identity)) {
+    yield* loadVersionLineage(driver, objectId, parentVersionId, visited, known, onIdentity);
   }
-  ordered.push(row);
+  onIdentity?.(identity);
+  if (known.has(versionId)) return;
+  const row = driver.queryOne<SyncPackNodeVersionRow>(
+    `SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')}
+     FROM node_sync_versions WHERE version_id = ?`, [versionId]);
+  if (!row) throw new Error(`sync_pack_node_version_missing:${versionId}`);
+  assertValidNodeVersionSnapshot(row);
+  yield row;
 }
 
-function loadParentVersionIds(driver: DatabaseDriver, row: SyncPackNodeVersionRow) {
+function loadParentVersionIds(driver: DatabaseDriver,
+  row: Pick<SyncPackNodeVersionRow, 'version_id' | 'parent_version_id'>) {
   const rows = driver.queryAll<{ parent_version_id: string }>(
     `SELECT parent_version_id FROM node_sync_version_parents
      WHERE version_id = ? ORDER BY ordinal ASC`,

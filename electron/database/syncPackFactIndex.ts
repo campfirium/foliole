@@ -8,7 +8,7 @@ import {
 
 import {
   loadSyncPackNodeVersionParentRows,
-  loadSyncPackNodeVersionRows
+  iterateSyncPackNodeVersionRows
 } from './syncPackNodeVersionRows.js';
 import { loadPackRows } from './syncPackRows.js';
 
@@ -38,11 +38,15 @@ export function loadDesktopSyncPackFactIndex(driver: DatabaseDriver, args: {
   );
   const toStateSeq = next?.state_seq ?? frontier;
   const base = loadPackRows(args.fromStateSeq, toStateSeq, driver);
-  const versions = loadSyncPackNodeVersionRows(driver, base.nodes);
-  const page: SyncPackFactPage = {
-    versions: versions.map((row) => describeVersionFact({ ...row,
+  const versions: SyncPackFactPage['versions'] = [];
+  for (const row of iterateSyncPackNodeVersionRows(driver, base.nodes)) {
+    if (versions.length >= MAX_FACTS_PER_KIND) throw new Error('sync_pack_fact_index_over_budget');
+    versions.push(describeVersionFact({ ...row,
       snapshot_metadata: snapshotMetadata(driver, row.version_id)
-    })),
+    }));
+  }
+  const page: SyncPackFactPage = {
+    versions,
     parents: loadSyncPackNodeVersionParentRows(driver, versions),
     reviews: base.reviewLog
   };

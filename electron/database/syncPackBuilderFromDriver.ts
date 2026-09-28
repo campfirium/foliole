@@ -18,7 +18,7 @@ import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
 import { stageDesktopSyncPackNodeHolds } from './syncPackNodeVersionHolds.js';
 import {
   loadSyncPackNodeVersionParentRows,
-  loadSyncPackNodeVersionRows
+  iterateSyncPackNodeVersionRows
 } from './syncPackNodeVersionRows.js';
 import { measureSyncPackPage, syncPackPageFits, type SyncPackPageBudget } from './syncPackPageBudget.js';
 import { assertSyncPackPreloadBudget } from './syncPackPreloadBudget.js';
@@ -155,10 +155,12 @@ function loadSourceRows(
   if (input.pageBudget) assertSyncPackVersionBudget(driver, baseRows.nodes, input.pageBudget,
     input.receiverFacts?.versions);
   const groupRows = loadSyncPackGroupRows(driver);
-  const nodeVersions = loadSyncPackNodeVersionRows(driver, baseRows.nodes);
+  const versionIdentities: { version_id: string; object_id: string }[] = [];
+  const nodeVersions = [...iterateSyncPackNodeVersionRows(driver, baseRows.nodes,
+    input.receiverFacts?.versions, (row) => versionIdentities.push(row))];
   const selectedFacts = selectMissingSyncPackFacts({
     versions: nodeVersions,
-    parents: loadSyncPackNodeVersionParentRows(driver, nodeVersions),
+    parents: loadSyncPackNodeVersionParentRows(driver, versionIdentities),
     reviews: baseRows.reviewLog
   }, input.receiverFacts ?? { versions: [], parents: [], reviews: [] });
   for (const version of selectedFacts.versions) {
