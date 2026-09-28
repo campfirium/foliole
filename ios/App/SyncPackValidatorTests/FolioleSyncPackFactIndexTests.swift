@@ -8,6 +8,8 @@ final class FolioleSyncPackFactIndexTests: XCTestCase {
             .appendingPathComponent("foliole-facts-\(UUID().uuidString).db")
         defer { try? FileManager.default.removeItem(at: url) }
         let database = try FolioleCompanionSyncPackSQLite(url: url, create: true)
+        try database.execute("CREATE TABLE nodes (id TEXT, current_version_id TEXT)")
+        try database.execute("INSERT INTO nodes VALUES ('node', 'v2')")
         try database.execute("CREATE TABLE node_sync_versions (version_id TEXT, object_id TEXT, " +
             "parent_version_id TEXT, host_name TEXT, created_at TEXT, content_hash TEXT, " +
             "body_text TEXT, snapshot_json TEXT)")
@@ -24,6 +26,14 @@ final class FolioleSyncPackFactIndexTests: XCTestCase {
             "v2", "node", "v1", "source", "2026-09-28", "hash-2", "body-2", "{\"id\":\"node\",\"content\":null}"
         ])
         try database.execute("INSERT INTO node_sync_version_parents VALUES ('v2', 'v1', 0)")
+
+        try database.execute("UPDATE node_sync_versions SET body_text = NULL WHERE version_id = 'v1'")
+        let trimmed = try FolioleCompanionSyncPackFactIndex.read(database,
+            from: 0, to: 1, frontier: 1, epoch: "epoch")
+        XCTAssertNoThrow(try FolioleCompanionSyncPackFactIndex.retainMissing(database, index: trimmed,
+            expectedId: trimmed["index_id"] as? String ?? "", versions: "00", parents: "00", reviews: ""))
+        XCTAssertEqual(try database.scalar("SELECT COUNT(*) FROM node_sync_versions"), 2)
+        try database.execute("UPDATE node_sync_versions SET body_text = 'body-1' WHERE version_id = 'v1'")
 
         let index = try FolioleCompanionSyncPackFactIndex.read(database,
             from: 0, to: 1, frontier: 1, epoch: "epoch")

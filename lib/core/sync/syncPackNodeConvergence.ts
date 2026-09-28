@@ -28,7 +28,8 @@ export async function applySyncPackVersionedNodesWithDbPort(
        AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = node.id)
      ORDER BY state.state_seq ASC, node.id ASC`
   );
-  const ancestry = rows.length > 0 ? await loadSyncPackVersionAncestry(port) : null;
+  const ancestry = await loadSyncPackVersionAncestry(port,
+    rows.flatMap((row) => row.current_version_id ? [row.current_version_id] : []));
   const records: NativeSyncNodeRecord[] = [];
   for (const row of rows) {
     const versionId = row.current_version_id;
@@ -40,7 +41,7 @@ export async function applySyncPackVersionedNodesWithDbPort(
     const bodyText = record.body_text ?? row.content;
     records.push({
       ...record,
-      ancestor_version_ids: ancestry!.ancestorIds(versionId),
+      ancestor_version_ids: ancestry.ancestorIds(versionId),
       body_text: bodyText,
       snapshot: await buildCurrentSnapshot(port, alias, row, bodyText),
       updated_at: row.updated_at

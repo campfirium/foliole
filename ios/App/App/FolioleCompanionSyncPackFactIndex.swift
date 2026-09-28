@@ -59,8 +59,11 @@ enum FolioleCompanionSyncPackFactIndex {
         let heldVersions = try bits(versionBits, count: versions.count)
         let heldParents = try bits(parentBits, count: parents.count)
         let heldReviews = try bits(reviewBits, count: reviews.count)
+        let heads = Set(try database.namedRows("SELECT current_version_id FROM nodes")
+            .compactMap { $0["current_version_id"] as? String })
         for (offset, held) in heldVersions.enumerated() where !held {
-            if versions[offset]["body_hash"] is NSNull {
+            if let versionId = versions[offset]["version_id"] as? String,
+               heads.contains(versionId), versions[offset]["body_hash"] is NSNull {
                 throw invalid("sync_pack_fact_body_unavailable")
             }
         }

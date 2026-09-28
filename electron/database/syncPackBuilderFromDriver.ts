@@ -163,8 +163,10 @@ function loadSourceRows(
     parents: loadSyncPackNodeVersionParentRows(driver, versionIdentities),
     reviews: baseRows.reviewLog
   }, input.receiverFacts ?? { versions: [], parents: [], reviews: [] });
+  // Retention may release historical payloads; current heads must remain usable.
+  const currentVersionIds = new Set(baseRows.nodes.map((node) => node.current_version_id));
   for (const version of selectedFacts.versions) {
-    if (describeVersionFact(version).body_hash === null) {
+    if (currentVersionIds.has(version.version_id) && describeVersionFact(version).body_hash === null) {
       throw new Error(`sync_pack_fact_body_unavailable:${version.version_id}`);
     }
   }

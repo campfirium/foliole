@@ -80,8 +80,13 @@ final class FolioleCompanionSyncPackFactIndex {
         boolean[] heldVersions = bits(versionBits, versions.length());
         boolean[] heldParents = bits(parentBits, parents.length());
         boolean[] heldReviews = bits(reviewBits, reviews.length());
+        java.util.Set<String> heads = new java.util.HashSet<>();
+        try (Cursor rows = pack.rawQuery("SELECT current_version_id FROM nodes", null)) {
+            while (rows.moveToNext()) if (!rows.isNull(0)) heads.add(rows.getString(0));
+        }
         for (int i = 0; i < versions.length(); i++) {
-            if (!heldVersions[i] && versions.getJSONObject(i).isNull("body_hash")) {
+            if (!heldVersions[i] && heads.contains(versions.getJSONObject(i).getString("version_id")) &&
+                versions.getJSONObject(i).isNull("body_hash")) {
                 throw new IllegalArgumentException("sync_pack_fact_body_unavailable:" +
                     versions.getJSONObject(i).getString("version_id"));
             }
