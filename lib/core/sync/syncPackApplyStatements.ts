@@ -65,7 +65,8 @@ export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOpti
     `LEFT JOIN main.sync_object_state current ON current.object_type = incoming.object_type ` +
     `AND current.object_id = incoming.object_id WHERE ` +
     `(incoming.object_type NOT IN ('node_reading', 'node_review') ` +
-    `OR current.content_hash IS NOT incoming.content_hash) AND ` +
+    `OR current.content_hash IS NOT incoming.content_hash ` +
+    `OR current.deleted_at IS NOT incoming.deleted_at) AND ` +
     `(current.object_id IS NULL OR (${ownerEpochFilter}) OR (` +
     `incoming.object_type <> 'setting' OR incoming.object_id <> 'user_space:windows:desktop:*:readwise_active_host'` +
     `) AND (incoming.object_type IN ('node', 'node_reading', 'node_review', 'view_state') OR (` +

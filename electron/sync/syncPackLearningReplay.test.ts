@@ -28,6 +28,20 @@ it.each(['node_reading', 'node_review'])('accepts a changed %s snapshot', async 
   }
 });
 
+it.each(['node_reading', 'node_review'])('keeps a %s deletion even when its hash is unchanged', async (type) => {
+  const db = createFixture(type, 'same-hash');
+  try {
+    db.prepare('UPDATE inc.sync_object_state SET deleted_at = ? WHERE object_type = ?')
+      .run('2026-05-02T00:00:00Z', type);
+    expect(await applySyncPackStateRowsWithDbPort(createBetterSqliteDbPort(db),
+      { objectTypes: [type] })).toBe(1);
+    expect(db.prepare('SELECT deleted_at, state_seq FROM sync_object_state WHERE object_type = ?')
+      .get(type)).toEqual({ deleted_at: '2026-05-02T00:00:00Z', state_seq: 8 });
+  } finally {
+    db.close();
+  }
+});
+
 function createFixture(type: string, incomingHash: string) {
   const db = new Database(':memory:');
   const incomingTime = incomingHash === 'same-hash'
