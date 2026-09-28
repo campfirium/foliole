@@ -1,7 +1,7 @@
-import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../../lib/core/database/androidCompanionSyncProtocolDefinitions';
-import type { NativeSyncObjectType, NativeSyncStateObjectRecord } from '../../../lib/platform/nativeSyncContract';
+import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../../lib/core/database/androidCompanionSyncProtocolDefinitions.js';
+import type { NativeSyncObjectType, NativeSyncStateObjectRecord } from '../../../lib/platform/nativeSyncContract.js';
 
-import type { SyncObjectIdentity } from './companionSyncPushProtocol';
+import type { SyncObjectIdentity } from './companionSyncPushProtocol.js';
 
 type StateObjectIdentityRow = Pick<NativeSyncStateObjectRecord, 'object_id' | 'object_type'>;
 

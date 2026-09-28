@@ -134,6 +134,7 @@ async function loadPayloadJson(port: DbPort, row: NativeSyncStateObjectRecord) {
 }
 
 function payloadSql(objectType: NativeSyncStateObjectRecord['object_type']) {
+  if (objectType === 'parent_child_order') return CONTRACT.sql.orderPayload;
   if (objectType === 'node_open_state') return CONTRACT.sql.openStatePayload;
   if (objectType === 'node_reading') return CONTRACT.sql.readingPayload;
   if (objectType === 'node_review') return CONTRACT.sql.reviewPayload;

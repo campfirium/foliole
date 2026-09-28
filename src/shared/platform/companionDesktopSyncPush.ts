@@ -13,6 +13,7 @@ import {
   nodeReadingSyncAdapter,
   nodeReviewSyncAdapter,
   nodeTextAlternativeSyncAdapter,
+  parentChildOrderSyncAdapter,
   reviewLogSyncAdapter,
   settingSyncAdapter,
   viewStateSyncAdapter,
@@ -85,6 +86,7 @@ const statePushAdapters = {
   node_reading: nodeReadingSyncAdapter,
   node_review: nodeReviewSyncAdapter,
   node_text_alternative: nodeTextAlternativeSyncAdapter,
+  parent_child_order: parentChildOrderSyncAdapter,
   setting: settingSyncAdapter,
   view_state: viewStateSyncAdapter
 } as const;

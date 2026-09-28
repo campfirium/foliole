@@ -14,4 +14,6 @@ it('retries current dirty state until the target peer confirms delivery', () => 
   expect(COMPANION_SYNCBACK_HOST_CONTRACT.sql.state).toContain(
     'sync_object_state.deleted_at IS NOT NULL'
   );
+  expect(COMPANION_SYNCBACK_HOST_CONTRACT.sql.state).toContain("'parent_child_order'");
+  expect(COMPANION_SYNCBACK_HOST_CONTRACT.sql.orderPayload).toContain('FROM parent_child_order');
 });

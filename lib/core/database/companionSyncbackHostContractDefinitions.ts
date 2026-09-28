@@ -1,3 +1,5 @@
+import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../sync/syncObjectPayloadSql.js';
+
 import { ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionLearningPayloadQueryDefinitions.js';
 import {
   ANDROID_COMPANION_MUTATION_DEFINITIONS,
@@ -19,7 +21,7 @@ const sharedStateQuery = ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncStateChang
 const reviewRequiredReceipt = `receipt.object_type IN (${REVIEW_REQUIRED_PUSH_ISSUE_TYPES_SQL})`;
 const syncbackStateQuery = sharedStateQuery.replace(
   "object_type NOT IN ('node', 'view_state')",
-  "object_type IN ('node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'setting')"
+  "object_type IN ('node_open_state', 'node_reading', 'node_review', 'node_text_alternative', 'parent_child_order', 'setting')"
 ).replace('AND state_seq > ? ', 'AND ? >= 0 ').replace(
   reviewRequiredReceipt,
   `${reviewRequiredReceipt} AND NOT (sync_object_state.object_type = 'node_text_alternative' `
@@ -60,6 +62,7 @@ export const COMPANION_SYNCBACK_HOST_CONTRACT = {
     nodeVersionParent: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncNodeVersionParent.sql,
     nodeVersions: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncNodeVersions.sql,
     openStatePayload: ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeOpenState.sql,
+    orderPayload: SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.parent_child_order,
     alternativePayload: ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeTextAlternative.sql,
     readingPayload: ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS.syncPayloadNodeReading.sql,
     reviewLog: ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS.syncReviewLog.sql,

@@ -14,8 +14,8 @@ export async function rekeyParentChildOrders(port: DbPort, sourceId: string, can
     const destination = parentId === sourceId ? canonicalId : parentId;
     const merged = next.get(destination) ?? [];
     for (const id of ids) {
-      const mapped = id === sourceId ? canonicalId : id;
-      if (!merged.includes(mapped)) merged.push(mapped);
+      if (!merged.includes(id)) merged.push(id);
+      if (id === sourceId && !merged.includes(canonicalId)) merged.push(canonicalId);
     }
     next.set(destination, merged);
   }
