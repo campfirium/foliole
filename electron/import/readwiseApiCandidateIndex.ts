@@ -1,6 +1,7 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { normalizeExportBook, normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { bindReadwiseApiAnnotationParents } from '../database/readwiseApiAnnotationLedger.js';
 import { loadOrCreateReadwiseApiCandidateRun, saveReadwiseApiCandidateCursor } from '../database/readwiseApiCandidateRun.js';
 import { saveReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
@@ -20,10 +21,10 @@ import {
 import { indexReadwiseApiAnnotationGraph } from './readwiseApiAnnotationGraph.js';
 import { resolveReadwiseApiNoteParents } from './readwiseApiAnnotationParentResolution.js';
 import { resolveAndSaveReadwiseApiCandidateParent } from './readwiseApiCandidateParent.js';
+import { createReadwiseApiCandidateRecord } from './readwiseApiCandidateRecord.js';
 import { matchesReadwiseDocumentImportTag } from './readwiseApiCandidateRouting.js';
 import {
   READER_PARENT_CATEGORIES,
-  type ReadwiseApiCandidate,
   type ReaderParentCategory
 } from './readwiseApiCandidateTypes.js';
 import {
@@ -43,21 +44,22 @@ export async function buildReadwiseApiCandidateIndex(input: {
   onProgress?: (processed: number) => void;
   settings: ImportManagerSettings;
 }) {
-  const run = loadOrCreateReadwiseApiCandidateRun(
-    input.connectionRef,
-    input.settings.readwiseAutoImportPolicy
-  );
   const request = createReadwiseApiRequest(input.dependencies);
-  const ledgers = loadOrCreateReadwiseApiScopeLedgers(
-    input.connectionRef,
-    input.settings.readwiseAutoImportPolicy,
-    run.roundStartedAt
-  );
+  const ledgers = await runWithDatabaseConnectionOwner(() => {
+    const run = loadOrCreateReadwiseApiCandidateRun(
+      input.connectionRef, input.settings.readwiseAutoImportPolicy
+    );
+    return loadOrCreateReadwiseApiScopeLedgers(
+      input.connectionRef, input.settings.readwiseAutoImportPolicy, run.roundStartedAt
+    );
+  });
   for (const initial of ledgers) await fetchScope(input, initial, request);
   await assembleCandidates(
     input.connectionRef, input.settings, request, input.includeParentContent !== false, input.onProgress
   );
-  saveReadwiseApiCandidateCursor({ connectionRef: input.connectionRef, cursor: null, phase: 'ready' });
+  await runWithDatabaseConnectionOwner(() => {
+    saveReadwiseApiCandidateCursor({ connectionRef: input.connectionRef, cursor: null, phase: 'ready' });
+  });
 }
 
 async function fetchScope(
@@ -85,19 +87,16 @@ async function fetchScope(
       }
       throw error;
     }
-    savePage(
-      input.connectionRef,
-      ledger.scope,
-      payload,
-      ledger.runStartedAt
-    );
-    input.dependencies.onPage?.({
-      phase: ledger.scope === 'export' ? 'export' : 'reader',
-      recordCount: values(payload).length
-    });
-    reportIndexProgress(input.connectionRef, input.onProgress);
     const cursor = nextCursor(payload);
-    ledger = saveReadwiseApiScopeCursor(input.connectionRef, ledger, cursor);
+    ledger = await runWithDatabaseConnectionOwner(() => {
+      savePage(input.connectionRef, ledger.scope, payload, ledger.runStartedAt);
+      input.dependencies.onPage?.({
+        phase: ledger.scope === 'export' ? 'export' : 'reader',
+        recordCount: values(payload).length
+      });
+      reportIndexProgress(input.connectionRef, input.onProgress);
+      return saveReadwiseApiScopeCursor(input.connectionRef, ledger, cursor);
+    });
     if (!cursor) return;
   }
 }
@@ -123,25 +122,19 @@ async function assembleCandidates(
   request: ReturnType<typeof createReadwiseApiRequest>, includeParentContent: boolean,
   onProgress?: (processed: number) => void
 ) {
-  const run = loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy);
+  const { run, facts } = await runWithDatabaseConnectionOwner(() => ({
+    run: loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy),
+    facts: loadReadwiseApiAnnotationLedger(connectionRef)
+  }));
   await resolveReadwiseApiNoteParents({
-    connectionRef, facts: loadReadwiseApiAnnotationLedger(connectionRef),
+    connectionRef, facts,
     onProgress: () => reportIndexProgress(connectionRef, onProgress),
     request,
     runStartedAt: run.roundStartedAt
   });
-  const documents = loadReadwiseApiReaderIndex(connectionRef);
-  const byId = new Map(documents.map((item) => [item.id, item]));
-  const annotations = loadReadwiseApiAnnotationLedger(connectionRef);
-  const graph = indexReadwiseApiAnnotationGraph(annotations, run.roundStartedAt);
-  const exportBooks = loadReadwiseApiExportIndex(connectionRef);
-  indexReadwiseApiExportAnnotationContent(connectionRef, exportBooks, run.roundStartedAt);
-  const exportIdsByParent = indexReadwiseApiExportMatches(annotations, exportBooks);
-  const parentIds = new Set([
-    ...documents.filter((item) => isParentCategory(item.category)).map((item) => item.id),
-    ...graph.affectedParents,
-    ...exportIdsByParent.keys()
-  ]);
+  const { byId, exportIdsByParent, graph, parentIds } = await loadCandidateAssemblyFacts(
+    connectionRef, run.roundStartedAt
+  );
   for (const parentId of parentIds) {
     let parent = byId.get(parentId) ?? null;
     const knownHighlightIds = new Set(graph.highlightIdsByParent.get(parentId) ?? []);
@@ -172,37 +165,35 @@ async function assembleCandidates(
     );
     if (destination === 'off') continue;
     const noteIds = graph.noteIdsByParent.get(parentId) ?? [];
-    bindReadwiseApiAnnotationParents(connectionRef, parentId, [...highlightIds, ...noteIds]);
-    saveReadwiseApiCandidates(connectionRef, [candidate(
-      parent, destination, hasHighlights, highlightIds, noteIds, matchedImportTag
-    )]);
+    await runWithDatabaseConnectionOwner(() => {
+      bindReadwiseApiAnnotationParents(connectionRef, parentId, [...highlightIds, ...noteIds]);
+      saveReadwiseApiCandidates(connectionRef, [createReadwiseApiCandidateRecord(
+        parent, destination, hasHighlights, highlightIds, noteIds, matchedImportTag
+      )]);
+    });
   }
+}
+
+function loadCandidateAssemblyFacts(connectionRef: string, runStartedAt: string) {
+  return runWithDatabaseConnectionOwner(() => {
+    const documents = loadReadwiseApiReaderIndex(connectionRef);
+    const byId = new Map(documents.map((item) => [item.id, item]));
+    const annotations = loadReadwiseApiAnnotationLedger(connectionRef);
+    const graph = indexReadwiseApiAnnotationGraph(annotations, runStartedAt);
+    const exportBooks = loadReadwiseApiExportIndex(connectionRef);
+    indexReadwiseApiExportAnnotationContent(connectionRef, exportBooks, runStartedAt);
+    const exportIdsByParent = indexReadwiseApiExportMatches(annotations, exportBooks);
+    const parentIds = new Set([
+      ...documents.filter((item) => isParentCategory(item.category)).map((item) => item.id),
+      ...graph.affectedParents,
+      ...exportIdsByParent.keys()
+    ]);
+    return { byId, exportIdsByParent, graph, parentIds };
+  });
 }
 
 function reportIndexProgress(connectionRef: string, onProgress?: (processed: number) => void) {
   if (onProgress) onProgress(countReadwiseApiIndexedRecords(connectionRef));
-}
-
-function candidate(
-  parent: NonNullable<ReturnType<typeof normalizeReaderDocument>>,
-  destination: 'external' | 'inbox',
-  hasHighlights: boolean,
-  highlightIds: string[],
-  noteIds: string[],
-  matchedImportTag: boolean
-): ReadwiseApiCandidate {
-  return {
-    destination,
-    documentId: parent.id,
-    exportCategory: null,
-    hasHighlights,
-    highlightIds,
-    noteIds,
-    matchedImportTag,
-    readerCategory: parent.category as ReaderParentCategory,
-    status: 'pending',
-    title: parent.title
-  };
 }
 
 function isParentCategory(value: unknown): value is ReaderParentCategory {

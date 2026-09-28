@@ -1,5 +1,6 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import {
   completeReadwiseApiCandidateRun
 } from '../database/readwiseApiCandidateRun.js';
@@ -64,20 +65,24 @@ export async function runReadwiseApiCandidatePipeline(input: ReadwiseApiCandidat
     settings, connectionRef, dependencies, purpose, onIndexProgress
   );
   const total = candidates.length;
-  input.onCandidateIndex?.(candidates.map((candidate) => candidate.documentId));
+  await runWithDatabaseConnectionOwner(() => {
+    input.onCandidateIndex?.(candidates.map((candidate) => candidate.documentId));
+  });
   const stats = {
     annotationCount: 0,
     committedCount: 0,
     completedCount: candidates.filter((candidate) => candidate.status === 'completed').length,
     skippedCount: 0
   };
-  reportReadwiseApiCandidateProgress(input.onCandidateCount, candidates, stats.completedCount);
+  await runWithDatabaseConnectionOwner(() => (
+    reportReadwiseApiCandidateProgress(input.onCandidateCount, candidates, stats.completedCount)
+  ));
   const consumer = createCandidateConsumer(input, total, stats);
   await produceReadwiseApiCandidateFacts(input, candidates, consumer, stats, total);
   const incomplete = await prepareDeferredReadwiseApiCandidates(input, consumer, stats, total);
   if (incomplete) return incomplete;
   await consumer.wait();
-  return finalizeCandidatePipeline(input, stats, total);
+  return runWithDatabaseConnectionOwner(() => finalizeCandidatePipeline(input, stats, total));
 }
 
 function finalizeCandidatePipeline(
@@ -116,10 +121,7 @@ async function consumeCandidate(
   preparedResources?: ReadwiseApiPreparedResources
 ) {
   try {
-    input.assertEligible();
-    const document = loadPreparedReadwiseApiCandidate(input.connectionRef, documentId);
-    const candidate = loadReadwiseApiCandidates(input.connectionRef)
-      .find((item) => item.documentId === documentId);
+    const { candidate, document } = await loadCandidateForCommit(input, documentId);
     if (!document) throw new Error('readwise_api_candidate_incomplete');
     if (!candidate) throw new Error('readwise_api_candidate_missing');
     const commitOptions = await input.beforeCommit?.(document);
@@ -129,10 +131,12 @@ async function consumeCandidate(
         documentId: document.id,
         status: 'skipped'
       });
-      setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed', null);
-      stats.skippedCount += 1;
-      stats.completedCount += 1;
-      input.onProgress?.(stats.completedCount, total);
+      await runWithDatabaseConnectionOwner(() => {
+        setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed', null);
+        stats.skippedCount += 1;
+        stats.completedCount += 1;
+        input.onProgress?.(stats.completedCount, total);
+      });
       return;
     }
     const result = await commitReadwiseApiDocument({
@@ -148,21 +152,34 @@ async function consumeCandidate(
         ? {} : { replaceExistingBody: commitOptions.replaceExistingBody })
     });
     await input.afterCommit?.(commitOptions?.document ?? document, result);
-    stats.annotationCount += result.annotationCount;
-    setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed', null);
-    stats.committedCount += 1;
-    stats.completedCount += 1;
-    input.onProgress?.(stats.completedCount, total);
+    await runWithDatabaseConnectionOwner(() => {
+      stats.annotationCount += result.annotationCount;
+      setReadwiseApiCandidateStatus(input.connectionRef, documentId, 'completed', null);
+      stats.committedCount += 1;
+      stats.completedCount += 1;
+      input.onProgress?.(stats.completedCount, total);
+    });
   } catch (error) {
     console.error('[readwise-candidate] candidate failed', { documentId, error });
-    setReadwiseApiCandidateStatus(
+    await runWithDatabaseConnectionOwner(() => setReadwiseApiCandidateStatus(
       input.connectionRef,
       documentId,
       input.dependencies.signal?.aborted ? 'ready' : 'failed',
       input.dependencies.signal?.aborted ? undefined : {
         failedAt: new Date().toISOString(), reason: readwiseApiCandidateFailureReason(error), stage: 'writing'
       }
-    );
+    ));
     if (input.failFastCandidate?.(documentId)) throw error;
   }
+}
+
+function loadCandidateForCommit(input: ReadwiseApiCandidatePipelineInput, documentId: string) {
+  return runWithDatabaseConnectionOwner(() => {
+    input.assertEligible();
+    return {
+      candidate: loadReadwiseApiCandidates(input.connectionRef)
+        .find((item) => item.documentId === documentId),
+      document: loadPreparedReadwiseApiCandidate(input.connectionRef, documentId)
+    };
+  });
 }

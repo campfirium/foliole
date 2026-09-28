@@ -1,7 +1,7 @@
 import { normalizeImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeReadwiseImportRunResult } from '../../lib/platform/nativeImportContract.js';
 import type { NativeReadwiseApiRunTrigger } from '../../lib/platform/nativeReadwiseApiImportContract.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import {
   loadReadwiseApiCompletedThrough,
   loadReadwiseApiImportSource
@@ -42,11 +42,15 @@ export async function previewReadwiseApiImport(
   settingsInput?: unknown,
   dependencies: ReadwiseApiFetchDependencies = {}
 ) {
-  assertReadwiseApiScopeAllowed('api');
-  const settings = settingsInput ? normalizeImportManagerSettings(settingsInput) : loadImportManagerSettings();
-  const connectionRef = requireConnectionRef();
+  const { connectionRef, settings } = await runWithDatabaseConnectionOwner(() => {
+    assertReadwiseApiScopeAllowed('api');
+    return {
+      connectionRef: requireConnectionRef(),
+      settings: settingsInput ? normalizeImportManagerSettings(settingsInput) : loadImportManagerSettings()
+    };
+  });
   const candidates = await ensureReadwiseApiCandidateIndex(settings, connectionRef, dependencies);
-  return buildReadwiseApiCandidatePreview(settings, connectionRef, candidates);
+  return runWithDatabaseConnectionOwner(() => buildReadwiseApiCandidatePreview(settings, connectionRef, candidates));
 }
 
 export function runReadwiseApiImport(input?: {
@@ -55,16 +59,20 @@ export function runReadwiseApiImport(input?: {
   trigger?: NativeReadwiseApiRunTrigger;
   window?: ReadwiseImportProgressWindow | null;
 }): Promise<NativeReadwiseImportRunResult> {
-  if (loadReadwiseSourceCutover()?.status === 'migration-in-progress') {
-    return runMigration(input);
-  }
   if (activeApiImport) return activeApiImport.promise;
   const controller = new AbortController();
-  const promise = runNow(input, controller.signal).finally(() => {
+  const promise = startImport(input, controller.signal).finally(() => {
     if (activeApiImport?.controller === controller) activeApiImport = null;
   });
   activeApiImport = { controller, promise };
   return promise;
+}
+
+async function startImport(input: Parameters<typeof runReadwiseApiImport>[0], signal: AbortSignal) {
+  const migrating = await runWithDatabaseConnectionOwner(() => (
+    loadReadwiseSourceCutover()?.status === 'migration-in-progress'
+  ));
+  return migrating ? runMigration(input) : runNow(input, signal);
 }
 
 async function runMigration(input: Parameters<typeof runReadwiseApiImport>[0]) {
@@ -101,13 +109,9 @@ export function isReadwiseApiImportActive() {
 async function runNow(
   input: Parameters<typeof runReadwiseApiImport>[0], signal: AbortSignal
 ): Promise<NativeReadwiseImportRunResult> {
-  assertReadwiseApiScopeAllowed('api');
-  const settings = input?.settings ? normalizeImportManagerSettings(input.settings) : loadImportManagerSettings();
-  const connectionRef = requireConnectionRef();
-  const kind = loadReadwiseApiCompletedThrough(connectionRef) ? 'routine' : 'initial';
-  beginReadwiseApiTrackedRun(connectionRef, input?.trigger ?? 'manual', kind);
+  const { connectionRef, settings } = await beginApiImport(input);
   try {
-    updateReadwiseApiTrackedRunStage('fetching');
+    await runWithDatabaseConnectionOwner(() => updateReadwiseApiTrackedRunStage('fetching'));
     const result = await runReadwiseApiCandidatePipeline({
       assertEligible: () => assertEligible(signal, connectionRef),
       connectionRef,
@@ -129,8 +133,10 @@ async function runNow(
       settings,
       shouldSkipCandidate: (candidate) => shouldSkipApiDocument(connectionRef, candidate)
     });
-    updateReadwiseApiTrackedRunStage('completion');
-    assertEligible(signal, connectionRef);
+    await runWithDatabaseConnectionOwner(() => {
+      updateReadwiseApiTrackedRunStage('completion');
+      assertEligible(signal, connectionRef);
+    });
     const output: NativeReadwiseImportRunResult = {
       annotation_count: result.annotationCount,
       committed_count: result.committedCount,
@@ -143,20 +149,31 @@ async function runNow(
       skipped_count: result.skippedCount,
       status: result.remainingCount > 0 ? 'failed' : 'completed'
     };
-    completeReadwiseApiTrackedRun(connectionRef, output);
+    await runWithDatabaseConnectionOwner(() => completeReadwiseApiTrackedRun(connectionRef, output));
     publishProgress(input?.window, result.completedCount, result.totalCount, 'source_completed');
     return output;
   } catch (error) {
     if (signal.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
       const result = createCancelledReadwiseApiImportResult();
-      completeReadwiseApiTrackedRun(connectionRef, result);
+      await runWithDatabaseConnectionOwner(() => completeReadwiseApiTrackedRun(connectionRef, result));
       publishProgress(input?.window, 0, 0, 'source_completed', undefined, 'cancelled');
       return result;
     }
-    failReadwiseApiTrackedRun(connectionRef, error);
+    await runWithDatabaseConnectionOwner(() => failReadwiseApiTrackedRun(connectionRef, error));
     publishProgress(input?.window, 0, 0, 'source_completed', undefined, 'failed');
     throw error;
   }
+}
+
+function beginApiImport(input: Parameters<typeof runReadwiseApiImport>[0]) {
+  return runWithDatabaseConnectionOwner(() => {
+    assertReadwiseApiScopeAllowed('api');
+    const settings = input?.settings ? normalizeImportManagerSettings(input.settings) : loadImportManagerSettings();
+    const connectionRef = requireConnectionRef();
+    const kind = loadReadwiseApiCompletedThrough(connectionRef) ? 'routine' : 'initial';
+    beginReadwiseApiTrackedRun(connectionRef, input?.trigger ?? 'manual', kind);
+    return { connectionRef, settings };
+  });
 }
 
 function shouldSkipApiDocument(connectionRef: string, candidate: ReadwiseApiCandidate) {

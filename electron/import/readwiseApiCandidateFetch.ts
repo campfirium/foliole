@@ -1,4 +1,5 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 
 import { createReadwiseApiCandidateFactFetcher } from './readwiseApiCandidateFacts.js';
@@ -14,12 +15,12 @@ export async function ensureReadwiseApiCandidateIndex(
   purpose: ReadwiseApiScopePurpose = 'api',
   onIndexProgress?: (processed: number) => void
 ) {
-  assertReadwiseApiScopeAllowed(purpose);
+  await runWithDatabaseConnectionOwner(() => assertReadwiseApiScopeAllowed(purpose));
   await buildReadwiseApiCandidateIndex({
     connectionRef, dependencies, includeParentContent: false,
     ...(onIndexProgress ? { onProgress: onIndexProgress } : {}), settings
   });
-  return loadReadwiseApiCandidates(connectionRef);
+  return runWithDatabaseConnectionOwner(() => loadReadwiseApiCandidates(connectionRef));
 }
 
 export async function fetchReadwiseApiCandidateFacts(

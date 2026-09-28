@@ -1,4 +1,5 @@
 import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { saveReadwiseApiCandidateFacts } from '../database/readwiseApiCandidateStage.js';
 import {
   loadReadwiseApiReaderIndex,
@@ -19,13 +20,18 @@ export function createReadwiseApiCandidateFactFetcher(
 ) {
   const request = createReadwiseApiRequest(dependencies);
   return async (candidate: ReadwiseApiCandidate) => {
-    let indexed = loadReadwiseApiReaderIndex(connectionRef);
-    let parent = indexed.find((item) => item.id === candidate.documentId && item.htmlContent) ?? null;
-    if (!parent) parent = loadReadwiseApiExistingParent(connectionRef, candidate.documentId);
+    let { indexed, parent } = await runWithDatabaseConnectionOwner(() => {
+      const indexed = loadReadwiseApiReaderIndex(connectionRef);
+      const parent = indexed.find((item) => item.id === candidate.documentId && item.htmlContent)
+        ?? loadReadwiseApiExistingParent(connectionRef, candidate.documentId);
+      return { indexed, parent };
+    });
     if (!parent) {
       parent = await fetchExact(candidate.documentId, true, request);
-      if (parent) saveReadwiseApiReaderIndexPage(connectionRef, [parent]);
-      indexed = loadReadwiseApiReaderIndex(connectionRef);
+      indexed = await runWithDatabaseConnectionOwner(() => {
+        if (parent) saveReadwiseApiReaderIndexPage(connectionRef, [parent]);
+        return loadReadwiseApiReaderIndex(connectionRef);
+      });
     }
     if (!parent || parent.category !== candidate.readerCategory) {
       throw new Error('readwise_api_candidate_parent_missing');
@@ -36,7 +42,9 @@ export function createReadwiseApiCandidateFactFetcher(
     if (annotations.length !== annotationIds.length) {
       throw new Error('readwise_api_candidate_annotation_missing');
     }
-    saveReadwiseApiCandidateFacts(connectionRef, candidate.documentId, [parent, ...annotations]);
+    await runWithDatabaseConnectionOwner(() => (
+      saveReadwiseApiCandidateFacts(connectionRef, candidate.documentId, [parent, ...annotations])
+    ));
     return 'ready' as const;
   };
 }

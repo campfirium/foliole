@@ -1,4 +1,5 @@
 import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import {
   bindReadwiseApiAnnotationParents,
   markReadwiseApiAnnotationParentsUnavailable
@@ -25,8 +26,10 @@ export async function resolveReadwiseApiNoteParents(input: {
   request: ReturnType<typeof createReadwiseApiRequest>;
   runStartedAt: string;
 }) {
-  const indexedParents = new Map(loadReadwiseApiReaderIndex(input.connectionRef)
-    .filter((item) => isParentCategory(item.category)).map((item) => [item.id, item]));
+  const indexedParents = await runWithDatabaseConnectionOwner(() => (
+    new Map(loadReadwiseApiReaderIndex(input.connectionRef)
+      .filter((item) => isParentCategory(item.category)).map((item) => [item.id, item]))
+  ));
   const highlightIds = new Set(input.facts.filter((item) => item.category === 'highlight')
     .map((item) => item.remoteId));
   const notesByParent = new Map<string, string[]>();
@@ -37,27 +40,33 @@ export async function resolveReadwiseApiNoteParents(input: {
   for (const [parentId, noteIds] of notesByParent) {
     const indexedParent = indexedParents.get(parentId);
     if (indexedParent) {
-      bindReadwiseApiAnnotationParents(input.connectionRef, indexedParent.id, noteIds);
+      await runWithDatabaseConnectionOwner(() => (
+        bindReadwiseApiAnnotationParents(input.connectionRef, indexedParent.id, noteIds)
+      ));
       continue;
     }
     const facts = input.facts.filter((item) => noteIds.includes(item.remoteId));
     if (facts.every((item) => item.resolution === 'parent-and-content-unavailable')) continue;
     const parent = await fetchExact(parentId, input.request);
     if (!parent) {
-      markReadwiseApiAnnotationParentsUnavailable(
-        input.connectionRef, noteIds, input.runStartedAt
-      );
+      await runWithDatabaseConnectionOwner(() => (
+        markReadwiseApiAnnotationParentsUnavailable(input.connectionRef, noteIds, input.runStartedAt)
+      ));
       continue;
     }
     if (parent.category === 'highlight') {
-      saveReadwiseApiReaderIndexPage(input.connectionRef, [parent], input.runStartedAt);
-      input.onProgress?.();
+      await runWithDatabaseConnectionOwner(() => {
+        saveReadwiseApiReaderIndexPage(input.connectionRef, [parent], input.runStartedAt);
+        input.onProgress?.();
+      });
       continue;
     }
     if (!isParentCategory(parent.category)) throw identityConflict(parentId);
-    saveReadwiseApiReaderIndexPage(input.connectionRef, [parent], input.runStartedAt);
-    input.onProgress?.();
-    bindReadwiseApiAnnotationParents(input.connectionRef, parent.id, noteIds);
+    await runWithDatabaseConnectionOwner(() => {
+      saveReadwiseApiReaderIndexPage(input.connectionRef, [parent], input.runStartedAt);
+      input.onProgress?.();
+      bindReadwiseApiAnnotationParents(input.connectionRef, parent.id, noteIds);
+    });
   }
 }
 

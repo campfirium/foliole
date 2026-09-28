@@ -6,6 +6,7 @@ import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readw
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordById } from '../database/attachments.js';
 import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from '../database/pdfIndexing.js';
 
 import { fetchReadwiseRawSourceDocument, type ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
@@ -86,11 +87,13 @@ export async function persistReadwiseApiOriginalFile(input: {
   title: string;
 }) {
   await stageReadwiseApiOriginalFile(input);
-  attachReadwiseApiOriginalFile(input.nodeId, input.state);
-  if (input.category === 'pdf') {
-    markPdfAttachmentIndexPending(input.state.attachmentId);
-    enqueuePdfAttachmentIndexing(input.state.attachmentId);
-  }
+  await runWithDatabaseConnectionOwner(() => {
+    attachReadwiseApiOriginalFile(input.nodeId, input.state);
+    if (input.category === 'pdf') {
+      markPdfAttachmentIndexPending(input.state.attachmentId);
+      enqueuePdfAttachmentIndexing(input.state.attachmentId);
+    }
+  });
 }
 
 export async function stageReadwiseApiOriginalFile(input: {
@@ -103,19 +106,23 @@ export async function stageReadwiseApiOriginalFile(input: {
 }) {
   const category = input.category ?? 'pdf';
   const originalName = `${safeFileStem(input.title)}.${category}`;
-  const existing = findAttachmentRecordById(input.state.attachmentId);
+  const existing = await runWithDatabaseConnectionOwner(() => (
+    findAttachmentRecordById(input.state.attachmentId)
+  ));
   const storagePath = resolveAttachmentStoragePath(input.state.contentHash, undefined, input.state.mimeType);
   await persistValidatedFile(storagePath, input.bytes);
   input.signal?.throwIfAborted();
-  input.assertEligible?.();
+  await runWithDatabaseConnectionOwner(() => input.assertEligible?.());
   const createdAt = existing?.createdAt ?? new Date().toISOString();
-  if (!existing) {
-    createAttachmentRecord({
-      createdAt, id: input.state.attachmentId, mimeType: input.state.mimeType,
-      originalName, sizeBytes: input.state.sizeBytes
-    });
-  }
-  recordAttachmentMetadata(input.state.attachmentId, createdAt);
+  await runWithDatabaseConnectionOwner(() => {
+    if (!existing) {
+      createAttachmentRecord({
+        createdAt, id: input.state.attachmentId, mimeType: input.state.mimeType,
+        originalName, sizeBytes: input.state.sizeBytes
+      });
+    }
+    recordAttachmentMetadata(input.state.attachmentId, createdAt);
+  });
 }
 
 export function attachReadwiseApiOriginalFile(

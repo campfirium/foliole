@@ -1,3 +1,4 @@
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import {
   loadPreparedReadwiseApiCandidate,
   loadReadwiseApiCandidates,
@@ -33,26 +34,34 @@ export async function produceReadwiseApiCandidateFacts(
   stats: CandidateStats,
   total: number
 ) {
-  markSkippedCandidates(input, candidates, stats, total);
-  const activeCandidates = candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate));
+  const activeCandidates = await runWithDatabaseConnectionOwner(() => {
+    markSkippedCandidates(input, candidates, stats, total);
+    return candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate));
+  });
   const fetchFacts = createReadwiseApiCandidateFactFetcher(input.connectionRef, input.dependencies);
   let frozenCount = candidates.length - activeCandidates.length
     + activeCandidates.filter(hasLocalReadwiseApiCandidateFacts).length;
-  if (!input.freezeCandidateResources) input.onCandidateFactsProgress?.(frozenCount, total);
+  if (!input.freezeCandidateResources) {
+    await runWithDatabaseConnectionOwner(() => input.onCandidateFactsProgress?.(frozenCount, total));
+  }
   if (!input.deferCommitUntilAllFacts) {
     for (const candidate of activeCandidates.filter(hasLocalReadwiseApiCandidateFacts)) consumer.enqueue(candidate.documentId);
   }
   for (const candidate of activeCandidates.filter(shouldFetchReadwiseApiCandidateFacts)) {
     try {
-      input.assertEligible();
+      await runWithDatabaseConnectionOwner(input.assertEligible);
       await fetchFacts(candidate);
       frozenCount += 1;
-      if (!input.freezeCandidateResources) input.onCandidateFactsProgress?.(frozenCount, total);
+      if (!input.freezeCandidateResources) {
+        await runWithDatabaseConnectionOwner(() => input.onCandidateFactsProgress?.(frozenCount, total));
+      }
       if (!input.deferCommitUntilAllFacts) consumer.enqueue(candidate.documentId);
     } catch (error) {
-      setReadwiseApiCandidateStatus(input.connectionRef, candidate.documentId, 'failed', {
-        failedAt: new Date().toISOString(), reason: readwiseApiCandidateFailureReason(error), stage: 'fetching'
-      });
+      await runWithDatabaseConnectionOwner(() => setReadwiseApiCandidateStatus(
+        input.connectionRef, candidate.documentId, 'failed', {
+          failedAt: new Date().toISOString(), reason: readwiseApiCandidateFailureReason(error), stage: 'fetching'
+        }
+      ));
       if (isReadwiseApiCandidateRunStoppingError(error)) throw error;
     }
   }
@@ -65,24 +74,28 @@ export async function prepareDeferredReadwiseApiCandidates(
   total: number
 ) {
   if (!input.deferCommitUntilAllFacts) return null;
-  const candidates = loadReadwiseApiCandidates(input.connectionRef).sort((left, right) =>
-    (input.candidatePriority?.(left.documentId) ?? 0) - (input.candidatePriority?.(right.documentId) ?? 0));
-  const activeCandidates = candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate));
+  const { activeCandidates, candidates } = await runWithDatabaseConnectionOwner(() => {
+    const candidates = loadReadwiseApiCandidates(input.connectionRef).sort((left, right) =>
+      (input.candidatePriority?.(left.documentId) ?? 0) - (input.candidatePriority?.(right.documentId) ?? 0));
+    return { activeCandidates: candidates.filter((candidate) => !input.shouldSkipCandidate?.(candidate)), candidates };
+  });
   if (activeCandidates.some((candidate) => !hasLocalReadwiseApiCandidateFacts(candidate))) {
     return incompleteReadwiseApiCandidateResult(stats, candidates);
   }
   const resources = new Map<string, ReadwiseApiPreparedResources>();
   let preparedCount = 0;
   for (const candidate of activeCandidates) {
-    const document = loadPreparedReadwiseApiCandidate(input.connectionRef, candidate.documentId);
+    const document = await runWithDatabaseConnectionOwner(() => (
+      loadPreparedReadwiseApiCandidate(input.connectionRef, candidate.documentId)
+    ));
     if (!document) throw new Error('readwise_api_candidate_incomplete');
     if (input.freezeCandidateResources) {
       resources.set(candidate.documentId, await input.freezeCandidateResources(document, candidate.destination));
     }
     preparedCount += 1;
-    input.onCandidateFactsProgress?.(preparedCount, total);
+    await runWithDatabaseConnectionOwner(() => input.onCandidateFactsProgress?.(preparedCount, total));
   }
-  input.onCandidateFactsComplete?.(total);
+  await runWithDatabaseConnectionOwner(() => input.onCandidateFactsComplete?.(total));
   for (const candidate of candidates.filter((item) => item.status !== 'completed')) {
     consumer.enqueue(candidate.documentId, resources.get(candidate.documentId));
   }

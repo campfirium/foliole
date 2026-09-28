@@ -1,6 +1,7 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import { resolveReadwiseAutoImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { markReadwiseApiArticleParentUnavailable } from '../database/readwiseApiAnnotationLedger.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import { saveReadwiseApiReaderIndexPage } from '../database/readwiseApiIndexStage.js';
@@ -22,14 +23,16 @@ export async function resolveReadwiseApiCandidateParent(
   runStartedAt: string,
   includeContent = true
 ) {
-  const existing = loadReadwiseApiExistingParent(connectionRef, id);
+  const existing = await runWithDatabaseConnectionOwner(() => loadReadwiseApiExistingParent(connectionRef, id));
   if (existing) return existing;
   const allHighlightedEnabled = READER_PARENT_CATEGORIES.every((category) =>
     resolveReadwiseAutoImportDestination(settings.readwiseAutoImportPolicy, category, true) !== 'off'
   );
   const first = await fetchExact(id, includeContent && allHighlightedEnabled, request);
   if (!first) {
-    markReadwiseApiArticleParentUnavailable(connectionRef, id, runStartedAt);
+    await runWithDatabaseConnectionOwner(() => (
+      markReadwiseApiArticleParentUnavailable(connectionRef, id, runStartedAt)
+    ));
     return null;
   }
   if (!isReaderParentCategory(first.category)) throw identityConflict(id);
@@ -54,8 +57,10 @@ export async function resolveAndSaveReadwiseApiCandidateParent(input: {
     input.runStartedAt, input.includeContent
   );
   if (!parent) return null;
-  saveReadwiseApiReaderIndexPage(input.connectionRef, [parent]);
-  input.onResolved();
+  await runWithDatabaseConnectionOwner(() => {
+    saveReadwiseApiReaderIndexPage(input.connectionRef, [parent]);
+    input.onResolved();
+  });
   return parent;
 }
 

@@ -1,6 +1,7 @@
 import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
 import { prepareReadwiseApiEpubCover } from './readwiseApiEpubCover.js';
@@ -17,13 +18,13 @@ type PreparationInput = {
 };
 
 export async function prepareReadwiseApiEpubCoverIfNeeded(input: PreparationInput) {
-  return shouldPrepareReadwiseApiEpubCover(input)
+  return await runWithDatabaseConnectionOwner(() => shouldPrepareReadwiseApiEpubCover(input))
     ? prepareReadwiseApiEpubCover(input.document)
     : null;
 }
 
 export async function prepareReadwiseApiEpubImagesIfNeeded(input: PreparationInput) {
-  return shouldPrepareReadwiseApiEpubImages(input)
+  return await runWithDatabaseConnectionOwner(() => shouldPrepareReadwiseApiEpubImages(input))
     ? prepareReadwiseApiEpubImages(input.document)
     : null;
 }

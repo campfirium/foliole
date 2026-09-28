@@ -3,12 +3,8 @@ import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderS
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { filterPostCutoverReadwiseDocument } from '../../lib/core/readwise/readwiseSourceCutover.js';
-import { deleteNodeAttachmentLink } from '../database/attachments.js';
-import { openDatabaseConnection } from '../database/connection.js';
-import {
-  loadReadwiseApiImportSource,
-  saveReadwiseApiImportSource
-} from '../database/readwiseApiImportState.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import {
   clearReadwiseApiSourceDisposition,
   readReadwiseApiSourceDisposition
@@ -21,11 +17,8 @@ import {
 } from './readwiseApiEpubImagePreparation.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
-import {
-  attachReadwiseApiOriginalFile,
-  persistReadwiseApiOriginalFile,
-  prepareReadwiseApiOriginalFile
-} from './readwiseApiOriginalFile.js';
+import { prepareReadwiseApiOriginalFile } from './readwiseApiOriginalFile.js';
+import { persistPreparedOriginalFile, saveOriginalFileState } from './readwiseApiOriginalFileCommit.js';
 import type { PreparedOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
 
 interface ReadwiseApiDocumentCommitInput {
@@ -53,10 +46,12 @@ export interface ReadwiseApiPreparedResources {
 }
 
 export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommitInput) {
-  if (shouldSkipHandledDocument(input)) {
-    return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
-  }
-  const { existingBefore, guardedDocument } = guardPostCutoverDocument(input.connectionRef, input.document);
+  const before = await runWithDatabaseConnectionOwner(() => {
+    if (shouldSkipHandledDocument(input)) return { skipped: true as const };
+    return { skipped: false as const, ...guardPostCutoverDocument(input.connectionRef, input.document) };
+  });
+  if (before.skipped) return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
+  const { existingBefore, guardedDocument } = before;
   if (!guardedDocument) return { annotationCount: 0, documentId: input.document.id, status: 'skipped' as const };
   input = { ...input, document: guardedDocument };
   const originalFileCategory = originalFileCategoryFor(input.document.category);
@@ -80,62 +75,34 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   const { preparedEpubCover, preparedEpubImages } = await prepareEpubResources(
     input, document, forceEpubStructure, Boolean(existingBefore?.nodeDeleted)
   );
-  input.assertEligible?.();
-  const result = materializeReadwiseApiDocument({
-    config: input.config, connectionRef: input.connectionRef, destination: input.destination, document,
-    preparedEpubCover, preparedEpubImages,
-    ...(forceEpubStructure ? { forceEpubStructure: true } : {}),
-    ...(input.reimportDeleted === undefined ? {} : { reimportDeleted: input.reimportDeleted }),
-    ...(input.replaceExistingBody === undefined && !forceEpubStructure
-      ? {} : { replaceExistingBody: Boolean(input.replaceExistingBody || forceEpubStructure) })
+  const result = await runWithDatabaseConnectionOwner(() => {
+    input.assertEligible?.();
+    return materializeReadwiseApiDocument({
+      config: input.config, connectionRef: input.connectionRef, destination: input.destination, document,
+      preparedEpubCover, preparedEpubImages,
+      ...(forceEpubStructure ? { forceEpubStructure: true } : {}),
+      ...(input.reimportDeleted === undefined ? {} : { reimportDeleted: input.reimportDeleted }),
+      ...(input.replaceExistingBody === undefined && !forceEpubStructure
+        ? {} : { replaceExistingBody: Boolean(input.replaceExistingBody || forceEpubStructure) })
+    });
   });
   if (!originalFileCategory || result.status !== 'imported') return result;
 
-  const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
+  const existing = await runWithDatabaseConnectionOwner(() => (
+    loadReadwiseApiImportSource(input.connectionRef, input.document.id)
+  ));
   if (!prepared || (previousOriginalFile?.status === 'localized' && !input.preparedResources?.replaceOriginalFile)) {
     return result;
   }
-  input.assertEligible?.();
+  await runWithDatabaseConnectionOwner(() => input.assertEligible?.());
   const finalState = await persistPreparedOriginalFile({
-    category: originalFileCategory, input, nodeId: existing?.nodeId ?? null,
+    category: originalFileCategory, document: input.document, nodeId: existing?.nodeId ?? null,
     prepared, previous: previousOriginalFile
   });
-  saveOriginalFileState(input.connectionRef, input.document.id, finalState);
+  await runWithDatabaseConnectionOwner(() => (
+    saveOriginalFileState(input.connectionRef, input.document.id, finalState)
+  ));
   return result;
-}
-
-async function persistPreparedOriginalFile(input: {
-  category: 'epub' | 'pdf';
-  input: ReadwiseApiDocumentCommitInput;
-  nodeId: string | null;
-  prepared: NonNullable<ReadwiseApiPreparedResources['originalFile']>;
-  previous: ReadwiseApiOriginalFileState | null | undefined;
-}) {
-  let finalState = input.prepared.state;
-  if (input.prepared.bytes && input.prepared.state.status === 'localized' && input.nodeId) {
-    try {
-      await persistReadwiseApiOriginalFile({
-        bytes: input.prepared.bytes, category: input.category, nodeId: input.nodeId,
-        state: input.prepared.state, title: input.input.document.title
-      });
-    } catch {
-      finalState = unavailableState(Boolean(input.input.document.body.trim()), 'original_file_storage_failed');
-    }
-  } else if (input.prepared.state.status === 'localized' && input.nodeId) {
-    attachReadwiseApiOriginalFile(input.nodeId, input.prepared.state);
-  }
-  replacePreviousOriginalLink(input.nodeId, input.previous, finalState);
-  return finalState;
-}
-
-function replacePreviousOriginalLink(
-  nodeId: string | null,
-  previous: ReadwiseApiOriginalFileState | null | undefined,
-  current: ReadwiseApiOriginalFileState
-) {
-  if (!nodeId || previous?.status !== 'localized' || current.status !== 'localized'
-    || previous.attachmentId === current.attachmentId) return;
-  deleteNodeAttachmentLink({ attachmentId: previous.attachmentId, nodeId, role: 'reference' });
 }
 
 function originalFileCategoryFor(category: PreparedReadwiseApiDocument['category']) {
@@ -179,16 +146,6 @@ function guardPostCutoverDocument(connectionRef: string, document: PreparedReadw
   return { existingBefore, guardedDocument };
 }
 
-function saveOriginalFileState(connectionRef: string, documentId: string, originalFile: ReadwiseApiOriginalFileState) {
-  const source = loadReadwiseApiImportSource(connectionRef, documentId);
-  if (!source) throw new Error('readwise_api_import_source_missing');
-  saveReadwiseApiImportSource({
-    annotationsJson: JSON.stringify(source.annotations), connectionRef, documentId,
-    sourceFingerprint: source.sourceFingerprint, state: { ...source.state, originalFile },
-    updatedAt: new Date().toISOString()
-  });
-}
-
 function withOriginalFileStatus(
   document: PreparedReadwiseApiDocument,
   state: ReadwiseApiOriginalFileState | null
@@ -221,11 +178,4 @@ function formatReason(reason: string | null) {
     original_file_url_rejected: 'the download address did not pass validation'
   };
   return reason && reasons[reason] ? reasons[reason] : 'the file is currently unavailable';
-}
-
-function unavailableState(hasHtmlBody: boolean, reason: string): ReadwiseApiOriginalFileState {
-  return {
-    attachmentId: null, contentHash: null, mimeType: null, reason, sizeBytes: null,
-    status: hasHtmlBody ? 'html_only' : 'unavailable'
-  };
 }
