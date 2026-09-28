@@ -10,6 +10,19 @@ import {
   shouldApplySyncPackPage
 } from './syncPackReceiveProgress.js';
 
+it('accepts ordinary changes after a completed restore while retaining cursor continuity', () => {
+  const progress = { completed: true, cursorStateSeq: 8, frontierStateSeq: 8,
+    groupId: 'group', peerId: 'peer', restoreId: 'restore-a', sourceEpoch: 'epoch-a' };
+  const next = { sourceEpoch: 'epoch-a', fromStateSeq: 8, toStateSeq: 9, frontierStateSeq: 9 };
+  expect(shouldApplySyncPackPage(next, progress, 8, false)).toBe(true);
+  expect(() => shouldApplySyncPackPage({ ...next, fromStateSeq: 7 }, progress, 8, false))
+    .toThrow('sync_pack_cursor_not_contiguous');
+  expect(() => shouldApplySyncPackPage(next, { ...progress, completed: false }, 8, false))
+    .toThrow('sync_pack_restore_event_changed');
+  expect(() => shouldApplySyncPackPage({ ...next, restoreId: 'restore-b' }, progress, 8, false))
+    .toThrow('sync_pack_restore_event_changed');
+});
+
 it('keeps a retired authenticated source epoch from replacing a newer receive cursor', async () => {
   const sqlite = new Database(':memory:');
   try {

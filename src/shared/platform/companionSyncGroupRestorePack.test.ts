@@ -61,12 +61,37 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
       .toBeUndefined();
     expect(target.prepare("SELECT object_id FROM sync_object_state WHERE object_id = 'b-only-node'").get())
       .toBeUndefined();
+    await verifyOrdinarySyncAfterRestore(source, target, root);
   } finally {
     source.close();
     target.close();
     await fs.rm(root, { force: true, recursive: true });
   }
 });
+
+async function verifyOrdinarySyncAfterRestore(source: Database.Database,
+  target: Database.Database, root: string) {
+  const progress = target.prepare(`SELECT cursor_state_seq FROM sync_pack_receive_progress
+    WHERE peer_id = ?`).get(sourceId) as { cursor_state_seq: number };
+  seedNode(source, 'after-restore-node', progress.cursor_state_seq + 1);
+  const packPath = path.join(root, 'ordinary.syncpack');
+  await buildDesktopSyncPackFromDriver({ fromPeerId: sourceId,
+    fromStateSeq: progress.cursor_state_seq, outputPath: packPath,
+    packId: 'pack-after-restore', toPeerId: targetId }, createBetterSqlite3Driver(source));
+  const incomingPath = path.join(root, 'ordinary.db');
+  await fs.writeFile(incomingPath, inflatePack(await fs.readFile(packPath)));
+  const args = { currentCursor: progress.cursor_state_seq, deviceId: targetId,
+    hostName: 'B', packPath: incomingPath, sourcePeerId: sourceId };
+  const port = createBetterSqliteDbPort(target);
+  const result = await applyCompanionSyncPackNodesWithDbPort(args, port);
+  expect(target.prepare("SELECT id FROM nodes WHERE id = 'after-restore-node'").get())
+    .toEqual({ id: 'after-restore-node' });
+  expect(target.prepare('SELECT restore_id, completed FROM sync_pack_receive_progress WHERE peer_id = ?')
+    .get(sourceId)).toEqual({ restore_id: null, completed: 1 });
+  const repeated = await applyCompanionSyncPackNodesWithDbPort({ ...args,
+    currentCursor: result.to_state_seq }, port);
+  expect(repeated.applied_object_count).toBe(0);
+}
 
 it('keeps the old library and pending event when replacement fails', async () => {
   const target = database(targetId);
@@ -105,7 +130,7 @@ function database(localId: string) {
   return db;
 }
 
-function seedNode(db: Database.Database, id: string) {
+function seedNode(db: Database.Database, id: string, stateSeq = 1) {
   const content = `# ${id}`;
   const versionId = `${id}-version`;
   db.prepare(`INSERT INTO nodes (id, kind, title, content, current_version_id, created_at, updated_at)
@@ -117,8 +142,8 @@ function seedNode(db: Database.Database, id: string) {
   db.prepare(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, current_version_id, content_hash,
      last_modified_by_host_name, updated_at, sync_dirty)
-    VALUES ('node', ?, 1, ?, ?, 'A', ?, 1)`)
-    .run(id, versionId, `hash-${id}`, at);
+    VALUES ('node', ?, ?, ?, ?, 'A', ?, 1)`)
+    .run(id, stateSeq, versionId, `hash-${id}`, at);
 }
 
 function seedRestore(db: Database.Database, appliedAt: string | null) {

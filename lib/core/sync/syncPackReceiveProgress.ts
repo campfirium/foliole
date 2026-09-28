@@ -58,7 +58,9 @@ export function shouldApplySyncPackPage(
     if (cursor.fromStateSeq !== 0) throw new Error('sync_pack_source_epoch_changed');
     return cursor.toStateSeq > 0 || cursor.frontierStateSeq === 0;
   }
-  if (progress.restoreId !== (cursor.restoreId ?? null)) {
+  const leavingCompletedRestore = progress.completed && progress.restoreId !== null &&
+    cursor.restoreId === undefined;
+  if (progress.restoreId !== (cursor.restoreId ?? null) && !leavingCompletedRestore) {
     throw new Error('sync_pack_restore_event_changed');
   }
   if (!progress.completed && progress.frontierStateSeq !== cursor.frontierStateSeq) {
