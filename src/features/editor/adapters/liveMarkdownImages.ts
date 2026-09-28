@@ -90,7 +90,7 @@ function appendLoadingImageSurface(
       revealLoadedMarkdownImageSurface(surface);
       wrapper.replaceChildren(surface);
       finalizeLoadedMarkdownImageDisplay(wrapper, imageMatch, requestMeasure);
-      if (editorNodeId) reportRemoteImageDisplayed(surface, editorNodeId);
+      if (editorNodeId) reportRemoteImageDisplayed(surface, editorNodeId, imageMatch.source);
     },
     requestMeasure
   });
@@ -117,7 +117,8 @@ export function createMarkdownImageWidgetDom(
   onRemoveImage: (() => void) | null = null,
   presentationVersion = 0,
   localDocumentPath: string | null = null,
-  onSurfaceReady: (() => void) | null = null
+  onSurfaceReady: (() => void) | null = null,
+  retainedRemoteSource: string | null = null
 ) {
   const renderPlan = buildMarkdownImageRenderPlan(imageMatch);
   const localDocumentImageSrc = resolveLocalDocumentImageSource(imageMatch, localDocumentPath);
@@ -125,6 +126,15 @@ export function createMarkdownImageWidgetDom(
   wrapper.className = imageMatch.display === 'block' ? 'cm-md-image-widget cm-md-image-widget-block' : 'cm-md-image-widget cm-md-image-widget-inline';
   setMarkdownImageWidgetDomIdentity(wrapper, imageMatch, editorNodeId, presentationVersion);
   updateMarkdownImageWidgetDomRange(wrapper, imageMatch);
+
+  if (retainedRemoteSource && imageMatch.attachmentId) {
+    wrapper.append(createImageSurface(imageMatch, retainedRemoteSource, editorNodeId, {
+      isActive: () => !isMarkdownImageWidgetDomDisposed(wrapper),
+      onLoad: () => finalizeLoadedMarkdownImageDisplay(wrapper, imageMatch, requestMeasure),
+      requestMeasure
+    }));
+    return wrapper;
+  }
 
   if (renderPlan.isRemote && renderPlan.imageSrc) {
     appendLoadingImageSurface(

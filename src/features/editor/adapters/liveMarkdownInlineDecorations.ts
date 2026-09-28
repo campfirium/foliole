@@ -7,6 +7,7 @@ import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { attachMarkdownImageResize } from './liveMarkdownImageResize';
 import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from './liveMarkdownImages';
 import { canReuseMarkdownImageWidgetDom, updateMarkdownImageWidgetDomRange } from './liveMarkdownImageWidgetDom';
+import { getRetainedRemoteImageSource } from './retainedRemoteImageDisplay';
 
 function parseWidgetRangeValue(value: string | undefined, fallback: number) {
   if (!value) {
@@ -78,7 +79,8 @@ class MarkdownImageWidget extends WidgetType {
       () => removeMarkdownImage(view, resolveCurrentImageMatchFromDom(widgetDom, this.imageMatch)),
       this.presentationVersion,
       this.localDocumentPath,
-      () => attachMarkdownImageResize(widgetDom!, view, this.imageMatch)
+      () => attachMarkdownImageResize(widgetDom!, view, this.imageMatch),
+      getRetainedRemoteImageSource(this.editorNodeId, this.imageMatch.source)
     );
     attachMarkdownImageResize(widgetDom, view, this.imageMatch);
     return widgetDom;

@@ -28,7 +28,7 @@ interface CodeMirrorEditorAdapterRuntimeArgs {
   onOpenNodeLink: ((title: string) => void) | null;
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
   onPastedAnchors: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
-  onApplyLocalizedChanges: (changes: LocalizedImageChange[], contentSnapshot: string) => void;
+  onApplyLocalizedChanges: (changes: LocalizedImageChange[], contentSnapshot: string, retainDisplay?: boolean) => void;
   onSetContent: (content: string) => void;
   options: CodeMirrorEditorAdapterOptions;
   paragraphMarkerCompartment: Compartment;
@@ -40,8 +40,8 @@ interface CodeMirrorEditorAdapterRuntimeArgs {
 
 function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
   const controllers = createCodeMirrorEditorControllers({
-    applyLocalizedContent: (localized, contentSnapshot, changes) => {
-      if (changes?.length) args.onApplyLocalizedChanges(changes, contentSnapshot);
+    applyLocalizedContent: (localized, contentSnapshot, changes, retainDisplay) => {
+      if (changes?.length) args.onApplyLocalizedChanges(changes, contentSnapshot, retainDisplay);
       else args.onSetContent(localized);
       args.options.onDocumentInput?.({
         contentLength: localized.length,

@@ -139,7 +139,7 @@ export class RemoteImageLocalizationController {
 
   constructor(
     private readonly args: {
-      applyLocalizedContent: (localized: string, contentSnapshot: string, changes?: LocalizedImageChange[]) => void;
+      applyLocalizedContent: (localized: string, contentSnapshot: string, changes?: LocalizedImageChange[], retainDisplay?: boolean) => void;
       getContent: () => string;
       getNodeId: () => string | null;
       host?: HTMLElement;
@@ -222,7 +222,8 @@ export class RemoteImageLocalizationController {
         this.args.applyLocalizedContent(
           localized.content,
           contentSnapshot,
-          'changes' in localized ? localized.changes : undefined
+          'changes' in localized ? localized.changes : undefined,
+          false
         );
         request.resolve(true);
       })

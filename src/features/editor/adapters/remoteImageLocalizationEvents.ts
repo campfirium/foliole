@@ -1,3 +1,5 @@
+import { recordDisplayedRemoteImageSource } from './retainedRemoteImageDisplay';
+
 export interface RemoteImageLocalizationRequest {
   recovery?: boolean;
   from: number;
@@ -11,7 +13,9 @@ export interface RemoteImageLocalizationRequest {
 const EVENT_NAME = 'foliole:remote-image-localization-request';
 const DISPLAYED_EVENT_NAME = 'foliole:remote-image-displayed';
 
-export function reportRemoteImageDisplayed(target: HTMLElement, nodeId: string) {
+export function reportRemoteImageDisplayed(target: HTMLElement, nodeId: string, source?: string) {
+  const renderUrl = target.querySelector<HTMLImageElement>('.cm-md-image-element')?.src;
+  if (source && renderUrl) recordDisplayedRemoteImageSource(nodeId, source, renderUrl);
   target.dispatchEvent(new CustomEvent(DISPLAYED_EVENT_NAME, { bubbles: true, detail: { nodeId } }));
 }
 

@@ -51,6 +51,7 @@ import {
   type EditorTextAnchorDecoration
 } from './EditorAdapter';
 import { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
+import { clearRetainedRemoteImageSources } from './retainedRemoteImageDisplay';
 
 export class CodeMirrorEditorAdapter implements EditorAdapter {
   private diffDecorationsCompartment = new Compartment();
@@ -108,9 +109,9 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       onOpenNodeLink: this.onOpenNodeLink,
       onPreviewNodeLink: this.onPreviewNodeLink,
       onPastedAnchors: this.onPastedAnchors,
-      onApplyLocalizedChanges: (changes, snapshot) => {
+      onApplyLocalizedChanges: (changes, snapshot, retainDisplay) => {
         applyCodeMirrorLocalizedImageChanges({
-          changes, contentSnapshot: snapshot, view: this.view,
+          changes, contentSnapshot: snapshot, nodeId: this.nodeId, retainDisplay, view: this.view,
           setApplyingExternalContent: (value) => { this.isApplyingExternalContent = value; }
         });
         this.remoteImageLocalization.schedule();
@@ -168,6 +169,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     setCodeMirrorReadOnly(this.view, this.readOnlyCompartment, readOnly);
   }
   setNodeId(nodeId: string | null) {
+    if (nodeId !== this.nodeId) clearRetainedRemoteImageSources(this.nodeId);
     this.externalChangeBuffer.flushNow();
     this.nodeId = nodeId;
     this.reconfigureLiveMarkdown();
