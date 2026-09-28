@@ -40,12 +40,12 @@ extension FoliolePhysicalSyncGroupUITests {
             waitForDisappearance(exit, timeout: 30,
                                  message: "Fri did not exit the active topic before Browse navigation.")
         }
-        if app.buttons["Directory"].waitForExistence(timeout: 3) {
-            app.buttons["Directory"].tap()
+        if app.buttons["Directory"].firstMatch.waitForExistence(timeout: 3) {
+            app.buttons["Directory"].firstMatch.tap()
         } else {
             tapButton(named: "Browse", in: app, timeout: 30)
         }
-        let inbox = app.buttons["Open topic Inbox"]
+        let inbox = app.buttons["Open folder Inbox"]
         if inbox.waitForExistence(timeout: 3) { inbox.tap() }
     }
 
