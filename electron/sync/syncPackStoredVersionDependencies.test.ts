@@ -1,0 +1,82 @@
+import Database from 'better-sqlite3';
+import { expect, it } from 'vitest';
+
+import { applySyncPackNodeVersionsWithDbPort } from '../../lib/core/sync/syncPackNodeVersionApplyExecutor.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+
+it('accepts a parent omitted from the pack when the main database has its body', async () => {
+  const db = createFixture('{"content":"parent body"}');
+  try {
+    await applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db));
+    expect(db.prepare('SELECT version_id, parent_version_id FROM node_sync_version_parents').all())
+      .toEqual([{ version_id: 'child', parent_version_id: 'parent' }]);
+    expect(db.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').all())
+      .toEqual([{ version_id: 'child' }, { version_id: 'parent' }]);
+  } finally {
+    db.close();
+  }
+});
+
+it('rejects an omitted parent whose stored body has been reclaimed', async () => {
+  const db = createFixture('{"content":null}');
+  try {
+    await expect(applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db)))
+      .rejects.toThrow('sync_pack_node_version_missing_parent:child');
+    expect(db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id = ?')
+      .get('child')).toBeUndefined();
+  } finally {
+    db.close();
+  }
+});
+
+it('rejects a conflicting parent relation for a known version', async () => {
+  const db = createFixture('{"content":"parent body"}');
+  try {
+    db.exec(`
+      INSERT INTO node_sync_versions VALUES
+        ('other', 'node-1', NULL, 'host', '2026-05-01', 'other-hash', 'other body', '{}');
+      INSERT INTO node_sync_versions VALUES
+        ('child', 'node-1', 'parent', 'host', '2026-05-02', 'child-hash', 'child body', '{}');
+      INSERT INTO node_sync_version_parents VALUES ('child', 'other', 0);
+    `);
+    await expect(applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db)))
+      .rejects.toThrow('sync_pack_node_version_parent_mismatch:child');
+  } finally {
+    db.close();
+  }
+});
+
+function createFixture(parentSnapshot: string) {
+  const db = new Database(':memory:');
+  db.exec(`
+    CREATE TABLE node_sync_versions (
+      version_id TEXT PRIMARY KEY, object_id TEXT, parent_version_id TEXT,
+      host_name TEXT, created_at TEXT, content_hash TEXT, body_text TEXT, snapshot_json TEXT
+    );
+    CREATE TABLE node_sync_version_parents (
+      version_id TEXT, parent_version_id TEXT, ordinal INTEGER,
+      PRIMARY KEY (version_id, parent_version_id)
+    );
+    CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY);
+    CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT);
+    ATTACH DATABASE ':memory:' AS inc;
+    CREATE TABLE inc.node_sync_versions (
+      version_id TEXT PRIMARY KEY, object_id TEXT, parent_version_id TEXT,
+      host_name TEXT, created_at TEXT, content_hash TEXT, body_text TEXT, snapshot_json TEXT
+    );
+    CREATE TABLE inc.node_sync_version_parents (
+      version_id TEXT, parent_version_id TEXT, ordinal INTEGER
+    );
+    CREATE TABLE inc.nodes (id TEXT PRIMARY KEY, current_version_id TEXT);
+  `);
+  db.prepare(`INSERT INTO node_sync_versions VALUES
+    ('parent', 'node-1', NULL, 'host', '2026-05-01', 'parent-hash', NULL, ?)`)
+    .run(parentSnapshot);
+  db.exec(`
+    INSERT INTO inc.node_sync_versions VALUES
+      ('child', 'node-1', 'parent', 'host', '2026-05-02', 'child-hash', 'child body', '{}');
+    INSERT INTO inc.node_sync_version_parents VALUES ('child', 'parent', 0);
+    INSERT INTO inc.nodes VALUES ('node-1', 'child');
+  `);
+  return db;
+}

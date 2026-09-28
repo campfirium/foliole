@@ -2,6 +2,10 @@ import type { DbPort, DbRow } from './dbPort.js';
 import type { SyncPackNodeApplyOptions } from './syncPackApplyStatements.js';
 import { restoreIncomingNodeMergeBases } from './syncPackNodeMergeBaseRestore.js';
 import {
+  assertCurrentVersionAvailable,
+  validateStoredVersionDependencies
+} from './syncPackNodeVersionDependencyValidation.js';
+import {
   assertValidNodeVersionSnapshot,
   SYNC_PACK_NODE_VERSION_COLUMNS,
   type SyncPackNodeVersionParentRow,
@@ -28,6 +32,7 @@ export async function applySyncPackNodeVersionsWithDbPort(
      WHERE version.object_id NOT IN ('special-inbox', 'special-virtual-root')
        AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = version.object_id)`
   )).map(normalizeVersionParentRow);
+  await validateStoredVersionDependencies(port, incoming, parents);
   const ordered = validateIncomingDag(incoming, parents);
   await assertIncomingCurrentPointers(port, alias, new Map(ordered.map((row) => [row.version_id, row])));
   await assertExistingVersionsMatch(port, alias);
@@ -135,7 +140,7 @@ function validateIncomingDag(
     const parents = (parentsByVersion.get(row.version_id) ?? []).sort((a, b) => a.ordinal - b.ordinal);
     for (const parentRow of parents) {
       const parent = byId.get(parentRow.parent_version_id);
-      if (!parent) throw new Error(`sync_pack_node_version_missing_parent:${row.version_id}`);
+      if (!parent) continue;
       if (parent.object_id !== row.object_id) {
         throw new Error(`sync_pack_node_version_cross_object:${row.version_id}`);
       }
@@ -164,7 +169,10 @@ async function assertIncomingCurrentPointers(
     const currentVersionId = requireNullableString(node.current_version_id, 'current_version_id');
     if (currentVersionId === null) continue;
     const version = versions.get(currentVersionId);
-    if (!version) throw new Error(`sync_pack_node_current_version_missing:${nodeId}`);
+    if (!version) {
+      await assertCurrentVersionAvailable(port, nodeId, currentVersionId);
+      continue;
+    }
     if (version.object_id !== nodeId) throw new Error(`sync_pack_node_current_version_cross_object:${nodeId}`);
   }
 }
