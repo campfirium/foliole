@@ -31,7 +31,7 @@ it('exports the PDF linked to the right-clicked source topic', async () => {
     importSource: { sourceKind: 'pdf', sourceLocator: 'foliole-asset://attachment/pdf-hash' }
   });
   renderWithLocalization(<Menu nodeId="topic-1" />);
-  fireEvent.click(await screen.findByRole('menuitem', { name: 'Export PDF…' }));
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Export original PDF…' }));
   await waitFor(() => expect(exportNodePdf).toHaveBeenCalledWith('topic-1'));
 });
 
@@ -42,5 +42,5 @@ it('does not offer export for an external PDF or a different source topic', asyn
   });
   renderWithLocalization(<Menu nodeId="topic-1" />);
   await waitFor(() => expect(loadRuntimeNodeSourceDetails).toHaveBeenCalledWith('topic-1'));
-  expect(screen.queryByText('Export PDF…')).not.toBeInTheDocument();
+  expect(screen.queryByText('Export original PDF…')).not.toBeInTheDocument();
 });

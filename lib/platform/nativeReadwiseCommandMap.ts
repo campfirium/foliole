@@ -25,6 +25,7 @@ import type {
   NativeReadwiseDetectionSource,
   NativeReadwiseDetectionResult,
   NativeReadwiseOriginalEpubActionState,
+  NativeReadwiseOriginalEpubExportResult,
   NativeReadwiseOriginalEpubResult,
   NativeReadwiseSourceResyncActionState,
   NativeReadwiseSourceResyncResult
@@ -152,6 +153,10 @@ export type NativeReadwiseCommandMap = {
   [NATIVE_COMMANDS.useReadwiseOriginalEpub]: {
     args: { node_id: string };
     result: NativeReadwiseOriginalEpubResult;
+  };
+  [NATIVE_COMMANDS.exportReadwiseOriginalEpub]: {
+    args: { node_id: string };
+    result: NativeReadwiseOriginalEpubExportResult;
   };
   [NATIVE_COMMANDS.loadReadwiseSourceResyncActionState]: {
     args: { node_id: string };

@@ -52,6 +52,10 @@ export interface NativeReadwiseOriginalEpubResult {
   status: 'completed' | 'failed' | 'not_applicable' | 'source_inactive';
 }
 
+export type NativeReadwiseOriginalEpubExportResult =
+  | { node_id: string; path: string; status: 'saved' }
+  | { error_code?: string; node_id: string; path: null; status: 'cancelled' | 'failed' | 'not_applicable' | 'source_inactive' };
+
 export interface NativeReadwiseSourceResyncActionState {
   body_authority: 'original_epub' | 'reader_html' | null;
   category: string | null;

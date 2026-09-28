@@ -73,7 +73,6 @@ export function ReadwiseSourceResyncMenuItem(props: {
       <NodeContextMenuItem disabled={state.status !== 'ready'} icon={RefreshCw} onSelect={() => void run()}>
         {label}
       </NodeContextMenuItem>
-      <NodeContextMenuSeparator />
     </>
   );
 }

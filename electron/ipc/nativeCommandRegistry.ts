@@ -49,6 +49,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.loadReadwiseBookEpub, route: 'import', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.loadReadwiseOriginalEpubActionState, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.useReadwiseOriginalEpub, route: 'import', capability: 'importMutation' },
+  { command: NATIVE_COMMANDS.exportReadwiseOriginalEpub, route: 'import', capability: 'filesystemWrite' },
   { command: NATIVE_COMMANDS.loadReadwiseSourceResyncActionState, route: 'import', capability: 'read' },
   { command: NATIVE_COMMANDS.resyncReadwiseSource, route: 'import', capability: 'importMutation' },
   { command: NATIVE_COMMANDS.resetReadwiseBookImport, route: 'import', capability: 'importMutation' },

@@ -1,3 +1,4 @@
+import { ReadwiseOriginalEpubExportMenuItem } from './ReadwiseOriginalEpubExportMenuItem';
 import { ReadwiseOriginalEpubMenuItem } from './ReadwiseOriginalEpubMenuItem';
 import { ReadwiseSourceResyncMenuItem } from './ReadwiseSourceResyncMenuItem';
 
@@ -16,6 +17,7 @@ export function ReadwiseSourceMenuItems(props: {
         hasPreviousGroup={props.hasPreviousGroup}
         nodeId={props.nodeId}
       />
+      <ReadwiseOriginalEpubExportMenuItem nodeId={props.nodeId} />
     </>
   );
 }

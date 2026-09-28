@@ -26,9 +26,9 @@ test('a PDF reader exports the linked file with its original name', async ({ des
     await topicRow.click();
     const reader = desktopWindow.getByRole('region', { name: /PDF reader panel|PDF 阅读器面板/ });
     await expect(reader).toBeVisible();
-    await expect(reader.getByRole('button', { name: /Export PDF|导出 PDF/ })).toHaveCount(0);
+    await expect(reader.getByRole('button', { name: /Export original PDF|导出原始 PDF/ })).toHaveCount(0);
     await topicRow.click({ button: 'right' });
-    const exportAction = desktopWindow.getByRole('menuitem', { name: /Export PDF|导出 PDF/ });
+    const exportAction = desktopWindow.getByRole('menuitem', { name: /Export original PDF|导出原始 PDF/ });
     await expect(exportAction).toBeVisible();
     await desktopWindow.screenshot({ path: path.resolve('.tmp/artifacts/pdf-export-menu-hidden-native.png') });
 
