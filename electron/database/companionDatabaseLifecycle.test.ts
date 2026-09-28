@@ -121,11 +121,13 @@ describe('shared companion database migration history', () => {
       "('a','a.png','image/png',1,'2026-01-01');" +
       "INSERT INTO nodes (id,title,current_version_id,created_at,updated_at) VALUES " +
       "('n','N','v','2026-01-01','2026-01-01');" +
+      "INSERT INTO node_order (node_id,position) VALUES ('n',0);" +
       "INSERT INTO node_sync_versions (version_id,object_id,host_name,created_at,content_hash,snapshot_json) VALUES " +
       "('v','n','d','2026-01-01','h','{\"attachments\":[{\"attachment_id\":\"a\",\"role\":\"inline\"}]}');");
     await bootstrap(first.port);
     expect(first.sqlite.prepare('SELECT attachment_id, role FROM node_attachments').get())
       .toEqual({ attachment_id: 'a', role: 'inline' });
+    expect(first.sqlite.prepare('SELECT child_ids_json FROM parent_child_order').pluck().get()).toBe('["n"]');
     first.sqlite.close();
 
     const second = fixture(20);
