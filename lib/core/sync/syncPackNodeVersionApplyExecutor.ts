@@ -29,9 +29,11 @@ export async function applySyncPackNodeVersionsWithDbPort(
   const parents = (await port.query(
     `SELECT parent.version_id, parent.parent_version_id, parent.ordinal
      FROM ${alias}.node_sync_version_parents parent
-     JOIN ${alias}.node_sync_versions version ON version.version_id = parent.version_id
-     WHERE version.object_id NOT IN ('special-inbox', 'special-virtual-root')
-       AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = version.object_id)`
+     JOIN ${alias}.nodes node ON node.id = COALESCE(
+       (SELECT object_id FROM ${alias}.node_sync_versions WHERE version_id = parent.version_id),
+       (SELECT object_id FROM main.node_sync_versions WHERE version_id = parent.version_id))
+     WHERE node.id NOT IN ('special-inbox', 'special-virtual-root')
+       AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = node.id)`
   )).map(normalizeVersionParentRow);
   const dependencies = includeLegacyVersionParents(incoming, parents);
   await validateStoredVersionDependencies(port, incoming, dependencies);
@@ -63,7 +65,8 @@ export async function applySyncPackNodeVersionsWithDbPort(
     `INSERT INTO main.node_sync_version_parents (version_id, parent_version_id, ordinal)
      SELECT parent.version_id, parent.parent_version_id, parent.ordinal
      FROM ${alias}.node_sync_version_parents parent
-     JOIN ${alias}.node_sync_versions version ON version.version_id = parent.version_id
+     JOIN main.node_sync_versions version ON version.version_id = parent.version_id
+     JOIN ${alias}.nodes node ON node.id = version.object_id
      WHERE ${eligibleVersionFilter('version')}
      ON CONFLICT(version_id, parent_version_id) DO NOTHING`
   );

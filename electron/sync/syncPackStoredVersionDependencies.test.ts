@@ -57,6 +57,24 @@ it('rejects a conflicting parent relation for a known version', async () => {
   }
 });
 
+it('adds a missing parent relation without receiving the known child body again', async () => {
+  const db = createFixture('{"content":"parent body"}');
+  try {
+    db.exec(`
+      INSERT INTO node_sync_versions VALUES
+        ('child', 'node-1', 'parent', 'host', '2026-05-02', 'child-hash', 'child body', '{}');
+      DELETE FROM inc.node_sync_versions;
+    `);
+    await applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db));
+    expect(db.prepare('SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents').all())
+      .toEqual([{ version_id: 'child', parent_version_id: 'parent', ordinal: 0 }]);
+    expect(db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('child'))
+      .toEqual({ body_text: 'child body' });
+  } finally {
+    db.close();
+  }
+});
+
 function createFixture(parentSnapshot: string) {
   const db = new Database(':memory:');
   db.exec(`

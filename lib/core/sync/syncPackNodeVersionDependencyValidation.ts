@@ -27,20 +27,16 @@ export async function validateStoredVersionDependencies(
 ) {
   const byId = new Map(incoming.map((row) => [row.version_id, row]));
   for (const edge of parents) {
-    const child = byId.get(edge.version_id);
+    const child = byId.get(edge.version_id) ?? await heldVersion(port, edge.version_id);
     if (!child) throw new Error(`sync_pack_node_version_missing:${edge.version_id}`);
-    if (byId.has(edge.parent_version_id)) continue;
-    const [held] = await port.query<{
-      object_id: string;
-      has_body: number;
-    }>(`SELECT object_id,
-      CASE WHEN body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text'
-        OR json_type(snapshot_json, '$.content') IS NULL THEN 1 ELSE 0 END AS has_body
-      FROM main.node_sync_versions WHERE version_id = ?`, [edge.parent_version_id]);
-    if (!held || held.has_body !== 1) {
+    if ('has_body' in child && child.has_body !== 1) {
+      throw new Error(`sync_pack_node_version_missing:${edge.version_id}`);
+    }
+    const parent = byId.get(edge.parent_version_id) ?? await heldVersion(port, edge.parent_version_id);
+    if (!parent || ('has_body' in parent && parent.has_body !== 1)) {
       throw new Error(`sync_pack_node_version_missing_parent:${edge.version_id}`);
     }
-    if (held.object_id !== child.object_id) {
+    if (parent.object_id !== child.object_id) {
       throw new Error(`sync_pack_node_version_cross_object:${edge.version_id}`);
     }
   }
@@ -57,17 +53,21 @@ export async function validateStoredVersionDependencies(
   }
 }
 
+function heldVersion(port: DbPort, versionId: string) {
+  return port.query<{ object_id: string; has_body: number }>(
+    `SELECT object_id,
+      CASE WHEN body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text'
+        OR json_type(snapshot_json, '$.content') IS NULL THEN 1 ELSE 0 END AS has_body
+      FROM main.node_sync_versions WHERE version_id = ?`, [versionId]
+  ).then((rows) => rows[0]);
+}
+
 export async function assertCurrentVersionAvailable(
   port: DbPort,
   nodeId: string,
   versionId: string
 ) {
-  const [held] = await port.query<{ object_id: string; has_body: number }>(
-    `SELECT object_id,
-      CASE WHEN body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text'
-        OR json_type(snapshot_json, '$.content') IS NULL THEN 1 ELSE 0 END AS has_body
-     FROM main.node_sync_versions WHERE version_id = ?`, [versionId]
-  );
+  const held = await heldVersion(port, versionId);
   if (!held || held.has_body !== 1) {
     throw new Error(`sync_pack_node_current_version_missing:${nodeId}`);
   }
