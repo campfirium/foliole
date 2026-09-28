@@ -8,7 +8,11 @@ import { createTestZip } from '../../electron/ipc/testZipBuilder';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
-import { createT178ApiAcceptanceSession, type T178AcceptanceSession } from './harness/t178ApiAcceptanceSession';
+import {
+  createT178ApiAcceptanceSession,
+  seedCompletedReadwiseApiMode,
+  type T178AcceptanceSession
+} from './harness/t178ApiAcceptanceSession';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/t183-2');
 
@@ -32,7 +36,9 @@ function originalEpubBase64() {
 
 async function installFixture(app: ElectronApplication) {
   await app.evaluate(({ clipboard }, epubBase64) => {
-    const runtime = globalThis as typeof globalThis & { __T183_EPUB_FETCH_COUNT__?: number };
+    const runtime = globalThis as typeof globalThis & {
+      __T183_EPUB_FETCH_COUNT__?: number;
+    };
     runtime.__T183_EPUB_FETCH_COUNT__ = 0;
     const root = {
       category: 'epub',
@@ -63,7 +69,9 @@ async function installFixture(app: ElectronApplication) {
 
 async function inspect(app: ElectronApplication) {
   return app.evaluate(() => {
-    const runtime = globalThis as typeof globalThis & { __T183_EPUB_FETCH_COUNT__?: number };
+    const runtime = globalThis as typeof globalThis & {
+      __T183_EPUB_FETCH_COUNT__?: number;
+    };
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
@@ -79,6 +87,9 @@ async function inspect(app: ElectronApplication) {
           [source.nodeId]).map((row) => row.title),
         fetchCount: runtime.__T183_EPUB_FETCH_COUNT__ ?? 0,
         nodeId: source.nodeId,
+        referenceCount: driver.queryOne(
+          "SELECT COUNT(*) count FROM node_attachments WHERE node_id=? AND role='reference'", [source.nodeId]
+        ).count,
         state: JSON.parse(source.state)
       };
     });
@@ -86,49 +97,42 @@ async function inspect(app: ElectronApplication) {
 }
 
 async function seedApiState(app: ElectronApplication) {
+  await seedCompletedReadwiseApiMode(app, '2026-09-12T00:00:00.000Z');
   await app.evaluate(() => {
     const moduleApi = process.getBuiltinModule('module');
     const pathApi = process.getBuiltinModule('path');
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
-    const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
-    const hostSettings = require(pathApi.join(process.cwd(), 'dist/lib/core/import/readwiseHostSettings.js'));
+    const config = require(pathApi.join(process.cwd(), 'dist/lib/core/import/readwiseReaderSettings.js'));
     const identity = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseRemoteIdentity.js'));
+    const materialization = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiMaterialization.js'));
     const secret = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiSecret.js'));
-    const cutover = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceCutover.js'));
     connection.runWithDatabaseConnectionOwner(() => {
       const now = '2026-09-12T00:00:00.000Z';
-      const assignment = host.activateReadwiseOnThisHost();
       const source = identity.createReadwiseRemoteSource(now);
-      const settings = hostSettings.createDefaultReadwiseHostSettings();
       const secretRef = 'readwise-api-00000000-0000-4000-8000-000000000183.bin';
       secret.writeReadwiseApiSecret(secretRef, 't183-2-token');
       identity.saveReadwiseConnectionState({
-        ...settings,
-        apiConnection: { secretRef, state: 'connected', verifiedAt: now },
-        readwiseSourceMode: 'api'
+        secretRef, state: 'connected', verifiedAt: now
       }, source, now);
-      cutover.writeLegacyReadwiseSourceCutover({
-        completedAt: now, completedCandidateCount: 0, migratedCount: 0,
-        sourceHost: assignment.current_host_name, startedAt: now, status: 'api',
-        totalCandidateCount: 0, unmatchedCount: 0
+      materialization.materializeReadwiseApiDocument({
+        config: config.createDefaultReadwiseReaderConfig(),
+        connectionRef: source.connectionRef,
+        destination: 'inbox',
+        document: {
+          annotations: [], body: '# Reader Chapter\n\nReader HTML body.', category: 'epub',
+          coverImageUrl: null, degradedReason: null,
+          epubStructure: {
+            degradedReason: null, imageCount: 0, markerCount: 1, rootBody: '',
+            sections: [{ content: '# Reader Chapter\n\nReader HTML body.', headingLevel: 1,
+              markerKey: 'reader', title: 'Reader Chapter' }]
+          },
+          id: 't183-book', metadata: { author: null, category: 'epub', readerUrl: null,
+            sourceUrl: null, title: 'T183 Book' },
+          title: 'T183 Book', unmatchedAnnotationCount: 0, updatedAt: now
+        }
       });
-    });
-  });
-}
-
-async function importReaderFixture(app: ElectronApplication) {
-  await app.evaluate(async () => {
-    const moduleApi = process.getBuiltinModule('module');
-    const pathApi = process.getBuiltinModule('path');
-    if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
-    const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
-    const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
-    const apiImport = require(pathApi.join(process.cwd(), 'dist/electron/import/readwiseApiImportRun.js'));
-    await connection.runWithDatabaseConnectionOwner(async () => {
-      const importResult = await apiImport.runReadwiseApiImport();
-      if (importResult.status !== 'completed') throw new Error(`import_failed:${JSON.stringify(importResult)}`);
     });
   });
 }
@@ -150,10 +154,11 @@ test('confirms and repeatedly rebuilds one Reader API book from EPUB', async ({ 
     session = await createT178ApiAcceptanceSession(stateRoot);
     await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
     await installFixture(session.electronApp);
-    await seedApiState(session.electronApp);
     await expectWorkspaceShell(session.firstWindow);
-    await importReaderFixture(session.electronApp);
-    await expect.poll(() => inspect(session!.electronApp)).toMatchObject({ childTitles: ['Reader Chapter'] });
+    await seedApiState(session.electronApp);
+    await expect.poll(() => inspect(session!.electronApp)).toMatchObject({
+      childTitles: ['Reader Chapter'], fetchCount: 0, referenceCount: 0
+    });
     await session.firstWindow.reload();
     await session.firstWindow.waitForFunction(() => globalThis.__FOLIOLE_APP_READY_REPORTED__ === true);
 
@@ -175,10 +180,9 @@ test('confirms and repeatedly rebuilds one Reader API book from EPUB', async ({ 
     await session.firstWindow.screenshot({ path: dialogScreenshot });
     await testInfo.attach('t183-2-rebuild-confirmation', { contentType: 'image/png', path: dialogScreenshot });
     await session.firstWindow.getByRole('button', { name: /^(Rebuild|重建)$/ }).click();
-    await expect(session.firstWindow.getByText(/^(Rebuilt from EPUB\.|已从 EPUB 重建。)$/)).toBeVisible();
     await expect.poll(() => inspect(session!.electronApp)).toMatchObject({
-      childTitles: ['Original Chapter'], fetchCount: 1, nodeId: before!.nodeId,
-      state: { bodyAuthority: 'original_epub', originalFile: { status: 'localized' } }
+      childTitles: ['Original Chapter'], fetchCount: 1, nodeId: before!.nodeId, referenceCount: 0,
+      state: { bodyAuthority: 'original_epub', originalFile: null }
     });
 
     await session.firstWindow.reload();
@@ -186,7 +190,7 @@ test('confirms and repeatedly rebuilds one Reader API book from EPUB', async ({ 
     await (await openRebuildMenu(session, before!.nodeId)).click();
     await session.firstWindow.getByRole('button', { name: /^(Rebuild|重建)$/ }).click();
     await expect.poll(() => inspect(session!.electronApp)).toMatchObject({
-      childTitles: ['Original Chapter'], fetchCount: 2, nodeId: before!.nodeId,
+      childTitles: ['Original Chapter'], fetchCount: 2, nodeId: before!.nodeId, referenceCount: 0,
       state: { bodyAuthority: 'original_epub' }
     });
     const screenshot = path.join(ARTIFACT_DIR, `repeated-rebuild-${process.platform}.png`);

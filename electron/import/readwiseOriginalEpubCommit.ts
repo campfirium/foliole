@@ -1,7 +1,6 @@
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { persistStagedManagedAttachment } from '../attachments/managedAttachmentFileStage.js';
-import { createNodeAttachmentLink } from '../database/attachments.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import {
   loadReadwiseApiImportSource,
@@ -58,14 +57,7 @@ function persistOriginalEpubAuthority(input: {
     state: {
       ...source.state,
       bodyAuthority: 'original_epub',
-      originalFile: {
-        attachmentId: input.candidate.epubAttachment.contentHash,
-        contentHash: input.candidate.epubAttachment.contentHash,
-        mimeType: input.candidate.epubAttachment.mimeType,
-        reason: null,
-        sizeBytes: input.candidate.epubAttachment.sizeBytes,
-        status: 'localized'
-      },
+      originalFile: source.state.originalFile,
       sourceUpdate: null
     },
     updatedAt: input.importedAt
@@ -133,11 +125,6 @@ function commitPreparedOriginalEpub(input: {
       importedAt: input.importedAt,
       preservedRootTexts,
       rootNodeId: input.target.nodeId
-    });
-    createNodeAttachmentLink({
-      attachmentId: input.candidate.epubAttachment.contentHash,
-      nodeId: input.target.nodeId,
-      role: 'reference'
     });
     persistOriginalEpubAuthority(input);
     return result;

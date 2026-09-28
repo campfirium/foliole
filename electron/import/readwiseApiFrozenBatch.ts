@@ -91,7 +91,7 @@ async function prepareOriginalResources(
     }) : null;
   input.dependencies.assertCutoverBatch?.();
   input.dependencies.signal?.throwIfAborted();
-  if (originalFile?.bytes && originalFile.state.status === 'localized') {
+  if (category === 'pdf' && originalFile?.bytes && originalFile.state.status === 'localized') {
     await stageReadwiseApiOriginalFile({
       bytes: originalFile.bytes, category: category ?? 'pdf', state: originalFile.state,
       title: input.document.title,
@@ -128,7 +128,7 @@ async function prepareCachedOriginalEpub(
 }
 
 function originalFileCategoryFor(category: PreparedReadwiseApiDocument['category']) {
-  return category === 'pdf' || category === 'epub' ? category : null;
+  return category === 'pdf' ? category : null;
 }
 
 function assertFreshOriginalFile(

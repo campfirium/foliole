@@ -80,25 +80,23 @@ it('creates a nonblank PDF Topic with links and an explicit unavailable reason',
   expect(persistOriginal).not.toHaveBeenCalled();
 });
 
-it('requests an original file only when an API EPUB is materialized locally', async () => {
-  prepareOriginal.mockResolvedValue({
-    bytes: null,
-    state: {
-      attachmentId: null, contentHash: null, mimeType: null, reason: 'original_file_not_distributed',
-      sizeBytes: null, status: 'html_only'
-    }
-  });
+it('materializes API EPUB text without downloading or attaching the original archive', async () => {
   await commitReadwiseApiDocument({
     config: createDefaultReadwiseReaderConfig(),
     connectionRef: 'connection', destination: 'inbox', document: { ...documentFixture('Readable HTML'), category: 'epub' }
   });
-  expect(prepareOriginal).toHaveBeenCalledWith(expect.objectContaining({ category: 'epub' }));
+  expect(prepareOriginal).not.toHaveBeenCalled();
   expect(persistOriginal).not.toHaveBeenCalled();
-  const row = openDatabaseConnection().driver.queryOne<{ remote_import_state_json: string }>(
-    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id = 'document-1'"
+  const row = openDatabaseConnection().driver.queryOne<{ content: string; remote_import_state_json: string }>(
+    `SELECT n.content, i.remote_import_state_json FROM import_sources i
+     JOIN nodes n ON n.id = i.latest_node_id WHERE i.remote_document_id = 'document-1'`
   );
-  expect(row?.remote_import_state_json).not.toContain('amazonaws');
-  expect(JSON.parse(row?.remote_import_state_json ?? '{}').originalFile).toMatchObject({ status: 'html_only' });
+  expect(row?.content).toContain('Readable HTML');
+  expect(row?.content).not.toContain('original EPUB');
+  expect(JSON.parse(row?.remote_import_state_json ?? '{}').originalFile).toBeNull();
+  expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
+    'SELECT COUNT(*) count FROM node_attachments'
+  )).toEqual({ count: 0 });
 });
 
 function documentFixture(body: string): PreparedReadwiseApiDocument {

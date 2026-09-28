@@ -70,12 +70,14 @@ export async function seedCompletedReadwiseApiMode(
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
     const host = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseHostAssignment.js'));
     const cutover = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceCutover.js'));
+    const cutoverContract = require(pathApi.join(process.cwd(), 'dist/lib/core/readwise/readwiseSourceCutover.js'));
     const sourceMode = require(pathApi.join(process.cwd(), 'dist/electron/database/readwiseSourceMode.js'));
     connection.runWithDatabaseConnectionOwner(() => {
       host.activateReadwiseOnThisHost();
       const sourceHost = host.loadReadwiseHostAssignment().current_host_name;
       cutover.writeReadwiseSourceCutover({
-        annotations: [], cohortDocumentIds: [], completedAt: timestamp, completionVersion: 6,
+        annotations: [], cohortDocumentIds: [], completedAt: timestamp,
+        completionVersion: cutoverContract.READWISE_SOURCE_CUTOVER_COMPLETION_VERSION,
         documents: [], retiredNodeIds: [], sourceHost, startedAt: timestamp, status: 'api'
       });
       sourceMode.writeReadwiseSourceMode(

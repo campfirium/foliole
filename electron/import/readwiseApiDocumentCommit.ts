@@ -139,7 +139,7 @@ function replacePreviousOriginalLink(
 }
 
 function originalFileCategoryFor(category: PreparedReadwiseApiDocument['category']) {
-  return category === 'pdf' || category === 'epub' ? category : null;
+  return category === 'pdf' ? category : null;
 }
 
 function shouldSkipHandledDocument(input: ReadwiseApiDocumentCommitInput) {

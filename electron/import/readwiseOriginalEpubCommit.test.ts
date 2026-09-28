@@ -17,6 +17,7 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({ canCurrentHostRunReadw
 vi.mock('./readwiseApiConnectionState.js', () => ({ isStoredReadwiseApiConnectionReady: () => true }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import {
@@ -153,6 +154,18 @@ it('builds the replacement document from existing local annotations', async () =
   });
 });
 
+it('rebuilds from EPUB bytes without retaining the archive as an attachment', async () => {
+  const seeded = await seedTarget();
+  commitReadwiseOriginalEpub({ ...seeded, expectedSnapshot: captureReadwiseOriginalEpubSnapshot(seeded.target), importedAt });
+  const driver = openDatabaseConnection().driver;
+  const source = driver.queryOne<{ remote_import_state_json: string }>(
+    "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='book-1'"
+  )!;
+  expect(JSON.parse(source.remote_import_state_json)).toMatchObject({ bodyAuthority: 'original_epub', originalFile: null });
+  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM attachments')).toEqual({ count: 0 });
+  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM node_attachments')).toEqual({ count: 0 });
+});
+
 it('force-replaces changed Reader content while preserving identities, user content, and local anchors', async () => {
   const seeded = await seedTarget();
   const expectedSnapshot = captureReadwiseOriginalEpubSnapshot(seeded.target);
@@ -186,15 +199,15 @@ it('force-replaces changed Reader content while preserving identities, user cont
   )).toMatchObject({ anchor_link: expect.stringContaining('imported-highlight-root-legacy-auto'), parent_title: '※' });
   expect(driver.queryOne<{ parent_id: string }>("SELECT parent_id FROM nodes WHERE id='ordinary-same-title'"))
     .toEqual({ parent_id: seeded.rootId });
-  expect(driver.queryAll<{ title: string }>(
-    `SELECT child.title FROM node_order ordered JOIN nodes child ON child.id=ordered.node_id
-     WHERE child.parent_id=? AND child.deleted_at IS NULL ORDER BY ordered.position`, [seeded.rootId]
-  ).at(-1)).toEqual({ title: '※' });
+  const children = new Map(driver.queryAll<{ id: string; title: string }>(
+    'SELECT id, title FROM nodes WHERE parent_id=? AND deleted_at IS NULL', [seeded.rootId]
+  ).map((row) => [row.id, row.title]));
+  expect(children.get(loadDerivedNodeOrder(driver).filter((id) => children.has(id)).at(-1) ?? '')).toBe('※');
   const source = driver.queryOne<{ remote_import_state_json: string }>(
     "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='book-1'"
   )!;
   expect(JSON.parse(source.remote_import_state_json)).toMatchObject({
-    bodyAuthority: 'original_epub', originalFile: { status: 'localized' }, sourceUpdate: null
+    bodyAuthority: 'original_epub', originalFile: null, sourceUpdate: null
   });
 });
 
@@ -222,5 +235,5 @@ it('keeps a cover image nested in the leading heading when replacing the whole E
   expect(candidate.images.rootBody).toMatch(/^!\[Cover\]\(asset:\/\//u);
   expect(candidate.images.rootAttachmentIds).toHaveLength(1);
   expect(candidate.images.sections.some((section) => section.content.includes('Body remains available.'))).toBe(true);
-  expect(candidate.stages).toHaveLength(2);
+  expect(candidate.stages).toHaveLength(1);
 });

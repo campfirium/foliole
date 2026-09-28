@@ -8,6 +8,7 @@ import type {
   NativeReadwiseOriginalEpubResult
 } from '../../lib/platform/nativeReadwiseContract.js';
 import { cleanCreatedManagedAttachmentFiles } from '../attachments/managedAttachmentFileStage.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL } from '../ipc/contracts.js';
 
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
@@ -75,10 +76,13 @@ export async function useReadwiseOriginalEpub(
     publish(window, nodeId, operationId, 'reading_epub', 'Reading EPUB…', 0.35);
     const importedAt = new Date().toISOString();
     candidate = await prepareOriginalEpubCandidate({ bytes, now: importedAt, title: target.title });
+    const preparedCandidate = candidate;
     const document = buildLocalReadwiseOriginalEpubDocument(target);
     publish(window, nodeId, operationId, 'locating_highlights', 'Locating highlights…', 0.6);
     publish(window, nodeId, operationId, 'saving', 'Saving…', 0.9);
-    commitReadwiseOriginalEpub({ candidate, document, expectedSnapshot, importedAt, target });
+    await runWithDatabaseConnectionOwner(() => commitReadwiseOriginalEpub({
+      candidate: preparedCandidate, document, expectedSnapshot, importedAt, target
+    }));
     publish(window, nodeId, operationId, 'completed', 'Rebuilt from EPUB.', 1);
     return { node_id: nodeId, status: 'completed' };
   } catch (error) {

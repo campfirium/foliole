@@ -13,15 +13,12 @@ import { readRawEpubBookBytes, type RawEpubBook } from '../ipc/epubImportBook.js
 
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 
-const EPUB_MIME = 'application/epub+zip';
-
 interface PreparedBody {
   attachmentIds: string[];
   content: string;
 }
 
 export interface PreparedOriginalEpubCandidate {
-  epubAttachment: StagedManagedAttachment;
   images: PreparedReadwiseApiEpubImages;
   stages: StagedManagedAttachment[];
 }
@@ -90,13 +87,6 @@ export async function prepareOriginalEpubCandidate(input: {
   if (!book.nodes.some((node) => node.content.trim())) throw new Error('original_epub_body_missing');
   const stages = new Map<string, StagedManagedAttachment>();
   try {
-    const epubAttachment = await stageManagedAttachmentFile({
-      bytes: input.bytes,
-      mimeType: EPUB_MIME,
-      now: input.now,
-      originalName: `${input.title}.epub`
-    });
-    stages.set(epubAttachment.contentHash, epubAttachment);
     const root = await prepareBody(book.rootContent, book.rootEmbeddedImages, input.now, stages);
     const preparedNodes: PreparedReadwiseApiEpubImages['sections'] = [];
     for (const node of book.nodes) {
@@ -112,13 +102,12 @@ export async function prepareOriginalEpubCandidate(input: {
       });
     }
     return {
-      epubAttachment,
       images: {
         accounting: {
           conversionDroppedCount: 0,
-          localizedBodyCount: stages.size - 1,
-          sourceBodyCount: stages.size - 1,
-          treeBodyCount: stages.size - 1,
+          localizedBodyCount: stages.size,
+          sourceBodyCount: stages.size,
+          treeBodyCount: stages.size,
           unavailableBodyCount: 0
         },
         degradedReason: null,
