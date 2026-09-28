@@ -75,6 +75,23 @@ it('adds a missing parent relation without receiving the known child body again'
   }
 });
 
+it('restores a reclaimed historical version body when the source resends that fact', async () => {
+  const db = createFixture('{"content":null}');
+  try {
+    db.exec(`
+      INSERT INTO inc.node_sync_versions VALUES
+        ('parent', 'node-1', NULL, 'host', '2026-05-01',
+         'parent-hash', 'parent body', '{"content":"parent body"}');
+      INSERT INTO nodes VALUES ('node-1', 'child');
+    `);
+    await applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db));
+    expect(db.prepare('SELECT body_text, snapshot_json FROM node_sync_versions WHERE version_id = ?')
+      .get('parent')).toEqual({ body_text: 'parent body', snapshot_json: '{"content":"parent body"}' });
+  } finally {
+    db.close();
+  }
+});
+
 function createFixture(parentSnapshot: string) {
   const db = new Database(':memory:');
   db.exec(`

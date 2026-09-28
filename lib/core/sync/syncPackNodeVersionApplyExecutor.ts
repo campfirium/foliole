@@ -60,7 +60,7 @@ export async function applySyncPackNodeVersionsWithDbPort(
      WHERE ${eligibleVersionFilter('incoming')}
      ON CONFLICT(version_id) DO NOTHING`
   );
-  await rehydrateCurrentVersionBodies(port, alias);
+  await rehydrateStoredVersionBodies(port, alias);
   await port.run(
     `INSERT INTO main.node_sync_version_parents (version_id, parent_version_id, ordinal)
      SELECT parent.version_id, parent.parent_version_id, parent.ordinal
@@ -73,7 +73,7 @@ export async function applySyncPackNodeVersionsWithDbPort(
   await restoreIncomingNodeMergeBases(port, alias);
 }
 
-async function rehydrateCurrentVersionBodies(port: DbPort, alias: string) {
+async function rehydrateStoredVersionBodies(port: DbPort, alias: string) {
   await port.run(
     `UPDATE main.node_sync_versions AS stored SET
        body_text = ${versionBodySql('incoming')}, snapshot_json = incoming.snapshot_json
@@ -81,11 +81,7 @@ async function rehydrateCurrentVersionBodies(port: DbPort, alias: string) {
      WHERE stored.version_id = incoming.version_id
        AND ${eligibleVersionFilter('incoming')}
        AND json_type(stored.snapshot_json, '$.content') = 'null'
-       AND ${versionBodySql('incoming')} IS NOT NULL
-       AND (EXISTS (SELECT 1 FROM ${alias}.nodes node
-         WHERE node.current_version_id = stored.version_id)
-         OR EXISTS (SELECT 1 FROM main.nodes node
-         WHERE node.current_version_id = stored.version_id))`
+       AND ${versionBodySql('incoming')} IS NOT NULL`
   );
 }
 
