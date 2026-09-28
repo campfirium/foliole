@@ -19,7 +19,7 @@ import type {
 } from './companionDesktopSyncTypes';
 import {
   applyCompanionDesktopSyncPack,
-  loadCompanionSyncPackCursor,
+  loadCompanionSyncPackPosition,
   loadCompanionSyncPackRestorePosition,
   saveCompanionSyncPackCursor
 } from './companionSyncObjects';
@@ -53,7 +53,7 @@ async function pullRemoteStructurePack(endpointUrl: string, restoreId?: string) 
   const sourceHostName = await resolveCompanionSyncPeerHostName(endpointUrl);
   let position: { cursor: number | null; frontierStateSeq?: number; sourceEpoch?: string } = restoreId
     ? await loadCompanionSyncPackRestorePosition(restoreId, sourcePeerId)
-    : { cursor: await loadCompanionSyncPackCursor(sourcePeerId) };
+    : await loadCompanionSyncPackPosition(sourcePeerId);
   let frontier = position.frontierStateSeq;
   let epoch = position.sourceEpoch;
   let appliedPackBlobCount = 0;

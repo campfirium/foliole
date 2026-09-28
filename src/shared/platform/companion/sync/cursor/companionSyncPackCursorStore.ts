@@ -1,4 +1,5 @@
 export interface CompanionSyncPackCursorStore {
+  loadPosition?(): Promise<{ cursor: number; frontierStateSeq?: number; sourceEpoch?: string }>;
   loadCursor(): Promise<number | null>;
   loadRestoreCursor?(restoreId: string): Promise<number>;
   loadRestorePosition?(restoreId: string): Promise<{

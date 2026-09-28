@@ -111,6 +111,7 @@ export {
   loadCompanionSyncNodeVersionPushCursor,
   loadCompanionSyncNodeVersions,
   loadCompanionSyncPackCursor,
+  loadCompanionSyncPackPosition,
   loadCompanionSyncPackRestorePosition,
   loadCompanionSyncReviewLog,
   loadCompanionSyncReviewLogCursor,

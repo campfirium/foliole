@@ -57,6 +57,13 @@ export async function loadCompanionSyncPackCursor(peerId?: string) {
   return readWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY);
 }
 
+export async function loadCompanionSyncPackPosition(peerId: string) {
+  if (!usesSharedOwner()) return { cursor: readWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY) ?? 0 };
+  const store = createIosCompanionSyncPackCursorStore(undefined, peerId);
+  if (!store.loadPosition) throw new Error('sync_pack_position_unavailable');
+  return store.loadPosition();
+}
+
 export async function loadCompanionSyncPackRestorePosition(restoreId: string, peerId: string) {
   if (!usesSharedOwner()) throw new Error('sync_group_restore_cursor_unavailable');
   const store = createIosCompanionSyncPackCursorStore(undefined, peerId);

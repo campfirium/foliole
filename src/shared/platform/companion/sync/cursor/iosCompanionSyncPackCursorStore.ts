@@ -16,6 +16,8 @@ export function createIosCompanionSyncPackCursorStore(
   peerId = 'legacy-peer'
 ): CompanionSyncPackCursorStore {
   return {
+    loadPosition: () => manager ? withConnection(manager, (db) => loadPosition(db, peerId))
+      : getIosCompanionDatabaseOwner().read((db) => loadPosition(db, peerId)),
     loadCursor: () => manager ? withConnection(manager, (db) => loadCursor(db, peerId))
       : getIosCompanionDatabaseOwner().read((db) => loadCursor(db, peerId)),
     loadRestoreCursor: (restoreId) => manager
@@ -39,6 +41,20 @@ async function loadCursor(connection: DbPort, peerId: string) {
   );
   if (rows[0]?.value !== undefined) validCursor(Number(rows[0].value));
   return 0;
+}
+
+async function loadPosition(connection: DbPort, peerId: string) {
+  const committed = await loadProgress(connection, peerId);
+  if (!committed) return { cursor: await loadCursor(connection, peerId) };
+  const cursor = validCursor(committed.cursor_state_seq);
+  if (committed.completed) return { cursor };
+  if (committed.restore_id) throw new Error('sync_group_restore_event_changed');
+  if (!Number.isSafeInteger(committed.frontier_state_seq) ||
+      committed.frontier_state_seq < cursor || !committed.source_epoch) {
+    throw new Error('invalid_ios_sync_pack_cursor');
+  }
+  return { cursor, frontierStateSeq: committed.frontier_state_seq,
+    sourceEpoch: committed.source_epoch };
 }
 
 async function loadRestoreCursor(connection: DbPort, peerId: string, restoreId: string) {

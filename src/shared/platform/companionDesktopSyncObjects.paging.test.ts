@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { shouldApplySyncPackPage } from '../../../lib/core/sync/syncPackReceiveProgress';
 import type {
   NativeSyncChangeCursor,
   NativeSyncNodeRecord,
@@ -30,6 +31,9 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncStateChanges: vi.fn(async () => [] as NativeSyncStateObjectRecord[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
+  loadCompanionSyncPackPosition: vi.fn(async (): Promise<{
+    cursor: number; frontierStateSeq?: number; sourceEpoch?: string
+  }> => ({ cursor: 0 })),
   loadCompanionSyncPackRestorePosition: vi.fn(async (): Promise<{
     cursor: number; frontierStateSeq?: number; sourceEpoch?: string
   }> => ({ cursor: 0 })),
@@ -125,6 +129,7 @@ function resetSyncMocks() {
   syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValue([]);
   syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValue([]);
   syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);
+  syncBridgeMock.loadCompanionSyncPackPosition.mockResolvedValue({ cursor: 0 });
   syncBridgeMock.loadCompanionSyncPackRestorePosition.mockResolvedValue({ cursor: 0 });
   syncBridgeMock.loadCompanionSyncStateCursor.mockResolvedValue(null);
   syncBridgeMock.loadCompanionSyncStatePushCursor.mockResolvedValue(null);
@@ -221,4 +226,24 @@ describe('multi-page structure receive', () => {
     expect(result.appliedPackObjectCount).toBe(3);
     expect(result.appliedPackBlobCount).toBe(1);
   });
+});
+
+
+it('finishes an interrupted ordinary round before consuming new source changes', async () => {
+  resetSyncMocks();
+  syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(5);
+  syncBridgeMock.loadCompanionSyncPackPosition.mockResolvedValue({
+    cursor: 5, frontierStateSeq: 8, sourceEpoch: 'epoch-a'
+  });
+  syncBridgeMock.applyCompanionDesktopSyncPack.mockImplementation(async ({ url }) => {
+    const request = new URL(url);
+    const frontier = Number(request.searchParams.get('frontier_state_seq') ?? 9);
+    const page = { fromStateSeq: 5, toStateSeq: 8, frontierStateSeq: frontier, sourceEpoch: 'epoch-a' };
+    shouldApplySyncPackPage(page, { completed: false, cursorStateSeq: 5,
+      frontierStateSeq: 8, groupId: 'g', peerId: 'p', restoreId: null, sourceEpoch: 'epoch-a' }, 5, false);
+    return { applied_blob_count: 0, applied_object_count: 1,
+      to_state_seq: 8, frontier_state_seq: frontier, source_epoch: 'epoch-a' };
+  });
+  await expect(runSync()).resolves.toMatchObject({ appliedPackObjectCount: 1 });
+  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenLastCalledWith(8, 'authorization-desktop-test');
 });

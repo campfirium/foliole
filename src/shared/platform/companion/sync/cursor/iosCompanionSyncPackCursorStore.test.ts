@@ -86,3 +86,15 @@ describe('iosCompanionSyncPackCursorStore', () => {
       .rejects.toThrow('invalid_ios_sync_pack_cursor');
   });
 });
+
+it('retains the ordinary round identity only while its committed frontier is unfinished', async () => {
+  const pending = createHarness('3', 5);
+  await expect(createIosCompanionSyncPackCursorStore(pending.manager as never, 'device-b')
+    .loadPosition!()).resolves.toEqual({ cursor: 5, frontierStateSeq: 8, sourceEpoch: 'epoch-a' });
+  const finished = createHarness('8', 8, null, 1);
+  await expect(createIosCompanionSyncPackCursorStore(finished.manager as never, 'device-b')
+    .loadPosition!()).resolves.toEqual({ cursor: 8 });
+  const restore = createHarness('3', 5, 'restore-a');
+  await expect(createIosCompanionSyncPackCursorStore(restore.manager as never, 'device-b')
+    .loadPosition!()).rejects.toThrow('sync_group_restore_event_changed');
+});

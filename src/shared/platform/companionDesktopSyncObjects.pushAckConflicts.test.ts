@@ -36,6 +36,7 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionMissingContentBlobs: vi.fn(async () => [] as Array<{ hash: string; size_bytes?: number }>),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncStateChanges: vi.fn(async () => [] as NativeSyncStateObjectRecord[]),
+  loadCompanionSyncPackPosition: vi.fn(async () => ({ cursor: 0 })),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncStateCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncStatePushCursor: vi.fn(async (): Promise<number | null> => null),

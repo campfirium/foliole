@@ -24,6 +24,7 @@ export const syncBridgeMock = {
     async () => []
   ),
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
+  loadCompanionSyncPackPosition: vi.fn(async () => ({ cursor: 0 })),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncReviewLog: vi.fn(async () => [] as Array<{ op_id: string; reviewed_at: string }>),
   loadCompanionSyncReviewLogPushCursor: vi.fn(async () => null as { change_id: string; created_at: string } | null),
@@ -159,6 +160,7 @@ export function resetCompanionDesktopSyncMocks() {
   syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValue([]);
   syncBridgeMock.loadCompanionMissingAttachmentResources.mockResolvedValue([]);
   syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);
+  syncBridgeMock.loadCompanionSyncPackPosition.mockResolvedValue({ cursor: 0 });
   syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([]);
   syncBridgeMock.loadCompanionSyncReviewLogPushCursor.mockResolvedValue(null);
   syncBridgeMock.saveCompanionSyncPackCursor.mockImplementation(async (cursor: number | null) => cursor);
