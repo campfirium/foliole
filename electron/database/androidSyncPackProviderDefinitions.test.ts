@@ -58,7 +58,7 @@ afterEach(() => {
 it('builds a baseline payload with structure, body manifest, and payload objects', () => {
   const pack = buildPack(0);
   expect(pack.prepare('SELECT id, content, body_blob_hash FROM nodes').get()).toMatchObject({
-    content: 'provider body', id: 'node-1'
+    content: '', id: 'node-1'
   });
   expect(pack.prepare('SELECT hash FROM content_blobs').get()).toBeTruthy();
   expect(pack.prepare("SELECT object_id FROM sync_objects WHERE object_type = 'setting'").get())
@@ -119,6 +119,22 @@ it('selects an independent delta for each Device cursor', () => {
     object_id: 'attachment-1', object_type: 'attachment'
   }]);
   baseline.close(); laterPeer.close();
+});
+
+it('includes a deleted-node tombstone only on its selected state page', () => {
+  source.exec(`DELETE FROM nodes WHERE id = 'node-1';
+    UPDATE sync_object_state SET deleted_at = '2026-08-08T00:00:00.000Z'
+      WHERE object_type = 'node' AND object_id = 'node-1';
+    INSERT INTO node_sync_tombstones
+      (node_id, version_id, parent_version_id, host_name, content_hash,
+       snapshot_json, deleted_at, created_at)
+      VALUES ('node-1', 'v1', NULL, 'android-b', 'node-hash', '{}',
+        '2026-08-08T00:00:00.000Z', '2026-08-08T00:00:00.000Z');`);
+  const first = buildPack(0, 1);
+  const second = buildPack(1, 3);
+  expect(first.prepare('SELECT node_id FROM node_sync_tombstones').all()).toEqual([{ node_id: 'node-1' }]);
+  expect(second.prepare('SELECT node_id FROM node_sync_tombstones').all()).toEqual([]);
+  first.close(); second.close();
 });
 
 it('packs the base node required by a delta text alternative', () => {

@@ -13,12 +13,16 @@ export const SYNC_GROUP_MEMBER_STATE_CAPABILITY = 'sync-group-member-state-v1';
 export const PARENT_CHILD_ORDER_CAPABILITY = 'parent-child-order-v1';
 export const NODE_VERSION_FRONTIER_RETENTION_CAPABILITY = 'node-version-frontier-retention-v1';
 export const WORKGROUP_RESTORE_CAPABILITY = 'workgroup-restore-v1';
+export const BOUNDED_SYNC_PACK_PAGE_CAPABILITY = 'bounded-sync-pack-pages-v1';
+export const SYNC_PACK_FACT_PROBE_CAPABILITY = 'sync-pack-fact-probe-v1';
 
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
     'author-host-snapshots-v1',
     'article-image-sources-v1',
     'attachment-metadata-only-v1',
+    BOUNDED_SYNC_PACK_PAGE_CAPABILITY,
+    SYNC_PACK_FACT_PROBE_CAPABILITY,
     'canonical-attachment-storage-key-v1',
     'device-delivery-receipts-v1',
     DESKTOP_SOFT_ANCHOR_CAPABILITY,

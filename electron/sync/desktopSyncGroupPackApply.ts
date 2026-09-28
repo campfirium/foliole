@@ -4,18 +4,25 @@ import path from 'node:path';
 
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import { markSyncGroupRestoreApplied } from '../../lib/core/sync/syncGroupRestoreEvents.js';
-import { clearWorkgroupSyncDataForRestore } from '../../lib/core/sync/syncGroupRestoreReset.js';
+import { assertSyncPackFactClaimsStillHeld,
+  type SyncPackFactClaims, type SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
 import { assertSyncPackManifestMatchesDatabase } from '../../lib/core/sync/syncPackManifestValidation.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { SYNC_PACK_PAGE_CONTRACT } from '../../lib/core/sync/syncPackPageContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { materializeDesktopSettingRecord } from '../database/desktopSettingMaterializer.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
+import { DEFAULT_SYNC_PACK_PAGE_BUDGET } from '../database/syncPackPageBudget.js';
 
+import { prepareDesktopSyncPackFactRequest } from './desktopSyncGroupFactProbe.js';
 import type { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
 import { readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
-import { extractSyncPackDatabase } from './syncPackContainerReader.js';
+import { assertPackRound } from './desktopSyncGroupPackRound.js';
+import { applyDesktopRestorePage } from './desktopSyncGroupRestoreApply.js';
+import { extractSyncPackDatabaseFromFile } from './syncPackContainerReader.js';
+import { decryptDesktopWorkgroupResponseFile } from './workgroupAeadFileNode.js';
+import { WORKGROUP_ENVELOPE_CONTENT_TYPE } from './workgroupHttpCrypto.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 type Peer = {
@@ -33,6 +40,7 @@ export async function fetchDesktopSyncGroupPackBody(args: {
   headers: Record<string, string>;
   groupId: string;
   pathWithQuery: string;
+  outputPath: string;
   timeoutMs?: number;
   url: string;
 }) {
@@ -43,10 +51,33 @@ export async function fetchDesktopSyncGroupPackBody(args: {
   );
   try {
     const response = await fetch(args.url, { headers: args.headers, signal: controller.signal });
-    return await readDesktopWorkgroupResponse({
+    if (!response.ok) await readDesktopWorkgroupResponse({
       contentType: 'application/zip', groupId: args.groupId,
+      maxEnvelopeBytes: 1024 * 1024,
       method: 'GET', pathWithQuery: args.pathWithQuery, response
     });
+    if (response.headers.get('content-type') !== WORKGROUP_ENVELOPE_CONTENT_TYPE ||
+        !response.body) throw new Error('workgroup_aead_response_required');
+    const file = await fs.open(args.outputPath, 'w');
+    const reader = response.body.getReader();
+    try {
+      let bytes = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        bytes += value.byteLength;
+        if (bytes > DEFAULT_SYNC_PACK_PAGE_BUDGET.transferBytes) {
+          throw new Error('sync_pack_encrypted_payload_limit_exceeded');
+        }
+        await file.writeFile(value);
+      }
+    } catch (error) {
+      try { await reader.cancel(); } catch { /* Preserve the transfer error. */ }
+      throw error;
+    } finally {
+      await file.close();
+    }
+    return args.outputPath;
   } catch (error) {
     if (controller.signal.aborted) throw new Error('sync_group_structure_pack_timeout', { cause: error });
     throw error;
@@ -75,44 +106,61 @@ export async function collectSyncPackAppliedEvent(port: DbPort, result: ApplyRes
 export async function downloadAndApplyDesktopSyncGroupPack(args: {
   after: number;
   createHeaders: typeof createDesktopSyncGroupSignedHeaders;
+  frontierStateSeq?: number;
   peer: Peer;
   restoreId?: string;
+  sourceEpoch?: string;
 }) {
-  const pathWithQuery = `/companion/sync-pack?after_state_seq=${args.after}` +
-    (args.restoreId ? `&restore_id=${encodeURIComponent(args.restoreId)}` : '');
   const key = await runWithDatabaseConnectionOwner(() => loadDesktopWorkgroupKey(args.peer.group_id));
   if (!key) throw new Error('sync_group_workgroup_key_missing');
-  const body = await fetchDesktopSyncGroupPackBody({
-    groupId: args.peer.group_id,
-    headers: args.createHeaders({ groupId: args.peer.group_id,
-      localDeviceId: args.peer.local_device_id,
-      method: 'GET', pathWithQuery, secret: key.group_key }),
-    pathWithQuery,
-    url: `${args.peer.endpoint_url}${pathWithQuery}`
-  });
   const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-desktop-initial-sync-'));
   try {
-    return await applyDesktopSyncGroupPack(args, body, tempRoot);
+    const pathWithQuery = `/companion/sync-pack?after_state_seq=${args.after}&page_contract=${SYNC_PACK_PAGE_CONTRACT}` +
+      (args.restoreId ? `&restore_id=${encodeURIComponent(args.restoreId)}` : '') +
+      (args.frontierStateSeq === undefined ? '' : `&frontier_state_seq=${args.frontierStateSeq}`) +
+      (args.sourceEpoch ? `&source_epoch=${encodeURIComponent(args.sourceEpoch)}` : '');
+    const prepared = await prepareDesktopSyncPackFactRequest({
+      after: args.after, endpointUrl: args.peer.endpoint_url,
+      ...(args.frontierStateSeq === undefined ? {} : { frontierStateSeq: args.frontierStateSeq }),
+      groupId: args.peer.group_id,
+      localDeviceId: args.peer.local_device_id, pathWithQuery, secret: key.group_key,
+      ...(args.sourceEpoch === undefined ? {} : { sourceEpoch: args.sourceEpoch })
+    });
+    const packPath = prepared.pathWithQuery;
+    const encryptedPath = await fetchDesktopSyncGroupPackBody({
+      groupId: args.peer.group_id,
+      headers: args.createHeaders({ groupId: args.peer.group_id,
+        localDeviceId: args.peer.local_device_id,
+        method: 'GET', pathWithQuery: packPath, secret: key.group_key }),
+      outputPath: path.join(tempRoot, 'encrypted.json'), pathWithQuery: packPath,
+      url: `${args.peer.endpoint_url}${packPath}`
+    });
+    const archivePath = path.join(tempRoot, 'authenticated.zip');
+    await decryptDesktopWorkgroupResponseFile({
+      contentType: 'application/zip', encryptedPath, groupId: args.peer.group_id,
+      maxPlaintextBytes: DEFAULT_SYNC_PACK_PAGE_BUDGET.transferBytes,
+      method: 'GET', outputPath: archivePath, pathWithQuery: packPath
+    });
+    return await applyDesktopSyncGroupPack({ ...args, factClaims: prepared.factClaims }, archivePath, tempRoot);
   } finally {
     await fs.rm(tempRoot, { recursive: true, force: true });
   }
 }
 
 export async function applyDesktopSyncGroupPack(
-  args: Pick<Parameters<typeof downloadAndApplyDesktopSyncGroupPack>[0], 'after' | 'peer' | 'restoreId'>,
-  body: Buffer,
+  args: Pick<Parameters<typeof downloadAndApplyDesktopSyncGroupPack>[0],
+    'after' | 'frontierStateSeq' | 'peer' | 'restoreId' | 'sourceEpoch'> & {
+      factClaims?: { index: SyncPackFactIndex; claims: SyncPackFactClaims };
+    },
+  archivePath: string,
   tempRoot: string
 ) {
   const incomingPath = path.join(tempRoot, 'incoming.db');
   const sourceDeviceName = args.peer.peer_device_name?.trim();
   if (!sourceDeviceName) throw new Error('sync_group_source_device_unavailable');
-  const manifest = await extractSyncPackDatabase({
-    body, expectedPeerId: args.peer.local_device_id,
-    expectedSourcePeerId: args.peer.peer_device_id, outputPath: incomingPath
-  });
-  if (args.restoreId && (args.after !== 0 || manifest.restoreId !== args.restoreId)) {
-    throw new Error('sync_group_restore_pack_mismatch');
-  }
+  const manifest = await extractBoundedIncomingPack(args, archivePath, incomingPath);
+  assertPackRound(args, manifest);
+  if (args.factClaims) assertFactIndexRound(manifest, args.factClaims.index);
   if (manifest.toStateSeq < args.after) throw new Error('sync_pack_provider_frontier_rollback');
   const { cursor, event, participatingArticleIds } = await runWithDatabaseConnectionOwner(async () => {
     const hostName = loadOrCreateDesktopHostName();
@@ -122,6 +170,9 @@ export async function applyDesktopSyncGroupPack(
     await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
     try {
       await assertSyncPackManifestMatchesDatabase(port, manifest);
+      if (args.factClaims) {
+        await assertSyncPackFactClaimsStillHeld(port, args.factClaims.index, args.factClaims.claims);
+      }
       const apply = (database: DbPort) => applySyncPackNodeSurfaceWithDbPort(database, {
         currentCursor: args.after, hostName,
         incomingAlias: 'inc', sourceHostName: sourceDeviceName,
@@ -129,16 +180,10 @@ export async function applyDesktopSyncGroupPack(
         recordVersionReceipt: true,
         onSettingApplied: materializeDesktopSettingRecord
       });
-      const outcome = args.restoreId ? await port.transaction(async (tx) => {
-        const removedNodeIds = await clearWorkgroupSyncDataForRestore(tx, args.restoreId!);
-        const applied = await apply(tx);
-        const event = await loadPendingRestoreEvent(tx, args.peer.group_id, args.restoreId!);
-        await markSyncGroupRestoreApplied(tx, event);
-        await tx.run(`INSERT INTO sync_peer_cursors (peer_id, stream_name, cursor_value, updated_at)
-          VALUES (?, 'state', ?, ?) ON CONFLICT(peer_id, stream_name) DO UPDATE SET
-          cursor_value = excluded.cursor_value, updated_at = excluded.updated_at`,
-        [args.peer.peer_device_id, String(applied.toStateSeq), new Date().toISOString()]);
-        return { result: applied, removedNodeIds };
+      const outcome = args.restoreId ? await applyDesktopRestorePage({
+        after: args.after, apply, frontierStateSeq: manifest.frontierStateSeq,
+        groupId: args.peer.group_id, peerId: args.peer.peer_device_id,
+        port, restoreId: args.restoreId
       }) : { result: await apply(port), removedNodeIds: [] as string[] };
       if (args.restoreId) initializeWorkspaceSearchSidecar(openDatabaseConnection(), {
         requireCurrentSource: true
@@ -156,15 +201,28 @@ export async function applyDesktopSyncGroupPack(
       await port.run('DETACH DATABASE inc');
     }
   });
-  return { cursor, event, participatingArticleIds };
+  return { cursor, event, frontierStateSeq: manifest.frontierStateSeq,
+    participatingArticleIds, sourceEpoch: manifest.sourceEpoch };
 }
 
-async function loadPendingRestoreEvent(port: DbPort, groupId: string, restoreId: string) {
-  const [event] = await port.query<{
-    group_id: string; restore_id: string; restored_at: string; source_device_identity_key: string
-  }>(`SELECT group_id, restore_id, restored_at, source_device_identity_key
-    FROM sync_group_restore_events WHERE group_id = ? AND restore_id = ? AND applied_at IS NULL`,
-  [groupId, restoreId]);
-  if (!event) throw new Error('sync_group_restore_superseded');
-  return event;
+function assertFactIndexRound(manifest: {
+  fromStateSeq: number; toStateSeq: number; frontierStateSeq: number; sourceEpoch: string;
+}, index: SyncPackFactIndex) {
+  if (manifest.fromStateSeq !== index.from_state_seq ||
+      manifest.toStateSeq !== index.to_state_seq ||
+      manifest.frontierStateSeq !== index.frontier_state_seq ||
+      manifest.sourceEpoch !== index.source_epoch) {
+    throw new Error('sync_pack_fact_index_changed');
+  }
+}
+
+async function extractBoundedIncomingPack(
+  args: Pick<Parameters<typeof downloadAndApplyDesktopSyncGroupPack>[0], 'peer'>,
+  archivePath: string, incomingPath: string
+) {
+  return extractSyncPackDatabaseFromFile({
+    archivePath, expectedPeerId: args.peer.local_device_id,
+    expectedSourcePeerId: args.peer.peer_device_id,
+    maxDatabaseBytes: DEFAULT_SYNC_PACK_PAGE_BUDGET.databaseBytes, outputPath: incomingPath
+  });
 }

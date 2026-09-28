@@ -5,9 +5,11 @@ import { SYNC_PACK_NODE_VERSION_COLUMNS } from '../../lib/core/sync/syncPackNode
 import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
 
 interface BuildDesktopSyncPackRowsInput {
+  frontierStateSeq: number;
   fromStateSeq: number;
   packId: string;
   restoreId?: string;
+  sourceEpoch: string;
   toPeerId?: string;
 }
 
@@ -41,9 +43,11 @@ export function writePackManifest(
 ) {
   db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run('manifest_json', JSON.stringify(
     buildSyncPackManifest({
+      frontierStateSeq: input.frontierStateSeq,
       fromStateSeq,
       packId: input.packId,
       ...(input.restoreId ? { restoreId: input.restoreId } : {}),
+      sourceEpoch: input.sourceEpoch,
       tableRows: {
         content_blobs: rows.contentBlobs,
         external_documents: rows.externalDocuments,

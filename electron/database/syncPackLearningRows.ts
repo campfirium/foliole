@@ -15,7 +15,6 @@ export function loadNodePreludeStateRows<T extends DatabaseRow & {
   nodeIds: string[];
   placeholders(values: unknown[]): string;
   query(sql: string, params: DatabaseBindParams): T[];
-  toStateSeq: number;
 }) {
   const nodeIds = [...new Set(args.nodeIds)];
   if (nodeIds.length === 0) return [];
@@ -30,9 +29,9 @@ export function loadNodePreludeStateRows<T extends DatabaseRow & {
        state.updated_at, state.deleted_at
      FROM sync_object_state state
      INNER JOIN node_prelude prelude ON prelude.id = state.object_id
-     WHERE state.object_type = 'node' AND state.state_seq <= ?
+     WHERE state.object_type = 'node'
      ORDER BY state.state_seq ASC`,
-    [...nodeIds, args.toStateSeq]
+    nodeIds
   ).filter(args.isSyncStatePackRow);
 }
 

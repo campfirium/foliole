@@ -50,6 +50,8 @@ let package = Package(
                 "FolioleCompanionZlib.swift",
                 "FolioleCompanionSyncPackArchive.swift",
                 "FolioleCompanionSyncPackEnvelopeValidator.swift",
+                "FolioleCompanionSyncPackFactIndex.swift",
+                "FolioleCompanionSyncPackFactProvider.swift",
                 "FolioleCompanionSyncPackPayloadWriter.swift",
                 "FolioleCompanionSyncPackProvider.swift",
                 "FolioleCompanionSyncPackProviderDefinitions.swift",

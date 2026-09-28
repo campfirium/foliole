@@ -20,6 +20,14 @@ import { applySyncPackNodeRowsWithDbPort } from './syncPackNodeRowsApply.js';
 import { applySyncPackNodeTombstonesWithDbPort } from './syncPackNodeTombstoneExecutor.js';
 import { applySyncPackNodeVersionsWithDbPort } from './syncPackNodeVersionApplyExecutor.js';
 import { clearConfirmedSyncPackPushAcks } from './syncPackPushAckClear.js';
+import {
+  isRetiredSyncPackSourceEpoch,
+  loadSyncPackReceiveProgress,
+  saveSyncPackReceiveProgress,
+  shouldApplySyncPackPage
+} from './syncPackReceiveProgress.js';
+import { applyReplayPackTombstones } from './syncPackReplayApply.js';
+import { enqueueSyncPackResourceArticles } from './syncPackResourceArticles.js';
 import { applySyncPackReviewLogWithDbPort } from './syncPackReviewLogExecutor.js';
 import { ensureSyncPackSpecialRootParents } from './syncPackSpecialRootApply.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
@@ -68,8 +76,25 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   if (options.expectedRestoreId && cursor.restoreId !== options.expectedRestoreId) {
     throw new Error('sync_group_restore_pack_mismatch');
   }
-  const shouldApply = assertContiguousSyncPackCursor(cursor, options.currentCursor);
-  const result = await port.transaction((tx) => applySyncPackSurfaceInTransaction(tx, options, shouldApply, cursor.toStateSeq));
+  const [incomingCount] = await port.query<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM ${options.incomingAlias ?? 'inc'}.sync_object_state`
+  );
+  const { result, shouldApply } = await port.transaction(async (tx) => {
+    const scope = options.sourcePeerId
+      ? await loadSyncPackReceiveProgress(tx, options.sourcePeerId) : null;
+    const retired = scope && options.sourcePeerId
+      ? await isRetiredSyncPackSourceEpoch(tx, scope.groupId, options.sourcePeerId, cursor.sourceEpoch) : false;
+    const shouldApply = scope
+      ? shouldApplySyncPackPage(cursor, scope.progress, options.currentCursor, retired)
+      : assertContiguousSyncPackCursor(cursor, options.currentCursor);
+    const result = await applySyncPackSurfaceInTransaction(tx, options, shouldApply, cursor.toStateSeq);
+    if (shouldApply && scope && options.sourcePeerId) {
+      await enqueueSyncPackResourceArticles(tx, { groupId: scope.groupId,
+        incomingAlias: options.incomingAlias ?? 'inc', peerId: options.sourcePeerId });
+      await saveSyncPackReceiveProgress(tx, scope.groupId, options.sourcePeerId, cursor);
+    }
+    return { result, shouldApply };
+  });
   const articles = shouldApply ? await port.query<{ object_id: string }>(
     `SELECT s.object_id FROM ${options.incomingAlias ?? 'inc'}.sync_object_state s
      JOIN ${options.incomingAlias ?? 'inc'}.nodes n ON n.id = s.object_id
@@ -77,6 +102,8 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   ) : [];
   return {
     applied: shouldApply,
+    frontierStateSeq: cursor.frontierStateSeq,
+    sourceEpoch: cursor.sourceEpoch,
     appliedTombstoneNodeIds: result.appliedTombstoneNodeIds,
     participatingArticleIds: articles.map((row) => row.object_id),
     appliedBlobCount: result.appliedBlobCount,
@@ -85,7 +112,8 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     appliedReviewOpIds: result.appliedReviewOpIds,
     handledConflictCount: result.handledConflictCount,
     fromStateSeq: cursor.fromStateSeq,
-    toStateSeq: cursor.toStateSeq
+    toStateSeq: cursor.toStateSeq,
+    ...(shouldApply && incomingCount?.count === 0 ? { verifiedEmptyPage: true } : {})
   };
 }
 
@@ -155,25 +183,6 @@ async function saveVersionReceipt(
 ) {
   if (!sourcePeerId) throw new Error('node_version_receipt_source_missing');
   await recordInboundNodeVersionReceipt(port, prepared, sourcePeerId);
-}
-
-async function applyReplayPackTombstones(
-  port: DbPort,
-  options: SyncPackNodeSurfaceApplyOptions,
-  toStateSeq: number
-) {
-  const appliedTombstoneNodeIds = await applySyncPackNodeTombstonesWithDbPort(
-    port, options.incomingAlias, options.enqueueSearchInvalidations !== false
-  );
-  await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
-  return {
-    appliedBlobCount: 0,
-    appliedGroupFactCount: 0,
-    appliedObjectCount: 0,
-    appliedReviewOpIds: [] as string[],
-    handledConflictCount: 0,
-    appliedTombstoneNodeIds
-  };
 }
 
 async function applyVersionedNodeStage(

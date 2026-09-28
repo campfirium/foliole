@@ -33,9 +33,12 @@ export function upsertNodeSyncState(args: {
 }
 
 export function backfillMissingNodeSyncState(
-  driver: DatabaseDriver
+  driver: DatabaseDriver,
+  collectIds = true
 ) {
-  const rows = driver.queryAll<MissingNodeSyncStateRow>(
+  const ids: string[] = [];
+  while (true) {
+    const rows = driver.queryAll<MissingNodeSyncStateRow>(
     `SELECT
        n.id,
        n.current_version_id,
@@ -48,18 +51,20 @@ export function backfillMissingNodeSyncState(
      INNER JOIN node_sync_versions v ON v.version_id = n.current_version_id
      LEFT JOIN sync_object_state s ON s.object_type = 'node' AND s.object_id = n.id
      WHERE n.id NOT IN (?, ?) AND n.current_version_id IS NOT NULL AND s.object_id IS NULL
-     ORDER BY n.updated_at ASC, n.id ASC`,
+     ORDER BY n.updated_at ASC, n.id ASC LIMIT 128`,
     SPECIAL_ROOT_NODE_IDS
-  );
-  for (const row of rows) {
-    upsertNodeSyncState({
-      contentHash: row.content_hash,
-      currentVersionId: row.current_version_id,
-      deletedAt: row.deleted_at,
-      hostName: row.last_modified_by_host_name ?? row.host_name,
-      nodeId: row.id,
-      updatedAt: row.updated_at
-    }, driver);
+    );
+    if (!rows.length) return ids;
+    for (const row of rows) {
+      upsertNodeSyncState({
+        contentHash: row.content_hash,
+        currentVersionId: row.current_version_id,
+        deletedAt: row.deleted_at,
+        hostName: row.last_modified_by_host_name ?? row.host_name,
+        nodeId: row.id,
+        updatedAt: row.updated_at
+      }, driver);
+      if (collectIds) ids.push(row.id);
+    }
   }
-  return rows.map((row) => row.id);
 }

@@ -17,7 +17,7 @@ enum FolioleCompanionZlib {
         }
     }
 
-    static func inflate(_ compressed: Data) throws -> Data {
+    static func inflate(_ compressed: Data, maxBytes: Int) throws -> Data {
         var stream = z_stream()
         let initialized = inflateInit_(&stream, ZLIB_VERSION, Int32(MemoryLayout<z_stream>.size))
         guard initialized == Z_OK else { throw error("init", initialized) }
@@ -29,11 +29,11 @@ enum FolioleCompanionZlib {
             }
             stream.next_in = UnsafeMutablePointer(mutating: base)
             stream.avail_in = uInt(compressed.count)
-            return try drain(&stream)
+            return try drain(&stream, maxBytes: maxBytes)
         }
     }
 
-    private static func drain(_ stream: inout z_stream) throws -> Data {
+    private static func drain(_ stream: inout z_stream, maxBytes: Int) throws -> Data {
         let capacity = 256 * 1024
         var output = Data()
         var status = Z_OK
@@ -45,6 +45,7 @@ enum FolioleCompanionZlib {
                 status = zlib.inflate(&stream, Z_NO_FLUSH)
                 return capacity - Int(stream.avail_out)
             }
+            if written > maxBytes - output.count { throw error("inflate limit", Z_MEM_ERROR) }
             if written > 0 { output.append(contentsOf: buffer.prefix(written)) }
             guard status == Z_OK || status == Z_STREAM_END else { throw error("inflate", status) }
         } while status != Z_STREAM_END

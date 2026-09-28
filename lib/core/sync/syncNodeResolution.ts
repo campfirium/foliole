@@ -2,6 +2,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import { createOpaqueVersionRef } from './opaqueSyncRefs.js';
@@ -137,7 +138,7 @@ async function markAlternativeTombstoneDirty(port: DbPort, alternativeId: string
   await port.run(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty
-     ) VALUES ('node_text_alternative', ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?,
+     ) VALUES ('node_text_alternative', ?, ${NEXT_SYNC_STATE_SEQ_SQL}, ?,
        'desktop-resolution', ?, ?, 1)
      ON CONFLICT(object_type, object_id) DO UPDATE SET
        state_seq = excluded.state_seq, content_hash = excluded.content_hash,
@@ -179,7 +180,7 @@ async function markAlternativeDirty(
   await port.run(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty
-     ) VALUES ('node_text_alternative', ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state), ?,
+     ) VALUES ('node_text_alternative', ?, ${NEXT_SYNC_STATE_SEQ_SQL}, ?,
        'desktop-resolution', ?, NULL, 1)
      ON CONFLICT(object_type, object_id) DO UPDATE SET
        state_seq = excluded.state_seq, content_hash = excluded.content_hash,

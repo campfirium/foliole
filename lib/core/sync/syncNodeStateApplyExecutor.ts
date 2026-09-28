@@ -1,4 +1,5 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 
 import type { DbPort } from './dbPort.js';
 
@@ -28,7 +29,7 @@ export async function upsertAppliedNodeSyncState(
      ) VALUES (
        'node',
        ?,
-       COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1),
+       ${NEXT_SYNC_STATE_SEQ_SQL},
        ?,
        ?,
        ?,

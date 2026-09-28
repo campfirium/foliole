@@ -152,7 +152,10 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
     beforeVersion: 36
   },
   { actions: [{ type: 'addWatchedBindingsOwnerIfMissing' }], beforeVersion: 38 },
-  step(41, 'installSchema', 'Failed to add companion Sync Group restore state.')
+  step(41, 'installSchema', 'Failed to add companion Sync Group restore state.'),
+  step(42, 'installSchema', 'Failed to add companion state sequence.'),
+  step(43, 'installSchema', 'Failed to add retired source epochs.'),
+  step(45, 'installSchema', 'Failed to add sync resource article backlog.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

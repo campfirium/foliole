@@ -21,7 +21,7 @@ final class FolioleCompanionSyncPackTransfer {
         File directory = ensureCacheDirectory(context);
         File pack = File.createTempFile("sync-pack-download-", ".tmp", directory);
         try {
-            FolioleCompanionDesktopHttpClient.downloadSyncPackToFile(context, url, headers, pack);
+            FolioleCompanionDesktopHttpClient.downloadToFile(context, url, headers, pack);
             return storePackFile(context, pack, expectedPeerId, expectedSourcePeerId);
         } finally {
             if (!pack.delete()) pack.deleteOnExit();

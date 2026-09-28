@@ -1,24 +1,18 @@
-import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { deflateSync } from 'node:zlib';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
-import {
-  SYNC_PACK_COMPRESSION,
-  SYNC_PACK_DATABASE_ENTRY,
-  SYNC_PACK_FORMAT,
-  SYNC_PACK_FORMAT_VERSION,
-  SYNC_PACK_PAYLOAD_SCHEMA_VERSION
-} from '../../lib/core/sync/syncPackEnvelopeContract.js';
-import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
+import { SYNC_PACK_DATABASE_ENTRY } from '../../lib/core/sync/syncPackEnvelopeContract.js';
+import { describeVersionFact, selectMissingSyncPackFacts, type SyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
-import { writeStoredZip } from '../diagnostics/zipStore.js';
+import { writeStoredZipFromFile } from '../diagnostics/zipStore.js';
 
 import { backfillMissingNodeSyncState } from './nodeSyncStateRows.js';
 import { loadDesktopSyncGroupRestoreState } from './syncGroupRestoreState.js';
 import { writePackManifest, writePackRows } from './syncPackBuilderRows.js';
+import { buildContainerManifest } from './syncPackContainerManifest.js';
+import { deflateSyncPackDatabase } from './syncPackFileCompression.js';
 import { loadSyncPackGroupRows } from './syncPackGroupRows.js';
 import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
 import { stageDesktopSyncPackNodeHolds } from './syncPackNodeVersionHolds.js';
@@ -26,14 +20,18 @@ import {
   loadSyncPackNodeVersionParentRows,
   loadSyncPackNodeVersionRows
 } from './syncPackNodeVersionRows.js';
-import { loadMaxStateSeq, loadPackRows } from './syncPackRows.js';
+import { measureSyncPackPage, syncPackPageFits, type SyncPackPageBudget } from './syncPackPageBudget.js';
+import { assertSyncPackPreloadBudget } from './syncPackPreloadBudget.js';
+import { loadPackRows } from './syncPackRows.js';
 import { loadSyncPackTombstoneRows } from './syncPackTombstoneRows.js';
+import { assertSyncPackVersionBudget } from './syncPackVersionPreflight.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 export interface BuildDesktopSyncPackInput {
   createdAt?: string;
+  frontierStateSeq?: number;
   fromPeerId: string;
   outputPath: string;
   packId: string;
@@ -42,63 +40,13 @@ export interface BuildDesktopSyncPackInput {
   toStateSeq?: number;
   requireDeliveryHold?: boolean;
   restoreId?: string;
+  sourceEpoch?: string;
+  pageBudget?: SyncPackPageBudget;
+  receiverFacts?: SyncPackFactClaims;
 }
 
 function normalizeSeq(value: number) {
   return Math.max(0, Math.trunc(value));
-}
-
-function sha256Uri(buffer: Buffer) {
-  return `sha256:${createHash('sha256').update(buffer).digest('hex')}`;
-}
-
-function buildContainerManifest(args: {
-  compressedBytes: Buffer;
-  createdAt: string;
-  fromPeerId: string;
-  fromStateSeq: number;
-  input: BuildDesktopSyncPackInput;
-  rows: LoadedDesktopSyncPackRows;
-  toStateSeq: number;
-  uncompressedBytes: Buffer;
-}) {
-  const innerManifest = buildSyncPackManifest({
-    fromStateSeq: args.fromStateSeq,
-    packId: args.input.packId,
-    ...(args.input.restoreId ? { restoreId: args.input.restoreId } : {}),
-    tableRows: {
-      content_blobs: args.rows.contentBlobs,
-      external_documents: args.rows.externalDocuments,
-      node_attachments: args.rows.nodeAttachments,
-      node_sync_versions: args.rows.nodeVersions,
-      node_sync_tombstones: args.rows.nodeTombstones,
-      node_sync_version_parents: args.rows.nodeVersionParents,
-      nodes: args.rows.nodes,
-      review_log: args.rows.reviewLog,
-      sync_group_devices: args.rows.groupDevices,
-      sync_groups: args.rows.groups,
-      sync_object_state: args.rows.stateRows,
-      sync_objects: args.rows.syncObjects
-    },
-    toStateSeq: args.toStateSeq
-  });
-  return {
-    format: SYNC_PACK_FORMAT,
-    format_version: SYNC_PACK_FORMAT_VERSION,
-    pack_id: args.input.packId,
-    ...(args.input.restoreId ? { restore_id: args.input.restoreId } : {}),
-    from_peer_id: args.fromPeerId,
-    to_peer_id: args.input.toPeerId ?? '*',
-    schema_version: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
-    from_state_seq: args.fromStateSeq,
-    to_state_seq: args.toStateSeq,
-    compression: SYNC_PACK_COMPRESSION,
-    database_file: SYNC_PACK_DATABASE_ENTRY,
-    database_uncompressed_sha256: sha256Uri(args.uncompressedBytes),
-    database_compressed_sha256: sha256Uri(args.compressedBytes),
-    tables: innerManifest.tables,
-    created_at: args.createdAt
-  };
 }
 
 export async function buildDesktopSyncPackFromDriver(
@@ -107,51 +55,79 @@ export async function buildDesktopSyncPackFromDriver(
 ) {
   const fromStateSeq = normalizeSeq(input.fromStateSeq);
   const createdAt = input.createdAt ?? new Date().toISOString();
-  backfillMissingNodeSyncState(sourceDriver);
+  backfillMissingNodeSyncState(sourceDriver, !input.pageBudget);
   await fs.mkdir(path.dirname(input.outputPath), { recursive: true });
   await fs.rm(input.outputPath, { force: true });
   const incomingPath = `${input.outputPath}.incoming.db`;
+  const compressedPath = `${input.outputPath}.incoming.db.deflate`;
   await fs.rm(incomingPath, { force: true });
+  await fs.rm(compressedPath, { force: true });
   const packDb = new BetterSqlite3(incomingPath);
   try {
     for (const statement of PACK_SCHEMA) packDb.exec(statement);
-    const { rows, packToStateSeq } = sourceDriver.transaction((tx) =>
-      loadSourceRowsAndStageHolds(tx, input, fromStateSeq, createdAt));
+    const { frontierStateSeq, rows, sourceEpoch, packToStateSeq } = sourceDriver.transaction((tx) =>
+      loadSourceRows(tx, input, fromStateSeq));
     const writePack = packDb.transaction(() => {
-      writePackManifest(packDb, input, fromStateSeq, packToStateSeq, rows);
+      writePackManifest(packDb, { ...input, frontierStateSeq, sourceEpoch }, fromStateSeq, packToStateSeq, rows);
       writePackRows(packDb, rows);
     });
     writePack();
-    const uncompressedBytes = await fs.readFile(incomingPath);
-    const compressedBytes = deflateSync(uncompressedBytes);
+    const fileChecksums = await deflateSyncPackDatabase(incomingPath, compressedPath);
     const containerManifest = buildContainerManifest({
-      compressedBytes, createdAt, fromPeerId: input.fromPeerId, fromStateSeq,
-      input, rows, toStateSeq: packToStateSeq, uncompressedBytes
+      compressedSha256: fileChecksums.compressed.sha256, createdAt,
+      fromPeerId: input.fromPeerId, frontierStateSeq, fromStateSeq, input, rows,
+      sourceEpoch, toStateSeq: packToStateSeq,
+      uncompressedSha256: fileChecksums.raw.sha256
     });
-    await writeStoredZip(input.outputPath, [
-      { name: 'manifest.json', content: Buffer.from(JSON.stringify(containerManifest, null, 2), 'utf8') },
-      { name: SYNC_PACK_DATABASE_ENTRY, content: compressedBytes }
-    ]);
+    await writeStoredZipFromFile({
+      bodyFilePath: compressedPath, bodyName: SYNC_PACK_DATABASE_ENTRY,
+      filePath: input.outputPath,
+      manifest: Buffer.from(JSON.stringify(containerManifest, null, 2), 'utf8')
+    });
+    const measured = await measureAndHoldPage(input, sourceDriver, rows, incomingPath, createdAt);
     return {
       outputPath: input.outputPath,
       packId: input.packId,
       fromStateSeq,
+      frontierStateSeq,
+      sourceEpoch,
       toStateSeq: packToStateSeq,
       objectCount: rows.stateRows.length,
       bodyBlobCount: rows.contentBlobs.length,
+      measured,
       manifest: containerManifest
     };
+  } catch (error) {
+    await fs.rm(input.outputPath, { force: true });
+    throw error;
   } finally {
     packDb.close();
     await fs.rm(incomingPath, { force: true });
+    await fs.rm(compressedPath, { force: true });
   }
 }
 
-function loadSourceRowsAndStageHolds(
+async function measureAndHoldPage(input: BuildDesktopSyncPackInput, sourceDriver: DatabaseDriver,
+  rows: LoadedDesktopSyncPackRows, databasePath: string, createdAt: string) {
+  const measured = await measureSyncPackPage({ archivePath: input.outputPath, databasePath, rows });
+  if (input.pageBudget && !syncPackPageFits(measured, input.pageBudget)) {
+    throw new Error('sync_pack_page_changed_during_build');
+  }
+  if (input.requireDeliveryHold) {
+    if (!input.toPeerId) throw new Error('node_version_pack_target_missing');
+    sourceDriver.transaction((tx) => stageDesktopSyncPackNodeHolds({
+      createdAt, driver: tx, fromPeerId: input.fromPeerId, nodes: rows.nodes,
+      packId: input.packId, toPeerId: input.toPeerId!, versions: rows.nodeVersions,
+      knownVersionIds: input.receiverFacts?.versions ?? []
+    }));
+  }
+  return measured;
+}
+
+function loadSourceRows(
   driver: DatabaseDriver,
   input: BuildDesktopSyncPackInput,
-  fromStateSeq: number,
-  createdAt: string
+  fromStateSeq: number
 ) {
   if (input.restoreId) {
     const groupId = driver.queryOne<{ group_id: string }>(`SELECT group_id FROM sync_group_local_state
@@ -161,26 +137,45 @@ function loadSourceRowsAndStageHolds(
       throw new Error('sync_group_restore_source_changed');
     }
   }
-  const toStateSeq = normalizeSeq(input.toStateSeq ?? loadMaxStateSeq(driver));
+  const source = driver.queryOne<{ high_water: number; source_epoch: string }>(
+    'SELECT high_water, source_epoch FROM sync_state_sequence WHERE singleton_id = 1'
+  );
+  if (!source?.source_epoch) throw new Error('sync_pack_source_epoch_missing');
+  if (input.sourceEpoch && input.sourceEpoch !== source.source_epoch) {
+    throw new Error('sync_pack_source_epoch_changed');
+  }
+  const frontierStateSeq = normalizeSeq(input.frontierStateSeq ?? source.high_water);
+  if (frontierStateSeq > source.high_water) throw new Error('sync_pack_frontier_unavailable');
+  const toStateSeq = normalizeSeq(input.toStateSeq ?? frontierStateSeq);
+  if (toStateSeq > frontierStateSeq) throw new Error('sync_pack_page_exceeds_frontier');
+  if (input.pageBudget) {
+    assertSyncPackPreloadBudget(driver, fromStateSeq, toStateSeq, input.pageBudget, input.receiverFacts);
+  }
   const baseRows = loadPackRows(fromStateSeq, toStateSeq, driver);
+  if (input.pageBudget) assertSyncPackVersionBudget(driver, baseRows.nodes, input.pageBudget,
+    input.receiverFacts?.versions);
   const groupRows = loadSyncPackGroupRows(driver);
   const nodeVersions = loadSyncPackNodeVersionRows(driver, baseRows.nodes);
+  const selectedFacts = selectMissingSyncPackFacts({
+    versions: nodeVersions,
+    parents: loadSyncPackNodeVersionParentRows(driver, nodeVersions),
+    reviews: baseRows.reviewLog
+  }, input.receiverFacts ?? { versions: [], parents: [], reviews: [] });
+  for (const version of selectedFacts.versions) {
+    if (describeVersionFact(version).body_hash === null) {
+      throw new Error(`sync_pack_fact_body_unavailable:${version.version_id}`);
+    }
+  }
   const rows: LoadedDesktopSyncPackRows = {
     ...baseRows,
+    reviewLog: selectedFacts.reviews,
     groupDevices: groupRows.devices,
     groups: groupRows.groups,
-    nodeVersions,
-    nodeTombstones: loadSyncPackTombstoneRows(driver),
-    nodeVersionParents: loadSyncPackNodeVersionParentRows(driver, nodeVersions)
+    nodeVersions: selectedFacts.versions,
+    nodeTombstones: loadSyncPackTombstoneRows(driver, input.pageBudget
+      ? { fromStateSeq, toStateSeq } : undefined),
+    nodeVersionParents: selectedFacts.parents
   };
-  if (input.requireDeliveryHold) {
-    if (!input.toPeerId) throw new Error('node_version_pack_target_missing');
-    stageDesktopSyncPackNodeHolds({
-      createdAt, driver, fromPeerId: input.fromPeerId,
-      nodes: baseRows.nodes, packId: input.packId, toPeerId: input.toPeerId, versions: nodeVersions
-    });
-  }
-  return { rows, packToStateSeq: Math.max(
-    rows.stateRows.at(-1)?.state_seq ?? fromStateSeq, baseRows.consumedStateSeq
-  ) };
+  return { frontierStateSeq, rows, sourceEpoch: source.source_epoch,
+    packToStateSeq: baseRows.consumedStateSeq };
 }

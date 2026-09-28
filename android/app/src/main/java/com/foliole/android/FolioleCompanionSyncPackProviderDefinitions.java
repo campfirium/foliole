@@ -27,4 +27,5 @@ final class FolioleCompanionSyncPackProviderDefinitions {
     int schemaVersion() throws Exception { return value.getInt("schemaVersion"); }
     int stateCopyIndex() throws Exception { return value.getInt("stateCopyIndex"); }
     JSONArray tableNames() throws Exception { return value.getJSONArray("tableNames"); }
+    String versionPreflightSql() throws Exception { return value.getString("versionPreflightSql"); }
 }

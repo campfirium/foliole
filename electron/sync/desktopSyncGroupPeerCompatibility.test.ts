@@ -43,3 +43,14 @@ it('rejects a v4 peer missing the complete member capability', async () => {
     peer, vi.fn(async () => response(protocol)) as typeof fetch
   )).rejects.toThrow('sync_group_peer_incompatible:required_capability_missing');
 });
+
+it('rejects an older provider before requesting an unbounded structure pack', async () => {
+  const protocol = {
+    ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
+      .filter((capability) => capability !== 'bounded-sync-pack-pages-v1')
+  };
+  await expect(assertDesktopSyncGroupPeerCompatible(
+    peer, vi.fn(async () => response(protocol)) as typeof fetch
+  )).rejects.toThrow('sync_group_peer_incompatible:required_capability_missing');
+});

@@ -40,6 +40,8 @@ import {
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
+import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaStatements.js';
+import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
 
 const SYNC_DELIVERY_TRIGGER_TARGETS = [
   'sync_object_state',
@@ -109,5 +111,22 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   } },
   { version: 107, migrate: (sqlite) => {
     for (const statement of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(statement);
-  } }
+  } },
+  { version: 108, migrate: (sqlite) => {
+    for (const statement of [
+      ...SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS, ...SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS
+    ]) sqlite.exec(statement);
+  } },
+  { version: 109, migrate: (sqlite) => {
+    sqlite.exec(SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS[1]);
+  } },
+  // Reserved: this development migration was withdrawn; existing databases keep their version.
+  { version: 110, migrate: () => {} },
+  { version: 111, migrate: (sqlite) => {
+    sqlite.exec(SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS[2]);
+  } },
+  // Reserved: this development migration was withdrawn; existing databases keep their version.
+  { version: 112, migrate: () => {} },
+  // Reserved: this development migration was withdrawn; existing databases keep their version.
+  { version: 113, migrate: () => {} }
 ];

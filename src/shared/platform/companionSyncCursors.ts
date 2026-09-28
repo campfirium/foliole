@@ -57,6 +57,13 @@ export async function loadCompanionSyncPackCursor(peerId?: string) {
   return readWebNumberCursor(WEB_SYNC_PACK_CURSOR_KEY);
 }
 
+export async function loadCompanionSyncPackRestorePosition(restoreId: string, peerId: string) {
+  if (!usesSharedOwner()) throw new Error('sync_group_restore_cursor_unavailable');
+  const store = createIosCompanionSyncPackCursorStore(undefined, peerId);
+  if (!store.loadRestorePosition) throw new Error('sync_group_restore_cursor_unavailable');
+  return store.loadRestorePosition(restoreId);
+}
+
 export async function saveCompanionSyncPackCursor(cursor: number | null, peerId?: string) {
   if (usesSharedOwner()) {
     const store = createIosCompanionSyncPackCursorStore(undefined, peerId ?? await getSyncPackPeerId());

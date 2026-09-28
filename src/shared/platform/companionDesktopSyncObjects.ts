@@ -1,4 +1,5 @@
 import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
+import { SYNC_PACK_PAGE_CONTRACT } from '../../../lib/core/sync/syncPackPageContract';
 
 import { createSignedRequestHeaders } from './companion/network/signedRequest';
 import {
@@ -19,99 +20,80 @@ import type {
 import {
   applyCompanionDesktopSyncPack,
   loadCompanionSyncPackCursor,
+  loadCompanionSyncPackRestorePosition,
   saveCompanionSyncPackCursor
 } from './companionSyncObjects';
 import {
   companionSyncTimeoutOwnership,
-  createCompanionSyncTimeoutError,
-  type CompanionSyncTimeoutKey
+  withSyncStepTimeout
 } from './companionSyncTimeoutOwnership';
 
-const SYNC_PACK_PATH = '/companion/sync-pack';
 export const COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS =
   companionSyncTimeoutOwnership('structure_pack_apply').timeoutMs;
 export { ATTACHMENT_RESOURCE_BATCH_LIMIT, CONTENT_BLOB_BATCH_LIMIT, syncCompanionContentBlobFromDesktop } from './companionDesktopSyncResources';
 export type { CompanionDesktopSyncOptions, CompanionDesktopSyncProgress, CompanionDesktopSyncResult } from './companionDesktopSyncTypes';
 const inFlightSyncByEndpoint = new Map<string, Promise<CompanionDesktopSyncResult>>();
 
-function buildPackPath(cursor: number | null, restoreId?: string) {
+function buildPackPath(position: { cursor: number | null; frontierStateSeq?: number; sourceEpoch?: string },
+  restoreId?: string) {
   const params = new URLSearchParams();
-  params.set('after_state_seq', String(restoreId ? 0 : cursor ?? 0));
+  params.set('after_state_seq', String(position.cursor ?? 0));
+  params.set('page_contract', SYNC_PACK_PAGE_CONTRACT);
   if (restoreId) params.set('restore_id', restoreId);
-  return `${SYNC_PACK_PATH}?${params.toString()}`;
-}
-
-function normalizeEndpointUrl(endpointUrl: string) {
-  return endpointUrl.trim().replace(/\/+$/, '');
+  if (position.frontierStateSeq !== undefined) {
+    params.set('frontier_state_seq', String(position.frontierStateSeq));
+  }
+  if (position.sourceEpoch) params.set('source_epoch', position.sourceEpoch);
+  return `/companion/sync-pack?${params.toString()}`;
 }
 
 async function pullRemoteStructurePack(endpointUrl: string, restoreId?: string) {
   const startedAt = Date.now();
   const sourcePeerId = await resolveCompanionSyncPeerId(endpointUrl);
   const sourceHostName = await resolveCompanionSyncPeerHostName(endpointUrl);
-  const cursor = restoreId ? 0 : await loadCompanionSyncPackCursor(sourcePeerId);
-  const pathWithQuery = buildPackPath(cursor, restoreId);
-  const result = await applyCompanionDesktopSyncPack({
-    ...(restoreId ? { expectedRestoreId: restoreId } : {}),
-    headers: await createSignedRequestHeaders({ endpointUrl, method: 'GET', pathWithQuery }),
-    sourceHostName,
-    sourcePeerId,
-    url: `${normalizeEndpointUrl(endpointUrl)}${pathWithQuery}`
-  });
-  assertSyncPackCursorAdvance({
-    appliedFactCount: result.applied_group_fact_count ?? 0,
-    appliedObjectCount: result.applied_object_count,
-    currentCursor: cursor ?? 0,
-    handledConflictCount: result.handled_conflict_count ?? 0,
-    toStateSeq: result.to_state_seq
-  });
-  if (result.to_state_seq > (cursor ?? 0)) {
-    await saveCompanionSyncPackCursor(result.to_state_seq, sourcePeerId);
+  let position: { cursor: number | null; frontierStateSeq?: number; sourceEpoch?: string } = restoreId
+    ? await loadCompanionSyncPackRestorePosition(restoreId, sourcePeerId)
+    : { cursor: await loadCompanionSyncPackCursor(sourcePeerId) };
+  let frontier = position.frontierStateSeq;
+  let epoch = position.sourceEpoch;
+  let appliedPackBlobCount = 0;
+  let appliedPackObjectCount = 0;
+  const reviewIds = new Set<string>();
+  for (;;) {
+    const cursor = position.cursor ?? 0;
+    const pathWithQuery = buildPackPath(position, restoreId);
+    const result = await withSyncStepTimeout('structure_pack_apply', applyCompanionDesktopSyncPack({
+      ...(restoreId ? { expectedRestoreId: restoreId } : {}),
+      headers: await createSignedRequestHeaders({ endpointUrl, method: 'GET', pathWithQuery }),
+      sourceHostName, sourcePeerId,
+      url: `${endpointUrl.trim().replace(/\/+$/, '')}${pathWithQuery}`
+    }));
+    assertSyncPackCursorAdvance({ appliedFactCount: result.applied_group_fact_count ?? 0,
+      appliedObjectCount: result.applied_object_count, currentCursor: cursor,
+      handledConflictCount: result.handled_conflict_count ?? 0, toStateSeq: result.to_state_seq,
+      verifiedEmptyPage: result.verified_empty_page === true });
+    frontier ??= result.frontier_state_seq ?? result.to_state_seq;
+    epoch ??= result.source_epoch;
+    if (result.frontier_state_seq !== undefined && result.frontier_state_seq !== frontier ||
+        result.source_epoch !== undefined && result.source_epoch !== epoch ||
+        result.to_state_seq > frontier || result.to_state_seq <= cursor && cursor < frontier) {
+      throw new Error('sync_pack_round_changed');
+    }
+    if (result.to_state_seq > cursor) await saveCompanionSyncPackCursor(result.to_state_seq, sourcePeerId);
+    appliedPackBlobCount += result.applied_blob_count;
+    appliedPackObjectCount += result.applied_object_count;
+    for (const id of result.applied_review_op_ids ?? []) reviewIds.add(id);
+    if (result.to_state_seq === frontier) break;
+    if (!epoch) throw new Error('sync_pack_source_epoch_missing');
+    position = { cursor: result.to_state_seq, frontierStateSeq: frontier, sourceEpoch: epoch };
   }
-  const appliedReviewOpIds = result.applied_review_op_ids ?? [];
   return {
-    participatingArticleIds: result.participating_article_ids ?? [],
-    appliedPackBlobCount: result.applied_blob_count,
-    appliedPackObjectCount: result.applied_object_count,
-    appliedReviewOpIds,
-    confirmedStructureStateSeq: result.to_state_seq,
+    sourcePeerId,
+    appliedPackBlobCount, appliedPackObjectCount,
+    appliedReviewOpIds: [...reviewIds],
+    confirmedStructureStateSeq: frontier,
     syncedStructureElapsedMs: Date.now() - startedAt
   };
-}
-
-async function withSyncStepTimeout<T>(
-  key: CompanionSyncTimeoutKey,
-  work: Promise<T>,
-): Promise<T> {
-  const ownership = companionSyncTimeoutOwnership(key);
-  const timeoutMs = ownership.timeoutMs;
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  const timeout = new Promise<'timeout'>((resolve) => {
-    timeoutId = setTimeout(() => {
-      resolve('timeout');
-    }, timeoutMs);
-  });
-  const wrappedWork = work.then(
-    (value) => ({ status: 'fulfilled' as const, value }),
-    (error) => ({ status: 'rejected' as const, error })
-  );
-  try {
-    const result = await Promise.race([wrappedWork, timeout]);
-    if (result === 'timeout') {
-      if (!ownership.cancelsUnderlyingWork && !ownership.allowsNewRunBeforeUnderlyingWorkSettles) {
-        return await work;
-      }
-      throw createCompanionSyncTimeoutError(key);
-    }
-    if (result.status === 'rejected') {
-      throw result.error;
-    }
-    return result.value;
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-    }
-  }
 }
 
 function pushErrorMessage(error: unknown) {
@@ -120,7 +102,7 @@ function pushErrorMessage(error: unknown) {
 
 function createSkippedStructurePack() {
   return {
-    participatingArticleIds: [] as string[],
+    sourcePeerId: null as string | null,
     appliedPackBlobCount: 0,
     appliedPackObjectCount: 0,
     appliedReviewOpIds: [],
@@ -187,14 +169,15 @@ async function runCompanionObjectsSync(
       }));
   const pack = options.resourcesOnly
     ? createSkippedStructurePack()
-    : await withSyncStepTimeout('structure_pack_apply', pullRemoteStructurePack(endpointUrl, options.restoreId));
+    : await pullRemoteStructurePack(endpointUrl, options.restoreId);
   if (!options.resourcesOnly) {
     options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
     await options.onStructureSynced?.();
   }
   const resources = options.includeResources === false
     ? createEmptyResourceStages()
-    : await pullResourceStages(endpointUrl, options.onProgress, pack.participatingArticleIds);
+    : await pullResourceStages(endpointUrl, options.onProgress, [],
+      pack.sourcePeerId ?? await resolveCompanionSyncPeerId(endpointUrl));
   const finalSummary = options.includeResources === false
     ? createSkippedResourceSummary()
     : await loadCompanionDesktopSyncSummary(endpointUrl, pack.confirmedStructureStateSeq);

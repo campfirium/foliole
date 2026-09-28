@@ -1,5 +1,6 @@
 import type http from 'node:http';
-import { Writable } from 'node:stream';
+import path from 'node:path';
+import { PassThrough, Writable } from 'node:stream';
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -23,7 +24,8 @@ const contentBlobResourceMock = vi.hoisted(() => ({
 }));
 const syncPackMock = vi.hoisted(() => ({
   buildCompanionSyncPackResource: vi.fn(async (): Promise<unknown> => ({
-    body: Buffer.from('sqlite-pack'),
+    cleanup: async () => {},
+    filePath: path.join(process.cwd(), 'package.json'),
     fileName: 'pack-1.syncpack',
     status: 'ready',
     statusCode: 200
@@ -42,10 +44,15 @@ const diagnosticsMock = vi.hoisted(() => ({
   }))
 }));
 const databaseOwnerMock = vi.hoisted(() => ({
-  run: vi.fn(async (execute: () => unknown) => execute())
+  active: false,
+  run: vi.fn(async (execute: () => unknown) => {
+    databaseOwnerMock.active = true;
+    try { return await execute(); } finally { databaseOwnerMock.active = false; }
+  })
 }));
 
 vi.mock('../database/connection.js', () => ({
+  registerDatabaseConnectionCleanup: vi.fn(),
   runWithDatabaseConnectionOwner: databaseOwnerMock.run
 }));
 
@@ -76,7 +83,10 @@ vi.mock('./buildCompanionSyncDiagnostics.js', () => ({
   buildCompanionSyncDiagnostics: diagnosticsMock.buildCompanionSyncDiagnostics
 }));
 vi.mock('./workgroupHttpCrypto.js', () => ({
-  createWorkgroupResponseStreamCipher: vi.fn(),
+  createWorkgroupResponseStreamCipher: vi.fn(() => ({
+    authTag: () => Buffer.alloc(16), cipher: new PassThrough(),
+    prefix: Buffer.from('{"ciphertext":"'), suffix: Buffer.from('"}')
+  })),
   encryptWorkgroupResponse: vi.fn(() => Buffer.from('encrypted-resource')),
   WORKGROUP_ENVELOPE_CONTENT_TYPE: 'application/vnd.foliole.workgroup-aead+json'
 }));
@@ -90,6 +100,7 @@ import {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  databaseOwnerMock.active = false;
   contentBlobResourceMock.loadCompanionContentBlobResource.mockResolvedValue({
     body: Buffer.from('body-bytes'),
     mimeType: 'text/plain',
@@ -100,7 +111,8 @@ beforeEach(() => {
     status: 'ok'
   });
   syncPackMock.buildCompanionSyncPackResource.mockResolvedValue({
-    body: Buffer.from('sqlite-pack'),
+    cleanup: async () => {},
+    filePath: path.join(process.cwd(), 'package.json'),
     fileName: 'pack-1.syncpack',
     status: 'ready',
     statusCode: 200
@@ -117,20 +129,34 @@ beforeEach(() => {
   });
 });
 
-it('keeps authenticated sync-pack preparation and response inside the database owner', async () => {
+it('prepares the signed sync pack under the database owner and streams after releasing it', async () => {
   const response = createResponse();
   await createHandler()({
-    headers: {}, method: 'GET', url: '/companion/sync-pack?after_state_seq=0'
+    headers: {}, method: 'GET', url: '/companion/sync-pack?after_state_seq=0&fact_index_id=probe-1'
   } as http.IncomingMessage, response);
 
   expect(response.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
-  expect(databaseOwnerMock.run).toHaveBeenCalledTimes(2);
+  expect(databaseOwnerMock.run).toHaveBeenCalledTimes(3);
+  expect(response.writtenWhileOwned()).toBe(false);
 });
+
+it('requires fact probing before serving a sync pack', async () => {
+  const response = createResponse();
+  syncPackMock.buildCompanionSyncPackResource.mockClear();
+  await createHandler()({
+    headers: {}, method: 'GET', url: '/companion/sync-pack?after_state_seq=0'
+  } as http.IncomingMessage, response);
+  expect(response.writeHead).toHaveBeenCalledWith(409, expect.any(Object));
+  expect(syncPackMock.buildCompanionSyncPackResource).not.toHaveBeenCalled();
+});
+
 
 function createResponse() {
   const chunks: Buffer[] = [];
+  let writtenWhileOwned = false;
   const writable = new Writable({
     write(chunk, _encoding, callback) {
+      writtenWhileOwned ||= databaseOwnerMock.active;
       chunks.push(Buffer.from(chunk));
       callback();
     }
@@ -139,6 +165,7 @@ function createResponse() {
   const response = writable as unknown as {
     body(): Buffer;
     end: ReturnType<typeof vi.fn>;
+    writtenWhileOwned(): boolean;
     writeHead: ReturnType<typeof vi.fn>;
   };
   response.end = vi.fn((chunk?: unknown, encoding?: unknown, callback?: unknown) => {
@@ -152,6 +179,7 @@ function createResponse() {
   });
   response.writeHead = vi.fn();
   response.body = () => Buffer.concat(chunks);
+  response.writtenWhileOwned = () => writtenWhileOwned;
   return response as unknown as http.ServerResponse & typeof response;
 }
 

@@ -9,6 +9,7 @@ const runtime = vi.hoisted(() => ({
   getPeerCursor: vi.fn(),
   loadPendingConflicts: vi.fn(),
   notifyApplied: vi.fn(),
+  queryOne: vi.fn(),
   reconcileBodies: vi.fn(),
   refreshAdvertisement: vi.fn(),
   reportCursor: vi.fn(),
@@ -21,7 +22,7 @@ vi.mock('../../lib/core/database/syncState.js', () => ({
   setPeerCursor: runtime.setPeerCursor
 }));
 vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: () => ({ driver: { kind: 'test' } }),
+  openDatabaseConnection: () => ({ driver: { kind: 'test', queryOne: runtime.queryOne } }),
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
 }));
 vi.mock('../database/syncBodyProjectionReconcile.js', () => ({
@@ -56,8 +57,10 @@ vi.mock('./desktopSyncGroupVersionReceipts.js', () => ({
   flushDesktopSyncGroupVersionReceipts: runtime.flushVersionReceipts
 }));
 vi.mock('./desktopSyncGroupResources.js', () => ({
-  assertDesktopSyncGroupResourcesComplete: runtime.assertResourcesComplete,
-  downloadDesktopSyncGroupResources: runtime.downloadResources
+  assertDesktopSyncGroupResourcesComplete: runtime.assertResourcesComplete
+}));
+vi.mock('./desktopSyncGroupResourceArticleDrain.js', () => ({
+  drainDesktopSyncGroupResourceArticles: runtime.downloadResources
 }));
 vi.mock('./desktopSyncGroupRoutes.js', () => ({ loadDesktopSyncGroupRoutes: vi.fn() }));
 vi.mock('./workspaceSyncAppliedEvents.js', () => ({ notifyWorkspaceSyncApplied: runtime.notifyApplied }));
@@ -75,7 +78,8 @@ const peer = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  runtime.getPeerCursor.mockReturnValue('3');
+  runtime.getPeerCursor.mockReturnValue('0');
+  runtime.queryOne.mockReturnValue(undefined);
   runtime.loadPendingConflicts.mockReturnValue([]);
   runtime.downloadPack.mockResolvedValue({
     cursor: 4,
@@ -123,7 +127,7 @@ it('does not re-advertise after consuming a peer change', async () => {
     cursor: 4,
     peerAuthorizationId: 'desktop-b'
   });
-  expect(runtime.downloadResources).toHaveBeenCalledWith(peer, ['article']);
+  expect(runtime.downloadResources).toHaveBeenCalledWith(peer);
   expect(runtime.refreshAdvertisement).not.toHaveBeenCalled();
 });
 
@@ -136,7 +140,7 @@ it('reconciles already-versioned bodies before committing an automatic receive c
   expect(sequence).toEqual(['body', 'cursor']);
 });
 
-it('refreshes an applied document only after its resources finish downloading', async () => {
+it('refreshes an applied document after its page commits while resources continue', async () => {
   let finishResources!: () => void;
   runtime.downloadResources.mockImplementationOnce(() => new Promise<void>((resolve) => {
     finishResources = resolve;
@@ -144,13 +148,13 @@ it('refreshes an applied document only after its resources finish downloading', 
 
   const pending = continueDesktopSyncGroupSync(peer);
   await vi.waitFor(() => expect(runtime.downloadResources).toHaveBeenCalledOnce());
-  expect(runtime.notifyApplied).not.toHaveBeenCalled();
-
-  finishResources();
-  await expect(pending).resolves.toEqual({ complete: true, cursor: 4 });
   expect(runtime.notifyApplied).toHaveBeenCalledWith({
     appliedNodeIds: ['node-1'], appliedObjectIds: [], appliedReviewOpIds: []
   });
+
+  finishResources();
+  await expect(pending).resolves.toEqual({ complete: true, cursor: 4 });
+  expect(runtime.notifyApplied).toHaveBeenCalledOnce();
 });
 
 it('still refreshes an applied document when a resource transfer fails', async () => {
@@ -165,4 +169,70 @@ it('does not commit a receive cursor when body reconciliation fails', async () =
 
   await expect(continueDesktopSyncGroupSync(peer)).rejects.toThrow('sync_body_projection_changed');
   expect(runtime.setPeerCursor).not.toHaveBeenCalled();
+});
+
+it('preserves the committed cursor when the provider reports a non-contiguous page', async () => {
+  runtime.downloadPack.mockRejectedValueOnce(new Error('sync_pack_cursor_not_contiguous'));
+
+  await expect(continueDesktopSyncGroupSync(peer)).rejects.toThrow('sync_pack_cursor_not_contiguous');
+  expect(runtime.downloadPack).toHaveBeenCalledOnce();
+  expect(runtime.setPeerCursor).not.toHaveBeenCalled();
+});
+
+it('re-enumerates a legacy cursor from zero without changing it before the new page commits', async () => {
+  runtime.getPeerCursor.mockReturnValue('94');
+  runtime.downloadPack.mockRejectedValueOnce(new Error('offline'));
+  await expect(continueDesktopSyncGroupSync(peer)).rejects.toThrow('offline');
+
+  expect(runtime.downloadPack).toHaveBeenCalledWith(expect.objectContaining({ after: 0 }));
+  expect(runtime.setPeerCursor).not.toHaveBeenCalled();
+});
+
+it('re-enumerates a mobile provider after the bounded-page compatibility check', async () => {
+  runtime.getPeerCursor.mockReturnValue('94');
+  runtime.downloadPack.mockRejectedValueOnce(new Error('offline'));
+  await expect(continueDesktopSyncGroupSync({ ...(peer as object), peer_platform: 'android-capacitor' } as never))
+    .rejects.toThrow('offline');
+  expect(runtime.downloadPack).toHaveBeenCalledWith(expect.objectContaining({ after: 0 }));
+  expect(runtime.setPeerCursor).not.toHaveBeenCalled();
+});
+
+it('resumes from the transactionally committed page after a lost outer cursor save', async () => {
+  runtime.queryOne.mockReturnValueOnce({ completed: 0, cursor_state_seq: 5,
+    frontier_state_seq: 8, restore_id: null, source_epoch: 'epoch-a' });
+  runtime.downloadPack.mockResolvedValueOnce({
+    cursor: 6,
+    frontierStateSeq: 8,
+    sourceEpoch: 'epoch-a',
+    event: { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] },
+    participatingArticleIds: []
+  }).mockResolvedValueOnce({
+    cursor: 8, frontierStateSeq: 8, sourceEpoch: 'epoch-a',
+    event: { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] },
+    participatingArticleIds: []
+  });
+
+  await expect(continueDesktopSyncGroupSync(peer)).resolves.toMatchObject({ cursor: 8 });
+  expect(runtime.downloadPack).toHaveBeenCalledWith(expect.objectContaining({
+    after: 5, frontierStateSeq: 8, sourceEpoch: 'epoch-a'
+  }));
+  expect(runtime.downloadPack).toHaveBeenCalledWith(expect.objectContaining({
+    after: 6, frontierStateSeq: 8, sourceEpoch: 'epoch-a'
+  }));
+});
+
+it('continues the same restore without resetting the first committed page', async () => {
+  runtime.exchangeMemberState.mockResolvedValueOnce({
+    localExited: false, peerBlocked: false, restoreFromPeer: 'restore-a'
+  });
+  runtime.queryOne.mockReturnValueOnce({ completed: 0, cursor_state_seq: 5,
+    frontier_state_seq: 8, restore_id: 'restore-a', source_epoch: 'epoch-a' });
+  runtime.downloadPack.mockResolvedValueOnce({ cursor: 8,
+    event: { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] },
+    participatingArticleIds: [] });
+
+  await continueDesktopSyncGroupSync(peer);
+  expect(runtime.downloadPack).toHaveBeenCalledWith(expect.objectContaining({
+    after: 5, frontierStateSeq: 8, restoreId: 'restore-a', sourceEpoch: 'epoch-a'
+  }));
 });

@@ -1,7 +1,10 @@
 import type http from 'node:http';
 
-import { writeWorkgroupBinary } from './companionLanResponses.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+
+import { writeWorkgroupFileStream } from './companionLanResponses.js';
 import { buildCompanionSyncPackResource, SYNC_PACK_PATH } from './companionLanSyncPack.js';
+import { createWorkgroupResponseStreamCipher } from './workgroupHttpCrypto.js';
 
 export async function handleSyncPackGet(
   request: http.IncomingMessage,
@@ -19,11 +22,37 @@ export async function handleSyncPackGet(
   if (parsedRequestUrl.pathname !== SYNC_PACK_PATH) {
     return false;
   }
-  const resource = await buildCompanionSyncPackResource(parsedRequestUrl, authenticatedDeviceId);
-  if (resource.status !== 'ready') {
-    writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
+  if (!parsedRequestUrl.searchParams.get('fact_index_id')) {
+    writeJson(request, response, 409, { error: 'sync_pack_fact_probe_required' }, 'GET, OPTIONS');
     return true;
   }
-  writeWorkgroupBinary(request, response, 200, resource.body ?? Buffer.alloc(0), 'application/zip');
+  let resource: Awaited<ReturnType<typeof buildCompanionSyncPackResource>>;
+  try {
+    resource = await runWithDatabaseConnectionOwner(() =>
+      buildCompanionSyncPackResource(parsedRequestUrl, authenticatedDeviceId));
+  } catch (error) {
+    if (error instanceof Error &&
+        (error.message.startsWith('sync_pack_fact_body_unavailable:') ||
+          ['sync_pack_fact_index_changed', 'sync_pack_fact_claims_invalid'].includes(error.message))) {
+      writeJson(request, response, 409, { error: error.message }, 'GET, OPTIONS');
+      return true;
+    }
+    throw error;
+  }
+  if (resource.status !== 'ready') {
+    await runWithDatabaseConnectionOwner(() =>
+      writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS'));
+    return true;
+  }
+  if (!resource.filePath || !resource.cleanup) throw new Error('sync_pack_file_unavailable');
+  try {
+    const cipher = await runWithDatabaseConnectionOwner(() =>
+      createWorkgroupResponseStreamCipher(request, 'application/zip'));
+    await writeWorkgroupFileStream(request, response, 200, {
+      filePath: resource.filePath, mimeType: 'application/zip'
+    }, cipher);
+  } finally {
+    await resource.cleanup();
+  }
   return true;
 }

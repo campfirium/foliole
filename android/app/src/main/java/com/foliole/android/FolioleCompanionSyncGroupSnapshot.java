@@ -47,6 +47,15 @@ final class FolioleCompanionSyncGroupSnapshot {
         }
     }
 
+    <T> T continueOrRefresh(String peerDeviceId, Work<T> work) throws Exception {
+        synchronized (lock(peerDeviceId)) {
+            ensureOpen();
+            File snapshot = snapshots.get(peerDeviceId);
+            return snapshot != null && snapshot.isFile()
+                ? work.run(snapshot.getAbsolutePath()) : refresh(peerDeviceId, work);
+        }
+    }
+
     void close() {
         closed = true;
         snapshots.values().forEach(FolioleCompanionSyncGroupSnapshot::delete);

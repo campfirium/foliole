@@ -30,6 +30,12 @@ it('rejects the fixed illegal DAG oracle with its missing-parent error', async (
     host_name TEXT NOT NULL, content_hash TEXT NOT NULL, snapshot_json TEXT NOT NULL,
     deleted_at TEXT NOT NULL, created_at TEXT NOT NULL
   )`);
+  const [manifestRow] = incoming.prepare("SELECT value FROM pack_manifest WHERE key = 'manifest_json'")
+    .all() as Array<{ value: string }>;
+  const inner = JSON.parse(manifestRow!.value) as Record<string, unknown>;
+  incoming.prepare("UPDATE pack_manifest SET value = ? WHERE key = 'manifest_json'")
+    .run(JSON.stringify({ ...inner, source_epoch: 'source-test',
+      frontier_state_seq: oracle.manifest.to_state_seq }));
   incoming.close();
   const main = new Database(':memory:');
   initializeDatabaseSchema(main);

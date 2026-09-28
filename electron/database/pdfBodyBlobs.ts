@@ -2,6 +2,7 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../../lib/core/database/syncStateSequenceSchemaStatements.js';
 import { PDF_READER_PLACEHOLDER_TEXT, resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -109,7 +110,7 @@ function upsertNodePackState(node: PdfReferenceNodeRow, bodyContent: string, ope
     virtualFilter: node.virtual_filter
   });
   const nextSeq = connection.driver.queryOne<{ value: number }>(
-    'SELECT COALESCE(MAX(state_seq), 0) + 1 AS value FROM sync_object_state'
+    `SELECT ${NEXT_SYNC_STATE_SEQ_SQL} AS value`
   )?.value ?? 1;
   connection.driver.execute(
     `INSERT INTO sync_object_state (

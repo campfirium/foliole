@@ -35,6 +35,13 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   incomingPath = path.join(tempRoot, 'incoming.db');
   initializeDatabaseConnection(openDatabaseConnection());
+  openDatabaseConnection().sqlite.exec(`
+    INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
+      VALUES ('test-group', 'Test', 'test-key', 'now', 'now');
+    INSERT INTO sync_group_local_state
+      (singleton_id, group_id, local_device_identity_key, state, updated_at)
+      VALUES (1, 'test-group', 'local', 'active', 'now');
+  `);
   seedLocalAcceptedSetting();
   createIncomingSettingPack(incomingPath);
 });
@@ -127,7 +134,8 @@ function createIncomingSettingPack(filePath: string) {
   try {
     for (const statement of PACK_SCHEMA) db.exec(statement);
     db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run(
-      'manifest_json', JSON.stringify({ from_state_seq: 0, to_state_seq: 7 })
+      'manifest_json', JSON.stringify({ source_epoch: 'source-test', frontier_state_seq: 7,
+        from_state_seq: 0, to_state_seq: 7 })
     );
     db.exec(`
       INSERT INTO sync_object_state (

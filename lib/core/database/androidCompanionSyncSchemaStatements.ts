@@ -1,4 +1,5 @@
 import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from './syncDeliverySchemaStatements.js';
+import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
 
 export const ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS setting_records (
@@ -35,6 +36,7 @@ export const ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS = [
     ON sync_object_state (state_seq)`,
   `CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_seq
     ON sync_object_state (object_type, state_seq)`,
+  ...SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS sync_change_log (
     change_id TEXT PRIMARY KEY,
     object_type TEXT NOT NULL,

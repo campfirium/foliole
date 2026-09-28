@@ -4,12 +4,14 @@ export function assertSyncPackCursorAdvance(args: {
   currentCursor: number;
   handledConflictCount: number;
   toStateSeq: number;
+  verifiedEmptyPage?: boolean;
 }) {
   if (
     args.toStateSeq > args.currentCursor &&
     (args.appliedFactCount ?? 0) === 0 &&
     args.appliedObjectCount === 0 &&
-    args.handledConflictCount === 0
+    args.handledConflictCount === 0 &&
+    !args.verifiedEmptyPage
   ) {
     throw new Error('sync_pack_applied_no_objects');
   }

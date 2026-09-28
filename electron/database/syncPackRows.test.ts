@@ -119,6 +119,22 @@ it('includes node ancestors when packing a changed child node', () => {
   });
 });
 
+it('includes a future-sequence parent as a dependency without advancing the main cursor', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
+    VALUES ('parent', NULL, 'folder', 'Parent', '', 'now', 'now'),
+      ('child', 'parent', 'topic', 'Child', '', 'now', 'now')`);
+  driver.execute(`INSERT INTO sync_object_state
+    (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at)
+    VALUES ('node', 'child', 1, 'child-hash', 'source', 'now'),
+      ('node', 'parent', 3, 'parent-hash', 'source', 'now')`);
+  const firstPage = loadPackRows(0, 1, driver);
+  expect(firstPage.consumedStateSeq).toBe(1);
+  expect(firstPage.nodes.map((row) => row.id).sort()).toEqual(['child', 'parent']);
+  expect(firstPage.stateRows.map((row) => row.state_seq)).toEqual([1, 3]);
+  expect(loadPackRows(1, 3, driver).stateRows.map((row) => row.state_seq)).toEqual([3]);
+});
+
 function insertNodeSyncState() {
   openDatabaseConnection().driver.execute(
     `INSERT INTO nodes (id, kind, title, content, created_at, updated_at)

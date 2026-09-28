@@ -5,6 +5,9 @@ async function loadPeer(endpointUrl: string) {
   const group = await loadCompanionSyncGroup();
   if (!group) throw new Error('sync_group_not_joined');
   const result = await discoverCompanionDesktop(endpointUrl);
+  if (result.compatibility.status !== 'compatible') {
+    throw new Error(`sync_group_peer_incompatible:${result.compatibility.reason ?? 'unknown'}`);
+  }
   if (result.discovery.group_id !== group.group_id) throw new Error('sync_group_identity_mismatch');
   const peerId = result.discovery.provider_device_id.trim();
   const deviceName = result.discovery.provider_device_name.trim();

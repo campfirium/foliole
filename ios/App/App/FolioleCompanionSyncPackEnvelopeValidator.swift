@@ -10,6 +10,8 @@ struct FoliolePreparedSyncPack {
 
 enum FolioleCompanionSyncPackEnvelopeValidator {
     private static let sqliteHeader = Data("SQLite format 3\0".utf8)
+    static let maximumTransferBytes = 1024 * 1024
+    private static let maximumDatabaseBytes = 4 * 1024 * 1024
 
     static func validate(
         archiveURL: URL,
@@ -28,7 +30,7 @@ enum FolioleCompanionSyncPackEnvelopeValidator {
             )
             guard let compressed = entries[contract.databaseEntry] else { throw invalid("missing_sync_pack_entry") }
             try verifySha256(compressed, expected: try string(manifest, "database_compressed_sha256"), layer: "compressed")
-            let database = try FolioleCompanionZlib.inflate(compressed)
+            let database = try FolioleCompanionZlib.inflate(compressed, maxBytes: maximumDatabaseBytes)
             try verifySha256(database, expected: try string(manifest, "database_uncompressed_sha256"), layer: "uncompressed")
             guard database.starts(with: sqliteHeader) else { throw invalid("invalid_sync_pack_sqlite_header") }
             return FoliolePreparedSyncPack(databaseBytes: database, manifest: manifest, rowCounts: rowCounts)
@@ -50,7 +52,15 @@ enum FolioleCompanionSyncPackEnvelopeValidator {
             guard entry.type == .file, allowed.contains(entry.path) else { throw invalid("invalid_sync_pack_entry") }
             guard result[entry.path] == nil else { throw invalid("duplicate_sync_pack_entry") }
             var data = Data()
-            _ = try archive.extract(entry) { data.append($0) }
+            var exceedsLimit = false
+            _ = try archive.extract(entry) { chunk in
+                if data.count > maximumTransferBytes - chunk.count {
+                    exceedsLimit = true
+                } else if !exceedsLimit {
+                    data.append(chunk)
+                }
+            }
+            if exceedsLimit { throw invalid("sync_pack_transfer_limit_exceeded") }
             result[entry.path] = data
         }
         guard Set(result.keys) == allowed else { throw invalid("missing_sync_pack_entry") }
@@ -90,9 +100,11 @@ enum FolioleCompanionSyncPackEnvelopeValidator {
             throw invalid("sync_pack_source_mismatch")
         }
         _ = try string(manifest, "created_at")
+        _ = try string(manifest, "source_epoch")
         let from = try integer(manifest, "from_state_seq")
         let to = try integer(manifest, "to_state_seq")
-        guard from >= 0, to >= from else { throw invalid("invalid_sync_pack_state_range") }
+        let frontier = try integer(manifest, "frontier_state_seq")
+        guard from >= 0, to >= from, frontier >= to else { throw invalid("invalid_sync_pack_state_range") }
         return try tableCounts(manifest, required: contract.manifestTableNames)
     }
 

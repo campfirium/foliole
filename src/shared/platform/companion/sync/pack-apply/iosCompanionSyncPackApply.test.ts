@@ -4,7 +4,8 @@ const mocks = vi.hoisted(() => ({
   applyDb: vi.fn(async () => ({ applied: true, to_state_seq: 3,
     applied_group_fact_count: 0, applied_object_count: 1, handled_conflict_count: 0 })),
   applyShared: vi.fn(async () => ({ applied: true, to_state_seq: 3 })),
-  createCursorStore: vi.fn(() => ({ loadCursor: vi.fn(), saveCursor: vi.fn() })),
+  createCursorStore: vi.fn(() => ({ loadCursor: vi.fn(),
+    loadRestoreCursor: vi.fn(async () => 0), saveCursor: vi.fn() })),
   requireRuntime: vi.fn(() => ({ kind: 'ios-native', platform: 'ios' })),
   runWriter: vi.fn((task: () => Promise<unknown>) => task())
 }));

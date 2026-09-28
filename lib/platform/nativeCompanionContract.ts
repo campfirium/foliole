@@ -1,7 +1,7 @@
 export type NativeCompanionRuntimeKind = 'android-capacitor' | 'ios-capacitor' | 'web-preview';
 
 export const COMPANION_DATABASE_NAME = 'foliole-companion';
-export const COMPANION_DATABASE_VERSION = 42;
+export const COMPANION_DATABASE_VERSION = 48;
 
 export interface NativeCompanionBootstrapPayload {
   booted_at: string;

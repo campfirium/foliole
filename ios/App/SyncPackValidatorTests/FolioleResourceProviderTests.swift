@@ -34,6 +34,18 @@ final class FolioleResourceProviderTests: XCTestCase {
         XCTAssertEqual((second["resources"] as? [[String: Any]])?.first?["status"] as? String, "missing")
     }
 
+    func testStructureContinuationReusesItsSourceSnapshot() throws {
+        let fixture = try ResourceFixture()
+        defer { fixture.close() }
+        let snapshots = FolioleCompanionSyncGroupSnapshot(bridge: SnapshotBridge(source: fixture.source))
+        defer { snapshots.close() }
+        let first = try snapshots.refresh("peer") { $0 }
+        let second = try snapshots.continueOrRefresh("peer") { $0 }
+        XCTAssertEqual(first, second)
+        let nextRound = try snapshots.refresh("peer") { $0 }
+        XCTAssertNotEqual(first, nextRound)
+    }
+
     func testMixedContentTransferKeepsOnlyVerifiedRequestedBytes() {
         let good = digest(Data("good".utf8)), corrupt = digest(Data("expected".utf8))
         let missing = String(repeating: "d", count: 64)

@@ -37,7 +37,8 @@ beforeEach(async () => {
   createIncomingPack(incomingPath);
   const incoming = new Database(incomingPath);
   incoming.prepare("UPDATE pack_manifest SET value = ? WHERE key = 'manifest_json'")
-    .run(JSON.stringify({ from_state_seq: 0, to_state_seq: 3 }));
+    .run(JSON.stringify({ source_epoch: 'source-test', frontier_state_seq: 3,
+      from_state_seq: 0, to_state_seq: 3 }));
   incoming.prepare(`INSERT INTO sync_object_state (
     object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
   ) VALUES ('parent_child_order', ?, 3, 'order-hash', 'desktop-host', '2026-05-04T01:02:00.000Z', NULL)`)

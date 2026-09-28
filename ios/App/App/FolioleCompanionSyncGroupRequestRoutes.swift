@@ -37,19 +37,66 @@ extension FolioleCompanionSyncGroupJoinServer {
         if request.method == "GET" && route == "/companion/sync-pack" {
             guard let snapshots, let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
             let peer = try authenticate(request)
+            guard Self.query(request.path, "page_contract") == "bounded-v1" else {
+                throw Self.invalid("sync_pack_page_contract_required")
+            }
             let after = Int(Self.query(request.path, "after_state_seq") ?? "0") ?? 0
-            let result = try snapshots.refresh(peer) { snapshot in
+            let frontier = Self.query(request.path, "frontier_state_seq").flatMap(Int.init)
+            let epoch = Self.query(request.path, "source_epoch")
+            let indexId = Self.query(request.path, "fact_index_id")
+            let selectedTo = Self.query(request.path, "to_state_seq").flatMap(Int.init)
+            guard let indexId, !indexId.isEmpty else {
+                return try send(connection, 409, ["error": "sync_pack_fact_probe_required"])
+            }
+            guard (frontier == nil) == (epoch == nil) else { throw Self.invalid("invalid_sync_pack_page_request") }
+            let build: (URL) throws -> FolioleCompanionSyncPackProvider.Result = { snapshot in
                 try FolioleCompanionSyncPackProvider.build(
                     snapshot: snapshot,
-                    fromDevice: try Self.requiredDiscovery(discovery, "provider_device_id"),
-                    toDevice: peer, fromSequence: after
+                    fromDevice: try Self.requiredDiscovery(self.discovery, "provider_device_id"),
+                    toDevice: peer, fromSequence: after,
+                    requestedFrontier: frontier, requestedEpoch: epoch,
+                    selectedTo: selectedTo, expectedIndex: indexId,
+                    versionBits: Self.query(request.path, "have_v"),
+                    parentBits: Self.query(request.path, "have_p"),
+                    reviewBits: Self.query(request.path, "have_r")
                 )
+            }
+            let result: FolioleCompanionSyncPackProvider.Result
+            do {
+                if frontier == nil { result = try snapshots.refresh(peer, work: build) }
+                else { result = try snapshots.continueOrRefresh(peer, work: build) }
+            } catch {
+                let code = (error as NSError).domain
+                guard code.hasPrefix("sync_pack_fact_") else { throw error }
+                let body = try JSONSerialization.data(withJSONObject: ["error": code])
+                return try sendWorkgroup(connection, request,
+                    "application/json; charset=utf-8", body, status: 409)
             }
             _ = try dataBridge.request("stage_version_pack", result.holds)
             _ = try dataBridge.request("record_supply_cursor", [
                 "from_cursor": after, "peer_id": peer, "to_cursor": result.toSequence
             ])
             return try sendWorkgroup(connection, request, "application/zip", result.body)
+        }
+        if request.method == "GET" && route == "/companion/sync-pack-facts" {
+            guard let snapshots else { throw Self.invalid("sync_group_data_owner_unavailable") }
+            let peer = try authenticate(request)
+            guard Self.query(request.path, "page_contract") == "bounded-v1" else {
+                throw Self.invalid("sync_pack_page_contract_required")
+            }
+            let after = Int(Self.query(request.path, "after_state_seq") ?? "0") ?? 0
+            let frontier = Self.query(request.path, "frontier_state_seq").flatMap(Int.init)
+            let epoch = Self.query(request.path, "source_epoch")
+            guard (frontier == nil) == (epoch == nil) else { throw Self.invalid("invalid_sync_pack_fact_request") }
+            let build: (URL) throws -> [String: Any] = { snapshot in
+                try FolioleCompanionSyncPackFactProvider.index(
+                    snapshot: snapshot, from: after, requestedFrontier: frontier, requestedEpoch: epoch
+                )
+            }
+            let index = frontier == nil ? try snapshots.refresh(peer, work: build)
+                : try snapshots.continueOrRefresh(peer, work: build)
+            let body = try JSONSerialization.data(withJSONObject: index, options: [.sortedKeys])
+            return try sendWorkgroup(connection, request, "application/json; charset=utf-8", body)
         }
         if request.method == "POST" && route == "/companion/version-pack-receipt" {
             guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }

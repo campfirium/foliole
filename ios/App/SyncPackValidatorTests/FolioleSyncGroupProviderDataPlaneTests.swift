@@ -8,8 +8,8 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         let definitions = try FolioleCompanionSyncPackProviderDefinitions.load()
         try definitions.validate()
         XCTAssertEqual(definitions.format, "foliole.sync-pack")
-        XCTAssertEqual(definitions.formatVersion, 15)
-        XCTAssertEqual(definitions.schemaVersion, 88)
+        XCTAssertEqual(definitions.formatVersion, 17)
+        XCTAssertEqual(definitions.schemaVersion, 90)
         XCTAssertTrue(definitions.copyStatements.contains { $0.contains("sync_group_devices") })
         XCTAssertFalse(definitions.copyStatements.contains { $0.contains("sync_group_members") })
     }
@@ -79,7 +79,7 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
     func testProviderArchiveUsesConsumerCompatibleZlibAndZip() throws {
         let plain = Data("provider database bytes".utf8)
         let compressed = try FolioleCompanionSyncPackArchive.deflate(plain)
-        XCTAssertEqual(try FolioleCompanionZlib.inflate(compressed), plain)
+        XCTAssertEqual(try FolioleCompanionZlib.inflate(compressed, maxBytes: 4 * 1024 * 1024), plain)
         let archiveData = FolioleCompanionSyncPackArchive.zip(entries: [
             ("manifest.json", Data("{}".utf8)), ("incoming.db.deflate", compressed)
         ])

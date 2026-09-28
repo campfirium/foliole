@@ -1,3 +1,4 @@
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../../lib/core/database/syncStateSequenceSchemaStatements.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import { applySyncObjectPayloadWithDbPort } from '../../lib/core/sync/syncObjectPayloadExecutor.js';
 import type { NativeSyncObjectRecord, NativeSyncObjectType } from '../../lib/platform/nativeSyncContract.js';
@@ -122,7 +123,7 @@ function upsertState(port: DbPort, record: NativeSyncObjectRecord, sourceHostNam
   return port.run(
     `INSERT INTO sync_object_state (` +
     `object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty, deleted_at` +
-    `) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), ?, ?, ?, 0, ?) ` +
+    `) VALUES (?, ?, ${NEXT_SYNC_STATE_SEQ_SQL}, ?, ?, ?, 0, ?) ` +
     `ON CONFLICT(object_type, object_id) DO UPDATE SET state_seq = excluded.state_seq, content_hash = excluded.content_hash, ` +
     `last_modified_by_host_name = excluded.last_modified_by_host_name, updated_at = excluded.updated_at, ` +
     `sync_dirty = excluded.sync_dirty, deleted_at = excluded.deleted_at`,

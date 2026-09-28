@@ -19,13 +19,14 @@ export function assertDesktopSyncGroupResourcesComplete() {
   if (missingBlobs) throw new Error('sync_group_resources_incomplete');
 }
 
-async function loadResourceNeeds(articleIds: readonly string[]) {
+async function loadResourceNeeds(articleIds: readonly string[], includeContentBlobs: boolean) {
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-resources' });
-  const blobs = await port.query<ResourceBlobRow>(
+  const blobs = includeContentBlobs ? await port.query<ResourceBlobRow>(
     `SELECT cb.hash, cb.stored_sha256, cb.stored_size_bytes FROM content_blobs cb
-     LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL ORDER BY cb.hash`
-  );
-  const { needs: attachments } = await loadArticleAttachmentNeeds(port, articleIds);
+     LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash
+     WHERE cbd.hash IS NULL ORDER BY cb.hash LIMIT ?`, [RESOURCE_AVAILABILITY_BATCH_LIMIT]
+  ) : [];
+  const { needs: attachments, unreadableArticleIds } = await loadArticleAttachmentNeeds(port, articleIds);
   const missingAttachments = [];
   for (const attachment of attachments) {
     const resolved = resolveAttachmentFile(attachment.storageKey);
@@ -33,11 +34,12 @@ async function loadResourceNeeds(articleIds: readonly string[]) {
         await hashResourceFile(resolved.filePath).catch(() => null) === attachment.contentHash) continue;
     missingAttachments.push(attachment);
   }
-  return { port, blobs, attachments: missingAttachments };
+  return { port, blobs, attachments: missingAttachments, unreadableArticleIds };
 }
 
-export async function downloadDesktopSyncGroupResources(peer: DesktopSyncGroupPeer, articleIds: readonly string[] = []) {
-  const loaded = await runWithDatabaseConnectionOwner(() => loadResourceNeeds(articleIds));
+export async function downloadDesktopSyncGroupResources(peer: DesktopSyncGroupPeer,
+  articleIds: readonly string[] = [], includeContentBlobs = true) {
+  const loaded = await runWithDatabaseConnectionOwner(() => loadResourceNeeds(articleIds, includeContentBlobs));
   const blobs = new Map(loaded.blobs.map((blob) => [blob.hash, blob]));
   const attachments = new Map(loaded.attachments.map((attachment) => [attachment.attachmentId, attachment]));
   const needs: ResourceNeed[] = [
@@ -66,5 +68,10 @@ export async function downloadDesktopSyncGroupResources(peer: DesktopSyncGroupPe
       issues: [...observed.issues, ...result.issues]
     });
   }
-  return { failedStorageKeys, resourceResults };
+  const [remaining] = await runWithDatabaseConnectionOwner(() => loaded.port.query<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM content_blobs cb
+     LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cbd.hash IS NULL`
+  ));
+  return { failedStorageKeys, resourceResults, remainingContentBlobCount: remaining?.count ?? 0,
+    unreadableArticleIds: loaded.unreadableArticleIds };
 }

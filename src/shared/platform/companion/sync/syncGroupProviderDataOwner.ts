@@ -20,6 +20,7 @@ import {
   applyCompanionSyncGroupMemberState,
   loadCompanionSyncGroupMemberState
 } from './syncGroupMemberStateStore';
+import { createCompanionSyncGroupSourceSnapshot } from './syncGroupSourceSnapshot';
 
 let listenerReady: Promise<void> | null = null;
 
@@ -51,7 +52,7 @@ async function handleRequest(request: CompanionSyncGroupDataRequest) {
 }
 
 function dispatch(operation: string, payload: Record<string, unknown>) {
-  if (operation === CONTRACT.operations.createSnapshot) return createSnapshot(payload);
+  if (operation === CONTRACT.operations.createSnapshot) return createCompanionSyncGroupSourceSnapshot(payload);
   if (operation === CONTRACT.operations.applyMemberState) {
     return applyCompanionSyncGroupMemberState(
       parseSyncGroupMemberState(payload.state),
@@ -197,16 +198,6 @@ async function verifyDevice(payload: Record<string, unknown>) {
     ))[0];
     return { active: Boolean(row), ...(row ? { device_name: requiredText(row.device_name) } : {}) };
   });
-}
-
-async function createSnapshot(payload: Record<string, unknown>) {
-  const targetPath = requiredText(payload.target_path);
-  if (!targetPath.includes('/cache/foliole-provider-source-')) throw new Error('sync_group_snapshot_path_invalid');
-  const sqlPath = targetPath.replaceAll("'", "''");
-  await runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter(
-    (db) => db.run(`VACUUM INTO '${sqlPath}'`).then(() => undefined)
-  ));
-  return { snapshot_path: targetPath };
 }
 
 function recordSupplyCursor(payload: Record<string, unknown>) {

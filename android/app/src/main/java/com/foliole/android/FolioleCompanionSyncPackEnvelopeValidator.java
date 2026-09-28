@@ -107,9 +107,11 @@ final class FolioleCompanionSyncPackEnvelopeValidator {
             throw invalid("sync_pack_source_mismatch");
         }
         requireString(manifest, "created_at");
+        requireString(manifest, "source_epoch");
         int fromStateSeq = requireInt(manifest, "from_state_seq");
         int toStateSeq = requireInt(manifest, "to_state_seq");
-        if (fromStateSeq < 0 || toStateSeq < fromStateSeq) {
+        int frontierStateSeq = requireInt(manifest, "frontier_state_seq");
+        if (fromStateSeq < 0 || toStateSeq < fromStateSeq || frontierStateSeq < toStateSeq) {
             throw invalid("invalid_sync_pack_state_range");
         }
         return validateTableManifest(manifest.getJSONArray("tables"), contract.manifestTableNames());

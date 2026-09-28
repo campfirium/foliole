@@ -13,6 +13,8 @@ import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.zip.CRC32;
 import java.util.zip.DeflaterOutputStream;
@@ -23,55 +25,86 @@ final class FolioleCompanionSyncPackProvider {
     private FolioleCompanionSyncPackProvider() {}
 
     static BuildResult build(Context context, String snapshotPath, String fromPeerId, String toPeerId, int fromSeq) throws Exception {
+        return build(context, snapshotPath, fromPeerId, toPeerId, fromSeq, null, null);
+    }
+
+    static BuildResult build(Context context, String snapshotPath, String fromPeerId, String toPeerId,
+                             int fromSeq, Integer requestedFrontier, String requestedEpoch) throws Exception {
+        return build(context, snapshotPath, fromPeerId, toPeerId, fromSeq,
+            requestedFrontier, requestedEpoch, null, null, null, null, null);
+    }
+
+    static BuildResult build(Context context, String snapshotPath, String fromPeerId, String toPeerId,
+            int fromSeq, Integer requestedFrontier, String requestedEpoch, Integer requestedTo,
+            String expectedIndex, String versionBits, String parentBits, String reviewBits) throws Exception {
         FolioleCompanionSyncPackProviderDefinitions definitions = FolioleCompanionSyncPackProviderDefinitions.load(context);
+        String sourceEpoch = sourceEpoch(snapshotPath);
+        if (requestedEpoch != null && !requestedEpoch.equals(sourceEpoch)) {
+            throw new IllegalArgumentException("sync_pack_source_epoch_changed");
+        }
+        int frontier = sourceFrontier(snapshotPath, fromSeq, requestedFrontier);
+        if (expectedIndex != null) {
+            if (requestedTo == null || requestedTo < fromSeq || requestedTo > frontier) {
+                throw new IllegalArgumentException("invalid_sync_pack_fact_request");
+            }
+            BuildResult selected = buildCandidate(context, definitions, snapshotPath, sourceEpoch,
+                fromPeerId, toPeerId, fromSeq, requestedTo, frontier,
+                expectedIndex, versionBits, parentBits, reviewBits);
+            if (selected == null) throw new IllegalArgumentException("sync_pack_object_requires_fragments");
+            return selected;
+        }
+        List<Integer> candidates = pageCandidates(snapshotPath, fromSeq, frontier);
+        for (int index = candidates.size() - 1; index >= 0; index = index == 0 ? -1 : (index - 1) / 2) {
+            BuildResult built = buildCandidate(context, definitions, snapshotPath, sourceEpoch,
+                fromPeerId, toPeerId, fromSeq, candidates.get(index), frontier,
+                null, null, null, null);
+            if (built != null) return built;
+        }
+        throw new IllegalArgumentException("sync_pack_object_requires_fragments");
+    }
+
+    private static BuildResult buildCandidate(Context context, FolioleCompanionSyncPackProviderDefinitions definitions,
+            String snapshotPath, String sourceEpoch, String fromPeerId, String toPeerId,
+            int fromSeq, int toSeq, int frontier, String expectedIndex,
+            String versionBits, String parentBits, String reviewBits) throws Exception {
+        if (expectedIndex == null && FolioleCompanionSyncPackVersionBudget.exceeds(
+            definitions, snapshotPath, fromSeq, toSeq)) return null;
         File packDbFile = File.createTempFile("foliole-provider-", ".db", context.getCacheDir());
         String packId = UUID.randomUUID().toString();
         SQLiteDatabase pack = SQLiteDatabase.openOrCreateDatabase(packDbFile, null);
-        int toSeq;
-        JSONObject holds;
         try {
-            toSeq = createPack(pack, definitions, snapshotPath, fromSeq);
-            holds = versionHolds(pack, packId, toPeerId);
+            createPack(pack, definitions, snapshotPath, fromSeq, toSeq);
+            JSONObject holds = FolioleCompanionSyncPackVersionHolds.read(pack, packId, toPeerId);
+            if (expectedIndex != null) {
+                JSONObject index = FolioleCompanionSyncPackFactIndex.read(pack,
+                    fromSeq, toSeq, frontier, sourceEpoch);
+                FolioleCompanionSyncPackFactIndex.retainMissing(pack, index,
+                    expectedIndex, versionBits, parentBits, reviewBits);
+            }
+            if (packDbFile.length() > 4L * 1024 * 1024) return null;
             JSONObject tables = tableManifest(pack, definitions.tableNames());
-            JSONObject inner = innerManifest(packId, fromSeq, toSeq, tables.getJSONArray("tables"));
+            JSONObject inner = innerManifest(packId, sourceEpoch, fromSeq, toSeq, frontier, tables.getJSONArray("tables"));
             pack.execSQL("INSERT INTO pack_manifest (key, value) VALUES ('manifest_json', ?)", new Object[] { inner.toString() });
-        } finally { pack.close(); }
-        try {
+            pack.close();
             byte[] database = readAll(packDbFile);
             byte[] compressed = deflate(database);
-            JSONObject manifest = outerManifest(definitions, packId, fromPeerId, toPeerId, fromSeq, toSeq,
+            if (compressed.length > FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES) return null;
+            JSONObject manifest = outerManifest(definitions, packId, sourceEpoch, fromPeerId, toPeerId, fromSeq, toSeq, frontier,
                 tableManifest(packDbFile, definitions.tableNames()).getJSONArray("tables"), database, compressed);
-            return new BuildResult(zip(manifest, definitions.databaseEntry(), compressed), toSeq, holds);
-        } finally { if (!packDbFile.delete()) packDbFile.deleteOnExit(); }
+            byte[] archive = zip(manifest, definitions.databaseEntry(), compressed);
+            return archive.length <= FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES
+                ? new BuildResult(archive, toSeq, holds) : null;
+        } finally {
+            if (pack.isOpen()) pack.close();
+            if (!packDbFile.delete()) packDbFile.deleteOnExit();
+        }
     }
 
-    private static JSONObject versionHolds(SQLiteDatabase pack, String packId, String peer) throws Exception {
-        JSONArray heads = new JSONArray();
-        JSONArray payloads = new JSONArray();
-        try (Cursor cursor = pack.rawQuery(
-            "SELECT id, current_version_id FROM nodes WHERE current_version_id IS NOT NULL", null)) {
-            while (cursor.moveToNext()) heads.put(new JSONObject()
-                .put("object_id", cursor.getString(0)).put("version_id", cursor.getString(1)));
-        }
-        try (Cursor cursor = pack.rawQuery(
-            "SELECT object_id, version_id, body_text, snapshot_json FROM node_sync_versions", null)) {
-            while (cursor.moveToNext()) {
-                JSONObject snapshot = new JSONObject(cursor.getString(3));
-                if (cursor.isNull(2) && snapshot.has("content") && snapshot.isNull("content")) continue;
-                payloads.put(new JSONObject()
-                    .put("object_id", cursor.getString(0)).put("version_id", cursor.getString(1)));
-            }
-        }
-        return new JSONObject().put("pack_id", packId).put("peer_id", peer)
-            .put("heads", heads).put("payloads", payloads);
-    }
-
-    private static int createPack(SQLiteDatabase pack, FolioleCompanionSyncPackProviderDefinitions definitions,
-                                  String snapshotPath, int fromSeq) throws Exception {
+    static void createPack(SQLiteDatabase pack, FolioleCompanionSyncPackProviderDefinitions definitions,
+                                   String snapshotPath, int fromSeq, int toSeq) throws Exception {
         pack.execSQL("ATTACH DATABASE ? AS source", new Object[] { snapshotPath });
         try {
             pack.execSQL("BEGIN");
-            int toSeq = maxStateSeq(pack, "source.");
             JSONArray schema = definitions.packSchema();
             for (int index = 0; index < schema.length(); index++) pack.execSQL(schema.getString(index));
             JSONArray copies = definitions.copyStatements();
@@ -86,7 +119,6 @@ final class FolioleCompanionSyncPackProvider {
                 else pack.execSQL(copies.getString(index));
             }
             pack.execSQL("COMMIT");
-            return toSeq;
         } catch (Exception error) {
             if (pack.inTransaction()) pack.execSQL("ROLLBACK");
             throw error;
@@ -94,9 +126,46 @@ final class FolioleCompanionSyncPackProvider {
     }
 
     private static int maxStateSeq(SQLiteDatabase source, String prefix) {
-        try (Cursor cursor = source.rawQuery("SELECT COALESCE(MAX(state_seq), 0) FROM " + prefix + "sync_object_state", null)) {
+        try (Cursor cursor = source.rawQuery("SELECT high_water FROM " + prefix + "sync_state_sequence WHERE singleton_id = 1", null)) {
             return cursor.moveToFirst() ? cursor.getInt(0) : 0;
         }
+    }
+
+    private static int sourceFrontier(String snapshotPath, int fromSeq, Integer requested) {
+        SQLiteDatabase source = SQLiteDatabase.openDatabase(snapshotPath, null, SQLiteDatabase.OPEN_READONLY);
+        try {
+            int highWater = maxStateSeq(source, "");
+            int frontier = requested == null ? highWater : requested;
+            if (fromSeq < 0 || frontier < fromSeq || frontier > highWater) {
+                throw new IllegalArgumentException("sync_pack_frontier_unavailable");
+            }
+            return frontier;
+        } finally { source.close(); }
+    }
+
+    private static List<Integer> pageCandidates(String snapshotPath, int fromSeq, int frontier) {
+        SQLiteDatabase source = SQLiteDatabase.openDatabase(snapshotPath, null, SQLiteDatabase.OPEN_READONLY);
+        try {
+            List<Integer> candidates = new ArrayList<>();
+            try (Cursor cursor = source.rawQuery(
+                "SELECT DISTINCT state_seq FROM sync_object_state WHERE state_seq > ? AND state_seq <= ? ORDER BY state_seq LIMIT 128",
+                new String[] { String.valueOf(fromSeq), String.valueOf(frontier) })) {
+                while (cursor.moveToNext()) candidates.add(cursor.getInt(0));
+            }
+            if (candidates.size() < 128 && (candidates.isEmpty() || candidates.get(candidates.size() - 1) != frontier)) {
+                candidates.add(frontier);
+            }
+            return candidates;
+        } finally { source.close(); }
+    }
+
+    private static String sourceEpoch(String snapshotPath) {
+        SQLiteDatabase source = SQLiteDatabase.openDatabase(snapshotPath, null, SQLiteDatabase.OPEN_READONLY);
+        try (Cursor cursor = source.rawQuery(
+            "SELECT source_epoch FROM sync_state_sequence WHERE singleton_id = 1", null)) {
+            if (!cursor.moveToFirst() || cursor.isNull(0)) throw new IllegalArgumentException("sync_pack_source_epoch_missing");
+            return cursor.getString(0);
+        } finally { source.close(); }
     }
 
     private static JSONObject tableManifest(File path, JSONArray names) throws Exception {
@@ -115,13 +184,14 @@ final class FolioleCompanionSyncPackProvider {
         return new JSONObject().put("tables", tables);
     }
 
-    private static JSONObject innerManifest(String id, int from, int to, JSONArray tables) throws Exception {
-        return new JSONObject().put("pack_id", id).put("from_state_seq", from).put("to_state_seq", to).put("tables", tables);
+    private static JSONObject innerManifest(String id, String epoch, int from, int to, int frontier, JSONArray tables) throws Exception {
+        return new JSONObject().put("pack_id", id).put("source_epoch", epoch).put("frontier_state_seq", frontier)
+            .put("from_state_seq", from).put("to_state_seq", to).put("tables", tables);
     }
 
-    private static JSONObject outerManifest(FolioleCompanionSyncPackProviderDefinitions definitions, String id,
-            String fromPeer, String toPeer, int from, int to, JSONArray tables, byte[] database, byte[] compressed) throws Exception {
-        return innerManifest(id, from, to, tables).put("format", definitions.format())
+    private static JSONObject outerManifest(FolioleCompanionSyncPackProviderDefinitions definitions, String id, String epoch,
+            String fromPeer, String toPeer, int from, int to, int frontier, JSONArray tables, byte[] database, byte[] compressed) throws Exception {
+        return innerManifest(id, epoch, from, to, frontier, tables).put("format", definitions.format())
             .put("format_version", definitions.formatVersion()).put("from_peer_id", fromPeer)
             .put("to_peer_id", toPeer).put("schema_version", definitions.schemaVersion())
             .put("compression", "zlib").put("database_file", definitions.databaseEntry())

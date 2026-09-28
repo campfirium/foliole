@@ -18,6 +18,21 @@ struct FolioleCompanionSignedClientRequest {
     let plaintextBody: Data?
     let workgroupKey: String
 
+    func signedRange(_ url: URL, deviceId: String) -> (headers: [String: String], context: Self) {
+        let path = url.path + (url.query.map { "?\($0)" } ?? "")
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let nonce = UUID().uuidString.lowercased()
+        let emptyHash = SHA256.hash(data: Data()).hex
+        let canonical = ["GET", path, timestamp, nonce, emptyHash].joined(separator: "\n")
+        let signature = HMAC<SHA256>.authenticationCode(
+            for: Data(canonical.utf8), using: SymmetricKey(data: Data(workgroupKey.utf8))
+        ).map { String(format: "%02x", $0) }.joined()
+        let context = Self(body: nil, endpoint: endpoint, groupId: groupId, groupTag: groupTag,
+                           method: "GET", path: path, plaintextBody: nil, workgroupKey: workgroupKey)
+        return (["X-Device-Id": deviceId, "X-Nonce": nonce, "X-Timestamp": timestamp,
+                 "X-Signature": signature, "X-Sync-Group-Id": groupId], context)
+    }
+
     func decrypt(_ data: Data, response: HTTPURLResponse) throws -> (Data, String) {
         guard response.value(forHTTPHeaderField: "Content-Type") == FolioleCompanionSyncGroupWorkgroup.envelopeContentType,
               let contentType = response.value(forHTTPHeaderField: "X-Foliole-Original-Content-Type"),

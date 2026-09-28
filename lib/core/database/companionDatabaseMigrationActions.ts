@@ -10,6 +10,7 @@ import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from './androidComp
 import { COMPANION_SCHEMA_STATEMENTS } from './companionSchemaStatements.js';
 import { SINGLE_PRINCIPAL_SYNC_GROUP_CLEANUP_STATEMENTS } from './singlePrincipalSyncGroupCleanupStatements.js';
 import { SYNC_DELIVERY_LEGACY_BACKFILL_SQL } from './syncDeliveryMigrationStatements.js';
+import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
 
 interface LegacySyncRow extends DbRow {
   content_hash: string;
@@ -38,8 +39,11 @@ export async function installCompanionSchema(db: DbPort) {
   const legacyMembers = await companionColumnExists(db, 'sync_group_members', 'device_id');
   const legacyLocalState = await companionTableExists(db, 'sync_group_local_state') &&
     !await companionColumnExists(db, 'sync_group_local_state', 'local_device_identity_key');
+  const legacySyncState = await companionTableExists(db, 'sync_object_state') &&
+    !await companionColumnExists(db, 'sync_object_state', 'state_seq');
   for (const statement of COMPANION_SCHEMA_STATEMENTS) {
     if ((legacyMembers || legacyLocalState) && statement.trimStart().startsWith('CREATE TRIGGER')) continue;
+    if (legacySyncState && SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS.some((item) => item === statement)) continue;
     await db.run(statement);
   }
 }

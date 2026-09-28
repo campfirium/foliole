@@ -12,6 +12,17 @@ import { SYNC_PACK_NODE_COLUMNS } from './syncPackNodeFields.js';
 import { PACK_SCHEMA } from './syncPackSchema.js';
 
 const nodeColumns = SYNC_PACK_NODE_COLUMNS.join(', ');
+const nodeSelectColumns = SYNC_PACK_NODE_COLUMNS.map((column) =>
+  column === 'content' ? "'' AS content" : column).join(', ');
+const versionPreflightSql = `SELECT COUNT(*) AS rows,
+  COALESCE(SUM(COALESCE(length(CAST(v.body_text AS BLOB)), 0) +
+    length(CAST(v.snapshot_json AS BLOB)) + 512), 0) AS bytes
+  FROM node_sync_versions v WHERE v.object_id IN (
+    SELECT object_id FROM sync_object_state WHERE state_seq > ? AND state_seq <= ?
+      AND object_type IN ('node', 'node_reading', 'node_review')
+    UNION SELECT a.node_id FROM node_text_alternatives a JOIN sync_object_state s
+      ON s.object_type = 'node_text_alternative' AND s.object_id = a.alternative_id
+    WHERE s.state_seq > ? AND s.state_seq <= ?) `;
 const payloadPlans = [
   { objectType: 'attachment', sql: `SELECT a.id __object_id, a.id attachment_id,
     a.original_name, a.mime_type, a.size_bytes, a.created_at FROM source.attachments a` },
@@ -86,14 +97,15 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
             AND selected.object_id = alternative.alternative_id)`,
     `DELETE FROM sync_object_state WHERE object_type NOT IN ('external_document','node') AND NOT EXISTS
       (SELECT 1 FROM sync_objects o WHERE o.object_type = sync_object_state.object_type AND o.object_id = sync_object_state.object_id)`,
-    `INSERT INTO nodes (${nodeColumns}) SELECT ${nodeColumns} FROM source.nodes
+    `INSERT INTO nodes (${nodeColumns}) SELECT ${nodeSelectColumns} FROM source.nodes
      WHERE id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node')`,
     `INSERT INTO node_sync_versions SELECT v.version_id, v.object_id, v.parent_version_id, v.host_name,
        v.created_at, v.content_hash, v.body_text, v.snapshot_json
      FROM source.node_sync_versions v JOIN nodes n ON n.id = v.object_id`,
     `INSERT INTO node_sync_tombstones SELECT t.node_id, t.version_id, t.parent_version_id,
        t.host_name, t.content_hash, t.snapshot_json, t.deleted_at, t.created_at
-     FROM source.node_sync_tombstones t`,
+     FROM source.node_sync_tombstones t WHERE t.node_id IN
+       (SELECT object_id FROM sync_object_state WHERE object_type = 'node' AND deleted_at IS NOT NULL)`,
     `INSERT INTO node_sync_version_parents SELECT p.version_id, p.parent_version_id, p.ordinal
      FROM source.node_sync_version_parents p
      WHERE p.version_id IN (SELECT version_id FROM node_sync_versions)
@@ -126,5 +138,6 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   schemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
   stateCopyIndex: 2,
-  tableNames: SYNC_PACK_TABLE_NAMES
+  tableNames: SYNC_PACK_TABLE_NAMES,
+  versionPreflightSql
 } as const;

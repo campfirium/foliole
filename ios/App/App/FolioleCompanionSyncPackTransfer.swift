@@ -19,6 +19,7 @@ enum FolioleCompanionSyncPackTransfer {
         )
 
         let (temporaryURL, response) = try await FolioleCompanionDesktopHttpTransport.download(for: request)
+        try assertPageFileSize(temporaryURL)
         guard let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
             throw error("Sync pack download returned an invalid HTTP status.")
         }
@@ -83,12 +84,23 @@ enum FolioleCompanionSyncPackTransfer {
         let destination = try cacheDirectory().appendingPathComponent("\(UUID().uuidString).syncpack")
         if let signed {
             let decrypted = try signed.decrypt(Data(contentsOf: temporaryURL), response: response).0
+            guard decrypted.count <= FolioleCompanionSyncPackEnvelopeValidator.maximumTransferBytes else {
+                throw error("sync_pack_transfer_limit_exceeded")
+            }
             try decrypted.write(to: destination, options: .atomic)
             try? FileManager.default.removeItem(at: temporaryURL)
         } else {
             try FileManager.default.moveItem(at: temporaryURL, to: destination)
         }
         return destination
+    }
+
+    private static func assertPageFileSize(_ url: URL) throws {
+        let values = try url.resourceValues(forKeys: [.fileSizeKey])
+        guard let size = values.fileSize,
+              size <= FolioleCompanionSyncPackEnvelopeValidator.maximumTransferBytes else {
+            throw error("sync_pack_transfer_limit_exceeded")
+        }
     }
 
     private static func cacheDirectory(fileManager: FileManager = .default) throws -> URL {

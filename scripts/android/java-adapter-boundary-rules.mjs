@@ -80,6 +80,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionSyncGroupServer.java',
       'FolioleCompanionSyncGroupSnapshot.java',
       'FolioleCompanionSyncPackEnvelopeValidator.java',
+      'FolioleCompanionSyncPackRoutes.java',
       'FolioleCompanionSyncPackTransfer.java',
       'FolioleCompanionSyncParticipationStore.java',
       'FolioleCompanionWorkgroupEnvelopeStream.java',
@@ -106,9 +107,13 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionResourceAvailability.java',
       'FolioleCompanionSyncGroupContentBlobBatch.java',
       'FolioleCompanionSyncPackDatabaseValidator.java',
+      'FolioleCompanionSyncPackFactIndex.java',
+      'FolioleCompanionSyncPackFactProvider.java',
       'FolioleCompanionSyncPackFileValidator.java',
       'FolioleCompanionSyncPackPayloadWriter.java',
-      'FolioleCompanionSyncPackProvider.java'
+      'FolioleCompanionSyncPackProvider.java',
+      'FolioleCompanionSyncPackVersionBudget.java',
+      'FolioleCompanionSyncPackVersionHolds.java'
     ]
   }
 };

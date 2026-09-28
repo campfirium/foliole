@@ -1,4 +1,8 @@
 import {
+  clearCompanionResourceArticles,
+  loadCompanionResourceArticleBatch
+} from './companion/sync/resources/syncResourceArticleQueue';
+import {
   pullMissingAttachmentResources,
   pullMissingContentBlobs
 } from './companionDesktopSyncResources';
@@ -45,20 +49,51 @@ async function pullAttachmentStage(endpointUrl: string, onProgress: CompanionDes
   return { ...attachments, syncedAttachmentResourceElapsedMs: Date.now() - startedAt };
 }
 
-export async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress'], articleIds: readonly string[] = []) {
+async function pullQueuedAttachmentStage(endpointUrl: string,
+  onProgress: CompanionDesktopSyncOptions['onProgress'], peerId: string, allowClear: boolean) {
+  const startedAt = Date.now();
+  let afterId = '';
+  let missingAttachmentCount = 0;
+  let syncedAttachmentResourceBytes = 0;
+  const syncedAttachmentIds: string[] = [];
+  for (;;) {
+    const ids = await loadCompanionResourceArticleBatch(peerId, afterId);
+    if (ids.length === 0) break;
+    const result = await withResourceTimeout('attachment_resource_downloads',
+      pullMissingAttachmentResources(endpointUrl, onProgress, ids));
+    missingAttachmentCount += result.missingAttachmentCount + result.unreadableArticleCount;
+    syncedAttachmentResourceBytes += result.syncedAttachmentResourceBytes;
+    syncedAttachmentIds.push(...result.syncedAttachmentIds);
+    if (allowClear && result.missingAttachmentCount === 0 &&
+        result.unreadableArticleCount === 0) {
+      await clearCompanionResourceArticles(peerId, ids);
+    }
+    afterId = ids[ids.length - 1]!;
+  }
+  return { missingAttachmentCount, unreadableArticleCount: 0,
+    syncedAttachmentResourceBytes, syncedAttachmentIds,
+    syncedAttachmentResourceElapsedMs: Date.now() - startedAt };
+}
+
+export async function pullResourceStages(endpointUrl: string, onProgress?: CompanionDesktopSyncOptions['onProgress'],
+  articleIds: readonly string[] = [], peerId?: string) {
   const startedAt = Date.now();
   const content = await pullContentStage(endpointUrl, onProgress)
     .then((value) => ({ reason: null, status: 'fulfilled' as const, value }))
     .catch((reason) => ({ reason, status: 'rejected' as const, value: null }));
-  const attachments = await pullAttachmentStage(endpointUrl, onProgress, articleIds)
+  const attachments = await (peerId
+    ? pullQueuedAttachmentStage(endpointUrl, onProgress, peerId, content.status === 'fulfilled')
+    : pullAttachmentStage(endpointUrl, onProgress, articleIds))
       .then((value) => ({ reason: null, status: 'fulfilled' as const, value }))
       .catch((reason) => ({ reason, status: 'rejected' as const, value: null }));
   const contentValue = content.value;
   const attachmentValue = attachments.value;
   return {
-    remainingAttachmentResourceCount: attachmentValue?.missingAttachmentCount ?? 0,
+    remainingAttachmentResourceCount: attachmentValue
+      ? attachmentValue.missingAttachmentCount + attachmentValue.unreadableArticleCount : 0,
     remainingAttachmentResourceBytes: null,
-    remainingFailedAttachmentResourceCount: attachmentValue?.missingAttachmentCount ?? 0,
+    remainingFailedAttachmentResourceCount: attachmentValue
+      ? attachmentValue.missingAttachmentCount + attachmentValue.unreadableArticleCount : 0,
     remainingFailedAttachmentResourceBytes: null,
     remainingAttachmentBreakdown: undefined,
     attachmentResourceError: attachments.status === 'rejected' ? errorMessage(attachments.reason) : null,

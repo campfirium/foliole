@@ -13,8 +13,9 @@ export async function pullMissingAttachmentResources(
   onProgress?: ProgressHandler,
   articleIds: readonly string[] = []
 ) {
-  if (articleIds.length === 0) return { missingAttachmentCount: 0, syncedAttachmentResourceBytes: 0, syncedAttachmentIds: [] as string[] };
-  const { needs } = await loadCompanionArticleAttachmentNeeds(endpointUrl, articleIds);
+  if (articleIds.length === 0) return { missingAttachmentCount: 0,
+    unreadableArticleCount: 0, syncedAttachmentResourceBytes: 0, syncedAttachmentIds: [] as string[] };
+  const { needs, unreadableArticleIds } = await loadCompanionArticleAttachmentNeeds(endpointUrl, articleIds);
   const requests = [];
   for (const need of needs) {
     const local = await resolveRuntimeAttachmentResource(`asset://${need.storageKey}`, { refresh: true });
@@ -25,7 +26,8 @@ export async function pullMissingAttachmentResources(
   const sizeById = new Map(requests.map((request) => [request.attachmentId, request.sizeBytes ?? 0]));
   let syncedBytes = 0;
   onProgress?.({ phase: 'attachment', completed: 0, total: requests.length });
-  if (requests.length === 0) return { missingAttachmentCount: 0, syncedAttachmentResourceBytes: 0, syncedAttachmentIds };
+  if (requests.length === 0) return { missingAttachmentCount: 0,
+    unreadableArticleCount: unreadableArticleIds.length, syncedAttachmentResourceBytes: 0, syncedAttachmentIds };
   await syncCompanionAttachmentResourceRequestsFromDesktop(endpointUrl, requests, (ids) => {
     syncedAttachmentIds.push(...ids);
     syncedBytes += ids.reduce((sum, id) => sum + (sizeById.get(id) ?? 0), 0);
@@ -33,5 +35,7 @@ export async function pullMissingAttachmentResources(
     onProgress?.({ phase: 'attachment', completed: syncedAttachmentIds.length,
       total: requests.length, completedBytes: syncedBytes, elapsedMs: Date.now() - startedAt });
   });
-  return { missingAttachmentCount: requests.length - syncedAttachmentIds.length, syncedAttachmentResourceBytes: syncedBytes, syncedAttachmentIds };
+  return { missingAttachmentCount: requests.length - syncedAttachmentIds.length,
+    unreadableArticleCount: unreadableArticleIds.length, syncedAttachmentResourceBytes: syncedBytes,
+    syncedAttachmentIds };
 }

@@ -74,7 +74,12 @@ final class FolioleCompanionSyncGroupServer {
         else if (request.method.equals("POST") && path.equals("/sync-group/join-requests")) createJoin(request, output);
         else if (request.method.equals("POST") && path.equals("/sync-group/join-acceptance")) collectAcceptance(request, output);
         else if (request.method.equals("POST") && path.equals("/sync-group/member-state")) memberState(request, output);
-        else if (request.method.equals("GET") && path.equals("/companion/sync-pack")) syncPack(request, output);
+        else if (request.method.equals("GET") && path.equals("/companion/sync-pack"))
+            FolioleCompanionSyncPackRoutes.pack(context, config, dataBridge, snapshots,
+                request, output, authenticate(request));
+        else if (request.method.equals("GET") && path.equals("/companion/sync-pack-facts"))
+            FolioleCompanionSyncPackRoutes.facts(context, config, snapshots,
+                request, output, authenticate(request));
         else if (request.method.equals("POST") && path.equals("/companion/version-pack-receipt"))
             versionPackReceipt(request, output);
         else if (request.method.equals("POST") && path.equals("/companion/resource-availability")) availability(request, output);
@@ -110,18 +115,6 @@ final class FolioleCompanionSyncGroupServer {
         JSONObject result = joins.collect(requestId, System.currentTimeMillis());
         if (result == null) FolioleCompanionHttpResponse.json(output, 409, error("sync_group_join_request_pending"));
         else FolioleCompanionHttpResponse.json(output, 200, result);
-    }
-
-    private void syncPack(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        FolioleCompanionSyncScreenAwake.touch();
-        String peer = authenticate(request);
-        int after = integerQuery(request.path, "after_state_seq");
-        FolioleCompanionSyncPackProvider.BuildResult pack = snapshots.refresh(
-            peer, snapshot -> FolioleCompanionSyncPackProvider.build(
-                context, snapshot, config.getString("device_id"), peer, after));
-        dataBridge.request("stage_version_pack", pack.holds);
-        FolioleCompanionSyncGroupDatabase.recordSupplyCursor(dataBridge, peer, after, pack.toSeq);
-        workgroupBytes(request, output, "application/zip", pack.body);
     }
 
     private void versionPackReceipt(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {

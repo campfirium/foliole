@@ -4,10 +4,8 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
 
 import { buildCompanionSyncDiagnostics } from './buildCompanionSyncDiagnostics.js';
-import {
-  ATTACHMENT_RESOURCE_PATH,
-  loadCompanionAttachmentResource
-} from './companionLanAttachmentResources.js';
+import { handleCompanionAttachmentGet } from './companionLanAttachmentGet.js';
+import { ATTACHMENT_RESOURCE_PATH } from './companionLanAttachmentResources.js';
 import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
 import {
   CONTENT_BLOB_ACK_PATH,
@@ -19,9 +17,7 @@ import {
   buildWorkspaceSnapshotPayload,
   buildWorkspaceVersionPayload
 } from './companionLanPayloads.js';
-import {
-  writeJson, writeOptions, writeWorkgroupBinary, writeWorkgroupFileStream
-} from './companionLanResponses.js';
+import { writeJson, writeOptions, writeWorkgroupBinary } from './companionLanResponses.js';
 import {
   isRetiredSyncJsonEndpoint,
   SYNC_INDEX_PATH,
@@ -31,6 +27,7 @@ import {
   SYNC_STATE_PATH
 } from './companionLanSyncObjects.js';
 import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
+import { handleCompanionSyncPackFactsGet, SYNC_PACK_FACTS_PATH } from './companionLanSyncPackFacts.js';
 import { handleSyncPackGet } from './companionLanSyncPackGet.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { SYNC_GROUP_MEMBER_STATE_PATH } from './desktopSyncGroupMemberState.js';
@@ -53,6 +50,7 @@ export {
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
   SYNC_PACK_PATH,
+  SYNC_PACK_FACTS_PATH,
   SYNC_REVIEW_LOG_PATH,
   SYNC_GROUP_MEMBER_STATE_PATH,
   SYNC_STATE_PATH
@@ -64,6 +62,10 @@ async function writeUnhandledRequestError(
   error: unknown
 ) {
   console.warn('[companion-sync] unhandled LAN request error', { error, url: request.url ?? null });
+  if (response.headersSent) {
+    response.destroy();
+    return;
+  }
   if (!response.writableEnded) {
     await runWithDatabaseConnectionOwner(() => {
       if (!response.writableEnded) writeJson(request, response, 500, { error: 'internal_server_error' });
@@ -135,15 +137,7 @@ async function handleAuthenticatedGet(
     return;
   }
   if (parsedRequestUrl.pathname === ATTACHMENT_RESOURCE_PATH) {
-    const resource = await loadCompanionAttachmentResource(
-      parsedRequestUrl.searchParams.get('attachment_id'),
-      parsedRequestUrl.searchParams.get('content_hash')
-    );
-    if (resource.status === 'ready') {
-      await writeWorkgroupFileStream(request, response, 200, resource);
-    } else {
-      writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
-    }
+    await handleCompanionAttachmentGet(request, response, parsedRequestUrl);
     return;
   }
   if (parsedRequestUrl.pathname === CONTENT_BLOB_RESOURCE_PATH) {
@@ -155,13 +149,6 @@ async function handleAuthenticatedGet(
     }
     return;
   }
-  if (await handleSyncPackGet(
-    request,
-    response,
-    parsedRequestUrl,
-    args.authenticatedDeviceId,
-    writeJson
-  )) return;
   if (handleWorkspaceMetadataGet(request, response, parsedRequestUrl, args)) return;
   if (parsedRequestUrl.pathname !== WORKSPACE_SNAPSHOT_PATH) {
     writeJson(request, response, 404, { error: 'not_found' });
@@ -211,6 +198,11 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       });
       return;
     }
+    if (parsedRequestUrl.pathname === SYNC_PACK_PATH) {
+      await handleSyncPackGet(request, response, parsedRequestUrl, auth.device_id, writeJson);
+      return;
+    }
+    if (await handleCompanionSyncPackFactsGet(request, response, parsedRequestUrl, writeJson)) return;
     await runWithDatabaseConnectionOwner(() => handleAuthenticatedGet(
       request, response, parsedRequestUrl, {
         ...args,

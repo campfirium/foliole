@@ -104,14 +104,9 @@ final class FolioleCompanionDesktopHttpClient {
         } finally { connection.disconnect(); }
     }
 
-    static void downloadToFile(Context context, String url, JSONObject headers, java.io.File outputFile) throws Exception {
-        byte[] body = requestBytes(context, url, headers);
-        try (OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(outputFile), COPY_BUFFER_BYTES)) {
-            outputStream.write(body);
-        }
-    }
-
-    static void downloadSyncPackToFile(Context context, String url, JSONObject headers, File outputFile) throws Exception {
+    static void downloadToFile(Context context, String url, JSONObject headers, File outputFile) throws Exception {
+        long maximumBytes = new URL(url).getPath().equals("/companion/sync-pack")
+            ? FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES : Long.MAX_VALUE;
         FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
             FolioleCompanionWorkgroupHttp.prepare(context, url, "GET", headers, null);
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
@@ -128,11 +123,11 @@ final class FolioleCompanionDesktopHttpClient {
             try (InputStream input = connection.getInputStream()) {
                 if (prepared.headers.has("X-Sync-Group-Id")) {
                     FolioleCompanionWorkgroupHttp.decryptResponseToFile(
-                        context, connection, "GET", prepared.path, input, outputFile);
+                        context, connection, "GET", prepared.path, input, outputFile, maximumBytes);
                 } else {
                     try (OutputStream output = new BufferedOutputStream(
                         new FileOutputStream(outputFile), COPY_BUFFER_BYTES)) {
-                        copy(input, output);
+                        copy(input, output, maximumBytes);
                     }
                 }
             }
@@ -211,9 +206,16 @@ final class FolioleCompanionDesktopHttpClient {
     }
 
     private static void copy(InputStream inputStream, OutputStream output) throws Exception {
+        copy(inputStream, output, Long.MAX_VALUE);
+    }
+
+    private static void copy(InputStream inputStream, OutputStream output, long maximumBytes) throws Exception {
         byte[] buffer = new byte[COPY_BUFFER_BYTES];
         int read;
+        long total = 0;
         while ((read = inputStream.read(buffer)) >= 0) {
+            total += read;
+            if (total > maximumBytes) throw new IllegalArgumentException("sync_pack_transfer_limit_exceeded");
             output.write(buffer, 0, read);
         }
     }

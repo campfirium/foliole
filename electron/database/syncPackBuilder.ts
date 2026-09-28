@@ -4,6 +4,8 @@ import {
   buildDesktopSyncPackFromDriver,
   type BuildDesktopSyncPackInput
 } from './syncPackBuilderFromDriver.js';
+import type { SyncPackPageBudget } from './syncPackPageBudget.js';
+import { buildNextDesktopSyncPackPage } from './syncPackPageSelection.js';
 
 export { buildDesktopSyncPackFromDriver } from './syncPackBuilderFromDriver.js';
 export type { BuildDesktopSyncPackInput } from './syncPackBuilderFromDriver.js';
@@ -15,5 +17,14 @@ export async function buildDesktopSyncPack(input: BuildDesktopSyncPackInput) {
     return buildDesktopSyncPackFromDriver({
       ...input, createdAt, fromPeerId: input.fromPeerId
     }, openDatabaseConnection().driver);
+  });
+}
+
+export async function buildDesktopSyncPackPage(input: BuildDesktopSyncPackInput, budget: SyncPackPageBudget) {
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  return runWithDatabaseConnectionOwner(() => {
+    flushDirtyNodeSyncVersions(createdAt);
+    return buildNextDesktopSyncPackPage({ ...input, createdAt }, budget,
+      openDatabaseConnection().driver);
   });
 }

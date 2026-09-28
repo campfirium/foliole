@@ -35,7 +35,7 @@ vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
 import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
 
 beforeEach(async () => {
-  mocks.query.mockReset();
+  mocks.query.mockReset().mockResolvedValue([]);
   mocks.resolve.mockReset().mockResolvedValue(undefined);
   mocks.run.mockReset().mockResolvedValue({ changes: 0, lastInsertRowId: null });
   mocks.writer.mockReset().mockImplementation((task: () => Promise<unknown>) => task());

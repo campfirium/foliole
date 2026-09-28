@@ -408,6 +408,33 @@
         }
       ],
       "beforeVersion": 41
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add companion state sequence.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 42
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add retired source epochs.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 43
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add sync resource article backlog.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 45
     }
   ],
   "planKeys": {

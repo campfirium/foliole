@@ -15,7 +15,8 @@ import {
 
 const EXPECTED_SYNC_PACK_TABLES = [
   'sync_groups', 'sync_group_devices', 'sync_object_state',
-  'sync_objects', 'nodes', 'node_sync_versions', 'node_sync_tombstones', 'node_sync_version_parents',
+  'sync_objects', 'nodes', 'node_sync_versions',
+  'node_sync_tombstones', 'node_sync_version_parents',
   'node_attachments', 'external_documents', 'content_blobs', 'review_log'
 ];
 
@@ -30,8 +31,10 @@ it('builds the pack manifest from the explicit table map', () => {
   expect(isSyncPackObjectType('setting')).toBe(false);
 
   expect(buildSyncPackManifest({
+    frontierStateSeq: 4,
     fromStateSeq: 1,
     packId: 'pack-1',
+    sourceEpoch: 'source-1',
     tableRows: {
       content_blobs: [{}],
       external_documents: [],
@@ -48,8 +51,10 @@ it('builds the pack manifest from the explicit table map', () => {
     },
     toStateSeq: 4
   })).toEqual({
+    frontier_state_seq: 4,
     from_state_seq: 1,
     pack_id: 'pack-1',
+    source_epoch: 'source-1',
     tables: [
       { name: 'sync_groups', row_count: 1 },
       { name: 'sync_group_devices', row_count: 3 },

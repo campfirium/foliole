@@ -18,6 +18,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 final class FolioleCompanionSyncPackFileValidator {
+    static final int MAX_TRANSFER_BYTES = 1024 * 1024;
+    private static final int MAX_DATABASE_BYTES = 4 * 1024 * 1024;
     private static final int BUFFER_BYTES = 64 * 1024;
     private static final int MAX_MANIFEST_BYTES = 1024 * 1024;
     private static final byte[] SQLITE_HEADER = "SQLite format 3\0".getBytes(StandardCharsets.US_ASCII);
@@ -28,6 +30,7 @@ final class FolioleCompanionSyncPackFileValidator {
         File pack, File database, FolioleCompanionSyncPackContract contract,
         String expectedPeerId, String expectedSourcePeerId
     ) throws Exception {
+        if (pack.length() > MAX_TRANSFER_BYTES) throw invalid("sync_pack_transfer_limit_exceeded");
         File compressed = File.createTempFile("sync-pack-compressed-", ".tmp", pack.getParentFile());
         try {
             Extracted extracted = extract(pack, compressed, contract.databaseEntry());
@@ -72,7 +75,7 @@ final class FolioleCompanionSyncPackFileValidator {
                 } else {
                     MessageDigest digest = MessageDigest.getInstance("SHA-256");
                     try (OutputStream output = new FileOutputStream(compressed)) {
-                        copy(zip, output, digest, Long.MAX_VALUE);
+                        copy(zip, output, digest, MAX_TRANSFER_BYTES);
                     }
                     compressedHash = sha256Uri(digest.digest());
                 }
@@ -88,7 +91,7 @@ final class FolioleCompanionSyncPackFileValidator {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (InputStream input = new InflaterInputStream(new FileInputStream(compressed));
              OutputStream output = new FileOutputStream(database)) {
-            copy(input, output, digest, Long.MAX_VALUE);
+            copy(input, output, digest, MAX_DATABASE_BYTES);
         } catch (Exception error) {
             throw new IllegalArgumentException("invalid_sync_pack_compressed_database", error);
         }

@@ -62,6 +62,10 @@ vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companion/sync/syncGroupStore', () => ({
   loadCompanionSyncGroup: vi.fn(async () => ({ group_id: 'group-test' }))
 }));
+vi.mock('./companion/sync/resources/syncResourceArticleQueue', () => ({
+  loadCompanionResourceArticleBatch: vi.fn(async () => []),
+  clearCompanionResourceArticles: vi.fn(async () => undefined)
+}));
 vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
   resolveCompanionSyncPeerId: vi.fn(async () => 'authorization-desktop-test'),
   resolveCompanionSyncPeerHostName: vi.fn(async () => 'Desktop')

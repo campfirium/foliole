@@ -1,4 +1,5 @@
 import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.js';
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
@@ -129,7 +130,7 @@ async function upsertAppliedSyncObjectState(port: DbPort, record: SyncPackSyncOb
   await port.run(
     `INSERT INTO sync_object_state (` +
     `object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty, deleted_at` +
-    `) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), ?, ?, ?, 0, ?) ` +
+    `) VALUES (?, ?, ${NEXT_SYNC_STATE_SEQ_SQL}, ?, ?, ?, 0, ?) ` +
     `ON CONFLICT(object_type, object_id) DO UPDATE SET ` +
     `state_seq = excluded.state_seq, content_hash = excluded.content_hash, ` +
     `last_modified_by_host_name = excluded.last_modified_by_host_name, updated_at = excluded.updated_at, ` +

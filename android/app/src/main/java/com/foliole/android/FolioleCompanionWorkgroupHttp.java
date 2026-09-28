@@ -133,6 +133,13 @@ final class FolioleCompanionWorkgroupHttp {
         Context context, HttpURLConnection connection, String method, String path,
         InputStream body, File output
     ) throws Exception {
+        decryptResponseToFile(context, connection, method, path, body, output, Long.MAX_VALUE);
+    }
+
+    static void decryptResponseToFile(
+        Context context, HttpURLConnection connection, String method, String path,
+        InputStream body, File output, long maximumBytes
+    ) throws Exception {
         if (!ENVELOPE_CONTENT_TYPE.equals(connection.getContentType())) {
             throw new SecurityException("workgroup_aead_response_required");
         }
@@ -145,7 +152,7 @@ final class FolioleCompanionWorkgroupHttp {
         File decoded = File.createTempFile("workgroup-decoded-", ".tmp", context.getCacheDir());
         try {
             FolioleCompanionWorkgroupEnvelopeStream.Header header =
-                FolioleCompanionWorkgroupEnvelopeStream.extract(body, encoded);
+                FolioleCompanionWorkgroupEnvelopeStream.extract(body, encoded, maximumBytes);
             FolioleCompanionWorkgroupFileDecrypt.decrypt(
                 encoded, decoded, output, groupKey, method, path, contentType, header);
             consumeResponseNonce(context, new JSONObject()

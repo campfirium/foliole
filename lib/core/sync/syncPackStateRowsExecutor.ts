@@ -1,3 +1,5 @@
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
+
 import type { DbPort, DbRow } from './dbPort.js';
 import { buildSyncPackApplyableRowsSql, type SyncPackApplyableRowsOptions } from './syncPackApplyStatements.js';
 
@@ -26,7 +28,7 @@ export async function applySyncPackStateRowsWithDbPort(
 }
 
 async function loadNextStateSeq(port: DbPort) {
-  const rows = await port.query<NextSeqRow>('SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state');
+  const rows = await port.query<NextSeqRow>(`SELECT ${NEXT_SYNC_STATE_SEQ_SQL} AS next_state_seq`);
   return rows[0]?.next_state_seq ?? 1;
 }
 

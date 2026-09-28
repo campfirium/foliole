@@ -4,12 +4,16 @@ import type {
   NativeSyncChangeCursor,
   NativeSyncNodeRecord,
   NativeSyncObjectRecord,
+  NativeSyncPackApplyResult,
   NativeSyncReviewLogRecord,
   NativeSyncStateObjectRecord
 } from '../../../lib/platform/nativeSyncContract';
 
 const syncBridgeMock = vi.hoisted(() => ({
-  applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 })),
+  applyCompanionDesktopSyncPack: vi.fn(async (args: { url: string }): Promise<NativeSyncPackApplyResult> => {
+    void args;
+    return { applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 };
+  }),
   applyCompanionSyncNodeVersions: vi.fn(async (nodes: NativeSyncNodeRecord[]) => nodes.map((node) => node.object_id)),
   applyCompanionSyncObjects: vi.fn(async (objects: NativeSyncObjectRecord[]) => (
     objects.map((object) => `${object.object_type}:${object.object_id}`)
@@ -26,6 +30,9 @@ const syncBridgeMock = vi.hoisted(() => ({
   loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
   loadCompanionSyncStateChanges: vi.fn(async () => [] as NativeSyncStateObjectRecord[]),
   loadCompanionSyncPackCursor: vi.fn(async (): Promise<number | null> => null),
+  loadCompanionSyncPackRestorePosition: vi.fn(async (): Promise<{
+    cursor: number; frontierStateSeq?: number; sourceEpoch?: string
+  }> => ({ cursor: 0 })),
   loadCompanionSyncStateCursor: vi.fn(async (): Promise<number | null> => null),
   loadCompanionSyncStatePushCursor: vi.fn(async (): Promise<number | null> => null),
   saveCompanionSyncNodeVersionCursor: vi.fn(async (cursor: NativeSyncChangeCursor | null) => cursor),
@@ -43,6 +50,10 @@ const syncBridgeMock = vi.hoisted(() => ({
 vi.mock('./companionSyncObjects', () => syncBridgeMock);
 vi.mock('./companion/sync/syncGroupStore', () => ({
   loadCompanionSyncGroup: vi.fn(async () => ({ group_id: 'group-test' }))
+}));
+vi.mock('./companion/sync/resources/syncResourceArticleQueue', () => ({
+  loadCompanionResourceArticleBatch: vi.fn(async () => []),
+  clearCompanionResourceArticles: vi.fn(async () => undefined)
 }));
 vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
   resolveCompanionSyncPeerId: vi.fn(async () => 'authorization-desktop-test'),
@@ -114,6 +125,7 @@ function resetSyncMocks() {
   syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValue([]);
   syncBridgeMock.loadCompanionMissingContentBlobHashes.mockResolvedValue([]);
   syncBridgeMock.loadCompanionSyncPackCursor.mockResolvedValue(null);
+  syncBridgeMock.loadCompanionSyncPackRestorePosition.mockResolvedValue({ cursor: 0 });
   syncBridgeMock.loadCompanionSyncStateCursor.mockResolvedValue(null);
   syncBridgeMock.loadCompanionSyncStatePushCursor.mockResolvedValue(null);
   syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
@@ -136,6 +148,24 @@ describe('companion desktop sync object paging', () => {
     expect(result.appliedPackBlobCount).toBe(3);
     expect(syncBridgeMock.applyCompanionSyncObjects).not.toHaveBeenCalled();
     expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenLastCalledWith(501, 'authorization-desktop-test');
+  });
+
+  it('requests a resumed restore page with its committed frontier and source epoch', async () => {
+    syncBridgeMock.loadCompanionSyncPackRestorePosition.mockResolvedValueOnce({
+      cursor: 5, frontierStateSeq: 8, sourceEpoch: 'epoch-a'
+    });
+    syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValueOnce({
+      applied_blob_count: 0, applied_object_count: 1, to_state_seq: 8
+    });
+    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+
+    await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', {
+      includeResources: false, restoreId: 'restore-a'
+    });
+    expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedRestoreId: 'restore-a',
+        url: expect.stringContaining('after_state_seq=5&page_contract=bounded-v1&restore_id=restore-a&frontier_state_seq=8&source_epoch=epoch-a') })
+    );
   });
 
   it('does not page legacy local state changes while pack sync is active', async () => {
@@ -167,5 +197,28 @@ describe('companion desktop sync object paging', () => {
     const syncObjects = await import('./companionDesktopSyncObjects');
 
     expect('bootstrapCompanionFromDesktopState' in syncObjects).toBe(false);
+  });
+});
+
+describe('multi-page structure receive', () => {
+  beforeEach(resetSyncMocks);
+
+  it('continues structure pages to the fixed frontier within one sync operation', async () => {
+    syncBridgeMock.applyCompanionDesktopSyncPack
+      .mockResolvedValueOnce({ applied_blob_count: 1, applied_object_count: 2,
+        frontier_state_seq: 5, source_epoch: 'epoch-a', to_state_seq: 2,
+        participating_article_ids: ['article-a'] })
+      .mockResolvedValueOnce({ applied_blob_count: 0, applied_object_count: 1,
+        frontier_state_seq: 5, source_epoch: 'epoch-a', to_state_seq: 5,
+        participating_article_ids: ['article-b'] });
+
+    const result = await runSync();
+
+    expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledTimes(2);
+    expect(syncBridgeMock.applyCompanionDesktopSyncPack.mock.calls[1]![0].url)
+      .toContain('after_state_seq=2&page_contract=bounded-v1&frontier_state_seq=5&source_epoch=epoch-a');
+    expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenLastCalledWith(5, 'authorization-desktop-test');
+    expect(result.appliedPackObjectCount).toBe(3);
+    expect(result.appliedPackBlobCount).toBe(1);
   });
 });

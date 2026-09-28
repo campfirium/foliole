@@ -61,7 +61,7 @@ it('reconstructs a missing special parent before applying an incremental child v
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   try {
     await expect(applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: 0, hostName: 'android-b', sourcePeerId: 'desktop-a'
+      currentCursor: 0, hostName: 'android-b', sourceHostName: 'desktop-a'
     })).resolves.toMatchObject({ applied: true, appliedObjectCount: 1 });
   } finally {
     await port.run('DETACH DATABASE inc');

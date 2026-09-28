@@ -13,8 +13,12 @@ const ISOLATED_SQLITE = new Set([
   'FolioleCompanionSyncGroupContentBlobBatch.java',
   'FolioleCompanionSyncGroupResources.java',
   'FolioleCompanionSyncPackDatabaseValidator.java',
+  'FolioleCompanionSyncPackFactIndex.java',
+  'FolioleCompanionSyncPackFactProvider.java',
   'FolioleCompanionSyncPackPayloadWriter.java',
-  'FolioleCompanionSyncPackProvider.java'
+  'FolioleCompanionSyncPackProvider.java',
+  'FolioleCompanionSyncPackVersionBudget.java',
+  'FolioleCompanionSyncPackVersionHolds.java'
 ]);
 
 function javaFiles() {

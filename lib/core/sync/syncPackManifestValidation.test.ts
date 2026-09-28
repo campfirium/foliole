@@ -5,7 +5,8 @@ import { SYNC_PACK_TABLE_NAMES } from './syncPackManifest.js';
 import { assertSyncPackManifestMatchesDatabase, parseSyncPackManifest } from './syncPackManifestValidation.js';
 
 function manifest() {
-  return { pack_id: 'pack', from_state_seq: 0, to_state_seq: 4,
+  return { pack_id: 'pack', source_epoch: 'source-1',
+    frontier_state_seq: 4, from_state_seq: 0, to_state_seq: 4,
     tables: SYNC_PACK_TABLE_NAMES.map((name) => ({ name, row_count: 0 })) };
 }
 

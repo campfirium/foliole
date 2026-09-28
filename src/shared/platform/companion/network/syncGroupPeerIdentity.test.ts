@@ -16,6 +16,7 @@ describe('syncGroupPeerIdentity', () => {
   it('binds grouped sync progress to the discovered target Device', async () => {
     mocks.loadGroup.mockResolvedValue({ group_id: 'group-1' });
     mocks.loadDiscovery.mockResolvedValue({
+      compatibility: { status: 'compatible' },
       discovery: { group_id: 'group-1', provider_device_id: 'device-c', provider_device_name: 'Desktop C' }
     });
 
@@ -26,6 +27,7 @@ describe('syncGroupPeerIdentity', () => {
   it('accepts another Device endpoint inside the same Sync Group', async () => {
     mocks.loadGroup.mockResolvedValue({ group_id: 'group-1' });
     mocks.loadDiscovery.mockResolvedValue({
+      compatibility: { status: 'compatible' },
       discovery: { group_id: 'group-1', provider_device_id: 'device-c', provider_device_name: 'Desktop C' }
     });
 
@@ -37,5 +39,15 @@ describe('syncGroupPeerIdentity', () => {
 
     await expect(resolveCompanionSyncPeerId('http://device-a/')).rejects.toThrow('sync_group_not_joined');
     expect(mocks.loadDiscovery).not.toHaveBeenCalled();
+  });
+
+  it('stops before requesting a pack from an older provider', async () => {
+    mocks.loadGroup.mockResolvedValue({ group_id: 'group-1' });
+    mocks.loadDiscovery.mockResolvedValue({
+      compatibility: { reason: 'required_capability_missing', status: 'incompatible' },
+      discovery: { group_id: 'group-1', provider_device_id: 'device-c', provider_device_name: 'Desktop C' }
+    });
+    await expect(resolveCompanionSyncPeerId('http://device-c/'))
+      .rejects.toThrow('sync_group_peer_incompatible:required_capability_missing');
   });
 });

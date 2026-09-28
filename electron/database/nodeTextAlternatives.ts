@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../../lib/core/database/syncStateSequenceSchemaStatements.js';
 import type { DbRow } from '../../lib/core/sync/dbPort.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
@@ -113,7 +114,7 @@ async function writeAlternativeStatus(
   );
   const contentHash = hash(JSON.stringify({ ...alternative, status, updated_at: now }));
   await port.run(
-    `UPDATE sync_object_state SET state_seq = (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state),
+    `UPDATE sync_object_state SET state_seq = ${NEXT_SYNC_STATE_SEQ_SQL},
        content_hash = ?, last_modified_by_host_name = 'desktop-alternative-action', updated_at = ?, sync_dirty = 1
      WHERE object_type = 'node_text_alternative' AND object_id = ?`,
     [contentHash, now, alternative.alternative_id]

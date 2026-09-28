@@ -19,6 +19,9 @@ struct FolioleCompanionDownloadedAttachment {
 }
 
 enum FolioleCompanionAttachmentResourceDownloader {
+    private static let rangeBytes = 1_048_576
+    private static let maxEnvelopeBytes = 1_500_000
+
     static func download(
         _ requests: [FolioleCompanionAttachmentDownloadRequest],
         temporaryRoot: URL,
@@ -54,34 +57,35 @@ enum FolioleCompanionAttachmentResourceDownloader {
               ["http", "https"].contains(endpoint.scheme?.lowercased() ?? "") else {
             throw invalid("Attachment download request is invalid.")
         }
-        var urlRequest = URLRequest(url: endpoint)
-        urlRequest.httpMethod = "GET"
-        urlRequest.timeoutInterval = 60
-        request.headers.forEach { urlRequest.setValue($0.value, forHTTPHeaderField: $0.key) }
-        let signed = try FolioleCompanionSignedClientRequests.claim(
+        guard let signed = try FolioleCompanionSignedClientRequests.claim(
             url: endpoint, method: "GET", headers: request.headers, body: nil
-        )
-        let (sourceURL, response) = try await FolioleCompanionDesktopHttpTransport.download(for: urlRequest)
-        defer { try? FileManager.default.removeItem(at: sourceURL) }
-        guard let http = response as? HTTPURLResponse else { throw invalid("protocol_error") }
-        let decrypted = try signed?.decrypt(Data(contentsOf: sourceURL), response: http).0
-        guard (200..<300).contains(http.statusCode) else {
-            throw invalid(http.statusCode == 404 ? "missing_file" :
-              http.statusCode == 401 || http.statusCode == 403 ? "authentication_failed" : "protocol_error")
+        ), let deviceId = request.headers.first(where: { $0.key.lowercased() == "x-device-id" })?.value
+        else { throw invalid("workgroup_client_request_not_prepared") }
+        let partialURL = temporaryRoot.appendingPathComponent("\(request.contentHash).unverified")
+        let first = try await receiveRange(endpoint, signed: signed, deviceId: deviceId, offset: 0)
+        let total = first.total
+        var offset = try preparePartial(partialURL, first: first.bytes, total: total)
+        if total == 0 && !FileManager.default.fileExists(atPath: partialURL.path) {
+            guard FileManager.default.createFile(atPath: partialURL.path, contents: Data()) else {
+                throw invalid("protocol_error")
+            }
+        }
+        while offset < total {
+            let segment = offset == 0 ? first : try await receiveRange(
+                endpoint, signed: signed, deviceId: deviceId, offset: offset
+            )
+            guard segment.total == total else { throw invalid("protocol_error") }
+            try append(segment.bytes, to: partialURL, at: offset)
+            offset += segment.bytes.count
+        }
+        guard try digestHex(partialURL) == request.contentHash else {
+            try? FileManager.default.removeItem(at: partialURL)
+            throw invalid("Attachment resource hash mismatch.")
         }
         let outputURL = temporaryRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
             .appendingPathComponent(request.contentHash)
         try FileManager.default.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        if let decrypted {
-            try decrypted.write(to: outputURL, options: .atomic)
-            try? FileManager.default.removeItem(at: sourceURL)
-        } else {
-            try FileManager.default.moveItem(at: sourceURL, to: outputURL)
-        }
-        guard try digestHex(outputURL) == request.contentHash else {
-            try? FileManager.default.removeItem(at: outputURL)
-            throw invalid("Attachment resource hash mismatch.")
-        }
+        try FileManager.default.moveItem(at: partialURL, to: outputURL)
         return FolioleCompanionDownloadedAttachment(
             attachmentId: request.attachmentId,
             contentHash: request.contentHash,
@@ -89,6 +93,69 @@ enum FolioleCompanionAttachmentResourceDownloader {
             storageKey: request.storageKey,
             temporaryURL: outputURL
         )
+    }
+
+    private static func receiveRange(
+        _ endpoint: URL, signed: FolioleCompanionSignedClientRequest,
+        deviceId: String, offset: Int
+    ) async throws -> (bytes: Data, total: Int) {
+        guard var parts = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
+            throw invalid("protocol_error")
+        }
+        let existing = parts.queryItems ?? []
+        parts.queryItems = existing + [
+            URLQueryItem(name: "offset", value: String(offset)),
+            URLQueryItem(name: "length", value: String(rangeBytes))
+        ]
+        guard let url = parts.url else { throw invalid("protocol_error") }
+        let signedRange = signed.signedRange(url, deviceId: deviceId)
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 60
+        signedRange.headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
+        let (source, response) = try await FolioleCompanionDesktopHttpTransport.download(for: request)
+        defer { try? FileManager.default.removeItem(at: source) }
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode),
+              let value = http.value(forHTTPHeaderField: "X-Foliole-Resource-Total-Bytes"),
+              let total = Int(value), (total > offset || total == 0 && offset == 0),
+              ((try source.resourceValues(forKeys: [.fileSizeKey])).fileSize ?? Int.max) <= maxEnvelopeBytes
+        else { throw invalid("protocol_error") }
+        let bytes = try autoreleasepool {
+            try signedRange.context.decrypt(Data(contentsOf: source), response: http).0
+        }
+        guard bytes.count == min(rangeBytes, total - offset) else { throw invalid("protocol_error") }
+        return (bytes, total)
+    }
+
+    private static func preparePartial(_ url: URL, first: Data, total: Int) throws -> Int {
+        guard FileManager.default.fileExists(atPath: url.path) else { return 0 }
+        let file = try FileHandle(forUpdating: url)
+        defer { try? file.close() }
+        let oldSize = Int(try file.seekToEnd())
+        let complete = oldSize == total ? total : oldSize / rangeBytes * rangeBytes
+        if complete > total { try file.truncate(atOffset: 0); return 0 }
+        try file.truncate(atOffset: UInt64(complete))
+        if complete > 0 {
+            try file.seek(toOffset: 0)
+            if try file.read(upToCount: first.count) != first {
+                try file.truncate(atOffset: 0)
+                return 0
+            }
+        }
+        return complete
+    }
+
+    private static func append(_ bytes: Data, to url: URL, at offset: Int) throws {
+        if !FileManager.default.fileExists(atPath: url.path) {
+            guard FileManager.default.createFile(atPath: url.path, contents: nil) else {
+                throw invalid("protocol_error")
+            }
+        }
+        let file = try FileHandle(forWritingTo: url)
+        defer { try? file.close() }
+        guard try file.seekToEnd() == UInt64(offset) else { throw invalid("protocol_error") }
+        try file.write(contentsOf: bytes)
+        try file.synchronize()
     }
 
     static func digestHex(_ url: URL) throws -> String {

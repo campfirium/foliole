@@ -1,3 +1,4 @@
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../../../../../lib/core/database/syncStateSequenceSchemaStatements';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 
 export async function iosCompanionDeviceId(db: DbPort) {
@@ -31,7 +32,7 @@ export async function markIosCompanionMutation(args: {
     `INSERT OR REPLACE INTO sync_object_state (
        object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash,
        last_modified_by_host_name, updated_at, deleted_at, sync_dirty
-     ) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), NULL, ?, ?, ?, ?, NULL, 1)`,
+     ) VALUES (?, ?, ${NEXT_SYNC_STATE_SEQ_SQL}, NULL, ?, ?, ?, ?, NULL, 1)`,
     [args.objectType, args.objectId, args.contentHash, base, args.hostName, args.updatedAt]
   );
 }

@@ -21,16 +21,28 @@ final class FolioleCompanionSyncPackSQLite {
         guard sqlite3_step(statement) == SQLITE_DONE else { throw error() }
     }
 
+    func execute(_ sql: String, values: [Any?]) throws {
+        guard let database else { throw Self.invalid("sync_pack_database_closed") }
+        var statement: OpaquePointer?
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else { throw error() }
+        defer { sqlite3_finalize(statement) }
+        for (offset, value) in values.enumerated() { bind(value, statement, Int32(offset + 1)) }
+        guard sqlite3_step(statement) == SQLITE_DONE else { throw error() }
+    }
+
     func attach(_ url: URL) throws { try execute("ATTACH DATABASE '\(url.path.replacingOccurrences(of: "'", with: "''"))' AS source") }
     func scalar(_ sql: String) throws -> Int {
         try rows(sql).first?.first.flatMap { ($0 as? NSNumber)?.intValue } ?? 0
     }
 
-    func rows(_ sql: String) throws -> [[Any?]] {
+    func rows(_ sql: String, bindings: [Int] = []) throws -> [[Any?]] {
         guard let database else { throw Self.invalid("sync_pack_database_closed") }
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else { throw error() }
         defer { sqlite3_finalize(statement) }
+        for (index, value) in bindings.enumerated() {
+            sqlite3_bind_int64(statement, Int32(index + 1), sqlite3_int64(value))
+        }
         var result: [[Any?]] = []
         while true {
             let status = sqlite3_step(statement)

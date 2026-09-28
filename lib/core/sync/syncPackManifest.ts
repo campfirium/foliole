@@ -71,9 +71,11 @@ export interface SyncPackTableManifest {
 }
 
 export interface SyncPackManifestInput {
+  frontierStateSeq: number;
   fromStateSeq: number;
   packId: string;
   restoreId?: string;
+  sourceEpoch: string;
   tableRows: Record<SyncPackTableName, unknown[]>;
   toStateSeq: number;
 }
@@ -86,8 +88,10 @@ export function buildSyncPackManifest(input: SyncPackManifestInput) {
   return {
     pack_id: input.packId,
     ...(input.restoreId ? { restore_id: input.restoreId } : {}),
+    source_epoch: input.sourceEpoch,
     from_state_seq: input.fromStateSeq,
     to_state_seq: input.toStateSeq,
+    frontier_state_seq: input.frontierStateSeq,
     tables
   };
 }

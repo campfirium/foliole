@@ -69,10 +69,12 @@ enum FolioleCompanionSyncPackDatabaseValidator {
 
     private static func comparableManifest(_ value: [String: Any]) throws -> String {
         let packId = try FolioleCompanionSyncPackEnvelopeValidator.string(value, "pack_id")
+        let epoch = try FolioleCompanionSyncPackEnvelopeValidator.string(value, "source_epoch")
+        let frontier = try FolioleCompanionSyncPackEnvelopeValidator.integer(value, "frontier_state_seq")
         let from = try FolioleCompanionSyncPackEnvelopeValidator.integer(value, "from_state_seq")
         let to = try FolioleCompanionSyncPackEnvelopeValidator.integer(value, "to_state_seq")
         let tables = try FolioleCompanionSyncPackEnvelopeValidator.tableCounts(value)
-        return "\(packId)|\(from)|\(to)|\(tables.sorted { $0.key < $1.key })"
+        return "\(packId)|\(epoch)|\(frontier)|\(from)|\(to)|\(tables.sorted { $0.key < $1.key })"
     }
 
     private static func quote(_ identifier: String) throws -> String {

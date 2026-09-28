@@ -7,9 +7,12 @@ import {
 } from '../../lib/core/sync/syncPackCursor.js';
 
 it('reads sync pack cursor values from the attached pack manifest', async () => {
-  const port = createPort(JSON.stringify({ from_state_seq: 4.8, to_state_seq: 9 }));
+  const port = createPort(JSON.stringify({
+    source_epoch: 'source-test', frontier_state_seq: 9, from_state_seq: 4, to_state_seq: 9
+  }));
 
   await expect(readSyncPackCursorWithDbPort(port, 'incoming')).resolves.toEqual({
+    sourceEpoch: 'source-test', frontierStateSeq: 9,
     fromStateSeq: 4,
     toStateSeq: 9
   });
@@ -18,10 +21,20 @@ it('reads sync pack cursor values from the attached pack manifest', async () => 
   );
 });
 
+it('rejects fractional or unbound pack positions', async () => {
+  await expect(readSyncPackCursorWithDbPort(createPort(JSON.stringify({
+    source_epoch: 'source-test', frontier_state_seq: 9, from_state_seq: 4.8, to_state_seq: 9
+  })))).rejects.toThrow('invalid_sync_pack_manifest');
+  await expect(readSyncPackCursorWithDbPort(createPort(JSON.stringify({
+    frontier_state_seq: 9, from_state_seq: 4, to_state_seq: 9
+  })))).rejects.toThrow('invalid_sync_pack_manifest');
+});
+
 it('checks whether a sync pack cursor can be applied contiguously', () => {
-  expect(assertContiguousSyncPackCursor({ fromStateSeq: 4, toStateSeq: 4 }, 4)).toBe(false);
-  expect(assertContiguousSyncPackCursor({ fromStateSeq: 4, toStateSeq: 8 }, 4)).toBe(true);
-  expect(() => assertContiguousSyncPackCursor({ fromStateSeq: 3, toStateSeq: 8 }, 4))
+  const base = { sourceEpoch: 'source-test', frontierStateSeq: 8 };
+  expect(assertContiguousSyncPackCursor({ ...base, fromStateSeq: 4, toStateSeq: 4 }, 4)).toBe(false);
+  expect(assertContiguousSyncPackCursor({ ...base, fromStateSeq: 4, toStateSeq: 8 }, 4)).toBe(true);
+  expect(() => assertContiguousSyncPackCursor({ ...base, fromStateSeq: 3, toStateSeq: 8 }, 4))
     .toThrow('sync_pack_cursor_not_contiguous');
 });
 

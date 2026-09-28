@@ -1,8 +1,10 @@
 import type { DbPort, DbRow } from './dbPort.js';
 
 export interface SyncPackCursor {
+  frontierStateSeq: number;
   fromStateSeq: number;
   restoreId?: string;
+  sourceEpoch: string;
   toStateSeq: number;
 }
 
@@ -22,16 +24,26 @@ export async function readSyncPackCursorWithDbPort(
     throw new Error('invalid_sync_pack_manifest');
   }
   const manifest = JSON.parse(value) as {
-    from_state_seq?: unknown; restore_id?: unknown; to_state_seq?: unknown
+    frontier_state_seq?: unknown; from_state_seq?: unknown; restore_id?: unknown;
+    source_epoch?: unknown; to_state_seq?: unknown
   };
   if (manifest.restore_id !== undefined &&
       (typeof manifest.restore_id !== 'string' || !manifest.restore_id.trim())) {
     throw new Error('invalid_sync_pack_manifest');
   }
+  const fromStateSeq = normalizeSeq(manifest.from_state_seq);
+  const toStateSeq = normalizeSeq(manifest.to_state_seq);
+  const frontierStateSeq = normalizeSeq(manifest.frontier_state_seq);
+  if (typeof manifest.source_epoch !== 'string' || !manifest.source_epoch.trim() ||
+      toStateSeq < fromStateSeq || frontierStateSeq < toStateSeq) {
+    throw new Error('invalid_sync_pack_manifest');
+  }
   return {
-    fromStateSeq: normalizeSeq(manifest.from_state_seq),
+    frontierStateSeq,
+    fromStateSeq,
     ...(manifest.restore_id ? { restoreId: manifest.restore_id as string } : {}),
-    toStateSeq: normalizeSeq(manifest.to_state_seq)
+    sourceEpoch: manifest.source_epoch.trim(),
+    toStateSeq
   };
 }
 
@@ -44,5 +56,8 @@ export function assertContiguousSyncPackCursor(cursor: SyncPackCursor, currentCu
 }
 
 function normalizeSeq(value: unknown) {
-  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.trunc(value)) : 0;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error('invalid_sync_pack_manifest');
+  }
+  return value;
 }

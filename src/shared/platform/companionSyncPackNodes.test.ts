@@ -17,7 +17,8 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   };
 
   connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({
-    from_peer_id: 'authorization-desktop', from_state_seq: 0, to_peer_id: 'authorization-android', to_state_seq: 4
+    from_peer_id: 'authorization-desktop', source_epoch: 'source-test', frontier_state_seq: 4,
+    from_state_seq: 0, to_peer_id: 'authorization-android', to_state_seq: 4
   }) }] });
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
@@ -41,8 +42,12 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
     appliedReviewOpIds: [],
     appliedTombstoneNodeIds: [],
     fromStateSeq: 0,
+    frontier_state_seq: 4,
+    frontierStateSeq: 4,
     handled_conflict_count: 0,
     handledConflictCount: 0,
+    source_epoch: 'source-test',
+    sourceEpoch: 'source-test',
     to_state_seq: 4,
     toStateSeq: 4
   });
@@ -78,7 +83,8 @@ it('reuses an already open companion database connection', async () => {
   const connection = createFakeConnection();
   connection.isDBOpen.mockResolvedValue({ result: true });
   connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({
-    from_peer_id: 'authorization-desktop', from_state_seq: 0, to_peer_id: 'authorization-ios', to_state_seq: 1
+    from_peer_id: 'authorization-desktop', source_epoch: 'source-test', frontier_state_seq: 1,
+    from_state_seq: 0, to_peer_id: 'authorization-ios', to_state_seq: 1
   }) }] });
   const manager = {
     closeConnection: vi.fn(async () => undefined),
@@ -125,7 +131,7 @@ it('loads and advances the pack cursor around the shared core apply', async () =
   expect(cursorStore.saveCursor).toHaveBeenCalledWith(5);
 });
 
-it('does not advance the pack cursor when no objects were applied', async () => {
+it('advances the cursor for a verified empty scan page', async () => {
   const connection = createFakeConnection();
   const manager = {
     closeConnection: vi.fn(async () => undefined),
@@ -144,9 +150,16 @@ it('does not advance the pack cursor when no objects were applied', async () => 
     deviceId: 'android-device', hostName: 'android-device',
     packPath: '/tmp/empty-apply-pack.db',
     sourcePeerId: 'desktop-device'
-  }, cursorStore, manager as never)).rejects.toThrow('sync_pack_applied_no_objects');
+  }, cursorStore, manager as never)).resolves.toMatchObject({
+    to_state_seq: 5, verified_empty_page: true
+  });
 
-  expect(cursorStore.saveCursor).not.toHaveBeenCalled();
+  expect(cursorStore.saveCursor).toHaveBeenCalledWith(5);
+});
+
+it('rejects cursor advance without a verified empty page or applied facts', () => {
+  expect(() => assertSyncPackCursorAdvance({ appliedObjectCount: 0,
+    currentCursor: 2, handledConflictCount: 0, toStateSeq: 5 })).toThrow('sync_pack_applied_no_objects');
 });
 
 it('retrieves an existing Android companion database connection before attaching a sync pack', async () => {
@@ -161,7 +174,8 @@ it('retrieves an existing Android companion database connection before attaching
   };
 
   connection.query.mockResolvedValueOnce({ values: [{ value: JSON.stringify({
-    from_peer_id: 'authorization-desktop', from_state_seq: 0, to_peer_id: 'authorization-android', to_state_seq: 1
+    from_peer_id: 'authorization-desktop', source_epoch: 'source-test', frontier_state_seq: 1,
+    from_state_seq: 0, to_peer_id: 'authorization-android', to_state_seq: 1
   }) }] });
 
   await expect(applyCompanionSyncPackNodesWithSharedCore({
@@ -221,7 +235,9 @@ function createFakeConnection() {
     isDBOpen: vi.fn(async () => ({ result: false })),
     open: vi.fn(async () => undefined),
     query: vi.fn(async (sql: string): Promise<{ values: Array<Record<string, unknown>> }> => {
-      void sql;
+      if (sql.includes('FROM sync_group_local_state')) {
+        return { values: [{ group_id: 'group', local_device_identity_key: 'android-device' }] };
+      }
       return { values: [] };
     }),
     rollbackTransaction: vi.fn(),
@@ -237,15 +253,20 @@ function mockPackApplyQueries(
     if (sql.includes('pack_manifest')) {
       return { values: [{ value: JSON.stringify({
         pack_id: 'test-pack',
+        source_epoch: 'source-test', frontier_state_seq: args.toStateSeq,
         from_peer_id: 'authorization-desktop', from_state_seq: args.fromStateSeq,
         to_peer_id: 'android-device', to_state_seq: args.toStateSeq
       }) }] };
     }
-    if (sql.includes('COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq')) {
+    if (sql.includes('AS next_state_seq')) {
       return { values: [{ next_state_seq: 1 }] };
     }
     if (sql.includes('FROM sync_group_local_state')) {
       return { values: [{ group_id: 'group', local_device_identity_key: 'android-device' }] };
+    }
+    if (sql.includes('FROM sync_pack_receive_progress')) {
+      return { values: [{ source_epoch: 'source-test', cursor_state_seq: args.fromStateSeq,
+        frontier_state_seq: args.toStateSeq, restore_id: null, completed: 0 }] };
     }
     if (sql.includes('FROM sync_group_devices')) {
       return { values: [{ active: 1 }] };

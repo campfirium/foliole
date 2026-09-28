@@ -9,6 +9,26 @@ import {
 
 export { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 
+export async function fetchDesktopWorkgroupJson<T>(args: {
+  endpointUrl: string;
+  groupId: string;
+  localDeviceId: string;
+  pathWithQuery: string;
+  secret: string;
+}): Promise<T> {
+  const response = await fetch(`${args.endpointUrl}${args.pathWithQuery}`, {
+    headers: createDesktopSyncGroupSignedHeaders({
+      ...args, method: 'GET'
+    })
+  });
+  const body = await readDesktopWorkgroupResponse({
+    contentType: 'application/json; charset=utf-8', groupId: args.groupId,
+    maxEnvelopeBytes: 512 * 1024, method: 'GET',
+    pathWithQuery: args.pathWithQuery, response
+  });
+  return JSON.parse(body.toString('utf8')) as T;
+}
+
 export async function requestJson(url: string, init: RequestInit) {
   const response = await fetch(url, init);
   const payload = await response.json() as Record<string, unknown>;
@@ -39,6 +59,7 @@ export function createDesktopWorkgroupPost(args: {
 export async function readDesktopWorkgroupResponse(args: {
   contentType: string;
   groupId: string;
+  maxEnvelopeBytes?: number;
   method: string;
   pathWithQuery: string;
   response: Response;
@@ -46,7 +67,9 @@ export async function readDesktopWorkgroupResponse(args: {
   if (args.response.headers.get('content-type') !== WORKGROUP_ENVELOPE_CONTENT_TYPE) {
     throw new Error('workgroup_aead_response_required');
   }
-  const body = Buffer.from(await args.response.arrayBuffer());
+  const body = args.maxEnvelopeBytes === undefined
+    ? Buffer.from(await args.response.arrayBuffer())
+    : await readBoundedResponse(args.response, args.maxEnvelopeBytes);
   const contentType = args.response.headers.get('x-foliole-original-content-type') ?? args.contentType;
   const plaintext = await runWithDatabaseConnectionOwner(() => decryptDesktopWorkgroupResponse({
     body, contentType, groupId: args.groupId,
@@ -57,6 +80,28 @@ export async function readDesktopWorkgroupResponse(args: {
     throw new Error(`sync_group_http_${args.response.status}${error ? `:${error}` : ''}`);
   }
   return plaintext;
+}
+
+async function readBoundedResponse(response: Response, limit: number) {
+  if (!Number.isSafeInteger(limit) || limit < 1 || !response.body) {
+    throw new Error('workgroup_aead_response_limit_invalid');
+  }
+  const chunks: Buffer[] = [];
+  const reader = response.body.getReader();
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > limit) throw new Error('workgroup_aead_response_limit_exceeded');
+      chunks.push(Buffer.from(value));
+    }
+  } catch (error) {
+    try { await reader.cancel(); } catch { /* Preserve the transfer error. */ }
+    throw error;
+  }
+  return Buffer.concat(chunks, total);
 }
 
 function readWorkgroupError(body: Buffer) {

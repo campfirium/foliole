@@ -54,6 +54,13 @@ const syncGroupMock = vi.hoisted(() => ({
   }))
 }));
 const receiptMock = vi.hoisted(() => ({ flush: vi.fn(async () => undefined) }));
+const factProbeMock = vi.hoisted(() => ({
+  prepare: vi.fn(async () => ({
+    headers: { 'X-Authorization-Id': 'fact-probe' },
+    url: 'http://desktop/companion/sync-pack?fact_index_id=checked',
+    factClaims: { index: { index_id: 'checked' }, claims: { versions: [], parents: [], reviews: [] } }
+  }))
+}));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: {
@@ -71,6 +78,9 @@ vi.mock('./companion/sync/pack-apply/iosCompanionSyncPackApply', () => ({
 vi.mock('./companion/sync/syncGroupStore', () => ({ loadCompanionSyncGroup: syncGroupMock.load }));
 vi.mock('./companion/sync/companionNodeVersionReceiptDelivery', () => ({
   flushCompanionNodeVersionReceipts: receiptMock.flush
+}));
+vi.mock('./companion/sync/pack-apply/companionSyncPackFactProbe', () => ({
+  prepareCompanionSyncPackFactRequest: factProbeMock.prepare
 }));
 
 beforeEach(() => {
@@ -104,15 +114,16 @@ it('downloads desktop packs before applying them through the shared database own
   expect(capacitorMock.plugin.downloadDesktopSyncPack).toHaveBeenCalledWith({
     expected_peer_id: 'android-group-device',
     expected_source_peer_id: 'desktop-test-device',
-    headers: { 'X-Authorization-Id': 'android' },
-    url: 'http://desktop/companion/sync-pack'
+    headers: { 'X-Authorization-Id': 'fact-probe' },
+    url: 'http://desktop/companion/sync-pack?fact_index_id=checked'
   });
   expect(iosSyncPackApplyMock.apply).toHaveBeenCalledWith({
     deviceId: 'android-group-device',
     hostName: 'Android test host',
     packPath: '/tmp/downloaded-pack.db',
     sourceHostName: 'Desktop Test Host',
-    sourcePeerId: 'desktop-test-device'
+    sourcePeerId: 'desktop-test-device',
+    factClaims: { index: { index_id: 'checked' }, claims: { versions: [], parents: [], reviews: [] } }
   });
   expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({ pack_path: '/tmp/downloaded-pack.db' });
   expect(receiptMock.flush).toHaveBeenCalledTimes(2);
@@ -157,7 +168,8 @@ it('downloads validated packs before routing iOS through its shared-core adapter
     hostName: 'iOS test host',
     packPath: '/tmp/downloaded-pack.db',
     sourceHostName: 'Desktop Test Host',
-    sourcePeerId: 'desktop-test-device'
+    sourcePeerId: 'desktop-test-device',
+    factClaims: { index: { index_id: 'checked' }, claims: { versions: [], parents: [], reviews: [] } }
   });
   expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledWith({
     pack_path: '/tmp/downloaded-pack.db'

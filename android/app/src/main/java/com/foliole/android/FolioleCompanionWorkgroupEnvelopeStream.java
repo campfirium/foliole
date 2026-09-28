@@ -24,10 +24,14 @@ final class FolioleCompanionWorkgroupEnvelopeStream {
     }
 
     static Header extract(InputStream input, File encodedCiphertext) throws Exception {
-        return new FolioleCompanionWorkgroupEnvelopeStream(input).read(encodedCiphertext);
+        return extract(input, encodedCiphertext, Long.MAX_VALUE);
     }
 
-    private Header read(File encodedCiphertext) throws Exception {
+    static Header extract(InputStream input, File encodedCiphertext, long maximumBytes) throws Exception {
+        return new FolioleCompanionWorkgroupEnvelopeStream(input).read(encodedCiphertext, maximumBytes);
+    }
+
+    private Header read(File encodedCiphertext, long maximumBytes) throws Exception {
         Header header = new Header();
         Set<String> seen = new HashSet<>();
         expect('{');
@@ -43,7 +47,7 @@ final class FolioleCompanionWorkgroupEnvelopeStream {
                 case "ciphertext":
                     try (OutputStream output = new BufferedOutputStream(
                         new FileOutputStream(encodedCiphertext), 64 * 1024)) {
-                        readString(output, Long.MAX_VALUE);
+                        readString(output, maximumBytes);
                     }
                     break;
                 default: throw invalid();

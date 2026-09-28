@@ -45,7 +45,7 @@ vi.mock('../../lib/core/sync/syncPackNodeApplyExecutor.js', () => ({
   applySyncPackNodeSurfaceWithDbPort: runtime.apply
 }));
 vi.mock('./syncPackContainerReader.js', () => ({
-  extractSyncPackDatabase: async () => ({ toStateSeq: 1 })
+  extractSyncPackDatabaseFromFile: async () => ({ toStateSeq: 1 })
 }));
 vi.mock('../database/desktopSettingMaterializer.js', () => ({
   materializeDesktopSettingRecord: vi.fn()
@@ -58,7 +58,7 @@ it('keeps the SQLite owner through incoming pack attachment and apply', async ()
     after: 0,
     peer: { endpoint_url: 'http://member', group_id: 'group-1',
       local_device_id: 'desktop-a', peer_device_id: 'desktop-b', peer_device_name: 'Windows' }
-  }, Buffer.from('pack'), '/tmp/pack-owner-test')).resolves.toEqual({
+  }, '/tmp/pack-owner-test/archive.zip', '/tmp/pack-owner-test')).resolves.toEqual({
     cursor: 1,
     event: { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] },
     participatingArticleIds: []

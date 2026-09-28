@@ -11,6 +11,7 @@ export function stageDesktopSyncPackNodeHolds(args: {
   packId: string;
   toPeerId: string;
   versions: SyncPackNodeVersionRow[];
+  knownVersionIds?: string[];
 }) {
   const local = args.driver.queryOne<{ group_id: string }>(
     `SELECT local.group_id FROM sync_group_local_state local
@@ -25,10 +26,14 @@ export function stageDesktopSyncPackNodeHolds(args: {
   );
   if (!local) throw new Error('node_version_pack_peer_unavailable');
   const versions = new Map(args.versions.map((row) => [row.version_id, row]));
+  const knownVersions = new Set(args.knownVersionIds ?? []);
   const heads = args.nodes.filter((node) => node.current_version_id);
   for (const node of heads) {
     const versionId = node.current_version_id!;
-    const head = versions.get(versionId);
+    const head = versions.get(versionId) ?? (knownVersions.has(versionId)
+      ? args.driver.queryOne<SyncPackNodeVersionRow>(
+        'SELECT * FROM node_sync_versions WHERE version_id = ? AND object_id = ?',
+        [versionId, node.id]) : undefined);
     if (!head || head.object_id !== node.id || !hasPayload(head)) {
       throw new Error('node_version_pack_head_unavailable');
     }

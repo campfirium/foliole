@@ -158,6 +158,9 @@ function insertReadwiseIdentitySyncState() {
 }
 
 async function buildContractFixturePack(outputPath: string) {
+  openDatabaseConnection().driver.execute(
+    "UPDATE sync_state_sequence SET source_epoch = 'source-contract-fixture' WHERE singleton_id = 1"
+  );
   insertNodeSyncState();
   insertNodeAttachmentRows();
   insertExternalDocumentSyncState();

@@ -1,4 +1,5 @@
 import { SYNC_DELIVERY_SCHEMA_STATEMENTS } from './syncDeliverySchemaStatements.js';
+import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
 
 export const SYNC_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS sync_object_state (
@@ -23,6 +24,7 @@ export const SYNC_SCHEMA_STATEMENTS = [
     ON sync_object_state (sync_dirty, updated_at)`,
   `CREATE INDEX IF NOT EXISTS idx_sync_object_state_type_updated
     ON sync_object_state (object_type, updated_at)`,
+  ...SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS sync_change_log (
     change_id TEXT PRIMARY KEY,
     object_type TEXT NOT NULL,

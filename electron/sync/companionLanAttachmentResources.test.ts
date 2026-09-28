@@ -16,7 +16,7 @@ vi.mock('../database/attachmentResourceDescription.js', () => ({
   loadAttachmentResourceDescription: attachmentMock.loadAttachmentResourceDescription
 }));
 
-import { loadCompanionAttachmentResource } from './companionLanAttachmentResources.js';
+import { ATTACHMENT_RANGE_BYTES, loadCompanionAttachmentResource } from './companionLanAttachmentResources.js';
 
 let tempRoot = '';
 
@@ -54,4 +54,34 @@ it('does not serve bytes for mismatched requested content hashes', async () => {
     statusCode: 409
   });
   expect(attachmentMock.resolveAttachmentFile).not.toHaveBeenCalled();
+});
+
+it('serves only a bounded authenticated attachment range', async () => {
+  const filePath = path.join(tempRoot, 'large.bin');
+  await fs.writeFile(filePath, Buffer.alloc(ATTACHMENT_RANGE_BYTES + 7));
+  attachmentMock.loadAttachmentResourceDescription.mockReturnValue({ contentHash: 'hash-current' });
+  attachmentMock.resolveAttachmentFile.mockReturnValue({ filePath, mimeType: 'application/pdf', status: 'ready' });
+
+  await expect(loadCompanionAttachmentResource('att-1', 'hash-current',
+    { offset: String(ATTACHMENT_RANGE_BYTES), length: '7' })).resolves.toEqual({
+    byteOffset: ATTACHMENT_RANGE_BYTES, contentLength: 7,
+    totalBytes: ATTACHMENT_RANGE_BYTES + 7, filePath,
+    mimeType: 'application/pdf', status: 'ready'
+  });
+  await expect(loadCompanionAttachmentResource('att-1', 'hash-current',
+    { offset: '0', length: String(ATTACHMENT_RANGE_BYTES + 1) })).resolves.toMatchObject({
+    error: 'invalid_request', statusCode: 400
+  });
+});
+
+it('serves an empty attachment as one authenticated empty range', async () => {
+  const filePath = path.join(tempRoot, 'empty.bin');
+  await fs.writeFile(filePath, '');
+  attachmentMock.loadAttachmentResourceDescription.mockReturnValue({ contentHash: 'hash-empty' });
+  attachmentMock.resolveAttachmentFile.mockReturnValue({ filePath, mimeType: null, status: 'ready' });
+
+  await expect(loadCompanionAttachmentResource('att-1', 'hash-empty',
+    { offset: '0', length: String(ATTACHMENT_RANGE_BYTES) })).resolves.toEqual({
+    byteOffset: 0, contentLength: 0, totalBytes: 0, filePath, mimeType: null, status: 'ready'
+  });
 });

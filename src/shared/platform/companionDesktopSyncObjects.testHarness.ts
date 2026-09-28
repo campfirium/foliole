@@ -51,13 +51,28 @@ export const attachmentResourceMock = {
 export const articleNeedsMock = vi.fn<(ids: readonly string[]) => Promise<Array<{
   attachment_id: string; content_hash: string; mime_type?: string; storage_key?: string; size_bytes?: number
 }>>>().mockResolvedValue([]);
+export const articleUnreadableMock = vi.fn(async () => [] as string[]);
+
+export const resourceArticleQueueMock = {
+  pending: ['article'] as string[],
+  load: vi.fn(async (_peerId: string, afterId = '') =>
+    resourceArticleQueueMock.pending.filter((id) => id > afterId).slice(0, 64)),
+  clear: vi.fn(async (_peerId: string, ids: readonly string[]) => {
+    resourceArticleQueueMock.pending = resourceArticleQueueMock.pending.filter((id) => !ids.includes(id));
+  })
+};
+
+vi.mock('./companion/sync/resources/syncResourceArticleQueue', () => ({
+  loadCompanionResourceArticleBatch: resourceArticleQueueMock.load,
+  clearCompanionResourceArticles: resourceArticleQueueMock.clear
+}));
 
 vi.mock('./companion/sync/resources/articleAttachmentNeeds', () => ({
   loadCompanionArticleAttachmentNeeds: async (_endpoint: string, ids: readonly string[]) => ({
     needs: (await articleNeedsMock(ids)).map((row) => ({ attachmentId: row.attachment_id,
       contentHash: row.content_hash, mimeType: row.mime_type ?? 'image/png',
       storageKey: row.storage_key ?? `${row.content_hash}.png`, sizeBytes: row.size_bytes })),
-    unreadableArticleIds: []
+    unreadableArticleIds: await articleUnreadableMock()
   })
 }));
 
@@ -119,6 +134,13 @@ export function resetCompanionDesktopSyncMocks() {
   vi.resetAllMocks();
   vi.unstubAllGlobals();
   articleNeedsMock.mockResolvedValue([]);
+  articleUnreadableMock.mockResolvedValue([]);
+  resourceArticleQueueMock.pending = ['article'];
+  resourceArticleQueueMock.load.mockImplementation(async (_peerId: string, afterId = '') =>
+    resourceArticleQueueMock.pending.filter((id) => id > afterId).slice(0, 64));
+  resourceArticleQueueMock.clear.mockImplementation(async (_peerId: string, ids: readonly string[]) => {
+    resourceArticleQueueMock.pending = resourceArticleQueueMock.pending.filter((id) => !ids.includes(id));
+  });
   attachmentResolutionMock.resolveRuntimeAttachmentResource.mockResolvedValue({ status: 'missing_file' });
   capacitorMock.getPlatform.mockReturnValue('web');
   capacitorMock.isNativePlatform.mockReturnValue(false);

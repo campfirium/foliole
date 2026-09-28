@@ -170,7 +170,7 @@ function isSyncStatePackRow(row: RawSyncStatePackRow): row is SyncStatePackRow {
 
 export function loadMaxStateSeq(driver: DatabaseDriver) {
   return driver.queryOne<{ value: number }>(
-    'SELECT COALESCE(MAX(state_seq), 0) AS value FROM sync_object_state'
+    'SELECT high_water AS value FROM sync_state_sequence WHERE singleton_id = 1'
   )?.value ?? 0;
 }
 
@@ -185,8 +185,7 @@ export function loadPackRows(
     isSyncStatePackRow,
     nodeIds: [...changedNodeIds, ...learningNodeIds(changedStateRows)],
     placeholders,
-    query: (sql, params) => driver.queryAll<RawSyncStatePackRow>(sql, params),
-    toStateSeq
+    query: (sql, params) => driver.queryAll<RawSyncStatePackRow>(sql, params)
   }));
   const syncObjects = loadPayloadObjects(driver, candidateStateRows);
   const stateRows = retainBackedStateRows(candidateStateRows, syncObjects);
@@ -196,7 +195,7 @@ export function loadPackRows(
   ])];
   const externalDocumentIds = idsForObjectTable(stateRows, 'external_documents');
   const nodes = queryRowsByIds<NodePackRow>(driver,
-    `SELECT ${SYNC_PACK_NODE_COLUMNS.join(', ')}
+    `SELECT ${SYNC_PACK_NODE_COLUMNS.map((column) => column === 'content' ? "'' AS content" : column).join(', ')}
      FROM nodes WHERE id IN (__IDS__)`,
     nodeIds
   );
@@ -204,12 +203,12 @@ export function loadPackRows(
   const externalDocuments = queryRowsByIds<ExternalDocumentPackRow>(driver,
     `SELECT document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
        source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash,
-       content, reference_kind, reference_json, indexed_at, is_present, missing_at, created_at, updated_at
+       '' AS content, reference_kind, reference_json, indexed_at, is_present, missing_at, created_at, updated_at
      FROM external_documents WHERE document_id IN (__IDS__)`,
     externalDocumentIds
   );
   return {
-    consumedStateSeq: candidateStateRows.at(-1)?.state_seq ?? fromStateSeq,
+    consumedStateSeq: toStateSeq,
     contentBlobs: queryRowsByIds<ContentBlobPackRow>(driver,
       `SELECT hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes,
          original_sha256, stored_sha256, availability, source_host_name, created_at, cached_at, last_verified_at

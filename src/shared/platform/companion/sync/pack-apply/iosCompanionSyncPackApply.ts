@@ -1,5 +1,10 @@
 import { assertSyncPackCursorAdvance } from '../../../../../../lib/core/sync/syncPackCursorGuard';
 import {
+  assertSyncPackFactClaimsStillHeld,
+  type SyncPackFactClaims,
+  type SyncPackFactIndex
+} from '../../../../../../lib/core/sync/syncPackFactPresence';
+import {
   NativeCompanionCapabilityUnavailableError,
   requireAvailableCompanionRuntime
 } from '../../../companionRuntimeCapabilities';
@@ -11,7 +16,8 @@ import { createIosCompanionSyncPackCursorStore } from '../cursor/iosCompanionSyn
 
 export async function applyIosCompanionSyncPackPath(
   args: { deviceId: string; expectedRestoreId?: string; hostName: string;
-    packPath: string; sourceHostName?: string; sourcePeerId: string },
+    packPath: string; sourceHostName?: string; sourcePeerId: string;
+    factClaims?: { index: SyncPackFactIndex; claims: SyncPackFactClaims } },
   manager?: CompanionSqliteConnectionManager
 ) {
   const runtime = requireAvailableCompanionRuntime('sync-pack-apply');
@@ -21,22 +27,35 @@ export async function applyIosCompanionSyncPackPath(
   const cursorStore = createIosCompanionSyncPackCursorStore(manager, args.sourcePeerId);
   if (manager) {
     const { applyCompanionSyncPackPathWithSharedCore } = await import('../../../companionSyncPackNodes');
-    return runCompanionSyncWriterTask(() => applyCompanionSyncPackPathWithSharedCore(args, cursorStore, manager));
+    return runCompanionSyncWriterTask(() => applyCompanionSyncPackPathWithSharedCore({
+      ...args, ...(args.factClaims ? { expectedFactIndex: args.factClaims.index } : {})
+    }, cursorStore, manager));
   }
   return runCompanionSyncWriterTask(async () => {
-    const currentCursor = args.expectedRestoreId ? 0 : await cursorStore.loadCursor() ?? 0;
-    const result = await getIosCompanionDatabaseOwner().runWriter((db) => applyCompanionSyncPackNodesWithDbPort({
-      currentCursor, deviceId: args.deviceId, hostName: args.hostName,
-      packPath: args.packPath, sourcePeerId: args.sourcePeerId,
-      ...(args.expectedRestoreId ? { expectedRestoreId: args.expectedRestoreId } : {}),
-      ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName })
-    }, db));
+    if (args.expectedRestoreId && !cursorStore.loadRestoreCursor) {
+      throw new Error('sync_group_restore_cursor_unavailable');
+    }
+    const currentCursor = args.expectedRestoreId
+      ? await cursorStore.loadRestoreCursor!(args.expectedRestoreId) : await cursorStore.loadCursor() ?? 0;
+    const result = await getIosCompanionDatabaseOwner().runWriter(async (db) => {
+      if (args.factClaims) {
+        await assertSyncPackFactClaimsStillHeld(db, args.factClaims.index, args.factClaims.claims);
+      }
+      return applyCompanionSyncPackNodesWithDbPort({
+        currentCursor, deviceId: args.deviceId, hostName: args.hostName,
+        packPath: args.packPath, sourcePeerId: args.sourcePeerId,
+        ...(args.factClaims ? { expectedFactIndex: args.factClaims.index } : {}),
+        ...(args.expectedRestoreId ? { expectedRestoreId: args.expectedRestoreId } : {}),
+        ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName })
+      }, db);
+    });
     assertSyncPackCursorAdvance({
       appliedFactCount: result.applied_group_fact_count,
       appliedObjectCount: result.applied_object_count,
       currentCursor,
       handledConflictCount: result.handled_conflict_count ?? 0,
-      toStateSeq: result.to_state_seq
+      toStateSeq: result.to_state_seq,
+      verifiedEmptyPage: result.verified_empty_page === true
     });
     if (result.to_state_seq > currentCursor) await cursorStore.saveCursor(result.to_state_seq);
     return result;

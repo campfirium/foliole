@@ -593,7 +593,7 @@
     },
     "syncStateNextSeqForMutation": {
       "resultKey": "rows",
-      "sql": "SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state",
+      "sql": "SELECT (SELECT high_water + 1 FROM sync_state_sequence WHERE singleton_id = 1) AS next_state_seq",
       "columns": [
         {
           "key": "next_state_seq",

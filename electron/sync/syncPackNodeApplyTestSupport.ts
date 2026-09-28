@@ -9,7 +9,8 @@ export function createIncomingPack(filePath: string) {
     for (const statement of PACK_SCHEMA) db.exec(statement);
     db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run(
       'manifest_json',
-      JSON.stringify({ from_state_seq: 0, to_state_seq: 1 })
+      JSON.stringify({ source_epoch: 'source-test', frontier_state_seq: 1,
+        from_state_seq: 0, to_state_seq: 1 })
     );
     db.prepare(
       `INSERT INTO sync_object_state (

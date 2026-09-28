@@ -17,11 +17,11 @@ async function testPullsStructurePack() {
   expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledWith({
     headers: {
       'X-Authorization-Id': 'android-test-device',
-      'X-Signature': 'signed:/companion/sync-pack?after_state_seq=0'
+      'X-Signature': 'signed:/companion/sync-pack?after_state_seq=0&page_contract=bounded-v1'
     },
     sourceHostName: 'Desktop Test Host',
     sourcePeerId: 'desktop-test-device',
-    url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0'
+    url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0&page_contract=bounded-v1'
   });
   expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8, 'desktop-test-device');
 }
@@ -173,7 +173,7 @@ async function testRejectedLegacyPackKeepsCursorForUpgradedRetry() {
     .resolves.toMatchObject({ appliedPackObjectCount: 3 });
   expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenNthCalledWith(2,
     expect.objectContaining({
-      url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0'
+      url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0&page_contract=bounded-v1'
     }));
   expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledOnce();
   expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8, 'desktop-test-device');

@@ -4,6 +4,7 @@ import {
   ANDROID_COMPANION_SYNC_STATE_CHANGES_SQL
 } from './androidCompanionSyncDeliveryQuerySql.js';
 import { ANDROID_COMPANION_SYNC_NODE_VERSIONS_SQL } from './androidCompanionSyncNodeVersionSql.js';
+import { NEXT_SYNC_STATE_SEQ_SQL } from './syncStateSequenceSchemaStatements.js';
 
 export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   ...ANDROID_COMPANION_CONVERGENCE_QUERY_DEFINITIONS,
@@ -122,7 +123,7 @@ export const ANDROID_COMPANION_SYNC_QUERY_DEFINITIONS = {
   },
   syncStateNextSeqForMutation: {
     resultKey: 'rows',
-    sql: 'SELECT COALESCE(MAX(state_seq), 0) + 1 AS next_state_seq FROM sync_object_state',
+    sql: `SELECT ${NEXT_SYNC_STATE_SEQ_SQL} AS next_state_seq`,
     columns: [{ key: 'next_state_seq', source: 'next_state_seq', type: 'long' }]
   }
 };

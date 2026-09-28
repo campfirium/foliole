@@ -88,6 +88,8 @@ final class FolioleCompanionSyncPackDatabaseValidator {
         }
         JSONObject inner = new JSONObject(value);
         if (!outer.getString("pack_id").equals(inner.optString("pack_id")) ||
+            !outer.getString("source_epoch").equals(inner.optString("source_epoch")) ||
+            outer.getInt("frontier_state_seq") != inner.optInt("frontier_state_seq", -1) ||
             outer.getInt("from_state_seq") != inner.optInt("from_state_seq", -1) ||
             outer.getInt("to_state_seq") != inner.optInt("to_state_seq", -1) ||
             !tableCounts(outer.getJSONArray("tables")).equals(tableCounts(inner.getJSONArray("tables")))) {

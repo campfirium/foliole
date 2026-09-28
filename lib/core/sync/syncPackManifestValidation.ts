@@ -18,13 +18,19 @@ export function parseSyncPackManifest(value: unknown) {
   if (typeof manifest.pack_id !== 'string' || !manifest.pack_id.trim()) throw new Error('invalid_sync_pack_manifest_field');
   const fromStateSeq = sequence(manifest.from_state_seq);
   const toStateSeq = sequence(manifest.to_state_seq);
-  if (toStateSeq < fromStateSeq) throw new Error('invalid_sync_pack_manifest_field');
+  const frontierStateSeq = sequence(manifest.frontier_state_seq);
+  const sourceEpoch = manifest.source_epoch;
+  if (toStateSeq < fromStateSeq || toStateSeq > frontierStateSeq ||
+      typeof sourceEpoch !== 'string' || !sourceEpoch.trim()) {
+    throw new Error('invalid_sync_pack_manifest_field');
+  }
   const tables = parseTables(manifest.tables);
   const restoreId = manifest.restore_id;
   if (restoreId !== undefined && (typeof restoreId !== 'string' || !restoreId.trim())) {
     throw new Error('invalid_sync_pack_manifest_field');
   }
-  return { packId: manifest.pack_id.trim(), fromStateSeq, toStateSeq,
+  return { packId: manifest.pack_id.trim(), frontierStateSeq, fromStateSeq,
+    sourceEpoch: sourceEpoch.trim(), toStateSeq,
     ...(restoreId ? { restoreId: restoreId as string } : {}), tables };
 }
 

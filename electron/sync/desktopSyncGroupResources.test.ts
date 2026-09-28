@@ -67,6 +67,7 @@ import {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  runtime.query.mockResolvedValue([]);
   runtime.needs.mockResolvedValue({ needs: [], unreadableArticleIds: [] });
   runtime.exists.mockReturnValue({ status: 'missing_file' });
   runtime.openConnection.mockReturnValue({ sqlite: {} });

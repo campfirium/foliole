@@ -8,6 +8,7 @@ const CLEAR_TABLES = [
   'node_version_inbound_receipts', 'node_version_device_bases',
   'node_version_device_revisions', 'node_version_local_source_revisions',
   'sync_delivery_receipts', 'sync_push_ack', 'sync_peer_cursors',
+  'sync_pack_receive_progress', 'sync_pack_resource_articles',
   'sync_change_log', 'node_attachments', 'node_text_alternatives',
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',

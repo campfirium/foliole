@@ -29,11 +29,13 @@ struct FolioleCompanionSyncPackProviderDefinitions {
     var schemaVersion: Int { value["schemaVersion"] as? Int ?? -1 }
     var stateCopyIndex: Int { value["stateCopyIndex"] as? Int ?? -1 }
     var tableNames: [String] { value["tableNames"] as? [String] ?? [] }
+    var versionPreflightSql: String { string("versionPreflightSql") }
 
     func validate() throws {
         guard compression == "zlib", !copyStatements.isEmpty, !databaseEntry.isEmpty,
               formatVersion > 0, !packSchema.isEmpty, payloadCopyIndex >= 0,
-              schemaVersion > 0, stateCopyIndex >= 0, !tableNames.isEmpty else {
+              schemaVersion > 0, stateCopyIndex >= 0, !tableNames.isEmpty,
+              !versionPreflightSql.isEmpty else {
             throw Self.invalid("sync_pack_provider_definitions_invalid")
         }
     }

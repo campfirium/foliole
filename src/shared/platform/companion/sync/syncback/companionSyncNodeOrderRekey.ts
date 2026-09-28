@@ -1,3 +1,4 @@
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../../../../../../lib/core/database/syncStateSequenceSchemaStatements';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 import {
   iosCompanionContentHash, iosCompanionHostName, markIosCompanionMutation
@@ -28,7 +29,7 @@ export async function rekeyParentChildOrders(port: DbPort, sourceId: string, can
     await port.run(
       `INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash,
          last_modified_by_host_name, updated_at, deleted_at, sync_dirty)
-       VALUES ('parent_child_order', ?, (SELECT COALESCE(MAX(state_seq), 0) + 1 FROM sync_object_state),
+       VALUES ('parent_child_order', ?, ${NEXT_SYNC_STATE_SEQ_SQL},
          ?, ?, ?, ?, 1)
        ON CONFLICT(object_type, object_id) DO UPDATE SET state_seq = excluded.state_seq,
          last_modified_by_host_name = excluded.last_modified_by_host_name,

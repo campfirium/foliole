@@ -1,6 +1,6 @@
 import { createReadStream } from 'node:fs';
 import type http from 'node:http';
-import { Transform } from 'node:stream';
+import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 import {
@@ -93,16 +93,25 @@ export async function writeWorkgroupFileStream(
   request: http.IncomingMessage,
   response: http.ServerResponse,
   statusCode: number,
-  resource: { filePath: string; mimeType: string | null }
+  resource: { byteOffset?: number; contentLength?: number; totalBytes?: number;
+    filePath: string; mimeType: string | null },
+  preparedStream?: ReturnType<typeof createWorkgroupResponseStreamCipher>
 ) {
   const contentType = resource.mimeType ?? 'application/octet-stream';
-  const stream = createWorkgroupResponseStreamCipher(request, contentType);
+  const stream = preparedStream ?? createWorkgroupResponseStreamCipher(request, contentType);
   response.writeHead(statusCode, {
     'Content-Type': WORKGROUP_ENVELOPE_CONTENT_TYPE,
-    'X-Foliole-Original-Content-Type': contentType
+    'X-Foliole-Original-Content-Type': contentType,
+    ...(resource.totalBytes === undefined ? {} : {
+      'X-Foliole-Resource-Total-Bytes': resource.totalBytes
+    })
   });
   response.write(stream.prefix);
-  await pipeline(createReadStream(resource.filePath), stream.cipher,
+  const source = resource.contentLength === 0 ? Readable.from([])
+    : resource.byteOffset === undefined ? createReadStream(resource.filePath)
+      : createReadStream(resource.filePath, { start: resource.byteOffset,
+        end: resource.byteOffset + resource.contentLength! - 1 });
+  await pipeline(source, stream.cipher,
     appendAuthTag(stream.authTag), base64UrlEncoder(), response, { end: false });
   response.end(stream.suffix);
 }

@@ -10,10 +10,8 @@ import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberSta
 import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
 import { assertDesktopSyncGroupPeerCompatible } from './desktopSyncGroupPeerCompatibility.js';
 import { runDesktopSyncGroupPeerSingleFlight } from './desktopSyncGroupPeerSingleFlight.js';
-import {
-  assertDesktopSyncGroupResourcesComplete,
-  downloadDesktopSyncGroupResources
-} from './desktopSyncGroupResources.js';
+import { drainDesktopSyncGroupResourceArticles } from './desktopSyncGroupResourceArticleDrain.js';
+import { assertDesktopSyncGroupResourcesComplete } from './desktopSyncGroupResources.js';
 import {
   loadDesktopSyncGroupRoutes,
   type DesktopSyncGroupPeer
@@ -51,25 +49,21 @@ async function continuePeerSync(target: DesktopSyncGroupPeer) {
     const pendingConflicts = await runWithDatabaseConnectionOwner(() => loadPendingWatchedFolderConflicts());
     if (pendingConflicts.length) return { complete: false, cursor: 0 };
   }
-  const cursor = restoreId ? 0 : await runWithDatabaseConnectionOwner(() =>
-    loadReceiveCursor(target.peer_device_id));
-  const pack = await runPeerSyncStage('sync_pack', () => restoreId
-    ? requestAndApply(target, 0, restoreId) : downloadAndApply(target, cursor));
-  try {
-    await runWithDatabaseConnectionOwner(() =>
-      reconcileVersionedInlineBodies(openDatabaseConnection().driver));
-    const nextCursor = pack.cursor;
-    await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
-    await flushDesktopSyncGroupVersionReceipts(target);
-    await reportDesktopSyncGroupCursorCommitted({
-      cursor: nextCursor, peerAuthorizationId: target.peer_device_id
-    });
-    await runPeerSyncStage('resources', () => downloadDesktopSyncGroupResources(target, pack.participatingArticleIds));
-    const complete = await runWithDatabaseConnectionOwner(() => resourcesComplete());
-    return { complete, cursor: nextCursor };
-  } finally {
-    notifyWorkspaceSyncApplied(pack.event);
-  }
+  const position = await runWithDatabaseConnectionOwner(() =>
+    loadReceivePosition(target.peer_device_id, restoreId ?? undefined));
+  const pack = await runPeerSyncStage('sync_pack', () =>
+    requestAndApply(target, position, restoreId ?? undefined));
+  await runWithDatabaseConnectionOwner(() =>
+    reconcileVersionedInlineBodies(openDatabaseConnection().driver));
+  const nextCursor = pack.cursor;
+  await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
+  await flushDesktopSyncGroupVersionReceipts(target);
+  await reportDesktopSyncGroupCursorCommitted({
+    cursor: nextCursor, peerAuthorizationId: target.peer_device_id
+  });
+  await runPeerSyncStage('resources', () => drainDesktopSyncGroupResourceArticles(target));
+  const complete = await runWithDatabaseConnectionOwner(() => resourcesComplete());
+  return { complete, cursor: nextCursor };
 }
 
 async function runPeerSyncStage<T>(stage: 'member_state' | 'resources' | 'sync_pack', execute: () => Promise<T>) {
@@ -82,34 +76,71 @@ async function runPeerSyncStage<T>(stage: 'member_state' | 'resources' | 'sync_p
   }
 }
 
-async function downloadAndApply(peer: DesktopSyncGroupPeer, after: number) {
-  try {
-    return await requestAndApply(peer, after);
-  } catch (error) {
-    if (after === 0 || !requiresCursorReenumeration(error)) throw error;
-    saveReceiveCursor(peer.peer_device_id, 0);
-    return requestAndApply(peer, 0);
+async function requestAndApply(
+  peer: DesktopSyncGroupPeer,
+  position: { cursor: number; frontierStateSeq?: number; sourceEpoch?: string },
+  restoreId?: string
+) {
+  let cursor = position.cursor;
+  let frontier = position.frontierStateSeq;
+  let epoch = position.sourceEpoch;
+  for (;;) {
+    const page = await downloadAndApplyDesktopSyncGroupPack({
+      after: cursor, peer, createHeaders: createDesktopSyncGroupSignedHeaders,
+      ...(frontier === undefined ? {} : { frontierStateSeq: frontier }),
+      ...(epoch ? { sourceEpoch: epoch } : {}),
+      ...(restoreId ? { restoreId } : {})
+    });
+    frontier ??= page.frontierStateSeq ?? page.cursor;
+    epoch ??= page.sourceEpoch;
+    if (page.frontierStateSeq !== undefined && page.frontierStateSeq !== frontier ||
+        page.sourceEpoch !== undefined && page.sourceEpoch !== epoch ||
+        page.cursor > frontier || page.cursor <= cursor && cursor < frontier) {
+      throw new Error('sync_pack_round_changed');
+    }
+    notifyWorkspaceSyncApplied(page.event);
+    cursor = page.cursor;
+    if (cursor === frontier) break;
+    if (!epoch) throw new Error('sync_pack_source_epoch_missing');
   }
+  return { cursor };
 }
 
-function requestAndApply(peer: DesktopSyncGroupPeer, after: number, restoreId?: string) {
-  return downloadAndApplyDesktopSyncGroupPack({
-    after, peer, createHeaders: createDesktopSyncGroupSignedHeaders,
-    ...(restoreId ? { restoreId } : {})
-  });
-}
-
-function requiresCursorReenumeration(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  if (['sync_pack_cursor_not_contiguous', 'sync_pack_provider_frontier_rollback']
-    .some((code) => error.message.includes(code))) return true;
-  return requiresCursorReenumeration(error.cause);
-}
-
-function loadReceiveCursor(peerAuthorizationId: string) {
-  const value = getPeerCursor(openDatabaseConnection().driver, peerAuthorizationId, 'state');
-  const cursor = Number.parseInt(value ?? '0', 10);
-  return Number.isSafeInteger(cursor) && cursor >= 0 ? cursor : 0;
+function loadReceivePosition(peerAuthorizationId: string, restoreId?: string) {
+  const progress = openDatabaseConnection().driver.queryOne<{
+    completed: number; cursor_state_seq: number; frontier_state_seq: number;
+    restore_id: string | null; source_epoch: string
+  }>(
+    `SELECT p.completed, p.cursor_state_seq, p.frontier_state_seq, p.restore_id, p.source_epoch
+     FROM sync_pack_receive_progress p
+     JOIN sync_group_local_state local ON local.group_id = p.group_id
+     WHERE local.singleton_id = 1 AND local.state = 'active' AND p.peer_id = ?`,
+    [peerAuthorizationId]
+  );
+  if (progress) {
+    if (!Number.isSafeInteger(progress.cursor_state_seq) || progress.cursor_state_seq < 0 ||
+        !Number.isSafeInteger(progress.frontier_state_seq) ||
+        progress.frontier_state_seq < progress.cursor_state_seq || !progress.source_epoch) {
+      throw new Error('sync_pack_receive_progress_invalid');
+    }
+    if (restoreId && progress.restore_id !== restoreId) {
+      if (progress.restore_id && !progress.completed) throw new Error('sync_group_restore_event_changed');
+      return { cursor: 0 };
+    }
+    if (!restoreId && progress.restore_id && !progress.completed) {
+      throw new Error('sync_group_restore_in_progress');
+    }
+    return { cursor: progress.cursor_state_seq,
+      ...(!progress.completed || restoreId ? { frontierStateSeq: progress.frontier_state_seq,
+        sourceEpoch: progress.source_epoch } : {}) };
+  }
+  if (restoreId) return { cursor: 0 };
+  const legacyCursor = Number(getPeerCursor(openDatabaseConnection().driver, peerAuthorizationId, 'state') ?? 0);
+  if (!Number.isSafeInteger(legacyCursor) || legacyCursor < 0) {
+    throw new Error('sync_pack_legacy_cursor_invalid');
+  }
+  // Peer compatibility requires bounded pages. Keep the old cursor until a page commits.
+  return { cursor: 0 };
 }
 
 function saveReceiveCursor(peerAuthorizationId: string, cursor: number) {

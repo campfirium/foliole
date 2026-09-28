@@ -134,6 +134,23 @@ it('advances state sequence monotonically and queries by cursor', () => {
   expect(rows.at(-1)).toEqual(expect.objectContaining({ objectId: 'att-1', objectType: 'attachment' }));
 });
 
+it('does not reuse a committed state position after its row is deleted', () => {
+  const driver = openInitializedDriver();
+  for (const objectId of ['first', 'removed']) {
+    upsertSyncObjectState(driver, {
+      objectType: 'setting', objectId, contentHash: objectId,
+      lastModifiedByHostName: 'desktop-1', updatedAt: '2026-09-27T00:00:00.000Z'
+    });
+  }
+  driver.execute("DELETE FROM sync_object_state WHERE object_type = 'setting' AND object_id = 'removed'");
+  upsertSyncObjectState(driver, {
+    objectType: 'setting', objectId: 'later', contentHash: 'later',
+    lastModifiedByHostName: 'desktop-1', updatedAt: '2026-09-27T00:00:01.000Z'
+  });
+
+  expect(selectSyncStateChangesSince(driver, 2, 10).map((row) => row.objectId)).toEqual(['later']);
+});
+
 it('stores independent peer cursors per stream', () => {
   const driver = openInitializedDriver();
 

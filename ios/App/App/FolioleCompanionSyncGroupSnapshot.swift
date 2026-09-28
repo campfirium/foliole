@@ -11,21 +11,35 @@ final class FolioleCompanionSyncGroupSnapshot {
     func refresh<T>(_ peer: String, work: (URL) throws -> T) throws -> T {
         try lock.withLock {
             try ensureOpen()
-            let next = FileManager.default.temporaryDirectory
-                .appendingPathComponent("cache/foliole-provider-source-\(UUID().uuidString).db")
-            try FileManager.default.createDirectory(at: next.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try? FileManager.default.removeItem(at: next)
-            let result = try bridge.request("create_snapshot", ["target_path": next.path])
-            guard result["snapshot_path"] as? String == next.path,
-                  FileManager.default.fileExists(atPath: next.path) else { throw Self.invalid("sync_group_snapshot_missing") }
-            do {
-                let value = try work(next)
-                if let previous = snapshots.updateValue(next, forKey: peer) { try? FileManager.default.removeItem(at: previous) }
-                return value
-            } catch {
-                try? FileManager.default.removeItem(at: next)
-                throw error
+            return try buildAndStore(peer, work: work)
+        }
+    }
+
+    func continueOrRefresh<T>(_ peer: String, work: (URL) throws -> T) throws -> T {
+        try lock.withLock {
+            try ensureOpen()
+            if let snapshot = snapshots[peer], FileManager.default.fileExists(atPath: snapshot.path) {
+                return try work(snapshot)
             }
+            return try buildAndStore(peer, work: work)
+        }
+    }
+
+    private func buildAndStore<T>(_ peer: String, work: (URL) throws -> T) throws -> T {
+        let next = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cache/foliole-provider-source-\(UUID().uuidString).db")
+        try FileManager.default.createDirectory(at: next.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? FileManager.default.removeItem(at: next)
+        let result = try bridge.request("create_snapshot", ["target_path": next.path])
+        guard result["snapshot_path"] as? String == next.path,
+              FileManager.default.fileExists(atPath: next.path) else { throw Self.invalid("sync_group_snapshot_missing") }
+        do {
+            let value = try work(next)
+            if let previous = snapshots.updateValue(next, forKey: peer) { try? FileManager.default.removeItem(at: previous) }
+            return value
+        } catch {
+            try? FileManager.default.removeItem(at: next)
+            throw error
         }
     }
 

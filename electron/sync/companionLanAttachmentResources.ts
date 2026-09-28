@@ -6,10 +6,13 @@ import { loadAttachmentResourceDescription } from '../database/attachmentResourc
 import { recordMissingResourceGetForAcceptance } from './acceptanceResourceGet404.js';
 
 export const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
+export const ATTACHMENT_RANGE_BYTES = 1024 * 1024;
 
 export type CompanionAttachmentResourceResult =
   | {
       contentLength: number;
+      byteOffset?: number;
+      totalBytes?: number;
       filePath: string;
       mimeType: string | null;
       status: 'ready';
@@ -31,7 +34,8 @@ function errorResult(
 
 export async function loadCompanionAttachmentResource(
   attachmentId: string | null,
-  contentHash: string | null
+  contentHash: string | null,
+  range?: { offset: string | null; length: string | null }
 ): Promise<CompanionAttachmentResourceResult> {
   const normalizedAttachmentId = attachmentId?.trim() ?? '';
   const normalizedContentHash = contentHash?.trim() ?? '';
@@ -52,5 +56,21 @@ export async function loadCompanionAttachmentResource(
   }
 
   const stats = await fs.stat(resolved.filePath);
+  if (range) {
+    const { offset, length } = range;
+    if (offset === null || length === null || !/^\d+$/u.test(offset) || !/^\d+$/u.test(length)) {
+      return errorResult('invalid_request', 400);
+    }
+    const start = Number(offset), bytes = Number(length);
+    if (!Number.isSafeInteger(start) || start % ATTACHMENT_RANGE_BYTES !== 0 ||
+        (start >= stats.size && !(start === 0 && stats.size === 0)) ||
+        !Number.isSafeInteger(bytes) || bytes < 1 || bytes > ATTACHMENT_RANGE_BYTES ||
+        (bytes !== ATTACHMENT_RANGE_BYTES && bytes !== stats.size - start)) {
+      return errorResult('invalid_request', 400);
+    }
+    return { byteOffset: start, contentLength: Math.min(bytes, stats.size - start),
+      totalBytes: stats.size, filePath: resolved.filePath,
+      mimeType: resolved.mimeType, status: 'ready' };
+  }
   return { contentLength: stats.size, filePath: resolved.filePath, mimeType: resolved.mimeType, status: 'ready' };
 }

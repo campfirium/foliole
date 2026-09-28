@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import type { NodeSyncHashInput } from './nodeSyncHash.js';
 import { computeNodeSyncHash } from './nodeSyncHash.js';
+import { NEXT_SYNC_STATE_SEQ_SQL } from './syncStateSequenceSchemaStatements.js';
 
 export type SyncObjectType =
   | 'attachment'
@@ -91,7 +92,7 @@ export function upsertSyncObjectState(driver: DatabaseDriver, input: SyncObjectS
        updated_at,
        deleted_at,
        sync_dirty
-     ) VALUES (?, ?, COALESCE((SELECT MAX(state_seq) + 1 FROM sync_object_state), 1), ?, ?, ?, ?, ?, ?)
+     ) VALUES (?, ?, ${NEXT_SYNC_STATE_SEQ_SQL}, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(object_type, object_id) DO UPDATE SET
        state_seq = excluded.state_seq,
        current_version_id = excluded.current_version_id,
