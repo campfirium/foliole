@@ -9,6 +9,8 @@ export const EN_DESKTOP_PDF_TRANSLATIONS = {
   'desktop.pdf.search.clear': 'Clear search',
   'desktop.pdf.pageProgress': 'PDF page progress',
   'desktop.pdf.readerPanel': 'PDF reader panel',
+  'desktop.pdf.export.action': 'Export PDF…',
+  'desktop.pdf.export.failed': 'Could not export this PDF.',
   'desktop.pdf.previewUnavailable': 'PDF preview unavailable',
   'desktop.pdf.retry': 'Retry',
   'desktop.pdf.loading.progress': 'PDF reader progress',

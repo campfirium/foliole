@@ -15,6 +15,7 @@ import type {
   NativeCopyAttachmentImageResult,
   NativeCopyDiagnosticReportResult,
   NativeExportAttachmentImageResult,
+  NativeExportNodePdfResult,
   NativeExportCurrentArticleMirrorResult,
   NativeLibraryPaths,
   NativeMirrorAttachmentLinkRebuildResult,
@@ -136,6 +137,10 @@ export type NativeUtilityCommandMap = {
       attachment_id: string;
     };
     result: NativeExportAttachmentImageResult;
+  };
+  [NATIVE_COMMANDS.exportNodePdf]: {
+    args: { node_id: string };
+    result: NativeExportNodePdfResult;
   };
   [NATIVE_COMMANDS.exportCurrentArticleMirror]: {
     args: {

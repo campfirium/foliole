@@ -203,6 +203,7 @@ function buildNodeListContextMenuProps(
     ...buildNodeListActionHandlers(props, menuState),
     onRenameNode: () => (requestNodeRename(menuState.primaryTargetId), props.contextMenu.closeContextMenu()),
     readwiseOriginalEpubTargetId: menuState.showNodeImportActions ? menuState.primaryTargetId : null,
+    pdfExportTargetId: menuState.showNodeImportActions && menuState.contextTargets.length === 1 ? menuState.primaryTargetId : null,
     onRestoreNode: () => (
       menuState.contextTargets.forEach((id) => props.restoreNode(id)),
       props.contextMenu.closeContextMenu()

@@ -84,6 +84,7 @@ export const NATIVE_COMMANDS = {
   resolveAttachmentResource: 'resolve_attachment_resource',
   copyAttachmentImageToClipboard: 'copy_attachment_image_to_clipboard',
   exportAttachmentImage: 'export_attachment_image',
+  exportNodePdf: 'export_node_pdf',
   copyDiagnosticReport: 'copy_diagnostic_report',
   resolveAppPaths: 'resolve_app_paths',
   loadLibraryPathSettings: 'load_library_path_settings',

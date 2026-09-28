@@ -86,6 +86,16 @@ export type NativeExportAttachmentImageResult =
       path: null;
     };
 
+export type NativeExportNodePdfResult =
+  | {
+      status: 'saved';
+      path: string;
+    }
+  | {
+      status: 'cancelled' | 'not_found' | 'missing_file' | 'save_failed';
+      path: null;
+    };
+
 export type NativeExportCurrentArticleMirrorResult =
   | {
       status: 'saved';

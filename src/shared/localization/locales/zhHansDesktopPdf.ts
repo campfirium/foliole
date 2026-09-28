@@ -11,6 +11,8 @@ export const ZH_HANS_DESKTOP_PDF_TRANSLATIONS: Partial<Record<TranslationKey, st
   'desktop.pdf.search.clear': '清除搜索',
   'desktop.pdf.pageProgress': 'PDF 页面进度',
   'desktop.pdf.readerPanel': 'PDF 阅读器面板',
+  'desktop.pdf.export.action': '导出 PDF…',
+  'desktop.pdf.export.failed': '无法导出这个 PDF。',
   'desktop.pdf.previewUnavailable': 'PDF 预览不可用',
   'desktop.pdf.retry': '重试',
   'desktop.pdf.loading.progress': 'PDF 阅读器进度',

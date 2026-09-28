@@ -10,6 +10,7 @@ export interface NodeListContextMenuProps {
   left: number;
   onClose: () => void;
   readwiseOriginalEpubTargetId?: string | null;
+  pdfExportTargetId?: string | null;
   onCreateCommand: (commandId: string) => void;
   onCreateTopicFromClipboard?: () => void;
   onAddToVirtualFolder?: () => void;
