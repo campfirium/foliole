@@ -27,7 +27,8 @@ export function registerAttachmentProtocol() {
         'cache-control': 'public, max-age=31536000, immutable'
     };
     if (range) headers['content-range'] = `bytes ${range.start}-${range.end}/${resolved.bytes.length}`;
-    return new Response(Uint8Array.from(body), {
+    const responseBytes = new Uint8Array(body.buffer as ArrayBuffer, body.byteOffset, body.byteLength);
+    return new Response(responseBytes, {
       headers,
       status: range ? 206 : 200
     });

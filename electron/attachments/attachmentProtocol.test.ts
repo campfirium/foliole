@@ -56,7 +56,7 @@ it('serves attachment resources with mime and cache headers but no page CSP', as
   expect(response.headers.get('content-type')).toBe('image/png');
   expect(response.headers.get('content-security-policy')).toBeNull();
   expect(response.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');
-  await expect(response.arrayBuffer()).resolves.toMatchObject(Buffer.from('image-bytes').buffer);
+  expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array(bytes));
 });
 
 it('serves PDF byte ranges without re-querying attachment metadata', async () => {
@@ -77,6 +77,25 @@ it('serves PDF byte ranges without re-querying attachment metadata', async () =>
   expect(response.headers.get('content-range')).toBe('bytes 2-5/10');
   expect(response.headers.get('content-type')).toBe('image/png');
   await expect(response.text()).resolves.toBe('2345');
+});
+
+it.each([
+  [null, '0123456789'],
+  ['bytes=2-5', '2345']
+])('preserves exact response bytes with a pooled buffer and range %s', async (range, expected) => {
+  const backing = Buffer.from('prefix0123456789suffix');
+  resolveAttachmentFile.mockReturnValue({
+    status: 'ready', bytes: backing.subarray(6, 16),
+    filePath: '/tmp/attachment-hash', mimeType: 'application/pdf'
+  });
+  registerAttachmentProtocol();
+  const handler = handle.mock.calls[0]?.[1];
+  const headers = new Headers();
+  if (range) headers.set('range', range);
+  const response = await handler({ headers, url: buildAttachmentAssetUrl(description) });
+  backing.fill(0);
+  expect(response.headers.get('content-length')).toBe(String(expected!.length));
+  expect(await response.text()).toBe(expected);
 });
 
 it('returns not found when the attachment file cannot be resolved', async () => {
