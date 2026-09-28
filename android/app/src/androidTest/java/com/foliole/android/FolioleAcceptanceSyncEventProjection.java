@@ -74,12 +74,29 @@ final class FolioleAcceptanceSyncEventProjection {
             JSONObject result = new JSONObject().put("application_id", context.getPackageName())
                 .put("group_id", groupId).put("diagnostic_events", diagnosticEvents)
                 .put("events", events).put("source_runs", sourceRuns)
+                .put("dirty_objects", dirtyObjects(database))
                 .put("syncEventsProjected", true);
             if ("com.foliole.android.t250dense".equals(context.getPackageName())) {
                 result.put("dense_facts", denseFacts(database));
             }
             return result;
         }
+    }
+
+    private static JSONArray dirtyObjects(SQLiteDatabase database) throws Exception {
+        JSONArray objects = new JSONArray();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT object_type, object_id, state_seq FROM sync_object_state " +
+                "WHERE sync_dirty = 1 AND object_type <> 'view_state' " +
+                "ORDER BY state_seq DESC LIMIT 20", null
+        )) {
+            while (cursor.moveToNext()) {
+                objects.put(new JSONObject().put("object_type", cursor.getString(0))
+                    .put("object_id", cursor.getString(1))
+                    .put("state_seq", cursor.getLong(2)));
+            }
+        }
+        return objects;
     }
 
     private static JSONObject denseFacts(SQLiteDatabase database) throws Exception {

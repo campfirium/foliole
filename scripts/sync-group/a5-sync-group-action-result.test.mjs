@@ -54,6 +54,20 @@ it('keeps a missing matching run distinct from an explicit product failure', asy
 it('accepts a public Sync Now action only when its matching run completes', async () => {
   await expect(runMacosA5SyncGroupMaintenance(args({
     actionStarted: true, actionRunId: 'run-1', errorText: '',
-    terminalResult: 'completed', terminalRunId: 'run-1'
+    terminalResult: 'completed', terminalRunId: 'run-1',
+    projectedStatus: 'completed', projectedResult: 'completed'
   }))).resolves.toMatchObject({ manifestPath: expect.any(String) });
+});
+
+it('rejects a UI completion when the persisted run still waits for a device change', async () => {
+  await expect(runMacosA5SyncGroupMaintenance(args({
+    actionStarted: true, actionRunId: 'run-1', errorText: '',
+    terminalResult: 'completed', terminalRunId: 'run-1',
+    projectedStatus: 'skipped', projectedResult: 'waiting',
+    dirtyObjects: [{ object_type: 'parent_child_order', object_id: 'parent', state_seq: 9 }]
+  }))).rejects.toMatchObject({
+    failureAxis: 'proof', missingFact: 'projectedRunCompleted',
+    projectedStatus: 'skipped', projectedResult: 'waiting',
+    dirtyObjects: [{ object_type: 'parent_child_order', object_id: 'parent', state_seq: 9 }]
+  });
 });

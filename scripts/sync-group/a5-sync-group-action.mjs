@@ -59,6 +59,14 @@ function validateProductResult(receipt, expected, evidenceRef) {
       terminalResult: receipt.terminalResult
     });
   }
+  if (receipt.projectedStatus !== 'completed' || receipt.projectedResult !== 'completed') {
+    throw proofFailure('Public Sync Now run did not finish all stages.', {
+      evidenceRef, missingFact: 'projectedRunCompleted',
+      projectedResult: receipt.projectedResult,
+      projectedStatus: receipt.projectedStatus,
+      dirtyObjects: receipt.dirtyObjects ?? []
+    });
+  }
 }
 
 export async function runMacosA5SyncGroupMaintenance({

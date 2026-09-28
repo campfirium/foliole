@@ -27,12 +27,18 @@ final class FolioleCompanionSyncNowAction {
         );
         JSONObject terminal = waitUntilTerminal(instrumentation, webView, TERMINAL_TIMEOUT_MS);
         requireCompletedTerminal(instrumentation, terminal);
-        waitUntilProjected(instrumentation, terminal.getString("terminalRunId"));
+        JSONObject projection = waitUntilProjected(
+            instrumentation, terminal.getString("terminalRunId")
+        );
+        JSONObject projectedRun = projection.getJSONObject("run");
         return receipt.put("syncRequested", true)
             .put("actionStarted", true)
             .put("actionRunId", terminal.getString("runId"))
             .put("terminalRunId", terminal.getString("terminalRunId"))
             .put("terminalResult", terminal.getString("terminalResult"))
+            .put("projectedStatus", projectedRun.getString("status"))
+            .put("projectedResult", projectedRun.optString("result"))
+            .put("dirtyObjects", projection.getJSONArray("dirty_objects"))
             .put("errorText", terminal.optString("errorText"));
     }
 
@@ -132,7 +138,7 @@ final class FolioleCompanionSyncNowAction {
         throw new IllegalStateException("Timed out waiting for Sync Now terminal: " + latest);
     }
 
-    private static void waitUntilProjected(
+    private static JSONObject waitUntilProjected(
         Instrumentation instrumentation, String runId
     ) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(30_000);
@@ -145,7 +151,12 @@ final class FolioleCompanionSyncNowAction {
                 );
                 JSONArray events = latestProjection.getJSONArray("events");
                 for (int index = 0; index < events.length(); index += 1) {
-                    if (runId.equals(events.getJSONObject(index).optString("run_id"))) return;
+                    JSONObject event = events.getJSONObject(index);
+                    if (runId.equals(event.optString("run_id"))) {
+                        return new JSONObject().put("run", event).put(
+                            "dirty_objects", latestProjection.getJSONArray("dirty_objects")
+                        );
+                    }
                 }
             } catch (SQLiteReadOnlyDatabaseException error) {
                 lastReadConflict = error;

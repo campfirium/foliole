@@ -98,7 +98,8 @@ it('binds ordinary sync to the visible public Sync Now product action', () => {
   expect(action).toContain('requireCompletedTerminal(instrumentation, terminal)');
   expect(action).toContain('"Sync Now failed before projection: " + terminal');
   expect(action).toContain('diagnoseDiscovery(instrumentation)');
-  expect(action).toContain('waitUntilProjected(instrumentation, terminal.getString("terminalRunId"))');
+  expect(action).toContain('JSONObject projection = waitUntilProjected(');
+  expect(action).toContain('terminal.getString("terminalRunId")');
   expect(action).toContain('FolioleAcceptanceSyncEventProjection.read(');
   expect(action).toContain('catch (SQLiteReadOnlyDatabaseException error)');
   expect(action).toContain('lastReadConflict');
