@@ -3,6 +3,7 @@ import {
   prepareReadwiseApiDocuments,
   type PreparedReadwiseApiDocument
 } from '../../lib/core/readwise/readwiseApiImport.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { prepareReadwiseApiEpubCover } from './readwiseApiEpubCover.js';
 import { prepareReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
@@ -39,7 +40,9 @@ export async function prepareReadwiseSourceResync(
   }
   const document = {
     ...prepared,
-    annotations: mergeRetainedReadwiseAnnotations(target, prepared.annotations)
+    annotations: await runWithDatabaseConnectionOwner(() => (
+      mergeRetainedReadwiseAnnotations(target, prepared.annotations)
+    ))
   };
   if (document.category !== 'epub') return { cover: null, document, images: null };
   const [cover, images] = await Promise.all([

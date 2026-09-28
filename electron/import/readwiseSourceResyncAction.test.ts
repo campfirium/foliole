@@ -7,9 +7,15 @@ const mocks = vi.hoisted(() => ({
   commit: vi.fn(),
   loadTarget: vi.fn(),
   prepare: vi.fn(),
-  runtimeStatus: vi.fn()
+  runtimeStatus: vi.fn(),
+  ownerActive: false,
+  owner: vi.fn(async (execute: () => unknown) => {
+    mocks.ownerActive = true;
+    try { return await execute(); } finally { mocks.ownerActive = false; }
+  })
 }));
 
+vi.mock('../database/connection.js', () => ({ runWithDatabaseConnectionOwner: mocks.owner }));
 vi.mock('./readwiseSourceResyncCommit.js', () => ({ commitReadwiseSourceResync: mocks.commit }));
 vi.mock('./readwiseSourceResyncPreparation.js', () => ({ prepareReadwiseSourceResync: mocks.prepare }));
 vi.mock('./readwiseSourceResyncTarget.js', () => ({
@@ -27,11 +33,19 @@ const target = {
 };
 
 beforeEach(() => {
-  Object.values(mocks).forEach((mock) => mock.mockReset());
+  Object.values(mocks).forEach((mock) => {
+    if (vi.isMockFunction(mock)) mock.mockClear();
+  });
+  mocks.ownerActive = false;
+  mocks.owner.mockImplementation(async (execute: () => unknown) => {
+    mocks.ownerActive = true;
+    try { return await execute(); } finally { mocks.ownerActive = false; }
+  });
   mocks.loadTarget.mockReturnValue(target);
   mocks.runtimeStatus.mockReturnValue('ready');
   mocks.capture.mockReturnValue('snapshot');
   mocks.prepare.mockResolvedValue({ document: { id: 'document' } });
+  mocks.commit.mockImplementation(() => undefined);
 });
 
 it('reports persisted source facts and runtime eligibility', () => {
@@ -49,6 +63,30 @@ it('requests and commits a fresh candidate on every completed execution', async 
   expect(mocks.prepare).toHaveBeenCalledTimes(2);
   expect(mocks.commit).toHaveBeenCalledTimes(2);
   expect(mocks.commit).toHaveBeenNthCalledWith(1, expect.objectContaining({ expectedSnapshot: 'snapshot', target }));
+});
+
+it('commits under the database owner after preparation completes', async () => {
+  mocks.commit.mockImplementation(() => {
+    if (!mocks.ownerActive) throw new Error('sqlite connection is owned by another asynchronous transaction');
+  });
+  await expect(resyncReadwiseSource('source')).resolves.toMatchObject({ status: 'completed' });
+  expect(mocks.commit).toHaveBeenCalledTimes(1);
+});
+
+it('waits for a busy database owner before reading the target', async () => {
+  let release!: () => void;
+  const busy = new Promise<void>((resolve) => { release = resolve; });
+  mocks.owner.mockImplementationOnce(async (execute: () => unknown) => {
+    await busy;
+    mocks.ownerActive = true;
+    try { return await execute(); } finally { mocks.ownerActive = false; }
+  });
+  const result = resyncReadwiseSource('source');
+  await Promise.resolve();
+  expect(mocks.loadTarget).not.toHaveBeenCalled();
+  expect(mocks.prepare).not.toHaveBeenCalled();
+  release();
+  await expect(result).resolves.toMatchObject({ status: 'completed' });
 });
 
 it('rejects a second request while the same source is being prepared', async () => {

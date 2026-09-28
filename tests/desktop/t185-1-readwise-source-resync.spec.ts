@@ -6,7 +6,11 @@ import type { ElectronApplication } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
-import { createT178ApiAcceptanceSession, type T178AcceptanceSession } from './harness/t178ApiAcceptanceSession';
+import {
+  createT178ApiAcceptanceSession,
+  seedCompletedReadwiseApiMode,
+  type T178AcceptanceSession
+} from './harness/t178ApiAcceptanceSession';
 
 const ARTIFACT_DIR = path.resolve('.tmp/artifacts/desktop-acceptance/t185-1');
 
@@ -63,16 +67,14 @@ async function seedReaderFixture(app: ElectronApplication) {
   });
 }
 
-async function connectAndCutover(session: T178AcceptanceSession) {
+async function connectAndSeedApiMode(session: T178AcceptanceSession) {
   const settings = await openSettingsCategory(session.firstWindow, 'ReadwiseReader');
   await settings.getByRole('radio', { name: /^(API mode|API 模式)$/ }).click();
-  const confirmation = session.firstWindow.getByRole('dialog', {
-    name: /^(Enable API mode|启用 API 模式)$/
-  });
-  await confirmation.getByRole('button', { name: /^(Enable and sync|启用并同步)$/ }).click();
+  const setup = session.firstWindow.getByRole('dialog', { name: /^(Set up API mode|设置 API 模式)$/ });
+  await setup.getByRole('button', { name: /^(Continue setup|继续设置)$/ }).click();
   await settings.getByRole('button', { name: /^(Connect Readwise|连接 Readwise)$/ }).click();
   await expect(settings.getByText(/^(Connected|已连接)$/)).toBeVisible();
-  await expect(settings.getByLabel(/^(Sync frequency|同步频率)$/)).toBeVisible();
+  await seedCompletedReadwiseApiMode(session.electronApp);
 }
 
 async function setRemoteBody(app: ElectronApplication, body: string) {
@@ -123,10 +125,12 @@ test('cancels safely and repeatedly resyncs one Reader source in place', async (
     await session.firstWindow.setViewportSize({ width: 1600, height: 1000 });
     await installFixture(session.electronApp);
     await expectWorkspaceShell(session.firstWindow);
-    await connectAndCutover(session);
+    await connectAndSeedApiMode(session);
     await session.firstWindow.locator('[role="presentation"][aria-label="Settings"], [role="presentation"][aria-label="设置"]')
       .click({ position: { x: 5, y: 5 } });
     await seedReaderFixture(session.electronApp);
+    await session.firstWindow.reload();
+    await expectWorkspaceShell(session.firstWindow);
     const before = await inspect(session.electronApp);
     expect(before?.body).toContain('Initial body');
     await setRemoteBody(session.electronApp, '<h1>Source</h1><p>Second body from Readwise.</p>');

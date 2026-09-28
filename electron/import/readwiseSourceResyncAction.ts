@@ -2,6 +2,7 @@ import type {
   NativeReadwiseSourceResyncActionState,
   NativeReadwiseSourceResyncResult
 } from '../../lib/platform/nativeReadwiseContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import {
@@ -29,16 +30,21 @@ export async function resyncReadwiseSource(
   nodeId: string,
   dependencies?: ReadwiseApiFetchDependencies
 ): Promise<NativeReadwiseSourceResyncResult> {
-  const target = loadReadwiseSourceResyncTarget(nodeId);
-  if (!target) return { node_id: nodeId, status: 'not_applicable' };
-  if (readReadwiseSourceResyncRuntimeStatus(target) !== 'ready' || !beginReadwiseSourceOperation(nodeId)) {
-    return { node_id: nodeId, status: 'source_inactive' };
-  }
+  const start = await runWithDatabaseConnectionOwner(() => {
+    const target = loadReadwiseSourceResyncTarget(nodeId);
+    if (!target) return { status: 'not_applicable' as const };
+    if (readReadwiseSourceResyncRuntimeStatus(target) !== 'ready' || !beginReadwiseSourceOperation(nodeId)) {
+      return { status: 'source_inactive' as const };
+    }
+    return { status: 'ready' as const, target, expectedSnapshot: captureReadwiseSourceResyncSnapshot(target) };
+  });
+  if (start.status !== 'ready') return { node_id: nodeId, status: start.status };
   try {
-    const expectedSnapshot = captureReadwiseSourceResyncSnapshot(target);
-    const candidate = await prepareReadwiseSourceResync(target, dependencies);
+    const candidate = await prepareReadwiseSourceResync(start.target, dependencies);
     const importedAt = new Date().toISOString();
-    commitReadwiseSourceResync({ candidate, expectedSnapshot, importedAt, target });
+    await runWithDatabaseConnectionOwner(() => commitReadwiseSourceResync({
+      candidate, expectedSnapshot: start.expectedSnapshot, importedAt, target: start.target
+    }));
     return { node_id: nodeId, status: 'completed' };
   } catch (error) {
     const errorCode = readErrorCode(error);
