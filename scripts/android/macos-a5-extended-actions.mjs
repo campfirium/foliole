@@ -72,15 +72,14 @@ export async function runMacosA5ClearAppDataEntry(args) {
   process.stdout.write(activation.output);
   const { runMacosA5PairSyncPreflight } = await import('./macos-a5-pair-sync-preflight.mjs');
   const readiness = runMacosA5PairSyncPreflight(args.paths);
-  if (readiness.nodeCount !== 0 || readiness.dirtyRecordCount !== 0
-    || readiness.pairingCredentialsPresent !== false) {
+  if (readiness.freshEmptyPairing !== true) {
     throw new Error('Fixed A5 did not establish an empty unpaired workspace after clear.');
   }
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-clear-app-data');
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const evidencePath = path.join(evidenceRoot, `${buildIdentity}.json`);
   fs.writeFileSync(evidencePath, `${JSON.stringify({ completedAt: new Date().toISOString(),
-    nodeCount: 0, pairingCredentialsPresent: false, participationActivated: true,
+    nodeCount: readiness.nodeCount, pairingCredentialsPresent: false, participationActivated: true,
     resultStatus: 'success', serial: args.serial
   }, null, 2)}\n`, 'utf8');
   console.log(`[macos-a5-dev] clear-app-data evidence=${evidencePath}`);

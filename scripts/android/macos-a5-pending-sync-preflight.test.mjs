@@ -82,3 +82,27 @@ it('routes a protected upgraded member without pairing credentials through repai
     protectedPendingSync: true
   });
 });
+
+it('accepts only the canonical empty Inbox after app data reset', () => {
+  const pairState = {
+    dirtyRecordCount: 0, nodeCount: 1, pairingCredentialsPresent: false,
+    pairingPeerAuthorizationFingerprint: null, pairingPeerConflict: false
+  };
+  const workspaceState = {
+    canonicalInbox: { active: true, kind: 'folder' },
+    counts: { content_blobs: 0, node_order: 0, nodes: 1 },
+    pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: false }
+  };
+  const run = (state, workspace) => vi.fn()
+    .mockReturnValueOnce(result('[android-data] pair-sync-recovery-readiness=', state))
+    .mockReturnValueOnce(result('[android-data] capture-annotation-readiness=', workspace, 77));
+  expect(runMacosA5PairSyncPreflight(
+    { adb: '/adb', buildRoot: '/repo' }, run(pairState, workspaceState)
+  )).toMatchObject({ freshEmptyPairing: true, existingPairing: false });
+  expect(() => runMacosA5PairSyncPreflight(
+    { adb: '/adb', buildRoot: '/repo' }, run(
+      { ...pairState, nodeCount: 2 },
+      { ...workspaceState, counts: { ...workspaceState.counts, nodes: 2 } }
+    )
+  )).toThrow('authorized pair-switch state');
+});

@@ -166,12 +166,15 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && pairState.pairingCredentialsRejected === true
     && pairState.pairingCredentialRejectionReason === null
     && authorizedPairing && rejectedEmptyWorkspace;
+  const freshWorkspaceNodes = pairState.nodeCount === workspaceState.counts?.nodes
+    && (pairState.nodeCount === 0 || (pairState.nodeCount === 1
+      && workspaceState.canonicalInbox?.active === true
+      && workspaceState.canonicalInbox?.kind === 'folder'));
   const freshEmptyPairing = pairing.status === 0 && pairState.dirtyRecordCount === 0
-    && pairState.nodeCount === 0
+    && freshWorkspaceNodes
     && pairState.pairingCredentialsPresent === false
     && pairState.pairingPeerAuthorizationFingerprint === null
     && pairState.pairingPeerConflict === false
-    && workspaceState.counts?.nodes === 0
     && workspaceState.counts?.content_blobs === 0
     && workspaceState.counts?.node_order === 0
     && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
@@ -195,6 +198,7 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
       ? pairState.syncGroupRemotePeerFingerprint
       : pairState.pairingPeerAuthorizationFingerprint,
     departedCredentialState,
+    freshEmptyPairing,
     joinedEmptyReauthorization,
     protectedPendingSync: protectedGroupPendingSync || protectedGroupCredentialRepair,
     requiresProductBootstrap: missingDatabaseBootstrap

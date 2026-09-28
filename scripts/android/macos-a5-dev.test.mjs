@@ -107,7 +107,7 @@ describe('macOS fixed A5 development entry', () => {
     expect(extended).toContain("['-s', args.serial, 'shell', 'pm', 'clear', APP_ID]");
     expect(extended).toContain("action: 'activate-participation'");
     expect(extended).toContain('installMain: false');
-    expect(extended).toContain('readiness.nodeCount !== 0');
+    expect(extended).toContain('readiness.freshEmptyPairing !== true');
     expect(generic).not.toContain("action: 'clear-app-data'");
     expect(source).not.toContain('process.argv[3]');
   });
