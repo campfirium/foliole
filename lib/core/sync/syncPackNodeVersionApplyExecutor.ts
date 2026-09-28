@@ -3,6 +3,7 @@ import type { SyncPackNodeApplyOptions } from './syncPackApplyStatements.js';
 import { restoreIncomingNodeMergeBases } from './syncPackNodeMergeBaseRestore.js';
 import {
   assertCurrentVersionAvailable,
+  includeLegacyVersionParents,
   validateStoredVersionDependencies
 } from './syncPackNodeVersionDependencyValidation.js';
 import {
@@ -13,7 +14,7 @@ import {
 } from './syncPackNodeVersions.js';
 
 const VERSION_BATCH_SIZE = 16;
-type VersionIdentity = Pick<SyncPackNodeVersionRow, 'version_id' | 'object_id'>;
+type VersionIdentity = Pick<SyncPackNodeVersionRow, 'version_id' | 'object_id' | 'parent_version_id'>;
 
 export async function applySyncPackNodeVersionsWithDbPort(
   port: DbPort,
@@ -21,7 +22,7 @@ export async function applySyncPackNodeVersionsWithDbPort(
 ) {
   const alias = quoteIdentifier(options.incomingAlias ?? 'inc');
   const incoming = (await port.query(
-    `SELECT version_id, object_id FROM ${alias}.node_sync_versions
+    `SELECT version_id, object_id, parent_version_id FROM ${alias}.node_sync_versions
      WHERE object_id NOT IN ('special-inbox', 'special-virtual-root')
        AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = object_id)`
   )).map(normalizeVersionIdentity);
@@ -32,8 +33,9 @@ export async function applySyncPackNodeVersionsWithDbPort(
      WHERE version.object_id NOT IN ('special-inbox', 'special-virtual-root')
        AND NOT EXISTS (SELECT 1 FROM main.node_sync_tombstones tomb WHERE tomb.node_id = version.object_id)`
   )).map(normalizeVersionParentRow);
-  await validateStoredVersionDependencies(port, incoming, parents);
-  const ordered = validateIncomingDag(incoming, parents);
+  const dependencies = includeLegacyVersionParents(incoming, parents);
+  await validateStoredVersionDependencies(port, incoming, dependencies);
+  const ordered = validateIncomingDag(incoming, dependencies);
   await assertIncomingCurrentPointers(port, alias, new Map(ordered.map((row) => [row.version_id, row])));
   await assertExistingVersionsMatch(port, alias);
   for (let offset = 0; offset < ordered.length; offset += VERSION_BATCH_SIZE) {
@@ -87,7 +89,8 @@ async function rehydrateCurrentVersionBodies(port: DbPort, alias: string) {
 function normalizeVersionIdentity(row: DbRow): VersionIdentity {
   return {
     version_id: requireString(row.version_id, 'version_id'),
-    object_id: requireString(row.object_id, 'object_id')
+    object_id: requireString(row.object_id, 'object_id'),
+    parent_version_id: requireNullableString(row.parent_version_id, 'parent_version_id')
   };
 }
 

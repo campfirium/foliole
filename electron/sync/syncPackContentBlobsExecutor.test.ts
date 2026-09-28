@@ -42,7 +42,7 @@ function createFixture() {
     hash TEXT PRIMARY KEY REFERENCES content_blobs(hash) ON DELETE CASCADE, data BLOB NOT NULL
   ); CREATE TABLE sync_object_state (
     object_type TEXT NOT NULL, object_id TEXT NOT NULL, content_hash TEXT NOT NULL,
-    updated_at TEXT NOT NULL, sync_dirty INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL, deleted_at TEXT, sync_dirty INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (object_type, object_id)
   ); ATTACH DATABASE ':memory:' AS incoming;`);
   for (const statement of PACK_SCHEMA) sqlite.exec(statement.replace(/^CREATE TABLE /u, 'CREATE TABLE incoming.'));

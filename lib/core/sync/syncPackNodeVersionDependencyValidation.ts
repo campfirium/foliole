@@ -3,7 +3,21 @@ import type { SyncPackNodeVersionParentRow } from './syncPackNodeVersions.js';
 
 interface VersionIdentity {
   object_id: string;
+  parent_version_id: string | null;
   version_id: string;
+}
+
+export function includeLegacyVersionParents(
+  incoming: VersionIdentity[],
+  parents: SyncPackNodeVersionParentRow[]
+) {
+  const explicit = new Set(parents.map((row) => row.version_id));
+  return [...parents, ...incoming.filter((row) => row.parent_version_id &&
+    !explicit.has(row.version_id)).map((row) => ({
+    version_id: row.version_id,
+    parent_version_id: row.parent_version_id!,
+    ordinal: 0
+  }))];
 }
 
 export async function validateStoredVersionDependencies(

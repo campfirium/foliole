@@ -29,6 +29,17 @@ it('rejects an omitted parent whose stored body has been reclaimed', async () =>
   }
 });
 
+it('checks a legacy parent pointer when no separate relation row exists', async () => {
+  const db = createFixture('{"content":null}');
+  try {
+    db.exec('DELETE FROM inc.node_sync_version_parents');
+    await expect(applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db)))
+      .rejects.toThrow('sync_pack_node_version_missing_parent:child');
+  } finally {
+    db.close();
+  }
+});
+
 it('rejects a conflicting parent relation for a known version', async () => {
   const db = createFixture('{"content":"parent body"}');
   try {
