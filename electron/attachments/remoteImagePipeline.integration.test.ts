@@ -84,7 +84,7 @@ it('shares one remote fetch across protocol renders and auto localization', asyn
   const handler = handle.mock.calls[0]?.[1];
   const url = buildRemoteImageRenderUrl({
     nodeId: 'node-1',
-    persist: true,
+    persist: false,
     sourceUrl: 'https://example.com/cover.png'
   });
 

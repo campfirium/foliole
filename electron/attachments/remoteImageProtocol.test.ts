@@ -90,7 +90,7 @@ it('uses the minimal normalized source context carried by the render URL', async
   expect(response.status).toBe(200);
 });
 
-it('persists the image when the render URL requests node-backed localization', async () => {
+it('returns the remote image without waiting for attachment persistence', async () => {
   fetchRemoteImageResource.mockResolvedValue({
     status: 'ready',
     resource: {
@@ -98,7 +98,7 @@ it('persists the image when the render URL requests node-backed localization', a
       mimeType: 'image/png'
     }
   });
-  importRemoteImageAttachment.mockResolvedValue({ status: 'imported', attachment_id: 'hash-1' });
+  importRemoteImageAttachment.mockImplementation(() => new Promise(() => undefined));
 
   registerRemoteImageProtocol();
   const handler = handle.mock.calls[0]?.[1];
@@ -110,15 +110,13 @@ it('persists the image when the render URL requests node-backed localization', a
     })
   });
 
-  expect(importRemoteImageAttachment).toHaveBeenCalledWith({
-    nodeId: 'node-1',
-    sourceOrigin: null,
-    sourceUrl: 'https://example.com/cover.png'
-  });
+  expect(importRemoteImageAttachment).not.toHaveBeenCalled();
   expect(response.status).toBe(200);
+  await new Promise(setImmediate);
+  expect(importRemoteImageAttachment).toHaveBeenCalledOnce();
 });
 
-it('keeps rendering the remote image when node-backed localization fails', async () => {
+it('keeps remote rendering independent of a failed attachment import', async () => {
   fetchRemoteImageResource.mockResolvedValue({
     status: 'ready',
     resource: {
@@ -138,13 +136,11 @@ it('keeps rendering the remote image when node-backed localization fails', async
     })
   });
 
-  expect(importRemoteImageAttachment).toHaveBeenCalledWith({
-    nodeId: 'node-1',
-    sourceOrigin: null,
-    sourceUrl: 'https://example.com/cover.png'
-  });
+  expect(importRemoteImageAttachment).not.toHaveBeenCalled();
   expect(response.status).toBe(200);
   expect(response.headers.get('content-type')).toBe('image/png');
+  await new Promise(setImmediate);
+  expect(importRemoteImageAttachment).toHaveBeenCalledOnce();
 });
 
 it('rejects persist requests without a node id', async () => {

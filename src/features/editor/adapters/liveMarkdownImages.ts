@@ -26,6 +26,7 @@ import {
   resolveRemoteRenderSourceContext
 } from './liveMarkdownRemoteRenderSource';
 import { createUnavailableImageStatus } from './liveMarkdownUnavailableImageStatus';
+import { reportRemoteImageDisplayed } from './remoteImageLocalizationEvents';
 
 export { disposeMarkdownImageWidgetDom } from './liveMarkdownImageDisposal';
 
@@ -89,6 +90,7 @@ function appendLoadingImageSurface(
       revealLoadedMarkdownImageSurface(surface);
       wrapper.replaceChildren(surface);
       finalizeLoadedMarkdownImageDisplay(wrapper, imageMatch, requestMeasure);
+      if (editorNodeId) reportRemoteImageDisplayed(surface, editorNodeId);
     },
     requestMeasure
   });

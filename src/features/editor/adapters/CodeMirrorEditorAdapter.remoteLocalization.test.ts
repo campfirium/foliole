@@ -18,15 +18,18 @@ vi.mock('../../../shared/platform/remoteImageLocalization', () => ({
 }));
 
 import { CodeMirrorEditorAdapter } from './CodeMirrorEditorAdapter';
+import { reportRemoteImageDisplayed } from './remoteImageLocalizationEvents';
 
 const IMAGE_HASH = 'a'.repeat(64);
 const IMAGE_URL = `asset://${IMAGE_HASH}.png`;
+let lastHost: HTMLElement;
 
 function getEditorView(adapter: CodeMirrorEditorAdapter) {
   return (adapter as unknown as { view: EditorView }).view;
 }
 
 async function waitForLocalization() {
+  reportRemoteImageDisplayed(lastHost, 'node-1');
   await vi.advanceTimersByTimeAsync(1_600);
   await Promise.resolve();
   await Promise.resolve();
@@ -35,6 +38,7 @@ async function waitForLocalization() {
 function createAdapter(onChange = vi.fn()) {
   const host = document.createElement('div');
   document.body.append(host);
+  lastHost = host;
   return {
     adapter: new CodeMirrorEditorAdapter(host, {
       initialContent: '',
@@ -69,6 +73,8 @@ it('rewrites remote markdown images by default after editor content changes', as
 
   adapter.setNodeId('node-1');
   adapter.replaceSelection('![Remote](https://example.com/cover.png)');
+  await vi.advanceTimersByTimeAsync(1_600);
+  expect(importRemoteImageAttachment).not.toHaveBeenCalled();
   await waitForLocalization();
 
   expect(adapter.getContent()).toBe(`![Remote](${IMAGE_URL})`);
@@ -76,6 +82,49 @@ it('rewrites remote markdown images by default after editor content changes', as
   expect(onChange).toHaveBeenLastCalledWith(`![Remote](${IMAGE_URL})`, { nodeId: 'node-1' });
   expect(window.confirm).not.toHaveBeenCalled();
 
+  adapter.destroy();
+});
+
+it('keeps the displayed remote image and editor responsive while saving is pending', async () => {
+  let completeImport!: (value: unknown) => void;
+  importRemoteImageAttachment.mockImplementation(() => new Promise((resolve) => { completeImport = resolve; }));
+  const { adapter } = createAdapter();
+  adapter.setNodeId('node-1');
+  adapter.setContent('![Remote](https://example.com/cover.png)');
+
+  await vi.advanceTimersByTimeAsync(1_600);
+  expect(importRemoteImageAttachment).not.toHaveBeenCalled();
+  reportRemoteImageDisplayed(lastHost, 'node-1');
+  await vi.advanceTimersByTimeAsync(100);
+  expect(importRemoteImageAttachment).toHaveBeenCalledOnce();
+  expect(adapter.getContent()).toBe('![Remote](https://example.com/cover.png)');
+  adapter.setSelection({ from: 3, to: 3 });
+  expect(adapter.getSelection()).toEqual({ from: 3, to: 3 });
+
+  completeImport({ status: 'imported', attachment_id: 'attachment-1', hash: IMAGE_HASH, mime_type: 'image/png', original_name: 'cover.png' });
+  await vi.advanceTimersByTimeAsync(1_600);
+  expect(adapter.getContent()).toContain(IMAGE_URL);
+  adapter.destroy();
+});
+
+it('updates only image ranges when several images are saved', async () => {
+  importRemoteImageAttachment.mockResolvedValue({
+    status: 'imported', attachment_id: 'attachment-1', hash: IMAGE_HASH,
+    mime_type: 'image/png', original_name: 'cover.png'
+  });
+  const { adapter } = createAdapter();
+  const original = 'Start ![One](https://example.com/one.png) middle ![Two](https://example.com/two.png) end';
+  adapter.setNodeId('node-1');
+  adapter.setContent(original);
+  const dispatch = vi.spyOn(getEditorView(adapter), 'dispatch');
+  await waitForLocalization();
+
+  const imageChanges = dispatch.mock.calls.map(([transaction]) => transaction?.changes)
+    .find((changes) => Array.isArray(changes) && changes.length === 2);
+  expect(imageChanges).toEqual([
+    { from: original.indexOf('![One]'), to: original.indexOf(' middle'), insert: `![One](${IMAGE_URL})` },
+    { from: original.indexOf('![Two]'), to: original.indexOf(' end'), insert: `![Two](${IMAGE_URL})` }
+  ]);
   adapter.destroy();
 });
 

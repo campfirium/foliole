@@ -111,7 +111,7 @@ describe('live markdown remote image rendering', () => {
     const status = host.querySelector('.cm-md-image-status[data-md-image-status="loading"]');
     expect(status?.textContent).toBe('');
     const src = await waitForRemoteImageSrc(host);
-    expect(src).toContain('persist=1');
+    expect(src).not.toContain('persist=1');
     expect(src).toContain('nodeId=node-1');
 
     getRemoteImage(host)?.dispatchEvent(new Event('load'));

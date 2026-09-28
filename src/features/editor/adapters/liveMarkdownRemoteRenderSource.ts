@@ -3,7 +3,6 @@ import {
   loadRemoteImageSourceContext,
   type RemoteImageSourceContextState
 } from '../../../shared/platform/remoteImageSourceRecovery';
-import { shouldAutoLocalizeRemoteImages } from '../model/remoteImageLocalizationSetting';
 
 const EMPTY_SOURCE_CONTEXT: RemoteImageSourceContextState = {
   imageHost: null,
@@ -24,7 +23,7 @@ export function buildRemoteRenderSource(
 ) {
   return buildRemoteImageRenderUrl({
     nodeId: editorNodeId,
-    persist: shouldAutoLocalizeRemoteImages() && Boolean(editorNodeId),
+    persist: false,
     retryKey,
     sourceOrigin: sourceContext.sourceOrigin,
     sourceProvenance: sourceContext.source,

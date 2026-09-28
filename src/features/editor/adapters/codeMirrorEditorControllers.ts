@@ -2,11 +2,12 @@ import { RemoteImageLocalizationController } from './codeMirrorEditorAdapterSupp
 import {
   EditorExternalChangeBuffer
 } from './editorExternalChangeBuffer';
+import type { LocalizedImageChange } from './localizeRemoteMarkdownImages';
 
 export const EDITOR_EXTERNAL_CHANGE_FLUSH_DELAY_MS = 1200;
 
 export function createCodeMirrorEditorControllers(args: {
-  applyLocalizedContent: (localized: string) => void;
+  applyLocalizedContent: (localized: string, contentSnapshot: string, changes?: LocalizedImageChange[]) => void;
   getContent: () => string;
   getNodeId: () => string | null;
   host: HTMLElement;
@@ -31,7 +32,7 @@ export function createCodeMirrorEditorControllers(args: {
 }
 
 export function createRemoteImageLocalizationController(args: {
-  applyLocalizedContent: (localized: string) => void;
+  applyLocalizedContent: (localized: string, contentSnapshot: string, changes?: LocalizedImageChange[]) => void;
   getContent: () => string;
   getNodeId: () => string | null;
 }) {

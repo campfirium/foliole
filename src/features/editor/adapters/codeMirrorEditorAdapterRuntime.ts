@@ -11,6 +11,7 @@ import { collectCodeMirrorTextHistoryEntries } from './codeMirrorTextHistory';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
 import type { EditorContentChangeMeta, EditorTextAnchorDecoration } from './EditorAdapter';
 import type { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
+import type { LocalizedImageChange } from './localizeRemoteMarkdownImages';
 
 interface CodeMirrorEditorAdapterRuntimeArgs {
   diffDecorationsCompartment: Compartment;
@@ -27,6 +28,7 @@ interface CodeMirrorEditorAdapterRuntimeArgs {
   onOpenNodeLink: ((title: string) => void) | null;
   onPreviewNodeLink: ((request: EditorNodeLinkPreviewRequest | null) => void) | null;
   onPastedAnchors: ((payload: { anchors: import('../model/anchorClipboardPayload').ClipboardAnchorRange[]; content: string; nodeId: string }) => void) | null;
+  onApplyLocalizedChanges: (changes: LocalizedImageChange[], contentSnapshot: string) => void;
   onSetContent: (content: string) => void;
   options: CodeMirrorEditorAdapterOptions;
   paragraphMarkerCompartment: Compartment;
@@ -38,8 +40,9 @@ interface CodeMirrorEditorAdapterRuntimeArgs {
 
 function createEditorControllers(args: CodeMirrorEditorAdapterRuntimeArgs) {
   const controllers = createCodeMirrorEditorControllers({
-    applyLocalizedContent: (localized) => {
-      args.onSetContent(localized);
+    applyLocalizedContent: (localized, contentSnapshot, changes) => {
+      if (changes?.length) args.onApplyLocalizedChanges(changes, contentSnapshot);
+      else args.onSetContent(localized);
       args.options.onDocumentInput?.({
         contentLength: localized.length,
         isComposing: false,

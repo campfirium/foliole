@@ -28,6 +28,7 @@ import { clampEditorPosition } from './codeMirrorEditorPosition';
 import { getEditorLineBlockHeight, setEditorScrollTop } from './codeMirrorEditorViewport';
 import type { HighlightRangePreview } from './codeMirrorHighlightRangePreview';
 import { reconfigureCodeMirrorLiveMarkdown } from './codeMirrorLiveMarkdownReconfigure';
+import { applyCodeMirrorLocalizedImageChanges } from './codeMirrorLocalizedImageChanges';
 import { applyParagraphMarkerState } from './codeMirrorParagraphMarkerState';
 import { resolvePositionClientRect } from './codeMirrorPositionClientRect';
 import {
@@ -107,6 +108,13 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       onOpenNodeLink: this.onOpenNodeLink,
       onPreviewNodeLink: this.onPreviewNodeLink,
       onPastedAnchors: this.onPastedAnchors,
+      onApplyLocalizedChanges: (changes, snapshot) => {
+        applyCodeMirrorLocalizedImageChanges({
+          changes, contentSnapshot: snapshot, view: this.view,
+          setApplyingExternalContent: (value) => { this.isApplyingExternalContent = value; }
+        });
+        this.remoteImageLocalization.schedule();
+      },
       onSetContent: (content) => this.setContent(content),
       options,
       paragraphMarkerCompartment: this.paragraphMarkerCompartment,

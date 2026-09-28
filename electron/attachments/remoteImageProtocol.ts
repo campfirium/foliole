@@ -45,18 +45,16 @@ export function registerRemoteImageProtocol() {
       return createRemoteImageErrorResponse(404, fetchResult.error.error_code);
     }
 
+    const response = createRemoteImageResponse(fetchResult.resource.bytes, fetchResult.resource.mimeType);
     if (parts.persist && parts.nodeId) {
-      try {
-        await importRemoteImageAttachment({
-          nodeId: parts.nodeId,
+      setImmediate(() => {
+        void importRemoteImageAttachment({
+          nodeId: parts.nodeId!,
           sourceOrigin: parts.sourceOrigin ?? null,
           sourceUrl: parts.sourceUrl
-        });
-      } catch {
-        // Rendering the already fetched remote image must not depend on attachment persistence.
-      }
+        }).catch(() => undefined);
+      });
     }
-
-    return createRemoteImageResponse(fetchResult.resource.bytes, fetchResult.resource.mimeType);
+    return response;
   });
 }

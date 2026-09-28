@@ -31,7 +31,8 @@ describe('localizeRemoteMarkdownImageOccurrence', () => {
       to: markdown.length
     })).resolves.toEqual({
       attachmentId: 'attachment-1',
-      content: `${first}\n![Second](${IMAGE_URL})`
+      content: `${first}\n![Second](${IMAGE_URL})`,
+      changes: [{ from: first.length + 1, to: markdown.length, insert: `![Second](${IMAGE_URL})` }]
     });
     expect(importRemoteImageAttachment).toHaveBeenCalledOnce();
     expect(importRemoteImageAttachment).toHaveBeenCalledWith('node-1', 'https://example.com/second.png');

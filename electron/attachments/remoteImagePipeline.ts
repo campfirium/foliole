@@ -216,7 +216,7 @@ export async function importRemoteImageAttachment(
   const importKey = `${normalizedNodeId}\u0000${fetchResult.resource.cacheKey}`;
   if (args.refresh) importByNodeAndCacheKey.delete(importKey);
   if (!importByNodeAndCacheKey.has(importKey)) {
-    const promise = runWithDatabaseConnectionOwner(async () => {
+    const promise = (async () => {
       const result = await importImageAttachmentBytes({
         bytes: fetchResult.resource.bytes,
         errorSource: fetchResult.resource.sourceUrl,
@@ -225,10 +225,10 @@ export async function importRemoteImageAttachment(
         originalName: fetchResult.resource.originalName
       });
       if (result.status === 'imported') {
-        registerNodeImageSources(normalizedNodeId, { [result.storage_key]: args.sourceUrl });
+        await runWithDatabaseConnectionOwner(() => registerNodeImageSources(normalizedNodeId, { [result.storage_key]: args.sourceUrl }));
       }
       return result;
-    });
+    })();
     importByNodeAndCacheKey.set(importKey, promise);
   }
   return importByNodeAndCacheKey.get(importKey)!;

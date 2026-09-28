@@ -10,9 +10,10 @@ import {
   findAttachmentRecordById
 } from '../database/attachments.js';
 import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
+import { runWithImageAttachmentHashOwner } from './imageAttachmentHashOwner.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { buildAttachmentStorageFileName } from './storagePath.js';
 
@@ -166,17 +167,26 @@ export async function importImageAttachmentBytes(
   if (!prepared) {
     return createErrorResult('unsupported_format', 'Only valid png, jpg, webp, and gif image bytes are supported.', input.errorSource);
   }
+  return runWithImageAttachmentHashOwner(prepared.hash, () => importPreparedImageAttachmentBytes(input, prepared));
+}
+
+async function importPreparedImageAttachmentBytes(
+  input: ImportImageAttachmentBytesInput,
+  prepared: NonNullable<ReturnType<typeof prepareCanonicalImageAttachment>>
+): Promise<NativeImportLocalImageAttachmentResult> {
   const normalizedNodeId = input.nodeId?.trim() || null;
   const normalizedOriginalName = normalizeImageFileName(input.originalName, prepared.mimeType);
 
-  if (normalizedNodeId && !ensureNodeExists(normalizedNodeId)) {
-    return createErrorResult('node_not_found', 'The target node does not exist.', input.errorSource);
-  }
-
-  const existing = findAttachmentRecordById(prepared.hash);
-  if (existing && (existing.mimeType !== prepared.mimeType || existing.sizeBytes !== prepared.sizeBytes)) {
-    return createErrorResult('storage_write_failed', 'The existing attachment metadata does not match its bytes.', input.errorSource);
-  }
+  const preflightError = await runWithDatabaseConnectionOwner(() => {
+    if (normalizedNodeId && !ensureNodeExists(normalizedNodeId)) {
+      return createErrorResult('node_not_found', 'The target node does not exist.', input.errorSource);
+    }
+    const existing = findAttachmentRecordById(prepared.hash);
+    return existing && (existing.mimeType !== prepared.mimeType || existing.sizeBytes !== prepared.sizeBytes)
+      ? createErrorResult('storage_write_failed', 'The existing attachment metadata does not match its bytes.', input.errorSource)
+      : null;
+  });
+  if (preflightError) return preflightError;
   const storagePath = resolveAttachmentStoragePath(prepared.hash, undefined, prepared.mimeType);
 
   let storedFile: 'created' | 'reused';
@@ -189,7 +199,7 @@ export async function importImageAttachmentBytes(
   let attachment: ReturnType<typeof createAttachmentRecordIfNeeded>['attachment'];
   let attachmentRecord: 'created' | 'reused';
   try {
-    openDatabaseConnection().driver.transaction(() => {
+    await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.transaction(() => {
       ({ attachment, attachmentRecord } = createAttachmentRecordIfNeeded(
         prepared.hash, normalizedOriginalName, prepared.mimeType, prepared.sizeBytes
       ));
@@ -197,7 +207,7 @@ export async function importImageAttachmentBytes(
       if (normalizedNodeId) {
         createNodeAttachmentLink({ nodeId: normalizedNodeId, attachmentId: attachment.id, role: IMAGE_ATTACHMENT_ROLE });
       }
-    });
+    }));
   } catch {
     if (storedFile === 'created') await fs.unlink(storagePath).catch(() => undefined);
     return createErrorResult('storage_write_failed', 'The image could not be stored by the app.', input.errorSource);

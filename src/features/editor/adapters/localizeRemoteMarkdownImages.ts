@@ -20,6 +20,12 @@ interface LocalizedRemoteImageImport {
   storage_key: string;
 }
 
+export interface LocalizedImageChange {
+  from: number;
+  to: number;
+  insert: string;
+}
+
 function toLocalizedRemoteImage(result: Awaited<ReturnType<typeof importRemoteImageAttachment>>) {
   const imported = result?.status === 'imported' ? result as LocalizedRemoteImageImport : null;
   return imported
@@ -60,6 +66,10 @@ function collectRemoteMarkdownImages(markdown: string) {
   return matches;
 }
 
+export function hasLocalizableMarkdownImageContent(markdown: string) {
+  return collectRemoteMarkdownImages(markdown).length > 0;
+}
+
 function buildLocalizedMarkdownImage(token: MarkdownImageToken, storageKey: string) {
   const target = token.rawTarget.replace(token.sourceUrl, buildAssetMarkdownUrl(storageKey));
   return token.raw.replace(token.rawTarget, target);
@@ -83,14 +93,15 @@ export async function localizeRemoteMarkdownImageOccurrence(
   if (!localized) return null;
   return {
     attachmentId: localized.attachmentId,
-    content: `${markdown.slice(0, token.from)}${buildLocalizedMarkdownImage(token, localized.storageKey)}${markdown.slice(token.to)}`
+    content: `${markdown.slice(0, token.from)}${buildLocalizedMarkdownImage(token, localized.storageKey)}${markdown.slice(token.to)}`,
+    changes: [{ from: token.from, to: token.to, insert: buildLocalizedMarkdownImage(token, localized.storageKey) }]
   };
 }
 
-export async function localizeRemoteMarkdownImages(nodeId: string, markdown: string) {
+export async function localizeRemoteMarkdownImagesWithChanges(nodeId: string, markdown: string) {
   const matches = collectRemoteMarkdownImages(markdown);
   if (matches.length === 0) {
-    return markdown;
+    return { content: markdown, changes: [] as LocalizedImageChange[] };
   }
 
   const resultByUrl = new Map<
@@ -105,6 +116,7 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
   >();
   let localized = '';
   let cursor = 0;
+  const changes: LocalizedImageChange[] = [];
 
   for (const match of matches) {
     if (!resultByUrl.has(match.sourceUrl)) {
@@ -113,8 +125,10 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
 
     const localization = resultByUrl.get(match.sourceUrl);
     if (localization) {
+      const replacement = buildLocalizedMarkdownImage(match, localization.storageKey);
       localized += markdown.slice(cursor, match.from);
-      localized += buildLocalizedMarkdownImage(match, localization.storageKey);
+      localized += replacement;
+      changes.push({ from: match.from, to: match.to, insert: replacement });
       cursor = match.to;
     } else {
       localized += markdown.slice(cursor, match.from);
@@ -124,5 +138,9 @@ export async function localizeRemoteMarkdownImages(nodeId: string, markdown: str
   }
 
   localized += markdown.slice(cursor);
-  return localized;
+  return { content: localized, changes };
+}
+
+export async function localizeRemoteMarkdownImages(nodeId: string, markdown: string) {
+  return (await localizeRemoteMarkdownImagesWithChanges(nodeId, markdown)).content;
 }

@@ -19,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { importImageAttachmentBytes, prepareCanonicalImageAttachment } from './importImageAttachmentBytes.js';
@@ -79,6 +79,40 @@ it('corrects misleading source hints and persists one canonical resource', async
     mimeType: 'image/jpeg',
     storageKey: `${contentHash}.jpg`
   });
+});
+
+it('keeps database reads available during file storage and serializes the same image', async () => {
+  const originalWriteFile = fs.writeFile.bind(fs);
+  let markWriting!: () => void;
+  let resumeWriting!: () => void;
+  const writing = new Promise<void>((resolve) => { markWriting = resolve; });
+  const held = new Promise<void>((resolve) => { resumeWriting = resolve; });
+  const write = vi.spyOn(fs, 'writeFile').mockImplementation(async (file, data, options) => {
+    markWriting();
+    await held;
+    return originalWriteFile(file, data, options);
+  });
+  const input = { bytes: jpeg, errorSource: 'image.jpeg', mimeType: 'image/jpeg', originalName: 'image.jpeg' };
+  try {
+    const first = importImageAttachmentBytes(input);
+    await writing;
+    const second = importImageAttachmentBytes(input);
+    let readFinished = false;
+    const read = runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.queryOne('SELECT 1 AS ready'))
+      .then(() => { readFinished = true; });
+    await new Promise(setImmediate);
+    expect(readFinished).toBe(true);
+    resumeWriting();
+    await read;
+    await expect(Promise.all([first, second])).resolves.toEqual([
+      expect.objectContaining({ status: 'imported' }),
+      expect.objectContaining({ status: 'imported' })
+    ]);
+    expect(write).toHaveBeenCalledOnce();
+  } finally {
+    resumeWriting();
+    write.mockRestore();
+  }
 });
 
 it('leaves no file or database rows when bytes are unsupported', async () => {
