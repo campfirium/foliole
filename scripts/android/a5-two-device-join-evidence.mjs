@@ -30,3 +30,28 @@ export function validateA5TwoDeviceJoin({ args, evidencePath, stdout }) {
     });
   }
 }
+
+export function readA5JoinReceipt(stdout) {
+  const encoded = stdout.match(/^INSTRUMENTATION_STATUS: folioleSyncGroupJoinReceipt=(.+)$/mu)?.[1];
+  if (!encoded) throw new Error('A5 join receipt is missing.');
+  const receipt = JSON.parse(encoded);
+  const run = receipt.initialRun;
+  if (!receipt.joined || !receipt.restarted || !run?.run_id
+      || run.trigger_reason !== 'initial' || !run.device_identity_key
+      || !run.occurred_at || !run.resourceProof) {
+    throw new Error('A5 initial run identity or pre-restart resource proof is missing.');
+  }
+  const completed = run.status === 'completed' && run.result === 'completed';
+  const partial = run.status === 'skipped' && run.result === 'partial';
+  if (!completed && !partial) throw new Error('A5 initial run terminal is unexpected.');
+  return receipt;
+}
+
+export function projectA5InitialRun(receipt, evidencePath) {
+  const run = receipt.initialRun;
+  return { projection: evidencePath, run: {
+    deviceIdentityKey: run.device_identity_key, occurredAt: run.occurred_at,
+    runId: run.run_id, result: run.result, status: run.status,
+    triggerReason: run.trigger_reason, resourceProof: run.resourceProof
+  } };
+}

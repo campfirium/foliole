@@ -133,6 +133,46 @@ it('rejects a receipt whose participating host build changed', () => {
   expect(() => validateTwoDeviceMatrix(receipts)).toThrow('windows builds differ');
 });
 
+function attributedPartialMatrix(root) {
+  const receipts = TWO_DEVICE_CELLS.map((cell, index) => receipt(root, cell, index));
+  const runs = receipts[2].runs;
+  runs.initial = { ...runs.initial, status: 'skipped', result: 'partial', resourceProof: {
+    nodeId: 'resource-fixture', recoveringHash: 'a'.repeat(64),
+    missingAttachmentHashes: ['a'.repeat(64)], clean: true, demanded: true,
+    structureComplete: true, bodyReady: true, availableReady: true, recoveringAbsent: true
+  } };
+  runs.recoveredAfterRestore = { ...runs.initial, resourceProof: undefined,
+    runId: 'resource-recovered', status: 'completed', result: 'completed',
+    triggerReason: 'automatic', restoredAt: '2026-08-29T00:01:00.000Z',
+    occurredAt: '2026-08-29T00:02:00.000Z' };
+  return receipts;
+}
+
+it('requires exact missing-resource attribution and a later completed recovery', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 't152-resource-recovery-'));
+  const receipts = attributedPartialMatrix(root);
+  expect(validateTwoDeviceMatrix(receipts)).toHaveLength(6);
+  for (const key of ['clean', 'demanded', 'structureComplete', 'bodyReady',
+    'availableReady', 'recoveringAbsent']) {
+    receipts[2].runs.initial.resourceProof[key] = false;
+    expect(() => validateTwoDeviceMatrix(receipts)).toThrow('initial run');
+    receipts[2].runs.initial.resourceProof[key] = true;
+  }
+  receipts[2].runs.initial.resourceProof.missingAttachmentHashes.push('b'.repeat(64));
+  expect(() => validateTwoDeviceMatrix(receipts)).toThrow('initial run');
+});
+
+it('rejects failed, foreign, absent or pre-restoration recovery runs', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 't152-resource-recovery-'));
+  for (const change of [null, { status: 'failed', result: 'failed' },
+    { deviceIdentityKey: 'another-device' }, { occurredAt: '2026-08-29T00:00:30.000Z' }]) {
+    const receipts = attributedPartialMatrix(root);
+    receipts[2].runs.recoveredAfterRestore = change === null ? undefined
+      : { ...receipts[2].runs.recoveredAfterRestore, ...change };
+    expect(() => validateTwoDeviceMatrix(receipts)).toThrow('initial run');
+  }
+});
+
 it('keeps the formal path free of external discovery and product containers', () => {
   const files = [
     'scripts/acceptance/t152-two-device-matrix-orchestrator.mjs',

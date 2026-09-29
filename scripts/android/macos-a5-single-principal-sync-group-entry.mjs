@@ -9,7 +9,8 @@ import { captureA5ActionRun, captureA5SyncRun } from './a5-sync-event-proof.mjs'
 import { observeA5JourneyFacts } from './a5-journey-facts-proof.mjs';
 import { buildA5TwoDeviceAcceptance } from './a5-two-device-build.mjs';
 import { writeMacosA5CellReceipt } from './a5-two-device-cell-receipt.mjs';
-import { validateA5TwoDeviceJoin } from './a5-two-device-join-evidence.mjs';
+import { projectA5InitialRun, readA5JoinReceipt,
+  validateA5TwoDeviceJoin } from './a5-two-device-join-evidence.mjs';
 import { openMacosSyncGroupDesktopSession } from './macos-sync-group-desktop-session.mjs';
 import {
   assertMacosAnchorReady, observeMacosAnchorAfterElection
@@ -78,6 +79,9 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'wm', 'dismiss-keyguard']);
     const result = await mechanics({ appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot, execute: args.execute, observeConcurrently: true,
+      instrumentationArgs: ['-e', 'resourceNodeId', resourceFixture.nodeId,
+        '-e', 'availableHash', resourceFixture.images[0].hash,
+        '-e', 'recoveringHash', resourceFixture.images[1].hash],
       expectedGroupId: providerOverview.sync_group.group_id,
       expectedGroupTag: providerOverview.sync_group.group_tag,
       observeWhileTransportOpen: (options) => observeAndAccept(session, options), paths: args.paths,
@@ -90,6 +94,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     });
     await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
+    const initialReceipt = readA5JoinReceipt(result.stdout);
+    const a5Initial = projectA5InitialRun(initialReceipt, result.evidencePath);
     if (iosResourceFailover) {
       await runMacosA5IosResourceFailover({ args, buildIdentity, env, evidenceRoot,
         fixture: resourceFixture, groupId: providerOverview.sync_group.group_id,
@@ -98,10 +104,11 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
         acceptIos: () => observeAndAccept(session) });
       return;
     }
-    await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
+    const resourceProbe = await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
       fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
-    const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
-      evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
+    const a5Recovered = await captureA5SyncRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'recovered-run') }, 'automatic',
+    [a5Initial.run], resourceProbe.restoredAt);
     const androidFact = await runMacosA5SyncGroupMaintenance({
       action: 'create-journey-fact', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'android-fact'), execute: args.execute,
@@ -174,7 +181,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       conflict,
       topology: { macosAfterRestart: macosRestart.topology,
         macosBeforeRestart: macosTopologyBeforeRestart },
-      runs: { a5: { automaticAfterRestart: a5AutomaticAfterRestart.run,
+      runs: { a5: { recoveredAfterRestore: { ...a5Recovered.run, restoredAt: resourceProbe.restoredAt },
+        automaticAfterRestart: a5AutomaticAfterRestart.run,
         automaticBeforeRestart: a5AutomaticBeforeRestart.run, initial: a5Initial.run,
         manualAfterRestart: a5ManualAfterRestart.run,
         manualBeforeRestart: a5ManualBeforeRestart.run }, macos: {
@@ -190,7 +198,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
         macos: { identity: providerOverview.sync_group.local_device_identity_key } },
       failureLocator: evidenceRoot, groupId: providerOverview.sync_group.group_id,
       groupTag: providerOverview.sync_group.group_tag,
-      rawRuns: { a5: { automaticAfterRestart: a5AutomaticAfterRestart.run,
+      rawRuns: { a5: { recoveredAfterRestore: { ...a5Recovered.run, restoredAt: resourceProbe.restoredAt },
+        automaticAfterRestart: a5AutomaticAfterRestart.run,
         automaticBeforeRestart: a5AutomaticBeforeRestart.run, initial: a5Initial.run,
         manualAfterRestart: a5ManualAfterRestart.run,
         manualBeforeRestart: a5ManualBeforeRestart.run }, macos: {

@@ -54,6 +54,8 @@ export function buildT152TwoDeviceProof({ automaticBeforeRestartHost, builds, bu
       automaticBeforeRestart: run(automaticBeforeRestartHost,
         'automaticBeforeRestart', devices, rawRuns),
       initial: run(joiner, 'initial', devices, rawRuns),
+      ...(rawRuns[joiner]?.recoveredAfterRestore ? { recoveredAfterRestore:
+        run(joiner, 'recoveredAfterRestore', devices, rawRuns) } : {}),
       manualAfterRestart, manualBeforeRestart
     }
   };

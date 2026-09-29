@@ -50,6 +50,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
                 instrumentation, webView, "companion-sync-discover", stageDeadline()
             );
             Log.i(LOG_TAG, "stage=discovery-requested");
+            long joinStartedAtMillis = System.currentTimeMillis();
             FolioleCompanionWebViewSemanticAdapter.clickUniqueVisibleMatchingAttribute(
                 instrumentation, webView, "companion-sync-group-join", "data-sync-group-id",
                 expectedGroupId, stageDeadline());
@@ -75,8 +76,13 @@ final class FolioleCompanionSyncGroupJoinScenario {
             FolioleCompanionSyncNowAction.waitUntilEnabled(
                 instrumentation, webView, TimeUnit.MINUTES.toMillis(2)
             );
-            FolioleCompanionSyncNowAction.waitUntilInitialCompleted(instrumentation);
-            Log.i(LOG_TAG, "stage=initial-sync-completed");
+            JSONObject initialRun = FolioleCompanionInitialSyncProof.waitForTerminal(
+                instrumentation, expectedGroupId, joinStartedAtMillis,
+                InstrumentationRegistry.getArguments().getString("resourceNodeId", ""),
+                InstrumentationRegistry.getArguments().getString("availableHash", ""),
+                InstrumentationRegistry.getArguments().getString("recoveringHash", "")
+            );
+            Log.i(LOG_TAG, "stage=initial-sync-terminal");
             instrumentation.runOnMainSync(activity::finish);
             activity = start(instrumentation);
             waitForFocus(activity, 30_000);
@@ -90,7 +96,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
             );
             JSONObject receipt = new JSONObject()
                 .put("ok", true).put("targetTestId", "sync-group-device-join")
-                .put("joined", true).put("restarted", true);
+                .put("joined", true).put("restarted", true).put("initialRun", initialRun);
             if (prejoinFact != null) {
                 receipt.put("prejoinFactText", prejoinFact.getString("factText"));
             }

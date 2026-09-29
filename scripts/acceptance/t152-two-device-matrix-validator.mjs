@@ -32,6 +32,26 @@ function deviceRunMap(runs) {
   return new Map(runs.map((run) => [run.deviceIdentityKey, run.runId]));
 }
 
+function verifiedInitialRun(runs, joinerIdentity) {
+  const initial = runs?.initial;
+  if (initial?.deviceIdentityKey !== joinerIdentity) return false;
+  if (completedRun(initial, 'initial')) return true;
+  const proof = initial.resourceProof;
+  const recovery = runs.recoveredAfterRestore;
+  return initial.triggerReason === 'initial' && initial.status === 'skipped'
+    && initial.result === 'partial' && Boolean(initial.runId)
+    && typeof proof?.nodeId === 'string' && proof.nodeId.length > 0
+    && /^[a-f0-9]{64}$/u.test(proof.recoveringHash ?? '')
+    && ['clean', 'demanded', 'structureComplete', 'bodyReady', 'availableReady',
+      'recoveringAbsent'].every((key) => proof[key] === true)
+    && proof.missingAttachmentHashes?.length === 1
+    && proof.missingAttachmentHashes[0] === proof.recoveringHash
+    && completedRun(recovery, 'automatic') && recovery.runId !== initial.runId
+    && recovery.deviceIdentityKey === joinerIdentity
+    && Date.parse(recovery.restoredAt) > Date.parse(initial.occurredAt)
+    && Date.parse(recovery.occurredAt) > Date.parse(recovery.restoredAt);
+}
+
 function validateBuilds(receipt, cell) {
   const expected = [cell.creator, cell.joiner].sort();
   required(receipt.builds && Object.keys(receipt.builds).sort().join(',') === expected.join(','),
@@ -78,8 +98,7 @@ export function validateTwoDeviceCell(receipt, cell, { exists = fs.existsSync } 
   required(receipt.preAccept?.groupKeyPresent === false,
     `${cell.id}: pre-accept group key absence is unproved.`);
   const joinerIdentity = receipt.devices.find(({ host }) => host === cell.joiner)?.identity;
-  required(completedRun(receipt.runs?.initial, 'initial')
-    && receipt.runs.initial.deviceIdentityKey === joinerIdentity,
+  required(verifiedInitialRun(receipt.runs, joinerIdentity),
   `${cell.id}: initial run is not bound to the joining Device.`);
   required(completedRun(receipt.runs?.automaticBeforeRestart, 'automatic'),
     `${cell.id}: pre-restart automatic run is incomplete.`);

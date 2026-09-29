@@ -51,11 +51,13 @@ final class FolioleAcceptanceSyncEventProjection {
                         .put("message", boundedMessage(event.optString("message"))));
                 }
                 if (!event.optString("run_id").isEmpty()) {
-                    sourceRuns.put(new JSONObject()
+                    JSONObject sourceRun = new JSONObject()
                         .put("kind", event.optString("kind"))
                         .put("run_id", event.optString("run_id"))
                         .put("status", event.optString("status"))
-                        .put("trigger_reason", event.optString("trigger_reason")));
+                        .put("trigger_reason", event.optString("trigger_reason"));
+                    copy(event, sourceRun, "started_at");
+                    sourceRuns.put(sourceRun);
                 }
                 if (!"run_finished".equals(event.optString("kind"))) continue;
                 JSONObject projected = new JSONObject()
