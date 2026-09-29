@@ -138,6 +138,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       installMain: false, paths: args.paths, serial: args.serial });
     await session.invoke('resume_companion_sync');
     await observeMacosAnchorAfterElection(session);
+    assertMacosAcceptanceSyncGroupServer(await session.load());
+    await delay(10_000);
     const a5ManualBeforeRestartAction = await runMacosA5SyncGroupMaintenance({
       action: 'sync-now', transportRequired: false, appId: ACCEPTANCE_APP_ID,
       buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-before-restart'),
