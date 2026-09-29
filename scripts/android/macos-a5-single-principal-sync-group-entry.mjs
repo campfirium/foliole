@@ -106,7 +106,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W',
       '-n', `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
-    await delay(75_000);
+    await session.invoke('sync_companion_now');
     const resourceArrival = await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'resource-arrival'), { A: 1, B: 1 });
     if (!resourceArrival.facts?.some((fact) => fact.includes('Resource LAN body remains readable.'))) {
