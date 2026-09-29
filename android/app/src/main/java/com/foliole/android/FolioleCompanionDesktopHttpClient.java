@@ -144,6 +144,8 @@ final class FolioleCompanionDesktopHttpClient {
                     }
                 }
             }
+        } catch (SecurityException error) {
+            throw new SecurityException(error.getMessage() + "; http_status=" + connection.getResponseCode(), error);
         } finally { connection.disconnect(); }
     }
 

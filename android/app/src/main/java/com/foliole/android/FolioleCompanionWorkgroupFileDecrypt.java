@@ -78,15 +78,16 @@ final class FolioleCompanionWorkgroupFileDecrypt {
              OutputStream output = new FileOutputStream(plaintext)) {
             byte[] buffer = new byte[BUFFER_BYTES];
             long remaining = cipherLength;
+            long written = 0;
             while (remaining > 0) {
                 int count = input.read(buffer, 0, (int) Math.min(buffer.length, remaining));
                 if (count < 0) throw new SecurityException("workgroup_aead_authentication_failed");
                 byte[] plain = ctr.update(buffer, 0, count);
-                if (plain == null || plain.length != count) {
-                    throw new SecurityException("workgroup_aead_authentication_failed");
+                if (plain != null) {
+                    output.write(plain);
+                    written += plain.length;
                 }
                 hash.updateCiphertext(buffer, count);
-                output.write(plain);
                 remaining -= count;
             }
             byte[] tag = new byte[TAG_BYTES];
@@ -98,8 +99,12 @@ final class FolioleCompanionWorkgroupFileDecrypt {
             }
             byte[] calculatedTag = hash.finish();
             for (int index = 0; index < TAG_BYTES; index++) calculatedTag[index] ^= tagMask[index];
-            if (input.read() != -1 || !MessageDigest.isEqual(calculatedTag, tag) ||
-                ctr.doFinal().length != 0) {
+            if (input.read() != -1 || !MessageDigest.isEqual(calculatedTag, tag)) {
+                throw new SecurityException("workgroup_aead_authentication_failed");
+            }
+            byte[] finalPlain = ctr.doFinal();
+            output.write(finalPlain);
+            if (written + finalPlain.length != cipherLength) {
                 throw new SecurityException("workgroup_aead_authentication_failed");
             }
         }
