@@ -75,6 +75,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
             FolioleCompanionSyncNowAction.waitUntilEnabled(
                 instrumentation, webView, TimeUnit.MINUTES.toMillis(2)
             );
+            FolioleCompanionSyncNowAction.waitUntilInitialCompleted(instrumentation);
             Log.i(LOG_TAG, "stage=initial-sync-completed");
             instrumentation.runOnMainSync(activity::finish);
             activity = start(instrumentation);

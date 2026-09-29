@@ -115,6 +115,31 @@ final class FolioleCompanionSyncNowAction {
         throw new IllegalStateException("Timed out waiting for public Sync Now: " + latest);
     }
 
+    static void waitUntilInitialCompleted(Instrumentation instrumentation) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(TERMINAL_TIMEOUT_MS);
+        JSONObject latest = new JSONObject();
+        while (System.nanoTime() < deadline) {
+            try {
+                latest = FolioleAcceptanceSyncEventProjection.read(
+                    instrumentation.getTargetContext()
+                );
+                JSONArray events = latest.getJSONArray("events");
+                for (int index = 0; index < events.length(); index += 1) {
+                    JSONObject event = events.getJSONObject(index);
+                    if (!"initial".equals(event.optString("trigger_reason"))) continue;
+                    if ("completed".equals(event.optString("status"))
+                        && "completed".equals(event.optString("result"))) return;
+                    throw new IllegalStateException("Initial Sync terminal is not completed: "
+                        + event + "; projection=" + latest);
+                }
+            } catch (SQLiteReadOnlyDatabaseException readConflict) {
+                // Retry a read conflict without interrupting the running Activity.
+            }
+            Thread.sleep(500);
+        }
+        throw new IllegalStateException("Timed out waiting for completed initial Sync: " + latest);
+    }
+
     private static JSONObject waitUntilStarted(
         Instrumentation instrumentation, WebView webView, String previousRunId, long timeoutMs
     ) throws Exception {
