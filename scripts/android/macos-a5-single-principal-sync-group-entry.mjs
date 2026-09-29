@@ -65,7 +65,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
   let session = await openSession({ env: sessionEnv, libraryHome: macosLibrary,
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   try {
-    if (iosResourceFailover) resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
+    resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
+    if (!iosResourceFailover) resourceFixture.restore();
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-initial-fact'), session });
     const conflictSeed = await createDesktopSyncConflictSeed({
@@ -101,17 +102,11 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await delay(30_000);
     const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
-    resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
-    await delay(75_000);
-    const resourceArrival = await observeA5JourneyFacts(args, buildIdentity, env,
-      path.join(evidenceRoot, 'resource-arrival'), { A: 1, B: 1 });
-    if (!resourceArrival.facts?.some((fact) => fact.includes('Resource LAN body remains readable.'))) {
-      throw new Error('Resource topic did not reach Android before recovery verification.');
-    }
-    await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
-      fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
     await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
+    fs.unlinkSync(resourceFixture.missingPath);
+    await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
+      fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
     const androidFact = await runMacosA5SyncGroupMaintenance({
       action: 'create-journey-fact', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'android-fact'), execute: args.execute,

@@ -32,6 +32,9 @@ public final class FolioleResourceLanTest {
         Bundle args = InstrumentationRegistry.getArguments();
         String phase = args.getString("resourcePhase", "");
         assertTrue(phase.matches("missing|restored|restarted|offline"));
+        if ("missing".equals(phase)) {
+            Files.deleteIfExists(attachment(context, args.getString("recoveringHash", "")).toPath());
+        }
         String nodeId = args.getString("resourceNodeId", "");
         String groupId = args.getString("resourceGroupId", "");
         String url = "foliole://node/v1?group=" + Uri.encode(groupId) + "&id=" + Uri.encode(nodeId);
