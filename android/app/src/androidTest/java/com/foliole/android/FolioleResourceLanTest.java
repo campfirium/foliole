@@ -87,14 +87,17 @@ public final class FolioleResourceLanTest {
                 "recoveringLoaded:(()=>{const i=document.querySelector(" + recoveringSelector + ")?.querySelector('.cm-md-image-element');return !!(i?.complete&&i.naturalWidth>0)})()," +
                 "imageStates:Array.from(document.querySelectorAll('[data-companion-readable-document] img'))" +
                 ".map(i=>({complete:i.complete,width:i.naturalWidth,top:Math.round(i.getBoundingClientRect().top)," +
-                "src:i.currentSrc.slice(0,140),attachment:i.closest('[data-md-image-attachment-id]')?.getAttribute('data-md-image-attachment-id')}))})");
-            if (!"missing".equals(phase) && !revealedRecoveringImage &&
+                "src:i.currentSrc.slice(0,140),srcAttribute:i.getAttribute('src')?.slice(0,140)," +
+                "attachment:i.closest('[data-md-image-attachment-id]')?.getAttribute('data-md-image-attachment-id')}))," +
+                "viewportHeight:window.innerHeight})");
+            if (!"missing".equals(phase) && !observed.optBoolean("recoveringLoaded") &&
                 nodeId.equals(observed.optString("node"))) {
                 JSONObject reveal = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
                     instrumentation, view,
                     "JSON.stringify((()=>{const target=document.querySelector(" + recoveringSelector + ");" +
                     "if(!target)return {revealed:false};target.scrollIntoView({block:'center'});" +
-                    "return {revealed:true}})())");
+                    "const rect=target.getBoundingClientRect();" +
+                    "return {revealed:rect.top<window.innerHeight&&rect.bottom>0}})())");
                 revealedRecoveringImage = reveal.optBoolean("revealed");
             }
             observed.put("availableFile", good.isFile());
