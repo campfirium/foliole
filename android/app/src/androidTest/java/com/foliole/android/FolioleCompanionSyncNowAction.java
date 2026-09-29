@@ -161,6 +161,8 @@ final class FolioleCompanionSyncNowAction {
                     if (runId.equals(event.optString("run_id"))) {
                         return new JSONObject().put("run", event).put(
                             "dirty_objects", latestProjection.getJSONArray("dirty_objects")
+                        ).put(
+                            "push_issues", latestProjection.getJSONArray("push_issues")
                         );
                     }
                 }
