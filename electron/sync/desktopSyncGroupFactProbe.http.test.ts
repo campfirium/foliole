@@ -6,6 +6,8 @@ import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import { encodeSyncPackFactClaims, probeSyncPackFactPresence,
+  type SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
 import { stageSyncPackKnownFactClaims } from '../../lib/core/sync/syncPackKnownFactClaims.js';
 import { assertSyncPackManifestMatchesDatabase } from '../../lib/core/sync/syncPackManifestValidation.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
@@ -154,4 +156,75 @@ it('rechecks a lost view over authenticated HTTP and applies the new frontier on
     revokeDesktopSyncGroupMemberStateReadiness(ids.receiver);
     target.close();
   }
+});
+
+function seedIncrementalHistory(target: Database.Database) {
+  insertNodeSyncState();
+  seedGroup();
+  const source = openDatabaseConnection().driver;
+  const versionColumns = `version_id, object_id, parent_version_id, host_name, created_at,
+    content_hash, body_text, snapshot_json`;
+  const insertVersion = target.prepare(`INSERT INTO node_sync_versions (${versionColumns})
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+  target.prepare(`INSERT INTO nodes (id, kind, title, content, current_version_id, created_at, updated_at)
+    VALUES ('node-1', 'topic', 'Node 1', 'body', 'v23', 'now', 'now')`).run();
+  for (let i = 2; i <= 24; i += 1) {
+    const version = `v${i}`;
+    const parent = i === 2 ? 'desktop#node-1-v1' : `v${i - 1}`;
+    source.execute(`INSERT INTO node_sync_versions (${versionColumns})
+      VALUES (?, 'node-1', ?, 'desktop', 'now', ?, 'body', '{"id":"node-1","content":null}')`,
+    [version, parent, `hash-${version}`]);
+    source.execute('INSERT INTO node_sync_version_parents VALUES (?, ?, 0)', [version, parent]);
+  }
+  source.execute("UPDATE nodes SET current_version_id = 'v24', sync_dirty = 0 WHERE id = 'node-1'");
+  source.execute('UPDATE sync_object_state SET sync_dirty = 0');
+  const known = source.queryAll<Record<string, string | null>>(
+    `SELECT ${versionColumns} FROM node_sync_versions WHERE version_id != 'v24' ORDER BY version_id`);
+  for (const row of known) insertVersion.run(...Object.values(row));
+  const edges = source.queryAll<{ version_id: string; parent_version_id: string; ordinal: number }>(
+    "SELECT * FROM node_sync_version_parents WHERE version_id != 'v24'");
+  for (const row of edges) target.prepare('INSERT INTO node_sync_version_parents VALUES (?, ?, ?)')
+    .run(row.version_id, row.parent_version_id, row.ordinal);
+}
+
+it('sends one new version after 23 known versions through authenticated HTTP', async () => {
+  const target = createReceiver();
+  seedIncrementalHistory(target);
+  markDesktopSyncGroupMemberStateReady(ids.receiver);
+  const http = await startAuthenticatedSyncHttp({ sourceDeviceId: ids.source,
+    receiverDeviceId: ids.receiver });
+  try {
+    const index = await http.getJson('/companion/sync-pack-facts?page_contract=bounded-v1' +
+      '&after_state_seq=0') as unknown as SyncPackFactIndex;
+    const claims = await probeSyncPackFactPresence(createBetterSqliteDbPort(target), index);
+    expect(claims.versions).toHaveLength(23);
+    const bits = encodeSyncPackFactClaims(index, claims);
+    const url = new URL('/companion/sync-pack?page_contract=bounded-v1&after_state_seq=0', http.origin);
+    url.searchParams.set('fact_index_id', index.index_id);
+    url.searchParams.set('have_v', bits.versions);
+    url.searchParams.set('have_p', bits.parents);
+    url.searchParams.set('have_r', bits.reviews);
+    const resource = await http.archive(url);
+    try {
+      const incoming = resolveSyncPackPath('incremental-incoming.db');
+      const manifest = await extractSyncPackDatabaseFromFile({ archivePath: resource.filePath,
+        outputPath: incoming, expectedPeerId: ids.receiver, expectedSourcePeerId: ids.source,
+        maxDatabaseBytes: 4 * 1024 * 1024 });
+      const pack = new Database(incoming, { readonly: true });
+      try {
+        expect(pack.prepare('SELECT version_id FROM node_sync_versions').all())
+          .toEqual([{ version_id: 'v24' }]);
+      } finally { pack.close(); }
+      const port = createBetterSqliteDbPort(target);
+      await port.run('ATTACH DATABASE ? AS inc', [incoming]);
+      try {
+        await assertSyncPackManifestMatchesDatabase(port, manifest);
+        const applied = await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 0,
+          hostName: 'receiver', sourcePeerId: ids.source, enqueueSearchInvalidations: false });
+        expect(applied.applied).toBe(true);
+        expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get())
+          .toEqual({ count: 24 });
+      } finally { await port.run('DETACH DATABASE inc'); }
+    } finally { await resource.cleanup(); }
+  } finally { await http.close(); revokeDesktopSyncGroupMemberStateReadiness(ids.receiver); target.close(); }
 });
