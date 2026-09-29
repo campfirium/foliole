@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
+import android.database.sqlite.SQLiteReadOnlyDatabaseException;
 import android.util.Log;
 import android.webkit.WebView;
 
@@ -11,6 +12,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.LinkedHashMap;
@@ -75,6 +77,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
             FolioleCompanionSyncNowAction.waitUntilEnabled(
                 instrumentation, webView, TimeUnit.MINUTES.toMillis(2)
             );
+            waitForInitialSync(instrumentation, expectedGroupId);
             Log.i(LOG_TAG, "stage=initial-sync-completed");
             instrumentation.runOnMainSync(activity::finish);
             activity = start(instrumentation);
@@ -102,6 +105,35 @@ final class FolioleCompanionSyncGroupJoinScenario {
 
     private static long stageDeadline() {
         return System.nanoTime() + TimeUnit.SECONDS.toNanos(STAGE_TIMEOUT_SECONDS);
+    }
+
+    private static void waitForInitialSync(
+        Instrumentation instrumentation, String expectedGroupId
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(2);
+        JSONObject latest = new JSONObject();
+        while (System.nanoTime() < deadline) {
+            try {
+                latest = FolioleAcceptanceSyncEventProjection.read(
+                    instrumentation.getTargetContext()
+                );
+                if (!expectedGroupId.equals(latest.optString("group_id"))) {
+                    throw new IllegalStateException("Initial Sync group identity changed: " + latest);
+                }
+                JSONArray events = latest.getJSONArray("events");
+                for (int index = 0; index < events.length(); index += 1) {
+                    JSONObject event = events.getJSONObject(index);
+                    if (!"initial".equals(event.optString("trigger_reason"))) continue;
+                    if ("completed".equals(event.optString("status"))
+                        && "completed".equals(event.optString("result"))) return;
+                    throw new IllegalStateException("Initial Sync did not complete: " + event);
+                }
+            } catch (SQLiteReadOnlyDatabaseException readConflict) {
+                // The product may be committing the event while this read-only proof opens.
+            }
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Timed out waiting for completed initial Sync: " + latest);
     }
 
     private static String expectedGroupId(Instrumentation instrumentation) throws Exception {
