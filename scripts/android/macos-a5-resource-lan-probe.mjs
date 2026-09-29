@@ -54,9 +54,13 @@ export async function seedA5ResourceLanProbe(session, libraryHome) {
 
 export async function verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot, fixture, groupId }) {
   const observations = [];
+  let restoredAt;
   try {
     for (const phase of ['missing', 'restored', 'restarted']) {
-      if (phase === 'restored') fixture.restore();
+      if (phase === 'restored') {
+        fixture.restore();
+        restoredAt = new Date().toISOString();
+      }
       const result = await runMacosA5InstrumentationMechanics({ appId: APP_ID, buildIdentity, env,
         evidenceRoot: path.join(evidenceRoot, `resource-${phase}`), execute: args.execute,
         installMain: false, needsTransport: false, instrumentationOwnsActivity: true,
@@ -77,10 +81,11 @@ export async function verifyA5ResourceLanProbe({ args, buildIdentity, env, evide
     }
   } finally { fixture.restore(); }
   fs.writeFileSync(path.join(evidenceRoot, 'resource-lan.json'), `${JSON.stringify({
-    nodeId: fixture.nodeId, images: fixture.images, observations,
+    nodeId: fixture.nodeId, images: fixture.images, observations, restoredAt,
     physicalDevices: ['macos', 'fixed-a5-87a33a4b'], transport: 'product-discovered LAN; no ADB reverse',
     failure: 'Mac isolated attachment bytes temporarily absent, then restored', resultStatus: 'success'
   }, null, 2)}\n`);
+  return { restoredAt };
 }
 
 export async function verifyA5ResourceLanPresence({ args, buildIdentity, env, evidenceRoot, fixture, groupId }) {
