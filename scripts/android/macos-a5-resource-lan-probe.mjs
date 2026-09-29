@@ -39,7 +39,9 @@ export async function seedA5ResourceLanProbe(session, libraryHome) {
     const result = await session.invoke('import_clipboard_image_attachment', {
       bytesBase64, mimeType: 'image/png', nodeId, originalName: 'resource-lan.png'
     });
-    if (result?.status !== 'imported') throw new Error('Resource LAN image import failed.');
+    if (result?.status !== 'imported') {
+      throw new Error(`Resource LAN image import failed: ${JSON.stringify(result)}`);
+    }
     const hash = createHash('sha256').update(Buffer.from(bytesBase64, 'base64')).digest('hex');
     if (result.attachment_id !== hash) throw new Error('Resource LAN fixture bytes changed on import.');
   }
