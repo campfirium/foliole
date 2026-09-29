@@ -75,7 +75,9 @@ public final class FolioleResourceLanTest {
                 "linkError:document.querySelector('[data-mobile-link-error]')?.getAttribute('data-mobile-link-error')," +
                 "surface:(document.body?.innerText||'').slice(0,1600),bodyReadable:(document.body?.innerText||'').includes('Resource LAN body remains readable.')," +
                 "loadedImages:Array.from(document.querySelectorAll('[data-companion-readable-document] img'))" +
-                ".filter(i=>i.complete&&i.naturalWidth>0).length})");
+                ".filter(i=>i.complete&&i.naturalWidth>0).length," +
+                "imageStates:Array.from(document.querySelectorAll('[data-companion-readable-document] img'))" +
+                ".map(i=>({complete:i.complete,width:i.naturalWidth,top:Math.round(i.getBoundingClientRect().top)}))})");
             if (!"missing".equals(phase) && !revealedRecoveringImage &&
                 nodeId.equals(observed.optString("node"))) {
                 JSONObject reveal = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
@@ -86,6 +88,9 @@ public final class FolioleResourceLanTest {
                     "return {revealed:true}})())");
                 revealedRecoveringImage = reveal.optBoolean("revealed");
             }
+            observed.put("availableFile", good.isFile());
+            observed.put("recoveringFile", recovering.isFile());
+            observed.put("revealedRecoveringImage", revealedRecoveringImage);
             boolean resources = good.isFile() && ("missing".equals(phase) ? !recovering.exists() : recovering.isFile());
             int requiredImages = "missing".equals(phase) ? 1 : 2;
             if (nodeId.equals(observed.optString("node")) && observed.optBoolean("bodyReadable")
