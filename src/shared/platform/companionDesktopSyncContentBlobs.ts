@@ -1,4 +1,4 @@
-import { resourceKey } from '../../../lib/platform/resourceAvailabilityContract';
+import { resourceKey, takeContentBlobByteBatch } from '../../../lib/platform/resourceAvailabilityContract';
 
 import { runCompanionResourceProviderBatch } from './companion/network/companionResourceProviders';
 import { createSignedRequestHeaders } from './companion/network/signedRequest';
@@ -109,8 +109,9 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
       contentBacklogRemaining = false;
       break;
     }
-    const hashes = blobs.map((blob) => blob.hash);
-    const sizeByHash = new Map(blobs.map((blob) => [blob.hash, Math.max(0, blob.size_bytes ?? 0)]));
+    const selected = takeContentBlobByteBatch(blobs, (blob) => blob.size_bytes as number);
+    const hashes = selected.map((blob) => blob.hash);
+    const sizeByHash = new Map(selected.map((blob) => [blob.hash, blob.size_bytes!]));
     const batchPromise = pullContentBlobBatch(endpoint, hashes, (syncedChunkHashes) => {
       syncedContentBlobHashes.push(...syncedChunkHashes);
       syncedBytes += syncedChunkHashes.reduce((sum, hash) => sum + (sizeByHash.get(hash) ?? 0), 0);
@@ -123,8 +124,8 @@ export async function pullMissingContentBlobs(endpointUrl: string, onProgress?: 
       if (syncedContentBlobHashes.length > 0) break;
       throw new Error('Topic body batch could not download any requested body.');
     }
-    if (hashes.length < CONTENT_BLOB_BATCH_LIMIT || syncedBatchHashes.length === 0) {
-      contentBacklogRemaining = syncedBatchHashes.length === 0 || batch.failedContentBlobCount > 0;
+    if (syncedBatchHashes.length === 0) {
+      contentBacklogRemaining = true;
       break;
     }
   }

@@ -1,4 +1,6 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { CONTENT_BLOB_BATCH_MAX_BYTES, RESOURCE_AVAILABILITY_BATCH_LIMIT
+} from '../../lib/platform/resourceAvailabilityContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 export const CONTENT_BLOB_RESOURCE_PATH = '/companion/content-blob';
@@ -42,11 +44,11 @@ function normalizeHash(value: string | null) {
 }
 
 function normalizeAckHashes(value: unknown) {
-  if (!Array.isArray(value)) return null;
+  if (!Array.isArray(value) || value.length > RESOURCE_AVAILABILITY_BATCH_LIMIT) return null;
   const hashes = value
     .map((hash) => (typeof hash === 'string' ? normalizeHash(hash) : null))
     .filter((hash): hash is string => Boolean(hash));
-  return hashes.length === value.length ? hashes : null;
+  return hashes.length === value.length && new Set(hashes).size === hashes.length ? hashes : null;
 }
 
 function toBuffer(data: ContentBlobRow['data']) {
@@ -109,13 +111,19 @@ export function loadCompanionContentBlobBatch(bodyText: string): CompanionConten
     return { error: 'invalid_hashes', status: 'error' as const, statusCode: 400 };
   }
   const placeholders = hashes.map(() => '?').join(', ');
-  const rows = openDatabaseConnection().driver.queryAll<ContentBlobRow & { hash: string }>(
-    `SELECT cb.hash, cb.mime_type, cbd.data
-     FROM content_blobs cb
-     JOIN content_blob_data cbd ON cbd.hash = cb.hash
-     WHERE cb.hash IN (${placeholders})`,
-    hashes
-  );
+  const rows = openDatabaseConnection().driver.transaction((driver) => {
+    const [budget] = driver.queryAll<{ bytes: number }>(
+      `SELECT COALESCE(SUM(length(cbd.data)), 0) AS bytes
+       FROM content_blob_data cbd WHERE cbd.hash IN (${placeholders})`, hashes);
+    if ((budget?.bytes ?? 0) > CONTENT_BLOB_BATCH_MAX_BYTES) {
+      throw new Error('content_blob_batch_exceeds_budget');
+    }
+    return driver.queryAll<ContentBlobRow & { hash: string }>(
+      `SELECT cb.hash, cb.mime_type, cbd.data
+       FROM content_blobs cb
+       JOIN content_blob_data cbd ON cbd.hash = cb.hash
+       WHERE cb.hash IN (${placeholders})`, hashes);
+  });
   const rowByHash = new Map(rows.map((row) => [row.hash, row]));
   const orderedRows = hashes.flatMap((hash) => {
     const row = rowByHash.get(hash);

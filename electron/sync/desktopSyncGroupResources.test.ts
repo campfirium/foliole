@@ -107,6 +107,25 @@ it('persists a content body batch through the transaction owner that enumerated 
   );
 });
 
+it('requests only the decoded-byte prefix of missing content bodies', async () => {
+  const firstHash = sha256('first'), secondHash = sha256('second');
+  runtime.query.mockReset()
+    .mockReturnValueOnce([firstHash, secondHash].map((hash) => ({
+      hash, stored_sha256: hash, stored_size_bytes: 1_200_000
+    })))
+    .mockReturnValueOnce([{ count: 2 }]);
+  const fetchMock = vi.fn(async (...request: [string, RequestInit]) => {
+    expect(request[0]).toContain('/companion/content-blobs');
+    return new Response('', { status: 404 });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+
+  await downloadDesktopSyncGroupResources(peer);
+
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(String(fetchMock.mock.calls[0]![1].body))).toEqual({ hashes: [firstHash] });
+});
+
 it('keeps successes and attempts other files once when a request fails', async () => {
   const items = ['complete', 'interrupted', 'other'].map((id) => ({ attachmentId: sha256(`${id}-body`),
     contentHash: sha256(`${id}-body`), mimeType: 'image/png', storageKey: `${sha256(`${id}-body`)}.png` }));

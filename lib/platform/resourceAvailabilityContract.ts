@@ -1,5 +1,6 @@
 export const RESOURCE_AVAILABILITY_PATH = '/companion/resource-availability';
 export const RESOURCE_AVAILABILITY_BATCH_LIMIT = 32;
+export const CONTENT_BLOB_BATCH_MAX_BYTES = 2 * 1024 * 1024;
 export const RESOURCE_AVAILABILITY_REPLY_LIMIT = 64 * 1024;
 export const RESOURCE_CLAIM_TTL_MS = 30_000;
 export type ResourceKind = 'attachment' | 'content_blob';
@@ -12,6 +13,20 @@ export type ResourceClaim = ResourceNeed & {
 export type ResourceFailure = 'missing_file' | 'checksum_mismatch' | 'authentication_failed' |
   'network_error' | 'protocol_error' | 'device_identity_mismatch' | 'unreachable';
 export type ResourceAvailabilityReply = { provider_device_id: string; resources: ResourceClaim[] };
+export function takeContentBlobByteBatch<T>(rows: readonly T[], sizeOf: (row: T) => number): T[] {
+  const selected: T[] = [];
+  let bytes = 0;
+  for (const row of rows) {
+    const size = sizeOf(row);
+    if (!Number.isSafeInteger(size) || size < 0 || size > CONTENT_BLOB_BATCH_MAX_BYTES) {
+      throw new Error('content_blob_batch_row_exceeds_budget');
+    }
+    if (selected.length > 0 && bytes + size > CONTENT_BLOB_BATCH_MAX_BYTES) break;
+    selected.push(row);
+    bytes += size;
+  }
+  return selected;
+}
 export function resourceKey(resource: ResourceNeed) { return `${resource.kind}:${resource.id}`; }
 export function parseResourceNeeds(value: unknown): ResourceNeed[] {
   const resources = (value as { resources?: unknown } | null)?.resources;

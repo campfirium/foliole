@@ -33,6 +33,23 @@ async function testReportsContentProgressAfterEachBatch() {
   }));
 }
 
+async function testContinuesAfterByteLimitedContentBatches() {
+  const { pullMissingContentBlobs } = await import('./companionDesktopSyncContentBlobs');
+  const hashes = ['a', 'b', 'c'].map((letter) => letter.repeat(64));
+  syncBridgeMock.loadCompanionMissingContentBlobs
+    .mockResolvedValueOnce(hashes.map((hash) => ({ hash, size_bytes: 1_200_000 })))
+    .mockResolvedValueOnce(hashes.slice(1).map((hash) => ({ hash, size_bytes: 1_200_000 })))
+    .mockResolvedValueOnce([{ hash: hashes[2]!, size_bytes: 1_200_000 }])
+    .mockResolvedValueOnce([]);
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: hashes, status: 'ok' }), { status: 200 })));
+
+  const result = await pullMissingContentBlobs('http://10.0.2.2:38641/');
+
+  expect(syncBridgeMock.syncCompanionContentBlobs.mock.calls.map(([request]) => JSON.parse(request.body).hashes))
+    .toEqual(hashes.map((hash) => [hash]));
+  expect(result.contentBacklogRemaining).toBe(false);
+}
+
 async function testReportsAttachmentProgressAfterEachConcurrentChunk() {
   const { ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT } = await import('./companionDesktopAttachmentResources');
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
@@ -75,6 +92,8 @@ describe('companion desktop sync resource progress', () => {
   beforeEach(resetCompanionDesktopSyncMocks);
 
   it('reports missing content blob progress after each successful batch', testReportsContentProgressAfterEachBatch);
+
+  it('continues after content batches limited by decoded bytes', testContinuesAfterByteLimitedContentBatches);
 
   it('reports missing attachment resource progress after each concurrent chunk', testReportsAttachmentProgressAfterEachConcurrentChunk);
 });

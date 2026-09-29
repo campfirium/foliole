@@ -81,6 +81,17 @@ it('loads a batch of text body blobs by content hash', () => {
   expect(bodyText).toContain('\r\n\r\nsecond body\r\n');
 });
 
+it('rejects a batch whose decoded bodies exceed the byte budget before loading them', () => {
+  const driver = openDatabaseConnection().driver;
+  const firstHash = upsertTextBodyBlob(driver, 'a'.repeat(1_200_000), '2026-04-27T00:00:00.000Z');
+  const secondHash = upsertTextBodyBlob(driver, 'b'.repeat(1_200_000), '2026-04-27T00:00:01.000Z');
+
+  expect(() => loadCompanionContentBlobBatch(JSON.stringify({ hashes: [firstHash, secondHash] })))
+    .toThrow('content_blob_batch_exceeds_budget');
+  expect(loadCompanionContentBlobBatch(JSON.stringify({ hashes: [firstHash, firstHash] })))
+    .toEqual({ error: 'invalid_hashes', status: 'error', statusCode: 400 });
+});
+
 it('rejects invalid and missing content blob hashes', async () => {
   await expect(loadCompanionContentBlobResource('not-a-hash')).resolves.toEqual({
     error: 'invalid_hash',

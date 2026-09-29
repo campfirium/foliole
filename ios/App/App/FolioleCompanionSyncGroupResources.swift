@@ -31,8 +31,12 @@ enum FolioleCompanionSyncGroupResources {
     static func contentBlobBatch(snapshot: URL, requestData: Data) throws -> Resource {
         let value = try JSONSerialization.jsonObject(with: requestData) as? [String: Any]
         guard let hashes = value?["hashes"] as? [String], hashes.count <= 32,
+              Set(hashes).count == hashes.count,
               hashes.allSatisfy({ $0.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil }) else {
             throw invalid("invalid_hashes")
+        }
+        guard try contentBlobBatchBytes(snapshot: snapshot, hashes: hashes) <= 2 * 1024 * 1024 else {
+            throw invalid("content_blob_batch_exceeds_budget")
         }
         let boundary = "foliole-content-blobs-" + String(hashes.joined().prefix(24))
         var output = Data()
@@ -43,6 +47,25 @@ enum FolioleCompanionSyncGroupResources {
         }
         output.append(Data("--\(boundary)--\r\n".utf8))
         return Resource(body: output, contentType: "multipart/mixed; boundary=\(boundary)")
+    }
+
+    private static func contentBlobBatchBytes(snapshot: URL, hashes: [String]) throws -> Int64 {
+        if hashes.isEmpty { return 0 }
+        var database: OpaquePointer?, statement: OpaquePointer?
+        guard sqlite3_open_v2(snapshot.path, &database, SQLITE_OPEN_READONLY | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK,
+              let database else { throw invalid("sync_group_snapshot_open_failed") }
+        defer { sqlite3_close(database) }
+        let placeholders = Array(repeating: "?", count: hashes.count).joined(separator: ",")
+        let sql = "SELECT COALESCE(SUM(length(data)), 0) FROM content_blob_data WHERE hash IN (\(placeholders))"
+        guard sqlite3_prepare_v2(database, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
+            throw invalid("sync_group_resource_query_failed")
+        }
+        defer { sqlite3_finalize(statement) }
+        for (offset, hash) in hashes.enumerated() {
+            sqlite3_bind_text(statement, Int32(offset + 1), hash, -1, transient)
+        }
+        guard sqlite3_step(statement) == SQLITE_ROW else { throw invalid("sync_group_resource_query_failed") }
+        return sqlite3_column_int64(statement, 0)
     }
 
     private static func query(_ url: URL, _ sql: String, _ values: [String]) throws -> (String?, Data)? {

@@ -15,6 +15,7 @@ import java.util.Map;
 
 final class FolioleCompanionSyncGroupContentBlobBatch {
     private static final int MAX_BATCH_SIZE = 32;
+    private static final int MAX_BATCH_BYTES = 2 * 1024 * 1024;
 
     private FolioleCompanionSyncGroupContentBlobBatch() {}
 
@@ -33,7 +34,9 @@ final class FolioleCompanionSyncGroupContentBlobBatch {
         List<String> hashes = new ArrayList<>();
         for (int index = 0; index < values.length(); index++) {
             String hash = values.optString(index, "").toLowerCase();
-            if (!hash.matches("[a-f0-9]{64}")) throw new IllegalArgumentException("invalid_hashes");
+            if (!hash.matches("[a-f0-9]{64}") || hashes.contains(hash)) {
+                throw new IllegalArgumentException("invalid_hashes");
+            }
             hashes.add(hash);
         }
         return hashes;
@@ -44,12 +47,21 @@ final class FolioleCompanionSyncGroupContentBlobBatch {
         if (hashes.isEmpty()) return entries;
         String placeholders = String.join(",", java.util.Collections.nCopies(hashes.size(), "?"));
         SQLiteDatabase db = SQLiteDatabase.openDatabase(path, null, SQLiteDatabase.OPEN_READONLY);
-        try (Cursor rows = db.rawQuery(
-            "SELECT cb.hash, cb.mime_type, cbd.data FROM content_blobs cb " +
-                "JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cb.hash IN (" + placeholders + ")",
-            hashes.toArray(new String[0]))) {
-            while (rows.moveToNext()) entries.put(rows.getString(0),
-                new Entry(rows.isNull(1) ? "application/octet-stream" : rows.getString(1), rows.getBlob(2)));
+        try {
+            try (Cursor budget = db.rawQuery(
+                "SELECT COALESCE(SUM(length(cbd.data)), 0) FROM content_blob_data cbd WHERE cbd.hash IN (" +
+                    placeholders + ")", hashes.toArray(new String[0]))) {
+                if (budget.moveToFirst() && budget.getLong(0) > MAX_BATCH_BYTES) {
+                    throw new IllegalArgumentException("content_blob_batch_exceeds_budget");
+                }
+            }
+            try (Cursor rows = db.rawQuery(
+                "SELECT cb.hash, cb.mime_type, cbd.data FROM content_blobs cb " +
+                    "JOIN content_blob_data cbd ON cbd.hash = cb.hash WHERE cb.hash IN (" + placeholders + ")",
+                hashes.toArray(new String[0]))) {
+                while (rows.moveToNext()) entries.put(rows.getString(0),
+                    new Entry(rows.isNull(1) ? "application/octet-stream" : rows.getString(1), rows.getBlob(2)));
+            }
             return entries;
         } finally { db.close(); }
     }

@@ -1,6 +1,7 @@
 import { loadArticleAttachmentNeeds } from '../../lib/core/sync/articleAttachmentNeeds.js';
 import { observeResourceProviders, transferResourceProviders } from '../../lib/core/sync/resourceProviderPass.js';
-import { RESOURCE_AVAILABILITY_BATCH_LIMIT, type ResourceNeed } from '../../lib/platform/resourceAvailabilityContract.js';
+import { RESOURCE_AVAILABILITY_BATCH_LIMIT, takeContentBlobByteBatch,
+  type ResourceNeed } from '../../lib/platform/resourceAvailabilityContract.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -21,11 +22,12 @@ export function assertDesktopSyncGroupResourcesComplete() {
 
 async function loadResourceNeeds(articleIds: readonly string[], includeContentBlobs: boolean) {
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-resources' });
-  const blobs = includeContentBlobs ? await port.query<ResourceBlobRow>(
+  const candidates = includeContentBlobs ? await port.query<ResourceBlobRow>(
     `SELECT cb.hash, cb.stored_sha256, cb.stored_size_bytes FROM content_blobs cb
      LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash
      WHERE cbd.hash IS NULL ORDER BY cb.hash LIMIT ?`, [RESOURCE_AVAILABILITY_BATCH_LIMIT]
   ) : [];
+  const blobs = takeContentBlobByteBatch(candidates, (row) => row.stored_size_bytes);
   const { needs: attachments, unreadableArticleIds } = await loadArticleAttachmentNeeds(port, articleIds);
   const missingAttachments = [];
   for (const attachment of attachments) {
