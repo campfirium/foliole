@@ -65,8 +65,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
   let session = await openSession({ env: sessionEnv, libraryHome: macosLibrary,
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   try {
-    resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
-    if (!iosResourceFailover) resourceFixture.restore();
+    if (iosResourceFailover) resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-initial-fact'), session });
     const conflictSeed = await createDesktopSyncConflictSeed({
@@ -104,7 +103,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
     await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
-    fs.unlinkSync(resourceFixture.missingPath);
+    resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
     await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
       fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
     const androidFact = await runMacosA5SyncGroupMaintenance({
