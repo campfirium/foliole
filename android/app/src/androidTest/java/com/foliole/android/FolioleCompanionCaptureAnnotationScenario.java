@@ -60,6 +60,7 @@ final class FolioleCompanionCaptureAnnotationScenario {
         long timeoutMs
     ) throws Exception {
         selectText(instrumentation, webView, NOTE_TEXT, timeoutMs);
+        waitForEnabledTestId(instrumentation, webView, "companion-selection-note", timeoutMs);
         perform(instrumentation, webView, "companion-selection-note", "click", "");
         waitForTestId(instrumentation, webView, "companion-selection-note-text", timeoutMs);
         perform(instrumentation, webView, "companion-selection-note-text", "input", "A5 note " + token);
