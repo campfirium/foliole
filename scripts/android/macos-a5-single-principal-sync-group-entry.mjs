@@ -56,8 +56,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
   }
   let cellProofInput;
   let resourceFixture;
-  const transfer404 = process.env.FOLIOLE_T203_IOS_PROVIDER_FAILOVER === '1' &&
-    process.env.FOLIOLE_T203_TRANSFER_404 === '1';
+  const iosResourceFailover = process.env.FOLIOLE_T203_IOS_PROVIDER_FAILOVER === '1';
+  const transfer404 = iosResourceFailover && process.env.FOLIOLE_T203_TRANSFER_404 === '1';
   const sessionEnv = transfer404 ? { ...env, FOLIOLE_T203_RESOURCE_GET_404: '1',
     FOLIOLE_T203_RESOURCE_GET_404_HASH: RESOURCE_LAN_FIRST_HASH,
     FOLIOLE_T203_RESOURCE_GET_404_LIBRARY: macosLibrary,
@@ -66,6 +66,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   try {
     resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
+    if (!iosResourceFailover) resourceFixture.restore();
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-initial-fact'), session });
     const conflictSeed = await createDesktopSyncConflictSeed({
@@ -88,9 +89,9 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'automatic-enabled'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial
     });
-    await observeA5JourneyFacts(args, buildIdentity, env,
-      path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
-    if (process.env.FOLIOLE_T203_IOS_PROVIDER_FAILOVER === '1') {
+    if (iosResourceFailover) {
+      await observeA5JourneyFacts(args, buildIdentity, env,
+        path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
       await runMacosA5IosResourceFailover({ args, buildIdentity, env, evidenceRoot,
         fixture: resourceFixture, groupId: providerOverview.sync_group.group_id,
         macDeviceId: providerOverview.sync_group.local_device_identity_key,
@@ -101,6 +102,9 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await delay(30_000);
     const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
+    await observeA5JourneyFacts(args, buildIdentity, env,
+      path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
+    fs.unlinkSync(resourceFixture.missingPath);
     await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
       fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
     const androidFact = await runMacosA5SyncGroupMaintenance({
