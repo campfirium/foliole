@@ -47,8 +47,13 @@ final class FolioleCompanionSyncNowAction {
         Instrumentation instrumentation, JSONObject terminal
     ) throws Exception {
         if ("completed".equals(terminal.optString("terminalResult"))) return;
+        JSONObject projection = FolioleAcceptanceSyncEventProjection.read(
+            instrumentation.getTargetContext()
+        );
         throw new IllegalStateException(
             "Sync Now failed before projection: " + terminal
+                + "; dirty=" + projection.optJSONArray("dirty_objects")
+                + "; pushIssues=" + projection.optJSONArray("push_issues")
                 + "; discovery=" + diagnoseDiscovery(instrumentation)
         );
     }
