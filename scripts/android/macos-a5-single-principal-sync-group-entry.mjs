@@ -4,6 +4,7 @@ import { RESOURCE_LAN_FIRST_HASH, seedA5ResourceLanProbe,
   verifyA5ResourceLanProbe } from './macos-a5-resource-lan-probe.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 
 import { captureA5ActionRun, captureA5SyncRun } from './a5-sync-event-proof.mjs';
 import { observeA5JourneyFacts } from './a5-journey-facts-proof.mjs';
@@ -97,10 +98,11 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
         acceptIos: () => observeAndAccept(session) });
       return;
     }
-    await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
-      fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
+    await delay(30_000);
     const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
+    await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
+      fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
     const androidFact = await runMacosA5SyncGroupMaintenance({
       action: 'create-journey-fact', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'android-fact'), execute: args.execute,
