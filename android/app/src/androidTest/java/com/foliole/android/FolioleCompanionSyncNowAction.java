@@ -39,6 +39,7 @@ final class FolioleCompanionSyncNowAction {
             .put("projectedStatus", projectedRun.getString("status"))
             .put("projectedResult", projectedRun.optString("result"))
             .put("dirtyObjects", projection.getJSONArray("dirty_objects"))
+            .put("pushIssues", projection.getJSONArray("push_issues"))
             .put("errorText", terminal.optString("errorText"));
     }
 

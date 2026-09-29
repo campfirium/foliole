@@ -75,6 +75,7 @@ final class FolioleAcceptanceSyncEventProjection {
                 .put("group_id", groupId).put("diagnostic_events", diagnosticEvents)
                 .put("events", events).put("source_runs", sourceRuns)
                 .put("dirty_objects", dirtyObjects(database))
+                .put("push_issues", pushIssues(database))
                 .put("syncEventsProjected", true);
             if ("com.foliole.android.t250dense".equals(context.getPackageName())) {
                 result.put("dense_facts", denseFacts(database));
@@ -86,17 +87,36 @@ final class FolioleAcceptanceSyncEventProjection {
     private static JSONArray dirtyObjects(SQLiteDatabase database) throws Exception {
         JSONArray objects = new JSONArray();
         try (Cursor cursor = database.rawQuery(
-            "SELECT object_type, object_id, state_seq FROM sync_object_state " +
+            "SELECT object_type, object_id, state_seq, content_hash, base_content_hash " +
+                "FROM sync_object_state " +
                 "WHERE sync_dirty = 1 AND object_type <> 'view_state' " +
                 "ORDER BY state_seq DESC LIMIT 20", null
         )) {
             while (cursor.moveToNext()) {
                 objects.put(new JSONObject().put("object_type", cursor.getString(0))
                     .put("object_id", cursor.getString(1))
-                    .put("state_seq", cursor.getLong(2)));
+                    .put("state_seq", cursor.getLong(2))
+                    .put("content_hash", cursor.getString(3))
+                    .put("base_content_hash", cursor.getString(4)));
             }
         }
         return objects;
+    }
+
+    private static JSONArray pushIssues(SQLiteDatabase database) throws Exception {
+        JSONArray issues = new JSONArray();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT object_type, object_id, status, issue_reason FROM sync_delivery_receipts " +
+                "WHERE status IN ('conflict', 'rejected') ORDER BY updated_at DESC LIMIT 20", null
+        )) {
+            while (cursor.moveToNext()) {
+                issues.put(new JSONObject().put("object_type", cursor.getString(0))
+                    .put("object_id", cursor.getString(1))
+                    .put("status", cursor.getString(2))
+                    .put("issue_reason", cursor.getString(3)));
+            }
+        }
+        return issues;
     }
 
     private static JSONObject denseFacts(SQLiteDatabase database) throws Exception {
