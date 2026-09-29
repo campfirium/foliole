@@ -62,7 +62,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     FOLIOLE_T203_RESOURCE_GET_404_LIBRARY: macosLibrary,
     FOLIOLE_T203_RESOURCE_GET_404_EVIDENCE: path.join(evidenceRoot, 't203-ios-provider-failover') } : env;
   let session = await openSession({ env: sessionEnv, libraryHome: macosLibrary,
-    repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
+    repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime'),
+    runtimeLogPath: path.join(evidenceRoot, 'macos-runtime.log') });
   try {
     resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
     await createDesktopSyncGroupJourneyFact({ device: 'A',

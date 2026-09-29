@@ -74,6 +74,8 @@ it('rebuilds and fast-forwards complete producer versions through the BetterSQLi
   const desktopTarget = createTargetDatabase();
   const desktopPort = createBetterSqliteDbPort(desktopTarget, { name: 'lossless-desktop-target' });
   await applySyncNodesWithDbPort(desktopPort, [versionOne], { enqueueSearchInvalidations: false });
+  desktopTarget.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)')
+    .run('folder-1', 91);
   await applySyncNodesWithDbPort(desktopPort, [versionTwo], { enqueueSearchInvalidations: false });
   expect(readTargetState(desktopTarget)).toEqual(expectedTargetState('Version two'));
 
@@ -166,7 +168,7 @@ function expectedTargetState(content: string) {
     import_content_fingerprint: 'content-a',
     import_source_fingerprint: 'source-a',
     manual_child_order: '["child-b","child-a"]',
-    position: 37,
+    position: 91,
     shelved_at: '2026-07-10T00:00:00.000Z'
   };
 }
