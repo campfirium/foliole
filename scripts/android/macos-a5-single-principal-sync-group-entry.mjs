@@ -104,6 +104,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
     resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
+    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W',
+      '-n', `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
     await delay(40_000);
     const resourceArrival = await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'resource-arrival'), { A: 1, B: 1 });
