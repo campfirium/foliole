@@ -11,6 +11,7 @@ import androidx.test.platform.app.InstrumentationRegistry;
 
 import com.getcapacitor.JSObject;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.util.LinkedHashMap;
@@ -75,6 +76,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
             FolioleCompanionSyncNowAction.waitUntilEnabled(
                 instrumentation, webView, TimeUnit.MINUTES.toMillis(2)
             );
+            waitForInitialSyncCompleted(instrumentation, TimeUnit.MINUTES.toMillis(2));
             Log.i(LOG_TAG, "stage=initial-sync-completed");
             instrumentation.runOnMainSync(activity::finish);
             activity = start(instrumentation);
@@ -102,6 +104,28 @@ final class FolioleCompanionSyncGroupJoinScenario {
 
     private static long stageDeadline() {
         return System.nanoTime() + TimeUnit.SECONDS.toNanos(STAGE_TIMEOUT_SECONDS);
+    }
+
+    private static void waitForInitialSyncCompleted(
+        Instrumentation instrumentation, long timeoutMs
+    ) throws Exception {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMs);
+        JSONObject last = new JSONObject();
+        while (System.nanoTime() < deadline) {
+            JSONObject projection = FolioleAcceptanceSyncEventProjection.read(
+                instrumentation.getTargetContext()
+            );
+            JSONArray events = projection.getJSONArray("events");
+            for (int index = 0; index < events.length(); index += 1) {
+                JSONObject event = events.getJSONObject(index);
+                if (!"initial".equals(event.optString("trigger_reason"))) continue;
+                last = event;
+                if ("completed".equals(event.optString("status"))) return;
+                throw new IllegalStateException("Initial Sync finished without completion: " + event);
+            }
+            Thread.sleep(100);
+        }
+        throw new IllegalStateException("Timed out waiting for completed initial Sync: " + last);
     }
 
     private static String expectedGroupId(Instrumentation instrumentation) throws Exception {
