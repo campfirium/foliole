@@ -9,7 +9,7 @@ import { inflateSync } from 'node:zlib';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 let appDataDir = '/tmp/foliole-trimmed-version-replay';
-vi.mock('../ipc/paths.js', () => ({
+vi.mock('../../../electron/ipc/paths.js', () => ({
   resolveAppPaths: () => ({
     app_cache_dir: path.join(appDataDir, 'cache'),
     app_config_dir: path.join(appDataDir, 'config'),
@@ -18,14 +18,15 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
-import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
-import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../../../electron/database/connection.js';
+import { buildDesktopSyncPack } from '../../../electron/database/syncPackBuilder.js';
+import { initializeDatabaseConnection } from '../../../lib/core/database/index.js';
+import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
+import { applySyncPackNodeSurfaceWithDbPort } from '../../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { createSyncGroupDeviceIdentity } from '../../../lib/platform/syncGroupUnifiedContract.js';
 
-import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
-import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { buildDesktopSyncPack } from './syncPackBuilder.js';
+import { applyCompanionSyncPackNodesWithDbPort } from './companionSyncPackNodes.js';
 
 const nodeId = 'offline-topic';
 const createdAt = '2026-09-27T00:00:00.000Z';
@@ -48,7 +49,8 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('replays a trimmed A to E chain into an offline A to F branch', async () => {
+it.each(['desktop', 'companion'] as const)(
+  'replays a trimmed A to E chain into an offline A to F branch through %s apply', async (mode) => {
   openLibrary('online');
   seedNode('E', 'left edited\nright one');
   for (const [id, parent, content] of [
@@ -75,14 +77,9 @@ it('replays a trimmed A to E chain into an offline A to F branch', async () => {
   installGroup(offlineIdentity.identity_key);
   const offline = openDatabaseConnection();
   const port = createBetterSqliteDbPort(offline.sqlite);
-  await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
-  try {
-    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: 0, hostName: 'offline-device', sourcePeerId: onlineIdentity.identity_key
-    })).resolves.toMatchObject({ applied: true, toStateSeq: 1 });
-  } finally {
-    await port.run('DETACH DATABASE inc');
-  }
+  await expect(applyIncoming(mode, port, incomingPath, 'offline-device',
+    onlineIdentity.identity_key, offlineIdentity.identity_key))
+    .resolves.toMatchObject({ applied: true, toStateSeq: 1 });
   const current = offline.sqlite.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
     .get(nodeId) as { content: string; current_version_id: string };
   expect(current.content).toBe('left edited\nright edited');
@@ -97,26 +94,37 @@ it('replays a trimmed A to E chain into an offline A to F branch', async () => {
     json_extract(snapshot_json, '$.content') AS snapshot_content
     FROM node_sync_versions WHERE version_id = ?`).get(current.current_version_id))
     .toEqual({ body_text: current.content, snapshot_content: current.content });
-  await replayMergedVersionToOnline(current);
+  await replayMergedVersionToOnline(current, mode);
 });
 
-async function replayMergedVersionToOnline(current: { content: string; current_version_id: string }) {
+async function replayMergedVersionToOnline(current: { content: string; current_version_id: string },
+  mode: 'desktop' | 'companion') {
   const returnPath = await buildIncomingPack('offline', offlineIdentity.identity_key,
     onlineIdentity.identity_key);
   closeDatabaseConnection();
   openLibrary('online');
   const returned = openDatabaseConnection();
   const returnPort = createBetterSqliteDbPort(returned.sqlite);
-  await returnPort.run(`ATTACH DATABASE '${returnPath.replaceAll("'", "''")}' AS inc`);
-  try {
-    await expect(applySyncPackNodeSurfaceWithDbPort(returnPort, {
-      currentCursor: 0, hostName: 'online-device', sourcePeerId: offlineIdentity.identity_key
-    })).resolves.toMatchObject({ applied: true });
-  } finally {
-    await returnPort.run('DETACH DATABASE inc');
-  }
+  await expect(applyIncoming(mode, returnPort, returnPath, 'online-device',
+    offlineIdentity.identity_key, onlineIdentity.identity_key))
+    .resolves.toMatchObject({ applied: true });
   expect(returned.sqlite.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
     .get(nodeId)).toEqual(current);
+}
+
+async function applyIncoming(mode: 'desktop' | 'companion', port: ReturnType<typeof createBetterSqliteDbPort>,
+  packPath: string, hostName: string, sourcePeerId: string, deviceId: string) {
+  if (mode === 'companion') return applyCompanionSyncPackNodesWithDbPort({
+    currentCursor: 0, deviceId, hostName, packPath, sourcePeerId
+  }, port);
+  await port.run(`ATTACH DATABASE '${packPath.replaceAll("'", "''")}' AS inc`);
+  try {
+    return await applySyncPackNodeSurfaceWithDbPort(port, {
+      currentCursor: 0, hostName, sourcePeerId
+    });
+  } finally {
+    await port.run('DETACH DATABASE inc');
+  }
 }
 
 function openLibrary(name: string) {
