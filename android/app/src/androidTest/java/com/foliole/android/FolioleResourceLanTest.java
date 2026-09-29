@@ -80,7 +80,8 @@ public final class FolioleResourceLanTest {
                 "loadedImages:Array.from(document.querySelectorAll('[data-companion-readable-document] img'))" +
                 ".filter(i=>i.complete&&i.naturalWidth>0).length," +
                 "imageStates:Array.from(document.querySelectorAll('[data-companion-readable-document] img'))" +
-                ".map(i=>({complete:i.complete,width:i.naturalWidth,top:Math.round(i.getBoundingClientRect().top)}))})");
+                ".map(i=>({complete:i.complete,width:i.naturalWidth,top:Math.round(i.getBoundingClientRect().top)," +
+                "src:i.currentSrc.slice(0,140)}))})");
             if (!"missing".equals(phase) && !revealedRecoveringImage &&
                 nodeId.equals(observed.optString("node"))) {
                 JSONObject reveal = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
@@ -93,6 +94,7 @@ public final class FolioleResourceLanTest {
             }
             observed.put("availableFile", good.isFile());
             observed.put("recoveringFile", recovering.isFile());
+            if (recovering.isFile()) observed.put("recoveringDigest", digest(recovering));
             observed.put("revealedRecoveringImage", revealedRecoveringImage);
             boolean resources = good.isFile() && ("missing".equals(phase) ? !recovering.exists() : recovering.isFile());
             int requiredImages = "missing".equals(phase) ? 1 : 2;
