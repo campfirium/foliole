@@ -101,12 +101,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await delay(30_000);
     const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
-    await observeA5JourneyFacts(args, buildIdentity, env,
-      path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
     resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
-    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W',
-      '-n', `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
-    await session.invoke('sync_companion_now');
+    await delay(75_000);
     const resourceArrival = await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'resource-arrival'), { A: 1, B: 1 });
     if (!resourceArrival.facts?.some((fact) => fact.includes('Resource LAN body remains readable.'))) {
@@ -114,6 +110,8 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     }
     await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
       fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
+    await observeA5JourneyFacts(args, buildIdentity, env,
+      path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
     const androidFact = await runMacosA5SyncGroupMaintenance({
       action: 'create-journey-fact', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'android-fact'), execute: args.execute,
