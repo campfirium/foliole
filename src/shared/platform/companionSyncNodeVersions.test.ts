@@ -79,7 +79,7 @@ it('applies a complete workspace-produced version through the Capacitor DbPort',
     manual_child_order: '["child-b","child-a"]',
     import_content_fingerprint: 'content-a',
     import_source_fingerprint: 'source-a',
-    position: 37,
+    position: null,
     shelved_at: '2026-07-10T00:00:00.000Z'
   });
   expect(db.prepare(

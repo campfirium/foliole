@@ -12,6 +12,7 @@ import { createBetterSqlite3Driver } from '../../../electron/database/betterSqli
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { buildDesktopSyncPackFromDriver } from '../../../electron/database/syncPackBuilderFromDriver.js';
 import { initializeDatabaseSchema } from '../../../lib/core/database/migrations.js';
+import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { clearWorkgroupSyncDataForRestore } from '../../../lib/core/sync/syncGroupRestoreReset.js';
 import { createSyncGroupDeviceIdentity } from '../../../lib/platform/syncGroupUnifiedContract.js';
 
@@ -34,6 +35,16 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
   try {
     seedNode(source, 'backup-node');
     seedNode(target, 'b-only-node');
+    const previousEpoch = (target.prepare(`SELECT library_epoch FROM node_version_local_proof_state
+      WHERE singleton_id = 1`).get() as { library_epoch: string }).library_epoch;
+    target.prepare(`INSERT INTO node_version_device_revisions
+      (group_id, device_identity_key, library_epoch, proof_revision, pack_id, updated_at)
+      VALUES (?, ?, ?, 1, 'old-pack', ?)`).run(groupId, sourceId, previousEpoch, at);
+    target.prepare(`INSERT INTO node_version_device_bases
+      (group_id, device_identity_key, object_id, version_id, library_epoch,
+       proof_revision, pack_id, updated_at)
+      VALUES (?, ?, 'b-only-node', 'b-only-node-version', ?, 1, 'old-pack', ?)`)
+      .run(groupId, sourceId, previousEpoch, at);
     target.prepare(`INSERT INTO setting_records
       (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at)
       VALUES ('b_only_setting', 'user_space', 'all', 'all', '*', 'true', 'hash', ?)`)
@@ -61,6 +72,12 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
       .toBeUndefined();
     expect(target.prepare("SELECT object_id FROM sync_object_state WHERE object_id = 'b-only-node'").get())
       .toBeUndefined();
+    expect(target.prepare('SELECT * FROM node_version_device_revisions').all()).toEqual([]);
+    expect(target.prepare('SELECT * FROM node_version_device_bases').all()).toEqual([]);
+    expect(target.prepare(`SELECT library_epoch, proof_revision FROM node_version_local_proof_state
+      WHERE singleton_id = 1`).get()).toEqual({ library_epoch: restoreId, proof_revision: 0 });
+    expect(await collectNodeVersionPayloads(port, 'backup-node'))
+      .toEqual({ released: 0, skipped: 'peer_base_unknown' });
     await verifyOrdinarySyncAfterRestore(source, target, root);
   } finally {
     source.close();
