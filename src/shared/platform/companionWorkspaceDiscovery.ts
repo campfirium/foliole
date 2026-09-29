@@ -185,7 +185,12 @@ export async function discoverCompanionDesktops(
   options: CompanionDiscoveryOptions = {}
 ): Promise<CompanionDiscoveryResult[]> {
   const candidates = await loadNativeDiscoveryCandidates(preferredEndpointUrl, options);
-  return loadCompanionDiscoveryCandidates(candidates);
+  const discovered = await loadCompanionDiscoveryCandidates(candidates);
+  if (discovered.length > 0 || !options.requiredGroupId || !isNativeCompanionNetworkRuntime()) {
+    return discovered;
+  }
+  const refreshed = await loadNativeDiscoveryCandidates(preferredEndpointUrl, options);
+  return loadCompanionDiscoveryCandidates(refreshed);
 }
 
 export async function discoverCompanionDesktop(
