@@ -110,14 +110,16 @@ async function writeViewState(
     const contentHash = await iosCompanionContentHash(hashPayload);
     const now = new Date().toISOString();
     await apply(tx, hostName, now);
-    await markIosCompanionMutation({ contentHash, db: tx, hostName, objectId, objectType: 'view_state', updatedAt: now });
+    await markIosCompanionMutation({ contentHash, db: tx, hostName, objectId,
+      objectType: 'view_state', skipUnchanged: true, updatedAt: now });
     return { content_hash: contentHash, object_id: objectId };
   }));
 }
 
 async function mark(db: DbPort, objectType: string, objectId: string, contentHash: string, updatedAt: string) {
   const hostName = await iosCompanionHostName(db);
-  return markIosCompanionMutation({ contentHash, db, hostName, objectId, objectType, updatedAt });
+  return markIosCompanionMutation({ contentHash, db, hostName, objectId, objectType,
+    skipUnchanged: objectType === 'setting', updatedAt });
 }
 
 async function insertReviewLog(db: DbPort, nodeId: string, opId: string, draft: Record<string, unknown>) {

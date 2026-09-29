@@ -156,6 +156,9 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(42, 'installSchema', 'Failed to add companion state sequence.'),
   step(43, 'installSchema', 'Failed to add retired source epochs.'),
   step(45, 'installSchema', 'Failed to add sync resource article backlog.'),
+  step(48, 'installSchema', 'Failed to add sync dependency staging.'),
+  step(49, 'installSchema', 'Failed to add retired sync source views.'),
+  step(50, 'installSchema', 'Failed to add persisted sync fact claims.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

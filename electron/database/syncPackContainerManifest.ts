@@ -1,3 +1,4 @@
+import { dependencyManifestFields } from '../../lib/core/sync/syncPackDependencyManifest.js';
 import {
   SYNC_PACK_COMPRESSION,
   SYNC_PACK_DATABASE_ENTRY,
@@ -45,6 +46,7 @@ export function buildContainerManifest(args: {
     toStateSeq: args.toStateSeq
   });
   return {
+    ...dependencyManifestFields(args.input),
     format: SYNC_PACK_FORMAT,
     format_version: SYNC_PACK_FORMAT_VERSION,
     pack_id: args.input.packId,

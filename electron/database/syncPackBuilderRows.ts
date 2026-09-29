@@ -1,10 +1,11 @@
+import type { SyncPackDependencyManifest } from '../../lib/core/sync/syncPackDependencyManifest.js';
 import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
 import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
 import { SYNC_PACK_NODE_VERSION_COLUMNS } from '../../lib/core/sync/syncPackNodeVersions.js';
 
 import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
 
-interface BuildDesktopSyncPackRowsInput {
+interface BuildDesktopSyncPackRowsInput extends SyncPackDependencyManifest {
   frontierStateSeq: number;
   fromStateSeq: number;
   packId: string;
@@ -43,6 +44,7 @@ export function writePackManifest(
 ) {
   db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run('manifest_json', JSON.stringify(
     buildSyncPackManifest({
+      ...(input.dependencyTransfers?.length ? { dependencyTransfers: input.dependencyTransfers } : {}),
       frontierStateSeq: input.frontierStateSeq,
       fromStateSeq,
       packId: input.packId,

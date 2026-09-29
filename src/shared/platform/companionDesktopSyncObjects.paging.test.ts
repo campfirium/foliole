@@ -226,6 +226,21 @@ describe('multi-page structure receive', () => {
     expect(result.appliedPackObjectCount).toBe(3);
     expect(result.appliedPackBlobCount).toBe(1);
   });
+
+  it('continues after a lost fact view rebases the frontier', async () => {
+    syncBridgeMock.loadCompanionSyncPackPosition.mockResolvedValueOnce({
+      cursor: 5, frontierStateSeq: 8, sourceEpoch: 'epoch-a'
+    });
+    syncBridgeMock.applyCompanionDesktopSyncPack
+      .mockResolvedValueOnce({ applied_blob_count: 0, applied_object_count: 1,
+        frontier_state_seq: 9, round_rebased: true, source_epoch: 'epoch-a', to_state_seq: 6 })
+      .mockResolvedValueOnce({ applied_blob_count: 0, applied_object_count: 1,
+        frontier_state_seq: 9, source_epoch: 'epoch-a', to_state_seq: 9 });
+
+    await expect(runSync()).resolves.toMatchObject({ appliedPackObjectCount: 2 });
+    expect(syncBridgeMock.applyCompanionDesktopSyncPack.mock.calls[1]![0].url)
+      .toContain('after_state_seq=6&page_contract=bounded-v1&frontier_state_seq=9&source_epoch=epoch-a');
+  });
 });
 
 

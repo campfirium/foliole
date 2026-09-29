@@ -72,6 +72,10 @@ async function pullRemoteStructurePack(endpointUrl: string, restoreId?: string) 
       appliedObjectCount: result.applied_object_count, currentCursor: cursor,
       handledConflictCount: result.handled_conflict_count ?? 0, toStateSeq: result.to_state_seq,
       verifiedEmptyPage: result.verified_empty_page === true });
+    if (result.round_rebased) {
+      if (epoch && result.source_epoch !== epoch) throw new Error('sync_pack_source_epoch_changed');
+      frontier = result.frontier_state_seq;
+    }
     frontier ??= result.frontier_state_seq ?? result.to_state_seq;
     epoch ??= result.source_epoch;
     if (result.frontier_state_seq !== undefined && result.frontier_state_seq !== frontier ||

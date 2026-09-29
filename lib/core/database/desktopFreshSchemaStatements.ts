@@ -14,6 +14,7 @@ import { SOURCE_DISPOSITION_SCHEMA_STATEMENTS } from './sourceDispositionSchemaS
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
+import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from './syncPackDependencyStagingSchema.js';
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaStatements.js';
 import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 
@@ -27,6 +28,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
   ...SYNC_SCHEMA_STATEMENTS,
   ...SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS,
+  ...SYNC_PACK_DEPENDENCY_STAGING_SCHEMA,
   ...SYNC_GROUP_SCHEMA_STATEMENTS,
   ...SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS,
   ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,

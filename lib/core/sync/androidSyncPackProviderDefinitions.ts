@@ -14,15 +14,20 @@ import { PACK_SCHEMA } from './syncPackSchema.js';
 const nodeColumns = SYNC_PACK_NODE_COLUMNS.join(', ');
 const nodeSelectColumns = SYNC_PACK_NODE_COLUMNS.map((column) =>
   column === 'content' ? "'' AS content" : column).join(', ');
-const versionPreflightSql = `SELECT COUNT(*) AS rows,
-  COALESCE(SUM(COALESCE(length(CAST(v.body_text AS BLOB)), 0) +
-    length(CAST(v.snapshot_json AS BLOB)) + 512), 0) AS bytes
-  FROM node_sync_versions v WHERE v.object_id IN (
+const versionPreflightSql = `WITH RECURSIVE selected(id) AS (
     SELECT object_id FROM sync_object_state WHERE state_seq > ? AND state_seq <= ?
-      AND object_type IN ('node', 'node_reading', 'node_review')
+      AND object_type IN ('node', 'node_open_state', 'node_reading', 'node_review', 'parent_child_order')
     UNION SELECT a.node_id FROM node_text_alternatives a JOIN sync_object_state s
       ON s.object_type = 'node_text_alternative' AND s.object_id = a.alternative_id
-    WHERE s.state_seq > ? AND s.state_seq <= ?) `;
+    WHERE s.state_seq > ? AND s.state_seq <= ?
+  ), ancestry(id, parent_id) AS (
+    SELECT node.id, node.parent_id FROM nodes node JOIN selected ON selected.id = node.id
+    UNION SELECT parent.id, parent.parent_id FROM nodes parent
+      JOIN ancestry child ON child.parent_id = parent.id
+  ) SELECT COUNT(*) AS rows,
+  COALESCE(SUM(COALESCE(length(CAST(v.body_text AS BLOB)), 0) +
+    length(CAST(v.snapshot_json AS BLOB)) + 512), 0) AS bytes
+  FROM node_sync_versions v WHERE v.object_id IN (SELECT id FROM ancestry)`;
 const payloadPlans = [
   { objectType: 'attachment', sql: `SELECT a.id __object_id, a.id attachment_id,
     a.original_name, a.mime_type, a.size_bytes, a.created_at FROM source.attachments a` },
@@ -88,13 +93,19 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
        AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        `,
-    `INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq, s.content_hash,
-       s.last_modified_by_host_name, s.updated_at, s.deleted_at
-     FROM source.sync_object_state s WHERE s.object_type = 'node' AND s.object_id IN
-       (SELECT object_id FROM sync_object_state WHERE object_type IN ('node_reading','node_review')
-        UNION SELECT alternative.node_id FROM source.node_text_alternatives alternative
-          JOIN sync_object_state selected ON selected.object_type = 'node_text_alternative'
-            AND selected.object_id = alternative.alternative_id)`,
+    `WITH RECURSIVE node_prelude(id, parent_id) AS (
+       SELECT node.id, node.parent_id FROM source.nodes node WHERE node.id IN
+         (SELECT object_id FROM sync_object_state WHERE object_type IN
+            ('node','node_open_state','node_reading','node_review','parent_child_order')
+          UNION SELECT alternative.node_id FROM source.node_text_alternatives alternative
+            JOIN sync_object_state selected ON selected.object_type = 'node_text_alternative'
+              AND selected.object_id = alternative.alternative_id)
+       UNION SELECT parent.id, parent.parent_id FROM source.nodes parent
+         JOIN node_prelude child ON child.parent_id = parent.id
+     ) INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq,
+       s.content_hash, s.last_modified_by_host_name, s.updated_at, s.deleted_at
+     FROM source.sync_object_state s JOIN node_prelude prelude ON prelude.id = s.object_id
+     WHERE s.object_type = 'node'`,
     `DELETE FROM sync_object_state WHERE object_type NOT IN ('external_document','node') AND NOT EXISTS
       (SELECT 1 FROM sync_objects o WHERE o.object_type = sync_object_state.object_type AND o.object_id = sync_object_state.object_id)`,
     `INSERT INTO nodes (${nodeColumns}) SELECT ${nodeSelectColumns} FROM source.nodes

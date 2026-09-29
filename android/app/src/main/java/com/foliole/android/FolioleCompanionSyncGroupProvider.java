@@ -81,9 +81,7 @@ final class FolioleCompanionSyncGroupProvider {
         String requestId = call.getString(key(context, "requestId"));
         FolioleCompanionJoinRequest request = joinProvider.request(requestId, System.currentTimeMillis());
         String groupId = activeConfig.getJSONObject("sync_group").getString("group_id");
-        String identityKey = new JSONArray().put(1).put(groupId)
-            .put(request.device.getString("device_anchor"))
-            .put(request.device.getString("canonical_library_path")).toString();
+        String identityKey = request.deviceIdentityKey();
         JSONObject device = request.registeredDevice(identityKey);
         dataBridge.request("register_device", new JSONObject().put("group_id", groupId).put("device", device));
         JSObject acceptance = joinProvider.accept(requestId, System.currentTimeMillis());

@@ -43,12 +43,14 @@ export async function applyIosCompanionSyncPackPath(
       }
       return applyCompanionSyncPackNodesWithDbPort({
         currentCursor, deviceId: args.deviceId, hostName: args.hostName,
+        recordVersionReceipt: true,
         packPath: args.packPath, sourcePeerId: args.sourcePeerId,
         ...(args.factClaims ? { expectedFactIndex: args.factClaims.index } : {}),
         ...(args.expectedRestoreId ? { expectedRestoreId: args.expectedRestoreId } : {}),
         ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName })
       }, db);
     });
+    if (result.dependencyProgress) return result;
     assertSyncPackCursorAdvance({
       appliedFactCount: result.applied_group_fact_count,
       appliedObjectCount: result.applied_object_count,

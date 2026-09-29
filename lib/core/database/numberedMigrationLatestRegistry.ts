@@ -40,6 +40,7 @@ import {
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
+import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from './syncPackDependencyStagingSchema.js';
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaStatements.js';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
 
@@ -128,5 +129,14 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   // Reserved: this development migration was withdrawn; existing databases keep their version.
   { version: 112, migrate: () => {} },
   // Reserved: this development migration was withdrawn; existing databases keep their version.
-  { version: 113, migrate: () => {} }
+  { version: 113, migrate: () => {} },
+  { version: 114, migrate: (sqlite) => {
+    for (const statement of SYNC_PACK_DEPENDENCY_STAGING_SCHEMA) sqlite.exec(statement);
+  } },
+  { version: 115, migrate: (sqlite) => {
+    sqlite.exec(SYNC_PACK_DEPENDENCY_STAGING_SCHEMA[2]);
+  } },
+  { version: 116, migrate: (sqlite) => {
+    sqlite.exec(SYNC_PACK_DEPENDENCY_STAGING_SCHEMA[3]);
+  } }
 ];

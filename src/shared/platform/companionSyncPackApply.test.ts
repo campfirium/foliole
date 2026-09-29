@@ -54,6 +54,13 @@ const syncGroupMock = vi.hoisted(() => ({
   }))
 }));
 const receiptMock = vi.hoisted(() => ({ flush: vi.fn(async () => undefined) }));
+const resumeMock = vi.hoisted(() => ({ load: vi.fn(async () => null) }));
+vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: () => ({ read: resumeMock.load })
+}));
+vi.mock('./companion/network/signedRequest', () => ({
+  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Authorization-Id': 'dependency-page' }))
+}));
 const factProbeMock = vi.hoisted(() => ({
   prepare: vi.fn(async () => ({
     headers: { 'X-Authorization-Id': 'fact-probe' },
@@ -142,6 +149,27 @@ it('keeps pack apply inert outside native companion hosts', async () => {
     applied_object_count: 0,
     to_state_seq: 0
   });
+});
+
+it('consumes dependency pages internally and returns only the final advancing business page', async () => {
+  const progress = { nextRow: 2, digest: 'digest', position: {
+    table: 'node_sync_versions', key: { key: 'v2', ordinal: -1 }
+  }, transfer: { sourceViewId: 'view', sourceEpoch: 'epoch', frontierStateSeq: 12 } };
+  iosSyncPackApplyMock.apply.mockImplementationOnce(async () => ({
+    applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0,
+    dependencyProgress: progress
+  }));
+  const api = await import('./companionSyncPackApply');
+  const result = await api.applyCompanionDesktopSyncPack({ headers: {},
+    sourceHostName: 'Desktop Test Host', sourcePeerId: 'desktop-test-device',
+    url: 'http://desktop/companion/sync-pack?after_state_seq=0' });
+  expect(result.to_state_seq).toBe(12);
+  expect(capacitorMock.plugin.downloadDesktopSyncPack).toHaveBeenCalledTimes(2);
+  expect(capacitorMock.plugin.deleteDownloadedSyncPack).toHaveBeenCalledTimes(2);
+  expect(capacitorMock.plugin.downloadDesktopSyncPack).toHaveBeenLastCalledWith(expect.objectContaining({
+    headers: { 'X-Authorization-Id': 'dependency-page' },
+    url: expect.stringContaining('dependency_after_row=2')
+  }));
 });
 
 it('downloads validated packs before routing iOS through its shared-core adapter', async () => {

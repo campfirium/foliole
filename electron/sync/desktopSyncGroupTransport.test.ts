@@ -221,6 +221,24 @@ it('resumes from the transactionally committed page after a lost outer cursor sa
   }));
 });
 
+it('continues with the new frontier after a lost fact view is rebased', async () => {
+  runtime.queryOne.mockReturnValueOnce({ completed: 0, cursor_state_seq: 5,
+    frontier_state_seq: 8, restore_id: null, source_epoch: 'epoch-a' });
+  runtime.downloadPack.mockResolvedValueOnce({ cursor: 6, roundRebased: true,
+    frontierStateSeq: 9, sourceEpoch: 'epoch-a',
+    event: { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] },
+    participatingArticleIds: []
+  }).mockResolvedValueOnce({ cursor: 9, roundRebased: false,
+    frontierStateSeq: 9, sourceEpoch: 'epoch-a',
+    event: { appliedNodeIds: [], appliedObjectIds: [], appliedReviewOpIds: [] },
+    participatingArticleIds: [] });
+
+  await expect(continueDesktopSyncGroupSync(peer)).resolves.toMatchObject({ cursor: 9 });
+  expect(runtime.downloadPack).toHaveBeenCalledWith(expect.objectContaining({
+    after: 6, frontierStateSeq: 9, sourceEpoch: 'epoch-a'
+  }));
+});
+
 it('continues the same restore without resetting the first committed page', async () => {
   runtime.exchangeMemberState.mockResolvedValueOnce({
     localExited: false, peerBlocked: false, restoreFromPeer: 'restore-a'

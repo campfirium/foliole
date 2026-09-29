@@ -435,6 +435,33 @@
         }
       ],
       "beforeVersion": 45
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add sync dependency staging.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 48
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add retired sync source views.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 49
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add persisted sync fact claims.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 50
     }
   ],
   "planKeys": {

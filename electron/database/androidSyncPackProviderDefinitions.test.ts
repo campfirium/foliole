@@ -10,6 +10,7 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS as definitions } from '../../lib/core/sync/androidSyncPackProviderDefinitions.js';
 
+import { copyPayloads } from './androidSyncPackProviderDefinitions.testSupport.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 
 let root = '';
@@ -101,6 +102,34 @@ it('packs full ancestry with original parent order for changed nodes', () => {
   expect(pack.prepare('SELECT * FROM node_sync_version_parents').all()).toEqual([
     { version_id: 'android-b#2', parent_version_id: 'android-b#1', ordinal: 0 }
   ]);
+  pack.close();
+});
+
+it('includes only a selected nodes later ancestor state, without widening its page', () => {
+  const now = '2026-08-08T00:00:00.000Z';
+  source.exec(`
+    INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
+      VALUES ('child', 'node-1', 'topic', 'Child', '', '${now}', '${now}'),
+             ('unrelated', NULL, 'topic', 'Unrelated', '', '${now}', '${now}');
+    INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash,
+      last_modified_by_host_name, updated_at, sync_dirty)
+      VALUES ('node', 'child', 9, 'child-hash', 'android-b', '${now}', 1),
+             ('node', 'unrelated', 10, 'unrelated-hash', 'android-b', '${now}', 1);
+    UPDATE sync_object_state SET state_seq = 12
+      WHERE object_type = 'node' AND object_id = 'node-1';
+    INSERT INTO node_sync_versions (version_id, object_id, host_name, created_at,
+      content_hash, body_text, snapshot_json) VALUES
+      ('child-v1', 'child', 'android-b', '${now}', 'child-hash', 'child', '{}'),
+      ('parent-v1', 'node-1', 'android-b', '${now}', 'parent-hash', 'parent', '{}'),
+      ('unrelated-v1', 'unrelated', 'android-b', '${now}', 'unrelated-hash', 'unrelated', '{}');
+  `);
+  expect(source.prepare(definitions.versionPreflightSql).get(8, 9, 8, 9))
+    .toMatchObject({ rows: 2 });
+  const pack = buildPack(8, 9);
+  expect(pack.prepare("SELECT object_id FROM sync_object_state WHERE object_type = 'node' ORDER BY object_id").all())
+    .toEqual([{ object_id: 'child' }, { object_id: 'node-1' }]);
+  expect(pack.prepare('SELECT id FROM nodes ORDER BY id').all())
+    .toEqual([{ id: 'child' }, { id: 'node-1' }]);
   pack.close();
 });
 
@@ -222,38 +251,4 @@ function buildPack(fromStateSeq: number, toStateSeq = 3) {
   });
   pack.exec('DETACH DATABASE source');
   return pack;
-}
-
-function copyPayloads(pack: Database.Database) {
-  const payloads = new Map<string, Record<string, unknown>>();
-  for (const plan of definitions.payloadPlans) {
-    for (const row of pack.prepare(plan.sql).all() as Array<Record<string, unknown>>) {
-      const objectId = String(row.__object_id);
-      delete row.__object_id;
-      payloads.set(`${plan.objectType}\u0000${objectId}`, nestedPayload(row));
-    }
-  }
-  const states = pack.prepare(`SELECT object_type, object_id, content_hash, updated_at, deleted_at
-    FROM sync_object_state WHERE object_type NOT IN ('external_document','node')`).all() as Array<Record<string, unknown>>;
-  const insert = pack.prepare(`INSERT INTO sync_objects
-    (object_type, object_id, content_hash, payload_json, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?)`);
-  for (const state of states) {
-    const row = state.deleted_at == null ? payloads.get(`${state.object_type}\u0000${state.object_id}`) : null;
-    if (state.deleted_at == null && row === undefined) continue;
-    insert.run(state.object_type, state.object_id, state.content_hash,
-      row ? JSON.stringify(row) : null, state.updated_at, state.deleted_at);
-  }
-}
-
-function nestedPayload(row: Record<string, unknown>) {
-  const payload: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(row)) {
-    const [parent = '', child] = key.split('__');
-    if (!child) payload[parent] = value;
-    else {
-      const nested = (payload[parent] ??= {}) as Record<string, unknown>;
-      nested[child] = value;
-    }
-  }
-  return payload;
 }

@@ -27,6 +27,10 @@ final class FolioleCompanionDesktopHttpClient {
 
     private FolioleCompanionDesktopHttpClient() {}
 
+    static final class SyncPackSourceViewUnavailable extends Exception {
+        SyncPackSourceViewUnavailable() { super("sync_pack_source_view_unavailable"); }
+    }
+
     static final class BinaryResponse {
         final byte[] body;
         final String contentType;
@@ -117,7 +121,16 @@ final class FolioleCompanionDesktopHttpClient {
         try {
             int status = connection.getResponseCode();
             if (status < 200 || status >= 300) {
-                byte[] error = readBytes(connection.getErrorStream());
+                byte[] error = readBytes(connection.getErrorStream(), 64 * 1024);
+                if (prepared.headers.has("X-Sync-Group-Id")) {
+                    error = FolioleCompanionWorkgroupHttp.decryptResponse(
+                        context, connection, "GET", prepared.path, error);
+                    if (status == 409 && new URL(url).getPath().equals("/companion/sync-pack")
+                        && "sync_pack_source_view_unavailable".equals(
+                            new JSONObject(new String(error, StandardCharsets.UTF_8)).optString("error"))) {
+                        throw new SyncPackSourceViewUnavailable();
+                    }
+                }
                 throw binaryResourceError(status, readSafeErrorCode(error), "GET", prepared.path);
             }
             try (InputStream input = connection.getInputStream()) {
@@ -197,10 +210,14 @@ final class FolioleCompanionDesktopHttpClient {
     }
 
     private static byte[] readBytes(InputStream inputStream) throws Exception {
+        return readBytes(inputStream, Long.MAX_VALUE);
+    }
+
+    private static byte[] readBytes(InputStream inputStream, long maximumBytes) throws Exception {
         if (inputStream == null) return new byte[0];
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (InputStream buffered = new BufferedInputStream(inputStream, COPY_BUFFER_BYTES)) {
-            copy(buffered, output);
+            copy(buffered, output, maximumBytes);
         }
         return output.toByteArray();
     }

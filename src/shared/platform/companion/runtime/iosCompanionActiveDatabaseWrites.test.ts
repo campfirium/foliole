@@ -65,4 +65,11 @@ it('persists iOS setting, reading, review, open, and view state through one shar
   expect(database?.prepare('SELECT state FROM node_reading WHERE node_id = ?').pluck().get('node-1')).toBe('active');
   expect(database?.prepare('SELECT state FROM node_review WHERE node_id = ?').pluck().get('node-1')).toBe(2);
   expect(database?.prepare('SELECT count(*) FROM sync_object_state WHERE sync_dirty = 1').pluck().get()).toBe(6);
+  const before = database?.prepare(`SELECT object_type, object_id, state_seq FROM sync_object_state
+    WHERE object_type IN ('setting', 'view_state') ORDER BY object_type, object_id`).all();
+  await saveIosSetting({ key: 'app_settings', value_json: '{}' });
+  await saveIosActiveViewState({ node_id: 'node-1' });
+  await saveIosNodeViewState({ node_id: 'node-1', scroll_top: 42.8 });
+  expect(database?.prepare(`SELECT object_type, object_id, state_seq FROM sync_object_state
+    WHERE object_type IN ('setting', 'view_state') ORDER BY object_type, object_id`).all()).toEqual(before);
 });

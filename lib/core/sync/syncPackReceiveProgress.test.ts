@@ -23,6 +23,31 @@ it('accepts ordinary changes after a completed restore while retaining cursor co
     .toThrow('sync_pack_restore_event_changed');
 });
 
+it('continues an incomplete receive round when the same source advances its frontier', async () => {
+  const sqlite = new Database(':memory:');
+  try {
+    for (const statement of SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS) sqlite.exec(statement);
+    const port = createBetterSqliteDbPort(sqlite);
+    await saveSyncPackReceiveProgress(port, 'group', 'peer', {
+      sourceEpoch: 'epoch-a', fromStateSeq: 0, toStateSeq: 22, frontierStateSeq: 96
+    });
+    const progress = { completed: false, cursorStateSeq: 22, frontierStateSeq: 96,
+      groupId: 'group', peerId: 'peer', restoreId: null, sourceEpoch: 'epoch-a' };
+    const next = { sourceEpoch: 'epoch-a', fromStateSeq: 22,
+      toStateSeq: 23, frontierStateSeq: 468 };
+    expect(shouldApplySyncPackPage(next, progress, 22, false)).toBe(true);
+    expect(() => shouldApplySyncPackPage({ ...next, fromStateSeq: 21 }, progress, 22, false))
+      .toThrow('sync_pack_cursor_not_contiguous');
+    expect(() => shouldApplySyncPackPage({ ...next, frontierStateSeq: 95 }, progress, 22, false))
+      .toThrow('sync_pack_frontier_changed');
+    await saveSyncPackReceiveProgress(port, 'group', 'peer', next);
+    expect(sqlite.prepare(`SELECT cursor_state_seq, frontier_state_seq, completed
+      FROM sync_pack_receive_progress`).get()).toEqual({
+      cursor_state_seq: 23, frontier_state_seq: 468, completed: 0
+    });
+  } finally { sqlite.close(); }
+});
+
 it('keeps a retired authenticated source epoch from replacing a newer receive cursor', async () => {
   const sqlite = new Database(':memory:');
   try {

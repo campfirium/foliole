@@ -91,6 +91,10 @@ async function requestAndApply(
       ...(epoch ? { sourceEpoch: epoch } : {}),
       ...(restoreId ? { restoreId } : {})
     });
+    if (page.roundRebased) {
+      if (epoch && page.sourceEpoch !== epoch) throw new Error('sync_pack_source_epoch_changed');
+      frontier = page.frontierStateSeq;
+    }
     frontier ??= page.frontierStateSeq ?? page.cursor;
     epoch ??= page.sourceEpoch;
     if (page.frontierStateSeq !== undefined && page.frontierStateSeq !== frontier ||

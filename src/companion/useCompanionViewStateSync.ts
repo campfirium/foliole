@@ -16,6 +16,7 @@ export function useCompanionViewStateSync(args: {
   selectedBrowseNodeId: string | null;
 }) {
   const scrollSaveTimerRef = useRef<ScrollSaveTimer | null>(null);
+  const lastVisibleNodeIdRef = useRef<string | null>(null);
   const currentViewNodeId = useMemo(() => {
     if (args.activeAction === 'review') {
       return args.reviewNodeId;
@@ -24,6 +25,8 @@ export function useCompanionViewStateSync(args: {
   }, [args.activeAction, args.readableArticleNodeId, args.reviewNodeId, args.selectedBrowseNodeId]);
 
   useEffect(() => {
+    if (currentViewNodeId === lastVisibleNodeIdRef.current) return;
+    lastVisibleNodeIdRef.current = currentViewNodeId;
     void saveCompanionSyncActiveViewState(currentViewNodeId);
   }, [currentViewNodeId]);
 

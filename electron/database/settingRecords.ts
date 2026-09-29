@@ -22,6 +22,9 @@ export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordI
     scope: identity.scope,
     value_json: input.valueJson
   });
+  const existing = driver.queryOne<{ content_hash: string }>(
+    `SELECT content_hash FROM sync_object_state
+     WHERE object_type = 'setting' AND object_id = ?`, [identity.objectId]);
 
   driver.execute(
     `INSERT INTO setting_records (
@@ -42,6 +45,7 @@ export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordI
     [input.key, identity.scope, identity.platform, identity.formFactor, identity.hostName,
       input.valueJson, contentHash, input.updatedAt]
   );
+  if (existing?.content_hash === contentHash) return;
   upsertSyncObjectState(driver, {
     objectType: 'setting',
     objectId: identity.objectId,

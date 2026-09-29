@@ -13,10 +13,16 @@ const ISOLATED_SQLITE = new Set([
   'FolioleCompanionSyncGroupContentBlobBatch.java',
   'FolioleCompanionSyncGroupResources.java',
   'FolioleCompanionSyncPackDatabaseValidator.java',
+  'FolioleCompanionSyncPackDependencyArchive.java',
+  'FolioleCompanionSyncPackDependencySource.java',
+  'FolioleCompanionSyncPackDependencyRows.java',
+  'FolioleCompanionSyncPackFactClaims.java',
   'FolioleCompanionSyncPackFactIndex.java',
+  'FolioleCompanionSyncPackFactPages.java',
   'FolioleCompanionSyncPackFactProvider.java',
   'FolioleCompanionSyncPackPayloadWriter.java',
   'FolioleCompanionSyncPackProvider.java',
+  'FolioleCompanionSyncPackProviderCandidate.java',
   'FolioleCompanionSyncPackVersionBudget.java',
   'FolioleCompanionSyncPackVersionHolds.java'
 ]);

@@ -202,7 +202,7 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       await handleSyncPackGet(request, response, parsedRequestUrl, auth.device_id, writeJson);
       return;
     }
-    if (await handleCompanionSyncPackFactsGet(request, response, parsedRequestUrl, writeJson)) return;
+    if (await handleCompanionSyncPackFactsGet(request, response, parsedRequestUrl, auth.device_id, writeJson)) return;
     await runWithDatabaseConnectionOwner(() => handleAuthenticatedGet(
       request, response, parsedRequestUrl, {
         ...args,

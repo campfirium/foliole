@@ -19,6 +19,7 @@ export async function markIosCompanionMutation(args: {
   hostName: string;
   objectId: string;
   objectType: string;
+  skipUnchanged?: boolean;
   updatedAt: string;
 }) {
   const existing = (await args.db.query<DbRow>(
@@ -26,6 +27,7 @@ export async function markIosCompanionMutation(args: {
     [args.objectType, args.objectId]
   ))[0];
   const contentHash = typeof existing?.content_hash === 'string' ? existing.content_hash : null;
+  if (args.skipUnchanged && contentHash === args.contentHash) return;
   const baseContentHash = typeof existing?.base_content_hash === 'string' ? existing.base_content_hash : null;
   const base = Number(existing?.sync_dirty) === 1 ? baseContentHash ?? contentHash : contentHash;
   await args.db.run(

@@ -1,4 +1,5 @@
 import type { DbPort } from './dbPort.js';
+import { parseSyncPackDependencyManifest } from './syncPackDependencyManifest.js';
 import { SYNC_PACK_TABLE_NAMES } from './syncPackManifest.js';
 
 function record(value: unknown): Record<string, unknown> {
@@ -30,6 +31,7 @@ export function parseSyncPackManifest(value: unknown) {
     throw new Error('invalid_sync_pack_manifest_field');
   }
   return { packId: manifest.pack_id.trim(), frontierStateSeq, fromStateSeq,
+    ...parseSyncPackDependencyManifest(manifest),
     sourceEpoch: sourceEpoch.trim(), toStateSeq,
     ...(restoreId ? { restoreId: restoreId as string } : {}), tables };
 }

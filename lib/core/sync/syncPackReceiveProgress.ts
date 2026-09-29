@@ -63,7 +63,7 @@ export function shouldApplySyncPackPage(
   if (progress.restoreId !== (cursor.restoreId ?? null) && !leavingCompletedRestore) {
     throw new Error('sync_pack_restore_event_changed');
   }
-  if (!progress.completed && progress.frontierStateSeq !== cursor.frontierStateSeq) {
+  if (!progress.completed && cursor.frontierStateSeq < progress.frontierStateSeq) {
     throw new Error('sync_pack_frontier_changed');
   }
   if (cursor.toStateSeq <= progress.cursorStateSeq) return false;

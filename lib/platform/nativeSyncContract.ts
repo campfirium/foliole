@@ -55,6 +55,7 @@ export interface NativeSyncPackApplyResult {
   handled_conflict_count?: number;
   pre_sync_backup_path?: string;
   frontier_state_seq?: number;
+  round_rebased?: boolean;
   source_epoch?: string;
   to_state_seq: number;
   verified_empty_page?: boolean;

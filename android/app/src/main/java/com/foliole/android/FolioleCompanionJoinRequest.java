@@ -65,6 +65,13 @@ final class FolioleCompanionJoinRequest {
             .put("device_identity_key", identityKey);
     }
 
+    String deviceIdentityKey() throws Exception {
+        return new JSONArray().put(1).put(groupId)
+            .put(device.getString("device_anchor"))
+            .put(device.getString("canonical_library_path"))
+            .toString().replace("\\/", "/");
+    }
+
     private static void validateDevice(JSONObject device) throws Exception {
         String flavor = required(device, "path_flavor");
         if (!"posix".equals(flavor) && !"windows".equals(flavor)) {

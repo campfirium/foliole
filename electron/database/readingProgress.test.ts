@@ -225,4 +225,12 @@ it('writes sync object state for active node and node view states', () => {
     )
     .get() as { count: number };
   expect(changeCount.count).toBe(0);
+  const before = openDatabaseConnection().sqlite.prepare(`SELECT object_id, state_seq
+    FROM sync_object_state WHERE object_type = 'view_state' ORDER BY object_id`).all();
+  saveReadingProgress({ activeNodeId: 'node-2', browseRootNodeId: 'special-home',
+    nodeViewStates: [{ nodeId: 'node-1', scrollTop: 124, selectionFrom: 10, selectionTo: 18 },
+      { nodeId: 'node-2', scrollTop: 8, selectionFrom: null, selectionTo: null }],
+    updatedAt: '2026-03-06T10:01:00.000Z' });
+  expect(openDatabaseConnection().sqlite.prepare(`SELECT object_id, state_seq
+    FROM sync_object_state WHERE object_type = 'view_state' ORDER BY object_id`).all()).toEqual(before);
 });

@@ -70,6 +70,13 @@ public final class FolioleCompanionJoinRequestProviderTest {
         assertRejected(input);
     }
 
+    @Test public void deviceIdentityMatchesTheSharedJsonContractForPosixPaths() throws Exception {
+        FolioleCompanionJoinRequestProvider provider = provider();
+        JSRequest request = request(provider, keyPair(), NOW);
+        assertEquals("[1,\"group-a\",\"a1111111-1111-4111-8111-111111111111\",\"/data/user/0/com.foliole.android/files/Foliole/Data/foliole.db\"]",
+            provider.request(request.id, NOW).deviceIdentityKey());
+    }
+
     private static FolioleCompanionJoinRequestProvider provider() throws Exception {
         return new FolioleCompanionJoinRequestProvider(groupInfo());
     }

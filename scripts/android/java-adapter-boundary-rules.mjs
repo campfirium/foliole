@@ -107,11 +107,17 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionResourceAvailability.java',
       'FolioleCompanionSyncGroupContentBlobBatch.java',
       'FolioleCompanionSyncPackDatabaseValidator.java',
+      'FolioleCompanionSyncPackDependencyArchive.java',
+      'FolioleCompanionSyncPackDependencySource.java',
+      'FolioleCompanionSyncPackDependencyRows.java',
+      'FolioleCompanionSyncPackFactClaims.java',
       'FolioleCompanionSyncPackFactIndex.java',
+      'FolioleCompanionSyncPackFactPages.java',
       'FolioleCompanionSyncPackFactProvider.java',
       'FolioleCompanionSyncPackFileValidator.java',
       'FolioleCompanionSyncPackPayloadWriter.java',
       'FolioleCompanionSyncPackProvider.java',
+      'FolioleCompanionSyncPackProviderCandidate.java',
       'FolioleCompanionSyncPackVersionBudget.java',
       'FolioleCompanionSyncPackVersionHolds.java'
     ]

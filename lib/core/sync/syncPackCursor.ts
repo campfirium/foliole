@@ -1,8 +1,10 @@
 import type { DbPort, DbRow } from './dbPort.js';
+import { parseSyncPackDependencyManifest, type SyncPackDependencyManifest } from './syncPackDependencyManifest.js';
 
-export interface SyncPackCursor {
+export interface SyncPackCursor extends SyncPackDependencyManifest {
   frontierStateSeq: number;
   fromStateSeq: number;
+  packId?: string;
   restoreId?: string;
   sourceEpoch: string;
   toStateSeq: number;
@@ -25,10 +27,17 @@ export async function readSyncPackCursorWithDbPort(
   }
   const manifest = JSON.parse(value) as {
     frontier_state_seq?: unknown; from_state_seq?: unknown; restore_id?: unknown;
-    source_epoch?: unknown; to_state_seq?: unknown
+    source_epoch?: unknown; to_state_seq?: unknown;
+    pack_id?: unknown;
+    dependency_transfers?: unknown;
+    dependency_page?: unknown;
   };
   if (manifest.restore_id !== undefined &&
       (typeof manifest.restore_id !== 'string' || !manifest.restore_id.trim())) {
+    throw new Error('invalid_sync_pack_manifest');
+  }
+  if (manifest.pack_id !== undefined &&
+      (typeof manifest.pack_id !== 'string' || !manifest.pack_id.trim())) {
     throw new Error('invalid_sync_pack_manifest');
   }
   const fromStateSeq = normalizeSeq(manifest.from_state_seq);
@@ -39,8 +48,10 @@ export async function readSyncPackCursorWithDbPort(
     throw new Error('invalid_sync_pack_manifest');
   }
   return {
+    ...parseSyncPackDependencyManifest(manifest),
     frontierStateSeq,
     fromStateSeq,
+    ...(typeof manifest.pack_id === 'string' ? { packId: manifest.pack_id.trim() } : {}),
     ...(manifest.restore_id ? { restoreId: manifest.restore_id as string } : {}),
     sourceEpoch: manifest.source_epoch.trim(),
     toStateSeq

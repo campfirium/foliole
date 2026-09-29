@@ -2,7 +2,8 @@ import type { DatabaseBindParams, DatabaseRow } from '../../lib/core/database/dr
 
 export function learningNodeIds(rows: Array<{ object_id: string; object_type: string }>) {
   return rows
-    .filter((row) => row.object_type === 'node_reading' || row.object_type === 'node_review')
+    .filter((row) => ['node_open_state', 'node_reading', 'node_review',
+      'parent_child_order'].includes(row.object_type))
     .map((row) => row.object_id);
 }
 

@@ -103,7 +103,8 @@ async function readStoredEntry(
   file: Awaited<ReturnType<typeof fs.open>>, offset: number, archiveSize: number
 ) {
   const header = await readExact(file, offset, 30);
-  if (header.readUInt32LE(0) !== 0x04034b50 || header.readUInt16LE(6) !== 0 ||
+  if (header.readUInt32LE(0) !== 0x04034b50 ||
+      (header.readUInt16LE(6) & ~0x0800) !== 0 ||
       header.readUInt16LE(8) !== 0) throw new Error('invalid_sync_pack_zip_entry');
   const size = header.readUInt32LE(18);
   if (size !== header.readUInt32LE(22)) throw new Error('invalid_sync_pack_zip_entry');

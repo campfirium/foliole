@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import type { SyncPackDependencyTransfer } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import { SYNC_PACK_DATABASE_ENTRY } from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import { describeVersionFact, selectMissingSyncPackFacts, type SyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
@@ -30,6 +31,8 @@ const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
 export interface BuildDesktopSyncPackInput {
+  allFactsKnown?: boolean;
+  dependencyTransfers?: SyncPackDependencyTransfer[];
   createdAt?: string;
   frontierStateSeq?: number;
   fromPeerId: string;
@@ -55,7 +58,7 @@ export async function buildDesktopSyncPackFromDriver(
 ) {
   const fromStateSeq = normalizeSeq(input.fromStateSeq);
   const createdAt = input.createdAt ?? new Date().toISOString();
-  backfillMissingNodeSyncState(sourceDriver, !input.pageBudget);
+  if (!input.dependencyTransfers) backfillMissingNodeSyncState(sourceDriver, !input.pageBudget);
   await fs.mkdir(path.dirname(input.outputPath), { recursive: true });
   await fs.rm(input.outputPath, { force: true });
   const incomingPath = `${input.outputPath}.incoming.db`;
@@ -129,14 +132,7 @@ function loadSourceRows(
   input: BuildDesktopSyncPackInput,
   fromStateSeq: number
 ) {
-  if (input.restoreId) {
-    const groupId = driver.queryOne<{ group_id: string }>(`SELECT group_id FROM sync_group_local_state
-      WHERE singleton_id = 1 AND state = 'active'`)?.group_id;
-    const restore = groupId ? loadDesktopSyncGroupRestoreState(driver, groupId) : null;
-    if (!restore?.applied || restore.event.restore_id !== input.restoreId) {
-      throw new Error('sync_group_restore_source_changed');
-    }
-  }
+  if (input.restoreId) assertRestoreSource(driver, input.restoreId);
   const source = driver.queryOne<{ high_water: number; source_epoch: string }>(
     'SELECT high_water, source_epoch FROM sync_state_sequence WHERE singleton_id = 1'
   );
@@ -148,21 +144,26 @@ function loadSourceRows(
   if (frontierStateSeq > source.high_water) throw new Error('sync_pack_frontier_unavailable');
   const toStateSeq = normalizeSeq(input.toStateSeq ?? frontierStateSeq);
   if (toStateSeq > frontierStateSeq) throw new Error('sync_pack_page_exceeds_frontier');
+  const stagedReviews = input.dependencyTransfers?.filter((item) => item.objectType === 'node_review')
+    .map((item) => item.objectId) ?? [];
   if (input.pageBudget) {
-    assertSyncPackPreloadBudget(driver, fromStateSeq, toStateSeq, input.pageBudget, input.receiverFacts);
+    assertSyncPackPreloadBudget(driver, fromStateSeq, toStateSeq, input.pageBudget, input.receiverFacts, stagedReviews);
   }
-  const baseRows = loadPackRows(fromStateSeq, toStateSeq, driver);
-  if (input.pageBudget) assertSyncPackVersionBudget(driver, baseRows.nodes, input.pageBudget,
+  const baseRows = loadPackRows(fromStateSeq, toStateSeq, driver, stagedReviews);
+  const stagedObjects = new Set(input.dependencyTransfers?.flatMap((transfer) =>
+    transfer.nodeIds ?? [transfer.objectId]));
+  const inlineNodes = baseRows.nodes.filter((node) => !stagedObjects.has(node.id));
+  if (input.pageBudget && !input.allFactsKnown) assertSyncPackVersionBudget(driver, inlineNodes, input.pageBudget,
     input.receiverFacts?.versions);
   const groupRows = loadSyncPackGroupRows(driver);
   const versionIdentities: { version_id: string; object_id: string }[] = [];
-  const nodeVersions = [...iterateSyncPackNodeVersionRows(driver, baseRows.nodes,
-    input.receiverFacts?.versions, (row) => versionIdentities.push(row))];
-  const selectedFacts = selectMissingSyncPackFacts({
-    versions: nodeVersions,
-    parents: loadSyncPackNodeVersionParentRows(driver, versionIdentities),
-    reviews: baseRows.reviewLog
-  }, input.receiverFacts ?? { versions: [], parents: [], reviews: [] });
+  const selectedFacts = input.allFactsKnown ? { versions: [], parents: [], reviews: [] } :
+    selectMissingSyncPackFacts({
+      versions: [...iterateSyncPackNodeVersionRows(driver, inlineNodes,
+        input.receiverFacts?.versions, (row) => versionIdentities.push(row))],
+      parents: loadSyncPackNodeVersionParentRows(driver, versionIdentities),
+      reviews: baseRows.reviewLog
+    }, input.receiverFacts ?? { versions: [], parents: [], reviews: [] });
   // Retention may release historical payloads; current heads must remain usable.
   const currentVersionIds = new Set(baseRows.nodes.map((node) => node.current_version_id));
   for (const version of selectedFacts.versions) {
@@ -182,4 +183,13 @@ function loadSourceRows(
   };
   return { frontierStateSeq, rows, sourceEpoch: source.source_epoch,
     packToStateSeq: baseRows.consumedStateSeq };
+}
+
+function assertRestoreSource(driver: DatabaseDriver, restoreId: string) {
+  const groupId = driver.queryOne<{ group_id: string }>(`SELECT group_id FROM sync_group_local_state
+    WHERE singleton_id = 1 AND state = 'active'`)?.group_id;
+  const restore = groupId ? loadDesktopSyncGroupRestoreState(driver, groupId) : null;
+  if (!restore?.applied || restore.event.restore_id !== restoreId) {
+    throw new Error('sync_group_restore_source_changed');
+  }
 }

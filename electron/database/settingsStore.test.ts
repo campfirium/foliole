@@ -67,6 +67,18 @@ it('overwrites existing key with upsert and keeps a single row', () => {
   expect(row.count).toBe(1);
 });
 
+it('does not assign a new sync sequence when a saved setting is unchanged', () => {
+  saveJsonSetting('host_name', 'Maci');
+  saveJsonSetting('app_settings', { theme: 'dark' });
+  const sqlite = openDatabaseConnection().sqlite;
+  const sequence = () => sqlite.prepare(`SELECT state_seq FROM sync_object_state
+    WHERE object_type = 'setting' AND object_id = 'user_space:windows:desktop:*:app_settings'`)
+    .pluck().get();
+  const before = sequence();
+  saveJsonSetting('app_settings', { theme: 'dark' });
+  expect(sequence()).toBe(before);
+});
+
 
 it('mirrors syncable settings into setting records and sync object state', () => {
   saveJsonSetting('host_name', 'Maci', '2026-03-06T00:00:00.000Z');

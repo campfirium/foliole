@@ -9,13 +9,15 @@ import {
   buildSyncPackNodeAttachmentInsertSql,
   type SyncPackNodeApplyOptions
 } from './syncPackApplyStatements.js';
-import { applySyncPackAttachmentObjectsWithDbPort } from './syncPackAttachmentObjectsExecutor.js';
 import { applySyncPackContentBlobsWithDbPort } from './syncPackContentBlobsExecutor.js';
 import { assertContiguousSyncPackCursor, readSyncPackCursorWithDbPort } from './syncPackCursor.js';
+import { clearAppliedSyncPackDependencies, prepareSyncPackDependencies } from './syncPackDependencyApply.js';
+import { stageSyncPackDependencySurface } from './syncPackDependencyPageApply.js';
+import { retireObsoleteSyncPackDependencyViews } from './syncPackDependencyResume.js';
 import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocumentsExecutor.js';
 import { applySyncPackGroupFactsWithDbPort } from './syncPackGroupFactsExecutor.js';
+import { clearSyncPackKnownFactClaims } from './syncPackKnownFactClaims.js';
 import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
-import { applySyncPackVersionedNodesWithDbPort } from './syncPackNodeConvergence.js';
 import { applySyncPackNodeRowsWithDbPort } from './syncPackNodeRowsApply.js';
 import { applySyncPackNodeTombstonesWithDbPort } from './syncPackNodeTombstoneExecutor.js';
 import { applySyncPackNodeVersionsWithDbPort } from './syncPackNodeVersionApplyExecutor.js';
@@ -29,7 +31,6 @@ import {
 import { applyReplayPackTombstones } from './syncPackReplayApply.js';
 import { enqueueSyncPackResourceArticles } from './syncPackResourceArticles.js';
 import { applySyncPackReviewLogWithDbPort } from './syncPackReviewLogExecutor.js';
-import { ensureSyncPackSpecialRootParents } from './syncPackSpecialRootApply.js';
 import { applySyncPackStateRowsWithDbPort } from './syncPackStateRowsExecutor.js';
 import {
   applySyncPackMetadataObjectsWithDbPort,
@@ -38,6 +39,7 @@ import {
   applySyncPackNodeTextAlternativesWithDbPort,
   applySyncPackSettingObjectsWithDbPort
 } from './syncPackSyncObjectsExecutor.js';
+import { applyVersionedNodeStage } from './syncPackVersionedNodeStage.js';
 import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObjectsExecutor.js';
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
@@ -76,6 +78,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   if (options.expectedRestoreId && cursor.restoreId !== options.expectedRestoreId) {
     throw new Error('sync_group_restore_pack_mismatch');
   }
+  if (cursor.dependencyPage) return stageSyncPackDependencySurface(port, { ...options, cursor });
   const [incomingCount] = await port.query<{ count: number }>(
     `SELECT COUNT(*) AS count FROM ${options.incomingAlias ?? 'inc'}.sync_object_state`
   );
@@ -87,11 +90,21 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     const shouldApply = scope
       ? shouldApplySyncPackPage(cursor, scope.progress, options.currentCursor, retired)
       : assertContiguousSyncPackCursor(cursor, options.currentCursor);
+    if (shouldApply && cursor.dependencyTransfers && (!scope || !options.sourcePeerId)) {
+      throw new Error('sync_pack_dependency_apply_scope_missing');
+    }
+    const directClaimScope = shouldApply && scope && options.sourcePeerId
+      ? await prepareSyncPackDependencies(tx, { cursor, groupId: scope.groupId,
+        peerId: options.sourcePeerId, incomingAlias: options.incomingAlias ?? 'inc' }) : null;
     const result = await applySyncPackSurfaceInTransaction(tx, options, shouldApply, cursor.toStateSeq);
     if (shouldApply && scope && options.sourcePeerId) {
       await enqueueSyncPackResourceArticles(tx, { groupId: scope.groupId,
         incomingAlias: options.incomingAlias ?? 'inc', peerId: options.sourcePeerId });
       await saveSyncPackReceiveProgress(tx, scope.groupId, options.sourcePeerId, cursor);
+      await clearAppliedSyncPackDependencies(tx, cursor.dependencyTransfers);
+      if (directClaimScope) await clearSyncPackKnownFactClaims(tx, directClaimScope);
+      await retireObsoleteSyncPackDependencyViews(tx, { groupId: scope.groupId,
+        peerId: options.sourcePeerId, currentCursor: cursor.toStateSeq });
     }
     return { result, shouldApply };
   });
@@ -101,6 +114,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
      WHERE s.object_type = 'node' AND s.deleted_at IS NULL`
   ) : [];
   return {
+    dependencyProgress: undefined,
     applied: shouldApply,
     frontierStateSeq: cursor.frontierStateSeq,
     sourceEpoch: cursor.sourceEpoch,
@@ -183,24 +197,6 @@ async function saveVersionReceipt(
 ) {
   if (!sourcePeerId) throw new Error('node_version_receipt_source_missing');
   await recordInboundNodeVersionReceipt(port, prepared, sourcePeerId);
-}
-
-async function applyVersionedNodeStage(
-  port: DbPort,
-  options: SyncPackNodeSurfaceApplyOptions
-) {
-  await ensureSyncPackSpecialRootParents(port, options.incomingAlias);
-  await applySyncPackAttachmentObjectsWithDbPort(port, options);
-  await applySyncPackNodeRowsWithDbPort(port, {
-    ...options,
-    preserveExistingNodes: true
-  });
-  await applySyncPackNodeVersionsWithDbPort(port, options);
-  return applySyncPackVersionedNodesWithDbPort(
-    port,
-    options.hostName,
-    options.incomingAlias
-  );
 }
 
 const SYNC_PACK_SURFACE_OBJECT_TYPES = [

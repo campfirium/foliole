@@ -1,100 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const runtime = vi.hoisted(() => ({
-  coordinator: vi.fn(async () => ({ status: 'completed' })),
-  discovery: vi.fn(),
-  freshness: vi.fn(),
-  memberEndpoints: [] as Array<Record<string, unknown>>,
-  memberSessionArgs: null as null | {
-    onChanged(): void;
-    onMember(peer: Record<string, unknown>): Promise<boolean>;
-    onMemberLost(deviceId: string): void;
-  },
-  notifyOverviewChanged: vi.fn(),
-  recoverTopology: vi.fn(),
-  recoverMembers: vi.fn(),
-  recoverAdvertisement: vi.fn(),
-  readwiseContinue: vi.fn(async () => null),
-  syncCompleted: null as null | (() => void),
-  owned: false,
-  requireOwner: false,
-  group: {
-    devices: [
-      { device_identity_key: 'desktop-a', device_name: 'Mac', platform: 'darwin', state: 'active' },
-      { device_identity_key: 'desktop-b', device_name: 'Windows', platform: 'win32', state: 'active' }
-    ],
-    group_id: 'group-1', local_device_identity_key: 'desktop-a'
-  },
-  participating: true,
-  persistedRoute: null as null | Record<string, unknown>,
-  role: 'observing',
-  sessionArgs: null as null | Record<string, (...args: never[]) => unknown>,
-  stop: vi.fn(),
-  updateRole: vi.fn(async () => undefined)
-}));
-
-vi.mock('../database/connection.js', () => ({
-  runWithDatabaseConnectionOwner: async <T>(execute: () => Promise<T> | T) => {
-    runtime.owned = true;
-    try { return await execute(); } finally { runtime.owned = false; }
-  }
-}));
-vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => {
-  if (runtime.requireOwner && !runtime.owned) throw new Error('sqlite owner required');
-  return runtime.group;
-} }));
-vi.mock('../database/syncGroupMemberStateStore.js', () => ({
-  isDesktopSyncGroupDeviceBlocked: () => false
-}));
-vi.mock('../database/watchedFolderConflictDecisions.js', () => ({
-  loadUnreconciledWatchedFolderConflictDecisions: () => []
-}));
-vi.mock('../database/settingsStore.js', () => ({
-  loadJsonSetting: () => runtime.persistedRoute,
-  saveJsonSetting: (_key: string, value: null | Record<string, unknown>) => {
-    runtime.persistedRoute = value;
-  }
-}));
-vi.mock('./desktopAnchorTopologyRole.js', () => ({
-  loadDesktopAnchorTopologyState: () => ({ role: runtime.role })
-}));
-vi.mock('./desktopAnchorTopologySession.js', () => ({
-  startDesktopAnchorTopologySession: (args: typeof runtime.sessionArgs) => {
-    runtime.sessionArgs = args;
-    return { recoverDiscovery: runtime.recoverTopology, stop: runtime.stop };
-  }
-}));
-vi.mock('./desktopCompanionSyncPreference.js', () => ({
-  isDesktopCompanionSyncParticipating: () => runtime.participating
-}));
-vi.mock('./companionMdnsAdvertisement.js', () => ({
-  recoverCompanionMdnsAdvertisement: runtime.recoverAdvertisement,
-  updateCompanionMdnsAdvertisementRole: runtime.updateRole
-}));
-vi.mock('./desktopMemberSyncCadence.js', () => ({ updateDesktopSyncFreshness: runtime.freshness }));
-vi.mock('./desktopSyncCoordinator.js', () => ({ runDesktopSyncCoordinator: runtime.coordinator,
-  subscribeDesktopSyncCompleted: (callback: () => void) => {
-    runtime.syncCompleted = callback;
-    return () => { runtime.syncCompleted = null; };
-  } }));
-vi.mock('./desktopSyncGroupDiscovery.js', () => ({ discoverDesktopSyncGroups: runtime.discovery }));
-vi.mock('./desktopSyncGroupOverviewNotifier.js', () => ({
-  notifyDesktopSyncGroupOverviewChanged: runtime.notifyOverviewChanged
-}));
-vi.mock('./desktopSyncGroupMemberStateSession.js', () => ({
-  exchangeAllDesktopSyncGroupMemberStates: vi.fn(async () => false),
-  loadDesktopSyncGroupMemberEndpoints: () => runtime.memberEndpoints,
-  startDesktopSyncGroupMemberStateSession: (_group: unknown, onChanged: () => void,
-    onMember: (peer: Record<string, unknown>) => Promise<boolean>,
-    onMemberLost: (deviceId: string) => void) => {
-    runtime.memberSessionArgs = { onChanged, onMember, onMemberLost };
-    return { recover: runtime.recoverMembers, stop: vi.fn() };
-  }
-}));
-vi.mock('./readwiseOwnerHandoff.js', () => ({
-  continuePendingReadwiseHandoff: runtime.readwiseContinue
-}));
-
+/* eslint-disable import/order -- Vitest mocks must register before the subject loads. */
+import { getRuntime } from './desktopSyncGroupAutoSync.testSupport.js';
 import {
   recoverDesktopSyncGroupDiscovery,
   runDesktopManualSyncWithDiscovery,
@@ -103,6 +10,8 @@ import {
 } from './desktopSyncGroupAutoSync.js';
 import { loadDesktopSyncGroupDiscoveryError } from './desktopSyncGroupDiscoveryStatus.js';
 import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
+
+const runtime = getRuntime();
 
 beforeEach(() => {
   stopDesktopSyncGroupAutoSync();
@@ -137,6 +46,28 @@ it('resumes an interrupted mobile guide route after restart and clears it on suc
     'automatic', expect.objectContaining({ peer_device_id: 'android-b' })
   ));
   await vi.waitFor(() => expect(runtime.persistedRoute).toBeNull());
+});
+
+it('keeps an unfinished mobile guide route when its device temporarily disappears', async () => {
+  let rejectSync: (error: Error) => void = () => undefined;
+  runtime.coordinator.mockImplementationOnce(() => new Promise((_, reject) => {
+    rejectSync = reject;
+  }));
+  runtime.persistedRoute = {
+    endpoint_url: 'http://android:38641', group_id: 'group-1',
+    local_device_id: 'desktop-a', peer_device_id: 'android-b',
+    peer_device_name: 'A5', peer_platform: 'android-capacitor', route_kind: 'mobile_guide'
+  };
+
+  startDesktopSyncGroupAutoSync();
+  runtime.memberSessionArgs?.onMemberLost('android-b');
+
+  expect(runtime.persistedRoute).toEqual(expect.objectContaining({ peer_device_id: 'android-b' }));
+  expect(loadDesktopSyncGroupRoutes('group-1')).toEqual([
+    expect.objectContaining({ peer_device_id: 'android-b' })
+  ]);
+  rejectSync(new Error('A5 temporarily unavailable'));
+  await vi.waitFor(() => expect(runtime.coordinator).toHaveBeenCalledOnce());
 });
 
 it('keeps exactly one qualified desktop anchor as the automatic route', async () => {

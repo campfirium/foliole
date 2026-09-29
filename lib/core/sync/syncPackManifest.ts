@@ -1,3 +1,5 @@
+import { dependencyManifestFields, type SyncPackDependencyManifest } from './syncPackDependencyManifest.js';
+
 export type SyncPackTableName =
   | 'content_blobs'
   | 'external_documents'
@@ -70,7 +72,7 @@ export interface SyncPackTableManifest {
   row_count: number;
 }
 
-export interface SyncPackManifestInput {
+export interface SyncPackManifestInput extends SyncPackDependencyManifest {
   frontierStateSeq: number;
   fromStateSeq: number;
   packId: string;
@@ -86,6 +88,7 @@ export function buildSyncPackManifest(input: SyncPackManifestInput) {
     row_count: input.tableRows[name].length
   }));
   return {
+    ...dependencyManifestFields(input),
     pack_id: input.packId,
     ...(input.restoreId ? { restore_id: input.restoreId } : {}),
     source_epoch: input.sourceEpoch,

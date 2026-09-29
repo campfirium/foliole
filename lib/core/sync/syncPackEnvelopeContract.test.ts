@@ -19,7 +19,7 @@ it('defines the shared sync pack envelope and actual sqlite requirements', () =>
     compression: 'zlib',
     databaseEntry: 'incoming.db.deflate',
     format: 'foliole.sync-pack',
-    formatVersion: 17,
+    formatVersion: 18,
     forbiddenDeviceIdentityKeys: [
       'canonical_library_path', 'device_anchor', 'device_identity_key', 'device_key', 'identity_key'
     ],

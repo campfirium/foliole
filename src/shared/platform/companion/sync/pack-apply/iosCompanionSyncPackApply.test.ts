@@ -66,7 +66,7 @@ describe('iosCompanionSyncPackApply', () => {
       packPath: '/Library/incoming.db', sourcePeerId: 'desktop-device'
     });
     expect(mocks.applyDb).toHaveBeenCalledWith(expect.objectContaining({
-      currentCursor: 0, expectedRestoreId: 'restore-2'
+      currentCursor: 0, expectedRestoreId: 'restore-2', recordVersionReceipt: true
     }), expect.any(Object));
   });
 });

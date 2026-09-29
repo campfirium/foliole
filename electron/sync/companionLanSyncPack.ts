@@ -8,9 +8,10 @@ import { SYNC_PACK_PAGE_CONTRACT } from '../../lib/core/sync/syncPackPageContrac
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadDesktopSyncGroupRestoreState } from '../database/syncGroupRestoreState.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
-import { buildDesktopSyncPack, buildDesktopSyncPackPage } from '../database/syncPackBuilder.js';
+import { buildDesktopSyncPack, buildDesktopSyncPackPage, type BuildDesktopSyncPackInput } from '../database/syncPackBuilder.js';
 import { DEFAULT_SYNC_PACK_PAGE_BUDGET } from '../database/syncPackPageBudget.js';
 
+import { buildCompanionDependencyPack } from './companionLanDependencyPack.js';
 import { loadCompanionSyncPackFactIndex } from './companionLanSyncPackFacts.js';
 
 export const SYNC_PACK_PATH = '/companion/sync-pack';
@@ -86,7 +87,8 @@ export async function buildCompanionSyncPackResource(
     local.device_identity_key, restoreId)) {
     return { error: 'sync_group_restore_source_unavailable', status: 'error', statusCode: 409 };
   }
-  const requestedFacts = resolveRequestedFactClaims(parsedRequestUrl);
+  const dependencyView = parsedRequestUrl.searchParams.get('dependency_view');
+  const requestedFacts = dependencyView ? null : resolveRequestedFactClaims(parsedRequestUrl);
   const { tempRoot, packId, outputPath } = await createTempPackResource();
   try {
     const buildInput = {
@@ -96,15 +98,7 @@ export async function buildCompanionSyncPackResource(
       ...(restoreId ? { restoreId } : {}),
       toPeerId: authenticatedDeviceId, requireDeliveryHold: true
     };
-    if (requestedFacts) {
-      const { index, receiverFacts } = requestedFacts;
-      await buildDesktopSyncPack({ ...buildInput,
-        frontierStateSeq: index.frontier_state_seq, sourceEpoch: index.source_epoch,
-        toStateSeq: index.to_state_seq, pageBudget: DEFAULT_SYNC_PACK_PAGE_BUDGET,
-        receiverFacts });
-    } else {
-      await buildDesktopSyncPackPage(buildInput, DEFAULT_SYNC_PACK_PAGE_BUDGET);
-    }
+    await buildRequestedPack(parsedRequestUrl, group.group_id, buildInput, requestedFacts);
     return {
       cleanup: () => fs.rm(tempRoot, { force: true, recursive: true }),
       filePath: outputPath,
@@ -115,6 +109,24 @@ export async function buildCompanionSyncPackResource(
   } catch (error) {
     await fs.rm(tempRoot, { force: true, recursive: true });
     throw error;
+  }
+}
+
+async function buildRequestedPack(url: URL, groupId: string,
+  input: BuildDesktopSyncPackInput, facts: ReturnType<typeof resolveRequestedFactClaims>) {
+  if (url.searchParams.has('dependency_view') || url.searchParams.has('fact_view')) {
+    return buildCompanionDependencyPack({ url, groupId, input });
+  }
+  if (!facts) return buildDesktopSyncPackPage(input, DEFAULT_SYNC_PACK_PAGE_BUDGET);
+  const { index, receiverFacts } = facts;
+  try {
+    return await buildDesktopSyncPack({ ...input,
+      frontierStateSeq: index.frontier_state_seq, sourceEpoch: index.source_epoch,
+      toStateSeq: index.to_state_seq, pageBudget: DEFAULT_SYNC_PACK_PAGE_BUDGET, receiverFacts });
+  } catch (error) {
+    if (!(error instanceof Error) || !['sync_pack_page_preflight_exceeds_budget',
+      'sync_pack_page_changed_during_build'].includes(error.message)) throw error;
+    return buildCompanionDependencyPack({ url, groupId, input, facts });
   }
 }
 

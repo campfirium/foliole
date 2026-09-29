@@ -45,3 +45,13 @@ function createPort(manifestJson: string): DbPort {
     transaction: vi.fn()
   } as never;
 }
+
+it('rejects final dependency descriptors from mixed stable source views', async () => {
+  const transfer = { groupId: 'group', peerId: 'peer', sourceViewId: 'view-a', objectType: 'node',
+    objectId: 'first', sourceEpoch: 'epoch', fromStateSeq: 0, objectStateSeq: 1,
+    frontierStateSeq: 2, expectedRows: 1, expectedDigest: 'a'.repeat(64) };
+  const port = createPort(JSON.stringify({ source_epoch: 'epoch', from_state_seq: 0,
+    to_state_seq: 2, frontier_state_seq: 2,
+    dependency_transfers: [transfer, { ...transfer, objectId: 'second', sourceViewId: 'view-b' }] }));
+  await expect(readSyncPackCursorWithDbPort(port)).rejects.toThrow('sync_pack_dependency_source_view_mismatch');
+});

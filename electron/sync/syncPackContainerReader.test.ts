@@ -106,6 +106,13 @@ it('checks a file-backed pack before publishing its decompressed database', asyn
     fromStateSeq: 0, toStateSeq: 1, sourceEpoch: 'source-epoch'
   });
   expect(await fs.readFile(outputPath)).toEqual(database);
+  const androidStoredZip = await fs.readFile(archivePath);
+  const secondEntryOffset = 30 + androidStoredZip.readUInt16LE(26)
+    + androidStoredZip.readUInt16LE(28) + androidStoredZip.readUInt32LE(18);
+  androidStoredZip.writeUInt16LE(0x0800, 6);
+  androidStoredZip.writeUInt16LE(0x0800, secondEntryOffset + 6);
+  await fs.writeFile(archivePath, androidStoredZip);
+  expect(await extractSyncPackDatabaseFromFile(args)).toMatchObject({ toStateSeq: 1 });
   const broken = await fs.readFile(archivePath);
   const damageAt = broken.indexOf(compressed.subarray(0, 12)) + 20;
   if (damageAt < 20 || damageAt >= broken.length) throw new Error('compressed entry missing');

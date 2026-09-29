@@ -81,6 +81,8 @@ export function startDesktopSyncGroupAutoSync() {
     (deviceId) => {
       const topology = loadDesktopAnchorTopologyState();
       if (topology.role === 'member' && topology.anchor_device_id === deviceId) return;
+      if (loadDesktopSyncGroupRoutes(group.group_id).some((route) =>
+        route.peer_device_id === deviceId && route.route_kind === 'mobile_guide')) return;
       removeDesktopSyncGroupRoute(deviceId);
       updateFreshnessForRole(group.group_id);
     },

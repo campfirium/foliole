@@ -177,7 +177,8 @@ export function loadMaxStateSeq(driver: DatabaseDriver) {
 export function loadPackRows(
   fromStateSeq: number,
   toStateSeq: number,
-  driver: DatabaseDriver
+  driver: DatabaseDriver,
+  stagedReviewNodeIds: readonly string[] = []
 ) {
   const changedStateRows = listChangedStateRows(driver, fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
   const changedNodeIds = idsForObjectTable(changedStateRows, 'nodes');
@@ -218,7 +219,7 @@ export function loadPackRows(
     externalDocuments,
     nodeAttachments,
     nodes,
-    reviewLog: loadReviewLogRows(driver, stateRows),
+    reviewLog: loadReviewLogRows(driver, stateRows.filter((row) => !stagedReviewNodeIds.includes(row.object_id))),
     stateRows,
     syncObjects
   };

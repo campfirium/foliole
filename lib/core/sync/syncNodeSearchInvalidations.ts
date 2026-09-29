@@ -80,6 +80,12 @@ export async function enqueueAppliedNodeDeleteSearchInvalidation(
   await markWorkspaceSearchSourceRevisionQueued(port, updatedAt);
 }
 
+export async function enqueueAppliedNodeBodySearchInvalidation(port: DbPort, nodeId: string, updatedAt: string) {
+  await advanceWorkspaceSearchSourceRevision(port, updatedAt);
+  await enqueueNodeSearchInvalidation(port, 'node_workspace', nodeId, updatedAt);
+  await markWorkspaceSearchSourceRevisionQueued(port, updatedAt);
+}
+
 export async function enqueueAppliedNodeSearchInvalidations(
   port: DbPort,
   localNode: LocalSyncNodeSearchInvalidationState | null,

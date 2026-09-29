@@ -73,7 +73,8 @@ function attachmentRows(driver: DatabaseDriver, params: number[], limit: number)
 
 /** Rejects oversized payload sources before the ordinary JS row loader sees them. */
 export function assertSyncPackPreloadBudget(driver: DatabaseDriver, fromStateSeq: number,
-  toStateSeq: number, budget: SyncPackPageBudget, claims?: SyncPackFactClaims) {
+  toStateSeq: number, budget: SyncPackPageBudget, claims?: SyncPackFactClaims,
+  stagedReviewNodeIds: readonly string[] = []) {
   const params = [fromStateSeq, toStateSeq];
   const rows = driver.queryOne<{ count: number }>(
     `SELECT COUNT(*) AS count FROM sync_object_state
@@ -116,14 +117,7 @@ export function assertSyncPackPreloadBudget(driver: DatabaseDriver, fromStateSeq
        WHERE s.object_type = 'node' AND s.object_id = t.node_id
          AND s.deleted_at IS NOT NULL AND s.state_seq > ? AND s.state_seq <= ?)`, params
   );
-  const knownReviews = claims?.reviews ?? [];
-  const reviewExclusion = knownReviews.length
-    ? ` AND r.op_id NOT IN (${knownReviews.map(() => '?').join(', ')})` : '';
-  const reviews = driver.queryOne<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM review_log r
-     JOIN sync_object_state s ON s.object_type = 'node_review' AND s.object_id = r.node_id
-     WHERE s.state_seq > ? AND s.state_seq <= ?${reviewExclusion}`, [...params, ...knownReviews]
-  )?.count ?? 0;
+  const reviews = missingReviewRows(driver, params, claims?.reviews ?? [], stagedReviewNodeIds);
   const attachments = attachmentRows(driver, params, budget.applyRows);
   const bytes = nodePayload + inlinePayloadBytes(driver, params) + (tombstones?.bytes ?? 0);
   const totalRows = rows + ancestors + reviews + attachments + (tombstones?.rows ?? 0);
@@ -131,4 +125,17 @@ export function assertSyncPackPreloadBudget(driver: DatabaseDriver, fromStateSeq
     bytes > budget.databaseBytes || totalRows > budget.applyRows) {
     throw new Error('sync_pack_page_preflight_exceeds_budget');
   }
+}
+
+function missingReviewRows(driver: DatabaseDriver, params: number[], knownReviews: readonly string[],
+  stagedReviewNodeIds: readonly string[]) {
+  const reviewExclusion = knownReviews.length
+    ? ` AND r.op_id NOT IN (${knownReviews.map(() => '?').join(', ')})` : '';
+  return driver.queryOne<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM review_log r
+     JOIN sync_object_state s ON s.object_type = 'node_review' AND s.object_id = r.node_id
+     WHERE s.state_seq > ? AND s.state_seq <= ?${reviewExclusion}
+       AND r.node_id NOT IN (SELECT value FROM json_each(?))`,
+    [...params, ...knownReviews, JSON.stringify(stagedReviewNodeIds)]
+  )?.count ?? 0;
 }

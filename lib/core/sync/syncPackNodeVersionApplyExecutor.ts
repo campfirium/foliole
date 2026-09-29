@@ -13,7 +13,8 @@ import {
   type SyncPackNodeVersionRow
 } from './syncPackNodeVersions.js';
 
-const VERSION_BATCH_SIZE = 16;
+// Assembled dependency history can exceed a transport page; read one body at a time.
+const VERSION_BATCH_SIZE = 1;
 type VersionIdentity = Pick<SyncPackNodeVersionRow, 'version_id' | 'object_id' | 'parent_version_id'>;
 
 export async function applySyncPackNodeVersionsWithDbPort(

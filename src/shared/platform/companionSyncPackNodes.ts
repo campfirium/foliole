@@ -48,6 +48,7 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     sourcePeerId: args.sourcePeerId,
     recordVersionReceipt: true
   }, manager);
+  if (result.dependencyProgress) return result;
   assertSyncPackCursorAdvance({
     appliedFactCount: result.applied_group_fact_count,
     appliedObjectCount: result.applied_object_count,
@@ -129,7 +130,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
       frontier_state_seq: result.frontierStateSeq,
       source_epoch: result.sourceEpoch,
       to_state_seq: result.toStateSeq,
-      ...(result.verifiedEmptyPage ? { verified_empty_page: true } : {})
+      ...('verifiedEmptyPage' in result && result.verifiedEmptyPage ? { verified_empty_page: true } : {})
     } satisfies NativeSyncPackApplyResult & typeof result & {
       appliedPackBlobCount: number;
       appliedPackObjectCount: number;
@@ -142,7 +143,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
 async function assertFactIndexRound(port: DbPort, index: SyncPackFactIndex) {
   const cursor = await readSyncPackCursorWithDbPort(port, INCOMING_PACK_ALIAS);
   if (cursor.fromStateSeq !== index.from_state_seq ||
-      cursor.toStateSeq !== index.to_state_seq ||
+      (cursor.dependencyPage ? cursor.dependencyPage.transfer.objectStateSeq : cursor.toStateSeq) !== index.to_state_seq ||
       cursor.frontierStateSeq !== index.frontier_state_seq ||
       cursor.sourceEpoch !== index.source_epoch) {
     throw new Error('sync_pack_fact_index_changed');

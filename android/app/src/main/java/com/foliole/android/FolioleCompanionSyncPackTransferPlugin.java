@@ -47,6 +47,8 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
                     packFile.getAbsolutePath()
                 );
                 call.resolve(result);
+            } catch (FolioleCompanionDesktopHttpClient.SyncPackSourceViewUnavailable exception) {
+                call.reject(exception.getMessage(), "sync_pack_source_view_unavailable", exception);
             } catch (Exception exception) {
                 call.reject(FolioleCompanionPluginErrors.withCause("Failed to download companion desktop sync pack.", exception), exception);
             }

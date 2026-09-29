@@ -82,7 +82,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 17,
+    "formatVersion": 18,
     "forbiddenDeviceIdentityKeys": [
       "canonical_library_path",
       "device_anchor",

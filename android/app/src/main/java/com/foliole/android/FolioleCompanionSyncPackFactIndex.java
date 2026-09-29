@@ -16,19 +16,20 @@ final class FolioleCompanionSyncPackFactIndex {
         JSONArray versions = new JSONArray();
         try (Cursor rows = pack.rawQuery(
             "SELECT version_id, object_id, parent_version_id, host_name, created_at, " +
-            "content_hash, body_text, snapshot_json, json_remove(snapshot_json, '$.content') " +
+            "content_hash, body_text, snapshot_json " +
             "FROM node_sync_versions ORDER BY object_id, created_at, version_id", null)) {
             while (rows.moveToNext()) {
                 JSONObject snapshot = new JSONObject(rows.getString(7));
                 String body = rows.isNull(6) ? (snapshot.has("content")
                     ? (snapshot.isNull("content") ? null : snapshot.getString("content")) : "") : rows.getString(6);
+                snapshot.remove("content");
                 versions.put(new JSONObject()
                     .put("version_id", rows.getString(0)).put("object_id", rows.getString(1))
                     .put("parent_version_id", rows.isNull(2) ? JSONObject.NULL : rows.getString(2))
                     .put("host_name", rows.getString(3)).put("created_at", rows.getString(4))
                     .put("content_hash", rows.getString(5))
                     .put("body_hash", body == null ? JSONObject.NULL : sha(body))
-                    .put("snapshot_metadata", rows.getString(8)));
+                    .put("snapshot_metadata", snapshot.toString().replace("\\/", "/")));
             }
         }
         JSONArray parents = new JSONArray();
@@ -110,6 +111,13 @@ final class FolioleCompanionSyncPackFactIndex {
             pack.setTransactionSuccessful();
         } finally { pack.endTransaction(); }
         pack.execSQL("VACUUM");
+    }
+
+    static void validateBits(JSONObject index, String versionBits,
+                             String parentBits, String reviewBits) throws Exception {
+        bits(versionBits, index.getJSONArray("versions").length());
+        bits(parentBits, index.getJSONArray("parents").length());
+        bits(reviewBits, index.getJSONArray("reviews").length());
     }
 
     private static boolean[] bits(String hex, int count) {

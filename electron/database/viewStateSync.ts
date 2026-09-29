@@ -41,6 +41,10 @@ function writeViewStateObject(connection: DatabaseConnection, key: string, paylo
     ...payload
   };
   const contentHash = computeSyncContentHash('view_state', withoutNodeViewStateHashSource(syncPayload));
+  const existing = connection.driver.queryOne<{ content_hash: string }>(
+    `SELECT content_hash FROM sync_object_state
+     WHERE object_type = 'view_state' AND object_id = ?`, [objectId]);
+  if (existing?.content_hash === contentHash) return;
   upsertSyncObjectState(connection.driver, {
     objectType: 'view_state',
     objectId,
