@@ -69,6 +69,10 @@ public final class FolioleResourceLanTest {
         Context context, Bundle args, String phase, String nodeId) throws Exception {
         File good = attachment(context, args.getString("availableHash", ""));
         File recovering = attachment(context, args.getString("recoveringHash", ""));
+        String availableSelector = JSONObject.quote("[data-md-image-attachment-id='"
+            + args.getString("availableHash", "") + "']");
+        String recoveringSelector = JSONObject.quote("[data-md-image-attachment-id='"
+            + args.getString("recoveringHash", "") + "']");
         long deadline = System.nanoTime() + 90_000_000_000L;
         JSONObject observed = new JSONObject();
         boolean revealedRecoveringImage = false;
@@ -79,16 +83,17 @@ public final class FolioleResourceLanTest {
                 "surface:(document.body?.innerText||'').slice(0,1600),bodyReadable:(document.body?.innerText||'').includes('Resource LAN body remains readable.')," +
                 "loadedImages:Array.from(document.querySelectorAll('[data-companion-readable-document] img'))" +
                 ".filter(i=>i.complete&&i.naturalWidth>0).length," +
+                "availableLoaded:(()=>{const i=document.querySelector(" + availableSelector + ")?.querySelector('.cm-md-image-element');return !!(i?.complete&&i.naturalWidth>0)})()," +
+                "recoveringLoaded:(()=>{const i=document.querySelector(" + recoveringSelector + ")?.querySelector('.cm-md-image-element');return !!(i?.complete&&i.naturalWidth>0)})()," +
                 "imageStates:Array.from(document.querySelectorAll('[data-companion-readable-document] img'))" +
                 ".map(i=>({complete:i.complete,width:i.naturalWidth,top:Math.round(i.getBoundingClientRect().top)," +
-                "src:i.currentSrc.slice(0,140)}))})");
+                "src:i.currentSrc.slice(0,140),attachment:i.closest('[data-md-image-attachment-id]')?.getAttribute('data-md-image-attachment-id')}))})");
             if (!"missing".equals(phase) && !revealedRecoveringImage &&
                 nodeId.equals(observed.optString("node"))) {
                 JSONObject reveal = FolioleCompanionWebViewSemanticAdapter.evaluateJson(
                     instrumentation, view,
-                    "JSON.stringify((()=>{const images=Array.from(document.querySelectorAll(" +
-                    "'[data-companion-readable-document] img'));const last=images[images.length-1];" +
-                    "if(images.length<2)return {revealed:false};last.scrollIntoView({block:'center'});" +
+                    "JSON.stringify((()=>{const target=document.querySelector(" + recoveringSelector + ");" +
+                    "if(!target)return {revealed:false};target.scrollIntoView({block:'center'});" +
                     "return {revealed:true}})())");
                 revealedRecoveringImage = reveal.optBoolean("revealed");
             }
@@ -97,9 +102,9 @@ public final class FolioleResourceLanTest {
             if (recovering.isFile()) observed.put("recoveringDigest", digest(recovering));
             observed.put("revealedRecoveringImage", revealedRecoveringImage);
             boolean resources = good.isFile() && ("missing".equals(phase) ? !recovering.exists() : recovering.isFile());
-            int requiredImages = "missing".equals(phase) ? 1 : 2;
             if (nodeId.equals(observed.optString("node")) && observed.optBoolean("bodyReadable")
-                && resources && observed.optInt("loadedImages") >= requiredImages) {
+                && resources && observed.optBoolean("availableLoaded")
+                && ("missing".equals(phase) || observed.optBoolean("recoveringLoaded"))) {
                 assertEquals(args.getString("availableHash"), digest(good));
                 if (!"missing".equals(phase)) assertEquals(args.getString("recoveringHash"), digest(recovering));
                 return observed.put("availableHashVerified", true)
