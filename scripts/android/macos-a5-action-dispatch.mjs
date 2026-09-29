@@ -1,5 +1,8 @@
 /* global console */
 
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+
 import {
   macosA5ErrorEvidence,
   recoverMacosA5SyncGroupRejoinEntry,
@@ -179,7 +182,8 @@ export async function dispatchMacosA5Action({
     await runMacosA5SyncGroupJoinPrepareEntry(productArgs);
   }
   if (action === 'single-principal-sync-group') {
-    await (await import('./macos-a5-single-principal-sync-group-entry.mjs'))
+    await (await import(pathToFileURL(path.join(paths.buildRoot,
+      'scripts/android/macos-a5-single-principal-sync-group-entry.mjs')).href))
       .runMacosA5SinglePrincipalSyncGroupEntry(productArgs);
   }
   if (action === 'sync-group-rejoin') await runMacosA5SyncGroupRejoinEntry(productArgs);
