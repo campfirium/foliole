@@ -104,6 +104,12 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await observeA5JourneyFacts(args, buildIdentity, env,
       path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
     resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
+    await delay(40_000);
+    const resourceArrival = await observeA5JourneyFacts(args, buildIdentity, env,
+      path.join(evidenceRoot, 'resource-arrival'), { A: 1, B: 1 });
+    if (!resourceArrival.facts?.some((fact) => fact.includes('Resource LAN body remains readable.'))) {
+      throw new Error('Resource topic did not reach Android before recovery verification.');
+    }
     await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
       fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
     const androidFact = await runMacosA5SyncGroupMaintenance({
