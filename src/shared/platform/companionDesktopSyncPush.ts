@@ -127,34 +127,58 @@ function formatPushError(error: unknown) {
   return error instanceof Error ? error.message : 'Desktop sync push failed.';
 }
 
+async function pushLocalDirtyObjectsOnce(endpointUrl: string, peerId: string) {
+  const { items } = await collectLocalPushItems(peerId);
+  if (items.length === 0) {
+    return {
+      rekeyedNode: false,
+      pushConflictCount: 0,
+      pushedObjectIds: [],
+      pushedReviewOpIds: [],
+      pushError: null,
+      pushRejectedCount: 0
+    };
+  }
+  await stageCompanionSyncPushItems(peerId, items);
+  const response = await postDesktopJson<DesktopSyncPushResponse>(endpointUrl, SYNC_PUSH_PATH, { items });
+  const acks = response.acks.map(toPushAck);
+  const accepted = acceptedAcks(acks);
+  await saveCompanionSyncPushAcks(peerId, acks);
+  return {
+    rekeyedNode: accepted.some((ack) => ack.identity.objectType === 'node'
+      && Boolean(ack.canonicalObjectId && ack.canonicalObjectId !== ack.identity.objectId)),
+    pushedObjectIds: accepted
+      .filter((ack) => ack.identity.objectType !== 'review_log')
+      .map((ack) => `${ack.identity.objectType}:${ack.identity.objectId}`),
+    pushedReviewOpIds: accepted
+      .filter((ack) => ack.identity.objectType === 'review_log')
+      .map((ack) => ack.identity.objectId),
+    pushConflictCount: countAcksByStatus(acks, 'conflict'),
+    pushError: null,
+    pushRejectedCount: countAcksByStatus(acks, 'rejected')
+  };
+}
+
 export async function pushLocalDirtyObjects(endpointUrl: string): Promise<CompanionDesktopSyncPushResult> {
   try {
     const peerId = await resolveCompanionSyncPeerId(endpointUrl);
-    const { items } = await collectLocalPushItems(peerId);
-    if (items.length === 0) {
+    const first = await pushLocalDirtyObjectsOnce(endpointUrl, peerId);
+    if (!first.rekeyedNode) {
       return {
-        pushConflictCount: 0,
-        pushedObjectIds: [],
-        pushedReviewOpIds: [],
-        pushError: null,
-        pushRejectedCount: 0
+        pushConflictCount: first.pushConflictCount,
+        pushedObjectIds: first.pushedObjectIds,
+        pushedReviewOpIds: first.pushedReviewOpIds,
+        pushError: first.pushError,
+        pushRejectedCount: first.pushRejectedCount
       };
     }
-    await stageCompanionSyncPushItems(peerId, items);
-    const response = await postDesktopJson<DesktopSyncPushResponse>(endpointUrl, SYNC_PUSH_PATH, { items });
-    const acks = response.acks.map(toPushAck);
-    const accepted = acceptedAcks(acks);
-    await saveCompanionSyncPushAcks(peerId, acks);
+    const second = await pushLocalDirtyObjectsOnce(endpointUrl, peerId);
     return {
-      pushedObjectIds: accepted
-        .filter((ack) => ack.identity.objectType !== 'review_log')
-        .map((ack) => `${ack.identity.objectType}:${ack.identity.objectId}`),
-      pushedReviewOpIds: accepted
-        .filter((ack) => ack.identity.objectType === 'review_log')
-        .map((ack) => ack.identity.objectId),
-      pushConflictCount: countAcksByStatus(acks, 'conflict'),
+      pushConflictCount: first.pushConflictCount + second.pushConflictCount,
+      pushedObjectIds: [...first.pushedObjectIds, ...second.pushedObjectIds],
+      pushedReviewOpIds: [...first.pushedReviewOpIds, ...second.pushedReviewOpIds],
       pushError: null,
-      pushRejectedCount: countAcksByStatus(acks, 'rejected')
+      pushRejectedCount: first.pushRejectedCount + second.pushRejectedCount
     };
   } catch (error) {
     return {

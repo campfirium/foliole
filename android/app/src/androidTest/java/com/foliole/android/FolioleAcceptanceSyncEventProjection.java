@@ -64,6 +64,7 @@ final class FolioleAcceptanceSyncEventProjection {
                     .put("trigger_reason", required(event, "trigger_reason"))
                     .put("status", required(event, "status"));
                 copy(event, projected, "result");
+                copy(event, projected, "message");
                 copy(event, projected, "started_at");
                 copy(event, projected, "occurred_at");
                 if (!projected.has("started_at") && !projected.has("occurred_at")) {
@@ -75,6 +76,7 @@ final class FolioleAcceptanceSyncEventProjection {
                 .put("group_id", groupId).put("diagnostic_events", diagnosticEvents)
                 .put("events", events).put("source_runs", sourceRuns)
                 .put("dirty_objects", dirtyObjects(database))
+                .put("unconfirmed_deliveries", unconfirmedDeliveries(database))
                 .put("push_issues", pushIssues(database))
                 .put("syncEventsProjected", true);
             if ("com.foliole.android.t250dense".equals(context.getPackageName())) {
@@ -117,6 +119,25 @@ final class FolioleAcceptanceSyncEventProjection {
             }
         }
         return issues;
+    }
+
+    private static JSONArray unconfirmedDeliveries(SQLiteDatabase database) throws Exception {
+        JSONArray deliveries = new JSONArray();
+        try (Cursor cursor = database.rawQuery(
+            "SELECT object_type, object_id, operation_id, status, payload_identity, " +
+                "remote_position FROM sync_delivery_receipts " +
+                "WHERE status <> 'confirmed' ORDER BY updated_at DESC LIMIT 20", null
+        )) {
+            while (cursor.moveToNext()) {
+                deliveries.put(new JSONObject().put("object_type", cursor.getString(0))
+                    .put("object_id", cursor.getString(1))
+                    .put("operation_id", cursor.getString(2))
+                    .put("status", cursor.getString(3))
+                    .put("payload_identity", cursor.getString(4))
+                    .put("remote_position", cursor.getString(5)));
+            }
+        }
+        return deliveries;
     }
 
     private static JSONObject denseFacts(SQLiteDatabase database) throws Exception {
