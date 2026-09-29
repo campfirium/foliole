@@ -4,7 +4,6 @@ import { RESOURCE_LAN_FIRST_HASH, seedA5ResourceLanProbe,
   verifyA5ResourceLanProbe } from './macos-a5-resource-lan-probe.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
-import { setTimeout as delay } from 'node:timers/promises';
 
 import { captureA5ActionRun, captureA5SyncRun } from './a5-sync-event-proof.mjs';
 import { observeA5JourneyFacts } from './a5-journey-facts-proof.mjs';
@@ -66,7 +65,6 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     repoRoot: args.paths.buildRoot, runtimeRoot: path.join(sharedRoot, 'macos-runtime') });
   try {
     resourceFixture = await seedA5ResourceLanProbe(session, macosLibrary);
-    if (!iosResourceFailover) resourceFixture.restore();
     await createDesktopSyncGroupJourneyFact({ device: 'A',
       evidenceRoot: path.join(evidenceRoot, 'desktop-initial-fact'), session });
     const conflictSeed = await createDesktopSyncConflictSeed({
@@ -89,9 +87,9 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       evidenceRoot: path.join(evidenceRoot, 'automatic-enabled'), execute: args.execute,
       installMain: false, paths: args.paths, serial: args.serial
     });
+    await observeA5JourneyFacts(args, buildIdentity, env,
+      path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
     if (iosResourceFailover) {
-      await observeA5JourneyFacts(args, buildIdentity, env,
-        path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
       await runMacosA5IosResourceFailover({ args, buildIdentity, env, evidenceRoot,
         fixture: resourceFixture, groupId: providerOverview.sync_group.group_id,
         macDeviceId: providerOverview.sync_group.local_device_identity_key,
@@ -99,14 +97,10 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
         acceptIos: () => observeAndAccept(session) });
       return;
     }
-    await delay(30_000);
-    const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
-      evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
-    await observeA5JourneyFacts(args, buildIdentity, env,
-      path.join(evidenceRoot, 'initial-union'), { A: 1, B: 1 });
-    fs.unlinkSync(resourceFixture.missingPath);
     await verifyA5ResourceLanProbe({ args, buildIdentity, env, evidenceRoot,
       fixture: resourceFixture, groupId: providerOverview.sync_group.group_id });
+    const a5Initial = await captureA5SyncRun({ args, buildIdentity, env,
+      evidenceRoot: path.join(evidenceRoot, 'initial-run') }, 'initial');
     const androidFact = await runMacosA5SyncGroupMaintenance({
       action: 'create-journey-fact', appId: ACCEPTANCE_APP_ID, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'android-fact'), execute: args.execute,
@@ -139,7 +133,6 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await session.invoke('resume_companion_sync');
     await observeMacosAnchorAfterElection(session);
     assertMacosAcceptanceSyncGroupServer(await session.load());
-    await delay(10_000);
     const a5ManualBeforeRestartAction = await runMacosA5SyncGroupMaintenance({
       action: 'sync-now', transportRequired: false, appId: ACCEPTANCE_APP_ID,
       buildIdentity, env, evidenceRoot: path.join(evidenceRoot, 'manual-before-restart'),
