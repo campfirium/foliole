@@ -102,6 +102,11 @@ final class FolioleCompanionDesktopHttpClient {
                 contentType = connection.getHeaderField("X-Foliole-Original-Content-Type");
             }
             if (status < 200 || status >= 300) {
+                if (status == 409 && "/companion/sync-pack".equals(new URL(url).getPath())
+                    && "sync_pack_source_view_unavailable".equals(
+                        new JSONObject(new String(responseBody, StandardCharsets.UTF_8)).optString("error"))) {
+                    throw new SyncPackSourceViewUnavailable();
+                }
                 throw binaryResourceError(status, readSafeErrorCode(responseBody), method, prepared.path);
             }
             return new BinaryResponse(responseBody, contentType);
@@ -109,8 +114,17 @@ final class FolioleCompanionDesktopHttpClient {
     }
 
     static void downloadToFile(Context context, String url, JSONObject headers, File outputFile) throws Exception {
-        long maximumBytes = new URL(url).getPath().equals("/companion/sync-pack")
-            ? FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES : Long.MAX_VALUE;
+        if ("/companion/sync-pack".equals(new URL(url).getPath())) {
+            byte[] body = requestBytes(context, url, headers);
+            if (body.length > FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES) {
+                throw new IllegalArgumentException("sync_pack_transfer_limit_exceeded");
+            }
+            try (OutputStream output = new BufferedOutputStream(
+                new FileOutputStream(outputFile), COPY_BUFFER_BYTES)) {
+                output.write(body);
+            }
+            return;
+        }
         FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
             FolioleCompanionWorkgroupHttp.prepare(context, url, "GET", headers, null);
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
@@ -125,22 +139,17 @@ final class FolioleCompanionDesktopHttpClient {
                 if (prepared.headers.has("X-Sync-Group-Id")) {
                     error = FolioleCompanionWorkgroupHttp.decryptResponse(
                         context, connection, "GET", prepared.path, error);
-                    if (status == 409 && new URL(url).getPath().equals("/companion/sync-pack")
-                        && "sync_pack_source_view_unavailable".equals(
-                            new JSONObject(new String(error, StandardCharsets.UTF_8)).optString("error"))) {
-                        throw new SyncPackSourceViewUnavailable();
-                    }
                 }
                 throw binaryResourceError(status, readSafeErrorCode(error), "GET", prepared.path);
             }
             try (InputStream input = connection.getInputStream()) {
                 if (prepared.headers.has("X-Sync-Group-Id")) {
                     FolioleCompanionWorkgroupHttp.decryptResponseToFile(
-                        context, connection, "GET", prepared.path, input, outputFile, maximumBytes);
+                        context, connection, "GET", prepared.path, input, outputFile);
                 } else {
                     try (OutputStream output = new BufferedOutputStream(
                         new FileOutputStream(outputFile), COPY_BUFFER_BYTES)) {
-                        copy(input, output, maximumBytes);
+                        copy(input, output);
                     }
                 }
             }
