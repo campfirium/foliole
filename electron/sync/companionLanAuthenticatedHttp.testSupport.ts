@@ -12,8 +12,8 @@ import { decryptDesktopWorkgroupResponse, encryptDesktopWorkgroupRequest
 const GROUP_ID = 'group';
 const KEY = Buffer.alloc(32, 7).toString('base64url');
 
-export async function startAuthenticatedSyncHttp({ sourceDeviceId = 'source',
-  receiverDeviceId = 'receiver' } = {}) {
+export async function startAuthenticatedSyncHttp({ archiveDir, sourceDeviceId = 'source',
+  receiverDeviceId = 'receiver' }: { archiveDir?: string; sourceDeviceId?: string; receiverDeviceId?: string } = {}) {
   const handler = createLanWorkspaceSyncRequestHandler({ appVersion: 'test',
     onJoinRequestCreated: null, deviceId: sourceDeviceId, updateGroupStatus: () => {},
     getSyncStatus: () => null });
@@ -49,7 +49,9 @@ export async function startAuthenticatedSyncHttp({ sourceDeviceId = 'source',
     postJson: async (pathWithQuery: string, body: unknown) => JSON.parse((await request(
       'POST', pathWithQuery, JSON.stringify(body))).toString('utf8')) as Record<string, unknown>,
     archive: async (url: URL) => {
-      const filePath = resolveSyncPackPath(`http-archive-${++archiveIndex}.syncpack`);
+      const filePath = archiveDir
+        ? `${archiveDir}/http-archive-${++archiveIndex}.syncpack`
+        : resolveSyncPackPath(`http-archive-${++archiveIndex}.syncpack`);
       await fs.writeFile(filePath, await request('GET', url.pathname + url.search));
       return { status: 'ready' as const, filePath, cleanup: () => fs.rm(filePath) };
     },
