@@ -96,6 +96,7 @@ const controlledElectronSqliteTests = [
   'electron/sync/companionLanSourceMutation.http.integration.test.ts',
   'electron/sync/companionLanTombstoneBatch.http.test.ts',
   'electron/sync/desktopAttachmentRanges.process.http.test.ts',
+  'electron/sync/desktopAttachmentSourceSwitch.http.integration.test.ts',
   'electron/sync/desktopResourceTransfers.restart.test.ts',
   'electron/sync/desktopResourceArticleContinuation.http.integration.test.ts',
   'electron/sync/desktopSyncGroupFactProbe.http.test.ts',
