@@ -93,6 +93,7 @@ const controlledElectronSqliteTests = [
   'electron/sync/syncPackCrashApply.http.integration.test.ts',
   'electron/sync/companionLanPagedFactRoundTrip.test.ts',
   'electron/sync/companionLanPagedReview.test.ts',
+  'electron/sync/companionLanSourceMutation.http.integration.test.ts',
   'electron/sync/companionLanTombstoneBatch.http.test.ts',
   'electron/sync/desktopAttachmentRanges.process.http.test.ts',
   'electron/sync/desktopResourceTransfers.restart.test.ts',
