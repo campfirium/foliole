@@ -1,7 +1,10 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
+import { resolveFolderConflict } from '../../lib/core/sync/syncFolderResolution.js';
+import { resolveItemConflict } from '../../lib/core/sync/syncItemResolution.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { resolveTopicConflict } from '../../lib/core/sync/syncNodeConvergence.js';
+import { loadMergeBaseCandidates } from '../../lib/core/sync/syncNodeGraph.js';
 import { isNodeVersionIdentityOnly, orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -50,21 +53,29 @@ export async function applyNodePushBatchWithDbPort(
     else appendNodeAck(result, entry, applied.appliedIds.includes(entry.record.object_id)
       || (isNodeVersionIdentityOnly(entry.record) && await isStoredVersionIdentical(port, entry.record)));
   }
-  for (const entry of deferred.filter(({ record }) => isAdditiveNode(record))) {
-    await resolveAdditiveObject(port, entry, result);
+  const related = [];
+  for (const entry of deferred) {
+    if (isAdditiveNode(entry.record) && !await hasSharedHistory(port, entry.record)) {
+      await resolveAdditiveObject(port, entry, result);
+    } else related.push(entry);
   }
-  const topicEntries = deferred.filter(({ record }) => !isAdditiveNode(record));
-  for (const entries of groupByObjectId(topicEntries)) {
-    await resolveTopic(port, entries, result);
+  for (const entries of groupByObjectId(related)) {
+    await resolveSharedObject(port, entries, result);
   }
   return result;
+}
+
+async function hasSharedHistory(port: DbPort, record: NativeSyncNodeRecord) {
+  const local = await loadCurrentSyncNodeRecord(port, record.object_id);
+  return Boolean(local?.version_id && record.version_id
+    && (await loadMergeBaseCandidates(port, local.version_id, record.version_id)).length > 0);
 }
 
 function isAdditiveNode(record: NativeSyncNodeRecord) {
   return record.snapshot.anchor_link !== null || record.snapshot.kind !== 'topic';
 }
 
-async function resolveTopic(
+async function resolveSharedObject(
   port: DbPort,
   entries: Array<{ item: CompanionSyncPushPayload; record: NativeSyncNodeRecord }>,
   result: CompanionSyncPushResult
@@ -72,7 +83,10 @@ async function resolveTopic(
   const ordered = [...entries].sort((left, right) =>
     (left.record.version_id ?? '').localeCompare(right.record.version_id ?? ''));
   try {
-    await resolveTopicConflict(port, ordered.map(({ record }) => record));
+    const records = ordered.map(({ record }) => record);
+    if (records.every((record) => record.snapshot.kind === 'folder')) await resolveFolderConflict(port, records);
+    else if (records.every((record) => record.snapshot.kind === 'item')) await resolveItemConflict(port, records);
+    else await resolveTopicConflict(port, records);
   } catch {
     ordered.forEach((entry) => appendNodeAck(result, entry, false));
     return;

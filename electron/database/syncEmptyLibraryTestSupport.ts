@@ -9,6 +9,7 @@ import { expect } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
+import type { NodeAnchorLinkPayload } from '../../lib/core/database/nodeMutationPayloads.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import { applyCompanionContentPack } from '../../lib/core/sync/companionBatchDataPlane.js';
 import { confirmOutboundNodeVersionPack } from '../../lib/core/sync/nodeVersionDeliveryProof.js';
@@ -70,11 +71,12 @@ export function joinPeers(...members: Peer[]) {
   }
 }
 
-export function edit(peer: Peer, content: string, title = 'Topic') {
+export function edit(peer: Peer, content: string, title = 'Topic', anchorLink: NodeAnchorLinkPayload | null = null,
+  kind: 'topic' | 'folder' | 'item' = 'topic') {
   const at = new Date(Date.UTC(2026, 8, 30, 0, 0, ++sequence)).toISOString();
   return peer.driver.transaction((driver) => {
-    upsertNodeSnapshot(driver, { anchorLink: null, content, createdAt: '2026-09-30T00:00:00.000Z',
-      hostName: peer.name, isTitleManual: true, kind: 'topic', nodeId: 'topic', parentNodeId: null,
+    upsertNodeSnapshot(driver, { anchorLink, content, createdAt: '2026-09-30T00:00:00.000Z',
+      hostName: peer.name, isTitleManual: true, kind, nodeId: 'topic', parentNodeId: null,
       position: null, reveal: null, title, updatedAt: at });
     return flushNodeSyncVersionWithDriver(driver, 'topic', peer.name, at)!;
   });
