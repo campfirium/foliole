@@ -133,6 +133,20 @@ async function negotiateFactView(server: TestServer) {
   return viewId;
 }
 
+function assertReceivedNodes(target: Database.Database, softDeleted: boolean, staged: string[]) {
+  expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get())
+    .toEqual({ count: 2 });
+  expect(target.prepare('SELECT node_id FROM node_sync_tombstones').get())
+    .toEqual({ node_id: 'deleted-3' });
+  expect(target.prepare('SELECT id FROM attachments').get())
+    .toEqual({ id: 'a'.repeat(64) });
+  if (softDeleted) expect(target.prepare("SELECT deleted_at FROM nodes WHERE id = 'live-2'").get())
+    .toEqual({ deleted_at: 'now' });
+  expect(target.prepare('SELECT id, content FROM nodes ORDER BY id').all())
+    .toEqual([{ id: 'live-1', content: 'body-1' }, { id: 'live-2', content: 'body-2' }]);
+  expect(staged).toEqual(['live-1', 'live-2']);
+}
+
 async function applyPages(server: TestServer, viewId: string, softDeleted = false) {
   const targetPath = resolveSyncPackPath('multi-node-http-target.db');
   let target = new Database(targetPath);
@@ -160,15 +174,7 @@ async function applyPages(server: TestServer, viewId: string, softDeleted = fals
             enqueueSearchInvalidations: false });
           if (!result.dependencyProgress) {
             expect(result.toStateSeq).toBe(6);
-            expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get())
-              .toEqual({ count: 2 });
-            expect(target.prepare('SELECT node_id FROM node_sync_tombstones').get())
-              .toEqual({ node_id: 'deleted-3' });
-            expect(target.prepare('SELECT id FROM attachments').get())
-              .toEqual({ id: 'a'.repeat(64) });
-            if (softDeleted) expect(target.prepare("SELECT deleted_at FROM nodes WHERE id = 'live-2'").get())
-              .toEqual({ deleted_at: 'now' });
-            expect(staged).toEqual(['live-1', 'live-2']);
+            assertReceivedNodes(target, softDeleted, staged);
             break;
           }
           staged.push(result.dependencyProgress.transfer.objectId);

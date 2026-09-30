@@ -14,7 +14,7 @@ export async function reconcileSyncPackInlineBodies(port: DbPort, incomingAlias:
        JOIN main.node_sync_versions version ON version.version_id = n.current_version_id
          AND version.object_id = n.id
        WHERE n.id > ? AND n.id IN (SELECT id FROM ${alias}.nodes)
-         AND n.deleted_at IS NULL AND n.sync_dirty = 0
+         AND n.sync_dirty = 0
          AND n.body_blob_hash IS NULL AND n.content = ''
          AND version.body_text IS NOT NULL AND version.body_text <> ''
        ORDER BY n.id LIMIT 1`, [after]);
@@ -24,7 +24,7 @@ export async function reconcileSyncPackInlineBodies(port: DbPort, incomingAlias:
     const result = await port.run(
       `UPDATE nodes SET content = ?, body_blob_hash = ?
        WHERE id = ? AND current_version_id = ? AND sync_dirty = 0
-         AND deleted_at IS NULL AND body_blob_hash IS NULL AND content = ''`,
+         AND body_blob_hash IS NULL AND content = ''`,
       [row.body_text, hash, row.id, row.current_version_id]);
     if (result.changes !== 1) throw new Error(`sync_body_projection_changed:${row.id}`);
     if (enqueueSearchInvalidations) await enqueueAppliedNodeBodySearchInvalidation(port, row.id, now);
