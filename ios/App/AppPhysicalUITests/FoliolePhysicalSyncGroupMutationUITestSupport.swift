@@ -25,7 +25,10 @@ extension FoliolePhysicalSyncGroupUITests {
         waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
         for prefix in requiredEnvironment("FOLIOLE_PHYSICAL_REMOVED_TOPIC_PREFIXES")
             .split(separator: ",").map(String.init) {
-            waitForDisappearance(visibleTopics(prefix: prefix, in: app).firstMatch, timeout: 120,
+            let obsolete = app.buttons.matching(
+                NSPredicate(format: "label BEGINSWITH %@", "Open topic \(prefix)")
+            ).firstMatch
+            waitForDisappearance(obsolete, timeout: 120,
                                  message: "Backup adoption retained obsolete topic: \(prefix)")
         }
     }
