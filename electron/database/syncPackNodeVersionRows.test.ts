@@ -57,7 +57,9 @@ it('packs current head lineage references without requiring missing historical p
   } as never]);
 
   expect(versions).toEqual([head]);
-  expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual([]);
+  expect(loadSyncPackNodeVersionParentRows(driver, versions)).toEqual([
+    { ordinal: 0, parent_version_id: 'desktop#missing-parent', version_id: 'desktop#head' }
+  ]);
 });
 
 it('packs every retained branch of the current merge lineage', () => {
@@ -83,7 +85,7 @@ it('packs every retained branch of the current merge lineage', () => {
   ]);
 });
 
-it('keeps only pack-internal parent edges for the same node object', () => {
+it('keeps parent references and rejects known cross-object edges', () => {
   const parent = createVersion({ parent_version_id: null, version_id: 'desktop#parent' });
   const head = createVersion({ parent_version_id: 'desktop#parent' });
   const rows = [{ ordinal: 0, parent_version_id: 'desktop#parent', version_id: 'desktop#head' }];

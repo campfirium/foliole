@@ -5,7 +5,7 @@ import { resolveFolderConflict } from '../../lib/core/sync/syncFolderResolution.
 import { resolveItemConflict } from '../../lib/core/sync/syncItemResolution.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { resolveTopicConflict } from '../../lib/core/sync/syncNodeConvergence.js';
-import { loadMergeBaseCandidates } from '../../lib/core/sync/syncNodeGraph.js';
+import { isStoredAncestorVersion, loadMergeBaseCandidates } from '../../lib/core/sync/syncNodeGraph.js';
 import { isNodeVersionIdentityOnly, orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -84,7 +84,15 @@ async function resolveSharedObject(
   const ordered = [...entries].sort((left, right) =>
     (left.record.version_id ?? '').localeCompare(right.record.version_id ?? ''));
   try {
-    const records = ordered.map(({ record }) => record);
+    const records = [];
+    for (const { record } of ordered) {
+      let ancestor = false;
+      for (const { record: other } of ordered) {
+        if (record.version_id !== other.version_id &&
+            await isStoredAncestorVersion(port, record.version_id!, other.version_id!)) ancestor = true;
+      }
+      if (!ancestor) records.push(record);
+    }
     if (records.every((record) => record.snapshot.kind === 'folder')) await resolveFolderConflict(port, records);
     else if (records.every((record) => record.snapshot.kind === 'item')) await resolveItemConflict(port, records);
     else await resolveTopicConflict(port, records);

@@ -210,15 +210,17 @@ it('does not claim node history for a stale reading state after its node was del
   } finally { view.close(); }
 });
 
-it('rejects a source lineage whose parent version is absent before offering facts', () => {
+it('offers existing history and original references when a historical parent is absent', () => {
   seedNode('node', null, 2, 1);
   source.exec(`UPDATE node_sync_versions SET parent_version_id = 'missing'
     WHERE version_id = 'node-0001';
     UPDATE node_sync_version_parents SET parent_version_id = 'missing'
     WHERE version_id = 'node-0001'`);
-  expect(() => readDesktopSyncPackFactPage(createBetterSqlite3Driver(source), {
+  const page = readDesktopSyncPackFactPage(createBetterSqlite3Driver(source), {
     fromStateSeq: 0, toStateSeq: 1, frontierStateSeq: 1, sourceEpoch: 'epoch'
-  })).toThrow('sync_pack_node_version_missing_parent:node-0001');
+  });
+  expect(page.index.versions.map((row) => row.version_id)).toEqual(['node-0001']);
+  expect(page.index.parents).toEqual([{ version_id: 'node-0001', parent_version_id: 'missing', ordinal: 0 }]);
 });
 
 it('checks source row bytes before materializing a body that exceeds the page budget', () => {

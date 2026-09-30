@@ -72,6 +72,7 @@ const controlledElectronSqliteTests = [
   'electron/database/syncPackSpecialRootApply.test.ts',
   'electron/database/syncEmptyLibrary.integration.test.ts',
   'electron/database/syncEmptyLibraryCrisscross.integration.test.ts',
+  'electron/database/syncMissingAncestor.integration.test.ts',
   'electron/database/syncNodeParentIdentity.test.ts',
   'electron/database/syncGroupStore.test.ts',
   'electron/database/syncGroupLocalIdentityRekey.test.ts',

@@ -6,7 +6,8 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
-import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { applySyncPackNodeRowsWithDbPort } from '../../lib/core/sync/syncPackNodeRowsApply.js';
+import { applySyncPackNodeVersionsWithDbPort } from '../../lib/core/sync/syncPackNodeVersionApplyExecutor.js';
 import { readHostedPack } from '../../scripts/ios/ios-hosted-sync-pack-evidence.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -17,7 +18,7 @@ afterEach(async () => {
   if (tempRoot) await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('rejects the fixed illegal DAG oracle with its missing-parent error', async () => {
+it('preserves the fixed historical-gap fixture without inventing its missing ancestor', async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-illegal-dag-oracle-'));
   const incomingPath = path.join(tempRoot, 'illegal-dag.db');
   const oracle = readHostedPack(
@@ -42,10 +43,12 @@ it('rejects the fixed illegal DAG oracle with its missing-parent error', async (
   const port = createBetterSqliteDbPort(main, { name: 'sync-pack-illegal-dag-oracle-test' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   try {
-    await expect(applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: oracle.manifest.from_state_seq,
-      hostName: 'ios-static-oracle'
-    })).rejects.toThrow('sync_pack_node_version_missing_parent');
+    await applySyncPackNodeRowsWithDbPort(port);
+    await expect(applySyncPackNodeVersionsWithDbPort(port)).resolves.toBeUndefined();
+    expect(main.prepare("SELECT version_id FROM node_sync_versions WHERE version_id = 'missing#ancestor'").get())
+      .toBeUndefined();
+    expect(main.prepare("SELECT parent_version_id FROM node_sync_version_parents WHERE parent_version_id = 'missing#ancestor'")
+      .pluck().all()).toEqual(['missing#ancestor']);
   } finally {
     await port.run('DETACH DATABASE inc');
     main.close();

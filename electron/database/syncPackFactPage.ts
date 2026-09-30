@@ -121,15 +121,6 @@ function assertFactLineage(driver: DatabaseDriver, window: DesktopSyncPackFactWi
     WHERE node.current_version_id IS NOT NULL AND
       (version.version_id IS NULL OR version.object_id <> node.id) LIMIT 1`, params);
   if (invalidHead) throw new Error('sync_pack_node_version_missing_or_mismatched');
-  const missingParent = driver.queryOne<{ version_id: string }>(`${PRELUDE}
-    SELECT version.version_id FROM lineage
-    JOIN node_sync_versions version ON version.version_id = lineage.version_id
-    LEFT JOIN node_sync_version_parents edge ON edge.version_id = version.version_id
-    LEFT JOIN node_sync_versions parent ON parent.version_id =
-      coalesce(edge.parent_version_id, version.parent_version_id)
-    WHERE coalesce(edge.parent_version_id, version.parent_version_id) IS NOT NULL
-      AND parent.version_id IS NULL LIMIT 1`, params);
-  if (missingParent) throw new Error(`sync_pack_node_version_missing_parent:${missingParent.version_id}`);
   const crossObject = driver.queryOne(`${PRELUDE} SELECT version.version_id FROM lineage
     JOIN node_sync_versions version ON version.version_id = lineage.version_id
     LEFT JOIN node_sync_version_parents edge ON edge.version_id = version.version_id

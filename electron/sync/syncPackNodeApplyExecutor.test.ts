@@ -167,7 +167,6 @@ it('does not apply live node state rows when the pack has no node payload', asyn
 });
 
 it.each([
-  ['missing parent', "INSERT INTO node_sync_version_parents VALUES ('desktop#1', 'missing#1', 0)"],
   ['cycle', "INSERT INTO node_sync_version_parents VALUES ('desktop#1', 'desktop#1', 0)"],
   ['invalid snapshot', "UPDATE node_sync_versions SET snapshot_json = 'not-json'"],
   ['dangling current pointer', "UPDATE nodes SET current_version_id = 'missing#head'"]

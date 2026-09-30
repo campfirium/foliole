@@ -47,9 +47,10 @@ export function loadSyncPackNodeVersionParentRows(
     ));
   }
   return rows.filter((row) => {
-    const parentObjectId = objectIds.get(row.parent_version_id);
-    if (parentObjectId === undefined) return false;
-    if (parentObjectId !== objectIds.get(row.version_id)) {
+    const parentObjectId = objectIds.get(row.parent_version_id) ?? driver.queryOne<{ object_id: string }>(
+      'SELECT object_id FROM node_sync_versions WHERE version_id = ?', [row.parent_version_id]
+    )?.object_id;
+    if (parentObjectId !== undefined && parentObjectId !== objectIds.get(row.version_id)) {
       throw new Error(`sync_pack_node_version_cross_object:${row.version_id}`);
     }
     return true;

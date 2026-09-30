@@ -91,12 +91,12 @@ export async function resolveTopicConflict(
     deletion = selectOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
     const baseBody = base ? storedSyncNodeVersionBody(base) : '';
     const incomingBody = incoming.body_text ?? incoming.snapshot.content ?? '';
-    const merge = matchingHeads ? { kind: 'merged' as const, text: body } : baseBody === null || !base
+    const merge = matchingHeads || body === incomingBody ? { kind: 'merged' as const, text: body } : baseBody === null || !base
       ? { kind: 'conflict' as const }
       : mergeSyncText(baseBody, body, incomingBody);
     if (merge.kind === 'merged') {
       body = merge.text;
-      winner = chooseProjection(winner, incoming, matchingHeads ? body : baseBody!, 0, 0);
+      winner = chooseProjection(winner, incoming, matchingHeads ? body : baseBody ?? '', 0, 0);
       continue;
     }
     const projection = await chooseEvidenceProjection(port, winner, incoming, baseBody ?? '');

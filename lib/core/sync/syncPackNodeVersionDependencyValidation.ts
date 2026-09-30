@@ -26,15 +26,13 @@ export async function validateStoredVersionDependencies(
   parents: SyncPackNodeVersionParentRow[]
 ) {
   const byId = new Map(incoming.map((row) => [row.version_id, row]));
+  await assertReturningParentOwners(port, byId);
   for (const edge of parents) {
     const child = byId.get(edge.version_id) ?? await heldVersion(port, edge.version_id);
     if (!child) throw new Error(`sync_pack_node_version_missing:${edge.version_id}`);
     const parent = byId.get(edge.parent_version_id) ?? await heldVersion(port, edge.parent_version_id);
-    // Retention releases historical bodies, not the identities used by causal edges.
-    if (!parent) {
-      throw new Error(`sync_pack_node_version_missing_parent:${edge.version_id}`);
-    }
-    if (parent.object_id !== child.object_id) {
+    // Preserve historical gaps as references; only available identities prove ownership.
+    if (parent && parent.object_id !== child.object_id) {
       throw new Error(`sync_pack_node_version_cross_object:${edge.version_id}`);
     }
   }
@@ -48,6 +46,29 @@ export async function validateStoredVersionDependencies(
         edge.parent_version_id, edge.ordinal]
     );
     if (conflict) throw new Error(`sync_pack_node_version_parent_mismatch:${edge.version_id}`);
+  }
+}
+
+async function assertReturningParentOwners(port: DbPort, incoming: Map<string, VersionIdentity>) {
+  if (incoming.size === 0) return;
+  const children = await port.query<{ version_id: string; object_id: string; parent_version_id: string }>(
+    `WITH requested AS MATERIALIZED (
+       SELECT value AS version_id FROM json_each(?) request WHERE NOT EXISTS (
+         SELECT 1 FROM main.node_sync_versions held WHERE held.version_id = request.value))
+     SELECT child.version_id, child.object_id, edge.parent_version_id
+     FROM main.node_sync_version_parents edge
+     JOIN main.node_sync_versions child ON child.version_id = edge.version_id
+     WHERE edge.parent_version_id IN (SELECT version_id FROM requested)
+     UNION ALL SELECT child.version_id, child.object_id, child.parent_version_id
+     FROM main.node_sync_versions child
+     WHERE child.parent_version_id IN (SELECT version_id FROM requested) AND NOT EXISTS (
+       SELECT 1 FROM main.node_sync_version_parents edge WHERE edge.version_id = child.version_id)`,
+    [JSON.stringify([...incoming.keys()])]
+  );
+  for (const child of children) {
+    if (incoming.get(child.parent_version_id)?.object_id !== child.object_id) {
+      throw new Error(`sync_pack_node_version_cross_object:${child.version_id}`);
+    }
   }
 }
 

@@ -55,16 +55,32 @@ it('retains both identities when the same batch contains a parent and its newer 
   expect(db.prepare('SELECT content,current_version_id FROM nodes WHERE id = ?').get('topic'))
     .toEqual({ content: 'child', current_version_id: 'child' });
 });
-it('rolls back a missing-parent node instead of publishing an incomplete history', async () => {
-  await expect(applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record('child', 'missing')]))
-    .rejects.toThrow(/missing_parent/);
-  expect(persisted()).toEqual([]);
-  expect(db.prepare("SELECT count(*) count FROM nodes WHERE id = 'topic'").get()).toEqual({ count: 0 });
+it('retains a missing historical parent reference without inventing its identity', async () => {
+  await applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record('child', 'missing')]);
+  expect(persisted()).toEqual([{ version_id: 'child', parent_version_id: 'missing' }]);
+  expect(db.prepare("SELECT content,current_version_id FROM nodes WHERE id = 'topic'").get())
+    .toEqual({ content: 'child', current_version_id: 'child' });
 });
-it('rejects a missing-parent push without acknowledging or persisting it', async () => {
-  await expect(applyCompanionStateSyncPushWithDbPort(createBetterSqliteDbPort(db),
-    [push(record('child', 'missing'))])).rejects.toThrow(/missing_parent/);
-  expect(persisted()).toEqual([]);
+it('acknowledges a readable push while preserving its missing historical parent', async () => {
+  const result = await applyCompanionStateSyncPushWithDbPort(createBetterSqliteDbPort(db),
+    [push(record('child', 'missing'))]);
+  expect(result.acks).toMatchObject([{ status: 'accepted' }]);
+  expect(persisted()).toEqual([{ version_id: 'child', parent_version_id: 'missing' }]);
+});
+it('rejects a known parent from a different object', async () => {
+  const parent = record('parent');
+  await applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [{ ...parent, object_id: 'other',
+    snapshot: { ...parent.snapshot, id: 'other' } }]);
+  await expect(applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record('child', 'parent')]))
+    .rejects.toThrow(/cross_object/);
+  expect(persisted()).toEqual([{ version_id: 'parent', parent_version_id: null }]);
+});
+it('rejects a conflicting stored parent edge even when the other parent is absent', async () => {
+  const port = createBetterSqliteDbPort(db);
+  await applySyncNodesWithDbPort(port, [record('child', 'missing')]);
+  const changed = record('child', 'different');
+  await expect(applySyncNodesWithDbPort(port, [changed])).rejects.toThrow(/parent_mismatch/);
+  expect(persisted()).toEqual([{ version_id: 'child', parent_version_id: 'missing' }]);
 });
 it('accepts a child after its actual parent has been received and preserves replay', async () => {
   const port = createBetterSqliteDbPort(db);
@@ -80,4 +96,18 @@ it('accepts a complete push batch even when the child precedes its parent', asyn
   expect(result.acks).toHaveLength(2);
   expect(result.acks.every((ack) => ack.status === 'accepted')).toBe(true);
   expect(persisted()).toHaveLength(2);
+});
+
+it('rejects a returning missing identity when it belongs to a different object', async () => {
+  const port = createBetterSqliteDbPort(db);
+  await applySyncNodesWithDbPort(port, [record('child', 'missing')]);
+  const parent = record('missing');
+  await expect(applySyncNodesWithDbPort(port, [{ ...parent, object_id: 'other',
+    snapshot: { ...parent.snapshot, id: 'other' } }])).rejects.toThrow(/cross_object/);
+  expect(persisted()).toEqual([{ version_id: 'child', parent_version_id: 'missing' }]);
+});
+it('rejects a cyclic parent relationship', async () => {
+  await expect(applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record('child', 'child')]))
+    .rejects.toThrow(/cycle/);
+  expect(persisted()).toEqual([]);
 });
