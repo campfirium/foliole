@@ -8,8 +8,6 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { dependencyResumeUrl } from '../../lib/core/sync/syncPackDependencyResume.js';
-import { encodeSyncPackFactClaims, probeSyncPackFactPresence,
-  type SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
 import { assertSyncPackManifestMatchesDatabase } from '../../lib/core/sync/syncPackManifestValidation.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -17,8 +15,11 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { saveCurrentLibraryHome } from '../ipc/libraryPathBootstrap.js';
 
 import { startAuthenticatedSyncHttp } from './companionLanAuthenticatedHttp.testSupport.js';
+import { prepareMutationRoundPack } from './companionLanSourceMutation.testSupport.js';
 import { markDesktopSyncGroupMemberStateReady,
   revokeDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
+import { addThreePeerReview, appendThreePeerVersion24, readThreePeerIncomingFacts,
+  seedThreePeerVersions } from './desktopSyncGroupThreePeerHistory.testSupport.js';
 import { extractSyncPackDatabaseFromFile } from './syncPackContainerReader.js';
 
 const fixture = vi.hoisted(() => ({ deviceId: 'A', root: '/tmp/foliole-three-peer',
@@ -84,53 +85,6 @@ function selectLibrary(deviceId: string) {
   saveCurrentLibraryHome(path.join(fixture.root, `library-${deviceId}`));
 }
 
-function seedVersions(count: number) {
-  selectLibrary('A');
-  const driver = openDatabaseConnection().driver;
-  driver.execute(`INSERT INTO nodes (id, kind, title, content, current_version_id, created_at, updated_at)
-    VALUES ('node-1', 'topic', 'Node 1', ?, ?, 'now', 'now')`, [`body-${count}`, `v${count}`]);
-  for (let i = 1; i <= count; i += 1) {
-    const id = `v${String(i).padStart(2, '0')}`;
-    const parent = i === 1 ? null : `v${String(i - 1).padStart(2, '0')}`;
-    driver.execute(`INSERT INTO node_sync_versions (version_id, object_id, parent_version_id,
-      host_name, created_at, content_hash, body_text, snapshot_json)
-      VALUES (?, 'node-1', ?, 'A', 'now', ?, ?, '{"id":"node-1","content":null}')`,
-    [id, parent, `hash-${id}`, `body-${i}`]);
-    if (parent) driver.execute('INSERT INTO node_sync_version_parents VALUES (?, ?, 0)', [id, parent]);
-  }
-  driver.execute(`INSERT INTO sync_object_state
-    (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
-    VALUES ('node', 'node-1', 1, ?, 'A', 'now', 0)`, [`hash-v${count}`]);
-}
-
-function appendVersion24() {
-  selectLibrary('A');
-  const driver = openDatabaseConnection().driver;
-  driver.execute(`INSERT INTO node_sync_versions (version_id, object_id, parent_version_id,
-    host_name, created_at, content_hash, body_text, snapshot_json)
-    VALUES ('v24', 'node-1', 'v23', 'A', 'now', 'hash-v24', 'body-24',
-      '{"id":"node-1","content":null}')`);
-  driver.execute("INSERT INTO node_sync_version_parents VALUES ('v24', 'v23', 0)");
-  driver.execute("UPDATE nodes SET current_version_id = 'v24', content = 'body-24' WHERE id = 'node-1'");
-  driver.execute("UPDATE sync_object_state SET state_seq = 2, content_hash = 'hash-v24' WHERE object_id = 'node-1'");
-  driver.execute('UPDATE sync_state_sequence SET high_water = 2 WHERE singleton_id = 1');
-}
-
-async function prepareFactUrl(http: Awaited<ReturnType<typeof startAuthenticatedSyncHttp>>,
-  port: ReturnType<typeof createBetterSqliteDbPort>, after: number) {
-    const index = (await http.getJson(
-      `/companion/sync-pack-facts?page_contract=bounded-v1&after_state_seq=${after}`
-    )) as unknown as SyncPackFactIndex;
-    const claims = await probeSyncPackFactPresence(port, index);
-    const bits = encodeSyncPackFactClaims(index, claims);
-    const url = new URL(`/companion/sync-pack?page_contract=bounded-v1&after_state_seq=${after}`, http.origin);
-    url.searchParams.set('fact_index_id', index.index_id);
-    url.searchParams.set('have_v', bits.versions);
-    url.searchParams.set('have_p', bits.parents);
-    url.searchParams.set('have_r', bits.reviews);
-    return url;
-}
-
 async function transfer(sourceId: string, targetId: string, packName: string, after = 0) {
   selectLibrary(sourceId);
   const target = new Database(dbPaths.get(targetId)!);
@@ -140,9 +94,10 @@ async function transfer(sourceId: string, targetId: string, packName: string, af
     receiverDeviceId: fixture.ids[targetId as keyof typeof fixture.ids] });
   const port = createBetterSqliteDbPort(target);
   try {
-    let url = await prepareFactUrl(http, port, after);
+    let url = (await prepareMutationRoundPack(http, port, after)).url;
     let applied = false;
     const sentVersions: string[] = [];
+    const sentReviewOpIds: string[] = [];
     for (let page = 0; page < 20; page += 1) {
       const archive = await http.archive(url);
       const incoming = path.join(fixture.root, `${packName}-${page}.db`);
@@ -155,8 +110,9 @@ async function transfer(sourceId: string, targetId: string, packName: string, af
         await port.run('ATTACH DATABASE ? AS inc', [incoming]);
         try {
           await assertSyncPackManifestMatchesDatabase(port, manifest);
-          const rows = target.prepare('SELECT version_id FROM inc.node_sync_versions').all() as Array<{ version_id: string }>;
-          sentVersions.push(...rows.map((row) => row.version_id));
+          const facts = readThreePeerIncomingFacts(target, Boolean(manifest.dependencyPage));
+          sentVersions.push(...facts.versionIds);
+          sentReviewOpIds.push(...facts.reviewOpIds);
           const result = await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: after,
             hostName: targetId, sourcePeerId: fixture.ids[sourceId as keyof typeof fixture.ids],
             enqueueSearchInvalidations: false });
@@ -174,7 +130,8 @@ async function transfer(sourceId: string, targetId: string, packName: string, af
     }
     expect(applied).toBe(true);
     return {
-      sentVersions, versions: target.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').all(),
+      sentVersions, sentReviewOpIds, reviews: target.prepare('SELECT * FROM review_log ORDER BY op_id').all(),
+      versions: target.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').all(),
       cursor: target.prepare('SELECT cursor_state_seq FROM sync_pack_receive_progress WHERE peer_id = ?')
         .get(fixture.ids[sourceId as keyof typeof fixture.ids])
     };
@@ -187,14 +144,16 @@ async function transfer(sourceId: string, targetId: string, packName: string, af
 }
 
 it('relays the same version identities through isolated A, B, and C libraries over authenticated HTTP', async () => {
-  seedVersions(23);
+  selectLibrary('A');
+  seedThreePeerVersions(openDatabaseConnection().driver, 23);
   const atB = await transfer('A', 'B', 'a-to-b');
   expect(atB.versions).toHaveLength(23);
   expect(atB.cursor).toEqual({ cursor_state_seq: 1 });
   const atC = await transfer('B', 'C', 'b-to-c');
   expect(atC.versions).toEqual(atB.versions);
   expect(atC.cursor).toEqual({ cursor_state_seq: 1 });
-  appendVersion24();
+  selectLibrary('A');
+  appendThreePeerVersion24(openDatabaseConnection().driver);
   const newerB = await transfer('A', 'B', 'a-to-b-new', 1);
   expect(newerB.sentVersions).toEqual(['v24']);
   expect(newerB.versions).toHaveLength(24);
@@ -204,7 +163,8 @@ it('relays the same version identities through isolated A, B, and C libraries ov
 });
 
 it('refuses to relay a current version whose body was lost at the middle peer', async () => {
-  seedVersions(23);
+  selectLibrary('A');
+  seedThreePeerVersions(openDatabaseConnection().driver, 23);
   await transfer('A', 'B', 'shell-source');
   const middle = new Database(dbPaths.get('B')!);
   try {
@@ -217,4 +177,34 @@ it('refuses to relay a current version whose body was lost at the middle peer', 
   try {
     expect(last.prepare('SELECT count(*) AS count FROM node_sync_versions').get()).toEqual({ count: 0 });
   } finally { last.close(); }
+});
+
+it('relays original review identities and only the new operation through three independent HTTP libraries', async () => {
+  selectLibrary('A');
+  seedThreePeerVersions(openDatabaseConnection().driver, 23);
+  addThreePeerReview(openDatabaseConnection().driver, 1, 2);
+  const initialSource = openDatabaseConnection().driver.queryAll('SELECT * FROM review_log ORDER BY op_id');
+  const initialB = await transfer('A', 'B', 'review-a-b');
+  const initialC = await transfer('B', 'C', 'review-b-c');
+  expect(initialB.reviews).toEqual(initialSource);
+  expect(initialC.reviews).toEqual(initialSource);
+  expect(initialC.reviews).toHaveLength(1);
+  expect(initialC.reviews[0]).toMatchObject({ op_id: 'op-1', host_name: 'A' });
+  selectLibrary('A');
+  addThreePeerReview(openDatabaseConnection().driver, 2, 3);
+  const finalSource = openDatabaseConnection().driver.queryAll('SELECT * FROM review_log ORDER BY op_id');
+  const newerB = await transfer('A', 'B', 'review-a-b-new', 2);
+  const newerC = await transfer('B', 'C', 'review-b-c-new', 2);
+  expect(newerB.sentReviewOpIds).toEqual(['op-2']);
+  expect(newerC.sentReviewOpIds).toEqual(['op-2']);
+  expect(newerB.sentVersions).toEqual([]);
+  expect(newerC.sentVersions).toEqual([]);
+  expect(newerB.reviews).toEqual(finalSource);
+  expect(newerC.reviews).toEqual(finalSource);
+  expect(newerC.reviews).toHaveLength(2);
+  expect(newerC.reviews[1]).toMatchObject({ op_id: 'op-2', host_name: 'A' });
+  await fs.mkdir('.tmp/artifacts/T267', { recursive: true });
+  await fs.writeFile('.tmp/artifacts/T267/three-peer-review-relay.json', JSON.stringify({
+    atB: newerB, atC: newerC
+  }, null, 2));
 });
