@@ -26,6 +26,8 @@ it('does not report malformed JSON or truncated multipart as a network outage', 
   expect(classifyResourceFailure(new SyntaxError('Unexpected token'))).toBe('protocol_error');
   expect(classifyResourceFailure(new Error('content_blob_batch_truncated'))).toBe('protocol_error');
   expect(classifyResourceFailure(new TypeError('fetch failed'))).toBe('network_error');
+  expect(classifyResourceFailure(Object.assign(new Error('write failed'), { code: 'ENOSPC' })))
+    .toBe('disk_full');
 });
 
   it.each(['missing_file', 'checksum_mismatch', 'authentication_failed', 'network_error'] as const)(

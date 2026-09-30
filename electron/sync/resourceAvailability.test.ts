@@ -6,7 +6,10 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ resource: vi.fn(), queryOne: vi.fn() }));
-vi.mock('./companionLanAttachmentResources.js', () => ({ loadCompanionAttachmentResource: mocks.resource }));
+vi.mock('../attachments/resourceResolver.js', () => ({ resolveAttachmentFileForSync: mocks.resource }));
+vi.mock('../database/attachmentResourceDescription.js', () => ({
+  loadAttachmentResourceStorageIdentity: () => ({ storageKey: 'attachment.png' })
+}));
 vi.mock('../database/connection.js', () => ({ openDatabaseConnection: () => ({ driver: { queryOne: mocks.queryOne } }) }));
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => ({ local_device_identity_key: 'stable-C' }) }));
 
@@ -24,7 +27,7 @@ afterEach(async () => fs.rm(root, { recursive: true, force: true }));
 it('binds claims to stable identity and verifies real file bytes rather than metadata', async () => {
   const filePath = path.join(root, 'resource');
   await fs.writeFile(filePath, bytes);
-  mocks.resource.mockResolvedValue({ status: 'ready', filePath, contentLength: bytes.length });
+  mocks.resource.mockReturnValue({ status: 'ready', filePath, sizeBytes: bytes.length });
   const body = JSON.stringify({ resources: [{ kind: 'attachment', id: hash }] });
   expect(await loadResourceAvailability(body)).toEqual({ provider_device_id: 'stable-C', resources: [
     { kind: 'attachment', id: hash, status: 'available', sha256: hash, size_bytes: bytes.length }
@@ -36,7 +39,7 @@ it('binds claims to stable identity and verifies real file bytes rather than met
 });
 
 it('reports a historical metadata row without bytes as missing regardless of source host', async () => {
-  mocks.resource.mockResolvedValue({ status: 'error', error: 'missing_file', statusCode: 404 });
+  mocks.resource.mockReturnValue({ status: 'missing_file' });
   const body = JSON.stringify({ resources: [{ kind: 'attachment', id: hash }] });
   expect((await loadResourceAvailability(body)).resources).toEqual([{ kind: 'attachment', id: hash, status: 'missing' }]);
 });

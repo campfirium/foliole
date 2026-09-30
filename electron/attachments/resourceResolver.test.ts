@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import { createHash } from 'node:crypto';
+import fsSync from 'node:fs';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -10,8 +11,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 
 import { buildAttachmentAssetUrl } from './attachmentAssetUrl.js';
-import { clearAttachmentLibraryPathSnapshot } from './attachmentLibraryPathSnapshot.js';
-import { resolveAttachmentFile, resolveAttachmentResource } from './resourceResolver.js';
+import { clearAttachmentLibraryPathSnapshot, publishAttachmentLibraryPathSnapshot } from './attachmentLibraryPathSnapshot.js';
+import { resolveAttachmentFile, resolveAttachmentFileForSync, resolveAttachmentResource } from './resourceResolver.js';
 import { resolveAttachmentStorageKeyPath } from './storagePath.js';
 
 let tempRoot = '';
@@ -75,4 +76,21 @@ it('rejects a symbolic link even when its target has the expected bytes', async 
   await fs.writeFile(target, bytes);
   await fs.symlink(target, resolveAttachmentStorageKeyPath(tempRoot, resource.storageKey));
   expect(resolveAttachmentFile(resource.storageKey, tempRoot)).toEqual({ status: 'missing_file', mimeType: 'image/png' });
+});
+
+it('resolves a large sync source without reading the complete file into memory', async () => {
+  const bytes = Buffer.concat([PNG_PREFIX, Buffer.alloc(3 * 1024 * 1024, 0x5a)]);
+  const resource = description(bytes);
+  const filePath = resolveAttachmentStorageKeyPath(tempRoot, resource.storageKey);
+  await fs.writeFile(filePath, bytes);
+  publishAttachmentLibraryPathSnapshot({ assetsDir: tempRoot, libraryScope: 'library-1' });
+  const fullRead = vi.spyOn(fsSync, 'readFileSync').mockImplementation(() => {
+    throw new Error('full file read is forbidden');
+  });
+  try {
+    expect(resolveAttachmentFileForSync(resource.storageKey)).toEqual({
+      status: 'ready', filePath, mimeType: 'image/png', sizeBytes: bytes.length
+    });
+    expect(fullRead).not.toHaveBeenCalled();
+  } finally { clearAttachmentLibraryPathSnapshot(); }
 });

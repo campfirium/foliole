@@ -13,6 +13,7 @@ export async function drainDesktopSyncGroupResourceArticles(peer: DesktopSyncGro
   let priorMissing = Number.POSITIVE_INFINITY;
   for (;;) {
     const result = await downloadDesktopSyncGroupResources(peer, [], true);
+    if (hasDiskFull(result)) throw new Error('sync_group_resources_disk_full');
     if (hasIssues(result) || result.remainingContentBlobCount >= priorMissing) {
       throw new Error('sync_group_resources_incomplete');
     }
@@ -26,6 +27,7 @@ export async function drainDesktopSyncGroupResourceArticles(peer: DesktopSyncGro
     ));
     if (ids.length === 0) return;
     const result = await downloadDesktopSyncGroupResources(peer, ids, false);
+    if (hasDiskFull(result)) throw new Error('sync_group_resources_disk_full');
     if (hasIssues(result)) throw new Error('sync_group_resources_incomplete');
     await runWithDatabaseConnectionOwner(() => clearSyncPackResourceArticles(
       createBetterSqliteDbPort(openDatabaseConnection().sqlite),
@@ -38,4 +40,8 @@ export async function drainDesktopSyncGroupResourceArticles(peer: DesktopSyncGro
 function hasIssues(result: Awaited<ReturnType<typeof downloadDesktopSyncGroupResources>>) {
   return result.unreadableArticleIds.length > 0 || result.failedStorageKeys.length > 0 ||
     result.resourceResults.some((item) => item.unresolved.length > 0 || item.issues.length > 0);
+}
+
+function hasDiskFull(result: Awaited<ReturnType<typeof downloadDesktopSyncGroupResources>>) {
+  return result.resourceResults.some((item) => item.issues.some((issue) => issue.error === 'disk_full'));
 }

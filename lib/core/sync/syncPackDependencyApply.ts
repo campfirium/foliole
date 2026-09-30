@@ -14,6 +14,18 @@ const TABLE_COLUMNS = {
     'due_before', 'stability_before', 'difficulty_before', 'due_after', 'stability_after', 'difficulty_after']
 } as const;
 
+const TRANSFER_ROW_SCOPE = `staged.group_id = ? AND staged.peer_id = ?
+  AND staged.source_view_id = ? AND staged.object_type = ? AND staged.object_id = ?`;
+
+const ROW_IDENTITY = {
+  node_sync_versions: `existing.version_id = json_extract(staged.payload_json, '$.version_id')`,
+  node_sync_version_parents: `existing.version_id = json_extract(staged.payload_json, '$.version_id')
+    AND (existing.parent_version_id = json_extract(staged.payload_json, '$.parent_version_id')
+      OR existing.ordinal = json_extract(staged.payload_json, '$.ordinal'))`,
+  review_log: `existing.id = json_extract(staged.payload_json, '$.id')
+    OR existing.op_id = json_extract(staged.payload_json, '$.op_id')`
+} as const;
+
 export async function prepareSyncPackDependencies(port: DbPort, args: {
   cursor: SyncPackCursor; groupId: string; peerId: string; incomingAlias: string;
 }) {
@@ -44,12 +56,25 @@ export async function materializeSyncPackDependencies(port: DbPort, args: {
   for (const transfer of args.cursor.dependencyTransfers ?? []) {
     await assertReadyTransfer(port, transfer, args, alias);
     for (const [table, columns] of Object.entries(TABLE_COLUMNS)) {
-      await port.run(`INSERT INTO ${alias}.${table} (${columns.join(', ')})
+      await assertMatchingExistingRows(port, alias, table as keyof typeof TABLE_COLUMNS,
+        columns, transfer);
+      await port.run(`INSERT OR IGNORE INTO ${alias}.${table} (${columns.join(', ')})
         SELECT ${columns.map((column) => `json_extract(payload_json, '$.${column}')`).join(', ')}
         FROM main.sync_pack_dependency_rows WHERE ${DEPENDENCY_SCOPE_SQL} AND table_name = ?
         ORDER BY row_index`, [...dependencyScopeParams(transfer), table]);
     }
   }
+}
+
+async function assertMatchingExistingRows(port: DbPort, alias: string,
+  table: keyof typeof TABLE_COLUMNS, columns: readonly string[], transfer: SyncPackDependencyTransfer) {
+  const differs = columns.map((column) =>
+    `NOT (existing.${column} IS json_extract(staged.payload_json, '$.${column}'))`).join(' OR ');
+  const [conflict] = await port.query(`SELECT 1 AS conflict FROM main.sync_pack_dependency_rows staged
+    JOIN ${alias}.${table} existing ON (${ROW_IDENTITY[table]})
+    WHERE ${TRANSFER_ROW_SCOPE} AND staged.table_name = ? AND (${differs}) LIMIT 1`,
+  [...dependencyScopeParams(transfer), table]);
+  if (conflict) throw new Error('sync_pack_dependency_duplicate_conflict');
 }
 
 export async function clearAppliedSyncPackDependencies(port: DbPort,

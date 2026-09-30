@@ -29,6 +29,7 @@ export interface SyncPackFactIndex extends SyncPackFactPage {
   frontier_state_seq: number;
   from_state_seq: number;
   index_id: string;
+  round_source_view_id?: string;
   source_epoch: string;
   to_state_seq: number;
 }

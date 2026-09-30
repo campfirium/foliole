@@ -72,6 +72,8 @@ export function dependencyResumeUrl(url: string, resume: Awaited<ReturnType<type
   const next = new URL(url);
   next.searchParams.delete('fact_view');
   next.searchParams.set('dependency_view', resume.transfer.sourceViewId);
+  next.searchParams.set('dependency_object_type', resume.transfer.objectType);
+  next.searchParams.set('dependency_object_id', resume.transfer.objectId);
   next.searchParams.set('source_epoch', resume.transfer.sourceEpoch);
   next.searchParams.set('frontier_state_seq', String(resume.transfer.frontierStateSeq));
   next.searchParams.set('dependency_after_row', String(resume.nextRow));

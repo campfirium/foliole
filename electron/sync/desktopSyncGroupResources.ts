@@ -2,7 +2,7 @@ import { loadArticleAttachmentNeeds } from '../../lib/core/sync/articleAttachmen
 import { observeResourceProviders, transferResourceProviders } from '../../lib/core/sync/resourceProviderPass.js';
 import { RESOURCE_AVAILABILITY_BATCH_LIMIT, takeContentBlobByteBatch,
   type ResourceNeed } from '../../lib/platform/resourceAvailabilityContract.js';
-import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
+import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 
@@ -31,7 +31,7 @@ async function loadResourceNeeds(articleIds: readonly string[], includeContentBl
   const { needs: attachments, unreadableArticleIds } = await loadArticleAttachmentNeeds(port, articleIds);
   const missingAttachments = [];
   for (const attachment of attachments) {
-    const resolved = resolveAttachmentFile(attachment.storageKey);
+    const resolved = resolveAttachmentFileForSync(attachment.storageKey);
     if (resolved.status === 'ready' &&
         await hashResourceFile(resolved.filePath).catch(() => null) === attachment.contentHash) continue;
     missingAttachments.push(attachment);

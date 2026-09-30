@@ -17,24 +17,51 @@ it('accepts a parent omitted from the pack when the main database has its body',
   }
 });
 
-it('rejects an omitted parent whose stored body has been reclaimed', async () => {
+it('accepts an omitted parent identity whose stored body has been reclaimed', async () => {
   const db = createFixture('{"content":null}');
   try {
-    await expect(applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db)))
-      .rejects.toThrow('sync_pack_node_version_missing_parent:child');
-    expect(db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id = ?')
-      .get('child')).toBeUndefined();
+    await applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db));
+    expect(db.prepare('SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ?')
+      .get('child')).toEqual({ parent_version_id: 'parent' });
+    expect(db.prepare('SELECT body_text, snapshot_json FROM node_sync_versions WHERE version_id = ?')
+      .get('parent')).toEqual({ body_text: null, snapshot_json: '{"content":null}' });
   } finally {
     db.close();
   }
 });
 
-it('checks a legacy parent pointer when no separate relation row exists', async () => {
+it('accepts a legacy parent pointer to a retained identity without its body', async () => {
   const db = createFixture('{"content":null}');
   try {
     db.exec('DELETE FROM inc.node_sync_version_parents');
+    await applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db));
+    expect(db.prepare('SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?')
+      .get('child')).toEqual({ parent_version_id: 'parent' });
+  } finally {
+    db.close();
+  }
+});
+
+it('rejects a parent identity absent from both the pack and the main database', async () => {
+  const db = createFixture('{"content":null}');
+  try {
+    db.exec('DELETE FROM node_sync_versions');
     await expect(applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db)))
       .rejects.toThrow('sync_pack_node_version_missing_parent:child');
+    expect(db.prepare('SELECT version_id FROM node_sync_versions').all()).toEqual([]);
+  } finally {
+    db.close();
+  }
+});
+
+it('still requires the body of an omitted current version', async () => {
+  const db = createFixture('{"content":null}');
+  try {
+    db.exec(`DELETE FROM inc.node_sync_versions;
+      DELETE FROM inc.node_sync_version_parents;
+      UPDATE inc.nodes SET current_version_id = 'parent';`);
+    await expect(applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db)))
+      .rejects.toThrow('sync_pack_node_current_version_missing:node-1');
   } finally {
     db.close();
   }
@@ -87,6 +114,23 @@ it('restores a reclaimed historical version body when the source resends that fa
     await applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db));
     expect(db.prepare('SELECT body_text, snapshot_json FROM node_sync_versions WHERE version_id = ?')
       .get('parent')).toEqual({ body_text: 'parent body', snapshot_json: '{"content":"parent body"}' });
+  } finally {
+    db.close();
+  }
+});
+
+it('adds an edge for a reclaimed historical child while preserving its empty body', async () => {
+  const db = createFixture('{"content":null}');
+  try {
+    db.exec(`INSERT INTO node_sync_versions VALUES
+      ('child', 'node-1', 'parent', 'host', '2026-05-02', 'child-hash', NULL, '{"content":null}');
+      DELETE FROM inc.node_sync_versions;
+      UPDATE inc.nodes SET current_version_id = NULL;`);
+    await applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db));
+    expect(db.prepare('SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ?')
+      .get('child')).toEqual({ parent_version_id: 'parent' });
+    expect(db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
+      .get('child')).toEqual({ body_text: null });
   } finally {
     db.close();
   }

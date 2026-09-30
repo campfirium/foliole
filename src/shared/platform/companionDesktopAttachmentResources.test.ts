@@ -37,7 +37,8 @@ const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
 const iosDatabaseMock = vi.hoisted(() => ({
-  commit: vi.fn(async () => ({ syncedIds: [] as string[] })), owner: {}
+  commit: vi.fn(async () => ({ syncedIds: [] as string[] })), db: {}, owner: { databasePath: '/isolated/fixture.db',
+    runWriter: vi.fn(async <T>(task: (db: unknown) => Promise<T>) => task(iosDatabaseMock.db)) }
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -144,6 +145,7 @@ describe('companion desktop attachment resource manifests', () => {
       pathWithQuery: `/companion/attachment-resource?attachment_id=att-1&content_hash=${'1'.repeat(64)}`
     });
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
+      database_path: '/isolated/fixture.db',
       resources: [{
         attachment_id: 'att-1',
         content_hash: '1'.repeat(64),
@@ -168,6 +170,7 @@ describe('companion desktop attachment resource manifests', () => {
     ])).resolves.toEqual(['att-2']);
 
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
+      database_path: '/isolated/fixture.db',
       resources: [{
         attachment_id: 'att-2',
         content_hash: '2'.repeat(64),
@@ -203,6 +206,14 @@ describe('companion iOS attachment resource manifests', () => {
 
 describe('companion desktop attachment resource queue', () => {
   beforeEach(resetAttachmentResourceMocks);
+
+  it('reports exhausted device storage while leaving the attachment pending', async () => {
+    capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValueOnce(
+      Object.assign(new Error('write failed'), { code: 'ENOSPC' }));
+    await expect(syncCompanionAttachmentResourceRequestsFromDesktop('http://10.0.2.2:38641/', [
+      resource('att-2', '2')
+    ])).rejects.toThrow('attachment_resource_disk_full');
+  });
 
   it('does not retry a failed batch and continues the next bounded batch', async () => {
     capacitorMock.plugin.downloadAttachmentResourceBatch.mockRejectedValueOnce(new Error('Connection interrupted.'));

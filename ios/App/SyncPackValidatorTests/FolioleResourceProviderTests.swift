@@ -5,6 +5,10 @@ import XCTest
 @testable import FolioleSyncPackValidator
 
 final class FolioleResourceProviderTests: XCTestCase {
+    func testAttachmentStorageExhaustionHasSpecificFailure() {
+        let error = NSError(domain: NSCocoaErrorDomain, code: CocoaError.fileWriteOutOfSpace.rawValue)
+        XCTAssertEqual(FolioleCompanionAttachmentResourceDownloader.resourceFailure(error), "disk_full")
+    }
     func testPresenceRequiresStoredBytesAndChecksum() throws {
         let fixture = try ResourceFixture()
         defer { fixture.close() }
@@ -64,6 +68,24 @@ final class FolioleResourceProviderTests: XCTestCase {
         let hash = String(repeating: "a", count: 64)
         XCTAssertThrowsError(try reply(fixture.source, hashes: [hash, hash]))
         XCTAssertThrowsError(try reply(fixture.source, hashes: Array(repeating: hash, count: 33)))
+    }
+
+    func testAttachmentSenderReadsOnlyRequestedRangesAndReportsTotalLength() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("t267-\(UUID().uuidString).png")
+        let bytes = Data(repeating: 0x31, count: 1_048_576) + Data(repeating: 0x42, count: 7)
+        try bytes.write(to: url)
+        defer { try? FileManager.default.removeItem(at: url) }
+        XCTAssertEqual(try FolioleCompanionSyncGroupResources.readAttachmentRange(url,
+            offset: 0, count: 1_048_576), bytes.prefix(1_048_576))
+        XCTAssertEqual(try FolioleCompanionSyncGroupResources.readAttachmentRange(url,
+            offset: 1_048_576, count: 7), bytes.suffix(7))
+        XCTAssertThrowsError(try FolioleCompanionSyncGroupResources.readAttachmentRange(url,
+            offset: 1_048_576, count: 8))
+        let response = FolioleCompanionHttpMessage.response(status: 200,
+            contentType: "application/octet-stream", body: Data(bytes.suffix(7)),
+            totalBytes: bytes.count)
+        XCTAssertTrue(String(decoding: response.prefix(200), as: UTF8.self)
+            .contains("X-Foliole-Resource-Total-Bytes: 1048583"))
     }
 
     private func reply(_ snapshot: URL, hashes: [String]) throws -> [String: Any] {

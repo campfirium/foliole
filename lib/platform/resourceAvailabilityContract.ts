@@ -1,6 +1,7 @@
 export const RESOURCE_AVAILABILITY_PATH = '/companion/resource-availability';
 export const RESOURCE_AVAILABILITY_BATCH_LIMIT = 32;
 export const CONTENT_BLOB_BATCH_MAX_BYTES = 2 * 1024 * 1024;
+export const ATTACHMENT_RANGE_BYTES = 1024 * 1024;
 export const RESOURCE_AVAILABILITY_REPLY_LIMIT = 64 * 1024;
 export const RESOURCE_CLAIM_TTL_MS = 30_000;
 export type ResourceKind = 'attachment' | 'content_blob';
@@ -11,7 +12,7 @@ export type ResourceClaim = ResourceNeed & {
   size_bytes?: number;
 };
 export type ResourceFailure = 'missing_file' | 'checksum_mismatch' | 'authentication_failed' |
-  'network_error' | 'protocol_error' | 'device_identity_mismatch' | 'unreachable';
+  'network_error' | 'protocol_error' | 'device_identity_mismatch' | 'unreachable' | 'disk_full';
 export type ResourceAvailabilityReply = { provider_device_id: string; resources: ResourceClaim[] };
 export function takeContentBlobByteBatch<T>(rows: readonly T[], sizeOf: (row: T) => number): T[] {
   const selected: T[] = [];
@@ -69,6 +70,8 @@ export function parseResourceClaims(value: unknown, deviceId: string, needs: rea
 }
 export function classifyResourceFailure(error: unknown): ResourceFailure {
   const message = error instanceof Error ? error.message : String(error);
+  if ((error as NodeJS.ErrnoException | null)?.code === 'ENOSPC' ||
+      /no space left|disk(?: is)? full|storage full|out of space|disk_full/i.test(message)) return 'disk_full';
   if (/identity_mismatch/.test(message)) return 'device_identity_mismatch';
   if (/checksum|hash mismatch/i.test(message)) return 'checksum_mismatch';
   if (/401|403|authentication|signature|workgroup_aead|device_not_active|workgroup_key|member_state_required|group_not_available/.test(message)) return 'authentication_failed';

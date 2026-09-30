@@ -1,5 +1,6 @@
 import {
   advanceSyncPackDependencyDigest, SYNC_PACK_DEPENDENCY_INITIAL_DIGEST,
+  type SyncPackNodeDependencyObjectType,
   type SyncPackDependencyRow
 } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import type { SyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
@@ -14,7 +15,7 @@ interface DependencySourceArgs {
   view: ReturnType<typeof openSyncPackSourceView>;
   objectId: string;
   nodeIds?: string[];
-  objectType: 'node' | 'node_review';
+  objectType: SyncPackNodeDependencyObjectType;
   budget: SyncPackDependencyBudget;
   after?: { table: SyncPackDependencyTable; position: SyncPackDependencyPosition };
   claims?: SyncPackFactClaims;

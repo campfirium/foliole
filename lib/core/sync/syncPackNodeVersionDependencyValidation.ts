@@ -29,11 +29,9 @@ export async function validateStoredVersionDependencies(
   for (const edge of parents) {
     const child = byId.get(edge.version_id) ?? await heldVersion(port, edge.version_id);
     if (!child) throw new Error(`sync_pack_node_version_missing:${edge.version_id}`);
-    if ('has_body' in child && child.has_body !== 1) {
-      throw new Error(`sync_pack_node_version_missing:${edge.version_id}`);
-    }
     const parent = byId.get(edge.parent_version_id) ?? await heldVersion(port, edge.parent_version_id);
-    if (!parent || ('has_body' in parent && parent.has_body !== 1)) {
+    // Retention releases historical bodies, not the identities used by causal edges.
+    if (!parent) {
       throw new Error(`sync_pack_node_version_missing_parent:${edge.version_id}`);
     }
     if (parent.object_id !== child.object_id) {

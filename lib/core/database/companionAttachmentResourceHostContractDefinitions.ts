@@ -1,3 +1,5 @@
+import { ATTACHMENT_RECEIVE_CHECKPOINT_SQL } from '../sync/attachmentReceiveCheckpoint.js';
+
 import { ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionAttachmentResourceQueryDefinitions.js';
 import { ANDROID_COMPANION_MISSING_RESOURCE_READ_RULES } from './androidCompanionMissingResourceQueryDefinitions.js';
 import { ANDROID_COMPANION_RESOURCE_READ_RULES } from './androidCompanionResourceQueryDefinitions.js';
@@ -20,6 +22,7 @@ export const COMPANION_ATTACHMENT_RESOURCE_HOST_CONTRACT_DEFINITIONS = {
     resources: missingRead.resultKey
   },
   requestKeys: {
+    databasePath: 'database_path',
     attachmentId: COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS.attachmentId,
     batchToken: COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS.batchToken,
     committed: COMPANION_RESOURCE_PLUGIN_REQUEST_KEYS.committed,
@@ -34,6 +37,9 @@ export const COMPANION_ATTACHMENT_RESOURCE_HOST_CONTRACT_DEFINITIONS = {
   resolveResponseKeys: attachmentRead.resolveResponseKeys,
   resolveStatuses: attachmentRead.resolveStatuses,
   sql: {
+    checkpointLoad: ATTACHMENT_RECEIVE_CHECKPOINT_SQL.load,
+    checkpointSave: ATTACHMENT_RECEIVE_CHECKPOINT_SQL.save,
+    checkpointClear: ATTACHMENT_RECEIVE_CHECKPOINT_SQL.clear,
     contentHashes: ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS.attachmentResourceContentHashesByIds.sql,
     missingById: ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS.attachmentResourceMissingById.sql,
     missingRows: ANDROID_COMPANION_ATTACHMENT_RESOURCE_QUERY_DEFINITIONS.attachmentResourceMissingRows.sql,

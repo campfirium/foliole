@@ -1,22 +1,19 @@
 import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
 
 import {
   parseResourceNeeds,
   type ResourceClaim,
   type ResourceNeed
 } from '../../lib/platform/resourceAvailabilityContract.js';
+import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
+import { loadAttachmentResourceStorageIdentity } from '../database/attachmentResourceDescription.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import { expireAvailableResourceForAcceptance } from './acceptanceResourceGet404.js';
-import { loadCompanionAttachmentResource } from './companionLanAttachmentResources.js';
+import { hashResourceFile } from './resourceFileHash.js';
 
-export async function hashResourceFile(filePath: string) {
-  const digest = createHash('sha256');
-  for await (const chunk of createReadStream(filePath)) digest.update(chunk);
-  return digest.digest('hex');
-}
+export { hashResourceFile };
 
 export async function loadResourceAvailability(bodyText: string) {
   const needs = parseResourceNeeds(JSON.parse(bodyText));
@@ -30,14 +27,16 @@ export async function loadResourceAvailability(bodyText: string) {
 async function inspectResource(need: ResourceNeed): Promise<ResourceClaim> {
   if (need.kind === 'content_blob') return inspectBlob(need);
   try {
-    const resource = await loadCompanionAttachmentResource(need.id, need.id);
+    const identity = loadAttachmentResourceStorageIdentity(need.id);
+    if (!identity) return { ...need, status: 'missing' };
+    const resource = resolveAttachmentFileForSync(identity.storageKey);
     if (resource.status !== 'ready') return { ...need, status: 'missing' };
     const sha256 = await hashResourceFile(resource.filePath);
     if (sha256 === need.id) {
-      await expireAvailableResourceForAcceptance(resource.filePath, sha256, resource.contentLength);
+      await expireAvailableResourceForAcceptance(resource.filePath, sha256, resource.sizeBytes);
     }
     return sha256 === need.id
-      ? { ...need, status: 'available', sha256, size_bytes: resource.contentLength }
+      ? { ...need, status: 'available', sha256, size_bytes: resource.sizeBytes }
       : { ...need, status: 'checksum_mismatch' };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { ...need, status: 'missing' };

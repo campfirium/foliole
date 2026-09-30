@@ -1,5 +1,8 @@
 export function formatCompanionSyncFailureMessage(error: unknown) {
   const message = normalizeCompanionSyncErrorMessage(error);
+  if (message.includes('attachment_resource_disk_full') || message.includes('sync_group_resources_disk_full')) {
+    return 'Attachment sync stopped because this device is out of storage space. Free space, then retry sync.';
+  }
   if (/connection foliole-companion .*does not exist/i.test(message) ||
     /connection foliole-companion .*already exists/i.test(message)) {
     return 'The device sync database connection was reset. Sync will retry.';

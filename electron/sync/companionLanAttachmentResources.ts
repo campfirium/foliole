@@ -1,12 +1,11 @@
-import { promises as fs } from 'node:fs';
-
-import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
-import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
+import { ATTACHMENT_RANGE_BYTES } from '../../lib/platform/resourceAvailabilityContract.js';
+import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
+import { loadAttachmentResourceStorageIdentity } from '../database/attachmentResourceDescription.js';
 
 import { recordMissingResourceGetForAcceptance } from './acceptanceResourceGet404.js';
 
 export const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
-export const ATTACHMENT_RANGE_BYTES = 1024 * 1024;
+export { ATTACHMENT_RANGE_BYTES };
 
 export type CompanionAttachmentResourceResult =
   | {
@@ -43,10 +42,10 @@ export async function loadCompanionAttachmentResource(
     return errorResult('invalid_request', 400);
   }
 
-  const description = loadAttachmentResourceDescription(normalizedAttachmentId);
+  const description = loadAttachmentResourceStorageIdentity(normalizedAttachmentId);
   if (!description) return errorResult('not_found', 404);
   if (description.contentHash !== normalizedContentHash) return errorResult('content_hash_mismatch', 409);
-  const resolved = resolveAttachmentFile(description.storageKey);
+  const resolved = resolveAttachmentFileForSync(description.storageKey);
   if (resolved.status === 'not_found') {
     return errorResult('not_found', 404);
   }
@@ -55,7 +54,7 @@ export async function loadCompanionAttachmentResource(
     return errorResult('missing_file', 404);
   }
 
-  const stats = await fs.stat(resolved.filePath);
+  const stats = { size: resolved.sizeBytes };
   if (range) {
     const { offset, length } = range;
     if (offset === null || length === null || !/^\d+$/u.test(offset) || !/^\d+$/u.test(length)) {

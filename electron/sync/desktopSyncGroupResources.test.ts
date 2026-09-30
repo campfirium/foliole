@@ -25,7 +25,7 @@ vi.mock('node:fs', async (importOriginal) => {
 });
 vi.mock('../../lib/core/sync/articleAttachmentNeeds.js', () => ({ loadArticleAttachmentNeeds: runtime.needs }));
 vi.mock('../attachments/resourceResolver.js', () => ({
-  resolveAttachmentFile: runtime.exists,
+  resolveAttachmentFileForSync: runtime.exists,
   resolveAttachmentStoragePath: (id: string) => `${process.cwd()}/.tmp/test-attachments/${id}`
 }));
 vi.mock('../database/betterSqliteDbPort.js', () => ({
@@ -52,6 +52,16 @@ vi.mock('./desktopSyncGroupHttp.js', () => ({
 }));
 
 vi.mock('./resourceAvailability.js', () => ({ hashResourceFile: runtime.hashFile }));
+vi.mock('./desktopAttachmentRangeTransfer.js', () => ({
+  receiveDesktopAttachmentRanges: async (args: {
+    contentHash: string; requestRange: (offset: number) => Promise<{ body: Buffer; totalBytes: number }>
+  }) => {
+    const first = await args.requestRange(0);
+    if (first.totalBytes !== first.body.length || sha256(first.body) !== args.contentHash) {
+      throw new Error('attachment_checksum_mismatch');
+    }
+  }
+}));
 vi.mock('./desktopResourceProviders.js', () => ({
   requireResourceGroupKey: () => 'group-key',
   loadEligibleResourceMemberIds: () => ['provider'],
@@ -133,7 +143,9 @@ it('keeps successes and attempts other files once when a request fails', async (
   runtime.needs.mockResolvedValue({ needs: items, unreadableArticleIds: [] });
   const fetchMock = vi.fn(async (url: string) => url.includes(`attachment_id=${items[1]!.attachmentId}`)
     ? new Response('', { status: 404 })
-    : new Response(url.includes(`attachment_id=${items[0]!.attachmentId}`) ? 'complete-body' : 'other-body'));
+    : new Response(url.includes(`attachment_id=${items[0]!.attachmentId}`) ? 'complete-body' : 'other-body',
+      { headers: { 'X-Foliole-Resource-Total-Bytes': url.includes(`attachment_id=${items[0]!.attachmentId}`)
+        ? '13' : '10' } }));
   vi.stubGlobal('fetch', fetchMock);
   const result = await downloadDesktopSyncGroupResources(peer, ['article']);
   expect(result.failedStorageKeys).toEqual([items[1]!.storageKey]);

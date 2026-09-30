@@ -471,6 +471,15 @@
         }
       ],
       "beforeVersion": 52
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add attachment receive checkpoints.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 54
     }
   ],
   "planKeys": {

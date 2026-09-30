@@ -22,11 +22,20 @@ enum FolioleCompanionResourceAvailability {
 
     private static func inspect(snapshot: URL, kind: String, id: String) throws -> [String: Any] {
         var result: [String: Any] = ["kind": kind, "id": id, "status": "missing"]
+        if kind == "attachment" {
+            guard let file = try FolioleCompanionSyncGroupResources.attachmentFile(
+                snapshot: snapshot, attachmentId: id, contentHash: id) else { return result }
+            let sha256 = try FolioleCompanionAttachmentResourceDownloader.digestHex(file.url)
+            result["status"] = sha256 == id ? "available" : "checksum_mismatch"
+            if sha256 == id {
+                result["sha256"] = sha256
+                result["size_bytes"] = file.size
+            }
+            return result
+        }
         let resource: FolioleCompanionSyncGroupResources.Resource?
         do {
-            resource = kind == "attachment"
-                ? try FolioleCompanionSyncGroupResources.attachment(snapshot: snapshot, attachmentId: id, contentHash: id)
-                : try FolioleCompanionSyncGroupResources.contentBlob(snapshot: snapshot, hash: id)
+            resource = try FolioleCompanionSyncGroupResources.contentBlob(snapshot: snapshot, hash: id)
         } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
             return result
         }

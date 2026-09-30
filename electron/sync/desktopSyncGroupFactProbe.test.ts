@@ -69,3 +69,17 @@ it('uses a saved fact view frontier when the outer receive position is older', a
     .toBe('9');
   expect(fetchFacts.mock.calls[0]![0].pathWithQuery).toContain('fact_view=saved-view');
 });
+
+it('returns a round source identity with a direct pack request', async () => {
+  loadActive.mockReturnValue(null);
+  fetchFacts.mockReset().mockResolvedValue({ from_state_seq: 0, to_state_seq: 1,
+    frontier_state_seq: 1, source_epoch: 'epoch', index_id: 'index',
+    round_source_view_id: 'round-id', versions: [], parents: [], reviews: [] });
+  const result = await prepareDesktopSyncPackFactRequest({
+    after: 0, endpointUrl: 'http://localhost:38641', groupId: 'group',
+    localDeviceId: 'receiver', sourcePeerId: 'source', secret: 'test-key',
+    pathWithQuery: '/companion/sync-pack?after_state_seq=0&page_contract=bounded-v1'
+  });
+  expect(new URL(result.pathWithQuery, 'http://localhost')
+    .searchParams.get('round_source_view_id')).toBe('round-id');
+});

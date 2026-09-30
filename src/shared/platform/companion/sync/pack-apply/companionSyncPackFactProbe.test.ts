@@ -51,3 +51,14 @@ it('resumes a saved fact view with its own frontier after the receive frontier h
   expect(new URL(prepared.url).searchParams.get('frontier_state_seq')).toBe('531');
   expect(prepared.roundRebased).toBe(true);
 });
+
+it('returns a round source identity with a direct pack request', async () => {
+  read.mockImplementation(async (work) => work({ query: async () => [] }));
+  fetchDesktopJson.mockReset().mockResolvedValue({ from_state_seq: 0, to_state_seq: 1,
+    frontier_state_seq: 1, source_epoch: 'epoch', index_id: 'index',
+    round_source_view_id: 'round-id', versions: [], parents: [], reviews: [] });
+  const prepared = await prepareCompanionSyncPackFactRequest(
+    'http://desktop.local/companion/sync-pack?after_state_seq=0&page_contract=bounded-v1',
+    { groupId: 'group', peerId: 'peer' });
+  expect(new URL(prepared.url).searchParams.get('round_source_view_id')).toBe('round-id');
+});

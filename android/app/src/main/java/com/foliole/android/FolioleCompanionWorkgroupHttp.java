@@ -175,6 +175,13 @@ final class FolioleCompanionWorkgroupHttp {
         Context context, JSONObject config, FolioleCompanionHttpRequest request,
         OutputStream output, int status, String contentType, byte[] body
     ) throws Exception {
+        writeBytes(context, config, request, output, status, contentType, body, -1);
+    }
+
+    static void writeBytes(
+        Context context, JSONObject config, FolioleCompanionHttpRequest request,
+        OutputStream output, int status, String contentType, byte[] body, long totalBytes
+    ) throws Exception {
         String key = FolioleCompanionCurrentGroupCredential.load(
             config.getJSONObject("sync_group").getString("group_id")
         ).workgroupKey;
@@ -182,7 +189,7 @@ final class FolioleCompanionWorkgroupHttp {
             key, config.getString("group_tag"), request.method, request.path, "response", contentType, body
         ).toString().getBytes(StandardCharsets.UTF_8);
         FolioleCompanionHttpResponse.bytes(
-            output, status, ENVELOPE_CONTENT_TYPE, contentType, encrypted
+            output, status, ENVELOPE_CONTENT_TYPE, contentType, encrypted, totalBytes
         );
     }
 

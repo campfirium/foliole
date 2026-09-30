@@ -65,13 +65,15 @@ struct FolioleCompanionHttpMessage {
     }
 
     static func response(
-        status: Int, contentType: String, body: Data, originalContentType: String? = nil
+        status: Int, contentType: String, body: Data, originalContentType: String? = nil,
+        totalBytes: Int? = nil
     ) -> Data {
         let reason = status == 200 ? "OK" : status == 202 ? "Accepted" : status == 401 ? "Unauthorized" :
             status == 404 ? "Not Found" : status == 409 ? "Conflict" :
             status == 413 ? "Payload Too Large" : status == 500 ? "Internal Server Error" : "Bad Request"
         let original = originalContentType.map { "X-Foliole-Original-Content-Type: \($0)\r\n" } ?? ""
-        let head = "HTTP/1.1 \(status) \(reason)\r\nContent-Type: \(contentType)\r\n" + original +
+        let total = totalBytes.map { "X-Foliole-Resource-Total-Bytes: \($0)\r\n" } ?? ""
+        let head = "HTTP/1.1 \(status) \(reason)\r\nContent-Type: \(contentType)\r\n" + original + total +
             "Content-Length: \(body.count)\r\nConnection: close\r\n\r\n"
         return Data(head.utf8) + body
     }

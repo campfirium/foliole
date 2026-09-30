@@ -5,6 +5,8 @@ final class FolioleCompanionResourceFailure {
 
     static String classify(Exception error) {
         String message = String.valueOf(error.getMessage());
+        if (message.contains("ENOSPC") || message.contains("No space left on device")
+            || message.contains("disk_full")) return "disk_full";
         if (message.contains("hash mismatch")) return "checksum_mismatch";
         if (message.contains("401") || message.contains("403") || message.contains("aead")
             || message.contains("signature") || error instanceof SecurityException) return "authentication_failed";

@@ -6,12 +6,15 @@ import path from 'node:path';
 import { decodeSyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
 import { SYNC_PACK_PAGE_CONTRACT } from '../../lib/core/sync/syncPackPageContract.js';
 import { openDatabaseConnection } from '../database/connection.js';
-import { loadDesktopSyncGroupRestoreState } from '../database/syncGroupRestoreState.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { buildDesktopSyncPack, buildDesktopSyncPackPage, type BuildDesktopSyncPackInput } from '../database/syncPackBuilder.js';
+import { buildDesktopSyncPackFromDriver } from '../database/syncPackBuilderFromDriver.js';
 import { DEFAULT_SYNC_PACK_PAGE_BUDGET } from '../database/syncPackPageBudget.js';
 
 import { buildCompanionDependencyPack } from './companionLanDependencyPack.js';
+import { isCompanionRestoreSourceAvailable } from './companionLanRestoreSource.js';
+import { markCompanionSourceRoundFinalPack,
+  openCompanionSourceRoundView } from './companionLanSourceRoundView.js';
 import { loadCompanionSyncPackFactIndex } from './companionLanSyncPackFacts.js';
 
 export const SYNC_PACK_PATH = '/companion/sync-pack';
@@ -31,10 +34,10 @@ function parseStateSeq(value: string | null) {
   return /^\d+$/u.test(value) && Number.isSafeInteger(parsed) ? parsed : null;
 }
 
-function resolveRequestedFactClaims(url: URL) {
+function resolveRequestedFactClaims(url: URL, peerId: string) {
   const factIndexId = url.searchParams.get('fact_index_id');
   if (!factIndexId) return null;
-  const index = loadCompanionSyncPackFactIndex(url);
+  const index = loadCompanionSyncPackFactIndex(url, peerId);
   if (index.index_id !== factIndexId) {
     throw new Error('sync_pack_fact_index_changed');
   }
@@ -83,12 +86,12 @@ export async function buildCompanionSyncPackResource(
     return { error: 'invalid_restore_pack_request', status: 'error', statusCode: 400 };
   }
   const { group, local } = localSyncPackSource();
-  if (restoreId && !isRestoreSourceAvailable(group.group_id,
+  if (restoreId && !isCompanionRestoreSourceAvailable(group.group_id,
     local.device_identity_key, restoreId)) {
     return { error: 'sync_group_restore_source_unavailable', status: 'error', statusCode: 409 };
   }
   const dependencyView = parsedRequestUrl.searchParams.get('dependency_view');
-  const requestedFacts = dependencyView ? null : resolveRequestedFactClaims(parsedRequestUrl);
+  const requestedFacts = dependencyView ? null : resolveRequestedFactClaims(parsedRequestUrl, authenticatedDeviceId);
   const { tempRoot, packId, outputPath } = await createTempPackResource();
   try {
     const buildInput = {
@@ -98,7 +101,8 @@ export async function buildCompanionSyncPackResource(
       ...(restoreId ? { restoreId } : {}),
       toPeerId: authenticatedDeviceId, requireDeliveryHold: true
     };
-    await buildRequestedPack(parsedRequestUrl, group.group_id, buildInput, requestedFacts);
+    const built = await buildRequestedPack(parsedRequestUrl, group.group_id, buildInput, requestedFacts);
+    await markFinalRoundPack(group.group_id, authenticatedDeviceId, built);
     return {
       cleanup: () => fs.rm(tempRoot, { force: true, recursive: true }),
       filePath: outputPath,
@@ -112,6 +116,16 @@ export async function buildCompanionSyncPackResource(
   }
 }
 
+function markFinalRoundPack(groupId: string, peerId: string, built: unknown) {
+  if (!built || typeof built !== 'object') return;
+  const page = built as Record<string, unknown>;
+  if (typeof page.packId !== 'string' || typeof page.sourceEpoch !== 'string' ||
+      typeof page.frontierStateSeq !== 'number' || typeof page.toStateSeq !== 'number') return;
+  return markCompanionSourceRoundFinalPack({ groupId, peerId,
+    sourceEpoch: page.sourceEpoch, frontierStateSeq: page.frontierStateSeq },
+  page.packId, page.toStateSeq);
+}
+
 async function buildRequestedPack(url: URL, groupId: string,
   input: BuildDesktopSyncPackInput, facts: ReturnType<typeof resolveRequestedFactClaims>) {
   if (url.searchParams.has('dependency_view') || url.searchParams.has('fact_view')) {
@@ -120,18 +134,19 @@ async function buildRequestedPack(url: URL, groupId: string,
   if (!facts) return buildDesktopSyncPackPage(input, DEFAULT_SYNC_PACK_PAGE_BUDGET);
   const { index, receiverFacts } = facts;
   try {
-    return await buildDesktopSyncPack({ ...input,
+    const directInput = { ...input,
       frontierStateSeq: index.frontier_state_seq, sourceEpoch: index.source_epoch,
-      toStateSeq: index.to_state_seq, pageBudget: DEFAULT_SYNC_PACK_PAGE_BUDGET, receiverFacts });
+      toStateSeq: index.to_state_seq, pageBudget: DEFAULT_SYNC_PACK_PAGE_BUDGET, receiverFacts };
+    const round = input.toPeerId && openCompanionSourceRoundView({ groupId,
+      peerId: input.toPeerId, frontierStateSeq: index.frontier_state_seq,
+      sourceEpoch: index.source_epoch });
+    if (!round) return await buildDesktopSyncPack(directInput);
+    try { return await buildDesktopSyncPackFromDriver({ ...directInput,
+      holdDriver: openDatabaseConnection().driver }, round.driver); }
+    finally { round.close(); }
   } catch (error) {
     if (!(error instanceof Error) || !['sync_pack_page_preflight_exceeds_budget',
       'sync_pack_page_changed_during_build'].includes(error.message)) throw error;
     return buildCompanionDependencyPack({ url, groupId, input, facts });
   }
-}
-
-function isRestoreSourceAvailable(groupId: string, sourcePeerId: string, restoreId: string) {
-  const restore = loadDesktopSyncGroupRestoreState(openDatabaseConnection().driver, groupId);
-  return Boolean(restore?.applied && restore.event.restore_id === restoreId &&
-    restore.event.source_device_identity_key === sourcePeerId);
 }

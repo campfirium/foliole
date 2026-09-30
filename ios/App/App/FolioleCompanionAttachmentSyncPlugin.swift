@@ -34,7 +34,7 @@ extension FolioleCompanionSyncPlugin {
                 let contract = try FolioleCompanionContractStore().attachmentResourceContract()
                 let token = try attachmentString(call, "batchToken", contract)
                 let committedKey = try attachmentKey("committed", contract)
-                await attachmentResourceSessions.finish(token, committed: call.getBool(committedKey) ?? false)
+                try await attachmentResourceSessions.finish(token, committed: call.getBool(committedKey) ?? false)
                 call.resolve()
             } catch { call.reject("Failed to finish companion attachment resources: \(error.localizedDescription)") }
         }
@@ -48,7 +48,9 @@ extension FolioleCompanionSyncPlugin {
                 let result = try await FolioleCompanionAttachmentResourceDownloader.download(
                     requests,
                     temporaryRoot: try attachmentTemporaryRoot(contract),
-                    hashPattern: contract.hashPattern
+                    hashPattern: contract.hashPattern,
+                    databasePath: try attachmentString(call, "databasePath", contract),
+                    checkpointRequest: groupData.request
                 )
                 let token = await attachmentResourceSessions.create(
                     downloaded: result.downloaded,

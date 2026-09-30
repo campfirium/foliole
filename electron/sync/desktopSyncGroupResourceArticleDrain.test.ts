@@ -49,6 +49,17 @@ it('retains a batch whose article body cannot yet expose its attachments', async
   expect(runtime.clear).not.toHaveBeenCalled();
 });
 
+it('reports exhausted storage and leaves the pending article for a later retry', async () => {
+  runtime.download.mockResolvedValueOnce({ failedStorageKeys: [], unreadableArticleIds: [],
+    resourceResults: [], remainingContentBlobCount: 0 });
+  runtime.download.mockResolvedValueOnce({ failedStorageKeys: ['attachment'], unreadableArticleIds: [],
+    resourceResults: [{ unresolved: ['attachment:a'], issues: [{ error: 'disk_full' }] }],
+    remainingContentBlobCount: 0 });
+  await expect(drainDesktopSyncGroupResourceArticles(peer)).rejects
+    .toThrow('sync_group_resources_disk_full');
+  expect(runtime.clear).not.toHaveBeenCalled();
+});
+
 it('continues bounded content batches until the stored backlog is empty', async () => {
   runtime.load.mockReset().mockResolvedValue([]);
   runtime.download.mockResolvedValueOnce({ failedStorageKeys: [], unreadableArticleIds: [],

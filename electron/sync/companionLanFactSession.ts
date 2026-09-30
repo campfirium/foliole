@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
@@ -7,14 +8,17 @@ import { decodeSyncPackFactClaims, parentFactKey, type SyncPackFactIndex
 } from '../../lib/core/sync/syncPackFactPresence.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import {
-  readDesktopSyncPackFactPage, selectDesktopSyncPackFactWindow,
+  readDesktopSyncPackFactPage,
   type DesktopSyncPackFactWindow, type SyncPackFactPosition
 } from '../database/syncPackFactPage.js';
-import { createSyncPackSourceView, openSyncPackSourceView } from '../database/syncPackSourceView.js';
+import { selectDesktopSyncPackFactWindow } from '../database/syncPackFactWindow.js';
+import { openSyncPackSourceView } from '../database/syncPackSourceView.js';
 
 import { sessionRoot } from './companionLanDependencySession.js';
+import { getOrCreateCompanionSourceRoundView } from './companionLanSourceRoundView.js';
 
 interface FactSession {
+  roundSourceViewId: string;
   toPeerId: string;
   window: DesktopSyncPackFactWindow;
 }
@@ -31,20 +35,32 @@ interface FactProgress {
 
 export async function createCompanionFactSession(args: {
   groupId: string; toPeerId: string; window: DesktopSyncPackFactWindow;
+  freshRound?: boolean;
 }) {
   const base = sessionRoot(args.groupId, args.toPeerId);
   await fs.mkdir(base, { recursive: true });
   const staging = await fs.mkdtemp(path.join(base, '.preparing-'));
-  let view: Awaited<ReturnType<typeof createSyncPackSourceView>> | undefined;
+  let view: ReturnType<typeof openSyncPackSourceView> | undefined;
   try {
-    view = await createSyncPackSourceView(openDatabaseConnection().sqlite,
-      path.join(staging, 'source.db'));
+    const round = await getOrCreateCompanionSourceRoundView({ groupId: args.groupId,
+      peerId: args.toPeerId, frontierStateSeq: args.window.frontierStateSeq,
+      sourceEpoch: args.window.sourceEpoch }, args.freshRound);
+    const roundSourceViewId = round.sourceViewId;
+    try { await fs.link(round.filePath, path.join(staging, 'source.db')); }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error('sync_pack_source_view_unavailable');
+      }
+      throw error;
+    }
+    finally { round.close(); }
+    view = openSyncPackSourceView(path.join(staging, 'source.db'));
     if (view.frontierStateSeq !== args.window.frontierStateSeq) {
       throw new Error('sync_pack_source_view_unavailable');
     }
     const window = selectDesktopSyncPackFactWindow(view.driver, args.window);
     if (window.toStateSeq !== args.window.toStateSeq) throw new Error('sync_pack_fact_window_changed');
-    const session: FactSession = { toPeerId: args.toPeerId, window };
+    const session: FactSession = { roundSourceViewId, toPeerId: args.toPeerId, window };
     await fs.writeFile(path.join(staging, 'fact-session.json'), JSON.stringify(session), { mode: 0o600 });
     const claims = new Database(path.join(staging, 'fact-claims.db'));
     try {
@@ -58,9 +74,10 @@ export async function createCompanionFactSession(args: {
         .run(first.index.index_id);
     } finally { claims.close(); }
     await fs.chmod(path.join(staging, 'fact-claims.db'), 0o600);
+    const viewId = randomUUID();
     view.close();
-    await fs.rename(staging, path.join(base, view.sourceViewId));
-    return openCompanionFactSession(args.groupId, args.toPeerId, view.sourceViewId);
+    await fs.rename(staging, path.join(base, viewId));
+    return openCompanionFactSession(args.groupId, args.toPeerId, viewId);
   } finally {
     try { view?.close(); } catch { /* Closed before publication. */ }
     await fs.rm(staging, { recursive: true, force: true });
@@ -76,6 +93,7 @@ export async function openCompanionFactSession(groupId: string, peerId: string, 
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') throw new Error('sync_pack_source_view_unavailable');
     throw error;
   }
+  if (!session.roundSourceViewId) throw new Error('sync_pack_source_view_unavailable');
   if (session.toPeerId !== peerId) throw new Error('sync_pack_source_view_changed');
   const sourcePath = path.join(root, 'source.db');
   try { await Promise.all([fs.access(sourcePath), fs.access(path.join(root, 'fact-claims.db'))]); }
@@ -84,13 +102,32 @@ export async function openCompanionFactSession(groupId: string, peerId: string, 
     throw error;
   }
   const view = openSyncPackSourceView(sourcePath);
-  if (view.sourceViewId !== viewId || view.sourceEpoch !== session.window.sourceEpoch ||
+  if (view.sourceViewId !== session.roundSourceViewId ||
+      view.sourceEpoch !== session.window.sourceEpoch ||
       view.frontierStateSeq !== session.window.frontierStateSeq) {
     view.close();
     throw new Error('sync_pack_source_view_changed');
   }
   view.driver.execute('ATTACH DATABASE ? AS fact_claims', [path.join(root, 'fact-claims.db')]);
-  return { ...session, view };
+  return { ...session, view: { ...view, sourceViewId: viewId } };
+}
+
+export async function releaseConfirmedCompanionFactSession(groupId: string, peerId: string, viewId: string) {
+  if (!/^[a-f0-9-]{36}$/u.test(viewId)) return;
+  const root = path.join(sessionRoot(groupId, peerId), viewId);
+  try { await fs.access(path.join(root, 'fact-session.json')); }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
+  try { await fs.access(path.join(root, 'session.json')); return; }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+  if (openDatabaseConnection().driver.queryOne(
+    'SELECT 1 FROM node_version_outbound_holds WHERE pack_id = ? LIMIT 1', [viewId]
+  )) return;
+  await fs.rm(root, { recursive: true, force: true });
 }
 
 export async function readCompanionFactSessionPage(args: {

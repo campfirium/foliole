@@ -22,5 +22,12 @@ export const SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS = [
     peer_id TEXT NOT NULL,
     article_id TEXT NOT NULL,
     PRIMARY KEY (group_id, peer_id, article_id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS attachment_receive_checkpoints (
+    content_hash TEXT NOT NULL,
+    temporary_path TEXT NOT NULL,
+    total_bytes INTEGER NOT NULL CHECK (total_bytes >= 0),
+    confirmed_bytes INTEGER NOT NULL CHECK (confirmed_bytes >= 0 AND confirmed_bytes <= total_bytes),
+    PRIMARY KEY (content_hash, temporary_path)
   )`
 ] as const;

@@ -3,7 +3,15 @@ import SQLite3
 
 // sql-surface: ios-isolated-snapshot-owner
 enum FolioleCompanionSyncGroupResources {
-    struct Resource { let body: Data; let contentType: String }
+    struct Resource {
+        let body: Data
+        let contentType: String
+        let totalBytes: Int?
+        init(body: Data, contentType: String, totalBytes: Int? = nil) {
+            self.body = body; self.contentType = contentType; self.totalBytes = totalBytes
+        }
+    }
+    private static let attachmentRangeBytes = 1_048_576
 
     static func contentBlob(snapshot: URL, hash: String?) throws -> Resource? {
         guard let hash, hash.range(of: "^[a-fA-F0-9]{64}$", options: .regularExpression) != nil else { return nil }
@@ -12,7 +20,8 @@ enum FolioleCompanionSyncGroupResources {
             [hash.lowercased()]).map { Resource(body: $0.1, contentType: $0.0 ?? "application/octet-stream") }
     }
 
-    static func attachment(snapshot: URL, attachmentId: String?, contentHash: String?) throws -> Resource? {
+    static func attachmentFile(snapshot: URL, attachmentId: String?, contentHash: String?) throws
+        -> (url: URL, mimeType: String, size: Int)? {
         guard let attachmentId, attachmentId == contentHash, let contentHash,
               contentHash.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
               let row = try query(snapshot, "SELECT mime_type, CAST(id AS BLOB) FROM attachments WHERE id = ?",
@@ -23,9 +32,36 @@ enum FolioleCompanionSyncGroupResources {
                                                   appropriateFor: nil, create: false)
         let contract = try FolioleCompanionContractStore().attachmentResourceContract()
         let url = support.appendingPathComponent(contract.directoryName, isDirectory: true).appendingPathComponent(storageKey)
-        let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-        guard values?.isRegularFile == true, values?.isSymbolicLink != true else { return nil }
-        return Resource(body: try Data(contentsOf: url), contentType: mimeType)
+        let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey])
+        guard values?.isRegularFile == true, values?.isSymbolicLink != true,
+              let size = values?.fileSize else { return nil }
+        return (url, mimeType, size)
+    }
+
+    static func attachmentRange(snapshot: URL, attachmentId: String?, contentHash: String?,
+                                offsetText: String?, lengthText: String?) throws -> Resource? {
+        guard let source = try attachmentFile(snapshot: snapshot, attachmentId: attachmentId, contentHash: contentHash)
+            else { return nil }
+        guard let offsetText, let lengthText, !offsetText.isEmpty, !lengthText.isEmpty,
+              offsetText.allSatisfy(\.isNumber), lengthText.allSatisfy(\.isNumber),
+              let offset = Int(offsetText), let length = Int(lengthText),
+              offset >= 0, offset % attachmentRangeBytes == 0,
+              offset < source.size || offset == 0 && source.size == 0,
+              length > 0, length <= attachmentRangeBytes,
+              length == attachmentRangeBytes || length == source.size - offset
+              else { throw invalid("invalid_request") }
+        let body = try readAttachmentRange(source.url, offset: offset,
+            count: min(length, source.size - offset))
+        return Resource(body: body, contentType: source.mimeType, totalBytes: source.size)
+    }
+
+    static func readAttachmentRange(_ url: URL, offset: Int, count: Int) throws -> Data {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        try handle.seek(toOffset: UInt64(offset))
+        let body = try handle.read(upToCount: count) ?? Data()
+        guard body.count == count else { throw invalid("attachment_resource_range_invalid") }
+        return body
     }
 
     static func contentBlobBatch(snapshot: URL, requestData: Data) throws -> Resource {

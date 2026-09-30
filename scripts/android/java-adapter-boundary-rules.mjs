@@ -45,6 +45,8 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionAppDataStore.java',
       'FolioleCompanionAttachmentFileResolver.java',
       'FolioleCompanionAttachmentFileStage.java',
+      'FolioleCompanionAttachmentRangeDownload.java',
+      'FolioleCompanionAttachmentCheckpoint.java',
       'FolioleCompanionAttachmentResourceBatchSessions.java',
       'FolioleCompanionAttachmentResourceBatchStore.java',
       'FolioleCompanionBootstrapState.java',

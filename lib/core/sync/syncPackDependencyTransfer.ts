@@ -3,12 +3,16 @@ import { hashText } from './syncNodeResolution.js';
 export const SYNC_PACK_DEPENDENCY_INITIAL_DIGEST = hashText('foliole-sync-pack-dependencies-v1');
 export const SYNC_PACK_DEPENDENCY_MAX_ROWS = 128;
 export const SYNC_PACK_DEPENDENCY_MAX_BYTES = 2 * 1024 * 1024;
+export const SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES = [
+  'node', 'node_open_state', 'node_reading', 'node_review', 'parent_child_order'
+] as const;
+export type SyncPackNodeDependencyObjectType = typeof SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES[number];
 
 export interface SyncPackDependencyScope {
   groupId: string;
   peerId: string;
   sourceViewId: string;
-  objectType: 'node' | 'node_review';
+  objectType: SyncPackNodeDependencyObjectType;
   objectId: string;
 }
 
@@ -59,7 +63,7 @@ export function parseSyncPackDependencyTransfers(value: unknown): SyncPackDepend
     if (!transfer || typeof transfer !== 'object' ||
         ![transfer.groupId, transfer.peerId, transfer.sourceViewId, transfer.objectId,
           transfer.sourceEpoch].every((field) => typeof field === 'string' && field.trim()) ||
-        !['node', 'node_review'].includes(transfer.objectType) ||
+        !SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES.includes(transfer.objectType) ||
         ![transfer.fromStateSeq, transfer.objectStateSeq, transfer.frontierStateSeq, transfer.expectedRows]
           .every((field) => Number.isSafeInteger(field) && field >= 0) ||
         (transfer.expectedRows === 0 && transfer.expectedDigest !== SYNC_PACK_DEPENDENCY_INITIAL_DIGEST) ||
@@ -87,7 +91,7 @@ export function parseSyncPackDependencyTransfers(value: unknown): SyncPackDepend
 export function validateSyncPackDependencyPage(page: SyncPackDependencyPage) {
   const transfer = page.transfer;
   if (![...dependencyScopeParams(transfer), transfer.sourceEpoch].every((value) =>
-    typeof value === 'string' && value.trim()) || !['node', 'node_review'].includes(transfer.objectType) ||
+    typeof value === 'string' && value.trim()) || !SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES.includes(transfer.objectType) ||
       ![transfer.fromStateSeq, transfer.objectStateSeq, transfer.frontierStateSeq,
         transfer.expectedRows, page.afterRow].every((value) => Number.isSafeInteger(value) && value >= 0) ||
       transfer.objectStateSeq <= transfer.fromStateSeq || transfer.frontierStateSeq < transfer.objectStateSeq ||

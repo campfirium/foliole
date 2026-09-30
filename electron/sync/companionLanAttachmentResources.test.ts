@@ -5,15 +5,15 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 const attachmentMock = vi.hoisted(() => ({
-  loadAttachmentResourceDescription: vi.fn(),
-  resolveAttachmentFile: vi.fn()
+  loadAttachmentResourceStorageIdentity: vi.fn(),
+  resolveAttachmentFileForSync: vi.fn()
 }));
 
 vi.mock('../attachments/resourceResolver.js', () => ({
-  resolveAttachmentFile: attachmentMock.resolveAttachmentFile
+  resolveAttachmentFileForSync: attachmentMock.resolveAttachmentFileForSync
 }));
 vi.mock('../database/attachmentResourceDescription.js', () => ({
-  loadAttachmentResourceDescription: attachmentMock.loadAttachmentResourceDescription
+  loadAttachmentResourceStorageIdentity: attachmentMock.loadAttachmentResourceStorageIdentity
 }));
 
 import { ATTACHMENT_RANGE_BYTES, loadCompanionAttachmentResource } from './companionLanAttachmentResources.js';
@@ -34,8 +34,9 @@ it('loads attachment bytes when the attachment identity matches the requested ha
   const contentHash = 'hash-current';
   const filePath = path.join(tempRoot, 'att-1.bin');
   await fs.writeFile(filePath, body);
-  attachmentMock.loadAttachmentResourceDescription.mockReturnValue({ contentHash });
-  attachmentMock.resolveAttachmentFile.mockReturnValue({ filePath, mimeType: 'application/octet-stream', status: 'ready' });
+  attachmentMock.loadAttachmentResourceStorageIdentity.mockReturnValue({ contentHash });
+  attachmentMock.resolveAttachmentFileForSync.mockReturnValue({ filePath,
+    mimeType: 'application/octet-stream', sizeBytes: body.byteLength, status: 'ready' });
 
   await expect(loadCompanionAttachmentResource('att-1', contentHash)).resolves.toEqual({
     contentLength: body.byteLength,
@@ -46,21 +47,22 @@ it('loads attachment bytes when the attachment identity matches the requested ha
 });
 
 it('does not serve bytes for mismatched requested content hashes', async () => {
-  attachmentMock.loadAttachmentResourceDescription.mockReturnValue({ contentHash: 'hash-current' });
+  attachmentMock.loadAttachmentResourceStorageIdentity.mockReturnValue({ contentHash: 'hash-current' });
 
   await expect(loadCompanionAttachmentResource('att-1', 'hash-old')).resolves.toEqual({
     error: 'content_hash_mismatch',
     status: 'error',
     statusCode: 409
   });
-  expect(attachmentMock.resolveAttachmentFile).not.toHaveBeenCalled();
+  expect(attachmentMock.resolveAttachmentFileForSync).not.toHaveBeenCalled();
 });
 
 it('serves only a bounded authenticated attachment range', async () => {
   const filePath = path.join(tempRoot, 'large.bin');
   await fs.writeFile(filePath, Buffer.alloc(ATTACHMENT_RANGE_BYTES + 7));
-  attachmentMock.loadAttachmentResourceDescription.mockReturnValue({ contentHash: 'hash-current' });
-  attachmentMock.resolveAttachmentFile.mockReturnValue({ filePath, mimeType: 'application/pdf', status: 'ready' });
+  attachmentMock.loadAttachmentResourceStorageIdentity.mockReturnValue({ contentHash: 'hash-current' });
+  attachmentMock.resolveAttachmentFileForSync.mockReturnValue({ filePath,
+    mimeType: 'application/pdf', sizeBytes: ATTACHMENT_RANGE_BYTES + 7, status: 'ready' });
 
   await expect(loadCompanionAttachmentResource('att-1', 'hash-current',
     { offset: String(ATTACHMENT_RANGE_BYTES), length: '7' })).resolves.toEqual({
@@ -77,8 +79,9 @@ it('serves only a bounded authenticated attachment range', async () => {
 it('serves an empty attachment as one authenticated empty range', async () => {
   const filePath = path.join(tempRoot, 'empty.bin');
   await fs.writeFile(filePath, '');
-  attachmentMock.loadAttachmentResourceDescription.mockReturnValue({ contentHash: 'hash-empty' });
-  attachmentMock.resolveAttachmentFile.mockReturnValue({ filePath, mimeType: null, status: 'ready' });
+  attachmentMock.loadAttachmentResourceStorageIdentity.mockReturnValue({ contentHash: 'hash-empty' });
+  attachmentMock.resolveAttachmentFileForSync.mockReturnValue({ filePath,
+    mimeType: null, sizeBytes: 0, status: 'ready' });
 
   await expect(loadCompanionAttachmentResource('att-1', 'hash-empty',
     { offset: '0', length: String(ATTACHMENT_RANGE_BYTES) })).resolves.toEqual({

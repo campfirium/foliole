@@ -5,38 +5,14 @@ import { describeVersionFact, type SyncPackFactIndex, type SyncPackFactPage,
 import { assertValidNodeVersionSnapshot } from '../../lib/core/sync/syncPackNodeVersions.js';
 import type { SyncPackReviewLogRecord } from '../../lib/core/sync/syncPackReviewLogExecutor.js';
 
+import type { DesktopSyncPackFactWindow } from './syncPackFactWindow.js';
+
+export type { DesktopSyncPackFactWindow } from './syncPackFactWindow.js';
+
 export interface SyncPackFactPosition {
   kind: 'versions' | 'parents' | 'reviews';
   key: string;
   ordinal: number;
-}
-
-export interface DesktopSyncPackFactWindow {
-  fromStateSeq: number;
-  toStateSeq: number;
-  frontierStateSeq: number;
-  sourceEpoch: string;
-}
-
-export function selectDesktopSyncPackFactWindow(driver: DatabaseDriver, args: {
-  fromStateSeq: number; frontierStateSeq?: number; sourceEpoch?: string;
-}): DesktopSyncPackFactWindow {
-  const source = driver.queryOne<{ high_water: number; source_epoch: string }>(
-    'SELECT high_water, source_epoch FROM sync_state_sequence WHERE singleton_id = 1');
-  if (!source?.source_epoch) throw new Error('sync_pack_source_epoch_missing');
-  const frontier = args.frontierStateSeq ?? source.high_water;
-  if (!Number.isSafeInteger(args.fromStateSeq) || args.fromStateSeq < 0 ||
-      !Number.isSafeInteger(frontier) || frontier < args.fromStateSeq || frontier > source.high_water) {
-    throw new Error('sync_pack_frontier_unavailable');
-  }
-  if (args.sourceEpoch && args.sourceEpoch !== source.source_epoch) {
-    throw new Error('sync_pack_source_epoch_changed');
-  }
-  const next = driver.queryOne<{ state_seq: number }>(
-    'SELECT state_seq FROM sync_object_state WHERE state_seq > ? AND state_seq <= ? ORDER BY state_seq LIMIT 1',
-    [args.fromStateSeq, frontier]);
-  return { fromStateSeq: args.fromStateSeq, toStateSeq: next?.state_seq ?? frontier,
-    frontierStateSeq: frontier, sourceEpoch: source.source_epoch };
 }
 
 const MAX_ROWS = 128;
@@ -47,8 +23,11 @@ const REVIEW_COLUMNS = ['id', 'op_id', 'host_name', 'node_id', 'grade', 'schedul
   'reviewed_at', 'due_before', 'stability_before', 'difficulty_before',
   'due_after', 'stability_after', 'difficulty_after'];
 const PRELUDE = `WITH RECURSIVE changed AS (
-  SELECT object_type, object_id FROM sync_object_state
-  WHERE state_seq > ? AND state_seq <= ? AND deleted_at IS NULL
+  SELECT object_type, object_id FROM sync_object_state state
+  WHERE state_seq > ? AND state_seq <= ? AND (deleted_at IS NULL OR object_type = 'node')
+    AND (object_type <> 'node_reading' OR EXISTS (
+      SELECT 1 FROM node_reading reading JOIN nodes node ON node.id = reading.node_id
+      WHERE reading.node_id = state.object_id AND node.deleted_at IS NULL))
 ), pack_nodes(id) AS (
   SELECT object_id FROM changed WHERE object_type IN
     ('node', 'node_open_state', 'node_reading', 'node_review', 'parent_child_order')
@@ -142,6 +121,15 @@ function assertFactLineage(driver: DatabaseDriver, window: DesktopSyncPackFactWi
     WHERE node.current_version_id IS NOT NULL AND
       (version.version_id IS NULL OR version.object_id <> node.id) LIMIT 1`, params);
   if (invalidHead) throw new Error('sync_pack_node_version_missing_or_mismatched');
+  const missingParent = driver.queryOne<{ version_id: string }>(`${PRELUDE}
+    SELECT version.version_id FROM lineage
+    JOIN node_sync_versions version ON version.version_id = lineage.version_id
+    LEFT JOIN node_sync_version_parents edge ON edge.version_id = version.version_id
+    LEFT JOIN node_sync_versions parent ON parent.version_id =
+      coalesce(edge.parent_version_id, version.parent_version_id)
+    WHERE coalesce(edge.parent_version_id, version.parent_version_id) IS NOT NULL
+      AND parent.version_id IS NULL LIMIT 1`, params);
+  if (missingParent) throw new Error(`sync_pack_node_version_missing_parent:${missingParent.version_id}`);
   const crossObject = driver.queryOne(`${PRELUDE} SELECT version.version_id FROM lineage
     JOIN node_sync_versions version ON version.version_id = lineage.version_id
     LEFT JOIN node_sync_version_parents edge ON edge.version_id = version.version_id

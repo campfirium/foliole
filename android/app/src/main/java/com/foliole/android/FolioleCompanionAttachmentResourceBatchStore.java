@@ -23,11 +23,11 @@ final class FolioleCompanionAttachmentResourceBatchStore {
 
     private FolioleCompanionAttachmentResourceBatchStore() {}
 
-    static JSObject downloadResources(Context context, JSONArray resources) throws Exception {
+    static JSObject downloadResources(Context context, String databasePath, JSONArray resources) throws Exception {
         if (resources == null) {
             throw new IllegalArgumentException(FolioleCompanionBridgeContractDefinitions.resourceResourcesRequestKey(context) + " is required.");
         }
-        DownloadResult result = downloadResourceFiles(context, resources);
+        DownloadResult result = downloadResourceFiles(context, databasePath, resources);
         String token = FolioleCompanionAttachmentResourceBatchSessions.create(
             result.tempFilesById,
             result.contentHashesById,
@@ -45,14 +45,14 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         return response;
     }
 
-    private static DownloadResult downloadResourceFiles(Context context, JSONArray resources) throws Exception {
+    private static DownloadResult downloadResourceFiles(Context context, String databasePath, JSONArray resources) throws Exception {
         int workerCount = Math.max(1, Math.min(DOWNLOAD_CONCURRENCY, resources.length()));
         ExecutorService executor = Executors.newFixedThreadPool(workerCount);
         ExecutorCompletionService<SingleDownloadResult> completionService = new ExecutorCompletionService<>(executor);
         try {
             for (int index = 0; index < resources.length(); index += 1) {
                 JSONObject resource = resources.getJSONObject(index);
-                completionService.submit(downloadTask(context, resource));
+                completionService.submit(downloadTask(context, databasePath, resource));
             }
             Map<String, String> contentHashesById = new HashMap<>();
             Map<String, String> mimeTypesById = new HashMap<>();
@@ -81,19 +81,19 @@ final class FolioleCompanionAttachmentResourceBatchStore {
         }
     }
 
-    private static Callable<SingleDownloadResult> downloadTask(Context context, JSONObject resource) {
+    private static Callable<SingleDownloadResult> downloadTask(Context context, String databasePath, JSONObject resource) {
         return () -> {
             String attachmentIdKey = FolioleCompanionBridgeContractDefinitions.resourceAttachmentIdRequestKey(context);
             String attachmentId = requireText(resource.optString(attachmentIdKey, null), attachmentIdKey);
             try {
-                return downloadResourceFile(context, attachmentId, resource);
+                return downloadResourceFile(context, databasePath, attachmentId, resource);
             } catch (Exception error) {
                 return SingleDownloadResult.failed(attachmentId, FolioleCompanionResourceFailure.classify(error));
             }
         };
     }
 
-    private static SingleDownloadResult downloadResourceFile(Context context, String attachmentId, JSONObject resource) throws Exception {
+    private static SingleDownloadResult downloadResourceFile(Context context, String databasePath, String attachmentId, JSONObject resource) throws Exception {
         String contentHashKey = FolioleCompanionBridgeContractDefinitions.resourceContentHashRequestKey(context);
         String mimeTypeKey = FolioleCompanionBridgeContractDefinitions.resourceMimeTypeRequestKey(context);
         String storageKeyKey = FolioleCompanionBridgeContractDefinitions.resourceStorageKeyRequestKey(context);
@@ -105,31 +105,25 @@ final class FolioleCompanionAttachmentResourceBatchStore {
             throw new IllegalArgumentException("Attachment storage key is not canonical.");
         }
         File tempFile = tempAttachmentFile(context, contentHash);
-        File parent = tempFile.getParentFile();
-        if (parent != null && !parent.exists() && !parent.mkdirs()) {
-            throw new IllegalStateException("Failed to create attachment directory.");
+        File partial = new File(tempFile.getParentFile().getParentFile(), contentHash + ".unverified");
+        File published = new File(new File(context.getFilesDir(), "attachments"), storageKey);
+        if (published.isFile() && contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(published))) {
+            tempFile.getParentFile().mkdirs();
+            java.nio.file.Files.copy(published.toPath(), tempFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
-        try {
-            FolioleCompanionDesktopHttpClient.downloadToFile(
-                context,
+        {
+            FolioleCompanionAttachmentRangeDownload.download(context,
                 requireText(resource.optString(urlKey, null), urlKey),
                 resource.optJSONObject(FolioleCompanionBridgeContractDefinitions.resourceHeadersRequestKey(context)),
-                tempFile
-            );
-            if (!contentHash.equals(FolioleCompanionAttachmentResourceHash.digestHex(context, tempFile))) {
-                tempFile.delete();
-                throw new IllegalStateException("Attachment resource hash mismatch.");
-            }
+                partial, tempFile, contentHash, new FolioleCompanionAttachmentCheckpoint(
+                    context, databasePath, partial, contentHash));
             return SingleDownloadResult.synced(attachmentId, contentHash, mimeType, storageKey, tempFile);
-        } catch (Exception error) {
-            tempFile.delete();
-            throw error;
         }
     }
 
     private static File tempAttachmentFile(Context context, String contentHash) throws Exception {
         File root = new File(new File(context.getFilesDir(), resourceRule(context, "directoryName")), ".tmp");
-        return new File(new File(root, java.util.UUID.randomUUID().toString()), contentHash);
+        return new File(new File(root, "verified"), contentHash);
     }
 
     private static String requireText(String value, String field) {

@@ -42,13 +42,35 @@ final class FolioleCompanionAttachmentResourceBatchSessions {
         }
     }
 
-    static synchronized void finish(String token, boolean committed) {
-        Session session = SESSIONS.remove(token);
+    static synchronized void finish(String token, boolean committed) throws Exception {
+        Session session = SESSIONS.get(token);
         if (session == null) return;
         if (!committed && session.stagedCreatedFiles != null) {
-            for (File file : session.stagedCreatedFiles.values()) file.delete();
+            for (Map.Entry<String, File> entry : session.stagedCreatedFiles.entrySet()) {
+                restore(entry.getValue(), session.tempFilesById.get(entry.getKey()),
+                    session.contentHashesById.get(entry.getKey()));
+            }
         }
-        for (File file : session.tempFilesById.values()) file.delete();
+        if (committed) for (File file : session.tempFilesById.values()) file.delete();
+        SESSIONS.remove(token);
+    }
+
+    private static void restore(File published, File temporary, String hash) throws Exception {
+        if (temporary == null || hash == null) throw new java.io.IOException("Missing attachment recovery identity");
+        if (!published.exists()) {
+            if (temporary.isFile() && hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(temporary))) return;
+            throw new java.io.IOException("Completed attachment bytes are missing");
+        }
+        if (!hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(published))) {
+            throw new java.io.IOException("Published attachment recovery hash mismatch");
+        }
+        if (temporary.exists()) {
+            if (!hash.equals(FolioleCompanionAttachmentResourceHash.digestHex(temporary)) || !published.delete()) {
+                throw new java.io.IOException("Attachment recovery destination conflict");
+            }
+        } else if (!published.renameTo(temporary)) {
+            throw new java.io.IOException("Unable to retain completed attachment bytes");
+        }
     }
 
     static final class Session {

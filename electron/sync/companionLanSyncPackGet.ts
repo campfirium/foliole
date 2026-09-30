@@ -36,7 +36,7 @@ export async function handleSyncPackGet(
     if (error instanceof Error &&
         (error.message.startsWith('sync_pack_fact_body_unavailable:') ||
           ['sync_pack_fact_index_changed', 'sync_pack_fact_claims_invalid',
-            'sync_pack_source_view_unavailable'].includes(error.message))) {
+            'sync_pack_source_view_unavailable', 'sync_pack_upgrade_required'].includes(error.message))) {
       writeJson(request, response, 409, { error: error.message }, 'GET, OPTIONS');
       return true;
     }

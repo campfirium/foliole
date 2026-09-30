@@ -189,16 +189,19 @@ extension FolioleCompanionSyncGroupJoinServer {
                     snapshot: snapshot, hash: Self.query(request.path, "hash")
                 )
             }
-            return try FolioleCompanionSyncGroupResources.attachment(
+            return try FolioleCompanionSyncGroupResources.attachmentRange(
                 snapshot: snapshot, attachmentId: Self.query(request.path, "attachment_id"),
-                contentHash: Self.query(request.path, "content_hash")
+                contentHash: Self.query(request.path, "content_hash"),
+                offsetText: Self.query(request.path, "offset"),
+                lengthText: Self.query(request.path, "length")
             )
         }
         guard let resource else {
             let body = try JSONSerialization.data(withJSONObject: ["error": kind == "blob" ? "blob_not_found" : "missing_file"])
             return try sendWorkgroup(connection, request, "application/json; charset=utf-8", body, status: 404)
         }
-        try sendWorkgroup(connection, request, resource.contentType, resource.body)
+        try sendWorkgroup(connection, request, resource.contentType, resource.body,
+            totalBytes: resource.totalBytes)
     }
 
 }

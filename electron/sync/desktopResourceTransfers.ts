@@ -1,8 +1,7 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { promises as fs } from 'node:fs';
-import path from 'node:path';
+import { createHash } from 'node:crypto';
 
 import type { ArticleAttachmentNeed } from '../../lib/core/sync/articleAttachmentNeeds.js';
+import { createAttachmentReceiveCheckpoint } from '../../lib/core/sync/attachmentReceiveCheckpoint.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { ResourceTransfer } from '../../lib/core/sync/resourceProviderPass.js';
 import { classifyResourceFailure, resourceKey, type ResourceNeed } from '../../lib/platform/resourceAvailabilityContract.js';
@@ -11,6 +10,8 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { boundedConcurrentMap } from './boundedConcurrentMap.js';
 import { parseCompanionContentBlobMultipart } from './companionContentBlobMultipart.js';
+import { ATTACHMENT_RANGE_BYTES } from './companionLanAttachmentResources.js';
+import { receiveDesktopAttachmentRanges } from './desktopAttachmentRangeTransfer.js';
 import { requireResourceGroupKey, type DesktopResourceProvider } from './desktopResourceProviders.js';
 import { createDesktopSyncGroupSignedHeaders, createDesktopWorkgroupPost, readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
 
@@ -33,7 +34,7 @@ export async function transferDesktopResources(args: {
     try {
       const attachment = args.attachments.get(need.id);
       if (!attachment) throw new Error('resource_request_invalid');
-      await transferAttachment(args.peer, attachment);
+      await transferAttachment(args.peer, attachment, args.port);
       result.ready.push(key);
     } catch (error) { result.errors[key] = classifyResourceFailure(error); }
   });
@@ -72,20 +73,31 @@ async function transferBlobs(peer: DesktopResourceProvider, needs: ResourceNeed[
   }
 }
 
-async function transferAttachment(peer: DesktopResourceProvider, attachment: ArticleAttachmentNeed) {
-  const query = new URLSearchParams({ attachment_id: attachment.attachmentId, content_hash: attachment.contentHash });
-  const { body } = await download(peer, `/companion/attachment-resource?${query.toString()}`);
-  if (sha256(body) !== attachment.contentHash) throw new Error('attachment_checksum_mismatch');
+async function transferAttachment(peer: DesktopResourceProvider, attachment: ArticleAttachmentNeed, port: DbPort) {
   const filePath = resolveAttachmentStoragePath(attachment.contentHash, undefined, attachment.mimeType);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  const temporary = `${filePath}.${randomUUID()}.partial`;
-  try {
-    await fs.writeFile(temporary, body);
-    await fs.rename(temporary, filePath);
-  } finally { await fs.rm(temporary, { force: true }); }
+  const checkpoint = createAttachmentReceiveCheckpoint(port, filePath, attachment.contentHash);
+  await receiveDesktopAttachmentRanges({ filePath, contentHash: attachment.contentHash,
+    checkpoint: {
+      load: (total) => runWithDatabaseConnectionOwner(() => checkpoint.load(total)),
+      save: (total, offset) => runWithDatabaseConnectionOwner(() => checkpoint.save(total, offset)),
+      clear: () => runWithDatabaseConnectionOwner(() => checkpoint.clear())
+    },
+    ...(attachment.sizeBytes === undefined ? {} : { expectedBytes: attachment.sizeBytes }),
+    requestRange: async (offset) => {
+      const query = new URLSearchParams({ attachment_id: attachment.attachmentId,
+        content_hash: attachment.contentHash, offset: String(offset),
+        length: String(ATTACHMENT_RANGE_BYTES) });
+      const { body, totalBytes } = await download(peer,
+        `/companion/attachment-resource?${query.toString()}`, undefined, 1_500_000);
+      if (totalBytes === null || !/^\d+$/u.test(totalBytes)) {
+        throw new Error('attachment_resource_range_invalid');
+      }
+      return { body, totalBytes: Number(totalBytes) };
+    } });
 }
 
-async function download(peer: DesktopResourceProvider, pathWithQuery: string, payload?: unknown) {
+async function download(peer: DesktopResourceProvider, pathWithQuery: string,
+  payload?: unknown, maxEnvelopeBytes?: number) {
   const method = payload ? 'POST' : 'GET';
   const init = await runWithDatabaseConnectionOwner(() => {
     const args = { groupId: peer.group_id, localDeviceId: peer.local_device_id, pathWithQuery,
@@ -98,9 +110,12 @@ async function download(peer: DesktopResourceProvider, pathWithQuery: string, pa
   });
   const contentType = response.headers.get('x-foliole-original-content-type');
   const body = await readDesktopWorkgroupResponse({
-    contentType: contentType ?? 'application/octet-stream', groupId: peer.group_id, method, pathWithQuery, response
+    contentType: contentType ?? 'application/octet-stream', groupId: peer.group_id,
+    method, pathWithQuery, response,
+    ...(maxEnvelopeBytes === undefined ? {} : { maxEnvelopeBytes })
   });
-  return { body, contentType };
+  return { body, contentType,
+    totalBytes: response.headers.get('x-foliole-resource-total-bytes') };
 }
 
 function sha256(body: Buffer) { return createHash('sha256').update(body).digest('hex'); }

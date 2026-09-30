@@ -172,10 +172,12 @@ final class FolioleCompanionSyncGroupServer {
     private void attachment(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
         String peer = authenticate(request);
         FolioleCompanionSyncGroupResources.Resource resource = snapshots.read(
-            peer, snapshot -> FolioleCompanionSyncGroupResources.attachment(
-                context, snapshot, query(request.path, "attachment_id"), query(request.path, "content_hash")));
+            peer, snapshot -> FolioleCompanionSyncGroupResources.attachmentRange(
+                context, snapshot, query(request.path, "attachment_id"), query(request.path, "content_hash"),
+                query(request.path, "offset"), query(request.path, "length")));
         if (resource == null) workgroupJson(request, output, 404, error("missing_file"));
-        else workgroupBytes(request, output, resource.mimeType, resource.body);
+        else FolioleCompanionWorkgroupHttp.writeBytes(context, config, request, output,
+            200, resource.mimeType, resource.body, resource.totalBytes);
     }
 
     private String authenticate(FolioleCompanionHttpRequest request) throws Exception {

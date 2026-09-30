@@ -33,6 +33,32 @@ export function resolveAttachmentStoragePath(
   return resolveAttachmentStorageKeyPath(assetsDir, buildAttachmentStorageFileName(contentHash, mimeType));
 }
 
+/** Resolves a send-only path without loading the attachment into memory. */
+export function resolveAttachmentFileForSync(storageKey: string) {
+  const snapshot = readAttachmentLibraryPathSnapshot();
+  const parsed = parseCanonicalAttachmentStorageKey(storageKey);
+  if (!snapshot || !parsed) return { status: 'not_found' as const };
+  const filePath = resolveAttachmentStorageKeyPath(snapshot.assetsDir, storageKey);
+  try {
+    if (!fs.existsSync(filePath)) restoreAttachmentFromTrash(snapshot.assetsDir, storageKey);
+    if (!fs.lstatSync(filePath).isFile()) return { status: 'missing_file' as const };
+    const descriptor = fs.openSync(filePath, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+    try {
+      const stat = fs.fstatSync(descriptor);
+      if (!stat.isFile()) return { status: 'missing_file' as const };
+      const prefix = Buffer.alloc(128);
+      const count = fs.readSync(descriptor, prefix, 0, prefix.length, 0);
+      if (classifyAttachmentBytes(prefix.subarray(0, count)) !== parsed.mimeType) {
+        return { status: 'missing_file' as const };
+      }
+      return { status: 'ready' as const, filePath, mimeType: parsed.mimeType,
+        sizeBytes: stat.size };
+    } finally { fs.closeSync(descriptor); }
+  } catch {
+    return { status: 'missing_file' as const };
+  }
+}
+
 function resolveAttachmentAssetsDir() {
   const snapshot = readAttachmentLibraryPathSnapshot();
   if (!snapshot) throw new Error('attachment library path snapshot is unavailable');

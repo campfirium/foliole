@@ -6,6 +6,7 @@ import {
   type SyncPackFactPage
 } from '../../lib/core/sync/syncPackFactPresence.js';
 
+import { selectDesktopSyncPackFactWindow } from './syncPackFactWindow.js';
 import {
   loadSyncPackNodeVersionParentRows,
   iterateSyncPackNodeVersionRows
@@ -20,23 +21,8 @@ export function loadDesktopSyncPackFactIndex(driver: DatabaseDriver, args: {
   frontierStateSeq?: number;
   sourceEpoch?: string;
 }): SyncPackFactIndex {
-  const source = driver.queryOne<{ high_water: number; source_epoch: string }>(
-    'SELECT high_water, source_epoch FROM sync_state_sequence WHERE singleton_id = 1'
-  );
-  if (!source?.source_epoch) throw new Error('sync_pack_source_epoch_missing');
-  const frontier = args.frontierStateSeq ?? source.high_water;
-  if (!Number.isSafeInteger(args.fromStateSeq) || args.fromStateSeq < 0 ||
-      !Number.isSafeInteger(frontier) || frontier < args.fromStateSeq || frontier > source.high_water) {
-    throw new Error('sync_pack_frontier_unavailable');
-  }
-  if (args.sourceEpoch && args.sourceEpoch !== source.source_epoch) {
-    throw new Error('sync_pack_source_epoch_changed');
-  }
-  const next = driver.queryOne<{ state_seq: number }>(
-    `SELECT state_seq FROM sync_object_state WHERE state_seq > ? AND state_seq <= ?
-     ORDER BY state_seq LIMIT 1`, [args.fromStateSeq, frontier]
-  );
-  const toStateSeq = next?.state_seq ?? frontier;
+  const window = selectDesktopSyncPackFactWindow(driver, args);
+  const toStateSeq = window.toStateSeq;
   const base = loadPackRows(args.fromStateSeq, toStateSeq, driver);
   const versions: SyncPackFactPage['versions'] = [];
   for (const row of iterateSyncPackNodeVersionRows(driver, base.nodes)) {
@@ -55,7 +41,7 @@ export function loadDesktopSyncPackFactIndex(driver: DatabaseDriver, args: {
   }
   const identity = {
     from_state_seq: args.fromStateSeq, to_state_seq: toStateSeq,
-    frontier_state_seq: frontier, source_epoch: source.source_epoch,
+    frontier_state_seq: window.frontierStateSeq, source_epoch: window.sourceEpoch,
     ...page
   };
   const serialized = JSON.stringify(identity);

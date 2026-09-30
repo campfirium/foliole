@@ -43,7 +43,7 @@ final class FolioleCompanionAttachmentFileStage {
         return response(context, FolioleCompanionAttachmentResourceBatchSessions.get(token));
     }
 
-    static void finish(String token, boolean committed) {
+    static void finish(String token, boolean committed) throws Exception {
         FolioleCompanionAttachmentResourceBatchSessions.finish(token, committed);
     }
 

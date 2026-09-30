@@ -35,6 +35,8 @@
 		50F022191FED79650016851F /* FolioleCompanionSyncTrigger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F022091FED79650016851F /* FolioleCompanionSyncTrigger.swift */; };
 		50F022181FED79650016851F /* FolioleCompanionDeviceAnchorStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F022081FED79650016851F /* FolioleCompanionDeviceAnchorStore.swift */; };
 		50F023111FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023011FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift */; };
+		A26700111FED79650016851F /* FolioleCompanionAttachmentResourceSessions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A26700011FED79650016851F /* FolioleCompanionAttachmentResourceSessions.swift */; };
+		50F027101FED79650016851F /* FolioleCompanionAttachmentCheckpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F027001FED79650016851F /* FolioleCompanionAttachmentCheckpoint.swift */; };
 		50F023131FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */; };
 		F20300131FED79650016851F /* FolioleRemoteImageFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20300031FED79650016851F /* FolioleRemoteImageFiles.swift */; };
 		F20300431FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20300331FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift */; };
@@ -159,6 +161,8 @@
 		50F022091FED79650016851F /* FolioleCompanionSyncTrigger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncTrigger.swift; sourceTree = "<group>"; };
 		50F022081FED79650016851F /* FolioleCompanionDeviceAnchorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionDeviceAnchorStore.swift; sourceTree = "<group>"; };
 		50F023011FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentResourceDownload.swift; sourceTree = "<group>"; };
+		A26700011FED79650016851F /* FolioleCompanionAttachmentResourceSessions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentResourceSessions.swift; sourceTree = "<group>"; };
+		50F027001FED79650016851F /* FolioleCompanionAttachmentCheckpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentCheckpoint.swift; sourceTree = "<group>"; };
 		50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionAttachmentSyncPlugin.swift; sourceTree = "<group>"; };
 		F20300031FED79650016851F /* FolioleRemoteImageFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRemoteImageFiles.swift; sourceTree = "<group>"; };
 		F20300331FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleAttachmentMaintenanceFiles.swift; sourceTree = "<group>"; };
@@ -305,6 +309,8 @@
 				50F022091FED79650016851F /* FolioleCompanionSyncTrigger.swift */,
 				50F022081FED79650016851F /* FolioleCompanionDeviceAnchorStore.swift */,
 				50F023011FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift */,
+				A26700011FED79650016851F /* FolioleCompanionAttachmentResourceSessions.swift */,
+				50F027001FED79650016851F /* FolioleCompanionAttachmentCheckpoint.swift */,
 				50F023031FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift */,
 				F20300031FED79650016851F /* FolioleRemoteImageFiles.swift */,
 				F20300331FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift */,
@@ -591,6 +597,8 @@
 				50F022191FED79650016851F /* FolioleCompanionSyncTrigger.swift in Sources */,
 				50F022181FED79650016851F /* FolioleCompanionDeviceAnchorStore.swift in Sources */,
 				50F023111FED79650016851F /* FolioleCompanionAttachmentResourceDownload.swift in Sources */,
+				A26700111FED79650016851F /* FolioleCompanionAttachmentResourceSessions.swift in Sources */,
+				50F027101FED79650016851F /* FolioleCompanionAttachmentCheckpoint.swift in Sources */,
 				50F023131FED79650016851F /* FolioleCompanionAttachmentSyncPlugin.swift in Sources */,
 				F20300131FED79650016851F /* FolioleRemoteImageFiles.swift in Sources */,
 				F20300431FED79650016851F /* FolioleAttachmentMaintenanceFiles.swift in Sources */,

@@ -120,6 +120,9 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
     if (results.length > 0) {
       onSyncedChunk?.(results);
     }
+    if (result.issues.some((issue) => issue.error === 'disk_full')) {
+      throw new Error('attachment_resource_disk_full');
+    }
   }
   return syncedAttachmentIds;
 }
@@ -136,10 +139,11 @@ async function syncAttachmentResourceRequestBatch(endpoint: string, requests: At
 
 async function syncAttachmentResourceRequestBatchOnce(endpoint: string, requests: AttachmentResourceRequest[]) {
   const resources = await Promise.all(requests.map((request) => buildSignedAttachmentResourceRequest(endpoint, request)));
-  const download = await FolioleCompanionSync.downloadAttachmentResourceBatch({ resources });
-  const result = await commitStagedCompanionAttachmentBatch(
-    getIosCompanionDatabaseOwner(), FolioleCompanionSync, download.batch_token
-  );
+  const owner = getIosCompanionDatabaseOwner();
+  const download = await FolioleCompanionSync.downloadAttachmentResourceBatch({
+    database_path: owner.databasePath, resources
+  });
+  const result = await commitStagedCompanionAttachmentBatch(owner, FolioleCompanionSync, download.batch_token);
   return { ready: result.syncedIds.map((id) => `attachment:${id}`),
     errors: Object.fromEntries(requests.filter((request) => !result.syncedIds.includes(request.attachmentId)).map((request) => [
       `attachment:${request.attachmentId}`, download.failed_attachment_errors?.[request.attachmentId] ??

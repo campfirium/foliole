@@ -13,6 +13,7 @@ import {
 import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
+import { loadAttachmentPreludeStateRows } from './syncPackAttachmentPreludeRows.js';
 import { learningNodeIds, loadNodePreludeStateRows, mergeStateRows } from './syncPackLearningRows.js';
 
 interface RawSyncStatePackRow extends DatabaseRow {
@@ -96,6 +97,10 @@ function listChangedStateRows(driver: DatabaseDriver, fromStateSeq: number, toSt
      ))
      AND (object_type NOT IN ('node_reading', 'node_review') OR EXISTS (
        SELECT 1 FROM nodes WHERE nodes.id = sync_object_state.object_id
+     ))
+     AND (object_type <> 'node_reading' OR deleted_at IS NOT NULL OR EXISTS (
+       SELECT 1 FROM node_reading reading JOIN nodes node ON node.id = reading.node_id
+       WHERE reading.node_id = sync_object_state.object_id AND node.deleted_at IS NULL
      ))
      ORDER BY state_seq ASC`,
     [fromStateSeq, toStateSeq]
@@ -182,25 +187,28 @@ export function loadPackRows(
 ) {
   const changedStateRows = listChangedStateRows(driver, fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
   const changedNodeIds = idsForObjectTable(changedStateRows, 'nodes');
-  const candidateStateRows = mergeStateRows(changedStateRows, loadNodePreludeStateRows({
+  const nodePreludeStateRows = mergeStateRows(changedStateRows, loadNodePreludeStateRows({
     isSyncStatePackRow,
     nodeIds: [...changedNodeIds, ...learningNodeIds(changedStateRows)],
     placeholders,
     query: (sql, params) => driver.queryAll<RawSyncStatePackRow>(sql, params)
   }));
-  const syncObjects = loadPayloadObjects(driver, candidateStateRows);
-  const stateRows = retainBackedStateRows(candidateStateRows, syncObjects);
   const nodeIds = [...new Set([
-    ...idsForObjectTable(stateRows, 'nodes'),
-    ...learningNodeIds(stateRows)
+    ...idsForObjectTable(nodePreludeStateRows, 'nodes'),
+    ...learningNodeIds(nodePreludeStateRows)
   ])];
-  const externalDocumentIds = idsForObjectTable(stateRows, 'external_documents');
   const nodes = queryRowsByIds<NodePackRow>(driver,
     `SELECT ${SYNC_PACK_NODE_COLUMNS.map((column) => column === 'content' ? "'' AS content" : column).join(', ')}
      FROM nodes WHERE id IN (__IDS__)`,
     nodeIds
   );
   const nodeAttachments = loadNodeAttachmentRows(driver, nodeIds);
+  const candidateStateRows = mergeStateRows(nodePreludeStateRows, loadAttachmentPreludeStateRows(driver, {
+    fromStateSeq, pageStateRows: changedStateRows, nodeAttachments
+  }));
+  const syncObjects = loadPayloadObjects(driver, candidateStateRows);
+  const stateRows = retainBackedStateRows(candidateStateRows, syncObjects);
+  const externalDocumentIds = idsForObjectTable(stateRows, 'external_documents');
   const externalDocuments = queryRowsByIds<ExternalDocumentPackRow>(driver,
     `SELECT document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
        source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash,

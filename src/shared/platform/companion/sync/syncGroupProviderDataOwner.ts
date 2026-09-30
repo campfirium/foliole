@@ -14,6 +14,7 @@ import { parseSyncGroupMemberState } from '../../../../../lib/platform/syncGroup
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import { handleCompanionAttachmentCheckpoint } from '../runtime/companionAttachmentCheckpoint';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import {
@@ -52,6 +53,7 @@ async function handleRequest(request: CompanionSyncGroupDataRequest) {
 }
 
 function dispatch(operation: string, payload: Record<string, unknown>) {
+  if (operation === CONTRACT.operations.attachmentCheckpoint) return handleCompanionAttachmentCheckpoint(getIosCompanionDatabaseOwner(), payload);
   if (operation === CONTRACT.operations.createSnapshot) return createCompanionSyncGroupSourceSnapshot(payload);
   if (operation === CONTRACT.operations.applyMemberState) {
     return applyCompanionSyncGroupMemberState(

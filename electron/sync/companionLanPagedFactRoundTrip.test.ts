@@ -13,6 +13,7 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { insertNodeSyncState, mockedSyncPackBuilderAppDataDir,
   resolveSyncPackPath, setupSyncPackBuilderTestLifecycle } from '../database/syncPackBuilderTestSupport.js';
+import { selectDesktopSyncPackFactWindow } from '../database/syncPackFactWindow.js';
 
 import { startAuthenticatedSyncHttp } from './companionLanAuthenticatedHttp.testSupport.js';
 import { createCompanionFactSession, readCompanionFactSessionPage } from './companionLanFactSession.js';
@@ -81,14 +82,15 @@ async function applyPack(url: URL, target: Database.Database, name: string,
   } finally { await resource.cleanup?.(); }
 }
 
-async function claimHistory(target: Database.Database, fromStateSeq = 0, toStateSeq = 1,
+async function claimHistory(target: Database.Database, fromStateSeq = 0,
   http?: Awaited<ReturnType<typeof startAuthenticatedSyncHttp>>) {
   const source = openDatabaseConnection();
   const state = source.driver.queryOne<{ high_water: number; source_epoch: string }>(
     'SELECT high_water, source_epoch FROM sync_state_sequence WHERE singleton_id = 1')!;
+  const window = selectDesktopSyncPackFactWindow(source.driver, { fromStateSeq,
+    frontierStateSeq: state.high_water, sourceEpoch: state.source_epoch });
   const fact = http ? null : await createCompanionFactSession({ groupId: 'group', toPeerId: 'receiver',
-    window: { fromStateSeq, toStateSeq, frontierStateSeq: state.high_water,
-      sourceEpoch: state.source_epoch } });
+    window });
   const firstPath = `/companion/sync-pack-facts?page_contract=bounded-v1&after_state_seq=${fromStateSeq}`;
   const first = http ? await http.getJson(firstPath) as unknown as Awaited<ReturnType<typeof readCompanionFactSessionPage>>
     : await readCompanionFactSessionPage({ groupId: 'group', peerId: 'receiver',
@@ -138,7 +140,7 @@ it('packs an open-state change after more than 4096 known facts', async () => {
     VALUES ('node_open_state', 'node-1', 3, 'open-hash', 'desktop', 'now', 0)`);
   const target = seedPagedFactReceiver();
   try {
-    const { url } = await claimHistory(target, 2, 3);
+    const { url } = await claimHistory(target, 2);
     const resource = await buildCompanionSyncPackResource(url, 'receiver');
     try {
       const incoming = resolveSyncPackPath('open-state-incoming.db');
@@ -175,10 +177,10 @@ it('applies an all-known 130-version page without retransmission and clears clai
   markDesktopSyncGroupMemberStateReady('receiver');
   const server = await startAuthenticatedSyncHttp();
   try {
-    const { url } = await claimHistory(target, 0, 1, server);
+    const { url } = await claimHistory(target, 0, server);
     const { result, manifest } = await applyPack(url, target, 'all-known-incoming.db', server.archive);
     expect(manifest.dependencyTransfers?.[0]?.expectedRows).toBe(0);
-    expect(result.toStateSeq).toBe(1);
+    expect(result.toStateSeq).toBe(2);
     expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get()).toEqual({ count: 130 });
     expect(target.prepare('SELECT count(*) AS count FROM sync_pack_known_fact_claims').get()).toEqual({ count: 0 });
     const replay = await applyPack(url, target, 'all-known-replay.db', server.archive);
@@ -200,7 +202,7 @@ it('applies only two missing versions and parent edges after the receiver claime
       const { result, manifest } = await applyPack(request, target, `missing-${seenRequests.size}.db`);
       if (!result.dependencyProgress) {
         expect(manifest.dependencyTransfers?.[0]?.expectedRows).toBe(4);
-        expect(result.toStateSeq).toBe(1);
+        expect(result.toStateSeq).toBe(2);
         break;
       }
       expect(result.toStateSeq).toBe(0);

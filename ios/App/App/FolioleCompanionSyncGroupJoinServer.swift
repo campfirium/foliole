@@ -83,11 +83,12 @@ final class FolioleCompanionSyncGroupJoinServer {
 
     func sendWorkgroup(
         _ connection: NWConnection, _ request: FolioleCompanionHttpMessage,
-        _ contentType: String, _ body: Data, status: Int = 200
+        _ contentType: String, _ body: Data, status: Int = 200, totalBytes: Int? = nil
     ) throws {
         let response = try FolioleCompanionSyncGroupWorkgroup.response(
             request, status: status, contentType: contentType, body: body,
-            groupTag: try Self.requiredDiscovery(discovery, "group_tag"), workgroupKey: provider.workgroupKey
+            groupTag: try Self.requiredDiscovery(discovery, "group_tag"),
+            workgroupKey: provider.workgroupKey, totalBytes: totalBytes
         )
         connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
     }

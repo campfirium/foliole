@@ -17,6 +17,7 @@
         "resources": "resources"
       },
       "requestKeys": {
+        "databasePath": "database_path",
         "attachmentId": "attachment_id",
         "batchToken": "batch_token",
         "committed": "committed",
@@ -39,6 +40,9 @@
         "readyStatusKey": "ready"
       },
       "sql": {
+        "checkpointLoad": "SELECT total_bytes, confirmed_bytes FROM attachment_receive_checkpoints\n    WHERE content_hash = ? AND temporary_path = ?",
+        "checkpointSave": "INSERT INTO attachment_receive_checkpoints\n    (content_hash, temporary_path, total_bytes, confirmed_bytes) VALUES (?, ?, ?, ?)\n    ON CONFLICT(content_hash, temporary_path) DO UPDATE SET\n      total_bytes = excluded.total_bytes, confirmed_bytes = excluded.confirmed_bytes",
+        "checkpointClear": "DELETE FROM attachment_receive_checkpoints\n    WHERE content_hash = ? AND temporary_path = ?",
         "contentHashes": "SELECT id AS attachment_id, id AS content_hash FROM attachments WHERE id IN (__ATTACHMENT_ID_FILTER__)",
         "missingById": "SELECT a.id AS attachment_id, a.id AS content_hash, COALESCE(a.size_bytes, 0) AS size_bytes,\n  'unresolved' AS availability, (CASE WHEN length(a.id) = 64 AND a.id NOT GLOB '*[^a-f0-9]*'\n    THEN a.id || (CASE lower(trim(a.mime_type)) WHEN 'application/epub+zip' THEN '.epub' WHEN 'application/pdf' THEN '.pdf' WHEN 'image/gif' THEN '.gif' WHEN 'image/jpeg' THEN '.jpg' WHEN 'image/png' THEN '.png' WHEN 'image/webp' THEN '.webp' END) END) AS storage_key, a.mime_type FROM attachments a WHERE a.id = ? LIMIT 1",
         "missingRows": "SELECT a.id AS attachment_id, a.id AS content_hash, COALESCE(a.size_bytes, 0) AS size_bytes,\n  'unresolved' AS availability, (CASE WHEN length(a.id) = 64 AND a.id NOT GLOB '*[^a-f0-9]*'\n    THEN a.id || (CASE lower(trim(a.mime_type)) WHEN 'application/epub+zip' THEN '.epub' WHEN 'application/pdf' THEN '.pdf' WHEN 'image/gif' THEN '.gif' WHEN 'image/jpeg' THEN '.jpg' WHEN 'image/png' THEN '.png' WHEN 'image/webp' THEN '.webp' END) END) AS storage_key, a.mime_type FROM attachments a WHERE 0",

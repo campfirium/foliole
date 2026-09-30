@@ -11,15 +11,21 @@ export function currentLibraryScope() {
 }
 
 export function loadAttachmentResourceDescription(attachmentId: string): AttachmentResourceDescription | null {
+  const identity = loadAttachmentResourceStorageIdentity(attachmentId);
+  if (!identity) return null;
+  return { ...identity,
+    availability: resolveAttachmentFile(identity.storageKey).status === 'ready' ? 'local' : 'missing',
+    libraryScope: currentLibraryScope() };
+}
+
+export function loadAttachmentResourceStorageIdentity(attachmentId: string) {
   const row = openDatabaseConnection().driver.queryOne<{ id: string; mime_type: string }>(
     'SELECT id, mime_type FROM attachments WHERE id = ?', [attachmentId]
   );
   const storageKey = row?.mime_type ? buildCanonicalAttachmentStorageKey(row.id, row.mime_type) : null;
   if (!row || !storageKey) return null;
   return {
-    attachmentId: row.id,
-    availability: resolveAttachmentFile(storageKey).status === 'ready' ? 'local' : 'missing',
-    contentHash: row.id, libraryScope: currentLibraryScope(),
+    attachmentId: row.id, contentHash: row.id,
     mimeType: row.mime_type as AttachmentResourceDescription['mimeType'], storageKey
   };
 }

@@ -4,11 +4,11 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
+import java.io.RandomAccessFile;
 
 final class FolioleCompanionSyncGroupResources {
+    private static final int RANGE_BYTES = 1024 * 1024;
     private FolioleCompanionSyncGroupResources() {}
 
     static Resource contentBlob(String snapshotPath, String hash) {
@@ -22,7 +22,8 @@ final class FolioleCompanionSyncGroupResources {
         } finally { db.close(); }
     }
 
-    static Resource attachment(Context context, String snapshotPath, String attachmentId, String contentHash) throws Exception {
+    static AttachmentSource attachmentSource(Context context, String snapshotPath, String attachmentId,
+                                             String contentHash) throws Exception {
         if (attachmentId == null || attachmentId.trim().isEmpty() || contentHash == null || contentHash.trim().isEmpty()) return null;
         SQLiteDatabase db = SQLiteDatabase.openDatabase(snapshotPath, null, SQLiteDatabase.OPEN_READONLY);
         try (Cursor cursor = db.rawQuery(
@@ -35,24 +36,48 @@ final class FolioleCompanionSyncGroupResources {
             if (!contentHash.equals(storedHash) ||
                 !FolioleCompanionCanonicalAttachmentKey.matches(storedHash, mimeType, storageKey)) return null;
             File file = new File(new File(context.getFilesDir(), "attachments"), storageKey);
-            if (!file.isFile()) return null;
-            return new Resource(mimeType, readAll(file));
+            if (!file.isFile() || java.nio.file.Files.isSymbolicLink(file.toPath())) return null;
+            return new AttachmentSource(file, mimeType);
         } finally { db.close(); }
     }
 
-    private static byte[] readAll(File file) throws Exception {
-        try (FileInputStream input = new FileInputStream(file); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[256 * 1024];
-            for (int count; (count = input.read(buffer)) >= 0;) {
-                if (count > 0) output.write(buffer, 0, count);
+    static Resource attachmentRange(Context context, String snapshotPath, String attachmentId,
+                                    String contentHash, String offsetText, String lengthText) throws Exception {
+        AttachmentSource source = attachmentSource(context, snapshotPath, attachmentId, contentHash);
+        if (source == null) return null;
+        if (offsetText == null || lengthText == null || !offsetText.matches("[0-9]+") ||
+            !lengthText.matches("[0-9]+")) throw new IllegalArgumentException("invalid_request");
+        long offset = Long.parseLong(offsetText);
+        int length = Integer.parseInt(lengthText);
+        try (RandomAccessFile input = new RandomAccessFile(source.file, "r")) {
+            long total = input.length();
+            if (offset < 0 || offset % RANGE_BYTES != 0 ||
+                (offset >= total && !(offset == 0 && total == 0)) ||
+                length < 1 || length > RANGE_BYTES ||
+                (length != RANGE_BYTES && length != total - offset)) {
+                throw new IllegalArgumentException("invalid_request");
             }
-            return output.toByteArray();
+            int size = (int) Math.min(length, total - offset);
+            byte[] body = new byte[size];
+            input.seek(offset);
+            input.readFully(body);
+            return new Resource(source.mimeType, body, total);
         }
+    }
+
+    static final class AttachmentSource {
+        final File file;
+        final String mimeType;
+        AttachmentSource(File file, String mimeType) { this.file = file; this.mimeType = mimeType; }
     }
 
     static final class Resource {
         final byte[] body;
         final String mimeType;
-        Resource(String mimeType, byte[] body) { this.mimeType = mimeType; this.body = body; }
+        final long totalBytes;
+        Resource(String mimeType, byte[] body) { this(mimeType, body, -1); }
+        Resource(String mimeType, byte[] body, long totalBytes) {
+            this.mimeType = mimeType; this.body = body; this.totalBytes = totalBytes;
+        }
     }
 }

@@ -5,7 +5,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import java.io.FileNotFoundException;
 import java.security.MessageDigest;
 import java.util.HashSet;
 import java.util.Set;
@@ -30,12 +29,17 @@ final class FolioleCompanionResourceAvailability {
 
     private static JSONObject inspect(Context context, String snapshot, String kind, String id) throws Exception {
         JSONObject claim = new JSONObject().put("kind", kind).put("id", id).put("status", "missing");
-        FolioleCompanionSyncGroupResources.Resource resource;
-        try {
-            resource = kind.equals("attachment")
-                ? FolioleCompanionSyncGroupResources.attachment(context, snapshot, id, id)
-                : FolioleCompanionSyncGroupResources.contentBlob(snapshot, id);
-        } catch (FileNotFoundException error) { return claim; }
+        if (kind.equals("attachment")) {
+            FolioleCompanionSyncGroupResources.AttachmentSource source =
+                FolioleCompanionSyncGroupResources.attachmentSource(context, snapshot, id, id);
+            if (source == null) return claim;
+            String actual = FolioleCompanionAttachmentResourceHash.digestHex(context, source.file);
+            return actual.equals(id)
+                ? claim.put("status", "available").put("sha256", actual).put("size_bytes", source.file.length())
+                : claim.put("status", "checksum_mismatch");
+        }
+        FolioleCompanionSyncGroupResources.Resource resource =
+            FolioleCompanionSyncGroupResources.contentBlob(snapshot, id);
         if (resource == null) return claim;
         String expectedHash = id;
         long expectedSize = resource.body.length;

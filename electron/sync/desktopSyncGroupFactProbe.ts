@@ -70,6 +70,9 @@ export async function prepareDesktopSyncPackFactRequest(args: {
   requested.searchParams.set('frontier_state_seq', String(index.frontier_state_seq));
   requested.searchParams.set('source_epoch', index.source_epoch);
   requested.searchParams.set('fact_index_id', index.index_id);
+  if (index.round_source_view_id) {
+    requested.searchParams.set('round_source_view_id', index.round_source_view_id);
+  }
   requested.searchParams.set('to_state_seq', String(index.to_state_seq));
   requested.searchParams.set('have_v', bits.versions);
   requested.searchParams.set('have_p', bits.parents);

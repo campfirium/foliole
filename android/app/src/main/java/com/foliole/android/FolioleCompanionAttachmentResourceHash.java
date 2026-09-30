@@ -13,10 +13,13 @@ final class FolioleCompanionAttachmentResourceHash {
     private FolioleCompanionAttachmentResourceHash() {}
 
     static String digestHex(Context context, File file) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance(FolioleCompanionResourceReadQueryRules.contentBlobCasString(
-            context,
-            "hashAlgorithm"
-        ));
+        return digestHex(file, FolioleCompanionResourceReadQueryRules.contentBlobCasString(context, "hashAlgorithm"));
+    }
+
+    static String digestHex(File file) throws Exception { return digestHex(file, "SHA-256"); }
+
+    private static String digestHex(File file, String algorithm) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance(algorithm);
         byte[] buffer = new byte[BUFFER_BYTES];
         try (BufferedInputStream input = new BufferedInputStream(new FileInputStream(file), BUFFER_BYTES)) {
             int read;

@@ -10,7 +10,8 @@ final class FolioleCompanionResourcePluginActions {
 
     static JSObject downloadAttachmentResourceBatch(Context context, PluginCall call) throws Exception {
         return FolioleCompanionAttachmentResourceBatchStore.downloadResources(
-            context, call.getData().optJSONArray(
+            context, call.getString(FolioleCompanionBridgeContractDefinitions.hostApiString(
+                context, "attachmentResourceSync", "requestKeys", "databasePath")), call.getData().optJSONArray(
                 FolioleCompanionBridgeContractDefinitions.resourceResourcesRequestKey(context)
             )
         );

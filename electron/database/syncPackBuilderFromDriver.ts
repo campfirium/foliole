@@ -36,6 +36,7 @@ export interface BuildDesktopSyncPackInput {
   createdAt?: string;
   frontierStateSeq?: number;
   fromPeerId: string;
+  holdDriver?: DatabaseDriver;
   outputPath: string;
   packId: string;
   fromStateSeq: number;
@@ -118,7 +119,7 @@ async function measureAndHoldPage(input: BuildDesktopSyncPackInput, sourceDriver
   }
   if (input.requireDeliveryHold) {
     if (!input.toPeerId) throw new Error('node_version_pack_target_missing');
-    sourceDriver.transaction((tx) => stageDesktopSyncPackNodeHolds({
+    (input.holdDriver ?? sourceDriver).transaction((tx) => stageDesktopSyncPackNodeHolds({
       createdAt, driver: tx, fromPeerId: input.fromPeerId, nodes: rows.nodes,
       packId: input.packId, toPeerId: input.toPeerId!, versions: rows.nodeVersions,
       knownVersionIds: input.receiverFacts?.versions ?? []

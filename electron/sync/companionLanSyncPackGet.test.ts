@@ -21,3 +21,14 @@ it('routes a completed paged fact view into pack construction', async () => {
   expect(buildCompanionSyncPackResource).toHaveBeenCalledWith(url, 'peer');
   expect(writeJson).toHaveBeenCalledWith({}, {}, 409, { error: 'source_view_unavailable' }, 'GET, OPTIONS');
 });
+
+it('reports an old direct-pack client as needing an upgrade', async () => {
+  vi.mocked(buildCompanionSyncPackResource).mockRejectedValueOnce(
+    new Error('sync_pack_upgrade_required'));
+  const writeJson = vi.fn();
+  const url = new URL('http://localhost/companion/sync-pack?' +
+    'page_contract=bounded-v1&fact_index_id=index');
+  expect(await handleSyncPackGet({} as never, {} as never, url, 'peer', writeJson)).toBe(true);
+  expect(writeJson).toHaveBeenCalledWith({}, {}, 409,
+    { error: 'sync_pack_upgrade_required' }, 'GET, OPTIONS');
+});

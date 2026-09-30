@@ -75,7 +75,7 @@ enum FolioleCompanionSyncGroupWorkgroup {
 
     static func response(
         _ request: FolioleCompanionHttpMessage, status: Int, contentType: String,
-        body: Data, groupTag: String, workgroupKey: String
+        body: Data, groupTag: String, workgroupKey: String, totalBytes: Int? = nil
     ) throws -> Data {
         let envelope = try encrypt(
             body, key: workgroupKey, groupTag: groupTag, method: request.method,
@@ -83,7 +83,8 @@ enum FolioleCompanionSyncGroupWorkgroup {
         )
         let encoded = try JSONSerialization.data(withJSONObject: envelope, options: [.sortedKeys])
         return FolioleCompanionHttpMessage.response(
-            status: status, contentType: envelopeContentType, body: encoded, originalContentType: contentType
+            status: status, contentType: envelopeContentType, body: encoded,
+            originalContentType: contentType, totalBytes: totalBytes
         )
     }
 

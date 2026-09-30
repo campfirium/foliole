@@ -2,6 +2,7 @@ import type { ResourceFailure } from '../../../lib/platform/resourceAvailability
 
 export interface CompanionAttachmentResourceSyncPlugin {
   downloadAttachmentResourceBatch(args: {
+    database_path: string;
     resources: Array<{
       attachment_id: string;
       content_hash: string;

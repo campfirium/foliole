@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { formatCompanionSyncFailureMessage } from './companionSyncFailureMessage';
 
 describe('formatCompanionSyncFailureMessage', () => {
+  it('explains an attachment storage failure and the retry action', () => {
+    expect(formatCompanionSyncFailureMessage(new Error('attachment_resource_disk_full')))
+      .toBe('Attachment sync stopped because this device is out of storage space. Free space, then retry sync.');
+  });
   it('hides companion SQLite connection internals without naming a platform', () => {
     expect(formatCompanionSyncFailureMessage(
       new Error('Connection foliole-companion does not exist')

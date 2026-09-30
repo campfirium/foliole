@@ -30,6 +30,8 @@ let package = Package(
                 "FolioleCompanionResourceTransferValidation.swift",
                 "FolioleCompanionAttachmentFileStage.swift",
                 "FolioleCompanionAttachmentResourceDownload.swift",
+                "FolioleCompanionAttachmentCheckpoint.swift",
+                "FolioleCompanionAttachmentResourceSessions.swift",
                 "FolioleCompanionBonjourEndpoint.swift",
                 "FolioleCompanionContractStore.swift",
                 "FolioleCompanionDesktopHttpClient.swift",

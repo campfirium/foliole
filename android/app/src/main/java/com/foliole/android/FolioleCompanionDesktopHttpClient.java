@@ -34,10 +34,12 @@ final class FolioleCompanionDesktopHttpClient {
     static final class BinaryResponse {
         final byte[] body;
         final String contentType;
+        final long totalBytes;
 
-        BinaryResponse(byte[] body, String contentType) {
+        BinaryResponse(byte[] body, String contentType, long totalBytes) {
             this.body = body;
             this.contentType = contentType;
+            this.totalBytes = totalBytes;
         }
     }
 
@@ -94,8 +96,12 @@ final class FolioleCompanionDesktopHttpClient {
         }
         int status = connection.getResponseCode();
         try {
-            byte[] responseBody = readBytes(status >= 400 ? connection.getErrorStream() : connection.getInputStream());
+            boolean attachmentRange = "/companion/attachment-resource".equals(new URL(url).getPath());
+            byte[] responseBody = readBytes(status >= 400 ? connection.getErrorStream() : connection.getInputStream(),
+                attachmentRange ? 1_500_000 : Long.MAX_VALUE);
             String contentType = connection.getContentType();
+            String totalHeader = attachmentRange ? connection.getHeaderField("X-Foliole-Resource-Total-Bytes") : null;
+            long totalBytes = totalHeader == null ? -1 : Long.parseLong(totalHeader);
             if (prepared.headers.has("X-Sync-Group-Id")) {
                 responseBody = FolioleCompanionWorkgroupHttp.decryptResponse(
                     context, connection, method, prepared.path, responseBody);
@@ -109,7 +115,7 @@ final class FolioleCompanionDesktopHttpClient {
                 }
                 throw binaryResourceError(status, readSafeErrorCode(responseBody), method, prepared.path);
             }
-            return new BinaryResponse(responseBody, contentType);
+            return new BinaryResponse(responseBody, contentType, totalBytes);
         } finally { connection.disconnect(); }
     }
 

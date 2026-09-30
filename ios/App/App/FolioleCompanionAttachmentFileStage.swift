@@ -46,8 +46,28 @@ enum FolioleCompanionAttachmentFileStage {
         return Result(createdURLs: created, manifest: manifest)
     }
 
-    static func discard(_ urls: [URL]) {
-        for url in urls { try? FileManager.default.removeItem(at: url) }
+    static func restore(_ batch: FolioleCompanionAttachmentResourceSessions.Batch, urls: [URL]) throws {
+        for url in urls {
+            guard let item = batch.downloaded.first(where: { $0.storageKey == url.lastPathComponent }) else {
+                throw invalid("Missing attachment recovery identity.")
+            }
+            let manager = FileManager.default
+            if !manager.fileExists(atPath: url.path) {
+                guard try FolioleCompanionAttachmentResourceDownloader.digestHex(item.temporaryURL) == item.contentHash
+                else { throw invalid("Completed attachment bytes are missing.") }
+                continue
+            }
+            guard try FolioleCompanionAttachmentResourceDownloader.digestHex(url) == item.contentHash else {
+                throw invalid("Published attachment recovery hash mismatch.")
+            }
+            if manager.fileExists(atPath: item.temporaryURL.path) {
+                guard try FolioleCompanionAttachmentResourceDownloader.digestHex(item.temporaryURL) == item.contentHash
+                else { throw invalid("Attachment recovery destination conflict.") }
+                try manager.removeItem(at: url)
+            } else {
+                try manager.moveItem(at: url, to: item.temporaryURL)
+            }
+        }
     }
 
     private static func invalid(_ message: String) -> NSError {

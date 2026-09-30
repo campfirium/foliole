@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import type { SyncPackDependencyTransfer } from '../../lib/core/sync/syncPackDependencyTransfer.js';
+import { SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES, type SyncPackDependencyTransfer,
+  type SyncPackNodeDependencyObjectType } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import type { SyncPackFactClaims, SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { describeSyncPackDependencySource } from '../database/syncPackDependencySource.js';
@@ -14,6 +15,7 @@ export interface CompanionDependencySession {
   index: SyncPackFactIndex;
   claims: SyncPackFactClaims;
   transfer: SyncPackDependencyTransfer;
+  transfers?: SyncPackDependencyTransfer[];
   toPeerId: string;
   claimDatabase?: true;
 }
@@ -37,7 +39,8 @@ export async function releaseConfirmedCompanionDependencySession(groupId: string
   try {
     const driver = openDatabaseConnection().driver;
     if (driver.queryOne('SELECT 1 FROM node_version_outbound_holds WHERE pack_id = ? LIMIT 1', [packId])) return;
-    const objectIds = [...new Set([...(session.transfer.nodeIds ?? [session.transfer.objectId]),
+    const objectIds = [...new Set([...(session.transfers ?? [session.transfer]).flatMap(
+      (transfer) => transfer.nodeIds ?? [transfer.objectId]),
       ...session.index.versions.map((version) => version.object_id)])];
     if (objectIds.length === 0) return;
     for (const objectId of objectIds) {
@@ -64,7 +67,16 @@ export async function openCompanionDependencySession(groupId: string, peerId: st
     throw error;
   }
   if (session.toPeerId !== peerId || session.transfer.groupId !== groupId ||
-      session.transfer.sourceViewId !== viewId) throw new Error('sync_pack_source_view_changed');
+      session.transfer.sourceViewId !== viewId ||
+      (session.transfers && (session.transfers.length < 1 || session.transfers.length > 128 ||
+        session.transfers[0]?.objectId !== session.transfer.objectId ||
+        session.transfers.some((transfer) => transfer.groupId !== groupId ||
+          transfer.sourceViewId !== viewId || transfer.peerId !== session.transfer.peerId ||
+          transfer.sourceEpoch !== session.transfer.sourceEpoch ||
+          transfer.fromStateSeq !== session.transfer.fromStateSeq ||
+          transfer.frontierStateSeq !== session.transfer.frontierStateSeq)))) {
+    throw new Error('sync_pack_source_view_changed');
+  }
   const sourcePath = path.join(root, 'source.db');
   try { await fs.access(sourcePath); }
   catch (error) {
@@ -72,7 +84,23 @@ export async function openCompanionDependencySession(groupId: string, peerId: st
     throw error;
   }
   const view = openSyncPackSourceView(sourcePath);
-  if (view.sourceViewId !== viewId || view.sourceEpoch !== session.transfer.sourceEpoch) {
+  let expectedViewId = viewId;
+  if (session.claimDatabase) {
+    try {
+      const facts = JSON.parse(await fs.readFile(path.join(root, 'fact-session.json'), 'utf8')) as {
+        roundSourceViewId: string;
+      };
+      if (!facts.roundSourceViewId) throw new Error('sync_pack_source_view_unavailable');
+      expectedViewId = facts.roundSourceViewId;
+    } catch (error) {
+      view.close();
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        throw new Error('sync_pack_source_view_unavailable');
+      }
+      throw error;
+    }
+  }
+  if (view.sourceViewId !== expectedViewId || view.sourceEpoch !== session.transfer.sourceEpoch) {
     view.close();
     throw new Error('sync_pack_source_view_changed');
   }
@@ -86,7 +114,7 @@ export async function openCompanionDependencySession(groupId: string, peerId: st
     }
     view.driver.execute('ATTACH DATABASE ? AS fact_claims', [claimsPath]);
   }
-  return { ...session, view };
+  return { ...session, view: session.claimDatabase ? { ...view, sourceViewId: viewId } : view };
 }
 
 export async function createCompanionDependencySession(args: {
@@ -101,11 +129,11 @@ export async function createCompanionDependencySession(args: {
     const index = loadDesktopSyncPackFactIndex(view.driver, { fromStateSeq: args.index.from_state_seq,
       frontierStateSeq: args.index.frontier_state_seq, sourceEpoch: args.index.source_epoch });
     if (index.index_id !== args.index.index_id) throw new Error('sync_pack_fact_index_changed');
-    const object = view.driver.queryOne<{ object_type: 'node' | 'node_review'; object_id: string; state_seq: number }>(
+    const object = view.driver.queryOne<{ object_type: SyncPackNodeDependencyObjectType; object_id: string; state_seq: number }>(
       `SELECT object_type, object_id, state_seq FROM sync_object_state
-       WHERE state_seq > ? AND state_seq <= ? AND object_type IN ('node', 'node_review')
-         AND deleted_at IS NULL ORDER BY state_seq, object_type LIMIT 1`,
-      [index.from_state_seq, index.to_state_seq]);
+       WHERE state_seq > ? AND state_seq <= ? AND object_type IN (${SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES.map(() => '?').join(', ')})
+         AND (deleted_at IS NULL OR object_type = 'node') ORDER BY state_seq, object_type LIMIT 1`,
+      [index.from_state_seq, index.to_state_seq, ...SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES]);
     if (!object) throw new Error('sync_pack_dependency_object_unavailable');
     const description = describeSyncPackDependencySource({ view, objectId: object.object_id,
       objectType: object.object_type, claims: args.claims, budget: { rows: 128, payloadBytes: 2 * 1024 * 1024 } });

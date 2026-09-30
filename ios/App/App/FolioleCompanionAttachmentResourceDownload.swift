@@ -25,7 +25,9 @@ enum FolioleCompanionAttachmentResourceDownloader {
     static func download(
         _ requests: [FolioleCompanionAttachmentDownloadRequest],
         temporaryRoot: URL,
-        hashPattern: String
+        hashPattern: String,
+        databasePath: String,
+        checkpointRequest: @escaping (String, [String: Any]) throws -> [String: Any]
     ) async throws -> (downloaded: [FolioleCompanionDownloadedAttachment], failedIds: [String], errors: [String: String]) {
         let expression = try NSRegularExpression(pattern: hashPattern)
         var downloaded: [FolioleCompanionDownloadedAttachment] = []
@@ -34,7 +36,7 @@ enum FolioleCompanionAttachmentResourceDownloader {
         try FileManager.default.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
         for request in requests {
             do {
-                downloaded.append(try await downloadOne(request, temporaryRoot: temporaryRoot, expression: expression))
+                downloaded.append(try await downloadOne(request, temporaryRoot: temporaryRoot, expression: expression, databasePath: databasePath, checkpointRequest: checkpointRequest))
             } catch {
                 failedIds.append(request.attachmentId)
                 errors[request.attachmentId] = resourceFailure(error)
@@ -46,7 +48,9 @@ enum FolioleCompanionAttachmentResourceDownloader {
     private static func downloadOne(
         _ request: FolioleCompanionAttachmentDownloadRequest,
         temporaryRoot: URL,
-        expression: NSRegularExpression
+        expression: NSRegularExpression,
+        databasePath: String,
+        checkpointRequest: @escaping (String, [String: Any]) throws -> [String: Any]
     ) async throws -> FolioleCompanionDownloadedAttachment {
         guard !request.attachmentId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               matches(request.contentHash, expression: expression),
@@ -62,30 +66,20 @@ enum FolioleCompanionAttachmentResourceDownloader {
         ), let deviceId = request.headers.first(where: { $0.key.lowercased() == "x-device-id" })?.value
         else { throw invalid("workgroup_client_request_not_prepared") }
         let partialURL = temporaryRoot.appendingPathComponent("\(request.contentHash).unverified")
-        let first = try await receiveRange(endpoint, signed: signed, deviceId: deviceId, offset: 0)
-        let total = first.total
-        var offset = try preparePartial(partialURL, first: first.bytes, total: total)
-        if total == 0 && !FileManager.default.fileExists(atPath: partialURL.path) {
-            guard FileManager.default.createFile(atPath: partialURL.path, contents: Data()) else {
-                throw invalid("protocol_error")
-            }
-        }
-        while offset < total {
-            let segment = offset == 0 ? first : try await receiveRange(
-                endpoint, signed: signed, deviceId: deviceId, offset: offset
-            )
-            guard segment.total == total else { throw invalid("protocol_error") }
-            try append(segment.bytes, to: partialURL, at: offset)
-            offset += segment.bytes.count
-        }
-        guard try digestHex(partialURL) == request.contentHash else {
-            try? FileManager.default.removeItem(at: partialURL)
-            throw invalid("Attachment resource hash mismatch.")
-        }
-        let outputURL = temporaryRoot.appendingPathComponent(UUID().uuidString, isDirectory: true)
+        let checkpoint = try FolioleCompanionAttachmentCheckpoint(
+            databasePath: databasePath, partialURL: partialURL, hash: request.contentHash, request: checkpointRequest
+        )
+        let outputURL = temporaryRoot.appendingPathComponent("verified", isDirectory: true)
             .appendingPathComponent(request.contentHash)
         try FileManager.default.createDirectory(at: outputURL.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try FileManager.default.moveItem(at: partialURL, to: outputURL)
+        let publishedURL = temporaryRoot.deletingLastPathComponent().appendingPathComponent(request.storageKey)
+        if FileManager.default.fileExists(atPath: publishedURL.path), try digestHex(publishedURL) == request.contentHash {
+            try? FileManager.default.removeItem(at: outputURL)
+            try FileManager.default.copyItem(at: publishedURL, to: outputURL)
+        }
+        try await receiveFile(partialURL, verified: outputURL, hash: request.contentHash, checkpoint: checkpoint) {
+            try await receiveRange(endpoint, signed: signed, deviceId: deviceId, offset: $0)
+        }
         return FolioleCompanionDownloadedAttachment(
             attachmentId: request.attachmentId,
             contentHash: request.contentHash,
@@ -93,6 +87,39 @@ enum FolioleCompanionAttachmentResourceDownloader {
             storageKey: request.storageKey,
             temporaryURL: outputURL
         )
+    }
+
+    static func receiveFile(
+        _ partial: URL, verified: URL, hash: String, checkpoint: FolioleCompanionAttachmentCheckpoint,
+        source: (Int) async throws -> (bytes: Data, total: Int)
+    ) async throws {
+        if FileManager.default.fileExists(atPath: verified.path), try digestHex(verified) == hash {
+            try checkpoint.clear()
+            return
+        }
+        if FileManager.default.fileExists(atPath: verified.path) { try FileManager.default.removeItem(at: verified) }
+        let first = try await source(0)
+        let total = first.total
+        guard total >= 0, first.bytes.count == min(rangeBytes, total) else { throw invalid("protocol_error") }
+        var offset = try preparePartial(partial, first: first.bytes, total: total, confirmed: checkpoint.load(total))
+        try checkpoint.save(total, offset)
+        if total == 0 { try append(Data(), to: partial, at: 0) }
+        while offset < total {
+            let segment = offset == 0 ? first : try await source(offset)
+            guard segment.total == total, segment.bytes.count == min(rangeBytes, total - offset) else {
+                throw invalid("protocol_error")
+            }
+            try append(segment.bytes, to: partial, at: offset)
+            try checkpoint.save(total, offset + segment.bytes.count)
+            offset += segment.bytes.count
+        }
+        guard try digestHex(partial) == hash else {
+            try? FileManager.default.removeItem(at: partial)
+            try checkpoint.clear()
+            throw invalid("Attachment resource hash mismatch.")
+        }
+        try FileManager.default.moveItem(at: partial, to: verified)
+        try checkpoint.clear()
     }
 
     private static func receiveRange(
@@ -127,18 +154,20 @@ enum FolioleCompanionAttachmentResourceDownloader {
         return (bytes, total)
     }
 
-    private static func preparePartial(_ url: URL, first: Data, total: Int) throws -> Int {
+    private static func preparePartial(_ url: URL, first: Data, total: Int, confirmed: Int) throws -> Int {
         guard FileManager.default.fileExists(atPath: url.path) else { return 0 }
         let file = try FileHandle(forUpdating: url)
         defer { try? file.close() }
         let oldSize = Int(try file.seekToEnd())
-        let complete = oldSize == total ? total : oldSize / rangeBytes * rangeBytes
-        if complete > total { try file.truncate(atOffset: 0); return 0 }
+        let available = min(oldSize, total, confirmed)
+        let complete = available == total ? total : available / rangeBytes * rangeBytes
         try file.truncate(atOffset: UInt64(complete))
+        try file.synchronize()
         if complete > 0 {
             try file.seek(toOffset: 0)
             if try file.read(upToCount: first.count) != first {
                 try file.truncate(atOffset: 0)
+                try file.synchronize()
                 return 0
             }
         }
@@ -166,8 +195,12 @@ enum FolioleCompanionAttachmentResourceDownloader {
         return digest.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
-    private static func resourceFailure(_ error: Error) -> String {
+    static func resourceFailure(_ error: Error) -> String {
         let message = error.localizedDescription
+        let nsError = error as NSError
+        if (nsError.domain == NSCocoaErrorDomain && nsError.code == CocoaError.fileWriteOutOfSpace.rawValue)
+            || (nsError.domain == NSPOSIXErrorDomain && nsError.code == POSIXError.ENOSPC.rawValue)
+            || message.contains("disk_full") { return "disk_full" }
         if ["missing_file", "authentication_failed", "protocol_error"].contains(message) { return message }
         if message.contains("hash mismatch") { return "checksum_mismatch" }
         if message.contains("aead") || message.contains("signature") { return "authentication_failed" }
@@ -182,41 +215,5 @@ enum FolioleCompanionAttachmentResourceDownloader {
 
     private static func invalid(_ message: String) -> NSError {
         NSError(domain: "FolioleAttachmentResourceDownload", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
-    }
-}
-
-actor FolioleCompanionAttachmentResourceSessions {
-    struct Batch {
-        let downloaded: [FolioleCompanionDownloadedAttachment]
-        let failedIds: [String]
-    }
-
-    private var batches: [String: Batch] = [:]
-    private var committedIds: [String: [String]] = [:]
-    private var stagedCreatedURLs: [String: [URL]] = [:]
-    private var stagedManifests: [String: [[String: Any]]] = [:]
-
-    func create(downloaded: [FolioleCompanionDownloadedAttachment], failedIds: [String]) -> String {
-        let token = UUID().uuidString
-        batches[token] = Batch(downloaded: downloaded, failedIds: failedIds)
-        return token
-    }
-
-    func load(_ token: String) -> Batch? { batches[token] }
-    func committed(_ token: String) -> [String]? { committedIds[token] }
-    func staged(_ token: String) -> [[String: Any]]? { stagedManifests[token] }
-    func markStaged(_ token: String, result: FolioleCompanionAttachmentFileStage.Result) {
-        stagedCreatedURLs[token] = result.createdURLs
-        stagedManifests[token] = result.manifest
-    }
-    func finish(_ token: String, committed: Bool) {
-        if !committed { FolioleCompanionAttachmentFileStage.discard(stagedCreatedURLs[token] ?? []) }
-        batches[token] = nil
-        stagedCreatedURLs[token] = nil
-        stagedManifests[token] = nil
-    }
-    func markCommitted(_ token: String, ids: [String]) {
-        committedIds[token] = ids
-        batches[token] = nil
     }
 }

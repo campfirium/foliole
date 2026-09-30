@@ -13,11 +13,16 @@ const GROUP_ID = 'group';
 const KEY = Buffer.alloc(32, 7).toString('base64url');
 
 export async function startAuthenticatedSyncHttp({ archiveDir, sourceDeviceId = 'source',
-  receiverDeviceId = 'receiver' }: { archiveDir?: string; sourceDeviceId?: string; receiverDeviceId?: string } = {}) {
+  receiverDeviceId = 'receiver', attachmentDelayMs = 0 }: { archiveDir?: string; sourceDeviceId?: string;
+    receiverDeviceId?: string; attachmentDelayMs?: number } = {}) {
   const handler = createLanWorkspaceSyncRequestHandler({ appVersion: 'test',
     onJoinRequestCreated: null, deviceId: sourceDeviceId, updateGroupStatus: () => {},
     getSyncStatus: () => null });
-  const server = http.createServer(handler);
+  const server = http.createServer((request, response) => {
+    if (attachmentDelayMs && request.url?.startsWith('/companion/attachment-resource?')) {
+      setTimeout(() => handler(request, response), attachmentDelayMs);
+    } else { handler(request, response); }
+  });
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
   const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   let archiveIndex = 0;

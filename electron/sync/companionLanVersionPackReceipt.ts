@@ -4,7 +4,9 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { releaseConfirmedCompanionDependencySession } from './companionLanDependencySession.js';
+import { releaseConfirmedCompanionFactSession } from './companionLanFactSession.js';
 import { restoreKnownFactReceiptHolds } from './companionLanKnownFactPack.js';
+import { releaseCompanionSourceRoundOnReceipt } from './companionLanSourceRoundView.js';
 
 export const VERSION_PACK_RECEIPT_PATH = '/companion/version-pack-receipt';
 
@@ -33,5 +35,7 @@ export async function acceptCompanionVersionPackReceipt(bodyText: string, authen
     packId: receipt.packId, proofRevision: receipt.proofRevision, results: receipt.results
   });
   await releaseConfirmedCompanionDependencySession(receipt.groupId, receipt.deviceId, receipt.packId);
+  await releaseConfirmedCompanionFactSession(receipt.groupId, receipt.deviceId, receipt.packId);
+  await releaseCompanionSourceRoundOnReceipt(receipt.groupId, receipt.deviceId, receipt.packId);
   return { accepted: true };
 }

@@ -66,7 +66,9 @@ public class FolioleCompanionBatchDataPlaneTest {
         assertTrue(target.exists());
         FolioleCompanionAttachmentFileStage.finish(token, false);
         assertFalse(target.exists());
-        assertFalse(temp.exists());
+        assertTrue(temp.exists());
+        assertEquals(hash, FolioleCompanionAttachmentResourceHash.digestHex(context, temp));
+        temp.delete();
     }
 
     @Test
@@ -91,9 +93,10 @@ public class FolioleCompanionBatchDataPlaneTest {
         } finally { database.close(); }
         try {
             FolioleCompanionSyncGroupResources.Resource resource =
-                FolioleCompanionSyncGroupResources.attachment(
-                    context, snapshot.getAbsolutePath(), hash, hash);
+                FolioleCompanionSyncGroupResources.attachmentRange(
+                    context, snapshot.getAbsolutePath(), hash, hash, "0", "1048576");
             assertEquals("image/png", resource.mimeType);
+            assertEquals(bytes.length, resource.totalBytes);
             assertArrayEquals(bytes, resource.body);
         } finally {
             target.delete(); snapshot.delete(); source.delete();

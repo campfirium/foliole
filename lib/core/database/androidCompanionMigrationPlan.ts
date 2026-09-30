@@ -160,6 +160,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(49, 'installSchema', 'Failed to add retired sync source views.'),
   step(50, 'installSchema', 'Failed to add persisted sync fact claims.'),
   step(52, 'installSchema', 'Failed to add transactional workgroup restore pages.'),
+  step(54, 'installSchema', 'Failed to add attachment receive checkpoints.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

@@ -17,13 +17,15 @@ export async function readA5SyncEvents({ args, buildIdentity, env, evidenceRoot 
     manifestPath: result.manifestPath };
 }
 
-export async function captureA5SyncRun(options, triggerReason, exclude = []) {
+export async function captureA5SyncRun(options, triggerReason, exclude = [], after = null) {
   const deadline = Date.now() + 2 * 60_000;
   while (Date.now() < deadline) {
     const projection = await readA5SyncEvents(options);
     try {
+      const events = after ? projection.events.filter((event) =>
+        Date.parse(event.occurred_at) > Date.parse(after)) : projection.events;
       return { projection: projection.manifestPath,
-        run: selectProjectedRun(projection.events, triggerReason, { exclude }) };
+        run: selectProjectedRun(events, triggerReason, { exclude }) };
     } catch (error) {
       if (!(error instanceof Error)
           || error.message !== `No new completed ${triggerReason} mobile Sync run was projected.`) {

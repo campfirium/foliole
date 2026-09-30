@@ -86,7 +86,7 @@ it('persists page claims by stable view and accepts only exact replay before pub
   const sourceState = source.driver.queryOne<{ high_water: number; source_epoch: string }>(
     'SELECT high_water, source_epoch FROM sync_state_sequence WHERE singleton_id = 1')!;
   const session = await createCompanionFactSession({ groupId: 'group', toPeerId: 'receiver',
-    window: { fromStateSeq: 0, toStateSeq: 1, frontierStateSeq: sourceState.high_water,
+    window: { fromStateSeq: 0, toStateSeq: 2, frontierStateSeq: sourceState.high_water,
       sourceEpoch: sourceState.source_epoch } });
   const viewId = session.view.sourceViewId;
   session.view.close();
@@ -131,7 +131,7 @@ it('converts persisted page claims into only missing dependency rows', async () 
   const state = source.driver.queryOne<{ high_water: number; source_epoch: string }>(
     'SELECT high_water, source_epoch FROM sync_state_sequence WHERE singleton_id = 1')!;
   const session = await createCompanionFactSession({ groupId: 'group', toPeerId: 'receiver',
-    window: { fromStateSeq: 0, toStateSeq: 1, frontierStateSeq: state.high_water,
+    window: { fromStateSeq: 0, toStateSeq: 2, frontierStateSeq: state.high_water,
       sourceEpoch: state.source_epoch } });
   const viewId = session.view.sourceViewId;
   session.view.close();
@@ -177,7 +177,7 @@ it('publishes an all-known history without retransmitting any version body', asy
   const state = source.driver.queryOne<{ high_water: number; source_epoch: string }>(
     'SELECT high_water, source_epoch FROM sync_state_sequence WHERE singleton_id = 1')!;
   const session = await createCompanionFactSession({ groupId: 'group', toPeerId: 'receiver',
-    window: { fromStateSeq: 0, toStateSeq: 1, frontierStateSeq: state.high_water,
+    window: { fromStateSeq: 0, toStateSeq: 2, frontierStateSeq: state.high_water,
       sourceEpoch: state.source_epoch } });
   const viewId = session.view.sourceViewId;
   session.view.close();
@@ -214,7 +214,7 @@ it('includes a historical parent prelude in the same bounded transfer', async ()
   const state = source.driver.queryOne<{ high_water: number; source_epoch: string }>(
     'SELECT high_water, source_epoch FROM sync_state_sequence WHERE singleton_id = 1')!;
   const session = await createCompanionFactSession({ groupId: 'group', toPeerId: 'receiver',
-    window: { fromStateSeq: 0, toStateSeq: 1, frontierStateSeq: state.high_water,
+    window: { fromStateSeq: 0, toStateSeq: 2, frontierStateSeq: state.high_water,
       sourceEpoch: state.source_epoch } });
   const viewId = session.view.sourceViewId;
   session.view.close();

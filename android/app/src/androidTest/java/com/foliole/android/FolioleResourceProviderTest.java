@@ -53,18 +53,19 @@ public final class FolioleResourceProviderTest {
     @Test public void mixedAttachmentDownloadsKeepSuccessAndAuthenticateFailures() throws Exception {
         fixture.installCredentials();
         String endpoint = fixture.start(request -> {
-            String route = request.path;
-            int status = route.equals("/gone") || route.equals("/forged") ? 404 : 200;
-            byte[] body = route.equals("/good") ? bytes("good") : bytes("wrong");
-            return new FolioleResourceProviderFixture.Reply(status, "application/octet-stream", body, !route.equals("/forged"));
+            String route = android.net.Uri.parse(request.path).getQueryParameter("case");
+            int status = "gone".equals(route) || "forged".equals(route) ? 404 : 200;
+            byte[] body = "good".equals(route) ? bytes("good") : bytes("wrong");
+            return new FolioleResourceProviderFixture.Reply(status, "application/octet-stream", body,
+                !"forged".equals(route), status == 200 ? body.length : -1);
         });
         JSONArray resources = new JSONArray();
         for (String text : new String[] {"good", "gone", "bad", "forged"}) {
             String id = hash(bytes(text));
             resources.put(new JSONObject().put("attachment_id", id).put("content_hash", id).put("mime_type", "image/png")
-                .put("storage_key", id + ".png").put("url", endpoint + "/" + text).put("headers", fixture.headers()));
+                .put("storage_key", id + ".png").put("url", endpoint + "/companion/attachment-resource?case=" + text).put("headers", fixture.headers()));
         }
-        JSONObject result = FolioleCompanionAttachmentResourceBatchStore.downloadResources(fixture.context, resources);
+        JSONObject result = FolioleCompanionAttachmentResourceBatchStore.downloadResources(fixture.context, fixture.database.getAbsolutePath(), resources);
         String token = result.getString("batch_token");
         try {
             assertEquals(hash(bytes("good")), result.getJSONArray("synced_attachment_ids").getString(0));
