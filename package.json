@@ -223,7 +223,7 @@
     "better-sqlite3": "13.0.3",
     "bonjour-service": "1.4.4",
     "clsx": "^2.1.1",
-    "drizzle-orm": "0.45.2",
+    "drizzle-orm": "0.45.3",
     "electron-updater": "6.8.9",
     "katex": "0.18.7",
     "liquidjs": "10.29.0",
