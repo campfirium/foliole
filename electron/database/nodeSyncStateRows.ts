@@ -48,8 +48,8 @@ export function backfillMissingNodeSyncState(
        v.host_name,
        v.content_hash
      FROM nodes n
-     INNER JOIN node_sync_versions v ON v.version_id = n.current_version_id
      LEFT JOIN sync_object_state s ON s.object_type = 'node' AND s.object_id = n.id
+     INNER JOIN node_sync_versions v ON v.version_id = n.current_version_id
      WHERE n.id NOT IN (?, ?) AND n.current_version_id IS NOT NULL AND s.object_id IS NULL
      ORDER BY n.updated_at ASC, n.id ASC LIMIT 128`,
     SPECIAL_ROOT_NODE_IDS

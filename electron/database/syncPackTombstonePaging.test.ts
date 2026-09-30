@@ -84,3 +84,32 @@ it('backfills old node states in fixed batches without retaining page-only IDs',
     WHERE object_type = 'node'`).get()).toMatchObject({ count: 260 });
   expect(backfillMissingNodeSyncState(driver)).toEqual([]);
 });
+
+
+it('preserves known states and backfills only valid missing heads with their deletion metadata', () => {
+  const { sqlite, driver } = openDatabaseConnection();
+  for (const id of ['known', 'removed', 'missing-version']) {
+    sqlite.prepare(`INSERT INTO nodes
+      (id, kind, title, current_version_id, last_modified_by_host_name, deleted_at, created_at, updated_at)
+      VALUES (?, 'topic', 'Node', ?, 'editor', ?, 'now', 'later')`)
+      .run(id, `v-${id}`, id === 'removed' ? 'deleted-time' : null);
+    if (id !== 'missing-version') sqlite.prepare(`INSERT INTO node_sync_versions
+      (version_id, object_id, host_name, created_at, content_hash, snapshot_json)
+      VALUES (?, ?, 'author', 'now', ?, '{}')`).run(`v-${id}`, id, `hash-${id}`);
+  }
+  sqlite.prepare(`INSERT INTO sync_object_state
+    (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
+    VALUES ('node', 'known', 7, 'kept-hash', 'kept-host', 'kept-time', 1)`).run();
+  sqlite.prepare('UPDATE sync_state_sequence SET high_water=7 WHERE singleton_id=1').run();
+  const known = sqlite.prepare("SELECT * FROM sync_object_state WHERE object_id='known'").get();
+  expect(backfillMissingNodeSyncState(driver)).toEqual(['removed']);
+  expect(sqlite.prepare("SELECT * FROM sync_object_state WHERE object_id='known'").get()).toEqual(known);
+  expect(sqlite.prepare("SELECT * FROM sync_object_state WHERE object_id='removed'").get())
+    .toMatchObject({ state_seq: 8, current_version_id: 'v-removed', content_hash: 'hash-removed',
+      last_modified_by_host_name: 'editor', updated_at: 'later', deleted_at: 'deleted-time', sync_dirty: 0 });
+  expect(sqlite.prepare("SELECT * FROM sync_object_state WHERE object_id='missing-version'").get())
+    .toBeUndefined();
+  expect(backfillMissingNodeSyncState(driver)).toEqual([]);
+  expect(sqlite.prepare('SELECT high_water FROM sync_state_sequence WHERE singleton_id=1').get())
+    .toEqual({ high_water: 8 });
+});
