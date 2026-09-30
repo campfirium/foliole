@@ -183,13 +183,14 @@ function reportSidecarCleanup(result: Awaited<ReturnType<typeof cleanupOrphanedB
 export async function restoreApplicationDatabaseBackup(
   options: RestoreApplicationDatabaseBackupOptions
 ): Promise<SqliteRestoreResult> {
+  const restoredAt = new Date().toISOString();
   const finishRestore = beginApplicationDatabaseRestore();
   let resumeLibraryTasks: (() => void) | null = null;
   let completed = false;
   try {
     resumeLibraryTasks = await desktopTaskScheduler.pauseResource('library');
     const result = await runWithDatabaseConnectionMaintenance(() =>
-      restoreDatabaseBackupInMaintenance(options.sourcePath));
+      restoreDatabaseBackupInMaintenance(options.sourcePath, restoredAt));
     clearDesktopSyncGroupMemberStateReadiness();
     completed = true;
     return result;

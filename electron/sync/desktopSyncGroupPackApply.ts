@@ -169,8 +169,9 @@ export async function applyDesktopSyncGroupPack(
       if (args.factClaims) {
         await assertSyncPackFactClaimsStillHeld(port, args.factClaims.index, args.factClaims.claims);
       }
-      const apply = (database: DbPort) => applySyncPackNodeSurfaceWithDbPort(database, {
-        currentCursor: args.after, hostName,
+      const apply = (database: DbPort, after = args.after) => applySyncPackNodeSurfaceWithDbPort(database, {
+        currentCursor: after, hostName,
+        ...(args.restoreId ? { expectedRestoreId: args.restoreId } : {}),
         incomingAlias: 'inc', sourceHostName: sourceDeviceName,
         sourcePeerId: args.peer.peer_device_id,
         recordVersionReceipt: true,
@@ -181,7 +182,7 @@ export async function applyDesktopSyncGroupPack(
         groupId: args.peer.group_id, peerId: args.peer.peer_device_id,
         port, restoreId: args.restoreId
       }) : { result: await apply(port), removedNodeIds: [] as string[] };
-      if (args.restoreId && !manifest.dependencyPage) initializeWorkspaceSearchSidecar(openDatabaseConnection(), {
+      if (args.restoreId && outcome.result.applied && !manifest.dependencyPage) initializeWorkspaceSearchSidecar(openDatabaseConnection(), {
         requireCurrentSource: true
       });
       const result = outcome.result;
@@ -190,7 +191,7 @@ export async function applyDesktopSyncGroupPack(
         cursor: result.toStateSeq,
         dependencyProgress: result.dependencyProgress,
         event: { ...event, appliedNodeIds: [...new Set([
-          ...event.appliedNodeIds, ...outcome.removedNodeIds
+          ...event.appliedNodeIds, ...outcome.removedNodeIds, ...result.participatingArticleIds
         ])] },
         participatingArticleIds: result.participatingArticleIds
       };

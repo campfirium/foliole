@@ -7,6 +7,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 
 let appDataDir = '';
 vi.mock('../ipc/paths.js', () => ({
@@ -32,6 +33,8 @@ beforeEach(async () => {
   initializeDatabase();
 });
 afterEach(async () => {
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   closeDatabaseConnection();
   await fs.rm(root, { recursive: true, force: true });
 });
@@ -50,6 +53,19 @@ it('restores an older backup and keeps the current workgroup connection with an 
   createDesktopSyncGroup({ device: identity, deviceName: 'A', platform: 'desktop',
     workgroupKey: 'current-secret' });
   const before = loadDesktopSyncGroup();
+  const currentDriver = openDatabaseConnection().driver;
+  currentDriver.execute(`INSERT INTO setting_records
+    (key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at)
+    VALUES ('host_preference', 'host', 'windows', 'desktop', 'A', 'true', 'hash', 'now')`);
+  currentDriver.execute("INSERT INTO settings VALUES ('host_preference', 'true', 'now')");
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
+  const pause = desktopTaskScheduler.pauseResource.bind(desktopTaskScheduler);
+  vi.spyOn(desktopTaskScheduler, 'pauseResource').mockImplementation(async (resource) => {
+    const resume = await pause(resource);
+    vi.setSystemTime(new Date('2026-09-30T00:01:00.000Z'));
+    return resume;
+  });
   const result = await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
   const after = loadDesktopSyncGroup();
   const driver = openDatabaseConnection().driver;
@@ -59,6 +75,12 @@ it('restores an older backup and keeps the current workgroup connection with an 
   );
   expect(result.sourcePath).toBe(backup.destinationPath);
   expect(after).toEqual(before);
+  expect(driver.queryOne('SELECT restored_at FROM sync_group_restore_events'))
+    .toEqual({ restored_at: '2026-09-30T00:00:00.000Z' });
+  expect(driver.queryOne("SELECT value FROM settings WHERE key = 'host_preference'"))
+    .toEqual({ value: 'true' });
+  expect(driver.queryOne("SELECT value_json FROM setting_records WHERE key = 'host_preference'"))
+    .toEqual({ value_json: 'true' });
   expect(driver.queryOne<{ id: string }>(
     "SELECT id FROM nodes WHERE id = 'backup-topic'"
   )).toEqual({ id: 'backup-topic' });
@@ -72,4 +94,6 @@ it('restores an older backup and keeps the current workgroup connection with an 
     packId: 'restore-pack', restoreId: event!.restore_id }, driver);
   expect(pack.objectCount).toBeGreaterThan(0);
   expect(pack.manifest.restore_id).toBe(event!.restore_id);
+  expect(driver.queryOne('SELECT source_epoch FROM sync_state_sequence'))
+    .toEqual({ source_epoch: event!.restore_id });
 });

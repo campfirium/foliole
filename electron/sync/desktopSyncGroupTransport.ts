@@ -128,7 +128,6 @@ function loadReceivePosition(peerAuthorizationId: string, restoreId?: string) {
       throw new Error('sync_pack_receive_progress_invalid');
     }
     if (restoreId && progress.restore_id !== restoreId) {
-      if (progress.restore_id && !progress.completed) throw new Error('sync_group_restore_event_changed');
       return { cursor: 0 };
     }
     if (!restoreId && progress.restore_id && !progress.completed) {

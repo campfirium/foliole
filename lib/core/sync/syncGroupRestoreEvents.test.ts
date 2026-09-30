@@ -6,6 +6,7 @@ import { expect, it } from 'vitest';
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../database/syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../database/syncGroupSchemaStatements.js';
+import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from '../database/syncPackDependencyStagingSchema.js';
 
 import {
   loadLatestSyncGroupRestoreEvent,
@@ -17,7 +18,8 @@ it('keeps the later offline restore, including after replays and restart', async
   const sqlite = new Database(':memory:');
   try {
     sqlite.pragma('foreign_keys = ON');
-    for (const statement of [...SYNC_GROUP_SCHEMA_STATEMENTS, ...SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS]) {
+    for (const statement of [...SYNC_GROUP_SCHEMA_STATEMENTS, ...SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS,
+      ...SYNC_PACK_DEPENDENCY_STAGING_SCHEMA]) {
       sqlite.exec(statement);
     }
     sqlite.prepare(`INSERT INTO sync_groups VALUES ('group', 'Group', 'key', 'now', 'now')`).run();

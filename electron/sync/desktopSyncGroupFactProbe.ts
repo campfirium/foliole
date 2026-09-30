@@ -65,8 +65,7 @@ export async function prepareDesktopSyncPackFactRequest(args: {
         index.source_epoch !== requested.searchParams.get('source_epoch'))) {
     throw new Error('sync_pack_fact_index_changed');
   }
-  const claims = await runWithDatabaseConnectionOwner(() =>
-    probeSyncPackFactPresence(createBetterSqliteDbPort(openDatabaseConnection().sqlite), index));
+  const claims = await loadReceiverFactClaims(requested, index);
   const bits = encodeSyncPackFactClaims(index, claims);
   requested.searchParams.set('frontier_state_seq', String(index.frontier_state_seq));
   requested.searchParams.set('source_epoch', index.source_epoch);
@@ -115,7 +114,9 @@ async function preparePagedFacts(args: Parameters<typeof prepareDesktopSyncPackF
         index.source_epoch !== window.source_epoch) throw new Error('sync_pack_fact_index_changed');
     const claims = await runWithDatabaseConnectionOwner(() => stageSyncPackKnownFactClaims(
       createBetterSqliteDbPort(openDatabaseConnection().sqlite), {
-        ...scope, sourceViewId: first.source_view_id }, index));
+        ...scope, sourceViewId: first.source_view_id,
+        ...(requested.searchParams.has('restore_id')
+          ? { restoreId: requested.searchParams.get('restore_id')! } : {}) }, index));
     const bits = encodeSyncPackFactClaims(index, claims);
     const next = new URL(requested);
     next.pathname = next.pathname.replace(/\/sync-pack$/u, '/sync-pack-facts');
@@ -138,4 +139,10 @@ async function preparePagedFacts(args: Parameters<typeof prepareDesktopSyncPackF
   requested.searchParams.set('frontier_state_seq', String(window.frontier_state_seq));
   requested.searchParams.set('to_state_seq', String(window.to_state_seq));
   return { pathWithQuery: requested.pathname + requested.search, factClaims: undefined };
+}
+
+function loadReceiverFactClaims(requested: URL, index: SyncPackFactIndex) {
+  return runWithDatabaseConnectionOwner(() => requested.searchParams.has('restore_id')
+    ? { versions: [], parents: [], reviews: [] }
+    : probeSyncPackFactPresence(createBetterSqliteDbPort(openDatabaseConnection().sqlite), index));
 }

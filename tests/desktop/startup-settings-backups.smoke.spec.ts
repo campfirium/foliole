@@ -42,7 +42,9 @@ test.describe('desktop smoke', () => {
     await createBackupButton.click();
 
     await expect(desktopWindow.getByText(/^Backup created:/)).toBeVisible();
-    await createRestoreDriftTopic(desktopWindow);
+    await desktopWindow.keyboard.press('Escape');
+    await createPostRestoreTopic(desktopWindow, 'Backup restore drift');
+    await openBackupsSection(desktopWindow);
     await expectBridgeBackedControlEnabled({
       controlName: 'Restore',
       desktopSession,
@@ -157,7 +159,7 @@ async function createRestoreDriftTopic(desktopWindow: Page) {
   }, RESTORE_DRIFT_NODE_ID);
 }
 
-async function createPostRestoreTopic(desktopWindow: Page) {
+async function createPostRestoreTopic(desktopWindow: Page, title = POST_RESTORE_TOPIC_TITLE) {
   const beforeId = await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.() ?? null);
   await desktopWindow.getByRole('button', { name: /^(Create topic|创建主题)$/ }).click();
   await expect.poll(() => desktopWindow.evaluate((previousId) => {
@@ -168,17 +170,13 @@ async function createPostRestoreTopic(desktopWindow: Page) {
     window.__folioleDebug?.setEditorSelection?.('prompt-editor', 0, 0) ?? false
   ))).toBe(true);
   await desktopWindow.locator('.prompt-editor-host .cm-content').click();
-  await desktopWindow.keyboard.insertText(POST_RESTORE_TOPIC_CONTENT);
-  await expect(desktopWindow.getByRole('treeitem', { name: POST_RESTORE_TOPIC_TITLE })).toBeVisible();
+  await desktopWindow.keyboard.insertText(title === POST_RESTORE_TOPIC_TITLE
+    ? POST_RESTORE_TOPIC_CONTENT : `# ${title}\n\nThis topic must disappear after restore.`);
+  await expect(desktopWindow.getByRole('treeitem', { name: title })).toBeVisible();
 }
 
 async function hasRestoreDriftTopic(desktopWindow: Page) {
-  return desktopWindow.evaluate(async (nodeId) => {
-    const snapshot = await globalThis.window?.electronAPI?.invoke('load_workspace_list_snapshot', {}) as {
-      nodesById: Record<string, unknown>;
-    };
-    return nodeId in snapshot.nodesById;
-  }, RESTORE_DRIFT_NODE_ID);
+  return hasTopic(desktopWindow, 'Backup restore drift');
 }
 
 async function hasTopic(desktopWindow: Page, title: string) {

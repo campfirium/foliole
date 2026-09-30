@@ -51,7 +51,7 @@ export async function applyIosCompanionSyncPackPath(
       }, db);
     });
     if (result.dependencyProgress) return result;
-    assertSyncPackCursorAdvance({
+    if (!args.expectedRestoreId || result.applied) assertSyncPackCursorAdvance({
       appliedFactCount: result.applied_group_fact_count,
       appliedObjectCount: result.applied_object_count,
       currentCursor,

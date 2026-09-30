@@ -73,7 +73,6 @@ async function loadRestorePosition(connection: DbPort, peerId: string, restoreId
     return { cursor, frontierStateSeq: committed.frontier_state_seq,
       sourceEpoch: committed.source_epoch };
   }
-  if (committed.restore_id && !committed.completed) throw new Error('sync_group_restore_event_changed');
   return { cursor: 0 };
 }
 

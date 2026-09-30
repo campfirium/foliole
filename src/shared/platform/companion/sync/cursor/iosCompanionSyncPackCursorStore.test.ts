@@ -46,7 +46,7 @@ describe('iosCompanionSyncPackCursorStore', () => {
       expect.anything());
   });
 
-  it('resumes the same restore and rejects a changed event during partial restore', async () => {
+  it('resumes the same restore and starts a newer event from zero', async () => {
     const { manager } = createHarness('9', 5, 'restore-a');
     const store = createIosCompanionSyncPackCursorStore(manager as never, 'device-b');
 
@@ -55,7 +55,7 @@ describe('iosCompanionSyncPackCursorStore', () => {
       cursor: 5, frontierStateSeq: 8, sourceEpoch: 'epoch-a'
     });
     await expect(store.loadRestoreCursor!('restore-b'))
-      .rejects.toThrow('sync_group_restore_event_changed');
+      .resolves.toBe(0);
   });
 
   it('starts a newly authorized restore from zero after an interrupted ordinary round', async () => {

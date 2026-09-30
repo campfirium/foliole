@@ -9,6 +9,7 @@ const CLEAR_TABLES = [
   'node_version_device_revisions', 'node_version_local_source_revisions',
   'sync_delivery_receipts', 'sync_push_ack', 'sync_peer_cursors',
   'sync_pack_receive_progress', 'sync_pack_resource_articles',
+  'sync_pack_dependency_rows', 'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims',
   'sync_change_log', 'node_attachments', 'node_text_alternatives',
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',
@@ -50,6 +51,9 @@ export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: 
   if (tableNames.has('node_version_local_proof_state')) {
     await port.run(`UPDATE main.node_version_local_proof_state
       SET library_epoch = ?, proof_revision = 0 WHERE singleton_id = 1`, [restoreId]);
+  }
+  if (tableNames.has('sync_state_sequence')) {
+    await port.run('UPDATE main.sync_state_sequence SET source_epoch = ? WHERE singleton_id = 1', [restoreId]);
   }
   if (tableNames.has('settings')) {
     await port.run(`INSERT INTO main.settings (key, value, updated_at)

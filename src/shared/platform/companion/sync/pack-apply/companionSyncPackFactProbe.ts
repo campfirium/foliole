@@ -70,8 +70,9 @@ async function prepareSingleFactRequest(requested: URL, index: SyncPackFactIndex
        index.source_epoch !== requested.searchParams.get('source_epoch'))) {
     throw new Error('sync_pack_fact_index_changed');
   }
-  const claims = await getIosCompanionDatabaseOwner().read((db) =>
-    probeSyncPackFactPresence(db, index));
+  const claims = await getIosCompanionDatabaseOwner().read(async (db) =>
+    requested.searchParams.has('restore_id') ? { versions: [], parents: [], reviews: [] }
+      : probeSyncPackFactPresence(db, index));
   const bits = encodeSyncPackFactClaims(index, claims);
   requested.searchParams.set('frontier_state_seq', String(index.frontier_state_seq));
   requested.searchParams.set('source_epoch', index.source_epoch);
@@ -118,7 +119,9 @@ async function preparePagedFactRequest(requested: URL, first: PagedFacts | Ready
     }
     const claims = await runCompanionSyncWriterTask(() =>
       getIosCompanionDatabaseOwner().runWriter((db) => stageSyncPackKnownFactClaims(db, {
-        ...scope, sourceViewId: first.source_view_id }, index)));
+        ...scope, sourceViewId: first.source_view_id,
+        ...(requested.searchParams.has('restore_id')
+          ? { restoreId: requested.searchParams.get('restore_id')! } : {}) }, index)));
     const bits = encodeSyncPackFactClaims(index, claims);
     const next = new URL(requested);
     next.pathname = next.pathname.replace(/\/sync-pack$/u, '/sync-pack-facts');

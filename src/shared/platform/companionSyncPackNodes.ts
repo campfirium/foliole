@@ -1,8 +1,7 @@
 import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
 
 import type { DbPort } from '../../../lib/core/sync/dbPort.js';
-import { markSyncGroupRestoreApplied } from '../../../lib/core/sync/syncGroupRestoreEvents.js';
-import { clearWorkgroupSyncDataForRestore } from '../../../lib/core/sync/syncGroupRestoreReset.js';
+import { applySyncGroupRestorePage } from '../../../lib/core/sync/syncGroupRestorePageApply.js';
 import { readSyncPackCursorWithDbPort } from '../../../lib/core/sync/syncPackCursor.js';
 import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard.js';
 import type { SyncPackFactIndex } from '../../../lib/core/sync/syncPackFactPresence.js';
@@ -49,7 +48,7 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     recordVersionReceipt: true
   }, manager);
   if (result.dependencyProgress) return result;
-  assertSyncPackCursorAdvance({
+  if (!args.expectedRestoreId || result.applied) assertSyncPackCursorAdvance({
     appliedFactCount: result.applied_group_fact_count,
     appliedObjectCount: result.applied_object_count,
     currentCursor: currentCursor ?? 0,
@@ -103,8 +102,8 @@ export async function applyCompanionSyncPackNodesWithDbPort(
   await port.run(`ATTACH DATABASE ${sqlString(args.packPath)} AS ${INCOMING_PACK_ALIAS}`);
   try {
     if (args.expectedFactIndex) await assertFactIndexRound(port, args.expectedFactIndex);
-    const apply = (db: DbPort) => applySyncPackNodeSurfaceWithDbPort(db, {
-      currentCursor: args.currentCursor,
+    const apply = (db: DbPort, after = args.currentCursor) => applySyncPackNodeSurfaceWithDbPort(db, {
+      currentCursor: after,
       ...(args.expectedRestoreId ? { expectedRestoreId: args.expectedRestoreId } : {}),
       enqueueSearchInvalidations: false,
       hostName: args.hostName,
@@ -114,8 +113,8 @@ export async function applyCompanionSyncPackNodesWithDbPort(
       recordVersionReceipt: args.recordVersionReceipt === true
     });
     const result = args.expectedRestoreId
-      ? await applyRestorePack(port, args.currentCursor, args.expectedRestoreId,
-        args.sourcePeerId, apply)
+      ? (await applySyncGroupRestorePage(port, { after: args.currentCursor,
+        restoreId: args.expectedRestoreId, peerId: args.sourcePeerId, apply })).result
       : await apply(port);
     return {
       ...result,
@@ -148,33 +147,6 @@ async function assertFactIndexRound(port: DbPort, index: SyncPackFactIndex) {
       cursor.sourceEpoch !== index.source_epoch) {
     throw new Error('sync_pack_fact_index_changed');
   }
-}
-
-async function applyRestorePack(
-  port: DbPort, currentCursor: number, restoreId: string, sourcePeerId: string,
-  apply: (db: DbPort) => ReturnType<typeof applySyncPackNodeSurfaceWithDbPort>
-) {
-  return port.transaction(async (tx) => {
-    const cursor = await readSyncPackCursorWithDbPort(tx, INCOMING_PACK_ALIAS);
-    const [event] = await tx.query<{
-      group_id: string; restore_id: string; restored_at: string;
-      source_device_identity_key: string
-    }>(`SELECT group_id, restore_id, restored_at, source_device_identity_key
-      FROM sync_group_restore_events WHERE restore_id = ? AND applied_at IS NULL`, [restoreId]);
-    if (!event || event.source_device_identity_key !== sourcePeerId) {
-      throw new Error('sync_group_restore_source_mismatch');
-    }
-    if (currentCursor === 0) await clearWorkgroupSyncDataForRestore(tx, restoreId);
-    const applied = await apply(tx);
-    if (applied.toStateSeq === cursor.frontierStateSeq) {
-      await markSyncGroupRestoreApplied(tx, event);
-    }
-    await tx.run(`INSERT INTO sync_peer_cursors (peer_id, stream_name, cursor_value, updated_at)
-      VALUES (?, 'sync-pack-receive', ?, ?) ON CONFLICT(peer_id, stream_name) DO UPDATE SET
-      cursor_value = excluded.cursor_value, updated_at = excluded.updated_at`,
-    [sourcePeerId, String(applied.toStateSeq), new Date().toISOString()]);
-    return applied;
-  });
 }
 
 function sqlString(value: string) {

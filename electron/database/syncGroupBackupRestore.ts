@@ -11,6 +11,9 @@ const GROUP_TABLES = [
 type GroupSnapshot = {
   group: DatabaseRow;
   local: DatabaseRow;
+  hostSettings: DatabaseRow[];
+  materializedHostSettings: DatabaseRow[];
+  hostObjectStates: DatabaseRow[];
   rows: Record<(typeof GROUP_TABLES)[number], DatabaseRow[]>;
 };
 
@@ -24,7 +27,13 @@ export function captureCurrentSyncGroupForBackupRestore(driver: DatabaseDriver):
   const rows = Object.fromEntries(GROUP_TABLES.map((table) => [table,
     driver.queryAll<DatabaseRow>(`SELECT * FROM ${table} WHERE group_id = ?`, [groupId])
   ])) as GroupSnapshot['rows'];
-  return { group, local, rows };
+  const hostSettings = driver.queryAll<DatabaseRow>("SELECT * FROM setting_records WHERE scope = 'host'");
+  const materializedHostSettings = driver.queryAll<DatabaseRow>(`SELECT * FROM settings
+    WHERE key IN (SELECT key FROM setting_records WHERE scope = 'host')
+      OR key IN ('host_name', 'device_id', 'desktop_device_id')`);
+  const hostObjectStates = driver.queryAll<DatabaseRow>(
+    "SELECT * FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE 'host:%'");
+  return { group, local, rows, hostSettings, materializedHostSettings, hostObjectStates };
 }
 
 export function finishSyncGroupBackupRestore(
@@ -53,6 +62,15 @@ export function finishSyncGroupBackupRestore(
       for (const row of snapshot.rows[table]) insertRow(tx, table, row);
     }
     insertRow(tx, 'sync_group_local_state', snapshot.local);
+    tx.execute("DELETE FROM settings WHERE key IN (SELECT key FROM setting_records WHERE scope = 'host')");
+    tx.execute("DELETE FROM setting_records WHERE scope = 'host'");
+    for (const row of snapshot.hostSettings) insertRow(tx, 'setting_records', row);
+    for (const row of snapshot.materializedHostSettings) {
+      tx.execute('DELETE FROM settings WHERE key = ?', [row.key as string]);
+      insertRow(tx, 'settings', row);
+    }
+    tx.execute("DELETE FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE 'host:%'");
+    for (const row of snapshot.hostObjectStates) insertRow(tx, 'sync_object_state', row);
     resetSyncGeneration(tx, event.restore_id);
     tx.execute(`INSERT INTO sync_group_restore_events
       (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
@@ -74,8 +92,11 @@ function resetSyncGeneration(driver: DatabaseDriver, restoreId: string) {
     'node_version_local_holds', 'node_version_pack_receipts',
     'node_version_inbound_receipts', 'node_version_device_bases',
     'node_version_device_revisions', 'node_version_local_source_revisions',
-    'sync_delivery_receipts', 'sync_peer_cursors'
+    'sync_delivery_receipts', 'sync_peer_cursors',
+    'sync_pack_receive_progress', 'sync_pack_resource_articles',
+    'sync_pack_dependency_rows', 'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims'
   ]) driver.execute(`DELETE FROM ${table}`);
   driver.execute(`UPDATE node_version_local_proof_state
     SET library_epoch = ?, proof_revision = 0 WHERE singleton_id = 1`, [restoreId]);
+  driver.execute('UPDATE sync_state_sequence SET source_epoch = ? WHERE singleton_id = 1', [restoreId]);
 }

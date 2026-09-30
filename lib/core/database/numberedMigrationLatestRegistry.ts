@@ -138,5 +138,8 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   } },
   { version: 116, migrate: (sqlite) => {
     sqlite.exec(SYNC_PACK_DEPENDENCY_STAGING_SCHEMA[3]);
+  } },
+  { version: 117, migrate: (sqlite) => {
+    sqlite.exec(SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS[2]);
   } }
 ];

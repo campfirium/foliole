@@ -77,7 +77,7 @@ it('restores the application sqlite state from an online backup snapshot', async
         id: 'node-1',
         imageSources: {},
         parentNodeId: null,
-        position: null,
+        position: 0,
         kind: 'topic',
         title: 'node-1',
         isTitleManual: true,
@@ -129,6 +129,7 @@ it('restores review history, node lifecycle state, and backup truth after later 
     ...restored,
     nodesById: Object.fromEntries(Object.entries(restored.nodesById).map(([nodeId, node]) => [nodeId, {
       ...node,
+      position: { 'node-root': 0, 'node-qa': 1, 'node-trash': 2 }[nodeId],
       authorText: null,
       imageSources: {},
       importContentFingerprint: null,

@@ -69,7 +69,8 @@ export function authenticateCompanionRequest(args: {
   if (device && args.requireMemberState &&
       desktopSyncGroupMemberStateReadiness(headers.deviceId) === 'restore') {
     const url = new URL(args.request.url ?? '/', 'http://localhost');
-    if (args.request.method !== 'GET' || url.pathname !== '/companion/sync-pack' ||
+    if (args.request.method !== 'GET' ||
+        !['/companion/sync-pack', '/companion/sync-pack-facts'].includes(url.pathname) ||
         !url.searchParams.get('restore_id')) {
       return failure('sync_group_member_state_required', 409);
     }

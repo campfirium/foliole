@@ -31,7 +31,7 @@ import {
 } from './syncGroupBackupRestore.js';
 
 export async function restoreDatabaseBackupInMaintenance(
-  sourcePath: string
+  sourcePath: string, restoredAt = new Date().toISOString()
 ): Promise<SqliteRestoreResult> {
   const connection = openDatabaseConnection();
   const syncGroup = captureCurrentSyncGroupForBackupRestore(connection.driver);
@@ -58,7 +58,7 @@ export async function restoreDatabaseBackupInMaintenance(
     });
     replacementComplete = true;
     const restored = initializeDatabase();
-    finishSyncGroupBackupRestore(restored.driver, syncGroup);
+    finishSyncGroupBackupRestore(restored.driver, syncGroup, restoredAt);
     initializeWorkspaceSearchSidecar(restored, { requireCurrentSource: true });
     reapplyBackupSettingsAfterRestore(backupSettings);
     await startSearchAliasMirror('restore');

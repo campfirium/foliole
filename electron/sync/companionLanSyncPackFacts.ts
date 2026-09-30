@@ -9,6 +9,7 @@ import { readDesktopSyncPackFactPage, selectDesktopSyncPackFactWindow } from '..
 import { backfillMissingTombstoneSyncState } from '../database/syncPackTombstoneStateBackfill.js';
 
 import { createCompanionFactSession, readCompanionFactSessionPage } from './companionLanFactSession.js';
+import { isCompanionRestoreSourceAvailable } from './companionLanRestoreSource.js';
 
 export const SYNC_PACK_FACTS_PATH = '/companion/sync-pack-facts';
 
@@ -111,6 +112,13 @@ export async function handleCompanionSyncPackFactsGet(
   if (url.pathname !== SYNC_PACK_FACTS_PATH) return false;
   try {
     await runWithDatabaseConnectionOwner(async () => {
+      const restoreId = url.searchParams.get('restore_id');
+      const group = loadDesktopSyncGroup();
+      if (restoreId !== null && (!group || !restoreId.trim() ||
+          !isCompanionRestoreSourceAvailable(group.group_id,
+            group.local_device_identity_key, restoreId))) {
+        throw new Error('sync_group_restore_source_unavailable');
+      }
       const index = await loadCompanionSyncPackFacts(url, peerId);
       writeJson(request, response, 200, index);
     });

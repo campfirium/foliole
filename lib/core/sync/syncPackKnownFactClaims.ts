@@ -8,6 +8,7 @@ interface FactClaimScope {
   groupId: string;
   peerId: string;
   sourceViewId: string;
+  restoreId?: string;
 }
 
 const SCOPE = 'group_id = ? AND peer_id = ? AND source_view_id = ?';
@@ -20,7 +21,8 @@ export async function stageSyncPackKnownFactClaims(port: DbPort,
       from_state_seq: index.from_state_seq, to_state_seq: index.to_state_seq,
       frontier_state_seq: index.frontier_state_seq, source_epoch: index.source_epoch
     });
-    const claims = await probeSyncPackFactPresence(tx, index);
+    const claims: SyncPackFactClaims = scope.restoreId
+      ? { versions: [], parents: [], reviews: [] } : await probeSyncPackFactPresence(tx, index);
     const known = { versions: new Set(claims.versions), parents: new Set(claims.parents),
       reviews: new Set(claims.reviews) };
     for (const fact of index.versions) if (known.versions.has(fact.version_id)) {

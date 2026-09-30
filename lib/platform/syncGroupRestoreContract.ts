@@ -36,8 +36,8 @@ export function compareSyncGroupRestoreEvents(
   right: SyncGroupRestoreEvent
 ) {
   if (left.group_id !== right.group_id) throw new Error('sync_group_restore_group_mismatch');
-  const byTime = left.restored_at.localeCompare(right.restored_at);
-  return byTime || left.restore_id.localeCompare(right.restore_id);
+  const compare = (a: string, b: string) => a === b ? 0 : a > b ? 1 : -1;
+  return compare(left.restored_at, right.restored_at) || compare(left.restore_id, right.restore_id);
 }
 
 function required(value: unknown): value is string {

@@ -462,6 +462,15 @@
         }
       ],
       "beforeVersion": 50
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add transactional workgroup restore pages.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 52
     }
   ],
   "planKeys": {
