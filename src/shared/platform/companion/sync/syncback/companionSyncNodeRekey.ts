@@ -1,3 +1,4 @@
+import { moveCanonicalNodeHistory, linkCanonicalNodeVersion } from '../../../../../../lib/core/sync/canonicalNodeHistory';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 
 import { rekeyParentChildOrders } from './companionSyncNodeOrderRekey';
@@ -23,6 +24,12 @@ export async function rekeyNodeObject(
   sourceVersionId: string,
   canonicalVersionId: string
 ) {
+  const [local] = await port.query<{ current_version_id: string | null }>(
+    'SELECT current_version_id FROM nodes WHERE id = ?', [sourceId]);
+  if (!local && (await port.query('SELECT id FROM nodes WHERE id = ?', [canonicalId])).length) return;
+  const [sent] = await port.query<{ object_id: string }>(
+    'SELECT object_id FROM node_sync_versions WHERE version_id = ?', [sourceVersionId]);
+  if (sent?.object_id === canonicalId) return;
   const columns = await port.query<{ name: string }>('PRAGMA table_info(nodes)');
   const names = columns.map((row) => row.name).filter(Boolean);
   const projection = names.map((name) => name === 'id' ? '? AS "id"' :
@@ -36,13 +43,14 @@ export async function rekeyNodeObject(
     await port.run(`UPDATE ${table} SET ${column} = ? WHERE ${column} = ?`, [canonicalId, sourceId]);
   }
   await rekeyParentChildOrders(port, sourceId, canonicalId);
+  await moveCanonicalNodeHistory(port, { sourceId, canonicalId });
   await createCanonicalVersion(port, {
     canonicalId, canonicalVersionId, sourceVersionId
   });
-  await port.run(
-    'UPDATE nodes SET current_version_id = ? WHERE id = ?',
-    [canonicalVersionId, canonicalId]
-  );
+  await linkCanonicalNodeVersion(port, canonicalVersionId, sourceVersionId);
+  const head = local?.current_version_id && local.current_version_id !== sourceVersionId
+    ? local.current_version_id : canonicalVersionId;
+  await port.run('UPDATE nodes SET current_version_id = ? WHERE id = ?', [head, canonicalId]);
   await port.run(
     `UPDATE sync_object_state SET object_id = ? WHERE object_id = ?
      AND object_type IN ('node', 'node_open_state', 'node_reading', 'node_review')`,
@@ -51,7 +59,7 @@ export async function rekeyNodeObject(
   await port.run(
     `UPDATE sync_object_state SET current_version_id = ?
      WHERE object_type = 'node' AND object_id = ?`,
-    [canonicalVersionId, canonicalId]
+    [head, canonicalId]
   );
   await port.run(
     `UPDATE sync_delivery_receipts SET object_id = ? WHERE object_id = ? AND object_type = 'node'`,

@@ -43,7 +43,7 @@ interface DesktopSyncPushResponse {
   }>;
 }
 
-function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
+export function toPushAck(raw: DesktopSyncPushResponse['acks'][number]): SyncPushAck {
   if (
     raw.identity.objectType === 'node'
     && (raw.status === 'accepted' || raw.status === 'already_applied')

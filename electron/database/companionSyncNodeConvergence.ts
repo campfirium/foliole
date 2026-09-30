@@ -1,3 +1,4 @@
+import { moveCanonicalNodeHistory } from '../../lib/core/sync/canonicalNodeHistory.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 import { resolveFolderConflict } from '../../lib/core/sync/syncFolderResolution.js';
@@ -114,18 +115,24 @@ async function resolveAdditiveObject(
   const canonicalId = `${entry.record.object_id}~${suffix}`;
   const derived: NativeSyncNodeRecord = {
     ...entry.record,
-    ancestor_version_ids: [],
+    ancestor_version_ids: [...entry.record.ancestor_version_ids],
     object_id: canonicalId,
-    parent_version_id: null,
-    parent_version_ids: [],
+    parent_version_id: entry.record.version_id,
+    parent_version_ids: [entry.record.version_id!],
     snapshot: { ...entry.record.snapshot, id: canonicalId },
     version_id: createOpaqueVersionRef(suffix)
   };
-  const applied = await applySyncNodesWithDbPort(port, [derived], {
+  const applied = await applySyncNodesWithDbPort(port, [{ ...derived, parent_version_id: null, parent_version_ids: [] }], {
     enqueueSearchInvalidations: false,
     includeAlreadyApplied: true
   });
   if (!applied.appliedIds.includes(canonicalId)) throw new Error('sync_derived_object_not_applied');
+  await moveCanonicalNodeHistory(port, { sourceId: entry.record.object_id, canonicalId,
+    versionIds: [entry.record.version_id!, ...entry.record.ancestor_version_ids] });
+  await port.run('UPDATE node_sync_versions SET parent_version_id = ? WHERE version_id = ?',
+    [entry.record.version_id!, derived.version_id!]);
+  await port.run('INSERT OR IGNORE INTO node_sync_version_parents VALUES (?, ?, 0)',
+    [derived.version_id!, entry.record.version_id!]);
   result.acks.push({
     canonicalObjectId: canonicalId,
     canonicalVersionId: derived.version_id!,

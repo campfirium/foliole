@@ -4,7 +4,7 @@ import type { DbParams, DbPort, DbRow } from '../../../../../../lib/core/sync/db
 
 import { rekeyNodeObject } from './companionSyncNodeRekey';
 
-it('creates a canonical branch head without rewriting shared version history', async () => {
+it('creates a canonical branch head while preserving version identities', async () => {
   const port = new RecordingPort();
 
   await rekeyNodeObject(
@@ -16,7 +16,10 @@ it('creates a canonical branch head without rewriting shared version history', a
     && params[1] === 'highlight-1~canonical'
     && params.at(-1) === JSON.stringify({ id: 'highlight-1~canonical', title: 'Selection' })))
     .toBe(true);
-  expect(port.runs.some(([sql]) => sql.startsWith('UPDATE node_sync_versions SET'))).toBe(false);
+  expect(port.runs.some(([sql]) => /UPDATE node_sync_versions SET version_id\s*=/.test(sql))).toBe(false);
+  expect(port.runs).toContainEqual([
+    'UPDATE node_sync_versions SET parent_version_id = ? WHERE version_id = ?', ['android#1', 'ver_canonical']
+  ]);
   expect(port.runs.some(([sql]) => sql.includes('json_'))).toBe(false);
   expect(port.runs.at(-1)).toEqual([
     'DELETE FROM nodes WHERE id = ?',
