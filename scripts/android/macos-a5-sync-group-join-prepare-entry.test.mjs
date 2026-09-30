@@ -20,9 +20,9 @@ it('binds the fixed A5 action to the inactive native provider and preserves prod
   const context = args();
   const mechanics = vi.fn(async (input) => {
     input.validateInstrumentation({
-      evidencePath: '/artifacts/evidence.json', stdout: 'OK (3 tests)'
+      evidencePath: '/artifacts/evidence.json', stdout: 'OK (4 tests)'
     });
-    return { evidencePath: '/artifacts/evidence.json', output: '', stdout: 'OK (3 tests)' };
+    return { evidencePath: '/artifacts/evidence.json', output: '', stdout: 'OK (4 tests)' };
   });
 
   await expect(runMacosA5SyncGroupJoinPrepareEntry(context, { mechanics }))
