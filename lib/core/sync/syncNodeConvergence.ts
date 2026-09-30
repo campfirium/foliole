@@ -5,7 +5,7 @@ import { reviveDeletedFoldersForLaterChildren } from './syncFolderChildRevival.j
 import { resolveFolderConflict } from './syncFolderResolution.js';
 import { resolveItemConflict } from './syncItemResolution.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
-import { loadCurrentSyncNodeRecord, loadMergeBase, storedSyncNodeVersionBody } from './syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord, storedSyncNodeVersionBody } from './syncNodeGraph.js';
 import {
   buildResolutionRecord,
   chooseEvidenceProjection,
@@ -13,6 +13,7 @@ import {
   reconcileResolutionAlternatives
 } from './syncNodeResolution.js';
 import { mergeSyncText } from './syncTextDiff3.js';
+import { loadTopicConflictBase } from './syncTopicConflictBase.js';
 
 export async function applyConvergentSyncNodesWithDbPort(
   port: DbPort,
@@ -84,18 +85,18 @@ export async function resolveTopicConflict(
   let parent = { value: local.snapshot.parent_id, source: local };
   let deletion = { value: local.snapshot.deleted_at, source: local };
   for (const incoming of ordered) {
-    const base = await loadMergeBase(port, local.version_id, incoming.version_id!);
+    const { base, matchingHeads } = await loadTopicConflictBase(port, local, incoming, body);
     const baseSnapshot = base ? JSON.parse(base.snapshot_json) as NativeSyncNodeRecord['snapshot'] : null;
     parent = selectOperationValue(baseSnapshot?.parent_id, parent, incoming.snapshot.parent_id, incoming);
     deletion = selectOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
     const baseBody = base ? storedSyncNodeVersionBody(base) : '';
     const incomingBody = incoming.body_text ?? incoming.snapshot.content ?? '';
-    const merge = baseBody === null || !base
+    const merge = matchingHeads ? { kind: 'merged' as const, text: body } : baseBody === null || !base
       ? { kind: 'conflict' as const }
       : mergeSyncText(baseBody, body, incomingBody);
     if (merge.kind === 'merged') {
       body = merge.text;
-      winner = chooseProjection(winner, incoming, baseBody!, 0, 0);
+      winner = chooseProjection(winner, incoming, matchingHeads ? body : baseBody!, 0, 0);
       continue;
     }
     const projection = await chooseEvidenceProjection(port, winner, incoming, baseBody ?? '');

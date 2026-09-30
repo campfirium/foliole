@@ -6,7 +6,7 @@ export const ANDROID_COMPANION_SYNC_NODE_VERSIONS_SQL =
   "AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = ?2 " +
   "AND receipt.stream_name = 'node_version' AND receipt.operation_id = 'node:' || v.version_id " +
   "AND receipt.status <> 'pending') " +
-  'AND n.current_version_id = v.version_id AND n.deleted_at IS NULL UNION ALL ' +
+  'AND n.deleted_at IS NULL UNION ALL ' +
   "SELECT t.version_id, t.node_id AS object_id, 'node' AS object_type, t.parent_version_id, t.host_name, " +
   '1 AS is_tombstone, t.created_at AS version_created_at, t.deleted_at AS updated_at, ' +
   't.content_hash, NULL AS body_text, t.snapshot_json AS snapshot FROM node_sync_tombstones t ' +

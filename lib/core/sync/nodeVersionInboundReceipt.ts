@@ -1,6 +1,6 @@
 import type { DbPort, DbRow } from './dbPort.js';
 import type { NodeVersionPackResult } from './nodeVersionDeliveryProof.js';
-import { loadMergeBase, storedSyncNodeVersionBody } from './syncNodeGraph.js';
+import { loadMergeBaseCandidates, storedSyncNodeVersionBody } from './syncNodeGraph.js';
 
 interface IncomingHead extends DbRow {
   object_id: string;
@@ -142,9 +142,10 @@ async function resolveHead(port: DbPort, head: IncomingHead): Promise<NodeVersio
     'SELECT 1 AS blocked FROM node_sync_tombstones WHERE node_id = ?', [head.object_id]
   );
   if (head.tombstoned || tombstone) return { ...common, baseVersionId: null, result: 'blocked' };
-  const baseId = head.previous_version_id
-    ? (await loadMergeBase(port, head.previous_version_id, head.sent_version_id))?.version_id
-    : head.sent_version_id;
+  const baseIds = head.previous_version_id
+    ? await loadMergeBaseCandidates(port, head.previous_version_id, head.sent_version_id)
+    : [head.sent_version_id];
+  const baseId = baseIds.length === 1 ? baseIds[0] : null;
   if (!baseId) return { ...common, baseVersionId: null, result: 'not_applied' };
   const [local] = await port.query<DbRow>(
     `SELECT * FROM node_sync_versions WHERE version_id = ? AND object_id = ?`,

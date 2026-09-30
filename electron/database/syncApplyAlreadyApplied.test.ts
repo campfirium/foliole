@@ -22,6 +22,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncNodesAsync } from './syncApply.js';
+import { seedNodeVersion } from './syncNodeVersionTestSupport.js';
 
 let tempRoot = '';
 
@@ -39,12 +40,14 @@ afterEach(async () => {
 it('can acknowledge already applied node versions for push cursor delivery', async () => {
   insertLocalNodeVersion('phone#1');
 
+  seedNodeVersion(openDatabaseConnection().sqlite, 'node-1', 'desktop#0');
   await expect(applySyncNodesAsync([createRemoteNodeRecord()], { includeAlreadyApplied: true })).resolves.toEqual(['node-1']);
 });
 
 it('does not treat same-content restored local versions as already applied without ancestry', async () => {
   insertLocalNodeVersion('desktop#~restore-aaaaaaaa-aaaa-4aaa-aaaa-aaaaaaaaaaaa#1');
 
+  seedNodeVersion(openDatabaseConnection().sqlite, 'node-1', 'desktop#0');
   await expect(applySyncNodesAsync([createRemoteNodeRecord()], { includeAlreadyApplied: true })).resolves.toEqual([]);
 
   expect(

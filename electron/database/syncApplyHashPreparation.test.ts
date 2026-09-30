@@ -39,12 +39,12 @@ afterEach(async () => {
 
 function remoteNode(): NativeSyncNodeRecord {
   return {
-    ancestor_version_ids: ['desktop#0'],
+    ancestor_version_ids: [],
     content_hash: 'remote-hash',
     host_name: 'phone',
     object_id: 'node-1',
     object_type: 'node',
-    parent_version_id: 'desktop#0',
+    parent_version_id: null,
     snapshot: {
       anchor_link: null,
       attachments: [],

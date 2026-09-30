@@ -22,6 +22,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncNodesAsync } from './syncApply.js';
+import { seedNodeVersion } from './syncNodeVersionTestSupport.js';
 
 let tempRoot = '';
 
@@ -47,6 +48,7 @@ it('warns when parent apply cannot remap a local child text anchor', async () =>
     id: 'child-1',
     parentId: 'parent-1'
   });
+  seedNodeVersion(openDatabaseConnection().sqlite, 'parent-1', 'desktop#parent-v1');
   const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
   await expect(applySyncNodesAsync([parentRecord('Beta Alpha Beta Gamma')])).resolves.toEqual(['parent-1']);

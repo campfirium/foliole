@@ -2,6 +2,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { resolveTopicConflict } from '../../lib/core/sync/syncNodeConvergence.js';
+import { isNodeVersionIdentityOnly, orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { isStoredVersionIdentical, loadCurrentSyncNodeRecord } from './companionSyncNodeGraph.js';
@@ -28,6 +29,9 @@ export async function applyNodePushBatchWithDbPort(
     return false;
   });
   const deferred: typeof valid = [];
+  const historyOrder = new Map(orderNodeVersionHistory(valid.map((entry) => entry.record))
+    .map((record, index) => [record, index]));
+  valid.sort((left, right) => historyOrder.get(left.record)! - historyOrder.get(right.record)!);
   for (const entry of valid) {
     const current = await loadCurrentSyncNodeRecord(port, entry.record.object_id);
     if (entry.record.version_id && (current?.version_id === entry.record.version_id
@@ -43,7 +47,8 @@ export async function applyNodePushBatchWithDbPort(
       ...(operation ? { operation } : {})
     });
     if (applied.conflictNodes.length > 0) deferred.push(entry);
-    else appendNodeAck(result, entry, applied.appliedIds.includes(entry.record.object_id));
+    else appendNodeAck(result, entry, applied.appliedIds.includes(entry.record.object_id)
+      || (isNodeVersionIdentityOnly(entry.record) && await isStoredVersionIdentical(port, entry.record)));
   }
   for (const entry of deferred.filter(({ record }) => isAdditiveNode(record))) {
     await resolveAdditiveObject(port, entry, result);

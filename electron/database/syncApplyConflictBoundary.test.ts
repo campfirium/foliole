@@ -22,6 +22,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncNodesAsync } from './syncApply.js';
+import { seedNodeVersion } from './syncNodeVersionTestSupport.js';
 
 let tempRoot = '';
 
@@ -83,6 +84,8 @@ function remoteRecord(overrides: Partial<NativeSyncNodeRecord> = {}): NativeSync
 
 it('preserves dirty local content without creating a duplicate topic before an ancestral tombstone', async () => {
   insertDirtyLocalNode();
+  seedNodeVersion(openDatabaseConnection().sqlite, 'node-1', 'desktop#1');
+  seedNodeVersion(openDatabaseConnection().sqlite, 'node-1', 'desktop#2');
 
   await expect(applySyncNodesAsync([remoteRecord()])).resolves.toEqual([]);
 

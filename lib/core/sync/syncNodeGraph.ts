@@ -55,6 +55,18 @@ export async function isStoredVersionIdentical(port: DbPort, record: NativeSyncN
 }
 
 export async function loadMergeBase(port: DbPort, leftId: string, rightId: string) {
+  const candidates = await loadMergeBaseCandidates(port, leftId, rightId);
+  if (candidates.length > 1) throw new Error('sync_node_merge_base_ambiguous');
+  const nearest = candidates[0];
+  if (!nearest) return null;
+  const [row] = await port.query<StoredSyncNodeVersionRow>(
+    'SELECT * FROM node_sync_versions WHERE version_id = ? LIMIT 1',
+    [nearest]
+  );
+  return row ?? null;
+}
+
+export async function loadMergeBaseCandidates(port: DbPort, leftId: string, rightId: string) {
   const parents = new Map<string, string[]>();
   const [left, right] = await Promise.all([
     loadAncestorDistances(port, leftId, parents),
@@ -74,14 +86,7 @@ export async function loadMergeBase(port: DbPort, leftId: string, rightId: strin
       pending.push(...await cachedParents(port, ancestor, parents));
     }
   }
-  if (maximal.size > 1) throw new Error('sync_node_merge_base_ambiguous');
-  const nearest = maximal.values().next().value;
-  if (!nearest) return null;
-  const [row] = await port.query<StoredSyncNodeVersionRow>(
-    'SELECT * FROM node_sync_versions WHERE version_id = ? LIMIT 1',
-    [nearest]
-  );
-  return row ?? null;
+  return [...maximal];
 }
 
 export async function isStoredAncestorVersion(port: DbPort, ancestorId: string, currentId: string) {

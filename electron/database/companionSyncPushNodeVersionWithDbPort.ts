@@ -1,6 +1,8 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { SyncNodeApplyOperation } from '../../lib/core/sync/syncNodeApplyRules.js';
+import { isStoredVersionIdentical } from '../../lib/core/sync/syncNodeGraph.js';
+import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import type { CompanionSyncPushPayload, CompanionSyncPushResult } from './companionSyncPushTypes.js';
@@ -35,7 +37,8 @@ export function parseNodeVersionPush(item: CompanionSyncPushPayload): NativeSync
   return {
     ...record,
     ancestor_version_ids: item.base.ancestorVersionIds,
-    body_text: record.body_text ?? record.snapshot.content ?? '',
+    body_text: record.body_text === null && record.snapshot.content === null
+      ? null : record.body_text ?? record.snapshot.content ?? '',
     content_hash: item.contentHash ?? record.content_hash,
     parent_version_ids: item.base.parentVersionIds ?? (item.base.parentVersionId ? [item.base.parentVersionId] : []),
     updated_at: item.updatedAt ?? record.updated_at
@@ -54,7 +57,8 @@ export async function applyNodeVersionPushWithDbPort(
     includeAlreadyApplied: true,
     ...(operation ? { operation } : {})
   });
-  const accepted = result.appliedIds.includes(record.object_id);
+  const accepted = result.appliedIds.includes(record.object_id)
+    || (isNodeVersionIdentityOnly(record) && await isStoredVersionIdentical(port, record));
   return {
     acks: [{
       clientOpId: item.clientOpId,

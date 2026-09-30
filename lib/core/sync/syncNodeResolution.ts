@@ -59,7 +59,9 @@ export function buildResolutionRecord(
 ): NativeSyncNodeRecord {
   const parents = [...new Set(records.map((record) => record.version_id!))].sort();
   const createdAt = nextResolutionTimestamp(records);
-  const snapshot = normalizeResolutionSnapshot(resolvedSnapshot ?? winner.snapshot, body, createdAt);
+  const snapshot = JSON.parse(canonicalResolutionJson(
+    normalizeResolutionSnapshot(resolvedSnapshot ?? winner.snapshot, body, createdAt)
+  )) as NativeSyncNodeRecord['snapshot'];
   const contentHash = hashText(canonicalResolutionJson({ body, snapshot }));
   const identity = hashText(`${winner.object_id}\n${parents.join('\n')}\n${contentHash}`);
   return {

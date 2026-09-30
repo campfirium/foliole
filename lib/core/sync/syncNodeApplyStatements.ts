@@ -144,7 +144,8 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
       record.host_name,
       record.version_created_at,
       record.content_hash ?? '',
-      record.body_text ?? record.snapshot.content ?? '',
+      record.body_text === null && record.snapshot.content === null
+        ? null : record.body_text ?? record.snapshot.content ?? '',
       JSON.stringify(record.snapshot)
     ],
     sql: UPSERT_REMOTE_NODE_VERSION_SQL

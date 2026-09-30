@@ -28,12 +28,12 @@ let tempRoot = '';
 
 function createRemoteNodeRecord(): NativeSyncNodeRecord {
   return {
-    ancestor_version_ids: ['desktop#0'],
+    ancestor_version_ids: [],
     content_hash: 'hash-1',
     host_name: 'phone',
     object_id: 'node-1',
     object_type: 'node',
-    parent_version_id: 'desktop#0',
+    parent_version_id: null,
     snapshot: {
       anchor_link: null,
       attachments: [
@@ -68,7 +68,7 @@ function createModifiedRemoteNodeRecord(): NativeSyncNodeRecord {
   const base = createRemoteNodeRecord();
   return {
     ...base,
-    ancestor_version_ids: ['desktop#0', 'phone#1'],
+    ancestor_version_ids: ['phone#1'],
     content_hash: 'hash-2',
     parent_version_id: 'phone#1',
     snapshot: {
@@ -88,7 +88,7 @@ function createRemoteTombstoneRecord(): NativeSyncNodeRecord {
   const base = createModifiedRemoteNodeRecord();
   return {
     ...base,
-    ancestor_version_ids: ['desktop#0', 'phone#1', 'phone#2'],
+    ancestor_version_ids: ['phone#1', 'phone#2'],
     content_hash: 'hash-delete',
     parent_version_id: 'phone#2',
     snapshot: {
@@ -138,7 +138,7 @@ it('applies remote sync nodes through the async desktop DbPort entry', async () 
     content: 'remote body',
     current_version_id: 'phone#1',
     last_modified_by_host_name: 'phone',
-    position: 4,
+    position: null,
     sync_dirty: 0,
     title: 'Remote Node'
   });
@@ -177,7 +177,7 @@ it('covers create, repeated apply, and modify through the shared desktop DbPort 
   ).toEqual({
     content: 'remote body updated',
     current_version_id: 'phone#2',
-    position: 1,
+    position: null,
     sync_dirty: 0,
     title: 'Remote Node Updated'
   });

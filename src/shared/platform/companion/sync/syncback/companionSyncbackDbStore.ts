@@ -70,7 +70,8 @@ async function loadNodeVersions(
     return {
       ...row,
       ancestor_version_ids: await loadAncestorVersionIds(port, parentVersionIds),
-      body_text: typeof row.body_text === 'string' ? row.body_text : snapshot.content ?? '',
+      body_text: row.body_text === null && snapshot.content === null
+        ? null : typeof row.body_text === 'string' ? row.body_text : snapshot.content ?? '',
       is_tombstone: Number(row.is_tombstone) === 1,
       parent_version_ids: parentVersionIds,
       snapshot

@@ -22,6 +22,7 @@ import { hasContentEquivalentIncomingLineage } from './syncNodeLineageEquivalenc
 import { prepareSyncNodeTextBodyHashes } from './syncNodePreparedTextBodyHashes.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { applyRemoteNodeTombstone, loadNodeSyncTombstone } from './syncNodeTombstoneApply.js';
+import { isNodeVersionIdentityOnly, prepareIncomingNodeVersionHistory, retainIncomingNodeVersionHistory } from './syncNodeVersionHistory.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 
 interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
@@ -142,13 +143,15 @@ export async function applySyncNodesWithDbPort(
     tombstoneBlockedIds: [],
     unmappedAnchorRecords: []
   };
-  const ordered = orderNodesForApply(latestBranchHeadRecords(records));
+  const ordered = orderNodesForApply(latestBranchHeadRecords(records.filter((record) => !isNodeVersionIdentityOnly(record))));
   const remoteNodeIdsInBatch = new Set(ordered.map((record) => record.object_id));
   const preparedTextBodyHashes = await prepareSyncNodeTextBodyHashes(ordered, options);
   const invalidatedAt = new Date().toISOString();
 
   await assertLocalRestoreCanApply(port, options.operation, ordered);
   await port.transaction(async (tx) => {
+    const history = await prepareIncomingNodeVersionHistory(tx, records);
+    await retainIncomingNodeVersionHistory(tx, history);
     for (const record of ordered) {
       if (await handleTombstoneGuard({ options, record, result, tx })) {
         continue;
@@ -178,6 +181,7 @@ export async function applySyncNodesWithDbPort(
       result.conflictRecords.push(toSyncNodeConflictRecord(record));
       result.conflictNodes.push(record);
     }
+    await retainIncomingNodeVersionHistory(tx, history);
     assertLocalRestoreApplied(options.operation, result.appliedIds.length, ordered.length);
     if (result.appliedIds.length > 0) {
       await pruneLearningRowsWithoutVisibleNodes(tx);

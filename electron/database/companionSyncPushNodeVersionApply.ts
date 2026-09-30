@@ -1,3 +1,6 @@
+import { isStoredVersionIdentical } from '../../lib/core/sync/syncNodeGraph.js';
+import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
+
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import {
   parseNodeVersionPush,
@@ -18,7 +21,8 @@ export async function applyNodeVersionPushAsync(item: CompanionSyncPushPayload):
     includeAlreadyApplied: true,
     ...(operation ? { operation } : {})
   });
-  const accepted = appliedNodeIds.includes(record.object_id);
+  const accepted = appliedNodeIds.includes(record.object_id)
+    || (isNodeVersionIdentityOnly(record) && await isStoredVersionIdentical(port, record));
   return {
     acks: [{
       clientOpId: item.clientOpId,

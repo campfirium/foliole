@@ -22,6 +22,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncNodesAsync } from './syncApply.js';
+import { seedNodeVersion } from './syncNodeVersionTestSupport.js';
 
 let tempRoot = '';
 
@@ -38,6 +39,7 @@ afterEach(async () => {
 
 it('does not let an old active remote version revive a locally deleted node', async () => {
   insertDeletedLocalNodeVersion();
+  seedNodeVersion(openDatabaseConnection().sqlite, 'node-1', 'desktop#0');
 
   await expect(applySyncNodesAsync([createRemoteNodeRecord()])).resolves.toEqual([]);
 

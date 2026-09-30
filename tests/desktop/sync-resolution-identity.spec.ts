@@ -46,12 +46,8 @@ async function runNativeResolutionExchange() {
       for (const db of databases) initializeDatabaseSchema(db);
       const ports = databases.map((db) => createBetterSqliteDbPort(db));
       for (const [index, port] of ports.entries()) {
+        await applySyncNodesWithDbPort(port, [a, b]);
         await applySyncNodesWithDbPort(port, [index === 0 ? left : right]);
-        // Preserve the common parent bodies, as an ordinary sync exchange does.
-        for (const record of [a, b]) await port.run(`INSERT INTO node_sync_versions
-          (version_id, object_id, host_name, created_at, content_hash, body_text, snapshot_json)
-          VALUES (?, 'topic', ?, ?, ?, 'Body', ?)`,
-        [record.version_id, record.host_name, time, record.content_hash, JSON.stringify(record.snapshot)]);
         const incoming = index === 0 ? right : left;
         const result = await applyNodePushBatchWithDbPort(port, [{
           authorHostName: incoming.host_name, clientOpId: incoming.version_id,
