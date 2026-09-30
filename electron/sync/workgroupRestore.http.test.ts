@@ -109,18 +109,35 @@ async function negotiateFacts(server: RestoreServer, packUrl: URL, factUrl: URL)
 async function receiveRestorePages(server: RestoreServer, initial: URL,
   receiver: 'desktop' | 'companion', target: Database.Database, restoreId: string) {
   let url = initial;
+  let after = 0;
   for (let page = 0; page < 30; page++) {
     const archive = await server.archive(url);
     const incomingPath = resolveSyncPackPath(`restore-http-${receiver}-${page}.db`);
     try {
       const manifest = await extractSyncPackDatabaseFromFile({ archivePath: archive.filePath,
         expectedPeerId: ids.receiver, expectedSourcePeerId: ids.source, outputPath: incomingPath });
-      const outcome = await applyPage(receiver, target, 0, { path: incomingPath,
+      const outcome = await applyPage(receiver, target, after, { path: incomingPath,
         frontier: manifest.frontierStateSeq }, restoreId, ids.source);
       const result = 'result' in outcome ? outcome.result : outcome;
-      if (!result.dependencyProgress) return;
+      if (!result.dependencyProgress && !result.restorePending) return;
       expect(nodeIds(target)).toEqual(['old']);
-      url = new URL(dependencyResumeUrl(url.href, result.dependencyProgress));
+      expect(target.prepare('SELECT applied_at FROM sync_group_restore_events').get())
+        .toEqual({ applied_at: null });
+      if (result.dependencyProgress) {
+        url = new URL(dependencyResumeUrl(url.href, result.dependencyProgress));
+      } else {
+        expect(result.toStateSeq).toBeGreaterThan(after);
+        after = result.toStateSeq;
+        url = new URL(initial.origin + initial.pathname);
+        for (const [key, value] of Object.entries({ after_state_seq: after,
+          page_contract: 'bounded-v1', restore_id: restoreId,
+          frontier_state_seq: manifest.frontierStateSeq, source_epoch: manifest.sourceEpoch })) {
+          url.searchParams.set(key, String(value));
+        }
+        const factUrl = new URL(url);
+        factUrl.pathname += '-facts';
+        await negotiateFacts(server, url, factUrl);
+      }
     } finally { await archive.cleanup(); }
   }
   throw new Error('restore_pack_page_limit');
