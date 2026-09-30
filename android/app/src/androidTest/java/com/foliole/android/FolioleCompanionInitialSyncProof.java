@@ -31,7 +31,7 @@ final class FolioleCompanionInitialSyncProof {
                 if (!expectedGroupId.equals(latest.optString("group_id"))) {
                     throw new IllegalStateException("Initial Sync group identity changed: " + latest);
                 }
-                String runId = startedRunId(latest.getJSONArray("source_runs"), joinStartedAtMillis);
+                String runId = startedRunId(latest, joinStartedAtMillis);
                 JSONArray events = latest.getJSONArray("events");
                 for (int index = 0; index < events.length(); index += 1) {
                     JSONObject event = events.getJSONObject(index);
@@ -67,8 +67,9 @@ final class FolioleCompanionInitialSyncProof {
             + longestReadMillis + " projection=" + latest);
     }
 
-    private static String startedRunId(JSONArray sourceRuns, long joinStartedAtMillis)
+    private static String startedRunId(JSONObject projection, long joinStartedAtMillis)
         throws Exception {
+        JSONArray sourceRuns = projection.getJSONArray("source_runs");
         String runId = "";
         for (int index = 0; index < sourceRuns.length(); index += 1) {
             JSONObject event = sourceRuns.getJSONObject(index);
@@ -78,7 +79,8 @@ final class FolioleCompanionInitialSyncProof {
             if (startedAt.isEmpty()) throw new IllegalStateException("Initial start time missing");
             if (Instant.parse(startedAt).toEpochMilli() < joinStartedAtMillis) continue;
             if (!runId.isEmpty() && !runId.equals(event.optString("run_id"))) {
-                throw new IllegalStateException("Ambiguous initial Sync runs after join: " + sourceRuns);
+                throw new IllegalStateException("Ambiguous initial Sync runs after join: " + sourceRuns
+                    + " diagnostics=" + projection.optJSONArray("diagnostic_events"));
             }
             runId = event.getString("run_id");
         }

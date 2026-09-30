@@ -1,6 +1,7 @@
 import {
   dependencyResumeUrl, loadSyncPackDependencyResume, retireSyncPackDependencyView
 } from '../../../lib/core/sync/syncPackDependencyResume';
+import { dependencyScopeParams } from '../../../lib/core/sync/syncPackDependencyTransfer';
 import { clearSyncPackKnownFactClaims } from '../../../lib/core/sync/syncPackKnownFactClaims';
 import type { NativeSyncPackApplyResult } from '../../../lib/platform/nativeSyncContract';
 import { resolveLocalSyncGroupDevice } from '../../../lib/platform/syncGroupContract';
@@ -63,7 +64,8 @@ async function applyDependencyRound(input: {
 }) {
   const { args } = input;
   let { prepared, resume } = input;
-  let previousPosition = resume?.nextRow ?? 0;
+  const positions = new Map<string, number>();
+  if (resume) positions.set(JSON.stringify(dependencyScopeParams(resume.transfer)), resume.nextRow);
   let reconciled = false;
   let roundRebased = 'roundRebased' in prepared && prepared.roundRebased === true;
   for (;;) {
@@ -87,14 +89,17 @@ async function applyDependencyRound(input: {
         peerId: input.args.sourcePeerId });
       roundRebased = true;
       resume = null;
-      previousPosition = 0;
+      positions.clear();
       reconciled = true;
       continue;
     }
     if (!result) return { applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 };
     if (result.dependencyProgress) {
-      if (result.dependencyProgress.nextRow <= previousPosition) throw new Error('sync_pack_dependency_no_progress');
-      previousPosition = result.dependencyProgress.nextRow;
+      const scope = JSON.stringify(dependencyScopeParams(result.dependencyProgress.transfer));
+      if (result.dependencyProgress.nextRow <= (positions.get(scope) ?? 0)) {
+        throw new Error('sync_pack_dependency_no_progress');
+      }
+      positions.set(scope, result.dependencyProgress.nextRow);
       resume = result.dependencyProgress;
       prepared = await signDependencyRequest(dependencyResumeUrl(prepared.url, result.dependencyProgress));
       continue;
