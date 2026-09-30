@@ -75,6 +75,7 @@ for (const receiver of ['desktop', 'companion'] as const) {
 }
 
 type RestoreServer = Awaited<ReturnType<typeof startAuthenticatedSyncHttp>>;
+type RestoreFactIndex = SyncPackFactIndex & { round_source_view_id?: string };
 
 function seedDevices(database: Database.Database) {
   for (const identity of [ids.source, ids.receiver]) {
@@ -90,7 +91,7 @@ function seedDevices(database: Database.Database) {
 async function negotiateFacts(server: RestoreServer, packUrl: URL, factUrl: URL) {
   for (let page = 0; page < 30; page++) {
     const response = await server.getJson(factUrl.pathname + factUrl.search) as unknown as
-      SyncPackFactIndex & { source_view_id?: string; index?: SyncPackFactIndex; ready?: boolean };
+      RestoreFactIndex & { source_view_id?: string; index?: RestoreFactIndex; ready?: boolean };
     if (response.ready) { packUrl.searchParams.set('fact_view', response.source_view_id!); return; }
     const index = response.index ?? response;
     const bits = encodeSyncPackFactClaims(index, { versions: [], parents: [], reviews: [] });
