@@ -2,7 +2,7 @@ import type { DbPort } from './dbPort.js';
 import { dependencyScopeParams, DEPENDENCY_SCOPE_SQL, type SyncPackDependencyTransfer } from './syncPackDependencyTransfer.js';
 import { clearSyncPackKnownFactClaims } from './syncPackKnownFactClaims.js';
 
-export async function retireSyncPackDependencyView(port: DbPort, transfer: SyncPackDependencyTransfer) {
+export async function retireSyncPackDependencyView(port: DbPort, transfer: Pick<SyncPackDependencyTransfer, 'groupId' | 'peerId' | 'sourceViewId'>) {
   await port.transaction(async (tx) => {
     const scope = [transfer.groupId, transfer.peerId, transfer.sourceViewId];
     await tx.run(`INSERT OR IGNORE INTO sync_pack_retired_source_views

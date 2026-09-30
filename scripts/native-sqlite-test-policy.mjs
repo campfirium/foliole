@@ -99,6 +99,7 @@ const controlledElectronSqliteTests = [
   'electron/sync/desktopAttachmentRanges.process.http.test.ts',
   'electron/sync/desktopAttachmentSourceSwitch.http.integration.test.ts',
   'electron/sync/desktopResourceTransfers.restart.test.ts',
+  'electron/sync/desktopFactClaimRevalidation.http.integration.test.ts',
   'electron/sync/desktopResourceArticleContinuation.http.integration.test.ts',
   'electron/sync/desktopSyncGroupFactProbe.http.test.ts',
   'electron/sync/desktopSyncGroupThreePeerRoundTrip.test.ts',

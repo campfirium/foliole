@@ -28,6 +28,7 @@ import {
   saveSyncPackReceiveProgress,
   shouldApplySyncPackPage
 } from './syncPackReceiveProgress.js';
+import { runSyncPackApplyTransaction } from './syncPackRejectedFactClaims.js';
 import { applyReplayPackTombstones } from './syncPackReplayApply.js';
 import { enqueueSyncPackResourceArticles } from './syncPackResourceArticles.js';
 import { applySyncPackReviewLogWithDbPort } from './syncPackReviewLogExecutor.js';
@@ -82,7 +83,7 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   const [incomingCount] = await port.query<{ count: number }>(
     `SELECT COUNT(*) AS count FROM ${options.incomingAlias ?? 'inc'}.sync_object_state`
   );
-  const { result, shouldApply } = await port.transaction(async (tx) => {
+  const { result, shouldApply } = await runSyncPackApplyTransaction(port, options, async (tx) => {
     const scope = options.sourcePeerId
       ? await loadSyncPackReceiveProgress(tx, options.sourcePeerId) : null;
     const retired = scope && options.sourcePeerId
