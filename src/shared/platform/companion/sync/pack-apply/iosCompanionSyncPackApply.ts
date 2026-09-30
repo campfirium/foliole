@@ -50,7 +50,7 @@ export async function applyIosCompanionSyncPackPath(
         ...(args.sourceHostName === undefined ? {} : { sourceHostName: args.sourceHostName })
       }, db);
     });
-    if (result.dependencyProgress) return result;
+    if (result.dependencyProgress || result.restore_pending) return result;
     if (!args.expectedRestoreId || result.applied) assertSyncPackCursorAdvance({
       appliedFactCount: result.applied_group_fact_count,
       appliedObjectCount: result.applied_object_count,

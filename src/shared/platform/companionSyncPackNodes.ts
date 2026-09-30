@@ -47,7 +47,7 @@ export async function applyCompanionSyncPackPathWithSharedCore(
     sourcePeerId: args.sourcePeerId,
     recordVersionReceipt: true
   }, manager);
-  if (result.dependencyProgress) return result;
+  if (result.dependencyProgress || result.restore_pending) return result;
   if (!args.expectedRestoreId || result.applied) assertSyncPackCursorAdvance({
     appliedFactCount: result.applied_group_fact_count,
     appliedObjectCount: result.applied_object_count,
@@ -129,6 +129,7 @@ export async function applyCompanionSyncPackNodesWithDbPort(
       frontier_state_seq: result.frontierStateSeq,
       source_epoch: result.sourceEpoch,
       to_state_seq: result.toStateSeq,
+      ...('restorePending' in result && result.restorePending ? { restore_pending: true } : {}),
       ...('verifiedEmptyPage' in result && result.verifiedEmptyPage ? { verified_empty_page: true } : {})
     } satisfies NativeSyncPackApplyResult & typeof result & {
       appliedPackBlobCount: number;

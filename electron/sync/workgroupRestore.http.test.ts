@@ -120,6 +120,9 @@ async function receiveRestorePages(server: RestoreServer, initial: URL,
         frontier: manifest.frontierStateSeq }, restoreId, ids.source);
       const result = 'result' in outcome ? outcome.result : outcome;
       if (!result.dependencyProgress && !result.restorePending) return;
+      if (receiver === 'companion' && result.restorePending) {
+        expect(result).toMatchObject({ restore_pending: true });
+      }
       expect(nodeIds(target)).toEqual(['old']);
       expect(target.prepare('SELECT applied_at FROM sync_group_restore_events').get())
         .toEqual({ applied_at: null });

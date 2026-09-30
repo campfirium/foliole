@@ -68,7 +68,7 @@ async function pullRemoteStructurePack(endpointUrl: string, restoreId?: string) 
       sourceHostName, sourcePeerId,
       url: `${endpointUrl.trim().replace(/\/+$/, '')}${pathWithQuery}`
     }));
-    assertSyncPackCursorAdvance({ appliedFactCount: result.applied_group_fact_count ?? 0,
+    if (!restoreId || !result.restore_pending) assertSyncPackCursorAdvance({ appliedFactCount: result.applied_group_fact_count ?? 0,
       appliedObjectCount: result.applied_object_count, currentCursor: cursor,
       handledConflictCount: result.handled_conflict_count ?? 0, toStateSeq: result.to_state_seq,
       verifiedEmptyPage: result.verified_empty_page === true });
@@ -83,7 +83,9 @@ async function pullRemoteStructurePack(endpointUrl: string, restoreId?: string) 
         result.to_state_seq > frontier || result.to_state_seq <= cursor && cursor < frontier) {
       throw new Error('sync_pack_round_changed');
     }
-    if (result.to_state_seq > cursor) await saveCompanionSyncPackCursor(result.to_state_seq, sourcePeerId);
+    if (!result.restore_pending && result.to_state_seq > cursor) {
+      await saveCompanionSyncPackCursor(result.to_state_seq, sourcePeerId);
+    }
     appliedPackBlobCount += result.applied_blob_count;
     appliedPackObjectCount += result.applied_object_count;
     for (const id of result.applied_review_op_ids ?? []) reviewIds.add(id);
