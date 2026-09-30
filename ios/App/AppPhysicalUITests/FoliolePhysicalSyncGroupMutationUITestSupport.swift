@@ -1,6 +1,35 @@
 import XCTest
 
 extension FoliolePhysicalSyncGroupUITests {
+    func testBackupRestoreRemovesOldTopicsAcrossRelaunch() throws {
+        let app = acceptanceApplication()
+        app.launch()
+        openSyncSettings(in: app)
+        enableAutomaticSync(in: app)
+        tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
+        waitForSyncNowCompletion(in: app)
+        assertRestoredTopicSet(in: app)
+        attachScreenshot(named: "Fri-backup-restore-replaced-topics")
+        app.terminate()
+        XCTAssertTrue(app.wait(for: .notRunning, timeout: 30))
+        app.launch()
+        openSyncSettings(in: app)
+        XCTAssertTrue(app.staticTexts["Current Sync Group"].waitForExistence(timeout: 45),
+                      "Backup adoption must retain the local Sync Group after relaunch.")
+        assertRestoredTopicSet(in: app)
+        attachScreenshot(named: "Fri-backup-restore-persisted")
+    }
+
+    private func assertRestoredTopicSet(in app: XCUIApplication) {
+        openBrowse(in: app)
+        waitForVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_FACT_TITLE"), in: app)
+        for prefix in requiredEnvironment("FOLIOLE_PHYSICAL_REMOVED_TOPIC_PREFIXES")
+            .split(separator: ",").map(String.init) {
+            waitForDisappearance(visibleTopics(prefix: prefix, in: app).firstMatch, timeout: 120,
+                                 message: "Backup adoption retained obsolete topic: \(prefix)")
+        }
+    }
+
     func testPublishesTwoDeviceConflictFork() throws {
         XCTAssertTrue(isTwoDeviceJourney, "This journey is reserved for a T152 two-Device attempt.")
         let app = acceptanceApplication()
