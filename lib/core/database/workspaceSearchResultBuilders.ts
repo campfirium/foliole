@@ -1,5 +1,5 @@
 import { buildCrossPagePdfExcerpt } from './pdfCrossPageWorkspaceSearch.js';
-import { findSearchAliasSpans } from './searchAliasEvidence.js';
+import { locateSearchAliasSpans } from './searchAliasMatchContext.js';
 import type { RankedWorkspaceSearchResult, WorkspaceSearchPathQuality } from './workspaceSearchResults.js';
 import type {
   WorkspacePdfCrossPageSearchRow,
@@ -56,10 +56,11 @@ export function buildNodeResult(
   query: string,
   pathQuality: WorkspaceSearchPathQuality,
   aliasSpellings: string[] = [],
-  triggerSpellings: string[] = []
+  triggerSpellings: string[] = [],
+  evidenceOwner?: object
 ): RankedWorkspaceSearchResult {
-  const bodySpans = findSearchAliasSpans(row.content, aliasSpellings);
-  const titleSpans = findSearchAliasSpans(`${row.title} ${row.path ?? ''}`, aliasSpellings);
+  const bodySpans = locateSearchAliasSpans(evidenceOwner, row.content, aliasSpellings);
+  const titleSpans = locateSearchAliasSpans(evidenceOwner, `${row.title} ${row.path ?? ''}`, aliasSpellings);
   const aliasMatches = aliasSpellings.flatMap((spelling) => {
     const bodySpan = bodySpans.find((span) => span.spelling === spelling);
     const titleSpan = titleSpans.find((span) => span.spelling === spelling);
@@ -95,12 +96,13 @@ export function buildPdfResult(
   query: string,
   pathQuality: WorkspaceSearchPathQuality,
   aliasSpellings: string[] = [],
-  triggerSpellings: string[] = []
+  triggerSpellings: string[] = [],
+  evidenceOwner?: object
 ): RankedWorkspaceSearchResult | null {
   const page = Number.parseInt(row.page, 10) || 0;
   const pageTextLength = Number.parseInt(row.page_text_length, 10) || 0;
-  const pageSpans = findSearchAliasSpans(row.text, aliasSpellings);
-  const metadataSpans = findSearchAliasSpans(`${row.title} ${row.path ?? ''}`, aliasSpellings);
+  const pageSpans = locateSearchAliasSpans(evidenceOwner, row.text, aliasSpellings);
+  const metadataSpans = locateSearchAliasSpans(evidenceOwner, `${row.title} ${row.path ?? ''}`, aliasSpellings);
   const aliasMatches = aliasSpellings.flatMap((spelling) => {
     const span = pageSpans.find((item) => item.spelling === spelling);
     const metadata = metadataSpans.find((item) => item.spelling === spelling);

@@ -1,5 +1,5 @@
 import type { FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
-import { findSearchAliasSpans } from '../../lib/core/database/searchAliasEvidence.js';
+import { locateSearchAliasSpans } from '../../lib/core/database/searchAliasMatchContext.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 
 import type { ReadwiseExternalDocumentRow } from './readwiseExternalDocumentRows.js';
@@ -21,8 +21,8 @@ export function toReadwiseSearchResult(args: {
     relativePath: row.relative_path,
     sourceKind: 'external' as const
   };
-  const bodySpans = findSearchAliasSpans(row.content, plan.aliasSpellings);
-  const metadataSpans = findSearchAliasSpans(`${row.file_name} ${row.relative_path}`, plan.aliasSpellings);
+  const bodySpans = locateSearchAliasSpans(plan, row.content, plan.aliasSpellings);
+  const metadataSpans = locateSearchAliasSpans(plan, `${row.file_name} ${row.relative_path}`, plan.aliasSpellings);
   const aliasMatches = plan.aliasSpellings.flatMap((spelling) => {
     const body = bodySpans.find((span) => span.spelling === spelling);
     const metadata = metadataSpans.find((span) => span.spelling === spelling);

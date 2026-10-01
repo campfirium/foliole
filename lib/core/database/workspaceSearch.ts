@@ -1,7 +1,7 @@
 import type { DatabaseDriver } from './driver.js';
 import { executeFtsSearchPlan } from './ftsSearchExecution.js';
-import { matchesFtsSearchFields, type FtsSearchQueryPlan } from './ftsSearchQuery.js';
-import { loadAliasFallbackWorkspaceMatches } from './workspaceSearchAliasFallback.js';
+import { buildFtsSearchQueryPlan, matchesFtsSearchFields, type FtsSearchQueryPlan } from './ftsSearchQuery.js';
+import { searchAliasWorkspaceCandidates } from './workspaceSearchAliasCandidates.js';
 import { buildCrossPagePdfResult, buildNodeResult, buildPdfResult } from './workspaceSearchResultBuilders.js';
 import {
   mergeRankedResults,
@@ -157,6 +157,8 @@ function loadLiteralFtsWorkspaceMatches(driver: DatabaseDriver, queryPlan: FtsSe
 }
 
 export function searchWorkspace(driver: DatabaseDriver, query: string, aliases: string[][] = []) {
+  const plan = buildFtsSearchQueryPlan(query, aliases);
+  if (plan.expandedExpression) return searchAliasWorkspaceCandidates(driver, plan);
   return executeFtsSearchPlan(query, {
     finalizeResults: sortAndLimitResults,
     loadAdvancedMatches: (queryPlan) => loadAdvancedFtsWorkspaceMatches(driver, queryPlan),
@@ -165,8 +167,7 @@ export function searchWorkspace(driver: DatabaseDriver, query: string, aliases: 
     loadPairMatches: (queryPlan) => loadPairFtsWorkspaceMatches(driver, queryPlan),
     loadPostTermFallbackMatches: (queryPlan) => [
       ...loadFallbackPdfMatches(driver, queryPlan.normalizedQuery),
-      ...loadCrossPagePdfMatches(driver, queryPlan.normalizedQuery, queryPlan.shortTerms),
-      ...loadAliasFallbackWorkspaceMatches(driver, queryPlan)
+      ...loadCrossPagePdfMatches(driver, queryPlan.normalizedQuery, queryPlan.shortTerms)
     ],
     loadShortQueryMatches: (queryPlan) => [
       ...loadFallbackNodeMatches(driver, queryPlan.normalizedQuery),

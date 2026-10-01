@@ -2,7 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import type { FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
-import { findSearchAliasSpans } from '../../lib/core/database/searchAliasEvidence.js';
+import { locateSearchAliasSpans } from '../../lib/core/database/searchAliasMatchContext.js';
 import type { WorkspaceExternalSearchSourceKind } from '../../lib/core/database/workspaceSearchResults.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
@@ -185,8 +185,8 @@ export function toExternalResult(
     relativePath: row.relative_path,
     sourceKind: resolveExternalSearchSourceKind(row.folder_id)
   };
-  const bodySpans = findSearchAliasSpans(row.text, plan?.aliasSpellings ?? []);
-  const metadataSpans = findSearchAliasSpans(`${row.file_name} ${row.relative_path}`, plan?.aliasSpellings ?? []);
+  const bodySpans = locateSearchAliasSpans(plan, row.text, plan?.aliasSpellings ?? []);
+  const metadataSpans = locateSearchAliasSpans(plan, `${row.file_name} ${row.relative_path}`, plan?.aliasSpellings ?? []);
   const aliasMatches = plan?.aliasSpellings.flatMap((spelling) => {
     const body = bodySpans.find((span) => span.spelling === spelling);
     const metadata = metadataSpans.find((span) => span.spelling === spelling);

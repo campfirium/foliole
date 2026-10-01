@@ -2,7 +2,7 @@ import { normalizeSearchAlias } from '../search/searchAliasDocument.js';
 
 import { indexSearchAliases } from './ftsSearchAliasIndex.js';
 import { compileSearchExpression, escapeFtsPhrase, evaluateSearchExpression, type SearchExpression } from './ftsSearchExpression.js';
-import { findSearchAliasSpan } from './searchAliasEvidence.js';
+import { matchesSearchAliasTerm } from './searchAliasMatchContext.js';
 
 const SEARCH_OPERATOR_TOKENS = new Set(['AND', 'OR', 'NOT']);
 const SEARCH_TERM_EDGE_PUNCTUATION = /^["'()[\]{}.,!?;:，。？！；：（）【】「」『』《》、]+|["'()[\]{}.,!?;:，。？！；：（）【】「」『』《》、]+$/g;
@@ -240,6 +240,6 @@ export function matchesFtsSearchText(text: string, queryPlan: FtsSearchQueryPlan
 export function matchesFtsSearchFields(fields: string[], queryPlan: FtsSearchQueryPlan): boolean {
   if (!queryPlan.expandedExpression) return matchesFtsSearchText(fields.join(' '), queryPlan);
   return evaluateSearchExpression(queryPlan.expandedExpression, '', (value) =>
-    fields.some((field) => Boolean(findSearchAliasSpan(field, value)))
+    fields.some((field) => matchesSearchAliasTerm(queryPlan, field, value))
   );
 }

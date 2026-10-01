@@ -58,13 +58,30 @@ function allSpans(source: string, folded: FoldedText, spelling: string): SearchA
   return spans;
 }
 
-export function findSearchAliasSpan(text: string, spelling: string): SearchAliasSpan | null {
-  return allSpans(text, foldText(text), spelling)[0] ?? null;
+export function prepareSearchAliasText(text: string) {
+  const folded = foldText(text);
+  const matches = new Map<string, SearchAliasSpan[]>();
+  return (spelling: string) => {
+    let spans = matches.get(spelling);
+    if (!spans) {
+      spans = allSpans(text, folded, spelling);
+      matches.set(spelling, spans);
+    }
+    return spans;
+  };
 }
 
-export function findSearchAliasSpans(text: string, spellings: string[]) {
-  const folded = foldText(text);
-  const occurrences = spellings.flatMap((spelling) => allSpans(text, folded, spelling));
+export function findSearchAliasSpan(text: string, spelling: string): SearchAliasSpan | null {
+  return prepareSearchAliasText(text)(spelling)[0] ?? null;
+}
+
+export function findSearchAliasSpans(
+  text: string,
+  spellings: string[],
+  prepared?: ReturnType<typeof prepareSearchAliasText>
+) {
+  const locate = prepared ?? prepareSearchAliasText(text);
+  const occurrences = spellings.flatMap(locate);
   return spellings.flatMap((spelling) => {
     const span = occurrences.find((candidate) => candidate.spelling === spelling && !occurrences.some((other) =>
       other.spelling !== spelling && other.query.length > candidate.query.length

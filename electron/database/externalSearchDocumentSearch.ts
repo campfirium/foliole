@@ -1,5 +1,5 @@
 import { executeFtsSearchPlan } from '../../lib/core/database/ftsSearchExecution.js';
-import { buildFtsSearchQueryPlan, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
+import { buildFtsSearchQueryPlan, matchesFtsSearchFields, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 
 import { loadDesktopSourceByConfig, resolveDesktopSourceAddress } from './desktopSources.js';
 import {
@@ -156,7 +156,8 @@ export function searchExternalDocuments(query: string, aliases: string[][] = [])
   });
   return [
     ...localRows
-      .filter((row) => isExternalDocumentVisible(row.absolute_path))
+      .filter((row) => isExternalDocumentVisible(row.absolute_path)
+        && (!queryPlan.expandedExpression || matchesFtsSearchFields([row.file_name, row.relative_path, row.text], queryPlan)))
       .map((row) =>
         toExternalResult(row, queryPlan.highlightQuery, resolveImportedNodeIdForExternalDocument(row.absolute_path), queryPlan)
       ),
