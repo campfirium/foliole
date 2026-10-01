@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+
 let mockedAppDataDir = '/tmp/foliole-split-topic-tests';
 const publishGuardMocks = vi.hoisted(() => ({ assertFoliolePublishedDeleteAllowed: vi.fn() }));
 
@@ -22,7 +24,7 @@ vi.mock('../foliolePublish/foliolePublishManagement.js', () => publishGuardMocks
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { replaceNodeOrder, restoreNodes } from './nodeMutations.js';
-import { getNodeOrderRows, getNodeRow, seedNode } from './nodeMutations.test.helpers.js';
+import { getNodeRow, seedNode } from './nodeMutations.test.helpers.js';
 import { splitTopic } from './splitTopicMutation.js';
 
 let tempRoot = '';
@@ -61,6 +63,25 @@ function readSyncDirty(nodeId: string) {
     .get(nodeId) as { sync_dirty: number } | undefined;
 }
 
+function childIds(parentId: string) {
+  const row = openDatabaseConnection().driver.queryOne<{ child_ids_json: string }>(
+    'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', [parentId]
+  );
+  return JSON.parse(row!.child_ids_json) as string[];
+}
+
+function mutationState() {
+  const driver = openDatabaseConnection().driver;
+  return {
+    nodes: driver.queryAll('SELECT * FROM nodes ORDER BY id'),
+    orders: driver.queryAll('SELECT * FROM parent_child_order ORDER BY parent_id'),
+    versions: driver.queryAll('SELECT * FROM node_sync_versions ORDER BY version_id'),
+    state: driver.queryAll('SELECT * FROM sync_object_state ORDER BY object_type, object_id'),
+    sequence: driver.queryAll('SELECT * FROM sync_state_sequence'),
+    dispositions: driver.queryAll('SELECT * FROM source_disposition_states ORDER BY source_kind, source_scope, original_title')
+  };
+}
+
 it('atomically creates root sibling Topics, updates order, trashes the source, and returns a patch', () => {
   seedNode('root-a', null, 0);
   seedNode('source', null, 1);
@@ -84,7 +105,9 @@ it('atomically creates root sibling Topics, updates order, trashes the source, a
   });
   expect(getNodeRow('source')?.deleted_at).toBe('2026-07-28T00:01:00.000Z');
   expect(getNodeRow('part-a')?.parent_id).toBeNull();
-  expect(getNodeOrderRows().map((row) => row.node_id)).toEqual(['root-a', 'source', 'part-a', 'part-b', 'root-b']);
+  expect(childIds(ROOT_CHILD_ORDER_ID)).toEqual([
+    'root-a', 'source', 'part-a', 'part-b', 'root-b', 'special-inbox', 'special-virtual-root'
+  ]);
   expect(readSyncDirty('source')?.sync_dirty).toBe(0);
   expect(readSyncDirty('part-a')?.sync_dirty).toBe(0);
   expect(publishGuardMocks.assertFoliolePublishedDeleteAllowed).toHaveBeenCalledWith(['source']);
@@ -109,7 +132,8 @@ it('creates generated Topics as folder siblings without hiding them when the sou
   expect(getNodeRow('source')?.deleted_at).toBeNull();
   expect(getNodeRow('part-a')?.deleted_at).toBeNull();
   expect(getNodeRow('part-b')?.parent_id).toBe('folder');
-  expect(getNodeOrderRows().map((row) => row.node_id)).toEqual(['folder', 'source', 'part-a', 'part-b', 'sibling']);
+  expect(childIds('folder')).toEqual(['source', 'part-a', 'part-b', 'sibling']);
+  expect(childIds(ROOT_CHILD_ORDER_ID)).toEqual(['folder', 'special-inbox', 'special-virtual-root']);
 });
 
 it('keeps the source and inserts generated Topics as its first direct children', () => {
@@ -133,9 +157,10 @@ it('keeps the source and inserts generated Topics as its first direct children',
   expect(getNodeRow('part-a')?.parent_id).toBe('source');
   expect(getNodeRow('old-child')?.parent_id).toBe('source');
   expect(getNodeRow('grandchild')?.parent_id).toBe('old-child');
-  expect(getNodeOrderRows().map((row) => row.node_id)).toEqual([
-    'folder', 'source', 'part-a', 'part-b', 'old-child', 'grandchild', 'sibling'
-  ]);
+  expect(childIds('source')).toEqual(['part-a', 'part-b', 'old-child']);
+  expect(childIds('old-child')).toEqual(['grandchild']);
+  expect(childIds('folder')).toEqual(['source', 'sibling']);
+  expect(childIds(ROOT_CHILD_ORDER_ID)).toEqual(['folder', 'special-inbox', 'special-virtual-root']);
   expect(publishGuardMocks.assertFoliolePublishedDeleteAllowed).not.toHaveBeenCalled();
 });
 
@@ -143,18 +168,25 @@ it('rolls back generated Topics, order, and source Trash when any write fails', 
   seedNode('source', null, 0);
   seedNode('sibling', null, 1);
   replaceNodeOrder(['source', 'sibling']);
+  const before = mutationState();
+  openDatabaseConnection().sqlite.exec(`CREATE TRIGGER reject_second_generated BEFORE INSERT ON nodes
+    WHEN NEW.id = 'part-b' BEGIN SELECT RAISE(ABORT, 'injected generated write failure'); END`);
 
   expect(() => splitTopic({
     activeNodeId: 'part-a',
     deletedAt: '2026-07-28T00:01:00.000Z',
     disposition: 'replace',
-    generatedNodes: [generatedTopic('part-a', 'missing-parent', 1)],
-    nodeOrder: ['source', 'part-a', 'sibling'],
+    generatedNodes: [generatedTopic('part-a', null, 1), generatedTopic('part-b', null, 2)],
+    nodeOrder: ['source', 'part-a', 'part-b', 'sibling'],
     sourceNodeId: 'source',
     sourceParentNodeId: null
-  })).toThrow();
+  })).toThrow('injected generated write failure');
 
+  expect(mutationState()).toEqual(before);
   expect(getNodeRow('source')?.deleted_at).toBeNull();
   expect(getNodeRow('part-a')).toBeUndefined();
-  expect(getNodeOrderRows().map((row) => row.node_id)).toEqual(['source', 'sibling']);
+  expect(getNodeRow('part-b')).toBeUndefined();
+  expect(childIds(ROOT_CHILD_ORDER_ID)).toEqual(['source', 'sibling', 'special-inbox', 'special-virtual-root']);
+  closeDatabaseConnection();
+  expect(mutationState()).toEqual(before);
 });

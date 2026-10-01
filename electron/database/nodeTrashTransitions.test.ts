@@ -5,6 +5,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+
 let appDataDir = '';
 vi.mock('../ipc/paths.js', () => ({
   resolveAppPaths: () => ({
@@ -38,7 +40,9 @@ afterEach(async () => {
 
 function rows() {
   return openDatabaseConnection().driver.queryAll(
-    'SELECT id, deleted_at, image_regions, content, updated_at, sync_dirty, current_version_id FROM nodes ORDER BY id'
+    `SELECT n.id, n.deleted_at, n.image_regions, ${buildNodeBodyContentSql()} AS content,
+      n.updated_at, n.sync_dirty, n.current_version_id FROM nodes n
+      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ORDER BY n.id`
   );
 }
 
@@ -65,7 +69,8 @@ it('commits delete, undo and redo with parent regions while preserving the paren
     expect.objectContaining({ id: 'parent', image_regions: null, content: '# parent' })
   ]));
   expect(restoreNodesWithParents({ nodeIds: deletion.nodeIds, parentUpdates: [{ ...parentUpdate, imageRegions: regions }] }))
-    .toEqual({ restoredNodeIds: deletion.nodeIds, skippedConflicts: [] });
+    .toEqual({ restoredNodeIds: deletion.nodeIds, skippedConflicts: [],
+      nodeOrder: ['special-inbox', 'special-virtual-root', 'parent', 'node-child'] });
   closeDatabaseConnection();
   expect(rows()).toEqual(expect.arrayContaining([
     expect.objectContaining({ id: 'node-child', deleted_at: null }),

@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   syncCreateNodeMutationToRuntime,
-  syncMoveNodesToRuntime,
   syncNodeContentMutationToRuntime,
   syncNodeContentToRuntime,
   syncNodeContentWithAnchorsToRuntime,
@@ -11,6 +10,7 @@ import {
 } from './workspaceRuntimeSync';
 import { deferNodeContentRuntimePersist } from './workspaceStoreContentRuntimePersist';
 import { createWorkspaceNodeActions } from './workspaceStoreNodeActions';
+import { registerRootMoveCoverage } from './workspaceStoreNodeActions.root-move.test-support';
 import {
   createWorkspaceNodeActionsFixture,
   createWorkspaceNodeActionsSetStateHarness
@@ -228,27 +228,7 @@ describe('workspaceStoreNodeActions extra sync coverage command bridge', () => {
     );
   });
 
-  it('syncs moved root nodes through runtime command bridge', async () => {
-    vi.mocked(syncMoveNodesToRuntime).mockImplementation(async (payload) => ({
-      movedNodeIds: payload.nodes.map((node) => node.nodeId),
-      nodeOrder: payload.nodeOrder
-    }));
-    const harness = createWorkspaceNodeActionsSetStateHarness(createWorkspaceNodeActionsFixture());
-    const actions = createWorkspaceNodeActions(harness.setState);
-    const firstFolderId = (await actions.createRootNode('Folder A', 'folder'))!;
-    const secondFolderId = (await actions.createRootNode('Folder B', 'folder'))!;
-
-    vi.clearAllMocks();
-    const moved = await actions.moveNodes([secondFolderId], firstFolderId, 'before');
-
-    expect(moved).toBe(true);
-    expect(syncMoveNodesToRuntime).toHaveBeenCalledWith(expect.objectContaining({
-      nodeOrder: expect.arrayContaining([secondFolderId, firstFolderId]),
-      nodes: [expect.objectContaining({ nodeId: secondFolderId, parentNodeId: null })]
-    }));
-    expect(syncNodeContentToRuntime).not.toHaveBeenCalled();
-    expect(syncNodeOrderToRuntime).not.toHaveBeenCalled();
-  });
+  registerRootMoveCoverage();
 });
 
 it('includes an automatic title in the queued body save without a second body writer', async () => {

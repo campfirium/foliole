@@ -15,6 +15,10 @@ function folderNode(): WorkspaceNodeSnapshot {
       { attachmentId: 'attachment-b', mimeType: null, originalName: null, role: 'reference' },
       { attachmentId: 'attachment-a', mimeType: null, originalName: null, role: 'cover' }
     ],
+    resourceReferences: [
+      { storage_key: `${'b'.repeat(64)}.pdf`, role: 'reference', original_name: 'Original.pdf' },
+      { storage_key: `${'a'.repeat(64)}.png`, role: 'image', original_name: 'Cover.png' }
+    ],
     content: 'Folder body',
     createdAt: '2026-07-11T00:00:00.000Z',
     currentVersionId: 'desktop#base',
@@ -49,7 +53,10 @@ it('builds the complete canonical payload from authoritative workspace fields', 
     manual_child_order: '["child-b","child-a"]',
     import_content_fingerprint: 'content-a',
     import_source_fingerprint: 'source-a',
-    position: 37,
+    resource_references: JSON.stringify([
+      { storage_key: `${'a'.repeat(64)}.png`, role: 'image', original_name: 'Cover.png' },
+      { storage_key: `${'b'.repeat(64)}.pdf`, role: 'reference', original_name: 'Original.pdf' }
+    ]),
     sequential_reading_enabled: true,
     shelved_at: '2026-07-10T00:00:00.000Z'
   });
@@ -67,6 +74,7 @@ it('uses one canonical payload for the version snapshot and desktop-compatible h
       attachmentId: attachment.attachmentId,
       role: attachment.role
     })),
+    resourceReferences: node.resourceReferences ?? [],
     content: node.content,
     createdAt: node.createdAt,
     deletedAt: null,
@@ -91,6 +99,32 @@ it('uses one canonical payload for the version snapshot and desktop-compatible h
     updatedAt: node.updatedAt,
     virtualFilter: null
   }));
+});
+
+it('ignores legacy position changes in the same node payload and hash', async () => {
+  const node = folderNode();
+  const before = await toCompanionNativeNodeVersion({ ...node, position: 37 }, 'android-device');
+  const after = await toCompanionNativeNodeVersion({ ...node, position: 91 }, 'android-device');
+
+  expect(Object.hasOwn(before.snapshot, 'position')).toBe(false);
+  expect(after.snapshot).toEqual(before.snapshot);
+  expect(after.content_hash).toBe(before.content_hash);
+});
+
+it.each([
+  { original_name: 'Renamed.pdf' },
+  { storage_key: `${'c'.repeat(64)}.pdf` },
+  { storage_key: `${'b'.repeat(64)}.png` }
+])('includes resource name and canonical hash/key changes in the version hash: %j', async (change) => {
+  const node = folderNode();
+  const before = await toCompanionNativeNodeVersion(node, 'android-device');
+  const after = await toCompanionNativeNodeVersion({
+    ...node,
+    resourceReferences: [{ ...node.resourceReferences![0]!, ...change }, node.resourceReferences![1]!]
+  }, 'android-device');
+
+  expect(after.snapshot.resource_references).not.toBe(before.snapshot.resource_references);
+  expect(after.content_hash).not.toBe(before.content_hash);
 });
 
 it('creates a mobile-safe version id when the WebView lacks randomUUID', async () => {

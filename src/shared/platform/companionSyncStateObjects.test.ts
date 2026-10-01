@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from '../../../lib/core/database/syncStateSequenceSchemaStatements';
 import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
@@ -34,18 +35,20 @@ it('applies state objects through the Capacitor DbPort adapter and shared core',
   });
 });
 
-it('unlinks nodes before applying an attachment tombstone', async () => {
+it('ignores retired attachment tombstones without changing current node resources, body or state', async () => {
   db = new Database(':memory:');
   db.pragma('foreign_keys = ON');
   installStateObjectSchema(db);
-  installAttachmentSchema(db);
+  installNodeResourceSchema(db);
+  const before = db.prepare('SELECT * FROM nodes').all();
+  const stateBefore = db.prepare('SELECT * FROM sync_object_state').all();
 
   await expect(applyCompanionSyncObjectsWithSharedCore(createFakeCapacitorConnection(db) as never, [
     attachmentTombstone()
-  ])).resolves.toEqual(['attachment:att-1']);
+  ])).resolves.toEqual([]);
 
-  expect(db.prepare('SELECT COUNT(*) AS count FROM node_attachments').get() as unknown).toEqual({ count: 0 });
-  expect(db.prepare('SELECT COUNT(*) AS count FROM attachments').get() as unknown).toEqual({ count: 0 });
+  expect(db.prepare('SELECT * FROM nodes').all()).toEqual(before);
+  expect(db.prepare('SELECT * FROM sync_object_state').all()).toEqual(stateBefore);
 });
 
 it('opens the Android companion database before applying state objects', async () => {
@@ -87,7 +90,7 @@ function attachmentTombstone(): NativeSyncObjectRecord {
   return {
     content_hash: 'attachment-delete-hash-1',
     deleted_at: '2026-05-04T02:00:00.000Z',
-    object_id: 'att-1',
+    object_id: 'a'.repeat(64),
     object_type: 'attachment',
     payload_json: null,
     updated_at: '2026-05-04T02:00:00.000Z'
@@ -150,39 +153,28 @@ function installStateObjectSchema(database: Database.Database) {
       PRIMARY KEY (object_type, object_id)
     );
   `);
+  database.exec(SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS.join(';\n'));
 }
 
-function installAttachmentSchema(database: Database.Database) {
+function installNodeResourceSchema(database: Database.Database) {
   database.exec(`
     CREATE TABLE nodes (
-      id TEXT PRIMARY KEY
-    );
-    CREATE TABLE attachments (
       id TEXT PRIMARY KEY,
-      original_name TEXT,
-      mime_type TEXT,
-      size_bytes INTEGER,
-      created_at TEXT NOT NULL
+      content TEXT NOT NULL,
+      resource_references TEXT NOT NULL,
+      current_version_id TEXT NOT NULL,
+      sync_dirty INTEGER NOT NULL
     );
-    CREATE TABLE attachment_blobs (
-      attachment_id TEXT PRIMARY KEY REFERENCES attachments(id) ON DELETE CASCADE
-    );
-    CREATE TABLE pdf_page_text (
-      attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
-      page INTEGER NOT NULL,
-      text TEXT NOT NULL DEFAULT '',
-      PRIMARY KEY (attachment_id, page)
-    );
-    CREATE TABLE node_attachments (
-      node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-      attachment_id TEXT NOT NULL REFERENCES attachments(id),
-      role TEXT NOT NULL,
-      PRIMARY KEY (node_id, attachment_id, role)
-    );
-    INSERT INTO nodes (id) VALUES ('node-1');
-    INSERT INTO attachments (id, created_at) VALUES ('att-1', '2026-05-04T01:00:00.000Z');
-    INSERT INTO attachment_blobs (attachment_id) VALUES ('att-1');
-    INSERT INTO pdf_page_text (attachment_id, page, text) VALUES ('att-1', 1, 'PDF text');
-    INSERT INTO node_attachments (node_id, attachment_id, role) VALUES ('node-1', 'att-1', 'reference');
   `);
+  database.prepare('INSERT INTO nodes VALUES (?, ?, ?, ?, ?)').run(
+    'node-1', '# Current body', JSON.stringify([{
+      storage_key: `${'a'.repeat(64)}.pdf`, role: 'reference', original_name: 'Original.pdf'
+    }]), 'node-version-1', 1
+  );
+  database.prepare(`INSERT INTO sync_object_state
+    (object_type, object_id, state_seq, current_version_id, content_hash,
+     last_modified_by_host_name, updated_at, sync_dirty, deleted_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    'node', 'node-1', 1, 'node-version-1', 'node-hash-1', 'mobile', '2026-05-04T01:00:00.000Z', 1, null
+  );
 }
