@@ -14,6 +14,7 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
 }) }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -39,12 +40,12 @@ function open(name: string) {
 function branch(version: string, title: string): NativeSyncNodeRecord {
   const time = '2026-09-20T00:00:00.000Z';
   return {
-    ancestor_version_ids: [], body_text: 'Shared body', content_hash: `hash-${version}`,
+    ancestor_version_ids: [], body_text: `Body ${version}`, content_hash: `hash-${version}`,
     host_name: version, object_id: 'topic', object_type: 'node',
     parent_version_id: null, parent_version_ids: [], updated_at: time,
     version_created_at: time, version_id: version,
     snapshot: {
-      anchor_link: null, attachments: [], content: 'Shared body', created_at: time,
+      anchor_link: null, attachments: [], content: `Body ${version}`, created_at: time,
       deleted_at: null, desired_retention: null, hide_title_heading: false, id: 'topic',
       image_regions: null, is_title_manual: true, kind: 'topic', opening_text: null,
       parent_id: null, position: null, priority: null, reveal: null, title,
@@ -69,15 +70,18 @@ async function push(record: NativeSyncNodeRecord) {
 async function resolve(name: string, local: NativeSyncNodeRecord, incoming: NativeSyncNodeRecord) {
   const port = open(name);
   await applySyncNodesWithDbPort(port, [local]);
+  await retainLocalEditBase(port, { holdId: `draft-${name}`, nodeId: 'topic', versionId: local.version_id! });
   // An existing local annotation favors the local head when no common body is available.
   await port.run(`INSERT INTO nodes
     (id, kind, title, parent_id, anchor_link, anchor_resolution_status, anchor_source_version_id, created_at, updated_at)
     VALUES (?, 'note', 'Note', 'topic', 'anchor', 'resolved', ?, ?, ?)`,
   [`note-${name}`, local.version_id, local.updated_at, local.updated_at]);
-  return push(incoming);
+  const resolution = await push(incoming);
+  await retainLocalEditBase(port, { holdId: `result-${name}`, nodeId: 'topic', versionId: resolution.version_id! });
+  return resolution;
 }
 
-it('keeps different resolved payloads distinct and converges after exchanging them', async () => {
+it('resolves incomparable bases in one exchange while preserving both bodies after restart and replay', async () => {
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-resolution-identity-'));
   const a = branch('branch-a', 'Title A');
   const b = branch('branch-b', 'Title B');
@@ -95,5 +99,18 @@ it('keeps different resolved payloads distinct and converges after exchanging th
   expect(finalLeft.content_hash).toBe(finalRight.content_hash);
   expect(finalLeft.snapshot).toEqual(finalRight.snapshot);
   expect(new Set(finalLeft.parent_version_ids)).toEqual(new Set([left.version_id, right.version_id]));
-  expect((await push(left)).version_id).toBe(finalRight.version_id);
+  for (const name of ['left', 'right']) {
+    const port = open(name);
+    const reopened = (await loadCurrentSyncNodeRecord(port, 'topic'))!;
+    expect(reopened.version_id).toBe(finalRight.version_id);
+    const alternatives = await port.query<{ body_text: string }>(
+      "SELECT body_text FROM node_text_alternatives WHERE node_id = 'topic' AND status = 'available'");
+    expect(new Set([reopened.body_text, ...alternatives.map((row) => row.body_text)]))
+      .toEqual(new Set([a.body_text, b.body_text]));
+    const [before] = await port.query<{ count: number }>('SELECT COUNT(*) AS count FROM node_sync_versions');
+    expect((await push(left)).version_id).toBe(finalRight.version_id);
+    expect((await push(right)).version_id).toBe(finalRight.version_id);
+    const [after] = await port.query<{ count: number }>('SELECT COUNT(*) AS count FROM node_sync_versions');
+    expect(after).toEqual(before);
+  }
 });
