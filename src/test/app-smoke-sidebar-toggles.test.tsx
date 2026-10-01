@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeAll, expect, it } from 'vitest';
+import { afterEach, beforeAll, expect, it, vi } from 'vitest';
 
 import './app-smoke.shared';
 
@@ -11,6 +11,13 @@ beforeAll(async () => {
   await preloadTranslationCatalog('en');
   await preloadTranslationCatalog('zh-Hans');
 });
+
+afterEach(() => vi.restoreAllMocks());
+
+function mockBrowserPlatform(platform: string) {
+  vi.spyOn(navigator, 'platform', 'get').mockReturnValue(platform);
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue(platform);
+}
 
 function openRightPanelFromMenu(label: string) {
   fireEvent.keyDown(screen.getByRole('button', { name: 'More right sidebar panels' }), { key: 'ArrowDown' });
@@ -61,7 +68,8 @@ it('keeps the workspace stable when switching right panels after collapsing the 
   expect(screen.getByRole('main', { name: 'Foliole workspace' })).toBeInTheDocument();
 });
 
-it('toggles sidebars from non-editing bracket shortcuts', () => {
+it.each(['Win32', 'Linux x86_64'])('toggles sidebars from non-editing bracket shortcuts on %s', (platform) => {
+  mockBrowserPlatform(platform);
   render(<App />);
 
   fireEvent.keyDown(window, { key: '[' });
@@ -77,4 +85,36 @@ it('toggles sidebars from non-editing bracket shortcuts', () => {
   fireEvent.keyDown(window, { key: '\\' });
   expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(true);
   expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(true);
+});
+
+it('uses the macOS left sidebar shortcut without assigning bare bracket defaults', () => {
+  mockBrowserPlatform('MacIntel');
+  render(<App />);
+
+  for (const key of ['[', ']', '\\']) {
+    fireEvent.keyDown(window, { key });
+    expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(false);
+    expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(false);
+  }
+
+  fireEvent.keyDown(window, { key: 'l', metaKey: true, shiftKey: true });
+  expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(true);
+  expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(false);
+
+  fireEvent.keyDown(window, { key: 'l', metaKey: true, shiftKey: true });
+  expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(false);
+});
+
+it.each(['Win32', 'Linux x86_64'])('keeps bracket input from toggling sidebars while editing on %s', (platform) => {
+  mockBrowserPlatform(platform);
+  render(<App />);
+  const editor = screen.getByTestId('editor-value');
+  editor.focus();
+  expect(editor).toHaveFocus();
+
+  for (const key of ['[', ']', '\\']) {
+    fireEvent.keyDown(editor, { key });
+    expect(useWorkspaceStore.getState().layout.isListCollapsed).toBe(false);
+    expect(useWorkspaceStore.getState().layout.isRightSidebarCollapsed).toBe(false);
+  }
 });
