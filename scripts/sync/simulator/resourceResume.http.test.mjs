@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { Buffer } from 'node:buffer';
+import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import process from 'node:process';
 import { promises as fs } from 'node:fs';
@@ -68,7 +69,9 @@ async function seedResource(source) {
 for (const restart of [false, true]) it(`resumes interrupted images without an edit, restart=${restart}`, async () => {
   process.env.FOLIOLE_SIM_PATH = 'desktop';
   process.env.FOLIOLE_SIM_SCENARIO = 'resource-resume';
-  const root = await fs.mkdtemp(path.resolve('.tmp/artifacts/s275/resume-'));
+  const parent = path.resolve('.tmp/artifacts/s275', `run-${randomUUID()}`);
+  await fs.mkdir(parent, { recursive: true });
+  const root = await fs.mkdtemp(path.join(parent, 'resume-'));
   const source = openPeer(root, 'a', '1');
   const target = openPeer(root, 'b', '1');
   pairPeers([source, target]);
