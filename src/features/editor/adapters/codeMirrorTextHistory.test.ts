@@ -1,3 +1,4 @@
+import { cursorLineEnd, cursorLineStart } from '@codemirror/commands';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -102,6 +103,29 @@ describe('CodeMirror text history transactions', () => {
 });
 
 describe('CodeMirror text history selection', () => {
+  it('moves to logical line boundaries in mixed-direction text', () => {
+    const runtime = createView();
+    runtime.view.dispatch({ changes: { from: 0, to: 1, insert: 'fooفرخة' } });
+    runtime.view.dispatch({ selection: { anchor: 2 } });
+
+    expect(cursorLineEnd(runtime.view)).toBe(true);
+    expect(runtime.view.state.selection.main.head).toBe(7);
+    expect(cursorLineStart(runtime.view)).toBe(true);
+    expect(runtime.view.state.selection.main.head).toBe(0);
+  });
+
+  it('keeps the caret beside replacement text when another insertion reaches its boundary', () => {
+    const runtime = createView();
+    runtime.view.dispatch({ selection: { anchor: 0, head: 1 } });
+    runtime.view.dispatch(runtime.view.state.replaceSelection('B'), { userEvent: 'input.type' });
+
+    runtime.view.dispatch({ changes: { from: 1, insert: 'C' } });
+
+    expect(runtime.view.state.doc.toString()).toBe('BC');
+    expect(runtime.view.state.selection.main).toMatchObject({ anchor: 1, head: 1 });
+    expect(runtime.entries).toHaveLength(1);
+  });
+
   it('restores the exact pre-edit selection during undo', () => {
     const runtime = createView();
     runtime.view.dispatch({ selection: { anchor: 0, head: 1 } });
