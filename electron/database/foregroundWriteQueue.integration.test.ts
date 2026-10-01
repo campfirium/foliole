@@ -153,7 +153,7 @@ it('runs waiting foreground creation before the next background write', async ()
 
 afterEach(async () => {
   closeDatabaseConnection();
-  await fs.rm(root, { force: true, recursive: true });
+  await fs.rm(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
 });
 
 it('rebuilds missing indexes in a real worker and settles the matching persisted source', async () => {

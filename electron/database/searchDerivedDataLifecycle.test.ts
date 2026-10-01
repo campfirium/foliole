@@ -168,7 +168,7 @@ it('removes stale search rows for soft-deleted and restored nodes when they are 
   expect(indexedPdfCount(['node-transient'])).toEqual({ count: 0 });
 });
 
-it('keeps PDF page text facts and sync state intact while soft delete only hides search', () => {
+it('keeps PDF page text facts and sync state intact while soft delete marks indexed Trash results', () => {
   upsertSearchNode({ content: 'transient marker', id: 'node-soft-pdf', title: 'Soft PDF' });
   linkReadyPdf('node-soft-pdf', SOFT_PDF_ID, 'soft pdf marker');
   processSearchQueue();
@@ -185,7 +185,10 @@ it('keeps PDF page text facts and sync state intact while soft delete only hides
   expect(openDatabaseConnection().sqlite
     .prepare("SELECT content_hash, deleted_at FROM sync_object_state WHERE object_type = 'pdf_page_text' AND object_id = ?")
     .get(`${SOFT_PDF_ID}:1`)).toEqual(beforeState);
-  expect(indexedPdfCount(['node-soft-pdf'])).toEqual({ count: 0 });
+  expect(indexedPdfCount(['node-soft-pdf'])).toEqual({ count: 1 });
+  expect(openDatabaseConnection().sqlite
+    .prepare('SELECT is_trashed FROM search.pdf_search WHERE node_id = ?')
+    .get('node-soft-pdf')).toEqual({ is_trashed: 1 });
 });
 
 it('clears historical search rows when subtree delete invalidations target missing nodes', () => {
@@ -197,7 +200,7 @@ it('clears historical search rows when subtree delete invalidations target missi
   expect(indexedPdfCount(['missing-node'])).toEqual({ count: 0 });
 });
 
-it('clears existing subtrees and exact missing targets in the same delete batch', () => {
+it('marks existing subtrees as Trash and clears exact missing targets in the same delete batch', () => {
   upsertSearchNode({ content: 'parent marker', id: 'batch-parent', title: 'Batch Parent' });
   upsertSearchNode({
     content: 'child marker',
@@ -213,7 +216,11 @@ it('clears existing subtrees and exact missing targets in the same delete batch'
   enqueueSubtreeDeletedInvalidation('batch-missing');
 
   expect(processSearchQueue()).toEqual({ failed: 0, processed: 2 });
-  expect(indexedNodeCount(['batch-parent', 'batch-child', 'batch-missing'])).toEqual({ count: 0 });
+  expect(indexedNodeCount(['batch-parent', 'batch-child'])).toEqual({ count: 2 });
+  expect(openDatabaseConnection().sqlite
+    .prepare('SELECT is_trashed FROM search.node_search WHERE node_id IN (?, ?)')
+    .all('batch-parent', 'batch-child')).toEqual([{ is_trashed: 1 }, { is_trashed: 1 }]);
+  expect(indexedNodeCount(['batch-missing'])).toEqual({ count: 0 });
   expect(indexedPdfCount(['batch-missing'])).toEqual({ count: 0 });
   expect(indexedNodeCount(['batch-survivor'])).toEqual({ count: 1 });
 });

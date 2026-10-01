@@ -67,10 +67,10 @@ function seedPdfNode(input: { attachmentId: string; nodeId: string; pages: Array
   const insertPage = sqlite.prepare('INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)');
   input.pages.forEach(([page, text]) => insertPage.run(input.attachmentId, page, text));
   syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, [input.nodeId]);
-  sqlite.prepare('DELETE FROM search.pdf_search').run();
+  sqlite.prepare('DELETE FROM pdf_page_text').run();
 }
 
-it('falls back to PDF page text for long queries when the PDF FTS index is empty', () => {
+it('keeps long PDF queries backed by the indexed snapshot without source page text', () => {
   seedPdfNode({
     attachmentId: '5d851d5cb70f8b4050d43b86399239aa0d8c2f0695d68ea2dffeea470af85cce',
     nodeId: 'node-pdf-fallback',
@@ -84,7 +84,7 @@ it('falls back to PDF page text for long queries when the PDF FTS index is empty
   });
 });
 
-it('keeps cross-page PDF search backed by page text when the PDF FTS index is empty', () => {
+it('keeps cross-page PDF search backed by indexed neighbors without source page text', () => {
   seedPdfNode({
     attachmentId: '0a87220c20b6f49719e7927e38509b3631055b0484a08d33379ad201c3cf9c2a',
     nodeId: 'node-pdf-cross-page',
