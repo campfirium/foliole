@@ -36,9 +36,6 @@ it('carries only a native pack path through the Web contract before shared conte
 it('stages native attachment files and commits only their small manifest', async () => {
   const { owner, port } = fakeOwner();
   const attachmentId = 'b'.repeat(64);
-  port.query = vi.fn(async () => [{
-    id: attachmentId, mime_type: 'image/png', size_bytes: 32_600_000
-  }]) as DbPort['query'];
   const plugin = {
     finishAttachmentResourceBatch: vi.fn(async () => ({})),
     stageAttachmentResourceBatch: vi.fn(async () => ({
@@ -56,9 +53,8 @@ it('stages native attachment files and commits only their small manifest', async
 
   expect(plugin.stageAttachmentResourceBatch).toHaveBeenCalledWith({ batch_token: 'attachment-token' });
   expect(plugin.finishAttachmentResourceBatch).toHaveBeenCalledWith({ batch_token: 'attachment-token', committed: true });
-  expect(port.query).toHaveBeenCalledWith(
-    'SELECT id, mime_type, size_bytes FROM attachments WHERE id = ? LIMIT 1', [attachmentId]
-  );
+  expect(port.query).not.toHaveBeenCalled();
+  expect(port.run).not.toHaveBeenCalled();
 });
 
 it('reports failed shared commits so native staging can roll back', async () => {

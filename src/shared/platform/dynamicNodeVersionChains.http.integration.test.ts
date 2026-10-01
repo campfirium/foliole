@@ -45,7 +45,7 @@ function sourcePeer(): Peer {
   const { sqlite: db, driver } = openDatabaseConnection();
   const anchor = randomUUID();
   const id = createSyncGroupDeviceIdentity({ device_anchor: anchor, group_id: 'group',
-    library_path: db.name, path_flavor: 'posix' }).identity_key;
+    library_path: db.name, path_flavor: process.platform === 'win32' ? 'windows' : 'posix' }).identity_key;
   return { id, name: 'source', anchor, file: db.name, db, driver, port: createBetterSqliteDbPort(db) };
 }
 

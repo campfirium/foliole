@@ -68,6 +68,7 @@ afterEach(async () => {
 
 it.each(['android', 'ios'])('%s merges the real input base and persists the next input branch across reopen', async (platform) => {
   state.platform = platform;
+  await readCompanionContentSource('topic', 'editor-session');
   await insert(node({ content: 'Apples\nBread\nMilk coffee\n', currentVersionId: 'base' }), 'remote');
   const first = await saveCompanionContentEdit(edit('Apples tea\nBread\nMilk\n'));
   expect(first.content).toBe('Apples tea\nBread\nMilk coffee\n');
@@ -75,12 +76,14 @@ it.each(['android', 'ios'])('%s merges the real input base and persists the next
   await state.owner!.close();
   database.close();
   database = new Database(path.join(directory, 'companion.db'));
-  expect(database.prepare('SELECT content FROM nodes WHERE id = ?').get('topic')).toEqual({
+  expect(database.prepare(`SELECT CAST(data.data AS TEXT) AS content FROM nodes n
+    JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`).get('topic')).toEqual({
     content: 'Apples tea\nBread jam\nMilk coffee\n'
   });
 });
 
 it('replays an uncertain acknowledgement without creating another input version', async () => {
+  await readCompanionContentSource('topic', 'unacknowledged-input');
   const request = edit('Apples tea\nBread\nMilk\n');
   const first = await saveCompanionContentEdit(request);
   const replay = await saveCompanionContentEdit(request);
@@ -145,6 +148,7 @@ it('drops an orphaned companion editor hold when its database owner reopens', as
 });
 
 it('retains overlapping input as current content or an existing text alternative', async () => {
+  await readCompanionContentSource('topic', 'editor-session');
   await insert(node({ content: 'Apples coffee\nBread\nMilk\n', currentVersionId: 'base' }), 'remote');
   const saved = await saveCompanionContentEdit(edit('Apples tea\nBread\nMilk\n'));
   const rows = database.prepare('SELECT body_text FROM node_text_alternatives').all() as { body_text: string }[];
@@ -189,7 +193,9 @@ it('rejects an input whose parent was moved to trash before the writer ran', asy
   database.prepare('UPDATE nodes SET parent_id = ? WHERE id = ?').run('folder', 'topic');
   database.prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?').run(now, 'folder');
   await expect(saveCompanionContentEdit(edit('Protected draft'))).rejects.toThrow('cannot be edited');
-  expect(database.prepare('SELECT content FROM nodes WHERE id = ?').get('topic')).toEqual({ content: baseline });
+  expect(database.prepare(`SELECT CAST(data.data AS TEXT) AS content FROM nodes n
+    JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`).get('topic'))
+    .toEqual({ content: baseline });
 });
 
 

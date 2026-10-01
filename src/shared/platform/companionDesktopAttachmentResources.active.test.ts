@@ -21,6 +21,8 @@ const syncObjectsMock = vi.hoisted(() => ({
   loadCompanionMissingAttachmentResource: vi.fn(async () => ({
     attachment_id: 'att-3',
     content_hash: 'blob-hash-3',
+    mime_type: 'image/png',
+    storage_key: 'blob-hash-3.png',
     size_bytes: 4096
   })),
   loadCompanionMissingAttachmentResources: vi.fn()
@@ -33,7 +35,7 @@ const writerQueueMock = vi.hoisted(() => ({
 }));
 const databaseMock = vi.hoisted(() => ({
   commit: vi.fn(async () => ({ syncedIds: ['att-3'] })),
-  owner: {}
+  owner: { databasePath: '/native/companion.db' }
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -71,6 +73,8 @@ function resetMocks() {
   syncObjectsMock.loadCompanionMissingAttachmentResource.mockResolvedValue({
     attachment_id: 'att-3',
     content_hash: 'blob-hash-3',
+    mime_type: 'image/png',
+    storage_key: 'blob-hash-3.png',
     size_bytes: 4096
   });
   databaseMock.commit.mockResolvedValue({ syncedIds: ['att-3'] });
@@ -88,11 +92,14 @@ describe('companion desktop active attachment resource priority', () => {
     expect(syncObjectsMock.loadCompanionMissingAttachmentResource).toHaveBeenCalledWith('att-3');
     expect(syncObjectsMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
     expect(capacitorMock.plugin.downloadAttachmentResourceBatch).toHaveBeenCalledWith({
+      database_path: '/native/companion.db',
       resources: [{
         attachment_id: 'att-3',
         content_hash: 'blob-hash-3',
+        mime_type: 'image/png',
+        storage_key: 'blob-hash-3.png',
         headers: { 'X-Signature': 'signed' },
-        url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-3&content_hash=blob-hash-3'
+        url: 'http://10.0.2.2:38641/companion/attachment-resource?attachment_id=att-3&content_hash=blob-hash-3&storage_key=blob-hash-3.png'
       }]
     });
     expect(databaseMock.commit).toHaveBeenCalledWith(

@@ -100,8 +100,6 @@ function seedMixedSource(softDeleted = false) {
     driver.execute("UPDATE sync_object_state SET deleted_at = 'now' WHERE object_id = 'live-2'");
   }
   const attachmentId = 'a'.repeat(64);
-  driver.execute(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    VALUES (?, 'sample.png', 'image/png', 12, 'now')`, [attachmentId]);
   driver.execute(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, content_hash, updated_at, sync_dirty, last_modified_by_host_name)
     VALUES ('attachment', ?, 6, 'hash-attachment', 'now', 0, 'source')`, [attachmentId]);
@@ -210,13 +208,16 @@ it.each([false, true])('mobile orchestration scopes dependency progress over rea
       { objectId: 'live-1', nextRow: 1 },
       { objectId: 'live-2', nextRow: 1 }
     ]);
-    expect(target.prepare('SELECT id, content FROM nodes ORDER BY id').all()).toEqual([
+    expect(target.prepare(`SELECT n.id, v.body_text AS content FROM nodes n
+      JOIN node_sync_versions v ON v.version_id = n.current_version_id ORDER BY n.id`).all()).toEqual([
       { id: 'live-1', content: 'body-1' },
       { id: 'live-2', content: 'body-2' }
     ]);
     expect(target.prepare('SELECT count(*) AS count FROM node_sync_tombstones').get())
       .toEqual({ count: 1 });
     expect(target.pragma('quick_check', { simple: true })).toBe('ok');
+    expect(target.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'attachments'")
+      .get()).toBeUndefined();
   } finally {
     await receiver.server.close();
     revokeDesktopSyncGroupMemberStateReadiness(ids.receiver);

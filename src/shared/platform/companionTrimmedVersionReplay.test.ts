@@ -22,6 +22,7 @@ import { createBetterSqliteDbPort } from '../../../electron/database/betterSqlit
 import { closeDatabaseConnection, openDatabaseConnection } from '../../../electron/database/connection.js';
 import { buildDesktopSyncPack } from '../../../electron/database/syncPackBuilder.js';
 import { initializeDatabaseConnection } from '../../../lib/core/database/index.js';
+import { retainLocalEditBase } from '../../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createSyncGroupDeviceIdentity } from '../../../lib/platform/syncGroupUnifiedContract.js';
@@ -64,8 +65,9 @@ it.each(['desktop', 'companion'] as const)(
   const online = openDatabaseConnection();
   expect(await collectNodeVersionPayloads(createBetterSqliteDbPort(online.sqlite), nodeId))
     .toEqual({ released: 3, skipped: null });
-  expect(versionBodies()).toEqual([['A', 'left one\nright one'], ['B', null],
-    ['C', null], ['D', null], ['E', 'left edited\nright one']]);
+  expect(versionBodies()).toEqual([['A', 'left one\nright one'], ['E', 'left edited\nright one']]);
+  expect(online.sqlite.prepare('SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ?')
+    .all('E')).toEqual([{ parent_version_id: 'A' }]);
   const incomingPath = await buildIncomingPack('online', onlineIdentity.identity_key,
     offlineIdentity.identity_key);
   closeDatabaseConnection();
@@ -77,16 +79,17 @@ it.each(['desktop', 'companion'] as const)(
   installGroup(offlineIdentity.identity_key);
   const offline = openDatabaseConnection();
   const port = createBetterSqliteDbPort(offline.sqlite);
+  await retainLocalEditBase(port, { holdId: 'offline-editor', nodeId, versionId: 'F' });
   await expect(applyIncoming(mode, port, incomingPath, 'offline-device',
     onlineIdentity.identity_key, offlineIdentity.identity_key))
     .resolves.toMatchObject({ applied: true, toStateSeq: 1 });
-  const current = offline.sqlite.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
+  const current = offline.sqlite.prepare(`SELECT CAST(data.data AS TEXT) AS content, n.current_version_id
+    FROM nodes n JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`)
     .get(nodeId) as { content: string; current_version_id: string };
   expect(current.content).toBe('left edited\nright edited');
   expect(current.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
-  expect(versionBodies().slice(0, 6)).toEqual([['A', 'left one\nright one'],
-    ['B', null], ['C', null], ['D', null], ['E', 'left edited\nright one'],
-    ['F', 'left one\nright edited']]);
+  expect(versionBodies()).toEqual([['A', 'left one\nright one'], ['E', 'left edited\nright one'],
+    ['F', 'left one\nright edited'], [current.current_version_id, current.content]]);
   expect(offline.sqlite.prepare(`SELECT parent_version_id FROM node_sync_version_parents
     WHERE version_id = ? ORDER BY ordinal`).all(current.current_version_id))
     .toEqual([{ parent_version_id: 'E' }, { parent_version_id: 'F' }]);
@@ -108,7 +111,8 @@ async function replayMergedVersionToOnline(current: { content: string; current_v
   await expect(applyIncoming(mode, returnPort, returnPath, 'online-device',
     offlineIdentity.identity_key, onlineIdentity.identity_key))
     .resolves.toMatchObject({ applied: true });
-  expect(returned.sqlite.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
+  expect(returned.sqlite.prepare(`SELECT CAST(data.data AS TEXT) AS content, n.current_version_id
+    FROM nodes n JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`)
     .get(nodeId)).toEqual(current);
 }
 

@@ -3,6 +3,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const writerQueueMock = vi.hoisted(() => ({
   run: vi.fn(async <T>(task: () => Promise<T>) => task())
 }));
+const databaseOwnerMock = vi.hoisted(() => ({
+  runWriter: vi.fn(async (task: (db: unknown) => Promise<unknown>) => task({
+    query: async () => [], transaction: async (execute: (db: unknown) => Promise<unknown>) =>
+      execute({ query: async () => [] })
+  }))
+}));
+vi.mock('./companion/runtime/iosCompanionDatabaseBootstrap', () => ({
+  getIosCompanionDatabaseOwner: () => databaseOwnerMock
+}));
 const iosSyncbackStoreMock = vi.hoisted(() => ({
   loadNodeVersions: vi.fn(async () => [{ object_id: 'node-1' }]),
   loadReviewLog: vi.fn(async () => [{ op_id: 'op-1' }]),
@@ -113,6 +122,7 @@ async function testNativePluginBridge() {
   await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
   await expect(api.loadCompanionMissingContentBlobs(3)).resolves.toEqual([{ hash: 'a'.repeat(64), size_bytes: 1024 }]);
   expect(iosReadsMock.missingBlobs).toHaveBeenCalledWith(3);
+  expect(databaseOwnerMock.runWriter).toHaveBeenCalled();
   await expect(api.loadCompanionMissingAttachmentResources(4)).resolves.toEqual([
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
@@ -188,7 +198,7 @@ describe('companion sync objects bridge', () => {
     capacitorMock.platform.mockReturnValue('android');
   });
 
-  it('loads and applies generic sync objects through the native plugin', testNativePluginBridge);
+  it('loads and applies generic sync objects through the shared database owner', testNativePluginBridge);
 
   it('loads generic sync object metadata and payloads on iOS', async () => {
     capacitorMock.platform.mockReturnValue('ios');

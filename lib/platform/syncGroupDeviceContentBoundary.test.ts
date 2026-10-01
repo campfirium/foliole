@@ -27,7 +27,10 @@ it('keeps Device identity in group facts and out of Sync Pack business rows', ()
   const groupFacts = PACK_SCHEMA.filter((statement) =>
     statement.includes('sync_group_devices')).join('\n');
   const businessRows = PACK_SCHEMA.filter((statement) =>
-    !statement.includes('sync_group_devices')).join('\n');
+    !/CREATE TABLE (pack_manifest|sync_groups|sync_group_devices|node_version_peer_heads)\b/.test(statement)).join('\n');
+  const peerHeads = PACK_SCHEMA.find((statement) => statement.includes('CREATE TABLE node_version_peer_heads'));
+  expect(peerHeads).toMatch(/\bdevice_identity_key\b/);
+  expect(peerHeads).toMatch(/\blibrary_epoch\b/);
   for (const key of ['canonical_library_path', 'device_anchor', 'device_identity_key']) {
     expect(groupFacts).toMatch(new RegExp(`\\b${key}\\b`));
   }

@@ -28,6 +28,14 @@ function evidence(overrides: Partial<PreparedAnchorEvidence> = {}): PreparedAnch
 it('uses the prepared anchor topology as the production sync contract while preserving join v1', () => {
   expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(fixture.production_protocol_version);
   expect(PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(fixture.prepared_protocol_version);
+  expect(PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR).toEqual(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
+  expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR).toMatchObject({
+    min_supported_version: 15, max_supported_version: 15,
+    capabilities: expect.arrayContaining([
+      'node-owned-resource-references-v1', 'parent-child-order-v1',
+      'dynamic-node-version-chains-v1', 'desktop-soft-anchor-v1'
+    ])
+  });
   expect(SYNC_GROUP_JOIN_CONTRACT_VERSION).toBe(fixture.join_contract_version);
 });
 

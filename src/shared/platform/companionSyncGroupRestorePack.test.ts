@@ -73,11 +73,11 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
     expect(target.prepare("SELECT object_id FROM sync_object_state WHERE object_id = 'b-only-node'").get())
       .toBeUndefined();
     expect(target.prepare('SELECT * FROM node_version_device_revisions').all()).toEqual([]);
-    expect(target.prepare('SELECT * FROM node_version_device_bases').all()).toEqual([]);
+    assertRestoredPeerBase(source, target);
     expect(target.prepare(`SELECT library_epoch, proof_revision FROM node_version_local_proof_state
       WHERE singleton_id = 1`).get()).toEqual({ library_epoch: restoreId, proof_revision: 0 });
     expect(await collectNodeVersionPayloads(port, 'backup-node'))
-      .toEqual({ released: 0, skipped: 'peer_base_unknown' });
+      .toEqual({ released: 0, skipped: null });
     await verifyOrdinarySyncAfterRestore(source, target, root);
   } finally {
     source.close();
@@ -85,6 +85,17 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
     await fs.rm(root, { force: true, recursive: true });
   }
 });
+
+function assertRestoredPeerBase(source: Database.Database, target: Database.Database) {
+  const sourceProof = source.prepare(`SELECT library_epoch, proof_revision
+    FROM node_version_local_proof_state WHERE singleton_id = 1`).get() as {
+      library_epoch: string; proof_revision: number
+    };
+  expect(target.prepare('SELECT * FROM node_version_device_bases').all()).toEqual([{
+    group_id: groupId, device_identity_key: sourceId, object_id: 'backup-node',
+    version_id: 'backup-node-version', ...sourceProof, pack_id: 'local-head', updated_at: at
+  }]);
+}
 
 async function verifyOrdinarySyncAfterRestore(source: Database.Database,
   target: Database.Database, root: string) {
