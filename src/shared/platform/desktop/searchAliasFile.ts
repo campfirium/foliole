@@ -3,7 +3,7 @@ import { getRuntimeInvoke } from '../runtimeInvoke';
 
 function requireRuntime() {
   const invoke = getRuntimeInvoke();
-  if (!invoke) throw new Error('Desktop search aliases are unavailable.');
+  if (!invoke) throw new Error('Desktop search synonyms are unavailable.');
   return invoke;
 }
 

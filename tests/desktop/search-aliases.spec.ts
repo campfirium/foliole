@@ -18,6 +18,7 @@ async function saveAliases(desktopWindow: Page, stateRoot: string, text: string)
     throw new Error('alias file is outside the isolated native test state');
   }
   expect(path.basename(path.dirname(status.path))).toBe('Widgets');
+  expect(path.basename(status.path)).toBe('search-synonyms.txt');
   await fs.mkdir(path.dirname(status.path), { recursive: true });
   await fs.writeFile(status.path, text, 'utf8');
 }

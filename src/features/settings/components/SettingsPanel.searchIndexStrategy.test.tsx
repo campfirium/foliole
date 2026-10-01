@@ -47,7 +47,7 @@ beforeEach(() => {
     }
     if (command === 'load_search_index_rebuild_status') return null;
     if (command === 'load_search_alias_file_status' || command === 'open_search_alias_file') {
-      return { error: null, path: '/library/Widgets/search-aliases.txt' };
+      return { error: null, path: '/library/Widgets/search-synonyms.txt' };
     }
     if (command === 'save_app_settings_state') return null;
     if (command === 'rebuild_search_index') {
@@ -87,9 +87,9 @@ it('persists full-text search language from General settings', async () => {
   expect(await screen.findByRole('combobox', { name: 'Full-text search language' })).toHaveValue('cjk-trigram');
 });
 
-it('opens the external aliases file from General search settings', async () => {
+it('opens the search synonyms file from General search settings', async () => {
   renderWithMouseGestureProvider(<SearchSettingsHarness />);
-  expect(await screen.findByText('Search aliases')).toBeInTheDocument();
+  expect(await screen.findByText('Search synonyms')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Open file' }));
   await waitFor(() => expect(window.electronAPI!.invoke).toHaveBeenCalledWith('open_search_alias_file'));
 });

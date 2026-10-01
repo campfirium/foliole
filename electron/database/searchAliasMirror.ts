@@ -18,8 +18,9 @@ import {
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
 const SETTING_KEY = 'search_aliases_document';
-const TEMPLATE = '# One group per line. Separate spellings with |.\n# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好\n';
+const TEMPLATE = '# One group per line. Separate terms that should match each other with |.\n# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好\n';
 const PREVIOUS_TEMPLATES = [
+  '# One group per line. Separate spellings with |.\n# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好\n',
   '# One group per line. Separate spellings with |.\n# Disney | 迪士尼\n',
   '# One group per line. Separate spellings with |.\n# Incremental reading | 渐进阅读\n',
   '# One group per line. Separate spellings with |.\n# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好 | 哈囉\n'
@@ -42,11 +43,11 @@ function readDatabaseDocument(): string | null {
   const value = loadJsonSetting(SETTING_KEY);
   if (value === null) return null;
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('The saved search aliases document is invalid.');
+    throw new Error('The saved search synonyms document is invalid.');
   }
   const record = value as Partial<StoredDocument>;
   if (record.version !== 1 || typeof record.text !== 'string') {
-    throw new Error('The saved search aliases document has an unsupported version.');
+    throw new Error('The saved search synonyms document has an unsupported version.');
   }
   return parseSearchAliasDocument(record.text).text;
 }
@@ -116,7 +117,7 @@ async function reconcileDocument(mode: 'normal' | 'restore') {
   }
   if (hash(fileText) !== baseline) await preserveSearchAliasConflict(filePath);
   if (await readOptionalText(filePath) !== source) {
-    throw new Error('The search aliases file changed during reconciliation. Retry after saving.');
+    throw new Error('The search synonyms file changed during reconciliation. Retry after saving.');
   }
   await writeTextAtomically(filePath, databaseText);
   await commitBaseline(databasePath, databaseText);
@@ -144,7 +145,7 @@ export async function reconcileSearchAliasMirror(mode: 'normal' | 'restore' = 'n
     if (lastError !== message) {
       void import('electron').then(({ Notification }) => {
         if (Notification.isSupported()) {
-          new Notification({ title: 'Search aliases could not be updated', body: message }).show();
+          new Notification({ title: 'Search synonyms could not be updated', body: message }).show();
         }
       }).catch(() => {});
     }
@@ -190,7 +191,7 @@ export async function startSearchAliasMirror(mode: 'normal' | 'restore' = 'norma
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   boundDatabasePath = databasePath;
   watcher = watch(path.dirname(filePath), (_event, name) => {
-    if (name && name.toString() !== 'search-aliases.txt') return;
+    if (name && name.toString() !== path.basename(filePath)) return;
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => {
       if (boundDatabasePath !== databasePath) return;

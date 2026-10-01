@@ -6,31 +6,40 @@ import path from 'node:path';
 import { resolveAppPaths } from '../ipc/paths.js';
 
 export function searchAliasFilePath(databasePath: string) {
-  return path.join(path.dirname(path.dirname(databasePath)), 'Widgets', 'search-aliases.txt');
+  return path.join(path.dirname(path.dirname(databasePath)), 'Widgets', 'search-synonyms.txt');
 }
 
 export function legacySearchAliasFilePath(databasePath: string) {
   return path.join(path.dirname(databasePath), 'search-aliases.txt');
 }
 
+function legacyWidgetSearchAliasFilePath(databasePath: string) {
+  return path.join(path.dirname(searchAliasFilePath(databasePath)), 'search-aliases.txt');
+}
+
 export async function migrateLegacySearchAliasFile(databasePath: string) {
-  const legacyPath = legacySearchAliasFilePath(databasePath);
-  const legacyText = await readOptionalText(legacyPath);
-  if (legacyText === null) return;
   const filePath = searchAliasFilePath(databasePath);
+  const legacyPaths = [legacyWidgetSearchAliasFilePath(databasePath), legacySearchAliasFilePath(databasePath)];
+  const legacyFiles = (await Promise.all(legacyPaths.map(async (file) => ({
+    file, text: await readOptionalText(file)
+  })))).filter((entry): entry is { file: string; text: string } => entry.text !== null);
+  if (legacyFiles.length === 0) return;
   const currentText = await readOptionalText(filePath);
-  if (currentText !== null && currentText !== legacyText) {
-    throw new Error(`Search aliases exist in both Data and Widgets with different contents: ${legacyPath}; ${filePath}`);
+  const expectedText = currentText ?? legacyFiles[0]!.text;
+  if (legacyFiles.some((entry) => entry.text !== expectedText)) {
+    throw new Error(`Search synonym files have different contents: ${[filePath, ...legacyPaths].join('; ')}`);
   }
   if (currentText === null) {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.copyFile(legacyPath, filePath, constants.COPYFILE_EXCL);
+    await fs.copyFile(legacyFiles[0]!.file, filePath, constants.COPYFILE_EXCL);
   }
-  if (await readOptionalText(legacyPath) !== await readOptionalText(filePath)) {
-    throw new Error(`The search aliases file changed during relocation: ${legacyPath}; ${filePath}`);
+  for (const legacy of legacyFiles) {
+    if (await readOptionalText(legacy.file) !== await readOptionalText(filePath)) {
+      throw new Error(`The search synonym file changed during relocation: ${legacy.file}; ${filePath}`);
+    }
+    const stamp = new Date().toISOString().replace(/[:.]/gu, '-');
+    await fs.rename(legacy.file, `${legacy.file}.migrated-${stamp}-${randomUUID().slice(0, 8)}.txt`);
   }
-  const stamp = new Date().toISOString().replace(/[:.]/gu, '-');
-  await fs.rename(legacyPath, `${legacyPath}.migrated-${stamp}-${randomUUID().slice(0, 8)}.txt`);
 }
 
 export function searchAliasBaselinePath(databasePath: string) {

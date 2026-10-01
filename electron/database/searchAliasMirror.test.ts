@@ -41,7 +41,7 @@ afterEach(async () => {
 
 it('creates a multilingual example without saving an untouched template', async () => {
   await ensureSearchAliasFile();
-  expect(filePath).toBe(path.join(appData, 'Foliole', 'Widgets', 'search-aliases.txt'));
+  expect(filePath).toBe(path.join(appData, 'Foliole', 'Widgets', 'search-synonyms.txt'));
   expect(await fs.readFile(filePath, 'utf8')).toContain(
     '# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好\n'
   );
@@ -62,13 +62,47 @@ it('moves the previous Data file into Widgets without dropping its text', async 
   expect(await fs.readFile(path.join(path.dirname(legacyPath), backup!), 'utf8')).toBe('Atlas | Mapbook\n');
 });
 
+it('moves the previous Widgets filename while keeping a migration backup', async () => {
+  const previousPath = path.join(path.dirname(filePath), 'search-aliases.txt');
+  await fs.writeFile(previousPath, 'Hello | 你好\n');
+  await reconcileSearchAliasMirror();
+  expect(await fs.readFile(filePath, 'utf8')).toBe('Hello | 你好\n');
+  expect(content()).toBe('Hello | 你好\n');
+  await expect(fs.stat(previousPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  const backup = (await fs.readdir(path.dirname(filePath)))
+    .find((name) => name.startsWith('search-aliases.txt.migrated-'));
+  expect(await fs.readFile(path.join(path.dirname(filePath), backup!), 'utf8')).toBe('Hello | 你好\n');
+});
+
+it('does not choose between different legacy files when the new filename is absent', async () => {
+  const dataPath = legacySearchAliasFilePath(openDatabaseConnection().dbPath);
+  const previousWidgetPath = path.join(path.dirname(filePath), 'search-aliases.txt');
+  await fs.writeFile(dataPath, 'Atlas | Mapbook\n');
+  await fs.writeFile(previousWidgetPath, 'Hello | 你好\n');
+  await expect(reconcileSearchAliasMirror()).rejects.toThrow('different contents');
+  expect(await fs.readFile(dataPath, 'utf8')).toBe('Atlas | Mapbook\n');
+  expect(await fs.readFile(previousWidgetPath, 'utf8')).toBe('Hello | 你好\n');
+  await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
+it('moves matching files from both former locations into one canonical file', async () => {
+  const dataPath = legacySearchAliasFilePath(openDatabaseConnection().dbPath);
+  const previousWidgetPath = path.join(path.dirname(filePath), 'search-aliases.txt');
+  await fs.writeFile(dataPath, 'Hello | 你好\n');
+  await fs.writeFile(previousWidgetPath, 'Hello | 你好\n');
+  await reconcileSearchAliasMirror();
+  expect(await fs.readFile(filePath, 'utf8')).toBe('Hello | 你好\n');
+  await expect(fs.stat(dataPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  await expect(fs.stat(previousWidgetPath)).rejects.toMatchObject({ code: 'ENOENT' });
+});
+
 it('keeps different files in both locations when a location conflict exists', async () => {
   const legacyPath = legacySearchAliasFilePath(openDatabaseConnection().dbPath);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   saveJsonSetting('search_aliases_document', { version: 1, text: 'saved | valid\n' });
   await fs.writeFile(legacyPath, 'Atlas | Mapbook\n');
   await fs.writeFile(filePath, 'Hello | Hallo\n');
-  await expect(reconcileSearchAliasMirror()).rejects.toThrow('both Data and Widgets');
+  await expect(reconcileSearchAliasMirror()).rejects.toThrow('different contents');
   expect(await fs.readFile(legacyPath, 'utf8')).toBe('Atlas | Mapbook\n');
   expect(await fs.readFile(filePath, 'utf8')).toBe('Hello | Hallo\n');
   expect(content()).toBe('saved | valid\n');
@@ -85,6 +119,10 @@ it('does not save previous untouched examples as aliases', async () => {
     await reconcileSearchAliasMirror();
     expect(content()).toBeNull();
   }
+  await fs.writeFile(filePath,
+    '# One group per line. Separate spellings with |.\n# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好\n');
+  await reconcileSearchAliasMirror();
+  expect(content()).toBeNull();
 });
 
 it('imports a saved document, regenerates a missing file, and syncs an explicit clear', async () => {
