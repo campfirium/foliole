@@ -200,7 +200,9 @@
     "quality:ios:full": "node scripts/quality/quality-command-contracts.mjs allow quality:ios:full && FOLIOLE_IOS_RESOURCE_MODE=full npm run quality:ios",
     "ios:sync:preflight": "node scripts/quality/quality-command-contracts.mjs allow ios:sync:preflight && npm run check:ios-boundary",
     "ios:sqlite-capability:gate": "node scripts/quality/quality-command-contracts.mjs allow ios:sqlite-capability:gate && node scripts/sync/ios-capacitor-sqlite-capability-gate.mjs",
-    "sync:sql-surface:scan": "node scripts/quality/quality-command-contracts.mjs allow sync:sql-surface:scan && node scripts/sync/sql-surface-scan.mjs"
+    "sync:sql-surface:scan": "node scripts/quality/quality-command-contracts.mjs allow sync:sql-surface:scan && node scripts/sync/sql-surface-scan.mjs",
+    "database:audit:snapshot": "python3 scripts/database/database-audit-snapshot.py",
+    "database:audit": "node --no-warnings scripts/database/database-audit.mjs"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "8.1.1",
