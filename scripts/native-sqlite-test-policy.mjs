@@ -1,4 +1,5 @@
 const controlledElectronSqliteTests = [
+  'scripts/ios/ios-hosted-sync-pack-oracle-seed.test.mjs',
   'scripts/desktop/fixed-performance-fixture.test.mjs',
   'scripts/desktop/fixed-performance-http.test.mjs',
   'src/shared/platform/companion/runtime/companionCurrentVersionBodies.sqlite.test.ts',
@@ -155,6 +156,7 @@ const controlledElectronSqliteTests = [
   'electron/sync/syncNodeVisibilityPruning.test.ts',
   'electron/sync/syncPackNodeTombstoneApply.test.ts',
   'electron/sync/syncPackStoredVersionDependencies.test.ts',
+  'electron/sync/syncPackContractedParentFrontiers.test.ts',
   'electron/sync/watchedFolderPayloadIsolation.test.ts',
   'electron/sync/workgroupRestore.http.test.ts',
   'electron/sync/workgroupRestore.mobileHttp.integration.test.ts',

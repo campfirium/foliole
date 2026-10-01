@@ -120,15 +120,16 @@ it.each([false, true])('converges matching production heads after independent ov
   assertPersisted(right, 'Shared final body', final.version_id!);
 });
 
-it('keeps different production heads intact when their best common bases are incomparable', async () => {
+it('resolves different production heads while preserving both bodies when their common bases are incomparable', async () => {
   const { left, right } = await diverge();
   const [a, b] = await Promise.all([current(left), current(right)]);
-  expect((await applyNodePushBatchWithDbPort(left.port, [payload(b)])).acks[0]?.status).toBe('conflict');
-  expect((await applyNodePushBatchWithDbPort(right.port, [payload(a)])).acks[0]?.status).toBe('conflict');
-  assertPersisted(left, 'Left edit', a.version_id!);
-  assertPersisted(right, 'Right edit', b.version_id!);
+  expect((await applyNodePushBatchWithDbPort(left.port, [payload(b)])).acks[0]?.status).toBe('accepted');
+  expect((await applyNodePushBatchWithDbPort(right.port, [payload(a)])).acks[0]?.status).toBe('accepted');
   for (const peer of [left, right]) {
-    expect(peer.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id IN (?, ?)')
-      .pluck().all(a.version_id, b.version_id).sort()).toEqual(['Left edit', 'Right edit']);
+    const final = await current(peer);
+    assertPersisted(peer, final.body_text!, final.version_id!);
+    const alternatives = peer.db.prepare("SELECT body_text FROM node_text_alternatives WHERE node_id = 'topic' AND status = 'available'")
+      .pluck().all() as string[];
+    expect(new Set([final.body_text, ...alternatives])).toEqual(new Set(['Left edit', 'Right edit']));
   }
 });

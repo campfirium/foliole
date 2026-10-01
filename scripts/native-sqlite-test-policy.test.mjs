@@ -70,6 +70,7 @@ describe('native sqlite test policy', () => {
   });
 
   it('keeps the fixed iOS corpus product contract on the Electron ABI test entry', () => {
+    expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-hosted-sync-pack-oracle-seed.test.mjs');
     expect(controlledElectronSqliteTests).toContain('scripts/ios/ios-acceptance-contract-corpus-product.test.mjs');
     expect(controlledElectronSqliteTests.some((file) => file.includes('ios-sync-pack-acceptance-fixture')))
       .toBe(false);

@@ -27,6 +27,7 @@ export async function validateStoredVersionDependencies(
   parents: SyncPackNodeVersionParentRow[]
 ) {
   const byId = new Map(incoming.map((row) => [row.version_id, row]));
+  const equivalentFrontiers = new Map<string, boolean>();
   await assertReturningParentOwners(port, byId);
   for (const edge of parents) {
     const child = byId.get(edge.version_id) ?? await heldVersion(port, edge.version_id);
@@ -43,6 +44,10 @@ export async function validateStoredVersionDependencies(
       'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?', [edge.version_id]);
     // An existing contracted chain is kept as-is; incoming edges cannot expand it.
     if (storedChild && incomingChild && storedChild.parent_version_id !== incomingChild.parent_version_id) {
+      if (!equivalentFrontiers.has(edge.version_id)) {
+        equivalentFrontiers.set(edge.version_id, await provenContractedFrontiers(port, edge.version_id, parents));
+      }
+      if (equivalentFrontiers.get(edge.version_id)) continue;
       if (!storedChild.parent_version_id || incomingChild.parent_version_id && (
         incomingAncestor(parents, storedChild.parent_version_id, incomingChild.parent_version_id) ||
         await isStoredAncestorVersion(port, storedChild.parent_version_id, incomingChild.parent_version_id))) continue;
@@ -64,6 +69,25 @@ export async function validateStoredVersionDependencies(
       throw new Error(`sync_pack_node_version_parent_mismatch:${edge.version_id}`);
     }
   }
+}
+
+async function provenContractedFrontiers(port: DbPort, versionId: string, incoming: SyncPackNodeVersionParentRow[]) {
+  const stored = await port.query<{ parent_version_id: string }>(
+    'SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ?', [versionId]);
+  const left = stored.map(row => row.parent_version_id);
+  const right = incoming.filter(row => row.version_id === versionId).map(row => row.parent_version_id);
+  if (!left.length || !right.length) return false;
+  const comparable = async (first: string, second: string) => first === second ||
+    incomingAncestor(incoming, first, second) || incomingAncestor(incoming, second, first) ||
+    await isStoredAncestorVersion(port, first, second) || await isStoredAncestorVersion(port, second, first);
+  for (const [frontier, other] of [[left, right], [right, left]]) {
+    for (const parent of frontier!) {
+      let covered = false;
+      for (const candidate of other!) if (await comparable(parent, candidate)) { covered = true; break; }
+      if (!covered) return false;
+    }
+  }
+  return true;
 }
 
 async function assertReturningParentOwners(port: DbPort, incoming: Map<string, VersionIdentity>) {
