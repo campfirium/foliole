@@ -33,7 +33,7 @@ export function resolveBucketTimeoutSeconds(bucket) {
 }
 
 export function resolveBucketPool(bucket) {
-  return bucket === 'core' ? 'forks' : 'threads';
+  return ['core', 'core-one', 'core-two'].includes(bucket) ? 'forks' : 'threads';
 }
 
 export function writeBucketTimeoutReport(reportPath, bucket, timeoutSeconds, files) {
