@@ -188,6 +188,8 @@
     "test:e2e": "playwright test",
     "test:e2e:desktop": "node node_modules/playwright/cli.js test --config playwright.desktop.config.ts",
     "test:e2e:desktop:agent": "FOLIOLE_ELECTRON_APP_ROOT=$(pwd) node scripts/with-resource-gate.mjs preview -- xvfb-run --auto-servernum node node_modules/playwright/cli.js test --config playwright.desktop.config.ts",
+    "benchmark:desktop:compare": "node scripts/desktop/fixed-performance-compare.mjs",
+    "benchmark:desktop": "node scripts/desktop/fixed-performance-benchmarks.mjs",
     "test:e2e:desktop:native:hidden": "node scripts/desktop/playwright-desktop-native-hidden.mjs",
     "test:e2e:desktop:rc-golden-journey": "node scripts/desktop/playwright-desktop-native-hidden.mjs tests/desktop/rc-golden-journey.spec.ts",
     "test:e2e:desktop:native:visible": "node scripts/desktop/playwright-desktop-native-visible.mjs",
