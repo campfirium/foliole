@@ -151,6 +151,7 @@ test('keeps a dragged formula cloze visible before and after relaunch', async ({
 
   try {
     await expectWorkspaceShell(desktopWindow);
+    await desktopWindow.waitForFunction(() => globalThis.window?.__folioleWorkspaceDebug?.isHydrated?.());
     await desktopWindow.evaluate(async ({ formula }) => {
       const api = globalThis.window?.__folioleWorkspaceDebug;
       await api?.seedNodes?.([{ content: formula, id: 'playwright-formula-drag-parent', kind: 'topic', title: 'RC Golden Formula Parent' }]);
@@ -160,6 +161,7 @@ test('keeps a dragged formula cloze visible before and after relaunch', async ({
     await openNode(desktopWindow, 'playwright-formula-drag-parent');
     await expectActiveNode(desktopWindow, 'playwright-formula-drag-parent');
 
+    await expect(desktopWindow.locator('.prompt-editor-host .cm-md-math-widget-block .katex-html')).toBeVisible();
     await dragFormulaClozeRegion(desktopWindow);
     await expect.poll(() => findFormulaClozeChildId(desktopWindow)).not.toBeNull();
     const childId = await findFormulaClozeChildId(desktopWindow);
@@ -185,10 +187,18 @@ test('keeps a dragged formula cloze visible before and after relaunch', async ({
     await openNode(secondSession.firstWindow, 'playwright-formula-drag-parent');
     await expectActiveNode(secondSession.firstWindow, 'playwright-formula-drag-parent');
     await expectFormulaRegionPresentation(secondSession.firstWindow, { outlined: 'true' });
+    await expect.poll(() => findFormulaClozeChildId(secondSession!.firstWindow)).toBe(childId);
+    await expect.poll(() => collectNodeContent(secondSession!.firstWindow, childId!)).toBe(FORMULA);
+    await attachWorkspaceScreenshot(secondSession.firstWindow, 'rc-golden-cloze-parent-after-relaunch', testInfo);
     const parentStateAfterRelaunch = await collectFormulaRegionState(secondSession.firstWindow);
     expect(parentStateAfterRelaunch.width).toBeGreaterThan(8);
     expect(parentStateAfterRelaunch.height).toBeGreaterThan(8);
 
+    const parentRow = secondSession.firstWindow.locator('[role="treeitem"][data-node-id="playwright-formula-drag-parent"]');
+    if (await parentRow.getAttribute('aria-expanded') === 'false') {
+      await parentRow.locator('[data-node-tree-chevron="true"]').click();
+    }
+    await expect(parentRow).toHaveAttribute('aria-expanded', 'true');
     await openNode(secondSession.firstWindow, childId!);
     await expectActiveNode(secondSession.firstWindow, childId!);
     await expectFormulaRegionPresentation(secondSession.firstWindow, { hidden: 'true' });
