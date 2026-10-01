@@ -17,6 +17,8 @@ vi.mock('./paths.js', () => ({
   })
 }));
 
+import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import {
@@ -62,6 +64,9 @@ function nodeInput(content: string, updatedAt: string) {
 it('returns the persisted projection and both confirmation identities through the command boundary', async () => {
   upsertVersionedNodeSnapshot(nodeInput('First\nMiddle\nLast\n', '2026-07-25T04:30:00.000Z'));
   const base = openDatabaseConnection().sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get('node-1') as { current_version_id: string };
+  await retainLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite), {
+    holdId: 'editor', nodeId: 'node-1', versionId: base.current_version_id
+  });
   upsertVersionedNodeSnapshot(nodeInput('First\nMiddle\nRemote last\n', '2026-07-25T04:35:00.000Z'));
   const result = await handleLocalContentEditCommand({
     parent: nodeInput('Local first\nMiddle\nLast\n', '2026-07-25T04:32:00.000Z'),
@@ -96,6 +101,9 @@ it('preserves the normal anchor remap and retries the same saved version', async
   const sqlite = openDatabaseConnection().sqlite;
   const base = sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?')
     .get('node-1') as { current_version_id: string };
+  await retainLocalEditBase(createBetterSqliteDbPort(sqlite), {
+    holdId: 'editor', nodeId: 'node-1', versionId: base.current_version_id
+  });
   const request = {
     parent: nodeInput(content, '2026-07-25T04:32:00.000Z'), affectedAnchors: [],
     edit: { baseVersionId: base.current_version_id, versionId: 'ver_normal-edit' }

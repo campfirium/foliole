@@ -210,18 +210,18 @@ it('routes image clipboard and export actions through the unified runtime entry'
   await expect(
     handleInvokeRequest({
       command: NATIVE_COMMANDS.copyAttachmentImageToClipboard,
-      args: { attachment_id: 'hash-1' }
+      args: { storage_key: ATTACHMENT_STORAGE_KEY }
     })
   ).resolves.toEqual({ status: 'copied' });
   await expect(
     handleInvokeRequest({
       command: NATIVE_COMMANDS.exportAttachmentImage,
-      args: { attachment_id: 'hash-1' }
+      args: { storage_key: ATTACHMENT_STORAGE_KEY }
     })
   ).resolves.toEqual({ path: '/tmp/cover.png', status: 'saved' });
 
-  expect(copyAttachmentImageToClipboard).toHaveBeenCalledWith('hash-1');
-  expect(exportAttachmentImage).toHaveBeenCalledWith('hash-1', null);
+  expect(copyAttachmentImageToClipboard).toHaveBeenCalledWith(ATTACHMENT_STORAGE_KEY);
+  expect(exportAttachmentImage).toHaveBeenCalledWith(ATTACHMENT_STORAGE_KEY, null, undefined);
 });
 
 it('routes current article mirror exports through the unified runtime entry', async () => {

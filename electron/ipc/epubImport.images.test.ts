@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -75,7 +76,7 @@ it('imports embedded chapter images and rewrites relative epub image paths to st
   const database = openDatabaseConnection().sqlite;
   const child = database
     .prepare(
-      `SELECT n.id, n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
+      `SELECT n.id, ${buildNodeBodyContentSql()} AS content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
        FROM nodes n
        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.parent_id = ?

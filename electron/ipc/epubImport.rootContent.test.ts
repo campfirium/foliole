@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -49,7 +50,8 @@ function source(filePath: string) {
 
 function readImportedRoot(nodeId: string) {
   return openDatabaseConnection().sqlite
-    .prepare('SELECT title, content FROM nodes WHERE id = ?')
+    .prepare(`SELECT n.title, ${buildNodeBodyContentSql()} AS content FROM nodes n
+      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`)
     .get(nodeId) as { content: string; title: string };
 }
 

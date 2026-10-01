@@ -29,6 +29,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { listAttachmentNodeLinks, listNodeAttachments } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -55,13 +56,15 @@ afterEach(async () => {
 });
 
 function countAttachments() {
-  const row = openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachments').get() as { count: number };
+  const row = openDatabaseConnection().sqlite.prepare(`SELECT COUNT(DISTINCT json_extract(resource.value, '$.storage_key')) AS count
+    FROM nodes owner, json_each(owner.resource_references) resource`).get() as { count: number };
   return row.count;
 }
 
 function readImportedNode(nodeId: string) {
   return openDatabaseConnection().sqlite
-    .prepare('SELECT parent_id, title, content FROM nodes WHERE id = ?')
+    .prepare(`SELECT n.parent_id, n.title, ${buildNodeBodyContentSql()} AS content FROM nodes n
+      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`)
     .get(nodeId) as { content: string; parent_id: string | null; title: string };
 }
 

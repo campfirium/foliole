@@ -95,7 +95,7 @@ it('imports a copied PDF through the same linked reader chain as manual file imp
 
   expect(imported).toEqual(expect.objectContaining({ result_status: 'imported', source_kind: 'pdf' }));
   const pdfAttachment = listNodeAttachments(imported?.node_id as string)[0];
-  const description = loadAttachmentResourceDescription(pdfAttachment?.attachmentId as string)!;
+  const description = loadAttachmentResourceDescription(`${pdfAttachment?.attachmentId}.pdf`)!;
   const resolvedAttachment = resolveAttachmentFile(description.storageKey);
   expect(resolvedAttachment.status).toBe('ready');
   expect(pdfAttachment).toEqual(

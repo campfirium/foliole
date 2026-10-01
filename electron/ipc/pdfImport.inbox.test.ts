@@ -97,7 +97,7 @@ function readPdfOpenDetails(nodeId: string) {
 }
 
 function resolvePdfAttachmentAssetUrl(attachmentId: string) {
-  const description = loadAttachmentResourceDescription(attachmentId)!;
+  const description = loadAttachmentResourceDescription(`${attachmentId}.pdf`)!;
   const resolved = resolveAttachmentFile(description.storageKey);
   expect(resolved.status).toBe('ready');
   return buildAttachmentAssetUrl(description);
@@ -132,11 +132,12 @@ async function expectPdfImportChain(options: {
     source_name: options.sourceName
   });
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT COUNT(*) AS count FROM attachments WHERE id = ?")
-    .get(pdfAttachment?.attachmentId)).toEqual({ count: 1 });
+    .prepare(`SELECT COUNT(*) AS count FROM nodes owner, json_each(owner.resource_references) resource
+      WHERE owner.id = ? AND json_extract(resource.value, '$.storage_key') = ?`)
+    .get(options.nodeId, `${pdfAttachment?.attachmentId}.pdf`)).toEqual({ count: 1 });
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT COUNT(*) AS count FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?")
-    .get(pdfAttachment?.attachmentId)).toEqual({ count: 1 });
+    .prepare("SELECT COUNT(*) AS count FROM sync_object_state WHERE object_type = 'node' AND object_id = ?")
+    .get(options.nodeId)).toEqual({ count: 1 });
 }
 
 it('imports pdf dropped into the managed inbox and keeps node/import/opening chain valid', async () => {

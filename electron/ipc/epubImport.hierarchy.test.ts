@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { isEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -50,8 +51,9 @@ function source(filePath: string) {
 function readImportedTree(parentNodeId: string) {
   return openDatabaseConnection().sqlite
     .prepare(
-      `SELECT n.id, n.parent_id, n.title, n.content
+      `SELECT n.id, n.parent_id, n.title, ${buildNodeBodyContentSql()} AS content
        FROM nodes n
+       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.id = ? OR n.parent_id = ? OR n.parent_id IN (
          SELECT id FROM nodes WHERE parent_id = ?
        ) OR n.parent_id IN (
