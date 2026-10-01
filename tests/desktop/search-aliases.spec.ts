@@ -138,6 +138,9 @@ test('an alias found on a distant PDF page opens that exact page', async ({ desk
 
 test('ordinary and alias searches scroll through every result without a fixed cutoff', async ({ desktopSession, desktopApp, desktopWindow }, testInfo) => {
   await expect(desktopWindow.getByRole('main', { name: /Foliole (workspace|工作区)/ })).toBeVisible();
+  await expect.poll(() => desktopWindow.evaluate(async () =>
+    (await window.electronAPI?.invoke('load_search_index_rebuild_status', {}))?.status
+  )).toBe('ready');
   const initialMainRssBytes = await desktopApp.evaluate(() => process.memoryUsage().rss);
   await seedBulkSearchRows(desktopApp);
   await saveAliases(desktopWindow, desktopSession.target.runtimeStateRoot, 'Atlas | Mapbook\n');
