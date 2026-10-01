@@ -50,6 +50,25 @@ function readPayloadJson(driver: DatabaseDriver, type: JsonSyncObjectType, objec
   return driver.queryOne<{ payload_json: string | null }>(sql, [objectId])?.payload_json ?? null;
 }
 
+export function hasSyncObjectPayloadFromDriver(
+  driver: DatabaseDriver, type: string, objectId: string
+) {
+  if (type === 'view_state') {
+    const parts = objectId.split(':');
+    const hostName = parts[3];
+    const key = parts.slice(4).join(':');
+    if (!hostName) return false;
+    if (key === 'active_node') return Boolean(driver.queryOne(
+      "SELECT 1 FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1"));
+    if (key.startsWith('node:')) return Boolean(driver.queryOne(
+      'SELECT 1 FROM node_view_state WHERE node_id = ? AND host_name = ? LIMIT 1',
+      [key.slice(5), hostName]));
+    return false;
+  }
+  const sql = SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE[type as keyof typeof SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE];
+  return Boolean(sql && driver.queryOne(`SELECT 1 FROM (${sql}) LIMIT 1`, [objectId]));
+}
+
 function toRecord(driver: DatabaseDriver, row: SyncObjectStateRow): NativeSyncObjectRecord {
   return {
     content_hash: row.content_hash,

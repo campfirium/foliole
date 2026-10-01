@@ -45,7 +45,7 @@ beforeEach(async () => {
   const incomingPath = path.join(root, 'incoming.db');
   createIncomingPack(incomingPath);
   const incoming = new Database(incomingPath);
-  incoming.exec(`DELETE FROM node_sync_versions; DELETE FROM node_attachments;
+  incoming.exec(`DELETE FROM node_sync_versions;
     DELETE FROM sync_objects; DELETE FROM sync_object_state WHERE object_type <> 'node';
     UPDATE nodes SET current_version_id = 'v23';`);
   incoming.prepare('UPDATE pack_manifest SET value = ? WHERE key = ?').run(JSON.stringify({
@@ -140,8 +140,7 @@ it('rolls back the business result and preserves staged dependencies if cursor p
 
 it.each([
   { content: 'local text', dirty: 0, deleted: null },
-  { content: '', dirty: 1, deleted: null },
-  { content: '', dirty: 0, deleted: '2026-09-29' }
+  { content: '', dirty: 1, deleted: null }
 ])('preserves a protected local projection: %j', async ({ content, dirty, deleted }) => {
   await stageThrough();
   await applySyncPackNodeSurfaceWithDbPort(port, options);
@@ -152,6 +151,18 @@ it.each([
   await port.transaction((tx) => reconcileSyncPackInlineBodies(tx, 'inc', false));
   expect(target.prepare(`SELECT content, body_blob_hash FROM nodes WHERE id = 'node-1'`).get())
     .toEqual({ content, body_blob_hash: null });
+});
+
+it('rehydrates a removed node body while preserving its deletion state', async () => {
+  await stageThrough();
+  await applySyncPackNodeSurfaceWithDbPort(port, options);
+  target.prepare(`UPDATE nodes SET content = '', body_blob_hash = NULL,
+    deleted_at = '2026-09-29' WHERE id = 'node-1'`).run();
+  const { reconcileSyncPackInlineBodies } = await import('../../lib/core/sync/syncPackBodyProjection.js');
+  await port.transaction((tx) => reconcileSyncPackInlineBodies(tx, 'inc', false));
+  expect(target.prepare(`SELECT deleted_at, length(content) AS body_bytes,
+    body_blob_hash IS NOT NULL AS has_blob FROM nodes WHERE id = 'node-1'`).get())
+    .toEqual({ deleted_at: '2026-09-29', body_bytes: 741 * 1024, has_blob: 1 });
 });
 
 it('delivers a stable SQLite history across both source and receiver restart, then publishes it', async () => {

@@ -12,7 +12,7 @@ import {
 } from '../../lib/core/sync/syncPackNodeFields.js';
 import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
-import { loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
+import { hasSyncObjectPayloadFromDriver, loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
 import { loadAttachmentPreludeStateRows } from './syncPackAttachmentPreludeRows.js';
 import { learningNodeIds, loadNodePreludeStateRows, mergeStateRows } from './syncPackLearningRows.js';
 
@@ -234,3 +234,9 @@ export function loadPackRows(
 }
 
 export type LoadedSyncPackRows = ReturnType<typeof loadPackRows>;
+
+export function loadPresentSyncPackStateRows(driver: DatabaseDriver, fromStateSeq: number, toStateSeq: number) {
+  const rows = listChangedStateRows(driver, fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
+  return rows.filter((row) => !isSyncPackPayloadObjectType(row.object_type) || row.deleted_at !== null ||
+    hasSyncObjectPayloadFromDriver(driver, row.object_type, row.object_id));
+}

@@ -38,7 +38,9 @@ function createReviewLogPort(options: {
   const port = {
     query: vi.fn(async (sql: string, params: unknown[] = []) => {
       if (sql.includes('sqlite_master')) return [{ ok: 1 }];
-      if (sql.includes('FROM incoming.review_log')) return [reviewLogRow()];
+      if (sql.includes('FROM incoming.review_log')) {
+        return sql.includes('payload_bytes') ? [{ payload_bytes: 300 }] : [reviewLogRow()];
+      }
       if (sql.includes('FROM nodes')) return params[0] === 'node-1' ? [{ ok: 1 }] : [];
       if (sql.includes('FROM review_log')) return existingOpIds.has(String(params[0])) ? [reviewLogRow()] : [];
       return [];
