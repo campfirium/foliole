@@ -28,6 +28,7 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { deleteNodesPermanently } from '../database/nodeMutations.js';
@@ -226,7 +227,7 @@ it('re-imports a removed Readwise source through the Readwise pipeline', async (
 
   const result = await restoreRemovedSource('draft-import-source-readwise', 'Plain.md');
   const importedNode = openDatabaseConnection().sqlite
-    .prepare(`SELECT content FROM nodes WHERE id = ?`)
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`)
     .get(result.node_id) as { content: string } | undefined;
 
   expect(result).toMatchObject({ status: 'restored' });

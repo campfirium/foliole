@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -67,11 +68,11 @@ it('imports mismatched pending incoming updates as a new suffixed topic', async 
   expect(result).toMatchObject({ incoming_update_id: incomingUpdateId, status: 'imported_as_new' });
   expect(result.node_id).toEqual(expect.any(String));
   expect(openDatabaseConnection().driver.queryOne<{ content: string; title: string }>(
-    `SELECT content, title FROM nodes WHERE id = ?`,
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content, nodes.title FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`,
     [result.node_id as string]
   )).toEqual({ content: '# Imported topic\n\nIncoming import content', title: 'Imported topic 2' });
   expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
-    `SELECT content FROM nodes WHERE id = ?`,
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`,
     ['topic-incoming-new']
   )?.content).toBe('Current mirror content');
   await expect(loadNodeSourceUpdatePreview('topic-incoming-new')).resolves.toBeNull();

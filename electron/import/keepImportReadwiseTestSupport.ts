@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
@@ -109,10 +110,10 @@ export function readImportedChildRows() {
     .prepare(`SELECT latest_node_id FROM import_sources WHERE source_name = 'Sample Article.md'`)
     .get() as { latest_node_id: string };
   const parentRow = connection.sqlite
-    .prepare('SELECT content FROM nodes WHERE id = ?')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`)
     .get(importedNode.latest_node_id) as { content: string };
   const childRows = connection.sqlite
-    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? ORDER BY nodes.created_at ASC`)
     .all(importedNode.latest_node_id) as Array<{ anchor_link: string | null; content: string; title: string }>;
   return { childRows, parentRow };
 }

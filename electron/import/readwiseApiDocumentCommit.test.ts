@@ -23,6 +23,7 @@ vi.mock('./readwiseApiOriginalFile.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -70,8 +71,8 @@ it('creates a nonblank PDF Topic with links and an explicit unavailable reason',
   expect(result.status).toBe('imported');
   expect(prepareOriginal).toHaveBeenCalledWith(expect.objectContaining({ category: 'pdf' }));
   const row = openDatabaseConnection().driver.queryOne<{ content: string; remote_import_state_json: string; source_kind: string }>(
-    `SELECT n.content, i.remote_import_state_json, i.source_kind FROM import_sources i
-     JOIN nodes n ON n.id = i.latest_node_id WHERE i.remote_document_id = 'document-1'`
+    `SELECT ${buildNodeBodyContentSql('n')} AS content, i.remote_import_state_json, i.source_kind FROM import_sources i
+     JOIN nodes n ON n.id = i.latest_node_id LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE i.remote_document_id = 'document-1'`
   );
   expect(row?.content).toContain('The original PDF was not synced: the file exceeds the 100 MB limit.');
   expect(row?.content).toContain('[Open in Reader](https://readwise.io/reader/read/document-1)');
@@ -88,14 +89,14 @@ it('materializes API EPUB text without downloading or attaching the original arc
   expect(prepareOriginal).not.toHaveBeenCalled();
   expect(persistOriginal).not.toHaveBeenCalled();
   const row = openDatabaseConnection().driver.queryOne<{ content: string; remote_import_state_json: string }>(
-    `SELECT n.content, i.remote_import_state_json FROM import_sources i
-     JOIN nodes n ON n.id = i.latest_node_id WHERE i.remote_document_id = 'document-1'`
+    `SELECT ${buildNodeBodyContentSql('n')} AS content, i.remote_import_state_json FROM import_sources i
+     JOIN nodes n ON n.id = i.latest_node_id LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE i.remote_document_id = 'document-1'`
   );
   expect(row?.content).toContain('Readable HTML');
   expect(row?.content).not.toContain('original EPUB');
   expect(JSON.parse(row?.remote_import_state_json ?? '{}').originalFile).toBeNull();
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
-    'SELECT COUNT(*) count FROM node_attachments'
+    'SELECT COUNT(*) count FROM nodes, json_each(nodes.resource_references)'
   )).toEqual({ count: 0 });
 });
 

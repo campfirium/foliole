@@ -24,6 +24,7 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -80,15 +81,15 @@ it('adopts inline markdown highlights for generic merged keep imports', async ()
 
   const row = openDatabaseConnection().sqlite
     .prepare(
-      `SELECT id, content
-       FROM nodes
-       WHERE title = 'entry'
-       ORDER BY created_at DESC
+      `SELECT nodes.id, ${buildNodeBodyContentSql('nodes')} AS content
+       FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash
+       WHERE nodes.title = 'entry'
+       ORDER BY nodes.created_at DESC
        LIMIT 1`
     )
     .get() as { content: string; id: string };
   const childRows = openDatabaseConnection().sqlite
-    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? ORDER BY nodes.created_at ASC`)
     .all(row.id) as Array<{ anchor_link: string | null; content: string; title: string }>;
   const anchorLink = parseAnchorLink(childRows[0]!.anchor_link!);
 
@@ -222,14 +223,14 @@ it('imports generic split sidecar highlights only when they match the source bod
 
   const row = openDatabaseConnection().sqlite
     .prepare(
-      `SELECT nodes.id, nodes.content
+      `SELECT nodes.id, ${buildNodeBodyContentSql('nodes')} AS content
        FROM import_sources
-       JOIN nodes ON nodes.id = import_sources.latest_node_id
+       JOIN nodes ON nodes.id = import_sources.latest_node_id LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash
        WHERE import_sources.source_name = 'entry.md'`
     )
     .get() as { content: string; id: string };
   const childRows = openDatabaseConnection().sqlite
-    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? ORDER BY nodes.created_at ASC`)
     .all(row.id) as Array<{ anchor_link: string | null; content: string; title: string }>;
 
   expect(row.content).toContain('Before matching highlight after.');

@@ -25,6 +25,8 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({
   canCurrentHostRunReadwise: vi.fn(() => true)
 }));
 
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { saveJsonSetting } from '../database/settingsStore.js';
@@ -49,7 +51,7 @@ afterEach(async () => {
 
 function readNodeContent(nodeId: string) {
   return (openDatabaseConnection().sqlite
-    .prepare('SELECT content FROM nodes WHERE id = ? AND deleted_at IS NULL')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ? AND nodes.deleted_at IS NULL`)
     .get(nodeId) as { content: string } | undefined)?.content ?? '';
 }
 
@@ -60,26 +62,26 @@ function readActiveChildNodeIds(nodeId: string) {
 }
 
 function writeLegacyPendingBookContent(nodeId: string) {
-  openDatabaseConnection().sqlite
-    .prepare('UPDATE nodes SET content = ?, updated_at = ? WHERE id = ?')
-    .run(
-      [
-        '# Book Placeholder',
-        '',
-        '## Current status',
-        '- No highlights yet',
-        '- Original file missing',
-        '- Book import pending',
-        '',
-        '## Next actions',
-        '- Download original file*',
-        '- Load original file*',
-        '',
-        '*In progress. These actions will be connected in a later task.*'
-      ].join('\n'),
-      new Date().toISOString(),
-      nodeId
-    );
+  writeNodeBody({
+    content: [
+      '# Book Placeholder',
+      '',
+      '## Current status',
+      '- No highlights yet',
+      '- Original file missing',
+      '- Book import pending',
+      '',
+      '## Next actions',
+      '- Download original file*',
+      '- Load original file*',
+      '',
+      '*In progress. These actions will be connected in a later task.*'
+    ].join('\n'),
+    driver: openDatabaseConnection().driver,
+    nodeId,
+    title: 'Book Placeholder',
+    updatedAt: new Date().toISOString()
+  });
 }
 
 function writeStalePersistedBooksInventory(paths: { bookHighlightPath: string; bookPrimaryPath: string }) {

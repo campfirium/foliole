@@ -30,6 +30,7 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({
   canCurrentHostRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createReadwiseImportSources } from '../../lib/core/import/importManagerSettings.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -104,7 +105,7 @@ async function createBooksFixture() {
 
 function readImportedBook(connection: ReturnType<typeof openDatabaseConnection>['sqlite'], rootNodeId: string) {
   const chapters = connection
-    .prepare('SELECT id, title, content FROM nodes WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC')
+    .prepare(`SELECT nodes.id, nodes.title, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? AND nodes.deleted_at IS NULL ORDER BY nodes.created_at ASC`)
     .all(rootNodeId) as Array<{ content: string; id: string; title: string }>;
   const rootHighlights = connection
     .prepare('SELECT id FROM nodes WHERE parent_id = ? AND anchor_link IS NOT NULL AND deleted_at IS NULL')
@@ -152,10 +153,10 @@ function expectImportedHighlights(connection: ReturnType<typeof openDatabaseConn
   const chapterOne = chapters.find((row) => row.title === 'Chapter 1');
   const chapterTwo = chapters.find((row) => row.title === 'Chapter 2');
   const chapterOneDerived = connection
-    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC')
+    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? AND nodes.deleted_at IS NULL ORDER BY nodes.created_at ASC`)
     .all(chapterOne!.id) as Array<{ anchor_link: string; content: string; title: string }>;
   const chapterTwoDerived = connection
-    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ? AND deleted_at IS NULL ORDER BY created_at ASC')
+    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? AND nodes.deleted_at IS NULL ORDER BY nodes.created_at ASC`)
     .all(chapterTwo!.id) as Array<{ anchor_link: string; content: string; title: string }>;
   const chapterOneAnchorLink = parseAnchorLink(chapterOneDerived[0]!.anchor_link);
   const chapterTwoAnchorLink = parseAnchorLink(chapterTwoDerived[0]!.anchor_link);

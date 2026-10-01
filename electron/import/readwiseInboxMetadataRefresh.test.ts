@@ -21,6 +21,7 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -77,7 +78,7 @@ async function seedReadwiseSource(fullDocumentMarkdown: string) {
 
 function readImportedNodeContent() {
   return openDatabaseConnection().sqlite
-    .prepare("SELECT content FROM nodes WHERE title = 'Highlighted'")
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.title = 'Highlighted'`)
     .get() as { content: string } | undefined;
 }
 

@@ -32,6 +32,7 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({
   canCurrentHostRunReadwise: vi.fn(() => sourceOwnerMock.canRunExternalSources)
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { listRemovedKeepImportItems } from '../database/keepImportItems.js';
@@ -182,7 +183,7 @@ it('resets an imported readwise book back to its pre-load placeholder state', as
   });
 
   const rootNode = openDatabaseConnection().sqlite
-    .prepare('SELECT content, opening_text, reveal FROM nodes WHERE id = ? AND deleted_at IS NULL')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content, nodes.opening_text, nodes.reveal FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ? AND nodes.deleted_at IS NULL`)
     .get(nodeId) as { content: string; opening_text: string | null; reveal: string | null } | undefined;
   expectResetPlaceholderContent(rootNode?.content);
   expect(rootNode?.opening_text).toBeNull();
@@ -234,7 +235,7 @@ it('does not recreate a deleted readwise book node when re-import is triggered',
   });
 
   const deletedNode = openDatabaseConnection().sqlite
-    .prepare('SELECT id, deleted_at, content FROM nodes WHERE id = ?')
+    .prepare(`SELECT nodes.id, nodes.deleted_at, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`)
     .get(nodeId) as { content: string; deleted_at: string | null; id: string } | undefined;
   expect(deletedNode?.id).toBe(nodeId);
   expect(deletedNode?.deleted_at).toBe('2026-04-04T11:00:00.000Z');

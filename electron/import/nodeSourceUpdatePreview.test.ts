@@ -23,6 +23,7 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -182,7 +183,7 @@ it('accepts pending incoming updates into the mirror topic and clears the pendin
   });
 
   expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
-    `SELECT content FROM nodes WHERE id = ?`,
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`,
     ['topic-incoming-accept']
   )?.content).toBe('Accepted incoming content');
   await expect(loadNodeSourceUpdatePreview('topic-incoming-accept')).resolves.toBeNull();
@@ -204,7 +205,7 @@ it('dismisses pending incoming updates without changing the topic content', asyn
   });
 
   expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
-    `SELECT content FROM nodes WHERE id = ?`,
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`,
     ['topic-incoming-dismiss']
   )?.content).toBe('Current mirror content');
   await expect(loadNodeSourceUpdatePreview('topic-incoming-dismiss')).resolves.toBeNull();

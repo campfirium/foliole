@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { saveJsonSetting } from '../database/settingsStore.js';
@@ -79,7 +80,7 @@ function readActiveNodeTitles() {
 
 function readNodeContent(nodeId: string) {
   return (openDatabaseConnection().sqlite
-    .prepare('SELECT content FROM nodes WHERE id = ? AND deleted_at IS NULL')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ? AND nodes.deleted_at IS NULL`)
     .get(nodeId) as { content: string } | undefined)?.content ?? '';
 }
 

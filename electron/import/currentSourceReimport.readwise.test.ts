@@ -22,6 +22,7 @@ vi.mock('./managedInboxEvents.js', () => ({
 }));
 
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -131,14 +132,14 @@ it('rebuilds readwise article content and replaces imported child highlights', a
   });
 
   const node = connection.sqlite
-    .prepare('SELECT content FROM nodes WHERE id = ?')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`)
     .get(first.last_node_id) as { content: string };
   const importedChildren = connection.sqlite
     .prepare(
-      `SELECT anchor_link, content, title
-       FROM nodes
-       WHERE parent_id = ?
-       ORDER BY created_at ASC`
+      `SELECT nodes.anchor_link, ${buildNodeBodyContentSql('nodes')} AS content, nodes.title
+       FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash
+       WHERE nodes.parent_id = ?
+       ORDER BY nodes.created_at ASC`
     )
     .all(first.last_node_id);
 

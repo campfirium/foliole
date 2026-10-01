@@ -30,6 +30,7 @@ vi.mock('electron', () => ({
   shell: { trashItem }
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -76,7 +77,7 @@ it('deletes primary and split highlight files after a successful delete-handling
   });
 
   const row = openDatabaseConnection().sqlite
-    .prepare(`SELECT content FROM nodes WHERE title = 'entry' ORDER BY created_at DESC LIMIT 1`)
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.title = 'entry' ORDER BY nodes.created_at DESC LIMIT 1`)
     .get() as { content: string };
 
   await expect(fs.stat(sourceFile)).rejects.toMatchObject({ code: 'ENOENT' });

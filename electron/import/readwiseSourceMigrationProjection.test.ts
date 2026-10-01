@@ -41,6 +41,8 @@ vi.mock('../attachments/remoteImagePipeline.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import {
@@ -85,9 +87,10 @@ it('reprojects content whose only drift is deterministic remote image localizati
 
 it('replaces a genuinely edited body during the explicit source cutover', async () => {
   await seedLocalizedSource();
-  openDatabaseConnection().driver.execute(
-    "UPDATE nodes SET content='My local edit' WHERE id='topic-1'"
-  );
+  writeNodeBody({
+    content: 'My local edit', driver: openDatabaseConnection().driver,
+    nodeId: 'topic-1', title: 'Sample', updatedAt: '2026-10-01T00:00:00.000Z'
+  });
 
   expect(applyReadwiseSourceProjection('topic-1', apiDocument())).toBe(true);
   expect(readTopicContent()).toBe('API body');
@@ -157,12 +160,12 @@ async function seedLocalizedSource() {
     readwiseConfig: createDefaultReadwiseReaderConfig()
   });
   const localized = await localizeReadwiseSourceContent(prepared.content);
-  driver.execute("UPDATE nodes SET content=? WHERE id='topic-1'", [localized.text]);
+  writeNodeBody({ content: localized.text, driver, nodeId: 'topic-1', title: 'Sample', updatedAt: 'old' });
 }
 
 function readTopicContent() {
   return openDatabaseConnection().driver.queryOne<{ content: string }>(
-    "SELECT content FROM nodes WHERE id='topic-1'"
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id='topic-1'`
   )?.content;
 }
 
