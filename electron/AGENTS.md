@@ -67,7 +67,7 @@
 
 - 升级 Electron major 时，必须把所有 Electron 原生模块作为同一兼容集合联合审查和验证；除 ABI、加载与行为合同外，适用路径必须覆盖进程退出、worker 终止、原生对象回收与资源清理。
 - 桌面验收以当前原生宿主为主；只有用户明确要求、目标命中另一平台专属边界、发布/安装包或方案承诺跨宿主一致性时，才追加另一宿主。任何宿主的证据不得外推为另一宿主结论。
-- 当前宿主先运行 `npm run quality:fast`，再按目标选择 T1 Hidden Native、T2 Visible Native 或 T3 人工检查。默认使用 `npm run test:e2e:desktop:native:hidden -- <spec>`；无显式 spec 的 hidden health 只证明 runner 可用，不构成功能验收。
+- 当前宿主先满足根规则的本地行为测试门槛，并运行 `npm run quality:fast`，再按目标选择 T1 Hidden Native、T2 Visible Native 或 T3 人工检查。默认使用 `npm run test:e2e:desktop:native:hidden -- <spec>`；无显式 spec 的 hidden health 只证明 runner 可用，不构成功能验收。
 - 只有目标依赖真实焦点、菜单栏、系统 dialog、拖拽/窗口、tray、notification、installer/updater 或用户明确要求可见预览时，才使用 `npm run test:e2e:desktop:native:visible -- <spec>` 或人工检查；开始前在 commentary 说明会短暂打扰桌面。
 - Hidden/Visible spec 只断言稳定用户行为。UI、layout、空白页或视觉回归还必须产出截图或 trace 到 `.tmp/artifacts/`；不得用 DOM 顺序、坐标或文本存在代替视觉证据。最终汇报说明自动断言覆盖的用户效果与未覆盖观察点。
 - Desktop Playwright 使用共享 harness、隔离 state root 与 resource gate，并在共享工作区串行执行；并发占用是资源冲突，不得报告为产品失败。不得绕开 runner 直接运行裸 Playwright CLI。

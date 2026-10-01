@@ -30,5 +30,5 @@
 
 ## Validation
 
-- companion 先按根规则执行覆盖本轮结果的最小验证；Web 诊断、quality 升级、真实 A5、Android WebView 与真机 L1 的触发和入口统一由 `android/AGENTS.md` 维护。
+- companion 进入真机产品验收前先满足根规则的本地行为测试门槛；Web 诊断、quality 升级、真实 A5、Android WebView 与真机 L1 的触发和入口统一由 `android/AGENTS.md` 维护。
 - 现有固定动作不足以验收真实 companion 内容、持久化结果或 Android WebView CSS 时，必须停下重新评估；不得直接调用 adb、Gradle 或另建真机入口。
