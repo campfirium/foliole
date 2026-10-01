@@ -5,7 +5,7 @@ import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 
 export const HOSTED_ORACLE_TABLES = [
   'sync_object_state', 'sync_objects', 'nodes', 'node_sync_versions',
-  'node_sync_version_parents', 'node_order', 'node_attachments',
+  'node_sync_version_parents', 'node_sync_tombstones', 'node_version_peer_heads',
   'external_documents', 'content_blobs', 'review_log'
 ] as const;
 

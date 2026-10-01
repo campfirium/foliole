@@ -39,6 +39,7 @@ it('regenerates only the scenario restore expectation and still rejects changed 
     database.exec(`ATTACH DATABASE ':memory:' AS inc;
       CREATE TABLE inc.node_sync_versions AS SELECT * FROM main.node_sync_versions WHERE 0;
       CREATE TABLE inc.node_sync_version_parents AS SELECT * FROM main.node_sync_version_parents WHERE 0;
+      CREATE TABLE inc.node_sync_tombstones AS SELECT * FROM main.node_sync_tombstones WHERE 0;
       CREATE TABLE inc.nodes AS SELECT * FROM main.nodes WHERE 0;`);
     const changed = { ...expected.snapshot, content: 'genuinely different body' };
     const changedHash = createHash('sha256').update(JSON.stringify(changed)).digest('hex');

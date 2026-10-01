@@ -24,6 +24,8 @@ afterEach(async () => {
 });
 
 it('builds identity-bound live packs through the production writer inside the attempt root', async () => {
+  const oraclePath = path.join(loadIosAcceptanceContractCorpus().syncPackDirectory, 'legal.syncpack');
+  const oracleBytes = await fs.readFile(oraclePath);
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-ios-hosted-writer-'));
   const generator = createIosHostedSyncPackGenerator({
     artifactRoot: tempRoot,
@@ -34,6 +36,7 @@ it('builds identity-bound live packs through the production writer inside the at
   const second = generator.prepare('accepted-device');
   expect(second).toBe(first);
   const packs = await first;
+  expect(await fs.readFile(oraclePath)).toEqual(oracleBytes);
 
   const legal = readHostedPack(packs.legal);
   expect(legal.manifest).toMatchObject({
@@ -83,8 +86,7 @@ async function applyGeneratedPack(packPath: string, name: string) {
     expect(target.prepare("SELECT sql FROM inc.sqlite_master WHERE name = 'external_documents'").pluck().get())
       .toContain('reference_json');
     return await applySyncPackNodeSurfaceWithDbPort(port, {
-      currentCursor: 0, hostName: 'accepted-device', sourceHostName: 'Acceptance Provider',
-      sourcePeerId: 'provider-device'
+      currentCursor: 0, hostName: 'accepted-device', sourceHostName: 'Acceptance Provider'
     });
   } finally {
     await port.run('DETACH DATABASE inc');

@@ -14,6 +14,7 @@ import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmen
 import { IOS_SYNC_PACK_RESTORE_VERSION_ID } from '../../lib/platform/iosSyncPackAcceptanceContract.js';
 
 import { readHostedPack } from './ios-hosted-sync-pack-evidence.js';
+import { upgradeHostedOracleResources } from './ios-hosted-sync-pack-oracle-upgrade.js';
 import {
   hostedPackSemanticDigest,
   hostedPackSemanticProjection,
@@ -30,6 +31,9 @@ export async function seedHostedSourceFromOracle(args: {
   writeFileSync(oraclePath, pack.database, { flag: 'wx' });
   args.source.prepare('ATTACH DATABASE ? AS oracle_seed').run(oraclePath);
   try {
+    args.source.prepare("UPDATE oracle_seed.pack_manifest SET value = ? WHERE key = 'manifest_json'")
+      .run(JSON.stringify({ ...pack.manifest, source_epoch: `oracle:${pack.manifest.from_peer_id}`,
+        frontier_state_seq: pack.manifest.to_state_seq }));
     ensureOracleNodeTombstones(args.source);
     ensureOracleExternalReferenceColumns(args.source);
     canonicalizeOracleAttachmentPayloads(args.source);
@@ -37,14 +41,14 @@ export async function seedHostedSourceFromOracle(args: {
     if (pack.manifest.pack_id === 'ios-acceptance-successor') {
       await canonicalizeScenarioRestoreVersion(args.source);
     }
+    upgradeHostedOracleResources(args.source);
     await applySyncPackNodeSurfaceWithDbPort(
       createBetterSqliteDbPort(args.source, { name: 'ios-hosted-oracle-seed' }),
       {
         currentCursor: pack.manifest.from_state_seq,
         hostName: oracleHostName(args.source, pack.manifest.from_peer_id),
         incomingAlias: 'oracle_seed',
-        sourceHostName: pack.manifest.from_peer_id,
-        sourcePeerId: pack.manifest.from_peer_id
+        sourceHostName: pack.manifest.from_peer_id
       }
     );
     restoreOracleFacts(args.source);
@@ -98,8 +102,9 @@ async function canonicalizeScenarioRestoreVersion(database: SqliteDatabase) {
     ...buildWorkspaceSnapshotNode(row), currentVersionId: version.parent_version_id,
     deletedAt: null, updatedAt: version.created_at
   }, version.host_name, version.version_id);
-  const { image_sources: imageSources, ...otherFields } = current.snapshot;
-  if (imageSources !== '{}' || !isDeepStrictEqual(otherFields, JSON.parse(version.snapshot_json)) ||
+  const { image_sources: imageSources, resource_references: resources, ...otherFields } = current.snapshot;
+  const { position, ...legacyFields } = JSON.parse(version.snapshot_json);
+  if (imageSources !== '{}' || resources !== '[]' || position !== null || !isDeepStrictEqual(otherFields, legacyFields) ||
       current.body_text !== version.body_text) {
     throw new Error('ios_hosted_scenario_restore_version_drift');
   }
