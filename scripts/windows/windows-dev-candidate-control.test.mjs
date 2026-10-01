@@ -47,7 +47,7 @@ it('pins Internal actions to a full commit instead of a later dev tip', () => {
     .toThrow('full SHA');
 });
 
-it('freezes the committed dev tree while leaving Mac edits untouched', () => {
+it('freezes the committed dev tree while leaving Mac edits untouched', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'windows-dirty-candidate-'));
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
   try {
@@ -64,7 +64,8 @@ it('freezes the committed dev tree while leaving Mac edits untouched', () => {
     expect(fs.readFileSync(path.join(root, 'tracked.txt'), 'utf8')).toBe('working edit');
     expect(() => assertPinnedDevRevision(root, 'f'.repeat(40))).toThrow('must belong to Mac dev');
   } finally {
-    fs.rmSync(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
+    await fs.promises.rm(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
+    expect(fs.existsSync(root)).toBe(false);
   }
 });
 
