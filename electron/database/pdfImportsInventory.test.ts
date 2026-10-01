@@ -77,24 +77,22 @@ function insertImportSource(input: {
     );
 }
 
-function insertPdfAttachment(input: {
-  createdAt: string;
+function insertPdfIndexState(input: {
   id: string;
   indexedAt?: string | null;
   status: 'failed' | 'indexing' | 'pending' | 'ready' | null;
 }) {
   openDatabaseConnection().sqlite
     .prepare(
-      `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at, pdf_index_status, pdf_indexed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO pdf_index_state (attachment_id, status, indexed_at) VALUES (?, ?, ?)`
     )
-    .run(input.id, `${input.id}.pdf`, 'application/pdf', 128, input.createdAt, input.status, input.indexedAt ?? null);
+    .run(input.id, input.status, input.indexedAt ?? null);
 }
 
 function linkReferenceAttachment(nodeId: string, attachmentId: string) {
   openDatabaseConnection().sqlite
-    .prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`)
-    .run(nodeId, attachmentId, 'reference');
+    .prepare(`UPDATE nodes SET resource_references = ? WHERE id = ?`)
+    .run(JSON.stringify([{ storage_key: `${attachmentId}.pdf`, role: 'reference', original_name: 'active.pdf' }]), nodeId);
 }
 
 it('marks inventory entries as deleted when latest node was removed', () => {
@@ -120,7 +118,7 @@ it('marks inventory entries as deleted when latest node was removed', () => {
   ]);
 });
 
-it('uses the newest linked pdf attachment status for a node', () => {
+it('uses the current node-owned PDF resource status rather than stale local index state', () => {
   insertNode({ id: 'node-active' });
   insertImportSource({
     latestNodeId: 'node-active',
@@ -128,18 +126,15 @@ it('uses the newest linked pdf attachment status for a node', () => {
     sourceLocator: '/tmp/active.pdf',
     sourceName: 'active.pdf'
   });
-  insertPdfAttachment({
-    createdAt: '2026-04-02T00:00:00.000Z',
-    id: 'attachment-old-failed',
+  insertPdfIndexState({
+    id: 'a'.repeat(64),
     status: 'failed'
   });
-  insertPdfAttachment({
-    createdAt: '2026-04-04T00:00:00.000Z',
-    id: 'attachment-new-pending',
+  insertPdfIndexState({
+    id: 'b'.repeat(64),
     status: 'pending'
   });
-  linkReferenceAttachment('node-active', 'attachment-old-failed');
-  linkReferenceAttachment('node-active', 'attachment-new-pending');
+  linkReferenceAttachment('node-active', 'b'.repeat(64));
 
   expect(loadPdfImportsInventory()).toEqual([
     {

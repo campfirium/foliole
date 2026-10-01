@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { pushLocalDirtyObjects } from '../shared/platform/companionDesktopSyncPush';
@@ -117,7 +118,9 @@ function expectPersistedCapture(db: Database.Database, result: Awaited<ReturnTyp
     title: 'iPhone note'
   });
   expect(db.prepare(`
-    SELECT content, last_modified_by_host_name, parent_id, title FROM nodes WHERE id = ?
+    SELECT ${buildNodeBodyContentSql('n', 'body')} AS content,
+      n.last_modified_by_host_name, n.parent_id, n.title FROM nodes n
+      LEFT JOIN content_blob_data body ON body.hash = n.body_blob_hash WHERE n.id = ?
   `).get(result.nodeId)).toEqual({
     content: 'iPhone note\nsecond line',
     last_modified_by_host_name: 'ios-device',
