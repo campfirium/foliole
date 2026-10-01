@@ -90,11 +90,15 @@ it('uses aliases in Boolean queries and keeps the matching PDF page for each spe
     .toMatchObject({ page: 2, query: 'Obama' });
 });
 
-it('returns results after the former workspace and merged-candidate limits', () => {
-  for (let index = 0; index < 135; index += 1) {
-    insertNode({ id: `bulk-${index}`, title: `Atlas ${index}`, content: 'Atlas marker', updatedAt: '2026-05-01T00:00:00.000Z' });
+it('returns every ordinary and aliased result after the former workspace limits', async () => {
+  saveJsonSetting('search_aliases_document', { version: 1, text: 'Atlas | Mapbook\n' });
+  await reconcileSearchAliasMirror();
+  for (let index = 0; index < 505; index += 1) {
+    const name = index < 490 ? 'Atlas' : 'Mapbook';
+    insertNode({ id: `bulk-${index}`, title: `${name} ${index}`, content: `${name} catalogue entry`, updatedAt: '2026-05-01T00:00:00.000Z' });
   }
-  expect(searchWorkspace('Atlas').filter((result) => result.kind === 'node')).toHaveLength(135);
+  expect(searchWorkspace('catalogue').filter((result) => result.kind === 'node')).toHaveLength(505);
+  expect(searchWorkspace('Atlas').filter((result) => result.kind === 'node')).toHaveLength(505);
 });
 
 it('keeps original text offsets for accented word-based index matches', async () => {
