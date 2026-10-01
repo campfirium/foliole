@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 import { expect, it } from 'vitest';
 
 import { maintenanceExitCode, maintenanceSteps, parseMaintenanceArgs } from './system-integration-maintenance-plan.mjs';
@@ -10,13 +12,14 @@ it('selects an explicit affected domain without running other product domains', 
 });
 
 it('runs core plus the full two-path synchronization regression for full maintenance', () => {
-  const steps = maintenanceSteps(parseMaintenanceArgs([]).scope, '/isolated-output');
+  const outputRoot = path.resolve('isolated-output');
+  const steps = maintenanceSteps(parseMaintenanceArgs([]).scope, outputRoot);
   expect(steps.map((step) => step.name)).toEqual(['journey', 'editing', 'reading', 'review', 'search', 'import', 'sync']);
   const sync = steps.at(-1);
   expect(sync.args).toContain('both');
   expect(sync.args).not.toContain('--scenarios');
   expect(sync.args).not.toContain('--database');
-  expect(sync.args.at(-1)).toBe('/isolated-output/sync');
+  expect(path.relative(outputRoot, sync.args.at(-1))).toBe('sync');
 });
 
 it('rejects path traversal, unknown scope and missing arguments before executing', () => {
