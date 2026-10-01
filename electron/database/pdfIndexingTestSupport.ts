@@ -92,6 +92,7 @@ export function reopenDatabase() {
 }
 
 beforeEach(() => {
+  fs.mkdirSync(path.resolve('.tmp/artifacts/T268'), { recursive: true });
   mockExtraction.root = fs.mkdtempSync(path.resolve('.tmp/artifacts/T268/library-'));
   mockExtraction.loaded = null;
   mockExtraction.gate = null;
