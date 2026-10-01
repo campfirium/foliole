@@ -1,11 +1,15 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { beforeEach, expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
 
 import { CustomCopyDialogHost } from './CustomCopyDialogHost';
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
+
+vi.mock('../../../shared/platform/desktop/searchAliasFile', () => ({
+  loadSearchAliasFileStatus: async () => ({ error: null })
+}));
 
 beforeEach(() => {
   window.localStorage.clear();

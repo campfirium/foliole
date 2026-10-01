@@ -9,7 +9,7 @@ import { migrateDesktopHostProfile } from '../../../electron/database/hostProfil
 import { createDesktopSyncGroup, registerSyncGroupDevice } from '../../../electron/database/syncGroupStore.js';
 import { markDesktopSyncGroupMemberStateReady } from '../../../electron/sync/desktopSyncGroupMemberStateReadiness.js';
 import { initializeDatabaseSchema } from '../../../lib/core/database/migrations.js';
-import { createSyncGroupDeviceIdentity } from '../../../lib/platform/syncGroupUnifiedContract.js';
+import { createSyncGroupDeviceIdentity, devicePathFlavorFromCanonicalLibraryPath } from '../../../lib/platform/syncGroupUnifiedContract.js';
 
 import { inPeer, type SimulatorPeer } from './scope.js';
 
@@ -27,7 +27,7 @@ export function openPeer(root: string, name: string, seed: string): SimulatorPee
   const digest = createHash('sha256').update(`${seed}:${name}`).digest('hex');
   const anchor = `${digest.slice(0,8)}-${digest.slice(8,12)}-4${digest.slice(13,16)}-8${digest.slice(17,20)}-${digest.slice(20,32)}`;
   const identity = createSyncGroupDeviceIdentity({ device_anchor: anchor, group_id: 'group',
-    library_path: dbPath, path_flavor: 'posix' });
+    library_path: dbPath, path_flavor: devicePathFlavorFromCanonicalLibraryPath(dbPath) });
   const peer = { sqlite, driver: createBetterSqlite3Driver(sqlite), dbPath, searchDbPath,
     name, id: identity.identity_key, anchor, assets: path.join(folder, 'assets'), root: folder };
   if (!sqlite.prepare("SELECT 1 FROM settings WHERE key='host_name'").get()) migrateDesktopHostProfile(peer, name);
@@ -41,7 +41,8 @@ export function pairPeers(peers: SimulatorPeer[]) {
     // Replace only isolated host pairing state; never rewrite content/history identities.
     peer.sqlite.exec('DELETE FROM sync_group_local_state; DELETE FROM sync_group_devices; DELETE FROM sync_groups; DELETE FROM sync_group_nonce_ledger');
     const identity = (member: SimulatorPeer) => createSyncGroupDeviceIdentity({
-      device_anchor: member.anchor, group_id: 'group', library_path: member.dbPath, path_flavor: 'posix' });
+      device_anchor: member.anchor, group_id: 'group', library_path: member.dbPath,
+      path_flavor: devicePathFlavorFromCanonicalLibraryPath(member.dbPath) });
     createDesktopSyncGroup({ device: identity(peer), deviceName: peer.name,
       platform: 'mac', workgroupKey: secret });
     for (const member of peers) {

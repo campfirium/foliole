@@ -24,7 +24,7 @@ import { createCompanionSyncGroupSourceSnapshot } from './syncGroupSourceSnapsho
 
 it('captures old orphan tombstones after assigning durable source positions', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-snapshot-test-'));
-  const target = path.join(root, 'cache', 'foliole-provider-source-test.db');
+  const target = path.join(root, 'cache', 'foliole-provider-source-test.db').replaceAll(path.sep, '/');
   await fs.mkdir(path.dirname(target));
   const sqlite = new Database(':memory:');
   try {

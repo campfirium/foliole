@@ -64,7 +64,7 @@ it('freezes the committed dev tree while leaving Mac edits untouched', () => {
     expect(fs.readFileSync(path.join(root, 'tracked.txt'), 'utf8')).toBe('working edit');
     expect(() => assertPinnedDevRevision(root, 'f'.repeat(40))).toThrow('must belong to Mac dev');
   } finally {
-    fs.rmSync(root, { force: true, recursive: true });
+    fs.rmSync(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 

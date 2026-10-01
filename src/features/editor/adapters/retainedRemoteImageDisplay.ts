@@ -6,7 +6,8 @@ const renderedSourcesByNode = new Map<string, Map<string, string>>();
 const displaySourcesByNode = new Map<string, Map<string, string>>();
 
 export function recordDisplayedRemoteImageSource(nodeId: string, source: string, renderUrl: string) {
-  if (!/^https?:\/\//u.test(source) || !renderUrl.startsWith('foliole-remote-image://')) return;
+  const remote = source.startsWith('http://') || source.startsWith('https://');
+  if (!remote || !renderUrl.startsWith('foliole-remote-image://')) return;
   const sources = renderedSourcesByNode.get(nodeId) ?? new Map<string, string>();
   sources.set(source, renderUrl);
   renderedSourcesByNode.set(nodeId, sources);

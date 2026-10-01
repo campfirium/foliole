@@ -92,7 +92,7 @@ it('can exercise public Sync Now through the discovered LAN anchor without adb r
   const root = createTestRoot();
   roots.push(root);
   const mechanics = vi.fn(async () => ({ evidencePath: '/evidence/raw.json', stdout: [
-    'INSTRUMENTATION_STATUS: folioleActionReceipt={"actionStarted":true,"terminalRunId":"run-1","actionRunId":"run-1","terminalResult":"completed"}',
+    'INSTRUMENTATION_STATUS: folioleActionReceipt={"actionStarted":true,"terminalRunId":"run-1","actionRunId":"run-1","terminalResult":"completed","projectedStatus":"completed","projectedResult":"completed"}',
     'INSTRUMENTATION_STATUS: folioleAfterSemantic={}',
     'INSTRUMENTATION_CODE: -1'
   ].join('\n') }));
@@ -109,7 +109,7 @@ it('lets instrumentation own the only Activity during post-admission Sync Now', 
     code: 0,
     output: 'instrumentation',
     stdout: [
-      'INSTRUMENTATION_STATUS: folioleActionReceipt={"actionStarted":true,"terminalRunId":"run-1","actionRunId":"run-1","terminalResult":"completed"}',
+      'INSTRUMENTATION_STATUS: folioleActionReceipt={"actionStarted":true,"terminalRunId":"run-1","actionRunId":"run-1","terminalResult":"completed","projectedStatus":"completed","projectedResult":"completed"}',
       'INSTRUMENTATION_STATUS: folioleAfterSemantic={}',
       'INSTRUMENTATION_CODE: -1'
     ].join('\n')
@@ -156,7 +156,7 @@ it('accepts an already absent owned reverse listener before the single bind', as
         output: "adb: error: listener 'tcp:38641' not found\n", stdout: '' };
     }
     if (args.includes('instrument')) return { code: 0, output: 'instrumentation', stdout: [
-      'INSTRUMENTATION_STATUS: folioleActionReceipt={"syncRequested":true,"actionStarted":true,"actionRunId":"run-1","terminalRunId":"run-1","terminalResult":"completed"}',
+      'INSTRUMENTATION_STATUS: folioleActionReceipt={"syncRequested":true,"actionStarted":true,"actionRunId":"run-1","terminalRunId":"run-1","terminalResult":"completed","projectedStatus":"completed","projectedResult":"completed"}',
       'INSTRUMENTATION_STATUS: folioleAfterSemantic={}', 'INSTRUMENTATION_CODE: -1'
     ].join('\n') };
     return successfulAdbResult(args);

@@ -16,7 +16,7 @@ import { confirmOutboundNodeVersionPack } from '../../lib/core/sync/nodeVersionD
 import { loadPendingNodeVersionReceipts } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { loadSyncPackReceiveProgress } from '../../lib/core/sync/syncPackReceiveProgress.js';
-import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { createSyncGroupDeviceIdentity, devicePathFlavorFromCanonicalLibraryPath } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -48,7 +48,8 @@ export async function closeLibraries() {
 export function createPeer(id: string): Peer {
   const file = path.join(root, `${id}.db`);
   const anchor = randomUUID();
-  const identity = createSyncGroupDeviceIdentity({ device_anchor: anchor, group_id: 'group', library_path: file, path_flavor: 'posix' });
+  const identity = createSyncGroupDeviceIdentity({ device_anchor: anchor, group_id: 'group', library_path: file,
+    path_flavor: devicePathFlavorFromCanonicalLibraryPath(file) });
   const db = new Database(file);
   db.pragma('foreign_keys = ON');
   initializeDatabaseSchema(db);

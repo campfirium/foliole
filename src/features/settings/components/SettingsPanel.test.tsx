@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
-import { beforeAll, beforeEach, expect, it } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../../shared/config/appSettings';
@@ -14,6 +14,10 @@ import {
   openReviewSettings,
   renderWithMouseGestureProvider
 } from './SettingsPanel.testUtils';
+
+vi.mock('../../../shared/platform/desktop/searchAliasFile', () => ({
+  loadSearchAliasFileStatus: async () => ({ error: null })
+}));
 
 beforeAll(async () => {
   await preloadTranslationCatalog('en');
