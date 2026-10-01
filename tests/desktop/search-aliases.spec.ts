@@ -17,6 +17,7 @@ async function saveAliases(desktopWindow: Page, stateRoot: string, text: string)
   if (!status?.path || !path.resolve(status.path).startsWith(path.resolve(stateRoot) + path.sep)) {
     throw new Error('alias file is outside the isolated native test state');
   }
+  expect(path.basename(path.dirname(status.path))).toBe('Widgets');
   await fs.mkdir(path.dirname(status.path), { recursive: true });
   await fs.writeFile(status.path, text, 'utf8');
 }

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { watch, type FSWatcher } from 'node:fs';
+import { promises as fs, watch, type FSWatcher } from 'node:fs';
 import path from 'node:path';
 
 import { parseSearchAliasDocument } from '../../lib/core/search/searchAliasDocument.js';
@@ -8,6 +8,7 @@ import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js
 import { openDatabaseConnection, registerDatabaseConnectionCleanup, runWithDatabaseConnectionOwner } from './connection.js';
 import { notifySearchAliasesChanged } from './searchAliasEvents.js';
 import {
+  migrateLegacySearchAliasFile,
   preserveSearchAliasConflict,
   readOptionalText,
   searchAliasBaselinePath,
@@ -74,6 +75,7 @@ function commitDocument(text: string) {
 
 async function reconcileDocument(mode: 'normal' | 'restore') {
   const databasePath = openDatabaseConnection().dbPath;
+  await migrateLegacySearchAliasFile(databasePath);
   const filePath = searchAliasFilePath(databasePath);
   const [source, baseline] = await Promise.all([
     readOptionalText(filePath), readBaseline(databasePath)
@@ -157,7 +159,9 @@ export function searchAliasMirrorStatus() {
 }
 
 export async function ensureSearchAliasFile() {
-  const filePath = searchAliasFilePath(openDatabaseConnection().dbPath);
+  const databasePath = openDatabaseConnection().dbPath;
+  await migrateLegacySearchAliasFile(databasePath);
+  const filePath = searchAliasFilePath(databasePath);
   if (await readOptionalText(filePath) !== null) return filePath;
   await reconcileSearchAliasMirror();
   if (await readOptionalText(filePath) === null) await writeTextAtomically(filePath, TEMPLATE);
@@ -183,6 +187,7 @@ export async function startSearchAliasMirror(mode: 'normal' | 'restore' = 'norma
   }
   const databasePath = openDatabaseConnection().dbPath;
   const filePath = searchAliasFilePath(databasePath);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
   boundDatabasePath = databasePath;
   watcher = watch(path.dirname(filePath), (_event, name) => {
     if (name && name.toString() !== 'search-aliases.txt') return;

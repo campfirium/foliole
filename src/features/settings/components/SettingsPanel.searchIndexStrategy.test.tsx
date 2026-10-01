@@ -47,7 +47,7 @@ beforeEach(() => {
     }
     if (command === 'load_search_index_rebuild_status') return null;
     if (command === 'load_search_alias_file_status' || command === 'open_search_alias_file') {
-      return { error: null, path: '/library/Data/search-aliases.txt' };
+      return { error: null, path: '/library/Widgets/search-aliases.txt' };
     }
     if (command === 'save_app_settings_state') return null;
     if (command === 'rebuild_search_index') {

@@ -19,7 +19,7 @@ vi.mock('electron', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { ensureSearchAliasFile, getEffectiveSearchAliases, reconcileSearchAliasMirror, startSearchAliasMirror } from './searchAliasMirror.js';
-import { searchAliasFilePath } from './searchAliasMirrorFiles.js';
+import { legacySearchAliasFilePath, searchAliasFilePath } from './searchAliasMirrorFiles.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
 let root = '';
@@ -31,6 +31,7 @@ beforeEach(async () => {
   appData = path.join(root, 'app');
   initializeDatabase();
   filePath = searchAliasFilePath(openDatabaseConnection().dbPath);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
 });
 
 afterEach(async () => {
@@ -40,10 +41,35 @@ afterEach(async () => {
 
 it('creates a multilingual example without saving an untouched template', async () => {
   await ensureSearchAliasFile();
+  expect(filePath).toBe(path.join(appData, 'Foliole', 'Widgets', 'search-aliases.txt'));
   expect(await fs.readFile(filePath, 'utf8')).toContain(
     '# Hello | Hallo | Hola | Bonjour | Ciao | こんにちは | 안녕하세요 | Cześć | Olá | Привет | 你好\n'
   );
   await reconcileSearchAliasMirror();
+  expect(content()).toBeNull();
+});
+
+it('moves the previous Data file into Widgets without dropping its text', async () => {
+  const legacyPath = legacySearchAliasFilePath(openDatabaseConnection().dbPath);
+  await fs.rmdir(path.dirname(filePath));
+  await fs.writeFile(legacyPath, 'Atlas | Mapbook\n');
+  await reconcileSearchAliasMirror();
+  expect(await fs.readFile(filePath, 'utf8')).toBe('Atlas | Mapbook\n');
+  expect(content()).toBe('Atlas | Mapbook\n');
+  await expect(fs.stat(legacyPath)).rejects.toMatchObject({ code: 'ENOENT' });
+  const backup = (await fs.readdir(path.dirname(legacyPath)))
+    .find((name) => name.startsWith('search-aliases.txt.migrated-'));
+  expect(await fs.readFile(path.join(path.dirname(legacyPath), backup!), 'utf8')).toBe('Atlas | Mapbook\n');
+});
+
+it('keeps different files in both locations when a location conflict exists', async () => {
+  const legacyPath = legacySearchAliasFilePath(openDatabaseConnection().dbPath);
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(legacyPath, 'Atlas | Mapbook\n');
+  await fs.writeFile(filePath, 'Hello | Hallo\n');
+  await expect(reconcileSearchAliasMirror()).rejects.toThrow('both Data and Widgets');
+  expect(await fs.readFile(legacyPath, 'utf8')).toBe('Atlas | Mapbook\n');
+  expect(await fs.readFile(filePath, 'utf8')).toBe('Hello | Hallo\n');
   expect(content()).toBeNull();
 });
 
@@ -101,6 +127,7 @@ it('keeps an invalid file editable without changing the database', async () => {
 });
 
 it('imports an editor save while the search palette is closed', async () => {
+  await fs.rmdir(path.dirname(filePath));
   await startSearchAliasMirror();
   await fs.writeFile(filePath, 'Disney | 迪士尼\n');
   await vi.waitFor(() => expect(content()).toBe('Disney | 迪士尼\n'));
