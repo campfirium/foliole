@@ -8,6 +8,7 @@ import type { DatabaseDriver } from './driver.js';
 import { parseImageSources, serializeImageSources, type ImageSources } from './imageSources.js';
 import { deriveImportedHighlightImageRegions } from './importedHighlightImageRegions.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
+import { ensureNodeParentMembership } from './nodeOrderMutations.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 function deriveImportedHighlightTitle(content: string) {
@@ -106,6 +107,7 @@ export function insertImportedHighlightNodes(input: {
     }
   });
 
+  for (const nodeId of insertedNodeIds) ensureNodeParentMembership(input.driver, nodeId);
   enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, insertedNodeIds);
 
   return insertedNodeIds.length;

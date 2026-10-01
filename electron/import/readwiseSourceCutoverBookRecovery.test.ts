@@ -44,6 +44,8 @@ vi.mock('./importManagerSettings.js', async () => {
 vi.mock('./readwiseApiSecret.js', () => ({ readReadwiseApiSecret: () => 'secret' }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+import { readParentChildOrders } from '../../lib/core/database/parentChildOrder.js';
 import {
   clearAttachmentLibraryPathSnapshot,
   publishAttachmentLibraryPathSnapshot
@@ -117,17 +119,21 @@ it('rebuilds a bound EPUB from frozen Reader HTML and keeps unlocated highlights
   expect(fetchImpl.mock.calls.filter(([input]) => new URL(String(input)).hostname.endsWith('.amazonaws.com')))
     .toHaveLength(0);
   expect(driver.queryAll<{ content: string }>(
-    "SELECT content FROM nodes WHERE id='topic-1' OR parent_id='topic-1'"
+    `SELECT ${buildNodeBodyContentSql()} AS content FROM nodes n
+      LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash
+      WHERE n.id='topic-1' OR n.parent_id='topic-1'`
   ).map((row) => row.content).join('\n')).toContain('https://bucket.s3.amazonaws.com/diagram.png');
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='topic-1'")?.content)
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql()} AS content FROM nodes n
+    LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash WHERE n.id='topic-1'`)?.content)
     .toContain('https://bucket.s3.amazonaws.com/cover.jpeg');
-  expect(driver.queryOne<{ count: number }>(
-    "SELECT COUNT(*) count FROM node_attachments WHERE node_id='topic-1' OR node_id IN (SELECT id FROM nodes WHERE parent_id='topic-1')"
-  )).toEqual({ count: 0 });
+  expect(driver.queryAll<{ resource_references: string }>(
+    "SELECT resource_references FROM nodes WHERE id='topic-1' OR parent_id='topic-1'"
+  ).flatMap((row) => JSON.parse(row.resource_references))).toEqual([]);
   expect(driver.queryOne<{ title: string }>(`SELECT parent.title FROM nodes child
     JOIN nodes parent ON parent.id=child.parent_id WHERE child.id='local-unlocated'`)).toEqual({ title: '※' });
-  expect(driver.queryOne<{ title: string }>(`SELECT child.title FROM nodes child JOIN node_order o ON o.node_id=child.id
-    WHERE child.parent_id='topic-1' AND child.deleted_at IS NULL ORDER BY o.position DESC LIMIT 1`))
+  const lastChild = readParentChildOrders(driver).get('topic-1')?.at(-1);
+  expect(driver.queryOne<{ title: string }>(
+    "SELECT title FROM nodes WHERE id=? AND parent_id='topic-1' AND deleted_at IS NULL", [lastChild ?? null]))
     .toEqual({ title: '※' });
 });
 
@@ -159,21 +165,21 @@ it('replaces a wrong migration original-file state with Reader HTML authority', 
   await seedMigratableSource(state.sourcePath);
   const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
   const driver = openDatabaseConnection().driver;
+  const originalHash = 'a'.repeat(64);
   driver.execute(`UPDATE import_sources SET remote_provider='readwise', remote_connection_ref=?,
     remote_document_id='document-1', remote_annotations_json='[]', remote_import_state_json=?
     WHERE source_fingerprint='source-1'`, [remote.connectionRef, JSON.stringify({
     annotations: [], bodyAuthority: 'original_epub', bodyState: 'materialized',
     documentBlockedAt: null, metadata: { category: 'epub' },
     originalFile: {
-      attachmentId: 'wrong-original', contentHash: 'wrong-hash', mimeType: 'application/epub+zip',
+      attachmentId: originalHash, contentHash: originalHash, mimeType: 'application/epub+zip',
       reason: null, sizeBytes: 10, status: 'localized'
     },
     remoteLifecycle: null, sourceUpdatedAt: null, sourceUpdate: null, version: 6
   })]);
-  driver.execute(`INSERT INTO attachments (id,original_name,mime_type,size_bytes,created_at)
-    VALUES ('wrong-original','wrong.epub','application/epub+zip',10,'old')`);
-  driver.execute(`INSERT INTO node_attachments (node_id,attachment_id,role)
-    VALUES ('topic-1','wrong-original','reference')`);
+  driver.execute("UPDATE nodes SET resource_references=? WHERE id='topic-1'", [JSON.stringify([{
+    storage_key: `${originalHash}.epub`, original_name: 'wrong.epub', role: 'reference'
+  }])]);
 
   await expect(runReadwiseSourceCutover({
     dependencies: { fetchImpl: epubMigrationFetch(), minIntervalMs: 0 }
@@ -185,9 +191,10 @@ it('replaces a wrong migration original-file state with Reader HTML authority', 
   expect(JSON.parse(source?.remote_import_state_json ?? '{}')).toMatchObject({
     bodyAuthority: 'reader_html', originalFile: null
   });
-  expect(driver.queryOne<{ count: number }>(
-    "SELECT COUNT(*) count FROM node_attachments WHERE attachment_id='wrong-original'"
-  )).toEqual({ count: 0 });
+  expect(driver.queryAll<{ resource_references: string }>(
+    'SELECT resource_references FROM nodes'
+  ).flatMap((row) => JSON.parse(row.resource_references)))
+    .not.toContainEqual(expect.objectContaining({ storage_key: `${originalHash}.epub` }));
   expect(driver.queryAll<{ title: string }>(
     "SELECT title FROM nodes WHERE parent_id='topic-1' AND id LIKE 'node-epub-%' AND deleted_at IS NULL"
   ).map((item) => item.title)).toEqual(['Chapter 1', 'Chapter 2']);

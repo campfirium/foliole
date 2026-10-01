@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -48,13 +49,16 @@ function readPersistedImportState(sourceFingerprint: string, nodeId: string | nu
     )
     .all(sourceFingerprint);
   const nodeRow = nodeId
-    ? (connection.sqlite.prepare('SELECT parent_id, kind, title, content FROM nodes WHERE id = ?').get(nodeId) as
+    ? (connection.sqlite.prepare(`SELECT n.parent_id, n.kind, n.title, ${buildNodeBodyContentSql()} AS content
+        FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash WHERE n.id = ?`).get(nodeId) as
         | { content: string; kind: string; parent_id: string; title: string }
         | undefined)
     : undefined;
   const childRows = nodeId
     ? connection.sqlite
-        .prepare('SELECT parent_id, kind, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+        .prepare(`SELECT n.parent_id, n.kind, n.title, ${buildNodeBodyContentSql()} AS content, n.anchor_link
+          FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash
+          WHERE n.parent_id = ? ORDER BY n.created_at ASC`)
         .all(nodeId) as Array<{ anchor_link: string | null; content: string; kind: string; parent_id: string; title: string }>
     : [];
 
@@ -228,5 +232,7 @@ it('creates imported child nodes for matched sidecar highlights during the first
   if (!imported.nodeId) {
     throw new Error('expected imported node id');
   }
+  expectImportedChildrenInSnapshot(imported.nodeId, imported.sourceFingerprint);
+  closeDatabaseConnection();
   expectImportedChildrenInSnapshot(imported.nodeId, imported.sourceFingerprint);
 });

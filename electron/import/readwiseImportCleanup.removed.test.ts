@@ -21,6 +21,7 @@ vi.mock('./managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { ensureNodeParentMembership } from '../../lib/core/database/nodeOrderMutations.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -80,7 +81,7 @@ it('clears Readwise Books placeholders and tracking-only records', async () => {
     `INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
      VALUES ('node-readwise-book-placeholder', 'special-inbox', 'topic', 'Readwise Book', '# Readwise Book', ?, ?)`
   ).run('2026-05-11T00:00:00.000Z', '2026-05-11T00:00:00.000Z');
-  connection.prepare("INSERT INTO node_order (node_id, position) VALUES ('node-readwise-book-placeholder', 0)").run();
+  ensureNodeParentMembership(openDatabaseConnection().driver, 'node-readwise-book-placeholder');
 
   expect(previewReadwiseImportCleanup()).toMatchObject({ delete_count: 1, tracking_only_count: 1, total_count: 2 });
   runReadwiseImportCleanup();

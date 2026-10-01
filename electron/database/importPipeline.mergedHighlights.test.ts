@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -39,11 +40,14 @@ afterEach(async () => {
 function readPersistedImportState(sourceFingerprint: string, nodeId: string | null) {
   const connection = openDatabaseConnection();
   const nodeRow = nodeId
-    ? connection.sqlite.prepare('SELECT parent_id, title, content FROM nodes WHERE id = ?').get(nodeId)
+    ? connection.sqlite.prepare(`SELECT n.parent_id, n.title, ${buildNodeBodyContentSql()} AS content
+      FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash WHERE n.id = ?`).get(nodeId)
     : undefined;
   const childRows = nodeId
     ? connection.sqlite
-        .prepare('SELECT parent_id, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+        .prepare(`SELECT n.parent_id, n.title, ${buildNodeBodyContentSql()} AS content, n.anchor_link
+          FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash
+          WHERE n.parent_id = ? ORDER BY n.created_at ASC`)
         .all(nodeId) as Array<{ anchor_link: string; content: string; parent_id: string; title: string }>
     : [];
   return { childRows, nodeRow, sourceFingerprint };
