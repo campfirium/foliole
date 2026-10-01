@@ -85,7 +85,7 @@ async function seed(page: Page) {
 }
 
 async function openNode(page: Page, nodeId: string) {
-  expect(await page.evaluate((id) => window.__folioleWorkspaceDebug?.openNode?.(id) ?? false, nodeId)).toBe(true);
+  await page.evaluate((id) => window.__folioleWorkspaceDebug?.openNode?.(id), nodeId);
   await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId?.())).toBe(nodeId);
 }
 
@@ -104,10 +104,8 @@ async function inspectLinks(app: ElectronApplication, nodeId: string) {
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
-    return connection.runWithDatabaseConnectionOwner(() => {
-      const sqlite = connection.openDatabaseConnection().sqlite;
-      return sqlite.prepare('SELECT attachment_id attachmentId FROM node_attachments WHERE node_id=?').all(id);
-    });
+    const attachments = require(pathApi.join(process.cwd(), 'dist/electron/database/attachments.js'));
+    return connection.runWithDatabaseConnectionOwner(() => attachments.listNodeAttachments(id));
   }, nodeId);
 }
 

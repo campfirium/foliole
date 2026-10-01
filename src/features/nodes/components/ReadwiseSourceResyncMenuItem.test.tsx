@@ -116,6 +116,15 @@ it('keeps the success notice through 4200ms and expires it at 8000ms', async () 
   runtime.noticeId = null;
 });
 
+it('keeps a failed resync as an error notice', async () => {
+  runtime.confirmation.mockResolvedValue(true);
+  runtime.resync.mockResolvedValue({ node_id: 'source', status: 'failed' });
+  renderWithLocalization(<Menu />);
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Resync from Readwise' }));
+  await waitFor(() => expect(runtime.notice).toHaveBeenCalledTimes(2));
+  expect(runtime.notice).toHaveBeenLastCalledWith('Could not resync from Readwise. The topic is unchanged.', 'error');
+});
+
 it('hides the resync action when this device does not handle Readwise imports', async () => {
   Object.assign(runtime.state, { status: 'source_inactive' });
   renderWithLocalization(<Menu />);

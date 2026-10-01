@@ -19,6 +19,7 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({ canCurrentHostRunReadw
 vi.mock('./readwiseApiConnectionState.js', () => ({ isStoredReadwiseApiConnectionReady: () => true }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -142,9 +143,11 @@ it('atomically replaces one source while preserving user identities, content, an
     '2026-09-13T02:00:00.000Z')).toMatchObject({ status: 'imported' });
 
   const driver = openDatabaseConnection().driver;
-  const root = driver.queryOne<{ content: string }>('SELECT content FROM nodes WHERE id=?', [seeded.rootId]);
-  expect(root?.content).toContain('New body');
-  expect(root?.content).toContain('local phrase');
+  const root = loadNodeBodyResolution(driver, seeded.rootId);
+  expect(root?.status).toBe('resolved');
+  if (!root || root.status !== 'resolved') throw new Error('resynced_body_unavailable');
+  expect(root.content).toContain('New body');
+  expect(root.content).toContain('local phrase');
   expect(driver.queryOne<{ content: string }>('SELECT content FROM nodes WHERE id=?', [seeded.remoteId]))
     .toEqual({ content: 'User edited highlight' });
   expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id='local-cloze'"))

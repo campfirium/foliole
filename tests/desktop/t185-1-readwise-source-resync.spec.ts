@@ -92,13 +92,14 @@ async function inspect(app: ElectronApplication) {
     if (!moduleApi || !pathApi) throw new Error('Node built-ins unavailable.');
     const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
     const connection = require(pathApi.join(process.cwd(), 'dist/electron/database/connection.js'));
+    const body = require(pathApi.join(process.cwd(), 'dist/lib/core/database/nodeBodyResolution.js'));
     return connection.runWithDatabaseConnectionOwner(() => {
       const driver = connection.openDatabaseConnection().driver;
       const source = driver.queryOne(`SELECT latest_node_id nodeId, remote_import_state_json state
         FROM import_sources WHERE remote_document_id='t185-source'`);
       if (!source) return null;
       return {
-        body: driver.queryOne('SELECT content FROM nodes WHERE id=?', [source.nodeId])?.content,
+        body: body.loadNodeBodyResolution(driver, source.nodeId)?.content,
         directFetchCount: runtime.__T185_DIRECT_FETCH_COUNT__ ?? 0,
         nodeId: source.nodeId,
         state: JSON.parse(source.state)
@@ -153,6 +154,9 @@ test('cancels safely and repeatedly resyncs one Reader source in place', async (
       body: expect.stringContaining('Second body'), directFetchCount: 1, nodeId: before!.nodeId,
       state: { bodyAuthority: 'reader_html' }
     });
+    await session.firstWindow.waitForTimeout(4200);
+    await expect(session.firstWindow.getByText(/^(Resynced from Readwise\.|已从 Readwise 重新同步。)$/)).toBeVisible();
+    await expect(session.firstWindow.getByText(/^(Resynced from Readwise\.|已从 Readwise 重新同步。)$/)).toBeHidden({ timeout: 4500 });
 
     await setRemoteBody(session.electronApp, '<h1>Source</h1><p>Third body from Readwise.</p>');
     await (await openResyncMenu(session, before!.nodeId)).click();
