@@ -26,6 +26,7 @@ const driver: DatabaseDriver = {
 
 const nodeRow = {
   parent_id: null,
+  resource_references: '[]',
   is_title_manual: 1,
   opening_text: null,
   content: 'content',
@@ -50,6 +51,7 @@ beforeEach(() => {
   executeSpy.mockReset();
   queryOneSpy.mockReset();
   queryAllSpy.mockReset();
+  queryAllSpy.mockReturnValue([]);
 });
 
 it('prefers the persisted active node for full workspace snapshots', () => {
@@ -58,7 +60,9 @@ it('prefers the persisted active node for full workspace snapshots', () => {
       { ...nodeRow, id: 'node-1', title: 'Node 1' },
       { ...nodeRow, id: 'node-2', title: 'Node 2' }
     ])
-    .mockReturnValueOnce([{ node_id: 'node-1' }, { node_id: 'node-2' }])
+    .mockReturnValueOnce([
+      { ...nodeRow, id: 'node-1' }, { ...nodeRow, id: 'node-2' }
+    ])
     .mockReturnValueOnce([])
     .mockReturnValueOnce([])
     .mockReturnValueOnce([]);

@@ -4,10 +4,12 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
+
 it('adds local durable editor history in schema v96', () => {
   const sqlite = new Database(':memory:');
-  initializeDatabaseSchema(sqlite);
-  sqlite.exec('DROP TABLE editor_operation_history; PRAGMA user_version = 95;');
+  installHistoricalDesktopSchema(sqlite, 95);
   initializeDatabaseSchema(sqlite);
 
   expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);

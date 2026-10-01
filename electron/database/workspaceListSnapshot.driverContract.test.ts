@@ -31,6 +31,7 @@ const workspaceListRow = {
   import_content_fingerprint: 'content-1',
   import_source_fingerprint: 'source-1',
   parent_id: null,
+  resource_references: '[]',
   priority: null,
   desired_retention: null,
   enable_short_term: null,
@@ -95,6 +96,7 @@ const expectedWorkspaceListSnapshot = {
       anchorLink: null,
       reading: null,
       readwiseRemoteLifecycle: null,
+      resourceReferences: [],
       review: null,
       shelvedAt: null,
       createdAt: '2026-03-14T00:00:00.000Z',
@@ -111,20 +113,22 @@ beforeEach(() => {
   executeSpy.mockReset();
   queryOneSpy.mockReset();
   queryAllSpy.mockReset();
+  queryAllSpy.mockReturnValue([]);
   transactionSpy.mockReset();
 });
 
 it('loads workspace list snapshot without long-lived node documents', () => {
-  queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([]).mockReturnValueOnce([{ node_id: 'node-1' }]);
+  queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([]).mockReturnValueOnce([workspaceListRow]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceListSnapshot(driver)).toEqual(expectedWorkspaceListSnapshot);
 
-  expect(queryAllSpy).toHaveBeenCalledTimes(3);
+  expect(queryAllSpy).toHaveBeenCalledWith('SELECT id, parent_id, created_at, deleted_at FROM nodes', undefined);
+  expect(queryAllSpy).toHaveBeenCalledWith('SELECT parent_id, child_ids_json FROM parent_child_order', undefined);
 });
 
 it('projects collection names without retaining long-lived content bodies', () => {
-  queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([]).mockReturnValueOnce([{ node_id: 'node-1' }]);
+  queryAllSpy.mockReturnValueOnce([workspaceListRow]).mockReturnValueOnce([]).mockReturnValueOnce([workspaceListRow]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   loadWorkspaceListSnapshot(driver);
@@ -151,7 +155,7 @@ it('preserves failed body status in lightweight list snapshots', () => {
   queryAllSpy
     .mockReturnValueOnce([{ ...workspaceListRow, body_status: 'failed' }])
     .mockReturnValueOnce([])
-    .mockReturnValueOnce([{ node_id: 'node-1' }]);
+    .mockReturnValueOnce([workspaceListRow]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceListSnapshot(driver)?.nodesById['node-1']?.bodyStatus).toBe('failed');
@@ -165,7 +169,9 @@ it('prefers the persisted active node when it is still available', () => {
       id: 'node-2',
       title: 'Node 2'
     }
-  ]).mockReturnValueOnce([]).mockReturnValueOnce([{ node_id: 'node-1' }, { node_id: 'node-2' }]);
+  ]).mockReturnValueOnce([]).mockReturnValueOnce([
+    workspaceListRow, { ...workspaceListRow, id: 'node-2' }
+  ]);
   queryOneSpy.mockImplementation((sql) => {
     if (sql.includes('sync_group_local_state')) return undefined;
     if (sql.includes('settings WHERE key')) return { value: '"desktop-test"' };
@@ -186,7 +192,7 @@ it('uses indexed pdf text as the opening when the node body only contains the pd
       }
     ])
     .mockReturnValueOnce([{ node_id: 'node-1', text: 'The actual PDF body starts here. More text follows.' }])
-    .mockReturnValueOnce([{ node_id: 'node-1' }]);
+    .mockReturnValueOnce([workspaceListRow]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceListSnapshot(driver)?.nodesById['node-1']?.openingText).toBe('The actual PDF body starts here. More text follows.');
@@ -201,11 +207,12 @@ it('can skip pdf page opening backfill for lightweight startup snapshots', () =>
         title: 'paper'
       }
     ])
-    .mockReturnValueOnce([{ node_id: 'node-1' }]);
+    .mockReturnValueOnce([workspaceListRow]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 
   expect(loadWorkspaceListSnapshot(driver, { includePdfOpenings: false })?.nodesById['node-1']?.openingText).toBeNull();
-  expect(queryAllSpy).toHaveBeenCalledTimes(2);
+  expect(queryAllSpy.mock.calls.some(([sql]) => sql.includes('pdf_page_text'))).toBe(false);
+  expect(queryAllSpy).toHaveBeenCalledWith('SELECT parent_id, child_ids_json FROM parent_child_order', undefined);
 });
 
 it('falls back to the first nested child opening when the parent body is only a cover', () => {
@@ -241,10 +248,15 @@ it('falls back to the first nested child opening when the parent body is only a 
     ])
     .mockReturnValueOnce([])
     .mockReturnValueOnce([
-      { node_id: 'node-book' },
-      { node_id: 'node-title-page' },
-      { node_id: 'node-part' },
-      { node_id: 'node-chapter' }
+      { ...workspaceListRow, id: 'node-book' },
+      { ...workspaceListRow, id: 'node-title-page', parent_id: 'node-book' },
+      { ...workspaceListRow, id: 'node-part', parent_id: 'node-book' },
+      { ...workspaceListRow, id: 'node-chapter', parent_id: 'node-part' }
+    ])
+    .mockReturnValueOnce([
+      { parent_id: 'parent-child-order:root', child_ids_json: '["node-book"]' },
+      { parent_id: 'node-book', child_ids_json: '["node-title-page","node-part"]' },
+      { parent_id: 'node-part', child_ids_json: '["node-chapter"]' }
     ]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' }).mockReturnValueOnce(undefined).mockReturnValueOnce(undefined);
 

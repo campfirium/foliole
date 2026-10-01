@@ -9,11 +9,12 @@ import {
 } from '../../lib/core/database/dataMigrationState.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
+
 it.each(['fresh', 'version-86'] as const)('creates database-owned data migration state for %s databases', (source) => {
   const sqlite = new Database(':memory:');
   if (source === 'version-86') {
-    initializeDatabaseSchema(sqlite);
-    sqlite.pragma('user_version = 86');
+    installHistoricalDesktopSchema(sqlite, 86);
   }
 
   initializeDatabaseSchema(sqlite);

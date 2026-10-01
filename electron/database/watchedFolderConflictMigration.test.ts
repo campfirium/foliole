@@ -5,11 +5,12 @@ import { expect, it } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
+
 it('adds durable watched conflict decisions to an existing version 101 library', () => {
   const db = new Database(':memory:');
   try {
-    initializeDatabaseSchema(db);
-    db.exec('DROP TABLE watched_folder_conflict_decisions; PRAGMA user_version = 101');
+    installHistoricalDesktopSchema(db, 101);
     initializeDatabaseSchema(db);
     db.prepare(`INSERT INTO watched_folder_conflict_decisions
       (group_id, conflict_key, decision_id, decided_at, decided_by_device_identity_key,
@@ -25,9 +26,7 @@ it('adds durable watched conflict decisions to an existing version 101 library',
 it('adds a local reconciliation marker to an existing version 102 decision table', () => {
   const db = new Database(':memory:');
   try {
-    initializeDatabaseSchema(db);
-    db.exec(`ALTER TABLE watched_folder_conflict_decisions DROP COLUMN local_reconciled_at;
-      PRAGMA user_version = 102`);
+    installHistoricalDesktopSchema(db, 102);
     initializeDatabaseSchema(db);
     expect(db.prepare(`SELECT name FROM pragma_table_info('watched_folder_conflict_decisions')
       WHERE name = 'local_reconciled_at'`).get()).toEqual({ name: 'local_reconciled_at' });
@@ -39,7 +38,7 @@ it('adds a local reconciliation marker to an existing version 102 decision table
 it('adds a frozen source mapping column to existing version 103 decisions', () => {
   const db = new Database(':memory:');
   try {
-    initializeDatabaseSchema(db);
+    installHistoricalDesktopSchema(db, 103);
     db.exec(`INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name,
       host_platform, root_path, path_flavor, type_settings_json, created_at, updated_at)
       VALUES ('watched:old', 'watched', 'old', 'Host', 'darwin', '/Articles', 'posix', '{}', 'now', 'now'),
@@ -53,8 +52,6 @@ it('adds a frozen source mapping column to existing version 103 decisions', () =
       INSERT INTO watched_folder_conflict_decisions (group_id, conflict_key, decision_id,
         decided_at, decided_by_device_identity_key, selected_binding_ids_json)
       VALUES ('group', '["/Articles",["new","old"]]', 'decision', 'now', 'device', '["new"]');`);
-    db.exec(`ALTER TABLE watched_folder_conflict_decisions DROP COLUMN source_alias_refs_json;
-      PRAGMA user_version = 103`);
     initializeDatabaseSchema(db);
     expect(db.prepare(`SELECT name FROM pragma_table_info('watched_folder_conflict_decisions')
       WHERE name = 'source_alias_refs_json'`).get()).toEqual({ name: 'source_alias_refs_json' });

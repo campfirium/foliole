@@ -8,18 +8,18 @@ import {
   initializeDatabaseSchema
 } from '../../lib/core/database/migrations.js';
 
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
+
 let sqlite: Database.Database;
 
 beforeEach(() => {
   sqlite = new Database(':memory:');
-  initializeDatabaseSchema(sqlite);
-  sqlite.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('host_name', ?, 'host')")
-    .run(JSON.stringify('This Mac'));
 });
 
 afterEach(() => sqlite.close());
 
 it('invalidates a deployed v2 completion when schema 89 upgrades', () => {
+  initializeHistoricalSource(89);
   const completion = {
     batchId: 'old-batch', completedAt: 'old-done',
     sourceHost: 'This Mac', startedAt: 'old-start'
@@ -32,7 +32,6 @@ it('invalidates a deployed v2 completion when schema 89 upgrades', () => {
     startedAt: completion.startedAt, status: 'api', version: 2
   });
   saveSetting('readwise_source_mode', { completion, mode: 'api', version: 1 });
-  sqlite.pragma('user_version = 89');
 
   initializeDatabaseSchema(sqlite);
 
@@ -45,6 +44,7 @@ it('invalidates a deployed v2 completion when schema 89 upgrades', () => {
 });
 
 it('reopens a v3 completion whose bound EPUB still requires a fresh download', () => {
+  initializeHistoricalSource(91);
   const completion = {
     batchId: 'old-batch', completedAt: 'old-done',
     sourceHost: 'This Mac', startedAt: 'old-start'
@@ -63,7 +63,6 @@ it('reopens a v3 completion whose bound EPUB still requires a fresh download', (
     remote_connection_ref,remote_document_id,remote_import_state_json
   ) VALUES ('source','readwise_api','epub','Book','book','old','old','hash','topic-book',
     'readwise','connection','book',?)`).run(JSON.stringify({ metadata: { category: 'epub' } }));
-  sqlite.pragma('user_version = 91');
 
   initializeDatabaseSchema(sqlite);
 
@@ -74,6 +73,7 @@ it('reopens a v3 completion whose bound EPUB still requires a fresh download', (
 });
 
 it('reopens a v4 completion whose bound EPUB was attached but not rebuilt', () => {
+  initializeHistoricalSource(92);
   const completion = {
     batchId: 'old-batch', completedAt: 'old-done',
     sourceHost: 'This Mac', startedAt: 'old-start'
@@ -95,7 +95,6 @@ it('reopens a v4 completion whose bound EPUB was attached but not rebuilt', () =
       bodyAuthority: 'reader_html', metadata: { category: 'epub' },
       originalFile: { status: 'localized' }
     }));
-  sqlite.pragma('user_version = 92');
 
   initializeDatabaseSchema(sqlite);
 
@@ -106,6 +105,7 @@ it('reopens a v4 completion whose bound EPUB was attached but not rebuilt', () =
 });
 
 it('reopens a v5 completion with per-document failures', () => {
+  initializeHistoricalSource(93);
   const completion = {
     batchId: 'old-batch', completedAt: 'old-done',
     sourceHost: 'This Mac', startedAt: 'old-start'
@@ -121,7 +121,6 @@ it('reopens a v5 completion with per-document failures', () => {
     startedAt: completion.startedAt, status: 'api', version: 2
   });
   saveSetting('readwise_source_mode', { completion, mode: 'api', version: 1 });
-  sqlite.pragma('user_version = 93');
 
   initializeDatabaseSchema(sqlite);
 
@@ -132,6 +131,7 @@ it('reopens a v5 completion with per-document failures', () => {
 });
 
 it('reopens a v6 completion so bound books are rebuilt from Reader HTML', () => {
+  initializeHistoricalSource(94);
   const completion = {
     batchId: 'old-batch', completedAt: 'old-done',
     sourceHost: 'This Mac', startedAt: 'old-start'
@@ -153,7 +153,6 @@ it('reopens a v6 completion so bound books are rebuilt from Reader HTML', () => 
       bodyAuthority: 'original_epub', metadata: { category: 'epub' },
       originalFile: { status: 'localized' }
     }));
-  sqlite.pragma('user_version = 94');
 
   initializeDatabaseSchema(sqlite);
 
@@ -162,6 +161,11 @@ it('reopens a v6 completion so bound books are rebuilt from Reader HTML', () => 
     cohortDocumentIds: [], documents: [], phase: 'indexing', status: 'migration-in-progress'
   });
 });
+
+function initializeHistoricalSource(version: number) {
+  installHistoricalDesktopSchema(sqlite, version);
+  saveSetting('host_name', 'This Mac');
+}
 
 function saveSetting(key: string, value: unknown) {
   sqlite.prepare(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, 'old')

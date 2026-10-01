@@ -9,16 +9,19 @@ import { createAttachmentReceiveCheckpoint } from '../../lib/core/sync/attachmen
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 it.each(['desktop', 'companion'] as const)('adds checkpoints to existing %s libraries without changing nodes', async (host) => {
   const sqlite = new Database(':memory:');
   try {
-    if (host === 'desktop') initializeDatabaseSchema(sqlite);
-    else sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
-    sqlite.exec(`DROP TABLE attachment_receive_checkpoints;
-      INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
+    if (host === 'desktop') installHistoricalDesktopSchema(sqlite, 117);
+    else {
+      sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+      sqlite.exec('DROP TABLE attachment_receive_checkpoints');
+      sqlite.pragma('user_version = 53');
+    }
+    sqlite.exec(`INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
       VALUES ('original', 'topic', 'Original', 'original body', 'now', 'now');`);
-    sqlite.pragma(`user_version = ${host === 'desktop' ? 117 : 53}`);
     const port = createBetterSqliteDbPort(sqlite);
     if (host === 'desktop') initializeDatabaseSchema(sqlite);
     else await migrateCompanionDatabase(port, 53, COMPANION_DATABASE_VERSION);

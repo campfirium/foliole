@@ -8,6 +8,7 @@ import { loadWorkspaceListSnapshot } from '../../lib/core/database/index.js';
 const workspaceListRow = {
   id: 'node-trash',
   parent_id: null,
+  resource_references: '[]',
   kind: 'topic',
   priority: null,
   desired_retention: null,
@@ -48,9 +49,10 @@ const workspaceListRow = {
 
 it('carries deleted node timestamps for runtime trash hydration', () => {
   const queryAll = vi.fn()
+    .mockReturnValue([])
     .mockReturnValueOnce([workspaceListRow])
     .mockReturnValueOnce([])
-    .mockReturnValueOnce([{ node_id: 'node-trash' }]);
+    .mockReturnValueOnce([workspaceListRow]);
   const queryOne = vi.fn()
     .mockReturnValueOnce({ value: '"desktop-test"' })
     .mockReturnValueOnce(undefined)

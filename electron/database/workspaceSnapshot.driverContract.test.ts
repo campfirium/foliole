@@ -31,6 +31,7 @@ const workspaceSnapshotRow = {
   import_content_fingerprint: 'content-1',
   import_source_fingerprint: 'source-1',
   parent_id: null,
+  resource_references: '[]',
   title: 'Node 1',
   is_title_manual: 1,
   opening_text: null,
@@ -77,9 +78,10 @@ const expectedWorkspaceSnapshot = {
       virtualFilter: null,
       reveal: null,
       anchorLink: null,
-      position: null,
+      position: 0,
       reading: null,
       readwiseRemoteLifecycle: null,
+      resourceReferences: [],
       review: null,
       shelvedAt: null,
       createdAt: '2026-03-14T00:00:00.000Z',
@@ -102,7 +104,7 @@ beforeEach(() => {
 it('loads workspace snapshot through query helpers only', () => {
   queryAllSpy.mockReturnValue([])
     .mockReturnValueOnce([workspaceSnapshotRow])
-    .mockReturnValueOnce([{ node_id: 'node-1' }])
+    .mockReturnValueOnce([workspaceSnapshotRow])
     .mockReturnValueOnce([])
     .mockReturnValueOnce([]);
   queryOneSpy.mockImplementation((sql) => {

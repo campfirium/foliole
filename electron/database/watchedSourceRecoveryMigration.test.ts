@@ -9,6 +9,7 @@ import { applySyncObjectsWithDbPort } from '../../lib/core/sync/syncObjectApplyE
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 const OLD = '2026-09-25T07:14:32.581Z';
 const RULE = 'draft-import-source-102';
@@ -16,12 +17,11 @@ const PATH = 'D:\\T\\demo\\split\\artiles';
 
 function database(deviceId: string) {
   const db = new Database(':memory:');
-  initializeDatabaseSchema(db);
+  installHistoricalDesktopSchema(db, 100);
   db.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('device_id', ?, ?)")
     .run(JSON.stringify(deviceId), OLD);
   db.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('host_name', ?, ?)")
     .run(JSON.stringify(deviceId), OLD);
-  db.pragma('user_version = 100');
   return db;
 }
 
@@ -133,6 +133,7 @@ it('republishes an owned path so an equal-hash remote projection can recover', a
     expect(republished.sync_dirty).toBe(1);
     const nextPayload = (mac.prepare(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.watched_folder)
       .get(id) as { payload_json: string }).payload_json;
+    initializeDatabaseSchema(windows);
     await applySyncObjectsWithDbPort(createBetterSqliteDbPort(windows), [{
       object_type: 'watched_folder', object_id: id, content_hash: republished.content_hash,
       deleted_at: null, updated_at: republished.updated_at, payload_json: nextPayload

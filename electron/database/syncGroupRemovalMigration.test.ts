@@ -5,20 +5,18 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
+
 let sqlite: Database.Database;
 
 beforeEach(() => {
   sqlite = new Database(':memory:');
-  initializeDatabaseSchema(sqlite);
+  installHistoricalDesktopSchema(sqlite, 90);
 });
 
 afterEach(() => sqlite.close());
 
 it('adds durable removal decisions and confirmations when schema 90 upgrades', () => {
-  sqlite.exec(`DROP TABLE sync_group_removal_confirmations;
-    DROP TABLE sync_group_removal_decisions;
-    PRAGMA user_version = 90;`);
-
   initializeDatabaseSchema(sqlite);
 
   const tables = sqlite.prepare(`SELECT name FROM sqlite_master

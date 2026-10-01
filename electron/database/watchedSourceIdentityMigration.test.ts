@@ -8,13 +8,11 @@ import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectP
 import { applyWatchedFolderObject } from '../../lib/core/sync/syncObjectWatchedFolderPayloadExecutor.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 function migratedDatabase(deviceId: string, path: string) {
   const db = new Database(':memory:');
-  initializeDatabaseSchema(db);
-  db.exec(`ALTER TABLE watched_folder_bindings DROP COLUMN local_rule_id;
-      ALTER TABLE watched_folder_bindings DROP COLUMN reported_path;
-      PRAGMA user_version = 99`);
+  installHistoricalDesktopSchema(db, 99);
   db.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('device_id', ?, 'old')")
     .run(JSON.stringify(deviceId));
   db.prepare(`INSERT INTO desktop_sources
@@ -123,10 +121,7 @@ it('splits two copied databases even before their copied device settings are cor
 it('preserves an already distinct remote source during the legacy draft migration', () => {
   const db = new Database(':memory:');
   try {
-    initializeDatabaseSchema(db);
-    db.exec(`ALTER TABLE watched_folder_bindings DROP COLUMN local_rule_id;
-      ALTER TABLE watched_folder_bindings DROP COLUMN reported_path;
-      PRAGMA user_version = 99`);
+    installHistoricalDesktopSchema(db, 99);
     db.prepare("INSERT INTO settings (key, value, updated_at) VALUES ('device_id', ?, 'old')")
       .run(JSON.stringify('mac-device'));
     db.prepare(`INSERT INTO desktop_sources
