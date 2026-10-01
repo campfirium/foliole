@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "Papierkorb",
+  "desktop.search.searching": "Suche läuft…",
   "desktop.search.noMatches": "Keine passenden Ergebnisse",
   "desktop.search.unavailable": "Die Suche ist nicht verfügbar. Versuchen Sie es gleich noch einmal.",
   "desktop.search.results.aria": "Workspace-Suchergebnisse",

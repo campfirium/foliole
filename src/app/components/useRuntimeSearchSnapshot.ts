@@ -12,6 +12,8 @@ import type { WorkspaceSearchResult } from './workspaceSearch';
 interface RuntimeSearchState {
   aliasSpellings: Array<{ key: string; label: string }>;
   error: boolean;
+  loading: boolean;
+  query: string;
   hasMore: boolean;
   results: WorkspaceSearchResult[];
   selectedSpelling: string | null;
@@ -19,7 +21,7 @@ interface RuntimeSearchState {
 }
 
 const EMPTY_STATE: RuntimeSearchState = {
-  aliasSpellings: [], error: false, hasMore: false, results: [], selectedSpelling: null, snapshotId: ''
+  aliasSpellings: [], error: false, loading: false, query: '', hasMore: false, results: [], selectedSpelling: null, snapshotId: ''
 };
 
 export function useRuntimeSearchSnapshot(isOpen: boolean, hasRuntime: boolean, query: string) {
@@ -36,7 +38,7 @@ export function useRuntimeSearchSnapshot(isOpen: boolean, hasRuntime: boolean, q
     snapshotRef.current = '';
     selectedRef.current = null;
     loadingRef.current = false;
-    setState(EMPTY_STATE);
+    setState({ ...EMPTY_STATE, loading: Boolean(isOpen && hasRuntime && query.trim()), query });
     if (isOpen && hasRuntime && query.trim()) {
       void searchWorkspaceInRuntime(query).then((snapshot) => {
         ownedId = snapshot.snapshotId;
@@ -46,8 +48,8 @@ export function useRuntimeSearchSnapshot(isOpen: boolean, hasRuntime: boolean, q
         }
         snapshotRef.current = ownedId;
         revisionRef.current = snapshot.revision;
-        setState({ ...snapshot, error: false, selectedSpelling: null });
-      }).catch(() => { if (!cancelled) setState({ ...EMPTY_STATE, error: true }); });
+        setState({ ...snapshot, error: false, loading: false, query, selectedSpelling: null });
+      }).catch(() => { if (!cancelled) setState({ ...EMPTY_STATE, error: true, query }); });
     }
     return () => {
       cancelled = true;
@@ -61,12 +63,12 @@ export function useRuntimeSearchSnapshot(isOpen: boolean, hasRuntime: boolean, q
     if (!id || selectedRef.current === spelling) return;
     selectedRef.current = spelling;
     loadingRef.current = false;
-    setState((current) => ({ ...current, results: [], hasMore: false, selectedSpelling: spelling }));
+    setState((current) => ({ ...current, results: [], hasMore: false, loading: true, error: false, selectedSpelling: spelling }));
     void loadWorkspaceSearchBatchInRuntime(id, 0, spelling).then((batch) => {
       if (snapshotRef.current !== id || selectedRef.current !== spelling) return;
-      setState((current) => ({ ...current, ...batch }));
+      setState((current) => ({ ...current, ...batch, loading: false }));
     }).catch(() => {
-      if (snapshotRef.current === id) setState((current) => ({ ...current, error: true }));
+      if (snapshotRef.current === id && selectedRef.current === spelling) setState((current) => ({ ...current, error: true, loading: false }));
     });
   }, []);
 
@@ -84,7 +86,7 @@ export function useRuntimeSearchSnapshot(isOpen: boolean, hasRuntime: boolean, q
     }).finally(() => { loadingRef.current = false; });
   }, [state.hasMore, state.results.length]);
 
-  return { ...state, loadMore, selectSpelling };
+  return { ...state, loading: isOpen && hasRuntime && Boolean(query.trim()) && (state.query !== query || state.loading), loadMore, selectSpelling };
 }
 
 function useSearchAliasRevision(

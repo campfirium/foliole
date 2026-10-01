@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "휴지통",
+  "desktop.search.searching": "검색 중…",
   "desktop.search.noMatches": "일치하는 결과가 없습니다",
   "desktop.search.unavailable": "검색이 불가능합니다. 잠시 후에 다시 시도해 보세요.",
   "desktop.search.results.aria": "작업공간 검색 결과",

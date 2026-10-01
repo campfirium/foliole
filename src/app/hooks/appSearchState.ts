@@ -176,7 +176,7 @@ export function buildControllerSearchState(args: SearchStateArgs): AppSearchStat
         args.runtime.setIsSearchPaletteOpen(false);
         return;
       }
-      if (options?.preview) {
+      if (options?.preview || result.isTrashed) {
         args.searchPreview?.openSearchPreview(result);
         args.runtime.setIsSearchPaletteOpen(false);
         return;

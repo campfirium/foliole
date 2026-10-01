@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "回收站",
+  "desktop.search.searching": "搜尋中…",
   "desktop.search.noMatches": "沒有匹配結果",
   "desktop.search.unavailable": "搜尋不可用。稍後再試一次。",
   "desktop.search.results.aria": "工作區搜尋結果",

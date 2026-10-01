@@ -31,7 +31,7 @@ import type { WorkspaceSearchSourceState } from './workspaceSearchSourceState.js
 
 export type { WorkspaceSearchSidecarRebuildStatus } from './workspaceSearchSidecarMetadata.js';
 
-const SEARCH_SIDECAR_SCHEMA_VERSION = 1;
+const SEARCH_SIDECAR_SCHEMA_VERSION = 2;
 const APP_SETTINGS_KEY = 'app_settings';
 
 interface AppSettingsRow {
@@ -73,15 +73,19 @@ function readAppSettings(sqlite: DatabaseMigrationTarget) {
 function dropSearchIndexTables(sqlite: DatabaseMigrationTarget) {
   sqlite.exec('DROP TABLE IF EXISTS search.node_search');
   sqlite.exec('DROP TABLE IF EXISTS search.pdf_search');
+  sqlite.exec('DROP TABLE IF EXISTS search.pdf_page_map');
 }
 
 function createSearchIndexTables(sqlite: DatabaseMigrationTarget, tokenizer: FullTextSearchTokenizer) {
+  sqlite.exec(`CREATE TABLE search.pdf_page_map (row_id INTEGER PRIMARY KEY, node_id TEXT NOT NULL,
+    attachment_id TEXT NOT NULL, page INTEGER NOT NULL, UNIQUE(node_id, attachment_id, page))`);
   sqlite.exec(`CREATE VIRTUAL TABLE search.node_search USING fts5(
     title,
     path,
     content,
     node_id UNINDEXED,
     updated_at UNINDEXED,
+    is_trashed UNINDEXED,
     tokenize = '${tokenizer}'
   )`);
   sqlite.exec(`CREATE VIRTUAL TABLE search.pdf_search USING fts5(
@@ -93,6 +97,7 @@ function createSearchIndexTables(sqlite: DatabaseMigrationTarget, tokenizer: Ful
     page UNINDEXED,
     updated_at UNINDEXED,
     page_text_length UNINDEXED,
+    is_trashed UNINDEXED,
     tokenize = '${tokenizer}'
   )`);
 }
@@ -107,10 +112,10 @@ function hasSearchIndexTables(sqlite: DatabaseMigrationTarget) {
     `SELECT name
      FROM search.sqlite_master
      WHERE type = 'table'
-       AND name IN ('node_search', 'pdf_search')`
+       AND name IN ('node_search', 'pdf_search', 'pdf_page_map')`
   ).all() as Array<{ name: string }>;
   const names = new Set(rows.map((row) => row.name));
-  return names.has('node_search') && names.has('pdf_search');
+  return names.has('node_search') && names.has('pdf_search') && names.has('pdf_page_map');
 }
 
 function shouldRetryPreviousRebuild(sqlite: DatabaseMigrationTarget) {

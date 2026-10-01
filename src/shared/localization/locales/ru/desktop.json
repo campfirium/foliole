@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "Корзина",
+  "desktop.search.searching": "Поиск…",
   "desktop.search.noMatches": "Нет соответствующих результатов",
   "desktop.search.unavailable": "Поиск недоступен. Повторите попытку через минуту.",
   "desktop.search.results.aria": "Результаты поиска рабочей области",

@@ -1,25 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
-
-const NODE_PATHS_CTE_SQL = `WITH RECURSIVE node_paths(node_id, path) AS (
-    SELECT id, ''
-    FROM nodes
-    WHERE parent_id IS NULL
-      AND deleted_at IS NULL
-    UNION ALL
-    SELECT
-      child.id,
-      CASE
-        WHEN paths.path = '' THEN COALESCE(NULLIF(trim(parent.title), ''), 'Untitled')
-        ELSE paths.path || ' / ' || COALESCE(NULLIF(trim(parent.title), ''), 'Untitled')
-      END
-    FROM nodes child
-    INNER JOIN nodes parent
-      ON parent.id = child.parent_id
-     AND parent.deleted_at IS NULL
-    INNER JOIN node_paths paths
-      ON paths.node_id = parent.id
-    WHERE child.deleted_at IS NULL
-  )`;
+import { refreshWorkspacePdfPageMap } from './workspacePdfPageMap.js';
+import { NODE_PATHS_CTE_SQL } from './workspaceSearchIndexSql.js';
 
 const TEMP_SUBTREE_SEED_IDS_SQL = `CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_subtree_seed_ids (
   id TEXT PRIMARY KEY
@@ -46,15 +27,17 @@ const INSERT_SUBTREE_AFFECTED_IDS_SQL = `WITH RECURSIVE node_descendants(id) AS 
 
 const UPDATE_NODE_SEARCH_PATH_SQL = `${NODE_PATHS_CTE_SQL}
   UPDATE search.node_search
-  SET path = COALESCE((SELECT path FROM node_paths WHERE node_paths.node_id = node_search.node_id), '')
+  SET path = COALESCE((SELECT path FROM node_paths WHERE node_paths.node_id = node_search.node_id), ''),
+    is_trashed = COALESCE((SELECT is_trashed FROM node_paths WHERE node_paths.node_id = node_search.node_id), 0)
   WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)
-    AND EXISTS (SELECT 1 FROM nodes WHERE nodes.id = node_search.node_id AND nodes.deleted_at IS NULL)`;
+    AND EXISTS (SELECT 1 FROM nodes WHERE nodes.id = node_search.node_id)`;
 
 const UPDATE_PDF_SEARCH_PATH_SQL = `${NODE_PATHS_CTE_SQL}
   UPDATE search.pdf_search
-  SET path = COALESCE((SELECT path FROM node_paths WHERE node_paths.node_id = pdf_search.node_id), '')
+  SET path = COALESCE((SELECT path FROM node_paths WHERE node_paths.node_id = pdf_search.node_id), ''),
+    is_trashed = COALESCE((SELECT is_trashed FROM node_paths WHERE node_paths.node_id = pdf_search.node_id), 0)
   WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)
-    AND EXISTS (SELECT 1 FROM nodes WHERE nodes.id = pdf_search.node_id AND nodes.deleted_at IS NULL)`;
+    AND EXISTS (SELECT 1 FROM nodes WHERE nodes.id = pdf_search.node_id)`;
 
 function toUniqueIds(ids: string[]) {
   return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
@@ -108,6 +91,7 @@ export function deleteWorkspaceSearchIndexForExistingSubtreeRootIds(driver: Data
     SELECT id FROM node_descendants`;
   driver.execute(`DELETE FROM search.node_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
   driver.execute(`DELETE FROM search.pdf_search WHERE node_id IN (${affectedIdsSql})`, seedIds);
+  refreshWorkspacePdfPageMap(driver);
 }
 
 export function deleteWorkspaceSearchIndexForSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {
@@ -118,6 +102,7 @@ export function deleteWorkspaceSearchIndexForSubtreeRootIds(driver: DatabaseDriv
   driver.execute('DELETE FROM search.node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)');
   driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_subtree_affected_ids)');
   deleteWorkspaceSearchIndexForNodeIds(driver, missingIds);
+  refreshWorkspacePdfPageMap(driver);
 }
 
 export function syncWorkspaceSearchPathForSubtreeRootIds(driver: DatabaseDriver, rootIds: string[]) {

@@ -42,8 +42,8 @@ export function hasRemoteImportBinding(row: ReadwiseExternalDocumentRow) {
   const reference = readRemoteReference(row);
   if (!reference) return false;
   return Boolean(openDatabaseConnection().driver.queryOne(
-    `SELECT source_fingerprint FROM import_sources
-     WHERE remote_provider = 'readwise' AND remote_connection_ref = ? AND remote_document_id = ? LIMIT 1`,
+    `SELECT source_fingerprint FROM stored_import_locators
+     WHERE remote_connection_ref = ? AND remote_document_id = ? LIMIT 1`,
     [reference.connection_ref, reference.remote_document_id]
   ));
 }

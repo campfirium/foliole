@@ -35,7 +35,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('keeps workspace search on main-data fallback when sidecar FTS tables are unavailable', () => {
+it('reports unavailable search instead of reading original data when the search index is missing', () => {
   upsertNodeSnapshot({
     anchorLink: null,
     content: 'Atlas fallback body is still visible.',
@@ -63,6 +63,6 @@ it('keeps workspace search on main-data fallback when sidecar FTS tables are una
     .run('Old Atlas', '', 'main-only stale marker', 'node-fallback', '2026-05-26T00:00:00.000Z');
   connection.sqlite.exec('DROP TABLE search.node_search');
 
-  expect(searchWorkspace('Atlas').map((result) => result.id)).toContain('node-fallback');
-  expect(searchWorkspace('main-only stale marker')).toEqual([]);
+  expect(() => searchWorkspace('Atlas')).toThrow(/no such table: search.node_search/);
+  expect(() => searchWorkspace('main-only stale marker')).toThrow(/no such table: search.node_search/);
 });

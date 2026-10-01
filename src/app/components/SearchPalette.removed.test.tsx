@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -68,7 +68,7 @@ function renderSearchPalette() {
 
 it('includes Removed source matches in workspace search', async () => {
   const entry = createRemovedSource();
-  mocks.getRuntimeInvoke.mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot([])));
+  mocks.getRuntimeInvoke.mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot(buildRemovedWorkspaceSearchResults([entry], 'launch'))));
   mocks.loadRuntimeRemovedSources.mockResolvedValue({
     entries: [entry],
     loadedAt: '2026-05-13T00:00:00.000Z'
@@ -82,11 +82,8 @@ it('includes Removed source matches in workspace search', async () => {
     target: { value: 'launch' }
   });
 
-  await waitFor(() => expect(mocks.loadRuntimeRemovedSources).toHaveBeenCalled());
-  await expect(mocks.loadRuntimeRemovedSources.mock.results[0]?.value).resolves.toMatchObject({
-    entries: [{ title: 'Removed launch' }]
-  });
   expect(await screen.findByRole('button', { name: /Removed launch/ })).toBeInTheDocument();
   expect(screen.getAllByText('Removed').length).toBeGreaterThan(0);
   expect(screen.getByText('/Readwise/Removed.md')).toBeInTheDocument();
+  expect(mocks.loadRuntimeRemovedSources).not.toHaveBeenCalled();
 });

@@ -1,3 +1,4 @@
+import type { WorkspaceRemovedSearchEntry } from '../core/database/workspaceRemovedSearchEntry.js';
 import type { WorkspaceExternalSearchSourceKind } from '../core/database/workspaceSearchResults.js';
 
 export interface NativeWorkspaceSearchResult {
@@ -10,7 +11,9 @@ export interface NativeWorkspaceSearchResult {
   }>;
   excerpt: string;
   id: string;
-  kind: 'external' | 'node' | 'pdf';
+  kind: 'external' | 'node' | 'pdf' | 'removed';
+  removedMatch?: { entry: WorkspaceRemovedSearchEntry; query: string };
+  isTrashed?: boolean | undefined;
   matchedOriginal?: boolean;
   externalMatch: {
     absolutePath: string;

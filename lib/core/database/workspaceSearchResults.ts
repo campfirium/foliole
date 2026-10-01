@@ -1,9 +1,12 @@
+import type { WorkspaceRemovedSearchEntry } from './workspaceRemovedSearchEntry.js';
 export interface WorkspaceSearchResult {
   aliasMatches?: SearchAliasResultMatch[] | undefined;
+  isTrashed?: boolean | undefined;
   matchedOriginal?: boolean | undefined;
   excerpt: string;
   id: string;
-  kind: 'external' | 'node' | 'pdf';
+  kind: 'external' | 'node' | 'pdf' | 'removed';
+  removedMatch?: { entry: WorkspaceRemovedSearchEntry; query: string };
   externalMatch: {
     absolutePath: string;
     folderId: string;
@@ -94,6 +97,7 @@ function mergeAliasMatches(left: SearchAliasResultMatch[] = [], right: SearchAli
 export function sortAndLimitResults(results: RankedWorkspaceSearchResult[]) {
   return results
     .sort((left, right) => {
+      if (Boolean(left.isTrashed) !== Boolean(right.isTrashed)) return left.isTrashed ? 1 : -1;
       if (Boolean(left.matchedOriginal) !== Boolean(right.matchedOriginal)) {
         return left.matchedOriginal ? -1 : 1;
       }
@@ -111,6 +115,7 @@ export function sortAndLimitResults(results: RankedWorkspaceSearchResult[]) {
       excerpt: result.excerpt,
       externalMatch: result.externalMatch,
       id: result.id,
+      isTrashed: result.isTrashed,
       kind: result.kind,
       matchedOriginal: result.matchedOriginal,
       nodeMatch: result.nodeMatch,

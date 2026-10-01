@@ -122,7 +122,7 @@ it('queues ordinary node edits and searches them after the invalidation consumer
     deletedAt: '2026-05-16T10:02:00.000Z'
   });
   processSearchIndexInvalidations(openDatabaseConnection().driver);
-  expect(searchWorkspace('Atlas')).toEqual([]);
+  expect(searchWorkspace('Atlas')[0]).toMatchObject({ id: 'node-edit', isTrashed: true });
 
   restoreNodes({ nodeIds: ['node-edit'] });
   processSearchIndexInvalidations(openDatabaseConnection().driver);
@@ -153,7 +153,7 @@ it('updates moved subtree paths without rebuilding child content', () => {
   expect(searchWorkspace('UnindexedFreshToken')).toEqual([]);
 });
 
-it('hides descendants immediately after ancestor delete and restores the subtree through the queue', () => {
+it('marks descendants as Trash through the index queue and clears the mark on restore', () => {
   upsertSearchNode({ content: '', id: 'parent-delete', parentNodeId: null, title: 'Parent' });
   upsertSearchNode({ content: 'Descendant marker', id: 'child-delete', parentNodeId: 'parent-delete', title: 'Child' });
   processSearchIndexInvalidations(openDatabaseConnection().driver);
@@ -163,7 +163,7 @@ it('hides descendants immediately after ancestor delete and restores the subtree
     deletedAt: '2026-05-16T10:02:00.000Z'
   });
 
-  expect(searchWorkspace('Descendant marker')).toEqual([]);
+  expect(searchWorkspace('Descendant marker')[0]).toMatchObject({ id: 'child-delete', isTrashed: false });
   expect(pendingInvalidations()).toEqual([
     { invalidation_type: 'node_workspace', status: 'pending', target_id: 'parent-delete' }
   ]);
@@ -172,11 +172,12 @@ it('hides descendants immediately after ancestor delete and restores the subtree
     openDatabaseConnection().sqlite
       .prepare("SELECT COUNT(*) AS count FROM search.node_search WHERE node_id IN ('parent-delete', 'child-delete')")
       .get()
-  ).toEqual({ count: 0 });
+  ).toEqual({ count: 2 });
+  expect(searchWorkspace('Descendant marker')[0]).toMatchObject({ id: 'child-delete', isTrashed: true });
 
   restoreNodes({ nodeIds: ['parent-delete'] });
   processSearchIndexInvalidations(openDatabaseConnection().driver);
-  expect(searchWorkspace('Descendant marker')[0]).toMatchObject({ id: 'child-delete', kind: 'node' });
+  expect(searchWorkspace('Descendant marker')[0]).toMatchObject({ id: 'child-delete', kind: 'node', isTrashed: false });
 });
 
 it('queues Readwise parent and child highlights without indexing inside the import transaction', () => {

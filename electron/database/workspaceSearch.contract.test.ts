@@ -107,7 +107,7 @@ it('keeps path updates and delete restore visibility symmetric', () => {
 
   softDeleteNodes({ nodeIds: ['folder-parent'], deletedAt: '2026-05-25T00:10:00.000Z' });
   processSearchQueue();
-  expect(searchWorkspace('contract marker')).toEqual([]);
+  expect(searchWorkspace('contract marker')[0]).toMatchObject({ id: 'node-child', isTrashed: true });
 
   restoreNodes({ nodeIds: ['folder-parent'] });
   processSearchQueue();

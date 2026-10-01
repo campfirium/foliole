@@ -91,8 +91,8 @@ it('searches titles and content from sqlite without needing renderer-side conten
 
   const results = searchWorkspace('Atlas');
 
-  expect(results).toHaveLength(2);
-  expect(results[0]).toEqual({
+  expect(results).toHaveLength(3);
+  expect(results[0]).toMatchObject({
     id: 'node-title',
     title: 'Project Atlas',
     excerpt: 'Planning notes stay in sqlite until the node is opened.',
@@ -116,7 +116,7 @@ it('searches titles and content from sqlite without needing renderer-side conten
     updatedAt: '2026-03-02T00:00:00.000Z'
   });
   expect(results[1]?.excerpt).toContain('Atlas launch checklist');
-  expect(results[1]?.excerpt).not.toContain('Should stay hidden from search results.');
+  expect(results[2]).toMatchObject({ id: 'node-deleted', isTrashed: true });
 });
 
 it('searches node body blob data before inline content', () => {

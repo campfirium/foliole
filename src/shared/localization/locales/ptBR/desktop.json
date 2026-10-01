@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "Lixeira",
+  "desktop.search.searching": "Pesquisando…",
   "desktop.search.noMatches": "Nenhum resultado correspondente",
   "desktop.search.unavailable": "A pesquisa não está disponível. Tente novamente em alguns instantes.",
   "desktop.search.results.aria": "Resultados da pesquisa no espaço de trabalho",

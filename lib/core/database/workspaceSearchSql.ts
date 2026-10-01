@@ -1,7 +1,4 @@
 import type { DatabaseRow } from './driver.js';
-import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
-import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
-import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export interface WorkspaceSearchRow extends DatabaseRow {
   content: string;
@@ -10,6 +7,7 @@ export interface WorkspaceSearchRow extends DatabaseRow {
   rank: number;
   title: string;
   updated_at: string;
+  is_trashed?: number;
 }
 
 export interface WorkspacePdfSearchRow extends DatabaseRow {
@@ -22,6 +20,7 @@ export interface WorkspacePdfSearchRow extends DatabaseRow {
   text: string;
   title: string;
   updated_at: string;
+  is_trashed?: number;
 }
 
 export interface WorkspacePdfCrossPageSearchRow extends DatabaseRow {
@@ -35,105 +34,35 @@ export interface WorkspacePdfCrossPageSearchRow extends DatabaseRow {
   text: string;
   title: string;
   updated_at: string;
+  is_trashed?: number;
 }
 
-const NODE_BODY_CONTENT_SQL = buildNodeBodyContentSql();
-export const TITLE_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
-SELECT n.id, n.title, ${NODE_BODY_CONTENT_SQL} AS content, n.updated_at
-  FROM nodes n
-  INNER JOIN visible_nodes visible
-    ON visible.id = n.id
-  LEFT JOIN content_blob_data cbd
-    ON cbd.hash = n.body_blob_hash
-  WHERE instr(lower(trim(n.title)), ?) > 0
-  ORDER BY n.updated_at DESC`;
-export const CONTENT_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
-SELECT n.id, n.title, ${NODE_BODY_CONTENT_SQL} AS content, n.updated_at
-  FROM nodes n
-  INNER JOIN visible_nodes visible
-    ON visible.id = n.id
-  LEFT JOIN content_blob_data cbd
-    ON cbd.hash = n.body_blob_hash
-  WHERE instr(lower(trim(n.title)), ?) = 0
-    AND instr(lower(${NODE_BODY_CONTENT_SQL}), ?) > 0
-  ORDER BY n.updated_at DESC`;
-export const NODE_FTS_SQL = `${VISIBLE_NODES_CTE_SQL}
-SELECT node_search.node_id AS id, title, path, content, updated_at, bm25(node_search, 8.0, 2.0, 1.0) AS rank
-  FROM search.node_search AS node_search
-  INNER JOIN visible_nodes visible
-    ON visible.id = node_search.node_id
-  WHERE node_search MATCH ?
-  ORDER BY rank ASC, updated_at DESC`;
-export const PDF_FTS_SQL = `${VISIBLE_NODES_CTE_SQL}
-SELECT
-  pdf_search.node_id AS id,
-  title,
-  path,
-  text,
-  attachment_id,
-  page,
-  updated_at,
-  page_text_length,
-  bm25(pdf_search, 4.0, 2.0, 1.0) AS rank
-FROM search.pdf_search AS pdf_search
-INNER JOIN visible_nodes visible
-  ON visible.id = pdf_search.node_id
-WHERE pdf_search MATCH ?
-ORDER BY rank ASC, updated_at DESC`;
-export const PDF_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
-SELECT
-  a.node_id AS id,
-  COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
-  ppt.text AS text,
-  ppt.page AS page,
-  length(ppt.text) AS page_text_length,
-  n.updated_at AS updated_at,
-  a.id AS attachment_id
-FROM pdf_page_text ppt
-INNER JOIN (${NODE_PDF_RESOURCES_SQL}) a ON a.id = ppt.attachment_id
-INNER JOIN nodes n ON n.id = a.node_id
-INNER JOIN visible_nodes visible ON visible.id = n.id
-WHERE a.mime_type = 'application/pdf'
-  AND a.pdf_index_status = 'ready'
-  AND instr(lower(ppt.text), ?) > 0
-ORDER BY n.updated_at DESC`;
-export const PDF_CROSS_PAGE_MATCH_SQL = `${VISIBLE_NODES_CTE_SQL},
-page_pairs AS (
-  SELECT
-    a.node_id AS id,
-    COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
-    ppt.text AS text,
-    next_ppt.text AS next_text,
-    ppt.page AS page,
-    next_ppt.page AS end_page,
-    length(ppt.text) AS page_text_length,
-    n.updated_at AS updated_at,
-    a.id AS attachment_id,
-    CASE
-      WHEN length(ppt.text) > ? THEN length(ppt.text) - ?
-      ELSE 0
-    END AS tail_start,
-    substr(ppt.text, CASE WHEN length(ppt.text) - ? + 1 > 1 THEN length(ppt.text) - ? + 1 ELSE 1 END)
-      || substr(next_ppt.text, 1, ?) AS boundary_text
-  FROM pdf_page_text ppt
-  INNER JOIN pdf_page_text next_ppt ON next_ppt.attachment_id = ppt.attachment_id AND next_ppt.page = ppt.page + 1
-  INNER JOIN (${NODE_PDF_RESOURCES_SQL}) a ON a.id = ppt.attachment_id
-    INNER JOIN nodes n ON n.id = a.node_id
-  INNER JOIN visible_nodes visible ON visible.id = n.id
-  WHERE a.mime_type = 'application/pdf'
-    AND a.pdf_index_status = 'ready'
+export const NODE_INDEX_COLUMNS = 'node_id AS id, title, path, content, updated_at, is_trashed';
+export const PDF_INDEX_COLUMNS = 'node_id AS id, title, path, text, attachment_id, page, updated_at, page_text_length, is_trashed';
+export const TITLE_FALLBACK_SQL = `SELECT ${NODE_INDEX_COLUMNS} FROM search.node_search
+  WHERE instr(lower(trim(title)), ?) > 0 ORDER BY updated_at DESC`;
+export const CONTENT_FALLBACK_SQL = `SELECT ${NODE_INDEX_COLUMNS} FROM search.node_search
+  WHERE instr(lower(trim(title)), ?) = 0 AND instr(lower(content), ?) > 0 ORDER BY updated_at DESC`;
+export const NODE_FTS_SQL = `SELECT ${NODE_INDEX_COLUMNS}, bm25(node_search, 8.0, 2.0, 1.0) AS rank
+  FROM search.node_search WHERE node_search MATCH ? ORDER BY rank ASC, updated_at DESC`;
+export const PDF_FTS_SQL = `SELECT ${PDF_INDEX_COLUMNS}, bm25(pdf_search, 4.0, 2.0, 1.0) AS rank
+  FROM search.pdf_search WHERE pdf_search MATCH ? ORDER BY rank ASC, updated_at DESC`;
+export const PDF_FALLBACK_SQL = `SELECT ${PDF_INDEX_COLUMNS} FROM search.pdf_search
+  WHERE instr(lower(text), ?) > 0 ORDER BY updated_at DESC`;
+export const PDF_CROSS_PAGE_MATCH_SQL = `WITH page_pairs AS (
+  SELECT p.node_id AS id, p.title, p.text, next.text AS next_text,
+    CAST(p.page AS INTEGER) AS page, CAST(next.page AS INTEGER) AS end_page,
+    CAST(p.page_text_length AS INTEGER) AS page_text_length, p.updated_at, p.attachment_id, p.is_trashed,
+    CASE WHEN length(p.text) > ? THEN length(p.text) - ? ELSE 0 END AS tail_start,
+    substr(p.text, CASE WHEN length(p.text) - ? + 1 > 1 THEN length(p.text) - ? + 1 ELSE 1 END)
+      || substr(next.text, 1, ?) AS boundary_text
+  FROM search.pdf_search p INNER JOIN search.pdf_page_map current ON current.row_id = p.rowid
+    INNER JOIN search.pdf_page_map neighbor
+      ON neighbor.node_id = current.node_id AND neighbor.attachment_id = current.attachment_id
+        AND neighbor.page = current.page + 1
+    INNER JOIN search.pdf_search next ON next.rowid = neighbor.row_id
 )
-SELECT
-  id,
-  title,
-  text,
-  next_text,
-  page,
-  end_page,
+SELECT id, title, text, next_text, page, end_page,
   instr(lower(boundary_text), ?) - 1 + tail_start AS match_start,
-  page_text_length,
-  updated_at,
-  attachment_id
-FROM page_pairs
-WHERE instr(lower(boundary_text), ?) > 0
-ORDER BY updated_at DESC`;
+  page_text_length, updated_at, attachment_id, is_trashed
+FROM page_pairs WHERE instr(lower(boundary_text), ?) > 0 ORDER BY updated_at DESC`;

@@ -1,6 +1,8 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.search.searching': '搜索中…',
+  'desktop.search.badge.trash': '回收站',
   'desktop.search.noMatches': '没有匹配结果',
   'desktop.search.unavailable': '搜索暂时不可用。请稍后再试。',
   'desktop.search.results.aria': '工作区搜索结果',

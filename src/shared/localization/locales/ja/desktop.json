@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "ゴミ箱",
+  "desktop.search.searching": "検索中…",
   "desktop.search.noMatches": "一致する結果はありません",
   "desktop.search.unavailable": "検索は利用できません。しばらくしてからもう一度試してください。",
   "desktop.search.results.aria": "ワークスペースの検索結果",

@@ -108,6 +108,7 @@ export function resolveSearchResultNodeBadge(
   if (result.kind === 'external') {
     return t('desktop.search.badge.external');
   }
+  if (result.isTrashed) return t('desktop.search.badge.trash');
   if (result.kind === 'removed') {
     return t('desktop.search.badge.removed');
   }

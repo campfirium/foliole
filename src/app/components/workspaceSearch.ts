@@ -16,6 +16,7 @@ export interface WorkspaceSearchResult {
   excerpt: string;
   id: string;
   kind: 'external' | 'node' | 'pdf' | 'removed';
+  isTrashed?: boolean | undefined;
   matchedOriginal?: boolean;
   externalMatch: {
     absolutePath: string;

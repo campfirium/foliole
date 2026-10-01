@@ -1,3 +1,4 @@
+import type { WorkspaceRemovedSearchEntry } from '../../../lib/core/database/workspaceRemovedSearchEntry';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
   NativeRestoreRemovedSourceResult,
@@ -7,19 +8,7 @@ import type {
 
 import { getRuntimeInvoke } from './runtimeInvoke';
 
-export interface RuntimeRemovedSourceEntry {
-  content: string | null;
-  contentPreview: string | null;
-  deletedAt: string;
-  firstSeenAt: string;
-  hasSourceUpdate: boolean;
-  id: string;
-  lastImportedAt: string | null;
-  lastNodeId: string | null;
-  ruleId: string;
-  sourcePath: string;
-  title: string;
-}
+export type RuntimeRemovedSourceEntry = WorkspaceRemovedSearchEntry;
 
 export interface RuntimeRemovedSourcesResult {
   entries: RuntimeRemovedSourceEntry[];

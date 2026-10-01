@@ -6,11 +6,9 @@ import { resolveNodeDisplayTitle } from '../../shared/localization/systemEntryNa
 import {
   hasWorkspaceSearchRuntimeRepository
 } from '../../shared/platform/appRuntimeCommandRepository';
-import { loadRuntimeRemovedSources } from '../../shared/platform/removedSourcesRuntimeRepository';
 
 import { useRuntimeSearchSnapshot } from './useRuntimeSearchSnapshot';
 import {
-  buildRemovedWorkspaceSearchResults,
   buildWorkspaceSearchResults,
   type WorkspaceSearchResult
 } from './workspaceSearch';
@@ -42,31 +40,6 @@ function useSearchExecutionQuery(isOpen: boolean, query: string, isComposing: bo
   return executionQuery;
 }
 
-function useRemovedSearchResults(isOpen: boolean, query: string) {
-  const [removedResults, setRemovedResults] = useState<WorkspaceSearchResult[]>([]);
-  useEffect(() => {
-    if (!isOpen || !query.trim()) {
-      setRemovedResults([]);
-      return;
-    }
-
-    let cancelled = false;
-    setRemovedResults([]);
-    void loadRuntimeRemovedSources()
-      .then((result) => {
-        if (!cancelled) setRemovedResults(buildRemovedWorkspaceSearchResults(result.entries, query));
-      })
-      .catch(() => {
-        if (!cancelled) setRemovedResults([]);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen, query]);
-  return removedResults;
-}
-
 function applySelectedAliasMatch(result: WorkspaceSearchResult, spelling: string | null) {
   const match = spelling ? result.aliasMatches?.find((item) => item.spelling === spelling) : null;
   return match ? { ...result, ...match } : result;
@@ -85,20 +58,20 @@ export function useSearchResults(props: SearchSourceProps, query: string, isComp
     [executionQuery, hasRuntime, props.nodeOrder, props.nodesById, props.trashedNodeIds]
   );
   const runtime = useRuntimeSearchSnapshot(props.isOpen, hasRuntime, executionQuery);
-  const removedResults = useRemovedSearchResults(props.isOpen, executionQuery);
   const results = useMemo(
     () =>
       hasPendingQuery
         ? []
-        : (hasRuntime ? [...runtime.results, ...(runtime.selectedSpelling ? [] : removedResults)] : [...localResults, ...removedResults]).map((result) => {
+        : (hasRuntime ? runtime.results : localResults).map((result) => {
           const selected = applySelectedAliasMatch(result, runtime.selectedSpelling);
           return selected.kind === 'node' ? { ...selected, title: resolveNodeDisplayTitle(locale, selected.id, selected.title) } : selected;
         }),
-    [hasPendingQuery, hasRuntime, localResults, locale, removedResults, runtime.results, runtime.selectedSpelling]
+    [hasPendingQuery, hasRuntime, localResults, locale, runtime.results, runtime.selectedSpelling]
   );
   return {
     aliasSpellings: hasPendingQuery ? [] : runtime.aliasSpellings,
-    error: hasRuntime ? runtime.error : false,
+    error: !hasPendingQuery && hasRuntime ? runtime.error : false,
+    loading: Boolean(query.trim()) && (hasPendingQuery || runtime.loading),
     hasMore: hasPendingQuery ? false : runtime.hasMore,
     loadMore: runtime.loadMore,
     results,
@@ -126,8 +99,9 @@ export function useOrderedSearchResults(
       else regularResults.push(result);
     });
     const ordered = [...regularResults, ...anchoredResults, ...removedResults, ...openedResults, ...externalResults];
-    return prioritizeOriginal
+    const ranked = prioritizeOriginal
       ? ordered.sort((left, right) => Number(Boolean(right.matchedOriginal)) - Number(Boolean(left.matchedOriginal)))
       : ordered;
+    return ranked.sort((left, right) => Number(Boolean(left.isTrashed)) - Number(Boolean(right.isTrashed)));
   }, [nodesById, prioritizeOriginal, results]);
 }

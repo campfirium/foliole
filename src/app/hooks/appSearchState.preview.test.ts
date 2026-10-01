@@ -48,3 +48,13 @@ it('routes modified node search results to the shared search preview', () => {
   expect(args.ws.setNodeViewState).not.toHaveBeenCalled();
   expect(args.runtime.setIsSearchPaletteOpen).toHaveBeenCalledWith(false);
 });
+
+it('opens Trash search hits as read-only previews without selecting an editable topic', () => {
+  const args = createArgs();
+  const result = { excerpt: 'Trash preview', externalMatch: null, id: 'trash-topic',
+    kind: 'node' as const, isTrashed: true, nodeMatch: null, pdfMatch: null,
+    title: 'Trashed topic', updatedAt: '2026-10-01T00:00:00.000Z' };
+  buildControllerSearchState(args).onOpenResult(result);
+  expect(args.searchPreview.openSearchPreview).toHaveBeenCalledWith(result);
+  expect(args.nav.handleSelectNode).not.toHaveBeenCalled();
+});

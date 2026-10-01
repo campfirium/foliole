@@ -116,9 +116,9 @@ it('keeps batch node indexing equivalent for blobs, inline fallback, and deleted
 
   syncNodeSearchIndexForNodeIds(connection.driver, ['node-blob', 'node-inline', 'node-deleted']);
 
-  expect(searchWorkspace('atlas').map((result) => result.id)).toEqual(['node-blob', 'node-inline']);
+  expect(searchWorkspace('atlas').map((result) => result.id)).toEqual(['node-blob', 'node-inline', 'node-deleted']);
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM search.node_search WHERE node_id = ?').get('node-deleted')).toEqual({
-    count: 0
+    count: 1
   });
 });
 

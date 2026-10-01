@@ -40,6 +40,7 @@ import {
   invalidateLegacyReadwiseSourceCompletion,
   migrateReadwiseSourceMode
 } from './readwiseSourceModeMigration.js';
+import { initializeStoredSourceSearch } from './storedSourceSearchSchema.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
@@ -158,5 +159,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     migrateDynamicNodeVersionChains(sqlite);
   } },
   { version: 121, migrate: repairSyncStateEntities },
-  { version: 122, migrate: migrateIndependentNodeVersions }
+  { version: 122, migrate: migrateIndependentNodeVersions },
+  { version: 123, migrate: initializeStoredSourceSearch }
 ];

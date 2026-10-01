@@ -13,6 +13,7 @@ import { READWISE_HOST_SETTINGS_VERSION_GUARDS } from './readwiseHostSettingsVer
 import { isRetiredAttachmentSchema } from './retiredAttachmentSchema.js';
 import { SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS } from './searchIndexInvalidationSchemaStatements.js';
 import { SOURCE_DISPOSITION_SCHEMA_STATEMENTS } from './sourceDispositionSchemaStatements.js';
+import { STORED_SOURCE_SEARCH_SCHEMA } from './storedSourceSearchSchema.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
@@ -41,5 +42,6 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...SOURCE_DISPOSITION_SCHEMA_STATEMENTS,
   ...SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS,
   ...READWISE_HOST_SETTINGS_VERSION_GUARDS,
+  ...STORED_SOURCE_SEARCH_SCHEMA,
   ...DATA_MIGRATION_STATE_SCHEMA_STATEMENTS
 ].filter((statement) => !isRetiredAttachmentSchema(statement));

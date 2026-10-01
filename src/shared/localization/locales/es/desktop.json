@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "Papelera",
+  "desktop.search.searching": "Buscando…",
   "desktop.search.noMatches": "No hay resultados coincidentes",
   "desktop.search.unavailable": "La búsqueda no está disponible. Inténtalo de nuevo en un momento.",
   "desktop.search.results.aria": "Resultados de búsqueda del espacio de trabajo",

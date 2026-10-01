@@ -1,4 +1,6 @@
 export const EN_DESKTOP_TRANSLATIONS = {
+  'desktop.search.searching': 'Searching…',
+  'desktop.search.badge.trash': 'Trash',
   'desktop.search.noMatches': 'No matching results',
   'desktop.search.unavailable': 'Search is unavailable. Try again in a moment.',
   'desktop.search.results.aria': 'Workspace search results',

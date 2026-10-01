@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "Corbeille",
+  "desktop.search.searching": "Recherche en cours…",
   "desktop.search.noMatches": "Aucun résultat correspondant",
   "desktop.search.unavailable": "La recherche n'est pas disponible. Réessayez dans un instant.",
   "desktop.search.results.aria": "Résultats de recherche dans l'espace de travail",

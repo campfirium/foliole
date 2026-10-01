@@ -26,14 +26,9 @@ export function loadActiveImportedSourceLocators() {
 
 function loadActiveImportedSourceLocatorRows() {
   const rows = openDatabaseConnection().sqlite
-    .prepare(
-      `SELECT source.source_locator, source.source_ref, source.source_location,
-         source.latest_node_id, node.deleted_at
-       FROM import_sources source
-       JOIN nodes node ON node.id = source.latest_node_id
-       WHERE source.source_locator <> ''
-       ORDER BY node.deleted_at IS NOT NULL ASC, source.last_imported_at DESC`
-    )
+    .prepare(`SELECT locator AS source_locator, node_id AS latest_node_id, deleted_at,
+      NULL AS source_ref, NULL AS source_location FROM stored_import_locators
+      WHERE locator <> '' ORDER BY deleted_at IS NOT NULL ASC`)
     .all() as ActiveImportLocatorRow[];
   return rows;
 }
@@ -53,11 +48,20 @@ export function loadActiveImportedSourceLocatorNodeIds() {
 
 export function resolveImportedNodeIdForExternalDocument(
   absolutePath: string,
-  importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds()
+  importedNodeIdsByLocator?: Map<string, string>
 ) {
-  return importedNodeIdsByLocator.get(normalizeExternalImportLocator(absolutePath)) ?? null;
+  const locator = normalizeExternalImportLocator(absolutePath);
+  if (importedNodeIdsByLocator) return importedNodeIdsByLocator.get(locator) ?? null;
+  return openDatabaseConnection().driver.queryOne<{ node_id: string }>(
+    `SELECT node_id FROM stored_import_locators WHERE locator = ?
+      ORDER BY deleted_at IS NOT NULL ASC LIMIT 1`, [locator]
+  )?.node_id ?? null;
 }
 
-export function isExternalDocumentVisible(absolutePath: string, activeImportedLocators = loadActiveImportedSourceLocators()) {
-  return !activeImportedLocators.has(normalizeExternalImportLocator(absolutePath));
+export function isExternalDocumentVisible(absolutePath: string, activeImportedLocators?: Set<string>) {
+  const locator = normalizeExternalImportLocator(absolutePath);
+  if (activeImportedLocators) return !activeImportedLocators.has(locator);
+  return !openDatabaseConnection().driver.queryOne(
+    'SELECT node_id FROM stored_import_locators WHERE locator = ? LIMIT 1', [locator]
+  );
 }

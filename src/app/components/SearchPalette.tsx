@@ -9,7 +9,7 @@ import { FloatingPaletteInput } from './FloatingPaletteInput';
 import { SearchAliasFilters } from './SearchAliasFilters';
 import { SearchPaletteEnhancementPrompt } from './SearchPaletteEnhancementPrompt';
 import { SearchPaletteIndexStatus } from './SearchPaletteIndexStatus';
-import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList } from './SearchPaletteResults';
+import { SearchPaletteEmptyState, SearchPaletteErrorState, SearchPaletteList, SearchPaletteLoadingState } from './SearchPaletteResults';
 import { useOrderedSearchResults, useSearchResults } from './searchPaletteSearchState';
 import { SearchPaletteShortcutsFooter, useSearchPaletteShortcuts } from './SearchPaletteShortcutsFooter';
 import { useSearchResultSourceDetails } from './searchPaletteSourceDetails';
@@ -72,8 +72,7 @@ export function SearchPalette(props: SearchPaletteProps) {
         />
         <SearchPaletteBody
           activeIndex={activeIndex}
-          hasError={searchState.error}
-          hasMore={searchState.hasMore}
+          searchState={searchState}
           nodesById={props.nodesById}
           onOpenResult={props.onOpenResult}
           onLoadMore={searchState.loadMore}
@@ -166,8 +165,7 @@ function createOpenActiveSearchResultHandler(
 
 function SearchPaletteBody(props: {
   activeIndex: number;
-  hasError: boolean;
-  hasMore: boolean;
+  searchState: ReturnType<typeof useSearchResults>;
   nodesById: WorkspaceListNodesById;
   onOpenResult: (result: WorkspaceSearchResult, options?: { preview?: boolean }) => void;
   onLoadMore: () => void;
@@ -177,16 +175,17 @@ function SearchPaletteBody(props: {
   selectedSpelling: string | null;
   sourceDetailsByNodeId: ReturnType<typeof useSearchResultSourceDetails>;
 }) {
-  if (props.hasError) {
+  if (props.searchState.error) {
     return <SearchPaletteErrorState />;
   }
+  if (!props.results.length && props.searchState.loading) return <SearchPaletteLoadingState />;
   if (!props.results.length) {
     return <SearchPaletteEmptyState query={props.query} />;
   }
   return (
     <SearchPaletteList
       activeIndex={props.activeIndex}
-      hasMore={props.hasMore}
+      hasMore={props.searchState.hasMore}
       nodesById={props.nodesById}
       onOpenResult={props.onOpenResult}
       onLoadMore={props.onLoadMore}

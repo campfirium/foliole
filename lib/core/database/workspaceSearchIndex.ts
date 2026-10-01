@@ -1,94 +1,8 @@
 import type { DatabaseDriver } from './driver.js';
-import { buildNodeBodyContentSql, NodeBodyUnavailableError } from './nodeBodyResolution.js';
+import { NodeBodyUnavailableError } from './nodeBodyResolution.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
-
-const NODE_BODY_CONTENT_SQL = buildNodeBodyContentSql();
-
-const NODE_PATHS_CTE_SQL = `WITH RECURSIVE node_paths(node_id, path) AS (
-    SELECT id, ''
-    FROM nodes
-    WHERE parent_id IS NULL
-      AND deleted_at IS NULL
-    UNION ALL
-    SELECT
-      child.id,
-      CASE
-        WHEN paths.path = '' THEN COALESCE(NULLIF(trim(parent.title), ''), 'Untitled')
-        ELSE paths.path || ' / ' || COALESCE(NULLIF(trim(parent.title), ''), 'Untitled')
-      END
-    FROM nodes child
-    INNER JOIN nodes parent
-      ON parent.id = child.parent_id
-     AND parent.deleted_at IS NULL
-    INNER JOIN node_paths paths
-      ON paths.node_id = parent.id
-    WHERE child.deleted_at IS NULL
-  )`;
-
-const NODE_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
-  INSERT INTO search.node_search (title, path, content, node_id, updated_at)
-  SELECT trim(n.title), COALESCE(paths.path, ''), ${NODE_BODY_CONTENT_SQL}, n.id, n.updated_at
-  FROM nodes n
-  LEFT JOIN node_paths paths
-    ON paths.node_id = n.id
-  LEFT JOIN content_blob_data cbd
-    ON cbd.hash = n.body_blob_hash
-  WHERE n.id IN (SELECT id FROM temp_workspace_search_affected_ids)
-    AND n.deleted_at IS NULL
-    AND paths.node_id IS NOT NULL`;
-
-const PDF_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
-  INSERT INTO search.pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
-  SELECT
-    COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document'),
-    COALESCE(paths.path, ''),
-    ppt.text,
-    n.id,
-    a.id,
-    CAST(ppt.page AS TEXT),
-    n.updated_at,
-    CAST(length(ppt.text) AS TEXT)
-  FROM (${NODE_PDF_RESOURCES_SQL}) a
-  INNER JOIN nodes n
-    ON n.id = a.node_id
-   AND n.deleted_at IS NULL
-  LEFT JOIN node_paths paths
-    ON paths.node_id = n.id
-  INNER JOIN pdf_page_text ppt
-    ON ppt.attachment_id = a.id
-  WHERE a.node_id IN (SELECT id FROM temp_workspace_search_affected_ids)
-    AND a.pdf_index_status = 'ready'
-    AND paths.node_id IS NOT NULL`;
-
-const NODE_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
-  INSERT INTO search.node_search (title, path, content, node_id, updated_at)
-  SELECT trim(n.title), COALESCE(paths.path, ''), ${NODE_BODY_CONTENT_SQL}, n.id, n.updated_at
-  FROM nodes n
-  LEFT JOIN node_paths paths
-    ON paths.node_id = n.id
-  LEFT JOIN content_blob_data cbd
-    ON cbd.hash = n.body_blob_hash
-  WHERE n.deleted_at IS NULL`;
-
-const PDF_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
-  INSERT INTO search.pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
-  SELECT
-    COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document'),
-    COALESCE(paths.path, ''),
-    ppt.text,
-    n.id,
-    a.id,
-    CAST(ppt.page AS TEXT),
-    n.updated_at,
-    CAST(length(ppt.text) AS TEXT)
-  FROM pdf_page_text ppt
-  INNER JOIN (${NODE_PDF_RESOURCES_SQL}) a
-    ON a.id = ppt.attachment_id AND a.pdf_index_status = 'ready'
-  INNER JOIN nodes n
-    ON n.id = a.node_id
-   AND n.deleted_at IS NULL
-  LEFT JOIN node_paths paths
-    ON paths.node_id = n.id`;
+import { refreshWorkspacePdfPageMap } from './workspacePdfPageMap.js';
+import { NODE_PATHS_CTE_SQL, NODE_SEARCH_INSERT_AFFECTED_SQL, NODE_SEARCH_REBUILD_SQL, PDF_SEARCH_INSERT_AFFECTED_SQL, PDF_SEARCH_REBUILD_SQL } from './workspaceSearchIndexSql.js';
 
 const TEMP_SEED_IDS_SQL = `CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_seed_ids (
   id TEXT PRIMARY KEY
@@ -184,6 +98,7 @@ export function rebuildWorkspaceSearchIndexes(driver: DatabaseDriver) {
   driver.execute('DELETE FROM search.pdf_search');
   driver.execute(NODE_SEARCH_REBUILD_SQL);
   driver.execute(PDF_SEARCH_REBUILD_SQL);
+  refreshWorkspacePdfPageMap(driver);
 }
 
 export function syncNodeSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: string[]) {
@@ -206,6 +121,7 @@ export function syncPdfSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: st
   }
   driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute(PDF_SEARCH_INSERT_AFFECTED_SQL);
+  refreshWorkspacePdfPageMap(driver);
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 
@@ -220,6 +136,7 @@ export function syncWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeI
   driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
   driver.execute(PDF_SEARCH_INSERT_AFFECTED_SQL);
+  refreshWorkspacePdfPageMap(driver);
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 

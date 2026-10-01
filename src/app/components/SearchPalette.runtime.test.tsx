@@ -1,3 +1,4 @@
+
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
@@ -12,7 +13,7 @@ import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
 import { searchSnapshot } from './searchPaletteTestSupport';
-import type { WorkspaceSearchResult } from './workspaceSearch';
+import { buildRemovedWorkspaceSearchResults, type WorkspaceSearchResult } from './workspaceSearch';
 
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -148,10 +149,8 @@ it('orders internal, anchored, removed, opened, and external results in stable b
     createSearchResult({ id: 'external-result', kind: 'external', sourceKind: 'external', title: 'External result' }),
     createSearchResult({ id: 'opened-result', kind: 'external', sourceKind: 'opened', title: 'Opened result' }),
     createSearchResult({ id: 'anchored-result', title: 'Anchored result' }),
-    createSearchResult({ id: 'regular-result', title: 'Regular result' })
-  ])));
-  removedSourcesMock.mockResolvedValueOnce({
-    entries: [{
+    createSearchResult({ id: 'regular-result', title: 'Regular result' }),
+    ...buildRemovedWorkspaceSearchResults([{
       content: 'Removed launch body',
       contentPreview: 'Removed launch body',
       deletedAt: '2026-05-12T00:00:00.000Z',
@@ -163,9 +162,9 @@ it('orders internal, anchored, removed, opened, and external results in stable b
       ruleId: 'rule-1',
       sourcePath: '/Readwise/Removed.md',
       title: 'Removed result'
-    }],
-    loadedAt: '2026-05-13T00:00:00.000Z'
-  });
+    }], 'launch')
+  ])));
+
 
   renderWithLocalization(
     <SearchPalette

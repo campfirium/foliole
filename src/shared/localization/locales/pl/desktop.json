@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "Kosz",
+  "desktop.search.searching": "Wyszukiwanie…",
   "desktop.search.noMatches": "Brak pasujących wyników",
   "desktop.search.unavailable": "Wyszukiwanie jest niedostępne. Spróbuj ponownie za chwilę.",
   "desktop.search.results.aria": "Wyniki wyszukiwania obszaru roboczego",

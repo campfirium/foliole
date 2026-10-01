@@ -4,8 +4,6 @@ import { buildFtsSearchQueryPlan, type FtsSearchQueryPlan } from '../../lib/core
 import { loadDesktopSourceByConfig, resolveDesktopSourceAddress } from './desktopSources.js';
 import {
   isExternalDocumentVisible,
-  loadActiveImportedSourceLocatorNodeIds,
-  loadActiveImportedSourceLocators,
   resolveImportedNodeIdForExternalDocument
 } from './externalDocumentImportVisibility.js';
 import { OPENED_EXTERNAL_DOCUMENTS_FOLDER_ID } from './externalOpenedDocumentConstants.js';
@@ -32,12 +30,11 @@ function readShortExternalSearchRows(db: import('better-sqlite3').Database, norm
         content AS text,
         modified_at,
         1000 AS rank
-       FROM external_search_documents
-       WHERE is_present = 1
-         AND (instr(lower(file_name), ?) > 0
+       FROM external_search_fts
+       WHERE (instr(lower(file_name), ?) > 0
           OR instr(lower(relative_path), ?) > 0
           OR instr(lower(content), ?) > 0)
-       ORDER BY modified_ms DESC`
+       ORDER BY modified_at DESC`
     )
     .all(normalizedQuery, normalizedQuery, normalizedQuery) as ExternalSearchRow[];
 }
@@ -85,10 +82,9 @@ function readShortTermExternalSearchRows(db: import('better-sqlite3').Database, 
         content AS text,
         modified_at,
         950 AS rank
-       FROM external_search_documents
-       WHERE is_present = 1
-         AND ${clauses.join(' AND ')}
-       ORDER BY modified_ms DESC`
+       FROM external_search_fts
+       WHERE ${clauses.join(' AND ')}
+       ORDER BY modified_at DESC`
     )
     .all(...queryPlan.shortTerms) as ExternalSearchRow[];
 }
@@ -115,10 +111,9 @@ function readCombinedTermFallbackExternalSearchRows(db: import('better-sqlite3')
         content AS text,
         modified_at,
         925 AS rank
-       FROM external_search_documents
-       WHERE is_present = 1
-         AND ${clauses.join(' AND ')}
-       ORDER BY modified_ms DESC`
+       FROM external_search_fts
+       WHERE ${clauses.join(' AND ')}
+       ORDER BY modified_at DESC`
     )
     .all(...terms) as ExternalSearchRow[];
 }
@@ -155,17 +150,15 @@ export function searchExternalDocuments(query: string, aliases: string[][] = [])
   if (!queryPlan.normalizedQuery) {
     return [];
   }
-  const activeImportedLocators = loadActiveImportedSourceLocators();
-  const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
   const localRows = rows.flatMap((row) => {
     const resolved = resolveCurrentExternalSearchRow(row);
     return resolved ? [resolved] : [];
   });
   return [
     ...localRows
-      .filter((row) => isExternalDocumentVisible(row.absolute_path, activeImportedLocators))
+      .filter((row) => isExternalDocumentVisible(row.absolute_path))
       .map((row) =>
-        toExternalResult(row, queryPlan.highlightQuery, resolveImportedNodeIdForExternalDocument(row.absolute_path, importedNodeIdsByLocator), queryPlan)
+        toExternalResult(row, queryPlan.highlightQuery, resolveImportedNodeIdForExternalDocument(row.absolute_path), queryPlan)
       ),
     ...searchExternalMirrorDocuments(queryPlan).map((row) =>
       toExternalResult(row, queryPlan.highlightQuery, null, queryPlan)

@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import { matchesFtsSearchFields, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
+import { searchStoredSources } from '../../lib/core/database/storedSourceSearch.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
@@ -16,7 +17,6 @@ import { openDatabaseConnection } from './connection.js';
 import {
   isExternalDocumentVisible,
   loadActiveImportedSourceLocatorNodeIds,
-  loadActiveImportedSourceLocators,
   resolveImportedNodeIdForExternalDocument
 } from './externalDocumentImportVisibility.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -231,18 +231,18 @@ export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan) {
   if (!normalizedQuery) {
     return [];
   }
-  const activeImportedLocators = loadActiveImportedSourceLocators();
-  const importedNodeIdsByLocator = loadActiveImportedSourceLocatorNodeIds();
-  return readReadwiseExternalDocumentRows()
+  return searchStoredSources(openDatabaseConnection().driver, 'external', queryPlan)
+    .map((indexed) => ({ ...JSON.parse(indexed.metadata), content: indexed.content }) as ReadwiseExternalDocumentRow)
+    .filter((row) => isReadwiseExternalFolderId(row.folder_id) || readRemoteReference(row))
     .filter((row) => readRemoteReference(row)
       ? !hasRemoteImportBinding(row)
-      : isExternalDocumentVisible(resolveDocumentAbsolutePath(row), activeImportedLocators))
+      : isExternalDocumentVisible(resolveDocumentAbsolutePath(row)))
     .filter((row) => matchesFtsSearchFields([row.file_name, row.relative_path, row.content], queryPlan))
     .map((row) => toReadwiseSearchResult({
       absolutePath: resolveDocumentKey(row),
       folderPath: resolveReadwiseFolderPath(row.folder_id),
       importedNodeId: readRemoteReference(row) ? null
-        : resolveImportedNodeIdForExternalDocument(resolveDocumentAbsolutePath(row), importedNodeIdsByLocator),
+        : resolveImportedNodeIdForExternalDocument(resolveDocumentAbsolutePath(row)),
       plan: queryPlan,
       row
     }));

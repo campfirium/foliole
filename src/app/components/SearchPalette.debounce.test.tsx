@@ -11,10 +11,15 @@ vi.mock('../../shared/platform/externalSearchRuntimeRepository', () => ({
   loadRuntimeExternalSearchFolders: vi.fn()
 }));
 
+vi.mock('../../shared/platform/removedSourcesRuntimeRepository', () => ({
+  loadRuntimeRemovedSources: vi.fn()
+}));
+
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { loadRuntimeExternalSearchFolders } from '../../shared/platform/externalSearchRuntimeRepository';
 import { loadRuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
+import { loadRuntimeRemovedSources } from '../../shared/platform/removedSourcesRuntimeRepository';
 import { getRuntimeInvoke } from '../../shared/platform/runtimeInvoke';
 
 import { SearchPalette } from './SearchPalette';
@@ -37,6 +42,7 @@ beforeEach(() => {
   window.localStorage.clear();
   window.localStorage.setItem(APP_SETTINGS_STORAGE_KEYS.searchEnhancementPromptDismissed, 'true');
   vi.clearAllMocks();
+  vi.mocked(loadRuntimeRemovedSources).mockResolvedValue({ entries: [], loadedAt: '' });
   vi.useFakeTimers();
 });
 
@@ -82,4 +88,40 @@ it('does not run workspace search while IME composition is active', async () => 
   await act(async () => vi.advanceTimersByTime(400));
 
   expect(search).toHaveBeenCalledWith('search_workspace', { query: 'launch' });
+});
+
+it('shows search progress through debounce and runtime completion before reporting no matches', async () => {
+  let resolveSearch!: (value: ReturnType<typeof searchSnapshot>) => void;
+  const pending = new Promise<ReturnType<typeof searchSnapshot>>((resolve) => { resolveSearch = resolve; });
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockImplementation((command) =>
+    command === 'search_workspace' ? pending : Promise.resolve(undefined)));
+  vi.mocked(loadRuntimeNodeSourceDetails).mockResolvedValue(null);
+  vi.mocked(loadRuntimeExternalSearchFolders).mockResolvedValue([]);
+  renderSearchPalette();
+  const input = screen.getByRole('textbox', { name: 'Search workspace' });
+  expect(screen.queryByText('Searching…')).not.toBeInTheDocument();
+  fireEvent.change(input, { target: { value: 'launch' } });
+  expect(screen.getByRole('status')).toHaveTextContent('Searching…');
+  expect(screen.queryByText('No matching results')).not.toBeInTheDocument();
+  await act(async () => vi.advanceTimersByTime(400));
+  expect(screen.getByRole('status')).toHaveTextContent('Searching…');
+  expect(screen.queryByText('No matching results')).not.toBeInTheDocument();
+  await act(async () => resolveSearch(searchSnapshot([])));
+  expect(screen.queryByText('Searching…')).not.toBeInTheDocument();
+  expect(screen.getByText('No matching results')).toBeInTheDocument();
+  fireEvent.change(input, { target: { value: 'next' } });
+  expect(screen.getByRole('status')).toHaveTextContent('Searching…');
+  expect(screen.queryByText('No matching results')).not.toBeInTheDocument();
+  fireEvent.change(input, { target: { value: '' } });
+  expect(screen.queryByText('Searching…')).not.toBeInTheDocument();
+  expect(screen.queryByText('No matching results')).not.toBeInTheDocument();
+});
+
+it('does not refresh removed import sources while searching', async () => {
+  vi.mocked(getRuntimeInvoke).mockReturnValue(vi.fn().mockResolvedValue(searchSnapshot([])));
+  renderSearchPalette();
+  fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), { target: { value: 'missing' } });
+  await act(async () => vi.advanceTimersByTime(400));
+  expect(screen.getByText('No matching results')).toBeInTheDocument();
+  expect(loadRuntimeRemovedSources).not.toHaveBeenCalled();
 });

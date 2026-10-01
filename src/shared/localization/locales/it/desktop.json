@@ -1,4 +1,6 @@
 {
+  "desktop.search.badge.trash": "Cestino",
+  "desktop.search.searching": "Ricerca in corso…",
   "desktop.search.noMatches": "Nessun risultato corrispondente",
   "desktop.search.unavailable": "La ricerca non è disponibile. Riprova tra un attimo.",
   "desktop.search.results.aria": "Risultati della ricerca dell'area di lavoro",

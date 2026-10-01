@@ -4,6 +4,7 @@ import type { WorkspaceListNodesById } from '../../features/nodes/model/workspac
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { RuntimeNodeSourceDetails } from '../../shared/platform/nodeSourceRuntimeRepository';
 import {
+  AppLoadingState,
   appFloatingEmptyStateClassName,
   appFloatingItemClassName,
   appFloatingListClassName
@@ -30,6 +31,11 @@ export function SearchPaletteEmptyState({ query }: { query: string }) {
       <li className={appFloatingEmptyStateClassName()}>{label}</li>
     </ul>
   );
+}
+
+export function SearchPaletteLoadingState() {
+  const t = useTranslation();
+  return <AppLoadingState className="min-h-56" description={t('desktop.search.searching')} surface="floating" />;
 }
 
 export function SearchPaletteErrorState() {

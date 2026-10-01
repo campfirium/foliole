@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 vi.mock('../../shared/platform/runtimeInvoke', () => ({ getRuntimeInvoke: vi.fn() }));
@@ -28,11 +28,14 @@ it('filters a complete search snapshot by spelling without starting another data
   window.localStorage.setItem('foliole-search-enhancement-prompt-dismissed', 'true');
   const original = result('original', 'disney');
   const later = result('later', '迪士尼');
+  let resolveBatch!: (value: { hasMore: boolean; results: WorkspaceSearchResult[] }) => void;
+  const batch = new Promise<{ hasMore: boolean; results: WorkspaceSearchResult[] }>((resolve) => { resolveBatch = resolve; });
   const invoke = vi.fn((command: string, args?: { spelling?: string | null }) => {
     if (command === 'search_workspace') return Promise.resolve({
       aliasSpellings: [{ key: 'disney', label: 'Disney' }, { key: '迪士尼', label: '迪士尼' }],
       hasMore: false, results: [original], revision: 1, snapshotId: 'snapshot-1'
     });
+    if (command === 'load_workspace_search_batch' && args?.spelling === '迪士尼') return batch;
     if (command === 'load_workspace_search_batch') return Promise.resolve({
       hasMore: false, results: args?.spelling === '迪士尼' ? [later] : [original]
     });
@@ -45,6 +48,9 @@ it('filters a complete search snapshot by spelling without starting another data
   fireEvent.change(screen.getByRole('textbox', { name: 'Search workspace' }), { target: { value: 'Disney' } });
   await waitFor(() => expect(screen.getByRole('button', { name: /Disney topic/ })).toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: '迪士尼' }));
+  expect(screen.getByRole('status')).toHaveTextContent('Searching…');
+  expect(screen.queryByText('No matching results')).not.toBeInTheDocument();
+  await act(async () => resolveBatch({ hasMore: false, results: [later] }));
   await waitFor(() => expect(screen.getByRole('button', { name: /迪士尼 topic/ })).toBeInTheDocument());
   expect(screen.queryByRole('button', { name: /Disney topic/ })).not.toBeInTheDocument();
   expect(invoke.mock.calls.filter(([command]) => command === 'search_workspace')).toHaveLength(1);

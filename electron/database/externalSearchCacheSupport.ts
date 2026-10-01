@@ -205,7 +205,7 @@ export function toExternalResult(
     excerpt: primary?.excerpt ?? buildExternalExcerpt(row.text, query),
     externalMatch: primary?.externalMatch ?? externalMatch,
     id: row.absolute_path,
-    kind: 'external',
+    kind: 'external' as const,
     nodeMatch: null,
     pdfMatch: null,
     matchedOriginal: aliasMatches.some((item) => plan?.triggerSpellings.includes(item.spelling)),
