@@ -33,8 +33,12 @@ it('authenticates provider reads with the group key and an active Device fact', 
 
 it('pins one independent source snapshot to each Device sync-pack cycle', async () => {
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
+  const routes = await readJava('FolioleCompanionSyncPackRoutes.java');
   const snapshot = await readJava('FolioleCompanionSyncGroupSnapshot.java');
-  expect(server).toMatch(/syncPack[\s\S]*snapshots\.refresh\([\s\S]*peer/u);
+  expect(server).toMatch(/SyncPackRoutes\.pack\(context, config, dataBridge, snapshots,[\s\S]*request, output, authenticate\(request\)\)/u);
+  expect(server).toMatch(/SyncPackRoutes\.facts\(context, config, snapshots,[\s\S]*request, output, authenticate\(request\)\)/u);
+  expect(routes).toMatch(/frontier == null \? snapshots\.refresh\(peer, build\)\s*: snapshots\.read\(peer, build\)/u);
+  expect(routes).toMatch(/factView == null && frontier == null \? snapshots\.refresh\(peer, build\)\s*: snapshots\.read\(peer, build\)/u);
   expect(server).toMatch(/contentBlobs[\s\S]*snapshots\.read\([\s\S]*peer/u);
   expect(snapshot).toContain('snapshots.put(peerDeviceId, next)');
   expect(snapshot).toContain('"create_snapshot"');

@@ -1,18 +1,10 @@
 export const EXPECTED_SCHEMA_SOURCES = {
-  androidAssetStatements: 72,
+  androidAssetStatements: 103,
   androidJavaMigrationStatements: 0,
-  desktopStatements: 91
+  desktopStatements: 117
 };
 
 export const EXPECTED_SHARED_SCHEMA_DRIFT = {
-  attachments: [
-    'columns.pdf_index_attempt',
-    'columns.pdf_index_error',
-    'columns.pdf_index_status',
-    'columns.pdf_index_version',
-    'columns.pdf_indexed_at',
-    'createSql'
-  ],
   content_blob_data: ['createSql'],
   external_documents: [
     'columns.title',
@@ -27,7 +19,6 @@ export const EXPECTED_SHARED_SCHEMA_DRIFT = {
   ],
   node_sync_versions: ['indexes.idx_node_sync_versions_object_created'],
   node_view_state: ['createSql'],
-  pdf_page_text: ['createSql'],
   setting_records: [
     'columns.form_factor',
     'columns.host_name',

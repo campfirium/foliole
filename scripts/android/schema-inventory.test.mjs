@@ -6,8 +6,6 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.ts';
-import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionHostSchemaStatements.ts';
 import {
   ANDROID_COMPANION_MIGRATION_PLAN,
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS
@@ -16,11 +14,8 @@ import {
   ANDROID_COMPANION_APP_DATA_CLEAR_MUTATIONS,
   ANDROID_COMPANION_MUTATION_DEFINITIONS
 } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
-import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.ts';
-import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.ts';
-import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.ts';
-import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from '../../lib/core/database/syncDeliveryTriggerStatements.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
+import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.ts';
 import {
   EXPECTED_SCHEMA_SOURCES,
   EXPECTED_SHARED_SCHEMA_DRIFT
@@ -49,14 +44,7 @@ describe('schema inventory drift gate', () => {
   it('generates the Android schema asset from the shared schema source', async () => {
     const schema = JSON.parse(await readFile(COMPANION_SCHEMA, 'utf8'));
 
-    expect(schema.statements).toEqual([
-      ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
-      ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
-      ...ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS,
-      ...ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS,
-      ...SYNC_GROUP_SCHEMA_STATEMENTS,
-      ...SYNC_DELIVERY_TRIGGER_STATEMENTS
-    ]);
+    expect(schema.statements).toEqual(COMPANION_SCHEMA_STATEMENTS);
   });
 
   it('keeps Android migration repair DDL in the generated migration asset', async () => {

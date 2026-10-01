@@ -32,9 +32,15 @@ const DESKTOP_SCHEMA_FILES = {
   EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS: 'lib/core/database/externalDocumentSchemaStatements.ts',
   KEEP_IMPORT_SCHEMA_STATEMENTS: 'lib/core/database/keepImportSchemaStatements.ts',
   SYNC_DELIVERY_SCHEMA_STATEMENTS: 'lib/core/database/syncDeliverySchemaStatements.ts',
+  SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS: 'lib/core/database/syncStateSequenceSchemaStatements.ts',
   SYNC_DELIVERY_TRIGGER_STATEMENTS: 'lib/core/database/syncDeliveryTriggerStatements.ts',
   SYNC_SCHEMA_STATEMENTS: 'lib/core/database/syncSchemaStatements.ts',
-  SYNC_GROUP_SCHEMA_STATEMENTS: 'lib/core/database/syncGroupSchemaStatements.ts'
+  SYNC_GROUP_SCHEMA_STATEMENTS: 'lib/core/database/syncGroupSchemaStatements.ts',
+  PDF_INDEX_STATE_SCHEMA_STATEMENTS: 'lib/core/database/pdfIndexStateSchema.ts',
+  SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS: 'lib/core/database/syncPackProgressSchemaStatements.ts',
+  SYNC_PACK_DEPENDENCY_STAGING_SCHEMA: 'lib/core/database/syncPackDependencyStagingSchema.ts',
+  SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS: 'lib/core/database/syncGroupRestoreSchemaStatements.ts',
+  NODE_VERSION_RETENTION_SCHEMA_STATEMENTS: 'lib/core/database/nodeVersionRetentionSchemaStatements.ts'
 };
 
 export function buildSchemaDriftReport(repoRoot = REPO_ROOT) {
@@ -67,7 +73,11 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
   }
   const source = readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.DESKTOP_FRESH_SCHEMA_STATEMENTS);
   const body = extractArrayBody(source, 'DESKTOP_FRESH_SCHEMA_STATEMENTS');
-  return extractStatementsFromBody(body, arrays);
+  const statements = extractStatementsFromBody(body, arrays);
+  statements.push(...extractStatementsFromBody(
+    readRepoFile(repoRoot, 'lib/core/database/numberedMigrationParentChildOrder.ts'), arrays));
+  return statements.filter((statement) =>
+    !/CREATE (?:TABLE|INDEX) IF NOT EXISTS (?:attachments|node_attachments|idx_node_attachments_attachment_id)\b/.test(statement));
 }
 
 export function loadAndroidSchemaAssetStatements(repoRoot = REPO_ROOT) {
