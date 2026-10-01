@@ -45,7 +45,9 @@ export function* iterateSyncPackDependencyPages(args: DependencySourceArgs) {
   }
 }
 
-export function describeSyncPackDependencySource(args: Omit<DependencySourceArgs, 'after'>) {
+export function describeSyncPackDependencySource(args: Omit<DependencySourceArgs, 'after'> & {
+  onRow?: (row: SyncPackDependencyRow) => void;
+}) {
   let expectedRows = 0;
   let expectedDigest = SYNC_PACK_DEPENDENCY_INITIAL_DIGEST;
   for (const page of iterateSyncPackDependencyPages({ view: args.view, objectId: args.objectId,
@@ -55,6 +57,7 @@ export function describeSyncPackDependencySource(args: Omit<DependencySourceArgs
     for (const row of page) {
       expectedRows++;
       expectedDigest = advanceSyncPackDependencyDigest(expectedDigest, row);
+      args.onRow?.(row);
     }
   }
   return { expectedRows, expectedDigest };

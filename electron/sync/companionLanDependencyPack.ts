@@ -87,10 +87,11 @@ async function buildDependencyPage(args: Parameters<typeof buildCompanionDepende
   const source = { view: session.view, objectId: transfer.objectId, objectType: transfer.objectType,
     ...(transfer.nodeIds ? { nodeIds: transfer.nodeIds } : {}), claims: session.claims,
     ...(session.claimDatabase ? { claimDatabase: true } : {}), ...(after ? { after } : {}) };
+  const pageRows = iterateSyncPackDependencyPages({ ...source,
+    budget: { rows: 128, payloadBytes: 2 * 1024 * 1024 } }).next().value;
+  if (!pageRows?.length) throw new Error('sync_pack_dependency_page_not_contiguous');
   for (let rowLimit = 128; rowLimit >= 1; rowLimit = Math.floor(rowLimit / 2)) {
-    const rows = iterateSyncPackDependencyPages({ ...source,
-      budget: { rows: rowLimit, payloadBytes: 2 * 1024 * 1024 } }).next().value;
-    if (!rows?.length) throw new Error('sync_pack_dependency_page_not_contiguous');
+    const rows = pageRows.slice(0, rowLimit);
     const afterDigest = rows.reduce(advanceSyncPackDependencyDigest, beforeDigest);
     try {
       return await buildSyncPackDependencyPageArchive({

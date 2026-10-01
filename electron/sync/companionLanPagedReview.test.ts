@@ -135,6 +135,7 @@ it('stages two nodes and advances dependency pages before publishing their state
 it('stages missing node history when the changed object is node open state', async () => {
   insertNodeSyncState();
   const driver = openDatabaseConnection().driver;
+  driver.execute("INSERT INTO node_open_state (node_id, last_opened_at) VALUES ('node-1', 'now')");
   driver.execute("UPDATE sync_object_state SET state_seq = 10 WHERE object_type = 'node'");
   driver.execute(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at)

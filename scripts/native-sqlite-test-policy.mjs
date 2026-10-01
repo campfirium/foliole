@@ -97,6 +97,7 @@ const controlledElectronSqliteTests = [
   'electron/sync/companionLanMultiNodeBatch.http.test.ts',
   'electron/sync/syncPackCrashApply.http.integration.test.ts',
   'electron/sync/companionLanPagedFactRoundTrip.test.ts',
+  'electron/sync/companionLanPagedDependencyRecovery.test.ts',
   'electron/sync/companionLanPagedReview.test.ts',
   'electron/sync/companionLanReviewDelta.http.integration.test.ts',
   'electron/sync/companionLanSourceMutation.http.integration.test.ts',

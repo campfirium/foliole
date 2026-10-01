@@ -49,6 +49,7 @@ setupSyncPackBuilderTestLifecycle();
 function seedHistory() {
   insertNodeSyncState();
   const driver = openDatabaseConnection().driver;
+  driver.execute("DELETE FROM sync_object_state WHERE object_type = 'setting'");
   const body = 'b'.repeat(741 * 1024);
   const ids = ['desktop#node-1-v1', ...Array.from({ length: 22 }, (_, i) => `v${i + 2}`)];
   driver.execute(`UPDATE node_sync_versions SET body_text = ?,
