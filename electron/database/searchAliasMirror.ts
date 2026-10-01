@@ -75,13 +75,13 @@ function commitDocument(text: string) {
 
 async function reconcileDocument(mode: 'normal' | 'restore') {
   const databasePath = openDatabaseConnection().dbPath;
+  const databaseText = readDatabaseDocument();
+  updateEffectiveGroups(databaseText ?? '');
   await migrateLegacySearchAliasFile(databasePath);
   const filePath = searchAliasFilePath(databasePath);
   const [source, baseline] = await Promise.all([
     readOptionalText(filePath), readBaseline(databasePath)
   ]);
-  const databaseText = readDatabaseDocument();
-  updateEffectiveGroups(databaseText ?? '');
   const fileText = source === null ? null : parseSearchAliasDocument(source).text;
   if (fileText === null && databaseText === null) {
     updateEffectiveGroups('');

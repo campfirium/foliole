@@ -65,12 +65,14 @@ it('moves the previous Data file into Widgets without dropping its text', async 
 it('keeps different files in both locations when a location conflict exists', async () => {
   const legacyPath = legacySearchAliasFilePath(openDatabaseConnection().dbPath);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
+  saveJsonSetting('search_aliases_document', { version: 1, text: 'saved | valid\n' });
   await fs.writeFile(legacyPath, 'Atlas | Mapbook\n');
   await fs.writeFile(filePath, 'Hello | Hallo\n');
   await expect(reconcileSearchAliasMirror()).rejects.toThrow('both Data and Widgets');
   expect(await fs.readFile(legacyPath, 'utf8')).toBe('Atlas | Mapbook\n');
   expect(await fs.readFile(filePath, 'utf8')).toBe('Hello | Hallo\n');
-  expect(content()).toBeNull();
+  expect(content()).toBe('saved | valid\n');
+  expect(getEffectiveSearchAliases().groups).toEqual([['saved', 'valid']]);
 });
 
 it('does not save previous untouched examples as aliases', async () => {
