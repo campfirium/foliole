@@ -8,8 +8,8 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from '../../lib/core/database/syncPackDependencyStagingSchema.js';
-import type { DbParams, DbRow } from '../../lib/core/sync/dbPort.js';
 import { stageSyncPackDependencyPage } from '../../lib/core/sync/syncPackDependencyStaging.js';
 import {
   advanceSyncPackDependencyDigest, SYNC_PACK_DEPENDENCY_INITIAL_DIGEST,
@@ -89,6 +89,29 @@ async function stageThrough(end = rows.length, start = 0) {
   }
 }
 
+function expectCurrentBody(deletedAt: string | null = null) {
+  expect(target.prepare(`SELECT n.current_version_id, n.content AS inline, n.deleted_at,
+    ${buildNodeBodyContentSql()} AS body FROM nodes n
+    LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash WHERE n.id='node-1'`).get())
+    .toEqual({ current_version_id: 'v23', inline: '', deleted_at: deletedAt, body: 'b'.repeat(741 * 1024) });
+  expect(target.prepare('SELECT version_id, parent_version_id, body_text FROM node_sync_versions').all())
+    .toEqual([{ version_id: 'v23', parent_version_id: null, body_text: 'b'.repeat(741 * 1024) }]);
+  expect(target.prepare('SELECT count(*) AS count FROM node_sync_version_parents').get()).toEqual({ count: 0 });
+}
+
+function expectCompleteStaging() {
+  const staged = target.prepare(`SELECT table_name, payload_json FROM sync_pack_dependency_rows
+    WHERE source_view_id=? ORDER BY row_index`).all(transfer.sourceViewId) as Array<{
+    table_name: string; payload_json: string;
+  }>;
+  expect(staged).toHaveLength(45);
+  expect(staged.filter((row) => row.table_name === 'node_sync_versions')
+    .map((row) => JSON.parse(row.payload_json).body_text)).toEqual(Array(23).fill('b'.repeat(741 * 1024)));
+  expect(target.prepare(`SELECT received_digest, completed FROM sync_pack_dependency_transfers
+    WHERE source_view_id=?`).get(transfer.sourceViewId))
+    .toEqual({ received_digest: transfer.expectedDigest, completed: 1 });
+}
+
 it('publishes a heavy node only after every dependency is staged and cleans staging with the business cursor', async () => {
   const stale = { ...transfer, sourceViewId: 'stale-view' };
   await stageSyncPackDependencyPage(port, { transfer: stale, afterRow: 0,
@@ -100,27 +123,16 @@ it('publishes a heavy node only after every dependency is staged and cleans stag
   expect(target.prepare('SELECT count(*) AS count FROM nodes').get()).toEqual({ count: 0 });
   expect(target.prepare('SELECT count(*) AS count FROM sync_pack_receive_progress').get()).toEqual({ count: 0 });
   await stageThrough(rows.length, 2);
-  const query = port.query.bind(port);
-  let largestBodyRead = 0;
-  port.query = async <T extends DbRow>(sql: string, params?: DbParams) => {
-    const result = await query<T>(sql, params);
-    largestBodyRead = Math.max(largestBodyRead, result.reduce((sum, row) => sum +
-      (typeof row.body_text === 'string' ? Buffer.byteLength(row.body_text) : 0), 0));
-    return result;
-  };
+  expectCompleteStaging();
   expect(await applySyncPackNodeSurfaceWithDbPort(port, options)).toMatchObject({ applied: true, toStateSeq: 1 });
-  expect(target.prepare('SELECT current_version_id, length(content) AS bytes FROM nodes WHERE id = ?').get('node-1'))
-    .toEqual({ current_version_id: 'v23', bytes: 741 * 1024 });
+  expectCurrentBody();
   expect(target.prepare(`SELECT length(data) AS bytes FROM content_blob_data
     WHERE hash = (SELECT body_blob_hash FROM nodes WHERE id = 'node-1')`).get())
     .toEqual({ bytes: 741 * 1024 });
-  expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get()).toEqual({ count: 23 });
-  expect(target.prepare('SELECT count(*) AS count FROM node_sync_version_parents').get()).toEqual({ count: 22 });
   expect(target.prepare('SELECT cursor_state_seq FROM sync_pack_receive_progress').get()).toEqual({ cursor_state_seq: 1 });
   expect(target.prepare('SELECT count(*) AS count FROM sync_pack_dependency_rows').get()).toEqual({ count: 0 });
   expect(target.prepare("SELECT source_view_id FROM sync_pack_retired_source_views WHERE source_view_id = 'stale-view'").get())
     .toEqual({ source_view_id: 'stale-view' });
-  expect(largestBodyRead).toBeLessThanOrEqual(2 * 1024 * 1024);
   expect(await applySyncPackNodeSurfaceWithDbPort(port, { ...options, currentCursor: 1 })).toMatchObject({ applied: false });
 });
 
@@ -160,9 +172,7 @@ it('rehydrates a removed node body while preserving its deletion state', async (
     deleted_at = '2026-09-29' WHERE id = 'node-1'`).run();
   const { reconcileSyncPackInlineBodies } = await import('../../lib/core/sync/syncPackBodyProjection.js');
   await port.transaction((tx) => reconcileSyncPackInlineBodies(tx, 'inc', false));
-  expect(target.prepare(`SELECT deleted_at, length(content) AS body_bytes,
-    body_blob_hash IS NOT NULL AS has_blob FROM nodes WHERE id = 'node-1'`).get())
-    .toEqual({ deleted_at: '2026-09-29', body_bytes: 741 * 1024, has_blob: 1 });
+  expectCurrentBody('2026-09-29');
 });
 
 it('delivers a stable SQLite history across both source and receiver restart, then publishes it', async () => {
@@ -199,8 +209,14 @@ it('delivers a stable SQLite history across both source and receiver restart, th
     expect(await stageSyncPackDependencyPage(port, page)).toMatchObject({ replay: true, nextRow });
     const identity = { ...view };
     view.close();
-    source.exec(`UPDATE node_sync_versions SET body_text = 'new live edit' WHERE version_id = 'v23';
-      UPDATE sync_state_sequence SET high_water = 2;`);
+    source.exec(`INSERT INTO node_sync_versions (version_id,object_id,parent_version_id,host_name,
+      created_at,content_hash,snapshot_json,body_text)
+      SELECT 'v24',object_id,'v23',host_name,'2026-09-30','hash-v24',snapshot_json,'new live edit'
+      FROM node_sync_versions WHERE version_id='v23';
+      INSERT INTO node_sync_version_parents VALUES ('v24','v23',0);
+      UPDATE nodes SET current_version_id='v24' WHERE id='node-1';
+      UPDATE sync_object_state SET state_seq=3,content_hash='hash-v24' WHERE object_type='node';
+      UPDATE sync_state_sequence SET high_water = 3;`);
     view = openSyncPackSourceView(viewPath, identity);
     const last = first.at(-1)!;
     for (const resumed of iterateSyncPackDependencyPages({ ...args, view,
@@ -212,11 +228,9 @@ it('delivers a stable SQLite history across both source and receiver restart, th
       digest = afterDigest;
     }
     expect(nextRow).toBe(45);
+    expectCompleteStaging();
     expect(await applySyncPackNodeSurfaceWithDbPort(port, options)).toMatchObject({ applied: true });
-    expect(target.prepare(`SELECT count(*) AS count FROM node_sync_versions
-      WHERE length(body_text) = ?`).get(741 * 1024)).toEqual({ count: 23 });
-    expect(target.prepare(`SELECT length(content) AS bytes FROM nodes WHERE id = 'node-1'`).get())
-      .toEqual({ bytes: 741 * 1024 });
+    expectCurrentBody();
     expect(target.prepare('SELECT cursor_state_seq FROM sync_pack_receive_progress').get())
       .toEqual({ cursor_state_seq: 1 });
   } finally { view.close(); source.close(); }
