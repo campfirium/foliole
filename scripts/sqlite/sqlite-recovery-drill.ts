@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
@@ -26,6 +27,8 @@ export interface RecoveryDrillOptions {
 }
 
 interface RecoverySummary {
+  semanticDigests: Record<string, string>;
+  foreignKeyViolationCount: number;
   activeNodeCount: number;
   deletedNodeCount: number;
   integrityCheck: string;
@@ -124,11 +127,16 @@ async function createFixtureDatabase(databasePath: string) {
   }
 }
 
-function summarizeDatabase(databasePath: string): RecoverySummary {
+export function summarizeDatabase(databasePath: string): RecoverySummary {
   const sqlite = new BetterSqlite3(databasePath, { fileMustExist: true, readonly: true });
   try {
     const tableCounts = Object.fromEntries(COUNT_TABLES.map((table) => [table, countRows(sqlite, table)]));
     return {
+      semanticDigests: Object.fromEntries(EXPECTED_TABLES.map((table) => [table,
+        createHash('sha256').update(JSON.stringify(sqlite.prepare(`SELECT * FROM ${table}`).all()
+          .map((row) => JSON.stringify(row)).sort())).digest('hex')
+      ])),
+      foreignKeyViolationCount: sqlite.pragma('foreign_key_check').length,
       activeNodeCount: countWhere(sqlite, 'nodes', 'deleted_at IS NULL'),
       deletedNodeCount: countWhere(sqlite, 'nodes', 'deleted_at IS NOT NULL'),
       integrityCheck: readIntegrityCheck(sqlite),
@@ -144,10 +152,13 @@ function summarizeDatabase(databasePath: string): RecoverySummary {
   }
 }
 
-function buildChecks(source: RecoverySummary, restored: RecoverySummary) {
+export function buildChecks(source: RecoverySummary, restored: RecoverySummary) {
   const checks = [
     buildCheck('source integrity', 'ok', source.integrityCheck),
     buildCheck('restored integrity', 'ok', restored.integrityCheck),
+    buildCheck('source foreign keys', 0, source.foreignKeyViolationCount),
+    buildCheck('restored foreign keys', 0, restored.foreignKeyViolationCount),
+    buildCheck('content, relationships and permanent settings', source.semanticDigests, restored.semanticDigests),
     ...EXPECTED_TABLES.map((table) => buildCheck(`table exists: ${table}`, true, restored.tableNames.includes(table))),
     buildCheck('table counts', source.tableCounts, restored.tableCounts),
     buildCheck('active nodes', source.activeNodeCount, restored.activeNodeCount),

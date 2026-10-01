@@ -3,10 +3,11 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import Database from 'better-sqlite3';
 
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { runRecoveryDrill } from './sqlite-recovery-drill.ts';
+import { buildChecks, runRecoveryDrill, summarizeDatabase } from './sqlite-recovery-drill.ts';
 
 let tempRoot = '';
 
@@ -36,6 +37,21 @@ it('backs up and restores a fixture database into an isolated target with redact
   expect(serializedReport).not.toContain('fixture answer body');
   expect(serializedReport).not.toContain('fixture-trash');
 }, 15_000);
+
+it.each([
+  "UPDATE nodes SET content = 'changed' WHERE id = 'node-root'",
+  "UPDATE nodes SET parent_id = 'node-root' WHERE id = 'node-qa'",
+  "UPDATE workspace_meta SET value = 'node-qa' WHERE key = 'active_node_id'"
+])('rejects semantic drift even when integrity and row counts are unchanged: %s', async (sql) => {
+  const report = await runRecoveryDrill({ workDir: tempRoot });
+  const db = new Database(report.restorePath);
+  try { db.exec(sql); } finally { db.close(); }
+  const restored = summarizeDatabase(report.restorePath);
+  expect(restored.integrityCheck).toBe('ok');
+  expect(restored.tableCounts).toEqual(report.source.tableCounts);
+  expect(buildChecks(report.source, restored).find((check) =>
+    check.name === 'content, relationships and permanent settings')?.status).toBe('failed');
+});
 
 it('fails before restore when the isolated target database already exists', async () => {
   const backupPath = path.join(tempRoot, 'backup.db');
