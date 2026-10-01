@@ -150,7 +150,7 @@ describe('quality-gate-fast.sh light related tests', () => {
     }
   }, 15000);
 
-  it('prints related tests for light-level route json', async () => {
+  it('prints executable related tests without treating test helpers as test entries', async () => {
     const tempRoot = await createQualityGateTempRoot();
     try {
       await writePackageJson(tempRoot, {
@@ -168,8 +168,10 @@ describe('quality-gate-fast.sh light related tests', () => {
         'export {};\n'
       );
 
+      const helper = 'src/features/image-cloze/components/ImageClozeCardView.test.helpers.ts';
+      await writeFixtureFile(tempRoot, helper, 'export {};\n');
       const result = await runQualityGate(tempRoot, {
-        QUALITY_GATE_CHANGED_FILES: 'src/features/image-cloze/components/ImageClozeCardView.tsx'
+        QUALITY_GATE_CHANGED_FILES: `src/features/image-cloze/components/ImageClozeCardView.tsx\n${helper}`
       }, ['--route-json']);
 
       expect(result.code).toBe(0);
