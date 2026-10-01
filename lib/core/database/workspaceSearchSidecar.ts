@@ -23,9 +23,11 @@ import {
   ensureWorkspaceSearchSourceState,
   markWorkspaceSearchSourceRevisionQueued,
   recordIndexedWorkspaceSearchSourceState,
+  readWorkspaceSearchSourceState,
   recoverInterruptedWorkspaceSearchInvalidations,
   workspaceSearchSourceStateMatches
 } from './workspaceSearchSourceState.js';
+import type { WorkspaceSearchSourceState } from './workspaceSearchSourceState.js';
 
 export type { WorkspaceSearchSidecarRebuildStatus } from './workspaceSearchSidecarMetadata.js';
 
@@ -48,6 +50,9 @@ interface InitializeWorkspaceSearchSidecarOptions {
 interface WorkspaceSearchSidecarRebuildOptions {
   rebuildWorkspaceSearchIndexes?: (driver: DatabaseDriver) => void;
   strategy: FullTextSearchIndexStrategy;
+  source?: WorkspaceSearchSourceState;
+  retirePending?: boolean;
+  onCoveredId?: (id: number) => void;
 }
 
 function readJsonObject(value: unknown): Record<string, unknown> | null {
@@ -149,13 +154,14 @@ export function rebuildWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarCo
     [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: options.strategy
   });
   createWorkspaceSearchMetadataTable(connection.sqlite);
-  ensureWorkspaceSearchSourceState(connection.driver);
+  if (!options.source) ensureWorkspaceSearchSourceState(connection.driver);
   markWorkspaceSearchSidecarRebuilding(connection, resolution.strategy);
   try {
     // Keep main-database writes outside the long search transaction so foreground edits can proceed.
-    const source = markWorkspaceSearchSourceRevisionQueued(connection.driver);
+    const source = options.source ?? markWorkspaceSearchSourceRevisionQueued(connection.driver);
     let coveredId = 0;
     const result = connection.driver.transaction(() => {
+      const indexedSource = readWorkspaceSearchSourceState(connection.driver) ?? source;
       coveredId = connection.driver.queryOne<{ id: number }>(
         'SELECT COALESCE(MAX(id), 0) AS id FROM search_index_invalidations'
       )?.id ?? 0;
@@ -168,7 +174,7 @@ export function rebuildWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarCo
         strategy: resolution.strategy,
         tokenizer: resolution.tokenizer
       });
-      recordIndexedWorkspaceSearchSourceState(connection.driver, source);
+      recordIndexedWorkspaceSearchSourceState(connection.driver, indexedSource);
       const readyStatus = {
         status: 'ready',
         strategy: resolution.strategy,
@@ -177,7 +183,8 @@ export function rebuildWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarCo
       writeWorkspaceSearchMetadata(connection.sqlite, 'last_rebuild_status', readyStatus);
       return readyStatus;
     });
-    retireSearchPendingThrough(connection.driver, coveredId);
+    options.onCoveredId?.(coveredId);
+    if (options.retirePending !== false) retireSearchPendingThrough(connection.driver, coveredId);
     return result;
   } catch (error) {
     const failedStatus = {
@@ -191,10 +198,10 @@ export function rebuildWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarCo
   }
 }
 
-export function initializeWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarConnection>(
+export function prepareWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarConnection>(
   connection: T,
   options: InitializeWorkspaceSearchSidecarOptions = {}
-): T {
+): FullTextSearchIndexStrategy | null {
   const resolution = resolveFullTextSearchIndexStrategy(readAppSettings(connection.sqlite));
   createWorkspaceSearchMetadataTable(connection.sqlite);
   recoverInterruptedWorkspaceSearchInvalidations(connection.driver);
@@ -206,7 +213,18 @@ export function initializeWorkspaceSearchSidecar<T extends WorkspaceSearchSideca
       ? workspaceSearchSourceStateMatches(connection.driver)
       : canResumeWorkspaceSearchInvalidations(connection.driver))
   ) {
-    const rebuildOptions: WorkspaceSearchSidecarRebuildOptions = { strategy: resolution.strategy };
+    return resolution.strategy;
+  }
+  return null;
+}
+
+export function initializeWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarConnection>(
+  connection: T,
+  options: InitializeWorkspaceSearchSidecarOptions = {}
+): T {
+  const strategy = prepareWorkspaceSearchSidecar(connection, options);
+  if (strategy) {
+    const rebuildOptions: WorkspaceSearchSidecarRebuildOptions = { strategy };
     if (options.rebuildWorkspaceSearchIndexes) {
       rebuildOptions.rebuildWorkspaceSearchIndexes = options.rebuildWorkspaceSearchIndexes;
     }

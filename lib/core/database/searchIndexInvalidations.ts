@@ -18,7 +18,7 @@ export type SearchIndexInvalidationType =
   | 'node_subtree_restored'
   | 'node_workspace';
 
-interface SearchIndexInvalidationRow {
+export interface SearchIndexInvalidationRow {
   [column: string]: unknown;
   id: number;
   invalidation_type: SearchIndexInvalidationType;
@@ -128,9 +128,23 @@ export function enqueuePdfSearchInvalidationForAttachmentIds(driver: DatabaseDri
 }
 
 export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 500) {
+  const rows = claimSearchIndexInvalidations(driver, limit);
+  if (rows.length === 0) return { failed: 0, processed: 0 };
+
+  try {
+    processClaimedInvalidationRows(driver, rows);
+    completeInvalidations(driver, rows.map((row) => row.id));
+    return { failed: 0, processed: rows.length };
+  } catch (error) {
+    failInvalidations(driver, rows.map((row) => row.id), error, nowIso());
+    return { failed: rows.length, processed: 0 };
+  }
+}
+
+export function claimSearchIndexInvalidations(driver: DatabaseDriver, limit = 500) {
   const claimedAt = nowIso();
   normalizeSearchPendingStates(driver);
-  const rows = driver.transaction(() => {
+  return driver.transaction(() => {
     const candidates = driver.queryAll<SearchIndexInvalidationRow>(
       `SELECT id, invalidation_type, target_id
        FROM search_index_invalidations
@@ -148,16 +162,6 @@ export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 
     candidates.forEach((row) => claim.run([claimedAt, claimedAt, row.id]));
     return candidates;
   });
-  if (rows.length === 0) return { failed: 0, processed: 0 };
-
-  try {
-    processClaimedInvalidationRows(driver, rows);
-    completeInvalidations(driver, rows.map((row) => row.id));
-    return { failed: 0, processed: rows.length };
-  } catch (error) {
-    failInvalidations(driver, rows.map((row) => row.id), error, nowIso());
-    return { failed: rows.length, processed: 0 };
-  }
 }
 
 export function readSearchIndexInvalidationBacklog(driver: DatabaseDriver) {
@@ -172,7 +176,7 @@ export function readSearchIndexInvalidationBacklog(driver: DatabaseDriver) {
   ) ?? { failed_count: 0, pending_count: 0, running_count: 0, total_count: 0 };
 }
 
-function processClaimedInvalidationRows(driver: DatabaseDriver, rows: SearchIndexInvalidationRow[]) {
+export function processClaimedInvalidationRows(driver: DatabaseDriver, rows: SearchIndexInvalidationRow[]) {
   const attachmentIds = rows.filter((row) => row.invalidation_type === 'attachment_pdf').map((row) => row.target_id);
   for (const attachmentId of attachmentIds) {
     driver.execute('DELETE FROM search.pdf_search WHERE attachment_id = ?', [attachmentId]);
@@ -183,7 +187,7 @@ function processClaimedInvalidationRows(driver: DatabaseDriver, rows: SearchInde
   syncWorkspaceSearchIndexForNodeIds(driver, nodeIds);
 }
 
-function completeInvalidations(driver: DatabaseDriver, ids: number[]) {
+export function completeInvalidations(driver: DatabaseDriver, ids: number[]) {
   const complete = driver.prepare(
     "DELETE FROM search_index_invalidations WHERE id = ?"
   );
@@ -193,7 +197,7 @@ function completeInvalidations(driver: DatabaseDriver, ids: number[]) {
   });
 }
 
-function failInvalidations(driver: DatabaseDriver, ids: number[], error: unknown, failedAt: string) {
+export function failInvalidations(driver: DatabaseDriver, ids: number[], error: unknown, failedAt = nowIso()) {
   const message = error instanceof Error ? error.message : String(error);
   const fail = driver.prepare(
     `UPDATE search_index_invalidations

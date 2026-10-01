@@ -31,11 +31,13 @@ it('keeps every registered operation executable and auditable from one definitio
 
   const mainDatabaseOperations = definitions.filter((definition) => [
     'automatic-backup', 'image-address-migration', 'keep-import', 'managed-inbox-import', 'mirror-backfill',
-    'mirror-incremental', 'pdf-indexing', 'readwise-api-import', 'search-index-incremental',
-    'search-index-rebuild'
+    'mirror-incremental', 'pdf-indexing', 'readwise-api-import'
   ].includes(definition.name));
   for (const definition of mainDatabaseOperations) {
     expect(definition.resources).toContainEqual({ resource: 'main-database-write' });
+  }
+  for (const definition of definitions.filter((entry) => entry.name.startsWith('search-index-'))) {
+    expect(definition.resources).not.toContainEqual({ resource: 'main-database-write' });
   }
 });
 

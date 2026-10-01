@@ -45,7 +45,7 @@ vi.mock('../reviewSchedulerSettings.js', () => ({
   loadReviewSchedulerSettings: vi.fn(),
   saveReviewSchedulerSettings: vi.fn()
 }));
-vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn().mockResolvedValue(undefined), bootReport: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./review.js', () => ({ reviewGrade: vi.fn() }));
 vi.mock('../mirror/rebuildMirrorOutput.js', () => ({ rebuildMirrorOutput: vi.fn() }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({ scheduleMirrorSync: vi.fn() }));

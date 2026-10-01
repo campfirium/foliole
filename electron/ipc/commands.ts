@@ -3,10 +3,12 @@ import { BrowserWindow, type WebContents } from 'electron';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { waitForDatabaseReady } from '../database/databaseReadiness.js';
+import { runDesktopDatabaseWrite } from '../database/desktopDatabaseWriteQueue.js';
 
 import { handleAssistantCommand } from './assistantCommands.js';
 import { resolveCommandRoute, type CommandRouteFamily } from './commandRoutes.js';
 import type { InvokeRequest } from './contracts.js';
+import { isForegroundNodeMutationCommand } from './foregroundNodeMutationCommands.js';
 import { handleImportCommand } from './importCommands.js';
 import {
   IPC_REQUEST_PAYLOAD_WARNING_BYTES,
@@ -92,6 +94,9 @@ function dispatchRoutedCommand(
     const execute = () => handleStorageCommand(
       request.command, args, resolveTargetWindow(context), context?.sender
     );
+    if (isForegroundNodeMutationCommand(request.command)) {
+      return runDesktopDatabaseWrite('foreground', execute);
+    }
     return shouldCoordinateStorageDispatch(request.command)
       ? runWithDatabaseConnectionOwner(execute)
       : execute();
