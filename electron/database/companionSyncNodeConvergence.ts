@@ -3,6 +3,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 import { resolveFolderConflict } from '../../lib/core/sync/syncFolderResolution.js';
 import { resolveItemConflict } from '../../lib/core/sync/syncItemResolution.js';
+import { upsertRemoteVersion } from '../../lib/core/sync/syncNodeApplyAcceptedRemote.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { resolveTopicConflict } from '../../lib/core/sync/syncNodeConvergence.js';
 import { isStoredAncestorVersion, loadMergeBaseCandidates } from '../../lib/core/sync/syncNodeGraph.js';
@@ -37,6 +38,7 @@ export async function applyNodePushBatchWithDbPort(
     .map((record, index) => [record, index]));
   valid.sort((left, right) => historyOrder.get(left.record)! - historyOrder.get(right.record)!);
   for (const entry of valid) {
+    if (await acknowledgeCanonicalAdditiveReplay(port, entry, result)) continue;
     if (await isConfirmedRetiredVersion(port, entry.record)) {
       appendNodeAck(result, entry, true);
       continue;
@@ -74,6 +76,26 @@ async function hasSharedHistory(port: DbPort, record: NativeSyncNodeRecord) {
   const local = await loadCurrentSyncNodeRecord(port, record.object_id);
   return Boolean(local?.version_id && record.version_id
     && (await loadMergeBaseCandidates(port, local.version_id, record.version_id)).length > 0);
+}
+
+async function acknowledgeCanonicalAdditiveReplay(
+  port: DbPort,
+  entry: { item: CompanionSyncPushPayload; record: NativeSyncNodeRecord },
+  result: CompanionSyncPushResult
+) {
+  if (!isAdditiveNode(entry.record) || !entry.record.version_id) return false;
+  const suffix = hashText(`${entry.record.object_id}\n${semanticSnapshot(entry.record.snapshot)}`).slice(0, 12);
+  const canonicalId = `${entry.record.object_id}~${suffix}`;
+  const [stored] = await port.query<{ object_id: string }>(
+    'SELECT object_id FROM node_sync_versions WHERE version_id = ?', [entry.record.version_id]);
+  if (stored?.object_id !== canonicalId || !await loadCurrentSyncNodeRecord(port, canonicalId)) return false;
+  await upsertRemoteVersion(port, { ...entry.record, object_id: canonicalId,
+    snapshot: { ...entry.record.snapshot, id: canonicalId } });
+  result.acks.push({ canonicalObjectId: canonicalId, canonicalVersionId: createOpaqueVersionRef(suffix),
+    clientOpId: entry.item.clientOpId, identity: entry.item.identity,
+    status: 'accepted', versionId: entry.record.version_id });
+  result.appliedNodeIds.push(canonicalId);
+  return true;
 }
 
 function isAdditiveNode(record: NativeSyncNodeRecord) {

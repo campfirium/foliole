@@ -122,9 +122,31 @@ it('preserves both additive objects under a stable canonical id', async () => {
     { anchor_link: '{"id":"anchor-remote","kind":"highlight"}', id: canonicalId }
   ]);
 
+  closeDatabaseConnection();
   const replay = await applyCompanionSyncPushAsync([incoming], 'ios');
   expect(replay.acks[0]?.canonicalObjectId).toBe(canonicalId);
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
     `SELECT COUNT(*) AS count FROM nodes WHERE id LIKE 'highlight-1%'`
   )).toEqual({ count: 2 });
+});
+
+it('rejects a changed immutable identity on a canonical additive replay without mutation', async () => {
+  await applyCompanionSyncPushAsync([createHighlightPush('anchor-local', 'android#local')], 'android');
+  const incoming = createHighlightPush('anchor-remote', 'ios#remote');
+  await applyCompanionSyncPushAsync([incoming], 'ios');
+  const readFacts = () => {
+    const sqlite = openDatabaseConnection().sqlite;
+    return {
+      nodes: sqlite.prepare('SELECT * FROM nodes ORDER BY id').all(),
+      versions: sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all(),
+      state: sqlite.prepare('SELECT * FROM sync_object_state ORDER BY object_type, object_id').all()
+    };
+  };
+  const before = readFacts();
+  const record = JSON.parse(incoming.payloadJson!) as NativeSyncNodeRecord;
+  const changed = { ...incoming, contentHash: 'changed-hash',
+    payloadJson: JSON.stringify({ ...record, content_hash: 'changed-hash' }) };
+  await expect(applyCompanionSyncPushAsync([changed], 'ios'))
+    .rejects.toThrow('sync_pack_node_version_immutable_mismatch:ios#remote');
+  expect(readFacts()).toEqual(before);
 });
