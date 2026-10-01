@@ -1,5 +1,7 @@
 // @vitest-environment node
 
+import { readFileSync } from 'node:fs';
+
 import { expect, it } from 'vitest';
 
 import { resolveDesktopLaunchTarget } from '../desktop/playwright-desktop-launch-target.mjs';
@@ -27,6 +29,15 @@ it('separates DEB and AppImage builds and guards the AppImage launcher', () => {
   expect(appImage.appImage.executableArgs).toEqual([]);
   expect(appImage.afterPack).toBe('scripts/linux/appimage-after-pack.mjs');
   expect(appImage.extraFiles).toEqual([]);
+});
+
+it('declares installable Electron and mDNS dependencies instead of a default sentinel', () => {
+  const { deb } = JSON.parse(readFileSync('electron/builder.json', 'utf8'));
+  expect(deb.depends).not.toContain('default');
+  expect(deb.depends).toEqual(expect.arrayContaining([
+    'libgtk-3-0', 'libnss3', 'libsecret-1-0',
+    'libavahi-client3', 'libavahi-common3', 'avahi-daemon'
+  ]));
 });
 
 it('roots an installed Linux package at its POSIX directory', () => {
