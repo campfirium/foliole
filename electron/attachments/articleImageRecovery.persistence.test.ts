@@ -81,6 +81,30 @@ it('restores missing bytes without changing the article when the source is uncha
   expect(loadWorkspaceNodeDocument('article')?.content).toBe(content);
 });
 
+it('returns verified existing image bytes without an attachment registry', async () => {
+  const { imported, content } = await localized();
+  const sqlite = openDatabaseConnection().sqlite;
+  sqlite.pragma('foreign_keys = OFF');
+  expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachments'").all()).toEqual([]);
+  transport.mockClear();
+  const result = await recoverArticleImageAttachment({ nodeId: 'article', sourceUrl: '',
+    recoverStorageKey: imported.storage_key, expectedContent: content });
+  expect(result).toMatchObject({ status: 'imported', hash: imported.hash,
+    storage_key: imported.storage_key, size_bytes: png.byteLength, recovered_content: content });
+  expect(transport).not.toHaveBeenCalled();
+});
+
+it('recovers corrupted existing bytes instead of treating file presence as success', async () => {
+  const { imported, content, file } = await localized();
+  await fs.writeFile(file, new Uint8Array([...png, 9]));
+  transport.mockClear();
+  const result = await recoverArticleImageAttachment({ nodeId: 'article', sourceUrl: '',
+    recoverStorageKey: imported.storage_key, expectedContent: content });
+  expect(result.status).toBe('error');
+  expect(transport).toHaveBeenCalled();
+  expect(loadWorkspaceNodeDocument('article')?.content).toBe(content);
+});
+
 it('accepts changed remote bytes and updates only the requesting article', async () => {
   const { imported, content, file } = await localized();
   saveNode('sibling', content, { [imported.storage_key]: sourceUrl });

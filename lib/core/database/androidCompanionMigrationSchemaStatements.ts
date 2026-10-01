@@ -35,6 +35,7 @@ export {
 } from './androidCompanionMigrationMetadata.js';
 
 export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
+  nodesResourceReferencesColumn: "ALTER TABLE nodes ADD COLUMN resource_references TEXT NOT NULL DEFAULT '[]'",
   nodesImageSourcesColumn: 'ALTER TABLE nodes ADD COLUMN image_sources TEXT',
   ...ANDROID_COMPANION_CONVERGENCE_MIGRATION_STATEMENTS,
   ...ANDROID_COMPANION_NODE_PROVENANCE_MIGRATION_STATEMENTS,
@@ -67,6 +68,8 @@ export const ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS = {
 };
 
 export const ANDROID_COMPANION_MIGRATION_REPAIR_RULES = {
+  nodesResourceReferences: { columnName: 'resource_references', tableName: 'nodes',
+    statementName: 'nodesResourceReferencesColumn', errorMessage: 'Failed to add node resource references.' },
   nodesImageSources: {
     columnName: 'image_sources', errorMessage: 'Failed to add article image sources.',
     statementName: 'nodesImageSourcesColumn', tableName: 'nodes'

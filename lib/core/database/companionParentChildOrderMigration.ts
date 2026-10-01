@@ -6,11 +6,6 @@ import { ROOT_CHILD_ORDER_ID } from './parentChildOrder.js';
 const MIGRATED_ORDER_TIME = '1970-01-01T00:00:00.000Z';
 
 export async function migrateCompanionParentChildOrder(db: DbPort) {
-  const missing = await db.query<{ id: string }>(
-    `SELECT n.id FROM nodes n LEFT JOIN node_order o ON o.node_id = n.id
-     WHERE n.deleted_at IS NULL AND o.node_id IS NULL LIMIT 1`
-  );
-  if (missing[0]) throw new Error(`missing_active_node_order:${missing[0].id}`);
   const rows = await db.query<{ id: string; parent_id: string | null }>(
     `SELECT n.id, n.parent_id FROM node_order o JOIN nodes n ON n.id = o.node_id
      ORDER BY o.position, n.id`

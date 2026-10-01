@@ -28,14 +28,5 @@ export async function loadCompanionWorkspaceNodeFromDb(db: DbPort, nodeId: strin
   );
   if (!row) return null;
   const node = buildWorkspaceSnapshotNode(row);
-  const links = await db.query<{ attachment_id: string; role: string }>(
-    'SELECT attachment_id, role FROM node_attachments WHERE node_id = ?', [nodeId]
-  );
-  node.attachments = links.map((link) => ({
-    attachmentId: link.attachment_id,
-    mimeType: null,
-    originalName: null,
-    role: link.role
-  }));
   return node;
 }

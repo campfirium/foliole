@@ -17,13 +17,14 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+
+import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
-import { createAttachmentRecord, createNodeAttachmentLink } from './attachments.js';
-import { recordAttachmentMetadata } from './attachmentSyncState.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { deleteNodesPermanently, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
+import { persistNodeResourceReference } from './nodeResources.js';
 
 let tempRoot = '';
 const IMAGE_ID = 'a'.repeat(64);
@@ -57,20 +58,9 @@ function seedNode(nodeId: string, content: string) {
 }
 
 async function seedAttachment(args: { attachmentId: string; mimeType: string; nodeIds: string[]; originalName: string; role: string }) {
-  createAttachmentRecord({
-    id: args.attachmentId,
-    originalName: args.originalName,
-    mimeType: args.mimeType,
-    sizeBytes: 32,
-    createdAt: '2026-04-18T08:00:00.000Z'
-  });
-  recordAttachmentMetadata(args.attachmentId, '2026-04-18T08:00:00.000Z');
   for (const nodeId of args.nodeIds) {
-    createNodeAttachmentLink({
-      nodeId,
-      attachmentId: args.attachmentId,
-      role: args.role
-    });
+    persistNodeResourceReference(nodeId, { storage_key: buildCanonicalAttachmentStorageKey(args.attachmentId, args.mimeType)!,
+      original_name: args.originalName, role: args.role as 'image' | 'reference' });
   }
   const storagePath = resolveAttachmentStoragePath(args.attachmentId, undefined, args.mimeType);
   await fs.mkdir(path.dirname(storagePath), { recursive: true });
@@ -81,11 +71,8 @@ async function seedAttachment(args: { attachmentId: string; mimeType: string; no
 function readAttachmentCounts(attachmentId: string) {
   const database = openDatabaseConnection().sqlite;
   return {
-    attachmentRows: (database.prepare('SELECT COUNT(*) AS count FROM attachments WHERE id = ?').get(attachmentId) as { count: number })
-      .count,
-    linkRows: (
-      database.prepare('SELECT COUNT(*) AS count FROM node_attachments WHERE attachment_id = ?').get(attachmentId) as { count: number }
-    ).count,
+    linkRows: (database.prepare(`SELECT count(*) AS count FROM nodes owner, json_each(owner.resource_references) resource
+      WHERE substr(json_extract(resource.value, '$.storage_key'), 1, 64) = ?`).get(attachmentId) as { count: number }).count,
     pdfIndexRows: (
       database.prepare('SELECT COUNT(*) AS count FROM pdf_page_text WHERE attachment_id = ?').get(attachmentId) as { count: number }
     ).count,
@@ -111,7 +98,6 @@ it('keeps attachments intact after soft delete even when the deleted node was th
   });
 
   expect(readAttachmentCounts(IMAGE_ID)).toEqual({
-    attachmentRows: 1,
     linkRows: 1,
     pdfIndexRows: 0,
     pdfSearchRows: 0
@@ -137,7 +123,6 @@ it('keeps shared inline images until the last body reference is permanently dele
   });
 
   expect(readAttachmentCounts(IMAGE_ID)).toEqual({
-    attachmentRows: 1,
     linkRows: 1,
     pdfIndexRows: 0,
     pdfSearchRows: 0
@@ -150,17 +135,11 @@ it('keeps shared inline images until the last body reference is permanently dele
   });
 
   expect(readAttachmentCounts(IMAGE_ID)).toEqual({
-    attachmentRows: 0,
     linkRows: 0,
     pdfIndexRows: 0,
     pdfSearchRows: 0
   });
-  expect(openDatabaseConnection().driver.queryOne<{ deleted_at: string }>(
-    `SELECT deleted_at
-     FROM sync_object_state
-     WHERE object_type = 'attachment' AND object_id = ?`,
-    [IMAGE_ID]
-  )).toEqual({ deleted_at: expect.any(String) });
+
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
@@ -193,7 +172,6 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
   });
 
   expect(readAttachmentCounts(PDF_ID)).toEqual({
-    attachmentRows: 1,
     linkRows: 1,
     pdfIndexRows: 1,
     pdfSearchRows: 1
@@ -206,7 +184,6 @@ it('keeps shared pdf attachments until the last mounted node is permanently dele
   });
 
   expect(readAttachmentCounts(PDF_ID)).toEqual({
-    attachmentRows: 0,
     linkRows: 0,
     pdfIndexRows: 0,
     pdfSearchRows: 0

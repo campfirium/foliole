@@ -1,3 +1,6 @@
+import { projectNodeInlineContent } from '../database/nodeInlineProjection.js';
+
+import { materializeCurrentVersionBodyBlobs } from './currentVersionBodyBlob.js';
 import type { DbPort } from './dbPort.js';
 import { enqueueAppliedNodeBodySearchInvalidation } from './syncNodeSearchInvalidations.js';
 import { hashTextBodyContent, upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
@@ -5,7 +8,9 @@ import { hashTextBodyContent, upsertTextBodyBlob } from './syncNodeTextBodyBlobs
 /** Reconcile only this pack's clean, missing inline projections, before committing its cursor. */
 export async function reconcileSyncPackInlineBodies(port: DbPort, incomingAlias: string,
   enqueueSearchInvalidations: boolean) {
+  await materializeCurrentVersionBodyBlobs(port, { incomingAlias });
   const alias = `"${incomingAlias.replaceAll('"', '""')}"`;
+  await refreshInlineBodyProjections(port, alias);
   let after = '';
   const now = new Date().toISOString();
   while (true) {
@@ -25,9 +30,26 @@ export async function reconcileSyncPackInlineBodies(port: DbPort, incomingAlias:
       `UPDATE nodes SET content = ?, body_blob_hash = ?
        WHERE id = ? AND current_version_id = ? AND sync_dirty = 0
          AND body_blob_hash IS NULL AND content = ''`,
-      [row.body_text, hash, row.id, row.current_version_id]);
+      [projectNodeInlineContent(row.body_text), hash, row.id, row.current_version_id]);
     if (result.changes !== 1) throw new Error(`sync_body_projection_changed:${row.id}`);
     if (enqueueSearchInvalidations) await enqueueAppliedNodeBodySearchInvalidation(port, row.id, now);
+    after = row.id;
+  }
+}
+
+async function refreshInlineBodyProjections(port: DbPort, alias: string) {
+  let after = '';
+  for (;;) {
+    const [row] = await port.query<{ id: string; body_blob_hash: string; body: string; content: string }>(
+      `SELECT n.id, n.body_blob_hash, n.content, CAST(data.data AS TEXT) AS body
+       FROM nodes n JOIN content_blob_data data ON data.hash = n.body_blob_hash
+       WHERE n.id > ? AND n.sync_dirty = 0 AND n.id IN (SELECT id FROM ${alias}.nodes)
+       ORDER BY n.id LIMIT 1`, [after]);
+    if (!row) return;
+    const projection = projectNodeInlineContent(row.body);
+    if (row.content !== projection && (row.content === '' || row.content === row.body)) await port.run(
+      'UPDATE nodes SET content = ? WHERE id = ? AND body_blob_hash = ? AND sync_dirty = 0',
+      [projection, row.id, row.body_blob_hash]);
     after = row.id;
   }
 }

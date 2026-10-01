@@ -69,8 +69,6 @@ async function prepareIndependentSources() {
   const bytes = 3 * 1048576 + 17;
   const { hash, sourcePath } = await writeAttachmentFixture(root, bytes);
   await fs.copyFile(sourcePath, path.join(secondAssets, `${hash}.png`));
-  driver.execute(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    VALUES (?, 'source.png', 'image/png', ?, 'now')`, [hash, bytes]);
   const dbPath = path.join(root, 'source-b.db');
   await openDatabaseConnection().sqlite.backup(dbPath);
   const sqlite = new Database(dbPath);

@@ -27,6 +27,14 @@ final class FolioleCompanionCanonicalAttachmentKey {
             && EXTENSIONS.containsValue(key.substring(64));
     }
 
+    static String mimeType(String key) {
+        if (!valid(key)) return null;
+        for (Map.Entry<String, String> entry : EXTENSIONS.entrySet()) {
+            if (entry.getValue().equals(key.substring(64))) return entry.getKey();
+        }
+        return null;
+    }
+
     static boolean matches(String contentHash, String mimeType, String storageKey) {
         return storageKey != null && storageKey.equals(storageKey(contentHash, mimeType));
     }

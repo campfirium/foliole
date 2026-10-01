@@ -4,35 +4,47 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
-import { buildCanonicalAttachmentStorageKey } from '../../../lib/platform/attachmentResource.js';
+import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
+import { initializeDatabaseSchema } from '../../../lib/core/database/migrations.js';
+import type { ArticleAttachmentNeed } from '../../../lib/core/sync/articleAttachmentNeeds.js';
+import { loadNodeOwnedArticleResourceNeeds } from '../../../lib/core/sync/nodeOwnedArticleResourceNeeds.js';
+import { classifyAttachmentBytes } from '../../../lib/platform/attachmentByteClassification.js';
 
-export async function snapshotInput(database: string, assets: string | undefined, destination: string) {
+export async function snapshotInput(database: string, assets: string | undefined, destination: string, deferResources = false) {
   await fs.mkdir(path.join(destination, 'assets'), { recursive: true });
   const source = new Database(database, { readonly: true, fileMustExist: true });
   const output = path.join(destination, 'foliole.db');
-  try { await source.backup(output); } finally { source.close(); }
-  const copy = new Database(output, { readonly: true });
-  const issues: Array<Record<string, unknown>> = [];
+  let sourceSchemaVersion: unknown;
   try {
-    const rows = copy.prepare('SELECT id,mime_type FROM attachments').all() as { id: string; mime_type: string }[];
-    for (const row of rows) {
-      const key = buildCanonicalAttachmentStorageKey(row.id, row.mime_type);
-      if (!key || !assets) {
-        issues.push({ attachment: row.id, error: 'input_attachment_path_missing' });
-        continue;
-      }
-      try {
-        const bytes = await fs.readFile(path.join(assets, key));
-        const hash = createHash('sha256').update(bytes).digest('hex');
-        if (hash !== row.id) throw new Error('input_attachment_hash_mismatch');
-        await fs.writeFile(path.join(destination, 'assets', key), bytes, { flag: 'wx' });
-      } catch (error) {
-        issues.push({ attachment: row.id, key, error: String(error) });
-      }
-    }
-    return { database: path.resolve(database), assets, output, resourceIssues: issues,
+    sourceSchemaVersion = source.pragma('user_version', { simple: true });
+    await source.backup(output);
+  } finally { source.close(); }
+  const copy = new Database(output);
+  try {
+    initializeDatabaseSchema(copy);
+    const ids = copy.prepare('SELECT id FROM nodes WHERE deleted_at IS NULL').pluck().all() as string[];
+    const resources = await loadNodeOwnedArticleResourceNeeds(createBetterSqliteDbPort(copy), ids);
+    const input = { database: path.resolve(database), assets, output, destination,
+      resourceNeeds: resources.needs, unreadableArticleIds: resources.unreadableArticleIds,
+      resourceIssues: [] as ResourceIssue[], sourceSchemaVersion,
       schemaVersion: copy.pragma('user_version', { simple: true }),
       counts: { nodes: copy.prepare('SELECT count(*) FROM nodes').pluck().get(),
-        versions: copy.prepare('SELECT count(*) FROM node_sync_versions').pluck().get(), attachments: rows.length } };
+        versions: copy.prepare('SELECT count(*) FROM node_sync_versions').pluck().get(), resources: resources.needs.length } };
+    if (!deferResources) await copyInputResources(input, resources.needs);
+    return input;
   } finally { copy.close(); }
+}
+interface ResourceIssue { key: string; error: string; }
+export async function copyInputResources(input: {
+  assets: string | undefined; destination: string; resourceIssues: ResourceIssue[];
+}, needs: readonly ArticleAttachmentNeed[]) {
+  for (const need of needs) {
+    try {
+      if (!input.assets) throw new Error('input_resource_directory_missing');
+      const bytes = await fs.readFile(path.join(input.assets, need.storageKey));
+      if (createHash('sha256').update(bytes).digest('hex') !== need.contentHash) throw new Error('input_resource_hash_mismatch');
+      await fs.writeFile(path.join(input.destination, 'assets', need.storageKey), bytes, { flag: 'wx' });
+      if (classifyAttachmentBytes(bytes.subarray(0, 128)) !== need.mimeType) throw new Error('input_resource_type_mismatch');
+    } catch (error) { input.resourceIssues.push({ key: need.storageKey, error: String(error) }); }
+  }
 }

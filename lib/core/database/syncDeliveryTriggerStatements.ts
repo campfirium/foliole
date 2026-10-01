@@ -1,3 +1,5 @@
+import { SYNC_STATE_RECEIPT_LIFECYCLE_TRIGGERS } from './syncStateReceiptLifecycle.js';
+
 export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
   `CREATE TRIGGER IF NOT EXISTS trg_sync_delivery_state_insert
    AFTER INSERT ON sync_object_state WHEN NEW.sync_dirty = 1 BEGIN
@@ -61,5 +63,6 @@ export const SYNC_DELIVERY_TRIGGER_STATEMENTS = [
            AND removal.target_device_identity_key = device.device_identity_key
            AND removal.superseded_at IS NULL)
        AND NEW.reviewed_at >= device.joined_at;
-   END`
+   END`,
+  ...SYNC_STATE_RECEIPT_LIFECYCLE_TRIGGERS
 ] as const;

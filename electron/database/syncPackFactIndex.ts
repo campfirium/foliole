@@ -12,6 +12,8 @@ import {
   iterateSyncPackNodeVersionRows
 } from './syncPackNodeVersionRows.js';
 import { loadPackRows } from './syncPackRows.js';
+import { loadSyncPackTombstoneRows } from './syncPackTombstoneRows.js';
+import { syncPackVersionHeads } from './syncPackVersionHeads.js';
 
 const MAX_FACTS_PER_KIND = 128;
 const MAX_INDEX_BYTES = 256 * 1024;
@@ -25,7 +27,8 @@ export function loadDesktopSyncPackFactIndex(driver: DatabaseDriver, args: {
   const toStateSeq = window.toStateSeq;
   const base = loadPackRows(args.fromStateSeq, toStateSeq, driver);
   const versions: SyncPackFactPage['versions'] = [];
-  for (const row of iterateSyncPackNodeVersionRows(driver, base.nodes)) {
+  for (const row of iterateSyncPackNodeVersionRows(driver, syncPackVersionHeads(driver, base.nodes,
+    loadSyncPackTombstoneRows(driver, { fromStateSeq: args.fromStateSeq, toStateSeq })))) {
     if (versions.length >= MAX_FACTS_PER_KIND) throw new Error('sync_pack_fact_index_over_budget');
     versions.push(describeVersionFact({ ...row,
       snapshot_metadata: snapshotMetadata(driver, row.version_id)

@@ -3,27 +3,23 @@
   "copyStatements": [
     "INSERT INTO sync_groups SELECT group_id, display_name, created_at\n     FROM source.sync_groups WHERE group_id IN (SELECT group_id FROM source.sync_group_local_state WHERE singleton_id = 1)",
     "INSERT INTO sync_group_devices SELECT group_id, device_identity_key, device_anchor,\n       canonical_library_path, device_name, platform, state, joined_at, left_at, last_seen_at, updated_at\n     FROM source.sync_group_devices\n     WHERE group_id IN (SELECT group_id FROM sync_groups) AND state IN ('active', 'left')",
-    "INSERT INTO sync_object_state SELECT state.object_type, state.object_id, state.state_seq,\n       state.content_hash, state.last_modified_by_host_name, state.updated_at,\n       CASE WHEN state.object_type = 'node_text_alternative' THEN COALESCE(state.deleted_at,\n         (SELECT node.deleted_at FROM source.node_text_alternatives alternative\n          JOIN source.nodes node ON node.id = alternative.node_id\n          WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END\n     FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN\n       ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',\n        'node_review','node_text_alternative','parent_child_order','pdf_page_text','setting','view_state','watched_folder')\n       AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       ",
+    "INSERT INTO sync_object_state SELECT state.object_type, state.object_id, state.state_seq,\n       state.content_hash, state.last_modified_by_host_name, state.updated_at,\n       CASE WHEN state.object_type = 'node_text_alternative' THEN COALESCE(state.deleted_at,\n         (SELECT node.deleted_at FROM source.node_text_alternatives alternative\n          JOIN source.nodes node ON node.id = alternative.node_id\n          WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END\n     FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN\n       ('external_document','external_folder','import_source','node','node_open_state','node_reading',\n        'node_review','node_text_alternative','parent_child_order','pdf_page_text','setting','view_state','watched_folder')\n       AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       AND (state.object_type NOT IN ('node_reading','node_review') OR state.deleted_at IS NOT NULL OR EXISTS\n         (SELECT 1 FROM source.nodes WHERE id = state.object_id))\n       ",
     "WITH RECURSIVE node_prelude(id, parent_id) AS (\n       SELECT node.id, node.parent_id FROM source.nodes node WHERE node.id IN\n         (SELECT object_id FROM sync_object_state WHERE object_type IN\n            ('node','node_open_state','node_reading','node_review','parent_child_order')\n          UNION SELECT alternative.node_id FROM source.node_text_alternatives alternative\n            JOIN sync_object_state selected ON selected.object_type = 'node_text_alternative'\n              AND selected.object_id = alternative.alternative_id)\n       UNION SELECT parent.id, parent.parent_id FROM source.nodes parent\n         JOIN node_prelude child ON child.parent_id = parent.id\n     ) INSERT OR IGNORE INTO sync_object_state SELECT s.object_type, s.object_id, s.state_seq,\n       s.content_hash, s.last_modified_by_host_name, s.updated_at, s.deleted_at\n     FROM source.sync_object_state s JOIN node_prelude prelude ON prelude.id = s.object_id\n     WHERE s.object_type = 'node'",
     "DELETE FROM sync_object_state WHERE object_type NOT IN ('external_document','node') AND NOT EXISTS\n      (SELECT 1 FROM sync_objects o WHERE o.object_type = sync_object_state.object_type AND o.object_id = sync_object_state.object_id)",
-    "INSERT INTO nodes (id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, import_source_fingerprint, import_content_fingerprint, content, current_version_id, created_at, updated_at, deleted_at) SELECT id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, import_source_fingerprint, import_content_fingerprint, '' AS content, current_version_id, created_at, updated_at, deleted_at FROM source.nodes\n     WHERE id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node')",
-    "INSERT INTO node_sync_versions SELECT v.version_id, v.object_id, v.parent_version_id, v.host_name,\n       v.created_at, v.content_hash, v.body_text, v.snapshot_json\n     FROM source.node_sync_versions v JOIN nodes n ON n.id = v.object_id",
+    "INSERT INTO nodes (id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, resource_references, import_source_fingerprint, import_content_fingerprint, content, current_version_id, created_at, updated_at, deleted_at) SELECT id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, resource_references, import_source_fingerprint, import_content_fingerprint, '' AS content, current_version_id, created_at, updated_at, deleted_at FROM source.nodes\n     WHERE id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node')",
+    "INSERT INTO node_sync_versions SELECT v.version_id, v.object_id, v.parent_version_id, v.host_name,\n       v.created_at, v.content_hash, v.body_text, v.snapshot_json\n     FROM source.node_sync_versions v WHERE v.object_id IN\n       (SELECT object_id FROM sync_object_state WHERE object_type = 'node')",
     "INSERT INTO node_sync_tombstones SELECT t.node_id, t.version_id, t.parent_version_id,\n       t.host_name, t.content_hash, t.snapshot_json, t.deleted_at, t.created_at\n     FROM source.node_sync_tombstones t WHERE t.node_id IN\n       (SELECT object_id FROM sync_object_state WHERE object_type = 'node' AND deleted_at IS NOT NULL)",
     "INSERT INTO node_sync_version_parents SELECT p.version_id, p.parent_version_id, p.ordinal\n     FROM source.node_sync_version_parents p\n     WHERE p.version_id IN (SELECT version_id FROM node_sync_versions)\n       AND p.parent_version_id IN (SELECT version_id FROM node_sync_versions)",
-    "INSERT INTO node_attachments SELECT a.node_id, a.attachment_id, a.role FROM source.node_attachments a\n     WHERE a.node_id IN (SELECT id FROM nodes)",
     "INSERT INTO external_documents SELECT d.document_id, d.folder_id, d.relative_path, d.file_name, d.extension,\n       d.source_size_bytes, d.source_modified_at, d.source_modified_ms, d.content_hash, d.title, d.opening_text,\n       d.body_blob_hash, '', d.reference_kind, d.reference_json, d.indexed_at, d.is_present, d.missing_at,\n       d.created_at, d.updated_at\n     FROM source.external_documents d WHERE d.document_id IN\n       (SELECT object_id FROM sync_object_state WHERE object_type = 'external_document')",
     "INSERT INTO content_blobs SELECT b.hash, b.storage_key, b.kind, b.mime_type, b.compression,\n       b.original_size_bytes, b.stored_size_bytes, b.original_sha256, b.stored_sha256, b.availability,\n       b.source_host_name, b.created_at, b.cached_at, b.last_verified_at FROM source.content_blobs b\n     WHERE b.hash IN (SELECT body_blob_hash FROM nodes WHERE body_blob_hash IS NOT NULL\n       UNION SELECT body_blob_hash FROM external_documents WHERE body_blob_hash IS NOT NULL)",
-    "INSERT INTO review_log SELECT r.id, r.op_id, r.host_name, r.node_id, r.grade, r.scheduler_version,\n       r.reviewed_at, r.due_before, r.stability_before, r.difficulty_before, r.due_after,\n       r.stability_after, r.difficulty_after FROM source.review_log r\n     WHERE r.node_id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node_review')"
+    "INSERT INTO review_log SELECT r.id, r.op_id, r.host_name, r.node_id, r.grade, r.scheduler_version,\n       r.reviewed_at, r.due_before, r.stability_before, r.difficulty_before, r.due_after,\n       r.stability_after, r.difficulty_after FROM source.review_log r\n     WHERE r.node_id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node_review')",
+    "INSERT INTO node_version_peer_heads (group_id, device_identity_key, object_id, version_id, library_epoch, proof_revision, pack_id, updated_at)\n    SELECT local.group_id, local.local_device_identity_key AS device_identity_key, node.id AS object_id,\n      node.current_version_id AS version_id, proof.library_epoch, proof.proof_revision,\n      'local-head' AS pack_id, node.updated_at\n    FROM (SELECT id, current_version_id, updated_at FROM source.nodes\n      UNION ALL SELECT tomb.node_id, tomb.version_id, tomb.deleted_at FROM source.node_sync_tombstones tomb\n        JOIN source.node_sync_versions version ON version.version_id = tomb.version_id AND version.object_id = tomb.node_id\n        WHERE NOT EXISTS (SELECT 1 FROM source.nodes held WHERE held.id = tomb.node_id)) node\n    JOIN source.sync_group_local_state local ON local.singleton_id = 1 AND local.state = 'active'\n    JOIN source.node_version_local_proof_state proof ON proof.singleton_id = 1\n    WHERE node.id IN (SELECT id FROM (SELECT id FROM nodes UNION SELECT node_id AS id FROM node_sync_tombstones)) AND node.current_version_id IS NOT NULL\n      AND node.id NOT IN ('special-inbox', 'special-virtual-root')"
   ],
   "databaseEntry": "incoming.db.deflate",
   "format": "foliole.sync-pack",
-  "formatVersion": 18,
+  "formatVersion": 20,
   "payloadCopyIndex": 4,
   "payloadPlans": [
-    {
-      "objectType": "attachment",
-      "sql": "SELECT a.id __object_id, a.id attachment_id,\n    a.original_name, a.mime_type, a.size_bytes, a.created_at FROM source.attachments a"
-    },
     {
       "objectType": "external_folder",
       "sql": "SELECT f.id __object_id, f.id, f.folder_path, f.attachment_mode,\n    f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at, f.last_error,\n    s.host_name, s.host_platform, s.type_settings_json, f.created_at, f.updated_at, f.source_ref\n    FROM source.external_search_folders f JOIN source.desktop_sources s ON s.source_ref = f.source_ref"
@@ -97,7 +93,6 @@
     "protocol": {
       "capabilities": [
         "article-image-sources-v1",
-        "attachment-metadata-only-v1",
         "author-host-snapshots-v1",
         "bounded-sync-pack-pages-v1",
         "canonical-attachment-storage-key-v1",
@@ -105,10 +100,11 @@
         "desktop-soft-anchor-v1",
         "device-delivery-receipts-v1",
         "device-sync-groups-v1",
+        "dynamic-node-version-chains-v1",
         "group-key-routing-v1",
         "lan-sync-v1",
+        "node-owned-resource-references-v1",
         "node-tombstone-pack-v1",
-        "node-version-frontier-retention-v1",
         "opaque-sync-refs-v1",
         "parent-child-order-v1",
         "readwise-library-source-mode-v1",
@@ -123,16 +119,15 @@
         "workgroup-aead-v1",
         "workgroup-restore-v1"
       ],
-      "max_supported_version": 13,
-      "min_supported_version": 13,
-      "version": 13
+      "max_supported_version": 15,
+      "min_supported_version": 15,
+      "version": 15
     },
     "resourceKinds": [
       "attachment",
       "content_blob"
     ],
     "sharedPolicyKeys": [
-      "attachment",
       "content_blobs",
       "external_document",
       "external_folder",
@@ -163,13 +158,13 @@
     "CREATE TABLE pack_manifest (\n    key TEXT PRIMARY KEY,\n    value TEXT NOT NULL\n  )",
     "CREATE TABLE sync_groups (\n    group_id TEXT PRIMARY KEY,\n    display_name TEXT NOT NULL,\n    created_at TEXT NOT NULL\n  )",
     "CREATE TABLE sync_group_devices (\n    group_id TEXT NOT NULL,\n    device_identity_key TEXT NOT NULL,\n    device_anchor TEXT NOT NULL,\n    canonical_library_path TEXT NOT NULL,\n    device_name TEXT NOT NULL,\n    platform TEXT NOT NULL,\n    state TEXT NOT NULL,\n    joined_at TEXT NOT NULL,\n    left_at TEXT,\n    last_seen_at TEXT,\n    updated_at TEXT NOT NULL,\n    PRIMARY KEY (group_id, device_identity_key)\n  )",
+    "CREATE TABLE node_version_peer_heads (\n    group_id TEXT NOT NULL,\n    device_identity_key TEXT NOT NULL,\n    object_id TEXT NOT NULL,\n    version_id TEXT NOT NULL,\n    library_epoch TEXT NOT NULL,\n    proof_revision INTEGER NOT NULL,\n    pack_id TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    PRIMARY KEY (group_id, device_identity_key, object_id)\n  )",
     "CREATE TABLE sync_object_state (\n    object_type TEXT NOT NULL,\n    object_id TEXT NOT NULL,\n    state_seq INTEGER NOT NULL,\n    content_hash TEXT NOT NULL,\n    last_modified_by_host_name TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    deleted_at TEXT,\n    PRIMARY KEY (object_type, object_id)\n  )",
     "CREATE TABLE sync_objects (\n    object_type TEXT NOT NULL,\n    object_id TEXT NOT NULL,\n    content_hash TEXT NOT NULL,\n    payload_json TEXT,\n    updated_at TEXT NOT NULL,\n    deleted_at TEXT,\n    PRIMARY KEY (object_type, object_id)\n  )",
-    "CREATE TABLE nodes (\n    id TEXT PRIMARY KEY,\n    parent_id TEXT,\n    kind TEXT NOT NULL,\n    priority INTEGER,\n    desired_retention REAL,\n    enable_short_term INTEGER,\n    sequential_reading_enabled INTEGER,\n    shelved_at TEXT,\n    manual_child_order TEXT,\n    title TEXT NOT NULL,\n    is_title_manual INTEGER NOT NULL DEFAULT 0,\n    hide_title_heading INTEGER NOT NULL DEFAULT 0,\n    body_blob_hash TEXT,\n    opening_text TEXT,\n    virtual_filter TEXT,\n    reveal TEXT,\n    anchor_link TEXT,\n    anchor_resolution_status TEXT,\n    anchor_source_version_id TEXT,\n    image_regions TEXT,\n    image_sources TEXT,\n    import_source_fingerprint TEXT,\n    import_content_fingerprint TEXT,\n    content TEXT NOT NULL DEFAULT '',\n    current_version_id TEXT,\n    created_at TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    deleted_at TEXT\n  )",
+    "CREATE TABLE nodes (\n    id TEXT PRIMARY KEY,\n    parent_id TEXT,\n    kind TEXT NOT NULL,\n    priority INTEGER,\n    desired_retention REAL,\n    enable_short_term INTEGER,\n    sequential_reading_enabled INTEGER,\n    shelved_at TEXT,\n    manual_child_order TEXT,\n    title TEXT NOT NULL,\n    is_title_manual INTEGER NOT NULL DEFAULT 0,\n    hide_title_heading INTEGER NOT NULL DEFAULT 0,\n    body_blob_hash TEXT,\n    opening_text TEXT,\n    virtual_filter TEXT,\n    reveal TEXT,\n    anchor_link TEXT,\n    anchor_resolution_status TEXT,\n    anchor_source_version_id TEXT,\n    image_regions TEXT,\n    image_sources TEXT,\n    resource_references TEXT NOT NULL DEFAULT '[]',\n    import_source_fingerprint TEXT,\n    import_content_fingerprint TEXT,\n    content TEXT NOT NULL DEFAULT '',\n    current_version_id TEXT,\n    created_at TEXT NOT NULL,\n    updated_at TEXT NOT NULL,\n    deleted_at TEXT\n  )",
     "CREATE TABLE node_sync_versions (\n    version_id TEXT PRIMARY KEY,\n    object_id TEXT NOT NULL,\n    parent_version_id TEXT,\n    host_name TEXT NOT NULL,\n    created_at TEXT NOT NULL,\n    content_hash TEXT NOT NULL,\n    body_text TEXT,\n    snapshot_json TEXT NOT NULL\n  )",
     "CREATE TABLE node_sync_tombstones (\n    node_id TEXT PRIMARY KEY,\n    version_id TEXT NOT NULL,\n    parent_version_id TEXT,\n    host_name TEXT NOT NULL,\n    content_hash TEXT NOT NULL,\n    snapshot_json TEXT NOT NULL,\n    deleted_at TEXT NOT NULL,\n    created_at TEXT NOT NULL\n  )",
     "CREATE TABLE node_sync_version_parents (\n    version_id TEXT NOT NULL,\n    parent_version_id TEXT NOT NULL,\n    ordinal INTEGER NOT NULL,\n    PRIMARY KEY (version_id, parent_version_id),\n    UNIQUE (version_id, ordinal)\n  )",
-    "CREATE TABLE node_attachments (\n    node_id TEXT NOT NULL,\n    attachment_id TEXT NOT NULL,\n    role TEXT NOT NULL,\n    PRIMARY KEY (node_id, attachment_id, role)\n  )",
     "CREATE TABLE external_documents (\n    document_id TEXT PRIMARY KEY,\n    folder_id TEXT NOT NULL,\n    relative_path TEXT NOT NULL,\n    file_name TEXT NOT NULL,\n    extension TEXT NOT NULL,\n    source_size_bytes INTEGER NOT NULL,\n    source_modified_at TEXT NOT NULL,\n    source_modified_ms INTEGER NOT NULL,\n    content_hash TEXT NOT NULL,\n    title TEXT,\n    opening_text TEXT,\n    body_blob_hash TEXT,\n    content TEXT NOT NULL DEFAULT '',\n    reference_kind TEXT NOT NULL DEFAULT 'local_path',\n    reference_json TEXT,\n    indexed_at TEXT NOT NULL,\n    is_present INTEGER NOT NULL DEFAULT 1,\n    missing_at TEXT,\n    created_at TEXT NOT NULL,\n    updated_at TEXT NOT NULL\n  )",
     "CREATE TABLE content_blobs (\n    hash TEXT PRIMARY KEY,\n    storage_key TEXT NOT NULL,\n    kind TEXT NOT NULL,\n    mime_type TEXT,\n    compression TEXT NOT NULL DEFAULT 'none',\n    original_size_bytes INTEGER NOT NULL,\n    stored_size_bytes INTEGER NOT NULL,\n    original_sha256 TEXT NOT NULL,\n    stored_sha256 TEXT NOT NULL,\n    availability TEXT NOT NULL DEFAULT 'missing',\n    source_host_name TEXT,\n    created_at TEXT NOT NULL,\n    cached_at TEXT,\n    last_verified_at TEXT\n  )",
     "CREATE TABLE review_log (\n    id TEXT PRIMARY KEY,\n    op_id TEXT NOT NULL UNIQUE,\n    host_name TEXT NOT NULL,\n    node_id TEXT NOT NULL,\n    grade INTEGER NOT NULL,\n    scheduler_version TEXT NOT NULL,\n    reviewed_at TEXT NOT NULL,\n    due_before TEXT NOT NULL,\n    stability_before REAL NOT NULL,\n    difficulty_before REAL NOT NULL,\n    due_after TEXT NOT NULL,\n    stability_after REAL NOT NULL,\n    difficulty_after REAL NOT NULL\n  )"
@@ -177,7 +172,6 @@
   "protocol": {
     "capabilities": [
       "article-image-sources-v1",
-      "attachment-metadata-only-v1",
       "author-host-snapshots-v1",
       "bounded-sync-pack-pages-v1",
       "canonical-attachment-storage-key-v1",
@@ -185,10 +179,11 @@
       "desktop-soft-anchor-v1",
       "device-delivery-receipts-v1",
       "device-sync-groups-v1",
+      "dynamic-node-version-chains-v1",
       "group-key-routing-v1",
       "lan-sync-v1",
+      "node-owned-resource-references-v1",
       "node-tombstone-pack-v1",
-      "node-version-frontier-retention-v1",
       "opaque-sync-refs-v1",
       "parent-child-order-v1",
       "readwise-library-source-mode-v1",
@@ -203,25 +198,25 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 13,
-    "min_supported_version": 13,
-    "version": 13
+    "max_supported_version": 15,
+    "min_supported_version": 15,
+    "version": 15
   },
-  "schemaVersion": 90,
+  "schemaVersion": 92,
   "stateCopyIndex": 2,
   "tableNames": [
     "sync_groups",
     "sync_group_devices",
+    "node_version_peer_heads",
     "sync_object_state",
     "sync_objects",
     "nodes",
     "node_sync_versions",
     "node_sync_tombstones",
     "node_sync_version_parents",
-    "node_attachments",
     "external_documents",
     "content_blobs",
     "review_log"
   ],
-  "versionPreflightSql": "WITH RECURSIVE selected(id) AS (\n    SELECT object_id FROM sync_object_state WHERE state_seq > ? AND state_seq <= ?\n      AND object_type IN ('node', 'node_open_state', 'node_reading', 'node_review', 'parent_child_order')\n    UNION SELECT a.node_id FROM node_text_alternatives a JOIN sync_object_state s\n      ON s.object_type = 'node_text_alternative' AND s.object_id = a.alternative_id\n    WHERE s.state_seq > ? AND s.state_seq <= ?\n  ), ancestry(id, parent_id) AS (\n    SELECT node.id, node.parent_id FROM nodes node JOIN selected ON selected.id = node.id\n    UNION SELECT parent.id, parent.parent_id FROM nodes parent\n      JOIN ancestry child ON child.parent_id = parent.id\n  ) SELECT COUNT(*) AS rows,\n  COALESCE(SUM(COALESCE(length(CAST(v.body_text AS BLOB)), 0) +\n    length(CAST(v.snapshot_json AS BLOB)) + 512), 0) AS bytes\n  FROM node_sync_versions v WHERE v.object_id IN (SELECT id FROM ancestry)"
+  "versionPreflightSql": "WITH RECURSIVE selected(id) AS (\n    SELECT object_id FROM sync_object_state WHERE state_seq > ? AND state_seq <= ?\n      AND object_type IN ('node', 'node_open_state', 'node_reading', 'node_review', 'parent_child_order')\n    UNION SELECT a.node_id FROM node_text_alternatives a JOIN sync_object_state s\n      ON s.object_type = 'node_text_alternative' AND s.object_id = a.alternative_id\n    WHERE s.state_seq > ? AND s.state_seq <= ?\n  ), ancestry(id, parent_id) AS (\n    SELECT node.id, node.parent_id FROM nodes node JOIN selected ON selected.id = node.id\n    UNION SELECT parent.id, parent.parent_id FROM nodes parent\n      JOIN ancestry child ON child.parent_id = parent.id\n  ) SELECT COUNT(*) AS rows,\n  COALESCE(SUM(COALESCE(length(CAST(v.body_text AS BLOB)), 0) +\n    length(CAST(v.snapshot_json AS BLOB)) + 512), 0) AS bytes\n  FROM node_sync_versions v WHERE v.object_id IN (SELECT id FROM ancestry UNION SELECT id FROM selected)"
 }

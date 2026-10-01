@@ -7,6 +7,7 @@ import {
   type FullTextSearchTokenizer
 } from './fullTextSearchIndexStrategy.js';
 import type { DatabaseConnectionLike, DatabaseMigrationTarget } from './migrationTypes.js';
+import { retireSearchPendingThrough } from './searchPendingState.js';
 import { rebuildWorkspaceSearchIndexes } from './workspaceSearchIndex.js';
 import {
   createWorkspaceSearchMetadataTable,
@@ -153,7 +154,11 @@ export function rebuildWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarCo
   try {
     // Keep main-database writes outside the long search transaction so foreground edits can proceed.
     const source = markWorkspaceSearchSourceRevisionQueued(connection.driver);
-    return connection.driver.transaction(() => {
+    let coveredId = 0;
+    const result = connection.driver.transaction(() => {
+      coveredId = connection.driver.queryOne<{ id: number }>(
+        'SELECT COALESCE(MAX(id), 0) AS id FROM search_index_invalidations'
+      )?.id ?? 0;
       clearIndexedWorkspaceSearchSourceState(connection.driver);
       dropSearchIndexTables(connection.sqlite);
       createSearchIndexTables(connection.sqlite, resolution.tokenizer);
@@ -172,6 +177,8 @@ export function rebuildWorkspaceSearchSidecar<T extends WorkspaceSearchSidecarCo
       writeWorkspaceSearchMetadata(connection.sqlite, 'last_rebuild_status', readyStatus);
       return readyStatus;
     });
+    retireSearchPendingThrough(connection.driver, coveredId);
+    return result;
   } catch (error) {
     const failedStatus = {
       error: toErrorMessage(error),

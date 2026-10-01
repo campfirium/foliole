@@ -4,7 +4,8 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 
 import { SYNC_PACK_DEPENDENCY_PAGE_SCHEMA } from '../../lib/core/sync/syncPackDependencyPageApply.js';
-import { validateSyncPackDependencyPage, type SyncPackDependencyPage } from '../../lib/core/sync/syncPackDependencyTransfer.js';
+import { SYNC_PACK_DEPENDENCY_STORED_MAX_BYTES, validateSyncPackDependencyPage,
+  type SyncPackDependencyPage } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import { SYNC_PACK_COMPRESSION, SYNC_PACK_DATABASE_ENTRY, SYNC_PACK_FORMAT,
   SYNC_PACK_FORMAT_VERSION, SYNC_PACK_PAYLOAD_SCHEMA_VERSION } from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import { buildSyncPackManifest, SYNC_PACK_TABLE_NAMES, type SyncPackTableName } from '../../lib/core/sync/syncPackManifest.js';
@@ -19,6 +20,8 @@ export async function buildSyncPackDependencyPageArchive(args: {
   fromPeerId: string; toPeerId: string; restoreId?: string;
 }) {
   validateSyncPackDependencyPage(args.page);
+  const storedBytes = args.page.rows.reduce((sum, row) => sum + Buffer.byteLength(JSON.stringify(row), 'utf8'), 0);
+  if (storedBytes > SYNC_PACK_DEPENDENCY_STORED_MAX_BYTES) throw new Error('sync_pack_dependency_page_over_budget');
   if (args.fromPeerId !== args.page.transfer.peerId) throw new Error('sync_pack_dependency_source_mismatch');
   await fs.mkdir(path.dirname(args.outputPath), { recursive: true });
   const root = await fs.mkdtemp(path.join(path.dirname(args.outputPath), '.dependency-pack-'));

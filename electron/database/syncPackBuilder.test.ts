@@ -36,13 +36,13 @@ const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3
 const EXTERNAL_DOCUMENT_PACK_TABLES = [
   { name: 'sync_groups', row_count: 0 },
   { name: 'sync_group_devices', row_count: 0 },
+        { name: 'node_version_peer_heads', row_count: 0 },
   { name: 'sync_object_state', row_count: 1 },
   { name: 'sync_objects', row_count: 0 },
   { name: 'nodes', row_count: 0 },
   { name: 'node_sync_versions', row_count: 0 },
   { name: 'node_sync_tombstones', row_count: 0 },
   { name: 'node_sync_version_parents', row_count: 0 },
-  { name: 'node_attachments', row_count: 0 },
   { name: 'external_documents', row_count: 1 },
   { name: 'content_blobs', row_count: 1 },
   { name: 'review_log', row_count: 0 }
@@ -125,7 +125,7 @@ function expectNodePackRows(packPath: string) {
       database_compressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       database_uncompressed_sha256: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
       format: 'foliole.sync-pack',
-      format_version: 18,
+      format_version: 20,
       created_at: '2026-04-27T02:00:00.000Z',
       from_peer_id: 'authorization-desktop-fixture',
       from_state_seq: 0,
@@ -136,19 +136,19 @@ function expectNodePackRows(packPath: string) {
       tables: [
         { name: 'sync_groups', row_count: 0 },
         { name: 'sync_group_devices', row_count: 0 },
+        { name: 'node_version_peer_heads', row_count: 0 },
         { name: 'sync_object_state', row_count: 2 },
         { name: 'sync_objects', row_count: 1 },
         { name: 'nodes', row_count: 1 },
         { name: 'node_sync_versions', row_count: 1 },
         { name: 'node_sync_tombstones', row_count: 0 },
         { name: 'node_sync_version_parents', row_count: 0 },
-        { name: 'node_attachments', row_count: 1 },
         { name: 'external_documents', row_count: 0 },
         { name: 'content_blobs', row_count: 1 },
         { name: 'review_log', row_count: 0 }
       ]
     }),
-    nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
+    nodeResources: [{ id: 'node-1', resource_references: JSON.stringify([{ storage_key: `${'a'.repeat(64)}.png`, original_name: 'cover.png', role: 'image' }]) }],
     nodeVersions: [expect.objectContaining({
       object_id: 'node-1',
       parent_version_id: null,

@@ -29,7 +29,7 @@ await receiveDesktopAttachmentRanges({ filePath, contentHash, expectedBytes: Num
       await new Promise(() => {});
     }
     offsets.push(offset);
-    const query = new URLSearchParams({ attachment_id: contentHash, content_hash: contentHash,
+    const query = new URLSearchParams({ attachment_id: contentHash, content_hash: contentHash, storage_key: contentHash + '.png',
       offset: String(offset), length: '1048576' });
     const pathWithQuery = '/companion/attachment-resource?' + query;
     const response = await fetch(origin + pathWithQuery, {
@@ -50,7 +50,8 @@ process.stdout.write(JSON.stringify({ offsets, peakRss, checkpoints }));
 
 export async function compileAttachmentHttpWorker(root: string) {
   const files = ['electron/sync/desktopAttachmentRangeTransfer.ts', 'electron/sync/resourceFileHash.ts',
-    'lib/platform/resourceAvailabilityContract.ts', 'lib/core/sync/attachmentReceiveCheckpoint.ts',
+    'lib/platform/resourceAvailabilityContract.ts', 'lib/platform/attachmentResource.ts',
+    'lib/core/sync/attachmentReceiveCheckpoint.ts',
     'lib/core/database/syncPackProgressSchemaStatements.ts', 'electron/sync/desktopSyncGroupHttp.ts',
     'electron/sync/desktopSyncGroupSignedHeaders.ts', 'electron/sync/workgroupHttpCrypto.ts',
     'electron/sync/workgroupAeadNode.ts'];

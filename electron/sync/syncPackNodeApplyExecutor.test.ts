@@ -62,16 +62,14 @@ it('applies nodes and node attachments from an attached sync pack', async () => 
   });
   expect(connection.sqlite.prepare('SELECT node_id, position FROM node_order WHERE node_id = ?').get('node-1'))
     .toBeUndefined();
-  expect(connection.sqlite.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all()).toEqual([{
-    attachment_id: 'att-1',
-    node_id: 'node-1',
-    role: 'reference'
-  }]);
+  expect(JSON.parse(connection.sqlite.prepare('SELECT resource_references FROM nodes WHERE id = ?').pluck().get('node-1') as string)).toEqual([
+    { storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'Original.pdf', role: 'reference' }
+  ]);
 });
 
-it('skips pack node attachment links when the attachment metadata is missing locally', async () => {
+it('retains a node mount even when its file is absent locally', async () => {
   const connection = openDatabaseConnection();
-  connection.sqlite.prepare('DELETE FROM attachments WHERE id = ?').run('att-1');
+  expect(connection.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachments'").get()).toBeUndefined();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-pack-node-missing-attachment-test' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   try {
@@ -83,7 +81,9 @@ it('skips pack node attachment links when the attachment metadata is missing loc
   expect(connection.sqlite.prepare('SELECT title FROM nodes WHERE id = ?').get('node-1')).toEqual({
     title: 'Packed Node'
   });
-  expect(connection.sqlite.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all()).toEqual([]);
+  expect(JSON.parse(connection.sqlite.prepare('SELECT resource_references FROM nodes WHERE id = ?').pluck().get('node-1') as string)).toEqual([
+    { storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'Original.pdf', role: 'reference' }
+  ]);
 });
 
 it('applies pack nodes only when the attached pack cursor is contiguous', async () => {

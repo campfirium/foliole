@@ -7,7 +7,10 @@ import process from 'node:process';
 import { validateOutputPath } from './simulator-paths.mjs';
 
 const scenarios = ['continuous', 'merge', 'conflict', 'kinds', 'delayed-receipt',
-  'trimmed', 'paged-restart', 'deletion', 'collision', 'resources', 'lost-push-response', 'wal-snapshot'];
+  'trimmed', 'paged-restart', 'deletion', 'collision', 'resources', 'lost-push-response',
+  'wal-snapshot', 'open-state-batch', 'resource-recovery', 'orphaned-learning-state',
+  'large-dependency-page', 'unbacked-learning-state', 'escaped-dependency-page', 'tombstoned-learning-state', 'mismatched-resource-type', 'local-root-state',
+  'source-edit-during-sync', 'move-between-folders', 'unchanged-replay'];
 const usage = `Usage: npm run sync:simulate -- [--mode empty|real] [--scenarios all|name,...]
   [--path desktop|companion|both] [--seed 1] [--scale 1] [--out .tmp/artifacts/sync-simulator/run]
   [--database /absolute/foliole.db] [--assets /absolute/Assets]

@@ -1,3 +1,4 @@
+import type { NodeResourceReference } from '../../../../lib/core/database/nodeResourceReferences';
 import type { NodeKind } from '../../../../lib/core/nodes/nodeKind';
 import type { VirtualNodeFilter } from '../../../../lib/core/nodes/virtualNodeFilter';
 import type { ReadingState } from '../../../../lib/core/review/readingState';
@@ -139,6 +140,7 @@ export interface Node {
   anchorLink?: NodeAnchorLink | null;
   imageRegions?: NodeImageRegionGroup[] | null;
   imageSources?: Record<string, string> | null;
+  resourceReferences?: NodeResourceReference[];
   reveal: string | null;
   reading?: NodeReadingProfile | null;
   review: NodeReviewProfile | null;

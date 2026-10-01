@@ -30,7 +30,7 @@ export async function persistPreparedOriginalFile(input: {
   } else if (input.prepared.state.status === 'localized' && input.nodeId) {
     const nodeId = input.nodeId;
     const state = input.prepared.state;
-    await runWithDatabaseConnectionOwner(() => attachReadwiseApiOriginalFile(nodeId, state));
+    await runWithDatabaseConnectionOwner(() => attachReadwiseApiOriginalFile(nodeId, state, input.document.title));
   }
   await runWithDatabaseConnectionOwner(() => (
     replacePreviousOriginalLink(input.nodeId, input.previous, finalState)

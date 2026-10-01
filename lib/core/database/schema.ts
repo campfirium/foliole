@@ -23,6 +23,7 @@ export const nodes = sqliteTable('nodes', {
   anchorSourceVersionId: text('anchor_source_version_id'),
   imageRegions: text('image_regions'),
   imageSources: text('image_sources'),
+  resourceReferences: text('resource_references').notNull().default('[]'),
   importSourceFingerprint: text('import_source_fingerprint'),
   importContentFingerprint: text('import_content_fingerprint'),
   position: integer('position'),
@@ -137,29 +138,6 @@ export const incomingUpdates = sqliteTable('incoming_updates', {
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull()
 });
-
-export const attachments = sqliteTable('attachments', {
-  id: text('id').primaryKey(),
-  originalName: text('original_name'),
-  mimeType: text('mime_type'),
-  sizeBytes: integer('size_bytes'),
-  createdAt: text('created_at').notNull(),
-  pdfIndexStatus: text('pdf_index_status'),
-  pdfIndexedAt: text('pdf_indexed_at'),
-  pdfIndexError: text('pdf_index_error'),
-  pdfIndexVersion: integer('pdf_index_version'),
-  pdfIndexAttempt: integer('pdf_index_attempt')
-});
-
-export const nodeAttachments = sqliteTable(
-  'node_attachments',
-  {
-    nodeId: text('node_id').notNull(),
-    attachmentId: text('attachment_id').notNull(),
-    role: text('role').notNull()
-  },
-  (table) => [primaryKey({ columns: [table.nodeId, table.attachmentId, table.role] })]
-);
 
 export const importRuns = sqliteTable('import_runs', {
   id: text('id').primaryKey(),

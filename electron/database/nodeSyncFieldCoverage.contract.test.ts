@@ -47,6 +47,7 @@ const WIRE_SNAPSHOT_FIELDS = expectCompleteWireSnapshotFields([
   'parent_id',
   'position',
   'priority',
+  'resource_references',
   'reveal',
   'sequential_reading_enabled',
   'shelved_at',
@@ -132,6 +133,7 @@ function desktopSnapshotFields() {
     'opening_text',
     'parent_id',
     'priority',
+    'resource_references',
     'reveal',
     'sequential_reading_enabled',
     'shelved_at',
@@ -208,6 +210,7 @@ function nodeSyncInput(): NodeSyncHashInput {
   return {
     anchorLink: null,
     attachments: [],
+    resourceReferences: [],
     content: 'Body',
     createdAt: '2026-07-06T00:00:00.000Z',
     deletedAt: null,

@@ -124,7 +124,7 @@ export function applyParentContentChange(input: {
     if (remapped.value === row.anchor_link && remapped.imageRegions === row.image_regions) {
       return;
     }
-    input.driver.execute('UPDATE nodes SET anchor_link = ?, image_regions = ?, updated_at = ? WHERE id = ?', [
+    input.driver.execute('UPDATE nodes SET anchor_link = ?, image_regions = ?, updated_at = ?, sync_dirty = 1 WHERE id = ?', [
       remapped.value,
       remapped.imageRegions,
       input.updatedAt,

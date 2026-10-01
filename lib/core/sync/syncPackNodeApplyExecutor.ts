@@ -1,12 +1,12 @@
 import type { DbPort } from './dbPort.js';
+import { applyPackNodeVersionDependencies } from './nodeVersionDependencies.js';
 import {
   prepareInboundNodeVersionReceipt,
   recordInboundNodeVersionReceipt
 } from './nodeVersionInboundReceipt.js';
+import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import {
-  buildSyncPackNodeAttachmentDeleteSql,
-  buildSyncPackNodeAttachmentInsertSql,
   type SyncPackNodeApplyOptions
 } from './syncPackApplyStatements.js';
 import { applySyncPackContentBlobsWithDbPort } from './syncPackContentBlobsExecutor.js';
@@ -60,15 +60,6 @@ export async function applySyncPackNodesWithDbPort(
 ) {
   await applySyncPackNodeRowsWithDbPort(port, options);
   await applySyncPackNodeVersionsWithDbPort(port, options);
-  await applySyncPackNodeAttachmentsWithDbPort(port, options);
-}
-
-async function applySyncPackNodeAttachmentsWithDbPort(
-  port: DbPort,
-  options: SyncPackNodeApplyOptions = {}
-) {
-  await port.run(buildSyncPackNodeAttachmentDeleteSql(options));
-  await port.run(buildSyncPackNodeAttachmentInsertSql(options));
 }
 
 export async function applySyncPackNodeSurfaceWithDbPort(
@@ -167,12 +158,6 @@ async function applySyncPackSurfaceInTransaction(
   await applySyncPackNodeTextAlternativesWithDbPort(port, options);
   await applySyncPackLearningObjectsWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
-  const attachmentOptions = {
-    ...remainingNodeOptions,
-    excludedNodeIds: nodeConvergence.processedNodeIds
-      .filter((nodeId) => !nodeConvergence.newNodeIds.includes(nodeId))
-  };
-  await applySyncPackNodeAttachmentsWithDbPort(port, attachmentOptions);
   await applySyncPackViewStateObjectsWithDbPort(port, options);
   const appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
   const appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
@@ -180,7 +165,11 @@ async function applySyncPackSurfaceInTransaction(
     objectTypes: SYNC_PACK_SURFACE_OBJECT_TYPES
   });
   await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
+  await applyPackNodeVersionDependencies(port, options.incomingAlias ?? 'inc', options.sourcePeerId);
   if (preparedReceipt) await saveVersionReceipt(port, preparedReceipt, options.sourcePeerId);
+  const heads = await port.query<{ id: string }>(`SELECT id FROM ${options.incomingAlias ?? 'inc'}.nodes
+    UNION SELECT node_id AS id FROM ${options.incomingAlias ?? 'inc'}.node_sync_tombstones`);
+  for (const head of heads) await collectNodeVersionPayloads(port, head.id, Number.MAX_SAFE_INTEGER);
   return {
     appliedBlobCount,
     appliedGroupFactCount: groupFacts.appliedFactCount,
@@ -212,7 +201,6 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'node_open_state',
   'node_text_alternative',
   'parent_child_order',
-  'attachment',
   'pdf_page_text',
   'view_state'
 ] as const;

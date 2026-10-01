@@ -34,8 +34,7 @@ const PRELUDE = `WITH RECURSIVE changed AS (
   UNION SELECT node.parent_id FROM nodes node JOIN pack_nodes pack ON pack.id = node.id
     WHERE node.parent_id IS NOT NULL
 ), lineage(version_id) AS (
-  SELECT node.current_version_id FROM nodes node JOIN pack_nodes pack ON pack.id = node.id
-    WHERE node.current_version_id IS NOT NULL
+  SELECT version.version_id FROM node_sync_versions version JOIN pack_nodes pack ON pack.id = version.object_id
   UNION SELECT coalesce(parent.parent_version_id, version.parent_version_id)
     FROM lineage JOIN node_sync_versions version ON version.version_id = lineage.version_id
     LEFT JOIN node_sync_version_parents parent ON parent.version_id = version.version_id

@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type {
   PreparedReadwiseApiAnnotation,
   PreparedReadwiseApiDocument
@@ -28,10 +29,14 @@ export function mergeRetainedReadwiseAnnotations(
   const byRemoteId = new Map(remote.map((annotation) => [annotation.remoteId, annotation]));
   for (const state of source.state.annotations) {
     if (state.blockedAt || byRemoteId.has(state.remoteId)) continue;
-    const row = openDatabaseConnection().driver.queryOne<{ anchor_link: string | null; content: string }>(
-      'SELECT anchor_link, content FROM nodes WHERE id = ? AND deleted_at IS NULL', [state.nodeId]
+    const stored = openDatabaseConnection().driver.queryOne<NodeBodyRow & { anchor_link: string | null }>(
+      `SELECT n.anchor_link, n.content, n.body_blob_hash, cbd.data AS body_blob_data FROM nodes n
+       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+       WHERE n.id = ? AND n.deleted_at IS NULL`, [state.nodeId]
     );
-    if (!row?.content.trim()) continue;
+    if (!stored) continue;
+    const row = { ...stored, content: requireResolvedNodeBody(stored, state.nodeId).content };
+    if (!row.content.trim()) continue;
     byRemoteId.set(state.remoteId, {
       content: row.content,
       contentHash: state.contentHash || createHash('sha256').update(row.content).digest('hex'),

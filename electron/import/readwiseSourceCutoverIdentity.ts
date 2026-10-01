@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { formatHighlightCardContent } from '../../lib/core/annotations/textAnnotationContent.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { extractReadwiseSidecarHighlights } from '../../lib/core/import/readwiseReaderParsing.js';
 import {
   resolveReaderBodyAncestor,
@@ -182,10 +183,11 @@ function loadLegacyAnnotationCandidates(nodeId: string) {
   return openDatabaseConnection().driver.queryAll<LegacyAnnotationCandidate>(`WITH RECURSIVE tree(id) AS (
        SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
        UNION ALL SELECT n.id FROM nodes n JOIN tree t ON n.parent_id = t.id WHERE n.deleted_at IS NULL
-     ) SELECT n.id, n.title, n.content, n.anchor_link anchorLink,
+     ) SELECT n.id, n.title, ${buildNodeBodyContentSql()} AS content, n.anchor_link anchorLink,
        n.is_title_manual isTitleManual, n.created_at createdAt,
        (SELECT COUNT(*) FROM nodes child WHERE child.parent_id=n.id AND child.deleted_at IS NULL) childCount
-       FROM nodes n JOIN tree t ON t.id=n.id`,
+       FROM nodes n JOIN tree t ON t.id=n.id
+       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash`,
   [nodeId]);
 }
 

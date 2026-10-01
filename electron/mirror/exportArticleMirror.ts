@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import { parseStoredAnchorLink, type StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
@@ -84,16 +85,20 @@ function resolveArticlePath(mirrorRoot: string, ancestors: AncestorRow[], articl
 
 export function loadArticleNode(articleId: string): MirrorNodeRow | null {
   const db = openDatabaseConnection().sqlite;
-  return db.prepare(
-    'SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, content, reveal, anchor_link, created_at, updated_at, deleted_at FROM nodes WHERE id = ?'
-  ).get(articleId) as MirrorNodeRow | null ?? null;
+  const row = db.prepare(
+    `SELECT n.*, cbd.data AS body_blob_data FROM nodes n
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`
+  ).get(articleId) as (MirrorNodeRow & NodeBodyRow) | undefined;
+  return row ? { ...row, content: row.deleted_at ? '' : requireResolvedNodeBody(row, articleId).content } : null;
 }
 
 function loadArticleChildren(articleId: string): MirrorNodeRow[] {
   const db = openDatabaseConnection().sqlite;
-  return db.prepare(
-    'SELECT id, parent_id, kind, title, is_title_manual, hide_title_heading, content, reveal, anchor_link, created_at, updated_at, deleted_at FROM nodes WHERE parent_id = ?'
-  ).all(articleId) as MirrorNodeRow[];
+  const rows = db.prepare(
+    `SELECT n.*, cbd.data AS body_blob_data FROM nodes n
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.parent_id = ?`
+  ).all(articleId) as (MirrorNodeRow & NodeBodyRow)[];
+  return rows.map((row) => ({ ...row, content: requireResolvedNodeBody(row, row.id).content }));
 }
 
 function loadAncestorChain(parentId: string): AncestorRow[] {

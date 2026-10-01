@@ -1,8 +1,9 @@
+import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { importImageAttachmentResource } from '../attachments/importImageAttachmentResource.js';
 import { fetchRemoteImageResource } from '../attachments/remoteImagePipeline.js';
-import { createNodeAttachmentLink } from '../database/attachments.js';
+import { persistNodeResourceReference } from '../database/nodeResources.js';
 
 import { readImageIntrinsicSize, type ImageIntrinsicSize } from './imageIntrinsicSize.js';
 import { layoutLocalizedMarkdownImage } from './localizedMarkdownImageLayout.js';
@@ -17,6 +18,7 @@ interface MarkdownImageToken {
 }
 
 interface LocalizedImage {
+  resourceReference: NodeResourceReference;
   attachmentId: string;
   markdownUrl: string;
   size: ImageIntrinsicSize | null;
@@ -25,6 +27,7 @@ interface LocalizedImage {
 type RemoteImageResolution = LocalizedImage | 'omit' | null;
 
 export interface ImageLocalizationResult {
+  resourceReferences: NodeResourceReference[];
   attachmentIds: string[];
   imageSources: Record<string, string>;
   degradedMessages: string[];
@@ -77,10 +80,8 @@ function isTrackingPixel(size: ImageIntrinsicSize | null) {
   return size?.width === 1 && size.height === 1;
 }
 
-export function linkLocalizedImagesToNode(nodeId: string, attachmentIds: string[]) {
-  Array.from(new Set(attachmentIds)).forEach((attachmentId) => {
-    createNodeAttachmentLink({ attachmentId, nodeId, role: 'image' });
-  });
+export function linkLocalizedImagesToNode(nodeId: string, references: readonly NodeResourceReference[]) {
+  for (const reference of references) persistNodeResourceReference(nodeId, reference);
 }
 
 export class ImageLocalizationContext {
@@ -92,8 +93,9 @@ export class ImageLocalizationContext {
   async localizeMarkdown(markdown: string, options: ImageLocalizationOptions = {}): Promise<ImageLocalizationResult> {
     const matches = collectRemoteMarkdownImages(markdown);
     if (matches.length === 0) {
-      return { attachmentIds: [], imageSources: {}, degradedMessages: [], text: markdown };
+      return { resourceReferences: [], attachmentIds: [], imageSources: {}, degradedMessages: [], text: markdown };
     }
+    const resourceReferences = new Map<string, NodeResourceReference>();
     const attachmentIds = new Set<string>();
     const imageSources: Record<string, string> = {};
     let localized = '';
@@ -106,6 +108,7 @@ export class ImageLocalizationContext {
         cursor = match.to;
       } else if (localization) {
         attachmentIds.add(localization.attachmentId);
+        resourceReferences.set(localization.resourceReference.storage_key, localization.resourceReference);
         imageSources[localization.markdownUrl.slice(8)] = match.sourceUrl;
         const imageMarkdown = buildLocalizedMarkdownImage(match, localization.markdownUrl);
         const layout = options.layoutLargeImages === false
@@ -128,6 +131,7 @@ export class ImageLocalizationContext {
     }
     localized += markdown.slice(cursor);
     return {
+      resourceReferences: [...resourceReferences.values()],
       attachmentIds: [...attachmentIds],
       imageSources,
       degradedMessages: [...new Set(this.degradedByUrl.values())],
@@ -161,6 +165,7 @@ export class ImageLocalizationContext {
       return null;
     }
     return {
+      resourceReference: { storage_key: imported.storage_key, original_name: imported.original_name, role: 'image' },
       attachmentId: imported.attachment_id,
       markdownUrl: buildAssetMarkdownUrl(imported.storage_key),
       size

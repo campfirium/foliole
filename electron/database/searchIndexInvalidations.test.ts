@@ -29,7 +29,9 @@ import { initializeDatabase } from './migrate.js';
 import { restoreNodes, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
 import { savePdfPageTextRows } from './pdfPageTextRows.js';
 import { searchWorkspace } from './workspaceSearch.js';
+import { insertPdfAttachment } from './workspaceSearchTestSupport.js';
 
+const PDF_ATTACHMENT_ID = 'a'.repeat(64);
 let tempRoot = '';
 
 beforeEach(async () => {
@@ -67,17 +69,13 @@ function pendingInvalidations() {
 function seedPdfReferenceNode() {
   const database = openDatabaseConnection().sqlite;
   database.exec(`
-    INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    VALUES ('pdf-1', 'paper.pdf', 'application/pdf', 1024, '2026-05-16T10:00:00.000Z');
-    UPDATE attachments SET pdf_index_status = 'ready' WHERE id = 'pdf-1';
     INSERT INTO nodes (
       id, kind, title, is_title_manual, hide_title_heading, content, created_at, updated_at
     ) VALUES (
       'node-pdf', 'topic', 'Paper', 1, 0, '', '2026-05-16T10:00:00.000Z', '2026-05-16T10:00:00.000Z'
     );
-    INSERT INTO node_attachments (node_id, attachment_id, role)
-    VALUES ('node-pdf', 'pdf-1', 'reference');
   `);
+  insertPdfAttachment({ nodeId: 'node-pdf', id: PDF_ATTACHMENT_ID, originalName: 'paper.pdf', status: 'ready' });
 }
 
 function upsertSearchNode(input: { content: string; id: string; parentNodeId: string | null; title: string }) {
@@ -144,7 +142,6 @@ it('updates moved subtree paths without rebuilding child content', () => {
   upsertSearchNode({ content: 'Parent body', id: 'article', parentNodeId: 'folder-b', title: 'Article' });
 
   expect(pendingInvalidations()).toEqual([
-    { invalidation_type: 'node_subtree_path', status: 'pending', target_id: 'article' },
     { invalidation_type: 'node_workspace', status: 'pending', target_id: 'article' }
   ]);
   processSearchIndexInvalidations(openDatabaseConnection().driver);
@@ -168,7 +165,7 @@ it('hides descendants immediately after ancestor delete and restores the subtree
 
   expect(searchWorkspace('Descendant marker')).toEqual([]);
   expect(pendingInvalidations()).toEqual([
-    { invalidation_type: 'node_subtree_deleted', status: 'pending', target_id: 'parent-delete' }
+    { invalidation_type: 'node_workspace', status: 'pending', target_id: 'parent-delete' }
   ]);
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   expect(
@@ -207,25 +204,25 @@ it('queues Readwise parent and child highlights without indexing inside the impo
 it('queues PDF search invalidation when page text becomes ready', () => {
   seedPdfReferenceNode();
   savePdfPageTextRows(
-    'pdf-1',
+    PDF_ATTACHMENT_ID,
     [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Atlas appears in PDF text.' }],
     '2026-05-16T10:03:00.000Z'
   );
 
   expect(pendingInvalidations()).toEqual([
-    { invalidation_type: 'attachment_pdf', status: 'pending', target_id: 'pdf-1' }
+    { invalidation_type: 'node_workspace', status: 'pending', target_id: 'node-pdf' }
   ]);
   expect(
     openDatabaseConnection().sqlite
-      .prepare("SELECT COUNT(*) AS count FROM search.pdf_search WHERE attachment_id = 'pdf-1'")
-      .get()
+      .prepare('SELECT COUNT(*) AS count FROM search.pdf_search WHERE attachment_id = ?')
+      .get(PDF_ATTACHMENT_ID)
   ).toEqual({ count: 0 });
 
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   expect(searchWorkspace('Atlas')[0]).toMatchObject({
     id: 'node-pdf',
     kind: 'pdf',
-    pdfMatch: expect.objectContaining({ attachmentId: 'pdf-1' })
+    pdfMatch: expect.objectContaining({ attachmentId: PDF_ATTACHMENT_ID })
   });
 });
 
@@ -242,6 +239,6 @@ it('marks failed invalidations retryable with attempt and error state', () => {
   ).toMatchObject({
     attempts: 1,
     last_error: expect.stringContaining('node_search'),
-    status: 'failed'
+    status: 'pending'
   });
 });

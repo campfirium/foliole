@@ -1,5 +1,6 @@
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 
+import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from './androidCompanionCoreSchemaStatements.js';
 import { ANDROID_COMPANION_MIGRATION_QUERY_DEFINITIONS } from './androidCompanionMigrationQueryDefinitions.js';
 import {
   ANDROID_COMPANION_MIGRATION_REPAIR_RULES as REPAIRS,
@@ -8,6 +9,7 @@ import {
 import { ANDROID_COMPANION_MUTATION_DEFINITIONS as MUTATIONS } from './androidCompanionMutationDefinitions.js';
 import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from './androidCompanionNodeResourceQueryDefinitions.js';
 import { COMPANION_SCHEMA_STATEMENTS } from './companionSchemaStatements.js';
+import { isRetiredAttachmentSchema } from './retiredAttachmentSchema.js';
 import { SINGLE_PRINCIPAL_SYNC_GROUP_CLEANUP_STATEMENTS } from './singlePrincipalSyncGroupCleanupStatements.js';
 import { SYNC_DELIVERY_LEGACY_BACKFILL_SQL } from './syncDeliveryMigrationStatements.js';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
@@ -46,6 +48,10 @@ export async function installCompanionSchema(db: DbPort) {
     if (legacySyncState && SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS.some((item) => item === statement)) continue;
     await db.run(statement);
   }
+ }
+
+export async function installLegacyAttachmentSchema(db: DbPort) {
+  for (const statement of ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema)) await db.run(statement);
 }
 
 export async function retireLegacySyncGroupState(db: DbPort) {

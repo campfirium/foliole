@@ -23,14 +23,19 @@ vi.mock('node:fs', async (importOriginal) => {
     promises: { ...actual.promises, mkdir: runtime.mkdir, rename: runtime.rename, writeFile: runtime.writeFile }
   };
 });
-vi.mock('../../lib/core/sync/articleAttachmentNeeds.js', () => ({ loadArticleAttachmentNeeds: runtime.needs }));
+// These transport unit cases have no retained current versions; real SQLite covers materialization.
+vi.mock('../../lib/core/sync/currentVersionBodyBlob.js', () => ({
+  materializeCurrentVersionBodyBlobs: async () => 0
+}));
+vi.mock('../../lib/core/sync/nodeOwnedArticleResourceNeeds.js', () => ({ loadNodeOwnedArticleResourceNeeds: runtime.needs }));
 vi.mock('../attachments/resourceResolver.js', () => ({
   resolveAttachmentFileForSync: runtime.exists,
   resolveAttachmentStoragePath: (id: string) => `${process.cwd()}/.tmp/test-attachments/${id}`
 }));
 vi.mock('../database/betterSqliteDbPort.js', () => ({
   createBetterSqliteDbPort: () => ({
-    query: runtime.query,
+    query: (sql: string, ...params: unknown[]) => sql.startsWith('SELECT hash FROM content_blob_data')
+      ? Promise.resolve([]) : runtime.query(sql, ...params),
     run: runtime.run,
     transaction: runtime.transaction
   })
@@ -81,8 +86,10 @@ beforeEach(() => {
   runtime.needs.mockResolvedValue({ needs: [], unreadableArticleIds: [] });
   runtime.exists.mockReturnValue({ status: 'missing_file' });
   runtime.openConnection.mockReturnValue({ sqlite: {} });
-  runtime.transaction.mockImplementation(async (execute: (tx: { run: typeof runtime.transactionRun }) => Promise<void>) => {
-    await execute({ run: runtime.transactionRun });
+  runtime.transaction.mockImplementation(async (execute: (tx: {
+    run: typeof runtime.transactionRun; query: () => Promise<never[]>;
+  }) => Promise<void>) => {
+    await execute({ run: runtime.transactionRun, query: async () => [] });
   });
   runtime.query
     .mockReturnValueOnce([])
@@ -111,7 +118,7 @@ it('persists a content body batch through the transaction owner that enumerated 
   });
 
   expect(runtime.openConnection).toHaveBeenCalled();
-  expect(runtime.transaction).toHaveBeenCalledTimes(1);
+  expect(runtime.transaction).toHaveBeenCalledTimes(2);
   expect(runtime.transactionRun).toHaveBeenCalledWith(
     'INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)', [hash, body]
   );
@@ -185,7 +192,7 @@ it('keeps verified bodies while rejecting missing, corrupt, and duplicate multip
     part(0, 'good'), part(1, 'damaged'), part(3, 'duplicate'), part(3, 'duplicate'), Buffer.from('--mixed--\r\n')
   ]), { headers: { 'X-Foliole-Original-Content-Type': 'multipart/mixed; boundary=mixed' } })));
   const result = await downloadDesktopSyncGroupResources(peer);
-  expect(runtime.transaction).toHaveBeenCalledTimes(1);
+  expect(runtime.transaction).toHaveBeenCalledTimes(2);
   expect(result.resourceResults[0]?.ready).toEqual([`content_blob:${rows[0]!.hash}`]);
   expect(result.resourceResults[0]?.issues.map((issue) => issue.error)).toEqual([
     'checksum_mismatch', 'missing_file', 'protocol_error'

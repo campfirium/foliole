@@ -1,3 +1,4 @@
+import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import {
   collectMarkdownImageReferences,
   parseMarkdownImageTarget
@@ -14,6 +15,7 @@ import { readRawEpubBookBytes, type RawEpubBook } from '../ipc/epubImportBook.js
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 
 interface PreparedBody {
+  resourceReferences: NodeResourceReference[];
   attachmentIds: string[];
   content: string;
 }
@@ -31,6 +33,7 @@ async function prepareBody(
 ): Promise<PreparedBody> {
   const byDestination = new Map(embeddedImages.map((image) => [image.destination, image]));
   const attachmentIds = new Set<string>();
+  const references = new Map<string, NodeResourceReference>();
   let rewritten = '';
   let cursor = 0;
   for (const reference of collectMarkdownImageReferences(content)) {
@@ -45,6 +48,7 @@ async function prepareBody(
     const canonical = prepareCanonicalImageAttachment(image.bytes);
     if (!canonical) throw new Error('original_epub_image_invalid');
     attachmentIds.add(canonical.hash);
+    references.set(canonical.storageKey, { storage_key: canonical.storageKey, original_name: image.originalName, role: 'image' });
     let stage = stages.get(canonical.hash);
     if (!stage) {
       stage = await stageManagedAttachmentFile({
@@ -60,6 +64,7 @@ async function prepareBody(
   }
   rewritten += content.slice(cursor);
   return {
+    resourceReferences: [...references.values()],
     attachmentIds: [...attachmentIds],
     content: rewritten
   };
@@ -92,6 +97,7 @@ export async function prepareOriginalEpubCandidate(input: {
     for (const node of book.nodes) {
       const prepared = await prepareBody(node.content, node.embeddedImages, input.now, stages);
       preparedNodes.push({
+        resourceReferences: prepared.resourceReferences,
         attachmentIds: prepared.attachmentIds,
         content: prepared.content,
         headingLevel: null,
@@ -111,6 +117,7 @@ export async function prepareOriginalEpubCandidate(input: {
           unavailableBodyCount: 0
         },
         degradedReason: null,
+        rootResourceReferences: root.resourceReferences,
         rootAttachmentIds: root.attachmentIds,
         rootBody: root.content,
         sections: preparedNodes

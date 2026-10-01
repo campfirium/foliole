@@ -128,13 +128,14 @@ export type NativeUtilityCommandMap = {
   };
   [NATIVE_COMMANDS.copyAttachmentImageToClipboard]: {
     args: {
-      attachment_id: string;
+      storage_key: string;
     };
     result: NativeCopyAttachmentImageResult;
   };
   [NATIVE_COMMANDS.exportAttachmentImage]: {
     args: {
-      attachment_id: string;
+      storage_key: string;
+      node_id?: string;
     };
     result: NativeExportAttachmentImageResult;
   };

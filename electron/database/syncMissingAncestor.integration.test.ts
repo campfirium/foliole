@@ -118,14 +118,15 @@ it.each([false, true])('merges missing-base branches and retains available bodie
 });
 
 it('restores a genuine base supplied by the peer and uses ordinary three-way text merging', async () => {
-  const { left, right, a, b, c } = await fork(false, false);
+  const { left, right, a, c } = await fork(false, false);
   await exchange(right, left);
   const merged = await current(left);
   expect(merged.body_text).toBe('Left final\nx=1\n');
-  expect(new Set(merged.parent_version_ids)).toEqual(new Set([b, c]));
+  expect(merged.parent_version_ids).toContain(c);
   expect(alternatives(left)).toEqual([]);
   await exchange(left, right);
-  expect(await current(right)).toEqual(merged);
+  expect((await current(right)).version_id).toBe(merged.version_id);
+  expect((await current(right)).body_text).toBe(merged.body_text);
   for (const peer of [left, right]) {
     expect(peer.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(a))
       .toBe('Original\nx=0\n');

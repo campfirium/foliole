@@ -64,12 +64,28 @@ it('cancels pending maintenance before starting a worker on shutdown', async () 
   expect(mocks.process.mock.calls.every(([, signal]) => signal.aborted)).toBe(true);
 });
 
-it('reports failures without repeatedly retrying the same failing backlog', async () => {
-  mocks.process.mockResolvedValue({ failed: 1, processed: 0 });
+it('retries unfinished work after a delay and stops retrying after success', async () => {
+  mocks.process.mockResolvedValueOnce({ failed: 1, processed: 0 });
   startSearchIndexInvalidationScheduler();
-  await vi.runAllTimersAsync();
+  await vi.advanceTimersByTimeAsync(0);
   expect(mocks.process).toHaveBeenCalledOnce();
+  await vi.advanceTimersByTimeAsync(999);
+  expect(mocks.process).toHaveBeenCalledOnce();
+  await vi.advanceTimersByTimeAsync(10);
+  expect(mocks.process).toHaveBeenCalledTimes(2);
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(mocks.process).toHaveBeenCalledTimes(2);
   expect(mocks.appendLog).toHaveBeenCalledWith('search_index_invalidation_processing_failed', expect.any(Object));
+});
+
+it('backs off persistent errors and cancels their retry when stopped', async () => {
+  mocks.process.mockRejectedValue(new Error('database busy'));
+  startSearchIndexInvalidationScheduler();
+  await vi.advanceTimersByTimeAsync(3100);
+  expect(mocks.process).toHaveBeenCalledTimes(3);
+  stopSearchIndexInvalidationScheduler();
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(mocks.process).toHaveBeenCalledTimes(3);
 });
 
 it('waits for a database owner before reading status after worker completion', async () => {

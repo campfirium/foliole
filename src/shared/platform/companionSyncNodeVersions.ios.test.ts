@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { buildNodeBodyContentSql } from '../../../lib/core/database/nodeBodySql';
 import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncNodeRecord } from '../../../lib/platform/nativeSyncContract';
 
@@ -103,7 +104,8 @@ it('tracks a local iOS version as pending without blocking its converged descend
   await expect(applyCompanionSyncNodeVersions([desktopResolution(local, remote)], manager as never))
     .resolves.toEqual(['ios-node-1']);
   expect(database.prepare(
-    'SELECT content, current_version_id FROM nodes WHERE id = ?'
+    `SELECT ${buildNodeBodyContentSql()} AS content, n.current_version_id FROM nodes n
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`
   ).get('ios-node-1')).toEqual({
     content: 'Locally edited body\nDesktop edit',
     current_version_id: 'desktop#resolution'

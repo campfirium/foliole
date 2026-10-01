@@ -1,5 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
 import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
+import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import {
   type WorkspacePdfCrossPageSearchRow,
   type WorkspacePdfSearchRow,
@@ -50,7 +51,7 @@ export function loadShortTermPdfRows(driver: DatabaseDriver, shortTerms: string[
   return driver.queryAll<WorkspacePdfSearchRow>(
     `${VISIBLE_NODES_CTE_SQL}
 SELECT
-  na.node_id AS id,
+  a.node_id AS id,
   COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
   ppt.text AS text,
   ppt.page AS page,
@@ -59,9 +60,8 @@ SELECT
   a.id AS attachment_id,
   200 AS rank
 FROM pdf_page_text ppt
-INNER JOIN attachments a ON a.id = ppt.attachment_id
-INNER JOIN node_attachments na ON na.attachment_id = a.id AND na.role = 'reference'
-INNER JOIN nodes n ON n.id = na.node_id
+INNER JOIN (${NODE_PDF_RESOURCES_SQL}) a ON a.id = ppt.attachment_id
+INNER JOIN nodes n ON n.id = a.node_id
 INNER JOIN visible_nodes visible ON visible.id = n.id
 WHERE a.mime_type = 'application/pdf'
   AND a.pdf_index_status = 'ready'

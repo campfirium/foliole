@@ -16,10 +16,12 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { migrateCompanionParentChildOrder } from '../../lib/core/database/companionParentChildOrderMigration.js';
 import { restoreNodes } from '../../lib/core/database/nodeMutations.js';
-import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
+import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
+import { loadDerivedNodeOrder, ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
@@ -57,6 +59,11 @@ function prepareOldOrder(ids: string[]) {
   return db;
 }
 
+function migrateOldOrder(db: ReturnType<typeof prepareOldOrder>) {
+  db.transaction(() => applyNumberedSchemaMigrations({ currentVersion: 104, targetVersion: 105,
+    legacyMessage: 'unsupported', sqlite: db, setUserVersion: version => db.pragma(`user_version = ${version}`) }))();
+}
+
 it('keeps old versions and appends a legacy trash node only when restored', () => {
   createNode('node-a');
   createNode('node-b');
@@ -67,7 +74,7 @@ it('keeps old versions and appends a legacy trash node only when restored', () =
     version_id, object_id, host_name, created_at, content_hash, snapshot_json
   ) VALUES ('old-version', 'node-a', 'old-host', '2026-05-01T00:00:00.000Z', 'old-hash', '{"position":7}')`).run();
 
-  initializeDatabaseSchema(db);
+  migrateOldOrder(db);
 
   const rows = db.prepare('SELECT parent_id, child_ids_json FROM parent_child_order WHERE parent_id = ?')
     .get(ROOT_CHILD_ORDER_ID) as { child_ids_json: string };
@@ -96,10 +103,14 @@ it('keeps old versions and appends a legacy trash node only when restored', () =
   expect(db.pragma('user_version', { simple: true })).toBe(105);
 });
 
-it('rolls back when an active node has no reliable old order row', () => {
+it.each(['desktop', 'companion'])('preserves active nodes without legacy order records (%s)', async (host) => {
   createNode('missing-active');
   const db = prepareOldOrder([]);
-  expect(() => initializeDatabaseSchema(db)).toThrow('missing_active_node_order:missing-active');
-  expect(db.pragma('user_version', { simple: true })).toBe(104);
-  expect(db.prepare('SELECT COUNT(*) AS count FROM parent_child_order').get()).toEqual({ count: 0 });
+  if (host === 'desktop') migrateOldOrder(db);
+  else await migrateCompanionParentChildOrder(createBetterSqliteDbPort(db));
+  expect(db.prepare("SELECT id FROM nodes WHERE id = 'missing-active'").get()).toEqual({ id: 'missing-active' });
+  expect(loadDerivedNodeOrder(openDatabaseConnection().driver)).toContain('missing-active');
+  expect(db.prepare('SELECT child_ids_json FROM parent_child_order').all()).toEqual([
+    { child_ids_json: '["special-inbox","special-virtual-root"]' }
+  ]);
 });

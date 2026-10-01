@@ -4,6 +4,8 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect } from 'vitest';
 
+import { buildNodeBodyContentSql } from '../../../lib/core/database/nodeBodySql.js';
+
 import { assertBody } from './assertions.js';
 import { snapshotInput } from './input.js';
 import { edit, mobileEdit } from './operations.js';
@@ -34,7 +36,8 @@ export async function walSnapshot(ctx: ScenarioContext) {
   const input = await snapshotInput(ctx.a.dbPath, ctx.a.assets, path.join(ctx.a.root, 'snapshot'));
   const snapshot = new Database(input.output, { readonly: true });
   try {
-    expect(snapshot.prepare("SELECT content FROM nodes WHERE id='topic'").pluck().get()).toBe('latest WAL edit');
+    expect(snapshot.prepare(`SELECT ${buildNodeBodyContentSql()} AS content FROM nodes n
+      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id='topic'`).pluck().get()).toBe('latest WAL edit');
     expect(snapshot.pragma('quick_check')).toEqual([{ quick_check: 'ok' }]);
   } finally { snapshot.close(); }
   await converge(ctx);

@@ -1,6 +1,5 @@
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
-import { persistStagedManagedAttachment } from '../attachments/managedAttachmentFileStage.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import {
   loadReadwiseApiImportSource,
@@ -98,7 +97,6 @@ function commitPreparedOriginalEpub(input: {
       throw new Error('original_epub_target_changed');
     }
     const preservedRootTexts = captureReadwiseBookRootTexts(input.target.nodeId);
-    for (const stage of input.candidate.stages) persistStagedManagedAttachment(stage);
     const document = withOriginalEpubBody(input);
     const result = materializeReadwiseApiDocument({
       allowOriginalEpubReplacement: true,

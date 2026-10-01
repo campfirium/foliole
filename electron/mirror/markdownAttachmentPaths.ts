@@ -27,7 +27,7 @@ export function rewriteMirrorMarkdownAttachmentPaths(content: string) {
       return match;
     }
 
-    const absolutePath = resolveMirrorAttachmentPath(attachmentId);
+    const absolutePath = resolveMirrorAttachmentPath(storageKey!);
     if (!absolutePath) {
       return match;
     }

@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+
 let mockedAppDataDir = '/tmp/foliole-topic-highlight-merge-tests';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -17,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import {
   configureRemoteImageFetchTransportForTests,
@@ -66,14 +68,15 @@ function readMergedState(nodeId: string) {
   const connection = openDatabaseConnection();
   const node = connection.sqlite
     .prepare(
-      `SELECT n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
+      `SELECT ${buildNodeBodyContentSql()} AS content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
        FROM nodes n
        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.id = ?`
     )
     .get(nodeId) as { body_blob_data: string; body_blob_hash: string; content: string } | undefined;
   const children = connection.sqlite
-    .prepare('SELECT content, anchor_link, image_regions FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+    .prepare(`SELECT ${buildNodeBodyContentSql()} AS content, n.anchor_link, n.image_regions FROM nodes n
+      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.parent_id = ? ORDER BY n.created_at ASC`)
     .all(nodeId) as Array<{ anchor_link: string | null; content: string; image_regions: string | null }>;
   return { children, node };
 }
@@ -246,7 +249,7 @@ it('localizes shared remote images before matching manually merged readwise high
   const anchorLink = parseAnchorLink(state.children[0]!.anchor_link);
   const locator = anchorLink.locator;
   const attachmentRows = openDatabaseConnection().sqlite
-    .prepare('SELECT attachment_id FROM node_attachments WHERE node_id = ?')
+    .prepare("SELECT value FROM nodes, json_each(nodes.resource_references) WHERE nodes.id = ?")
     .all(imported.nodeId as string);
 
   expect(fetchTransport).toHaveBeenCalledTimes(1);

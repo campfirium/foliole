@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { nodeVersionDependenciesSql, type NodeVersionDependency } from '../../lib/core/sync/nodeVersionDependencies.js';
 import type { SyncPackDependencyTransfer } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import { SYNC_PACK_DATABASE_ENTRY } from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import { describeVersionFact, selectMissingSyncPackFacts, type SyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
@@ -25,6 +26,7 @@ import { measureSyncPackPage, syncPackPageFits, type SyncPackPageBudget } from '
 import { assertSyncPackPreloadBudget } from './syncPackPreloadBudget.js';
 import { loadPackRows } from './syncPackRows.js';
 import { loadSyncPackTombstoneRows } from './syncPackTombstoneRows.js';
+import { syncPackVersionHeads } from './syncPackVersionHeads.js';
 import { assertSyncPackVersionBudget } from './syncPackVersionPreflight.js';
 
 const require = createRequire(import.meta.url);
@@ -120,7 +122,8 @@ async function measureAndHoldPage(input: BuildDesktopSyncPackInput, sourceDriver
   if (input.requireDeliveryHold) {
     if (!input.toPeerId) throw new Error('node_version_pack_target_missing');
     (input.holdDriver ?? sourceDriver).transaction((tx) => stageDesktopSyncPackNodeHolds({
-      createdAt, driver: tx, fromPeerId: input.fromPeerId, nodes: rows.nodes,
+      createdAt, driver: tx, fromPeerId: input.fromPeerId,
+      nodes: syncPackVersionHeads(tx, rows.nodes, rows.nodeTombstones),
       packId: input.packId, toPeerId: input.toPeerId!, versions: rows.nodeVersions,
       knownVersionIds: input.receiverFacts?.versions ?? []
     }));
@@ -151,22 +154,24 @@ function loadSourceRows(
     assertSyncPackPreloadBudget(driver, fromStateSeq, toStateSeq, input.pageBudget, input.receiverFacts, stagedReviews);
   }
   const baseRows = loadPackRows(fromStateSeq, toStateSeq, driver, stagedReviews);
+  const tombstones = loadSyncPackTombstoneRows(driver, input.pageBudget ? { fromStateSeq, toStateSeq } : undefined);
+  const heads = syncPackVersionHeads(driver, baseRows.nodes, tombstones);
   const stagedObjects = new Set(input.dependencyTransfers?.flatMap((transfer) =>
     transfer.nodeIds ?? [transfer.objectId]));
-  const inlineNodes = baseRows.nodes.filter((node) => !stagedObjects.has(node.id));
-  if (input.pageBudget && !input.allFactsKnown) assertSyncPackVersionBudget(driver, inlineNodes, input.pageBudget,
+  const inlineHeads = heads.filter((node) => !stagedObjects.has(node.id));
+  if (input.pageBudget && !input.allFactsKnown) assertSyncPackVersionBudget(driver, inlineHeads, input.pageBudget,
     input.receiverFacts?.versions);
   const groupRows = loadSyncPackGroupRows(driver);
   const versionIdentities: { version_id: string; object_id: string }[] = [];
   const selectedFacts = input.allFactsKnown ? { versions: [], parents: [], reviews: [] } :
     selectMissingSyncPackFacts({
-      versions: [...iterateSyncPackNodeVersionRows(driver, inlineNodes,
+      versions: [...iterateSyncPackNodeVersionRows(driver, inlineHeads,
         input.receiverFacts?.versions, (row) => versionIdentities.push(row))],
       parents: loadSyncPackNodeVersionParentRows(driver, versionIdentities),
       reviews: baseRows.reviewLog
     }, input.receiverFacts ?? { versions: [], parents: [], reviews: [] });
   // Retention may release historical payloads; current heads must remain usable.
-  const currentVersionIds = new Set(baseRows.nodes.map((node) => node.current_version_id));
+  const currentVersionIds = new Set(heads.map((node) => node.current_version_id));
   for (const version of selectedFacts.versions) {
     if (currentVersionIds.has(version.version_id) && describeVersionFact(version).body_hash === null) {
       throw new Error(`sync_pack_fact_body_unavailable:${version.version_id}`);
@@ -174,12 +179,13 @@ function loadSourceRows(
   }
   const rows: LoadedDesktopSyncPackRows = {
     ...baseRows,
+    nodeVersionDependencies: driver.queryAll<NodeVersionDependency>(nodeVersionDependenciesSql('main',
+      `(SELECT value AS id FROM json_each(?))`), [JSON.stringify(heads.map((node) => node.id))]),
     reviewLog: selectedFacts.reviews,
     groupDevices: groupRows.devices,
     groups: groupRows.groups,
     nodeVersions: selectedFacts.versions,
-    nodeTombstones: loadSyncPackTombstoneRows(driver, input.pageBudget
-      ? { fromStateSeq, toStateSeq } : undefined),
+    nodeTombstones: tombstones,
     nodeVersionParents: selectedFacts.parents
   };
   return { frontierStateSeq, rows, sourceEpoch: source.source_epoch,

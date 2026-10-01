@@ -129,15 +129,9 @@ function insertExternalDocumentSyncState() {
 
 function insertNodeAttachmentRows() {
   const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:02:30.000Z']
-  );
-  driver.execute(
-    'INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)',
-    ['node-1', 'att-1', 'image']
-  );
+  driver.execute('UPDATE nodes SET resource_references = ? WHERE id = ?', [
+    JSON.stringify([{ storage_key: `${'a'.repeat(64)}.png`, original_name: 'cover.png', role: 'image' }]), 'node-1'
+  ]);
 }
 
 function insertReadwiseIdentitySyncState() {
@@ -185,7 +179,7 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
       pack_id: 'sync-pack-contract-v1',
       tables: SYNC_PACK_CONTRACT_TABLES
     }),
-    nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
+    nodeResources: [{ id: 'node-1', resource_references: JSON.stringify([{ storage_key: `${'a'.repeat(64)}.png`, original_name: 'cover.png', role: 'image' }]) }],
     parentChildOrders: [expect.objectContaining({ object_id: ROOT_CHILD_ORDER_ID })],
     importSources: SYNC_PACK_CONTRACT_IMPORT_SOURCES,
     nodeVersions: [expect.objectContaining({

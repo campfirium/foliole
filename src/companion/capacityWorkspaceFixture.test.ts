@@ -10,7 +10,7 @@ function port(rows: { inbox?: number; nodes?: Array<{ id: string; title: string 
   const query = vi.fn(async (sql: string) => {
     if (sql.includes('NOT GLOB')) return rows.unexpected ? [{ id: rows.unexpected }] : [];
     if (sql.includes("id GLOB 'node-[0-9]*'")) return rows.nodes ?? [];
-    if (sql.includes('LEFT JOIN node_attachments')) return rows.pdf ?? [];
+    if (sql.includes('na.attachment_id')) return rows.pdf ?? [];
     if (sql.includes('COUNT(*)')) return [{ count: rows.inbox ?? 1 }];
     return [];
   });

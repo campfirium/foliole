@@ -2,9 +2,6 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { createAttachmentRecord, findAttachmentRecordById } from '../database/attachments.js';
-import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
-
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 
 export interface StagedManagedAttachment {
@@ -42,7 +39,7 @@ export async function stageManagedAttachmentFile(input: {
     await fs.mkdir(path.dirname(storagePath), { recursive: true });
     try {
       await fs.writeFile(storagePath, input.bytes, { flag: 'wx' });
-      createdFile = !findAttachmentRecordById(contentHash);
+      createdFile = true;
     } catch (writeError) {
       if ((writeError as NodeJS.ErrnoException).code !== 'EEXIST') throw writeError;
       await verifyStoredFile(storagePath, contentHash);
@@ -57,23 +54,6 @@ export async function stageManagedAttachmentFile(input: {
     sizeBytes: input.bytes.byteLength,
     storagePath
   };
-}
-
-export function persistStagedManagedAttachment(stage: StagedManagedAttachment) {
-  const existing = findAttachmentRecordById(stage.contentHash);
-  if (existing && (existing.mimeType !== stage.mimeType || existing.sizeBytes !== stage.sizeBytes)) {
-    throw new Error('managed_attachment_metadata_mismatch');
-  }
-  if (!existing) {
-    createAttachmentRecord({
-      createdAt: stage.createdAt,
-      id: stage.contentHash,
-      mimeType: stage.mimeType,
-      originalName: stage.originalName,
-      sizeBytes: stage.sizeBytes
-    });
-  }
-  recordAttachmentMetadata(stage.contentHash, existing?.createdAt ?? stage.createdAt);
 }
 
 export async function cleanCreatedManagedAttachmentFiles(stages: StagedManagedAttachment[]) {

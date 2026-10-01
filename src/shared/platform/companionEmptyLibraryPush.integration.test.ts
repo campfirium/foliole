@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { applyNodeVersionPushWithDbPort } from '../../../electron/database/companionSyncPushNodeVersionWithDbPort.js';
 import { applyCompanionStateSyncPushWithDbPort } from '../../../electron/database/companionSyncPushWithDbPort.js';
 import type { Peer } from '../../../electron/database/syncEmptyLibraryTestSupport.js';
 import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, sync } from '../../../electron/database/syncEmptyLibraryTestSupport.js';
@@ -50,15 +49,17 @@ it('pushes each successive production mobile edit when synchronized immediately'
     const version = `mobile-${index}`;
     await mobileEdit(mobile, base, content, version, index + 1);
     const records = await store.loadNodeVersions(desktop.id, null);
-    const result = await applyCompanionStateSyncPushWithDbPort(desktop.port,
-      records.map((record) => nodeVersionSyncAdapter.buildPushPayload(record)));
+    const payloads = records.map((record) => nodeVersionSyncAdapter.buildPushPayload(record));
+    await store.stagePushItems(desktop.id, payloads);
+    const result = await applyCompanionStateSyncPushWithDbPort(desktop.port, payloads);
+    await store.savePushAcks(desktop.id, JSON.parse(JSON.stringify(result.acks)) as SyncPushAck[]);
     expect(result.acks.every((ack) => ack.status === 'accepted')).toBe(true);
     assertPersisted(desktop, content, version);
     base = version;
   }
 });
 
-it.each([false, true])('pushes two offline production edits without losing the intermediate parent (collection=%s)', async (collect) => {
+it.each([false, true])('pushes two offline production edits and retires the unsent intermediate version (collection=%s)', async (collect) => {
   const desktop = createPeer('desktop');
   const mobile = createPeer('mobile');
   joinPeers(desktop, mobile);
@@ -69,29 +70,22 @@ it.each([false, true])('pushes two offline production edits without losing the i
   await mobileEdit(mobile, a, '123456', 'mobile-B', 1);
   await mobileEdit(mobile, 'mobile-B', '123456789', 'mobile-C', 2);
   if (collect) {
-    expect(await collectNodeVersionPayloads(mobile.port, 'topic')).toEqual({ released: 1, skipped: null });
-    expect(history(mobile).find((row) => row.version_id === 'mobile-B')?.body_text).toBeNull();
+    expect(await collectNodeVersionPayloads(mobile.port, 'topic')).toEqual({ released: 0, skipped: null });
+    expect(history(mobile).find((row) => row.version_id === 'mobile-B')).toBeUndefined();
   }
   const store = mobileStore(mobile);
   const records = await store.loadNodeVersions(desktop.id, null);
   const payloads = records.map((record) => nodeVersionSyncAdapter.buildPushPayload(record));
   await store.stagePushItems(desktop.id, payloads);
-  if (collect) {
-    const identityOnly = payloads.find((item) => item.clientOpId === 'node:mobile-B')!;
-    expect((await applyNodeVersionPushWithDbPort(desktop.port, identityOnly)).acks[0]?.status).toBe('accepted');
-    assertPersisted(desktop, '123', a);
-  }
   const result = await applyCompanionStateSyncPushWithDbPort(desktop.port, [...payloads].reverse());
   expect(result.acks).toEqual(expect.arrayContaining([
-    expect.objectContaining({ status: 'accepted', versionId: 'mobile-B' }),
     expect.objectContaining({ status: 'accepted', versionId: 'mobile-C' })
   ]));
   const decoded = JSON.parse(JSON.stringify(result)) as { acks: SyncPushAck[] };
   await store.savePushAcks(desktop.id, decoded.acks);
   expect(await store.loadNodeVersions(desktop.id, null)).toEqual([]);
   assertPersisted(desktop, '123456789', 'mobile-C');
-  expect(history(desktop).find((row) => row.version_id === 'mobile-B')?.body_text)
-    .toBe(collect ? null : '123456');
+  expect(history(desktop).find((row) => row.version_id === 'mobile-B')).toBeUndefined();
   const replay = await applyCompanionStateSyncPushWithDbPort(desktop.port,
     [...records].reverse().map((record) => nodeVersionSyncAdapter.buildPushPayload(record)));
   expect(replay.acks.every((ack) => ack.status === 'accepted')).toBe(true);
@@ -114,7 +108,8 @@ it.each([false, true])('keeps shared highlight history and later edits across a 
     .map((record) => nodeVersionSyncAdapter.buildPushPayload(record));
   await store.stagePushItems(desktop.id, payloads);
   const response = await applyCompanionStateSyncPushWithDbPort(desktop.port, payloads);
-  expect(response.acks).toEqual([expect.objectContaining({ status: 'accepted', versionId: 'mobile-B' })]);
+  expect(response.acks).toEqual(expect.arrayContaining([expect.objectContaining({ status: 'accepted', versionId: 'mobile-B' })]));
+  expect(response.acks.every((ack) => ack.status === 'accepted')).toBe(true);
   expect(response.acks[0]?.canonicalObjectId).toBeUndefined();
   const resolved = await loadCurrentSyncNodeRecord(desktop.port, 'topic');
   expect(await isStoredAncestorVersion(desktop.port, a, resolved!.version_id!)).toBe(true);
@@ -129,7 +124,7 @@ it.each([false, true])('keeps shared highlight history and later edits across a 
   await store.savePushAcks(desktop.id, JSON.parse(JSON.stringify(response.acks)) as SyncPushAck[]);
   await store.savePushAcks(desktop.id, JSON.parse(JSON.stringify(response.acks)) as SyncPushAck[]);
   assertPersisted(mobile, later, 'mobile-C');
-  expect(history(mobile).map((row) => row.version_id)).toEqual(expect.arrayContaining([a, 'mobile-B', 'mobile-C']));
+  expect(history(mobile).map((row) => row.version_id)).toEqual(expect.arrayContaining(['mobile-B', 'mobile-C']));
   expect((await store.loadNodeVersions(desktop.id, null)).map((record) => record.version_id)).toContain('mobile-C');
   const next = (await store.loadNodeVersions(desktop.id, null))
     .map((record) => nodeVersionSyncAdapter.buildPushPayload(record));
@@ -156,7 +151,8 @@ it.each(['folder', 'item'] as const)('keeps shared %s identity and ancestry duri
     .map((record) => nodeVersionSyncAdapter.buildPushPayload(record));
   await store.stagePushItems(desktop.id, payloads);
   const response = await applyCompanionStateSyncPushWithDbPort(desktop.port, payloads);
-  expect(response.acks).toEqual([expect.objectContaining({ status: 'accepted', versionId: b })]);
+  expect(response.acks).toEqual(expect.arrayContaining([expect.objectContaining({ status: 'accepted', versionId: b })]));
+  expect(response.acks.every((ack) => ack.status === 'accepted')).toBe(true);
   expect(response.acks[0]?.canonicalObjectId).toBeUndefined();
   const resolved = await loadCurrentSyncNodeRecord(desktop.port, 'topic');
   for (const id of [a, b, d]) {
@@ -165,5 +161,5 @@ it.each(['folder', 'item'] as const)('keeps shared %s identity and ancestry duri
   const c = edit(mobile, '', 'Later title', null, kind);
   await store.savePushAcks(desktop.id, JSON.parse(JSON.stringify(response.acks)) as SyncPushAck[]);
   assertPersisted(mobile, '', c);
-  expect(history(mobile).map((row) => row.version_id)).toEqual(expect.arrayContaining([a, b, c]));
+  expect(history(mobile).map((row) => row.version_id)).toEqual(expect.arrayContaining([b, c]));
 });

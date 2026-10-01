@@ -6,26 +6,30 @@ import {
   type SyncPackNodeVersionRow
 } from '../../lib/core/sync/syncPackNodeVersions.js';
 
-import type { NodePackRow } from './syncPackRows.js';
+import type { VersionHead } from './syncPackVersionHeads.js';
 
 const VERSION_PARENT_QUERY_BATCH_SIZE = 900;
 
 export function loadSyncPackNodeVersionRows(
   driver: DatabaseDriver,
-  nodes: NodePackRow[],
+  nodes: VersionHead[],
   knownVersionIds: readonly string[] = []
 ): SyncPackNodeVersionRow[] {
   return [...iterateSyncPackNodeVersionRows(driver, nodes, knownVersionIds)];
 }
 
 export function* iterateSyncPackNodeVersionRows(
-  driver: DatabaseDriver, nodes: NodePackRow[], knownVersionIds: readonly string[] = [],
+  driver: DatabaseDriver, nodes: VersionHead[], knownVersionIds: readonly string[] = [],
   onIdentity?: (row: Pick<SyncPackNodeVersionRow, 'version_id' | 'object_id'>) => void
 ): Generator<SyncPackNodeVersionRow> {
   const visited = new Map<string, string>();
   const known = new Set(knownVersionIds);
   for (const node of [...nodes].sort((left, right) => left.id.localeCompare(right.id))) {
     yield* loadVersionLineage(driver, node.id, node.current_version_id, visited, known, onIdentity, true);
+    for (const row of driver.queryAll<{ version_id: string }>(
+      'SELECT version_id FROM node_sync_versions WHERE object_id = ? ORDER BY created_at, version_id', [node.id])) {
+      yield* loadVersionLineage(driver, node.id, row.version_id, visited, known, onIdentity);
+    }
   }
 }
 

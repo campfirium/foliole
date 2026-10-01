@@ -1,6 +1,9 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { projectNodeResourceLinks } from '../database/nodeResourceReferences.js';
 
 import type { DbPort } from './dbPort.js';
+import { retainSubmittedLocalEdit } from './nodeVersionLocalEditHold.js';
+import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { resolveTopicConflict } from './syncNodeConvergence.js';
 import { loadCurrentSyncNodeRecord, loadStoredSyncNodeVersionRecord } from './syncNodeGraph.js';
@@ -31,7 +34,7 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     const current = await loadCurrentSyncNodeRecord(tx, input.nodeId, Boolean(stored));
     if (!current) throw new Error('content_edit_current_version_unavailable');
     if (input.content === base.body_text) return { current, submittedVersionId: base.version_id! };
-    const record = createEditRecord(base, input);
+    const record = createEditRecord(base, input, current.snapshot.resource_references);
     if (stored && !matchesEdit(stored, record)) throw new Error('content_edit_version_mismatch');
     if (current.version_id === record.version_id || current.ancestor_version_ids.includes(input.versionId)) {
       if (!stored) throw new Error('content_edit_version_mismatch');
@@ -39,6 +42,9 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     }
     if (current.version_id === input.baseVersionId && applyFastForward) applyFastForward();
     else await applyBranch(tx, stored ?? record, options);
+    await tx.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
+    await retainSubmittedLocalEdit(tx, input.nodeId, input.baseVersionId, input.versionId);
+    await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER);
     const applied = await loadCurrentSyncNodeRecord(tx, input.nodeId, false);
     if (!applied) throw new Error('content_edit_result_unavailable');
     return { current: applied, submittedVersionId: input.versionId };
@@ -47,9 +53,10 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
 
 function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & {
   content: string; hideTitleHeading: boolean; hostName: string; title: string; updatedAt: string;
-}): NativeSyncNodeRecord {
+}, resources?: string): NativeSyncNodeRecord {
   const snapshot = {
     ...base.snapshot,
+    ...(resources === undefined ? {} : { resource_references: resources, attachments: projectNodeResourceLinks(resources) }),
     body_blob_hash: null,
     content: input.content,
     hide_title_heading: input.hideTitleHeading,
@@ -73,7 +80,6 @@ function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & 
 
 function matchesEdit(stored: NativeSyncNodeRecord, record: NativeSyncNodeRecord) {
   return stored.object_id === record.object_id
-    && stored.parent_version_id === record.parent_version_id
     && stored.host_name === record.host_name
     && stored.body_text === record.body_text
     && stored.snapshot.title === record.snapshot.title

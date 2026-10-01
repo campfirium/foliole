@@ -22,16 +22,20 @@ final class FolioleCompanionResourceAvailability {
             String kind = need.getString("kind"), id = need.getString("id");
             if ((!kind.equals("attachment") && !kind.equals("content_blob")) || !id.matches("[a-f0-9]{64}")
                 || !seen.add(kind + ":" + id)) throw new IllegalArgumentException("resource_availability_invalid_request");
-            claims.put(inspect(context, snapshot, kind, id));
+            claims.put(inspect(context, snapshot, kind, id, need.optString("storage_key", null)));
         }
         return new JSONObject().put("provider_device_id", deviceId).put("resources", claims);
     }
 
-    private static JSONObject inspect(Context context, String snapshot, String kind, String id) throws Exception {
+    private static JSONObject inspect(Context context, String snapshot, String kind, String id, String storageKey) throws Exception {
         JSONObject claim = new JSONObject().put("kind", kind).put("id", id).put("status", "missing");
         if (kind.equals("attachment")) {
+            if (!FolioleCompanionCanonicalAttachmentKey.valid(storageKey) || !storageKey.substring(0, 64).equals(id)) {
+                throw new IllegalArgumentException("resource_availability_invalid_request");
+            }
+            claim.put("storage_key", storageKey);
             FolioleCompanionSyncGroupResources.AttachmentSource source =
-                FolioleCompanionSyncGroupResources.attachmentSource(context, snapshot, id, id);
+                FolioleCompanionSyncGroupResources.attachmentSource(context, id, id, storageKey);
             if (source == null) return claim;
             String actual = FolioleCompanionAttachmentResourceHash.digestHex(context, source.file);
             return actual.equals(id)

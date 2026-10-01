@@ -2,12 +2,14 @@ import { promises as fs, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { CHAIN_HEAD_SQL } from '../../lib/core/sync/nodeVersionChainSql.js';
 import { SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES,
   type SyncPackDependencyRow, type SyncPackDependencyTransfer,
   type SyncPackNodeDependencyObjectType } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import type { SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { describeSyncPackDependencySource } from '../database/syncPackDependencySource.js';
+import { loadPresentSyncPackStateRows } from '../database/syncPackRows.js';
 
 import { openCompanionDependencySession, sessionRoot,
   type CompanionDependencySession } from './companionLanDependencySession.js';
@@ -21,15 +23,12 @@ export async function activatePagedCompanionDependencySession(args: {
     const [progress] = fact.view.driver.queryAll<{ completed: number; current_index_id: string }>(
       'SELECT completed, current_index_id FROM fact_claims.progress WHERE singleton_id = 1');
     if (progress?.completed !== 1) throw new Error('sync_pack_fact_claims_incomplete');
-    const objects = fact.view.driver.queryAll<{
-      object_type: SyncPackNodeDependencyObjectType; object_id: string; state_seq: number;
-    }>(`SELECT object_type, object_id, state_seq FROM sync_object_state
-      WHERE state_seq > ? AND state_seq <= ? AND object_type IN (${SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES.map(() => '?').join(', ')})
-        AND (deleted_at IS NULL OR object_type = 'node')
-        AND (object_type <> 'node' OR deleted_at IS NOT NULL OR EXISTS (
-          SELECT 1 FROM nodes WHERE id = sync_object_state.object_id))
-      ORDER BY state_seq, CASE object_type WHEN 'node_review' THEN 0 ELSE 1 END LIMIT 129`,
-    [fact.window.fromStateSeq, fact.window.toStateSeq, ...SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES]);
+    const objects = loadPresentSyncPackStateRows(fact.view.driver,
+      fact.window.fromStateSeq, fact.window.toStateSeq)
+      .filter((row) => SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES.some((type) => type === row.object_type))
+      .map((row) => ({ ...row, object_type: row.object_type as SyncPackNodeDependencyObjectType }))
+      .sort((left, right) => left.state_seq - right.state_seq ||
+        Number(right.object_type === 'node_review') - Number(left.object_type === 'node_review'));
     if (!objects.length || objects.length > 128) throw new Error('sync_pack_dependency_object_unavailable');
     const identity = { from_state_seq: fact.window.fromStateSeq,
       to_state_seq: fact.window.toStateSeq, frontier_state_seq: fact.window.frontierStateSeq,
@@ -83,7 +82,7 @@ function holdPagedNodeHeads(tx: DatabaseDriver,
     if (heldHeads.has(objectId)) continue;
     heldHeads.add(objectId);
     const head = view.driver.queryOne<{ current_version_id: string }>(
-      'SELECT current_version_id FROM nodes WHERE id = ?', [objectId]);
+      CHAIN_HEAD_SQL, [objectId]);
     if (!head?.current_version_id) continue;
     tx.execute(`INSERT OR IGNORE INTO node_version_outbound_holds
       (pack_id, group_id, device_identity_key, object_id, version_id, created_at)

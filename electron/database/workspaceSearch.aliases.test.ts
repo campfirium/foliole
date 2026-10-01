@@ -69,14 +69,12 @@ it('uses aliases in Boolean queries and keeps the matching PDF page for each spe
   insertNode({ id: 'alias', title: 'Alias', content: 'Barack Obama described health care.', updatedAt: '2026-05-02T00:00:00.000Z' });
   insertNode({ id: 'substring', title: 'Substring', content: 'Obamacare described health care.', updatedAt: '2026-05-03T00:00:00.000Z' });
   insertNode({ id: 'pdf-holder', title: 'PDF Holder', content: '', updatedAt: '2026-05-04T00:00:00.000Z' });
-  insertPdfAttachment({ id: 'pdf-alias', originalName: 'Speech.pdf', status: 'ready' });
+  insertPdfAttachment({ nodeId: 'pdf-holder', id: 'ffa5f1b464b24c8c9e77f7f70d3ee68d6cde10311d33ec9271f664a9fa0ae5e5', originalName: 'Speech.pdf', status: 'ready' });
   const sqlite = openDatabaseConnection().sqlite;
-  sqlite.prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
-    .run('pdf-holder', 'pdf-alias', 'reference');
   sqlite.prepare('INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)')
-    .run('pdf-alias', 1, 'Barack Obama discussed health care.');
+    .run('ffa5f1b464b24c8c9e77f7f70d3ee68d6cde10311d33ec9271f664a9fa0ae5e5', 1, 'Barack Obama discussed health care.');
   sqlite.prepare('INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)')
-    .run('pdf-alias', 2, 'Obama discussed healthcare.');
+    .run('ffa5f1b464b24c8c9e77f7f70d3ee68d6cde10311d33ec9271f664a9fa0ae5e5', 2, 'Obama discussed healthcare.');
   syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, ['pdf-holder']);
 
   const results = searchWorkspace('Obama AND healthcare');

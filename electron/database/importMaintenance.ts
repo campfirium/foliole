@@ -1,3 +1,4 @@
+import { recordImportSourceDeletionSync } from '../../lib/core/database/importPipelineRecords.js';
 import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import type { NativeResetImportDataResult } from '../../lib/platform/nativeStorageContract.js';
 
@@ -109,6 +110,10 @@ export function resetImportData(): NativeResetImportDataResult {
   const clearActiveNodeStatement = connection.sqlite.prepare('DELETE FROM workspace_meta WHERE key = ?');
 
   connection.sqlite.transaction(() => {
+    const deletedAt = new Date().toISOString();
+    const sources = connection.driver.queryAll<{ source_fingerprint: string }>(
+      'SELECT source_fingerprint FROM import_sources');
+    for (const source of sources) recordImportSourceDeletionSync(connection.driver, source.source_fingerprint, deletedAt);
     deleteKeepImportItems.run();
     deleteKeepImportItemCache.run();
     deleteImportRuns.run();

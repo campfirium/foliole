@@ -7,8 +7,8 @@ import {
 } from './syncPackNodeFields.js';
 
 export const SYNC_PACK_FORMAT = 'foliole.sync-pack';
-export const SYNC_PACK_FORMAT_VERSION = 18;
-export const SYNC_PACK_PAYLOAD_SCHEMA_VERSION = 90;
+export const SYNC_PACK_FORMAT_VERSION = 20;
+export const SYNC_PACK_PAYLOAD_SCHEMA_VERSION = 92;
 export const SYNC_PACK_COMPRESSION = 'zlib';
 export const SYNC_PACK_DATABASE_ENTRY = 'incoming.db.deflate';
 export const SYNC_PACK_MINIMUM_SCHEMA_VERSION = SYNC_PACK_PAYLOAD_SCHEMA_VERSION;
@@ -30,6 +30,8 @@ export const SYNC_PACK_SQLITE_TABLE_REQUIREMENTS = {
     'group_id', 'device_identity_key', 'device_anchor', 'canonical_library_path',
     'device_name', 'platform', 'state', 'joined_at', 'left_at', 'last_seen_at', 'updated_at'
   ],
+  node_version_peer_heads: ['group_id', 'device_identity_key', 'object_id', 'version_id',
+    'library_epoch', 'proof_revision', 'pack_id', 'updated_at'],
   sync_object_state: [
     'object_type', 'object_id', 'state_seq', 'content_hash', 'last_modified_by_host_name', 'updated_at', 'deleted_at'
   ],
@@ -44,7 +46,6 @@ export const SYNC_PACK_SQLITE_TABLE_REQUIREMENTS = {
     'snapshot_json', 'deleted_at', 'created_at'
   ],
   node_sync_version_parents: ['version_id', 'parent_version_id', 'ordinal'],
-  node_attachments: ['node_id', 'attachment_id', 'role'],
   external_documents: [
     'document_id', 'folder_id', 'relative_path', 'file_name', 'extension', 'source_size_bytes',
     'source_modified_at', 'source_modified_ms', 'content_hash', 'title', 'opening_text',

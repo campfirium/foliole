@@ -1,6 +1,6 @@
 import { ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS } from '../../../../../../lib/core/database/androidCompanionNodeResourceQueryDefinitions';
 import { ANDROID_COMPANION_WORKSPACE_READ_RULES } from '../../../../../../lib/core/database/androidCompanionWorkspaceReadDefinitions';
-import { attachmentStorageKeySql } from '../../../../../../lib/core/database/attachmentMetadataSql';
+import { NODE_RESOURCES_SQL } from '../../../../../../lib/core/database/nodeResourcesSql';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from '../../../../../../lib/core/database/workspaceSnapshotContract';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
 
@@ -56,12 +56,7 @@ async function loadSnapshot(connection: DbPort) {
 }
 
 async function loadAttachments(connection: DbPort) {
-  return queryRows(connection,
-    `SELECT na.node_id, na.attachment_id, na.role, a.mime_type,
-       a.original_name, 'unresolved' AS availability, a.id AS content_hash, ${attachmentStorageKeySql('a.id', 'a.mime_type')} AS storage_key
-     FROM node_attachments na LEFT JOIN attachments a ON a.id = na.attachment_id
-     ORDER BY na.node_id, na.role, na.attachment_id`
-  );
+  return queryRows(connection, `${NODE_RESOURCES_SQL} ORDER BY node_id, role, attachment_id`);
 }
 
 async function loadMetaValue(connection: DbPort, table: string, key: string) {

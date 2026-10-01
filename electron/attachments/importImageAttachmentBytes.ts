@@ -4,13 +4,8 @@ import path from 'node:path';
 
 import { classifyAttachmentBytes } from '../../lib/platform/attachmentByteClassification.js';
 import type { NativeImportLocalImageAttachmentResult } from '../../lib/platform/nativeStorageContract.js';
-import {
-  createAttachmentRecord,
-  createNodeAttachmentLink,
-  findAttachmentRecordById
-} from '../database/attachments.js';
-import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
-import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { runWithDatabaseConnectionOwner, openDatabaseConnection } from '../database/connection.js';
+import { persistNodeResourceReference } from '../database/nodeResources.js';
 import { readImageIntrinsicSize } from '../import/imageIntrinsicSize.js';
 
 import { runWithImageAttachmentHashOwner } from './imageAttachmentHashOwner.js';
@@ -79,7 +74,7 @@ function ensureNodeExists(nodeId: string) {
 }
 
 function toImportedResult(input: {
-  attachment: ReturnType<typeof createAttachmentRecordIfNeeded>['attachment'];
+  attachment: { id: string; createdAt: string; originalName: string };
   attachmentRecord: 'created' | 'reused';
   intrinsicSize: { height: number; width: number } | null;
   mimeType: string;
@@ -121,32 +116,6 @@ async function persistAttachmentFile(storagePath: string, bytes: Uint8Array) {
   return 'created' as const;
 }
 
-function createAttachmentRecordIfNeeded(hash: string, originalName: string, mimeType: string, sizeBytes: number) {
-  const existingAttachment = findAttachmentRecordById(hash);
-  if (existingAttachment) {
-    return {
-      attachment: existingAttachment,
-      attachmentRecord: 'reused' as const
-    };
-  }
-
-  const createdAt = new Date().toISOString();
-  const attachment = {
-    id: hash,
-    originalName,
-    mimeType,
-    sizeBytes,
-    createdAt
-  };
-
-  createAttachmentRecord(attachment);
-
-  return {
-    attachment,
-    attachmentRecord: 'created' as const
-  };
-}
-
 export function normalizeImageFileName(originalName: string | null | undefined, mimeType: string) {
   const trimmedName = originalName?.trim() ?? '';
   if (trimmedName) {
@@ -181,10 +150,7 @@ async function importPreparedImageAttachmentBytes(
     if (normalizedNodeId && !ensureNodeExists(normalizedNodeId)) {
       return createErrorResult('node_not_found', 'The target node does not exist.', input.errorSource);
     }
-    const existing = findAttachmentRecordById(prepared.hash);
-    return existing && (existing.mimeType !== prepared.mimeType || existing.sizeBytes !== prepared.sizeBytes)
-      ? createErrorResult('storage_write_failed', 'The existing attachment metadata does not match its bytes.', input.errorSource)
-      : null;
+    return null;
   });
   if (preflightError) return preflightError;
   const storagePath = resolveAttachmentStoragePath(prepared.hash, undefined, prepared.mimeType);
@@ -196,26 +162,28 @@ async function importPreparedImageAttachmentBytes(
     return createErrorResult('storage_write_failed', 'The image could not be stored by the app.', input.errorSource);
   }
 
-  let attachment: ReturnType<typeof createAttachmentRecordIfNeeded>['attachment'];
-  let attachmentRecord: 'created' | 'reused';
+  const attachment = {
+    id: prepared.hash,
+    originalName: normalizedOriginalName,
+    createdAt: (await fs.stat(storagePath)).birthtime.toISOString()
+  };
+  let attachmentRecord: 'created' | 'reused' = storedFile;
   try {
-    await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.transaction(() => {
-      ({ attachment, attachmentRecord } = createAttachmentRecordIfNeeded(
-        prepared.hash, normalizedOriginalName, prepared.mimeType, prepared.sizeBytes
-      ));
-      recordAttachmentMetadata(attachment.id, attachment.createdAt);
-      if (normalizedNodeId) {
-        createNodeAttachmentLink({ nodeId: normalizedNodeId, attachmentId: attachment.id, role: IMAGE_ATTACHMENT_ROLE });
-      }
-    }));
+    if (normalizedNodeId) {
+      attachmentRecord = await runWithDatabaseConnectionOwner(() => persistNodeResourceReference(normalizedNodeId, {
+        storage_key: prepared.storageKey,
+        original_name: normalizedOriginalName,
+        role: IMAGE_ATTACHMENT_ROLE
+      }));
+    }
   } catch {
     if (storedFile === 'created') await fs.unlink(storagePath).catch(() => undefined);
     return createErrorResult('storage_write_failed', 'The image could not be stored by the app.', input.errorSource);
   }
 
   return toImportedResult({
-    attachment: attachment!,
-    attachmentRecord: attachmentRecord!,
+    attachment,
+    attachmentRecord,
     intrinsicSize: readImageIntrinsicSize(input.bytes),
     mimeType: prepared.mimeType,
     sizeBytes: prepared.sizeBytes,

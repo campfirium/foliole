@@ -1,9 +1,10 @@
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApiImport.js';
-import { createNodeAttachmentLink } from '../database/attachments.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { registerNodeImageSources } from '../database/nodeImageSources.js';
+import { loadNodeResourceReferences, persistNodeResourceReference } from '../database/nodeResources.js';
 import { flushNodeSyncVersion } from '../database/nodeSyncVersions.js';
 import { loadReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 
@@ -75,7 +76,7 @@ async function repairPreparedTarget(
   registerNodeImageSources(target.nodeId, cover.imageSources ?? {});
   if (content === before.body && !linksChanged) return { nodeId: target.nodeId, status: 'unchanged' } as const;
   commitRepair({
-    attachmentIds: cover.attachmentIds,
+    resourceReferences: cover.resourceReferences ?? [],
     beforeBody: before.body!,
     connectionRef: target.connectionRef,
     content,
@@ -105,14 +106,12 @@ function requireSource(connectionRef: string, documentId: string) {
 }
 
 function readImageAttachmentIds(nodeId: string) {
-  return openDatabaseConnection().driver.queryAll<{ attachment_id: string }>(
-    "SELECT attachment_id FROM node_attachments WHERE node_id = ? AND role = 'image'",
-    [nodeId]
-  ).map((row) => row.attachment_id);
+  return loadNodeResourceReferences(nodeId).filter((reference) => reference.role === 'image')
+    .map((reference) => reference.storage_key.slice(0, 64));
 }
 
 function commitRepair(input: {
-  attachmentIds: string[];
+  resourceReferences: NodeResourceReference[];
   beforeBody: string;
   connectionRef: string;
   content: string;
@@ -134,9 +133,7 @@ function commitRepair(input: {
       `UPDATE nodes SET last_modified_by_host_name = ?, sync_dirty = 1 WHERE id = ?`,
       [loadOrCreateDesktopHostName(now), input.nodeId]
     );
-    for (const attachmentId of input.attachmentIds) {
-      createNodeAttachmentLink({ attachmentId, nodeId: input.nodeId, role: 'image' });
-    }
+    for (const reference of input.resourceReferences) persistNodeResourceReference(input.nodeId, reference);
     flushNodeSyncVersion(input.nodeId, now);
   });
 }

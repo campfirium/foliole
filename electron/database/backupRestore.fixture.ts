@@ -1,7 +1,42 @@
 import { expect } from 'vitest';
 
+import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { initializeDatabase } from './migrate.js';
 import { deleteNodesPermanently, softDeleteNodes, upsertNodeSnapshot } from './nodeMutations.js';
+import { persistNodeResourceReference } from './nodeResources.js';
 import { applyReviewGrade } from './reviewMutations.js';
+import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
+import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
+
+export async function assertResourceRestoreAfterColdOpen() {
+  const references = [
+    { storage_key: `${'a'.repeat(64)}.pdf`, role: 'reference' as const, original_name: 'Original.pdf' },
+    { storage_key: `${'b'.repeat(64)}.png`, role: 'image' as const, original_name: 'Image.png' }
+  ];
+  seedNode('resource-parent', '# Parent');
+  seedNode('resource-owner', `![Image](asset://${'b'.repeat(64)}.png)`, 1);
+  openDatabaseConnection().sqlite.prepare('UPDATE nodes SET parent_id = ? WHERE id = ?')
+    .run('resource-parent', 'resource-owner');
+  for (const reference of references) persistNodeResourceReference('resource-owner', reference);
+  saveJsonSetting('resource_restore_preference', { enabled: true });
+  const before = loadWorkspaceSnapshot({ includeBody: true });
+  const backup = await createApplicationDatabaseBackup();
+  openDatabaseConnection().sqlite.prepare("UPDATE nodes SET resource_references = '[]', parent_id = NULL WHERE id = ?")
+    .run('resource-owner');
+  seedNode('resource-owner', '# After backup', 1);
+  saveJsonSetting('resource_restore_preference', { enabled: false });
+  await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
+  for (let reopen = 0; reopen < 2; reopen++) {
+    expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual(before);
+    expect(loadWorkspaceSnapshot({ includeBody: true })?.nodesById['resource-owner']?.resourceReferences).toEqual(references);
+    expect(loadJsonSetting('resource_restore_preference')).toEqual({ enabled: true });
+    expect(openDatabaseConnection().sqlite.pragma('integrity_check', { simple: true })).toBe('ok');
+    expect(openDatabaseConnection().sqlite.pragma('foreign_key_check')).toEqual([]);
+    closeDatabaseConnection();
+    initializeDatabase();
+  }
+}
 
 export function seedBackupBaseline() {
   seedNode('node-root', '# root', 0);

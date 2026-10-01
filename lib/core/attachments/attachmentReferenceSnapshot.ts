@@ -1,5 +1,5 @@
-import { loadArticleAttachmentNeeds } from '../sync/articleAttachmentNeeds.js';
 import type { DbPort } from '../sync/dbPort.js';
+import { loadNodeOwnedArticleResourceNeeds } from '../sync/nodeOwnedArticleResourceNeeds.js';
 
 export async function attachmentDatabaseRevision(port: DbPort) {
   const data = await port.query('PRAGMA data_version');
@@ -13,7 +13,7 @@ export async function readAttachmentReferenceSnapshot(port: DbPort, signal?: Abo
   const storageKeys = new Set<string>();
   for (const article of articles) {
     signal?.throwIfAborted();
-    const result = await loadArticleAttachmentNeeds(port, [article.id]);
+    const result = await loadNodeOwnedArticleResourceNeeds(port, [article.id]);
     if (result.unreadableArticleIds.length) throw new Error('attachment_scan_body_unreadable');
     for (const need of result.needs) storageKeys.add(need.storageKey);
   }

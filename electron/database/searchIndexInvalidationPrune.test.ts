@@ -22,6 +22,7 @@ import {
   pruneCompletedSearchIndexInvalidations,
   readSearchIndexInvalidationRetentionStatusCounts
 } from '../../lib/core/database/searchIndexInvalidationPruning.js';
+import { enqueueWorkspaceSearchInvalidationForNodeIds, processSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -35,6 +36,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.useRealTimers();
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
@@ -88,4 +90,66 @@ it('prunes only completed invalidations older than the explicit ISO boundary', (
     { status: 'pending', rows: 1 },
     { status: 'running', rows: 1 }
   ]);
+});
+
+it('automatically retires all completions on an idle processing pass and preserves other states across reopen', () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date('2026-05-20T00:00:00.000Z'));
+  insertInvalidation('completed', '2026-05-12T23:59:59.999Z');
+  insertInvalidation('completed', '2026-05-13T00:00:00.000Z');
+  insertInvalidation('completed', '2026-05-20T00:00:00.000Z');
+  insertInvalidation('completed', null);
+  insertInvalidation('pending', '2026-05-01T00:00:00.000Z');
+  insertInvalidation('running', '2026-05-01T00:00:00.000Z');
+  insertInvalidation('failed', '2026-05-01T00:00:00.000Z');
+  const driver = openDatabaseConnection().driver;
+  const activeBefore = driver.queryAll(
+    "SELECT * FROM search_index_invalidations WHERE status != 'completed' ORDER BY id"
+  );
+
+  expect(processSearchIndexInvalidations(driver, 0)).toEqual({ failed: 0, processed: 0 });
+  expect(driver.queryOne(
+    "SELECT COUNT(*) AS count FROM search_index_invalidations WHERE status = 'completed'"
+  )).toEqual({ count: 0 });
+  closeDatabaseConnection();
+  const reopened = openDatabaseConnection().driver;
+  expect(reopened.queryAll(
+    "SELECT * FROM search_index_invalidations WHERE status != 'completed' ORDER BY id"
+  )).toEqual(activeBefore.map((row) => ({ ...row, status: 'pending' })));
+  vi.setSystemTime(new Date('2026-05-28T00:00:00.000Z'));
+  processSearchIndexInvalidations(reopened, 0);
+  expect(reopened.queryOne(
+    "SELECT COUNT(*) AS count FROM search_index_invalidations WHERE status = 'completed'"
+  )).toEqual({ count: 0 });
+});
+
+it('removes newly successful work immediately and persists its searchable result across reopen', () => {
+  const driver = openDatabaseConnection().driver;
+  processSearchIndexInvalidations(driver);
+  driver.execute("UPDATE nodes SET title = 'ImmediateRetirementSentinel' WHERE id = 'special-inbox'");
+  enqueueWorkspaceSearchInvalidationForNodeIds(driver, ['special-inbox']);
+  expect(processSearchIndexInvalidations(driver)).toEqual({ failed: 0, processed: 1 });
+  closeDatabaseConnection();
+  const reopened = openDatabaseConnection().driver;
+  expect(reopened.queryAll('SELECT * FROM search_index_invalidations')).toEqual([]);
+  expect(reopened.queryOne(
+    "SELECT node_id FROM search.node_search WHERE node_search MATCH 'ImmediateRetirementSentinel'"
+  )).toEqual({ node_id: 'special-inbox' });
+});
+
+it('retains failed completion work for retry when the final transaction cannot commit', () => {
+  const connection = openDatabaseConnection();
+  processSearchIndexInvalidations(connection.driver);
+  enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, ['special-inbox']);
+  connection.sqlite.exec(`CREATE TRIGGER reject_task_retirement BEFORE DELETE ON search_index_invalidations
+    WHEN OLD.target_id = 'special-inbox' BEGIN SELECT RAISE(ABORT, 'retirement blocked'); END`);
+  expect(processSearchIndexInvalidations(connection.driver)).toEqual({ failed: 1, processed: 0 });
+  expect(connection.driver.queryOne(
+    'SELECT status, attempts FROM search_index_invalidations WHERE target_id = ?', ['special-inbox']
+  )).toEqual({ status: 'pending', attempts: 1 });
+  connection.sqlite.exec('DROP TRIGGER reject_task_retirement');
+  closeDatabaseConnection();
+  const reopened = openDatabaseConnection().driver;
+  expect(processSearchIndexInvalidations(reopened)).toEqual({ failed: 0, processed: 1 });
+  expect(reopened.queryAll('SELECT * FROM search_index_invalidations')).toEqual([]);
 });

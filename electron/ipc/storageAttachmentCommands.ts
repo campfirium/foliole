@@ -120,11 +120,12 @@ export function handleStorageAttachmentCommand(
   }
 
   if (command === NATIVE_COMMANDS.copyAttachmentImageToClipboard) {
-    return copyAttachmentImageToClipboard(asString(args.attachment_id, 'attachment_id'));
+    return copyAttachmentImageToClipboard(asString(args.storage_key, 'storage_key'));
   }
 
   if (command === NATIVE_COMMANDS.exportAttachmentImage) {
-    return exportAttachmentImage(asString(args.attachment_id, 'attachment_id'), window);
+    return exportAttachmentImage(asString(args.storage_key, 'storage_key'), window,
+      typeof args.node_id === 'string' ? args.node_id : undefined);
   }
 
   if (command === NATIVE_COMMANDS.exportNodePdf) {

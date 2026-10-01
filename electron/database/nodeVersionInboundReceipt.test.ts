@@ -13,7 +13,7 @@ import {
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
-it('persists an exact per-node base from the receiver state before pack apply', async () => {
+it('persists an exact per-node base from the receiver state after pack apply', async () => {
   const sqlite = new Database(':memory:');
   try {
     initializeDatabaseSchema(sqlite);
@@ -36,6 +36,8 @@ it('persists an exact per-node base from the receiver state before pack apply', 
       CREATE TABLE inc.pack_manifest (key TEXT PRIMARY KEY, value TEXT NOT NULL);
       INSERT INTO inc.pack_manifest VALUES ('manifest_json', '{"pack_id":"pack-1"}');
       CREATE TABLE inc.nodes (id TEXT PRIMARY KEY, current_version_id TEXT);
+      CREATE TABLE inc.node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT);
+      CREATE TABLE inc.node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT);
       INSERT INTO inc.nodes VALUES ('node', 'E');
     `);
     const port = createBetterSqliteDbPort(sqlite);
@@ -49,7 +51,7 @@ it('persists an exact per-node base from the receiver state before pack apply', 
     `);
 
     const results = await port.transaction((tx) => recordInboundNodeVersionReceipt(tx, prepared, 'source'));
-    expect(results).toEqual([{ baseVersionId: 'A', objectId: 'node', result: 'applied', sentVersionId: 'E' }]);
+    expect(results).toEqual([{ baseVersionId: 'E', objectId: 'node', result: 'applied', sentVersionId: 'E' }]);
     const [receipt] = await loadPendingNodeVersionReceipts(port, 'source');
     expect(receipt).toMatchObject({ packId: 'pack-1', proofRevision: 1, results });
     expect((await recordInboundNodeVersionReceipt(port, prepared, 'source'))).toEqual(results);
@@ -76,6 +78,6 @@ it('persists an exact per-node base from the receiver state before pack apply', 
 function expectSourceRevisions(sqlite: Database.Database) {
   expect(sqlite.prepare(`SELECT source_device_identity_key, proof_revision
     FROM node_version_local_source_revisions ORDER BY source_device_identity_key`).all())
-    .toEqual([{ source_device_identity_key: 'other', proof_revision: 1 },
+    .toEqual([{ source_device_identity_key: 'other', proof_revision: 3 },
       { source_device_identity_key: 'source', proof_revision: 2 }]);
 }

@@ -3,10 +3,10 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import type { ReadwiseApiOriginalFileState } from '../../lib/core/readwise/readwiseApiImportState.js';
+import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
-import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordById } from '../database/attachments.js';
-import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { loadNodeResourceReferences, persistNodeResourceReference } from '../database/nodeResources.js';
 import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from '../database/pdfIndexing.js';
 
 import { fetchReadwiseRawSourceDocument, type ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
@@ -88,7 +88,7 @@ export async function persistReadwiseApiOriginalFile(input: {
 }) {
   await stageReadwiseApiOriginalFile(input);
   await runWithDatabaseConnectionOwner(() => {
-    attachReadwiseApiOriginalFile(input.nodeId, input.state);
+    attachReadwiseApiOriginalFile(input.nodeId, input.state, input.title);
     if (input.category === 'pdf') {
       markPdfAttachmentIndexPending(input.state.attachmentId);
       enqueuePdfAttachmentIndexing(input.state.attachmentId);
@@ -104,36 +104,33 @@ export async function stageReadwiseApiOriginalFile(input: {
   state: Extract<ReadwiseApiOriginalFileState, { status: 'localized' }>;
   title: string;
 }) {
-  const category = input.category ?? 'pdf';
-  const originalName = `${safeFileStem(input.title)}.${category}`;
-  const existing = await runWithDatabaseConnectionOwner(() => (
-    findAttachmentRecordById(input.state.attachmentId)
-  ));
   const storagePath = resolveAttachmentStoragePath(input.state.contentHash, undefined, input.state.mimeType);
   await persistValidatedFile(storagePath, input.bytes);
   input.signal?.throwIfAborted();
   await runWithDatabaseConnectionOwner(() => input.assertEligible?.());
-  const createdAt = existing?.createdAt ?? new Date().toISOString();
-  await runWithDatabaseConnectionOwner(() => {
-    if (!existing) {
-      createAttachmentRecord({
-        createdAt, id: input.state.attachmentId, mimeType: input.state.mimeType,
-        originalName, sizeBytes: input.state.sizeBytes
-      });
-    }
-    recordAttachmentMetadata(input.state.attachmentId, createdAt);
-  });
+
 }
 
 export function attachReadwiseApiOriginalFile(
   nodeId: string,
-  state: Extract<ReadwiseApiOriginalFileState, { status: 'localized' }>
+  state: Extract<ReadwiseApiOriginalFileState, { status: 'localized' }>,
+  title: string
 ) {
-  createNodeAttachmentLink({ attachmentId: state.attachmentId, nodeId, role: 'reference' });
+  const storageKey = buildCanonicalAttachmentStorageKey(state.contentHash, state.mimeType);
+  if (!storageKey) throw new Error('original_file_identity_invalid');
+  const existing = loadNodeResourceReferences(nodeId).find((reference) => reference.storage_key === storageKey && reference.role === 'reference');
+  persistNodeResourceReference(nodeId, { storage_key: storageKey, role: 'reference',
+    original_name: existing?.original_name ?? `${safeFileStem(title)}.${state.mimeType === PDF_MIME ? 'pdf' : 'epub'}` });
 }
 
 async function persistValidatedFile(storagePath: string, bytes: Uint8Array) {
-  try { await fs.access(storagePath); return; } catch { /* create below */ }
+  try {
+    const existing = await fs.readFile(storagePath);
+    if (createHash('sha256').update(existing).digest('hex') !== createHash('sha256').update(bytes).digest('hex')) {
+      throw new Error('original_file_hash_mismatch');
+    }
+    return;
+  } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
   await fs.mkdir(path.dirname(storagePath), { recursive: true });
   await fs.writeFile(storagePath, bytes, { flag: 'wx' });
 }

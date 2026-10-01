@@ -23,8 +23,8 @@ vi.mock('../ipc/paths.js', () => ({
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 
-import { createAttachmentRecord, createNodeAttachmentLink } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { persistNodeResourceReference } from './nodeResources.js';
 import { saveJsonSetting } from './settingsStore.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
@@ -71,7 +71,7 @@ function readPackRows(packPath: string) {
   const db = new BetterSqlite3(incomingPath, { readonly: true });
   try {
     return {
-      nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
+      nodeResources: db.prepare('SELECT id, resource_references FROM nodes').all(),
       stateRows: db.prepare('SELECT object_type, object_id, state_seq FROM sync_object_state').all()
     };
   } finally {
@@ -98,14 +98,7 @@ function readStoredZipEntries(filePath: string) {
 
 it('packs node attachment links through the changed node state', async () => {
   seedSyncedNode();
-  createAttachmentRecord({
-    createdAt: '2026-04-27T00:01:00.000Z',
-    id: 'att-1',
-    mimeType: 'image/png',
-    originalName: 'cover.png',
-    sizeBytes: 12
-  });
-  createNodeAttachmentLink({ attachmentId: 'att-1', nodeId: 'node-1', role: 'image' });
+  persistNodeResourceReference('node-1', { storage_key: `${'a'.repeat(64)}.png`, original_name: 'cover.png', role: 'image' });
 
   const packPath = path.join(tempRoot, 'incoming-node-attachments.db');
   const result = await buildDesktopSyncPack({
@@ -117,7 +110,7 @@ it('packs node attachment links through the changed node state', async () => {
 
   expect(result).toMatchObject({ objectCount: 1, packId: 'pack-node-attachment-link' });
   expect(readPackRows(packPath)).toEqual({
-    nodeAttachments: [{ attachment_id: 'att-1', node_id: 'node-1', role: 'image' }],
+    nodeResources: [{ id: 'node-1', resource_references: JSON.stringify([{ storage_key: `${'a'.repeat(64)}.png`, role: 'image', original_name: 'cover.png' }]) }],
     stateRows: [expect.objectContaining({ object_id: 'node-1', object_type: 'node' })]
   });
 });

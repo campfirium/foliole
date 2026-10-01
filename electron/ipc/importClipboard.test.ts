@@ -230,14 +230,17 @@ it('writes a body blob when clipboard image attachment import falls back to an e
   await runClipboardImport();
 
   const updateCall = databaseDriver.execute.mock.calls.find(([sql]) =>
-    String(sql).includes('UPDATE nodes SET content = ?, body_blob_hash = ?')
+    String(sql).includes('content = ?, body_blob_hash = ?, opening_text = ?')
   );
   expect(updateCall).toBeTruthy();
   expect(updateCall?.[1]).toEqual([
-    '[Image import failed]',
+    expect.stringMatching(/^[a-f0-9]{64}$/),
+    '',
     expect.stringMatching(/^[a-f0-9]{64}$/),
     '[Image import failed]',
     expect.stringMatching(/^20\d\d-\d\d-\d\dT/),
     'node-1'
   ]);
+  const bodyCall = databaseDriver.execute.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO content_blob_data'));
+  expect(Buffer.from(bodyCall?.[1]?.[1] as Uint8Array).toString()).toBe('[Image import failed]');
 });

@@ -119,6 +119,7 @@ export interface NativeSyncNodeRecord {
     anchor_resolution_status?: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing' | null;
     anchor_source_version_id?: string | null;
     attachments: NativeSyncNodeAttachmentRef[];
+    resource_references?: string;
     body_blob_hash?: string | null;
     content?: string;
     created_at: string;

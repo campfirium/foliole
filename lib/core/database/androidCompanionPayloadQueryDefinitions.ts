@@ -1,5 +1,3 @@
-import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../sync/syncObjectPayloadSql.js';
-
 import { ANDROID_COMPANION_LEARNING_PAYLOAD_QUERY_DEFINITIONS } from './androidCompanionLearningPayloadQueryDefinitions.js';
 
 export type CompanionNativePlatform = 'android' | 'ios';
@@ -16,10 +14,6 @@ const NODE_TEXT_ALTERNATIVE_COLUMNS = [
 ].map((key) => ({ key, source: key, type: 'string' }));
 
 export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
-  syncPayloadAttachment: {
-    syncPayload: { argMode: 'object_id', objectType: 'attachment' },
-    sql: SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.attachment
-  },
   syncPayloadExternalDocument: {
     syncPayload: {
       argMode: 'object_id',

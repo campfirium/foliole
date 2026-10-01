@@ -51,7 +51,6 @@ final class FolioleResourceProviderFixture implements AutoCloseable {
         };
         try (SQLiteDatabase db = SQLiteDatabase.openOrCreateDatabase(database, null)) {
             db.execSQL("CREATE TABLE attachment_receive_checkpoints (content_hash TEXT, temporary_path TEXT, total_bytes INTEGER, confirmed_bytes INTEGER, PRIMARY KEY(content_hash,temporary_path))");
-            db.execSQL("CREATE TABLE attachments (id TEXT PRIMARY KEY, mime_type TEXT)");
             db.execSQL("CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, mime_type TEXT, stored_sha256 TEXT, stored_size_bytes INTEGER)");
             db.execSQL("CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB)");
         }

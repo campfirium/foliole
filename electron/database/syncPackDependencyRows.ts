@@ -20,8 +20,7 @@ const REVIEW_COLUMNS = ['id', 'op_id', 'host_name', 'node_id', 'grade', 'schedul
   'due_after', 'stability_after', 'difficulty_after'];
 
 const LINEAGE = `WITH RECURSIVE lineage(version_id) AS (
-  SELECT current_version_id FROM nodes WHERE id IN (SELECT value FROM json_each(?))
-    AND current_version_id IS NOT NULL
+  SELECT version_id FROM node_sync_versions WHERE object_id IN (SELECT value FROM json_each(?))
   UNION
   SELECT coalesce(parent.parent_version_id, version.parent_version_id)
   FROM lineage JOIN node_sync_versions version ON version.version_id = lineage.version_id

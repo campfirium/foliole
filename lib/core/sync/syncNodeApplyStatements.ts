@@ -1,5 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { normalizeNodeImportProvenance } from '../database/nodeImportProvenance.js';
+import { projectNodeInlineContent } from '../database/nodeInlineProjection.js';
+import { parseNodeResourceReferences, serializeNodeResourceReferences } from '../database/nodeResourceReferences.js';
 
 import type { DbParams } from './dbPort.js';
 
@@ -10,10 +12,10 @@ export interface SyncNodeStatement {
 
 export const UPSERT_REMOTE_NODE_SQL = `INSERT INTO nodes (
   id, parent_id, kind, priority, desired_retention, enable_short_term, sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual, hide_title_heading,
-  content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources,
+  content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, resource_references,
   import_source_fingerprint, import_content_fingerprint,
   current_version_id, last_modified_by_host_name, sync_dirty, created_at, updated_at, deleted_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   parent_id = excluded.parent_id,
   kind = excluded.kind,
@@ -36,6 +38,7 @@ ON CONFLICT(id) DO UPDATE SET
   anchor_source_version_id = excluded.anchor_source_version_id,
   image_regions = excluded.image_regions,
   image_sources = excluded.image_sources,
+  resource_references = excluded.resource_references,
   import_source_fingerprint = excluded.import_source_fingerprint,
   import_content_fingerprint = excluded.import_content_fingerprint,
   current_version_id = excluded.current_version_id,
@@ -50,7 +53,7 @@ export const UPDATE_REMOTE_NODE_SQL = `UPDATE nodes SET
   sequential_reading_enabled = ?, shelved_at = ?, manual_child_order = ?, title = ?,
   is_title_manual = ?, hide_title_heading = ?, content = ?, body_blob_hash = ?,
   opening_text = ?, virtual_filter = ?, reveal = ?, anchor_link = ?,
-  anchor_resolution_status = ?, anchor_source_version_id = ?, image_regions = ?, image_sources = ?,
+  anchor_resolution_status = ?, anchor_source_version_id = ?, image_regions = ?, image_sources = ?, resource_references = ?,
   import_source_fingerprint = ?, import_content_fingerprint = ?,
   current_version_id = ?, last_modified_by_host_name = ?, sync_dirty = ?,
   created_at = ?, updated_at = ?, deleted_at = ?
@@ -61,13 +64,7 @@ export const UPSERT_REMOTE_NODE_VERSION_SQL = `INSERT INTO node_sync_versions (
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(version_id) DO NOTHING`;
 
-export const DELETE_NODE_ATTACHMENTS_SQL = 'DELETE FROM node_attachments WHERE node_id = ?';
 
-export const SELECT_ATTACHMENT_EXISTS_SQL = 'SELECT id FROM attachments WHERE id = ?';
-
-export const INSERT_NODE_ATTACHMENT_LINK_SQL = `INSERT INTO node_attachments (node_id, attachment_id, role)
-VALUES (?, ?, ?)
-ON CONFLICT(node_id, attachment_id, role) DO NOTHING`;
 
 export function buildRemoteNodeUpsert(
   record: NativeSyncNodeRecord,
@@ -111,7 +108,7 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
       snapshot.title,
       snapshot.is_title_manual ? 1 : 0,
       snapshot.hide_title_heading ? 1 : 0,
-      snapshot.content ?? '',
+      projectNodeInlineContent(snapshot.content ?? ''),
       bodyBlobHash,
       snapshot.opening_text,
       snapshot.virtual_filter,
@@ -121,6 +118,7 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
       snapshot.anchor_source_version_id ?? null,
       snapshot.image_regions,
       snapshot.image_sources ?? null,
+      serializeNodeResourceReferences(parseNodeResourceReferences(snapshot.resource_references)),
       provenance.importSourceFingerprint,
       provenance.importContentFingerprint,
       record.version_id,
@@ -149,29 +147,5 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
       JSON.stringify(record.snapshot)
     ],
     sql: UPSERT_REMOTE_NODE_VERSION_SQL
-  };
-}
-
-export function buildNodeAttachmentDelete(record: NativeSyncNodeRecord): SyncNodeStatement {
-  return {
-    params: [record.object_id],
-    sql: DELETE_NODE_ATTACHMENTS_SQL
-  };
-}
-
-export function buildAttachmentExistsQuery(attachmentId: string): SyncNodeStatement {
-  return {
-    params: [attachmentId],
-    sql: SELECT_ATTACHMENT_EXISTS_SQL
-  };
-}
-
-export function buildNodeAttachmentInsert(
-  record: NativeSyncNodeRecord,
-  attachment: NativeSyncNodeRecord['snapshot']['attachments'][number]
-): SyncNodeStatement {
-  return {
-    params: [record.object_id, attachment.attachment_id, attachment.role],
-    sql: INSERT_NODE_ATTACHMENT_LINK_SQL
   };
 }

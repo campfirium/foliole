@@ -1,5 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 
+import { collectAllNodeVersionChainsWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
 import type { SyncGroupDevicePayload, SyncGroupPayload } from '../../lib/platform/syncGroupContract.js';
 import type { SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { desktopWorkgroupTag } from '../sync/workgroupKeyStore.js';
@@ -134,7 +135,13 @@ export function leaveDesktopSyncGroupDevice(deviceIdentityKey: string, leftAt = 
       driver.execute('DELETE FROM sync_delivery_receipts');
       driver.execute('DELETE FROM sync_peer_cursors');
       driver.execute('DELETE FROM sync_group_nonce_ledger');
+      driver.execute('DELETE FROM node_version_outbound_holds');
+      driver.execute('DELETE FROM node_version_outbound_payload_holds');
     }
+    driver.execute(`DELETE FROM node_version_outbound_payload_holds WHERE pack_id IN
+      (SELECT pack_id FROM node_version_outbound_holds WHERE device_identity_key = ?)`, [deviceIdentityKey]);
+    driver.execute('DELETE FROM node_version_outbound_holds WHERE device_identity_key = ?', [deviceIdentityKey]);
+    collectAllNodeVersionChainsWithDriver(driver);
   });
 }
 

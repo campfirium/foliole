@@ -15,8 +15,11 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 
 import { relocateReadwiseBookLocalAnchors } from './readwiseBookLocalAnchors.js';
 import { ensureReadwiseUnlocatedNode } from './readwiseBookUnlocated.js';
@@ -28,6 +31,7 @@ beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-epub-local-anchors-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
   initializeDatabaseConnection(openDatabaseConnection());
+  initializeDesktopDeviceProfileFixture('desktop-test');
 });
 
 afterEach(async () => {
@@ -57,8 +61,22 @@ it('places an existing unlocated container last when no root-level anchor needs 
     annotationStates: [], bodies: [{ content: 'Body', id: 'chapter' }], connectionRef: 'connection',
     documentId: 'document', importedAt, rootNodeId: 'book'
   })).toBe(0);
-  expect(driver.queryAll<{ title: string }>(
-    `SELECT child.title FROM node_order ordered JOIN nodes child ON child.id=ordered.node_id
-     WHERE child.parent_id='book' ORDER BY ordered.position`
-  )).toEqual([{ title: 'Chapter' }, { title: '※' }]);
+  const siblings = driver.queryAll<{ id: string; title: string }>("SELECT id, title FROM nodes WHERE parent_id='book'");
+  const byId = new Map(siblings.map((row) => [row.id, row.title]));
+  expect(loadDerivedNodeOrder(driver).filter((id) => byId.has(id)).map((id) => byId.get(id)))
+    .toEqual(['Chapter', '※']);
+});
+
+
+it('relocates a local automatic highlight using its complete hashed body', () => {
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`INSERT INTO nodes (id,parent_id,kind,title,is_title_manual,content,created_at,updated_at)
+    VALUES ('book',NULL,'topic','Book',1,'',?,?), ('local','book','topic','Display title',0,'',?,?), ('chapter','book','topic','Chapter',1,'',?,?)`,
+    [importedAt, importedAt, importedAt, importedAt, importedAt, importedAt]);
+  writeNodeBody({ driver, nodeId: 'local', title: 'Display title', content: 'Exact excerpt', updatedAt: importedAt });
+  relocateReadwiseBookLocalAnchors({ annotationStates: [], bodies: [{ id: 'chapter', content: 'Before Exact excerpt After' }],
+    connectionRef: 'connection', documentId: 'document', importedAt, rootNodeId: 'book' });
+  expect(driver.queryOne<{ parent_id: string; anchor_link: string }>(
+    "SELECT parent_id, anchor_link FROM nodes WHERE id='local'"))
+    .toMatchObject({ parent_id: 'chapter', anchor_link: expect.stringContaining('Exact excerpt') });
 });

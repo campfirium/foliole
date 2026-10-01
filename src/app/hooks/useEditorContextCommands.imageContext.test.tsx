@@ -220,7 +220,7 @@ it('cuts an attachment image only after clipboard copy succeeds', async () => {
     await result.current.handleCutImage();
   });
 
-  expect(copyAttachmentImageToClipboard).toHaveBeenCalledWith(IMAGE_ATTACHMENT_ID);
+  expect(copyAttachmentImageToClipboard).toHaveBeenCalledWith(`${IMAGE_CONTENT_HASH}.png`);
   expect(adapter.replaceRange).toHaveBeenCalledWith(3, IMAGE_MARKDOWN.length - 1, '');
   expect(updateNodeContent).toHaveBeenCalledWith('node-1', 'after-cut');
 });
@@ -252,5 +252,5 @@ it('exports an attachment image through the native bridge', async () => {
     await result.current.handleExportImage();
   });
 
-  expect(exportAttachmentImage).toHaveBeenCalledWith(IMAGE_ATTACHMENT_ID);
+  expect(exportAttachmentImage).toHaveBeenCalledWith(`${IMAGE_CONTENT_HASH}.png`, 'node-1');
 });

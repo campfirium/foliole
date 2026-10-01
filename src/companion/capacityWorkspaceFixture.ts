@@ -1,3 +1,4 @@
+import { NODE_RESOURCES_SQL } from '../../lib/core/database/nodeResourcesSql';
 import { INBOX_NODE_ID } from '../../lib/core/database/specialNodeIds';
 import type { DbPort } from '../../lib/core/sync/dbPort';
 
@@ -26,7 +27,7 @@ export async function inspectCapacityWorkspace(db: DbPort): Promise<CapacityWork
   });
   const pdf = await db.query<{ attachment_id: string | null; id: string; kind: string; parent_id: string | null; title: string }>(
     `SELECT n.id, n.title, n.kind, n.parent_id, na.attachment_id FROM nodes n
-     LEFT JOIN node_attachments na ON na.node_id = n.id AND na.role = 'reference'
+     LEFT JOIN (${NODE_RESOURCES_SQL}) na ON na.node_id = n.id AND na.role = 'reference'
      WHERE n.id = ?`, [PDF_NODE_ID]
   );
   const [pdfNode] = pdf;

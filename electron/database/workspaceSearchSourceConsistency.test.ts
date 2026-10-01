@@ -91,7 +91,7 @@ it('recovers interrupted invalidations without marking their source revision ind
       'SELECT status FROM search_index_invalidations WHERE target_id = ? ORDER BY id DESC LIMIT 1',
       ['special-inbox']
     )
-  ).toEqual({ status: 'failed' });
+  ).toEqual({ status: 'pending' });
   expect(workspaceSearchSourceStateMatches(connection.driver)).toBe(false);
 
   processSearchIndexInvalidations(connection.driver);
@@ -117,11 +117,11 @@ it('resumes persisted content changes across reopen without a full rebuild and m
   )).toEqual({ node_id: 'special-inbox' });
 });
 
-it('retains rebuild provenance while pending work remains so reopening does not rebuild again', () => {
+it('retires covered work on rebuild so reopening does not rebuild again', () => {
   const connection = openDatabaseConnection();
   enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, ['special-inbox']);
   rebuildWorkspaceSearchSidecar(connection, { strategy: 'word-based' });
-  expect(workspaceSearchSourceStateMatches(connection.driver)).toBe(false);
+  expect(workspaceSearchSourceStateMatches(connection.driver)).toBe(true);
   closeDatabaseConnection();
   const reopened = openDatabaseConnection();
   const rebuild = vi.fn();
@@ -129,7 +129,7 @@ it('retains rebuild provenance while pending work remains so reopening does not 
   initializeWorkspaceSearchSidecar(reopened, { rebuildWorkspaceSearchIndexes: rebuild });
 
   expect(rebuild).not.toHaveBeenCalled();
-  expect(processSearchIndexInvalidations(reopened.driver)).toEqual({ failed: 0, processed: 1 });
+  expect(processSearchIndexInvalidations(reopened.driver)).toEqual({ failed: 0, processed: 0 });
   expect(workspaceSearchSourceStateMatches(reopened.driver)).toBe(true);
 });
 

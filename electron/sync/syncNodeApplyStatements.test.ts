@@ -1,9 +1,6 @@
 import { expect, it } from 'vitest';
 
 import {
-  buildAttachmentExistsQuery,
-  buildNodeAttachmentDelete,
-  buildNodeAttachmentInsert,
   buildRemoteNodeUpdate,
   buildRemoteNodeUpsert,
   buildRemoteNodeVersionUpsert
@@ -68,7 +65,7 @@ it('builds the canonical remote node upsert params', () => {
     'Remote Node',
     1,
     1,
-    'remote body',
+    '',
     'body-hash',
     'remote opening',
     null,
@@ -78,6 +75,7 @@ it('builds the canonical remote node upsert params', () => {
     null,
     null,
     null,
+    '[]',
     'source-a',
     'content-a',
     'phone#1',
@@ -98,7 +96,7 @@ it('normalizes incomplete remote provenance to a double null', () => {
     }
   });
 
-  expect(buildRemoteNodeUpsert(record, 'body-hash').params.slice(21, 23)).toEqual([null, null]);
+  expect(buildRemoteNodeUpsert(record, 'body-hash').params.slice(23, 25)).toEqual([null, null]);
 });
 
 it('builds an explicit update for an existing remote node', () => {
@@ -128,25 +126,4 @@ it('builds remote version upsert only for complete version metadata', () => {
     expect.stringContaining('"sequential_reading_enabled":false')
   ]);
   expect(buildRemoteNodeVersionUpsert(createNodeRecord({ version_id: null }))).toBeNull();
-});
-
-it('builds node attachment link statements without deciding existence', () => {
-  const record = createNodeRecord({
-    snapshot: {
-      ...createNodeRecord().snapshot,
-      attachments: [{ attachment_id: 'att-1', role: 'reference' }]
-    }
-  });
-
-  expect(buildNodeAttachmentDelete(record)).toMatchObject({
-    params: ['node-1']
-  });
-  expect(buildAttachmentExistsQuery('att-1')).toMatchObject({
-    params: ['att-1']
-  });
-  const [attachment] = record.snapshot.attachments;
-  expect(attachment).toBeDefined();
-  expect(buildNodeAttachmentInsert(record, attachment!)).toMatchObject({
-    params: ['node-1', 'att-1', 'reference']
-  });
 });

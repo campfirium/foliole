@@ -188,7 +188,7 @@ export async function mergeReadwiseTopicHighlightsFromFile(
     previousContent: sourceNode.content,
     update: readwiseUpdate
   });
-  linkLocalizedImagesToNode(nodeId, mergeInput.localized.attachmentIds);
+  linkLocalizedImagesToNode(nodeId, mergeInput.localized.resourceReferences);
   registerNodeImageSources(nodeId, mergeInput.localized.imageSources);
 
   scheduleMirrorSync([nodeId]);

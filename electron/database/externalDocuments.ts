@@ -127,7 +127,7 @@ function upsertExternalDocument(
          updated_at = excluded.updated_at`,
     [documentId, payload.folder_id, payload.relative_path, payload.file_name, payload.extension,
       payload.source_size_bytes, payload.source_modified_at, payload.source_modified_ms, payload.content_hash,
-      payload.title, payload.opening_text, bodyBlobHash, payload.content, payload.reference_kind,
+      payload.title, payload.opening_text, bodyBlobHash, '', payload.reference_kind,
       payload.reference_json, payload.indexed_at, indexedAt, indexedAt]
   );
   recordExternalDocumentSync({ contentHash: syncContentHash, hostName, documentId, updatedAt: indexedAt });

@@ -75,11 +75,6 @@ export function insertNodeSyncState() {
 export function insertAttachmentSyncState() {
   const driver = openDatabaseConnection().driver;
   driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:02:00.000Z']
-  );
-  driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
      ) VALUES ('attachment', 'att-1', 3, 'attachment-hash', 'desktop', '2026-04-27T00:02:00.000Z', 1)`
@@ -166,12 +161,8 @@ export function insertViewStateSyncState() {
 
 export function insertNodeAttachmentRows() {
   const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:02:00.000Z']
-  );
-  driver.execute('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)', ['node-1', 'att-1', 'image']);
+  driver.execute('UPDATE nodes SET resource_references = ? WHERE id = ?',
+    [JSON.stringify([{ storage_key: `${'a'.repeat(64)}.png`, original_name: 'cover.png', role: 'image' }]), 'node-1']);
 }
 
 export function insertExternalFolderSyncState() {
@@ -199,11 +190,6 @@ export function insertExternalFolderSyncState() {
 
 export function insertPdfPageTextSyncState() {
   const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['pdf-1', 'paper.pdf', 'application/pdf', 128, '2026-04-27T00:05:00.000Z']
-  );
   driver.execute(
     `INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height)
      VALUES (?, ?, ?, ?, ?)`,

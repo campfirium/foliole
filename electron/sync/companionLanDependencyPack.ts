@@ -58,7 +58,7 @@ export async function buildCompanionDependencyPack(args: {
     }
     const beforeDigest = switched ? SYNC_PACK_DEPENDENCY_INITIAL_DIGEST :
       args.url.searchParams.get('dependency_digest') ?? SYNC_PACK_DEPENDENCY_INITIAL_DIGEST;
-    return buildDependencyPage(args, session, transfer, afterRow, beforeDigest,
+    return await buildDependencyPage(args, session, transfer, afterRow, beforeDigest,
       switched ? undefined : readPosition(args.url, afterRow));
   } finally { session.view.close(); }
 }

@@ -116,10 +116,8 @@ it('rejects an oversized node image field before materializing its row', () => {
     expect(() => assertSyncPackPreloadBudget(createBetterSqlite3Driver(sqlite), 0, 1,
       { applyRows: 128, databaseBytes: 1024 * 1024, transferBytes: 1024 * 1024 }))
       .not.toThrow();
-    const insertAttachment = sqlite.prepare('INSERT INTO node_attachments VALUES (?, ?)');
-    for (let index = 0; index < 128; index += 1) {
-      insertAttachment.run('large', `attachment-${index}`);
-    }
+    sqlite.prepare('UPDATE nodes SET resource_references = ? WHERE id = ?')
+      .run('x'.repeat(2 * 1024 * 1024), 'large');
     expect(() => assertSyncPackPreloadBudget(createBetterSqlite3Driver(sqlite), 0, 1,
       { applyRows: 128, databaseBytes: 1024 * 1024, transferBytes: 1024 * 1024 }))
       .toThrow('sync_pack_page_preflight_exceeds_budget');

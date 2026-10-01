@@ -18,9 +18,9 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { loadNodeResourceReferences } from '../database/nodeResources.js';
 
 import { importImageAttachmentBytes, prepareCanonicalImageAttachment } from './importImageAttachmentBytes.js';
 
@@ -73,12 +73,7 @@ it('corrects misleading source hints and persists one canonical resource', async
   });
   await expect(fs.readFile(path.join(assetsDir(), `${contentHash}.jpg`))).resolves.toEqual(jpeg);
   await expect(fs.access(path.join(assetsDir(), `${contentHash}.png`))).rejects.toThrow();
-  expect(loadAttachmentResourceDescription(contentHash)).toMatchObject({
-    attachmentId: contentHash,
-    contentHash,
-    mimeType: 'image/jpeg',
-    storageKey: `${contentHash}.jpg`
-  });
+  expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachments'").get()).toBeUndefined();
 });
 
 it('keeps database reads available during file storage and serializes the same image', async () => {
@@ -122,7 +117,7 @@ it('leaves no file or database rows when bytes are unsupported', async () => {
     mimeType: 'image/png',
     originalName: 'image.png'
   })).resolves.toMatchObject({ error_code: 'unsupported_format', status: 'error' });
-  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachments').get()).toEqual({ count: 0 });
+  expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachments'").get()).toBeUndefined();
   expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();
   await expect(fs.readdir(assetsDir())).resolves.toEqual([]);
 });
@@ -130,16 +125,33 @@ it('leaves no file or database rows when bytes are unsupported', async () => {
 it('removes a newly created canonical file when database persistence fails', async () => {
   const contentHash = hash(jpeg);
   openDatabaseConnection().sqlite.exec(
-    `CREATE TRIGGER reject_image_manifest BEFORE INSERT ON attachments
-     BEGIN SELECT RAISE(ABORT, 'reject image manifest'); END`
+    `INSERT INTO nodes (id, title, created_at, updated_at) VALUES ('owner', 'Owner', 'now', 'now');
+     CREATE TRIGGER reject_node_resource BEFORE UPDATE OF resource_references ON nodes
+     BEGIN SELECT RAISE(ABORT, 'reject node resource'); END`
   );
   await expect(importImageAttachmentBytes({
     bytes: jpeg,
+    nodeId: 'owner',
     errorSource: 'image.jpeg',
     mimeType: 'image/jpeg',
     originalName: 'image.jpeg'
   })).resolves.toMatchObject({ error_code: 'storage_write_failed', status: 'error' });
   await expect(fs.access(path.join(assetsDir(), `${contentHash}.jpg`))).rejects.toThrow();
-  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachments').get()).toEqual({ count: 0 });
+  expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachments'").get()).toBeUndefined();
   expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();
+});
+
+it('stores each original name on its owner while importing without either registry', async () => {
+  const db = openDatabaseConnection().sqlite;
+  db.pragma('foreign_keys = OFF');
+  db.exec(`
+    INSERT INTO nodes (id, title, created_at, updated_at) VALUES ('first', 'First', 'now', 'now'), ('second', 'Second', 'now', 'now');`);
+  for (const nodeId of ['first', 'second']) {
+    await expect(importImageAttachmentBytes({ bytes: jpeg, errorSource: nodeId, mimeType: 'image/png',
+      originalName: `${nodeId}.jpeg`, nodeId })).resolves.toMatchObject({ status: 'imported' });
+    expect(loadNodeResourceReferences(nodeId)).toEqual([
+      { storage_key: `${hash(jpeg)}.jpg`, original_name: `${nodeId}.jpeg`, role: 'image' }
+    ]);
+  }
+  await expect(fs.readFile(path.join(assetsDir(), `${hash(jpeg)}.jpg`))).resolves.toEqual(jpeg);
 });

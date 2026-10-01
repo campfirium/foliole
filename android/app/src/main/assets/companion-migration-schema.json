@@ -480,6 +480,24 @@
         }
       ],
       "beforeVersion": 54
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add sync state receipt lifecycle.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 57
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add independent node versions.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 58
     }
   ],
   "planKeys": {
@@ -493,6 +511,12 @@
     "tableName": "tableName"
   },
   "repairRules": {
+    "nodesResourceReferences": {
+      "columnName": "resource_references",
+      "tableName": "nodes",
+      "statementName": "nodesResourceReferencesColumn",
+      "errorMessage": "Failed to add node resource references."
+    },
     "nodesImageSources": {
       "columnName": "image_sources",
       "errorMessage": "Failed to add article image sources.",
@@ -687,6 +711,7 @@
     }
   },
   "statementsByName": {
+    "nodesResourceReferencesColumn": "ALTER TABLE nodes ADD COLUMN resource_references TEXT NOT NULL DEFAULT '[]'",
     "nodesImageSourcesColumn": "ALTER TABLE nodes ADD COLUMN image_sources TEXT",
     "nodesAnchorResolutionStatusColumn": "ALTER TABLE nodes ADD COLUMN anchor_resolution_status TEXT",
     "nodesAnchorSourceVersionIdColumn": "ALTER TABLE nodes ADD COLUMN anchor_source_version_id TEXT",

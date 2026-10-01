@@ -1,3 +1,4 @@
+import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import {
   collectMarkdownImageReferences,
   parseMarkdownImageTarget
@@ -13,6 +14,7 @@ const UNAVAILABLE_IMAGE_PLACEHOLDER = '**Image unavailable.**';
 
 export interface PreparedReadwiseApiEpubImageSection extends PreparedReadwiseApiEpubSection {
   attachmentIds: string[];
+  resourceReferences?: NodeResourceReference[];
   imageSources?: Record<string, string>;
 }
 
@@ -26,6 +28,7 @@ export interface PreparedReadwiseApiEpubImages {
   };
   degradedReason: string | null;
   rootAttachmentIds: string[];
+  rootResourceReferences?: NodeResourceReference[];
   rootImageSources?: Record<string, string>;
   rootBody: string;
   sections: PreparedReadwiseApiEpubImageSection[];
@@ -33,6 +36,7 @@ export interface PreparedReadwiseApiEpubImages {
 
 interface FinalizedMarkdown {
   attachmentIds: string[];
+  resourceReferences?: NodeResourceReference[];
   imageSources?: Record<string, string>;
   localizedCount: number;
   text: string;
@@ -53,7 +57,7 @@ export async function prepareReadwiseApiEpubImages(
   const sections: PreparedReadwiseApiEpubImageSection[] = [];
   for (const section of structure.sections) {
     const localized = await localizeAndFinalize(section.content, context);
-    sections.push({ ...section, attachmentIds: localized.attachmentIds, imageSources: localized.imageSources ?? {}, content: localized.text });
+    sections.push({ ...section, resourceReferences: localized.resourceReferences ?? [], attachmentIds: localized.attachmentIds, imageSources: localized.imageSources ?? {}, content: localized.text });
   }
   const sourceBodyCount = structure.imageCount;
   const treeBodyCount = countImageReferences(structure.rootBody)
@@ -71,6 +75,7 @@ export async function prepareReadwiseApiEpubImages(
       unavailableBodyCount
     }),
     rootAttachmentIds: root.attachmentIds,
+    rootResourceReferences: root.resourceReferences ?? [],
     rootImageSources: root.imageSources ?? {},
     rootBody: root.text,
     sections
@@ -89,6 +94,7 @@ async function localizeAndFinalize(markdown: string, context: ImageLocalizationC
   }
   return {
     attachmentIds: unique(localized.attachmentIds),
+    resourceReferences: localized.resourceReferences,
     imageSources: localized.imageSources,
     localizedCount: countAssetReferences(text),
     text,

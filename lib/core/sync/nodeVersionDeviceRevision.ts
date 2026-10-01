@@ -22,8 +22,8 @@ export async function acceptDeviceRevision(port: DbPort, args: {
     [args.groupId, args.deviceId]
   );
   if (known?.blocked_reason) return false;
+  if (known && known.library_epoch === args.libraryEpoch && known.proof_revision > args.proofRevision) return true;
   const old = known && (known.library_epoch !== args.libraryEpoch ||
-    known.proof_revision > args.proofRevision ||
     (known.proof_revision === args.proofRevision && known.pack_id !== args.packId));
   if (old) {
     const [row] = await port.query<{ count: number }>(

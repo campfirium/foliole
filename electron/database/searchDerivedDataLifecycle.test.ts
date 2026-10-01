@@ -19,7 +19,6 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { processSearchIndexInvalidations } from '../../lib/core/database/searchIndexInvalidations.js';
 
-import { recordAttachmentMetadata } from './attachmentSyncState.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import {
@@ -86,11 +85,7 @@ function upsertSearchNode(input: {
 }
 
 function linkReadyPdf(nodeId: string, attachmentId: string, text = 'pdf lifecycle marker') {
-  insertPdfAttachment({ id: attachmentId, originalName: `${attachmentId}.pdf`, status: 'ready' });
-  recordAttachmentMetadata(attachmentId, '2026-05-26T00:01:00.000Z');
-  openDatabaseConnection().sqlite
-    .prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
-    .run(nodeId, attachmentId, 'reference');
+  insertPdfAttachment({ nodeId, id: attachmentId, originalName: `${attachmentId}.pdf`, status: 'ready' });
   savePdfPageTextRows(
     attachmentId,
     [{ page: 1, pageHeight: 1200, pageWidth: 800, text }],
@@ -213,6 +208,7 @@ it('clears existing subtrees and exact missing targets in the same delete batch'
   upsertSearchNode({ content: 'survivor marker', id: 'batch-survivor', title: 'Batch Survivor' });
   processSearchQueue();
   insertStaleSearchRows('batch-missing');
+  openDatabaseConnection().driver.execute("UPDATE nodes SET deleted_at = '2026-10-01T00:00:00.000Z' WHERE id = 'batch-parent'");
   enqueueSubtreeDeletedInvalidation('batch-parent');
   enqueueSubtreeDeletedInvalidation('batch-missing');
 
@@ -240,7 +236,7 @@ it('refreshes node and PDF search paths after moving a subtree to a new parent',
       }
     ]
   });
-  expect(invalidationCount('node_subtree_path', ['article'])).toEqual({ count: 1 });
+  expect(invalidationCount('node_workspace', ['article'])).toEqual({ count: 1 });
 
   processSearchQueue();
   expect(

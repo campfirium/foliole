@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
+
 let mockedAppDataDir = '/tmp/foliole-node-mutations-tests';
 const publishGuardMocks = vi.hoisted(() => ({ assertFoliolePublishedDeleteAllowed: vi.fn() }));
 
@@ -19,6 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 vi.mock('../foliolePublish/foliolePublishManagement.js', () => publishGuardMocks);
 
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import {
@@ -136,16 +139,19 @@ it('deletes subtree nodes and rewrites node_order while clearing review side tab
   expect(getNodeReadingRow('node-child')).toBeUndefined();
 });
 
-it('keeps a permanent-delete tombstone for an already versioned live node', () => {
+it.each([false, true])('keeps a complete permanent-delete fact with editor base retention=%s', async (retained) => {
   seedNode('node-root', null, 0);
   const activeVersionId = flushNodeSyncVersion('node-root', '2026-03-06T00:01:00.000Z');
+  const connection = openDatabaseConnection();
+  if (retained) await retainLocalEditBase(createBetterSqliteDbPort(connection.sqlite), {
+    holdId: 'delete-test-draft', nodeId: 'node-root', versionId: activeVersionId!
+  });
 
   deleteNodesPermanently({
     nodeIds: ['node-root'],
     nodeOrder: []
   });
 
-  const connection = openDatabaseConnection();
   const tombstone = connection.sqlite.prepare(
     `SELECT version_id, parent_version_id, snapshot_json, deleted_at, created_at
      FROM node_sync_tombstones WHERE node_id = ?`
@@ -157,7 +163,9 @@ it('keeps a permanent-delete tombstone for an already versioned live node', () =
     version_id: string;
   };
   expect(tombstone.version_id).not.toBe(activeVersionId);
-  expect(tombstone.parent_version_id).toBe(activeVersionId);
+  expect(tombstone.parent_version_id).toBe(retained ? activeVersionId : null);
+  expect(connection.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
+    .pluck().get(tombstone.version_id)).toBe('# node-root');
   expect(tombstone.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   expect(tombstone.deleted_at).toBe(tombstone.created_at);
   expect(JSON.parse(tombstone.snapshot_json)).toMatchObject({

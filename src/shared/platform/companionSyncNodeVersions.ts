@@ -1,5 +1,6 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
+import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector';
 import { applySyncNodesWithDbPort } from '../../../lib/core/sync/syncNodeApplyExecutor';
 import type { SyncNodeApplyOperation } from '../../../lib/core/sync/syncNodeApplyRules';
 import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
@@ -111,6 +112,9 @@ async function applyCompanionSyncNodeVersionsWithDbPort(
   });
   if (result.conflictNodes.length > 0) {
     throw new Error('shared_node_conflict_copy_not_migrated');
+  }
+  if (operation === 'local_mutation' || operation === 'local_restore') {
+    for (const nodeId of result.appliedIds) await collectNodeVersionPayloads(port, nodeId, Number.MAX_SAFE_INTEGER);
   }
   return result.appliedIds;
 }

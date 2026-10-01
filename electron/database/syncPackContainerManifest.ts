@@ -30,9 +30,9 @@ export function buildContainerManifest(args: {
     ...(args.input.restoreId ? { restoreId: args.input.restoreId } : {}),
     sourceEpoch: args.sourceEpoch,
     tableRows: {
+      node_version_peer_heads: args.rows.nodeVersionDependencies ?? [],
       content_blobs: args.rows.contentBlobs,
       external_documents: args.rows.externalDocuments,
-      node_attachments: args.rows.nodeAttachments,
       node_sync_versions: args.rows.nodeVersions,
       node_sync_tombstones: args.rows.nodeTombstones,
       node_sync_version_parents: args.rows.nodeVersionParents,

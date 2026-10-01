@@ -25,7 +25,6 @@ async function deleteLocalNodeRows(port: DbPort, nodeId: string) {
   await port.run('DELETE FROM node_review WHERE node_id = ?', [nodeId]);
   await port.run('DELETE FROM node_reading WHERE node_id = ?', [nodeId]);
   await port.run('DELETE FROM node_reading_host_state WHERE node_id = ?', [nodeId]);
-  await port.run('DELETE FROM node_attachments WHERE node_id = ?', [nodeId]);
   await port.run('DELETE FROM nodes WHERE id = ?', [nodeId]);
 }
 

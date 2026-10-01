@@ -18,4 +18,9 @@ export async function pruneLearningRowsWithoutVisibleNodes(port: DbPort) {
      DELETE FROM node_review
      WHERE node_id NOT IN (SELECT id FROM visible_nodes)`
   );
+  await port.run(`DELETE FROM sync_object_state WHERE sync_dirty = 0 AND deleted_at IS NULL
+    AND ((object_type = 'node_reading' AND NOT EXISTS
+      (SELECT 1 FROM node_reading entity WHERE entity.node_id = sync_object_state.object_id))
+    OR (object_type = 'node_review' AND NOT EXISTS
+      (SELECT 1 FROM node_review entity WHERE entity.node_id = sync_object_state.object_id)))`);
 }

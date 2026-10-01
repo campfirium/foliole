@@ -26,6 +26,7 @@ vi.mock('./managedInboxEvents.js', () => ({
 
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -85,7 +86,7 @@ it('reimports an updated keep source into the same active topic', async () => {
 
   const result = await reimportCurrentTopicSource(first.last_node_id);
   const node = connection.sqlite
-    .prepare('SELECT content, deleted_at FROM nodes WHERE id = ?')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content, deleted_at FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`)
     .get(first.last_node_id) as { content: string; deleted_at: string | null };
   const keepItem = connection.sqlite
     .prepare(

@@ -8,6 +8,7 @@ import { isReadingState, type ReadingState } from '../review/readingState.js';
 import { parseStoredAnchorLink, type StoredAnchorLink } from './anchorLinkCodec.js';
 import { parseStoredImageRegions, type StoredImageRegionGroup } from './imageRegionCodec.js';
 import { parseImageSources } from './imageSources.js';
+import { parseNodeResourceReferences, type NodeResourceReference } from './nodeResourceReferences.js';
 
 interface WorkspaceReviewProfile {
   due: string;
@@ -61,6 +62,7 @@ export interface WorkspaceNodeSnapshot {
   anchorLink: StoredAnchorLink | null;
   imageRegions?: StoredImageRegionGroup[] | null;
   imageSources?: Record<string, string> | null;
+  resourceReferences?: NodeResourceReference[];
   importContentFingerprint?: string | null;
   importSourceFingerprint?: string | null;
   reading: WorkspaceReadingProfile | null;
@@ -99,6 +101,7 @@ export interface WorkspaceNodeRowShape {
   id: string;
   image_regions: string | null;
   image_sources?: string | null;
+  resource_references?: string;
   import_content_fingerprint?: string | null;
   import_source_fingerprint?: string | null;
   is_title_manual: number;
@@ -176,6 +179,7 @@ export function buildWorkspaceSnapshotNode(row: WorkspaceNodeRowShape): Workspac
     authorText: readNodeAuthorText(row.content),
     id: row.id,
     imageSources: parseImageSources(row.image_sources),
+    resourceReferences: parseNodeResourceReferences(row.resource_references),
     parentNodeId: row.parent_id,
     kind: parseNodeKind(row.kind),
     title: row.title,

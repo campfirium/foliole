@@ -17,11 +17,13 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
+import { persistNodeResourceReference } from './nodeResources.js';
 
 let tempRoot = '';
 
@@ -59,16 +61,15 @@ function seedNode(input: {
 
 function readNode(nodeId: string) {
   return openDatabaseConnection().sqlite
-    .prepare('SELECT content, anchor_link, image_regions FROM nodes WHERE id = ?')
+    .prepare(`SELECT ${buildNodeBodyContentSql()} AS content, n.anchor_link, n.image_regions
+      FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`)
     .get(nodeId) as { anchor_link: string | null; content: string; image_regions: string | null };
 }
 
-function seedAttachmentResource(attachmentId: string, mimeType: string, storageKey: string) {
-  const sqlite = openDatabaseConnection().sqlite;
-  sqlite.prepare(
-    'INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).run(attachmentId, storageKey, mimeType, 1, '2026-05-13T00:00:00.000Z');
-
+function seedImageResource(storageKey: string) {
+  persistNodeResourceReference('node-parent', {
+    storage_key: storageKey, role: 'image', original_name: storageKey
+  });
 }
 
 it('updates parent content and remaps text child locators through image rewrites', () => {
@@ -133,7 +134,7 @@ it('expands remapped image locators to the full localized image markdown', () =>
 
   const localImage = '![](asset://7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec.jpg)';
   const contentHash = '7aeed822aea5916460d95e2220aeeeacaf3f31244115095762db670b23cb3fec';
-  seedAttachmentResource(contentHash, 'image/jpeg', `${contentHash}.jpg`);
+  seedImageResource(`${contentHash}.jpg`);
   const nextContent = `Lead\n\n${localImage}`;
   applyParentContentChange({
     driver: openDatabaseConnection().driver,
@@ -227,6 +228,7 @@ it('does not rewrite a parent or anchors when its Blob is unavailable', () => {
   expect(() => applyParentContentChange({
     driver: connection.driver, nextContent: 'Replacement', nodeId: 'node-parent', updatedAt: '2026-05-13T00:00:01.000Z'
   })).toThrow(`node_body_unavailable:node-parent`);
-  expect(readNode('node-parent').content).toBe('stale inline');
+  expect(connection.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('node-parent'))
+    .toBe('stale inline');
   expect(readNode('node-child').anchor_link).toBe(before);
 });

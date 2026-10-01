@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncPackAttachmentObjectsWithDbPort } from '../../lib/core/sync/syncPackAttachmentObjectsExecutor.js';
 
-it('applies attachment parents before earlier pdf page text records', async () => {
+it('applies PDF text without attachment registry parents', async () => {
   const contentHash = 'a'.repeat(64);
   const runs: Array<{ params: unknown[]; sql: string }> = [];
   const port = {
@@ -38,14 +38,13 @@ it('applies attachment parents before earlier pdf page text records', async () =
 
   await expect(applySyncPackAttachmentObjectsWithDbPort(port, {
     incomingAlias: 'incoming'
-  })).resolves.toBe(2);
-  expect(runs[0]?.sql).toContain('INSERT INTO attachments');
-  expect(runs[0]?.params.slice(0, 4)).toEqual([contentHash, 'doc.pdf', 'application/pdf', 128]);
-  expect(runs[1]?.sql).toContain('INSERT INTO pdf_page_text');
-  expect(runs[1]?.params.slice(0, 3)).toEqual([contentHash, 3, 'page text']);
+  })).resolves.toBe(1);
+  expect(runs[0]?.sql).toContain('INSERT INTO pdf_page_text');
+  expect(runs[0]?.params.slice(0, 3)).toEqual([contentHash, 3, 'page text']);
+
 });
 
-it('deletes attachment payload rows for tombstones', async () => {
+it('ignores retired attachment tombstones without deleting PDF text', async () => {
   const contentHash = 'a'.repeat(64);
   const runs: string[] = [];
   const port = {
@@ -65,10 +64,6 @@ it('deletes attachment payload rows for tombstones', async () => {
 
   await expect(applySyncPackAttachmentObjectsWithDbPort(port, {
     incomingAlias: 'incoming'
-  })).resolves.toBe(1);
-  expect(runs).toEqual([
-    'DELETE FROM pdf_page_text WHERE attachment_id = ?',
-    'DELETE FROM node_attachments WHERE attachment_id = ?',
-    'DELETE FROM attachments WHERE id = ?'
-  ]);
+  })).resolves.toBe(0);
+  expect(runs).toEqual([]);
 });

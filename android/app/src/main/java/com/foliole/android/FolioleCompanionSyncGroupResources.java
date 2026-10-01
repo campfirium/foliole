@@ -22,28 +22,19 @@ final class FolioleCompanionSyncGroupResources {
         } finally { db.close(); }
     }
 
-    static AttachmentSource attachmentSource(Context context, String snapshotPath, String attachmentId,
-                                             String contentHash) throws Exception {
-        if (attachmentId == null || attachmentId.trim().isEmpty() || contentHash == null || contentHash.trim().isEmpty()) return null;
-        SQLiteDatabase db = SQLiteDatabase.openDatabase(snapshotPath, null, SQLiteDatabase.OPEN_READONLY);
-        try (Cursor cursor = db.rawQuery(
-            "SELECT id, mime_type FROM attachments WHERE id = ?",
-            new String[] { attachmentId })) {
-            if (!cursor.moveToFirst() || cursor.isNull(0) || cursor.isNull(1)) return null;
-            String storedHash = cursor.getString(0);
-            String mimeType = cursor.getString(1);
-            String storageKey = FolioleCompanionCanonicalAttachmentKey.storageKey(storedHash, mimeType);
-            if (!contentHash.equals(storedHash) ||
-                !FolioleCompanionCanonicalAttachmentKey.matches(storedHash, mimeType, storageKey)) return null;
-            File file = new File(new File(context.getFilesDir(), "attachments"), storageKey);
-            if (!file.isFile() || java.nio.file.Files.isSymbolicLink(file.toPath())) return null;
-            return new AttachmentSource(file, mimeType);
-        } finally { db.close(); }
+    static AttachmentSource attachmentSource(Context context, String attachmentId,
+                                             String contentHash, String storageKey) throws Exception {
+        String mimeType = FolioleCompanionCanonicalAttachmentKey.mimeType(storageKey);
+        if (mimeType == null || contentHash == null || !contentHash.equals(attachmentId) ||
+            !FolioleCompanionCanonicalAttachmentKey.matches(contentHash, mimeType, storageKey)) return null;
+        File file = new File(new File(context.getFilesDir(), "attachments"), storageKey);
+        if (!file.isFile() || java.nio.file.Files.isSymbolicLink(file.toPath())) return null;
+        return new AttachmentSource(file, mimeType);
     }
 
-    static Resource attachmentRange(Context context, String snapshotPath, String attachmentId,
-                                    String contentHash, String offsetText, String lengthText) throws Exception {
-        AttachmentSource source = attachmentSource(context, snapshotPath, attachmentId, contentHash);
+    static Resource attachmentRange(Context context, String attachmentId,
+                                    String contentHash, String storageKey, String offsetText, String lengthText) throws Exception {
+        AttachmentSource source = attachmentSource(context, attachmentId, contentHash, storageKey);
         if (source == null) return null;
         if (offsetText == null || lengthText == null || !offsetText.matches("[0-9]+") ||
             !lengthText.matches("[0-9]+")) throw new IllegalArgumentException("invalid_request");

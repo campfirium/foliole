@@ -4,8 +4,6 @@ import {
   buildSyncPackApplyableRowsSql,
   buildSyncPackContentBlobUpsertSql,
   buildSyncPackExternalDocumentUpsertSql,
-  buildSyncPackNodeAttachmentDeleteSql,
-  buildSyncPackNodeAttachmentInsertSql,
   buildSyncPackNodeUpsertSql
 } from '../../lib/core/sync/syncPackApplyStatements.js';
 import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
@@ -90,10 +88,5 @@ it('builds node and attachment pack apply statements against an incoming alias',
   expect(legacySql).toContain(
     'SELECT existing.import_content_fingerprint FROM main.nodes existing WHERE existing.id = incoming.id'
   );
-  expect(buildSyncPackNodeAttachmentDeleteSql({ incomingAlias: 'incoming' })).toContain(
-    'DELETE FROM main.node_attachments WHERE node_id IN'
-  );
-  expect(buildSyncPackNodeAttachmentInsertSql({ incomingAlias: 'incoming' })).toContain(
-    'INNER JOIN main.attachments attachment ON attachment.id = incoming.attachment_id'
-  );
+  expect(nodeSql).toContain('resource_references = excluded.resource_references');
 });

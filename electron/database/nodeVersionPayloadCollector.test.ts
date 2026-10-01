@@ -42,6 +42,7 @@ beforeEach(() => {
       id, parent, `2026-09-27T00:00:0${index}Z`, `hash-${id}`, `body-${id}`,
       JSON.stringify({ id: 'node', content: `body-${id}` })
     );
+    sqlite.prepare('INSERT INTO node_version_local_origins VALUES (?)').run(id);
     if (parent) sqlite.prepare(`INSERT INTO node_sync_version_parents VALUES (?, ?, 0)`).run(id, parent);
   }
 });
@@ -71,14 +72,12 @@ function payloads() {
     FROM node_sync_versions ORDER BY version_id`).all();
 }
 
-it('keeps an offline A base and current E while stripping intermediate payloads', async () => {
+it('keeps complete offline A and current E and retires intermediate identities', async () => {
   proveBase('A');
   expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
   expect(payloads()).toEqual([
     { version_id: 'A', body_text: 'body-A', snapshot_content: 'body-A', parent_version_id: null },
-    ...['B', 'C', 'D'].map((id, index) => ({ version_id: id, body_text: null,
-      snapshot_content: null, parent_version_id: ['A', 'B', 'C'][index] })),
-    { version_id: 'E', body_text: 'body-E', snapshot_content: 'body-E', parent_version_id: 'D' }
+    { version_id: 'E', body_text: 'body-E', snapshot_content: 'body-E', parent_version_id: 'A' }
   ]);
   expect(await isStoredAncestorVersion(port, 'A', 'E')).toBe(true);
 });
@@ -98,8 +97,9 @@ it('keeps the common merge base when a peer base is on a sibling branch', async 
     .map((row) => (row as { version_id: string }).version_id)).toEqual(['B', 'E', 'F']);
 });
 
-it('keeps all payloads when an active device has no exact base proof', async () => {
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: 'peer_base_unknown' });
+it('keeps the inherited complete chain until direct device dependencies are known', async () => {
+  sqlite.exec('DELETE FROM node_version_local_origins');
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
   expect(payloads().every((row) => (row as { body_text: string }).body_text !== null)).toBe(true);
 });
 
@@ -107,9 +107,9 @@ it('keeps an in-flight version alongside the device base and current head', asyn
   proveBase('A');
   sqlite.prepare(`INSERT INTO node_version_outbound_holds VALUES
     ('pack-2', 'group', 'remote', 'node', 'C', 'now')`).run();
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 1, skipped: null });
   expect(payloads().filter((row) => (row as { body_text: string | null }).body_text !== null)
-    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'C', 'E']);
+    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'B', 'C', 'E']);
 });
 
 it('holds every full payload in a pack until its exact node receipt', async () => {
@@ -119,7 +119,7 @@ it('holds every full payload in a pack until its exact node receipt', async () =
     heads: [{ objectId: 'node', versionId: 'E' }],
     packId: 'pack-2', payloads: [{ objectId: 'node', versionId: 'C' }]
   });
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C'))
     .toEqual({ body_text: 'body-C' });
 
@@ -128,9 +128,8 @@ it('holds every full payload in a pack until its exact node receipt', async () =
     packId: 'pack-2', proofRevision: 2,
     results: [{ baseVersionId: 'A', objectId: 'node', result: 'applied', sentVersionId: 'E' }]
   });
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 1, skipped: null });
-  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C'))
-    .toEqual({ body_text: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C')).toBeUndefined();
 });
 
 it('keeps a pending edit base and a conflict reference', async () => {
@@ -154,7 +153,7 @@ it('protects an editor base until its hold is released', async () => {
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('B'))
     .toEqual({ body_text: 'body-B' });
   await releaseLocalEditBase(port, 'editor-1', 'node');
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 1, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
   await expect(retainLocalEditBase(port, { holdId: 'late-editor', nodeId: 'node', versionId: 'B' }))
     .rejects.toThrow('content_edit_base_unavailable');
 });
@@ -211,7 +210,7 @@ it('advances a peer base only from an exact applied pack receipt', async () => {
 
   expect(sqlite.prepare(`SELECT version_id, pack_id FROM node_version_device_bases`).all())
     .toEqual([{ version_id: 'A', pack_id: 'pack-1' }]);
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
 });
 
 it('does not infer a peer base from a tombstone-blocked node in an acknowledged pack', async () => {
@@ -220,7 +219,8 @@ it('does not infer a peer base from a tombstone-blocked node in an acknowledged 
     groupId: 'group', libraryEpoch: 'epoch', packId: 'pack-1', proofRevision: 1,
     results: [{ baseVersionId: null, objectId: 'node', result: 'blocked', sentVersionId: 'A' }] });
 
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: 'peer_base_unknown' });
+  expect(sqlite.prepare('SELECT * FROM node_version_device_bases').all()).toEqual([]);
+  expect(sqlite.prepare('SELECT version_id FROM node_version_outbound_holds').all()).toEqual([{ version_id: 'A' }]);
 });
 
 it('keeps an unconfirmed hold after an ack names the wrong version', async () => {

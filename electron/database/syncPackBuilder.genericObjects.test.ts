@@ -69,37 +69,13 @@ it('packs a changed direct-child sequence without node rows or article versions'
   });
 });
 
-it('packs attachment metadata as a generic sync object', async () => {
+it('ignores retired independent attachment state while consuming its cursor', async () => {
   insertAttachmentSyncState();
   const packPath = resolveSyncPackPath('incoming-attachment.db');
-
-  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-attachment-1', fromStateSeq: 0 });
-
-  expect(result).toMatchObject({ objectCount: 1, packId: 'pack-attachment-1', toStateSeq: 3 });
-  expect(readPackRows(packPath)).toMatchObject({
-    manifest: expect.objectContaining({
-      tables: [
-        { name: 'sync_groups', row_count: 0 },
-        { name: 'sync_group_devices', row_count: 0 },
-        { name: 'sync_object_state', row_count: 1 },
-        { name: 'sync_objects', row_count: 1 },
-        { name: 'nodes', row_count: 0 },
-        { name: 'node_sync_versions', row_count: 0 },
-        { name: 'node_sync_tombstones', row_count: 0 },
-        { name: 'node_sync_version_parents', row_count: 0 },
-        { name: 'node_attachments', row_count: 0 },
-        { name: 'external_documents', row_count: 0 },
-        { name: 'content_blobs', row_count: 0 },
-        { name: 'review_log', row_count: 0 }
-      ]
-    }),
-    stateRows: [{ object_id: 'att-1', object_type: 'attachment', state_seq: 3 }],
-    syncObjects: [expect.objectContaining({
-      object_id: 'att-1',
-      object_type: 'attachment',
-      payload_json: expect.stringContaining('cover.png')
-    })]
-  });
+  const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath,
+    packId: 'pack-attachment-1', fromStateSeq: 0 });
+  expect(result).toMatchObject({ objectCount: 0, toStateSeq: 3 });
+  expect(readPackRows(packPath)).toMatchObject({ stateRows: [], syncObjects: [], nodes: [] });
 });
 
 it('packs external folder metadata as a generic sync object', async () => {

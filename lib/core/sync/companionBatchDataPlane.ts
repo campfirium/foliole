@@ -1,6 +1,7 @@
 import { isCanonicalAttachmentStorageKey } from '../../platform/attachmentResource.js';
 
 import type { DbPort } from './dbPort.js';
+import { refreshNodeInlineBodiesForHashes } from './nodeInlineBodyProjection.js';
 
 const CONTENT_PACK_ALIAS = 'content_batch';
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
@@ -42,6 +43,7 @@ export async function applyCompanionContentPack(
       for (const hash of failedHashes) {
         await tx.run("UPDATE content_blobs SET availability = 'failed' WHERE hash = ?", [hash]);
       }
+      await refreshNodeInlineBodiesForHashes(tx, acceptedHashes);
     });
     return { failedHashes, syncedHashes: acceptedHashes };
   } finally {
@@ -50,18 +52,14 @@ export async function applyCompanionContentPack(
 }
 
 export async function applyCompanionAttachmentManifest(
-  port: DbPort,
+  _port: DbPort,
   args: { entries: CompanionAttachmentManifestEntry[]; failedIds: string[]; now: string }
 ) {
   assertAttachmentEntries(args.entries);
   const syncedIds: string[] = [];
   const failedIds = new Set(args.failedIds);
   for (const entry of args.entries) {
-    const [row] = await port.query<{ id: string; mime_type: string; size_bytes: number | null }>(
-      'SELECT id, mime_type, size_bytes FROM attachments WHERE id = ? LIMIT 1', [entry.attachmentId]
-    );
-    if (entry.attachmentId !== entry.contentHash || !row || row.mime_type !== entry.mimeType
-        || (row.size_bytes != null && row.size_bytes !== entry.sizeBytes)) {
+    if (entry.attachmentId !== entry.contentHash) {
       failedIds.add(entry.attachmentId);
       continue;
     }

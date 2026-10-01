@@ -1,5 +1,6 @@
 import type { DbPort, DbRow } from './dbPort.js';
 import { acceptDeviceRevision } from './nodeVersionDeviceRevision.js';
+import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion } from './syncNodeGraph.js';
 
 interface HeldVersion extends DbRow {
@@ -88,6 +89,7 @@ export async function confirmOutboundNodeVersionPack(port: DbPort, args: {
   const accepted = await port.transaction(async (tx) => {
     if (!await acceptDeviceRevision(tx, args)) return false;
     for (const result of args.results) await confirmOne(tx, args, result);
+    for (const result of args.results) await collectNodeVersionPayloads(tx, result.objectId, Number.MAX_SAFE_INTEGER);
     return true;
   });
   if (!accepted) throw new Error('node_version_proof_device_revision_invalid');
@@ -159,7 +161,7 @@ async function promoteBaseProof(
     throw new Error('node_version_proof_epoch_changed');
   }
   if (existing && existing.proof_revision > args.proofRevision) {
-    throw new Error('node_version_proof_revision_regressed');
+    return;
   }
   if (existing && existing.proof_revision === args.proofRevision && existing.version_id !== versionId) {
     throw new Error('node_version_proof_revision_conflict');

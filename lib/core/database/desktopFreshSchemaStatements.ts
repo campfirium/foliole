@@ -8,7 +8,9 @@ import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
 import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from './numberedMigrationWatchedFolderConflicts.js';
+import { PDF_INDEX_STATE_SCHEMA_STATEMENTS } from './pdfIndexStateSchema.js';
 import { READWISE_HOST_SETTINGS_VERSION_GUARDS } from './readwiseHostSettingsVersionMigration.js';
+import { isRetiredAttachmentSchema } from './retiredAttachmentSchema.js';
 import { SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS } from './searchIndexInvalidationSchemaStatements.js';
 import { SOURCE_DISPOSITION_SCHEMA_STATEMENTS } from './sourceDispositionSchemaStatements.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
@@ -23,6 +25,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(0, 6),
   ...KEEP_IMPORT_SCHEMA_STATEMENTS,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(6),
+  ...PDF_INDEX_STATE_SCHEMA_STATEMENTS,
   ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS,
   ...WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS,
   ...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
@@ -39,4 +42,4 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS,
   ...READWISE_HOST_SETTINGS_VERSION_GUARDS,
   ...DATA_MIGRATION_STATE_SCHEMA_STATEMENTS
-];
+].filter((statement) => !isRetiredAttachmentSchema(statement));

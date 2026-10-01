@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
@@ -97,7 +98,7 @@ it('creates one multi-parent resolution for non-overlapping text edits', async (
 
   const result = await applyCompanionSyncPushAsync([createDivergedTopicPush('A\nB\nC1\n')], 'android-device');
   const node = openDatabaseConnection().driver.queryOne<{ content: string; current_version_id: string; updated_at: string }>(
-    `SELECT content, current_version_id, updated_at FROM nodes WHERE id = 'topic-1'`
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content, current_version_id, updated_at FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = 'topic-1'`
   );
 
   expect(result.acks).toMatchObject([{ status: 'accepted', versionId: 'android#branch' }]);
@@ -160,7 +161,7 @@ it('absorbs multiple same-request branches into one stable resolution', async ()
 
   const first = await applyCompanionSyncPushAsync(pushes, 'android-device');
   const node = openDatabaseConnection().driver.queryOne<{ content: string; current_version_id: string }>(
-    `SELECT content, current_version_id FROM nodes WHERE id = 'topic-1'`
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content, current_version_id FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = 'topic-1'`
   );
   expect(first.acks).toHaveLength(2);
   expect(node?.content).toBe('A1\nB1\nC1\n');

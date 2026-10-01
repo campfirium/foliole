@@ -9,7 +9,7 @@ import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { openDatabaseConnection, type DatabaseConnection } from '../database/connection.js';
 import { resolveSyncPackPath } from '../database/syncPackBuilderTestSupport.js';
 
-import { seedMixedSource, type BatchPeerIds } from './companionLanMultiNodeBatch.testSupport.js';
+import { seedSource, type BatchPeerIds } from './companionLanMultiNodeBatch.testSupport.js';
 import { writeAttachmentFixture } from './desktopAttachmentRanges.http.testSupport.js';
 
 export function openContinuationReceiver(dbPath: string): DatabaseConnection {
@@ -32,7 +32,7 @@ function createReceiver(ids: BatchPeerIds, hash: string, body: Buffer) {
   initializeDatabaseConnection({ sqlite });
   sqlite.prepare('ATTACH DATABASE ? AS src').run(openDatabaseConnection().dbPath);
   try {
-    for (const table of ['sync_groups', 'sync_group_devices', 'content_blobs', 'attachments']) {
+    for (const table of ['sync_groups', 'sync_group_devices', 'content_blobs']) {
       sqlite.exec(`INSERT INTO ${table} SELECT * FROM src.${table}`);
     }
   } finally { sqlite.exec('DETACH DATABASE src'); }
@@ -53,7 +53,7 @@ function createReceiver(ids: BatchPeerIds, hash: string, body: Buffer) {
 }
 
 export async function prepareArticleContinuation(ids: BatchPeerIds) {
-  seedMixedSource(ids);
+  seedSource(ids);
   const sourceAssets = resolveSyncPackPath('source-assets');
   const receiverAssets = resolveSyncPackPath('receiver-assets');
   await fs.mkdir(sourceAssets);
@@ -65,11 +65,6 @@ export async function prepareArticleContinuation(ids: BatchPeerIds) {
   const body = Buffer.from(`![first](asset://${first.hash}.png)\n![second](asset://${second.hash}.png)`);
   const hash = createHash('sha256').update(body).digest('hex');
   seedBody(body, hash);
-  for (const [resource, bytes] of [[first, 1024], [second, 2048]] as const) {
-    openDatabaseConnection().driver.execute(`INSERT INTO attachments
-      (id, original_name, mime_type, size_bytes, created_at) VALUES (?, 'image.png', 'image/png', ?, 'now')`,
-    [resource.hash, bytes]);
-  }
   const receiver = createReceiver(ids, hash, body);
   return { receiver, receiverAssets, sourceAssets, body, hash, first, second, secondBytes };
 }
@@ -93,4 +88,31 @@ export async function writeArticleContinuationEvidence(report: Record<string, un
   await fs.mkdir('.tmp/artifacts/T267', { recursive: true });
   await fs.writeFile('.tmp/artifacts/T267/resource-article-authenticated-continuation.json',
     JSON.stringify(report, null, 2));
+}
+
+export async function prepareHundredResourceContinuation(ids: BatchPeerIds) {
+  seedSource(ids);
+  const sourceAssets = resolveSyncPackPath('source-assets');
+  const receiverAssets = resolveSyncPackPath('receiver-assets');
+  await fs.mkdir(sourceAssets);
+  await fs.mkdir(receiverAssets);
+  const resources = [];
+  for (let index = 0; index < 100; index++) {
+    resources.push(await writeAttachmentFixture(sourceAssets, 1024 + index));
+  }
+  const missing = resources[99]!;
+  const missingBytes = await fs.readFile(missing.sourcePath);
+  await fs.rm(missing.sourcePath);
+  const existing = resources[0]!;
+  const existingPath = receiverAttachmentPath(receiverAssets, existing.hash);
+  await fs.copyFile(existing.sourcePath, existingPath);
+  const existingStat = await fs.stat(existingPath);
+  const body = Buffer.from(resources.map((resource, index) =>
+    `![image ${index}](asset://${resource.hash}.png)`).join('\n'));
+  const hash = createHash('sha256').update(body).digest('hex');
+  seedBody(body, hash);
+  openDatabaseConnection().driver.execute('INSERT INTO content_blob_data VALUES (?, ?)', [hash, body]);
+  const receiver = createReceiver(ids, hash, body);
+  return { receiver, receiverAssets, sourceAssets, resources, missing, missingBytes,
+    existingPath, existingStat, body, hash };
 }

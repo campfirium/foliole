@@ -1,17 +1,7 @@
+import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
-import { findAttachmentRecordById } from '../database/attachments.js';
 
-export function resolveMirrorAttachmentPath(attachmentId: string) {
-  const normalizedAttachmentId = attachmentId.trim();
-  if (!normalizedAttachmentId) {
-    return null;
-  }
-
-  const attachment = findAttachmentRecordById(normalizedAttachmentId);
-  if (!attachment) {
-    return null;
-  }
-
-  if (!attachment.mimeType) return null;
-  return resolveAttachmentStoragePath(attachment.id, undefined, attachment.mimeType);
+export function resolveMirrorAttachmentPath(storageKey: string) {
+  const identity = parseCanonicalAttachmentStorageKey(storageKey);
+  return identity ? resolveAttachmentStoragePath(identity.contentHash, undefined, identity.mimeType) : null;
 }

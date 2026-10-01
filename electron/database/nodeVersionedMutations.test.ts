@@ -72,7 +72,7 @@ it('atomically creates a formal sync version and state during a normal node crea
   ).get('node-1')).toEqual({ current_version_id: node.current_version_id, sync_dirty: 0 });
 });
 
-it('creates a child version linked to the prior formal version during a normal edit', () => {
+it('replaces the previous unsent version during an edit outside a sync group', () => {
   upsertVersionedNodeSnapshot(nodeInput('Alpha baseline.', '2026-07-25T04:31:00.000Z'));
   const sqlite = openDatabaseConnection().sqlite;
   const first = sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get('node-1') as {
@@ -89,7 +89,7 @@ it('creates a child version linked to the prior formal version during a normal e
     'SELECT body_text, parent_version_id FROM node_sync_versions WHERE version_id = ?'
   ).get(second.current_version_id)).toEqual({
     body_text: 'Alpha desktop.',
-    parent_version_id: first.current_version_id
+    parent_version_id: null
   });
 });
 

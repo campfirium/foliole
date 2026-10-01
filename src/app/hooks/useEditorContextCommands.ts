@@ -171,6 +171,7 @@ function buildEditorCommandsResult(args: {
   ) => Promise<boolean>;
 }) {
   const imageHandlers = createImageCommandHandlers({
+    nodeId: args.activeNodeId,
     closeContextMenu: args.closeContextMenu,
     contextMenu: args.contextMenu,
     editorRef: args.editorRef,

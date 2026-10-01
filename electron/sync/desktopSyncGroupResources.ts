@@ -1,4 +1,5 @@
-import { loadArticleAttachmentNeeds } from '../../lib/core/sync/articleAttachmentNeeds.js';
+import { materializeCurrentVersionBodyBlobs } from '../../lib/core/sync/currentVersionBodyBlob.js';
+import { loadNodeOwnedArticleResourceNeeds } from '../../lib/core/sync/nodeOwnedArticleResourceNeeds.js';
 import { observeResourceProviders, transferResourceProviders } from '../../lib/core/sync/resourceProviderPass.js';
 import { RESOURCE_AVAILABILITY_BATCH_LIMIT, takeContentBlobByteBatch,
   type ResourceNeed } from '../../lib/platform/resourceAvailabilityContract.js';
@@ -27,8 +28,15 @@ async function loadResourceNeeds(articleIds: readonly string[], includeContentBl
      LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash
      WHERE cbd.hash IS NULL ORDER BY cb.hash LIMIT ?`, [RESOURCE_AVAILABILITY_BATCH_LIMIT]
   ) : [];
-  const blobs = takeContentBlobByteBatch(candidates, (row) => row.stored_size_bytes);
-  const { needs: attachments, unreadableArticleIds } = await loadArticleAttachmentNeeds(port, articleIds);
+  const selected = takeContentBlobByteBatch(candidates, (row) => row.stored_size_bytes);
+  if (selected.length) await port.transaction((tx) => materializeCurrentVersionBodyBlobs(tx,
+    { hashes: selected.map((row) => row.hash) }));
+  const remaining = selected.length ? await port.query<{ hash: string }>(
+    `SELECT hash FROM content_blob_data WHERE hash IN (SELECT value FROM json_each(?))`,
+    [JSON.stringify(selected.map((row) => row.hash))]) : [];
+  const present = new Set(remaining.map((row) => row.hash));
+  const blobs = selected.filter((row) => !present.has(row.hash));
+  const { needs: attachments, unreadableArticleIds } = await loadNodeOwnedArticleResourceNeeds(port, articleIds);
   const missingAttachments = [];
   for (const attachment of attachments) {
     const resolved = resolveAttachmentFileForSync(attachment.storageKey);
@@ -46,7 +54,7 @@ export async function downloadDesktopSyncGroupResources(peer: DesktopSyncGroupPe
   const attachments = new Map(loaded.attachments.map((attachment) => [attachment.attachmentId, attachment]));
   const needs: ResourceNeed[] = [
     ...[...blobs.keys()].map((id) => ({ kind: 'content_blob' as const, id })),
-    ...[...attachments.keys()].map((id) => ({ kind: 'attachment' as const, id }))
+    ...[...attachments.values()].map((attachment) => ({ kind: 'attachment' as const, id: attachment.attachmentId, storage_key: attachment.storageKey }))
   ];
   const failedStorageKeys: string[] = [];
   const resourceResults = [];

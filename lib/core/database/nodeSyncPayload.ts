@@ -1,4 +1,5 @@
 import { normalizeNodeImportProvenance } from './nodeImportProvenance.js';
+import { serializeNodeResourceReferences, type NodeResourceReference } from './nodeResourceReferences.js';
 
 export interface NodeSyncAttachmentRef {
   attachmentId: string;
@@ -10,6 +11,7 @@ export interface NodeSyncHashInput {
   anchorResolutionStatus?: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing' | null;
   anchorSourceVersionId?: string | null;
   attachments: NodeSyncAttachmentRef[];
+  resourceReferences?: readonly NodeResourceReference[];
   content: string;
   createdAt: string;
   deletedAt: string | null;
@@ -64,6 +66,9 @@ export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
     anchor_resolution_status: normalizeNullableText(input.anchorResolutionStatus ?? null),
     anchor_source_version_id: normalizeNullableText(input.anchorSourceVersionId ?? null),
     attachments: normalizeAttachments(input.attachments),
+    ...(input.resourceReferences === undefined ? {} : {
+      resource_references: serializeNodeResourceReferences(input.resourceReferences)
+    }),
     content: input.content,
     created_at: normalizeIso(input.createdAt),
     deleted_at: normalizeIso(input.deletedAt),

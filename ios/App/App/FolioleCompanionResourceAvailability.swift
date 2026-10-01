@@ -15,16 +15,19 @@ enum FolioleCompanionResourceAvailability {
                   let id = resource["id"] as? String,
                   id.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
                   seen.insert("\(kind):\(id)").inserted else { throw invalid("resource_availability_invalid_request") }
-            claims.append(try inspect(snapshot: snapshot, kind: kind, id: id))
+            claims.append(try inspect(snapshot: snapshot, kind: kind, id: id, storageKey: resource["storage_key"] as? String))
         }
         return try JSONSerialization.data(withJSONObject: ["provider_device_id": deviceId, "resources": claims])
     }
 
-    private static func inspect(snapshot: URL, kind: String, id: String) throws -> [String: Any] {
+    private static func inspect(snapshot: URL, kind: String, id: String, storageKey: String?) throws -> [String: Any] {
         var result: [String: Any] = ["kind": kind, "id": id, "status": "missing"]
         if kind == "attachment" {
+            guard let storageKey, FolioleCompanionCanonicalAttachmentKey.valid(storageKey),
+                  String(storageKey.prefix(64)) == id else { throw invalid("resource_availability_invalid_request") }
+            result["storage_key"] = storageKey
             guard let file = try FolioleCompanionSyncGroupResources.attachmentFile(
-                snapshot: snapshot, attachmentId: id, contentHash: id) else { return result }
+                attachmentId: id, contentHash: id, storageKey: storageKey) else { return result }
             let sha256 = try FolioleCompanionAttachmentResourceDownloader.digestHex(file.url)
             result["status"] = sha256 == id ? "available" : "checksum_mismatch"
             if sha256 == id {

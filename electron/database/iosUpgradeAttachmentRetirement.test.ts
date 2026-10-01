@@ -6,6 +6,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.js';
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
@@ -17,6 +18,8 @@ it.each([false, true])('migrates canonical v4 attachments or atomically rejects 
   fs.copyFileSync('scripts/ios/fixtures/database-upgrade-runtime/v4-foliole-companionSQLite.db', copy);
   const database = new Database(copy);
   try {
+    database.exec(`INSERT INTO node_order (node_id, position)
+      SELECT id, ROW_NUMBER() OVER (ORDER BY id) - 1 FROM nodes`);
     if (canonical) {
       database.exec('BEGIN; PRAGMA defer_foreign_keys = ON');
       const id = 'b'.repeat(64);
@@ -27,8 +30,6 @@ it.each([false, true])('migrates canonical v4 attachments or atomically rejects 
       database.exec('COMMIT');
     }
     const before = snapshot(database);
-    const attachments = database.prepare('SELECT * FROM attachments').all();
-    const links = database.prepare('SELECT * FROM node_attachments').all();
     const bodies = database.prepare('SELECT id, content FROM nodes ORDER BY id').all();
     const port = createBetterSqliteDbPort(database, { name: 'ios-v4-upgrade' });
     const request = { allowCreate: false, expectedHostName: 'ios-upgrade-device', now: '2026-09-20T00:00:00.000Z' };
@@ -41,8 +42,9 @@ it.each([false, true])('migrates canonical v4 attachments or atomically rejects 
     for (let run = 0; run < 2; run++) {
       await bootstrapCompanionDatabase(port, request);
       expect(database.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
-      expect(database.prepare('SELECT * FROM attachments').all()).toEqual(attachments);
-      expect(database.prepare('SELECT * FROM node_attachments').all()).toEqual(links);
+      expect(database.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')").all()).toEqual([]);
+      expect(JSON.parse(String((database.prepare("SELECT resource_references FROM nodes WHERE id = 'upgrade-node'").get() as { resource_references: string }).resource_references)))
+        .toEqual([{ storage_key: `${'b'.repeat(64)}.png`, role: 'image', original_name: 'sample.png' }]);
       expect(database.prepare('SELECT id, content FROM nodes ORDER BY id').all()).toEqual(bodies);
       expect(database.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();
     }
@@ -57,21 +59,27 @@ it('upgrades the previous mobile schema and preserves attachment relationships a
     const port = createBetterSqliteDbPort(database, { name: 'ios-upgrade-attachment' });
     const request = { allowCreate: true, expectedHostName: 'ios-upgrade-device', now: '2026-09-20T00:00:00.000Z' };
     await bootstrapCompanionDatabase(port, request);
+    database.exec(`INSERT INTO node_order (node_id, position)
+      SELECT value, ROW_NUMBER() OVER (ORDER BY parent_id, CAST(key AS INTEGER)) - 1
+      FROM parent_child_order, json_each(child_ids_json);
+      DROP TABLE parent_child_order;
+      DELETE FROM sync_object_state WHERE object_type = 'parent_child_order';`);
     const id = 'a'.repeat(64);
     database.exec(`CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY, content_hash TEXT,
       storage_key TEXT, mime_type TEXT, size_bytes INTEGER); PRAGMA user_version = 36;`);
+    for (const sql of ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS) database.exec(sql);
     database.prepare('INSERT INTO attachments (id, mime_type, size_bytes, created_at) VALUES (?, ?, 80, ?)')
       .run(id, 'image/png', request.now);
     database.prepare('INSERT INTO attachment_blobs VALUES (?, ?, ?, ?, 80)').run(id, id, `${id}.png`, 'image/png');
     database.prepare("INSERT INTO node_attachments (node_id, attachment_id, role) SELECT id, ?, 'image' FROM nodes LIMIT 1").run(id);
-    const before = database.prepare('SELECT * FROM attachments').all();
-    const links = database.prepare('SELECT * FROM node_attachments').all();
+    const owner = (database.prepare('SELECT node_id FROM node_attachments').get() as { node_id: string }).node_id;
     for (let run = 0; run < 2; run++) {
       await bootstrapCompanionDatabase(port, { allowCreate: false,
         expectedHostName: 'ios-upgrade-device', now: '2026-09-20T00:00:00.000Z' });
       expect(database.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
-      expect(database.prepare('SELECT * FROM attachments').all()).toEqual(before);
-      expect(database.prepare('SELECT * FROM node_attachments').all()).toEqual(links);
+      expect(database.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')").all()).toEqual([]);
+      expect(JSON.parse((database.prepare('SELECT resource_references FROM nodes WHERE id = ?').get(owner) as { resource_references: string }).resource_references))
+        .toEqual([{ storage_key: `${id}.png`, role: 'image', original_name: null }]);
       expect(database.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();
     }
   } finally { database.close(); fs.rmSync(root, { recursive: true, force: true }); }

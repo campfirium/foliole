@@ -19,6 +19,9 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
+
 import { restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -46,7 +49,9 @@ it('retires a restored representable manifest without changing article bodies or
   connection.sqlite.exec(`CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY,
     content_hash TEXT, storage_key TEXT, size_bytes INTEGER, mime_type TEXT, availability TEXT, created_at TEXT);
     PRAGMA user_version = 97;`);
+  for (const sql of DESKTOP_RESOURCE_SCHEMA_STATEMENTS) connection.sqlite.exec(sql);
   seedLegacyAttachment(hash, bytes.length);
+  prepareLegacyOrder();
   const backupPath = path.join(tempRoot, 'pre-retirement.db');
   await connection.sqlite.backup(backupPath);
   initializeDatabase();
@@ -56,6 +61,16 @@ it('retires a restored representable manifest without changing article bodies or
   expect(readBody()).toContain(`asset://${hash}.jpg`);
   await expect(fs.readFile(path.join(assetsDir, `${hash}.jpg`))).resolves.toEqual(bytes);
 });
+
+function prepareLegacyOrder() {
+  const { driver, sqlite } = openDatabaseConnection();
+  const nodeOrder = loadDerivedNodeOrder(driver);
+  sqlite.exec(`DELETE FROM node_order;
+    DROP TABLE parent_child_order;
+    DELETE FROM sync_object_state WHERE object_type = 'parent_child_order';`);
+  const insert = sqlite.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
+  nodeOrder.forEach((id, position) => insert.run(id, position));
+}
 
 function seedLegacyAttachment(hash: string, sizeBytes: number) {
   const sqlite = openDatabaseConnection().sqlite;

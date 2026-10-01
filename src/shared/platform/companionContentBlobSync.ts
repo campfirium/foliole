@@ -1,4 +1,5 @@
 import { commitStagedCompanionContentBatch } from './companion/runtime/companionBatchDataPlane';
+import { materializeCompanionCurrentBodies } from './companion/runtime/companionCurrentVersionBodies';
 import { loadIosMissingContentBlobs } from './companion/runtime/iosCompanionActiveDatabaseReads';
 import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
 import {
@@ -10,7 +11,7 @@ export async function loadCompanionMissingContentBlobHashes(limit = 50) {
   if (!isNativeCompanionContentBlobRuntime()) {
     return [] as string[];
   }
-  return (await loadIosMissingContentBlobs(limit)).hashes;
+  return (await loadMissingAfterMaterializing(limit)).hashes;
 }
 
 export interface CompanionMissingContentBlobBatch {
@@ -30,7 +31,7 @@ export async function loadCompanionMissingContentBlobBatch(limit = 50): Promise<
   if (!isNativeCompanionContentBlobRuntime()) {
     return { blobs: [], failedBytes: null, failedCount: null, hashes: [], total: null, totalBytes: null };
   }
-  const result = await loadIosMissingContentBlobs(limit);
+  const result = await loadMissingAfterMaterializing(limit);
   const blobs = Array.isArray(result.blobs)
     ? result.blobs
     : result.hashes.map((hash) => ({ hash }));
@@ -46,6 +47,12 @@ export async function loadCompanionMissingContentBlobBatch(limit = 50): Promise<
 
 export async function loadCompanionMissingContentBlobs(limit = 50): Promise<Array<{ hash: string; size_bytes?: number }>> {
   return (await loadCompanionMissingContentBlobBatch(limit)).blobs;
+}
+
+async function loadMissingAfterMaterializing(limit: number) {
+  const result = await loadIosMissingContentBlobs(limit);
+  const count = await materializeCompanionCurrentBodies(result.hashes);
+  return count ? loadIosMissingContentBlobs(limit) : result;
 }
 
 export async function syncCompanionContentBlob(args: {

@@ -40,19 +40,6 @@ function insertParentNode(connection: ReturnType<typeof openDatabaseConnection>)
   );
 }
 
-function insertAttachmentFixtures(connection: ReturnType<typeof openDatabaseConnection>) {
-  connection.driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['att-1', 'att-1.png', 'image/png', 10, '2026-04-21T09:10:00.000Z']
-  );
-  connection.driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['att-2', 'att-2.png', 'image/png', 20, '2026-04-21T09:11:00.000Z']
-  );
-}
-
 function insertNodeFixture(connection: ReturnType<typeof openDatabaseConnection>) {
   connection.driver.execute(
     `INSERT INTO nodes (
@@ -99,17 +86,6 @@ function insertVersionFixtures(connection: ReturnType<typeof openDatabaseConnect
   }
 }
 
-function insertNodeAttachmentFixtures(connection: ReturnType<typeof openDatabaseConnection>) {
-  connection.driver.execute(
-    `INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`,
-    ['node-1', 'att-2', 'cover']
-  );
-  connection.driver.execute(
-    `INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`,
-    ['node-1', 'att-1', 'inline']
-  );
-}
-
 function replaceNodeOrderPosition(connection: ReturnType<typeof openDatabaseConnection>, position: number) {
   connection.driver.execute('UPDATE nodes SET position = NULL WHERE id = ?', ['node-1']);
   connection.driver.execute(
@@ -121,10 +97,8 @@ function replaceNodeOrderPosition(connection: ReturnType<typeof openDatabaseConn
 
 function insertSyncNodeFixture(connection: ReturnType<typeof openDatabaseConnection>) {
   insertParentNode(connection);
-  insertAttachmentFixtures(connection);
   insertNodeFixture(connection);
   insertVersionFixtures(connection);
-  insertNodeAttachmentFixtures(connection);
 }
 
 function expectedSyncNodeRecord() {
@@ -140,10 +114,8 @@ function expectedSyncNodeRecord() {
       parent_version_ids: ['desktop#1'],
       snapshot: {
         anchor_link: '{"kind":"highlight"}',
-        attachments: [
-          { attachment_id: 'att-1', role: 'inline' },
-          { attachment_id: 'att-2', role: 'cover' }
-        ],
+        attachments: [],
+        resource_references: '[]',
         body_blob_hash: null,
         content: 'hello',
         created_at: '2026-04-21T10:00:00.000Z',
@@ -159,7 +131,6 @@ function expectedSyncNodeRecord() {
         manual_child_order: null,
         opening_text: 'opening',
         parent_id: 'parent-1',
-        position: 7,
         priority: null,
         reveal: null,
         sequential_reading_enabled: null,
@@ -191,13 +162,13 @@ describe('loadSyncNodes', () => {
     expect(loadSyncNodes(['node-1'])).toEqual(expectedSyncNodeRecord());
   });
 
-  it('uses node_order as the fallback sync node position source', () => {
+  it('keeps legacy node_order position out of the current node payload', () => {
     const connection = openDatabaseConnection();
     insertSyncNodeFixture(connection);
     replaceNodeOrderPosition(connection, 12);
 
     const [node] = loadSyncNodes(['node-1']);
-    expect(node?.snapshot.position).toBe(12);
+    expect(node?.snapshot).not.toHaveProperty('position');
   });
 
   it('returns empty array for empty object ids input', () => {

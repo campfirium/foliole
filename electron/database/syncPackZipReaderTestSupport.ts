@@ -24,7 +24,7 @@ export function readPackRowsFromZip(packPath: string, tempRoot: string) {
         "SELECT value FROM pack_manifest WHERE key = 'manifest_json'"
       ).pluck().get())),
       manifest,
-      nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
+      nodeResources: db.prepare("SELECT id, resource_references FROM nodes WHERE resource_references <> '[]'").all(),
       nodeTombstones: manifest.tables.some(({ name }: { name: string }) => name === 'node_sync_tombstones')
         ? db.prepare('SELECT node_id, version_id, deleted_at FROM node_sync_tombstones').all()
         : [],

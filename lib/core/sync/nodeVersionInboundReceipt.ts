@@ -7,6 +7,7 @@ interface IncomingHead extends DbRow {
   sent_version_id: string;
   previous_version_id: string | null;
   tombstoned: number;
+  incoming_tombstone?: number;
 }
 
 export interface PreparedNodeVersionReceipt {
@@ -57,12 +58,18 @@ export async function prepareInboundNodeVersionReceipt(port: DbPort, alias: stri
   const heads = await port.query<IncomingHead>(
     `SELECT incoming.id AS object_id, incoming.current_version_id AS sent_version_id,
        local.current_version_id AS previous_version_id,
-       CASE WHEN tomb.node_id IS NULL THEN 0 ELSE 1 END AS tombstoned
+       CASE WHEN tomb.node_id IS NULL THEN 0 ELSE 1 END AS tombstoned, 0 AS incoming_tombstone
      FROM ${alias}.nodes incoming
      LEFT JOIN main.nodes local ON local.id = incoming.id
      LEFT JOIN main.node_sync_tombstones tomb ON tomb.node_id = incoming.id
      WHERE incoming.current_version_id IS NOT NULL
-       AND incoming.id NOT IN ('special-inbox', 'special-virtual-root')`
+       AND incoming.id NOT IN ('special-inbox', 'special-virtual-root')
+     UNION ALL SELECT incoming.node_id, incoming.version_id, local.version_id, 0, 1
+     FROM ${alias}.node_sync_tombstones incoming
+     LEFT JOIN main.node_sync_tombstones local ON local.node_id = incoming.node_id
+     WHERE NOT EXISTS (SELECT 1 FROM ${alias}.nodes node WHERE node.id = incoming.node_id)
+       AND EXISTS (SELECT 1 FROM ${alias}.node_sync_versions version WHERE version.version_id = incoming.version_id
+         AND version.object_id = incoming.node_id)`
   );
   return { heads, packId } satisfies PreparedNodeVersionReceipt;
 }
@@ -116,11 +123,7 @@ async function advanceLocalSourceRevision(port: DbPort, sourceDeviceId: string) 
   );
   if (!proof) throw new Error('node_version_local_proof_missing');
   const epoch = proof.library_epoch;
-  const [sourceRevision] = await port.query<{ proof_revision: number }>(
-    `SELECT proof_revision FROM node_version_local_source_revisions
-     WHERE source_device_identity_key = ?`, [sourceDeviceId]
-  );
-  const revision = (sourceRevision?.proof_revision ?? 0) + 1;
+  const revision = proof.proof_revision + 1;
   if (!Number.isSafeInteger(revision)) throw new Error('node_version_proof_revision_exhausted');
   await port.run(
     `INSERT INTO node_version_local_proof_state (singleton_id, library_epoch, proof_revision)
@@ -138,12 +141,21 @@ async function advanceLocalSourceRevision(port: DbPort, sourceDeviceId: string) 
 
 async function resolveHead(port: DbPort, head: IncomingHead): Promise<NodeVersionPackResult> {
   const common = { objectId: head.object_id, sentVersionId: head.sent_version_id };
+  if (head.incoming_tombstone) {
+    const [accepted] = await port.query(`SELECT 1 FROM node_sync_tombstones tomb JOIN node_sync_versions version
+      ON version.version_id = tomb.version_id AND version.object_id = tomb.node_id
+      WHERE tomb.node_id = ? AND tomb.version_id = ? AND version.body_text IS NOT NULL`,
+    [head.object_id, head.sent_version_id]);
+    return { ...common, baseVersionId: accepted ? head.sent_version_id : null, result: accepted ? 'applied' : 'not_applied' };
+  }
   const [tombstone] = await port.query<DbRow>(
     'SELECT 1 AS blocked FROM node_sync_tombstones WHERE node_id = ?', [head.object_id]
   );
   if (head.tombstoned || tombstone) return { ...common, baseVersionId: null, result: 'blocked' };
-  const baseIds = head.previous_version_id
-    ? await loadMergeBaseCandidates(port, head.previous_version_id, head.sent_version_id)
+  const [current] = await port.query<{ current_version_id: string }>(
+    'SELECT current_version_id FROM nodes WHERE id = ?', [head.object_id]);
+  const baseIds = current?.current_version_id
+    ? await loadMergeBaseCandidates(port, current.current_version_id, head.sent_version_id)
     : [head.sent_version_id];
   const baseId = baseIds.length === 1 ? baseIds[0] : null;
   if (!baseId) return { ...common, baseVersionId: null, result: 'not_applied' };

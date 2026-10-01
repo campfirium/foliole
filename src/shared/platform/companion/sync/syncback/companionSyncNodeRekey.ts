@@ -14,7 +14,10 @@ const NODE_REFERENCES: Array<readonly [string, string]> = [
   ['node_sync_conflicts', 'object_id'],
   ['node_text_alternatives', 'node_id'],
   ['node_view_state', 'node_id'],
-  ['node_attachments', 'node_id']
+  ['node_version_device_bases', 'object_id'],
+  ['node_version_outbound_holds', 'object_id'],
+  ['node_version_outbound_payload_holds', 'object_id'],
+  ['node_version_local_holds', 'object_id']
 ];
 
 export async function rekeyNodeObject(

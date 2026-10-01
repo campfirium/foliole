@@ -34,8 +34,7 @@ async function loadNextStateSeq(port: DbPort) {
 
 function normalizedObjectTypes(options: SyncPackStateRowsApplyOptions) {
   return options.objectTypes ?? [
-    'attachment',
-    'external_folder',
+      'external_folder',
     'import_source',
     'node',
     'external_document',
@@ -53,6 +52,13 @@ function applyableStateRowsSql(options: SyncPackStateRowsApplyOptions, objectTyp
   return `SELECT object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at ` +
     `FROM ${buildSyncPackApplyableRowsSql(options)} applyable_state ` +
     `WHERE object_type IN (${objectTypes.map(() => '?').join(', ')}) ` +
+    `AND (deleted_at IS NOT NULL OR (` +
+    `(object_type <> 'node_reading' OR EXISTS (SELECT 1 FROM main.node_reading entity ` +
+    `WHERE entity.node_id = applyable_state.object_id)) AND ` +
+    `(object_type <> 'node_review' OR EXISTS (SELECT 1 FROM main.node_review entity ` +
+    `WHERE entity.node_id = applyable_state.object_id)) AND ` +
+    `(object_type <> 'import_source' OR EXISTS (SELECT 1 FROM main.import_sources entity ` +
+    `WHERE entity.source_fingerprint = applyable_state.object_id)))) ` +
     `AND (object_type <> 'node_review' OR NOT EXISTS (` +
     `SELECT 1 FROM node_review local_review ` +
     `LEFT JOIN sync_object_state local_state ON local_state.object_type = 'node_review' ` +

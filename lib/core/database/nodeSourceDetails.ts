@@ -1,5 +1,6 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { loadNodeBodyResolution, resolveNodeBody, type NodeBodyRow } from './nodeBodyResolution.js';
+import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 
 interface ImportSourceRow extends DatabaseRow {
   first_imported_at: string;
@@ -118,12 +119,7 @@ function readImportSource(driver: DatabaseDriver, nodeId: string) {
          attachment.pdf_index_status,
          attachment.pdf_indexed_at
        FROM import_sources
-       LEFT JOIN node_attachments node_attachment
-         ON node_attachment.node_id = import_sources.latest_node_id
-        AND node_attachment.role = 'reference'
-       LEFT JOIN attachments attachment
-         ON attachment.id = node_attachment.attachment_id
-        AND attachment.mime_type = 'application/pdf'
+       LEFT JOIN (${NODE_PDF_RESOURCES_SQL}) attachment ON attachment.node_id = import_sources.latest_node_id
        WHERE latest_node_id = ?
        ORDER BY CASE WHEN lower(source_kind) = 'pdf' THEN 0 ELSE 1 END, last_imported_at DESC
        LIMIT 1`,
@@ -189,14 +185,9 @@ function readPdfPageDimensions(driver: DatabaseDriver, nodeId: string) {
        pdf_page_text.page,
        pdf_page_text.page_width,
        pdf_page_text.page_height
-     FROM node_attachments
-     INNER JOIN attachments
-       ON attachments.id = node_attachments.attachment_id
-      AND attachments.mime_type = 'application/pdf'
-     INNER JOIN pdf_page_text
-       ON pdf_page_text.attachment_id = attachments.id
-     WHERE node_attachments.node_id = ?
-       AND node_attachments.role = 'reference'
+     FROM (${NODE_PDF_RESOURCES_SQL}) resource
+     INNER JOIN pdf_page_text ON pdf_page_text.attachment_id = resource.id
+     WHERE resource.node_id = ?
      ORDER BY pdf_page_text.page ASC`,
     [nodeId]
   );

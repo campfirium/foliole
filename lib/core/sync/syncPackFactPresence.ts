@@ -95,7 +95,7 @@ export async function probeSyncPackFactPresence(
     if (!held) continue;
     const local = describeVersionFact(held);
     if (local.version_id !== fact.version_id || local.object_id !== fact.object_id ||
-        local.parent_version_id !== fact.parent_version_id || local.host_name !== fact.host_name ||
+        local.host_name !== fact.host_name ||
         local.created_at !== fact.created_at || local.content_hash !== fact.content_hash ||
         local.snapshot_metadata !== fact.snapshot_metadata ||
         (fact.body_hash !== null && local.body_hash !== null &&
@@ -110,11 +110,9 @@ export async function probeSyncPackFactPresence(
        WHERE version_id = ? AND (ordinal = ? OR parent_version_id = ?)`,
       [fact.version_id, fact.ordinal, fact.parent_version_id]
     );
-    if (rows.some((row) => row.ordinal !== fact.ordinal ||
-        row.parent_version_id !== fact.parent_version_id)) {
-      throw new Error(`sync_pack_node_version_parent_mismatch:${fact.version_id}`);
-    }
-    if (rows.length > 0) claims.parents.push(parentFactKey(fact));
+    // A contracted relation must be validated with the complete incoming DAG at apply.
+    if (rows.some((row) => row.ordinal === fact.ordinal &&
+        row.parent_version_id === fact.parent_version_id)) claims.parents.push(parentFactKey(fact));
   }
   for (const fact of page.reviews) {
     const [held] = await port.query<SyncPackReviewLogRecord>(

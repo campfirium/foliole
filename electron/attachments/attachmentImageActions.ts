@@ -9,7 +9,7 @@ import type {
 } from '../../lib/platform/nativeUtilityContract.js';
 import { electronClipboardAccess } from '../clipboardAccess.js';
 import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
-import { findAttachmentRecordById } from '../database/attachments.js';
+import { loadNodeResourceReferences } from '../database/nodeResources.js';
 
 import { resolveAttachmentFile } from './resourceResolver.js';
 
@@ -66,7 +66,8 @@ export async function copyAttachmentImageToClipboard(attachmentId: string): Prom
 
 export async function exportAttachmentImage(
   attachmentId: string,
-  window: BrowserWindow | null
+  window: BrowserWindow | null,
+  nodeId?: string
 ): Promise<NativeExportAttachmentImageResult> {
   const description = loadAttachmentResourceDescription(attachmentId);
   if (!description) return { path: null, status: 'not_found' };
@@ -75,8 +76,9 @@ export async function exportAttachmentImage(
     return { path: null, status: resolved.status };
   }
 
-  const record = findAttachmentRecordById(attachmentId);
-  const defaultFileName = resolveFallbackFileName(attachmentId, record?.originalName ?? null, resolved.mimeType);
+  const originalName = nodeId ? loadNodeResourceReferences(nodeId)
+    .find((reference) => reference.storage_key === description.storageKey && reference.role === 'image')?.original_name : null;
+  const defaultFileName = resolveFallbackFileName(description.attachmentId, originalName ?? null, resolved.mimeType);
   const dialogOptions = {
     buttonLabel: 'Save image',
     defaultPath: defaultFileName,

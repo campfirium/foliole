@@ -7,11 +7,13 @@ import {
   ANDROID_COMPANION_MIGRATION_SCHEMA_STATEMENTS as STATEMENTS
 } from './androidCompanionMigrationSchemaStatements.js';
 import { retireCompanionAttachmentManifest } from './attachmentManifestRetirementMigration.js';
+import { retireCompanionAttachmentRegistry } from './companionAttachmentRegistryRetirement.js';
 import { migrateCompanionAuthorHostSnapshots } from './companionAuthorHostSnapshotsMigration.js';
 import {
   addColumnIfMissing,
   backfillNodeAttachments,
   installCompanionSchema,
+  installLegacyAttachmentSchema,
   migrateExternalFolderOwnership,
   retireLegacySyncGroupState,
   replaceLegacySyncPushAck,
@@ -24,6 +26,9 @@ import { migrateCompanionParentChildOrder } from './companionParentChildOrderMig
 import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwnershipMigration.js';
 import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigration.js';
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
+import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
+import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
+import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 
 type MigrationAction = (typeof ANDROID_COMPANION_MIGRATION_PLAN)[number]['actions'][number];
 type RepairName = keyof typeof REPAIRS;
@@ -57,6 +62,7 @@ export async function migrateCompanionDatabase(
   targetVersion: number,
   beforeVersionCommit?: () => void | Promise<void>
 ) {
+  if (currentVersion < 56) await installLegacyAttachmentSchema(db);
   for (const step of ANDROID_COMPANION_MIGRATION_PLAN) {
     if (currentVersion >= step.beforeVersion) continue;
     for (const action of step.actions) {
@@ -68,6 +74,10 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 37 && targetVersion >= 37) await retireCompanionAttachmentManifest(db);
   if (currentVersion < 39 && targetVersion >= 39) await migrateCompanionWatchedDisplayPath(db);
   if (currentVersion < 38 && targetVersion >= 38) await migrateCompanionWatchedBindings(db);
+  if (currentVersion < 56 && targetVersion >= 56) await retireCompanionAttachmentRegistry(db);
+  if (currentVersion < 57 && targetVersion >= 57) await migrateCompanionDynamicNodeVersionChains(db);
+  if (currentVersion < 58 && targetVersion >= 58) await repairCompanionSyncStateEntities(db);
+  if (currentVersion < 59 && targetVersion >= 59) await migrateCompanionIndependentNodeVersions(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

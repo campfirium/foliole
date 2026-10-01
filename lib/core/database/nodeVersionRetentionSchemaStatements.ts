@@ -1,4 +1,7 @@
 export const NODE_VERSION_RETENTION_SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS node_version_local_origins (
+    version_id TEXT PRIMARY KEY REFERENCES node_sync_versions(version_id) ON DELETE CASCADE
+  )`,
   `CREATE TABLE IF NOT EXISTS node_version_device_bases (
     group_id TEXT NOT NULL,
     device_identity_key TEXT NOT NULL,

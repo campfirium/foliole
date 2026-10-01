@@ -173,7 +173,7 @@ final class FolioleCompanionSyncGroupServer {
         String peer = authenticate(request);
         FolioleCompanionSyncGroupResources.Resource resource = snapshots.read(
             peer, snapshot -> FolioleCompanionSyncGroupResources.attachmentRange(
-                context, snapshot, query(request.path, "attachment_id"), query(request.path, "content_hash"),
+                context, query(request.path, "attachment_id"), query(request.path, "content_hash"), query(request.path, "storage_key"),
                 query(request.path, "offset"), query(request.path, "length")));
         if (resource == null) workgroupJson(request, output, 404, error("missing_file"));
         else FolioleCompanionWorkgroupHttp.writeBytes(context, config, request, output,

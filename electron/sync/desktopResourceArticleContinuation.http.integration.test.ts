@@ -9,7 +9,7 @@ import { openDatabaseConnection, type DatabaseConnection } from '../database/con
 import { mockedSyncPackBuilderAppDataDir, setupSyncPackBuilderTestLifecycle } from '../database/syncPackBuilderTestSupport.js';
 
 import { startAuthenticatedSyncHttp } from './companionLanAuthenticatedHttp.testSupport.js';
-import { openContinuationReceiver, prepareArticleContinuation, readArticleContinuationState,
+import { openContinuationReceiver, prepareArticleContinuation, prepareHundredResourceContinuation, readArticleContinuationState,
   receiverAttachmentPath, writeArticleContinuationEvidence } from './desktopResourceArticleContinuation.testSupport.js';
 import { markDesktopSyncGroupMemberStateReady,
   revokeDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
@@ -64,6 +64,9 @@ setupSyncPackBuilderTestLifecycle();
 it('retains applied article demand through missing body, missing image, and a cold receiver restart over real HTTP', async () => {
   const data = await prepareArticleContinuation(fixture.ids);
   let receiver = data.receiver;
+  // This scenario exercises unavailable retained text as well as unavailable resource bytes.
+  receiver.sqlite.exec(`UPDATE node_sync_versions SET body_text = NULL,
+    snapshot_json = json_set(snapshot_json, '$.content', NULL)`);
   publishAttachmentLibraryPathSnapshot({ assetsDir: data.sourceAssets, libraryScope: 'source' });
   markDesktopSyncGroupMemberStateReady(fixture.ids.receiver);
   const http = await startAuthenticatedSyncHttp({ sourceDeviceId: fixture.ids.source,
@@ -113,6 +116,45 @@ it('retains applied article demand through missing body, missing image, and a co
       bodyHash: data.hash, imageHashes: [data.first.hash, data.second.hash] });
   } finally {
     vi.restoreAllMocks();
+    receiver.sqlite.close();
+    await http.close();
+    revokeDesktopSyncGroupMemberStateReadiness(fixture.ids.receiver);
+  }
+}, 60_000);
+
+it('preserves 100 current references, transfers 99 available files, and resumes the missing file after restart', async () => {
+  const data = await prepareHundredResourceContinuation(fixture.ids);
+  let receiver = data.receiver;
+  publishAttachmentLibraryPathSnapshot({ assetsDir: data.sourceAssets, libraryScope: 'source' });
+  markDesktopSyncGroupMemberStateReady(fixture.ids.receiver);
+  const http = await startAuthenticatedSyncHttp({ sourceDeviceId: fixture.ids.source,
+    receiverDeviceId: fixture.ids.receiver });
+  const peer = { endpoint_url: http.origin, group_id: 'group', local_device_id: fixture.ids.receiver,
+    peer_device_id: fixture.ids.source, peer_device_name: 'Source', peer_platform: 'mac' };
+  const drain = () => fixture.routing!.run({ connection: receiver, assetsDir: data.receiverAssets },
+    () => drainDesktopSyncGroupResourceArticles(peer));
+  try {
+    await expect(drain()).rejects.toThrow('sync_group_resources_incomplete');
+    expect(await fs.readdir(data.receiverAssets)).toHaveLength(99);
+    for (const resource of data.resources.slice(0, 99)) {
+      expect(await hashResourceFile(receiverAttachmentPath(data.receiverAssets, resource.hash))).toBe(resource.hash);
+    }
+    expect((await fs.stat(data.existingPath)).mtimeMs).toBe(data.existingStat.mtimeMs);
+    expect(receiver.sqlite.prepare('SELECT data FROM content_blob_data WHERE hash=?').pluck().get(data.hash)).toEqual(data.body);
+    expect(data.body.toString().match(/asset:\/\//g)).toHaveLength(100);
+    expect(readArticleContinuationState(receiver).pending).toBe(1);
+    expect(receiver.sqlite.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments','node_attachments')").all()).toEqual([]);
+    const beforeRestart = readArticleContinuationState(receiver);
+    receiver.sqlite.close();
+    receiver = openContinuationReceiver(receiver.dbPath);
+    expect(readArticleContinuationState(receiver)).toEqual(beforeRestart);
+    await fs.writeFile(data.missing.sourcePath, data.missingBytes);
+    await expect(drain()).resolves.toBeUndefined();
+    expect(readArticleContinuationState(receiver).pending).toBe(0);
+    expect(await fs.readdir(data.receiverAssets)).toHaveLength(100);
+    expect(await hashResourceFile(receiverAttachmentPath(data.receiverAssets, data.missing.hash))).toBe(data.missing.hash);
+    expect(receiver.sqlite.pragma('integrity_check', { simple: true })).toBe('ok');
+  } finally {
     receiver.sqlite.close();
     await http.close();
     revokeDesktopSyncGroupMemberStateReadiness(fixture.ids.receiver);

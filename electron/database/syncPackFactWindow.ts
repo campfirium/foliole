@@ -1,6 +1,7 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 
 import { assertSyncPackPreloadBudget } from './syncPackPreloadBudget.js';
+import { assertSyncPackSurfaceRowBudget } from './syncPackSurfaceRowBudget.js';
 
 interface SourceState extends DatabaseRow {
   state_seq: number;
@@ -57,6 +58,7 @@ export function selectDesktopSyncPackFactWindow(driver: DatabaseDriver, args: {
 function fitsBatch(driver: DatabaseDriver, fromStateSeq: number, toStateSeq: number) {
   try {
     assertSyncPackPreloadBudget(driver, fromStateSeq, toStateSeq, BATCH_BUDGET);
+    assertSyncPackSurfaceRowBudget(driver, fromStateSeq, toStateSeq, BATCH_BUDGET.applyRows);
     return true;
   } catch (error) {
     if (!(error instanceof Error)) throw error;

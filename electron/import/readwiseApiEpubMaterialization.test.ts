@@ -15,6 +15,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -56,8 +57,11 @@ it('creates one body topic per marked heading and places annotations across ever
     .toMatchObject({ sourceHash: expect.stringMatching(/^[0-9a-f]{64}$/u), version: 1 });
   const descendants = driver.queryAll<{ content: string; id: string; parent_id: string; title: string }>(
     `WITH RECURSIVE tree AS (
-       SELECT id, parent_id, title, content FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
-       UNION ALL SELECT n.id, n.parent_id, n.title, n.content FROM nodes n JOIN tree ON n.parent_id = tree.id
+       SELECT n.id, n.parent_id, n.title, ${buildNodeBodyContentSql()} AS content
+       FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+       WHERE n.parent_id = ? AND n.deleted_at IS NULL
+       UNION ALL SELECT n.id, n.parent_id, n.title, ${buildNodeBodyContentSql()} AS content
+       FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash JOIN tree ON n.parent_id = tree.id
        WHERE n.deleted_at IS NULL
      ) SELECT * FROM tree`, [source.latest_node_id]
   );
@@ -168,7 +172,7 @@ it('keeps a legacy flat API EPUB until an explicit structure re-import', () => {
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%'"))
     .toEqual({ count: 0 });
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE title = 'Book'")?.content)
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE title = 'Book'`)?.content)
     .toBe('Legacy flat body');
 
   materializeReadwiseApiDocument({
@@ -176,7 +180,7 @@ it('keeps a legacy flat API EPUB until an explicit structure re-import', () => {
   });
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%'"))
     .toEqual({ count: 3 });
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE title = 'Book'")?.content)
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE title = 'Book'`)?.content)
     .toContain('Front matter');
 });
 
@@ -198,7 +202,7 @@ it('retires obsolete generated topics when an explicit rebuild has no marked hea
   expect(driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%' AND deleted_at IS NULL"
   )).toEqual({ count: 0 });
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE title = 'Book'")?.content)
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE title = 'Book'`)?.content)
     .toContain('Ordinary EPUB body');
 });
 

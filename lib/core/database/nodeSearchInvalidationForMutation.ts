@@ -4,7 +4,6 @@ import {
   enqueueWorkspaceSearchInvalidationForNodeIds,
   enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds
 } from './searchIndexInvalidations.js';
-import { advanceWorkspaceSearchSourceRevision } from './workspaceSearchSourceState.js';
 
 interface ExistingNodePathRow {
   [column: string]: unknown;
@@ -25,17 +24,15 @@ export function prepareNodeSearchInvalidationForUpsert(
     input.nodeId
   ]);
   return () => {
-    if (options.workspaceInvalidation === 'defer') {
-      advanceWorkspaceSearchSourceRevision(driver);
-    } else {
-      enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId]);
-    }
+    enqueueWorkspaceSearchInvalidationForNodeIds(driver, [input.nodeId], {
+      requestProcessing: options.workspaceInvalidation !== 'defer'
+    });
     if (existingPathRow && (existingPathRow.parent_id !== input.parentNodeId || existingPathRow.title !== input.title)) {
       enqueueWorkspaceSearchPathInvalidationForSubtreeRootIds(
         driver,
         [input.nodeId],
         options.workspaceInvalidation === 'defer'
-          ? { advanceSourceRevision: false, markSourceRevisionQueued: false }
+          ? { advanceSourceRevision: false, requestProcessing: false }
           : {}
       );
     }

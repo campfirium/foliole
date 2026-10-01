@@ -99,7 +99,7 @@ beforeEach(() => {
   });
 });
 
-it('reports incomplete and failed incremental coverage without hiding existing results', () => {
+it('reports unfinished incremental coverage as pending even after an unsuccessful attempt', () => {
   mocks.readWorkspaceSearchSidecarRebuildStatus.mockReturnValue({
     status: 'ready',
     strategy: 'word-based',
@@ -115,13 +115,13 @@ it('reports incomplete and failed incremental coverage without hiding existing r
 
   mocks.readSearchIndexInvalidationBacklog.mockReturnValue({
     failed_count: 1,
-    pending_count: 0,
+    pending_count: 1,
     running_count: 0,
     total_count: 1
   });
   expect(loadSearchIndexRebuildStatus()).toEqual({
     error: 'Some search data could not be updated.',
-    status: 'failed',
+    status: 'rebuilding',
     strategy: 'word-based'
   });
 });

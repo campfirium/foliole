@@ -3,21 +3,21 @@ import type { DbPort } from './dbPort.js';
 // Materialized Sync Pack data is removed before the winning full pack is applied.
 // The caller owns a transaction that covers both operations and the restore receipt.
 const CLEAR_TABLES = [
-  'node_version_outbound_payload_holds', 'node_version_outbound_holds',
+  'node_version_local_origins', 'node_version_outbound_payload_holds', 'node_version_outbound_holds',
   'node_version_local_holds', 'node_version_pack_receipts',
   'node_version_inbound_receipts', 'node_version_device_bases',
   'node_version_device_revisions', 'node_version_local_source_revisions',
   'sync_delivery_receipts', 'sync_push_ack', 'sync_peer_cursors',
   'sync_pack_receive_progress', 'sync_pack_resource_articles',
   'sync_pack_dependency_rows', 'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims',
-  'sync_change_log', 'node_attachments', 'node_text_alternatives',
+  'sync_change_log', 'node_text_alternatives',
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',
   'node_reading_host_state', 'node_view_state', 'node_order', 'review_log',
   'parent_child_order', 'pdf_page_text', 'external_documents',
   'external_search_folders', 'import_sources', 'watched_folder_bindings',
   'sync_objects', 'sync_object_state', 'content_blob_data', 'content_blobs',
-  'attachments'
+  'pdf_index_state'
 ] as const;
 
 export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: string) {

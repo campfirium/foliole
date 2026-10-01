@@ -1,3 +1,4 @@
+import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
@@ -8,6 +9,7 @@ const COVER_PREPARATION_BUDGET_MS = 30_000;
 
 export interface PreparedReadwiseApiEpubCover {
   attachmentIds: string[];
+  resourceReferences?: NodeResourceReference[];
   imageSources?: Record<string, string>;
   degradedReason: string | null;
   text: string;
@@ -43,6 +45,6 @@ export async function prepareReadwiseApiEpubCover(
     return Boolean(parseAssetMarkdownUrl(target));
   });
   return usable
-    ? { attachmentIds: localized.attachmentIds, imageSources: localized.imageSources, degradedReason: null, text: localized.text }
+    ? { resourceReferences: localized.resourceReferences, attachmentIds: localized.attachmentIds, imageSources: localized.imageSources, degradedReason: null, text: localized.text }
     : { attachmentIds: [], degradedReason: 'Reader EPUB cover unavailable.', text: '' };
 }

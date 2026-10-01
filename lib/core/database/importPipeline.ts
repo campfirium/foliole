@@ -23,6 +23,7 @@ import {
 import { updateExistingReadwiseNode } from './importReadwiseHighlightBackfill.js';
 
 export interface RunPreparedImportOptions {
+  prepareDeletionVersions?: (nodeIds: string[], deletedAt: string) => void;
   ambiguityPolicy?: 'first' | 'unique';
   forceUpdateExistingNodeId?: string;
   preserveExistingHighlightNodes?: boolean;
@@ -38,6 +39,7 @@ function persistImportedHighlightNodes(input: {
   prepared: PreparedImportRecord;
   preserveExistingHighlightNodes: boolean;
   resetImportedStructure: boolean;
+  prepareDeletionVersions?: RunPreparedImportOptions['prepareDeletionVersions'];
   matchedAnchoredHighlights: Array<PreparedImportHighlightRecord | ReturnType<typeof applyImportedHighlightAnchors>['highlights'][number]>;
 }) {
   if (input.preserveExistingHighlightNodes) return;
@@ -46,6 +48,7 @@ function persistImportedHighlightNodes(input: {
       driver: input.driver,
       highlights: input.matchedAnchoredHighlights as ReturnType<typeof applyImportedHighlightAnchors>['highlights'],
       importedAt: input.importedAt,
+      ...(input.prepareDeletionVersions ? { prepareDeletionVersions: input.prepareDeletionVersions } : {}),
       parentNodeId: input.nodeId,
       parentContent: input.anchoredContent
     });
@@ -182,6 +185,7 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     driver,
     duplicateSemantic,
     importedAt: baseRecord.importedAt,
+    ...(options.prepareDeletionVersions ? { prepareDeletionVersions: options.prepareDeletionVersions } : {}),
     matchedAnchoredHighlights: anchoredImport.highlights,
     nodeId,
     prepared,

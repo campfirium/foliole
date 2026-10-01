@@ -1,4 +1,5 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { NODE_PDF_RESOURCES_SQL } from '../../lib/core/database/nodePdfResourcesSql.js';
 import { searchPdfDocumentText } from '../../lib/core/pdf/pdfDocumentTextSearch.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -22,12 +23,9 @@ function findPdfAttachment(nodeId: string) {
          WHEN selected.anchor_link IS NOT NULL AND selected.parent_id IS NOT NULL THEN selected.parent_id
          ELSE selected.id
        END
-     INNER JOIN node_attachments node_attachment
-       ON node_attachment.node_id = source.id AND node_attachment.role = 'reference'
-     INNER JOIN attachments attachment
-       ON attachment.id = node_attachment.attachment_id AND attachment.mime_type = 'application/pdf'
+     INNER JOIN (${NODE_PDF_RESOURCES_SQL}) attachment ON attachment.node_id = source.id
      WHERE selected.id = ?
-     ORDER BY attachment.created_at ASC
+     ORDER BY attachment.storage_key ASC
      LIMIT 1`,
     [nodeId]
   );

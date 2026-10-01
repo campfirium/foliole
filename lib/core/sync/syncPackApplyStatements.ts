@@ -104,6 +104,12 @@ export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {
 
 function incomingNodeColumnExpression(column: SyncPackNodeColumn, options: SyncPackNodeApplyOptions) {
   const incomingColumns = options.incomingNodeColumns;
+  if (column === 'content') {
+    return `CASE WHEN incoming.content = '' AND incoming.body_blob_hash IS NOT NULL THEN ` +
+      `COALESCE((SELECT existing.content FROM main.nodes existing WHERE existing.id = incoming.id ` +
+      `AND existing.body_blob_hash = incoming.body_blob_hash AND existing.current_version_id = incoming.current_version_id), '') ` +
+      `ELSE incoming.content END`;
+  }
   if (NODE_PROVENANCE_COLUMNS.includes(column as typeof NODE_PROVENANCE_COLUMNS[number])) {
     const hasCompleteColumns = !incomingColumns
       || NODE_PROVENANCE_COLUMNS.every((provenanceColumn) => incomingColumns.includes(provenanceColumn));
@@ -117,24 +123,6 @@ function incomingNodeColumnExpression(column: SyncPackNodeColumn, options: SyncP
     return `incoming.${column}`;
   }
   return `(SELECT existing.${column} FROM main.nodes existing WHERE existing.id = incoming.id)`;
-}
-
-export function buildSyncPackNodeAttachmentDeleteSql(options: SyncPackApplyableRowsOptions = {}) {
-  return `DELETE FROM main.node_attachments WHERE node_id IN (` +
-    `SELECT object_id FROM ${buildSyncPackApplyableRowsSql({ ...options, objectType: 'node' })})`;
-}
-
-export function buildSyncPackNodeAttachmentInsertSql(options: SyncPackApplyableRowsOptions = {}) {
-  const alias = incomingAlias(options);
-  return `INSERT OR REPLACE INTO main.node_attachments (node_id, attachment_id, role) ` +
-    `SELECT incoming.node_id, incoming.attachment_id, incoming.role FROM ${alias}.node_attachments incoming ` +
-    `INNER JOIN main.attachments attachment ON attachment.id = incoming.attachment_id ` +
-    `WHERE incoming.node_id IN (SELECT object_id FROM ${buildSyncPackApplyableRowsSql({
-      excludedNodeIds: options.excludedNodeIds,
-      incomingAlias: alias,
-      objectType: 'node',
-      sourcePeerId: options.sourcePeerId
-    })})`;
 }
 
 export function buildSyncPackContentBlobUpsertSql(options: SyncPackApplyableRowsOptions = {}) {

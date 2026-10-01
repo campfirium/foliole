@@ -24,7 +24,7 @@ vi.mock('electron', () => ({
   systemPreferences: { getUserDefault: vi.fn(), subscribeNotification: vi.fn() }
 }));
 
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { updateLibraryPathSetting } from '../ipc/libraryPaths.js';
@@ -44,6 +44,18 @@ import {
 import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 
 let tempRoot = '';
+
+it('keeps an existing mirror intact when its hashed article body is unavailable', async () => {
+  seedArticleWithLocatorHighlight();
+  await exportArticleToMirror('node-article');
+  const outputPath = path.join(tempRoot, 'Library', 'Mirror', 'Mirror Export Demo.md');
+  const before = await fs.readFile(outputPath, 'utf8');
+  const { driver } = openDatabaseConnection();
+  driver.execute(`DELETE FROM content_blob_data WHERE hash =
+    (SELECT body_blob_hash FROM nodes WHERE id = 'node-article')`);
+  await expect(exportArticleToMirror('node-article')).rejects.toThrow('node_body_unavailable:node-article');
+  await expect(fs.readFile(outputPath, 'utf8')).resolves.toBe(before);
+});
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-export-article-mirror-'));

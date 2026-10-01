@@ -1,5 +1,6 @@
 import type Database from 'better-sqlite3';
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { encodeSyncPackFactClaims, probeSyncPackFactPresence,
   type SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
 import type { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -77,5 +78,5 @@ export function mutateSourceDuringFrozenRound() {
 }
 
 export function mutationReceiverRows(target: Database.Database) {
-  return target.prepare('SELECT id, current_version_id, content, deleted_at FROM nodes ORDER BY id').all();
+  return target.prepare(`SELECT id, current_version_id, ${buildNodeBodyContentSql('nodes')} AS content, deleted_at FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash ORDER BY id`).all();
 }

@@ -3,7 +3,7 @@ import { dependencyManifestFields, type SyncPackDependencyManifest } from './syn
 export type SyncPackTableName =
   | 'content_blobs'
   | 'external_documents'
-  | 'node_attachments'
+  | 'node_version_peer_heads'
   | 'node_sync_versions'
   | 'node_sync_tombstones'
   | 'node_sync_version_parents'
@@ -17,13 +17,13 @@ export type SyncPackTableName =
 export const SYNC_PACK_TABLE_NAMES: SyncPackTableName[] = [
   'sync_groups',
   'sync_group_devices',
+  'node_version_peer_heads',
   'sync_object_state',
   'sync_objects',
   'nodes',
   'node_sync_versions',
   'node_sync_tombstones',
   'node_sync_version_parents',
-  'node_attachments',
   'external_documents',
   'content_blobs',
   'review_log'
@@ -41,7 +41,6 @@ export const SYNC_PACK_OBJECT_TYPES = new Set<SyncPackObjectType>(
 );
 
 export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
-  'attachment',
   'external_folder',
   'import_source',
   'node_open_state',

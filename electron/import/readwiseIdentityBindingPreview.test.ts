@@ -33,6 +33,8 @@ vi.mock('./readwiseApiConnectionState.js', async () => {
 });
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
@@ -73,7 +75,8 @@ it('previews and confirms a stable Topic and unedited highlight without changing
     remote_document_id: 'document-1', remote_provider: 'readwise',
     source_location: 'Sample.md', source_locator: '/historical/Sample.md'
   });
-  expect(openDatabaseConnection().driver.queryOne(`SELECT content, anchor_link FROM nodes WHERE id='highlight-topic'`))
+  expect(openDatabaseConnection().driver.queryOne(`SELECT ${buildNodeBodyContentSql()} AS content, n.anchor_link FROM nodes n
+    LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id='highlight-topic'`))
     .toEqual({ anchor_link: '{"origin":"imported"}', content: 'Exact highlight text.' });
 });
 
@@ -105,6 +108,9 @@ async function seedSource() {
     VALUES ('topic-1',NULL,'topic','Sample',0,'Exact highlight text.',NULL,'old','old'),
       ('highlight-topic','topic-1','topic','Exact highlight text.',0,'Exact highlight text.',
        '{"origin":"imported"}','old','old')`);
+  for (const nodeId of ['topic-1', 'highlight-topic']) writeNodeBody({
+    driver, nodeId, title: 'Sample', content: 'Exact highlight text.', updatedAt: 'old'
+  });
   driver.execute(`INSERT INTO desktop_sources (source_ref,source_type,config_ref,host_name,host_platform,
     root_path,path_flavor,type_settings_json,created_at,updated_at) VALUES
     ('readwise:articles','readwise','articles','desktop-test','darwin',?,'posix',?,'old','old')`,

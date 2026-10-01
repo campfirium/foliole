@@ -1,5 +1,5 @@
-import { attachmentStorageKeySql } from '../../lib/core/database/attachmentMetadataSql.js';
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import type { NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import {
   prepareReadwiseApiDocuments,
   stableReadwiseEpubNodeId
@@ -7,6 +7,7 @@ import {
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { registerNodeImageSources } from '../database/nodeImageSources.js';
+import { loadNodeResourceReferences } from '../database/nodeResources.js';
 import { flushNodeSyncVersion } from '../database/nodeSyncVersions.js';
 
 import { buildReadwiseApiEpubBookNodes } from './readwiseApiEpubBookTree.js';
@@ -80,7 +81,7 @@ export function buildReadwiseApiEpubBodyOverwrite(
   const root = before.get(target.nodeId);
   if (!root) throw new Error('readwise_body_repair_root_missing');
   const desired = [{
-    attachmentIds: referencedRootAttachmentIds(target.nodeId, root.content, images.rootAttachmentIds),
+    resourceReferences: retainedRootResources(target.nodeId, root.content, images.rootResourceReferences ?? []),
     imageSources: images.rootImageSources ?? {},
     content: rebuildRoot(root.content, target.title, images.rootBody),
     nodeId: target.nodeId,
@@ -90,7 +91,7 @@ export function buildReadwiseApiEpubBodyOverwrite(
     const nodeId = stableReadwiseEpubNodeId(target.connectionRef, target.documentId, node.key);
     const current = before.get(nodeId);
     if (!current) throw new Error(`readwise_body_repair_node_missing:${nodeId}`);
-    desired.push({ imageSources: node.imageSources ?? {}, attachmentIds: node.attachmentIds, content: node.content, nodeId, title: current.title });
+    desired.push({ imageSources: node.imageSources ?? {}, resourceReferences: node.resourceReferences ?? [], content: node.content, nodeId, title: current.title });
   }
   if (desired.length !== before.size) throw new Error('readwise_body_repair_node_scope_changed');
   return desired;
@@ -104,16 +105,10 @@ function rebuildRoot(current: string, title: string, body: string) {
   return [heading, cover, body, trailing].filter(Boolean).join('\n\n');
 }
 
-function referencedRootAttachmentIds(rootNodeId: string, content: string, bodyAttachmentIds: string[]) {
-  const rows = openDatabaseConnection().driver.queryAll<{
-    attachment_id: string;
-    storage_key: string;
-  }>(`SELECT na.attachment_id, ${attachmentStorageKeySql('a.id', 'a.mime_type')} AS storage_key FROM node_attachments na
-      JOIN attachments a ON a.id = na.attachment_id
-      WHERE na.node_id = ? AND na.role = 'image'`, [rootNodeId]);
-  const retained = rows.filter((row) => content.includes(`asset://${row.storage_key}`))
-    .map((row) => row.attachment_id);
-  return [...new Set([...retained, ...bodyAttachmentIds])];
+function retainedRootResources(rootNodeId: string, content: string, bodyResources: readonly NodeResourceReference[]) {
+  const retained = loadNodeResourceReferences(rootNodeId).filter((reference) =>
+    reference.role === 'image' && content.includes(`asset://${reference.storage_key}`));
+  return [...new Map([...retained, ...bodyResources].map((reference) => [reference.storage_key, reference])).values()];
 }
 
 function commitBodies(
@@ -131,7 +126,7 @@ function commitBodies(
       writeNodeBody({ content: item.content, driver, nodeId: item.nodeId, title: item.title, updatedAt: now });
       driver.execute(`UPDATE nodes SET last_modified_by_host_name = ?, sync_dirty = 1 WHERE id = ?`,
         [loadOrCreateDesktopHostName(now), item.nodeId]);
-      replaceReadwiseApiEpubImageLinks(item.nodeId, item.attachmentIds);
+      replaceReadwiseApiEpubImageLinks(item.nodeId, item.resourceReferences);
       registerNodeImageSources(item.nodeId, item.imageSources);
       flushNodeSyncVersion(item.nodeId, now);
     }

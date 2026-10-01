@@ -43,7 +43,8 @@ setupSyncPackBuilderTestLifecycle();
 
 type TestServer = Awaited<ReturnType<typeof startAuthenticatedSyncHttp>>;
 
-async function applyPages(server: TestServer, viewId: string, softDeleted = false) {
+async function applyPages(server: TestServer, { viewId, frontierStateSeq }: Awaited<ReturnType<typeof negotiateFactView>>,
+  softDeleted = false) {
   const targetPath = resolveSyncPackPath('multi-node-http-target.db');
   let target = new Database(targetPath);
   try {
@@ -69,7 +70,7 @@ async function applyPages(server: TestServer, viewId: string, softDeleted = fals
             hostName: 'receiver', sourcePeerId: ids.source, recordVersionReceipt: true,
             enqueueSearchInvalidations: false });
           if (!result.dependencyProgress) {
-            expect(result.toStateSeq).toBe(6);
+            expect(result.toStateSeq).toBe(frontierStateSeq);
             assertReceivedNodes(target, softDeleted);
             expect(staged).toEqual(['live-1', 'live-2']);
             break;

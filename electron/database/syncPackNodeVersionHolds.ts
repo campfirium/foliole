@@ -1,13 +1,13 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import type { SyncPackNodeVersionRow } from '../../lib/core/sync/syncPackNodeVersions.js';
 
-import type { NodePackRow } from './syncPackRows.js';
+import type { VersionHead } from './syncPackVersionHeads.js';
 
 export function stageDesktopSyncPackNodeHolds(args: {
   createdAt: string;
   driver: DatabaseDriver;
   fromPeerId: string;
-  nodes: NodePackRow[];
+  nodes: VersionHead[];
   packId: string;
   toPeerId: string;
   versions: SyncPackNodeVersionRow[];

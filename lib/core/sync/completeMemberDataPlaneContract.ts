@@ -4,7 +4,6 @@ import {
 } from '../../platform/syncProtocolContract.js';
 
 export const COMPLETE_MEMBER_SHARED_POLICY_KEYS = [
-  'attachment',
   'content_blobs',
   'external_document',
   'external_folder',

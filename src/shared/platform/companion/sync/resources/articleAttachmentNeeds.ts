@@ -1,4 +1,4 @@
-import { loadArticleAttachmentNeeds } from '../../../../../../lib/core/sync/articleAttachmentNeeds';
+import { loadNodeOwnedArticleResourceNeeds } from '../../../../../../lib/core/sync/nodeOwnedArticleResourceNeeds';
 import { syncCompanionContentBlobFromDesktop } from '../../../companionDesktopSyncContentBlobs';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 
@@ -15,5 +15,5 @@ export async function loadCompanionArticleAttachmentNeeds(endpointUrl: string, a
       await syncCompanionContentBlobFromDesktop(endpointUrl, row.hash).catch(() => undefined);
     }
   }
-  return owner.read((db) => loadArticleAttachmentNeeds(db, articleIds));
+  return owner.read((db) => loadNodeOwnedArticleResourceNeeds(db, articleIds));
 }

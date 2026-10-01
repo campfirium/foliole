@@ -2,12 +2,14 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import { CHAIN_HEAD_SQL } from '../../lib/core/sync/nodeVersionChainSql.js';
 import { SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES, type SyncPackDependencyTransfer,
   type SyncPackNodeDependencyObjectType } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import type { SyncPackFactClaims, SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { describeSyncPackDependencySource } from '../database/syncPackDependencySource.js';
 import { loadDesktopSyncPackFactIndex } from '../database/syncPackFactIndex.js';
+import { loadPresentSyncPackStateRows } from '../database/syncPackRows.js';
 import { createSyncPackSourceView, openSyncPackSourceView } from '../database/syncPackSourceView.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 
@@ -45,7 +47,7 @@ export async function releaseConfirmedCompanionDependencySession(groupId: string
     if (objectIds.length === 0) return;
     for (const objectId of objectIds) {
       const head = session.view.driver.queryOne<{ current_version_id: string }>(
-        'SELECT current_version_id FROM nodes WHERE id = ?', [objectId]);
+        CHAIN_HEAD_SQL, [objectId]);
       if (!head?.current_version_id) continue;
       const confirmed = driver.queryOne(`SELECT 1 FROM node_version_pack_receipts
         WHERE pack_id = ? AND object_id = ? AND group_id = ? AND device_identity_key = ?
@@ -129,11 +131,9 @@ export async function createCompanionDependencySession(args: {
     const index = loadDesktopSyncPackFactIndex(view.driver, { fromStateSeq: args.index.from_state_seq,
       frontierStateSeq: args.index.frontier_state_seq, sourceEpoch: args.index.source_epoch });
     if (index.index_id !== args.index.index_id) throw new Error('sync_pack_fact_index_changed');
-    const object = view.driver.queryOne<{ object_type: SyncPackNodeDependencyObjectType; object_id: string; state_seq: number }>(
-      `SELECT object_type, object_id, state_seq FROM sync_object_state
-       WHERE state_seq > ? AND state_seq <= ? AND object_type IN (${SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES.map(() => '?').join(', ')})
-         AND (deleted_at IS NULL OR object_type = 'node') ORDER BY state_seq, object_type LIMIT 1`,
-      [index.from_state_seq, index.to_state_seq, ...SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES]);
+    const selected = loadPresentSyncPackStateRows(view.driver, index.from_state_seq, index.to_state_seq)
+      .find((row) => SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES.some((type) => type === row.object_type));
+    const object = selected ? { ...selected, object_type: selected.object_type as SyncPackNodeDependencyObjectType } : null;
     if (!object) throw new Error('sync_pack_dependency_object_unavailable');
     const description = describeSyncPackDependencySource({ view, objectId: object.object_id,
       objectType: object.object_type, claims: args.claims, budget: { rows: 128, payloadBytes: 2 * 1024 * 1024 } });
@@ -160,7 +160,7 @@ function holdSourceFacts(session: CompanionDependencySession, view: ReturnType<t
     const objectIds = [...new Set(session.index.versions.map((version) => version.object_id))];
     for (const objectId of objectIds) {
       const head = view.driver.queryOne<{ current_version_id: string }>(
-        'SELECT current_version_id FROM nodes WHERE id = ?', [objectId]);
+        CHAIN_HEAD_SQL, [objectId]);
       if (!head?.current_version_id) continue;
       tx.execute(`INSERT INTO node_version_outbound_holds
         (pack_id, group_id, device_identity_key, object_id, version_id, created_at)

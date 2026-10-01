@@ -34,6 +34,7 @@ function scheduleFlushTimers() {
 function flushFromTimer() {
   void flushCoalescedWorkspaceSearchInvalidations().catch((error) => {
     appendMainProcessDiagnosticLog('search_index_invalidation_flush_failed', { error });
+    if (pendingWorkspaceNodeIds.size > 0) scheduleFlushTimers();
   });
 }
 

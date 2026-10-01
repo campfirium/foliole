@@ -54,14 +54,12 @@ async function prepareSource(root: string, size: number | 'formal') {
 
 const sizes: Array<number | 'formal'> = process.env.T267_ATTACHMENT_FIXTURE ? ['formal'] : [3, 300];
 it.each(sizes)('resumes authenticated HTTP in a new process after SIGKILL (fixture=%s)', async (mebibytes) => {
-  const driver = seedGroup();
+  seedGroup();
   const root = resolveSyncPackPath('http-worker');
   await fs.mkdir(root, { recursive: true });
-  const { hash, bytes, mimeType } = await prepareSource(root, mebibytes);
+  const { hash, bytes } = await prepareSource(root, mebibytes);
   const filePath = path.join(root, 'received.png');
   publishAttachmentLibraryPathSnapshot({ assetsDir: root, libraryScope: 'test-source' });
-  driver.execute(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    VALUES (?, 'source', ?, ?, 'now')`, [hash, mimeType, bytes]);
   markDesktopSyncGroupMemberStateReady('receiver');
   const http = await startAuthenticatedSyncHttp();
   try {
@@ -93,15 +91,13 @@ it.each(sizes)('resumes authenticated HTTP in a new process after SIGKILL (fixtu
 }, 150_000);
 
 it('completes a real slow HTTP transfer lasting more than sixty seconds', async () => {
-  const driver = seedGroup();
+  seedGroup();
   const root = resolveSyncPackPath('slow-http');
   await fs.mkdir(root, { recursive: true });
   const bytes = 3 * 1048576 + 17;
   const { hash } = await writeAttachmentFixture(root, bytes);
   const filePath = path.join(root, 'received.png');
   publishAttachmentLibraryPathSnapshot({ assetsDir: root, libraryScope: 'test-source' });
-  driver.execute(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    VALUES (?, 'source.png', 'image/png', ?, 'now')`, [hash, bytes]);
   markDesktopSyncGroupMemberStateReady('receiver');
   const http = await startAuthenticatedSyncHttp({ attachmentDelayMs: 17_000 });
   try {

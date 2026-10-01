@@ -3,9 +3,13 @@ import { promises as fs } from 'node:fs';
 
 import { expect } from 'vitest';
 
+import { resolveAttachmentFileForSync } from '../../../electron/attachments/resourceResolver.js';
+import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { loadNodeBodyResolution } from '../../../lib/core/database/nodeBodyResolution.js';
+import { loadNodeOwnedArticleResourceNeeds } from '../../../lib/core/sync/nodeOwnedArticleResourceNeeds.js';
 
-import type { SimulatorPeer } from './scope.js';
+import { LOCAL_ROOT_IDS_SQL } from './localRootRecords.js';
+import { inPeer, type SimulatorPeer } from './scope.js';
 
 export function defects(peer: SimulatorPeer) {
   const db = peer.sqlite;
@@ -27,11 +31,12 @@ export function defects(peer: SimulatorPeer) {
         FROM content_blob_data WHERE hash=n.body_blob_hash),n.content)))`).all()
   };
 }
-export function assertHealthy(peer: SimulatorPeer) {
+export function assertHealthy(peer: SimulatorPeer, existingGaps: readonly unknown[] = []) {
   const report = defects(peer);
   expect(report.integrity).toEqual([{ quick_check: 'ok' }]);
   expect(report.foreignKeys).toEqual([]);
-  expect(report.missingParents).toEqual([]);
+  const allowed = new Set(existingGaps.map((row) => JSON.stringify(row)));
+  expect(report.missingParents.filter((row) => !allowed.has(JSON.stringify(row)))).toEqual([]);
   expect(report.missingHeads).toEqual([]);
   expect(report.mismatchedHeads).toEqual([]);
 }
@@ -42,11 +47,19 @@ export function assertBody(peer: SimulatorPeer, content: string, id = 'topic', v
   const body = peer.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id=?').pluck().get(row.current_version_id);
   expect(body).toBe(content);
 }
-export function assertCompleted(peer: SimulatorPeer) {
+export async function assertCompleted(peer: SimulatorPeer, missingKeys: ReadonlySet<string> = new Set()) {
   const db = peer.sqlite;
   expect(db.prepare('SELECT * FROM sync_pack_receive_progress WHERE completed<>1 OR cursor_state_seq<>frontier_state_seq').all()).toEqual([]);
   expect(db.prepare('SELECT count(*) FROM sync_pack_dependency_rows').pluck().get()).toBe(0);
-  expect(db.prepare('SELECT count(*) FROM sync_pack_resource_articles').pluck().get()).toBe(0);
+  const pending = db.prepare('SELECT article_id FROM sync_pack_resource_articles').all() as { article_id: string }[];
+  if (pending.length) {
+    // Production retains an incomplete article batch until its remaining demands are available.
+    const demand = await loadNodeOwnedArticleResourceNeeds(createBetterSqliteDbPort(db), pending.map((row) => row.article_id));
+    expect(demand.unreadableArticleIds).toEqual([]);
+    const absent = demand.needs.filter((need) => inPeer(peer, () => resolveAttachmentFileForSync(need.storageKey).status !== 'ready'));
+    expect(absent.length).toBeGreaterThan(0);
+    expect(absent.filter((need) => !missingKeys.has(need.storageKey))).toEqual([]);
+  }
   const nodes = db.prepare('SELECT id FROM nodes WHERE deleted_at IS NULL AND body_blob_hash IS NOT NULL').all() as { id: string }[];
   for (const node of nodes) expect(loadNodeBodyResolution(peer.driver, node.id)?.status).toBe('resolved');
 }
@@ -64,7 +77,7 @@ export function state(peer: SimulatorPeer) {
 }
 export function stateSummary(peer: SimulatorPeer) {
   const tables = ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'node_text_alternatives',
-    'content_blob_data', 'attachments', 'sync_pack_dependency_rows', 'sync_delivery_receipts'];
+    'content_blob_data', 'sync_pack_dependency_rows', 'sync_delivery_receipts'];
   return { database: peer.dbPath, assets: peer.assets,
     counts: Object.fromEntries(tables.map((table) => [table,
       peer.sqlite.prepare(`SELECT count(*) FROM ${table}`).pluck().get()])),
@@ -79,19 +92,26 @@ export function addedDefects(before: ReturnType<typeof defects>, after: ReturnTy
 }
 export function graph(peer: SimulatorPeer) {
   return {
-    nodes: peer.sqlite.prepare(`SELECT id,kind,title,body_blob_hash,current_version_id,deleted_at
-      FROM nodes ORDER BY id`).all(),
+    nodes: peer.sqlite.prepare(`SELECT id,kind,title,body_blob_hash,current_version_id,deleted_at,resource_references
+      FROM nodes WHERE id NOT IN (${LOCAL_ROOT_IDS_SQL}) ORDER BY id`).all(),
     versions: peer.sqlite.prepare(`SELECT version_id,object_id,parent_version_id,content_hash
-      FROM node_sync_versions ORDER BY version_id`).all(),
-    parents: peer.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id,ordinal').all(),
+      FROM node_sync_versions WHERE object_id NOT IN (${LOCAL_ROOT_IDS_SQL}) ORDER BY version_id`).all(),
+    parents: peer.sqlite.prepare(`SELECT p.* FROM node_sync_version_parents p JOIN node_sync_versions v
+      ON v.version_id=p.version_id WHERE v.object_id NOT IN (${LOCAL_ROOT_IDS_SQL}) ORDER BY p.version_id,p.ordinal`).all(),
     alternatives: peer.sqlite.prepare(`SELECT node_id,source_version_id,body_text,status
-      FROM node_text_alternatives ORDER BY node_id,source_version_id`).all()
+      FROM node_text_alternatives WHERE node_id NOT IN (${LOCAL_ROOT_IDS_SQL}) ORDER BY node_id,source_version_id`).all()
   };
 }
-export async function assertResources(source: SimulatorPeer, target: SimulatorPeer) {
-  const blobs = source.sqlite.prepare('SELECT hash,data FROM content_blob_data ORDER BY hash').all() as { hash: string; data: Buffer }[];
-  for (const blob of blobs) expect(target.sqlite.prepare('SELECT data FROM content_blob_data WHERE hash=?').pluck().get(blob.hash)).toEqual(blob.data);
-  for (const name of await fs.readdir(source.assets)) {
+export async function assertResources(source: SimulatorPeer, target: SimulatorPeer, missingKeys: ReadonlySet<string> = new Set()) {
+  const ids = source.sqlite.prepare(`SELECT id FROM nodes WHERE deleted_at IS NULL AND id NOT IN (${LOCAL_ROOT_IDS_SQL})`).pluck().all() as string[];
+  for (const id of ids) expect(loadNodeBodyResolution(target.driver, id)).toEqual(loadNodeBodyResolution(source.driver, id));
+  const demand = await loadNodeOwnedArticleResourceNeeds(createBetterSqliteDbPort(source.sqlite), ids);
+  expect(demand.unreadableArticleIds).toEqual([]);
+  for (const { storageKey: name } of demand.needs) {
+    if (inPeer(source, () => resolveAttachmentFileForSync(name).status !== 'ready')) {
+      expect(missingKeys.has(name)).toBe(true);
+      continue;
+    }
     const sourceBytes = await fs.readFile(`${source.assets}/${name}`);
     const targetBytes = await fs.readFile(`${target.assets}/${name}`);
     expect(createHash('sha256').update(targetBytes).digest('hex')).toBe(createHash('sha256').update(sourceBytes).digest('hex'));

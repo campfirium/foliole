@@ -1,4 +1,5 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { projectNodeResourceLinks } from '../../lib/core/database/nodeResourceReferences.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -22,6 +23,7 @@ interface SyncNodeRow extends DatabaseRow {
   id: string;
   image_regions: string | null;
   image_sources: string | null;
+  resource_references: string;
   is_title_manual: number;
   kind: string;
   opening_text: string | null;
@@ -36,11 +38,6 @@ interface SyncNodeRow extends DatabaseRow {
   version_created_at: string | null;
   version_id: string | null;
   virtual_filter: string | null;
-}
-
-interface NodeAttachmentRefRow extends DatabaseRow {
-  attachment_id: string;
-  role: string;
 }
 
 interface NodeSyncVersionParentRow extends DatabaseRow {
@@ -66,16 +63,6 @@ function listDirectParentVersionIds(versionId: string | null, fallbackParentId: 
   return parentId ? [parentId] : [];
 }
 
-function listNodeAttachmentRefs(nodeId: string) {
-  return openDatabaseConnection().driver.queryAll<NodeAttachmentRefRow>(
-    `SELECT attachment_id, role
-     FROM node_attachments
-     WHERE node_id = ?
-     ORDER BY attachment_id ASC, role ASC`,
-    [nodeId]
-  );
-}
-
 function listAncestorVersionIds(versionId: string | null, parentVersionId: string | null = null) {
   if (!versionId) return parentVersionId ? [parentVersionId] : [];
   const ancestors: string[] = [];
@@ -94,7 +81,7 @@ function listAncestorVersionIds(versionId: string | null, parentVersionId: strin
 function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
   return {
     anchor_link: row.anchor_link,
-    attachments: listNodeAttachmentRefs(row.id),
+    attachments: projectNodeResourceLinks(row.resource_references),
     body_blob_hash: row.body_blob_hash,
     content: row.content,
     created_at: row.created_at,
@@ -107,6 +94,7 @@ function fallbackSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
     id: row.id,
     image_regions: row.image_regions,
     image_sources: row.image_sources,
+    resource_references: row.resource_references,
     is_title_manual: row.is_title_manual === 1,
     kind: row.kind,
     opening_text: row.opening_text,
@@ -170,6 +158,7 @@ const SYNC_NODE_SELECT_COLUMNS = `
   n.anchor_link,
   n.image_regions,
   n.image_sources,
+  n.resource_references,
   n.current_version_id,
   n.created_at,
   n.updated_at,

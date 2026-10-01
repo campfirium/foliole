@@ -1,3 +1,4 @@
+import type { NodeResourceReference } from '../database/nodeResourceReferences.js';
 export const IMPORT_PROVIDER_DESKTOP_TEXT_FILE = 'desktop_text_file';
 
 export type ImportProvider = typeof IMPORT_PROVIDER_DESKTOP_TEXT_FILE;
@@ -42,7 +43,7 @@ export interface PreparedImportRecord {
   unmatchedHighlights?: PreparedImportHighlightRecord[];
   degradedReason: string | null;
   importedAt: string;
-  localizedImageAttachmentIds?: string[];
+  localizedImageResources?: NodeResourceReference[];
   sourceProfile?: PreparedImportSourceProfile;
   sourceTrackingMode?: ImportSourceTrackingMode;
   targetParentNodeId?: string | null;

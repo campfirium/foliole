@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 
 interface PdfImportInventoryRow extends DatabaseRow {
   last_imported_at: string;
@@ -52,18 +53,7 @@ export function loadPdfImportsInventory(driver: DatabaseDriver, limit = 200): Pd
        attachment.pdf_indexed_at
      FROM import_sources source
      LEFT JOIN nodes node ON node.id = source.latest_node_id
-     LEFT JOIN attachments attachment
-       ON attachment.id = (
-         SELECT node_attachment.attachment_id
-         FROM node_attachments node_attachment
-         INNER JOIN attachments candidate_attachment
-           ON candidate_attachment.id = node_attachment.attachment_id
-          AND candidate_attachment.mime_type = 'application/pdf'
-         WHERE node_attachment.node_id = source.latest_node_id
-           AND node_attachment.role = 'reference'
-         ORDER BY candidate_attachment.created_at DESC, node_attachment.attachment_id DESC
-         LIMIT 1
-       )
+     LEFT JOIN (${NODE_PDF_RESOURCES_SQL}) attachment ON attachment.node_id = source.latest_node_id
      WHERE source.source_kind = 'pdf'
      ORDER BY source.last_imported_at DESC
      LIMIT ?`,

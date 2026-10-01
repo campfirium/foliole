@@ -23,7 +23,9 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { initializeDatabase } from './migrate.js';
 import { savePdfPageTextRows } from './pdfPageTextRows.js';
 import { searchWorkspace } from './workspaceSearch.js';
+import { insertPdfAttachment } from './workspaceSearchTestSupport.js';
 
+const PDF_ATTACHMENT_ID = 'a'.repeat(64);
 let tempRoot = '';
 
 beforeEach(async () => {
@@ -49,36 +51,33 @@ async function removeTempRoot() {
 
 function seedPdfReferenceNode() {
   openDatabaseConnection().sqlite.exec(`
-    INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at, pdf_index_status)
-    VALUES ('pdf-1', 'paper.pdf', 'application/pdf', 1024, '2026-05-16T10:00:00.000Z', 'ready');
     INSERT INTO nodes (
       id, kind, title, is_title_manual, hide_title_heading, content, created_at, updated_at
     ) VALUES (
       'node-pdf', 'topic', 'Paper', 1, 0, '', '2026-05-16T10:00:00.000Z', '2026-05-16T10:00:00.000Z'
     );
-    INSERT INTO node_attachments (node_id, attachment_id, role)
-    VALUES ('node-pdf', 'pdf-1', 'reference');
   `);
+  insertPdfAttachment({ nodeId: 'node-pdf', id: PDF_ATTACHMENT_ID, originalName: 'paper.pdf', status: 'ready' });
 }
 
 it('refreshes PDF FTS rows after PDF page text invalidation is processed', () => {
   seedPdfReferenceNode();
   savePdfPageTextRows(
-    'pdf-1',
+    PDF_ATTACHMENT_ID,
     [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Atlas appears in PDF text.' }],
     '2026-05-16T10:03:00.000Z'
   );
 
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT COUNT(*) AS count FROM search.pdf_search WHERE attachment_id = 'pdf-1'")
-    .get()).toEqual({ count: 0 });
+    .prepare('SELECT COUNT(*) AS count FROM search.pdf_search WHERE attachment_id = ?')
+    .get(PDF_ATTACHMENT_ID)).toEqual({ count: 0 });
   processSearchIndexInvalidations(openDatabaseConnection().driver);
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT text FROM search.pdf_search WHERE attachment_id = 'pdf-1' AND page = '1'")
-    .get()).toEqual({ text: 'Atlas appears in PDF text.' });
+    .prepare("SELECT text FROM search.pdf_search WHERE attachment_id = ? AND page = '1'")
+    .get(PDF_ATTACHMENT_ID)).toEqual({ text: 'Atlas appears in PDF text.' });
 
   savePdfPageTextRows(
-    'pdf-1',
+    PDF_ATTACHMENT_ID,
     [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Replaced PDF marker.' }],
     '2026-05-16T10:04:00.000Z'
   );
@@ -86,6 +85,6 @@ it('refreshes PDF FTS rows after PDF page text invalidation is processed', () =>
   expect(searchWorkspace('Replaced')[0]).toMatchObject({
     id: 'node-pdf',
     kind: 'pdf',
-    pdfMatch: expect.objectContaining({ attachmentId: 'pdf-1' })
+    pdfMatch: expect.objectContaining({ attachmentId: PDF_ATTACHMENT_ID })
   });
 });

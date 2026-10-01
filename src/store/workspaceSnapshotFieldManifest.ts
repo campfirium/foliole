@@ -15,6 +15,7 @@ export const WORKSPACE_NODE_BOUNDARY_PRESERVED_FIELDS = [
   'isTitleManual',
   'hideTitleHeading',
   'attachments',
+  'resourceReferences',
   'bodyBlobHash',
   'bodyStatus',
   'openingText',

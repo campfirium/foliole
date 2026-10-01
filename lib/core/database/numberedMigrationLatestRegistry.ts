@@ -1,5 +1,8 @@
 import { retireAttachmentManifest } from './attachmentManifestRetirementMigration.js';
+import { retireAttachmentRegistry } from './attachmentRegistryRetirement.js';
+import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
+import { migrateIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
@@ -42,13 +45,17 @@ import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaSt
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from './syncPackDependencyStagingSchema.js';
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaStatements.js';
+import { repairSyncStateEntities } from './syncStateEntityRepair.js';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
 
 const SYNC_DELIVERY_TRIGGER_TARGETS = [
   'sync_object_state',
   'sync_object_state',
   'sync_group_devices',
-  'review_log'
+  'review_log',
+  'sync_object_state',
+  'sync_object_state',
+  'sync_object_state'
 ] as const;
 
 function installAvailableSyncDeliveryTriggers(sqlite: DatabaseMigrationTarget) {
@@ -144,5 +151,12 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   } },
   { version: 118, migrate: (sqlite) => {
     sqlite.exec(SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS[3]);
-  } }
+  } },
+  { version: 119, migrate: retireAttachmentRegistry },
+  { version: 120, migrate: (sqlite) => {
+    for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);
+    migrateDynamicNodeVersionChains(sqlite);
+  } },
+  { version: 121, migrate: repairSyncStateEntities },
+  { version: 122, migrate: migrateIndependentNodeVersions }
 ];

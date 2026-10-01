@@ -36,9 +36,9 @@ export function seedSnapshotDatabase(database: Database.Database) {
     .run(hash, 'stale inline', snapshotNodeId(19));
   database.prepare('UPDATE nodes SET body_blob_hash = ?, content = ? WHERE id = ?')
     .run('b'.repeat(64), '', snapshotNodeId(18));
-  database.prepare('INSERT INTO attachments VALUES (?, ?, ?, ?, ?)')
-    .run('attachment', 'original.pdf', 'application/pdf', 10, stamp);
-  database.prepare('INSERT INTO node_attachments VALUES (?, ?, ?)').run(snapshotNodeId(0), 'attachment', 'reference');
+  database.prepare('UPDATE nodes SET resource_references = ? WHERE id = ?')
+    .run(JSON.stringify([{ storage_key: `${'c'.repeat(64)}.pdf`, role: 'reference',
+      original_name: 'original.pdf' }]), snapshotNodeId(0));
 }
 
 export const snapshotConnection = (database: Database.Database) => createFakeCapacitorConnection(database);

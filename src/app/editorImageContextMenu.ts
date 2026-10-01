@@ -1,10 +1,13 @@
 import type { MouseEvent as ReactMouseEvent } from 'react';
 
+import { parseAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl';
+
 import type { WorkspaceEditorContextMenu } from './components/WorkspaceLayout';
 import type { SelectionCommandPayload } from './contextCommands';
 
 export interface ImageContextMenuState extends WorkspaceEditorContextMenu {
   imageAttachmentId: string;
+  imageStorageKey: string;
   imageRange: {
     from: number;
     to: number;
@@ -31,13 +34,15 @@ export function resolveImageContextMenuState(
     return null;
   }
   const attachmentId = imageWidget.dataset.mdImageAttachmentId?.trim() ?? '';
+  const storageKey = parseAssetMarkdownUrl(imageWidget.dataset.mdImageSource ?? '');
   const from = parseImageRangeValue(imageWidget.dataset.mdImageFrom);
   const to = parseImageRangeValue(imageWidget.dataset.mdImageTo);
-  if (!attachmentId || from === null || to === null || to < from) {
+  if (!storageKey || !attachmentId || from === null || to === null || to < from) {
     return null;
   }
   return {
     imageAttachmentId: attachmentId,
+    imageStorageKey: storageKey,
     imageRange: { from, to },
     kind: 'image',
     left: position.left,

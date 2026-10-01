@@ -2,6 +2,7 @@ import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver
 import type { SyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
 import { SYNC_PACK_NODE_FIELD_DEFINITIONS } from '../../lib/core/sync/syncPackNodeFields.js';
 
+import { SYNC_PACK_LEARNING_NODE_OBJECT_TYPES } from './syncPackLearningRows.js';
 import type { SyncPackPageBudget } from './syncPackPageBudget.js';
 
 interface PayloadSize extends DatabaseRow {
@@ -46,29 +47,15 @@ const NODE_TEXT_BYTES = SYNC_PACK_NODE_FIELD_DEFINITIONS
   .map((field) => `COALESCE(length(CAST(n.${field.name} AS BLOB)), 0)`)
   .join(' + ');
 
+const NODE_PRELUDE_TYPES = ['node', ...SYNC_PACK_LEARNING_NODE_OBJECT_TYPES]
+  .map((type) => `'${type}'`).join(', ');
+
 function inlinePayloadBytes(driver: DatabaseDriver, params: number[]) {
   let bytes = 0;
   for (const sql of INLINE_PAYLOAD_SIZE_QUERIES) {
     bytes += driver.queryOne<PayloadSize>(sql, params)?.bytes ?? 0;
   }
   return bytes;
-}
-
-function attachmentRows(driver: DatabaseDriver, params: number[], limit: number) {
-  return driver.queryOne<{ count: number }>(
-    `WITH RECURSIVE roots(id) AS (
-       SELECT object_id FROM sync_object_state
-       WHERE state_seq > ? AND state_seq <= ?
-         AND object_type IN ('node', 'node_reading', 'node_review')
-     ), lineage(id, parent_id) AS (
-       SELECT n.id, n.parent_id FROM nodes n JOIN roots r ON r.id = n.id
-       UNION SELECT parent.id, parent.parent_id FROM nodes parent
-       JOIN lineage child ON child.parent_id = parent.id
-     )
-     SELECT COUNT(*) AS count FROM node_attachments a
-     JOIN (SELECT DISTINCT id FROM lineage LIMIT ?) selected ON selected.id = a.node_id`,
-    [...params, limit]
-  )?.count ?? 0;
 }
 
 /** Rejects oversized payload sources before the ordinary JS row loader sees them. */
@@ -84,7 +71,7 @@ export function assertSyncPackPreloadBudget(driver: DatabaseDriver, fromStateSeq
     `WITH RECURSIVE roots(id) AS (
        SELECT object_id FROM sync_object_state
        WHERE state_seq > ? AND state_seq <= ?
-         AND object_type IN ('node', 'node_reading', 'node_review')
+         AND object_type IN (${NODE_PRELUDE_TYPES})
      ), lineage(id, parent_id) AS (
        SELECT n.id, n.parent_id FROM nodes n JOIN roots r ON r.id = n.id
        UNION SELECT parent.id, parent.parent_id FROM nodes parent
@@ -100,7 +87,7 @@ export function assertSyncPackPreloadBudget(driver: DatabaseDriver, fromStateSeq
     `WITH RECURSIVE roots(id) AS (
        SELECT object_id FROM sync_object_state
        WHERE state_seq > ? AND state_seq <= ?
-         AND object_type IN ('node', 'node_reading', 'node_review')
+         AND object_type IN (${NODE_PRELUDE_TYPES})
      ), lineage(id, parent_id) AS (
        SELECT n.id, n.parent_id FROM nodes n JOIN roots r ON r.id = n.id
        UNION SELECT parent.id, parent.parent_id FROM nodes parent
@@ -118,9 +105,8 @@ export function assertSyncPackPreloadBudget(driver: DatabaseDriver, fromStateSeq
          AND s.deleted_at IS NOT NULL AND s.state_seq > ? AND s.state_seq <= ?)`, params
   );
   const reviews = missingReviewRows(driver, params, claims?.reviews ?? [], stagedReviewNodeIds);
-  const attachments = attachmentRows(driver, params, budget.applyRows);
   const bytes = nodePayload + inlinePayloadBytes(driver, params) + (tombstones?.bytes ?? 0);
-  const totalRows = rows + ancestors + reviews + attachments + (tombstones?.rows ?? 0);
+  const totalRows = rows + ancestors + reviews + (tombstones?.rows ?? 0);
   if (!Number.isSafeInteger(bytes) || !Number.isSafeInteger(totalRows) ||
     bytes > budget.databaseBytes || totalRows > budget.applyRows) {
     throw new Error('sync_pack_page_preflight_exceeds_budget');

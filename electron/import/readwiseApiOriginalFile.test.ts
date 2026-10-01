@@ -91,11 +91,9 @@ it('refreshes an S3 URL without forwarding the token and persists one verified P
   });
 
   const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM attachments')).toEqual({ count: 1 });
-  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM node_attachments')).toEqual({ count: 1 });
-  expect(driver.queryOne<{ id: string; mime_type: string }>(
-    'SELECT id, mime_type FROM attachments'
-  )).toEqual({ id: prepared.state.contentHash, mime_type: prepared.state.mimeType });
+  const owner = driver.queryOne<{ resource_references: string }>("SELECT resource_references FROM nodes WHERE id = 'node-1'")!;
+  expect(JSON.parse(owner.resource_references)).toEqual([{ storage_key: `${prepared.state.contentHash}.pdf`,
+    role: 'reference', original_name: 'Remote PDF.pdf' }]);
 });
 
 it('uses the paged raw URL and refreshes only that document when the URL has expired', async () => {

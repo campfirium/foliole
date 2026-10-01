@@ -145,7 +145,7 @@ function createHandleCopyImage(
     if (contextMenu?.kind !== 'image') {
       return;
     }
-    await copyAttachmentImageToClipboard(contextMenu.imageAttachmentId);
+    await copyAttachmentImageToClipboard(contextMenu.imageStorageKey);
     closeContextMenu();
   };
 }
@@ -159,7 +159,7 @@ function createHandleCutImage(
     if (contextMenu?.kind !== 'image') {
       return;
     }
-    const result = await copyAttachmentImageToClipboard(contextMenu.imageAttachmentId);
+    const result = await copyAttachmentImageToClipboard(contextMenu.imageStorageKey);
     if (result?.status !== 'copied') {
       closeContextMenu();
       return;
@@ -171,19 +171,21 @@ function createHandleCutImage(
 
 function createHandleExportImage(
   contextMenu: EditorContextMenuState | null,
-  closeContextMenu: () => void
+  closeContextMenu: () => void,
+  nodeId: string | null
 ) {
   return async () => {
     if (contextMenu?.kind !== 'image') {
       return;
     }
-    await exportAttachmentImage(contextMenu.imageAttachmentId);
+    await exportAttachmentImage(contextMenu.imageStorageKey, nodeId ?? undefined);
     closeContextMenu();
   };
 }
 
 export function createImageCommandHandlers(args: {
   closeContextMenu: () => void;
+  nodeId: string | null;
   contextMenu: EditorContextMenuState | null;
   editorRef: MutableRefObject<EditorAdapter | null>;
   syncActiveNodeContentFromEditor: () => void;
@@ -198,6 +200,6 @@ export function createImageCommandHandlers(args: {
     handleCopyImage: createHandleCopyImage(args.contextMenu, args.closeContextMenu),
     handleCutImage: createHandleCutImage(args.contextMenu, args.closeContextMenu, removeImageSource),
     handleDeleteImage: () => (removeImageSource(), args.closeContextMenu()),
-    handleExportImage: createHandleExportImage(args.contextMenu, args.closeContextMenu)
+    handleExportImage: createHandleExportImage(args.contextMenu, args.closeContextMenu, args.nodeId)
   };
 }

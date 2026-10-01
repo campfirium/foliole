@@ -1,5 +1,6 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import type { NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { parseNodeResourceReferences, projectNodeResourceLinks } from '../../lib/core/database/nodeResourceReferences.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 
 export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
@@ -21,6 +22,7 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   id: string;
   image_regions: string | null;
   image_sources: string | null;
+  resource_references: string;
   import_content_fingerprint: string | null;
   import_source_fingerprint: string | null;
   is_title_manual: number;
@@ -35,26 +37,13 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   virtual_filter: string | null;
 }
 
-interface NodeAttachmentRefRow extends DatabaseRow {
-  attachment_id: string;
-  role: string;
-}
-
-function listNodeAttachmentRefs(driver: DatabaseDriver, nodeId: string) {
-  return driver.queryAll<NodeAttachmentRefRow>(
-    `SELECT attachment_id, role FROM node_attachments
-     WHERE node_id = ? ORDER BY attachment_id ASC, role ASC`,
-    [nodeId]
-  );
-}
-
 export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, nodeId: string) {
   return driver.queryOne<NodeSyncVersionSourceRow>(
     `SELECT id, parent_id, kind, priority, desired_retention, enable_short_term,
        sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual,
        hide_title_heading, content, nodes.body_blob_hash, cbd.data AS body_blob_data,
        opening_text, virtual_filter, reveal,
-       anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, import_content_fingerprint, import_source_fingerprint,
+       anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, resource_references, import_content_fingerprint, import_source_fingerprint,
        current_version_id, sync_dirty, created_at, updated_at, deleted_at
      FROM nodes
      LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash
@@ -64,7 +53,7 @@ export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, node
 }
 
 export function buildNodeSyncSnapshotFromDriver(
-  driver: DatabaseDriver,
+  _driver: DatabaseDriver,
   row: NodeSyncVersionSourceRow,
   nodeId: string
 ) {
@@ -72,7 +61,7 @@ export function buildNodeSyncSnapshotFromDriver(
     anchor_link: row.anchor_link,
     anchor_resolution_status: row.anchor_resolution_status,
     anchor_source_version_id: row.anchor_source_version_id,
-    attachments: listNodeAttachmentRefs(driver, nodeId),
+    attachments: projectNodeResourceLinks(row.resource_references),
     body_blob_hash: row.body_blob_hash,
     content: '',
     created_at: row.created_at,
@@ -83,9 +72,10 @@ export function buildNodeSyncSnapshotFromDriver(
     shelved_at: row.shelved_at,
     manual_child_order: row.manual_child_order,
     hide_title_heading: row.hide_title_heading === 1,
-    id: row.id,
+    id: nodeId,
     image_regions: row.image_regions,
     image_sources: row.image_sources,
+    resource_references: row.resource_references,
     import_content_fingerprint: row.import_content_fingerprint,
     import_source_fingerprint: row.import_source_fingerprint,
     is_title_manual: row.is_title_manual === 1,
@@ -101,7 +91,7 @@ export function buildNodeSyncSnapshotFromDriver(
 }
 
 export function computeNodeSyncVersionHashFromDriver(
-  driver: DatabaseDriver,
+  _driver: DatabaseDriver,
   row: NodeSyncVersionSourceRow,
   nodeId: string
 ) {
@@ -109,7 +99,7 @@ export function computeNodeSyncVersionHashFromDriver(
     anchorLink: row.anchor_link,
     anchorResolutionStatus: row.anchor_resolution_status,
     anchorSourceVersionId: row.anchor_source_version_id,
-    attachments: listNodeAttachmentRefs(driver, nodeId).map((item) => ({
+    attachments: projectNodeResourceLinks(row.resource_references).map((item) => ({
       attachmentId: item.attachment_id,
       role: item.role
     })),
@@ -122,9 +112,10 @@ export function computeNodeSyncVersionHashFromDriver(
     shelvedAt: row.shelved_at,
     manualChildOrder: row.manual_child_order,
     hideTitleHeading: row.hide_title_heading === 1,
-    id: row.id,
+    id: nodeId,
     imageRegions: row.image_regions,
     imageSources: row.image_sources,
+    resourceReferences: parseNodeResourceReferences(row.resource_references),
     importContentFingerprint: row.import_content_fingerprint,
     importSourceFingerprint: row.import_source_fingerprint,
     isTitleManual: row.is_title_manual === 1,

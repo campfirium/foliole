@@ -69,3 +69,12 @@ it('continues bounded content batches until the stored backlog is empty', async 
   await drainDesktopSyncGroupResourceArticles(peer);
   expect(runtime.download).toHaveBeenCalledTimes(2);
 });
+
+it('continues later article batches after a missing file and retains only the incomplete batch', async () => {
+  runtime.load.mockReset().mockResolvedValueOnce(['article-a']).mockResolvedValueOnce(['article-b']).mockResolvedValueOnce([]);
+  runtime.download.mockResolvedValueOnce({ failedStorageKeys: [], unreadableArticleIds: [], resourceResults: [], remainingContentBlobCount: 0 });
+  runtime.download.mockResolvedValueOnce({ failedStorageKeys: ['missing.png'], unreadableArticleIds: [], resourceResults: [], remainingContentBlobCount: 0 });
+  await expect(drainDesktopSyncGroupResourceArticles(peer)).rejects.toThrow('sync_group_resources_incomplete');
+  expect(runtime.download).toHaveBeenCalledWith(peer, ['article-b'], false);
+  expect(runtime.clear).toHaveBeenCalledExactlyOnceWith(expect.anything(), 'group', 'peer', ['article-b']);
+});

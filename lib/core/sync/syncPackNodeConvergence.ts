@@ -1,5 +1,6 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { SPECIAL_ROOT_NODE_IDS } from '../database/nodeMutationSpecialRoots.js';
+import { projectNodeResourceLinks } from '../database/nodeResourceReferences.js';
 
 import type { DbPort } from './dbPort.js';
 import { applyConvergentSyncNodesWithDbPort } from './syncNodeConvergence.js';
@@ -43,7 +44,7 @@ export async function applySyncPackVersionedNodesWithDbPort(
       ...record,
       ancestor_version_ids: ancestry.ancestorIds(versionId),
       body_text: bodyText,
-      snapshot: await buildCurrentSnapshot(port, alias, row, bodyText),
+      snapshot: buildCurrentSnapshot(row, bodyText),
       updated_at: row.updated_at
     });
   }
@@ -64,22 +65,15 @@ export async function applySyncPackVersionedNodesWithDbPort(
   ])] };
 }
 
-async function buildCurrentSnapshot(
-  port: DbPort,
-  alias: string,
+function buildCurrentSnapshot(
   row: SyncPackNodeRow,
   bodyText: string
-): Promise<NativeSyncNodeRecord['snapshot']> {
-  const attachments = await port.query<{ attachment_id: string; role: string }>(
-    `SELECT attachment_id, role FROM ${alias}.node_attachments
-     WHERE node_id = ? ORDER BY attachment_id, role`,
-    [row.id]
-  );
+): NativeSyncNodeRecord['snapshot'] {
   return {
     anchor_link: row.anchor_link,
     anchor_resolution_status: normalizeAnchorStatus(row.anchor_resolution_status),
     anchor_source_version_id: row.anchor_source_version_id,
-    attachments,
+    attachments: projectNodeResourceLinks(row.resource_references),
     body_blob_hash: row.body_blob_hash,
     content: bodyText,
     created_at: row.created_at,
@@ -90,6 +84,7 @@ async function buildCurrentSnapshot(
     id: row.id,
     image_regions: row.image_regions,
     image_sources: row.image_sources,
+    resource_references: row.resource_references,
     import_content_fingerprint: row.import_content_fingerprint,
     import_source_fingerprint: row.import_source_fingerprint,
     is_title_manual: row.is_title_manual === 1,

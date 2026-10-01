@@ -59,7 +59,7 @@ enum FolioleCompanionSyncPackFactIndex {
         let heldVersions = try bits(versionBits, count: versions.count)
         let heldParents = try bits(parentBits, count: parents.count)
         let heldReviews = try bits(reviewBits, count: reviews.count)
-        let heads = Set(try database.namedRows("SELECT current_version_id FROM nodes")
+        let heads = Set(try database.namedRows("SELECT current_version_id FROM nodes UNION SELECT version_id AS current_version_id FROM node_sync_tombstones")
             .compactMap { $0["current_version_id"] as? String })
         for (offset, held) in heldVersions.enumerated() where !held {
             if let versionId = versions[offset]["version_id"] as? String,

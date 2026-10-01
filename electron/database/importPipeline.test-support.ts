@@ -1,3 +1,5 @@
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+
 import { openDatabaseConnection } from './connection.js';
 
 export function parseAnchorLink(value: string) {
@@ -26,11 +28,14 @@ export function readPersistedImportState(sourceFingerprint: string, nodeId: stri
     )
     .all(sourceFingerprint);
   const nodeRow = nodeId
-    ? connection.sqlite.prepare('SELECT parent_id, title, hide_title_heading, content, opening_text FROM nodes WHERE id = ?').get(nodeId)
+    ? connection.sqlite.prepare(`SELECT n.parent_id, n.title, n.hide_title_heading,
+      ${buildNodeBodyContentSql()} AS content, n.opening_text FROM nodes n
+      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`).get(nodeId)
     : undefined;
   const childRows = nodeId
     ? connection.sqlite
-        .prepare('SELECT parent_id, title, content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC')
+        .prepare(`SELECT n.parent_id, n.title, ${buildNodeBodyContentSql()} AS content, n.anchor_link FROM nodes n
+          LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.parent_id = ? ORDER BY n.created_at ASC`)
         .all(nodeId) as Array<{ anchor_link: string; content: string; parent_id: string; title: string }>
     : [];
 

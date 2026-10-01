@@ -1,6 +1,6 @@
+import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { ATTACHMENT_RANGE_BYTES } from '../../lib/platform/resourceAvailabilityContract.js';
 import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
-import { loadAttachmentResourceStorageIdentity } from '../database/attachmentResourceDescription.js';
 
 import { recordMissingResourceGetForAcceptance } from './acceptanceResourceGet404.js';
 
@@ -34,6 +34,7 @@ function errorResult(
 export async function loadCompanionAttachmentResource(
   attachmentId: string | null,
   contentHash: string | null,
+  storageKey: string | null,
   range?: { offset: string | null; length: string | null }
 ): Promise<CompanionAttachmentResourceResult> {
   const normalizedAttachmentId = attachmentId?.trim() ?? '';
@@ -42,9 +43,9 @@ export async function loadCompanionAttachmentResource(
     return errorResult('invalid_request', 400);
   }
 
-  const description = loadAttachmentResourceStorageIdentity(normalizedAttachmentId);
-  if (!description) return errorResult('not_found', 404);
-  if (description.contentHash !== normalizedContentHash) return errorResult('content_hash_mismatch', 409);
+  const description = storageKey ? parseCanonicalAttachmentStorageKey(storageKey) : null;
+  if (!description) return errorResult('invalid_request', 400);
+  if (description.contentHash !== normalizedContentHash || description.contentHash !== normalizedAttachmentId) return errorResult('content_hash_mismatch', 409);
   const resolved = resolveAttachmentFileForSync(description.storageKey);
   if (resolved.status === 'not_found') {
     return errorResult('not_found', 404);

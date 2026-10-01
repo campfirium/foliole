@@ -82,7 +82,7 @@ function injectRequestFailure(mode: 'disconnect' | 'elapsed' | 'expired') {
 
 it.each(['disconnect', 'elapsed', 'expired'] as const)(
   'resumes a signed attachment transfer after %s without reusing expired ciphertext', async (mode) => {
-  const driver = seedGroup();
+  seedGroup();
   const sourceDir = resolveSyncPackPath('attachment-source');
   roots.target = resolveSyncPackPath('attachment-target');
   await fs.mkdir(sourceDir, { recursive: true });
@@ -91,8 +91,6 @@ it.each(['disconnect', 'elapsed', 'expired'] as const)(
   const { hash, sourcePath } = await writeAttachmentFixture(sourceDir, bytes);
   const targetPath = path.join(roots.target, `${hash}.png`);
   publishAttachmentLibraryPathSnapshot({ assetsDir: sourceDir, libraryScope: 'test-source' });
-  driver.execute(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    VALUES (?, 'source.png', 'image/png', ?, 'now')`, [hash, bytes]);
   markDesktopSyncGroupMemberStateReady('receiver');
   const http = await startAuthenticatedSyncHttp();
   const peer = { endpoint_url: http.origin, endpointUrl: http.origin,

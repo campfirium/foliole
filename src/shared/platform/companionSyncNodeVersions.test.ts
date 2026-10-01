@@ -42,13 +42,9 @@ it('applies node versions through the Capacitor DbPort adapter and shared core',
 it('applies a complete workspace-produced version through the Capacitor DbPort', async () => {
   db = new Database(':memory:');
   installNodeApplySchema(db);
-  db.prepare(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES ('attachment-1', 'Paper.pdf', 'application/pdf', 128, '2026-07-11T00:00:00.000Z')`
-  ).run();
   const version = await toWorkspaceNativeNodeVersion({
     anchorLink: null,
-    attachments: [{ attachmentId: 'attachment-1', mimeType: 'application/pdf', originalName: 'Paper.pdf', role: 'reference' }],
+    resourceReferences: [{ storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'Paper.pdf', role: 'reference' }],
     content: 'Folder body',
     createdAt: '2026-07-11T00:00:00.000Z',
     hideTitleHeading: false,
@@ -82,9 +78,9 @@ it('applies a complete workspace-produced version through the Capacitor DbPort',
     position: null,
     shelved_at: '2026-07-10T00:00:00.000Z'
   });
-  expect(db.prepare(
-    `SELECT attachment_id, role FROM node_attachments WHERE node_id = 'folder-1'`
-  ).all()).toEqual([{ attachment_id: 'attachment-1', role: 'reference' }]);
+  expect(JSON.parse(db.prepare(
+    `SELECT resource_references FROM nodes WHERE id = 'folder-1'`
+  ).pluck().get() as string)).toEqual([{ storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'Paper.pdf', role: 'reference' }]);
 });
 
 it('opens the Android companion database before running the shared core', async () => {

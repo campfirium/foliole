@@ -42,7 +42,7 @@ export function persistReadwiseApiEpubBookNodes(input: {
       title: node.title,
       updatedAt: input.importedAt
     });
-    replaceReadwiseApiEpubImageLinks(nodeId, node.attachmentIds);
+    replaceReadwiseApiEpubImageLinks(nodeId, node.resourceReferences ?? []);
     registerNodeImageSources(nodeId, node.imageSources ?? {});
   });
   retireObsoleteBookNodes(driver, input.rootNodeId, new Set(nodeIds.values()), input.importedAt);

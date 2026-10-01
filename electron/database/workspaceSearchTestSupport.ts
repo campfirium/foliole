@@ -1,12 +1,16 @@
+import { upsertNodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
+
 import { openDatabaseConnection } from './connection.js';
 
-export function insertPdfAttachment(input: { id: string; originalName: string; status: 'failed' | 'indexing' | 'pending' | 'ready' }) {
-  openDatabaseConnection().sqlite
-    .prepare(
-      `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at, pdf_index_status)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    )
-    .run(input.id, input.originalName, 'application/pdf', 128, '2026-03-01T00:00:00.000Z', input.status);
+export function insertPdfAttachment(input: { nodeId: string; id: string; originalName: string; status: 'failed' | 'indexing' | 'pending' | 'ready' }) {
+  const driver = openDatabaseConnection().driver;
+  const row = driver.queryOne<{ resource_references: string }>('SELECT resource_references FROM nodes WHERE id = ?', [input.nodeId]);
+  if (!row) throw new Error('test_pdf_owner_missing');
+  driver.execute('UPDATE nodes SET resource_references = ? WHERE id = ?', [
+    upsertNodeResourceReference(row.resource_references, { storage_key: `${input.id}.pdf`, role: 'reference', original_name: input.originalName }), input.nodeId
+  ]);
+  openDatabaseConnection().sqlite.prepare('INSERT INTO pdf_index_state (attachment_id, status) VALUES (?, ?)')
+    .run(input.id, input.status);
 }
 
 export function insertStaleSearchRows(nodeId: string, attachmentId = `${nodeId}-pdf`) {

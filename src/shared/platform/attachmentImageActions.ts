@@ -33,24 +33,25 @@ function isExportResult(value: unknown): value is NativeExportAttachmentImageRes
   );
 }
 
-export async function copyAttachmentImageToClipboard(attachmentId: string) {
+export async function copyAttachmentImageToClipboard(storageKey: string) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
   const result = await runtimeInvoke(NATIVE_COMMANDS.copyAttachmentImageToClipboard, {
-    attachment_id: attachmentId
+    storage_key: storageKey
   });
   return isCopyResult(result) ? result : null;
 }
 
-export async function exportAttachmentImage(attachmentId: string) {
+export async function exportAttachmentImage(storageKey: string, nodeId?: string) {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
   const result = await runtimeInvoke(NATIVE_COMMANDS.exportAttachmentImage, {
-    attachment_id: attachmentId
+    storage_key: storageKey,
+    ...(nodeId ? { node_id: nodeId } : {})
   });
   return isExportResult(result) ? result : null;
 }

@@ -4,7 +4,6 @@ import path from 'node:path';
 import { dialog, type BrowserWindow } from 'electron';
 
 import type { NativeExportNodePdfResult } from '../../lib/platform/nativeUtilityContract.js';
-import { loadAttachmentResourceDescription } from '../database/attachmentResourceDescription.js';
 import { listNodeAttachments } from '../database/attachments.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
 
@@ -26,11 +25,7 @@ export async function exportNodePdf(
   );
   if (!link) return { path: null, status: 'not_found' };
 
-  const description = loadAttachmentResourceDescription(link.attachmentId);
-  if (!description || description.mimeType !== 'application/pdf') {
-    return { path: null, status: 'not_found' };
-  }
-  const resolved = resolveAttachmentFile(description.storageKey);
+  const resolved = resolveAttachmentFile(`${link.attachmentId}.pdf`);
   if (resolved.status !== 'ready') return { path: null, status: resolved.status };
 
   const options = {

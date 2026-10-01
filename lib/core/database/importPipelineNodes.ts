@@ -4,6 +4,7 @@ import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
+import { projectNodeInlineContent } from './nodeInlineProjection.js';
 import { applyParentContentChange } from './parentContentMutation.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
@@ -88,7 +89,7 @@ export function writeNewNode(input: {
       parentNodeId,
       resolvedTitle,
       input.hideTitleHeading ? 1 : 0,
-      input.content,
+      projectNodeInlineContent(input.content),
       bodyBlobHash,
       openingText,
       input.importedAt,

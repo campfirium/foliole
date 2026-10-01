@@ -40,5 +40,6 @@ export async function importCompanionImageResource(sourceUrl: string) {
   const storageKey = buildCanonicalAttachmentStorageKey(contentHash, mimeType);
   if (!storageKey) throw new Error('remote_image_identity_rejected');
   const stored = await FolioleCompanionSync.writeImageAttachment({ bytesBase64, contentHash, mimeType, storageKey });
-  return { contentHash, mimeType, sizeBytes: bytes.length, storageKey, storedFile: stored.storedFile };
+  const originalName = decodeURIComponent(new URL(sourceUrl).pathname.split('/').at(-1) ?? '') || storageKey;
+  return { contentHash, mimeType, originalName, sizeBytes: bytes.length, storageKey, storedFile: stored.storedFile };
 }

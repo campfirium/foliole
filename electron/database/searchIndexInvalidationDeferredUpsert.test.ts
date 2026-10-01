@@ -54,7 +54,7 @@ function pendingInvalidations() {
     .all() as Array<{ invalidation_type: string; status: string; target_id: string }>;
 }
 
-it('defers ordinary node edit workspace invalidation until the caller flushes it', () => {
+it('persists pending state immediately while the caller defers processing', () => {
   const driver = openDatabaseConnection().driver;
   const before = readWorkspaceSearchSourceState(driver)!;
   expect(workspaceSearchSourceStateMatches(driver)).toBe(true);
@@ -73,9 +73,11 @@ it('defers ordinary node edit workspace invalidation until the caller flushes it
     updatedAt: '2026-05-16T10:01:00.000Z'
   }, { searchInvalidation: { workspaceInvalidation: 'defer' } });
 
-  expect(pendingInvalidations()).toEqual([]);
+  expect(pendingInvalidations()).toEqual([
+    { invalidation_type: 'node_workspace', status: 'pending', target_id: 'node-deferred' }
+  ]);
   expect(readWorkspaceSearchSourceState(driver)).toMatchObject({
-    queuedRevision: before.revision,
+    queuedRevision: before.revision + 1,
     revision: before.revision + 1
   });
   expect(workspaceSearchSourceStateMatches(driver)).toBe(false);

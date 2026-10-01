@@ -26,19 +26,15 @@ afterEach(async () => {
   if (appData) await fs.rm(appData, { recursive: true, force: true });
 });
 
-it('includes a later attachment state before its PDF page and node reference', async () => {
+it('carries a node mount and PDF page without a metadata prelude', async () => {
   appData = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-attachment-prelude-'));
   initializeDatabaseConnection(openDatabaseConnection());
   const driver = openDatabaseConnection().driver;
   const id = 'a'.repeat(64);
-  driver.execute(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    VALUES (?, 'document.pdf', 'application/pdf', 12, 'now')`, [id]);
-  driver.execute(`INSERT INTO pdf_page_text (attachment_id, page, text)
-    VALUES (?, 1, 'page text')`, [id]);
-  driver.execute(`INSERT INTO nodes (id, kind, title, content, created_at, updated_at)
-    VALUES ('node-1', 'topic', 'Document', '', 'now', 'now')`);
-  driver.execute(`INSERT INTO node_attachments (node_id, attachment_id, role)
-    VALUES ('node-1', ?, 'document')`, [id]);
+  driver.execute(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, 1, 'page text')`, [id]);
+  driver.execute(`INSERT INTO nodes (id, kind, title, content, resource_references, created_at, updated_at)
+    VALUES ('node-1', 'topic', 'Document', '', ?, 'now', 'now')`,
+    [JSON.stringify([{ storage_key: `${id}.pdf`, role: 'reference', original_name: 'document.pdf' }])]);
   driver.execute(`INSERT INTO sync_object_state
     (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at)
     VALUES ('pdf_page_text', ?, 1, 'page-hash', 'source', 'now'),
@@ -48,11 +44,11 @@ it('includes a later attachment state before its PDF page and node reference', a
   const page = loadPackRows(0, 2, driver);
   expect(page.consumedStateSeq).toBe(2);
   expect(page.stateRows.map((row) => `${row.object_type}:${row.object_id}`))
-    .toEqual([`pdf_page_text:${id}:1`, 'node:node-1', `attachment:${id}`]);
+    .toEqual([`pdf_page_text:${id}:1`, 'node:node-1']);
   expect(page.syncObjects.map((row) => `${row.object_type}:${row.object_id}`).sort())
-    .toEqual([`attachment:${id}`, `pdf_page_text:${id}:1`]);
+    .toEqual([`pdf_page_text:${id}:1`]);
   driver.execute("UPDATE sync_object_state SET state_seq = 3 WHERE object_type = 'attachment'");
   driver.execute("UPDATE sync_object_state SET state_seq = 4 WHERE object_type = 'node'");
   expect(loadPackRows(3, 4, driver).stateRows.map((row) => row.object_type)).toEqual(['node']);
-  expect(loadPackRows(3, 4, driver).nodeAttachments).toHaveLength(1);
+  expect(loadPackRows(3, 4, driver).nodes[0]?.resource_references).toContain(`${id}.pdf`);
 });

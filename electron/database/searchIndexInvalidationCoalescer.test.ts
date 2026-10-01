@@ -106,3 +106,16 @@ it('waits for a connection owner and preserves pending nodes when the write fail
     mocks.driver, ['node-1'], { advanceSourceRevision: false }
   );
 });
+
+it('automatically retries a failed timer flush without requiring another edit', async () => {
+  const { enqueueCoalescedWorkspaceSearchInvalidation, SEARCH_INVALIDATION_IDLE_FLUSH_MS } =
+    await import('./searchIndexInvalidationCoalescer.js');
+  mocks.enqueueWorkspaceSearchInvalidationForNodeIds.mockImplementationOnce(() => { throw new Error('write failed'); });
+  enqueueCoalescedWorkspaceSearchInvalidation(['node-1']);
+  await vi.advanceTimersByTimeAsync(SEARCH_INVALIDATION_IDLE_FLUSH_MS);
+  expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledOnce();
+  await vi.advanceTimersByTimeAsync(SEARCH_INVALIDATION_IDLE_FLUSH_MS);
+  expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledTimes(2);
+  await vi.runAllTimersAsync();
+  expect(mocks.enqueueWorkspaceSearchInvalidationForNodeIds).toHaveBeenCalledTimes(2);
+});

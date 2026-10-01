@@ -14,10 +14,10 @@ import {
 } from './syncPackManifest.js';
 
 const EXPECTED_SYNC_PACK_TABLES = [
-  'sync_groups', 'sync_group_devices', 'sync_object_state',
+  'sync_groups', 'sync_group_devices', 'node_version_peer_heads', 'sync_object_state',
   'sync_objects', 'nodes', 'node_sync_versions',
   'node_sync_tombstones', 'node_sync_version_parents',
-  'node_attachments', 'external_documents', 'content_blobs', 'review_log'
+  'external_documents', 'content_blobs', 'review_log'
 ];
 
 it('builds the pack manifest from the shared table map', () => {
@@ -35,9 +35,9 @@ it('builds the pack manifest from the shared table map', () => {
     packId: 'pack-1',
     sourceEpoch: 'source-1',
     tableRows: {
+      node_version_peer_heads: [],
       content_blobs: [{}],
       external_documents: [],
-      node_attachments: [{}],
       node_sync_versions: [{}, {}, {}],
       node_sync_tombstones: [],
       node_sync_version_parents: [],
@@ -57,13 +57,13 @@ it('builds the pack manifest from the shared table map', () => {
     tables: [
       { name: 'sync_groups', row_count: 1 },
       { name: 'sync_group_devices', row_count: 3 },
+      { name: 'node_version_peer_heads', row_count: 0 },
       { name: 'sync_object_state', row_count: 3 },
       { name: 'sync_objects', row_count: 1 },
       { name: 'nodes', row_count: 2 },
       { name: 'node_sync_versions', row_count: 3 },
       { name: 'node_sync_tombstones', row_count: 0 },
       { name: 'node_sync_version_parents', row_count: 0 },
-      { name: 'node_attachments', row_count: 1 },
       { name: 'external_documents', row_count: 0 },
       { name: 'content_blobs', row_count: 1 },
       { name: 'review_log', row_count: 1 }
@@ -74,7 +74,6 @@ it('builds the pack manifest from the shared table map', () => {
 
 it('declares the stage one payload object inventory explicitly', () => {
   expect([...SYNC_PACK_PAYLOAD_OBJECT_TYPES]).toEqual([
-    'attachment',
     'external_folder',
     'import_source',
     'node_open_state',

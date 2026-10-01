@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -62,7 +63,8 @@ function readChildren(parentNodeId: string) {
   return openDatabaseConnection().driver.queryAll<{
     anchor_link: string | null;
     content: string;
-  }>('SELECT content, anchor_link FROM nodes WHERE parent_id = ? ORDER BY created_at ASC', [parentNodeId]);
+  }>(`SELECT ${buildNodeBodyContentSql()} AS content, n.anchor_link FROM nodes n
+  LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.parent_id = ? ORDER BY n.created_at ASC`, [parentNodeId]);
 }
 
 function assertRealBodyLocator(parentContent: string, anchorLink: string | null, text: string) {
@@ -95,7 +97,8 @@ it('keeps title matches unmapped across first, duplicate, and incremental Readwi
     '2026-09-04T05:10:00.000Z'
   ));
   const parent = openDatabaseConnection().driver.queryOne<{ content: string }>(
-    'SELECT content FROM nodes WHERE id = ?', [first.nodeId]
+    `SELECT ${buildNodeBodyContentSql()} AS content FROM nodes n
+    LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`, [first.nodeId]
   );
   const children = readChildren(first.nodeId);
 

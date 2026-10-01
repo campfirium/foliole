@@ -5,6 +5,7 @@ import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
 import { serializeImageSources } from './imageSources.js';
+import { projectNodeInlineContent } from './nodeInlineProjection.js';
 import type {
   NodeAnchorLinkPayload,
   NodeImageRegionGroupPayload,
@@ -92,7 +93,7 @@ function runNodeTableUpsert(
     input.title,
     input.isTitleManual ? 1 : 0,
     input.hideTitleHeading === true ? 1 : 0,
-    input.content,
+    projectNodeInlineContent(input.content),
     bodyBlobHash,
     resolveStoredOpeningText(input),
     stringifyVirtualNodeFilter(input.virtualFilter ?? null),

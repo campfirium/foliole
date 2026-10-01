@@ -18,9 +18,9 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
-import { createAttachmentRecord } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncNodesAsync } from './syncApply.js';
 
@@ -117,21 +117,14 @@ afterEach(async () => {
 });
 
 it('applies remote sync nodes through the async desktop DbPort entry', async () => {
-  createAttachmentRecord({
-    id: 'att-1',
-    originalName: 'att-1.pdf',
-    mimeType: 'application/pdf',
-    sizeBytes: 128,
-    createdAt: '2026-04-21T09:00:00.000Z'
-  });
 
   await expect(applySyncNodesAsync([createRemoteNodeRecord()])).resolves.toEqual(['node-1']);
 
   const connection = openDatabaseConnection();
   expect(
     connection.sqlite.prepare(
-      `SELECT current_version_id, last_modified_by_host_name, sync_dirty, title, content, body_blob_hash, position
-       FROM nodes WHERE id = ?`
+      `SELECT current_version_id, last_modified_by_host_name, sync_dirty, title, ${buildNodeBodyContentSql('nodes')} AS content, body_blob_hash, position
+       FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`
     ).get('node-1')
   ).toEqual({
     body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
@@ -171,8 +164,8 @@ it('covers create, repeated apply, and modify through the shared desktop DbPort 
   const connection = openDatabaseConnection();
   expect(
     connection.sqlite.prepare(
-      `SELECT current_version_id, title, content, position, sync_dirty
-       FROM nodes WHERE id = ?`
+      `SELECT current_version_id, title, ${buildNodeBodyContentSql('nodes')} AS content, position, sync_dirty
+       FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`
     ).get('node-1')
   ).toEqual({
     content: 'remote body updated',
@@ -209,8 +202,8 @@ it('covers create, modify, delete, and repeated tombstone through the shared des
   const connection = openDatabaseConnection();
   expect(
     connection.sqlite.prepare(
-      `SELECT current_version_id, title, content, deleted_at, sync_dirty
-       FROM nodes WHERE id = ?`
+      `SELECT current_version_id, title, ${buildNodeBodyContentSql('nodes')} AS content, deleted_at, sync_dirty
+       FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`
     ).get('node-1')
   ).toEqual({
     content: 'deleted remote body',

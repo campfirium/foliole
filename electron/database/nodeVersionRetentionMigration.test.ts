@@ -5,12 +5,14 @@ import { expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { isRetiredAttachmentSchema } from '../../lib/core/database/retiredAttachmentSchema.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
-const TABLES = ['node_version_device_bases', 'node_version_device_revisions',
+const TABLES = ['node_version_local_origins', 'node_version_device_bases', 'node_version_device_revisions',
   'node_version_outbound_holds', 'node_version_outbound_payload_holds', 'node_version_local_holds',
   'node_version_pack_receipts', 'node_version_local_proof_state', 'node_version_inbound_receipts',
   'node_version_local_source_revisions'];
@@ -35,6 +37,7 @@ it('adds retention state and a stable library epoch without touching desktop ver
         (version_id, object_id, host_name, created_at, content_hash, body_text, snapshot_json)
       VALUES ('original', 'node', 'local', 'now', 'hash', 'original body', '{"content":"original body"}');`);
     dropRetentionTables(sqlite);
+    for (const statement of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema)) sqlite.exec(statement);
     sqlite.pragma('user_version = 105');
 
     initializeDatabaseSchema(sqlite);
@@ -42,7 +45,7 @@ it('adds retention state and a stable library epoch without touching desktop ver
     expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
     expectTables(sqlite);
     expect(sqlite.prepare('SELECT library_epoch, proof_revision FROM node_version_local_proof_state').get())
-      .toMatchObject({ library_epoch: expect.any(String), proof_revision: 0 });
+      .toMatchObject({ library_epoch: expect.any(String), proof_revision: 1 });
     expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('original'))
       .toEqual({ body_text: 'original body' });
   } finally {
@@ -62,7 +65,7 @@ it('adds retention state and a stable library epoch to an existing companion lib
     expect(sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
     expectTables(sqlite);
     expect(sqlite.prepare('SELECT library_epoch, proof_revision FROM node_version_local_proof_state').get())
-      .toMatchObject({ library_epoch: expect.any(String), proof_revision: 0 });
+      .toMatchObject({ library_epoch: expect.any(String), proof_revision: 1 });
   } finally {
     sqlite.close();
   }

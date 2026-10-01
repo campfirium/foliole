@@ -62,10 +62,8 @@ function seedPdfNode(input: { attachmentId: string; nodeId: string; pages: Array
     title: input.nodeId,
     updatedAt: '2026-05-26T00:00:00.000Z'
   });
-  insertPdfAttachment({ id: input.attachmentId, originalName: `${input.attachmentId}.pdf`, status: 'ready' });
+  insertPdfAttachment({ nodeId: input.nodeId, id: input.attachmentId, originalName: `${input.attachmentId}.pdf`, status: 'ready' });
   const sqlite = openDatabaseConnection().sqlite;
-  sqlite.prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
-    .run(input.nodeId, input.attachmentId, 'reference');
   const insertPage = sqlite.prepare('INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)');
   input.pages.forEach(([page, text]) => insertPage.run(input.attachmentId, page, text));
   syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, [input.nodeId]);
@@ -74,7 +72,7 @@ function seedPdfNode(input: { attachmentId: string; nodeId: string; pages: Array
 
 it('falls back to PDF page text for long queries when the PDF FTS index is empty', () => {
   seedPdfNode({
-    attachmentId: 'pdf-fallback',
+    attachmentId: '5d851d5cb70f8b4050d43b86399239aa0d8c2f0695d68ea2dffeea470af85cce',
     nodeId: 'node-pdf-fallback',
     pages: [[1, 'The durable atlas phrase lives only in page text.']]
   });
@@ -82,13 +80,13 @@ it('falls back to PDF page text for long queries when the PDF FTS index is empty
   expect(searchWorkspace('durable atlas phrase')[0]).toMatchObject({
     id: 'node-pdf-fallback',
     kind: 'pdf',
-    pdfMatch: expect.objectContaining({ attachmentId: 'pdf-fallback', page: 1 })
+    pdfMatch: expect.objectContaining({ attachmentId: '5d851d5cb70f8b4050d43b86399239aa0d8c2f0695d68ea2dffeea470af85cce', page: 1 })
   });
 });
 
 it('keeps cross-page PDF search backed by page text when the PDF FTS index is empty', () => {
   seedPdfNode({
-    attachmentId: 'pdf-cross-page',
+    attachmentId: '0a87220c20b6f49719e7927e38509b3631055b0484a08d33379ad201c3cf9c2a',
     nodeId: 'node-pdf-cross-page',
     pages: [[1, 'alpha bri'], [2, 'dge omega']]
   });
@@ -96,6 +94,6 @@ it('keeps cross-page PDF search backed by page text when the PDF FTS index is em
   expect(searchWorkspace('bridge')[0]).toMatchObject({
     id: 'node-pdf-cross-page',
     kind: 'pdf',
-    pdfMatch: expect.objectContaining({ attachmentId: 'pdf-cross-page', page: 1 })
+    pdfMatch: expect.objectContaining({ attachmentId: '0a87220c20b6f49719e7927e38509b3631055b0484a08d33379ad201c3cf9c2a', page: 1 })
   });
 });

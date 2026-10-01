@@ -2,6 +2,7 @@ import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
 
 import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
+import { projectNodeInlineContent } from './nodeInlineProjection.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
 export function writeNodeBody(input: {
@@ -14,10 +15,12 @@ export function writeNodeBody(input: {
   const bodyBlobHash = upsertTextBodyBlob(input.driver, input.content, input.updatedAt);
   input.driver.execute(
     `UPDATE nodes
-     SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ?
+     SET sync_dirty = CASE WHEN body_blob_hash IS NOT ? THEN 1 ELSE sync_dirty END,
+         content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ?
      WHERE id = ?`,
     [
-      input.content,
+      bodyBlobHash,
+      projectNodeInlineContent(input.content),
       bodyBlobHash,
       resolveNodeOpeningText(input.content, input.title),
       input.updatedAt,

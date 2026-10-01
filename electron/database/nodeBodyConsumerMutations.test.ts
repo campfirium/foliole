@@ -17,16 +17,17 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { PDF_READER_PLACEHOLDER_TEXT } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildReadwiseBookPlaceholderNodeId } from '../import/readwiseBookNodes.js';
 import { refreshReadwiseBookPlaceholderNode } from '../import/readwiseBookPlaceholderRefresh.js';
 import type { ReadwiseBookInventoryItem } from '../import/readwiseBooksInventory.js';
 import { applyEpubSequentialReadingMode } from '../ipc/epubSequentialReading.js';
 
-import { createAttachmentRecord, createNodeAttachmentLink } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
+import { persistNodeResourceReference } from './nodeResources.js';
 import { syncPdfBodyBlobsForReferenceNodes } from './pdfBodyBlobs.js';
 
 let tempRoot = '';
@@ -52,7 +53,7 @@ function seedNode(nodeId: string, content: string) {
 
 function readBody(nodeId: string) {
   return openDatabaseConnection().driver.queryOne<{ blob: string; content: string; sync_dirty: number }>(
-    `SELECT CAST(cbd.data AS TEXT) AS blob, n.content, n.sync_dirty
+    `SELECT CAST(cbd.data AS TEXT) AS blob, ${buildNodeBodyContentSql()} AS content, n.sync_dirty
      FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`,
     [nodeId]
   );
@@ -86,31 +87,35 @@ it('normalizes a Readwise book placeholder through the formal Blob writer', () =
 
 it('refreshes a Blob-only PDF placeholder with matching Blob and inline projection', () => {
   seedNode('pdf-node', `# PDF\n\n${PDF_READER_PLACEHOLDER_TEXT}`);
-  createAttachmentRecord({
-    createdAt: '2026-08-01T00:00:00.000Z', id: 'pdf-attachment', mimeType: 'application/pdf',
-    originalName: 'paper.pdf', sizeBytes: 100
-  });
-  createNodeAttachmentLink({ attachmentId: 'pdf-attachment', nodeId: 'pdf-node', role: 'reference' });
+  persistNodeResourceReference('pdf-node', { storage_key: `${'a'.repeat(64)}.pdf`, role: 'reference', original_name: 'paper.pdf' });
   openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', 'pdf-node']);
 
   expect(syncPdfBodyBlobsForReferenceNodes(
-    'pdf-attachment', [{ page: 1, text: 'Page body', pageHeight: null, pageWidth: null }],
+    'a'.repeat(64), [{ page: 1, text: 'Page body', pageHeight: null, pageWidth: null }],
     'test-host', '2026-08-01T00:01:00.000Z'
   )).toEqual(['pdf-node']);
   const body = readBody('pdf-node');
   expect(body?.content).toContain('Page body');
   expect(body?.blob).toBe(body?.content);
-  expect(body?.sync_dirty).toBe(1);
+  expect(body?.sync_dirty).toBe(0);
+  const connection = openDatabaseConnection();
+  const head = connection.sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').pluck().get('pdf-node');
+  const version = connection.sqlite.prepare('SELECT body_text, snapshot_json FROM node_sync_versions WHERE version_id = ?')
+    .get(head) as { body_text: string; snapshot_json: string };
+  expect(version.body_text).toContain('Page body');
+  expect(JSON.parse(version.snapshot_json).resource_references).toContain('paper.pdf');
 
   const hash = openDatabaseConnection().driver.queryOne<{ body_blob_hash: string }>(
     'SELECT body_blob_hash FROM nodes WHERE id = ?', ['pdf-node']
   )?.body_blob_hash ?? '';
   openDatabaseConnection().driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
   expect(syncPdfBodyBlobsForReferenceNodes(
-    'pdf-attachment', [{ page: 1, text: 'Replacement', pageHeight: null, pageWidth: null }],
+    'a'.repeat(64), [{ page: 1, text: 'Replacement', pageHeight: null, pageWidth: null }],
     'test-host', '2026-08-01T00:02:00.000Z'
   )).toEqual([]);
-  expect(readBody('pdf-node')?.content).toContain('Page body');
+  expect(connection.sqlite.prepare('SELECT body_blob_hash FROM nodes WHERE id = ?').pluck().get('pdf-node')).toBe(hash);
+  expect(connection.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(head))
+    .toContain('Page body');
 });
 
 it('uses Blob-only EPUB candidates and aborts all reading writes for unavailable bodies', () => {

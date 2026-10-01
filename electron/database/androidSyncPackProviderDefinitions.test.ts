@@ -41,10 +41,6 @@ beforeEach(() => {
     contentHash: 'setting-hash', lastModifiedByHostName: 'android-b',
     objectId: 'host:android:phone:Android test host:sample', objectType: 'setting', updatedAt: now
   });
-  driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES ('attachment-1', 'sample.pdf', 'application/pdf', 12, ?)`, [now]
-  );
   upsertSyncObjectState(driver, {
     contentHash: 'attachment-state-hash', lastModifiedByHostName: 'android-b',
     objectId: 'attachment-1', objectType: 'attachment', updatedAt: now
@@ -64,11 +60,8 @@ it('builds a baseline payload with structure, body manifest, and payload objects
   expect(pack.prepare('SELECT hash FROM content_blobs').get()).toBeTruthy();
   expect(pack.prepare("SELECT object_id FROM sync_objects WHERE object_type = 'setting'").get())
     .toEqual({ object_id: 'host:android:phone:Android test host:sample' });
-  expect(JSON.parse((pack.prepare(
-    "SELECT payload_json FROM sync_objects WHERE object_type = 'attachment'"
-  ).get() as { payload_json: string }).payload_json)).toMatchObject({
-    attachment_id: 'attachment-1', mime_type: 'application/pdf', size_bytes: 12
-  });
+  expect(pack.prepare("SELECT payload_json FROM sync_objects WHERE object_type = 'attachment'").get()).toBeUndefined();
+  expect(pack.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')").all()).toEqual([]);
   pack.close();
 });
 
@@ -143,10 +136,8 @@ it('loads each payload surface in bulk instead of querying once per state row', 
 it('selects an independent delta for each Device cursor', () => {
   const baseline = buildPack(0);
   const laterPeer = buildPack(2);
-  expect(baseline.prepare('SELECT COUNT(*) AS value FROM sync_object_state').get()).toEqual({ value: 3 });
-  expect(laterPeer.prepare('SELECT object_type, object_id FROM sync_object_state').all()).toEqual([{
-    object_id: 'attachment-1', object_type: 'attachment'
-  }]);
+  expect(baseline.prepare('SELECT COUNT(*) AS value FROM sync_object_state').get()).toEqual({ value: 2 });
+  expect(laterPeer.prepare('SELECT object_type, object_id FROM sync_object_state').all()).toEqual([]);
   baseline.close(); laterPeer.close();
 });
 

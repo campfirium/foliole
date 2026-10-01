@@ -139,7 +139,7 @@ export async function sync(source: Peer, target: Peer) {
   return pack;
 }
 
-async function receiveBodies(source: Peer, target: Peer) {
+export async function receiveBodies(source: Peer, target: Peer) {
   const needed = target.db.prepare(`SELECT hash FROM content_blobs
     WHERE hash NOT IN (SELECT hash FROM content_blob_data)`).pluck().all() as string[];
   if (!needed.length) return;

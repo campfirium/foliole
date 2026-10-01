@@ -13,7 +13,9 @@ final class FolioleCompanionSyncPackVersionHolds {
         JSONArray heads = new JSONArray();
         JSONArray payloads = new JSONArray();
         try (Cursor cursor = pack.rawQuery(
-            "SELECT id, current_version_id FROM nodes WHERE current_version_id IS NOT NULL", null)) {
+            "SELECT id, current_version_id FROM nodes WHERE current_version_id IS NOT NULL " +
+            "UNION SELECT t.node_id, t.version_id FROM node_sync_tombstones t " +
+            "JOIN node_sync_versions v ON v.version_id = t.version_id AND v.object_id = t.node_id", null)) {
             while (cursor.moveToNext()) heads.put(new JSONObject()
                 .put("object_id", cursor.getString(0)).put("version_id", cursor.getString(1)));
         }

@@ -24,6 +24,17 @@ export const PACK_SCHEMA = [
     updated_at TEXT NOT NULL,
     PRIMARY KEY (group_id, device_identity_key)
   )`,
+  `CREATE TABLE node_version_peer_heads (
+    group_id TEXT NOT NULL,
+    device_identity_key TEXT NOT NULL,
+    object_id TEXT NOT NULL,
+    version_id TEXT NOT NULL,
+    library_epoch TEXT NOT NULL,
+    proof_revision INTEGER NOT NULL,
+    pack_id TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (group_id, device_identity_key, object_id)
+  )`,
   `CREATE TABLE sync_object_state (
     object_type TEXT NOT NULL,
     object_id TEXT NOT NULL,
@@ -70,12 +81,6 @@ export const PACK_SCHEMA = [
     ordinal INTEGER NOT NULL,
     PRIMARY KEY (version_id, parent_version_id),
     UNIQUE (version_id, ordinal)
-  )`,
-  `CREATE TABLE node_attachments (
-    node_id TEXT NOT NULL,
-    attachment_id TEXT NOT NULL,
-    role TEXT NOT NULL,
-    PRIMARY KEY (node_id, attachment_id, role)
   )`,
   `CREATE TABLE external_documents (
     document_id TEXT PRIMARY KEY,

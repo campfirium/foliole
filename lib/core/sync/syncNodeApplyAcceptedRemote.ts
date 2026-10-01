@@ -8,9 +8,6 @@ import {
 } from './syncNodeAnchorRepair.js';
 import type { SyncNodeApplyOperation } from './syncNodeApplyRules.js';
 import {
-  buildAttachmentExistsQuery,
-  buildNodeAttachmentDelete,
-  buildNodeAttachmentInsert,
   buildRemoteNodeUpdate,
   buildRemoteNodeUpsert,
   buildRemoteNodeVersionUpsert
@@ -37,6 +34,16 @@ async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: read
 async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
   const statement = buildRemoteNodeVersionUpsert(record);
   if (!statement) return;
+  const [existing] = await port.query<DbRow>('SELECT * FROM node_sync_versions WHERE version_id = ?', [record.version_id]);
+  if (existing) {
+    const incomingBody = record.body_text ?? record.snapshot.content;
+    if (existing.object_id !== record.object_id || existing.content_hash !== record.content_hash ||
+        existing.host_name !== record.host_name || existing.created_at !== record.version_created_at ||
+        (existing.body_text !== null && incomingBody !== null && existing.body_text !== incomingBody)) {
+      throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
+    }
+    return;
+  }
   await port.run(statement.sql, statement.params);
   const parentIds = record.parent_version_ids
     ?? (record.parent_version_id ? [record.parent_version_id] : []);
@@ -70,18 +77,6 @@ async function upsertRemoteNode(
   await port.run(statement.sql, statement.params);
 }
 
-async function replaceNodeAttachmentLinks(port: DbPort, record: NativeSyncNodeRecord) {
-  const deleteStatement = buildNodeAttachmentDelete(record);
-  await port.run(deleteStatement.sql, deleteStatement.params);
-  for (const attachment of record.snapshot.attachments) {
-    const existsQuery = buildAttachmentExistsQuery(attachment.attachment_id);
-    const existing = await queryOne(port, existsQuery.sql, existsQuery.params);
-    if (!existing) continue;
-    const insertStatement = buildNodeAttachmentInsert(record, attachment);
-    await port.run(insertStatement.sql, insertStatement.params);
-  }
-}
-
 async function applyRemoteNode(
   port: DbPort,
   record: NativeSyncNodeRecord,
@@ -91,7 +86,6 @@ async function applyRemoteNode(
 ) {
   await upsertRemoteNode(port, record, preparedTextBodyHashes, nodeExists, syncDirty);
   await upsertRemoteVersion(port, record);
-  await replaceNodeAttachmentLinks(port, record);
 }
 
 export async function applyAcceptedRemoteNode(input: {
@@ -126,6 +120,10 @@ export async function applyAcceptedRemoteNode(input: {
     input.localNode !== null,
     0
   );
+  if (localMutation && input.record.version_id) {
+    await input.tx.run('INSERT OR IGNORE INTO node_version_local_origins (version_id) VALUES (?)', [input.record.version_id]);
+    await input.tx.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
+  }
   if (!input.record.snapshot.deleted_at && input.record.snapshot.content !== undefined) {
     const repairResult = await repairDirectChildAnchorsForAppliedParent({
       content: input.record.snapshot.content,

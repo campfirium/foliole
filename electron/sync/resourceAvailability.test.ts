@@ -28,9 +28,9 @@ it('binds claims to stable identity and verifies real file bytes rather than met
   const filePath = path.join(root, 'resource');
   await fs.writeFile(filePath, bytes);
   mocks.resource.mockReturnValue({ status: 'ready', filePath, sizeBytes: bytes.length });
-  const body = JSON.stringify({ resources: [{ kind: 'attachment', id: hash }] });
+  const body = JSON.stringify({ resources: [{ kind: 'attachment', id: hash, storage_key: `${hash}.png` }] });
   expect(await loadResourceAvailability(body)).toEqual({ provider_device_id: 'stable-C', resources: [
-    { kind: 'attachment', id: hash, status: 'available', sha256: hash, size_bytes: bytes.length }
+    { kind: 'attachment', id: hash, storage_key: `${hash}.png`, status: 'available', sha256: hash, size_bytes: bytes.length }
   ] });
   await fs.writeFile(filePath, 'corrupt bytes');
   expect((await loadResourceAvailability(body)).resources[0]?.status).toBe('checksum_mismatch');
@@ -40,8 +40,8 @@ it('binds claims to stable identity and verifies real file bytes rather than met
 
 it('reports a historical metadata row without bytes as missing regardless of source host', async () => {
   mocks.resource.mockReturnValue({ status: 'missing_file' });
-  const body = JSON.stringify({ resources: [{ kind: 'attachment', id: hash }] });
-  expect((await loadResourceAvailability(body)).resources).toEqual([{ kind: 'attachment', id: hash, status: 'missing' }]);
+  const body = JSON.stringify({ resources: [{ kind: 'attachment', id: hash, storage_key: `${hash}.png` }] });
+  expect((await loadResourceAvailability(body)).resources).toEqual([{ kind: 'attachment', id: hash, storage_key: `${hash}.png`, status: 'missing' }]);
 });
 
 it('checks stored blob hash and size, including corrupt and absent data', async () => {
@@ -56,7 +56,7 @@ it('checks stored blob hash and size, including corrupt and absent data', async 
 
 it('rejects malformed and oversized batches before accessing a resource', async () => {
   await expect(loadResourceAvailability('{')).rejects.toThrow();
-  await expect(loadResourceAvailability(JSON.stringify({ resources: Array(33).fill({ kind: 'attachment', id: hash }) }))).rejects.toThrow();
+  await expect(loadResourceAvailability(JSON.stringify({ resources: Array(33).fill({ kind: 'attachment', id: hash, storage_key: `${hash}.png` }) }))).rejects.toThrow();
   expect(mocks.resource).not.toHaveBeenCalled();
   expect(mocks.queryOne).not.toHaveBeenCalled();
 });

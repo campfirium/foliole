@@ -1,3 +1,4 @@
+import { NODE_VERSION_PEER_HEAD_COLUMNS } from '../../lib/core/sync/nodeVersionDependencies.js';
 import type { SyncPackDependencyManifest } from '../../lib/core/sync/syncPackDependencyManifest.js';
 import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
 import { SYNC_PACK_NODE_COLUMNS } from '../../lib/core/sync/syncPackNodeFields.js';
@@ -51,9 +52,9 @@ export function writePackManifest(
       ...(input.restoreId ? { restoreId: input.restoreId } : {}),
       sourceEpoch: input.sourceEpoch,
       tableRows: {
+        node_version_peer_heads: rows.nodeVersionDependencies ?? [],
         content_blobs: rows.contentBlobs,
         external_documents: rows.externalDocuments,
-        node_attachments: rows.nodeAttachments,
         node_sync_versions: rows.nodeVersions,
         node_sync_tombstones: rows.nodeTombstones,
         node_sync_version_parents: rows.nodeVersionParents,
@@ -71,6 +72,8 @@ export function writePackManifest(
 
 export function writePackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {
   writeGroupPackRows(db, rows);
+  copyRows({ db, table: 'node_version_peer_heads', columns: NODE_VERSION_PEER_HEAD_COLUMNS,
+    rows: rows.nodeVersionDependencies ?? [] });
   writeCorePackRows(db, rows);
   writeNodePackRows(db, rows);
   writeDocumentPackRows(db, rows);
@@ -135,12 +138,7 @@ function writeNodePackRows(db: import('better-sqlite3').Database, rows: LoadedDe
     rows: rows.nodes,
     values: (row) => SYNC_PACK_NODE_COLUMNS.map((column) => column === 'content' ? '' : row[column])
   });
-  copyRows({
-    db,
-    table: 'node_attachments',
-    columns: ['node_id', 'attachment_id', 'role'],
-    rows: rows.nodeAttachments
-  });
+
 }
 
 function writeDocumentPackRows(db: import('better-sqlite3').Database, rows: LoadedDesktopSyncPackRows) {

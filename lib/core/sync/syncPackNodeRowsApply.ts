@@ -1,3 +1,5 @@
+import { parseNodeResourceReferences } from '../database/nodeResourceReferences.js';
+
 import type { DbPort, DbRow } from './dbPort.js';
 import {
   buildSyncPackApplyableRowsSql,
@@ -9,6 +11,7 @@ import { ensureSyncPackSpecialRootParents } from './syncPackSpecialRootApply.js'
 
 interface CandidateNode extends DbRow {
   id: string;
+  resource_references: string;
   parent_id: string | null;
   exists_locally: number;
   parent_exists: number;
@@ -21,6 +24,7 @@ export async function applySyncPackNodeRowsWithDbPort(
 ) {
   await ensureSyncPackSpecialRootParents(port, options.incomingAlias);
   const candidates = await loadCandidateNodes(port, options);
+  for (const candidate of candidates) parseNodeResourceReferences(candidate.resource_references);
   await assertValidSyncPackParentChanges(port, candidates);
   const orderedIds = orderNodeInserts(candidates);
   if (orderedIds.length === 0) return;
@@ -32,7 +36,7 @@ function loadCandidateNodes(port: DbPort, options: SyncPackNodeApplyOptions) {
   const alias = options.incomingAlias ?? 'inc';
   const applyable = buildSyncPackApplyableRowsSql({ ...options, objectType: 'node' });
   return port.query<CandidateNode>(
-    `SELECT incoming.id, incoming.parent_id,
+    `SELECT incoming.id, incoming.parent_id, incoming.resource_references,
        current.id IS NOT NULL AS exists_locally, parent.id IS NOT NULL AS parent_exists,
        current.parent_id AS local_parent_id
      FROM ${alias}.nodes incoming

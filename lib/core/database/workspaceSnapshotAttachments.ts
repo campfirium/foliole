@@ -1,56 +1,35 @@
-import { attachmentStorageKeySql } from './attachmentMetadataSql.js';
+import { parseCanonicalAttachmentStorageKey } from '../../platform/attachmentResource.js';
+
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import type { WorkspaceNodeAttachmentSnapshot, WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
+import { parseNodeResourceReferences } from './nodeResourceReferences.js';
+import type { WorkspaceNodeSnapshot } from './workspaceSnapshotHelpers.js';
 
-interface NodeAttachmentSnapshotRow extends DatabaseRow {
-  attachment_id: string;
-  availability: string | null;
-  content_hash: string | null;
-  mime_type: string | null;
-  node_id: string;
-  original_name: string | null;
-  role: string;
-  storage_key: string | null;
-}
-
-function queryNodeAttachmentRows(driver: DatabaseDriver): NodeAttachmentSnapshotRow[] {
-  return driver.queryAll<NodeAttachmentSnapshotRow>(
-    `SELECT
-       node_attachments.node_id,
-       node_attachments.attachment_id,
-       node_attachments.role,
-       attachments.mime_type,
-       attachments.original_name
-       , attachments.id AS content_hash
-       , ${attachmentStorageKeySql('attachments.id', 'attachments.mime_type')} AS storage_key
-       , 'unresolved' AS availability
-     FROM node_attachments
-     LEFT JOIN attachments ON attachments.id = node_attachments.attachment_id
-     ORDER BY node_attachments.node_id ASC, node_attachments.role ASC, node_attachments.attachment_id ASC`
-  );
+interface NodeResourceRow extends DatabaseRow {
+  id: string;
+  resource_references: string;
 }
 
 export function attachWorkspaceNodeAttachments(
   driver: DatabaseDriver,
   nodesById: Record<string, WorkspaceNodeSnapshot>
 ) {
-  for (const node of Object.values(nodesById)) {
-    node.attachments = [];
-  }
-  for (const row of queryNodeAttachmentRows(driver)) {
-    const node = nodesById[row.node_id];
-    if (!node) {
-      continue;
-    }
-    const attachment: WorkspaceNodeAttachmentSnapshot = {
-      attachmentId: row.attachment_id,
-      availability: row.availability ?? 'unresolved',
-      contentHash: row.content_hash,
-      mimeType: row.mime_type,
-      originalName: row.original_name,
-      role: row.role,
-      storageKey: row.storage_key
-    };
-    node.attachments = [...(node.attachments ?? []), attachment];
+  for (const node of Object.values(nodesById)) node.attachments = [];
+  const rows = driver.queryAll<NodeResourceRow>('SELECT id, resource_references FROM nodes ORDER BY id');
+  for (const row of rows) {
+    const node = nodesById[row.id];
+    if (!node) continue;
+    node.resourceReferences = parseNodeResourceReferences(row.resource_references);
+    node.attachments = node.resourceReferences.map((reference) => {
+      const parsed = parseCanonicalAttachmentStorageKey(reference.storage_key)!;
+      return {
+        attachmentId: parsed.contentHash,
+        availability: 'unresolved',
+        contentHash: parsed.contentHash,
+        mimeType: parsed.mimeType,
+        originalName: reference.original_name,
+        role: reference.role,
+        storageKey: reference.storage_key
+      };
+    });
   }
 }

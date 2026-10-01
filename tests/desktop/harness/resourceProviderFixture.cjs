@@ -34,7 +34,8 @@ function send(state, request, response, status, payload, contentType = 'applicat
   const crypto = production('electron/sync/workgroupAeadNode.js');
   const plaintext = Buffer.isBuffer(payload) ? payload : Buffer.from(JSON.stringify(payload));
   response.writeHead(status, { 'Content-Type': 'application/vnd.foliole.workgroup-aead+json',
-    'X-Foliole-Original-Content-Type': contentType });
+    'X-Foliole-Original-Content-Type': contentType,
+    ...(contentType === 'image/png' ? { 'X-Foliole-Resource-Total-Bytes': String(plaintext.length) } : {}) });
   response.end(JSON.stringify(crypto.encryptWorkgroupPayloadNode({
     context: context(state, request, 'response', contentType), groupKey: state.secret.group_key, plaintext
   })));

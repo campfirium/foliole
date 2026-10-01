@@ -124,15 +124,12 @@ it('keeps batch node indexing equivalent for blobs, inline fallback, and deleted
 
 it('batches attachment-triggered pdf search indexing through one path CTE', () => {
   const connection = openDatabaseConnection();
-  const attachmentIds = ['pdf-a', 'pdf-b', 'pdf-c'];
+  const attachmentIds = ['2778baef34a09e1df2288ad483990f75bfb3845f8d178785a752dca7993af07a', '884cefa084c318fea475eda355530798135b6256f95bd49c1e9b49589af1950c', '06c7b281a4e2571c0f0b0fcb7e6a80791c5223995604022b7cb9765b5ab50da5'];
   attachmentIds.forEach((attachmentId, index) => {
     const nodeId = `pdf-node-${index}`;
     insertNode({ id: nodeId, title: `PDF Node ${index}`, content: '' });
-    insertPdfAttachment({ id: attachmentId, originalName: `Batch ${index}.pdf`, status: 'ready' });
-    connection.sqlite
-      .prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
-      .run(nodeId, attachmentId, 'reference');
-    connection.sqlite
+    insertPdfAttachment({ nodeId, id: attachmentId, originalName: `Batch ${index}.pdf`, status: 'ready' });
+      connection.sqlite
       .prepare('INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)')
       .run(attachmentId, 1, `attachment batch atlas marker ${index}`);
   });

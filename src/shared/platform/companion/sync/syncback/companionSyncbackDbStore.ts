@@ -1,5 +1,6 @@
 import { COMPANION_SYNCBACK_HOST_CONTRACT as CONTRACT } from '../../../../../../lib/core/database/companionSyncbackHostContractDefinitions';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort';
+import { includeRetainedNodePushHistory } from '../../../../../../lib/core/sync/nodeVersionPushHistory';
 import type {
   NativeSyncChangeCursor,
   NativeSyncNodeRecord,
@@ -64,7 +65,7 @@ async function loadNodeVersions(
   const rows = await port.query(CONTRACT.sql.nodeVersions, [
     hostName, peerId, createdAt, changeId, createdAt, createdAt, changeId, normalizeNodeVersionLimit(limit)
   ]);
-  return Promise.all(rows.map(async (row) => {
+  const records = await Promise.all(rows.map(async (row) => {
     const snapshot = parseNodeSnapshot(row.snapshot) as NativeSyncNodeRecord['snapshot'];
     const parentVersionIds = await loadDirectParentVersionIds(port, String(row.version_id));
     return {
@@ -76,7 +77,8 @@ async function loadNodeVersions(
       parent_version_ids: parentVersionIds,
       snapshot
     };
-  })) as Promise<NativeSyncNodeRecord[]>;
+  })) as NativeSyncNodeRecord[];
+  return includeRetainedNodePushHistory(port, records);
 }
 
 async function loadDirectParentVersionIds(port: DbPort, versionId: string) {
@@ -163,6 +165,8 @@ async function savePushAcks(port: DbPort, peerId: string, acks: SyncPushAck[]) {
   await port.transaction(async (tx) => {
     for (const ack of acks) {
       if (!isValidAck(ack)) continue;
+      const confirmed = await savePeerPushAcksWithinTransaction(tx, peerId, [ack]);
+      if (!confirmed.length) continue;
       if (ack.identity.objectType === 'node' && ack.canonicalObjectId
         && ack.canonicalObjectId !== ack.identity.objectId) {
         if (!ack.versionId || !ack.canonicalVersionId) {
@@ -172,7 +176,7 @@ async function savePushAcks(port: DbPort, peerId: string, acks: SyncPushAck[]) {
           tx, ack.identity.objectId, ack.canonicalObjectId, ack.versionId, ack.canonicalVersionId
         );
       }
-      saved.push(...await savePeerPushAcksWithinTransaction(tx, peerId, [ack]));
+      saved.push(...confirmed);
     }
   });
   return saved;

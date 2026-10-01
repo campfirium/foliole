@@ -3,6 +3,7 @@ import { hashText } from './syncNodeResolution.js';
 export const SYNC_PACK_DEPENDENCY_INITIAL_DIGEST = hashText('foliole-sync-pack-dependencies-v1');
 export const SYNC_PACK_DEPENDENCY_MAX_ROWS = 128;
 export const SYNC_PACK_DEPENDENCY_MAX_BYTES = 2 * 1024 * 1024;
+export const SYNC_PACK_DEPENDENCY_STORED_MAX_BYTES = SYNC_PACK_DEPENDENCY_MAX_BYTES + 128 * 1024;
 export const SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES = [
   'node', 'node_open_state', 'node_reading', 'node_review', 'parent_child_order'
 ] as const;

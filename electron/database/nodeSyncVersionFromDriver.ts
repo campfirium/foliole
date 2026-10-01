@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { resolveNodeBody } from '../../lib/core/database/nodeBodyResolution.js';
+import { collectNodeVersionChainWithDriver } from '../../lib/core/database/nodeVersionChainRetention.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 
 import { upsertNodeSyncState } from './nodeSyncStateRows.js';
@@ -34,6 +35,7 @@ export function flushNodeSyncVersionWithDriver(
       [resolvedVersionId, row.id, row.current_version_id, hostName, now, contentHash, body.content,
         JSON.stringify(buildNodeSyncSnapshotFromDriver(driver, resolvedRow, nodeId))]
     );
+    driver.execute('INSERT INTO node_version_local_origins (version_id) VALUES (?)', [resolvedVersionId]);
     if (row.current_version_id) {
       driver.execute(
         `INSERT INTO node_sync_version_parents (version_id, parent_version_id, ordinal) VALUES (?, ?, 0)`,
@@ -52,6 +54,8 @@ export function flushNodeSyncVersionWithDriver(
       nodeId: row.id,
       updatedAt: row.updated_at
     }, driver);
+    driver.execute('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
+    collectNodeVersionChainWithDriver(driver, nodeId);
     createdVersionId = resolvedVersionId;
   });
   return createdVersionId;

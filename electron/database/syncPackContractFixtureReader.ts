@@ -26,7 +26,7 @@ export function readSyncPackContractRows(packPath: string, tempRoot: string) {
         json_extract(payload_json, '$.remote_import_state_json') remote_import_state_json
         FROM sync_objects WHERE object_type = 'import_source'`).all(),
       manifest,
-      nodeAttachments: db.prepare('SELECT node_id, attachment_id, role FROM node_attachments').all(),
+      nodeResources: db.prepare("SELECT id, resource_references FROM nodes WHERE resource_references <> '[]'").all(),
       parentChildOrders: db.prepare(
         "SELECT object_id, payload_json FROM sync_objects WHERE object_type = 'parent_child_order'"
       ).all(),

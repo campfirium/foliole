@@ -1,9 +1,12 @@
 import type { DatabaseBindParams, DatabaseRow } from '../../lib/core/database/driver.js';
 
+export const SYNC_PACK_LEARNING_NODE_OBJECT_TYPES = [
+  'node_open_state', 'node_reading', 'node_review', 'parent_child_order'
+] as const;
+
 export function learningNodeIds(rows: Array<{ object_id: string; object_type: string }>) {
   return rows
-    .filter((row) => ['node_open_state', 'node_reading', 'node_review',
-      'parent_child_order'].includes(row.object_type))
+    .filter((row) => SYNC_PACK_LEARNING_NODE_OBJECT_TYPES.some((type) => type === row.object_type))
     .map((row) => row.object_id);
 }
 

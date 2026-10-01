@@ -4,7 +4,6 @@ export function resetMirrorTestWorkspace() {
   openDatabaseConnection().sqlite.exec(`
     DELETE FROM mirror_articles;
     DELETE FROM incoming_updates;
-    DELETE FROM node_attachments;
     DELETE FROM node_reading;
     DELETE FROM node_review;
     DELETE FROM node_order;

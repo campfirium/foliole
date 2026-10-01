@@ -4,18 +4,15 @@ import {
   androidReadableArticleSql,
   androidSearchExcerptExpression,
 } from './androidCompanionDerivedReadSql.js';
-import { attachmentStorageKeySql } from './attachmentMetadataSql.js';
 import { COMPANION_TOPIC_SEARCH_QUERY } from './companionTopicSearchDefinitions.js';
+import { NODE_RESOURCES_SQL } from './nodeResourcesSql.js';
 import { ROOT_CHILD_ORDER_ID } from './parentChildOrder.js';
 import { SNAPSHOT_VISIBLE_NODES_CTE_SQL, VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
   nodeAttachments: {
     resultKey: 'attachments',
-    sql:
-      `SELECT na.attachment_id, na.role, a.mime_type, a.original_name, a.id AS content_hash, ${attachmentStorageKeySql('a.id', 'a.mime_type')} AS storage_key, 'unresolved' AS availability ` +
-      'FROM node_attachments na LEFT JOIN attachments a ON a.id = na.attachment_id ' +
-      'WHERE na.node_id = ? ORDER BY na.role ASC, na.attachment_id ASC',
+    sql: `SELECT * FROM (${NODE_RESOURCES_SQL}) WHERE node_id = ? ORDER BY role, attachment_id`,
     columns: [
       { key: 'attachmentId', source: 'attachment_id', type: 'string' },
       { key: 'role', source: 'role', type: 'string' },
@@ -144,7 +141,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       "instr(substr(replace(n.content, char(13) || char(10), char(10)), 5), char(10) || '---' || char(10)) + 8) " +
       'ELSE NULL END AS collection_source_content, ' +
       'n.virtual_filter, NULL AS reveal, CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal, ' +
-      'n.anchor_link, n.image_regions, n.image_sources, n.import_source_fingerprint, n.import_content_fingerprint, ' +
+      'n.anchor_link, n.image_regions, n.image_sources, n.resource_references, n.import_source_fingerprint, n.import_content_fingerprint, ' +
       "(SELECT json_extract(i.remote_import_state_json, '$.remoteLifecycle') FROM import_sources i " +
       "WHERE i.latest_node_id = n.id AND i.remote_provider = 'readwise' ORDER BY i.last_imported_at DESC LIMIT 1) AS readwise_remote_lifecycle, " +
       'n.created_at, n.updated_at, n.deleted_at, n.current_version_id, ' +
@@ -181,6 +178,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       { key: 'anchor_link', source: 'anchor_link', type: 'nullableString' },
       { key: 'image_regions', source: 'image_regions', type: 'nullableString' },
       { key: 'image_sources', source: 'image_sources', type: 'nullableString' },
+      { key: 'resource_references', source: 'resource_references', type: 'string' },
       { key: 'import_source_fingerprint', source: 'import_source_fingerprint', type: 'nullableString' },
       { key: 'import_content_fingerprint', source: 'import_content_fingerprint', type: 'nullableString' },
       { key: 'readwise_remote_lifecycle', source: 'readwise_remote_lifecycle', type: 'nullableString' },

@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+
 let mockedAppDataDir = '/tmp/foliole-epub-import-tests';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -17,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -49,8 +51,8 @@ function source(filePath: string) {
 function readImportedChildren(parentNodeId: string) {
   return openDatabaseConnection().sqlite
     .prepare(
-      `SELECT n.title, n.content
-       FROM nodes n
+      `SELECT n.title, ${buildNodeBodyContentSql()} AS content
+       FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.parent_id = ?
        ORDER BY n.title ASC`
     )
@@ -118,7 +120,9 @@ it('keeps nav documents as real chapters while still skipping guide-marked cover
   ]);
 
   const imported = await runEpubImport(source(filePath), '2026-04-01T12:03:00.000Z');
-  const root = openDatabaseConnection().sqlite.prepare('SELECT title, content FROM nodes WHERE id = ?').get(imported.nodeId) as { content: string; title: string };
+  const root = openDatabaseConnection().sqlite.prepare(`SELECT n.title, ${buildNodeBodyContentSql()} AS content
+    FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`)
+    .get(imported.nodeId) as { content: string; title: string };
   const children = readImportedChildren(imported.nodeId as string);
 
   expect(children).toHaveLength(2);

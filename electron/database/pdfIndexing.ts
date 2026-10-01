@@ -6,13 +6,11 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
-import { loadAttachmentResourceDescription } from './attachmentResourceDescription.js';
 import { openDatabaseConnection } from './connection.js';
 import { submitPdfIndexingTask } from './pdfIndexingTaskQueue.js';
+import { beginPdfIndexAttempt, isMountedPdf, readPdfIndexAttempt, resetPdfIndexState, updatePdfIndexStatus } from './pdfIndexState.js';
 import { savePdfPageTextRows } from './pdfPageTextRows.js';
 
-const PDF_MIME_TYPE = 'application/pdf';
-const PDF_INDEX_VERSION = 1;
 const RETRY_LIMIT = 2;
 
 const PDF_STATUS_PENDING = 'pending';
@@ -24,78 +22,10 @@ interface PdfQueueRow extends DatabaseRow {
   id: string;
 }
 
-interface PdfIndexAttemptRow extends DatabaseRow {
-  pdf_index_attempt: number | null;
-}
-
 const queuedAttachmentIds = new Set<string>();
 
 export function toPdfDocumentData(bytes: Uint8Array) {
   return new Uint8Array(bytes);
-}
-
-function isPdfAttachment(attachmentId: string) {
-  const row = openDatabaseConnection().driver.queryOne<{ id: string }>(
-    `SELECT id
-     FROM attachments
-     WHERE id = ? AND mime_type = ?
-     LIMIT 1`,
-    [attachmentId, PDF_MIME_TYPE]
-  );
-  return Boolean(row);
-}
-
-function readPdfIndexAttempt(attachmentId: string) {
-  const row = openDatabaseConnection().driver.queryOne<PdfIndexAttemptRow>(
-    `SELECT pdf_index_attempt
-     FROM attachments
-     WHERE id = ?
-     LIMIT 1`,
-    [attachmentId]
-  );
-  return Math.max(0, row?.pdf_index_attempt ?? 0);
-}
-
-function updatePdfIndexStatus(input: {
-  attachmentId: string;
-  error: string | null;
-  indexedAt: string | null;
-  status: 'failed' | 'indexing' | 'pending' | 'ready';
-}) {
-  openDatabaseConnection().driver.execute(
-    `UPDATE attachments
-     SET pdf_index_status = ?,
-         pdf_indexed_at = ?,
-         pdf_index_error = ?,
-         pdf_index_version = COALESCE(pdf_index_version, ?)
-     WHERE id = ? AND mime_type = ?`,
-    [input.status, input.indexedAt, input.error, PDF_INDEX_VERSION, input.attachmentId, PDF_MIME_TYPE]
-  );
-}
-
-function beginIndexAttempt(attachmentId: string) {
-  openDatabaseConnection().driver.execute(
-    `UPDATE attachments
-     SET pdf_index_status = ?,
-         pdf_index_attempt = COALESCE(pdf_index_attempt, 0) + 1,
-         pdf_index_error = NULL,
-         pdf_index_version = COALESCE(pdf_index_version, ?)
-     WHERE id = ? AND mime_type = ?`,
-    [PDF_STATUS_INDEXING, PDF_INDEX_VERSION, attachmentId, PDF_MIME_TYPE]
-  );
-}
-
-function resetPdfIndexState(attachmentId: string) {
-  openDatabaseConnection().driver.execute(
-    `UPDATE attachments
-     SET pdf_index_status = ?,
-         pdf_indexed_at = NULL,
-         pdf_index_error = NULL,
-         pdf_index_version = ?,
-         pdf_index_attempt = 0
-     WHERE id = ? AND mime_type = ?`,
-    [PDF_STATUS_PENDING, PDF_INDEX_VERSION, attachmentId, PDF_MIME_TYPE]
-  );
 }
 
 function resolvePdfPageText(content: { items: unknown[] }) {
@@ -125,9 +55,7 @@ function resolvePdfPageDimensions(pdfPage: { getViewport: (input: { scale: numbe
 }
 
 async function extractPdfPageText(attachmentId: string) {
-  const description = loadAttachmentResourceDescription(attachmentId);
-  if (!description) throw new Error('PDF attachment description is not available.');
-  const resolved = resolveAttachmentFile(description.storageKey);
+  const resolved = resolveAttachmentFile(`${attachmentId}.pdf`);
   if (resolved.status !== 'ready') {
     throw new Error('PDF attachment file is not available.');
   }
@@ -163,12 +91,10 @@ function updatePdfNodeOpeningTexts(attachmentId: string, pages: Array<{ page: nu
   const connection = openDatabaseConnection();
   const linkedNodes = connection.driver.queryAll<{ node_id: string; title: string }>(
     `SELECT n.id AS node_id, n.title
-     FROM node_attachments na
-     INNER JOIN nodes n
-       ON n.id = na.node_id
-     WHERE na.attachment_id = ?
-       AND na.role = 'reference'`,
-    [attachmentId]
+     FROM nodes n, json_each(n.resource_references) resource
+     WHERE json_extract(resource.value, '$.storage_key') = ?
+       AND json_extract(resource.value, '$.role') = 'reference'`,
+    [`${attachmentId}.pdf`]
   );
   for (const node of linkedNodes) {
     const openingText = firstUsablePage ? resolveNodeOpeningText(firstUsablePage.text, node.title) : null;
@@ -194,11 +120,11 @@ function enqueueInternal(attachmentId: string) {
 }
 
 async function processOneAttachment(attachmentId: string) {
-  if (!isPdfAttachment(attachmentId)) {
+  if (!isMountedPdf(attachmentId)) {
     return;
   }
 
-  beginIndexAttempt(attachmentId);
+  beginPdfIndexAttempt(attachmentId);
 
   try {
     const pages = await extractPdfPageText(attachmentId);
@@ -233,12 +159,9 @@ export function markPdfAttachmentIndexPending(attachmentId: string) {
 
 export function resumePendingPdfAttachmentIndexing() {
   const rows = openDatabaseConnection().driver.queryAll<PdfQueueRow>(
-    `SELECT id
-     FROM attachments
-     WHERE mime_type = ?
-       AND pdf_index_status IN (?, ?)
-     ORDER BY created_at ASC`,
-    [PDF_MIME_TYPE, PDF_STATUS_PENDING, PDF_STATUS_INDEXING]
+    `SELECT attachment_id AS id FROM pdf_index_state
+     WHERE status IN (?, ?) ORDER BY attachment_id ASC`,
+    [PDF_STATUS_PENDING, PDF_STATUS_INDEXING]
   );
   for (const row of rows) {
     enqueueInternal(row.id);

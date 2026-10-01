@@ -131,7 +131,7 @@ export const DESKTOP_RESOURCE_SCHEMA_STATEMENTS = [
     data BLOB NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS pdf_page_text (
-    attachment_id TEXT NOT NULL REFERENCES attachments(id) ON DELETE CASCADE,
+    attachment_id TEXT NOT NULL,
     page INTEGER NOT NULL,
     text TEXT NOT NULL,
     page_width REAL,

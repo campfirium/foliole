@@ -134,7 +134,10 @@ async function readFreshFactPage(url: URL, peerId: string, fromStateSeq: number,
     const hasFacts = preview.page.index.versions.length + preview.page.index.parents.length +
       preview.page.index.reviews.length > 0;
     if (preview.page.complete && (!preview.multiObject || !hasFacts)) {
-      return loadCompanionSyncPackFactIndex(url, peerId);
+      const direct = new URL(url);
+      direct.searchParams.set('frontier_state_seq', String(preview.window.frontierStateSeq));
+      direct.searchParams.set('source_epoch', preview.window.sourceEpoch);
+      return loadCompanionSyncPackFactIndex(direct, peerId);
     }
     if (!group) throw new Error('sync_group_local_device_missing');
     const session = await createCompanionFactSession({ groupId: group.group_id, toPeerId: peerId,

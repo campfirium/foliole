@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
+import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from './workspaceBodyStatus.js';
@@ -49,7 +50,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
        CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content,
        CASE WHEN n.reveal IS NOT NULL THEN 1 ELSE 0 END AS has_reveal,
        CASE WHEN n.anchor_resolution_status LIKE 'unmapped_%' THEN NULL ELSE n.anchor_link END AS anchor_link,
-       n.image_regions,
+       n.image_regions, n.resource_references,
        n.import_content_fingerprint,
        n.import_source_fingerprint,
        n.created_at,
@@ -83,17 +84,9 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
 
 function queryPdfOpeningRows(driver: DatabaseDriver) {
   return driver.queryAll<PdfOpeningRow>(
-    `SELECT
-       na.node_id,
-       ppt.text
-     FROM node_attachments na
-     INNER JOIN attachments a
-       ON a.id = na.attachment_id
-     INNER JOIN pdf_page_text ppt
-       ON ppt.attachment_id = a.id
-     WHERE na.role = 'reference'
-       AND a.mime_type = 'application/pdf'
-     ORDER BY na.node_id ASC, ppt.page ASC`
+    `SELECT resource.node_id, ppt.text FROM (${NODE_PDF_RESOURCES_SQL}) resource
+     JOIN pdf_page_text ppt ON ppt.attachment_id = resource.id
+     ORDER BY resource.node_id ASC, ppt.page ASC`
   );
 }
 

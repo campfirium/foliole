@@ -63,9 +63,8 @@ function insertNode(input: { content: string; deletedAt?: string | null; id: str
 }
 
 function insertPdfPage(nodeId: string, attachmentId: string, originalName: string, text: string) {
-  insertPdfAttachment({ id: attachmentId, originalName, status: 'ready' });
+  insertPdfAttachment({ nodeId, id: attachmentId, originalName, status: 'ready' });
   const sqlite = openDatabaseConnection().sqlite;
-  sqlite.prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`).run(nodeId, attachmentId, 'reference');
   sqlite.prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, 3, ?)`).run(attachmentId, text);
 }
 
@@ -150,7 +149,7 @@ it('includes indexed pdf page hits in workspace search results', () => {
     content: '',
     updatedAt: '2026-03-05T00:00:00.000Z'
   });
-  insertPdfPage('node-pdf', 'pdf-attachment-1', 'Research.pdf', 'This page contains Atlas launch details and milestones.');
+  insertPdfPage('node-pdf', '2e06f68dae15631b82db20464cb65997f872440951a9c76b736dc6df491abc98', 'Research.pdf', 'This page contains Atlas launch details and milestones.');
   syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, ['node-pdf']);
 
   const results = searchWorkspace('Atlas');
@@ -165,7 +164,7 @@ it('includes indexed pdf page hits in workspace search results', () => {
   });
   expect(results[0]?.excerpt).toContain('Page 3');
   expect(results[0]?.pdfMatch).toEqual({
-    attachmentId: 'pdf-attachment-1',
+    attachmentId: '2e06f68dae15631b82db20464cb65997f872440951a9c76b736dc6df491abc98',
     matchStart: 19,
     page: 3,
     pageTextLength: 55,
@@ -182,7 +181,7 @@ it('does not return page-level pdf results when only the pdf title matches', () 
   });
   insertPdfPage(
     'node-pdf-title-only',
-    'pdf-attachment-title-only',
+    'a6d5009999812cc815ad6654b737c17775ce3cd3d1846cbc88159c356f0e3476',
     'Atlas Research.pdf',
     'This page contains unrelated content only.'
   );
@@ -200,13 +199,10 @@ it('includes cross-page pdf hits without changing the per-page storage model', (
     content: '',
     updatedAt: '2026-03-06T00:00:00.000Z'
   });
-  insertPdfAttachment({ id: 'pdf-attachment-cross', originalName: 'Boundary.pdf', status: 'ready' });
-  openDatabaseConnection().sqlite
-    .prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`)
-    .run('node-pdf-cross', 'pdf-attachment-cross', 'reference');
+  insertPdfAttachment({ nodeId: 'node-pdf-cross', id: '2651924b472dd09f2acd7d42d3718c694c677a7834a846df28b0a0b57c2b4ce4', originalName: 'Boundary.pdf', status: 'ready' });
   openDatabaseConnection().sqlite
     .prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?), (?, ?, ?)`)
-    .run('pdf-attachment-cross', 3, 'alpha bri', 'pdf-attachment-cross', 4, 'dge omega');
+    .run('2651924b472dd09f2acd7d42d3718c694c677a7834a846df28b0a0b57c2b4ce4', 3, 'alpha bri', '2651924b472dd09f2acd7d42d3718c694c677a7834a846df28b0a0b57c2b4ce4', 4, 'dge omega');
   syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, ['node-pdf-cross']);
 
   const results = searchWorkspace('bridge');
@@ -221,7 +217,7 @@ it('includes cross-page pdf hits without changing the per-page storage model', (
   });
   expect(results[0]?.excerpt).toContain('Cross-page match (3-4)');
   expect(results[0]?.pdfMatch).toEqual({
-    attachmentId: 'pdf-attachment-cross',
+    attachmentId: '2651924b472dd09f2acd7d42d3718c694c677a7834a846df28b0a0b57c2b4ce4',
     matchStart: 6,
     page: 3,
     pageTextLength: 9,

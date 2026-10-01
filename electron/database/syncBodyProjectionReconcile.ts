@@ -1,5 +1,6 @@
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { projectNodeInlineContent } from '../../lib/core/database/nodeInlineProjection.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 
 interface StaleBodyRow extends DatabaseRow {
@@ -27,7 +28,7 @@ export function reconcileVersionedInlineBodies(driver: DatabaseDriver) {
         `UPDATE nodes SET content = ?, body_blob_hash = ?
          WHERE id = ? AND current_version_id = ? AND sync_dirty = 0
            AND deleted_at IS NULL AND body_blob_hash IS NULL AND content = ''`,
-        [row.body_text, hash, row.id, row.current_version_id]
+        [projectNodeInlineContent(row.body_text), hash, row.id, row.current_version_id]
       );
       if (result.changes !== 1) throw new Error(`sync_body_projection_changed:${row.id}`);
     }

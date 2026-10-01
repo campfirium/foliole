@@ -137,7 +137,7 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
   if (!root.nodeId) throw new Error('readwise_epub_root_missing');
   replaceReadwiseApiEpubImageLinks(
     root.nodeId,
-    [...projectedCover.attachmentIds, ...projectedStructure.rootAttachmentIds]
+    [...(input.preparedCover?.resourceReferences ?? []), ...(input.preparedImages?.rootResourceReferences ?? [])]
   );
   registerNodeImageSources(root.nodeId, { ...input.preparedCover?.imageSources, ...input.preparedImages?.rootImageSources });
   persistReadwiseApiEpubBookNodes({

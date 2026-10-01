@@ -20,8 +20,9 @@ vi.mock('../ipc/paths.js', () => ({
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
+import { persistNodeResourceReference } from './nodeResources.js';
 import { searchCurrentPdfDocument } from './pdfDocumentSearch.js';
-import { insertPdfAttachment } from './workspaceSearchTestSupport.js';
+import { updatePdfIndexStatus } from './pdfIndexState.js';
 
 let tempRoot = '';
 
@@ -42,12 +43,11 @@ function seedPdf(status: 'indexing' | 'ready') {
     kind: 'topic', nodeId: 'pdf-topic', parentNodeId: null, position: null, reveal: null,
     title: 'PDF', updatedAt: '2026-09-22T00:00:00.000Z'
   });
-  insertPdfAttachment({ id: 'pdf-attachment', originalName: 'sample.pdf', status });
+  persistNodeResourceReference('pdf-topic', { storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'sample.pdf', role: 'reference' });
+  updatePdfIndexStatus({ attachmentId: 'a'.repeat(64), status, indexedAt: null, error: null });
   const sqlite = openDatabaseConnection().sqlite;
-  sqlite.prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
-    .run('pdf-topic', 'pdf-attachment', 'reference');
   sqlite.prepare('INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?), (?, ?, ?)')
-    .run('pdf-attachment', 1, 'alpha bri', 'pdf-attachment', 2, 'dge keyword keyword');
+    .run('a'.repeat(64), 1, 'alpha bri', 'a'.repeat(64), 2, 'dge keyword keyword');
 }
 
 it('searches every occurrence and cross-page match only after the durable index is ready', () => {

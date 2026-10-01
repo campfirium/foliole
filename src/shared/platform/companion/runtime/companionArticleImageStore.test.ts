@@ -17,7 +17,7 @@ vi.mock('./iosCompanionDatabaseBootstrap', () => ({
 }));
 
 import { importCompanionArticleImage } from './companionArticleImageRecovery';
-import { commitCompanionImageArticle, readCompanionImageArticle, saveCompanionImportedImage } from './companionArticleImageStore';
+import { commitCompanionImageArticle, readCompanionImageArticle } from './companionArticleImageStore';
 
 let database: Database.Database;
 const key = `${'a'.repeat(64)}.png`;
@@ -45,20 +45,20 @@ it('writes body and source together through the shared mobile version apply path
   expect(await readCompanionImageArticle('article')).toEqual(after);
 });
 
-it('retains original metadata when restoring an already registered image', async () => {
-  const image = { contentHash: 'a'.repeat(64), storageKey: key, sizeBytes: 8, mimeType: 'image/png' as const, storedFile: 'created' as const };
-  await saveCompanionImportedImage(state.port as DbPort, image);
-  database.prepare('UPDATE attachments SET original_name = ?, created_at = ? WHERE id = ?').run('Original.png', '2020-01-01', image.contentHash);
-  await saveCompanionImportedImage(state.port as DbPort, image);
-  expect(database.prepare('SELECT original_name, created_at FROM attachments WHERE id = ?').get(image.contentHash))
-    .toEqual({ original_name: 'Original.png', created_at: '2020-01-01' });
+it('keeps the filename on the article without an attachment registry', async () => {
+  const before = await readCompanionImageArticle('article');
+  const after = { content: `![image](asset://${key})`, imageSources: { [key]: url } };
+  expect(await commitCompanionImageArticle('article', before!, after,
+    { storage_key: key, role: 'image', original_name: 'Original.png' })).toBe(true);
+  const row = database.prepare('SELECT resource_references FROM nodes WHERE id = ?').get('article') as { resource_references: string };
+  expect(JSON.parse(row.resource_references)).toEqual([{ storage_key: key, role: 'image', original_name: 'Original.png' }]);
 });
 
 it('persists localized content and its source without an editable renderer or save callback', async () => {
   const original = `![image](${url})\n\n[ordinary](${url})\n\n\`![example](${url})\``;
   database.prepare('UPDATE nodes SET content = ? WHERE id = ?').run(original, 'article');
   importer.importCompanionImageResource.mockResolvedValue({ contentHash: 'a'.repeat(64),
-    storageKey: key, sizeBytes: 8, mimeType: 'image/png', storedFile: 'created' });
+    storageKey: key, originalName: 'image.png', sizeBytes: 8, mimeType: 'image/png', storedFile: 'created' });
   expect(await importCompanionArticleImage('article', url)).toMatchObject({ status: 'imported' });
   const expected = { content: original.replace(`![image](${url})`, `![image](asset://${key})`), imageSources: { [key]: url } };
   expect(await readCompanionImageArticle('article')).toEqual(expected);

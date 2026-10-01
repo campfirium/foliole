@@ -1,5 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
-import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
+import { buildNodeBodyContentSql, NodeBodyUnavailableError } from './nodeBodyResolution.js';
+import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 
 const NODE_BODY_CONTENT_SQL = buildNodeBodyContentSql();
 
@@ -33,7 +34,8 @@ const NODE_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
   LEFT JOIN content_blob_data cbd
     ON cbd.hash = n.body_blob_hash
   WHERE n.id IN (SELECT id FROM temp_workspace_search_affected_ids)
-    AND n.deleted_at IS NULL`;
+    AND n.deleted_at IS NULL
+    AND paths.node_id IS NOT NULL`;
 
 const PDF_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
   INSERT INTO search.pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length)
@@ -46,20 +48,17 @@ const PDF_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
     CAST(ppt.page AS TEXT),
     n.updated_at,
     CAST(length(ppt.text) AS TEXT)
-  FROM node_attachments na
-  INNER JOIN attachments a
-    ON a.id = na.attachment_id
-   AND a.mime_type = 'application/pdf'
-   AND a.pdf_index_status = 'ready'
+  FROM (${NODE_PDF_RESOURCES_SQL}) a
   INNER JOIN nodes n
-    ON n.id = na.node_id
+    ON n.id = a.node_id
    AND n.deleted_at IS NULL
   LEFT JOIN node_paths paths
     ON paths.node_id = n.id
   INNER JOIN pdf_page_text ppt
     ON ppt.attachment_id = a.id
-  WHERE na.node_id IN (SELECT id FROM temp_workspace_search_affected_ids)
-    AND na.role = 'reference'`;
+  WHERE a.node_id IN (SELECT id FROM temp_workspace_search_affected_ids)
+    AND a.pdf_index_status = 'ready'
+    AND paths.node_id IS NOT NULL`;
 
 const NODE_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
   INSERT INTO search.node_search (title, path, content, node_id, updated_at)
@@ -83,15 +82,10 @@ const PDF_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
     n.updated_at,
     CAST(length(ppt.text) AS TEXT)
   FROM pdf_page_text ppt
-  INNER JOIN attachments a
-    ON a.id = ppt.attachment_id
-   AND a.mime_type = 'application/pdf'
-   AND a.pdf_index_status = 'ready'
-  INNER JOIN node_attachments na
-    ON na.attachment_id = a.id
-   AND na.role = 'reference'
+  INNER JOIN (${NODE_PDF_RESOURCES_SQL}) a
+    ON a.id = ppt.attachment_id AND a.pdf_index_status = 'ready'
   INNER JOIN nodes n
-    ON n.id = na.node_id
+    ON n.id = a.node_id
    AND n.deleted_at IS NULL
   LEFT JOIN node_paths paths
     ON paths.node_id = n.id`;
@@ -175,7 +169,17 @@ function prepareAffectedNodeIds(driver: DatabaseDriver, nodeIds: string[], optio
   return { expandedCount: countTempAffectedIds(driver), seedCount: seedIds.length };
 }
 
+function requireAvailableNodeBodies(driver: DatabaseDriver, affectedOnly: boolean) {
+  const rows = driver.queryAll<{ id: string }>(`${NODE_PATHS_CTE_SQL}
+    SELECT n.id FROM nodes n INNER JOIN node_paths paths ON paths.node_id = n.id
+    LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+    WHERE NULLIF(TRIM(n.body_blob_hash), '') IS NOT NULL AND cbd.hash IS NULL
+      ${affectedOnly ? 'AND n.id IN (SELECT id FROM temp_workspace_search_affected_ids)' : ''}`);
+  if (rows.length > 0) throw new NodeBodyUnavailableError(rows.map((row) => row.id));
+}
+
 export function rebuildWorkspaceSearchIndexes(driver: DatabaseDriver) {
+  requireAvailableNodeBodies(driver, false);
   driver.execute('DELETE FROM search.node_search');
   driver.execute('DELETE FROM search.pdf_search');
   driver.execute(NODE_SEARCH_REBUILD_SQL);
@@ -188,6 +192,7 @@ export function syncNodeSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: s
   if (affected.expandedCount === 0) {
     return;
   }
+  requireAvailableNodeBodies(driver, true);
   driver.execute('DELETE FROM search.node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
@@ -210,6 +215,7 @@ export function syncWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeI
   if (affected.expandedCount === 0) {
     return;
   }
+  requireAvailableNodeBodies(driver, true);
   driver.execute('DELETE FROM search.node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
@@ -221,10 +227,7 @@ export function syncPdfSearchIndexForAttachmentIds(driver: DatabaseDriver, attac
   const nodeIds = new Set<string>();
   toUniqueIds(attachmentIds).forEach((attachmentId) => {
     const rows = driver.queryAll<{ node_id: string }>(
-      `SELECT DISTINCT na.node_id
-       FROM node_attachments na
-       WHERE na.attachment_id = ?
-         AND na.role = 'reference'`,
+      `SELECT DISTINCT a.node_id FROM (${NODE_PDF_RESOURCES_SQL}) a WHERE a.id = ?`,
       [attachmentId]
     );
     rows.forEach((row) => {

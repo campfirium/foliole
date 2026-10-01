@@ -42,9 +42,9 @@ export function createIncomingPack(filePath: string) {
        ) VALUES ('desktop#1', 'node-1', NULL, 'desktop',
          '2026-05-04T01:00:00.000Z', 'hash-node-1', '{"id":"node-1","title":"Packed Node"}')`
     ).run();
-    db.prepare(
-      "INSERT INTO node_attachments (node_id, attachment_id, role) VALUES ('node-1', 'att-1', 'reference')"
-    ).run();
+    db.prepare('UPDATE nodes SET resource_references = ? WHERE id = ?').run(JSON.stringify([
+      { storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'Original.pdf', role: 'reference' }
+    ]), 'node-1');
   } finally {
     db.close();
   }
@@ -53,8 +53,6 @@ export function createIncomingPack(filePath: string) {
 export function installLocalNodeFixtures() {
   const sqlite = openDatabaseConnection().sqlite;
   sqlite.exec(`
-    INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    VALUES ('att-1', 'att-1.pdf', 'application/pdf', 128, '2026-05-04T00:00:00.000Z');
     INSERT INTO sync_object_state (
       object_type, object_id, state_seq, current_version_id, content_hash,
       last_modified_by_host_name, updated_at, deleted_at, sync_dirty

@@ -1,5 +1,3 @@
-import { isCanonicalAttachmentStorageKey } from '../../../lib/platform/attachmentResource';
-import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 import { classifyResourceFailure, resourceKey } from '../../../lib/platform/resourceAvailabilityContract';
 
 import { invalidateAttachmentResourceResolution } from './attachmentResources';
@@ -24,48 +22,11 @@ interface AttachmentResourceRequest {
   storageKey: string;
 }
 
-function parsePayload(record: NativeSyncObjectRecord) {
-  if (!record.payload_json) {
-    return null;
-  }
-  try {
-    return JSON.parse(record.payload_json) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-function text(value: unknown) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
-}
-
-export function toAttachmentResourceRequest(record: NativeSyncObjectRecord): AttachmentResourceRequest | null {
-  if (record.object_type !== 'attachment' || record.deleted_at) {
-    return null;
-  }
-  const payload = parsePayload(record);
-  const blob = payload?.blob && typeof payload.blob === 'object'
-    ? payload.blob as Record<string, unknown>
-    : null;
-  const contentHash = text(blob?.content_hash);
-  const mimeType = text(blob?.mime_type);
-  const storageKey = text(blob?.storage_key);
-  if (!contentHash || !mimeType || !storageKey ||
-      !isCanonicalAttachmentStorageKey(storageKey, contentHash, mimeType)) {
-    return null;
-  }
-  return {
-    attachmentId: record.object_id,
-    contentHash,
-    mimeType,
-    storageKey
-  };
-}
-
 function buildAttachmentResourcePath(request: AttachmentResourceRequest) {
   const params = new URLSearchParams();
   params.set('attachment_id', request.attachmentId);
   params.set('content_hash', request.contentHash);
+  params.set('storage_key', request.storageKey);
   return `${ATTACHMENT_RESOURCE_PATH}?${params.toString()}`;
 }
 
@@ -79,18 +40,6 @@ async function buildSignedAttachmentResourceRequest(endpoint: string, request: A
     headers: await createSignedRequestHeaders({ endpointUrl: endpoint, method: 'GET', pathWithQuery }),
     url: `${endpoint}${pathWithQuery}`
   };
-}
-
-export async function syncCompanionAttachmentResourcesFromDesktop(
-  endpointUrl: string,
-  records: NativeSyncObjectRecord[]
-) {
-  return syncCompanionAttachmentResourceRequestsFromDesktop(
-    endpointUrl,
-    records
-      .map(toAttachmentResourceRequest)
-      .filter((request): request is AttachmentResourceRequest => Boolean(request))
-  );
 }
 
 export async function syncCompanionAttachmentResourceRequestsFromDesktop(
@@ -109,7 +58,7 @@ export async function syncCompanionAttachmentResourceRequestsFromDesktop(
     const chunk = uniqueRequests.slice(index, index + ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT);
     const result = await runCompanionResourceProviderBatch({ endpointUrl: endpoint,
       ...(onProviderTransfer ? { onTransfer: onProviderTransfer } : {}),
-      needs: chunk.map((request) => ({ kind: 'attachment', id: request.attachmentId })),
+      needs: chunk.map((request) => ({ kind: 'attachment', id: request.attachmentId, storage_key: request.storageKey })),
       transfer: async (providerEndpoint, selected) => {
         const requested = chunk.filter((request) => selected.some((need) => need.id === request.attachmentId));
         return syncAttachmentResourceRequestBatch(providerEndpoint, requested);
@@ -132,7 +81,7 @@ async function syncAttachmentResourceRequestBatch(endpoint: string, requests: At
     return await syncAttachmentResourceRequestBatchOnce(endpoint, requests);
   } catch (error) {
     return { ready: [], errors: Object.fromEntries(requests.map((request) => [
-      resourceKey({ kind: 'attachment', id: request.attachmentId }), classifyResourceFailure(error)
+      resourceKey({ kind: 'attachment', id: request.attachmentId, storage_key: request.storageKey }), classifyResourceFailure(error)
     ])) };
   }
 }

@@ -4,11 +4,13 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.js';
 import {
   bootstrapCompanionDatabase,
   checkpointCompanionDatabase
 } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import { isRetiredAttachmentSchema } from '../../lib/core/database/retiredAttachmentSchema.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -28,6 +30,7 @@ function fixture(version = COMPANION_DATABASE_VERSION) {
   const databasePath = path.join(root, 'fixture.db');
   const sqlite = new Database(databasePath);
   sqlite.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  if (version < 56) sqlite.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema).join(';'));
   if (version < 30) installLegacySyncGroupSchema(sqlite);
   sqlite.prepare('INSERT INTO companion_meta (key, value, updated_at) VALUES (?, ?, ?)')
     .run('device_id', 'fixture-device', '2026-08-06T00:00:00Z');
@@ -101,6 +104,8 @@ describe('shared companion database migration history', () => {
 
   it('runs the legacy state-sequence command migration without losing rows', async () => {
     const { port, sqlite } = fixture(4);
+    sqlite.exec("INSERT INTO nodes (id, title, created_at, updated_at) VALUES " +
+      "('a', 'A', '2026-01-01', '2026-01-01'), ('b', 'B', '2026-02-02', '2026-02-02');");
     sqlite.exec('DROP TABLE sync_object_state; CREATE TABLE sync_object_state (' +
       'object_type TEXT NOT NULL, object_id TEXT NOT NULL, current_version_id TEXT, content_hash TEXT NOT NULL, ' +
       'last_modified_by_device_id TEXT NOT NULL, updated_at TEXT NOT NULL, deleted_at TEXT, ' +
@@ -118,16 +123,17 @@ describe('shared companion database migration history', () => {
   it('runs attachment and external-folder command migrations on real legacy shapes', async () => {
     const first = fixture(8);
     first.sqlite.exec("INSERT INTO attachments (id,original_name,mime_type,size_bytes,created_at) VALUES " +
-      "('a','a.png','image/png',1,'2026-01-01');" +
+      `('${'a'.repeat(64)}','a.png','image/png',1,'2026-01-01');` +
       "INSERT INTO nodes (id,title,current_version_id,created_at,updated_at) VALUES " +
       "('n','N','v','2026-01-01','2026-01-01');" +
       "INSERT INTO node_order (node_id,position) VALUES ('n',0);" +
       "INSERT INTO node_sync_versions (version_id,object_id,host_name,created_at,content_hash,snapshot_json) VALUES " +
-      "('v','n','d','2026-01-01','h','{\"attachments\":[{\"attachment_id\":\"a\",\"role\":\"inline\"}]}');");
+      `('v','n','d','2026-01-01','h','{"attachments":[{"attachment_id":"${'a'.repeat(64)}","role":"inline"}]}');`);
     await bootstrap(first.port);
-    expect(first.sqlite.prepare('SELECT attachment_id, role FROM node_attachments').get())
-      .toEqual({ attachment_id: 'a', role: 'inline' });
-    expect(first.sqlite.prepare('SELECT child_ids_json FROM parent_child_order').pluck().get()).toBe('["n"]');
+    expect(first.sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
+    expect(JSON.parse((first.sqlite.prepare("SELECT resource_references FROM nodes WHERE id = 'n'").get() as { resource_references: string }).resource_references))
+      .toEqual([{ storage_key: `${'a'.repeat(64)}.png`, role: 'image', original_name: 'a.png' }]);
+    expect(first.sqlite.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')").all()).toEqual([]);
     first.sqlite.close();
 
     const second = fixture(20);

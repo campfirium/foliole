@@ -115,7 +115,7 @@ export function loadSearchIndexRebuildStatus(): SearchIndexRebuildStatusEvent | 
   if (backlog.failed_count > 0) {
     return {
       error: 'Some search data could not be updated.',
-      status: 'failed',
+      status: 'rebuilding',
       strategy: persisted.strategy
     };
   }

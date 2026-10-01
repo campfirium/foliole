@@ -119,6 +119,9 @@ it('clears import tracking tables and imported node trees together', () => {
   });
   expect(counts.importRuns.count).toBe(0);
   expect(counts.importSources.count).toBe(0);
+  expect(openDatabaseConnection().sqlite.prepare(
+    "SELECT COUNT(*) FROM sync_object_state WHERE object_type = 'import_source' AND deleted_at IS NULL"
+  ).pluck().get()).toBe(0);
   expect(counts.keepImportItems.count).toBe(0);
   expect(counts.nodes.count).toBe(0);
   expect(JSON.parse(counts.nodeOrder?.child_ids_json ?? '[]')).toContain('special-inbox');

@@ -190,8 +190,9 @@ extension FolioleCompanionSyncGroupJoinServer {
                 )
             }
             return try FolioleCompanionSyncGroupResources.attachmentRange(
-                snapshot: snapshot, attachmentId: Self.query(request.path, "attachment_id"),
+                attachmentId: Self.query(request.path, "attachment_id"),
                 contentHash: Self.query(request.path, "content_hash"),
+                storageKey: Self.query(request.path, "storage_key"),
                 offsetText: Self.query(request.path, "offset"),
                 lengthText: Self.query(request.path, "length")
             )

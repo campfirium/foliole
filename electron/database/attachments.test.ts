@@ -17,15 +17,10 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import {
-  createAttachmentRecord,
-  createNodeAttachmentLink,
-  deleteNodeAttachmentLink,
-  listAttachmentNodeLinks,
-  listNodeAttachments
-} from './attachments.js';
+import { deleteNodeAttachmentLink, listAttachmentNodeLinks, listNodeAttachments } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
+import { persistNodeResourceReference } from './nodeResources.js';
 
 let tempRoot = '';
 
@@ -60,169 +55,29 @@ function seedNode(nodeId: string) {
     .run(nodeId, null, nodeId, 1, 0, '', null, null, '2026-03-20T00:00:00.000Z', '2026-03-20T00:00:00.000Z', null);
 }
 
-function getAttachmentRowCount(attachmentId: string) {
-  const row = openDatabaseConnection().sqlite
-    .prepare('SELECT COUNT(*) AS count FROM attachments WHERE id = ?')
-    .get(attachmentId) as { count: number };
-  return row.count;
-}
-
-function createSharedAttachment() {
-  createAttachmentRecord({
-    id: 'hash-1',
-    originalName: 'shared.pdf',
-    mimeType: 'application/pdf',
-    sizeBytes: 8192,
-    createdAt: '2026-03-20T00:00:00.000Z'
-  });
-}
-
-function linkSharedAttachment(nodeId: string) {
-  createNodeAttachmentLink({
-    nodeId,
-    attachmentId: 'hash-1',
-    role: 'reference'
-  });
-}
-
-function expectSharedAttachmentForNode(nodeId: string) {
-  expect(listNodeAttachments(nodeId)).toEqual([
-    {
-      nodeId,
-      attachmentId: 'hash-1',
-      role: 'reference',
-      attachment: {
-        id: 'hash-1',
-        originalName: 'shared.pdf',
-        mimeType: 'application/pdf',
-        sizeBytes: 8192,
-        createdAt: '2026-03-20T00:00:00.000Z'
-      }
-    }
+const hash = 'a'.repeat(64);
+it('keeps each original filename on its owner without an independent attachment table', () => {
+  seedNode('first');
+  seedNode('second');
+  persistNodeResourceReference('first', { storage_key: `${hash}.pdf`, role: 'reference', original_name: 'First.pdf' });
+  persistNodeResourceReference('second', { storage_key: `${hash}.pdf`, role: 'reference', original_name: 'Second.pdf' });
+  expect(listNodeAttachments('first')[0]?.attachment.originalName).toBe('First.pdf');
+  expect(listNodeAttachments('second')[0]?.attachment.originalName).toBe('Second.pdf');
+  expect(listAttachmentNodeLinks(hash)).toEqual([
+    { attachmentId: hash, nodeId: 'first', role: 'reference' },
+    { attachmentId: hash, nodeId: 'second', role: 'reference' }
   ]);
-}
-
-it('creates an attachment record and returns it through node-based lookup', () => {
-  seedNode('node-1');
-  createAttachmentRecord({
-    id: 'hash-1',
-    originalName: 'diagram.png',
-    mimeType: 'image/png',
-    sizeBytes: 2048,
-    createdAt: '2026-03-20T00:00:00.000Z'
-  });
-
-  createNodeAttachmentLink({
-    nodeId: 'node-1',
-    attachmentId: 'hash-1',
-    role: 'image'
-  });
-
-  expect(listNodeAttachments('node-1')).toEqual([
-    {
-      nodeId: 'node-1',
-      attachmentId: 'hash-1',
-      role: 'image',
-      attachment: {
-        id: 'hash-1',
-        originalName: 'diagram.png',
-        mimeType: 'image/png',
-        sizeBytes: 2048,
-        createdAt: '2026-03-20T00:00:00.000Z'
-      }
-    }
-  ]);
-  expect(listAttachmentNodeLinks('hash-1')).toEqual([
-    {
-      nodeId: 'node-1',
-      attachmentId: 'hash-1',
-      role: 'image'
-    }
-  ]);
+  expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments','node_attachments')").all()).toEqual([]);
 });
-
-it('advances node sync state when attachment links change', () => {
-  seedNode('node-1');
-  createAttachmentRecord({
-    id: 'hash-1',
-    originalName: 'diagram.png',
-    mimeType: 'image/png',
-    sizeBytes: 2048,
-    createdAt: '2026-03-20T00:00:00.000Z'
-  });
-
-  createNodeAttachmentLink({
-    nodeId: 'node-1',
-    attachmentId: 'hash-1',
-    role: 'image'
-  });
-
-  const linkedState = openDatabaseConnection().sqlite
-    .prepare("SELECT content_hash, state_seq FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'")
-    .get() as { content_hash: string; state_seq: number };
-  expect(linkedState.content_hash).toMatch(/^[a-f0-9]{64}$/);
-
-  deleteNodeAttachmentLink({
-    nodeId: 'node-1',
-    attachmentId: 'hash-1',
-    role: 'image'
-  });
-
-  const unlinkedState = openDatabaseConnection().sqlite
-    .prepare("SELECT content_hash, state_seq FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'")
-    .get() as { content_hash: string; state_seq: number };
-  expect(unlinkedState.state_seq).toBeGreaterThan(linkedState.state_seq);
-  expect(unlinkedState.content_hash).not.toBe(linkedState.content_hash);
-});
-
-
-it('stores attachment metadata without a possession manifest', () => {
-  createAttachmentRecord({
-    id: 'hash-blob',
-    originalName: 'diagram.png',
-    mimeType: 'image/png',
-    sizeBytes: 2048,
-    createdAt: '2026-03-20T00:00:00.000Z'
-  });
-
-  expect(openDatabaseConnection().sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toBeUndefined();
-  expect(getAttachmentRowCount('hash-blob')).toBe(1);
-});
-
-it('supports reusing the same attachment across multiple nodes and keeps the attachment after unlink', () => {
-  seedNode('node-1');
-  seedNode('node-2');
-  createSharedAttachment();
-  linkSharedAttachment('node-1');
-  linkSharedAttachment('node-2');
-
-  expect(listAttachmentNodeLinks('hash-1')).toEqual([
-    {
-      nodeId: 'node-1',
-      attachmentId: 'hash-1',
-      role: 'reference'
-    },
-    {
-      nodeId: 'node-2',
-      attachmentId: 'hash-1',
-      role: 'reference'
-    }
-  ]);
-
-  deleteNodeAttachmentLink({
-    nodeId: 'node-1',
-    attachmentId: 'hash-1',
-    role: 'reference'
-  });
-
-  expect(listAttachmentNodeLinks('hash-1')).toEqual([
-    {
-      nodeId: 'node-2',
-      attachmentId: 'hash-1',
-      role: 'reference'
-    }
-  ]);
-  expect(listNodeAttachments('node-1')).toEqual([]);
-  expectSharedAttachmentForNode('node-2');
-  expect(getAttachmentRowCount('hash-1')).toBe(1);
+it('removes a mount from only its owner and records a durable node version', () => {
+  seedNode('first');
+  seedNode('second');
+  for (const nodeId of ['first', 'second']) persistNodeResourceReference(nodeId,
+    { storage_key: `${hash}.pdf`, role: 'reference', original_name: 'Original.pdf' });
+  const db = openDatabaseConnection().sqlite;
+  const before = db.prepare('SELECT current_version_id FROM nodes WHERE id = ?').pluck().get('first');
+  deleteNodeAttachmentLink({ nodeId: 'first', attachmentId: hash, role: 'reference' });
+  expect(listNodeAttachments('first')).toEqual([]);
+  expect(listNodeAttachments('second')).toHaveLength(1);
+  expect(db.prepare('SELECT current_version_id FROM nodes WHERE id = ?').pluck().get('first')).not.toBe(before);
 });

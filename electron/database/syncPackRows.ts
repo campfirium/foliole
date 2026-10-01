@@ -13,7 +13,6 @@ import {
 import type { NativeSyncObjectRecord, NativeSyncReviewLogRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { hasSyncObjectPayloadFromDriver, loadSyncObjectsFromDriver } from './syncObjectsFromDriver.js';
-import { loadAttachmentPreludeStateRows } from './syncPackAttachmentPreludeRows.js';
 import { learningNodeIds, loadNodePreludeStateRows, mergeStateRows } from './syncPackLearningRows.js';
 
 interface RawSyncStatePackRow extends DatabaseRow {
@@ -33,12 +32,6 @@ export interface SyncStatePackRow extends RawSyncStatePackRow {
 export type SyncObjectPackRow = NativeSyncObjectRecord;
 
 export type NodePackRow = SyncPackNodeRow;
-
-interface NodeAttachmentPackRow extends DatabaseRow {
-  attachment_id: string;
-  node_id: string;
-  role: string;
-}
 
 export interface ExternalDocumentPackRow extends DatabaseRow {
   body_blob_hash: string | null;
@@ -86,22 +79,24 @@ function placeholders(values: unknown[]) {
   return values.map(() => '?').join(', ');
 }
 
-function listChangedStateRows(driver: DatabaseDriver, fromStateSeq: number, toStateSeq: number) {
-  return driver.queryAll<RawSyncStatePackRow>(
-    `SELECT object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
-     FROM sync_object_state
-     WHERE state_seq > ? AND state_seq <= ?
-     AND (object_type <> 'node' OR object_id NOT IN ('special-inbox', 'special-virtual-root'))
+const SYNC_PACK_PRESENT_STATE_PREDICATE = `
+     (object_type <> 'node' OR object_id NOT IN ('special-inbox', 'special-virtual-root'))
      AND (object_type <> 'node' OR deleted_at IS NOT NULL OR EXISTS (
        SELECT 1 FROM nodes WHERE nodes.id = sync_object_state.object_id
      ))
-     AND (object_type NOT IN ('node_reading', 'node_review') OR EXISTS (
+     AND (object_type NOT IN ('node_reading', 'node_review') OR deleted_at IS NOT NULL OR EXISTS (
        SELECT 1 FROM nodes WHERE nodes.id = sync_object_state.object_id
      ))
      AND (object_type <> 'node_reading' OR deleted_at IS NOT NULL OR EXISTS (
        SELECT 1 FROM node_reading reading JOIN nodes node ON node.id = reading.node_id
        WHERE reading.node_id = sync_object_state.object_id AND node.deleted_at IS NULL
-     ))
+     ))`;
+
+function listChangedStateRows(driver: DatabaseDriver, fromStateSeq: number, toStateSeq: number) {
+  return driver.queryAll<RawSyncStatePackRow>(
+    `SELECT object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
+     FROM sync_object_state
+     WHERE state_seq > ? AND state_seq <= ? AND ${SYNC_PACK_PRESENT_STATE_PREDICATE}
      ORDER BY state_seq ASC`,
     [fromStateSeq, toStateSeq]
   );
@@ -117,15 +112,6 @@ function collectBodyBlobHashes(nodes: NodePackRow[], documents: ExternalDocument
     ...nodes.map((row) => row.body_blob_hash),
     ...documents.map((row) => row.body_blob_hash)
   ].filter((hash): hash is string => Boolean(hash)))];
-}
-
-function loadNodeAttachmentRows(driver: DatabaseDriver, nodeIds: string[]) {
-  return queryRowsByIds<NodeAttachmentPackRow>(driver,
-    `SELECT node_id, attachment_id, role
-     FROM node_attachments WHERE node_id IN (__IDS__)
-     ORDER BY node_id ASC, role ASC, attachment_id ASC`,
-    nodeIds
-  );
 }
 
 function idsForObjectTable(rows: SyncStatePackRow[], table: 'external_documents' | 'nodes') {
@@ -185,7 +171,8 @@ export function loadPackRows(
   driver: DatabaseDriver,
   stagedReviewNodeIds: readonly string[] = []
 ) {
-  const changedStateRows = listChangedStateRows(driver, fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
+  const listedStateRows = listChangedStateRows(driver, fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
+  const changedStateRows = retainBackedStateRows(listedStateRows, loadPayloadObjects(driver, listedStateRows));
   const changedNodeIds = idsForObjectTable(changedStateRows, 'nodes');
   const nodePreludeStateRows = mergeStateRows(changedStateRows, loadNodePreludeStateRows({
     isSyncStatePackRow,
@@ -202,10 +189,7 @@ export function loadPackRows(
      FROM nodes WHERE id IN (__IDS__)`,
     nodeIds
   );
-  const nodeAttachments = loadNodeAttachmentRows(driver, nodeIds);
-  const candidateStateRows = mergeStateRows(nodePreludeStateRows, loadAttachmentPreludeStateRows(driver, {
-    fromStateSeq, pageStateRows: changedStateRows, nodeAttachments
-  }));
+  const candidateStateRows = nodePreludeStateRows;
   const syncObjects = loadPayloadObjects(driver, candidateStateRows);
   const stateRows = retainBackedStateRows(candidateStateRows, syncObjects);
   const externalDocumentIds = idsForObjectTable(stateRows, 'external_documents');
@@ -225,7 +209,6 @@ export function loadPackRows(
       collectBodyBlobHashes(nodes, externalDocuments)
     ),
     externalDocuments,
-    nodeAttachments,
     nodes,
     reviewLog: loadReviewLogRows(driver, stateRows.filter((row) => !stagedReviewNodeIds.includes(row.object_id))),
     stateRows,

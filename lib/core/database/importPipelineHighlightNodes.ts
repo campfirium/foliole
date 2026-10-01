@@ -2,6 +2,8 @@ import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
 import { rewriteExistingNodeOrder } from './nodeOrderMutations.js';
+import { recordNodeRelatedStateDeletion, retireUnversionedDeletedNodeState } from './nodeRelatedStateDeletion.js';
+import { writeNodeSyncTombstonesForPermanentDelete } from './nodeSyncTombstones.js';
 import { loadDerivedNodeOrder } from './parentChildOrder.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 
@@ -38,7 +40,8 @@ function isGeneratedImportedChild(row: ExistingChildHighlightRow) {
   return isImportedAnchorLink(row.anchor_link) || (!row.anchor_link && row.is_title_manual === 0);
 }
 
-function deleteGeneratedImportedChildNodes(driver: DatabaseDriver, nodeIds: string[]) {
+function deleteGeneratedImportedChildNodes(driver: DatabaseDriver, nodeIds: string[], deletedAt: string,
+  replacementIds: Set<string>, prepareDeletionVersions?: (nodeIds: string[], deletedAt: string) => void) {
   if (nodeIds.length === 0) {
     return;
   }
@@ -48,7 +51,14 @@ function deleteGeneratedImportedChildNodes(driver: DatabaseDriver, nodeIds: stri
   const deleteNodeReadingHostState = driver.prepare('DELETE FROM node_reading_host_state WHERE node_id = ?');
   const deleteNodeViewState = driver.prepare('DELETE FROM node_view_state WHERE node_id = ?');
   const deleteNode = driver.prepare('DELETE FROM nodes WHERE id = ?');
+  const discardedIds = nodeIds.filter((nodeId) => !replacementIds.has(nodeId));
+  if (prepareDeletionVersions) {
+    prepareDeletionVersions(discardedIds, deletedAt);
+    writeNodeSyncTombstonesForPermanentDelete(driver, discardedIds, deletedAt);
+  }
   nodeIds.forEach((nodeId) => {
+    recordNodeRelatedStateDeletion(driver, nodeId, deletedAt);
+    if (!replacementIds.has(nodeId)) retireUnversionedDeletedNodeState(driver, nodeId);
     deleteReviewLog.run([nodeId]);
     deleteNodeReview.run([nodeId]);
     deleteNodeReading.run([nodeId]);
@@ -65,9 +75,12 @@ export function replaceImportedHighlightNodes(input: {
   importedAt: string;
   parentNodeId: string;
   parentContent: string;
+  prepareDeletionVersions?: (nodeIds: string[], deletedAt: string) => void;
 }) {
   const existingChildren = readExistingChildHighlights(input.driver, input.parentNodeId).filter(isGeneratedImportedChild);
-  deleteGeneratedImportedChildNodes(input.driver, existingChildren.map((row) => row.id));
+  deleteGeneratedImportedChildNodes(input.driver, existingChildren.map((row) => row.id), input.importedAt,
+    new Set(input.highlights.flatMap((highlight) => highlight.nodeId ? [highlight.nodeId] : [])),
+    input.prepareDeletionVersions);
   enqueueWorkspaceSearchInvalidationForNodeIds(
     input.driver,
     existingChildren.map((row) => row.id)

@@ -1,6 +1,7 @@
 import { parseStoredAnchorLink, type StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
+import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseBookUnlocated.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -64,11 +65,7 @@ export function relocateReadwiseBookLocalAnchors(input: {
 }) {
   const driver = openDatabaseConnection().driver;
   const trackedIds = new Set(input.annotationStates.map((state) => state.nodeId));
-  const rows = driver.queryAll<LocalAnchorRow>(
-    `SELECT id, title, content, anchor_link, is_title_manual FROM nodes
-     WHERE parent_id = ? AND deleted_at IS NULL
-       AND (anchor_link IS NOT NULL OR is_title_manual = 0)`, [input.rootNodeId]
-  ).filter((row) => !trackedIds.has(row.id));
+  const rows = readLocalAnchorRows(input.rootNodeId).filter((row) => !trackedIds.has(row.id));
   const placements = rows.map((row) => {
     const anchor = parseStoredAnchorLink(row.anchor_link) ?? legacyAnchor(row);
     const text = input.preservedRootTexts?.get(row.id)
@@ -103,15 +100,21 @@ export function relocateReadwiseBookLocalAnchors(input: {
 }
 
 export function captureReadwiseBookRootTexts(rootNodeId: string) {
-  const rows = openDatabaseConnection().driver.queryAll<LocalAnchorRow>(
-    `SELECT id, title, content, anchor_link, is_title_manual FROM nodes
-     WHERE parent_id = ? AND deleted_at IS NULL
-       AND (anchor_link IS NOT NULL OR is_title_manual = 0)`, [rootNodeId]
-  );
+  const rows = readLocalAnchorRows(rootNodeId);
   return new Map(rows.map((row) => {
     const anchor = parseStoredAnchorLink(row.anchor_link) ?? legacyAnchor(row);
     return [row.id, originalText(anchor) ?? (row.content.trim() || row.title.trim() || null)];
   }));
+}
+
+function readLocalAnchorRows(rootNodeId: string) {
+  return openDatabaseConnection().driver.queryAll<LocalAnchorRow & NodeBodyRow>(
+    `SELECT n.id, n.title, n.content, n.body_blob_hash, cbd.data AS body_blob_data,
+       n.anchor_link, n.is_title_manual FROM nodes n
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     WHERE n.parent_id = ? AND n.deleted_at IS NULL
+       AND (n.anchor_link IS NOT NULL OR n.is_title_manual = 0)`, [rootNodeId]
+  ).map((row) => ({ ...row, content: requireResolvedNodeBody(row, row.id).content }));
 }
 
 function legacyAnchor(row: LocalAnchorRow): StoredAnchorLink {

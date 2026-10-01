@@ -1,4 +1,5 @@
 import type { DbPort } from './dbPort.js';
+import { isStoredAncestorVersion } from './syncNodeGraph.js';
 import type { SyncPackNodeVersionParentRow } from './syncPackNodeVersions.js';
 
 interface VersionIdentity {
@@ -37,6 +38,11 @@ export async function validateStoredVersionDependencies(
     }
   }
   for (const edge of parents) {
+    const incomingChild = byId.get(edge.version_id);
+    const [storedChild] = await port.query<{ parent_version_id: string | null }>(
+      'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?', [edge.version_id]);
+    // An existing contracted chain is kept as-is; incoming edges cannot expand it.
+    if (storedChild && incomingChild && storedChild.parent_version_id !== incomingChild.parent_version_id) continue;
     const [conflict] = await port.query<{ parent_version_id: string }>(
       `SELECT parent_version_id FROM main.node_sync_version_parents
        WHERE version_id = ? AND
@@ -45,7 +51,13 @@ export async function validateStoredVersionDependencies(
       [edge.version_id, edge.ordinal, edge.parent_version_id,
         edge.parent_version_id, edge.ordinal]
     );
-    if (conflict) throw new Error(`sync_pack_node_version_parent_mismatch:${edge.version_id}`);
+    const [sameRelation] = await port.query(
+      'SELECT 1 FROM node_sync_version_parents WHERE version_id = ? AND parent_version_id = ?',
+      [edge.version_id, edge.parent_version_id]);
+    if (conflict && !sameRelation && !await isStoredAncestorVersion(port, edge.parent_version_id, edge.version_id)
+        && !incomingAncestor(parents, conflict.parent_version_id, edge.parent_version_id)) {
+      throw new Error(`sync_pack_node_version_parent_mismatch:${edge.version_id}`);
+    }
   }
 }
 
@@ -93,4 +105,17 @@ export async function assertCurrentVersionAvailable(
   if (held.object_id !== nodeId) {
     throw new Error(`sync_pack_node_current_version_cross_object:${nodeId}`);
   }
+}
+
+function incomingAncestor(edges: SyncPackNodeVersionParentRow[], ancestor: string, child: string) {
+  const seen = new Set<string>();
+  const pending = [child];
+  while (pending.length) {
+    const id = pending.pop()!;
+    if (id === ancestor) return true;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    pending.push(...edges.filter((edge) => edge.version_id === id).map((edge) => edge.parent_version_id));
+  }
+  return false;
 }

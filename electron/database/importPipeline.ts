@@ -10,10 +10,11 @@ import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { normalizeSafeMarkdownDataImageUrl, parseMarkdownDataImageSize } from '../../lib/platform/markdownImageDataUrl.js';
 
-import { createNodeAttachmentLink } from './attachments.js';
 import { openDatabaseConnection } from './connection.js';
+import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
 import { importMarkdownImageAttachment, importPdfSourceAttachment } from './importPipelineAttachments.js';
 import { rewriteInlineImageReferences } from './inlineImageReferences.js';
+import { persistNodeResourceReference } from './nodeResources.js';
 
 export type { PersistedImportRecord, PreparedImportRecord };
 
@@ -156,18 +157,18 @@ function rewriteMarkdownLocalImages(record: PersistedImportRecord, prepared: Pre
 }
 
 function linkPreparedLocalizedImages(record: PersistedImportRecord, prepared: PreparedImportRecord) {
-  if (!record.nodeId || !prepared.localizedImageAttachmentIds?.length) {
-    return;
+  if (!record.nodeId) return;
+  for (const reference of prepared.localizedImageResources ?? []) {
+    persistNodeResourceReference(record.nodeId, reference);
   }
-  Array.from(new Set(prepared.localizedImageAttachmentIds)).forEach((attachmentId) => {
-    createNodeAttachmentLink({ attachmentId, nodeId: record.nodeId as string, role: 'image' });
-  });
 }
 
 export function runPreparedImport(input: PreparedImportRecord, options?: RunPreparedImportOptions) {
   const { driver, sqlite } = openDatabaseConnection();
   // Reserve the SQLite writer before import lookups establish a read snapshot.
-  const imported = sqlite.transaction(() => runPreparedImportViaDriver(driver, input, options)).immediate();
+  const imported = sqlite.transaction(() => runPreparedImportViaDriver(driver, input, {
+    ...options, prepareDeletionVersions: (nodeIds, deletedAt) => prepareImportedNodeDeletionVersions(driver, nodeIds, deletedAt)
+  })).immediate();
   const record = rewriteMarkdownLocalImages(imported, input);
   linkPreparedLocalizedImages(record, input);
   if (input.sourceKind !== 'pdf' || !record.nodeId || record.resultStatus === 'failed') {

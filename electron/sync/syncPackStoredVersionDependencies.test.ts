@@ -42,13 +42,14 @@ it('accepts a legacy parent pointer to a retained identity without its body', as
   }
 });
 
-it('rejects a parent identity absent from both the pack and the main database', async () => {
+it('preserves a historical parent gap without inventing its identity or body', async () => {
   const db = createFixture('{"content":null}');
   try {
     db.exec('DELETE FROM node_sync_versions');
-    await expect(applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db)))
-      .rejects.toThrow('sync_pack_node_version_missing_parent:child');
-    expect(db.prepare('SELECT version_id FROM node_sync_versions').all()).toEqual([]);
+    await applySyncPackNodeVersionsWithDbPort(createBetterSqliteDbPort(db));
+    expect(db.prepare('SELECT version_id FROM node_sync_versions').all()).toEqual([{ version_id: 'child' }]);
+    expect(db.prepare('SELECT parent_version_id FROM node_sync_version_parents').all())
+      .toEqual([{ parent_version_id: 'parent' }]);
   } finally {
     db.close();
   }
@@ -147,7 +148,7 @@ function createFixture(parentSnapshot: string) {
       version_id TEXT, parent_version_id TEXT, ordinal INTEGER,
       PRIMARY KEY (version_id, parent_version_id)
     );
-    CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY);
+    CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT);
     CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT);
     ATTACH DATABASE ':memory:' AS inc;
     CREATE TABLE inc.node_sync_versions (
@@ -158,6 +159,7 @@ function createFixture(parentSnapshot: string) {
       version_id TEXT, parent_version_id TEXT, ordinal INTEGER
     );
     CREATE TABLE inc.nodes (id TEXT PRIMARY KEY, current_version_id TEXT);
+    CREATE TABLE inc.node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT);
   `);
   db.prepare(`INSERT INTO node_sync_versions VALUES
     ('parent', 'node-1', NULL, 'host', '2026-05-01', 'parent-hash', NULL, ?)`)

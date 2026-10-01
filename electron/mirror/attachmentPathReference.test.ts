@@ -19,7 +19,6 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { createAttachmentRecord } from '../database/attachments.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -41,16 +40,9 @@ afterEach(async () => {
 });
 
 it('points mirror attachment references at the shared library asset path without creating a mirror attachment tree', async () => {
-  createAttachmentRecord({
-    id: CONTENT_HASH,
-    originalName: 'cover.png',
-    mimeType: 'image/png',
-    sizeBytes: 12,
-    createdAt: '2026-03-30T00:00:00.000Z'
-  });
 
-  const firstPath = resolveMirrorAttachmentPath(CONTENT_HASH);
-  const secondPath = resolveMirrorAttachmentPath(CONTENT_HASH);
+  const firstPath = resolveMirrorAttachmentPath(`${CONTENT_HASH}.png`);
+  const secondPath = resolveMirrorAttachmentPath(`${CONTENT_HASH}.png`);
   const expectedPath = path.join(mockedDocumentsDir, 'Foliole', 'Assets', `${CONTENT_HASH}.png`);
   const mirrorAssetsDir = path.join(mockedDocumentsDir, 'Foliole', 'Mirror', 'Assets');
 

@@ -1,4 +1,5 @@
 import type { DatabaseDriver } from './driver.js';
+import { normalizeSearchPendingStates } from './searchPendingState.js';
 
 export const WORKSPACE_SEARCH_SOURCE_IDENTITY_KEY = 'workspace_search_source_identity';
 export const WORKSPACE_SEARCH_QUEUED_REVISION_KEY = 'workspace_search_queued_revision';
@@ -163,12 +164,5 @@ export function canResumeWorkspaceSearchInvalidations(driver: DatabaseDriver) {
 }
 
 export function recoverInterruptedWorkspaceSearchInvalidations(driver: DatabaseDriver) {
-  const recoveredAt = nowIso();
-  return driver.execute(
-    `UPDATE search_index_invalidations
-     SET status = 'failed', updated_at = ?, claimed_at = NULL,
-         last_error = COALESCE(last_error, 'interrupted_before_completion')
-     WHERE status = 'running'`,
-    [recoveredAt]
-  ).changes;
+  return normalizeSearchPendingStates(driver);
 }

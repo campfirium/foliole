@@ -22,6 +22,7 @@ export const SYNC_PACK_NODE_FIELD_DEFINITIONS = [
   { name: 'anchor_source_version_id', sql: 'TEXT' },
   { name: 'image_regions', sql: 'TEXT', legacyOptional: true },
   { name: 'image_sources', sql: 'TEXT', legacyOptional: true },
+  { name: 'resource_references', sql: "TEXT NOT NULL DEFAULT '[]'" },
   { name: 'import_source_fingerprint', sql: 'TEXT', legacyOptional: true },
   { name: 'import_content_fingerprint', sql: 'TEXT', legacyOptional: true },
   { name: 'content', sql: "TEXT NOT NULL DEFAULT ''" },
@@ -58,6 +59,7 @@ export interface SyncPackNodeRow extends DatabaseRow {
   id: string;
   image_regions: string | null;
   image_sources: string | null;
+  resource_references: string;
   import_content_fingerprint: string | null;
   import_source_fingerprint: string | null;
   is_title_manual: number;

@@ -15,11 +15,12 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
-import { createAttachmentRecord, createNodeAttachmentLink } from '../database/attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
+import { loadNodeResourceReferences, persistNodeResourceReference } from '../database/nodeResources.js';
 
 import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js';
 
@@ -39,14 +40,14 @@ afterEach(async () => {
 
 it('persists owning-topic image links and replaces stale links on explicit rebuild', () => {
   const document = documentFixture();
-  const createdAt = '2026-09-08T00:00:00.000Z';
-  for (const id of ['cover-attachment', 'section-attachment', 'stale-attachment']) {
-    createAttachmentRecord({ createdAt, id, mimeType: 'image/png', originalName: `${id}.png`, sizeBytes: 3 });
-  }
+  const sqlite = openDatabaseConnection().sqlite;
+  sqlite.pragma('foreign_keys = OFF');
+  expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachments'").all()).toEqual([]);
   const preparedEpubImages = preparedImages(document);
   const preparedEpubCover = {
-    attachmentIds: ['cover-attachment'], degradedReason: null,
-    text: '![Cover](asset://cover-attachment.png)'
+    resourceReferences: [{ storage_key: `${'a'.repeat(64)}.png`, original_name: 'Cover.png', role: 'image' as const }],
+    attachmentIds: ['a'.repeat(64)], degradedReason: null,
+    text: `![Cover](asset://${'a'.repeat(64)}.png)`
   };
   const config = createDefaultReadwiseReaderConfig();
   materializeReadwiseApiDocument({
@@ -58,26 +59,27 @@ it('persists owning-topic image links and replaces stale links on explicit rebui
     "SELECT latest_node_id FROM import_sources WHERE remote_document_id = 'epub-1'"
   )!;
   const root = driver.queryOne<{ id: string; content: string }>(
-    'SELECT id, content FROM nodes WHERE id = ?', [source.latest_node_id]
+    `SELECT id, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`, [source.latest_node_id]
   )!;
   const section = driver.queryOne<{ id: string; content: string }>(
-    "SELECT id, content FROM nodes WHERE title = 'Section'"
+    `SELECT id, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE title = 'Section'`
   )!;
-  expect(root.content).toContain('asset://cover-attachment.png');
-  expect(section.content).toContain('asset://section-attachment.png');
-  createNodeAttachmentLink({ attachmentId: 'stale-attachment', nodeId: root.id, role: 'image' });
-  createNodeAttachmentLink({ attachmentId: 'stale-attachment', nodeId: section.id, role: 'image' });
+  expect(root.content).toContain(`asset://${'a'.repeat(64)}.png`);
+  expect(section.content).toContain(`asset://${'b'.repeat(64)}.png`);
+  for (const nodeId of [root.id, section.id]) persistNodeResourceReference(nodeId, {
+    storage_key: `${'c'.repeat(64)}.png`, original_name: 'Stale.png', role: 'image'
+  });
 
   materializeReadwiseApiDocument({
     config, connectionRef: 'connection', destination: 'inbox', document, forceEpubStructure: true,
     preparedEpubCover, preparedEpubImages
   });
 
-  expect(driver.queryAll<{ attachment_id: string; node_id: string }>(
-    'SELECT attachment_id, node_id FROM node_attachments ORDER BY attachment_id'
-  )).toEqual([
-    { attachment_id: 'cover-attachment', node_id: root.id },
-    { attachment_id: 'section-attachment', node_id: section.id }
+  expect(loadNodeResourceReferences(root.id)).toEqual([
+    { storage_key: `${'a'.repeat(64)}.png`, original_name: 'Cover.png', role: 'image' }
+  ]);
+  expect(loadNodeResourceReferences(section.id)).toEqual([
+    { storage_key: `${'b'.repeat(64)}.png`, original_name: 'Section.png', role: 'image' }
   ]);
 });
 
@@ -92,8 +94,9 @@ function preparedImages(document: PreparedReadwiseApiDocument) {
     rootBody: '',
     sections: document.epubStructure!.sections.map((section) => ({
       ...section,
-      attachmentIds: ['section-attachment'],
-      content: '![Section](asset://section-attachment.png)'
+      resourceReferences: [{ storage_key: `${'b'.repeat(64)}.png`, original_name: 'Section.png', role: 'image' as const }],
+      attachmentIds: ['b'.repeat(64)],
+      content: `![Section](asset://${'b'.repeat(64)}.png)`
     }))
   };
 }

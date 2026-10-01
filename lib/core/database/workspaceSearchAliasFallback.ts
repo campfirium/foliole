@@ -1,6 +1,7 @@
 import type { DatabaseDriver } from './driver.js';
 import { matchesFtsSearchFields, type FtsSearchQueryPlan } from './ftsSearchQuery.js';
 import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
+import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { buildNodeResult, buildPdfResult } from './workspaceSearchResultBuilders.js';
 import type { RankedWorkspaceSearchResult } from './workspaceSearchResults.js';
 import type { WorkspacePdfSearchRow, WorkspaceSearchRow } from './workspaceSearchSql.js';
@@ -22,13 +23,12 @@ WHERE instr(lower(n.title), ?) > 0 OR instr(lower(${bodySql}), ?) > 0`, [spellin
       if (result.aliasMatches?.length) results.push(result);
     }
     const pages = driver.queryAll<WorkspacePdfSearchRow>(`${VISIBLE_NODES_CTE_SQL}
-SELECT na.node_id AS id, COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
+SELECT a.node_id AS id, COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
   ppt.text, ppt.page, length(ppt.text) AS page_text_length, n.updated_at,
   a.id AS attachment_id, 500 AS rank
 FROM pdf_page_text ppt
-INNER JOIN attachments a ON a.id = ppt.attachment_id
-INNER JOIN node_attachments na ON na.attachment_id = a.id AND na.role = 'reference'
-INNER JOIN nodes n ON n.id = na.node_id
+INNER JOIN (${NODE_PDF_RESOURCES_SQL}) a ON a.id = ppt.attachment_id
+INNER JOIN nodes n ON n.id = a.node_id
 INNER JOIN visible_nodes visible ON visible.id = n.id
 WHERE a.mime_type = 'application/pdf' AND a.pdf_index_status = 'ready'
   AND instr(lower(ppt.text), ?) > 0`, [spelling]);

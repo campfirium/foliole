@@ -2,7 +2,7 @@ import type { DbPort } from './dbPort.js';
 import type { SyncPackCursor } from './syncPackCursor.js';
 import { readDependencyTail } from './syncPackDependencyResume.js';
 import { stageSyncPackDependencyPage } from './syncPackDependencyStaging.js';
-import { SYNC_PACK_DEPENDENCY_MAX_BYTES, type SyncPackDependencyRow } from './syncPackDependencyTransfer.js';
+import { SYNC_PACK_DEPENDENCY_STORED_MAX_BYTES, type SyncPackDependencyRow } from './syncPackDependencyTransfer.js';
 import { isRetiredSyncPackSourceEpoch, loadSyncPackReceiveProgress, shouldApplySyncPackPage } from './syncPackReceiveProgress.js';
 
 export const SYNC_PACK_DEPENDENCY_PAGE_SCHEMA = `CREATE TABLE sync_pack_dependency_page_rows (
@@ -49,7 +49,7 @@ export async function applySyncPackDependencyPageFromDatabase(port: DbPort, args
     const [size] = await tx.query<{ count: number; bytes: number }>(
       `SELECT count(*) AS count, coalesce(sum(length(CAST(row_json AS BLOB))), 0) AS bytes
        FROM ${alias}.sync_pack_dependency_page_rows`);
-    if (size?.count !== header.rowCount || size.bytes > SYNC_PACK_DEPENDENCY_MAX_BYTES + 128 * 1024) {
+    if (size?.count !== header.rowCount || size.bytes > SYNC_PACK_DEPENDENCY_STORED_MAX_BYTES) {
       throw new Error('sync_pack_dependency_page_over_budget');
     }
     const stored = await tx.query<{ row_index: number; row_json: string }>(

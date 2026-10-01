@@ -18,9 +18,9 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
-import { createAttachmentRecord } from '../database/attachments.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
@@ -78,13 +78,6 @@ afterEach(async () => {
 it('applies remote nodes through the shared async DbPort executor', async () => {
   const connection = openDatabaseConnection();
   const port = createBetterSqliteDbPort(connection.sqlite, { name: 'sync-node-apply-executor-test' });
-  createAttachmentRecord({
-    id: 'att-1',
-    originalName: 'att-1.pdf',
-    mimeType: 'application/pdf',
-    sizeBytes: 128,
-    createdAt: '2026-04-21T09:00:00.000Z'
-  });
 
   await expect(applySyncNodesWithDbPort(port, [createRemoteNodeRecord()])).resolves.toMatchObject({
     appliedIds: ['node-1'],
@@ -95,15 +88,15 @@ it('applies remote nodes through the shared async DbPort executor', async () => 
 
   expect(
     connection.sqlite.prepare(
-      `SELECT current_version_id, last_modified_by_host_name, sync_dirty, title, content, body_blob_hash, position
-       FROM nodes WHERE id = ?`
+      `SELECT current_version_id, last_modified_by_host_name, sync_dirty, title, ${buildNodeBodyContentSql('nodes')} AS content, body_blob_hash, position
+       FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`
     ).get('node-1')
   ).toEqual({
     body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
     content: 'remote body',
     current_version_id: 'phone#1',
     last_modified_by_host_name: 'phone',
-    position: 4,
+    position: null,
     sync_dirty: 0,
     title: 'Remote Node'
   });
@@ -117,11 +110,10 @@ it('applies remote nodes through the shared async DbPort executor', async () => 
       ).get('node-1') as { data: Uint8Array }).data
     ).toString('utf8')
   ).toBe('remote body');
-  expect(
-    connection.sqlite.prepare(
-      'SELECT node_id, attachment_id, role FROM node_attachments WHERE node_id = ? ORDER BY attachment_id ASC'
-    ).all('node-1')
-  ).toEqual([{ attachment_id: 'att-1', node_id: 'node-1', role: 'reference' }]);
+  expect(connection.sqlite.prepare('SELECT resource_references FROM nodes WHERE id = ?').get('node-1'))
+    .toEqual({ resource_references: '[]' });
+  expect(connection.sqlite.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')").all())
+    .toEqual([]);
   expect(
     connection.sqlite.prepare(
       `SELECT invalidation_type, target_id, status

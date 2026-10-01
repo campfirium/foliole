@@ -161,10 +161,6 @@ function insertLearningStateRows() {
 it('loads only payload objects that match changed state row pairs', () => {
   const driver = openDatabaseConnection().driver;
   driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES ('att-1', 'cover.png', 'image/png', 12, '2026-04-27T00:01:00.000Z')`
-  );
-  driver.execute(
     `INSERT INTO import_sources (
        source_fingerprint, provider, source_kind, source_name, source_locator,
        first_imported_at, last_imported_at, last_content_fingerprint, latest_node_id
@@ -184,7 +180,6 @@ it('loads only payload objects that match changed state row pairs', () => {
   );
 
   expect(loadPackRows(0, 2, openDatabaseConnection().driver).syncObjects.map((row) => `${row.object_type}:${row.object_id}`)).toEqual([
-    'attachment:att-1',
     'import_source:source-1'
   ]);
 });

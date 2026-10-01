@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 
 import { hashTextBody } from '../../lib/core/database/contentBodyBlobs.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
+import { buildCanonicalNodeSyncPayload } from '../../lib/core/database/nodeSyncPayload.js';
 
 function input(overrides: { manualChildOrder?: string | null; sequentialReadingEnabled: boolean | null; shelvedAt?: string | null }) {
   return {
@@ -74,4 +75,15 @@ it('uses content as node identity while body blob hash stays derived', () => {
   expect(computeNodeSyncHash(base)).not.toBe(computeNodeSyncHash(changed));
   expect(hashTextBody(base.content)).toBe(hashTextBody('Body'));
   expect(hashTextBody(base.content)).not.toBe(hashTextBody(changed.content));
+});
+
+it('includes node-owned mounted resource names without rewriting legacy payload identity', () => {
+  const base = input({ sequentialReadingEnabled: null });
+  const reference = { storage_key: `${'a'.repeat(64)}.pdf`, role: 'reference' as const,
+    original_name: 'Original.pdf' };
+  expect(buildCanonicalNodeSyncPayload(base)).not.toHaveProperty('resource_references');
+  expect(computeNodeSyncHash({ ...base, resourceReferences: [reference] })).not.toBe(computeNodeSyncHash(base));
+  expect(computeNodeSyncHash({ ...base, resourceReferences: [reference] })).not.toBe(computeNodeSyncHash({
+    ...base, resourceReferences: [{ ...reference, original_name: 'Renamed.pdf' }]
+  }));
 });

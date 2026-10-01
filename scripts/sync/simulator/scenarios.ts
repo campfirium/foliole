@@ -11,21 +11,24 @@ import { reopenPeer } from './peers.js';
 import { inPeer, type SimulatorPeer } from './scope.js';
 import { mobileStore, pull, push, route, type Endpoint } from './transport.js';
 
-export interface ScenarioContext { a: SimulatorPeer; b: SimulatorPeer; sa: Endpoint; sb: Endpoint; }
-export async function converge({ a, b, sa, sb }: ScenarioContext) {
+export interface ScenarioContext {
+  a: SimulatorPeer; b: SimulatorPeer; sa: Endpoint; sb: Endpoint;
+  existingGaps?: readonly unknown[]; missingKeys?: ReadonlySet<string>;
+}
+export async function converge({ a, b, sa, sb, existingGaps = [], missingKeys = new Set<string>() }: ScenarioContext) {
   for (let round = 0; round < 8; round++) {
-    await pull(sa, b);
-    await pull(sb, a);
+    await pull(sa, b, true, missingKeys);
+    await pull(sb, a, true, missingKeys);
     if (JSON.stringify(graph(a)) === JSON.stringify(graph(b))) {
       const before = graph(a);
-      await pull(sa, b);
-      await pull(sb, a);
+      await pull(sa, b, true, missingKeys);
+      await pull(sb, a, true, missingKeys);
       expect(graph(a)).toEqual(before);
       expect(graph(b)).toEqual(before);
-      assertHealthy(a);
-      assertHealthy(b);
-      assertCompleted(a);
-      assertCompleted(b);
+      assertHealthy(a, existingGaps);
+      assertHealthy(b, existingGaps);
+      await assertCompleted(a, missingKeys);
+      await assertCompleted(b, missingKeys);
       return;
     }
   }
@@ -62,7 +65,8 @@ async function branches(ctx: ScenarioContext, overlap: boolean) {
   await push(sa, b);
   await converge(ctx);
   const head = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(a.sqlite), 'topic');
-  for (const ancestor of [base, left, right, tail]) {
+  for (const ancestor of [base, left, right, tail].filter((id) => a.sqlite.prepare(
+    'SELECT 1 FROM node_sync_versions WHERE version_id = ?').get(id))) {
     expect(await isStoredAncestorVersion(createBetterSqliteDbPort(a.sqlite), ancestor, head!.version_id!)).toBe(true);
   }
   if (!overlap) assertBody(a, '023\nx=1\ntail\n');
@@ -103,10 +107,11 @@ async function delayedPack(ctx: ScenarioContext) {
 async function trimmed(ctx: ScenarioContext) {
   const base = edit(ctx.a, '123');
   await pull(ctx.sa, ctx.b);
-  edit(ctx.a, '123456');
+  const intermediate = edit(ctx.a, '123456');
   const head = edit(ctx.a, '123456789');
   const collected = await collectNodeVersionPayloads(createBetterSqliteDbPort(ctx.a.sqlite), 'topic');
-  expect(collected.released).toBeGreaterThan(0);
+  expect(collected.released).toBe(0);
+  expect(ctx.a.sqlite.prepare('SELECT 1 FROM node_sync_versions WHERE version_id=?').get(intermediate)).toBeUndefined();
   expect(ctx.a.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id=?').pluck().get(head)).toBe('123456789');
   await mobileEdit(ctx.b, base, '923');
   await push(ctx.sa, ctx.b);

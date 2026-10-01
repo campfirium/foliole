@@ -1,3 +1,5 @@
+import { parseCanonicalAttachmentStorageKey } from './attachmentResource.js';
+
 export const RESOURCE_AVAILABILITY_PATH = '/companion/resource-availability';
 export const RESOURCE_AVAILABILITY_BATCH_LIMIT = 32;
 export const CONTENT_BLOB_BATCH_MAX_BYTES = 2 * 1024 * 1024;
@@ -5,7 +7,7 @@ export const ATTACHMENT_RANGE_BYTES = 1024 * 1024;
 export const RESOURCE_AVAILABILITY_REPLY_LIMIT = 64 * 1024;
 export const RESOURCE_CLAIM_TTL_MS = 30_000;
 export type ResourceKind = 'attachment' | 'content_blob';
-export type ResourceNeed = { kind: ResourceKind; id: string };
+export type ResourceNeed = { kind: ResourceKind; id: string; storage_key?: string };
 export type ResourceClaim = ResourceNeed & {
   status: 'available' | 'missing' | 'checksum_mismatch';
   sha256?: string;
@@ -40,8 +42,14 @@ export function parseResourceNeeds(value: unknown): ResourceNeed[] {
         typeof resource.id !== 'string' || !/^[a-f0-9]{64}$/.test(resource.id) || seen.has(resourceKey(resource))) {
       throw new Error('resource_availability_invalid_request');
     }
+    const identity = resource.kind === 'attachment' && typeof resource.storage_key === 'string'
+      ? parseCanonicalAttachmentStorageKey(resource.storage_key) : null;
+    if (resource.kind === 'attachment' && identity?.contentHash !== resource.id) {
+      throw new Error('resource_availability_invalid_request');
+    }
     seen.add(resourceKey(resource));
-    return { kind: resource.kind, id: resource.id };
+    return { kind: resource.kind, id: resource.id,
+      ...(identity ? { storage_key: identity.storageKey } : {}) };
   });
 }
 export function parseResourceClaims(value: unknown, deviceId: string, needs: readonly ResourceNeed[]) {
@@ -53,18 +61,21 @@ export function parseResourceClaims(value: unknown, deviceId: string, needs: rea
   if (!Array.isArray(reply.resources) || reply.resources.length !== needs.length) {
     throw new Error('resource_availability_protocol_error');
   }
-  const expected = new Set(needs.map(resourceKey));
+  const expected = new Map(needs.map((need) => [resourceKey(need), need]));
   return reply.resources.map((claim) => {
-    if (!claim || !expected.delete(resourceKey(claim)) ||
+    const need = claim ? expected.get(resourceKey(claim)) : undefined;
+    if (!claim || !need || (need.storage_key !== undefined && claim.storage_key !== need.storage_key) ||
         !['available', 'missing', 'checksum_mismatch'].includes(claim.status)) {
       throw new Error('resource_availability_protocol_error');
     }
+    expected.delete(resourceKey(claim));
     if (claim.status === 'available' && (typeof claim.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(claim.sha256) ||
         !Number.isSafeInteger(claim.size_bytes) || claim.size_bytes! < 0 ||
         (claim.kind === 'attachment' && claim.sha256 !== claim.id))) {
       throw new Error('resource_availability_protocol_error');
     }
     return { kind: claim.kind, id: claim.id, status: claim.status,
+      ...(need.storage_key ? { storage_key: need.storage_key } : {}),
       ...(claim.status === 'available' ? { sha256: claim.sha256!, size_bytes: claim.size_bytes! } : {}) };
   });
 }

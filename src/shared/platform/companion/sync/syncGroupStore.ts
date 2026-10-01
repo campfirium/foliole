@@ -1,3 +1,4 @@
+import { collectAllNodeVersionChains } from '../../../../../lib/core/database/dynamicNodeVersionChainMigration';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 import type { SyncGroupLibraryFacts, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
 import type { SyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
@@ -82,6 +83,9 @@ export function leaveCompanionSyncGroupDevice() {
     await tx.run('DELETE FROM sync_delivery_receipts');
     await tx.run('DELETE FROM sync_peer_cursors');
     await tx.run('DELETE FROM sync_group_nonce_ledger');
+    await tx.run('DELETE FROM node_version_outbound_holds');
+    await tx.run('DELETE FROM node_version_outbound_payload_holds');
+    await collectAllNodeVersionChains(tx);
   }));
 }
 

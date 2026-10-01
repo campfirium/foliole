@@ -1,6 +1,7 @@
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../platform/syncProtocolContract.js';
 
 import { COMPLETE_MEMBER_DATA_PLANE_CONTRACT } from './completeMemberDataPlaneContract.js';
+import { nodeVersionDependenciesCopySql } from './nodeVersionDependencies.js';
 import {
   SYNC_PACK_DATABASE_ENTRY,
   SYNC_PACK_FORMAT,
@@ -27,10 +28,8 @@ const versionPreflightSql = `WITH RECURSIVE selected(id) AS (
   ) SELECT COUNT(*) AS rows,
   COALESCE(SUM(COALESCE(length(CAST(v.body_text AS BLOB)), 0) +
     length(CAST(v.snapshot_json AS BLOB)) + 512), 0) AS bytes
-  FROM node_sync_versions v WHERE v.object_id IN (SELECT id FROM ancestry)`;
+  FROM node_sync_versions v WHERE v.object_id IN (SELECT id FROM ancestry UNION SELECT id FROM selected)`;
 const payloadPlans = [
-  { objectType: 'attachment', sql: `SELECT a.id __object_id, a.id attachment_id,
-    a.original_name, a.mime_type, a.size_bytes, a.created_at FROM source.attachments a` },
   { objectType: 'external_folder', sql: `SELECT f.id __object_id, f.id, f.folder_path, f.attachment_mode,
     f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at, f.last_error,
     s.host_name, s.host_platform, s.type_settings_json, f.created_at, f.updated_at, f.source_ref
@@ -86,11 +85,11 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
           JOIN source.nodes node ON node.id = alternative.node_id
           WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END
      FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN
-       ('attachment','external_document','external_folder','import_source','node','node_open_state','node_reading',
+       ('external_document','external_folder','import_source','node','node_open_state','node_reading',
         'node_review','node_text_alternative','parent_child_order','pdf_page_text','setting','view_state','watched_folder')
        AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
-       AND (state.object_type NOT IN ('node_reading','node_review') OR EXISTS
+       AND (state.object_type NOT IN ('node_reading','node_review') OR state.deleted_at IS NOT NULL OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        `,
     `WITH RECURSIVE node_prelude(id, parent_id) AS (
@@ -112,7 +111,8 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
      WHERE id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node')`,
     `INSERT INTO node_sync_versions SELECT v.version_id, v.object_id, v.parent_version_id, v.host_name,
        v.created_at, v.content_hash, v.body_text, v.snapshot_json
-     FROM source.node_sync_versions v JOIN nodes n ON n.id = v.object_id`,
+     FROM source.node_sync_versions v WHERE v.object_id IN
+       (SELECT object_id FROM sync_object_state WHERE object_type = 'node')`,
     `INSERT INTO node_sync_tombstones SELECT t.node_id, t.version_id, t.parent_version_id,
        t.host_name, t.content_hash, t.snapshot_json, t.deleted_at, t.created_at
      FROM source.node_sync_tombstones t WHERE t.node_id IN
@@ -121,8 +121,6 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
      FROM source.node_sync_version_parents p
      WHERE p.version_id IN (SELECT version_id FROM node_sync_versions)
        AND p.parent_version_id IN (SELECT version_id FROM node_sync_versions)`,
-    `INSERT INTO node_attachments SELECT a.node_id, a.attachment_id, a.role FROM source.node_attachments a
-     WHERE a.node_id IN (SELECT id FROM nodes)`,
     `INSERT INTO external_documents SELECT d.document_id, d.folder_id, d.relative_path, d.file_name, d.extension,
        d.source_size_bytes, d.source_modified_at, d.source_modified_ms, d.content_hash, d.title, d.opening_text,
        d.body_blob_hash, '', d.reference_kind, d.reference_json, d.indexed_at, d.is_present, d.missing_at,
@@ -137,7 +135,8 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
     `INSERT INTO review_log SELECT r.id, r.op_id, r.host_name, r.node_id, r.grade, r.scheduler_version,
        r.reviewed_at, r.due_before, r.stability_before, r.difficulty_before, r.due_after,
        r.stability_after, r.difficulty_after FROM source.review_log r
-     WHERE r.node_id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node_review')`
+     WHERE r.node_id IN (SELECT object_id FROM sync_object_state WHERE object_type = 'node_review')`,
+    nodeVersionDependenciesCopySql()
   ],
   databaseEntry: SYNC_PACK_DATABASE_ENTRY,
   format: SYNC_PACK_FORMAT,

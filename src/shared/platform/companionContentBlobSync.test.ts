@@ -7,6 +7,7 @@ const writerQueueMock = vi.hoisted(() => ({
 const iosDatabaseMock = vi.hoisted(() => ({
   commit: vi.fn(async () => ({ failedHashes: [] as string[], syncedHashes: ['a'.repeat(64)] })),
   missing: vi.fn(async () => ({ blobs: [{ hash: 'a'.repeat(64) }], hashes: ['a'.repeat(64)] })),
+  materialize: vi.fn(async () => 0),
   owner: {}
 }));
 
@@ -16,6 +17,10 @@ vi.mock('./companionSyncWriterQueue', () => ({
 
 vi.mock('./companion/runtime/companionBatchDataPlane', () => ({
   commitStagedCompanionContentBatch: iosDatabaseMock.commit
+}));
+
+vi.mock('./companion/runtime/companionCurrentVersionBodies', () => ({
+  materializeCompanionCurrentBodies: iosDatabaseMock.materialize
 }));
 
 vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
@@ -121,6 +126,16 @@ describe('iOS companion content blob sync bridge', () => {
 
     await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
     expect(iosDatabaseMock.missing).toHaveBeenCalledWith(3);
+  });
+
+  it('requeries missing bodies after local materialization before returning download demand', async () => {
+    const api = await import('./companionContentBlobSync');
+    iosDatabaseMock.materialize.mockResolvedValueOnce(1);
+    iosDatabaseMock.missing.mockResolvedValueOnce({ blobs: [{ hash: 'a'.repeat(64) }], hashes: ['a'.repeat(64)] })
+      .mockResolvedValueOnce({ blobs: [], hashes: [] });
+    await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual([]);
+    expect(iosDatabaseMock.materialize).toHaveBeenCalledWith(['a'.repeat(64)]);
+    expect(capacitorMock.plugin.downloadContentBlobBatch).not.toHaveBeenCalled();
   });
 
   it('downloads and commits content bodies through the iOS native contract', async () => {

@@ -23,6 +23,7 @@ import {
   listAssistantThreadMessages
 } from './assistantThreadMessages.js';
 import {
+  assertResourceRestoreAfterColdOpen,
   applyFollowupReviewGrade,
   createRestoredWorkspaceSnapshot,
   mutateWorkspaceAfterBackup,
@@ -76,6 +77,7 @@ it('restores the application sqlite state from an online backup snapshot', async
         authorText: null,
         id: 'node-1',
         imageSources: {},
+        resourceReferences: [],
         parentNodeId: null,
         position: 0,
         kind: 'topic',
@@ -132,6 +134,7 @@ it('restores review history, node lifecycle state, and backup truth after later 
       position: { 'node-root': 0, 'node-qa': 1, 'node-trash': 2 }[nodeId],
       authorText: null,
       imageSources: {},
+      resourceReferences: [],
       importContentFingerprint: null,
       importSourceFingerprint: null,
       readwiseRemoteLifecycle: null
@@ -168,6 +171,8 @@ it('mints opaque node sync versions without restore-specific identity state', as
   expect(restoredVersionId).not.toBe(preBackupVersionId);
   expect(selectSettingSyncRecordCount('desktop_node_sync_restore_incarnation')).toBe(0);
 });
+
+it('restores node-owned resources, parent links, and settings through a cold open', assertResourceRestoreAfterColdOpen);
 
 it('leaves device-local assistant history unchanged when restoring the main database', async () => {
   upsertAssistantThreadIndex({

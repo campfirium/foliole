@@ -1,9 +1,12 @@
 import type { DbPort } from '../sync/dbPort.js';
-import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../sync/syncObjectPayloadSql.js';
 
 import { ATTACHMENT_RETIREMENT_ROWS_SQL, validateAttachmentManifestRetirement, type RetiringAttachmentRow } from './attachmentManifestRetirement.js';
 import { computeCompanionContentHash } from './companionHostStateHashes.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+
+const LEGACY_ATTACHMENT_PAYLOAD = `SELECT json_object('attachment_id', id, 'original_name', original_name,
+  'mime_type', mime_type, 'size_bytes', size_bytes, 'created_at', created_at) AS payload_json
+  FROM attachments WHERE id = ?`;
 
 const EXISTS = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'attachment_blobs'";
 const INVALID_RELATIONS = `SELECT na.attachment_id FROM node_attachments na
@@ -27,7 +30,7 @@ export function retireAttachmentManifest(sqlite: DatabaseMigrationTarget) {
   if (sqlite.prepare(INVALID_RELATIONS).all().length) throw new Error('attachment_manifest_retirement_dangling_relation');
   for (const entry of entries) {
     sqlite.prepare(UPDATE_METADATA).run(entry.mimeType, entry.sizeBytes, entry.id);
-    const hash = payloadHash(sqlite.prepare(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.attachment).all(entry.id));
+    const hash = payloadHash(sqlite.prepare(LEGACY_ATTACHMENT_PAYLOAD).all(entry.id));
     sqlite.prepare(UPDATE_STATE).run(hash, entry.id, hash);
   }
   sqlite.exec('DROP TABLE attachment_blobs');
@@ -39,7 +42,7 @@ export async function retireCompanionAttachmentManifest(db: DbPort) {
   if ((await db.query(INVALID_RELATIONS)).length) throw new Error('attachment_manifest_retirement_dangling_relation');
   for (const entry of entries) {
     await db.run(UPDATE_METADATA, [entry.mimeType, entry.sizeBytes, entry.id]);
-    const hash = payloadHash(await db.query(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.attachment, [entry.id]));
+    const hash = payloadHash(await db.query(LEGACY_ATTACHMENT_PAYLOAD, [entry.id]));
     await db.run(UPDATE_STATE, [hash, entry.id, hash]);
   }
   await db.run('DROP TABLE attachment_blobs');

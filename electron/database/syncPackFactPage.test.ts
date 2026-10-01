@@ -61,16 +61,18 @@ it('combines deleted nodes and a later open-state change in one bounded window',
       sync_dirty, last_modified_by_host_name)
     VALUES ('node', ?, ?, 'deleted', 'now', 'now', 0, 'source')`).run(`deleted-${seq}`, seq);
   seedNode('live', null, 1, 4);
-  source.prepare("UPDATE sync_object_state SET object_type = 'node_open_state' WHERE object_id = 'live'").run();
-  source.prepare('UPDATE sync_state_sequence SET high_water = 4 WHERE singleton_id = 1').run();
+  source.prepare(`INSERT INTO sync_object_state
+    (object_type, object_id, state_seq, content_hash, updated_at, sync_dirty, last_modified_by_host_name)
+    VALUES ('node_open_state', 'live', 5, 'open', 'now', 0, 'source')`).run();
+  source.prepare('UPDATE sync_state_sequence SET high_water = 5 WHERE singleton_id = 1').run();
   const driver = createBetterSqlite3Driver(source);
   const window = selectDesktopSyncPackFactWindow(driver, { fromStateSeq: 0 });
-  expect(window.toStateSeq).toBe(4);
+  expect(window.toStateSeq).toBe(5);
   expect(readDesktopSyncPackFactPage(driver, window).index.versions).toHaveLength(1);
   const direct = loadDesktopSyncPackFactIndex(driver, { fromStateSeq: 0 });
-  expect(direct.to_state_seq).toBe(4);
+  expect(direct.to_state_seq).toBe(5);
   expect(direct.versions).toHaveLength(1);
-  expect(selectDesktopSyncPackFactWindow(driver, { fromStateSeq: 3 }).toStateSeq).toBe(4);
+  expect(selectDesktopSyncPackFactWindow(driver, { fromStateSeq: 3 }).toStateSeq).toBe(5);
 });
 
 it('keeps several versioned nodes in one state window without loading their bodies', () => {
@@ -219,7 +221,7 @@ it('offers existing history and original references when a historical parent is 
   const page = readDesktopSyncPackFactPage(createBetterSqlite3Driver(source), {
     fromStateSeq: 0, toStateSeq: 1, frontierStateSeq: 1, sourceEpoch: 'epoch'
   });
-  expect(page.index.versions.map((row) => row.version_id)).toEqual(['node-0001']);
+  expect(page.index.versions.map((row) => row.version_id)).toEqual(['node-0000', 'node-0001']);
   expect(page.index.parents).toEqual([{ version_id: 'node-0001', parent_version_id: 'missing', ordinal: 0 }]);
 });
 

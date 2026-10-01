@@ -1,20 +1,14 @@
 import type { DatabaseDriver } from './driver.js';
+import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { requestSearchIndexInvalidationProcessing } from './searchIndexInvalidationRuntime.js';
-import {
-  syncPdfSearchIndexForAttachmentIds,
-  syncPdfSearchIndexForNodeIds,
-  syncNodeSearchIndexForNodeIds,
-  syncWorkspaceSearchIndexForNodeIds
-} from './workspaceSearchIndex.js';
+import { DELETE_NODE_SEARCH_PENDING_SQL, INSERT_NODE_SEARCH_PENDING_SQL, normalizeSearchPendingStates } from './searchPendingState.js';
+import { syncPdfSearchIndexForAttachmentIds, syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
 import {
   advanceWorkspaceSearchSourceRevision,
   markWorkspaceSearchSourceIndexedIfSettled,
   markWorkspaceSearchSourceRevisionQueued
 } from './workspaceSearchSourceState.js';
-import {
-  deleteWorkspaceSearchIndexForSubtreeRootIds,
-  syncWorkspaceSearchPathForSubtreeRootIds
-} from './workspaceSearchSubtreeIndex.js';
+import { deleteWorkspaceSearchIndexForSubtreeRootIds } from './workspaceSearchSubtreeIndex.js';
 
 export type SearchIndexInvalidationType =
   | 'attachment_pdf'
@@ -39,9 +33,9 @@ interface SearchIndexInvalidationInput {
 interface EnqueueSearchIndexInvalidationOptions {
   advanceSourceRevision?: boolean;
   markSourceRevisionQueued?: boolean;
+  requestProcessing?: boolean;
 }
 
-const ACTIVE_STATUSES = "'pending', 'failed'";
 
 function nowIso() {
   return new Date().toISOString();
@@ -68,31 +62,29 @@ export function enqueueSearchIndexInvalidations(
   const uniqueInputs = toUniqueInputs(inputs);
   if (uniqueInputs.length === 0) return;
   const timestamp = nowIso();
-  const refreshPending = driver.prepare(
-    `UPDATE search_index_invalidations
-     SET updated_at = ?, last_error = NULL
-     WHERE invalidation_type = ?
-       AND target_id = ?
-       AND status = 'pending'`
-  );
-  const insert = driver.prepare(
-    `INSERT INTO search_index_invalidations (
-       invalidation_type, target_id, status, attempts, last_error, created_at, updated_at, claimed_at, completed_at
-     ) VALUES (?, ?, 'pending', 0, NULL, ?, ?, NULL, NULL)`
-  );
-  for (const input of uniqueInputs) {
-    const refreshed = refreshPending.run([timestamp, input.type, input.targetId]);
-    if (refreshed.changes === 0) {
-      insert.run([input.type, input.targetId, timestamp, timestamp]);
+  driver.transaction(() => {
+    const retire = driver.prepare(DELETE_NODE_SEARCH_PENDING_SQL);
+    const insert = driver.prepare(INSERT_NODE_SEARCH_PENDING_SQL);
+    const nodeIds = new Set<string>();
+    for (const input of uniqueInputs) {
+      if (input.type === 'attachment_pdf') {
+        driver.queryAll<{ node_id: string }>(
+          `SELECT DISTINCT node_id FROM (${NODE_PDF_RESOURCES_SQL}) WHERE id = ?`, [input.targetId]
+        ).forEach((row) => nodeIds.add(row.node_id));
+      } else nodeIds.add(input.targetId);
     }
-  }
+    for (const nodeId of nodeIds) {
+      retire.run([nodeId]);
+      insert.run([nodeId, timestamp, timestamp]);
+    }
+  });
   if (options.advanceSourceRevision !== false) {
     advanceWorkspaceSearchSourceRevision(driver);
   }
   if (options.markSourceRevisionQueued !== false) {
     markWorkspaceSearchSourceRevisionQueued(driver);
   }
-  requestSearchIndexInvalidationProcessing();
+  if (options.requestProcessing !== false) requestSearchIndexInvalidationProcessing();
 }
 
 export function enqueueWorkspaceSearchInvalidationForNodeIds(
@@ -137,11 +129,12 @@ export function enqueuePdfSearchInvalidationForAttachmentIds(driver: DatabaseDri
 
 export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 500) {
   const claimedAt = nowIso();
+  normalizeSearchPendingStates(driver);
   const rows = driver.transaction(() => {
     const candidates = driver.queryAll<SearchIndexInvalidationRow>(
       `SELECT id, invalidation_type, target_id
        FROM search_index_invalidations
-       WHERE status IN (${ACTIVE_STATUSES})
+       WHERE status = 'pending'
        ORDER BY updated_at ASC, id ASC
        LIMIT ?`,
       [limit]
@@ -149,7 +142,7 @@ export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 
     if (candidates.length === 0) return [];
     const claim = driver.prepare(
       `UPDATE search_index_invalidations
-       SET status = 'running', attempts = attempts + 1, claimed_at = ?, updated_at = ?, last_error = NULL
+       SET attempts = attempts + 1, claimed_at = ?, updated_at = ?, last_error = NULL
        WHERE id = ?`
     );
     candidates.forEach((row) => claim.run([claimedAt, claimedAt, row.id]));
@@ -159,7 +152,7 @@ export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 
 
   try {
     processClaimedInvalidationRows(driver, rows);
-    completeInvalidations(driver, rows.map((row) => row.id), nowIso());
+    completeInvalidations(driver, rows.map((row) => row.id));
     return { failed: 0, processed: rows.length };
   } catch (error) {
     failInvalidations(driver, rows.map((row) => row.id), error, nowIso());
@@ -170,7 +163,7 @@ export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 
 export function readSearchIndexInvalidationBacklog(driver: DatabaseDriver) {
   return driver.queryOne<{ failed_count: number; pending_count: number; running_count: number; total_count: number }>(
     `SELECT
-       SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_count,
+       SUM(CASE WHEN last_error IS NOT NULL THEN 1 ELSE 0 END) AS failed_count,
        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_count,
        SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) AS running_count,
        COUNT(*) AS total_count
@@ -180,29 +173,22 @@ export function readSearchIndexInvalidationBacklog(driver: DatabaseDriver) {
 }
 
 function processClaimedInvalidationRows(driver: DatabaseDriver, rows: SearchIndexInvalidationRow[]) {
-  const nodeWorkspaceIds = rows.filter((row) => row.invalidation_type === 'node_workspace').map((row) => row.target_id);
-  const nodePdfIds = rows.filter((row) => row.invalidation_type === 'node_pdf').map((row) => row.target_id);
-  const attachmentPdfIds = rows.filter((row) => row.invalidation_type === 'attachment_pdf').map((row) => row.target_id);
-  const subtreeDeletedIds = rows.filter((row) => row.invalidation_type === 'node_subtree_deleted').map((row) => row.target_id);
-  const subtreeRestoredIds = rows.filter((row) => row.invalidation_type === 'node_subtree_restored').map((row) => row.target_id);
-  const subtreePathIds = rows.filter((row) => row.invalidation_type === 'node_subtree_path').map((row) => row.target_id);
-  deleteWorkspaceSearchIndexForSubtreeRootIds(driver, subtreeDeletedIds);
-  syncNodeSearchIndexForNodeIds(driver, nodeWorkspaceIds);
-  syncPdfSearchIndexForNodeIds(driver, nodeWorkspaceIds);
-  syncPdfSearchIndexForNodeIds(driver, nodePdfIds);
-  syncPdfSearchIndexForAttachmentIds(driver, attachmentPdfIds);
-  syncWorkspaceSearchIndexForNodeIds(driver, subtreeRestoredIds);
-  syncWorkspaceSearchPathForSubtreeRootIds(driver, subtreePathIds);
+  const attachmentIds = rows.filter((row) => row.invalidation_type === 'attachment_pdf').map((row) => row.target_id);
+  for (const attachmentId of attachmentIds) {
+    driver.execute('DELETE FROM search.pdf_search WHERE attachment_id = ?', [attachmentId]);
+  }
+  syncPdfSearchIndexForAttachmentIds(driver, attachmentIds);
+  const nodeIds = rows.filter((row) => row.invalidation_type !== 'attachment_pdf').map((row) => row.target_id);
+  deleteWorkspaceSearchIndexForSubtreeRootIds(driver, nodeIds);
+  syncWorkspaceSearchIndexForNodeIds(driver, nodeIds);
 }
 
-function completeInvalidations(driver: DatabaseDriver, ids: number[], completedAt: string) {
+function completeInvalidations(driver: DatabaseDriver, ids: number[]) {
   const complete = driver.prepare(
-    `UPDATE search_index_invalidations
-     SET status = 'completed', updated_at = ?, completed_at = ?
-     WHERE id = ?`
+    "DELETE FROM search_index_invalidations WHERE id = ?"
   );
   driver.transaction(() => {
-    ids.forEach((id) => complete.run([completedAt, completedAt, id]));
+    ids.forEach((id) => complete.run([id]));
     markWorkspaceSearchSourceIndexedIfSettled(driver);
   });
 }
@@ -211,7 +197,7 @@ function failInvalidations(driver: DatabaseDriver, ids: number[], error: unknown
   const message = error instanceof Error ? error.message : String(error);
   const fail = driver.prepare(
     `UPDATE search_index_invalidations
-     SET status = 'failed', updated_at = ?, last_error = ?
+     SET status = 'pending', updated_at = ?, last_error = ?
      WHERE id = ?`
   );
   driver.transaction(() => {

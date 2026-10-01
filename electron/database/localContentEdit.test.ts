@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
+import { retainLocalEditBase, releaseLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -71,19 +72,27 @@ function edit(baseVersionId: string, content: string, versionId = 'ver_local-edi
 it('merges a delayed edit using its real parent and preserves both branches', async () => {
   upsertVersionedNodeSnapshot(nodeInput('Apples\nBread\nMilk\n', '2026-07-25T04:30:00.000Z'));
   const base = currentVersion();
+  await retainLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
+    { holdId: 'draft', nodeId: 'node-1', versionId: base });
   upsertVersionedNodeSnapshot(nodeInput('Apples\nBread\nMilk and coffee\n', '2026-07-25T04:35:00.000Z'));
   const remote = currentVersion();
   const result = await edit(base, 'Apples and tea\nBread\nMilk\n');
   expect(result.current.body_text).toBe('Apples and tea\nBread\nMilk and coffee\n');
-  expect(result.current.parent_version_ids).toEqual(expect.arrayContaining([remote, 'ver_local-edit']));
-  const local = openDatabaseConnection().sqlite.prepare('SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?')
-    .get('ver_local-edit');
-  expect(local).toEqual({ parent_version_id: base });
+  expect(result.current.parent_version_ids).toEqual(['ver_local-edit']);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT version_id FROM node_sync_versions WHERE version_id = ?')
+    .all(remote)).toEqual([]);
+  expect(openDatabaseConnection().sqlite.prepare('SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?')
+    .get('ver_local-edit')).toEqual({ parent_version_id: base });
+  await releaseLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite), 'draft', 'node-1');
+  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_versions').get())
+    .toEqual({ count: 1 });
 });
 
 it('retains an overlapping edit using the existing alternative policy', async () => {
   upsertVersionedNodeSnapshot(nodeInput('Original text', '2026-07-25T04:30:00.000Z'));
   const base = currentVersion();
+  await retainLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
+    { holdId: 'draft', nodeId: 'node-1', versionId: base });
   upsertVersionedNodeSnapshot(nodeInput('Remote replacement text', '2026-07-25T04:35:00.000Z'));
   const result = await edit(base, 'Local replacement');
   const alternatives = openDatabaseConnection().sqlite.prepare('SELECT body_text FROM node_text_alternatives').all();
@@ -94,6 +103,8 @@ it('retains an overlapping edit using the existing alternative policy', async ()
 it('does not create a version merely because editing was entered', async () => {
   upsertVersionedNodeSnapshot(nodeInput('Original', '2026-07-25T04:30:00.000Z'));
   const base = currentVersion();
+  await retainLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
+    { holdId: 'draft', nodeId: 'node-1', versionId: base });
   upsertVersionedNodeSnapshot(nodeInput('Remote', '2026-07-25T04:35:00.000Z'));
   const result = await edit(base, 'Original');
   expect(result.current.body_text).toBe('Remote');
@@ -104,6 +115,8 @@ it('does not create a version merely because editing was entered', async () => {
 it('retries an acknowledged edit without creating another resolution', async () => {
   upsertVersionedNodeSnapshot(nodeInput('Original', '2026-07-25T04:30:00.000Z'));
   const base = currentVersion();
+  await retainLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
+    { holdId: 'draft', nodeId: 'node-1', versionId: base });
   upsertVersionedNodeSnapshot(nodeInput('Remote', '2026-07-25T04:35:00.000Z'));
   const first = await edit(base, 'Local');
   const second = await edit(base, 'Local');

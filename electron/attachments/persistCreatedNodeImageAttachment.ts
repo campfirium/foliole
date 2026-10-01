@@ -2,9 +2,8 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { createAttachmentRecord, createNodeAttachmentLink, findAttachmentRecordById } from '../database/attachments.js';
-import { recordAttachmentMetadata } from '../database/attachmentSyncState.js';
 import { openDatabaseConnection } from '../database/connection.js';
+import { persistNodeResourceReference } from '../database/nodeResources.js';
 
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 import { validateSupportedImageBytes } from './supportedImageFormats.js';
@@ -13,7 +12,10 @@ const MAX_IMAGE_BYTES = 32 * 1024 * 1024;
 
 async function writeCanonicalFile(filePath: string, bytes: Uint8Array) {
   try {
-    await fs.access(filePath);
+    const existing = await fs.readFile(filePath);
+    if (createHash('sha256').update(existing).digest('hex') !== createHash('sha256').update(bytes).digest('hex')) {
+      throw new Error('canonical_attachment_hash_mismatch');
+    }
     return false;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
@@ -38,18 +40,14 @@ export async function persistCreatedNodeImageAttachment(args: {
   const hash = createHash('sha256').update(args.bytes).digest('hex');
   if (hash !== args.expectedHash) throw new Error('invalid argument: image hash');
   const originalName = args.originalName.trim() || 'pdf-image-excerpt.png';
-  const existing = findAttachmentRecordById(hash);
   const storagePath = resolveAttachmentStoragePath(hash, undefined, args.mimeType);
   const createdFile = await writeCanonicalFile(storagePath, args.bytes);
-  const createdAt = existing?.createdAt ?? new Date().toISOString();
   try {
     openDatabaseConnection().driver.transaction(() => {
       args.persistNode();
-      if (!existing) {
-        createAttachmentRecord({ id: hash, originalName, mimeType: args.mimeType, sizeBytes: args.bytes.byteLength, createdAt });
-      }
-      recordAttachmentMetadata(hash, createdAt);
-      createNodeAttachmentLink({ attachmentId: hash, nodeId: args.nodeId, role: 'image' });
+      persistNodeResourceReference(args.nodeId, {
+        storage_key: `${hash}.png`, original_name: originalName, role: 'image'
+      });
     });
   } catch (error) {
     if (createdFile) await fs.unlink(storagePath).catch(() => undefined);

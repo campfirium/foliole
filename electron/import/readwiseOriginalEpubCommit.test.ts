@@ -17,6 +17,8 @@ vi.mock('../database/readwiseHostAssignment.js', () => ({ canCurrentHostRunReadw
 vi.mock('./readwiseApiConnectionState.js', () => ({ isStoredReadwiseApiConnectionReady: () => true }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
@@ -107,7 +109,8 @@ async function seedTarget() {
   const driver = openDatabaseConnection().driver;
   const root = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE title = 'Book'")!;
   const readerSection = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE title = 'Reader chapter'")!;
-  const remote = driver.queryOne<{ id: string }>("SELECT id FROM nodes WHERE content = 'Remote original'")!;
+  const remote = driver.queryOne<{ id: string }>(`SELECT n.id FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+    WHERE ${buildNodeBodyContentSql()} = 'Remote original'`)!;
   const earlyUnlocated = ensureReadwiseUnlocatedNode({
     connectionRef, documentId: document.id, driver, importedAt, rootNodeId: root.id
   });
@@ -116,7 +119,8 @@ async function seedTarget() {
      VALUES ('early-unlocated-child',?,'topic','Early missing',1,'Kept',?,?)`,
     [earlyUnlocated, importedAt, importedAt]
   );
-  driver.execute("UPDATE nodes SET title = 'My title', content = 'My remote note' WHERE id = ?", [remote.id]);
+  driver.execute("UPDATE nodes SET title = 'My title' WHERE id = ?", [remote.id]);
+  writeNodeBody({ driver, nodeId: remote.id, title: 'My title', content: 'My remote note', updatedAt: importedAt });
   driver.execute("UPDATE nodes SET title = 'My Book', updated_at = ? WHERE id = ?", ['2026-09-12T01:10:00.000Z', root.id]);
   driver.execute(
     "UPDATE nodes SET title = 'Edited Reader chapter', content = 'Changed Reader body', body_blob_hash = NULL, updated_at = ? WHERE id = ?",
@@ -162,8 +166,7 @@ it('rebuilds from EPUB bytes without retaining the archive as an attachment', as
     "SELECT remote_import_state_json FROM import_sources WHERE remote_document_id='book-1'"
   )!;
   expect(JSON.parse(source.remote_import_state_json)).toMatchObject({ bodyAuthority: 'original_epub', originalFile: null });
-  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM attachments')).toEqual({ count: 0 });
-  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM node_attachments')).toEqual({ count: 0 });
+  expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes, json_each(nodes.resource_references) WHERE json_extract(value, '$.role') = 'reference'")).toEqual({ count: 0 });
 });
 
 it('force-replaces changed Reader content while preserving identities, user content, and local anchors', async () => {
@@ -174,7 +177,8 @@ it('force-replaces changed Reader content while preserving identities, user cont
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ title: string }>('SELECT title FROM nodes WHERE id = ?', [seeded.rootId]))
     .toEqual({ title: 'My Book' });
-  expect(driver.queryOne<{ content: string }>('SELECT content FROM nodes WHERE id = ?', [seeded.remoteId]))
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql()} AS content FROM nodes n
+    LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`, [seeded.remoteId]))
     .toEqual({ content: 'My remote note' });
   expect(driver.queryOne('SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL', [seeded.readerSectionId]))
     .toBeUndefined();
@@ -221,7 +225,7 @@ it('rolls every database write back when the authority save fails', async () => 
   expect(() => commitReadwiseOriginalEpub({ ...seeded, expectedSnapshot: before, importedAt }))
     .toThrow('injected failure');
   expect(captureReadwiseOriginalEpubSnapshot(seeded.target)).toBe(before);
-  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) count FROM attachments')).toEqual({ count: 0 });
+  expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes, json_each(nodes.resource_references) WHERE json_extract(value, '$.role') = 'reference'")).toEqual({ count: 0 });
 });
 
 it('removes files staged before an EPUB preparation failure', async () => {

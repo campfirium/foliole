@@ -85,16 +85,10 @@ public class FolioleCompanionBatchDataPlaneTest {
         try (FileOutputStream output = new FileOutputStream(target)) { output.write(bytes); }
         File snapshot = new File(context.getCacheDir(), "sync-group-provider-resource.db");
         snapshot.delete();
-        SQLiteDatabase database = SQLiteDatabase.openOrCreateDatabase(snapshot, null);
-        try {
-            database.execSQL("CREATE TABLE attachments (id TEXT PRIMARY KEY, mime_type TEXT)");
-            database.execSQL("INSERT INTO attachments VALUES (?, ?)",
-                new Object[] { hash, "image/png" });
-        } finally { database.close(); }
         try {
             FolioleCompanionSyncGroupResources.Resource resource =
                 FolioleCompanionSyncGroupResources.attachmentRange(
-                    context, snapshot.getAbsolutePath(), hash, hash, "0", "1048576");
+                    context, hash, hash, storageKey, "0", "1048576");
             assertEquals("image/png", resource.mimeType);
             assertEquals(bytes.length, resource.totalBytes);
             assertArrayEquals(bytes, resource.body);

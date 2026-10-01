@@ -2,7 +2,6 @@
   "syncProtocol": {
     "capabilities": [
       "article-image-sources-v1",
-      "attachment-metadata-only-v1",
       "author-host-snapshots-v1",
       "bounded-sync-pack-pages-v1",
       "canonical-attachment-storage-key-v1",
@@ -10,10 +9,11 @@
       "desktop-soft-anchor-v1",
       "device-delivery-receipts-v1",
       "device-sync-groups-v1",
+      "dynamic-node-version-chains-v1",
       "group-key-routing-v1",
       "lan-sync-v1",
+      "node-owned-resource-references-v1",
       "node-tombstone-pack-v1",
-      "node-version-frontier-retention-v1",
       "opaque-sync-refs-v1",
       "parent-child-order-v1",
       "readwise-library-source-mode-v1",
@@ -28,9 +28,9 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 13,
-    "min_supported_version": 13,
-    "version": 13
+    "max_supported_version": 15,
+    "min_supported_version": 15,
+    "version": 15
   },
   "pushAck": {
     "clientOpIdKeys": [
@@ -82,7 +82,7 @@
     "compression": "zlib",
     "databaseEntry": "incoming.db.deflate",
     "format": "foliole.sync-pack",
-    "formatVersion": 18,
+    "formatVersion": 20,
     "forbiddenDeviceIdentityKeys": [
       "canonical_library_path",
       "device_anchor",
@@ -108,19 +108,19 @@
     "manifestTableNames": [
       "sync_groups",
       "sync_group_devices",
+      "node_version_peer_heads",
       "sync_object_state",
       "sync_objects",
       "nodes",
       "node_sync_versions",
       "node_sync_tombstones",
       "node_sync_version_parents",
-      "node_attachments",
       "external_documents",
       "content_blobs",
       "review_log"
     ],
-    "maximumSchemaVersion": 90,
-    "minimumSchemaVersion": 90,
+    "maximumSchemaVersion": 92,
+    "minimumSchemaVersion": 92,
     "sqliteTableRequirements": {
       "pack_manifest": [
         "key",
@@ -142,6 +142,16 @@
         "joined_at",
         "left_at",
         "last_seen_at",
+        "updated_at"
+      ],
+      "node_version_peer_heads": [
+        "group_id",
+        "device_identity_key",
+        "object_id",
+        "version_id",
+        "library_epoch",
+        "proof_revision",
+        "pack_id",
         "updated_at"
       ],
       "sync_object_state": [
@@ -173,6 +183,7 @@
         "opening_text",
         "anchor_resolution_status",
         "anchor_source_version_id",
+        "resource_references",
         "content",
         "created_at",
         "updated_at",
@@ -202,11 +213,6 @@
         "version_id",
         "parent_version_id",
         "ordinal"
-      ],
-      "node_attachments": [
-        "node_id",
-        "attachment_id",
-        "role"
       ],
       "external_documents": [
         "document_id",
@@ -544,18 +550,6 @@
         "userVisible": true
       },
       {
-        "category": "resource",
-        "conflict": "lww",
-        "scope": "workspace",
-        "key": "attachment",
-        "objectType": "attachment",
-        "pushIssue": "review_required",
-        "storage": [
-          "attachments"
-        ],
-        "userVisible": true
-      },
-      {
         "category": "content",
         "conflict": "lww",
         "scope": "workspace",
@@ -738,7 +732,6 @@
       }
     ],
     "reviewRequiredPushIssueObjectTypes": [
-      "attachment",
       "external_document",
       "external_folder",
       "import_source",

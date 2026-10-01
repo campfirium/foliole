@@ -26,6 +26,7 @@ it('preserves the fixed historical-gap fixture without inventing its missing anc
   );
   await fs.writeFile(incomingPath, oracle.database);
   const incoming = new Database(incomingPath);
+  incoming.exec("ALTER TABLE nodes ADD COLUMN resource_references TEXT NOT NULL DEFAULT '[]'");
   incoming.exec(`CREATE TABLE node_sync_tombstones (
     node_id TEXT PRIMARY KEY, version_id TEXT NOT NULL, parent_version_id TEXT,
     host_name TEXT NOT NULL, content_hash TEXT NOT NULL, snapshot_json TEXT NOT NULL,

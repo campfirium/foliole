@@ -9,6 +9,9 @@ import { runWithDatabaseConnectionOwner } from './connection.js';
 
 const BATCH_LIMIT = 500;
 
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryDelayMs = 1000;
+
 let active: DesktopTaskHandle | null = null;
 let requested = false;
 let stopped = true;
@@ -30,10 +33,15 @@ export function stopSearchIndexInvalidationScheduler() {
   requested = false;
   setSearchIndexInvalidationScheduler(null);
   active?.cancel();
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+  retryDelayMs = 1000;
 }
 
 function scheduleSearchIndexInvalidationProcessing() {
   if (stopped) return;
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
   requested = true;
   if (active) return;
   requested = false;
@@ -46,9 +54,16 @@ function scheduleSearchIndexInvalidationProcessing() {
   void handle.promise.then((value) => {
     const result = value as { failed: number; processed: number } | undefined;
     if (result?.failed) throw new Error(`Search indexing failed for ${result.failed} queued items.`);
+    retryDelayMs = 1000;
     if (result && result.processed >= BATCH_LIMIT) requested = true;
   }).catch((error) => {
-    if (!stopped) appendMainProcessDiagnosticLog('search_index_invalidation_processing_failed', { error });
+    if (stopped) return;
+    appendMainProcessDiagnosticLog('search_index_invalidation_processing_failed', { error });
+    retryTimer = setTimeout(() => {
+      retryTimer = null;
+      scheduleSearchIndexInvalidationProcessing();
+    }, retryDelayMs);
+    retryDelayMs = Math.min(retryDelayMs * 2, 30_000);
   }).finally(() => {
     notifyStatusWhenConnectionAvailable();
     if (active === handle) active = null;

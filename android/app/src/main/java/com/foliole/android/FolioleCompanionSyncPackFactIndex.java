@@ -82,7 +82,7 @@ final class FolioleCompanionSyncPackFactIndex {
         boolean[] heldParents = bits(parentBits, parents.length());
         boolean[] heldReviews = bits(reviewBits, reviews.length());
         java.util.Set<String> heads = new java.util.HashSet<>();
-        try (Cursor rows = pack.rawQuery("SELECT current_version_id FROM nodes", null)) {
+        try (Cursor rows = pack.rawQuery("SELECT current_version_id FROM nodes UNION SELECT version_id AS current_version_id FROM node_sync_tombstones", null)) {
             while (rows.moveToNext()) if (!rows.isNull(0)) heads.add(rows.getString(0));
         }
         for (int i = 0; i < versions.length(); i++) {

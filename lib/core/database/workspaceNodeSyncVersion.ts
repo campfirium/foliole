@@ -15,6 +15,7 @@ export function canonicalWorkspaceNodePayload(node: WorkspaceNodeSnapshot) {
       attachmentId: attachment.attachmentId,
       role: attachment.role
     })),
+    ...(node.resourceReferences ? { resourceReferences: node.resourceReferences } : {}),
     content: node.content,
     createdAt: node.createdAt,
     deletedAt: node.deletedAt ?? null,

@@ -18,9 +18,9 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
-import { createAttachmentRecord } from './attachments.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncNodesAsync } from './syncApply.js';
 import { seedNodeVersion } from './syncNodeVersionTestSupport.js';
@@ -122,13 +122,6 @@ afterEach(async () => {
 });
 
 function createSyncAttachmentFixture() {
-  createAttachmentRecord({
-    id: 'att-1',
-    originalName: 'att-1.pdf',
-    mimeType: 'application/pdf',
-    sizeBytes: 128,
-    createdAt: '2026-04-21T09:00:00.000Z'
-  });
 }
 
 it('applies remote sync nodes into state, version table, and attachment links', async () => {
@@ -144,8 +137,8 @@ it('applies remote sync nodes into state, version table, and attachment links', 
   const connection = openDatabaseConnection();
   expect(
     connection.sqlite.prepare(
-      `SELECT current_version_id, last_modified_by_host_name, sync_dirty, title, content, body_blob_hash, position
-       FROM nodes WHERE id = ?`
+      `SELECT current_version_id, last_modified_by_host_name, sync_dirty, title, ${buildNodeBodyContentSql('nodes')} AS content, body_blob_hash, position
+       FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`
     ).get('node-1')
   ).toEqual({
     body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
@@ -179,11 +172,10 @@ it('applies remote sync nodes into state, version table, and attachment links', 
     snapshot_json: expect.stringContaining('"title":"Remote Node"'),
     version_id: 'phone#1'
   });
-  expect(
-    connection.sqlite.prepare(
-      'SELECT node_id, attachment_id, role FROM node_attachments WHERE node_id = ? ORDER BY attachment_id ASC'
-    ).all('node-1')
-  ).toEqual([{ attachment_id: 'att-1', node_id: 'node-1', role: 'reference' }]);
+  expect(connection.sqlite.prepare('SELECT resource_references FROM nodes WHERE id = ?').get('node-1'))
+    .toEqual({ resource_references: '[]' });
+  expect(connection.sqlite.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')").all())
+    .toEqual([]);
   expect(
     connection.sqlite.prepare('SELECT node_id, position FROM node_order WHERE node_id = ?').get('node-1')
   ).toBeUndefined();
@@ -200,7 +192,7 @@ it('fast-forwards remote node versions when the local version is an ancestor', a
 
   const connection = openDatabaseConnection();
   expect(
-    connection.sqlite.prepare('SELECT current_version_id, title, content FROM nodes WHERE id = ?').get('node-1')
+    connection.sqlite.prepare(`SELECT current_version_id, title, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`).get('node-1')
   ).toEqual({
     content: 'remote body',
     current_version_id: 'phone#1',
@@ -236,7 +228,7 @@ it('stores divergent remote node versions without reviving the legacy conflict q
 
   const connection = openDatabaseConnection();
   expect(
-    connection.sqlite.prepare('SELECT current_version_id, title, content FROM nodes WHERE id = ?').get('node-1')
+    connection.sqlite.prepare(`SELECT current_version_id, title, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`).get('node-1')
   ).toEqual({
     content: 'local body',
     current_version_id: 'desktop#2',

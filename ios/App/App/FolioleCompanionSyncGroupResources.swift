@@ -20,13 +20,11 @@ enum FolioleCompanionSyncGroupResources {
             [hash.lowercased()]).map { Resource(body: $0.1, contentType: $0.0 ?? "application/octet-stream") }
     }
 
-    static func attachmentFile(snapshot: URL, attachmentId: String?, contentHash: String?) throws
+    static func attachmentFile(attachmentId: String?, contentHash: String?, storageKey: String?) throws
         -> (url: URL, mimeType: String, size: Int)? {
-        guard let attachmentId, attachmentId == contentHash, let contentHash,
-              contentHash.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
-              let row = try query(snapshot, "SELECT mime_type, CAST(id AS BLOB) FROM attachments WHERE id = ?",
-                [attachmentId]), let mimeType = row.0,
-              let storageKey = FolioleCompanionCanonicalAttachmentKey.storageKey(contentHash: contentHash, mimeType: mimeType)
+        guard let attachmentId, attachmentId == contentHash, let contentHash, let storageKey,
+              let mimeType = FolioleCompanionCanonicalAttachmentKey.mimeType(storageKey),
+              FolioleCompanionCanonicalAttachmentKey.matches(contentHash: contentHash, mimeType: mimeType, storageKey: storageKey)
               else { return nil }
         let support = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask,
                                                   appropriateFor: nil, create: false)
@@ -38,9 +36,9 @@ enum FolioleCompanionSyncGroupResources {
         return (url, mimeType, size)
     }
 
-    static func attachmentRange(snapshot: URL, attachmentId: String?, contentHash: String?,
+    static func attachmentRange(attachmentId: String?, contentHash: String?, storageKey: String?,
                                 offsetText: String?, lengthText: String?) throws -> Resource? {
-        guard let source = try attachmentFile(snapshot: snapshot, attachmentId: attachmentId, contentHash: contentHash)
+        guard let source = try attachmentFile(attachmentId: attachmentId, contentHash: contentHash, storageKey: storageKey)
             else { return nil }
         guard let offsetText, let lengthText, !offsetText.isEmpty, !lengthText.isEmpty,
               offsetText.allSatisfy(\.isNumber), lengthText.allSatisfy(\.isNumber),

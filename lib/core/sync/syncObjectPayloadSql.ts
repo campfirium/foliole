@@ -2,10 +2,6 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
   parent_child_order: `SELECT json_object(
     'parent_id', parent_id, 'child_ids_json', child_ids_json
   ) AS payload_json FROM parent_child_order WHERE parent_id = ?`,
-  attachment: `SELECT json_object(
-    'attachment_id', a.id, 'original_name', a.original_name, 'mime_type', a.mime_type,
-    'size_bytes', a.size_bytes, 'created_at', a.created_at
-    ) AS payload_json FROM attachments a WHERE a.id = ?`,
   external_folder: `SELECT json_object(
     'id', f.id, 'folder_path', f.folder_path, 'attachment_mode', f.attachment_mode,
     'attachment_root_path', f.attachment_root_path, 'excluded_dirs_json', f.excluded_dirs_json,

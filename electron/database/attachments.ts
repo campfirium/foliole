@@ -1,9 +1,8 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
-import { enqueuePdfSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
+import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { loadOrCreateDesktopHostName } from './hostProfile.js';
-import { flushNodeSyncVersion } from './nodeSyncVersions.js';
+import { loadNodeResourceReferences, removeNodeResourceLink } from './nodeResources.js';
 
 export interface AttachmentRecordInput {
   id: string;
@@ -25,136 +24,33 @@ export interface NodeAttachmentRecord extends NodeAttachmentLinkInput {
   attachment: AttachmentRecord;
 }
 
-interface NodeAttachmentRow extends DatabaseRow {
-  node_id: string;
-  attachment_id: string;
-  role: string;
-  original_name: string | null;
-  mime_type: string | null;
-  size_bytes: number | null;
-  created_at: string;
-}
-
 interface AttachmentNodeLinkRow extends DatabaseRow {
   node_id: string;
   attachment_id: string;
   role: string;
 }
 
-interface AttachmentRecordRow extends DatabaseRow {
-  id: string;
-  original_name: string | null;
-  mime_type: string | null;
-  size_bytes: number | null;
-  created_at: string;
-}
-
-function toAttachmentRecord(row: AttachmentRecordRow): AttachmentRecord {
-  return {
-    id: row.id,
-    originalName: row.original_name,
-    mimeType: row.mime_type,
-    sizeBytes: row.size_bytes,
-    createdAt: row.created_at
-  };
-}
-
-function markNodeAttachmentLinksDirty(nodeId: string, now = new Date().toISOString()) {
-  const hostName = loadOrCreateDesktopHostName(now);
-  openDatabaseConnection().driver.execute(
-    `UPDATE nodes
-     SET updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
-     WHERE id = ?`,
-    [now, hostName, nodeId]
-  );
-  flushNodeSyncVersion(nodeId, now);
-}
-
-function changedRows() {
-  return openDatabaseConnection().driver.queryOne<{ count: number }>('SELECT changes() AS count')?.count ?? 0;
-}
-
-export function createAttachmentRecord(input: AttachmentRecordInput): void {
-  const connection = openDatabaseConnection();
-  connection.driver.execute(
-    `INSERT INTO attachments (
-       id,
-       original_name,
-       mime_type,
-       size_bytes,
-       created_at
-     ) VALUES (?, ?, ?, ?, ?)`,
-    [input.id, input.originalName, input.mimeType, input.sizeBytes, input.createdAt]
-  );
-}
-
-export function createNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
-  const connection = openDatabaseConnection();
-  connection.driver.transaction(() => {
-    connection.driver.execute(
-      `INSERT INTO node_attachments (node_id, attachment_id, role)
-       VALUES (?, ?, ?)
-       ON CONFLICT(node_id, attachment_id, role) DO NOTHING`,
-      [input.nodeId, input.attachmentId, input.role]
-    );
-    if (changedRows() > 0) {
-      markNodeAttachmentLinksDirty(input.nodeId);
-      enqueuePdfSearchInvalidationForNodeIds(connection.driver, [input.nodeId]);
-    }
-  });
-}
-
-export function findAttachmentRecordById(id: string): AttachmentRecord | null {
-  const connection = openDatabaseConnection();
-  const row = connection.driver.queryOne<AttachmentRecordRow>(
-    `SELECT id, original_name, mime_type, size_bytes, created_at
-     FROM attachments
-     WHERE id = ?`,
-    [id]
-  );
-
-  return row ? toAttachmentRecord(row) : null;
-}
-
 export function listNodeAttachments(nodeId: string): NodeAttachmentRecord[] {
-  const connection = openDatabaseConnection();
-  const rows = connection.driver.queryAll<NodeAttachmentRow>(
-    `SELECT
-       na.node_id,
-       na.attachment_id,
-       na.role,
-       a.original_name,
-       a.mime_type,
-       a.size_bytes,
-       a.created_at
-     FROM node_attachments na
-     INNER JOIN attachments a ON a.id = na.attachment_id
-     WHERE na.node_id = ?
-     ORDER BY na.role ASC, na.attachment_id ASC`,
-    [nodeId]
+  const row = openDatabaseConnection().driver.queryOne<{ created_at: string }>(
+    'SELECT created_at FROM nodes WHERE id = ?', [nodeId]
   );
-
-  return rows.map((row) => ({
-    nodeId: row.node_id,
-    attachmentId: row.attachment_id,
-    role: row.role,
-    attachment: {
-      id: row.attachment_id,
-      originalName: row.original_name,
-      mimeType: row.mime_type,
-      sizeBytes: row.size_bytes,
-      createdAt: row.created_at
-    }
-  }));
+  return loadNodeResourceReferences(nodeId).map((reference) => {
+    const identity = parseCanonicalAttachmentStorageKey(reference.storage_key)!;
+    return { nodeId, attachmentId: identity.contentHash, role: reference.role,
+      attachment: { id: identity.contentHash, originalName: reference.original_name,
+        mimeType: identity.mimeType, sizeBytes: null, createdAt: row?.created_at ?? '' } };
+  });
 }
 
 export function listAttachmentNodeLinks(attachmentId: string): NodeAttachmentLinkInput[] {
   const connection = openDatabaseConnection();
   const rows = connection.driver.queryAll<AttachmentNodeLinkRow>(
-    `SELECT node_id, attachment_id, role
-     FROM node_attachments
-     WHERE attachment_id = ?
-     ORDER BY node_id ASC, role ASC`,
+    `SELECT owner.id AS node_id,
+       substr(json_extract(resource.value, '$.storage_key'), 1, 64) AS attachment_id,
+       json_extract(resource.value, '$.role') AS role
+     FROM nodes owner, json_each(owner.resource_references) resource
+     WHERE substr(json_extract(resource.value, '$.storage_key'), 1, 64) = ?
+     ORDER BY owner.id ASC, role ASC`,
     [attachmentId]
   );
 
@@ -166,16 +62,5 @@ export function listAttachmentNodeLinks(attachmentId: string): NodeAttachmentLin
 }
 
 export function deleteNodeAttachmentLink(input: NodeAttachmentLinkInput): void {
-  const connection = openDatabaseConnection();
-  connection.driver.transaction(() => {
-    connection.driver.execute(
-      `DELETE FROM node_attachments
-       WHERE node_id = ? AND attachment_id = ? AND role = ?`,
-      [input.nodeId, input.attachmentId, input.role]
-    );
-    if (changedRows() > 0) {
-      markNodeAttachmentLinksDirty(input.nodeId);
-      enqueuePdfSearchInvalidationForNodeIds(connection.driver, [input.nodeId]);
-    }
-  });
+  removeNodeResourceLink(input.nodeId, input.attachmentId, input.role);
 }

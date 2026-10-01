@@ -77,12 +77,14 @@ function assertCurrentDatabase(sqlite: Database.Database, driver = createBetterS
   )).toEqual([]);
   const snapshot = loadWorkspaceSnapshot(driver, { includeBody: true });
   expect(snapshot?.nodeOrder.length).toBeGreaterThan(0);
-}
-
-async function copyFixture(registration: { file: string; schema: number }, purpose: string) {
-  const destination = path.join(tempRoot, `${registration.schema}-${purpose}.db`);
-  await copyFile(path.join(fixtureRoot, registration.file), destination);
-  return destination;
+  expect(snapshot?.nodesById['t166-root']).toMatchObject({ content: '# Stable user content' });
+  expect(snapshot?.nodesById['t166-child']).toMatchObject({
+    content: 'Preserve this child.', parentNodeId: 't166-root',
+    review: { state: 2, stability: 3.5, difficulty: 4.25, reps: 5, lapses: 1 },
+    reading: { intervalDurationMs: 900000, intervalGrowthFactor: 1.75, repetitionCount: 3 }
+  });
+  expect(sqlite.prepare("SELECT value FROM settings WHERE key = 't166.fixture.preference'").get())
+    .toEqual({ value: '{"enabled":true}' });
 }
 
 async function installFixtureAsProductionDatabase(registration: { file: string; schema: number }) {
@@ -137,18 +139,27 @@ describe('public Desktop database upgrade matrix', () => {
   it.each(fixtureRegistrations.filter(({ schema }) => schema < DATABASE_SCHEMA_VERSION))(
     'rolls schema $schema back when the upgrade fails before version commit',
     async (registration) => {
-      const databasePath = await copyFixture(registration, 'rollback');
+      const databasePath = await installFixtureAsProductionDatabase(registration);
       const sqlite = new Database(databasePath);
       try {
+        const protectedRows = readProtectedFixtureRows(sqlite);
         expect(() => initializeDatabaseSchema(sqlite, {
           beforeVersionCommit: () => { throw new Error('injected public upgrade failure'); }
         })).toThrow('injected public upgrade failure');
         expect(sqlite.pragma('user_version', { simple: true })).toBe(registration.schema);
         expect(sqlite.pragma('integrity_check', { simple: true })).toBe('ok');
         expect(sqlite.pragma('foreign_key_check')).toEqual([]);
+        expect(readProtectedFixtureRows(sqlite)).toEqual(protectedRows);
       } finally {
         sqlite.close();
       }
+      assertProductionOpen(databasePath);
+      assertProductionOpen(databasePath);
     }
   );
 });
+
+function readProtectedFixtureRows(sqlite: Database.Database) {
+  return ['nodes', 'node_review', 'node_reading', 'settings'].map((table) =>
+    sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
+}

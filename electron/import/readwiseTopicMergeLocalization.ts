@@ -25,6 +25,7 @@ export async function localizeReadwiseTopicMergeTexts(sourceContent: string, hig
     fs.readFile(highlightFilePath, 'utf8').then((content) => context.localizeMarkdown(content, { layoutLargeImages: false }))
   ]);
   return {
+    resourceReferences: [...source.resourceReferences, ...highlight.resourceReferences],
     attachmentIds: [...new Set([...source.attachmentIds, ...highlight.attachmentIds])],
     imageSources: { ...source.imageSources, ...highlight.imageSources },
     highlightMarkdown: highlight.text,

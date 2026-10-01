@@ -98,7 +98,8 @@ it('keeps Blob-only Readwise bodies and local edits across update and duplicate 
   expect(afterUpdate.body).toMatchObject({ source: 'blob', status: 'resolved' });
   expect(afterUpdate.body?.status === 'resolved' ? afterUpdate.body.content : '').toContain('author: Two');
   expect(afterUpdate.body?.status === 'resolved' ? afterUpdate.body.content : '').toContain('Local appendix.');
-  expect(afterUpdate.node?.content).toBe(afterUpdate.body?.status === 'resolved' ? afterUpdate.body.content : null);
+  expect(afterUpdate.node?.content).not.toContain('Local appendix.');
+  expect(afterUpdate.node?.content).toContain('author: Two');
   expect(afterUpdate.children).toHaveLength(2);
   expect(afterDuplicate.body).toEqual(afterUpdate.body);
   expect(afterDuplicate.children).toEqual(afterUpdate.children);

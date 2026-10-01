@@ -203,13 +203,10 @@ it('supplements node and PDF results with valid uppercase boolean search', () =>
     content: '',
     updatedAt: '2026-05-04T00:00:00.000Z'
   });
-  insertPdfAttachment({ id: 'pdf-advanced', originalName: 'Atlas Launch.pdf', status: 'ready' });
-  openDatabaseConnection().sqlite
-    .prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`)
-    .run('node-pdf', 'pdf-advanced', 'reference');
+  insertPdfAttachment({ nodeId: 'node-pdf', id: '7393b04b9af7a9b611be1db2f90c987551556766ca0633bb2abf64607ce081bc', originalName: 'Atlas Launch.pdf', status: 'ready' });
   openDatabaseConnection().sqlite
     .prepare(`INSERT INTO pdf_page_text (attachment_id, page, text) VALUES (?, ?, ?)`)
-    .run('pdf-advanced', 1, 'Atlas and Launch appears on one indexed page.');
+    .run('7393b04b9af7a9b611be1db2f90c987551556766ca0633bb2abf64607ce081bc', 1, 'Atlas and Launch appears on one indexed page.');
   syncPdfSearchIndexForNodeIds(openDatabaseConnection().driver, ['node-pdf']);
 
   const results = searchWorkspace('Atlas AND Launch');

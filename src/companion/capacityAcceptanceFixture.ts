@@ -23,7 +23,7 @@ export async function seedCapacityNodes(db: DbPort, start: number, count: number
   );
   await db.transaction(async (tx) => {
     await insertRows(tx, `nodes
-      (id,parent_id,title,content,body_blob_hash,created_at,updated_at,deleted_at)`, 8,
+      (id,parent_id,title,content,body_blob_hash,created_at,updated_at,deleted_at,resource_references)`, 9,
     records.map((record) => record.node));
     const existing = (await tx.query<{ child_ids_json: string }>(
       'SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?', ['node-0']
@@ -51,8 +51,6 @@ export async function seedCapacityNodes(db: DbPort, start: number, count: number
     await insertRows(tx, 'node_view_state (node_id,host_name,scroll_top,updated_at)', 4,
       records.flatMap((record) => record.metadata?.viewState ?? []));
     await insertRows(tx, 'node_open_state', 2, records.flatMap((record) => record.metadata?.openState ?? []));
-    await insertRows(tx, 'attachments', 5, records.flatMap((record) => record.metadata?.attachment ?? []));
-    await insertRows(tx, 'node_attachments', 3, records.flatMap((record) => record.metadata?.nodeAttachment ?? []));
   });
 }
 async function capacityNodeRecords(index: number, bytes: number, hostName: string) {
@@ -65,7 +63,8 @@ async function capacityNodeRecords(index: number, bytes: number, hostName: strin
   const deleted = index % 50 === 49;
   return {
     node: [id, index === 0 ? null : 'node-0', `Topic ${index}`, blob ? '' : body,
-      blob ? hash : null, time, time, deleted ? time : null] satisfies DbValue[],
+      blob ? hash : null, time, time, deleted ? time : null,
+      index % 5 === 0 ? JSON.stringify([{ storage_key: `${hash}.pdf`, original_name: 'synthetic.pdf', role: 'reference' }]) : '[]'] satisfies DbValue[],
     blob: blob ? [hash, hash, 'text', body.length, body.length, hash, hash,
       missing ? 'missing' : 'ready', time] satisfies DbValue[] : null,
     blobData: blob && !missing ? [hash, body] satisfies DbValue[] : null,
@@ -75,8 +74,7 @@ async function capacityNodeRecords(index: number, bytes: number, hostName: strin
 function capacityMetadata(id: string, hostName: string) {
   return {
     review: [[id, time]], reading: [[id, time, time]], viewState: [[id, hostName, 100, time]],
-    openState: [[id, time]], attachment: [[id, 'synthetic.pdf', 'application/pdf', 1048576, time]],
-    nodeAttachment: [[id, id, 'reference']]
+    openState: [[id, time]]
   } satisfies Record<string, DbValue[][]>;
 }
 async function insertRows(db: DbPort, table: string, width: number, rows: DbValue[][]) {

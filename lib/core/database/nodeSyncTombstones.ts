@@ -101,7 +101,9 @@ function writeNodeSyncTombstoneRow(
   deletedAt: string
 ) {
   const snapshot = forceDeletedSnapshot(row.snapshot_json, deletedAt);
-  const contentHash = computeNodeSyncHash(snapshotHashInput(snapshot));
+  const sourceSnapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
+  const contentHash = sourceSnapshot.deleted_at === deletedAt && sourceSnapshot.updated_at === deletedAt
+    ? row.content_hash : computeNodeSyncHash(snapshotHashInput(snapshot));
   upsert.run([
     nodeId,
     row.version_id,

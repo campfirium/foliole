@@ -5,6 +5,7 @@ export type DesktopMaintenanceOperationName =
   | 'database-integrity'
   | 'external-search-refresh'
   | 'keep-import'
+  | 'image-address-migration'
   | 'legacy-webview-migration'
   | 'managed-inbox-import'
   | 'pdf-indexing'
@@ -26,6 +27,21 @@ export const DESKTOP_MAINTENANCE_OPERATION_DEFINITIONS: Record<
   DesktopMaintenanceOperationName,
   DesktopOperationDefinition
 > = {
+  'image-address-migration': {
+    ...base,
+    completion: 'Verified historical image addresses commit before the library completion marker.',
+    concurrencyKey: 'image-address-migration',
+    cost: 'heavy',
+    evidence: 'Byte/hash validation, transactional body repair, normal versions, and restart tests.',
+    label: 'Historical image address migration',
+    priority: 'background',
+    recovery: 'Interrupted runs retain their marker; already repaired nodes are unchanged on restart.',
+    resources: [...databaseWrite, { resource: 'cpu-heavy' }],
+    source: 'image-address-migration',
+    trigger: 'App-ready when the active library has no completion marker.',
+    verification: 'Wrong suffixes, missing aliases, protected originals, sync, and completion no-op.',
+    workload: 'One file and bounded candidate-node batches, yielding between units.'
+  },
   'automatic-backup': {
     ...base,
     cancellable: false,

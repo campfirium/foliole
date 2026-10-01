@@ -161,6 +161,8 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(50, 'installSchema', 'Failed to add persisted sync fact claims.'),
   step(52, 'installSchema', 'Failed to add transactional workgroup restore pages.'),
   step(54, 'installSchema', 'Failed to add attachment receive checkpoints.'),
+  step(57, 'installSchema', 'Failed to add sync state receipt lifecycle.'),
+  step(58, 'installSchema', 'Failed to add independent node versions.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

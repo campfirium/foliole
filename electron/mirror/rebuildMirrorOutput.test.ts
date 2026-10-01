@@ -31,7 +31,6 @@ import {
   registerTestAttachmentResource,
   resetTestAttachmentResources
 } from '../../src/test/attachmentResourceTestSupport.js';
-import { createAttachmentRecord } from '../database/attachments.js';
 import { closeDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
@@ -142,13 +141,6 @@ it('writes one readable article .md with inline highlights, inline clozes, and s
 
 it('exports attachment markdown links as absolute asset paths', async () => {
   const resource = registerTestAttachmentResource({ attachmentId: 'a'.repeat(64) });
-  createAttachmentRecord({
-    id: resource.description.attachmentId,
-    originalName: 'cover.png',
-    mimeType: 'image/png',
-    sizeBytes: 12,
-    createdAt: '2026-03-30T00:00:00.000Z'
-  });
   upsertNodeSnapshot({
     nodeId: 'topic-with-asset',
     parentNodeId: null,

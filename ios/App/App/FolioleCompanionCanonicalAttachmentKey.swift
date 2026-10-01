@@ -19,6 +19,11 @@ enum FolioleCompanionCanonicalAttachmentKey {
         return extensions.values.contains(String(key.dropFirst(64)))
     }
 
+    static func mimeType(_ key: String) -> String? {
+        guard valid(key) else { return nil }
+        return extensions.first { $0.value == String(key.dropFirst(64)) }?.key
+    }
+
     static func matches(contentHash: String, mimeType: String, storageKey: String) -> Bool {
         return storageKey == self.storageKey(contentHash: contentHash, mimeType: mimeType)
     }

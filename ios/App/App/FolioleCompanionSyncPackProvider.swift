@@ -117,7 +117,9 @@ enum FolioleCompanionSyncPackProvider {
     private static func versionHolds(_ url: URL, _ packId: String, _ peer: String) throws -> [String: Any] {
         let database = try FolioleCompanionSyncPackSQLite(url: url, create: false)
         let heads = try database.namedRows(
-            "SELECT id AS object_id, current_version_id AS version_id FROM nodes WHERE current_version_id IS NOT NULL"
+            "SELECT id AS object_id, current_version_id AS version_id FROM nodes WHERE current_version_id IS NOT NULL " +
+            "UNION SELECT t.node_id AS object_id, t.version_id FROM node_sync_tombstones t " +
+            "JOIN node_sync_versions v ON v.version_id = t.version_id AND v.object_id = t.node_id"
         )
         let versions = try database.namedRows(
             "SELECT object_id, version_id, body_text, snapshot_json FROM node_sync_versions"

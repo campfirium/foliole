@@ -1,3 +1,5 @@
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+
 import { openDatabaseConnection } from './connection.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import { applyReviewGrade } from './reviewMutations.js';
@@ -21,7 +23,8 @@ export function seedNode(nodeId: string, parentNodeId: string | null, position: 
 export function getNodeRow(nodeId: string) {
   const connection = openDatabaseConnection();
   return connection.sqlite
-    .prepare('SELECT id, parent_id, content, body_blob_hash, anchor_link, deleted_at, virtual_filter FROM nodes WHERE id = ?')
+    .prepare(`SELECT n.id, n.parent_id, ${buildNodeBodyContentSql()} AS content, n.body_blob_hash, n.anchor_link, n.deleted_at, n.virtual_filter
+      FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`)
     .get(nodeId) as
     | {
         anchor_link: string | null;

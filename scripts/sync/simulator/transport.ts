@@ -13,6 +13,7 @@ import { pushLocalDirtyObjects, toPushAck } from '../../../src/shared/platform/c
 import { applyCompanionDesktopSyncPack } from '../../../src/shared/platform/companionSyncPackApply.js';
 import { nodeVersionSyncAdapter } from '../../../src/shared/platform/companionSyncPushProtocol.js';
 
+import { assertCompleted } from './assertions.js';
 import { operations } from './operations.js';
 import { secret } from './peers.js';
 import { inPeer, type SimulatorPeer } from './scope.js';
@@ -21,6 +22,7 @@ export interface Endpoint {
   origin: string; peer: SimulatorPeer; requests: string[];
   interrupt: { path: string; remaining: number } | null;
   loseResponse: string | null;
+  afterResponse?: (route: string) => void;
   close(): Promise<void>;
 }
 export async function serve(peer: SimulatorPeer): Promise<Endpoint> {
@@ -33,6 +35,7 @@ export async function serve(peer: SimulatorPeer): Promise<Endpoint> {
     const route = request.url ?? '';
     requests.push(route);
     operations.push({ action: 'http', peer: peer.name, method: request.method, route });
+    response.once('finish', () => endpoint.afterResponse?.(route));
     const fault = endpoint.interrupt;
     if (fault && new URL(route, 'http://localhost').pathname === fault.path && --fault.remaining === 0) {
       endpoint.interrupt = null;
@@ -58,30 +61,52 @@ export function route(endpoint: Endpoint, target: SimulatorPeer) {
   return { endpoint_url: endpoint.origin, group_id: 'group', local_device_id: target.id,
     peer_device_id: endpoint.peer.id, peer_device_name: endpoint.peer.name, peer_platform: 'mac' as const };
 }
-export async function pull(endpoint: Endpoint, target: SimulatorPeer, receipt = true) {
+export async function pull(endpoint: Endpoint, target: SimulatorPeer, receipt = true,
+  missingKeys: ReadonlySet<string> = new Set()) {
   return inPeer(target, async () => {
     const peer = route(endpoint, target);
     const port = createBetterSqliteDbPort(target.sqlite);
-    let cursor = (await loadSyncPackReceiveProgress(port, endpoint.peer.id)).progress?.cursorStateSeq ?? 0;
-    const round = endpoint.peer.sqlite.prepare('SELECT high_water, source_epoch FROM sync_state_sequence').get() as {
-      high_water: number; source_epoch: string };
+    const { progress } = await loadSyncPackReceiveProgress(port, endpoint.peer.id);
+    let cursor = progress?.cursorStateSeq ?? 0;
+    let frontier = progress && !progress.completed ? progress.frontierStateSeq : undefined;
+    let epoch = progress && !progress.completed ? progress.sourceEpoch : undefined;
     for (let page = 0; page < 100000; page++) {
       const mobile = process.env.FOLIOLE_SIM_PATH === 'companion' && target.name === 'b';
       const received = mobile ? await applyCompanionDesktopSyncPack({ headers: {},
         sourcePeerId: endpoint.peer.id, sourceHostName: endpoint.peer.name,
         url: `${endpoint.origin}/companion/sync-pack?page_contract=bounded-v1&after_state_seq=${cursor}` +
-          `&frontier_state_seq=${round.high_water}&source_epoch=${round.source_epoch}` }) : null;
-      const result = received ? { cursor: received.to_state_seq } : await downloadAndApplyDesktopSyncGroupPack({ after: cursor, peer,
-        frontierStateSeq: round.high_water, sourceEpoch: round.source_epoch,
+          (frontier === undefined ? '' : `&frontier_state_seq=${frontier}`) +
+          (epoch === undefined ? '' : `&source_epoch=${epoch}`) }) : null;
+      const result = received ? { cursor: received.to_state_seq, frontierStateSeq: received.frontier_state_seq,
+        sourceEpoch: received.source_epoch, roundRebased: received.round_rebased } : await downloadAndApplyDesktopSyncGroupPack({ after: cursor, peer,
+        ...(frontier === undefined ? {} : { frontierStateSeq: frontier }),
+        ...(epoch === undefined ? {} : { sourceEpoch: epoch }),
         createHeaders: createDesktopSyncGroupSignedHeaders });
-      if (result.cursor < cursor || (result.cursor === cursor && cursor < round.high_water)) {
+      if (result.roundRebased) {
+        if (epoch && result.sourceEpoch !== epoch) throw new Error('sync_pack_source_epoch_changed');
+        frontier = result.frontierStateSeq;
+      }
+      frontier ??= result.frontierStateSeq ?? result.cursor;
+      epoch ??= result.sourceEpoch;
+      if (result.frontierStateSeq !== undefined && result.frontierStateSeq !== frontier ||
+          result.sourceEpoch !== undefined && result.sourceEpoch !== epoch || result.cursor > frontier) {
+        throw new Error('sync_pack_round_changed');
+      }
+      if (result.cursor < cursor || (result.cursor === cursor && cursor < frontier)) {
         throw new Error('simulator_cursor_no_progress');
       }
       cursor = result.cursor;
-      if (cursor >= round.high_water) break;
+      if (cursor === frontier) break;
     }
-    if (cursor !== round.high_water) throw new Error('simulator_frontier_incomplete');
-    await drainDesktopSyncGroupResourceArticles(peer);
+    if (cursor !== frontier) throw new Error('simulator_frontier_incomplete');
+    try { await drainDesktopSyncGroupResourceArticles(peer); }
+    catch (error) {
+      if (!missingKeys.size || !(error instanceof Error) || error.message !== 'sync_group_resources_incomplete') throw error;
+      const pending = target.sqlite.prepare('SELECT count(*) FROM sync_pack_resource_articles').pluck().get();
+      if (!pending) throw error;
+      await assertCompleted(target, missingKeys);
+      operations.push({ action: 'expected-resource-partial', peer: target.name, missingKeys: [...missingKeys] });
+    }
     if (receipt) await flushDesktopSyncGroupVersionReceipts(peer);
     return cursor;
   });

@@ -4,7 +4,9 @@ import { buildDesktopSyncPackFromDriver, type BuildDesktopSyncPackInput } from '
 import { readDesktopSyncPackFactPage } from '../database/syncPackFactPage.js';
 import { stageDesktopSyncPackNodeHolds } from '../database/syncPackNodeVersionHolds.js';
 import { DEFAULT_SYNC_PACK_PAGE_BUDGET } from '../database/syncPackPageBudget.js';
-import { loadPackRows } from '../database/syncPackRows.js';
+import { loadPackRows, loadPresentSyncPackStateRows } from '../database/syncPackRows.js';
+import { loadSyncPackTombstoneRows } from '../database/syncPackTombstoneRows.js';
+import { syncPackVersionHeads } from '../database/syncPackVersionHeads.js';
 
 import { openCompanionFactSession } from './companionLanFactSession.js';
 
@@ -22,9 +24,8 @@ export async function buildKnownFactPack(args: {
           args.input.frontierStateSeq !== fact.window.frontierStateSeq)) {
       throw new Error('sync_pack_source_view_changed');
     }
-    const changed = fact.view.driver.queryOne<{ object_type: string }>(
-      `SELECT object_type FROM sync_object_state WHERE state_seq > ? AND state_seq <= ?
-        ORDER BY state_seq LIMIT 1`, [fact.window.fromStateSeq, fact.window.toStateSeq]);
+    const changed = loadPresentSyncPackStateRows(fact.view.driver,
+      fact.window.fromStateSeq, fact.window.toStateSeq)[0];
     if (changed?.object_type === 'node' || changed?.object_type === 'node_review') return null;
 
     if (!allKnownFactsHeld(fact)) return null;
@@ -59,8 +60,7 @@ function allKnownFactsHeld(fact: Awaited<ReturnType<typeof openCompanionFactSess
 
 function holdKnownFactPackHeads(fact: Awaited<ReturnType<typeof openCompanionFactSession>>,
   packId: string, fromPeerId: string, toPeerId: string) {
-  const nodes = loadPackRows(fact.window.fromStateSeq, fact.window.toStateSeq,
-    fact.view.driver).nodes;
+  const nodes = knownFactHeads(fact);
   const knownVersionIds = nodes.map((node) => node.current_version_id).filter((id): id is string => Boolean(id));
   openDatabaseConnection().driver.transaction((driver) => {
     const existing = driver.queryAll<{ object_id: string; version_id: string }>(
@@ -90,12 +90,17 @@ export async function restoreKnownFactReceiptHolds(args: {
     if (fact.view.driver.queryOne<{ completed: number }>(
       'SELECT completed FROM fact_claims.progress WHERE singleton_id = 1')?.completed !== 1) return;
     if (!allKnownFactsHeld(fact)) return;
-    const nodes = loadPackRows(fact.window.fromStateSeq, fact.window.toStateSeq,
-      fact.view.driver).nodes;
+    const nodes = knownFactHeads(fact);
     const expected = nodes.filter((node) => node.current_version_id)
       .map((node) => `${node.id}:${node.current_version_id}`).sort();
     const received = args.results.map((row) => `${row.objectId}:${row.sentVersionId}`).sort();
     if (JSON.stringify(expected) !== JSON.stringify(received)) return;
     holdKnownFactPackHeads(fact, args.packId, args.fromPeerId, args.peerId);
   } finally { fact.view.close(); }
+}
+
+function knownFactHeads(fact: Awaited<ReturnType<typeof openCompanionFactSession>>) {
+  return syncPackVersionHeads(fact.view.driver,
+    loadPackRows(fact.window.fromStateSeq, fact.window.toStateSeq, fact.view.driver).nodes,
+    loadSyncPackTombstoneRows(fact.view.driver, fact.window));
 }

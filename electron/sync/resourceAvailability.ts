@@ -6,7 +6,6 @@ import {
   type ResourceNeed
 } from '../../lib/platform/resourceAvailabilityContract.js';
 import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
-import { loadAttachmentResourceStorageIdentity } from '../database/attachmentResourceDescription.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
@@ -27,9 +26,8 @@ export async function loadResourceAvailability(bodyText: string) {
 async function inspectResource(need: ResourceNeed): Promise<ResourceClaim> {
   if (need.kind === 'content_blob') return inspectBlob(need);
   try {
-    const identity = loadAttachmentResourceStorageIdentity(need.id);
-    if (!identity) return { ...need, status: 'missing' };
-    const resource = resolveAttachmentFileForSync(identity.storageKey);
+    if (!need.storage_key) throw new Error('resource_availability_invalid_request');
+    const resource = resolveAttachmentFileForSync(need.storage_key);
     if (resource.status !== 'ready') return { ...need, status: 'missing' };
     const sha256 = await hashResourceFile(resource.filePath);
     if (sha256 === need.id) {

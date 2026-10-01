@@ -87,7 +87,7 @@ async function applyInNewProcess(target: string, incoming: string, mode = 'resum
 
 async function transferWithCrash(http: Awaited<ReturnType<typeof startAuthenticatedSyncHttp>>,
   target: string, phase: string, mode: string) {
-  const viewId = await negotiateFactView(http);
+  const { viewId, frontierStateSeq } = await negotiateFactView(http);
   let url = new URL(`/companion/sync-pack?page_contract=bounded-v1&after_state_seq=0&fact_view=${viewId}`, http.origin);
   let killed = false;
   let finalIncoming = '';
@@ -106,7 +106,7 @@ async function transferWithCrash(http: Awaited<ReturnType<typeof startAuthentica
         recoveredState = readDurableState(target);
         if (mode === 'before') expect(recoveredState).toEqual(before);
         else if (dependency) expect(recoveredState).toMatchObject({ nodes: 0, versions: 0, rows: 1, cursor: 0 });
-        else expect(recoveredState).toMatchObject({ nodes: 2, versions: 2, rows: 0, cursor: 6 });
+        else expect(recoveredState).toMatchObject({ nodes: 2, versions: 2, rows: 0, cursor: frontierStateSeq });
         killed = true;
       }
       const result = await applyInNewProcess(target, incoming);

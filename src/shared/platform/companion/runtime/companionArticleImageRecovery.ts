@@ -1,14 +1,14 @@
+import type { NodeResourceReference } from '../../../../../lib/core/database/nodeResourceReferences';
 import { recoverArticleImage } from '../../../../../lib/core/import/articleImageRecovery';
 import { localizeArticleImageSource, replaceArticleImageSource } from '../../../../../lib/core/import/replaceArticleImageSource';
 import { parseCanonicalAttachmentStorageKey } from '../../../../../lib/platform/attachmentResource';
-import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
-import { commitCompanionImageArticle, readCompanionImageArticle, saveCompanionImportedImage } from './companionArticleImageStore';
+import { commitCompanionImageArticle, readCompanionImageArticle } from './companionArticleImageStore';
 import { importCompanionImageResource } from './companionImageImporter';
-import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
 export async function recoverCompanionArticleImage(nodeId: string, storageKey: string, expectedContent: string) {
+  let resource: NodeResourceReference | undefined;
   return recoverArticleImage({
     storageKey,
     replaceSource: replaceArticleImageSource,
@@ -27,10 +27,10 @@ export async function recoverCompanionArticleImage(nodeId: string, storageKey: s
       },
       importImage: async (url) => {
         const image = await importCompanionImageResource(url);
-        await runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((db) => saveCompanionImportedImage(db, image)));
+        resource = { storage_key: image.storageKey, original_name: image.originalName, role: 'image' };
         return image.storageKey;
       },
-      commit: (before, after) => commitCompanionImageArticle(nodeId, before, after)
+      commit: (before, after) => commitCompanionImageArticle(nodeId, before, after, resource)
     }
   });
 }
@@ -39,16 +39,15 @@ export async function importCompanionArticleImage(nodeId: string, sourceUrl: str
   const before = await readCompanionImageArticle(nodeId);
   if (!before) return null;
   const image = await importCompanionImageResource(sourceUrl);
-  await runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((db) => saveCompanionImportedImage(db, image)));
   const saved = await commitCompanionImageArticle(nodeId, before, {
     content: localizeArticleImageSource(before.content, sourceUrl, image.storageKey),
     imageSources: { ...before.imageSources, [image.storageKey]: sourceUrl }
-  });
+  }, { storage_key: image.storageKey, original_name: image.originalName, role: 'image' });
   if (!saved) return null;
   return {
     status: 'imported' as const, attachment_id: image.contentHash, attachment_record: 'created' as const,
     created_at: new Date().toISOString(), hash: image.contentHash, mime_type: image.mimeType,
-    original_name: image.storageKey, size_bytes: image.sizeBytes, storage_key: image.storageKey,
+    original_name: image.originalName, size_bytes: image.sizeBytes, storage_key: image.storageKey,
     stored_file: image.storedFile
   };
 }

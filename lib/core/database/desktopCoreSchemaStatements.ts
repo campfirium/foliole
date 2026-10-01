@@ -27,6 +27,7 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
     anchor_source_version_id TEXT,
     image_regions TEXT,
     image_sources TEXT,
+    resource_references TEXT NOT NULL DEFAULT '[]',
     import_source_fingerprint TEXT,
     import_content_fingerprint TEXT,
     position INTEGER,
@@ -39,7 +40,7 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
   )`,
   `CREATE TABLE IF NOT EXISTS node_sync_versions (
     version_id TEXT PRIMARY KEY,
-    object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    object_id TEXT NOT NULL,
     parent_version_id TEXT,
     host_name TEXT NOT NULL,
     created_at TEXT NOT NULL,
@@ -59,7 +60,7 @@ export const DESKTOP_CORE_SCHEMA_STATEMENTS = [
   ...NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS,
   `CREATE TABLE IF NOT EXISTS node_sync_conflicts (
     conflict_version_id TEXT PRIMARY KEY,
-    object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    object_id TEXT NOT NULL,
     parent_version_id TEXT,
     host_name TEXT,
     content_hash TEXT,

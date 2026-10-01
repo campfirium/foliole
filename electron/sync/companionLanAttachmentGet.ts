@@ -11,7 +11,7 @@ export async function handleCompanionAttachmentGet(
   const params = parsedRequestUrl.searchParams;
   const hasRange = params.has('offset') || params.has('length');
   const resource = await loadCompanionAttachmentResource(
-    params.get('attachment_id'), params.get('content_hash'),
+    params.get('attachment_id'), params.get('content_hash'), params.get('storage_key'),
     hasRange ? { offset: params.get('offset'), length: params.get('length') } : undefined
   );
   if (resource.status === 'ready') {

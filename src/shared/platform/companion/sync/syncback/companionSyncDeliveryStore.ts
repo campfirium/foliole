@@ -1,11 +1,17 @@
-import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort';
-import type { SyncPushAck, SyncPushPayload } from '../../../companionSyncPushProtocol';
+import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
+import { stageNodeVersionPush, confirmNodeVersionPush } from '../../../../../../lib/core/sync/nodeVersionPushRetention.js';
+import type { SyncPushAck, SyncPushPayload } from '../../../companionSyncPushProtocol.js';
 
 export async function stagePushDeliveries(port: DbPort, authorizationId: string, items: SyncPushPayload[]) {
   const now = new Date().toISOString();
   await port.transaction(async (tx) => {
     for (const item of items) {
       const delivery = deliveryIdentity(item);
+      if (delivery.stream === 'state' && !(await tx.query(
+        `SELECT 1 FROM sync_object_state WHERE object_type = ? AND object_id = ?
+         AND content_hash = ? AND object_type || ':' || object_id || ':' || state_seq = ?`,
+        [item.identity.objectType, item.identity.objectId, delivery.payloadIdentity, item.clientOpId]
+      )).length) continue;
       await tx.run(
         `INSERT OR IGNORE INTO sync_delivery_receipts (
           peer_id, stream_name, operation_id, object_type, object_id, payload_identity,
@@ -19,6 +25,8 @@ export async function stagePushDeliveries(port: DbPort, authorizationId: string,
          WHERE peer_id = ? AND stream_name = ? AND operation_id = ?`,
         [authorizationId, delivery.stream, item.clientOpId]
       ))[0];
+      if (item.identity.objectType === 'node') await stageNodeVersionPush(tx, authorizationId, item.clientOpId,
+        item.identity.objectId, delivery.payloadIdentity, now);
       if (stored?.payload_identity !== delivery.payloadIdentity) {
         throw new Error('sync_delivery_operation_identity_mismatch');
       }
@@ -31,13 +39,24 @@ export async function savePeerPushAcksWithinTransaction(port: DbPort, authorizat
   for (const ack of acks) {
     const delivery = ackDelivery(ack);
     if (!delivery) continue;
+    if (delivery.stream === 'node_version' && delivery.status === 'confirmed') {
+      const [sent] = await port.query<{ payload_identity: string; object_id: string }>(
+        `SELECT payload_identity, object_id FROM sync_delivery_receipts
+         WHERE peer_id = ? AND stream_name = 'node_version' AND operation_id = ?`, [authorizationId, ack.clientOpId]);
+      if (!sent || sent.object_id !== ack.identity.objectId || sent.payload_identity !== ack.versionId) continue;
+    }
     const result = await port.run(
       `UPDATE sync_delivery_receipts SET status = ?, remote_position = ?, issue_reason = ?, updated_at = ?
        WHERE peer_id = ? AND stream_name = ? AND operation_id = ?`,
       [delivery.status, delivery.remotePosition, ack.conflictReason ?? null, new Date().toISOString(),
         authorizationId, delivery.stream, ack.clientOpId]
     );
-    if (result.changes > 0) saved.push(ack.clientOpId);
+    if (result.changes > 0) {
+      saved.push(ack.clientOpId);
+      if (delivery.stream === 'node_version' && delivery.status === 'confirmed') {
+        await confirmNodeVersionPush(port, authorizationId, ack.clientOpId, ack.identity.objectId, ack.versionId!);
+      }
+    }
   }
   return saved;
 }

@@ -1,5 +1,6 @@
 import type { DatabaseRow } from './driver.js';
 import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
+import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export interface WorkspaceSearchRow extends DatabaseRow {
@@ -81,7 +82,7 @@ WHERE pdf_search MATCH ?
 ORDER BY rank ASC, updated_at DESC`;
 export const PDF_FALLBACK_SQL = `${VISIBLE_NODES_CTE_SQL}
 SELECT
-  na.node_id AS id,
+  a.node_id AS id,
   COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
   ppt.text AS text,
   ppt.page AS page,
@@ -89,9 +90,8 @@ SELECT
   n.updated_at AS updated_at,
   a.id AS attachment_id
 FROM pdf_page_text ppt
-INNER JOIN attachments a ON a.id = ppt.attachment_id
-INNER JOIN node_attachments na ON na.attachment_id = a.id AND na.role = 'reference'
-INNER JOIN nodes n ON n.id = na.node_id
+INNER JOIN (${NODE_PDF_RESOURCES_SQL}) a ON a.id = ppt.attachment_id
+INNER JOIN nodes n ON n.id = a.node_id
 INNER JOIN visible_nodes visible ON visible.id = n.id
 WHERE a.mime_type = 'application/pdf'
   AND a.pdf_index_status = 'ready'
@@ -100,7 +100,7 @@ ORDER BY n.updated_at DESC`;
 export const PDF_CROSS_PAGE_MATCH_SQL = `${VISIBLE_NODES_CTE_SQL},
 page_pairs AS (
   SELECT
-    na.node_id AS id,
+    a.node_id AS id,
     COALESCE(NULLIF(trim(a.original_name), ''), 'PDF Document') AS title,
     ppt.text AS text,
     next_ppt.text AS next_text,
@@ -117,9 +117,8 @@ page_pairs AS (
       || substr(next_ppt.text, 1, ?) AS boundary_text
   FROM pdf_page_text ppt
   INNER JOIN pdf_page_text next_ppt ON next_ppt.attachment_id = ppt.attachment_id AND next_ppt.page = ppt.page + 1
-  INNER JOIN attachments a ON a.id = ppt.attachment_id
-  INNER JOIN node_attachments na ON na.attachment_id = a.id AND na.role = 'reference'
-  INNER JOIN nodes n ON n.id = na.node_id
+  INNER JOIN (${NODE_PDF_RESOURCES_SQL}) a ON a.id = ppt.attachment_id
+    INNER JOIN nodes n ON n.id = a.node_id
   INNER JOIN visible_nodes visible ON visible.id = n.id
   WHERE a.mime_type = 'application/pdf'
     AND a.pdf_index_status = 'ready'

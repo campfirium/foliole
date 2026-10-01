@@ -31,9 +31,6 @@ public final class FolioleResourceProviderTest {
         assertEquals("available", claims.getJSONObject(0).getString("status"));
         assertEquals("checksum_mismatch", claims.getJSONObject(1).getString("status"));
         assertEquals("missing", claims.getJSONObject(2).getString("status"));
-        try (var db = android.database.sqlite.SQLiteDatabase.openDatabase(fixture.database.getPath(), null, 0)) {
-            db.execSQL("INSERT INTO attachments VALUES (?, 'image/png')", new Object[] {id});
-        }
         var directory = new java.io.File(fixture.root, "attachments"); assertTrue(directory.mkdir());
         var file = new java.io.File(directory, id + ".png"); Files.write(file.toPath(), good);
         JSONArray attachment = new JSONArray().put(need("attachment", id));
@@ -99,7 +96,10 @@ public final class FolioleResourceProviderTest {
         return FolioleCompanionResourceAvailability.reply(fixture.context, fixture.database.getPath(),
             new JSONObject().put("resources", needs).toString(), "provider");
     }
-    private JSONObject need(String kind, String id) throws Exception { return new JSONObject().put("kind", kind).put("id", id); }
+    private JSONObject need(String kind, String id) throws Exception {
+        JSONObject need = new JSONObject().put("kind", kind).put("id", id);
+        return kind.equals("attachment") ? need.put("storage_key", id + ".png") : need;
+    }
     private static byte[] bytes(String value) { return value.getBytes(StandardCharsets.UTF_8); }
     private static String hash(byte[] value) throws Exception { return FolioleCompanionResourceAvailability.digest(value); }
     private static String part(String hash, String body) {

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { expect } from 'vitest';
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { encodeSyncPackFactClaims, type SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
@@ -10,7 +11,7 @@ type TestServer = Awaited<ReturnType<typeof startAuthenticatedSyncHttp>>;
 
 export interface BatchPeerIds { source: string; receiver: string; }
 
-function seedSource(ids: BatchPeerIds) {
+export function seedSource(ids: BatchPeerIds) {
   const driver = openDatabaseConnection().driver;
   driver.execute("INSERT INTO sync_groups VALUES ('group', 'Group', 'key', 'now', 'now')");
   driver.execute("INSERT INTO sync_group_local_state VALUES (1, 'group', ?, 'active', 'now')", [ids.source]);
@@ -67,13 +68,7 @@ export function seedMixedSource(ids: BatchPeerIds, softDeleted = false) {
     driver.execute("UPDATE nodes SET deleted_at = 'now' WHERE id = 'live-2'");
     driver.execute("UPDATE sync_object_state SET deleted_at = 'now' WHERE object_id = 'live-2'");
   }
-  const attachmentId = 'a'.repeat(64);
-  driver.execute(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-    VALUES (?, 'sample.png', 'image/png', 12, 'now')`, [attachmentId]);
-  driver.execute(`INSERT INTO sync_object_state
-    (object_type, object_id, state_seq, content_hash, updated_at, sync_dirty, last_modified_by_host_name)
-    VALUES ('attachment', ?, 6, 'hash-attachment', 'now', 0, 'source')`, [attachmentId]);
-  driver.execute('UPDATE sync_state_sequence SET high_water = 6 WHERE singleton_id = 1');
+
 }
 
 export async function negotiateFactView(server: TestServer) {
@@ -81,7 +76,10 @@ export async function negotiateFactView(server: TestServer) {
     let page = await server.getJson(firstPath) as unknown as
       { source_view_id: string; index?: SyncPackFactIndex; ready?: boolean };
     const viewId = page.source_view_id;
-    expect(page.index?.to_state_seq).toBe(6);
+    const frontierStateSeq = openDatabaseConnection().driver.queryOne<{ high_water: number }>(
+      'SELECT high_water FROM sync_state_sequence WHERE singleton_id = 1')!.high_water;
+    expect(page.index?.to_state_seq).toBe(frontierStateSeq);
+    expect(page.index?.frontier_state_seq).toBe(frontierStateSeq);
     for (let turn = 0; page.index && turn < 8; turn++) {
       const bits = encodeSyncPackFactClaims(page.index,
         { versions: [], parents: [], reviews: [] });
@@ -96,7 +94,7 @@ export async function negotiateFactView(server: TestServer) {
       page = await server.getJson(next.pathname + next.search) as typeof page;
     }
     expect(page.ready).toBe(true);
-  return viewId;
+  return { viewId, frontierStateSeq };
 }
 
 export function assertReceivedNodes(target: Database.Database, softDeleted: boolean) {
@@ -104,10 +102,9 @@ export function assertReceivedNodes(target: Database.Database, softDeleted: bool
     .toEqual({ count: 2 });
   expect(target.prepare('SELECT node_id FROM node_sync_tombstones').get())
     .toEqual({ node_id: 'deleted-3' });
-  expect(target.prepare('SELECT id FROM attachments').get())
-    .toEqual({ id: 'a'.repeat(64) });
+  expect(target.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')").all()).toEqual([]);
   if (softDeleted) expect(target.prepare("SELECT deleted_at FROM nodes WHERE id = 'live-2'").get())
     .toEqual({ deleted_at: 'now' });
-  expect(target.prepare('SELECT id, content FROM nodes ORDER BY id').all())
+  expect(target.prepare(`SELECT id, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash ORDER BY id`).all())
     .toEqual([{ id: 'live-1', content: 'body-1' }, { id: 'live-2', content: 'body-2' }]);
 }

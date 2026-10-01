@@ -1,3 +1,4 @@
+import { runImageAddressMigration } from './attachments/imageAddressMigration.js';
 import { startAutomaticBackupScheduler } from './automaticBackupScheduler.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { startSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
@@ -29,6 +30,11 @@ function startLightService(label: string, task: () => Promise<unknown> | unknown
 export function startFollowupTasks() {
   ensureDesktopTaskWatchdog();
   startAutomaticBackupScheduler();
+  const imageMigrationHandle = submitDesktopOperation('image-address-migration', {
+    failureLabel: '[attachments] image address migration failed',
+    run: runImageAddressMigration
+  });
+  void imageMigrationHandle.promise.catch(() => undefined);
   const mirrorHandle = submitDesktopOperation('mirror-backfill', {
     failureLabel: '[mirror] startup resume failed',
     run: resumePendingMirrorOutput

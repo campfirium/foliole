@@ -47,7 +47,7 @@ function resolvePdfSourceLocator(sourceNodeId: string) {
     return '';
   }
 
-  const description = loadAttachmentResourceDescription(attachment.attachmentId);
+  const description = loadAttachmentResourceDescription(`${attachment.attachmentId}.pdf`);
   return description ? buildAttachmentAssetUrl(description) : '';
 }
 

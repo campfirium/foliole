@@ -63,7 +63,8 @@ it('keeps body pages and later attachments in one snapshot while another connect
       if (!committed && result.values.some(row => Object.hasOwn(row as object, 'content'))) {
         writer.transaction(() => {
           writer.prepare("UPDATE nodes SET title = 'New title' WHERE id = 'node-0'").run();
-          writer.prepare("UPDATE attachments SET original_name = 'new.pdf'").run();
+          writer.prepare("UPDATE nodes SET resource_references = ? WHERE id = 'node-0'")
+            .run(JSON.stringify([{ storage_key: `${'c'.repeat(64)}.pdf`, role: 'reference', original_name: 'new.pdf' }]));
         })();
         committed = true;
       }

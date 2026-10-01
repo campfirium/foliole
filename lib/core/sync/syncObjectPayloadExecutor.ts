@@ -4,7 +4,6 @@ import {
 } from '../../platform/systemEntryDisplayNameContract.js';
 
 import type { DbPort } from './dbPort.js';
-import { applyAttachmentObject } from './syncObjectAttachmentPayloadExecutor.js';
 import { applyExternalFolderObject } from './syncObjectExternalFolderPayloadExecutor.js';
 import { applyImportSourceObject } from './syncObjectImportSourcePayloadExecutor.js';
 import {
@@ -24,8 +23,6 @@ export async function applySyncObjectPayloadWithDbPort(
   options: SyncObjectPayloadApplyOptions = {}
 ) {
   switch (record.object_type) {
-    case 'attachment':
-      return applyAttachmentObject(port, record);
     case 'external_document':
       return applyExternalDocumentObject(port, record);
     case 'external_folder':

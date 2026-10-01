@@ -1,13 +1,11 @@
 import { createHash } from 'node:crypto';
 
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
-import { enqueueWorkspaceSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { createEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
-import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { importImageAttachmentBytes } from '../attachments/importImageAttachmentBytes.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -117,16 +115,9 @@ async function importEmbeddedImagesForNode<T extends PreparedImportNodeContent>(
   }
 
   const connection = openDatabaseConnection();
-  const bodyBlobHash = upsertTextBodyBlob(connection.driver, rewrittenContent, importedAt);
   connection.driver.transaction(() => {
-    connection.driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ?, opening_text = ?, updated_at = ? WHERE id = ?', [
-      rewrittenContent,
-      bodyBlobHash,
-      resolveNodeOpeningText(rewrittenContent, node.title),
-      importedAt,
-      nodeId
-    ]);
-    enqueueWorkspaceSearchInvalidationForNodeIds(connection.driver, [nodeId]);
+    writeNodeBody({ driver: connection.driver, content: rewrittenContent, nodeId: nodeId,
+      title: node.title, updatedAt: importedAt });
   });
 
   return {

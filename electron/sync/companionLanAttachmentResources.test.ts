@@ -31,14 +31,14 @@ afterEach(async () => {
 
 it('loads attachment bytes when the attachment identity matches the requested hash', async () => {
   const body = Buffer.from('attachment body');
-  const contentHash = 'hash-current';
+  const contentHash = 'a'.repeat(64);
   const filePath = path.join(tempRoot, 'att-1.bin');
   await fs.writeFile(filePath, body);
   attachmentMock.loadAttachmentResourceStorageIdentity.mockReturnValue({ contentHash });
   attachmentMock.resolveAttachmentFileForSync.mockReturnValue({ filePath,
     mimeType: 'application/octet-stream', sizeBytes: body.byteLength, status: 'ready' });
 
-  await expect(loadCompanionAttachmentResource('att-1', contentHash)).resolves.toEqual({
+  await expect(loadCompanionAttachmentResource(contentHash, contentHash, `${contentHash}.pdf`)).resolves.toEqual({
     contentLength: body.byteLength,
     filePath,
     mimeType: 'application/octet-stream',
@@ -49,7 +49,7 @@ it('loads attachment bytes when the attachment identity matches the requested ha
 it('does not serve bytes for mismatched requested content hashes', async () => {
   attachmentMock.loadAttachmentResourceStorageIdentity.mockReturnValue({ contentHash: 'hash-current' });
 
-  await expect(loadCompanionAttachmentResource('att-1', 'hash-old')).resolves.toEqual({
+  await expect(loadCompanionAttachmentResource('a'.repeat(64), 'b'.repeat(64), `${'a'.repeat(64)}.pdf`)).resolves.toEqual({
     error: 'content_hash_mismatch',
     status: 'error',
     statusCode: 409
@@ -64,13 +64,13 @@ it('serves only a bounded authenticated attachment range', async () => {
   attachmentMock.resolveAttachmentFileForSync.mockReturnValue({ filePath,
     mimeType: 'application/pdf', sizeBytes: ATTACHMENT_RANGE_BYTES + 7, status: 'ready' });
 
-  await expect(loadCompanionAttachmentResource('att-1', 'hash-current',
+  await expect(loadCompanionAttachmentResource('a'.repeat(64), 'a'.repeat(64), `${'a'.repeat(64)}.pdf`,
     { offset: String(ATTACHMENT_RANGE_BYTES), length: '7' })).resolves.toEqual({
     byteOffset: ATTACHMENT_RANGE_BYTES, contentLength: 7,
     totalBytes: ATTACHMENT_RANGE_BYTES + 7, filePath,
     mimeType: 'application/pdf', status: 'ready'
   });
-  await expect(loadCompanionAttachmentResource('att-1', 'hash-current',
+  await expect(loadCompanionAttachmentResource('a'.repeat(64), 'a'.repeat(64), `${'a'.repeat(64)}.pdf`,
     { offset: '0', length: String(ATTACHMENT_RANGE_BYTES + 1) })).resolves.toMatchObject({
     error: 'invalid_request', statusCode: 400
   });
@@ -83,7 +83,7 @@ it('serves an empty attachment as one authenticated empty range', async () => {
   attachmentMock.resolveAttachmentFileForSync.mockReturnValue({ filePath,
     mimeType: null, sizeBytes: 0, status: 'ready' });
 
-  await expect(loadCompanionAttachmentResource('att-1', 'hash-empty',
+  await expect(loadCompanionAttachmentResource('a'.repeat(64), 'a'.repeat(64), `${'a'.repeat(64)}.pdf`,
     { offset: '0', length: String(ATTACHMENT_RANGE_BYTES) })).resolves.toEqual({
     byteOffset: 0, contentLength: 0, totalBytes: 0, filePath, mimeType: null, status: 'ready'
   });

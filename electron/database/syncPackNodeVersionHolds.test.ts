@@ -86,9 +86,9 @@ it('keeps unconfirmed pack payloads across a database restart and releases them 
       packId: 'pack', proofRevision: 2,
       results: [{ baseVersionId: 'C', objectId: 'node', result: 'applied', sentVersionId: 'C' }]
     });
-    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
-    expect(sqlite.prepare(`SELECT version_id FROM node_sync_versions
-      WHERE body_text IS NOT NULL ORDER BY version_id`).all())
+    // Confirmation already collects the chain; repeating collection is idempotent.
+    expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+    expect(sqlite.prepare(`SELECT version_id FROM node_sync_versions ORDER BY version_id`).all())
       .toEqual([{ version_id: 'C' }, { version_id: 'D' }]);
   } finally {
     sqlite.close();

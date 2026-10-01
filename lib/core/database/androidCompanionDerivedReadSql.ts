@@ -1,4 +1,5 @@
 import { ANDROID_COMPANION_RESOURCE_STATUSES as RESOURCE_STATUS } from './androidCompanionSyncProtocolDefinitions.js';
+import { NODE_RESOURCES_SQL } from './nodeResourcesSql.js';
 
 export function androidSqlString(value: string) {
   return `'${value.replaceAll("'", "''")}'`;
@@ -79,11 +80,9 @@ export function androidReadableArticleColumns() {
 }
 
 export function androidReadableArticleReferencePdfAttachmentSql(nodeIdExpression = 'n.id') {
-  return (
-    'SELECT na.attachment_id FROM node_attachments na ' +
-    "INNER JOIN attachments a ON a.id = na.attachment_id AND a.mime_type = 'application/pdf' " +
-    `WHERE na.node_id = ${nodeIdExpression} AND na.role = 'reference' ORDER BY na.attachment_id ASC LIMIT 1`
-  );
+  return `SELECT attachment_id FROM (${NODE_RESOURCES_SQL}) resource
+    WHERE resource.node_id = ${nodeIdExpression} AND role = 'reference'
+      AND mime_type = 'application/pdf' ORDER BY attachment_id LIMIT 1`;
 }
 
 function readableArticleContentSql() {

@@ -1,4 +1,5 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
+import { DELETE_NODE_SEARCH_PENDING_SQL, INSERT_NODE_SEARCH_PENDING_SQL } from '../database/searchPendingState.js';
 import {
   WORKSPACE_SEARCH_SOURCE_IDENTITY_KEY,
   WORKSPACE_SEARCH_QUEUED_REVISION_KEY,
@@ -13,24 +14,9 @@ export interface LocalSyncNodeSearchInvalidationState {
   title: string;
 }
 
-async function enqueueNodeSearchInvalidation(port: DbPort, type: string, nodeId: string, updatedAt: string) {
-  const refreshed = await port.run(
-    `UPDATE search_index_invalidations
-     SET updated_at = ?, last_error = NULL
-     WHERE invalidation_type = ?
-       AND target_id = ?
-       AND status = 'pending'`,
-    [updatedAt, type, nodeId]
-  );
-  if (refreshed.changes > 0) {
-    return;
-  }
-  await port.run(
-    `INSERT INTO search_index_invalidations (
-       invalidation_type, target_id, status, attempts, last_error, created_at, updated_at, claimed_at, completed_at
-     ) VALUES (?, ?, 'pending', 0, NULL, ?, ?, NULL, NULL)`,
-    [type, nodeId, updatedAt, updatedAt]
-  );
+async function enqueueNodeSearchInvalidation(port: DbPort, nodeId: string, updatedAt: string) {
+  await port.run(DELETE_NODE_SEARCH_PENDING_SQL, [nodeId]);
+  await port.run(INSERT_NODE_SEARCH_PENDING_SQL, [nodeId, updatedAt, updatedAt]);
 }
 
 async function advanceWorkspaceSearchSourceRevision(port: DbPort, updatedAt: string) {
@@ -76,32 +62,23 @@ export async function enqueueAppliedNodeDeleteSearchInvalidation(
   updatedAt: string
 ) {
   await advanceWorkspaceSearchSourceRevision(port, updatedAt);
-  await enqueueNodeSearchInvalidation(port, 'node_subtree_deleted', nodeId, updatedAt);
+  await enqueueNodeSearchInvalidation(port, nodeId, updatedAt);
   await markWorkspaceSearchSourceRevisionQueued(port, updatedAt);
 }
 
 export async function enqueueAppliedNodeBodySearchInvalidation(port: DbPort, nodeId: string, updatedAt: string) {
   await advanceWorkspaceSearchSourceRevision(port, updatedAt);
-  await enqueueNodeSearchInvalidation(port, 'node_workspace', nodeId, updatedAt);
+  await enqueueNodeSearchInvalidation(port, nodeId, updatedAt);
   await markWorkspaceSearchSourceRevisionQueued(port, updatedAt);
 }
 
 export async function enqueueAppliedNodeSearchInvalidations(
   port: DbPort,
-  localNode: LocalSyncNodeSearchInvalidationState | null,
+  _localNode: LocalSyncNodeSearchInvalidationState | null,
   record: NativeSyncNodeRecord,
   updatedAt: string
 ) {
   await advanceWorkspaceSearchSourceRevision(port, updatedAt);
-  if (record.snapshot.deleted_at) {
-    await enqueueNodeSearchInvalidation(port, 'node_subtree_deleted', record.object_id, updatedAt);
-  } else if (localNode?.deleted_at) {
-    await enqueueNodeSearchInvalidation(port, 'node_subtree_restored', record.object_id, updatedAt);
-  } else {
-    await enqueueNodeSearchInvalidation(port, 'node_workspace', record.object_id, updatedAt);
-    if (localNode && (localNode.parent_id !== record.snapshot.parent_id || localNode.title !== record.snapshot.title)) {
-      await enqueueNodeSearchInvalidation(port, 'node_subtree_path', record.object_id, updatedAt);
-    }
-  }
+  await enqueueNodeSearchInvalidation(port, record.object_id, updatedAt);
   await markWorkspaceSearchSourceRevisionQueued(port, updatedAt);
 }
