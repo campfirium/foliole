@@ -50,10 +50,11 @@
       "architectures": ["x64"],
       "deliveryChannel": "github-release",
       "t7Required": true,
-      "artifactContract": "deb",
+      "artifactContract": "linux-packages",
       "downloadAsset": "Foliole-Linux-Experimental-amd64-{version}.deb",
       "managedAssets": [
         "Foliole-Linux-Experimental-amd64-{version}.deb",
+        "Foliole-Linux-Experimental-amd64-{version}.AppImage",
         "SHA256SUMS-linux.txt"
       ],
       "update": {

@@ -53,7 +53,7 @@ permissions:
 
 jobs:
   release-linux:
-    name: Build and accept Ubuntu 24.04 x64 DEB
+    name: Build Linux x64 packages and accept DEB
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     outputs:
@@ -109,7 +109,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y apparmor apparmor-utils avahi-daemon dbus-x11 gnome-keyring libavahi-client-dev xvfb
           node scripts/quality/hosted-npm-ci.mjs
-      - name: Build the Experimental DEB
+      - name: Build the Experimental DEB and AppImage
         env:
           TARGET_VERSION: ${{ steps.identity.outputs.target_version }}
         run: node scripts/linux/package-linux-deb.mjs --version="$TARGET_VERSION"
@@ -119,6 +119,15 @@ jobs:
         run: >-
           dbus-run-session -- node scripts/linux/accept-linux-deb.mjs
           --directory=artifacts/linux --target-sha="$TARGET_SHA" --version="$TARGET_VERSION"
+      - name: Test real AppImage startup without sandbox on Ubuntu VM
+        env:
+          TARGET_VERSION: ${{ steps.identity.outputs.target_version }}
+        run: |
+          set -euo pipefail
+          sudo sysctl -w kernel.unprivileged_userns_clone=0
+          test "$(sysctl -n kernel.unprivileged_userns_clone)" = 0
+          node scripts/linux/test-linux-appimage.mjs \
+            --directory=artifacts/linux --target-sha="$TARGET_SHA" --version="$TARGET_VERSION"
       - name: Generate Linux artifact attestation
         if: inputs.execution_lane != '' && inputs.attest_artifact
         uses: actions/attest@v4
@@ -130,6 +139,7 @@ jobs:
           name: foliole-linux-release
           path: |
             artifacts/linux/*.deb
+            artifacts/linux/*.AppImage
             artifacts/linux/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
@@ -139,6 +149,7 @@ jobs:
         with:
           name: linux-acceptance-${{ env.TARGET_SHA }}-${{ github.run_attempt }}
           path: |
+            .tmp/artifacts/linux-appimage-test/result.json
             .tmp/artifacts/linux-deb-acceptance
             .tmp/artifacts/desktop-acceptance
             .tmp/playwright-results/desktop

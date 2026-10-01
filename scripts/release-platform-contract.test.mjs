@@ -64,8 +64,9 @@ describe('platform release contract', () => {
   it('accepts Linux only through one explicit registry entry', () => {
     const linux = {
       id: 'linux', displayName: 'Linux Experimental', status: 'active', architectures: ['x64'],
-      deliveryChannel: 'github-release', t7Required: true, artifactContract: 'deb',
-      managedAssets: ['Foliole-Linux-Experimental-amd64-{version}.deb', 'SHA256SUMS-linux.txt'],
+      deliveryChannel: 'github-release', t7Required: true, artifactContract: 'linux-packages',
+      managedAssets: ['Foliole-Linux-Experimental-amd64-{version}.deb',
+        'Foliole-Linux-Experimental-amd64-{version}.AppImage', 'SHA256SUMS-linux.txt'],
       update: { mode: 'manual', baselineVersion: null }
     };
     const identity = resolve({
@@ -76,7 +77,8 @@ describe('platform release contract', () => {
     expect(identity.hardGatePlatforms).toEqual(['macos', 'windows', 'linux']);
     expect(identity.updaterBaselines.linux).toBe('');
     expect(identity.managedAssets).toEqual([
-      'Foliole-Linux-Experimental-amd64-0.8.0.deb', 'SHA256SUMS-linux.txt'
+      'Foliole-Linux-Experimental-amd64-0.8.0.deb',
+      'Foliole-Linux-Experimental-amd64-0.8.0.AppImage', 'SHA256SUMS-linux.txt'
     ]);
   });
 

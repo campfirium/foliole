@@ -5,7 +5,7 @@ import { cp, mkdir, readFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 
 import { validateDesktopUpdateArtifacts } from './desktop-update-artifact-contract.mjs';
-import { verifyLinuxDebDirectory } from './linux/linux-deb-contract.mjs';
+import { verifyLinuxPackageDirectory } from './linux/linux-deb-contract.mjs';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { validateReleaseAssetDirectory } from './release-asset-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
@@ -22,8 +22,8 @@ async function validateActiveProducers(identity, inputRoot) {
   const active = identity.registry.platforms.filter((platform) => platform.status === 'active');
   for (const platform of active) {
     const directory = path.join(inputRoot, platform.id);
-    if (platform.artifactContract === 'deb') {
-      await verifyLinuxDebDirectory(directory, identity.intent.version);
+    if (platform.artifactContract === 'linux-packages') {
+      await verifyLinuxPackageDirectory(directory, identity.intent.version);
       continue;
     }
     if (platform.artifactContract !== 'desktop-updater') throw new Error(`unsupported active artifact contract: ${platform.artifactContract}`);

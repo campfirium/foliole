@@ -34,9 +34,10 @@ const REGISTRY = {
     },
     {
       id: 'linux', displayName: 'Linux Experimental', status: 'active', architectures: ['x64'],
-      deliveryChannel: 'github-release', t7Required: true, artifactContract: 'deb',
+      deliveryChannel: 'github-release', t7Required: true, artifactContract: 'linux-packages',
       managedAssets: [
-        'Foliole-Linux-Experimental-amd64-{version}.deb', 'SHA256SUMS-linux.txt'
+        'Foliole-Linux-Experimental-amd64-{version}.deb',
+        'Foliole-Linux-Experimental-amd64-{version}.AppImage', 'SHA256SUMS-linux.txt'
       ],
       update: { mode: 'manual', baselineVersion: null }
     }
@@ -67,10 +68,14 @@ async function writePlatform(root, platform) {
 async function writeLinux(root) {
   const directory = path.join(root, 'linux');
   const deb = `Foliole-Linux-Experimental-amd64-${VERSION}.deb`;
+  const appImage = `Foliole-Linux-Experimental-amd64-${VERSION}.AppImage`;
   await mkdir(directory, { recursive: true });
   await writeFile(path.join(directory, deb), 'deb');
-  const sha256 = createHash('sha256').update('deb').digest('hex');
-  await writeFile(path.join(directory, 'SHA256SUMS.txt'), `${sha256} *${deb}\n`);
+  await writeFile(path.join(directory, appImage), 'appimage');
+  const debChecksum = createHash('sha256').update('deb').digest('hex');
+  const appImageChecksum = createHash('sha256').update('appimage').digest('hex');
+  await writeFile(path.join(directory, 'SHA256SUMS.txt'),
+    `${debChecksum} *${deb}\n${appImageChecksum} *${appImage}\n`);
 }
 
 function identity(selectedPlatforms) {
@@ -96,10 +101,10 @@ async function fixture() {
 
 describe('release assembly assets', () => {
   it.each([
-    [['macos', 'windows', 'linux'], 12],
+    [['macos', 'windows', 'linux'], 13],
     [['windows'], 4],
     [['macos'], 6],
-    [['linux'], 2]
+    [['linux'], 3]
   ])('stages exactly the %s intent while validating every active producer', async (scope, count) => {
     const paths = await fixture();
     await expect(assembleReleaseAssets({ ...paths, identity: identity(scope) }))
@@ -117,6 +122,6 @@ describe('release assembly assets', () => {
     const paths = await fixture();
     await writeFile(path.join(paths.inputRoot, 'linux', 'SHA256SUMS.txt'), `${'0'.repeat(64)} *Foliole-Linux-Experimental-amd64-${VERSION}.deb\n`);
     await expect(assembleReleaseAssets({ ...paths, identity: identity(['windows']) }))
-      .rejects.toThrow('Linux DEB checksum mismatch');
+      .rejects.toThrow('Linux package checksum count mismatch');
   });
 });

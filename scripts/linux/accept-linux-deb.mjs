@@ -184,7 +184,7 @@ async function assertRemovedPackageFiles() {
 
 export async function acceptLinuxDeb({ directory, targetSha, version }) {
   assertLinuxAcceptanceHost();
-  const packageResult = await verifyLinuxDebDirectory(directory, version);
+  const packageResult = await verifyLinuxDebDirectory(directory, version, { allowOtherFiles: true });
   const debPath = path.resolve(directory, linuxDebName(version));
   assertDebMetadata(readDebMetadata(debPath), version);
   assertPackageContents(debPath);

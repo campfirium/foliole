@@ -5,14 +5,17 @@ import { readFile } from 'node:fs/promises';
 import { expect, it } from 'vitest';
 import { parse } from 'yaml';
 
-it('keeps the reusable Linux job on an installed Ubuntu 24.04 DEB contract', async () => {
+it('packages both Linux formats and accepts the installed DEB', async () => {
   const workflow = await readFile('.github/workflows/release-linux.yml', 'utf8');
   expect(workflow).toContain('runs-on: ubuntu-24.04');
   expect(workflow).toContain('node scripts/linux/package-linux-deb.mjs');
+  expect(workflow).toContain('node scripts/linux/test-linux-appimage.mjs');
+  expect(workflow).toContain('sudo sysctl -w kernel.unprivileged_userns_clone=0');
   expect(workflow).toContain('node scripts/linux/accept-linux-deb.mjs');
+  expect(workflow).toContain('.tmp/artifacts/linux-appimage-test/result.json');
   expect(workflow).toContain('artifacts/linux/*.deb');
   expect(workflow).toContain('subject-checksums: artifacts/linux/SHA256SUMS.txt');
-  expect(workflow).not.toContain('AppImage');
+  expect(workflow).toContain('artifacts/linux/*.AppImage');
   expect(workflow).not.toContain('latest-linux.yml');
   expect(workflow).not.toContain('gh release');
 });
@@ -48,12 +51,13 @@ it('registers one active hard-gated manual-update Linux Experimental producer', 
   const linux = registry.platforms.find((platform) => platform.id === 'linux');
 
   expect(linux).toMatchObject({
-    architectures: ['x64'], artifactContract: 'deb', deliveryChannel: 'github-release',
+    architectures: ['x64'], artifactContract: 'linux-packages', deliveryChannel: 'github-release',
     displayName: 'Linux Experimental', status: 'active', t7Required: true,
     update: { baselineVersion: null, mode: 'manual' }
   });
   expect(linux.managedAssets).toEqual([
-    'Foliole-Linux-Experimental-amd64-{version}.deb', 'SHA256SUMS-linux.txt'
+    'Foliole-Linux-Experimental-amd64-{version}.deb',
+    'Foliole-Linux-Experimental-amd64-{version}.AppImage', 'SHA256SUMS-linux.txt'
   ]);
-  expect(JSON.stringify(linux)).not.toMatch(/AppImage|latest-linux\.yml/u);
+  expect(JSON.stringify(linux)).not.toMatch(/latest-linux\.yml/u);
 });

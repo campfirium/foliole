@@ -5,7 +5,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 import { validateDesktopUpdateArtifacts } from './desktop-update-artifact-contract.mjs';
-import { verifyLinuxDebDirectory } from './linux/linux-deb-contract.mjs';
+import { verifyLinuxPackageDirectory } from './linux/linux-deb-contract.mjs';
 import { resolveReleasePlatformIdentity } from './release-platform-contract.mjs';
 import { assertQualityCommandAllowed } from './quality/quality-command-contracts.mjs';
 
@@ -36,8 +36,8 @@ export async function validateReleaseAssetDirectory({ directory, identity }) {
   const names = await readdir(directory);
   assertExactReleaseAssets(identity, names);
   for (const platform of selectedPlatforms(identity)) {
-    if (platform.artifactContract === 'deb') {
-      await verifyLinuxDebDirectory(directory, identity.intent.version, {
+    if (platform.artifactContract === 'linux-packages') {
+      await verifyLinuxPackageDirectory(directory, identity.intent.version, {
         allowOtherFiles: true, checksumFile: `SHA256SUMS-${platform.id}.txt`
       });
       continue;

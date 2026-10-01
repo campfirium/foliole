@@ -17,6 +17,10 @@ export function linuxDebName(version) {
   return `Foliole-Linux-Experimental-amd64-${requireVersion(version)}.deb`;
 }
 
+export function linuxAppImageName(version) {
+  return `Foliole-Linux-Experimental-amd64-${requireVersion(version)}.AppImage`;
+}
+
 export function assertDebMetadata(metadata, version) {
   const expected = { Architecture: 'amd64', Package: 'foliole', Version: requireVersion(version) };
   for (const [field, value] of Object.entries(expected)) {
@@ -37,12 +41,33 @@ export async function verifyLinuxDebDirectory(directory, version, options = {}) 
   if (!allowOtherFiles && JSON.stringify(files) !== JSON.stringify([checksumFile, deb].sort())) {
     throw new Error(`Linux DEB asset set mismatch: ${files.join(',')}`);
   }
-  const checksum = (await readFile(path.join(directory, checksumFile), 'utf8')).trim();
-  const match = checksum.match(/^([a-f0-9]{64}) \*([^\r\n]+)$/u);
+  const checksums = (await readFile(path.join(directory, checksumFile), 'utf8')).trim().split('\n');
+  const checksum = checksums.find((line) => line.endsWith(` *${deb}`));
+  const match = checksum?.match(/^([a-f0-9]{64}) \*([^\r\n]+)$/u);
   if (!match || match[2] !== deb) throw new Error('Linux checksum must name the exact DEB');
   const actual = await sha256(path.join(directory, deb));
   if (match[1] !== actual) throw new Error('Linux DEB checksum mismatch');
   return { checksum: actual, deb };
+}
+
+export async function verifyLinuxPackageDirectory(directory, version, options = {}) {
+  const { allowOtherFiles = false, checksumFile = 'SHA256SUMS.txt' } = options;
+  const assets = [linuxDebName(version), linuxAppImageName(version)];
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = entries.filter((entry) => entry.isFile()).map((entry) => entry.name).sort();
+  if (!allowOtherFiles && JSON.stringify(files) !== JSON.stringify([checksumFile, ...assets].sort())) {
+    throw new Error(`Linux package asset set mismatch: ${files.join(',')}`);
+  }
+  const checksums = (await readFile(path.join(directory, checksumFile), 'utf8')).trim().split('\n');
+  if (checksums.length !== assets.length) throw new Error('Linux package checksum count mismatch');
+  for (const asset of assets) {
+    const line = checksums.find((entry) => entry.endsWith(` *${asset}`));
+    const match = line?.match(/^([a-f0-9]{64}) \*([^\r\n]+)$/u);
+    if (!match || match[2] !== asset || match[1] !== await sha256(path.join(directory, asset))) {
+      throw new Error(`Linux package checksum mismatch: ${asset}`);
+    }
+  }
+  return assets;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {

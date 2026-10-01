@@ -11,7 +11,7 @@ it('accepts only the Ubuntu release architecture', () => {
   expect(() => assertLinuxBuildHost('darwin', 'x64')).toThrow('Linux x64');
 });
 
-it('disables builder publishing only in the Linux DEB build config', () => {
+it('separates DEB and AppImage builds and guards the AppImage launcher', () => {
   const config = createLinuxBuilderConfig({
     directories: { output: 'artifacts/windows' },
     extraFiles: [{ from: 'build/cli', to: 'bin' }],
@@ -22,6 +22,11 @@ it('disables builder publishing only in the Linux DEB build config', () => {
   expect(config.publish).toBeNull();
   expect(config.linux.target).toEqual(['deb']);
   expect(config.extraFiles).toEqual([{ from: 'build/linux/foliole', to: 'bin/foliole' }]);
+  const appImage = createLinuxBuilderConfig({ directories: {}, linux: {}, appImage: {} }, 'AppImage');
+  expect(appImage.linux.target).toEqual(['AppImage']);
+  expect(appImage.appImage.executableArgs).toEqual([]);
+  expect(appImage.afterPack).toBe('scripts/linux/appimage-after-pack.mjs');
+  expect(appImage.extraFiles).toEqual([]);
 });
 
 it('roots an installed Linux package at its POSIX directory', () => {

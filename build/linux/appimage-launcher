@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+show_sandbox_error() {
+  local message='Foliole requires the Electron sandbox. It is disabled or unavailable, so Foliole will close.'
+  printf '%s\n' "$message" >&2
+  if command -v zenity >/dev/null 2>&1; then
+    zenity --error --title='Foliole cannot start' --text="$message" 2>/dev/null || true
+  elif command -v kdialog >/dev/null 2>&1; then
+    kdialog --error "$message" --title 'Foliole cannot start' 2>/dev/null || true
+  elif command -v xmessage >/dev/null 2>&1; then
+    xmessage -center "$message" 2>/dev/null || true
+  fi
+}
+
+for argument in "$@"; do
+  case "$argument" in
+    --no-sandbox|--no-sandbox=*) show_sandbox_error; exit 1 ;;
+  esac
+done
+
+if [[ $EUID -eq 0 ]] || ! command -v unshare >/dev/null 2>&1 || ! unshare -Ur true 2>/dev/null; then
+  show_sandbox_error
+  exit 1
+fi
+
+launcher_dir="$(cd -- "$(dirname -- "$0")" && pwd -P)"
+exec "$launcher_dir/foliole-runtime" "$@"
