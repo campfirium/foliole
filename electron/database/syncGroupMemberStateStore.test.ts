@@ -1,13 +1,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceConnectionSchemaStatements.js';
-import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceSchemaStatements.js';
-import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
-import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from '../../lib/core/database/numberedMigrationWatchedFolderConflicts.js';
-import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupRestoreSchemaStatements.js';
-import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
-import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from '../../lib/core/database/syncPackDependencyStagingSchema.js';
+import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
@@ -198,16 +192,7 @@ function insertWatchedSource(database: Database.Database, ownerId: string, id: s
 function deviceDatabase(localIndex: number, remoteIndexes: number[]) {
   const database = new Database(':memory:');
   databases.push(database);
-  for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) database.exec(statement);
-  for (const statement of [...SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS,
-    ...SYNC_PACK_DEPENDENCY_STAGING_SCHEMA]) database.exec(statement);
-  for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) database.exec(statement);
-  for (const statement of [...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
-    ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS, ...WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS]) {
-    database.exec(statement);
-  }
-  database.exec('CREATE TABLE sync_delivery_receipts (peer_id TEXT)');
-  database.exec('CREATE TABLE sync_peer_cursors (peer_id TEXT)');
+  initializeDatabaseSchema(database);
   use(database);
   createDesktopSyncGroup({
     device: identities[localIndex]!, deviceName: localIndex.toString(), platform: 'desktop',

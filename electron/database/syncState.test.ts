@@ -45,26 +45,25 @@ function openInitializedDriver() {
 }
 
 it('computes stable object hashes independent of payload key order', () => {
-  const first = computeSyncContentHash('attachment', {
-    blob: { availability: 'local', content_hash: 'sha256:abc' },
-    original_name: 'paper.pdf',
-    size_bytes: 42
+  const first = computeSyncContentHash('pdf_page_text', {
+    page: 1,
+    text: 'Page one',
+    page_width: 800
   });
-  const second = computeSyncContentHash('attachment', {
-    size_bytes: 42,
-    original_name: 'paper.pdf',
-    blob: { content_hash: 'sha256:abc', availability: 'local' }
+  const second = computeSyncContentHash('pdf_page_text', {
+    page_width: 800,
+    text: 'Page one',
+    page: 1
   });
 
   expect(second).toBe(first);
 });
 
-it('writes sync object state for attachment pdf text setting and view state', () => {
+it('writes sync object state for pdf text setting and view state', () => {
   const driver = openInitializedDriver();
   const updatedAt = '2026-04-24T00:00:00.000Z';
   const rows = [
-    { objectType: 'attachment' as const, objectId: 'att-1' },
-    { objectType: 'pdf_page_text' as const, objectId: 'att-1:1' },
+    { objectType: 'pdf_page_text' as const, objectId: `${'a'.repeat(64)}:1` },
     { objectType: 'setting' as const, objectId: 'device:*:*:desktop-1:font_scale' },
     { objectType: 'view_state' as const, objectId: 'session_resume:windows:desktop-1:active_node' }
   ];
@@ -86,8 +85,7 @@ it('writes sync object state for attachment pdf text setting and view state', ()
   );
 
   expect(stored).toEqual([
-    { object_type: 'attachment', object_id: 'att-1', sync_dirty: 1 },
-    { object_type: 'pdf_page_text', object_id: 'att-1:1', sync_dirty: 1 },
+    { object_type: 'pdf_page_text', object_id: `${'a'.repeat(64)}:1`, sync_dirty: 1 },
     { object_type: 'setting', object_id: 'device:*:*:desktop-1:font_scale', sync_dirty: 1 },
     { object_type: 'view_state', object_id: 'session_resume:windows:desktop-1:active_node', sync_dirty: 1 }
   ]);
@@ -106,16 +104,16 @@ it('advances state sequence monotonically and queries by cursor', () => {
       });
     }
     upsertSyncObjectState(transactionDriver, {
-      objectType: 'attachment',
-      objectId: 'att-1',
-      contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1' }),
+      objectType: 'pdf_page_text',
+      objectId: `${'a'.repeat(64)}:1`,
+      contentHash: computeSyncContentHash('pdf_page_text', { page: 1, text: 'Original' }),
       lastModifiedByHostName: 'desktop-1',
       updatedAt: '2026-04-24T00:10:00.000Z'
     });
     upsertSyncObjectState(transactionDriver, {
-      objectType: 'attachment',
-      objectId: 'att-1',
-      contentHash: computeSyncContentHash('attachment', { attachment_id: 'att-1', updated: true }),
+      objectType: 'pdf_page_text',
+      objectId: `${'a'.repeat(64)}:1`,
+      contentHash: computeSyncContentHash('pdf_page_text', { page: 1, text: 'Updated' }),
       lastModifiedByHostName: 'desktop-1',
       updatedAt: '2026-04-24T00:11:00.000Z'
     });
@@ -131,7 +129,7 @@ it('advances state sequence monotonically and queries by cursor', () => {
 
   expect(duplicateSeqRows).toEqual([]);
   expect(rows.map((row) => row.stateSeq)).toEqual([1000, 1002]);
-  expect(rows.at(-1)).toEqual(expect.objectContaining({ objectId: 'att-1', objectType: 'attachment' }));
+  expect(rows.at(-1)).toEqual(expect.objectContaining({ objectId: `${'a'.repeat(64)}:1`, objectType: 'pdf_page_text' }));
 });
 
 it('does not reuse a committed state position after its row is deleted', () => {
@@ -165,13 +163,13 @@ it('stores independent peer cursors per stream', () => {
   expect(getPeerCursor(driver, 'peer-2', 'state')).toBeNull();
 });
 
-it('creates attachment metadata and setting record tables in fresh databases', () => {
+it('stores node resource references and settings without retired attachment registries', () => {
   const driver = openInitializedDriver();
+  const resources = JSON.stringify([{ storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'paper.pdf', role: 'reference' }]);
 
   driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['att-1', 'paper.pdf', 'application/pdf', 42, '2026-04-24T00:00:00.000Z']
+    `INSERT INTO nodes (id, title, resource_references, created_at, updated_at) VALUES (?, ?, ?, ?, ?)`,
+    ['node-1', 'Paper', resources, '2026-04-24T00:00:00.000Z', '2026-04-24T00:00:00.000Z']
   );
   driver.execute(
     `INSERT INTO setting_records (
@@ -187,6 +185,9 @@ it('creates attachment metadata and setting record tables in fresh databases', (
     ['font_scale', 'device', '*', 'desktop', 'desktop-1', '1.0', 'hash-setting', '2026-04-24T00:00:00.000Z']
   );
 
-  expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM attachments')?.count).toBe(1);
+  expect(driver.queryOne('SELECT resource_references FROM nodes WHERE id = ?', ['node-1']))
+    .toEqual({ resource_references: resources });
+  expect(driver.queryAll("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')"))
+    .toEqual([]);
   expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM setting_records')?.count).toBe(1);
 });

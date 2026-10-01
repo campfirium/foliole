@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -159,8 +160,8 @@ function insertVersion(
   openDatabaseConnection().driver.execute(
     `INSERT INTO node_sync_versions (
        version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
-     ) VALUES (?, 'shared-folder', ?, 'test-host', ?, ?, ?, ?)`,
-    [versionId, parentVersionId, createdAt, contentHash, content,
+     ) VALUES (?, 'shared-folder', ?, ?, ?, ?, ?, ?)`,
+    [versionId, parentVersionId, versionId.startsWith('remote-') ? 'remote-host' : 'test-host', createdAt, contentHash, content,
       JSON.stringify(snapshot(content, title, createdAt))]
   );
 }
@@ -217,5 +218,7 @@ function readCurrentNode() {
     content: string;
     current_version_id: string;
     title: string;
-  }>(`SELECT content, current_version_id, title FROM nodes WHERE id = 'shared-folder'`)!;
+  }>(`SELECT ${buildNodeBodyContentSql()} AS content, n.current_version_id, n.title
+      FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+      WHERE n.id = 'shared-folder'`)!;
 }

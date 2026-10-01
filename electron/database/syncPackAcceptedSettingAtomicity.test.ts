@@ -51,7 +51,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('applies payload, state, and receipt together for an accepted local setting', async () => {
+it('applies payload and state atomically and retires the obsolete accepted setting receipt', async () => {
   const sqlite = openDatabaseConnection().sqlite;
   const port = createBetterSqliteDbPort(sqlite, { name: 'accepted-setting-atomicity' });
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
@@ -73,7 +73,7 @@ it('applies payload, state, and receipt together for an accepted local setting',
   ).get()).toEqual({ content_hash: 'new-hash', sync_dirty: 0 });
   expect(sqlite.prepare(
     `SELECT status FROM sync_delivery_receipts WHERE peer_id = 'peer-b'`
-  ).get()).toEqual({ status: 'confirmed' });
+  ).get()).toBeUndefined();
 });
 
 it('converges a newer Readwise owner despite a pending local receipt and rejects the older epoch', async () => {

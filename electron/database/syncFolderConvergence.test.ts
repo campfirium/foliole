@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -120,7 +121,8 @@ it('keeps a topic body edit while the later move chooses its single parent folde
 
   await applyConvergentSyncNodesWithDbPort(port, [record]);
 
-  expect(driver.queryOne('SELECT parent_id, content FROM nodes WHERE id = ?', ['article']))
+  expect(driver.queryOne(`SELECT n.parent_id, ${buildNodeBodyContentSql('n', 'bd')} AS content
+    FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash WHERE n.id = ?`, ['article']))
     .toEqual({ parent_id: 'right-parent', content: 'Base local' });
 });
 

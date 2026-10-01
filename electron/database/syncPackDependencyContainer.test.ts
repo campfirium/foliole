@@ -7,7 +7,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { readSyncPackCursorWithDbPort } from '../../lib/core/sync/syncPackCursor.js';
 import { advanceSyncPackDependencyDigest, SYNC_PACK_DEPENDENCY_INITIAL_DIGEST,
   type SyncPackDependencyPage, type SyncPackDependencyRow } from '../../lib/core/sync/syncPackDependencyTransfer.js';
@@ -16,6 +16,7 @@ import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPack
 import { extractSyncPackDatabaseFromFile } from '../sync/syncPackContainerReader.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 import { buildSyncPackDependencyPageArchive } from './syncPackDependencyPageBuilder.js';
 import { DEFAULT_SYNC_PACK_PAGE_BUDGET } from './syncPackPageBudget.js';
 
@@ -98,12 +99,10 @@ it('rejects payload changes even when row count and container integrity are othe
 it.each([113, 114])('upgrades dependency staging from schema %s while preserving existing data', (version) => {
   const desktop = new Database(':memory:');
   try {
+    installHistoricalDesktopSchema(desktop, version);
+    desktop.exec(`CREATE TABLE preserved (value TEXT); INSERT INTO preserved VALUES ('kept');`);
     initializeDatabaseSchema(desktop);
-    if (version === 113) desktop.exec('DROP TABLE sync_pack_dependency_rows; DROP TABLE sync_pack_dependency_transfers;');
-    desktop.exec(`DROP TABLE sync_pack_retired_source_views; PRAGMA user_version = ${version};
-      CREATE TABLE preserved (value TEXT); INSERT INTO preserved VALUES ('kept');`);
-    initializeDatabaseSchema(desktop);
-    expect(desktop.pragma('user_version', { simple: true })).toBe(116);
+    expect(desktop.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
     expect(desktop.prepare('SELECT value FROM preserved').get()).toEqual({ value: 'kept' });
     expect(desktop.prepare('SELECT count(*) AS count FROM sync_pack_dependency_rows').get()).toEqual({ count: 0 });
     expect(desktop.prepare('SELECT count(*) AS count FROM sync_pack_retired_source_views').get()).toEqual({ count: 0 });

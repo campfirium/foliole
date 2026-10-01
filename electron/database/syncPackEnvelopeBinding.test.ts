@@ -50,7 +50,7 @@ async function pack(mutate?: (manifest: Record<string, unknown>) => void) {
       VALUES ('group', 'Group', 'key', 'now', 'now');
     INSERT INTO sync_group_local_state
       (singleton_id, group_id, local_device_identity_key, state, updated_at)
-      VALUES (1, 'group', '${target.identity_key}', 'active', 'now');
+      VALUES (1, 'group', '${source.identity_key}', 'active', 'now');
     INSERT INTO sync_group_devices
       (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
        platform, state, joined_at, updated_at)
@@ -63,6 +63,8 @@ async function pack(mutate?: (manifest: Record<string, unknown>) => void) {
     outputPath, packId: 'binding-test', fromStateSeq: 0,
     fromPeerId: source.identity_key, toPeerId: target.identity_key
   });
+  openDatabaseConnection().sqlite.prepare(`UPDATE sync_group_local_state
+    SET local_device_identity_key = ? WHERE singleton_id = 1`).run(target.identity_key);
   const files = entries(await fs.readFile(outputPath));
   const file = files.find((entry) => entry.name === 'manifest.json')!;
   const manifest = JSON.parse(file.content.toString());

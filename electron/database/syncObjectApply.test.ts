@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -19,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
+import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
@@ -162,18 +164,19 @@ it('applies import source and external folder payloads', async () => {
     .toEqual({ folder_path: '/docs' });
 });
 
-it('applies canonical attachment metadata without a possession manifest', async () => {
+it('ignores legacy attachment metadata without creating ownership or possession', async () => {
   const id = 'a'.repeat(64);
   const payload = { attachment_id: id, created_at: '2026-04-21T10:00:00.000Z',
     mime_type: 'image/png', original_name: 'cover.png', size_bytes: 12 };
   await expect(applySyncObjectsAsync([{ content_hash: 'hash-attachment', deleted_at: null,
     object_id: id, object_type: 'attachment', payload_json: JSON.stringify(payload),
     updated_at: '2026-04-21T16:00:00.000Z'
-  }])).resolves.toEqual([`attachment:${id}`]);
+  }])).resolves.toEqual([]);
   const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne('SELECT original_name, mime_type, size_bytes FROM attachments WHERE id = ?', [id]))
-    .toEqual({ original_name: 'cover.png', mime_type: 'image/png', size_bytes: 12 });
-  expect(driver.queryOne("SELECT name FROM sqlite_master WHERE name = 'attachment_blobs'")).toBeUndefined();
+  expect(driver.queryAll("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments', 'attachment_blobs')"))
+    .toEqual([]);
+  expect(driver.queryOne("SELECT object_id FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?", [id]))
+    .toBeUndefined();
 });
 
 it('applies tombstones to payload table and sync object state', async () => {
@@ -199,27 +202,37 @@ it('applies tombstones to payload table and sync object state', async () => {
   )).toEqual({ deleted_at: '2026-04-21T17:00:00.000Z' });
 });
 
-it('clears derived PDF text when applying an attachment tombstone', async () => {
+it('ignores legacy attachment tombstones without deleting node resources or derived PDF text', async () => {
   const driver = openDatabaseConnection().driver;
+  const bytes = Buffer.from('%PDF-1.7\nPDF resource bytes\n%%EOF');
+  const id = createHash('sha256').update(bytes).digest('hex');
+  const assetsDir = path.join(tempRoot, 'assets');
+  const resources = JSON.stringify([{ storage_key: `${id}.pdf`, original_name: 'paper.pdf', role: 'reference' }]);
+  insertNode('pdf-topic');
   driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['pdf-1', 'paper.pdf', 'application/pdf', 100, '2026-04-21T10:00:00.000Z']
+    'UPDATE nodes SET resource_references = ? WHERE id = ?', [resources, 'pdf-topic']
   );
+  expect(resolveAttachmentFile(`${id}.pdf`, assetsDir).status).toBe('missing_file');
+  await fs.mkdir(assetsDir, { recursive: true });
+  await fs.writeFile(path.join(assetsDir, `${id}.pdf`), bytes);
+  expect(resolveAttachmentFile(`${id}.pdf`, assetsDir)).toMatchObject({ status: 'ready', bytes });
   driver.execute(
     `INSERT INTO pdf_page_text (attachment_id, page, text, page_width, page_height)
      VALUES (?, ?, ?, ?, ?)`,
-    ['pdf-1', 1, 'Page one', 800, 1200]
+    [id, 1, 'Page one', 800, 1200]
   );
 
-  await applySyncObjectsAsync([{
+  await expect(applySyncObjectsAsync([{
     content_hash: 'hash-pdf-delete',
     deleted_at: '2026-04-21T17:00:00.000Z',
-    object_id: 'pdf-1',
+    object_id: id,
     object_type: 'attachment',
     payload_json: null,
     updated_at: '2026-04-21T17:00:00.000Z'
-  }]);
+  }])).resolves.toEqual([]);
 
-  expect(driver.queryOne('SELECT attachment_id FROM pdf_page_text WHERE attachment_id = ?', ['pdf-1'])).toBeUndefined();
+  expect(driver.queryOne('SELECT text FROM pdf_page_text WHERE attachment_id = ?', [id])).toEqual({ text: 'Page one' });
+  expect(driver.queryOne('SELECT resource_references FROM nodes WHERE id = ?', ['pdf-topic']))
+    .toEqual({ resource_references: resources });
+  expect(resolveAttachmentFile(`${id}.pdf`, assetsDir)).toMatchObject({ status: 'ready', bytes });
 });

@@ -118,13 +118,8 @@ function insertExternalDocumentRecord() {
   );
 }
 
-function insertAttachmentRecord() {
+function insertLegacyAttachmentState() {
   const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
-    ['att-1', 'cover.png', 'image/png', 12, '2026-04-21T10:00:00.000Z']
-  );
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
@@ -189,8 +184,8 @@ it('loads import source and external folder sync object payloads', () => {
   });
 });
 
-it('loads attachment metadata and blob manifest sync payloads', () => {
-  insertAttachmentRecord();
+it('does not synthesize legacy attachment metadata or possession from stale sync state', () => {
+  insertLegacyAttachmentState();
 
   const [record] = loadSyncObjects(['att-1'], ['attachment']);
 
@@ -198,14 +193,12 @@ it('loads attachment metadata and blob manifest sync payloads', () => {
     content_hash: 'hash-attachment',
     deleted_at: null,
     object_id: 'att-1',
-    object_type: 'attachment'
+    object_type: 'attachment',
+    payload_json: null
   });
-  expect(JSON.parse(record?.payload_json ?? '{}')).toMatchObject({
-    attachment_id: 'att-1',
-    original_name: 'cover.png',
-    mime_type: 'image/png',
-    size_bytes: 12
-  });
+  expect(openDatabaseConnection().driver.queryAll(
+    "SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')"
+  )).toEqual([]);
 });
 
 it('excludes pack-owned documents from JSON sync object streams', () => {

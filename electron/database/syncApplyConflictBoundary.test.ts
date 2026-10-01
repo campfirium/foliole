@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -90,7 +91,9 @@ it('preserves dirty local content without creating a duplicate topic before an a
   await expect(applySyncNodesAsync([remoteRecord()])).resolves.toEqual([]);
 
   const connection = openDatabaseConnection();
-  expect(connection.sqlite.prepare('SELECT current_version_id, content, sync_dirty, deleted_at FROM nodes WHERE id = ?').get('node-1'))
+  expect(connection.sqlite.prepare(`SELECT n.current_version_id, ${buildNodeBodyContentSql('n', 'bd')} AS content,
+    n.sync_dirty, n.deleted_at FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash
+    WHERE n.id = ?`).get('node-1'))
     .toEqual({
       content: 'local dirty body',
       current_version_id: 'desktop#2',
@@ -119,7 +122,9 @@ it('preserves dirty local content without creating a duplicate topic before an a
     })
   ])).resolves.toEqual(['node-1']);
 
-  expect(connection.sqlite.prepare('SELECT current_version_id, content, sync_dirty, deleted_at FROM nodes WHERE id = ?').get('node-1'))
+  expect(connection.sqlite.prepare(`SELECT n.current_version_id, ${buildNodeBodyContentSql('n', 'bd')} AS content,
+    n.sync_dirty, n.deleted_at FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash
+    WHERE n.id = ?`).get('node-1'))
     .toEqual({
       content: 'remote deleted body',
       current_version_id: 'phone#delete',

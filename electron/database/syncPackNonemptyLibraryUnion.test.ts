@@ -19,11 +19,14 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { initializeDatabaseConnection, upsertSyncObjectState } from '../../lib/core/database/index.js';
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { buildDesktopSyncPack } from './syncPackBuilder.js';
 
 let tempRoot = '';
@@ -37,7 +40,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('converges two nonempty libraries to the topic, attachment, reading, and review union', async () => {
+it('converges nonempty libraries to the topic, resource ownership, body, reading, and review union without claiming resource bytes', async () => {
   const packA = await buildLibraryPack('a', 'b-device');
   const packB = await buildLibraryPack('b', 'a-device');
 
@@ -45,7 +48,10 @@ it('converges two nonempty libraries to the topic, attachment, reading, and revi
   const summaryB = await applyPeerPack('b', packA, 'b-device');
   expect(summaryA).toEqual(summaryB);
   expect(summaryA).toEqual({
-    attachmentIds: ['a'.repeat(64), 'b'.repeat(64)],
+    resources: ['a', 'b'].map((suffix) => ({ id: `topic-${suffix}`, resource_references: JSON.stringify([
+      { storage_key: `${suffix.repeat(64)}.png`, original_name: `${suffix}.png`, role: 'reference' }
+    ]) })),
+    bodies: [{ id: 'topic-a', body_text: 'Body a' }, { id: 'topic-b', body_text: 'Body b' }],
     nodeIds: ['topic-a', 'topic-b'],
     readingIds: ['topic-a', 'topic-b'],
     reviewIds: ['topic-a', 'topic-b'],
@@ -55,6 +61,12 @@ it('converges two nonempty libraries to the topic, attachment, reading, and revi
   closeDatabaseConnection();
   openLibrary('a');
   expect(readSummary()).toEqual(summaryA);
+  for (const suffix of ['a', 'b']) {
+    expect(resolveAttachmentFile(`${suffix.repeat(64)}.png`, path.join(tempRoot, 'assets')).status).toBe('missing_file');
+  }
+  expect(openDatabaseConnection().driver.queryAll(
+    "SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')"
+  )).toEqual([]);
 });
 
 async function buildLibraryPack(suffix: 'a' | 'b', peerId: string) {
@@ -109,26 +121,17 @@ function insertLibraryFacts(suffix: 'a' | 'b') {
   const db = openDatabaseConnection().sqlite;
   const nodeId = `topic-${suffix}`;
   const versionId = `${suffix}#1`;
-  const hash = suffix.repeat(64);
   const createdAt = `2026-08-14T02:0${suffix === 'a' ? 1 : 2}:00.000Z`;
+  const resources = JSON.stringify([{ storage_key: `${suffix.repeat(64)}.png`, original_name: `${suffix}.png`, role: 'reference' }]);
   db.prepare(
     `INSERT INTO nodes (
        id, kind, title, is_title_manual, hide_title_heading, content,
-       current_version_id, created_at, updated_at
-     ) VALUES (?, 'topic', ?, 1, 0, ?, ?, ?, ?)`
-  ).run(nodeId, `Topic ${suffix.toUpperCase()}`, `Body ${suffix}`, versionId, createdAt, createdAt);
-  db.prepare(
-    `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at,
-       content_hash, body_text, snapshot_json
-     ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?)`
-  ).run(versionId, nodeId, `${suffix}-device`, createdAt, `node-${suffix}`, `Body ${suffix}`,
-    JSON.stringify({ id: nodeId, title: `Topic ${suffix.toUpperCase()}` }));
-  db.prepare(
-    `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES (?, NULL, 'image/png', 1, ?)`
-  ).run(hash, createdAt);
-  db.prepare('INSERT INTO node_attachments VALUES (?, ?, ?)').run(nodeId, hash, 'reference');
+       resource_references, created_at, updated_at
+     ) VALUES (?, 'topic', ?, 1, 0, '', ?, ?, ?)`
+  ).run(nodeId, `Topic ${suffix.toUpperCase()}`, resources, createdAt, createdAt);
+  const driver = openDatabaseConnection().driver;
+  writeNodeBody({ driver, nodeId, content: `Body ${suffix}`, title: `Topic ${suffix.toUpperCase()}`, updatedAt: createdAt });
+  expect(flushNodeSyncVersionWithDriver(driver, nodeId, `${suffix}-device`, createdAt, versionId)).toBe(versionId);
   db.prepare(
     `INSERT INTO node_reading (
        node_id, interval_duration_ms, interval_growth_factor, last_handled_at,
@@ -148,27 +151,26 @@ function insertLibraryFacts(suffix: 'a' | 'b') {
      ) VALUES (?, ?, ?, ?, 3, 'ts-fsrs@4', ?, ?, 1, 2, ?, 2, 3)`
   ).run(`log-${suffix}`, `op-${suffix}`, `${suffix}-device`, nodeId,
     createdAt, createdAt, createdAt);
-  insertStates(suffix, nodeId, versionId, hash, createdAt);
+  insertStates(suffix, nodeId, createdAt);
 }
 
-function insertStates(suffix: string, nodeId: string, versionId: string, hash: string, at: string) {
-  const statement = openDatabaseConnection().sqlite.prepare(
-    `INSERT INTO sync_object_state (
-       object_type, object_id, state_seq, current_version_id, content_hash,
-       last_modified_by_host_name, updated_at, sync_dirty
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`
-  );
-  statement.run('node', nodeId, 1, versionId, `node-${suffix}`, `${suffix}-device`, at);
-  statement.run('attachment', hash, 2, null, `attachment-${suffix}`, `${suffix}-device`, at);
-  statement.run('node_reading', nodeId, 3, null, `reading-${suffix}`, `${suffix}-device`, at);
-  statement.run('node_review', nodeId, 4, null, `review-${suffix}`, `${suffix}-device`, at);
+function insertStates(suffix: string, nodeId: string, at: string) {
+  for (const objectType of ['attachment', 'node_reading', 'node_review'] as const) {
+    upsertSyncObjectState(openDatabaseConnection().driver, {
+      objectType, objectId: objectType === 'attachment' ? suffix.repeat(64) : nodeId,
+      contentHash: `${objectType}-${suffix}`, lastModifiedByHostName: `${suffix}-device`,
+      updatedAt: at, syncDirty: true
+    });
+  }
 }
 
 function readSummary() {
   const db = openDatabaseConnection().sqlite;
   const ids = (sql: string) => (db.prepare(sql).all() as Array<{ id: string }>).map((row) => row.id);
   return {
-    attachmentIds: ids('SELECT id FROM attachments ORDER BY id'),
+    resources: db.prepare("SELECT id, resource_references FROM nodes WHERE id LIKE 'topic-%' ORDER BY id").all(),
+    bodies: db.prepare(`SELECT n.id, v.body_text FROM nodes n JOIN node_sync_versions v
+      ON v.version_id = n.current_version_id WHERE n.id LIKE 'topic-%' ORDER BY n.id`).all(),
     nodeIds: ids(`SELECT id FROM nodes WHERE id LIKE 'topic-%' ORDER BY id`),
     readingIds: ids('SELECT node_id AS id FROM node_reading ORDER BY node_id'),
     reviewIds: ids('SELECT node_id AS id FROM node_review ORDER BY node_id'),

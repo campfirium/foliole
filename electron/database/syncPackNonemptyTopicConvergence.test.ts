@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -45,7 +46,7 @@ it('keeps both bodies when a pack joins a nonempty topic branch', async () => {
   closeDatabaseConnection();
   const target = await applyConflictPack('target', incomingPath, 'target-device', true);
   expect(target.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
-  expect(target.parents).toEqual(['branch-a', 'branch-b']);
+  expect(target.parents).toEqual(['branch-a']);
   const alternative = target.alternative;
   expect(new Set([alternative.body_text, target.projection.content])).toEqual(
     new Set(['Local body', 'Remote body'])
@@ -55,9 +56,12 @@ it('keeps both bodies when a pack joins a nonempty topic branch', async () => {
   expect(source).toEqual(target);
   const reopened = openLibrary('target');
   expect(reopened.sqlite.prepare(
-    `SELECT COUNT(*) AS count FROM node_sync_versions
-     WHERE object_id = 'shared-topic'`
-  ).get()).toEqual({ count: 4 });
+    `SELECT version_id, body_text FROM node_sync_versions
+     WHERE object_id = 'shared-topic' ORDER BY version_id`
+  ).all()).toEqual([
+    { version_id: 'branch-a', body_text: 'Local body' },
+    { version_id: target.current_version_id, body_text: 'Remote body' }
+  ]);
   expect(reopened.sqlite.prepare(
     `SELECT COUNT(*) AS count FROM node_text_alternatives
      WHERE node_id = 'shared-topic' AND status = 'available'`
@@ -95,10 +99,12 @@ async function applyConflictPack(
      WHERE version_id = ? ORDER BY parent_version_id`
   ).all(current.current_version_id) as Array<{ id: string }>).map((row) => row.id);
   const alternative = connection.sqlite.prepare(
-    `SELECT body_text, status FROM node_text_alternatives WHERE node_id = 'shared-topic'`
-  ).get() as { body_text: string; status: string };
+    `SELECT body_text, status, source_version_id FROM node_text_alternatives WHERE node_id = 'shared-topic'`
+  ).get() as { body_text: string; status: string; source_version_id: string };
+  expect(alternative.source_version_id).toBe('branch-a');
   const projection = connection.sqlite.prepare(
-    `SELECT content FROM nodes WHERE id = 'shared-topic'`
+    `SELECT ${buildNodeBodyContentSql()} AS content FROM nodes n
+     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = 'shared-topic'`
   ).get() as { content: string };
   const version = connection.sqlite.prepare(
     'SELECT snapshot_json, content_hash FROM node_sync_versions WHERE version_id = ?'
@@ -195,7 +201,7 @@ function snapshot(content: string, updatedAt: string) {
   return {
     anchor_link: null, attachments: [], content, created_at: '2026-08-14T01:00:00.000Z',
     deleted_at: null, desired_retention: null, hide_title_heading: false, id: 'shared-topic',
-    image_regions: null, is_title_manual: true, kind: 'topic', opening_text: null,
+    image_regions: null, resource_references: '[]', is_title_manual: true, kind: 'topic', opening_text: null,
     parent_id: null, position: null, priority: null, reveal: null, title: 'Shared Topic',
     updated_at: updatedAt, virtual_filter: null
   };
