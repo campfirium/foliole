@@ -5,7 +5,7 @@ import { flushDesktopSyncGroupVersionReceipts } from '../../../electron/sync/des
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion, loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
 
-import { assertBody, assertHealthy, assertCompleted, graph } from './assertions.js';
+import { assertBody, assertHealthy, assertCompleted, assertSharedVersionIdentities, convergenceState, graph } from './assertions.js';
 import { edit, mobileEdit, remove } from './operations.js';
 import { reopenPeer } from './peers.js';
 import { inPeer, type SimulatorPeer } from './scope.js';
@@ -19,12 +19,13 @@ export async function converge({ a, b, sa, sb, existingGaps = [], missingKeys = 
   for (let round = 0; round < 8; round++) {
     await pull(sa, b, true, missingKeys);
     await pull(sb, a, true, missingKeys);
-    if (JSON.stringify(graph(a)) === JSON.stringify(graph(b))) {
-      const before = graph(a);
+    if (JSON.stringify(convergenceState(a)) === JSON.stringify(convergenceState(b))) {
+      const before = convergenceState(a);
       await pull(sa, b, true, missingKeys);
       await pull(sb, a, true, missingKeys);
-      expect(graph(a)).toEqual(before);
-      expect(graph(b)).toEqual(before);
+      expect(convergenceState(a)).toEqual(before);
+      expect(convergenceState(b)).toEqual(before);
+      assertSharedVersionIdentities(a, b);
       assertHealthy(a, existingGaps);
       assertHealthy(b, existingGaps);
       await assertCompleted(a, missingKeys);

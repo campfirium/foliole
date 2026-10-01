@@ -102,9 +102,34 @@ export function graph(peer: SimulatorPeer) {
       FROM node_text_alternatives WHERE node_id NOT IN (${LOCAL_ROOT_IDS_SQL}) ORDER BY node_id,source_version_id`).all()
   };
 }
+export function convergenceState(peer: SimulatorPeer) {
+  const { nodes, alternatives } = graph(peer);
+  return { nodes: nodes.map((row) => {
+    const node = { ...row as Record<string, unknown> };
+    delete node.body_blob_hash;
+    return { ...node, content: resolvedBodyContent(peer, String(node.id)) };
+  }), alternatives, tombstones: peer.sqlite.prepare(`SELECT node_id, version_id, content_hash,
+    snapshot_json, deleted_at FROM node_sync_tombstones ORDER BY node_id`).all() };
+}
+function resolvedBodyContent(peer: SimulatorPeer, id: string) {
+  const resolution = loadNodeBodyResolution(peer.driver, id);
+  expect(resolution?.status).toBe('resolved');
+  if (resolution?.status !== 'resolved') throw new Error(`simulator_body_unavailable:${id}`);
+  return resolution.content;
+}
+export function assertSharedVersionIdentities(a: SimulatorPeer, b: SimulatorPeer) {
+  const identities = (peer: SimulatorPeer) => graph(peer).versions as {
+    version_id: string; object_id: string; content_hash: string;
+  }[];
+  const source = new Map(identities(a).map((version) => [version.version_id, version]));
+  for (const version of identities(b)) {
+    const shared = source.get(version.version_id);
+    if (shared) expect(version).toMatchObject({ object_id: shared.object_id, content_hash: shared.content_hash });
+  }
+}
 export async function assertResources(source: SimulatorPeer, target: SimulatorPeer, missingKeys: ReadonlySet<string> = new Set()) {
   const ids = source.sqlite.prepare(`SELECT id FROM nodes WHERE deleted_at IS NULL AND id NOT IN (${LOCAL_ROOT_IDS_SQL})`).pluck().all() as string[];
-  for (const id of ids) expect(loadNodeBodyResolution(target.driver, id)).toEqual(loadNodeBodyResolution(source.driver, id));
+  for (const id of ids) expect(resolvedBodyContent(target, id)).toBe(resolvedBodyContent(source, id));
   const demand = await loadNodeOwnedArticleResourceNeeds(createBetterSqliteDbPort(source.sqlite), ids);
   expect(demand.unreadableArticleIds).toEqual([]);
   for (const { storageKey: name } of demand.needs) {
