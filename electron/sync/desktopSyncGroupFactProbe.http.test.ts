@@ -187,6 +187,16 @@ function seedIncrementalHistory(target: Database.Database) {
     .run(row.version_id, row.parent_version_id, row.ordinal);
 }
 
+function assertContractedHistory(target: Database.Database) {
+  expect(target.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get('node-1'))
+    .toEqual({ current_version_id: 'v24' });
+  expect(target.prepare(`SELECT version_id, parent_version_id, body_text
+    FROM node_sync_versions WHERE object_id = ?`).all('node-1'))
+    .toEqual([{ version_id: 'v24', parent_version_id: null, body_text: 'body' }]);
+  expect(target.prepare('SELECT * FROM node_sync_version_parents').all()).toEqual([]);
+  expect(target.pragma('foreign_key_check')).toEqual([]);
+}
+
 it('sends one new version after 23 known versions through authenticated HTTP', async () => {
   const target = createReceiver();
   seedIncrementalHistory(target);
@@ -219,11 +229,15 @@ it('sends one new version after 23 known versions through authenticated HTTP', a
       await port.run('ATTACH DATABASE ? AS inc', [incoming]);
       try {
         await assertSyncPackManifestMatchesDatabase(port, manifest);
-        const applied = await applySyncPackNodeSurfaceWithDbPort(port, { currentCursor: 0,
-          hostName: 'receiver', sourcePeerId: ids.source, enqueueSearchInvalidations: false });
+        const options = { currentCursor: 0, hostName: 'receiver', sourcePeerId: ids.source,
+          enqueueSearchInvalidations: false };
+        const applied = await applySyncPackNodeSurfaceWithDbPort(port, options);
         expect(applied.applied).toBe(true);
-        expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get())
-          .toEqual({ count: 24 });
+        assertContractedHistory(target);
+        const replay = await applySyncPackNodeSurfaceWithDbPort(port,
+          { ...options, currentCursor: applied.toStateSeq });
+        expect(replay.applied).toBe(false);
+        assertContractedHistory(target);
       } finally { await port.run('DETACH DATABASE inc'); }
     } finally { await resource.cleanup(); }
   } finally { await http.close(); revokeDesktopSyncGroupMemberStateReadiness(ids.receiver); target.close(); }
