@@ -17,6 +17,7 @@ it('formats backup dates in the active Chinese interface language', async () => 
         isBackupActionsAvailable
         isCreatingBackup={false}
         isLoadingBackups={false}
+        refreshBackups={async () => undefined}
         restoringPath=""
         restoreBackup={() => undefined}
         statusMessage=""

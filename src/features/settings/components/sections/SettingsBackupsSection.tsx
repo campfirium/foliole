@@ -79,7 +79,7 @@ export function SettingsBackupsSection() {
   return (
     <>
       <BackupSearchSettings isDesktopRuntime={state.isDesktopRuntime} />
-      <BackupListSection backups={state.backups} createBackup={state.handleCreateBackup} isBackupActionsAvailable={state.isDesktopRuntime} isCreatingBackup={state.isCreatingBackup} isLoadingBackups={state.isLoadingBackups} restoringPath={state.restoringPath} restoreBackup={state.handleRestoreBackup} statusMessage={state.statusMessage} />
+      <BackupListSection backups={state.backups} createBackup={state.handleCreateBackup} isBackupActionsAvailable={state.isDesktopRuntime} isCreatingBackup={state.isCreatingBackup} isLoadingBackups={state.isLoadingBackups} refreshBackups={state.refreshBackups} restoringPath={state.restoringPath} restoreBackup={state.handleRestoreBackup} statusMessage={state.statusMessage} />
       <SettingsSection ariaLabel={t('settings.backups.sourceHandling.sectionAria')} title={t('settings.backups.sourceHandling.title')}>
         <SourceDispositionStateRow
           isDesktopRuntime={state.isDesktopRuntime}

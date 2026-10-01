@@ -147,6 +147,7 @@ export function BackupListSection(props: {
   restoringPath: string;
   statusMessage: string;
   createBackup: () => void;
+  refreshBackups: () => Promise<void>;
   restoreBackup: (entry: DatabaseBackupEntry) => void;
 }) {
   const { locale, t } = useLocalization();
@@ -182,7 +183,10 @@ export function BackupListSection(props: {
       {props.isBackupActionsAvailable && !props.isLoadingBackups && props.backups.length > 3 ? (
         <SettingsRow className="justify-end">
           <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
-            <button className={SETTINGS_BUTTON_CLASS_NAME} onClick={() => setIsExpanded((value) => !value)} type="button">
+            <button className={SETTINGS_BUTTON_CLASS_NAME} onClick={() => {
+              if (!isExpanded) void props.refreshBackups();
+              setIsExpanded((value) => !value);
+            }} type="button">
               {isExpanded ? t('settings.backups.list.collapse') : t('settings.backups.list.showAll')}
             </button>
           </SettingsControlSlot>

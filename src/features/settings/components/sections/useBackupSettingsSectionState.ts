@@ -152,6 +152,7 @@ export function useBackupSettingsSectionState() {
     loadErrorMessage: state.loadErrorMessage,
     pathErrorMessage: state.pathErrorMessage,
     retryInitialLoad: reload.retryInitialLoad,
+    refreshBackups: async () => state.setBackups(await listDatabaseBackups()),
     restoringPath: state.restoringPath,
     sourceDispositionSummary: state.sourceDispositionSummary,
     sourceStateStatusMessage: state.sourceStateStatusMessage,
