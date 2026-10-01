@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import { serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 import { loadNodeSourceDetails } from '../../lib/core/database/nodeSourceDetails.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -47,11 +48,14 @@ function seedPdfNodeWithMarkdownAndPdfSources() {
     .run('node-pdf', 'Paper', '# Paper\n\nExtracted PDF text.', '2026-04-24T00:00:00.000Z', '2026-04-24T00:00:00.000Z');
   database
     .prepare(
-      `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at, pdf_index_status, pdf_indexed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO pdf_index_state (attachment_id, status, indexed_at) VALUES (?, ?, ?)`
     )
-    .run('pdf-1', 'paper.pdf', 'application/pdf', 1024, '2026-04-24T00:00:00.000Z', 'ready', '2026-04-24T00:03:00.000Z');
-  database.prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)').run('node-pdf', 'pdf-1', 'reference');
+    .run('a'.repeat(64), 'ready', '2026-04-24T00:03:00.000Z');
+  database.prepare('UPDATE nodes SET resource_references = ? WHERE id = ?').run(
+    serializeNodeResourceReferences([
+      { storage_key: `${'a'.repeat(64)}.pdf`, role: 'reference', original_name: 'paper.pdf' }
+    ]), 'node-pdf'
+  );
   database
     .prepare(
       `INSERT INTO import_sources (

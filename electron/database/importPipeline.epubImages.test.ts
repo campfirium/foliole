@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -59,15 +60,17 @@ it('keeps epub text visible, skips embedded image attachments, and replaces them
 
   const nodeId = imported.nodeId as string;
   const database = openDatabaseConnection().sqlite;
-  const nodeRow = database.prepare('SELECT content FROM nodes WHERE id = ?').get(nodeId) as { content: string };
+  const nodeRow = database.prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`).get(nodeId) as { content: string };
   const persistedRun = database
     .prepare('SELECT result_status, degraded_reason FROM import_runs WHERE id = ?')
     .get(imported.importId) as { degraded_reason: string | null; result_status: string };
   const attachmentCount = (
-    database.prepare('SELECT COUNT(*) AS count FROM attachments').get() as { count: number }
+    database.prepare(`SELECT COUNT(DISTINCT json_extract(resource.value, '$.storage_key')) AS count
+      FROM nodes, json_each(nodes.resource_references) resource`).get() as { count: number }
   ).count;
   const attachmentLinkCount = (
-    database.prepare('SELECT COUNT(*) AS count FROM node_attachments').get() as { count: number }
+    database.prepare(`SELECT COUNT(*) AS count
+      FROM nodes, json_each(nodes.resource_references) resource`).get() as { count: number }
   ).count;
 
   expect(imported.resultStatus).toBe('degraded');

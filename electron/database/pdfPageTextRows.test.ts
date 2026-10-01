@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
+
 let mockedAppDataDir = '/tmp/foliole-pdf-page-text-rows-tests';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -22,6 +24,7 @@ import { initializeDatabase } from './migrate.js';
 import { savePdfPageTextRows } from './pdfPageTextRows.js';
 
 let tempRoot = '';
+const pdfHash = 'a'.repeat(64);
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-pdf-page-text-rows-'));
@@ -45,12 +48,7 @@ async function removeTempRoot() {
 }
 
 function seedPdfAttachment() {
-  openDatabaseConnection().sqlite
-    .prepare(
-      `INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-       VALUES (?, ?, ?, ?, ?)`
-    )
-    .run('pdf-1', 'paper.pdf', 'application/pdf', 1024, '2026-04-24T00:00:00.000Z');
+  seedPdfReferenceNode();
 }
 
 function seedPdfReferenceNode() {
@@ -69,8 +67,10 @@ function seedPdfReferenceNode() {
       '2026-04-24T00:00:00.000Z'
     );
   database
-    .prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
-    .run('node-pdf', 'pdf-1', 'reference');
+    .prepare('UPDATE nodes SET resource_references = ? WHERE id = ?')
+    .run(serializeNodeResourceReferences([
+      { storage_key: `${pdfHash}.pdf`, role: 'reference', original_name: 'paper.pdf' }
+    ]), 'node-pdf');
 }
 
 function listPdfPageTextState() {
@@ -111,7 +111,7 @@ it('writes sync object state for saved PDF page text rows', () => {
   seedPdfAttachment();
 
   savePdfPageTextRows(
-    'pdf-1',
+    pdfHash,
     [
       { page: 1, pageHeight: 1200, pageWidth: 800, text: 'Page one' },
       { page: 2, pageHeight: null, pageWidth: null, text: 'Page two' }
@@ -120,8 +120,8 @@ it('writes sync object state for saved PDF page text rows', () => {
   );
 
   expect(listPdfPageTextState()).toEqual([
-    { object_id: 'pdf-1:1', deleted_at: null, sync_dirty: 1 },
-    { object_id: 'pdf-1:2', deleted_at: null, sync_dirty: 1 }
+    { object_id: `${pdfHash}:1`, deleted_at: null, sync_dirty: 1 },
+    { object_id: `${pdfHash}:2`, deleted_at: null, sync_dirty: 1 }
   ]);
   expect(countPdfPageTextChanges().count).toBe(0);
 });
@@ -129,7 +129,7 @@ it('writes sync object state for saved PDF page text rows', () => {
 it('marks removed PDF pages as deleted sync objects', () => {
   seedPdfAttachment();
   savePdfPageTextRows(
-    'pdf-1',
+    pdfHash,
     [
       { page: 1, pageHeight: 1200, pageWidth: 800, text: 'Page one' },
       { page: 2, pageHeight: 1200, pageWidth: 800, text: 'Page two' }
@@ -138,24 +138,23 @@ it('marks removed PDF pages as deleted sync objects', () => {
   );
 
   savePdfPageTextRows(
-    'pdf-1',
+    pdfHash,
     [{ page: 1, pageHeight: 1200, pageWidth: 800, text: 'Page one updated' }],
     '2026-04-24T00:02:00.000Z'
   );
 
   expect(listPdfPageTextState()).toEqual([
-    { object_id: 'pdf-1:1', deleted_at: null, sync_dirty: 1 },
-    { object_id: 'pdf-1:2', deleted_at: '2026-04-24T00:02:00.000Z', sync_dirty: 1 }
+    { object_id: `${pdfHash}:1`, deleted_at: null, sync_dirty: 1 },
+    { object_id: `${pdfHash}:2`, deleted_at: '2026-04-24T00:02:00.000Z', sync_dirty: 1 }
   ]);
   expect(countPdfPageTextChanges().count).toBe(0);
 });
 
 it('writes extracted PDF text as the reference node body blob for sync packs', () => {
   seedPdfAttachment();
-  seedPdfReferenceNode();
 
   savePdfPageTextRows(
-    'pdf-1',
+    pdfHash,
     [
       { page: 1, pageHeight: 1200, pageWidth: 800, text: 'First extracted page.' },
       { page: 2, pageHeight: 1200, pageWidth: 800, text: 'Second extracted page.' }
@@ -167,9 +166,12 @@ it('writes extracted PDF text as the reference node body blob for sync packs', (
     body_blob_data: '# Paper\n\nFirst extracted page.\n\nSecond extracted page.',
     body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
     opening_text: 'First extracted page. Second extracted page.',
-    sync_dirty: 1
+    sync_dirty: 0
   });
   expect(openDatabaseConnection().sqlite
     .prepare(`SELECT object_id, object_type FROM sync_object_state WHERE object_type = 'node'`)
     .all()).toEqual([{ object_id: 'node-pdf', object_type: 'node' }]);
+  expect(openDatabaseConnection().sqlite.prepare(`SELECT v.body_text FROM node_sync_versions v
+    JOIN nodes n ON n.current_version_id = v.version_id WHERE n.id = 'node-pdf'`).get())
+    .toEqual({ body_text: '# Paper\n\nFirst extracted page.\n\nSecond extracted page.' });
 });

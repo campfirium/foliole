@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import {
@@ -65,8 +66,8 @@ it('promotes the alternate body through a new formal child version', async () =>
     status: string;
     sync_dirty: number;
   }>(
-    `SELECT n.content, n.current_version_id, v.parent_version_id, a.status, s.sync_dirty
-     FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id
+    `SELECT ${buildNodeBodyContentSql('n')} AS content, n.current_version_id, v.parent_version_id, a.status, s.sync_dirty
+     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash JOIN node_sync_versions v ON v.version_id = n.current_version_id
      JOIN node_text_alternatives a ON a.node_id = n.id
      JOIN sync_object_state s ON s.object_type = 'node_text_alternative' AND s.object_id = a.alternative_id
      WHERE n.id = 'topic-1'`

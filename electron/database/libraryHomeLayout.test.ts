@@ -96,5 +96,9 @@ it('initializes and keeps using the library home directory layout across restart
   const secondConnection = initializeDatabase();
   expect(secondConnection.dbPath).toBe(path.join(dataDir, 'foliole.db'));
   expect(resolveDatabasePath()).toBe(path.join(dataDir, 'foliole.db'));
-  expect(secondConnection.sqlite.prepare('SELECT COUNT(*) FROM attachments').pluck().get()).toBe(1);
+  expect(secondConnection.sqlite.prepare(
+    'SELECT resource_references FROM nodes WHERE id = ?'
+  ).pluck().get('node-1')).toBe(JSON.stringify([
+    { storage_key: `${hash}.png`, role: 'image', original_name: 'cover.png' }
+  ]));
 });

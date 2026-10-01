@@ -6,6 +6,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+
 let mockedAppDataDir = '/tmp/foliole-node-anchor-link-tests';
 
 vi.mock('../ipc/paths.js', () => ({
@@ -36,7 +38,7 @@ afterEach(async () => {
 
 function getNodeRow(nodeId: string) {
   const connection = openDatabaseConnection();
-  return connection.sqlite.prepare('SELECT content, anchor_link, image_regions FROM nodes WHERE id = ?').get(nodeId) as
+  return connection.sqlite.prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content, anchor_link, image_regions FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`).get(nodeId) as
     | { content: string; anchor_link: string | null; image_regions: string | null }
     | undefined;
 }

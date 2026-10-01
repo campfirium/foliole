@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 
 import {
   ANDROID_SOURCE_DEVICE_ID,
@@ -177,8 +178,8 @@ function seedProjectionParents() {
 
 function readProjectedNodes() {
   return openDatabaseConnection().driver.queryAll(
-    `SELECT id, parent_id, kind, content, reveal, anchor_link, current_version_id, last_modified_by_host_name
-     FROM nodes WHERE id IN (?, ?, ?) ORDER BY id`,
+    `SELECT nodes.id, parent_id, kind, ${buildNodeBodyContentSql('nodes')} AS content, reveal, anchor_link, current_version_id, last_modified_by_host_name
+     FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id IN (?, ?, ?) ORDER BY nodes.id`,
     [CAPTURE_NODE_ID, CLOZE_NODE_ID, NOTE_NODE_ID]
   );
 }

@@ -21,6 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import { resetRemoteImagePipelineForTests } from '../attachments/remoteImagePipeline.js';
 import { loadPreparedReadwiseImportRecord } from '../import/readwisePreparedImport.js';
@@ -81,7 +82,7 @@ it('projects a localized image-only highlight into a full-image region', async (
   });
   const imported = runPreparedImport(prepared);
   const nodeRow = openDatabaseConnection().sqlite
-    .prepare('SELECT content FROM nodes WHERE id = ?')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`)
     .get(imported.nodeId as string) as { content: string };
   const childRow = openDatabaseConnection().sqlite
     .prepare('SELECT anchor_link, image_regions FROM nodes WHERE parent_id = ?')

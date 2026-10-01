@@ -15,6 +15,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { applyCanonicalBodyRepairPlan } from '../../scripts/oneoff/t181-canonical-body-repair-apply.js';
 import { buildCanonicalBodyRepairPlan } from '../../scripts/oneoff/t181-canonical-body-repair-plan.js';
 
@@ -76,14 +77,14 @@ it('maps JPEG and PNG by bytes, remaps child anchors, versions both, and becomes
   });
   expect(versions.map((entry) => entry.nodeId)).toEqual(['parent', 'child']);
   const parent = driver.queryOne<{ content: string; current_version_id: string; updated_at: string }>(
-    'SELECT content, current_version_id, updated_at FROM nodes WHERE id = ?', ['parent']
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content, current_version_id, updated_at FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, ['parent']
   );
   expect(parent?.content).toContain(`asset://${jpegHash}.jpg`);
   expect(parent?.content).toContain(`asset://${pngHash}.png`);
   expect(parent?.content).not.toContain('.jpeg');
   expect(parent?.current_version_id).not.toBe(before?.current_version_id);
   expect(parent?.updated_at).toBe('2026-09-20T01:00:00.000Z');
-  expect(driver.queryOne<{ content: string }>('SELECT content FROM nodes WHERE id = ?', ['child']))
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, ['child']))
     .toEqual({ content: 'Target sentence.' });
   const repeat = await buildCanonicalBodyRepairPlan({ assetsDir, driver, expectedNodes: 0, expectedTokens: 0 });
   expect(applyCanonicalBodyRepairPlan({ driver, hostName: 'Maci',
@@ -118,7 +119,7 @@ it('rejects frozen parent or child drift and rolls back a mid-transaction failur
   })).toThrow('injected_failure');
   expect(driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM node_sync_versions'))
     .toEqual(beforeVersions);
-  expect(driver.queryOne<{ content: string }>('SELECT content FROM nodes WHERE id = ?', ['parent']))
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, ['parent']))
     .toEqual({ content: body });
   expect(() => applyCanonicalBodyRepairPlan({
     driver, hostName: 'Maci', now: '2026-09-20T01:00:00.000Z', plan,

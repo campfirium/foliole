@@ -21,6 +21,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
@@ -30,6 +31,7 @@ import { loadPreparedReadwiseImportRecord } from '../import/readwisePreparedImpo
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { runPreparedImport } from './importPipeline.js';
 import { initializeDatabase } from './migrate.js';
+import { persistNodeResourceReference } from './nodeResources.js';
 
 let tempRoot = '';
 
@@ -75,7 +77,7 @@ it('keeps imported sidecar highlight locators aligned after local image rewrite'
     })
   );
   const nodeRow = openDatabaseConnection().sqlite
-    .prepare('SELECT content FROM nodes WHERE id = ?')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`)
     .get(imported.nodeId as string) as { content: string };
   const childRow = openDatabaseConnection().sqlite
     .prepare('SELECT anchor_link, image_regions FROM nodes WHERE parent_id = ?')
@@ -120,11 +122,10 @@ async function loadPreparedReadwiseFixture(fullDir: string, highlightDir: string
   });
 }
 
-function seedAvatarAttachment(contentHash: string, storageKey: string) {
-  openDatabaseConnection().sqlite.prepare(
-    'INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)'
-  ).run(contentHash, storageKey, 'image/png', 1, '2026-05-13T00:00:00.000Z');
-
+function seedAvatarAttachment(nodeId: string, storageKey: string) {
+  persistNodeResourceReference(nodeId, {
+    storage_key: storageKey, role: 'image', original_name: storageKey
+  });
 }
 
 it('matches readwise highlights before remote image localization and remaps after image rewrite', async () => {
@@ -133,10 +134,10 @@ it('matches readwise highlights before remote image localization and remaps afte
 
   const imported = runPreparedImport(await loadPreparedReadwiseFixture(fullDir, highlightDir));
   const nodeRow = openDatabaseConnection().sqlite
-    .prepare('SELECT content FROM nodes WHERE id = ?')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`)
     .get(imported.nodeId as string) as { content: string };
   const childRow = openDatabaseConnection().sqlite
-    .prepare('SELECT content, anchor_link FROM nodes WHERE parent_id = ?')
+    .prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content, anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE parent_id = ?`)
     .get(imported.nodeId as string) as { anchor_link: string | null; content: string };
   const locator = parseAnchorLink(childRow.anchor_link).locator;
 
@@ -148,7 +149,7 @@ it('matches readwise highlights before remote image localization and remaps afte
 
   const contentHash = 'a'.repeat(64);
   const storageKey = `${contentHash}.png`;
-  seedAvatarAttachment(contentHash, storageKey);
+  seedAvatarAttachment(imported.nodeId as string, storageKey);
   const rewrittenContent = nodeRow.content.replace(
     '![Avatar](https://cdn.example.com/avatar.png)',
     `![Avatar](asset://${storageKey})`
@@ -218,7 +219,7 @@ it('imports image-only readwise highlights with a locator on the image markdown'
   });
   const imported = runPreparedImport(prepared);
   const childRow = openDatabaseConnection().sqlite
-    .prepare('SELECT title, content, anchor_link FROM nodes WHERE parent_id = ?')
+    .prepare(`SELECT title, ${buildNodeBodyContentSql('nodes')} AS content, anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE parent_id = ?`)
     .get(imported.nodeId as string) as { anchor_link: string | null; content: string; title: string };
   const locator = parseAnchorLink(childRow.anchor_link).locator;
 

@@ -21,6 +21,9 @@ vi.mock('../ipc/paths.js', () => ({
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.js';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionResourceSchemaStatements.js';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSyncSchemaStatements.js';
+import { requireResolvedNodeBody } from '../../lib/core/database/nodeBodyResolution.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+import { projectNodeResourceLinks, serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 
@@ -33,6 +36,7 @@ import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 let tempRoot = '';
 const targetDatabases: Database.Database[] = [];
+const pdfHash = 'a'.repeat(64);
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-node-version-lossless-'));
@@ -68,7 +72,9 @@ it('rebuilds and fast-forwards complete producer versions through the BetterSQLi
     snapshot_json: JSON.stringify(versionTwo.snapshot),
     state_hash: versionTwo.content_hash
   });
-  expect(computeNodeSyncVersionHash(loadNodeSyncVersionSource('folder-1')!, 'folder-1'))
+  const storedSource = loadNodeSyncVersionSource('folder-1')!;
+  const resolvedBody = requireResolvedNodeBody(storedSource, 'folder-1');
+  expect(computeNodeSyncVersionHash({ ...storedSource, content: resolvedBody.content }, 'folder-1'))
     .toBe(versionTwo.content_hash);
 
   const desktopTarget = createTargetDatabase();
@@ -100,13 +106,10 @@ function seedSourceFolder(content: string, updatedAt: string) {
   });
   const sqlite = openDatabaseConnection().sqlite;
   sqlite.prepare(
-    `INSERT OR IGNORE INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-     VALUES ('attachment-1', 'Paper.pdf', 'application/pdf', 128, '2026-07-11T00:00:00.000Z')`
-  ).run();
-  sqlite.prepare(
-    `INSERT OR IGNORE INTO node_attachments (node_id, attachment_id, role)
-     VALUES ('folder-1', 'attachment-1', 'reference')`
-  ).run();
+    `UPDATE nodes SET resource_references = ? WHERE id = 'folder-1'`
+  ).run(serializeNodeResourceReferences([
+    { storage_key: `${pdfHash}.pdf`, role: 'reference', original_name: 'Paper.pdf' }
+  ]));
   sqlite.prepare(
     `UPDATE nodes SET import_source_fingerprint = 'source-a', import_content_fingerprint = 'content-a'
      WHERE id = 'folder-1'`
@@ -142,33 +145,34 @@ function createTargetDatabase() {
   database.exec(ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS.join(';\n'));
   database.exec(ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS.join(';\n'));
   database.exec(ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS.join(';\n'));
-  database.exec(`
-    INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at)
-      VALUES ('attachment-1', 'Paper.pdf', 'application/pdf', 128, '2026-07-11T00:00:00.000Z');
-  `);
   return database;
 }
 
 function readTargetState(database: Database.Database) {
   const node = database.prepare(
-    `SELECT n.content, n.shelved_at, n.manual_child_order, n.import_source_fingerprint,
+    `SELECT ${buildNodeBodyContentSql()} AS content, n.shelved_at, n.manual_child_order, n.import_source_fingerprint,
        n.import_content_fingerprint, o.position
-     FROM nodes n LEFT JOIN node_order o ON o.node_id = n.id WHERE n.id = 'folder-1'`
+     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+     LEFT JOIN node_order o ON o.node_id = n.id WHERE n.id = 'folder-1'`
   ).get();
-  const attachments = database.prepare(
-    `SELECT attachment_id, role FROM node_attachments WHERE node_id = 'folder-1' ORDER BY attachment_id, role`
-  ).all();
-  return { ...node as object, attachments };
+  const resources = database.prepare(
+    `SELECT resource_references FROM nodes WHERE id = 'folder-1'`
+  ).get() as { resource_references: string };
+  const attachments = projectNodeResourceLinks(resources.resource_references);
+  return { ...node as object, attachments, resource_references: resources.resource_references };
 }
 
 function expectedTargetState(content: string) {
   return {
-    attachments: [{ attachment_id: 'attachment-1', role: 'reference' }],
+    attachments: [{ attachment_id: pdfHash, role: 'reference' }],
     content,
     import_content_fingerprint: 'content-a',
     import_source_fingerprint: 'source-a',
     manual_child_order: '["child-b","child-a"]',
     position: 91,
+    resource_references: serializeNodeResourceReferences([
+      { storage_key: `${pdfHash}.pdf`, role: 'reference', original_name: 'Paper.pdf' }
+    ]),
     shelved_at: '2026-07-10T00:00:00.000Z'
   };
 }

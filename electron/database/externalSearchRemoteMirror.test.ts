@@ -15,6 +15,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated: vi.fn() }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { runImportForMirrorDocument } from '../ipc/importTextFile.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -71,7 +72,7 @@ it('imports remote mirror content without authorizing or reading the remote path
   const result = runImportForMirrorDocument('remote-doc');
   expect(result).toMatchObject({ node_id: expect.any(String), source_locator: 'mirror-document:remote-doc' });
   expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
-    'SELECT content FROM nodes WHERE id = ?', [result.node_id]
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, [result.node_id]
   )).toEqual({ content: '# Topic\nBody' });
 });
 

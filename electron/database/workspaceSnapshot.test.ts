@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import { serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
@@ -122,23 +123,23 @@ it('loads lightweight workspace snapshots without node content by default', () =
 it('includes node attachment references in the workspace snapshot', () => {
   seedNode('node-pdf', 0);
   const database = openDatabaseConnection().sqlite;
+  const pdfHash = 'a'.repeat(64);
   database
-    .prepare(`INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)`)
-    .run('pdf-attachment-1', 'Paper.pdf', 'application/pdf', 128, '2026-04-27T08:00:00.000Z');
-  database
-    .prepare(`INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)`)
-    .run('node-pdf', 'pdf-attachment-1', 'reference');
+    .prepare('UPDATE nodes SET resource_references = ? WHERE id = ?')
+    .run(serializeNodeResourceReferences([
+      { storage_key: `${pdfHash}.pdf`, role: 'reference', original_name: 'Paper.pdf' }
+    ]), 'node-pdf');
 
   const snapshot = loadWorkspaceSnapshot();
 
   expect(snapshot?.nodesById['node-pdf']?.attachments).toEqual([{
-    attachmentId: 'pdf-attachment-1',
+    attachmentId: pdfHash,
     availability: 'unresolved',
-    contentHash: 'pdf-attachment-1',
+    contentHash: pdfHash,
     mimeType: 'application/pdf',
     originalName: 'Paper.pdf',
     role: 'reference',
-    storageKey: null
+    storageKey: `${pdfHash}.pdf`
   }]);
 });
 

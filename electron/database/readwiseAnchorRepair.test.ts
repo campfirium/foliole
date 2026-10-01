@@ -16,6 +16,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { applyAnchorRepairPlan } from '../../scripts/oneoff/readwise-anchor-repair-apply.js';
 import { buildAnchorRepairPlan } from '../../scripts/oneoff/readwise-anchor-repair-selection.js';
 import type { BodyRecoveryReceipt } from '../../scripts/oneoff/readwise-anchor-repair-types.js';
@@ -105,13 +106,13 @@ it('marks a frontmatter-only match unmapped without changing the highlight conte
   const seeded = seedRecovered({ bodyText: '---\nsummary: Metadata only.\n---\n\nVisible body.\n',
     id: 'article-missing', visibleText: 'Metadata only.' });
   const before = openDatabaseConnection().driver.queryOne<{ anchor_link: string; content: string }>(
-    'SELECT anchor_link, content FROM nodes WHERE id = ?', [seeded.childId]
+    `SELECT anchor_link, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, [seeded.childId]
   );
   const { plan } = applyPlan(seeded.receipt);
   expect(plan.unmap).toHaveLength(1);
   const after = openDatabaseConnection().driver.queryOne<{
     anchor_link: string; anchor_resolution_status: string; content: string;
-  }>('SELECT anchor_link, anchor_resolution_status, content FROM nodes WHERE id = ?', [seeded.childId]);
+  }>(`SELECT anchor_link, anchor_resolution_status, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, [seeded.childId]);
   expect(after).toMatchObject({ anchor_link: before?.anchor_link, anchor_resolution_status: 'unmapped_missing',
     content: before?.content });
   const second = buildAnchorRepairPlan(openDatabaseConnection().driver, seeded.receipt, repairedAt,
@@ -139,7 +140,7 @@ it('marks multiple visible matches ambiguous and never scans nodes outside the s
   const { plan } = applyPlan(seeded.receipt);
   expect(plan.unmap).toMatchObject([{ childId: seeded.childId, nextStatus: 'unmapped_ambiguous' }]);
   expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
-    'SELECT content FROM nodes WHERE id = ?', ['outside-receipt']
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, ['outside-receipt']
   )).toEqual({ content: 'Untouched' });
 });
 

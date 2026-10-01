@@ -21,6 +21,7 @@ vi.mock('../import/managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { reimportCurrentTopicSource } from '../import/currentSourceReimport.js';
 import { runKeepImportRule } from '../import/keepImportService.js';
 import { confirmWatchedFolderReconnect, previewWatchedFolderReconnect } from '../import/watchedFolderReconnect.js';
@@ -241,6 +242,6 @@ it('preserves the original topic identity and surfaces its update after reconnec
     { latest_node_id: first.latest_node_id, source_fingerprint: first.source_fingerprint, source_location: 'note.md' }
   ]);
   expect(openDatabaseConnection().driver.queryOne(
-    'SELECT id, content FROM nodes WHERE id = ?', [first.latest_node_id]
+    `SELECT nodes.id, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, [first.latest_node_id]
   )).toEqual({ content: '# Original\nUpdated body', id: first.latest_node_id });
 });

@@ -7,6 +7,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
 
@@ -178,7 +180,7 @@ async function readSnapshotState(filePath: string | undefined) {
   try {
     const sqlite = new BetterSqlite3(materialized.databasePath, { readonly: true });
     try {
-      const row = sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get('node-1') as { content: string };
+      const row = sqlite.prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`).get('node-1') as { content: string };
       return { content: row.content, userVersion: sqlite.pragma('user_version', { simple: true }) };
     } finally {
       sqlite.close();

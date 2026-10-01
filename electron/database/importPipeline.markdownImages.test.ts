@@ -17,7 +17,9 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
+import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import { buildAttachmentAssetUrl } from '../attachments/attachmentAssetUrl.js';
 import { resolveAttachmentResource, resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
@@ -82,10 +84,14 @@ async function createMarkdownImportFixture(rootDir: string) {
 
 function expectAttachmentSyncRows(count: number) {
   expect(openDatabaseConnection().sqlite
-    .prepare("SELECT COUNT(DISTINCT object_id) AS count FROM sync_object_state WHERE object_type = 'attachment'")
+    .prepare(`SELECT COUNT(DISTINCT json_extract(resource.value, '$.storage_key')) AS count
+      FROM nodes n JOIN node_sync_versions version ON version.version_id = n.current_version_id
+      JOIN sync_object_state state ON state.object_type = 'node' AND state.object_id = n.id,
+      json_each(json_extract(version.snapshot_json, '$.resource_references')) resource`)
     .get()).toEqual({ count });
   expect(openDatabaseConnection().sqlite
-    .prepare('SELECT COUNT(*) AS count FROM attachments')
+    .prepare(`SELECT COUNT(DISTINCT json_extract(resource.value, '$.storage_key')) AS count
+      FROM nodes, json_each(nodes.resource_references) resource`)
     .get()).toEqual({ count });
 }
 
@@ -118,7 +124,9 @@ async function expectStoredAttachmentFiles(args: {
 
     await expect(fs.access(expectedStoragePath)).resolves.toBeUndefined();
     await expect(fs.access(path.join(args.assetsDir, entry.attachmentId))).rejects.toThrow();
-    const description = loadAttachmentResourceDescription(entry.attachmentId)!;
+    const storageKey = buildCanonicalAttachmentStorageKey(entry.attachmentId, entry.attachment.mimeType!);
+    expect(storageKey).not.toBeNull();
+    const description = loadAttachmentResourceDescription(storageKey!)!;
     expect(resolveAttachmentResource(description.storageKey, args.assetsDir)).toEqual({
       mime_type: entry.attachment.mimeType,
       resource_url: buildAttachmentAssetUrl(description),
@@ -143,7 +151,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
   const nodeId = imported.nodeId as string;
   const nodeRow = openDatabaseConnection().sqlite
     .prepare(
-      `SELECT n.content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
+      `SELECT ${buildNodeBodyContentSql('n')} AS content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
        FROM nodes n
        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.id = ?`
@@ -187,7 +195,7 @@ it('compacts consecutive small data-url markdown images during import', () => {
     })
   );
 
-  const nodeRow = openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get(imported.nodeId as string) as { content: string };
+  const nodeRow = openDatabaseConnection().sqlite.prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`).get(imported.nodeId as string) as { content: string };
   expect(imported.resultStatus).toBe('imported');
   expect(nodeRow.content).toBe(`![Up](${smallPngDataUrl}) ![Down](${smallPngDataUrl})`);
   expect(nodeRow.content).not.toContain('Unsupported local image');
@@ -240,7 +248,7 @@ it('resolves obsidian image embeds from the configured external attachment folde
     })
   );
 
-  const nodeRow = openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get(imported.nodeId as string) as { content: string };
+  const nodeRow = openDatabaseConnection().sqlite.prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`).get(imported.nodeId as string) as { content: string };
   expect(imported.resultStatus).toBe('imported');
   expect(nodeRow.content).toContain('![Pasted image 20260421082325](asset://');
   expect(nodeRow.content).not.toContain('[Missing local image:');

@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -49,7 +50,7 @@ it('normalizes encoded data-url markdown images instead of resolving them as loc
     })
   );
 
-  const nodeRow = openDatabaseConnection().sqlite.prepare('SELECT content FROM nodes WHERE id = ?').get(imported.nodeId as string) as { content: string };
+  const nodeRow = openDatabaseConnection().sqlite.prepare(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`).get(imported.nodeId as string) as { content: string };
   expect(imported.resultStatus).toBe('imported');
   expect(nodeRow.content).toBe(`![Inline](${dataUrl})`);
   expect(nodeRow.content).not.toContain('Unsupported local image');

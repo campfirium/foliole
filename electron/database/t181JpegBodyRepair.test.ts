@@ -15,6 +15,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { applyJpegBodyRepairPlan } from '../../scripts/oneoff/t181-jpeg-body-repair-apply.js';
 import { buildJpegBodyRepairPlan } from '../../scripts/oneoff/t181-jpeg-body-repair-plan.js';
 
@@ -72,7 +73,7 @@ it('writes a versioned body and preserves every non-body node field', async () =
   const before = driver.queryOne<{ current_version_id: string }>('SELECT current_version_id FROM nodes WHERE id = ?', ['node-1']);
   const versions = applyJpegBodyRepairPlan({ driver, hostName: 'Maci', now: '2026-09-12T01:00:00.000Z', plan });
   const after = driver.queryOne<{ content: string; current_version_id: string }>(
-    'SELECT content, current_version_id FROM nodes WHERE id = ?', ['node-1']
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content, current_version_id FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, ['node-1']
   );
   expect(after?.content).toContain(`asset://${hash}.jpg`);
   expect(after?.current_version_id).not.toBe(before?.current_version_id);
@@ -89,7 +90,7 @@ it('rolls back every body and version when a frozen candidate drifts mid-apply',
     driver, hostName: 'Maci', now: '2026-09-12T01:00:00.000Z', plan
   })).toThrow('injected_failure');
   const bodies = driver.queryAll<{ content: string }>(
-    "SELECT content FROM nodes WHERE id IN ('node-1', 'node-2') ORDER BY id"
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id IN ('node-1', 'node-2') ORDER BY nodes.id`
   );
   expect(bodies.every((row) => row.content.includes('.jpeg'))).toBe(true);
   expect(driver.queryOne<{ count: number }>(
