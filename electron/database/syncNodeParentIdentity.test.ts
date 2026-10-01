@@ -7,6 +7,9 @@ import path from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
@@ -52,13 +55,15 @@ it('retains both identities when the same batch contains a parent and its newer 
   await applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record('parent'), record('child', 'parent')]);
   expect(persisted()).toEqual([{ version_id: 'child', parent_version_id: 'parent' },
     { version_id: 'parent', parent_version_id: null }]);
-  expect(db.prepare('SELECT content,current_version_id FROM nodes WHERE id = ?').get('topic'))
+  expect(db.prepare(`SELECT ${buildNodeBodyContentSql('n', 'bd')} AS content,n.current_version_id
+    FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash WHERE n.id = ?`).get('topic'))
     .toEqual({ content: 'child', current_version_id: 'child' });
 });
 it('retains a missing historical parent reference without inventing its identity', async () => {
   await applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record('child', 'missing')]);
   expect(persisted()).toEqual([{ version_id: 'child', parent_version_id: 'missing' }]);
-  expect(db.prepare("SELECT content,current_version_id FROM nodes WHERE id = 'topic'").get())
+  expect(db.prepare(`SELECT ${buildNodeBodyContentSql('n', 'bd')} AS content,n.current_version_id
+    FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash WHERE n.id = 'topic'`).get())
     .toEqual({ content: 'child', current_version_id: 'child' });
 });
 it('acknowledges a readable push while preserving its missing historical parent', async () => {
@@ -110,4 +115,22 @@ it('rejects a cyclic parent relationship', async () => {
   await expect(applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record('child', 'child')]))
     .rejects.toThrow(/cycle/);
   expect(persisted()).toEqual([]);
+});
+
+it('keeps a proven contracted parent edge when replaying the complete original chain', async () => {
+  const port = createBetterSqliteDbPort(db);
+  const base = record('base');
+  const middle = record('middle', 'base');
+  const head = record('head', 'middle');
+  head.updated_at = '2026-08-25T12:59:24.000Z';
+  head.version_created_at = head.updated_at;
+  head.snapshot.updated_at = head.updated_at;
+  await applySyncNodesWithDbPort(port, [base, middle, head]);
+  await retainLocalEditBase(port, { holdId: 'open-editor', nodeId: 'topic', versionId: 'base' });
+  await collectNodeVersionPayloads(port, 'topic', Number.MAX_SAFE_INTEGER);
+  expect(db.prepare("SELECT parent_version_id FROM node_sync_versions WHERE version_id = 'head'").get())
+    .toEqual({ parent_version_id: 'base' });
+  await applySyncNodesWithDbPort(port, [base, middle, head]);
+  expect(db.prepare("SELECT parent_version_id FROM node_sync_versions WHERE version_id = 'head'").get())
+    .toEqual({ parent_version_id: 'base' });
 });

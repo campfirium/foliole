@@ -42,7 +42,12 @@ export async function validateStoredVersionDependencies(
     const [storedChild] = await port.query<{ parent_version_id: string | null }>(
       'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?', [edge.version_id]);
     // An existing contracted chain is kept as-is; incoming edges cannot expand it.
-    if (storedChild && incomingChild && storedChild.parent_version_id !== incomingChild.parent_version_id) continue;
+    if (storedChild && incomingChild && storedChild.parent_version_id !== incomingChild.parent_version_id) {
+      if (!storedChild.parent_version_id || incomingChild.parent_version_id && (
+        incomingAncestor(parents, storedChild.parent_version_id, incomingChild.parent_version_id) ||
+        await isStoredAncestorVersion(port, storedChild.parent_version_id, incomingChild.parent_version_id))) continue;
+      throw new Error(`sync_pack_node_version_parent_mismatch:${edge.version_id}`);
+    }
     const [conflict] = await port.query<{ parent_version_id: string }>(
       `SELECT parent_version_id FROM main.node_sync_version_parents
        WHERE version_id = ? AND
