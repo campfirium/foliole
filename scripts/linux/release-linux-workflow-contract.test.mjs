@@ -11,6 +11,7 @@ it('packages both Linux formats and accepts the installed DEB', async () => {
   expect(workflow).toContain('node scripts/linux/package-linux-deb.mjs');
   expect(workflow).toContain('node scripts/linux/test-linux-appimage.mjs');
   expect(workflow).toContain('sudo sysctl -w kernel.unprivileged_userns_clone=0');
+  expect(workflow).toContain("if: ${{ always() && steps.package.outcome == 'success' }}");
   expect(workflow).toContain('node scripts/linux/accept-linux-deb.mjs');
   expect(workflow).toContain('.tmp/artifacts/linux-appimage-test/result.json');
   expect(workflow).toContain('artifacts/linux/*.deb');

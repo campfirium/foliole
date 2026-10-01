@@ -110,6 +110,7 @@ jobs:
           sudo apt-get install -y apparmor apparmor-utils avahi-daemon dbus-x11 gnome-keyring libavahi-client-dev xvfb
           node scripts/quality/hosted-npm-ci.mjs
       - name: Build the Experimental DEB and AppImage
+        id: package
         env:
           TARGET_VERSION: ${{ steps.identity.outputs.target_version }}
         run: node scripts/linux/package-linux-deb.mjs --version="$TARGET_VERSION"
@@ -120,6 +121,7 @@ jobs:
           dbus-run-session -- node scripts/linux/accept-linux-deb.mjs
           --directory=artifacts/linux --target-sha="$TARGET_SHA" --version="$TARGET_VERSION"
       - name: Test real AppImage startup without sandbox on Ubuntu VM
+        if: ${{ always() && steps.package.outcome == 'success' }}
         env:
           TARGET_VERSION: ${{ steps.identity.outputs.target_version }}
         run: |
