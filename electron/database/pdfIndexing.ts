@@ -6,9 +6,9 @@ import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
-import { openDatabaseConnection } from './connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
 import { submitPdfIndexingTask } from './pdfIndexingTaskQueue.js';
-import { beginPdfIndexAttempt, isMountedPdf, readPdfIndexAttempt, resetPdfIndexState, updatePdfIndexStatus } from './pdfIndexState.js';
+import { beginPdfIndexAttempt, isMountedPdf, readPdfIndexState, resetPdfIndexState, updatePdfIndexStatus } from './pdfIndexState.js';
 import { savePdfPageTextRows } from './pdfPageTextRows.js';
 
 const RETRY_LIMIT = 2;
@@ -23,6 +23,10 @@ interface PdfQueueRow extends DatabaseRow {
 }
 
 const queuedAttachmentIds = new Set<string>();
+interface PdfAttempt {
+  number: number;
+}
+const activeAttempts = new Map<string, PdfAttempt>();
 
 export function toPdfDocumentData(bytes: Uint8Array) {
   return new Uint8Array(bytes);
@@ -119,27 +123,52 @@ function enqueueInternal(attachmentId: string) {
   });
 }
 
-async function processOneAttachment(attachmentId: string) {
-  if (!isMountedPdf(attachmentId)) {
-    return;
-  }
+function isCurrentAttempt(attachmentId: string, attempt: PdfAttempt) {
+  if (activeAttempts.get(attachmentId) !== attempt || !isMountedPdf(attachmentId)) return false;
+  const state = readPdfIndexState(attachmentId);
+  return state?.status === PDF_STATUS_INDEXING && state.attempt === attempt.number;
+}
 
+function beginAttempt(attachmentId: string) {
+  if (!isMountedPdf(attachmentId)) return null;
+  const state = readPdfIndexState(attachmentId);
+  if (!state || ![PDF_STATUS_PENDING, PDF_STATUS_INDEXING].includes(state.status)) return null;
   beginPdfIndexAttempt(attachmentId);
+  const attempt = { number: state.attempt + 1 };
+  activeAttempts.set(attachmentId, attempt);
+  return attempt;
+}
 
-  try {
-    const pages = await extractPdfPageText(attachmentId);
+function commitAttempt(attachmentId: string, attempt: PdfAttempt, pages: Awaited<ReturnType<typeof extractPdfPageText>>) {
+  const connection = openDatabaseConnection();
+  connection.sqlite.transaction(() => {
+    if (!isCurrentAttempt(attachmentId, attempt)) return;
     savePdfPageTextRows(attachmentId, pages);
     updatePdfNodeOpeningTexts(attachmentId, pages);
     updatePdfIndexStatus({ attachmentId, error: null, indexedAt: new Date().toISOString(), status: PDF_STATUS_READY });
+  })();
+}
+
+function failAttempt(attachmentId: string, attempt: PdfAttempt, error: unknown) {
+  if (!isCurrentAttempt(attachmentId, attempt)) return false;
+  const message = error instanceof Error ? error.message : 'Unknown PDF indexing failure.';
+  const retry = attempt.number <= RETRY_LIMIT;
+  updatePdfIndexStatus({ attachmentId, error: message, indexedAt: null,
+    status: retry ? PDF_STATUS_PENDING : PDF_STATUS_FAILED });
+  return retry;
+}
+
+async function processOneAttachment(attachmentId: string) {
+  const attempt = await runWithDatabaseConnectionOwner(() => beginAttempt(attachmentId));
+  if (!attempt) return;
+  try {
+    const pages = await extractPdfPageText(attachmentId);
+    await runWithDatabaseConnectionOwner(() => commitAttempt(attachmentId, attempt, pages));
   } catch (error) {
-    const attempt = readPdfIndexAttempt(attachmentId);
-    const message = error instanceof Error ? error.message : 'Unknown PDF indexing failure.';
-    if (attempt <= RETRY_LIMIT) {
-      updatePdfIndexStatus({ attachmentId, error: message, indexedAt: null, status: PDF_STATUS_PENDING });
-      enqueueInternal(attachmentId);
-      return;
-    }
-    updatePdfIndexStatus({ attachmentId, error: message, indexedAt: null, status: PDF_STATUS_FAILED });
+    const retry = await runWithDatabaseConnectionOwner(() => failAttempt(attachmentId, attempt, error));
+    if (retry) enqueueInternal(attachmentId);
+  } finally {
+    if (activeAttempts.get(attachmentId) === attempt) activeAttempts.delete(attachmentId);
   }
 }
 
@@ -155,15 +184,14 @@ export function markPdfAttachmentIndexPending(attachmentId: string) {
     return;
   }
   resetPdfIndexState(attachmentId);
+  activeAttempts.delete(attachmentId);
 }
 
-export function resumePendingPdfAttachmentIndexing() {
-  const rows = openDatabaseConnection().driver.queryAll<PdfQueueRow>(
+export async function resumePendingPdfAttachmentIndexing() {
+  const rows = await runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.queryAll<PdfQueueRow>(
     `SELECT attachment_id AS id FROM pdf_index_state
      WHERE status IN (?, ?) ORDER BY attachment_id ASC`,
     [PDF_STATUS_PENDING, PDF_STATUS_INDEXING]
-  );
-  for (const row of rows) {
-    enqueueInternal(row.id);
-  }
+  ));
+  for (const row of rows) enqueueInternal(row.id);
 }

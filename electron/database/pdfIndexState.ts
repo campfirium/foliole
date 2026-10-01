@@ -7,15 +7,20 @@ export function isMountedPdf(attachmentId: string) {
   return Boolean(openDatabaseConnection().driver.queryOne(
     `SELECT 1 FROM nodes n, json_each(n.resource_references) resource
      WHERE json_extract(resource.value, '$.storage_key') = ?
-       AND json_extract(resource.value, '$.role') = 'reference' LIMIT 1`, [`${attachmentId}.pdf`]
+       AND json_extract(resource.value, '$.role') = 'reference'
+       AND n.deleted_at IS NULL LIMIT 1`, [`${attachmentId}.pdf`]
   ));
 }
 
 export function readPdfIndexAttempt(attachmentId: string) {
-  const row = openDatabaseConnection().driver.queryOne<{ attempt: number | null }>(
-    'SELECT attempt FROM pdf_index_state WHERE attachment_id = ?', [attachmentId]
+  return readPdfIndexState(attachmentId)?.attempt ?? 0;
+}
+
+export function readPdfIndexState(attachmentId: string) {
+  return openDatabaseConnection().driver.queryOne<{ attempt: number; status: string }>(
+    'SELECT COALESCE(attempt, 0) AS attempt, status FROM pdf_index_state WHERE attachment_id = ?',
+    [attachmentId]
   );
-  return Math.max(0, row?.attempt ?? 0);
 }
 
 export function updatePdfIndexStatus(input: {
