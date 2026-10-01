@@ -1,6 +1,7 @@
 import type { DesktopOperationDefinition } from './desktopOperationDefinitions.js';
 
 export type DesktopMaintenanceOperationName =
+  | 'legacy-body-collection'
   | 'automatic-backup'
   | 'database-integrity'
   | 'external-search-refresh'
@@ -27,6 +28,22 @@ export const DESKTOP_MAINTENANCE_OPERATION_DEFINITIONS: Record<
   DesktopMaintenanceOperationName,
   DesktopOperationDefinition
 > = {
+  'legacy-body-collection': {
+    ...base,
+    completion: 'Inline duplicates retire and unheld text bodies are collected with durable progress.',
+    concurrencyKey: 'legacy-body-collection',
+    cost: 'heavy',
+    evidence: 'One bounded worker transaction rechecks all holders before deletion.',
+    label: 'Historical body storage maintenance',
+    priority: 'background',
+    recovery: 'Committed cursor resumes on library open; failure preserves the previous batch.',
+    resources: [...databaseWrite, { resource: 'cpu-heavy' }],
+    runOn: 'utility',
+    source: 'legacy-body-collection',
+    trigger: 'App-ready when the library collection marker is incomplete.',
+    verification: 'Upgrade, holder protection, rollback, restart, cancellation, and sync.',
+    workload: 'At most 32 inline nodes or body hashes per worker transaction.'
+  },
   'image-address-migration': {
     ...base,
     completion: 'Verified historical image addresses commit before the library completion marker.',

@@ -1,5 +1,6 @@
 import { runImageAddressMigration } from './attachments/imageAddressMigration.js';
 import { startAutomaticBackupScheduler } from './automaticBackupScheduler.js';
+import { startLegacyBodyCollectionTask } from './database/legacyBodyCollectionTask.js';
 import { resumePendingPdfAttachmentIndexing } from './database/pdfIndexing.js';
 import { startSearchIndexInvalidationScheduler } from './database/searchIndexInvalidationScheduler.js';
 import { submitDesktopOperation } from './desktopOperations.js';
@@ -29,6 +30,7 @@ function startLightService(label: string, task: () => Promise<unknown> | unknown
 
 export function startFollowupTasks() {
   ensureDesktopTaskWatchdog();
+  startLightService('[database] legacy body collection failed', startLegacyBodyCollectionTask);
   startAutomaticBackupScheduler();
   const imageMigrationHandle = submitDesktopOperation('image-address-migration', {
     failureLabel: '[attachments] image address migration failed',

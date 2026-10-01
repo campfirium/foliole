@@ -26,6 +26,7 @@ import {
   recoverCorruptedDatabase,
   verifyDatabaseIntegrity
 } from './integrity.js';
+import { migrateLegacyBodyConsistency, needsLegacyBodyConsistencySnapshot } from './legacyBodyConsistencyMigration.js';
 import {
   createManagedSafetySnapshotForMigration,
   settleManagedMigrationSnapshot
@@ -100,8 +101,12 @@ function initializeSchemaWorkspaceAndSearch(
   currentHostName: string,
   deferSearchIndex = false
 ) {
+  const fresh = readUserVersion(connection.sqlite) === 0;
   const initializedConnection = initializeDatabaseConnection(connection, {
-    beforeVersionCommit: () => migrateDesktopHostProfile(connection, currentHostName)
+    beforeVersionCommit: () => {
+      migrateDesktopHostProfile(connection, currentHostName);
+      migrateLegacyBodyConsistency(connection, currentHostName, fresh);
+    }
   });
   // Renderer drafts and their retry queue do not survive a process restart.
   initializedConnection.sqlite.prepare("DELETE FROM node_version_local_holds WHERE hold_id LIKE 'desktop:%'").run();
@@ -177,7 +182,9 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter, opti
 
 function createPreMigrationSnapshotIfNeeded(connection: ReturnType<typeof openDatabaseConnection>) {
   const currentVersion = readUserVersion(connection.sqlite);
-  if (currentVersion < NUMBERED_MIGRATION_BASE_VERSION || currentVersion >= DATABASE_SCHEMA_VERSION) {
+  const retryRepair = currentVersion === DATABASE_SCHEMA_VERSION &&
+    needsLegacyBodyConsistencySnapshot(connection);
+  if (currentVersion < NUMBERED_MIGRATION_BASE_VERSION || (currentVersion >= DATABASE_SCHEMA_VERSION && !retryRepair)) {
     return null;
   }
   return createManagedSafetySnapshotForMigration({

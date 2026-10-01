@@ -3,6 +3,7 @@ import { retireAttachmentRegistry } from './attachmentRegistryRetirement.js';
 import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { migrateIndependentNodeVersions } from './independentNodeVersionMigration.js';
+import { initializeLegacyBodyMigrationSchema } from './legacyBodyMigrationSchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
@@ -160,5 +161,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   } },
   { version: 121, migrate: repairSyncStateEntities },
   { version: 122, migrate: migrateIndependentNodeVersions },
-  { version: 123, migrate: initializeStoredSourceSearch }
+  { version: 123, migrate: initializeStoredSourceSearch },
+  { version: 124, migrate: initializeLegacyBodyMigrationSchema }
 ];

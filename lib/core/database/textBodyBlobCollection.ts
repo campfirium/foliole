@@ -1,7 +1,7 @@
 import { hashTextBody } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
 
-// Explicit library holders; collection is never attached to startup or a background scan.
+// Explicit library holders rechecked in the collection write transaction.
 const TEXT_HOLDERS = [
   ['nodes', 'content'], ['external_documents', 'content'], ['node_sync_versions', 'body_text'],
   ['node_text_alternatives', 'body_text'], ['keep_import_item_cache', 'content'],
@@ -67,7 +67,7 @@ export function collectTextBodyBlobCandidates(driver: DatabaseDriver, hashes: re
          JOIN content_blob_data data ON data.hash = b.hash WHERE b.hash = ?`, [hash]);
       if (!row || row.kind !== 'text_body') continue;
       if (hashTextBody(Buffer.from(row.data).toString('utf8')) !== hash) {
-        throw new Error('text_body_collection_invalid_bytes');
+        throw new Error(`text_body_collection_invalid_bytes:${hash}`);
       }
       driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
       driver.execute("DELETE FROM content_blobs WHERE hash = ? AND kind = 'text_body'", [hash]);

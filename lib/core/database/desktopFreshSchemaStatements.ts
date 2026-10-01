@@ -5,6 +5,7 @@ import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from './desktopSourceConnect
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatements.js';
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
 import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
+import { LEGACY_BODY_MIGRATION_SCHEMA } from './legacyBodyMigrationSchema.js';
 import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from './numberedMigrationWatchedFolderConflicts.js';
@@ -43,5 +44,6 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS,
   ...READWISE_HOST_SETTINGS_VERSION_GUARDS,
   ...STORED_SOURCE_SEARCH_SCHEMA,
+  ...LEGACY_BODY_MIGRATION_SCHEMA,
   ...DATA_MIGRATION_STATE_SCHEMA_STATEMENTS
 ].filter((statement) => !isRetiredAttachmentSchema(statement));

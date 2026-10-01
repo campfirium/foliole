@@ -11,7 +11,7 @@ import {
 it('keeps every registered operation executable and auditable from one definition', () => {
   const definitions = listDesktopOperationDefinitions();
 
-  expect(definitions).toHaveLength(13);
+  expect(definitions).toHaveLength(14);
   for (const definition of definitions) {
     expect(definition).toMatchObject({
       blocksStartup: false,
@@ -30,7 +30,7 @@ it('keeps every registered operation executable and auditable from one definitio
   expect(table).toContain('| managed-inbox-import |');
 
   const mainDatabaseOperations = definitions.filter((definition) => [
-    'automatic-backup', 'image-address-migration', 'keep-import', 'managed-inbox-import', 'mirror-backfill',
+    'legacy-body-collection', 'automatic-backup', 'image-address-migration', 'keep-import', 'managed-inbox-import', 'mirror-backfill',
     'mirror-incremental', 'pdf-indexing', 'readwise-api-import'
   ].includes(definition.name));
   for (const definition of mainDatabaseOperations) {

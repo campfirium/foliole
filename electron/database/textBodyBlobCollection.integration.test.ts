@@ -113,3 +113,13 @@ it('retires only exact inline duplicates without changing node or version facts'
   expect(retireDuplicateNodeInlineContent(peer.driver, ['topic']).protectedNodeIds).toEqual(['topic']);
   expect(peer.db.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic')).toBe('Contradictory fact');
 });
+
+it('does not retire inline facts when the referenced blob metadata is not a text body', () => {
+  const peer = createPeer('source');
+  edit(peer, 'Original inline fact');
+  peer.db.prepare('UPDATE nodes SET content = ?').run('Original inline fact');
+  peer.db.prepare("UPDATE content_blobs SET kind = 'image'").run();
+  expect(retireDuplicateNodeInlineContent(peer.driver, ['topic']))
+    .toEqual({ changed: 0, protectedNodeIds: ['topic'] });
+  expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe('Original inline fact');
+});

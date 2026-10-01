@@ -12,7 +12,7 @@ export interface StoredSyncNodeVersionRow extends DbRow {
   version_id: string;
 }
 
-export function storedSyncNodeVersionBody(row: StoredSyncNodeVersionRow): string | null {
+export function storedSyncNodeVersionBody<T extends Pick<StoredSyncNodeVersionRow, 'body_text' | 'snapshot_json'>>(row: T): string | null {
   if (row.body_text !== null) return row.body_text;
   const snapshot = JSON.parse(row.snapshot_json) as { content?: unknown };
   if (snapshot?.content === null) return null;
