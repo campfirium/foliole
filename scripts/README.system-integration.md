@@ -30,7 +30,7 @@ npm run integration:maintain -- --scope core
 | editing | 独立 SQLite 节点与分支→真实编辑和父内容更新；合并、冲突备选、无变化编辑、重试与缺失基线保护 |
 | reading | 独立 SQLite→保存活动节点、滚动与选区；读回一致、较旧写入/恢复不覆盖新进度；workspace snapshot 保留阅读状态 |
 | review | 独立 SQLite→评分/重置；复习状态与日志一起持久化、同步状态及删除事实一致 |
-| search | 独立 SQLite/搜索 sidecar→生产搜索与索引恢复；正文匹配、PDF 跨页、短查询、源身份/版本一致性 |
+| search | 独立 SQLite/搜索 sidecar→生产搜索与索引恢复；正文匹配、PDF 跨页、短查询、源身份/版本一致性；回收站标记/排序、恢复、永久删除与索引快照；另以 search-ui 步骤验证加载状态与来源不刷新 |
 | import | 独立 SQLite→生产导入；新/重复/更新/降级与来源可追溯，已删除对象不被重复导入错误复活 |
 | sync | 两份隔离库/资源目录→生产多实例 HTTP；24 场景分别桌面/共享 companion 接收，共 48 项；编辑/合并/冲突/删除/分页/资源/断线/重启/重复收敛；逐项详情见 [模拟器说明](sync/README.simulator.md) |
 

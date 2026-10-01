@@ -14,7 +14,7 @@ it('selects an explicit affected domain without running other product domains', 
 it('runs core plus the full two-path synchronization regression for full maintenance', () => {
   const outputRoot = path.resolve('isolated-output');
   const steps = maintenanceSteps(parseMaintenanceArgs([]).scope, outputRoot);
-  expect(steps.map((step) => step.name)).toEqual(['journey', 'editing', 'reading', 'review', 'search', 'import', 'sync']);
+  expect(steps.map((step) => step.name)).toEqual(['journey', 'editing', 'reading', 'review', 'search', 'import', 'search-ui', 'sync']);
   const sync = steps.at(-1);
   expect(sync.args).toContain('both');
   expect(sync.args).not.toContain('--scenarios');
