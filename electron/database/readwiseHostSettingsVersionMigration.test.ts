@@ -19,20 +19,13 @@ vi.mock('../ipc/paths.js', () => ({
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { initializeDatabase } from './migrate.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
-const GUARDS = [
-  'readwise_host_settings_insert_guard',
-  'readwise_host_settings_update_guard',
-  'readwise_host_setting_record_insert_guard',
-  'readwise_host_setting_record_update_guard'
-];
 let tempRoot = '';
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-settings-v2-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
 });
 
 afterEach(async () => {
@@ -42,8 +35,7 @@ afterEach(async () => {
 
 function prepareV78(value: string) {
   const connection = openDatabaseConnection();
-  for (const guard of GUARDS) connection.sqlite.exec(`DROP TRIGGER ${guard}`);
-  connection.sqlite.pragma('user_version = 78');
+  installHistoricalDesktopSchema(connection.sqlite, 78);
   connection.driver.execute(`INSERT INTO settings (key, value, updated_at)
     VALUES ('readwise_import_settings', ?, 'old')`, [value]);
   connection.driver.execute(`INSERT INTO setting_records

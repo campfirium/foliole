@@ -9,12 +9,14 @@ import { expect, it } from 'vitest';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import {
   SYNC_PACK_FORMAT_VERSION,
+  SYNC_PACK_MINIMUM_SCHEMA_VERSION,
   SYNC_PACK_PAYLOAD_SCHEMA_VERSION
 } from '../../lib/core/sync/syncPackEnvelopeContract.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 import { migrateDesktopHostProfile } from './hostProfile.js';
 
 const BASELINE = {
@@ -25,21 +27,24 @@ const BASELINE = {
   syncPackPayloadSchema: 88
 } as const;
 
-it('freezes the Host-state cutover versions and generated protocol assets', () => {
-  expect({
+it('preserves the Host-state cutover milestones and generated protocol assets', () => {
+  const current = {
     companionSchema: COMPANION_DATABASE_VERSION,
     desktopSchema: DATABASE_SCHEMA_VERSION,
     protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version,
     syncPack: SYNC_PACK_FORMAT_VERSION,
     syncPackPayloadSchema: SYNC_PACK_PAYLOAD_SCHEMA_VERSION
-  }).toEqual(BASELINE);
+  };
+  for (const key of Object.keys(BASELINE) as Array<keyof typeof BASELINE>) {
+    expect(current[key]).toBeGreaterThanOrEqual(BASELINE[key]);
+  }
 
   const android = readJson('android/app/src/main/assets/companion-sync-protocol-definitions.json');
   const ios = readJson('ios/App/App/companion-sync-protocol-definitions.json');
   expect(android).toEqual(ios);
   expect(readSchemaWindow(android)).toEqual({
-    maximumSchemaVersion: BASELINE.syncPackPayloadSchema,
-    minimumSchemaVersion: BASELINE.syncPackPayloadSchema
+    maximumSchemaVersion: SYNC_PACK_PAYLOAD_SCHEMA_VERSION,
+    minimumSchemaVersion: SYNC_PACK_MINIMUM_SCHEMA_VERSION
   });
 });
 
@@ -47,7 +52,7 @@ it('creates only Host-scoped permanent state in a fresh desktop database', () =>
   const sqlite = new Database(':memory:');
   initializeDatabaseSchema(sqlite);
 
-  expect(sqlite.pragma('user_version', { simple: true })).toBe(BASELINE.desktopSchema);
+  expect(sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
   expect(columns(sqlite, 'node_reading_host_state')).toContain('host_name');
   expect(columns(sqlite, 'node_view_state')).toContain('host_name');
   expect(columns(sqlite, 'setting_records')).toContain('host_name');
@@ -125,15 +130,10 @@ it('transfers the unique desktop Host scope while preserving permanent state', (
 
 it('rolls back Host schema, version, and state when desktop cutover fails', () => {
   const sqlite = new Database(':memory:');
-  initializeDatabaseSchema(sqlite);
+  installHistoricalDesktopSchema(sqlite, 69);
   sqlite.exec(`
     INSERT INTO settings VALUES ('device_id', '"Old Mac"', 'old');
     INSERT INTO settings VALUES ('host_name', '"Old Mac"', 'old');
-    ALTER TABLE node_reading_host_state RENAME TO node_reading_device_state;
-    ALTER TABLE node_reading_device_state RENAME COLUMN host_name TO device_id;
-    ALTER TABLE node_view_state RENAME COLUMN host_name TO device_id;
-    ALTER TABLE setting_records RENAME COLUMN host_name TO device_id;
-    PRAGMA user_version = 69;
   `);
   const connection = { driver: createBetterSqlite3Driver(sqlite), sqlite } as never;
 

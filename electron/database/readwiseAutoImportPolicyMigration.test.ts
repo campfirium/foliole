@@ -19,7 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { initializeDatabase } from './migrate.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 const guards = [
   'readwise_host_settings_insert_guard',
@@ -32,7 +32,6 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-policy-migration-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
 });
 
 afterEach(async () => {
@@ -42,6 +41,7 @@ afterEach(async () => {
 
 function prepareV83() {
   const connection = openDatabaseConnection();
+  installHistoricalDesktopSchema(connection.sqlite, 83);
   guards.forEach((name) => connection.sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`));
   const global = JSON.stringify({ detailsOpen: false, sources: [], version: 4 });
   const host = JSON.stringify({
@@ -64,7 +64,6 @@ function prepareV83() {
     ON CONFLICT(key, scope, platform, form_factor, host_name) DO UPDATE SET
       value_json = excluded.value_json, content_hash = excluded.content_hash,
       updated_at = excluded.updated_at`, [global, host]);
-  connection.sqlite.pragma('user_version = 83');
   return { connection, global, host };
 }
 

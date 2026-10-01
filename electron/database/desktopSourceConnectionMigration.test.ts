@@ -7,7 +7,7 @@ import { expect, it } from 'vitest';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { migrateDesktopSourceConnections } from '../../lib/core/database/numberedMigrationDesktopSourceConnections.js';
 
-import { createHistoricalImportSourcesTable, createHistoricalSettingsAndSyncTables } from './historicalMigration.test-support.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 const require = createRequire(import.meta.url);
 const BetterSqlite3 = require('better-sqlite3') as typeof import('better-sqlite3');
@@ -177,25 +177,7 @@ function expectMigratedSourceSettings(sqlite: import('better-sqlite3').Database)
 }
 
 function createV66SourceTables(sqlite: import('better-sqlite3').Database) {
-  createHistoricalSettingsAndSyncTables(sqlite);
-  createHistoricalImportSourcesTable(sqlite);
-  sqlite.exec(`CREATE TABLE external_search_folders (
-    id TEXT PRIMARY KEY, folder_path TEXT NOT NULL, attachment_mode TEXT NOT NULL,
-    attachment_root_path TEXT, excluded_dirs_json TEXT NOT NULL DEFAULT '[]',
-    status TEXT NOT NULL DEFAULT 'idle', document_count INTEGER NOT NULL DEFAULT 0,
-    indexed_at TEXT, last_error TEXT, owner_installation_id TEXT,
-    owner_device_name TEXT, owner_platform TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
-  );
-  CREATE TABLE external_folder_device_preferences (
-    installation_id TEXT NOT NULL, folder_id TEXT NOT NULL,
-    enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)), updated_at TEXT NOT NULL,
-    PRIMARY KEY (installation_id, folder_id)
-  );
-  CREATE TABLE keep_import_items (
-    rule_id TEXT NOT NULL, source_path TEXT NOT NULL, last_status TEXT NOT NULL,
-    last_seen_at TEXT NOT NULL, last_node_id TEXT, PRIMARY KEY (rule_id, source_path)
-  );
-  PRAGMA user_version = 66;`);
+  installHistoricalDesktopSchema(sqlite, 66);
 }
 
 function seedV66SourceData(sqlite: import('better-sqlite3').Database) {
@@ -207,12 +189,14 @@ function seedV66SourceData(sqlite: import('better-sqlite3').Database) {
   INSERT INTO external_folder_device_preferences VALUES (
     'installation-mac', 'external-1', 0, '2026-08-02T00:00:00.000Z'
   );
-  INSERT INTO import_sources VALUES (
+  INSERT INTO import_sources (source_fingerprint,provider,source_kind,source_name,source_locator,
+    first_imported_at,last_imported_at,last_content_fingerprint,latest_node_id) VALUES (
     'watched-fingerprint', 'markdown', 'file', 'Draft', '/Library/Drafts/draft.md',
     '2026-07-01T00:00:00.000Z', '2026-08-01T00:00:00.000Z', 'content-hash', 'node-1'
   );
-  INSERT INTO keep_import_items VALUES (
-    'draft-import-source-1', '/Library/Drafts/draft.md', 'imported',
+  INSERT INTO keep_import_items (rule_id,source_path,source_mtime_ms,source_size_bytes,first_seen_at,
+    last_status,last_seen_at,last_node_id) VALUES (
+    'draft-import-source-1', '/Library/Drafts/draft.md', 1, 1, '2026-07-01T00:00:00.000Z', 'imported',
     '2026-08-01T00:00:00.000Z', 'node-1'
   );
   INSERT INTO settings VALUES (

@@ -20,14 +20,13 @@ import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/cor
 import { createDefaultReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { initializeDatabase } from './migrate.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 let tempRoot = '';
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-tag-policy-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
 });
 
 afterEach(async () => {
@@ -37,13 +36,13 @@ afterEach(async () => {
 
 it('adds an empty import tag and advances the Host gate atomically from v85', () => {
   const connection = openDatabaseConnection();
+  installHistoricalDesktopSchema(connection.sqlite, 85);
   for (const name of [
     'readwise_host_settings_insert_guard',
     'readwise_host_settings_update_guard',
     'readwise_host_setting_record_insert_guard',
     'readwise_host_setting_record_update_guard'
   ]) connection.sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`);
-  connection.sqlite.pragma('user_version = 85');
   const global = JSON.stringify({
     readwiseAutoImportPolicy: { ...createDefaultReadwiseAutoImportPolicy(), importTag: undefined, version: 2 },
     version: 5

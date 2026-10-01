@@ -19,14 +19,13 @@ vi.mock('../ipc/paths.js', () => ({
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { initializeDatabase } from './migrate.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 let tempRoot = '';
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-seven-policy-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
 });
 
 afterEach(async () => {
@@ -36,13 +35,13 @@ afterEach(async () => {
 
 function prepareV84(status: 'api' | 'migration-in-progress') {
   const connection = openDatabaseConnection();
+  installHistoricalDesktopSchema(connection.sqlite, 84);
   for (const name of [
     'readwise_host_settings_insert_guard',
     'readwise_host_settings_update_guard',
     'readwise_host_setting_record_insert_guard',
     'readwise_host_setting_record_update_guard'
   ]) connection.sqlite.exec(`DROP TRIGGER IF EXISTS ${name}`);
-  connection.sqlite.pragma('user_version = 84');
   const settings = JSON.stringify({
     readwiseAutoImportPolicy: {
       articleWithHighlights: 'external', articleWithoutHighlights: 'off',

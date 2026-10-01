@@ -17,14 +17,13 @@ vi.mock('../ipc/paths.js', () => ({
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { initializeDatabase } from './migrate.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 let tempRoot = '';
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-identity-migration-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
 });
 
 afterEach(async () => {
@@ -34,13 +33,7 @@ afterEach(async () => {
 
 function prepareV79() {
   const connection = openDatabaseConnection();
-  connection.sqlite.exec('DROP TABLE readwise_api_import_stage; DROP TABLE readwise_api_import_runs;');
-  connection.sqlite.exec('DROP INDEX idx_import_sources_readwise_remote_document');
-  connection.sqlite.exec('DROP INDEX idx_import_sources_readwise_remote_topic');
-  for (const column of ['remote_annotations_json', 'remote_document_id', 'remote_connection_ref', 'remote_provider', 'remote_import_state_json']) {
-    connection.sqlite.exec(`ALTER TABLE import_sources DROP COLUMN ${column}`);
-  }
-  connection.sqlite.pragma('user_version = 79');
+  installHistoricalDesktopSchema(connection.sqlite, 79);
   return connection;
 }
 

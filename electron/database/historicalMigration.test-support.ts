@@ -1,4 +1,37 @@
+import { fileURLToPath } from 'node:url';
+
+import Database from 'better-sqlite3';
+
 import type { DatabaseMigrationTarget } from '../../lib/core/database/migrationTypes.js';
+import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
+
+export function installHistoricalDesktopSchema(sqlite: DatabaseMigrationTarget, targetVersion: number) {
+  const baseline = targetVersion < 78 ? 66 : 78;
+  const source = new Database(fileURLToPath(new URL(
+    `./fixtures/public-desktop-main/schema-${baseline}/foliole.db`, import.meta.url
+  )), { readonly: true, fileMustExist: true });
+  try {
+    const currentVersion = source.pragma('user_version', { simple: true }) as number;
+    const statements = source.prepare(`SELECT sql FROM sqlite_master
+      WHERE type IN ('table', 'index', 'view', 'trigger')
+        AND name NOT GLOB 'sqlite_*' AND sql IS NOT NULL
+      ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1
+        WHEN 'view' THEN 2 WHEN 'trigger' THEN 3 END, rowid`).all() as { sql: string }[];
+    sqlite.transaction(() => {
+      for (const { sql } of statements) sqlite.exec(sql);
+      sqlite.pragma(`user_version = ${currentVersion}`);
+      applyNumberedSchemaMigrations({
+        currentVersion,
+        legacyMessage: 'historical desktop fixture is older than the supported baseline',
+        setUserVersion: (version) => sqlite.pragma(`user_version = ${version}`),
+        sqlite,
+        targetVersion
+      });
+    })();
+  } finally {
+    source.close();
+  }
+}
 
 // Pre-Host schema: b54d1a6b8^:lib/core/database/syncSchemaStatements.ts.
 // Keep legacy column names so the numbered migrations exercise their renames.

@@ -17,14 +17,13 @@ vi.mock('../ipc/paths.js', () => ({
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { initializeDatabase } from './migrate.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 let tempRoot = '';
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-external-reference-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
 });
 
 afterEach(async () => {
@@ -34,9 +33,7 @@ afterEach(async () => {
 
 function prepareV81() {
   const connection = openDatabaseConnection();
-  connection.sqlite.exec('ALTER TABLE external_documents DROP COLUMN reference_json');
-  connection.sqlite.exec('ALTER TABLE external_documents DROP COLUMN reference_kind');
-  connection.sqlite.pragma('user_version = 81');
+  installHistoricalDesktopSchema(connection.sqlite, 81);
   return connection;
 }
 

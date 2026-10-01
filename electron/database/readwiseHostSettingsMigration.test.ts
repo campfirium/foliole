@@ -20,14 +20,13 @@ import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/cor
 import { migrateReadwiseHostSettings } from '../../lib/core/database/numberedMigrationReadwiseHostSettings.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { initializeDatabase } from './migrate.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 let tempRoot = '';
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-host-settings-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
 });
 
 afterEach(async () => {
@@ -92,39 +91,22 @@ function seedLegacySource(hostName: string, suffix = '') {
   ]);
 }
 
-function installHistoricalV76SyncStateShape() {
-  const sqlite = openDatabaseConnection().sqlite;
-  sqlite.exec(`DROP TABLE sync_object_state;
-    CREATE TABLE sync_object_state (
-      object_type TEXT NOT NULL,
-      object_id TEXT NOT NULL,
-      state_seq INTEGER NOT NULL,
-      current_version_id TEXT,
-      content_hash TEXT NOT NULL,
-      last_modified_by_host_name TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      deleted_at TEXT,
-      sync_dirty INTEGER NOT NULL DEFAULT 0,
-      PRIMARY KEY (object_type, object_id),
-      UNIQUE (state_seq)
-    );`);
-}
-
 function prepareV76() {
   const connection = openDatabaseConnection();
-  installHistoricalV76SyncStateShape();
+  installHistoricalDesktopSchema(connection.sqlite, 76);
   const value = JSON.stringify(legacySettings());
   connection.driver.execute(`INSERT INTO settings (key, value, updated_at) VALUES
     ('host_name', ?, 'now'), ('import_manager_settings', ?, '2026-08-20T00:00:00.000Z')
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
   [JSON.stringify('Host A'), value]);
-  connection.sqlite.pragma('user_version = 76');
   return connection;
 }
 
 it('moves the local Readwise projection into Host scope without rewriting Source or Topic Location', () => {
   const connection = prepareV76();
   seedLegacySource('Host A');
+  connection.driver.execute(`INSERT INTO nodes (id, parent_id, kind, title, content, created_at, updated_at)
+    VALUES ('existing-node', NULL, 'topic', 'Existing', '', 'now', 'now')`);
   connection.driver.execute(`INSERT INTO sync_object_state (object_type, object_id, state_seq,
     current_version_id, content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty)
     VALUES ('node', 'existing-node', 1, NULL, 'existing-hash', 'Host A', 'now', NULL, 0)`);

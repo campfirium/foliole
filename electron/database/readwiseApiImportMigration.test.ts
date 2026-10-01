@@ -17,14 +17,13 @@ vi.mock('../ipc/paths.js', () => ({
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { initializeDatabase } from './migrate.js';
+import { installHistoricalDesktopSchema } from './historicalMigration.test-support.js';
 
 let tempRoot = '';
 
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-api-migration-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
 });
 
 afterEach(async () => {
@@ -34,10 +33,7 @@ afterEach(async () => {
 
 function prepareV80() {
   const connection = openDatabaseConnection();
-  connection.sqlite.exec(`DROP TABLE readwise_api_import_stage;
-    DROP TABLE readwise_api_import_runs;
-    ALTER TABLE import_sources DROP COLUMN remote_import_state_json;`);
-  connection.sqlite.pragma('user_version = 80');
+  installHistoricalDesktopSchema(connection.sqlite, 80);
   return connection;
 }
 

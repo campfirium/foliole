@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { promises as fs } from 'node:fs';
+import { promises as fs, readFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -24,7 +24,6 @@ import {
 } from '../../lib/core/database/index.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
-import { createHistoricalImportSourcesTable, createHistoricalSettingsAndSyncTables } from './historicalMigration.test-support.js';
 
 let tempRoot = '';
 
@@ -46,9 +45,6 @@ it('installs core indexes in fresh and migrated desktop databases', () => {
 
   const migrated = openDatabaseConnection();
   createV38CoreTables(migrated.sqlite);
-  createHistoricalSettingsAndSyncTables(migrated.sqlite);
-  createHistoricalImportSourcesTable(migrated.sqlite);
-  migrated.sqlite.pragma('user_version = 38');
   initializeDatabaseConnection(migrated);
 
   expect(migrated.sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
@@ -95,46 +91,11 @@ function queryPlan(sqlite: ReturnType<typeof openDatabaseConnection>['sqlite'], 
 }
 
 function createV38CoreTables(sqlite: ReturnType<typeof openDatabaseConnection>['sqlite']) {
-  sqlite.exec(`
-    CREATE TABLE nodes (
-      id TEXT PRIMARY KEY,
-      parent_id TEXT,
-      body_blob_hash TEXT,
-      current_version_id TEXT,
-      sync_dirty INTEGER NOT NULL DEFAULT 0,
-      updated_at TEXT NOT NULL,
-      deleted_at TEXT
-    );
-    CREATE TABLE node_review (
-      node_id TEXT PRIMARY KEY,
-      due TEXT NOT NULL
-    );
-    CREATE TABLE node_reading (
-      node_id TEXT PRIMARY KEY,
-      next_at TEXT NOT NULL,
-      state TEXT NOT NULL DEFAULT 'active'
-    );
-    CREATE TABLE review_log (
-      id TEXT PRIMARY KEY,
-      op_id TEXT NOT NULL UNIQUE,
-      device_id TEXT NOT NULL,
-      node_id TEXT NOT NULL,
-      reviewed_at TEXT NOT NULL
-    );
-    CREATE TABLE external_search_folders (
-      id TEXT PRIMARY KEY,
-      folder_path TEXT NOT NULL UNIQUE,
-      attachment_mode TEXT NOT NULL,
-      attachment_root_path TEXT,
-      excluded_dirs_json TEXT NOT NULL DEFAULT '[]',
-      status TEXT NOT NULL DEFAULT 'idle',
-      document_count INTEGER NOT NULL DEFAULT 0,
-      indexed_at TEXT,
-      last_error TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    );
-  `);
+  const fixture = JSON.parse(readFileSync(new URL('./fixtures/core-index-schema-38.json', import.meta.url), 'utf8')) as {
+    schema: number; statements: string[];
+  };
+  for (const statement of fixture.statements) sqlite.exec(statement);
+  sqlite.pragma(`user_version = ${fixture.schema}`);
 }
 
 function seedQueryPlanRows(sqlite: ReturnType<typeof openDatabaseConnection>['sqlite']) {
