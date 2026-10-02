@@ -23,7 +23,7 @@ async function port() {
   return address.port;
 }
 
-async function setup() {
+async function setup(registerMembers = true) {
   await fs.mkdir('.tmp/artifacts/sync-join', { recursive: true });
   root = await fs.mkdtemp(path.resolve('.tmp/artifacts/sync-join/overwrite-'));
   await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
@@ -36,11 +36,29 @@ async function setup() {
     workers.push(worker);
     peers.push(await worker.send('init', { groupId, name }));
   }
-  for (const worker of workers) await worker.send('register', {
+  for (const worker of registerMembers ? workers : []) await worker.send('register', {
     members: peers.map((peer, i) => ({ device: peer.device, name: ['Source', 'Provider', 'Offline'][i] }))
   });
   return { script, peers, groupId };
 }
+
+it('supplies an overwrite to the approving device without prior local membership records', async () => {
+  const { peers } = await setup(false);
+  const [source, provider] = workers;
+  await source!.send('seed', { id: 'local-note', content: 'Fresh source data' });
+  await provider!.send('seed', { id: 'remote-note', content: 'Provider data' });
+  await source!.send('leave');
+  await provider!.send('joinProviderEnable');
+  const request = await source!.send('joinRequest', { origin: peers[1]!.origin, mode: 'overwrite' }) as unknown as {
+    join_request: { request_id: string }
+  };
+  await provider!.send('joinAccept', { requestId: request.join_request.request_id });
+  await source!.send('joinComplete');
+  await provider!.send('sync', { ...peers[0]! });
+  const received = await provider!.send('reopen');
+  expect(received.library.nodesById['remote-note']).toBeUndefined();
+  expect(received.library.nodesById['local-note']?.content).toBe('Fresh source data');
+}, 90000);
 
 for (const mode of ['merge', 'overwrite']) {
   it(`${mode} join ${mode === 'merge' ? 'retains rollback protection' : 'overwrites the whole group despite retained history'}`, async () => {
@@ -52,8 +70,8 @@ for (const mode of ['merge', 'overwrite']) {
     await offline!.send('seed', { id: 'offline-note', content: 'Offline historical data' });
     await source!.send('joinProviderEnable');
     await provider!.send('joinProviderEnable');
-    await source!.send('sync', peers[1]);
-    await provider!.send('sync', peers[0]);
+    await source!.send('sync', { ...peers[1]! });
+    await provider!.send('sync', { ...peers[0]! });
     expect((await source!.send('snapshot')).library.nodesById['remote-note']).toBeDefined();
     await offline!.close();
     workers.pop();
@@ -74,12 +92,12 @@ for (const mode of ['merge', 'overwrite']) {
     await provider!.send('joinAccept', { requestId: request.join_request.request_id });
     await source!.send('joinComplete');
     if (mode === 'merge') {
-      await expect(provider!.send('sync', peers[0])).rejects.toThrow('node_version_peer_restore_requires_rejoin');
+      await expect(provider!.send('sync', { ...peers[0]! })).rejects.toThrow('node_version_peer_restore_requires_rejoin');
       expect((await provider!.send('snapshot')).library.nodesById['remote-note']).toBeDefined();
       expect((await source!.send('snapshot')).restore).toBeNull();
       return;
     }
-    await provider!.send('pull', peers[0]);
+    await provider!.send('pull', { ...peers[0]! });
     await expect.poll(async () => (await provider!.send('snapshot')).library.nodesById['remote-note'],
       { timeout: 20000 }).toBeUndefined();
     const local = await source!.send('reopen');
@@ -92,7 +110,7 @@ for (const mode of ['merge', 'overwrite']) {
     await assertOfflineCatchup(script, groupId, peers[0]!, local.restore!.event.restore_id);
     await provider!.send('enable');
     await provider!.send('seed', { id: 'after-overwrite', content: 'Normal sync afterwards' });
-    await source!.send('sync', peers[1]);
+    await source!.send('sync', { ...peers[1]! });
     expect((await source!.send('reopen')).library.nodesById['after-overwrite']?.content).toBe('Normal sync afterwards');
     const safety = await provider!.send('safety') as unknown as Array<{ nodes: Array<{ id: string }> }>;
     expect(safety.some((entry) => entry.nodes.some((node) => node.id === 'remote-note'))).toBe(true);
@@ -104,7 +122,7 @@ async function assertOfflineCatchup(script: string, groupId: string, peer: Await
   workers.push(returning);
   await returning.send('init', { groupId, name: 'Offline' });
   await returning.send('enable');
-  await returning.send('pull', peer);
+  await returning.send('pull', { ...peer });
   const caughtUp = await returning.send('reopen');
   expect(caughtUp.library.nodesById['offline-note']).toBeUndefined();
   expect(caughtUp.library.nodesById['local-note']?.content).toBe('Local chosen data');

@@ -9,6 +9,7 @@ import {
 const privateKey = null as unknown as CryptoKey;
 
 beforeEach(() => saveDesktopSyncGroupPendingJoin({
+  mode: 'merge',
   candidate: {
     endpoint_url: 'http://192.168.1.12:41000', group_display_name: 'Office',
     group_id: 'group-1', group_tag: 'tag-1', provider_device_id: 'device-android-b',

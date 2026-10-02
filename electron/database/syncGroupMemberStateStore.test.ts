@@ -108,6 +108,26 @@ it('keeps the later of two offline backup restores before ordinary member sync',
   expect(loadDesktopSyncGroupMemberState().restore?.event.restore_id).toBe('restore-2');
 });
 
+it.each([true, false])('learns only a receiver negotiating the same explicit restore: %s', (matching) => {
+  const source = deviceDatabase(0, []);
+  const receiver = deviceDatabase(1, [0, 2]);
+  source.prepare(`INSERT INTO sync_group_restore_events
+    (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
+    VALUES ('restore-join', 'group-1', ?, ?, ?, ?)`).run(
+    '2026-10-03T00:00:00.000Z', identities[0]!.identity_key,
+    '2026-10-03T00:00:00.000Z', '2026-10-03T00:00:00.000Z');
+  use(source);
+  const fromSource = loadDesktopSyncGroupMemberState();
+  use(receiver);
+  const incoming = applyDesktopSyncGroupMemberState(fromSource, identities[0]!.identity_key).state;
+  if (!matching) incoming.restore = null;
+  use(source);
+  expect(applyDesktopSyncGroupMemberState(incoming, identities[1]!.identity_key).normalSyncReady).toBe(false);
+  const devices = loadDesktopSyncGroupMemberState().devices;
+  expect(devices.some((device) => device.device_identity_key === identities[1]!.identity_key)).toBe(matching);
+  expect(devices.some((device) => device.device_identity_key === identities[2]!.identity_key)).toBe(false);
+});
+
 it('completes immediately when the target confirms its own exit', () => {
   const a = deviceDatabase(0, [1, 2]);
   const c = deviceDatabase(2, [0, 1]);

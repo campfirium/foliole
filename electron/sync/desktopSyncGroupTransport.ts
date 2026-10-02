@@ -45,6 +45,8 @@ async function continuePeerSync(target: DesktopSyncGroupPeer, activity?: Desktop
   if (memberState.peerBlocked) return skipPeerSync(target, activity, 'membership');
   const restoreId = memberState.restoreFromPeer;
   if (memberState.normalSyncReady === false && !restoreId) return skipPeerSync(target, activity, 'not_ready');
+  if (restoreId) await runPeerSyncStage('member_state', () =>
+    exchangeDesktopSyncGroupMemberState(target), target, activity);
   if (!restoreId) {
     await flushDesktopSyncGroupVersionReceipts(target);
     const pendingConflicts = await runWithDatabaseConnectionOwner(() => loadPendingWatchedFolderConflicts());
@@ -56,6 +58,8 @@ async function continuePeerSync(target: DesktopSyncGroupPeer, activity?: Desktop
     requestAndApply(target, position, restoreId ?? undefined), target, activity);
   await runWithDatabaseConnectionOwner(() =>
     reconcileVersionedInlineBodies(openDatabaseConnection().driver));
+  if (restoreId) await runPeerSyncStage('member_state', () =>
+    exchangeDesktopSyncGroupMemberState(target), target, activity);
   const nextCursor = pack.cursor;
   await runWithDatabaseConnectionOwner(() => saveReceiveCursor(target.peer_device_id, nextCursor));
   await flushDesktopSyncGroupVersionReceipts(target);

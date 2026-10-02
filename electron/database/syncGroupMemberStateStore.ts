@@ -92,7 +92,15 @@ export function applyDesktopSyncGroupMemberState(
   driver.transaction(() => {
     const localRestore = receiveDesktopSyncGroupRestoreState(driver, incoming.group_id, incoming.restore);
     normalSyncReady = syncGroupRestorePeersReady(localRestore, incoming.restore);
-    if (!normalSyncReady) return;
+    if (!normalSyncReady) {
+      if (localRestore?.applied && localRestore.event.source_device_identity_key === local.sender_device_identity_key &&
+          incoming.restore?.event.restore_id === localRestore.event.restore_id) {
+        const receiver = incoming.devices.find((device) =>
+          device.device_identity_key === authenticatedDeviceId && device.state === 'active');
+        if (receiver) mergeDevice(incoming.group_id, receiver, local.sender_device_identity_key);
+      }
+      return;
+    }
     assertDesktopPeerProofFresh(incoming);
     for (const removal of incoming.removals) mergeRemoval(incoming.group_id, removal);
     for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key);

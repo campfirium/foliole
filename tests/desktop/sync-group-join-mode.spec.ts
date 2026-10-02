@@ -53,12 +53,32 @@ async function candidate(joining: DesktopSession, provider: DesktopSession) {
   return group.sync_group!.group_id;
 }
 
+async function bindReturnRoute(provider: DesktopSession, joining: DesktopSession) {
+  await expect.poll(async () => (await invoke<Overview>(joining, 'load_sync_group_overview')).server_status.port).not.toBeNull();
+  const port = (await invoke<Overview>(joining, 'load_sync_group_overview')).server_status.port;
+  await provider.electronApp.evaluate(({ app }, endpointUrl) => {
+    const pathApi = process.getBuiltinModule('node:path')!;
+    const load = process.getBuiltinModule('node:module')!.createRequire(pathApi.join(app.getAppPath(), 'main.js'));
+    const group = load(pathApi.join(app.getAppPath(), 'database', 'syncGroupStore.js')).loadDesktopSyncGroup();
+    const peer = group.devices.find((device: { device_identity_key: string }) =>
+      device.device_identity_key !== group.local_device_identity_key);
+    load(pathApi.join(app.getAppPath(), 'sync', 'desktopSyncGroupRoutes.js')).saveDesktopSyncGroupRoute({
+      endpoint_url: endpointUrl, group_id: group.group_id, local_device_id: group.local_device_identity_key,
+      peer_device_id: peer.device_identity_key, peer_device_name: peer.device_name, peer_platform: peer.platform
+    });
+  }, `http://127.0.0.1:${port}`);
+}
+
 for (const mode of ['merge', 'overwrite']) {
   test(`chooses ${mode} before joining and applying group data`, async ({ desktopSession }, info) => {
     const provider = await launchDesktopSession({ env: { ...process.env,
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: info.outputPath('provider'),
       FOLIOLE_COMPANION_SYNC_PORT: String(await freePort()) } }) as DesktopSession;
     try {
+      await desktopSession.electronApp.evaluate((_electron, port) => {
+        process.env.FOLIOLE_COMPANION_SYNC_PORT = String(port);
+      }, await freePort());
+      await invoke(desktopSession, 'enable_companion_sync');
       const localId = await topic(desktopSession);
       const remoteId = await topic(provider);
       const groupId = await candidate(desktopSession, provider);
@@ -76,6 +96,7 @@ for (const mode of ['merge', 'overwrite']) {
       expect((await invoke<Overview>(desktopSession, 'load_sync_group_overview')).sync_group).toBeNull();
       await invoke(provider, 'accept_sync_group_join_request', { request_id: requestId });
       await expect.poll(async () => (await invoke<Overview>(desktopSession, 'load_sync_group_overview')).sync_group?.group_id).toBe(groupId);
+      await bindReturnRoute(provider, desktopSession);
       await invoke(provider, 'sync_companion_now');
       await expect.poll(() => persisted(provider, localId), { timeout: 20000 }).toBe(true);
       expect(await persisted(provider, remoteId)).toBe(mode === 'merge');
