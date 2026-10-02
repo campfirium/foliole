@@ -3,6 +3,7 @@ import { expect, it } from 'vitest';
 import { calendarDateKey, monthLeadingDays, reviewCalendarDayKey, reviewCalendarMonths } from '../../lib/core/review/reviewCalendarDates';
 import type { Node } from '../features/nodes/model/nodeTypes';
 
+import { buildReviewQueuePlan } from './reviewQueuePlanner';
 import { createReadingNode, createReadingProfile, createReviewNode } from './reviewQueuePlanner.test-support';
 import { selectReviewCalendarSchedule } from './workspaceReviewCalendar';
 
@@ -20,7 +21,8 @@ it('separates Item and Topic due counts and moves overdue work to today', () => 
     createReviewNode('item-overdue', new Date(2026, 8, 1, 12).toISOString()),
     createReviewNode('item-later', later),
     createReadingNode('topic-later', later, 'body', createReadingProfile(later)),
-    createReadingNode('topic-new', new Date(2026, 8, 1, 12).toISOString())
+    createReadingNode('topic-overdue', new Date(2026, 8, 1, 12).toISOString(), 'body',
+      createReadingProfile(new Date(2026, 8, 1, 12).toISOString()))
   ]);
   expect(days['2026-10-02']).toEqual({ day: '2026-10-02', items: 1, topics: 1 });
   expect(days['2026-10-03']).toEqual({ day: '2026-10-03', items: 1, topics: 1 });
@@ -29,8 +31,29 @@ it('separates Item and Topic due counts and moves overdue work to today', () => 
 
 it('counts all scheduled candidates without session mode truncation or expanding future repetitions', () => {
   const later = new Date(2026, 9, 8, 12).toISOString();
-  const nodes = Array.from({ length: 120 }, (_, i) => createReadingNode(`topic-${i}`, later));
+  const nodes = Array.from({ length: 120 }, (_, i) =>
+    createReadingNode(`topic-${i}`, later, 'body', createReadingProfile(later)));
   expect(schedule(nodes)).toEqual({ '2026-10-08': { day: '2026-10-08', items: 0, topics: 120 } });
+});
+
+it('excludes unstarted Topics from today and future due counts without removing them from the reading queue', () => {
+  const overdue = new Date(2026, 8, 1, 12).toISOString();
+  const later = new Date(2026, 9, 8, 12).toISOString();
+  const nodes = [
+    createReadingNode('unstarted-overdue', overdue),
+    createReadingNode('unstarted-future', later),
+    createReadingNode('scheduled-overdue', overdue, 'body', createReadingProfile(overdue)),
+    createReadingNode('scheduled-future', later, 'body', createReadingProfile(later))
+  ];
+  expect(schedule(nodes)).toEqual({
+    '2026-10-02': { day: '2026-10-02', items: 0, topics: 1 },
+    '2026-10-08': { day: '2026-10-08', items: 0, topics: 1 }
+  });
+  expect(buildReviewQueuePlan({
+    nodesById: Object.fromEntries(nodes.map((node) => [node.id, node])),
+    nodeOrder: nodes.map((node) => node.id), trashedNodeIds: [],
+    now: new Date(2026, 9, 2, 12).toISOString()
+  }).readingQueueNodeIds).toContain('unstarted-overdue');
 });
 
 it('reuses Topic eligibility and excludes dismissed, empty and deleted-ancestor candidates', () => {

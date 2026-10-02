@@ -22,6 +22,7 @@ export function selectReviewCalendarSchedule(args: {
     for (const id of new Set(ids)) {
       const node = args.nodesById[id];
       if (!node) continue;
+      if (kind === 'topics' && !node.reading) continue;
       const availableAt = kind === 'items' ? resolveStoredReviewDueAt({
         due: node.review?.due ?? node.createdAt,
         scheduledDays: node.review?.scheduledDays ?? 0,
