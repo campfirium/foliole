@@ -161,6 +161,7 @@ export const NATIVE_COMMANDS = {
   loadWorkspaceSnapshot: 'load_workspace_snapshot',
   loadEditorOperationHistory: 'load_editor_operation_history',
   loadSyncGroupOverview: 'load_sync_group_overview',
+  loadDesktopSyncDiagnostics: 'load_desktop_sync_diagnostics',
   saveWatchedFolderConflict: 'save_watched_folder_conflict',
   createSyncGroup: 'create_sync_group',
   leaveSyncGroup: 'leave_sync_group',

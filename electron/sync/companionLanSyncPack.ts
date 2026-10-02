@@ -21,6 +21,7 @@ export const SYNC_PACK_PATH = '/companion/sync-pack';
 
 export interface CompanionSyncPackResource {
   cleanup?: () => Promise<void>;
+  activityPackId?: string;
   error?: string;
   filePath?: string;
   fileName?: string;
@@ -105,6 +106,7 @@ export async function buildCompanionSyncPackResource(
     await markFinalRoundPack(group.group_id, authenticatedDeviceId, built);
     return {
       cleanup: () => fs.rm(tempRoot, { force: true, recursive: true }),
+      activityPackId: built.manifest.dependency_page?.transfer.sourceViewId ?? built.manifest.pack_id,
       filePath: outputPath,
       fileName: `${packId}.syncpack`,
       status: 'ready',

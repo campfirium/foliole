@@ -8,6 +8,7 @@ import { releaseConfirmedCompanionDependencySession } from './companionLanDepend
 import { releaseConfirmedCompanionFactSession } from './companionLanFactSession.js';
 import { restoreKnownFactReceiptHolds } from './companionLanKnownFactPack.js';
 import { releaseCompanionSourceRoundOnReceipt } from './companionLanSourceRoundView.js';
+import { recordDesktopSyncActivity } from './desktopSyncActivityStore.js';
 
 export const VERSION_PACK_RECEIPT_PATH = '/companion/version-pack-receipt';
 
@@ -38,5 +39,13 @@ export async function acceptCompanionVersionPackReceipt(bodyText: string, authen
   await releaseConfirmedCompanionDependencySession(receipt.groupId, receipt.deviceId, receipt.packId, receipt.results);
   await releaseConfirmedCompanionFactSession(receipt.groupId, receipt.deviceId, receipt.packId);
   await releaseCompanionSourceRoundOnReceipt(receipt.groupId, receipt.deviceId, receipt.packId);
+  const complete = receipt.results.every((result) => result.result === 'applied');
+  await recordDesktopSyncActivity({
+    runId: `outbound:${authenticatedDeviceId}:${receipt.packId}`, startedAt: new Date().toISOString()
+  }, { direction: 'send', kind: 'run_finished', message: complete ? 'Version saving confirmed' : 'Some versions were not applied',
+    result: complete ? 'completed' : 'blocked', stage: 'version_receipt',
+    status: complete ? 'completed' : 'skipped', confirmation: complete ? 'confirmed' : 'blocked',
+    record_count: receipt.results.filter((result) => result.result === 'applied').length },
+  { peer_device_id: authenticatedDeviceId, peer_device_name: '' });
   return { accepted: true };
 }

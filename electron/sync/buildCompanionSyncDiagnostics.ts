@@ -8,6 +8,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { loadOrCreateDesktopDeviceId } from '../database/deviceIdentity.js';
 import { loadMaxStateSeq } from '../database/syncPackRows.js';
 
+import { loadDesktopSyncActivity } from './desktopSyncActivityStore.js';
 import type { LanWorkspaceSyncServerStatus } from './lanWorkspaceSyncServer.js';
 
 interface CountRow extends Record<string, unknown> {
@@ -147,7 +148,7 @@ export function buildCompanionSyncDiagnostics(args: {
       missing_external_document_body_count: 0,
       missing_topic_body_count: 0
     },
-    events: [],
+    events: loadDesktopSyncActivity(),
     host: 'desktop',
     identity: {
       app_version: args.appVersion,

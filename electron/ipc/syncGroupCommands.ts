@@ -22,6 +22,7 @@ import {
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 import { getMainWindow } from '../mainWindowRegistry.js';
+import { buildDesktopSyncDiagnostics } from '../sync/buildDesktopSyncDiagnostics.js';
 import { resolveDesktopHostName, resolveDesktopPlatformLabel } from '../sync/companionLanPayloads.js';
 import {
   activateDesktopCompanionSync,
@@ -63,7 +64,7 @@ const discovery = new DesktopSyncGroupDiscoverySession((snapshot) => {
 });
 
 const COMMANDS = new Set<string>([
-  NATIVE_COMMANDS.loadSyncGroupOverview, NATIVE_COMMANDS.createSyncGroup,
+  NATIVE_COMMANDS.loadSyncGroupOverview, NATIVE_COMMANDS.loadDesktopSyncDiagnostics, NATIVE_COMMANDS.createSyncGroup,
   NATIVE_COMMANDS.saveWatchedFolderConflict,
   NATIVE_COMMANDS.leaveSyncGroup, NATIVE_COMMANDS.removeSyncGroupDevice,
   NATIVE_COMMANDS.discoverSyncGroups,
@@ -212,6 +213,8 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
 
 export function handleSyncGroupCommand(command: string, args: Record<string, unknown>) {
   if (!COMMANDS.has(command)) return undefined;
+  if (command === NATIVE_COMMANDS.loadDesktopSyncDiagnostics) return runWithDatabaseConnectionOwner(() =>
+    buildDesktopSyncDiagnostics(overview(), resolveFolioleAppVersion(app)));
   if (([NATIVE_COMMANDS.enableCompanionSync, NATIVE_COMMANDS.resumeCompanionSync,
     NATIVE_COMMANDS.createSyncGroup, NATIVE_COMMANDS.completeSyncGroupJoin] as string[]).includes(command)) {
     return ensureWindowsSyncNetworkPermission().then((allowed) => {

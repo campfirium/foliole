@@ -165,6 +165,7 @@ it('completes an anchor manual action without polling a member', async () => {
 
   expect(runtime.discovery).not.toHaveBeenCalled();
   expect(runtime.coordinator).not.toHaveBeenCalled();
+  expect(runtime.recordNoPeer).toHaveBeenCalledWith('manual');
 });
 
 it('checks collected desktop members when the anchor runs Sync Now', async () => {

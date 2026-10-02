@@ -111,7 +111,7 @@ it('binds sync push provenance to the authenticated Host', async () => {
 
   await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
 
-  expect(syncPushMock.handleCompanionSyncPush).toHaveBeenCalledWith(requestBody, 'Android A5');
+  expect(syncPushMock.handleCompanionSyncPush).toHaveBeenCalledWith(requestBody, 'Android A5', 'device-android');
   expect(writeJson).toHaveBeenCalledWith(request, response, 200, { acks: [] }, 'POST, OPTIONS');
 });
 

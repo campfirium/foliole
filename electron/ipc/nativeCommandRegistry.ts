@@ -166,6 +166,7 @@ export const NATIVE_COMMAND_REGISTRY = [
   { command: NATIVE_COMMANDS.releaseWorkspaceSearch, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadWorkspaceSnapshot, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadEditorOperationHistory, route: 'storage', capability: 'read' },
+  { command: NATIVE_COMMANDS.loadDesktopSyncDiagnostics, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadSyncGroupOverview, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.saveWatchedFolderConflict, route: 'storage', capability: 'dataMutation' },
   { command: NATIVE_COMMANDS.resolveReadwiseJoinDecision, route: 'storage', capability: 'settingsMutation' },

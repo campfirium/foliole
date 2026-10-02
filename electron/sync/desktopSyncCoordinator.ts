@@ -7,6 +7,7 @@ import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
 import { markWatchedConflictDecisionsSynced } from '../database/watchedConflictSyncMarker.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
+import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import {
   continueDesktopSyncGroupSync,
   type DesktopSyncGroupPeer,
@@ -83,6 +84,9 @@ function startNextRun() {
 async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSyncGroupPeer) {
   const startedAt = new Date().toISOString();
   const runId = randomUUID();
+  const activity = { runId, reason, startedAt };
+  await recordDesktopSyncActivity(activity, { direction: 'local', kind: 'run_started',
+    message: 'Sync started', stage: 'run', status: 'started' });
   try {
     const peers = preferredPeer ? [preferredPeer]
       : await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupPeers());
@@ -93,7 +97,7 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
     }
     let complete = true;
     for (const peer of peers) {
-      const outcome = await continueDesktopSyncGroupSync(peer);
+      const outcome = await continueDesktopSyncGroupSync(peer, activity);
       if (!outcome?.complete) complete = false;
     }
     if (!complete) throw new Error('sync_group_sync_incomplete');
@@ -111,6 +115,11 @@ async function runOwnedSync(reason: SyncTriggerReason, preferredPeer?: DesktopSy
 }
 
 async function persistResult(result: SyncTriggerResult) {
+  const context: DesktopSyncActivityContext = { runId: result.run_id,
+    reason: result.reason, startedAt: result.started_at };
+  await recordDesktopSyncActivity(context, { direction: 'local', kind: 'run_finished',
+    message: result.error ?? (result.status === 'skipped' ? 'No available device' : 'Local sync round completed'),
+    result: result.status === 'skipped' ? 'waiting' : result.status, stage: 'run', status: result.status });
   await runWithDatabaseConnectionOwner(() => saveJsonSetting(RESULT_SETTING_KEY, result));
   return result;
 }

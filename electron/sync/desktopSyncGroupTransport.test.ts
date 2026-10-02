@@ -13,6 +13,7 @@ const runtime = vi.hoisted(() => ({
   reconcileBodies: vi.fn(),
   refreshAdvertisement: vi.fn(),
   reportCursor: vi.fn(),
+  recordActivity: vi.fn(),
   flushVersionReceipts: vi.fn(),
   setPeerCursor: vi.fn()
 }));
@@ -64,6 +65,7 @@ vi.mock('./desktopSyncGroupResourceArticleDrain.js', () => ({
 }));
 vi.mock('./desktopSyncGroupRoutes.js', () => ({ loadDesktopSyncGroupRoutes: vi.fn() }));
 vi.mock('./workspaceSyncAppliedEvents.js', () => ({ notifyWorkspaceSyncApplied: runtime.notifyApplied }));
+vi.mock('./desktopSyncActivityStore.js', () => ({ recordDesktopSyncActivity: runtime.recordActivity }));
 
 import { continueDesktopSyncGroupSync } from './desktopSyncGroupTransport.js';
 
@@ -97,7 +99,10 @@ beforeEach(() => {
 it('stops before content when member state marks the peer removed', async () => {
   runtime.exchangeMemberState.mockResolvedValueOnce({ localExited: false, peerBlocked: true });
 
-  await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: false, cursor: 0 });
+  const activity = { runId: 'round', startedAt: 'now' };
+  await expect(continueDesktopSyncGroupSync(peer, activity)).resolves.toEqual({ complete: false, cursor: 0 });
+  expect(runtime.recordActivity).toHaveBeenLastCalledWith(activity,
+    expect.objectContaining({ result: 'blocked', message: 'membership' }), peer);
   expect(runtime.downloadPack).not.toHaveBeenCalled();
   expect(runtime.downloadResources).not.toHaveBeenCalled();
 });
@@ -121,7 +126,10 @@ it('does not fetch or advance a cursor for an incompatible peer', async () => {
 });
 
 it('does not re-advertise after consuming a peer change', async () => {
-  await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: true, cursor: 4 });
+  const activity = { runId: 'round', startedAt: 'now' };
+  await expect(continueDesktopSyncGroupSync(peer, activity)).resolves.toEqual({ complete: true, cursor: 4 });
+  expect(runtime.recordActivity).toHaveBeenLastCalledWith(activity,
+    expect.objectContaining({ stage: 'resources', direction: 'local' }), undefined);
 
   expect(runtime.reportCursor).toHaveBeenCalledWith({
     cursor: 4,

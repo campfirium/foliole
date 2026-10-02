@@ -13,6 +13,7 @@ import {
 import { isDesktopCompanionSyncParticipating } from './desktopCompanionSyncPreference.js';
 import type { RecoverableDesktopDnsSdSession } from './desktopDnsSdRecoverySession.js';
 import { requestDesktopHighValueSync, updateDesktopSyncFreshness } from './desktopMemberSyncCadence.js';
+import { recordDesktopSyncNoPeer } from './desktopSyncActivityStore.js';
 import {
   loadActiveDesktopSyncRun, runDesktopSyncCoordinator, subscribeDesktopSyncCompleted
 } from './desktopSyncCoordinator.js';
@@ -189,7 +190,8 @@ async function runDesktopManualSync() {
       if (memberRoutes.some((route) => route.peer_device_id === peer.peer_device_id)) continue;
       memberRoutes.push(saveDesktopSyncGroupRoute(peer));
     }
-    return memberRoutes.length ? runDesktopSyncCoordinator('manual') : null;
+    if (!memberRoutes.length) { await recordDesktopSyncNoPeer('manual'); return null; }
+    return runDesktopSyncCoordinator('manual');
   }
   const current = loadDesktopSyncGroupRoutes(group.group_id)[0];
   if (current) return runDesktopSyncCoordinator('manual', current);

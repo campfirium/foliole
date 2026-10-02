@@ -15,6 +15,7 @@ import {
 import { SyncProtocolIncompatibleDialog } from '../../../../shared/ui/SyncProtocolIncompatibleDialog';
 import { isSyncProtocolIncompatibleError, useSyncProtocolIncompatibleNotice } from '../../../../shared/ui/useSyncProtocolIncompatibleNotice';
 
+import { SettingsSyncDiagnosticsRow } from './SettingsSyncDiagnosticsRow';
 import { SettingsSyncGroupRows } from './SettingsSyncGroupRows';
 
 function SyncAvailabilityRow(props: { disabled: boolean; enabled: boolean; onToggle(): void }) {
@@ -108,6 +109,7 @@ export function SettingsCompanionSyncSection() {
         disabled={!group || !state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         onSync={() => { protocolNotice.retry(); void state.syncNow(); }}
       />
+      <SettingsSyncDiagnosticsRow disabled={!state.isDesktopRuntime} />
       <SettingsSyncGroupRows
         candidates={state.overview.join_candidates ?? []}
         discovery={state.discovery}

@@ -6,6 +6,7 @@ import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 const runtime = vi.hoisted(() => ({
   activate: vi.fn(async () => undefined),
   enable: vi.fn(async () => undefined),
+  diagnostics: vi.fn(),
   permission: vi.fn(async () => true),
   events: [] as string[],
   send: vi.fn()
@@ -19,7 +20,7 @@ vi.mock('../appVersion.js', () => ({ resolveFolioleAppVersion: () => '0.7.14' })
 vi.mock('../database/backupRestorePendingSync.js', () => ({ loadBackupRestorePendingSync: () => null }));
 vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: vi.fn(),
-  runWithDatabaseConnectionOwner: (execute: () => unknown) => execute()
+  runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
 }));
 vi.mock('../database/syncGroupMemberStateStore.js', () => ({
   initiateDesktopSyncGroupDeviceRemoval: vi.fn(),
@@ -44,6 +45,7 @@ vi.mock('../mainWindowRegistry.js', () => ({
 vi.mock('../sync/companionLanPayloads.js', () => ({
   resolveDesktopHostName: vi.fn(), resolveDesktopPlatformLabel: vi.fn()
 }));
+vi.mock('../sync/buildDesktopSyncDiagnostics.js', () => ({ buildDesktopSyncDiagnostics: runtime.diagnostics }));
 vi.mock('../sync/desktopCompanionSyncParticipation.js', () => ({
   activateDesktopCompanionSync: async () => {
     runtime.events.push('runtime-active');
@@ -56,7 +58,7 @@ vi.mock('../sync/desktopCompanionSyncParticipation.js', () => ({
   resumeDesktopCompanionSync: vi.fn()
 }));
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({
-  loadDesktopCompanionSyncParticipation: () => ({ enabled: true, paused: false })
+  loadDesktopCompanionSyncParticipation: () => ({ sync_enabled: true, sync_paused: false, participating: true })
 }));
 vi.mock('../sync/desktopSyncGroupAutoSync.js', () => ({
   resumeDesktopSyncAfterWatchedDecision: vi.fn(async () => undefined),
@@ -104,6 +106,22 @@ beforeEach(() => {
   runtime.permission.mockClear();
   runtime.send.mockClear();
   runtime.events.length = 0;
+  runtime.diagnostics.mockReset();
+});
+
+it('loads the diagnostic contract without enabling sync or requesting permission', async () => {
+  const payload = { activity: [], active_run_ids: [], active_run: false, report_text: '{}' };
+  runtime.diagnostics.mockReturnValue(payload);
+  expect(await handleSyncGroupCommand(NATIVE_COMMANDS.loadDesktopSyncDiagnostics, {})).toBe(payload);
+  expect(runtime.diagnostics).toHaveBeenCalledWith(expect.objectContaining({ sync_enabled: true }), '0.7.14');
+  expect(runtime.enable).not.toHaveBeenCalled();
+  expect(runtime.permission).not.toHaveBeenCalled();
+});
+
+it('propagates diagnostic read failures instead of returning an empty success', async () => {
+  runtime.diagnostics.mockImplementation(() => { throw new Error('diagnostic_read_failed'); });
+  await expect(handleSyncGroupCommand(NATIVE_COMMANDS.loadDesktopSyncDiagnostics, {}))
+    .rejects.toThrow('diagnostic_read_failed');
 });
 
 it('activates the member runtime before a committed join returns to the renderer', async () => {

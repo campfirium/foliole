@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   coordinator: vi.fn(async () => ({ status: 'completed' })),
+  recordNoPeer: vi.fn(async () => undefined),
   discovery: vi.fn(),
   freshness: vi.fn(),
   memberEndpoints: [] as Array<Record<string, unknown>>,
@@ -34,6 +35,8 @@ const runtime = vi.hoisted(() => ({
 }));
 
 export function getRuntime() { return runtime; }
+
+vi.mock('./desktopSyncActivityStore.js', () => ({ recordDesktopSyncNoPeer: runtime.recordNoPeer }));
 
 vi.mock('../database/connection.js', () => ({
   runWithDatabaseConnectionOwner: async <T>(execute: () => Promise<T> | T) => {

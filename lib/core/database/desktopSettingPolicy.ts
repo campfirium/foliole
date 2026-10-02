@@ -29,6 +29,7 @@ const LOCAL_ONLY_KEYS = new Set([
   'remote-image-learned-sources-v1',
   'readwise_books_inventory_state',
   'sync_group_last_trigger_result',
+  'sync_group_activity',
   'watch_import_cursor_state'
 ]);
 const HOST_KEYS = new Set([

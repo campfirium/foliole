@@ -1,3 +1,4 @@
+import type { DesktopSyncDiagnosticsPayload } from './desktopSyncDiagnosticsContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { DesktopSyncGroupOverviewPayload } from './nativeCompanionSyncContract.js';
 import type {
@@ -12,6 +13,10 @@ import type { SyncGroupJoinMode } from './syncGroupJoinMode.js';
 import type { SystemEntryDisplayNamesPayload } from './systemEntryDisplayNameContract.js';
 
 export type NativeSyncCommandMap = {
+  [NATIVE_COMMANDS.loadDesktopSyncDiagnostics]: {
+    args: undefined;
+    result: DesktopSyncDiagnosticsPayload;
+  };
   [NATIVE_COMMANDS.loadSystemEntryDisplayNames]: {
     args: undefined;
     result: SystemEntryDisplayNamesPayload;

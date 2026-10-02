@@ -7,6 +7,7 @@ const transport = vi.hoisted(() => ({
 }));
 
 vi.mock('../database/settingsStore.js', () => settings);
+vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: () => null }));
 vi.mock('../database/connection.js', () => ({
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
 }));
@@ -50,7 +51,7 @@ it('joins manual sync to an active automatic run and persists one owned result',
     expect.objectContaining({ reason: 'automatic', status: 'completed' })
   ]);
   expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledOnce();
-  expect(settings.saveJsonSetting).toHaveBeenCalledOnce();
+  expect(settings.saveJsonSetting.mock.calls.filter(([key]) => key === 'sync_group_last_trigger_result')).toHaveLength(1);
 });
 
 it('queues a different preferred Device behind the active run', async () => {
@@ -60,11 +61,11 @@ it('queues a different preferred Device behind the active run', async () => {
   const first = runDesktopSyncCoordinator('automatic', peer);
   const second = runDesktopSyncCoordinator('automatic', peerB);
   expect(second).not.toBe(first);
-  expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledWith(peer);
+  await vi.waitFor(() => expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledWith(peer, expect.any(Object)));
 
   work.resolve({ complete: true, cursor: 9 });
   await second;
-  expect(transport.continueDesktopSyncGroupSync).toHaveBeenNthCalledWith(2, peerB);
+  expect(transport.continueDesktopSyncGroupSync).toHaveBeenNthCalledWith(2, peerB, expect.any(Object));
 });
 
 it('persists a manual failure while leaving transport cursor ownership unchanged', async () => {
@@ -108,10 +109,10 @@ it('serializes three distinct targets and reuses a queued target', async () => {
   const second = runDesktopSyncCoordinator('automatic', peerB);
   const third = runDesktopSyncCoordinator('automatic', peerC);
   expect(runDesktopSyncCoordinator('manual', peerC)).toBe(third);
-  expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(1);
+  await vi.waitFor(() => expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(1));
   firstWork.resolve({ complete: true, cursor: 1 });
   await first;
-  expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(2);
+  await vi.waitFor(() => expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledTimes(2));
   secondWork.resolve({ complete: true, cursor: 2 });
   await Promise.all([second, third]);
   expect(transport.continueDesktopSyncGroupSync.mock.calls.map(([target]) => target.peer_device_id))
@@ -141,5 +142,20 @@ it.each([null, { complete: false, cursor: 9 }])('does not publish completion for
     expect(completed).toHaveBeenCalledOnce();
   } finally {
     unsubscribe();
+  }
+});
+
+it('keeps the sync result intact when saving diagnostic activity fails', async () => {
+  settings.saveJsonSetting.mockImplementation((key: string) => {
+    if (key === 'sync_group_activity') throw new Error('diagnostic write failed');
+  });
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  try {
+    await expect(runDesktopSyncCoordinator('manual')).resolves.toMatchObject({ status: 'completed' });
+    expect(transport.continueDesktopSyncGroupSync).toHaveBeenCalledOnce();
+    expect(settings.saveJsonSetting).toHaveBeenLastCalledWith('sync_group_last_trigger_result',
+      expect.objectContaining({ status: 'completed', error: null }));
+  } finally {
+    warning.mockRestore(); settings.saveJsonSetting.mockReset();
   }
 });
