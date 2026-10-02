@@ -43,7 +43,7 @@ export async function refreshKeepImportItemCache(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor,
   refreshedAt: string,
-  options: { force?: boolean } = {}
+  options: { force?: boolean; requireTracking?: boolean } = {}
 ) {
   const existing = readKeepImportItemCache(config.ruleId, source.sourceName);
   if (!options.force && existing && canReuseExistingCache(existing, source)) {
@@ -65,5 +65,5 @@ export async function refreshKeepImportItemCache(
     sourcePath: source.sourceName,
     sourceSizeBytes: source.sizeBytes,
     title
-  });
+  }, { requireTracking: options.requireTracking === true });
 }

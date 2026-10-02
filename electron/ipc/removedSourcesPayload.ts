@@ -32,7 +32,7 @@ async function refreshReadwiseSourceDocumentCache(ruleId: string, sourcePath: st
   }
   try {
     const source = await buildKeepImportSourceDescriptor(config, sourcePath);
-    await refreshKeepImportItemCache(config, source, new Date().toISOString(), { force: true });
+    await refreshKeepImportItemCache(config, source, new Date().toISOString(), { force: true, requireTracking: true });
   } catch {
     // Removed remains readable from its last cache even if the source file is currently unavailable.
   }
