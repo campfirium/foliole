@@ -2,9 +2,6 @@ import type { NativeCompanionSyncEvent, NativeCompanionWorkspaceSyncState } from
 
 import { readCompanionArticle } from './companion/reading/companionArticleRead';
 import {
-  publishCompanionSyncMutationRevision
-} from './companion/sync/mutation/companionSyncMutationRevision';
-import {
   loadIosCompanionWorkspaceSyncState,
   saveIosCompanionWorkspaceSyncState
 } from './companion/sync/workspace-state/iosCompanionWorkspaceSyncStateStore';
@@ -27,7 +24,6 @@ import { normalizeEndpointUrl } from './companionWorkspaceRuntimeRepository';
 import {
   appendRememberedTarget,
   type CompanionSyncOnboardingStatus,
-  normalizePersistedSyncState,
   prependSyncEvent,
   readWebSyncState,
   removeRememberedTarget,
@@ -160,29 +156,6 @@ export async function loadCompanionReadableArticle(
   return nodeId
     ? resolveReadableCompanionArticleByNodeId(currentSnapshot, nodeId)
     : resolveReadableCompanionArticle(currentSnapshot);
-}
-
-export async function persistCompanionWorkspaceSnapshot(args: {
-  changedNodeId?: string;
-  endpointUrl: string | null;
-  lastSyncedAt: string | null;
-  rememberedTargets: NativeCompanionWorkspaceSyncState['remembered_targets'];
-  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'];
-}) {
-  if (usesSharedOwner()) {
-    const state = await updateIosWorkspaceSyncState((current) => normalizePersistedSyncState({
-      ...args,
-      syncEvents: current.sync_events,
-      syncOnboardingStatus: current.sync_onboarding_status
-    }));
-    publishCompanionSyncMutationRevision();
-    return state;
-  }
-  const nextState = normalizePersistedSyncState({
-    ...args,
-    syncEvents: readWebSyncState().sync_events
-  });
-  return writeWebSyncState(nextState);
 }
 
 function usesSharedOwner() {

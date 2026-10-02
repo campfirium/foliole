@@ -12,10 +12,10 @@ vi.mock('./companionSelectionAnnotationActions', () => ({
 
 it('keeps the readable parent active after creating a selection annotation', async () => {
   const snapshot = { nodesById: {}, nodeOrder: [], trashedNodeIds: [] };
-  const replaceSnapshot = vi.fn();
+  const refreshAfterMutation = vi.fn();
   const workspaceSync = {
     bootstrapState: { device_id: 'android-device' },
-    replaceSnapshot,
+    refreshAfterMutation,
     state: { workspace_snapshot: snapshot }
   };
   persistCompanionSelectionAnnotation.mockResolvedValue({
@@ -39,5 +39,5 @@ it('keeps the readable parent active after creating a selection annotation', asy
 
   await createCompanionSelectionAnnotationHandler(workspaceSync as never)('highlight', payload);
 
-  expect(replaceSnapshot).toHaveBeenCalledWith(expect.any(Object), 'parent-1');
+  expect(refreshAfterMutation).toHaveBeenCalledWith(expect.any(Object));
 });

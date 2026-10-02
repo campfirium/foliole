@@ -7,6 +7,7 @@ import {
   createSyncState,
   getSyncObjectsMock,
   getWorkspaceSyncMock,
+  getWorkspaceRepositoryMock,
   resetSyncActionMocks,
 } from './companionWorkspaceSyncActions.testSupport';
 
@@ -73,17 +74,43 @@ describe('companion workspace manual sync refresh', () => {
   });
 });
 
-it('refreshes and replaces snapshots without reading a default article', async () => {
+it('refreshes saved workspace projections without reading a default article', async () => {
   resetSyncActionMocks();
   const { actions, callbacks } = createActions();
   const snapshot = createSnapshot('changed-topic');
   const state = createSyncState({ workspace_snapshot: snapshot });
   workspaceSyncMock.loadCompanionWorkspaceSyncState.mockResolvedValue(state);
-  workspaceSyncMock.persistCompanionWorkspaceSnapshot.mockResolvedValue(state);
+  getWorkspaceRepositoryMock().refreshCompanionWorkspaceAfterMutation.mockResolvedValue(snapshot);
 
   await expect(actions.refreshFromDevice()).resolves.toEqual(state);
-  await expect(actions.replaceSnapshot(snapshot, 'changed-topic')).resolves.toEqual(state);
+  await expect(actions.refreshAfterMutation(snapshot)).resolves.toEqual(snapshot);
 
-  expect(callbacks.setState).toHaveBeenLastCalledWith(state);
+  const update = callbacks.setState.mock.lastCall?.[0];
+  expect(update(createSyncState())).toEqual(state);
   expect(workspaceSyncMock.loadCompanionReadableArticle).not.toHaveBeenCalled();
+});
+
+
+it('merges a delayed local refresh into the latest connection state', async () => {
+  resetSyncActionMocks();
+  const { actions, callbacks } = createActions();
+  const snapshot = createSnapshot('saved-topic');
+  let resolveRead!: (value: typeof snapshot) => void;
+  getWorkspaceRepositoryMock().refreshCompanionWorkspaceAfterMutation.mockReturnValue(
+    new Promise((resolve) => { resolveRead = resolve; })
+  );
+  const refresh = actions.refreshAfterMutation();
+  const latest = createSyncState({ endpoint_url: 'http://new-device:38641', last_synced_at: '2026-10-03T00:00:00Z' });
+  resolveRead(snapshot);
+  await refresh;
+  expect(callbacks.setState.mock.lastCall?.[0](latest)).toEqual({ ...latest, workspace_snapshot: snapshot });
+  expect(callbacks.setSyncConflictCount).toHaveBeenCalledWith(0);
+});
+
+it('does not invent a saved projection when the repository read fails', async () => {
+  resetSyncActionMocks();
+  const { actions, callbacks } = createActions();
+  getWorkspaceRepositoryMock().refreshCompanionWorkspaceAfterMutation.mockRejectedValue(new Error('read failed'));
+  await expect(actions.refreshAfterMutation()).rejects.toThrow('read failed');
+  expect(callbacks.setState).not.toHaveBeenCalled();
 });

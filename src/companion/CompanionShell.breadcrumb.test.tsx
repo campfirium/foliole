@@ -72,7 +72,7 @@ function mockBreadcrumbEnvironment(snapshot: WorkspaceSnapshot) {
     pairingStatus: 'idle',
     pullFromDesktop: vi.fn(),
     readableArticle: null,
-    replaceSnapshot: vi.fn(),
+    refreshAfterMutation: vi.fn(),
     saveEndpoint: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(),
     state: {

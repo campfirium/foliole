@@ -10,6 +10,7 @@ const controlledElectronSqliteTests = [
   'electron/database/textBodyBlobCompanionCollection.integration.test.ts',
   'electron/sync/desktopSyncDiagnostics.http.integration.test.ts',
   'src/shared/platform/companionTopicDailyCountSync.test.ts',
+  'src/companion/companionWorkspaceMutation.integration.test.ts',
   'scripts/ios/ios-hosted-sync-pack-oracle-seed.test.mjs',
   'scripts/desktop/fixed-performance-fixture.test.mjs',
   'scripts/desktop/fixed-performance-http.test.mjs',

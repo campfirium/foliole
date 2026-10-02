@@ -51,22 +51,17 @@ vi.mock('./companion/network/signedRequest', () => ({
   createSignedRequestHeaders: signedRequestMock.create
 }));
 
-import {
-  getCompanionSyncMutationRevision
-} from './companion/sync/mutation/companionSyncMutationRevision';
 import { clearCompanionAppData } from './companionAppData';
 import {
   loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState,
   loadCompanionWorkspaceVersion,
-  persistCompanionWorkspaceSnapshot,
   removeCompanionWorkspaceSyncRememberedTarget,
   saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
 } from './companionWorkspaceSync';
 import {
   createStoredSyncState,
-  createUpdatedStoredSnapshot,
   mockFetchJson,
   resetCompanionWorkspaceSyncTestState,
   storeWebPairingState
@@ -242,58 +237,10 @@ function registerReadableArticleTest() {
   });
 }
 
-function registerSnapshotPersistenceTest() {
-  it('persists local companion snapshot updates in web preview mode', async () => {
-    window.localStorage.setItem('foliole-companion-workspace-sync-state', JSON.stringify(createStoredSyncState()));
-
-    const state = await persistCompanionWorkspaceSnapshot(createUpdatedStoredSnapshot());
-
-    expect(state.workspace_snapshot?.nodesById['node-1']).toMatchObject({
-      review: {
-        due: '2026-04-25T12:00:00.000Z',
-        lastReviewAt: '2026-04-22T12:30:00.000Z',
-        reps: 2
-      }
-    });
-    const persistedState = await loadCompanionWorkspaceSyncState();
-    expect(persistedState.workspace_snapshot?.nodesById['node-1']).toMatchObject({
-      review: {
-        due: '2026-04-25T12:00:00.000Z'
-      }
-    });
-  });
-
-  it('publishes native snapshot commits for Sync Group provider refresh', async () => {
-    const updatedSnapshot = createUpdatedStoredSnapshot();
-    const revision = getCompanionSyncMutationRevision();
-    capacitorMock.getPlatform.mockReturnValue('android');
-    capacitorMock.isNativePlatform.mockReturnValue(true);
-    nativeWorkspaceState.load.mockResolvedValue({
-      endpoint_url: updatedSnapshot.endpointUrl,
-      last_synced_at: updatedSnapshot.lastSyncedAt,
-      remembered_targets: ['http://10.0.2.2:38641'],
-      sync_events: [],
-      sync_onboarding_status: 'completed',
-      workspace_snapshot: updatedSnapshot.workspaceSnapshot
-    });
-
-    await persistCompanionWorkspaceSnapshot({
-      ...updatedSnapshot,
-      rememberedTargets: ['http://10.0.2.2:38641'],
-      changedNodeId: 'node-1'
-    });
-
-    expect(nativeWorkspaceState.load).toHaveBeenCalled();
-    expect(capacitorMock.plugin.loadWorkspaceSyncState).not.toHaveBeenCalled();
-    expect(getCompanionSyncMutationRevision()).toBe(revision + 1);
-  });
-}
-
 describe('companionWorkspaceSync', () => {
   beforeEach(() => resetCompanionWorkspaceSyncTestState(capacitorMock));
   registerEndpointPersistenceTest();
   registerNativeAppDataClearTest();
   registerWorkspaceVersionTest();
   registerReadableArticleTest();
-  registerSnapshotPersistenceTest();
 });

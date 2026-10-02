@@ -12,7 +12,7 @@ function createActionState(args?: {
   const setReadingError = vi.fn();
   const setReviewError = vi.fn();
   const setSelectedBrowseNodeId = vi.fn();
-  const workspaceSync = { replaceSnapshot: vi.fn(), state: { workspace_snapshot: null } };
+  const workspaceSync = { refreshAfterMutation: vi.fn(), state: { workspace_snapshot: null } };
 
   const actions = useCompanionActionState({
     browseReturnNodeId: args?.browseReturnNodeId ?? null,

@@ -13,6 +13,6 @@ export function createCompanionTrashRestoreHandler(workspaceSync: CompanionWorks
     if (!result) {
       throw new Error('This topic or folder cannot be restored on this device.');
     }
-    await workspaceSync.replaceSnapshot(result.snapshot, result.nodeId);
+    await workspaceSync.refreshAfterMutation(result.snapshot);
   };
 }

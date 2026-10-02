@@ -16,7 +16,7 @@ export function createCompanionCaptureTextSaveHandler(workspaceSync: CompanionWo
         snapshot: workspaceSync.state.workspace_snapshot,
         text
       });
-      await workspaceSync.replaceSnapshot(result.snapshot, result.nodeId);
+      await workspaceSync.refreshAfterMutation(result.snapshot);
       return { nodeId: result.nodeId };
     } catch (error) {
       return { error: getCompanionCaptureTextErrorCode(error) ?? 'save-failed' };

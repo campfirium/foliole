@@ -8,7 +8,6 @@ const workspaceSyncMock = vi.hoisted(() => ({
   bindCompanionWorkspaceSyncTarget: vi.fn(),
   loadCompanionReadableArticle: vi.fn(),
   loadCompanionWorkspaceSyncState: vi.fn(),
-  persistCompanionWorkspaceSnapshot: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn(async () => []),

@@ -124,7 +124,7 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
     pairingStatus: 'idle' as const,
     pullFromDesktop: vi.fn(),
     readableArticle: null,
-    replaceSnapshot: vi.fn(async () => state),
+    refreshAfterMutation: vi.fn(async () => state),
     refreshFromDevice: vi.fn(async () => state),
     leaveSyncGroup: vi.fn(),
     refreshPairingState: vi.fn(async () => createPairingState()),
@@ -204,7 +204,7 @@ describe('useCompanionArticleSurface fsrs sync', () => {
 
     expectFsrsReviewRecordSaved(grade);
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord.mock.invocationCallOrder[0]!)
-      .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]!);
+      .toBeLessThan(workspaceSync.refreshAfterMutation.mock.invocationCallOrder[0]!);
   });
 
   it('does not replace the companion snapshot when fsrs review persistence is unavailable', async () => {
@@ -216,7 +216,7 @@ describe('useCompanionArticleSurface fsrs sync', () => {
       await result.current.handleGradeReview(3);
     });
 
-    expect(workspaceSync.replaceSnapshot).not.toHaveBeenCalled();
+    expect(workspaceSync.refreshAfterMutation).not.toHaveBeenCalled();
     expect(result.current.reviewError).toBe('Failed to persist the review grade.');
   });
 
@@ -231,6 +231,6 @@ describe('useCompanionArticleSurface fsrs sync', () => {
     });
 
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord).toHaveBeenCalledTimes(1);
-    expect(workspaceSync.replaceSnapshot).toHaveBeenCalledTimes(1);
+    expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledTimes(1);
   });
 });

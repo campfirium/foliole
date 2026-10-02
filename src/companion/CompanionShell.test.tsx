@@ -134,7 +134,7 @@ function mockWorkspaceSync(args: {
     pullFromDesktop: vi.fn(),
     readableArticle: null,
     removeRememberedTarget: vi.fn(),
-    replaceSnapshot: vi.fn(),
+    refreshAfterMutation: vi.fn(),
     saveEndpoint: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(),
     state: {

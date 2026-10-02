@@ -16,7 +16,7 @@ const workspaceSyncMock = vi.hoisted(() => ({
   bindCompanionWorkspaceSyncTarget: vi.fn(async () => undefined),
   loadCompanionReadableArticle: vi.fn(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
-  persistCompanionWorkspaceSnapshot: vi.fn(),
+
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoints: vi.fn(
@@ -25,6 +25,9 @@ const workspaceSyncMock = vi.hoisted(() => ({
   saveCompanionSyncOnboardingStatus: vi.fn(),
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
+const workspaceRepositoryMock = vi.hoisted(() => ({ refreshCompanionWorkspaceAfterMutation: vi.fn() }));
+vi.mock('../shared/platform/companionWorkspaceRepository', () => workspaceRepositoryMock);
+
 const memberStateMock = vi.hoisted(() => ({
   exchangeCompanionSyncGroupMemberState: vi.fn(async () => ({
     localExited: false, peerRemoved: false
@@ -151,3 +154,5 @@ export function resetSyncActionMocks() {
   );
   workspaceSyncMock.saveCompanionWorkspaceSyncEndpoint.mockResolvedValue(createSyncState());
 }
+
+export function getWorkspaceRepositoryMock() { return workspaceRepositoryMock; }

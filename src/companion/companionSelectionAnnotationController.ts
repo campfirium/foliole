@@ -25,7 +25,7 @@ export function createCompanionSelectionAnnotationHandler(workspaceSync: ReturnT
     if (!result) {
       return null;
     }
-    await workspaceSync.replaceSnapshot(result.snapshot, payload.parentNodeId);
+    await workspaceSync.refreshAfterMutation(result.snapshot);
     return result.nodeId;
   };
 }
@@ -41,7 +41,7 @@ export function createCompanionExistingHighlightNoteHandler(workspaceSync: Retur
       snapshot: workspaceSync.state.workspace_snapshot
     });
     if (!result) return null;
-    await workspaceSync.replaceSnapshot(result.snapshot, result.nodeId);
+    await workspaceSync.refreshAfterMutation(result.snapshot);
     return result.nodeId;
   };
 }
@@ -55,7 +55,7 @@ export function createCompanionExistingHighlightDeleteHandler(workspaceSync: Ret
       snapshot: workspaceSync.state.workspace_snapshot
     });
     if (!result) return null;
-    await workspaceSync.replaceSnapshot(result.snapshot, result.nodeId);
+    await workspaceSync.refreshAfterMutation(result.snapshot);
     return result.nodeId;
   };
 }

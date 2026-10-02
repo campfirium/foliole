@@ -42,7 +42,7 @@ function useCompanionReviewGradeAction(
         snapshot: result.snapshot
       });
       if (!persisted) throw new Error('Failed to persist the review grade.');
-      await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
+      await workspaceSync.refreshAfterMutation(result.snapshot);
       floatingBar.revealBar();
     } catch (error) {
       setReviewError(error instanceof Error ? error.message : 'Failed to apply the review grade.');
@@ -86,7 +86,7 @@ function useCompanionReadingReviewActions(
         snapshot: result.snapshot
       });
       if (!persisted) throw new Error('Failed to persist the reading topic.');
-      await workspaceSync.replaceSnapshot(result.snapshot, reviewSession.currentCard.nodeId);
+      await workspaceSync.refreshAfterMutation(result.snapshot);
       floatingBar.revealBar();
     } catch (error) {
       setReadingError(error instanceof Error ? error.message : 'Failed to update the reading topic.');

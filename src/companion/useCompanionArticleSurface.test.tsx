@@ -64,12 +64,12 @@ async function expectReadingReviewActionPersists(method: ReadingActionMethod) {
     await invokeReadingAction(result.current, method);
   });
 
-  expect(workspaceSync.replaceSnapshot).toHaveBeenCalledWith(expect.any(Object), 'article-1');
+  expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledWith(expect.any(Object));
   expect(syncObjectMock.saveCompanionSyncNodeReadingRecord).toHaveBeenCalledWith(expect.objectContaining({
     nodeId: 'article-1'
   }));
   expect(syncObjectMock.saveCompanionSyncNodeReadingRecord.mock.invocationCallOrder[0]!)
-    .toBeLessThan(workspaceSync.replaceSnapshot.mock.invocationCallOrder[0]!);
+    .toBeLessThan(workspaceSync.refreshAfterMutation.mock.invocationCallOrder[0]!);
 }
 
 describe('useCompanionArticleSurface', () => {
@@ -118,13 +118,12 @@ describe('useCompanionArticleSurface browsing', () => {
     await waitFor(() => expect(syncObjectMock.saveCompanionSyncNodeOpenState).toHaveBeenCalledWith(
       expect.objectContaining({ nodeId: 'article-2' })
     ));
-    expect(workspaceSync.replaceSnapshot).toHaveBeenCalledWith(
+    expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledWith(
       expect.objectContaining({
         nodeOpenStateById: expect.objectContaining({
           'article-2': expect.objectContaining({ nodeId: 'article-2' })
         })
-      }),
-      'article-2'
+      })
     );
   });
 
@@ -234,7 +233,7 @@ describe('useCompanionArticleSurface reading review persistence', () => {
       await invokeReadingAction(result.current, method);
     });
 
-    expect(workspaceSync.replaceSnapshot).not.toHaveBeenCalled();
+    expect(workspaceSync.refreshAfterMutation).not.toHaveBeenCalled();
     expect(result.current.readingError).toBe('Failed to persist the reading topic.');
   });
 
@@ -251,7 +250,7 @@ describe('useCompanionArticleSurface reading review persistence', () => {
     });
 
     expect(syncObjectMock.saveCompanionSyncNodeReadingRecord).toHaveBeenCalledTimes(1);
-    expect(workspaceSync.replaceSnapshot).toHaveBeenCalledTimes(1);
+    expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledTimes(1);
   });
 
 });
