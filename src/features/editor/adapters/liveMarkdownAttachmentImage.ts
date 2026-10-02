@@ -7,6 +7,7 @@ import type { MarkdownImageRenderPlan } from '../model/markdownImagePresentation
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMenu';
+import { finalizeLoadedMarkdownImageDisplay } from './liveMarkdownImageDisplay';
 import { isMarkdownImageWidgetDomDisposed } from './liveMarkdownImageDisposal';
 import type { RequestEditorMeasure } from './liveMarkdownImageElement';
 import { createImageStatusElement } from './liveMarkdownImageStatus';
@@ -41,6 +42,7 @@ function showResolvedAttachment(context: AttachmentImageContext, source: string)
       closeActiveRemoteImageFailureMenu();
       showUnavailableAttachment(context);
     },
+    onLoad: () => finalizeLoadedMarkdownImageDisplay(context.wrapper, context.imageMatch, context.requestMeasure),
     requestMeasure: context.requestMeasure
   }));
   context.onSurfaceReady?.();
