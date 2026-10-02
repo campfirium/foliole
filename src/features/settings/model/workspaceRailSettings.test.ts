@@ -42,10 +42,11 @@ it('normalizes top, bottom, and fixed rail sections independently', () => {
     'system.import-file',
     'system.import-clipboard',
     'system.immersive-reading',
+    'system.review-statistics',
     'system.workspace-search',
     'system.command-palette'
   ]);
-  expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command', 'system.feedback', 'system.appearance-mode', 'system.review-statistics']);
+  expect(itemIds(getWorkspaceRailSectionItems(normalized, 'bottom'))).toEqual(['user.command', 'system.feedback', 'system.appearance-mode']);
   expect(itemIds(getWorkspaceRailSectionItems(normalized, 'fixed'))).toEqual(['fixed.review', 'fixed.settings']);
 });
 
@@ -117,10 +118,11 @@ it('moves ordinary items across top and bottom sections', () => {
   expect(itemIds(getWorkspaceRailSectionItems(moved, 'top'))).toEqual([
     'system.import-clipboard',
     'system.immersive-reading',
+    'system.review-statistics',
     'system.workspace-search',
     'system.command-palette'
   ]);
-  expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file', 'system.feedback', 'system.appearance-mode', 'system.review-statistics']);
+  expect(itemIds(getWorkspaceRailSectionItems(moved, 'bottom'))).toEqual(['system.import-file', 'system.feedback', 'system.appearance-mode']);
 });
 
 it('adds a new action to the top rail by default', () => {
@@ -142,6 +144,7 @@ it('adds a new action to the top rail by default', () => {
     'system.import-file',
     'system.import-clipboard',
     'system.immersive-reading',
+    'system.review-statistics',
     'system.workspace-search',
     'system.command-palette',
     'user.document-findInTopic'
@@ -161,7 +164,7 @@ it('adds immersive reading to the default top rail', () => {
 });
 
 it('adds search and command palette to the default top rail', () => {
-  const [, , immersiveReading, search, commandPalette] = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'top');
+  const [, , immersiveReading, , search, commandPalette] = getWorkspaceRailSectionItems(resetWorkspaceRailItems(), 'top');
 
   expect(immersiveReading?.id).toBe('system.immersive-reading');
 

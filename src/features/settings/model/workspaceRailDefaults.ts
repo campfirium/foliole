@@ -31,10 +31,20 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     iconId: 'BookOpen'
   },
   {
+    id: 'system.review-statistics',
+    commandId: APP_COMMAND_IDS.openReviewCalendar,
+    section: 'top',
+    order: 3,
+    visible: true,
+    source: 'system',
+    iconId: 'ChartNoAxesColumnIncreasing',
+    labelOverride: 'desktop.command.openReviewCalendar'
+  },
+  {
     id: 'system.workspace-search',
     commandId: APP_COMMAND_IDS.openWorkspaceSearch,
     section: 'top',
-    order: 3,
+    order: 4,
     visible: true,
     source: 'system',
     iconId: 'Search'
@@ -43,7 +53,7 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     id: 'system.command-palette',
     commandId: APP_COMMAND_IDS.openCommandPalette,
     section: 'top',
-    order: 4,
+    order: 5,
     visible: true,
     source: 'system',
     iconId: 'SquareChevronRight'
@@ -66,16 +76,6 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     source: 'system',
     iconId: 'Sun',
     labelOverride: 'desktop.command.cycleAppearanceMode'
-  },
-  {
-    id: 'system.review-statistics',
-    commandId: APP_COMMAND_IDS.openReviewCalendar,
-    section: 'bottom',
-    order: 2,
-    visible: true,
-    source: 'system',
-    iconId: 'ChartNoAxesColumnIncreasing',
-    labelOverride: 'desktop.command.openReviewCalendar'
   },
   {
     id: 'fixed.review',
