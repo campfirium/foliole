@@ -1,6 +1,6 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
-import { searchStoredSources } from '../../lib/core/database/storedSourceSearch.js';
+import { searchStoredSources, type StoredSourceSearchRow } from '../../lib/core/database/storedSourceSearch.js';
 
 import { openDatabaseConnection } from './connection.js';
 import type { ExternalSearchRow } from './externalSearchCacheSupport.js';
@@ -15,13 +15,13 @@ interface MirrorSearchRow extends DatabaseRow {
   text: string;
 }
 
-export function searchExternalMirrorDocuments(queryPlan: FtsSearchQueryPlan): ExternalSearchRow[] {
+export function searchExternalMirrorDocuments(queryPlan: FtsSearchQueryPlan, candidates?: readonly StoredSourceSearchRow[]): ExternalSearchRow[] {
   const folders = loadExternalSearchFolders().filter((folder) =>
     folder.access_mode === 'remote_mirror' && folder.mirror_enabled !== false
   );
   if (!queryPlan.normalizedQuery || folders.length === 0) return [];
   const ids = folders.map((folder) => folder.id);
-  const rows = searchStoredSources(openDatabaseConnection().driver, 'external', queryPlan)
+  const rows = (candidates ?? searchStoredSources(openDatabaseConnection().driver, 'external', queryPlan))
     .map((indexed) => ({ ...JSON.parse(indexed.metadata), text: indexed.content, modified_at: indexed.updated_at }) as MirrorSearchRow)
     .filter((row) => ids.includes(row.folder_id));
   const folderPathById = new Map(folders.map((folder) => [folder.id, folder.folder_path]));
