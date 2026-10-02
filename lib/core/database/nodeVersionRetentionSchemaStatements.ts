@@ -1,3 +1,5 @@
+import { NODE_VERSION_CONFIRMATION_SCHEMA } from './nodeVersionConfirmationSchema.js';
+
 export const NODE_VERSION_RETENTION_SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS node_version_local_origins (
     version_id TEXT PRIMARY KEY REFERENCES node_sync_versions(version_id) ON DELETE CASCADE
@@ -85,5 +87,6 @@ export const NODE_VERSION_RETENTION_SCHEMA_STATEMENTS = [
   `CREATE INDEX IF NOT EXISTS idx_node_version_outbound_holds_object
     ON node_version_outbound_holds (object_id, version_id)`,
   `CREATE INDEX IF NOT EXISTS idx_node_version_outbound_payload_holds_object
-    ON node_version_outbound_payload_holds (object_id, version_id)`
+    ON node_version_outbound_payload_holds (object_id, version_id)`,
+  NODE_VERSION_CONFIRMATION_SCHEMA
 ] as const;

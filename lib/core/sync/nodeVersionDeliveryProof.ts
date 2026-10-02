@@ -1,4 +1,5 @@
 import type { DbPort, DbRow } from './dbPort.js';
+import { isConsumedNodeVersionConfirmation, saveNodeVersionConfirmationState } from './nodeVersionConfirmationState.js';
 import { acceptDeviceRevision } from './nodeVersionDeviceRevision.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion } from './syncNodeGraph.js';
@@ -87,8 +88,13 @@ export async function confirmOutboundNodeVersionPack(port: DbPort, args: {
     throw new Error('node_version_proof_invalid');
   }
   const accepted = await port.transaction(async (tx) => {
+    const consumed = await isConsumedNodeVersionConfirmation(tx, args);
     if (!await acceptDeviceRevision(tx, args)) return false;
-    for (const result of args.results) await confirmOne(tx, args, result);
+    for (const result of args.results) await confirmOne(tx, args, result, consumed);
+    await saveNodeVersionConfirmationState(tx, args);
+    await tx.run(`DELETE FROM node_version_pack_receipts WHERE pack_id = ? AND NOT EXISTS
+      (SELECT 1 FROM node_version_outbound_holds hold WHERE hold.pack_id = node_version_pack_receipts.pack_id
+        AND hold.object_id = node_version_pack_receipts.object_id)`, [args.packId]);
     for (const result of args.results) await collectNodeVersionPayloads(tx, result.objectId, Number.MAX_SAFE_INTEGER);
     return true;
   });
@@ -98,7 +104,8 @@ export async function confirmOutboundNodeVersionPack(port: DbPort, args: {
 async function confirmOne(
   port: DbPort,
   args: Parameters<typeof confirmOutboundNodeVersionPack>[1],
-  result: NodeVersionPackResult
+  result: NodeVersionPackResult,
+  consumed: boolean
 ) {
   const [received] = await port.query<DbRow>(
     `SELECT group_id, device_identity_key, sent_version_id, result,
@@ -117,6 +124,7 @@ async function confirmOne(
     `SELECT group_id, device_identity_key, version_id FROM node_version_outbound_holds
      WHERE pack_id = ? AND object_id = ?`, [args.packId, result.objectId]
   );
+  if (!held && consumed) return;
   if (held?.group_id !== args.groupId || held.device_identity_key !== args.deviceId ||
       held.version_id !== result.sentVersionId) throw new Error('node_version_pack_hold_missing');
   if (result.result === 'applied') {
@@ -126,7 +134,7 @@ async function confirmOne(
     }
     await promoteBaseProof(port, args, result.objectId, result.baseVersionId);
   }
-  await port.run(
+  if (result.result !== 'applied') await port.run(
     `INSERT INTO node_version_pack_receipts
      (pack_id, object_id, group_id, device_identity_key, sent_version_id, result,
       base_version_id, library_epoch, proof_revision, confirmed_at)

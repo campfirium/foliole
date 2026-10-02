@@ -49,6 +49,10 @@ export function assertBody(peer: SimulatorPeer, content: string, id = 'topic', v
 }
 export async function assertCompleted(peer: SimulatorPeer, missingKeys: ReadonlySet<string> = new Set()) {
   const db = peer.sqlite;
+  expect(db.prepare('SELECT COUNT(*) FROM node_version_inbound_receipts WHERE delivered_at IS NOT NULL').pluck().get()).toBe(0);
+  expect(db.prepare(`SELECT COUNT(*) FROM node_version_pack_receipts receipt WHERE NOT EXISTS
+    (SELECT 1 FROM node_version_outbound_holds hold WHERE hold.pack_id = receipt.pack_id
+      AND hold.object_id = receipt.object_id)`).pluck().get()).toBe(0);
   expect(db.prepare('SELECT * FROM sync_pack_receive_progress WHERE completed<>1 OR cursor_state_seq<>frontier_state_seq').all()).toEqual([]);
   expect(db.prepare('SELECT count(*) FROM sync_pack_dependency_rows').pluck().get()).toBe(0);
   const pending = db.prepare('SELECT article_id FROM sync_pack_resource_articles').all() as { article_id: string }[];
@@ -77,7 +81,8 @@ export function state(peer: SimulatorPeer) {
 }
 export function stateSummary(peer: SimulatorPeer) {
   const tables = ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'node_text_alternatives',
-    'content_blob_data', 'sync_pack_dependency_rows', 'sync_delivery_receipts'];
+    'content_blob_data', 'sync_pack_dependency_rows', 'sync_delivery_receipts',
+    'node_version_inbound_receipts', 'node_version_pack_receipts', 'node_version_confirmation_state'];
   return { database: peer.dbPath, assets: peer.assets,
     counts: Object.fromEntries(tables.map((table) => [table,
       peer.sqlite.prepare(`SELECT count(*) FROM ${table}`).pluck().get()])),

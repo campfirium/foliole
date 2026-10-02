@@ -30,6 +30,9 @@ export async function converge({ a, b, sa, sb, existingGaps = [], missingKeys = 
       assertHealthy(b, existingGaps);
       await assertCompleted(a, missingKeys);
       await assertCompleted(b, missingKeys);
+      for (const peer of [a, b]) {
+        expect(peer.sqlite.prepare('SELECT COUNT(*) FROM node_version_inbound_receipts').pluck().get()).toBe(0);
+      }
       return;
     }
   }
@@ -102,6 +105,13 @@ async function delayedPack(ctx: ScenarioContext) {
   await expect(deliver()).rejects.toThrow();
   await deliver();
   assertBody(ctx.a, '123456', 'topic', next);
+  ctx.sa.loseResponse = '/companion/version-pack-receipt';
+  await expect(pull(ctx.sa, ctx.b)).rejects.toThrow();
+  expect(ctx.sa.loseResponse).toBeNull();
+  expect(Number(ctx.b.sqlite.prepare('SELECT COUNT(*) FROM node_version_inbound_receipts').pluck().get())).toBeGreaterThan(0);
+  expect(ctx.a.sqlite.prepare('SELECT COUNT(*) FROM node_version_pack_receipts').pluck().get()).toBe(0);
+  reopenPeer(ctx.a);
+  reopenPeer(ctx.b);
   await pull(ctx.sa, ctx.b);
   await converge(ctx);
 }

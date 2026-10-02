@@ -26,10 +26,6 @@ export async function acceptDeviceRevision(port: DbPort, args: {
   const old = known && (known.library_epoch !== args.libraryEpoch ||
     (known.proof_revision === args.proofRevision && known.pack_id !== args.packId));
   if (old) {
-    const [row] = await port.query<{ count: number }>(
-      `SELECT COUNT(*) AS count FROM node_version_pack_receipts WHERE pack_id = ?`, [args.packId]
-    );
-    if (row?.count === args.results.length && row.count > 0) return true;
     await port.run(
       `UPDATE node_version_device_revisions SET blocked_reason = 'revision_or_epoch_changed', updated_at = ?
        WHERE group_id = ? AND device_identity_key = ?`,

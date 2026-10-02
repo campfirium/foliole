@@ -5,6 +5,7 @@ import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHis
 import { migrateIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { initializeLegacyBodyMigrationSchema } from './legacyBodyMigrationSchema.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { migrateNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { createDataMigrationStateTable } from './numberedMigrationDataState.js';
@@ -166,5 +167,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 124, migrate: initializeLegacyBodyMigrationSchema },
   { version: 125, migrate: (sqlite) => {
     for (const statement of REVIEW_DAILY_COUNT_SCHEMA) sqlite.exec(statement);
-  } }
+  } },
+  { version: 126, migrate: migrateNodeVersionConfirmations }
 ];

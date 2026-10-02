@@ -39,10 +39,6 @@ export async function applyNodePushBatchWithDbPort(
   valid.sort((left, right) => historyOrder.get(left.record)! - historyOrder.get(right.record)!);
   for (const entry of valid) {
     if (await acknowledgeCanonicalAdditiveReplay(port, entry, result)) continue;
-    if (await isConfirmedRetiredVersion(port, entry.record)) {
-      appendNodeAck(result, entry, true);
-      continue;
-    }
     const current = await loadCurrentSyncNodeRecord(port, entry.record.object_id);
     if (entry.record.version_id && (current?.version_id === entry.record.version_id
       || current?.ancestor_version_ids.includes(entry.record.version_id))
@@ -202,17 +198,4 @@ function append(target: CompanionSyncPushResult, source: CompanionSyncPushResult
   target.appliedNodeIds.push(...source.appliedNodeIds);
   target.appliedObjectIds.push(...source.appliedObjectIds);
   target.appliedReviewOpIds.push(...source.appliedReviewOpIds);
-}
-
-async function isConfirmedRetiredVersion(port: DbPort, record: NativeSyncNodeRecord) {
-  if (!record.version_id) return false;
-  const [receipt] = await port.query(`SELECT 1 FROM node_version_inbound_receipts receipt,
-    json_each(receipt.results_json) result WHERE NOT EXISTS
-      (SELECT 1 FROM node_sync_versions WHERE version_id = ?)
-      AND json_extract(result.value, '$.objectId') = ?
-      AND json_extract(result.value, '$.sentVersionId') = ?
-      AND json_extract(result.value, '$.baseVersionId') = ?
-      AND json_extract(result.value, '$.result') = 'applied' LIMIT 1`,
-  [record.version_id, record.object_id, record.version_id, record.version_id]);
-  return Boolean(receipt);
 }

@@ -1,3 +1,4 @@
+import { isConsumedNodeVersionConfirmation } from '../../lib/core/sync/nodeVersionConfirmationState.js';
 import { confirmOutboundNodeVersionPack } from '../../lib/core/sync/nodeVersionDeliveryProof.js';
 import { parseNodeVersionReceipt } from '../../lib/core/sync/nodeVersionReceiptContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -23,7 +24,7 @@ export async function acceptCompanionVersionPackReceipt(bodyText: string, authen
     throw new Error('node_version_receipt_identity_mismatch');
   }
   try {
-    await restoreKnownFactReceiptHolds({ groupId: receipt.groupId,
+    if (!await isConsumedNodeVersionConfirmation(port, receipt)) await restoreKnownFactReceiptHolds({ groupId: receipt.groupId,
       peerId: receipt.deviceId, packId: receipt.packId,
       fromPeerId: receipt.sourceDeviceId, results: receipt.results });
   } catch (error) {
@@ -34,7 +35,7 @@ export async function acceptCompanionVersionPackReceipt(bodyText: string, authen
     groupId: receipt.groupId, libraryEpoch: receipt.libraryEpoch,
     packId: receipt.packId, proofRevision: receipt.proofRevision, results: receipt.results
   });
-  await releaseConfirmedCompanionDependencySession(receipt.groupId, receipt.deviceId, receipt.packId);
+  await releaseConfirmedCompanionDependencySession(receipt.groupId, receipt.deviceId, receipt.packId, receipt.results);
   await releaseConfirmedCompanionFactSession(receipt.groupId, receipt.deviceId, receipt.packId);
   await releaseCompanionSourceRoundOnReceipt(receipt.groupId, receipt.deviceId, receipt.packId);
   return { accepted: true };

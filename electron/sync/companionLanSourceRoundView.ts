@@ -66,6 +66,8 @@ export async function releaseCompanionSourceRoundOnReceipt(groupId: string, peer
   packId: string) {
   if (!/^[a-f0-9-]{36}$/u.test(packId)) return;
   const scope = { groupId, peerId };
+  if (openDatabaseConnection().driver.queryOne(
+    'SELECT 1 FROM node_version_outbound_holds WHERE pack_id = ? LIMIT 1', [packId])) return;
   try { await fs.access(path.join(roundRoot(scope), 'final-packs', packId)); }
   catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;

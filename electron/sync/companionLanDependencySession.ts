@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import { CHAIN_HEAD_SQL } from '../../lib/core/sync/nodeVersionChainSql.js';
+import type { NodeVersionPackResult } from '../../lib/core/sync/nodeVersionDeliveryProof.js';
 import { SYNC_PACK_NODE_DEPENDENCY_OBJECT_TYPES, type SyncPackDependencyTransfer,
   type SyncPackNodeDependencyObjectType } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import type { SyncPackFactClaims, SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
@@ -29,7 +30,8 @@ export function sessionRoot(groupId: string, peerId: string) {
   return path.join(resolveAppPaths().app_cache_dir, 'sync-pack-source-views', scope);
 }
 
-export async function releaseConfirmedCompanionDependencySession(groupId: string, peerId: string, packId: string) {
+export async function releaseConfirmedCompanionDependencySession(groupId: string, peerId: string, packId: string,
+  results: NodeVersionPackResult[]) {
   if (!/^[a-f0-9-]{36}$/u.test(packId)) return;
   const root = path.join(sessionRoot(groupId, peerId), packId);
   try { await fs.access(path.join(root, 'session.json')); }
@@ -49,10 +51,8 @@ export async function releaseConfirmedCompanionDependencySession(groupId: string
       const head = session.view.driver.queryOne<{ current_version_id: string }>(
         CHAIN_HEAD_SQL, [objectId]);
       if (!head?.current_version_id) continue;
-      const confirmed = driver.queryOne(`SELECT 1 FROM node_version_pack_receipts
-        WHERE pack_id = ? AND object_id = ? AND group_id = ? AND device_identity_key = ?
-          AND sent_version_id = ? AND result = 'applied'`,
-      [packId, objectId, groupId, peerId, head.current_version_id]);
+      const confirmed = results.some((result) => result.objectId === objectId &&
+        result.sentVersionId === head.current_version_id && result.result === 'applied');
       if (!confirmed) return;
     }
   } finally { session.view.close(); }

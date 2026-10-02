@@ -16,6 +16,7 @@ export const CORE_TABLES = [
   'node_view_state',
   'node_version_device_bases',
   'node_version_device_revisions',
+  'node_version_confirmation_state',
   'node_version_inbound_receipts',
   'node_version_local_holds',
   'node_version_local_origins',

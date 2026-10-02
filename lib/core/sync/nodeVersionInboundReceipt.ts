@@ -44,8 +44,7 @@ export async function loadPendingNodeVersionReceipts(port: DbPort, sourceDeviceI
 
 export async function markNodeVersionReceiptDelivered(port: DbPort, packId: string) {
   await port.run(
-    `UPDATE node_version_inbound_receipts SET delivered_at = ?
-     WHERE pack_id = ? AND delivered_at IS NULL`, [new Date().toISOString(), packId]
+    'DELETE FROM node_version_inbound_receipts WHERE pack_id = ?', [packId]
   );
 }
 

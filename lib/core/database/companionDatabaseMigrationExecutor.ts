@@ -28,6 +28,7 @@ import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigrati
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
+import { migrateCompanionNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 
 type MigrationAction = (typeof ANDROID_COMPANION_MIGRATION_PLAN)[number]['actions'][number];
@@ -78,6 +79,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 57 && targetVersion >= 57) await migrateCompanionDynamicNodeVersionChains(db);
   if (currentVersion < 58 && targetVersion >= 58) await repairCompanionSyncStateEntities(db);
   if (currentVersion < 59 && targetVersion >= 59) await migrateCompanionIndependentNodeVersions(db);
+  if (currentVersion < 61 && targetVersion >= 61) await migrateCompanionNodeVersionConfirmations(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

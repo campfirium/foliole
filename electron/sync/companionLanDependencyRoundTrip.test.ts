@@ -185,14 +185,15 @@ it('delivers 23 heavy historical bodies through the LAN resource requests before
     expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get()).toEqual({ count: 23 });
     expect(target.prepare('SELECT count(*) AS count FROM node_sync_version_parents').get()).toEqual({ count: 22 });
     expect(target.prepare('SELECT cursor_state_seq FROM sync_pack_receive_progress').get()).toEqual({ cursor_state_seq: 1 });
-    expect(target.prepare('SELECT length(content) AS bytes FROM nodes WHERE id = ?').get('node-1'))
-      .toEqual({ bytes: 741 * 1024 });
     const row = target.prepare(`SELECT n.content, n.body_blob_hash, b.data AS body_blob_data
       FROM nodes n LEFT JOIN content_blob_data b ON b.hash = n.body_blob_hash WHERE n.id = ?`)
       .get('node-1') as NodeBodyRow;
     const body = resolveNodeBody(row);
     expect(body.status).toBe('resolved');
-    if (body.status === 'resolved') expect(hashTextBody(body.content)).toBe(hashTextBody('b'.repeat(741 * 1024)));
+    if (body.status === 'resolved') {
+      expect(Buffer.byteLength(body.content, 'utf8')).toBe(741 * 1024);
+      expect(hashTextBody(body.content)).toBe(hashTextBody('b'.repeat(741 * 1024)));
+    }
     await assertReceiptLifecycle(target, (receipt) => server.postJson('/companion/version-pack-receipt', receipt));
   } finally { await server.close(); revokeDesktopSyncGroupMemberStateReadiness('receiver'); target.close(); }
 });

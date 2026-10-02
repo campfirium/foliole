@@ -92,7 +92,7 @@ function insertRow(driver: DatabaseDriver, table: string, row: DatabaseRow) {
 export function resetSyncGeneration(driver: DatabaseDriver, restoreId: string) {
   for (const table of [
     'node_version_outbound_payload_holds', 'node_version_outbound_holds',
-    'node_version_local_holds', 'node_version_pack_receipts',
+    'node_version_local_holds', 'node_version_pack_receipts', 'node_version_confirmation_state',
     'node_version_inbound_receipts', 'node_version_device_bases',
     'node_version_device_revisions', 'node_version_local_source_revisions',
     'sync_delivery_receipts', 'sync_peer_cursors',

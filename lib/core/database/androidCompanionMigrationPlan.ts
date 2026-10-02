@@ -164,6 +164,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(57, 'installSchema', 'Failed to add sync state receipt lifecycle.'),
   step(58, 'installSchema', 'Failed to add independent node versions.'),
   step(60, 'installSchema', 'Failed to add daily Topic counts.'),
+  step(61, 'installSchema', 'Failed to add current sync confirmation state.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {
