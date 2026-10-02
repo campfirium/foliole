@@ -2,7 +2,6 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, URL } from 'node:url';
 
 const INTERNAL_BUNDLE_ID = 'com.campfirium.foliole';
-const BACKGROUND_UPDATE_REOPEN_ARG = '--foliole-background-update-reopen';
 const EXIT_TIMEOUT_MS = 30_000;
 const HELPER_STARTUP_GRACE_MS = 10_000;
 const WAIT_FOR_EXIT_HELPER = fileURLToPath(new URL('./wait-for-app-exit.swift', import.meta.url));
@@ -41,7 +40,7 @@ export function createInternalLifecycle(options = {}) {
     },
     open() {
       assertSucceeded('open installed Foliole Internal', run('open', [
-        '-g', '-a', targetPath, '--args', BACKGROUND_UPDATE_REOPEN_ARG
+        '-a', targetPath
       ], { stdio: 'ignore' }));
     }
   };

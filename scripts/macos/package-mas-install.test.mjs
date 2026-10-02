@@ -49,7 +49,7 @@ it('waits for a running Internal app before swapping and reopening it', async ()
   expect(log).toHaveBeenCalledWith('[macos-package] stage: REOPENED');
   expect(timeline.map((entry) => entry.event)).toEqual([
     'install_started', 'staged_app_verified', 'quit_requested', 'exit_confirmed',
-    'app_installed', 'background_reopen_requested', 'install_finished'
+    'app_installed', 'visible_reopen_requested', 'install_finished'
   ]);
   expect(timeline.every((entry) => entry.operationId === 'install-1')).toBe(true);
   expect(readVersion(fixture.targetPath)).toBe('new');

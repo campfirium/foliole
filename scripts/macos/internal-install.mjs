@@ -89,7 +89,7 @@ export async function installMasDevelopmentApp(options = {}) {
       record('app_installed');
       lifecycle.open();
       log('[macos-package] stage: REOPENED');
-      record('background_reopen_requested');
+      record('visible_reopen_requested');
     } catch (error) {
       if (!hadInstalledApp) {
         await remove(targetPath, { force: true, recursive: true });

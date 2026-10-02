@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { expect, it, vi } from 'vitest';
 
+import { shouldShowInitialWindow } from '../../electron/backgroundStartup.ts';
 import { createInternalLifecycle } from './internal-lifecycle.mjs';
 
 it('checks the exact Foliole Internal bundle id', () => {
@@ -13,15 +14,23 @@ it('checks the exact Foliole Internal bundle id', () => {
   ], { encoding: 'utf8' });
 });
 
-it('reopens an installed Internal build without activating its initial window', () => {
+it('reopens an installed Internal build with its initial window visible', () => {
   const run = vi.fn(() => ({ status: 0 }));
   const lifecycle = createInternalLifecycle({ run, targetPath: '/Applications/Foliole.app' });
 
   lifecycle.open();
 
   expect(run).toHaveBeenCalledWith('open', [
-    '-g', '-a', '/Applications/Foliole.app', '--args', '--foliole-background-update-reopen'
+    '-a', '/Applications/Foliole.app'
   ], { stdio: 'ignore' });
+  const launchArgs = run.mock.calls[0][1];
+  const argumentIndex = launchArgs.indexOf('--args');
+  expect(shouldShowInitialWindow({
+    argv: ['Foliole', ...(argumentIndex < 0 ? [] : launchArgs.slice(argumentIndex + 1))],
+    capturePanelLaunchIntent: false,
+    openedAtLogin: false,
+    platform: 'darwin'
+  })).toBe(true);
 });
 
 it('uses the process-exit helper as the bounded cooperative quit wait', async () => {
