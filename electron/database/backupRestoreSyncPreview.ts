@@ -8,6 +8,7 @@ import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import type { BackupRestoreSyncPreview, BackupRestoreSyncSettings } from '../../lib/platform/backupRestoreSyncContract.js';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
 
+import { readBackupRestoreLocalGroup } from './backupRestoreLocalGroup.js';
 import { snapshotBackupRestoreSource } from './backupRestoreSourceSnapshot.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { openDatabaseConnection } from './connection.js';
@@ -15,13 +16,11 @@ import { createDatabaseRestoreArtifacts } from './databaseRestoreArtifacts.js';
 import { verifySqliteDatabaseFile } from './sqliteBackupRestore.js';
 
 export function readBackupRestoreSyncSettings(driver: DatabaseDriver) {
-  const tables = new Set(driver.queryAll<{ name: string }>(
-    "SELECT name FROM sqlite_master WHERE type = 'table'").map((row) => row.name));
-  const group = tables.has('sync_group_local_state') ? driver.queryOne<{
+  const local = readBackupRestoreLocalGroup(driver);
+  const group = local ? driver.queryOne<{
     group_id: string; display_name: string; workgroup_key: string;
-  }>(`SELECT g.group_id, g.display_name, g.workgroup_key FROM sync_groups g
-    JOIN sync_group_local_state l ON l.group_id = g.group_id
-    WHERE l.singleton_id = 1 AND l.state = 'active'`) : undefined;
+  }>('SELECT group_id, display_name, workgroup_key FROM sync_groups WHERE group_id = ?',
+  [String(local.group_id)]) : undefined;
   const row = driver.queryOne<{ value: string }>("SELECT value FROM settings WHERE key = 'app_settings'");
   const settings = row ? JSON.parse(row.value) as Record<string, string> : {};
   return {

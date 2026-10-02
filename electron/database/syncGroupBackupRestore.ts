@@ -4,6 +4,7 @@ import type { DatabaseBindValue, DatabaseDriver, DatabaseRow } from '../../lib/c
 import type { SyncGroupRestoreEvent } from '../../lib/platform/syncGroupRestoreContract.js';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
 
+import { readBackupRestoreLocalGroup } from './backupRestoreLocalGroup.js';
 import { saveBackupRestorePendingSync } from './backupRestorePendingSync.js';
 import { writeJsonSetting } from './settingsStore.js';
 
@@ -22,11 +23,7 @@ export type GroupSnapshot = {
 };
 
 export function captureCurrentSyncGroupForBackupRestore(driver: DatabaseDriver): GroupSnapshot | null {
-  if (!driver.queryOne("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sync_group_local_state'")) {
-    return null;
-  }
-  const local = driver.queryOne<DatabaseRow>(`SELECT * FROM sync_group_local_state
-    WHERE singleton_id = 1 AND state = 'active'`);
+  const local = readBackupRestoreLocalGroup(driver);
   if (!local) return null;
   const groupId = String(local.group_id);
   const group = driver.queryOne<DatabaseRow>('SELECT * FROM sync_groups WHERE group_id = ?', [groupId]);
