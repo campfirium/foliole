@@ -12,6 +12,7 @@ import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from './numberedMigrationWa
 import { PDF_INDEX_STATE_SCHEMA_STATEMENTS } from './pdfIndexStateSchema.js';
 import { READWISE_HOST_SETTINGS_VERSION_GUARDS } from './readwiseHostSettingsVersionMigration.js';
 import { isRetiredAttachmentSchema } from './retiredAttachmentSchema.js';
+import { REVIEW_DAILY_COUNT_SCHEMA } from './reviewDailyCountSchema.js';
 import { SEARCH_INDEX_INVALIDATION_SCHEMA_STATEMENTS } from './searchIndexInvalidationSchemaStatements.js';
 import { SOURCE_DISPOSITION_SCHEMA_STATEMENTS } from './sourceDispositionSchemaStatements.js';
 import { STORED_SOURCE_SEARCH_SCHEMA } from './storedSourceSearchSchema.js';
@@ -24,6 +25,7 @@ import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 
 export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DESKTOP_CORE_SCHEMA_STATEMENTS,
+  ...REVIEW_DAILY_COUNT_SCHEMA,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(0, 6),
   ...KEEP_IMPORT_SCHEMA_STATEMENTS,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(6),

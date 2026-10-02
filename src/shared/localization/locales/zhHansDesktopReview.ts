@@ -1,6 +1,14 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_REVIEW_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.reviewCalendar.title': '复习日历',
+  'desktop.reviewCalendar.previous': '前六个月',
+  'desktop.reviewCalendar.next': '后六个月',
+  'desktop.reviewCalendar.completed': '已复习',
+  'desktop.reviewCalendar.due': '到期安排',
+  'desktop.reviewCalendar.unavailable': '历史数据不可用',
+  'desktop.reviewCalendar.failed': '无法读取复习历史。',
+  'desktop.reviewCalendar.retry': '重试',
   'desktop.immersiveShortcuts.aria': '沉浸阅读快捷键',
   'desktop.immersiveShortcuts.eyebrow': '当前推荐',
   'desktop.immersiveShortcuts.title': '沉浸阅读',

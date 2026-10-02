@@ -5,6 +5,7 @@ import { saveNodeOpenState } from '../database/nodeOpenState.js';
 import { saveNodeReadingState } from '../database/nodeReadingState.js';
 import { saveNodeReviewState } from '../database/nodeReviewState.js';
 import { loadReadingProgress, saveReadingProgress } from '../database/readingProgress.js';
+import { loadReviewCalendarHistory } from '../database/reviewCalendar.js';
 import { applyReviewGrade, resetNodeReviewState } from '../database/reviewMutations.js';
 import { loadSyncNodeConflicts } from '../database/syncConflictReads.js';
 import { loadSyncIndex } from '../database/syncIndex.js';
@@ -31,6 +32,11 @@ function completeHighValueWrite<T>(result: T) {
 }
 
 export function handleWorkspaceReadCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.loadReviewCalendarHistory) {
+    return loadReviewCalendarHistory({
+      from: asTimestamp(args.from, 'from'), to: asTimestamp(args.to, 'to')
+    });
+  }
   if (command === NATIVE_COMMANDS.loadWorkspaceSnapshot) {
     return loadWorkspaceSnapshot();
   }
@@ -96,6 +102,9 @@ export function handleReadingAndReviewCommand(command: string, args: Record<stri
     return completeHighValueWrite(saveNodeReadingState({
       nodeId: asString(args.nodeId, 'nodeId'),
       reading: args.reading as Parameters<typeof saveNodeReadingState>[0]['reading'],
+      ...(args.completedReviewDay === undefined ? {} : {
+        completedReviewDay: asString(args.completedReviewDay, 'completedReviewDay')
+      }),
       updatedAt: asTimestamp(args.updatedAt, 'updatedAt')
     }));
   }

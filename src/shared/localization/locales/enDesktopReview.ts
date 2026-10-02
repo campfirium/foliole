@@ -1,4 +1,13 @@
 export const EN_DESKTOP_REVIEW_TRANSLATIONS = {
+  'desktop.reviewCalendar.title': 'Review calendar',
+  'desktop.reviewCalendar.previous': 'Previous six months',
+  'desktop.reviewCalendar.next': 'Next six months',
+  'desktop.reviewCalendar.completed': 'Completed',
+  'desktop.reviewCalendar.due': 'Due',
+  'desktop.reviewCalendar.unavailable': 'History unavailable',
+  'desktop.reviewCalendar.failed': 'Could not load review history.',
+  'desktop.reviewCalendar.retry': 'Retry',
+
   'desktop.immersiveShortcuts.aria': 'Immersive reading shortcuts',
   'desktop.immersiveShortcuts.eyebrow': 'Recommended Now',
   'desktop.immersiveShortcuts.title': 'Immersive Reading',

@@ -198,6 +198,7 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'watched_folder',
   'node_reading',
   'node_review',
+  'topic_daily_count',
   'node_open_state',
   'node_text_alternative',
   'parent_child_order',

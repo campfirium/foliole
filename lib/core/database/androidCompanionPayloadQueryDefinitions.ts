@@ -95,6 +95,11 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
       'SELECT alternative_id, node_id, source_version_id, body_text, source_host_name, created_at, status, updated_at ' +
       'FROM node_text_alternatives WHERE alternative_id = ? LIMIT 1'
   },
+  syncPayloadTopicDailyCount: {
+    syncPayload: { argMode: 'object_id', objectType: 'topic_daily_count' },
+    sql: "SELECT json_object('day_key', day_key, 'node_id', node_id) AS payload_json " +
+      'FROM topic_daily_count_entries WHERE id = ? LIMIT 1'
+  },
   syncPayloadPdfPageText: {
     syncPayload: { argMode: 'object_id', objectType: 'pdf_page_text' },
     sql:

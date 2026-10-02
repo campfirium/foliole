@@ -4,4 +4,5 @@ export interface NativeSaveNodeReadingStateArgs {
   nodeId: string;
   reading: NativeWorkspaceReadingProfile | null;
   updatedAt: string;
+  completedReviewDay?: string;
 }

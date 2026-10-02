@@ -1,6 +1,7 @@
 import type { ReadingState } from '../review/readingState.js';
 
 import type { DatabaseBindParams, DatabaseDriver, DatabaseRow } from './driver.js';
+import { recordTopicDailyCount } from './reviewDailyCounts.js';
 import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
 export interface NodeReadingSyncPayload {
@@ -19,6 +20,7 @@ export interface WriteNodeReadingSyncInput {
   hostName?: string;
   reading?: NodeReadingSyncPayload | null;
   updatedAt: string;
+  completedReviewDay?: string;
 }
 
 interface ExistingNodeReadingRow extends DatabaseRow {
@@ -136,10 +138,21 @@ export function saveNodeReadingStateWithSync(driver: DatabaseDriver, input: Writ
       node_id, interval_duration_ms, interval_growth_factor, last_handled_at, next_at, priority, repetition_count, state
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   );
-  driver.transaction(() => writeNodeReadingSnapshotWithSync(driver, input, {
-    deleteDeviceState: deleteDeviceState.run,
-    deleteReading: deleteReading.run,
-    upsertDeviceState: upsertDeviceState.run,
-    upsertReading: upsertReading.run
-  }));
+  driver.transaction(() => {
+    writeNodeReadingSnapshotWithSync(driver, input, {
+      deleteDeviceState: deleteDeviceState.run,
+      deleteReading: deleteReading.run,
+      upsertDeviceState: upsertDeviceState.run,
+      upsertReading: upsertReading.run
+    });
+    if (input.completedReviewDay !== undefined) {
+      const node = driver.queryOne<{ kind: string }>('SELECT kind FROM nodes WHERE id = ?', [input.nodeId]);
+      if (!input.reading || !input.hostName || node?.kind !== 'topic') {
+        throw new Error('Daily count requires a completed Topic review');
+      }
+      recordTopicDailyCount(driver, {
+        day: input.completedReviewDay, nodeId: input.nodeId, hostName: input.hostName
+      });
+    }
+  });
 }

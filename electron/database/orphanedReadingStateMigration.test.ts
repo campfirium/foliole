@@ -27,6 +27,7 @@ afterEach(async () => { closeDatabaseConnection(); await fs.rm(appRoot, { recurs
 function seedLegacyOrphan() {
   const connection = initializeDatabase();
   upsertNodeSnapshot(connection.driver, { nodeId: 'old', kind: 'topic', title: 'Old', content: 'Body',
+    parentNodeId: null, isTitleManual: true, reveal: null, anchorLink: null, position: 0,
     createdAt: '2026-08-01T00:00:00Z', updatedAt: '2026-08-01T00:00:00Z' });
   saveNodeReadingStateWithSync(connection.driver, { nodeId: 'old', hostName: 'source',
     updatedAt: '2026-08-01T00:00:00Z', reading: { intervalDurationMs: 1000, intervalGrowthFactor: 1,

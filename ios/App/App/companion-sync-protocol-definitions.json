@@ -467,6 +467,7 @@
     "nodeReview": "node_review",
     "nodeTextAlternative": "node_text_alternative",
     "settingRecord": "setting",
+    "topicDailyCount": "topic_daily_count",
     "viewState": "view_state"
   },
   "syncObjectPolicy": {
@@ -659,6 +660,19 @@
         "userVisible": true
       },
       {
+        "category": "review",
+        "conflict": "append_only_idempotent",
+        "scope": "workspace",
+        "key": "topic_daily_count",
+        "objectType": "topic_daily_count",
+        "pushIssue": "review_required",
+        "storage": [
+          "topic_daily_count_entries",
+          "topic_daily_counts"
+        ],
+        "userVisible": true
+      },
+      {
         "category": "settings",
         "conflict": "lww",
         "scope": "workspace",
@@ -742,6 +756,7 @@
       "parent_child_order",
       "pdf_page_text",
       "setting",
+      "topic_daily_count",
       "watched_folder"
     ]
   }

@@ -16,6 +16,7 @@ export type SyncObjectType =
   | 'node_open_state'
   | 'node_reading'
   | 'node_review'
+  | 'topic_daily_count'
   | 'pdf_page_text'
   | 'setting'
   | 'watched_folder'

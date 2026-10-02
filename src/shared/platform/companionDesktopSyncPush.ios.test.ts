@@ -156,3 +156,24 @@ it('pushes review backlog after its node review state was already accepted', asy
     { items: [expect.objectContaining({ clientOpId: 'review_log:op-1' })] }
   );
 });
+
+
+it('sends daily Topic counts with the other dirty state objects', async () => {
+  const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
+  storeMock.loadStateChanges.mockResolvedValueOnce([{
+    base_content_hash: null, content_hash: 'count-hash', deleted_at: null,
+    object_id: '2026-10-02:topic-a', object_type: 'topic_daily_count',
+    payload_json: '{"day_key":"2026-10-02","node_id":"topic-a"}', state_seq: 7,
+    updated_at: '2026-10-02T00:00:00.000Z'
+  }]);
+  storeMock.loadReviewLog.mockResolvedValueOnce([]);
+  httpMock.post.mockResolvedValueOnce({ acks: [{ client_op_id: 'topic_daily_count:2026-10-02:topic-a:7',
+    identity: { objectId: '2026-10-02:topic-a', objectType: 'topic_daily_count', scope: 'workspace' },
+    state_seq: 7, status: 'accepted' }] });
+  await pushLocalDirtyObjects('http://desktop.local');
+  expect(httpMock.post).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({
+    items: [expect.objectContaining({ identity: {
+      objectId: '2026-10-02:topic-a', objectType: 'topic_daily_count', scope: 'workspace'
+    } })]
+  }));
+});

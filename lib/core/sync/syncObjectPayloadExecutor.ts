@@ -16,6 +16,7 @@ import { applyParentChildOrderObject } from './syncObjectParentChildOrderPayload
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
 import { applyWatchedFolderObject } from './syncObjectWatchedFolderPayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
+import { applyTopicDailyCount } from './syncTopicDailyCount.js';
 
 export async function applySyncObjectPayloadWithDbPort(
   port: DbPort,
@@ -23,6 +24,8 @@ export async function applySyncObjectPayloadWithDbPort(
   options: SyncObjectPayloadApplyOptions = {}
 ) {
   switch (record.object_type) {
+    case 'topic_daily_count':
+      return applyTopicDailyCount(port, record);
     case 'external_document':
       return applyExternalDocumentObject(port, record);
     case 'external_folder':

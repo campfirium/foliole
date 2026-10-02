@@ -3,6 +3,7 @@ import { applyNodeReadingObject, applyNodeReviewObject } from '../../../../../li
 import { applyNodeOpenStateObject } from '../../../../../lib/core/sync/syncObjectOpenStatePayloadExecutor';
 import { createCompanionUuid } from '../../companionUuid';
 
+import { recordCompanionTopicDailyCount } from './companionTopicDailyCounts';
 import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 import {
@@ -37,16 +38,20 @@ export function saveIosOpenState(args: { last_opened_at: string; node_id: string
     .then((result) => ({ ...result, last_opened_at: args.last_opened_at }));
 }
 
-export function saveIosReading(args: { node_id: string; reading_json: string }) {
+export function saveIosReading(args: { node_id: string; reading_json: string; completedReviewDay?: string }) {
   return writeIosCompanionDatabase((db) => db.transaction(async (tx) => {
     const input = parseObject(args.reading_json);
     const hostName = await iosCompanionHostName(tx);
     const payload: Record<string, unknown> = { ...input, host_name: hostName, node_id: args.node_id };
     const { host_name: ignoredHost, reading_position: ignoredPosition, ...hashPayload } = payload;
     void ignoredHost; void ignoredPosition;
-    return applyLocalObject(tx, 'node_reading', args.node_id, payload, (record) => (
+    const result = await applyLocalObject(tx, 'node_reading', args.node_id, payload, (record) => (
       applyNodeReadingObject(tx, record, { hostName })
     ), hashPayload);
+    if (args.completedReviewDay !== undefined) {
+      await recordCompanionTopicDailyCount(tx, args.completedReviewDay, args.node_id);
+    }
+    return result;
   }));
 }
 

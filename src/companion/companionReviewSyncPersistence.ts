@@ -1,5 +1,7 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
+import { reviewCalendarDayKey } from '../../lib/core/review/reviewCalendarDates';
 import type { SchedulerCard, ReviewGrade } from '../features/review/model/reviewTypes';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { definedProps } from '../shared/lib/definedProps';
 import {
   saveCompanionSyncNodeReadingRecord,
@@ -16,6 +18,7 @@ export interface CompanionReviewLogInput {
 
 export async function persistCompanionReviewSyncObject(args: {
   itemKind: 'fsrs' | 'reading';
+  completedReading?: boolean;
   nodeId: string;
   nodeIds?: string[];
   reviewLog?: CompanionReviewLogInput;
@@ -31,7 +34,13 @@ export async function persistCompanionReviewSyncObject(args: {
     for (const nodeId of nodeIds) {
       const readingNode = args.snapshot.nodesById[nodeId];
       if (!readingNode?.reading) return null;
-      const result = await saveCompanionSyncNodeReadingRecord({ nodeId, reading: readingNode.reading });
+      const result = await saveCompanionSyncNodeReadingRecord({
+        nodeId, reading: readingNode.reading,
+        ...(args.completedReading && nodeId === args.nodeId ? {
+          completedReviewDay: reviewCalendarDayKey(new Date(readingNode.reading.lastHandledAt),
+            getCurrentReviewSchedulerSettings().newDayStartsAtHour)
+        } : {})
+      });
       if (!result) return null;
       persisted.push(result);
     }

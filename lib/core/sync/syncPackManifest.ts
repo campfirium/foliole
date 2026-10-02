@@ -46,6 +46,7 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'node_open_state',
   'node_reading',
   'node_review',
+  'topic_daily_count',
   'node_text_alternative',
   'parent_child_order',
   'pdf_page_text',

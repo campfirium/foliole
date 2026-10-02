@@ -50,7 +50,7 @@ it('retains reading and host position through remote Trash, unrelated sync and r
     expect(peer.db.prepare('SELECT deleted_at FROM nodes WHERE id = ?').pluck().get('topic')).toBe(DELETED_AT);
     await pruneLearningRowsWithoutVisibleNodes(peer.port);
     expect(persistedReading(peer)).toEqual(before[index]);
-    expect(loadWorkspaceSnapshot(peer.driver)?.nodesById.topic.reading).toBeNull();
+    expect(loadWorkspaceSnapshot(peer.driver)?.nodesById.topic?.reading).toBeNull();
   }
   restoreNodes(source.driver, { nodeIds: ['topic'] });
   source.db.prepare('UPDATE nodes SET sync_dirty = 1 WHERE id = ?').run('topic');
@@ -59,7 +59,7 @@ it('retains reading and host position through remote Trash, unrelated sync and r
   for (const [index, peer] of [source, target].entries()) {
     expect(peer.db.prepare('SELECT deleted_at FROM nodes WHERE id = ?').pluck().get('topic')).toBeNull();
     expect(persistedReading(peer)).toEqual(before[index]);
-    expect(loadWorkspaceSnapshot(peer.driver)?.nodesById.topic.reading).toMatchObject({ readingPosition: 0.42, repetitionCount: 2 });
+    expect(loadWorkspaceSnapshot(peer.driver)?.nodesById.topic?.reading).toMatchObject({ readingPosition: 0.42, repetitionCount: 2 });
   }
 });
 
@@ -67,6 +67,7 @@ it('retains descendant progress while its parent is in Trash', async () => {
   const peer = createPeer('source');
   edit(peer, 'Parent');
   upsertNodeSnapshot(peer.driver, { nodeId: 'child', parentNodeId: 'topic', kind: 'topic',
+    isTitleManual: true, reveal: null, anchorLink: null, position: 0,
     title: 'Child', content: 'Child body', updatedAt: DELETED_AT, createdAt: DELETED_AT });
   saveReading(peer, 'child');
   const before = persistedReading(peer);

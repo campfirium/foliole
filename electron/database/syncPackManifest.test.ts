@@ -80,6 +80,7 @@ it('declares the stage one payload object inventory explicitly', () => {
     'node_open_state',
     'node_reading',
     'node_review',
+    'topic_daily_count',
     'node_text_alternative',
     'parent_child_order',
     'pdf_page_text',

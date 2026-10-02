@@ -30,6 +30,8 @@ const versionPreflightSql = `WITH RECURSIVE selected(id) AS (
     length(CAST(v.snapshot_json AS BLOB)) + 512), 0) AS bytes
   FROM node_sync_versions v WHERE v.object_id IN (SELECT id FROM ancestry UNION SELECT id FROM selected)`;
 const payloadPlans = [
+  { objectType: 'topic_daily_count', sql: `SELECT id __object_id, day_key, node_id
+    FROM source.topic_daily_count_entries` },
   { objectType: 'external_folder', sql: `SELECT f.id __object_id, f.id, f.folder_path, f.attachment_mode,
     f.attachment_root_path, f.excluded_dirs_json, f.status, f.document_count, f.indexed_at, f.last_error,
     s.host_name, s.host_platform, s.type_settings_json, f.created_at, f.updated_at, f.source_ref
@@ -86,7 +88,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
           WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END
      FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN
        ('external_document','external_folder','import_source','node','node_open_state','node_reading',
-        'node_review','node_text_alternative','parent_child_order','pdf_page_text','setting','view_state','watched_folder')
+        'node_review','node_text_alternative','parent_child_order','pdf_page_text','setting','view_state','watched_folder','topic_daily_count')
        AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        AND (state.object_type NOT IN ('node_reading','node_review') OR state.deleted_at IS NOT NULL OR EXISTS

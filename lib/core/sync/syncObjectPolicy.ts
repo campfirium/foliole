@@ -40,6 +40,8 @@ export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
   policy('node_review', 'node_review', 'review', 'workspace', 'review_merge', ['node_review'], true),
   policy('node_text_alternative', 'node_text_alternative', 'content', 'workspace', 'lww', ['node_text_alternatives'], true),
   policy('review_log', null, 'review', 'event', 'append_only_idempotent', ['review_log'], true),
+  policy('topic_daily_count', 'topic_daily_count', 'review', 'workspace', 'append_only_idempotent',
+    ['topic_daily_count_entries', 'topic_daily_counts'], true),
   policy('setting.workspace', 'setting', 'settings', 'workspace', 'lww', ['setting_records'], true),
   policy('setting.host', 'setting', 'settings', 'host', 'host_private', ['setting_records'], true, 'diagnostic'),
   policy('view_state.active_node', 'view_state', 'ui_session', 'host', 'host_private', ['workspace_meta'], true, 'diagnostic'),

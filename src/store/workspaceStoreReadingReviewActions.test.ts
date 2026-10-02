@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { reviewCalendarDayKey } from '../../lib/core/review/reviewCalendarDates';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { saveNodeReadingStateToRuntime } from '../shared/platform/runtime/nodeReadingStateRuntimeRepository';
 
 import { createWorkspaceActionHistoryActions } from './workspaceActionHistory';
@@ -36,6 +38,9 @@ it('undoes and redoes Read with its reading and review context', async () => {
   const before = harness.getState();
   const nodeId = before.reviewSession.currentNodeId!;
   await expect(actions.readReviewTopic(now)).resolves.toBe(true);
+  expect(saveNodeReadingStateToRuntime).toHaveBeenCalledWith(expect.objectContaining({
+    nodeId, completedReviewDay: reviewCalendarDayKey(new Date(now), getCurrentReviewSchedulerSettings().newDayStartsAtHour)
+  }));
   const entry = harness.getState().appActionHistory.undoStack.at(-1)!;
   expect(entry).toMatchObject({ nodeId, title: 'Read Topic', type: 'topic.dismiss' });
   expect(historyActions.undoWorkspaceAction()).toBe(true);
@@ -59,6 +64,7 @@ it('adds Later to the same workspace timeline', async () => {
   vi.setSystemTime(new Date(now));
 
   await expect(actions.postponeReviewTopic()).resolves.toBe(true);
+  expect(vi.mocked(saveNodeReadingStateToRuntime).mock.calls.every(([args]) => args.completedReviewDay === undefined)).toBe(true);
   expect(harness.getState().appActionHistory.undoStack.at(-1)).toMatchObject({
     title: 'Later Topic',
     type: 'topic.dismiss'

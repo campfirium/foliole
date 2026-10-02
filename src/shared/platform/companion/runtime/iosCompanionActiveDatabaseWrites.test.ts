@@ -73,3 +73,23 @@ it('persists iOS setting, reading, review, open, and view state through one shar
   expect(database?.prepare(`SELECT object_type, object_id, state_seq FROM sync_object_state
     WHERE object_type IN ('setting', 'view_state') ORDER BY object_type, object_id`).all()).toEqual(before);
 });
+
+
+it('captures a completed Topic once per day and rolls back invalid completion with its reading state', async () => {
+  database!.exec("UPDATE nodes SET kind = 'topic' WHERE id = 'node-1'");
+  const reading = JSON.stringify({ interval_duration_ms: 60000, interval_growth_factor: 2,
+    last_handled_at: '2026-10-02T08:00:00Z', next_at: '2026-10-03T08:00:00Z',
+    priority: 0, reading_position: 0, repetition_count: 1, state: 'active' });
+  const input = { node_id: 'node-1', reading_json: reading };
+  await saveIosReading(input);
+  expect(database!.prepare('SELECT count(*) FROM topic_daily_counts').pluck().get()).toBe(0);
+  await saveIosReading({ ...input, completedReviewDay: '2026-10-02' });
+  await saveIosReading({ ...input, completedReviewDay: '2026-10-02' });
+  expect(database!.prepare('SELECT count FROM topic_daily_counts').pluck().get()).toBe(1);
+  const before = database!.prepare('SELECT * FROM node_reading').all();
+  await expect(saveIosReading({ ...input, reading_json: reading.replace('60000', '120000'),
+    completedReviewDay: '2026-02-30' })).rejects.toThrow('Invalid review day');
+  expect(database!.prepare('SELECT * FROM node_reading').all()).toEqual(before);
+  expect(database!.prepare("SELECT object_id FROM sync_object_state WHERE object_type = 'topic_daily_count'").all())
+    .toEqual([{ object_id: '2026-10-02:node-1' }]);
+});

@@ -10,7 +10,7 @@ import type {
 } from './companionSyncPushTypes.js';
 import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js';
 
-export type StatePushObjectType = Extract<NativeSyncObjectType, 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'parent_child_order' | 'setting' | 'view_state'>;
+export type StatePushObjectType = Extract<NativeSyncObjectType, 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'parent_child_order' | 'setting' | 'view_state' | 'topic_daily_count'>;
 
 interface SyncObjectStateRow extends DbRow {
   content_hash: string;
@@ -23,6 +23,7 @@ export function isStateObjectPush(item: CompanionSyncPushPayload) {
   return item.identity.objectType === 'node_open_state'
     || item.identity.objectType === 'node_reading'
     || item.identity.objectType === 'node_review'
+    || item.identity.objectType === 'topic_daily_count'
     || item.identity.objectType === 'node_text_alternative'
     || item.identity.objectType === 'parent_child_order'
     || item.identity.objectType === 'setting'

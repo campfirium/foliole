@@ -1,4 +1,6 @@
 export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
+  topic_daily_count: `SELECT json_object('day_key', day_key, 'node_id', node_id)
+    AS payload_json FROM topic_daily_count_entries WHERE id = ?`,
   parent_child_order: `SELECT json_object(
     'parent_id', parent_id, 'child_ids_json', child_ids_json
   ) AS payload_json FROM parent_child_order WHERE parent_id = ?`,

@@ -5,6 +5,7 @@ import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from './androidCompanionSync
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { PDF_INDEX_STATE_SCHEMA_STATEMENTS } from './pdfIndexStateSchema.js';
 import { isRetiredAttachmentSchema } from './retiredAttachmentSchema.js';
+import { REVIEW_DAILY_COUNT_SCHEMA } from './reviewDailyCountSchema.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
@@ -14,6 +15,7 @@ import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaSt
 export const ANDROID_COMPANION_SCHEMA_STATEMENTS = [
   ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
   ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
+  ...REVIEW_DAILY_COUNT_SCHEMA,
   ...ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS,
   ...PDF_INDEX_STATE_SCHEMA_STATEMENTS,
   ...ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS,

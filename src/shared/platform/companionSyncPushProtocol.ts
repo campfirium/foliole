@@ -83,7 +83,7 @@ function stateClientOpId(row: NativeSyncStateObjectRecord) {
 }
 
 function createStateObjectSyncAdapter(
-  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'parent_child_order' | 'setting' | 'view_state'
+  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'parent_child_order' | 'setting' | 'view_state' | 'topic_daily_count'
 ): SyncableObjectAdapter<SyncableStateObjectRow, NativeSyncStateObjectRecord> {
   return {
     applyPullPayload(payload, localRow) {
@@ -126,7 +126,7 @@ function createStateObjectSyncAdapter(
 
 function resolveStateApplyStatus(
   payload: NativeSyncStateObjectRecord,
-  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'parent_child_order' | 'setting' | 'view_state',
+  objectType: 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'parent_child_order' | 'setting' | 'view_state' | 'topic_daily_count',
   localRow?: SyncableStateObjectRow | null
 ): SyncApplyResult['status'] {
   if (payload.object_type !== objectType) return 'ignored';
@@ -145,6 +145,8 @@ export const nodeReviewSyncAdapter = createStateObjectSyncAdapter('node_review')
 export const nodeTextAlternativeSyncAdapter = createStateObjectSyncAdapter('node_text_alternative');
 
 export const parentChildOrderSyncAdapter = createStateObjectSyncAdapter('parent_child_order');
+
+export const topicDailyCountSyncAdapter = createStateObjectSyncAdapter('topic_daily_count');
 
 export const settingSyncAdapter = createStateObjectSyncAdapter('setting');
 
@@ -242,6 +244,7 @@ export const syncPushAdapters = {
   node_text_alternative: nodeTextAlternativeSyncAdapter,
   parent_child_order: parentChildOrderSyncAdapter,
   setting: settingSyncAdapter,
+  topic_daily_count: topicDailyCountSyncAdapter,
   view_state: viewStateSyncAdapter,
   review_log: reviewLogSyncAdapter
 } as const;

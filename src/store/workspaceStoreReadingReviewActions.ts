@@ -1,4 +1,6 @@
+import { reviewCalendarDayKey } from '../../lib/core/review/reviewCalendarDates';
 import { isReadingReviewItemNode } from '../features/review/model/reviewItemKind';
+import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 
 import { pushWorkspaceUndoEntry } from './workspaceActionHistory';
 import { buildReadingReviewDomainPatch } from './workspaceReadingReviewDomain';
@@ -177,6 +179,9 @@ function buildReadOrPostponeReadingReviewPatch(args: {
     reviewSession.currentNodeId ?? reviewSession.continueNodeId ?? null
   );
   return {
+    ...(args.action === 'read' ? {
+      completedReviewDay: reviewCalendarDayKey(new Date(args.now), getCurrentReviewSchedulerSettings().newDayStartsAtHour)
+    } : {}),
     historyEntry: createReadingReviewHistoryEntry({
       afterActiveNodeId: activeContext.activeNodeId,
       ...('browseRootNodeId' in activeContext

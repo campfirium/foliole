@@ -9,6 +9,7 @@ export type NativeSyncObjectType =
   | 'node_open_state'
   | 'node_reading'
   | 'node_review'
+  | 'topic_daily_count'
   | 'node_text_alternative'
   | 'pdf_page_text'
   | 'setting'

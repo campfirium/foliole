@@ -16,6 +16,7 @@ export const COMPLETE_MEMBER_SHARED_POLICY_KEYS = [
   'node_text_alternative',
   'pdf_page_text',
   'review_log',
+  'topic_daily_count',
   'setting.workspace',
   'watched_folder'
 ] as const;

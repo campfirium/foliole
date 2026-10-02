@@ -41,6 +41,7 @@ import {
   invalidateLegacyReadwiseSourceCompletion,
   migrateReadwiseSourceMode
 } from './readwiseSourceModeMigration.js';
+import { REVIEW_DAILY_COUNT_SCHEMA } from './reviewDailyCountSchema.js';
 import { initializeStoredSourceSearch } from './storedSourceSearchSchema.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
@@ -162,5 +163,8 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 121, migrate: repairSyncStateEntities },
   { version: 122, migrate: migrateIndependentNodeVersions },
   { version: 123, migrate: initializeStoredSourceSearch },
-  { version: 124, migrate: initializeLegacyBodyMigrationSchema }
+  { version: 124, migrate: initializeLegacyBodyMigrationSchema },
+  { version: 125, migrate: (sqlite) => {
+    for (const statement of REVIEW_DAILY_COUNT_SCHEMA) sqlite.exec(statement);
+  } }
 ];

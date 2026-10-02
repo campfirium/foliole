@@ -71,13 +71,15 @@ export async function saveCompanionSyncSettingRecord(args: CompanionSyncSettingR
 export async function saveCompanionSyncNodeReadingRecord(args: {
   nodeId: string;
   reading: NativeWorkspaceReadingProfile;
+  completedReviewDay?: string;
 }) {
   if (!isNativeCompanionReadingWriteRuntime()) {
     return null;
   }
   return runCompanionHighValueMutationTask(() => saveIosReading({
     node_id: args.nodeId,
-    reading_json: JSON.stringify(toReadingPayload(args.reading))
+    reading_json: JSON.stringify(toReadingPayload(args.reading)),
+    ...(args.completedReviewDay !== undefined ? { completedReviewDay: args.completedReviewDay } : {})
   }));
 }
 

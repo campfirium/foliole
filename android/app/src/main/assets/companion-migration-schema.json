@@ -498,6 +498,15 @@
         }
       ],
       "beforeVersion": 58
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add daily Topic counts.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 60
     }
   ],
   "planKeys": {

@@ -80,6 +80,7 @@ function useCompanionReadingReviewActions(
       if (!result) throw new Error('The current reading topic is no longer available.');
       const persisted = await persistCompanionReviewSyncObject({
         itemKind: 'reading',
+        completedReading: action === 'read',
         nodeId: reviewSession.currentCard.nodeId,
         nodeIds: result.syncNodeIds,
         snapshot: result.snapshot

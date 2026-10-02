@@ -40,6 +40,7 @@ function normalizedObjectTypes(options: SyncPackStateRowsApplyOptions) {
     'external_document',
     'node_reading',
     'node_review',
+    'topic_daily_count',
     'pdf_page_text',
     'setting',
     'watched_folder',

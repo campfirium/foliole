@@ -19,6 +19,7 @@ import type { NativeSaveNodeReviewStateArgs } from './nativeNodeReviewStateContr
 import type { NativePdfDocumentSearchCommandMap } from './nativePdfDocumentSearchContract.js';
 import type { NativeReadwiseCommandMap } from './nativeReadwiseCommandMap.js';
 import type { NativeRemoteImageCommandMap } from './nativeRemoteImageCommandMap.js';
+import type { NativeReviewCalendarHistory, NativeReviewCalendarHistoryArgs } from './nativeReviewCalendarContract.js';
 import type { NativeSearchIndexCommandMap } from './nativeSearchIndexCommandMap.js';
 import type { NativeSplitTopicPreferencesCommandMap } from './nativeSplitTopicPreferencesContract.js';
 import type {
@@ -166,6 +167,10 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   [NATIVE_COMMANDS.saveNodeReadingState]: {
     args: NativeSaveNodeReadingStateArgs;
     result: null;
+  };
+  [NATIVE_COMMANDS.loadReviewCalendarHistory]: {
+    args: NativeReviewCalendarHistoryArgs;
+    result: NativeReviewCalendarHistory;
   };
   [NATIVE_COMMANDS.saveNodeReviewState]: {
     args: NativeSaveNodeReviewStateArgs;

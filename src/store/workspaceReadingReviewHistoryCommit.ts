@@ -28,6 +28,7 @@ export interface ReadingReviewPatchResult {
   historyEntry: WorkspaceTopicDismissHistoryEntry;
   nextNodesForSync: Node[];
   patch: Partial<WorkspaceState>;
+  completedReviewDay?: string;
 }
 
 export function persistReadingReviewNodes(
@@ -60,7 +61,9 @@ export async function persistAndApplyReadingReviewPatch(args: {
     let persisted = false;
     let invalidPersistence = false;
     try {
-      persisted = await persistReadingReviewNodes(result.nextNodesForSync, args.persistence);
+      persisted = result.completedReviewDay
+        ? await args.persistence.persistReadingNodes(result.nextNodesForSync, undefined, result.completedReviewDay)
+        : await persistReadingReviewNodes(result.nextNodesForSync, args.persistence);
     } catch (error) {
       invalidPersistence = isWorkspacePartialPersistenceError(error);
       persisted = false;
