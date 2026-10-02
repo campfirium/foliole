@@ -80,6 +80,7 @@ export function findSearchAliasSpans(
   spellings: string[],
   prepared?: ReturnType<typeof prepareSearchAliasText>
 ) {
+  if (spellings.length === 0) return [];
   const locate = prepared ?? prepareSearchAliasText(text);
   const occurrences = spellings.flatMap(locate);
   return spellings.flatMap((spelling) => {

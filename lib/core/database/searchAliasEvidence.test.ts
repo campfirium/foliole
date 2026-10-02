@@ -1,6 +1,16 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 import { findSearchAliasSpan, findSearchAliasSpans } from './searchAliasEvidence.js';
+
+it('does not normalize document text when there are no alias spellings to locate', () => {
+  const normalize = vi.spyOn(String.prototype, 'normalize');
+  try {
+    expect(findSearchAliasSpans('A large searchable document. '.repeat(1000), [])).toEqual([]);
+    expect(normalize.mock.calls.length).toBe(0);
+  } finally {
+    normalize.mockRestore();
+  }
+});
 
 it('maps accent and width folding back to the original UTF-16 text range', () => {
   const text = 'A café and ＡＩ overview.';
