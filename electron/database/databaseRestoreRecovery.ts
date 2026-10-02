@@ -39,7 +39,7 @@ export async function recoverCurrentDatabaseAfterRestoreFailure(args: {
       sourcePath: rollbackPath, targetPath: args.targetPath,
       onTemporaryDatabase: artifacts.trackCandidate
     });
-    initializeWorkspaceSearchSidecar(initializeDatabase(), { requireCurrentSource: true });
+    initializeWorkspaceSearchSidecar(initializeDatabase(undefined, { recovery: 'fail' }), { requireCurrentSource: true });
     clearDatabaseConnectionUnavailable();
   } catch (rollbackError) {
     artifacts.preserve();

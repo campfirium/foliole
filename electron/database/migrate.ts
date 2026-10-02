@@ -26,6 +26,8 @@ import {
   recoverCorruptedDatabase,
   verifyDatabaseIntegrity
 } from './integrity.js';
+import { prepareLegacyAttachmentFiles } from './legacyAttachmentFiles.js';
+import { captureLegacyAttachmentTargets, migrateLegacyAttachmentReferences } from './legacyAttachmentReferenceMigration.js';
 import { migrateLegacyBodyConsistency, needsLegacyBodyConsistencySnapshot } from './legacyBodyConsistencyMigration.js';
 import {
   createManagedSafetySnapshotForMigration,
@@ -68,12 +70,12 @@ function enableStartupWriteAheadLog(connection: ReturnType<typeof openDatabaseCo
   enableDatabaseWriteAheadLog(connection);
 }
 
-function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter, deferSearchIndex = false) {
+function initializeOpenedDatabase(connection: ReturnType<typeof openDatabaseConnection>, reportStage?: DatabaseInitStageReporter, deferSearchIndex = false, requireSchema = false) {
   reportStage?.('database_integrity_check_skipped', {
     reason: 'routine-startup-check-disabled'
   });
   enableStartupWriteAheadLog(connection, reportStage);
-  if (shouldSkipStartupSchemaInit()) {
+  if (!requireSchema && shouldSkipStartupSchemaInit()) {
     reportStage?.('database_schema_init_skipped', {
       reason: 'startup-schema-init-disabled'
     });
@@ -102,10 +104,13 @@ function initializeSchemaWorkspaceAndSearch(
   deferSearchIndex = false
 ) {
   const fresh = readUserVersion(connection.sqlite) === 0;
+  const attachmentTargets = captureLegacyAttachmentTargets(connection);
   const initializedConnection = initializeDatabaseConnection(connection, {
     beforeVersionCommit: () => {
       migrateDesktopHostProfile(connection, currentHostName);
       migrateLegacyBodyConsistency(connection, currentHostName, fresh);
+      prepareLegacyAttachmentFiles(resolveRuntimeDataPaths().assetsDir, attachmentTargets);
+      migrateLegacyAttachmentReferences(connection, attachmentTargets, currentHostName);
     }
   });
   // Renderer drafts and their retry queue do not survive a process restart.
@@ -121,7 +126,7 @@ function initializeSchemaWorkspaceAndSearch(
   return deferSearchIndex ? initializedConnection : initializeWorkspaceSearchSidecar(initializedConnection);
 }
 
-export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean } = {}) {
+export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail' } = {}) {
   const databasePath = resolveDatabasePath();
 
   try {
@@ -136,12 +141,13 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter, opti
       reportStage?.('database_open_connection_complete', {
         dbPath: connection.dbPath
       });
-      return initializeOpenedDatabase(connection, reportStage, options.deferSearchIndex);
+      return initializeOpenedDatabase(connection, reportStage, options.deferSearchIndex, options.recovery === 'fail');
     } catch (error) {
       closeDatabaseConnection();
       throw error;
     }
   } catch (error) {
+    if (options.recovery === 'fail') throw error;
     if (isLegacyDatabaseRebuildRequiredError(error)) {
       return rebuildLegacyDevelopmentDatabase(databasePath, reportStage, options.deferSearchIndex);
     }

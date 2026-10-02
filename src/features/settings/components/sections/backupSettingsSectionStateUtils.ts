@@ -134,8 +134,12 @@ export async function runRestoreBackup(
     setRestoringPath('');
     return;
   }
-  await onRestored(entry.fileName);
-  setRestoringPath('');
+  try {
+    await onRestored(entry.fileName);
+    setRestoringPath('');
+  } catch {
+    setStatusMessage('The backup was restored, but Foliole could not reload the library. Restart Foliole before making more changes.');
+  }
 }
 
 export async function runRestoreSourceDispositions(args: {

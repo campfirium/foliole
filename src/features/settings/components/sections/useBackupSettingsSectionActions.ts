@@ -1,5 +1,7 @@
+import { useTranslation, type Translate } from '../../../../shared/localization/LocalizationProvider';
 import { selectRuntimeFolder } from '../../../../shared/platform/folderSelectionRuntimeRepository';
 import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
+import { requestAppConfirmation } from '../../../../shared/ui/appConfirmation';
 import {
   beginWorkspaceRestoreSession,
   cancelWorkspaceRestoreSession,
@@ -7,6 +9,7 @@ import {
 } from '../../../../store/workspaceRestoreSession';
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
+import { localizeDatabaseRestoreFailure } from '../../model/databaseRestoreNotice';
 
 import {
   persistBackupSettings,
@@ -119,7 +122,32 @@ function buildPathHandlers(args: BackupActionHandlerArgs, saveDraft: SaveBackupS
   };
 }
 
+function reportRestoreFailure(message: string, args: BackupActionHandlerArgs, t: Translate) {
+  args.setStatusMessage(message);
+  void requestAppConfirmation({
+    cancelLabel: null,
+    confirmLabel: t('settings.backups.restore.success.done'),
+    description: message,
+    title: message === t('settings.backups.restore.reloadFailed')
+      ? t('settings.backups.restore.success.title') : t('settings.backups.restore.failure.title')
+  });
+}
+
+async function restoreWorkspaceBackup(entry: DatabaseBackupEntry, args: BackupActionHandlerArgs, t: Translate) {
+  if (!await beginWorkspaceRestoreSession()) {
+    reportRestoreFailure(t('settings.backups.restore.failure.pendingChanges'), args, t);
+    return;
+  }
+  await runRestoreBackup(entry, args.setRestoringPath, (message) => {
+    if (message) reportRestoreFailure(localizeDatabaseRestoreFailure(message, t), args, t);
+    else args.setStatusMessage('');
+  }, async (fileName) => {
+    completeWorkspaceRestoreSession(fileName);
+  }, cancelWorkspaceRestoreSession);
+}
+
 export function useBackupActionHandlers(args: BackupActionHandlerArgs) {
+  const t = useTranslation();
   const saveDraft = (nextSettings: DatabaseBackupSettings, refreshBackups = false) =>
     void persistBackupSettings({
       nextSettings,
@@ -132,16 +160,7 @@ export function useBackupActionHandlers(args: BackupActionHandlerArgs) {
     });
 
   const handleCreateBackup = () => void runCreateBackup(args.refreshBackups, args.setIsCreatingBackup, args.setStatusMessage);
-  const handleRestoreBackup = (entry: DatabaseBackupEntry) =>
-    void (async () => {
-      if (!await beginWorkspaceRestoreSession()) {
-        args.setStatusMessage('Backup restore did not start because recent changes could not be saved.');
-        return;
-      }
-      await runRestoreBackup(entry, args.setRestoringPath, args.setStatusMessage, async (fileName) => {
-        completeWorkspaceRestoreSession(fileName);
-      }, cancelWorkspaceRestoreSession);
-    })();
+  const handleRestoreBackup = (entry: DatabaseBackupEntry) => void restoreWorkspaceBackup(entry, args, t);
   const handleExportSourceDispositions = () => void runExportSourceDispositions(args);
   const handleImportSourceDispositions = () => void runImportSourceDispositions(args);
   const handleResetSourceDispositions = () => void runResetSourceDispositions(args);

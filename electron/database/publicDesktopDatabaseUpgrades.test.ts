@@ -1,7 +1,8 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -32,6 +33,7 @@ import {
   readDatabaseCapabilities
 } from '../../scripts/database/public-desktop-database-upgrade-contract.mjs';
 
+import { restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { closeDatabaseConnection, resolveDatabasePath } from './connection.js';
 import { waitForManagedSafetySnapshotSettlements } from './managedSafetySnapshots.js';
@@ -163,3 +165,40 @@ function readProtectedFixtureRows(sqlite: Database.Database) {
   return ['nodes', 'node_review', 'node_reading', 'settings'].map((table) =>
     sqlite.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
 }
+
+describe('populated historical Desktop database upgrades', () => {
+  it.each(fixtureRegistrations.filter(({ schema }) => [62, 78].includes(schema)))(
+    'upgrades and restores populated schema $schema with obsolete file mappings', async (registration) => {
+      const databasePath = await installFixtureAsProductionDatabase(registration);
+      const bytes = Buffer.from([0xff, 0xd8, 0xff, ...Buffer.from(`legacy-${registration.schema}`)]);
+      const id = createHash('sha256').update(bytes).digest('hex');
+      const assetsDir = path.join(mockedDocumentsDir, 'Foliole', 'Assets');
+      await mkdir(assetsDir, { recursive: true });
+      await writeFile(path.join(assetsDir, `${id}.jpg`), bytes);
+      const backupPath = path.join(path.dirname(databasePath), 'legacy-backup.db');
+      const raw = new Database(databasePath);
+      try {
+        raw.prepare('INSERT INTO attachments (id, original_name, mime_type, size_bytes, created_at) VALUES (?, ?, ?, ?, ?)')
+          .run(id, 'legacy.jpg', 'image/jpeg', bytes.length, '2026-08-03T00:00:00.000Z');
+        raw.prepare(`INSERT INTO attachment_blobs (attachment_id, content_hash, storage_key, mime_type, size_bytes, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)`).run(id, id, registration.schema === 62 ? `${id}.jpeg` : id,
+          'image/jpeg', bytes.length, '2026-08-03T00:00:00.000Z');
+        raw.prepare('INSERT INTO node_attachments (node_id, attachment_id, role) VALUES (?, ?, ?)')
+          .run('t166-root', id, 'image');
+        await raw.backup(backupPath);
+      } finally { raw.close(); }
+      assertProductionOpen(databasePath);
+      await restoreApplicationDatabaseBackup({ sourcePath: backupPath });
+      const connection = initializeDatabase();
+      assertCurrentDatabase(connection.sqlite, connection.driver);
+      const row = connection.sqlite.prepare('SELECT resource_references FROM nodes WHERE id = ?')
+        .get('t166-root') as { resource_references: string };
+      expect(JSON.parse(row.resource_references)).toEqual([
+        { storage_key: `${id}.jpg`, role: 'image', original_name: 'legacy.jpg' }
+      ]);
+      expect(readFileSync(path.join(assetsDir, `${id}.jpg`))).toEqual(bytes);
+      closeDatabaseConnection();
+      assertProductionOpen(databasePath);
+    }
+  );
+});

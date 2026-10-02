@@ -1,5 +1,5 @@
 export interface AppConfirmationOptions {
-  cancelLabel?: string;
+  cancelLabel?: string | null;
   confirmLabel?: string;
   description?: string | string[];
   title: string;

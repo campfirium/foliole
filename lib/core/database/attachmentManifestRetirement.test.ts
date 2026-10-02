@@ -11,8 +11,13 @@ it('preserves missing business metadata from a representable legacy manifest', (
     .toEqual([{ id, mimeType: 'image/png', sizeBytes: 80 }]);
 });
 
+it.each([null, id, `${id}.jpeg`, 'legacy-file-name'])('discards obsolete file names while preserving business metadata: %s', (blobKey) => {
+  expect(validateAttachmentManifestRetirement([{ ...base, blob_key: blobKey }]))
+    .toEqual([{ id, mimeType: 'image/png', sizeBytes: 80 }]);
+});
+
 it.each([
-  { id: null }, { id: 'legacy-id' }, { id: ` ${id}` }, { blob_key: `${id}.jpeg` },
+  { id: null }, { id: 'legacy-id' }, { id: ` ${id}` },
   { blob_hash: 'b'.repeat(64) }, { blob_mime: 'image/jpeg' }, { blob_size: 81 },
   { mime_type: null, blob_mime: null }
 ])('refuses retirement without losing unrepresentable metadata: %j', (change) => {

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
-import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
+import { requestAppConfirmation } from '../../shared/ui/appConfirmation';
 import { consumeWorkspaceRestoreCompletion } from '../../store/workspaceRestoreSession';
 
 export function useWorkspaceRestoreCompletionNotice(isWorkspaceHydrated: boolean) {
@@ -10,6 +10,11 @@ export function useWorkspaceRestoreCompletionNotice(isWorkspaceHydrated: boolean
     if (!isWorkspaceHydrated) return;
     const fileName = consumeWorkspaceRestoreCompletion();
     if (!fileName) return;
-    showAppRuntimeNotice(t('settings.backups.restore.success.description', { fileName }), 'success');
+    void requestAppConfirmation({
+      cancelLabel: null,
+      confirmLabel: t('settings.backups.restore.success.done'),
+      description: t('settings.backups.restore.success.description', { fileName }),
+      title: t('settings.backups.restore.success.title')
+    });
   }, [isWorkspaceHydrated, t]);
 }

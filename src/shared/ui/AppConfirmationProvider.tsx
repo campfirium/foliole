@@ -114,9 +114,11 @@ function ActiveAppDialog(props: {
             />
           </AppDialogBody>
           <AppDialogActions>
-            <AppButton onClick={() => props.onClose(false)} variant="ghost">
-              {props.activeDialog?.options.cancelLabel ?? t('shared.confirm.cancel')}
-            </AppButton>
+            {props.activeDialog?.options.cancelLabel !== null ? (
+              <AppButton onClick={() => props.onClose(false)} variant="ghost">
+                {props.activeDialog?.options.cancelLabel ?? t('shared.confirm.cancel')}
+              </AppButton>
+            ) : null}
             <AppButton onClick={() => props.onClose(true)} variant="default">
               {props.activeDialog?.options.confirmLabel ?? t('shared.confirm.confirm')}
             </AppButton>

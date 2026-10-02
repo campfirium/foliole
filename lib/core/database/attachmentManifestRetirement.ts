@@ -22,11 +22,11 @@ export function validateAttachmentManifestRetirement(rows: RetiringAttachmentRow
     const storageKey = row.id && mimeType ? buildCanonicalAttachmentStorageKey(row.id, mimeType) : null;
     if (!storageKey || !row.id || !/^[a-f0-9]{64}$/.test(row.id) || !mimeType
       || (row.blob_hash != null && row.blob_hash !== row.id)
-      || (row.blob_key != null && row.blob_key !== storageKey)
       || (row.blob_mime != null && row.blob_mime !== mimeType)
       || (row.size_bytes != null && row.blob_size != null && row.size_bytes !== row.blob_size)) {
       throw new Error(`attachment_manifest_retirement_unrepresentable:${row.id ?? 'orphan-manifest'}`);
     }
+    // File names and possession state are retired, not prerequisites for preserving metadata.
     return { id: row.id, mimeType, sizeBytes: row.size_bytes ?? row.blob_size };
   });
 }

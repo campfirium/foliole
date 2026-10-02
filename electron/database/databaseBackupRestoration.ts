@@ -12,7 +12,7 @@ import {
   closeDatabaseConnection,
   openDatabaseConnection
 } from './connection.js';
-import { createDatabaseRestoreArtifacts } from './databaseRestoreArtifacts.js';
+import { createDatabaseRestoreArtifacts, type DatabaseRestoreArtifacts } from './databaseRestoreArtifacts.js';
 import { recoverCurrentDatabaseAfterRestoreFailure } from './databaseRestoreRecovery.js';
 import {
   createManagedSafetySnapshotWithBackup,
@@ -57,7 +57,7 @@ export async function restoreDatabaseBackupInMaintenance(
       sourcePath: databasePath, targetPath, onTemporaryDatabase: artifacts.trackCandidate
     });
     replacementComplete = true;
-    const restored = initializeDatabase();
+    const restored = initializeDatabase(undefined, { recovery: 'fail' });
     finishSyncGroupBackupRestore(restored.driver, syncGroup, restoredAt);
     initializeWorkspaceSearchSidecar(restored, { requireCurrentSource: true });
     reapplyBackupSettingsAfterRestore(backupSettings);
@@ -76,12 +76,27 @@ export async function restoreDatabaseBackupInMaintenance(
       safetySnapshot,
       targetPath
     });
-    await startSearchAliasMirror();
+    await resumeRecoveredSearchAliasMirror();
     throw new Error('The selected backup was not restored. Your current library has been restored.');
   } finally {
-    await artifacts.finish({
+    await finishRestoreArtifacts(artifacts, {
       backupDirectory, replacementComplete, settings: backupSettings,
       snapshot: safetySnapshot, sourcePath
     });
   }
+}
+
+async function resumeRecoveredSearchAliasMirror() {
+  await startSearchAliasMirror().catch((error) => {
+    console.error('[backup] current library recovered but search alias watcher could not restart', error);
+  });
+}
+
+async function finishRestoreArtifacts(artifacts: DatabaseRestoreArtifacts,
+  args: Parameters<DatabaseRestoreArtifacts['finish']>[0]) {
+  await artifacts.finish(args).catch((error) => {
+    artifacts.preserve();
+    args.snapshot?.release();
+    console.error('[backup] restore outcome preserved; temporary cleanup failed', error);
+  });
 }

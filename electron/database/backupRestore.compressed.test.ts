@@ -23,6 +23,7 @@ import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } fro
 import { closeDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
+import * as searchAliasMirror from './searchAliasMirror.js';
 import { loadWorkspaceSnapshot } from './workspaceSnapshot.js';
 
 let tempRoot = '';
@@ -140,3 +141,43 @@ function seedNode(content: string) {
     createdAt: '2026-03-14T10:00:00.000Z', updatedAt: new Date().toISOString()
   });
 }
+
+it('reports successful restore even when temporary source cleanup fails afterwards', async () => {
+  seedNode('# original');
+  const backup = await createApplicationDatabaseBackup();
+  seedNode('# current');
+  const originalRename = fs.rename.bind(fs);
+  const originalRm = fs.rm.bind(fs);
+  let replaced = false;
+  const renameSpy = vi.spyOn(fs, 'rename').mockImplementation(async (source, target) => {
+    await originalRename(source, target);
+    if (String(source).includes('.foliole-restore-') && String(target).endsWith('foliole.db')) replaced = true;
+  });
+  const rmSpy = vi.spyOn(fs, 'rm').mockImplementation(async (file, options) => {
+    if (replaced && String(file).includes('.foliole-restore-source-')) throw new Error('injected temporary cleanup failure');
+    await originalRm(file, options);
+  });
+  try {
+    await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath }))
+      .resolves.toMatchObject({ sourcePath: path.resolve(backup.destinationPath) });
+    expect(currentContent()).toBe('# original');
+    await expect(fs.access(backup.destinationPath)).resolves.toBeUndefined();
+  } finally {
+    renameSpy.mockRestore();
+    rmSpy.mockRestore();
+  }
+});
+
+it('preserves the rollback outcome when restarting the search alias watcher also fails', async () => {
+  seedNode('# backup');
+  const backup = await createApplicationDatabaseBackup();
+  seedNode('# current');
+  const mirrorSpy = vi.spyOn(searchAliasMirror, 'startSearchAliasMirror').mockRejectedValue(new Error('watch unavailable'));
+  try {
+    await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath }))
+      .rejects.toThrow('Your current library has been restored');
+    expect(currentContent()).toBe('# current');
+  } finally {
+    mirrorSpy.mockRestore();
+  }
+});

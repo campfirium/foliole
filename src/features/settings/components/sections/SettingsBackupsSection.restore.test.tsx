@@ -23,6 +23,7 @@ vi.mock('../../model/databaseBackups', () => ({
 }));
 
 import { renderWithLocalization } from '../../../../shared/localization/testLocalization';
+import { AppConfirmationProvider } from '../../../../shared/ui/AppConfirmationProvider';
 import {
   beginWorkspaceRestoreSession,
   cancelWorkspaceRestoreSession,
@@ -93,7 +94,32 @@ it('unfreezes the current renderer session when restore fails', async () => {
 
   fireEvent.click((await screen.findAllByRole('button', { name: 'Restore' }))[0]!);
 
-  await screen.findByText('Backup restore failed: Restore failed.');
+  await screen.findByText('The backup could not be restored. Keep your backup files and restart Foliole before making more changes.');
   expect(cancelWorkspaceRestoreSession).toHaveBeenCalledOnce();
   expect(completeWorkspaceRestoreSession).not.toHaveBeenCalled();
+});
+
+it.each([
+  'The selected backup was not restored. Your current library is unchanged.',
+  'The selected backup was not restored. Your current library has been restored.',
+  'The selected backup was not restored, and Foliole could not reopen the current library. Keep your backup files and restart Foliole before making more changes.'
+])('keeps the failure outcome visible after the backup section unmounts: %s', async (message) => {
+  vi.mocked(restoreDatabaseBackup).mockResolvedValue({ ok: false, errorMessage: message });
+  const view = renderWithLocalization(<AppConfirmationProvider><SettingsBackupsSection /></AppConfirmationProvider>);
+  fireEvent.click((await screen.findAllByRole('button', { name: 'Restore' }))[0]!);
+  await screen.findByRole('dialog');
+  view.rerender(<AppConfirmationProvider><div>Another section</div></AppConfirmationProvider>);
+  expect(screen.getByRole('dialog')).toHaveTextContent(message);
+  expect(screen.getAllByRole('button')).toHaveLength(1);
+  fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+});
+
+it('reports database success when rebuilding the renderer session fails and keeps writes frozen', async () => {
+  vi.mocked(completeWorkspaceRestoreSession).mockImplementation(() => { throw new Error('session storage unavailable'); });
+  renderWithLocalization(<AppConfirmationProvider><SettingsBackupsSection /></AppConfirmationProvider>);
+  fireEvent.click((await screen.findAllByRole('button', { name: 'Restore' }))[0]!);
+  const dialog = await screen.findByRole('dialog', { name: 'Backup restored' });
+  expect(dialog).toHaveTextContent('The backup was restored, but Foliole could not reload the library. Restart Foliole before making more changes.');
+  expect(cancelWorkspaceRestoreSession).not.toHaveBeenCalled();
 });
