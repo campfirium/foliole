@@ -69,7 +69,7 @@ export const EN_DESKTOP_COMMAND_TRANSLATIONS = {
   'desktop.command.toggleDismissedTopicsVisibility': 'Toggle Topic Focus',
   'desktop.command.setPriority': 'Set Priority...',
   'desktop.command.toggleEditorDisplayMode': 'Toggle Editor Display Mode',
-  'desktop.command.openReviewCalendar': 'Open review calendar',
+  'desktop.command.openReviewCalendar': 'Open review statistics',
   'desktop.command.openSettings': 'Open Settings',
   'desktop.command.openCustomCopy': 'Open Custom Copy',
   'desktop.command.openReadwiseReaderSettings': 'Open Readwise Reader Settings',

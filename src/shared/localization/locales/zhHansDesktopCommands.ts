@@ -71,7 +71,7 @@ export const ZH_HANS_DESKTOP_COMMAND_TRANSLATIONS: Partial<Record<TranslationKey
   'desktop.command.toggleDismissedTopicsVisibility': '切换主题聚焦',
   'desktop.command.setPriority': '设置优先级...',
   'desktop.command.toggleEditorDisplayMode': '切换编辑器显示模式',
-  'desktop.command.openReviewCalendar': '打开复习日历',
+  'desktop.command.openReviewCalendar': '打开复习统计',
   'desktop.command.openSettings': '打开设置',
   'desktop.command.openCustomCopy': '打开自定义文案',
   'desktop.command.openReadwiseReaderSettings': '打开 Readwise Reader 设置',

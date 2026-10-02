@@ -157,14 +157,18 @@ export default {
         'settings-panel-y': '1.25rem',
         'settings-flow-copy-min': '22.5rem',
         'settings-flow-control-min': '12.5rem',
-        'state-surface': '7.5rem'
+        'state-surface': '7.5rem',
+        'statistics-row': '1.375rem'
       },
-      height: { 'floating-workspace': '47.5rem' },
+      height: { 'floating-workspace': '47.5rem', 'statistics-panel': 'min(53.75rem, calc(100dvh - 2.25rem))' },
       minHeight: { 'dialog-notice-body': '7.5rem' },
+      minWidth: { 'statistics-table': '60rem' },
       maxHeight: { 'floating-workspace': 'calc(100dvh - 2rem)' },
       width: {
         'dialog-notice': 'min(30rem, calc(100vw - 2rem))',
-        'floating-workspace': '65rem'
+        'floating-workspace': '65rem',
+        'statistics-panel': 'min(77.5rem, calc(100vw - 2.25rem))',
+        'statistics-day': '2rem'
       },
       maxWidth: { 'floating-workspace': 'calc(100vw - 2rem)' },
       gridTemplateColumns: { 'floating-workspace': 'minmax(0, var(--workspace-list-width, 18.75rem)) minmax(0, 1fr)' },

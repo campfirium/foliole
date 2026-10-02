@@ -15,45 +15,49 @@ import { ReviewShortcutHarness } from '../../../app/hooks/useReviewKeyboardShort
 import { APP_COMMAND_IDS } from '../../../shared/commands/ids';
 
 import { ReviewCalendarDialog } from './ReviewCalendarDialog';
-import { ReviewCalendarMonth } from './ReviewCalendarMonth';
+import { ReviewCalendarTable } from './ReviewCalendarTable';
 
 afterEach(cleanup);
 
-it('moves the legend past a month starting Monday and opens the initial page again after closing', async () => {
+it('opens all twelve months together with both quantity columns and zero-padded dates', async () => {
   render(<ReviewCalendarDialog />);
-  expect(screen.queryByRole('button')).not.toBeInTheDocument();
   act(() => runAppCommand(APP_COMMAND_IDS.openReviewCalendar, {} as never));
-  const dialog = await screen.findByRole('dialog');
-  expect(within(dialog).getByRole('region', { name: 'June 2026' })).not.toHaveTextContent('Date');
-  expect(within(dialog).getByRole('region', { name: 'July 2026' })).toHaveTextContent('ItemsTopics');
-  fireEvent.click(within(dialog).getByRole('button', { name: 'desktop.reviewCalendar.next' }));
-  expect(within(dialog).getByRole('region', { name: 'December 2026' })).toBeVisible();
-  fireEvent.keyDown(dialog, { key: 'Escape' });
-  act(() => runAppCommand(APP_COMMAND_IDS.openReviewCalendar, {} as never));
-  expect(await screen.findByRole('region', { name: 'June 2026' })).toBeVisible();
+  const table = within(await screen.findByRole('dialog')).getByRole('table');
+  expect(within(table).getByRole('columnheader', { name: 'June' })).toBeVisible();
+  expect(within(table).getByRole('columnheader', { name: 'May' })).toBeVisible();
+  expect(within(table).getAllByRole('columnheader', { name: /Items$/ })).toHaveLength(12);
+  expect(within(table).getAllByRole('columnheader', { name: /Topics$/ })).toHaveLength(12);
+  expect(within(table).getByRole('rowheader', { name: '01' })).toBeVisible();
+  expect(within(table).getByRole('rowheader', { name: '31' })).toBeVisible();
 });
 
-it('renders leap day, marks today, and explains unavailable history without printing placeholders', () => {
-  render(<ReviewCalendarMonth month={new Date(2028, 1, 1)} showYear showLegend today="2028-02-29"
-    counts={() => ({ items: 0, topics: null })} />);
+it('includes leap day and leaves unavailable and zero quantities blank without inventing invalid dates', () => {
+  const counts = vi.fn(() => ({ items: 0, topics: null }));
+  render(<ReviewCalendarTable months={[new Date(2028, 1, 1)]} today="2028-02-29" counts={counts} />);
   const leapDay = screen.getByRole('group', { name: /2028-02-29 .*Items: 0 .*Topics: desktop.reviewCalendar.unavailable/ });
-  expect(leapDay).toHaveTextContent(/^29$/);
-  expect(within(leapDay).getByText('29')).toHaveAttribute('aria-current', 'date');
-  expect(screen.queryByRole('group', { name: /2028-02-30/ })).not.toBeInTheDocument();
+  expect(leapDay).toHaveTextContent(/^$/);
+  expect(leapDay).toHaveAttribute('aria-current', 'date');
+  expect(screen.queryByRole('group', { name: /2028-03-0[12]/ })).not.toBeInTheDocument();
+  expect(counts).toHaveBeenCalledTimes(29);
 });
 
-it('keeps four-digit counts visible and independent of the date', () => {
-  render(<ReviewCalendarMonth month={new Date(2026, 9, 1)} showYear showLegend today="2026-10-02"
+it('keeps four-digit Topic quantities alongside the independent Item quantities', () => {
+  render(<ReviewCalendarTable months={[new Date(2026, 9, 1)]} today="2026-10-02"
     counts={() => ({ items: 19, topics: 2846 })} />);
   const today = screen.getByRole('group', { name: /2026-10-02 .*Items: 19 .*Topics: 2846/ });
   expect(within(today).getByText('19')).toBeVisible();
   expect(within(today).getByText('2846')).toBeVisible();
 });
 
-it('does not review the underlying Topic while the calendar has keyboard focus', async () => {
+it('does not review the underlying Topic and can reopen the full table after closing', async () => {
   const readReviewTopic = vi.fn(async () => true);
   render(<><ReviewShortcutHarness readReviewTopic={readReviewTopic} /><ReviewCalendarDialog /></>);
   act(() => runAppCommand(APP_COMMAND_IDS.openReviewCalendar, {} as never));
-  fireEvent.keyDown(await screen.findByRole('dialog'), { key: 'r' });
+  const dialog = await screen.findByRole('dialog');
+  fireEvent.keyDown(dialog, { key: 'r' });
   expect(readReviewTopic).not.toHaveBeenCalled();
+  fireEvent.keyDown(dialog, { key: 'Escape' });
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  act(() => runAppCommand(APP_COMMAND_IDS.openReviewCalendar, {} as never));
+  expect(within(await screen.findByRole('dialog')).getByRole('table')).toBeVisible();
 });

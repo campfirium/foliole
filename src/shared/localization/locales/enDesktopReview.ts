@@ -1,5 +1,6 @@
 export const EN_DESKTOP_REVIEW_TRANSLATIONS = {
-  'desktop.reviewCalendar.title': 'Review calendar',
+  'desktop.reviewCalendar.title': 'Review statistics',
+  'desktop.reviewCalendar.day': 'Day',
   'desktop.reviewCalendar.previous': 'Previous six months',
   'desktop.reviewCalendar.next': 'Next six months',
   'desktop.reviewCalendar.completed': 'Completed',

@@ -35,7 +35,7 @@ export const APP_PALETTE_COMMANDS: AppPaletteCommandMeta[] = [
   { id: APP_COMMAND_IDS.importFolder, title: 'Import Folder', section: 'Import', keywords: ['import', 'folder', 'directory', 'inbox'] },
   { id: APP_COMMAND_IDS.clipboardImport, title: 'Import Clipboard', section: 'Import', keywords: ['import', 'clipboard', 'paste'] },
   ...DEVELOPER_PALETTE_COMMANDS,
-  { id: APP_COMMAND_IDS.openReviewCalendar, title: 'Open Review Calendar', section: 'Workspace', keywords: ['calendar', 'review', 'items', 'topics', 'statistics'] },
+  { id: APP_COMMAND_IDS.openReviewCalendar, title: 'Open Review Statistics', section: 'Workspace', keywords: ['calendar', 'review', 'items', 'topics', 'statistics'] },
   { id: APP_COMMAND_IDS.openTrash, title: 'Open Trash', section: 'Workspace' },
   { id: APP_COMMAND_IDS.openGuidedSample, title: 'Open Guided Sample', section: 'Workspace', keywords: ['guide', 'sample', 'tutorial', 'start'] },
   { id: APP_COMMAND_IDS.openWorkspaceSearch, title: 'Search', section: 'Workspace', keywords: ['search', 'find', 'topics', 'workspace'] },
