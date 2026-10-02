@@ -10,12 +10,15 @@ type ReviewSlotNode = Pick<Node, 'kind' | 'review'>;
 export function allocateNewItemReviewDueDates(args: {
   batchSize: number;
   newDayStartsAtHour?: number;
+  newItemLoadBalancingDays?: number;
   nodes: Iterable<ReviewSlotNode | undefined>;
   now: string;
 }) {
   const newDayStartsAtHour =
     args.newDayStartsAtHour ?? getCurrentReviewSchedulerSettings().newDayStartsAtHour;
-  return allocateSharedNewItemReviewDueDates({ ...args, newDayStartsAtHour });
+  const newItemLoadBalancingDays =
+    args.newItemLoadBalancingDays ?? getCurrentReviewSchedulerSettings().newItemLoadBalancingDays;
+  return allocateSharedNewItemReviewDueDates({ ...args, newDayStartsAtHour, newItemLoadBalancingDays });
 }
 
 export function createNewItemReviewProfiles(args: {

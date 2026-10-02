@@ -48,6 +48,7 @@ const SETTINGS_SEARCH_ROW_DEFINITIONS: SearchRowDefinition[] = [
   row('review', 'review-priority-weight', 'settings.search.reviewPriorityWeight.title', 'settings.search.reviewPriorityWeight.description'),
   row('review', 'review-reading-initial-interval', 'settings.search.reviewInitialInterval.title', 'settings.search.reviewInitialInterval.description'),
   row('review', 'review-reading-interval-growth', 'settings.search.reviewIntervalGrowth.title', 'settings.search.reviewIntervalGrowth.description'),
+  row('review', 'review-new-item-load-balancing', 'settings.review.newItemLoadBalancing.title', 'settings.review.newItemLoadBalancing.description'),
   row('mouse-gestures', 'mouse-gestures-appearance', 'settings.mouseGestures.display.title', 'settings.category.mouseGestures.description',
     'settings.search.gestureLineColor.title', 'settings.search.gestureLineWidth.title',
     'settings.search.gestureThreshold.title', 'settings.mouseGestures.trail.opacity.title',

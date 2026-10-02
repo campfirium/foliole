@@ -150,6 +150,7 @@ function createItemState(nodes: NodeRow[], now: string) {
   const due = allocateNewItemReviewDueDates({
     batchSize: 1,
     newDayStartsAtHour: loadReviewSchedulerSettings().newDayStartsAtHour,
+    newItemLoadBalancingDays: loadReviewSchedulerSettings().newItemLoadBalancingDays,
     nodes: readItemReviewLoad(nodes),
     now
   })[0];

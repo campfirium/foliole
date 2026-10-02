@@ -19,6 +19,7 @@ it('handles review scheduler storage commands', async () => {
           desiredRetention: 0.8,
           maximumIntervalDays: 180,
           newDayStartsAtHour: 6,
+          newItemLoadBalancingDays: 14,
           enableShortTerm: true,
           pushQueue: {
             priorityRatio: 7,
@@ -32,6 +33,7 @@ it('handles review scheduler storage commands', async () => {
     desiredRetention: 0.8,
     maximumIntervalDays: 180,
     newDayStartsAtHour: 6,
+    newItemLoadBalancingDays: 14,
     enableShortTerm: true,
     pushQueue: {
       priorityRatio: 7,

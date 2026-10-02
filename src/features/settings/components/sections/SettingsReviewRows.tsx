@@ -30,6 +30,7 @@ export interface SettingsReviewRowsProps {
   desiredRetention: number;
   maximumIntervalDays: number;
   newDayStartsAtHour: number;
+  newItemLoadBalancingDays: number;
   defaultPriority: number;
   priorityRatio: number;
   queueMixRatioReading: number;
@@ -40,6 +41,7 @@ export interface SettingsReviewRowsProps {
   onDesiredRetentionChange: (value: number) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
   onNewDayStartsAtHourChange: (value: number) => void;
+  onNewItemLoadBalancingDaysChange: (value: number) => void;
   onDefaultPriorityChange: (value: number) => void;
   onPriorityRatioChange: (value: number) => void;
   onQueueMixRatioReadingChange: (value: number) => void;
@@ -63,6 +65,7 @@ function getReviewRows(t: ReturnType<typeof useTranslation>) {
     desiredRetention: rows[0]!,
     maximumInterval: rows[1]!,
     newDayStartsAt: rows[2]!,
+    newItemLoadBalancing: rows.find((row) => row.id === 'review-new-item-load-balancing')!,
     priorityWeight: rows[5]!,
     readingInitialInterval: rows[6]!,
     readingIntervalGrowth: rows[7]!,
@@ -82,14 +85,33 @@ function ReviewSettingRow({ title, description, control, searchRow }: ReviewSett
   );
 }
 
+function NewItemLoadBalancingRow(props: { value: number; onChange: (value: number) => void }) {
+  const t = useTranslation();
+  const row = getReviewRows(t).newItemLoadBalancing;
+  return (
+    <ReviewSettingRow
+      searchRow={row}
+      title={row.title}
+      description={row.description}
+      control={
+        <SettingsControlSlot className={SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME}>
+          <ReviewNumberInput ariaLabel={row.title} showStepper={false} min={1} max={99} step={1} value={props.value} onChange={props.onChange} />
+        </SettingsControlSlot>
+      }
+    />
+  );
+}
+
 export function SchedulerCoreRows(props: Pick<
   SettingsReviewRowsProps,
   | 'desiredRetention'
   | 'maximumIntervalDays'
   | 'newDayStartsAtHour'
+  | 'newItemLoadBalancingDays'
   | 'onDesiredRetentionChange'
   | 'onMaximumIntervalDaysChange'
   | 'onNewDayStartsAtHourChange'
+  | 'onNewItemLoadBalancingDaysChange'
 >) {
   const t = useTranslation();
   const rows = getReviewRows(t);
@@ -132,6 +154,7 @@ export function SchedulerCoreRows(props: Pick<
         description={rows.newDayStartsAt.description}
         control={<NewDayStartControl ariaLabel={t('settings.review.newDayStartsAt.aria')} onChange={props.onNewDayStartsAtHourChange} value={props.newDayStartsAtHour} />}
       />
+      <NewItemLoadBalancingRow value={props.newItemLoadBalancingDays} onChange={props.onNewItemLoadBalancingDaysChange} />
     </>
   );
 }

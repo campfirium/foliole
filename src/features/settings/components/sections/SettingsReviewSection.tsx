@@ -15,9 +15,11 @@ export function SettingsReviewSection() {
         desiredRetention={reviewSchedulerSettings.desiredRetention}
         maximumIntervalDays={reviewSchedulerSettings.maximumIntervalDays}
         newDayStartsAtHour={reviewSchedulerSettings.newDayStartsAtHour}
+        newItemLoadBalancingDays={reviewSchedulerSettings.newItemLoadBalancingDays}
         onDesiredRetentionChange={reviewSettings.onDesiredRetentionChange}
         onMaximumIntervalDaysChange={reviewSettings.onMaximumIntervalDaysChange}
         onNewDayStartsAtHourChange={reviewSettings.onNewDayStartsAtHourChange}
+        onNewItemLoadBalancingDaysChange={reviewSettings.onNewItemLoadBalancingDaysChange}
       />
       <PushQueueRows
         defaultPriority={reviewSchedulerSettings.pushQueue.defaultPriority}

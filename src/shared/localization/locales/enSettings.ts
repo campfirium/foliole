@@ -135,6 +135,8 @@ export const EN_SETTINGS_TRANSLATIONS = {
   'settings.editor.clozeGuard.frontAria': 'Cloze guard front length limit',
   'settings.search.reviewRetention.title': 'Desired retention',
   'settings.search.reviewRetention.description': 'Lower values shorten intervals. Recommended around 0.80-0.95.',
+  "settings.review.newItemLoadBalancing.title": "New item load balancing",
+  "settings.review.newItemLoadBalancing.description": "Distribute newly created items across the next few days based on each day’s review load. Set to 1 to put all new items on the next day.",
   'settings.review.section': 'Scheduler',
   'settings.review.sectionAria': 'Review settings section',
   'settings.review.desiredRetention.description': 'Lower values shorten intervals. Recommended around 0.80-0.95. Review previews update after each change.',

@@ -1,5 +1,6 @@
 import { FSRSVersion, generatorParameters } from 'ts-fsrs';
 
+import { normalizeNewItemLoadBalancingDays } from './newItemReviewSlots.js';
 import {
   DEFAULT_NEW_DAY_STARTS_AT_HOUR,
   normalizeNewDayStartsAtHour
@@ -18,6 +19,7 @@ export interface ReviewSchedulerSettings {
   desiredRetention: number;
   maximumIntervalDays: number;
   newDayStartsAtHour: number;
+  newItemLoadBalancingDays: number;
   enableShortTerm: boolean;
   pushQueue: UnifiedPushQueueRules;
   updatedAt: string;
@@ -27,6 +29,7 @@ export interface ReviewSchedulerSettingsSavePatch {
   desiredRetention?: number;
   maximumIntervalDays?: number;
   newDayStartsAtHour?: number;
+  newItemLoadBalancingDays?: number;
   enableShortTerm?: boolean;
   pushQueue?: UnifiedPushQueueRulesPatch;
 }
@@ -49,6 +52,7 @@ export const DEFAULT_REVIEW_SCHEDULER_SETTINGS: ReviewSchedulerSettings = {
   desiredRetention: 0.9,
   maximumIntervalDays: 36500,
   newDayStartsAtHour: DEFAULT_NEW_DAY_STARTS_AT_HOUR,
+  newItemLoadBalancingDays: 7,
   enableShortTerm: false,
   pushQueue: DEFAULT_UNIFIED_PUSH_QUEUE_RULES,
   updatedAt: '1970-01-01T00:00:00.000Z'
@@ -116,6 +120,7 @@ export function normalizeReviewSchedulerSettings(payload: unknown): ReviewSchedu
       DEFAULT_REVIEW_SCHEDULER_SETTINGS.maximumIntervalDays
     ),
     newDayStartsAtHour: normalizeNewDayStartsAtHour(value.newDayStartsAtHour),
+    newItemLoadBalancingDays: normalizeNewItemLoadBalancingDays(value.newItemLoadBalancingDays),
     enableShortTerm:
       typeof value.enableShortTerm === 'boolean'
         ? value.enableShortTerm
@@ -162,6 +167,7 @@ export function getReviewSchedulerSettingsSignature(settings: ReviewSchedulerSet
     settings.desiredRetention.toFixed(2),
     settings.maximumIntervalDays,
     settings.newDayStartsAtHour,
+    settings.newItemLoadBalancingDays,
     settings.enableShortTerm ? '1' : '0',
     settings.pushQueue.defaultPriority,
     settings.pushQueue.priorityRatio.toFixed(2),

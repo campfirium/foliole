@@ -163,3 +163,20 @@ it('restores push queue settings after save and database restart', () => {
     updatedAt: '2026-03-14T02:00:00.000Z'
   });
 });
+
+it('keeps new item balancing after restart and unrelated partial saves', () => {
+  expect(loadReviewSchedulerSettings().newItemLoadBalancingDays).toBe(7);
+  saveReviewSchedulerSettings({ newItemLoadBalancingDays: 99 });
+  saveReviewSchedulerSettings({ desiredRetention: 0.85 });
+  closeDatabaseConnection();
+  initializeDatabase();
+  expect(loadReviewSchedulerSettings().newItemLoadBalancingDays).toBe(99);
+  saveReviewSchedulerSettings({ newItemLoadBalancingDays: 1 });
+  expect(loadReviewSchedulerSettings().newItemLoadBalancingDays).toBe(1);
+});
+
+it('normalizes balancing days to whole numbers within one to ninety-nine', () => {
+  for (const [input, expected] of [[0, 1], [100, 99], [3.6, 4], [NaN, 7]]) {
+    expect(normalizeReviewSchedulerSettings({ newItemLoadBalancingDays: input }).newItemLoadBalancingDays).toBe(expected);
+  }
+});

@@ -44,7 +44,7 @@ function settingObject(args: {
 
 async function testHydratesSyncedSettings() {
   const object = settingObject({
-    settings: { desiredRetention: 0.82, newDayStartsAtHour: 7 },
+    settings: { desiredRetention: 0.82, newDayStartsAtHour: 7, newItemLoadBalancingDays: 14 },
     updatedAt: '2026-04-22T08:10:00.000Z'
   });
   syncObjectsMock.loadCompanionSyncIndex.mockResolvedValue([
@@ -54,12 +54,13 @@ async function testHydratesSyncedSettings() {
   const api = await import('./companionReviewSchedulerSettingsHydration');
 
   await expect(api.hydrateCompanionReviewSchedulerSettings()).resolves.toMatchObject({
-    settings: expect.objectContaining({ desiredRetention: 0.82, newDayStartsAtHour: 7 }),
+    settings: expect.objectContaining({ desiredRetention: 0.82, newDayStartsAtHour: 7, newItemLoadBalancingDays: 14 }),
     status: 'hydrated'
   });
   expect(getCurrentReviewSchedulerSettings()).toMatchObject({
     desiredRetention: 0.82,
-    newDayStartsAtHour: 7
+    newDayStartsAtHour: 7,
+    newItemLoadBalancingDays: 14
   });
   expect(syncObjectsMock.loadCompanionSyncObjects).toHaveBeenCalledWith([object.object_id], ['setting']);
 }

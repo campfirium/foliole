@@ -19,13 +19,19 @@ type ReviewSlotItem = {
 
 export const NEW_ITEM_REVIEW_SLOT_DAY_COUNT = 7;
 
+export function normalizeNewItemLoadBalancingDays(value: unknown) {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return NEW_ITEM_REVIEW_SLOT_DAY_COUNT;
+  return Math.min(99, Math.max(1, Math.round(value)));
+}
+
 export function allocateNewItemReviewDueDates(args: {
   batchSize: number;
   newDayStartsAtHour: number;
+  newItemLoadBalancingDays?: number;
   nodes: Iterable<ReviewSlotItem | undefined>;
   now: string;
 }) {
-  const dayStarts = createFutureLocalDayStarts(new Date(args.now), args.newDayStartsAtHour);
+  const dayStarts = createFutureLocalDayStarts(new Date(args.now), args.newDayStartsAtHour, args.newItemLoadBalancingDays);
   const loadByDay = new Map(dayStarts.map((dayStart) => [toLocalDateKey(dayStart), 0]));
   countExistingReviewLoad(loadByDay, args.nodes);
 
@@ -53,8 +59,8 @@ export function createInitialNewItemReviewProfile(due: string): NewItemReviewPro
   };
 }
 
-function createFutureLocalDayStarts(now: Date, newDayStartsAtHour: number) {
-  return Array.from({ length: NEW_ITEM_REVIEW_SLOT_DAY_COUNT }, (_, index) =>
+function createFutureLocalDayStarts(now: Date, newDayStartsAtHour: number, days: unknown) {
+  return Array.from({ length: normalizeNewItemLoadBalancingDays(days) }, (_, index) =>
     resolveScheduledDayStart({
       newDayStartsAtHour,
       reviewedAt: now.toISOString(),

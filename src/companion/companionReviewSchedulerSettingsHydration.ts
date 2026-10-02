@@ -117,6 +117,7 @@ function isReviewSchedulerSettingsPayload(payload: unknown) {
     'desiredRetention',
     'maximumIntervalDays',
     'newDayStartsAtHour',
+    'newItemLoadBalancingDays',
     'enableShortTerm',
     'pushQueue',
     'updatedAt'

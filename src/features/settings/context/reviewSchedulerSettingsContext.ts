@@ -10,6 +10,7 @@ export interface ReviewSchedulerSettingsContextValue {
   onEnableShortTermChange: (value: boolean) => void;
   onMaximumIntervalDaysChange: (value: number) => void;
   onNewDayStartsAtHourChange: (value: number) => void;
+  onNewItemLoadBalancingDaysChange: (value: number) => void;
   onPriorityRatioChange: (value: number) => void;
   onQueueMixRatioFsrsChange: (value: number) => void;
   onQueueMixRatioReadingChange: (value: number) => void;

@@ -62,6 +62,10 @@ function createSchedulerSettingActions(saveSettings: (patch: ReviewSchedulerSett
       }
       saveSettings({ newDayStartsAtHour: Math.round(value) });
     },
+    onNewItemLoadBalancingDaysChange: (value: number) => {
+      if (!Number.isInteger(value) || value < 1 || value > 99) return;
+      saveSettings({ newItemLoadBalancingDays: value });
+    },
     onEnableShortTermChange: (value: boolean) => {
       saveSettings({ enableShortTerm: value });
     }

@@ -137,6 +137,8 @@ export const ZH_HANS_SETTINGS_TRANSLATIONS: Partial<Record<TranslationKey, strin
   'settings.editor.clozeGuard.frontAria': '挖空保护正面长度限制',
   'settings.search.reviewRetention.title': '目标保持率',
   'settings.search.reviewRetention.description': '数值越低，间隔越短。建议保持在 0.80-0.95 附近。',
+  "settings.review.newItemLoadBalancing.title": "新检测项负载均衡",
+  "settings.review.newItemLoadBalancing.description": "将新生成的检测项按每日复习量，分散安排到从次日起的指定天数内。设为 1 时，全部安排到次日。",
   'settings.review.section': '调度器',
   'settings.review.sectionAria': '复习设置区',
   'settings.review.desiredRetention.description': '数值越低，间隔越短。建议保持在 0.80-0.95 附近。每次调整后会更新复习预览。',

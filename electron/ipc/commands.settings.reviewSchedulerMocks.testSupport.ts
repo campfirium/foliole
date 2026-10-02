@@ -6,6 +6,7 @@ const reviewSchedulerSettingsMocks = vi.hoisted(() => {
     desiredRetention: 0.9,
     maximumIntervalDays: 36500,
     newDayStartsAtHour: 4,
+    newItemLoadBalancingDays: 7,
     enableShortTerm: false,
     pushQueue: {
       defaultPriority: 5,
@@ -23,6 +24,7 @@ const reviewSchedulerSettingsMocks = vi.hoisted(() => {
       desiredRetention: 0.8,
       maximumIntervalDays: 180,
       newDayStartsAtHour: 6,
+      newItemLoadBalancingDays: 14,
       enableShortTerm: true,
       pushQueue: {
         ...baseSettings.pushQueue,

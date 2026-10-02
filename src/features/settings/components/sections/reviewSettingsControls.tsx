@@ -35,13 +35,16 @@ export function ReviewNumberInput(props: {
   min?: number;
   max?: number;
   step?: number;
+  showStepper?: boolean;
   value: number;
   onChange: (value: number) => void;
 }) {
   return (
     <input
       aria-label={props.ariaLabel}
-      className={settingsFieldClassName(SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME)}
+      className={settingsFieldClassName(`${SETTINGS_INPUT_VALUE_WIDTH_CLASS_NAME} ${props.showStepper === false
+        ? '[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none'
+        : ''}`)}
       max={props.max}
       min={props.min}
       onChange={(event) => props.onChange(Number(event.target.value))}
