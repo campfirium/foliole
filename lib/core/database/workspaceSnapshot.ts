@@ -87,9 +87,11 @@ interface NodeOrderRow extends DatabaseRow {
 }
 
 const ACTIVE_NODE_META_KEY = 'active_node_id';
-const READWISE_REMOTE_LIFECYCLE_SQL = `(SELECT json_extract(i.remote_import_state_json, '$.remoteLifecycle')
-  FROM import_sources i WHERE i.latest_node_id = n.id AND i.remote_provider = 'readwise'
-  ORDER BY i.last_imported_at DESC LIMIT 1)`;
+const READWISE_SOURCE_JOIN_SQL = `LEFT JOIN (
+  SELECT latest_node_id, remote_import_state_json,
+    ROW_NUMBER() OVER (PARTITION BY latest_node_id ORDER BY last_imported_at DESC) AS source_rank
+  FROM import_sources WHERE remote_provider = 'readwise' AND latest_node_id IS NOT NULL
+) readwise_source ON readwise_source.latest_node_id = n.id AND readwise_source.source_rank = 1`;
 
 function buildBodySelection(options: WorkspaceSnapshotLoadOptions) {
   if (options.includeBody) {
@@ -117,11 +119,9 @@ function buildBodySelection(options: WorkspaceSnapshotLoadOptions) {
   };
 }
 
-function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLoadOptions = {}): WorkspaceNodeRow[] {
-  const hostName = requireDatabaseHostName(driver);
+function buildWorkspaceRowsSql(options: WorkspaceSnapshotLoadOptions) {
   const { bodyJoin, bodyStatusExpression, contentExpression } = buildBodySelection(options);
-  return driver.queryAll<WorkspaceNodeRow>(
-    `${VISIBLE_NODES_CTE_SQL}
+  return `${VISIBLE_NODES_CTE_SQL}
      SELECT
        n.id,
        n.current_version_id,
@@ -146,7 +146,7 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
        n.image_regions, n.image_sources, n.resource_references,
        n.import_content_fingerprint,
        n.import_source_fingerprint,
-       ${READWISE_REMOTE_LIFECYCLE_SQL} AS readwise_remote_lifecycle,
+       json_extract(readwise_source.remote_import_state_json, '$.remoteLifecycle') AS readwise_remote_lifecycle,
        n.created_at,
        n.updated_at,
        n.deleted_at,
@@ -168,14 +168,18 @@ function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLo
        nr.reps AS review_reps,
        nr.lapses AS review_lapses
      FROM nodes n
+     ${READWISE_SOURCE_JOIN_SQL}
      LEFT JOIN visible_nodes visible ON visible.id = n.id
      LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
      ${bodyJoin}
      LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL
      LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL
-     LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL`
-    , [hostName]
-  );
+     LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL`;
+}
+
+function queryWorkspaceRows(driver: DatabaseDriver, options: WorkspaceSnapshotLoadOptions = {}): WorkspaceNodeRow[] {
+  const hostName = requireDatabaseHostName(driver);
+  return driver.queryAll<WorkspaceNodeRow>(buildWorkspaceRowsSql(options), [hostName]);
 }
 
 function queryNodeOrderRows(driver: DatabaseDriver): NodeOrderRow[] {
