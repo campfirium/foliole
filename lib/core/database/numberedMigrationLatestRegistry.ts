@@ -51,6 +51,7 @@ import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from './syncPackDependencyStaging
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaStatements.js';
 import { repairSyncStateEntities } from './syncStateEntityRepair.js';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
+import { removeUntrackedImportCaches } from './untrackedImportCacheMigration.js';
 
 const SYNC_DELIVERY_TRIGGER_TARGETS = [
   'sync_object_state',
@@ -168,5 +169,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 125, migrate: (sqlite) => {
     for (const statement of REVIEW_DAILY_COUNT_SCHEMA) sqlite.exec(statement);
   } },
-  { version: 126, migrate: migrateNodeVersionConfirmations }
+  { version: 126, migrate: migrateNodeVersionConfirmations },
+  { version: 127, migrate: removeUntrackedImportCaches }
 ];
