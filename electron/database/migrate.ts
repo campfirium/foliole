@@ -33,6 +33,7 @@ import {
   createManagedSafetySnapshotForMigration,
   settleManagedMigrationSnapshot
 } from './managedSafetySnapshots.js';
+import { migrateOrphanedInactiveReadingState, needsOrphanedReadingStateSnapshot } from './orphanedReadingStateMigration.js';
 import { migrateLegacyReadwiseDeviceConnection } from './readwiseDeviceConnection.js';
 import { ensureReadwiseSourceModeInitialized } from './readwiseSourceMode.js';
 import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
@@ -109,6 +110,7 @@ function initializeSchemaWorkspaceAndSearch(
     beforeVersionCommit: () => {
       migrateDesktopHostProfile(connection, currentHostName);
       migrateLegacyBodyConsistency(connection, currentHostName, fresh);
+      migrateOrphanedInactiveReadingState(connection);
       prepareLegacyAttachmentFiles(resolveRuntimeDataPaths().assetsDir, attachmentTargets);
       migrateLegacyAttachmentReferences(connection, attachmentTargets, currentHostName);
     }
@@ -189,7 +191,7 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter, opti
 function createPreMigrationSnapshotIfNeeded(connection: ReturnType<typeof openDatabaseConnection>) {
   const currentVersion = readUserVersion(connection.sqlite);
   const retryRepair = currentVersion === DATABASE_SCHEMA_VERSION &&
-    needsLegacyBodyConsistencySnapshot(connection);
+    (needsLegacyBodyConsistencySnapshot(connection) || needsOrphanedReadingStateSnapshot(connection));
   if (currentVersion < NUMBERED_MIGRATION_BASE_VERSION || (currentVersion >= DATABASE_SCHEMA_VERSION && !retryRepair)) {
     return null;
   }
