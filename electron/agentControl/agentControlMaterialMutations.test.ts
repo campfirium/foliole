@@ -16,6 +16,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -81,7 +82,11 @@ async function responseJson(response: Response) {
 }
 
 function readNode(id: string) {
-  return openDatabaseConnection().driver.queryOne<Record<string, unknown>>('SELECT * FROM nodes WHERE id = ?', [id]);
+  const { driver } = openDatabaseConnection();
+  const row = driver.queryOne<Record<string, unknown>>('SELECT * FROM nodes WHERE id = ?', [id]);
+  const body = loadNodeBodyResolution(driver, id);
+  expect(body?.status).toBe('resolved');
+  return { ...row, content: body?.status === 'resolved' ? body.content : undefined };
 }
 
 

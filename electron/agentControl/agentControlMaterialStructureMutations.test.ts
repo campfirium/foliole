@@ -18,6 +18,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
 
+import { listAgentControlMaterialChildren } from './agentControlMaterials.js';
 import { closeAgentControlTestServer, startAgentControlTestServer } from './agentControlTestServer.js';
 import type { AgentControlAuditEvent } from './agentControlTypes.js';
 
@@ -52,9 +53,8 @@ it('creates, moves, reorders, deletes, and restores materials through complete A
       material_ids: [secondId, topicId], parent_id: folderId
     });
     expect(reordered.status).toBe(200);
-    expect(readOrder().filter((id) => [folderId, secondId, topicId].includes(id))).toEqual([
-      folderId, secondId, topicId
-    ]);
+    expect(listAgentControlMaterialChildren(folderId, 10).children.map((item) => item.id))
+      .toEqual([secondId, topicId]);
 
     const moved = await postJson(endpoint, 'materials/move', {
       expected_updated_at: topicUpdatedAt, id: topicId, parent_id: null
@@ -129,12 +129,6 @@ function materialUpdatedAt(payload: Record<string, unknown>) {
 function readMaterial(payload: Record<string, unknown>) {
   if (!payload.material || typeof payload.material !== 'object') throw new Error('missing material');
   return payload.material as Record<string, unknown>;
-}
-
-function readOrder() {
-  return openDatabaseConnection().driver.queryAll<{ node_id: string }>(
-    'SELECT node_id FROM node_order ORDER BY position ASC'
-  ).map((row) => row.node_id);
 }
 
 function readNode(id: string) {
