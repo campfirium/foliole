@@ -25,7 +25,6 @@ import { getMainWindow } from '../mainWindowRegistry.js';
 import { resolveDesktopHostName, resolveDesktopPlatformLabel } from '../sync/companionLanPayloads.js';
 import {
   activateDesktopCompanionSync,
-  assertDesktopCompanionSyncParticipating,
   disableDesktopCompanionSync,
   enableDesktopCompanionSync,
   pauseDesktopCompanionSync,
@@ -182,11 +181,14 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
   }
   if (command === NATIVE_COMMANDS.stopDiscoverSyncGroups) return discovery.stop();
   if (command === NATIVE_COMMANDS.requestSyncGroupJoin) {
-    assertDesktopCompanionSyncParticipating();
+    if (loadBackupRestorePendingSync()) throw new Error('backup_restore_sync_confirmation_required');
     await requestDesktopSyncGroupJoin(asString(args.endpoint_url, 'endpoint_url'));
     return overview();
   }
   if (command === NATIVE_COMMANDS.completeSyncGroupJoin) {
+    if (await runWithDatabaseConnectionOwner(() => loadBackupRestorePendingSync())) {
+      throw new Error('backup_restore_sync_confirmation_required');
+    }
     await completeDesktopSyncGroupJoin({
       onMembershipCommitted: async () => {
         getMainWindow()?.webContents.send(IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL);

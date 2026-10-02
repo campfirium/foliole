@@ -1,22 +1,27 @@
 import { promises as fs } from 'node:fs';
 
+import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { createSyncGroupDeviceIdentity, type SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from '../database/backupRestore.js';
-import { loadBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
+import { loadBackupRestorePendingSync, saveBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
 import { inspectBackupRestoreSync } from '../database/backupRestoreSyncPreview.js';
+import { finishLocalOnlyBackupRestore } from '../database/backupRestoreSyncSelection.js';
 import { loadBackupSettings, resolveManagedBackupDirectory } from '../database/backupSettings.js';
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
+import { captureBackupRestoreHostSettings } from '../database/syncGroupBackupRestore.js';
 import { loadDesktopSyncGroupRestoreState } from '../database/syncGroupRestoreState.js';
 import { createDesktopSyncGroup, loadDesktopSyncGroup, registerSyncGroupDevice } from '../database/syncGroupStore.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
+import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
 
 import { appendRestoreFacts, deletePausedNode, restoreFactsSnapshot, safetySnapshotFacts } from './backupRestoreSyncGroup.facts.fixture.js';
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
+import { saveDesktopSyncGroupCandidates } from './desktopSyncGroupJoinState.js';
 import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
 import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
 import { drainDesktopSyncGroupResourceArticles } from './desktopSyncGroupResourceArticleDrain.js';
@@ -85,9 +90,42 @@ function snapshot() {
   return { pending: loadBackupRestorePendingSync(), participation: loadDesktopCompanionSyncParticipation(),
     group: loadDesktopSyncGroup()?.group_id, library: loadWorkspaceSnapshot({ includeBody: true })!,
     versions: driver.queryAll('SELECT version_id, body_text FROM node_sync_versions ORDER BY version_id'),
-    restore: loadDesktopSyncGroupRestoreState(driver, loadDesktopSyncGroup()!.group_id) };
+    restore: loadDesktopSyncGroup() ? loadDesktopSyncGroupRestoreState(driver, loadDesktopSyncGroup()!.group_id) : null };
 }
+async function runJoinFixture(action: string, args: Record<string, unknown>) {
+  if (action === 'initLocal') {
+    initializeDatabase();
+    const driver = openDatabaseConnection().driver;
+    finishLocalOnlyBackupRestore(driver, captureBackupRestoreHostSettings(driver));
+    if (args.enabled) await enableDesktopCompanionSync({ appVersion: '0.7.14', deviceId: 'unavailable' });
+    return snapshot();
+  }
+  if (action === 'pendingRestore') {
+    saveBackupRestorePendingSync(openDatabaseConnection().driver, args.pending ? {
+      groupId: String(args.groupId), restoreId: 'restore-pending', restoredAt: new Date().toISOString()
+    } : null);
+    return snapshot();
+  }
+  if (action === 'joinRequest') {
+    const discovery = await fetch(`${String(args.origin)}/companion/discovery`).then((response) => response.json());
+    saveDesktopSyncGroupCandidates([{ ...discovery, endpoint_url: String(args.origin) }]);
+    return handleSyncGroupCommand(NATIVE_COMMANDS.requestSyncGroupJoin, { endpoint_url: args.origin });
+  }
+  if (action === 'joinAccept' || action === 'joinReject') {
+    return handleSyncGroupCommand(action === 'joinAccept' ? NATIVE_COMMANDS.acceptSyncGroupJoinRequest :
+      NATIVE_COMMANDS.rejectSyncGroupJoinRequest, { request_id: args.requestId });
+  }
+  if (action === 'joinComplete') return handleSyncGroupCommand(NATIVE_COMMANDS.completeSyncGroupJoin, {});
+  if (action === 'joinProviderEnable') return handleSyncGroupCommand(NATIVE_COMMANDS.enableCompanionSync, {});
+  if (action === 'joinOverview') return handleSyncGroupCommand(NATIVE_COMMANDS.loadSyncGroupOverview, {});
+  throw new Error('unknown join fixture action');
+}
+
 async function run(action: string, args: Record<string, unknown>) {
+  if (['initLocal', 'pendingRestore', 'joinRequest', 'joinAccept', 'joinReject', 'joinComplete',
+    'joinProviderEnable', 'joinOverview'].includes(action)) {
+    return runJoinFixture(action, args);
+  }
   if (action === 'init') return initializeGroup(args);
   if (action === 'register') {
     for (const member of args.members as Array<{ device: SyncGroupDeviceIdentity; name: string }>) {
@@ -117,8 +155,11 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'enable') return enableDesktopCompanionSync({ appVersion: '0.7.14',
     deviceId: loadDesktopSyncGroup()!.local_device_identity_key });
   if (action === 'pull') return pull(args);
-  if (action === 'snapshot') return snapshot();
-  if (action === 'reopen') { closeDatabaseConnection(); initializeDatabase(); return snapshot(); }
+  if (action === 'snapshot') return runWithDatabaseConnectionOwner(snapshot);
+  if (action === 'reopen') {
+    await stopLanWorkspaceSyncServer();
+    closeDatabaseConnection(); initializeDatabase(); return snapshot();
+  }
   if (action === 'close') {
     await stopLanWorkspaceSyncServer();
     await new Promise<void>((resolve) => server?.close(() => resolve()) ?? resolve());

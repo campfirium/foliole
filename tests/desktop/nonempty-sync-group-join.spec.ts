@@ -139,10 +139,12 @@ async function restartAndVerify(env: NodeJS.ProcessEnv, groupId: string, nodeIds
     await expect.poll(() => hasPersistedNode(session, nodeId)).toBe(true);
     await expect.poll(() => hasNode(session.firstWindow, nodeId)).toBe(true);
   }
-  const overview = await invoke<{ sync_group: { group_id: string } }>(
+  const overview = await invoke<{ sync_group: { group_id: string }; sync_enabled: boolean; sync_paused: boolean }>(
     session.firstWindow, 'load_sync_group_overview'
   );
   expect(overview.sync_group.group_id).toBe(groupId);
+  expect(overview.sync_enabled).toBe(true);
+  expect(overview.sync_paused).toBe(false);
   return session;
 }
 
@@ -160,6 +162,7 @@ async function joinAndConverge(args: {
   const joiningTopicId = await createTopic(joiningWindow);
   await expect.poll(() => hasPersistedNode(args.joiningSession, joiningTopicId)).toBe(true);
   await invoke(joiningWindow, 'enable_companion_sync');
+  await invoke(joiningWindow, 'pause_companion_sync');
   await seedDiscoveredCandidate(args.joiningSession, args.provider.candidate);
   await invoke(joiningWindow, 'request_sync_group_join', {
     endpoint_url: args.provider.candidate.endpoint_url

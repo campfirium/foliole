@@ -135,3 +135,58 @@ async function assertInterruptedRestore(receiver: ReturnType<typeof startRestore
   expect(interrupted.library.nodesById['remote-only']).toBeDefined();
   expect(interrupted.restore?.applied).toBe(false);
 }
+
+for (const enabled of [false, true]) {
+  it(`joins a retained group after local-only restore with Sync ${enabled ? 'on' : 'off'}`, async () => {
+    await fs.mkdir(path.resolve('.tmp/artifacts/sync-join'), { recursive: true });
+    root = await fs.mkdtemp(path.resolve('.tmp/artifacts/sync-join/multi-'));
+    await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
+    const script = path.join(root, 'fixture.mjs');
+    await buildRestoreFixture(script);
+    const provider = startRestoreFixture(script, path.join(root, 'provider'), await reservePort());
+    const joining = startRestoreFixture(script, path.join(root, 'joining'), await reservePort());
+    workers.push(provider, joining);
+    const groupId = `join-${randomUUID()}`;
+    const peer = await provider.send('init', { groupId, name: 'Provider' });
+    await provider.send('joinProviderEnable');
+    await expect.poll(async () => {
+      const overview = await provider.send('joinOverview') as unknown as { server_status: { topology_role: string } };
+      return overview.server_status.topology_role;
+    }, { timeout: 15000 }).toBe('anchor');
+    await provider.send('seed', { id: 'provider-note', content: 'Retained remote note' });
+    const restored = await joining.send('initLocal', { enabled });
+    expect(restored.group).toBeUndefined();
+    expect(restored.participation).toMatchObject({ sync_enabled: enabled, sync_paused: true, participating: false });
+    await joining.send('seed', { id: 'restored-note', content: 'Restored local note' });
+    const pending = await joining.send('joinRequest', { origin: peer.origin }) as unknown as {
+      join_request: { request_id: string }; sync_paused: boolean; sync_group: unknown
+    };
+    expect(pending.sync_paused).toBe(true);
+    expect(pending.sync_group).toBeNull();
+    await provider.send('joinReject', { requestId: pending.join_request.request_id });
+    await expect(joining.send('joinComplete')).rejects.toThrow();
+    expect((await joining.send('snapshot')).participation).toEqual(restored.participation);
+    await joining.send('pendingRestore', { pending: true, groupId });
+    await expect(joining.send('joinRequest', { origin: peer.origin })).rejects.toThrow('backup_restore_sync_confirmation_required');
+    await joining.send('pendingRestore', { pending: false });
+    const retry = await joining.send('joinRequest', { origin: peer.origin }) as unknown as typeof pending;
+    await provider.send('joinAccept', { requestId: retry.join_request.request_id });
+    await joining.send('pendingRestore', { pending: true, groupId });
+    await expect(joining.send('joinComplete')).rejects.toThrow('backup_restore_sync_confirmation_required');
+    expect((await joining.send('snapshot')).group).toBeUndefined();
+    await joining.send('pendingRestore', { pending: false });
+    await joining.send('joinComplete');
+    await expect.poll(async () => (await joining.send('snapshot')).library.nodesById['provider-note']?.content,
+      { timeout: 20000 }).toBe('Retained remote note').catch((error) => {
+        throw new Error(`${String(error)}\nProvider: ${provider.diagnostics()}\nJoining: ${joining.diagnostics()}`);
+      });
+    await expect.poll(async () => (await provider.send('snapshot')).library.nodesById['restored-note']?.content,
+      { timeout: 20000 }).toBe('Restored local note');
+    const reopened = await joining.send('reopen');
+    expect(reopened.group).toBe(groupId);
+    expect(reopened.participation).toMatchObject({ sync_enabled: true, sync_paused: false, participating: true });
+    expect(reopened.library.nodesById['restored-note']?.content).toBe('Restored local note');
+    expect((await provider.send('reopen')).library.nodesById['provider-note']?.content).toBe('Retained remote note');
+    await expect(joining.send('joinRequest', { origin: peer.origin })).rejects.toThrow('sync_group_identity_mismatch');
+  }, 90000);
+}
