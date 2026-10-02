@@ -2,7 +2,7 @@ import type { ImportManagerSettings } from '../../lib/core/import/importManagerS
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import type { ReadwiseSourceCutoverFailureStage } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import { deleteNodeAttachmentLink } from '../database/attachments.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadReadwiseApiImportSource, saveReadwiseApiImportSource } from '../database/readwiseApiImportState.js';
 import { readReadwiseApiSourceDisposition } from '../database/readwiseApiSourceDispositions.js';
 
@@ -15,7 +15,7 @@ import {
 } from './readwiseBookLocalAnchors.js';
 import { verifyCutoverEpub } from './readwiseCutoverProjection.js';
 import { cutoverItemBinding, type CutoverWorkItem } from './readwiseCutoverWorklist.js';
-import { recordReadwiseSuppressedCutoverDocuments } from './readwiseSourceCutoverClassification.js';
+import { recordReadwiseSourceCutoverClassification } from './readwiseSourceCutoverClassification.js';
 import { prepareReadwiseCutoverResources } from './readwiseSourceCutoverDocumentStep.js';
 import { createReadwiseDocumentMigration } from './readwiseSourceCutoverJournal.js';
 import { mergeLegacyReadwiseAnnotations } from './readwiseSourceMigrationProjection.js';
@@ -29,6 +29,10 @@ export async function commitCutoverItem(input: {
   onStage: (stage: ReadwiseSourceCutoverFailureStage) => void;
   settings: ImportManagerSettings;
 }) {
+  return runWithDatabaseConnectionOwner(() => commitOwnedCutoverItem(input));
+}
+
+async function commitOwnedCutoverItem(input: Parameters<typeof commitCutoverItem>[0]) {
   const binding = cutoverItemBinding(input.item);
   const document = mergeLegacyReadwiseAnnotations(input.document, binding?.legacyAnnotations ?? []);
   const book = document.category === 'epub' || document.category === 'pdf';
@@ -42,7 +46,7 @@ export async function commitCutoverItem(input: {
   input.onStage('writing');
   openDatabaseConnection().driver.transaction((driver) => {
     if (readReadwiseApiSourceDisposition(driver, input.connectionRef, document.id) === 'hard_deleted') {
-      recordReadwiseSuppressedCutoverDocuments([document], new Set([document.id]));
+      recordReadwiseSourceCutoverClassification(document, 'suppressed', null);
       return;
     }
     const importedAt = new Date().toISOString();

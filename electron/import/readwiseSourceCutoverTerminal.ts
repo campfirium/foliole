@@ -9,8 +9,10 @@ export function assertReadwiseSourceCutoverComplete(
   documents: PreparedReadwiseApiDocument[]
 ) {
   const current = requireActiveCutover();
-  if (current.failures?.length) {
-    throw new Error('readwise_source_cutover_failures_remaining');
+  const failed = new Set(current.failures?.map((item) => item.remoteId));
+  if (current.failures?.some((failure) => !current.documents.some((item) =>
+    item.remoteId === failure.remoteId && item.status === 'unavailable' && item.reason === failure.reason))) {
+    throw new Error('readwise_source_cutover_failures_unrecorded');
   }
   const candidateIds = new Set(documents.map((item) => item.id));
   if (!sameSet(candidateIds, new Set(current.cohortDocumentIds))) {
@@ -26,7 +28,7 @@ export function assertReadwiseSourceCutoverComplete(
   if (!sameSet(expectedAnnotations, annotationTerminals)) {
     throw new Error('readwise_source_cutover_annotation_terminals_incomplete');
   }
-  if (countPendingReadwiseSourceBodies(connectionRef) > 0) {
+  if (countPendingReadwiseSourceBodies(connectionRef, failed) > 0) {
     throw new Error('readwise_source_cutover_pending_bodies');
   }
   assertCurrentEpubProjections(connectionRef, documents, current.documents);
@@ -46,13 +48,13 @@ function assertCurrentEpubProjections(
   }
 }
 
-export function countPendingReadwiseSourceBodies(connectionRef: string) {
-  return openDatabaseConnection().driver.queryOne<{ count: number }>(
-    `SELECT COUNT(*) count FROM import_sources
+export function countPendingReadwiseSourceBodies(connectionRef: string, failed = new Set<string>()) {
+  return openDatabaseConnection().driver.queryAll<{ remote_document_id: string }>(
+    `SELECT remote_document_id FROM import_sources
      WHERE remote_provider = 'readwise' AND remote_connection_ref = ?
        AND json_extract(remote_import_state_json, '$.sourceUpdate.status') = 'pending'`,
     [connectionRef]
-  )?.count ?? 0;
+  ).filter((item) => !failed.has(item.remote_document_id)).length;
 }
 
 function requireActiveCutover() {

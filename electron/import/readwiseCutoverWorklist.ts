@@ -1,6 +1,6 @@
 import type { ImportManagerSettings } from '../../lib/core/import/importManagerSettings.js';
 import { prepareReadwiseApiDocuments } from '../../lib/core/readwise/readwiseApiImport.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadStagedReadwiseApiContracts } from '../database/readwiseApiImportState.js';
 import { loadReadwiseCutoverStage, saveReadwiseCutoverStage } from '../database/readwiseCutoverStage.js';
 import { writeReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
@@ -29,12 +29,12 @@ export function cutoverItemBinding(item: CutoverWorkItem): ReadwiseSourceCutover
 }
 
 export async function prepareCutoverWorklist(connectionRef: string, settings: ImportManagerSettings) {
-  const staged = loadStagedReadwiseApiContracts(connectionRef);
+  const staged = await runWithDatabaseConnectionOwner(() => loadStagedReadwiseApiContracts(connectionRef));
   const documents = prepareReadwiseApiDocuments(staged.readerDocuments, staged.exportBooks);
-  const saved = loadReadwiseCutoverStage<Worklist>(connectionRef, KIND);
+  const saved = await runWithDatabaseConnectionOwner(() => loadReadwiseCutoverStage<Worklist>(connectionRef, KIND));
   if (saved) return withMergedAnnotations(documents, saved);
   const artifacts = await loadReadwiseSourceArtifacts();
-  return openDatabaseConnection().driver.transaction(() => {
+  return runWithDatabaseConnectionOwner(() => openDatabaseConnection().driver.transaction(() => {
     const matching = matchReadwiseSourceCutover({ artifacts, preparedDocuments: documents, readerDocuments: staged.readerDocuments });
     promoteReadwiseSourceCutoverCohort(documents.map((item) => item.id));
     if (requireReadwiseSourceCutoverV2().legacyMatches === undefined) recordReadwiseSourceCutoverLegacyFailures(matching.failures);
@@ -54,7 +54,7 @@ export async function prepareCutoverWorklist(connectionRef: string, settings: Im
     saveReadwiseCutoverStage(connectionRef, KIND, { items, config: settings.readwiseReaderConfig });
     writeReadwiseSourceCutover({ ...requireReadwiseSourceCutoverV2(), phase: 'merging', updateDocumentIds: items.map((item) => item.remoteId) });
     return withMergedAnnotations(documents, { items, config: settings.readwiseReaderConfig });
-  });
+  }));
 }
 
 function migrateDispositions(

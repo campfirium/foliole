@@ -3,6 +3,7 @@ import {
   readwiseSourceCutoverProgress
 } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import type { NativeReadwiseSourceCutoverResult } from '../../lib/platform/nativeReadwiseSourceCutoverContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import {
   ensureReadwiseRemoteSource,
@@ -20,12 +21,12 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import { isStoredReadwiseApiConnectionReady } from './readwiseApiConnectionState.js';
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
 import { readCutoverDownloadProgress } from './readwiseCutoverDownload.js';
+import { recoverReadwiseCutoverFailures } from './readwiseCutoverRecovery.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
 import {
   completeReadwiseSourceCutoverMigration,
   requireReadwiseSourceCutoverV2
 } from './readwiseSourceCutoverJournal.js';
-import { firstReadwiseCandidateFailureReason } from './readwiseSourceCutoverPreview.js';
 import { restartIncompleteReadwiseSourceCutover } from './readwiseSourceCutoverReset.js';
 import { runReadwiseSourceCutoverSnapshot } from './readwiseSourceCutoverSnapshotRun.js';
 
@@ -52,58 +53,85 @@ export async function runReadwiseSourceCutover(
 async function runNow(
   input: RunReadwiseSourceCutoverInput
 ): Promise<NativeReadwiseSourceCutoverResult> {
-  const current = loadReadwiseSourceCutover();
-  const sourceMode = loadReadwiseSourceModeState();
-  const currentProgress = current ? readwiseSourceCutoverProgress(current) : null;
+  const { current, sourceMode, assignment, source } = await runWithDatabaseConnectionOwner(() => ({
+    current: loadReadwiseSourceCutover(), sourceMode: loadReadwiseSourceModeState(),
+    assignment: loadReadwiseHostAssignment(), source: loadReadwiseRemoteSource()
+  }));
+  const ready = await runWithDatabaseConnectionOwner(isStoredReadwiseApiConnectionReady);
   const completed = current?.status === 'api'
     && current.version === 2
     && current.completionVersion === READWISE_SOURCE_CUTOVER_COMPLETION_VERSION;
   if (completed && sourceMode.mode === 'api' && sourceMode.conflictReasons.length === 0) {
-    return result('already_completed', currentProgress?.migratedCount, currentProgress?.unmatchedCount);
+    if (source && current.failures?.length) {
+      if (!assignment.is_active) return result('not_active_host', 0, 0, 'readwise_execution_eligibility_lost');
+      if (!ready) return result('connection_required', 0, 0, 'readwise_api_reconnect_required');
+      await recoverCompletedCutover(input, source.connectionRef);
+    }
+    const progress = await runWithDatabaseConnectionOwner(() => readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2()));
+    return result('already_completed', progress.migratedCount, progress.unmatchedCount);
   }
   if (sourceMode.conflictReasons.length > 0 || sourceMode.mode !== 'relay') {
     return result('failed', 0, 0, 'readwise_source_mode_conflict');
   }
-  const assignment = loadReadwiseHostAssignment();
   if (!assignment.is_active) {
     return result('not_active_host', 0, 0, 'readwise_execution_eligibility_lost');
   }
-  if (!isStoredReadwiseApiConnectionReady()) {
+  if (!ready) {
     return result('connection_required', 0, 0, 'readwise_api_reconnect_required');
   }
-  const source = loadReadwiseRemoteSource() ?? ensureReadwiseRemoteSource();
-  const restartRequired = !current || current.status === 'api';
-  const startedAt = restartRequired ? new Date().toISOString() : current.startedAt;
-  if (restartRequired) {
-    restartIncompleteReadwiseSourceCutover({
-      connectionRef: source.connectionRef,
-      sourceHost: assignment.current_host_name,
-      startedAt
-    });
-    await input.onMigrationStarted?.();
-    publishProgress(input.window, 0, 0, 'indexing');
-  }
-  recordCutoverError(null);
-  const activeBatchId = requireReadwiseSourceCutoverV2().batchId;
+  const { activeSource, activeBatchId } = await prepareCutoverRun(input, !current || current.status === 'api', current?.startedAt);
   try {
-    const output = await runCutoverPipeline(source.connectionRef, input);
-    const progress = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
-    if (output.remainingCount > 0) {
-      const failure = requireReadwiseSourceCutoverV2().failures?.[0]?.reason
-        ?? firstReadwiseCandidateFailureReason();
-      return result('failed', progress.migratedCount, progress.unmatchedCount, failure);
-    }
-    completeReadwiseSourceCutoverMigration(source.connectionRef, output.documents);
-    const completed = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
-    return result('completed', completed.migratedCount, completed.unmatchedCount);
+    const output = await runCutoverPipeline(activeSource.connectionRef, input);
+    return await runWithDatabaseConnectionOwner(() => {
+      if (output.remainingCount > 0) throw new Error('readwise_source_cutover_document_terminals_incomplete');
+      completeReadwiseSourceCutoverMigration(activeSource.connectionRef, output.documents);
+      const completed = readwiseSourceCutoverProgress(requireReadwiseSourceCutoverV2());
+      return result('completed', completed.migratedCount, completed.unmatchedCount);
+    });
   } catch (error) {
     console.error('[readwise-cutover] migration paused', error);
     const reason = safeFailureReason(error);
-    if (requireReadwiseSourceCutoverV2().batchId !== activeBatchId) return result('failed', 0, 0, reason);
-    recordCutoverError(reason);
-    publishFailed(input.window);
-    return result('failed', 0, 0, reason);
+    return runWithDatabaseConnectionOwner(() => {
+      if (requireReadwiseSourceCutoverV2().batchId !== activeBatchId) return result('failed', 0, 0, reason);
+      recordCutoverError(reason);
+      publishFailed(input.window);
+      return result('failed', 0, 0, reason);
+    });
   }
+}
+
+async function prepareCutoverRun(input: RunReadwiseSourceCutoverInput, restart: boolean, previousStartedAt?: string) {
+  const prepared = await runWithDatabaseConnectionOwner(() => {
+    const activeSource = loadReadwiseRemoteSource() ?? ensureReadwiseRemoteSource();
+    if (restart) restartIncompleteReadwiseSourceCutover({
+      connectionRef: activeSource.connectionRef,
+      sourceHost: loadReadwiseHostAssignment().current_host_name,
+      startedAt: previousStartedAt ?? new Date().toISOString()
+    });
+    recordCutoverError(null);
+    return { activeSource, activeBatchId: requireReadwiseSourceCutoverV2().batchId };
+  });
+  if (restart) {
+    await input.onMigrationStarted?.();
+    publishProgress(input.window, 0, 0, 'indexing');
+  }
+  return prepared;
+}
+
+function recoverCompletedCutover(input: RunReadwiseSourceCutoverInput, connectionRef: string) {
+  return recoverReadwiseCutoverFailures({ connectionRef, dependencies: input.dependencies ?? {},
+    assertEligible: () => {
+      if (input.dependencies?.signal?.aborted) throw new DOMException('Readwise import cancelled', 'AbortError');
+      if (!loadReadwiseHostAssignment().is_active || !isStoredReadwiseApiConnectionReady()) {
+        throw new Error('readwise_execution_eligibility_lost');
+      }
+      if (loadReadwiseRemoteSource()?.connectionRef !== connectionRef) {
+        throw new Error('readwise_execution_connection_changed');
+      }
+      const mode = loadReadwiseSourceModeState();
+      if (mode.mode !== 'api' || mode.conflictReasons.length) throw new Error('readwise_source_mode_conflict');
+    }
+  });
 }
 
 function recordCutoverError(errorReason: string | null) {
@@ -115,8 +143,9 @@ function recordCutoverError(errorReason: string | null) {
 }
 
 async function runCutoverPipeline(connectionRef: string, input: RunReadwiseSourceCutoverInput) {
-  const settings = loadImportManagerSettings();
-  const batchId = requireReadwiseSourceCutoverV2().batchId;
+  const { settings, batchId } = await runWithDatabaseConnectionOwner(() => ({
+    settings: loadImportManagerSettings(), batchId: requireReadwiseSourceCutoverV2().batchId
+  }));
   const assertEligible = () => assertMigrationEligible(connectionRef, batchId);
   const dependencies = {
     ...input.dependencies,

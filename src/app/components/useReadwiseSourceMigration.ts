@@ -84,7 +84,16 @@ function useMigrationProgressEvents(
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
     let disposed = false;
-    void onReadwiseReaderImportProgress((progress) => applyMigrationProgress(setProgress, progress))
+    void onReadwiseReaderImportProgress((progress) => {
+      if (progress.phase !== 'source_completed') return applyMigrationProgress(setProgress, progress);
+      void previewReadwiseSourceCutoverInRuntime().then((state) => {
+        if (disposed || state.status !== 'already_completed') return;
+        setProgress((current) => ({ ...current,
+          completedCount: state.completed_count, errorReason: null, failed: false,
+          failures: state.failed_items ?? [], phase: null, totalCount: null
+        }));
+      }).catch(() => undefined);
+    })
       .then((stop) => { if (disposed) stop?.(); else unsubscribe = stop; })
       .catch(() => undefined);
     return () => { disposed = true; unsubscribe?.(); };

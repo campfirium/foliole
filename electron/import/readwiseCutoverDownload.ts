@@ -1,5 +1,5 @@
 import { normalizeExportBook, normalizeReaderDocument } from '../../lib/core/readwise/readwiseApiContract.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadOrCreateReadwiseApiImportRun, loadStagedReadwiseApiContracts, saveReadwiseApiStagePage } from '../database/readwiseApiImportState.js';
 import { loadReadwiseCutoverStage, saveReadwiseCutoverStage } from '../database/readwiseCutoverStage.js';
 
@@ -28,19 +28,24 @@ export async function downloadReadwiseCutover(
   request: (url: URL) => Promise<Record<string, unknown>>,
   dependencies: ReadwiseApiFetchDependencies
 ) {
-  let state = loadDownload(connectionRef);
+  let state = await runWithDatabaseConnectionOwner(() => loadDownload(connectionRef));
   while (!state.reader.done || !state.export.done) {
     const kind = nextKind(state);
-    dependencies.assertCutoverBatch?.();
-    assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
+    await runWithDatabaseConnectionOwner(() => {
+      dependencies.assertCutoverBatch?.();
+      assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
+    });
     const payload = await request(pageUrl(kind, state[kind].cursor));
-    assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
-    dependencies.assertCutoverBatch?.();
-    state = persistPage(connectionRef, kind, state, payload);
-    dependencies.onPage?.({ phase: kind, recordCount: (payload.results as unknown[]).length,
-      ...(state[kind].total === null ? {} : { totalCount: state[kind].total }) });
+    state = await runWithDatabaseConnectionOwner(() => {
+      assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
+      dependencies.assertCutoverBatch?.();
+      const next = persistPage(connectionRef, kind, state, payload);
+      dependencies.onPage?.({ phase: kind, recordCount: (payload.results as unknown[]).length,
+        ...(next[kind].total === null ? {} : { totalCount: next[kind].total }) });
+      return next;
+    });
   }
-  return loadOrCreateReadwiseApiImportRun(connectionRef);
+  return runWithDatabaseConnectionOwner(() => loadOrCreateReadwiseApiImportRun(connectionRef));
 }
 
 function loadDownload(connectionRef: string): DownloadState {

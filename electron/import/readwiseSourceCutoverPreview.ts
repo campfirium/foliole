@@ -2,7 +2,7 @@ import {
   READWISE_SOURCE_CUTOVER_COMPLETION_VERSION
 } from '../../lib/core/readwise/readwiseSourceCutover.js';
 import type { NativeReadwiseSourceCutoverPreview } from '../../lib/platform/nativeReadwiseSourceCutoverContract.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadReadwiseApiCandidates } from '../database/readwiseApiCandidateStage.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
@@ -13,6 +13,10 @@ import { readCutoverDownloadProgress } from './readwiseCutoverDownload.js';
 interface SourceCountRow { [column: string]: unknown; count: number }
 
 export async function previewReadwiseSourceCutover(): Promise<NativeReadwiseSourceCutoverPreview> {
+  return runWithDatabaseConnectionOwner(previewOwnedCutover);
+}
+
+function previewOwnedCutover(): NativeReadwiseSourceCutoverPreview {
   const current = loadReadwiseSourceCutover();
   const completed = current?.version === 2 && current.status === 'api'
     && current.completionVersion === READWISE_SOURCE_CUTOVER_COMPLETION_VERSION;

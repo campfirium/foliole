@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { extractReaderLinkIds } from '../../lib/core/readwise/readwiseRemoteIdentity.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import {
   listReadwiseLegacySourceDispositions,
@@ -39,7 +39,8 @@ export interface ReadwiseSourceArtifact {
 }
 
 export async function loadReadwiseSourceArtifacts(): Promise<ReadwiseSourceArtifact[]> {
-  return [...loadTrackedArtifacts(), ...await loadFolderArtifacts()];
+  const tracked = await runWithDatabaseConnectionOwner(loadTrackedArtifacts);
+  return [...tracked, ...await loadFolderArtifacts()];
 }
 
 function loadTrackedArtifacts(): ReadwiseSourceArtifact[] {
@@ -84,21 +85,24 @@ function loadTrackedArtifacts(): ReadwiseSourceArtifact[] {
 }
 
 async function loadFolderArtifacts() {
-  const driver = openDatabaseConnection().driver;
-  const dispositionsByPath = readDispositionsByPath(driver);
-  const rows = driver.queryAll<SourceRow>(
-    `SELECT i.source_fingerprint, i.latest_node_id, i.source_location, i.source_ref,
-       i.remote_document_id, d.root_path,
-       n.title source_title, d.type_settings_json,
-       EXISTS(SELECT 1 FROM nodes n WHERE n.id = i.latest_node_id AND n.deleted_at IS NULL) AS node_active,
-       json_extract(d.type_settings_json, '$.highlightPath') AS highlight_path
-     FROM import_sources i JOIN desktop_sources d ON d.source_ref = i.source_ref
-     LEFT JOIN nodes n ON n.id = i.latest_node_id
-     WHERE d.source_type = 'readwise' AND d.host_name = ?
-       AND i.latest_node_id IS NOT NULL AND i.source_location IS NOT NULL
-     ORDER BY i.source_fingerprint`,
-    [loadReadwiseHostAssignment().current_host_name]
-  );
+  const { dispositionsByPath, rows } = await runWithDatabaseConnectionOwner(() => {
+    const driver = openDatabaseConnection().driver;
+    const dispositionsByPath = readDispositionsByPath(driver);
+    const rows = driver.queryAll<SourceRow>(
+      `SELECT i.source_fingerprint, i.latest_node_id, i.source_location, i.source_ref,
+         i.remote_document_id, d.root_path,
+         n.title source_title, d.type_settings_json,
+         EXISTS(SELECT 1 FROM nodes n WHERE n.id = i.latest_node_id AND n.deleted_at IS NULL) AS node_active,
+         json_extract(d.type_settings_json, '$.highlightPath') AS highlight_path
+       FROM import_sources i JOIN desktop_sources d ON d.source_ref = i.source_ref
+       LEFT JOIN nodes n ON n.id = i.latest_node_id
+       WHERE d.source_type = 'readwise' AND d.host_name = ?
+         AND i.latest_node_id IS NOT NULL AND i.source_location IS NOT NULL
+       ORDER BY i.source_fingerprint`,
+      [loadReadwiseHostAssignment().current_host_name]
+    );
+    return { dispositionsByPath, rows };
+  });
   return Promise.all(rows.map(async (source): Promise<ReadwiseSourceArtifact> => {
     const relative = safeRelative(source.source_location);
     const ruleId = source.source_ref.startsWith('readwise:') ? source.source_ref.slice('readwise:'.length) : '';

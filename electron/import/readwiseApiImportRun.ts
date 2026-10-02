@@ -28,6 +28,7 @@ import {
   updateReadwiseApiTrackedRunStage
 } from './readwiseApiScheduleState.js';
 import { assertReadwiseApiScopeAllowed } from './readwiseApiScopeGate.js';
+import { recoverReadwiseCutoverFailures } from './readwiseCutoverRecovery.js';
 import type { ReadwiseImportProgressWindow } from './readwiseReaderRunAccumulator.js';
 import { previewReadwiseSourceCutover, runReadwiseSourceCutover } from './readwiseSourceCutover.js';
 
@@ -72,7 +73,11 @@ async function startImport(input: Parameters<typeof runReadwiseApiImport>[0], si
   const migrating = await runWithDatabaseConnectionOwner(() => (
     loadReadwiseSourceCutover()?.status === 'migration-in-progress'
   ));
-  return migrating ? runMigration(input) : runNow(input, signal);
+  if (migrating) return runMigration(input);
+  const connectionRef = await runWithDatabaseConnectionOwner(requireConnectionRef);
+  await recoverReadwiseCutoverFailures({ connectionRef,
+    dependencies: input?.dependencies ?? {}, assertEligible: () => assertEligible(signal, connectionRef) });
+  return runNow(input, signal);
 }
 
 async function runMigration(input: Parameters<typeof runReadwiseApiImport>[0]) {

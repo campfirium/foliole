@@ -1,12 +1,16 @@
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
+import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { candidateScopeSignature } from '../database/readwiseApiCandidateRun.js';
 import { saveReadwiseApiCandidateManifestWithDriver } from '../database/readwiseApiCandidateStage.js';
 import { readwiseApiOverlapBoundary } from '../database/readwiseApiImportState.js';
 import { seedReadwiseApiScopeCheckpoints } from '../database/readwiseApiScopeLedger.js';
+import { loadReadwiseCutoverStage } from '../database/readwiseCutoverStage.js';
 import { loadReadwiseSourceCutover } from '../database/readwiseSourceCutover.js';
 import { writeJsonSetting } from '../database/settingsStore.js';
+
+import type { CutoverWorkItem } from './readwiseCutoverWorklist.js';
 
 export function completeCutoverDownload(
   driver: DatabaseDriver,
@@ -24,9 +28,16 @@ export function completeCutoverDownload(
   const state = loadReadwiseSourceCutover();
   if (state?.version === 2 && state.failures?.length) {
     const failed = new Set(state.failures.map((item) => item.remoteId));
+    const work = loadReadwiseCutoverStage<{ items: CutoverWorkItem[]; config: ReadwiseReaderConfig }>(
+      connectionRef, 'cutover-worklist-v2'
+    );
+    if (!work || state.failures.some((item) => !work.items.some((entry) => entry.remoteId === item.remoteId))) {
+      throw new Error('readwise_source_cutover_worklist_incomplete');
+    }
     writeJsonSetting(driver, 'readwise_source_cutover_failed_facts', {
       connectionRef, startedAt: run.round_started_at,
-      documents: documents.filter((item) => failed.has(item.id)), failures: state.failures
+      documents: documents.filter((item) => failed.has(item.id)), failures: state.failures,
+      work: { ...work, items: work.items.filter((item) => failed.has(item.remoteId)) }
     }, now);
   }
   const completedThrough = readwiseApiOverlapBoundary(run.round_started_at);

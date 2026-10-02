@@ -55,6 +55,8 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 import { ensureReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
+import { runReadwiseApiImport } from './readwiseApiImportRun.js';
+import { apiSettings } from './readwiseApiImportRun.testSupport.js';
 import { normalizeExpectedRootBody } from './readwiseCutoverProjection.js';
 import { previewReadwiseSourceCutover, runReadwiseSourceCutover } from './readwiseSourceCutover.js';
 import {
@@ -143,18 +145,68 @@ it('rebuilds a bound book when legacy timestamps look edited', async () => {
   });
 });
 
-it('rolls back content and identity when a new book fails during its final write', async () => {
+it('preserves a failed book without blocking migration or later recovery', async () => {
   ensureReadwiseRemoteSource();
   const driver = openDatabaseConnection().driver;
   driver.execute(`CREATE TRIGGER reject_chapter BEFORE INSERT ON nodes
     WHEN NEW.id LIKE 'node-epub-%' BEGIN SELECT RAISE(ABORT, 'injected chapter failure'); END`);
   expect((await runReadwiseSourceCutover({ dependencies: {
     fetchImpl: epubMigrationFetch(), minIntervalMs: 0
-  } })).status).toBe('failed');
+  } })).status).toBe('completed');
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE kind='topic'")?.count).toBe(0);
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM import_sources WHERE remote_provider='readwise'")?.count).toBe(0);
   expect(await previewReadwiseSourceCutover()).toMatchObject({
     failed_items: [expect.objectContaining({ stage: 'writing', reason: 'injected chapter failure' })],
-    status: 'migration_in_progress'
+    status: 'already_completed'
   });
+  closeDatabaseConnection();
+  initializeDatabaseConnection(openDatabaseConnection());
+  const reopened = openDatabaseConnection().driver;
+  expect(await previewReadwiseSourceCutover()).toMatchObject({ status: 'already_completed',
+    failed_items: [expect.objectContaining({ reason: 'injected chapter failure' })] });
+  reopened.execute('DROP TRIGGER reject_chapter');
+  const fetchImpl = vi.fn(epubMigrationFetch());
+  await runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } });
+  expect(fetchImpl).not.toHaveBeenCalled();
+  expect((await previewReadwiseSourceCutover()).failed_items).toBeUndefined();
+  expect(reopened.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM import_sources WHERE remote_provider='readwise'")?.count).toBe(1);
+});
+
+it.each(['scheduled', 'manual'] as const)('keeps successful items and later %s sync moving past a failed book', async (trigger) => {
+  const source = ensureReadwiseRemoteSource();
+  const driver = openDatabaseConnection().driver;
+  driver.execute(`CREATE TRIGGER reject_chapter BEFORE INSERT ON nodes
+    WHEN NEW.id LIKE 'node-epub-%' BEGIN SELECT RAISE(ABORT, 'injected chapter failure'); END`);
+  const original = epubMigrationFetch();
+  const fetchImpl = async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    const payload = await (await original(input)).json();
+    payload.results.push(url.pathname.includes('/v2/')
+      ? { external_id: 'healthy', source: 'reader', highlights: [{ external_id: 'healthy-h', text: 'Keep me' }] }
+      : { category: 'article', id: 'healthy', title: 'Healthy', html_content: '<p>Keep me</p>' });
+    if (!url.pathname.includes('/v2/')) payload.results.push({ category: 'highlight', id: 'healthy-h', parent_id: 'healthy' });
+    return Response.json(payload);
+  };
+  expect((await runReadwiseSourceCutover({ dependencies: { fetchImpl, minIntervalMs: 0 } })).status).toBe('completed');
+  const before = driver.queryOne<{ latest_node_id: string }>(
+    "SELECT latest_node_id FROM import_sources WHERE remote_document_id='healthy'")!;
+  const content = driver.queryOne('SELECT content, updated_at FROM nodes WHERE id=?', [before.latest_node_id]);
+  const routineFetch = async (input: string | URL | Request) => {
+    const url = new URL(String(input));
+    const results = url.pathname.includes('/v2/') || (url.searchParams.has('category') && url.searchParams.get('category') !== 'article')
+      ? [] : [{ category: 'article', id: 'later', title: 'Later', html_content: '<p>Later body</p>' }];
+    return Response.json({ results, nextPageCursor: null });
+  };
+  await expect(runReadwiseApiImport({ trigger, settings: apiSettings('inbox'),
+    dependencies: { fetchImpl: routineFetch, minIntervalMs: 0 } })).resolves.toMatchObject({ status: 'completed' });
+  expect(driver.queryOne('SELECT content, updated_at FROM nodes WHERE id=?', [before.latest_node_id])).toEqual(content);
+  expect(driver.queryOne("SELECT latest_node_id FROM import_sources WHERE remote_document_id='later'")).not.toBeNull();
+  expect((await previewReadwiseSourceCutover()).failed_items).toHaveLength(1);
+  driver.execute('DROP TRIGGER reject_chapter');
+  await runReadwiseApiImport({ trigger, settings: apiSettings('inbox'), dependencies: { fetchImpl: routineFetch, minIntervalMs: 0 } });
+  expect((await previewReadwiseSourceCutover()).failed_items).toBeUndefined();
+  expect(driver.queryOne<{ count: number }>(
+    "SELECT COUNT(*) count FROM import_sources WHERE remote_connection_ref=? AND remote_document_id='document-1'",
+    [source.connectionRef])?.count).toBe(1);
 });

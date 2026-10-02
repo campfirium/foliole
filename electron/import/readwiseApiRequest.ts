@@ -1,3 +1,4 @@
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { canCurrentHostRunReadwise, loadReadwiseHostAssignment } from '../database/readwiseHostAssignment.js';
 import { loadReadwiseRemoteSource } from '../database/readwiseRemoteIdentity.js';
 
@@ -27,7 +28,9 @@ export function createReadwiseRequest(
     for (let retry = 0; retry <= maxRetries; retry += 1) {
       const delay = Math.max(0, lastRequestAt + minIntervalMs - Date.now());
       if (delay) await abortableDelay(delay, dependencies.signal);
-      assertReadwiseApiEligible(dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover);
+      await runWithDatabaseConnectionOwner(() => assertReadwiseApiEligible(
+        dependencies.signal, connectionRef, dependencies.allowFolderModeForCutover
+      ));
       lastRequestAt = Date.now();
       const requestSignal = dependencies.signal
         ? AbortSignal.any([AbortSignal.timeout(30_000), dependencies.signal])
@@ -46,7 +49,7 @@ export function createReadwiseRequest(
         continue;
       }
       if (response.status === 401 || response.status === 403) {
-        saveReconnectRequired(loadStoredReadwiseHostSettings());
+        await runWithDatabaseConnectionOwner(() => saveReconnectRequired(loadStoredReadwiseHostSettings()));
         throw new Error('readwise_api_reconnect_required');
       }
       if (response.status === 429 && retry < maxRetries) {

@@ -188,6 +188,20 @@ it('restores completed migration warnings without reopening migration', async ()
   expect(cutover.run).not.toHaveBeenCalled();
 });
 
+it('refreshes completed migration warnings when a later sync recovers the failed item', async () => {
+  cutover.preview.mockResolvedValue({
+    completed_count: 1, error_reason: null,
+    failed_items: [{ reason: 'write_failed', remote_id: 'document-1', stage: 'writing', title: 'Book' }],
+    phase: null, status: 'already_completed', topic_count: 1, total_count: 1
+  });
+  render(<Probe committedMode="api" />);
+  await waitFor(() => expect(screen.getByTestId('failures')).toHaveTextContent('1'));
+  cutover.preview.mockResolvedValue({ completed_count: 1, error_reason: null,
+    phase: null, status: 'already_completed', topic_count: 1, total_count: 1 });
+  act(() => events.handler?.({ phase: 'source_completed', processedCount: 1, totalCount: 1, status: 'completed' }));
+  await waitFor(() => expect(screen.getByTestId('failures')).toHaveTextContent('0'));
+});
+
 function Probe(props: {
   showProgress?: boolean;
   committedMode?: 'api' | 'relay';

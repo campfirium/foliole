@@ -2,6 +2,7 @@ import {
   normalizeExportBook,
   normalizeReaderDocument
 } from '../../lib/core/readwise/readwiseApiContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import {
   loadOrCreateReadwiseApiImportRun,
   loadStagedReadwiseApiContracts,
@@ -75,8 +76,8 @@ export async function fetchReadwiseSourceCutoverSnapshot(
   connectionRef: string,
   dependencies: ReadwiseApiFetchDependencies = {}
 ) {
-  const settings = loadStoredReadwiseHostSettings();
-  if (!canRunReadwiseApiRequest(dependencies) || settings.apiConnection.state !== 'connected') {
+  const settings = await runWithDatabaseConnectionOwner(loadStoredReadwiseHostSettings);
+  if (!await runWithDatabaseConnectionOwner(() => canRunReadwiseApiRequest(dependencies)) || settings.apiConnection.state !== 'connected') {
     throw new Error('readwise_api_import_not_ready');
   }
   if (!settings.apiConnection.secretRef) throw new Error('readwise_api_token_missing');

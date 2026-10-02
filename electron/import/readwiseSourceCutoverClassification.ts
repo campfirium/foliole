@@ -16,19 +16,21 @@ export function recordReadwiseSourceCutoverClassification(
   binding: ReadwiseSourceCutoverIdentityBinding | null
 ) {
   const current = requireCutoverV2();
-  if (current.documents.some((item) => item.remoteId === document.id)) return;
+  const retrying = current.failures?.some((item) => item.remoteId === document.id);
+  if (current.documents.some((item) => item.remoteId === document.id) && !retrying) return;
   const next = withoutActiveDocument(current, document.id);
+  const annotationIds = new Set(document.annotations.map((item) => item.remoteId));
   const failures = next.failures?.filter((item) => item.remoteId !== document.id) ?? [];
   const byRemote = new Map(binding?.annotations.map((item) => [item.remoteId, item.nodeId]) ?? []);
   const blocked = binding?.blockedAnnotationIds ?? new Set<string>();
   writeReadwiseSourceCutover({
     ...next,
-    annotations: [...next.annotations, ...document.annotations.map((item) => ({
+    annotations: [...next.annotations.filter((item) => !retrying || !annotationIds.has(item.remoteId)), ...document.annotations.map((item) => ({
       nodeId: byRemote.get(item.remoteId) ?? null,
       remoteId: item.remoteId,
       status: annotationStatus(status, byRemote.has(item.remoteId), blocked.has(item.remoteId))
     }))],
-    documents: [...next.documents, {
+    documents: [...next.documents.filter((item) => !retrying || item.remoteId !== document.id), {
       nodeId: binding?.nodeId ?? null,
       remoteId: document.id,
       status
@@ -91,10 +93,20 @@ export function recordReadwiseSourceCutoverFailure(input: {
   stage: ReadwiseSourceCutoverFailureStage;
 }) {
   const current = requireCutoverV2();
-  if (current.documents.some((item) => item.remoteId === input.document.id)) return;
+  if (current.documents.some((item) => item.remoteId === input.document.id)
+    && !current.failures?.some((item) => item.remoteId === input.document.id)) return;
   const next = withoutActiveDocument(current, input.document.id);
   writeReadwiseSourceCutover({
     ...next,
+    documents: [...next.documents.filter((item) => item.remoteId !== input.document.id), {
+      nodeId: input.binding?.nodeId ?? null, remoteId: input.document.id,
+      reason: input.reason, status: 'unavailable'
+    }],
+    annotations: [...next.annotations.filter((item) =>
+      !input.document.annotations.some((annotation) => annotation.remoteId === item.remoteId)),
+    ...input.document.annotations.map((item) => ({
+      nodeId: null, remoteId: item.remoteId, status: 'unavailable' as const
+    }))],
     failures: [...(next.failures ?? []).filter((item) => item.remoteId !== input.document.id), {
       reason: input.reason,
       remoteId: input.document.id,
