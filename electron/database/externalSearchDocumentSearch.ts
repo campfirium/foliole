@@ -1,6 +1,8 @@
 import { executeFtsSearchPlan } from '../../lib/core/database/ftsSearchExecution.js';
 import { buildFtsSearchQueryPlan, matchesFtsSearchFields, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
+import { searchStoredSources } from '../../lib/core/database/storedSourceSearch.js';
 
+import { openDatabaseConnection } from './connection.js';
 import { loadDesktopSourceByConfig, resolveDesktopSourceAddress } from './desktopSources.js';
 import {
   isExternalDocumentVisible,
@@ -154,6 +156,7 @@ export function searchExternalDocuments(query: string, aliases: string[][] = [])
     const resolved = resolveCurrentExternalSearchRow(row);
     return resolved ? [resolved] : [];
   });
+  const storedCandidates = searchStoredSources(openDatabaseConnection().driver, 'external', queryPlan);
   return [
     ...localRows
       .filter((row) => isExternalDocumentVisible(row.absolute_path)
@@ -161,9 +164,9 @@ export function searchExternalDocuments(query: string, aliases: string[][] = [])
       .map((row) =>
         toExternalResult(row, queryPlan.highlightQuery, resolveImportedNodeIdForExternalDocument(row.absolute_path), queryPlan)
       ),
-    ...searchExternalMirrorDocuments(queryPlan).map((row) =>
+    ...searchExternalMirrorDocuments(queryPlan, storedCandidates).map((row) =>
       toExternalResult(row, queryPlan.highlightQuery, null, queryPlan)
     ),
-    ...searchReadwiseExternalDocuments(queryPlan)
+    ...searchReadwiseExternalDocuments(queryPlan, storedCandidates)
   ];
 }

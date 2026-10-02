@@ -1,7 +1,7 @@
 import path from 'node:path';
 
 import { matchesFtsSearchFields, type FtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
-import { searchStoredSources } from '../../lib/core/database/storedSourceSearch.js';
+import { searchStoredSources, type StoredSourceSearchRow } from '../../lib/core/database/storedSourceSearch.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
@@ -226,12 +226,12 @@ export function loadReadwiseExternalSearchPreview(
   };
 }
 
-export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan) {
+export function searchReadwiseExternalDocuments(queryPlan: FtsSearchQueryPlan, candidates?: readonly StoredSourceSearchRow[]) {
   const normalizedQuery = queryPlan.normalizedQuery;
   if (!normalizedQuery) {
     return [];
   }
-  return searchStoredSources(openDatabaseConnection().driver, 'external', queryPlan)
+  return (candidates ?? searchStoredSources(openDatabaseConnection().driver, 'external', queryPlan))
     .map((indexed) => ({ ...JSON.parse(indexed.metadata), content: indexed.content }) as ReadwiseExternalDocumentRow)
     .filter((row) => isReadwiseExternalFolderId(row.folder_id) || readRemoteReference(row))
     .filter((row) => readRemoteReference(row)
