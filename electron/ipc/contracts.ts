@@ -1,5 +1,6 @@
 import type { NativeInvokeRequest } from '../../lib/platform/nativeContract.js';
 
+export const IPC_DATABASE_BACKUPS_CHANGED_EVENT_CHANNEL = 'foliole:database-backups-changed';
 export const IPC_INVOKE_CHANNEL = 'foliole:invoke';
 export const IPC_DIAGNOSTIC_LOG_CHANNEL = 'foliole:diagnostics:log-event';
 export const IPC_DESKTOP_UPDATE_STATE_EVENT_CHANNEL = 'foliole:desktop-update-state';

@@ -30,6 +30,7 @@ import {
   cancelWorkspaceRestoreSession,
   completeWorkspaceRestoreSession
 } from '../../../../store/workspaceRestoreSession';
+import { chooseBackupRestoreSync } from '../../model/backupRestoreSyncChoice';
 import { listDatabaseBackups, loadBackupRetentionStatus, loadSourceDispositionSummary, restoreDatabaseBackup } from '../../model/databaseBackups';
 import { loadDatabaseBackupSettings } from '../../model/databaseBackupSettings';
 
@@ -123,4 +124,29 @@ it('reports database success when rebuilding the renderer session fails and keep
   const dialog = await screen.findByRole('dialog', { name: 'Backup restored' });
   expect(dialog).toHaveTextContent('The backup was restored, but Foliole could not reload the library. Restart Foliole before making more changes.');
   expect(cancelWorkspaceRestoreSession).not.toHaveBeenCalled();
+});
+
+it('shows the inspection error and unchanged outcome before restore starts', async () => {
+  vi.mocked(listDatabaseBackups).mockClear();
+  vi.mocked(chooseBackupRestoreSync).mockRejectedValueOnce(new Error('file is not a database'));
+  renderWithLocalization(<AppConfirmationProvider><SettingsBackupsSection /></AppConfirmationProvider>);
+  fireEvent.click((await screen.findAllByRole('button', { name: 'Restore' }))[0]!);
+  const dialog = await screen.findByRole('dialog', { name: 'Backup not restored' });
+  expect(dialog).toHaveTextContent('Your current library is unchanged.');
+  expect(dialog).toHaveTextContent('The selected file is not a valid library backup.');
+  expect(dialog).toHaveTextContent('file is not a database');
+  expect(restoreDatabaseBackup).not.toHaveBeenCalled();
+  expect(beginWorkspaceRestoreSession).not.toHaveBeenCalled();
+  expect(listDatabaseBackups).toHaveBeenCalledTimes(2);
+});
+
+it('shows the restore reason together with the rollback outcome', async () => {
+  vi.mocked(restoreDatabaseBackup).mockResolvedValue({ ok: false,
+    errorMessage: 'The selected backup was not restored. Your current library has been restored.\nReason: delivery_authorization_ambiguous:Phone' });
+  renderWithLocalization(<AppConfirmationProvider><SettingsBackupsSection /></AppConfirmationProvider>);
+  fireEvent.click((await screen.findAllByRole('button', { name: 'Restore' }))[0]!);
+  const dialog = await screen.findByRole('dialog', { name: 'Backup not restored' });
+  expect(dialog).toHaveTextContent('Your current library has been restored.');
+  expect(dialog).toHaveTextContent('Sync authorization records could not be matched unambiguously to a device.');
+  expect(dialog).toHaveTextContent('delivery_authorization_ambiguous:Phone');
 });

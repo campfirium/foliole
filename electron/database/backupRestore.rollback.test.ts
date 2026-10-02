@@ -103,7 +103,7 @@ it('rolls back to the current library when restored database initialization fail
   initializeState.failNext = true;
 
   await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath }))
-    .rejects.toThrow('Your current library has been restored');
+    .rejects.toThrow('Reason: injected restored database initialization failure');
 
   expect(currentContent()).toBe('# current');
   expect((await fs.readdir(path.dirname(backup.sourcePath)))
@@ -129,7 +129,7 @@ it('disables database access when restored initialization and rollback both fail
 
   try {
     await expect(restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath }))
-      .rejects.toThrow('restart Foliole before making more changes');
+      .rejects.toThrow('Rollback: injected rollback replacement failure');
     expect(() => currentContent()).toThrow('could not reopen the current library');
     await assertManagedSafetySnapshotIntegrity(backup.destinationPath);
     const snapshots = (await listManagedDatabaseBackups(path.dirname(backup.destinationPath)))

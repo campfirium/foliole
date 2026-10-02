@@ -45,7 +45,9 @@ export async function recoverCurrentDatabaseAfterRestoreFailure(args: {
     artifacts.preserve();
     const unavailable = new Error(
       'The selected backup was not restored, and Foliole could not reopen the current library. ' +
-      'Keep your backup files and restart Foliole before making more changes.'
+      'Keep your backup files and restart Foliole before making more changes.' +
+      `\nReason: ${args.error instanceof Error ? args.error.message : String(args.error)}` +
+      `\nRollback: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`
     );
     console.error('[backup] restore rollback failed; database writes are disabled', {
       restoreError: args.error,

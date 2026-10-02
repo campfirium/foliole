@@ -26,6 +26,8 @@ test('reports failed and successful database restores through the native bridge'
   const failure = desktopWindow.getByRole('dialog', { name: /^(Backup not restored|备份未恢复)$/ });
   await expect(failure).toBeVisible();
   await expect(failure).toContainText(/Your current library is unchanged|当前资料库保持原状/);
+  await expect(failure).toContainText(/Reason:|原因：/);
+  await expect(failure).toContainText('file is not a database');
   await failure.screenshot({ path: testInfo.outputPath('restore-failure.png') });
   await testInfo.attach('restore-failure', { path: testInfo.outputPath('restore-failure.png'), contentType: 'image/png' });
   await failure.getByRole('button', { name: DONE }).click();

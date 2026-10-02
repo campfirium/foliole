@@ -10,6 +10,7 @@ import {
 import { chooseBackupRestoreSync } from '../../model/backupRestoreSyncChoice';
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
+import { readDatabaseRestoreFailureMessage } from '../../model/databaseRestoreFailureMessage';
 import { localizeDatabaseRestoreFailure } from '../../model/databaseRestoreNotice';
 
 import {
@@ -137,7 +138,18 @@ function reportRestoreFailure(message: string, args: BackupActionHandlerArgs, t:
 async function restoreWorkspaceBackup(entry: DatabaseBackupEntry, args: BackupActionHandlerArgs, t: Translate) {
   let choice;
   try { choice = await chooseBackupRestoreSync(entry.filePath, t); }
-  catch { reportRestoreFailure(t('settings.backups.restore.failure.unchanged'), args, t); return; }
+  catch (error) {
+    const reason = (error instanceof Error ? error.message : String(error))
+      .replace(/^Error invoking remote method '[^']+': (?:Error: )?/u, '');
+    const message = readDatabaseRestoreFailureMessage(
+      `The selected backup was not restored. Your current library is unchanged.\nReason: ${reason}`
+    );
+    reportRestoreFailure(localizeDatabaseRestoreFailure(message, t), args, t);
+    await args.refreshBackups().catch((refreshError) => {
+      console.error('[backup] could not refresh after restore inspection failed', refreshError);
+    });
+    return;
+  }
   if (!choice) return;
   if (!await beginWorkspaceRestoreSession()) {
     reportRestoreFailure(t('settings.backups.restore.failure.pendingChanges'), args, t);

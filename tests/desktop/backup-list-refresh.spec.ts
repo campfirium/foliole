@@ -39,3 +39,27 @@ test('viewing all backups refreshes files copied or removed outside the app', as
   await expect(dialog.getByRole('heading', { name: copiedName })).toHaveCount(0);
   await expect(dialog.getByRole('heading', { name: 'foliole-manual-260930-100000.db.gz' })).toBeVisible();
 });
+
+test('an open backup list refreshes after native cleanup removes its old files', async ({ desktopSession, desktopWindow }, testInfo) => {
+  await expectWorkspaceShell(desktopWindow);
+  const libraryHome = desktopSession.launchOptions.env.FOLIOLE_LIBRARY_HOME;
+  if (!libraryHome) throw new Error('Missing isolated Library home.');
+  await desktopWindow.evaluate(async (backupDirectory) => {
+    await window.electronAPI.invoke('save_backup_settings', { settings: {
+      backup_dir: backupDirectory, hourly_max_count: 0, daily_max_count: 0,
+      weekly_max_count: 0, monthly_max_count: 0, total_size_limit_bytes: 1
+    } });
+  }, path.join(libraryHome, 'cleanup-refresh'));
+  const first = await desktopWindow.evaluate(async () =>
+    window.electronAPI.invoke('backup_sqlite_database', {})) as { destinationPath: string };
+  const dialog = await openBackupsSection(desktopWindow);
+  await expect(dialog.getByRole('heading', { name: path.basename(first.destinationPath) })).toBeVisible();
+  const next = await desktopWindow.evaluate(async () =>
+    window.electronAPI.invoke('backup_sqlite_database', {})) as { destinationPath: string };
+  await expect(dialog.getByRole('heading', { name: path.basename(first.destinationPath) })).toHaveCount(0);
+  await expect(dialog.getByRole('heading', { name: path.basename(next.destinationPath) })).toBeVisible();
+  const entries = await desktopWindow.evaluate(async () =>
+    window.electronAPI.invoke('list_sqlite_backups', {})) as { filePath: string }[];
+  expect(entries.map((entry) => entry.filePath)).not.toContain(first.destinationPath);
+  await dialog.screenshot({ path: testInfo.outputPath('cleanup-refreshed-list.png') });
+});

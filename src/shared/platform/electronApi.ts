@@ -78,6 +78,7 @@ export interface ManagedInboxUpdatedPayload {
 }
 
 export interface ElectronAPI {
+  onDatabaseBackupsChanged?: (handler: () => void) => () => void;
   debug?: ElectronDebugMetadata;
   invoke: NativeInvoke;
   logDiagnosticEvent?: (input: DiagnosticLogPayload) => Promise<void>;

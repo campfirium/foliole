@@ -1,5 +1,14 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+const changes = vi.hoisted(() => ({ listener: null as (() => void) | null, unsubscribe: vi.fn() }));
+vi.mock('../../../../shared/platform/databaseBackupRuntimeRepository', () => ({
+  loadDatabaseSpaceStatusFromRuntime: vi.fn(async () => null),
+  subscribeDatabaseBackupsChanged: (listener: () => void) => {
+    changes.listener = listener;
+    return changes.unsubscribe;
+  }
+}));
 
 vi.mock('../../../../shared/platform/folderSelectionRuntimeRepository', () => ({
   selectRuntimeFolder: vi.fn()
@@ -106,4 +115,17 @@ it('refreshes external backup changes every time all backups are opened', async 
   await waitFor(() => expect(screen.queryByText(copied.fileName)).not.toBeInTheDocument());
   expect(screen.getByText('auto-daily-2026-04-02_08-00-00-000.db')).toBeInTheDocument();
   expect(listDatabaseBackups).toHaveBeenCalledTimes(3);
+});
+
+it('updates an open list and storage status when background cleanup removes a backup', async () => {
+  const obsolete = backupEntry('foliole-manual-260930-120000.db.gz', '2026-09-30T12:00:00.000Z');
+  vi.mocked(listDatabaseBackups).mockResolvedValueOnce([obsolete, ...defaultBackups]).mockResolvedValue(defaultBackups);
+  const view = renderWithLocalization(<SettingsBackupsSection />);
+  await screen.findByText(obsolete.fileName);
+  const previousStatusReads = vi.mocked(loadBackupRetentionStatus).mock.calls.length;
+  act(() => changes.listener?.());
+  await waitFor(() => expect(screen.queryByText(obsolete.fileName)).not.toBeInTheDocument());
+  expect(loadBackupRetentionStatus).toHaveBeenCalledTimes(previousStatusReads + 1);
+  view.unmount();
+  expect(changes.unsubscribe).toHaveBeenCalled();
 });

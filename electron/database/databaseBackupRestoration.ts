@@ -72,7 +72,7 @@ export async function restoreDatabaseBackupInMaintenance(
   } catch (error) {
     if (!connectionClosed || !safetySnapshot) {
       console.error('[backup] restore failed before database replacement', error);
-      throw new Error('The selected backup was not restored. Your current library is unchanged.');
+      throw restoreFailure('unchanged', error);
     }
     await recoverCurrentDatabaseAfterRestoreFailure({
       artifacts,
@@ -82,13 +82,19 @@ export async function restoreDatabaseBackupInMaintenance(
       targetPath
     });
     await resumeRecoveredSearchAliasMirror();
-    throw new Error('The selected backup was not restored. Your current library has been restored.');
+    throw restoreFailure('restored', error);
   } finally {
     await finishRestoreArtifacts(artifacts, {
       backupDirectory, replacementComplete, settings: backupSettings,
       snapshot: safetySnapshot, sourcePath
     });
   }
+}
+
+function restoreFailure(state: 'unchanged' | 'restored', error: unknown) {
+  const outcome = state === 'unchanged' ? 'is unchanged' : 'has been restored';
+  const reason = error instanceof Error ? error.message : String(error);
+  return new Error(`The selected backup was not restored. Your current library ${outcome}.\nReason: ${reason}`);
 }
 
 async function resumeRecoveredSearchAliasMirror() {

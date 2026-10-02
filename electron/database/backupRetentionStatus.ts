@@ -4,6 +4,7 @@ import type {
   NativeBackupRetentionStatus,
   NativeBackupSettings
 } from '../../lib/platform/nativeUtilityContract.js';
+import { notifyDatabaseBackupsChanged } from '../ipc/databaseBackupsChangedEvents.js';
 
 import {
   listManagedDatabaseBackups,
@@ -27,6 +28,7 @@ export function recordBackupCleanup(directoryPath: string, result: BackupPruneRe
       remainingBytesOverLimit: result.remainingBytesOverLimit ?? 0
     }
   };
+  notifyDatabaseBackupsChanged();
 }
 
 export async function loadBackupRetentionStatus(

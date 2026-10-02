@@ -13,6 +13,7 @@ import type {
   NativeSqliteRestoreResult
 } from '../../../lib/platform/nativeContract';
 
+import { getElectronAPI } from './electronApi';
 import { getRuntimeInvoke } from './runtimeInvoke';
 
 export type RuntimeBackupSettings = NativeBackupSettings;
@@ -132,4 +133,8 @@ export async function inspectBackupRestoreSyncInRuntime(sourcePath: string) {
   const invoke = getRuntimeInvoke();
   if (!invoke) throw new Error('backup_restore_runtime_unavailable');
   return invoke(NATIVE_COMMANDS.inspectBackupRestoreSync, { sourcePath });
+}
+
+export function subscribeDatabaseBackupsChanged(handler: () => void) {
+  return getElectronAPI()?.onDatabaseBackupsChanged?.(handler) ?? (() => undefined);
 }

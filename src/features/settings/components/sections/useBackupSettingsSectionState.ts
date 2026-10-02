@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { subscribeDatabaseBackupsChanged } from '../../../../shared/platform/databaseBackupRuntimeRepository';
 import { useRuntimeAvailability } from '../../../../shared/platform/runtimeAvailability';
 import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
 import {
@@ -101,6 +102,19 @@ function useBackupStateStore() {
   };
 }
 
+function useBackupListUpdates(isDesktopRuntime: boolean, state: ReturnType<typeof useBackupStateStore>) {
+  const { setBackups, setRetentionStatus, setStatusMessage } = state;
+  const refreshBackups = useCallback(() => refreshBackupState(setBackups, setRetentionStatus),
+    [setBackups, setRetentionStatus]);
+  useEffect(() => {
+    if (!isDesktopRuntime) return;
+    return subscribeDatabaseBackupsChanged(() => {
+      void refreshBackups().catch(() => setStatusMessage('Could not refresh backups.'));
+    });
+  }, [isDesktopRuntime, refreshBackups, setStatusMessage]);
+  return refreshBackups;
+}
+
 export function useBackupSettingsSectionState() {
   const isDesktopRuntime = useRuntimeAvailability(areDatabaseBackupActionsAvailable);
   const state = useBackupStateStore();
@@ -118,9 +132,10 @@ export function useBackupSettingsSectionState() {
     state.setSettings
   );
   useDefaultBackupPath(isDesktopRuntime, state.setDefaultBackupPath);
+  const refreshBackups = useBackupListUpdates(isDesktopRuntime, state);
   const actions = useBackupActionHandlers({
     draft: state.draft,
-    refreshBackups: () => refreshBackupState(state.setBackups, state.setRetentionStatus),
+    refreshBackups,
     saveRequestIdRef,
     setDraft: state.setDraft,
     setExtraPathErrorMessage: state.setExtraPathErrorMessage,
