@@ -2,18 +2,18 @@ import { forwardRef, useState } from 'react';
 
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { useDesktopSyncGroup } from '../../shared/platform/useDesktopSyncGroup';
-import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
+import { AppButton, AppNoticeDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
 export function SyncGroupJoinRequestsDialog() {
   const state = useDesktopSyncGroup();
   if (!state.isDesktopRuntime || state.overview.join_requests.length === 0) return null;
   return (
-    <AppDialog open>
+    <AppNoticeDialog open>
       <AppDialogPortal>
         <AppDialogOverlay />
         <JoinDialogContent state={state} />
       </AppDialogPortal>
-    </AppDialog>
+    </AppNoticeDialog>
   );
 }
 
@@ -31,7 +31,7 @@ const JoinDialogContent = forwardRef<HTMLDivElement, {
     catch (error) { setErrorMessage(error instanceof Error ? error.message : t('settings.companionSync.error.devicesUnavailable')); }
   };
   return (
-    <AppDialogContent aria-describedby={undefined} className="w-[min(460px,calc(100vw-48px))]" layout="task"
+    <AppDialogContent aria-describedby={undefined} layout="notice"
       onEscapeKeyDown={(event) => event.preventDefault()} onPointerDownOutside={(event) => event.preventDefault()} ref={ref}>
       <AppDialogTitle className="text-base font-semibold text-foreground">
         {t('settings.companionSync.group.join.title')}

@@ -1,15 +1,16 @@
 import { useTranslation } from '../localization/LocalizationProvider';
 
-import { AppDialog, AppDialogBody, AppDialogContent,
+import { AppNoticeDialog } from './AppNoticeDialog';
+import { AppDialogBody, AppDialogContent,
   AppDialogDescription, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from './Dialog';
 
 export function SyncProtocolIncompatibleDialog(props: { onClose(): void; open: boolean }) {
   const t = useTranslation();
   return (
-    <AppDialog open={props.open} onOpenChange={(open) => !open && props.onClose()}>
+    <AppNoticeDialog open={props.open} onOpenChange={(open) => !open && props.onClose()}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-dialog-notice" layout="task">
+        <AppDialogContent layout="notice">
           <AppDialogTitle>{t('companion.sync.protocolMismatch.title')}</AppDialogTitle>
           <AppDialogBody className="!min-h-dialog-notice-body">
             <AppDialogDescription>
@@ -18,6 +19,6 @@ export function SyncProtocolIncompatibleDialog(props: { onClose(): void; open: b
           </AppDialogBody>
         </AppDialogContent>
       </AppDialogPortal>
-    </AppDialog>
+    </AppNoticeDialog>
   );
 }

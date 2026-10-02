@@ -9,7 +9,7 @@ import {
   selectReadwiseImportDeviceInRuntime
 } from '../../shared/platform/import/readwiseHostAssignmentRuntimeRepository';
 import { isDesktopRuntime } from '../../shared/platform/runtime';
-import { AppButton, AppDialog, AppDialogActions, AppDialogBody,
+import { AppButton, AppNoticeDialog, AppDialogActions, AppDialogBody,
   AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 
 function useReadwiseJoinDecision() {
@@ -67,11 +67,11 @@ export function ReadwiseImportDeviceDialog() {
   const { choose, decision, dismissed, error, pending, setDismissed } = useReadwiseJoinDecision();
   if (!decision || decision.kind === 'none' || dismissed) return null;
   return (
-    <AppDialog open>
+    <AppNoticeDialog open>
       <AppDialogPortal>
         <AppDialogOverlay />
         <AppDialogContent aria-describedby={undefined}
-          className="w-[min(460px,calc(100vw-48px))]" layout="task"
+          layout="notice"
           onEscapeKeyDown={(event) => event.preventDefault()}
           onPointerDownOutside={(event) => event.preventDefault()}>
           <AppDialogTitle>{t('desktop.readwise.join.title')}</AppDialogTitle>
@@ -98,6 +98,6 @@ export function ReadwiseImportDeviceDialog() {
           </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>
-    </AppDialog>
+    </AppNoticeDialog>
   );
 }

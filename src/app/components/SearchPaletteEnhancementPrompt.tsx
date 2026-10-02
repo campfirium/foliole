@@ -15,7 +15,7 @@ import {
 } from '../../shared/platform/searchIndexRebuildStatus';
 import {
   AppButton,
-  AppDialog,
+  AppNoticeDialog,
   AppDialogActions,
   AppDialogBody,
   AppDialogContent,
@@ -153,10 +153,10 @@ export function SearchPaletteEnhancementPrompt() {
   if (prompt.state === 'hidden') return null;
 
   return (
-    <AppDialog open onOpenChange={prompt.handleOpenChange}>
+    <AppNoticeDialog open onOpenChange={prompt.handleOpenChange}>
       <AppDialogPortal>
         <AppDialogOverlay />
-        <AppDialogContent className="w-[min(440px,calc(100vw-32px))]" layout="task">
+        <AppDialogContent layout="notice">
           <SearchEnhancementDialogContent
             error={prompt.error}
             isUpdating={prompt.isUpdating}
@@ -168,7 +168,7 @@ export function SearchPaletteEnhancementPrompt() {
           />
         </AppDialogContent>
       </AppDialogPortal>
-    </AppDialog>
+    </AppNoticeDialog>
   );
 }
 

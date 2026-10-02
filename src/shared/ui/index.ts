@@ -17,6 +17,7 @@ export { TruncatedTextTooltip } from './TruncatedTextTooltip';
 
 // Feedback and status surfaces: empty, loading, error, badges, confirmation, and startup fallback.
 export { AppConfirmationProvider } from './AppConfirmationProvider';
+export { AppNoticeDialog } from './AppNoticeDialog';
 export { requestAppConfirmation, requestAppTextInput, type AppConfirmationOptions, type AppTextInputOptions } from './appConfirmation';
 export { AppEmptyState, AppErrorState, AppLoadingState, AppSpinner } from './EmptyState';
 export { AppStatusBadge } from './StatusBadge';

@@ -23,7 +23,7 @@ const AppDialogOverlay = React.forwardRef<
 AppDialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 type AppDialogContentProps = React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
-  layout?: 'bare' | 'task';
+  layout?: 'bare' | 'task' | 'notice';
 };
 
 const AppDialogContent = React.forwardRef<
@@ -58,7 +58,7 @@ const AppDialogContent = React.forwardRef<
       className={cn(
         appFloatingSurfaceClassName('panel'),
         'fixed left-1/2 top-1/2 z-modal -translate-x-1/2 -translate-y-1/2 text-foreground outline-none',
-        layout === 'task' && [
+        layout !== 'bare' && [
           'flex flex-col overflow-hidden !bg-canvas p-0',
           '[&>[data-app-dialog-title]]:m-0 [&>[data-app-dialog-title]]:flex [&>[data-app-dialog-title]]:min-h-14 [&>[data-app-dialog-title]]:shrink-0 [&>[data-app-dialog-title]]:items-center',
           '[&>[data-app-dialog-title]]:border-b [&>[data-app-dialog-title]]:border-[var(--app-floating-divider-color)] [&>[data-app-dialog-title]]:bg-[var(--app-floating-surface-bg)] [&>[data-app-dialog-title]]:px-6 [&>[data-app-dialog-title]]:py-3',
@@ -67,6 +67,7 @@ const AppDialogContent = React.forwardRef<
           '[&>[data-app-dialog-actions]]:items-center [&>[data-app-dialog-actions]]:justify-end [&>[data-app-dialog-actions]]:gap-2 [&>[data-app-dialog-actions]]:border-t',
           '[&>[data-app-dialog-actions]]:border-[var(--app-floating-divider-color)] [&>[data-app-dialog-actions]]:bg-canvas [&>[data-app-dialog-actions]]:px-6 [&>[data-app-dialog-actions]]:py-2'
         ],
+        layout === 'notice' && 'w-dialog-notice',
         className
       )}
       onOpenAutoFocus={handleOpenAutoFocus}
