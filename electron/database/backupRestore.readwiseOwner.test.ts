@@ -29,7 +29,7 @@ vi.mock('./readwiseOwnerGuard.js', async (importOriginal) => {
   } };
 });
 
-import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { createSyncGroupDeviceIdentity, devicePathFlavorFromCanonicalLibraryPath } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { isDesktopCompanionSyncPaused } from '../sync/desktopCompanionSyncPreference.js';
 import { resolveReadwiseJoinDecision } from '../sync/readwiseGroupSetup.js';
 import { loadReadwiseHandoffIntent, saveReadwiseHandoffIntent } from '../sync/readwiseHandoffIntent.js';
@@ -60,7 +60,8 @@ afterEach(async () => {
 
 function group(id: string) {
   const device = createSyncGroupDeviceIdentity({ device_anchor: '11111111-1111-4111-8111-111111111111',
-    group_id: id, library_path: openDatabaseConnection().dbPath, path_flavor: 'posix' });
+    group_id: id, library_path: openDatabaseConnection().dbPath,
+    path_flavor: devicePathFlavorFromCanonicalLibraryPath(openDatabaseConnection().dbPath) });
   const result = createDesktopSyncGroup({ device, deviceName: 'This Mac', platform: 'darwin' });
   const remote = createSyncGroupDeviceIdentity({ device_anchor: '22222222-2222-4222-8222-222222222222',
     group_id: id, library_path: 'D:\\Library\\foliole.db', path_flavor: 'windows' });

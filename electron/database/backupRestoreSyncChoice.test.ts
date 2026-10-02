@@ -11,7 +11,7 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_config_dir: path.join(root, 'config'), app_log_dir: path.join(root, 'logs')
 }) }));
 
-import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { createSyncGroupDeviceIdentity, devicePathFlavorFromCanonicalLibraryPath } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { isDesktopCompanionSyncParticipating, isDesktopCompanionSyncPaused,
   setDesktopCompanionSyncPaused } from '../sync/desktopCompanionSyncPreference.js';
 
@@ -44,7 +44,8 @@ function seed(content: string) {
 }
 function group(id: string, secret = Buffer.alloc(32, 7).toString('base64url')) {
   const identity = createSyncGroupDeviceIdentity({ device_anchor: '11111111-1111-4111-8111-111111111111',
-    group_id: id, library_path: openDatabaseConnection().dbPath, path_flavor: 'posix' });
+    group_id: id, library_path: openDatabaseConnection().dbPath,
+    path_flavor: devicePathFlavorFromCanonicalLibraryPath(openDatabaseConnection().dbPath) });
   return createDesktopSyncGroup({ device: identity, deviceName: 'This desktop', displayName: 'Same name',
     platform: 'darwin', workgroupKey: secret });
 }

@@ -49,7 +49,7 @@ it('preserves production version delivery proofs and retained bodies while upgra
   joinPeers(source, target);
   edit(source, 'protected body');
   await sync(source, target);
-  const proofTables = ['node_version_pack_receipts', 'node_version_device_bases', 'node_sync_versions'];
+  const proofTables = ['node_version_confirmation_state', 'node_version_device_bases', 'node_sync_versions'];
   const before = proofTables.map((table) => source.db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all());
   expect(before[0]!.length).toBeGreaterThan(0);
   upsertSyncObjectState(source.driver, { objectType: 'node_review', objectId: 'legacy-orphan',

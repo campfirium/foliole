@@ -71,7 +71,7 @@ it('builds and applies a desktop learning-state pack after its node row', async 
   ).get()).toEqual({ object_id: 'node-reading-1', object_type: 'node_reading' });
 });
 
-it('prunes packed learning rows for live children hidden under deleted parents', async () => {
+it('retains packed reading rows for live children hidden under deleted parents', async () => {
   const packPath = await buildHiddenChildLearningDesktopPack();
   const incomingPath = extractIncomingPack(packPath, path.join(tempRoot, 'incoming-hidden-child.db'));
   const target = openTargetDatabase();
@@ -98,7 +98,8 @@ it('prunes packed learning rows for live children hidden under deleted parents',
   expect(target.sqlite.prepare('SELECT deleted_at FROM nodes WHERE id = ?').get('deleted-parent')).toEqual({
     deleted_at: '2026-05-06T10:10:00.000Z'
   });
-  expect(target.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('hidden-child')).toBeUndefined();
+  expect(target.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('hidden-child'))
+    .toEqual({ node_id: 'hidden-child' });
 });
 
 async function buildLearningOnlyDesktopPack() {

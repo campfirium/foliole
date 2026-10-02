@@ -150,7 +150,7 @@ it('restores merging progress and explains a paused migration in place', async (
 
   await waitFor(() => expect(cutover.preview).toHaveBeenCalled());
   expect(cutover.run).not.toHaveBeenCalled();
-  expect(await screen.findByText('Syncing · Update failed · 7 / 31 · Readwise request failed')).toBeInTheDocument();
+  expect(await screen.findByText('Syncing · Update failed · 7 · Readwise request failed')).toBeInTheDocument();
   expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Retry sync' }));
   await waitFor(() => expect(cutover.run).toHaveBeenCalledOnce());

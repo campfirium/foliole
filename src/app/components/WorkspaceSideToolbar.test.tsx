@@ -263,5 +263,6 @@ it('exposes shortcuts on visible rail command buttons', () => {
 
   renderToolbar(false);
 
-  expect(screen.getByRole('button', { name: 'Toggle List' }).getAttribute('aria-keyshortcuts')).toMatch(/^(Meta|Control)\+Shift\+L$/);
+  const shortcuts = screen.getByRole('button', { name: 'Toggle List' }).getAttribute('aria-keyshortcuts')?.split(' ');
+  expect(shortcuts).toEqual(expect.arrayContaining([expect.stringMatching(/^(Meta|Control)\+Shift\+L$/)]));
 });

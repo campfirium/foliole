@@ -14,7 +14,7 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_config_dir: path.join(root, 'config'), app_log_dir: path.join(root, 'logs')
 }) }));
 
-import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { createSyncGroupDeviceIdentity, devicePathFlavorFromCanonicalLibraryPath } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { loadBackupRestorePendingSync } from './backupRestorePendingSync.js';
@@ -29,7 +29,8 @@ beforeEach(async () => {
   vi.stubEnv('FOLIOLE_ELECTRON_TEST_STATE_ROOT', root);
   initializeDatabase();
   const identity = createSyncGroupDeviceIdentity({ device_anchor: '11111111-1111-4111-8111-111111111111',
-    group_id: 'current', library_path: openDatabaseConnection().dbPath, path_flavor: 'posix' });
+    group_id: 'current', library_path: openDatabaseConnection().dbPath,
+    path_flavor: devicePathFlavorFromCanonicalLibraryPath(openDatabaseConnection().dbPath) });
   createDesktopSyncGroup({ device: identity, deviceName: 'This desktop', displayName: 'Current group',
     platform: 'darwin', workgroupKey: Buffer.alloc(32, 7).toString('base64url') });
 });

@@ -46,6 +46,7 @@ function retiredDesktopSyncGroupFixture() {
   initializeDatabaseSchema(sqlite);
   for (const statement of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema)) sqlite.exec(statement);
   sqlite.exec(`
+    CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
     DROP TRIGGER trg_sync_delivery_state_insert;
     DROP TRIGGER trg_sync_delivery_state_update;
     DROP TRIGGER trg_sync_delivery_device_leave;

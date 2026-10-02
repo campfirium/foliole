@@ -1,7 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
+
 import type { NativeSyncNodeConflictRecord } from '../../lib/platform/nativeSyncContract';
+import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import type {
   CompanionDesktopSyncOptions,
   CompanionDesktopSyncResult
@@ -151,7 +156,7 @@ function renderCompanionWorkspaceSyncHook(useCompanionWorkspaceSync: typeof impo
     device_id: 'android-test-device',
     host_name: 'android-test-device',
     runtime_kind: 'android-capacitor'
-  }));
+  }), { wrapper: LocalizationProvider });
 }
 
 async function testManualSyncRefreshesSnapshotWithoutLoadingArticle() {

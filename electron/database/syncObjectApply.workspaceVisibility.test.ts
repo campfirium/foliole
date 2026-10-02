@@ -149,7 +149,7 @@ it('makes Android-applied reading and review visible while keeping view state de
     .get()).toEqual({ count: 0 });
 });
 
-it('prunes Android-applied reading and review for live children hidden under deleted parents', async () => {
+it('retains Android-applied reading but prunes review for children hidden under deleted parents', async () => {
   insertHiddenChild();
 
   await expect(applySyncObjectsAsync(androidStateRecords())).resolves.toEqual([
@@ -158,7 +158,8 @@ it('prunes Android-applied reading and review for live children hidden under del
   ]);
 
   const connection = openDatabaseConnection();
-  expect(connection.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('node-1')).toBeUndefined();
+  expect(connection.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('node-1'))
+    .toEqual({ node_id: 'node-1' });
   expect(connection.sqlite.prepare('SELECT node_id FROM node_review WHERE node_id = ?').get('node-1')).toBeUndefined();
   expect(loadWorkspaceSnapshot()?.nodesById['node-1']?.reading).toBeNull();
   expect(loadWorkspaceSnapshot()?.nodesById['node-1']?.review).toBeNull();

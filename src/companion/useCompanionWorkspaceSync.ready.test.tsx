@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { LocalizationProvider } from '../shared/localization/LocalizationProvider';
 import type { CompanionReadableArticle } from '../shared/platform/companionReadableArticle';
 
 import { createSyncState } from './useCompanionWorkspaceSync.testSupport';
@@ -22,6 +23,9 @@ const workspaceSyncMock = vi.hoisted(() => ({
 
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectsMock);
 vi.mock('../shared/platform/companionWorkspaceSync', () => workspaceSyncMock);
+vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
+  loadCompanionSyncGroup: vi.fn(async () => null)
+}));
 vi.mock('./useCompanionWorkspaceAutoSync', () => ({ useForegroundAutoSync: vi.fn() }));
 vi.mock('./useCompanionWorkspacePairing', () => ({
   useCompanionWorkspacePairing: () => ({
@@ -45,7 +49,7 @@ function renderReadyHook(useCompanionWorkspaceSync: typeof import('./useCompanio
     database_ready: true,
     device_id: 'android-test-device',
     runtime_kind: 'android-capacitor'
-  }));
+  }), { wrapper: LocalizationProvider });
 }
 
 describe('useCompanionWorkspaceSync ready gate', () => {

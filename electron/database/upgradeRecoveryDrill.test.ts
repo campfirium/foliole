@@ -46,7 +46,7 @@ it('restores production backup into a new isolated library and retains semantic 
     isTitleManual: true, content: childContent, reveal: null, anchorLink: null,
     position: 0, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-01T00:00:00.000Z'
   });
-  saveJsonSetting('t286.preference', { enabled: true });
+  saveJsonSetting('search_aliases_document', { terms: ['protected'] });
   const sourceAsset = path.join(libraryRoot, 'Documents', 'Foliole', 'Assets', assetName);
   await fs.mkdir(path.dirname(sourceAsset), { recursive: true });
   await fs.writeFile(sourceAsset, assetBytes);
@@ -77,7 +77,7 @@ function assertRestoredFacts() {
     content: 'Prompt [...]', reveal: 'Answer', review: { reps: 1, stability: 2.7 }
   });
   expect(snapshot?.trashedNodeIds).toContain('node-trash');
-  expect(loadJsonSetting('t286.preference')).toEqual({ enabled: true });
+  expect(loadJsonSetting('search_aliases_document')).toEqual({ terms: ['protected'] });
   const sqlite = openDatabaseConnection().sqlite;
   expect(sqlite.prepare("SELECT COUNT(*) AS count FROM review_log WHERE node_id = 'node-qa'").get())
     .toEqual({ count: 1 });
