@@ -22,7 +22,7 @@ export function createCompanionTopicContentSaveHandler(workspaceSync: CompanionW
       const input = edit ?? { nodeId, content, baseVersionId: (await readSource(nodeId)).versionId,
         versionId: createOpaqueVersionRef(createCompanionUuid()), updatedAt: new Date().toISOString() };
       const acknowledgement = await saveCompanionContentEdit(input);
-      await workspaceSync.refreshFromDevice();
+      await workspaceSync.refreshAfterMutation();
       return acknowledgement;
     }
     const result = await persistCompanionTopicContent({
@@ -31,7 +31,7 @@ export function createCompanionTopicContentSaveHandler(workspaceSync: CompanionW
     });
     if (!result) throw new Error('This topic cannot be edited on this device.');
     previewSnapshot = result.snapshot;
-    await workspaceSync.replaceSnapshot(result.snapshot, result.nodeId);
+    await workspaceSync.refreshAfterMutation(result.snapshot);
     const currentVersionId = result.snapshot.nodesById[nodeId]!.currentVersionId!;
     return { content, currentVersionId, submittedVersionId: currentVersionId };
   }, {

@@ -12,7 +12,6 @@ const workspaceSyncMock = vi.hoisted(() => ({
   clearCompanionPairingCredentials: vi.fn(),
   loadCompanionReadableArticle: vi.fn<() => Promise<CompanionReadableArticle | null>>(async () => null),
   loadCompanionWorkspaceSyncState: vi.fn(),
-  persistCompanionWorkspaceSnapshot: vi.fn(),
   recordCompanionWorkspaceSyncEvent: vi.fn(),
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoint: vi.fn(async (endpointUrl: string) => endpointUrl),
@@ -23,18 +22,10 @@ const workspaceSyncMock = vi.hoisted(() => ({
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectsMock);
 vi.mock('../shared/platform/companionWorkspaceSync', () => workspaceSyncMock);
 vi.mock('./useCompanionWorkspaceAutoSync', () => ({ useForegroundAutoSync: vi.fn() }));
-vi.mock('./useCompanionWorkspacePairing', () => ({
-  useCompanionWorkspacePairing: () => ({
-    cancelPairing: vi.fn(),
-    checkDesktop: vi.fn(),
-    completePairing: vi.fn(),
-    desktopDiscoveries: [],
-    desktopDiscovery: null,
-    pairingState: { is_paired: true },
-    pairingStatus: 'idle',
-    pendingPairRequest: null,
-    refreshPairingState: vi.fn(),
-    requestPairing: vi.fn()
+vi.mock('./useCompanionSyncGroupJoin', () => ({
+  useCompanionSyncGroupJoin: () => ({
+    joined: true, discoveries: [], pendingRequest: null, status: 'idle',
+    cancel: vi.fn(), complete: vi.fn(), discover: vi.fn(), request: vi.fn()
   })
 }));
 

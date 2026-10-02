@@ -75,7 +75,6 @@ vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   bindCompanionWorkspaceSyncTarget: workspaceSyncMock.bindCompanionWorkspaceSyncTarget,
   loadCompanionReadableArticle: workspaceSyncMock.loadCompanionReadableArticle,
   loadCompanionWorkspaceSyncState: workspaceSyncMock.loadCompanionWorkspaceSyncState,
-  persistCompanionWorkspaceSnapshot: vi.fn(),
   recordCompanionWorkspaceSyncEvent: workspaceSyncMock.recordCompanionWorkspaceSyncEvent,
   removeCompanionWorkspaceSyncRememberedTarget: vi.fn(),
   resolveReachableCompanionWorkspaceSyncEndpoint: workspaceSyncMock.resolveReachableCompanionWorkspaceSyncEndpoint,
@@ -95,24 +94,10 @@ vi.mock('./companionReviewSchedulerSettingsHydration', () => ({
 vi.mock('./useCompanionWorkspaceAutoSync', () => ({
   useForegroundAutoSync: vi.fn()
 }));
-vi.mock('./useCompanionWorkspacePairing', () => ({
-  useCompanionWorkspacePairing: () => ({
-    cancelPairing: vi.fn(),
-    checkDesktop: vi.fn(),
-    completePairing: vi.fn(),
-    desktopDiscoveries: [],
-    desktopDiscovery: null,
-    pairingState: {
-      host_name: 'android-test-device',
-      device_kind: 'android-capacitor',
-      device_name: 'Android companion',
-      is_paired: true,
-      paired_at: '2026-04-25T09:00:00.000Z'
-    },
-    pairingStatus: 'idle',
-    pendingPairRequest: null,
-    refreshPairingState: vi.fn(),
-    requestPairing: vi.fn()
+vi.mock('./useCompanionSyncGroupJoin', () => ({
+  useCompanionSyncGroupJoin: () => ({
+    joined: true, discoveries: [], pendingRequest: null, status: 'idle',
+    cancel: vi.fn(), complete: vi.fn(), discover: vi.fn(), request: vi.fn()
   })
 }));
 

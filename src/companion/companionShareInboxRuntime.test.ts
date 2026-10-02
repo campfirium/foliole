@@ -25,10 +25,10 @@ it('persists each native delivery before acknowledging it', async () => {
       { kind: 'title', value: 'Title' }, { kind: 'url', value: 'https://example.org' }
     ] }]);
   runtime.persist.mockResolvedValue({ nodeId: 'node-share', snapshot: nextSnapshot });
-  const replaceSnapshot = vi.fn(async () => undefined);
+  const refreshAfterMutation = vi.fn(async () => undefined);
 
   await consumeCompanionShareInbox({
-    bootstrapState: { device_id: 'device' }, replaceSnapshot,
+    bootstrapState: { device_id: 'device' }, refreshAfterMutation,
     state: { workspace_snapshot: snapshot }
   });
 
@@ -38,9 +38,9 @@ it('persists each native delivery before acknowledging it', async () => {
     text: 'Title\n\nhttps://example.org',
     versionId: 'ver_share_00000000-0000-4000-8000-000000000001'
   }));
-  expect(replaceSnapshot).toHaveBeenCalledWith(nextSnapshot, 'node-share');
+  expect(refreshAfterMutation).toHaveBeenCalledWith(nextSnapshot);
   expect(runtime.acknowledge).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000001');
-  expect(replaceSnapshot.mock.invocationCallOrder[0]!)
+  expect(refreshAfterMutation.mock.invocationCallOrder[0]!)
     .toBeLessThan(runtime.acknowledge.mock.invocationCallOrder[0]!);
 });
 
@@ -50,7 +50,7 @@ it('leaves the native item pending when persistence fails', async () => {
   runtime.persist.mockRejectedValue(new Error('storage unavailable'));
 
   await expect(consumeCompanionShareInbox({
-    bootstrapState: { device_id: 'device' }, replaceSnapshot: vi.fn(),
+    bootstrapState: { device_id: 'device' }, refreshAfterMutation: vi.fn(),
     state: { workspace_snapshot: {} as never }
   })).rejects.toThrow('storage unavailable');
   expect(runtime.acknowledge).not.toHaveBeenCalled();

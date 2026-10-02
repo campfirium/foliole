@@ -27,8 +27,7 @@ export async function markCompanionNodeOpened(args: {
   const lastOpenedAt = new Date().toISOString();
   const persisted = await saveCompanionSyncNodeOpenState({ lastOpenedAt, nodeId: args.nodeId });
   if (!persisted) return;
-  await args.workspaceSync.replaceSnapshot(
-    markSnapshotNodeOpened(args.snapshot, args.nodeId, persisted.last_opened_at),
-    args.nodeId
+  await args.workspaceSync.refreshAfterMutation(
+    markSnapshotNodeOpened(args.snapshot, args.nodeId, persisted.last_opened_at)
   );
 }

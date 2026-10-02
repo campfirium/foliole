@@ -1,4 +1,5 @@
 const controlledElectronSqliteTests = [
+  'src/companion/companionWorkspaceMutation.integration.test.ts',
   'scripts/ios/ios-hosted-sync-pack-oracle-seed.test.mjs',
   'scripts/desktop/fixed-performance-fixture.test.mjs',
   'scripts/desktop/fixed-performance-http.test.mjs',

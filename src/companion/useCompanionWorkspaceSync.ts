@@ -195,7 +195,7 @@ export function useCompanionWorkspaceSync(bootstrapState: NativeCompanionBootstr
     pullFromDesktop: participationActions.pullFromDevice,
     refreshFromDevice: snapshotActions.refreshFromDevice,
     removeRememberedTarget: snapshotActions.removeRememberedTarget,
-    replaceSnapshot: snapshotActions.replaceSnapshot,
+    refreshAfterMutation: snapshotActions.refreshAfterMutation,
     saveEndpoint: snapshotActions.saveEndpoint,
     saveSyncOnboardingStatus: snapshotActions.saveSyncOnboardingStatus,
     cancelJoin: join.cancel,

@@ -1,11 +1,12 @@
+import type { Dispatch, SetStateAction } from 'react';
+
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
-import { definedProps } from '../shared/lib/definedProps';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
+import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companionWorkspaceRepository';
 import {
   loadCompanionWorkspaceSyncState,
-  persistCompanionWorkspaceSnapshot,
   removeCompanionWorkspaceSyncRememberedTarget,
   saveCompanionSyncOnboardingStatus,
   saveCompanionWorkspaceSyncEndpoint
@@ -26,7 +27,7 @@ import type { CompanionWorkspaceSyncStatus } from './companionWorkspaceSyncFlow'
 interface WorkspaceSnapshotActionArgs {
   setError: (message: string | null) => void;
   setSyncConflictCount: (count: number) => void;
-  setState: (state: NativeCompanionWorkspaceSyncState) => void;
+  setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>;
   setSyncProgress: (progress: CompanionDesktopSyncProgress | null) => void;
   setStatus: (status: CompanionWorkspaceSyncStatus) => void;
   setManualSyncAction?: (action: CompanionManualSyncAction | null) => void;
@@ -35,7 +36,7 @@ interface WorkspaceSnapshotActionArgs {
 
 async function refreshConflictAwareState(args: {
   setSyncConflictCount: (count: number) => void;
-  setState: (state: NativeCompanionWorkspaceSyncState) => void;
+  setState: Dispatch<SetStateAction<NativeCompanionWorkspaceSyncState>>;
 }) {
   const nextState = await loadCompanionWorkspaceSyncState();
   args.setState(nextState);
@@ -88,20 +89,14 @@ function createPullFromDesktop(args: WorkspaceSnapshotActionArgs) {
   };
 }
 
-async function replaceCompanionWorkspaceSnapshot(
+async function refreshAfterMutation(
   args: WorkspaceSnapshotActionArgs,
-  workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
-  changedNodeId?: string
+  previewSnapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']
 ) {
-  const nextState = await persistCompanionWorkspaceSnapshot({
-    endpointUrl: args.state.endpoint_url,
-    lastSyncedAt: args.state.last_synced_at,
-    rememberedTargets: args.state.remembered_targets,
-    workspaceSnapshot,
-    ...definedProps({ changedNodeId })
-  });
-  args.setState(nextState);
-  return nextState;
+  const workspaceSnapshot = await refreshCompanionWorkspaceAfterMutation(previewSnapshot);
+  args.setState((current) => ({ ...current, workspace_snapshot: workspaceSnapshot }));
+  args.setSyncConflictCount((await loadCompanionSyncNodeConflicts()).length);
+  return workspaceSnapshot;
 }
 
 export function createWorkspaceSnapshotActions(args: WorkspaceSnapshotActionArgs) {
@@ -113,10 +108,8 @@ export function createWorkspaceSnapshotActions(args: WorkspaceSnapshotActionArgs
       args.setState(nextState);
       return nextState;
     },
-    replaceSnapshot: (
-      workspaceSnapshot: NativeCompanionWorkspaceSyncState['workspace_snapshot'],
-      changedNodeId?: string
-    ) => replaceCompanionWorkspaceSnapshot(args, workspaceSnapshot, changedNodeId),
+    refreshAfterMutation: (previewSnapshot?: NativeCompanionWorkspaceSyncState['workspace_snapshot']) =>
+      refreshAfterMutation(args, previewSnapshot),
     saveEndpoint: async (endpointUrl: string) => {
       const nextState = await saveCompanionWorkspaceSyncEndpoint(endpointUrl);
       args.setState(nextState);

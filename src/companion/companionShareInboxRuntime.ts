@@ -11,7 +11,7 @@ import { persistCompanionCapturedText } from './companionCaptureTextActions';
 interface ShareInboxWorkspace {
   bootstrapState: { device_id: string };
   state: { workspace_snapshot: WorkspaceSnapshot | null };
-  replaceSnapshot(snapshot: WorkspaceSnapshot, changedNodeId?: string): Promise<unknown>;
+  refreshAfterMutation(snapshot: WorkspaceSnapshot): Promise<unknown>;
 }
 
 function stableShareNodeId(deliveryId: string) {
@@ -36,7 +36,7 @@ export async function consumeCompanionShareInbox(workspace: ShareInboxWorkspace)
       versionId: stableShareVersionId(item.delivery_id)
     });
     snapshot = result.snapshot;
-    await workspace.replaceSnapshot(snapshot, result.nodeId);
+    await workspace.refreshAfterMutation(snapshot);
     await acknowledgeCompanionShare(item.delivery_id);
   }
 }

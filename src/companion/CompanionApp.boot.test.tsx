@@ -89,7 +89,7 @@ function mockCompanionWorkspaceSync(runtimeKind: 'android-capacitor' | 'ios-capa
     openReadableArticle: vi.fn().mockResolvedValue(null),
     readableArticle: null,
     removeRememberedTarget: vi.fn(),
-    replaceSnapshot: vi.fn(),
+    refreshAfterMutation: vi.fn(),
     requestPairing: vi.fn(),
     saveEndpoint: vi.fn(),
     saveSyncOnboardingStatus: vi.fn(),
