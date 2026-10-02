@@ -44,7 +44,7 @@ export async function buildBackupRestoreSyncPreview(sourcePath: string, backupDr
   for await (const chunk of createReadStream(sourcePath)) digest.update(chunk);
   digest.update(JSON.stringify({ backup, current }));
   return { backup: publicSettings(backup), current: publicSettings(current),
-    same: JSON.stringify(backup) === JSON.stringify(current), revision: digest.digest('hex') };
+    same: backup.group?.id === current.group?.id, revision: digest.digest('hex') };
 }
 
 export async function inspectBackupRestoreSync(sourcePath: string) {

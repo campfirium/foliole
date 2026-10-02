@@ -65,15 +65,17 @@ it('requires an explicit group decision instead of silently keeping the current 
   expect(loadBackupRestorePendingSync()).toBeNull();
 });
 
-it('compares configuration rather than names, clocks or connection progress', async () => {
+it('compares group identity while retaining complete settings in the revision', async () => {
   group('backup');
   const backup = await createApplicationDatabaseBackup();
   const driver = openDatabaseConnection().driver;
   driver.execute("UPDATE sync_groups SET updated_at = 'later'");
-  expect((await inspectBackupRestoreSync(backup.destinationPath)).same).toBe(true);
+  const initial = await inspectBackupRestoreSync(backup.destinationPath);
+  expect(initial.same).toBe(true);
   driver.execute('UPDATE sync_groups SET workgroup_key = ?', [Buffer.alloc(32, 8).toString('base64url')]);
   const preview = await inspectBackupRestoreSync(backup.destinationPath);
-  expect(preview.same).toBe(false);
+  expect(preview.same).toBe(true);
+  expect(preview.revision).not.toBe(initial.revision);
   expect(preview.backup.group?.name).toBe(preview.current.group?.name);
   expect(JSON.stringify(preview)).not.toContain(Buffer.alloc(32, 7).toString('base64url'));
 });
@@ -173,4 +175,37 @@ it('rejects array actions rather than treating them as overwrite permission', as
       import('../../lib/platform/backupRestoreSyncContract.js').BackupRestoreSyncChoice })).rejects.toThrow();
   expect(content()).toBe('current');
   expect(loadBackupRestorePendingSync()).toBeNull();
+});
+
+it('restores without a source choice when both sides are ungrouped with different participation settings', async () => {
+  const backup = await createApplicationDatabaseBackup();
+  writeRestoreSyncParticipation(openDatabaseConnection().driver, true, true);
+  seed('current');
+  expect((await inspectBackupRestoreSync(backup.destinationPath)).same).toBe(true);
+  await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
+  expect(content()).toBe('backup');
+  expect(loadDesktopSyncGroup()).toBeNull();
+  expect(loadBackupRestorePendingSync()).toBeNull();
+});
+
+it('keeps current group metadata and credentials for the same group even with a backup source choice', async () => {
+  group('same-group');
+  const backup = await createApplicationDatabaseBackup();
+  const secret = Buffer.alloc(32, 8).toString('base64url');
+  const driver = openDatabaseConnection().driver;
+  driver.execute('UPDATE sync_groups SET display_name = ?, workgroup_key = ?', ['Current name', secret]);
+  driver.execute('UPDATE sync_group_devices SET device_name = ?', ['Current device']);
+  writeRestoreSyncParticipation(driver, true, false);
+  const preview = await inspectBackupRestoreSync(backup.destinationPath);
+  expect(preview.same).toBe(true);
+  await restore(backup.destinationPath, 'backup', 'pause');
+  closeDatabaseConnection();
+  initializeDatabase();
+  expect(loadDesktopSyncGroup()).toMatchObject({ group_id: 'same-group', display_name: 'Current name' });
+  expect(openDatabaseConnection().driver.queryOne('SELECT workgroup_key FROM sync_groups WHERE group_id = ?', ['same-group']))
+    .toEqual({ workgroup_key: secret });
+  expect(openDatabaseConnection().driver.queryOne('SELECT device_name FROM sync_group_devices'))
+    .toEqual({ device_name: 'Current device' });
+  expect(content()).toBe('backup');
+  expect(isDesktopCompanionSyncPaused()).toBe(true);
 });

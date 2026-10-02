@@ -21,7 +21,8 @@ export async function selectBackupRestoreSync(args: {
     const choice = args.choice ? parseBackupRestoreSyncChoice(args.choice) : null;
     if (choice && choice.revision !== preview.revision) throw new Error('backup_restore_sync_settings_changed');
     if (!choice && (!preview.same || preview.current.group)) throw new Error('backup_restore_sync_choice_required');
-    const source = choice?.source === 'backup' ? backup : args.current;
+    const useBackup = !preview.same && choice?.source === 'backup';
+    const source = useBackup ? backup : args.current;
     const selected = captureCurrentSyncGroupForBackupRestore(source);
     if ((selected && choice?.action === 'local') || (!selected && choice && choice.action !== 'local')) {
       throw new Error('backup_restore_sync_action_invalid');
@@ -29,7 +30,7 @@ export async function selectBackupRestoreSync(args: {
     if (!selected) return { snapshot: null, mode: 'local' as const, host: captureBackupRestoreHostSettings(args.current) };
     const current = captureCurrentSyncGroupForBackupRestore(args.current);
     const snapshot = { ...selected, ...captureBackupRestoreHostSettings(args.current) };
-    if (choice?.source === 'backup') await bindBackupGroupToCurrentHost(snapshot, current, args.targetPath);
+    if (useBackup) await bindBackupGroupToCurrentHost(snapshot, current, args.targetPath);
     return { snapshot, host: captureBackupRestoreHostSettings(args.current), mode: choice?.action === 'pause' ? 'pause' as const : 'overwrite' as const };
   } finally { sqlite.close(); }
 }

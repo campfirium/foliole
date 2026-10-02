@@ -70,10 +70,13 @@ test('keeps the current group paused until the user confirms whole-group replace
   expect((await overview(desktopWindow)).sync_paused).toBe(false);
 });
 
-test('offers immediate group replacement when the settings match', async ({ desktopWindow }, info) => {
+test('skips source selection for the same group when participation settings differ', async ({ desktopWindow }, info) => {
   await desktopWindow.evaluate(() => window.electronAPI.invoke('create_sync_group', {}));
   const before = await overview(desktopWindow);
   const saved = await backup(desktopWindow);
+  await desktopWindow.evaluate(() => window.electronAPI.invoke('save_app_settings_state', {
+    settings: { 'foliole-desktop-device-sync-paused': 'true' }
+  }));
   await restore(desktopWindow, saved.destinationPath);
   const action = desktopWindow.getByRole('dialog', { name: /^(Sync after restoring|恢复后的同步)$/ });
   await expect(action).toBeVisible();
@@ -84,4 +87,18 @@ test('offers immediate group replacement when the settings match', async ({ desk
   expect(result.sync_paused).toBe(false);
   expect(result.pending_backup_restore).toBeNull();
   await evidence(desktopWindow, info, 'native-immediate-restore');
+});
+
+test('restores ungrouped backups without a redundant source choice after sync settings change', async ({ desktopWindow }, info) => {
+  const saved = await backup(desktopWindow);
+  await desktopWindow.evaluate(() => window.electronAPI.invoke('save_app_settings_state', {
+    settings: { 'foliole-desktop-device-sync-paused': 'true' }
+  }));
+  await restore(desktopWindow, saved.destinationPath);
+  await expect(desktopWindow.getByRole('dialog', {
+    name: /^(Sync settings for this restore|本次恢复的同步设置)$/
+  })).toHaveCount(0);
+  await finish(desktopWindow);
+  expect((await overview(desktopWindow)).sync_group).toBeNull();
+  await evidence(desktopWindow, info, 'native-ungrouped-no-choice');
 });
