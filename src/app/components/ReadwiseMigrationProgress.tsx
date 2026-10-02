@@ -61,15 +61,14 @@ function migrationPresentation(
       ? t('desktop.readwise.cutover.phase.importing')
       : t('desktop.readwise.cutover.phase.merging');
   if (!migration.failed) {
-    const progress = resolvedCutoverProgress(migration, taskStatus);
+    const completedCount = resolvedCutoverCount(migration, taskStatus);
     return {
       active: true,
       failed: false,
       retryable: false,
       text: progressText(
         `${t('desktop.readwise.cutover.status')} · ${phase}`, compact,
-        progress.completedCount,
-        progress.totalCount, migration.phase === 'indexing'
+        completedCount
       )
     };
   }
@@ -87,8 +86,7 @@ function migrationPresentation(
       ? `${t('desktop.readwise.cutover.status')} · ${failed}`
       : `${withProgress(
           `${t('desktop.readwise.cutover.status')} · ${failed}`,
-          migration.completedCount,
-          migration.totalCount, migration.phase === 'indexing'
+          migration.completedCount
         )}${reason ? ` · ${reason}` : ''}`
   };
 }
@@ -107,20 +105,20 @@ function inactiveMigrationPresentation(
     retryable: false,
     text: progressText(
       `${t('desktop.readwise.cutover.status')} · ${t('desktop.readwise.cutover.phase.indexing')}`,
-      compact, taskStatus.cutover.completed_count, taskStatus.cutover.total_count, true
+      compact, taskStatus.cutover.completed_count
     )
   } : null;
 }
 
-function resolvedCutoverProgress(
+function resolvedCutoverCount(
   migration: ReadwiseMigrationState,
   taskStatus: NativeReadwiseApiScheduleStatus | null
 ) {
   const projected = taskStatus?.cutover;
-  if (migration.totalCount !== null || projected?.status !== 'in_progress') {
-    return { completedCount: migration.completedCount, totalCount: migration.totalCount };
+  if (migration.phase === 'indexing' || migration.totalCount !== null || projected?.status !== 'in_progress') {
+    return migration.completedCount;
   }
-  return { completedCount: projected.completed_count, totalCount: projected.total_count };
+  return projected.completed_count;
 }
 
 function completedFailurePresentation(
@@ -135,14 +133,10 @@ function completedFailurePresentation(
   };
 }
 
-function progressText(text: string, compact: boolean, completedCount: number, totalCount: number | null, percent = false) {
-  return compact ? text : withProgress(text, completedCount, totalCount, percent);
+function progressText(text: string, compact: boolean, completedCount: number) {
+  return compact ? text : withProgress(text, completedCount);
 }
 
-function withProgress(text: string, completedCount: number, totalCount: number | null, percent = false) {
-  if (percent) return totalCount === null || totalCount === 0
-    ? completedCount === 0 ? `${text} · 0%` : text
-    : `${text} · ${Math.floor(completedCount * 100 / totalCount)}%`;
-  if (completedCount === 0 && totalCount === null) return text;
-  return `${text} · ${completedCount}${totalCount === null ? '' : ` / ${totalCount}`}`;
+function withProgress(text: string, completedCount: number) {
+  return `${text} · ${completedCount}`;
 }

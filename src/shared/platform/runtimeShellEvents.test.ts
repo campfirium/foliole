@@ -140,3 +140,19 @@ it('filters malformed Readwise Reader import progress events before reaching the
     totalCount: 2
   });
 });
+
+
+it('delivers download counts when the indexing total is unknown', async () => {
+  window.electronAPI = createMockElectronApi({
+    onReadwiseReaderImportProgress: (emit) => {
+      emit({ phase: 'indexing', processedCount: 8500, totalCount: 0, status: 'running' });
+      emit({ phase: 'indexing', processedCount: 8600, totalCount: 0, status: 'running' });
+      emit({ phase: 'writing', processedCount: 8500, totalCount: 0, status: 'running' });
+      emit({ phase: 'indexing', processedCount: 8500, totalCount: 100, status: 'running' });
+      return () => undefined;
+    }
+  });
+  const handler = vi.fn();
+  await onReadwiseReaderImportProgress(handler);
+  expect(handler.mock.calls.map(([payload]) => payload.processedCount)).toEqual([8500, 8600]);
+});

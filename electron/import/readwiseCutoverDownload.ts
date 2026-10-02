@@ -15,13 +15,12 @@ export function readCutoverDownloadProgress(connectionRef: string) {
   const state = loadReadwiseCutoverStage<DownloadState>(connectionRef, KIND);
   if (!state) return { completed: 0, total: null };
   const known = [state.reader, state.export].filter((item) => item.total !== null);
-  const completed = known.length
-    ? known.reduce((sum, item) => sum + item.saved, 0)
-    : state.reader.saved + state.export.saved;
-  const total = state.countIssue || known.length === 0
-    ? null : known.reduce((sum, item) => sum + (item.total ?? 0), 0);
+  const completed = state.reader.saved + state.export.saved;
   const complete = state.reader.done && state.export.done;
-  return { completed, total: total !== null && (completed > total || (!complete && completed === total)) ? null : total };
+  if (complete) return { completed, total: completed };
+  const total = state.countIssue || known.length !== 2
+    ? null : known.reduce((sum, item) => sum + (item.total ?? 0), 0);
+  return { completed, total: total !== null && completed >= total ? null : total };
 }
 
 export async function downloadReadwiseCutover(

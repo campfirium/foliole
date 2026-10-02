@@ -139,7 +139,7 @@ function subscribe(channel, handler) {
         !Number.isFinite(totalCount) ||
         processedCount < 0 ||
         totalCount < 0 ||
-        processedCount > totalCount ||
+        (processedCount > totalCount && !(payload?.phase === 'indexing' && totalCount === 0)) ||
         (status !== 'cancelled' && status !== 'running' && status !== 'completed' && status !== 'failed')
       ) {
         return;

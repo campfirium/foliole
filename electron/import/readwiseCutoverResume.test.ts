@@ -95,7 +95,7 @@ it('persists both first pages and resumes only unsaved pages after reopening the
   expect(readCutoverDownloadProgress(source.connectionRef)).toEqual({ completed: 4, total: 4 });
 });
 
-it('keeps unknown or changing totals indeterminate instead of inventing percentages', async () => {
+it('keeps changing totals indeterminate until all pages establish the actual count', async () => {
   const source = ensureReadwiseRemoteSource();
   const progress: Array<{ completed: number; total: number | null }> = [];
   await fetchReadwiseSourceCutoverSnapshot(source.connectionRef, {
@@ -109,7 +109,7 @@ it('keeps unknown or changing totals indeterminate instead of inventing percenta
         results: [{ category: 'article', id: last ? 'b' : 'a', title: 'Article' }] });
     }
   });
-  expect(progress).toEqual([{ completed: 1, total: 2 }, { completed: 1, total: 2 }, { completed: 2, total: null }]);
+  expect(progress).toEqual([{ completed: 1, total: null }, { completed: 1, total: 2 }, { completed: 2, total: 2 }]);
 });
 
 it('resumes finalization with a frozen denominator and promotes the original download boundary', async () => {
@@ -161,4 +161,20 @@ it('rejects a late page from an invalidated token batch without changing the rep
     'SELECT COUNT(*) count FROM readwise_api_import_stage'
   )?.count).toBe(0);
   expect(loadReadwiseSourceCutover()).not.toHaveProperty('errorReason');
+});
+
+
+it('counts downloaded records from both APIs even when one API omits its count', async () => {
+  const source = ensureReadwiseRemoteSource();
+  await expect(fetchReadwiseSourceCutoverSnapshot(source.connectionRef, {
+    allowFolderModeForCutover: true, minIntervalMs: 0,
+    fetchImpl: async (input) => {
+      const url = new URL(String(input));
+      if (url.searchParams.has('pageCursor')) throw new Error('offline');
+      return Response.json(url.pathname.includes('/v3/')
+        ? { results: [{ category: 'article', id: 'a', title: 'Article' }], nextPageCursor: 'next' }
+        : { count: 1, results: [{ source: 'reader', external_id: 'a', highlights: [{ external_id: 'h', text: 'One' }] }] });
+    }
+  })).rejects.toThrow('network_failed');
+  expect(readCutoverDownloadProgress(source.connectionRef)).toEqual({ completed: 2, total: null });
 });

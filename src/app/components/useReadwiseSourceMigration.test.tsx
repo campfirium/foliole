@@ -3,7 +3,9 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeReadwiseImportRunProgressEvent } from '../../../lib/platform/nativeImportContract';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
+import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
 
+import { ReadwiseMigrationProgress } from './ReadwiseMigrationProgress';
 import { useReadwiseSourceMigration } from './useReadwiseSourceMigration';
 
 const cutover = vi.hoisted(() => ({ preview: vi.fn(), run: vi.fn() }));
@@ -24,7 +26,9 @@ vi.mock('../../shared/platform/runtimeShellEvents', () => ({
 vi.mock('../../shared/platform/import/readwiseApiConnectionRuntimeRepository', () => ({
   loadReadwiseApiConnectionFromRuntime: connection.load
 }));
-vi.mock('../../shared/ui', () => ({ requestAppConfirmation: confirmation.request }));
+vi.mock('../../shared/ui', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../shared/ui')>(), requestAppConfirmation: confirmation.request
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -117,6 +121,37 @@ it('restores a durable migration without making the settings page execute it', a
   expect(onCommitMode).not.toHaveBeenCalled();
 });
 
+it('restores an unknown-total download after reopening the settings tab without restarting it', async () => {
+  cutover.preview.mockResolvedValue({
+    completed_count: 8500, error_reason: null, phase: 'indexing', status: 'migration_in_progress',
+    topic_count: 12, total_count: null
+  });
+  const first = render(<Probe />);
+  await waitFor(() => expect(screen.getByTestId('phase')).toHaveTextContent('indexing:8500/none'));
+  act(() => events.handler?.({ phase: 'indexing', processedCount: 8600, totalCount: 0, status: 'running' }));
+  expect(screen.getByTestId('phase')).toHaveTextContent('indexing:8600/none');
+  first.unmount();
+  cutover.preview.mockResolvedValue({
+    completed_count: 8600, error_reason: null, phase: 'indexing', status: 'migration_in_progress',
+    topic_count: 12, total_count: null
+  });
+  render(<Probe />);
+  await waitFor(() => expect(screen.getByTestId('phase')).toHaveTextContent('indexing:8600/none'));
+  expect(cutover.run).not.toHaveBeenCalled();
+});
+
+it('keeps the importing phase for a first import as live progress arrives', async () => {
+  cutover.preview.mockResolvedValue({
+    completed_count: 8500, error_reason: null, phase: 'indexing', status: 'migration_in_progress',
+    topic_count: 0, total_count: null
+  });
+  render(<LocalizationProvider><Probe showProgress /></LocalizationProvider>);
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Downloading · 8500'));
+  act(() => events.handler?.({ phase: 'merging', processedCount: 12, totalCount: 50, status: 'running' }));
+  expect(screen.getByRole('status')).toHaveTextContent('Importing · 12');
+  expect(screen.getByRole('status')).not.toHaveTextContent('12 / 50');
+});
+
 it('presents a required reconnection as a retryable migration failure', async () => {
   cutover.preview.mockResolvedValue({
     completed_count: 2, error_reason: null, phase: 'indexing', status: 'migration_in_progress',
@@ -154,6 +189,7 @@ it('restores completed migration warnings without reopening migration', async ()
 });
 
 function Probe(props: {
+  showProgress?: boolean;
   committedMode?: 'api' | 'relay';
   onCommitMode?: (mode: 'api' | 'relay' | 'off') => void;
   onSelectApi?: () => void;
@@ -165,6 +201,7 @@ function Probe(props: {
     t: ((key: string) => key) as Translate
   });
   return <>
+    {props.showProgress ? <ReadwiseMigrationProgress migration={migration} taskStatus={null} /> : null}
     <div data-testid="phase">
       {migration.phase ?? 'none'}:{migration.completedCount}/{migration.totalCount ?? 'none'}
     </div>

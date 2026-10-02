@@ -111,6 +111,7 @@ function applyMigrationProgress(
   setProgress((current) => {
     const nextCount = migrationCompletedCount(progress);
     return {
+      ...current,
       completedCount: nextCount,
       errorReason: null,
       failed: progress.status === 'failed',

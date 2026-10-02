@@ -70,7 +70,7 @@ function isReadwiseReaderImportProgressPayload(
     Number.isFinite(progress.totalCount) &&
     progress.processedCount >= 0 &&
     progress.totalCount >= 0 &&
-    progress.processedCount <= progress.totalCount &&
+    (progress.processedCount <= progress.totalCount || (progress.phase === 'indexing' && progress.totalCount === 0)) &&
     hasValidProgressPair(progress.sourceProcessedCount, progress.sourceTotalCount) &&
     hasValidProgressPair(progress.highlightProcessedCount, progress.highlightTotalCount) &&
     hasValidProgressPair(progress.indexProcessedCount, progress.indexTotalCount) &&

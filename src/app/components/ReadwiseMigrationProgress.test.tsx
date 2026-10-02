@@ -45,7 +45,7 @@ it('shows remote records while importing migration facts', () => {
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Syncing · Downloading · 5%')).toBeInTheDocument();
+  expect(screen.getByText('Syncing · Downloading · 12')).toBeInTheDocument();
 });
 
 it('does not present an ordinary initial sync as migration', () => {
@@ -95,7 +95,7 @@ it('uses only cutover state when migration progress has not arrived yet', () => 
     </LocalizationProvider>
   );
 
-  expect(screen.getByText('Syncing · Downloading · 100%')).toBeInTheDocument();
+  expect(screen.getByText('Syncing · Downloading · 27')).toBeInTheDocument();
   expect(screen.queryByText(/13 \/ 27/)).not.toBeInTheDocument();
 });
 
@@ -177,24 +177,24 @@ it('keeps download progress active without inventing a percentage', () => {
     migration={{ completedCount: 900, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent(/^Syncing · Downloading$/);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Syncing · Downloading · 900$/);
 });
 
-it('starts download progress at an approximate zero percent before the first total arrives', () => {
+it('shows zero downloaded records before the first page arrives', () => {
   render(<LocalizationProvider><ReadwiseMigrationProgress
     migration={{ completedCount: 0, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent(/^Syncing · Downloading · 0%$/);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Syncing · Downloading · 0$/);
 });
 
-it('keeps failed updates in the same denominator and distinguishes internal verification errors', () => {
+it('keeps the completed count for failed updates and distinguishes internal verification errors', () => {
   render(<LocalizationProvider><ReadwiseMigrationProgress
     migration={{ completedCount: 27, errorReason: 'readwise_source_cutover_epub_projection_incomplete',
       failed: true, phase: 'merging', totalCount: 27 }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent('27 / 27');
+  expect(screen.getByRole('status')).toHaveTextContent('Syncing · Update failed · 27');
   expect(screen.getByRole('status')).toHaveTextContent('Sync verification failed');
   expect(screen.getByRole('status')).not.toHaveTextContent('Readwise request failed');
 });
@@ -215,5 +215,16 @@ it('calls the second phase importing when there are no existing relay Topics', (
     }}
     taskStatus={null}
   /></LocalizationProvider>);
-  expect(screen.getByRole('status')).toHaveTextContent('Syncing · Importing · 3 / 8');
+  expect(screen.getByRole('status')).toHaveTextContent('Syncing · Importing · 3');
+});
+
+
+it('keeps restored download counts when the task snapshot still has zero merged documents', () => {
+  render(<LocalizationProvider><ReadwiseMigrationProgress
+    migration={{ completedCount: 8500, errorReason: null, failed: false, phase: 'indexing', totalCount: null }}
+    taskStatus={{ ...INITIAL_IMPORT_STATUS, cutover: {
+      ...INITIAL_IMPORT_STATUS.cutover, completed_count: 0, total_count: null
+    } }}
+  /></LocalizationProvider>);
+  expect(screen.getByRole('status')).toHaveTextContent(/^Syncing · Downloading · 8500$/);
 });
