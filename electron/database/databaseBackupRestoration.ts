@@ -3,6 +3,7 @@ import path from 'node:path';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import type { BackupRestoreSyncChoice } from '../../lib/platform/backupRestoreSyncContract.js';
 
+import { retainReadwiseOwnerAfterBackupRestore } from './backupRestoreReadwiseOwner.js';
 import { snapshotBackupRestoreSource } from './backupRestoreSourceSnapshot.js';
 import { selectBackupRestoreSync, finishLocalOnlyBackupRestore } from './backupRestoreSyncSelection.js';
 import {
@@ -22,6 +23,7 @@ import {
   type ManagedSafetySnapshot
 } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
+import { loadReadwiseHostAssignment } from './readwiseHostAssignment.js';
 import { startSearchAliasMirror } from './searchAliasMirror.js';
 import {
   restoreSqliteDatabase,
@@ -37,6 +39,7 @@ export async function restoreDatabaseBackupInMaintenance(
 ): Promise<SqliteRestoreResult> {
   const connection = openDatabaseConnection();
   const targetPath = connection.dbPath;
+  const wasLocalReadwiseOwner = loadReadwiseHostAssignment().is_active;
   const backupSettings = loadBackupSettings();
   const backupDirectory = resolveManagedBackupDirectory(backupSettings);
   const artifacts = createDatabaseRestoreArtifacts();
@@ -67,6 +70,7 @@ export async function restoreDatabaseBackupInMaintenance(
     initializeWorkspaceSearchSidecar(restored, { requireCurrentSource: true });
     reapplyBackupSettingsAfterRestore(backupSettings);
     await startSearchAliasMirror('restore');
+    retainReadwiseOwnerAfterBackupRestore(wasLocalReadwiseOwner);
     clearDatabaseConnectionUnavailable();
     return { ...result, sourcePath: path.resolve(sourcePath) };
   } catch (error) {

@@ -18,7 +18,7 @@ import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
 const READWISE_ACTIVE_HOST_KEY = 'readwise_active_host';
 
-function readActiveHost() {
+export function loadStoredReadwiseHost() {
   const value = loadJsonSetting(READWISE_ACTIVE_HOST_KEY);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { deviceId: null, hostName: null, epoch: 0 };
   const record = value as Record<string, unknown>;
@@ -110,7 +110,7 @@ function readWorkgroupDesktopHosts(currentHostName: string, activeHostName: stri
 export function loadReadwiseHostAssignment(): NativeReadwiseHostAssignment {
   const group = activeGroupMembers();
   const currentHost = currentHostName();
-  const owner = readActiveHost();
+  const owner = loadStoredReadwiseHost();
   const byId = group.members.find((member) => member.device_identity_key === owner.deviceId);
   const byName = group.members.filter((member) => member.device_name === owner.hostName);
   const activeId = owner.deviceId ?? (byName.length === 1 ? byName[0]?.device_identity_key ?? null : null);
