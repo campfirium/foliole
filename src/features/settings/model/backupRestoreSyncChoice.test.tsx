@@ -21,8 +21,8 @@ function Consumer() {
 }
 function render(same: boolean, backupGroup: boolean, currentGroup: boolean) {
   preview.load.mockResolvedValue({ same, revision: 'a'.repeat(64),
-    backup: { group: backupGroup ? { id: 'backup', name: 'Group' } : null, enabled: true, paused: false },
-    current: { group: currentGroup ? { id: 'current', name: 'Group' } : null, enabled: true, paused: false }
+    backup: { group: backupGroup ? { id: 'backup', name: 'Backup group' } : null, enabled: true, paused: false },
+    current: { group: currentGroup ? { id: 'current', name: 'Maci' } : null, enabled: true, paused: false }
   } satisfies BackupRestoreSyncPreview);
   renderWithLocalization(<AppConfirmationProvider><Consumer /></AppConfirmationProvider>);
 }
@@ -34,7 +34,7 @@ for (const source of ['backup', 'current'] as const) {
       let result!: ReturnType<typeof choose>;
       await act(async () => { result = choose(); });
       fireEvent.click(await screen.findByRole('button', { name: source === 'backup'
-        ? 'Use the backup’s sync group settings' : 'Keep current sync settings' }));
+        ? 'Use the backup’s sync group settings: Backup group' : 'Keep current sync settings: Maci' }));
       fireEvent.click(await screen.findByRole('button', { name: action === 'overwrite'
         ? 'Sync now and overwrite the entire group' : 'Pause sync and restore only this device first' }));
       await expect(result).resolves.toEqual({ source, action, revision: 'a'.repeat(64) });
@@ -47,7 +47,7 @@ it('skips redundant source selection and allows cancellation without restoring',
   let result!: ReturnType<typeof choose>;
   await act(async () => { result = choose(); });
   expect(await screen.findByRole('dialog', { name: 'Sync after restoring' })).toBeVisible();
-  expect(screen.queryByRole('button', { name: 'Keep current sync settings' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /Keep current sync settings/ })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
   await expect(result).resolves.toBeNull();
 });
@@ -56,7 +56,7 @@ it('returns local-only for a chosen ungrouped configuration', async () => {
   render(false, true, false);
   let result!: ReturnType<typeof choose>;
   await act(async () => { result = choose(); });
-  fireEvent.click(await screen.findByRole('button', { name: 'Keep current sync settings' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Keep current sync settings: No sync group' }));
   await expect(result).resolves.toMatchObject({ source: 'current', action: 'local' });
   expect(screen.queryByRole('dialog')).toBeNull();
 });
@@ -65,4 +65,16 @@ it('does not show either choice when both configurations are identical and ungro
   render(true, false, false);
   await expect(choose()).resolves.toMatchObject({ source: 'current', action: 'local' });
   expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+it('shows each sync group in its own restore option', async () => {
+  render(false, false, true);
+  let result!: ReturnType<typeof choose>;
+  await act(async () => { result = choose(); });
+  expect(await screen.findByRole('button', {
+    name: 'Use the backup’s sync group settings: No sync group'
+  })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Keep current sync settings: Maci' })).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+  await expect(result).resolves.toBeNull();
 });

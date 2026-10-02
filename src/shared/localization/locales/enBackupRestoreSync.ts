@@ -1,9 +1,8 @@
 export const EN_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'settings.backups.restore.sync.sourceTitle': 'Sync settings for this restore',
-  'settings.backups.restore.sync.sources': 'Backup: {backup}. Current: {current}.',
   'settings.backups.restore.sync.noGroup': 'No sync group',
-  'settings.backups.restore.sync.backup': 'Use the backup’s sync group settings',
-  'settings.backups.restore.sync.current': 'Keep current sync settings',
+  'settings.backups.restore.sync.backup': 'Use the backup’s sync group settings: {group}',
+  'settings.backups.restore.sync.current': 'Keep current sync settings: {group}',
   'settings.backups.restore.sync.actionTitle': 'Sync after restoring',
   'settings.backups.restore.sync.actionDescription': 'Choose whether to replace the entire sync group now or restore only this device first.',
   'settings.backups.restore.sync.overwrite': 'Sync now and overwrite the entire group',

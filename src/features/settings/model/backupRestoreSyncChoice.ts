@@ -9,13 +9,13 @@ export async function chooseBackupRestoreSync(sourcePath: string, t: Translate):
   if (!preview.same) {
     const selected = await requestAppChoice({
       title: t('settings.backups.restore.sync.sourceTitle'),
-      description: t('settings.backups.restore.sync.sources', {
-        backup: preview.backup.group?.name ?? t('settings.backups.restore.sync.noGroup'),
-        current: preview.current.group?.name ?? t('settings.backups.restore.sync.noGroup')
-      }),
       choices: [
-        { value: 'backup', label: t('settings.backups.restore.sync.backup') },
-        { value: 'current', label: t('settings.backups.restore.sync.current') }
+        { value: 'backup', label: t('settings.backups.restore.sync.backup', {
+          group: preview.backup.group?.name ?? t('settings.backups.restore.sync.noGroup')
+        }) },
+        { value: 'current', label: t('settings.backups.restore.sync.current', {
+          group: preview.current.group?.name ?? t('settings.backups.restore.sync.noGroup')
+        }) }
       ]
     });
     if (!selected) return null;
