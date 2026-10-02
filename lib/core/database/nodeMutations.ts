@@ -30,6 +30,7 @@ import {
   enqueueWorkspaceSearchDeleteInvalidationForSubtreeRootIds,
   enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds
 } from './searchIndexInvalidations.js';
+import { collectTextBodyBlobCandidates } from './textBodyBlobCollection.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 export type { RestoreNodesResult } from './nodeRestoreConflicts.js';
@@ -154,6 +155,8 @@ export function upsertNodeSnapshot(
       && !driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [input.nodeId]);
     const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input, options.searchInvalidation);
     ensureSpecialRootNodesForInput(driver, input);
+    const previousBody = driver.queryOne<{ body_blob_hash: string | null }>(
+      'SELECT body_blob_hash FROM nodes WHERE id = ?', [input.nodeId]);
     const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt);
     runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
     ensureNodeParentMembership(driver, input.nodeId);
@@ -173,6 +176,9 @@ export function upsertNodeSnapshot(
       updatedAt: input.updatedAt
     });
     enqueueSearchInvalidation();
+    if (previousBody?.body_blob_hash && previousBody.body_blob_hash !== bodyBlobHash) {
+      collectTextBodyBlobCandidates(driver, [previousBody.body_blob_hash]);
+    }
   });
 }
 

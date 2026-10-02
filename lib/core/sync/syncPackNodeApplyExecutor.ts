@@ -98,13 +98,10 @@ export async function applySyncPackNodeSurfaceWithDbPort(
       await retireObsoleteSyncPackDependencyViews(tx, { groupId: scope.groupId,
         peerId: options.sourcePeerId, currentCursor: cursor.toStateSeq });
     }
+    if (shouldApply) await collectAppliedNodeVersions(tx, options.incomingAlias ?? 'inc');
     return { result, shouldApply };
   });
-  const articles = shouldApply ? await port.query<{ object_id: string }>(
-    `SELECT s.object_id FROM ${options.incomingAlias ?? 'inc'}.sync_object_state s
-     JOIN ${options.incomingAlias ?? 'inc'}.nodes n ON n.id = s.object_id
-     WHERE s.object_type = 'node' AND s.deleted_at IS NULL`
-  ) : [];
+  const articles = shouldApply ? await loadIncomingArticles(port, options.incomingAlias ?? 'inc') : [];
   return {
     dependencyProgress: undefined,
     applied: shouldApply,
@@ -167,9 +164,6 @@ async function applySyncPackSurfaceInTransaction(
   await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
   await applyPackNodeVersionDependencies(port, options.incomingAlias ?? 'inc', options.sourcePeerId);
   if (preparedReceipt) await saveVersionReceipt(port, preparedReceipt, options.sourcePeerId);
-  const heads = await port.query<{ id: string }>(`SELECT id FROM ${options.incomingAlias ?? 'inc'}.nodes
-    UNION SELECT node_id AS id FROM ${options.incomingAlias ?? 'inc'}.node_sync_tombstones`);
-  for (const head of heads) await collectNodeVersionPayloads(port, head.id, Number.MAX_SAFE_INTEGER);
   return {
     appliedBlobCount,
     appliedGroupFactCount: groupFacts.appliedFactCount,
@@ -178,6 +172,18 @@ async function applySyncPackSurfaceInTransaction(
     handledConflictCount: nodeConvergence.handledConflictCount,
     appliedTombstoneNodeIds
   };
+}
+
+async function loadIncomingArticles(port: DbPort, incomingAlias: string) {
+  return port.query<{ object_id: string }>(`SELECT s.object_id FROM ${incomingAlias}.sync_object_state s
+    JOIN ${incomingAlias}.nodes n ON n.id = s.object_id
+    WHERE s.object_type = 'node' AND s.deleted_at IS NULL`);
+}
+
+async function collectAppliedNodeVersions(port: DbPort, incomingAlias: string) {
+  const heads = await port.query<{ id: string }>(`SELECT id FROM ${incomingAlias}.nodes
+    UNION SELECT node_id AS id FROM ${incomingAlias}.node_sync_tombstones`);
+  for (const head of heads) await collectNodeVersionPayloads(port, head.id, Number.MAX_SAFE_INTEGER);
 }
 
 async function saveVersionReceipt(

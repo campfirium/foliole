@@ -4,7 +4,7 @@ import type { DesktopTaskHandle } from '../desktopTaskTypes.js';
 
 import { openDatabaseConnection, registerDatabaseConnectionCleanup, runWithDatabaseConnectionOwner } from './connection.js';
 import { runLegacyBodyCollectionWorker } from './legacyBodyCollectionWorkerClient.js';
-import { BODY_COLLECTION_ID } from './legacyBodyMigrationState.js';
+import { BODY_COLLECTION_ID, BODY_RECLAIM_ID } from './legacyBodyMigrationState.js';
 
 let active: DesktopTaskHandle | null = null;
 let generation = 0;
@@ -17,7 +17,8 @@ registerDatabaseConnectionCleanup(() => {
 export async function startLegacyBodyCollectionTask() {
   const library = await runWithDatabaseConnectionOwner(() => {
     const connection = openDatabaseConnection();
-    if (readDataMigrationState(connection.sqlite, BODY_COLLECTION_ID)?.status === 'completed') return null;
+    if ([BODY_COLLECTION_ID, BODY_RECLAIM_ID].every((id) =>
+      readDataMigrationState(connection.sqlite, id)?.status === 'completed')) return null;
     return { dbPath: connection.dbPath, generation };
   });
   if (!library || active) return;

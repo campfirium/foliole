@@ -4,7 +4,7 @@ import { collectTextBodyBlobCandidates } from '../../lib/core/database/textBodyB
 
 import type { DatabaseConnection } from './connection.js';
 import {
-  BODY_COLLECTION_ID, initialBodyMigrationProgress, protectBodyMigration,
+  BODY_COLLECTION_ID, BODY_RECLAIM_ID, initialBodyMigrationProgress, protectBodyMigration,
   readBodyMigrationProgress, saveBodyMigrationProgress, type BodyMigrationProgress
 } from './legacyBodyMigrationState.js';
 
@@ -52,10 +52,13 @@ function collectBlobBatch(connection: Connection, progress: BodyMigrationProgres
 export function runLegacyBodyCollectionBatch(connection: Connection, limit = 32) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error('invalid_body_collection_batch_limit');
   const { driver, sqlite } = connection;
-  if (readDataMigrationState(sqlite, BODY_COLLECTION_ID)?.status === 'completed') return { completed: true, paused: false };
+  const migrationId = readDataMigrationState(sqlite, BODY_COLLECTION_ID)?.status === 'completed'
+    ? BODY_RECLAIM_ID : BODY_COLLECTION_ID;
+  if (readDataMigrationState(sqlite, migrationId)?.status === 'completed') return { completed: true, paused: false };
   try {
     return sqlite.transaction(() => {
-      const progress = readBodyMigrationProgress(driver, BODY_COLLECTION_ID) ?? initialBodyMigrationProgress(BODY_COLLECTION_ID, 'inline');
+      const progress = readBodyMigrationProgress(driver, migrationId) ?? initialBodyMigrationProgress(migrationId,
+        migrationId === BODY_RECLAIM_ID ? 'blobs' : 'inline');
       progress.error = null;
       const atEnd = progress.phase === 'blobs'
         ? collectBlobBatch(connection, progress, limit) : retireInlineBatch(connection, progress, limit);
@@ -63,10 +66,14 @@ export function runLegacyBodyCollectionBatch(connection: Connection, limit = 32)
         `SELECT 1 FROM legacy_body_migration_protections WHERE migration_id = ? AND ${TEMPORARY_REASONS} LIMIT 1`, [BODY_COLLECTION_ID]));
       if (atEnd && !paused) progress.phase = 'done';
       saveBodyMigrationProgress(connection, progress, progress.phase === 'done');
+      if (progress.phase === 'done' && migrationId === BODY_COLLECTION_ID) {
+        saveBodyMigrationProgress(connection, initialBodyMigrationProgress(BODY_RECLAIM_ID, 'done'), true);
+      }
       return { completed: progress.phase === 'done', paused, ...progress };
     }).immediate();
   } catch (error) {
-    const progress = readBodyMigrationProgress(driver, BODY_COLLECTION_ID) ?? initialBodyMigrationProgress(BODY_COLLECTION_ID, 'inline');
+    const progress = readBodyMigrationProgress(driver, migrationId) ?? initialBodyMigrationProgress(migrationId,
+        migrationId === BODY_RECLAIM_ID ? 'blobs' : 'inline');
     progress.error = error instanceof Error ? error.message : String(error);
     sqlite.transaction(() => saveBodyMigrationProgress(connection, progress, false)).immediate();
     throw error;

@@ -7,6 +7,7 @@ import type { DatabaseConnection } from './connection.js';
 
 export const BODY_REPAIR_ID = 'legacy-current-body-v1';
 export const BODY_COLLECTION_ID = 'legacy-body-collection-v1';
+export const BODY_RECLAIM_ID = 'released-body-collection-v3';
 export interface BodyMigrationProgress {
   migration_id: string;
   phase: string;
@@ -41,4 +42,9 @@ export function saveBodyMigrationProgress(connection: Pick<DatabaseConnection, '
 
 export function initialBodyMigrationProgress(migrationId: string, phase: string): BodyMigrationProgress {
   return { migration_id: migrationId, phase, cursor: '', changed: 0, deleted_blobs: 0, deleted_bytes: 0, error: null };
+}
+
+export function needsBodyReclamationSnapshot(sqlite: DatabaseConnection['sqlite']) {
+  return readDataMigrationState(sqlite, BODY_COLLECTION_ID)?.status === 'completed'
+    && readDataMigrationState(sqlite, BODY_RECLAIM_ID)?.status !== 'completed';
 }

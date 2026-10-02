@@ -1,10 +1,8 @@
-import { createHash } from 'node:crypto';
 
 import type { DatabaseDriver } from './driver.js';
+import { hashTextBody } from './textBodyHash.js';
 
-export function hashTextBody(content: string) {
-  return createHash('sha256').update(content, 'utf8').digest('hex');
-}
+export { hashTextBody } from './textBodyHash.js';
 
 export function upsertTextBodyBlob(driver: DatabaseDriver, content: string, now: string) {
   const hash = hashTextBody(content);

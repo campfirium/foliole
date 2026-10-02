@@ -29,6 +29,7 @@ import {
 import { prepareLegacyAttachmentFiles } from './legacyAttachmentFiles.js';
 import { captureLegacyAttachmentTargets, migrateLegacyAttachmentReferences } from './legacyAttachmentReferenceMigration.js';
 import { migrateLegacyBodyConsistency, needsLegacyBodyConsistencySnapshot } from './legacyBodyConsistencyMigration.js';
+import { needsBodyReclamationSnapshot } from './legacyBodyMigrationState.js';
 import {
   createManagedSafetySnapshotForMigration,
   settleManagedMigrationSnapshot
@@ -191,7 +192,8 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter, opti
 function createPreMigrationSnapshotIfNeeded(connection: ReturnType<typeof openDatabaseConnection>) {
   const currentVersion = readUserVersion(connection.sqlite);
   const retryRepair = currentVersion === DATABASE_SCHEMA_VERSION &&
-    (needsLegacyBodyConsistencySnapshot(connection) || needsOrphanedReadingStateSnapshot(connection));
+    (needsLegacyBodyConsistencySnapshot(connection) || needsOrphanedReadingStateSnapshot(connection) ||
+      needsBodyReclamationSnapshot(connection.sqlite));
   if (currentVersion < NUMBERED_MIGRATION_BASE_VERSION || (currentVersion >= DATABASE_SCHEMA_VERSION && !retryRepair)) {
     return null;
   }

@@ -8,7 +8,7 @@ import { storedSyncNodeVersionBody } from '../../lib/core/sync/syncNodeGraph.js'
 import type { DatabaseConnection } from './connection.js';
 import { repairCurrentVersionBodyWithDriver } from './currentVersionBodyRepair.js';
 import {
-  BODY_COLLECTION_ID, BODY_REPAIR_ID, initialBodyMigrationProgress,
+  BODY_COLLECTION_ID, BODY_RECLAIM_ID, BODY_REPAIR_ID, initialBodyMigrationProgress,
   protectBodyMigration, readBodyMigrationProgress, saveBodyMigrationProgress
 } from './legacyBodyMigrationState.js';
 
@@ -100,5 +100,7 @@ export function migrateLegacyBodyConsistency(connection: Pick<DatabaseConnection
     }
   }
   saveBodyMigrationProgress(connection, progress, protectedCount === 0);
-  if (fresh) saveBodyMigrationProgress(connection, initialBodyMigrationProgress(BODY_COLLECTION_ID, 'done'), true);
+  if (fresh) for (const id of [BODY_COLLECTION_ID, BODY_RECLAIM_ID]) {
+    saveBodyMigrationProgress(connection, initialBodyMigrationProgress(id, 'done'), true);
+  }
 }
