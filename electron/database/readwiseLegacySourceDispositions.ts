@@ -11,6 +11,8 @@ interface DispositionRow extends DatabaseRow, SourceDispositionKey {
   disposition: SourceDisposition;
 }
 
+const MIN_LEGACY_DISPOSITION_TITLE_LENGTH = 20;
+
 export interface ReadwiseLegacySourceDisposition {
   disposition: SourceDisposition;
   key: SourceDispositionKey;
@@ -31,7 +33,8 @@ export function listReadwiseLegacySourceDispositions(driver: DatabaseDriver) {
        ON cache.rule_id = item.rule_id AND cache.source_path = item.source_path`
   ).flatMap((row): ReadwiseLegacySourceDisposition[] => {
     const key = toSourceDispositionKey(row, readwiseRuleIds);
-    const disposition = key ? dispositions.get(sourceDispositionKeyId(key)) : null;
+    const disposition = key && [...key.originalTitle].length >= MIN_LEGACY_DISPOSITION_TITLE_LENGTH
+      ? dispositions.get(sourceDispositionKeyId(key)) : null;
     return key && disposition ? [{
       disposition: disposition.disposition, key, ruleId: row.rule_id, sourcePath: row.source_path
     }] : [];

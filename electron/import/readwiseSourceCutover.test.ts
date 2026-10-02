@@ -238,10 +238,10 @@ it.each(['dismissed', 'hard_deleted'] as const)(
     ) VALUES ('local','Sample.md',1,1,'present','active',0,'topic-1','imported','old','old','old')`);
     driver.execute(`INSERT INTO keep_import_item_cache (
       rule_id,source_path,title,source_mtime_ms,source_size_bytes,refreshed_at
-    ) VALUES ('local','Sample.md','Sample',1,1,'old')`);
+    ) VALUES ('local','Sample.md','Sample Reader document title',1,1,'old')`);
     driver.execute(`INSERT INTO source_disposition_states
       (source_kind,source_scope,original_title,disposition,updated_at)
-      VALUES ('readwise','local:.','Sample',?,'old')`, [disposition]);
+      VALUES ('readwise','local:.','Sample Reader document title',?,'old')`, [disposition]);
     const remote = ensureReadwiseRemoteSource(false, '2026-09-08T00:00:00.000Z');
     const fetchImpl = migrationFetch();
 

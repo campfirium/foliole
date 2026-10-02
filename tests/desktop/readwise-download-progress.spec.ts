@@ -103,3 +103,51 @@ test('keeps unknown-total download counts live and restores them after switching
     await rm(stateRoot, { force: true, recursive: true });
   }
 });
+
+test('skips short legacy deletion titles while retaining exact API deletions in native SQLite', async ({ browserName }) => {
+  void browserName;
+  const stateRoot = await mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-title-length-'));
+  const session = await createT178ApiAcceptanceSession(stateRoot);
+  try {
+    const result = await session.electronApp.evaluate(() => {
+      const moduleApi = process.getBuiltinModule('module')!;
+      const pathApi = process.getBuiltinModule('path')!;
+      const require = moduleApi.createRequire(pathApi.join(process.cwd(), 'package.json'));
+      const load = (name: string) => require(pathApi.join(process.cwd(), `dist/electron/${name}.js`));
+      const connection = load('database/connection');
+      return connection.runWithDatabaseConnectionOwner(() => {
+        const driver = connection.openDatabaseConnection().driver;
+        const host = load('database/readwiseHostAssignment').loadReadwiseHostAssignment().current_host_name;
+        driver.execute(`INSERT INTO desktop_sources (
+          source_ref,source_type,config_ref,host_name,host_platform,root_path,path_flavor,
+          type_settings_json,created_at,updated_at
+        ) VALUES ('readwise:title-test','readwise','title-test',?,'darwin','/tmp','posix',
+          '{"kind":"articles"}','old','old')`, [host]);
+        for (const title of ['ChatGPT', 'x'.repeat(19), 'x'.repeat(20)]) {
+          driver.execute(`INSERT INTO keep_import_items (
+            rule_id,source_path,source_mtime_ms,source_size_bytes,source_state,local_node_state,
+            has_source_update,last_node_id,last_status,first_seen_at,last_seen_at,last_imported_at
+          ) VALUES ('title-test',?,1,1,'present','locally_deleted',0,?,'blocked_deleted','old','old','old')`,
+          [`${title}.md`, `node-${title}`]);
+          driver.execute(`INSERT INTO keep_import_item_cache (
+            rule_id,source_path,title,source_mtime_ms,source_size_bytes,refreshed_at
+          ) VALUES ('title-test',?,?,1,1,'old')`, [`${title}.md`, title]);
+          driver.execute('INSERT INTO source_disposition_states VALUES (?,?,?,?,?)',
+            ['readwise', 'title-test:.', title, 'hard_deleted', 'old']);
+        }
+        const api = load('database/readwiseApiSourceDispositions');
+        api.writeReadwiseApiSourceDisposition(driver, 'connection', 'document-1', 'ChatGPT', 'hard_deleted', 'old');
+        return {
+          titles: load('database/readwiseLegacySourceDispositions').listReadwiseLegacySourceDispositions(driver)
+            .map((item: { key: { originalTitle: string } }) => item.key.originalTitle),
+          exact: api.readReadwiseApiSourceDisposition(driver, 'connection', 'document-1'),
+          records: driver.queryOne('SELECT count(*) count FROM source_disposition_states').count
+        };
+      });
+    });
+    expect(result).toEqual({ titles: ['x'.repeat(20)], exact: 'hard_deleted', records: 4 });
+  } finally {
+    await session.close();
+    await rm(stateRoot, { force: true, recursive: true });
+  }
+});
