@@ -11,4 +11,8 @@ export const ZH_HANS_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'settings.backups.restore.sync.resumeDescription': '恢复同步后，当前本机资料将覆盖整个同步组，是否继续？',
   'settings.backups.restore.sync.pendingTitle': '恢复后同步已暂停',
   'settings.backups.restore.sync.pendingDescription': '恢复同步时，当前本机资料（包括之后的编辑）将覆盖整个同步组。',
+  'syncGroup.join.mode.title': '加入同步组',
+  'syncGroup.join.mode.description': '合并会保留本机与组内资料。覆盖会替换组内所有设备的资料，包括之后重新上线的设备。',
+  'syncGroup.join.mode.merge': '合并资料',
+  'syncGroup.join.mode.overwrite': '用本机资料覆盖整个组',
 };

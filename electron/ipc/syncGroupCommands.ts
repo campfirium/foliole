@@ -182,7 +182,7 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.stopDiscoverSyncGroups) return discovery.stop();
   if (command === NATIVE_COMMANDS.requestSyncGroupJoin) {
     if (loadBackupRestorePendingSync()) throw new Error('backup_restore_sync_confirmation_required');
-    await requestDesktopSyncGroupJoin(asString(args.endpoint_url, 'endpoint_url'));
+    await requestDesktopSyncGroupJoin(asString(args.endpoint_url, 'endpoint_url'), args.mode);
     return overview();
   }
   if (command === NATIVE_COMMANDS.completeSyncGroupJoin) {

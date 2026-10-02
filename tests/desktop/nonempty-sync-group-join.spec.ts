@@ -165,7 +165,7 @@ async function joinAndConverge(args: {
   await invoke(joiningWindow, 'pause_companion_sync');
   await seedDiscoveredCandidate(args.joiningSession, args.provider.candidate);
   await invoke(joiningWindow, 'request_sync_group_join', {
-    endpoint_url: args.provider.candidate.endpoint_url
+    endpoint_url: args.provider.candidate.endpoint_url, mode: 'merge'
   });
   let requestId: string | null = null;
   await expect.poll(async () => {

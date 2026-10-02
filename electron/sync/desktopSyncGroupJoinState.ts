@@ -2,12 +2,14 @@ import type {
   DesktopSyncGroupJoinCandidatePayload,
   DesktopSyncGroupJoinRequestPayload
 } from '../../lib/platform/nativeCompanionSyncContract.js';
+import type { SyncGroupJoinMode } from '../../lib/platform/syncGroupJoinMode.js';
 
 type JoinKey = Awaited<ReturnType<typeof import('./desktopSyncGroupJoinCrypto.js')['createDesktopSyncGroupJoinKey']>>;
 
 export interface DesktopSyncGroupPendingJoin {
   candidate: DesktopSyncGroupJoinCandidatePayload;
   key: JoinKey;
+  mode: SyncGroupJoinMode;
   request: DesktopSyncGroupJoinRequestPayload;
 }
 

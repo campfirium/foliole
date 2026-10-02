@@ -191,7 +191,7 @@ export async function runWindowsSyncGroupRecovery({ evidenceRoot, execute, onRes
     try {
       await enableWindowsSyncParticipation(session.page, invokeWindowsSyncGroupCommand);
       candidate = await discoverUniqueGroup(session.page);
-      await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
+      await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url, mode: 'merge' });
       await waitForJoinedGroup(session.page, candidate.group_id);
       firstFacts = await waitForOrdinarySyncFacts(
         execute, paths, evidenceRoot, factIds, requiredJourneyOrigins

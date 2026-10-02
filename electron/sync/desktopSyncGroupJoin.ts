@@ -3,13 +3,15 @@ import {
   SYNC_GROUP_JOIN_CONTRACT_VERSION,
   type SyncGroupJoinAcceptance
 } from '../../lib/platform/syncGroupJoinContract.js';
+import { parseSyncGroupJoinMode } from '../../lib/platform/syncGroupJoinMode.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { joinDesktopSyncGroup, loadDesktopSyncGroup } from '../database/syncGroupStore.js';
+import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 
 import { resolveDesktopHostName, resolveDesktopPlatformLabel } from './companionLanPayloads.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { requestJson } from './desktopSyncGroupHttp.js';
+import { commitDesktopSyncGroupJoin } from './desktopSyncGroupJoinCommit.js';
 import {
   createDesktopSyncGroupJoinKey,
   decryptDesktopSyncGroupJoinInfo
@@ -30,7 +32,8 @@ type CompleteDesktopSyncGroupJoinOptions = {
   onMembershipCommitted?(): void | Promise<void>;
 };
 
-export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
+export async function requestDesktopSyncGroupJoin(endpointUrl: string, modeValue: unknown) {
+  const mode = parseSyncGroupJoinMode(modeValue);
   const state = loadDesktopSyncGroupJoinState();
   const candidate = state.candidates.find((item) => item.endpoint_url === endpointUrl);
   if (!candidate) throw new Error('sync_group_candidate_not_found');
@@ -59,6 +62,7 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string) {
   saveDesktopSyncGroupPendingJoin({
     candidate,
     key,
+    mode,
     request: {
       endpoint_url: endpointUrl,
       expires_at: requiredText(payload.expires_at, 'sync_group_join_response_invalid'),
@@ -95,27 +99,7 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
   );
   const groupInfo = parseSyncGroupJoinGroupInfo(JSON.parse(plaintext));
   if (groupInfo.group_id !== pending.candidate.group_id) throw new Error('sync_group_identity_mismatch');
-  const route = await runWithDatabaseConnectionOwner(async () => {
-    const connection = openDatabaseConnection();
-    const { identity } = await loadDesktopDeviceIdentity({
-      groupId: groupInfo.group_id, libraryPath: connection.dbPath
-    });
-    const group = joinDesktopSyncGroup({
-      device: identity, deviceName: resolveDesktopHostName(),
-      displayName: groupInfo.display_name, platform: resolveDesktopPlatformLabel(),
-      workgroupKey: groupInfo.workgroup_key
-    });
-    saveDesktopSyncGroupPendingJoin(null);
-    return {
-      endpoint_url: pending.candidate.endpoint_url,
-      group_id: groupInfo.group_id,
-      local_device_id: group.local_device_identity_key,
-      peer_device_id: pending.candidate.provider_device_id,
-      peer_device_name: pending.candidate.provider_device_name,
-      peer_platform: pending.candidate.provider_platform,
-      route_kind: isMobileProvider(pending.candidate.provider_platform) ? 'mobile_guide' : 'anchor'
-    } satisfies DesktopSyncGroupPeer;
-  });
+  const route = await runWithDatabaseConnectionOwner(() => commitDesktopSyncGroupJoin(pending, groupInfo));
   saveDesktopSyncGroupRoute(route);
   await options.onMembershipCommitted?.();
   if (route.route_kind !== 'mobile_guide') {
@@ -141,10 +125,6 @@ function queueInitialSync(route: DesktopSyncGroupPeer) {
         peerDeviceId: route.peer_device_id
       });
     });
-}
-
-function isMobileProvider(platform: string) {
-  return ['android-capacitor', 'ios-capacitor'].includes(platform.toLowerCase());
 }
 
 function parseAcceptance(value: Record<string, unknown>, requestId: string): SyncGroupJoinAcceptance {

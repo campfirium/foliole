@@ -1,7 +1,10 @@
 import { collectAllNodeVersionChains } from '../../../../../lib/core/database/dynamicNodeVersionChainMigration';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { publishSyncGroupRestoreEvent } from '../../../../../lib/core/sync/syncGroupRestorePublication';
 import type { SyncGroupLibraryFacts, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
+import type { SyncGroupJoinMode } from '../../../../../lib/platform/syncGroupJoinMode';
 import type { SyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
+import { createCompanionUuid } from '../../companionUuid';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 function owner() { return getIosCompanionDatabaseOwner(); }
@@ -30,6 +33,7 @@ export function loadCompanionSyncGroupLibraryFacts(): Promise<SyncGroupLibraryFa
 }
 
 export function joinCompanionSyncGroup(args: {
+  mode?: SyncGroupJoinMode;
   device: SyncGroupDeviceIdentity;
   deviceName: string;
   displayName: string;
@@ -65,6 +69,10 @@ export function joinCompanionSyncGroup(args: {
        VALUES (1, ?, ?, 'active', ?)`,
       [args.device.group_id, args.device.identity_key, now]
     );
+    if (args.mode === 'overwrite') await publishSyncGroupRestoreEvent(tx, {
+      group_id: args.device.group_id, restore_id: `restore-${createCompanionUuid()}`,
+      restored_at: now, source_device_identity_key: args.device.identity_key
+    });
     return (await loadGroup(tx))!;
   }));
 }

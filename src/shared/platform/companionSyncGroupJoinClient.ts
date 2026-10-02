@@ -3,6 +3,7 @@ import {
   SYNC_GROUP_JOIN_CONTRACT_VERSION,
   type SyncGroupJoinAcceptance
 } from '../../../lib/platform/syncGroupJoinContract';
+import { parseSyncGroupJoinMode, type SyncGroupJoinMode } from '../../../lib/platform/syncGroupJoinMode';
 import { createSyncGroupDeviceIdentity } from '../../../lib/platform/syncGroupUnifiedContract';
 
 import { requestCompanionSyncGroupEndpoint } from './companion/network/companionSyncGroupHttpRequest';
@@ -15,13 +16,15 @@ import {
 import { createCompanionUuid } from './companionUuid';
 import { FolioleCompanionSync, normalizeEndpointUrl } from './companionWorkspaceRuntimeRepository';
 
-const keyIds = new Map<string, string>();
+const keyIds = new Map<string, { keyId: string; mode: SyncGroupJoinMode; groupId: string }>();
 
 export async function requestCompanionSyncGroupJoin(args: {
   databasePath: string;
   endpointUrl: string;
   groupId: string;
+  mode: SyncGroupJoinMode;
 }) {
+  const mode = parseSyncGroupJoinMode(args.mode);
   if (await loadCompanionSyncGroup()) throw new Error('sync_group_identity_mismatch');
   const device = await FolioleCompanionSync.loadSyncGroupDeviceIdentity({ database_path: args.databasePath });
   const keyId = createCompanionUuid();
@@ -41,7 +44,7 @@ export async function requestCompanionSyncGroupJoin(args: {
     throw new Error(`sync_group_join_request_http_${response.status}`);
   }
   const payload = await response.json() as { expires_at: string; request_id: string };
-  keyIds.set(payload.request_id, keyId);
+  keyIds.set(payload.request_id, { keyId, mode, groupId: args.groupId });
   return { endpoint_url: endpointUrl, expires_at: payload.expires_at,
     group_id: args.groupId, request_id: payload.request_id, status: 'pending' as const };
 }
@@ -61,15 +64,16 @@ export async function completeCompanionSyncGroupJoin(args: {
   });
   if (!response.ok) throw new Error(`sync_group_join_acceptance_http_${response.status}`);
   const acceptance = await response.json() as SyncGroupJoinAcceptance;
-  const keyId = keyIds.get(args.requestId);
+  const pending = keyIds.get(args.requestId);
+  const keyId = pending?.keyId;
   if (!keyId || acceptance.request_id !== args.requestId) throw new Error('sync_group_join_acceptance_invalid');
   const plaintext = await decryptCompanionSyncGroupJoinInfo(keyId, acceptance.encrypted_group_info);
-  dropCompanionSyncGroupJoinPrivateKey(keyId);
-  keyIds.delete(args.requestId);
   const info = parseSyncGroupJoinGroupInfo(JSON.parse(plaintext));
+  if (info.group_id !== pending!.groupId) throw new Error('sync_group_identity_mismatch');
   const facts = await FolioleCompanionSync.loadSyncGroupDeviceIdentity({ database_path: args.databasePath });
   const provider = providerFromDiscovery(args, info.group_id);
-  return joinCompanionSyncGroup({
+  const group = await joinCompanionSyncGroup({
+    mode: pending!.mode,
     device: createSyncGroupDeviceIdentity({ device_anchor: facts.device_anchor, group_id: info.group_id,
       library_path: facts.canonical_library_path, path_flavor: facts.path_flavor }),
     deviceName: facts.device_name,
@@ -78,6 +82,9 @@ export async function completeCompanionSyncGroupJoin(args: {
     provider,
     workgroupKey: info.workgroup_key
   });
+  dropCompanionSyncGroupJoinPrivateKey(keyId);
+  keyIds.delete(args.requestId);
+  return group;
 }
 
 export function providerFromDiscovery(args: {
@@ -108,7 +115,7 @@ function isWindowsProvider(platform: string) {
 }
 
 export function cancelCompanionSyncGroupJoin(requestId: string) {
-  const keyId = keyIds.get(requestId);
+  const keyId = keyIds.get(requestId)?.keyId;
   if (keyId) dropCompanionSyncGroupJoinPrivateKey(keyId);
   keyIds.delete(requestId);
 }

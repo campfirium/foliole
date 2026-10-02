@@ -8,6 +8,7 @@ import type {
   NativeSyncPeer
 } from './nativeSyncContract.js';
 import type { SyncGroupDiscoverySnapshot } from './syncGroupDiscoveryContract.js';
+import type { SyncGroupJoinMode } from './syncGroupJoinMode.js';
 import type { SystemEntryDisplayNamesPayload } from './systemEntryDisplayNameContract.js';
 
 export type NativeSyncCommandMap = {
@@ -88,7 +89,7 @@ export type NativeSyncCommandMap = {
     result: SyncGroupDiscoverySnapshot;
   };
   [NATIVE_COMMANDS.requestSyncGroupJoin]: {
-    args: { endpoint_url: string };
+    args: { endpoint_url: string; mode: SyncGroupJoinMode };
     result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.completeSyncGroupJoin]: {

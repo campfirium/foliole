@@ -143,7 +143,7 @@ export async function runWindowsMultiDeviceSyncFromZero({ evidenceRoot, execute,
       openSession: (options) => openWindowsSyncGroupSession(paths, evidenceRoot, undefined, options),
       reportProgress,
       requestJoin: (page, endpoint_url) => invokeWindowsSyncGroupCommand(
-        page, 'request_sync_group_join', { endpoint_url }
+        page, 'request_sync_group_join', { endpoint_url, mode: 'merge' }
       ),
       reset: () => resetOwnedClient(paths, evidenceRoot, execute),
       waitForComplete: (report) => waitForCompleteFacts(inspect, report),

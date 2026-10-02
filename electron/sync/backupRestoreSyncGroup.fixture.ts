@@ -21,6 +21,7 @@ import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
 import { appendRestoreFacts, deletePausedNode, restoreFactsSnapshot, safetySnapshotFacts } from './backupRestoreSyncGroup.facts.fixture.js';
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
+import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
 import { saveDesktopSyncGroupCandidates } from './desktopSyncGroupJoinState.js';
 import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
 import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
@@ -109,7 +110,7 @@ async function runJoinFixture(action: string, args: Record<string, unknown>) {
   if (action === 'joinRequest') {
     const discovery = await fetch(`${String(args.origin)}/companion/discovery`).then((response) => response.json());
     saveDesktopSyncGroupCandidates([{ ...discovery, endpoint_url: String(args.origin) }]);
-    return handleSyncGroupCommand(NATIVE_COMMANDS.requestSyncGroupJoin, { endpoint_url: args.origin });
+    return handleSyncGroupCommand(NATIVE_COMMANDS.requestSyncGroupJoin, { endpoint_url: args.origin, mode: args.mode ?? 'merge' });
   }
   if (action === 'joinAccept' || action === 'joinReject') {
     return handleSyncGroupCommand(action === 'joinAccept' ? NATIVE_COMMANDS.acceptSyncGroupJoinRequest :
@@ -145,6 +146,18 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'readFacts') return restoreFactsSnapshot();
   if (action === 'safety') return safetySnapshotFacts();
   if (action === 'backup') return createApplicationDatabaseBackup();
+  if (action === 'leave') return handleSyncGroupCommand(NATIVE_COMMANDS.leaveSyncGroup, {});
+  if (action === 'restoreLocal') {
+    const preview = await inspectBackupRestoreSync(String(args.file));
+    return restoreApplicationDatabaseBackup({ sourcePath: String(args.file),
+      choice: { source: 'current', action: 'local', revision: preview.revision } });
+  }
+  if (action === 'sync') {
+    const group = loadDesktopSyncGroup()!;
+    return runDesktopSyncCoordinator('manual', { endpoint_url: String(args.origin),
+      group_id: group.group_id, local_device_id: group.local_device_identity_key,
+      peer_device_id: String(args.identity), peer_device_name: 'Peer', peer_platform: 'darwin' });
+  }
   if (action === 'restore') {
     const preview = await inspectBackupRestoreSync(String(args.file));
     return restoreApplicationDatabaseBackup({ sourcePath: String(args.file),

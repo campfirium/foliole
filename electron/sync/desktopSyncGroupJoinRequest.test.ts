@@ -42,7 +42,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: () => ({ dbPath: '/library/Data/foliole.db' }),
+  openDatabaseConnection: () => ({ dbPath: '/library/Data/foliole.db', driver: { transaction: (work: (tx: unknown) => unknown) => work({}) } }),
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => {
     mocks.ownerDepth += 1;
     try { return await execute(); }
@@ -89,7 +89,7 @@ afterEach(() => {
 
 it('requests a Device-scoped join without retired library or authorization metadata', async () => {
   mocks.state.candidates = [CANDIDATE];
-  await requestDesktopSyncGroupJoin(CANDIDATE.endpoint_url);
+  await requestDesktopSyncGroupJoin(CANDIDATE.endpoint_url, 'merge');
 
   const request = mocks.requestJson.mock.calls[0]![1] as { body: string };
   expect(JSON.parse(request.body)).toEqual({
@@ -108,7 +108,7 @@ it('requests a Device-scoped join without retired library or authorization metad
 
 it('commits membership before queueing initial convergence', async () => {
   mocks.state.pending = {
-    candidate: CANDIDATE, key: { privateKey: 'private', publicKey: 'public' },
+    candidate: CANDIDATE, mode: 'merge', key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
       group_id: 'group-1', request_id: 'request-1', status: 'pending' }
   };
@@ -131,7 +131,7 @@ it('commits membership before queueing initial convergence', async () => {
 
 it('keeps the committed membership successful when initial sync fails', async () => {
   mocks.state.pending = {
-    candidate: CANDIDATE, key: { privateKey: 'private', publicKey: 'public' },
+    candidate: CANDIDATE, mode: 'merge', key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
       group_id: 'group-1', request_id: 'request-1', status: 'pending' }
   };
@@ -149,7 +149,7 @@ it('keeps the committed membership successful when initial sync fails', async ()
 it('drops the one-time mobile guide route after initial convergence', async () => {
   const mobile = { ...CANDIDATE, provider_platform: 'android-capacitor' };
   mocks.state.pending = {
-    candidate: mobile, key: { privateKey: 'private', publicKey: 'public' },
+    candidate: mobile, mode: 'merge', key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: mobile.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
       group_id: 'group-1', request_id: 'request-1', status: 'pending' }
   };
@@ -163,7 +163,7 @@ it('drops the one-time mobile guide route after initial convergence', async () =
 
 it('clears an expired request without contacting or migrating its endpoint', async () => {
   mocks.state.pending = {
-    candidate: CANDIDATE, key: { privateKey: 'private', publicKey: 'public' },
+    candidate: CANDIDATE, mode: 'merge', key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2020-08-27T00:02:00.000Z',
       group_id: 'group-1', request_id: 'request-1', status: 'pending' }
   };

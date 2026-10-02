@@ -118,7 +118,7 @@ export async function runWindowsSinglePrincipalSyncGroup(options) {
       groupId: options.expectedGroupId, groupTag: options.expectedGroupTag
     });
     await invokeWindowsSyncGroupCommand(session.page, 'request_sync_group_join', {
-      endpoint_url: candidate.endpoint_url
+      endpoint_url: candidate.endpoint_url, mode: 'merge'
     });
     console.log(`[windows-dev-action] requested group=${candidate.group_id}`);
     report(options.reportProgress, 'requested');

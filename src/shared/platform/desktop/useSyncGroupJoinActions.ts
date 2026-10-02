@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 
 import type { DesktopSyncGroupOverviewPayload } from '../../../../lib/platform/nativeCompanionSyncContract';
+import { useTranslation } from '../../localization/LocalizationProvider';
+import { chooseSyncGroupJoinMode } from '../../ui/chooseSyncGroupJoinMode';
 import {
   completeDesktopSyncGroupJoin,
   discoverDesktopSyncGroups,
@@ -28,6 +30,7 @@ export function useDesktopSyncGroupJoinActions(args: {
   setOverview(value: DesktopSyncGroupOverviewPayload): void;
   setPendingActionId(value: string | null): void;
 }) {
+  const t = useTranslation();
   const { setError, setIsLoading, setOverview, setPendingActionId } = args;
   const run = useCallback(async (id: string, action: () => Promise<DesktopSyncGroupOverviewPayload>) => {
     setPendingActionId(id);
@@ -58,13 +61,17 @@ export function useDesktopSyncGroupJoinActions(args: {
       }
     },
     onDiscoveryChanged: onDesktopSyncGroupDiscoveryChanged,
-    requestJoin: (endpointUrl: string) => run('request-sync-group-join', async () => {
-      const overview = await requestDesktopSyncGroupJoin(endpointUrl);
-      await stopDiscoveringDesktopSyncGroups();
-      setOverview(overview);
-      const expiresAt = overview.join_request?.expires_at;
-      if (!expiresAt) throw new Error('sync_group_join_not_pending');
-      return waitForJoinAcceptance(expiresAt);
-    })
+    requestJoin: async (endpointUrl: string) => {
+      const mode = await chooseSyncGroupJoinMode(t);
+      if (!mode) return;
+      return run('request-sync-group-join', async () => {
+        const overview = await requestDesktopSyncGroupJoin(endpointUrl, mode);
+        await stopDiscoveringDesktopSyncGroups();
+        setOverview(overview);
+        const expiresAt = overview.join_request?.expires_at;
+        if (!expiresAt) throw new Error('sync_group_join_not_pending');
+        return waitForJoinAcceptance(expiresAt);
+      });
+    }
   };
 }

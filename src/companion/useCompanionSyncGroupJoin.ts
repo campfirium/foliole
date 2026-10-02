@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
+import { useTranslation } from '../shared/localization/LocalizationProvider';
 import { publishCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { startCompanionSyncGroupDiscoverySession } from '../shared/platform/companion/syncGroupDiscoverySession';
@@ -9,6 +10,7 @@ import {
   completeCompanionSyncGroupJoin,
   requestCompanionSyncGroupJoin
 } from '../shared/platform/companionSyncGroupJoinClient';
+import { chooseSyncGroupJoinMode } from '../shared/ui/chooseSyncGroupJoinMode';
 
 import type {
   CompanionSyncGroupDiscovery,
@@ -98,13 +100,6 @@ function useJoinCancellation(args: {
   }, [args]);
 }
 
-function usePersistedJoinState(databasePath: string | null, setJoined: (value: boolean) => void) {
-  useEffect(() => {
-    void Promise.resolve().then(() => loadCompanionSyncGroup())
-      .then((group) => setJoined(Boolean(group))).catch(() => setJoined(false));
-  }, [databasePath, setJoined]);
-}
-
 function useJoinAcceptancePolling(
   pendingRequest: PendingSyncGroupJoinRequest | null,
   complete: (request?: PendingSyncGroupJoinRequest | null) => Promise<unknown>
@@ -124,6 +119,40 @@ function useJoinAcceptancePolling(
       if (timer !== null) window.clearTimeout(timer);
     };
   }, [complete, pendingRequest]);
+}
+
+function useJoinRequest(args: { config: SyncGroupJoinArgs; discoveries: CompanionSyncGroupDiscovery[];
+  pendingRequestRef: React.MutableRefObject<PendingSyncGroupJoinRequest | null>;
+  setPendingRequest(value: PendingSyncGroupJoinRequest | null): void;
+  setStatus(value: CompanionSyncGroupJoinStatus): void;
+}) {
+  const t = useTranslation();
+  const { discoveries, pendingRequestRef, setPendingRequest, setStatus } = args;
+  return useCallback(async (endpointUrl: string) => {
+    if (!args.config.bootstrapState.database_path) throw new Error('companion_database_unavailable');
+    const candidate = discoveries.find((value) => value.endpointUrl === endpointUrl);
+    if (!candidate) throw new Error('sync_group_discovery_candidate_missing');
+    const mode = await chooseSyncGroupJoinMode(t);
+    if (!mode) return null;
+    setStatus('requesting'); args.config.onError(null);
+    try {
+      const result = await requestCompanionSyncGroupJoin({
+        databasePath: args.config.bootstrapState.database_path,
+        endpointUrl: candidate.endpointUrl,
+        groupId: candidate.groupId,
+        mode
+      });
+      const next = pendingFromCandidate(result, candidate);
+      pendingRequestRef.current = next;
+      setPendingRequest(next); setStatus('awaiting-acceptance');
+      await args.config.onSaveEndpoint(result.endpoint_url);
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setStatus('idle'); args.config.onError(message);
+      throw error;
+    }
+  }, [args, discoveries, t]);
 }
 
 export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
@@ -157,32 +186,13 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
       }
     });
   }, [args, complete, stopDiscovery]);
-  const request = useCallback(async (endpointUrl: string) => {
-    if (!args.bootstrapState.database_path) throw new Error('companion_database_unavailable');
-    const candidate = discoveries.find((value) => value.endpointUrl === endpointUrl);
-    if (!candidate) throw new Error('sync_group_discovery_candidate_missing');
-    setStatus('requesting'); args.onError(null);
-    try {
-      const result = await requestCompanionSyncGroupJoin({
-        databasePath: args.bootstrapState.database_path,
-        endpointUrl: candidate.endpointUrl,
-        groupId: candidate.groupId
-      });
-      const next = pendingFromCandidate(result, candidate);
-      pendingRequestRef.current = next;
-      setPendingRequest(next); setStatus('awaiting-acceptance');
-      await args.onSaveEndpoint(result.endpoint_url);
-      return result;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setStatus('idle'); args.onError(message);
-      throw error;
-    }
-  }, [args, discoveries]);
+  const request = useJoinRequest({ config: args, discoveries, pendingRequestRef, setPendingRequest, setStatus });
 
   useEffect(() => () => { void stopRef.current?.(); }, []);
   useEffect(() => { pendingRequestRef.current = pendingRequest; }, [pendingRequest]);
-  usePersistedJoinState(args.bootstrapState.database_path, setJoined);
+  useEffect(() => {
+    void loadCompanionSyncGroup().then((group) => setJoined(Boolean(group))).catch(() => setJoined(false));
+  }, [args.bootstrapState.database_path]);
   useJoinAcceptancePolling(pendingRequest, complete);
   return { cancel, complete, discoveries, discover, joined, pendingRequest, request, status };
 }

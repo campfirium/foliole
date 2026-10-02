@@ -79,7 +79,7 @@ export async function runMacosJoinsWindowsSyncGroup({ acceptedTip, evidenceRoot,
       evidenceRoot: path.join(evidenceRoot, 'macos-initial-fact'), session });
     await session.invoke('enable_companion_sync');
     const candidate = await discoverWindows(session, providerIdentity);
-    await session.invoke('request_sync_group_join', { endpoint_url: candidate.endpoint_url });
+    await session.invoke('request_sync_group_join', { endpoint_url: candidate.endpoint_url, mode: 'merge' });
     const pending = (await session.load()).join_request;
     if (!pending || JSON.stringify(pending).includes('workgroup_key')) {
       throw new Error('Mac pending join state did not remain key-free.');

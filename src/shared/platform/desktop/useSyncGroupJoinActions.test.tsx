@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+vi.mock('../../localization/LocalizationProvider', () => ({ useTranslation: () => (key: string) => key }));
+const choice = vi.hoisted(() => ({ select: vi.fn(async () => 'merge' as string | null) }));
+vi.mock('../../ui/chooseSyncGroupJoinMode', () => ({ chooseSyncGroupJoinMode: choice.select }));
+
 const runtime = vi.hoisted(() => ({
   events: [] as string[],
   complete: vi.fn(async () => {
@@ -32,6 +36,7 @@ import { useDesktopSyncGroupJoinActions } from './useSyncGroupJoinActions';
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.events.length = 0;
+  choice.select.mockResolvedValue('merge');
 });
 
 afterEach(() => vi.useRealTimers());
@@ -68,4 +73,19 @@ it('retries completion while approval remains pending', async () => {
   await act(() => completion);
 
   expect(runtime.events).toEqual(['request', 'stop', 'complete-pending', 'complete']);
+});
+
+
+it('does not request or start sync when the data choice is cancelled', async () => {
+  choice.select.mockResolvedValue(null);
+  const { result } = renderActions();
+  await act(() => result.current.requestJoin('http://maci.local:38641'));
+  expect(runtime.events).toEqual([]);
+});
+
+it('passes the explicit group overwrite choice before requesting approval', async () => {
+  choice.select.mockResolvedValue('overwrite');
+  const { result } = renderActions();
+  await act(() => result.current.requestJoin('http://maci.local:38641'));
+  expect(runtime.request).toHaveBeenCalledWith('http://maci.local:38641', 'overwrite');
 });

@@ -97,7 +97,7 @@ async function formGroup(owner, joiner) {
   const candidate = discovered.join_candidates.find((item) =>
     item.group_id === identity.groupId && item.group_tag === identity.groupTag);
   if (!candidate) throw new Error('Expected Sync Group was not discovered.');
-  await invoke(joiner, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url });
+  await invoke(joiner, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url, mode: 'merge' });
   const requested = await waitForDesktopProductState(owner, {
     command: 'load_sync_group_overview', condition: { count: 1, kind: 'join-request-count' },
     eventName: 'onSyncGroupJoinRequestsChanged', timeoutMs: 90_000

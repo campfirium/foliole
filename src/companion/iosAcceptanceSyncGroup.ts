@@ -45,7 +45,7 @@ export async function discoverIosHostedProvider() {
 
 export async function joinIosAcceptanceSyncGroup(databasePath: string) {
   const discovered = await discoverIosHostedProvider();
-  const pending = await requestCompanionSyncGroupJoin({
+  const pending = await requestCompanionSyncGroupJoin({ mode: 'merge',
     databasePath, endpointUrl: discovered.endpointUrl, groupId: discovered.discovery.group_id
   });
   const group = await completeCompanionSyncGroupJoin({

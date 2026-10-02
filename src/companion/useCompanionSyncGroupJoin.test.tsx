@@ -3,6 +3,10 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract';
 
+vi.mock('../shared/localization/LocalizationProvider', () => ({ useTranslation: () => (key: string) => key }));
+const choice = vi.hoisted(() => ({ select: vi.fn(async () => 'merge' as string | null) }));
+vi.mock('../shared/ui/chooseSyncGroupJoinMode', () => ({ chooseSyncGroupJoinMode: choice.select }));
+
 const runtime = vi.hoisted(() => ({
   callback: null as null | ((snapshot: SyncGroupDiscoverySnapshot) => void),
   complete: vi.fn(),
@@ -41,6 +45,7 @@ const candidate = {
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.callback = null;
+  choice.select.mockResolvedValue('merge');
   runtime.loadGroup.mockResolvedValue(null);
   runtime.request.mockResolvedValue({
     endpoint_url: candidate.endpoint_url,
@@ -166,4 +171,25 @@ it('restores the join action and reports a Device request failure', async () => 
   });
   await waitFor(() => expect(result.current.status).toBe('idle'));
   expect(onError).toHaveBeenLastCalledWith('device_identity_unavailable');
+});
+
+it.each(['overwrite', null])('requests membership only after choosing %s', async (mode) => {
+  choice.select.mockResolvedValueOnce(mode);
+  const onSaveEndpoint = vi.fn(async () => undefined);
+  const { result } = renderHook(() => useCompanionSyncGroupJoin({
+    bootstrapState: { database_path: '/library/foliole.db' } as never,
+    onError: vi.fn(), onSaveEndpoint
+  }));
+  await act(() => result.current.discover());
+  act(() => runtime.callback?.({
+    candidates: [candidate], change: 'found', error_code: null, status: 'results'
+  }));
+  await act(() => result.current.request(candidate.endpoint_url));
+  if (mode === null) {
+    expect(runtime.request).not.toHaveBeenCalled();
+    expect(onSaveEndpoint).not.toHaveBeenCalled();
+    expect(result.current.pendingRequest).toBeNull();
+  } else {
+    expect(runtime.request).toHaveBeenCalledWith(expect.objectContaining({ mode: 'overwrite' }));
+  }
 });

@@ -4,6 +4,7 @@ import type {
   DesktopSyncGroupOverviewPayload
 } from '../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncGroupDiscoverySnapshot } from '../../../lib/platform/syncGroupDiscoveryContract';
+import type { SyncGroupJoinMode } from '../../../lib/platform/syncGroupJoinMode';
 import type { WatchedFolderConflict } from '../../../lib/platform/watchedFolderConflictContract';
 
 import { normalizeJoinCandidates, normalizeJoinRequest } from './desktop/syncGroupJoinNormalization';
@@ -102,8 +103,8 @@ export function removeDesktopSyncGroupDevice(deviceIdentityKey: string) {
   });
 }
 
-export function requestDesktopSyncGroupJoin(endpointUrl: string) {
-  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.requestSyncGroupJoin, { endpoint_url: endpointUrl });
+export function requestDesktopSyncGroupJoin(endpointUrl: string, mode: SyncGroupJoinMode) {
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.requestSyncGroupJoin, { endpoint_url: endpointUrl, mode });
 }
 
 export function completeDesktopSyncGroupJoin() {
