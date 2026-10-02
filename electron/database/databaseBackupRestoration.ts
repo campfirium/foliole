@@ -1,7 +1,10 @@
 import path from 'node:path';
 
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
+import type { BackupRestoreSyncChoice } from '../../lib/platform/backupRestoreSyncContract.js';
 
+import { snapshotBackupRestoreSource } from './backupRestoreSourceSnapshot.js';
+import { selectBackupRestoreSync, finishLocalOnlyBackupRestore } from './backupRestoreSyncSelection.js';
 import {
   loadBackupSettings,
   reapplyBackupSettingsAfterRestore,
@@ -26,15 +29,13 @@ import {
   type SqliteRestoreResult
 } from './sqliteBackupRestore.js';
 import {
-  captureCurrentSyncGroupForBackupRestore,
   finishSyncGroupBackupRestore
 } from './syncGroupBackupRestore.js';
 
 export async function restoreDatabaseBackupInMaintenance(
-  sourcePath: string, restoredAt = new Date().toISOString()
+  sourcePath: string, restoredAt = new Date().toISOString(), choice?: BackupRestoreSyncChoice
 ): Promise<SqliteRestoreResult> {
   const connection = openDatabaseConnection();
-  const syncGroup = captureCurrentSyncGroupForBackupRestore(connection.driver);
   const targetPath = connection.dbPath;
   const backupSettings = loadBackupSettings();
   const backupDirectory = resolveManagedBackupDirectory(backupSettings);
@@ -43,8 +44,10 @@ export async function restoreDatabaseBackupInMaintenance(
   let connectionClosed = false;
   let replacementComplete = false;
   try {
-    const databasePath = await artifacts.materialize(sourcePath, path.dirname(targetPath));
+    const databasePath = await snapshotBackupRestoreSource(artifacts, sourcePath, path.dirname(targetPath));
     verifySqliteDatabaseFile(databasePath);
+    const selection = await selectBackupRestoreSync({ sourcePath, databasePath,
+      targetPath, current: connection.driver, ...(choice ? { choice } : {}) });
     safetySnapshot = await createManagedSafetySnapshotWithBackup({
       destinationDirectory: backupDirectory,
       reason: 'pre-restore',
@@ -58,7 +61,9 @@ export async function restoreDatabaseBackupInMaintenance(
     });
     replacementComplete = true;
     const restored = initializeDatabase(undefined, { recovery: 'fail' });
-    finishSyncGroupBackupRestore(restored.driver, syncGroup, restoredAt);
+    if (selection.snapshot) finishSyncGroupBackupRestore(restored.driver, selection.snapshot, restoredAt,
+      selection.mode === 'pause' ? 'pause' : 'overwrite');
+    else finishLocalOnlyBackupRestore(restored.driver, selection.host);
     initializeWorkspaceSearchSidecar(restored, { requireCurrentSource: true });
     reapplyBackupSettingsAfterRestore(backupSettings);
     await startSearchAliasMirror('restore');

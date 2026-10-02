@@ -159,3 +159,11 @@ it('does not describe anchor discovery while Sync is off', () => {
   expect(screen.getByText('Sync off')).toBeVisible();
   expect(screen.queryByText('Finding sync anchor…')).not.toBeInTheDocument();
 });
+
+it('shows the persisted overwrite notice while restored sync is paused', () => {
+  renderSyncSection(true, STOPPED_SYNC_GROUP_DISCOVERY, null, {
+    sync_paused: true, pending_backup_restore: 'restore-pending'
+  });
+  expect(screen.getByText('Sync paused after restore')).toBeVisible();
+  expect(screen.getByText(/including later edits/)).toBeVisible();
+});

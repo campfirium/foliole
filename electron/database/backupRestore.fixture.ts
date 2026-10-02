@@ -20,17 +20,21 @@ export async function assertResourceRestoreAfterColdOpen() {
     .run('resource-parent', 'resource-owner');
   for (const reference of references) persistNodeResourceReference('resource-owner', reference);
   saveJsonSetting('resource_restore_preference', { enabled: true });
+  saveJsonSetting('system_entry_display_names', { inbox: 'Saved Inbox' });
   const before = loadWorkspaceSnapshot({ includeBody: true });
   const backup = await createApplicationDatabaseBackup();
   openDatabaseConnection().sqlite.prepare("UPDATE nodes SET resource_references = '[]', parent_id = NULL WHERE id = ?")
     .run('resource-owner');
   seedNode('resource-owner', '# After backup', 1);
   saveJsonSetting('resource_restore_preference', { enabled: false });
+  saveJsonSetting('system_entry_display_names', { inbox: 'Changed Inbox' });
   await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
   for (let reopen = 0; reopen < 2; reopen++) {
     expect(loadWorkspaceSnapshot({ includeBody: true })).toEqual(before);
     expect(loadWorkspaceSnapshot({ includeBody: true })?.nodesById['resource-owner']?.resourceReferences).toEqual(references);
-    expect(loadJsonSetting('resource_restore_preference')).toEqual({ enabled: true });
+    // Unknown keys are host settings: preserve this device while restoring user-space settings.
+    expect(loadJsonSetting('resource_restore_preference')).toEqual({ enabled: false });
+    expect(loadJsonSetting('system_entry_display_names')).toEqual({ inbox: 'Saved Inbox' });
     expect(openDatabaseConnection().sqlite.pragma('integrity_check', { simple: true })).toBe('ok');
     expect(openDatabaseConnection().sqlite.pragma('foreign_key_check')).toEqual([]);
     closeDatabaseConnection();

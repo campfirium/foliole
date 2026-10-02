@@ -1,3 +1,4 @@
+import type { BackupRestoreSyncChoice } from '../../../lib/platform/backupRestoreSyncContract';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 import type {
   NativeBackupSettings,
@@ -69,12 +70,12 @@ export async function createDatabaseBackupInRuntime(): Promise<unknown | null> {
   return runtimeInvoke(NATIVE_COMMANDS.backupSqliteDatabase, {});
 }
 
-export async function restoreDatabaseBackupInRuntime(sourcePath: string): Promise<unknown | null> {
+export async function restoreDatabaseBackupInRuntime(sourcePath: string, choice?: BackupRestoreSyncChoice): Promise<unknown | null> {
   const runtimeInvoke = getRuntimeInvoke();
   if (!runtimeInvoke) {
     return null;
   }
-  return runtimeInvoke(NATIVE_COMMANDS.restoreSqliteDatabase, { sourcePath });
+  return runtimeInvoke(NATIVE_COMMANDS.restoreSqliteDatabase, { sourcePath, ...(choice ? { choice } : {}) });
 }
 
 export async function loadDatabaseSpaceStatusFromRuntime(): Promise<unknown | null> {
@@ -125,4 +126,10 @@ export async function resetSourceDispositionsInRuntime(): Promise<unknown | null
     return null;
   }
   return runtimeInvoke(NATIVE_COMMANDS.resetSourceDispositions);
+}
+
+export async function inspectBackupRestoreSyncInRuntime(sourcePath: string) {
+  const invoke = getRuntimeInvoke();
+  if (!invoke) throw new Error('backup_restore_runtime_unavailable');
+  return invoke(NATIVE_COMMANDS.inspectBackupRestoreSync, { sourcePath });
 }

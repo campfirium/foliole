@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { DesktopSyncGroupOverviewPayload } from '../../../lib/platform/nativeCompanionSyncContract';
 import { STOPPED_SYNC_GROUP_DISCOVERY } from '../../../lib/platform/syncGroupDiscoveryContract';
+import { useTranslation } from '../localization/LocalizationProvider';
 
 import {
   disableDesktopCompanionSync,
   enableDesktopCompanionSync,
-  pauseDesktopCompanionSync,
-  resumeDesktopCompanionSync
+  pauseDesktopCompanionSync
 } from './desktop/companionSyncParticipationRuntime';
+import { resumeSyncWithBackupRestoreConfirmation } from './desktop/confirmBackupRestoreSync';
 import { useSyncGroupDeviceActions } from './desktop/useSyncGroupDeviceActions';
 import { useDesktopSyncGroupJoinActions } from './desktop/useSyncGroupJoinActions';
 import {
@@ -96,10 +97,11 @@ function useToggleCompanionPauseAction(
   setIsLoading: (value: boolean) => void,
   setPendingActionId: (value: string | null) => void
 ) {
+  const t = useTranslation();
   return useCallback(async (paused: boolean) => {
     setPendingActionId(paused ? 'pause-sync' : 'resume-sync');
     try {
-      const nextOverview = paused ? await pauseDesktopCompanionSync() : await resumeDesktopCompanionSync();
+      const nextOverview = paused ? await pauseDesktopCompanionSync() : await resumeSyncWithBackupRestoreConfirmation(t);
       setOverview(nextOverview);
       setError(null);
       return nextOverview;
@@ -110,7 +112,7 @@ function useToggleCompanionPauseAction(
       setPendingActionId(null);
       setIsLoading(false);
     }
-  }, [setError, setIsLoading, setOverview, setPendingActionId]);
+  }, [t, setError, setIsLoading, setOverview, setPendingActionId]);
 }
 
 function useCreateSyncGroupAction(

@@ -22,6 +22,7 @@ import type { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp
 import { fetchDesktopSyncGroupPackBody } from './desktopSyncGroupPackDownload.js';
 import { assertPackRound } from './desktopSyncGroupPackRound.js';
 import { applyDesktopRestorePage } from './desktopSyncGroupRestoreApply.js';
+import { preserveDesktopGroupRestore } from './preserveDesktopGroupRestore.js';
 import { extractSyncPackDatabaseFromFile } from './syncPackContainerReader.js';
 import { decryptDesktopWorkgroupResponseFile } from './workgroupAeadFileNode.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
@@ -177,6 +178,7 @@ export async function applyDesktopSyncGroupPack(
         recordVersionReceipt: true,
         onSettingApplied: materializeDesktopSettingRecord
       });
+      await preserveDesktopGroupRestore(args.peer.group_id, args.restoreId, manifest);
       const outcome = args.restoreId && !manifest.dependencyPage ? await applyDesktopRestorePage({
         after: args.after, apply, frontierStateSeq: manifest.frontierStateSeq,
         groupId: args.peer.group_id, peerId: args.peer.peer_device_id,

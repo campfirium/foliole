@@ -16,6 +16,7 @@ vi.mock('../../lib/platform/syncGroupContract.js', () => ({
   resolveLocalSyncGroupDevice: () => ({ device_identity_key: 'device-local' })
 }));
 vi.mock('../appVersion.js', () => ({ resolveFolioleAppVersion: () => '0.7.14' }));
+vi.mock('../database/backupRestorePendingSync.js', () => ({ loadBackupRestorePendingSync: () => null }));
 vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: vi.fn(),
   runWithDatabaseConnectionOwner: (execute: () => unknown) => execute()

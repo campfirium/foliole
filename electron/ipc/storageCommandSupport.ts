@@ -1,17 +1,20 @@
 import type { WebContents } from 'electron';
 
+import { parseBackupRestoreSyncChoice } from '../../lib/platform/backupRestoreSyncContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import {
   createApplicationDatabaseBackup,
   listApplicationDatabaseBackups,
   restoreApplicationDatabaseBackup
 } from '../database/backupRestore.js';
+import { inspectBackupRestoreSync } from '../database/backupRestoreSyncPreview.js';
 import { loadBackupRetentionStatus } from '../database/backupRetentionStatus.js';
 import { loadBackupSettings } from '../database/backupSettings.js';
 import {
   compactApplicationDatabase,
   loadApplicationDatabaseSpaceStatus
 } from '../database/databaseCompaction.js';
+import { reconcileBackupRestoreSyncRuntime } from '../sync/backupRestoreSyncRuntime.js';
 
 import {
   cancelBackupSearchSession,
@@ -66,9 +69,16 @@ export function handleSqliteMaintenanceCommand(
       ...(destinationPath === null ? {} : { destinationPath })
     });
   }
+  if (command === NATIVE_COMMANDS.inspectBackupRestoreSync) {
+    return inspectBackupRestoreSync(asString(args.sourcePath, 'sourcePath'));
+  }
   if (command === NATIVE_COMMANDS.restoreSqliteDatabase) {
     return restoreApplicationDatabaseBackup({
-      sourcePath: asString(args.sourcePath, 'sourcePath')
+      sourcePath: asString(args.sourcePath, 'sourcePath'),
+      ...(args.choice === undefined ? {} : { choice: parseBackupRestoreSyncChoice(args.choice) })
+    }).then(async (result) => {
+      await reconcileBackupRestoreSyncRuntime();
+      return result;
     });
   }
   if (command === NATIVE_COMMANDS.compactSqliteDatabase) {

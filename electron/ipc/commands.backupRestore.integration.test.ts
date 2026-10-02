@@ -25,6 +25,7 @@ vi.mock('../database/databaseReadiness.js', () => ({ waitForDatabaseReady: vi.fn
 vi.mock('./menu.js', () => ({ syncAppMenuState: vi.fn() }));
 vi.mock('./boot.js', () => ({ appendBootEvent: vi.fn(), bootReport: vi.fn() }));
 
+import type { BackupRestoreSyncPreview } from '../../lib/platform/backupRestoreSyncContract.js';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { createApplicationDatabaseBackup } from '../database/backupRestore.js';
 import { closeDatabaseConnection } from '../database/connection.js';
@@ -109,3 +110,23 @@ function seedNode(content: string) {
     createdAt: '2026-03-14T10:00:00.000Z', updatedAt: new Date().toISOString()
   });
 }
+
+it('validates the restore choice before changing the library and accepts the inspected local choice', async () => {
+  const backup = await createApplicationDatabaseBackup();
+  seedNode('# current');
+  const preview = await handleInvokeRequest({ command: NATIVE_COMMANDS.inspectBackupRestoreSync,
+    args: { sourcePath: backup.destinationPath } }) as BackupRestoreSyncPreview;
+  expect(preview.current.group).toBeNull();
+  expect(preview.backup.group).toBeNull();
+  for (const choice of [[], { source: 'other', action: 'local', revision: preview.revision },
+    { source: 'current', action: 'pause', revision: preview.revision },
+    { source: 'current', action: 'local', revision: '0'.repeat(64) }]) {
+    await expect(handleInvokeRequest({ command: NATIVE_COMMANDS.restoreSqliteDatabase,
+      args: { sourcePath: backup.destinationPath, choice } })).rejects.toThrow();
+    expect(currentContent()).toBe('# current');
+  }
+  await handleInvokeRequest({ command: NATIVE_COMMANDS.restoreSqliteDatabase,
+    args: { sourcePath: backup.destinationPath,
+      choice: { source: 'current', action: 'local', revision: preview.revision } } });
+  expect(currentContent()).toBe('# backup');
+});

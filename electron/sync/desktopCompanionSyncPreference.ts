@@ -1,6 +1,8 @@
 import { createSyncParticipationSnapshot } from '../../lib/platform/syncParticipationContract.js';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
+import { loadBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
 import { loadJsonSetting, saveJsonSetting } from '../database/settingsStore.js';
+
 
 const APP_SETTINGS_KEY = 'app_settings';
 
@@ -24,7 +26,8 @@ export function isDesktopCompanionSyncEnabled() {
 }
 
 export function isDesktopCompanionSyncPaused() {
-  return loadAppSettingsRecord()[APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncPaused] === 'true';
+  return Boolean(loadBackupRestorePendingSync()) ||
+    loadAppSettingsRecord()[APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncPaused] === 'true';
 }
 
 export function loadDesktopCompanionSyncParticipation() {

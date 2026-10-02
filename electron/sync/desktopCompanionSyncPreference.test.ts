@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
+vi.mock('../database/backupRestorePendingSync.js', () => ({ loadBackupRestorePendingSync: () => null }));
 
 import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
 

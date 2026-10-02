@@ -2,13 +2,17 @@ import { randomUUID } from 'node:crypto';
 
 import type { DatabaseBindValue, DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import type { SyncGroupRestoreEvent } from '../../lib/platform/syncGroupRestoreContract.js';
+import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
+
+import { saveBackupRestorePendingSync } from './backupRestorePendingSync.js';
+import { writeJsonSetting } from './settingsStore.js';
 
 const GROUP_TABLES = [
   'sync_group_devices', 'sync_group_removal_decisions',
   'sync_group_removal_confirmations', 'sync_group_restore_events'
 ] as const;
 
-type GroupSnapshot = {
+export type GroupSnapshot = {
   group: DatabaseRow;
   local: DatabaseRow;
   hostSettings: DatabaseRow[];
@@ -18,6 +22,9 @@ type GroupSnapshot = {
 };
 
 export function captureCurrentSyncGroupForBackupRestore(driver: DatabaseDriver): GroupSnapshot | null {
+  if (!driver.queryOne("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'sync_group_local_state'")) {
+    return null;
+  }
   const local = driver.queryOne<DatabaseRow>(`SELECT * FROM sync_group_local_state
     WHERE singleton_id = 1 AND state = 'active'`);
   if (!local) return null;
@@ -27,18 +34,22 @@ export function captureCurrentSyncGroupForBackupRestore(driver: DatabaseDriver):
   const rows = Object.fromEntries(GROUP_TABLES.map((table) => [table,
     driver.queryAll<DatabaseRow>(`SELECT * FROM ${table} WHERE group_id = ?`, [groupId])
   ])) as GroupSnapshot['rows'];
+  return { group, local, rows, ...captureBackupRestoreHostSettings(driver) };
+}
+
+export function captureBackupRestoreHostSettings(driver: DatabaseDriver) {
   const hostSettings = driver.queryAll<DatabaseRow>("SELECT * FROM setting_records WHERE scope = 'host'");
   const materializedHostSettings = driver.queryAll<DatabaseRow>(`SELECT * FROM settings
     WHERE key IN (SELECT key FROM setting_records WHERE scope = 'host')
       OR key IN ('host_name', 'device_id', 'desktop_device_id')`);
   const hostObjectStates = driver.queryAll<DatabaseRow>(
     "SELECT * FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE 'host:%'");
-  return { group, local, rows, hostSettings, materializedHostSettings, hostObjectStates };
+  return { hostSettings, materializedHostSettings, hostObjectStates };
 }
 
 export function finishSyncGroupBackupRestore(
   driver: DatabaseDriver, snapshot: GroupSnapshot | null,
-  restoredAt = new Date().toISOString()
+  restoredAt = new Date().toISOString(), mode: 'overwrite' | 'pause' = 'overwrite'
 ): SyncGroupRestoreEvent | null {
   if (!snapshot) return null;
   const event = {
@@ -62,22 +73,14 @@ export function finishSyncGroupBackupRestore(
       for (const row of snapshot.rows[table]) insertRow(tx, table, row);
     }
     insertRow(tx, 'sync_group_local_state', snapshot.local);
-    tx.execute("DELETE FROM settings WHERE key IN (SELECT key FROM setting_records WHERE scope = 'host')");
-    tx.execute("DELETE FROM setting_records WHERE scope = 'host'");
-    for (const row of snapshot.hostSettings) insertRow(tx, 'setting_records', row);
-    for (const row of snapshot.materializedHostSettings) {
-      tx.execute('DELETE FROM settings WHERE key = ?', [row.key as string]);
-      insertRow(tx, 'settings', row);
-    }
-    tx.execute("DELETE FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE 'host:%'");
-    for (const row of snapshot.hostObjectStates) insertRow(tx, 'sync_object_state', row);
+    applyBackupRestoreHostSettings(tx, snapshot);
     resetSyncGeneration(tx, event.restore_id);
-    tx.execute(`INSERT INTO sync_group_restore_events
-      (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)`, [event.restore_id, event.group_id,
-      event.restored_at, event.source_device_identity_key, restoredAt, restoredAt]);
+    saveBackupRestorePendingSync(tx, mode === 'pause' ? { groupId: event.group_id,
+      restoreId: event.restore_id, restoredAt } : null);
+    writeRestoreSyncParticipation(tx, mode === 'pause', true);
+    if (mode === 'overwrite') publishBackupRestoreEvent(tx, event);
   });
-  return event;
+  return mode === 'overwrite' ? event : null;
 }
 
 function insertRow(driver: DatabaseDriver, table: string, row: DatabaseRow) {
@@ -86,7 +89,7 @@ function insertRow(driver: DatabaseDriver, table: string, row: DatabaseRow) {
     columns.map((column) => row[column] as DatabaseBindValue));
 }
 
-function resetSyncGeneration(driver: DatabaseDriver, restoreId: string) {
+export function resetSyncGeneration(driver: DatabaseDriver, restoreId: string) {
   for (const table of [
     'node_version_outbound_payload_holds', 'node_version_outbound_holds',
     'node_version_local_holds', 'node_version_pack_receipts',
@@ -99,4 +102,32 @@ function resetSyncGeneration(driver: DatabaseDriver, restoreId: string) {
   driver.execute(`UPDATE node_version_local_proof_state
     SET library_epoch = ?, proof_revision = 0 WHERE singleton_id = 1`, [restoreId]);
   driver.execute('UPDATE sync_state_sequence SET source_epoch = ? WHERE singleton_id = 1', [restoreId]);
+}
+
+export function writeRestoreSyncParticipation(driver: DatabaseDriver, paused: boolean, enabled: boolean) {
+  const row = driver.queryOne<{ value: string }>("SELECT value FROM settings WHERE key = 'app_settings'");
+  const settings = row ? JSON.parse(row.value) as Record<string, string> : {};
+  settings[APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncPaused] = String(paused);
+  settings[APP_SETTINGS_STORAGE_KEYS.desktopDeviceSyncEnabled] = String(enabled);
+  writeJsonSetting(driver, 'app_settings', settings);
+}
+
+export function publishBackupRestoreEvent(driver: DatabaseDriver, event: SyncGroupRestoreEvent) {
+  resetSyncGeneration(driver, event.restore_id);
+  driver.execute(`INSERT INTO sync_group_restore_events
+    (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)`, [event.restore_id, event.group_id,
+    event.restored_at, event.source_device_identity_key, event.restored_at, event.restored_at]);
+}
+
+export function applyBackupRestoreHostSettings(tx: DatabaseDriver, snapshot: ReturnType<typeof captureBackupRestoreHostSettings>) {
+  tx.execute("DELETE FROM settings WHERE key IN (SELECT key FROM setting_records WHERE scope = 'host')");
+  tx.execute("DELETE FROM setting_records WHERE scope = 'host'");
+  for (const row of snapshot.hostSettings) insertRow(tx, 'setting_records', row);
+  for (const row of snapshot.materializedHostSettings) {
+    tx.execute('DELETE FROM settings WHERE key = ?', [row.key as string]);
+    insertRow(tx, 'settings', row);
+  }
+  tx.execute("DELETE FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE 'host:%'");
+  for (const row of snapshot.hostObjectStates) insertRow(tx, 'sync_object_state', row);
 }

@@ -1,3 +1,4 @@
+vi.mock('../../model/backupRestoreSyncChoice', () => ({ chooseBackupRestoreSync: vi.fn(async () => ({ source: 'current', action: 'local', revision: 'a'.repeat(64) })) }));
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -72,7 +73,7 @@ it('rebuilds the renderer session after a successful restore', async () => {
 
   fireEvent.click(restoreButton);
 
-  await waitFor(() => expect(restoreDatabaseBackup).toHaveBeenCalledWith(defaultBackups[0]?.filePath));
+  await waitFor(() => expect(restoreDatabaseBackup).toHaveBeenCalledWith(defaultBackups[0]?.filePath, expect.objectContaining({ source: 'current', action: 'local' })));
   await waitFor(() => expect(completeWorkspaceRestoreSession).toHaveBeenCalledWith(initialBackup.fileName));
   expect(cancelWorkspaceRestoreSession).not.toHaveBeenCalled();
   expect(listDatabaseBackups).toHaveBeenCalledTimes(1);

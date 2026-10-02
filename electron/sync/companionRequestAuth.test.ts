@@ -13,6 +13,8 @@ const workgroup = vi.hoisted(() => ({
   consumeDesktopWorkgroupNonce: vi.fn(() => true),
   loadDesktopWorkgroupKey: vi.fn((): { group_key: string } | null => ({ group_key: 'group-secret' }))
 }));
+const pending = vi.hoisted(() => ({ value: null as { restoreId: string } | null }));
+vi.mock('../database/backupRestorePendingSync.js', () => ({ loadBackupRestorePendingSync: () => pending.value }));
 const membership = vi.hoisted(() => ({ blocked: vi.fn(() => false) }));
 const readiness = vi.hoisted(() => ({ ready: vi.fn(() => false),
   mode: vi.fn((): 'normal' | 'restore' | null => null) }));
@@ -36,6 +38,7 @@ const TIMESTAMP = new Date(NOW_MS).toISOString();
 const PATH = '/companion/workspace-version';
 
 afterEach(() => {
+  pending.value = null;
   clearCompanionRequestNonceCache();
   vi.clearAllMocks();
   group.devices = [
@@ -70,6 +73,12 @@ function request(deviceId: string, nonce: string, secret = 'group-secret', path 
 }
 
 describe('Sync Group request authentication', () => {
+  it('rejects all inbound sync while a backup overwrite awaits confirmation', () => {
+    pending.value = { restoreId: 'restore-pending' };
+    expect(authenticateCompanionRequest({ nowMs: NOW_MS, request: request('device-a', 'pending') }))
+      .toEqual({ error: 'backup_restore_sync_confirmation_required', ok: false, status_code: 409 });
+    expect(workgroup.consumeDesktopWorkgroupNonce).not.toHaveBeenCalled();
+  });
   it('rejects the retired authorization header', () => {
     const legacy = request('device-a', 'legacy');
     delete legacy.headers['x-device-id'];

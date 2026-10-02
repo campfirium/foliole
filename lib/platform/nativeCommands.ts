@@ -208,6 +208,7 @@ export const NATIVE_COMMANDS = {
   listSqliteBackups: 'list_sqlite_backups',
   backupSqliteDatabase: 'backup_sqlite_database',
   restoreSqliteDatabase: 'restore_sqlite_database',
+  inspectBackupRestoreSync: 'inspect_backup_restore_sync',
   compactSqliteDatabase: 'compact_sqlite_database',
   loadSourceDispositionSummary: 'load_source_disposition_summary',
   exportSourceDispositions: 'export_source_dispositions',

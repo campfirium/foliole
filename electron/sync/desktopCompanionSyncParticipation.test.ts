@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from 'vitest';
+vi.mock('../database/backupRestorePendingSync.js', () => ({ loadBackupRestorePendingSync: () => null }));
+vi.mock('../database/connection.js', () => ({ openDatabaseConnection: () => ({ driver: {} }) }));
 
 const runtime = vi.hoisted(() => ({
   enabled: true,

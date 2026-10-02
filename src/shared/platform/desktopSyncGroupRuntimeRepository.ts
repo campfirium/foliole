@@ -47,6 +47,7 @@ function normalizeOverview(value: unknown): DesktopSyncGroupOverviewPayload {
     sync_group: normalizeSyncGroup(raw.sync_group),
     sync_enabled: raw.sync_enabled === true,
     sync_paused: raw.sync_paused === true,
+    pending_backup_restore: typeof raw.pending_backup_restore === 'string' ? raw.pending_backup_restore : null,
     participating: raw.participating === true,
     removing_device_ids: Array.isArray(raw.removing_device_ids)
       ? raw.removing_device_ids.filter((item): item is string => typeof item === 'string') : []

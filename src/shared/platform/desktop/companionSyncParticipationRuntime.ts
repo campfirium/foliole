@@ -13,6 +13,7 @@ export function pauseDesktopCompanionSync() {
   return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.pauseCompanionSync);
 }
 
-export function resumeDesktopCompanionSync() {
-  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.resumeCompanionSync);
+export function resumeDesktopCompanionSync(confirmedRestoreId?: string) {
+  return invokeDesktopSyncGroupCommand(NATIVE_COMMANDS.resumeCompanionSync,
+    confirmedRestoreId ? { confirmed_restore_id: confirmedRestoreId } : undefined);
 }

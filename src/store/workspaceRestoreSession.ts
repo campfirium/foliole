@@ -43,6 +43,10 @@ async function flushRegisteredWorkspaceWrites() {
   return !hasPendingWorkspaceWrites();
 }
 
+export function isWorkspaceRestoreSessionActive() {
+  return restoreSessionActive;
+}
+
 export async function beginWorkspaceRestoreSession() {
   if (restoreSessionActive) return false;
   restoreSessionActive = true;

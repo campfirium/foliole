@@ -1,3 +1,6 @@
+import { loadBackupRestorePendingSync, saveBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
+import { openDatabaseConnection } from '../database/connection.js';
+import { publishBackupRestoreEvent, writeRestoreSyncParticipation } from '../database/syncGroupBackupRestore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import {
@@ -45,12 +48,25 @@ export function pauseDesktopCompanionSync() {
   return stopLanWorkspaceSyncServer();
 }
 
-export function resumeDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity) {
-  setDesktopCompanionSyncPaused(false);
+export function resumeDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity, confirmedRestoreId?: string) {
+  const driver = openDatabaseConnection().driver;
+  const pending = loadBackupRestorePendingSync(driver);
+  if (pending) {
+    const group = loadDesktopSyncGroup();
+    if (confirmedRestoreId !== pending.restoreId) throw new Error('backup_restore_sync_confirmation_required');
+    if (!group || group.group_id !== pending.groupId) throw new Error('backup_restore_sync_group_changed');
+    driver.transaction((tx) => {
+      publishBackupRestoreEvent(tx, { group_id: pending.groupId, restore_id: pending.restoreId,
+        restored_at: new Date().toISOString(), source_device_identity_key: group.local_device_identity_key });
+      saveBackupRestorePendingSync(tx, null);
+      writeRestoreSyncParticipation(tx, false, true);
+    });
+  } else setDesktopCompanionSyncPaused(false);
   return reconcileDesktopCompanionSyncRuntime(identity);
 }
 
 export function activateDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity) {
+  if (loadBackupRestorePendingSync()) throw new Error('backup_restore_sync_confirmation_required');
   setDesktopCompanionSyncEnabled(true);
   setDesktopCompanionSyncPaused(false);
   return ensureLanWorkspaceSyncServer(identity);

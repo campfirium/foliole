@@ -1,3 +1,4 @@
+import type { BackupRestoreSyncChoice } from '../../../../lib/platform/backupRestoreSyncContract';
 import {
   createDatabaseBackupInRuntime,
   hasSettingsRuntimeRepository,
@@ -214,12 +215,12 @@ export async function createDatabaseBackup(): Promise<DatabaseBackupActionResult
   }
 }
 
-export async function restoreDatabaseBackup(sourcePath: string): Promise<DatabaseRestoreActionResult | null> {
+export async function restoreDatabaseBackup(sourcePath: string, choice?: BackupRestoreSyncChoice): Promise<DatabaseRestoreActionResult | null> {
   if (!hasSettingsRuntimeRepository()) {
     return null;
   }
   try {
-    const result = normalizeSqliteRestoreResult(await restoreDatabaseBackupInRuntime(sourcePath));
+    const result = normalizeSqliteRestoreResult(await restoreDatabaseBackupInRuntime(sourcePath, choice));
     if (!result) {
       return { ok: false, errorMessage: readDatabaseRestoreFailureMessage('invalid payload') };
     }

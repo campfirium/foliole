@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
+import { inspectBackupRestoreSync } from './backupRestoreSyncPreview.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
@@ -66,7 +67,9 @@ it('restores an older backup and keeps the current workgroup connection with an 
     vi.setSystemTime(new Date('2026-09-30T00:01:00.000Z'));
     return resume;
   });
-  const result = await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath });
+  const preview = await inspectBackupRestoreSync(backup.destinationPath);
+  const result = await restoreApplicationDatabaseBackup({ sourcePath: backup.destinationPath,
+    choice: { source: 'current', action: 'overwrite', revision: preview.revision } });
   const after = loadDesktopSyncGroup();
   const driver = openDatabaseConnection().driver;
   const event = driver.queryOne<{ restore_id: string; applied_at: string | null }>(

@@ -1,6 +1,7 @@
 import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 
+import type { BackupRestoreSyncChoice } from '../../lib/platform/backupRestoreSyncContract.js';
 import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 import { clearDesktopSyncGroupMemberStateReadiness } from '../sync/desktopSyncGroupMemberStateReadiness.js';
@@ -50,6 +51,7 @@ export type ApplicationDatabaseBackupResult = SqliteBackupResult & {
 };
 
 export interface RestoreApplicationDatabaseBackupOptions {
+  choice?: BackupRestoreSyncChoice;
   sourcePath: string;
 }
 
@@ -190,7 +192,7 @@ export async function restoreApplicationDatabaseBackup(
   try {
     resumeLibraryTasks = await desktopTaskScheduler.pauseResource('library');
     const result = await runWithDatabaseConnectionMaintenance(() =>
-      restoreDatabaseBackupInMaintenance(options.sourcePath, restoredAt));
+      restoreDatabaseBackupInMaintenance(options.sourcePath, restoredAt, options.choice));
     clearDesktopSyncGroupMemberStateReadiness();
     completed = true;
     return result;

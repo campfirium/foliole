@@ -116,6 +116,7 @@ export interface DesktopSyncGroupJoinRequestPayload {
 }
 
 export interface DesktopSyncGroupOverviewPayload {
+  pending_backup_restore?: string | null;
   discovery_error: 'permission_required' | 'unavailable' | null;
   host_platform: string | null;
   watched_folder_conflicts?: import('./watchedFolderConflictContract.js').WatchedFolderConflict[];

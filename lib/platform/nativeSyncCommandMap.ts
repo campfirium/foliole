@@ -108,7 +108,7 @@ export type NativeSyncCommandMap = {
     result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.resumeCompanionSync]: {
-    args: undefined;
+    args: { confirmed_restore_id?: string } | undefined;
     result: DesktopSyncGroupOverviewPayload;
   };
   [NATIVE_COMMANDS.syncCompanionNow]: {

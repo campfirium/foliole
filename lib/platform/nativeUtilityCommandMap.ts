@@ -1,4 +1,5 @@
 import type { AttachmentMaintenanceRequest, AttachmentMaintenanceStatus } from './attachmentMaintenanceContract.js';
+import type { BackupRestoreSyncChoice, BackupRestoreSyncPreview } from './backupRestoreSyncContract.js';
 import { NATIVE_COMMANDS } from './nativeCommands.js';
 import type { NativeDatabaseCompactionResult, NativeDatabaseSpaceStatus } from './nativeDatabaseCompactionContract.js';
 import type { NativeDatabaseMaintenanceStatus } from './nativeDatabaseMaintenanceContract.js';
@@ -189,8 +190,9 @@ export type NativeUtilityCommandMap = {
     args: { destinationPath?: string };
     result: NativeSqliteBackupResult;
   };
+  [NATIVE_COMMANDS.inspectBackupRestoreSync]: { args: { sourcePath: string }; result: BackupRestoreSyncPreview };
   [NATIVE_COMMANDS.restoreSqliteDatabase]: {
-    args: { sourcePath: string };
+    args: { sourcePath: string; choice?: BackupRestoreSyncChoice };
     result: NativeSqliteRestoreResult;
   };
   [NATIVE_COMMANDS.compactSqliteDatabase]: {

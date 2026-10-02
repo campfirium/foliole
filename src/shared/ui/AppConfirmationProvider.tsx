@@ -2,6 +2,7 @@ import { createContext, useCallback, useEffect, useMemo, useState, type ReactNod
 
 import { useTranslation } from '../localization/LocalizationProvider';
 
+import { AppChoiceDialog } from './AppChoiceDialog';
 import {
   type AppConfirmationOptions,
   type AppTextInputOptions,
@@ -82,6 +83,7 @@ export function AppConfirmationProvider({ children }: { children: ReactNode }) {
   return (
     <AppConfirmationContext.Provider value={contextValue}>
       {children}
+      <AppChoiceDialog />
       <ActiveAppDialog
         activeDialog={activeDialog}
         description={description}

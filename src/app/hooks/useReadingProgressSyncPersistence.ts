@@ -5,6 +5,7 @@ import {
   hasWorkspaceRuntimeRepository,
   saveWorkspaceReadingProgressNow
 } from '../../shared/platform/workspaceRuntimeRepository';
+import { isWorkspaceRestoreSessionActive } from '../../store/workspaceRestoreSession';
 import { syncReadingProgressToRuntime } from '../../store/workspaceRuntimeSync';
 import type { NodeViewState } from '../../store/workspaceStore';
 
@@ -40,6 +41,7 @@ export function flushReadingProgressToRuntime(args: {
   lastSyncedSignatureRef: MutableRefObject<string | null>;
   persistence: ReadingProgressPersistenceArgs;
 }) {
+  if (isWorkspaceRestoreSessionActive()) return;
   if (args.persistence.getReadingPositionSyncState?.()) {
     pushDebugTrace('reading-progress.flush-runtime-skipped', {
       activeNodeId: args.activeNodeIdOverride ?? null,

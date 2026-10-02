@@ -1,5 +1,5 @@
 import type { SyncGroupDevicePayload } from '../../../../../lib/platform/syncGroupContract';
-import { useTranslation } from '../../../../shared/localization/LocalizationProvider';
+import { useTranslation, type Translate } from '../../../../shared/localization/LocalizationProvider';
 import { useDesktopSyncGroup } from '../../../../shared/platform/useDesktopSyncGroup';
 import {
   SETTINGS_AUTO_CONTROL_WIDTH_CLASS_NAME,
@@ -88,9 +88,7 @@ export function SettingsCompanionSyncSection() {
   const protocolNotice = useSyncProtocolIncompatibleNotice(
     state.discovery.error_code === 'protocol_incompatible' || isSyncProtocolIncompatibleError(state.error)
   );
-  const syncError = state.overview.server_status.last_error
-    ? t('settings.companionSync.error.open', { error: state.overview.server_status.last_error })
-    : undefined;
+  const syncError = localizeSyncError(state.overview.server_status.last_error, t);
   const group = state.overview.sync_group;
   const groupName = group ? t('settings.companionSync.group.named', { name: group.display_name }) : '';
   const { confirmLeave, confirmRemove } = useSyncGroupConfirmationActions(state, groupName);
@@ -105,6 +103,7 @@ export function SettingsCompanionSyncSection() {
         enabled={state.overview.sync_enabled}
         onToggle={() => void (state.overview.sync_enabled ? state.disableSync() : state.enableSync())}
       />
+      <PendingBackupRestoreNotice pending={Boolean(state.overview.pending_backup_restore)} />
       <SyncNowRow
         disabled={!group || !state.isDesktopRuntime || state.pendingActionId !== null || state.isLoading}
         onSync={() => { protocolNotice.retry(); void state.syncNow(); }}
@@ -141,4 +140,14 @@ export function SettingsCompanionSyncSection() {
       ) : null}
     </SettingsSection>
   );
+}
+
+function PendingBackupRestoreNotice({ pending }: { pending: boolean }) {
+  const t = useTranslation();
+  return pending ? <SettingsRow title={t('settings.backups.restore.sync.pendingTitle')}
+    description={t('settings.backups.restore.sync.pendingDescription')} /> : null;
+}
+
+function localizeSyncError(error: string | null | undefined, t: Translate) {
+  return error ? t('settings.companionSync.error.open', { error }) : undefined;
 }

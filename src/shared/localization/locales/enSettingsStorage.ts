@@ -1,4 +1,6 @@
+import { EN_BACKUP_RESTORE_SYNC_TRANSLATIONS } from './enBackupRestoreSync';
 export const EN_SETTINGS_STORAGE_TRANSLATIONS = {
+  ...EN_BACKUP_RESTORE_SYNC_TRANSLATIONS,
   'settings.attachments.title': "Local attachments",
   'settings.attachments.error': "Could not finish the attachment operation. Please try again.",
   'settings.attachments.used': "Total storage used",

@@ -7,6 +7,7 @@ import {
   cancelWorkspaceRestoreSession,
   completeWorkspaceRestoreSession
 } from '../../../../store/workspaceRestoreSession';
+import { chooseBackupRestoreSync } from '../../model/backupRestoreSyncChoice';
 import type { DatabaseBackupEntry } from '../../model/databaseBackups';
 import type { DatabaseBackupSettings } from '../../model/databaseBackupSettings';
 import { localizeDatabaseRestoreFailure } from '../../model/databaseRestoreNotice';
@@ -134,6 +135,10 @@ function reportRestoreFailure(message: string, args: BackupActionHandlerArgs, t:
 }
 
 async function restoreWorkspaceBackup(entry: DatabaseBackupEntry, args: BackupActionHandlerArgs, t: Translate) {
+  let choice;
+  try { choice = await chooseBackupRestoreSync(entry.filePath, t); }
+  catch { reportRestoreFailure(t('settings.backups.restore.failure.unchanged'), args, t); return; }
+  if (!choice) return;
   if (!await beginWorkspaceRestoreSession()) {
     reportRestoreFailure(t('settings.backups.restore.failure.pendingChanges'), args, t);
     return;
@@ -143,7 +148,7 @@ async function restoreWorkspaceBackup(entry: DatabaseBackupEntry, args: BackupAc
     else args.setStatusMessage('');
   }, async (fileName) => {
     completeWorkspaceRestoreSession(fileName);
-  }, cancelWorkspaceRestoreSession);
+  }, cancelWorkspaceRestoreSession, choice);
 }
 
 export function useBackupActionHandlers(args: BackupActionHandlerArgs) {

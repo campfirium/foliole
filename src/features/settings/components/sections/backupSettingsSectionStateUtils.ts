@@ -1,3 +1,4 @@
+import type { BackupRestoreSyncChoice } from '../../../../../lib/platform/backupRestoreSyncContract';
 import type { RuntimeSourceDispositionSummary } from '../../../../shared/platform/settingsRuntimeRepository';
 import {
   createDatabaseBackup,
@@ -117,11 +118,12 @@ export async function runRestoreBackup(
   setRestoringPath: (value: string) => void,
   setStatusMessage: (value: string) => void,
   onRestored: (fileName: string) => Promise<void>,
-  onFailed: () => void = () => undefined
+  onFailed: () => void = () => undefined,
+  choice?: BackupRestoreSyncChoice
 ) {
   setStatusMessage('');
   setRestoringPath(entry.filePath);
-  const result = await restoreDatabaseBackup(entry.filePath);
+  const result = await restoreDatabaseBackup(entry.filePath, choice);
   if (!result) {
     onFailed();
     setStatusMessage('Backup restore failed: Desktop runtime unavailable.');

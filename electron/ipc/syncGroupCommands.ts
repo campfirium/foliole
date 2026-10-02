@@ -3,6 +3,7 @@ import { app } from 'electron';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContract.js';
 import { resolveFolioleAppVersion } from '../appVersion.js';
+import { loadBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import {
   initiateDesktopSyncGroupDeviceRemoval,
@@ -95,6 +96,7 @@ function overview() {
     join_requests: loadDesktopSyncGroupJoinProvider()?.pending() ?? [],
     server_status: getLanWorkspaceSyncServerStatus(),
     sync_group: group,
+    pending_backup_restore: loadBackupRestorePendingSync()?.restoreId ?? null,
     removing_device_ids: group ? loadPendingDesktopSyncGroupRemovalDeviceIds(group.group_id) : [],
     ...loadDesktopCompanionSyncParticipation()
   };
@@ -196,7 +198,8 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
   if (command === NATIVE_COMMANDS.enableCompanionSync) await enableDesktopCompanionSync(runtimeIdentity());
   else if (command === NATIVE_COMMANDS.disableCompanionSync) await disableDesktopCompanionSync();
   else if (command === NATIVE_COMMANDS.pauseCompanionSync) await pauseDesktopCompanionSync();
-  else if (command === NATIVE_COMMANDS.resumeCompanionSync) await resumeDesktopCompanionSync(runtimeIdentity());
+  else if (command === NATIVE_COMMANDS.resumeCompanionSync) await resumeDesktopCompanionSync(runtimeIdentity(),
+      typeof args.confirmed_restore_id === 'string' ? args.confirmed_restore_id : undefined);
   else if (command === NATIVE_COMMANDS.syncCompanionNow) {
     await runDesktopManualSyncWithDiscovery();
     return runWithDatabaseConnectionOwner(() => overview());

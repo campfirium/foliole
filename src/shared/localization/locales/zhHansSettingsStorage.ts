@@ -1,6 +1,9 @@
 import type { TranslationKey } from '../translations';
 
+import { ZH_HANS_BACKUP_RESTORE_SYNC_TRANSLATIONS } from './zhHansBackupRestoreSync';
+
 export const ZH_HANS_SETTINGS_STORAGE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  ...ZH_HANS_BACKUP_RESTORE_SYNC_TRANSLATIONS,
   'settings.attachments.title': "本机附件",
   'settings.attachments.error': "附件操作未完成，请重试。",
   'settings.attachments.used': "总占用",

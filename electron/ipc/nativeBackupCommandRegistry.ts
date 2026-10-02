@@ -1,6 +1,7 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
 export const NATIVE_BACKUP_COMMAND_REGISTRY = [
+  { command: NATIVE_COMMANDS.inspectBackupRestoreSync, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadDatabaseSpaceStatus, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadBackupSettings, route: 'storage', capability: 'read' },
   { command: NATIVE_COMMANDS.loadBackupRetentionStatus, route: 'storage', capability: 'read' },

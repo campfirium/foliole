@@ -21,6 +21,7 @@ const USER_SPACE_KEYS = new Set([
 ]);
 const SESSION_RESUME_KEYS = new Set(['readwise_book_epub_picker_state', 'window_state']);
 const LOCAL_ONLY_KEYS = new Set([
+  'backup_restore_pending_sync',
   'host_name',
   'device_id',
   'desktop_device_id',

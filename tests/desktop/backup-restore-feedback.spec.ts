@@ -21,7 +21,7 @@ test('reports failed and successful database restores through the native bridge'
   const invalidName = 'foliole-manual-261002-230000.db';
   await writeFile(path.join(backupDir, invalidName), 'invalid sqlite backup');
   const settings = await openBackupsSection(desktopWindow);
-  await settings.locator('[data-settings-row]').filter({ has: settings.getByRole('heading', { name: invalidName }) })
+  await settings.locator('[data-settings-row]').filter({ has: desktopWindow.getByRole('heading', { name: invalidName }) })
     .getByRole('button', { name: RESTORE }).click();
   const failure = desktopWindow.getByRole('dialog', { name: /^(Backup not restored|备份未恢复)$/ });
   await expect(failure).toBeVisible();
@@ -30,7 +30,7 @@ test('reports failed and successful database restores through the native bridge'
   await testInfo.attach('restore-failure', { path: testInfo.outputPath('restore-failure.png'), contentType: 'image/png' });
   await failure.getByRole('button', { name: DONE }).click();
 
-  await settings.locator('[data-settings-row]').filter({ has: settings.getByRole('heading', { name: path.basename(backup.destinationPath) }) })
+  await settings.locator('[data-settings-row]').filter({ has: desktopWindow.getByRole('heading', { name: path.basename(backup.destinationPath) }) })
     .getByRole('button', { name: RESTORE }).click();
   const success = desktopWindow.getByRole('dialog', { name: /^(Backup restored|备份已恢复)$/ });
   await expect(success).toBeVisible();

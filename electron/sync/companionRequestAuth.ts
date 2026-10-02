@@ -1,5 +1,6 @@
 import type http from 'node:http';
 
+import { loadBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
 import { isDesktopSyncGroupDeviceBlocked } from '../database/syncGroupMemberStateStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
@@ -24,7 +25,7 @@ interface CompanionRequestAuthSuccess {
 interface CompanionRequestAuthFailure {
   error: 'expired_timestamp' | 'invalid_signature' | 'missing_headers' |
     'replayed_nonce' | 'sync_group_device_not_active' | 'sync_group_member_state_required' |
-    'sync_group_workgroup_key_missing';
+    'sync_group_workgroup_key_missing' | 'backup_restore_sync_confirmation_required';
   ok: false;
   status_code: 401 | 409;
 }
@@ -42,6 +43,7 @@ export function authenticateCompanionRequest(args: {
   requireMemberState?: boolean;
   request: http.IncomingMessage;
 }): CompanionRequestAuthResult {
+  if (loadBackupRestorePendingSync()) return failure('backup_restore_sync_confirmation_required', 409);
   const headers = readAuthenticationHeaders(args.request);
   if (!headers.deviceId || !headers.groupId || !headers.nonce || !headers.signature || !headers.timestamp) {
     return failure('missing_headers', 401);

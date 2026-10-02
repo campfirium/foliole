@@ -1,0 +1,137 @@
+// @vitest-environment node
+import { randomUUID } from 'node:crypto';
+import { promises as fs } from 'node:fs';
+import net from 'node:net';
+import path from 'node:path';
+
+import { afterEach, expect, it } from 'vitest';
+
+import { buildRestoreFixture, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
+
+let root = '';
+const workers: ReturnType<typeof startRestoreFixture>[] = [];
+afterEach(async () => {
+  await Promise.allSettled(workers.splice(0).map((worker) => worker.close()));
+  if (root) await fs.rm(root, { recursive: true, force: true });
+});
+
+async function reservePort() {
+  const server = net.createServer();
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('port missing');
+  await new Promise<void>((resolve) => server.close(() => resolve()));
+  return address.port;
+}
+
+async function setup() {
+  root = await fs.realpath(await fs.mkdtemp(path.resolve('.tmp/artifacts/t296/multi-')));
+  await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
+  const script = path.join(root, 'fixture.mjs');
+  await buildRestoreFixture(script);
+  const members = ['A', 'B', 'C'].map((name) => ({ name, root: path.join(root, name), anchor: randomUUID() }));
+  for (const member of members) {
+    await fs.mkdir(path.join(member.root, 'device-identity'), { recursive: true });
+    await fs.writeFile(path.join(member.root, 'device-identity', 'anchor-v1'), `${member.anchor}\n`);
+  }
+  const groupId = `test-t296-${randomUUID()}`;
+  const peers = [];
+  for (const member of members) {
+    const worker = startRestoreFixture(script, member.root, await reservePort());
+    workers.push(worker);
+    peers.push(await worker.send('init', { groupId, name: member.name, members }));
+  }
+  const registered = peers.map((peer, index) => ({ device: peer.device, name: members[index]!.name }));
+  for (const worker of workers) await worker.send('register', { members: registered });
+  return { members, groupId, peers, script };
+}
+
+async function resumePausedRestore(context: Awaited<ReturnType<typeof setup>>) {
+  const { members, groupId, peers, script } = context;
+  const receiver = workers[1]!;
+  let source = workers[0]!;
+      await source.close();
+      source = startRestoreFixture(script, members[0]!.root, await reservePort());
+      workers[0] = source;
+      peers[0] = await source.send('init', { groupId, name: 'A', members });
+      const paused = await source.send('snapshot');
+      expect(paused.participation).toMatchObject({ sync_paused: true, participating: false });
+      expect(paused.pending!.groupId).toBe(groupId);
+      await expect(source!.send('resume')).rejects.toThrow('backup_restore_sync_confirmation_required');
+      await source!.send('enable');
+      expect((await source!.send('snapshot')).participation.participating).toBe(false);
+      await expect(receiver!.send('pull', { ...peers[0], name: 'A' })).rejects.toThrow();
+      expect((await receiver!.send('snapshot')).library.nodesById['remote-only']).toBeDefined();
+      await source!.send('seed', { content: 'Edited after restore' });
+      await source!.send('seed', { id: 'later', content: 'Added while paused' });
+      await source.send('delete');
+      await source.send('facts');
+      await source!.send('resume', { confirm: true });
+      await source.close();
+      source = startRestoreFixture(script, members[0]!.root, await reservePort());
+      workers[0] = source;
+      peers[0] = await source.send('init', { groupId, name: 'A', members });
+  return source;
+}
+
+for (const pause of [false, true]) {
+  it(`covers a whole group through independent production instances after ${pause ? 'pause and edits' : 'immediate restore'}`, async () => {
+    const { members, groupId, peers, script } = await setup();
+    let source = workers[0]!;
+    const receiver = workers[1]!;
+    const offline = workers[2]!;
+    await source!.send('seed', { content: 'Chosen backup' });
+    await source.send('seed', { id: 'delete-me', content: 'Delete while paused' });
+    await source.send('facts');
+    await source.send('batch');
+    const backup = await source!.send('backup');
+    await source!.send('seed', { content: 'Source before restore' });
+    await receiver!.send('seed', { id: 'remote-only', content: 'Remote before restore' });
+    await offline!.send('seed', { id: 'offline-only', content: 'Offline before restore' });
+    await offline!.close();
+    workers.pop();
+    await source!.send('restore', { file: backup.destinationPath, pause });
+    if (pause) source = await resumePausedRestore({ members, groupId, peers, script });
+    else await source.send('enable');
+    // An old receiver negotiates first; it must learn the restore instead of overwriting the source.
+    await receiver!.send('enable');
+    await assertInterruptedRestore(receiver, peers[0]!);
+    const adopted = await receiver!.send('pull', { ...peers[0], name: 'A' });
+    expect(adopted.applied).toBe(true);
+    const a = await source!.send('snapshot');
+    const b = await receiver!.send('reopen');
+    expect(a.pending).toBeNull();
+    expect(b.restore!.event.restore_id).toBe(a.restore!.event.restore_id);
+    expect(b.restore!.applied).toBe(true);
+    const expected = pause ? 'Edited after restore' : 'Chosen backup';
+    expect(a.library.nodesById.topic!.content).toContain(expected);
+    expect(b.library.nodesById.topic!.content).toBe(a.library.nodesById.topic!.content);
+    expect(b.library.nodesById['remote-only']).toBeUndefined();
+    if (pause) expect(b.library.nodesById.later!.content).toBe('Added while paused');
+    expect(b.versions).toEqual(a.versions);
+    expect(await receiver.send('readFacts')).toEqual(await source.send('readFacts'));
+    if (pause) expect(b.library.trashedNodeIds).toContain('delete-me');
+    const returning = startRestoreFixture(script, members[2]!.root, await reservePort());
+    workers.push(returning);
+    await returning.send('init', { groupId, name: 'C', members });
+    await returning.send('enable');
+    await returning.send('pull', { ...peers[0], name: 'A' });
+    const c = await returning.send('reopen');
+    expect(c.library.nodesById.topic!.content).toBe(a.library.nodesById.topic!.content);
+    expect(c.library.nodesById['offline-only']).toBeUndefined();
+    expect(c.versions).toEqual(a.versions);
+    // Production receive path must preserve the overwritten remote library in a safety snapshot.
+    const snapshots = await receiver.send('safety') as unknown as Array<{ nodes: Array<{ id: string }>; versions: Array<{ body_text: string }> }>;
+    expect(snapshots.some((snapshot) => snapshot.nodes.some((node) => node.id === 'remote-only'))).toBe(true);
+    expect(snapshots.some((snapshot) => snapshot.versions.some((version) => version.body_text === 'Remote before restore'))).toBe(true);
+  }, 90000);
+}
+
+async function assertInterruptedRestore(receiver: ReturnType<typeof startRestoreFixture>, peer: Awaited<ReturnType<ReturnType<typeof startRestoreFixture>['send']>>) {
+  const first = await receiver.send('pull', { ...peer, name: 'A', firstPage: true });
+  expect(first.applied).toBe(false);
+  expect(first.cursor).toBeLessThan(first.frontier);
+  const interrupted = await receiver.send('reopen');
+  expect(interrupted.library.nodesById['remote-only']).toBeDefined();
+  expect(interrupted.restore?.applied).toBe(false);
+}
