@@ -30,6 +30,7 @@ vi.mock('./backupFileDisposition.js', () => ({
 }));
 
 import { listManagedDatabaseBackups, pruneManagedDatabaseBackups } from './backupCatalog.js';
+import { BACKUP_MANAGEMENT_FILE, registerGeneratedBackup } from './backupManagement.js';
 import { reconcileAutomaticDatabaseBackups } from './backupRestore.js';
 import { loadBackupSettings, resolveManagedBackupDirectory, saveBackupSettings } from './backupSettings.js';
 import { closeDatabaseConnection } from './connection.js';
@@ -59,7 +60,7 @@ it('creates one automatic restore point for all enabled retention layers', async
   });
 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 10, 15, 0));
-  const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).sort();
+  const backupNames = (await backupFileNames()).sort();
 
   expect(backupNames).toEqual(['foliole-auto-260402-101500.db.gz']);
 });
@@ -76,7 +77,7 @@ it('uses the finest enabled layer as the only automatic backup cadence', async (
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 10, 45, 0));
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 11, 5, 0));
 
-  const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).sort();
+  const backupNames = (await backupFileNames()).sort();
   expect(backupNames).toEqual(['foliole-auto-260402-101500.db.gz']);
 });
 
@@ -92,7 +93,7 @@ it('falls back to daily cadence when hourly retention is disabled', async () => 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 2, 18, 15, 0));
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 3, 9, 0, 0));
 
-  const backupNames = (await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).sort();
+  const backupNames = (await backupFileNames()).sort();
   expect(backupNames).toEqual(['foliole-auto-260402-101500.db.gz']);
 });
 
@@ -118,7 +119,7 @@ it.each([
   await reconcileAutomaticDatabaseBackups(same);
   await reconcileAutomaticDatabaseBackups(next);
 
-  const backupNames = await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()));
+  const backupNames = await backupFileNames();
   expect(backupNames).toHaveLength(1);
 });
 
@@ -132,7 +133,7 @@ it('does not create automatic restore points when every layer is disabled', asyn
 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 6, 10, 0));
 
-  expect(await fs.readdir(resolveManagedBackupDirectory(loadBackupSettings()))).toEqual([]);
+  expect(await backupFileNames()).toEqual([]);
 });
 
 it('does not overwrite an existing automatic restore point in the same second', async () => {
@@ -182,7 +183,7 @@ it('treats legacy frequency files as one shared restore point collection', async
 
   await reconcileAutomaticDatabaseBackups(new Date(2026, 3, 6, 11, 15, 0));
 
-  const backupNames = (await fs.readdir(backupDirectory)).sort();
+  const backupNames = (await backupFileNames(backupDirectory)).sort();
   expect(backupNames).toEqual([
     'auto-daily-2026-04-06_10-15-00-000.db',
     'foliole-auto-260406-111500.db.gz'
@@ -242,5 +243,10 @@ async function createBackupFixture(
 ) {
   const filePath = path.join(directoryPath, fileName);
   await fs.writeFile(filePath, content);
+  registerGeneratedBackup(filePath);
   await fs.utimes(filePath, new Date(updatedAt), new Date(updatedAt));
+}
+
+async function backupFileNames(directory = resolveManagedBackupDirectory(loadBackupSettings())) {
+  return (await fs.readdir(directory)).filter((name) => name !== BACKUP_MANAGEMENT_FILE);
 }

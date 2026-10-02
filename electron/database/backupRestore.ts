@@ -15,6 +15,7 @@ import {
 import { showBackupCleanupNotification } from './backupCleanupNotification.js';
 import { moveManagedBackupToTrash } from './backupFileDisposition.js';
 import { automaticBackupFileName, buildManagedBackupPath } from './backupFileNames.js';
+import { registerGeneratedBackup } from './backupManagement.js';
 import { finestEnabledFrequency, frequencyBucketKey } from './backupRetentionPolicy.js';
 import { recordBackupCleanup } from './backupRetentionStatus.js';
 import {
@@ -89,6 +90,7 @@ async function createAutomaticBackup(
     sourcePath: connection.dbPath
   });
   if (!result) return false;
+  registerGeneratedBackup(result.destinationPath);
   await fs.utimes(result.destinationPath, now, now);
   await copyExtraBackup({
     disposeFile: moveManagedBackupToTrash,
@@ -127,7 +129,8 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
   reconciledCadenceBuckets.set(connection.dbPath, cadenceBucket);
   if (created) {
     const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, {
-      disposeFile: moveManagedBackupToTrash
+      disposeFile: moveManagedBackupToTrash,
+      now: now.getTime()
     });
     recordBackupCleanup(backupDirectory, pruneResult);
     showBackupCleanupNotification(pruneResult);
@@ -154,6 +157,9 @@ export async function createApplicationDatabaseBackup(
     : await backupCompressedSqliteDatabase(backupOptions);
   if (options.destinationPath) {
     verifySqliteDatabaseFile(result.destinationPath);
+  }
+  if (path.resolve(path.dirname(result.destinationPath)) === path.resolve(backupDirectory)) {
+    registerGeneratedBackup(result.destinationPath);
   }
   const extraBackup = options.destinationPath
     ? disabledExtraBackupResult()

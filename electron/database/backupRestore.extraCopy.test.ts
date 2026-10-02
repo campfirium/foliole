@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+
 let mockedAppDataDir = '/tmp/foliole-backup-extra-tests';
 let mockedDocumentsDir = '/tmp/foliole-backup-extra-documents';
 
@@ -25,6 +26,7 @@ vi.mock('./backupFileDisposition.js', () => ({
   }
 }));
 
+import { registerGeneratedBackup } from './backupManagement.js';
 import { createApplicationDatabaseBackup, reconcileAutomaticDatabaseBackups } from './backupRestore.js';
 import { loadBackupSettings, normalizeBackupSettings, resolveManagedBackupDirectory, saveBackupSettings } from './backupSettings.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -124,6 +126,7 @@ it('copies automatic backups into the extra location without blocking primary re
 async function createBackupFixture(directoryPath: string, fileName: string, content: string, updatedAt: string) {
   const filePath = path.join(directoryPath, fileName);
   await fs.writeFile(filePath, content);
+  registerGeneratedBackup(filePath);
   await fs.utimes(filePath, new Date(updatedAt), new Date(updatedAt));
 }
 

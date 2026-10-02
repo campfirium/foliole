@@ -25,11 +25,13 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 vi.mock('./backupFileDisposition.js', () => ({ moveManagedBackupToTrash: trashItem }));
 
+import { registerGeneratedBackup } from './backupManagement.js';
 import {
   createApplicationDatabaseBackup,
   listApplicationDatabaseBackups,
   restoreApplicationDatabaseBackup
 } from './backupRestore.js';
+import { inspectBackupRestoreSync } from './backupRestoreSyncPreview.js';
 import { materializeCompressedSqliteBackup } from './compressedSqliteBackup.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import {
@@ -84,6 +86,7 @@ it('creates a pre-restore snapshot and keeps only the configured safety count', 
     await fs.writeFile(snapshotPath, `stale-${index}`);
     const mtime = new Date(Date.UTC(2026, 2, 14, 10, index, 0));
     await fs.utimes(snapshotPath, mtime, mtime);
+    registerGeneratedBackup(snapshotPath);
   }
 
   seedNode('node-1', '# mutated');
@@ -169,7 +172,10 @@ it('keeps distinct compressed pre-restore and pre-migration states restorable', 
   expect(preRestore?.state.userVersion).toBe(DATABASE_SCHEMA_VERSION);
   expect(preMigration?.state.userVersion).toBe(DATABASE_SCHEMA_VERSION - 1);
 
-  await restoreApplicationDatabaseBackup({ sourcePath: preRestore?.entry.filePath ?? '' });
+  const sourcePath = preRestore?.entry.filePath ?? '';
+  const preview = await inspectBackupRestoreSync(sourcePath);
+  await restoreApplicationDatabaseBackup({ sourcePath,
+    choice: { source: 'current', action: 'local', revision: preview.revision } });
   expect(loadWorkspaceSnapshot({ includeBody: true })?.nodesById['node-1']?.content).toBe('# current state');
   await expect(fs.access(preRestore?.entry.filePath ?? '')).resolves.toBeUndefined();
 });

@@ -4,6 +4,7 @@ import type { NativeBackupSettings } from '../../lib/platform/nativeUtilityContr
 
 import { listManagedDatabaseBackups } from './backupCatalog.js';
 import { moveManagedBackupToTrash } from './backupFileDisposition.js';
+import { forgetManagedBackup, reconcileBackupManagement } from './backupManagement.js';
 import { loadBackupSettings, resolveManagedBackupDirectory } from './backupSettings.js';
 import {
   isManagedSafetySnapshotProtected,
@@ -15,6 +16,7 @@ export async function discardRestoreSafetySnapshot(snapshot: ManagedSafetySnapsh
   snapshot.release();
   try {
     await moveManagedBackupToTrash(snapshot.currentPath);
+    forgetManagedBackup(snapshot.currentPath);
   } catch (error) {
     console.error('[backup] could not move unused restore safety snapshot to trash', error);
   }
@@ -30,7 +32,9 @@ export async function settleRestoreSafetySnapshots(
   try {
     const settings = context?.settings ?? loadBackupSettings();
     const backupDirectory = context?.backupDirectory ?? resolveManagedBackupDirectory(settings);
-    const entries = await listManagedDatabaseBackups(backupDirectory);
+    const allEntries = await listManagedDatabaseBackups(backupDirectory);
+    const management = reconcileBackupManagement(backupDirectory, allEntries.map((entry) => entry.fileName));
+    const entries = allEntries.filter((entry) => management.whitelist.has(entry.fileName));
     const retained = new Set(entries
       .filter((entry) => entry.kind === 'snapshot')
       .slice(0, settings.safety_max_count)
@@ -50,6 +54,7 @@ export async function settleRestoreSafetySnapshots(
 async function moveSafetySnapshotToTrash(filePath: string) {
   try {
     await moveManagedBackupToTrash(filePath);
+    forgetManagedBackup(filePath);
   } catch (error) {
     console.error('[backup] could not move expired safety snapshot to trash', { error, filePath });
   }

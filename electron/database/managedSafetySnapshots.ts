@@ -2,6 +2,7 @@ import { promises as fs, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 
+import { registerGeneratedBackup } from './backupManagement.js';
 import {
   compressSqliteFile,
   materializeCompressedSqliteBackup
@@ -41,6 +42,7 @@ export async function createManagedSafetySnapshotWithBackup(
   try {
     const snapshot = await createInternalDatabaseSnapshotWithBackup(normalizedOptions);
     protection.currentPath = await settleSnapshotCompression(snapshot);
+    registerGeneratedBackup(protection.currentPath);
     return protection;
   } catch (error) {
     protection.release();
@@ -66,7 +68,10 @@ export function settleManagedMigrationSnapshot(
   protection: ManagedSafetySnapshot
 ) {
   const settlement = settleSnapshotCompression(snapshot)
-    .then((currentPath) => { protection.currentPath = currentPath; })
+    .then((currentPath) => {
+      protection.currentPath = currentPath;
+      registerGeneratedBackup(currentPath);
+    })
     .finally(() => protection.release());
   pendingSettlements.add(settlement);
   void settlement.then(

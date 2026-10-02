@@ -57,7 +57,10 @@ function buildBody(result: BackupPruneResult, usesSimplifiedChinese: boolean) {
     : cleanup;
 }
 
-export function showBackupCleanupNotification(result: BackupPruneResult) {
+export function showBackupCleanupNotification(cleanup: BackupPruneResult) {
+  const result = { ...cleanup,
+    deletedCount: cleanup.deletedCount - (cleanup.temporaryDeletedCount ?? 0),
+    failedCount: cleanup.failedCount - (cleanup.temporaryFailedCount ?? 0) };
   if (result.deletedCount === 0 && result.failedCount === 0 && !result.remainingBytesOverLimit) return false;
   try {
     if (!Notification?.isSupported?.()) {

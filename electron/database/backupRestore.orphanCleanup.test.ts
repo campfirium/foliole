@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { BACKUP_MANAGEMENT_FILE } from './backupManagement.js';
 import { reconcileAutomaticDatabaseBackups } from './backupRestore.js';
 import { loadBackupSettings, resolveManagedBackupDirectory, saveBackupSettings } from './backupSettings.js';
 import { closeDatabaseConnection } from './connection.js';
@@ -51,7 +52,7 @@ it('reclaims interrupted private compression files before creating the next rest
     deletedCount: 1,
     releasedBytes: 13
   });
-  expect((await fs.readdir(backupDirectory)).sort()).toEqual([
+  expect((await fs.readdir(backupDirectory).then((names) => names.filter((name) => name !== BACKUP_MANAGEMENT_FILE))).sort()).toEqual([
     'foliole-auto-260402-101500.db.gz',
     'manual-2026-04-02_09-00-00-000.db'
   ]);

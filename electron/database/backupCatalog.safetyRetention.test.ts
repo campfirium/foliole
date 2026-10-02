@@ -9,6 +9,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { NativeBackupSettings } from '../../lib/platform/nativeUtilityContract.js';
 
 import { listManagedDatabaseBackups, pruneManagedDatabaseBackups } from './backupCatalog.js';
+import { registerGeneratedBackup } from './backupManagement.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { createManagedSafetySnapshotWithBackup } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
@@ -184,5 +185,6 @@ async function removeFixture(filePath: string) {
 async function writeFixture(fileName: string, size: number, updatedAt: string) {
   const filePath = path.join(backupDirectory, fileName);
   await fs.writeFile(filePath, Buffer.alloc(size, 1));
+  registerGeneratedBackup(filePath);
   await fs.utimes(filePath, new Date(updatedAt), new Date(updatedAt));
 }

@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { NativeExtraBackupResult } from '../../lib/platform/nativeUtilityContract.js';
 
 import { listManagedDatabaseBackups } from './backupCatalog.js';
+import { forgetManagedBackup, reconcileBackupManagement, registerGeneratedBackup } from './backupManagement.js';
 
 export type ExtraBackupCopyResult = NativeExtraBackupResult;
 
@@ -41,6 +42,7 @@ export async function copyExtraBackup(options: CopyExtraBackupOptions): Promise<
     await fs.copyFile(options.sourcePath, tempPath);
     await disposeExistingBackup(destinationPath, options.disposeFile);
     await fs.rename(tempPath, destinationPath);
+    registerGeneratedBackup(destinationPath);
     await pruneExtraBackups(options.extraBackupDir, options.maxCount, options.disposeFile);
     return { destinationPath, errorMessage: null, status: 'copied' };
   } catch (error) {
@@ -66,7 +68,14 @@ async function disposeExistingBackup(
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
     throw error;
   }
+  const entries = await listManagedDatabaseBackups(path.dirname(filePath));
+  const management = reconcileBackupManagement(path.dirname(filePath), entries.map((entry) => entry.fileName));
+  const name = path.basename(filePath);
+  if (!management.whitelist.has(name) && !management.expired.has(name)) {
+    throw new Error('An externally added backup with this name is still protected.');
+  }
   await disposeFile(filePath);
+  forgetManagedBackup(filePath);
 }
 
 async function pruneExtraBackups(
@@ -75,9 +84,16 @@ async function pruneExtraBackups(
   disposeFile: CopyExtraBackupOptions['disposeFile']
 ) {
   const entries = await listManagedDatabaseBackups(directoryPath);
-  const retained = new Set(entries.slice(0, Math.max(1, maxCount)).map((entry) => entry.filePath));
-  const deletedPaths = entries.filter((entry) => !retained.has(entry.filePath)).map((entry) => entry.filePath);
-  await Promise.all(deletedPaths.map((filePath) => disposeFile(filePath)));
+  const management = reconcileBackupManagement(directoryPath, entries.map((entry) => entry.fileName));
+  const generated = entries.filter((entry) => management.whitelist.has(entry.fileName));
+  const retained = new Set(generated.slice(0, Math.max(1, maxCount)).map((entry) => entry.filePath));
+  const deletedPaths = entries.filter((entry) =>
+    (management.whitelist.has(entry.fileName) && !retained.has(entry.filePath)) ||
+    management.expired.has(entry.fileName)).map((entry) => entry.filePath);
+  await Promise.all(deletedPaths.map(async (filePath) => {
+    await disposeFile(filePath);
+    forgetManagedBackup(filePath);
+  }));
 }
 
 async function areSameDirectory(left: string, right: string) {
