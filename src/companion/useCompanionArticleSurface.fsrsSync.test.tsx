@@ -124,7 +124,7 @@ function createWorkspaceSync(snapshot = createSnapshot()) {
     pairingStatus: 'idle' as const,
     pullFromDesktop: vi.fn(),
     readableArticle: null,
-    refreshAfterMutation: vi.fn(async () => state),
+    refreshAfterMutation: vi.fn(async () => state.workspace_snapshot),
     refreshFromDevice: vi.fn(async () => state),
     leaveSyncGroup: vi.fn(),
     refreshPairingState: vi.fn(async () => createPairingState()),

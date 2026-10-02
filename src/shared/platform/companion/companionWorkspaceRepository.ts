@@ -1,10 +1,10 @@
-import type { WorkspaceSnapshot } from '../../../lib/core/database/workspaceSnapshot';
+import type { WorkspaceSnapshot } from '../../../../lib/core/database/workspaceSnapshot';
+import { getCompanionRuntimeCapability } from '../companionRuntimeCapabilities';
+import { readWebSyncState, writeWebSyncState } from '../companionWorkspaceSyncState';
+import { registerWorkspaceAttachmentResources } from '../runtime/workspaceAttachmentResourceRegistry';
 
-import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
-import { loadIosCompanionWorkspaceSnapshot } from './companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
-import { getCompanionRuntimeCapability } from './companionRuntimeCapabilities';
-import { readWebSyncState, writeWebSyncState } from './companionWorkspaceSyncState';
-import { registerWorkspaceAttachmentResources } from './runtime/workspaceAttachmentResourceRegistry';
+import { getIosCompanionDatabaseOwner } from './runtime/iosCompanionDatabaseBootstrap';
+import { loadIosCompanionWorkspaceSnapshot } from './sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
 // Native mutations have already committed; only the Web preview stores a supplied projection.
 export async function refreshCompanionWorkspaceAfterMutation(previewSnapshot?: WorkspaceSnapshot | null) {

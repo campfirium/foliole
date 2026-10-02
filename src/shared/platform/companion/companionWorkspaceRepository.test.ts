@@ -6,9 +6,10 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: () => ({})
 }));
 
+import { createStoredSyncState, createUpdatedStoredSnapshot } from '../companionWorkspaceSync.testSupport';
+import { readWebSyncState, writeWebSyncState } from '../companionWorkspaceSyncState';
+
 import { refreshCompanionWorkspaceAfterMutation } from './companionWorkspaceRepository';
-import { createStoredSyncState, createUpdatedStoredSnapshot } from './companionWorkspaceSync.testSupport';
-import { readWebSyncState, writeWebSyncState } from './companionWorkspaceSyncState';
 
 beforeEach(() => window.localStorage.clear());
 

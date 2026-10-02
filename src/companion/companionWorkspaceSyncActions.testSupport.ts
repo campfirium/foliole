@@ -26,7 +26,7 @@ const workspaceSyncMock = vi.hoisted(() => ({
   saveCompanionWorkspaceSyncEndpoint: vi.fn()
 }));
 const workspaceRepositoryMock = vi.hoisted(() => ({ refreshCompanionWorkspaceAfterMutation: vi.fn() }));
-vi.mock('../shared/platform/companionWorkspaceRepository', () => workspaceRepositoryMock);
+vi.mock('../shared/platform/companion/companionWorkspaceRepository', () => workspaceRepositoryMock);
 
 const memberStateMock = vi.hoisted(() => ({
   exchangeCompanionSyncGroupMemberState: vi.fn(async () => ({

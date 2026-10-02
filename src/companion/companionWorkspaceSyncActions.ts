@@ -1,10 +1,10 @@
 import type { Dispatch, SetStateAction } from 'react';
 
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
+import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companion/companionWorkspaceRepository';
 import type { CompanionDesktopSyncProgress } from '../shared/platform/companionDesktopSyncObjects';
 import { createCompanionSyncRunId } from '../shared/platform/companionSyncActivityEvents';
 import { loadCompanionSyncNodeConflicts } from '../shared/platform/companionSyncObjects';
-import { refreshCompanionWorkspaceAfterMutation } from '../shared/platform/companionWorkspaceRepository';
 import {
   loadCompanionWorkspaceSyncState,
   removeCompanionWorkspaceSyncRememberedTarget,
