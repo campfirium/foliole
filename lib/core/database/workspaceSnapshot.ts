@@ -14,7 +14,7 @@ import {
 } from './workspaceSnapshotHelpers.js';
 import { loadPersistedNodeViewById } from './workspaceSnapshotNodeViewState.js';
 import { loadUntitledSequenceByParent } from './workspaceUntitledSequence.js';
-import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
+import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 export interface WorkspaceSnapshot {
   activeNodeId: string | null;
