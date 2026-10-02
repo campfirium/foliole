@@ -68,6 +68,16 @@ export const DEFAULT_WORKSPACE_RAIL_ITEMS: WorkspaceRailItemConfig[] = [
     labelOverride: 'desktop.command.cycleAppearanceMode'
   },
   {
+    id: 'system.review-statistics',
+    commandId: APP_COMMAND_IDS.openReviewCalendar,
+    section: 'bottom',
+    order: 2,
+    visible: true,
+    source: 'system',
+    iconId: 'ChartNoAxesColumnIncreasing',
+    labelOverride: 'desktop.command.openReviewCalendar'
+  },
+  {
     id: 'fixed.review',
     commandId: APP_COMMAND_IDS.startStudyMode,
     section: 'fixed',
@@ -98,5 +108,6 @@ export const WORKSPACE_RAIL_COMMAND_LABELS: Record<string, string> = {
   [APP_COMMAND_IDS.sendFeedback]: 'Send Feedback',
   [APP_COMMAND_IDS.toggleBaseColorMode]: 'Appearance Mode',
   [APP_COMMAND_IDS.startStudyMode]: 'Study',
+  [APP_COMMAND_IDS.openReviewCalendar]: 'Open review statistics',
   [APP_COMMAND_IDS.openSettings]: 'Settings'
 };

@@ -11,6 +11,7 @@ export interface AnnualStatisticsCell {
   values: readonly [number | null, number | null];
   valid: boolean;
   current: boolean;
+  past: boolean;
 }
 
 interface AnnualStatisticsTableProps {
@@ -28,7 +29,7 @@ export function AnnualStatisticsTable(props: AnnualStatisticsTableProps) {
     <colgroup><col className="w-statistics-day" />{props.groups.map((group) => <col key={group.key} span={2} />)}</colgroup>
     <StatisticsHeaders {...props} />
     <tbody>{props.rows.map((row) => <tr key={row.label} className="even:bg-foreground/[0.018]">
-      <th scope="row" className="h-statistics-row pr-2.5 text-right text-ui-sm font-normal text-foreground/56">{row.label}</th>
+      <th scope="row" className={`relative h-statistics-row pr-2.5 text-right text-ui-sm ${row.cells.some((cell) => cell.current) ? "font-medium text-companion-accent before:absolute before:left-0.5 before:top-1/2 before:size-1 before:-translate-y-1/2 before:rounded-full before:bg-companion-accent" : "font-normal text-foreground/56"}`}>{row.label}</th>
       {row.cells.map((cell) => <StatisticsCell key={cell.key} cell={cell} />)}
     </tr>)}</tbody>
   </table>;
@@ -53,7 +54,7 @@ function StatisticsHeaders(props: AnnualStatisticsTableProps) {
 
 function StatisticsCell({ cell }: { cell: AnnualStatisticsCell }) {
   const state = !cell.valid ? 'bg-foreground/[0.035]' : cell.current
-    ? 'border-b border-companion-accent font-medium text-companion-accent' : 'text-foreground/85';
+    ? 'border-b-2 border-companion-accent bg-companion-accent/10 font-medium text-companion-accent' : cell.past ? 'text-foreground/45' : 'text-foreground/85';
   return <td colSpan={2} title={cell.valid ? cell.label : undefined} className={`${separator} h-statistics-row p-0 text-ui-xs ${state}`}>
     {cell.valid ? <div role="group" aria-label={cell.label} aria-current={cell.current ? 'date' : undefined} className="grid grid-cols-2">
       {cell.values.map((value, index) => <span key={index} className="pr-1.5 text-right">{value || ''}</span>)}

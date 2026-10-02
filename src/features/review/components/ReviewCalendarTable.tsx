@@ -19,11 +19,11 @@ export function ReviewCalendarTable(props: ReviewCalendarTableProps) {
     const date = new Date(month.getFullYear(), month.getMonth(), day);
     const key = calendarDateKey(date);
     const valid = date.getMonth() === month.getMonth();
-    if (!valid) return { key: `${calendarDateKey(month)}-${day}`, valid: false, current: false, label: '', values: [null, null] };
+    if (!valid) return { key: `${calendarDateKey(month)}-${day}`, valid: false, current: false, past: false, label: '', values: [null, null] };
     const value = props.counts(key);
     const label = `${key} · ${t(key < props.today ? 'desktop.reviewCalendar.completed' : 'desktop.reviewCalendar.due')} · ` +
       `Items: ${value.items ?? t('desktop.reviewCalendar.unavailable')} · Topics: ${value.topics ?? t('desktop.reviewCalendar.unavailable')}`;
-    return { key, valid, label, current: key === props.today, values: [value.items, value.topics] };
+    return { key, valid, label, current: key === props.today, past: key < props.today, values: [value.items, value.topics] };
   }
   const rows = Array.from({ length: 31 }, (_, index) => ({
     label: String(index + 1).padStart(2, '0'), cells: props.months.map((month) => cell(month, index + 1))
