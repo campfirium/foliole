@@ -73,10 +73,6 @@
       "statementName": "appDataClearNodeReadingHostState"
     },
     {
-      "table": "node_order",
-      "statementName": "appDataClearNodeOrder"
-    },
-    {
       "table": "parent_child_order",
       "statementName": "appDataClearParentChildOrder"
     },
@@ -207,7 +203,6 @@
     "nodeRekeyTombstones": "UPDATE node_sync_tombstones SET node_id = ? WHERE node_id = ?",
     "nodeRekeyConflicts": "UPDATE node_sync_conflicts SET object_id = ? WHERE object_id = ?",
     "nodeRekeyAlternatives": "UPDATE node_text_alternatives SET node_id = ? WHERE node_id = ?",
-    "nodeRekeyOrder": "UPDATE node_order SET node_id = ? WHERE node_id = ?",
     "nodeRekeyViewState": "UPDATE node_view_state SET node_id = ? WHERE node_id = ?",
     "nodeRekeySyncState": "UPDATE sync_object_state SET object_id = ? WHERE object_id = ? AND object_type IN ('node', 'node_open_state', 'node_reading', 'node_review')",
     "nodeRekeyPushAck": "UPDATE sync_delivery_receipts SET object_id = ? WHERE object_id = ? AND object_type = 'node'",
@@ -258,7 +253,6 @@
     "appDataClearNodeVersionLocalOrigins": "DELETE FROM node_version_local_origins",
     "appDataClearNodeViewState": "DELETE FROM node_view_state",
     "appDataClearNodeReadingHostState": "DELETE FROM node_reading_host_state",
-    "appDataClearNodeOrder": "DELETE FROM node_order",
     "appDataClearParentChildOrder": "DELETE FROM parent_child_order",
     "appDataClearNodeOpenState": "DELETE FROM node_open_state",
     "appDataClearPdfIndexState": "DELETE FROM pdf_index_state",

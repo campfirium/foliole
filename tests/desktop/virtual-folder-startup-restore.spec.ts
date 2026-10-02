@@ -27,6 +27,7 @@ async function createAndOpenSavedSearch(
   page: DesktopSession['firstWindow'],
   testInfo: TestInfo
 ) {
+  await expect.poll(() => page.evaluate(() => window.__folioleWorkspaceDebug?.isHydrated())).toBe(true);
   await page.evaluate(async ({ id, query, title }) => {
     await globalThis.window?.__folioleWorkspaceDebug?.seedNodes?.([
       { content: `Body contains ${query}.`, id, kind: 'topic', title }
@@ -117,6 +118,7 @@ test('keeps Home as the browse root after opening a topic and relaunching', asyn
   let secondSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
   try {
     await expectWorkspaceShell(desktopWindow);
+    await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.isHydrated())).toBe(true);
     await desktopWindow.evaluate(async ({ id, title }) => {
       await globalThis.window?.__folioleWorkspaceDebug?.seedNodes?.([
         { content: 'Home startup body.', id, kind: 'topic', title }

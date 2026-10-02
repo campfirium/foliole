@@ -97,9 +97,9 @@ it('re-imports book placeholders without writing inbox topic order', async () =>
        ) VALUES (?, ?, 'topic', NULL, NULL, ?, 1, 0, '', NULL, NULL, ?, ?, NULL)`
     )
     .run('node-existing-inbox-top', 'special-inbox', 'Older inbox node', '2026-04-04T11:00:00.000Z', '2026-04-04T11:00:00.000Z');
-  connection.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)').run('node-existing-inbox-top', 5);
+  connection.prepare('INSERT INTO parent_child_order VALUES (?, ?, ?) ON CONFLICT(parent_id) DO UPDATE SET child_ids_json=excluded.child_ids_json').run('special-inbox', '["node-existing-inbox-top"]', 'then');
 
   await resetReadwiseBookImport(nodeId);
 
-  expect(connection.prepare('SELECT node_id FROM node_order WHERE node_id = ?').get(nodeId)).toBeUndefined();
+  expect(connection.prepare("SELECT value FROM parent_child_order, json_each(child_ids_json) WHERE value = ?").get(nodeId)).toBeUndefined();
 });

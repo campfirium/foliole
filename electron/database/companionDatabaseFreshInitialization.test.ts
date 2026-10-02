@@ -76,6 +76,7 @@ describe('companion order migration', () => {
     insertNode.run('parent', null, 'Parent');
     insertNode.run('child-b', 'parent', 'B');
     insertNode.run('child-a', 'parent', 'A');
+    fixture.sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
     const insertOrder = fixture.sqlite.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
     insertOrder.run('parent', 0);
     insertOrder.run('child-a', 1);

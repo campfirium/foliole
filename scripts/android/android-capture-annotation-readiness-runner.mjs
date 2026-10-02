@@ -25,7 +25,7 @@ function parseArgs(argv) {
 export async function runCaptureAnnotationReadiness(options) {
   const snapshot = await collectAndroidDeviceSnapshot({
     ...options, databaseInspector: inspectCaptureAnnotationWorkspace, includeEvents: false,
-    tables: ['nodes', 'node_order', 'content_blobs', 'companion_meta']
+    tables: ['nodes', 'parent_child_order', 'content_blobs', 'companion_meta']
   });
   return captureAnnotationReadiness(snapshot);
 }

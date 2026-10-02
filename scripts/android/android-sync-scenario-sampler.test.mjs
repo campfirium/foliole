@@ -24,10 +24,10 @@ function createReport(overrides = {}) {
     },
     structural: [
       { androidCount: 10, desktopCount: 10, missingOnAndroid: [], name: 'nodes' },
-      { androidCount: 9, desktopCount: 10, missingOnAndroid: ['node-10'], name: 'node_order' },
+      { androidCount: 9, desktopCount: 10, missingOnAndroid: ['node-10'], name: 'parent_child_order' },
       { androidCount: 1, desktopCount: 1, missingOnAndroid: [], name: 'external_documents' }
     ],
-    suspectedBrokenLayer: 'node_order apply',
+    suspectedBrokenLayer: 'parent_child_order apply',
     syncEvents: {
       latestRun: { message: 'Library index applied.', result: 'success' }
     },
@@ -53,7 +53,7 @@ describe('android sync scenario sampler', () => {
     expect(result.samples).toHaveLength(3);
     expect(result.samples[0]).toMatchObject({
       endpoint: 'http://10.0.2.2:38641',
-      suspectedLayer: 'node_order apply'
+      suspectedLayer: 'parent_child_order apply'
     });
   });
 
@@ -68,7 +68,7 @@ describe('android sync scenario sampler', () => {
 
     expect(output).toContain('=== t+0s');
     expect(output).toContain('cursor android=12 desktop=15 gap=3');
-    expect(output).toContain('node_order=9/10 missing=1');
+    expect(output).toContain('parent_child_order=9/10 missing=1');
     expect(output).toContain('resources node_bodies=3 external_bodies=2 attachments=1');
     expect(output).toContain('local_push dirty=0 issues=0');
     expect(output).toContain('latest_run=success:Library index applied.');

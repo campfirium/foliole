@@ -118,8 +118,8 @@ function suspectLayer(report) {
   if (!report.identity.androidEndpoint) return 'pairing/source mismatch: Android workspace endpoint is missing';
   if (report.cursors.androidCursor > report.cursors.desktopMaxSeq) return 'cursor advancement: Android cursor is ahead of desktop';
   if (report.localPush.issueCount > 0) return 'local push conflict or rejection left Android changes unsent';
-  const nodeOrder = report.structural.find((item) => item.name === 'node_order');
-  if (nodeOrder?.missingOnAndroid.length || nodeOrder?.positionMismatches.length) return 'node_order apply';
+  const nodeOrder = report.structural.find((item) => item.name === 'parent_child_order');
+  if (nodeOrder?.missingOnAndroid.length || nodeOrder?.positionMismatches.length) return 'parent_child_order apply';
   if (report.structural.some((item) => item.missingOnAndroid.length)) return 'pack apply or pack builder';
   if (report.content.missingMetadata.length) return 'content_blobs metadata sync';
   if (report.resources.availableWithoutData.length) return 'resource pull wrote availability without bytes';

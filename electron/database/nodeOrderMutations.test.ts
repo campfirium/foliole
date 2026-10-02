@@ -93,9 +93,7 @@ it('reorders only the root sequence without creating article versions', () => {
 it('persists non-folder ids in their direct parent sequence', () => {
   seedFolderNode('folder-a', 0);
   seedNode('node-topic', null, 1);
-  openDatabaseConnection().sqlite
-    .prepare('INSERT OR REPLACE INTO node_order (node_id, position) VALUES (?, ?)')
-    .run('node-topic', 99);
+
 
   replaceNodeOrder(['node-topic', 'folder-a']);
 

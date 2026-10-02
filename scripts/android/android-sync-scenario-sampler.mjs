@@ -105,7 +105,7 @@ function formatScenarioSample(sample) {
     `=== t+${sample.targetSecond}s sampled at +${sample.elapsedSeconds}s ===`,
     `serial=${sample.serial} endpoint=${sample.endpoint}`,
     `cursor android=${sample.cursor.androidCursor} desktop=${sample.cursor.desktopMaxSeq} gap=${sample.cursor.gap}`,
-    `structure nodes=${formatCount(sample.structural.nodes)} node_order=${formatCount(sample.structural.node_order)} external_documents=${formatCount(sample.structural.external_documents)}`,
+    `structure nodes=${formatCount(sample.structural.nodes)} parent_child_order=${formatCount(sample.structural.parent_child_order)} external_documents=${formatCount(sample.structural.external_documents)}`,
     `pending live=${sample.cursor.pending.liveCount} tombstones=${sample.cursor.pending.tombstoneCount}`,
     `resources node_bodies=${sample.resources.missingNodeBodies} external_bodies=${sample.resources.missingExternalDocumentBodies} attachments=${sample.resources.missingAttachmentResources}`,
     `local_push dirty=${sample.localPush?.dirtyCount ?? 'n/a'} issues=${sample.localPush?.issueCount ?? 'n/a'} latest_run=${formatRun(sample.run)}`,

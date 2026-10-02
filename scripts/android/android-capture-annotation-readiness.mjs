@@ -1,4 +1,4 @@
-const REQUIRED_TABLES = ['nodes', 'node_order', 'content_blobs', 'companion_meta'];
+const REQUIRED_TABLES = ['nodes', 'parent_child_order', 'content_blobs', 'companion_meta'];
 
 function tableExists(database, table) {
   return database.prepare(
@@ -28,7 +28,7 @@ export function inspectCaptureAnnotationWorkspace(database) {
     canonicalInbox: { active: Boolean(inbox), kind: inbox?.kind ?? null },
     counts: {
       content_blobs: countRows(database, 'content_blobs'),
-      node_order: countRows(database, 'node_order'),
+      parent_child_order: countRows(database, 'parent_child_order'),
       nodes: countRows(database, 'nodes')
     },
     pairingWorkspace: {
@@ -44,7 +44,7 @@ function missingPrerequisites(snapshot) {
   const missing = [];
   if (!snapshot.database?.exists) missing.push('database_missing');
   else if (snapshot.database.unreadable || !inspection) missing.push('database_unreadable');
-  if (inspection && (inspection.counts.nodes <= 1 || inspection.counts.node_order <= 0
+  if (inspection && (inspection.counts.nodes <= 1 || inspection.counts.parent_child_order <= 0
       || inspection.counts.content_blobs <= 0)) missing.push('acceptance_workspace_empty');
   if (inspection && (!inspection.canonicalInbox.active
       || inspection.canonicalInbox.kind !== 'folder')) missing.push('canonical_inbox_missing');
@@ -58,7 +58,7 @@ export function captureAnnotationReadiness(snapshot) {
   const missing = missingPrerequisites(snapshot);
   return {
     canonicalInbox: inspection?.canonicalInbox ?? { active: false, kind: null },
-    counts: inspection?.counts ?? { content_blobs: null, node_order: null, nodes: null },
+    counts: inspection?.counts ?? { content_blobs: null, parent_child_order: null, nodes: null },
     missingPrerequisites: missing,
     pairingWorkspace: inspection?.pairingWorkspace ?? {
       localDeviceIdentityPresent: false, syncEndpointPresent: false

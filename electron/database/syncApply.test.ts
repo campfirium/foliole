@@ -177,7 +177,7 @@ it('applies remote sync nodes into state, version table, and attachment links', 
   expect(connection.sqlite.prepare("SELECT name FROM sqlite_master WHERE name IN ('attachments', 'node_attachments')").all())
     .toEqual([]);
   expect(
-    connection.sqlite.prepare('SELECT node_id, position FROM node_order WHERE node_id = ?').get('node-1')
+    connection.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'node_order'").get()
   ).toBeUndefined();
 });
 
@@ -201,8 +201,10 @@ it('fast-forwards remote node versions when the local version is an ancestor', a
   expect(connection.sqlite.prepare('SELECT conflict_version_id FROM node_sync_conflicts').all()).toEqual([]);
 });
 
-it('prunes learning rows when accepted remote nodes remain hidden under deleted parents', async () => {
+it('prunes review rows but preserves reading progress under deleted parents', async () => {
   insertDeletedParentWithLiveChildLearning();
+  const beforeReading = openDatabaseConnection().sqlite
+    .prepare('SELECT * FROM node_reading WHERE node_id = ?').get('node-1');
   seedNodeVersion(openDatabaseConnection().sqlite, 'node-1', 'desktop-child#1');
   const record = createRemoteNodeRecord();
   record.parent_version_id = 'desktop-child#1';
@@ -213,7 +215,7 @@ it('prunes learning rows when accepted remote nodes remain hidden under deleted 
 
   const connection = openDatabaseConnection();
   expect(connection.sqlite.prepare('SELECT node_id FROM node_review WHERE node_id = ?').get('node-1')).toBeUndefined();
-  expect(connection.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('node-1')).toBeUndefined();
+  expect(connection.sqlite.prepare('SELECT * FROM node_reading WHERE node_id = ?').get('node-1')).toEqual(beforeReading);
 });
 
 it('stores divergent remote node versions without reviving the legacy conflict queue', async () => {

@@ -6,6 +6,7 @@ import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatement
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
 import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
 import { LEGACY_BODY_MIGRATION_SCHEMA } from './legacyBodyMigrationSchema.js';
+import { isLegacyOrderingSchema } from './legacyStorageRetirementMigration.js';
 import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from './numberedMigrationWatchedFolderConflicts.js';
@@ -48,4 +49,4 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...STORED_SOURCE_SEARCH_SCHEMA,
   ...LEGACY_BODY_MIGRATION_SCHEMA,
   ...DATA_MIGRATION_STATE_SCHEMA_STATEMENTS
-].filter((statement) => !isRetiredAttachmentSchema(statement));
+].filter((statement) => !isRetiredAttachmentSchema(statement) && !isLegacyOrderingSchema(statement));

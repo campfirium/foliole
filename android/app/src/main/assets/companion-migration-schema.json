@@ -507,6 +507,15 @@
         }
       ],
       "beforeVersion": 60
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add current sync confirmation state.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 61
     }
   ],
   "planKeys": {

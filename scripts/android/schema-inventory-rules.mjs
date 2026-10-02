@@ -5,7 +5,6 @@ export const CORE_TABLES = [
   'external_documents',
   'external_search_folders',
   'import_sources',
-  'node_order',
   'node_reading',
   'node_reading_host_state',
   'node_review',

@@ -12,9 +12,9 @@ import { policyBreakdown } from './android-sync-audit-state-policy.mjs';
 const STRUCTURAL_TABLES = [
   { name: 'nodes', pk: 'id', sql: "SELECT id, title FROM nodes WHERE deleted_at IS NULL" },
   {
-    name: 'node_order',
+    name: 'parent_child_order',
     pk: 'node_id',
-    sql: 'SELECT no.node_id, no.position FROM node_order no INNER JOIN nodes n ON n.id = no.node_id WHERE n.deleted_at IS NULL'
+    sql: 'SELECT parent_id AS node_id, child_ids_json AS position FROM parent_child_order'
   },
   { name: 'external_documents', pk: 'document_id', sql: 'SELECT document_id FROM external_documents WHERE is_present = 1' }
 ];
@@ -76,7 +76,7 @@ function compareStructures(desktop, android) {
       desktopCount: desktopRows.length,
       missingOnAndroid: diffKeys(desktopRows, androidRows, definition.pk).slice(0, 20),
       name: definition.name,
-      positionMismatches: definition.name === 'node_order' ? positionMismatches(desktopRows, androidRows).slice(0, 20) : []
+      positionMismatches: definition.name === 'parent_child_order' ? positionMismatches(desktopRows, androidRows).slice(0, 20) : []
     };
   });
 }

@@ -95,11 +95,6 @@ export const reviewLog = sqliteTable('review_log', {
   difficultyAfter: real('difficulty_after').notNull()
 });
 
-export const nodeOrder = sqliteTable('node_order', {
-  nodeId: text('node_id').primaryKey(),
-  position: integer('position').notNull()
-});
-
 export const workspaceMeta = sqliteTable('workspace_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),

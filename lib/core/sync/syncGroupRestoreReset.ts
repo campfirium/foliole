@@ -13,7 +13,7 @@ const CLEAR_TABLES = [
   'sync_change_log', 'node_text_alternatives',
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',
-  'node_reading_host_state', 'node_view_state', 'node_order', 'review_log',
+  'node_reading_host_state', 'node_view_state', 'review_log',
   'parent_child_order', 'pdf_page_text', 'external_documents',
   'external_search_folders', 'import_sources', 'watched_folder_bindings',
   'sync_objects', 'sync_object_state', 'content_blob_data', 'content_blobs',

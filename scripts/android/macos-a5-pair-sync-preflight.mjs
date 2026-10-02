@@ -116,7 +116,7 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && typeof pairState.syncGroupTimelineId === 'string'
     && workspaceState.counts?.nodes === 0
     && workspaceState.counts?.content_blobs === 0
-    && workspaceState.counts?.node_order === 0
+    && workspaceState.counts?.parent_child_order === 0
     && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
   const rejectedWorkspace = pairState.nodeCount > 0
     && workspaceState.counts?.nodes === pairState.nodeCount
@@ -124,7 +124,7 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
   const rejectedEmptyWorkspace = pairState.nodeCount === 0
     && workspaceState.counts?.nodes === 0
     && workspaceState.counts?.content_blobs === 0
-    && workspaceState.counts?.node_order === 0
+    && workspaceState.counts?.parent_child_order === 0
     && workspaceState.pairingWorkspace?.syncEndpointPresent === true;
   const authorizedWorkspace = emptyStalePairing || joinedEmptyWorkspace || syncedProfileSwitch;
   const authorizedGroupRoute = pairState.syncGroupCredentialsPresent === true
@@ -176,7 +176,7 @@ export function runMacosA5PairSyncPreflight(paths, run = spawnSync) {
     && pairState.pairingPeerAuthorizationFingerprint === null
     && pairState.pairingPeerConflict === false
     && workspaceState.counts?.content_blobs === 0
-    && workspaceState.counts?.node_order === 0
+    && workspaceState.counts?.parent_child_order === 0
     && workspaceState.pairingWorkspace?.localDeviceIdentityPresent === true
     && workspaceState.pairingWorkspace?.syncEndpointPresent === false;
   const departedCredentialState = pairing.status === 0

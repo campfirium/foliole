@@ -29,6 +29,7 @@ vi.mock('./managedInboxEvents.js', () => ({
 }));
 
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { deleteNodesPermanently } from '../database/nodeMutations.js';
@@ -178,9 +179,7 @@ it('restores a removed import by importing a fresh initial topic', async () => {
   const firstRow = openDatabaseConnection().sqlite
     .prepare(`SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?`)
     .get('draft-import-source-301', 'entry.md') as { last_node_id: string };
-  const nodeOrder = openDatabaseConnection().sqlite
-    .prepare(`SELECT node_id FROM node_order ORDER BY position ASC`)
-    .all() as Array<{ node_id: string }>;
+  const nodeOrder = loadDerivedNodeOrder(openDatabaseConnection().driver).map((node_id) => ({ node_id }));
   deleteNodesPermanently({
     nodeIds: [firstRow.last_node_id],
     nodeOrder: nodeOrder.map((row) => row.node_id)
@@ -211,9 +210,7 @@ it('re-imports a removed Readwise source through the Readwise pipeline', async (
   const firstRow = openDatabaseConnection().sqlite
     .prepare(`SELECT last_node_id FROM keep_import_items WHERE rule_id = ? AND source_path = ?`)
     .get('draft-import-source-readwise', 'Plain.md') as { last_node_id: string };
-  const nodeOrder = openDatabaseConnection().sqlite
-    .prepare(`SELECT node_id FROM node_order ORDER BY position ASC`)
-    .all() as Array<{ node_id: string }>;
+  const nodeOrder = loadDerivedNodeOrder(openDatabaseConnection().driver).map((node_id) => ({ node_id }));
   deleteNodesPermanently({
     nodeIds: [firstRow.last_node_id],
     nodeOrder: nodeOrder.map((row) => row.node_id)

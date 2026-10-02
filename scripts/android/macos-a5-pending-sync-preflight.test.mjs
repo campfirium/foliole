@@ -30,7 +30,7 @@ const pending = {
 };
 const workspace = {
   canonicalInbox: { active: true, kind: 'folder' },
-  counts: { content_blobs: 2415, node_order: 0, nodes: 1960 },
+  counts: { content_blobs: 2415, parent_child_order: 0, nodes: 1960 },
   pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true }
 };
 
@@ -90,7 +90,7 @@ it('accepts only the canonical empty Inbox after app data reset', () => {
   };
   const workspaceState = {
     canonicalInbox: { active: true, kind: 'folder' },
-    counts: { content_blobs: 0, node_order: 0, nodes: 1 },
+    counts: { content_blobs: 0, parent_child_order: 0, nodes: 1 },
     pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: false }
   };
   const run = (state, workspace) => vi.fn()

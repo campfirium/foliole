@@ -58,6 +58,6 @@ export const departedCredentialFixture = Object.freeze({
 });
 
 export const departedWorkspaceFixture = Object.freeze({
-  counts: { content_blobs: 0, node_order: 0, nodes: 0 },
+  counts: { content_blobs: 0, parent_child_order: 0, nodes: 0 },
   pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true }
 });

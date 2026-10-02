@@ -32,6 +32,7 @@ function legacyFixture() {
     CREATE INDEX idx_setting_records_device ON setting_records (device_id, updated_at);
     INSERT INTO companion_meta VALUES ('device_id', 'Old Phone', 'old');
     INSERT INTO nodes (id, title, created_at, updated_at) VALUES ('n', 'Node', 'old', 'old');
+    CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
     INSERT INTO node_order (node_id, position) VALUES ('n', 0);
     INSERT INTO node_reading_device_state VALUES ('n', 'Old Phone', 22, 'old');
     INSERT INTO node_view_state VALUES ('n', 'Old Phone', 80, 1, 3, 'close-flush', 'old');

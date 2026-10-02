@@ -84,7 +84,7 @@ it('does not reconstruct retired ranking from article history during replay', as
   } finally {
     await port.run('DETACH DATABASE inc');
   }
-  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM node_order').get()).toEqual({ count: 0 });
+  expect(connection.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'node_order'").all()).toEqual([]);
   expect(connection.sqlite.prepare('SELECT child_ids_json FROM parent_child_order WHERE parent_id = ?')
     .get(ROOT_CHILD_ORDER_ID)).toEqual({ child_ids_json: '["node-1"]' });
 });

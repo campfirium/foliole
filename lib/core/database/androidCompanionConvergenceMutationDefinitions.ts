@@ -19,7 +19,6 @@ export const ANDROID_COMPANION_CONVERGENCE_MUTATION_DEFINITIONS = {
   nodeRekeyTombstones: 'UPDATE node_sync_tombstones SET node_id = ? WHERE node_id = ?',
   nodeRekeyConflicts: 'UPDATE node_sync_conflicts SET object_id = ? WHERE object_id = ?',
   nodeRekeyAlternatives: 'UPDATE node_text_alternatives SET node_id = ? WHERE node_id = ?',
-  nodeRekeyOrder: 'UPDATE node_order SET node_id = ? WHERE node_id = ?',
   nodeRekeyViewState: 'UPDATE node_view_state SET node_id = ? WHERE node_id = ?',
   nodeRekeySyncState:
     "UPDATE sync_object_state SET object_id = ? WHERE object_id = ? AND object_type IN " +

@@ -83,6 +83,7 @@ it('does not delete legacy development tables that already exist', () => {
 });
 
 function seedLegacyVirtualFolders(sqlite: SqliteDatabase) {
+  sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   sqlite.exec(`
     CREATE TABLE virtual_folders (
       id TEXT PRIMARY KEY,

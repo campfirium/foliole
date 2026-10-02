@@ -18,6 +18,7 @@ it.each([false, true])('migrates canonical v4 attachments or atomically rejects 
   fs.copyFileSync('scripts/ios/fixtures/database-upgrade-runtime/v4-foliole-companionSQLite.db', copy);
   const database = new Database(copy);
   try {
+    database.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
     database.exec(`INSERT INTO node_order (node_id, position)
       SELECT id, ROW_NUMBER() OVER (ORDER BY id) - 1 FROM nodes`);
     if (canonical) {
@@ -59,6 +60,7 @@ it('upgrades the previous mobile schema and preserves attachment relationships a
     const port = createBetterSqliteDbPort(database, { name: 'ios-upgrade-attachment' });
     const request = { allowCreate: true, expectedHostName: 'ios-upgrade-device', now: '2026-09-20T00:00:00.000Z' };
     await bootstrapCompanionDatabase(port, request);
+    database.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
     database.exec(`INSERT INTO node_order (node_id, position)
       SELECT value, ROW_NUMBER() OVER (ORDER BY parent_id, CAST(key AS INTEGER)) - 1
       FROM parent_child_order, json_each(child_ids_json);

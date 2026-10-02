@@ -9,7 +9,7 @@ export function resetSeededWorkspace() {
     DELETE FROM node_reading;
     DELETE FROM node_reading_host_state;
     DELETE FROM node_review;
-    DELETE FROM node_order;
+    DELETE FROM parent_child_order;
     DELETE FROM workspace_meta;
     DELETE FROM nodes;
   `);

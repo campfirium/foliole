@@ -162,6 +162,7 @@ it('omits retired ordering positions from new sync snapshots', () => {
   upsertTestNode();
   const connection = openDatabaseConnection();
   connection.driver.execute('UPDATE nodes SET kind = ?, position = NULL WHERE id = ?', ['folder', 'node-1']);
+  connection.sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   connection.driver.execute(
     `INSERT INTO node_order (node_id, position) VALUES (?, ?)
      ON CONFLICT(node_id) DO UPDATE SET position = excluded.position`,

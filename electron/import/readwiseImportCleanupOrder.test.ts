@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { rewriteExistingNodeOrder } from '../../lib/core/database/nodeOrderMutations.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 import { replaceNodeOrder } from '../database/nodeMutations.js';
@@ -72,9 +73,7 @@ function insertNode(id: string, parentId: string | null, title: string, timestam
 }
 
 function insertOrder(nodeIds: string[]) {
-  const statement = openDatabaseConnection().sqlite
-    .prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
-  nodeIds.forEach((nodeId, index) => statement.run(nodeId, index));
+  rewriteExistingNodeOrder(openDatabaseConnection().driver, nodeIds);
 }
 
 it('deletes unchanged Readwise imports after order persistence', () => {

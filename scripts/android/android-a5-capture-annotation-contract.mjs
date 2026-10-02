@@ -35,7 +35,7 @@ export function parseCaptureAnnotationReadiness(output) {
   if (readiness?.schemaVersion !== 1 || !['ready', 'approval_required'].includes(readiness.resultStatus)
       || !Array.isArray(readiness.missingPrerequisites) || !counts || !pairing
       || readiness.missingPrerequisites.some((entry) => typeof entry !== 'string')
-      || ['content_blobs', 'node_order', 'nodes'].some(
+      || ['content_blobs', 'parent_child_order', 'nodes'].some(
         (key) => counts[key] !== null && !Number.isSafeInteger(counts[key])
       )
       || typeof readiness.canonicalInbox?.active !== 'boolean'
@@ -49,7 +49,7 @@ export function parseCaptureAnnotationReadiness(output) {
       kind: typeof readiness.canonicalInbox.kind === 'string' ? readiness.canonicalInbox.kind : null
     },
     counts: {
-      content_blobs: counts.content_blobs, node_order: counts.node_order, nodes: counts.nodes
+      content_blobs: counts.content_blobs, parent_child_order: counts.parent_child_order, nodes: counts.nodes
     },
     missingPrerequisites: [...readiness.missingPrerequisites],
     pairingWorkspace: {

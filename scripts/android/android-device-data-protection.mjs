@@ -11,7 +11,7 @@ import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { classifyInstallerClearAppDataEvents } from './android-install-events.mjs';
 
 const DEFAULT_TABLES = [
-  'nodes', 'node_order', 'content_blobs', 'attachments',
+  'nodes', 'parent_child_order', 'content_blobs', 'attachments',
   'sync_object_state', 'workspace_meta', 'companion_meta',
   'sync_groups', 'sync_group_devices', 'sync_group_local_state'
 ];
@@ -83,7 +83,7 @@ function printSummary(label, snapshot) {
   const counts = snapshot.database?.counts ?? {};
   const clearDataEvents = classifyInstallerClearAppDataEvents(snapshot.events ?? []);
   console.log(`[android-data] ${label}: serial=${snapshot.serial || 'none'} installed=${snapshot.packageInfo?.installed ?? false}`);
-  console.log(`[android-data] database=${snapshot.database?.exists ? 'present' : 'missing'} nodes=${counts.nodes ?? 'n/a'} node_order=${counts.node_order ?? 'n/a'} content_blobs=${counts.content_blobs ?? 'n/a'}`);
+  console.log(`[android-data] database=${snapshot.database?.exists ? 'present' : 'missing'} nodes=${counts.nodes ?? 'n/a'} parent_child_order=${counts.parent_child_order ?? 'n/a'} content_blobs=${counts.content_blobs ?? 'n/a'}`);
   if (snapshot.database?.unreadable) {
     console.log(`[android-data] warning: database backup was created but sqlite inspection failed (${snapshot.database.error})`);
   }

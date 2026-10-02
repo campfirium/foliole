@@ -60,7 +60,7 @@ it('applies nodes and node attachments from an attached sync pack', async () => 
     reveal: 'Packed answer',
     title: 'Packed Node'
   });
-  expect(connection.sqlite.prepare('SELECT node_id, position FROM node_order WHERE node_id = ?').get('node-1'))
+  expect(connection.sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'node_order'").get())
     .toBeUndefined();
   expect(JSON.parse(connection.sqlite.prepare('SELECT resource_references FROM nodes WHERE id = ?').pluck().get('node-1') as string)).toEqual([
     { storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'Original.pdf', role: 'reference' }

@@ -10,7 +10,7 @@ import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-r
 const APP_ID = 'com.foliole.android';
 const COMPONENT = `${APP_ID}/.MainActivity`;
 const TABLES = [
-  'attachments', 'companion_meta', 'content_blobs', 'node_order', 'nodes', 'review_log',
+  'attachments', 'companion_meta', 'content_blobs', 'parent_child_order', 'nodes', 'review_log',
   'sync_group_local_state', 'sync_group_members', 'sync_object_state', 'workspace_meta'
 ];
 

@@ -51,6 +51,7 @@ function createNode(id: string) {
 function prepareOldOrder(ids: string[]) {
   const db = openDatabaseConnection().sqlite;
   db.exec("DELETE FROM parent_child_order; DELETE FROM sync_object_state WHERE object_type = 'parent_child_order'");
+  db.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   const insert = db.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
   insert.run('special-inbox', 0);
   insert.run('special-virtual-root', 1);

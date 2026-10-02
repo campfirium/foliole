@@ -7,7 +7,7 @@ function fingerprint(value) {
 export function classifyDepartedCredentialState(pairState, workspaceState) {
   const emptyContent = pairState.nodeCount === 0 && pairState.dirtyRecordCount === 0
     && workspaceState.counts?.nodes === 0 && workspaceState.counts?.content_blobs === 0
-    && workspaceState.counts?.node_order === 0;
+    && workspaceState.counts?.parent_child_order === 0;
   const exact = pairState.activeSyncGroupMemberCount === 0
     && pairState.syncGroupId === null && pairState.syncGroupTimelineId === null
     && pairState.storedSyncGroupCount === 1

@@ -184,7 +184,7 @@ function readStoredItem(id: string) {
 function readCounts() {
   return {
     nodes: openDatabaseConnection().driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM nodes')?.count,
-    order: openDatabaseConnection().driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM node_order')?.count,
+    order: openDatabaseConnection().driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM parent_child_order')?.count,
     review: openDatabaseConnection().driver.queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM node_review')?.count
   };
 }

@@ -28,7 +28,7 @@ function createDatabase() {
     );
     CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
-    CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER);
+    CREATE TABLE parent_child_order (parent_id TEXT PRIMARY KEY, child_ids_json TEXT);
     CREATE TABLE node_review (node_id TEXT PRIMARY KEY, due TEXT);
     CREATE TABLE node_reading (node_id TEXT PRIMARY KEY, next_at TEXT, priority INTEGER, state TEXT);
   `);
@@ -46,7 +46,7 @@ function insertNode(db, args) {
     '2026-07-25T00:00:00.000Z'
   );
   if (args.bodyHash) db.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run(args.bodyHash, Buffer.from(args.body ?? 'blob body'));
-  db.prepare('INSERT INTO node_order VALUES (?, ?)').run(args.id, args.position);
+  db.prepare("INSERT INTO parent_child_order VALUES ('parent-child-order:root', json_array(?)) ON CONFLICT(parent_id) DO UPDATE SET child_ids_json = json_insert(child_ids_json, '$[#]', ?)").run(args.id, args.id);
 }
 
 describe('Android Review acceptance selection', () => {

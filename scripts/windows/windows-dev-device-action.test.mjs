@@ -125,7 +125,7 @@ describe('Windows DEV fixed device action', () => {
     const { evidenceRoot, paths } = fixture();
     const readiness = {
       canonicalInbox: { active: false, kind: null },
-      counts: { content_blobs: 0, node_order: 0, nodes: 0 },
+      counts: { content_blobs: 0, parent_child_order: 0, nodes: 0 },
       missingPrerequisites: ['acceptance_workspace_empty', 'canonical_inbox_missing'],
       pairingWorkspace: { localDeviceIdentityPresent: false, syncEndpointPresent: false },
       resultStatus: 'approval_required', schemaVersion: 1

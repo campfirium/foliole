@@ -21,6 +21,7 @@ vi.mock('../import/managedInboxEvents.js', () => ({
   notifyManagedInboxUpdated: vi.fn()
 }));
 
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { runKeepImportRule } from '../import/keepImportService.js';
 import { runImportForFilePath } from '../ipc/importTextFile.js';
@@ -51,9 +52,7 @@ afterEach(async () => {
 });
 
 function readNodeOrder() {
-  return (openDatabaseConnection().sqlite.prepare('SELECT node_id FROM node_order ORDER BY position ASC').all() as Array<{ node_id: string }>).map(
-    (row) => row.node_id
-  );
+  return loadDerivedNodeOrder(openDatabaseConnection().driver);
 }
 
 async function importDocument(filePath: string) {

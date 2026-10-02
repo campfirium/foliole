@@ -28,6 +28,7 @@ import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigrati
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
+import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
 import { migrateCompanionNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
 
@@ -64,6 +65,9 @@ export async function migrateCompanionDatabase(
   beforeVersionCommit?: () => void | Promise<void>
 ) {
   if (currentVersion < 56) await installLegacyAttachmentSchema(db);
+  if (currentVersion < 40) await db.run(
+    'CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY REFERENCES nodes(id), position INTEGER NOT NULL)'
+  );
   for (const step of ANDROID_COMPANION_MIGRATION_PLAN) {
     if (currentVersion >= step.beforeVersion) continue;
     for (const action of step.actions) {
@@ -80,6 +84,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 58 && targetVersion >= 58) await repairCompanionSyncStateEntities(db);
   if (currentVersion < 59 && targetVersion >= 59) await migrateCompanionIndependentNodeVersions(db);
   if (currentVersion < 61 && targetVersion >= 61) await migrateCompanionNodeVersionConfirmations(db);
+  if (currentVersion < 62 && targetVersion >= 62) await retireCompanionLegacyStorage(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

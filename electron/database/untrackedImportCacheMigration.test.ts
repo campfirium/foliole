@@ -3,7 +3,7 @@ import { createRequire } from 'node:module';
 
 import { afterEach, expect, it } from 'vitest';
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import type { SqliteDatabase } from './connection.js';
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
@@ -46,7 +46,7 @@ it('removes only unmatched exact pairs and preserves every tracked cache column 
   initializeDatabaseSchema(db);
   expect(db.prepare('SELECT * FROM keep_import_item_cache ORDER BY rule_id, source_path').all()).toEqual(kept);
   expect(db.prepare('SELECT * FROM stored_source_search ORDER BY source_key').all()).toEqual(search);
-  expect(db.pragma('user_version', { simple: true })).toBe(127);
+  expect(db.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
 it('does nothing without orphan caches and never repeats after the version is committed', () => {

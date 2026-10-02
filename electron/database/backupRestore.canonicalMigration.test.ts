@@ -30,6 +30,40 @@ import { flushNodeSyncVersion } from './nodeSyncVersions.js';
 
 let tempRoot = '';
 
+it('restores v127 legacy storage and duplicate previews through the normal backup upgrade', async () => {
+  const db = openDatabaseConnection().sqlite;
+  const full = '# Recovery\n\n' + 'Complete cached source body. '.repeat(30);
+  db.exec(`CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);
+    CREATE TABLE virtual_folders (id TEXT PRIMARY KEY, description TEXT);
+    CREATE TABLE virtual_folder_items (id TEXT PRIMARY KEY);
+    INSERT INTO virtual_folders VALUES ('unused','unused description');
+    INSERT INTO keep_import_items (rule_id,source_path,source_mtime_ms,source_size_bytes,
+      first_seen_at,last_seen_at,last_status,source_state,local_node_state)
+    VALUES ('rule','unavailable.md',1,2,'then','now','blocked_deleted','present','locally_deleted');
+    PRAGMA user_version = 127;`);
+  db.prepare(`INSERT INTO keep_import_item_cache VALUES ('rule','unavailable.md','Recovery',?,?,1,2,'then','unavailable')`)
+    .run(full, full);
+  const order = db.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all();
+  const backupPath = path.join(tempRoot, 'legacy-cache.db');
+  await db.backup(backupPath);
+  initializeDatabase();
+  await restoreApplicationDatabaseBackup({ sourcePath: backupPath });
+  const restored = openDatabaseConnection().sqlite;
+  expect(restored.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
+  expect(restored.prepare(`SELECT name FROM sqlite_master
+    WHERE name IN ('node_order','virtual_folders','virtual_folder_items')`).all()).toEqual([]);
+  expect(restored.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all()).toEqual(order);
+  const cache = restored.prepare('SELECT content,content_preview,refreshed_at,refresh_error FROM keep_import_item_cache')
+    .get() as { content: string; content_preview: string; refreshed_at: string; refresh_error: string };
+  expect(cache).toMatchObject({ content: full, refreshed_at: 'then', refresh_error: 'unavailable' });
+  expect(cache.content_preview.length).toBeLessThanOrEqual(201);
+  expect(cache.content_preview).toContain('Complete cached source body.');
+  const search = restored.prepare("SELECT content,metadata FROM stored_source_search WHERE source_key='rule:unavailable.md'")
+    .get() as { content: string; metadata: string };
+  expect(search.content).toBe(full);
+  expect(JSON.parse(search.metadata).contentPreview).toBe(cache.content_preview);
+});
+
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-restore-canonical-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
@@ -86,6 +120,7 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
 function prepareLegacyOrder() {
   const { driver, sqlite } = openDatabaseConnection();
   const nodeOrder = loadDerivedNodeOrder(driver);
+  sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   sqlite.exec(`DELETE FROM node_order;
     DROP TABLE parent_child_order;
     DELETE FROM sync_object_state WHERE object_type = 'parent_child_order';`);

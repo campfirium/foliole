@@ -169,7 +169,7 @@ describe('Windows DEV foreground build', () => {
     const { calls, execute } = successfulExecutor(paths);
     const prepareHost = vi.fn();
     const readiness = {
-      counts: { content_blobs: 0, node_order: 0, nodes: 0 },
+      counts: { content_blobs: 0, parent_child_order: 0, nodes: 0 },
       missingPrerequisites: ['acceptance_workspace_empty'],
       resultStatus: 'approval_required', schemaVersion: 1
     };

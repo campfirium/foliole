@@ -80,6 +80,7 @@ it('rebuilds and fast-forwards complete producer versions through the BetterSQLi
   const desktopTarget = createTargetDatabase();
   const desktopPort = createBetterSqliteDbPort(desktopTarget, { name: 'lossless-desktop-target' });
   await applySyncNodesWithDbPort(desktopPort, [versionOne], { enqueueSearchInvalidations: false });
+  desktopTarget.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   desktopTarget.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)')
     .run('folder-1', 91);
   await applySyncNodesWithDbPort(desktopPort, [versionTwo], { enqueueSearchInvalidations: false });

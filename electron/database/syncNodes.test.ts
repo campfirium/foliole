@@ -67,6 +67,7 @@ function insertNodeFixture(connection: ReturnType<typeof openDatabaseConnection>
       null
     ]
   );
+  connection.sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   connection.driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', ['node-1', 7]);
 }
 

@@ -38,7 +38,7 @@ it('locks the exact runner, method, token receipt, and restart evidence', () => 
 it('accepts only bounded readiness evidence without credential values', () => {
   const readiness = {
     canonicalInbox: { active: false, kind: null },
-    counts: { content_blobs: 0, node_order: 0, nodes: 0 },
+    counts: { content_blobs: 0, parent_child_order: 0, nodes: 0 },
     missingPrerequisites: ['acceptance_workspace_empty'],
     pairingWorkspace: { localDeviceIdentityPresent: false, syncEndpointPresent: false },
     resultStatus: 'approval_required', schemaVersion: 1

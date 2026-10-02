@@ -14,6 +14,8 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   documents_dir: path.join(appRoot, 'Documents')
 }) }));
 
+import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 import { saveImportManagerSettings } from '../import/importManagerSettings.js';
 import { runKeepImportRule } from '../import/keepImportService.js';
 import { restoreRemovedSource } from '../import/removedSourceRestore.js';
@@ -82,7 +84,7 @@ it('a real snapshot filesystem failure blocks startup without deleting caches or
   } finally { db.close(); }
   await fs.rm(backupDir);
   initializeDatabase(undefined, { recovery: 'fail' });
-  expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(127);
+  expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
 it('keeps Removed readable and restorable through production import after the actual upgrade', async () => {
@@ -95,7 +97,7 @@ it('keeps Removed readable and restorable through production import after the ac
   await runKeepImportRule({ directoryPath: sourceDir, highlightPolicy: 'reference_only', ruleId: 'rule' });
   const db = openDatabaseConnection().sqlite;
   const nodeId = db.prepare("SELECT last_node_id FROM keep_import_items WHERE rule_id = 'rule'").pluck().get() as string;
-  const order = db.prepare('SELECT node_id FROM node_order ORDER BY position').all() as { node_id: string }[];
+  const order = loadDerivedNodeOrder(openDatabaseConnection().driver).map((node_id) => ({ node_id }));
   deleteNodesPermanently({ nodeIds: [nodeId], nodeOrder: order.map((row) => row.node_id) });
   db.exec("INSERT INTO keep_import_item_cache VALUES ('orphan', '/other', 'Old', 'Unique', NULL, 1, 2, 'then', NULL); PRAGMA user_version = 126");
   const before = (await loadRemovedSources()).entries;

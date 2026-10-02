@@ -162,6 +162,7 @@ it('ignores obsolete ranking rows in the next automatic pack', async () => {
   const previousSeq = driver.queryOne<{ value: number }>(
     'SELECT MAX(state_seq) AS value FROM sync_object_state'
   )!.value;
+  openDatabaseConnection().sqlite.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
   driver.execute('INSERT INTO node_order (node_id, position) VALUES (?, ?)', ['node-1', 7]);
 
   const packPath = path.join(tempRoot, 'stale-order.syncpack');

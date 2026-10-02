@@ -7,7 +7,7 @@ import {
 } from './android-capture-annotation-readiness.mjs';
 
 function databaseFixture({ counts = {}, inbox = { kind: 'folder' }, meta = {} } = {}) {
-  const tables = new Set(['nodes', 'node_order', 'content_blobs', 'companion_meta']);
+  const tables = new Set(['nodes', 'parent_child_order', 'content_blobs', 'companion_meta']);
   return {
     prepare(sql) {
       return {
@@ -28,13 +28,13 @@ function databaseFixture({ counts = {}, inbox = { kind: 'folder' }, meta = {} } 
 
 it('proves a populated canonical Inbox workspace without returning identity or endpoint values', () => {
   const inspection = inspectCaptureAnnotationWorkspace(databaseFixture({
-    counts: { content_blobs: 19, node_order: 12, nodes: 13 },
+    counts: { content_blobs: 19, parent_child_order: 12, nodes: 13 },
     meta: { device_id: 'android-a5', workspace_sync_endpoint_url: 'http://windows:38641?secret=x' }
   }));
   const readiness = captureAnnotationReadiness({ database: { exists: true, inspection } });
   expect(readiness).toMatchObject({
     canonicalInbox: { active: true, kind: 'folder' },
-    counts: { content_blobs: 19, node_order: 12, nodes: 13 },
+    counts: { content_blobs: 19, parent_child_order: 12, nodes: 13 },
     missingPrerequisites: [],
     pairingWorkspace: { localDeviceIdentityPresent: true, syncEndpointPresent: true },
     resultStatus: 'ready'
@@ -45,7 +45,7 @@ it('proves a populated canonical Inbox workspace without returning identity or e
 it('requires approval for an empty or unpaired workspace and exposes only bounded conclusions', () => {
   const inspection = inspectCaptureAnnotationWorkspace(databaseFixture({ inbox: null }));
   expect(captureAnnotationReadiness({ database: { exists: true, inspection } })).toMatchObject({
-    counts: { content_blobs: 0, node_order: 0, nodes: 0 },
+    counts: { content_blobs: 0, parent_child_order: 0, nodes: 0 },
     missingPrerequisites: [
       'acceptance_workspace_empty', 'canonical_inbox_missing', 'pairing_workspace_unproven'
     ],

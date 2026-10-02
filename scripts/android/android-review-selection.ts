@@ -4,6 +4,7 @@ import {
   androidBodyStatusExpression,
   androidResolvedContentExpression
 } from '../../lib/core/database/androidCompanionDerivedReadSql.ts';
+import { projectParentChildOrder } from '../../lib/core/database/parentChildOrder.ts';
 import type { ReviewSchedulerSettings } from '../../lib/core/review/settings.ts';
 import { buildReviewQueuePlan, type ReviewQueueNode } from '../../src/store/reviewQueuePlanner.ts';
 
@@ -125,11 +126,13 @@ export function selectReviewAcceptanceObjects(
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      LEFT JOIN node_reading rd ON rd.node_id = n.id
      LEFT JOIN node_review nr ON nr.node_id = n.id
-     ORDER BY COALESCE((SELECT position FROM node_order WHERE node_id = n.id), 2147483647),
-       n.updated_at DESC, n.created_at DESC, n.id ASC`
+     ORDER BY n.created_at ASC, n.id ASC`
   ).all() as ReviewNodeRow[];
   const nodesById = Object.fromEntries(rows.map((row) => [row.id, toPlannerNode(row)]));
-  const nodeOrder = rows.map(({ id }) => id);
+  const orders = db.prepare('SELECT parent_id, child_ids_json FROM parent_child_order').all() as
+    { parent_id: string; child_ids_json: string }[];
+  const nodeOrder = projectParentChildOrder(rows,
+    new Map(orders.map((row) => [row.parent_id, JSON.parse(row.child_ids_json) as string[]])));
   const plan = buildReviewQueuePlan({
     newDayStartsAtHour: settings.newDayStartsAtHour,
     nodeOrder,

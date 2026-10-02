@@ -30,7 +30,7 @@ function createDatabase(settings = SETTINGS_INPUT) {
     );
     CREATE TABLE content_blobs (hash TEXT PRIMARY KEY, availability TEXT);
     CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL);
-    CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER);
+    CREATE TABLE parent_child_order (parent_id TEXT PRIMARY KEY, child_ids_json TEXT);
     CREATE TABLE node_review (node_id TEXT PRIMARY KEY, due TEXT, last_review_at TEXT, state INTEGER, reps INTEGER, lapses INTEGER);
     CREATE TABLE node_reading (
       node_id TEXT PRIMARY KEY, interval_duration_ms INTEGER, interval_growth_factor REAL,
@@ -65,11 +65,11 @@ function createDatabase(settings = SETTINGS_INPUT) {
   return databasePath;
 }
 
-function insertNode(db, { id, kind, position, reveal }) {
+function insertNode(db, { id, kind, reveal }) {
   db.prepare('INSERT INTO nodes VALUES (?, NULL, ?, 0, NULL, ?, NULL, ?, ?, ?, NULL)').run(
     id, kind, `private body ${id}`, reveal, '2026-07-20T00:00:00.000Z', '2026-07-25T00:00:00.000Z'
   );
-  db.prepare('INSERT INTO node_order VALUES (?, ?)').run(id, position);
+  db.prepare("INSERT INTO parent_child_order VALUES ('parent-child-order:root', json_array(?)) ON CONFLICT(parent_id) DO UPDATE SET child_ids_json = json_insert(child_ids_json, '$[#]', ?)").run(id, id);
 }
 
 function prepare(databasePath) {

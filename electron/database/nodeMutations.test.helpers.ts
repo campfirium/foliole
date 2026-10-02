@@ -1,4 +1,5 @@
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
@@ -39,9 +40,8 @@ export function getNodeRow(nodeId: string) {
 }
 
 export function getNodeOrderRows() {
-  return openDatabaseConnection().sqlite
-    .prepare('SELECT node_id, position FROM node_order ORDER BY position ASC')
-    .all() as Array<{ node_id: string; position: number }>;
+  return loadDerivedNodeOrder(openDatabaseConnection().driver)
+    .map((node_id, position) => ({ node_id, position }));
 }
 
 export function getReviewCounts(nodeId: string) {
