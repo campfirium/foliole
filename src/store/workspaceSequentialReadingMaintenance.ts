@@ -76,9 +76,10 @@ export function buildSequentialReadingMaintenancePatch(args: {
       if (nextNodesById[nodeId]?.reading?.state !== 'locked' || findEnabledSequentialReadingSourceId(nodeId, nextNodesById)) {
         continue;
       }
-      const patchNodesById = { ...nextNodesById };
-      applyActiveReadingState({ ...args, changes, nextNodesById: patchNodesById, nodeId });
-      nextNodesById = patchNodesById;
+      if (nextNodesById === args.nodesById) {
+        nextNodesById = { ...nextNodesById };
+      }
+      applyActiveReadingState({ ...args, changes, nextNodesById, nodeId });
     }
   }
   return changes.length === 0 ? null : { changes, nodesById: nextNodesById };
