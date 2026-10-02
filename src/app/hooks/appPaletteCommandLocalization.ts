@@ -57,6 +57,7 @@ const COMMAND_TITLE_KEYS: Partial<Record<AppCommandId, TranslationKey>> = {
     'desktop.command.toggleDismissedTopicsVisibility',
   [APP_COMMAND_IDS.enterPriorityMode]: 'desktop.command.setPriority',
   [APP_COMMAND_IDS.toggleEditorDisplayMode]: 'desktop.command.toggleEditorDisplayMode',
+  [APP_COMMAND_IDS.openReviewCalendar]: 'desktop.command.openReviewCalendar',
   [APP_COMMAND_IDS.openSettings]: 'desktop.command.openSettings',
   [APP_COMMAND_IDS.openCustomCopy]: 'desktop.command.openCustomCopy',
   [APP_COMMAND_IDS.openReadwiseReaderSettings]: 'desktop.command.openReadwiseReaderSettings',

@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { ReviewCalendarDialog } from '../../features/review/components/ReviewCalendarDialog';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 
@@ -141,7 +142,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
       {props.overlay}
       {renderWorkspaceActivityNotice(clipboardImportNotice)}
       <WorkspaceRuntimeNotice />
-      <WorkspacePublishDialogHosts />
+      <WorkspaceAuxiliaryDialogs />
       <ImmersiveShortcutsOverlay visible={layoutChrome.isImmersiveMode && !immersive.isImmersiveEditing && immersive.isShortcutsOverlayOpen} />
       <ImportSourceWorkspace
         onOpenChange={(open) => (open ? imports.onOpenImportManagement() : imports.onCloseImportManagement())}
@@ -214,4 +215,11 @@ function WorkspaceMainChrome({
       })}
     </>
   );
+}
+
+function WorkspaceAuxiliaryDialogs() {
+  return <>
+    <WorkspacePublishDialogHosts />
+    <ReviewCalendarDialog />
+  </>;
 }

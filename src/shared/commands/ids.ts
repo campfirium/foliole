@@ -8,6 +8,7 @@ export const APP_COMMAND_IDS = {
   toggleCommandPaletteWin: 'commandPalette.toggle.win',
   closeCommandPalette: 'ui.closeCommandPalette',
   closeSettings: 'ui.closeSettings',
+  openReviewCalendar: 'review.openCalendar',
   closeContextMenu: 'ui.closeContextMenu',
   undo: 'app.undo',
   redo: 'app.redo',

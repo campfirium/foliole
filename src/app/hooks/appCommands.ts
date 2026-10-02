@@ -1,3 +1,4 @@
+import { requestReviewCalendarOpen } from '../../features/review/model/reviewCalendarRequests';
 import type { PdfReadingMode } from '../../features/settings/model/appearanceSettings';
 import {
   isContentRegionScaleCommandId,
@@ -179,6 +180,7 @@ function createWorkspaceCommandHandlers(
 
 function createOptionalWorkspaceCommandHandlers(actions: RunAppCommandActions) {
   return {
+    [APP_COMMAND_IDS.openReviewCalendar]: requestReviewCalendarOpen,
     [APP_COMMAND_IDS.publishToFoliole]: actions.publishToFoliole ?? (() => false),
     [APP_COMMAND_IDS.publishToDiscourse]: actions.publishToDiscourse ?? (() => false),
     [APP_COMMAND_IDS.publishToWordPress]: actions.publishToWordPress ?? (() => false),

@@ -9,14 +9,25 @@
 
 .review-calendar-cell {
   display: grid;
-  grid-template-rows: 20px 12px 12px;
+  grid-template-rows: 24px 14px 14px;
+  row-gap: 1px;
   justify-items: center;
-  height: 44px;
+  height: 54px;
 }
 
-.review-calendar-cell > span {
-  width: 28px;
+.review-calendar-cell > span,
+.review-calendar-weekdays > span {
+  width: min(44px, 100%);
   text-align: right;
+}
+
+.review-calendar-weekdays { justify-items: center; }
+.review-calendar-count {
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.review-calendar-key > span {
+  line-height: 14px;
 }
 
 @media (max-width: 700px) {

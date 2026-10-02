@@ -1,5 +1,4 @@
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { ReviewCalendarDialog } from '../../features/review/components/ReviewCalendarDialog';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { useDemoRuntimeState } from '../../shared/platform/runtime/demoRuntime';
 import {
@@ -22,13 +21,11 @@ interface WorkspaceRightSidebarReviewQueuePanelProps {
 
 function QueueHeader({ demoDay }: { demoDay?: number }) {
   const t = useTranslation();
-  const { isDemo } = useDemoRuntimeState();
   return (
     <header className={`${inspectorListInsetPaddingClassName} pb-2 pt-3`}>
       <div className="flex items-baseline justify-between gap-2">
         <h2 className={`m-0 shrink-0 whitespace-nowrap px-0 pb-0 text-left ${inspectorListHeadingClassName}`}>{t('desktop.rightPanel.flow')}</h2>
         {demoDay ? <DemoDayLabel day={demoDay} /> : null}
-        {!isDemo ? <ReviewCalendarDialog /> : null}
       </div>
     </header>
   );
