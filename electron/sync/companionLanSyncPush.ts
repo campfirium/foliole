@@ -19,7 +19,8 @@ export async function handleCompanionSyncPush(bodyText: string, authenticatedHos
   }, peer);
   try {
     const result = await handleCompanionSyncPushWithApply(
-      bodyText, authenticatedHostName, applyCompanionSyncPushAsync, notifyWorkspaceSyncApplied
+      bodyText, authenticatedHostName,
+      items => applyCompanionSyncPushAsync(items, authenticatedDeviceId ?? ''), notifyWorkspaceSyncApplied
     );
     const saved = result.acks.filter((ack) => ack.status === 'accepted' || ack.status === 'already_applied').length;
     if (authenticatedDeviceId) await recordDesktopSyncActivity(context, {

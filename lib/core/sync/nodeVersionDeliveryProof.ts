@@ -174,11 +174,14 @@ async function promoteBaseProof(
   if (existing && existing.proof_revision === args.proofRevision && existing.version_id !== versionId) {
     throw new Error('node_version_proof_revision_conflict');
   }
+  const confirmedVersionId = existing && existing.version_id !== versionId &&
+    await isStoredAncestorVersion(port, versionId, existing.version_id)
+    ? existing.version_id : versionId;
   const [body] = await port.query<DbRow>(
     `SELECT 1 AS available FROM node_sync_versions WHERE object_id = ? AND version_id = ?
        AND (body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text'
          OR json_type(snapshot_json, '$.content') IS NULL)`,
-    [objectId, versionId]
+    [objectId, confirmedVersionId]
   );
   if (!body) throw new Error('node_version_proof_base_unavailable');
   await port.run(
@@ -189,7 +192,7 @@ async function promoteBaseProof(
        version_id = excluded.version_id, library_epoch = excluded.library_epoch,
        proof_revision = excluded.proof_revision, pack_id = excluded.pack_id,
        updated_at = excluded.updated_at`,
-    [args.groupId, args.deviceId, objectId, versionId, args.libraryEpoch,
+    [args.groupId, args.deviceId, objectId, confirmedVersionId, args.libraryEpoch,
       args.proofRevision, args.packId, args.confirmedAt]
   );
 }

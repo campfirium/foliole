@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 
+import { hasConfirmedIncomingNodeDescendant } from '../../lib/core/sync/incomingNodeVersionDescendants.js';
 import {
   blocksIncomingNodeVersion,
   decideIncomingNodeApply,
@@ -67,6 +68,28 @@ it('keeps only the latest head per remote branch', () => {
       })
     ]).map((record) => record.version_id)
   ).toEqual(['phone#2', 'tablet#1']);
+});
+
+it('recognizes history consumed by a confirmed incoming descendant through explicit parent edges', () => {
+  const history = createNodeRecord({ object_id: 'node-1', version_id: 'old' });
+  const middle = createNodeRecord({ object_id: 'node-1', version_id: 'middle', parent_version_ids: ['old'] });
+  const head = createNodeRecord({ object_id: 'node-1', version_id: 'head', parent_version_ids: ['middle'] });
+  expect(hasConfirmedIncomingNodeDescendant(history, [history, middle, head], new Set(['head']))).toBe(true);
+  expect(hasConfirmedIncomingNodeDescendant(history, [history, middle, head], new Set())).toBe(false);
+});
+
+it('does not consume a conflict from an unproven ancestor claim or another object', () => {
+  const history = createNodeRecord({ object_id: 'node-1', version_id: 'old' });
+  const claimed = createNodeRecord({ object_id: 'node-1', version_id: 'claimed', ancestor_version_ids: ['old'] });
+  const other = createNodeRecord({ object_id: 'node-2', version_id: 'other', parent_version_ids: ['old'] });
+  expect(hasConfirmedIncomingNodeDescendant(history, [history, claimed, other], new Set(['claimed', 'other']))).toBe(false);
+});
+
+it('does not infer a descendant through missing intermediate history', () => {
+  const history = createNodeRecord({ object_id: 'node-1', version_id: 'old' });
+  const head = createNodeRecord({ object_id: 'node-1', version_id: 'head', parent_version_ids: ['missing'],
+    ancestor_version_ids: ['missing', 'old'] });
+  expect(hasConfirmedIncomingNodeDescendant(history, [history, head], new Set(['head']))).toBe(false);
 });
 
 it('orders child nodes after their included parent node', () => {

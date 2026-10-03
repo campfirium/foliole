@@ -1,5 +1,6 @@
 import { moveCanonicalNodeHistory } from '../../lib/core/sync/canonicalNodeHistory.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { hasConfirmedIncomingNodeDescendant } from '../../lib/core/sync/incomingNodeVersionDescendants.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
 import { resolveFolderConflict } from '../../lib/core/sync/syncFolderResolution.js';
 import { resolveItemConflict } from '../../lib/core/sync/syncItemResolution.js';
@@ -22,13 +23,18 @@ import {
 } from './companionSyncPushNodeVersionWithDbPort.js';
 import type { CompanionSyncPushPayload, CompanionSyncPushResult } from './companionSyncPushTypes.js';
 
+interface NodePushEntry {
+  item: CompanionSyncPushPayload;
+  record: NativeSyncNodeRecord;
+}
+
 export async function applyNodePushBatchWithDbPort(
   port: DbPort,
   items: CompanionSyncPushPayload[]
 ): Promise<CompanionSyncPushResult> {
   const parsed = items.map((item) => ({ item, record: parseNodeVersionPush(item) }));
   const result = emptyResult();
-  const valid = parsed.filter((entry): entry is { item: CompanionSyncPushPayload; record: NativeSyncNodeRecord } => {
+  const valid = parsed.filter((entry): entry is NodePushEntry => {
     if (entry.record?.host_name === entry.item.authorHostName) return true;
     append(result, rejectNodeVersionPush(entry.item, 'invalid_node_push'));
     return false;
@@ -56,16 +62,28 @@ export async function applyNodePushBatchWithDbPort(
     else appendNodeAck(result, entry, applied.appliedIds.includes(entry.record.object_id)
       || (isNodeVersionIdentityOnly(entry.record) && await isStoredVersionIdentical(port, entry.record)));
   }
+  await settleDeferredNodes(port, deferred, valid, result);
+  return result;
+}
+
+async function settleDeferredNodes(port: DbPort, deferred: NodePushEntry[], valid: NodePushEntry[],
+  result: CompanionSyncPushResult) {
   const related = [];
   for (const entry of deferred) {
     if (isAdditiveNode(entry.record) && !await hasSharedHistory(port, entry.record)) {
       await resolveAdditiveObject(port, entry, result);
     } else related.push(entry);
   }
-  for (const entries of groupByObjectId(related)) {
+  const confirmed = new Set(result.acks.filter(ack => ack.status === 'accepted' && !ack.canonicalObjectId)
+    .map(ack => ack.versionId));
+  const pending = related.filter(entry => {
+    if (!hasConfirmedIncomingNodeDescendant(entry.record, valid.map(item => item.record), confirmed)) return true;
+    appendNodeAck(result, entry, true);
+    return false;
+  });
+  for (const entries of groupByObjectId(pending)) {
     await resolveSharedObject(port, entries, result);
   }
-  return result;
 }
 
 async function hasSharedHistory(port: DbPort, record: NativeSyncNodeRecord) {
