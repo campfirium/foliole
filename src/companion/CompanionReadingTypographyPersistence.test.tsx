@@ -20,7 +20,7 @@ function openAppearance() {
 }
 
 function choose(name: string) {
-  fireEvent.click(screen.getByRole('button', { name, exact: true }));
+  fireEvent.click(screen.getByRole('button', { name }));
 }
 
 afterEach(() => window.localStorage.clear());
@@ -36,7 +36,7 @@ it('restores settings selected through the reading surface after leaving and rem
   const reopened = mountArticle();
   openAppearance();
   for (const name of ['Extra large', 'Serif', 'Relaxed', 'High']) {
-    expect(screen.getByRole('button', { name, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true');
   }
   expect(reopened.container.querySelector('[data-reading-font-size]')).toHaveAttribute('data-reading-font-size', 'xlarge');
 });
@@ -54,14 +54,14 @@ it('retains confirmed settings and reports quota failure, then allows retry', ()
   }
   storage.setItem('quota', 'x'.repeat(5_000_000 - used - 'quota'.length));
   choose('Extra large');
-  expect(screen.getByRole('button', { name: 'Small', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Small' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByRole('alert')).toHaveTextContent('Could not save reading settings. Your previous settings are still in use.');
   expect(loadReadingTypographySettings()).toEqual(confirmed);
   expect(view.container.querySelector('[data-reading-font-size]')).toHaveAttribute('data-reading-font-size', 'small');
   view.unmount();
   mountArticle();
   openAppearance();
-  expect(screen.getByRole('button', { name: 'Small', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  expect(screen.getByRole('button', { name: 'Small' })).toHaveAttribute('aria-pressed', 'true');
   choose('Extra large');
   expect(screen.getByRole('alert')).toBeInTheDocument();
   storage.removeItem('quota');
