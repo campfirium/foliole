@@ -21,7 +21,7 @@ export function searchStoredSources(driver: DatabaseDriver, kind: 'external' | '
     FROM stored_source_search WHERE stored_source_search MATCH ? AND kind = ?`, [ftsQuery, kind])) {
     rows.set(row.source_key, row);
   }
-  const clauses = terms.map(() => "instr(lower(title || ' ' || path || ' ' || content), ?) > 0");
+  const clauses = terms.map(() => "instr(source_search_lower(title || ' ' || path || ' ' || content), ?) > 0");
   for (const row of driver.queryAll<StoredSourceSearchRow>(`SELECT ${columns}
     FROM stored_source_search WHERE kind = ? AND (${clauses.join(' OR ')})`, [kind, ...terms])) {
     rows.set(row.source_key, row);

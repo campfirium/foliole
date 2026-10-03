@@ -74,6 +74,9 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
   });
 
   const rawSqlite = new BetterSqlite3(dbPath);
+  // Stored-source candidates must use the same case conversion as the JS matcher.
+  rawSqlite.function('source_search_lower', { deterministic: true, directOnly: true },
+    (value: unknown) => typeof value === 'string' ? value.toLowerCase() : null);
   if (applyJournalMode) {
     rawSqlite.pragma('journal_mode = WAL');
   }
