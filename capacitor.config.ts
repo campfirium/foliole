@@ -7,7 +7,7 @@ export function createCapacitorConfig(env: NodeJS.ProcessEnv = process.env): Cap
     appId: 'com.campfirium.foliole.android',
     appName: 'Foliole',
     android: {
-      loggingBehavior: 'none'
+      loggingBehavior: 'debug'
     },
     plugins: {
       CapacitorSQLite: {

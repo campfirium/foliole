@@ -16,6 +16,10 @@ it('keeps build and status outside the fixed A5 mutation lease', () => {
     deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
     formalTarget: 'fixed-a5', formalTargetIdentity: '87a33a4b', mutatesFixedA5: false
   });
+  expect(assertRegisteredMacosA5Action('sync-logs')).toMatchObject({
+    deviceLeaseMode: 'readonly-lifecycle', formalSourceClass: 'source-free-readonly',
+    mutatesFixedA5: false
+  });
   expect(assertRegisteredMacosA5Action('hidden-desktop-status')).toMatchObject({
     formalEvidence: { kind: 'run-json', root: 'a5-hidden-desktop-status' },
     deviceLeaseMode: null, formalSourceClass: 'frozen-build', mutatesFixedA5: false,

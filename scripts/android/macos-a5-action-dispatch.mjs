@@ -36,6 +36,12 @@ export async function dispatchMacosA5Action({
   if (action === 'status') {
     assertFixed(paths); pairingReadiness(paths); readiness(paths);
   }
+  if (action === 'sync-logs') {
+    const { readA5SyncLogs } = await import('./macos-a5-sync-logs.mjs');
+    const { filePath, rows } = readA5SyncLogs({ assertFixed: () => assertFixed(paths),
+      buildIdentity, captured, paths, serial });
+    console.log(`[macos-a5-dev] sync-logs=${filePath} records=${rows.length}`);
+  }
   if (action === 's220-package-inventory') {
     const { inspectS220A5Packages } = await import('./macos-a5-s220-package-inventory.mjs');
     const { filePath, receipt } = await inspectS220A5Packages({ assertFixed: () => assertFixed(paths),
