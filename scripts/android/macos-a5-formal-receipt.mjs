@@ -180,13 +180,16 @@ function formalA5EvidenceLocator(context, descriptor) {
 
 export function prepareFormalA5ReceiptCompletion(manager, context, paths, fsApi = fs) {
   const frozen = context.formalSourceClass === 'frozen-build';
-  if (frozen && !fsApi.existsSync(paths.apk)) throw new Error('Formal action APK evidence is missing.');
   const locator = formalA5EvidenceLocator(context, manager.actionContract.formalEvidence);
+  const bundle = context.action === 'bundle-release';
+  const artifact = bundle ? path.join(locator, 'app-release-unsigned.aab') : paths.apk;
+  if (frozen && !fsApi.existsSync(artifact)) throw new Error('Formal action artifact evidence is missing.');
   if (!fsApi.existsSync(locator)) throw new Error('Formal action evidence locator is missing.');
   return update(manager, {
     evidence: { locator, runId: context.runId, verifiedAt: manager.now() },
-    apk: frozen ? { digest: sha256(fsApi.readFileSync(paths.apk)),
-      projectRelativePath: 'android/app/build/outputs/apk/debug/app-debug.apk' } : null,
+    [bundle ? 'bundle' : 'apk']: frozen ? { digest: sha256(fsApi.readFileSync(artifact)),
+      projectRelativePath: bundle ? 'android/app/build/outputs/bundle/release/app-release.aab'
+        : 'android/app/build/outputs/apk/debug/app-debug.apk' } : null,
     source: { ...manager.receipt.source,
       archiveDigest: frozen ? context.sourceArchiveDigest : null },
     stage: 'action-complete'
