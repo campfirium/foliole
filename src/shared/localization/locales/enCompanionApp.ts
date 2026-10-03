@@ -1,5 +1,7 @@
 export const EN_COMPANION_APP_TRANSLATIONS = {
   'companion.share.incomplete': 'Sharing could not be completed. Try again.',
+  'companion.search.unavailable': 'This result is no longer available.',
+  'companion.search.refresh': 'Search again',
   'companion.link.unavailable': 'This link cannot be opened in this library.',
   'companion.link.dismiss': 'Dismiss',
   'companion.app.retry': 'Retry',

@@ -155,6 +155,6 @@ function normalizeBodyStatus(status: NativeExternalDocument['content_status']) {
   return status === 'failed' || status === 'fetching' || status === 'missing' ? status : 'ready';
 }
 
-function normalizeExternalDocumentSearchResult(document: NativeExternalDocumentSearchResult): CompanionExternalDocumentSearchResult {
+export function normalizeExternalDocumentSearchResult(document: NativeExternalDocumentSearchResult): CompanionExternalDocumentSearchResult {
   return normalizeExternalDocument(document);
 }

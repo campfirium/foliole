@@ -10,7 +10,8 @@ const searchCompanionFullText = vi.fn();
 const supportsCompanionExtendedSearch = vi.fn(() => true);
 
 vi.mock('../shared/platform/companionFullTextSearch', () => ({
-  searchCompanionFullText: (...args: unknown[]) => searchCompanionFullText(...args),
+  isCompanionSearchTopicAvailable: async () => true,
+  searchCompanionFullTextSnapshot: (...args: unknown[]) => searchCompanionFullText(...args),
   supportsCompanionExtendedSearch: () => supportsCompanionExtendedSearch()
 }));
 
@@ -53,7 +54,7 @@ describe('CompanionSearchContent presentation', () => {
     renderWithLocalization(<CompanionSearchContent />);
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
 
-    await waitFor(() => expect(searchCompanionFullText).toHaveBeenCalledWith('alpha', 20));
+    await waitFor(() => expect(searchCompanionFullText).toHaveBeenCalledWith('alpha'));
     expect(screen.getByText('Topics')).toBeInTheDocument();
     expect(screen.getByText('Topic Alpha')).toBeInTheDocument();
     expect(screen.getByText('PDF text')).toBeInTheDocument();
@@ -80,7 +81,7 @@ describe('CompanionSearchContent states and actions', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
 
     fireEvent.click(await screen.findByRole('button', { name: /Topic Alpha/u }));
-    expect(onOpenTopic).toHaveBeenCalledWith(expect.objectContaining({ nodeId: 'topic-1', matchStart: 1 }), 'alpha');
+    await waitFor(() => expect(onOpenTopic).toHaveBeenCalledWith(expect.objectContaining({ nodeId: 'topic-1', matchStart: 1 }), 'alpha'));
     fireEvent.click(screen.getByRole('button', { name: /External Alpha/u }));
     expect(onOpenExternalDocument).toHaveBeenCalledWith(expect.objectContaining({ document_id: 'doc-1' }), 'alpha');
     fireEvent.click(screen.getByRole('button', { name: /PDF page 2/u }));

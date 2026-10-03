@@ -1,69 +1,43 @@
 import { useEffect, useRef, useState } from 'react';
 
-import { searchCompanionFullText, type CompanionFullTextSearchResults, type CompanionSearchOffsets } from '../shared/platform/companionFullTextSearch';
+import { searchCompanionFullTextSnapshot, type CompanionFullTextSearchResults } from '../shared/platform/companionFullTextSearch';
 
 const PAGE_SIZE = 20;
 type Status = 'idle' | 'loading' | 'ready' | 'error';
 
-function nextOffsets(results: CompanionFullTextSearchResults, previous: CompanionSearchOffsets = {}): CompanionSearchOffsets {
-  return Object.fromEntries((['topics', 'pdf', 'external'] as const).map((kind) => [
-    kind, results[kind].length < PAGE_SIZE ? null : (previous[kind] ?? 0) + results[kind].length
-  ]));
-}
-
 export function useCompanionSearch(query: string) {
-  const [results, setResults] = useState<CompanionFullTextSearchResults | null>(null);
+  const [snapshot, setSnapshot] = useState<CompanionFullTextSearchResults | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [moreError, setMoreError] = useState(false);
-  const [offsets, setOffsets] = useState<CompanionSearchOffsets>({});
+  const [count, setCount] = useState(PAGE_SIZE);
+  const [refresh, setRefresh] = useState(0);
   const generation = useRef(0);
-  const busy = useRef(false);
   const normalizedQuery = query.trim();
   useEffect(() => {
     const current = ++generation.current;
-    busy.current = false;
-    setResults(null);
-    setOffsets({});
-    setLoadingMore(false);
-    setMoreError(false);
+    setSnapshot(null);
+    setCount(PAGE_SIZE);
     setStatus(normalizedQuery ? 'loading' : 'idle');
     if (!normalizedQuery) return;
-    searchCompanionFullText(normalizedQuery, PAGE_SIZE).then((page) => {
+    searchCompanionFullTextSnapshot(normalizedQuery).then((next) => {
       if (generation.current !== current) return;
-      setResults(page);
-      setOffsets(nextOffsets(page));
+      setSnapshot(next);
       setStatus('ready');
     }).catch(() => {
       if (generation.current === current) setStatus('error');
     });
     return () => { generation.current += 1; };
-  }, [normalizedQuery]);
+  }, [normalizedQuery, refresh]);
 
-  async function loadMore() {
-    if (busy.current || !results) return;
-    busy.current = true;
-    setLoadingMore(true);
-    setMoreError(false);
-    const current = generation.current;
-    try {
-      const page = await searchCompanionFullText(normalizedQuery, PAGE_SIZE, offsets);
-      if (generation.current !== current) return;
-      setResults({
-        ...page,
-        topics: [...results.topics, ...page.topics],
-        pdf: [...results.pdf, ...page.pdf],
-        external: [...results.external, ...page.external]
-      });
-      setOffsets(nextOffsets(page, offsets));
-    } catch {
-      if (generation.current === current) setMoreError(true);
-    } finally {
-      if (generation.current === current) {
-        busy.current = false;
-        setLoadingMore(false);
-      }
-    }
-  }
-  return { results, status, loadMore, loadingMore, moreError, hasMore: Object.values(offsets).some((offset) => offset !== null) };
+  const results = snapshot ? {
+    ...snapshot,
+    topics: snapshot.topics.slice(0, count),
+    pdf: snapshot.pdf.slice(0, count),
+    external: snapshot.external.slice(0, count)
+  } : null;
+  return {
+    results, status,
+    loadMore: () => setCount((current) => current + PAGE_SIZE),
+    refresh: () => setRefresh((current) => current + 1),
+    hasMore: Boolean(snapshot && Math.max(snapshot.topics.length, snapshot.pdf.length, snapshot.external.length) > count)
+  };
 }

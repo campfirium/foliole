@@ -9,7 +9,8 @@ import { createCompanionSearchResultsFixture } from './companionSearchTestFixtur
 
 const search = vi.hoisted(() => vi.fn());
 vi.mock('../shared/platform/companionFullTextSearch', () => ({
-  searchCompanionFullText: search,
+  isCompanionSearchTopicAvailable: async () => true,
+  searchCompanionFullTextSnapshot: search,
   supportsCompanionExtendedSearch: () => true
 }));
 beforeEach(() => search.mockReset());
@@ -28,38 +29,41 @@ function begin() {
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'alpha' } });
 }
 
-it('keeps the first page reachable while appending all three result kinds', async () => {
-  search.mockResolvedValueOnce(page(0, 20)).mockResolvedValueOnce(page(20, 2));
+it('reveals all three fixed result sets without querying the changed library again', async () => {
+  search.mockResolvedValueOnce(page(0, 42)).mockResolvedValueOnce(page(90, 1));
   begin();
   fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
   expect(await screen.findByText('Topic 21')).toBeInTheDocument();
   expect(screen.getByText('External 21')).toBeInTheDocument();
   expect(screen.getByText('PDF page 22')).toBeInTheDocument();
   expect(screen.getByText('Topic 0')).toBeInTheDocument();
-  expect(search).toHaveBeenLastCalledWith('alpha', 20, { topics: 20, pdf: 20, external: 20 });
-  expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
-});
-
-it('preserves results on a failed continuation and retries the same page', async () => {
-  search.mockResolvedValueOnce(page(0, 20)).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(page(20, 1));
-  begin();
-  fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('Search failed');
-  expect(screen.getByText('Topic 0')).toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Load more' }));
-  expect(await screen.findByText('Topic 20')).toBeInTheDocument();
-  expect(search.mock.calls[1]).toEqual(search.mock.calls[2]);
+  expect(await screen.findByText('Topic 41')).toBeInTheDocument();
+  expect(search).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Search again' }));
+  expect(await screen.findByText('Topic 90')).toBeInTheDocument();
+  expect(screen.queryByText('Topic 0')).not.toBeInTheDocument();
+  expect(screen.getByRole('searchbox')).toHaveValue('alpha');
 });
 
-it('ignores an older continuation after the user changes the query', async () => {
-  let resolve!: (value: CompanionFullTextSearchResults) => void;
-  search.mockResolvedValueOnce(page(0, 20)).mockReturnValueOnce(new Promise((done) => { resolve = done; })).mockResolvedValueOnce(page(90, 1));
+it('retries failed snapshot creation without publishing a partial list', async () => {
+  search.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(page(20, 1));
   begin();
-  fireEvent.click(await screen.findByRole('button', { name: 'Load more' }));
-  expect(screen.getByRole('button', { name: 'Searching...' })).toBeDisabled();
+  await screen.findByText(/Search failed/u);
+  expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Search again' }));
+  expect(await screen.findByText('Topic 20')).toBeInTheDocument();
+  expect(search.mock.calls[0]).toEqual(search.mock.calls[1]);
+});
+
+it('ignores an older snapshot after changing the query', async () => {
+  let resolve!: (value: CompanionFullTextSearchResults) => void;
+  search.mockReturnValueOnce(new Promise((done) => { resolve = done; })).mockResolvedValueOnce(page(90, 1));
+  begin();
   fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'beta' } });
   await screen.findByText('Topic 90');
-  await act(async () => resolve(page(20, 1)));
+  await act(async () => resolve(page(20, 42)));
   await waitFor(() => expect(screen.queryByText('Topic 20')).not.toBeInTheDocument());
-  expect(screen.queryByText('Topic 0')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
 });
