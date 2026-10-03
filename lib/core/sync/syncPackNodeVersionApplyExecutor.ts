@@ -1,5 +1,6 @@
 import type { DbPort, DbRow } from './dbPort.js';
 import type { SyncPackNodeApplyOptions } from './syncPackApplyStatements.js';
+import { loadConvergedSyncPackReplays } from './syncPackConvergedReplay.js';
 import { restoreIncomingNodeMergeBases } from './syncPackNodeMergeBaseRestore.js';
 import {
   assertCurrentVersionAvailable,
@@ -12,6 +13,7 @@ import {
   type SyncPackNodeVersionParentRow,
   type SyncPackNodeVersionRow
 } from './syncPackNodeVersions.js';
+import { loadVerifiedExistingSyncPackVersions, rehydrateStoredVersionBodies } from './syncPackStoredVersionFacts.js';
 import { eligiblePackVersion } from './syncPackVersionEligibility.js';
 
 // Assembled dependency history can exceed a transport page; read one body at a time.
@@ -36,11 +38,17 @@ export async function applySyncPackNodeVersionsWithDbPort(
      WHERE ${eligiblePackVersion('identity', alias)}`
   )).map(normalizeVersionParentRow);
   const dependencies = includeLegacyVersionParents(incoming, parents);
-  await validateStoredVersionDependencies(port, incoming, dependencies, options.incomingAlias ?? 'inc');
+  await validateIncomingBodies(port, alias, incoming);
+  const verified = await loadVerifiedExistingSyncPackVersions(port, alias);
+  const replays = await loadConvergedSyncPackReplays(port, alias,
+    [...options.verifiedVersionIds ?? [], ...verified], dependencies);
+  await validateStoredVersionDependencies(port, incoming, dependencies, options.incomingAlias ?? 'inc', replays);
   const ordered = validateIncomingDag(incoming, dependencies);
   await assertIncomingCurrentPointers(port, alias, new Map(ordered.map((row) => [row.version_id, row])));
-  await assertExistingVersionsMatch(port, alias);
-  await validateIncomingBodies(port, alias, ordered);
+  await storeIncomingVersions(port, alias, replays);
+}
+
+async function storeIncomingVersions(port: DbPort, alias: string, replays: Set<string>) {
   await port.run(
     `INSERT INTO main.node_sync_versions (${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')})
      SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.map((column) => `incoming.${column}`).join(', ')}
@@ -55,6 +63,7 @@ export async function applySyncPackNodeVersionsWithDbPort(
      FROM ${alias}.node_sync_version_parents parent
      JOIN main.node_sync_versions version ON version.version_id = parent.version_id
      WHERE ${eligiblePackVersion('version', alias)}
+       AND version.version_id NOT IN (SELECT value FROM json_each(?))
        AND (version.parent_version_id = (SELECT incoming.parent_version_id FROM ${alias}.node_sync_versions incoming
          WHERE incoming.version_id = version.version_id) OR (NOT EXISTS
          (SELECT 1 FROM ${alias}.node_sync_versions incoming WHERE incoming.version_id = version.version_id)
@@ -62,7 +71,7 @@ export async function applySyncPackNodeVersionsWithDbPort(
        AND NOT EXISTS (SELECT 1 FROM main.node_sync_version_parents held
          WHERE held.version_id = parent.version_id AND held.ordinal = parent.ordinal
            AND held.parent_version_id <> parent.parent_version_id)
-     ON CONFLICT(version_id, parent_version_id) DO NOTHING`
+     ON CONFLICT(version_id, parent_version_id) DO NOTHING`, [JSON.stringify([...replays])]
   );
   await restoreIncomingNodeMergeBases(port, alias);
 }
@@ -81,18 +90,6 @@ async function validateIncomingBodies(port: DbPort, alias: string, ordered: Vers
       if (!row) throw new Error(`sync_pack_node_version_missing:${identity.version_id}`);
     }
   }
-}
-
-async function rehydrateStoredVersionBodies(port: DbPort, alias: string) {
-  await port.run(
-    `UPDATE main.node_sync_versions AS stored SET
-       body_text = ${versionBodySql('incoming')}, snapshot_json = incoming.snapshot_json
-     FROM ${alias}.node_sync_versions AS incoming
-     WHERE stored.version_id = incoming.version_id
-       AND ${eligiblePackVersion('incoming', alias)}
-       AND json_type(stored.snapshot_json, '$.content') = 'null'
-       AND ${versionBodySql('incoming')} IS NOT NULL`
-  );
 }
 
 function normalizeVersionIdentity(row: DbRow): VersionIdentity {
@@ -187,33 +184,6 @@ async function assertIncomingCurrentPointers(
     }
     if (version.object_id !== nodeId) throw new Error(`sync_pack_node_current_version_cross_object:${nodeId}`);
   }
-}
-
-async function assertExistingVersionsMatch(port: DbPort, alias: string) {
-  const immutableColumns = SYNC_PACK_NODE_VERSION_COLUMNS.filter((column) =>
-    !['version_id', 'parent_version_id', 'body_text', 'snapshot_json'].includes(column));
-  const mismatch = [
-    ...immutableColumns.map((column) => `existing.${column} IS NOT incoming.${column}`),
-    `json_remove(existing.snapshot_json, '$.content') IS NOT
-      json_remove(incoming.snapshot_json, '$.content')`,
-    `(${versionBodySql('existing')} IS NOT NULL AND ${versionBodySql('incoming')} IS NOT NULL
-      AND ${versionBodySql('existing')} IS NOT ${versionBodySql('incoming')})`
-  ].join(' OR ');
-  const [row] = await port.query<{ version_id: string }>(
-    `SELECT incoming.version_id FROM ${alias}.node_sync_versions incoming
-     JOIN main.node_sync_versions existing ON existing.version_id = incoming.version_id
-     WHERE ${eligiblePackVersion('incoming', alias)} AND (${mismatch}) LIMIT 1`
-  );
-  if (row) throw new Error(`sync_pack_node_version_immutable_mismatch:${row.version_id}`);
-}
-
-function versionBodySql(table: string) {
-  return `CASE WHEN ${table}.body_text IS NOT NULL THEN ${table}.body_text
-    WHEN json_type(${table}.snapshot_json, '$.content') = 'null' THEN NULL
-    WHEN json_type(${table}.snapshot_json, '$.content') IS NULL THEN ''
-    WHEN json_type(${table}.snapshot_json, '$.content') = 'text'
-      THEN json_extract(${table}.snapshot_json, '$.content')
-    ELSE NULL END`;
 }
 
 function requireString(value: unknown, field: string) {

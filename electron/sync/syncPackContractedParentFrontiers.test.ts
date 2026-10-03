@@ -23,13 +23,13 @@ function createFixture() {
   return database;
 }
 
-it('accepts independently contracted parent frontiers without replacing the stored lineage', async () => {
+it.each([false, true])('accepts independently contracted frontiers without replacing lineage (childOmitted=%s)', async omitted => {
   const database = createFixture();
   try {
     const before = database.prepare('SELECT * FROM node_sync_version_parents').all();
     await validateStoredVersionDependencies(createBetterSqliteDbPort(database), [
       { version_id: 'final-right', object_id: 'topic', parent_version_id: 'base-right' },
-      { version_id: 'resolution', object_id: 'topic', parent_version_id: 'base-left' }
+      ...omitted ? [] : [{ version_id: 'resolution', object_id: 'topic', parent_version_id: 'base-left' }]
     ], [
       { version_id: 'final-right', parent_version_id: 'base-right', ordinal: 0 },
       { version_id: 'resolution', parent_version_id: 'base-left', ordinal: 0 },

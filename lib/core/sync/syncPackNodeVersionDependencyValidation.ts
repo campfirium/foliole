@@ -26,7 +26,8 @@ export async function validateStoredVersionDependencies(
   port: DbPort,
   incoming: VersionIdentity[],
   parents: SyncPackNodeVersionParentRow[],
-  incomingAlias?: string
+  incomingAlias?: string,
+  convergedReplays: ReadonlySet<string> = new Set()
 ) {
   const byId = new Map(incoming.map((row) => [row.version_id, row]));
   const equivalentFrontiers = new Map<string, boolean>();
@@ -42,6 +43,7 @@ export async function validateStoredVersionDependencies(
   }
   for (const edge of parents) {
     const incomingChild = byId.get(edge.version_id);
+    if (convergedReplays.has(edge.version_id)) continue;
     const [storedChild] = await port.query<{ parent_version_id: string | null }>(
       'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?', [edge.version_id]);
     // An existing contracted chain is kept as-is; incoming edges cannot expand it.
@@ -69,6 +71,7 @@ export async function validateStoredVersionDependencies(
       [edge.version_id, edge.parent_version_id]);
     if (conflict && !sameRelation && !await isStoredAncestorVersion(port, edge.parent_version_id, edge.version_id)
         && !incomingAncestor(parents, conflict.parent_version_id, edge.parent_version_id)
+        && !await provenContractedFrontiers(port, edge.version_id, parents)
         && !(incomingAlias && await proveSyncPackResolutionFrontier(port, edge.version_id, parents, incomingAlias))) {
       throw new Error(`sync_pack_node_version_parent_mismatch:${edge.version_id}`);
     }

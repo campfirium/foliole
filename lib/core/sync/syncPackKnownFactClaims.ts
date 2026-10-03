@@ -109,3 +109,19 @@ export async function loadActiveSyncPackFactRound(port: DbPort, args: {
 export async function clearSyncPackKnownFactClaims(port: DbPort, scope: FactClaimScope) {
   await port.run(`DELETE FROM sync_pack_known_fact_claims WHERE ${SCOPE}`, scopeParams(scope));
 }
+
+/** Only call after validating these exact scopes in the current apply transaction. */
+export async function loadVerifiedSyncPackVersionIds(port: DbPort, scopes: FactClaimScope[]) {
+  const ids = new Set<string>();
+  const visited = new Set<string>();
+  for (const scope of scopes) {
+    const key = JSON.stringify(scopeParams(scope));
+    if (visited.has(key)) continue;
+    visited.add(key);
+    const rows = await port.query<{ fact_key: string }>(
+      `SELECT fact_key FROM sync_pack_known_fact_claims WHERE ${SCOPE} AND kind = 'versions'`,
+      scopeParams(scope));
+    for (const row of rows) ids.add(row.fact_key);
+  }
+  return [...ids];
+}

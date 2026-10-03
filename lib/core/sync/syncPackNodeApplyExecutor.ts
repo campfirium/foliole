@@ -16,7 +16,7 @@ import { stageSyncPackDependencySurface } from './syncPackDependencyPageApply.js
 import { retireObsoleteSyncPackDependencyViews } from './syncPackDependencyResume.js';
 import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocumentsExecutor.js';
 import { applySyncPackGroupFactsWithDbPort } from './syncPackGroupFactsExecutor.js';
-import { clearSyncPackKnownFactClaims } from './syncPackKnownFactClaims.js';
+import { clearSyncPackKnownFactClaims, loadVerifiedSyncPackVersionIds } from './syncPackKnownFactClaims.js';
 import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
 import { applySyncPackNodeRowsWithDbPort } from './syncPackNodeRowsApply.js';
 import { applySyncPackNodeTombstonesWithDbPort } from './syncPackNodeTombstoneExecutor.js';
@@ -88,7 +88,9 @@ export async function applySyncPackNodeSurfaceWithDbPort(
     const directClaimScope = shouldApply && scope && options.sourcePeerId
       ? await prepareSyncPackDependencies(tx, { cursor, groupId: scope.groupId,
         peerId: options.sourcePeerId, incomingAlias: options.incomingAlias ?? 'inc' }) : null;
-    const result = await applySyncPackSurfaceInTransaction(tx, options, shouldApply, cursor.toStateSeq);
+    const claimScopes = cursor.dependencyTransfers ?? (directClaimScope ? [directClaimScope] : []);
+    const verifiedVersionIds = shouldApply ? await loadVerifiedSyncPackVersionIds(tx, claimScopes) : [];
+    const result = await applySyncPackSurfaceInTransaction(tx, { ...options, verifiedVersionIds }, shouldApply, cursor.toStateSeq);
     if (shouldApply && scope && options.sourcePeerId) {
       await enqueueSyncPackResourceArticles(tx, { groupId: scope.groupId,
         incomingAlias: options.incomingAlias ?? 'inc', peerId: options.sourcePeerId });

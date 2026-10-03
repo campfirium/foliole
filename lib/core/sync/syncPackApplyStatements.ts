@@ -13,6 +13,7 @@ export interface SyncPackApplyableRowsOptions {
 }
 
 export interface SyncPackNodeApplyOptions extends SyncPackApplyableRowsOptions {
+  verifiedVersionIds?: readonly string[];
   incomingNodeColumns?: readonly string[];
   preserveExistingNodes?: boolean;
 }

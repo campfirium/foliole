@@ -14,8 +14,13 @@ type Peer = Awaited<ReturnType<Worker['send']>>;
 let root = '';
 const workers: Worker[] = [];
 afterEach(async ({ task }) => {
-  await Promise.allSettled(workers.splice(0).map(worker => worker.close()));
-  if (task.result?.state === 'fail') console.info('Failed sync databases:', root);
+  const closed = workers.splice(0);
+  await Promise.allSettled(closed.map(worker => worker.close()));
+  if (task.result?.state === 'fail') {
+    await fs.writeFile(path.join(root, 'workers.log'), closed.map((worker, index) =>
+      `Worker ${index}\n${worker.diagnostics()}`).join('\n'));
+    console.info('Failed sync databases:', root);
+  }
   else if (root) await fs.rm(root, { recursive: true, force: true });
 });
 
@@ -44,7 +49,6 @@ async function setup() {
     await worker.send('register', { members: peers.map((peer, index) => ({
       device: peer.device, name: ['Left', 'Right', 'Relay'][index]
     })) });
-    await worker.send('joinProviderEnable');
   }
   return peers;
 }
@@ -82,6 +86,7 @@ it('keeps a converged version stable through concurrent HTTP sync, a stale relay
   await workers[0]!.send('seed', { id: 'topic', content: 'Original' });
   await exchange(peers, 0, 1);
   await exchange(peers, 0, 2);
+  const offlineRelay = persisted(peers[2]!);
   for (const index of [0, 1]) {
     await workers[index]!.send('seed', { id: 'topic', content: `${index} independent edit` });
   }
@@ -95,13 +100,14 @@ it('keeps a converged version stable through concurrent HTTP sync, a stale relay
   expect(final.node).toMatchObject({ content: 'Shared final body' });
   expect(persisted(peers[1]!).node).toEqual(final.node);
   // The relay has retained an older confirmed base while the other two edited independently.
+  // Pin real HTTP endpoints instead of advertising these isolated peers to OS discovery.
+  expect(persisted(peers[2]!)).toEqual(offlineRelay);
   await exchange(peers, 1, 2);
   await exchange(peers, 2, 0);
   for (const peer of peers) expect(persisted(peer).node).toEqual(final.node);
   const beforeRetry = peers.map(persisted);
   for (const worker of workers) {
     await worker.send('reopen');
-    await worker.send('joinProviderEnable');
   }
   await exchange(peers, 0, 1);
   await exchange(peers, 1, 2);
