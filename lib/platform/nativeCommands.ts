@@ -38,6 +38,8 @@ export const NATIVE_COMMANDS = {
   exportReadwiseOriginalEpub: 'export_readwise_original_epub',
   loadReadwiseSourceResyncActionState: 'load_readwise_source_resync_action_state',
   resyncReadwiseSource: 'resync_readwise_source',
+  loadReadwisePdfOriginalActionState: 'load_readwise_pdf_original_action_state',
+  getReadwisePdfOriginal: 'get_readwise_pdf_original',
   resetReadwiseBookImport: 'reset_readwise_book_import',
   loadActiveSyncGroupDevice: 'load_active_sync_group_device',
   recoverSyncGroupDiscovery: 'recover_sync_group_discovery',

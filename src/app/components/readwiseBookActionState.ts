@@ -4,6 +4,7 @@ import type {
   NativeReadwiseBookDownloadResult,
   NativeReadwiseBookEpubLoadResult
 } from '../../../lib/platform/nativeReadwiseContract';
+import { READWISE_ORIGINAL_FILE_LOADED_EVENT, type ReadwiseOriginalFileLoadedEventDetail } from '../../shared/platform/import/readwiseOriginalFileLoadedEvent';
 import {
   loadRuntimeReadwiseBookEpub,
   onRuntimeReadwiseBookEpubProgress,
@@ -15,11 +16,8 @@ import { refreshWorkspaceState } from '../../store/workspaceRefreshScheduler';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { requestReadwiseBookEpubImportReleaseMode } from '../hooks/epubImportReleaseModeDialogStore';
 
-export const READWISE_ORIGINAL_FILE_LOADED_EVENT = 'foliole:readwise-original-file-loaded';
-
-export interface ReadwiseOriginalFileLoadedEventDetail {
-  nodeId: string;
-}
+export { READWISE_ORIGINAL_FILE_LOADED_EVENT } from '../../shared/platform/import/readwiseOriginalFileLoadedEvent';
+export type { ReadwiseOriginalFileLoadedEventDetail } from '../../shared/platform/import/readwiseOriginalFileLoadedEvent';
 
 function getBookLabel(title: string | null) {
   return title?.trim() || 'this book';

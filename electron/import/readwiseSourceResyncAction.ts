@@ -5,6 +5,7 @@ import type {
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
+import { placeReadwisePdfHighlightsFromAttachment } from './readwisePdfPlacement.js';
 import {
   beginReadwiseSourceOperation,
   finishReadwiseSourceOperation,
@@ -45,6 +46,19 @@ export async function resyncReadwiseSource(
     await runWithDatabaseConnectionOwner(() => commitReadwiseSourceResync({
       candidate, expectedSnapshot: start.expectedSnapshot, importedAt, target: start.target
     }));
+    const originalFile = start.target.state.originalFile;
+    if (candidate.document.category === 'pdf' && originalFile?.status === 'localized') {
+      try {
+        await placeReadwisePdfHighlightsFromAttachment({
+          attachmentId: originalFile.attachmentId,
+          connectionRef: start.target.connectionRef,
+          documentId: start.target.documentId,
+          nodeId
+        });
+      } catch (error) {
+        console.error('[readwise-source-resync] PDF highlight placement failed', { error, nodeId });
+      }
+    }
     return { node_id: nodeId, status: 'completed' };
   } catch (error) {
     const errorCode = readErrorCode(error);

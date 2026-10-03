@@ -20,6 +20,7 @@ import { materializeReadwiseApiDocument } from './readwiseApiMaterialization.js'
 import { prepareReadwiseApiOriginalFile } from './readwiseApiOriginalFile.js';
 import { persistPreparedOriginalFile, saveOriginalFileState } from './readwiseApiOriginalFileCommit.js';
 import type { PreparedOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
+import { placeReadwisePdfHighlightsFromAttachment } from './readwisePdfPlacement.js';
 
 interface ReadwiseApiDocumentCommitInput {
   assertEligible?: () => void;
@@ -92,6 +93,7 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
     loadReadwiseApiImportSource(input.connectionRef, input.document.id)
   ));
   if (!prepared || (previousOriginalFile?.status === 'localized' && !input.preparedResources?.replaceOriginalFile)) {
+    await placePdfHighlightsIfAvailable(input, existing?.nodeId ?? null, previousOriginalFile);
     return result;
   }
   await runWithDatabaseConnectionOwner(() => input.assertEligible?.());
@@ -102,7 +104,26 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   await runWithDatabaseConnectionOwner(() => (
     saveOriginalFileState(input.connectionRef, input.document.id, finalState)
   ));
+  await placePdfHighlightsIfAvailable(input, existing?.nodeId ?? null, finalState);
   return result;
+}
+
+async function placePdfHighlightsIfAvailable(
+  input: ReadwiseApiDocumentCommitInput,
+  nodeId: string | null,
+  originalFile: ReadwiseApiOriginalFileState | null | undefined
+) {
+  if (input.document.category !== 'pdf' || !nodeId || originalFile?.status !== 'localized') return;
+  try {
+    await placeReadwisePdfHighlightsFromAttachment({
+      attachmentId: originalFile.attachmentId,
+      connectionRef: input.connectionRef,
+      documentId: input.document.id,
+      nodeId
+    });
+  } catch (error) {
+    console.error('[readwise-pdf-original] highlight placement failed', { documentId: input.document.id, error });
+  }
 }
 
 function originalFileCategoryFor(category: PreparedReadwiseApiDocument['category']) {

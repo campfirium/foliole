@@ -8,6 +8,7 @@ import {
   useReadwiseOriginalEpub
 } from '../import/readwiseOriginalEpubAction.js';
 import { exportReadwiseOriginalEpub } from '../import/readwiseOriginalEpubExport.js';
+import { getReadwisePdfOriginal, loadReadwisePdfOriginalActionState } from '../import/readwisePdfOriginalAction.js';
 import {
   loadReadwiseSourceResyncActionState,
   resyncReadwiseSource
@@ -45,6 +46,14 @@ export async function handleReadwiseBookActionCommand(
   }
   if (request.command === NATIVE_COMMANDS.resyncReadwiseSource) {
     const result = await resyncReadwiseSource(nodeId());
+    if (result.status === 'completed') notifyWorkspaceContentChanged();
+    return result;
+  }
+  if (request.command === NATIVE_COMMANDS.loadReadwisePdfOriginalActionState) {
+    return loadReadwisePdfOriginalActionState(nodeId());
+  }
+  if (request.command === NATIVE_COMMANDS.getReadwisePdfOriginal) {
+    const result = await getReadwisePdfOriginal(nodeId());
     if (result.status === 'completed') notifyWorkspaceContentChanged();
     return result;
   }

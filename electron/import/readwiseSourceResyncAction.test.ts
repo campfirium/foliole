@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   commit: vi.fn(),
   loadTarget: vi.fn(),
   prepare: vi.fn(),
+  placePdf: vi.fn(),
   runtimeStatus: vi.fn(),
   ownerActive: false,
   owner: vi.fn(async (execute: () => unknown) => {
@@ -18,6 +19,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../database/connection.js', () => ({ runWithDatabaseConnectionOwner: mocks.owner }));
 vi.mock('./readwiseSourceResyncCommit.js', () => ({ commitReadwiseSourceResync: mocks.commit }));
 vi.mock('./readwiseSourceResyncPreparation.js', () => ({ prepareReadwiseSourceResync: mocks.prepare }));
+vi.mock('./readwisePdfPlacement.js', () => ({ placeReadwisePdfHighlightsFromAttachment: mocks.placePdf }));
 vi.mock('./readwiseSourceResyncTarget.js', () => ({
   captureReadwiseSourceResyncSnapshot: mocks.capture,
   loadReadwiseSourceResyncTarget: mocks.loadTarget,
@@ -45,7 +47,20 @@ beforeEach(() => {
   mocks.runtimeStatus.mockReturnValue('ready');
   mocks.capture.mockReturnValue('snapshot');
   mocks.prepare.mockResolvedValue({ document: { id: 'document' } });
+  mocks.placePdf.mockResolvedValue(undefined);
   mocks.commit.mockImplementation(() => undefined);
+});
+
+it('places highlights again after resyncing a PDF that already has a local original', async () => {
+  mocks.loadTarget.mockReturnValue({ ...target, state: {
+    bodyAuthority: 'reader_html', metadata: { category: 'pdf' },
+    originalFile: { attachmentId: 'original', status: 'localized' }
+  } });
+  mocks.prepare.mockResolvedValue({ document: { category: 'pdf', id: 'document' } });
+  await expect(resyncReadwiseSource('source')).resolves.toMatchObject({ status: 'completed' });
+  expect(mocks.placePdf).toHaveBeenCalledWith({
+    attachmentId: 'original', connectionRef: 'connection', documentId: 'document', nodeId: 'source'
+  });
 });
 
 it('reports persisted source facts and runtime eligibility', () => {
