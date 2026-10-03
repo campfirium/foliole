@@ -22,7 +22,7 @@ function ReadingRoute() {
     onSelectOutlineItem={reading.handleSelectOutlineItem} onToggleContentEditing={reading.enterContentEditing}
     openReadingSheet={reading.openReadingSheet} outlineOpen={reading.isOutlineOpen}
     readableArticle={{ content: 'alpha body', nodeId: 'topic', title: 'Topic', hideTitleHeading: false,
-      persistedNodeViewState: null, textAnchorDecorations: [] }}
+      pdfAttachmentId: null, persistedNodeViewState: null, textAnchorDecorations: [] }}
     readingTypographySettings={DEFAULT_READING_TYPOGRAPHY_SETTINGS} searchOpen={reading.isSearchSheetOpen}
   />;
 }
