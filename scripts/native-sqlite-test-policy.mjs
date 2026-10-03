@@ -17,6 +17,7 @@ const controlledElectronSqliteTests = [
   'src/companion/companionGradeRecovery.integration.test.tsx',
   'src/companion/companionSelectionRecovery.integration.test.tsx',
   'src/companion/companionExistingHighlightRecovery.integration.test.tsx',
+  'src/companion/companionTrashRecovery.integration.test.tsx',
   'src/companion/companionShareRecovery.integration.test.ts',
   'src/companion/companionWorkspaceMutation.integration.test.ts',
   'scripts/ios/ios-hosted-sync-pack-oracle-seed.test.mjs',
