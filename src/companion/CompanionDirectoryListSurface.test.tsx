@@ -46,3 +46,22 @@ it('uses article actions and preserves availability feedback inside folders', ()
   expect(select).not.toHaveBeenCalled();
   expect(screen.getByRole('dialog')).toBeInTheDocument();
 });
+
+it('does not present a folder body status or repeat its type in the directory', () => {
+  render(<LocalizationProvider initialLanguagePreference="zh-Hans">
+    <CompanionDirectoryList
+      directory={{ entries: [] } as never}
+      emptyLabel=""
+      onSelectItem={vi.fn()}
+      sections={[{ id: 'home', items: [
+        { id: 'inbox', nodeId: 'special-inbox', kind: 'folder', source: 'internal', title: 'Inbox', preview: null, bodyStatus: 'empty' },
+        { id: 'folder', nodeId: 'folder', kind: 'folder', source: 'internal', title: 'todo', preview: null, bodyStatus: 'empty' }
+      ] }]}
+      snapshot={null}
+    />
+  </LocalizationProvider>);
+
+  expect(screen.getByRole('button', { name: '打开文件夹 收件箱' })).toHaveTextContent('新主题默认进入这里');
+  expect(screen.getByRole('button', { name: '打开文件夹 todo' })).not.toHaveTextContent('文件夹');
+  expect(screen.queryByText('空主题')).not.toBeInTheDocument();
+});

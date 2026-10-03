@@ -59,9 +59,9 @@ function DirectoryRow(props: DirectoryRowProps) {
         <span className="block truncate text-[15.5px] font-medium leading-5 text-foreground/90">
           {title}
         </span>
-        <span className="mt-1 block line-clamp-1 text-[13px] leading-[18px] text-companion-text-tertiary">
+        {subtitle ? <span className="mt-1 block line-clamp-1 text-[13px] leading-[18px] text-companion-text-tertiary">
           {subtitle}
-        </span>
+        </span> : null}
       </span>
       {meta ? (
         <span className="min-w-7 shrink-0 text-right text-[13px] font-medium leading-5 text-companion-text-tertiary">

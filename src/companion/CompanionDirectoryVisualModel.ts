@@ -55,9 +55,11 @@ export function resolveDirectoryRowMeta(args: {
 }
 
 export function resolveDirectoryRowSubtitle(item: DirectoryListItem, t: Translate) {
-  const bodyStatusLabel = resolveBodyStatusLabel(item, t);
-  if (bodyStatusLabel) return bodyStatusLabel;
-  if (item.preview) return item.preview;
+  if (item.kind === 'topic') {
+    const bodyStatusLabel = resolveBodyStatusLabel(item, t);
+    if (bodyStatusLabel) return bodyStatusLabel;
+    if (item.preview) return item.preview;
+  }
   if (item.source === 'externalFolder' || item.source === 'externalDirectory')
     return t('companion.directory.row.externalFolder');
   if (item.source === 'externalDocument') return t('companion.directory.row.externalDocument');
@@ -65,7 +67,5 @@ export function resolveDirectoryRowSubtitle(item: DirectoryListItem, t: Translat
     return t('companion.directory.row.trash');
   if (item.nodeId === 'special-inbox') return t('companion.directory.row.inbox');
   if (item.source === 'virtual') return t('companion.directory.row.virtual');
-  return item.kind === 'folder'
-    ? t('companion.directory.row.folder')
-    : t('companion.directory.row.topic');
+  return item.kind === 'topic' ? t('companion.directory.row.topic') : null;
 }
