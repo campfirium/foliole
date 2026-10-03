@@ -7,6 +7,7 @@ import {
   saveCompanionSyncNodeReadingRecord,
   saveCompanionSyncNodeReviewRecord
 } from '../shared/platform/companionSyncObjects';
+import { WorkspacePartialPersistenceError } from '../store/workspacePersistenceFailure';
 
 export interface CompanionReviewLogInput {
   cardAfter: SchedulerCard;
@@ -32,17 +33,28 @@ export async function persistCompanionReviewSyncObject(args: {
   if (args.itemKind === 'reading' && node.reading) {
     const persisted = [];
     for (const nodeId of nodeIds) {
-      const readingNode = args.snapshot.nodesById[nodeId];
-      if (!readingNode?.reading) return null;
-      const result = await saveCompanionSyncNodeReadingRecord({
-        nodeId, reading: readingNode.reading,
-        ...(args.completedReading && nodeId === args.nodeId ? {
-          completedReviewDay: reviewCalendarDayKey(new Date(readingNode.reading.lastHandledAt),
-            getCurrentReviewSchedulerSettings().newDayStartsAtHour)
-        } : {})
-      });
-      if (!result) return null;
-      persisted.push(result);
+      try {
+        const readingNode = args.snapshot.nodesById[nodeId];
+        if (!readingNode?.reading) {
+          if (persisted.length > 0) throw new WorkspacePartialPersistenceError();
+          return null;
+        }
+        const result = await saveCompanionSyncNodeReadingRecord({
+          nodeId, reading: readingNode.reading,
+          ...(args.completedReading && nodeId === args.nodeId ? {
+            completedReviewDay: reviewCalendarDayKey(new Date(readingNode.reading.lastHandledAt),
+              getCurrentReviewSchedulerSettings().newDayStartsAtHour)
+          } : {})
+        });
+        if (!result) {
+          if (persisted.length > 0) throw new WorkspacePartialPersistenceError();
+          return null;
+        }
+        persisted.push(result);
+      } catch (error) {
+        if (persisted.length > 0) throw new WorkspacePartialPersistenceError();
+        throw error;
+      }
     }
     return persisted;
   }
