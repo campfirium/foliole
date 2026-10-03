@@ -82,6 +82,7 @@ const controlledElectronSqliteTests = [
   'electron/database/independentNodeVersionMigration.test.ts',
   'src/shared/platform/dynamicNodeVersionChains.http.integration.test.ts',
   'src/shared/platform/companionSyncLostPushReply.http.integration.test.ts',
+  'src/shared/platform/companionSyncCrisscrossRetry.integration.test.ts',
   'src/shared/platform/dynamicNodeVersionChains.push.integration.test.ts',
   'electron/database/nodeVersionInboundReceipt.test.ts',
   'electron/database/nodeVersionPayloadCollector.test.ts',

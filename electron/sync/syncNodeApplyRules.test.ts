@@ -8,6 +8,7 @@ import {
   latestBranchHeadRecords,
   orderNodesForApply
 } from '../../lib/core/sync/syncNodeApplyRules.js';
+import { buildResolutionRecord } from '../../lib/core/sync/syncNodeResolution.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 function createNodeRecord(overrides: Partial<NativeSyncNodeRecord> & Pick<NativeSyncNodeRecord, 'object_id'>): NativeSyncNodeRecord {
@@ -90,6 +91,23 @@ it('does not infer a descendant through missing intermediate history', () => {
   const head = createNodeRecord({ object_id: 'node-1', version_id: 'head', parent_version_ids: ['missing'],
     ancestor_version_ids: ['missing', 'old'] });
   expect(hasConfirmedIncomingNodeDescendant(history, [history, head], new Set(['head']))).toBe(false);
+});
+
+it('recognizes a consumed branch only when its heads reconstruct the confirmed resolution identity', () => {
+  const original = createNodeRecord({ object_id: 'node-1', version_id: 'original' });
+  original.snapshot.kind = 'topic';
+  const left = { ...original, version_id: 'left', parent_version_ids: ['original'] };
+  const right = { ...original, version_id: 'right', parent_version_ids: ['original'] };
+  const resolution = buildResolutionRecord([left, right], left, 'Final body');
+  resolution.parent_version_ids = ['right'];
+  resolution.parent_version_id = 'right';
+  const records = [original, left, right, resolution];
+  expect(hasConfirmedIncomingNodeDescendant(left, records, new Set([resolution.version_id]))).toBe(true);
+  expect(hasConfirmedIncomingNodeDescendant(left, records, new Set())).toBe(false);
+  const unrelated = { ...left, version_id: 'unrelated' };
+  expect(hasConfirmedIncomingNodeDescendant(unrelated, [...records, unrelated], new Set([resolution.version_id]))).toBe(false);
+  const altered = { ...resolution, body_text: 'Different body' };
+  expect(hasConfirmedIncomingNodeDescendant(left, [left, right, altered], new Set([altered.version_id]))).toBe(false);
 });
 
 it('orders child nodes after their included parent node', () => {
