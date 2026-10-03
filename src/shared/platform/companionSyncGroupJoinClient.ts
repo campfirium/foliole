@@ -7,6 +7,8 @@ import { parseSyncGroupJoinMode, type SyncGroupJoinMode } from '../../../lib/pla
 import { createSyncGroupDeviceIdentity } from '../../../lib/platform/syncGroupUnifiedContract';
 
 import { requestCompanionSyncGroupEndpoint } from './companion/network/companionSyncGroupHttpRequest';
+import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
+import { loadCompanionLocalNodeProof } from './companion/sync/nodeVersionCompanionPeerProof';
 import { joinCompanionSyncGroup, loadCompanionSyncGroup } from './companion/sync/syncGroupStore';
 import {
   createCompanionSyncGroupJoinPublicKey,
@@ -27,6 +29,7 @@ export async function requestCompanionSyncGroupJoin(args: {
   const mode = parseSyncGroupJoinMode(args.mode);
   if (await loadCompanionSyncGroup()) throw new Error('sync_group_identity_mismatch');
   const device = await FolioleCompanionSync.loadSyncGroupDeviceIdentity({ database_path: args.databasePath });
+  const proof = mode === 'merge' ? await getIosCompanionDatabaseOwner().read(loadCompanionLocalNodeProof) : null;
   const keyId = createCompanionUuid();
   const publicKey = await createCompanionSyncGroupJoinPublicKey(keyId);
   const endpointUrl = normalizeEndpointUrl(args.endpointUrl);
@@ -35,12 +38,15 @@ export async function requestCompanionSyncGroupJoin(args: {
       contract_version: SYNC_GROUP_JOIN_CONTRACT_VERSION,
       device,
       ephemeral_public_key: publicKey,
-      group_id: args.groupId
+      group_id: args.groupId,
+      ...(proof ? { merge_proof: proof } : {})
     }),
     headers: { 'Content-Type': 'application/json' }, method: 'POST'
   });
   if (!response.ok) {
     dropCompanionSyncGroupJoinPrivateKey(keyId);
+    const error = await response.json().catch(() => null) as { error?: unknown } | null;
+    if (error?.error === 'sync_group_merge_requires_overwrite') throw new Error(error.error);
     throw new Error(`sync_group_join_request_http_${response.status}`);
   }
   const payload = await response.json() as { expires_at: string; request_id: string };

@@ -1,6 +1,8 @@
 import type http from 'node:http';
 
-import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { assertSyncGroupJoinMergeAllowed } from '../../lib/core/sync/syncGroupJoinMergeGuard.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { loadDesktopSyncGroupJoinProvider } from './desktopSyncGroupJoinProvider.js';
@@ -21,7 +23,11 @@ export async function handleSyncGroupJoinRequest(
   const provider = loadDesktopSyncGroupJoinProvider();
   if (!provider) return writeJson(request, response, 409, { error: 'sync_group_not_available' });
   try {
-    const created = provider.receive(JSON.parse(await readCompanionRequestBody(request)));
+    const input: unknown = JSON.parse(await readCompanionRequestBody(request));
+    const created = await runWithDatabaseConnectionOwner(async () => {
+      await assertSyncGroupJoinMergeAllowed(createBetterSqliteDbPort(openDatabaseConnection().sqlite), input);
+      return provider.receive(input as Parameters<typeof provider.receive>[0]);
+    });
     writeJson(request, response, 202, created);
     onRequestCreated?.();
   } catch (error) {

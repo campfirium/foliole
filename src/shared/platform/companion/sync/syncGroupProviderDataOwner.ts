@@ -6,6 +6,7 @@ import {
   stageOutboundNodeVersionHolds
 } from '../../../../../lib/core/sync/nodeVersionDeliveryProof';
 import { parseNodeVersionReceipt } from '../../../../../lib/core/sync/nodeVersionReceiptContract';
+import { assertSyncGroupJoinMergeAllowed } from '../../../../../lib/core/sync/syncGroupJoinMergeGuard';
 import {
   COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
   type CompanionSyncGroupDataRequest
@@ -53,6 +54,10 @@ async function handleRequest(request: CompanionSyncGroupDataRequest) {
 }
 
 function dispatch(operation: string, payload: Record<string, unknown>) {
+  if (operation === CONTRACT.operations.validateJoin) return getIosCompanionDatabaseOwner().read(async (db) => {
+    await assertSyncGroupJoinMergeAllowed(db, payload);
+    return { allowed: true };
+  });
   if (operation === CONTRACT.operations.attachmentCheckpoint) return handleCompanionAttachmentCheckpoint(getIosCompanionDatabaseOwner(), payload);
   if (operation === CONTRACT.operations.createSnapshot) return createCompanionSyncGroupSourceSnapshot(payload);
   if (operation === CONTRACT.operations.applyMemberState) {

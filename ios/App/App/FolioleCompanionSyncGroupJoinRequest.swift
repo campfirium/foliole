@@ -16,7 +16,9 @@ final class FolioleCompanionSyncGroupJoinRequest {
     var acceptance: [String: Any]?
 
     init(value: [String: Any], now: Date) throws {
-        try Self.exactKeys(value, ["contract_version", "device", "ephemeral_public_key", "group_id"])
+        var keys: Set<String> = ["contract_version", "device", "ephemeral_public_key", "group_id"]
+        if value["merge_proof"] != nil { keys.insert("merge_proof") }
+        try Self.exactKeys(value, keys)
         guard let version = value["contract_version"] as? NSNumber,
               CFGetTypeID(version) != CFBooleanGetTypeID(), version.intValue == 1,
               version.doubleValue == 1 else { throw Self.invalid("sync_group_join_contract_incompatible") }

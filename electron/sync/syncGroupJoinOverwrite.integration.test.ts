@@ -86,17 +86,20 @@ for (const mode of ['merge', 'overwrite']) {
     await expect(source!.send('joinComplete')).rejects.toThrow();
     expect((await source!.send('snapshot')).restore).toBeNull();
     expect((await source!.send('snapshot')).group).toBeUndefined();
-    const request = await source!.send('joinRequest', { origin: peers[1]!.origin, mode }) as unknown as {
+    if (mode === 'merge') {
+      await expect(source!.send('joinRequest', { origin: peers[1]!.origin, mode }))
+        .rejects.toThrow('sync_group_merge_requires_overwrite');
+      expect((await source!.send('snapshot')).group).toBeUndefined();
+      expect((await source!.send('snapshot')).library.nodesById['local-note']?.content).toBe('Local chosen data');
+      expect((await provider!.send('snapshot')).library.nodesById['remote-note']).toBeDefined();
+      expect((await provider!.send('joinOverview') as unknown as { join_requests: unknown[] })
+        .join_requests).toHaveLength(0);
+    }
+    const request = await source!.send('joinRequest', { origin: peers[1]!.origin, mode: 'overwrite' }) as unknown as {
       join_request: { request_id: string }
     };
     await provider!.send('joinAccept', { requestId: request.join_request.request_id });
     await source!.send('joinComplete');
-    if (mode === 'merge') {
-      await expect(provider!.send('sync', { ...peers[0]! })).rejects.toThrow('node_version_peer_restore_requires_rejoin');
-      expect((await provider!.send('snapshot')).library.nodesById['remote-note']).toBeDefined();
-      expect((await source!.send('snapshot')).restore).toBeNull();
-      return;
-    }
     await provider!.send('pull', { ...peers[0]! });
     await expect.poll(async () => (await provider!.send('snapshot')).library.nodesById['remote-note'],
       { timeout: 20000 }).toBeUndefined();
@@ -116,6 +119,34 @@ for (const mode of ['merge', 'overwrite']) {
     expect(safety.some((entry) => entry.nodes.some((node) => node.id === 'remote-note'))).toBe(true);
   }, 90000);
 }
+
+it.each([false, true])('merges independent data with an empty provider: %s', async (emptyProvider) => {
+  const { peers } = await setup(false);
+  const [source, provider] = workers;
+  await source!.send('seed', { id: 'local-note', content: 'Local data' });
+  if (!emptyProvider) await provider!.send('seed', { id: 'remote-note', content: 'Independent data' });
+  await source!.send('leave');
+  await provider!.send('joinProviderEnable');
+  await expect.poll(async () => {
+    const overview = await provider!.send('joinOverview') as unknown as { server_status: { topology_role: string } };
+    return overview.server_status.topology_role;
+  }, { timeout: 15000 }).toBe('anchor');
+  const request = await source!.send('joinRequest', { origin: peers[1]!.origin, mode: 'merge' }) as unknown as {
+    join_request: { request_id: string }
+  };
+  await provider!.send('joinAccept', { requestId: request.join_request.request_id });
+  await source!.send('joinComplete');
+  await source!.send('sync', { ...peers[1]! });
+  await provider!.send('sync', { ...peers[0]! });
+  const local = await source!.send('reopen');
+  const remote = await provider!.send('reopen');
+  expect(local.restore).toBeNull();
+  expect(remote.restore).toBeNull();
+  for (const state of [local, remote]) {
+    expect(state.library.nodesById['local-note']?.content).toBe('Local data');
+    if (!emptyProvider) expect(state.library.nodesById['remote-note']?.content).toBe('Independent data');
+  }
+}, 90000);
 
 async function assertOfflineCatchup(script: string, groupId: string, peer: Awaited<ReturnType<ReturnType<typeof startRestoreFixture>['send']>>, restoreId: string) {
   const returning = startRestoreFixture(script, path.join(root, 'Offline'), await port());

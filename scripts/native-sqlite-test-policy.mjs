@@ -180,6 +180,7 @@ const controlledElectronSqliteTests = [
   'electron/sync/watchedFolderPayloadIsolation.test.ts',
   'electron/sync/workgroupRestore.http.test.ts',
   'electron/sync/workgroupRestore.mobileHttp.integration.test.ts',
+  'electron/sync/syncGroupJoinMobile.http.integration.test.ts',
   'scripts/demo/export-demo-pack.test.mjs',
   'scripts/android/schema-inventory.test.mjs',
   'scripts/android/android-sync-audit-core.test.mjs',

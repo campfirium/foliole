@@ -15,4 +15,6 @@ export const EN_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'syncGroup.join.mode.description': 'Merging keeps data from this device and the group. Overwriting replaces data on every device in the group, including devices that reconnect later.',
   'syncGroup.join.mode.merge': 'Merge data',
   'syncGroup.join.mode.overwrite': 'Use this device’s data to overwrite the entire group',
+  'syncGroup.join.restoreProtection.title': 'Cannot merge data',
+  'syncGroup.join.restoreProtection.description': 'These libraries cannot be merged. To continue joining, use this device’s data to overwrite the sync group.',
 };

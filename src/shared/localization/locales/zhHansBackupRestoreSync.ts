@@ -15,4 +15,6 @@ export const ZH_HANS_BACKUP_RESTORE_SYNC_TRANSLATIONS = {
   'syncGroup.join.mode.description': '合并会保留本机与组内资料。覆盖会替换组内所有设备的资料，包括之后重新上线的设备。',
   'syncGroup.join.mode.merge': '合并资料',
   'syncGroup.join.mode.overwrite': '用本机资料覆盖整个组',
+  'syncGroup.join.restoreProtection.title': '无法合并资料',
+  'syncGroup.join.restoreProtection.description': '当前情况无法合并，若要继续加入，需要改用本机资料覆盖同步组。',
 };

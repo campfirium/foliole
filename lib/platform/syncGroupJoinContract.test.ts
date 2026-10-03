@@ -8,6 +8,18 @@ import {
 
 const PUBLIC_KEY = `BA${'A'.repeat(85)}`;
 
+it.each([null, {}, { library_epoch: 'epoch', proof_revision: -1, source_proof_revisions: {} },
+  { library_epoch: 'epoch', proof_revision: 1, source_proof_revisions: { peer: -1 } }])(
+  'rejects an invalid merge proof instead of treating it as overwrite', (merge_proof) => {
+    expect(() => parseSyncGroupJoinRequestInput({
+      contract_version: SYNC_GROUP_JOIN_CONTRACT_VERSION,
+      device: { canonical_library_path: '/library', device_anchor: 'a1111111-1111-4111-8111-111111111111',
+        device_name: 'Phone', path_flavor: 'posix', platform: 'ios-capacitor' },
+      ephemeral_public_key: PUBLIC_KEY, group_id: 'group-a', merge_proof
+    })).toThrow('sync_group_join_merge_proof_invalid');
+  }
+);
+
 describe('Sync Group join contract', () => {
   it('binds one canonical Device request to one ephemeral public key', () => {
     const request = parseSyncGroupJoinRequestInput({

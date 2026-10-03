@@ -9,6 +9,8 @@ extension FolioleCompanionSyncGroupJoinServer {
             return try send(connection, 200, FolioleCompanionSyncGroupDiscoveryPayload.make(discovery))
         }
         if request.method == "POST" && route == "/sync-group/join-requests" {
+            guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
+            _ = try dataBridge.request("validate_join", request.body)
             let created = try provider.receive(request.body)
             stateChanged()
             return try send(connection, 202, created)

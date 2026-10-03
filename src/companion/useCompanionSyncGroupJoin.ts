@@ -11,6 +11,7 @@ import {
   requestCompanionSyncGroupJoin
 } from '../shared/platform/companionSyncGroupJoinClient';
 import { chooseSyncGroupJoinMode } from '../shared/ui/chooseSyncGroupJoinMode';
+import { requestSyncGroupJoinWithChoice } from '../shared/ui/requestSyncGroupJoinWithChoice';
 
 import type {
   CompanionSyncGroupDiscovery,
@@ -129,19 +130,21 @@ function useJoinRequest(args: { config: SyncGroupJoinArgs; discoveries: Companio
   const t = useTranslation();
   const { discoveries, pendingRequestRef, setPendingRequest, setStatus } = args;
   return useCallback(async (endpointUrl: string) => {
-    if (!args.config.bootstrapState.database_path) throw new Error('companion_database_unavailable');
+    const databasePath = args.config.bootstrapState.database_path;
+    if (!databasePath) throw new Error('companion_database_unavailable');
     const candidate = discoveries.find((value) => value.endpointUrl === endpointUrl);
     if (!candidate) throw new Error('sync_group_discovery_candidate_missing');
     const mode = await chooseSyncGroupJoinMode(t);
     if (!mode) return null;
     setStatus('requesting'); args.config.onError(null);
     try {
-      const result = await requestCompanionSyncGroupJoin({
-        databasePath: args.config.bootstrapState.database_path,
+      const result = await requestSyncGroupJoinWithChoice(t, mode, (selected) => requestCompanionSyncGroupJoin({
+        databasePath,
         endpointUrl: candidate.endpointUrl,
         groupId: candidate.groupId,
-        mode
-      });
+        mode: selected
+      }));
+      if (!result) { setStatus('idle'); return null; }
       const next = pendingFromCandidate(result, candidate);
       pendingRequestRef.current = next;
       setPendingRequest(next); setStatus('awaiting-acceptance');

@@ -32,7 +32,11 @@ final class FolioleCompanionJoinRequest {
     JSONObject acceptance;
 
     FolioleCompanionJoinRequest(JSONObject value, long nowMs) throws Exception {
-        exactKeys(value, "contract_version", "device", "ephemeral_public_key", "group_id");
+        if (value.has("merge_proof")) {
+            exactKeys(value, "contract_version", "device", "ephemeral_public_key", "group_id", "merge_proof");
+        } else {
+            exactKeys(value, "contract_version", "device", "ephemeral_public_key", "group_id");
+        }
         Object contractVersion = value.opt("contract_version");
         if (!(contractVersion instanceof Number) || ((Number) contractVersion).intValue() != 1
             || ((Number) contractVersion).doubleValue() != 1.0d) {

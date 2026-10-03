@@ -34,6 +34,27 @@ vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
 
 import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
 
+it.each([
+  ['old-epoch', 1, 1, false],
+  ['current-epoch', 2, 1, false],
+  ['current-epoch', 1, 1, true]
+])('validates merge admission without writing: %s/%s/%s', async (epoch, knownRevision, sourceRevision, allowed) => {
+  mocks.query.mockResolvedValueOnce([{ group_id: 'group-1', local_device_identity_key: 'provider' }])
+    .mockResolvedValueOnce([{ library_epoch: epoch, proof_revision: knownRevision }]);
+  mocks.listener?.({ operation: 'validate_join', request_id: 'admission', payload: {
+    contract_version: 1, group_id: 'group-1', ephemeral_public_key: `BA${'A'.repeat(85)}`,
+    device: { canonical_library_path: '/library', device_anchor: 'a1111111-1111-4111-8111-111111111111',
+      device_name: 'Applicant', path_flavor: 'posix', platform: 'ios-capacitor' },
+    merge_proof: { library_epoch: 'current-epoch', proof_revision: 1,
+      source_proof_revisions: { provider: sourceRevision } }
+  } });
+  await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalledWith(allowed
+    ? { request_id: 'admission', result: { allowed: true } }
+    : { request_id: 'admission', error: 'sync_group_merge_requires_overwrite' }));
+  expect(mocks.run).not.toHaveBeenCalled();
+  expect(mocks.writer).not.toHaveBeenCalled();
+});
+
 beforeEach(async () => {
   mocks.query.mockReset().mockResolvedValue([]);
   mocks.resolve.mockReset().mockResolvedValue(undefined);

@@ -105,7 +105,14 @@ final class FolioleCompanionSyncGroupServer {
     }
 
     private void createJoin(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        JSONObject result = joins.receive(new JSONObject(request.bodyText()), System.currentTimeMillis());
+        JSONObject input = new JSONObject(request.bodyText());
+        try { dataBridge.request("validate_join", input); }
+        catch (IllegalStateException failure) {
+            if (!"sync_group_merge_requires_overwrite".equals(failure.getMessage())) throw failure;
+            FolioleCompanionHttpResponse.json(output, 409, error(failure.getMessage()));
+            return;
+        }
+        JSONObject result = joins.receive(input, System.currentTimeMillis());
         stateChanged.run();
         FolioleCompanionHttpResponse.json(output, 202, result);
     }

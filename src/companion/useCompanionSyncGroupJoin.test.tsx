@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract';
+import { registerAppChoiceHandler } from '../shared/ui/appChoice';
 
 vi.mock('../shared/localization/LocalizationProvider', () => ({ useTranslation: () => (key: string) => key }));
 const choice = vi.hoisted(() => ({ select: vi.fn(async () => 'merge' as string | null) }));
@@ -41,6 +42,29 @@ const candidate = {
   provider_device_name: 'Provider',
   provider_platform: 'ios-capacitor'
 };
+
+it.each([null, 'overwrite'])('handles restoration on the mobile applicant with choice %s', async (selected) => {
+  const remove = registerAppChoiceHandler(async () => selected);
+  runtime.request.mockRejectedValueOnce(new Error('sync_group_merge_requires_overwrite'));
+  const onSaveEndpoint = vi.fn(async () => undefined);
+  const { result } = renderHook(() => useCompanionSyncGroupJoin({
+    bootstrapState: { database_path: '/library/foliole.db' } as never, onError: vi.fn(), onSaveEndpoint
+  }));
+  try {
+    await act(() => result.current.discover());
+    act(() => runtime.callback?.({ candidates: [candidate], change: 'found', error_code: null, status: 'results' }));
+    await act(() => result.current.request(candidate.endpoint_url));
+    expect(runtime.request).toHaveBeenCalledTimes(selected ? 2 : 1);
+    if (selected) expect(runtime.request).toHaveBeenLastCalledWith(expect.objectContaining({
+      endpointUrl: candidate.endpoint_url, groupId: candidate.group_id, mode: 'overwrite'
+    }));
+    else {
+      expect(result.current.status).toBe('idle');
+      expect(result.current.pendingRequest).toBeNull();
+      expect(onSaveEndpoint).not.toHaveBeenCalled();
+    }
+  } finally { remove(); }
+});
 
 beforeEach(() => {
   vi.clearAllMocks();

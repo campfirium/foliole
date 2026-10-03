@@ -5,6 +5,7 @@ export const COMPANION_SYNC_GROUP_DATA_CONTRACT = Object.freeze({
     attachmentCheckpoint: 'attachment_checkpoint',
     confirmVersionPack: 'confirm_version_pack',
     applyMemberState: 'apply_member_state',
+    validateJoin: 'validate_join',
     loadCurrentCredential: 'load_current_credential',
     loadGroup: 'load_group',
     loadMemberState: 'load_member_state',

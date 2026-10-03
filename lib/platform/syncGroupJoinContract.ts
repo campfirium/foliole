@@ -1,4 +1,5 @@
 import type { SyncGroupJoinEncryptedInfoPayload } from './nativeCompanionSyncContract.js';
+import { parseSyncGroupJoinMergeProof, type SyncGroupJoinMergeProof } from './syncGroupJoinMergeProof.js';
 import {
   canonicalizeLibraryPath,
   parseDeviceAnchor,
@@ -21,6 +22,7 @@ export interface SyncGroupJoinRequestInput {
   device: SyncGroupJoinDeviceFacts;
   ephemeral_public_key: string;
   group_id: string;
+  merge_proof?: SyncGroupJoinMergeProof;
 }
 
 export interface SyncGroupJoinRequest extends SyncGroupJoinRequestInput {
@@ -47,7 +49,8 @@ const BASE64_URL_PATTERN = /^[A-Za-z0-9_-]+$/u;
 
 export function parseSyncGroupJoinRequestInput(value: unknown): SyncGroupJoinRequestInput {
   const raw = record(value, 'sync_group_join_request_invalid');
-  exactKeys(raw, ['contract_version', 'device', 'ephemeral_public_key', 'group_id']);
+  exactKeys(raw, ['contract_version', 'device', 'ephemeral_public_key', 'group_id',
+    ...('merge_proof' in raw ? ['merge_proof'] : [])]);
   if (raw.contract_version !== SYNC_GROUP_JOIN_CONTRACT_VERSION) {
     throw new Error('sync_group_join_contract_incompatible');
   }
@@ -55,7 +58,8 @@ export function parseSyncGroupJoinRequestInput(value: unknown): SyncGroupJoinReq
     contract_version: SYNC_GROUP_JOIN_CONTRACT_VERSION,
     device: parseDeviceFacts(raw.device),
     ephemeral_public_key: parseP256PublicKey(raw.ephemeral_public_key),
-    group_id: requiredString(raw.group_id, 'group_id_invalid')
+    group_id: requiredString(raw.group_id, 'group_id_invalid'),
+    ...('merge_proof' in raw ? { merge_proof: parseSyncGroupJoinMergeProof(raw.merge_proof) } : {})
   };
 }
 

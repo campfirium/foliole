@@ -1,6 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { registerAppChoiceHandler } from '../../ui/appChoice';
+
 vi.mock('../../localization/LocalizationProvider', () => ({ useTranslation: () => (key: string) => key }));
 const choice = vi.hoisted(() => ({ select: vi.fn(async () => 'merge' as string | null) }));
 vi.mock('../../ui/chooseSyncGroupJoinMode', () => ({ chooseSyncGroupJoinMode: choice.select }));
@@ -88,4 +90,16 @@ it('passes the explicit group overwrite choice before requesting approval', asyn
   const { result } = renderActions();
   await act(() => result.current.requestJoin('http://maci.local:38641'));
   expect(runtime.request).toHaveBeenCalledWith('http://maci.local:38641', 'overwrite');
+});
+
+it.each([null, 'overwrite'])('handles restoration on the applicant with choice %s', async (selected) => {
+  const remove = registerAppChoiceHandler(async () => selected);
+  runtime.request.mockRejectedValueOnce(new Error('sync_group_merge_requires_overwrite'));
+  const { result } = renderActions();
+  try {
+    await act(() => result.current.requestJoin('http://maci.local:38641'));
+    expect(runtime.request).toHaveBeenCalledTimes(selected ? 2 : 1);
+    if (selected) expect(runtime.request).toHaveBeenLastCalledWith('http://maci.local:38641', 'overwrite');
+    else { expect(runtime.stop).not.toHaveBeenCalled(); expect(runtime.complete).not.toHaveBeenCalled(); }
+  } finally { remove(); }
 });

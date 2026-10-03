@@ -5,6 +5,7 @@ import {
 } from '../../lib/platform/syncGroupJoinContract.js';
 import { parseSyncGroupJoinMode } from '../../lib/platform/syncGroupJoinMode.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 
@@ -54,7 +55,8 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string, modeValue
         platform: resolveDesktopPlatformLabel()
       },
       ephemeral_public_key: key.publicKey,
-      group_id: candidate.group_id
+      group_id: candidate.group_id,
+      ...(mode === 'merge' ? { merge_proof: loadDesktopLocalNodeProof() } : {})
     }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'
