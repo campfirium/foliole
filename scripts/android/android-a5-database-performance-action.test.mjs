@@ -178,6 +178,35 @@ it('runs normal workspace capacity in two clean instrumentation processes', asyn
 
 const WORKSPACE_TEST = 'com.foliole.android.FolioleLibraryWorkspaceCapacityTest';
 
+it('runs the isolated sync fact probe and keeps its measurements', async () => {
+  const evidenceRoot = createEvidenceRoot('a5-fact-probe-test-');
+  const calls = [];
+  const measurement = { status: 'passed', scenario: 'sync-fact-probe',
+    results: [{ facts: 32, claimed: 0, queryCalls: 33, runCalls: 1, elapsedMs: 1500 },
+      { facts: 128, claimed: 0, queryCalls: 129, runCalls: 1, elapsedMs: 6000 }],
+    pageApply: { facts: 32, appliedObjects: 0, queries: 100, runs: 20, elapsedMs: 5000 } };
+  const outcome = await runA5DatabasePerformance({
+    env: { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'sync-fact-probe' },
+    evidenceRoot, serial: 'fixed-a5',
+    paths: { adb: '/adb', apk: '/app.apk', androidTestApk: '/test.apk', buildRoot: '/repo' },
+    captured: (_cmd, args) => args.at(-1) === '/app.apk'
+      ? '<manifest package="com.campfirium.foliole.android.acceptance"/>'
+      : '<manifest package="com.campfirium.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.campfirium.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
+    execute: async (_command, args) => {
+      calls.push(args);
+      return { code: 0, output: args.includes('dumpsys')
+        ? 'topResumedActivity=ActivityRecord{123 u0 com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity}'
+        : args.includes('instrument') ? 'OK (1 test)\n'
+        : args.includes('exec-out') ? JSON.stringify(measurement) : 'Success' };
+    }
+  });
+  expect(calls.find(args => args.includes('instrument')))
+    .toContain('com.foliole.android.FolioleSyncFactProbeAcceptanceTest');
+  expect(JSON.parse(fs.readFileSync(outcome.evidencePath, 'utf8')).results)
+    .toEqual(measurement.results);
+  expect(calls.at(-2)).toContain('com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity');
+});
+
 
 it.each([
   { FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE: '1' },

@@ -19,12 +19,14 @@ const TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionDatabasePerformanceGateTes
 const LIFECYCLE_TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionDatabaseLifecyclePluginContractTest`;
 const BATCH_DATA_PLANE_TEST_CLASS = `${TEST_NAMESPACE}.FolioleCompanionBatchDataPlaneTest`;
 const WORKSPACE_CAPACITY_TEST_CLASS = `${TEST_NAMESPACE}.FolioleLibraryWorkspaceCapacityTest`;
+const FACT_PROBE_TEST_CLASS = `${TEST_NAMESPACE}.FolioleSyncFactProbeAcceptanceTest`;
 
 export async function runA5DatabasePerformance({ env, evidenceRoot, execute, captured, paths, serial }) {
   const identities = assertPerformanceApkIdentity({ captured, paths, env });
   const scenario = performanceScenario(env);
   const capacity = scenario === 'library-capacity';
   const workspaceCapacity = scenario === 'library-capacity-workspace';
+  const factProbe = scenario === 'sync-fact-probe';
   const resetFixture = env.FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE;
   if (resetFixture !== undefined && (resetFixture !== '1' || (!capacity && !workspaceCapacity))) {
     throw new Error('Capacity fixture reset requires an explicit capacity scenario and value 1.');
@@ -75,7 +77,8 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
     } else {
       result = await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'instrument', '-w', '-r',
-        '-e', 'class', capacity ? `${TEST_NAMESPACE}.FolioleLibraryCapacityTest` : TEST_CLASS, RUNNER
+        '-e', 'class', factProbe ? FACT_PROBE_TEST_CLASS
+          : capacity ? `${TEST_NAMESPACE}.FolioleLibraryCapacityTest` : TEST_CLASS, RUNNER
       ], options);
       output.push(result.output);
     }
@@ -83,6 +86,8 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
       execute, paths, serial, options });
     if (workspaceCapacity) return await saveWorkspaceCapacityEvidence({ evidenceRoot, identities, result, output,
       execute, paths, serial, options, resetFixture, workspaceMemory });
+    if (factProbe) return await saveFactProbeEvidence({ evidenceRoot, identities, result,
+      output, execute, paths, serial, options });
     for (const testClass of [LIFECYCLE_TEST_CLASS, BATCH_DATA_PLANE_TEST_CLASS]) {
       const contract = await checked(execute, paths.adb, [
         '-s', serial, 'shell', 'am', 'instrument', '-w', '-r', '-e', 'class', testClass, RUNNER
@@ -102,6 +107,22 @@ export async function runA5DatabasePerformance({ env, evidenceRoot, execute, cap
   } finally {
     if (testInstalled) await restoreAcceptanceActivity({ execute, paths, serial, options, evidenceRoot });
   }
+}
+
+async function saveFactProbeEvidence({ evidenceRoot, identities, result, output, execute, paths, serial, options }) {
+  fs.writeFileSync(path.join(evidenceRoot, 'sync-fact-probe-instrumentation.log'), result.output);
+  assertSingleInstrumentationPassed(result.output, FACT_PROBE_TEST_CLASS);
+  const artifact = await checked(execute, paths.adb, ['-s', serial, 'exec-out', 'run-as', APP_ID,
+    'cat', 'files/sync-fact-probe-result.json'], options);
+  const measurement = JSON.parse(artifact.output);
+  if (measurement.status !== 'passed' || measurement.scenario !== 'sync-fact-probe' ||
+      measurement.results?.length !== 2 || measurement.results.some((item) => item.claimed !== 0) ||
+      measurement.pageApply?.facts !== 32 || measurement.pageApply.appliedObjects !== 0) {
+    throw new Error('Isolated sync fact probe result is invalid.');
+  }
+  const evidencePath = path.join(evidenceRoot, 'sync-fact-probe-result.json');
+  fs.writeFileSync(evidencePath, `${JSON.stringify({ ...measurement, identities }, null, 2)}\n`);
+  return { evidencePath, output: output.join('') };
 }
 
 async function saveWorkspaceCapacityEvidence(args) {

@@ -24,6 +24,9 @@ if (!rootElement) {
 if (isIosBridgeAcceptance) {
   const module = iosAcceptanceScenario === 'library-capacity'
     ? import('./capacityAcceptance').then(({ mountCapacityAcceptance }) => mountCapacityAcceptance(rootElement))
+    : iosAcceptanceScenario === 'sync-fact-probe'
+      ? import('./syncFactProbeAcceptance').then(({ mountSyncFactProbeAcceptance }) =>
+        mountSyncFactProbeAcceptance(rootElement))
     : iosAcceptanceScenario === 'library-capacity-workspace'
       ? import('./capacityWorkspaceAcceptance').then(({ mountCapacityWorkspaceAcceptance }) =>
         mountCapacityWorkspaceAcceptance(rootElement))
