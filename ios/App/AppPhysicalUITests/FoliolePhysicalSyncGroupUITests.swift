@@ -12,9 +12,12 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
         resetExistingSyncGroup(in: app)
         tapButton(named: "Connect to Sync Group", in: app, timeout: 30)
         waitForLocalNetworkDecision(allow: true)
-        XCTAssertTrue(app.staticTexts["Searching..."].waitForExistence(timeout: 30),
-                      "Local Network discovery did not enter its ready searching state.")
+        waitForDiscoveryReady(in: app)
         attachScreenshot(named: "Fri-local-network-ready")
+    }
+
+    func testCancelsJoinModeWithoutSendingRequest() throws {
+        verifyJoinModeCancellation()
     }
 
     func testJoinsDiscoveredSyncGroupAndPersistsAfterRelaunch() throws {

@@ -4,6 +4,7 @@ import { MouseGestureSettingsProvider } from '../features/settings/context/Mouse
 import { useAttachmentObservation } from '../shared/hooks/useAttachmentObservation';
 import { LocalizationProvider, useTranslation } from '../shared/localization/LocalizationProvider';
 import { useSystemEntryDisplayNamesSnapshot } from '../shared/localization/systemEntryDisplayNamesStore';
+import { AppConfirmationProvider } from '../shared/ui/AppConfirmationProvider';
 import {
   createStartupBootSurfaceModel,
   createStartupErrorSurfaceModel,
@@ -68,7 +69,9 @@ function CompanionAppContent() {
 export function CompanionApp() {
   return (
     <LocalizationProvider>
-      <CompanionAppContent />
+      <AppConfirmationProvider>
+        <CompanionAppContent />
+      </AppConfirmationProvider>
     </LocalizationProvider>
   );
 }

@@ -71,6 +71,7 @@
 		50F046111FED79650016851F /* FolioleCompanionSyncGroupAdvertisement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F046011FED79650016851F /* FolioleCompanionSyncGroupAdvertisement.swift */; };
 		50F060111FED79650016851F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 50F060011FED79650016851F /* PrivacyInfo.xcprivacy */; };
 		50F100011FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */; };
+		50F311011FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F311021FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift */; };
 		50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */; };
 		50F200111FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F200121FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift */; };
 		50F100311FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */; };
@@ -197,6 +198,7 @@
 		50F046011FED79650016851F /* FolioleCompanionSyncGroupAdvertisement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupAdvertisement.swift; sourceTree = "<group>"; };
 		50F060011FED79650016851F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupUITests.swift; sourceTree = "<group>"; };
+		50F311021FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalJoinChoiceUITestSupport.swift; sourceTree = "<group>"; };
 		50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupUITestSupport.swift; sourceTree = "<group>"; };
 		50F200121FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalBodyPersistenceUITestSupport.swift; sourceTree = "<group>"; };
 		50F100321FED79650016851F /* FoliolePhysicalSyncGroupMutationUITestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalSyncGroupMutationUITestSupport.swift; sourceTree = "<group>"; };
@@ -381,6 +383,7 @@
 				50F100121FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift */,
 				50F200121FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift */,
 				50F100021FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift */,
+				50F311021FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift */,
 			);
 			path = AppPhysicalUITests;
 			sourceTree = "<group>";
@@ -658,6 +661,7 @@
 				50F100111FED79650016851F /* FoliolePhysicalSyncGroupUITestSupport.swift in Sources */,
 				50F200111FED79650016851F /* FoliolePhysicalBodyPersistenceUITestSupport.swift in Sources */,
 				50F100011FED79650016851F /* FoliolePhysicalSyncGroupUITests.swift in Sources */,
+				50F311011FED79650016851F /* FoliolePhysicalJoinChoiceUITestSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
