@@ -34,7 +34,7 @@ export async function runIosDatabaseUpgradeAcceptance(
 ) {
   const resourceMode = resolveIosResourceMode();
   const options = {
-    artifactDir, bundleId: 'com.foliole.ios.bootstrap-acceptance',
+    artifactDir, bundleId: 'com.campfirium.foliole.ios.bootstrap-acceptance',
     derivedData: prepareIosAcceptanceCache(repoRoot).derivedData, repoRoot,
     resourceArgs: iosXcodebuildResourceArgs(resourceMode), resourceMode
   };

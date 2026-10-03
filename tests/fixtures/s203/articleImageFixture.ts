@@ -54,7 +54,7 @@ export function createArticleImageFixture(baseUrl: string, scenario: ImageCase) 
     initialFiles: scenario === 'existing' ? [{ storageKey: originalKey, bytes: original }] : [],
     response: { path: new URL(sourceUrl).pathname, status: scenario === 'failed' ? 404 : 200, bytes: replacement },
     expectedContent: body(scenario, expectedKey),
-    environment: { FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: '.s203acceptance', FOLIOLE_S203_SCENARIO: scenario,
+    environment: { FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: '.dev', FOLIOLE_S203_SCENARIO: scenario,
       FOLIOLE_S203_ORIGINAL_KEY: originalKey, FOLIOLE_S203_SOURCE_URL: sourceUrl,
       [`FOLIOLE_S203_EXPECTED_${scenario.toUpperCase()}_KEY`]: expectedKey }
   };

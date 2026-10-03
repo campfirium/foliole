@@ -7,7 +7,7 @@ final class FolioleArticleImageProjectionTests: XCTestCase {
     func testChecksRecoveredArticlePersistence() throws { try verify(afterRecovery: true) }
 
     private func verify(afterRecovery: Bool) throws {
-        XCTAssertEqual(Bundle.main.bundleIdentifier, "com.foliole.ios.s203acceptance")
+        XCTAssertEqual(Bundle.main.bundleIdentifier, "com.campfirium.foliole.ios.dev")
         let scenario = try environment("FOLIOLE_S203_SCENARIO")
         XCTAssertTrue(["existing", "same", "changed", "failed", "local", "localized"].contains(scenario))
         let oldKey = try environment("FOLIOLE_S203_ORIGINAL_KEY")

@@ -18,7 +18,7 @@ import {
 const SCENARIO = 'device-identity';
 const GROUP_ID = 'group-t152-device-anchor-acceptance';
 const OTHER_ANCHOR = '22222222-2222-4222-8222-222222222222';
-const BUNDLE_ID = 'com.foliole.ios.bootstrap-acceptance';
+const BUNDLE_ID = 'com.campfirium.foliole.ios.bootstrap-acceptance';
 const RESULT_RELATIVE_PATH = 'Library/FolioleBridgeAcceptance/result.json';
 const ACCEPTANCE_ENV_KEYS = [
   'VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE', 'VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_ENDPOINT',

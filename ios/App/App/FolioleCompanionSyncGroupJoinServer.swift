@@ -8,7 +8,7 @@ final class FolioleCompanionSyncGroupJoinServer {
     let provider: FolioleCompanionSyncGroupJoinProvider
     let snapshots: FolioleCompanionSyncGroupSnapshot?
     var memberStateReady = [String: String]()
-    private let queue = DispatchQueue(label: "com.foliole.ios.sync-group-provider")
+    private let queue = DispatchQueue(label: "com.campfirium.foliole.ios.sync-group-provider")
     let stateChanged: () -> Void
     private(set) var port: UInt16?
     let runtimeInstanceId: String

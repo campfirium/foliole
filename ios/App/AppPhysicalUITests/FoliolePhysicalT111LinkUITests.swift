@@ -14,7 +14,7 @@ final class FoliolePhysicalT111LinkUITests: XCTestCase {
             throw XCTSkip("T111 requires an isolated library's group, node, and expected text.")
         }
 
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.t219capacity")
+        let app = XCUIApplication(bundleIdentifier: "com.campfirium.foliole.ios.dev")
         app.launchArguments = ["--foliole-physical-acceptance",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
 
@@ -52,7 +52,7 @@ final class FoliolePhysicalT111LinkUITests: XCTestCase {
             throw XCTSkip("T111 requires an isolated library's folder identity and title.")
         }
 
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.t219capacity")
+        let app = XCUIApplication(bundleIdentifier: "com.campfirium.foliole.ios.dev")
         app.launchArguments = ["--foliole-physical-acceptance",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         let url = URL(string: "foliole://node/v1?group=\(group)&id=\(folder)")!
@@ -72,7 +72,7 @@ final class FoliolePhysicalT111LinkUITests: XCTestCase {
         guard let group = ProcessInfo.processInfo.environment["FOLIOLE_T111_GROUP_ID"] else {
             throw XCTSkip("T111 requires the isolated library's group identity.")
         }
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.t219capacity")
+        let app = XCUIApplication(bundleIdentifier: "com.campfirium.foliole.ios.dev")
         app.launchArguments = ["--foliole-physical-acceptance",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()

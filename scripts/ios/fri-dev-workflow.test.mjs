@@ -12,8 +12,6 @@ import {
   FRI_DEV_APP_ID,
   FRI_DEV_BUNDLE_SUFFIX,
   FRI_DEV_TEST,
-  FRI_T219_APP_ID,
-  FRI_T219_BUNDLE_SUFFIX,
   FRI_XCUITEST_RUNNER,
   runFriDevWorkflow
 } from './fri-dev-workflow.mjs';
@@ -77,8 +75,8 @@ describe('Fri development workflow', () => {
   it('uses an isolated persistent app and delegates bounded retention before testing', () => {
     const source = read('scripts/ios/fri-dev-workflow.mjs');
 
-    expect(FRI_DEV_APP_ID).toBe('com.foliole.ios.devworkflow');
-    expect(FRI_DEV_BUNDLE_SUFFIX).toBe('.devworkflow');
+    expect(FRI_DEV_APP_ID).toBe('com.campfirium.foliole.ios.dev');
+    expect(FRI_DEV_BUNDLE_SUFFIX).toBe('.dev');
     expect(source).not.toMatch(/fetch|pull|reset|receipt|candidate/iu);
     expect(source).toContain('retainFriDevelopmentApps');
     expect(source).not.toMatch(/ordinaryjourney/iu);
@@ -114,6 +112,6 @@ it('builds the normal workspace capacity resource and selects its physical UI te
   expect(commands[2].args).toContain(
     'AppPhysicalUITests/FoliolePhysicalDevWorkflowUITests/testMeasuresLibraryWorkspaceCapacity'
   );
-  expect(commands[2].env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe(FRI_T219_BUNDLE_SUFFIX);
-  expect(commands[3].args).toContain(FRI_T219_APP_ID);
+  expect(commands[2].env.FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).toBe(FRI_DEV_BUNDLE_SUFFIX);
+  expect(commands[3].args).toContain(FRI_DEV_APP_ID);
 });

@@ -2,22 +2,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
-export const FRI_PRODUCTION_APP_ID = 'com.foliole.ios';
-export const FRI_DEV_SUFFIX = '.devworkflow';
-export const FRI_T152_SUFFIX = '.t152acceptance';
+export const FRI_PRODUCTION_APP_ID = 'com.campfirium.foliole.ios';
+export const FRI_DEV_SUFFIX = '.dev';
 
 function appIdsForSuffix(suffix) {
   return [
-    `com.foliole.ios${suffix}`,
-    `com.foliole.ios.physical-uitests${suffix}.xctrunner`,
-    `com.foliole.ios.acceptance-projection-tests${suffix}.xctrunner`
+    `com.campfirium.foliole.ios${suffix}`,
+    `com.campfirium.foliole.ios.physical-uitests${suffix}.xctrunner`,
+    `com.campfirium.foliole.ios.acceptance-projection-tests${suffix}.xctrunner`
   ];
 }
 
 export const FRI_RETAINED_DEVELOPMENT_APP_IDS = new Set([
   FRI_PRODUCTION_APP_ID,
-  ...appIdsForSuffix(FRI_DEV_SUFFIX),
-  ...appIdsForSuffix(FRI_T152_SUFFIX)
+  ...appIdsForSuffix(FRI_DEV_SUFFIX)
 ]);
 
 function installedApps(inventory) {
@@ -38,7 +36,7 @@ export function staleFriDevelopmentAppIds(inventory) {
 
 export function freshFriAcceptanceAppIds(inventory) {
   const installed = new Set(installedApps(inventory).map(({ bundleIdentifier }) => bundleIdentifier));
-  return appIdsForSuffix(FRI_T152_SUFFIX).filter((bundleId) => installed.has(bundleId));
+  return appIdsForSuffix(FRI_DEV_SUFFIX).filter((bundleId) => installed.has(bundleId));
 }
 
 function requireSuccess(result, stage) {
@@ -58,13 +56,13 @@ async function readFriAppInventory({ evidenceRoot, fileName, run }) {
   return JSON.parse(fs.readFileSync(inventoryPath, 'utf8'));
 }
 
-export async function retainFriDevelopmentApps({ evidenceRoot, freshT152 = false, run }) {
+export async function retainFriDevelopmentApps({ evidenceRoot, freshAcceptance = false, run }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const inventory = await readFriAppInventory({
     evidenceRoot, fileName: 'installed-apps-before.json', run
   });
   const stale = staleFriDevelopmentAppIds(inventory);
-  const fresh = freshT152 ? freshFriAcceptanceAppIds(inventory) : [];
+  const fresh = freshAcceptance ? freshFriAcceptanceAppIds(inventory) : [];
   const removed = [...new Set([...stale, ...fresh])].sort();
   for (const bundleId of removed) {
     const result = await run('xcrun', [
@@ -78,11 +76,11 @@ export async function retainFriDevelopmentApps({ evidenceRoot, freshT152 = false
     evidenceRoot, fileName: 'installed-apps-after.json', run
   });
   const remaining = [...staleFriDevelopmentAppIds(after),
-    ...(freshT152 ? freshFriAcceptanceAppIds(after) : [])];
+    ...(freshAcceptance ? freshFriAcceptanceAppIds(after) : [])];
   if (remaining.length > 0) {
     throw new Error(`Fri application retention left managed apps installed: ${remaining.join(', ')}`);
   }
-  const receipt = { deviceId: FRI_COREDEVICE_ID, freshT152, removed,
+  const receipt = { deviceId: FRI_COREDEVICE_ID, freshAcceptance, removed,
     retained: [...FRI_RETAINED_DEVELOPMENT_APP_IDS].sort(), schemaVersion: 1 };
   fs.writeFileSync(path.join(evidenceRoot, 'receipt.json'),
     `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');

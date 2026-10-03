@@ -22,8 +22,8 @@ export function friAcceptanceBundle(taskId) {
   if (!/^t[0-9]+$/u.test(taskId ?? '')) {
     throw new Error('Fri acceptance task identity is missing or invalid.');
   }
-  const suffix = `.${taskId}`;
-  return { applicationId: `com.foliole.ios${suffix}`, suffix };
+  const suffix = '.dev';
+  return { applicationId: `com.campfirium.foliole.ios${suffix}`, suffix };
 }
 
 function loadProjection(root, buildIdentity, applicationId) {

@@ -11,7 +11,7 @@ final class FoliolePhysicalArticleImageUITests: XCTestCase {
     func testLocalImageWithoutSourceRemainsMissing() throws { try verifyImageCase("local", available: false) }
 
     func testAttachmentSettingsPersistAcrossRestart() throws {
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.s203acceptance")
+        let app = XCUIApplication(bundleIdentifier: "com.campfirium.foliole.ios.dev")
         app.launchArguments = ["--foliole-physical-acceptance", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         openAttachmentSettings(in: app)
@@ -58,12 +58,12 @@ final class FoliolePhysicalArticleImageUITests: XCTestCase {
 
     private func verifyImageCase(_ scenario: String, available: Bool) throws {
         let environment = ProcessInfo.processInfo.environment
-        XCTAssertEqual(environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"], ".s203acceptance",
+        XCTAssertEqual(environment["FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX"], ".dev",
                        "S203 scenarios require the isolated acceptance application.")
         let key = try XCTUnwrap(environment["FOLIOLE_S203_EXPECTED_\(scenario.uppercased())_KEY"],
                                "Prepare the S203 fixture and its read-only precondition projection first.")
         XCTAssertNotNil(key.range(of: #"^[a-f0-9]{64}\.png$"#, options: .regularExpression))
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.s203acceptance")
+        let app = XCUIApplication(bundleIdentifier: "com.campfirium.foliole.ios.dev")
         app.launchArguments = ["--foliole-physical-acceptance", "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()
         openArticle(scenario, in: app)

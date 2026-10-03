@@ -63,7 +63,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
 
     func testMeasuresLibraryCapacity() throws {
         executionTimeAllowance = 1200
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.devworkflow")
+        let app = XCUIApplication(bundleIdentifier: "com.campfirium.foliole.ios.dev")
         app.launchArguments += ["--foliole-physical-acceptance"]
         app.launch()
         let run = app.buttons["Run T219 capacity"]
@@ -91,7 +91,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
 
     func testMeasuresLibraryWorkspaceCapacity() throws {
         executionTimeAllowance = 1200
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.t219capacity")
+        let app = XCUIApplication(bundleIdentifier: "com.campfirium.foliole.ios.dev")
         app.launchArguments += ["--foliole-physical-acceptance",
                                 "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         var results: [[String: Any]] = []
@@ -102,7 +102,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
             if target == 1000 { app.terminate() }
         }
         let result: [String: Any] = ["status": "passed", "platform": "ios",
-            "appId": "com.foliole.ios.t219capacity", "scenario": "library-capacity-workspace",
+            "appId": "com.campfirium.foliole.ios.dev", "scenario": "library-capacity-workspace",
             "results": results]
         let data = try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted])
         let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
@@ -205,7 +205,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
     private func dismissCapacityWirelessDataPrompt() {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         let alert = springboard.alerts.matching(NSPredicate(
-            format: "label CONTAINS %@", "Foliole.t219capacity"
+            format: "label CONTAINS %@", "Foliole Mobile.dev"
         )).firstMatch
         guard alert.waitForExistence(timeout: 3) else { return }
         let wirelessOnly = alert.buttons.matching(NSPredicate(
@@ -233,7 +233,7 @@ final class FoliolePhysicalDevWorkflowUITests: XCTestCase {
     private func assertCapacityResult(_ data: Data) throws {
         let result = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         XCTAssertEqual(result["status"] as? String, "passed", String(describing: result["error"]))
-        XCTAssertEqual(result["appId"] as? String, "com.foliole.ios.devworkflow")
+        XCTAssertEqual(result["appId"] as? String, "com.campfirium.foliole.ios.dev")
         XCTAssertEqual(result["platform"] as? String, "ios")
         XCTAssertEqual(result["scenario"] as? String, "library-capacity")
         let cases = try XCTUnwrap(result["results"] as? [[String: Any]])

@@ -10,10 +10,8 @@ import { createFriPhysicalReadinessAdapter } from './fri-physical-readiness.mjs'
 import { retainFriDevelopmentApps } from './fri-app-retention.mjs';
 
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
-export const FRI_DEV_APP_ID = 'com.foliole.ios.devworkflow';
-export const FRI_DEV_BUNDLE_SUFFIX = '.devworkflow';
-export const FRI_T219_APP_ID = 'com.foliole.ios.t219capacity';
-export const FRI_T219_BUNDLE_SUFFIX = '.t219capacity';
+export const FRI_DEV_APP_ID = 'com.campfirium.foliole.ios.dev';
+export const FRI_DEV_BUNDLE_SUFFIX = '.dev';
 export const FRI_DEV_TEST =
   'AppPhysicalUITests/FoliolePhysicalDevWorkflowUITests/testOpensAndOperatesBrowse';
 export const FRI_XCUITEST_RUNNER =
@@ -47,9 +45,8 @@ export function buildFriDevWorkflowCommands({ evidenceRoot, repoRoot, runnerPath
   const capacity = scenario.startsWith('library-capacity');
   const method = scenario === 'library-capacity-workspace'
     ? 'testMeasuresLibraryWorkspaceCapacity' : 'testMeasuresLibraryCapacity';
-  const appId = scenario === 'library-capacity-workspace' ? FRI_T219_APP_ID : FRI_DEV_APP_ID;
-  const bundleSuffix = scenario === 'library-capacity-workspace'
-    ? FRI_T219_BUNDLE_SUFFIX : FRI_DEV_BUNDLE_SUFFIX;
+  const appId = FRI_DEV_APP_ID;
+  const bundleSuffix = FRI_DEV_BUNDLE_SUFFIX;
   const buildEnv = { ...process.env, VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE: capacity ? '1' : '0',
     VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO: capacity ? scenario : '' };
   const runnerArgs = [runnerPath,

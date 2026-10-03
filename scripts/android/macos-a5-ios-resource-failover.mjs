@@ -11,7 +11,7 @@ import { createSimulatorAcceptanceBuildArgs, verifyAcceptanceAppSignature,
   waitForAcceptanceObservation } from '../ios/ios-simulator-acceptance-runner.mjs';
 import { assertOwnedResourcePath, verifyA5ResourceLanPresence } from './macos-a5-resource-lan-probe.mjs';
 
-const BUNDLE_ID = 'com.foliole.ios.bootstrap-acceptance';
+const BUNDLE_ID = 'com.campfirium.foliole.ios.bootstrap-acceptance';
 const SCENARIO = 'resource-provider-failover';
 const VITE_KEYS = ['VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE',
   'VITE_FOLIOLE_IOS_BRIDGE_ACCEPTANCE_SCENARIO', 'VITE_FOLIOLE_ACCEPTANCE_GROUP_ID',

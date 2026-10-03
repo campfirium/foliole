@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 
 import { buildFriRunTimeline } from './fri-two-device-run-proof.mjs';
 
-const applicationId = 'com.foliole.ios.t152acceptance.atest';
+const applicationId = 'com.campfirium.foliole.ios.dev';
 const event = (runId, triggerReason, minute) => ({
   device_identity_key: 'fri-device', occurred_at: `2026-08-29T00:0${minute}:00.000Z`,
   result: 'completed', run_id: runId, trigger_reason: triggerReason

@@ -22,24 +22,26 @@ function inventory(ids) {
 it('removes legacy Foliole development identities and retains fixed identities', () => {
   const value = inventory([
     FRI_PRODUCTION_APP_ID,
-    'com.foliole.ios.devworkflow',
-    'com.foliole.ios.physical-uitests.devworkflow.xctrunner',
-    'com.foliole.ios.t152acceptance',
-    'com.foliole.ios.physical-uitests.t152acceptance.xctrunner',
-    'com.foliole.ios.t17325',
-    'com.foliole.ios.physical-uitests.t17325.xctrunner',
-    'com.foliole.ios.t152acceptance.adeadbeef',
+    'com.campfirium.foliole.ios.dev',
+    'com.campfirium.foliole.ios.physical-uitests.dev.xctrunner',
+    'com.campfirium.foliole.ios.t152acceptance',
+    'com.campfirium.foliole.ios.physical-uitests.t152acceptance.xctrunner',
+    'com.campfirium.foliole.ios.t17325',
+    'com.campfirium.foliole.ios.physical-uitests.t17325.xctrunner',
+    'com.campfirium.foliole.ios.t152acceptance.adeadbeef',
     'com.example.unrelated'
   ]);
 
   expect(staleFriDevelopmentAppIds(value)).toEqual([
-    'com.foliole.ios.physical-uitests.t17325.xctrunner',
-    'com.foliole.ios.t152acceptance.adeadbeef',
-    'com.foliole.ios.t17325'
+    'com.campfirium.foliole.ios.physical-uitests.t152acceptance.xctrunner',
+    'com.campfirium.foliole.ios.physical-uitests.t17325.xctrunner',
+    'com.campfirium.foliole.ios.t152acceptance',
+    'com.campfirium.foliole.ios.t152acceptance.adeadbeef',
+    'com.campfirium.foliole.ios.t17325'
   ]);
   expect(freshFriAcceptanceAppIds(value)).toEqual([
-    'com.foliole.ios.t152acceptance',
-    'com.foliole.ios.physical-uitests.t152acceptance.xctrunner'
+    'com.campfirium.foliole.ios.dev',
+    'com.campfirium.foliole.ios.physical-uitests.dev.xctrunner'
   ]);
 });
 
@@ -48,9 +50,9 @@ it('inventories Fri, removes only exact selected bundle identifiers, and writes 
   const calls = [];
   const installed = new Set([
     FRI_PRODUCTION_APP_ID,
-    'com.foliole.ios.devworkflow',
-    'com.foliole.ios.t152acceptance',
-    'com.foliole.ios.t173'
+    'com.campfirium.foliole.ios.dev',
+    'com.campfirium.foliole.ios.t152acceptance',
+    'com.campfirium.foliole.ios.t173'
   ]);
   const run = async (command, args) => {
     calls.push([command, args]);
@@ -63,11 +65,12 @@ it('inventories Fri, removes only exact selected bundle identifiers, and writes 
     return { code: 0 };
   };
 
-  const receipt = await retainFriDevelopmentApps({ evidenceRoot, freshT152: true, run });
+  const receipt = await retainFriDevelopmentApps({ evidenceRoot, freshAcceptance: true, run });
 
   expect(receipt.removed).toEqual([
-    'com.foliole.ios.t152acceptance',
-    'com.foliole.ios.t173'
+    'com.campfirium.foliole.ios.dev',
+    'com.campfirium.foliole.ios.t152acceptance',
+    'com.campfirium.foliole.ios.t173'
   ]);
   expect(calls.filter(([, args]) => args.includes('uninstall'))
     .map(([, args]) => args.at(-1))).toEqual(receipt.removed);

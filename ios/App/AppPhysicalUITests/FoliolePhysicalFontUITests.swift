@@ -4,7 +4,7 @@ final class FoliolePhysicalFontUITests: XCTestCase {
     override func setUpWithError() throws { continueAfterFailure = false }
 
     func testSystemFontAndCustomFontImport() throws {
-        let app = XCUIApplication(bundleIdentifier: "com.foliole.ios.fontacceptance")
+        let app = XCUIApplication(bundleIdentifier: "com.campfirium.foliole.ios.dev")
         app.launchArguments = ["--foliole-physical-acceptance",
                                "-AppleLanguages", "(en)", "-AppleLocale", "en_US"]
         app.launch()

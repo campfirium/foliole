@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { cleanupOwnedIosSimulator, createOwnedIosSimulator } from '../ios/ios-dedicated-simulator-runtime.mjs';
 import { verifyAcceptanceAppSignature } from '../ios/ios-simulator-acceptance-runner.mjs';
 
-const BUNDLE_ID = 'com.foliole.ios';
+const BUNDLE_ID = 'com.campfirium.foliole.ios';
 
 export function createSignedSimulatorBuildArgs(repoRoot, derivedData, udid) {
   return [

@@ -6,6 +6,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
+import { retainFriDevelopmentApps } from './fri-app-retention.mjs';
 import { runFriSyncGroupProvider } from './fri-sync-group-provider.mjs';
 import { writeFriTwoDeviceCellReceipt } from './fri-two-device-cell-receipt.mjs';
 import { buildFriRunTimeline } from './fri-two-device-run-proof.mjs';
@@ -90,6 +91,10 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   repoRoot = process.cwd() }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const bundle = friAcceptanceBundle(process.env.FOLIOLE_ACCEPTANCE_TASK_ID);
+  await retainFriDevelopmentApps({ evidenceRoot: path.join(evidenceRoot, 'fri-app-retention'),
+    freshAcceptance: true, run: createActionExecutor({
+      logPath: path.join(evidenceRoot, 'fri-app-retention.log'),
+      progressPath: path.join(evidenceRoot, 'fri-app-retention-progress.jsonl') }) });
   const providerRoot = path.join(evidenceRoot, 'macos-provider');
   const signals = createStateSignals();
   const releaseGate = createReleaseGate();

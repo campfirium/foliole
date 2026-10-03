@@ -71,7 +71,7 @@ final class FolioleCompanionDeviceAnchorStore {
 
 final class FolioleDeviceAnchorSystemKeychain: FolioleCompanionDeviceAnchorKeychain {
     private let account = "device-anchor-v1"
-    private let service = "com.foliole.ios.device-anchor"
+    private let service = "com.campfirium.foliole.ios.device-anchor"
 
     func delete() throws {
         let status = SecItemDelete(query() as CFDictionary)

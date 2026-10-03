@@ -30,7 +30,7 @@ import {
   writeAcceptanceFailure
 } from './ios-simulator-acceptance-runner.mjs';
 
-const BUNDLE_ID = 'com.foliole.ios.bootstrap-acceptance';
+const BUNDLE_ID = 'com.campfirium.foliole.ios.bootstrap-acceptance';
 const DATABASE_RELATIVE_PATH = 'Library/CapacitorDatabase/foliole-companionSQLite.db';
 const RESULT_RELATIVE_PATH = 'Library/FolioleBridgeAcceptance/result.json';
 const BOOTSTRAP_TIMEOUT_MS = 60_000;

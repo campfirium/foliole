@@ -18,14 +18,14 @@ describe('iOS app identity host contract', () => {
     );
 
     expect(bundleIdentifiers).toEqual([
-      '"com.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
-      '"com.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
-      '"com.foliole.ios.physical-uitests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
-      '"com.foliole.ios.physical-uitests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
-      '"com.foliole.ios.acceptance-projection-tests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
-      '"com.foliole.ios.acceptance-projection-tests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
-      '"com.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).share"',
-      '"com.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).share"'
+      '"com.campfirium.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
+      '"com.campfirium.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
+      '"com.campfirium.foliole.ios.physical-uitests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
+      '"com.campfirium.foliole.ios.physical-uitests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
+      '"com.campfirium.foliole.ios.acceptance-projection-tests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
+      '"com.campfirium.foliole.ios.acceptance-projection-tests$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)"',
+      '"com.campfirium.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).share"',
+      '"com.campfirium.foliole.ios$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX).share"'
     ]);
     expect(project).not.toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX =');
   });
@@ -45,7 +45,8 @@ describe('iOS app identity host contract', () => {
     const infoPlist = read('ios/App/App/Info.plist');
 
     expect(infoPlist).toContain('<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>');
-    expect(infoPlist).not.toContain('com.foliole.ios');
+    expect(infoPlist).toContain('<string>Foliole Mobile$(FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX)</string>');
+    expect(infoPlist).not.toContain('com.campfirium.foliole.ios');
   });
 
   it('forces both Fri two-device journeys onto a separate signed acceptance bundle', () => {
@@ -55,6 +56,7 @@ describe('iOS app identity host contract', () => {
       expect(source).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix');
       expect(source).toContain('FOLIOLE_ACCEPTANCE_TASK_ID');
       expect(source).toContain("'--keep-app-foreground', bundle.applicationId");
+      expect(source).toContain('freshAcceptance: true');
     }
   });
 

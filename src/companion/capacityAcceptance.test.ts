@@ -50,12 +50,12 @@ it('rejects nonempty dedicated databases before any write', async () => {
   expect(run).not.toHaveBeenCalled();
 });
 
-it.each(['com.foliole.ios', 'com.foliole.ios.t152acceptance'])('refuses unowned iOS identity %s', id => {
+it.each(['com.campfirium.foliole.ios', 'com.campfirium.foliole.ios.t152acceptance', 'com.campfirium.foliole.ios.t219capacity'])('refuses unowned iOS identity %s', id => {
   expect(() => assertIdentity('ios', id)).toThrow('fixed acceptance');
 });
 
 it('accepts the fixed isolated iOS workspace capacity identity', () => {
-  expect(() => assertIdentity('ios', 'com.foliole.ios.t219capacity')).not.toThrow();
+  expect(() => assertIdentity('ios', 'com.campfirium.foliole.ios.dev')).not.toThrow();
 });
 
 it('exposes a terminal error through the fixed readable result control', async () => {

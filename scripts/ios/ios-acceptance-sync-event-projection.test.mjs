@@ -21,15 +21,15 @@ it('runs the isolated signed projection target and accepts only its fixed fields
   expect(source).toContain('value.container_identity !== applicationId');
   expect(source).not.toMatch(/CapacitorDatabase|device copy|container_path|workgroup_key|endpoint/u);
   expect(projectionTest).toContain('requiredEnvironment("FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX")');
-  expect(projectionTest).toContain('t[0-9]+|s[0-9]+acceptance');
+  expect(projectionTest).toContain('XCTAssertEqual(suffix, ".dev")');
   expect(projectionTest).toContain('"error": event["status"] as? String == "failed"');
   expect(projectionTest).not.toContain('.t152-acceptance');
 });
 
 it('uses one fixed signed acceptance container for the task', () => {
   expect(friAcceptanceBundle('t173')).toEqual({
-    applicationId: 'com.foliole.ios.t173',
-    suffix: '.t173'
+    applicationId: 'com.campfirium.foliole.ios.dev',
+    suffix: '.dev'
   });
   expect(() => friAcceptanceBundle('12345678-1234-4234-8234-123456789abc'))
     .toThrow('task identity');

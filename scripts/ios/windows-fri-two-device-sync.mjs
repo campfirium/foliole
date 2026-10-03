@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 
 import { createActionExecutor } from '../sync-group/multi-device-sync-action-executor.mjs';
 import { startWindowsSyncGroupProvider } from '../sync-group/multi-device-sync-windows-provider.mjs';
+import { retainFriDevelopmentApps } from './fri-app-retention.mjs';
 import {
   friAcceptanceBundle, runFriSyncEventProjection
 } from './ios-acceptance-sync-event-projection.mjs';
@@ -66,6 +67,8 @@ export async function runWindowsFriTwoDeviceSync({ acceptedTip, evidenceRoot,
   repoRoot = process.cwd() }) {
   fs.mkdirSync(evidenceRoot, { recursive: true });
   const bundle = friAcceptanceBundle(process.env.FOLIOLE_ACCEPTANCE_TASK_ID);
+  await retainFriDevelopmentApps({ evidenceRoot: path.join(evidenceRoot, 'fri-app-retention'),
+    freshAcceptance: true, run: executor(evidenceRoot, 'fri-app-retention') });
   const provider = startWindowsSyncGroupProvider({ action: 'two-device-sync-provider',
     execute: executor(evidenceRoot, 'windows-provider'), repoRoot,
     sourceRef: 'refs/heads/dev' });

@@ -44,7 +44,7 @@ describe('iOS bootstrap acceptance contract', () => {
     const args = createAcceptanceBuildArgs('SIM-1');
 
     expect(args).toContain('FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX=.bootstrap-acceptance');
-    expect(args).not.toContain('PRODUCT_BUNDLE_IDENTIFIER=com.foliole.ios.bootstrap-acceptance');
+    expect(args).not.toContain('PRODUCT_BUNDLE_IDENTIFIER=com.campfirium.foliole.ios.bootstrap-acceptance');
     expect(args).toContain('platform=iOS Simulator,id=SIM-1');
     expect(args).toContain(path.join(
       process.cwd(), '.cache/ios-acceptance-build/DerivedData/PackageCache'
@@ -55,11 +55,11 @@ describe('iOS bootstrap acceptance contract', () => {
 
   it('requires the acceptance signature to use the isolated Bundle identifier', () => {
     expect(verifyAcceptanceAppSignature(
-      'Identifier=com.foliole.ios.bootstrap-acceptance\nTeamIdentifier=not set\n',
-      'com.foliole.ios.bootstrap-acceptance'
-    )).toBe('com.foliole.ios.bootstrap-acceptance');
+      'Identifier=com.campfirium.foliole.ios.bootstrap-acceptance\nTeamIdentifier=not set\n',
+      'com.campfirium.foliole.ios.bootstrap-acceptance'
+    )).toBe('com.campfirium.foliole.ios.bootstrap-acceptance');
     expect(() => verifyAcceptanceAppSignature(
-      'Identifier=com.foliole.ios\n', 'com.foliole.ios.bootstrap-acceptance'
+      'Identifier=com.campfirium.foliole.ios\n', 'com.campfirium.foliole.ios.bootstrap-acceptance'
     )).toThrow('Unexpected acceptance signature identifier');
   });
 
