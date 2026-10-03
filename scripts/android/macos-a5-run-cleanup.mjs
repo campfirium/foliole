@@ -1,3 +1,5 @@
+/* global console */
+
 import { spawnSync } from 'node:child_process';
 
 import { closeMacosA5BuildCapsule } from './macos-a5-build-capsule.mjs';
@@ -7,12 +9,21 @@ import {
 } from './macos-a5-formal-receipt.mjs';
 import { releaseMacosA5DeviceLease } from './macos-a5-run-lease.mjs';
 
+export function shouldStopAdbServer(spawn = spawnSync) {
+  const result = spawn('/usr/bin/pgrep', ['-x', 'scrcpy']);
+  if (result.status === 1) return true;
+  if (result.status !== 0) {
+    console.warn('[macos-a5-dev] keeping adb: unable to inspect scrcpy process');
+  }
+  return false;
+}
+
 export function cleanupMacosA5Run({
   actionFailed, adb, context, deviceLeaseMode, lease, receipt, spawn = spawnSync
 }) {
   try {
     if (receipt && !actionFailed) markFormalA5Stage(receipt, 'cleanup');
-    if (deviceLeaseMode) spawn(adb, ['kill-server']);
+    if (deviceLeaseMode && shouldStopAdbServer(spawn)) spawn(adb, ['kill-server']);
     try {
       if (lease) {
         releaseMacosA5DeviceLease(lease);

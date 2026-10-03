@@ -10,6 +10,7 @@ import {
   macosA5GradleEnv,
   macosA5Paths
 } from './macos-a5-dev.mjs';
+import { shouldStopAdbServer } from './macos-a5-run-cleanup.mjs';
 
 const APP_ID = 'com.campfirium.foliole.android';
 const TEST_CLASS = `com.foliole.android.FolioleCompanionSyncGroupApprovalTest`;
@@ -121,7 +122,8 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
   appId = APP_ID,
   allowControlledCancellation = false, instrumentationExecute = execute,
   assertFixed = assertFixedA5, mainMatches = installedMainMatches,
-  startProvider = startMacosA5SyncGroupApprovalProvider, cancelInstrumentation = () => {} }) {
+  startProvider = startMacosA5SyncGroupApprovalProvider, cancelInstrumentation = () => {},
+  shouldStopAdb = shouldStopAdbServer }) {
   const paths = macosA5Paths(repoRoot);
   const env = macosA5GradleEnv();
   assertFixed(paths);
@@ -160,7 +162,7 @@ export async function runMacosA5SyncGroupApproval({ execute, onProviderStopped =
     });
   } finally {
     await execute(paths.adb, ['-s', A5_SERIAL, 'uninstall', `${appId}.test`], { env, timeoutMs: 60_000 });
-    await execute(paths.adb, ['kill-server'], { env, timeoutMs: 30_000 });
+    if (shouldStopAdb()) await execute(paths.adb, ['kill-server'], { env, timeoutMs: 30_000 });
   }
   await startProvider({ appId, execute,
     onProviderStopped: () => stopMacosA5SyncGroupApprovalProvider({ appId, execute, paths, env }),

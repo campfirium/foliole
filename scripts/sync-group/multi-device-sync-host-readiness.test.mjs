@@ -26,7 +26,8 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   };
   const adapters = createHostReadinessAdapters({ execute,
     networkInterfaces: () => ({ en0: [{ address: '192.168.0.10', family: 'IPv4', internal: false }] }),
-    probeA5Lease: (...args) => leaseCalls.push(args), repoRoot, runId: 'run-1' });
+    probeA5Lease: (...args) => leaseCalls.push(args), repoRoot, runId: 'run-1',
+    shouldStopAdb: () => false });
   await adapters['android-b']();
   await adapters['windows-c']();
   expect(calls.some(([, args]) => args.includes('87a33a4b'))).toBe(true);
@@ -40,6 +41,7 @@ it('uses explicit A5 serial and a registered Windows action', async () => {
   expect(calls.find(([command]) => command === 'ssh')[1]).toContain('C:/Progra~1/nodejs/node.exe');
   expect(calls.find(([command]) => command === 'ssh')[2].timeout).toBe(40_000);
   expect(calls.some(([, args]) => args.includes('am'))).toBe(false);
+  expect(calls.some(([, args]) => args.includes('kill-server'))).toBe(false);
   expect(leaseCalls).toEqual([[repoRoot]]);
 });
 

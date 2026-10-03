@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 
 import { A5_SERIAL, macosA5Paths } from '../android/macos-a5-dev.mjs';
 import { createMacosA5ExecutionContext } from '../android/macos-a5-execution-context.mjs';
+import { shouldStopAdbServer } from '../android/macos-a5-run-cleanup.mjs';
 import {
   acquireMacosA5DeviceLease, releaseMacosA5DeviceLease
 } from '../android/macos-a5-run-lease.mjs';
@@ -81,6 +82,7 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
   fsApi = fs, networkInterfaces = os.networkInterfaces, probeA5Lease = probeFixedA5Lease,
   repoRoot, runId,
   probeMacosSyncPort = probeTcpPort,
+  shouldStopAdb = shouldStopAdbServer,
   windowsHost = WINDOWS_DEV_DEFAULT_SSH }) {
   const paths = macosA5Paths(repoRoot);
   return {
@@ -116,7 +118,9 @@ export function createHostReadinessAdapters({ env = process.env, execute = bound
         assertA5LanRoute(route, networkInterfaces());
         return { facts: ['fixed_a5_ready', 'fixed_a5_lease_ready', 'fixed_a5_unlocked',
           'fixed_a5_lan_ready', 'android_acceptance_profile_available'] };
-      } finally { await execute(paths.adb, ['kill-server'], { env }).catch(() => undefined); }
+      } finally {
+        if (shouldStopAdb()) await execute(paths.adb, ['kill-server'], { env }).catch(() => undefined);
+      }
     },
     'windows-c': async () => {
       const key = env.FOLIOLE_WINDOWS_DEV_GIT_SSH_KEY

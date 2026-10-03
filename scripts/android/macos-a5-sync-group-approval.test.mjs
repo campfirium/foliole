@@ -144,7 +144,7 @@ it('starts the peer from instrumented readiness and restores after instrumentati
     else if (args.includes('force-stop')) events.push('provider-stopped');
     return { code: 0, output: '' };
   };
-  await runMacosA5SyncGroupApproval({ assertFixed: () => {}, execute,
+  const options = { assertFixed: () => {}, execute, shouldStopAdb: () => true,
     instrumentationExecute: async (_command, _args, options) => {
       events.push('instrumentation-started');
       options.onOutput({ output:
@@ -155,10 +155,17 @@ it('starts the peer from instrumented readiness and restores after instrumentati
     onReady: async () => events.push('peer-started'), prepare: () => {}, repoRoot: process.cwd(),
     startProvider: async ({ onProviderStopped }) => {
       await onProviderStopped(); events.push('provider-started');
-    } });
+    } };
+  await runMacosA5SyncGroupApproval(options);
   expect(events).toEqual([
     'provider-stopped', 'transport-open', 'instrumentation-started', 'peer-started',
     'test-uninstalled', 'adb-stopped',
     'provider-stopped', 'provider-started'
+  ]);
+  events.length = 0;
+  await runMacosA5SyncGroupApproval({ ...options, shouldStopAdb: () => false });
+  expect(events).toEqual([
+    'provider-stopped', 'transport-open', 'instrumentation-started', 'peer-started',
+    'test-uninstalled', 'provider-stopped', 'provider-started'
   ]);
 });
