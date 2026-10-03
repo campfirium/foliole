@@ -12,7 +12,10 @@ const loadArticle = vi.hoisted(() => vi.fn());
 vi.mock('../shared/platform/companionWorkspaceSync', () => ({
   loadCompanionReadableArticle: loadArticle
 }));
-vi.mock('../shared/platform/appLifecycle', () => ({ subscribeNativeAppForeground: vi.fn(async () => () => undefined) }));
+vi.mock('../shared/platform/appLifecycle', () => ({
+  subscribeNativeAppForeground: vi.fn(async () => () => undefined),
+  subscribeNativeAppBackground: vi.fn(async () => () => undefined)
+}));
 vi.mock('../shared/platform/companionSyncObjects', () => ({
   saveCompanionSyncActiveViewState: vi.fn(async () => undefined),
   saveCompanionSyncNodeOpenState: vi.fn(async () => ({ last_opened_at: '2026-09-22T00:00:00Z' })),
