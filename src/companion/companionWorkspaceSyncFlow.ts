@@ -108,6 +108,7 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
   };
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
     ...(args.restoreId ? { restoreId: args.restoreId } : {}),
+    runId: args.runId,
     onProgress: args.setSyncProgress,
     onStructureSynced: refreshAfterStructureSync,
     resourcesOnly: args.continuationMode === 'resources-only'

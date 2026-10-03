@@ -27,8 +27,12 @@ async function testUsesStreamSyncDirectly() {
 
   expect(syncObjectsMock.syncCompanionObjectsFromDesktop).toHaveBeenCalledWith(
     'http://10.0.2.2:38641',
-    expect.objectContaining({ onStructureSynced: expect.any(Function) })
+    expect.objectContaining({ onStructureSynced: expect.any(Function), runId: expect.any(String) })
   );
+  const runId = syncObjectsMock.syncCompanionObjectsFromDesktop.mock.calls[0]?.[1]?.runId;
+  expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'run_finished', runId
+  }));
   expect(outcome).toBe('completed');
   expect(syncPlatformMock.recordCompanionWorkspaceSyncEvent).toHaveBeenCalledWith(expect.objectContaining({
     message: 'All stages completed.',

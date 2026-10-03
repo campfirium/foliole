@@ -4,6 +4,7 @@ export interface CompanionDesktopSyncOptions {
   onStructureSynced?: () => Promise<void> | void;
   resourcesOnly?: boolean;
   restoreId?: string;
+  runId?: string;
 }
 
 export interface CompanionDesktopSyncProgress {

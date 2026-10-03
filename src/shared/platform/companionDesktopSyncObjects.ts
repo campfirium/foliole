@@ -1,7 +1,6 @@
 import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
 import { SYNC_PACK_PAGE_CONTRACT } from '../../../lib/core/sync/syncPackPageContract';
 
-import { createSignedRequestHeaders } from './companion/network/signedRequest';
 import {
   resolveCompanionSyncPeerHostName,
   resolveCompanionSyncPeerId
@@ -12,13 +11,14 @@ import {
   createSkippedResourceSummary,
   pullResourceStages
 } from './companionDesktopSyncResourceStages';
+import { applyTracedStructurePage } from './companionDesktopSyncStructurePage';
 import { loadCompanionDesktopSyncSummary } from './companionDesktopSyncSummary';
+import { traceCompanionSyncStep } from './companionDesktopSyncTrace';
 import type {
   CompanionDesktopSyncOptions,
   CompanionDesktopSyncResult
 } from './companionDesktopSyncTypes';
 import {
-  applyCompanionDesktopSyncPack,
   loadCompanionSyncPackPosition,
   loadCompanionSyncPackRestorePosition,
   saveCompanionSyncPackCursor
@@ -47,7 +47,7 @@ function buildPackPath(position: { cursor: number | null; frontierStateSeq?: num
   return `/companion/sync-pack?${params.toString()}`;
 }
 
-async function pullRemoteStructurePack(endpointUrl: string, restoreId?: string) {
+async function pullRemoteStructurePack(endpointUrl: string, restoreId?: string, runId?: string) {
   const startedAt = Date.now();
   const sourcePeerId = await resolveCompanionSyncPeerId(endpointUrl);
   const sourceHostName = await resolveCompanionSyncPeerHostName(endpointUrl);
@@ -59,15 +59,14 @@ async function pullRemoteStructurePack(endpointUrl: string, restoreId?: string) 
   let appliedPackBlobCount = 0;
   let appliedPackObjectCount = 0;
   const reviewIds = new Set<string>();
+  let page = 0;
   for (;;) {
     const cursor = position.cursor ?? 0;
     const pathWithQuery = buildPackPath(position, restoreId);
-    const result = await withSyncStepTimeout('structure_pack_apply', applyCompanionDesktopSyncPack({
-      ...(restoreId ? { expectedRestoreId: restoreId } : {}),
-      headers: await createSignedRequestHeaders({ endpointUrl, method: 'GET', pathWithQuery }),
-      sourceHostName, sourcePeerId,
-      url: `${endpointUrl.trim().replace(/\/+$/, '')}${pathWithQuery}`
-    }));
+    const result = await applyTracedStructurePage({
+      cursor, endpointUrl, page: ++page, pathWithQuery, restoreId,
+      runId, sourceHostName, sourcePeerId
+    });
     if (!restoreId || !result.restore_pending) assertSyncPackCursorAdvance({ appliedFactCount: result.applied_group_fact_count ?? 0,
       appliedObjectCount: result.applied_object_count, currentCursor: cursor,
       handledConflictCount: result.handled_conflict_count ?? 0, toStateSeq: result.to_state_seq,
@@ -165,7 +164,8 @@ async function runCompanionObjectsSync(
   const skipPush = options.resourcesOnly === true || Boolean(options.restoreId);
   const pushed = skipPush
     ? createSkippedPushResult()
-    : await withSyncStepTimeout('push_local_changes', pushLocalDirtyObjects(endpointUrl))
+    : await traceCompanionSyncStep({ runId: options.runId, stage: 'push',
+      task: () => withSyncStepTimeout('push_local_changes', pushLocalDirtyObjects(endpointUrl)) })
       .catch((error) => ({
         pushConflictCount: 0,
         pushedObjectIds: [],
@@ -175,15 +175,16 @@ async function runCompanionObjectsSync(
       }));
   const pack = options.resourcesOnly
     ? createSkippedStructurePack()
-    : await pullRemoteStructurePack(endpointUrl, options.restoreId);
+    : await pullRemoteStructurePack(endpointUrl, options.restoreId, options.runId);
   if (!options.resourcesOnly) {
     options.onProgress?.({ completed: pack.appliedPackObjectCount, phase: 'structure', total: pack.appliedPackObjectCount });
     await options.onStructureSynced?.();
   }
   const resources = options.includeResources === false
     ? createEmptyResourceStages()
-    : await pullResourceStages(endpointUrl, options.onProgress, [],
-      pack.sourcePeerId ?? await resolveCompanionSyncPeerId(endpointUrl));
+    : await traceCompanionSyncStep({ runId: options.runId, stage: 'resources',
+      task: async () => pullResourceStages(endpointUrl, options.onProgress, [],
+        pack.sourcePeerId ?? await resolveCompanionSyncPeerId(endpointUrl)) });
   const finalSummary = options.includeResources === false
     ? createSkippedResourceSummary()
     : await loadCompanionDesktopSyncSummary(endpointUrl, pack.confirmedStructureStateSeq);
