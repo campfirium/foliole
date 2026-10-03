@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionHighlightRead, CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
@@ -8,6 +8,7 @@ import { AppButton, appFloatingSurfaceClassName } from '../shared/ui';
 import type { CompanionExistingHighlightTarget } from './companionExistingHighlightActions';
 import { CompanionSelectionNotePanel, CompanionSelectionToolbarActions } from './CompanionSelectionToolbarControls';
 import { useCompanionHighlightSession } from './useCompanionHighlightSession';
+import { useCompanionSelectionApply } from './useCompanionSelectionApply';
 
 export type CompanionSelectionAnnotationKind = 'cloze' | 'highlight' | 'note';
 
@@ -34,42 +35,20 @@ function resolveApplyPayload(props: CompanionSelectionAnnotationToolbarProps) {
   return props.resolveSelectionPayload ? props.resolveSelectionPayload() : props.state?.payload ?? null;
 }
 
-function reportAnnotationError(error: unknown) {
-  console.error('[companion-selection-toolbar] annotation action failed', error);
-}
-
-function useSelectionAnnotationApply(props: CompanionSelectionAnnotationToolbarProps) {
-  const applyPendingRef = useRef(false);
-  return (kind: CompanionSelectionAnnotationKind, note?: string) => {
-    const payload = resolveApplyPayload(props);
-    if (!payload || applyPendingRef.current) return;
-    applyPendingRef.current = true;
-    void Promise.resolve(props.onApply(kind, payload, note))
-      .then(() => {
-        applyPendingRef.current = false;
-        props.onClose();
-      })
-      .catch((error) => {
-        applyPendingRef.current = false;
-        reportAnnotationError(error);
-      });
-  };
-}
-
 export function CompanionSelectionAnnotationToolbar(props: CompanionSelectionAnnotationToolbarProps) {
   if (!props.state) return null;
-  return <ToolbarSession key={props.state.existingHighlight?.nodeId ?? 'selection'} {...props} />;
+  return <ToolbarSession key={props.state.existingHighlight?.nodeId ?? `${props.state.payload?.parentNodeId}:${props.state.payload?.anchorId}`} {...props} />;
 }
 
 function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
   const [noteDraft, setNoteDraft] = useState('');
   const [isNoteOpen, setIsNoteOpen] = useState(false);
   const session = useCompanionHighlightSession(props.state?.existingHighlight, props.loadExistingHighlight);
-  const apply = useSelectionAnnotationApply(props);
+  const creation = useCompanionSelectionApply({ ...props, resolvePayload: () => resolveApplyPayload(props) });
   const state = props.state!;
   const isExistingHighlight = Boolean(state.existingHighlight);
   const draft = isExistingHighlight ? session.draft : noteDraft;
-  const disabled = isExistingHighlight && (session.loading || !session.ready || session.saving);
+  const disabled = isExistingHighlight ? session.loading || !session.ready || session.saving : creation.saving || creation.saved;
   function applyExistingNote() {
     const target = state.existingHighlight;
     if (!target) return;
@@ -85,14 +64,17 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
       onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()}
       style={{ left: state.left, top: state.top }}>
       <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} disabled={disabled}
-        onAddNote={() => setIsNoteOpen(true)} onApply={apply} onDeleteExistingHighlight={deleteExistingHighlight} />
+        onAddNote={() => setIsNoteOpen(true)} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight} />
+      {!isNoteOpen && !isExistingHighlight && creation.error ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
+        <CreationStatus creation={creation} />
+      </div> : null}
       {!isNoteOpen && (session.loading || session.error) ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
         <HighlightStatus session={session} />
       </div> : null}
-      {isNoteOpen ? <CompanionSelectionNotePanel draft={draft} disabled={disabled} status={<HighlightStatus session={session} />}
+      {isNoteOpen ? <CompanionSelectionNotePanel draft={draft} disabled={disabled} status={isExistingHighlight ? <HighlightStatus session={session} /> : creation.error ? <CreationStatus creation={creation} /> : null}
         left={state.noteLeft - state.left} top={state.noteTop - state.top}
         onCancel={() => setIsNoteOpen(false)} onChange={isExistingHighlight ? session.setDraft : setNoteDraft}
-        onSave={() => isExistingHighlight ? applyExistingNote() : apply('note', noteDraft)} /> : null}
+        onSave={() => isExistingHighlight ? applyExistingNote() : creation.apply('note', noteDraft)} /> : null}
     </div>
   );
 }
@@ -104,5 +86,13 @@ function HighlightStatus({ session }: { session: ReturnType<typeof useCompanionH
   return <div className="mb-2 text-sm" role="alert">
     <p>{t(session.ready ? 'companion.selection.saveError' : 'companion.selection.loadError')}</p>
     {!session.ready && session.canRetry ? <AppButton onClick={session.retry}>{t('companion.selection.retry')}</AppButton> : null}
+  </div>;
+}
+
+function CreationStatus({ creation }: { creation: ReturnType<typeof useCompanionSelectionApply> }) {
+  const t = useTranslation();
+  return <div role="alert">
+    <p>{t(creation.saved ? 'companion.selection.savedRefreshError' : 'companion.selection.createError')}</p>
+    {creation.saved ? <AppButton disabled={creation.saving} onClick={creation.retryRefresh}>{t('companion.selection.refresh')}</AppButton> : null}
   </div>;
 }
