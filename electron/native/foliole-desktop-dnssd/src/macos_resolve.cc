@@ -48,23 +48,14 @@ class MacResolve final : public NativeOperation {
         regtype_(input.type.ends_with(".") ? input.type : input.type + ".") {}
 
   void Start() override {
-    DNSServiceErrorType error = DNSServiceResolve(&ref_, 0, input_.interface_index,
-      input_.name.c_str(), regtype_.c_str(), input_.domain.c_str(),
-      ResolveCallback, this);
-    if (error != kDNSServiceErr_NoError) {
-      FinishError(error);
-      return;
-    }
     if (!sink_->AcquireWorker()) {
       active_ = false;
-      DNSServiceRefDeallocate(ref_);
-      ref_ = nullptr;
       sink_->Close();
       return;
     }
     worker_ = std::thread([self = shared_from_this()] {
       auto* operation = static_cast<MacResolve*>(self.get());
-      operation->Run();
+      if (operation->Initialize()) operation->Run();
       operation->sink_->ReleaseWorker();
     });
   }
@@ -76,6 +67,17 @@ class MacResolve final : public NativeOperation {
   }
 
  private:
+  bool Initialize() {
+    DNSServiceErrorType error = DNSServiceResolve(&ref_, 0, input_.interface_index,
+      input_.name.c_str(), regtype_.c_str(), input_.domain.c_str(),
+      ResolveCallback, this);
+    if (error != kDNSServiceErr_NoError) {
+      FinishError(error);
+      return false;
+    }
+    return true;
+  }
+
   static void DNSSD_API ResolveCallback(DNSServiceRef, DNSServiceFlags,
     uint32_t interface_index, DNSServiceErrorType error, const char* fullname,
     const char* host, uint16_t port, uint16_t txt_length,

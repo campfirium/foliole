@@ -15,6 +15,7 @@ const controlledElectronSqliteTests = [
   'electron/database/reviewDailyCounts.test.ts',
   'electron/database/textBodyBlobCompanionCollection.integration.test.ts',
   'electron/sync/desktopSyncDiagnostics.http.integration.test.ts',
+  'electron/sync/desktopDnsSdResponsiveness.test.ts',
   'electron/sync/syncCrisscrossHttpRetry.integration.test.ts',
   'electron/sync/syncPackResolutionFrontierProof.test.ts',
   'electron/sync/syncPackConvergedReplay.test.ts',

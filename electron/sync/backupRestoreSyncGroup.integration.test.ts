@@ -10,9 +10,14 @@ import { buildRestoreFixture, startRestoreFixture } from './backupRestoreSyncGro
 
 let root = '';
 const workers: ReturnType<typeof startRestoreFixture>[] = [];
-afterEach(async () => {
-  await Promise.allSettled(workers.splice(0).map((worker) => worker.close()));
-  if (root) await fs.rm(root, { recursive: true, force: true });
+afterEach(async ({ task }) => {
+  const closed = workers.splice(0);
+  await Promise.allSettled(closed.map((worker) => worker.close()));
+  if (task.result?.state === 'fail') {
+    await fs.writeFile(path.join(root, 'workers.log'), closed.map((worker, index) =>
+      `Worker ${index}\n${worker.diagnostics()}`).join('\n'));
+    console.info('Failed restore databases:', root);
+  } else if (root) await fs.rm(root, { recursive: true, force: true });
 });
 
 async function reservePort() {

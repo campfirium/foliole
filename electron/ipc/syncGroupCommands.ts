@@ -103,6 +103,12 @@ function overview() {
 }
 
 async function createGroup() {
+  const identity = await runWithDatabaseConnectionOwner(prepareGroup);
+  await activateDesktopCompanionSync(identity);
+  return runWithDatabaseConnectionOwner(overview);
+}
+
+async function prepareGroup() {
   const connection = openDatabaseConnection();
   const groupId = newSyncGroupId();
   const { identity } = await loadDesktopDeviceIdentity({ groupId, libraryPath: connection.dbPath });
@@ -111,8 +117,7 @@ async function createGroup() {
     deviceName: resolveDesktopHostName(),
     platform: resolveDesktopPlatformLabel()
   });
-  await activateDesktopCompanionSync(runtimeIdentity());
-  return overview();
+  return runtimeIdentity();
 }
 
 async function leaveGroup() {
@@ -193,22 +198,22 @@ async function handleOwned(command: string, args: Record<string, unknown>) {
     await completeDesktopSyncGroupJoin({
       onMembershipCommitted: async () => {
         getMainWindow()?.webContents.send(IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL);
-        await activateDesktopCompanionSync(runtimeIdentity());
+        await activateDesktopCompanionSync(await runWithDatabaseConnectionOwner(runtimeIdentity));
       }
     });
     return runWithDatabaseConnectionOwner(() => overview());
   }
-  if (command === NATIVE_COMMANDS.enableCompanionSync) await enableDesktopCompanionSync(runtimeIdentity());
+  if (command === NATIVE_COMMANDS.enableCompanionSync) await enableDesktopCompanionSync(await runWithDatabaseConnectionOwner(runtimeIdentity));
   else if (command === NATIVE_COMMANDS.disableCompanionSync) await disableDesktopCompanionSync();
   else if (command === NATIVE_COMMANDS.pauseCompanionSync) await pauseDesktopCompanionSync();
-  else if (command === NATIVE_COMMANDS.resumeCompanionSync) await resumeDesktopCompanionSync(runtimeIdentity(),
+  else if (command === NATIVE_COMMANDS.resumeCompanionSync) await resumeDesktopCompanionSync(await runWithDatabaseConnectionOwner(runtimeIdentity),
       typeof args.confirmed_restore_id === 'string' ? args.confirmed_restore_id : undefined);
   else if (command === NATIVE_COMMANDS.syncCompanionNow) {
     await runDesktopManualSyncWithDiscovery();
     return runWithDatabaseConnectionOwner(() => overview());
   }
   else return mutateJoinRequest(command, args);
-  return overview();
+  return runWithDatabaseConnectionOwner(overview);
 }
 
 export function handleSyncGroupCommand(command: string, args: Record<string, unknown>) {
@@ -219,11 +224,11 @@ export function handleSyncGroupCommand(command: string, args: Record<string, unk
     NATIVE_COMMANDS.createSyncGroup, NATIVE_COMMANDS.completeSyncGroupJoin] as string[]).includes(command)) {
     return ensureWindowsSyncNetworkPermission().then((allowed) => {
       if (!allowed) return runWithDatabaseConnectionOwner(() => overview());
-      return command === NATIVE_COMMANDS.completeSyncGroupJoin
-        ? handleOwned(command, args) : runWithDatabaseConnectionOwner(() => handleOwned(command, args));
+      return handleOwned(command, args);
     });
   }
   if (command === NATIVE_COMMANDS.completeSyncGroupJoin || command === NATIVE_COMMANDS.syncCompanionNow ||
+      command === NATIVE_COMMANDS.disableCompanionSync || command === NATIVE_COMMANDS.pauseCompanionSync ||
       command === NATIVE_COMMANDS.removeSyncGroupDevice ||
       command === NATIVE_COMMANDS.saveWatchedFolderConflict) {
     return handleOwned(command, args);

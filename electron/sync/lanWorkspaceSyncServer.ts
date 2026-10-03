@@ -1,5 +1,6 @@
 import http from 'node:http';
 
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import {
@@ -170,10 +171,12 @@ function clearMdnsWarning() {
 }
 
 async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
-  const group = loadDesktopSyncGroup();
-  if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
-  const groupStatus = resolveLatestGroupStatus();
-  startDesktopSyncGroupAutoSync();
+  const groupStatus = await runWithDatabaseConnectionOwner(() => {
+    const group = loadDesktopSyncGroup();
+    if (!group || !loadDesktopWorkgroupKey(group.group_id)) throw new Error('sync_group_workgroup_key_missing');
+    startDesktopSyncGroupAutoSync();
+    return resolveLatestGroupStatus();
+  });
   if (activeServer) {
     if (activeStatus.port) await advertiseDesktopSyncGroup({ ...args,
       onWarning: recordMdnsWarning, onRecovered: clearMdnsWarning, port: activeStatus.port });
@@ -209,9 +212,9 @@ async function startLanWorkspaceSyncServer(args: { appVersion: string; deviceId:
 }
 
 export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; deviceId: string }) {
-  if (!isDesktopCompanionSyncParticipating()) return activeStatus;
   if (activeStart) return activeStart;
-  const start = startLanWorkspaceSyncServer(args);
+  const start = runWithDatabaseConnectionOwner(isDesktopCompanionSyncParticipating)
+    .then(participating => participating ? startLanWorkspaceSyncServer(args) : activeStatus);
   activeStart = start;
   void start.finally(() => {
     if (activeStart === start) activeStart = null;
@@ -222,7 +225,12 @@ export async function ensureLanWorkspaceSyncServer(args: { appVersion: string; d
 export async function stopLanWorkspaceSyncServer() {
   stopDesktopSyncGroupAutoSync();
   clearDesktopSyncGroupMemberStateReadiness();
-  await activeStart?.catch(() => undefined);
+  if (activeStart) {
+    await activeStart.catch(() => undefined);
+    // Startup may create its sessions after the first stop request.
+    stopDesktopSyncGroupAutoSync();
+    clearDesktopSyncGroupMemberStateReadiness();
+  }
   if (!activeServer) {
     activeStatus = {
       advertised_urls: [],

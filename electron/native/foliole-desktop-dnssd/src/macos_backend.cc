@@ -28,24 +28,14 @@ class MacBrowse final : public NativeOperation {
       : NativeOperation(std::move(sink)), input_(input) {}
 
   void Start() override {
-    DNSServiceErrorType error = DNSServiceBrowse(&ref_, 0, input_.interface_index,
-      input_.type.c_str(), input_.domain.c_str(), BrowseCallback, this);
-    if (error != kDNSServiceErr_NoError) {
-      active_ = false;
-      sink_->Emit(ErrorEvent("desktop_dnssd_browse_failed", error));
-      sink_->DrainAndClose();
-      return;
-    }
     if (!sink_->AcquireWorker()) {
       active_ = false;
-      DNSServiceRefDeallocate(ref_);
-      ref_ = nullptr;
       sink_->Close();
       return;
     }
     worker_ = std::thread([self = shared_from_this()] {
       auto* operation = static_cast<MacBrowse*>(self.get());
-      operation->Run();
+      if (operation->Initialize()) operation->Run();
       operation->sink_->ReleaseWorker();
     });
   }
@@ -57,6 +47,18 @@ class MacBrowse final : public NativeOperation {
   }
 
  private:
+  bool Initialize() {
+    DNSServiceErrorType error = DNSServiceBrowse(&ref_, 0, input_.interface_index,
+      input_.type.c_str(), input_.domain.c_str(), BrowseCallback, this);
+    if (error != kDNSServiceErr_NoError) {
+      active_ = false;
+      sink_->Emit(ErrorEvent("desktop_dnssd_browse_failed", error));
+      sink_->DrainAndClose();
+      return false;
+    }
+    return true;
+  }
+
   static void DNSSD_API BrowseCallback(DNSServiceRef, DNSServiceFlags flags,
     uint32_t interface_index, DNSServiceErrorType error, const char* name,
     const char* type, const char* domain, void* context) {
@@ -111,26 +113,14 @@ class MacRegistration final : public NativeOperation {
       : NativeOperation(std::move(sink)), input_(input), txt_(EncodeTxt(input.txt)) {}
 
   void Start() override {
-    DNSServiceErrorType error = DNSServiceRegister(&ref_, 0, input_.interface_index,
-      input_.name.c_str(), input_.type.c_str(), input_.domain.c_str(),
-      input_.host.empty() ? nullptr : input_.host.c_str(), htons(input_.port),
-      txt_.size(), txt_.data(), RegisterCallback, this);
-    if (error != kDNSServiceErr_NoError) {
-      active_ = false;
-      sink_->Emit(ErrorEvent("desktop_dnssd_register_failed", error));
-      sink_->DrainAndClose();
-      return;
-    }
     if (!sink_->AcquireWorker()) {
       active_ = false;
-      DNSServiceRefDeallocate(ref_);
-      ref_ = nullptr;
       sink_->Close();
       return;
     }
     worker_ = std::thread([self = shared_from_this()] {
       auto* operation = static_cast<MacRegistration*>(self.get());
-      operation->Run();
+      if (operation->Initialize()) operation->Run();
       operation->sink_->ReleaseWorker();
     });
   }
@@ -142,6 +132,20 @@ class MacRegistration final : public NativeOperation {
   }
 
  private:
+  bool Initialize() {
+    DNSServiceErrorType error = DNSServiceRegister(&ref_, 0, input_.interface_index,
+      input_.name.c_str(), input_.type.c_str(), input_.domain.c_str(),
+      input_.host.empty() ? nullptr : input_.host.c_str(), htons(input_.port),
+      txt_.size(), txt_.data(), RegisterCallback, this);
+    if (error != kDNSServiceErr_NoError) {
+      active_ = false;
+      sink_->Emit(ErrorEvent("desktop_dnssd_register_failed", error));
+      sink_->DrainAndClose();
+      return false;
+    }
+    return true;
+  }
+
   static void DNSSD_API RegisterCallback(DNSServiceRef, DNSServiceFlags,
     DNSServiceErrorType error, const char* name, const char* type,
     const char* domain, void* context) {

@@ -55,7 +55,7 @@ function seed(args: Record<string, unknown>) {
   flushDirtyNodeSyncVersions();
 }
 async function pull(args: Record<string, unknown>) {
-  const group = loadDesktopSyncGroup()!;
+  const group = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup()!);
   const peer = { endpoint_url: String(args.origin), group_id: group.group_id,
     local_device_id: group.local_device_identity_key, peer_device_id: String(args.identity),
     peer_device_name: String(args.name), peer_platform: 'darwin' };
@@ -138,7 +138,7 @@ async function run(action: string, args: Record<string, unknown>) {
     }
     return null;
   }
-  if (action === 'seed') return seed(args);
+  if (action === 'seed') return runWithDatabaseConnectionOwner(() => seed(args));
   if (action === 'batch') {
     for (let index = 0; index < 40; index++) seed({ id: `batch-${index}`, content: `Batch ${index}` });
     return null;
@@ -155,7 +155,7 @@ async function run(action: string, args: Record<string, unknown>) {
       choice: { source: 'current', action: 'local', revision: preview.revision } });
   }
   if (action === 'sync') {
-    const group = loadDesktopSyncGroup()!;
+    const group = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup()!);
     return runDesktopSyncCoordinator('manual', { endpoint_url: String(args.origin),
       group_id: group.group_id, local_device_id: group.local_device_identity_key,
       peer_device_id: String(args.identity), peer_device_name: 'Peer', peer_platform: 'darwin' });

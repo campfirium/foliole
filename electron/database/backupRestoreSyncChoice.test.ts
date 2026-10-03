@@ -156,8 +156,8 @@ it('does not consume the pending overwrite if its durable confirmation handoff f
     return execute(sql, params);
   });
   try {
-    expect(() => resumeDesktopCompanionSync({ appVersion: '0.7.14', deviceId: 'local' }, pending.restoreId))
-      .toThrow('injected handoff failure');
+    await expect(resumeDesktopCompanionSync({ appVersion: '0.7.14', deviceId: 'local' }, pending.restoreId))
+      .rejects.toThrow('injected handoff failure');
   } finally { fault.mockRestore(); }
   closeDatabaseConnection();
   initializeDatabase();

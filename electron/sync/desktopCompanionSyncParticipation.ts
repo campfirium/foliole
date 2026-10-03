@@ -1,5 +1,5 @@
 import { loadBackupRestorePendingSync, saveBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { publishBackupRestoreEvent, writeRestoreSyncParticipation } from '../database/syncGroupBackupRestore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
@@ -28,27 +28,34 @@ export function assertDesktopCompanionSyncParticipating() {
 export async function reconcileDesktopCompanionSyncRuntime(
   identity: DesktopSyncRuntimeIdentity
 ) {
-  return isDesktopCompanionSyncParticipating() && hasCurrentWorkgroupSecurity()
+  const participating = await runWithDatabaseConnectionOwner(() =>
+    isDesktopCompanionSyncParticipating() && hasCurrentWorkgroupSecurity());
+  return participating
     ? ensureLanWorkspaceSyncServer(identity)
     : stopLanWorkspaceSyncServer();
 }
 
-export function enableDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity) {
-  setDesktopCompanionSyncEnabled(true);
+export async function enableDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity) {
+  await runWithDatabaseConnectionOwner(() => setDesktopCompanionSyncEnabled(true));
   return reconcileDesktopCompanionSyncRuntime(identity);
 }
 
-export function disableDesktopCompanionSync() {
-  setDesktopCompanionSyncEnabled(false);
+export async function disableDesktopCompanionSync() {
+  await runWithDatabaseConnectionOwner(() => setDesktopCompanionSyncEnabled(false));
   return stopLanWorkspaceSyncServer();
 }
 
-export function pauseDesktopCompanionSync() {
-  setDesktopCompanionSyncPaused(true);
+export async function pauseDesktopCompanionSync() {
+  await runWithDatabaseConnectionOwner(() => setDesktopCompanionSyncPaused(true));
   return stopLanWorkspaceSyncServer();
 }
 
-export function resumeDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity, confirmedRestoreId?: string) {
+export async function resumeDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity, confirmedRestoreId?: string) {
+  await runWithDatabaseConnectionOwner(() => prepareResume(confirmedRestoreId));
+  return reconcileDesktopCompanionSyncRuntime(identity);
+}
+
+function prepareResume(confirmedRestoreId?: string) {
   const driver = openDatabaseConnection().driver;
   const pending = loadBackupRestorePendingSync(driver);
   if (pending) {
@@ -62,13 +69,14 @@ export function resumeDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity,
       writeRestoreSyncParticipation(tx, false, true);
     });
   } else setDesktopCompanionSyncPaused(false);
-  return reconcileDesktopCompanionSyncRuntime(identity);
 }
 
-export function activateDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity) {
-  if (loadBackupRestorePendingSync()) throw new Error('backup_restore_sync_confirmation_required');
-  setDesktopCompanionSyncEnabled(true);
-  setDesktopCompanionSyncPaused(false);
+export async function activateDesktopCompanionSync(identity: DesktopSyncRuntimeIdentity) {
+  await runWithDatabaseConnectionOwner(() => {
+    if (loadBackupRestorePendingSync()) throw new Error('backup_restore_sync_confirmation_required');
+    setDesktopCompanionSyncEnabled(true);
+    setDesktopCompanionSyncPaused(false);
+  });
   return ensureLanWorkspaceSyncServer(identity);
 }
 

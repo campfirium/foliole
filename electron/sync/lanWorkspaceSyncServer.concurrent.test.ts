@@ -5,6 +5,8 @@ const runtime = vi.hoisted(() => {
   let releaseAdvertisement = () => {};
   return {
     advertise: vi.fn(() => new Promise<void>((resolve) => { releaseAdvertisement = resolve; })),
+    startAutoSync: vi.fn(),
+    stopAutoSync: vi.fn(),
     loadGroup: vi.fn(() => ({ devices: [], group_id: 'group-test' })),
     releaseAdvertisement: () => releaseAdvertisement(),
     server: {
@@ -15,6 +17,9 @@ const runtime = vi.hoisted(() => {
   };
 });
 
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
+}));
 vi.mock('node:http', () => ({ default: { createServer: () => runtime.server } }));
 vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: runtime.loadGroup
@@ -47,7 +52,7 @@ vi.mock('./desktopSyncGroupAdvertisement.js', () => ({
   advertiseDesktopSyncGroup: runtime.advertise
 }));
 vi.mock('./desktopSyncGroupAutoSync.js', () => ({
-  startDesktopSyncGroupAutoSync: vi.fn(), stopDesktopSyncGroupAutoSync: vi.fn()
+  startDesktopSyncGroupAutoSync: runtime.startAutoSync, stopDesktopSyncGroupAutoSync: runtime.stopAutoSync
 }));
 vi.mock('./desktopSyncGroupJoinProvider.js', () => ({
   loadDesktopSyncGroupJoinProvider: () => null
@@ -79,4 +84,26 @@ it('shares one listener start across concurrent recovery requests', async () => 
   expect(runtime.loadGroup).toHaveBeenCalledTimes(groupReadsBeforeAdvertisement);
   expect(firstStatus.state).toBe('running');
   expect(secondStatus).toEqual(firstStatus);
+});
+
+it('finishes a requested stop after an in-flight advertisement settles', async () => {
+  const starting = ensureLanWorkspaceSyncServer({ appVersion: '1.0.0', deviceId: 'desktop-a' });
+  await vi.waitFor(() => expect(runtime.advertise).toHaveBeenCalledOnce());
+  const stopping = stopLanWorkspaceSyncServer();
+  runtime.releaseAdvertisement();
+  await starting;
+  expect((await stopping).state).toBe('stopped');
+  expect(runtime.server.close).toHaveBeenCalledOnce();
+});
+
+it('honors stop before the asynchronous startup check returns', async () => {
+  const starting = ensureLanWorkspaceSyncServer({ appVersion: '1.0.0', deviceId: 'desktop-a' });
+  const stopping = stopLanWorkspaceSyncServer();
+  await vi.waitFor(() => expect(runtime.advertise).toHaveBeenCalledOnce());
+  runtime.releaseAdvertisement();
+  await starting;
+  expect((await stopping).state).toBe('stopped');
+  expect(runtime.server.close).toHaveBeenCalledOnce();
+  expect(runtime.stopAutoSync.mock.invocationCallOrder.at(-1))
+    .toBeGreaterThan(runtime.startAutoSync.mock.invocationCallOrder.at(-1)!);
 });

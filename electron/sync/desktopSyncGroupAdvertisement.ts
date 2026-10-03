@@ -1,4 +1,5 @@
 import { resolveLocalSyncGroupDevice } from '../../lib/platform/syncGroupContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
 import {
@@ -16,13 +17,18 @@ interface DesktopSyncGroupAdvertisementInput {
 }
 
 export async function advertiseDesktopSyncGroup(args: DesktopSyncGroupAdvertisementInput) {
+  const input = await runWithDatabaseConnectionOwner(() => prepareAdvertisement(args));
+  if (input) await startCompanionMdnsAdvertisement(input);
+}
+
+function prepareAdvertisement(args: DesktopSyncGroupAdvertisementInput) {
   const group = loadDesktopSyncGroup();
   if (!group) return;
   const workgroup = loadDesktopWorkgroupKey(group.group_id);
   if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
   const local = resolveLocalSyncGroupDevice(group);
   if (!local) throw new Error('sync_group_local_device_missing');
-  await startCompanionMdnsAdvertisement({
+  return {
     appVersion: args.appVersion,
     deviceId: local.device_identity_key,
     groupDisplayName: group.display_name,
@@ -32,5 +38,5 @@ export async function advertiseDesktopSyncGroup(args: DesktopSyncGroupAdvertisem
     onWarning: args.onWarning,
     port: args.port,
     role: loadDesktopAnchorTopologyState().role
-  });
+  };
 }

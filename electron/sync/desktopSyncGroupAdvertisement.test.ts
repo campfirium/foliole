@@ -12,6 +12,9 @@ const runtime = vi.hoisted(() => ({
   start: vi.fn(async () => { throw new Error('desktop_dnssd_registration_unavailable'); })
 }));
 
+vi.mock('../database/connection.js', () => ({
+  runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
+}));
 vi.mock('../database/syncGroupStore.js', () => ({
   loadDesktopSyncGroup: () => runtime.group
 }));

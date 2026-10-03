@@ -4,10 +4,14 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
 
 const runtime = vi.hoisted(() => ({
-  activate: vi.fn(async () => undefined),
-  enable: vi.fn(async () => undefined),
+  activate: vi.fn(async (): Promise<void> => undefined),
+  enable: vi.fn(async (): Promise<void> => undefined),
+  disable: vi.fn(async (): Promise<void> => undefined),
+  pause: vi.fn(async (): Promise<void> => undefined),
+  resume: vi.fn(async (): Promise<void> => undefined),
   diagnostics: vi.fn(),
   permission: vi.fn(async () => true),
+  read: async (execute: () => unknown) => execute(),
   events: [] as string[],
   send: vi.fn()
 }));
@@ -18,10 +22,12 @@ vi.mock('../../lib/platform/syncGroupContract.js', () => ({
 }));
 vi.mock('../appVersion.js', () => ({ resolveFolioleAppVersion: () => '0.7.14' }));
 vi.mock('../database/backupRestorePendingSync.js', () => ({ loadBackupRestorePendingSync: () => null }));
-vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: vi.fn(),
-  runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
-}));
+vi.mock('../database/connection.js', async () => {
+  const { SqliteConnectionCoordinator } = await import('../database/sqliteConnectionCoordinator.js');
+  const coordinator = new SqliteConnectionCoordinator();
+  runtime.read = execute => coordinator.runExclusive(execute);
+  return { openDatabaseConnection: vi.fn(), runWithDatabaseConnectionOwner: runtime.read };
+});
 vi.mock('../database/syncGroupMemberStateStore.js', () => ({
   initiateDesktopSyncGroupDeviceRemoval: vi.fn(),
   loadPendingDesktopSyncGroupRemovalDeviceIds: () => []
@@ -52,16 +58,16 @@ vi.mock('../sync/desktopCompanionSyncParticipation.js', () => ({
     return runtime.activate();
   },
   assertDesktopCompanionSyncParticipating: vi.fn(),
-  disableDesktopCompanionSync: vi.fn(),
+  disableDesktopCompanionSync: runtime.disable,
   enableDesktopCompanionSync: runtime.enable,
-  pauseDesktopCompanionSync: vi.fn(),
-  resumeDesktopCompanionSync: vi.fn()
+  pauseDesktopCompanionSync: runtime.pause,
+  resumeDesktopCompanionSync: runtime.resume
 }));
 vi.mock('../sync/desktopCompanionSyncPreference.js', () => ({
   loadDesktopCompanionSyncParticipation: () => ({ sync_enabled: true, sync_paused: false, participating: true })
 }));
 vi.mock('../sync/desktopSyncGroupAutoSync.js', () => ({
-  resumeDesktopSyncAfterWatchedDecision: vi.fn(async () => undefined),
+  resumeDesktopSyncAfterWatchedDecision: vi.fn(async (): Promise<void> => undefined),
   runDesktopManualSyncWithDiscovery: vi.fn()
 }));
 vi.mock('../sync/desktopSyncGroupDiscoverySession.js', () => ({
@@ -103,6 +109,9 @@ import { handleSyncGroupCommand } from './syncGroupCommands.js';
 beforeEach(() => {
   runtime.activate.mockClear();
   runtime.enable.mockClear();
+  runtime.disable.mockClear();
+  runtime.pause.mockClear();
+  runtime.resume.mockClear();
   runtime.permission.mockClear();
   runtime.send.mockClear();
   runtime.events.length = 0;
@@ -146,4 +155,26 @@ it('Sync Now never triggers the permission request', async () => {
   const calls = runtime.permission.mock.calls.length;
   await handleSyncGroupCommand(NATIVE_COMMANDS.syncCompanionNow, {});
   expect(runtime.permission).toHaveBeenCalledTimes(calls);
+});
+
+it.each([
+  [NATIVE_COMMANDS.enableCompanionSync, 'enable'],
+  [NATIVE_COMMANDS.resumeCompanionSync, 'resume'],
+  [NATIVE_COMMANDS.disableCompanionSync, 'disable'],
+  [NATIVE_COMMANDS.pauseCompanionSync, 'pause']
+] as const)('keeps database reads available while %s waits for OS network work', async (command, method) => {
+  let release = () => {};
+  runtime[method].mockImplementationOnce(() => new Promise<void>(resolve => { release = resolve; }));
+  const starting = handleSyncGroupCommand(command, {});
+  await vi.waitFor(() => expect(runtime[method]).toHaveBeenCalledOnce());
+  let readCompleted = false;
+  const read = runtime.read(() => { readCompleted = true; });
+  try {
+    await new Promise<void>(resolve => setImmediate(resolve));
+    expect(readCompleted).toBe(true);
+  } finally {
+    release();
+    await starting;
+    await read;
+  }
 });
