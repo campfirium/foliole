@@ -37,7 +37,7 @@ export function loadEligibleResourceMemberIds(groupId: string) {
 
 export async function queryDesktopResourceAvailability(peer: DesktopResourceProvider, needs: readonly ResourceNeed[]) {
   await assertDesktopSyncGroupPeerCompatible(peer);
-  const membership = await runWithDatabaseConnectionOwner(() => exchangeDesktopSyncGroupMemberState(peer));
+  const membership = await exchangeDesktopSyncGroupMemberState(peer);
   if (membership.localExited || membership.peerBlocked) throw new Error('sync_group_device_not_active');
   const encrypted = await runWithDatabaseConnectionOwner(() => createDesktopWorkgroupPost({
     body: JSON.stringify({ resources: needs }), groupId: peer.group_id, localDeviceId: peer.local_device_id,

@@ -29,6 +29,7 @@ import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackAppl
 import { drainDesktopSyncGroupResourceArticles } from './desktopSyncGroupResourceArticleDrain.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 import { createWorkspaceSyncHttpServer, stopLanWorkspaceSyncServer } from './lanWorkspaceSyncServer.js';
+import { runResourceConcurrencyFixture } from './resourceAvailabilityConcurrency.fixture.js';
 
 let server: ReturnType<typeof createWorkspaceSyncHttpServer> | null = null;
 let origin = '';
@@ -184,7 +185,8 @@ async function run(action: string, args: Record<string, unknown>) {
   throw new Error('unknown test action');
 }
 process.on('message', (message: { id: number; action: string; args: Record<string, unknown> }) => {
-  void run(message.action, message.args).then(
+  const handler = message.action.startsWith('resource') ? runResourceConcurrencyFixture : run;
+  void handler(message.action, message.args).then(
     (result) => process.send?.({ id: message.id, result }),
     (error: unknown) => process.send?.({ id: message.id, error: error instanceof Error ? `${message.action}: ${error.stack}` : String(error) })
   );
