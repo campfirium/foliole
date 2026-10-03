@@ -1,5 +1,4 @@
 import { FileUp, Mic, Clipboard, type LucideIcon } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -14,10 +13,9 @@ import {
   appInputFocusVisibleClassName
 } from '../shared/ui';
 
-import type { CompanionCaptureTextSaveError } from './companionCaptureTextController';
+import type { CompanionCaptureTextSaveError, CompanionCaptureTextSaveResult } from './companionCaptureTextController';
 import { companionMobileRailClassName } from './companionCssCompatibility';
-
-type CaptureSaveResult = { error: CompanionCaptureTextSaveError } | { nodeId: string };
+import { useCompanionCaptureDraft } from './useCompanionCaptureDraft';
 
 function CaptureActionRow(props: { icon: LucideIcon; label: string }) {
   const Icon = props.icon;
@@ -37,6 +35,7 @@ function CaptureActionRow(props: { icon: LucideIcon; label: string }) {
 function CaptureSheetHeader(props: {
   canSave: boolean;
   isSaving: boolean;
+  isSaved: boolean;
   onCancel(): void;
   onSave(): void;
 }) {
@@ -44,7 +43,7 @@ function CaptureSheetHeader(props: {
   return (
     <div className="mb-4 flex items-center justify-between">
       <AppDialogClose className="rounded-md px-2 py-1 text-sm font-medium text-companion-text-secondary transition hover:bg-companion-subtle" onClick={props.onCancel}>
-        {t('common.cancel')}
+        {t(props.isSaved ? 'companion.capture.close' : 'common.cancel')}
       </AppDialogClose>
       <AppDialogTitle>{t('companion.capture.title')}</AppDialogTitle>
       <button
@@ -56,7 +55,9 @@ function CaptureSheetHeader(props: {
         type="button"
       >
         {props.isSaving ? <AppSpinner className="pointer-events-none shrink-0" decorative size="sm" /> : null}
-        <span>{t(props.isSaving ? 'companion.capture.saving' : 'companion.capture.save')}</span>
+        <span>{t(props.isSaved
+          ? (props.isSaving ? 'companion.capture.refreshing' : 'companion.capture.refresh')
+          : (props.isSaving ? 'companion.capture.saving' : 'companion.capture.save'))}</span>
       </button>
     </div>
   );
@@ -64,6 +65,7 @@ function CaptureSheetHeader(props: {
 
 function CaptureTextBox(props: {
   draft: string;
+  readOnly: boolean;
   onChange(value: string): void;
 }) {
   const t = useTranslation();
@@ -85,6 +87,7 @@ function CaptureTextBox(props: {
         )}
         data-testid="companion-capture-text"
         onChange={(event) => props.onChange(event.currentTarget.value)}
+        readOnly={props.readOnly}
         placeholder={t('companion.capture.placeholder')}
         value={props.draft}
       />
@@ -99,56 +102,26 @@ function resolveCaptureErrorLabel(error: CompanionCaptureTextSaveError | null, t
 }
 
 export function CompanionCaptureSheet(props: {
-  onSave(text: string): Promise<CaptureSaveResult>;
+  onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
   onOpenChange(open: boolean): void;
   open: boolean;
 }) {
-  const { onOpenChange, onSave, open } = props;
   const t = useTranslation();
-  const [draft, setDraft] = useState('');
-  const [error, setError] = useState<CompanionCaptureTextSaveError | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const canSave = draft.trim().length > 0 && !isSaving;
-  const errorLabel = resolveCaptureErrorLabel(error, t);
-
-  const resetDraft = useCallback(() => {
-    setDraft('');
-    setError(null);
-    setIsSaving(false);
-  }, []);
-  const handleDraftChange = useCallback((value: string) => {
-    setDraft(value);
-    if (error) setError(null);
-  }, [error]);
-  const handleOpenChange = useCallback((nextOpen: boolean) => {
-    if (!nextOpen) resetDraft();
-    onOpenChange(nextOpen);
-  }, [onOpenChange, resetDraft]);
-  const handleSave = useCallback(async () => {
-    if (!canSave) return;
-    setIsSaving(true);
-    setError(null);
-    const result = await onSave(draft);
-    if ('error' in result) {
-      setError(result.error);
-      setIsSaving(false);
-      return;
-    }
-    resetDraft();
-    onOpenChange(false);
-  }, [canSave, draft, onOpenChange, onSave, resetDraft]);
-
-  useEffect(() => { if (!open) resetDraft(); }, [open, resetDraft]);
+  const state = useCompanionCaptureDraft(props);
+  const { draft, isSaving, isSaved, canSave, handleDraftChange, handleOpenChange, handleSave } = state;
+  const errorLabel = isSaved
+    ? t('companion.capture.error.refreshFailed')
+    : resolveCaptureErrorLabel(state.error, t);
 
   return (
-    <AppDialog onOpenChange={handleOpenChange} open={open}>
+    <AppDialog onOpenChange={handleOpenChange} open={props.open}>
       <AppDialogPortal>
         <AppDialogOverlay className="companion-sheet-overlay" />
         <AppDialogContent className={`companion-sheet bottom-0 left-0 top-auto w-full translate-x-0 translate-y-0 [transform:translate(0,0)] rounded-b-none rounded-t-xl border-x-0 border-b-0 ${companionMobileRailClassName} pt-3 pb-6 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),24px)]`}>
           <div aria-hidden="true" className="mx-auto mb-3 h-1 w-9 rounded-full bg-companion-divider-strong" />
           <div className="mx-auto w-full max-w-[760px]">
-            <CaptureSheetHeader canSave={canSave} isSaving={isSaving} onCancel={resetDraft} onSave={handleSave} />
-            <CaptureTextBox draft={draft} onChange={handleDraftChange} />
+            <CaptureSheetHeader canSave={canSave} isSaving={isSaving} isSaved={isSaved} onCancel={() => handleOpenChange(false)} onSave={handleSave} />
+            <CaptureTextBox draft={draft} readOnly={isSaving || isSaved} onChange={handleDraftChange} />
             {errorLabel ? <p className="mt-3 text-sm text-destructive" role="alert">{errorLabel}</p> : null}
             <div className="mt-5 border-t border-companion-divider">
               <CaptureActionRow icon={Clipboard} label={t('companion.capture.paste')} />

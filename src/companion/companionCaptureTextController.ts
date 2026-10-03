@@ -8,15 +8,23 @@ type CompanionWorkspaceSyncApi = ReturnType<typeof useCompanionWorkspaceSync>;
 
 export type CompanionCaptureTextSaveError = 'empty' | 'inbox-unavailable' | 'save-failed';
 
+export type CompanionCaptureTextSaveResult =
+  | { error: CompanionCaptureTextSaveError }
+  | { nodeId: string; retryRefresh?: () => Promise<unknown> };
+
 export function createCompanionCaptureTextSaveHandler(workspaceSync: CompanionWorkspaceSyncApi) {
-  return async (text: string): Promise<{ error: CompanionCaptureTextSaveError } | { nodeId: string }> => {
+  return async (text: string): Promise<CompanionCaptureTextSaveResult> => {
     try {
       const result = await persistCompanionCapturedText({
         deviceId: workspaceSync.bootstrapState.device_id,
         snapshot: workspaceSync.state.workspace_snapshot,
         text
       });
-      await workspaceSync.refreshAfterMutation(result.snapshot);
+      try {
+        await workspaceSync.refreshAfterMutation(result.snapshot);
+      } catch {
+        return { nodeId: result.nodeId, retryRefresh: () => workspaceSync.refreshAfterMutation(result.snapshot) };
+      }
       return { nodeId: result.nodeId };
     } catch (error) {
       return { error: getCompanionCaptureTextErrorCode(error) ?? 'save-failed' };
