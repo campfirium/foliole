@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { assertPersisted, closeLibraries, createPeer, edit, joinPeers, startLibraries, sync } from '../../electron/database/syncEmptyLibraryTestSupport';
 import { saveNodeReviewStateWithSync } from '../../lib/core/database/nodeReviewSyncState';
+import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { isCompanionGradeDue } from '../companion/companionFlowMutation';
 import { loadIosCompanionWorkspaceSnapshot } from '../shared/platform/companion/sync/workspace-state/iosCompanionWorkspaceSnapshotStore';
 
@@ -25,7 +26,7 @@ it('keeps the same Flow material after a peer edit and skips its remotely handle
   saveNodeReviewStateWithSync(desktop.driver, { nodeId: 'topic', hostName: desktop.name,
     review, updatedAt: '2026-09-30T00:00:00.000Z' });
   await sync(desktop, mobile);
-  const initial = (await loadIosCompanionWorkspaceSnapshot(mobile.port))!;
+  const initial = (await loadIosCompanionWorkspaceSnapshot(mobile.port)) as WorkspaceSnapshot;
   const now = '2026-10-03T00:00:00.000Z';
   const session = resumeFlowSession(initial, 'review-first', null, now);
   expect(session.currentNodeId).toBe('topic');
@@ -41,7 +42,7 @@ it('keeps the same Flow material after a peer edit and skips its remotely handle
       .toEqual({ due: '2099-01-01T00:00:00.000Z', reps: 3 });
     expect(peer.db.prepare('SELECT count(*) FROM review_log').pluck().get()).toBe(0);
   }
-  const refreshed = (await loadIosCompanionWorkspaceSnapshot(mobile.port))!;
+  const refreshed = (await loadIosCompanionWorkspaceSnapshot(mobile.port)) as WorkspaceSnapshot;
   expect(reconcileFlowSession(refreshed, session, 'review-first'))
     .toMatchObject({ currentNodeId: 'topic', isAnswerRevealed: true });
   expect(isCompanionGradeDue(refreshed, 'topic', now)).toBe(false);

@@ -112,7 +112,7 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
   };
 }
 
-async function renderShellWithSurface(surface: unknown) {
+async function renderShellWithSurface(surface: ReturnType<typeof createSurface>) {
   mockFloatingBar();
   mockWorkspaceSync();
   useCompanionArticleSurface.mockImplementation((_workspace, _bar, _sort, options) => ({
