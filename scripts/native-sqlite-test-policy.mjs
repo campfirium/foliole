@@ -1,4 +1,5 @@
 const controlledElectronSqliteTests = [
+  'src/companion/CompanionSearchDeparture.integration.test.tsx',
   'src/companion/companionReviewContinuity.integration.test.tsx',
   'src/companion/companionCaptureRecovery.integration.test.tsx',
   'src/shared/platform/companionReviewSnapshot.integration.test.ts',
