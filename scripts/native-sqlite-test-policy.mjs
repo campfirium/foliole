@@ -15,6 +15,7 @@ const controlledElectronSqliteTests = [
   'src/shared/platform/companionTopicDailyCountSync.test.ts',
   'src/companion/companionReadingRecovery.integration.test.tsx',
   'src/companion/companionGradeRecovery.integration.test.tsx',
+  'src/companion/companionShareRecovery.integration.test.ts',
   'src/companion/companionWorkspaceMutation.integration.test.ts',
   'scripts/ios/ios-hosted-sync-pack-oracle-seed.test.mjs',
   'scripts/desktop/fixed-performance-fixture.test.mjs',

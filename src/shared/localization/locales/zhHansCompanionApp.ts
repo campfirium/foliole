@@ -1,6 +1,7 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_COMPANION_APP_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'companion.share.incomplete': '分享尚未完成，请重试。',
   'companion.link.unavailable': '无法在当前资料库打开此链接。',
   'companion.link.dismiss': '关闭',
   'companion.app.retry': '重试',
