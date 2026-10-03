@@ -31,6 +31,9 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.reading.alternative.error': 'This text version could not be updated. Try again.',
   'companion.selection.loading': 'Loading annotation…',
   'companion.selection.loadError': 'This annotation could not be loaded.',
+  'companion.selection.savedRefreshError': 'Annotation saved. The page could not be refreshed.',
+  'companion.selection.createError': 'Annotation could not be saved. Try again.',
+  'companion.selection.refresh': 'Refresh',
   'companion.selection.saveError': 'Changes could not be saved. Your note is still here.',
   'companion.selection.retry': 'Retry'
 };

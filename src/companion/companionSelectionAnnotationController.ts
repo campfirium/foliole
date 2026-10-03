@@ -7,6 +7,7 @@ import {
   persistCompanionSelectionAnnotation
 } from './companionSelectionAnnotationActions';
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
+import { CompanionSelectionRefreshError } from './companionSelectionRefreshError';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 import type { SelectionAnnotationPayload } from '@/shared/selectionAnnotationActions';
@@ -25,7 +26,11 @@ export function createCompanionSelectionAnnotationHandler(workspaceSync: ReturnT
     if (!result) {
       return null;
     }
-    await workspaceSync.refreshAfterMutation(result.snapshot);
+    try {
+      await workspaceSync.refreshAfterMutation(result.snapshot);
+    } catch {
+      throw new CompanionSelectionRefreshError(() => workspaceSync.refreshAfterMutation(result.snapshot));
+    }
     return result.nodeId;
   };
 }
