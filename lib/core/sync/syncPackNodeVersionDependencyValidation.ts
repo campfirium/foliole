@@ -1,6 +1,7 @@
 import type { DbPort } from './dbPort.js';
 import { isStoredAncestorVersion } from './syncNodeGraph.js';
 import type { SyncPackNodeVersionParentRow } from './syncPackNodeVersions.js';
+import { proveSyncPackResolutionFrontier } from './syncPackResolutionFrontierProof.js';
 
 interface VersionIdentity {
   object_id: string;
@@ -24,7 +25,8 @@ export function includeLegacyVersionParents(
 export async function validateStoredVersionDependencies(
   port: DbPort,
   incoming: VersionIdentity[],
-  parents: SyncPackNodeVersionParentRow[]
+  parents: SyncPackNodeVersionParentRow[],
+  incomingAlias?: string
 ) {
   const byId = new Map(incoming.map((row) => [row.version_id, row]));
   const equivalentFrontiers = new Map<string, boolean>();
@@ -45,7 +47,8 @@ export async function validateStoredVersionDependencies(
     // An existing contracted chain is kept as-is; incoming edges cannot expand it.
     if (storedChild && incomingChild && storedChild.parent_version_id !== incomingChild.parent_version_id) {
       if (!equivalentFrontiers.has(edge.version_id)) {
-        equivalentFrontiers.set(edge.version_id, await provenContractedFrontiers(port, edge.version_id, parents));
+        equivalentFrontiers.set(edge.version_id, await provenContractedFrontiers(port, edge.version_id, parents) ||
+          Boolean(incomingAlias && await proveSyncPackResolutionFrontier(port, edge.version_id, parents, incomingAlias)));
       }
       if (equivalentFrontiers.get(edge.version_id)) continue;
       if (!storedChild.parent_version_id || incomingChild.parent_version_id && (
@@ -65,7 +68,8 @@ export async function validateStoredVersionDependencies(
       'SELECT 1 FROM node_sync_version_parents WHERE version_id = ? AND parent_version_id = ?',
       [edge.version_id, edge.parent_version_id]);
     if (conflict && !sameRelation && !await isStoredAncestorVersion(port, edge.parent_version_id, edge.version_id)
-        && !incomingAncestor(parents, conflict.parent_version_id, edge.parent_version_id)) {
+        && !incomingAncestor(parents, conflict.parent_version_id, edge.parent_version_id)
+        && !(incomingAlias && await proveSyncPackResolutionFrontier(port, edge.version_id, parents, incomingAlias))) {
       throw new Error(`sync_pack_node_version_parent_mismatch:${edge.version_id}`);
     }
   }

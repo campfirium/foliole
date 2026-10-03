@@ -13,6 +13,8 @@ const controlledElectronSqliteTests = [
   'electron/database/reviewDailyCounts.test.ts',
   'electron/database/textBodyBlobCompanionCollection.integration.test.ts',
   'electron/sync/desktopSyncDiagnostics.http.integration.test.ts',
+  'electron/sync/syncCrisscrossHttpRetry.integration.test.ts',
+  'electron/sync/syncPackResolutionFrontierProof.test.ts',
   'src/shared/platform/companionTopicDailyCountSync.test.ts',
   'src/companion/companionReadingRecovery.integration.test.tsx',
   'src/companion/companionBrowseReachability.integration.test.tsx',

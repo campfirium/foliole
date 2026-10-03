@@ -36,7 +36,7 @@ export async function applySyncPackNodeVersionsWithDbPort(
      WHERE ${eligiblePackVersion('identity', alias)}`
   )).map(normalizeVersionParentRow);
   const dependencies = includeLegacyVersionParents(incoming, parents);
-  await validateStoredVersionDependencies(port, incoming, dependencies);
+  await validateStoredVersionDependencies(port, incoming, dependencies, options.incomingAlias ?? 'inc');
   const ordered = validateIncomingDag(incoming, dependencies);
   await assertIncomingCurrentPointers(port, alias, new Map(ordered.map((row) => [row.version_id, row])));
   await assertExistingVersionsMatch(port, alias);
