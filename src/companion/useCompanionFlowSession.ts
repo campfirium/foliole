@@ -10,7 +10,8 @@ import { createEmptyReviewSession } from '../store/workspaceReviewReading';
 import { buildCurrentCard, emptyCompanionReviewSession, resolveScheduledReviewSummary } from './companionReviewSession';
 
 type FlowOwner = { identity: string; scope: object; session: ReturnType<typeof createEmptyReviewSession>;
-  generation: number; hydrated: boolean; error: string | null; kind: string | null };
+  generation: number; hydrated: boolean; error: string | null; kind: string | null;
+  snapshot: WorkspaceSnapshot | null };
 
 export function useCompanionFlowSession(args: {
   snapshot: WorkspaceSnapshot | null; ready: boolean; active: boolean; onlyReview: boolean; libraryScope: string;
@@ -19,16 +20,17 @@ export function useCompanionFlowSession(args: {
   const scope = useSyncExternalStore(subscribeCompanionReadingScope, getCompanionReadingScope);
   const identity = JSON.stringify([args.libraryScope, args.onlyReview]);
   const owner = useRef({ identity, scope, session: createEmptyReviewSession(), generation: 0,
-    hydrated: false, error: null as string | null, kind: null as string | null });
+    hydrated: false, error: null as string | null, kind: null as string | null,
+    snapshot: null as WorkspaceSnapshot | null });
   if (owner.current.identity !== identity || owner.current.scope !== scope) owner.current = {
     identity, scope, session: createEmptyReviewSession(), generation: owner.current.generation + 1,
-    hydrated: false, error: null, kind: null
+    hydrated: false, error: null, kind: null, snapshot: null
   };
   const current = owner.current;
   const latest = useRef(args);
   latest.current = args;
   const mode = args.onlyReview ? 'review-first' : 'recommended';
-  reconcileCurrentFlow(args.snapshot, current, mode);
+  reconcileCurrentFlow(args.snapshot, current, mode, args.active);
   useFlowHydration(args, current, owner, latest, identity, scope, mode, render);
   const wasActive = useRef(args.active);
   useEffect(() => {
@@ -107,10 +109,13 @@ function flowView(snapshot: WorkspaceSnapshot | null, current: FlowOwner) {
   } : emptyCompanionReviewSession();
 }
 
-function reconcileCurrentFlow(snapshot: WorkspaceSnapshot | null, current: FlowOwner, mode: 'review-first' | 'recommended') {
+function reconcileCurrentFlow(snapshot: WorkspaceSnapshot | null, current: FlowOwner,
+  mode: 'review-first' | 'recommended', active: boolean) {
   if (snapshot && current.hydrated) {
     const previousNodeId = current.session.currentNodeId;
-    current.session = reconcileFlowSession(snapshot, current.session, mode);
+    const refreshedAt = active && current.snapshot !== snapshot ? new Date().toISOString() : undefined;
+    current.session = reconcileFlowSession(snapshot, current.session, mode, refreshedAt);
+    current.snapshot = snapshot;
     const kind = getReviewItemKind(snapshot.nodesById[current.session.currentNodeId ?? '']);
     if (previousNodeId !== current.session.currentNodeId || (current.kind !== null && current.kind !== kind)) {
       current.generation += 1;

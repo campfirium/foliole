@@ -6,7 +6,7 @@ import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors'
 
 import { buildNextDismissReviewSession } from './workspaceReviewDismissSession';
 import { buildReviewSessionAfterGrade } from './workspaceReviewGradeSession';
-import { buildCurrentReviewSessionQueueOutput, buildStartReviewSessionQueue } from './workspaceReviewLiveQueue';
+import { buildCurrentReviewSessionQueueOutput, buildLiveReviewQueue, buildStartReviewSessionQueue } from './workspaceReviewLiveQueue';
 import { createEmptyReviewSession, createStartedReviewSession } from './workspaceReviewReading';
 import { buildResumeReviewSessionQueue } from './workspaceReviewResumeQueue';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
@@ -33,15 +33,29 @@ export function resumeFlowSession(snapshot: WorkspaceSnapshot, mode: ReviewSessi
   }) : createEmptyReviewSession();
 }
 
-export function reconcileFlowSession(snapshot: WorkspaceSnapshot, session: ReviewSessionState, mode: ReviewSessionMode) {
+export function reconcileFlowSession(snapshot: WorkspaceSnapshot, session: ReviewSessionState,
+  mode: ReviewSessionMode, refreshedAt?: string) {
   const isAvailable = (id: string) => isCanonicalVisibleNodeId(snapshot, id) &&
     (isFsrsReviewItemNode(snapshot.nodesById[id]) ||
       (mode !== 'review-first' && isReadingReviewItemNode(snapshot.nodesById[id])));
   const queueNodeIds = session.queueNodeIds.filter(isAvailable);
   const soonNodeIds = (session.soonNodeIds ?? []).filter(isAvailable);
+  let addedNodeCount = 0;
+  if (mode === 'review-first' && refreshedAt) {
+    const seen = new Set([session.currentNodeId, ...queueNodeIds, ...soonNodeIds]);
+    const fresh = buildLiveReviewQueue(flowState(snapshot, session, mode), refreshedAt)
+      .filter((id) => !seen.has(id));
+    if (fresh.length && !session.currentNodeId && !queueNodeIds.length && !soonNodeIds.length) {
+      return createStartedReviewSession({ continueNodeId: null, currentNodeId: fresh[0]!,
+        queueNodeIds: fresh, sessionStartedAt: refreshedAt, totalNodeCount: fresh.length });
+    }
+    queueNodeIds.push(...fresh);
+    addedNodeCount = fresh.length;
+  }
   const currentNodeId = session.currentNodeId && isAvailable(session.currentNodeId)
     ? session.currentNodeId : queueNodeIds[0] ?? soonNodeIds.shift() ?? null;
   return { ...session, currentNodeId, queueNodeIds, soonNodeIds,
+    totalNodeCount: session.totalNodeCount + addedNodeCount,
     isAnswerRevealed: currentNodeId === session.currentNodeId && session.isAnswerRevealed };
 }
 
