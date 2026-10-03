@@ -5,13 +5,13 @@ import {
   type FolderListSortKey
 } from '../features/nodes/model/folderListOrdering';
 
+import { CompanionArticleBodyStatusFallback } from './CompanionArticleBodyStatusFallback';
 import { CompanionDirectoryContent, type CompanionDirectorySelection } from './CompanionDirectoryContent';
 import * as DirectoryArticle from './CompanionDirectoryReadableArticleModel';
 import { CompanionFolderArticleList } from './CompanionFolderArticleList';
 import { CompanionOnlyReviewContent } from './CompanionOnlyReviewContent';
 import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
 import { RecentArticleList } from './CompanionRecentArticleList';
-import { CompanionReviewAnswer, CompanionReviewCard } from './CompanionReviewCard';
 import { CompanionReviewFallback } from './CompanionReviewFallback';
 import { renderCompanionSettingsContent } from './CompanionSettingsShellContent';
 import {
@@ -87,33 +87,6 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
   );
 }
 
-function ReviewContent(props: {
-  error: string | null;
-  hasSnapshot: boolean;
-  onSelectBreadcrumbItem: (id: string) => void;
-  reviewBreadcrumbItems: ReviewBreadcrumbItem[];
-  surface: Surface;
-}) {
-  if (!props.surface.reviewSession.currentCard) {
-    return <CompanionReviewFallback error={props.error} hasSnapshot={props.hasSnapshot} reviewSession={props.surface.reviewSession} />;
-  }
-
-  return (
-    <>
-      <CompanionReviewCard
-        breadcrumbItems={props.reviewBreadcrumbItems}
-        card={props.surface.reviewSession.currentCard}
-        onSelectBreadcrumbItem={props.onSelectBreadcrumbItem}
-      />
-      {props.surface.reviewSession.currentCard.itemKind === 'fsrs' && props.surface.isAnswerRevealed ? (
-        <CompanionReviewAnswer card={props.surface.reviewSession.currentCard} />
-      ) : null}
-      {props.surface.readingError ? <p className="mt-3 text-sm text-error">{props.surface.readingError}</p> : null}
-      {props.surface.reviewError ? <p className="mt-3 text-sm text-error">{props.surface.reviewError}</p> : null}
-    </>
-  );
-}
-
 function renderRecentContent(props: CompanionShellContentProps) {
   if (props.isBrowseDirectoryOpen) {
     if (
@@ -175,25 +148,19 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
     return renderRecentContent(props);
   }
   if (props.surface.activeAction === 'review') {
-    if (props.isOnlyReviewOpen) {
-      return (
-        <CompanionOnlyReviewContent
-          hasSnapshot={props.hasSnapshot}
-          isAnswerRevealed={props.surface.isAnswerRevealed}
-          reviewSession={props.surface.onlyReviewSession}
-        />
-      );
+    if (props.surface.flowReady === false) return <CompanionWorkspaceSyncLoading />;
+    if (props.surface.effectiveReviewSession.currentCard && props.surface.readableArticle) {
+      return <CompanionShellReadableArticle surface={props.surface} workspaceSync={props.workspaceSync}
+        onExit={() => props.surface.handleTabAction('recent')} flow />;
     }
-    return (
-      <ReviewContent
-        error={props.workspaceError}
-        hasSnapshot={props.hasSnapshot}
-        onSelectBreadcrumbItem={props.onSelectReviewBreadcrumbItem}
-        reviewBreadcrumbItems={props.reviewBreadcrumbItems}
-        surface={props.surface}
-      />
-    );
+    if (props.surface.effectiveReviewSession.currentCard) return <CompanionArticleBodyStatusFallback
+      bodyStatus="fetching" title={props.surface.effectiveReviewSession.currentCard.title} />;
+    if (props.isOnlyReviewOpen) return <CompanionOnlyReviewContent hasSnapshot={props.hasSnapshot}
+      isAnswerRevealed={props.surface.isAnswerRevealed} reviewSession={props.surface.onlyReviewSession} />;
+    return <CompanionReviewFallback error={props.surface.flowError ?? props.workspaceError} hasSnapshot={props.hasSnapshot}
+      reviewSession={props.surface.reviewSession} />;
   }
+
   return (
     <ReadableArticleOrFallback
       error={props.workspaceError}

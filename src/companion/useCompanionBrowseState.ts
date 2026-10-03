@@ -12,7 +12,6 @@ import {
   resolveCompanionRecentArticles
 } from '../shared/platform/companionBrowseLists';
 
-import { resolveCompanionReviewSession } from './companionReviewSession';
 import { useCompanionBrowseSelection } from './useCompanionBrowseSelection';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -52,7 +51,6 @@ export function useCompanionBrowseState(
   const recentArticles = useMemo(() => projectedArticles.length > 0
     ? projectedArticles : buildReadableArticleFallback(workspaceSync.readableArticle),
   [projectedArticles, workspaceSync.readableArticle]);
-  const reviewSession = useMemo(() => resolveCompanionReviewSession(snapshot), [snapshot]);
   const { browsedFolder, readableArticle, selectedBrowseNodeId, setSelectedBrowseNodeId } = useCompanionBrowseSelection(
     snapshot,
     workspaceSync.readableArticle,
@@ -63,7 +61,6 @@ export function useCompanionBrowseState(
     browsedFolder,
     readableArticle,
     recentArticles,
-    reviewSession,
     selectedBrowseNodeId,
     setSelectedBrowseNodeId,
     snapshot

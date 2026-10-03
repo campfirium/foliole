@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 
+import { CompanionReadingActivity } from './companionReadingActivity';
+
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
@@ -11,13 +13,8 @@ const useFloatingBarVisibility = vi.fn();
 vi.mock('./useCompanionWorkspaceSync', () => ({ useCompanionWorkspaceSync }));
 vi.mock('./useCompanionArticleSurface', () => ({ useCompanionArticleSurface }));
 vi.mock('./useFloatingBarVisibility', () => ({ useFloatingBarVisibility }));
-vi.mock('./CompanionReviewCard', () => ({
-  CompanionReviewAnswer: () => <div data-testid="companion-review-answer" />,
-  CompanionReviewCard: (props: { breadcrumbItems?: Array<{ label: string }> }) => (
-    <div data-testid="companion-review-card">
-      {(props.breadcrumbItems ?? []).map((item) => <span key={item.label}>{item.label}</span>)}
-    </div>
-  )
+vi.mock('@/features/editor/components/MarkdownEditor', () => ({
+  MarkdownEditor: (props: { value: string }) => <div>{props.value}</div>
 }));
 vi.mock('@/features/pdf/components/SimplePdfDocument', () => ({
   SimplePdfDocument: () => <div>PDF original viewer</div>
@@ -147,7 +144,9 @@ function reviewSurface(currentCard: Record<string, unknown> | null, onlyReviewCa
     isAnswerRevealed: true,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,
-    readableArticle: currentCard ? null : { content: '# Readable article', nodeId: 'topic-1', title: 'Readable article' },
+    readingActivity: new CompanionReadingActivity(currentCard?.nodeId as string ?? null, vi.fn()),
+    handleSoonReviewTopic: vi.fn(),
+    readableArticle: currentCard ? { content: currentCard.content, nodeId: currentCard.nodeId, title: currentCard.title, textAnchorDecorations: [] } : { content: '# Readable article', nodeId: 'topic-1', title: 'Readable article' },
     recentArticles: [],
     readingError: null,
     reviewError: null,
@@ -178,6 +177,7 @@ const fsrsReviewCard = {
   queuePosition: 1,
   remainingCount: 1,
   reveal: 'Answer',
+  hasAnswer: true,
   title: 'Card one',
   totalCount: 1
 };
@@ -196,6 +196,7 @@ describe('CompanionShell review surfaces', () => {
   it('shows reading actions when the current review card is a reading item', async () => {
     await renderShellWithSurface(reviewSurface(readingReviewCard));
 
+    expect(screen.getByLabelText('Soon')).toBeInTheDocument();
     expect(screen.getByLabelText('Later')).toBeInTheDocument();
     expect(screen.getByLabelText('Read')).toBeInTheDocument();
     expect(screen.getByLabelText('Dismiss')).toBeInTheDocument();
@@ -203,11 +204,11 @@ describe('CompanionShell review surfaces', () => {
   });
 
   it('uses the FSRS-only card for Only Review content and footer actions', async () => {
-    await renderShellWithSurface(reviewSurface(readingReviewCard, fsrsReviewCard));
+    await renderShellWithSurface(reviewSurface(fsrsReviewCard));
     fireEvent.click(screen.getAllByRole('button', { name: 'Only Review' })[0]!);
 
     expect(screen.getByRole('group', { name: 'Companion review toolbar' })).toHaveAttribute('data-review-item-kind', 'fsrs');
-    expect(screen.getByLabelText('Show Answer')).toBeInTheDocument();
+    expect(screen.getByLabelText('Again')).toBeInTheDocument();
     expect(screen.queryByLabelText('Read')).not.toBeInTheDocument();
   });
 

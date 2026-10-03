@@ -98,3 +98,21 @@ it('ignores a read that resolves after newer input and flushes when editing ends
   await act(async () => undefined);
   expect(save).toHaveBeenCalledWith('n1', 'Typed during read', expect.objectContaining({ baseVersionId: 'base' }));
 });
+
+it('retains a saved acknowledgement and retries only refresh after a refresh failure', async () => {
+  const { ContentSavedRefreshError } = await import('../shared/platform/companion/editing/contentSavedRefreshError');
+  const { result, save } = mount();
+  const refresh = vi.fn(async () => undefined);
+  save.mockImplementationOnce(async (_id, content, edit) => {
+    save.setSource({ content, versionId: edit!.versionId });
+    throw new ContentSavedRefreshError({ content, currentVersionId: edit!.versionId,
+      submittedVersionId: edit!.versionId }, refresh);
+  });
+  act(() => result.current.handleChange('Saved body'));
+  await act(async () => { await expect(result.current.flushPendingSave()).rejects.toThrow('refreshed'); });
+  expect(result.current.value).toBe('Saved body');
+  await act(() => result.current.flushPendingSave());
+  expect(save).toHaveBeenCalledTimes(1);
+  expect(refresh).toHaveBeenCalledTimes(1);
+  expect(result.current.error).toBeNull();
+});

@@ -1,6 +1,5 @@
 import { memo, type ComponentProps } from 'react';
 
-import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
 import { CompanionCaptureSheet } from './CompanionCaptureSheet';
 import { CompanionBottomTabBar, type CompanionTabAction } from './CompanionFloatingBars';
 import type { CompanionSecondaryDestinationId, CompanionTabConfig } from './CompanionTabsConfig';
@@ -28,7 +27,6 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
   onRevealAnswer: Surface['handleRevealAnswer'];
   onSecondaryDestination(destinationId: CompanionSecondaryDestinationId): void;
 }) {
-  const currentReviewCard = props.currentReviewCard;
 
   return (
     <>
@@ -45,21 +43,7 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
         onSave={props.onCaptureSave}
         open={props.isCaptureSheetOpen}
       />
-      <CompanionBottomReviewBar
-        disabled={props.isBottomBarDisabled}
-        hasAnswer={Boolean(currentReviewCard?.hasAnswer)}
-        isAnswerRevealed={props.isReviewAnswerRevealed}
-        itemKind={currentReviewCard?.itemKind ?? 'reading'}
-        onReadReviewTopic={props.onReadReviewTopic}
-        onPostponeReviewTopic={props.onPostponeReviewTopic}
-        onDismissReviewTopic={props.onDismissReviewTopic}
-        onGrade={props.onGradeReview}
-        onRevealAnswer={props.onRevealAnswer}
-        reviewCardKey={currentReviewCard ? `${currentReviewCard.itemKind}:${currentReviewCard.nodeId}` : null}
-        statusLabel={null}
-        visible={props.activeAction === 'review' && Boolean(currentReviewCard)}
-      />
+
     </>
   );
 });
-

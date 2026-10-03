@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import type { CompanionTabAction } from './CompanionFloatingBars';
-import { resolveCompanionFsrsReviewSession } from './companionFsrsReviewSession';
-import { hydrateCompanionReviewSession, resolveCompanionReviewSession } from './companionReviewSession';
+import { CompanionReadingActivity } from './companionReadingActivity';
+import { hydrateCompanionReviewSession } from './companionReviewSession';
 import { useCompanionActionState } from './useCompanionActionState';
 import type { CompanionBrowseSortState } from './useCompanionBrowseState';
 import { useCompanionBrowseState } from './useCompanionBrowseState';
+import { useCompanionFlowSession } from './useCompanionFlowSession';
 import { useCompanionMissingBodySync } from './useCompanionMissingBodySync';
 import { useCompanionSurfaceActions } from './useCompanionSurfaceActions';
 import { useCompanionViewStateSync } from './useCompanionViewStateSync';
@@ -48,7 +49,9 @@ function useCompanionBrowseActions(args: {
 function useCompanionInteractionState(
   browsedFolderNodeId: string | null,
   floatingBar: FloatingBarVisibilityApi,
-  reviewSession: ReturnType<typeof resolveCompanionReviewSession>,
+  flow: ReturnType<typeof useCompanionFlowSession>,
+  activity: CompanionReadingActivity,
+  active: boolean,
   setActiveAction: (action: CompanionTabAction) => void,
   setSelectedBrowseNodeId: (nodeId: string | null) => void,
   snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'],
@@ -56,11 +59,12 @@ function useCompanionInteractionState(
 ) {
   const { setReadingError, setReviewError, ...reviewActions } = useCompanionSurfaceActions({
     floatingBar,
-    reviewSession,
+    flow,
+    activity,
+    active,
     snapshot,
     workspaceSync
   });
-  const [isAnswerRevealed, setIsAnswerRevealed] = useState(false);
   const {
     handleExitBrowseArticle,
     handleExitDirectoryArticle,
@@ -79,31 +83,24 @@ function useCompanionInteractionState(
     workspaceSync
   });
 
-  useEffect(() => {
-    setIsAnswerRevealed(false);
-  }, [reviewSession.currentCard?.nodeId]);
-
-  function handleRevealAnswer() {
-    setIsAnswerRevealed(true);
-  }
-
   return {
     ...reviewActions,
-    handleRevealAnswer,
+    handleRevealAnswer: flow.reveal,
     handleExitBrowseArticle,
     handleExitDirectoryArticle,
     handleExitSearchArticle,
     handleSelectBrowseNode,
     handleSelectRecentArticle,
     handleTabAction,
-    isAnswerRevealed
+    isAnswerRevealed: flow.isAnswerRevealed
   };
 }
 
 function useReadableArticleWithBodySyncStatus(
   readableArticle: CompanionWorkspaceSyncApi['readableArticle'],
-  fetchingBodyKey: string | null
+  workspaceSync: CompanionWorkspaceSyncApi
 ) {
+  const { fetchingBodyKey } = useCompanionMissingBodySync({ readableArticle, workspaceSync });
   return useMemo(() => {
     if (!readableArticle?.bodyBlobHash || !fetchingBodyKey) {
       return readableArticle;
@@ -114,19 +111,6 @@ function useReadableArticleWithBodySyncStatus(
     }
     return { ...readableArticle, bodyStatus: 'fetching' as const };
   }, [fetchingBodyKey, readableArticle]);
-}
-
-function useCompanionEffectiveReviewSession(args: {
-  isOnlyReviewOpen?: boolean | undefined;
-  reviewSession: ReturnType<typeof resolveCompanionReviewSession>;
-  snapshot: CompanionWorkspaceSyncApi['state']['workspace_snapshot'];
-}) {
-  const onlyReviewSession = useMemo(
-    () => resolveCompanionFsrsReviewSession(args.snapshot),
-    [args.snapshot]
-  );
-  const effectiveReviewSession = args.isOnlyReviewOpen ? onlyReviewSession : args.reviewSession;
-  return { effectiveReviewSession, onlyReviewSession };
 }
 
 function useCompanionActiveAction(workspaceSync: CompanionWorkspaceSyncApi) {
@@ -158,24 +142,20 @@ export function useCompanionArticleSurface(
 ) {
   const { activeAction, setUserActiveAction } = useCompanionActiveAction(workspaceSync);
   const browseState = useCompanionBrowseState(workspaceSync, browseSort);
-  const reviewSessions = useCompanionEffectiveReviewSession({
-    isOnlyReviewOpen: options.isOnlyReviewOpen,
-    reviewSession: browseState.reviewSession,
-    snapshot: browseState.snapshot
+  const flow = useCompanionFlowSession({
+    snapshot: browseState.snapshot, ready: workspaceSync.isWorkspaceSyncStateReady,
+    active: activeAction === 'review', onlyReview: options.isOnlyReviewOpen === true,
+    libraryScope: browseState.snapshot?.libraryScope ?? workspaceSync.bootstrapState.database_path ?? 'preview'
   });
-  const demandNodeId = options.isOnlyReviewOpen || activeAction === 'review'
-    ? reviewSessions.effectiveReviewSession.currentCard?.nodeId ?? null
+  const demandNodeId = activeAction === 'review' ? flow.view.currentCard?.nodeId ?? null
     : activeAction === 'recent' && !browseState.browsedFolder ? browseState.selectedBrowseNodeId : null;
+  const readingActivity = useReadingActivity(demandNodeId, browseState.snapshot?.libraryScope);
   const readyDemandNodeId = workspaceSync.isWorkspaceSyncStateReady ? demandNodeId : null;
-  useEffect(() => {
-    void Promise.resolve(workspaceSync.openReadableArticle(readyDemandNodeId)).catch(() => undefined);
-  }, [readyDemandNodeId, workspaceSync.openReadableArticle]);
-  const candidateArticle = options.isOnlyReviewOpen || activeAction === 'review'
-    ? workspaceSync.readableArticle : browseState.readableArticle;
-  const currentArticle = candidateArticle?.nodeId === readyDemandNodeId ? candidateArticle : null;
+  const currentArticle = useCompanionDemandArticle(workspaceSync, browseState.readableArticle,
+    activeAction, readyDemandNodeId);
   const effectiveReviewSession = useMemo(
-    () => hydrateCompanionReviewSession(reviewSessions.effectiveReviewSession, currentArticle),
-    [reviewSessions.effectiveReviewSession, currentArticle]
+    () => hydrateCompanionReviewSession(flow.view, currentArticle),
+    [flow.view, currentArticle]
   );
   const handleViewScroll = useCompanionViewStateSync({
     activeAction,
@@ -186,17 +166,18 @@ export function useCompanionArticleSurface(
   const interactionState = useCompanionInteractionState(
     browseState.browsedFolder?.nodeId ?? null,
     floatingBar,
-    effectiveReviewSession,
+    flow,
+    readingActivity,
+    activeAction === 'review',
     setUserActiveAction,
     browseState.setSelectedBrowseNodeId,
     browseState.snapshot,
     workspaceSync
   );
 
-  const missingBodySync = useCompanionMissingBodySync({ readableArticle: currentArticle, workspaceSync });
   const readableArticle = useReadableArticleWithBodySyncStatus(
     currentArticle,
-    missingBodySync.fetchingBodyKey
+    workspaceSync
   );
 
   return {
@@ -205,10 +186,28 @@ export function useCompanionArticleSurface(
     readableArticle,
     recentArticles: browseState.recentArticles,
     effectiveReviewSession,
-    onlyReviewSession: options.isOnlyReviewOpen ? effectiveReviewSession : reviewSessions.onlyReviewSession,
-    reviewSession: options.isOnlyReviewOpen ? browseState.reviewSession : effectiveReviewSession,
+    onlyReviewSession: effectiveReviewSession,
+    reviewSession: effectiveReviewSession,
+    readingActivity,
+    flowError: flow.error,
+    flowReady: flow.ready,
     selectedBrowseNodeId: browseState.selectedBrowseNodeId,
     handleViewScroll,
     ...interactionState
   };
+}
+
+function useCompanionDemandArticle(workspaceSync: CompanionWorkspaceSyncApi,
+  browseArticle: CompanionWorkspaceSyncApi['readableArticle'], activeAction: CompanionTabAction,
+  readyDemandNodeId: string | null) {
+  useEffect(() => {
+    void Promise.resolve(workspaceSync.openReadableArticle(readyDemandNodeId)).catch(() => undefined);
+  }, [readyDemandNodeId, workspaceSync.openReadableArticle]);
+  const candidate = activeAction === 'review' ? workspaceSync.readableArticle : browseArticle;
+  return candidate?.nodeId === readyDemandNodeId ? candidate : null;
+}
+
+function useReadingActivity(nodeId: string | null, libraryScope: string | undefined) {
+  const [, changed] = useReducer((value: number) => value + 1, 0);
+  return useMemo(() => new CompanionReadingActivity(nodeId, changed), [nodeId, libraryScope]);
 }

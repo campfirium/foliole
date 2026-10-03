@@ -5,12 +5,12 @@ import { createWorkspaceActionHistoryEntryId } from './workspaceActionHistoryEnt
 import { captureWorkspaceHistoryContext } from './workspaceHistoryContext';
 import { buildReviewActiveNodeContext } from './workspaceReviewBrowseRoot';
 import { createReviewGradeHistoryEntry } from './workspaceReviewGradeActionHistory';
+import { buildReviewSessionAfterGrade } from './workspaceReviewGradeSession';
 import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue';
 import {
   runtimeWorkspaceReviewPersistence,
   type WorkspaceReviewPersistenceAdapter
 } from './workspaceReviewPersistence';
-import { advanceReviewSession, completeReviewSession } from './workspaceReviewReading';
 import { calculateReviewStepElapsedMs } from './workspaceReviewSessionProgress';
 import type { SequentialReadingChange } from './workspaceSequentialReading';
 import type { WorkspaceState } from './workspaceStore';
@@ -18,8 +18,6 @@ import {
   createTopicDismissHistoryEntry,
   type WorkspaceTopicReadingActionTitle
 } from './workspaceTopicDismissActionHistory';
-
-type ReviewSession = WorkspaceState['reviewSession'];
 
 export async function persistReviewGradeMutation(args: {
   currentNodeId: string;
@@ -30,35 +28,6 @@ export async function persistReviewGradeMutation(args: {
   cardAfter: SchedulerCard;
 }, persistence: WorkspaceReviewPersistenceAdapter = runtimeWorkspaceReviewPersistence): Promise<boolean> {
   return persistence.persistReviewGrade(args);
-}
-
-function buildReviewSessionAfterGrade(args: {
-  continueNodeId: string | null;
-  nextDueAt: string;
-  nextNodeId: string | null;
-  now: string;
-  queueNodeIds: string[];
-  reviewElapsedMsDelta: number;
-  reviewSession: ReviewSession;
-  reviewedItemDelta: number;
-}): ReviewSession {
-  if (args.nextNodeId) {
-    return advanceReviewSession(args.reviewSession, {
-      handledAt: args.now,
-      nextReviewDueAt: args.nextDueAt,
-      nextNodeId: args.nextNodeId,
-      queueNodeIds: args.queueNodeIds,
-      reviewElapsedMsDelta: args.reviewElapsedMsDelta,
-      reviewedItemDelta: args.reviewedItemDelta
-    });
-  }
-  return completeReviewSession(args.reviewSession, {
-    completedAt: args.now,
-    continueNodeId: args.continueNodeId,
-    nextReviewDueAt: args.nextDueAt,
-    reviewElapsedMsDelta: args.reviewElapsedMsDelta,
-    reviewedItemDelta: args.reviewedItemDelta
-  });
 }
 
 export function buildGradedReviewState(args: {

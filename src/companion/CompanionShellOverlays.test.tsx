@@ -50,7 +50,7 @@ describe('CompanionShellOverlays', () => {
     expect(screen.getByRole('button', { name: 'Flow' })).toBeInTheDocument();
   });
 
-  it('enables the reveal action when a review card has an answer without synced body text', () => {
+  it('keeps review actions out of global overlays so related reading cannot grade the Flow task', () => {
     render(
       <CompanionShellOverlays
         {...createOverlayProps()}
@@ -70,8 +70,7 @@ describe('CompanionShellOverlays', () => {
       />
     );
 
-    expect(screen.getByLabelText('Show Answer')).not.toBeDisabled();
+    expect(screen.queryByLabelText('Show Answer')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
   });
 });
-

@@ -2,6 +2,10 @@ import { buildCurrentReviewSessionQueueOutput } from './workspaceReviewLiveQueue
 import { advanceReviewSession, completeReviewSession } from './workspaceReviewReading';
 import type { WorkspaceState } from './workspaceStore';
 
+export type ReviewFlowState = Pick<WorkspaceState,
+  'nodeOrder' | 'nodesById' | 'trashedNodeIds' | 'reviewSession' | 'reviewSessionMode'
+> & Partial<Pick<WorkspaceState, 'trashedNodeDeletedAtById'>>;
+
 export function isExistingQueueTopic(reviewSession: WorkspaceState['reviewSession'], currentNodeId: string) {
   return reviewSession.queueNodeIds.includes(currentNodeId);
 }
@@ -14,8 +18,8 @@ function resolveRemainingSessionQueue(args: {
   currentNodeId: string;
   excludedNodeIds?: readonly string[];
   nextNodesById: WorkspaceState['nodesById'];
-  snapshot: WorkspaceState;
-  state: WorkspaceState;
+  snapshot: ReviewFlowState;
+  state: ReviewFlowState;
 }) {
   const excludedNodeIds = new Set([args.currentNodeId, ...(args.excludedNodeIds ?? [])]);
   return args.snapshot.reviewSession.queueNodeIds.filter((nodeId) =>
@@ -31,8 +35,8 @@ export function advanceOrCompleteAfterReadingAction(args: {
   now: string;
   progressDelta: number;
   readingElapsedMsDelta: number;
-  snapshot: WorkspaceState;
-  state: WorkspaceState;
+  snapshot: ReviewFlowState;
+  state: ReviewFlowState;
 }) {
   const soonNodeIds = withoutNodeId(args.snapshot.reviewSession.soonNodeIds, args.currentNodeId);
   const remainingQueueNodeIds = resolveRemainingSessionQueue({
@@ -82,8 +86,8 @@ export function advanceAfterSoonAction(args: {
   now: string;
   progressDelta: number;
   readingElapsedMsDelta: number;
-  snapshot: WorkspaceState;
-  state: WorkspaceState;
+  snapshot: ReviewFlowState;
+  state: ReviewFlowState;
 }) {
   const remainingQueueNodeIds = withoutNodeId(args.snapshot.reviewSession.queueNodeIds, args.currentNodeId)
     .filter((nodeId) => args.state.nodesById[nodeId] && !args.state.trashedNodeIds.includes(nodeId));

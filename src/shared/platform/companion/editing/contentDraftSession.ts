@@ -2,6 +2,7 @@ import { createOpaqueVersionRef } from '../../../../../lib/core/sync/opaqueSyncR
 import { createCompanionUuid } from '../../companionUuid';
 
 import type { CompanionContentEdit, CompanionContentSaveHandler, CompanionContentSource } from './companionContentEditContract';
+import { ContentSavedRefreshError } from './contentSavedRefreshError';
 
 export class ContentDraftSession {
   value: string;
@@ -10,6 +11,7 @@ export class ContentDraftSession {
   private sequence = 0;
   private acknowledged = 0;
   private pending: (CompanionContentEdit & { sequence: number }) | null = null;
+  private refreshSaved: (() => Promise<unknown>) | null = null;
   private running: Promise<void> | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private refreshSequence = 0;
@@ -23,7 +25,7 @@ export class ContentDraftSession {
     this.ready = !save.retainHold;
   }
 
-  get dirty() { return this.sequence > this.acknowledged; }
+  get dirty() { return this.sequence > this.acknowledged || Boolean(this.refreshSaved); }
   get attached() { return this.listeners.size > 0; }
 
   subscribe(listener: () => void) {
@@ -104,6 +106,12 @@ export class ContentDraftSession {
   async flush() {
     if (!this.ready) await this.start();
     this.clearTimer();
+    if (this.refreshSaved) {
+      await this.refreshSaved();
+      this.refreshSaved = null;
+      this.error = null;
+      this.publish();
+    }
     const target = this.sequence;
     while (this.acknowledged < target) {
       if (!this.running) this.running = this.commit().finally(() => { this.running = null; });
@@ -121,7 +129,11 @@ export class ContentDraftSession {
     };
     this.pending = edit;
     try {
-      const ack = await this.save(this.nodeId, edit.content, edit);
+      const ack = await this.save(this.nodeId, edit.content, edit).catch((error: unknown) => {
+        if (!(error instanceof ContentSavedRefreshError)) throw error;
+        this.refreshSaved = error.refresh;
+        return error.acknowledgement;
+      });
       this.acknowledged = edit.sequence;
       this.pending = null;
       this.error = null;
@@ -153,6 +165,7 @@ export class ContentDraftSession {
         this.base = { content: edit.content, versionId: ack.submittedVersionId };
       }
       this.publish();
+      if (this.refreshSaved) throw new Error('The topic was saved, but could not be refreshed.');
     } catch (error) {
       this.error = error instanceof Error ? error.message : 'Could not save this topic.';
       this.publish();
