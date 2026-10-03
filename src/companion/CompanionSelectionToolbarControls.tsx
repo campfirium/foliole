@@ -96,6 +96,7 @@ export function CompanionSelectionNotePanel(props: {
 
 export function CompanionSelectionToolbarActions(props: {
   isExistingHighlight: boolean;
+  isCloze?: boolean;
   disabled?: boolean | undefined;
   onAddNote: () => void;
   onApply: (kind: CompanionSelectionAnnotationKind) => void;
@@ -105,7 +106,7 @@ export function CompanionSelectionToolbarActions(props: {
   return (
     <div className={cn(appFloatingSurfaceClassName('popover'), 'flex items-center gap-1 rounded-md px-1.5 py-1')} role="toolbar">
       {props.isExistingHighlight ? (
-        <ToolbarButton disabled={props.disabled} label={t('companion.selection.closeHighlight')} onClick={props.onDeleteExistingHighlight}>
+        <ToolbarButton disabled={props.disabled} label={t(props.isCloze ? 'companion.selection.deleteCloze' : 'companion.selection.closeHighlight')} onClick={props.onDeleteExistingHighlight}>
           <X aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       ) : (
@@ -113,17 +114,17 @@ export function CompanionSelectionToolbarActions(props: {
           <Highlighter aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
-      <ToolbarButton disabled={props.disabled} label={t('companion.selection.addComment')} onClick={props.onAddNote} testId="companion-selection-note">
+      {props.isCloze ? null : <ToolbarButton disabled={props.disabled} label={t('companion.selection.addComment')} onClick={props.onAddNote} testId="companion-selection-note">
         <MessageSquare aria-hidden="true" size={19} strokeWidth={2} />
-      </ToolbarButton>
+      </ToolbarButton>}
       {props.isExistingHighlight ? null : (
         <ToolbarButton disabled={props.disabled} label={t('companion.selection.cloze')} onClick={() => props.onApply('cloze')} testId="companion-selection-cloze">
           <RectangleEllipsis aria-hidden="true" size={19} strokeWidth={2} />
         </ToolbarButton>
       )}
-      <ToolbarButton disabled={props.disabled} label={t('companion.selection.more')} onClick={() => undefined}>
+      {props.isCloze ? null : <ToolbarButton disabled={props.disabled} label={t('companion.selection.more')} onClick={() => undefined}>
         <MoreHorizontal aria-hidden="true" size={19} strokeWidth={2} />
-      </ToolbarButton>
+      </ToolbarButton>}
     </div>
   );
 }

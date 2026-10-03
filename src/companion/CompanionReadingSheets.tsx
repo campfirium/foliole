@@ -1,4 +1,4 @@
-import { Highlighter, Info, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
+import { Highlighter, Info, RotateCcw, Search, X, SlidersHorizontal } from 'lucide-react';
 import { useRef } from 'react';
 import type { ReactNode, MutableRefObject } from 'react';
 
@@ -60,6 +60,7 @@ export function ReadingActionsSheet(props: {
   onFindInDocument(): void;
   onOpenChange(open: boolean): void;
   onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info'): void;
+  onOpenClozeRemoval?: () => void;
   onRestoreFromTrash?: () => Promise<void> | void;
   open: boolean;
 }) {
@@ -92,6 +93,11 @@ export function ReadingActionsSheet(props: {
           label={t('companion.reading.info')}
           onClick={() => openReadingSheet('info')}
         />
+        {props.onOpenClozeRemoval ? <ReadingActionRow
+          icon={<X aria-hidden="true" className="h-5 w-5" />}
+          label={t('companion.selection.deleteCloze')}
+          onClick={props.onOpenClozeRemoval}
+        /> : null}
         {props.onRestoreFromTrash ? (
           <>
             {restore.error ? <ReadingRestoreErrorMessage saved={restore.error === 'refresh'} /> : null}

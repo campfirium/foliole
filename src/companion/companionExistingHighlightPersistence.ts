@@ -1,5 +1,6 @@
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { getTextAnchorLocators } from '../features/nodes/model/nodeTypes';
 import { assertCompanionHighlightRead, type CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { runCompanionOptionalHighValueMutationTask } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
@@ -31,8 +32,10 @@ async function writeExistingHighlight(args: ExistingHighlightMutation, withinWri
   const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   assertCompanionHighlightRead(sourceNode, args.guard);
-  if (withinWriter) await applyCompanionSyncNodeVersionsWithinWriterTask([nodeVersion], undefined, 'local_mutation');
-  else await applyCompanionLocalNodeVersions([nodeVersion]);
+  const appliedIds = withinWriter
+    ? await applyCompanionSyncNodeVersionsWithinWriterTask([nodeVersion], undefined, 'local_mutation')
+    : await applyCompanionLocalNodeVersions([nodeVersion]);
+  if (withinWriter && !appliedIds.includes(node.id)) throw new Error('companion_annotation_not_applied');
   return {
     nodeId: versionedNode.id,
     snapshot: {
@@ -91,10 +94,12 @@ export async function deleteCompanionExistingHighlight(args: {
     node,
     ...(args.guard ? { guard: args.guard } : {}),
     snapshot: args.snapshot,
-    update: (current, timestamp) => ({
-      ...current,
-      deletedAt: timestamp,
-      updatedAt: timestamp
-    })
+    update: (current, timestamp) => {
+      if (current.deletedAt || (current.anchorLink?.kind !== 'highlight' &&
+          !(current.kind === 'item' && current.anchorLink?.kind === 'cloze' && getTextAnchorLocators(current.anchorLink.locator).length))) {
+        throw new Error('companion_annotation_unavailable');
+      }
+      return { ...current, deletedAt: timestamp, updatedAt: timestamp };
+    }
   });
 }

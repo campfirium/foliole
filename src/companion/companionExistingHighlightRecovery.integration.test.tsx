@@ -75,7 +75,7 @@ const payload: SelectionCommandPayload = {
     range: { from: 6, to: 10 }, locator: { from: 6, to: 10, originalText: 'Beta' } }]
 };
 
-function HighlightSurface({ initial, nodeId }: { initial: NativeCompanionWorkspaceSyncState; nodeId: string }) {
+function HighlightSurface({ initial, nodeId, cloze }: { initial: NativeCompanionWorkspaceSyncState; nodeId: string; cloze: boolean }) {
   const [state, setState] = useState(initial);
   const [open, setOpen] = useState(true);
   const actions = createWorkspaceSnapshotActions({ state, setState, setError: () => {}, setStatus: () => {},
@@ -88,16 +88,16 @@ function HighlightSurface({ initial, nodeId }: { initial: NativeCompanionWorkspa
       onDeleteExistingHighlight={createCompanionExistingHighlightDeleteHandler(sync)}
       onClose={() => setOpen(false)} snapshot={state.workspace_snapshot} resolveSelectionPayload={() => null}
       state={open ? { left: 0, top: 0, noteLeft: 0, noteTop: 0, payload: null,
-        existingHighlight: { nodeId, originalText: 'Beta' } } : null} />
+        existingHighlight: { nodeId, originalText: 'Beta', kind: cloze ? 'cloze' : 'highlight' } } : null} />
   </CompanionDraftProvider>;
 }
 
-async function openHighlight() {
+async function openHighlight(kind = 'highlight') {
   const initial = await loadCompanionWorkspaceSyncState();
-  const saved = await persistCompanionSelectionAnnotation({ deviceId: 'fixture', kind: 'highlight', payload,
+  const saved = await persistCompanionSelectionAnnotation({ deviceId: 'fixture', kind: kind === 'cloze' ? 'cloze' : 'highlight', payload,
     snapshot: initial.workspace_snapshot });
-  renderWithLocalization(<HighlightSurface initial={await loadCompanionWorkspaceSyncState()} nodeId={saved!.nodeId} />);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Add Comment' })).toBeEnabled());
+  renderWithLocalization(<HighlightSurface initial={await loadCompanionWorkspaceSyncState()} nodeId={saved!.nodeId} cloze={kind === 'cloze'} />);
+  await waitFor(() => expect(screen.getByRole('button', { name: kind === 'cloze' ? 'Delete cloze' : 'Add Comment' })).toBeEnabled());
   return saved!.nodeId;
 }
 
@@ -106,11 +106,11 @@ function submit(kind: string) {
     fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
     fireEvent.change(screen.getByPlaceholderText('Add annotation...'), { target: { value: 'Reader note' } });
   }
-  fireEvent.click(screen.getByRole('button', { name: kind === 'note' ? 'Save' : 'Close Highlight' }));
+  fireEvent.click(screen.getByRole('button', { name: kind === 'note' ? 'Save' : kind === 'cloze' ? 'Delete cloze' : 'Close Highlight' }));
 }
 
-it.each(['note', 'delete'])('recovers saved %s without another write, including reopening', async (kind) => {
-  const nodeId = await openHighlight();
+it.each(['note', 'delete', 'cloze'])('recovers saved %s without another write, including reopening', async (kind) => {
+  const nodeId = await openHighlight(kind);
   const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation')
     .mockRejectedValueOnce(new Error('Read unavailable'));
   submit(kind);
@@ -121,7 +121,7 @@ it.each(['note', 'delete'])('recovers saved %s without another write, including 
   const versions = database!.prepare('SELECT * FROM node_sync_versions').all();
   fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
   fireEvent.click(screen.getByRole('button', { name: 'Reopen' }));
-  expect(screen.getByRole('button', { name: 'Add Comment' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: kind === 'cloze' ? 'Delete cloze' : 'Add Comment' })).toBeDisabled();
   refresh.mockRejectedValueOnce(new Error('Still unavailable'));
   fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled());
@@ -133,8 +133,8 @@ it.each(['note', 'delete'])('recovers saved %s without another write, including 
   expect(await loadCompanionWorkspaceNode(nodeId)).toEqual(saved);
 });
 
-it.each(['note', 'delete'])('closes after a successful %s', async (kind) => {
-  const nodeId = await openHighlight();
+it.each(['note', 'delete', 'cloze'])('closes after a successful %s', async (kind) => {
+  const nodeId = await openHighlight(kind);
   submit(kind);
   await waitFor(() => expect(screen.queryByRole('toolbar')).toBeNull());
   const saved = await loadCompanionWorkspaceNode(nodeId);
@@ -142,8 +142,8 @@ it.each(['note', 'delete'])('closes after a successful %s', async (kind) => {
   else expect(saved?.deletedAt).toBeTruthy();
 });
 
-it.each(['note', 'delete'])('keeps an actual failed %s editable and retries the write', async (kind) => {
-  const nodeId = await openHighlight();
+it.each(['note', 'delete', 'cloze'])('keeps an actual failed %s editable and retries the write', async (kind) => {
+  const nodeId = await openHighlight(kind);
   const before = await loadCompanionWorkspaceNode(nodeId);
   database!.exec("CREATE TRIGGER fail_change BEFORE INSERT ON node_sync_versions BEGIN SELECT RAISE(ABORT, 'storage failure'); END");
   submit(kind);
@@ -154,18 +154,18 @@ it.each(['note', 'delete'])('keeps an actual failed %s editable and retries the 
   if (kind === 'note') {
     fireEvent.change(screen.getByPlaceholderText('Add annotation...'), { target: { value: 'Revised' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-  } else fireEvent.click(screen.getByRole('button', { name: 'Close Highlight' }));
+  } else fireEvent.click(screen.getByRole('button', { name: kind === 'cloze' ? 'Delete cloze' : 'Close Highlight' }));
   await waitFor(() => expect(screen.queryByRole('toolbar')).toBeNull());
   const after = await loadCompanionWorkspaceNode(nodeId);
   if (kind === 'note') expect(after?.content).toBe('Beta\n※ Revised');
   else expect(after?.deletedAt).toBeTruthy();
 });
 
-it('blocks a saved refresh after changing libraries', async () => {
-  await openHighlight();
+it.each(['note', 'cloze'])('blocks a saved %s refresh after changing libraries', async (kind) => {
+  await openHighlight(kind);
   const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation')
     .mockRejectedValueOnce(new Error('Read unavailable'));
-  submit('note');
+  submit(kind);
   await screen.findByRole('alert');
   act(() => invalidateCompanionReadingScope());
   expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();

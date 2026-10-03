@@ -30,9 +30,9 @@ export class CompanionReadingActivity {
     }
   }
 
-  async flush() {
+  async flush(retryingKey?: string) {
     await Promise.all([...this.pending]);
-    if (this.errors.size) throw this.errors.values().next().value;
+    for (const [key, error] of this.errors) if (key !== retryingKey) throw error;
     await this.flushDraft?.();
   }
 }

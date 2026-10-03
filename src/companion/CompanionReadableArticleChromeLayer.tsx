@@ -5,9 +5,9 @@ import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapsho
 import { CompanionDocumentSearchSheet } from './CompanionDocumentSearchSheet';
 import { buildCompanionHighlightPanelItems } from './companionHighlightPanelModel';
 import { CompanionNodeTextAlternativeSheet } from './CompanionNodeTextAlternativeSheet';
+import { ReadingActionsLayer } from './CompanionReadingActionsLayer';
 import { ReadingChrome } from './CompanionReadingChrome';
 import {
-  ReadingActionsSheet,
   OutlineSheet,
   ReadingFontSheet,
   ReadingHighlightSheet,
@@ -44,6 +44,7 @@ interface ImmersiveChromeLayerProps {
   onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
   onOpenSearchSheet(open: boolean): void;
   onReadingTypographySettingsChange(settings: CompanionReadingTypographySettings): void;
+  onOpenClozeRemoval?: () => void;
   onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
   onSelectOutlineItem(item: { from: number; to: number }): void;
   onToggleContentEditing(): void;
@@ -81,31 +82,6 @@ function ReadingChromeControls(props: {
       onOpenOutline={() => props.onOpenOutline(true)}
       onToggleContentEditing={props.onToggleContentEditing}
       title={props.readableArticle.title}
-    />
-  );
-}
-
-function ReadingActionsLayer(props: {
-  actionsOpen: boolean;
-  onFindInDocument(): void;
-  onOpenActions(open: boolean): void;
-  onOpenReadingSheet(sheet: 'font' | 'highlight' | 'info' | null): void;
-  onRestoreFromTrash?: (nodeId: string) => Promise<void> | void;
-  readableArticle: ReadableArticle;
-}) {
-  const restoreFromTrash = props.onRestoreFromTrash;
-  return (
-    <ReadingActionsSheet
-      key={props.readableArticle.nodeId}
-      onFindInDocument={props.onFindInDocument}
-      onOpenChange={props.onOpenActions}
-      onOpenReadingSheet={props.onOpenReadingSheet}
-      open={props.actionsOpen}
-      {...definedProps({
-        onRestoreFromTrash: props.readableArticle.isTrashed && restoreFromTrash
-          ? () => restoreFromTrash(props.readableArticle.nodeId)
-          : undefined
-      })}
     />
   );
 }
@@ -212,7 +188,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         onOpenActions={props.onOpenActions}
         onOpenReadingSheet={props.onOpenReadingSheet}
         readableArticle={props.readableArticle}
-        {...definedProps({ onRestoreFromTrash: props.onRestoreFromTrash })}
+        {...definedProps({ onRestoreFromTrash: props.onRestoreFromTrash, onOpenClozeRemoval: props.onOpenClozeRemoval })}
       />
       <ReadingSheetsLayer
         editor={props.editor}

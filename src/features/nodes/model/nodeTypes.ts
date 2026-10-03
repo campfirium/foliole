@@ -153,9 +153,9 @@ export function isPdfAnchorLocator(locator: NodeAnchorLink['locator'] | null | u
   return Boolean(locator && 'page' in locator && typeof locator.page === 'number' && Number.isInteger(locator.page) && locator.page > 0);
 }
 
-export function isTextAnchorLocator(locator: NodeAnchorLink['locator'] | null | undefined): locator is TextAnchorLocator {
+export function isTextAnchorLocator(locator: unknown): locator is TextAnchorLocator {
   return Boolean(
-    locator &&
+    locator && typeof locator === 'object' &&
       !('ranges' in locator) &&
       'from' in locator &&
       'to' in locator &&
@@ -165,13 +165,13 @@ export function isTextAnchorLocator(locator: NodeAnchorLink['locator'] | null | 
       typeof locator.to === 'number' &&
       Number.isInteger(locator.to) &&
       locator.to >= locator.from &&
-      typeof locator.originalText === 'string'
+      'originalText' in locator && typeof locator.originalText === 'string'
   );
 }
 
-function isTextAnchorLocatorGroup(locator: NodeAnchorLink['locator'] | null | undefined): locator is TextAnchorLocatorGroup {
+function isTextAnchorLocatorGroup(locator: unknown): locator is TextAnchorLocatorGroup {
   return Boolean(
-    locator &&
+    locator && typeof locator === 'object' &&
       'ranges' in locator &&
       Array.isArray(locator.ranges) &&
       locator.ranges.length > 1 &&
@@ -201,7 +201,7 @@ export function isFormulaAnchorLocator(locator: NodeAnchorLink['locator'] | null
   );
 }
 
-export function getTextAnchorLocators(locator: NodeAnchorLink['locator'] | null | undefined): TextAnchorLocator[] {
+export function getTextAnchorLocators(locator: unknown): TextAnchorLocator[] {
   if (isTextAnchorLocator(locator)) {
     return [locator];
   }

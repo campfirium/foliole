@@ -22,14 +22,14 @@ export function assertCompanionHighlightRead(node: WorkspaceNodeSnapshot, guard?
   }
 }
 
-export async function readCompanionHighlight(snapshot: WorkspaceSnapshot | null, nodeId: string): Promise<CompanionHighlightRead> {
+export async function readCompanionHighlight(snapshot: WorkspaceSnapshot | null, nodeId: string, kind: 'highlight' | 'cloze' = 'highlight'): Promise<CompanionHighlightRead> {
   const expected = snapshot?.nodesById[nodeId];
   if (!expected || snapshot?.trashedNodeIds.includes(nodeId)) throw new Error('companion_highlight_node_unavailable');
   const guard = { nodeId, scope: getCompanionReadingScope(), versionId: expected.currentVersionId };
   const node = isAvailableNativeCompanionRuntime() ? await loadCompanionWorkspaceNode(nodeId) : expected;
-  if (!node || node.deletedAt || node.parentNodeId !== expected.parentNodeId || node.anchorLink?.kind !== 'highlight') {
+  if (!node || node.deletedAt || node.parentNodeId !== expected.parentNodeId || node.anchorLink?.kind !== kind) {
     throw new Error('companion_highlight_node_unavailable');
   }
   assertCompanionHighlightRead(node, guard);
-  return { note: parseHighlightCardContent({ content: node.content }).note ?? '', guard };
+  return { note: kind === 'cloze' ? '' : parseHighlightCardContent({ content: node.content }).note ?? '', guard };
 }

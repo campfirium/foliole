@@ -41,7 +41,7 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
       onAddExistingHighlightNote: (...args: Parameters<ReturnType<typeof createCompanionExistingHighlightNoteHandler>>) =>
         activity.run('note', () => createCompanionExistingHighlightNoteHandler(props.workspaceSync)(...args)),
       onDeleteExistingHighlight: (...args: Parameters<ReturnType<typeof createCompanionExistingHighlightDeleteHandler>>) =>
-        activity.run('delete', () => createCompanionExistingHighlightDeleteHandler(props.workspaceSync)(...args))
+        activity.flush('delete').then(() => activity.run('delete', () => createCompanionExistingHighlightDeleteHandler(props.workspaceSync)(...args)))
     } : {}),
     ...(supportsCompanionNodeMutationSurface('selection-annotation') ? {
       onCreateSelectionAnnotation: (...args: Parameters<ReturnType<typeof createCompanionSelectionAnnotationHandler>>) =>

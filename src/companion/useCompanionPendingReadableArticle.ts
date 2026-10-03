@@ -8,6 +8,7 @@ import {
   removeResolvedCompanionPendingTextAnchorDecorations
 } from './companionPendingTextAnchorDecorations';
 import type { CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
+import { CompanionSelectionRefreshError } from './companionSelectionRefreshError';
 
 import type { EditorTextAnchorDecoration } from '@/features/editor/adapters/EditorAdapter';
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
@@ -107,7 +108,7 @@ export function createPendingAnnotationActions(
     pendingReadableArticle.stageDeletedHighlight(nodeId);
     const result = props.onDeleteExistingHighlight?.(nodeId, guard) ?? null;
     return Promise.resolve(result).catch((error) => {
-      pendingReadableArticle.restoreDeletedHighlight(nodeId);
+      if (!(error instanceof CompanionSelectionRefreshError)) pendingReadableArticle.restoreDeletedHighlight(nodeId);
       throw error;
     });
   }

@@ -63,7 +63,7 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
     <div className="fixed z-floating" data-companion-selection-toolbar="true"
       onContextMenu={(event) => event.preventDefault()} onPointerDown={(event) => event.stopPropagation()}
       style={{ left: state.left, top: state.top }}>
-      <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} disabled={disabled}
+      <CompanionSelectionToolbarActions isExistingHighlight={isExistingHighlight} isCloze={state.existingHighlight?.kind === 'cloze'} disabled={disabled}
         onAddNote={() => setIsNoteOpen(true)} onApply={creation.apply} onDeleteExistingHighlight={deleteExistingHighlight} />
       {!isNoteOpen && !isExistingHighlight && creation.error ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
         <CreationStatus creation={creation} />

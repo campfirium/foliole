@@ -6,6 +6,7 @@ import type { CompanionContentSaveHandler } from '../shared/platform/companion/e
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 
 import { companionMobileRailClassName, companionReviewBottomInsetClassName } from './companionCssCompatibility';
+import { findCompanionClozeTarget } from './companionExistingHighlightActions';
 import { ImmersiveArticleContent } from './CompanionImmersiveArticleContent';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
@@ -13,6 +14,7 @@ import type { CompanionReadingActivity } from './companionReadingActivity';
 import { resolveCompanionSearchSelection, type CompanionSearchMatch } from './companionSearchMatch';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
+import { getDefaultSelectionClientPoint, resolveExistingHighlightToolbarState } from './companionSelectionToolbarState';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionImmersiveScrollPosition } from './useCompanionImmersiveScrollPosition';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
@@ -93,7 +95,13 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
   }
   const chromeReservedSpacing = 'pt-14 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+3.5rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
   const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${chromeReservedSpacing} ${props.flow ? companionReviewBottomInsetClassName : ''} text-foreground`;
+  const cloze = findCompanionClozeTarget(snapshot, props.readableArticle.nodeId);
+  const openClozeRemoval = cloze && props.onDeleteExistingHighlight && !reading.isContentEditing ? () => {
+    reading.setIsActionsSheetOpen(false);
+    toolbar.setSelectionToolbar(resolveExistingHighlightToolbarState(cloze, getDefaultSelectionClientPoint()));
+  } : undefined;
   return {
+    openClozeRemoval,
     closeToolbarFromArticlePointer,
     closeToolbarFromArticleTouch,
     openToolbarFromArticlePointer,
@@ -139,7 +147,7 @@ function ImmersiveArticleChrome(props: {
       readingTypographySettings={readingTypography.settings}
       searchOpen={model.reading.isSearchSheetOpen}
       textAlternative={textAlternative}
-      {...definedProps({ onRestoreFromTrash: articleProps.onRestoreFromTrash })}
+      {...definedProps({ onRestoreFromTrash: articleProps.onRestoreFromTrash, onOpenClozeRemoval: model.openClozeRemoval })}
     />
   );
 }

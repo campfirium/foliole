@@ -148,6 +148,7 @@ export const ZH_HANS_COMPANION_TRANSLATIONS: Partial<Record<TranslationKey, stri
   'companion.recent.empty.description': '后台同步下载完成后，最近主题会显示在这里。',
   'companion.selection.addAnnotation': '添加批注...',
   'companion.selection.addComment': '添加评论',
+  'companion.selection.deleteCloze': '删除挖空',
   'companion.selection.closeHighlight': '关闭高亮',
   'companion.selection.cloze': '挖空',
   'companion.selection.highlight': '高亮',
