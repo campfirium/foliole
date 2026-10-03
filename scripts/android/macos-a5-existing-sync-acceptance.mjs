@@ -11,8 +11,8 @@ import {
   assertBidirectionalConvergence, factObservation
 } from '../sync-group/sync-scenario-predicate.mjs';
 
-const APP_ID = 'com.foliole.android';
-const COMPONENT = `${APP_ID}/.MainActivity`;
+const APP_ID = 'com.campfirium.foliole.android';
+const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
 
 function activeMemberIds(overview) {
   return (overview.sync_group?.members ?? [])

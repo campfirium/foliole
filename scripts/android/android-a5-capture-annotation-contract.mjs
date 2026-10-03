@@ -7,10 +7,10 @@ export const CAPTURE_ANNOTATION_EVIDENCE_FILES = [
   'capture-annotation-db-summary.json'
 ];
 
-export const CAPTURE_ANNOTATION_APP_ID = 'com.foliole.android';
+export const CAPTURE_ANNOTATION_APP_ID = 'com.campfirium.foliole.android';
 export const CAPTURE_ANNOTATION_TEST_APP_ID = `${CAPTURE_ANNOTATION_APP_ID}.test`;
 export const CAPTURE_ANNOTATION_TEST_CLASS_NAME =
-  `${CAPTURE_ANNOTATION_APP_ID}.FolioleCompanionWebViewAutomationTest`;
+  `com.foliole.android.FolioleCompanionWebViewAutomationTest`;
 export const CAPTURE_ANNOTATION_TEST_METHOD = 'persistsCaptureClozeAndNoteAfterRestart';
 export const CAPTURE_ANNOTATION_TEST_CLASS =
   `${CAPTURE_ANNOTATION_TEST_CLASS_NAME}#${CAPTURE_ANNOTATION_TEST_METHOD}`;

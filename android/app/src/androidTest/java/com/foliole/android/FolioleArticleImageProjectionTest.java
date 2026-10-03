@@ -23,7 +23,7 @@ public class FolioleArticleImageProjectionTest {
 
     @Test public void projectsPublicImageAndOptionallyRemovesItsFile() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("com.foliole.android", context.getPackageName());
+        assertEquals("com.campfirium.foliole.android", context.getPackageName());
         Bundle arguments = InstrumentationRegistry.getArguments();
         boolean remove = "true".equals(arguments.getString("removePublicImage"));
         if (remove) assertEquals("true", arguments.getString("disposableTestData"));

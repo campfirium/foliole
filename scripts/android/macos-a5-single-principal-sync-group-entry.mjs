@@ -31,8 +31,8 @@ import { runMacosA5IosResourceFailover } from './macos-a5-ios-resource-failover.
 import { waitForMacFact } from './macos-a5-single-principal-sync-group-facts.mjs';
 import { observeAndAccept } from './macos-a5-single-principal-join.mjs';
 
-const PRODUCT_APP_ID = 'com.foliole.android';
-const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
+const PRODUCT_APP_ID = 'com.campfirium.foliole.android';
+const TEST_CLASS = `com.foliole.android.FolioleCompanionSyncGroupJoinTest`;
 
 export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies = {}) {
   const mechanics = dependencies.mechanics ?? runMacosA5InstrumentationMechanics;
@@ -156,7 +156,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
       '-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID
     ]);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
-      `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
+      `${ACCEPTANCE_APP_ID}/com.foliole.android.MainActivity`]);
     const a5AutomaticAfterRestart = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'automatic-after-restart-run') }, 'automatic',
     [a5Initial.run, a5AutomaticBeforeRestart.run]);
@@ -213,7 +213,7 @@ export async function runMacosA5SinglePrincipalSyncGroupEntry(args, dependencies
     await session.close().catch(() => undefined);
     await removeA5AcceptanceApplication(args);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
-      `${PRODUCT_APP_ID}/.MainActivity`]);
+      `${PRODUCT_APP_ID}/com.foliole.android.MainActivity`]);
   }
   if (process.env.FOLIOLE_T152_CELL_ID) {
     writeMacosA5CellReceipt({ buildIdentity, evidenceRoot, input: cellProofInput,

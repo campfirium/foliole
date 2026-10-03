@@ -15,7 +15,7 @@ import { assertDepartedCredentialBaseline } from './macos-a5-departed-credential
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 
 export async function stopA5ForCredentialSnapshot({ env, execute, paths, serial }) {
   const stopped = await execute(paths.adb, [

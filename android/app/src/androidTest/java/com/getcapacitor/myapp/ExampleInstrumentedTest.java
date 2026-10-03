@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getInstrumentation().getTargetContext();
 
-        assertEquals("com.foliole.android", appContext.getPackageName());
+        assertEquals("com.campfirium.foliole.android", appContext.getPackageName());
     }
 }

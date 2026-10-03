@@ -16,8 +16,8 @@ it('cold-restarts A5 so foreground sync consumes the new desktop setting', async
     }, paths: { adb: 'adb' }, serial: 'fixed-a5'
   });
   expect(calls).toEqual([
-    ['-s', 'fixed-a5', 'shell', 'am', 'force-stop', 'com.foliole.android'],
-    ['-s', 'fixed-a5', 'shell', 'am', 'start', '-W', '-n', 'com.foliole.android/.MainActivity']
+    ['-s', 'fixed-a5', 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android'],
+    ['-s', 'fixed-a5', 'shell', 'am', 'start', '-W', '-n', 'com.campfirium.foliole.android/com.foliole.android.MainActivity']
   ]);
 });
 

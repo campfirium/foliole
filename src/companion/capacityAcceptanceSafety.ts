@@ -9,7 +9,7 @@ export function requireValue(condition: unknown, message: string): asserts condi
 }
 
 export function assertIdentity(platform: string, appId: string) {
-  const expected = platform === 'android' ? 'com.foliole.android.acceptance'
+  const expected = platform === 'android' ? 'com.campfirium.foliole.android.acceptance'
     : platform === 'ios' ? ['com.foliole.ios.devworkflow', 'com.foliole.ios.t219capacity'] : null;
   requireValue(expected && (Array.isArray(expected) ? expected.includes(appId) : appId === expected),
     'T219 requires the fixed acceptance application');

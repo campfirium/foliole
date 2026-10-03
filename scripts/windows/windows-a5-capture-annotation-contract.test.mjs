@@ -23,7 +23,7 @@ function instrumentationOutput(token) {
 
 it('locks the exact runner, method, token receipt, and restart evidence', () => {
   expect(CAPTURE_ANNOTATION_RUNNER_IDENTITY).toBe(
-    'instrumentation:com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner (target=com.foliole.android)'
+    'instrumentation:com.campfirium.foliole.android.test/androidx.test.runner.AndroidJUnitRunner (target=com.campfirium.foliole.android)'
   );
   expect(CAPTURE_ANNOTATION_TEST_CLASS).toBe(
     'com.foliole.android.FolioleCompanionWebViewAutomationTest#persistsCaptureClozeAndNoteAfterRestart'
@@ -52,14 +52,14 @@ it('accepts only bounded readiness evidence without credential values', () => {
 
 it('requires a complete installed package identity', () => {
   const details = [
-    'Package [com.foliole.android] (abc):', '  versionCode=1 minSdk=26',
+    'Package [com.campfirium.foliole.android] (abc):', '  versionCode=1 minSdk=26',
     '  versionName=1.0', '  firstInstallTime=2026-07-31 10:00:00',
     '  lastUpdateTime=2026-07-31 11:00:00'
   ].join('\n');
   expect(parseCaptureAnnotationPackage(
-    'com.foliole.android', details, 'package:/data/app/com.foliole.android/base.apk\n'
-  )).toMatchObject({ packageName: 'com.foliole.android', versionCode: '1', versionName: '1.0' });
-  expect(() => parseCaptureAnnotationPackage('com.foliole.android', details, ''))
+    'com.campfirium.foliole.android', details, 'package:/data/app/com.campfirium.foliole.android/base.apk\n'
+  )).toMatchObject({ packageName: 'com.campfirium.foliole.android', versionCode: '1', versionName: '1.0' });
+  expect(() => parseCaptureAnnotationPackage('com.campfirium.foliole.android', details, ''))
     .toThrow('identity is incomplete');
 });
 

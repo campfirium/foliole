@@ -13,7 +13,7 @@ android {
         baseline file("lint-baseline.xml")
     }
     defaultConfig {
-        applicationId System.getenv("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID") ?: "com.foliole.android"
+        applicationId System.getenv("FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID") ?: "com.campfirium.foliole.android"
         buildConfigField "int", "FOLIOLE_COMPANION_SYNC_PORT",
             System.getenv("FOLIOLE_ANDROID_COMPANION_SYNC_PORT") ?: "38641"
         minSdkVersion rootProject.ext.minSdkVersion

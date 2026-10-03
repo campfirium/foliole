@@ -1,7 +1,7 @@
 import { expect, it, vi } from 'vitest';
 import { assertPerformanceApkIdentity, buildA5DatabasePerformance } from './a5-database-performance-build.mjs';
 
-const appId = 'com.foliole.android.acceptance';
+const appId = 'com.campfirium.foliole.android.acceptance';
 const env = { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_SCENARIO: 'library-capacity' };
 const paths = { apk: '/app.apk', androidTestApk: '/test.apk', buildRoot: '/repo', cap: '/cap', gradle: '/gradle' };
 const manifests = apk => apk === paths.apk ? `<manifest package="${appId}"/>`
@@ -23,7 +23,7 @@ it.each(['app', 'runner'])('rejects the %s APK targeting the main app', target =
     const apk = args.at(-1);
     const xml = manifests(apk);
     return (target === 'app' ? apk === paths.apk : apk === paths.androidTestApk)
-      ? xml.replaceAll(appId, 'com.foliole.android') : xml;
+      ? xml.replaceAll(appId, 'com.campfirium.foliole.android') : xml;
   };
   expect(() => assertPerformanceApkIdentity({ captured, paths, env })).toThrow('identities');
 });

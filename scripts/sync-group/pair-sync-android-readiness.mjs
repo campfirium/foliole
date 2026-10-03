@@ -36,14 +36,14 @@ export async function postPairSyncRecoveryReadiness({
   paths, quiesceProvider = false, run, serial, wait = delay
 }) {
   beforeSnapshot ??= quiesceProvider ? () => run(paths.adbPath, [
-    '-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', 'com.foliole.android'
+    '-P', adbPort, '-s', serial, 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android'
   ], options(env), 'post-sync-snapshot') : async () => {};
   afterSnapshot ??= quiesceProvider ? () => run(paths.adbPath, [
     '-P', adbPort, '-s', serial, 'shell', 'am', 'start', '-W', '-n',
-    'com.foliole.android/com.foliole.android.MainActivity'
+    'com.campfirium.foliole.android/com.foliole.android.MainActivity'
   ], options(env), 'post-sync-snapshot') : async () => {};
   const pairingScript = path.join(paths.repoRoot, 'scripts/android/android-pair-sync-recovery-readiness-runner.mjs');
-  const common = ['--adb', paths.adbPath, '--serial', serial, '--app-id', 'com.foliole.android'];
+  const common = ['--adb', paths.adbPath, '--serial', serial, '--app-id', 'com.campfirium.foliole.android'];
   let pairingResult;
   let pairing;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {

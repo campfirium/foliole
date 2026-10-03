@@ -3,8 +3,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const MAIN_APP = 'com.foliole.android';
-const CAPACITY_APP = 'com.foliole.android.acceptance';
+const MAIN_APP = 'com.campfirium.foliole.android';
+const CAPACITY_APP = 'com.campfirium.foliole.android.acceptance';
 const DRIVER_APPS = [
   'com.microsoft.playwright.androiddriver',
   'com.microsoft.playwright.androiddriver.test'

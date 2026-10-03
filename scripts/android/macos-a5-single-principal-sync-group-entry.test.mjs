@@ -24,7 +24,7 @@ it('accepts a nonzero MIUI uninstall result only after the package is absent', a
     expect.objectContaining({ timeoutCode: 'a5_acceptance_cleanup_timeout', timeoutMs: 60_000 })
   ]));
   expect(calls[0]).toEqual(['-s', 'a5', 'shell', 'am', 'force-stop',
-    'com.foliole.android.acceptance.test']);
+    'com.campfirium.foliole.android.acceptance.test']);
 });
 
 it('rejects a failed uninstall while the acceptance package remains installed', async () => {
@@ -45,7 +45,7 @@ it('uses the user package manager when MIUI rejects the ordinary uninstall', asy
   };
   await removeA5AcceptanceApplication({ execute, paths: { adb: 'adb' }, serial: 'a5' });
   expect(calls.at(-1)).toEqual(['-s', 'a5', 'shell', 'pm', 'uninstall', '--user', '0',
-    'com.foliole.android.acceptance']);
+    'com.campfirium.foliole.android.acceptance']);
 });
 
 it('accepts the package manager proof that a package is absent for user zero', async () => {
@@ -110,7 +110,7 @@ it('materializes both isolated Android and hidden Mac runtimes inside the frozen
   expect(joinEvidence).toContain("'screencap', '-p', remotePath");
   expect(source).toContain("'keyevent', 'KEYCODE_WAKEUP'");
   expect(source).toContain("'wm', 'dismiss-keyguard'");
-  expect(source).toContain('`${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`');
+  expect(source).toContain('`${ACCEPTANCE_APP_ID}/com.foliole.android.MainActivity`');
   expect(source).not.toContain('`${ACCEPTANCE_APP_ID}/.MainActivity`');
   expect(source).not.toContain("if (suffix === 'initial-manual')");
   expect(cleanup).toContain('`${ACCEPTANCE_APP_ID}.test`');

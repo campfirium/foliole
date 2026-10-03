@@ -43,7 +43,7 @@ describe('Android device data protection', () => {
       const attachmentArchive = `${source}.attachments.tar`;
       await writeFile(attachmentArchive, 'attachments');
       const backup = await backupDatabase(
-        { appId: 'com.foliole.android', backupRoot: path.join(root, 'backup') },
+        { appId: 'com.campfirium.foliole.android', backupRoot: path.join(root, 'backup') },
         { attachments: { path: attachmentArchive,
           sha256: '3930e671c9e40dee2a33442c6f1055e8e8b75958ee19da8bd470754fd44beec2' },
         database: { counts: { nodes: 2 }, exists: true, path: source,
@@ -67,10 +67,10 @@ describe('Android device data protection', () => {
     const absent = Object.assign(new Error('missing'), { code: 1 });
     const failed = Object.assign(new Error('transport failed'), { code: 2 });
     await expect(pullDatabaseFile(
-      { appId: 'com.foliole.android' }, 'database-wal', 'unused', async () => { throw absent; }
+      { appId: 'com.campfirium.foliole.android' }, 'database-wal', 'unused', async () => { throw absent; }
     )).resolves.toBe(false);
     await expect(pullDatabaseFile(
-      { appId: 'com.foliole.android' }, 'database-wal', 'unused', async () => { throw failed; }
+      { appId: 'com.campfirium.foliole.android' }, 'database-wal', 'unused', async () => { throw failed; }
     )).rejects.toThrow('transport failed');
   });
 
@@ -81,7 +81,7 @@ describe('Android device data protection', () => {
       ? { stdout: Buffer.from('archive-bytes') }
       : { stdout: Buffer.alloc(0) };
     const archive = await pullAttachmentArchive(
-      { appId: 'com.foliole.android' }, destination, executeAdb
+      { appId: 'com.campfirium.foliole.android' }, destination, executeAdb
     );
     expect(archive).toMatchObject({ size: 13, path: destination,
       sha256: expect.stringMatching(/^[0-9a-f]{64}$/u) });

@@ -46,11 +46,11 @@ export async function compareS220A5Main({ assertFixed, paths, serial,
   collectSnapshot = collectAndroidDeviceSnapshot, openDatabase = openReadonlySqliteDatabase }) {
   assertFixed();
   const { receipt, receiptPath } = latestPreparation(paths);
-  if (receipt.serial !== serial || receipt.apkIdentity.appId !== 'com.foliole.android.s220acceptance') {
+  if (receipt.serial !== serial || receipt.apkIdentity.appId !== 'com.campfirium.foliole.android.s220acceptance') {
     throw new Error('S220 baseline identity does not match the fixed device and package.');
   }
   const baseline = JSON.parse(fs.readFileSync(receipt.baseline, 'utf8'));
-  const current = await collectSnapshot({ adb: paths.adb, appId: 'com.foliole.android',
+  const current = await collectSnapshot({ adb: paths.adb, appId: 'com.campfirium.foliole.android',
     databaseInspector: inspectProtectionIdentity, keepPulledDatabase: true,
     serial, tables: TABLES });
   try {

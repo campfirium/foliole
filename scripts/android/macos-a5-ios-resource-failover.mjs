@@ -65,7 +65,7 @@ export async function runMacosA5IosResourceFailover({ args, buildIdentity, env, 
   const a5Presence = await verifyA5ResourceLanPresence({ args, buildIdentity, env,
     evidenceRoot: path.join(root, 'a5-presence'), fixture, groupId });
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
-    'com.foliole.android.acceptance/com.foliole.android.MainActivity']);
+    'com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity']);
   const paths = await session.invoke('load_library_path_settings');
   const macImage = assertOwnedResourcePath(macosLibrary, paths.assets_dir, fixture.images[0].storageKey);
   if (digest(macImage) !== fixture.images[0].hash) throw new Error('Mac source fixture hash changed.');

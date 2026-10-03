@@ -32,16 +32,16 @@ it('reads only the acceptance package and restores the main foreground', async (
   expect(input.checked).toHaveBeenCalledWith('/repo/android/gradlew',
     ['--no-daemon', 'assembleDebugAndroidTest'], expect.objectContaining({
       cwd: path.join(input.paths.buildRoot, 'android'), env: expect.objectContaining({
-        FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: 'com.foliole.android.acceptance'
+        FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: 'com.campfirium.foliole.android.acceptance'
       })
     }));
   expect(runAction).toHaveBeenCalledWith(expect.objectContaining({
-    action: 'read-sync-events', appId: 'com.foliole.android.acceptance',
+    action: 'read-sync-events', appId: 'com.campfirium.foliole.android.acceptance',
     installMain: false, serial: '87a33a4b'
   }));
   expect(input.checked).toHaveBeenCalledWith('/fixed/adb', [
     '-s', '87a33a4b', 'shell', 'am', 'start', '-W', '-n',
-    'com.foliole.android/com.foliole.android.MainActivity'
+    'com.campfirium.foliole.android/com.foliole.android.MainActivity'
   ]);
 });
 
@@ -65,6 +65,6 @@ it('cleans only the acceptance test package through the MIUI fallback', async ()
   await removeA5AcceptanceTestApplication({ execute, paths: { adb: '/fixed/adb' },
     serial: '87a33a4b' }, {});
   expect(calls.at(-1)).toEqual(['-s', '87a33a4b', 'shell', 'pm', 'uninstall',
-    '--user', '0', 'com.foliole.android.acceptance.test']);
-  expect(calls.flat()).not.toContain('com.foliole.android.acceptance');
+    '--user', '0', 'com.campfirium.foliole.android.acceptance.test']);
+  expect(calls.flat()).not.toContain('com.campfirium.foliole.android.acceptance');
 });

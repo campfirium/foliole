@@ -22,7 +22,7 @@ function fixture() {
   write('package.json', '{"version":"0.7.14"}');
   write('dist/companion/index.html', '<html>current</html>');
   write('android/app/build/intermediates/merged_manifests/release/processReleaseManifest/AndroidManifest.xml',
-    '<manifest package="com.foliole.android" android:versionCode="17" android:versionName="0.7.14"/>');
+    '<manifest package="com.campfirium.foliole.android" android:versionCode="17" android:versionName="0.7.14"/>');
   const paths = { buildRoot: root, sourceRepoRoot: root, artifactsRoot: path.join(root, 'evidence'),
     runId: 'run', cap: '/cap', gradle: '/gradle' };
   const checked = vi.fn((command) => {
@@ -32,7 +32,7 @@ function fixture() {
     if (command === 'git') return args[0] === 'rev-parse' ? 'a'.repeat(40) : '';
     if (args[0] === '-Z1') return ['BundleConfig.pb', 'base/manifest/AndroidManifest.xml',
       'base/dex/classes.dex', 'base/assets/public/index.html'].join('\n');
-    return args[2].endsWith('index.html') ? '<html>current</html>' : '{"appId":"com.foliole.android"}';
+    return args[2].endsWith('index.html') ? '<html>current</html>' : '{"appId":"com.campfirium.foliole.android"}';
   });
   return { paths, checked, captured, write, action: 'bundle-release',
     env: { FOLIOLE_ANDROID_VERSION_CODE: '17' }, assertFixed: vi.fn() };
@@ -83,7 +83,7 @@ it('rejects live server assets and mismatched native versions', async () => {
   const args = fixture();
   const original = args.captured;
   args.captured = (command, argv) => argv[2]?.endsWith('capacitor.config.json')
-    ? '{"appId":"com.foliole.android","server":{"url":"http://localhost:1234"}}'
+    ? '{"appId":"com.campfirium.foliole.android","server":{"url":"http://localhost:1234"}}'
     : original(command, argv);
   await expect(dispatchMacosA5Action(args)).rejects.toThrow('live server');
   args.captured = original;

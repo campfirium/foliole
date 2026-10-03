@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-export const PERFORMANCE_APP_ID = 'com.foliole.android.acceptance';
+export const PERFORMANCE_APP_ID = 'com.campfirium.foliole.android.acceptance';
 
 export function performanceScenario(env) {
   const scenario = env.FOLIOLE_DATABASE_PERFORMANCE_SCENARIO ?? 'native-gate';

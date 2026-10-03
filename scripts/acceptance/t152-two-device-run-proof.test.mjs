@@ -29,9 +29,9 @@ describe('T152 two-device run proof', () => {
   });
 
   it('fails closed on the wrong acceptance container', () => {
-    expect(projectedEvents({ application_id: 'com.foliole.android.acceptance', events: [] },
-      'com.foliole.android.acceptance')).toEqual([]);
-    expect(() => projectedEvents({ application_id: 'com.foliole.android', events: [] },
-      'com.foliole.android.acceptance')).toThrow('container identity');
+    expect(projectedEvents({ application_id: 'com.campfirium.foliole.android.acceptance', events: [] },
+      'com.campfirium.foliole.android.acceptance')).toEqual([]);
+    expect(() => projectedEvents({ application_id: 'com.campfirium.foliole.android', events: [] },
+      'com.campfirium.foliole.android.acceptance')).toThrow('container identity');
   });
 });

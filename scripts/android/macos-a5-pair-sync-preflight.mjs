@@ -9,7 +9,7 @@ import {
 import { hasProtectedPendingSyncState } from './macos-a5-pending-sync-state.mjs';
 
 const A5_SERIAL = '87a33a4b';
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 
 function evidence(command, args, options = {}, run = spawnSync) {
   const result = run(command, args, { encoding: 'utf8', ...options });

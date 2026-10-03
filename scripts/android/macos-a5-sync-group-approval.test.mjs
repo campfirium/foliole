@@ -129,7 +129,7 @@ it('ends the previous provider lifecycle before a staged foreground restart', as
     }, paths: { adb: 'adb' }
   });
   expect(calls).toEqual([{
-    args: ['-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'],
+    args: ['-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android'],
     command: 'adb', options: { env: {}, timeoutMs: 30_000 }
   }]);
 });

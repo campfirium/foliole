@@ -13,12 +13,12 @@ export const PAIR_SYNC_RECOVERY_EVIDENCE_FILES = [
   'pair-sync-recovery-desktop-overview.json'
 ];
 
-export const PAIR_SYNC_RECOVERY_APP_ID = 'com.foliole.android';
+export const PAIR_SYNC_RECOVERY_APP_ID = 'com.campfirium.foliole.android';
 export const PAIR_SYNC_RECOVERY_MAIN_COMPONENT = `${PAIR_SYNC_RECOVERY_APP_ID}/com.foliole.android.MainActivity`;
 export const PAIR_SYNC_RECOVERY_TEST_APP_ID = `${PAIR_SYNC_RECOVERY_APP_ID}.test`;
 export const PAIR_SYNC_RECOVERY_TEST_METHOD = 'recoversPairingAndInitialSync';
 export const PAIR_SYNC_RECOVERY_TEST_CLASS_NAME =
-  `${PAIR_SYNC_RECOVERY_APP_ID}.FolioleCompanionWebViewAutomationTest`;
+  `com.foliole.android.FolioleCompanionWebViewAutomationTest`;
 export const PAIR_SYNC_RECOVERY_TEST_CLASS =
   `${PAIR_SYNC_RECOVERY_TEST_CLASS_NAME}#${PAIR_SYNC_RECOVERY_TEST_METHOD}`;
 export const PAIR_SYNC_RECOVERY_TEST_RUNNER =

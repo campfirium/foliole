@@ -27,8 +27,8 @@ public final class FolioleResourceLanTest {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Context context = instrumentation.getTargetContext();
         assertTrue("Resource test must use an isolated acceptance package",
-            "com.foliole.android.acceptance".equals(context.getPackageName())
-                || "com.foliole.android.s220acceptance".equals(context.getPackageName()));
+            "com.campfirium.foliole.android.acceptance".equals(context.getPackageName())
+                || "com.campfirium.foliole.android.s220acceptance".equals(context.getPackageName()));
         Bundle args = InstrumentationRegistry.getArguments();
         String phase = args.getString("resourcePhase", "");
         assertTrue(phase.matches("missing|restored|restarted|offline"));

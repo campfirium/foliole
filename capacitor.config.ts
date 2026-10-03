@@ -4,7 +4,7 @@ const A5_DEV_SERVER_URL = 'http://127.0.0.1:24605';
 
 export function createCapacitorConfig(env: NodeJS.ProcessEnv = process.env): CapacitorConfig {
   return {
-    appId: 'com.foliole.android',
+    appId: 'com.campfirium.foliole.android',
     appName: 'Foliole',
     android: {
       loggingBehavior: 'none'

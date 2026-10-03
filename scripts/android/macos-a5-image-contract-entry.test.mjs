@@ -36,10 +36,10 @@ it('runs only the fixed class after backup and restores the main Activity', asyn
   const { args, events } = fixture();
   await dispatchMacosA5Action({ ...args, action: 'image-contract' });
   expect(args.execute.mock.calls[0][1]).toEqual(['-s', '87a33a4b', 'shell', 'am', 'instrument', '-w', '-r',
-    '-e', 'class', IMAGE_TEST_CLASS, 'com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner']);
+    '-e', 'class', IMAGE_TEST_CLASS, 'com.campfirium.foliole.android.test/androidx.test.runner.AndroidJUnitRunner']);
   expect(events.indexOf('backup')).toBeLessThan(events.findIndex((event) => event.includes('install -r main.apk')));
   expect(events).toContain('check');
-  expect(events.some((event) => event.includes('am start -n com.foliole.android/.MainActivity'))).toBe(true);
+  expect(events.some((event) => event.includes('am start -n com.campfirium.foliole.android/com.foliole.android.MainActivity'))).toBe(true);
   expect(events.some((event) => /pm clear|uninstall com\.foliole\.android$/u.test(event))).toBe(false);
 });
 it('retains a test failure while checking protected data and restoring the Activity', async () => {
@@ -86,7 +86,7 @@ it('passes only the bounded case and observed PID to the native projection', asy
   expect(args.execute.mock.calls[1][1]).toEqual(['-s', '87a33a4b', 'shell', 'am', 'instrument', '-w', '-r',
     '-e', 'class', 'com.foliole.android.FolioleArticleImageCasesProjectionTest',
     '-e', 'caseMode', 'inspect', '-e', 'observedPid', '1234', '-e', 'removePublicImage', 'false',
-    '-e', 'disposableTestData', 'true', 'com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner']);
+    '-e', 'disposableTestData', 'true', 'com.campfirium.foliole.android.test/androidx.test.runner.AndroidJUnitRunner']);
 });
 
 it('runs the bounded native fixture and preserves its failure while restoring the Activity', async () => {

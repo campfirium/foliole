@@ -1,5 +1,5 @@
-const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
-const T250_APP_ID = 'com.foliole.android.t250dense';
+const ACCEPTANCE_APP_ID = 'com.campfirium.foliole.android.acceptance';
+const T250_APP_ID = 'com.campfirium.foliole.android.t250dense';
 
 async function removeUserPackage(args, packageId, options) {
   await args.execute(args.paths.adb,

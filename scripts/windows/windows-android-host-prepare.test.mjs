@@ -59,7 +59,7 @@ it('prepares bundled capture assets without a DEV server contract', async () => 
       fs.mkdirSync(path.join(assets, 'public'), { recursive: true });
       fs.writeFileSync(path.join(assets, 'public', 'index.html'), '<main>bundled</main>');
       fs.writeFileSync(path.join(assets, 'capacitor.config.json'), JSON.stringify({
-        appId: 'com.foliole.android', webDir: 'dist/companion'
+        appId: 'com.campfirium.foliole.android', webDir: 'dist/companion'
       }));
     }
     const output = command === paths.gitPath ? '' : 'ok\n';

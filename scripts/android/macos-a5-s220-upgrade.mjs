@@ -16,8 +16,8 @@ export async function upgradeS220A5Package(args) {
   if (fs.existsSync(receiptPath)) throw new Error('S220 final upgrade was already attempted.');
   const inventory = await inspectS220A5Packages({ assertFixed, execute, paths, serial });
   if (!inventory.receipt.packages[S220_APP_ID].installed
-    || !inventory.receipt.packages['com.foliole.android'].installed
-    || !inventory.receipt.packages['com.foliole.android.acceptance'].installed) {
+    || !inventory.receipt.packages['com.campfirium.foliole.android'].installed
+    || !inventory.receipt.packages['com.campfirium.foliole.android.acceptance'].installed) {
     throw new Error('S220 upgrade requires all three existing package identities.');
   }
   const buildEnv = { ...env, FOLIOLE_ANDROID_ACCEPTANCE_APPLICATION_ID: S220_APP_ID };

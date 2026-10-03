@@ -48,10 +48,10 @@ it('merges the same read-only database snapshot fields before and after Leave', 
   )).resolves.toMatchObject({ dirtyObjectCounts: {}, protectedContentDigest: digest });
   expect(events).toEqual(['stop', 'snapshot']);
   expect(execute).toHaveBeenCalledWith('/adb', [
-    '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'
+    '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android'
   ], expect.objectContaining({ timeoutCode: 'credential_snapshot_stop_timeout' }));
   expect(collectSnapshot).toHaveBeenCalledWith(expect.objectContaining({
-    adb: '/adb', appId: 'com.foliole.android', includeAttachments: false,
+    adb: '/adb', appId: 'com.campfirium.foliole.android', includeAttachments: false,
     includeEvents: false, serial: '87a33a4b', tables: ['nodes']
   }));
   expect(collectSnapshot.mock.calls[0][0].databaseInspector).toBeTypeOf('function');

@@ -58,7 +58,7 @@ export function assertProtectionPreserved(before, after) {
 function parseArgs(argv) {
   const options = {
     adb: process.env.ANDROID_ADB || 'adb',
-    appId: 'com.foliole.android',
+    appId: 'com.campfirium.foliole.android',
     backupRoot: path.resolve('.lab/internal/android-device-backups'),
     manifest: '',
     mode: 'diagnose',

@@ -6,7 +6,7 @@ import {
   removeA5AcceptanceTestApplication, removeT250TestApplication
 } from './macos-a5-acceptance-package-cleanup.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 const TEST_APK = 'android/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk';
 
 function executionFailure(message, details = {}) {
@@ -46,7 +46,7 @@ async function removeOwnedAcceptanceApplication(execute, paths, serial, appId, o
 }
 
 async function foregroundInstrumentationTarget(execute, paths, serial, appId, options) {
-  const component = `${appId}/${APP_ID}.MainActivity`;
+  const component = `${appId}/com.foliole.android.MainActivity`;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     await checked(execute, paths.adb,
       ['-s', serial, 'shell', 'input', 'keyevent', 'KEYCODE_BACK'],
@@ -77,7 +77,7 @@ export async function runMacosA5InstrumentationMechanics({
   instrumentationOwnsActivity = false, needsTransport = false, observeConcurrently = false,
   observeWhileTransportOpen, paths,
   releaseAfterObservation = false, restartApp = false, serial, testClass,
-  testClassPrefix = APP_ID, validateInstrumentation
+  testClassPrefix = 'com.foliole.android', validateInstrumentation
 }) {
   if (typeof testClass !== 'string' || !testClass.startsWith(`${testClassPrefix}.`)) {
     throw executionFailure('Android instrumentation target is invalid.', {
@@ -209,15 +209,15 @@ export async function runMacosA5InstrumentationMechanics({
     if (reverseCreated) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'reverse', '--remove', `tcp:${PAIR_SYNC_PORT}`],
       options, 'transport cleanup')).output);
-    if (testInstalled && appId === 'com.foliole.android.acceptance') {
+    if (testInstalled && appId === 'com.campfirium.foliole.android.acceptance') {
       await removeA5AcceptanceTestApplication({ execute, paths, serial }, options);
-    } else if (testInstalled && appId === 'com.foliole.android.t250dense') {
+    } else if (testInstalled && appId === 'com.campfirium.foliole.android.t250dense') {
       await removeT250TestApplication({ execute, paths, serial }, options);
     } else if (testInstalled) output.push((await checked(execute, paths.adb,
       ['-s', serial, 'uninstall', `${appId}.test`], options, 'test cleanup')).output);
   }
   if (restartApp) output.push((await checked(execute, paths.adb,
-    ['-s', serial, 'shell', 'am', 'start', '-W', '-n', `${appId}/${APP_ID}.MainActivity`],
+    ['-s', serial, 'shell', 'am', 'start', '-W', '-n', `${appId}/com.foliole.android.MainActivity`],
     options, 'activity restart')).output);
   return { ...completed, output: output.join('') };
 }

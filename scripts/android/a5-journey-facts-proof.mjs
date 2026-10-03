@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 
-const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
+const ACCEPTANCE_APP_ID = 'com.campfirium.foliole.android.acceptance';
 
 export async function observeA5JourneyFacts(args, buildIdentity, env, evidenceRoot,
   expectedJourneyCounts) {

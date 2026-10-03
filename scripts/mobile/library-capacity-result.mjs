@@ -4,7 +4,7 @@ export function parseLibraryCapacityResult(output) {
   if (matches.length !== 1) throw new Error('Expected one complete library capacity result.');
   const result = JSON.parse(matches[0].slice(matches[0].indexOf(prefix) + prefix.length));
   if (result.status !== 'passed' || result.scenario !== 'library-capacity'
-    || result.appId !== 'com.foliole.android.acceptance' || result.platform !== 'android'
+    || result.appId !== 'com.campfirium.foliole.android.acceptance' || result.platform !== 'android'
     || result.results?.length !== 2) throw new Error('Invalid isolated capacity result.');
   for (const [index, count] of [1000, 10000].entries()) {
     const entry = result.results[index];

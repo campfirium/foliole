@@ -16,12 +16,12 @@ it('cleans up instrumentation before restarting the real Activity', async () => 
     stdout: 'INSTRUMENTATION_CODE: -1'
   } : args.includes('dumpsys') ? {
     code: 0,
-    output: 'topResumedActivity=com.foliole.android.acceptance/com.foliole.android.MainActivity',
-    stdout: 'topResumedActivity=com.foliole.android.acceptance/com.foliole.android.MainActivity'
+    output: 'topResumedActivity=com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity',
+    stdout: 'topResumedActivity=com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity'
   } : { code: 0, output: 'Success\n', stdout: 'Success\n' });
   try {
     await runMacosA5InstrumentationMechanics({
-      appId: 'com.foliole.android.acceptance', buildIdentity: 'build-1', env: {},
+      appId: 'com.campfirium.foliole.android.acceptance', buildIdentity: 'build-1', env: {},
       evidenceRoot, execute, installMain: false,
       paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() },
       restartApp: true, serial: '87a33a4b',
@@ -33,11 +33,11 @@ it('cleans up instrumentation before restarting the real Activity', async () => 
       '-s 87a33a4b shell dumpsys activity activities'
     );
     expect(commands.indexOf(
-      '-s 87a33a4b shell am start -W -n com.foliole.android.acceptance/com.foliole.android.MainActivity'
+      '-s 87a33a4b shell am start -W -n com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity'
     )).toBeLessThan(commands.findIndex((command) => command.includes(' am instrument ')));
-    expect(commands.indexOf('-s 87a33a4b uninstall com.foliole.android.acceptance.test'))
+    expect(commands.indexOf('-s 87a33a4b uninstall com.campfirium.foliole.android.acceptance.test'))
       .toBeLessThan(commands.lastIndexOf(
-        '-s 87a33a4b shell am start -W -n com.foliole.android.acceptance/com.foliole.android.MainActivity'
+        '-s 87a33a4b shell am start -W -n com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity'
       ));
   } finally { fs.rmSync(evidenceRoot, { force: true, recursive: true }); }
 });

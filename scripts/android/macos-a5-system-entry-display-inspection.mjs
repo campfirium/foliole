@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Buffer } from 'node:buffer';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 const RUNNER = `${APP_ID}.test/androidx.test.runner.AndroidJUnitRunner`;
-const TEST_CLASS = `${APP_ID}.FolioleCompanionSystemEntryDisplayNameTest#displaysHydratedInboxNameAfterRestart`;
+const TEST_CLASS = `com.foliole.android.FolioleCompanionSystemEntryDisplayNameTest#displaysHydratedInboxNameAfterRestart`;
 
 function receipt(output) {
   const prefix = 'INSTRUMENTATION_STATUS: folioleActionReceipt=';

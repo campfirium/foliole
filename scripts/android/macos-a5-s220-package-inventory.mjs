@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const S220_APP_ID = 'com.foliole.android.s220acceptance';
-const PROTECTED = ['com.foliole.android', 'com.foliole.android.acceptance'];
+export const S220_APP_ID = 'com.campfirium.foliole.android.s220acceptance';
+const PROTECTED = ['com.campfirium.foliole.android', 'com.campfirium.foliole.android.acceptance'];
 
 export async function inspectS220A5Packages({ assertFixed, execute, paths, serial }) {
   assertFixed();

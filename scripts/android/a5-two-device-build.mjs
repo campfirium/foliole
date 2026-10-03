@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 
-const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
+const ACCEPTANCE_APP_ID = 'com.campfirium.foliole.android.acceptance';
 
 export function buildA5TwoDeviceAcceptance(args) {
   const env = { ...macosAcceptanceEnv(args.env),

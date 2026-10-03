@@ -11,8 +11,8 @@ import {
   macosA5Paths
 } from './macos-a5-dev.mjs';
 
-const APP_ID = 'com.foliole.android';
-const TEST_CLASS = `${APP_ID}.FolioleCompanionSyncGroupApprovalTest`;
+const APP_ID = 'com.campfirium.foliole.android';
+const TEST_CLASS = `com.foliole.android.FolioleCompanionSyncGroupApprovalTest`;
 const PROVIDER_READY_PREFIX = 'INSTRUMENTATION_STATUS: folioleSyncGroupApprovalReady=';
 
 function requireSuccess(result, stage) {
@@ -101,11 +101,11 @@ export async function startMacosA5SyncGroupApprovalProvider({
 }) {
   await onProviderStopped();
   requireSuccess(await execute(paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start',
-    '-W', '-n', `${appId}/${APP_ID}.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-ready');
+    '-W', '-n', `${appId}/com.foliole.android.MainActivity`], { env, timeoutMs: 60_000 }), 'provider-ready');
   requireSuccess(await execute(process.execPath, [
     path.join(paths.buildRoot, 'scripts/android/verify-android-launch.mjs'),
     '--adb', paths.adb, '--serial', A5_SERIAL, '--app-id', appId,
-    '--component', `${appId}/${APP_ID}.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3'
+    '--component', `${appId}/com.foliole.android.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3'
   ], { env, timeoutMs: 60_000 }), 'provider-stability');
   await onReady();
 }

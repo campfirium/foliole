@@ -11,7 +11,7 @@ import {
 import { inspectMacosA5SyncGroupFacts } from './macos-a5-pair-sync-preflight.mjs';
 import { PAIR_SYNC_PORT } from '../sync-group/pair-sync-transport.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 
 export function macosA5ErrorEvidence(error) {
   const output = error?.result?.output;
@@ -39,11 +39,11 @@ export async function runMacosA5SettledStoppedStatus(args) {
     runtimeRoot: args.paths.desktopRuntimeRoot });
   try {
     await session.enable();
-    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android']);
+    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android']);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-n',
-      'com.foliole.android/.MainActivity']);
+      'com.campfirium.foliole.android/com.foliole.android.MainActivity']);
     await delay(90_000);
-    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android']);
+    args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android']);
     args.pairingReadiness(args.paths); args.readiness(args.paths);
   } finally { await session.close().catch(() => undefined); }
 }
@@ -59,10 +59,10 @@ export async function runMacosA5ClearAppDataEntry(args) {
   if (cleared.code !== 0 || !/^Success\s*$/mu.test(cleared.stdout)) {
     throw Object.assign(new Error('Fixed A5 app data clear failed'), { result: cleared });
   }
-  args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`]);
+  args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-n', `${APP_ID}/com.foliole.android.MainActivity`]);
   args.checked(process.execPath, [path.join(args.paths.buildRoot, 'scripts/android/verify-android-launch.mjs'),
     '--adb', args.paths.adb, '--serial', args.serial, '--app-id', APP_ID,
-    '--component', `${APP_ID}/.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3']);
+    '--component', `${APP_ID}/com.foliole.android.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3']);
   const activation = await runMacosA5SyncGroupMaintenance({
     action: 'activate-participation', buildIdentity, env: args.env,
     evidenceRoot: path.join(args.paths.artifactsRoot, 'a5-clear-app-data',
@@ -96,7 +96,7 @@ export async function runMacosA5WindowsJoinEntry(args) {
 export async function runMacosA5DesktopLeaveEntry(args) {
   args.assertFixed();
   await args.execute(args.paths.adb, [
-    '-s', args.serial, 'shell', 'am', 'start', '-n', 'com.foliole.android/.MainActivity'
+    '-s', args.serial, 'shell', 'am', 'start', '-n', 'com.campfirium.foliole.android/com.foliole.android.MainActivity'
   ], { env: args.env, timeoutMs: 60_000 });
   await args.execute(args.paths.adb, [
     '-s', args.serial, 'forward', `tcp:${PAIR_SYNC_PORT}`, `tcp:${PAIR_SYNC_PORT}`
@@ -151,7 +151,7 @@ export async function runMacosA5SyncGroupRejoinEntry(args) {
   args.markMutationBoundary?.();
   const evidenceRoot = path.join(args.paths.artifactsRoot, 'a5-sync-group-rejoin', buildIdentity);
   const stopped = await args.execute(args.paths.adb, [
-    '-s', args.serial, 'shell', 'am', 'force-stop', 'com.foliole.android'
+    '-s', args.serial, 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android'
   ], { env: args.env, timeoutMs: 30_000 });
   if (stopped.code !== 0) throw Object.assign(new Error('Failed to stop A5 before baseline backup'), {
     result: stopped

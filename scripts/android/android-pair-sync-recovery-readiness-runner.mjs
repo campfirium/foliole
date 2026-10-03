@@ -23,7 +23,7 @@ function quoteAdbShellScript(script) {
 }
 
 function parseArgs(argv) {
-  const options = { adb: 'adb', appId: 'com.foliole.android', serial: '' };
+  const options = { adb: 'adb', appId: 'com.campfirium.foliole.android', serial: '' };
   for (let index = 0; index < argv.length; index += 2) {
     const key = argv[index];
     const value = argv[index + 1];

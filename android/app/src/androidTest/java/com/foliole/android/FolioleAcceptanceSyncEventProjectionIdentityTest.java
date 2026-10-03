@@ -8,12 +8,12 @@ import org.junit.Test;
 public final class FolioleAcceptanceSyncEventProjectionIdentityTest {
     @Test public void admitsOnlyTheTwoExactAcceptancePackages() {
         assertTrue(FolioleAcceptanceSyncEventProjection.isAcceptancePackage(
-            "com.foliole.android.acceptance"));
+            "com.campfirium.foliole.android.acceptance"));
         assertTrue(FolioleAcceptanceSyncEventProjection.isAcceptancePackage(
-            "com.foliole.android.s220acceptance"));
-        assertFalse(FolioleAcceptanceSyncEventProjection.isAcceptancePackage("com.foliole.android"));
+            "com.campfirium.foliole.android.s220acceptance"));
+        assertFalse(FolioleAcceptanceSyncEventProjection.isAcceptancePackage("com.campfirium.foliole.android"));
         assertFalse(FolioleAcceptanceSyncEventProjection.isAcceptancePackage(
-            "com.foliole.android.s220acceptance.other"));
+            "com.campfirium.foliole.android.s220acceptance.other"));
         assertFalse(FolioleAcceptanceSyncEventProjection.isAcceptancePackage(null));
     }
 }

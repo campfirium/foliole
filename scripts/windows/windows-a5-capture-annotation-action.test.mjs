@@ -56,7 +56,7 @@ function executor(token = 'capture-run-1') {
     if (args.includes('dumpsys')) stdout = packageDetails(args.at(-1));
     if (args.includes('path')) stdout = `package:/data/app/${args.at(-1)}/base.apk\n`;
     if (args.includes('instrumentation')) {
-      stdout = 'instrumentation:com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner (target=com.foliole.android)\n';
+      stdout = 'instrumentation:com.campfirium.foliole.android.test/androidx.test.runner.AndroidJUnitRunner (target=com.campfirium.foliole.android)\n';
     }
     if (args.includes('log')) {
       stdout = 'INSTRUMENTATION_STATUS: test=persistsCaptureClozeAndNoteAfterRestart\n';
@@ -101,7 +101,7 @@ it('installs only same-run APKs, executes one fixed restart method, audits, and 
   });
   const adbArgs = calls.map(({ args }) => args);
   expect(adbArgs[0]).toEqual([
-    '-P', '5037', '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'
+    '-P', '5037', '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android'
   ]);
   expect(adbArgs.filter((args) => args.includes('install'))).toEqual([
     ['-P', '5037', '-s', '87a33a4b', 'install', '-r', path.join(paths.repoRoot, 'android/app/build/outputs/apk/debug/app-debug.apk')],
@@ -111,7 +111,7 @@ it('installs only same-run APKs, executes one fixed restart method, audits, and 
     'com.foliole.android.FolioleCompanionWebViewAutomationTest#persistsCaptureClozeAndNoteAfterRestart'
   );
   expect(protectData.mock.calls.map(([mode]) => mode)).toEqual(['backup']);
-  expect(adbArgs.at(-1)).toEqual(['-P', '5037', '-s', '87a33a4b', 'uninstall', 'com.foliole.android.test']);
+  expect(adbArgs.at(-1)).toEqual(['-P', '5037', '-s', '87a33a4b', 'uninstall', 'com.campfirium.foliole.android.test']);
   expect(database.close).toHaveBeenCalledOnce();
   const manifest = JSON.parse(fs.readFileSync(result.captureAnnotation.manifestPath, 'utf8'));
   expect(manifest).toMatchObject({
@@ -142,7 +142,7 @@ it('rejects another run receipt, removes the installed test APK, and writes no s
   } catch (error) { failure = error; }
   expect(failure).toMatchObject({ stage: 'instrumentation-evidence' });
   expect(failure.result.output).toContain('folioleActionReceipt');
-  expect(calls.some(({ args }) => args.includes('uninstall') && args.includes('com.foliole.android.test'))).toBe(true);
+  expect(calls.some(({ args }) => args.includes('uninstall') && args.includes('com.campfirium.foliole.android.test'))).toBe(true);
   expect(fs.existsSync(path.join(evidenceRoot, 'capture-annotation-manifest.json'))).toBe(false);
 });
 

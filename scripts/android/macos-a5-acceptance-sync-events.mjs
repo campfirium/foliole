@@ -5,8 +5,8 @@ import path from 'node:path';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { macosAcceptanceEnv } from '../sync-group/multi-device-sync-macos-channel.mjs';
 
-const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
-const MAIN_COMPONENT = 'com.foliole.android/com.foliole.android.MainActivity';
+const ACCEPTANCE_APP_ID = 'com.campfirium.foliole.android.acceptance';
+const MAIN_COMPONENT = 'com.campfirium.foliole.android/com.foliole.android.MainActivity';
 
 export async function readA5AcceptanceSyncEvents(args, runAction = runMacosA5SyncGroupMaintenance) {
   args.assertFixed();

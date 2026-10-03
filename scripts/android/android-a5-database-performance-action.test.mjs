@@ -32,7 +32,7 @@ describe('fixed A5 database performance action', () => {
       const isInstrumentation = args.includes('instrument');
       let output = 'Success\n';
       if (args.includes('dumpsys')) {
-        output = 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}';
+        output = 'topResumedActivity=ActivityRecord{123 u0 com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity}';
       } else if (isBatchContract) {
         output = 'OK (3 tests)\n';
       } else if (isLifecycleContract) {
@@ -45,8 +45,8 @@ describe('fixed A5 database performance action', () => {
     const result = await runA5DatabasePerformance({
       env: { ANDROID_SDK_ROOT: "/sdk" }, evidenceRoot, execute,
       captured: (_command, args) => args.at(-1) === "/repo/main.apk"
-        ? '<manifest package="com.foliole.android.acceptance"/>'
-        : '<manifest package="com.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
+        ? '<manifest package="com.campfirium.foliole.android.acceptance"/>'
+        : '<manifest package="com.campfirium.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.campfirium.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
       paths: { adb: '/fixed/adb', apk: '/repo/main.apk', androidTestApk: '/repo/test.apk', buildRoot: '/repo' },
       serial: 'fixed-a5'
     });
@@ -64,8 +64,8 @@ describe('fixed A5 database performance action', () => {
     expect(instrumentation[2]).toContain(
       'com.foliole.android.FolioleCompanionBatchDataPlaneTest'
     );
-    expect(calls.at(-3)?.[1]).toEqual(['-s', 'fixed-a5', 'uninstall', 'com.foliole.android.acceptance.test']);
-    expect(calls.at(-2)?.[1]).toContain('com.foliole.android.acceptance/com.foliole.android.MainActivity');
+    expect(calls.at(-3)?.[1]).toEqual(['-s', 'fixed-a5', 'uninstall', 'com.campfirium.foliole.android.acceptance.test']);
+    expect(calls.at(-2)?.[1]).toContain('com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity');
   });
 });
 
@@ -82,7 +82,7 @@ function performanceOutput() {
 it('refuses a mismatched APK before any device command', async () => {
   const calls = [];
   await expect(runA5DatabasePerformance({ env: { ANDROID_SDK_ROOT: '/sdk', FOLIOLE_DATABASE_PERFORMANCE_RESET_CAPACITY_FIXTURE: '1' }, paths: {},
-    captured: () => '<manifest package="com.foliole.android"/>',
+    captured: () => '<manifest package="com.campfirium.foliole.android"/>',
     execute: (...args) => calls.push(args)
   })).rejects.toThrow('identities');
   expect(calls).toEqual([]);
@@ -91,7 +91,7 @@ it('refuses a mismatched APK before any device command', async () => {
 it.each([false, true])('runs capacity with explicit reset=%s and restores the isolated activity', async (reset) => {
   const evidenceRoot = createEvidenceRoot('a5-capacity-test-');
   const calls = [];
-  const result = { status: 'passed', scenario: 'library-capacity', appId: 'com.foliole.android.acceptance',
+  const result = { status: 'passed', scenario: 'library-capacity', appId: 'com.campfirium.foliole.android.acceptance',
     platform: 'android', results: [1000, 10000].map(count => ({
       fixture: { count, bodyBytes: 4096, imports: 0, analyzed: false },
       environment: { version: [{ version: 'test-only' }] }, plans: [{}],
@@ -103,31 +103,31 @@ it.each([false, true])('runs capacity with explicit reset=%s and restores the is
     evidenceRoot, serial: 'fixed-a5',
     paths: { adb: '/adb', apk: '/app.apk', androidTestApk: '/test.apk', buildRoot: '/repo' },
     captured: (_cmd, args) => args.at(-1) === '/app.apk'
-      ? '<manifest package="com.foliole.android.acceptance"/>'
-      : '<manifest package="com.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
+      ? '<manifest package="com.campfirium.foliole.android.acceptance"/>'
+      : '<manifest package="com.campfirium.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.campfirium.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
     execute: async (_command, args) => {
       calls.push(args);
       return { code: 0, output: args.includes('dumpsys')
-        ? 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}' : args.includes('instrument')
+        ? 'topResumedActivity=ActivityRecord{123 u0 com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity}' : args.includes('instrument')
         ? 'OK (1 test)\n' : args.includes('exec-out') ? JSON.stringify(result) : 'Success' };
     }
   });
   expect(calls.filter(args => args.includes('instrument'))).toHaveLength(1);
   expect(calls.find(args => args.includes('instrument'))).toContain('com.foliole.android.FolioleLibraryCapacityTest');
-  expect(calls.at(-2)).toContain('com.foliole.android.acceptance/com.foliole.android.MainActivity');
+  expect(calls.at(-2)).toContain('com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity');
   expect(JSON.parse(fs.readFileSync(outcome.evidencePath)).measurements).toEqual(result);
   expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, 'capacity-result.json')))).toEqual(result);
   expect(calls.find(args => args.includes('exec-out'))).toEqual(['-s', 'fixed-a5', 'exec-out',
-    'run-as', 'com.foliole.android.acceptance', 'cat', 'files/t219-library-capacity.json']);
+    'run-as', 'com.campfirium.foliole.android.acceptance', 'cat', 'files/t219-library-capacity.json']);
   expect(calls.findIndex(args => args.includes('exec-out')))
     .toBeLessThan(calls.findLastIndex(args => args.includes('uninstall')));
-  const appRemoval = calls.findIndex(args => args.includes('uninstall') && args.at(-1) === 'com.foliole.android.acceptance');
+  const appRemoval = calls.findIndex(args => args.includes('uninstall') && args.at(-1) === 'com.campfirium.foliole.android.acceptance');
   expect(appRemoval >= 0).toBe(reset);
-  expect(calls.some(args => args.includes('com.foliole.android'))).toBe(false);
+  expect(calls.some(args => args.includes('com.campfirium.foliole.android'))).toBe(false);
   if (reset) {
     expect(appRemoval).toBeLessThan(calls.findIndex(args => args.includes('install')));
     expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, 'capacity-fixture-reset.json'))))
-      .toMatchObject({ appId: 'com.foliole.android.acceptance', status: 'reset' });
+      .toMatchObject({ appId: 'com.campfirium.foliole.android.acceptance', status: 'reset' });
   }
 });
 
@@ -142,14 +142,14 @@ it('runs normal workspace capacity in two clean instrumentation processes', asyn
     evidenceRoot, serial: 'fixed-a5',
     paths: { adb: '/adb', apk: '/app.apk', androidTestApk: '/test.apk', buildRoot: '/repo' },
     captured: (_cmd, args) => args.at(-1) === '/app.apk'
-      ? '<manifest package="com.foliole.android.acceptance"/>'
-      : '<manifest package="com.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
+      ? '<manifest package="com.campfirium.foliole.android.acceptance"/>'
+      : '<manifest package="com.campfirium.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.campfirium.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
     execute: async (_command, args) => {
       calls.push(args);
       return { code: 0, output: args.includes('meminfo')
-        ? '** MEMINFO in pid 123 [com.foliole.android.acceptance] **\nTOTAL PSS: 12,345 TOTAL RSS: 67,890\n'
+        ? '** MEMINFO in pid 123 [com.campfirium.foliole.android.acceptance] **\nTOTAL PSS: 12,345 TOTAL RSS: 67,890\n'
         : args.includes('dumpsys')
-        ? 'topResumedActivity=ActivityRecord{123 u0 com.foliole.android.acceptance/com.foliole.android.MainActivity}'
+        ? 'topResumedActivity=ActivityRecord{123 u0 com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity}'
         : args.includes('instrument') ? 'OK (1 test)\n'
         : args.includes('exec-out') ? JSON.stringify(result) : 'Success' };
     }
@@ -170,7 +170,7 @@ it('runs normal workspace capacity in two clean instrumentation processes', asyn
         peakPssKb: 12345, peakRssKb: 67890 }
     ] }, memoryLimitation: expect.stringContaining('isolated WebView renderer processes are excluded') });
   expect(calls.findIndex(args => args.includes('uninstall')
-    && args.at(-1) === 'com.foliole.android.acceptance'))
+    && args.at(-1) === 'com.campfirium.foliole.android.acceptance'))
     .toBeLessThan(calls.findIndex(args => args.includes('install')));
   expect(JSON.parse(fs.readFileSync(path.join(evidenceRoot, 'capacity-fixture-reset.json'))))
     .toMatchObject({ scenario: 'library-capacity-workspace', status: 'reset' });
@@ -187,8 +187,8 @@ it.each([
   await expect(runA5DatabasePerformance({
     env: { ANDROID_SDK_ROOT: '/sdk', ...env }, paths: { apk: '/app.apk', androidTestApk: '/test.apk' },
     captured: (_cmd, args) => args.at(-1) === '/app.apk'
-      ? '<manifest package="com.foliole.android.acceptance"/>'
-      : '<manifest package="com.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
+      ? '<manifest package="com.campfirium.foliole.android.acceptance"/>'
+      : '<manifest package="com.campfirium.foliole.android.acceptance.test"><instrumentation android:targetPackage="com.campfirium.foliole.android.acceptance" android:name="androidx.test.runner.AndroidJUnitRunner"/></manifest>',
     execute: (...args) => calls.push(args)
   })).rejects.toThrow('reset requires');
   expect(calls).toEqual([]);

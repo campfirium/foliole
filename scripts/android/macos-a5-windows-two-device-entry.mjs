@@ -7,9 +7,8 @@ import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-acti
 
 /* global clearTimeout, console, process, setTimeout */
 
-const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
-const PRODUCT_APP_ID = 'com.foliole.android';
-const TEST_CLASS = `${PRODUCT_APP_ID}.FolioleCompanionSyncGroupJoinTest`;
+const ACCEPTANCE_APP_ID = 'com.campfirium.foliole.android.acceptance';
+const TEST_CLASS = `com.foliole.android.FolioleCompanionSyncGroupJoinTest`;
 
 function waitForControllerRelease(timeoutMs = 10 * 60_000) {
   return new Promise((resolve, reject) => {
@@ -95,7 +94,7 @@ export async function runMacosA5WindowsTwoDeviceEntry({ args, buildIdentity, env
       evidenceRoot: path.join(evidenceRoot, 'manual-before-restart-run') }, 'manual');
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', ACCEPTANCE_APP_ID]);
     args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'start', '-W', '-n',
-      `${ACCEPTANCE_APP_ID}/${PRODUCT_APP_ID}.MainActivity`]);
+      `${ACCEPTANCE_APP_ID}/com.foliole.android.MainActivity`]);
     const a5AutomaticAfterRestart = await captureA5SyncRun({ args, buildIdentity, env,
       evidenceRoot: path.join(evidenceRoot, 'automatic-after-restart-run') }, 'automatic',
     [a5Initial.run, a5AutomaticBeforeRestart.run]);

@@ -1,5 +1,5 @@
 const STAGE_FILE = 'files/foliole-pair-sync-stage.txt';
-const TEST_APP_ID = 'com.foliole.android.test';
+const TEST_APP_ID = 'com.campfirium.foliole.android.test';
 
 export async function collectPairSyncHostStage({
   adbPort, buildIdentity, env, execute, paths, serial

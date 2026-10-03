@@ -31,7 +31,7 @@ public final class FolioleS220ResourceDiagnosticTest {
     @Test public void capturesOfflineResourceBoundariesOnce() throws Exception {
         Instrumentation instrumentation = InstrumentationRegistry.getInstrumentation();
         Context context = instrumentation.getTargetContext();
-        assertEquals("com.foliole.android.s220acceptance", context.getPackageName());
+        assertEquals("com.campfirium.foliole.android.s220acceptance", context.getPackageName());
         Bundle args = InstrumentationRegistry.getArguments();
         JSONArray hashes = new JSONArray().put(requireHash(args, "availableHash"))
             .put(requireHash(args, "recoveringHash"));

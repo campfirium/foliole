@@ -7,7 +7,7 @@ vi.mock('./macos-a5-process.mjs', () => ({
   checked: vi.fn((_command, args) => {
     if (!args.includes('force-stop')) return;
     state.events.push('stop');
-    expect(args).toEqual(['-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android']);
+    expect(args).toEqual(['-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android']);
     if (state.failStop) throw new Error('stop failed');
   }),
   captured: vi.fn((_command, args) => args.includes('devices') ? '87a33a4b\tdevice' : 'device'),

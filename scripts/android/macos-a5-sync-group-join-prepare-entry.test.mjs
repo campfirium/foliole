@@ -33,7 +33,7 @@ it('binds the fixed A5 action to the inactive native provider and preserves prod
   }));
   expect(context.protectData.mock.calls.map(([mode]) => mode)).toEqual(['backup', 'check']);
   expect(context.checked).toHaveBeenCalledWith('/adb', [
-    '-s', '87a33a4b', 'shell', 'am', 'start', '-n', 'com.foliole.android/.MainActivity'
+    '-s', '87a33a4b', 'shell', 'am', 'start', '-n', 'com.campfirium.foliole.android/com.foliole.android.MainActivity'
   ]);
 });
 

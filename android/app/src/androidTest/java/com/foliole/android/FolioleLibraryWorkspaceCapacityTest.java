@@ -22,7 +22,7 @@ import org.junit.runner.RunWith;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleLibraryWorkspaceCapacityTest {
-    private static final String APP_ID = "com.foliole.android.acceptance";
+    private static final String APP_ID = "com.campfirium.foliole.android.acceptance";
     private static final long DEADLINE_MS = 180_000;
 
     @Test

@@ -1,6 +1,6 @@
 /* global process */
 
-export const MULTI_DEVICE_ANDROID_APP_ID = 'com.foliole.android.acceptance';
+export const MULTI_DEVICE_ANDROID_APP_ID = 'com.campfirium.foliole.android.acceptance';
 export const MULTI_DEVICE_ANDROID_CLASS_PREFIX = 'com.foliole.android';
 export const MULTI_DEVICE_ANDROID_SYNC_PORT = '38644';
 

@@ -11,8 +11,8 @@ import { runMacosA5InstrumentationMechanics } from './macos-a5-sync-group-mainte
 import { runT250UiAcceptance } from './macos-a5-t250-ui-acceptance.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 
-const APP_ID = 'com.foliole.android.t250dense';
-const MAIN_COMPONENT = 'com.foliole.android/com.foliole.android.MainActivity';
+const APP_ID = 'com.campfirium.foliole.android.t250dense';
+const MAIN_COMPONENT = 'com.campfirium.foliole.android/com.foliole.android.MainActivity';
 const JOIN_TEST = 'com.foliole.android.FolioleCompanionSyncGroupJoinTest';
 
 function assertApkIdentity(args, env) {
@@ -29,7 +29,7 @@ function assertApkIdentity(args, env) {
 
 async function inspectPackages(args) {
   const packages = {};
-  for (const appId of ['com.foliole.android', 'com.foliole.android.acceptance', APP_ID]) {
+  for (const appId of ['com.campfirium.foliole.android', 'com.campfirium.foliole.android.acceptance', APP_ID]) {
     const result = await args.execute(args.paths.adb,
       ['-s', args.serial, 'shell', 'pm', 'path', '--user', '0', appId],
       { timeoutMs: 30_000 });
@@ -77,8 +77,8 @@ export async function runT250DenseSession(args) {
   if (source.created !== 350) throw new Error('T250 requires 350 prepared highlights.');
   const beforePackages = await inspectPackages(args);
   const previous = previousSession(root, source.articleId);
-  if (!beforePackages['com.foliole.android']
-    || !beforePackages['com.foliole.android.acceptance']
+  if (!beforePackages['com.campfirium.foliole.android']
+    || !beforePackages['com.campfirium.foliole.android.acceptance']
     || beforePackages[APP_ID] !== Boolean(previous)) {
     throw new Error('T250 requires both protected apps and a package owned by this acceptance.');
   }
@@ -127,8 +127,8 @@ export async function runT250DenseSession(args) {
       } });
     receipt.join = join ? { evidencePath: join.evidencePath, observation: join.observation } : previous.join;
     receipt.afterPackages = await inspectPackages(args);
-    if (!receipt.afterPackages['com.foliole.android']
-      || !receipt.afterPackages['com.foliole.android.acceptance']
+    if (!receipt.afterPackages['com.campfirium.foliole.android']
+      || !receipt.afterPackages['com.campfirium.foliole.android.acceptance']
       || !receipt.afterPackages[APP_ID]) throw new Error('T250 package identities changed unexpectedly.');
     const syncEvents = await runMacosA5SyncGroupMaintenance({
       action: 'read-sync-events', appId: APP_ID, buildIdentity: path.basename(evidenceRoot),

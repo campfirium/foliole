@@ -10,7 +10,7 @@ import { inspectA5SystemEntryDisplayName } from './macos-a5-system-entry-display
 import { buildMacosA5Desktop } from './macos-a5-extended-actions.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 const ALIAS = 'T143 Synced Inbox';
 const SETTING_KEY = 'system_entry_display_names';
 
@@ -55,7 +55,7 @@ async function checkedA5Lifecycle(context, args) {
 
 export async function restartA5(context) {
   await checkedA5Lifecycle(context, ['force-stop', APP_ID]);
-  await checkedA5Lifecycle(context, ['start', '-W', '-n', `${APP_ID}/.MainActivity`]);
+  await checkedA5Lifecycle(context, ['start', '-W', '-n', `${APP_ID}/com.foliole.android.MainActivity`]);
 }
 
 function sessionOptions(context) {

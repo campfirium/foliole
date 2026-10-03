@@ -19,7 +19,7 @@ public final class FolioleS220NetworkTest {
 
     private void change(boolean restore) throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("com.foliole.android.s220acceptance", context.getPackageName());
+        assertEquals("com.campfirium.foliole.android.s220acceptance", context.getPackageName());
         JSONObject network = restore
             ? FolioleArticleImageTestNetwork.restore(context)
             : FolioleArticleImageTestNetwork.disconnect(context);

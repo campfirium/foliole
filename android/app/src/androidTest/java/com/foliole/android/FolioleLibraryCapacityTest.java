@@ -21,7 +21,7 @@ import java.nio.charset.StandardCharsets;
 
 @RunWith(AndroidJUnit4.class)
 public class FolioleLibraryCapacityTest {
-    private static final String APP_ID = "com.foliole.android.acceptance";
+    private static final String APP_ID = "com.campfirium.foliole.android.acceptance";
     private static final String RESULT = "t219-capacity-result";
 
     @Test

@@ -73,7 +73,7 @@ public final class FolioleCompanionJoinRequestProviderTest {
     @Test public void deviceIdentityMatchesTheSharedJsonContractForPosixPaths() throws Exception {
         FolioleCompanionJoinRequestProvider provider = provider();
         JSRequest request = request(provider, keyPair(), NOW);
-        assertEquals("[1,\"group-a\",\"a1111111-1111-4111-8111-111111111111\",\"/data/user/0/com.foliole.android/files/Foliole/Data/foliole.db\"]",
+        assertEquals("[1,\"group-a\",\"a1111111-1111-4111-8111-111111111111\",\"/data/user/0/com.campfirium.foliole.android/files/Foliole/Data/foliole.db\"]",
             provider.request(request.id, NOW).deviceIdentityKey());
     }
 
@@ -94,7 +94,7 @@ public final class FolioleCompanionJoinRequestProviderTest {
 
     private static JSONObject requestInput(KeyPair requester) throws Exception {
         JSONObject device = new JSONObject()
-            .put("canonical_library_path", "/data/user/0/com.foliole.android/files/Foliole/Data/foliole.db")
+            .put("canonical_library_path", "/data/user/0/com.campfirium.foliole.android/files/Foliole/Data/foliole.db")
             .put("device_anchor", "a1111111-1111-4111-8111-111111111111")
             .put("device_name", "A5").put("path_flavor", "posix").put("platform", "android");
         return new JSONObject().put("contract_version", 1).put("device", device)

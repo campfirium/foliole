@@ -65,7 +65,7 @@ export async function runWindowsA5TwoDeviceSync({ acceptedTip, evidenceRoot,
     fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`, 'utf8');
     const a5Identity = a5Receipt.runs.a5.initial.deviceIdentityKey;
     const a5Locator = writeT152ResourceLocator(evidenceRoot, 'a5', {
-      applicationId: 'com.foliole.android.acceptance', evidence: a5EvidenceRoot,
+      applicationId: 'com.campfirium.foliole.android.acceptance', evidence: a5EvidenceRoot,
       identity: a5Identity, uninstalledAfterAttempt: true
     });
     const windowsLocator = writeT152ResourceLocator(evidenceRoot, 'windows', {

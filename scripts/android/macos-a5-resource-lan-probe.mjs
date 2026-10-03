@@ -10,7 +10,7 @@ const IMAGES = [
 ];
 export const RESOURCE_LAN_FIRST_HASH = createHash('sha256')
   .update(Buffer.from(IMAGES[0], 'base64')).digest('hex');
-const APP_ID = 'com.foliole.android.acceptance';
+const APP_ID = 'com.campfirium.foliole.android.acceptance';
 
 export function assertOwnedResourcePath(libraryHome, assetsDir, storageKey) {
   const library = fs.realpathSync(libraryHome);

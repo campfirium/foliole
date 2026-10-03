@@ -3,9 +3,9 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 const TEST_ID = `${APP_ID}.test`;
-const TEST_CLASS = `${APP_ID}.FolioleMobileNodeLinkTest`;
+const TEST_CLASS = `com.foliole.android.FolioleMobileNodeLinkTest`;
 
 export function assertMobileLinkOutput(output) {
   if (/FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg=/u.test(output) || !/OK \(1 test\)/u.test(output)) {
@@ -66,8 +66,8 @@ export async function runMacosA5MobileLinkEntry(args) {
 }
 
 function restoreApp(args, command) {
-  command(['shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`]);
+  command(['shell', 'am', 'start', '-n', `${APP_ID}/com.foliole.android.MainActivity`]);
   args.checked(process.execPath, [path.join(args.paths.buildRoot, 'scripts/android/verify-android-launch.mjs'),
     '--adb', args.paths.adb, '--serial', args.serial, '--app-id', APP_ID,
-    '--component', `${APP_ID}/.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3']);
+    '--component', `${APP_ID}/com.foliole.android.MainActivity`, '--timeout-seconds', '30', '--stability-seconds', '3']);
 }

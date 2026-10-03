@@ -11,7 +11,7 @@ export function runParticipantMaintenance(context, action, suffix = action) {
 export async function restartAndroidParticipant({ appId, context, serial }) {
   const commands = [
     ['shell', 'am', 'force-stop', appId],
-    ['shell', 'am', 'start', '-W', '-n', `${appId}/.MainActivity`]
+    ['shell', 'am', 'start', '-W', '-n', `${appId}/com.foliole.android.MainActivity`]
   ];
   for (const args of commands) {
     const result = await context.execute(context.paths.adb, ['-s', serial, ...args], {

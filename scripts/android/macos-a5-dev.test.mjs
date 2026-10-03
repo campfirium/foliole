@@ -121,7 +121,7 @@ describe('macOS fixed A5 development entry', () => {
     expect(source).not.toContain('process.argv[3]');
     expect(extended).toContain('runMacosA5SyncGroupMaintenance({');
     expect(extended).toContain('assertT132CredentialRecoveryBaseline');
-    expect(extended).toContain("'force-stop', 'com.foliole.android'");
+    expect(extended).toContain("'force-stop', 'com.campfirium.foliole.android'");
     expect(extended).toContain("args.protectData('backup'");
     expect(extended).toContain('runMacosA5SyncGroupRejoinJourney');
   });
@@ -140,10 +140,10 @@ describe('macOS fixed A5 development entry', () => {
     });
 
     expect(calls[0]).toEqual(['/adb', [
-      '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'
+      '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android'
     ]]);
     expect(calls[1][1]).toEqual([
-      '-s', '87a33a4b', 'shell', 'am', 'start', '-n', 'com.foliole.android/.MainActivity'
+      '-s', '87a33a4b', 'shell', 'am', 'start', '-n', 'com.campfirium.foliole.android/com.foliole.android.MainActivity'
     ]);
     expect(calls[2][1]).toContain(path.join('/repo', 'scripts/android/verify-android-launch.mjs'));
   });

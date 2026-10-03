@@ -3,7 +3,7 @@ import {
 } from '../acceptance/t152-two-device-proof-builder.mjs';
 import { writeT152TwoDeviceCellReceipt } from '../acceptance/t152-two-device-cell-receipt.mjs';
 
-const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
+const ACCEPTANCE_APP_ID = 'com.campfirium.foliole.android.acceptance';
 
 export function writeMacosA5CellReceipt({ buildIdentity, evidenceRoot, input, macosLibrary }) {
   const a5Locator = writeT152ResourceLocator(evidenceRoot, 'a5', {

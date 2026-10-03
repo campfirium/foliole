@@ -24,7 +24,7 @@ import {
   validateT132DepartedMemberDesktop
 } from './macos-a5-sync-group-rejoin-contract.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 const CREDENTIALS_ONLY_DISCOVERY_TARGET = () => [
   '-e', 'foliolePairSyncEvidenceGoal', 'credentials-signable'
 ];
@@ -55,7 +55,7 @@ async function readiness(execute, paths, env, serial) {
 async function restartA5(execute, paths, env, serial, leaveStopped = false) {
   await execute(paths.adb, ['-s', serial, 'shell', 'am', 'force-stop', APP_ID], { env, timeoutMs: 30_000 });
   if (!leaveStopped) await execute(paths.adb, [
-    '-s', serial, 'shell', 'am', 'start', '-W', '-n', `${APP_ID}/.MainActivity`
+    '-s', serial, 'shell', 'am', 'start', '-W', '-n', `${APP_ID}/com.foliole.android.MainActivity`
   ], { env, timeoutMs: 60_000 });
 }
 

@@ -31,13 +31,13 @@ it('holds the fixed session and restores the main app when it closes', async () 
     });
     expect(waitForEnd).toHaveBeenCalledOnce();
     expect(checked.mock.calls[0][1]).toContain(
-      'com.foliole.android.acceptance/com.foliole.android.MainActivity');
+      'com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity');
     expect(checked.mock.calls.some(([, args]) => args.includes(
-      'com.foliole.android/com.foliole.android.MainActivity'))).toBe(true);
+      'com.campfirium.foliole.android/com.foliole.android.MainActivity'))).toBe(true);
     expect(checked.mock.calls.filter(([, args]) => args.includes('uninstall')).length).toBe(2);
     expect(JSON.parse(fs.readFileSync(path.join(root, 'a5-t234-webview-session',
       'revision', 'session.json'), 'utf8'))).toMatchObject({
-      appId: 'com.foliole.android.acceptance', pid: 42, serial: '87a33a4b',
+      appId: 'com.campfirium.foliole.android.acceptance', pid: 42, serial: '87a33a4b',
       socket: 'webview_devtools_remote_42', status: 'closed'
     });
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
@@ -54,7 +54,7 @@ it('restores the main app if WebView discovery fails', async () => {
       serial: '87a33a4b'
     })).rejects.toThrow('Expected one fixed A5 process');
     expect(checked.mock.calls.some(([, args]) => args.includes(
-      'com.foliole.android/com.foliole.android.MainActivity'))).toBe(true);
+      'com.campfirium.foliole.android/com.foliole.android.MainActivity'))).toBe(true);
     expect(JSON.parse(fs.readFileSync(path.join(root, 'a5-t234-webview-session',
       'failed', 'session.json'), 'utf8'))).toMatchObject({ status: 'failed' });
   } finally { fs.rmSync(root, { recursive: true, force: true }); }

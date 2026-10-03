@@ -7,8 +7,8 @@ import { collectAndroidDeviceSnapshot } from './android-device-snapshot.mjs';
 import { runMacosA5PairSyncPreflight } from './macos-a5-pair-sync-preflight.mjs';
 import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-readiness.mjs';
 
-const APP_ID = 'com.foliole.android';
-const COMPONENT = `${APP_ID}/.MainActivity`;
+const APP_ID = 'com.campfirium.foliole.android';
+const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
 const TABLES = [
   'attachments', 'companion_meta', 'content_blobs', 'parent_child_order', 'nodes', 'review_log',
   'sync_group_local_state', 'sync_group_members', 'sync_object_state', 'workspace_meta'

@@ -11,7 +11,7 @@ import { inspectPairSyncRecoveryWorkspace } from './android-pair-sync-recovery-r
 import { A5_SERIAL, macosA5Paths } from './macos-a5-dev.mjs';
 import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 
 function assertTwoMemberBaseline(macos, android) {
   const group = macos?.sync_group;
@@ -41,7 +41,7 @@ export async function inspectMacosA5SyncGroupBaseline({ collectSnapshot = collec
     });
   });
   await executeAdb(['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
-  await executeAdb(['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`]);
+  await executeAdb(['-s', A5_SERIAL, 'shell', 'am', 'start', '-n', `${APP_ID}/com.foliole.android.MainActivity`]);
   await wait(2_000);
   await executeAdb(['-s', A5_SERIAL, 'shell', 'am', 'force-stop', APP_ID]);
   const session = await openSession({ repoRoot });

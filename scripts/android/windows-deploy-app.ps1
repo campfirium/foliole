@@ -1,7 +1,7 @@
 param(
   [string]$WindowsWorkDir = "C:\dev\foliole-android-preview",
   [string]$AndroidHostDir = "android",
-  [string]$AppId = "com.foliole.android",
+  [string]$AppId = "com.campfirium.foliole.android",
   [string]$MainActivity = "com.foliole.android.MainActivity",
   [int]$BootTimeoutSeconds = 180,
   [int]$LaunchTimeoutSeconds = 20,

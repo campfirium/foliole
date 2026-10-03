@@ -14,7 +14,7 @@ it('aborts host observation when physical A5 instrumentation fails first', async
       code: 0, output: 'INSTRUMENTATION_CODE: -1', stdout: 'INSTRUMENTATION_CODE: -1'
     };
     const output = args.includes('dumpsys')
-      ? 'com.foliole.android.acceptance/com.foliole.android.MainActivity' : 'Success\n';
+      ? 'com.campfirium.foliole.android.acceptance/com.foliole.android.MainActivity' : 'Success\n';
     return { code: 0, output, stdout: output };
   });
   const observer = vi.fn(({ signal }) => new Promise((_resolve, reject) => {
@@ -22,7 +22,7 @@ it('aborts host observation when physical A5 instrumentation fails first', async
   }));
   try {
     await expect(runMacosA5InstrumentationMechanics({
-      appId: 'com.foliole.android.acceptance', buildIdentity: 'race', env: {}, evidenceRoot,
+      appId: 'com.campfirium.foliole.android.acceptance', buildIdentity: 'race', env: {}, evidenceRoot,
       execute, observeConcurrently: true, observeWhileTransportOpen: observer,
       paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() },
       serial: '87a33a4b', testClass: 'com.foliole.android.PhysicalTest',

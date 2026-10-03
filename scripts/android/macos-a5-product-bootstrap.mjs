@@ -8,8 +8,8 @@ import {
 } from './macos-a5-pair-sync-preflight.mjs';
 
 const A5_SERIAL = '87a33a4b';
-const APP_ID = 'com.foliole.android';
-const COMPONENT = `${APP_ID}/.MainActivity`;
+const APP_ID = 'com.campfirium.foliole.android';
+const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
 
 function checked(command, args, options, run) {
   const result = run(command, args, { stdio: 'inherit', ...options });

@@ -25,10 +25,10 @@ it.each([false, true])('checks protected data and restores Activity after instru
     const run = runMacosA5ResourceProviderEntry(args);
     if (failed) await expect(run).rejects.toThrow('four tests'); else await run;
     expect(args.execute.mock.calls[0][1]).toEqual(['-s', '87a33a4b', 'shell', 'am', 'instrument', '-w', '-r',
-      '-e', 'class', RESOURCE_PROVIDER_TEST, 'com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner']);
+      '-e', 'class', RESOURCE_PROVIDER_TEST, 'com.campfirium.foliole.android.test/androidx.test.runner.AndroidJUnitRunner']);
     expect(events.indexOf('backup')).toBeLessThan(events.indexOf('-s 87a33a4b install -r main.apk'));
     expect(events).toContain('check');
-    expect(events.some((event) => event.includes('am start -n com.foliole.android/.MainActivity'))).toBe(true);
+    expect(events.some((event) => event.includes('am start -n com.campfirium.foliole.android/com.foliole.android.MainActivity'))).toBe(true);
     expect(events.some((event) => /pm clear|uninstall com\.foliole\.android$/u.test(event))).toBe(false);
   } finally { rmSync(root, { force: true, recursive: true }); }
 });

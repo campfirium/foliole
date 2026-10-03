@@ -10,7 +10,7 @@ import {
 describe('android install event classification', () => {
   it('treats installer flags 39 as a code-cache clear instead of app data loss', () => {
     const event = parseInstallerClearAppDataEvent(
-      '05-03 10:11:12.000  1000  1000 I installer_clear_app_data_caller: [710,1000,com.foliole.android,39]'
+      '05-03 10:11:12.000  1000  1000 I installer_clear_app_data_caller: [710,1000,com.campfirium.foliole.android,39]'
     );
 
     expect(event).toMatchObject({
@@ -22,9 +22,9 @@ describe('android install event classification', () => {
 
   it('keeps unknown installer clear events in the potential data-clear bucket', () => {
     const events = classifyInstallerClearAppDataEvents([
-      'I installer_clear_app_data_caller: [710,1000,com.foliole.android,39]',
-      'I installer_clear_app_data_caller: [710,1000,com.foliole.android,7]',
-      'I am_kill: [0,com.foliole.android]'
+      'I installer_clear_app_data_caller: [710,1000,com.campfirium.foliole.android,39]',
+      'I installer_clear_app_data_caller: [710,1000,com.campfirium.foliole.android,7]',
+      'I am_kill: [0,com.campfirium.foliole.android]'
     ]);
 
     expect(events.codeCacheOnly).toHaveLength(1);

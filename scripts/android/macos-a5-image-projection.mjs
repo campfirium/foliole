@@ -22,7 +22,7 @@ export async function runImageProjection(args, root, mode) {
     '-e', 'caseMode', cases ? mode.slice('cases-'.length) : 'inspect', ...(pid ? ['-e', 'observedPid', pid] : []),
     '-e', 'removePublicImage', String(mode === 'remove'),
     '-e', 'disposableTestData', String(args.env.FOLIOLE_A5_TEST_DATA_DISPOSABLE === '1'),
-    'com.foliole.android.test/androidx.test.runner.AndroidJUnitRunner'],
+    'com.campfirium.foliole.android.test/androidx.test.runner.AndroidJUnitRunner'],
   { env: args.env, timeoutCode: 'image_projection_timeout', timeoutMs: 60_000 });
   fs.writeFileSync(path.join(root, 'article-projection.log'), result.output ?? '');
   if (result.code !== 0 || !/OK \(1 test\)/u.test(result.output)

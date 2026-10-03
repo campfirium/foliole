@@ -18,7 +18,7 @@ function createTestRoot() {
 
 function successfulAdbResult(args) {
   const output = args.includes('dumpsys')
-    ? 'topResumedActivity=com.foliole.android/com.foliole.android.MainActivity'
+    ? 'topResumedActivity=com.campfirium.foliole.android/com.foliole.android.MainActivity'
     : 'Success\n';
   return { code: 0, output, stdout: output };
 }
@@ -60,10 +60,10 @@ it('uses the fixed product instrumentation method and records its receipt', asyn
     '-s 87a33a4b reverse --remove tcp:38641'
   ]);
   const commands = execute.mock.calls.map(([, args]) => args.join(' '));
-  expect(commands.indexOf('-s 87a33a4b shell am force-stop com.foliole.android'))
+  expect(commands.indexOf('-s 87a33a4b shell am force-stop com.campfirium.foliole.android'))
     .toBeLessThan(commands.indexOf('-s 87a33a4b reverse tcp:38641 tcp:38641'));
   expect(execute.mock.calls.at(-1)?.[1]).toEqual([
-    '-s', '87a33a4b', 'uninstall', 'com.foliole.android.test'
+    '-s', '87a33a4b', 'uninstall', 'com.campfirium.foliole.android.test'
   ]);
 });
 
@@ -119,7 +119,7 @@ it('lets instrumentation own the only Activity during post-admission Sync Now', 
     paths: { adb: '/fixed/adb', apk: '/fixed/app.apk', buildRoot: process.cwd() },
     serial: '87a33a4b', transportRequired: false });
   const commands = execute.mock.calls.map(([, args]) => args.join(' '));
-  expect(commands).toContain('-s 87a33a4b shell am force-stop com.foliole.android');
+  expect(commands).toContain('-s 87a33a4b shell am force-stop com.campfirium.foliole.android');
   expect(commands.some((command) => command.includes('dumpsys activity activities'))).toBe(false);
 });
 

@@ -41,8 +41,8 @@ import {
 export { macosA5GradleEnv, macosA5Paths } from './macos-a5-runtime-paths.mjs';
 
 export const A5_SERIAL = '87a33a4b';
-const APP_ID = 'com.foliole.android';
-const COMPONENT = `${APP_ID}/.MainActivity`;
+const APP_ID = 'com.campfirium.foliole.android';
+const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
 
 export function assertFixedA5(paths) {
   checked(paths.adb, ['start-server']);

@@ -27,8 +27,8 @@ it('uses only fixed read-only package queries and refuses an occupied S220 ident
   expect(calls[0]).toBe('fixed');
   expect(calls.slice(1)).toEqual([
     ['-s', 'fixed-a5', 'shell', 'dumpsys', 'window', 'policy'],
-    ['-s', 'fixed-a5', 'shell', 'pm', 'path', '--user', '0', 'com.foliole.android'],
-    ['-s', 'fixed-a5', 'shell', 'pm', 'path', '--user', '0', 'com.foliole.android.acceptance'],
+    ['-s', 'fixed-a5', 'shell', 'pm', 'path', '--user', '0', 'com.campfirium.foliole.android'],
+    ['-s', 'fixed-a5', 'shell', 'pm', 'path', '--user', '0', 'com.campfirium.foliole.android.acceptance'],
     ['-s', 'fixed-a5', 'shell', 'pm', 'path', '--user', '0', S220_APP_ID]
   ]);
   expect(receipt.s220PackageAvailable).toBe(false);

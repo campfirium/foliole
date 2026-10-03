@@ -5,7 +5,7 @@ import path from 'node:path';
 
 import { _android } from 'playwright';
 
-const APP_ID = 'com.foliole.android.t250dense';
+const APP_ID = 'com.campfirium.foliole.android.t250dense';
 const ARTICLE_TITLE = 'T234 Dense Annotation Fixture 20260924';
 const TARGET = 'T234 unique passage 0175';
 

@@ -5,7 +5,7 @@ import { WINDOWS_A5_LIVE_RELOAD_PORT } from './windows-a5-live-reload-contract.m
 import { startWindowsA5LiveReloadServer } from './windows-a5-live-reload-server.mjs';
 import { captureWindowsA5Screenshot } from './windows-a5-screenshot.mjs';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
 
 function failure(message, stage, result) {

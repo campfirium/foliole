@@ -7,10 +7,10 @@ import {
 
 it('parses target App PSS and RSS without treating other output as a sample', () => {
   expect(parseAndroidPackageMemory(
-    '** MEMINFO in pid 321 [com.foliole.android.acceptance] **\nTOTAL PSS: 155,956 TOTAL RSS: 285,640',
+    '** MEMINFO in pid 321 [com.campfirium.foliole.android.acceptance] **\nTOTAL PSS: 155,956 TOTAL RSS: 285,640',
     1200
   )).toEqual({ elapsedMs: 1200, pid: 321, pssKb: 155956, rssKb: 285640 });
-  expect(parseAndroidPackageMemory('No process found for: com.foliole.android.acceptance', 0)).toBeNull();
+  expect(parseAndroidPackageMemory('No process found for: com.campfirium.foliole.android.acceptance', 0)).toBeNull();
 });
 
 it('records target App peaks while the registered workspace operation runs', async () => {
@@ -21,7 +21,7 @@ it('records target App peaks while the registered workspace operation runs', asy
   let release;
   const operation = new Promise(resolve => { release = resolve; });
   const measurement = measureAndroidWorkspaceMemory({
-    adb: '/adb', appId: 'com.foliole.android.acceptance', env: {}, serial: 'fixed-a5',
+    adb: '/adb', appId: 'com.campfirium.foliole.android.acceptance', env: {}, serial: 'fixed-a5',
     execute: async () => ({ code: 0, output: outputs.shift() ?? outputs.at(-1) })
   }, () => operation);
   await delay(130);

@@ -81,7 +81,7 @@ final class FolioleAcceptanceSyncEventProjection {
                 .put("unconfirmed_deliveries", unconfirmedDeliveries(database))
                 .put("push_issues", pushIssues(database))
                 .put("syncEventsProjected", true);
-            if ("com.foliole.android.t250dense".equals(context.getPackageName())) {
+            if ("com.campfirium.foliole.android.t250dense".equals(context.getPackageName())) {
                 result.put("dense_facts", denseFacts(database));
             }
             return result;
@@ -166,9 +166,9 @@ final class FolioleAcceptanceSyncEventProjection {
     }
 
     static boolean isAcceptancePackage(String packageName) {
-        return "com.foliole.android.acceptance".equals(packageName)
-            || "com.foliole.android.s220acceptance".equals(packageName)
-            || "com.foliole.android.t250dense".equals(packageName);
+        return "com.campfirium.foliole.android.acceptance".equals(packageName)
+            || "com.campfirium.foliole.android.s220acceptance".equals(packageName)
+            || "com.campfirium.foliole.android.t250dense".equals(packageName);
     }
 
     private static String scalar(SQLiteDatabase database, String sql) {

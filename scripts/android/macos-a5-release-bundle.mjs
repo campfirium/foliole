@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 export function releaseBundleInputs(env, root) {

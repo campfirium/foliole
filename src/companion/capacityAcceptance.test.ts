@@ -18,12 +18,12 @@ import { assertIdentity } from './capacityAcceptanceSafety';
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mocks.getInfo.mockResolvedValue({ id: 'com.foliole.android.acceptance' });
+  mocks.getInfo.mockResolvedValue({ id: 'com.campfirium.foliole.android.acceptance' });
   mocks.isDatabase.mockResolvedValue({ result: true });
 });
 
 it('rejects product app identity before any database call', async () => {
-  mocks.getInfo.mockResolvedValue({ id: 'com.foliole.android' });
+  mocks.getInfo.mockResolvedValue({ id: 'com.campfirium.foliole.android' });
   await expect(runCapacityAcceptance()).rejects.toThrow('fixed acceptance');
   expect(mocks.isDatabase).not.toHaveBeenCalled();
   expect(mocks.createConnection).not.toHaveBeenCalled();

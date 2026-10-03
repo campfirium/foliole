@@ -144,7 +144,7 @@ async function leaveAndroid(context, before) {
   await runParticipantMaintenance(context, 'pause-and-leave', 'android-paused-leave');
   context.reportProgress('android-left-while-paused');
   await context.execute(context.paths.adb, ['-s', A5_SERIAL, 'shell', 'am', 'start', '-n',
-    `${APP_ID}/.MainActivity`], { env: context.env, timeoutMs: 30_000 });
+    `${APP_ID}/com.foliole.android.MainActivity`], { env: context.env, timeoutMs: 30_000 });
   await delay(1_000);
   const after = await androidSnapshot(context.paths);
   const inspection = after.database?.inspection;

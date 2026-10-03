@@ -19,7 +19,7 @@ import org.junit.runner.RunWith;
 public class FolioleArticleImageCasesProjectionTest {
     @Test public void projectsProductCreatedArticles() throws Exception {
         Context context = InstrumentationRegistry.getInstrumentation().getTargetContext();
-        assertEquals("com.foliole.android", context.getPackageName());
+        assertEquals("com.campfirium.foliole.android", context.getPackageName());
         Bundle args = InstrumentationRegistry.getArguments();
         String mode = args.getString("caseMode", "inspect");
         if (!mode.equals("inspect")) assertEquals("true", args.getString("disposableTestData"));

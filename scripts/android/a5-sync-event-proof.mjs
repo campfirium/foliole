@@ -6,7 +6,7 @@ import {
 } from '../acceptance/t152-two-device-run-proof.mjs';
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 
-const ACCEPTANCE_APP_ID = 'com.foliole.android.acceptance';
+const ACCEPTANCE_APP_ID = 'com.campfirium.foliole.android.acceptance';
 
 export async function readA5SyncEvents({ args, buildIdentity, env, evidenceRoot }) {
   const result = await runMacosA5SyncGroupMaintenance({ action: 'read-sync-events',

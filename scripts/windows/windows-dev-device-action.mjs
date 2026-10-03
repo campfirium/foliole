@@ -8,7 +8,7 @@ import {
 
 export const WINDOWS_DEV_ADB_PORT = '5037';
 export const WINDOWS_DEV_A5_SERIAL = '87a33a4b';
-const APP_ID = 'com.foliole.android';
+const APP_ID = 'com.campfirium.foliole.android';
 const COMPONENT = `${APP_ID}/com.foliole.android.MainActivity`;
 
 async function runDefaultCaptureAnnotation(options) {

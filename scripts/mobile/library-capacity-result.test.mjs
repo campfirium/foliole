@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { parseLibraryCapacityResult } from './library-capacity-result.mjs';
 
 export function capacityResult() {
-  return { status: 'passed', scenario: 'library-capacity', appId: 'com.foliole.android.acceptance',
+  return { status: 'passed', scenario: 'library-capacity', appId: 'com.campfirium.foliole.android.acceptance',
     platform: 'android', results: [1000, 10000].map(count => ({
       fixture: { count, bodyBytes: 4096, imports: 0, analyzed: false },
       environment: { version: [{ version: 'test-only' }] }, plans: [{ sql: 'SELECT 1' }], memory: null,
@@ -19,7 +19,7 @@ it('accepts complete measurements without pretending unknown memory was measured
 
 it.each(['identity', 'size', 'repeats', 'hash', 'timing'])('rejects invalid %s evidence', field => {
   const result = capacityResult();
-  if (field === 'identity') result.appId = 'com.foliole.android';
+  if (field === 'identity') result.appId = 'com.campfirium.foliole.android';
   if (field === 'size') result.results[0].fixture.count = 1293;
   if (field === 'repeats') result.results[0].runs.pop();
   if (field === 'hash') result.results[0].runs[1].snapshotHash = 'b'.repeat(64);

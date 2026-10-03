@@ -6,8 +6,8 @@ import {
   runMacosA5InstrumentationMechanics
 } from './macos-a5-sync-group-maintenance-action.mjs';
 
-const APP_ID = 'com.foliole.android';
-const TEST_CLASS = `${APP_ID}.FolioleCompanionJoinRequestProviderTest`;
+const APP_ID = 'com.campfirium.foliole.android';
+const TEST_CLASS = `com.foliole.android.FolioleCompanionJoinRequestProviderTest`;
 
 function validateProviderAcceptance({ evidencePath, stdout }) {
   if (!/OK \(4 tests\)/u.test(stdout)) {
@@ -38,7 +38,7 @@ export async function runMacosA5SyncGroupJoinPrepareEntry(args, dependencies = {
   args.checked(args.paths.adb, ['-s', args.serial, 'shell', 'am', 'force-stop', APP_ID]);
   await args.protectData('check', path.join(evidenceRoot, 'baseline.json'), backupRoot);
   args.checked(args.paths.adb, [
-    '-s', args.serial, 'shell', 'am', 'start', '-n', `${APP_ID}/.MainActivity`
+    '-s', args.serial, 'shell', 'am', 'start', '-n', `${APP_ID}/com.foliole.android.MainActivity`
   ]);
   console.log(`[macos-a5-dev] sync-group-join-prepare evidence=${result.evidencePath}`);
   return result;

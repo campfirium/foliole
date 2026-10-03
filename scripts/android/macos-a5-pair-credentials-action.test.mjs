@@ -50,7 +50,7 @@ it('stops fresh A5 pairing after native credentials can sign the first request',
   expect(macosA5CredentialsOnlyModeArgs(true)).toContain('re-pair');
   expect(runPairSync.mock.calls[0][0].execute).not.toBe(args.execute);
   expect(args.execute).toHaveBeenCalledWith('/adb', [
-    '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.foliole.android'
+    '-s', '87a33a4b', 'shell', 'am', 'force-stop', 'com.campfirium.foliole.android'
   ], expect.objectContaining({ timeoutCode: 'credential_snapshot_stop_timeout' }));
 });
 
