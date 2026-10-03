@@ -40,7 +40,7 @@ function owner() {
   return getIosCompanionDatabaseOwner();
 }
 
-function normalizeRow(row: DbRow, columns?: readonly { key: string; source: string; type: string }[]) {
+export function normalizeRow(row: DbRow, columns?: readonly { key: string; source: string; type: string }[]) {
   if (!columns) return row;
   return Object.fromEntries(columns.map((column) => [column.key, normalizeValue(row[column.source], column.type)]));
 }

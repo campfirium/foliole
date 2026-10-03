@@ -4,8 +4,10 @@ import {
   type FullTextSearchIndexStrategy
 } from '../../../lib/core/database/fullTextSearchIndexStrategy';
 
+import { loadCompanionSearchSnapshot } from './companion/runtime/companionSearchSnapshot';
+import { loadCompanionWorkspaceNode } from './companion/runtime/companionWorkspaceNodeStore';
 import { loadIosSyncIndex, loadIosSyncObjects, searchIosTopics } from './companion/runtime/iosCompanionActiveDatabaseReads';
-import { searchCompanionExternalDocuments } from './companionExternalDocuments';
+import { normalizeExternalDocumentSearchResult, searchCompanionExternalDocuments } from './companionExternalDocuments';
 import { searchCompanionPdfPageText } from './companionSyncObjects';
 import {
   isNativeCompanionExternalDocumentSearchRuntime,
@@ -63,6 +65,21 @@ export async function searchCompanionFullText(query: string, limit?: number, off
     offsets.external === null ? [] : searchCompanionExternalDocuments(normalizedQuery, limit, offsets.external)
   ]);
   return { external, pdf, strategy, topics };
+}
+
+export async function searchCompanionFullTextSnapshot(query: string): Promise<CompanionFullTextSearchResults> {
+  const normalizedQuery = query.trim();
+  const strategy = await loadCompanionFullTextSearchStrategyOrDefault();
+  if (!normalizedQuery || !isNativeCompanionTopicSearchRuntime()) return { external: [], pdf: [], strategy, topics: [] };
+  const snapshot = await loadCompanionSearchSnapshot(normalizedQuery);
+  return {
+    strategy,
+    topics: (snapshot.topics as unknown as NativeTopicSearchResult[]).map(toCompanionTopicSearchResult),
+    pdf: snapshot.pdf as unknown as CompanionFullTextSearchResults['pdf'],
+    external: snapshot.external.map((row) => normalizeExternalDocumentSearchResult(
+      row as unknown as Parameters<typeof normalizeExternalDocumentSearchResult>[0]
+    ))
+  };
 }
 
 export function supportsCompanionExtendedSearch() {
@@ -133,4 +150,11 @@ function parseAppSettings(valueJson: string | undefined): Record<string, unknown
   } catch {
     return null;
   }
+}
+
+
+export async function isCompanionSearchTopicAvailable(nodeId: string) {
+  if (!isNativeCompanionTopicSearchRuntime()) return false;
+  const node = await loadCompanionWorkspaceNode(nodeId);
+  return Boolean(node && !node.deletedAt);
 }

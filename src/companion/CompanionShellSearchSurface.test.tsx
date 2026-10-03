@@ -11,7 +11,8 @@ import { renderCompanionShellSearchSurface } from './CompanionShellSearchSurface
 const searchCompanionFullText = vi.fn();
 
 vi.mock('../shared/platform/companionFullTextSearch', () => ({
-  searchCompanionFullText: (...args: unknown[]) => searchCompanionFullText(...args),
+  isCompanionSearchTopicAvailable: async () => true,
+  searchCompanionFullTextSnapshot: (...args: unknown[]) => searchCompanionFullText(...args),
   supportsCompanionExtendedSearch: () => true
 }));
 

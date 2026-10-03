@@ -1,4 +1,4 @@
-import { act, renderHook, screen } from '@testing-library/react';
+import { act, renderHook, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../shared/localization/testLocalization';
@@ -9,6 +9,9 @@ import { createCompanionSearchResultsFixture } from './companionSearchTestFixtur
 import { CompanionShellReadableArticle } from './CompanionShellReadableArticle';
 import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
+
+const loadDocument = vi.hoisted(() => vi.fn());
+vi.mock('../shared/platform/companionExternalDocuments', () => ({ loadCompanionExternalDocument: loadDocument }));
 
 vi.mock('./CompanionReadableArticleDocument', () => ({
   ReadableArticleDocument: (props: { readingSelection: { from: number; to: number } | null; readingRestoreCommandId: string | null }) => (
@@ -39,10 +42,12 @@ it('carries a topic match through navigation into the reader restore command', (
   });
 });
 
-it('locates external document body matches and leaves title-only matches without a restore command', () => {
+it('locates external document body matches and leaves title-only matches without a restore command', async () => {
   const document = { ...createCompanionSearchResultsFixture().external[0]!, content: body };
+  loadDocument.mockResolvedValue(document);
   const searchMatch = { matchStart: 20, query: 'alpha' };
   const view = renderWithLocalization(<CompanionSearchExternalArticle document={document} onExit={vi.fn()} searchMatch={searchMatch} />);
+  await waitFor(() => expect(screen.getByTestId('reading-target')).toBeInTheDocument());
   expect(JSON.parse(screen.getByTestId('reading-target').textContent!).selection).toEqual({ from: body.indexOf('alpha'), to: body.indexOf('alpha') + 5 });
   view.rerender(<CompanionSearchExternalArticle document={document} onExit={vi.fn()} searchMatch={{ matchStart: 0, query: 'title-only' }} />);
   expect(JSON.parse(screen.getByTestId('reading-target').textContent!)).toEqual({ selection: null, command: null });
@@ -58,4 +63,13 @@ it('uses an available body after loading and lets subsequent outline navigation 
   expect(hook.result.current.readingSelection?.from).toBe(body.indexOf('alpha'));
   act(() => hook.result.current.handleSelectOutlineItem({ from: 2, to: 9 }));
   expect(hook.result.current.readingSelection).toEqual({ from: 2, to: 9 });
+});
+
+
+it('does not show stale cached text when a searched external document was deleted', async () => {
+  loadDocument.mockResolvedValue(null);
+  const document = { ...createCompanionSearchResultsFixture().external[0]!, content: 'stale body' };
+  renderWithLocalization(<CompanionSearchExternalArticle document={document} onExit={vi.fn()} />);
+  expect(await screen.findByText('This result is no longer available.')).toBeInTheDocument();
+  expect(screen.queryByTestId('reading-target')).not.toBeInTheDocument();
 });

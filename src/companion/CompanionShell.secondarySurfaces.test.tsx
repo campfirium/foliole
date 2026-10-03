@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { createCompanionSearchResultsFixture } from './companionSearchTestFixtures';
@@ -8,11 +8,17 @@ const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
 const searchCompanionFullText = vi.fn();
 
+vi.mock('../shared/platform/companionExternalDocuments', async (original) => ({
+  ...await original<typeof import('../shared/platform/companionExternalDocuments')>(),
+  loadCompanionExternalDocument: async () => createCompanionSearchResultsFixture().external[0]
+}));
+
 vi.mock('./useCompanionWorkspaceSync', () => ({ useCompanionWorkspaceSync }));
 vi.mock('./useCompanionArticleSurface', () => ({ useCompanionArticleSurface }));
 vi.mock('./useFloatingBarVisibility', () => ({ useFloatingBarVisibility }));
 vi.mock('../shared/platform/companionFullTextSearch', () => ({
-  searchCompanionFullText: (...args: unknown[]) => searchCompanionFullText(...args),
+  isCompanionSearchTopicAvailable: async () => true,
+  searchCompanionFullTextSnapshot: (...args: unknown[]) => searchCompanionFullText(...args),
   supportsCompanionExtendedSearch: () => true
 }));
 
@@ -217,7 +223,7 @@ describe('CompanionShell search topic routing', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
     fireEvent.click(await screen.findByRole('button', { name: /Topic Alpha/u }));
 
-    expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-1');
+    await waitFor(() => expect(surface.handleSelectBrowseNode).toHaveBeenCalledWith('topic-1'));
     expect(await screen.findByText(/Search-opened body/u)).toBeInTheDocument();
     fireEvent.click(screen.getByText(/Search-opened body/u));
     fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
