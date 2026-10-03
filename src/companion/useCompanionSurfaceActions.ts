@@ -28,13 +28,21 @@ function useCompanionReviewGradeAction(
   const [isSubmittingGrade, setIsSubmittingGrade] = useState(false);
   const [reviewError, setReviewError] = useState<string | null>(null);
   const isSubmittingGradeRef = useRef(false);
+  const needsGradeRefreshRef = useRef(false);
 
   async function handleGradeReview(grade: BottomBarGrade) {
-    if (!snapshot || !reviewSession.currentCard || isSubmittingGradeRef.current) return;
+    if (isSubmittingGradeRef.current) return;
+    if (!needsGradeRefreshRef.current && (!snapshot || !reviewSession.currentCard)) return;
     isSubmittingGradeRef.current = true;
     setIsSubmittingGrade(true);
     setReviewError(null);
     try {
+      if (needsGradeRefreshRef.current) {
+        await workspaceSync.refreshAfterMutation();
+        needsGradeRefreshRef.current = false;
+        return;
+      }
+      if (!snapshot || !reviewSession.currentCard) return;
       const result = await gradeCompanionReviewCard({ grade, nodeId: reviewSession.currentCard.nodeId, snapshot });
       if (!result) throw new Error('The current item is no longer available.');
       const persisted = await persistCompanionReviewSyncObject({
@@ -44,7 +52,9 @@ function useCompanionReviewGradeAction(
         snapshot: result.snapshot
       });
       if (!persisted) throw new Error('Failed to persist the review grade.');
+      needsGradeRefreshRef.current = true;
       await workspaceSync.refreshAfterMutation(result.snapshot);
+      needsGradeRefreshRef.current = false;
       floatingBar.revealBar();
     } catch (error) {
       setReviewError(error instanceof Error ? error.message : 'Failed to apply the review grade.');
