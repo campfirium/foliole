@@ -80,9 +80,9 @@ describe('CompanionSearchContent states and actions', () => {
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search topics' }), { target: { value: 'alpha' } });
 
     fireEvent.click(await screen.findByRole('button', { name: /Topic Alpha/u }));
-    expect(onOpenTopic).toHaveBeenCalledWith('topic-1');
+    expect(onOpenTopic).toHaveBeenCalledWith(expect.objectContaining({ nodeId: 'topic-1', matchStart: 1 }), 'alpha');
     fireEvent.click(screen.getByRole('button', { name: /External Alpha/u }));
-    expect(onOpenExternalDocument).toHaveBeenCalledWith(expect.objectContaining({ document_id: 'doc-1' }));
+    expect(onOpenExternalDocument).toHaveBeenCalledWith(expect.objectContaining({ document_id: 'doc-1' }), 'alpha');
     fireEvent.click(screen.getByRole('button', { name: /PDF page 2/u }));
     expect(onOpenPdf).toHaveBeenCalledWith(expect.objectContaining({ attachment_id: 'attachment-1', page: 2 }));
   });

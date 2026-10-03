@@ -156,6 +156,7 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
   const searchSurface = renderCompanionShellSearchSurface({
     externalDocument: props.searchExternalDocument,
     pdfResult: props.searchPdfResult,
+    searchMatch: props.searchMatch,
     isTopicOpen: props.isSearchArticleOpen,
     onExitExternalDocument: props.onExitSearchExternalDocument,
     onExitPdf: props.onExitSearchPdf,

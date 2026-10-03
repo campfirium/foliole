@@ -80,6 +80,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.search.description': 'Topics and synced reading materials on this device.',
   'companion.search.descriptionTopics': 'Topics synced to this device.',
   'companion.search.loading': 'Searching...',
+  'companion.search.loadMore': 'Load more',
   'companion.search.empty': 'No local results found.',
   'companion.search.error': 'Search failed on this device.',
   'companion.search.section.topics': 'Topics',

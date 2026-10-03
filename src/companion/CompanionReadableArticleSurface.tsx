@@ -10,6 +10,7 @@ import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
 import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
+import { resolveCompanionSearchSelection, type CompanionSearchMatch } from './companionSearchMatch';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -27,6 +28,7 @@ import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
 interface ImmersiveReadableArticleProps {
+  searchMatch?: CompanionSearchMatch | null | undefined;
   onAttachmentResourceSynced?: () => void;
   onCreateSelectionAnnotation?: (
     kind: CompanionSelectionAnnotationKind,
@@ -76,7 +78,7 @@ function ImmersiveArticleContent(props: {
 }
 
 function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) {
-  const reading = useImmersiveReadableArticleState();
+  const reading = useImmersiveReadableArticleState(resolveCompanionSearchSelection(props.readableArticle.content, props.searchMatch));
   const snapshot = props.snapshot;
   const toolbar = useCompanionSelectionAnnotationToolbar({
     canCreateAnnotation: Boolean(props.onCreateSelectionAnnotation) && !reading.isContentEditing,

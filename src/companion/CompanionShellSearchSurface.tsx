@@ -1,8 +1,10 @@
 import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
+import type { CompanionTopicSearchResult } from '../shared/platform/companionFullTextSearch';
 import type { CompanionPdfPageTextSearchResult } from '../shared/platform/companionSyncObjects';
 
 import { CompanionSearchContent } from './CompanionSearchContent';
 import { CompanionSearchExternalArticle } from './CompanionSearchExternalArticle';
+import type { CompanionSearchMatch } from './companionSearchMatch';
 import { CompanionSearchPdfDocument } from './CompanionSearchPdfDocument';
 import { CompanionShellReadableArticle } from './CompanionShellReadableArticle';
 import { resolveCompanionWorkspaceSyncEndpoint } from './companionWorkspaceSyncEndpoint';
@@ -17,23 +19,25 @@ export type CompanionShellSearchRouteProps = {
   onExitSearchArticle(): void;
   onExitSearchExternalDocument(): void;
   onExitSearchPdf(): void;
-  onOpenSearchExternalDocument(document: CompanionExternalDocumentSearchResult): void;
+  onOpenSearchExternalDocument(document: CompanionExternalDocumentSearchResult, query: string): void;
   onOpenSearchPdf(result: CompanionPdfPageTextSearchResult): void;
-  onOpenSearchTopic(nodeId: string): void;
+  onOpenSearchTopic(result: CompanionTopicSearchResult, query: string): void;
   searchExternalDocument: CompanionExternalDocumentSearchResult | null;
+  searchMatch?: CompanionSearchMatch | null | undefined;
   searchPdfResult: CompanionPdfPageTextSearchResult | null;
 };
 
 export function renderCompanionShellSearchSurface(props: {
   externalDocument: CompanionExternalDocumentSearchResult | null;
+  searchMatch?: CompanionSearchMatch | null | undefined;
   pdfResult: CompanionPdfPageTextSearchResult | null;
   isTopicOpen: boolean;
   onExitExternalDocument(): void;
   onExitPdf(): void;
   onExitTopic(): void;
-  onOpenExternalDocument(document: CompanionExternalDocumentSearchResult): void;
+  onOpenExternalDocument(document: CompanionExternalDocumentSearchResult, query: string): void;
   onOpenPdf(result: CompanionPdfPageTextSearchResult): void;
-  onOpenTopic(nodeId: string): void;
+  onOpenTopic(result: CompanionTopicSearchResult, query: string): void;
   surface: Surface;
   workspaceSync: WorkspaceSync;
 }) {
@@ -47,7 +51,7 @@ export function renderCompanionShellSearchSurface(props: {
         onOpenTopic={props.onOpenTopic}
       />
       {props.externalDocument ? (
-        <CompanionSearchExternalArticle document={props.externalDocument} onExit={props.onExitExternalDocument} />
+        <CompanionSearchExternalArticle searchMatch={props.searchMatch} document={props.externalDocument} onExit={props.onExitExternalDocument} />
       ) : null}
       {props.pdfResult ? (
         <CompanionSearchPdfDocument
@@ -57,7 +61,7 @@ export function renderCompanionShellSearchSurface(props: {
         />
       ) : null}
       {props.isTopicOpen ? (
-        <CompanionShellReadableArticle onExit={props.onExitTopic} surface={props.surface} workspaceSync={props.workspaceSync} />
+        <CompanionShellReadableArticle searchMatch={props.searchMatch} onExit={props.onExitTopic} surface={props.surface} workspaceSync={props.workspaceSync} />
       ) : null}
     </>
   );

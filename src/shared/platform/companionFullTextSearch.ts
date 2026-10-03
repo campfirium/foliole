@@ -48,7 +48,9 @@ interface NativeTopicSearchResult {
   updated_at: string;
 }
 
-export async function searchCompanionFullText(query: string, limit?: number): Promise<CompanionFullTextSearchResults> {
+export type CompanionSearchOffsets = { external?: number | null; pdf?: number | null; topics?: number | null };
+
+export async function searchCompanionFullText(query: string, limit?: number, offsets: CompanionSearchOffsets = {}): Promise<CompanionFullTextSearchResults> {
   const normalizedQuery = query.trim();
   const strategy = await loadCompanionFullTextSearchStrategyOrDefault();
   if (!normalizedQuery || !isNativeCompanionTopicSearchRuntime()) {
@@ -56,9 +58,9 @@ export async function searchCompanionFullText(query: string, limit?: number): Pr
   }
 
   const [topics, pdf, external] = await Promise.all([
-    searchCompanionTopics(normalizedQuery, limit),
-    searchCompanionPdfPageText(normalizedQuery, limit),
-    searchCompanionExternalDocuments(normalizedQuery, limit)
+    offsets.topics === null ? [] : searchCompanionTopics(normalizedQuery, limit, offsets.topics),
+    offsets.pdf === null ? [] : searchCompanionPdfPageText(normalizedQuery, limit, offsets.pdf),
+    offsets.external === null ? [] : searchCompanionExternalDocuments(normalizedQuery, limit, offsets.external)
   ]);
   return { external, pdf, strategy, topics };
 }
@@ -92,8 +94,8 @@ export async function loadCompanionFullTextSearchStrategy() {
   return normalizeFullTextSearchIndexStrategy(parseAppSettings(settings?.value_json)?.[FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]);
 }
 
-async function searchCompanionTopics(query: string, limit?: number) {
-  const results = await searchIosTopics(query, limit) as NativeTopicSearchResult[];
+async function searchCompanionTopics(query: string, limit?: number, offset = 0) {
+  const results = await searchIosTopics(query, limit, offset) as NativeTopicSearchResult[];
   return results.map(toCompanionTopicSearchResult);
 }
 

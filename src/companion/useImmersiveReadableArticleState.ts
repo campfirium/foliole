@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 
-export function useImmersiveReadableArticleState() {
+export function useImmersiveReadableArticleState(initialSelection: EditorSelection | null = null) {
   const [isChromeVisible, setIsChromeVisible] = useState(false);
   const [isOutlineOpen, setIsOutlineOpen] = useState(false);
   const [isActionsSheetOpen, setIsActionsSheetOpen] = useState(false);
@@ -57,8 +57,8 @@ export function useImmersiveReadableArticleState() {
     isSearchSheetOpen,
     openDocumentSearch,
     openReadingSheet,
-    readingRestoreCommandId: readingTarget?.commandId ?? null,
-    readingSelection: readingTarget?.selection ?? null,
+    readingRestoreCommandId: readingTarget?.commandId ?? (initialSelection ? 'companion-search-match' : null),
+    readingSelection: readingTarget?.selection ?? initialSelection,
     setIsActionsSheetOpen,
     setIsOutlineOpen,
     setIsSearchSheetOpen,

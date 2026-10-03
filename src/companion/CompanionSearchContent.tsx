@@ -1,24 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionExternalDocumentSearchResult } from '../shared/platform/companionExternalDocuments';
-import {
-  searchCompanionFullText,
-  type CompanionFullTextSearchResults
-} from '../shared/platform/companionFullTextSearch';
+import type { CompanionTopicSearchResult } from '../shared/platform/companionFullTextSearch';
 import type { CompanionPdfPageTextSearchResult } from '../shared/platform/companionSyncObjects';
-import { appInputBorderFocusVisibleClassName } from '../shared/ui';
+import { AppButton, appInputBorderFocusVisibleClassName } from '../shared/ui';
 
 import { CompanionSearchResults } from './CompanionSearchResults';
+import { useCompanionSearch } from './useCompanionSearch';
 
-const SEARCH_LIMIT = 20;
-
-type SearchStatus = 'idle' | 'loading' | 'ready' | 'error';
 export function CompanionSearchContent(props: {
-  onOpenExternalDocument?: ((document: CompanionExternalDocumentSearchResult) => void) | undefined;
+  onOpenExternalDocument?: ((document: CompanionExternalDocumentSearchResult, query: string) => void) | undefined;
   onOpenPdf?: ((result: CompanionPdfPageTextSearchResult) => void) | undefined;
-  onOpenTopic?: ((nodeId: string) => void) | undefined;
+  onOpenTopic?: ((result: CompanionTopicSearchResult, query: string) => void) | undefined;
 }) {
   const t = useTranslation();
   const [query, setQuery] = useState('');
@@ -42,46 +37,18 @@ export function CompanionSearchContent(props: {
       </label>
       <div className="mt-4">
         <CompanionSearchResults
-          onOpenExternalDocument={props.onOpenExternalDocument}
+          onOpenExternalDocument={props.onOpenExternalDocument ? (result) => props.onOpenExternalDocument?.(result, query.trim()) : undefined}
           onOpenPdf={props.onOpenPdf}
-          onOpenTopic={props.onOpenTopic}
+          onOpenTopic={props.onOpenTopic ? (result) => props.onOpenTopic?.(result, query.trim()) : undefined}
           state={searchState}
         />
+        {searchState.moreError ? <p role="alert" className="py-2 text-sm text-companion-text-secondary">{t('companion.search.error')}</p> : null}
+        {searchState.hasMore ? (
+          <AppButton className="mt-4 w-full" disabled={searchState.loadingMore} onClick={() => void searchState.loadMore()} variant="ghost">
+            {t(searchState.loadingMore ? 'companion.search.loading' : 'companion.search.loadMore')}
+          </AppButton>
+        ) : null}
       </div>
     </section>
   );
-}
-
-function useCompanionSearch(query: string) {
-  const [results, setResults] = useState<CompanionFullTextSearchResults | null>(null);
-  const [status, setStatus] = useState<SearchStatus>('idle');
-  const normalizedQuery = query.trim();
-  useEffect(() => {
-    if (!normalizedQuery) return resetSearch(setResults, setStatus);
-    let cancelled = false;
-    setStatus('loading');
-    searchCompanionFullText(normalizedQuery, SEARCH_LIMIT)
-      .then((nextResults) => {
-        if (cancelled) return;
-        setResults(nextResults);
-        setStatus('ready');
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setResults(null);
-        setStatus('error');
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [normalizedQuery]);
-  return { results, status };
-}
-
-function resetSearch(
-  setResults: (results: CompanionFullTextSearchResults | null) => void,
-  setStatus: (status: SearchStatus) => void
-) {
-  setResults(null);
-  setStatus('idle');
 }

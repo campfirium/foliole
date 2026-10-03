@@ -141,11 +141,11 @@ export async function loadCompanionPdfPageText(attachmentId: string) {
   return loadIosPdfPageText(attachmentId);
 }
 
-export async function searchCompanionPdfPageText(query: string, limit?: number) {
+export async function searchCompanionPdfPageText(query: string, limit?: number, offset = 0) {
   if (!isNativeCompanionPdfPageTextRuntime()) {
     return [] as CompanionPdfPageTextSearchResult[];
   }
-  return searchIosPdfPageText(query, limit);
+  return searchIosPdfPageText(query, limit, offset);
 }
 
 export async function saveCompanionSyncPushAcks(peerId: string, acks: SyncPushAck[]) {

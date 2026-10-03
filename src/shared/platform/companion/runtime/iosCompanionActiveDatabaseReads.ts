@@ -7,7 +7,7 @@ import type {
   NativeSyncObjectRecord
 } from '../../../../../lib/platform/nativeSyncContract';
 
-import { iosSearchParams, queryIosCompanionDatabase, readIosCompanionDatabase } from './iosCompanionActiveDatabase';
+import { queryIosCompanionDatabase, readIosCompanionDatabase, searchIosCompanionDatabase as search } from './iosCompanionActiveDatabase';
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 import { iosCompanionDeviceId, iosCompanionHostName } from './iosCompanionMutationState';
 
@@ -106,8 +106,8 @@ export async function loadIosSyncObjects(objectIds: string[], objectTypes?: stri
   })));
 }
 
-export function searchIosTopics(query: string, limit = 20) {
-  return search<TopicSearchResult & DbRow>('topicSearch', query, limit);
+export function searchIosTopics(query: string, limit = 20, offset = 0) {
+  return search<TopicSearchResult & DbRow>('topicSearch', query, limit, offset);
 }
 
 export function loadIosCompanionNodeDocument(nodeId: string) {
@@ -131,8 +131,8 @@ export function loadIosPdfPageText(attachmentId: string) {
   return queryIosCompanionDatabase<PdfPage & DbRow>('pdfPageTextPages', [attachmentId]);
 }
 
-export function searchIosPdfPageText(query: string, limit = 20) {
-  return search<PdfSearchResult & DbRow>('pdfPageTextSearch', query, limit);
+export function searchIosPdfPageText(query: string, limit = 20, offset = 0) {
+  return search<PdfSearchResult & DbRow>('pdfPageTextSearch', query, limit, offset);
 }
 
 export function loadIosExternalDocument(documentId: string) {
@@ -147,8 +147,8 @@ export async function loadIosExternalDirectory() {
   return { entries, folders };
 }
 
-export function searchIosExternalDocuments(query: string, limit = 20) {
-  return search<ExternalSearchResult & DbRow>('externalDocumentSearch', query, limit);
+export function searchIosExternalDocuments(query: string, limit = 20, offset = 0) {
+  return search<ExternalSearchResult & DbRow>('externalDocumentSearch', query, limit, offset);
 }
 
 export async function loadIosMissingContentBlobs(limit = 50) {
@@ -176,10 +176,6 @@ export async function loadIosMissingAttachments(limit = 50, attachmentId?: strin
   return rows.slice(0, Math.max(1, limit));
 }
 
-function search<T extends DbRow>(name: 'topicSearch' | 'pdfPageTextSearch' | 'externalDocumentSearch', query: string, limit: number) {
-  const definition = ANDROID_COMPANION_QUERY_DEFINITIONS[name];
-  return queryIosCompanionDatabase<T>(name, iosSearchParams(definition.sql, query, Math.max(1, Math.min(100, limit))));
-}
 
 async function loadPayload(row: NativeSyncObjectRecord) {
   const definition = payloadDefinition(row);
