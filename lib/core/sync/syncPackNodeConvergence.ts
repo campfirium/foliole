@@ -4,7 +4,7 @@ import { projectNodeResourceLinks } from '../database/nodeResourceReferences.js'
 
 import type { DbPort } from './dbPort.js';
 import { applyConvergentSyncNodesWithDbPort } from './syncNodeConvergence.js';
-import { loadStoredSyncNodeVersionRecord } from './syncNodeGraph.js';
+import { loadStoredSyncNodeVersionRecords } from './syncNodeGraph.js';
 import type { SyncPackNodeRow } from './syncPackNodeFields.js';
 import { loadSyncPackVersionAncestry } from './syncPackVersionAncestry.js';
 
@@ -31,11 +31,13 @@ export async function applySyncPackVersionedNodesWithDbPort(
   );
   const ancestry = await loadSyncPackVersionAncestry(port,
     rows.flatMap((row) => row.current_version_id ? [row.current_version_id] : []));
+  const versions = await loadStoredSyncNodeVersionRecords(port,
+    rows.flatMap((row) => row.current_version_id ? [row.current_version_id] : []));
   const records: NativeSyncNodeRecord[] = [];
   for (const row of rows) {
     const versionId = row.current_version_id;
     if (!versionId) throw new Error(`sync_pack_node_current_record_invalid:${row.id}`);
-    const record = await loadStoredSyncNodeVersionRecord(port, versionId, false);
+    const record = versions.get(versionId);
     if (!record || record.object_id !== row.id) {
       throw new Error(`sync_pack_node_current_record_invalid:${row.id}`);
     }
@@ -53,13 +55,11 @@ export async function applySyncPackVersionedNodesWithDbPort(
       processedNodeIds: [...SPECIAL_ROOT_NODE_IDS, ...skippedNodeIds] };
   }
   const result = await applyConvergentSyncNodesWithDbPort(port, records);
-  for (const record of records) {
-    await port.run(
-      `UPDATE sync_object_state SET last_modified_by_host_name = ?
-       WHERE object_type = 'node' AND object_id = ? AND current_version_id = ?`,
-      [hostName, record.object_id, record.version_id]
-    );
-  }
+  const pairs = records.map((record) => [record.object_id, record.version_id]);
+  await port.run(`UPDATE sync_object_state SET last_modified_by_host_name = ?
+    WHERE object_type = 'node' AND (object_id, current_version_id) IN
+      (VALUES ${pairs.map(() => '(?, ?)').join(', ')})`,
+  [hostName, ...pairs.flat()]);
   return { ...result, processedNodeIds: [...new Set([
     ...result.processedNodeIds, ...SPECIAL_ROOT_NODE_IDS, ...skippedNodeIds
   ])] };

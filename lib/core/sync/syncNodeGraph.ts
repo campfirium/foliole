@@ -8,6 +8,7 @@ export interface StoredSyncNodeVersionRow extends DbRow {
   created_at: string;
   host_name: string;
   object_id: string;
+  parent_version_id: string | null;
   snapshot_json: string;
   version_id: string;
 }
@@ -43,6 +44,32 @@ export async function loadStoredSyncNodeVersionRecord(
     [versionId]
   );
   return row ? storedVersionToRecord(port, row, includeAncestors) : null;
+}
+
+export async function loadStoredSyncNodeVersionRecords(port: DbPort, versionIds: string[]) {
+  const uniqueIds = [...new Set(versionIds)];
+  const records = new Map<string, NativeSyncNodeRecord>();
+  if (uniqueIds.length === 0) return records;
+  const placeholders = uniqueIds.map(() => '?').join(', ');
+  const rows = await port.query<StoredSyncNodeVersionRow>(
+    `SELECT * FROM node_sync_versions WHERE version_id IN (${placeholders})`, uniqueIds
+  );
+  const edges = await port.query<{ version_id: string; parent_version_id: string }>(
+    `SELECT version_id, parent_version_id FROM node_sync_version_parents
+     WHERE version_id IN (${placeholders}) ORDER BY version_id, ordinal`, uniqueIds
+  );
+  const parents = new Map<string, string[]>();
+  for (const edge of edges) {
+    const list = parents.get(edge.version_id) ?? [];
+    list.push(edge.parent_version_id);
+    parents.set(edge.version_id, list);
+  }
+  for (const row of rows) {
+    const lineage = parents.get(row.version_id) ??
+      (row.parent_version_id ? [row.parent_version_id] : []);
+    records.set(row.version_id, await storedVersionToRecord(port, row, false, lineage));
+  }
+  return records;
 }
 
 export async function isStoredVersionIdentical(port: DbPort, record: NativeSyncNodeRecord) {
@@ -96,12 +123,13 @@ export async function isStoredAncestorVersion(port: DbPort, ancestorId: string, 
 async function storedVersionToRecord(
   port: DbPort,
   row: StoredSyncNodeVersionRow,
-  includeAncestors: boolean
+  includeAncestors: boolean,
+  knownParents?: string[]
 ): Promise<NativeSyncNodeRecord> {
   const snapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
   const body = storedSyncNodeVersionBody(row);
   if (body === null) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
-  const parents = await loadParents(port, row.version_id);
+  const parents = knownParents ?? await loadParents(port, row.version_id);
   return {
     ancestor_version_ids: includeAncestors ? await loadAncestors(port, row.version_id) : [],
     body_text: body,
