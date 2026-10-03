@@ -21,6 +21,16 @@ export function queryIosCompanionDatabase<T extends DbRow>(name: QueryName, para
   )));
 }
 
+export function searchIosCompanionDatabase<T extends DbRow>(
+  name: 'topicSearch' | 'pdfPageTextSearch' | 'externalDocumentSearch', query: string, limit: number, offset = 0
+) {
+  const definition = ANDROID_COMPANION_QUERY_DEFINITIONS[name];
+  const params = iosSearchParams(definition.sql, query, Math.max(1, Math.min(100, limit)));
+  return readIosCompanionDatabase<T[]>((db) => db.query(
+    `${definition.sql} OFFSET ?`, [...params, Math.max(0, Math.trunc(offset))]
+  ).then((rows) => rows.map((row) => normalizeRow(row, definition.columns) as T)));
+}
+
 export function iosSearchParams(sql: string, query: string, limit: number) {
   const count = (sql.match(/\?/g) ?? []).length;
   return [...Array(Math.max(0, count - 1)).fill(query.toLocaleLowerCase()), limit] as DbParams;

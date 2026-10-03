@@ -133,11 +133,11 @@ function parseAppSettingValue(valueJson: string | undefined) {
   }
 }
 
-export async function searchCompanionExternalDocuments(query: string, limit?: number) {
+export async function searchCompanionExternalDocuments(query: string, limit?: number, offset = 0) {
   if (!isNativeCompanionExternalDocumentSearchRuntime()) {
     return [] as CompanionExternalDocumentSearchResult[];
   }
-  const results = await searchIosExternalDocuments(query, limit) as NativeExternalDocumentSearchResult[];
+  const results = await searchIosExternalDocuments(query, limit, offset) as NativeExternalDocumentSearchResult[];
   return results.map(normalizeExternalDocumentSearchResult);
 }
 

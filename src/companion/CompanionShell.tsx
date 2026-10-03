@@ -123,6 +123,7 @@ function buildCompanionShellModel(args: {
     reviewBreadcrumbItems: args.reviewChrome.reviewBreadcrumbItems,
     searchExternalDocument: args.searchArticle.externalDocument,
     searchPdfResult: args.searchArticle.pdfResult,
+    searchMatch: args.searchArticle.searchMatch,
     setIsCaptureSheetOpen: args.setIsCaptureSheetOpen,
     setBrowseSortDirection: args.browseSort.setBrowseSortDirection,
     setBrowseSortKey: args.browseSort.setBrowseSortKey,

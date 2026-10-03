@@ -72,6 +72,7 @@ function renderCompanionMainContent(model: CompanionShellModel) {
         reviewBreadcrumbItems: model.reviewBreadcrumbItems,
         searchExternalDocument: model.searchExternalDocument,
         searchPdfResult: model.searchPdfResult,
+        searchMatch: model.searchMatch,
         settingsPage: model.settingsPage,
         surface: model.surface,
         workspaceError: model.workspaceSync.error,

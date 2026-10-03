@@ -15,7 +15,7 @@ type ResourceStatus = CompanionTopicSearchResult['bodyStatus'] | CompanionExtern
 export function CompanionSearchResults(props: {
   onOpenExternalDocument?: ((document: CompanionExternalDocumentSearchResult) => void) | undefined;
   onOpenPdf?: ((result: CompanionPdfPageTextSearchResult) => void) | undefined;
-  onOpenTopic?: ((nodeId: string) => void) | undefined;
+  onOpenTopic?: ((result: CompanionTopicSearchResult) => void) | undefined;
   state: { results: CompanionFullTextSearchResults | null; status: SearchStatus };
 }) {
   const t = useTranslation();
@@ -54,7 +54,7 @@ function SearchIntro() {
 }
 
 function TopicResults(props: {
-  onOpenTopic?: ((nodeId: string) => void) | undefined;
+  onOpenTopic?: ((result: CompanionTopicSearchResult) => void) | undefined;
   results: CompanionTopicSearchResult[];
 }) {
   const t = useTranslation();
@@ -65,7 +65,7 @@ function TopicResults(props: {
         <SearchResultItem
           excerpt={result.excerpt || result.openingText || ''}
           key={result.nodeId}
-          onOpen={props.onOpenTopic ? () => props.onOpenTopic?.(result.nodeId) : undefined}
+          onOpen={props.onOpenTopic ? () => props.onOpenTopic?.(result) : undefined}
           status={resourceStatusLabel(t, result.bodyStatus)}
           title={result.title || t('companion.search.untitledTopic')}
         />

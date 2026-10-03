@@ -122,9 +122,9 @@ async function expectIosCompleteSearch() {
     strategy: 'cjk-trigram',
     topics: [expect.objectContaining({ nodeId: 'topic-1', title: 'Topic One' })]
   });
-  expect(iosReads.topics).toHaveBeenCalledWith('alpha', 5);
-  expect(iosReads.pdf).toHaveBeenCalledWith('alpha', 5);
-  expect(iosReads.external).toHaveBeenCalledWith('alpha', 5);
+  expect(iosReads.topics).toHaveBeenCalledWith('alpha', 5, 0);
+  expect(iosReads.pdf).toHaveBeenCalledWith('alpha', 5, 0);
+  expect(iosReads.external).toHaveBeenCalledWith('alpha', 5, 0);
 }
 
 describe('companion full text search', () => {
@@ -137,9 +137,9 @@ describe('companion full text search', () => {
       strategy: 'word-based',
       topics: [expect.objectContaining({ bodyStatus: 'missing', nodeId: 'topic-1', title: 'Topic One' })]
     });
-    expect(iosReads.topics).toHaveBeenCalledWith('alpha', 5);
-    expect(iosReads.pdf).toHaveBeenCalledWith('alpha', 5);
-    expect(iosReads.external).toHaveBeenCalledWith('alpha', 5);
+    expect(iosReads.topics).toHaveBeenCalledWith('alpha', 5, 0);
+    expect(iosReads.pdf).toHaveBeenCalledWith('alpha', 5, 0);
+    expect(iosReads.external).toHaveBeenCalledWith('alpha', 5, 0);
   });
 
   it('loads the full-text search language from synced app settings', async () => {
@@ -192,4 +192,13 @@ describe('companion full text search', () => {
       topics: []
     });
   });
+});
+
+it('continues each result kind independently and stops querying exhausted kinds', async () => {
+  const api = await import('./companionFullTextSearch');
+  const page = await api.searchCompanionFullText('alpha', 20, { topics: 120, external: 40, pdf: null });
+  expect(iosReads.topics).toHaveBeenCalledWith('alpha', 20, 120);
+  expect(iosReads.external).toHaveBeenCalledWith('alpha', 20, 40);
+  expect(iosReads.pdf).not.toHaveBeenCalled();
+  expect(page.pdf).toEqual([]);
 });

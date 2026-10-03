@@ -1,4 +1,5 @@
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
+import type { CompanionSearchMatch } from './companionSearchMatch';
 import {
   createCompanionExistingHighlightDeleteHandler,
   createCompanionExistingHighlightNoteHandler,
@@ -27,7 +28,7 @@ export function continueCompanionAttachmentResourceSync(workspaceSync: Workspace
   void workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined);
 }
 
-export function CompanionShellReadableArticle(props: { onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
+export function CompanionShellReadableArticle(props: { searchMatch?: CompanionSearchMatch | null | undefined; onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
   if (!props.surface.readableArticle) return null;
   const nodeMutationProps = {
     ...(supportsCompanionNodeMutationSurface('existing-highlight-edit') ? {
@@ -46,6 +47,7 @@ export function CompanionShellReadableArticle(props: { onExit: () => void; surfa
   };
   return (
     <ImmersiveReadableArticle
+      searchMatch={props.searchMatch}
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
       onExit={props.onExit}
       onScrollTopChange={props.surface.handleViewScroll}

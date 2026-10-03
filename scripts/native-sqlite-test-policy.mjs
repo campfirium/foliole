@@ -18,6 +18,7 @@ const controlledElectronSqliteTests = [
   'scripts/desktop/fixed-performance-fixture.test.mjs',
   'scripts/desktop/fixed-performance-http.test.mjs',
   'src/shared/platform/companion/runtime/companionCurrentVersionBodies.sqlite.test.ts',
+  'src/shared/platform/companion/runtime/companionSearchPagination.sqlite.test.ts',
   'scripts/sync/simulator/resourceResume.http.test.mjs',
   'scripts/sync/simulator/simulator.http.test.mjs',
   'electron/attachments/canonicalAttachmentPreflight.test.ts',
