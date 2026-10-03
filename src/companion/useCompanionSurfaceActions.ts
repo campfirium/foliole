@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react';
 
+import { isWorkspacePartialPersistenceError } from '../store/workspacePersistenceFailure';
+
 import type { BottomBarGrade } from './CompanionFloatingBars';
 import {
   readCompanionReviewTopic,
@@ -55,6 +57,29 @@ function useCompanionReviewGradeAction(
   return { handleGradeReview, isSubmittingGrade, reviewError, setReviewError };
 }
 
+async function persistReadingAction(
+  action: 'read' | 'later' | 'dismiss',
+  nodeId: string,
+  snapshot: NonNullable<CompanionWorkspaceSyncApi['state']['workspace_snapshot']>
+) {
+  const result =
+    action === 'read'
+      ? readCompanionReviewTopic({ nodeId, snapshot })
+      : action === 'later'
+        ? postponeCompanionReviewTopic({ nodeId, snapshot })
+        : dismissCompanionReviewTopic({ nodeId, snapshot });
+  if (!result) throw new Error('The current reading topic is no longer available.');
+  const persisted = await persistCompanionReviewSyncObject({
+    itemKind: 'reading',
+    completedReading: action === 'read',
+    nodeId,
+    nodeIds: result.syncNodeIds,
+    snapshot: result.snapshot
+  });
+  if (!persisted) throw new Error('Failed to persist the reading topic.');
+  return result.snapshot;
+}
+
 function useCompanionReadingReviewActions(
   floatingBar: FloatingBarVisibilityApi,
   reviewSession: ReturnType<typeof resolveCompanionReviewSession>,
@@ -64,32 +89,36 @@ function useCompanionReadingReviewActions(
   const [isSubmittingReadingAction, setIsSubmittingReadingAction] = useState(false);
   const [readingError, setReadingError] = useState<string | null>(null);
   const isSubmittingReadingActionRef = useRef(false);
+  const needsReadingRefreshRef = useRef(false);
+
+  async function refreshReadingState() {
+    await workspaceSync.refreshAfterMutation();
+    needsReadingRefreshRef.current = false;
+  }
 
   async function applyReadingAction(action: 'read' | 'later' | 'dismiss') {
-    if (!snapshot || !reviewSession.currentCard || reviewSession.currentCard.itemKind !== 'reading' || isSubmittingReadingActionRef.current) return;
+    if (isSubmittingReadingActionRef.current) return;
+    if (!needsReadingRefreshRef.current && (!snapshot || reviewSession.currentCard?.itemKind !== 'reading')) return;
     isSubmittingReadingActionRef.current = true;
     setIsSubmittingReadingAction(true);
     setReadingError(null);
     try {
-      const result =
-        action === 'read'
-          ? readCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot })
-          : action === 'later'
-            ? postponeCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot })
-            : dismissCompanionReviewTopic({ nodeId: reviewSession.currentCard.nodeId, snapshot });
-      if (!result) throw new Error('The current reading topic is no longer available.');
-      const persisted = await persistCompanionReviewSyncObject({
-        itemKind: 'reading',
-        completedReading: action === 'read',
-        nodeId: reviewSession.currentCard.nodeId,
-        nodeIds: result.syncNodeIds,
-        snapshot: result.snapshot
-      });
-      if (!persisted) throw new Error('Failed to persist the reading topic.');
-      await workspaceSync.refreshAfterMutation(result.snapshot);
+      if (needsReadingRefreshRef.current) {
+        await refreshReadingState();
+        return;
+      }
+      if (!snapshot || !reviewSession.currentCard) return;
+      const nextSnapshot = await persistReadingAction(action, reviewSession.currentCard.nodeId, snapshot);
+      needsReadingRefreshRef.current = true;
+      await workspaceSync.refreshAfterMutation(nextSnapshot);
+      needsReadingRefreshRef.current = false;
       floatingBar.revealBar();
     } catch (error) {
       setReadingError(error instanceof Error ? error.message : 'Failed to update the reading topic.');
+      if (isWorkspacePartialPersistenceError(error)) {
+        needsReadingRefreshRef.current = true;
+        await refreshReadingState().catch(() => undefined);
+      }
     } finally {
       isSubmittingReadingActionRef.current = false;
       setIsSubmittingReadingAction(false);
