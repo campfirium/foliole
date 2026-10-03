@@ -33,6 +33,7 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
   'companion.reading.alternative.error': '暂时无法更新这份正文，请重试。',
   'companion.selection.loading': '正在读取批注…',
   'companion.selection.loadError': '暂时无法读取这条批注。',
+  'companion.selection.changesSavedRefreshError': '更改已保存，页面未能刷新。',
   'companion.selection.savedRefreshError': '批注已保存，页面未能刷新。',
   'companion.selection.createError': '批注未能保存，请重试。',
   'companion.selection.refresh': '刷新',

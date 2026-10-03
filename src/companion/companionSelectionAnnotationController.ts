@@ -46,7 +46,11 @@ export function createCompanionExistingHighlightNoteHandler(workspaceSync: Retur
       snapshot: workspaceSync.state.workspace_snapshot
     });
     if (!result) return null;
-    await workspaceSync.refreshAfterMutation(result.snapshot);
+    try {
+      await workspaceSync.refreshAfterMutation(result.snapshot);
+    } catch {
+      throw new CompanionSelectionRefreshError(() => workspaceSync.refreshAfterMutation(result.snapshot));
+    }
     return result.nodeId;
   };
 }
@@ -60,7 +64,11 @@ export function createCompanionExistingHighlightDeleteHandler(workspaceSync: Ret
       snapshot: workspaceSync.state.workspace_snapshot
     });
     if (!result) return null;
-    await workspaceSync.refreshAfterMutation(result.snapshot);
+    try {
+      await workspaceSync.refreshAfterMutation(result.snapshot);
+    } catch {
+      throw new CompanionSelectionRefreshError(() => workspaceSync.refreshAfterMutation(result.snapshot));
+    }
     return result.nodeId;
   };
 }

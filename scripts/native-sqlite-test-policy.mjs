@@ -13,6 +13,7 @@ const controlledElectronSqliteTests = [
   'src/companion/companionReadingRecovery.integration.test.tsx',
   'src/companion/companionGradeRecovery.integration.test.tsx',
   'src/companion/companionSelectionRecovery.integration.test.tsx',
+  'src/companion/companionExistingHighlightRecovery.integration.test.tsx',
   'src/companion/companionCaptureRecovery.integration.test.tsx',
   'src/shared/platform/companionReviewSnapshot.integration.test.ts',
   'src/companion/companionWorkspaceMutation.integration.test.ts',
