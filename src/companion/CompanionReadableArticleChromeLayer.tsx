@@ -92,6 +92,7 @@ function ReadingActionsLayer(props: {
   const restoreFromTrash = props.onRestoreFromTrash;
   return (
     <ReadingActionsSheet
+      key={props.readableArticle.nodeId}
       onFindInDocument={props.onFindInDocument}
       onOpenChange={props.onOpenActions}
       onOpenReadingSheet={props.onOpenReadingSheet}

@@ -14,6 +14,7 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
   'companion.reading.editContent': '编辑内容',
   'companion.reading.doneEditing': '完成',
   'companion.reading.restoreFromTrash': '从废纸篓恢复',
+  'companion.reading.restoredRefreshError': '已恢复，页面未能刷新。',
   'companion.reading.restoreError': '这台设备暂时无法恢复这个主题。',
   'companion.reading.noHeadings.title': '这个主题没有标题',
   'companion.reading.noHeadings.description': '当这个主题包含标题时，大纲会显示在这里。',

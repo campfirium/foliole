@@ -12,6 +12,7 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.reading.editContent': 'Edit content',
   'companion.reading.doneEditing': 'Done',
   'companion.reading.restoreFromTrash': 'Restore from Trash',
+  'companion.reading.restoredRefreshError': 'Restored. The page could not be refreshed.',
   'companion.reading.restoreError': 'This topic could not be restored on this device.',
   'companion.reading.noHeadings.title': 'No headings in this topic',
   'companion.reading.noHeadings.description': 'Headings will appear here when this topic contains an outline.',

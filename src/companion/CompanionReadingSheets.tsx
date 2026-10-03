@@ -1,5 +1,5 @@
 import { Highlighter, Info, RotateCcw, Search, SlidersHorizontal } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import type { ReactNode, MutableRefObject } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -8,6 +8,7 @@ import { CompanionBottomSheet } from './CompanionBottomSheet';
 import type { CompanionHighlightPanelItem } from './companionHighlightPanelModel';
 import { CompanionReadingTypographyControls } from './CompanionReadingTypographyControls';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
+import { useCompanionTrashRestoreAction } from './useCompanionTrashRestoreAction';
 
 import { extractDocumentOutline } from '@/features/editor/model/documentOutline';
 import { AppEmptyState } from '@/shared/ui';
@@ -31,10 +32,12 @@ function ReadingActionRow(props: {
   icon: ReactNode;
   label: string;
   onClick(): void;
+  disabled?: boolean;
 }) {
   return (
     <button
       className="flex w-full items-center gap-3 border-b border-companion-divider py-4 text-left text-sm font-medium text-foreground transition-colors active:bg-companion-subtle/80"
+      disabled={props.disabled}
       onClick={props.onClick}
       type="button"
     >
@@ -44,11 +47,11 @@ function ReadingActionRow(props: {
   );
 }
 
-function ReadingRestoreErrorMessage() {
+function ReadingRestoreErrorMessage({ saved }: { saved: boolean }) {
   const t = useTranslation();
   return (
     <p className="border-b border-companion-divider py-3 text-sm text-error" role="status">
-      {t('companion.reading.restoreError')}
+      {t(saved ? 'companion.reading.restoredRefreshError' : 'companion.reading.restoreError')}
     </p>
   );
 }
@@ -61,19 +64,10 @@ export function ReadingActionsSheet(props: {
   open: boolean;
 }) {
   const t = useTranslation();
-  const [restoreError, setRestoreError] = useState(false);
+  const restore = useCompanionTrashRestoreAction(props);
   const openReadingSheet = (sheet: 'font' | 'highlight' | 'info') => {
     props.onOpenChange(false);
     props.onOpenReadingSheet(sheet);
-  };
-  const restoreFromTrash = async () => {
-    setRestoreError(false);
-    try {
-      await props.onRestoreFromTrash?.();
-      props.onOpenChange(false);
-    } catch {
-      setRestoreError(true);
-    }
   };
   return (
     <ReadingBottomSheet onOpenChange={props.onOpenChange} open={props.open} title={t('companion.reading.actions')}>
@@ -100,11 +94,12 @@ export function ReadingActionsSheet(props: {
         />
         {props.onRestoreFromTrash ? (
           <>
-            {restoreError ? <ReadingRestoreErrorMessage /> : null}
+            {restore.error ? <ReadingRestoreErrorMessage saved={restore.error === 'refresh'} /> : null}
             <ReadingActionRow
               icon={<RotateCcw aria-hidden="true" className="h-5 w-5" />}
-              label={t('companion.reading.restoreFromTrash')}
-              onClick={restoreFromTrash}
+              label={t(restore.error === 'refresh' ? 'companion.selection.refresh' : 'companion.reading.restoreFromTrash')}
+              disabled={restore.pending}
+              onClick={restore.restore}
             />
           </>
         ) : null}
