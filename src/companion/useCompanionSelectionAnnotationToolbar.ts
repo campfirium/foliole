@@ -192,7 +192,9 @@ export function useCompanionSelectionAnnotationToolbar(props: {
   });
 
   useCompanionSelectionAnnotationDocumentEvents({
+    clearSelectionAndCloseToolbar,
     closeSelectionToolbar,
+    editorRef,
     lastFallbackRef: scheduler.lastFallbackRef,
     lastSelectionInteractionAtRef: scheduler.lastSelectionInteractionAtRef,
     scheduleSelectionToolbarOpen: scheduler.scheduleSelectionToolbarOpen
