@@ -1,7 +1,8 @@
 import { promises as fs } from 'node:fs';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
-import { createSyncGroupDeviceIdentity, type SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { createSyncGroupDeviceIdentity, devicePathFlavorFromCanonicalLibraryPath,
+  type SyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from '../database/backupRestore.js';
 import { loadBackupRestorePendingSync, saveBackupRestorePendingSync } from '../database/backupRestorePendingSync.js';
 import { inspectBackupRestoreSync } from '../database/backupRestoreSyncPreview.js';
@@ -131,7 +132,8 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'register') {
     for (const member of args.members as Array<{ device: SyncGroupDeviceIdentity; name: string }>) {
       registerSyncGroupDevice({ device: createSyncGroupDeviceIdentity({ device_anchor: member.device.device_anchor,
-        group_id: member.device.group_id, library_path: member.device.canonical_library_path, path_flavor: 'posix' }),
+        group_id: member.device.group_id, library_path: member.device.canonical_library_path,
+        path_flavor: devicePathFlavorFromCanonicalLibraryPath(member.device.canonical_library_path) }),
         deviceName: member.name, platform: 'darwin' });
     }
     return null;
