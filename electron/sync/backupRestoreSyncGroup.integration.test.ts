@@ -13,7 +13,7 @@ const workers: ReturnType<typeof startRestoreFixture>[] = [];
 afterEach(async ({ task }) => {
   const closed = workers.splice(0);
   await Promise.allSettled(closed.map((worker) => worker.close()));
-  if (task.result?.state === 'fail') {
+  if (root && task.result?.state === 'fail') {
     await fs.writeFile(path.join(root, 'workers.log'), closed.map((worker, index) =>
       `Worker ${index}\n${worker.diagnostics()}`).join('\n'));
     console.info('Failed restore databases:', root);
@@ -30,6 +30,7 @@ async function reservePort() {
 }
 
 async function setup() {
+  await fs.mkdir(path.resolve('.tmp/artifacts/t296'), { recursive: true });
   root = await fs.realpath(await fs.mkdtemp(path.resolve('.tmp/artifacts/t296/multi-')));
   await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
   const script = path.join(root, 'fixture.mjs');
