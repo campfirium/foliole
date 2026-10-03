@@ -8,6 +8,7 @@ import type { CompanionTabAction } from './CompanionFloatingBars';
 import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionNodeLinkRuntime } from './CompanionNodeLinkRuntime';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
+import { CompanionShareInboxNotice } from './CompanionShareInboxNotice';
 import { CompanionShellView } from './CompanionShellView';
 import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
 import { CompanionSyncProtocolNotice } from './CompanionSyncProtocolNotice';
@@ -16,7 +17,6 @@ import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
 import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
-import { useCompanionShareInbox } from './useCompanionShareInbox';
 import { useCompanionShellActions } from './useCompanionShellActions';
 import { useCompanionSyncSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionTabsConfig } from './useCompanionTabsConfig';
@@ -136,19 +136,13 @@ function buildCompanionShellModel(args: {
   };
 }
 
-function useCompanionWorkspaceRuntime(bootstrapState: NativeCompanionBootstrapState) {
-  const workspaceSync = useCompanionWorkspaceSync(bootstrapState);
-  useCompanionShareInbox(workspaceSync);
-  return workspaceSync;
-}
-
 function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const floatingBar = useFloatingBarVisibility('companion-bottom-tabs');
   const browseSort = useCompanionBrowseSortState();
   const [isBrowseDirectoryOpen, setIsBrowseDirectoryOpen] = useState(false);
   const [isCaptureSheetOpen, setIsCaptureSheetOpen] = useState(false);
   const [isOnlyReviewOpen, setIsOnlyReviewOpen] = useState(false);
-  const workspaceSync = useCompanionWorkspaceRuntime(bootstrapState);
+  const workspaceSync = useCompanionWorkspaceSync(bootstrapState);
   const surface = useCompanionArticleSurface(workspaceSync, floatingBar, {
     sortDirection: browseSort.browseSortDirection,
     sortKey: browseSort.browseSortKey
@@ -218,7 +212,9 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
         <CompanionHandoffReminderRuntime workspaceSync={model.workspaceSync}>
           <CompanionNodeLinkRuntime model={model}>
             <CompanionSyncProtocolNotice error={model.workspaceSync.error}>
-              <CompanionShellView model={model} />
+              <CompanionShareInboxNotice workspaceSync={model.workspaceSync}>
+                <CompanionShellView model={model} />
+              </CompanionShareInboxNotice>
             </CompanionSyncProtocolNotice>
           </CompanionNodeLinkRuntime>
         </CompanionHandoffReminderRuntime>

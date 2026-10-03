@@ -3,6 +3,7 @@ import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSna
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract';
 import { deriveNodeTitleFromContent } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
+import { persistCompanionShareDelivery } from '../shared/platform/companion/runtime/companionShareDelivery';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { applyCompanionLocalNodeVersions } from '../shared/platform/companionSyncObjects';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
@@ -32,6 +33,7 @@ interface PersistCompanionCapturedTextArgs {
 }
 
 interface CaptureTextDraft {
+  persisted?: boolean;
   node: WorkspaceNodeSnapshot;
   nodeVersion: NativeSyncNodeRecord;
   snapshot: WorkspaceSnapshot;
@@ -59,8 +61,16 @@ function createCaptureNode(content: string, timestamp: string, nodeId?: string):
 async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Promise<CaptureTextDraft> {
   if (!args.text.trim()) throw new CompanionCaptureTextError('empty');
   const content = args.preserveBoundaryWhitespace ? args.text : args.text.trim();
-  const inboxNode = args.snapshot?.nodesById[INBOX_NODE_ID];
-  if (!args.snapshot || !inboxNode || args.snapshot.trashedNodeIds.includes(INBOX_NODE_ID)) {
+  if (!args.snapshot) throw new CompanionCaptureTextError('inbox-unavailable');
+  const node = createCaptureNode(content, args.now ?? new Date().toISOString(), args.nodeId);
+  const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId, args.versionId);
+  if (args.nodeId && args.versionId && isAvailableNativeCompanionRuntime()) {
+    await persistCompanionShareDelivery(nodeVersion, Boolean(args.snapshot.nodesById[INBOX_NODE_ID])
+      && !args.snapshot.trashedNodeIds.includes(INBOX_NODE_ID));
+    return { persisted: true, node, nodeVersion, snapshot: args.snapshot };
+  }
+  const inboxNode = args.snapshot.nodesById[INBOX_NODE_ID];
+  if (!inboxNode || args.snapshot.trashedNodeIds.includes(INBOX_NODE_ID)) {
     throw new CompanionCaptureTextError('inbox-unavailable');
   }
   let existingNode = args.nodeId ? args.snapshot.nodesById[args.nodeId] : null;
@@ -77,8 +87,6 @@ async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Pr
       existingNode, args.deviceId, args.versionId
     ), snapshot: args.snapshot };
   }
-  const node = createCaptureNode(content, args.now ?? new Date().toISOString(), args.nodeId);
-  const nodeVersion = await toCompanionNativeNodeVersion(node, args.deviceId, args.versionId);
   const versionedNode = { ...node, currentVersionId: nodeVersion.version_id };
   return {
     node: versionedNode,
@@ -93,7 +101,7 @@ async function buildCaptureTextDraft(args: PersistCompanionCapturedTextArgs): Pr
 
 export async function persistCompanionCapturedText(args: PersistCompanionCapturedTextArgs) {
   const draft = await buildCaptureTextDraft(args);
-  await applyCompanionLocalNodeVersions([draft.nodeVersion]);
+  if (!draft.persisted) await applyCompanionLocalNodeVersions([draft.nodeVersion]);
   return {
     nodeId: draft.node.id,
     snapshot: draft.snapshot
