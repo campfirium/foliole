@@ -1,4 +1,5 @@
 import { FileUp, Mic, Clipboard, type LucideIcon } from 'lucide-react';
+import { useEffect } from 'react';
 
 import { cn } from '../shared/lib/utils';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
@@ -13,6 +14,7 @@ import {
   appInputFocusVisibleClassName
 } from '../shared/ui';
 
+import { COMPANION_ANDROID_CAPTURE_BACK_EVENT } from './companionAndroidBackEvent';
 import type { CompanionCaptureTextSaveError, CompanionCaptureTextSaveResult } from './companionCaptureTextController';
 import { companionMobileRailClassName } from './companionCssCompatibility';
 import { useCompanionCaptureDraft } from './useCompanionCaptureDraft';
@@ -102,12 +104,22 @@ function resolveCaptureErrorLabel(error: CompanionCaptureTextSaveError | null, t
 }
 
 export function CompanionCaptureSheet(props: {
+  draftScope: string;
   onSave(text: string): Promise<CompanionCaptureTextSaveResult>;
   onOpenChange(open: boolean): void;
   open: boolean;
 }) {
   const t = useTranslation();
   const state = useCompanionCaptureDraft(props);
+  useEffect(() => {
+    if (!props.open) return;
+    const handleBack = (event: Event) => {
+      event.preventDefault();
+      state.closeForSystemBack();
+    };
+    document.addEventListener(COMPANION_ANDROID_CAPTURE_BACK_EVENT, handleBack);
+    return () => document.removeEventListener(COMPANION_ANDROID_CAPTURE_BACK_EVENT, handleBack);
+  }, [props.open, state.closeForSystemBack]);
   const { draft, isSaving, isSaved, canSave, handleDraftChange, handleOpenChange, handleSave } = state;
   const errorLabel = isSaved
     ? t('companion.capture.error.refreshFailed')

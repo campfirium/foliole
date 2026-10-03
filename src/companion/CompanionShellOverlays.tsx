@@ -8,6 +8,7 @@ import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 type Surface = ReturnType<typeof useCompanionArticleSurface>;
 
 export const CompanionShellOverlays = memo(function CompanionShellOverlays(props: {
+  captureDraftScope: string;
   activeSecondaryDestinationId: CompanionSecondaryDestinationId | null;
   activeAction: CompanionTabAction;
   companionTabConfig: CompanionTabConfig;
@@ -39,6 +40,7 @@ export const CompanionShellOverlays = memo(function CompanionShellOverlays(props
         visible={props.isNavigationVisible && !props.isReadableArticleImmersive}
       />
       <CompanionCaptureSheet
+        draftScope={props.captureDraftScope}
         onOpenChange={props.onCaptureSheetOpenChange}
         onSave={props.onCaptureSave}
         open={props.isCaptureSheetOpen}

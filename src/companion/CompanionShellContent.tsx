@@ -151,7 +151,7 @@ export function renderCompanionShellContent(props: CompanionShellContentProps) {
     if (props.surface.flowReady === false) return <CompanionWorkspaceSyncLoading />;
     if (props.surface.effectiveReviewSession.currentCard && props.surface.readableArticle) {
       return <CompanionShellReadableArticle surface={props.surface} workspaceSync={props.workspaceSync}
-        onExit={() => props.surface.handleTabAction('recent')} flow />;
+        onExit={() => props.isOnlyReviewOpen ? props.onBackDirectorySelection() : props.surface.handleTabAction('recent')} flow />;
     }
     if (props.surface.effectiveReviewSession.currentCard) return <CompanionArticleBodyStatusFallback
       bodyStatus="fetching" title={props.surface.effectiveReviewSession.currentCard.title} />;

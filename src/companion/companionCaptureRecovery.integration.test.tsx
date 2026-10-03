@@ -76,7 +76,7 @@ function CaptureSurface({ initial }: { initial: NativeCompanionWorkspaceSyncStat
   } as ReturnType<typeof useCompanionWorkspaceSync>);
   return <>
     <button onClick={() => setOpen(true)}>Open capture</button>
-    <CompanionCaptureSheet onOpenChange={setOpen} onSave={save} open={open} />
+    <CompanionCaptureSheet draftScope="recovery-test" onOpenChange={setOpen} onSave={save} open={open} />
   </>;
 }
 

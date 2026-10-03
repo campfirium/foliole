@@ -113,6 +113,7 @@ export function CompanionShellView(props: { model: CompanionShellModel }) {
         </div>
       </main>
       <CompanionShellOverlays
+        captureDraftScope={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? model.workspaceSync.bootstrapState?.database_path ?? 'preview'}
         activeSecondaryDestinationId={model.activeSecondaryDestinationId}
         activeAction={model.surface.activeAction}
         companionTabConfig={model.companionTabs.config}

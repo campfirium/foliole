@@ -13,6 +13,7 @@ import { CompanionShareInboxNotice } from './CompanionShareInboxNotice';
 import { CompanionShellView } from './CompanionShellView';
 import { CompanionSyncGroupRuntime } from './CompanionSyncGroupRuntime';
 import { CompanionSyncProtocolNotice } from './CompanionSyncProtocolNotice';
+import { useCompanionAndroidBack } from './useCompanionAndroidBack';
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionBrowseSortState } from './useCompanionBrowseSortState';
 import { useCompanionDirectorySelectionState } from './useCompanionDirectorySelectionState';
@@ -203,6 +204,7 @@ export type CompanionShellModel = ReturnType<typeof useCompanionShellModel>;
 
 export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrapState }) {
   const model = useCompanionShellModel(props.bootstrapState);
+  useCompanionAndroidBack(model);
 
   return (
     <CompanionCustomCssProvider

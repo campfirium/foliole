@@ -19,6 +19,7 @@ import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import { useCompanionImmersiveScrollPosition } from './useCompanionImmersiveScrollPosition';
 import { useCompanionNodeTextAlternative } from './useCompanionNodeTextAlternative';
 import { createPendingAnnotationActions, useCompanionPendingReadableArticle } from './useCompanionPendingReadableArticle';
+import { useCompanionReadableAndroidBack } from './useCompanionReadableAndroidBack';
 import { useCompanionReadingTypographySettings } from './useCompanionReadingTypographySettings';
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
@@ -52,6 +53,19 @@ interface ImmersiveReadableArticleProps {
   syncEndpointUrl?: string | null;
 }
 
+function createArticleToolbarEvents(toolbar: ReturnType<typeof useCompanionSelectionAnnotationToolbar>) {
+  function closeToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
+    if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.closeSelectionToolbar();
+  }
+  function closeToolbarFromArticleTouch(event: ReactTouchEvent<HTMLElement>) {
+    if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.closeSelectionToolbar();
+  }
+  function openToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
+    if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.openSelectionToolbar(event);
+  }
+  return { closeToolbarFromArticlePointer, closeToolbarFromArticleTouch, openToolbarFromArticlePointer };
+}
+
 function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) {
   const reading = useImmersiveReadableArticleState(resolveCompanionSearchSelection(props.readableArticle.content, props.searchMatch));
   const snapshot = props.snapshot;
@@ -77,22 +91,18 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     });
     toolbar.editorRef.current?.focus();
   }
+  useCompanionReadableAndroidBack({
+    editing: reading.isContentEditing,
+    selectionOpen: Boolean(toolbar.selectionToolbar),
+    closeSelection: toolbar.clearSelectionAndCloseToolbar,
+    finishEditing: toggleContentEditing,
+    exit: props.onExit
+  });
   function selectOutlineItem(item: { from: number; to: number }) {
     reading.handleSelectOutlineItem(item);
     toolbar.closeSelectionToolbar();
   }
-  function closeToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
-    if (isCompanionArticleInteractiveTarget(event.target)) return;
-    toolbar.closeSelectionToolbar();
-  }
-  function closeToolbarFromArticleTouch(event: ReactTouchEvent<HTMLElement>) {
-    if (isCompanionArticleInteractiveTarget(event.target)) return;
-    toolbar.closeSelectionToolbar();
-  }
-  function openToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
-    if (isCompanionArticleInteractiveTarget(event.target)) return;
-    toolbar.openSelectionToolbar(event);
-  }
+  const toolbarEvents = createArticleToolbarEvents(toolbar);
   const chromeReservedSpacing = 'pt-14 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+3.5rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
   const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${chromeReservedSpacing} ${props.flow ? companionReviewBottomInsetClassName : ''} text-foreground`;
   const cloze = findCompanionClozeTarget(snapshot, props.readableArticle.nodeId);
@@ -102,9 +112,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
   } : undefined;
   return {
     openClozeRemoval,
-    closeToolbarFromArticlePointer,
-    closeToolbarFromArticleTouch,
-    openToolbarFromArticlePointer,
+    ...toolbarEvents,
     reading,
     selectOutlineItem,
     surfaceClassName,
