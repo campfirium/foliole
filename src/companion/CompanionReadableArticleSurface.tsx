@@ -153,6 +153,7 @@ function ImmersiveArticleChrome(props: {
       onOpenReadingSheet={model.reading.setOpenReadingSheet}
       onOpenSearchSheet={model.reading.setIsSearchSheetOpen}
       onReadingTypographySettingsChange={readingTypography.updateSettings}
+      readingTypographySaveError={readingTypography.saveError}
       onSelectOutlineItem={model.selectOutlineItem}
       onToggleContentEditing={model.toggleContentEditing}
       openReadingSheet={model.reading.openReadingSheet}

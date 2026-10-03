@@ -1,4 +1,5 @@
 export const ZH_HANS_COMPANION_READING_TYPOGRAPHY_TRANSLATIONS = {
+  'companion.reading.font.saveError': '阅读设置未能保存，仍使用上次保存的设置。',
   'companion.reading.font.size': '字号',
   'companion.reading.font.size.small': '小',
   'companion.reading.font.size.default': 'Default',

@@ -50,6 +50,7 @@ interface ImmersiveChromeLayerProps {
   outlineOpen: boolean;
   readableArticle: ReadableArticle;
   readingTypographySettings: CompanionReadingTypographySettings;
+  readingTypographySaveError?: boolean | undefined;
   searchOpen: boolean;
   snapshot?: WorkspaceSnapshot | null;
   textAlternative?: TextAlternativeState;
@@ -115,6 +116,7 @@ function ReadingSheetsLayer(props: {
   onSelectOutlineItem(item: { from: number; to: number }): void;
   openReadingSheet: 'font' | 'highlight' | 'info' | null;
   readingTypographySettings: CompanionReadingTypographySettings;
+  readingTypographySaveError?: boolean | undefined;
   searchOpen: boolean;
   outlineOpen: boolean;
   readableArticle: ReadableArticle;
@@ -141,6 +143,7 @@ function ReadingSheetsLayer(props: {
         onOpenChange={(open) => props.onOpenReadingSheet(open ? 'font' : null)}
         open={props.openReadingSheet === 'font'}
         settings={props.readingTypographySettings}
+        saveError={props.readingTypographySaveError}
       />
       <ReadingHighlightSheet
         highlights={highlights}
@@ -216,6 +219,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
         onSelectOutlineItem={props.onSelectOutlineItem}
         openReadingSheet={props.openReadingSheet}
         readingTypographySettings={props.readingTypographySettings}
+        readingTypographySaveError={props.readingTypographySaveError}
         searchOpen={props.searchOpen}
         outlineOpen={props.outlineOpen}
         readableArticle={props.readableArticle}
