@@ -15,6 +15,7 @@ const controlledElectronSqliteTests = [
   'electron/sync/desktopSyncDiagnostics.http.integration.test.ts',
   'src/shared/platform/companionTopicDailyCountSync.test.ts',
   'src/companion/companionReadingRecovery.integration.test.tsx',
+  'src/companion/companionBrowseReachability.integration.test.tsx',
   'src/companion/companionGradeRecovery.integration.test.tsx',
   'src/companion/companionSelectionRecovery.integration.test.tsx',
   'src/companion/companionExistingHighlightRecovery.integration.test.tsx',
