@@ -106,8 +106,10 @@ it.each([false, true])('converges matching production heads after independent ov
   expect((await current(right)).body_text).toBe(final.body_text);
   for (const peer of [left, right]) {
     assertPersisted(peer, 'Shared final body', final.version_id!);
-    expect((await applyNodePushBatchWithDbPort(peer.port, [payload(a), payload(b)])).acks
-      .every((ack) => ack.status === 'accepted')).toBe(true);
+    const source = peer === left ? right : left;
+    const replay = peer === left ? toLeft : toRight;
+    expect(await receivePack(source, peer, replay))
+      .toMatchObject({ appliedObjectCount: 0, handledConflictCount: 0 });
     assertPersisted(peer, 'Shared final body', final.version_id!);
   }
   await receivePack(right, left, toLeft);
