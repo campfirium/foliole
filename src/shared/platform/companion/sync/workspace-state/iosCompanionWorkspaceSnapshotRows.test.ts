@@ -83,3 +83,12 @@ describe('iosCompanionWorkspaceSnapshotRows', () => {
     expect(views['node-1']).toMatchObject({ scrollTop: 42, selectionFrom: 2, selectionTo: 7 });
   });
 });
+
+it('preserves complete review rows, including valid zero and absent review states', () => {
+  const review = { due: '2026-05-01T00:00:00Z', last_review_at: null, review_state: 0,
+    stability: 0, difficulty: 0, elapsed_days: 0, scheduled_days: 0, reps: 0, lapses: 0 };
+  expect(buildIosWorkspaceNodes([{ ...nodeRow(), ...review }]).nodesById['node-1']?.review)
+    .toEqual({ due: review.due, lastReviewAt: null, state: 0,
+      stability: 0, difficulty: 0, elapsedDays: 0, scheduledDays: 0, reps: 0, lapses: 0 });
+  expect(buildIosWorkspaceNodes([{ ...nodeRow(), ...review, due: null }]).nodesById['node-1']?.review).toBeNull();
+});
