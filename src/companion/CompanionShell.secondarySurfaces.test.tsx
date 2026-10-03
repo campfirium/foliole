@@ -115,7 +115,10 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
 async function renderShellWithSurface(surface: unknown) {
   mockFloatingBar();
   mockWorkspaceSync();
-  useCompanionArticleSurface.mockReturnValue(surface);
+  useCompanionArticleSurface.mockImplementation((_workspace, _bar, _sort, options) => ({
+    ...surface,
+    effectiveReviewSession: options?.isOnlyReviewOpen ? surface.onlyReviewSession : surface.effectiveReviewSession
+  }));
   const { CompanionShell } = await import('./CompanionShell');
   render(
     <CompanionShell

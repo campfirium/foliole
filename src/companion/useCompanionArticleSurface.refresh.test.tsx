@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -157,14 +157,14 @@ describe('useCompanionArticleSurface remote refresh', () => {
     expect(result.current.recentArticles[0]?.preview).toContain('Updated remote body');
   });
 
-  it('refreshes the review queue when synced review state changes', () => {
+  it('keeps visible current reading material when its remote schedule changes', async () => {
     const dueSnapshot = createSnapshot();
     const { result, rerender } = renderHook(
       ({ workspaceSync }) => useCompanionArticleSurface(workspaceSync, createFloatingBar()),
       { initialProps: { workspaceSync: createWorkspaceSync(dueSnapshot) } }
     );
 
-    expect(result.current.reviewSession.currentCard?.nodeId).toBe('article-1');
+    await waitFor(() => expect(result.current.reviewSession.currentCard?.nodeId).toBe('article-1'));
     rerender({
       workspaceSync: createWorkspaceSync(createSnapshot({
         reading: {
@@ -174,6 +174,6 @@ describe('useCompanionArticleSurface remote refresh', () => {
       }))
     });
 
-    expect(result.current.reviewSession.currentCard).toBeNull();
+    expect(result.current.reviewSession.currentCard?.nodeId).toBe('article-1');
   });
 });

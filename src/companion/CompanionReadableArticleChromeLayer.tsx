@@ -33,6 +33,7 @@ type TextAlternativeState = {
 interface ImmersiveChromeLayerProps {
   actionsOpen: boolean;
   canEditContent?: boolean;
+  actionsAtTop?: boolean;
   editor: EditorAdapter | null;
   isChromeVisible: boolean;
   isContentEditing: boolean;
@@ -58,6 +59,7 @@ interface ImmersiveChromeLayerProps {
 
 function ReadingChromeControls(props: {
   canEditContent?: boolean;
+  actionsAtTop?: boolean;
   isChromeVisible: boolean;
   isContentEditing: boolean;
   onExit(): void;
@@ -69,6 +71,7 @@ function ReadingChromeControls(props: {
 }) {
   return (
     <ReadingChrome
+      actionsAtTop={props.actionsAtTop === true}
       canEditContent={props.canEditContent === true}
       isContentEditing={props.isContentEditing}
       visible={props.isChromeVisible}
@@ -189,6 +192,7 @@ export function ImmersiveChromeLayer(props: ImmersiveChromeLayerProps) {
     <>
       <ReadingChromeControls
         {...definedProps({ canEditContent: props.canEditContent })}
+        actionsAtTop={props.actionsAtTop === true}
         isChromeVisible={props.isChromeVisible}
         isContentEditing={props.isContentEditing}
         onExit={props.onExit}

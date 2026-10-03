@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest';
 
 import type { CompanionContentAcknowledgement } from '../shared/platform/companion/editing/companionContentEditContract';
+import { invalidateCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 
 import { createContentSaveMock, deferred } from './companionContentEditingTestSupport';
 import { CompanionDraftProvider } from './CompanionDraftProvider';
@@ -38,4 +39,23 @@ it('retains a failed detached draft until a foreground event confirms it', async
     gate.resolve({ content: 'Retained input', currentVersionId: first!.versionId, submittedVersionId: first!.versionId });
   });
   expect(screen.getByLabelText('Draft')).toHaveValue('Retained input');
+});
+
+it('does not carry a dirty draft into a reopened library with the same node id', async () => {
+  const oldSave = createContentSaveMock();
+  oldSave.mockRejectedValue(new Error('Old library unavailable'));
+  const newSave = createContentSaveMock({ content: 'Other library body', versionId: 'other' });
+  function Editor({ save }: { save: typeof oldSave }) {
+    const draft = useCompanionTopicEditAutosave({ canEdit: true, initialContent: 'Other library body',
+      initialVersionId: 'other', nodeId: 'same-id', onSaveContent: save });
+    return <textarea aria-label="Scoped draft" value={draft.value} onChange={(event) => draft.handleChange(event.target.value)} />;
+  }
+  const ui = render(<CompanionDraftProvider><Editor save={oldSave} /></CompanionDraftProvider>);
+  fireEvent.change(screen.getByLabelText('Scoped draft'), { target: { value: 'Old unsaved input' } });
+  act(() => {
+    invalidateCompanionReadingScope();
+    ui.rerender(<CompanionDraftProvider><Editor save={newSave} /></CompanionDraftProvider>);
+  });
+  await waitFor(() => expect(screen.getByLabelText('Scoped draft')).toHaveValue('Other library body'));
+  expect(newSave).not.toHaveBeenCalled();
 });

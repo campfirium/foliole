@@ -11,6 +11,7 @@ export function CompanionBottomReviewBar(props: {
   disabled?: boolean;
   isAnswerRevealed: boolean;
   itemKind: 'fsrs' | 'reading';
+  onSoonReviewTopic?: () => void;
   onReadReviewTopic: () => void;
   onPostponeReviewTopic: () => void;
   onDismissReviewTopic: () => void;
@@ -37,6 +38,8 @@ export function CompanionBottomReviewBar(props: {
           primary={
             props.itemKind === 'reading' ? (
               <ReadingReviewActions
+                isSubmitting={Boolean(props.disabled)}
+                {...(props.onSoonReviewTopic ? { onRevisitReviewTopicSoon: props.onSoonReviewTopic } : {})}
                 actionButtonClassName="min-w-0 flex-1 border-border px-2"
                 groupClassName={actionGroupClassName}
                 onReadReviewTopic={props.onReadReviewTopic}
@@ -44,7 +47,7 @@ export function CompanionBottomReviewBar(props: {
                 onDismissReviewTopic={props.onDismissReviewTopic}
               />
             ) : !canGradeFsrs ? (
-              <FsrsRevealAction disabled={!props.hasAnswer} onRevealAnswer={props.onRevealAnswer} />
+              <FsrsRevealAction disabled={!props.hasAnswer || Boolean(props.disabled)} onRevealAnswer={props.onRevealAnswer} />
             ) : (
               <ReviewGradeActions
                 buttonClassName="min-w-0 flex-1 px-3"
@@ -58,7 +61,7 @@ export function CompanionBottomReviewBar(props: {
           }
           reviewInputMode="hotkeys"
           reviewItemKind={props.itemKind}
-          secondary={null}
+          secondary={props.statusLabel ?? null}
         />
       </div>
     </footer>

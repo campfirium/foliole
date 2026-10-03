@@ -112,6 +112,7 @@ function renderSurface(initial: NativeCompanionWorkspaceSyncState, onlyReview: b
 }
 
 async function expectCurrentBody(ui: ReturnType<typeof renderSurface>) {
+  await waitFor(() => expect(ui.result.current.effectiveReviewSession.currentCard).not.toBeNull());
   const id = ui.result.current.effectiveReviewSession.currentCard?.nodeId;
   expect(id).toBeTruthy();
   await waitFor(() => expect(ui.result.current.readableArticle?.nodeId).toBe(id));
@@ -144,7 +145,7 @@ it.each([false, true])('keeps the current card and body through fast navigation 
   expect(ui.result.current.isAnswerRevealed).toBe(true);
   expect(ui.result.current.effectiveReviewSession.queueNodeIds).toEqual(queue);
   if (only) expect(queue).not.toContain('reading');
-  else expect(queue).toContain('reading');
+  // Flow uses the desktop task queue; reading extensions are selected by its transitions.
   expect(database!.prepare('SELECT * FROM review_log').all()).toHaveLength(0);
 });
 
@@ -163,7 +164,7 @@ it.each([false, true])('rebuilds the same eligible queue from durable state afte
   expect(reopened.result.current.effectiveReviewSession.queueNodeIds).toEqual(queue);
   expect(reopened.result.current.isAnswerRevealed).toBe(false);
   const plan = buildReviewQueuePlan({ ...selectCanonicalReviewQueueSource(state.workspace_snapshot!), now: new Date().toISOString() });
-  expect(reopened.result.current.onlyReviewSession.queueNodeIds).toEqual(plan.queueNodeIds.filter((id) => id !== 'reading'));
+  if (only) expect(reopened.result.current.onlyReviewSession.queueNodeIds).toEqual(plan.queueNodeIds.filter((id) => id !== 'reading'));
 });
 
 it.each([false, true])('reconciles a deleted current card on foreground and clears its answer (only=%s)', async (only) => {
@@ -180,7 +181,7 @@ it.each([false, true])('reconciles a deleted current card on foreground and clea
   expect(ui.result.current.isAnswerRevealed).toBe(false);
 });
 
-it('drops a no-longer-due card and reaches an empty Only Review session without retaining its body', async () => {
+it('skips a remotely handled card before grading and reaches an empty Only Review session', async () => {
   const ui = renderSurface(await loadCompanionWorkspaceSyncState(), true);
   await expectCurrentBody(ui);
   act(() => ui.result.current.handleRevealAnswer());
@@ -193,9 +194,49 @@ it('drops a no-longer-due card and reaches an empty Only Review session without 
     { node_id: 'one', due: '2099-01-01T00:00:00.000Z' }, { node_id: 'two', due: '2099-01-01T00:00:00.000Z' }
   ]);
   await foreground();
+  expect(ui.result.current.onlyReviewSession.currentCard).not.toBeNull();
+  await act(() => ui.result.current.handleGradeReview(3));
   await waitFor(() => expect(ui.result.current.onlyReviewSession.currentCard).toBeNull());
   expect(ui.result.current.readableArticle).toBeNull();
   expect(ui.result.current.isAnswerRevealed).toBe(false);
-  expect(ui.result.current.reviewSession.queueNodeIds).toEqual(['reading']);
+  expect(ui.result.current.reviewSession.queueNodeIds).toEqual([]);
   expect(database!.prepare('SELECT * FROM review_log').all()).toHaveLength(0);
+});
+
+it('keeps the current task and revealed answer when new content changes the candidate order', async () => {
+  const ui = renderSurface(await loadCompanionWorkspaceSyncState(), true);
+  const id = await expectCurrentBody(ui);
+  act(() => ui.result.current.handleRevealAnswer());
+  await seed('new-item', 'item');
+  const node = (await loadCompanionWorkspaceNode(id))!;
+  await applyCompanionLocalNodeVersions([await toWorkspaceNativeNodeVersion({
+    ...node, content: 'Updated body', updatedAt: '2026-10-03T01:00:00.000Z'
+  }, 'fixture')]);
+  await foreground();
+  expect(ui.result.current.effectiveReviewSession.currentCard?.nodeId).toBe(id);
+  expect(ui.result.current.isAnswerRevealed).toBe(true);
+  await waitFor(() => expect(ui.result.current.readableArticle?.content).toBe('Updated body'));
+  await act(() => ui.result.current.handleGradeReview(3));
+  expect(database!.prepare('SELECT node_id FROM review_log').all()).toEqual([{ node_id: id }]);
+});
+
+it('defers reading with Soon without writing a reading completion and restores a legal target on reopen', async () => {
+  database!.exec("UPDATE node_review SET due = '2099-01-01T00:00:00.000Z'");
+  await seed('reading-two', 'topic');
+  const ui = renderSurface(await loadCompanionWorkspaceSyncState(), false);
+  const id = await expectCurrentBody(ui);
+  const before = database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all();
+  await act(() => ui.result.current.handleSoonReviewTopic());
+  expect(ui.result.current.effectiveReviewSession.currentCard?.nodeId).not.toBe(id);
+  expect(database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(before);
+  const resumeId = ui.result.current.effectiveReviewSession.currentCard?.nodeId;
+  await waitFor(async () => {
+    const { loadCompanionFlowResume } = await import('../shared/platform/companion/runtime/companionFlowResume');
+    expect(await loadCompanionFlowResume(ui.result.current.state.workspace_snapshot!.libraryScope!, false)).toBe(resumeId);
+  });
+  ui.unmount();
+  await closeIosCompanionDatabase();
+  await openLibrary();
+  const reopened = renderSurface(await loadCompanionWorkspaceSyncState(), false);
+  expect(await expectCurrentBody(reopened)).toBe(resumeId);
 });

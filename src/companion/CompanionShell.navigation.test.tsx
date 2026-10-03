@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { CompanionReadingActivity } from './companionReadingActivity';
+
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
@@ -98,7 +100,8 @@ function createSurface(activeAction: 'recent' | 'review' | 'search') {
     isAnswerRevealed: false,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,
-    readableArticle: null,
+    readingActivity: new CompanionReadingActivity('topic-1', vi.fn()),
+    readableArticle: activeAction === 'review' ? { content: 'Readable topic body', nodeId: 'topic-1', title: 'Readable article', textAnchorDecorations: [] } : null,
     recentArticles: [],
     readingError: null,
     reviewError: null,

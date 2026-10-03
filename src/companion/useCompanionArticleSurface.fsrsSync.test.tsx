@@ -1,4 +1,4 @@
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
@@ -197,6 +197,8 @@ describe('useCompanionArticleSurface fsrs sync', () => {
   it.each([1, 2, 3, 4] as const)('persists FSRS grade %s with a review log draft', async (grade) => {
     const workspaceSync = createWorkspaceSync();
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+    await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
+    act(() => result.current.handleRevealAnswer());
 
     await act(async () => {
       await result.current.handleGradeReview(grade);
@@ -204,25 +206,29 @@ describe('useCompanionArticleSurface fsrs sync', () => {
 
     expectFsrsReviewRecordSaved(grade);
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord.mock.invocationCallOrder[0]!)
-      .toBeLessThan(workspaceSync.refreshAfterMutation.mock.invocationCallOrder[0]!);
+      .toBeLessThan(workspaceSync.refreshAfterMutation.mock.invocationCallOrder[1]!);
   });
 
   it('does not replace the companion snapshot when fsrs review persistence is unavailable', async () => {
     syncObjectMock.saveCompanionSyncNodeReviewRecord.mockResolvedValueOnce(null as never);
     const workspaceSync = createWorkspaceSync();
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+    await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
+    act(() => result.current.handleRevealAnswer());
 
     await act(async () => {
       await result.current.handleGradeReview(3);
     });
 
-    expect(workspaceSync.refreshAfterMutation).not.toHaveBeenCalled();
-    expect(result.current.reviewError).toBe('Failed to persist the review grade.');
+    expect(workspaceSync.refreshAfterMutation).not.toHaveBeenCalledWith(expect.any(Object));
+    expect(result.current.reviewError).toBe('Could not save the review grade.');
   });
 
   it('ignores duplicate fsrs review submissions while persistence is in flight', async () => {
     const workspaceSync = createWorkspaceSync();
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+    await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
+    act(() => result.current.handleRevealAnswer());
 
     await act(async () => {
       const first = result.current.handleGradeReview(3);
@@ -231,6 +237,6 @@ describe('useCompanionArticleSurface fsrs sync', () => {
     });
 
     expect(syncObjectMock.saveCompanionSyncNodeReviewRecord).toHaveBeenCalledTimes(1);
-    expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledTimes(1);
+    expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCompanionArticleSurface } from './useCompanionArticleSurface';
 import {
@@ -24,6 +24,8 @@ const desktopSyncMock = vi.hoisted(() => ({
 
 vi.mock('../shared/platform/companionSyncObjects', () => syncObjectMock);
 vi.mock('../shared/platform/companionDesktopSyncObjects', () => desktopSyncMock);
+
+afterEach(() => vi.useRealTimers());
 
 const readingActions = [
   ['read', 'handleReadReviewTopic'],
@@ -59,6 +61,7 @@ async function expectReadingReviewActionPersists(method: ReadingActionMethod) {
   const snapshot = createReadingArticleSnapshot();
   const workspaceSync = createWorkspaceSync(snapshot);
   const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
 
   await act(async () => {
     await invokeReadingAction(result.current, method);
@@ -69,10 +72,9 @@ async function expectReadingReviewActionPersists(method: ReadingActionMethod) {
     nodeId: 'article-1'
   }));
   expect(syncObjectMock.saveCompanionSyncNodeReadingRecord.mock.invocationCallOrder[0]!)
-    .toBeLessThan(workspaceSync.refreshAfterMutation.mock.invocationCallOrder[0]!);
+    .toBeLessThan(workspaceSync.refreshAfterMutation.mock.invocationCallOrder[1]!);
 }
 
-describe('useCompanionArticleSurface', () => {
   beforeEach(() => {
     vi.useRealTimers();
     syncObjectMock.saveCompanionSyncActiveViewState.mockClear();
@@ -84,6 +86,8 @@ describe('useCompanionArticleSurface', () => {
     desktopSyncMock.syncCompanionContentBlobFromDesktop.mockClear();
     desktopSyncMock.syncCompanionContentBlobFromDesktop.mockResolvedValue({ availability: 'cached', hash: 'hash' });
   });
+
+describe('useCompanionArticleSurface', () => {
 
   it('opens the connection page first when the phone has no desktop content yet', () => {
     const { result } = renderHook(() => useCompanionArticleSurface(createUnpairedWorkspaceSync(), createFloatingBar()));
@@ -110,6 +114,7 @@ describe('useCompanionArticleSurface browsing', () => {
   it('marks opened browse topics as last opened in the local snapshot', async () => {
     const workspaceSync = createWorkspaceSync();
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
 
     act(() => {
       result.current.handleSelectRecentArticle('article-2');
@@ -138,6 +143,7 @@ describe('useCompanionArticleSurface browsing', () => {
     };
     const workspaceSync = createWorkspaceSync(snapshot);
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
 
     act(() => {
       result.current.handleSelectRecentArticle('article-2');
@@ -228,19 +234,21 @@ describe('useCompanionArticleSurface reading review persistence', () => {
     const snapshot = createReadingArticleSnapshot();
     const workspaceSync = createWorkspaceSync(snapshot);
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
 
     await act(async () => {
       await invokeReadingAction(result.current, method);
     });
 
-    expect(workspaceSync.refreshAfterMutation).not.toHaveBeenCalled();
-    expect(result.current.readingError).toBe('Failed to persist the reading topic.');
+    expect(workspaceSync.refreshAfterMutation).not.toHaveBeenCalledWith(expect.any(Object));
+    expect(result.current.readingError).toBe('Could not save the reading action.');
   });
 
   it.each(readingActions)('ignores duplicate %s actions while persistence is in flight', async (_label, method) => {
     const snapshot = createReadingArticleSnapshot();
     const workspaceSync = createWorkspaceSync(snapshot);
     const { result } = renderHook(() => useCompanionArticleSurface(workspaceSync, createFloatingBar()));
+  await waitFor(() => expect(result.current.reviewSession.currentCard).not.toBeNull());
     syncObjectMock.saveCompanionSyncNodeReadingRecord.mockClear();
 
     await act(async () => {
@@ -250,7 +258,7 @@ describe('useCompanionArticleSurface reading review persistence', () => {
     });
 
     expect(syncObjectMock.saveCompanionSyncNodeReadingRecord).toHaveBeenCalledTimes(1);
-    expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledTimes(1);
+    expect(workspaceSync.refreshAfterMutation).toHaveBeenCalledTimes(2);
   });
 
 });

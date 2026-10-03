@@ -1,4 +1,4 @@
-import { lazy, Suspense, type CSSProperties, useCallback } from 'react';
+import { lazy, Suspense, type CSSProperties, useCallback, useEffect } from 'react';
 
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 
@@ -8,6 +8,7 @@ import {
   CompanionPdfTextVersionToolbar,
   useCompanionPdfReadingEntry
 } from './CompanionPdfReadingEntry';
+import type { CompanionReadingActivity } from './companionReadingActivity';
 import { readingFontCssFamily } from './companionReadingFonts';
 import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
 import type { useCompanionArticleSurface } from './useCompanionArticleSurface';
@@ -155,6 +156,8 @@ function ReadableArticleTextDocument(props: {
 }
 
 export function ReadableArticleDocument(props: {
+  activity?: CompanionReadingActivity;
+  answer?: string | null;
   allowContentEditing?: boolean;
   onAttachmentResourceSynced?: () => void;
   onEditorReady?: (adapter: EditorAdapter | null) => void;
@@ -176,12 +179,7 @@ export function ReadableArticleDocument(props: {
       onSaveContent: props.onSaveContent
     })
   });
-  const syncMissingAttachmentResource = useCallback(async (attachmentId: string) => {
-    if (!props.syncEndpointUrl) return;
-    await saveCompanionSyncActiveViewState(props.readableArticle.nodeId).catch(() => undefined);
-    const result = await syncCompanionAttachmentResourceFromDesktop(props.syncEndpointUrl, attachmentId);
-    if (result.status === 'cached') props.onAttachmentResourceSynced?.();
-  }, [props.onAttachmentResourceSynced, props.readableArticle.nodeId, props.syncEndpointUrl]);
+  const syncMissingAttachmentResource = useReadableDocumentActivity(props, editorState);
 
   if (pdfAttachmentId && pdfReading.isViewingOriginal) {
     return renderOriginalPdf(
@@ -212,7 +210,35 @@ export function ReadableArticleDocument(props: {
           scrollContainer: props.scrollContainer
         })}
       />
+      <ReadableArticleAnswer answer={props.answer ?? null} article={props.readableArticle}
+        settings={props.readingTypographySettings} onMissingResource={syncMissingAttachmentResource} />
       {editorState.error ? <p className="mt-3 px-1 text-sm text-error">{editorState.error}</p> : null}
     </>
   );
+}
+
+function useReadableDocumentActivity(props: Parameters<typeof ReadableArticleDocument>[0],
+  editorState: ReturnType<typeof useCompanionTopicEditAutosave>) {
+  useEffect(() => {
+    const activity = props.activity;
+    if (!activity) return;
+    activity.flushDraft = editorState.flushPendingSave;
+    return () => { if (activity.flushDraft === editorState.flushPendingSave) activity.flushDraft = null; };
+  }, [props.activity, editorState.flushPendingSave]);
+  return useCallback(async (attachmentId: string) => {
+    if (!props.syncEndpointUrl) return;
+    await saveCompanionSyncActiveViewState(props.readableArticle.nodeId).catch(() => undefined);
+    const result = await syncCompanionAttachmentResourceFromDesktop(props.syncEndpointUrl, attachmentId);
+    if (result.status === 'cached') props.onAttachmentResourceSynced?.();
+  }, [props.onAttachmentResourceSynced, props.readableArticle.nodeId, props.syncEndpointUrl]);
+
+}
+
+function ReadableArticleAnswer(props: { answer: string | null; article: ReadableArticle;
+  settings: CompanionReadingTypographySettings; onMissingResource: (id: string) => Promise<void> }) {
+  if (!props.answer) return null;
+  return <div style={typographyStyle(props.settings)} className="border-t border-companion-divider pt-5">
+    <CompanionArticleDocument content={props.answer} nodeId={props.article.nodeId + '::answer'}
+      layout="review" scrollContainer="outer" onMissingAttachmentResource={props.onMissingResource} />
+  </div>;
 }

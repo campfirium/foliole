@@ -2,6 +2,9 @@ import { vi } from 'vitest';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 
+import { CompanionReadingActivity } from './companionReadingActivity';
+
+
 type SnapshotNode = WorkspaceSnapshot['nodesById'][string];
 
 function createSnapshotNode(overrides: Partial<SnapshotNode>): SnapshotNode {
@@ -115,7 +118,8 @@ export function createItemReviewSurface() {
     isAnswerRevealed: false,
     isSubmittingGrade: false,
     isSubmittingReadingAction: false,
-    readableArticle: null,
+    readingActivity: new CompanionReadingActivity(currentCard.nodeId, vi.fn()),
+    readableArticle: { content: currentCard.content, nodeId: currentCard.nodeId, title: currentCard.title, textAnchorDecorations: [] },
     readingError: null,
     recentArticles: [],
     reviewError: null,

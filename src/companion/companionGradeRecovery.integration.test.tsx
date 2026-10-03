@@ -3,9 +3,9 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', () => ({
@@ -25,9 +25,10 @@ import {
   loadCompanionWorkspaceSyncState
 } from '../shared/platform/companionWorkspaceSync';
 
-import { resolveCompanionReviewSession } from './companionReviewSession';
+import { CompanionReadingActivity } from './companionReadingActivity';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import { createFloatingBar } from './useCompanionArticleSurfaceTestSupport';
+import { useCompanionFlowSession } from './useCompanionFlowSession';
 import { useCompanionSurfaceActions } from './useCompanionSurfaceActions';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -83,12 +84,16 @@ function renderSurface(initial: NativeCompanionWorkspaceSyncState) {
       setSyncConflictCount: () => {}, setSyncProgress: () => {}
     });
     const snapshot = state.workspace_snapshot;
-    const session = resolveCompanionReviewSession(snapshot);
+    const flow = useCompanionFlowSession({ snapshot, ready: true, active: true, onlyReview: false,
+      libraryScope: snapshot?.libraryScope ?? 'test' });
+    const activity = useMemo(() => new CompanionReadingActivity(flow.view.currentCard?.nodeId ?? null, () => {}),
+      [flow.view.currentCard?.nodeId]);
+    const session = flow.view;
     const handlers = useCompanionSurfaceActions({
-      floatingBar: createFloatingBar(), reviewSession: session, snapshot,
+      floatingBar: createFloatingBar(), flow, activity, active: true, snapshot,
       workspaceSync: { ...actions, state } as ReturnType<typeof useCompanionWorkspaceSync>
     });
-    return { ...handlers, state, session };
+    return { ...handlers, state, session, reveal: flow.reveal };
   });
 }
 
@@ -101,9 +106,12 @@ function storedGrade() {
 
 it('retries only the read after a saved grade, preserving its log and schedule through reopen', async () => {
   const ui = renderSurface(await loadCompanionWorkspaceSyncState());
+  await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
   expect(ui.result.current.session.currentCard?.nodeId).toBe('card');
   const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation');
+  refresh.mockResolvedValueOnce(ui.result.current.state.workspace_snapshot);
   refresh.mockRejectedValueOnce(new Error('Read unavailable'));
+  act(() => ui.result.current.reveal());
   await act(() => ui.result.current.handleGradeReview(3));
   expect(ui.result.current.reviewError).toBeTruthy();
   expect(ui.result.current.session.currentCard?.nodeId).toBe('card');
@@ -112,9 +120,11 @@ it('retries only the read after a saved grade, preserving its log and schedule t
   const stored = await loadCompanionWorkspaceSyncState();
   expect(stored.workspace_snapshot?.nodesById.card?.review?.due).not.toBe('2026-05-01T00:00:00.000Z');
   refresh.mockRejectedValueOnce(new Error('Read still unavailable'));
+  act(() => ui.result.current.reveal());
   await act(() => ui.result.current.handleGradeReview(1));
   expect(ui.result.current.reviewError).toBeTruthy();
   expect(storedGrade()).toEqual(saved);
+  act(() => ui.result.current.reveal());
   await act(() => ui.result.current.handleGradeReview(4));
   expect(ui.result.current.reviewError).toBeNull();
   expect(ui.result.current.state.workspace_snapshot).toEqual(stored.workspace_snapshot);
@@ -131,13 +141,16 @@ it('retries only the read after a saved grade, preserving its log and schedule t
 
 it('rolls back a failed log insert and permits a fresh grade retry', async () => {
   const ui = renderSurface(await loadCompanionWorkspaceSyncState());
+  await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
   const before = storedGrade();
   database!.exec("CREATE TRIGGER fail_log BEFORE INSERT ON review_log BEGIN SELECT RAISE(ABORT, 'log storage failure'); END");
+  act(() => ui.result.current.reveal());
   await act(() => ui.result.current.handleGradeReview(3));
   expect(ui.result.current.reviewError).toBeTruthy();
   expect(storedGrade()).toEqual(before);
   expect(ui.result.current.session.currentCard?.nodeId).toBe('card');
   database!.exec('DROP TRIGGER fail_log');
+  act(() => ui.result.current.reveal());
   await act(() => ui.result.current.handleGradeReview(3));
   expect(ui.result.current.reviewError).toBeNull();
   expect(storedGrade().logs).toHaveLength(1);

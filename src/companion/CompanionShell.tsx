@@ -4,6 +4,7 @@ import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCom
 
 import { createCompanionCaptureTextSaveHandler } from './companionCaptureTextController';
 import { CompanionCustomCssProvider } from './CompanionCustomCssProvider';
+import { CompanionDraftProvider } from './CompanionDraftProvider';
 import type { CompanionTabAction } from './CompanionFloatingBars';
 import { CompanionHandoffReminderRuntime } from './CompanionHandoffReminderRuntime';
 import { CompanionNodeLinkRuntime } from './CompanionNodeLinkRuntime';
@@ -213,7 +214,9 @@ export function CompanionShell(props: { bootstrapState: NativeCompanionBootstrap
           <CompanionNodeLinkRuntime model={model}>
             <CompanionSyncProtocolNotice error={model.workspaceSync.error}>
               <CompanionShareInboxNotice workspaceSync={model.workspaceSync}>
-                <CompanionShellView model={model} />
+                <CompanionDraftProvider key={model.workspaceSync.state.workspace_snapshot?.libraryScope ?? props.bootstrapState.database_path}>
+                  <CompanionShellView model={model} />
+                </CompanionDraftProvider>
               </CompanionShareInboxNotice>
             </CompanionSyncProtocolNotice>
           </CompanionNodeLinkRuntime>

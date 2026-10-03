@@ -3,9 +3,9 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import Database from 'better-sqlite3';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', () => ({
@@ -25,9 +25,10 @@ import {
   loadCompanionWorkspaceSyncState
 } from '../shared/platform/companionWorkspaceSync';
 
-import { resolveCompanionReviewSession } from './companionReviewSession';
+import { CompanionReadingActivity } from './companionReadingActivity';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 import { createFloatingBar } from './useCompanionArticleSurfaceTestSupport';
+import { useCompanionFlowSession } from './useCompanionFlowSession';
 import { useCompanionSurfaceActions } from './useCompanionSurfaceActions';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
@@ -89,12 +90,16 @@ function renderSurface(initial: NativeCompanionWorkspaceSyncState) {
       setSyncConflictCount: () => {}, setSyncProgress: () => {}
     });
     const snapshot = state.workspace_snapshot;
-    const session = resolveCompanionReviewSession(snapshot);
+    const flow = useCompanionFlowSession({ snapshot, ready: true, active: true, onlyReview: false,
+      libraryScope: snapshot?.libraryScope ?? 'test' });
+    const activity = useMemo(() => new CompanionReadingActivity(flow.view.currentCard?.nodeId ?? null, () => {}),
+      [flow.view.currentCard?.nodeId]);
+    const session = flow.view;
     const handlers = useCompanionSurfaceActions({
-      floatingBar: createFloatingBar(), reviewSession: session, snapshot,
+      floatingBar: createFloatingBar(), flow, activity, active: true, snapshot,
       workspaceSync: { ...actions, state } as ReturnType<typeof useCompanionWorkspaceSync>
     });
-    return { ...handlers, state, session };
+    return { ...handlers, state, session, reveal: flow.reveal };
   });
 }
 
@@ -106,6 +111,7 @@ function failReadingWrite(nodeId: string) {
 it('shows committed partial reading state and does not repeat the dismissed item after failure or reopen', async () => {
   const initial = await loadCompanionWorkspaceSyncState();
   const ui = renderSurface(initial);
+  await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
   expect(ui.result.current.session.currentCard?.nodeId).toBe('first');
   failReadingWrite('last');
   await act(() => ui.result.current.handleDismissReviewTopic());
@@ -131,6 +137,7 @@ it('shows committed partial reading state and does not repeat the dismissed item
 
 it('allows retry after the first write fails without advancing either topic', async () => {
   const ui = renderSurface(await loadCompanionWorkspaceSyncState());
+  await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
   failReadingWrite('first');
   await act(() => ui.result.current.handleDismissReviewTopic());
   expect(ui.result.current.session.currentCard?.nodeId).toBe('first');
@@ -145,8 +152,10 @@ it('allows retry after the first write fails without advancing either topic', as
 
 it.each(['partial', 'complete'] as const)('recovers a failed refresh after %s saving before accepting another action', async (outcome) => {
   const ui = renderSurface(await loadCompanionWorkspaceSyncState());
+  await waitFor(() => expect(ui.result.current.session.currentCard).not.toBeNull());
   if (outcome === 'partial') failReadingWrite('last');
   const refresh = vi.spyOn(workspaceRepository, 'refreshCompanionWorkspaceAfterMutation');
+  refresh.mockResolvedValueOnce(ui.result.current.state.workspace_snapshot);
   refresh.mockRejectedValueOnce(new Error('Read unavailable'));
   await act(() => ui.result.current.handleDismissReviewTopic());
   expect(ui.result.current.readingError).toBeTruthy();
@@ -158,7 +167,8 @@ it.each(['partial', 'complete'] as const)('recovers a failed refresh after %s sa
   expect(ui.result.current.readingError).toBeTruthy();
   expect(database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(rows);
   await act(() => ui.result.current.handleReadReviewTopic());
-  expect(ui.result.current.readingError).toBeNull();
+  if (outcome === 'complete') expect(ui.result.current.readingError).toBeNull();
+  else expect(ui.result.current.readingError).toBeTruthy();
   expect(ui.result.current.session.currentCard?.nodeId).not.toBe('first');
   expect(database!.prepare('SELECT * FROM node_reading ORDER BY node_id').all()).toEqual(rows);
   expect(ui.result.current.state.workspace_snapshot).toEqual((await loadCompanionWorkspaceSyncState()).workspace_snapshot);

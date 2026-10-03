@@ -1,4 +1,5 @@
 import { ChevronLeft, EllipsisVertical, ListTree, Pencil, RefreshCw, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
@@ -70,6 +71,7 @@ function EditingChrome(props: {
 }
 
 function ReadingTopChrome(props: {
+  actions?: ReactNode;
   controlsVisible: boolean;
   onExit(): void;
   onOpenAlternative?: () => void;
@@ -86,18 +88,21 @@ function ReadingTopChrome(props: {
               <ReadingChromeButton icon={ChevronLeft} label={t('companion.reading.exit')} onClick={props.onExit} testId="companion-reading-exit" />
               <ReadingChromeButton icon={ListTree} label={t('companion.reading.outline')} onClick={props.onOpenOutline} />
             </div>
-            <span className="pointer-events-none absolute left-1/2 w-[calc(100%-12.25rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
+            {!props.actions ? <span className="pointer-events-none absolute left-1/2 w-[calc(100%-12.25rem)] max-w-[52vw] -translate-x-1/2 truncate text-center text-sm font-medium text-foreground sm:max-w-sm">
               {props.title}
-            </span>
-            {props.onOpenAlternative ? (
-              <div className="ml-auto">
-                <ReadingChromeButton
-                  icon={RefreshCw}
-                  label={t('companion.reading.alternative.open')}
-                  onClick={props.onOpenAlternative}
-                />
-              </div>
-            ) : null}
+            </span> : null}
+            <div className="ml-auto flex items-center">
+              {props.onOpenAlternative ? (
+                <div className="ml-auto">
+                  <ReadingChromeButton
+                    icon={RefreshCw}
+                    label={t('companion.reading.alternative.open')}
+                    onClick={props.onOpenAlternative}
+                  />
+                </div>
+              ) : null}
+            {props.actions}
+            </div>
           </>
         ) : <ChromeSpacer />}
       </div>
@@ -106,6 +111,7 @@ function ReadingTopChrome(props: {
 }
 
 export function ReadingChrome(props: {
+  actionsAtTop?: boolean;
   canEditContent?: boolean;
   isContentEditing?: boolean;
   onExit(): void;
@@ -116,7 +122,6 @@ export function ReadingChrome(props: {
   title: string;
   visible?: boolean;
 }) {
-  const t = useTranslation();
   if (props.isContentEditing) {
     return <EditingChrome onToggleContentEditing={props.onToggleContentEditing} />;
   }
@@ -124,29 +129,27 @@ export function ReadingChrome(props: {
   return (
     <>
       <ReadingTopChrome
+        actions={props.actionsAtTop ? <ReadingActionsControls {...props} /> : null}
         controlsVisible={controlsVisible}
         onExit={props.onExit}
         onOpenOutline={props.onOpenOutline}
         title={props.title}
         {...(props.onOpenAlternative ? { onOpenAlternative: props.onOpenAlternative } : {})}
       />
-      <div className={`fixed inset-x-0 bottom-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} py-2 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),8px)]`}>
+      {!props.actionsAtTop ? <div className={`fixed inset-x-0 bottom-0 z-workspace-overlay bg-companion-base ${companionMobileChromeHitRailClassName} py-2 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),8px)]`}>
         <div className={`mx-auto flex max-w-[760px] items-center justify-end ${companionFlexRowGap2ClassName}`}>
-          {controlsVisible ? (
-            <>
-              {props.canEditContent ? (
-                <ReadingChromeButton
-                  icon={Pencil}
-                  label={t('companion.reading.editTopic')}
-                  onClick={props.onToggleContentEditing ?? (() => undefined)}
-                  testId="companion-reading-edit"
-                />
-              ) : null}
-              <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
-            </>
-          ) : <ChromeSpacer />}
+          {controlsVisible ? <ReadingActionsControls {...props} /> : <ChromeSpacer />}
         </div>
-      </div>
+      </div> : null}
     </>
   );
+}
+
+function ReadingActionsControls(props: { canEditContent?: boolean; onToggleContentEditing?: () => void; onOpenActions(): void }) {
+  const t = useTranslation();
+  return <>
+    {props.canEditContent ? <ReadingChromeButton icon={Pencil} label={t('companion.reading.editTopic')}
+      onClick={props.onToggleContentEditing} testId="companion-reading-edit" /> : null}
+    <ReadingChromeButton icon={EllipsisVertical} label={t('companion.reading.more')} onClick={props.onOpenActions} />
+  </>;
 }

@@ -23,17 +23,8 @@ vi.mock('./useFloatingBarVisibility', () => ({
   useFloatingBarVisibility
 }));
 
-vi.mock('./CompanionReviewCard', () => ({
-  CompanionReviewAnswer: () => <div data-testid="companion-review-answer" />,
-  CompanionReviewCard: (props: { breadcrumbItems?: Array<{ label: string; targetNodeId: string }>; onSelectBreadcrumbItem?: (id: string) => void }) => (
-    <div data-testid="companion-review-card">
-      {(props.breadcrumbItems ?? []).map((item) => (
-        <button key={item.label} onClick={() => props.onSelectBreadcrumbItem?.(item.targetNodeId)} type="button">
-          {item.label}
-        </button>
-      ))}
-    </div>
-  )
+vi.mock('@/features/editor/components/MarkdownEditor', () => ({
+  MarkdownEditor: () => <article>Prompt body</article>
 }));
 
 function mockBreadcrumbEnvironment(snapshot: WorkspaceSnapshot) {

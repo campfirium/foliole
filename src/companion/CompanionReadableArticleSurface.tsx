@@ -1,15 +1,15 @@
-import { useEffect, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent } from 'react';
+import { useEffect, type PointerEvent as ReactPointerEvent, type TouchEvent as ReactTouchEvent, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
 
-import { companionMobileRailClassName } from './companionCssCompatibility';
+import { companionMobileRailClassName, companionReviewBottomInsetClassName } from './companionCssCompatibility';
+import { ImmersiveArticleContent } from './CompanionImmersiveArticleContent';
 import { ImmersiveChromeLayer } from './CompanionReadableArticleChromeLayer';
-import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 import { SelectionAnnotationToolbarLayer } from './CompanionReadableArticleSelectionToolbarLayer';
-import type { CompanionReadingTypographySettings } from './companionReadingTypographySettings';
+import type { CompanionReadingActivity } from './companionReadingActivity';
 import { resolveCompanionSearchSelection, type CompanionSearchMatch } from './companionSearchMatch';
 import { type CompanionSelectionAnnotationKind } from './CompanionSelectionAnnotationToolbar';
 import { isCompanionArticleInteractiveTarget } from './companionSelectionToolbarDom';
@@ -21,13 +21,17 @@ import { useCompanionReadingTypographySettings } from './useCompanionReadingTypo
 import { useCompanionSelectionAnnotationToolbar } from './useCompanionSelectionAnnotationToolbar';
 import { useImmersiveReadableArticleState } from './useImmersiveReadableArticleState';
 
-import type { EditorAdapter, EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 import { definedProps } from '@/shared/lib/definedProps';
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 type ReadableArticle = NonNullable<ReturnType<typeof useCompanionArticleSurface>['readableArticle']>;
 
 interface ImmersiveReadableArticleProps {
+  activity?: CompanionReadingActivity;
+  flow?: boolean;
+  answer?: string | null;
+  footer?: ReactNode;
+  header?: ReactNode;
   searchMatch?: CompanionSearchMatch | null | undefined;
   onAttachmentResourceSynced?: () => void;
   onCreateSelectionAnnotation?: (
@@ -46,37 +50,6 @@ interface ImmersiveReadableArticleProps {
   syncEndpointUrl?: string | null;
 }
 
-function ImmersiveArticleContent(props: {
-  onAttachmentResourceSynced?: () => void;
-  isContentEditing: boolean;
-  onEditorReady(adapter: EditorAdapter | null): void;
-  onSaveArticleContent?: CompanionContentSaveHandler;
-  readableArticle: ReadableArticle;
-  readingTypographySettings: CompanionReadingTypographySettings;
-  readingRestoreCommandId: string | null;
-  readingSelection: EditorSelection | null;
-  syncEndpointUrl?: string | null;
-}) {
-  return (
-    <div className="mx-auto min-h-full w-full max-w-[760px]">
-      <ReadableArticleDocument
-        allowContentEditing={props.isContentEditing}
-        onEditorReady={props.onEditorReady}
-        readableArticle={props.readableArticle}
-        readingTypographySettings={props.readingTypographySettings}
-        readingRestoreCommandId={props.readingRestoreCommandId}
-        readingSelection={props.readingSelection}
-        scrollContainer="outer"
-        {...definedProps({
-          onAttachmentResourceSynced: props.onAttachmentResourceSynced,
-          onSaveContent: props.onSaveArticleContent,
-          syncEndpointUrl: props.syncEndpointUrl
-        })}
-      />
-    </div>
-  );
-}
-
 function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) {
   const reading = useImmersiveReadableArticleState(resolveCompanionSearchSelection(props.readableArticle.content, props.searchMatch));
   const snapshot = props.snapshot;
@@ -88,14 +61,17 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
   useEffect(() => {
     if (reading.isContentEditing) toolbar.editorRef.current?.focus();
   }, [reading.isContentEditing, toolbar.editorRef]);
-  function toggleContentEditing() {
+  async function toggleContentEditing() {
     if (reading.isContentEditing) {
+      try { await props.activity?.flush(); } catch { return; }
       reading.exitContentEditing();
+      props.activity?.setEditing(false);
       return;
     }
     toolbar.clearSelectionAndCloseToolbar();
     flushSync(() => {
       reading.enterContentEditing();
+      props.activity?.setEditing(true);
     });
     toolbar.editorRef.current?.focus();
   }
@@ -116,7 +92,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     toolbar.openSelectionToolbar(event);
   }
   const chromeReservedSpacing = 'pt-14 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+3.5rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
-  const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${chromeReservedSpacing} text-foreground`;
+  const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${chromeReservedSpacing} ${props.flow ? companionReviewBottomInsetClassName : ''} text-foreground`;
   return {
     closeToolbarFromArticlePointer,
     closeToolbarFromArticleTouch,
@@ -141,6 +117,7 @@ function ImmersiveArticleChrome(props: {
   });
   return (
     <ImmersiveChromeLayer
+      actionsAtTop={articleProps.flow === true}
       actionsOpen={model.reading.isActionsSheetOpen}
       canEditContent={Boolean(articleProps.onSaveArticleContent)}
       editor={model.toolbar.editorRef.current}
@@ -186,6 +163,7 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
       ref={scrollPosition.surfaceRef}
     >
       <ImmersiveArticleChrome articleProps={props} model={model} readingTypography={readingTypography} />
+      {props.header}
       <ImmersiveArticleContent
         isContentEditing={model.reading.isContentEditing}
         onEditorReady={model.toolbar.handleEditorReady}
@@ -194,11 +172,13 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
         readingRestoreCommandId={model.reading.readingRestoreCommandId}
         readingSelection={model.reading.readingSelection}
         {...definedProps({
+          activity: props.activity, answer: props.answer,
           onAttachmentResourceSynced: props.onAttachmentResourceSynced,
           onSaveArticleContent: props.onSaveArticleContent,
           syncEndpointUrl: props.syncEndpointUrl
         })}
       />
+      {props.footer}
       <SelectionAnnotationToolbarLayer
         key={props.readableArticle.nodeId}
         snapshot={props.snapshot}
