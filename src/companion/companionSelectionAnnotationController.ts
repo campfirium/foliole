@@ -1,5 +1,6 @@
 import { definedProps } from '../shared/lib/definedProps';
 import type { CompanionHighlightReadGuard } from '../shared/platform/companion/reading/companionHighlightRead';
+import { getCompanionReadingScope } from '../shared/platform/companion/reading/companionReadingScope';
 
 import {
   addNoteToCompanionExistingHighlight,
@@ -56,7 +57,9 @@ export function createCompanionExistingHighlightNoteHandler(workspaceSync: Retur
 }
 
 export function createCompanionExistingHighlightDeleteHandler(workspaceSync: ReturnTypeOfUseCompanionWorkspaceSync) {
+  const scope = getCompanionReadingScope();
   return async (nodeId: string, guard?: CompanionHighlightReadGuard) => {
+    if (scope !== getCompanionReadingScope()) throw new Error('companion_annotation_library_changed');
     const result = await deleteCompanionExistingHighlight({
       deviceId: workspaceSync.bootstrapState.device_id,
       nodeId,
@@ -64,10 +67,14 @@ export function createCompanionExistingHighlightDeleteHandler(workspaceSync: Ret
       snapshot: workspaceSync.state.workspace_snapshot
     });
     if (!result) return null;
+    const refresh = () => {
+      if (scope !== getCompanionReadingScope()) return Promise.reject(new Error('companion_annotation_library_changed'));
+      return workspaceSync.refreshAfterMutation(result.snapshot);
+    };
     try {
-      await workspaceSync.refreshAfterMutation(result.snapshot);
+      await refresh();
     } catch {
-      throw new CompanionSelectionRefreshError(() => workspaceSync.refreshAfterMutation(result.snapshot));
+      throw new CompanionSelectionRefreshError(refresh);
     }
     return result.nodeId;
   };

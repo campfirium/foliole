@@ -206,6 +206,7 @@ export function useCompanionSelectionAnnotationToolbar(props: {
     handleEditorReady,
     openSelectionToolbar,
     resolveSelectionPayload,
-    selectionToolbar
+    selectionToolbar,
+    setSelectionToolbar
   };
 }

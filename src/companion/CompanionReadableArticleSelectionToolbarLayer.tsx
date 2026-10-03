@@ -38,7 +38,7 @@ export function SelectionAnnotationToolbarLayer(props: {
         if (!result) throw new Error('companion_highlight_node_unavailable');
       }}
       resolveSelectionPayload={props.resolveSelectionPayload}
-      loadExistingHighlight={(nodeId) => readCompanionHighlight(props.snapshot, nodeId)}
+      loadExistingHighlight={(nodeId) => readCompanionHighlight(props.snapshot, nodeId, props.state?.existingHighlight?.kind)}
       state={props.state}
     />
   );

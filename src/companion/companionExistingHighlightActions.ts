@@ -4,32 +4,16 @@ import {
 } from '../../lib/core/annotations/textAnnotationContent';
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { getTextAnchorLocators } from '../features/nodes/model/nodeTypes';
+import { findTextAnchorAtPosition } from '../shared/textAnchorTarget';
 
 import type { SelectionCommandPayload } from '@/shared/selectionCommandPayload';
 
 export interface CompanionExistingHighlightTarget {
+  kind?: 'highlight' | 'cloze';
   note?: string;
   nodeId: string;
   originalText: string;
-}
-
-function isTextLocator(value: unknown): value is { from: number; originalText: string; to: number } {
-  return Boolean(
-    value &&
-      typeof value === 'object' &&
-      typeof (value as { from?: unknown }).from === 'number' &&
-      typeof (value as { to?: unknown }).to === 'number' &&
-      typeof (value as { originalText?: unknown }).originalText === 'string'
-  );
-}
-
-function getLocators(node: WorkspaceNodeSnapshot) {
-  const locator = node.anchorLink?.locator;
-  if (isTextLocator(locator)) return [locator];
-  if (locator && typeof locator === 'object' && Array.isArray((locator as { ranges?: unknown }).ranges)) {
-    return (locator as { ranges: unknown[] }).ranges.filter(isTextLocator);
-  }
-  return [];
 }
 
 function getHighlightNote(node: WorkspaceNodeSnapshot) {
@@ -41,7 +25,7 @@ function getHighlightNote(node: WorkspaceNodeSnapshot) {
 }
 
 function toExistingHighlightTarget(node: WorkspaceNodeSnapshot | undefined): CompanionExistingHighlightTarget | null {
-  const originalText = node ? getLocators(node)[0]?.originalText : null;
+  const originalText = node ? getTextAnchorLocators(node.anchorLink?.locator)[0]?.originalText : null;
   const note = node ? getHighlightNote(node) : null;
   if (!node || !originalText) return null;
   return {
@@ -64,7 +48,7 @@ export function findCompanionExistingHighlightFromPayload(
     candidate.parentNodeId === parentNodeId &&
     candidate.anchorLink?.kind === 'highlight' &&
     !trashed.has(candidate.id) &&
-    getLocators(candidate).some((match) =>
+    getTextAnchorLocators(candidate.anchorLink?.locator).some((match) =>
       match.from === locator.from &&
       match.to === locator.to &&
       match.originalText === locator.originalText
@@ -79,14 +63,10 @@ export function findCompanionExistingHighlightAtPosition(args: {
   snapshot: WorkspaceSnapshot | null;
 }): CompanionExistingHighlightTarget | null {
   if (!args.snapshot) return null;
-  const trashed = new Set(args.snapshot.trashedNodeIds);
-  const node = Object.values(args.snapshot.nodesById).find((candidate) =>
-    candidate.parentNodeId === args.parentNodeId &&
-    candidate.anchorLink?.kind === 'highlight' &&
-    !trashed.has(candidate.id) &&
-    getLocators(candidate).some((locator) => locator.from <= args.position && args.position <= locator.to)
-  );
-  return toExistingHighlightTarget(node);
+  const match = findTextAnchorAtPosition(args.parentNodeId, args.snapshot.nodesById, args.position, args.snapshot.trashedNodeIds);
+  if (!match) return null;
+  if (match.kind === 'cloze') return { kind: 'cloze', nodeId: match.nodeId, originalText: match.originalText };
+  return toExistingHighlightTarget(args.snapshot.nodesById[match.nodeId]);
 }
 
 export function appendCompanionExistingHighlightNote(args: {
@@ -99,4 +79,12 @@ export function appendCompanionExistingHighlightNote(args: {
     note: args.note,
     originalText: args.originalText
   });
+}
+
+export function findCompanionClozeTarget(snapshot: WorkspaceSnapshot | null, nodeId: string): CompanionExistingHighlightTarget | null {
+  const node = snapshot?.nodesById[nodeId];
+  if (!node || node.kind !== 'item' || node.deletedAt || snapshot?.trashedNodeIds.includes(nodeId) ||
+      node.anchorLink?.kind !== 'cloze') return null;
+  const locators = getTextAnchorLocators(node.anchorLink?.locator);
+  return locators.length ? { kind: 'cloze', nodeId, originalText: locators.map((locator) => locator.originalText).join(' … ') } : null;
 }

@@ -149,6 +149,7 @@ export const EN_COMPANION_TRANSLATIONS = {
   'companion.recent.empty.description': 'Recent topics will appear here after background sync downloads them.',
   'companion.selection.addAnnotation': 'Add annotation...',
   'companion.selection.addComment': 'Add Comment',
+  'companion.selection.deleteCloze': 'Delete cloze',
   'companion.selection.closeHighlight': 'Close Highlight',
   'companion.selection.cloze': 'Cloze',
   'companion.selection.highlight': 'Highlight',
