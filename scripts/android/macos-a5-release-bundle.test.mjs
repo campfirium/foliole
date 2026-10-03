@@ -103,3 +103,10 @@ it('completes bundle provenance without requiring or relabeling a debug APK', as
   expect(manager.receipt.bundle.digest).toMatch(/^[a-f0-9]{64}$/u);
   expect(manager.receipt.source.archiveDigest).toBe(context.sourceArchiveDigest);
 });
+
+it('rejects unusable upload signing credentials before building an AAB', async () => {
+  const args = fixture();
+  args.env.FOLIOLE_ANDROID_UPLOAD_SIGNING_CONFIG = '/missing/upload-signing.json';
+  await expect(dispatchMacosA5Action(args)).rejects.toThrow('Upload signing');
+  expect(args.checked).not.toHaveBeenCalled();
+});

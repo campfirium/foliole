@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 
+import { loadUploadSigning, signReleaseBundle } from './macos-a5-upload-signing.mjs';
+
 const APP_ID = 'com.campfirium.foliole.android';
 const digest = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
@@ -75,6 +77,7 @@ function preserveBundle({ bundle, captured, env, paths, identity, verification }
 
 export function buildReleaseBundle({ checked, captured, env, paths }) {
   const identity = releaseBundleInputs(env, paths.buildRoot);
+  const signing = loadUploadSigning(env.FOLIOLE_ANDROID_UPLOAD_SIGNING_CONFIG, paths.sourceRepoRoot);
   const bundle = path.join(paths.buildRoot, 'android/app/build/outputs/bundle/release/app-release.aab');
   fs.rmSync(bundle, { force: true });
   checked('npm', ['run', 'android:web:build'], { cwd: paths.buildRoot, env });
@@ -84,5 +87,11 @@ export function buildReleaseBundle({ checked, captured, env, paths }) {
   { cwd: path.join(paths.buildRoot, 'android'), env });
   if (!fs.existsSync(bundle)) throw new Error('Release AAB was not produced.');
   const verification = verifyReleaseBundle({ bundle, captured, env, paths, identity });
-  return preserveBundle({ bundle, captured, env, paths, identity, verification });
+  const receipt = preserveBundle({ bundle, captured, env, paths, identity, verification });
+  if (signing) {
+    const signed = signReleaseBundle({ receipt, config: signing, java: paths.java, env });
+    console.log(`[macos-a5-dev] upload signed engineering bundle=${signed.artifact}`);
+    return { ...receipt, uploadBundle: signed };
+  }
+  return receipt;
 }
