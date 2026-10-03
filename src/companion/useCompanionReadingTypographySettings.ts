@@ -4,31 +4,33 @@ import { activateReadingFont } from './companionReadingFonts';
 import {
   type CompanionReadingTypographySettings,
   loadReadingTypographySettings,
+  normalizeReadingTypographySettings,
   saveReadingTypographySettings
 } from './companionReadingTypographySettings';
 
 export function useCompanionReadingTypographySettings() {
   const [settings, setSettings] = useState(loadReadingTypographySettings);
+  const [saveError, setSaveError] = useState(false);
+  const updateSettings = useCallback((nextSettings: CompanionReadingTypographySettings) => {
+    const next = normalizeReadingTypographySettings(nextSettings);
+    if (!saveReadingTypographySettings(next)) {
+      setSaveError(true);
+      return;
+    }
+    setSettings(next);
+    setSaveError(false);
+  }, []);
 
   useEffect(() => {
     if (!settings.fontFamily.startsWith('custom:')) return;
     let active = true;
     void activateReadingFont(settings.fontFamily.slice(7)).then((found) => {
       if (active && !found) {
-        setSettings((current) => {
-          const next = { ...current, fontFamily: 'sans' as const };
-          saveReadingTypographySettings(next);
-          return next;
-        });
+        updateSettings({ ...settings, fontFamily: 'sans' });
       }
     }).catch(() => undefined);
     return () => { active = false; };
-  }, [settings.fontFamily]);
+  }, [settings, updateSettings]);
 
-  const updateSettings = useCallback((nextSettings: CompanionReadingTypographySettings) => {
-    setSettings(nextSettings);
-    saveReadingTypographySettings(nextSettings);
-  }, []);
-
-  return { settings, updateSettings };
+  return { settings, updateSettings, saveError };
 }
