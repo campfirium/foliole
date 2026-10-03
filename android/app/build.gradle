@@ -18,8 +18,8 @@ android {
             System.getenv("FOLIOLE_ANDROID_COMPANION_SYNC_PORT") ?: "38641"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "0.7.14"
+        versionCode providers.gradleProperty("folioleVersionCode").getOrElse("1").toInteger()
+        versionName providers.gradleProperty("folioleVersionName").getOrElse("0.7.14")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

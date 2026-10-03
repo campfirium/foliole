@@ -25,6 +25,10 @@ export async function dispatchMacosA5Action({
   action, assertFixed, build, buildIdentity, captureAnnotation, captured, checked, deploy,
   env, execute, markMutationBoundary, pairingReadiness, paths, protectData, readiness, serial
 }) {
+  if (action === 'bundle-release') {
+    const { buildReleaseBundle } = await import('./macos-a5-release-bundle.mjs');
+    buildReleaseBundle({ checked, captured, env, paths });
+  }
   if (action === 'build') {
     if (env.FOLIOLE_DATABASE_PERFORMANCE_SCENARIO) buildA5DatabasePerformance({ checked, captured, env, paths });
     else build(paths);

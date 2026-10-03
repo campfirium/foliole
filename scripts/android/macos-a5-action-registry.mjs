@@ -1,4 +1,6 @@
 const ACTION_OVERRIDES = Object.freeze({
+  'bundle-release': { deviceLeaseMode: null, formalTarget: 'build-capsule',
+    formalTargetIdentity: 'unsigned-release-bundle', mutatesFixedA5: false },
   deploy: { requiresDataProtection: false },
   build: { deviceLeaseMode: null, formalTarget: 'build-capsule',
     formalTargetIdentity: 'accepted-source-archive', mutatesFixedA5: false },
@@ -46,6 +48,7 @@ const ACTION_OVERRIDES = Object.freeze({
   'sync-group-rejoin-recover': { requiresHiddenDesktopRuntime: true }
 });
 const FORMAL_EVIDENCE = Object.freeze({
+  'bundle-release': { kind: 'run-directory', root: 'android-release-bundle' },
   'resource-provider-contract': { kind: 'run-directory', root: 'a5-resource-provider' },
   'mobile-link': { kind: 'run-directory', root: 'a5-mobile-link' },
   'image-contract': { kind: 'run-directory', root: 'a5-image-contract' },
