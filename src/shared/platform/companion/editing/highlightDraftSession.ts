@@ -5,6 +5,7 @@ export class HighlightDraftSession {
   data: CompanionHighlightRead | undefined;
   value = '';
   error = false;
+  refresh: (() => Promise<unknown>) | null = null;
   pending: Promise<void> | null = null;
   private changed = false;
   private listeners = new Set<() => void>();
@@ -26,6 +27,7 @@ export class HighlightDraftSession {
     this.publish();
   }
   change(value: string) {
+    if (this.refresh || this.pending) return;
     this.value = value;
     this.changed = value !== (this.data?.note ?? '');
     this.publish();
@@ -35,6 +37,7 @@ export class HighlightDraftSession {
     this.error = false;
     this.pending = Promise.resolve().then(action).then(() => {
       this.changed = false;
+      this.refresh = null;
       this.data = undefined;
     }).catch((error) => {
       this.error = true;

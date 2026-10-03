@@ -48,7 +48,7 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
   const state = props.state!;
   const isExistingHighlight = Boolean(state.existingHighlight);
   const draft = isExistingHighlight ? session.draft : noteDraft;
-  const disabled = isExistingHighlight ? session.loading || !session.ready || session.saving : creation.saving || creation.saved;
+  const disabled = isExistingHighlight ? session.loading || !session.ready || session.saving || session.saved : creation.saving || creation.saved;
   function applyExistingNote() {
     const target = state.existingHighlight;
     if (!target) return;
@@ -69,9 +69,9 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
         <CreationStatus creation={creation} />
       </div> : null}
       {!isNoteOpen && (session.loading || session.error) ? <div className={`${appFloatingSurfaceClassName('popover')} mt-2 w-64 rounded-md p-2 text-sm`}>
-        <HighlightStatus session={session} />
+        <HighlightStatus session={session} onClose={props.onClose} />
       </div> : null}
-      {isNoteOpen ? <CompanionSelectionNotePanel draft={draft} disabled={disabled} status={isExistingHighlight ? <HighlightStatus session={session} /> : creation.error ? <CreationStatus creation={creation} /> : null}
+      {isNoteOpen ? <CompanionSelectionNotePanel draft={draft} disabled={disabled} status={isExistingHighlight ? <HighlightStatus session={session} onClose={props.onClose} /> : creation.error ? <CreationStatus creation={creation} /> : null}
         left={state.noteLeft - state.left} top={state.noteTop - state.top}
         onCancel={() => setIsNoteOpen(false)} onChange={isExistingHighlight ? session.setDraft : setNoteDraft}
         onSave={() => isExistingHighlight ? applyExistingNote() : creation.apply('note', noteDraft)} /> : null}
@@ -79,12 +79,13 @@ function ToolbarSession(props: CompanionSelectionAnnotationToolbarProps) {
   );
 }
 
-function HighlightStatus({ session }: { session: ReturnType<typeof useCompanionHighlightSession> }) {
+function HighlightStatus({ session, onClose }: { session: ReturnType<typeof useCompanionHighlightSession>; onClose(): void }) {
   const t = useTranslation();
   if (session.loading) return <p role="status">{t('companion.selection.loading')}</p>;
   if (!session.error) return null;
   return <div className="mb-2 text-sm" role="alert">
-    <p>{t(session.ready ? 'companion.selection.saveError' : 'companion.selection.loadError')}</p>
+    <p>{t(session.saved ? 'companion.selection.changesSavedRefreshError' : session.ready ? 'companion.selection.saveError' : 'companion.selection.loadError')}</p>
+    {session.saved ? <AppButton disabled={session.saving || !session.canRetry} onClick={() => session.save(() => {}, onClose)}>{t('companion.selection.refresh')}</AppButton> : null}
     {!session.ready && session.canRetry ? <AppButton onClick={session.retry}>{t('companion.selection.retry')}</AppButton> : null}
   </div>;
 }
