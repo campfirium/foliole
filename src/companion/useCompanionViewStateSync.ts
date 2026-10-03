@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
+import { subscribeNativeAppBackground } from '../shared/platform/appLifecycle';
 import {
   saveCompanionSyncActiveViewState,
   saveCompanionSyncNodeViewState
@@ -7,7 +8,35 @@ import {
 
 import type { CompanionTabAction } from './CompanionFloatingBars';
 
-type ScrollSaveTimer = ReturnType<typeof setTimeout>;
+function useCompanionScrollSave(currentViewNodeId: string | null) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pending = useRef<{ nodeId: string; scrollTop: number } | null>(null);
+  const flush = useCallback(() => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = null;
+    const position = pending.current;
+    pending.current = null;
+    if (position) void saveCompanionSyncNodeViewState(position).catch(() => undefined);
+  }, []);
+
+  useEffect(() => flush, [currentViewNodeId, flush]);
+  useEffect(() => {
+    let disposed = false;
+    let unsubscribe: (() => void) | undefined;
+    void subscribeNativeAppBackground(flush).then((cleanup) => {
+      if (disposed) cleanup();
+      else unsubscribe = cleanup;
+    }).catch(() => undefined);
+    return () => { disposed = true; unsubscribe?.(); };
+  }, [flush]);
+
+  return useCallback((scrollTop: number) => {
+    if (!currentViewNodeId) return;
+    if (timer.current !== null) clearTimeout(timer.current);
+    pending.current = { nodeId: currentViewNodeId, scrollTop };
+    timer.current = setTimeout(flush, 800);
+  }, [currentViewNodeId, flush]);
+}
 
 export function useCompanionViewStateSync(args: {
   activeAction: CompanionTabAction;
@@ -15,7 +44,6 @@ export function useCompanionViewStateSync(args: {
   reviewNodeId: string | null;
   selectedBrowseNodeId: string | null;
 }) {
-  const scrollSaveTimerRef = useRef<ScrollSaveTimer | null>(null);
   const lastVisibleNodeIdRef = useRef<string | null>(null);
   const currentViewNodeId = useMemo(() => {
     if (args.activeAction === 'review') {
@@ -30,20 +58,5 @@ export function useCompanionViewStateSync(args: {
     void saveCompanionSyncActiveViewState(currentViewNodeId);
   }, [currentViewNodeId]);
 
-  useEffect(() => {
-    return () => {
-      if (scrollSaveTimerRef.current) clearTimeout(scrollSaveTimerRef.current);
-    };
-  }, []);
-
-  return useCallback((scrollTop: number) => {
-    if (!currentViewNodeId) return;
-    if (scrollSaveTimerRef.current) clearTimeout(scrollSaveTimerRef.current);
-    scrollSaveTimerRef.current = setTimeout(() => {
-      void saveCompanionSyncNodeViewState({
-        nodeId: currentViewNodeId,
-        scrollTop
-      });
-    }, 800);
-  }, [currentViewNodeId]);
+  return useCompanionScrollSave(currentViewNodeId);
 }

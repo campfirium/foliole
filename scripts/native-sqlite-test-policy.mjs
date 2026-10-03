@@ -1,4 +1,5 @@
 const controlledElectronSqliteTests = [
+  'src/companion/useCompanionViewStateSync.integration.test.tsx',
   'electron/database/backupRestore.legacySync.test.ts',
   'electron/database/companionLegacyStorageRetirement.test.ts',
   'electron/database/legacyStorageRetirementMigration.test.ts',
