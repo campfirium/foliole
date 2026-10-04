@@ -53,6 +53,8 @@ export function loadDesktopSyncGroupMemberState(args?: {
   };
 }
 
+// Removal coordinates membership across the user's trusted devices. It does not
+// rotate the shared key or promise isolation from a device retaining that key.
 export function initiateDesktopSyncGroupDeviceRemoval(targetDeviceId: string, now = new Date().toISOString()) {
   const state = loadDesktopSyncGroupMemberState();
   if (targetDeviceId === state.sender_device_identity_key ||

@@ -191,6 +191,10 @@ export async function handleAuthenticatedPost(
     return true;
   }
   await runWithDatabaseConnectionOwner(async () => {
+    // A trusted group-key holder may be unknown to this peer during membership
+    // convergence or recovery. Member-state learns that participant before data
+    // sync; this is intentional in the single-user trust model documented in
+    // companionRequestSignature.ts, not a per-device revocation boundary.
     const auth = authenticateCompanionRequest({
       allowUnknownDevice: route === 'member-state', bodyText, request,
       requireMemberState: route !== 'member-state'

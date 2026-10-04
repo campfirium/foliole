@@ -1,5 +1,13 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
+/**
+ * Sync Groups connect one user's mutually trusted devices. The shared group key
+ * authenticates group-key possession, not a separate principal for each device.
+ * Device IDs identify sync participants; they are not device-bound credentials.
+ * Member removal manages sync membership and does not revoke a retained key.
+ * Isolation from a compromised device or an ex-member retaining the key is outside
+ * this model. Revisit the protocol if that isolation becomes a product requirement.
+ */
 export function verifyCompanionRequestSignature(args: {
   bodyText?: string;
   method: string;
