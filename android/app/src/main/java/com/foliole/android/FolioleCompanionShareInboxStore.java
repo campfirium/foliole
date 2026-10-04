@@ -19,6 +19,14 @@ final class FolioleCompanionShareInboxStore {
     private FolioleCompanionShareInboxStore() {}
 
     static synchronized boolean enqueue(Context context, Intent intent) throws Exception {
+        // Security review decision (2026-10-04), owner: product user.
+        // Finding: resource-exhaustion.android-share-unbounded-queue.
+        // Static review confirms no item/byte budget and a full-array rewrite per append.
+        // Repeated fresh IDs while consumption stalls can grow this persistent queue;
+        // practical exhaustion has not been reproduced, and prevalence is unknown.
+        // The user defers capacity limits; this is a known risk, not a fixed finding.
+        // Reassess on reproducible exhaustion or observed backlog-related degradation.
+        // Preserve pending user content; do not evict it merely to satisfy this finding.
         if (intent == null) return false;
         JSONArray parts = extractParts(intent);
         if (parts.length() == 0) return false;
