@@ -32,6 +32,7 @@ export async function commitSoftDeleteMutation(
     ...createTrashParentUpdates(mutation.parentNodesToSync)
   });
   if (!result || result.deletedNodeIds.length !== mutation.nodeIds.length ||
+      new Set(result.deletedNodeIds).size !== mutation.nodeIds.length ||
       !result.deletedNodeIds.every((nodeId) => mutation.nodeIds.includes(nodeId))) {
     return null;
   }

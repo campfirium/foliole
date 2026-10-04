@@ -148,7 +148,8 @@ function buildDeleteNodePatch(args: {
 export function computeDeleteNodesMutation(
   state: WorkspaceState,
   nodeIds: string[],
-  deletedAt = new Date().toISOString()
+  deletedAt = new Date().toISOString(),
+  scope: 'subtree' | 'receipt' = 'subtree'
 ): DeleteNodeMutationResult | null {
   const targetNodeIds = collectRootDeleteTargets(state, nodeIds, false);
   if (targetNodeIds.length === 0) {
@@ -159,7 +160,8 @@ export function computeDeleteNodesMutation(
   const parentNodesToSync = new Map<string, Node>();
   const alreadyTrashed = new Set(state.trashedNodeIds);
   const deletedNodeIds = new Set(
-    [...collectDeletedNodeIds(targetNodeIds, state.nodesById)]
+    (scope === 'receipt' ? nodeIds.filter((nodeId) => Boolean(state.nodesById[nodeId]))
+      : [...collectDeletedNodeIds(targetNodeIds, state.nodesById)])
       .filter((nodeId) => !alreadyTrashed.has(nodeId))
   );
 

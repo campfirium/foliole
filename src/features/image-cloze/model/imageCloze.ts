@@ -54,7 +54,7 @@ export function appendImageClozeRegions(
   }
 
   const regionIds = new Set(existingGroup.regions.map((region) => region.id));
-  existingGroup.regions = [
+  const appendedRegions = [
     ...existingGroup.regions,
     ...nextRegions.filter((region) => {
       if (regionIds.has(region.id)) {
@@ -64,7 +64,7 @@ export function appendImageClozeRegions(
       return true;
     })
   ];
-  return existingGroups;
+  return existingGroups.map((group) => group === existingGroup ? { ...group, regions: appendedRegions } : group);
 }
 
 export function removeImageClozeRegion(

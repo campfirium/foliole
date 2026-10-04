@@ -69,16 +69,18 @@ function reconcileExplicitImageRegionRemoval(
 function createCommittedImageRegionDeletePatch(args: {
   deletedAt: string;
   deletedNodeIds: string[];
-  mutation: DeleteNodeMutationResult;
+  attachmentId: string;
+  regionId: string;
   parentNodeId: string;
   state: WorkspaceState;
 }) {
-  const committedMutation = args.deletedNodeIds.every((nodeId) => args.mutation.nodeIds.includes(nodeId))
-    ? args.mutation
-    : computeDeleteNodesMutation(args.state, args.deletedNodeIds, args.deletedAt);
-  if (!committedMutation) {
+  const currentMutation = computeDeleteNodesMutation(args.state, args.deletedNodeIds, args.deletedAt, 'receipt');
+  if (!currentMutation) {
     return args.state;
   }
+  const committedMutation = reconcileExplicitImageRegionRemoval(
+    currentMutation, args.parentNodeId, args.attachmentId, args.regionId
+  );
   const entry = createEditorAnnotationDeleteEntry(args.state, committedMutation.nodeIds, args.parentNodeId);
   return {
     ...committedMutation.patch,
@@ -136,7 +138,8 @@ function createDeleteImageClozeRegionAction(
         return createCommittedImageRegionDeletePatch({
           deletedAt,
           deletedNodeIds: result.deletedNodeIds,
-          mutation: pendingMutation,
+          attachmentId,
+          regionId,
           parentNodeId,
           state
         });
