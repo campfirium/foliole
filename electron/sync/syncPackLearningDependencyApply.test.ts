@@ -70,7 +70,7 @@ it('applies learning state after the pack applies its node row', async () => {
   });
 });
 
-it('removes learning state when the pack deletes its node row', async () => {
+it('preserves reading progress and removes review scheduling when the pack trashes a node', async () => {
   const packPath = path.join(tempRoot, 'incoming-learning-delete-dependency.db');
   createIncomingDeletedNodePack(packPath);
   const connection = openDatabaseConnection();
@@ -108,7 +108,11 @@ it('removes learning state when the pack deletes its node row', async () => {
   expect(connection.sqlite.prepare('SELECT deleted_at FROM nodes WHERE id = ?').get('node-deleted-1')).toEqual({
     deleted_at: '2026-05-04T02:00:00.000Z'
   });
-  expect(connection.sqlite.prepare('SELECT node_id FROM node_reading WHERE node_id = ?').get('node-deleted-1')).toBeUndefined();
+  expect(connection.sqlite.prepare(`SELECT node_id, state, repetition_count, next_at
+    FROM node_reading WHERE node_id = ?`).get('node-deleted-1')).toEqual({
+    node_id: 'node-deleted-1', state: 'active', repetition_count: 1,
+    next_at: '2026-05-04T01:00:00.000Z'
+  });
   expect(connection.sqlite.prepare('SELECT node_id FROM node_review WHERE node_id = ?').get('node-deleted-1')).toBeUndefined();
 });
 

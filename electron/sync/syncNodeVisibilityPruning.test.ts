@@ -36,14 +36,28 @@ function remaining() {
   return tables.map((table) => sqlite.prepare(`SELECT node_id FROM ${table} ORDER BY node_id`).all());
 }
 
-it('retains visible learning records and removes descendants hidden by a deleted ancestor', async () => {
+it('preserves reading progress in Trash while removing hidden review scheduling', async () => {
   node('root', null);
   node('visible', 'root');
   node('deleted', 'root', true);
   node('hidden', 'deleted');
   for (const id of ['visible', 'deleted', 'hidden']) learning(id);
   await pruneLearningRowsWithoutVisibleNodes(createBetterSqliteDbPort(sqlite));
+  const retainedReading = [{ node_id: 'deleted' }, { node_id: 'hidden' }, { node_id: 'visible' }];
+  expect(remaining()).toEqual([retainedReading, retainedReading, [{ node_id: 'visible' }]]);
+});
+
+it('retires orphaned reading and review state after the node no longer exists', async () => {
+  node('visible', null);
+  node('removed', null, true);
+  learning('visible');
+  learning('removed');
+  sqlite.pragma('foreign_keys = OFF');
+  sqlite.prepare('DELETE FROM nodes WHERE id = ?').run('removed');
+  sqlite.pragma('foreign_keys = ON');
+  await pruneLearningRowsWithoutVisibleNodes(createBetterSqliteDbPort(sqlite));
   expect(remaining()).toEqual(tables.map(() => [{ node_id: 'visible' }]));
+  expect(sqlite.pragma('foreign_key_check')).toEqual([]);
 });
 
 it('keeps a single version write from spending seconds pruning an unchanged 10k library', async () => {
