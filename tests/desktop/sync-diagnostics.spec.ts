@@ -7,6 +7,11 @@ import { expectWorkspaceShell, openSettingsCategory } from './harness/settings';
 test('opens sync diagnostics, displays a recorded manual failure and copies a private-data-free report', async ({ desktopSession }, info) => {
   const page = desktopSession.firstWindow;
   await expectWorkspaceShell(page);
+  await openSettingsCategory(page, 'Sync');
+  await page.getByRole('button', { name: /^(View log|查看日志)$/ }).click();
+  const empty = page.getByRole('dialog', { name: /^(Sync log|同步日志)$/ });
+  await expect(empty.getByText(/No sync activity recorded yet|尚无同步记录/)).toBeVisible();
+  await empty.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   const failure = await page.evaluate(async () => {
     try { await window.electronAPI.invoke('sync_companion_now'); return null; }
     catch (error) { return error instanceof Error ? error.message : String(error); }
@@ -33,6 +38,9 @@ test('opens sync diagnostics, displays a recorded manual failure and copies a pr
   expect(report).not.toMatch(/\/Users\/|database_path|canonical_library_path/);
   await dialog.getByRole('button', { name: /^(Copy log summary|复制日志摘要)$/ }).click();
   await expect(dialog.getByRole('button', { name: /^(Copied|已复制)$/ })).toBeVisible();
+  const clipboardText = await desktopSession.electronApp.evaluate(({ clipboard }) => clipboard.readText());
+  expect(clipboardText).toContain('sync_group_peer_unavailable');
+  expect(clipboardText).not.toMatch(/\/Users\/|database_path|canonical_library_path|https?:\/\/|Bearer /);
   await dialog.getByRole('button', { name: /^(Close|关闭)$/ }).click();
   await expect(dialog).toBeHidden();
 });
