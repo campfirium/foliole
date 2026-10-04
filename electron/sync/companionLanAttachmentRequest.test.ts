@@ -9,6 +9,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const attachmentMock = vi.hoisted(() => ({ load: vi.fn() }));
 
 vi.mock('../database/connection.js', () => ({
+  registerDatabaseConnectionCleanup: vi.fn(),
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
 }));
 vi.mock('../database/workspaceSnapshot.js', () => ({
@@ -84,7 +85,7 @@ it('serves signed attachment resources without loading a workspace snapshot', as
     'X-Foliole-Original-Content-Type': 'image/png'
   });
   expect(response.body().toString()).toBe(Buffer.from('attachment-bytes').toString('base64url'));
-  expect(attachmentMock.load).toHaveBeenCalledWith('att-1', 'hash-1');
+  expect(attachmentMock.load).toHaveBeenCalledWith('att-1', 'hash-1', null, undefined);
 });
 
 it('returns attachment resource errors as json', async () => {

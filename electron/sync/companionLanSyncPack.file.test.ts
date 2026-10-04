@@ -7,6 +7,7 @@ import { expect, it, vi } from 'vitest';
 const buildMock = vi.hoisted(() => vi.fn(async (args: { outputPath: string }) => {
   const { promises: files } = await import('node:fs');
   await files.writeFile(args.outputPath, Buffer.alloc(64 * 1024, 7));
+  return { manifest: { pack_id: 'file-fixture-pack' } };
 }));
 
 vi.mock('../database/syncGroupStore.js', () => ({

@@ -1,10 +1,11 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import ts from 'typescript';
 
 const worker = `
-import Database from ${JSON.stringify(path.join(process.cwd(), 'node_modules/better-sqlite3/lib/index.js'))};
+import Database from ${JSON.stringify(pathToFileURL(path.join(process.cwd(), 'node_modules/better-sqlite3/lib/index.js')).href)};
 import { receiveDesktopAttachmentRanges } from './electron/sync/desktopAttachmentRangeTransfer.js';
 import { createAttachmentReceiveCheckpoint } from './lib/core/sync/attachmentReceiveCheckpoint.js';
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './lib/core/database/syncPackProgressSchemaStatements.js';

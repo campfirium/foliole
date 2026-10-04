@@ -38,10 +38,11 @@ export async function initializeMigrationFixture() {
 
 export async function stageMigrationSend(versionId: string) {
   const connection = openDatabaseConnection();
+  const pathFlavor = process.platform === 'win32' ? 'windows' : 'posix';
   const local = createSyncGroupDeviceIdentity({ device_anchor: randomUUID(), group_id: 'group',
-    library_path: connection.dbPath, path_flavor: 'posix' });
+    library_path: connection.dbPath, path_flavor: pathFlavor });
   const receiver = createSyncGroupDeviceIdentity({ device_anchor: randomUUID(), group_id: 'group',
-    library_path: path.join(migrationFixture.root, 'receiver.db'), path_flavor: 'posix' });
+    library_path: path.join(migrationFixture.root, 'receiver.db'), path_flavor: pathFlavor });
   createDesktopSyncGroup({ device: local, deviceName: 'Source', platform: 'mac', now: 'now' });
   registerSyncGroupDevice({ device: receiver, deviceName: 'Receiver', platform: 'mac', now: 'now' });
   await stageNodeVersionPush(createBetterSqliteDbPort(connection.sqlite), receiver.identity_key,

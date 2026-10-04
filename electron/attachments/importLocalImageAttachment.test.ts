@@ -1,6 +1,5 @@
 // @vitest-environment node
 
-import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -26,6 +25,7 @@ import { closeDatabaseConnection, openDatabaseConnection } from '../database/con
 import { initializeDatabase } from '../database/migrate.js';
 
 import { importLocalImageAttachment } from './importLocalImageAttachment.js';
+import { countResourceReferences, createPngBytes, expectAttachmentSyncState, hashBytes, seedNode } from './importLocalImageAttachment.testSupport.js';
 import { resolveAttachmentStoragePath } from './resourceResolver.js';
 
 let tempRoot = '';
@@ -41,57 +41,6 @@ afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
-
-function seedNode(nodeId: string) {
-  openDatabaseConnection().sqlite
-    .prepare(
-      `INSERT INTO nodes (
-         id,
-         parent_id,
-         title,
-         is_title_manual,
-         hide_title_heading,
-         content,
-         reveal,
-         anchor_link,
-         created_at,
-         updated_at,
-         deleted_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    )
-    .run(nodeId, null, nodeId, 1, 0, '', null, null, '2026-03-29T00:00:00.000Z', '2026-03-29T00:00:00.000Z', null);
-}
-
-function countAttachments() {
-  const row = openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM attachments').get() as { count: number };
-  return row.count;
-}
-
-function hashBytes(bytes: Uint8Array) {
-  return createHash('sha256').update(bytes).digest('hex');
-}
-
-function createPngBytes() {
-  return Buffer.from([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
-    0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
-    0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01
-  ]);
-}
-
-function expectAttachmentSyncState(attachmentId: string, sizeBytes: number) {
-  expect(openDatabaseConnection().driver.queryOne<{ content_hash: string; object_type: string; sync_dirty: number }>(
-    `SELECT content_hash, object_type, sync_dirty FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?`,
-    [attachmentId]
-  )).toEqual({ content_hash: expect.any(String), object_type: 'attachment', sync_dirty: 1 });
-  expect(openDatabaseConnection().sqlite.prepare('SELECT size_bytes FROM attachments WHERE id = ?').get(attachmentId)).toEqual({ size_bytes: sizeBytes });
-  expect(loadAttachmentResourceDescription(attachmentId)).toEqual(expect.objectContaining({
-    attachmentId,
-    availability: 'local',
-    contentHash: attachmentId,
-    storageKey: `${attachmentId}.png`
-  }));
-}
 
 it('imports a local png into the app attachment directory and links it to the node', async () => {
   seedNode('node-1');
@@ -123,8 +72,8 @@ it('imports a local png into the app attachment directory and links it to the no
       id: hashBytes(imageBytes),
       originalName: 'cover.png',
       mimeType: 'image/png',
-      sizeBytes: imageBytes.byteLength,
-      createdAt: expect.any(String)
+      sizeBytes: null,
+      createdAt: '2026-03-29T00:00:00.000Z'
     }
   });
 
@@ -132,7 +81,7 @@ it('imports a local png into the app attachment directory and links it to the no
     fs.readFile(resolveAttachmentStoragePath(hashBytes(imageBytes), path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/png'))
   ).resolves.toEqual(imageBytes);
   await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', hashBytes(imageBytes)))).rejects.toThrow();
-  expect(loadAttachmentResourceDescription(hashBytes(imageBytes))).toEqual({
+  expect(loadAttachmentResourceDescription(`${hashBytes(imageBytes)}.png`)).toEqual({
     attachmentId: hashBytes(imageBytes),
     contentHash: hashBytes(imageBytes),
     storageKey: `${hashBytes(imageBytes)}.png`,
@@ -140,14 +89,10 @@ it('imports a local png into the app attachment directory and links it to the no
     availability: 'local',
     libraryScope: expect.any(String)
   });
-  expect(openDatabaseConnection().driver.queryOne<{ object_type: string; sync_dirty: number }>(
-    `SELECT object_type, sync_dirty FROM sync_object_state WHERE object_type = 'attachment' AND object_id = ?`,
-    [hashBytes(imageBytes)]
-  )).toEqual({ object_type: 'attachment', sync_dirty: 1 });
-  expectAttachmentSyncState(hashBytes(imageBytes), imageBytes.byteLength);
+  await expectAttachmentSyncState('node-1', hashBytes(imageBytes), imageBytes.byteLength);
 });
 
-it('reuses the same stored file and attachment record for repeated imports of identical content', async () => {
+it('reuses the same stored file across nodes and the resource reference for identical repeated imports', async () => {
   seedNode('node-1');
   seedNode('node-2');
   const sharedBytes = createPngBytes();
@@ -168,12 +113,17 @@ it('reuses the same stored file and attachment record for repeated imports of id
   expect(secondResult).toMatchObject({
     status: 'imported',
     attachment_id: (firstResult as { attachment_id: string }).attachment_id,
-    attachment_record: 'reused',
+    attachment_record: 'created',
     stored_file: 'reused'
   });
 
-  expect(countAttachments()).toBe(1);
-  expect(loadAttachmentResourceDescription((firstResult as { attachment_id: string }).attachment_id)).toMatchObject({
+  await expect(importLocalImageAttachment('node-2', secondSourcePath)).resolves.toMatchObject({
+    status: 'imported', attachment_record: 'reused', stored_file: 'reused'
+  });
+  expect(await fs.readdir(path.join(mockedDocumentsDir, 'Foliole', 'Assets'))).toEqual([`${hashBytes(sharedBytes)}.png`]);
+
+  expect(countResourceReferences()).toBe(1);
+  expect(loadAttachmentResourceDescription(`${hashBytes(sharedBytes)}.png`)).toMatchObject({
     attachmentId: (firstResult as { attachment_id: string }).attachment_id,
     contentHash: (firstResult as { attachment_id: string }).attachment_id,
     storageKey: `${(firstResult as { attachment_id: string }).attachment_id}.png`,
@@ -199,7 +149,7 @@ it('uses JPEG bytes as truth when the source file is named png', async () => {
     hash, path.join(mockedDocumentsDir, 'Foliole', 'Assets'), 'image/jpeg'
   ))).resolves.toEqual(imageBytes);
   await expect(fs.access(path.join(mockedDocumentsDir, 'Foliole', 'Assets', `${hash}.png`))).rejects.toThrow();
-  expect(loadAttachmentResourceDescription(hash)).toMatchObject({
+  expect(loadAttachmentResourceDescription(`${hash}.jpg`)).toMatchObject({
     attachmentId: hash, contentHash: hash, mimeType: 'image/jpeg', storageKey: `${hash}.jpg`
   });
 });
@@ -216,7 +166,7 @@ it('rejects files whose bytes do not match the declared image type', async () =>
     message: 'Only valid png, jpg, webp, and gif image bytes are supported.',
     source_path: sourcePath
   });
-  expect(countAttachments()).toBe(0);
+  expect(countResourceReferences()).toBe(0);
   expect(openDatabaseConnection().sqlite.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE name = 'attachment_blobs'").get()).toEqual({ count: 0 });
   expect(listNodeAttachments('node-1')).toEqual([]);
 });
@@ -258,5 +208,5 @@ it('returns an explicit error when the app cannot persist the image file', async
     message: 'The image could not be stored by the app.',
     source_path: sourcePath
   });
-  expect(countAttachments()).toBe(0);
+  expect(countResourceReferences()).toBe(0);
 });

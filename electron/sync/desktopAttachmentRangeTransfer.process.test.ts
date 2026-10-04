@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
 import ts from 'typescript';
@@ -16,7 +17,7 @@ import { hashResourceFile } from './resourceFileHash.js';
 const run = promisify(execFile);
 const worker = `
 import { promises as fs } from 'node:fs';
-import Database from ${JSON.stringify(path.join(process.cwd(), 'node_modules/better-sqlite3/lib/index.js'))};
+import Database from ${JSON.stringify(pathToFileURL(path.join(process.cwd(), 'node_modules/better-sqlite3/lib/index.js')).href)};
 import { createAttachmentReceiveCheckpoint } from './lib/core/sync/attachmentReceiveCheckpoint.js';
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './lib/core/database/syncPackProgressSchemaStatements.js';
 import { receiveDesktopAttachmentRanges } from './electron/sync/desktopAttachmentRangeTransfer.js';
@@ -63,6 +64,7 @@ process.stdout.write(JSON.stringify({ offsets, startingRss, peakRss,
 async function compileReceiver(root: string) {
   for (const relative of ['electron/sync/desktopAttachmentRangeTransfer.ts',
     'electron/sync/resourceFileHash.ts', 'lib/platform/resourceAvailabilityContract.ts',
+    'lib/platform/attachmentResource.ts',
     'lib/core/sync/attachmentReceiveCheckpoint.ts', 'lib/core/database/syncPackProgressSchemaStatements.ts']) {
     const source = await fs.readFile(path.join(process.cwd(), relative), 'utf8');
     const output = ts.transpileModule(source, { compilerOptions: {
@@ -104,7 +106,7 @@ it.each([['prefix', 3], ['tail', 3], ['aligned', 3], ['short', 3], ['prefix', 30
     const args = [path.join(root, 'worker.mjs'), sourcePath, filePath, hash];
     const options = { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, timeout: 60_000 };
     await expect(run(process.execPath, [...args, mode], options))
-      .rejects.toMatchObject({ signal: 'SIGKILL' });
+      .rejects.toMatchObject({ signal: 'SIGKILL', stderr: '' });
     expect((await fs.stat(`${filePath}.unverified`)).size)
       .toBe(mode === 'short' ? ATTACHMENT_RANGE_BYTES
         : ATTACHMENT_RANGE_BYTES * (mode === 'aligned' ? 3 : 2) + (mode === 'tail' ? 13 : 0));
@@ -134,7 +136,7 @@ it('recovers in a new process when killed after publication before checkpoint cl
     const args = [path.join(root, 'worker.mjs'), sourcePath, filePath, hash];
     const options = { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, timeout: 15_000 };
     await expect(run(process.execPath, [...args, 'published'], options))
-      .rejects.toMatchObject({ signal: 'SIGKILL' });
+      .rejects.toMatchObject({ signal: 'SIGKILL', stderr: '' });
     expect(await hashResourceFile(filePath)).toBe(hash);
     const resumed = await run(process.execPath, [...args, 'resume'], options);
     expect(JSON.parse(resumed.stdout).offsets).toEqual([]);

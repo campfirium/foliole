@@ -101,7 +101,7 @@ it('keeps a packaged source build out of the official data and library paths', (
   };
   try {
     const configured = configureRuntimeAppIdentity(app, vi.fn(), 'darwin', env);
-    expect(configured.userDataPath).toBe(path.join(appDataRoot, 'foliole-source'));
+    expect(configured.userDataPath).toBe(path.resolve(appDataRoot, 'foliole-source'));
     expect(configured.libraryHome).toBe(path.join(os.homedir(), 'Documents', 'Foliole Source'));
     expect(setPath).toHaveBeenCalledWith('sessionData', configured.userDataPath);
     expect(env.FOLIOLE_BUILD_CHANNEL).toBe('source');

@@ -58,7 +58,13 @@ it('materializes attachment links for a node first learned from the pack', async
   } finally {
     await port.run('DETACH DATABASE inc');
   }
-  expect(connection.sqlite.prepare(
-    'SELECT node_id, attachment_id, role FROM node_attachments'
-  ).all()).toEqual([{ attachment_id: 'att-1', node_id: 'node-1', role: 'reference' }]);
+  expect(connection.sqlite.prepare(`SELECT nodes.id AS node_id,
+    json_extract(resource.value, '$.storage_key') AS storage_key,
+    json_extract(resource.value, '$.original_name') AS original_name,
+    json_extract(resource.value, '$.role') AS role
+    FROM nodes, json_each(nodes.resource_references) resource WHERE nodes.id = ?`
+  ).all('node-1')).toEqual([{
+    node_id: 'node-1', storage_key: `${'a'.repeat(64)}.pdf`,
+    original_name: 'Original.pdf', role: 'reference'
+  }]);
 });

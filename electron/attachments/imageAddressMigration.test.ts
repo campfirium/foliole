@@ -4,6 +4,8 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_data_dir: migrationFixture.appDataDir, app_config_dir: path.join(migrationFixture.root, 'config'),
   app_cache_dir: path.join(migrationFixture.root, 'cache'), app_log_dir: path.join(migrationFixture.root, 'logs')
@@ -12,8 +14,6 @@ vi.mock('../database/runtimeDataPaths.js', () => ({ resolveRuntimeDataPaths: () 
   assetsDir: migrationFixture.assetsDir, databasePath: openDatabaseConnection().dbPath, mode: 'library'
 }) }));
 vi.mock('../ipc/workspaceContentChangedEvents.js', () => ({ notifyWorkspaceContentChanged: vi.fn() }));
-
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 
 import { IMAGE_ADDRESS_MIGRATION_ID, runImageAddressMigration } from './imageAddressMigration.js';
 import { migrationContext, migrationFixture, initializeMigrationFixture,

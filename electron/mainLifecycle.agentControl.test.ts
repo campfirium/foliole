@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
     getVersion: vi.fn(() => '0.1.0-test'),
     isPackaged: false,
     on: vi.fn(),
+    once: vi.fn(),
     quit: vi.fn(),
     requestSingleInstanceLock: vi.fn(() => true),
     whenReady: vi.fn()
@@ -20,7 +21,10 @@ const mocks = vi.hoisted(() => ({
   resolveAppPaths: vi.fn(() => ({ app_cache_dir: '/cache', app_log_dir: '/logs' }))
 }));
 
-vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: vi.fn(() => []) }, app: mocks.app }));
+vi.mock('electron', () => ({
+  BrowserWindow: { getAllWindows: vi.fn(() => []) }, app: mocks.app,
+  powerMonitor: { on: vi.fn(), removeListener: vi.fn() }
+}));
 vi.mock('./agentControl/agentControlServer.js', () => ({
   ensureAgentControlApiServer: mocks.ensureAgentControlApiServer,
   stopAgentControlApiServer: vi.fn().mockResolvedValue(undefined)
@@ -34,6 +38,7 @@ vi.mock('./database/backupRestore.js', () => ({ reconcileAutomaticDatabaseBackup
 vi.mock('./database/databaseReadiness.js', () => ({ beginDatabaseStartup: vi.fn(), markDatabaseReady: vi.fn(), markDatabaseStartupFailed: vi.fn() }));
 vi.mock('./database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop') }));
 vi.mock('./database/migrate.js', () => ({ initializeDatabase: mocks.initializeDatabase }));
+vi.mock('./database/searchAliasMirror.js', () => ({ startSearchAliasMirror: vi.fn().mockResolvedValue(undefined), stopSearchAliasMirror: vi.fn() }));
 vi.mock('./database/nodeMutations.js', () => ({ flushAllDirtyNodeSyncVersions: vi.fn() }));
 vi.mock('./database/pdfIndexing.js', () => ({ resumePendingPdfAttachmentIndexing: vi.fn() }));
 vi.mock('./database/searchIndexInvalidationCoalescer.js', () => ({ flushCoalescedWorkspaceSearchInvalidations: vi.fn() }));

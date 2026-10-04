@@ -42,7 +42,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: () => ({ dbPath: '/library/Data/foliole.db', driver: { transaction: (work: (tx: unknown) => unknown) => work({}) } }),
+  openDatabaseConnection: () => ({ dbPath: '/library/Data/foliole.db', driver: {
+    queryOne: () => ({ library_epoch: 'library-epoch-1', proof_revision: 0 }),
+    queryAll: () => [],
+    transaction: (work: (tx: unknown) => unknown) => work({})
+  } }),
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => {
     mocks.ownerDepth += 1;
     try { return await execute(); }
@@ -100,7 +104,10 @@ it('requests a Device-scoped join without retired library or authorization metad
       device_name: 'Desktop B', path_flavor: process.platform === 'win32' ? 'windows' : 'posix',
       platform: resolveDesktopPlatformLabel()
     },
-    ephemeral_public_key: 'public', group_id: 'group-1'
+    ephemeral_public_key: 'public', group_id: 'group-1',
+    merge_proof: {
+      library_epoch: 'library-epoch-1', proof_revision: 0, source_proof_revisions: {}
+    }
   });
   expect(request.body).not.toMatch(/authorization|library_facts|member|timeline/u);
   expect(mocks.savePending).toHaveBeenCalledOnce();

@@ -5,6 +5,7 @@ import { deleteNodesPermanently, moveNodes, replaceNodeOrder } from '../database
 import { restoreNodesWithParents as restoreNodes, softDeleteNodesWithParents as softDeleteNodes } from '../database/nodeTrashTransitions.js';
 import { upsertVersionedNodeSnapshot, upsertVersionedNodeSnapshotWithOrder } from '../database/nodeVersionedMutations.js';
 import { enqueueCoalescedWorkspaceSearchInvalidation } from '../database/searchIndexInvalidationCoalescer.js';
+import { requestDesktopHighValueSync } from '../sync/desktopMemberSyncCadence.js';
 
 import { handleInvokeRequest } from './commands.js';
 
@@ -51,6 +52,9 @@ vi.mock('../database/searchIndexInvalidationCoalescer.js', () => ({
 }));
 vi.mock('../mirror/mirrorSyncScheduler.js', () => ({
   scheduleMirrorSync: vi.fn()
+}));
+vi.mock('../sync/desktopMemberSyncCadence.js', () => ({
+  requestDesktopHighValueSync: vi.fn(async () => undefined)
 }));
 vi.mock('../agentControl/agentControlVirtualFolderLifecycle.js', () => ({ renameCollectionVirtualFolder: vi.fn() }));
 vi.mock('../agentControl/agentControlVirtualFolders.js', () => ({ readCollectionVirtualFolderRow: vi.fn(() => null) }));
@@ -100,6 +104,7 @@ it('handles node mutation commands', async () => {
     { searchInvalidation: { workspaceInvalidation: 'defer' } }
   );
   expect(enqueueCoalescedWorkspaceSearchInvalidation).toHaveBeenCalledWith(['node-1']);
+  expect(requestDesktopHighValueSync).toHaveBeenCalledOnce();
 });
 
 it('handles node reveal mutation command', async () => {

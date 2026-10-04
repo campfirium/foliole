@@ -7,6 +7,10 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { initializeDatabase } from '../database/migrate.js';
+
 let mockedAppDataDir = '/tmp/foliole-canonical-migration';
 let mockedDocumentsDir = '/tmp/foliole-canonical-migration-documents';
 
@@ -15,9 +19,6 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_config_dir: path.join(mockedAppDataDir, 'config'), documents_dir: mockedDocumentsDir,
   app_log_dir: path.join(mockedAppDataDir, 'logs')
 }) }));
-
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
-import { initializeDatabase } from '../database/migrate.js';
 
 import {
   CANONICAL_ATTACHMENT_MIGRATION_ID,
@@ -33,6 +34,10 @@ beforeEach(async () => {
   mockedAppDataDir = path.join(root, 'app-data');
   mockedDocumentsDir = path.join(root, 'documents');
   initializeDatabase();
+  for (const statement of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter((sql) =>
+    /^CREATE TABLE IF NOT EXISTS (attachments|node_attachments) \(/.test(sql))) {
+    openDatabaseConnection().sqlite.exec(statement);
+  }
   openDatabaseConnection().sqlite.exec(`CREATE TABLE attachment_blobs (
     attachment_id TEXT PRIMARY KEY, content_hash TEXT, storage_key TEXT, size_bytes INTEGER,
     mime_type TEXT, availability TEXT, source_host_name TEXT, created_at TEXT, cached_at TEXT, last_verified_at TEXT)`);

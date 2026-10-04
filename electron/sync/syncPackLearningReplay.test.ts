@@ -57,6 +57,7 @@ function createFixture(type: string, incomingHash: string) {
     INSERT INTO sync_state_sequence VALUES (1, 7);
     CREATE TABLE node_reading (node_id TEXT PRIMARY KEY, last_handled_at TEXT, repetition_count INTEGER);
     CREATE TABLE node_review (node_id TEXT PRIMARY KEY, last_review_at TEXT, reps INTEGER);
+    CREATE TABLE import_sources (source_fingerprint TEXT PRIMARY KEY);
     CREATE TABLE setting_records (
       key TEXT, scope TEXT, platform TEXT, form_factor TEXT, host_name TEXT,
       value_json TEXT, content_hash TEXT
