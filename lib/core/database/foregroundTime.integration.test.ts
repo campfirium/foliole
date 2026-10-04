@@ -12,6 +12,7 @@ import { applySyncPackStateRowsWithDbPort } from '../sync/syncPackStateRowsExecu
 
 import { migrateCompanionDatabase } from './companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from './companionSchemaStatements.js';
+import { DATABASE_SCHEMA_VERSION } from './databaseSchemaVersion.js';
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from './desktopFreshSchemaStatements.js';
 import { readForegroundTimeHistory } from './foregroundTimeHistory.js';
 import { saveForegroundTime } from './foregroundTimeStore.js';
@@ -124,7 +125,7 @@ it('upgrades desktop and companion storage while retaining existing reading data
       INSERT INTO node_reading(node_id, last_handled_at, next_at, repetition_count, state) VALUES ('retained', '2026-10-01', '2026-10-04', 7, 'active')`);
     if (schema === DESKTOP_FRESH_SCHEMA_STATEMENTS) {
       db.pragma(`user_version = ${version}`); initializeDatabaseSchema(db);
-      expect(db.pragma('user_version', { simple: true })).toBe(134);
+      expect(db.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
     } else {
       const port = createBetterSqliteDbPort(db);
       await port.transaction((tx) => migrateCompanionDatabase(tx, 66, 68));
