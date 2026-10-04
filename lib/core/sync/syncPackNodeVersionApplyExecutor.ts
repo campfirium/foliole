@@ -63,7 +63,9 @@ async function storeIncomingVersions(port: DbPort, alias: string, replays: Set<s
      FROM ${alias}.node_sync_version_parents parent
      JOIN main.node_sync_versions version ON version.version_id = parent.version_id
      WHERE ${eligiblePackVersion('version', alias)}
-       AND version.version_id NOT IN (SELECT value FROM json_each(?))
+       AND (version.version_id NOT IN (SELECT value FROM json_each(?)) OR
+         version.parent_version_id IS (SELECT incoming.parent_version_id FROM ${alias}.node_sync_versions incoming
+           WHERE incoming.version_id = version.version_id))
        AND (version.parent_version_id = (SELECT incoming.parent_version_id FROM ${alias}.node_sync_versions incoming
          WHERE incoming.version_id = version.version_id) OR (NOT EXISTS
          (SELECT 1 FROM ${alias}.node_sync_versions incoming WHERE incoming.version_id = version.version_id)

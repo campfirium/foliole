@@ -21,7 +21,7 @@ export function migrateDynamicNodeVersionChains(sqlite: DatabaseMigrationTarget)
     const keep = new Set([node.current_version_id, ...refs.flatMap((ref) => ref.version_id ? [ref.version_id] : [])]);
     const frozen = new Set(refs.filter((ref) => ref.frozen && ref.version_id).map((ref) => ref.version_id!));
     const plan = planNodeVersionChain(sqlite.prepare(CHAIN_VERSIONS_SQL).all(node.id) as ChainVersion[],
-      sqlite.prepare(CHAIN_EDGES_SQL).all(node.id) as ChainEdge[], keep, frozen, Number.MAX_SAFE_INTEGER, true);
+      sqlite.prepare(CHAIN_EDGES_SQL).all(node.id) as ChainEdge[], keep, frozen, Number.MAX_SAFE_INTEGER, new Set([node.current_version_id]));
     for (const statement of chainMutationStatements(plan)) sqlite.prepare(statement.sql).run(...statement.params);
   }
 }

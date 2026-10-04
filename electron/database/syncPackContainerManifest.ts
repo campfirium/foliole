@@ -10,6 +10,7 @@ import { buildSyncPackManifest } from '../../lib/core/sync/syncPackManifest.js';
 
 import type { BuildDesktopSyncPackInput } from './syncPackBuilderFromDriver.js';
 import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
+import { syncPackTableRows } from './syncPackTableRows.js';
 
 export function buildContainerManifest(args: {
   compressedSha256: string;
@@ -29,20 +30,7 @@ export function buildContainerManifest(args: {
     packId: args.input.packId,
     ...(args.input.restoreId ? { restoreId: args.input.restoreId } : {}),
     sourceEpoch: args.sourceEpoch,
-    tableRows: {
-      node_version_peer_heads: args.rows.nodeVersionDependencies ?? [],
-      content_blobs: args.rows.contentBlobs,
-      external_documents: args.rows.externalDocuments,
-      node_sync_versions: args.rows.nodeVersions,
-      node_sync_tombstones: args.rows.nodeTombstones,
-      node_sync_version_parents: args.rows.nodeVersionParents,
-      nodes: args.rows.nodes,
-      review_log: args.rows.reviewLog,
-      sync_group_devices: args.rows.groupDevices,
-      sync_groups: args.rows.groups,
-      sync_object_state: args.rows.stateRows,
-      sync_objects: args.rows.syncObjects
-    },
+    tableRows: syncPackTableRows(args.rows),
     toStateSeq: args.toStateSeq
   });
   return {

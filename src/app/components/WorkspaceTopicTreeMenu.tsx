@@ -57,6 +57,7 @@ export function WorkspaceTopicTreeMenu(props: WorkspaceTopicTreeMenuProps) {
     <>
       <NodeListTreeMenu
         contextMenu={props.contextMenu}
+        orderHistoryRootParentId={props.activeFolderId}
         createMenuSurface={props.virtualFolderView ? 'virtual-topics' : 'topics'}
         createChildNode={props.onCreateChildNode}
         createGlobalNode={(content = '', kind = 'topic') => props.onCreateChildNode(props.activeFolderId, content, kind)}

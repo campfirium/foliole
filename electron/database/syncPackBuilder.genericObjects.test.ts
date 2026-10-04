@@ -59,14 +59,16 @@ it('packs a changed direct-child sequence without node rows or article versions'
     packId: 'pack-parent-order-1', fromStateSeq
   });
 
-  expect(result.objectCount).toBe(1);
-  expect(readPackRows(packPath)).toMatchObject({
-    nodes: [],
-    stateRows: [expect.objectContaining({ object_type: 'parent_child_order' })],
-    syncObjects: [expect.objectContaining({
-      object_type: 'parent_child_order', payload_json: expect.stringContaining('node-b')
-    })]
-  });
+  expect(result.objectCount).toBe(2);
+  const rows = readPackRows(packPath);
+  expect(rows.nodes).toEqual([]);
+  expect(rows.stateRows.map((row) => (row as { object_type: string }).object_type)).toEqual(['order_version', 'parent_child_order']);
+  expect(rows.syncObjects).toEqual(expect.arrayContaining([
+    expect.objectContaining({ object_type: 'parent_child_order',
+      payload_json: expect.stringContaining('node-b') }),
+    expect.objectContaining({ object_type: 'order_version',
+      payload_json: expect.stringContaining('"kind":"user"') })
+  ]));
 });
 
 it('ignores retired independent attachment state while consuming its cursor', async () => {

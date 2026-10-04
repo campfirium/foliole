@@ -10,6 +10,33 @@ export const CHAIN_EDGES_SQL = `SELECT edge.* FROM node_sync_version_parents edg
   JOIN node_sync_versions version ON version.version_id = edge.version_id
   WHERE version.object_id = ? ORDER BY edge.version_id, edge.ordinal`;
 
+const CHAIN_READ_TABLES = new Set([
+  'node_version_device_bases', 'sync_group_local_state', 'sync_group_devices',
+  'sync_delivery_receipts', 'node_sync_versions', 'node_sync_version_parents',
+  'node_version_member_positions', 'node_version_local_origins', 'node_version_outbound_holds',
+  'node_version_outbound_payload_holds', 'node_version_local_holds',
+  'sync_change_log', 'node_sync_conflicts', 'node_text_alternatives',
+  'nodes', 'node_sync_tombstones', 'sync_object_state'
+]);
+
+/** Bind the fixed retention read queries to an attached immutable source view. */
+export function qualifyNodeVersionReadSql(sql: string, schema = 'main') {
+  if (!/^[a-z][a-z0-9_]*$/u.test(schema)) throw new Error('node_version_schema_invalid');
+  if (schema === 'main') return sql;
+  return sql.replace(/\b(FROM|JOIN)\s+([a-z_]+)\b/gu, (match, keyword: string, table: string) =>
+    CHAIN_READ_TABLES.has(table) ? `${keyword} ${schema}.${table}` : match);
+}
+
+const MEMBER_POSITIONS_SQL = `SELECT position.adopted_version_id, 0 FROM node_version_member_positions position
+  JOIN sync_group_local_state local ON local.group_id = position.group_id AND local.state = 'active'
+  WHERE position.object_id = ? AND position.device_identity_key <> local.local_device_identity_key
+    AND position.resolved_revision IS NULL
+UNION SELECT pending.value, 0 FROM node_version_member_positions position
+  JOIN sync_group_local_state local ON local.group_id = position.group_id AND local.state = 'active'
+  JOIN json_each(position.pending_version_ids_json) pending
+  WHERE position.object_id = ? AND position.device_identity_key <> local.local_device_identity_key
+    AND position.resolved_revision IS NULL`;
+
 const OUTBOUND_REFERENCES_SQL = `SELECT hold.version_id, 1 FROM node_version_outbound_holds hold
   JOIN sync_group_local_state local ON local.group_id = hold.group_id AND local.state = 'active'
   JOIN sync_group_devices peer ON peer.group_id = hold.group_id
@@ -22,13 +49,35 @@ UNION SELECT payload.version_id, 1 FROM node_version_outbound_payload_holds payl
     AND peer.device_identity_key = hold.device_identity_key AND peer.state = 'active'
   WHERE payload.object_id = ? AND peer.device_identity_key <> local.local_device_identity_key`;
 
-export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false) {
+const LOCAL_REFERENCES_SQL = `SELECT version.version_id, 0 FROM node_sync_versions version
+      WHERE version.object_id = ? AND NOT EXISTS (
+        SELECT 1 FROM node_sync_version_parents edge WHERE edge.parent_version_id = version.version_id)
+        AND NOT EXISTS (SELECT 1 FROM node_sync_versions child
+          WHERE child.parent_version_id = version.version_id)
+    UNION SELECT version_id, 0 FROM node_version_local_holds WHERE object_id = ?
+    UNION SELECT base_version_id, 0 FROM sync_change_log
+      WHERE object_type = 'node' AND object_id = ? AND applied_at IS NULL
+    UNION SELECT result_version_id, 0 FROM sync_change_log
+      WHERE object_type = 'node' AND object_id = ? AND applied_at IS NULL
+    UNION SELECT conflict_version_id, 0 FROM node_sync_conflicts WHERE object_id = ?
+    UNION SELECT parent_version_id, 0 FROM node_sync_conflicts WHERE object_id = ?
+    UNION SELECT source_version_id, 0 FROM node_text_alternatives WHERE node_id = ? AND status = 'available'
+    UNION SELECT anchor_source_version_id, 0 FROM nodes WHERE anchor_source_version_id IN
+      (SELECT version_id FROM node_sync_versions WHERE object_id = ?)
+    UNION SELECT current_version_id, 0 FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`;
+
+export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false,
+  schema = 'main') {
   return {
-    sql: `SELECT base.version_id, 0 AS frozen FROM node_version_device_bases base
+    sql: qualifyNodeVersionReadSql(`SELECT base.version_id, 0 AS frozen FROM node_version_device_bases base
       JOIN sync_group_local_state local ON local.group_id = base.group_id AND local.state = 'active'
       JOIN sync_group_devices device ON device.group_id = base.group_id
-        AND device.device_identity_key = base.device_identity_key AND device.state = 'active'
+        AND device.device_identity_key = base.device_identity_key
       WHERE base.object_id = ? AND base.device_identity_key <> local.local_device_identity_key
+        AND NOT EXISTS (SELECT 1 FROM node_version_member_positions position
+          WHERE position.group_id = base.group_id AND position.device_identity_key = base.device_identity_key
+            AND position.object_id = base.object_id AND position.library_epoch = base.library_epoch
+            AND position.proof_revision >= base.proof_revision)
     UNION SELECT receipt.payload_identity, 0 FROM sync_delivery_receipts receipt
       JOIN sync_group_local_state local ON local.state = 'active'
       JOIN sync_group_devices peer ON peer.group_id = local.group_id
@@ -44,12 +93,6 @@ export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false
           UNION SELECT version.parent_version_id FROM node_sync_versions version
             JOIN proven ON proven.version_id = version.version_id WHERE version.parent_version_id IS NOT NULL
         ) SELECT 1 FROM proven WHERE proven.version_id = receipt.payload_identity)
-        AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts newer JOIN node_sync_versions next
-          ON next.version_id = newer.payload_identity
-          WHERE newer.peer_id = receipt.peer_id AND newer.object_id = receipt.object_id
-            AND newer.stream_name = 'node_version' AND newer.status = 'confirmed'
-            AND (next.created_at > version.created_at OR
-              (next.created_at = version.created_at AND next.version_id > version.version_id)))
     UNION SELECT version.version_id, 0 FROM node_sync_versions version
       WHERE version.object_id = ? AND ${retireLegacyHistory ? '0' : '1'} AND (version.body_text IS NOT NULL
         OR json_type(version.snapshot_json, '$.content') = 'text' OR json_type(version.snapshot_json, '$.content') IS NULL)
@@ -63,41 +106,20 @@ export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false
               AND base.object_id = version.object_id)
           AND NOT EXISTS (SELECT 1 FROM sync_delivery_receipts receipt WHERE receipt.peer_id = peer.device_identity_key
             AND receipt.object_id = version.object_id AND receipt.stream_name = 'node_version' AND receipt.status = 'confirmed'))
+    UNION ${MEMBER_POSITIONS_SQL}
     UNION ${OUTBOUND_REFERENCES_SQL}
-    UNION SELECT version_id, 0 FROM node_version_local_holds WHERE object_id = ?
-    UNION SELECT base_version_id, 0 FROM sync_change_log
-      WHERE object_type = 'node' AND object_id = ? AND applied_at IS NULL
-    UNION SELECT result_version_id, 0 FROM sync_change_log
-      WHERE object_type = 'node' AND object_id = ? AND applied_at IS NULL
-    UNION SELECT conflict_version_id, 0 FROM node_sync_conflicts WHERE object_id = ?
-    UNION SELECT parent_version_id, 0 FROM node_sync_conflicts WHERE object_id = ?
-    UNION SELECT source_version_id, 0 FROM node_text_alternatives WHERE node_id = ? AND status = 'available'
-    UNION SELECT anchor_source_version_id, 0 FROM nodes WHERE anchor_source_version_id IN
-      (SELECT version_id FROM node_sync_versions WHERE object_id = ?)
-    UNION SELECT current_version_id, 0 FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`,
-    params: Array<string>(13).fill(nodeId)
+    UNION ${LOCAL_REFERENCES_SQL}`, schema),
+    params: Array<string>(16).fill(nodeId)
   };
 }
 
 export function chainMutationStatements(plan: ReturnType<typeof planNodeVersionChain>) {
   const statements: Array<{ sql: string; params: DbParams }> = [];
   if (plan.skipped || !plan.removed?.length) return statements;
-  for (const relation of plan.relations!) {
-    statements.push({ sql: 'DELETE FROM node_sync_version_parents WHERE version_id = ?', params: [relation.id] });
-    statements.push({ sql: 'UPDATE node_sync_versions SET parent_version_id = ? WHERE version_id = ?',
-      params: [relation.parents[0] ?? null, relation.id] });
-    statements.push({ sql: 'UPDATE node_sync_tombstones SET parent_version_id = ? WHERE version_id = ?',
-      params: [relation.parents[0] ?? null, relation.id] });
-    for (const [ordinal, parent] of relation.parents.entries()) statements.push({
-      sql: 'INSERT INTO node_sync_version_parents (version_id, parent_version_id, ordinal) VALUES (?, ?, ?)',
-      params: [relation.id, parent, ordinal]
-    });
-  }
-  for (const id of plan.removed!) {
-    statements.push({ sql: 'DELETE FROM node_sync_version_parents WHERE version_id = ?', params: [id] });
-    statements.push({ sql: 'DELETE FROM node_version_local_origins WHERE version_id = ?', params: [id] });
-    statements.push({ sql: "DELETE FROM sync_delivery_receipts WHERE stream_name = 'node_version' AND payload_identity = ?", params: [id] });
-    statements.push({ sql: 'DELETE FROM node_sync_versions WHERE version_id = ?', params: [id] });
-  }
+  for (const id of plan.removed) statements.push({
+    sql: `UPDATE node_sync_versions SET body_text = NULL,
+      snapshot_json = json_set(snapshot_json, '$.content', NULL) WHERE version_id = ?`,
+    params: [id]
+  });
   return statements;
 }

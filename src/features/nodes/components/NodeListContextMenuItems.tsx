@@ -1,5 +1,6 @@
 import {
   ArchiveRestore,
+  History,
   BookMarked,
   BookOpenCheck,
   CalendarClock,
@@ -177,6 +178,10 @@ function NoteMenuItems(props: NoteMenuItemsProps) {
         nodeId={props.pdfExportTargetId ?? null}
         readwiseNodeId={props.readwiseOriginalEpubTargetId ?? null}
       />
+      {props.onOpenOrderHistory ? <>
+        {hasAnyPrimaryGroup ? <NodeContextMenuSeparator /> : null}
+        <NodeContextMenuItem icon={History} onSelect={props.onOpenOrderHistory}>Saved arrangements…</NodeContextMenuItem>
+      </> : null}
       {renderRemovalItems(t, props, hasAnyPrimaryGroup)}
     </>
   );
@@ -191,6 +196,7 @@ export function NodeListContextMenuItems(props: NodeListContextMenuProps) {
       createCommands={props.createCommands}
       {...(props.onAddToVirtualFolder ? { onAddToVirtualFolder: props.onAddToVirtualFolder } : {})}
       {...(props.onCreateTopicFromClipboard ? { onCreateTopicFromClipboard: props.onCreateTopicFromClipboard } : {})}
+      {...(props.onOpenOrderHistory ? { onOpenOrderHistory: props.onOpenOrderHistory } : {})}
       onCreateCommand={props.onCreateCommand}
       {...(props.readwiseOriginalEpubTargetId !== undefined ? { readwiseOriginalEpubTargetId: props.readwiseOriginalEpubTargetId } : {})}
       {...(props.pdfExportTargetId !== undefined ? { pdfExportTargetId: props.pdfExportTargetId } : {})}

@@ -4,7 +4,9 @@ import {
   prepareInboundNodeVersionReceipt,
   recordInboundNodeVersionReceipt
 } from './nodeVersionInboundReceipt.js';
-import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
+import { applySyncPackNodeMemberPositions } from './nodeVersionMemberPositionApply.js';
+import { persistSyncIdentityParentOrderMerges,
+  stageSyncIdentityParentOrderMerges } from './syncIdentityParentOrderApply.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import {
   type SyncPackNodeApplyOptions
@@ -18,6 +20,7 @@ import { applySyncPackExternalDocumentsWithDbPort } from './syncPackExternalDocu
 import { applySyncPackGroupFactsWithDbPort } from './syncPackGroupFactsExecutor.js';
 import { clearSyncPackKnownFactClaims, loadVerifiedSyncPackVersionIds } from './syncPackKnownFactClaims.js';
 import { applySyncPackLearningObjectsWithDbPort } from './syncPackLearningObjectsExecutor.js';
+import { collectAppliedNodeVersions, publishAppliedNodePositions } from './syncPackNodePositions.js';
 import { applySyncPackNodeRowsWithDbPort } from './syncPackNodeRowsApply.js';
 import { applySyncPackNodeTombstonesWithDbPort } from './syncPackNodeTombstoneExecutor.js';
 import { applySyncPackNodeVersionsWithDbPort } from './syncPackNodeVersionApplyExecutor.js';
@@ -42,12 +45,14 @@ import {
 } from './syncPackSyncObjectsExecutor.js';
 import { applyVersionedNodeStage } from './syncPackVersionedNodeStage.js';
 import { applySyncPackViewStateObjectsWithDbPort } from './syncPackViewStateObjectsExecutor.js';
+import { applySyncPackParentOrderFacts } from './syncParentOrderFactApply.js';
 
 export interface SyncPackNodeSurfaceApplyOptions extends SyncPackNodeApplyOptions {
   currentCursor: number;
   expectedRestoreId?: string;
   enqueueSearchInvalidations?: boolean;
   hostName: string;
+  identityOrderMerge?: boolean;
   onSettingApplied?: (port: DbPort, record: import('./syncPackSyncObjectsExecutor.js').SyncPackSyncObjectRecord) => Promise<void>;
   recordVersionReceipt?: boolean;
   sourceHostName?: string;
@@ -122,13 +127,14 @@ export async function applySyncPackNodeSurfaceWithDbPort(
   };
 }
 
-async function applySyncPackSurfaceInTransaction(
+export async function applySyncPackSurfaceInTransaction(
   port: DbPort,
   options: SyncPackNodeSurfaceApplyOptions,
   shouldApply: boolean,
-  toStateSeq: number
+  toStateSeq: number | null
 ) {
   if (!shouldApply) {
+    if (toStateSeq === null) throw new Error('sync_identity_pack_replay_unsupported');
     return applyReplayPackTombstones(port, options, toStateSeq);
   }
   const preparedReceipt = options.recordVersionReceipt
@@ -148,8 +154,37 @@ async function applySyncPackSurfaceInTransaction(
     excludedNodeIds: nodeConvergence.processedNodeIds
   };
   await applySyncPackNodeRowsWithDbPort(port, remainingNodeOptions);
+  const appliedPositions = await applySyncPackNodeMemberPositions(port, options.incomingAlias);
+  await applySyncPackParentOrderFacts(port, options.incomingAlias);
+  const parentOrderMerges = options.identityOrderMerge
+    ? await stageSyncIdentityParentOrderMerges(port, options.incomingAlias) : [];
   await applySyncPackParentChildOrdersWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
+  await applyRemainingSurfaceObjects(port, options);
+  const appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
+  const appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
+    ...remainingNodeOptions,
+    objectTypes: SYNC_PACK_SURFACE_OBJECT_TYPES
+  });
+  await persistSyncIdentityParentOrderMerges(port, parentOrderMerges, options.hostName);
+  if (toStateSeq !== null) await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
+  await applyPackNodeVersionDependencies(port, options.incomingAlias ?? 'inc', options.sourcePeerId);
+  if (preparedReceipt) await saveVersionReceipt(port, preparedReceipt, options.sourcePeerId);
+  // Whole-set restore preserves the source inventory until its final verification.
+  if (!options.expectedRestoreId && (toStateSeq !== null || options.identityOrderMerge)) {
+    await publishAppliedNodePositions(port, options.incomingAlias ?? 'inc');
+  }
+  return {
+    appliedBlobCount,
+    appliedGroupFactCount: groupFacts.appliedFactCount,
+    appliedObjectCount: appliedObjectCount + nodeConvergence.appliedNodeCount + appliedPositions,
+    appliedReviewOpIds,
+    handledConflictCount: nodeConvergence.handledConflictCount,
+    appliedTombstoneNodeIds
+  };
+}
+
+async function applyRemainingSurfaceObjects(port: DbPort, options: SyncPackNodeSurfaceApplyOptions) {
   await applySyncPackExternalDocumentsWithDbPort(port, options);
   await applySyncPackSettingObjectsWithDbPort(port, options);
   await applySyncPackMetadataObjectsWithDbPort(port, options);
@@ -158,34 +193,12 @@ async function applySyncPackSurfaceInTransaction(
   await applySyncPackLearningObjectsWithDbPort(port, options);
   await pruneLearningRowsWithoutVisibleNodes(port);
   await applySyncPackViewStateObjectsWithDbPort(port, options);
-  const appliedReviewOpIds = await applySyncPackReviewLogWithDbPort(port, options);
-  const appliedObjectCount = await applySyncPackStateRowsWithDbPort(port, {
-    ...remainingNodeOptions,
-    objectTypes: SYNC_PACK_SURFACE_OBJECT_TYPES
-  });
-  await clearConfirmedSyncPackPushAcks(port, options, toStateSeq);
-  await applyPackNodeVersionDependencies(port, options.incomingAlias ?? 'inc', options.sourcePeerId);
-  if (preparedReceipt) await saveVersionReceipt(port, preparedReceipt, options.sourcePeerId);
-  return {
-    appliedBlobCount,
-    appliedGroupFactCount: groupFacts.appliedFactCount,
-    appliedObjectCount: appliedObjectCount + nodeConvergence.appliedNodeCount,
-    appliedReviewOpIds,
-    handledConflictCount: nodeConvergence.handledConflictCount,
-    appliedTombstoneNodeIds
-  };
 }
 
 async function loadIncomingArticles(port: DbPort, incomingAlias: string) {
   return port.query<{ object_id: string }>(`SELECT s.object_id FROM ${incomingAlias}.sync_object_state s
     JOIN ${incomingAlias}.nodes n ON n.id = s.object_id
     WHERE s.object_type = 'node' AND s.deleted_at IS NULL`);
-}
-
-async function collectAppliedNodeVersions(port: DbPort, incomingAlias: string) {
-  const heads = await port.query<{ id: string }>(`SELECT id FROM ${incomingAlias}.nodes
-    UNION SELECT node_id AS id FROM ${incomingAlias}.node_sync_tombstones`);
-  for (const head of heads) await collectNodeVersionPayloads(port, head.id, Number.MAX_SAFE_INTEGER);
 }
 
 async function saveVersionReceipt(
@@ -210,6 +223,7 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'node_open_state',
   'node_text_alternative',
   'parent_child_order',
+  'order_version',
   'pdf_page_text',
   'view_state'
 ] as const;

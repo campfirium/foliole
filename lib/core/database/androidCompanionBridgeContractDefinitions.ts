@@ -93,11 +93,14 @@ export const ANDROID_COMPANION_BRIDGE_CONTRACT_DEFINITIONS = {
         expectedPeerId: 'expected_peer_id',
         expectedSourcePeerId: 'expected_source_peer_id',
         headers: 'headers',
+        body: 'body',
+        method: 'method',
         packPath: 'pack_path',
         url: 'url'
       },
       responseKeys: {
         deleted: 'deleted',
+        manifest: 'manifest',
         packPath: 'pack_path'
       }
     },

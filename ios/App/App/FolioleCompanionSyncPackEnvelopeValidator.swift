@@ -80,6 +80,10 @@ enum FolioleCompanionSyncPackEnvelopeValidator {
         expectedPeerId: String,
         expectedSourcePeerId: String
     ) throws -> [String: Int] {
+        if (try? integer(manifest, "format_version")) == 21 {
+            return try validateIdentityManifest(manifest, contract: contract,
+                expectedPeerId: expectedPeerId, expectedSourcePeerId: expectedSourcePeerId)
+        }
         guard try string(manifest, "format") == contract.format else { throw invalid("unsupported_sync_pack_format") }
         guard try integer(manifest, "format_version") == contract.formatVersion else {
             throw invalid("unsupported_sync_pack_format_version")
@@ -105,6 +109,30 @@ enum FolioleCompanionSyncPackEnvelopeValidator {
         let to = try integer(manifest, "to_state_seq")
         let frontier = try integer(manifest, "frontier_state_seq")
         guard from >= 0, to >= from, frontier >= to else { throw invalid("invalid_sync_pack_state_range") }
+        return try tableCounts(manifest, required: contract.manifestTableNames)
+    }
+
+    private static func validateIdentityManifest(
+        _ manifest: [String: Any], contract: FolioleCompanionSyncPackContract,
+        expectedPeerId: String, expectedSourcePeerId: String
+    ) throws -> [String: Int] {
+        guard try string(manifest, "format") == contract.format,
+              try string(manifest, "compression") == contract.compression,
+              try string(manifest, "database_file") == contract.databaseEntry,
+              try (contract.minimumSchemaVersion...contract.maximumSchemaVersion).contains(integer(manifest, "schema_version")),
+              try string(manifest, "from_peer_id") == expectedSourcePeerId,
+              try string(manifest, "to_peer_id") == expectedPeerId,
+              try string(manifest, "contract") == "global-id-v1",
+              let page = manifest["identity_page"] as? [String: Any],
+              try string(page, "contract") == "global-id-v1",
+              try string(page, "source_peer_id") == expectedSourcePeerId,
+              try string(page, "target_peer_id") == expectedPeerId,
+              manifest["from_state_seq"] == nil, manifest["to_state_seq"] == nil,
+              manifest["frontier_state_seq"] == nil else {
+            throw invalid("sync_identity_pack_manifest_invalid")
+        }
+        _ = try string(manifest, "pack_id")
+        try FolioleCompanionIdentityPageContract.validate(page, manifest: manifest)
         return try tableCounts(manifest, required: contract.manifestTableNames)
     }
 

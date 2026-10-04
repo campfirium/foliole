@@ -11,18 +11,25 @@ struct FolioleCompanionHttpMessage {
     func header(_ name: String) -> String? { headers[name.lowercased()] }
 
     static func expectedLength(_ data: Data) throws -> Int? {
-        guard data.count <= maximumBytes else { throw invalid("request_too_large") }
-        guard let separator = data.range(of: Data("\r\n\r\n".utf8)) else { return nil }
+        guard let separator = data.range(of: Data("\r\n\r\n".utf8)) else {
+            if data.count > 16 * 1024 { throw invalid("http_header_too_large") }
+            return nil
+        }
+        guard separator.lowerBound <= 16 * 1024 else { throw invalid("http_header_too_large") }
         guard let headers = String(data: data[..<separator.lowerBound], encoding: .utf8) else {
             throw invalid("invalid_http_headers")
         }
+        let requestLine = headers.split(separator: "\r\n").first.map(String.init) ?? ""
+        let pushLimit = requestLine.hasPrefix("POST /companion/sync-identity-push ")
+            ? 2 * 1024 * 1024 : maximumBytes
+        guard data.count <= pushLimit else { throw invalid("request_too_large") }
         let length = headers.split(separator: "\r\n").dropFirst().compactMap { line -> Int? in
             let parts = line.split(separator: ":", maxSplits: 1)
             guard parts.count == 2, parts[0].trimmingCharacters(in: .whitespaces).lowercased() == "content-length"
             else { return nil }
             return Int(parts[1].trimmingCharacters(in: .whitespaces))
         }.first ?? 0
-        guard length >= 0, separator.upperBound + length <= maximumBytes else {
+        guard length >= 0, separator.upperBound + length <= pushLimit else {
             throw invalid("request_too_large")
         }
         return separator.upperBound + length

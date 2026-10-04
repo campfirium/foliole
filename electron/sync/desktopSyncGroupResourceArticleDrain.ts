@@ -1,5 +1,5 @@
 import {
-  clearSyncPackResourceArticles,
+  clearSyncPackResourceArticles, enqueueSyncIdentityResourceScanPage,
   loadSyncPackResourceArticleBatch
 } from '../../lib/core/sync/syncPackResourceArticles.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -7,6 +7,21 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 
 import { downloadDesktopSyncGroupResources } from './desktopSyncGroupResources.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
+import { verifyDesktopSyncIdentityBlobBytes } from './desktopSyncIdentityBlobIntegrity.js';
+
+export async function drainDesktopSyncIdentityResources(peer: DesktopSyncGroupPeer) {
+  let afterId = '';
+  for (;;) {
+    const next = await runWithDatabaseConnectionOwner(() => enqueueSyncIdentityResourceScanPage(
+      createBetterSqliteDbPort(openDatabaseConnection().sqlite), {
+        groupId: peer.group_id, peerId: peer.peer_device_id, afterId
+      }));
+    if (!next) break;
+    afterId = next;
+  }
+  await drainDesktopSyncGroupResourceArticles(peer);
+  await verifyDesktopSyncIdentityBlobBytes(peer);
+}
 
 export async function drainDesktopSyncGroupResourceArticles(peer: DesktopSyncGroupPeer) {
   let afterId = '';

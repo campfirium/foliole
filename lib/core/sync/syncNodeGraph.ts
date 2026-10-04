@@ -46,6 +46,13 @@ export async function loadStoredSyncNodeVersionRecord(
   return row ? storedVersionToRecord(port, row, includeAncestors) : null;
 }
 
+/** Retired bodies remain original version facts and cannot be used as current text. */
+export async function loadRetainedSyncNodeVersionFact(port: DbPort, versionId: string) {
+  const [row] = await port.query<StoredSyncNodeVersionRow>(
+    'SELECT * FROM node_sync_versions WHERE version_id = ? LIMIT 1', [versionId]);
+  return row ? storedVersionToRecord(port, row, true, undefined, false) : null;
+}
+
 export async function loadStoredSyncNodeVersionRecords(port: DbPort, versionIds: string[]) {
   const uniqueIds = [...new Set(versionIds)];
   const records = new Map<string, NativeSyncNodeRecord>();
@@ -124,11 +131,12 @@ async function storedVersionToRecord(
   port: DbPort,
   row: StoredSyncNodeVersionRow,
   includeAncestors: boolean,
-  knownParents?: string[]
+  knownParents?: string[],
+  requireBody = true
 ): Promise<NativeSyncNodeRecord> {
   const snapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
   const body = storedSyncNodeVersionBody(row);
-  if (body === null) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
+  if (body === null && requireBody) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
   const parents = knownParents ?? await loadParents(port, row.version_id);
   return {
     ancestor_version_ids: includeAncestors ? await loadAncestors(port, row.version_id) : [],

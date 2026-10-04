@@ -55,7 +55,7 @@ export async function compileAttachmentHttpWorker(root: string) {
     'lib/core/sync/attachmentReceiveCheckpoint.ts',
     'lib/core/database/syncPackProgressSchemaStatements.ts', 'electron/sync/desktopSyncGroupHttp.ts',
     'electron/sync/desktopSyncGroupSignedHeaders.ts', 'electron/sync/workgroupHttpCrypto.ts',
-    'electron/sync/workgroupAeadNode.ts'];
+    'electron/sync/workgroupAeadNode.ts', 'electron/sync/workgroupConnectionReset.ts'];
   for (const relative of files) {
     const source = await fs.readFile(path.join(process.cwd(), relative), 'utf8');
     const output = ts.transpileModule(source, { compilerOptions: {

@@ -7,6 +7,7 @@ import { initializeLegacyBodyMigrationSchema } from './legacyBodyMigrationSchema
 import { retireLegacyStorage } from './legacyStorageRetirementMigration.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { migrateNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
+import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { createDataMigrationStateTable } from './numberedMigrationDataState.js';
@@ -32,6 +33,7 @@ import {
 } from './numberedMigrationWatchedFolderConflicts.js';
 import { migrateWatchedSourceIdentity } from './numberedMigrationWatchedSourceIdentity.js';
 import { recoverWatchedSourcesAndPaths } from './numberedMigrationWatchedSourceRecovery.js';
+import { migrateParentOrderVersions } from './parentOrderVersionMigration.js';
 import { migrateReadwiseApiImport } from './readwiseApiImportMigration.js';
 import { migrateReadwiseApiReconcile } from './readwiseApiReconcileMigration.js';
 import { migrateReadwiseAutoImportPolicy } from './readwiseAutoImportPolicyMigration.js';
@@ -48,6 +50,10 @@ import { initializeStoredSourceSearch } from './storedSourceSearchSchema.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
+import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS } from './syncIdentityEntityTriggerStatements.js';
+import { SYNC_IDENTITY_FACT_STAGING_SCHEMA } from './syncIdentityFactStagingSchema.js';
+import { SYNC_IDENTITY_INDEX_SCHEMA_STATEMENTS } from './syncIdentityIndexSchemaStatements.js';
+import { SYNC_IDENTITY_RECEIPT_SCHEMA_STATEMENTS } from './syncIdentityReceiptSchemaStatements.js';
 import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from './syncPackDependencyStagingSchema.js';
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaStatements.js';
 import { repairSyncStateEntities } from './syncStateEntityRepair.js';
@@ -172,5 +178,24 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   } },
   { version: 126, migrate: migrateNodeVersionConfirmations },
   { version: 127, migrate: removeUntrackedImportCaches },
-  { version: 128, migrate: retireLegacyStorage }
+  { version: 128, migrate: retireLegacyStorage },
+  { version: 129, migrate: (sqlite) => {
+    for (const statement of SYNC_IDENTITY_INDEX_SCHEMA_STATEMENTS) sqlite.exec(statement);
+    for (const statement of SYNC_IDENTITY_RECEIPT_SCHEMA_STATEMENTS) sqlite.exec(statement);
+    for (const statement of SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+  } },
+  { version: 130, migrate: (sqlite) => {
+    for (const column of ['local_proof_root', 'peer_proof_root',
+      'proof_contract_revision']) {
+      addColumnIfMissing(sqlite, 'sync_identity_peer_baselines', column,
+        "TEXT NOT NULL DEFAULT ''");
+    }
+  } },
+  { version: 131, migrate: migrateParentOrderVersions },
+  { version: 132, migrate: (sqlite) => {
+    for (const statement of NODE_VERSION_MEMBER_POSITION_SCHEMA) sqlite.exec(statement);
+  } },
+  { version: 133, migrate: (sqlite) => {
+    for (const statement of SYNC_IDENTITY_FACT_STAGING_SCHEMA) sqlite.exec(statement);
+  } }
 ];

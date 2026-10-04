@@ -1,5 +1,5 @@
-import { NEXT_SYNC_STATE_SEQ_SQL } from '../../../../../lib/core/database/syncStateSequenceSchemaStatements';
-import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../../../../../lib/core/database/syncStateSequenceSchemaStatements.js';
+import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort.js';
 
 export async function iosCompanionDeviceId(db: DbPort) {
   const row = (await db.query<DbRow>("SELECT value FROM companion_meta WHERE key = 'device_id' LIMIT 1"))[0];
@@ -31,10 +31,15 @@ export async function markIosCompanionMutation(args: {
   const baseContentHash = typeof existing?.base_content_hash === 'string' ? existing.base_content_hash : null;
   const base = Number(existing?.sync_dirty) === 1 ? baseContentHash ?? contentHash : contentHash;
   await args.db.run(
-    `INSERT OR REPLACE INTO sync_object_state (
+    `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash,
        last_modified_by_host_name, updated_at, deleted_at, sync_dirty
-     ) VALUES (?, ?, ${NEXT_SYNC_STATE_SEQ_SQL}, NULL, ?, ?, ?, ?, NULL, 1)`,
+     ) VALUES (?, ?, ${NEXT_SYNC_STATE_SEQ_SQL}, NULL, ?, ?, ?, ?, NULL, 1)
+     ON CONFLICT(object_type, object_id) DO UPDATE SET
+       state_seq = excluded.state_seq, current_version_id = excluded.current_version_id,
+       content_hash = excluded.content_hash, base_content_hash = excluded.base_content_hash,
+       last_modified_by_host_name = excluded.last_modified_by_host_name,
+       updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, sync_dirty = 1`,
     [args.objectType, args.objectId, args.contentHash, base, args.hostName, args.updatedAt]
   );
 }

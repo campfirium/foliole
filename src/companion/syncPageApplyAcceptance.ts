@@ -1,8 +1,8 @@
-import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements';
-import type { DbPort } from '../../lib/core/sync/dbPort';
-import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor';
-import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema';
-import { createIsolatedCapacitorDatabaseManager } from '../shared/platform/capacitorSqliteDbPort';
+import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
+import { createIsolatedCapacitorDatabaseManager } from '../shared/platform/capacitorSqliteDbPort.js';
 
 const COUNT = 32;
 const UPDATED = '2026-10-03T00:00:00.000Z';

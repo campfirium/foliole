@@ -243,6 +243,7 @@
     "tailwind-merge": "^3.7.0",
     "ts-fsrs": "5.4.2",
     "yaml": "2.9.1",
+    "zod": "4.6.5",
     "zustand": "^5.0.15"
   },
   "optionalDependencies": {

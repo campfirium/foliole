@@ -145,6 +145,18 @@ final class FolioleCompanionHostBridgeContractDefinitions {
         return syncPackTransferResponseKey(context, "packPath");
     }
 
+    static String syncPackTransferManifestResponseKey(Context context) throws Exception {
+        return syncPackTransferResponseKey(context, "manifest");
+    }
+
+    static String syncPackTransferMethodRequestKey(Context context) throws Exception {
+        return syncPackTransferRequestKey(context, "method");
+    }
+
+    static String syncPackTransferBodyRequestKey(Context context) throws Exception {
+        return syncPackTransferRequestKey(context, "body");
+    }
+
     static String syncPackTransferUrlRequestKey(Context context) throws Exception {
         return syncPackTransferRequestKey(context, "url");
     }

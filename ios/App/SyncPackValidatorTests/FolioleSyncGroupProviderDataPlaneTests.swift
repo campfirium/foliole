@@ -8,8 +8,8 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         let definitions = try FolioleCompanionSyncPackProviderDefinitions.load()
         try definitions.validate()
         XCTAssertEqual(definitions.format, "foliole.sync-pack")
-        XCTAssertEqual(definitions.formatVersion, 18)
-        XCTAssertEqual(definitions.schemaVersion, 90)
+        XCTAssertEqual(definitions.formatVersion, 20)
+        XCTAssertEqual(definitions.schemaVersion, 92)
         XCTAssertTrue(definitions.copyStatements.contains { $0.contains("sync_group_devices") })
         XCTAssertFalse(definitions.copyStatements.contains { $0.contains("sync_group_members") })
     }
@@ -88,6 +88,17 @@ final class FolioleSyncGroupProviderDataPlaneTests: XCTestCase {
         try archiveData.write(to: url)
         let archive = try Archive(url: url, accessMode: .read)
         XCTAssertEqual(Set(archive.map(\.path)), ["manifest.json", "incoming.db.deflate"])
+    }
+
+    func testIdentityPushAcceptsBoundedArchiveRequestWithoutWideningOtherRoutes() throws {
+        let payload = String(repeating: "a", count: 1_500_000)
+        func request(_ route: String) -> Data {
+            Data("POST \(route) HTTP/1.1\r\nContent-Length: \(payload.count)\r\n\r\n\(payload)".utf8)
+        }
+        let push = request("/companion/sync-identity-push")
+        XCTAssertEqual(try FolioleCompanionHttpMessage.expectedLength(push), push.count)
+        XCTAssertThrowsError(try FolioleCompanionHttpMessage.expectedLength(
+            request("/companion/sync-identity-pack")))
     }
 }
 

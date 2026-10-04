@@ -6,6 +6,15 @@ import {
   syncBridgeMock
 } from './companionDesktopSyncObjects.testHarness';
 
+// These scenarios retain the v15 cursor contract; identity dispatch is covered separately.
+vi.mock('../../../lib/platform/syncProtocolContract', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../lib/platform/syncProtocolContract')>();
+  return { ...actual, CURRENT_SYNC_PROTOCOL_DESCRIPTOR: {
+    ...actual.CURRENT_SYNC_PROTOCOL_DESCRIPTOR, version: 15,
+    min_supported_version: 15, max_supported_version: 15
+  } };
+});
+
 async function testPullsStructurePack() {
   const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
   const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');

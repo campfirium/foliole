@@ -1,0 +1,116 @@
+import { completeSyncIdentityExchange } from '../../../../../lib/core/sync/syncIdentityExchangeCompletion.js';
+import { recordSyncIdentityPeerBaseline } from '../../../../../lib/core/sync/syncIdentityPeerBaseline.js';
+import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
+import { resolveCompanionSyncPeerHostName,
+  resolveCompanionSyncPeerId } from '../network/syncGroupPeerIdentity';
+import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
+
+import { receiveCompanionSyncIdentityCandidates,
+  sendCompanionSyncIdentityCandidates } from './syncGroupIdentityExchange';
+import { probeCompanionSyncIdentities } from './syncGroupIdentityProbe';
+import { drainCompanionSyncIdentityResources } from './syncGroupIdentityResources';
+import { loadCompanionSyncGroup } from './syncGroupStore';
+
+async function recordCompletedBaseline(pair: {
+  groupId: string; localDeviceId: string; peerDeviceId: string;
+}, checked: Awaited<ReturnType<typeof probeCompanionSyncIdentities>>) {
+  await runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((port) =>
+    recordSyncIdentityPeerBaseline(port, { ...pair,
+      localEpoch: checked.localEpoch, peerEpoch: checked.sourceEpoch,
+      localWatermark: checked.localWatermark, peerWatermark: checked.sourceWatermark,
+      localViewId: checked.localViewId, peerViewId: checked.sourceViewId,
+      localProofRoot: checked.localProofRoot, peerProofRoot: checked.peerProofRoot })));
+}
+
+/** A bilateral v21 exchange is complete only after a fresh fixed-view probe is empty. */
+export async function runCompanionSyncIdentityRound(endpointUrl: string, hostName: string,
+  options: { includeResources?: boolean } = {}) {
+  const group = await loadCompanionSyncGroup();
+  if (!group) throw new Error('sync_group_not_joined');
+  const peerId = await resolveCompanionSyncPeerId(endpointUrl);
+  const peerHostName = await resolveCompanionSyncPeerHostName(endpointUrl);
+  const pair = { groupId: group.group_id,
+    localDeviceId: group.local_device_identity_key, peerDeviceId: peerId };
+  const candidate = await probeCompanionSyncIdentities(endpointUrl);
+  let outbound: Awaited<ReturnType<typeof probeCompanionSyncIdentities>> | undefined;
+  let verification: Awaited<ReturnType<typeof probeCompanionSyncIdentities>> | undefined;
+  try {
+    const identity = { endpointUrl,
+      groupId: group.group_id, hostName, localPeerId: group.local_device_identity_key,
+      peerHostName, peerId };
+    const firstReceived = await receiveCompanionSyncIdentityCandidates({ ...identity,
+      localViewId: candidate.localViewId, remoteViewId: candidate.sourceViewId,
+      snapshotPath: candidate.snapshotPath });
+    const receivedPages = firstReceived.appliedPages;
+    outbound = receivedPages > 0 ? await probeCompanionSyncIdentities(endpointUrl) : candidate;
+    const sent = await sendCompanionSyncIdentityCandidates({ ...identity,
+      localViewId: outbound.localViewId, remoteViewId: outbound.sourceViewId,
+      snapshotPath: outbound.snapshotPath });
+    let resources = options.includeResources === false ? { syncedCount: 0 } :
+      await drainCompanionSyncIdentityResources({ endpointUrl,
+        groupId: group.group_id, peerId });
+    if (sent.appliedPages > 0) verification = await probeCompanionSyncIdentities(endpointUrl);
+    const completion = await completeCompanionIdentityRound({ initial: verification ?? outbound,
+      initialCount: verification?.count ?? 0, endpointUrl, identity, received: firstReceived, sent });
+    const checked = completion.checked;
+    if (checked !== (verification ?? outbound)) {
+      await verification?.cleanup();
+      verification = checked;
+      if (options.includeResources !== false) {
+        const additional = await drainCompanionSyncIdentityResources({ endpointUrl,
+          groupId: group.group_id, peerId });
+        resources = { syncedCount: resources.syncedCount + additional.syncedCount };
+      }
+    }
+    if (options.includeResources !== false) {
+      await recordCompletedBaseline(pair, checked);
+    }
+    return { received: firstReceived, sent,
+      resources,
+      candidateCount: candidate.count + (outbound !== candidate ? outbound.count : 0) +
+        completion.candidateCount,
+      timeCandidateCount: 0, usedTimeCandidates: false,
+      verifiedCandidateCount: checked.count };
+  } finally {
+    await verification?.cleanup();
+    if (outbound !== candidate) await outbound?.cleanup();
+    await candidate.cleanup();
+  }
+}
+
+async function completeCompanionIdentityRound(args: {
+  initial: Awaited<ReturnType<typeof probeCompanionSyncIdentities>>;
+  initialCount: number;
+  endpointUrl: string;
+  identity: Omit<Parameters<typeof receiveCompanionSyncIdentityCandidates>[0],
+    'localViewId' | 'remoteViewId' | 'snapshotPath'>;
+  received: Awaited<ReturnType<typeof receiveCompanionSyncIdentityCandidates>>;
+  sent: Awaited<ReturnType<typeof sendCompanionSyncIdentityCandidates>>;
+}) {
+  let candidateCount = args.initialCount;
+  const checked = await completeSyncIdentityExchange({ initial: args.initial,
+    probe: async () => {
+      const candidate = await probeCompanionSyncIdentities(args.endpointUrl);
+      candidateCount += candidate.count;
+      return candidate;
+    },
+    receive: async (candidate) => {
+      const result = await receiveCompanionSyncIdentityCandidates({ ...args.identity,
+        localViewId: candidate.localViewId, remoteViewId: candidate.sourceViewId,
+        snapshotPath: candidate.snapshotPath });
+      args.received.appliedPages += result.appliedPages;
+      args.received.pageCount += result.pageCount;
+      args.received.appliedObjects += result.appliedObjects;
+      return result.appliedPages;
+    },
+    send: async (candidate) => {
+      const result = await sendCompanionSyncIdentityCandidates({ ...args.identity,
+        localViewId: candidate.localViewId, remoteViewId: candidate.sourceViewId,
+        snapshotPath: candidate.snapshotPath });
+      args.sent.appliedPages += result.appliedPages;
+      args.sent.pageCount += result.pageCount;
+      args.sent.appliedObjects += result.appliedObjects;
+      return result.appliedPages;
+    } });
+  return { checked, candidateCount };
+}

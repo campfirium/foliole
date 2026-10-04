@@ -4,6 +4,7 @@ import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { crc32, createInflate, inflateSync } from 'node:zlib';
 
+import { parseSyncIdentityPackContainerManifest } from '../../lib/core/sync/syncIdentityPackManifest.js';
 import {
   assertSyncPackSchemaVersion,
   SYNC_PACK_DATABASE_ENTRY,
@@ -38,6 +39,32 @@ export async function extractSyncPackDatabaseFromFile(args: {
   maxDatabaseBytes?: number;
   outputPath: string;
 }) {
+  return extractPackDatabaseFromFile(args, validateManifest);
+}
+
+export async function extractSyncIdentityPackDatabaseFromFile(args: {
+  archivePath: string;
+  expectedPeerId: string;
+  expectedSourcePeerId: string;
+  maxDatabaseBytes?: number;
+  outputPath: string;
+}) {
+  return extractPackDatabaseFromFile(args, (manifest, expected) =>
+    parseSyncIdentityPackContainerManifest(manifest, {
+      sourcePeerId: expected.expectedSourcePeerId,
+      targetPeerId: expected.expectedPeerId
+    }));
+}
+
+async function extractPackDatabaseFromFile<T>(args: {
+  archivePath: string;
+  expectedPeerId: string;
+  expectedSourcePeerId: string;
+  maxDatabaseBytes?: number;
+  outputPath: string;
+}, validate: (manifest: Record<string, unknown>, expected: {
+  expectedPeerId: string; expectedSourcePeerId: string;
+}) => T): Promise<T> {
   const archive = await fs.open(args.archivePath, 'r');
   try {
     const archiveSize = (await archive.stat()).size;
@@ -48,7 +75,7 @@ export async function extractSyncPackDatabaseFromFile(args: {
     const manifestBytes = await readExact(archive, manifestEntry.bodyStart, manifestEntry.size);
     if (crc32(manifestBytes) !== manifestEntry.checksum) throw new Error('invalid_sync_pack_manifest');
     const manifest = JSON.parse(manifestBytes.toString('utf8')) as Record<string, unknown>;
-    const verifiedManifest = validateManifest(manifest, args);
+    const verifiedManifest = validate(manifest, args);
     const databaseEntry = await readStoredEntry(archive, manifestEntry.bodyEnd, archiveSize);
     if (databaseEntry.name !== SYNC_PACK_DATABASE_ENTRY) {
       throw new Error(`missing_sync_pack_entry:${SYNC_PACK_DATABASE_ENTRY}`);

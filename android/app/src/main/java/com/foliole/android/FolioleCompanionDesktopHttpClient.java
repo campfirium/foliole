@@ -81,8 +81,9 @@ final class FolioleCompanionDesktopHttpClient {
     }
 
     static BinaryResponse requestBinary(Context context, String url, String method, JSONObject headers, String body) throws Exception {
-        FolioleCompanionWorkgroupHttp.PreparedRequest prepared =
-            FolioleCompanionWorkgroupHttp.prepare(context, url, method, headers, body);
+        FolioleCompanionWorkgroupHttp.PreparedRequest prepared = FolioleCompanionWorkgroupHttp.isPrepared(headers)
+            ? FolioleCompanionWorkgroupHttp.acceptPrepared(url, headers, body)
+            : FolioleCompanionWorkgroupHttp.prepare(context, url, method, headers, body);
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
         connection.setReadTimeout(READ_TIMEOUT_MS);
@@ -96,9 +97,13 @@ final class FolioleCompanionDesktopHttpClient {
         }
         int status = connection.getResponseCode();
         try {
-            boolean attachmentRange = "/companion/attachment-resource".equals(new URL(url).getPath());
+            String route = new URL(url).getPath();
+            boolean attachmentRange = "/companion/attachment-resource".equals(route);
+            long responseLimit = "/companion/sync-identity-pack".equals(route)
+                ? 2L * FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES
+                : attachmentRange ? 1_500_000 : Long.MAX_VALUE;
             byte[] responseBody = readBytes(status >= 400 ? connection.getErrorStream() : connection.getInputStream(),
-                attachmentRange ? 1_500_000 : Long.MAX_VALUE);
+                responseLimit);
             String contentType = connection.getContentType();
             String totalHeader = attachmentRange ? connection.getHeaderField("X-Foliole-Resource-Total-Bytes") : null;
             long totalBytes = totalHeader == null ? -1 : Long.parseLong(totalHeader);

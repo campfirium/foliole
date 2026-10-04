@@ -62,9 +62,28 @@ enum FolioleCompanionSyncPackDatabaseValidator {
               let inner = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw invalid("missing_sync_pack_inner_manifest")
         }
-        guard try comparableManifest(inner) == comparableManifest(outer) else {
+        let identity = (try? FolioleCompanionSyncPackEnvelopeValidator.integer(outer, "format_version")) == 21
+        let matches = try identity
+            ? comparableIdentityManifest(inner) == comparableIdentityManifest(outer)
+            : comparableManifest(inner) == comparableManifest(outer)
+        guard matches else {
             throw invalid("sync_pack_inner_manifest_mismatch")
         }
+    }
+
+    private static func comparableIdentityManifest(_ value: [String: Any]) throws -> String {
+        guard value["contract"] as? String == "global-id-v1", value["from_state_seq"] == nil, value["to_state_seq"] == nil,
+              value["frontier_state_seq"] == nil,
+              let page = value["identity_page"] as? [String: Any] else {
+            throw invalid("sync_identity_pack_inner_manifest_mismatch")
+        }
+        let packId = try FolioleCompanionSyncPackEnvelopeValidator.string(value, "pack_id")
+        let pageId = try FolioleCompanionIdentityPageContract.comparable(page, manifest: value)
+        let tables = try FolioleCompanionSyncPackEnvelopeValidator.tableCounts(value)
+        let dependencies = value["dependencies"] ?? []
+        let dependencyData = try JSONSerialization.data(withJSONObject: dependencies, options: [.sortedKeys])
+        return "\(packId)|\(pageId)|\(tables.sorted { $0.key < $1.key })|" +
+            String(decoding: dependencyData, as: UTF8.self)
     }
 
     private static func comparableManifest(_ value: [String: Any]) throws -> String {

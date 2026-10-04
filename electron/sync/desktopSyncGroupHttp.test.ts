@@ -27,7 +27,9 @@ vi.mock('./workgroupHttpCrypto.js', () => ({
   WORKGROUP_ENVELOPE_CONTENT_TYPE: 'application/vnd.foliole.workgroup-aead+json'
 }));
 
-import { readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
+import { fetchDesktopWorkgroupJson,
+  readDesktopWorkgroupResponse } from './desktopSyncGroupHttp.js';
+import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 
 it('decrypts a downloaded workgroup response inside the database owner queue', async () => {
   const response = new Response('encrypted', {
@@ -58,4 +60,24 @@ it('decrypts an authenticated HTTP error before reporting its exact reason', asy
   expect(runtime.decrypt).toHaveBeenCalledWith(expect.objectContaining({
     contentType: 'application/json; charset=utf-8'
   }));
+});
+
+it('retries a reset authenticated GET with fresh signed headers', async () => {
+  const reset = Object.assign(new TypeError('fetch failed'), {
+    cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' })
+  });
+  const fetchMock = vi.fn().mockRejectedValueOnce(reset).mockResolvedValueOnce(new Response(
+    'encrypted', { headers: { 'content-type': 'application/vnd.foliole.workgroup-aead+json' } }
+  ));
+  vi.stubGlobal('fetch', fetchMock);
+  runtime.decrypt.mockReturnValueOnce(Buffer.from('{"ok":true}'));
+  vi.mocked(createDesktopSyncGroupSignedHeaders).mockClear();
+  try {
+    await expect(fetchDesktopWorkgroupJson<{ ok: boolean }>({
+      endpointUrl: 'http://peer', groupId: 'group-1', localDeviceId: 'local',
+      pathWithQuery: '/companion/sync-identity-summary', secret: 'secret'
+    })).resolves.toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(createDesktopSyncGroupSignedHeaders).toHaveBeenCalledTimes(2);
+  } finally { vi.unstubAllGlobals(); }
 });

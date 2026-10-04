@@ -28,7 +28,8 @@ export function loadNodePreludeStateRows<T extends DatabaseRow & {
        UNION SELECT parent.id, parent.parent_id FROM nodes parent
        INNER JOIN node_prelude child ON child.parent_id = parent.id
      )
-     SELECT state.object_type, state.object_id, state.state_seq, state.content_hash,
+     SELECT state.object_type, state.object_id, state.state_seq, state.current_version_id,
+       state.content_hash,
        state.last_modified_by_host_name,
        state.updated_at, state.deleted_at
      FROM sync_object_state state

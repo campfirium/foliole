@@ -33,7 +33,9 @@ export function receiveDesktopSyncGroupRestoreState(
   if (event.group_id !== groupId) throw new Error('sync_group_restore_group_mismatch');
   if (current && compareSyncGroupRestoreEvents(current.event, event) >= 0) return current;
   for (const table of ['sync_group_restore_page_rows', 'sync_pack_dependency_rows',
-    'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims']) driver.execute(`DELETE FROM ${table}`);
+    'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims',
+    'sync_identity_receive_rounds', 'sync_identity_retired_views',
+    'sync_identity_pack_receipts', 'sync_identity_peer_baselines']) driver.execute(`DELETE FROM ${table}`);
   driver.execute(`INSERT INTO sync_group_restore_events
     (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
     VALUES (?, ?, ?, ?, NULL, ?)`, [event.restore_id, event.group_id, event.restored_at,

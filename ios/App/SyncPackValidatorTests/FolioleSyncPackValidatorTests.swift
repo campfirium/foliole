@@ -77,7 +77,7 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
 
     func testRejectsLegacyAndUnknownFormatGenerationsBeforeSQLiteWrite() throws {
         let contract = try FolioleCompanionContractStore(bundle: .module).syncPackContract()
-        for formatVersion in [contract.formatVersion - 1, contract.formatVersion + 1] {
+        for formatVersion in [contract.formatVersion - 1, contract.formatVersion + 2] {
             var entries = try fixtureEntries()
             var manifest = try XCTUnwrap(JSONSerialization.jsonObject(
                 with: try XCTUnwrap(entries["manifest.json"])
@@ -89,6 +89,36 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
 
             try assertEnvelopeError(archiveURL, code: "unsupported_sync_pack_format_version")
         }
+    }
+
+    func testIdentityEnvelopeCannotReuseLegacyInnerManifest() throws {
+        var entries = try fixtureEntries()
+        var manifest = try XCTUnwrap(JSONSerialization.jsonObject(
+            with: try XCTUnwrap(entries["manifest.json"])
+        ) as? [String: Any])
+        manifest["format_version"] = 21
+        manifest["contract"] = "global-id-v1"
+        manifest["from_state_seq"] = nil
+        manifest["to_state_seq"] = nil
+        manifest["frontier_state_seq"] = nil
+        manifest["identity_page"] = [
+            "contract": "global-id-v1", "source_peer_id": expectedSourcePeerId,
+            "target_peer_id": "android-fixture", "page_id": String(repeating: "a", count: 64)
+        ]
+        entries["manifest.json"] = try JSONSerialization.data(withJSONObject: manifest)
+        let archiveURL = try temporaryArchiveURL(entries: entries)
+        defer { try? FileManager.default.removeItem(at: archiveURL) }
+        let contract = try FolioleCompanionContractStore(bundle: .module).syncPackContract()
+        let prepared = try FolioleCompanionSyncPackEnvelopeValidator.validate(
+            archiveURL: archiveURL, contract: contract, expectedPeerId: "android-fixture",
+            expectedSourcePeerId: expectedSourcePeerId
+        )
+        let databaseURL = temporaryDatabaseURL()
+        defer { try? FileManager.default.removeItem(at: databaseURL) }
+        try prepared.databaseBytes.write(to: databaseURL)
+        XCTAssertThrowsError(try FolioleCompanionSyncPackDatabaseValidator.validate(
+            databaseURL: databaseURL, prepared: prepared, contract: contract
+        ))
     }
 
     func testRejectsSchema77BeforeSQLiteWrite() throws {

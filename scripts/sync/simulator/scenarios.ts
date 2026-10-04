@@ -122,7 +122,14 @@ async function trimmed(ctx: ScenarioContext) {
   const head = edit(ctx.a, '123456789');
   const collected = await collectNodeVersionPayloads(createBetterSqliteDbPort(ctx.a.sqlite), 'topic');
   expect(collected.released).toBe(0);
-  expect(ctx.a.sqlite.prepare('SELECT 1 FROM node_sync_versions WHERE version_id=?').get(intermediate)).toBeUndefined();
+  expect(ctx.a.sqlite.prepare(`SELECT object_id, parent_version_id, body_text,
+    json_type(snapshot_json, '$.content') AS content_type FROM node_sync_versions WHERE version_id=?`)
+    .get(intermediate)).toEqual({ object_id: 'topic', parent_version_id: base,
+      body_text: null, content_type: 'null' });
+  for (const [version, parent] of [[intermediate, base], [head, intermediate]]) {
+    expect(ctx.a.sqlite.prepare(`SELECT 1 FROM node_sync_version_parents
+      WHERE version_id=? AND parent_version_id=?`).get(version, parent)).toBeDefined();
+  }
   expect(ctx.a.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id=?').pluck().get(head)).toBe('123456789');
   await mobileEdit(ctx.b, base, '923');
   await push(ctx.sa, ctx.b);

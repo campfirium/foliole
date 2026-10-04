@@ -49,6 +49,8 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'topic_daily_count',
   'node_text_alternative',
   'parent_child_order',
+  'order_version',
+  'node_position',
   'pdf_page_text',
   'setting',
   'watched_folder',

@@ -23,3 +23,14 @@ export function loadSyncPackTombstoneRows(driver: DatabaseDriver,
     page ? [page.fromStateSeq, page.toStateSeq] : []
   );
 }
+
+export function loadSyncPackTombstoneRowsByIds(driver: DatabaseDriver, nodeIds: readonly string[]) {
+  if (nodeIds.length === 0) return [];
+  if (nodeIds.length > 128) throw new Error('sync_identity_pack_page_invalid');
+  return driver.queryAll<SyncPackTombstoneRow>(
+    `SELECT node_id, version_id, parent_version_id, host_name, content_hash,
+      snapshot_json, deleted_at, created_at FROM node_sync_tombstones
+     WHERE node_id IN (SELECT value FROM json_each(?)) ORDER BY node_id`,
+    [JSON.stringify(nodeIds)]
+  );
+}

@@ -27,7 +27,11 @@ final class FolioleCompanionHttpRequest {
             if (separator > 0) headers.put(value.substring(0, separator).trim().toLowerCase(), value.substring(separator + 1).trim());
         }
         int length = Integer.parseInt(headers.getOrDefault("content-length", "0"));
-        if (length < 0 || length > 1024 * 1024) throw new IllegalArgumentException("request_too_large");
+        int limit = parts[0].equalsIgnoreCase("POST") &&
+            (parts[1].equals("/companion/sync-identity-push") ||
+                parts[1].startsWith("/companion/sync-identity-push?"))
+            ? 2 * 1024 * 1024 : 1024 * 1024;
+        if (length < 0 || length > limit) throw new IllegalArgumentException("request_too_large");
         byte[] body = new byte[length];
         int offset = 0;
         while (offset < length) {

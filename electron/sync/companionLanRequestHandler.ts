@@ -13,6 +13,7 @@ import {
   loadCompanionContentBlobResource
 } from './companionLanContentBlobs.js';
 import { loadCompanionLanDiscovery } from './companionLanDiscovery.js';
+import { handleCompanionIdentityGet } from './companionLanIdentityGet.js';
 import {
   buildWorkspaceSnapshotPayload,
   buildWorkspaceVersionPayload
@@ -42,6 +43,14 @@ export const SYNC_GROUP_JOIN_REQUESTS_PATH = '/sync-group/join-requests';
 export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 export const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
+export { SYNC_IDENTITY_GLOBAL_PAGE_PATH, SYNC_IDENTITY_GLOBAL_SUMMARY_PATH
+} from './companionLanIdentityGlobalGet.js';
+export { SYNC_IDENTITY_FACT_PAGE_PATH, SYNC_IDENTITY_FACT_SUMMARY_PATH,
+  SYNC_IDENTITY_NODE_FACTS_PATH,
+  SYNC_IDENTITY_PAGE_PATH, SYNC_IDENTITY_SUMMARY_PATH } from './companionLanIdentityGet.js';
+export { SYNC_IDENTITY_RESTORE_SET_PATH } from './companionLanIdentityRestore.js';
+export { SYNC_IDENTITY_PACK_PATH } from './companionLanIdentityPackPost.js';
+export { SYNC_IDENTITY_PUSH_PATH } from './companionLanIdentityPushPost.js';
 export {
   ATTACHMENT_RESOURCE_PATH,
   CONTENT_BLOB_RESOURCE_PATH,
@@ -203,6 +212,8 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       return;
     }
     if (await handleCompanionSyncPackFactsGet(request, response, parsedRequestUrl, auth.device_id, writeJson)) return;
+    if (await runWithDatabaseConnectionOwner(() => handleCompanionIdentityGet(
+      request, response, parsedRequestUrl, auth.device_id))) return;
     await runWithDatabaseConnectionOwner(() => handleAuthenticatedGet(
       request, response, parsedRequestUrl, {
         ...args,

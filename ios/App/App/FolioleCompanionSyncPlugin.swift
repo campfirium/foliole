@@ -10,6 +10,9 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "maintainAttachmentFiles", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "beginSyncRun", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "desktopHttpRequest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "createIdentitySourceView", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "buildIdentitySourcePack", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "closeIdentitySourceView", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "downloadContentBlobBatch", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "finishAttachmentResourceBatch", returnType: CAPPluginReturnPromise),
@@ -40,6 +43,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     lazy var groupData = FolioleCompanionSyncGroupDataBridge { [weak self] event in
         DispatchQueue.main.async { self?.notifyListeners("syncGroupDataRequest", data: event) }
     }
+    let identityClientView = FolioleCompanionSyncIdentityClientView()
 
     @objc func downloadContentBlobBatch(_ call: CAPPluginCall) {
         Task {

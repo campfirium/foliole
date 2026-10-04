@@ -28,6 +28,29 @@ const sourceId = sourceIdentity.identity_key;
 const targetId = targetIdentity.identity_key;
 const at = '2026-09-27T12:00:00.000Z';
 
+function seedStaleIdentityEvidence(target: Database.Database) {
+  target.exec(`INSERT INTO sync_identity_index_rows VALUES
+    ('node', 'b-only-node', 7, 'old', 'now');
+    INSERT INTO sync_identity_partition_digest VALUES (7, 'old', 1);
+    UPDATE sync_identity_index_meta SET backfill_complete = 1 WHERE singleton_id = 1;
+    INSERT INTO sync_identity_receive_rounds VALUES
+    ('group-1', 'source', 'old-view', 0, 'old-page', 'now');
+    INSERT INTO sync_identity_peer_baselines
+    (group_id, local_device_id, peer_device_id, local_epoch, peer_epoch,
+     local_watermark, peer_watermark, local_view_id, peer_view_id, verified_at)
+    VALUES ('group-1', 'target', 'source', 'old', 'old', 'now', 'now',
+      'old-view', 'old-view', 'now')`);
+}
+
+function assertIdentityEvidenceReset(target: Database.Database) {
+  expect(target.prepare('SELECT * FROM sync_identity_index_rows').all()).toEqual([]);
+  expect(target.prepare('SELECT * FROM sync_identity_partition_digest').all()).toEqual([]);
+  expect(target.prepare('SELECT backfill_complete FROM sync_identity_index_meta').get())
+    .toEqual({ backfill_complete: 0 });
+  expect(target.prepare('SELECT * FROM sync_identity_receive_rounds').all()).toEqual([]);
+  expect(target.prepare('SELECT * FROM sync_identity_peer_baselines').all()).toEqual([]);
+}
+
 it('replaces B-only data atomically with the chosen backup snapshot', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-restore-pack-'));
   const source = database(sourceId);
@@ -51,6 +74,7 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
       .run(at);
     target.prepare(`INSERT INTO settings (key, value, updated_at)
       VALUES ('b_only_setting', 'true', ?)`).run(at);
+    seedStaleIdentityEvidence(target);
     seedRestore(source, at);
     seedRestore(target, null);
     const packPath = path.join(root, 'snapshot.syncpack');
@@ -73,6 +97,7 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
     expect(target.prepare("SELECT object_id FROM sync_object_state WHERE object_id = 'b-only-node'").get())
       .toBeUndefined();
     expect(target.prepare('SELECT * FROM node_version_device_revisions').all()).toEqual([]);
+    assertIdentityEvidenceReset(target);
     assertRestoredPeerBase(source, target);
     expect(target.prepare(`SELECT library_epoch, proof_revision FROM node_version_local_proof_state
       WHERE singleton_id = 1`).get()).toEqual({ library_epoch: restoreId, proof_revision: 0 });

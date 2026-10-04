@@ -33,6 +33,7 @@ import { parseSplitTopicArgs } from './splitTopicCommandArgs.js';
 import { readObjectArg } from './storageCommandSupport.js';
 import { handleLocalContentEditCommand } from './storageLocalContentEditCommand.js';
 import { buildNodeMutationPatchResult, completeCreatedNodeCreation, completeWorkspaceMutation, type OriginWindow } from './storageNodeMutationResult.js';
+import { handleParentOrderCommand } from './storageParentOrderCommands.js';
 
 function readNowMs() {
   return performance.now();
@@ -178,6 +179,9 @@ export function handleNodeMutationCommand(command: string, args: Record<string, 
   }
   if (command === NATIVE_COMMANDS.flushDirtyNodeSyncVersions) {
     return flushAllDirtyNodeSyncVersions();
+  }
+  if (command === NATIVE_COMMANDS.readParentOrderHistory || command === NATIVE_COMMANDS.restoreParentOrderSnapshot) {
+    return handleParentOrderCommand(command, args, originWindow);
   }
   if (command === NATIVE_COMMANDS.replaceNodeOrder) {
     replaceNodeOrder(asStringArray(args.nodeIds, 'nodeIds'));

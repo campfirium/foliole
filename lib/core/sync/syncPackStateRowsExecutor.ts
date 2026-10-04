@@ -107,11 +107,16 @@ function insertCleanStateRows(
     `CASE WHEN object_type = 'node' THEN (` +
     `SELECT current_version_id FROM ${alias}.nodes WHERE ${alias}.nodes.id = applyable.object_id` +
     `) ELSE NULL END AS current_version_id FROM applyable) ` +
-    `INSERT OR REPLACE INTO sync_object_state (` +
+    `INSERT INTO sync_object_state (` +
     `object_type, object_id, state_seq, current_version_id, content_hash, ` +
     `last_modified_by_host_name, updated_at, deleted_at, sync_dirty` +
     `) SELECT object_type, object_id, ? + state_seq_offset, current_version_id, content_hash, ` +
-    `last_modified_by_host_name, updated_at, deleted_at, 0 FROM numbered`,
+    `last_modified_by_host_name, updated_at, deleted_at, 0 FROM numbered WHERE 1 ` +
+    `ON CONFLICT(object_type, object_id) DO UPDATE SET ` +
+    `state_seq = excluded.state_seq, current_version_id = excluded.current_version_id, ` +
+    `content_hash = excluded.content_hash, ` +
+    `last_modified_by_host_name = excluded.last_modified_by_host_name, ` +
+    `updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, sync_dirty = 0`,
     [...objectTypes, nextStateSeq]
   );
 }

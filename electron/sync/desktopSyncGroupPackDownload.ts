@@ -8,8 +8,10 @@ import { WORKGROUP_ENVELOPE_CONTENT_TYPE } from './workgroupHttpCrypto.js';
 export const DESKTOP_SYNC_GROUP_STRUCTURE_TIMEOUT_MS = 30_000;
 
 export async function fetchDesktopSyncGroupPackBody(args: {
+  body?: string;
   headers: Record<string, string>;
   groupId: string;
+  method?: 'GET' | 'POST';
   pathWithQuery: string;
   outputPath: string;
   timeoutMs?: number;
@@ -21,11 +23,13 @@ export async function fetchDesktopSyncGroupPackBody(args: {
     args.timeoutMs ?? DESKTOP_SYNC_GROUP_STRUCTURE_TIMEOUT_MS
   );
   try {
-    const response = await fetch(args.url, { headers: args.headers, signal: controller.signal });
+    const method = args.method ?? 'GET';
+    const response = await fetch(args.url, { headers: args.headers, signal: controller.signal,
+      method, ...(args.body === undefined ? {} : { body: args.body }) });
     if (!response.ok) await readDesktopWorkgroupResponse({
       contentType: 'application/zip', groupId: args.groupId,
       maxEnvelopeBytes: 1024 * 1024,
-      method: 'GET', pathWithQuery: args.pathWithQuery, response
+      method, pathWithQuery: args.pathWithQuery, response
     });
     if (response.headers.get('content-type') !== WORKGROUP_ENVELOPE_CONTENT_TYPE ||
         !response.body) throw new Error('workgroup_aead_response_required');

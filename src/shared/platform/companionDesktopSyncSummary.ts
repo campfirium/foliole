@@ -13,17 +13,21 @@ function compactBreakdown<T extends Record<string, number | undefined>>(values: 
 
 export async function loadCompanionDesktopSyncSummary(
   endpointUrl: string,
-  confirmedStructureStateSeq: number | null = null
+  confirmedStructureStateSeq: number | 'identity-complete' | null = null
 ) {
+  const identityComplete = confirmedStructureStateSeq === 'identity-complete';
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
-  const desktopDiagnostics = await loadDesktopSyncDiagnostics(endpointUrl).catch(() => null);
+  const desktopDiagnostics = identityComplete ? null :
+    await loadDesktopSyncDiagnostics(endpointUrl).catch(() => null);
   const desktopStateSeq = desktopDiagnostics?.sync_state?.max_state_seq;
-  const localCursor = confirmedStructureStateSeq ?? diagnostics?.sync_state?.pack_cursor;
-  const structureTarget = confirmedStructureStateSeq ?? desktopStateSeq;
+  const localCursor = typeof confirmedStructureStateSeq === 'number' ?
+    confirmedStructureStateSeq : diagnostics?.sync_state?.pack_cursor;
+  const structureTarget = typeof confirmedStructureStateSeq === 'number' ?
+    confirmedStructureStateSeq : desktopStateSeq;
   return {
-    localDirtyCount: diagnostics?.sync_state?.local_dirty_count ?? null,
-    pendingAckCount: diagnostics?.sync_state?.pending_ack_count ?? null,
-    pushIssueCount: diagnostics?.sync_state?.push_issue_count ?? null,
+    localDirtyCount: identityComplete ? 0 : diagnostics?.sync_state?.local_dirty_count ?? null,
+    pendingAckCount: identityComplete ? 0 : diagnostics?.sync_state?.pending_ack_count ?? null,
+    pushIssueCount: identityComplete ? 0 : diagnostics?.sync_state?.push_issue_count ?? null,
     ...(diagnostics ? { remainingAttachmentBreakdown: compactBreakdown({
       activeTopicAttachments: diagnostics.content?.missing_active_topic_attachment_resource_count,
       dueReviewAttachments: diagnostics.content?.missing_due_review_attachment_resource_count,
@@ -50,8 +54,8 @@ export async function loadCompanionDesktopSyncSummary(
     remainingContentBlobCount: diagnostics?.content?.missing_content_blob_count ?? null,
     remainingFailedContentBlobBytes: diagnostics?.content?.failed_content_blob_bytes ?? null,
     remainingFailedContentBlobCount: diagnostics?.content?.failed_content_blob_count ?? null,
-    remainingStructureChangeCount: typeof structureTarget === 'number' && typeof localCursor === 'number'
-      ? Math.max(0, structureTarget - localCursor)
-      : null
+    remainingStructureChangeCount: identityComplete ? 0 :
+      typeof structureTarget === 'number' && typeof localCursor === 'number'
+        ? Math.max(0, structureTarget - localCursor) : null
   };
 }

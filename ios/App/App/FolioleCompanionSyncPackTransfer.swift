@@ -1,22 +1,42 @@
 import Foundation
 
 enum FolioleCompanionSyncPackTransfer {
+    struct ValidatedPack {
+        let databaseURL: URL
+        let manifest: [String: Any]
+    }
+
     static func downloadDesktopSyncPack(
         url: String,
         headers: [String: String],
         expectedPeerId: String,
         expectedSourcePeerId: String
     ) async throws -> URL {
+        try await downloadWithManifest(
+            url: url, headers: headers,
+            expectedPeerId: expectedPeerId, expectedSourcePeerId: expectedSourcePeerId
+        ).databaseURL
+    }
+
+    static func downloadWithManifest(
+        url: String, headers: [String: String],
+        expectedPeerId: String, expectedSourcePeerId: String,
+        method: String = "GET", body: String? = nil
+    ) async throws -> ValidatedPack {
+        guard method == "GET" && body == nil || method == "POST" && body != nil else {
+            throw error("sync_pack_request_invalid")
+        }
         guard let endpoint = URL(string: url),
               ["http", "https"].contains(endpoint.scheme?.lowercased() ?? "") else {
             throw error("Invalid sync pack URL.")
         }
         var request = URLRequest(url: endpoint)
-        request.httpMethod = "GET"
+        request.httpMethod = method
         headers.forEach { request.setValue($0.value, forHTTPHeaderField: $0.key) }
         let signed = try FolioleCompanionSignedClientRequests.claim(
-            url: endpoint, method: "GET", headers: headers, body: nil
+            url: endpoint, method: method, headers: headers, body: body.map { Data($0.utf8) }
         )
+        request.httpBody = signed?.body ?? body.map { Data($0.utf8) }
 
         let (temporaryURL, response) = try await FolioleCompanionDesktopHttpTransport.download(for: request)
         try assertPageFileSize(temporaryURL)
@@ -52,7 +72,7 @@ enum FolioleCompanionSyncPackTransfer {
         _ archiveURL: URL,
         expectedPeerId: String,
         expectedSourcePeerId: String
-    ) throws -> URL {
+    ) throws -> ValidatedPack {
         let store = try FolioleCompanionContractStore()
         let contract = try store.syncPackContract()
         let prepared = try FolioleCompanionSyncPackEnvelopeValidator.validate(
@@ -69,7 +89,7 @@ enum FolioleCompanionSyncPackTransfer {
                 prepared: prepared,
                 contract: contract
             )
-            return databaseURL
+            return ValidatedPack(databaseURL: databaseURL, manifest: prepared.manifest)
         } catch {
             try? FileManager.default.removeItem(at: databaseURL)
             throw error

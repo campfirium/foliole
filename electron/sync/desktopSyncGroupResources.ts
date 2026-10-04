@@ -21,21 +21,25 @@ export function assertDesktopSyncGroupResourcesComplete() {
   if (missingBlobs) throw new Error('sync_group_resources_incomplete');
 }
 
-async function loadResourceNeeds(articleIds: readonly string[], includeContentBlobs: boolean) {
+async function loadResourceNeeds(articleIds: readonly string[], includeContentBlobs: boolean,
+  forcedBlobHashes: readonly string[]) {
   const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite, { name: 'desktop-sync-group-resources' });
   const candidates = includeContentBlobs ? await port.query<ResourceBlobRow>(
     `SELECT cb.hash, cb.stored_sha256, cb.stored_size_bytes FROM content_blobs cb
      LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash
-     WHERE cbd.hash IS NULL ORDER BY cb.hash LIMIT ?`, [RESOURCE_AVAILABILITY_BATCH_LIMIT]
+     WHERE cbd.hash IS NULL OR cb.hash IN (SELECT value FROM json_each(?))
+     ORDER BY cb.hash LIMIT ?`, [JSON.stringify(forcedBlobHashes), RESOURCE_AVAILABILITY_BATCH_LIMIT]
   ) : [];
-  const selected = takeContentBlobByteBatch(candidates, (row) => row.stored_size_bytes);
-  if (selected.length) await port.transaction((tx) => materializeCurrentVersionBodyBlobs(tx,
-    { hashes: selected.map((row) => row.hash) }));
-  const remaining = selected.length ? await port.query<{ hash: string }>(
+  if (candidates.length) await port.transaction((tx) => materializeCurrentVersionBodyBlobs(tx,
+    { hashes: candidates.map((row) => row.hash) }));
+  const remaining = candidates.length ? await port.query<{ hash: string }>(
     `SELECT hash FROM content_blob_data WHERE hash IN (SELECT value FROM json_each(?))`,
-    [JSON.stringify(selected.map((row) => row.hash))]) : [];
+    [JSON.stringify(candidates.map((row) => row.hash))]) : [];
   const present = new Set(remaining.map((row) => row.hash));
-  const blobs = selected.filter((row) => !present.has(row.hash));
+  const forced = new Set(forcedBlobHashes);
+  const blobs = takeContentBlobByteBatch(
+    candidates.filter((row) => !present.has(row.hash) || forced.has(row.hash)),
+    (row) => row.stored_size_bytes);
   const { needs: attachments, unreadableArticleIds } = await loadNodeOwnedArticleResourceNeeds(port, articleIds);
   const missingAttachments = [];
   for (const attachment of attachments) {
@@ -48,8 +52,10 @@ async function loadResourceNeeds(articleIds: readonly string[], includeContentBl
 }
 
 export async function downloadDesktopSyncGroupResources(peer: DesktopSyncGroupPeer,
-  articleIds: readonly string[] = [], includeContentBlobs = true) {
-  const loaded = await runWithDatabaseConnectionOwner(() => loadResourceNeeds(articleIds, includeContentBlobs));
+  articleIds: readonly string[] = [], includeContentBlobs = true,
+  forcedBlobHashes: readonly string[] = []) {
+  const loaded = await runWithDatabaseConnectionOwner(() =>
+    loadResourceNeeds(articleIds, includeContentBlobs, forcedBlobHashes));
   const blobs = new Map(loaded.blobs.map((blob) => [blob.hash, blob]));
   const attachments = new Map(loaded.attachments.map((attachment) => [attachment.attachmentId, attachment]));
   const needs: ResourceNeed[] = [

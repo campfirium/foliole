@@ -2,6 +2,9 @@ export const COMPANION_SYNC_GROUP_DATA_CONTRACT = Object.freeze({
   eventName: 'syncGroupDataRequest',
   operations: Object.freeze({
     createSnapshot: 'create_snapshot',
+    readIdentitySource: 'read_identity_source',
+    prepareIdentityPack: 'prepare_identity_pack',
+    applyIdentityPack: 'apply_identity_pack',
     attachmentCheckpoint: 'attachment_checkpoint',
     confirmVersionPack: 'confirm_version_pack',
     applyMemberState: 'apply_member_state',

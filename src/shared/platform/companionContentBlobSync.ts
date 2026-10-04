@@ -50,9 +50,10 @@ export async function loadCompanionMissingContentBlobs(limit = 50): Promise<Arra
 }
 
 async function loadMissingAfterMaterializing(limit: number) {
-  const result = await loadIosMissingContentBlobs(limit);
-  const count = await materializeCompanionCurrentBodies(result.hashes);
-  return count ? loadIosMissingContentBlobs(limit) : result;
+  for (;;) {
+    const result = await loadIosMissingContentBlobs(limit);
+    if (await materializeCompanionCurrentBodies(result.hashes) === 0) return result;
+  }
 }
 
 export async function syncCompanionContentBlob(args: {

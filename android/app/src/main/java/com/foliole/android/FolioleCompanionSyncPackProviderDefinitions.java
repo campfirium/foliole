@@ -19,9 +19,19 @@ final class FolioleCompanionSyncPackProviderDefinitions {
     String databaseEntry() throws Exception { return value.getString("databaseEntry"); }
     String format() throws Exception { return value.getString("format"); }
     int formatVersion() throws Exception { return value.getInt("formatVersion"); }
+    String identityThinPreludeSql() throws Exception { return value.getString("identityThinPreludeSql"); }
+    String identityMissingOriginalHeadSql() throws Exception { return value.getString("identityMissingOriginalHeadSql"); }
+    JSONArray identityFactPlans() throws Exception { return value.getJSONArray("identityFactPlans"); }
+    String identityFactValidateSql() throws Exception { return value.getString("identityFactValidateSql"); }
+    String identityFactHeadCopySql() throws Exception { return value.getString("identityFactHeadCopySql"); }
+    String identityHeadCopySql() throws Exception { return value.getString("identityHeadCopySql"); }
+    String identityPreludeCopySql() throws Exception { return value.getString("identityPreludeCopySql"); }
+    String identityReviewCopySql() throws Exception { return value.getString("identityReviewCopySql"); }
+    String identityStateCopySql() throws Exception { return value.getString("identityStateCopySql"); }
     int payloadCopyIndex() throws Exception { return value.getInt("payloadCopyIndex"); }
     JSONArray payloadPlans() throws Exception { return value.getJSONArray("payloadPlans"); }
     JSONArray packSchema() throws Exception { return value.getJSONArray("packSchema"); }
+    int reviewCopyIndex() throws Exception { return value.getInt("reviewCopyIndex"); }
     JSONObject preparedMemberDataPlane() throws Exception { return value.getJSONObject("preparedMemberDataPlane"); }
     JSONObject protocol() throws Exception { return value.getJSONObject("protocol"); }
     int schemaVersion() throws Exception { return value.getInt("schemaVersion"); }

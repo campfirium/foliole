@@ -20,6 +20,7 @@ const WORKSPACE_WRITE_COMMANDS = new Set<string>([
   NATIVE_COMMANDS.moveNodes,
   NATIVE_COMMANDS.relearnNode,
   NATIVE_COMMANDS.replaceNodeOrder,
+  NATIVE_COMMANDS.restoreParentOrderSnapshot,
   NATIVE_COMMANDS.releaseNodeEditorBase,
   NATIVE_COMMANDS.retainNodeEditorBase,
   NATIVE_COMMANDS.restoreNodes,

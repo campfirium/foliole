@@ -1,12 +1,12 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 
-import type { DbPort } from '../../lib/core/sync/dbPort';
-import type { SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence';
-import { stageSyncPackKnownFactClaims } from '../../lib/core/sync/syncPackKnownFactClaims';
-import { createIsolatedCapacitorDatabaseManager } from '../shared/platform/capacitorSqliteDbPort';
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import type { SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence.js';
+import { stageSyncPackKnownFactClaims } from '../../lib/core/sync/syncPackKnownFactClaims.js';
+import { createIsolatedCapacitorDatabaseManager } from '../shared/platform/capacitorSqliteDbPort.js';
 
-import { assertIdentity, requireValue } from './capacityAcceptanceSafety';
-import { runIsolatedKnownReadingPage } from './syncPageApplyAcceptance';
+import { assertIdentity, requireValue } from './capacityAcceptanceSafety.js';
+import { runIsolatedKnownReadingPage } from './syncPageApplyAcceptance.js';
 
 export const SYNC_FACT_PROBE_SCHEMA = [
   `CREATE TABLE node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT,

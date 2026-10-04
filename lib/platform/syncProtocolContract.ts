@@ -21,6 +21,10 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'author-host-snapshots-v1',
     'article-image-sources-v1',
     'node-owned-resource-references-v1',
+    'global-object-identity-v2',
+    'independent-node-fact-pages-v1',
+    'original-parent-order-versions-v1',
+    'relayed-node-member-positions-v1',
     BOUNDED_SYNC_PACK_PAGE_CAPABILITY,
     SYNC_PACK_FACT_PROBE_CAPABILITY,
     'canonical-attachment-storage-key-v1',
@@ -45,9 +49,9 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     'workgroup-aead-v1',
     WORKGROUP_RESTORE_CAPABILITY
   ].sort()),
-  max_supported_version: 15,
-  min_supported_version: 15,
-  version: 15
+  max_supported_version: 21,
+  min_supported_version: 21,
+  version: 21
 } as const satisfies SyncProtocolDescriptor);
 
 export const REQUIRED_SYNC_PROTOCOL_CAPABILITIES = CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities;

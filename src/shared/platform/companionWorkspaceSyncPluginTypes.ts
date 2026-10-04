@@ -57,6 +57,11 @@ export interface CompanionWorkspaceSyncPlugin
     path_flavor: 'posix';
     platform: string;
   }>;
+  createIdentitySourceView(): Promise<{ snapshot_path: string; source_view_id: string }>;
+  buildIdentitySourcePack(args: { snapshot_path: string;
+    page: import('../../../lib/core/sync/syncIdentityPackPage').SyncIdentityPackPage
+  }): Promise<{ archive_base64url: string }>;
+  closeIdentitySourceView(args: { snapshot_path: string }): Promise<{ deleted: boolean }>;
   startDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;
   stopDiscoverySession(): Promise<CompanionNativeDiscoveryEvent>;
   addListener(

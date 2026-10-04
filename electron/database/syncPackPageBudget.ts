@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 
-import type { LoadedDesktopSyncPackRows } from './syncPackLoadedRows.js';
+import type { WritableDesktopSyncPackRows } from './syncPackLoadedRows.js';
 
 export interface SyncPackPageBudget {
   applyRows: number;
@@ -18,7 +18,7 @@ export const DEFAULT_SYNC_PACK_PAGE_BUDGET: SyncPackPageBudget = {
 export async function measureSyncPackPage(args: {
   archivePath: string;
   databasePath: string;
-  rows: LoadedDesktopSyncPackRows;
+  rows: WritableDesktopSyncPackRows;
 }): Promise<SyncPackPageBudget> {
   const [archive, database] = await Promise.all([
     fs.stat(args.archivePath), fs.stat(args.databasePath)

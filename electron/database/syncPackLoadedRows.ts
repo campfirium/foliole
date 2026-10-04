@@ -16,3 +16,5 @@ export interface LoadedDesktopSyncPackRows extends LoadedSyncPackRows {
   nodeTombstones: SyncPackTombstoneRow[];
   nodeVersionParents: SyncPackNodeVersionParentRow[];
 }
+
+export type WritableDesktopSyncPackRows = Omit<LoadedDesktopSyncPackRows, 'consumedStateSeq'>;

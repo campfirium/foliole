@@ -20,6 +20,7 @@ export interface NodeListContextMenuProps {
   onDismissNode?: () => void;
   onMergeHighlightsIntoTopic?: () => void;
   onMoveToNode?: () => void;
+  onOpenOrderHistory?: () => void;
   onOpenReviewScheduling?: () => void;
   onOpenPostponeTopic?: () => void;
   onPasteIntoNode?: () => void;

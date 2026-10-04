@@ -83,6 +83,10 @@ final class FolioleCompanionSyncPackEnvelopeValidator {
         String expectedPeerId,
         String expectedSourcePeerId
     ) throws Exception {
+        if (manifest.optInt("format_version", -1) == 21) {
+            return FolioleCompanionIdentityPackValidator.validateManifest(
+                manifest, contract, expectedPeerId, expectedSourcePeerId);
+        }
         if (!contract.format().equals(requireString(manifest, "format"))) {
             throw invalid("unsupported_sync_pack_format");
         }
@@ -117,7 +121,7 @@ final class FolioleCompanionSyncPackEnvelopeValidator {
         return validateTableManifest(manifest.getJSONArray("tables"), contract.manifestTableNames());
     }
 
-    private static Map<String, Integer> validateTableManifest(JSONArray tables, Set<String> required) throws Exception {
+    static Map<String, Integer> validateTableManifest(JSONArray tables, Set<String> required) throws Exception {
         Map<String, Integer> counts = new LinkedHashMap<>();
         for (int index = 0; index < tables.length(); index += 1) {
             Object item = tables.get(index);

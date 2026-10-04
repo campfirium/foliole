@@ -1,4 +1,5 @@
 import type { DbRow } from './dbPort.js';
+import { preserveLiveForkBodies } from './nodeVersionLiveForkBodies.js';
 
 export interface ChainVersion extends DbRow {
   version_id: string;
@@ -13,17 +14,10 @@ export interface ChainEdge extends DbRow {
   ordinal: number;
 }
 
-/** Contracting a DAG must preserve the ancestor order and every maximal common base. */
+/** Release replaceable bodies while preserving every original version identity and parent edge. */
 export function planNodeVersionChain(versions: ChainVersion[], edges: ChainEdge[],
-  protectedIds: Set<string>, frozenIds: Set<string>, limit: number, retireLegacyHistory = false) {
+  protectedIds: Set<string>, frozenIds: Set<string>, limit: number, localHeads: ReadonlySet<string> = protectedIds) {
   const rows = new Map(versions.map((row) => [row.version_id, row]));
-  if (retireLegacyHistory && protectedIds.size === 1 && frozenIds.size === 0) {
-    const current = rows.get([...protectedIds][0]!);
-    if (current && hasBody(current)) return {
-      removed: versions.filter(row => row.version_id !== current.version_id).map(row => row.version_id),
-      relations: [{ id: current.version_id, parents: [] as string[] }], skipped: null
-    };
-  }
   const parents = new Map(versions.map((row) => [row.version_id, [] as string[]]));
   for (const edge of edges) parents.get(edge.version_id)?.push(edge.parent_version_id);
   for (const row of versions) {
@@ -35,24 +29,16 @@ export function planNodeVersionChain(versions: ChainVersion[], edges: ChainEdge[
   if (!ancestors) return { skipped: 'lineage_unproven' as const };
   const keep = new Set(protectedIds);
   for (const id of frozenIds) for (const ancestor of ancestors.get(id) ?? []) keep.add(ancestor);
+  preserveLiveForkBodies(keep, ancestors, localHeads);
   preserveCommonBases(keep, ancestors);
   if ([...keep].some((id) => !rows.has(id) || !hasBody(rows.get(id)!))) {
     return { skipped: 'protected_body_unavailable' as const };
   }
-  const removed = versions.filter((row) => !keep.has(row.version_id)).slice(0, limit);
-  const retired = new Set(removed.map((row) => row.version_id));
-  const retained = versions.filter((row) => !retired.has(row.version_id));
-  const relations = retained.map((row) => {
-    const original = parents.get(row.version_id)!;
-    if (original.every((id) => !retired.has(id))) return { id: row.version_id, parents: original };
-    const candidates = new Set([...ancestors.get(row.version_id)!].filter((id) =>
-      id !== row.version_id && !retired.has(id)));
-    for (const id of candidates) {
-      for (const older of ancestors.get(id)!) if (older !== id) candidates.delete(older);
-    }
-    return { id: row.version_id, parents: [...candidates].sort() };
-  });
-  return { removed: removed.map((row) => row.version_id), relations, skipped: null };
+  const removed = versions.filter((row) => !keep.has(row.version_id) && hasBody(row)).slice(0, limit);
+  const relations = versions.map((row) => ({ id: row.version_id,
+    parents: parents.get(row.version_id)! }));
+  return { removed: removed.map((row) => row.version_id), relations,
+    requiredBodyIds: [...keep].sort(), skipped: null };
 }
 
 function ancestorClosure(parents: Map<string, string[]>) {

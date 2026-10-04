@@ -2,6 +2,7 @@ import { projectNodeInlineContent } from '../database/nodeInlineProjection.js';
 
 import { materializeCurrentVersionBodyBlobs } from './currentVersionBodyBlob.js';
 import type { DbPort } from './dbPort.js';
+import { readNodeInlineBodyProjection } from './readNodeInlineBodyProjection.js';
 import { enqueueAppliedNodeBodySearchInvalidation } from './syncNodeSearchInvalidations.js';
 import { hashTextBodyContent, upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
 
@@ -40,16 +41,17 @@ export async function reconcileSyncPackInlineBodies(port: DbPort, incomingAlias:
 async function refreshInlineBodyProjections(port: DbPort, alias: string) {
   let after = '';
   for (;;) {
-    const [row] = await port.query<{ id: string; body_blob_hash: string; body: string; content: string }>(
-      `SELECT n.id, n.body_blob_hash, n.content, CAST(data.data AS TEXT) AS body
+    const [row] = await port.query<{ id: string; body_blob_hash: string; size: number }>(
+      `SELECT n.id, n.body_blob_hash, length(CAST(data.data AS BLOB)) AS size
        FROM nodes n JOIN content_blob_data data ON data.hash = n.body_blob_hash
        WHERE n.id > ? AND n.sync_dirty = 0 AND n.id IN (SELECT id FROM ${alias}.nodes)
        ORDER BY n.id LIMIT 1`, [after]);
     if (!row) return;
-    const projection = projectNodeInlineContent(row.body);
-    if (row.content !== projection && (row.content === '' || row.content === row.body)) await port.run(
-      'UPDATE nodes SET content = ? WHERE id = ? AND body_blob_hash = ? AND sync_dirty = 0',
-      [projection, row.id, row.body_blob_hash]);
+    const projection = await readNodeInlineBodyProjection(port, row.body_blob_hash, row.size);
+    await port.run(`UPDATE nodes SET content = ? WHERE id = ? AND body_blob_hash = ? AND sync_dirty = 0
+      AND content != ? AND (content = '' OR content = (
+        SELECT CAST(data AS TEXT) FROM content_blob_data WHERE hash = ?))`,
+    [projection, row.id, row.body_blob_hash, projection, row.body_blob_hash]);
     after = row.id;
   }
 }

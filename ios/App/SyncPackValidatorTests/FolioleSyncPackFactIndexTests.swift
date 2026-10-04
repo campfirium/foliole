@@ -9,6 +9,7 @@ final class FolioleSyncPackFactIndexTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: url) }
         let database = try FolioleCompanionSyncPackSQLite(url: url, create: true)
         try database.execute("CREATE TABLE nodes (id TEXT, current_version_id TEXT)")
+        try database.execute("CREATE TABLE node_sync_tombstones (node_id TEXT, version_id TEXT)")
         try database.execute("INSERT INTO nodes VALUES ('node', 'v2')")
         try database.execute("CREATE TABLE node_sync_versions (version_id TEXT, object_id TEXT, " +
             "parent_version_id TEXT, host_name TEXT, created_at TEXT, content_hash TEXT, " +

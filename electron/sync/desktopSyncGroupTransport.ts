@@ -1,4 +1,5 @@
 import { getPeerCursor, setPeerCursor } from '../../lib/core/database/syncState.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { reconcileVersionedInlineBodies } from '../database/syncBodyProjectionReconcile.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
@@ -11,13 +12,16 @@ import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberSta
 import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
 import { assertDesktopSyncGroupPeerCompatible } from './desktopSyncGroupPeerCompatibility.js';
 import { runDesktopSyncGroupPeerSingleFlight } from './desktopSyncGroupPeerSingleFlight.js';
-import { drainDesktopSyncGroupResourceArticles } from './desktopSyncGroupResourceArticleDrain.js';
+import { drainDesktopSyncGroupResourceArticles,
+  drainDesktopSyncIdentityResources } from './desktopSyncGroupResourceArticleDrain.js';
 import { assertDesktopSyncGroupResourcesComplete } from './desktopSyncGroupResources.js';
 import {
   loadDesktopSyncGroupRoutes,
   type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
 import { flushDesktopSyncGroupVersionReceipts } from './desktopSyncGroupVersionReceipts.js';
+import { runDesktopSyncIdentityRestoreRound } from './desktopSyncIdentityRestoreRound.js';
+import { runDesktopSyncIdentityRound } from './desktopSyncIdentityRound.js';
 import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 export type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
@@ -47,6 +51,23 @@ async function continuePeerSync(target: DesktopSyncGroupPeer, activity?: Desktop
   if (memberState.normalSyncReady === false && !restoreId) return skipPeerSync(target, activity, 'not_ready');
   if (restoreId) await runPeerSyncStage('member_state', () =>
     exchangeDesktopSyncGroupMemberState(target), target, activity);
+  if (CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version >= 21) {
+    if (restoreId) {
+      await runPeerSyncStage('sync_pack', () =>
+        runDesktopSyncIdentityRestoreRound(target, restoreId), target, activity);
+      await runPeerSyncStage('member_state', () =>
+        exchangeDesktopSyncGroupMemberState(target), target, activity);
+      await runPeerSyncStage('resources', () =>
+        drainDesktopSyncIdentityResources(target), target, activity);
+    }
+    const pendingConflicts = await runWithDatabaseConnectionOwner(() => loadPendingWatchedFolderConflicts());
+    if (pendingConflicts.length) return skipPeerSync(target, activity, 'watched_conflict');
+    const result = await runPeerSyncStage('sync_pack', () =>
+      runDesktopSyncIdentityRound(target), target, activity);
+    await runWithDatabaseConnectionOwner(() =>
+      reconcileVersionedInlineBodies(openDatabaseConnection().driver));
+    return { complete: result.verifiedCandidateCount === 0 };
+  }
   if (!restoreId) {
     await flushDesktopSyncGroupVersionReceipts(target);
     const pendingConflicts = await runWithDatabaseConnectionOwner(() => loadPendingWatchedFolderConflicts());

@@ -1,11 +1,13 @@
 import { assertSyncPackCursorAdvance } from '../../../lib/core/sync/syncPackCursorGuard';
 import { SYNC_PACK_PAGE_CONTRACT } from '../../../lib/core/sync/syncPackPageContract';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../lib/platform/syncProtocolContract';
 
 import {
   resolveCompanionSyncPeerHostName,
   resolveCompanionSyncPeerId
 } from './companion/network/syncGroupPeerIdentity';
 import { traceCompanionSyncStep } from './companion/sync/diagnostics/companionDesktopSyncTrace';
+import { syncCompanionIdentityObjects } from './companion/sync/syncGroupIdentityCompanionResult';
 import { applyTracedStructurePage } from './companion/sync/transfer/companionDesktopSyncStructurePage';
 import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
 import {
@@ -161,6 +163,9 @@ async function runCompanionObjectsSync(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions = {}
 ): Promise<CompanionDesktopSyncResult> {
+  if (CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version >= 21) {
+    return syncCompanionIdentityObjects(endpointUrl, options);
+  }
   const skipPush = options.resourcesOnly === true || Boolean(options.restoreId);
   const pushed = skipPush
     ? createSkippedPushResult()

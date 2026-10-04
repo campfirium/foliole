@@ -1,5 +1,14 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+// These tests exercise the retained sequence cursor route independently of the v21 identity route.
+vi.mock('../../lib/platform/syncProtocolContract.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/platform/syncProtocolContract.js')>();
+  return { ...actual, CURRENT_SYNC_PROTOCOL_DESCRIPTOR: {
+    ...actual.CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    version: 15, min_supported_version: 15, max_supported_version: 15
+  } };
+});
+
 const runtime = vi.hoisted(() => ({
   assertCompatible: vi.fn(),
   assertResourcesComplete: vi.fn(),

@@ -4,6 +4,12 @@ import { loadBackupRestorePendingSync } from '../database/backupRestorePendingSy
 import { isDesktopSyncGroupDeviceBlocked } from '../database/syncGroupMemberStateStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
+import { SYNC_IDENTITY_CHANGED_PAGE_PATH, SYNC_IDENTITY_FACT_PAGE_PATH,
+  SYNC_IDENTITY_FACT_SUMMARY_PATH, SYNC_IDENTITY_NODE_FACTS_PATH,
+  SYNC_IDENTITY_PAGE_PATH } from './companionLanIdentityGet.js';
+import { SYNC_IDENTITY_GLOBAL_PAGE_PATH } from './companionLanIdentityGlobalGet.js';
+import { SYNC_IDENTITY_PACK_PATH } from './companionLanIdentityPackPost.js';
+import { SYNC_IDENTITY_RESTORE_SET_PATH } from './companionLanIdentityRestore.js';
 import { verifyCompanionRequestSignature } from './companionRequestSignature.js';
 import {
   desktopSyncGroupMemberStateReadiness,
@@ -71,9 +77,16 @@ export function authenticateCompanionRequest(args: {
   if (device && args.requireMemberState &&
       desktopSyncGroupMemberStateReadiness(headers.deviceId) === 'restore') {
     const url = new URL(args.request.url ?? '/', 'http://localhost');
-    if (args.request.method !== 'GET' ||
-        !['/companion/sync-pack', '/companion/sync-pack-facts'].includes(url.pathname) ||
-        !url.searchParams.get('restore_id')) {
+    const restoreGet = args.request.method === 'GET' &&
+      ['/companion/sync-pack', '/companion/sync-pack-facts',
+          SYNC_IDENTITY_RESTORE_SET_PATH, SYNC_IDENTITY_PAGE_PATH,
+          SYNC_IDENTITY_GLOBAL_PAGE_PATH,
+          SYNC_IDENTITY_FACT_SUMMARY_PATH, SYNC_IDENTITY_FACT_PAGE_PATH,
+          SYNC_IDENTITY_NODE_FACTS_PATH, SYNC_IDENTITY_CHANGED_PAGE_PATH]
+        .includes(url.pathname);
+    const restorePack = args.request.method === 'POST' &&
+      url.pathname === SYNC_IDENTITY_PACK_PATH;
+    if (!(restoreGet || restorePack) || !url.searchParams.get('restore_id')) {
       return failure('sync_group_member_state_required', 409);
     }
   }

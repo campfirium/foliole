@@ -78,14 +78,38 @@ it('merges a delayed edit using its real parent and preserves both branches', as
   const remote = currentVersion();
   const result = await edit(base, 'Apples and tea\nBread\nMilk\n');
   expect(result.current.body_text).toBe('Apples and tea\nBread\nMilk and coffee\n');
-  expect(result.current.parent_version_ids).toEqual(['ver_local-edit']);
-  expect(openDatabaseConnection().sqlite.prepare('SELECT version_id FROM node_sync_versions WHERE version_id = ?')
-    .all(remote)).toEqual([]);
-  expect(openDatabaseConnection().sqlite.prepare('SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?')
-    .get('ver_local-edit')).toEqual({ parent_version_id: base });
-  await releaseLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite), 'draft', 'node-1');
-  expect(openDatabaseConnection().sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_versions').get())
-    .toEqual({ count: 1 });
+  expect(result.current.parent_version_ids).toEqual([remote, 'ver_local-edit'].sort());
+  const sqlite = openDatabaseConnection().sqlite;
+  const originalGraph = () => sqlite.prepare(`SELECT version_id, object_id, parent_version_id,
+    host_name, created_at, content_hash, json_remove(snapshot_json, '$.content') AS snapshot_metadata
+    FROM node_sync_versions WHERE object_id = ? ORDER BY version_id`).all('node-1');
+  const originalEdges = () => sqlite.prepare(`SELECT version_id, parent_version_id, ordinal
+    FROM node_sync_version_parents WHERE version_id IN
+      (SELECT version_id FROM node_sync_versions WHERE object_id = ?) ORDER BY version_id, ordinal`)
+    .all('node-1');
+  expect(originalGraph().map((row) => (row as { version_id: string }).version_id))
+    .toEqual([base, remote, 'ver_local-edit', result.current.version_id].sort());
+  expect(originalEdges()).toEqual(expect.arrayContaining([
+    { version_id: remote, parent_version_id: base, ordinal: 0 },
+    { version_id: 'ver_local-edit', parent_version_id: base, ordinal: 0 }
+  ]));
+  const heldBodies = sqlite.prepare(`SELECT version_id, body_text FROM node_sync_versions
+    WHERE version_id IN (?, ?) ORDER BY version_id`).all(base, 'ver_local-edit');
+  expect(heldBodies).toEqual([
+    { version_id: base, body_text: 'Apples\nBread\nMilk\n' },
+    { version_id: 'ver_local-edit', body_text: 'Apples and tea\nBread\nMilk\n' }
+  ].sort((left, right) => left.version_id.localeCompare(right.version_id)));
+  const graph = originalGraph();
+  const edges = originalEdges();
+  await releaseLocalEditBase(createBetterSqliteDbPort(sqlite), 'draft', 'node-1');
+  expect(originalGraph()).toEqual(graph);
+  expect(originalEdges()).toEqual(edges);
+  expect(sqlite.prepare(`SELECT version_id, body_text, json_extract(snapshot_json, '$.content') AS content
+    FROM node_sync_versions WHERE version_id IN (?, ?, ?) ORDER BY version_id`)
+    .all(base, remote, 'ver_local-edit')).toEqual([base, remote, 'ver_local-edit'].sort()
+      .map((version_id) => ({ version_id, body_text: null, content: null })));
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
+    .get(result.current.version_id)).toEqual({ body_text: 'Apples and tea\nBread\nMilk and coffee\n' });
 });
 
 it('retains an overlapping edit using the existing alternative policy', async () => {

@@ -1,9 +1,7 @@
 // @vitest-environment node
 
-import Database from 'better-sqlite3';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import {
   confirmOutboundNodeVersionPack,
@@ -13,48 +11,10 @@ import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/n
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion, loadMergeBase } from '../../lib/core/sync/syncNodeGraph.js';
 
-import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { port, proveBase, setupVersionCollectionFixture,
+  sqlite } from './nodeVersionPayloadCollector.testSupport.js';
 
-let sqlite: Database.Database;
-let port: DbPort;
-
-beforeEach(() => {
-  sqlite = new Database(':memory:');
-  initializeDatabaseSchema(sqlite);
-  port = createBetterSqliteDbPort(sqlite);
-  sqlite.exec(`
-    INSERT INTO sync_groups (group_id, display_name, workgroup_key, created_at, updated_at)
-      VALUES ('group', 'Group', 'key', 'now', 'now');
-    INSERT INTO sync_group_local_state VALUES (1, 'group', 'local', 'active', 'now');
-    INSERT INTO sync_group_devices
-      (group_id, device_identity_key, device_anchor, canonical_library_path, device_name,
-       platform, state, joined_at, updated_at)
-      VALUES ('group', 'local', 'anchor-local', '/local', 'Local', 'mac', 'active', 'now', 'now'),
-        ('group', 'remote', 'anchor-remote', '/remote', 'Remote', 'android', 'active', 'now', 'now');
-    INSERT INTO nodes (id, kind, title, current_version_id, created_at, updated_at)
-      VALUES ('node', 'topic', 'Node', 'E', 'now', 'now');
-  `);
-  for (const [index, id] of ['A', 'B', 'C', 'D', 'E'].entries()) {
-    const parent = index ? ['A', 'B', 'C', 'D'][index - 1] : null;
-    sqlite.prepare(`INSERT INTO node_sync_versions
-      (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
-      VALUES (?, 'node', ?, 'local', ?, ?, ?, ?)`).run(
-      id, parent, `2026-09-27T00:00:0${index}Z`, `hash-${id}`, `body-${id}`,
-      JSON.stringify({ id: 'node', content: `body-${id}` })
-    );
-    sqlite.prepare('INSERT INTO node_version_local_origins VALUES (?)').run(id);
-    if (parent) sqlite.prepare(`INSERT INTO node_sync_version_parents VALUES (?, ?, 0)`).run(id, parent);
-  }
-});
-
-afterEach(() => sqlite.close());
-
-function proveBase(versionId: string) {
-  sqlite.prepare(`INSERT OR IGNORE INTO node_version_device_revisions VALUES
-    ('group', 'remote', 'epoch', 1, 'pack-1', NULL, 'now')`).run();
-  sqlite.prepare(`INSERT INTO node_version_device_bases VALUES
-    ('group', 'remote', 'node', ?, 'epoch', 1, 'pack-1', 'now')`).run(versionId);
-}
+setupVersionCollectionFixture();
 
 async function stagePackAtA() {
   sqlite.prepare("UPDATE nodes SET current_version_id = 'A' WHERE id = 'node'").run();
@@ -72,14 +32,21 @@ function payloads() {
     FROM node_sync_versions ORDER BY version_id`).all();
 }
 
-it('keeps complete offline A and current E and retires intermediate identities', async () => {
+it('keeps offline and current bodies while preserving original intermediate identities and edges', async () => {
   proveBase('A');
   expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
   expect(payloads()).toEqual([
     { version_id: 'A', body_text: 'body-A', snapshot_content: 'body-A', parent_version_id: null },
-    { version_id: 'E', body_text: 'body-E', snapshot_content: 'body-E', parent_version_id: 'A' }
+    { version_id: 'B', body_text: null, snapshot_content: null, parent_version_id: 'A' },
+    { version_id: 'C', body_text: null, snapshot_content: null, parent_version_id: 'B' },
+    { version_id: 'D', body_text: null, snapshot_content: null, parent_version_id: 'C' },
+    { version_id: 'E', body_text: 'body-E', snapshot_content: 'body-E', parent_version_id: 'D' }
   ]);
   expect(await isStoredAncestorVersion(port, 'A', 'E')).toBe(true);
+  expect(sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all())
+    .toEqual(['B', 'C', 'D', 'E'].map((id, index) => ({ version_id: id,
+      parent_version_id: ['A', 'B', 'C', 'D'][index], ordinal: 0 })));
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
 });
 
 it('keeps the common merge base when a peer base is on a sibling branch', async () => {
@@ -101,6 +68,22 @@ it('keeps the inherited complete chain until direct device dependencies are know
   sqlite.exec('DELETE FROM node_version_local_origins');
   expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
   expect(payloads().every((row) => (row as { body_text: string }).body_text !== null)).toBe(true);
+});
+
+it('keeps an unabsorbed sibling and its base without a direct member declaration', async () => {
+  proveBase('A');
+  sqlite.exec(`INSERT INTO node_sync_versions
+    (version_id, object_id, parent_version_id, host_name, created_at,
+     content_hash, body_text, snapshot_json)
+    VALUES ('hidden', 'node', 'B', 'remote', 'later', 'hidden-hash', 'hidden-body',
+      '{"id":"node","content":"hidden-body"}');
+    INSERT INTO node_sync_version_parents VALUES ('hidden', 'B', 0);`);
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('B'))
+    .toEqual({ body_text: 'body-B' });
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('hidden'))
+    .toEqual({ body_text: 'hidden-body' });
+  expect((await loadMergeBase(port, 'hidden', 'E'))?.version_id).toBe('B');
 });
 
 it('keeps an in-flight version alongside the device base and current head', async () => {
@@ -129,7 +112,7 @@ it('holds every full payload in a pack until its exact node receipt', async () =
     results: [{ baseVersionId: 'A', objectId: 'node', result: 'applied', sentVersionId: 'E' }]
   });
   expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
-  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C')).toBeUndefined();
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C')).toEqual({ body_text: null });
 });
 
 it('keeps a pending edit base and a conflict reference', async () => {

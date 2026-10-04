@@ -52,7 +52,7 @@ function acceptedDeliveryFilter(options: SyncPackApplyableRowsOptions) {
     `WHERE receipt.peer_id = '${peerId}' AND receipt.stream_name = 'state' ` +
     `AND receipt.object_type = incoming.object_type AND receipt.object_id = incoming.object_id ` +
     `AND receipt.payload_identity = current.content_hash AND receipt.status = 'accepted' ` +
-    `AND receipt.remote_position IS NOT NULL ` +
+    `AND receipt.remote_position IS NOT NULL AND incoming.state_seq > 0 ` +
     `AND incoming.state_seq >= CAST(receipt.remote_position AS INTEGER))`;
 }
 

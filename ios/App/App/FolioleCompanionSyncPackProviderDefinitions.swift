@@ -22,9 +22,19 @@ struct FolioleCompanionSyncPackProviderDefinitions {
     var databaseEntry: String { string("databaseEntry") }
     var format: String { string("format") }
     var formatVersion: Int { value["formatVersion"] as? Int ?? -1 }
+    var identityThinPreludeSql: String { string("identityThinPreludeSql") }
+    var identityMissingOriginalHeadSql: String { string("identityMissingOriginalHeadSql") }
+    var identityFactPlans: [[String: Any]] { value["identityFactPlans"] as? [[String: Any]] ?? [] }
+    var identityFactValidateSql: String { string("identityFactValidateSql") }
+    var identityFactHeadCopySql: String { string("identityFactHeadCopySql") }
+    var identityHeadCopySql: String { string("identityHeadCopySql") }
+    var identityPreludeCopySql: String { string("identityPreludeCopySql") }
+    var identityReviewCopySql: String { string("identityReviewCopySql") }
+    var identityStateCopySql: String { string("identityStateCopySql") }
     var packSchema: [String] { value["packSchema"] as? [String] ?? [] }
     var payloadCopyIndex: Int { value["payloadCopyIndex"] as? Int ?? -1 }
     var payloadPlans: [[String: Any]] { value["payloadPlans"] as? [[String: Any]] ?? [] }
+    var reviewCopyIndex: Int { value["reviewCopyIndex"] as? Int ?? -1 }
     var preparedMemberDataPlane: [String: Any] { value["preparedMemberDataPlane"] as? [String: Any] ?? [:] }
     var schemaVersion: Int { value["schemaVersion"] as? Int ?? -1 }
     var stateCopyIndex: Int { value["stateCopyIndex"] as? Int ?? -1 }

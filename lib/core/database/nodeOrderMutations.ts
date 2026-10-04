@@ -1,18 +1,27 @@
+import { restoreParentOrderSnapshot } from '../sync/syncVersionedParentOrderMerge.js';
+
 import type { DatabaseDriver } from './driver.js';
 import { ensureSpecialRootNodesForOrder } from './nodeMutationSpecialRoots.js';
 import {
   parentOrderId, readOrderMembers, readParentChildOrders, writeParentChildOrder
 } from './parentChildOrder.js';
+import { recordLocalParentOrderVersion } from './parentOrderVersionMutations.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { computeSyncContentHash, upsertSyncObjectState } from './syncState.js';
 
-function persistParentOrder(driver: DatabaseDriver, parentId: string, childIds: string[], now: string, hostName: string) {
-  const childIdsJson = JSON.stringify(childIds);
-  writeParentChildOrder(driver, parentId, childIds, now);
-  upsertSyncObjectState(driver, {
-    objectType: 'parent_child_order', objectId: parentId,
-    contentHash: computeSyncContentHash('parent_child_order', { parent_id: parentId, child_ids_json: childIdsJson }),
-    lastModifiedByHostName: hostName, updatedAt: now, syncDirty: true
+function persistParentOrder(driver: DatabaseDriver, parentId: string, before: string[],
+  childIds: string[], now: string, hostName: string, kind: 'membership' | 'user') {
+  driver.transaction(() => {
+    const childIdsJson = JSON.stringify(childIds);
+    const versionId = recordLocalParentOrderVersion(driver, { before, createdAt: now,
+      kind, order: childIds, parentId });
+    writeParentChildOrder(driver, parentId, childIds, now);
+    upsertSyncObjectState(driver, {
+      objectType: 'parent_child_order', objectId: parentId,
+      currentVersionId: versionId,
+      contentHash: computeSyncContentHash('parent_child_order', { parent_id: parentId, child_ids_json: childIdsJson }),
+      lastModifiedByHostName: hostName, updatedAt: now, syncDirty: true
+    });
   });
 }
 
@@ -32,7 +41,8 @@ export function ensureNodeParentMembership(driver: DatabaseDriver, nodeId: strin
   if (changes.size === 0) return;
   const now = new Date().toISOString();
   const hostName = requireDatabaseHostName(driver);
-  for (const [parentId, childIds] of changes) persistParentOrder(driver, parentId, childIds, now, hostName);
+  for (const [parentId, childIds] of changes) persistParentOrder(driver, parentId,
+    orders.get(parentId) ?? [], childIds, now, hostName, 'membership');
 }
 
 function retainHiddenSlots(existing: string[], visible: string[], hidden: Set<string>) {
@@ -73,7 +83,7 @@ export function rewriteExistingNodeOrder(driver: DatabaseDriver, nodeIds: string
     const unlisted = existing.filter((id) => !listed.has(id) && !hidden.has(id));
     const next = retainHiddenSlots(existing, [...requestedVisible, ...unlisted], hidden);
     if (JSON.stringify(next) === JSON.stringify(orders.get(parentId) ?? [])) continue;
-    persistParentOrder(driver, parentId, next, now, hostName);
+    persistParentOrder(driver, parentId, orders.get(parentId) ?? [], next, now, hostName, 'user');
   }
   return nodeIds.filter((id) => byId.has(id));
 }
@@ -81,5 +91,35 @@ export function rewriteExistingNodeOrder(driver: DatabaseDriver, nodeIds: string
 export function replaceNodeOrder(driver: DatabaseDriver, nodeIds: string[]): void {
   driver.transaction(() => {
     rewriteExistingNodeOrder(driver, nodeIds);
+  });
+}
+
+/** Restore a saved arrangement as a new user edit against current parent membership. */
+export function restoreSavedParentOrder(driver: DatabaseDriver, input: {
+  hostName: string;
+  parentId: string;
+  updatedAt: string;
+  versionId: string;
+}) {
+  return driver.transaction(() => {
+    const saved = driver.queryOne<{ parent_id: string; child_ids_json: string }>(
+      `SELECT parent_id, child_ids_json FROM parent_order_versions WHERE version_id = ?`,
+      [input.versionId]);
+    if (saved?.parent_id !== input.parentId) throw new Error('sync_parent_order_snapshot_missing');
+    const current = readParentChildOrders(driver).get(input.parentId) ?? [];
+    const members = readOrderMembers(driver).filter((row) =>
+      !row.deleted_at && parentOrderId(row.parent_id) === input.parentId);
+    const membership = new Set(members.map((row) => row.id));
+    const names = new Map(driver.queryAll<{ id: string; title: string }>(`SELECT id, title
+      FROM nodes WHERE id IN (SELECT value FROM json_each(?))`,
+    [JSON.stringify([...membership])]).map((row) => [row.id, row.title]));
+    const compareAdded = (a: string, b: string) => (names.get(a) ?? '').localeCompare(
+      names.get(b) ?? '', 'zh-CN', { numeric: true }) || (a < b ? -1 : a > b ? 1 : 0);
+    const order = restoreParentOrderSnapshot(JSON.parse(saved.child_ids_json) as string[],
+      current, membership, compareAdded);
+    if (JSON.stringify(order) === JSON.stringify(current)) return false;
+    persistParentOrder(driver, input.parentId, current, order, input.updatedAt,
+      input.hostName, 'user');
+    return true;
   });
 }

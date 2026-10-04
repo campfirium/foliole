@@ -1,6 +1,7 @@
 import { CONTENT_BLOB_BATCH_MAX_BYTES } from '../../platform/resourceAvailabilityContract.js';
 
 import type { DbPort, DbParams } from './dbPort.js';
+import { hashSqliteByteChunks } from './hashSqliteByteChunks.js';
 import { refreshNodeInlineBodiesForHashes } from './nodeInlineBodyProjection.js';
 import { hashTextBodyContent } from './syncNodeTextBodyBlobs.js';
 
@@ -34,7 +35,7 @@ export async function materializeCurrentVersionBodyBlobs(port: DbPort, scope: Bo
   for (;;) {
     const [row] = await port.query<CurrentBodyRow>(currentBodySql(filter.sql),
       [after, ...filter.params, CONTENT_BLOB_BATCH_MAX_BYTES]);
-    if (!row) return count;
+    if (!row) break;
     after = row.id;
     if (!/^[a-f0-9]{64}$/u.test(row.hash)) continue;
     const bytes = new TextEncoder().encode(row.body);
@@ -42,11 +43,12 @@ export async function materializeCurrentVersionBodyBlobs(port: DbPort, scope: Bo
         await hashTextBodyContent(row.body, {}) !== row.hash) continue;
     count += await persistCurrentBody(port, row, bytes);
   }
+  return count + await materializeLargeCurrentBodies(port, filter);
 }
 
-function currentBodySql(filter: string) {
+function currentBodySql(filter: string, large = false) {
   return `SELECT n.id, n.current_version_id, cb.hash, cb.stored_size_bytes,
-      ${VERSION_BODY} AS body
+      ${large ? 'NULL' : VERSION_BODY} AS body
     FROM main.nodes n
     JOIN main.node_sync_versions v ON v.version_id = n.current_version_id AND v.object_id = n.id
     JOIN main.sync_object_state s ON s.object_type = 'node' AND s.object_id = n.id
@@ -58,7 +60,7 @@ function currentBodySql(filter: string) {
       AND cb.kind = 'text_body' AND cb.mime_type = 'text/plain' AND cb.compression = 'none'
       AND cb.original_sha256 = cb.hash AND cb.stored_sha256 = cb.hash
       AND cb.original_size_bytes = cb.stored_size_bytes
-      AND cb.stored_size_bytes BETWEEN 0 AND ?
+      AND cb.stored_size_bytes ${large ? '>' : 'BETWEEN 0 AND'} ?
       AND CASE WHEN json_valid(v.snapshot_json) THEN
         json_extract(v.snapshot_json, '$.id') = n.id
         AND (v.body_text IS NULL OR json_type(v.snapshot_json, '$.content') IS NOT 'text'
@@ -79,14 +81,43 @@ async function persistCurrentBody(port: DbPort, row: CurrentBodyRow, bytes: Uint
      ON CONFLICT(hash) DO NOTHING`,
     [row.hash, bytes, row.id, row.current_version_id, row.hash]);
   if (!inserted.changes) return 0;
+  return publishCurrentBodyCache(port, row, bytes.byteLength);
+}
+
+async function publishCurrentBodyCache(port: DbPort, row: CurrentBodyRow, byteLength: number) {
   const now = new Date().toISOString();
   const updated = await port.run(
     `UPDATE main.content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ?
      WHERE hash = ? AND stored_sha256 = ? AND original_sha256 = ?
        AND stored_size_bytes = ? AND original_size_bytes = ?
        AND kind = 'text_body' AND mime_type = 'text/plain' AND compression = 'none'`,
-    [now, now, row.hash, row.hash, row.hash, bytes.byteLength, bytes.byteLength]);
+    [now, now, row.hash, row.hash, row.hash, byteLength, byteLength]);
   if (updated.changes !== 1) throw new Error('sync_current_body_manifest_changed');
   await refreshNodeInlineBodiesForHashes(port, [row.hash]);
   return 1;
+}
+
+async function materializeLargeCurrentBodies(port: DbPort, filter: ReturnType<typeof scopeFilter>) {
+  let after = '';
+  let count = 0;
+  for (;;) {
+    const [row] = await port.query<CurrentBodyRow>(currentBodySql(filter.sql, true),
+      [after, ...filter.params, CONTENT_BLOB_BATCH_MAX_BYTES]);
+    if (!row) return count;
+    after = row.id;
+    if (!/^[a-f0-9]{64}$/u.test(row.hash)) continue;
+    const hash = await hashSqliteByteChunks(row.stored_size_bytes, async (offset, limit) => {
+      const [chunk] = await port.query<{ bytes: string }>(`SELECT hex(substr(CAST(${VERSION_BODY} AS BLOB), ?, ?)) AS bytes
+        FROM main.node_sync_versions v WHERE v.version_id = ? AND v.object_id = ?`,
+      [offset + 1, limit, row.current_version_id, row.id]);
+      return chunk?.bytes ?? '';
+    });
+    if (hash !== row.hash) continue;
+    const inserted = await port.run(`INSERT INTO main.content_blob_data (hash, data)
+      SELECT ?, CAST(${VERSION_BODY} AS BLOB) FROM main.node_sync_versions v JOIN main.nodes n
+        ON n.current_version_id = v.version_id AND n.id = v.object_id
+      WHERE n.id = ? AND n.current_version_id = ? AND n.body_blob_hash = ?
+      ON CONFLICT(hash) DO NOTHING`, [row.hash, row.id, row.current_version_id, row.hash]);
+    if (inserted.changes) count += await publishCurrentBodyCache(port, row, row.stored_size_bytes);
+  }
 }

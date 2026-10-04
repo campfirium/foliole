@@ -15,7 +15,7 @@ import {
   ANDROID_COMPANION_MUTATION_DEFINITIONS
 } from '../../lib/core/database/androidCompanionMutationDefinitions.ts';
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from '../../lib/core/database/androidCompanionSyncProtocolDefinitions.ts';
-import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.ts';
+import { ANDROID_COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionSchemaStatements.ts';
 import {
   EXPECTED_SCHEMA_SOURCES,
   EXPECTED_SHARED_SCHEMA_DRIFT
@@ -44,7 +44,7 @@ describe('schema inventory drift gate', () => {
   it('generates the Android schema asset from the shared schema source', async () => {
     const schema = JSON.parse(await readFile(COMPANION_SCHEMA, 'utf8'));
 
-    expect(schema.statements).toEqual(COMPANION_SCHEMA_STATEMENTS);
+    expect(schema.statements).toEqual(ANDROID_COMPANION_SCHEMA_STATEMENTS);
   });
 
   it('keeps Android migration repair DDL in the generated migration asset', async () => {

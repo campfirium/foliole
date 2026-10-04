@@ -36,6 +36,15 @@ extension FolioleCompanionSyncGroupJoinServer {
             stateChanged()
             return
         }
+        if request.method == "GET" && FolioleCompanionSyncIdentityRoutes.supports(route) {
+            return try respondIdentity(connection, request)
+        }
+        if request.method == "POST" && route == "/companion/sync-identity-pack" {
+            return try respondIdentityPack(connection, request)
+        }
+        if request.method == "POST" && route == "/companion/sync-identity-push" {
+            return try respondIdentityPush(connection, request)
+        }
         if request.method == "GET" && route == "/companion/sync-pack" {
             guard let snapshots, let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
             let peer = try authenticate(request)
@@ -161,7 +170,7 @@ extension FolioleCompanionSyncGroupJoinServer {
         }
     }
 
-    private func authenticate(_ request: FolioleCompanionHttpMessage) throws -> String {
+    func authenticate(_ request: FolioleCompanionHttpMessage) throws -> String {
         guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
         let peer = try FolioleCompanionSyncGroupWorkgroup.authenticate(
             request, groupId: provider.groupId, workgroupKey: provider.workgroupKey,

@@ -38,13 +38,18 @@ public class FolioleCompanionSyncPackTransferPlugin: CAPPlugin, CAPBridgedPlugin
             let headers = try stringHeaders(headersObject)
             Task {
                 do {
-                    let packURL = try await FolioleCompanionSyncPackTransfer.downloadDesktopSyncPack(
+                    let pack = try await FolioleCompanionSyncPackTransfer.downloadWithManifest(
                         url: url,
                         headers: headers,
                         expectedPeerId: expectedPeerId,
-                        expectedSourcePeerId: expectedSourcePeerId
+                        expectedSourcePeerId: expectedSourcePeerId,
+                        method: call.getString(try contracts.transferRequestKey("method")) ?? "GET",
+                        body: call.getString(try contracts.transferRequestKey("body"))
                     )
-                    call.resolve([try contracts.transferResponseKey("packPath"): packURL.path])
+                    call.resolve([
+                        try contracts.transferResponseKey("packPath"): pack.databaseURL.path,
+                        try contracts.transferResponseKey("manifest"): pack.manifest
+                    ])
                 } catch {
                     call.reject("Failed to download companion desktop sync pack: \(downloadFailure(error))")
                 }

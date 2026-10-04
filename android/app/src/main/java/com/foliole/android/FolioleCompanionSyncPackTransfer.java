@@ -18,10 +18,38 @@ final class FolioleCompanionSyncPackTransfer {
         String expectedPeerId,
         String expectedSourcePeerId
     ) throws Exception {
+        return downloadWithManifestToCache(context, url, headers, expectedPeerId, expectedSourcePeerId).file;
+    }
+
+    static ValidatedPack downloadWithManifestToCache(
+        Context context, String url, JSONObject headers,
+        String expectedPeerId, String expectedSourcePeerId
+    ) throws Exception {
+        return downloadWithManifestToCache(context, url, headers, expectedPeerId,
+            expectedSourcePeerId, "GET", null);
+    }
+
+    static ValidatedPack downloadWithManifestToCache(
+        Context context, String url, JSONObject headers,
+        String expectedPeerId, String expectedSourcePeerId,
+        String method, String body
+    ) throws Exception {
+        if (!("GET".equals(method) && body == null || "POST".equals(method) && body != null)) {
+            throw new IllegalArgumentException("sync_pack_request_invalid");
+        }
         File directory = ensureCacheDirectory(context);
         File pack = File.createTempFile("sync-pack-download-", ".tmp", directory);
         try {
-            FolioleCompanionDesktopHttpClient.downloadToFile(context, url, headers, pack);
+            if ("GET".equals(method)) {
+                FolioleCompanionDesktopHttpClient.downloadToFile(context, url, headers, pack);
+            } else {
+                byte[] archive = FolioleCompanionDesktopHttpClient.requestBytes(
+                    context, url, method, headers, body);
+                if (archive.length > FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES) {
+                    throw new IllegalArgumentException("sync_pack_transfer_limit_exceeded");
+                }
+                try (FileOutputStream output = new FileOutputStream(pack)) { output.write(archive); }
+            }
             return storePackFile(context, pack, expectedPeerId, expectedSourcePeerId);
         } finally {
             if (!pack.delete()) pack.deleteOnExit();
@@ -37,13 +65,27 @@ final class FolioleCompanionSyncPackTransfer {
         File pack = File.createTempFile("sync-pack-fixture-", ".tmp", ensureCacheDirectory(context));
         try {
             try (FileOutputStream output = new FileOutputStream(pack)) { output.write(body); }
+            return storePackFile(context, pack, expectedPeerId, expectedSourcePeerId).file;
+        } finally {
+            if (!pack.delete()) pack.deleteOnExit();
+        }
+    }
+
+    static ValidatedPack storeReceivedArchive(Context context, byte[] body,
+            String expectedPeerId, String expectedSourcePeerId) throws Exception {
+        if (body.length > FolioleCompanionSyncPackFileValidator.MAX_TRANSFER_BYTES) {
+            throw new IllegalArgumentException("sync_pack_transfer_limit_exceeded");
+        }
+        File pack = File.createTempFile("sync-pack-received-", ".tmp", ensureCacheDirectory(context));
+        try {
+            try (FileOutputStream output = new FileOutputStream(pack)) { output.write(body); }
             return storePackFile(context, pack, expectedPeerId, expectedSourcePeerId);
         } finally {
             if (!pack.delete()) pack.deleteOnExit();
         }
     }
 
-    private static File storePackFile(
+    private static ValidatedPack storePackFile(
         Context context, File pack, String expectedPeerId, String expectedSourcePeerId
     ) throws Exception {
         File directory = ensureCacheDirectory(context);
@@ -54,7 +96,7 @@ final class FolioleCompanionSyncPackTransfer {
                     pack, file, FolioleCompanionSyncPackContract.load(context),
                     expectedPeerId, expectedSourcePeerId);
             FolioleCompanionSyncPackDatabaseValidator.validate(file, envelope);
-            return file;
+            return new ValidatedPack(file, envelope.manifest);
         } catch (Exception exception) {
             if (file.exists() && !file.delete()) file.deleteOnExit();
             throw exception;
@@ -85,6 +127,16 @@ final class FolioleCompanionSyncPackTransfer {
 
     private static File cacheDirectory(File cacheRoot) {
         return new File(cacheRoot, "sync-packs");
+    }
+
+    static final class ValidatedPack {
+        final File file;
+        final JSONObject manifest;
+
+        ValidatedPack(File file, JSONObject manifest) {
+            this.file = file;
+            this.manifest = manifest;
+        }
     }
 
 }

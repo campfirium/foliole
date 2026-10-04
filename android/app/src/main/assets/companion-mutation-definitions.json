@@ -268,7 +268,7 @@
     "appDataClearSettingRecords": "DELETE FROM setting_records",
     "appDataClearNodes": "DELETE FROM nodes",
     "appDataClearWorkspaceMeta": "DELETE FROM workspace_meta",
-    "syncStateUpsert": "INSERT OR REPLACE INTO sync_object_state (object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    "syncStateUpsert": "INSERT INTO sync_object_state (object_type, object_id, state_seq, current_version_id, content_hash, base_content_hash, last_modified_by_host_name, updated_at, deleted_at, sync_dirty) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(object_type, object_id) DO UPDATE SET state_seq = excluded.state_seq, current_version_id = excluded.current_version_id, content_hash = excluded.content_hash, base_content_hash = excluded.base_content_hash, last_modified_by_host_name = excluded.last_modified_by_host_name, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at, sync_dirty = excluded.sync_dirty"
   },
   "syncApplyMutations": {
     "groupKeys": {

@@ -17,6 +17,7 @@ import { learningNodeIds, loadNodePreludeStateRows, mergeStateRows } from './syn
 
 interface RawSyncStatePackRow extends DatabaseRow {
   content_hash: string;
+  current_version_id: string | null;
   deleted_at: string | null;
   last_modified_by_host_name: string;
   object_id: string;
@@ -79,7 +80,7 @@ function placeholders(values: unknown[]) {
   return values.map(() => '?').join(', ');
 }
 
-const SYNC_PACK_PRESENT_STATE_PREDICATE = `
+export const SYNC_PACK_PRESENT_STATE_PREDICATE = `
      (object_type <> 'node' OR object_id NOT IN ('special-inbox', 'special-virtual-root'))
      AND (object_type <> 'node' OR deleted_at IS NOT NULL OR EXISTS (
        SELECT 1 FROM nodes WHERE nodes.id = sync_object_state.object_id
@@ -94,7 +95,8 @@ const SYNC_PACK_PRESENT_STATE_PREDICATE = `
 
 function listChangedStateRows(driver: DatabaseDriver, fromStateSeq: number, toStateSeq: number) {
   return driver.queryAll<RawSyncStatePackRow>(
-    `SELECT object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
+    `SELECT object_type, object_id, state_seq, current_version_id, content_hash,
+       last_modified_by_host_name, updated_at, deleted_at
      FROM sync_object_state
      WHERE state_seq > ? AND state_seq <= ? AND ${SYNC_PACK_PRESENT_STATE_PREDICATE}
      ORDER BY state_seq ASC`,
@@ -172,6 +174,13 @@ export function loadPackRows(
   stagedReviewNodeIds: readonly string[] = []
 ) {
   const listedStateRows = listChangedStateRows(driver, fromStateSeq, toStateSeq).filter(isSyncStatePackRow);
+  return loadPackRowsForStateRows(driver, listedStateRows, toStateSeq, stagedReviewNodeIds);
+}
+
+export function loadPackRowsForStateRows(
+  driver: DatabaseDriver, listedStateRows: SyncStatePackRow[], consumedStateSeq: number,
+  stagedReviewNodeIds: readonly string[] = []
+) {
   const changedStateRows = retainBackedStateRows(listedStateRows, loadPayloadObjects(driver, listedStateRows));
   const changedNodeIds = idsForObjectTable(changedStateRows, 'nodes');
   const nodePreludeStateRows = mergeStateRows(changedStateRows, loadNodePreludeStateRows({
@@ -201,7 +210,7 @@ export function loadPackRows(
     externalDocumentIds
   );
   return {
-    consumedStateSeq: toStateSeq,
+    consumedStateSeq,
     contentBlobs: queryRowsByIds<ContentBlobPackRow>(driver,
       `SELECT hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes,
          original_sha256, stored_sha256, availability, source_host_name, created_at, cached_at, last_verified_at

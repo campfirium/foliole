@@ -52,7 +52,8 @@ it('rekeys direct-child membership and publishes the changed parent sequence', a
     expect.stringContaining('INSERT INTO parent_child_order'),
     ['parent', '["highlight-1","highlight-1~canonical","other"]', expect.any(String)]
   ]);
-  expect(port.runs.some(([sql, params]) => sql.includes('INSERT OR REPLACE INTO sync_object_state')
+  expect(port.runs.some(([sql, params]) => sql.includes('INSERT INTO sync_object_state')
+    && sql.includes('ON CONFLICT(object_type, object_id)')
     && params[0] === 'parent_child_order' && params[1] === 'parent')).toBe(true);
 });
 

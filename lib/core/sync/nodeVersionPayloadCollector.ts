@@ -4,13 +4,14 @@ import { collectTextBodyBlobCandidatesWithPort } from '../database/textBodyBlobC
 import type { DbPort } from './dbPort.js';
 import { planNodeVersionChain, type ChainEdge, type ChainVersion } from './nodeVersionChainPlan.js';
 import { CHAIN_EDGES_SQL, CHAIN_HEAD_SQL, CHAIN_VERSIONS_SQL, chainMutationStatements, chainReferencesQuery } from './nodeVersionChainSql.js';
+import { RETIRE_RESOLVED_NODE_POSITIONS_SQL } from './nodeVersionRetiredPositions.js';
 
 export interface NodeVersionCollectionResult {
   released: number;
   skipped: string | null;
 }
 
-/** Version identities, bodies and obsolete edges leave the chain together. */
+/** Collect replaceable bodies; version identities and original parent edges remain intact. */
 export async function collectNodeVersionPayloads(port: DbPort, nodeId: string, limit = 32,
   retireLegacyHistory = false): Promise<NodeVersionCollectionResult> {
   return port.transaction(async (tx) => {
@@ -19,12 +20,13 @@ export async function collectNodeVersionPayloads(port: DbPort, nodeId: string, l
       CHAIN_HEAD_SQL, [nodeId]
     );
     if (!node?.current_version_id || node.sync_dirty !== 0) return { released: 0, skipped: 'unversioned_or_dirty' };
+    await tx.run(RETIRE_RESOLVED_NODE_POSITIONS_SQL, [nodeId]);
     const references = chainReferencesQuery(nodeId, retireLegacyHistory);
     const refs = await tx.query<{ version_id: string | null; frozen: number }>(references.sql, references.params);
     const keep = new Set([node.current_version_id, ...refs.flatMap((row) => row.version_id ? [row.version_id] : [])]);
     const frozen = new Set(refs.filter((row) => row.frozen && row.version_id).map((row) => row.version_id!));
     const plan = planNodeVersionChain(await tx.query<ChainVersion>(CHAIN_VERSIONS_SQL, [nodeId]),
-      await tx.query<ChainEdge>(CHAIN_EDGES_SQL, [nodeId]), keep, frozen, limit, retireLegacyHistory);
+      await tx.query<ChainEdge>(CHAIN_EDGES_SQL, [nodeId]), keep, frozen, limit, new Set([node.current_version_id]));
     const releasedBodies: ReleasedVersionBody[] = [];
     for (const id of plan.removed ?? []) {
       releasedBodies.push(...await tx.query<ReleasedVersionBody>(RELEASED_VERSION_BODY_SQL, [id]));

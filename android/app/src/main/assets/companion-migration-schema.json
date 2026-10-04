@@ -516,6 +516,33 @@
         }
       ],
       "beforeVersion": 61
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add sync identity index state.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 62
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add node member position declarations.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 65
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add independent identity fact staging.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 66
     }
   ],
   "planKeys": {

@@ -96,7 +96,7 @@ it('rolls bytes and availability back when the caller fails after materializing'
   expect(bodyState(db)).toEqual(before);
 });
 
-it('does not return over-budget bodies to JavaScript', async () => {
+it('materializes large original bodies in SQLite without returning them whole to JavaScript', async () => {
   const db = database();
   const { hash } = seedCurrentBody(db, 'x'.repeat(2 * 1024 * 1024 + 1));
   const port = createBetterSqliteDbPort(db);
@@ -107,7 +107,8 @@ it('does not return over-budget bodies to JavaScript', async () => {
     return rows;
   };
   await port.transaction((tx) => materializeCurrentVersionBodyBlobs(tx, { hashes: [hash] }));
-  expect(db.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
+  expect(db.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(1);
+  expect(db.prepare('SELECT length(data) FROM content_blob_data').pluck().get()).toBe(2 * 1024 * 1024 + 1);
 });
 
 it('materializes the production split-body version whose snapshot contains an empty projection', async () => {

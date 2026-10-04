@@ -87,6 +87,10 @@ final class FolioleCompanionSyncPackDatabaseValidator {
             if (cursor.moveToNext()) throw invalid("duplicate_sync_pack_inner_manifest");
         }
         JSONObject inner = new JSONObject(value);
+        if (outer.optInt("format_version", -1) == 21) {
+            FolioleCompanionIdentityPackValidator.assertInnerMatches(inner, outer);
+            return;
+        }
         if (!outer.getString("pack_id").equals(inner.optString("pack_id")) ||
             !outer.getString("source_epoch").equals(inner.optString("source_epoch")) ||
             outer.getInt("frontier_state_seq") != inner.optInt("frontier_state_seq", -1) ||
@@ -97,7 +101,7 @@ final class FolioleCompanionSyncPackDatabaseValidator {
         }
     }
 
-    private static Map<String, Integer> tableCounts(JSONArray tables) throws Exception {
+    static Map<String, Integer> tableCounts(JSONArray tables) throws Exception {
         Map<String, Integer> result = new LinkedHashMap<>();
         for (int index = 0; index < tables.length(); index += 1) {
             JSONObject table = tables.getJSONObject(index);

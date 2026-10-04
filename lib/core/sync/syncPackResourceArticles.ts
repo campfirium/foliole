@@ -2,6 +2,26 @@ import type { DbPort } from './dbPort.js';
 
 export const SYNC_PACK_RESOURCE_ARTICLE_BATCH = 64;
 
+/** Schedule current articles even when no object state changed in this identity round. */
+export async function enqueueSyncIdentityResourceScanPage(db: DbPort, args: {
+  groupId: string; peerId: string; afterId: string;
+}) {
+  return db.transaction(async (tx) => {
+    const rows = await tx.query<{ object_id: string }>(`SELECT state.object_id
+      FROM sync_object_state state JOIN nodes node ON node.id = state.object_id
+      WHERE state.object_type = 'node' AND state.deleted_at IS NULL
+        AND state.object_id NOT IN ('special-inbox', 'special-virtual-root')
+        AND state.object_id > ? ORDER BY state.object_id LIMIT ?`,
+    [args.afterId, SYNC_PACK_RESOURCE_ARTICLE_BATCH]);
+    if (!rows.length) return null;
+    await tx.run(`INSERT OR IGNORE INTO sync_pack_resource_articles
+      (group_id, peer_id, article_id)
+      SELECT ?, ?, value FROM json_each(?)`,
+    [args.groupId, args.peerId, JSON.stringify(rows.map((row) => row.object_id))]);
+    return rows.at(-1)!.object_id;
+  });
+}
+
 export async function enqueueSyncPackResourceArticles(db: DbPort, args: {
   groupId: string; incomingAlias: string; peerId: string;
 }) {

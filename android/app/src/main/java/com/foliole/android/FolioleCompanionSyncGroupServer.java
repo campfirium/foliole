@@ -74,6 +74,15 @@ final class FolioleCompanionSyncGroupServer {
         else if (request.method.equals("POST") && path.equals("/sync-group/join-requests")) createJoin(request, output);
         else if (request.method.equals("POST") && path.equals("/sync-group/join-acceptance")) collectAcceptance(request, output);
         else if (request.method.equals("POST") && path.equals("/sync-group/member-state")) memberState(request, output);
+        else if (request.method.equals("GET") && FolioleCompanionSyncIdentityRoutes.supports(path))
+            FolioleCompanionSyncIdentityRoutes.handle(context, config, dataBridge, snapshots,
+                request, output, authenticate(request));
+        else if (request.method.equals("POST") && path.equals("/companion/sync-identity-pack"))
+            FolioleCompanionSyncIdentityRoutes.pack(context, config, dataBridge, snapshots,
+                request, output, authenticate(request), new JSONObject(decryptRequest(request)));
+        else if (request.method.equals("POST") && path.equals("/companion/sync-identity-push"))
+            FolioleCompanionSyncIdentityPushRoute.handle(context, config, dataBridge,
+                request, output, authenticate(request), new JSONObject(decryptRequest(request)));
         else if (request.method.equals("GET") && path.equals("/companion/sync-pack"))
             FolioleCompanionSyncPackRoutes.pack(context, config, dataBridge, snapshots,
                 request, output, authenticate(request));

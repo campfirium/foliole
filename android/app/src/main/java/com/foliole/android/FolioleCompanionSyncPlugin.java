@@ -8,12 +8,13 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.io.File;
 
 @CapacitorPlugin(name = "FolioleCompanionSync")
 public class FolioleCompanionSyncPlugin extends Plugin {
     private FolioleCompanionNsdDiscoverySession discoverySession;
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
+    private final FolioleCompanionSyncIdentityClientView identityClientView =
+        new FolioleCompanionSyncIdentityClientView();
     private boolean lifecycleActive = true;
 
     @Override public void load() {
@@ -51,17 +52,24 @@ public class FolioleCompanionSyncPlugin extends Plugin {
 
     @PluginMethod public void loadSyncGroupDeviceIdentity(PluginCall call) {
         try {
-            String databasePath = call.getString("database_path", "");
-            if (databasePath.isEmpty()) throw new IllegalArgumentException("database_path_required");
-            call.resolve(new JSObject()
-                .put("canonical_library_path", FolioleCompanionDeviceAnchorStore.canonicalLibraryPath(new File(databasePath)))
-                .put("device_anchor", FolioleCompanionDeviceAnchorStore.loadOrCreate(getContext()))
-                .put("device_name", android.os.Build.MODEL)
-                .put("path_flavor", "posix")
-                .put("platform", "android-capacitor"));
+            call.resolve(identityClientView.deviceIdentity(getContext(), call.getString("database_path", "")));
         } catch (Exception error) {
             call.reject("Failed to load Device identity.", error);
         }
+    }
+
+    @PluginMethod public void createIdentitySourceView(PluginCall call) {
+        async(call, "Failed to create sync source view.", () -> identityClientView.create(getContext()));
+    }
+
+    @PluginMethod public void buildIdentitySourcePack(PluginCall call) {
+        async(call, "Failed to build sync identity pack.", () -> identityClientView.build(
+            getContext(), call.getString("snapshot_path", ""), call.getObject("page")));
+    }
+
+    @PluginMethod public void closeIdentitySourceView(PluginCall call) {
+        async(call, "Failed to close sync source view.", () ->
+            identityClientView.close(call.getString("snapshot_path", "")));
     }
 
     @PluginMethod public void startDiscoverySession(PluginCall call) {
@@ -231,6 +239,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         lifecycleActive = false;
         fileExecutor.execute(() -> {
             FolioleCompanionSyncGroupProvider.pause(this);
+            identityClientView.closeAll();
             FolioleCompanionSyncGroupDataBridge.uninstall(this);
         });
         super.handleOnDestroy();

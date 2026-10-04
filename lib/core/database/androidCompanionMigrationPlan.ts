@@ -165,6 +165,9 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(58, 'installSchema', 'Failed to add independent node versions.'),
   step(60, 'installSchema', 'Failed to add daily Topic counts.'),
   step(61, 'installSchema', 'Failed to add current sync confirmation state.'),
+  step(62, 'installSchema', 'Failed to add sync identity index state.'),
+  step(65, 'installSchema', 'Failed to add node member position declarations.'),
+  step(66, 'installSchema', 'Failed to add independent identity fact staging.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

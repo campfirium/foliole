@@ -13,7 +13,8 @@ import { openContinuationReceiver, prepareArticleContinuation, prepareHundredRes
   receiverAttachmentPath, writeArticleContinuationEvidence } from './desktopResourceArticleContinuation.testSupport.js';
 import { markDesktopSyncGroupMemberStateReady,
   revokeDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
-import { drainDesktopSyncGroupResourceArticles } from './desktopSyncGroupResourceArticleDrain.js';
+import { drainDesktopSyncGroupResourceArticles,
+  drainDesktopSyncIdentityResources } from './desktopSyncGroupResourceArticleDrain.js';
 import { hashResourceFile } from './resourceAvailability.js';
 
 interface ReceiverScope { connection: DatabaseConnection; assetsDir: string; }
@@ -60,6 +61,61 @@ vi.mock('./workgroupKeyStore.js', async (original) => ({
 }));
 fixture.routing = new AsyncLocalStorage<ReceiverScope>();
 setupSyncPackBuilderTestLifecycle();
+
+it('fetches missing attachment bytes with identical article state and no incoming pack', async () => {
+  const data = await prepareArticleContinuation(fixture.ids);
+  const receiver = data.receiver;
+  receiver.sqlite.exec('DELETE FROM sync_pack_resource_articles');
+  await fs.writeFile(data.second.sourcePath, data.secondBytes);
+  publishAttachmentLibraryPathSnapshot({ assetsDir: data.sourceAssets, libraryScope: 'source' });
+  markDesktopSyncGroupMemberStateReady(fixture.ids.receiver);
+  const http = await startAuthenticatedSyncHttp({ sourceDeviceId: fixture.ids.source,
+    receiverDeviceId: fixture.ids.receiver });
+  const peer = { endpoint_url: http.origin, group_id: 'group', local_device_id: fixture.ids.receiver,
+    peer_device_id: fixture.ids.source, peer_device_name: 'Source', peer_platform: 'mac' };
+  try {
+    expect(readArticleContinuationState(receiver).pending).toBe(0);
+    await fixture.routing!.run({ connection: receiver, assetsDir: data.receiverAssets },
+      () => drainDesktopSyncIdentityResources(peer));
+    expect(readArticleContinuationState(receiver).pending).toBe(0);
+    expect(await hashResourceFile(receiverAttachmentPath(data.receiverAssets, data.first.hash)))
+      .toBe(data.first.hash);
+    expect(await hashResourceFile(receiverAttachmentPath(data.receiverAssets, data.second.hash)))
+      .toBe(data.second.hash);
+    expect(receiver.sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'article'").pluck().get())
+      .toBe('article-head');
+  } finally {
+    receiver.sqlite.close();
+    await http.close();
+    revokeDesktopSyncGroupMemberStateReadiness(fixture.ids.receiver);
+  }
+}, 60_000);
+
+it('repairs present but corrupt body bytes with identical article state', async () => {
+  const data = await prepareArticleContinuation(fixture.ids);
+  const receiver = data.receiver;
+  await fs.writeFile(data.second.sourcePath, data.secondBytes);
+  openDatabaseConnection().driver.execute('INSERT INTO content_blob_data VALUES (?, ?)',
+    [data.hash, data.body]);
+  receiver.sqlite.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run(data.hash, Buffer.from('corrupt'));
+  receiver.sqlite.exec('DELETE FROM sync_pack_resource_articles');
+  publishAttachmentLibraryPathSnapshot({ assetsDir: data.sourceAssets, libraryScope: 'source' });
+  markDesktopSyncGroupMemberStateReady(fixture.ids.receiver);
+  const http = await startAuthenticatedSyncHttp({ sourceDeviceId: fixture.ids.source,
+    receiverDeviceId: fixture.ids.receiver });
+  const peer = { endpoint_url: http.origin, group_id: 'group', local_device_id: fixture.ids.receiver,
+    peer_device_id: fixture.ids.source, peer_device_name: 'Source', peer_platform: 'mac' };
+  try {
+    await fixture.routing!.run({ connection: receiver, assetsDir: data.receiverAssets },
+      () => drainDesktopSyncIdentityResources(peer));
+    expect(receiver.sqlite.prepare('SELECT data FROM content_blob_data WHERE hash = ?').pluck().get(data.hash))
+      .toEqual(data.body);
+  } finally {
+    receiver.sqlite.close();
+    await http.close();
+    revokeDesktopSyncGroupMemberStateReadiness(fixture.ids.receiver);
+  }
+}, 60_000);
 
 it('retains applied article demand through missing body, missing image, and a cold receiver restart over real HTTP', async () => {
   const data = await prepareArticleContinuation(fixture.ids);

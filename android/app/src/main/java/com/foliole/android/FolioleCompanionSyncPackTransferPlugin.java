@@ -6,8 +6,6 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
-import java.io.File;
-
 @CapacitorPlugin(name = "FolioleCompanionSyncPackTransfer")
 public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
 
@@ -32,19 +30,28 @@ public class FolioleCompanionSyncPackTransferPlugin extends Plugin {
                     call.reject("Sync pack peer identities are required.");
                     return;
                 }
-                File packFile = FolioleCompanionSyncPackTransfer.downloadToCache(
+                FolioleCompanionSyncPackTransfer.ValidatedPack pack =
+                    FolioleCompanionSyncPackTransfer.downloadWithManifestToCache(
                     getContext(),
                     url.trim(),
                     call.getData().optJSONObject(
                         FolioleCompanionHostBridgeContractDefinitions.syncPackTransferHeadersRequestKey(getContext())
                     ),
                     expectedPeerId.trim(),
-                    expectedSourcePeerId.trim()
+                    expectedSourcePeerId.trim(),
+                    call.getString(FolioleCompanionHostBridgeContractDefinitions
+                        .syncPackTransferMethodRequestKey(getContext()), "GET"),
+                    call.getString(FolioleCompanionHostBridgeContractDefinitions
+                        .syncPackTransferBodyRequestKey(getContext()))
                 );
                 JSObject result = new JSObject();
                 result.put(
                     FolioleCompanionHostBridgeContractDefinitions.syncPackTransferPackPathResponseKey(getContext()),
-                    packFile.getAbsolutePath()
+                    pack.file.getAbsolutePath()
+                );
+                result.put(
+                    FolioleCompanionHostBridgeContractDefinitions.syncPackTransferManifestResponseKey(getContext()),
+                    pack.manifest
                 );
                 call.resolve(result);
             } catch (FolioleCompanionDesktopHttpClient.SyncPackSourceViewUnavailable exception) {

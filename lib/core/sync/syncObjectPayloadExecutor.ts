@@ -4,6 +4,7 @@ import {
 } from '../../platform/systemEntryDisplayNameContract.js';
 
 import type { DbPort } from './dbPort.js';
+import { applyNodeMemberPosition } from './nodeVersionMemberPositionApply.js';
 import { applyExternalFolderObject } from './syncObjectExternalFolderPayloadExecutor.js';
 import { applyImportSourceObject } from './syncObjectImportSourcePayloadExecutor.js';
 import {
@@ -16,6 +17,7 @@ import { applyParentChildOrderObject } from './syncObjectParentChildOrderPayload
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
 import { applyWatchedFolderObject } from './syncObjectWatchedFolderPayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
+import { applyParentOrderFactObject } from './syncParentOrderFactApply.js';
 import { applyTopicDailyCount } from './syncTopicDailyCount.js';
 
 export async function applySyncObjectPayloadWithDbPort(
@@ -36,6 +38,10 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyNodeOpenStateObject(port, record);
     case 'parent_child_order':
       return applyParentChildOrderObject(port, record);
+    case 'node_position':
+      return applyNodeMemberPosition(port, record);
+    case 'order_version':
+      return applyParentOrderFactObject(port, record);
     case 'node_reading':
       return applyNodeReadingObject(port, record, options);
     case 'node_review':

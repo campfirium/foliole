@@ -21,9 +21,17 @@ final class FolioleCompanionSyncGroupSnapshot {
     }
 
     <T> T refresh(String peerDeviceId, Work<T> work) throws Exception {
+        return refresh(peerDeviceId, false, work);
+    }
+
+    <T> T refreshIdentity(String peerDeviceId, Work<T> work) throws Exception {
+        return refresh(peerDeviceId, true, work);
+    }
+
+    private <T> T refresh(String peerDeviceId, boolean identityIndex, Work<T> work) throws Exception {
         synchronized (lock(peerDeviceId)) {
             ensureOpen();
-            File next = create();
+            File next = create(identityIndex);
             try {
                 T result = work.run(next.getAbsolutePath());
                 File previous = snapshots.put(peerDeviceId, next);
@@ -63,16 +71,22 @@ final class FolioleCompanionSyncGroupSnapshot {
         locks.clear();
     }
 
-    private File create() throws Exception {
+    private File create(boolean identityIndex) throws Exception {
         File snapshot = File.createTempFile("foliole-provider-source-", ".db", context.getCacheDir());
         if (!snapshot.delete()) throw new IllegalStateException("sync_group_snapshot_prepare_failed");
-        JSONObject result = bridge.request(
-            "create_snapshot", new JSONObject().put("target_path", snapshot.getAbsolutePath())
-        );
-        if (!snapshot.getAbsolutePath().equals(result.optString("snapshot_path")) || !snapshot.isFile()) {
-            throw new IllegalStateException("sync_group_snapshot_missing");
+        try {
+            JSONObject result = bridge.request(
+                "create_snapshot", new JSONObject().put("target_path", snapshot.getAbsolutePath())
+                    .put("identity_index", identityIndex)
+            );
+            if (!snapshot.getAbsolutePath().equals(result.optString("snapshot_path")) || !snapshot.isFile()) {
+                throw new IllegalStateException("sync_group_snapshot_missing");
+            }
+            return snapshot;
+        } catch (Exception failure) {
+            delete(snapshot);
+            throw failure;
         }
-        return snapshot;
     }
 
     private Object lock(String peerDeviceId) {

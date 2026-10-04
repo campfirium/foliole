@@ -1,6 +1,7 @@
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
+import { isWorkgroupConnectionReset } from './workgroupConnectionReset.js';
 import {
   decryptDesktopWorkgroupResponse,
   encryptDesktopWorkgroupRequest,
@@ -10,6 +11,20 @@ import {
 export { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 
 export async function fetchDesktopWorkgroupJson<T>(args: {
+  endpointUrl: string;
+  groupId: string;
+  localDeviceId: string;
+  pathWithQuery: string;
+  secret: string;
+}): Promise<T> {
+  try { return await fetchDesktopWorkgroupJsonOnce<T>(args); }
+  catch (error) {
+    if (!isWorkgroupConnectionReset(error)) throw error;
+    return fetchDesktopWorkgroupJsonOnce<T>(args);
+  }
+}
+
+async function fetchDesktopWorkgroupJsonOnce<T>(args: {
   endpointUrl: string;
   groupId: string;
   localDeviceId: string;

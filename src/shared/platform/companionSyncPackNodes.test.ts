@@ -65,7 +65,8 @@ it('attaches a sync pack before applying pack nodes through the shared core', as
   expect(connection.close).not.toHaveBeenCalled();
   expect(manager.closeConnection).toHaveBeenCalledWith('foliole-companion', false);
   expect(connection.run).toHaveBeenCalledWith(
-    expect.stringContaining('INSERT OR REPLACE INTO sync_object_state'), expect.any(Array), false
+    expect.stringMatching(/INSERT INTO sync_object_state[\s\S]*ON CONFLICT\(object_type, object_id\)/),
+    expect.any(Array), false
   );
 });
 

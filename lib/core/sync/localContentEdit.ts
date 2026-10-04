@@ -3,6 +3,7 @@ import { projectNodeResourceLinks } from '../database/nodeResourceReferences.js'
 
 import type { DbPort } from './dbPort.js';
 import { retainSubmittedLocalEdit } from './nodeVersionLocalEditHold.js';
+import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { resolveTopicConflict } from './syncNodeConvergence.js';
@@ -44,6 +45,7 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     else await applyBranch(tx, stored ?? record, options);
     await tx.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
     await retainSubmittedLocalEdit(tx, input.nodeId, input.baseVersionId, input.versionId);
+    await publishLocalNodePosition(tx, input.nodeId);
     await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER);
     const applied = await loadCurrentSyncNodeRecord(tx, input.nodeId, false);
     if (!applied) throw new Error('content_edit_result_unavailable');

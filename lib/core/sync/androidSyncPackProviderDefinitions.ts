@@ -2,6 +2,11 @@ import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../platform/syncProtocolCon
 
 import { COMPLETE_MEMBER_DATA_PLANE_CONTRACT } from './completeMemberDataPlaneContract.js';
 import { nodeVersionDependenciesCopySql } from './nodeVersionDependencies.js';
+import { SYNC_IDENTITY_NATIVE_FACT_HEAD_COPY_SQL, SYNC_IDENTITY_NATIVE_FACT_PLANS,
+  SYNC_IDENTITY_NATIVE_FACT_VALIDATE_SQL } from './syncIdentityNativeFactPackSql.js';
+import { SYNC_IDENTITY_NATIVE_HEAD_COPY_SQL, SYNC_IDENTITY_NATIVE_PRELUDE_COPY_SQL,
+  SYNC_IDENTITY_NATIVE_REVIEW_COPY_SQL, SYNC_IDENTITY_NATIVE_MISSING_ORIGINAL_HEAD_SQL,
+  SYNC_IDENTITY_NATIVE_STATE_COPY_SQL, SYNC_IDENTITY_NATIVE_THIN_PRELUDE_SQL } from './syncIdentityNativePackSql.js';
 import {
   SYNC_PACK_DATABASE_ENTRY,
   SYNC_PACK_FORMAT,
@@ -30,6 +35,12 @@ const versionPreflightSql = `WITH RECURSIVE selected(id) AS (
     length(CAST(v.snapshot_json AS BLOB)) + 512), 0) AS bytes
   FROM node_sync_versions v WHERE v.object_id IN (SELECT id FROM ancestry UNION SELECT id FROM selected)`;
 const payloadPlans = [
+  { objectType: 'node_position', sql: `SELECT fact_id __object_id,
+    adopted_version_id, device_identity_key, group_id, library_epoch, object_id,
+    pending_version_ids_json, proof_revision, updated_at FROM source.node_version_member_positions` },
+  { objectType: 'order_version', sql: `SELECT version_id __object_id, child_ids_json,
+    created_at, kind, parent_id, parent_version_ids_json, version_id
+    FROM source.parent_order_versions` },
   { objectType: 'topic_daily_count', sql: `SELECT id __object_id, day_key, node_id
     FROM source.topic_daily_count_entries` },
   { objectType: 'external_folder', sql: `SELECT f.id __object_id, f.id, f.folder_path, f.attachment_mode,
@@ -73,6 +84,15 @@ const payloadPlans = [
 
 export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   compression: 'zlib',
+  identityThinPreludeSql: SYNC_IDENTITY_NATIVE_THIN_PRELUDE_SQL,
+  identityMissingOriginalHeadSql: SYNC_IDENTITY_NATIVE_MISSING_ORIGINAL_HEAD_SQL,
+  identityFactPlans: SYNC_IDENTITY_NATIVE_FACT_PLANS,
+  identityFactValidateSql: SYNC_IDENTITY_NATIVE_FACT_VALIDATE_SQL,
+  identityFactHeadCopySql: SYNC_IDENTITY_NATIVE_FACT_HEAD_COPY_SQL,
+  identityStateCopySql: SYNC_IDENTITY_NATIVE_STATE_COPY_SQL,
+  identityPreludeCopySql: SYNC_IDENTITY_NATIVE_PRELUDE_COPY_SQL,
+  identityReviewCopySql: SYNC_IDENTITY_NATIVE_REVIEW_COPY_SQL,
+  identityHeadCopySql: SYNC_IDENTITY_NATIVE_HEAD_COPY_SQL,
   copyStatements: [
     `INSERT INTO sync_groups SELECT group_id, display_name, created_at
      FROM source.sync_groups WHERE group_id IN (SELECT group_id FROM source.sync_group_local_state WHERE singleton_id = 1)`,
@@ -88,7 +108,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
           WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END
      FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN
        ('external_document','external_folder','import_source','node','node_open_state','node_reading',
-        'node_review','node_text_alternative','parent_child_order','pdf_page_text','setting','view_state','watched_folder','topic_daily_count')
+        'node_review','node_text_alternative','parent_child_order','order_version','node_position','pdf_page_text','setting','view_state','watched_folder','topic_daily_count')
        AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        AND (state.object_type NOT IN ('node_reading','node_review') OR state.deleted_at IS NOT NULL OR EXISTS
@@ -144,6 +164,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
   format: SYNC_PACK_FORMAT,
   formatVersion: SYNC_PACK_FORMAT_VERSION,
   payloadCopyIndex: 4,
+  reviewCopyIndex: 11,
   payloadPlans,
   preparedMemberDataPlane: COMPLETE_MEMBER_DATA_PLANE_CONTRACT,
   packSchema: PACK_SCHEMA,

@@ -53,6 +53,13 @@ export async function startAuthenticatedSyncHttp({ archiveDir, sourceDeviceId = 
       .toString('utf8')) as Record<string, unknown>,
     postJson: async (pathWithQuery: string, body: unknown) => JSON.parse((await request(
       'POST', pathWithQuery, JSON.stringify(body))).toString('utf8')) as Record<string, unknown>,
+    postArchive: async (pathWithQuery: string, body: unknown) => {
+      const filePath = archiveDir
+        ? `${archiveDir}/http-archive-${++archiveIndex}.syncpack`
+        : resolveSyncPackPath(`http-archive-${++archiveIndex}.syncpack`);
+      await fs.writeFile(filePath, await request('POST', pathWithQuery, JSON.stringify(body)));
+      return { status: 'ready' as const, filePath, cleanup: () => fs.rm(filePath) };
+    },
     archive: async (url: URL) => {
       const filePath = archiveDir
         ? `${archiveDir}/http-archive-${++archiveIndex}.syncpack`

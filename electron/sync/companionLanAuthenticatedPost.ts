@@ -10,6 +10,10 @@ import {
   CONTENT_BLOB_BATCH_PATH,
   loadCompanionContentBlobBatch
 } from './companionLanContentBlobs.js';
+import { handleCompanionIdentityPackPost,
+  SYNC_IDENTITY_PACK_PATH } from './companionLanIdentityPackPost.js';
+import { handleCompanionIdentityPushPost,
+  SYNC_IDENTITY_PUSH_PATH, SYNC_IDENTITY_PUSH_REQUEST_LIMIT } from './companionLanIdentityPushPost.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { writeWorkgroupBinary } from './companionLanResponses.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
@@ -44,6 +48,8 @@ function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
   if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
   if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
   if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
+  if (parsedRequestUrl.pathname === SYNC_IDENTITY_PACK_PATH) return 'identity-pack';
+  if (parsedRequestUrl.pathname === SYNC_IDENTITY_PUSH_PATH) return 'identity-push';
   if (parsedRequestUrl.pathname === VERSION_PACK_RECEIPT_PATH) return 'version-pack-receipt';
   if (parsedRequestUrl.pathname === SYNC_GROUP_MEMBER_STATE_PATH) return 'member-state';
   if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
@@ -56,7 +62,8 @@ async function readAuthenticatedPostBody(
   writeJson: WriteJson
 ) {
   try {
-    return await readCompanionRequestBody(request);
+    return await readCompanionRequestBody(request,
+      request.url?.startsWith(SYNC_IDENTITY_PUSH_PATH) ? SYNC_IDENTITY_PUSH_REQUEST_LIMIT : undefined);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'invalid_request_body';
     await runWithDatabaseConnectionOwner(() => writeJson(
@@ -76,7 +83,7 @@ async function handleAuthenticatedRoute(args: {
   writeJson: WriteJson;
 }) {
   const { auth, bodyText, request, response, route, writeJson } = args;
-  if (route === 'version-pack-receipt') return handleVersionPackReceipt(args);
+  if (['identity-pack', 'identity-push', 'version-pack-receipt'].includes(route)) return handlePackRoute(args);
   if (route === 'readwise-group-setup') {
     await writeReadwiseGroupSetupResponse(args);
   } else if (route === 'readwise-owner-stop') {
@@ -126,6 +133,14 @@ async function handleAuthenticatedRoute(args: {
       }, 'POST, OPTIONS');
     }
   }
+}
+
+function handlePackRoute(args: Parameters<typeof handleAuthenticatedRoute>[0]) {
+  if (args.route === 'identity-pack') return handleCompanionIdentityPackPost(
+    args.request, args.response, args.bodyText, args.auth.device_id);
+  if (args.route === 'identity-push') return handleCompanionIdentityPushPost(
+    args.request, args.response, args.bodyText, args.auth);
+  return handleVersionPackReceipt(args);
 }
 
 async function handleVersionPackReceipt(args: {
