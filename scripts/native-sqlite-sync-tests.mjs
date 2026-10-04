@@ -28,5 +28,6 @@ export const controlledSyncSqliteTests = [
   'scripts/sync/identity-simulator/performancePreparation.test.mjs',
   'src/shared/platform/companion/sync/pack-apply/companionSyncIdentityRestoreApply.test.ts',
   'src/shared/platform/companion/sync/syncGroupIdentityCandidateStore.test.ts',
-  'src/shared/platform/companionContentBlobSync.sqlite.test.ts'
+  'src/shared/platform/companionContentBlobSync.sqlite.test.ts',
+  'src/shared/platform/companionDesktopSyncObjects.allStreams.test.ts'
 ];

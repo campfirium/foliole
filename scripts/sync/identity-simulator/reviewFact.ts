@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import { expect } from 'vitest';
 
 import { runDesktopSyncIdentityRound } from '../../../electron/sync/desktopSyncIdentityRound.js';
+import { syncCompanionObjectsFromDesktop } from '../../../src/shared/platform/companionDesktopSyncObjects.js';
 
 import { assertBody, assertHealthy, convergenceState } from './assertions.js';
 import { edit, resetOperations } from './operations.js';
@@ -15,7 +16,7 @@ function reviewRows(peer: SimulatorPeer) {
 }
 
 /** Equal node heads must not hide a missing retained review operation. */
-export async function runIdentityMissingReview(root: string) {
+export async function runIdentityMissingReview(root: string, companion = false) {
   process.env.FOLIOLE_SIM_SCENARIO = 'identity-missing-review';
   resetOperations();
   await fs.mkdir(root, { recursive: true });
@@ -23,9 +24,12 @@ export async function runIdentityMissingReview(root: string) {
   const [a, b] = peers as [SimulatorPeer, SimulatorPeer];
   pairPeers(peers);
   const endpoint: Endpoint = await serve(a);
+  const exchange = () => inPeer(b, () => companion
+    ? syncCompanionObjectsFromDesktop(endpoint.origin, { includeResources: false })
+    : runDesktopSyncIdentityRound(route(endpoint, b)));
   try {
     edit(a, 'reviewed content');
-    await inPeer(b, () => runDesktopSyncIdentityRound(route(endpoint, b)));
+    await exchange();
     a.sqlite.prepare(`INSERT INTO review_log (id, op_id, host_name, node_id, grade,
       scheduler_version, reviewed_at, due_before, stability_before, difficulty_before,
       due_after, stability_after, difficulty_after)
@@ -33,14 +37,15 @@ export async function runIdentityMissingReview(root: string) {
       'review-1', 'review-op-1', a.name, 'topic', 3, 'fsrs-v1',
       '2026-09-30T00:00:01.000Z', '2026-09-30T00:00:00.000Z', 1, 5,
       '2026-10-01T00:00:00.000Z', 2, 4);
-    await inPeer(b, () => runDesktopSyncIdentityRound(route(endpoint, b)));
+    await exchange();
     expect(reviewRows(b)).toEqual(reviewRows(a));
     const removed = b.sqlite.prepare('DELETE FROM review_log WHERE op_id = ?')
       .run('review-op-1');
     expect(removed.changes).toBe(1);
     expect(convergenceState(b)).toEqual(convergenceState(a));
-    const repaired = await inPeer(b, () => runDesktopSyncIdentityRound(route(endpoint, b)));
-    expect(repaired.verifiedCandidateCount).toBe(0);
+    const repaired = await exchange();
+    if (companion) expect(repaired).toMatchObject({ pushError: null });
+    else expect(repaired).toMatchObject({ verifiedCandidateCount: 0 });
     expect(reviewRows(b)).toEqual(reviewRows(a));
     reopenPeer(b);
     expect(reviewRows(b)).toEqual(reviewRows(a));

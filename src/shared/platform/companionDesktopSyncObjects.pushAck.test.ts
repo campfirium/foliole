@@ -129,9 +129,8 @@ describe('companion desktop sync push acknowledgements', () => {
         push_issue_count: 1
       }
     } as Awaited<ReturnType<typeof diagnosticsMock.loadLocalSyncDiagnostics>>);
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+    const { loadCompanionDesktopSyncSummary } = await import('./companionDesktopSyncSummary');
+    const result = await loadCompanionDesktopSyncSummary('http://10.0.2.2:38641/', 'identity-unchecked');
 
     expect(result.pushIssueCount).toBe(1);
   });
@@ -141,9 +140,9 @@ describe('companion desktop sync push acknowledgements', () => {
       ...createLocalNodeReadingChange(),
       object_type: 'attachment'
     }]);
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+    const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
 
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+    const result = await pushLocalDirtyObjects('http://10.0.2.2:38641/');
 
     expect(result.pushedObjectIds).toEqual([]);
     expect(fetch).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-push'), expect.any(Object));
@@ -162,9 +161,9 @@ describe('companion desktop sync accepted push acknowledgements', () => {
       createLocalViewStateChange()
     ]);
     syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+    const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
 
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+    const result = await pushLocalDirtyObjects('http://10.0.2.2:38641/');
 
     expect(fetch).toHaveBeenCalledWith('http://10.0.2.2:38641/companion/sync-push', expect.objectContaining({
       body: expect.stringContaining('"baseContentHash":"desktop-base"'),
@@ -194,9 +193,9 @@ describe('companion desktop sync accepted push acknowledgements', () => {
   it('pushes review_log after its node_review state is no longer dirty', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([]);
     syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+    const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
 
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+    const result = await pushLocalDirtyObjects('http://10.0.2.2:38641/');
 
     expect(result.pushedReviewOpIds).toEqual(['op-1']);
     expect(fetch).toHaveBeenCalledWith(
@@ -214,44 +213,7 @@ describe('companion desktop sync accepted push acknowledgements', () => {
 describe('companion desktop sync push acknowledgement cursors', () => {
   setupPushAckMocks();
 
-  it('reports pulled review confirmation without reviving the legacy push cursor', async () => {
-    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
-    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([createLocalReviewLog()]);
-    syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
-      applied_blob_count: 0,
-      applied_object_count: 1,
-      applied_review_op_ids: ['op-1'],
-      to_state_seq: 10
-    });
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-    expect(result.appliedReviewOpIds).toEqual(['op-1']);
-    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
-  });
-
-  it('does not advance the review log cursor past earlier unconfirmed ops', async () => {
-    syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
-    syncBridgeMock.loadCompanionSyncReviewLog.mockResolvedValue([
-      createLocalReviewLog({ op_id: 'op-1', reviewed_at: '2026-04-25T00:05:00.000Z' }),
-      createLocalReviewLog({ id: 'review-op-2', op_id: 'op-2', reviewed_at: '2026-04-25T00:06:00.000Z' })
-    ]);
-    syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({
-      applied_blob_count: 0,
-      applied_object_count: 1,
-      applied_review_op_ids: ['op-2'],
-      to_state_seq: 10
-    });
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-    expect(result.appliedReviewOpIds).toEqual(['op-2']);
-    expect(syncBridgeMock.saveCompanionSyncReviewLogPushCursor).not.toHaveBeenCalled();
-  });
-
-  it('surfaces push failures while still applying the structure pack', async () => {
+  it('surfaces push failures without claiming an accepted acknowledgement', async () => {
     syncBridgeMock.loadCompanionSyncStateChanges.mockResolvedValue([createLocalNodeReviewChange()]);
     vi.mocked(fetch).mockResolvedValueOnce({
       json: async () => ({}),
@@ -259,12 +221,12 @@ describe('companion desktop sync push acknowledgement cursors', () => {
       status: 500,
       text: async () => 'push rejected'
     } as Response);
-    const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+    const { pushLocalDirtyObjects } = await import('./companionDesktopSyncPush');
 
-    const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+    const result = await pushLocalDirtyObjects('http://10.0.2.2:38641/');
 
     expect(result.pushError).toBe('Desktop sync target returned 500 for /companion/sync-push.');
     expect(result.pushedObjectIds).toEqual([]);
-    expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalled();
+    expect(syncBridgeMock.saveCompanionSyncPushAcks).not.toHaveBeenCalled();
   });
 });
