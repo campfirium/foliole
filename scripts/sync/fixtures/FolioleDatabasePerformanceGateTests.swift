@@ -14,7 +14,8 @@ final class FolioleDatabasePerformanceGateTests: XCTestCase {
     }
 
     override func tearDown() {
-        harness.cleanup()
+        do { try harness.cleanup() }
+        catch { XCTFail("Performance fixture cleanup failed: \(error)") }
         harness = nil
         super.tearDown()
     }
@@ -38,6 +39,7 @@ final class FolioleDatabasePerformanceGateTests: XCTestCase {
                 for _ in 0..<32 { try harness.pluginRun("foliole_ios_perf_plugin_control", "INSERT INTO events (value) VALUES ('control')") }
             }
         }
+        try harness.cleanup()
         emit("control_write", baseline, candidate, cleanup: true)
     }
 
@@ -54,6 +56,7 @@ final class FolioleDatabasePerformanceGateTests: XCTestCase {
         let candidate = try FoliolePerformanceMeasure.run {
             XCTAssertEqual(try harness.pluginQuery("foliole_ios_perf_plugin_hydrate", "SELECT id, title FROM nodes ORDER BY id").count, 1293)
         }
+        try harness.cleanup()
         emit("hydrate_1293", baseline, candidate, cleanup: true)
     }
 
@@ -76,6 +79,7 @@ final class FolioleDatabasePerformanceGateTests: XCTestCase {
             }
             try harness.pluginRun("foliole_ios_perf_plugin_\(workload)", "DETACH DATABASE incoming")
         }
+        try harness.cleanup()
         emit(workload, baseline, candidate, cleanup: true)
     }
 
@@ -104,11 +108,12 @@ final class FolioleDatabasePerformanceGateTests: XCTestCase {
     private func emit(_ workload: String, _ baseline: FolioleMeasuredResult,
                       _ candidate: FolioleMeasuredResult, cleanup: Bool) {
         let result: [String: Any] = [
-            "gate_version": 1, "platform": "ios", "workload": workload,
+            "gate_version": 2, "platform": "ios", "workload": workload,
             "native_ms": baseline.elapsedMs, "candidate_ms": candidate.elapsedMs,
-            "native_peak_delta_bytes": baseline.peakDeltaBytes,
-            "candidate_peak_delta_bytes": candidate.peakDeltaBytes,
-            "bridge_blob_bytes": 0, "timer_resolution_ms": 1,
+            "native_peak_delta_bytes": baseline.peakDeltaBytes.map { $0 as Any } ?? NSNull(),
+            "candidate_peak_delta_bytes": candidate.peakDeltaBytes.map { $0 as Any } ?? NSNull(),
+            "bridge_blob_bytes": NSNull(), "bridge_observation": "not_observed",
+            "execution_scope": "native_direct", "timer_resolution_ms": 1,
             "cleanup_verified": cleanup
         ]
         let data = try! JSONSerialization.data(withJSONObject: result, options: [.sortedKeys])

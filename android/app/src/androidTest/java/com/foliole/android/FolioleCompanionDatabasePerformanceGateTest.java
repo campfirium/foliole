@@ -34,7 +34,7 @@ import static com.foliole.android.FolioleDatabasePerformanceFixtures.seedRows;
 @RunWith(AndroidJUnit4.class)
 public class FolioleCompanionDatabasePerformanceGateTest {
     private static final String TAG = "FolioleDatabasePerf";
-    private static final int GATE_VERSION = 1;
+    private static final int GATE_VERSION = 2;
     private static final int HYDRATE_ROWS = 1293;
     private static final String NATIVE_DB = "foliole-performance-native.db";
     private static final String PLUGIN_DB = "foliole-performance-plugin";
@@ -93,8 +93,8 @@ public class FolioleCompanionDatabasePerformanceGateTest {
         assertEquals(32, count(nativeDb, "events"));
         assertEquals(32, pluginCount("events"));
         nativeDb.close();
-        emit("control_write", nativeResult, candidate, true);
         resetWorkload();
+        emit("control_write", nativeResult, candidate, true);
     }
 
     private void recordHydrate() throws Exception {
@@ -110,8 +110,8 @@ public class FolioleCompanionDatabasePerformanceGateTest {
             assertEquals(HYDRATE_ROWS, rows.length());
         });
         nativeDb.close();
-        emit("hydrate_1293", nativeResult, candidate, true);
         resetWorkload();
+        emit("hydrate_1293", nativeResult, candidate, true);
     }
 
     private void recordAttach(String workload, int rows, int bytesPerRow) throws Exception {
@@ -124,9 +124,10 @@ public class FolioleCompanionDatabasePerformanceGateTest {
         assertEquals(rows, count(nativeDb, "blobs"));
         assertEquals(rows, pluginCount("blobs"));
         nativeDb.close();
-        boolean cleanup = nativePack.delete() && pluginPack.delete();
-        emit(workload, nativeResult, candidate, cleanup);
+        deleteRecursively(nativePack);
+        deleteRecursively(pluginPack);
         resetWorkload();
+        emit(workload, nativeResult, candidate, !nativePack.exists() && !pluginPack.exists());
     }
 
     private void recordAttachmentFiles() throws Exception {
@@ -198,7 +199,9 @@ public class FolioleCompanionDatabasePerformanceGateTest {
         result.put("candidate_ms", candidate.elapsedMs);
         result.put("native_peak_delta_bytes", nativeResult.peakDeltaBytes);
         result.put("candidate_peak_delta_bytes", candidate.peakDeltaBytes);
-        result.put("bridge_blob_bytes", 0);
+        result.put("bridge_blob_bytes", JSONObject.NULL);
+        result.put("bridge_observation", "not_observed");
+        result.put("execution_scope", "native_direct");
         result.put("timer_resolution_ms", 1);
         result.put("cleanup_verified", cleanup);
         String line = "FOLIOLE_DATABASE_PERFORMANCE_RESULT=" + result;
@@ -228,8 +231,12 @@ public class FolioleCompanionDatabasePerformanceGateTest {
 
     private void resetWorkload() throws Exception {
         plugin.closeConnection(PLUGIN_DB, false);
-        context.deleteDatabase(PLUGIN_FILE);
-        context.deleteDatabase(NATIVE_DB);
+        deleteDatabases();
+        for (String name : new String[] { PLUGIN_FILE, NATIVE_DB }) {
+            for (String suffix : new String[] { "", "-wal", "-shm", "-journal" }) {
+                assertFalse(new File(context.getDatabasePath(name).getPath() + suffix).exists());
+            }
+        }
     }
 
 }

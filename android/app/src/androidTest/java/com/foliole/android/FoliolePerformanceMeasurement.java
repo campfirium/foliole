@@ -5,6 +5,7 @@ import android.os.SystemClock;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 final class FoliolePerformanceMeasurement {
     interface Operation { void run() throws Exception; }
@@ -21,7 +22,11 @@ final class FoliolePerformanceMeasurement {
         long initialPss = totalPssBytes();
         AtomicLong peakPss = new AtomicLong(initialPss);
         AtomicBoolean running = new AtomicBoolean(true);
-        Thread sampler = new Thread(() -> sampleMemory(running, peakPss), "foliole-performance-memory");
+        AtomicReference<RuntimeException> observationFailure = new AtomicReference<>();
+        Thread sampler = new Thread(() -> {
+            try { sampleMemory(running, peakPss); }
+            catch (RuntimeException error) { observationFailure.set(error); }
+        }, "foliole-performance-memory");
         sampler.start();
         long startedAt = SystemClock.elapsedRealtime();
         try {
@@ -30,6 +35,7 @@ final class FoliolePerformanceMeasurement {
             running.set(false);
             sampler.join();
         }
+        if (observationFailure.get() != null) throw observationFailure.get();
         return new FoliolePerformanceMeasurement(
             SystemClock.elapsedRealtime() - startedAt,
             Math.max(0, peakPss.get() - initialPss)
@@ -47,6 +53,8 @@ final class FoliolePerformanceMeasurement {
     private static long totalPssBytes() {
         Debug.MemoryInfo info = new Debug.MemoryInfo();
         Debug.getMemoryInfo(info);
-        return info.getTotalPss() * 1024L;
+        long bytes = info.getTotalPss() * 1024L;
+        if (bytes <= 0) throw new IllegalStateException("Process memory was not observed");
+        return bytes;
     }
 }

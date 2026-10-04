@@ -4,7 +4,7 @@ import MachO
 
 struct FolioleMeasuredResult {
     let elapsedMs: Int
-    let peakDeltaBytes: UInt64
+    let peakDeltaBytes: UInt64?
 }
 
 enum FoliolePerformanceMeasure {
@@ -23,19 +23,20 @@ enum FoliolePerformanceMeasure {
             group.leave()
         }
         let started = DispatchTime.now().uptimeNanoseconds
-        defer {
-            running.value = false
-            group.wait()
-        }
-        try operation()
+        do { try operation() }
+        catch { running.value = false; group.wait(); throw error }
         let elapsed = DispatchTime.now().uptimeNanoseconds - started
+        running.value = false
+        group.wait()
         return FolioleMeasuredResult(
             elapsedMs: Int(elapsed / 1_000_000),
-            peakDeltaBytes: peak.value > initial ? peak.value - initial : 0
+            peakDeltaBytes: initial.flatMap { baseline in
+                peak.value.map { $0 > baseline ? $0 - baseline : 0 }
+            }
         )
     }
 
-    private static func residentBytes() -> UInt64 {
+    private static func residentBytes() -> UInt64? {
         var info = mach_task_basic_info()
         var count = mach_msg_type_number_t(MemoryLayout<mach_task_basic_info>.size) / 4
         let status = withUnsafeMutablePointer(to: &info) {
@@ -43,16 +44,20 @@ enum FoliolePerformanceMeasure {
                 task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
             }
         }
-        return status == KERN_SUCCESS ? UInt64(info.resident_size) : 0
+        return status == KERN_SUCCESS ? UInt64(info.resident_size) : nil
     }
 }
 
 private final class LockedPeak {
     private let lock = NSLock()
-    private var stored: UInt64
-    init(_ value: UInt64) { stored = value }
-    func record(_ value: UInt64) { lock.lock(); stored = max(stored, value); lock.unlock() }
-    var value: UInt64 { lock.lock(); defer { lock.unlock() }; return stored }
+    private var stored: UInt64?
+    init(_ value: UInt64?) { stored = value }
+    func record(_ value: UInt64?) {
+        lock.lock()
+        defer { lock.unlock() }
+        stored = stored.flatMap { previous in value.map { max(previous, $0) } }
+    }
+    var value: UInt64? { lock.lock(); defer { lock.unlock() }; return stored }
 }
 
 private final class LockedFlag {
@@ -115,16 +120,26 @@ final class FolioleDatabasePerformanceHarness {
         catch { _ = try? plugin.rollbackTransaction(databaseName); throw error }
     }
 
-    func cleanup() {
+    func cleanup() throws {
+        let paths = try Set(pluginNames.map {
+            try UtilsFile.getFilePath(databaseLocation: location, fileName: "\($0)SQLite.db")
+        } + directDatabases.map { $0.path })
         for name in pluginNames {
-            try? plugin.close(name, readonly: false)
-            try? plugin.deleteDatabase(name, readonly: false)
-            try? plugin.closeConnection(name, readonly: false)
+            try plugin.closeConnection(name, readonly: false)
         }
         for database in directDatabases {
-            let name = database.dbName
-            try? database.close()
-            try? UtilsFile.deleteFile(fileName: name, databaseLocation: location)
+            try database.close()
+        }
+        for path in paths {
+            for suffix in ["", "-wal", "-shm", "-journal"] {
+                let file = path + suffix
+                if FileManager.default.fileExists(atPath: file) {
+                    try FileManager.default.removeItem(atPath: file)
+                }
+                guard !FileManager.default.fileExists(atPath: file) else {
+                    throw CocoaError(.fileWriteUnknown)
+                }
+            }
         }
         pluginNames.removeAll()
         directDatabases.removeAll()

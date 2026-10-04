@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { COMPANION_DATABASE_PERFORMANCE_WORKLOADS } from '../mobile/companion-database-performance-contract.mjs';
+import { COMPANION_DATABASE_PERFORMANCE_GATE_VERSION, COMPANION_DATABASE_PERFORMANCE_WORKLOADS } from '../mobile/companion-database-performance-contract.mjs';
 import { runA5DatabasePerformance } from './android-a5-database-performance-action.mjs';
 
 const created = [];
@@ -72,8 +72,8 @@ describe('fixed A5 database performance action', () => {
 function performanceOutput() {
   return Object.keys(COMPANION_DATABASE_PERFORMANCE_WORKLOADS).map((workload) =>
     `INSTRUMENTATION_STATUS: stream=FOLIOLE_DATABASE_PERFORMANCE_RESULT=${JSON.stringify({
-      bridge_blob_bytes: 0, candidate_ms: 10, candidate_peak_delta_bytes: 1024,
-      cleanup_verified: true, gate_version: 1, native_ms: 10,
+      bridge_blob_bytes: 0, bridge_observation: 'observed', candidate_ms: 10, candidate_peak_delta_bytes: 1024,
+      cleanup_verified: true, gate_version: COMPANION_DATABASE_PERFORMANCE_GATE_VERSION, native_ms: 10,
       native_peak_delta_bytes: 1024, platform: 'android', timer_resolution_ms: 1, workload
     })}`
   ).join('\n');
