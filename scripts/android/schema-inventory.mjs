@@ -46,6 +46,7 @@ const DESKTOP_SCHEMA_FILES = {
   SYNC_PACK_DEPENDENCY_STAGING_SCHEMA: 'lib/core/database/syncPackDependencyStagingSchema.ts',
   SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS: 'lib/core/database/syncGroupRestoreSchemaStatements.ts',
   NODE_VERSION_RETENTION_SCHEMA_STATEMENTS: 'lib/core/database/nodeVersionRetentionSchemaStatements.ts',
+  NODE_VERSION_RETENTION_INDEX_SCHEMA: 'lib/core/database/nodeVersionRetentionIndexSchema.ts',
   NODE_VERSION_MEMBER_POSITION_SCHEMA: 'lib/core/database/nodeVersionMemberPositionSchema.ts',
   PARENT_ORDER_VERSION_SCHEMA: 'lib/core/sync/syncParentOrderVersionStore.ts'
 };
