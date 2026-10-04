@@ -1,5 +1,5 @@
 import type { DbPort } from './dbPort.js';
-import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
+import { publishLocalNodePositionPage } from './nodeVersionMemberPositionPublish.js';
 import { isEligibleSyncIdentityState } from './syncIdentityEligibility.js';
 import { backfillSyncIdentityIndexPage, drainSyncIdentityDirtyPage,
   assertReadySyncIdentityIndex } from './syncIdentityIndexMaintenance.js';
@@ -13,7 +13,7 @@ export async function prepareReadySyncIdentityIndex(port: DbPort, options: { pub
       UNION SELECT node_id AS id FROM node_sync_tombstones)
       WHERE id > ? ORDER BY id LIMIT 128`, [after]);
     if (options.publishPositions !== false) {
-      for (const node of nodes) await port.transaction((tx) => publishLocalNodePosition(tx, node.id));
+      await port.transaction((tx) => publishLocalNodePositionPage(tx, nodes.map((node) => node.id)));
     }
     if (nodes.length < 128) break;
     after = nodes.at(-1)!.id;
