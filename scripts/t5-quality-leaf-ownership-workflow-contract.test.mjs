@@ -79,6 +79,18 @@ function maximumWorkflowDepth(file, ancestors = []) {
 }
 
 describe('T5 canonical leaf ownership', () => {
+  it('provides a running native DNS-SD daemon before Linux Electron tests', () => {
+    const steps = electron.jobs['electron-tests'].steps;
+    const setup = steps.find((step) => step.name === 'Prepare Linux native DNS-SD');
+    expect(setup.if).toBe("runner.os == 'Linux'");
+    expect(setup.run).toContain('libavahi-client-dev avahi-daemon dbus');
+    expect(setup.run).toContain('sudo systemctl start dbus avahi-daemon');
+    expect(setup.run).toContain('avahi-daemon --check');
+    expect(steps.indexOf(setup)).toBeLessThan(steps.findIndex(
+      (step) => step.name === 'Run canonical Electron bucket'
+    ));
+  });
+
   it('requests no more than eighteen runner-backed first-wave leaves', () => {
     const fixedLeaves = 4;
     const portableLeaves = portable.jobs['portable-domain-tests'].strategy.matrix.include.length * 2;

@@ -70,9 +70,13 @@ jobs:
           cache: npm
       - name: Activate pinned npm
         run: node scripts/quality/pinned-npm.mjs activate
-      - name: Install Linux DNS-SD build headers
+      - name: Prepare Linux native DNS-SD
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libavahi-client-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libavahi-client-dev avahi-daemon dbus
+          sudo systemctl start dbus avahi-daemon
+          avahi-daemon --check
       - name: Install dependencies
         run: node scripts/quality/hosted-npm-ci.mjs
       - name: Verify checked-out target SHA
