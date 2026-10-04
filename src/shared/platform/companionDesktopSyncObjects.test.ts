@@ -1,212 +1,75 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
 
-import {
-  diagnosticsMock,
-  resetCompanionDesktopSyncMocks,
-  syncBridgeMock
-} from './companionDesktopSyncObjects.testHarness';
+import { syncCompanionObjectsFromDesktop } from './companionDesktopSyncObjects';
+import { createEmptyResourceStages } from './companionDesktopSyncResourceStages';
 
-// These scenarios retain the v15 cursor contract; identity dispatch is covered separately.
-vi.mock('../../../lib/platform/syncProtocolContract', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../lib/platform/syncProtocolContract')>();
-  return { ...actual, CURRENT_SYNC_PROTOCOL_DESCRIPTOR: {
-    ...actual.CURRENT_SYNC_PROTOCOL_DESCRIPTOR, version: 15,
-    min_supported_version: 15, max_supported_version: 15
-  } };
+const runtime = vi.hoisted(() => ({ round: vi.fn(), resources: vi.fn(),
+  legacy: vi.fn(), localDiagnostics: vi.fn(), remoteDiagnostics: vi.fn() }));
+vi.mock('./companion/sync/syncGroupIdentityRound', () => ({ runCompanionSyncIdentityRound: runtime.round }));
+vi.mock('./companion/sync/syncGroupIdentityResources', () => ({ drainCompanionSyncIdentityResources: runtime.resources }));
+vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({ loadIosCompanionHostName: async () => 'Phone' }));
+vi.mock('./companion/sync/syncGroupStore', () => ({ loadCompanionSyncGroup: async () => ({ group_id: 'group' }) }));
+vi.mock('./companion/network/syncGroupPeerIdentity', () => ({ resolveCompanionSyncPeerId: async () => 'peer' }));
+vi.mock('./companionSyncObjects', () => ({ applyCompanionDesktopSyncPack: runtime.legacy }));
+vi.mock('./companion/sync/diagnostics/companionSyncDiagnostics', () => ({
+  loadLocalSyncDiagnostics: runtime.localDiagnostics, loadDesktopSyncDiagnostics: runtime.remoteDiagnostics
+}));
+
+const endpoint = 'http://current-peer.test';
+function result() {
+  return { received: { appliedObjects: 3 }, resources: { stages: createEmptyResourceStages() } };
+}
+beforeEach(() => {
+  vi.resetAllMocks();
+  runtime.localDiagnostics.mockResolvedValue(null);
+  runtime.round.mockResolvedValue(result());
+  runtime.resources.mockResolvedValue({ syncedCount: 0, stages: createEmptyResourceStages() });
 });
 
-async function testPullsStructurePack() {
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-  expect(result).toMatchObject({
-    appliedPackBlobCount: 2,
-    appliedPackObjectCount: 3
+it('returns current identity results without consulting legacy sequence diagnostics', async () => {
+  await expect(syncCompanionObjectsFromDesktop(endpoint)).resolves.toMatchObject({
+    appliedPackObjectCount: 3, remainingStructureChangeCount: 0, pushError: null
   });
-  expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledWith({
-    headers: {
-      'X-Authorization-Id': 'android-test-device',
-      'X-Signature': 'signed:/companion/sync-pack?after_state_seq=0&page_contract=bounded-v1'
-    },
-    sourceHostName: 'Desktop Test Host',
-    sourcePeerId: 'desktop-test-device',
-    url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0&page_contract=bounded-v1'
-  });
-  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8, 'desktop-test-device');
-}
+  expect(runtime.legacy).not.toHaveBeenCalled();
+  expect(runtime.remoteDiagnostics).not.toHaveBeenCalled();
+});
 
-async function testNoLegacyJsonStreams() {
-  const fetchMock = vi.fn();
-  vi.stubGlobal('fetch', fetchMock);
-
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-  expect(result).toMatchObject({
-    appliedNodeIds: [],
-    appliedObjectIds: [],
-    appliedReviewOpIds: [],
-    changedObjectIds: [],
-    pushedNodeIds: [],
-    pushedObjectIds: [],
-    pushedReviewOpIds: [],
-    syncedAttachmentIds: []
-  });
-  expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-state'), expect.any(Object));
-  expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-node-versions'), expect.any(Object));
-  expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-review-log'), expect.any(Object));
-  expect(fetchMock).not.toHaveBeenCalledWith(expect.stringContaining('/companion/sync-objects'), expect.any(Object));
-}
-
-async function testWaitsForExclusiveStructureApplyAfterTimeout() {
+it('keeps exclusive identity work pending through a long native apply', async () => {
   vi.useFakeTimers();
-  const resolvePackRef: {
-    current: ((result: { applied_blob_count: number; applied_object_count: number; to_state_seq: number }) => void) | null;
-  } = { current: null };
-  syncBridgeMock.applyCompanionDesktopSyncPack.mockReturnValue(new Promise((resolve) => {
-    resolvePackRef.current = resolve;
-  }));
+  try {
+    let complete!: (value: ReturnType<typeof result>) => void;
+    runtime.round.mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));
+    const pending = syncCompanionObjectsFromDesktop(endpoint, { includeResources: false });
+    let settled = false;
+    pending.finally(() => { settled = true; }).catch(() => undefined);
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(settled).toBe(false);
+    expect(runtime.legacy).not.toHaveBeenCalled();
+    complete(result());
+    await expect(pending).resolves.toMatchObject({ appliedPackObjectCount: 3 });
+  } finally { vi.useRealTimers(); }
+});
 
-  const {
-    COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS,
-    syncCompanionObjectsFromDesktop
-  } = await import('./companionDesktopSyncObjects');
-  const sync = syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-  let settled = false;
-  sync.finally(() => {
-    settled = true;
-  }).catch(() => undefined);
-  await vi.advanceTimersByTimeAsync(COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS);
+it('rejects an incompatible identity peer without a sequence fallback and permits an upgraded retry', async () => {
+  runtime.round.mockRejectedValueOnce(new Error('sync_protocol_version_incompatible'));
+  await expect(syncCompanionObjectsFromDesktop(endpoint)).rejects.toThrow('sync_protocol_version_incompatible');
+  expect(runtime.legacy).not.toHaveBeenCalled();
+  await expect(syncCompanionObjectsFromDesktop(endpoint)).resolves.toMatchObject({ appliedPackObjectCount: 3 });
+  expect(runtime.round).toHaveBeenCalledTimes(2);
+});
 
-  expect(settled).toBe(false);
-  expect(syncBridgeMock.saveCompanionSyncPackCursor).not.toHaveBeenCalled();
-  const resolvePack = resolvePackRef.current;
-  if (!resolvePack) {
-    throw new Error('Expected sync pack apply promise to be pending');
-  }
-  resolvePack({
-    applied_blob_count: 2,
-    applied_object_count: 3,
-    to_state_seq: 8
+it('continues resources without a structure exchange or a false structure completion', async () => {
+  const stages = { ...createEmptyResourceStages(), syncedContentBlobHashes: ['body'], syncedContentBlobBytes: 1024 };
+  runtime.resources.mockResolvedValueOnce({ syncedCount: 1, stages });
+  await expect(syncCompanionObjectsFromDesktop(endpoint, { resourcesOnly: true })).resolves.toMatchObject({
+    appliedPackObjectCount: 0, remainingStructureChangeCount: null,
+    syncedContentBlobHashes: ['body'], syncedContentBlobBytes: 1024
   });
-  await expect(sync).resolves.toMatchObject({ appliedPackObjectCount: 3 });
-  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8, 'desktop-test-device');
-  vi.useRealTimers();
-}
+  expect(runtime.round).not.toHaveBeenCalled();
+  expect(runtime.resources).toHaveBeenCalledWith({ endpointUrl: endpoint, groupId: 'group', peerId: 'peer', onProgress: undefined });
+  expect(runtime.remoteDiagnostics).not.toHaveBeenCalled();
+});
 
-async function testStructureTimeoutStaysBelowMinute() {
-  const {
-    COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS
-  } = await import('./companionDesktopSyncObjects');
-
-  expect(COMPANION_DESKTOP_SYNC_STRUCTURE_TIMEOUT_MS).toBeLessThan(60_000);
-}
-
-async function testConfirmsTheAppliedPackSnapshotDespiteLaterDesktopWrites() {
-  diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue({
-    content: {
-      missing_attachment_resource_bytes: 0,
-      missing_attachment_resource_count: 0,
-      missing_content_blob_bytes: 0,
-      missing_content_blob_count: 0
-    },
-    sync_state: {
-      local_dirty_count: 0,
-      pack_cursor: 8,
-      pending_ack_count: 0,
-      push_issue_count: 0
-    }
-  });
-  diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue({
-    sync_state: {
-      max_state_seq: 10
-    }
-  });
-
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-  expect(diagnosticsMock.loadDesktopSyncDiagnostics).toHaveBeenCalledWith('http://10.0.2.2:38641/');
-  expect(result.remainingStructureChangeCount).toBe(0);
-}
-
-async function testResourceContinuationSkipsStructurePack() {
-  vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 200 })));
-  syncBridgeMock.loadCompanionMissingContentBlobs
-    .mockResolvedValueOnce([{ hash: 'body-hash', size_bytes: 1024 }])
-    .mockResolvedValue([]);
-
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { resourcesOnly: true });
-
-  expect(result).toMatchObject({
-    appliedPackBlobCount: 0,
-    appliedPackObjectCount: 0,
-    pushError: null,
-    syncedContentBlobHashes: ['body-hash']
-  });
-  expect(syncBridgeMock.applyCompanionDesktopSyncPack).not.toHaveBeenCalled();
-  expect(syncBridgeMock.saveCompanionSyncPackCursor).not.toHaveBeenCalled();
-}
-
-async function testResourceContinuationDetectsLaterDesktopWrites() {
-  diagnosticsMock.loadLocalSyncDiagnostics.mockResolvedValue({
-    content: { missing_attachment_resource_count: 0, missing_content_blob_count: 0 },
-    sync_state: { local_dirty_count: 0, pack_cursor: 8, pending_ack_count: 0, push_issue_count: 0 }
-  });
-  diagnosticsMock.loadDesktopSyncDiagnostics.mockResolvedValue({ sync_state: { max_state_seq: 10 } });
-
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop(
-    'http://10.0.2.2:38641/', { resourcesOnly: true }
-  );
-
-  expect(result.remainingStructureChangeCount).toBe(2);
-}
-
-async function testRejectedLegacyPackKeepsCursorForUpgradedRetry() {
-  syncBridgeMock.applyCompanionDesktopSyncPack
-    .mockRejectedValueOnce(new Error('unsupported_sync_pack_format_version'))
-    .mockResolvedValueOnce({
-      applied_blob_count: 2,
-      applied_object_count: 3,
-      to_state_seq: 8
-    });
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-
-  await expect(syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/'))
-    .rejects.toThrow('unsupported_sync_pack_format_version');
-  expect(syncBridgeMock.saveCompanionSyncPackCursor).not.toHaveBeenCalled();
-
-  await expect(syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/'))
-    .resolves.toMatchObject({ appliedPackObjectCount: 3 });
-  expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenNthCalledWith(2,
-    expect.objectContaining({
-      url: 'http://10.0.2.2:38641/companion/sync-pack?after_state_seq=0&page_contract=bounded-v1'
-    }));
-  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledOnce();
-  expect(syncBridgeMock.saveCompanionSyncPackCursor).toHaveBeenCalledWith(8, 'desktop-test-device');
-}
-
-describe('companion desktop sync objects', () => {
-  beforeEach(resetCompanionDesktopSyncMocks);
-
-  it('pulls the structure pack from desktop', testPullsStructurePack);
-
-  it('does not run legacy JSON state, topic, or review streams on the normal pull path', testNoLegacyJsonStreams);
-
-  it('waits for exclusive structure apply work instead of racing failure writes', testWaitsForExclusiveStructureApplyAfterTimeout);
-
-  it('keeps structure sync timeout below a minute', testStructureTimeoutStaysBelowMinute);
-
-  it('confirms the applied pack snapshot despite later desktop writes',
-    testConfirmsTheAppliedPackSnapshotDespiteLaterDesktopWrites);
-
-  it('skips structure pack work during resource-only continuation', testResourceContinuationSkipsStructurePack);
-
-  it('detects later desktop writes during resource-only continuation',
-    testResourceContinuationDetectsLaterDesktopWrites);
-
-  it('keeps the original cursor when a legacy pack is rejected and converges after upgrade',
-    testRejectedLegacyPackKeepsCursorForUpgradedRetry);
+it('does not expose the retired state diff bootstrap path', async () => {
+  expect('bootstrapCompanionFromDesktopState' in await import('./companionDesktopSyncObjects')).toBe(false);
 });
