@@ -93,10 +93,25 @@ function uniqueMatches(source, pattern, label) {
   return [...new Set(matches)];
 }
 
+function androidVersionValues(source, setting, property, integer) {
+  const expressions = uniqueMatches(source, new RegExp(`^\\s*${setting}\\s+([^\\r\\n]+)$`, 'gmu'),
+    `Android ${setting}`);
+  return [...new Set(expressions.map((expression) => {
+    const literal = integer ? expression.match(/^(\d+)$/u) : expression.match(/^["']([^"']+)["']$/u);
+    if (literal) return literal[1];
+    const suffix = integer ? '\\.toInteger\\(\\)' : '';
+    const parameterized = expression.match(new RegExp(
+      `^providers\\.gradleProperty\\(["']${property}["']\\)\\.getOrElse\\(["']([^"']+)["']\\)${suffix}$`, 'u'
+    ));
+    if (!parameterized) throw new Error(`Android ${setting} expression is unsupported.`);
+    return parameterized[1];
+  }))];
+}
+
 export function validateMobilePlatformVersions({ androidGradle, iosInfoPlist, iosProject, packageVersion }) {
   requireProductVersion(packageVersion, 'package.json version');
-  const androidVersions = uniqueMatches(androidGradle, /versionName\s+["']([^"']+)["']/gu, 'Android versionName');
-  const androidBuilds = uniqueMatches(androidGradle, /versionCode\s+(\d+)/gu, 'Android versionCode');
+  const androidVersions = androidVersionValues(androidGradle, 'versionName', 'folioleVersionName', false);
+  const androidBuilds = androidVersionValues(androidGradle, 'versionCode', 'folioleVersionCode', true);
   const iosVersions = uniqueMatches(iosProject, /MARKETING_VERSION\s*=\s*([^;]+);/gu, 'iOS MARKETING_VERSION');
   const iosBuilds = uniqueMatches(iosProject, /CURRENT_PROJECT_VERSION\s*=\s*([^;]+);/gu, 'iOS CURRENT_PROJECT_VERSION');
   if (androidVersions.length !== 1 || androidVersions[0] !== packageVersion) {

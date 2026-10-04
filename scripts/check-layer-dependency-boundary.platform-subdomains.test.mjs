@@ -35,6 +35,11 @@ afterAll(async () => {
 describe('check-layer-dependency-boundary platform subdomains', () => {
   it('resolves platform subdomains by path, explicit manifest, then filename rules', () => {
     expect(resolvePlatformSubdomain('src/shared/platform/runtime/customAdapter.ts')).toBe('runtime-core');
+    expect(resolvePlatformSubdomain('src/shared/platform/companion/runtime/androidBack.ts')).toBe(
+      'companion-runtime-plugin'
+    );
+    expect(resolvePlatformSubdomain('src/shared/platform/companion/sync/transfer/companionDesktopSyncStructurePage.ts'))
+      .toBe('companion-sync-transfer');
     expect(resolvePlatformSubdomain('src/shared/platform/companion/sync/diagnostics/customDiagnostic.ts')).toBe(
       'companion-sync-diagnostics'
     );

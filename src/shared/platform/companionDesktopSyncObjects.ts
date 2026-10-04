@@ -5,15 +5,15 @@ import {
   resolveCompanionSyncPeerHostName,
   resolveCompanionSyncPeerId
 } from './companion/network/syncGroupPeerIdentity';
+import { traceCompanionSyncStep } from './companion/sync/diagnostics/companionDesktopSyncTrace';
+import { applyTracedStructurePage } from './companion/sync/transfer/companionDesktopSyncStructurePage';
 import { pushLocalDirtyObjects } from './companionDesktopSyncPush';
 import {
   createEmptyResourceStages,
   createSkippedResourceSummary,
   pullResourceStages
 } from './companionDesktopSyncResourceStages';
-import { applyTracedStructurePage } from './companionDesktopSyncStructurePage';
 import { loadCompanionDesktopSyncSummary } from './companionDesktopSyncSummary';
-import { traceCompanionSyncStep } from './companionDesktopSyncTrace';
 import type {
   CompanionDesktopSyncOptions,
   CompanionDesktopSyncResult

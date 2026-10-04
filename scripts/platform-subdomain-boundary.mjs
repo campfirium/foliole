@@ -12,6 +12,7 @@ const PATH_SUBDOMAINS = [
   ['src/shared/platform/runtime/', 'runtime-core'],
   ['src/shared/platform/desktop/', 'desktop-runtime-repository'],
   ['src/shared/platform/companion/sync/diagnostics/', 'companion-sync-diagnostics'],
+  ['src/shared/platform/companion/sync/transfer/', 'companion-sync-transfer'],
   ['src/shared/platform/companion/sync/pack-apply/', 'companion-sync-pack-apply'],
   ['src/shared/platform/companion/sync/cursor/', 'companion-sync-reader'],
   ['src/shared/platform/companion/runtime/', 'companion-runtime-plugin'],

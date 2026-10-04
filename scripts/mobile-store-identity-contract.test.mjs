@@ -11,8 +11,36 @@ import {
 } from './mobile-store-identity-contract.mjs';
 
 const EMPTY_HISTORY = { schemaVersion: 1, attempts: [] };
+const PLATFORM_FIXTURE = {
+  packageVersion: '0.8.0',
+  iosInfoPlist: '<string>$(MARKETING_VERSION)</string><string>$(CURRENT_PROJECT_VERSION)</string>',
+  iosProject: 'MARKETING_VERSION = 0.8.0; CURRENT_PROJECT_VERSION = 1;'
+};
 
 describe('mobile store build identity', () => {
+  it.each([
+    'versionName "0.8.0"\nversionCode 1',
+    'versionName providers.gradleProperty("folioleVersionName").getOrElse("0.8.0")\n' +
+      'versionCode providers.gradleProperty("folioleVersionCode").getOrElse("1").toInteger()'
+  ])('validates literal and parameterized Android defaults: %s', (androidGradle) => {
+    expect(validateMobilePlatformVersions({ ...PLATFORM_FIXTURE, androidGradle }).android).toEqual({
+      internalBuildNumber: '1', userVisibleVersion: '0.8.0'
+    });
+  });
+
+  it.each([
+    ['versionName "0.8.1"\nversionCode 1', 'match package.json'],
+    ['versionName "0.8.0"\nversionName "0.8.1"\nversionCode 1', 'every configuration'],
+    ['versionName providers.gradleProperty("folioleVersionName").getOrElse("0.8.1")\nversionCode 1',
+      'match package.json'],
+    ['versionName "0.8.0"\nversionCode providers.gradleProperty("folioleVersionCode").getOrElse("0").toInteger()',
+      'positive integer'],
+    ['versionName "0.8.0"\nversionName unknownVersion\nversionCode 1', 'unsupported'],
+    ['versionCode 1', 'missing']
+  ])('rejects invalid Android defaults: %s', (androidGradle, error) => {
+    expect(() => validateMobilePlatformVersions({ ...PLATFORM_FIXTURE, androidGradle })).toThrow(error);
+  });
+
   it('keeps the product version user-visible while allowing independent build attempts', () => {
     const first = resolveMobileBuildIdentity({
       internalBuildNumber: 41, platform: 'android', productVersion: '0.8.0'

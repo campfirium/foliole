@@ -158,6 +158,10 @@ interface SharedViteConfigOptions {
   warmupClientFiles?: string[];
 }
 
+export function resolvePlatformTestExcludes(platform: NodeJS.Platform = process.platform): string[] {
+  return platform === 'win32' ? ['scripts/android/macos-a5-upload-signing.test.mjs'] : [];
+}
+
 export function createSharedViteConfig(projectRoot: string, options: SharedViteConfigOptions = {}) {
   return defineConfig({
     base: './',
@@ -195,7 +199,7 @@ export function createSharedViteConfig(projectRoot: string, options: SharedViteC
         'lib/**/*.test.tsx',
         'scripts/**/*.test.mjs'
       ],
-      exclude: ['tests/**', 'node_modules/**', 'dist/**'],
+      exclude: ['tests/**', 'node_modules/**', 'dist/**', ...resolvePlatformTestExcludes()],
       setupFiles: './src/test/setup.ts',
       globals: true
     }

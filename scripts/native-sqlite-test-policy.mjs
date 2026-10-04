@@ -1,4 +1,8 @@
 const controlledElectronSqliteTests = [
+  'electron/sync/companionLanKnownNodePage.http.integration.test.ts',
+  'electron/sync/syncFactProbeAcceptance.integration.test.ts',
+  'electron/sync/syncPageApplyAcceptance.integration.test.ts',
+  'src/companion/companionOnlyReviewRefresh.integration.test.tsx',
   'src/companion/companionClozeRemoval.sync.integration.test.ts',
   'src/store/workspaceFlowSession.sync.integration.test.ts',
   'src/companion/CompanionSearchDeparture.integration.test.tsx',

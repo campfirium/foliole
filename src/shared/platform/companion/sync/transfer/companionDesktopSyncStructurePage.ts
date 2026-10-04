@@ -1,7 +1,7 @@
-import { createSignedRequestHeaders } from './companion/network/signedRequest';
-import { traceCompanionSyncStep } from './companionDesktopSyncTrace';
-import { applyCompanionDesktopSyncPack } from './companionSyncObjects';
-import { withSyncStepTimeout } from './companionSyncTimeoutOwnership';
+import { applyCompanionDesktopSyncPack } from '../../../companionSyncObjects';
+import { withSyncStepTimeout } from '../../../companionSyncTimeoutOwnership';
+import { createSignedRequestHeaders } from '../../network/signedRequest';
+import { traceCompanionSyncStep } from '../diagnostics/companionDesktopSyncTrace';
 
 export function applyTracedStructurePage(args: {
   cursor: number;

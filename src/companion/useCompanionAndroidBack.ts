@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { exitAndroidApp, subscribeAndroidBack } from '../shared/platform/androidBack';
+import { exitAndroidApp, subscribeAndroidBack } from '../shared/platform/companion/runtime/androidBack';
 
 import { COMPANION_ANDROID_CAPTURE_BACK_EVENT, dispatchCompanionAndroidBack } from './companionAndroidBackEvent';
 import type { CompanionShellModel } from './CompanionShell';

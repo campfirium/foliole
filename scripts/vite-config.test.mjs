@@ -13,13 +13,19 @@ import demoViteConfig, {
   normalizeDemoCanonicalRouteHtml
 } from '../vite.demo.config.ts';
 import viteConfig from '../vite.config.ts';
-import { injectDefaultStartupSkeletonHtml, resolveViteHmrSetting } from '../vite.shared.ts';
+import { injectDefaultStartupSkeletonHtml, resolvePlatformTestExcludes, resolveViteHmrSetting } from '../vite.shared.ts';
 import { WINDOWS_A5_LIVE_RELOAD_URL } from './windows/windows-a5-live-reload-server.mjs';
 
 const normalizePath = (value) => String(value).replaceAll('\\', '/');
 const packageJson = JSON.parse(readFileSync('package.json', 'utf8'));
 
 describe('vite config', () => {
+  it('routes the private POSIX upload credential proof to hosts with POSIX file permissions', () => {
+    expect(resolvePlatformTestExcludes('win32')).toEqual(['scripts/android/macos-a5-upload-signing.test.mjs']);
+    expect(resolvePlatformTestExcludes('linux')).toEqual([]);
+    expect(resolvePlatformTestExcludes('darwin')).toEqual([]);
+  });
+
   it('collects shared lib tests through the authoritative include', () => {
     expect(viteConfig.test?.include).toEqual(expect.arrayContaining([
       'lib/**/*.test.ts',
