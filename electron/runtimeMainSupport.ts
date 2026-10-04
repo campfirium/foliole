@@ -205,6 +205,10 @@ function normalizeLinkPanelWebviewPreferences(webPreferences: WebPreferences) {
   webPreferences.nodeIntegration = false;
   webPreferences.contextIsolation = true;
   webPreferences.sandbox = true;
+  webPreferences.webSecurity = true;
+  webPreferences.allowRunningInsecureContent = false;
+  webPreferences.nodeIntegrationInWorker = false;
+  webPreferences.nodeIntegrationInSubFrames = false;
 }
 
 async function loadEmbeddedLinkPanelUrl(contents: WebContents, url: string) {

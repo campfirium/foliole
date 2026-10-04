@@ -16,6 +16,9 @@ it('uses the same secured session and load event as material link panels', async
   webview.dispatchEvent(new Event('dom-ready'));
   await expect(result).resolves.toBe(true);
   expect(webview).not.toBeInTheDocument();
+  for (const attribute of ['disablewebsecurity', 'nodeintegration', 'allowpopups']) {
+    expect(webview.hasAttribute(attribute)).toBe(false);
+  }
 });
 
 it('reports a failed main-frame load as not detected without claiming availability', async () => {

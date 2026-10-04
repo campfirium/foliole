@@ -1,9 +1,6 @@
 const PROBE_TIMEOUT_MS = 5_000;
 
 export const LINK_PANEL_WEBVIEW_PROPS = {
-  allowpopups: 'false',
-  disablewebsecurity: 'false',
-  nodeintegration: 'false',
   partition: 'foliole-link-panels',
   referrerpolicy: 'no-referrer',
   webpreferences: 'contextIsolation=yes, sandbox=yes, nodeIntegration=no'

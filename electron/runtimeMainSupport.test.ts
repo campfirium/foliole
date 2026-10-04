@@ -173,7 +173,11 @@ it('allows only the fixed link panel partition and web URLs for webview attach',
     contextIsolation: false,
     nodeIntegration: true,
     preload: '/tmp/unsafe-preload.js',
-    sandbox: false
+    sandbox: false,
+    webSecurity: false,
+    allowRunningInsecureContent: true,
+    nodeIntegrationInWorker: true,
+    nodeIntegrationInSubFrames: true
   };
 
   handler(allowedEvent, webPreferences, {
@@ -185,7 +189,11 @@ it('allows only the fixed link panel partition and web URLs for webview attach',
   expect(webPreferences).toEqual({
     contextIsolation: true,
     nodeIntegration: false,
-    sandbox: true
+    sandbox: true,
+    webSecurity: true,
+    allowRunningInsecureContent: false,
+    nodeIntegrationInWorker: false,
+    nodeIntegrationInSubFrames: false
   });
 
   const blockedSrcEvent = { preventDefault: vi.fn() };
