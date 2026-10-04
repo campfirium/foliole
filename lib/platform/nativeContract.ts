@@ -1,4 +1,3 @@
-import type { ForegroundTimeHistoryArgs, ForegroundTimeHistory } from './nativeForegroundTimeContract.js';
 import type { z } from 'zod';
 
 import type { NativeAideStorageCommandMap } from './nativeAideStorageContract.js';
@@ -171,10 +170,6 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   [NATIVE_COMMANDS.saveNodeReadingState]: {
     args: NativeSaveNodeReadingStateArgs;
     result: null;
-  };
-  [NATIVE_COMMANDS.loadForegroundTimeHistory]: {
-    args: ForegroundTimeHistoryArgs;
-    result: ForegroundTimeHistory;
   };
   [NATIVE_COMMANDS.loadReviewCalendarHistory]: {
     args: NativeReviewCalendarHistoryArgs;
