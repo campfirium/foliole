@@ -58,7 +58,15 @@ const { runIdentityIncomparableProjection } = await import('./nodeProjectionScen
 const { runIdentityNestedOrder } = await import('./nestedOrder.js');
 const { runIdentityMissingReview } = await import('./reviewFact.js');
 const { runIdentityMissingResource } = await import('./resourceFact.js');
+const { runCompanionIdentityLostReply,
+  runCompanionIdentityResourceContinuation } = await import('./companionIdentityScenarios.js');
 const output = process.env.FOLIOLE_SIM_OUTPUT ?? path.resolve('.tmp/artifacts/sync-identity-simulator', `test-${Date.now()}`);
+it.each([false, true])('companion global ID retries a committed push after a later edit and reopen (replyLost=%s)', async replyLost => {
+  await runCompanionIdentityLostReply(path.join(output, `companion-lost-reply-${replyLost}`), replyLost);
+}, 600_000);
+it('companion resources-only continuation preserves unexchanged structure and persists repaired bytes', async () => {
+  await runCompanionIdentityResourceContinuation(path.join(output, 'companion-resource-continuation'));
+}, 600_000);
 it('global ID path converges an empty receiving library', async () => {
   await runScenario('continuous', path.join(output, 'continuous'));
 }, 600_000);

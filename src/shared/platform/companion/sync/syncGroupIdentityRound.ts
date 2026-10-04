@@ -1,5 +1,7 @@
 import { completeSyncIdentityExchange } from '../../../../../lib/core/sync/syncIdentityExchangeCompletion.js';
 import { recordSyncIdentityPeerBaseline } from '../../../../../lib/core/sync/syncIdentityPeerBaseline.js';
+import { createEmptyResourceStages } from '../../companionDesktopSyncResourceStages';
+import type { CompanionDesktopSyncOptions } from '../../companionDesktopSyncTypes';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { resolveCompanionSyncPeerHostName,
   resolveCompanionSyncPeerId } from '../network/syncGroupPeerIdentity';
@@ -24,7 +26,9 @@ async function recordCompletedBaseline(pair: {
 
 /** A bilateral v21 exchange is complete only after a fresh fixed-view probe is empty. */
 export async function runCompanionSyncIdentityRound(endpointUrl: string, hostName: string,
-  options: { includeResources?: boolean } = {}) {
+  options: { includeResources?: boolean;
+    onProgress?: CompanionDesktopSyncOptions['onProgress'];
+    onStructureSynced?: (appliedObjects: number) => Promise<void> | void } = {}) {
   const group = await loadCompanionSyncGroup();
   if (!group) throw new Error('sync_group_not_joined');
   const peerId = await resolveCompanionSyncPeerId(endpointUrl);
@@ -46,9 +50,6 @@ export async function runCompanionSyncIdentityRound(endpointUrl: string, hostNam
     const sent = await sendCompanionSyncIdentityCandidates({ ...identity,
       localViewId: outbound.localViewId, remoteViewId: outbound.sourceViewId,
       snapshotPath: outbound.snapshotPath });
-    let resources = options.includeResources === false ? { syncedCount: 0 } :
-      await drainCompanionSyncIdentityResources({ endpointUrl,
-        groupId: group.group_id, peerId });
     if (sent.appliedPages > 0) verification = await probeCompanionSyncIdentities(endpointUrl);
     const completion = await completeCompanionIdentityRound({ initial: verification ?? outbound,
       initialCount: verification?.count ?? 0, endpointUrl, identity, received: firstReceived, sent });
@@ -56,12 +57,12 @@ export async function runCompanionSyncIdentityRound(endpointUrl: string, hostNam
     if (checked !== (verification ?? outbound)) {
       await verification?.cleanup();
       verification = checked;
-      if (options.includeResources !== false) {
-        const additional = await drainCompanionSyncIdentityResources({ endpointUrl,
-          groupId: group.group_id, peerId });
-        resources = { syncedCount: resources.syncedCount + additional.syncedCount };
-      }
     }
+    await options.onStructureSynced?.(firstReceived.appliedObjects);
+    const resources = options.includeResources === false
+      ? { syncedCount: 0, stages: createEmptyResourceStages() } :
+      await drainCompanionSyncIdentityResources({ endpointUrl,
+        groupId: group.group_id, peerId, onProgress: options.onProgress });
     if (options.includeResources !== false) {
       await recordCompletedBaseline(pair, checked);
     }

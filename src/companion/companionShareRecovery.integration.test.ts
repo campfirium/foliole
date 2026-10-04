@@ -12,6 +12,7 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: () => native
 }));
 
+import { readShareOriginalFacts } from '../../electron/database/companionShareRecoveryTestSupport';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
@@ -25,7 +26,6 @@ import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWor
 
 import { toCompanionNativeNodeVersion } from './companionAnnotationNodeVersion';
 import { consumeCompanionShareInbox } from './companionShareInboxRuntime';
-import { readShareOriginalFacts } from './companionShareRecovery.testSupport';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 
 let root = '';

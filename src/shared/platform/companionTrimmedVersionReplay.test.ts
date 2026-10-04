@@ -65,9 +65,10 @@ it.each(['desktop', 'companion'] as const)(
   const online = openDatabaseConnection();
   expect(await collectNodeVersionPayloads(createBetterSqliteDbPort(online.sqlite), nodeId))
     .toEqual({ released: 3, skipped: null });
-  expect(versionBodies()).toEqual([['A', 'left one\nright one'], ['E', 'left edited\nright one']]);
+  expect(versionBodies()).toEqual([['A', 'left one\nright one'],
+    ['B', null], ['C', null], ['D', null], ['E', 'left edited\nright one']]);
   expect(online.sqlite.prepare('SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ?')
-    .all('E')).toEqual([{ parent_version_id: 'A' }]);
+    .all('E')).toEqual([{ parent_version_id: 'D' }]);
   const incomingPath = await buildIncomingPack('online', onlineIdentity.identity_key,
     offlineIdentity.identity_key);
   closeDatabaseConnection();
@@ -88,7 +89,8 @@ it.each(['desktop', 'companion'] as const)(
     .get(nodeId) as { content: string; current_version_id: string };
   expect(current.content).toBe('left edited\nright edited');
   expect(current.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
-  expect(versionBodies()).toEqual([['A', 'left one\nright one'], ['E', 'left edited\nright one'],
+  expect(versionBodies()).toEqual([['A', 'left one\nright one'],
+    ['B', null], ['C', null], ['D', null], ['E', 'left edited\nright one'],
     ['F', 'left one\nright edited'], [current.current_version_id, current.content]]);
   expect(offline.sqlite.prepare(`SELECT parent_version_id FROM node_sync_version_parents
     WHERE version_id = ? ORDER BY ordinal`).all(current.current_version_id))

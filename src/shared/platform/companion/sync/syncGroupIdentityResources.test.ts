@@ -2,6 +2,8 @@
 
 import { expect, it, vi } from 'vitest';
 
+import { createEmptyResourceStages } from '../../companionDesktopSyncResourceStages';
+
 const runtime = vi.hoisted(() => ({
   scans: [] as string[], scanPages: ['node-a', null] as Array<string | null>,
   pulls: [] as Array<{ syncedContentBlobHashes: string[]; syncedAttachmentIds: string[];
@@ -18,7 +20,8 @@ vi.mock('../../companionContentBlobSync', () => ({
   loadCompanionMissingContentBlobBatch: async () => ({
     blobs: runtime.missing.shift() ? [{ hash: 'missing' }] : [] })
 }));
-vi.mock('../../companionDesktopSyncResourceStages', () => ({
+vi.mock('../../companionDesktopSyncResourceStages', async original => ({
+  ...await original<typeof import('../../companionDesktopSyncResourceStages')>(),
   pullResourceStages: async () => runtime.pulls.shift()
 }));
 vi.mock('../../companionSyncWriterQueue', () => ({
@@ -37,7 +40,10 @@ import { drainCompanionSyncIdentityResources } from './syncGroupIdentityResource
 
 const args = { endpointUrl: 'http://peer', groupId: 'group', peerId: 'peer' };
 function result(hashes: string[], attachmentIds: string[] = []) {
-  return { syncedContentBlobHashes: hashes, syncedAttachmentIds: attachmentIds,
+  return { ...createEmptyResourceStages(),
+    syncedContentBlobBytes: hashes.length * 1024,
+    syncedAttachmentResourceBytes: attachmentIds.length * 2048,
+    syncedContentBlobHashes: hashes, syncedAttachmentIds: attachmentIds,
     remainingAttachmentResourceCount: 0, attachmentResourceError: null,
     contentBlobError: null };
 }
@@ -47,7 +53,11 @@ it('scans unchanged articles and drains multiple bounded content passes', async 
   runtime.scanPages = ['node-a', null];
   runtime.pulls = [result(['first'], ['attachment']), result(['second'])];
   runtime.missing = [true, false];
-  await expect(drainCompanionSyncIdentityResources(args)).resolves.toEqual({ syncedCount: 3 });
+  await expect(drainCompanionSyncIdentityResources(args)).resolves.toMatchObject({
+    syncedCount: 3, stages: { syncedContentBlobHashes: ['first', 'second'],
+      syncedAttachmentIds: ['attachment'], syncedContentBlobBytes: 2048,
+      syncedAttachmentResourceBytes: 2048 }
+  });
   expect(runtime.scans).toEqual(['', 'node-a']);
 });
 

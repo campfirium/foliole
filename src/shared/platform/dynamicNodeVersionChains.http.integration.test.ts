@@ -99,7 +99,7 @@ async function pull(server: Awaited<ReturnType<typeof startAuthenticatedSyncHttp
   }
 }
 
-it('merges an offline edit over authenticated HTTP and retains only each direct acknowledged base', async () => {
+it('merges an offline edit over authenticated HTTP without compressing its original ancestry', async () => {
   const source = sourcePeer();
   const target = createPeer('target');
   joinPeers(source, target);
@@ -112,7 +112,8 @@ it('merges an offline edit over authenticated HTTP and retains only each direct 
     await pull(server, source, target);
     const retired = edit(source, 'left-middle\nright\n');
     edit(source, 'left-online\nright\n');
-    expect(history(source).find((row) => row.version_id === retired)).toBeUndefined();
+    expect(history(source).find((row) => row.version_id === retired))
+      .toMatchObject({ body_text: null, parent_version_id: base });
     const offline = edit(target, 'left\nright-offline\n');
     const store = createCompanionSyncbackDbStore({ ...target.port, query: (sql, params = []) => {
       const values: (typeof params)[number][] = [];
@@ -134,8 +135,12 @@ it('merges an offline edit over authenticated HTTP and retains only each direct 
     await pull(server, source, target);
     assertPersisted(source, 'left-online\nright-offline\n');
     assertPersisted(target, 'left-online\nright-offline\n');
-    expect(history(source)).toHaveLength(1);
-    expect(history(target)).toHaveLength(1);
+    for (const peer of [source, target]) {
+      expect(history(peer).map(row => row.version_id))
+        .toEqual(expect.arrayContaining([base, retired, offline]));
+      expect(history(peer).find(row => row.version_id === retired))
+        .toMatchObject({ body_text: null, parent_version_id: base });
+    }
   } finally {
     await server.close();
     revokeDesktopSyncGroupMemberStateReadiness(target.id);
@@ -157,7 +162,7 @@ it('propagates a physical deletion over authenticated HTTP and advances the dire
     for (const peer of [source, target]) {
       expect(peer.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").get()).toBeUndefined();
       expect(history(peer).map(row => [row.version_id, row.body_text, row.parent_version_id]))
-        .toEqual([[tomb.version_id, 'body', null]]);
+        .toEqual([[base, null, null], [tomb.version_id, 'body', base]]);
       expect(peer.db.pragma('foreign_key_check')).toEqual([]);
     }
   } finally {

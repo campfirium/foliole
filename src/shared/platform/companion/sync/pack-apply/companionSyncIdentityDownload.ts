@@ -16,7 +16,7 @@ export async function downloadAndApplyCompanionSyncIdentityPage(args: {
   try {
     return await applyCompanionSyncIdentityPackPath({
       expectedPageId: downloaded.page.page_id, hostName: args.hostName,
-      manifest: downloaded.manifest, packPath: downloaded.packPath,
+      manifest: downloaded.containerManifest, packPath: downloaded.packPath,
       ...(args.sourceHostName ? { sourceHostName: args.sourceHostName } : {}),
       sourcePeerId: downloaded.page.source_peer_id,
       targetPeerId: downloaded.page.target_peer_id
@@ -50,7 +50,7 @@ export async function downloadCompanionSyncIdentityPage(args: {
         manifest.identity_page.restore_set_id !== page.restore_set_id) {
       throw new Error('sync_identity_pack_page_changed');
     }
-    return { page, manifest, packPath: pack.packPath,
+    return { page, manifest, containerManifest: pack.manifest, packPath: pack.packPath,
       cleanup: () => deleteCompanionDownloadedSyncPack(pack.packPath) };
   } catch (error) {
     await deleteCompanionDownloadedSyncPack(pack.packPath);

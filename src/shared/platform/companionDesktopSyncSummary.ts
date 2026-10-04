@@ -13,11 +13,12 @@ function compactBreakdown<T extends Record<string, number | undefined>>(values: 
 
 export async function loadCompanionDesktopSyncSummary(
   endpointUrl: string,
-  confirmedStructureStateSeq: number | 'identity-complete' | null = null
+  confirmedStructureStateSeq: number | 'identity-complete' | 'identity-unchecked' | null = null
 ) {
   const identityComplete = confirmedStructureStateSeq === 'identity-complete';
+  const identityUnchecked = confirmedStructureStateSeq === 'identity-unchecked';
   const diagnostics = await loadLocalSyncDiagnostics().catch(() => null);
-  const desktopDiagnostics = identityComplete ? null :
+  const desktopDiagnostics = identityComplete || identityUnchecked ? null :
     await loadDesktopSyncDiagnostics(endpointUrl).catch(() => null);
   const desktopStateSeq = desktopDiagnostics?.sync_state?.max_state_seq;
   const localCursor = typeof confirmedStructureStateSeq === 'number' ?
@@ -54,7 +55,7 @@ export async function loadCompanionDesktopSyncSummary(
     remainingContentBlobCount: diagnostics?.content?.missing_content_blob_count ?? null,
     remainingFailedContentBlobBytes: diagnostics?.content?.failed_content_blob_bytes ?? null,
     remainingFailedContentBlobCount: diagnostics?.content?.failed_content_blob_count ?? null,
-    remainingStructureChangeCount: identityComplete ? 0 :
+    remainingStructureChangeCount: identityUnchecked ? null : identityComplete ? 0 :
       typeof structureTarget === 'number' && typeof localCursor === 'number'
         ? Math.max(0, structureTarget - localCursor) : null
   };

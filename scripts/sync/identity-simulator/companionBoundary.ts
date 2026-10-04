@@ -9,7 +9,12 @@ vi.mock('../../../src/shared/platform/companionRuntimeCapabilities.js', async (o
 });
 vi.mock('../../../src/shared/platform/companionWorkspaceRuntimeRepository.js', async (original) => {
   const actual = await original<typeof import('../../../src/shared/platform/companionWorkspaceRuntimeRepository.js')>();
-  return { ...actual, getNativeCompanionSyncbackPlatform: () => 'android', isNativeCompanionNetworkRuntime: () => false };
+  const native = await import('./companionIdentityNativeAdapter.js');
+  return { ...actual, getNativeCompanionSyncbackPlatform: () => 'android', isNativeCompanionNetworkRuntime: () => false,
+    FolioleCompanionSync: { ...actual.FolioleCompanionSync,
+      createIdentitySourceView: native.createNativeIdentityView,
+      buildIdentitySourcePack: native.buildNativeIdentityPack,
+      closeIdentitySourceView: native.closeNativeIdentityView } };
 });
 vi.mock('../../../src/shared/platform/companionBootstrap.js', async () => {
   const { currentPeer } = await import('./scope.js');
@@ -23,6 +28,7 @@ vi.mock('../../../src/shared/platform/companion/sync/syncGroupStore.js', async (
 vi.mock('../../../src/shared/platform/companion/runtime/iosCompanionDatabaseBootstrap.js', async () => {
   const { companionPort } = await import('./companionPort.js');
   return { getIosCompanionDatabaseOwner: () => ({
+    platform: 'android',
     read: async (task: (db: ReturnType<typeof companionPort>) => unknown) => task(companionPort()),
     runWriter: async (task: (db: ReturnType<typeof companionPort>) => unknown) => task(companionPort())
   }) };
@@ -30,9 +36,13 @@ vi.mock('../../../src/shared/platform/companion/runtime/iosCompanionDatabaseBoot
 vi.mock('../../../src/shared/platform/companion/network/signedRequest.js', async () => {
   const { currentPeer } = await import('./scope.js');
   const { createDesktopSyncGroupSignedHeaders } = await import('../../../electron/sync/desktopSyncGroupHttp.js');
+  const { createDesktopWorkgroupPost } = await import('../../../electron/sync/desktopSyncGroupHttp.js');
   const { secret } = await import('./peers.js');
   return { createSignedRequestHeaders: async (args: { method: string; pathWithQuery: string; bodyText?: string }) =>
-    createDesktopSyncGroupSignedHeaders({ ...args, groupId: 'group', localDeviceId: currentPeer().id, secret }) };
+    createDesktopSyncGroupSignedHeaders({ ...args, groupId: 'group', localDeviceId: currentPeer().id, secret }),
+    prepareNativeCompanionWorkgroupRequest: async (args: { bodyText: string; pathWithQuery: string }) =>
+      createDesktopWorkgroupPost({ body: args.bodyText, pathWithQuery: args.pathWithQuery,
+        groupId: 'group', localDeviceId: currentPeer().id, secret }) };
 });
 vi.mock('../../../src/shared/platform/companionDesktopSyncHttp.js', async (original) => {
   const actual = await original<typeof import('../../../src/shared/platform/companionDesktopSyncHttp.js')>();
@@ -57,6 +67,8 @@ vi.mock('../../../src/shared/platform/companionDesktopSyncHttp.js', async (origi
 });
 vi.mock('../../../src/shared/platform/companionSyncPackTransfer.js', async () => {
   const { downloadNativeAdapter, deleteNativeAdapter } = await import('./companionTransfer.js');
+  const { downloadNativeIdentityPack } = await import('./companionIdentityNativeAdapter.js');
   return { downloadCompanionDesktopSyncPack: downloadNativeAdapter,
+    downloadCompanionDesktopSyncIdentityPack: downloadNativeIdentityPack,
     deleteCompanionDownloadedSyncPack: deleteNativeAdapter };
 });

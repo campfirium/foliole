@@ -49,3 +49,11 @@ it('uses the completed identity probe instead of a foreign state sequence', asyn
     localDirtyCount: 0, pendingAckCount: 0, pushIssueCount: 0 });
   expect(diagnosticsMock.loadDesktopSyncDiagnostics).not.toHaveBeenCalled();
 });
+
+it('leaves structure completeness unknown when only resources were checked', async () => {
+  const { loadCompanionDesktopSyncSummary } = await import('./companionDesktopSyncSummary');
+  const summary = await loadCompanionDesktopSyncSummary('http://mac.local:38641',
+    'identity-unchecked');
+  expect(summary.remainingStructureChangeCount).toBeNull();
+  expect(diagnosticsMock.loadDesktopSyncDiagnostics).not.toHaveBeenCalled();
+});

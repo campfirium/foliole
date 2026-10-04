@@ -2,6 +2,9 @@
 
 import { expect, it, vi } from 'vitest';
 
+import { createEmptyResourceStages } from '../../companionDesktopSyncResourceStages';
+import type { CompanionDesktopSyncOptions } from '../../companionDesktopSyncTypes';
+
 const runtime = vi.hoisted(() => ({
   baselines: [] as Array<{ localViewId: string; peerViewId: string;
     localProofRoot: string; peerProofRoot: string }>,
@@ -55,14 +58,32 @@ vi.mock('./syncGroupIdentityExchange', () => ({
     return { appliedPages: 1, appliedObjects: 2, pageCount: 1 };
   }
 }));
-vi.mock('./syncGroupIdentityResources', () => ({
-  drainCompanionSyncIdentityResources: async () => {
+vi.mock('./syncGroupIdentityResources', async original => ({
+  ...await original<typeof import('./syncGroupIdentityResources')>(),
+  drainCompanionSyncIdentityResources: async (args: {
+    onProgress?: CompanionDesktopSyncOptions['onProgress']
+  }) => {
     if (runtime.resourceError) throw new Error('sync_group_resources_incomplete');
-    return { syncedCount: 0 };
+    args.onProgress?.({ phase: 'content', completed: 1, total: 1 });
+    return { syncedCount: 0, stages: createEmptyResourceStages() };
   }
 }));
 
 import { runCompanionSyncIdentityRound } from './syncGroupIdentityRound.js';
+
+it('refreshes received structure and forwards progress before downloading resources', async () => {
+  runtime.probes = 0;
+  runtime.terminalProbe = 3;
+  runtime.resourceError = false;
+  const progress = vi.fn();
+  const refreshed = vi.fn();
+  await runCompanionSyncIdentityRound('http://peer', 'Local', {
+    onProgress: progress, onStructureSynced: refreshed
+  });
+  expect(refreshed).toHaveBeenCalledWith(2);
+  expect(progress).toHaveBeenCalledWith({ phase: 'content', completed: 1, total: 1 });
+  expect(refreshed.mock.invocationCallOrder[0]).toBeLessThan(progress.mock.invocationCallOrder[0]!);
+});
 
 it('reprobes after receiving so it never uploads an obsolete local source view', async () => {
   runtime.probes = 0;
@@ -110,7 +131,7 @@ it('leaves the peer baseline untouched when resource bytes remain missing', asyn
   await expect(runCompanionSyncIdentityRound('http://peer', 'Local'))
     .rejects.toThrow('sync_group_resources_incomplete');
   expect(runtime.baselines).toEqual([]);
-  expect(runtime.cleanups).toEqual(['2', '1']);
+  expect(runtime.cleanups).toEqual(['3', '2', '1']);
   runtime.resourceError = false;
 });
 

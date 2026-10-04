@@ -1,12 +1,13 @@
 import { expect, it, vi } from 'vitest';
 
+import { parseSyncIdentityPackContainerManifest } from '../../../../../../lib/core/sync/syncIdentityPackManifest.js';
 import { buildSyncIdentityPackPage } from '../../../../../../lib/core/sync/syncIdentityPackPage.js';
 import { SYNC_PACK_TABLE_NAMES } from '../../../../../../lib/core/sync/syncPackManifest.js';
 
 const mocks = vi.hoisted(() => ({
   prepare: vi.fn(async () => ({ body: 'encrypted', headers: { Authorization: 'signed' } })),
   download: vi.fn(async () => ({ packPath: '/cache/pack.db', manifest: {} })),
-  apply: vi.fn(async () => { throw new Error('apply_failed'); }),
+  apply: vi.fn<(input: { manifest: unknown }) => Promise<never>>(async () => { throw new Error('apply_failed'); }),
   remove: vi.fn(async () => true)
 }));
 vi.mock('../../network/signedRequest', () => ({
@@ -70,4 +71,20 @@ it('binds a staged restore download to the selected event and set', async () => 
   }));
   await staged.cleanup();
   expect(mocks.remove).toHaveBeenCalledWith('/cache/restore.db');
+});
+
+it('passes a complete verified container manifest to the production apply boundary', async () => {
+  const page = buildSyncIdentityPackPage({ group_id: 'group', source_peer_id: 'source',
+    target_peer_id: 'receiver', source_view_id: '12345678-1234-1234-1234-123456789abc',
+    page_index: 0, previous_page_id: null, objects: [] });
+  mocks.download.mockResolvedValueOnce({ packPath: '/cache/pack.db', manifest: manifestFor(page) });
+  mocks.apply.mockImplementationOnce(async (input) => {
+    parseSyncIdentityPackContainerManifest(input.manifest, {
+      sourcePeerId: 'source', targetPeerId: 'receiver'
+    });
+    throw new Error('validated_apply_boundary');
+  });
+  const { downloadAndApplyCompanionSyncIdentityPage } = await import('./companionSyncIdentityDownload');
+  await expect(downloadAndApplyCompanionSyncIdentityPage({ endpointUrl: 'http://desktop.local',
+    hostName: 'mobile', page })).rejects.toThrow('validated_apply_boundary');
 });
