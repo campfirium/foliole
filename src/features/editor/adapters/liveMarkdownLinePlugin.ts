@@ -127,14 +127,13 @@ function syncMappedMarkdownImageWidgetRanges(view: EditorView) {
   });
   if (imageMatches.length === 0) return;
   const editorNodeId = view.state.facet(activeNodeIdFacet);
-  const presentationVersion = view.state.facet(imageClozePresentationVersionFacet);
   const usedWidgets = new Set<HTMLElement>();
   const widgets = Array.from(view.dom.querySelectorAll<HTMLElement>('.cm-md-image-widget'));
 
   for (const imageMatch of imageMatches) {
     const widget = widgets.find((candidate) =>
       !usedWidgets.has(candidate) &&
-      canReuseMarkdownImageWidgetDom(candidate, imageMatch, editorNodeId, presentationVersion)
+      canReuseMarkdownImageWidgetDom(candidate, imageMatch, editorNodeId)
     );
     if (!widget) continue;
     updateMarkdownImageWidgetDomRange(widget, imageMatch);

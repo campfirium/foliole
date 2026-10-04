@@ -16,6 +16,7 @@ export function createImageSurface(
     onLoad?: (() => void) | null;
     requestMeasure?: RequestEditorMeasure;
     isActive?: () => boolean;
+    existingImage?: HTMLImageElement;
   } = {}
 ) {
   const presentation = getImageClozeEditorPresentation(editorNodeId);
@@ -27,7 +28,7 @@ export function createImageSurface(
     editorNodeId,
     from: imageMatch.from,
     presentation: imagePresentation,
-    renderImage: () => createMarkdownImageElement({
+    renderImage: () => imageOptions.existingImage ?? createMarkdownImageElement({
       alt: imageMatch.alt,
       deferSource: imageOptions.deferSource ?? false,
       display: imageMatch.display,
