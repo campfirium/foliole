@@ -115,14 +115,15 @@ it('rejects malformed identities, dates, durations and deletions before changing
 });
 
 it('upgrades desktop and companion storage while retaining existing reading data', async () => {
-  for (const schema of [DESKTOP_FRESH_SCHEMA_STATEMENTS, COMPANION_SCHEMA_STATEMENTS]) {
+  for (const [schema, version] of [[DESKTOP_FRESH_SCHEMA_STATEMENTS, 128],
+    [DESKTOP_FRESH_SCHEMA_STATEMENTS, 133], [COMPANION_SCHEMA_STATEMENTS, 66]] as const) {
     const db = new Database(':memory:'); connections.push(db);
     for (const sql of schema) db.exec(sql);
     db.exec(`DROP TABLE foreground_daily_time; DROP TABLE foreground_time_coverage;
       INSERT INTO nodes(id, title, created_at, updated_at) VALUES ('retained', 'Retained', '2026-10-01', '2026-10-01');
       INSERT INTO node_reading(node_id, last_handled_at, next_at, repetition_count, state) VALUES ('retained', '2026-10-01', '2026-10-04', 7, 'active')`);
     if (schema === DESKTOP_FRESH_SCHEMA_STATEMENTS) {
-      db.pragma('user_version = 133'); initializeDatabaseSchema(db);
+      db.pragma(`user_version = ${version}`); initializeDatabaseSchema(db);
       expect(db.pragma('user_version', { simple: true })).toBe(134);
     } else {
       const port = createBetterSqliteDbPort(db);

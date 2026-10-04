@@ -50,7 +50,7 @@ function sourceTriggers() {
   });
 }
 
-export const SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS = [
+export const SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS_V129 = [
   ...entityTriggers('nodes', '$.id', ['node', 'node_reading', 'node_review', 'node_open_state']),
   ...entityTriggers('external_documents', '$.document_id', ['external_document']),
   ...entityTriggers('external_search_folders', '$.id', ['external_folder']),
@@ -65,7 +65,6 @@ export const SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS = [
     "$.scope || ':' || $.platform || ':' || $.form_factor || ':' || $.host_name || ':' || $.key",
     ['setting']),
   ...entityTriggers('watched_folder_bindings', '$.binding_id', ['watched_folder']),
-  ...entityTriggers('foreground_daily_time', '$.id', ['foreground_daily_time']),
   ...entityTriggers('topic_daily_count_entries', '$.id', ['topic_daily_count']),
   ...sourceTriggers(),
   ...viewStateTriggers('workspace_meta',
@@ -73,4 +72,9 @@ export const SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS = [
   ...viewStateTriggers('node_view_state',
     "substr(state.object_id, -length(':' || $.host_name || ':node:' || $.node_id)) = " +
       "':' || $.host_name || ':node:' || $.node_id")
+] as const;
+
+export const SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS = [
+  ...SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS_V129,
+  ...entityTriggers('foreground_daily_time', '$.id', ['foreground_daily_time'])
 ] as const;

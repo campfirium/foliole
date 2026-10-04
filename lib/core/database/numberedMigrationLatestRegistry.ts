@@ -51,7 +51,8 @@ import { initializeStoredSourceSearch } from './storedSourceSearchSchema.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
-import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS } from './syncIdentityEntityTriggerStatements.js';
+import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS,
+  SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS_V129 } from './syncIdentityEntityTriggerStatements.js';
 import { SYNC_IDENTITY_FACT_STAGING_SCHEMA } from './syncIdentityFactStagingSchema.js';
 import { SYNC_IDENTITY_INDEX_SCHEMA_STATEMENTS } from './syncIdentityIndexSchemaStatements.js';
 import { SYNC_IDENTITY_RECEIPT_SCHEMA_STATEMENTS } from './syncIdentityReceiptSchemaStatements.js';
@@ -183,7 +184,7 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 129, migrate: (sqlite) => {
     for (const statement of SYNC_IDENTITY_INDEX_SCHEMA_STATEMENTS) sqlite.exec(statement);
     for (const statement of SYNC_IDENTITY_RECEIPT_SCHEMA_STATEMENTS) sqlite.exec(statement);
-    for (const statement of SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+    for (const statement of SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS_V129) sqlite.exec(statement);
   } },
   { version: 130, migrate: (sqlite) => {
     for (const column of ['local_proof_root', 'peer_proof_root',
