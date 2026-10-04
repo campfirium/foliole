@@ -68,6 +68,14 @@ function isBlockedIpv6Host(hostname: string) {
   return false;
 }
 
+/**
+ * Intentional URL-text policy, not complete SSRF or DNS-rebinding protection.
+ * DNS-answer filtering was removed in 7342a3681 because TUN proxies return
+ * fake IPs (for example, 198.18.0.0/15) for legitimate public image hosts.
+ * Private literals remain blocked, but ordinary names can resolve to private
+ * peers. This residual risk is retained for proxy compatibility; any future
+ * DNS/peer enforcement should first prove that normal TUN image loading works.
+ */
 export function isAllowedRemoteImageHostname(hostname: string) {
   const normalized = stripIpv6Brackets(hostname.trim().toLowerCase());
   if (!normalized) return false;
