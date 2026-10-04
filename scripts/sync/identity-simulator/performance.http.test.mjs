@@ -112,8 +112,7 @@ it('measures real source views while preserving original node identities and bod
 const benchmarkRequested = Object.keys(process.env).some((key) =>
   key.startsWith('FOLIOLE_BENCHMARK_'));
 
-// SKIP: Requires the manual benchmark environment and isolated library snapshot | 2026-10-04 | revive: explicit FOLIOLE_BENCHMARK_* inputs
-it.skipIf(!benchmarkRequested)('compares both production paths on one WAL-aware library snapshot', async () => {
+async function compareProductionPaths() {
   if (process.env.FOLIOLE_BENCHMARK_PREPARATION_ONLY === '1') {
     const base = process.env.FOLIOLE_BENCHMARK_BASE;
     const output = process.env.FOLIOLE_BENCHMARK_OUTPUT;
@@ -137,4 +136,12 @@ it.skipIf(!benchmarkRequested)('compares both production paths on one WAL-aware 
   await fs.writeFile(path.join(output, 'summary.json'), JSON.stringify(report, null, 2));
   expect(report.reports.map((item) => item.error)).toEqual(
     report.reports.map(() => null));
-}, 1_800_000);
+}
+
+const benchmarkName = 'compares both production paths on one WAL-aware library snapshot';
+if (benchmarkRequested) {
+  it(benchmarkName, compareProductionPaths, 1_800_000);
+} else {
+  // SKIP: Requires the manual benchmark environment and isolated library snapshot | 2026-10-04 | revive: explicit FOLIOLE_BENCHMARK_* inputs
+  it.skip(benchmarkName, compareProductionPaths, 1_800_000);
+}

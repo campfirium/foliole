@@ -24,7 +24,7 @@ import { reconcileFlowSession, resumeFlowSession } from '../store/workspaceFlowS
 import { deleteCompanionExistingHighlight } from './companionExistingHighlightPersistence';
 import { restoreCompanionTrashNode } from './companionTrashActions';
 
-const now = '2026-10-03T00:00:00.000Z';
+const now = new Date(2026, 9, 3, 12).toISOString();
 beforeEach(startLibraries);
 afterEach(async () => { await closeIosCompanionDatabase(); await closeLibraries(); });
 
@@ -86,6 +86,7 @@ it('soft deletes, synchronizes and restores the same cloze after reopening witho
   expect(log).toHaveLength(1);
   expect(initial.nodesById.cloze!.review?.reps).toBe(2);
   const session = resumeFlowSession(initial, 'review-first', 'cloze', now);
+  expect(session.currentNodeId).toBe('cloze');
   session.isAnswerRevealed = true;
   const { guard } = await readCompanionHighlight(initial, 'cloze', 'cloze');
   await deleteCompanionExistingHighlight({ deviceId: mobile.name, nodeId: 'cloze', snapshot: initial, guard });

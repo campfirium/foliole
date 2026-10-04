@@ -126,7 +126,7 @@ it('replays a native staged restore in one writer transaction', async () => {
   const view = await createSyncIdentitySourceView(source, resolveSyncPackPath('mobile-source.db'));
   const targetPath = resolveSyncPackPath('mobile-target.db');
   const snapshotPath = path.join(mockedSyncPackBuilderAppDataDir, 'cache',
-    'foliole-provider-source-mobile-test.db');
+    'foliole-provider-source-mobile-test.db').split(path.sep).join('/');
   let target: Database.Database | undefined;
   try {
     const inventory = await readReadySyncIdentityInventory(view.port);

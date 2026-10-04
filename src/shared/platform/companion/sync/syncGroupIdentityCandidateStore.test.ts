@@ -30,7 +30,7 @@ it('stages fixed-view candidates and pages each direction in global ID order', a
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-candidate-store-'));
   const cache = path.join(root, 'cache');
   await fs.mkdir(cache);
-  const snapshotPath = path.join(cache, 'foliole-provider-source-test.db');
+  const snapshotPath = path.join(cache, 'foliole-provider-source-test.db').split(path.sep).join('/');
   const snapshot = new Database(snapshotPath);
   snapshot.close();
   const sqlite = new Database(':memory:');

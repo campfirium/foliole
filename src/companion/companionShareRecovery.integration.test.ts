@@ -25,6 +25,7 @@ import { loadCompanionWorkspaceSyncState } from '../shared/platform/companionWor
 
 import { toCompanionNativeNodeVersion } from './companionAnnotationNodeVersion';
 import { consumeCompanionShareInbox } from './companionShareInboxRuntime';
+import { readShareOriginalFacts } from './companionShareRecovery.testSupport';
 import { createWorkspaceSnapshotActions } from './companionWorkspaceSyncActions';
 
 let root = '';
@@ -202,24 +203,33 @@ it.each([true, false])('preserves a permanent deletion with receipt present = %s
     content: 'Edited before permanent deletion', updatedAt: '2026-10-03T00:30:00Z'
   }, 'share-device', 'ver_before_delete')]);
   const current = (await loadCompanionWorkspaceNode(topicId))!;
+  const originals = readShareOriginalFacts(database!, topicId);
   const deleted = await toCompanionNativeNodeVersion({ ...current,
     deletedAt: '2026-10-03T01:00:00Z', updatedAt: '2026-10-03T01:00:00Z'
   }, 'other-host', 'ver_deleted');
   await applyCompanionSyncNodeVersions([{ ...deleted, is_tombstone: true }]);
   await writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, topicId, Number.MAX_SAFE_INTEGER));
-  expect(facts().versions).not.toEqual(expect.arrayContaining([expect.objectContaining({ version_id: `ver_share_${deliveryId}` })]));
+  expect(readShareOriginalFacts(database!, topicId).versions).toEqual(expect.arrayContaining(originals.versions));
+  expect(readShareOriginalFacts(database!, topicId).edges).toEqual(expect.arrayContaining(originals.edges));
+  expect(database!.prepare(`SELECT version_id, body_text, json_extract(snapshot_json, '$.content') AS content
+    FROM node_sync_versions WHERE version_id IN (?, ?) ORDER BY version_id`)
+    .all(`ver_share_${deliveryId}`, 'ver_before_delete')).toEqual([
+      { version_id: 'ver_before_delete', body_text: 'Edited before permanent deletion',
+        content: 'Edited before permanent deletion' },
+      { version_id: `ver_share_${deliveryId}`, body_text: null, content: null }
+    ]);
   expect(facts().topics).toHaveLength(0);
   expect(database!.prepare('SELECT node_id FROM node_sync_tombstones WHERE node_id = ?').all(topicId)).toHaveLength(1);
   if (!receiptPresent) database!.prepare("DELETE FROM companion_meta WHERE key LIKE 'share-delivery:%'").run();
   const saved = facts();
+  const retained = readShareOriginalFacts(database!, topicId);
   await closeIosCompanionDatabase();
   await openLibrary();
-  if (receiptPresent) {
-    await consumeCompanionShareInbox(await workspace());
-    expect(pending().items).toHaveLength(0);
-  } else {
-    await expect(consumeCompanionShareInbox(await workspace())).rejects.toThrow('share_delivery_collision');
-    expect(pending().items).toHaveLength(1);
-  }
+  await consumeCompanionShareInbox(await workspace());
+  expect(pending().items).toHaveLength(0);
   expect(facts()).toEqual(saved);
+  expect(readShareOriginalFacts(database!, topicId)).toEqual(retained);
+  expect(database!.prepare('SELECT node_id FROM node_sync_tombstones WHERE node_id = ?').all(topicId))
+    .toEqual([{ node_id: topicId }]);
+  expect(await loadCompanionWorkspaceNode(topicId)).toBeNull();
 });

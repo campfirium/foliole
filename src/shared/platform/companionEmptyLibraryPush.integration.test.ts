@@ -59,7 +59,7 @@ it('pushes each successive production mobile edit when synchronized immediately'
   }
 });
 
-it.each([false, true])('pushes two offline production edits and retires the unsent intermediate version (collection=%s)', async (collect) => {
+it.each([false, true])('pushes offline edits and retires only the intermediate body (collection=%s)', async (collect) => {
   const desktop = createPeer('desktop');
   const mobile = createPeer('mobile');
   joinPeers(desktop, mobile);
@@ -71,7 +71,8 @@ it.each([false, true])('pushes two offline production edits and retires the unse
   await mobileEdit(mobile, 'mobile-B', '123456789', 'mobile-C', 2);
   if (collect) {
     expect(await collectNodeVersionPayloads(mobile.port, 'topic')).toEqual({ released: 0, skipped: null });
-    expect(history(mobile).find((row) => row.version_id === 'mobile-B')).toBeUndefined();
+    expect(history(mobile).find((row) => row.version_id === 'mobile-B'))
+      .toMatchObject({ body_text: null, parent_version_id: a });
   }
   const store = mobileStore(mobile);
   const records = await store.loadNodeVersions(desktop.id, null);
@@ -85,7 +86,8 @@ it.each([false, true])('pushes two offline production edits and retires the unse
   await store.savePushAcks(desktop.id, decoded.acks);
   expect(await store.loadNodeVersions(desktop.id, null)).toEqual([]);
   assertPersisted(desktop, '123456789', 'mobile-C');
-  expect(history(desktop).find((row) => row.version_id === 'mobile-B')).toBeUndefined();
+  expect(history(desktop).find((row) => row.version_id === 'mobile-B'))
+    .toMatchObject({ body_text: null, parent_version_id: a });
   const replay = await applyCompanionStateSyncPushWithDbPort(desktop.port,
     [...records].reverse().map((record) => nodeVersionSyncAdapter.buildPushPayload(record)));
   expect(replay.acks.every((ack) => ack.status === 'accepted')).toBe(true);

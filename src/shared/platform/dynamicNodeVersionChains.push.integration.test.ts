@@ -33,7 +33,7 @@ it.each(['member-left', 'group-left', 'group-switched', 'orphan-payload', 'local
     if (change === 'local-device') source.db.prepare('UPDATE node_version_outbound_holds SET device_identity_key = ?').run(source.id);
     await collectNodeVersionPayloads(source.port, 'topic');
     expect(history(source).map((row) => [row.version_id, row.body_text, row.parent_version_id]))
-      .toEqual([[head, 'current', null]]);
+      .toEqual([[sent, null, null], [head, 'current', sent]]);
   }
 );
 
@@ -58,5 +58,6 @@ it('freezes a concrete push and accepts only its exact acknowledgement', async (
   const next = nodeVersionSyncAdapter.buildPushPayload((await loadCurrentSyncNodeRecord(source.port, 'topic'))!);
   await store.stagePushItems(target.id, [next]);
   await store.savePushAcks(target.id, [{ ...ack, clientOpId: next.clientOpId, versionId: head }]);
-  expect(history(source).map((row) => row.version_id)).toEqual([head]);
+  expect(history(source).map((row) => [row.version_id, row.body_text, row.parent_version_id]))
+    .toEqual([[sent, 'sent', null], [head, 'current', sent]]);
 });

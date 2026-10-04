@@ -94,6 +94,7 @@ const smokeBridgeMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../shared/platform/runtimeInvoke', () => ({
+  isRuntimeInvokeAvailable: vi.fn(() => Boolean(window.electronAPI?.invoke)),
   getRuntimeInvoke: vi.fn(() => window.electronAPI?.invoke ?? smokeRuntimeMocks.createRuntimeInvoke())
 }));
 
