@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { net, protocol } from 'electron';
@@ -7,22 +6,14 @@ import {
   EXT_DOC_IMAGE_PROTOCOL_SCHEME,
   parseExtDocImageRenderUrl
 } from '../../lib/platform/extDocImageProtocolUrl.js';
+import { resolveExternalSearchFolder } from '../database/externalSearchFolderOwnership.js';
 import { loadExternalSearchFolders } from '../database/externalSearchFolders.js';
 import { resolveExternalPreviewImageResource } from '../database/externalSearchPreviewContent.js';
 
-
-
-function isWithinFolder(filePath: string, folderPath: string) {
-  const relative = path.relative(folderPath, filePath);
-  return relative === '' || (!!relative && !relative.startsWith('..') && !path.isAbsolute(relative));
-}
-
 function resolveExternalPreviewFolder(documentAbsolutePath: string) {
-  return (
-    loadExternalSearchFolders()
-      .filter((folder) => folder.access_mode === 'local' && folder.source_executable)
-      .filter((folder) => isWithinFolder(documentAbsolutePath, folder.folder_path))
-      .sort((left, right) => right.folder_path.length - left.folder_path.length)[0] ?? null
+  return resolveExternalSearchFolder(
+    documentAbsolutePath,
+    loadExternalSearchFolders().filter((folder) => folder.access_mode === 'local' && folder.source_executable)
   );
 }
 

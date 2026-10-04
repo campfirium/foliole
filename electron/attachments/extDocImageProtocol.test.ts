@@ -3,6 +3,7 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
@@ -131,5 +132,52 @@ it('returns not found for paths that escape both allowed local bases', async () 
 
   expect(response.status).toBe(404);
   expect(response.headers.get('cache-control')).toBe('no-store');
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+it('uses the most specific folder and never a prefix sibling for attachment fallback', async () => {
+  const root = await createTempRoot();
+  const books = createFolderConfig(path.join(root, 'Books'));
+  const nested = createFolderConfig(path.join(root, 'Books', 'Topics'));
+  const sibling = createFolderConfig(path.join(root, 'BooksOld'));
+  for (const folder of [books, nested, sibling]) {
+    await mkdir(folder.attachment_root_path, { recursive: true });
+    await writeFile(path.join(folder.attachment_root_path, 'cover.png'), 'png');
+  }
+  loadExternalSearchFolders.mockReturnValue([books, nested, sibling]);
+  registerExtDocImageProtocol();
+  const handler = handle.mock.calls[0]?.[1];
+  for (const folder of [nested, sibling]) {
+    fetch.mockClear();
+    const response = await handler({ url: buildExtDocImageRenderUrl({
+      documentAbsolutePath: path.join(folder.folder_path, 'topic.md'), imageDestination: 'cover.png'
+    }) });
+    expect(response.status).toBe(200);
+    expect(fetch.mock.calls[0]?.[0]).toBe(pathToFileURL(path.join(folder.attachment_root_path, 'cover.png')).toString());
+  }
+  loadExternalSearchFolders.mockReturnValue([books]);
+  fetch.mockClear();
+  const response = await handler({ url: buildExtDocImageRenderUrl({
+    documentAbsolutePath: path.join(sibling.folder_path, 'topic.md'), imageDestination: 'cover.png'
+  }) });
+  expect(response.status).toBe(404);
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+it.each(['remote_mirror', 'unavailable'] as const)('keeps %s sources out of attachment fallback', async (state) => {
+  const root = await createTempRoot();
+  const folder = createFolderConfig(root);
+  await mkdir(folder.attachment_root_path, { recursive: true });
+  await writeFile(path.join(folder.attachment_root_path, 'cover.png'), 'png');
+  loadExternalSearchFolders.mockReturnValue([{
+    ...folder, access_mode: state === 'remote_mirror' ? 'remote_mirror' : 'local',
+    source_executable: state !== 'unavailable'
+  }]);
+  registerExtDocImageProtocol();
+  const handler = handle.mock.calls[0]?.[1];
+  const response = await handler({ url: buildExtDocImageRenderUrl({
+    documentAbsolutePath: path.join(root, 'topic.md'), imageDestination: 'cover.png'
+  }) });
+  expect(response.status).toBe(404);
   expect(fetch).not.toHaveBeenCalled();
 });

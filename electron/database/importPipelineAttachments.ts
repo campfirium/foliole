@@ -7,6 +7,7 @@ import { prepareCanonicalImageAttachment } from '../attachments/importImageAttac
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
 
 import { openDatabaseConnection } from './connection.js';
+import { resolveExternalSearchFolder } from './externalSearchFolderOwnership.js';
 import { loadExternalSearchFolders } from './externalSearchFolders.js';
 import { persistNodeResourceReference, replaceNodePdfResourceReference } from './nodeResources.js';
 import { enqueuePdfAttachmentIndexing, markPdfAttachmentIndexPending } from './pdfIndexing.js';
@@ -45,12 +46,7 @@ function decodeMarkdownPath(destination: string) {
 }
 
 function resolveExternalAttachmentRoot(sourceLocator: string) {
-  const normalizedSourceLocator = sourceLocator.trim().toLowerCase();
-  if (!normalizedSourceLocator) return null;
-  const matchingFolder = loadExternalSearchFolders().find((folder) => {
-    const normalizedFolderPath = folder.folder_path.trim().toLowerCase();
-    return normalizedFolderPath && normalizedSourceLocator.startsWith(normalizedFolderPath);
-  });
+  const matchingFolder = resolveExternalSearchFolder(sourceLocator, loadExternalSearchFolders());
   return matchingFolder?.attachment_root_path?.trim() || null;
 }
 
