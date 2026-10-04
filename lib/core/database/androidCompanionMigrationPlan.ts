@@ -170,6 +170,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(66, 'installSchema', 'Failed to add independent identity fact staging.'),
   step(67, 'installSchema', 'Failed to add daily foreground time.'),
   step(69, 'installSchema', 'Failed to add retained version query indexes.'),
+  step(70, 'installSchema', 'Failed to install shared companion retention indexes.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

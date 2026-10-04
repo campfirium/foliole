@@ -561,6 +561,15 @@
         }
       ],
       "beforeVersion": 69
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install shared companion retention indexes.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 70
     }
   ],
   "planKeys": {

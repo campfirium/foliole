@@ -2,16 +2,33 @@
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
-import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
+import { createCompanionDatabase, migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from '../../lib/core/database/nodeVersionRetentionIndexSchema.js';
 import { chainReferencesQuery } from '../../lib/core/sync/nodeVersionChainSql.js';
 import { prepareReadySyncIdentityIndex } from '../../lib/core/sync/syncIdentityIndexPreparation.js';
 import { buildSyncIdentityNodeFactIndex, readSyncIdentityNodeFactProofRoot } from '../../lib/core/sync/syncIdentityNodeFactIndex.js';
+import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
-it.each(['desktop', 'companion'])('preserves original facts and retention proofs through %s index upgrade and retry', async (host) => {
+function assertIndexes(db: Database.Database) {
+  const names = db.prepare<[], { name: string }>("SELECT name FROM sqlite_master WHERE type = 'index'")
+    .all().map((row) => row.name);
+  for (const statement of NODE_VERSION_RETENTION_INDEX_SCHEMA) {
+    expect(names).toContain(statement.match(/idx_[a-z_]+/u)![0]);
+  }
+}
+
+it('installs retained-version query indexes through the actual fresh companion schema', async () => {
+  const db = new Database(':memory:');
+  try {
+    await createCompanionDatabase(createBetterSqliteDbPort(db), COMPANION_DATABASE_VERSION);
+    assertIndexes(db);
+  } finally { db.close(); }
+});
+
+it.each(['desktop', 'companion68', 'companion69'])('preserves original facts and retention proofs through %s index upgrade and retry', async (host) => {
   const db = new Database(':memory:');
   try {
     initializeDatabaseSchema(db);
@@ -44,8 +61,10 @@ it.each(['desktop', 'companion'])('preserves original facts and retention proofs
         db.pragma('user_version = 134');
         initializeDatabaseSchema(db);
       } else {
-        await port.transaction(tx => migrateCompanionDatabase(tx, 68, 69));
+        const from = host === 'companion68' ? 68 : 69;
+        await port.transaction(tx => migrateCompanionDatabase(tx, from, COMPANION_DATABASE_VERSION));
       }
+      assertIndexes(db);
       await buildSyncIdentityNodeFactIndex(port);
       expect(await readSyncIdentityNodeFactProofRoot(port)).toBe(proof);
       expect(db.prepare(query.sql).all(...query.params)).toEqual(retained);
