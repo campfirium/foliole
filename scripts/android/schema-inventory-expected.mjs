@@ -1,7 +1,7 @@
 export const EXPECTED_SCHEMA_SOURCES = {
-  androidAssetStatements: 177,
+  androidAssetStatements: 184,
   androidJavaMigrationStatements: 0,
-  desktopStatements: 141
+  desktopStatements: 144
 };
 
 export const EXPECTED_SHARED_SCHEMA_DRIFT = {

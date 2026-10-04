@@ -2,6 +2,7 @@ import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.j
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { shouldApplyForegroundTime } from './syncForegroundDailyTime.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
@@ -17,6 +18,7 @@ const STATE_OBJECT_TYPES = new Set<NativeSyncObjectRecord['object_type']>([
   'node_reading',
   'node_review',
   'topic_daily_count',
+  'foreground_daily_time',
   'node_text_alternative',
   'parent_child_order',
   'pdf_page_text',
@@ -145,6 +147,9 @@ async function getSyncObjectApplyStatus(port: DbPort, record: SyncPackSyncObject
     'SELECT content_hash, deleted_at, updated_at FROM sync_object_state WHERE object_type = ? AND object_id = ?',
     [record.object_type, record.object_id]
   ))[0];
+  if (record.object_type === 'foreground_daily_time') {
+    return await shouldApplyForegroundTime(port, record) ? 'apply' : 'already_applied';
+  }
   if (!current) return 'apply';
   if (current.content_hash === record.content_hash && current.deleted_at === record.deleted_at) return 'already_applied';
   const currentKey = `${current.updated_at}\n${current.content_hash}\n${current.deleted_at ?? ''}`;

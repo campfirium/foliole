@@ -15,6 +15,7 @@ import {
   closeDatabaseConnection,
   enableDatabaseWriteAheadLog,
   openDatabaseConnection,
+  notifyDatabaseConnectionReady,
   resolveDatabasePath
 } from './connection.js';
 import type { DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
@@ -129,7 +130,7 @@ function initializeSchemaWorkspaceAndSearch(
   return deferSearchIndex ? initializedConnection : initializeWorkspaceSearchSidecar(initializedConnection);
 }
 
-export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail' } = {}) {
+function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail' } = {}) {
   const databasePath = resolveDatabasePath();
 
   try {
@@ -187,6 +188,12 @@ export function initializeDatabase(reportStage?: DatabaseInitStageReporter, opti
     reportStage?.('database_recovery_schema_init_complete');
     return initializedConnection;
   }
+}
+
+export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail' } = {}) {
+  const connection = initializeDatabaseInternal(reportStage, options);
+  notifyDatabaseConnectionReady();
+  return connection;
 }
 
 function createPreMigrationSnapshotIfNeeded(connection: ReturnType<typeof openDatabaseConnection>) {

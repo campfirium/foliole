@@ -1,4 +1,8 @@
 const controlledElectronSqliteTests = [
+  'electron/foregroundTimeRuntime.test.ts',
+  'lib/core/database/foregroundTime.integration.test.ts',
+  'src/shared/platform/companion/runtime/companionForegroundTime.test.ts',
+  'src/shared/platform/companion/runtime/foregroundTimeSync.integration.test.ts',
   'electron/sync/companionLanKnownNodePage.http.integration.test.ts',
   'electron/sync/syncFactProbeAcceptance.integration.test.ts',
   'electron/sync/syncPageApplyAcceptance.integration.test.ts',

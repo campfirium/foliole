@@ -1,5 +1,7 @@
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { foregroundTimeHistoryArgsSchema } from '../../lib/platform/nativeForegroundTimeContract.js';
 import { loadEditorOperationHistory, saveEditorOperationHistory } from '../database/editorOperationHistory.js';
+import { loadForegroundTimeHistory } from '../database/foregroundTimeHistory.js';
 import { loadNodeBacklinks } from '../database/nodeBacklinks.js';
 import { saveNodeOpenState } from '../database/nodeOpenState.js';
 import { saveNodeReadingState } from '../database/nodeReadingState.js';
@@ -32,6 +34,9 @@ function completeHighValueWrite<T>(result: T) {
 }
 
 export function handleWorkspaceReadCommand(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.loadForegroundTimeHistory) {
+    return loadForegroundTimeHistory(foregroundTimeHistoryArgsSchema.parse(args));
+  }
   if (command === NATIVE_COMMANDS.loadReviewCalendarHistory) {
     return loadReviewCalendarHistory({
       from: asTimestamp(args.from, 'from'), to: asTimestamp(args.to, 'to')

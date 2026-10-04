@@ -4,6 +4,7 @@ import { MouseGestureSettingsProvider } from '../features/settings/context/Mouse
 import { useAttachmentObservation } from '../shared/hooks/useAttachmentObservation';
 import { LocalizationProvider, useTranslation } from '../shared/localization/LocalizationProvider';
 import { useSystemEntryDisplayNamesSnapshot } from '../shared/localization/systemEntryDisplayNamesStore';
+import { useCompanionForegroundTime } from '../shared/platform/companion/runtime/useCompanionForegroundTime';
 import { AppConfirmationProvider } from '../shared/ui/AppConfirmationProvider';
 import {
   createStartupBootSurfaceModel,
@@ -24,6 +25,7 @@ function CompanionAppContent() {
   const t = useTranslation();
   const bootstrap = useCompanionBootstrap();
   useAttachmentObservation(bootstrap.status === 'ready');
+  useCompanionForegroundTime(bootstrap.status === 'ready');
   useEffect(() => {
     if (bootstrap.status === 'ready')
       void hydrateCompanionSystemEntryDisplayNames().catch(() => undefined);

@@ -6,6 +6,7 @@ import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from './desktopResourceSchemaState
 import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from './desktopSourceConnectionSchemaStatements.js';
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatements.js';
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
+import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
 import { LEGACY_BODY_MIGRATION_SCHEMA } from './legacyBodyMigrationSchema.js';
 import { isLegacyOrderingSchema } from './legacyStorageRetirementMigration.js';
@@ -34,6 +35,7 @@ import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DESKTOP_CORE_SCHEMA_STATEMENTS,
   ...REVIEW_DAILY_COUNT_SCHEMA,
+  ...FOREGROUND_TIME_SCHEMA,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(0, 6),
   ...KEEP_IMPORT_SCHEMA_STATEMENTS,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(6),

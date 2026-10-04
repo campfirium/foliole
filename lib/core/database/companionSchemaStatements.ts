@@ -4,6 +4,7 @@ import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from './androidCompanionCore
 import { ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS } from './androidCompanionHostSchemaStatements.js';
 import { ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS } from './androidCompanionResourceSchemaStatements.js';
 import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from './androidCompanionSyncSchemaStatements.js';
+import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { isLegacyOrderingSchema } from './legacyStorageRetirementMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
@@ -23,6 +24,7 @@ export const COMPANION_SCHEMA_STATEMENTS = [
   ...ANDROID_COMPANION_HOST_SCHEMA_STATEMENTS,
   ...ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS,
   ...REVIEW_DAILY_COUNT_SCHEMA,
+  ...FOREGROUND_TIME_SCHEMA,
   ...ANDROID_COMPANION_RESOURCE_SCHEMA_STATEMENTS,
   ...PDF_INDEX_STATE_SCHEMA_STATEMENTS,
   ...ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS,

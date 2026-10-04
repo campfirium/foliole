@@ -142,6 +142,7 @@ function payloadSql(objectType: NativeSyncStateObjectRecord['object_type']) {
   if (objectType === 'node_reading') return CONTRACT.sql.readingPayload;
   if (objectType === 'node_review') return CONTRACT.sql.reviewPayload;
   if (objectType === 'node_text_alternative') return CONTRACT.sql.alternativePayload;
+  if (objectType === 'foreground_daily_time') return CONTRACT.sql.foregroundDailyTimePayload;
   if (objectType === 'topic_daily_count') return CONTRACT.sql.topicDailyCountPayload;
   if (objectType === 'setting') return CONTRACT.sql.settingPayload;
   throw new Error(`unsupported_companion_syncback_object:${objectType}`);

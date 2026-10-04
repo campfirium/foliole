@@ -17,6 +17,7 @@ import {
   reviewLogSyncAdapter,
   settingSyncAdapter,
   topicDailyCountSyncAdapter,
+  foregroundDailyTimeSyncAdapter,
   viewStateSyncAdapter,
   type SyncPushAck
 } from './companionSyncPushProtocol';
@@ -90,6 +91,7 @@ const statePushAdapters = {
   parent_child_order: parentChildOrderSyncAdapter,
   setting: settingSyncAdapter,
   topic_daily_count: topicDailyCountSyncAdapter,
+  foreground_daily_time: foregroundDailyTimeSyncAdapter,
   view_state: viewStateSyncAdapter
 } as const;
 

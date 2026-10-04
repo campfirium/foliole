@@ -162,16 +162,17 @@ export default {
       },
       height: { 'floating-workspace': '47.5rem', 'statistics-panel': 'min(53.75rem, calc(100dvh - 2.25rem))' },
       minHeight: { 'dialog-notice-body': '7.5rem' },
-      minWidth: { 'statistics-table': '60rem' },
+      minWidth: { 'statistics-table': '60rem', 'statistics-time-table': '120rem' },
       maxHeight: { 'floating-workspace': 'calc(100dvh - 2rem)' },
       width: {
         'dialog-notice': 'min(30rem, calc(100vw - 2rem))',
         'floating-workspace': '65rem',
         'statistics-panel': 'min(77.5rem, calc(100vw - 2.25rem))',
+        'statistics-time': '5rem',
         'statistics-day': '2rem'
       },
       maxWidth: { 'floating-workspace': 'calc(100vw - 2rem)' },
-      gridTemplateColumns: { 'floating-workspace': 'minmax(0, var(--workspace-list-width, 18.75rem)) minmax(0, 1fr)' },
+      gridTemplateColumns: { 'statistics-time': 'repeat(2, minmax(0, 1fr)) 5rem', 'floating-workspace': 'minmax(0, var(--workspace-list-width, 18.75rem)) minmax(0, 1fr)' },
       boxShadow: {
         popover: 'var(--shadow-popover)',
         panel: 'var(--shadow-panel)',

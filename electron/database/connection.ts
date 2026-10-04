@@ -33,10 +33,19 @@ interface OpenDatabaseConnectionOptions {
 let cachedConnection: DatabaseConnection | null = null;
 let databaseUnavailableError: Error | null = null;
 const connectionCleanupCallbacks = new Set<() => void>();
+const connectionReadyCallbacks = new Set<() => void>();
 const mainDatabaseCoordinator = new SqliteConnectionCoordinator();
 
 export function registerDatabaseConnectionCleanup(callback: () => void) {
   connectionCleanupCallbacks.add(callback);
+}
+
+export function registerDatabaseConnectionReady(callback: () => void) {
+  connectionReadyCallbacks.add(callback);
+}
+
+export function notifyDatabaseConnectionReady() {
+  for (const callback of connectionReadyCallbacks) callback();
 }
 
 function resolveConfiguredDatabasePath(): string {

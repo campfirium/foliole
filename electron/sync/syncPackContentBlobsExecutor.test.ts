@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { FOREGROUND_TIME_SCHEMA } from '../../lib/core/database/foregroundTimeSchema.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncPackContentBlobsWithDbPort } from '../../lib/core/sync/syncPackContentBlobsExecutor.js';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
@@ -33,6 +34,7 @@ it('retains local body bytes when the same manifest returns in a sync pack', asy
 function createFixture() {
   const sqlite = new Database(':memory:');
   sqlite.pragma('foreign_keys = ON');
+  for (const statement of FOREGROUND_TIME_SCHEMA) sqlite.exec(statement);
   sqlite.exec(`CREATE TABLE content_blobs (
     hash TEXT PRIMARY KEY, storage_key TEXT NOT NULL, kind TEXT NOT NULL, mime_type TEXT,
     compression TEXT NOT NULL, original_size_bytes INTEGER NOT NULL, stored_size_bytes INTEGER NOT NULL,

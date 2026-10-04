@@ -21,6 +21,7 @@ import { stopDevScreenshotServer } from './devScreenshotServer.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { installExternalDocumentFileOpenLifecycle } from './externalDocumentFileOpen.js';
 import { notifyExternalSearchSecondInstance, notifyExternalSearchUserActivity, stopExternalSearchBackgroundRefresh } from './externalSearchBackgroundRefreshRuntime.js';
+import { startDesktopForegroundTime, stopDesktopForegroundTime } from './foregroundTimeRuntime.js';
 import {
   createGlobalCapturePanelLaunchIntent,
   createGlobalCapturePanelSingleInstanceData
@@ -101,6 +102,7 @@ function installBeforeQuitLifecycle() {
       void stopLanWorkspaceSyncServer().catch((error) => appendMainProcessDiagnosticLog('lan_sync_stop_failed', { error }));
     },
     flush: async () => {
+      await stopDesktopForegroundTime();
       await flushReadingProgressForWindows(BrowserWindow.getAllWindows());
       await flushCoalescedWorkspaceSearchInvalidations();
       await waitForApplicationDatabaseRestoreSettlement();
@@ -129,6 +131,7 @@ async function initializeRuntimeServices() {
     await startSearchAliasMirror();
     refreshGlobalClipShortcutFromSettings();
     await appendBootEvent('database_init_complete');
+    startDesktopForegroundTime();
     installAppMenu();
     markDatabaseReady();
   } catch (error) {

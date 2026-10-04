@@ -26,7 +26,7 @@ test('counts scheduled Topics in the calendar and excludes unstarted reading con
   await desktopWindow.getByRole('button', { name: /^(Open Review Statistics|打开复习统计)$/ }).click();
   const calendar = desktopWindow.getByRole('dialog', { name: /^(Review statistics|复习统计)$/ });
   await expect(calendar).toBeVisible();
-  await expect(calendar.locator('[aria-current="date"]')).toHaveAttribute('aria-label', /Topics: 1$/);
-  await expect(calendar.getByRole('group', { name: /Topics: 1$/ })).toHaveCount(2);
+  await expect(calendar.locator('[aria-current="date"]')).toHaveAttribute('aria-label', /Topics: 1(?: |$)/);
+  await expect(calendar.getByRole('group', { name: /Topics: 1(?: |$)/ })).toHaveCount(2);
   await desktopWindow.screenshot({ path: path.resolve('.tmp/artifacts/review-calendar-due-topics-hidden.png') });
 });

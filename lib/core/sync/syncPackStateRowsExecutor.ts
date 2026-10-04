@@ -41,6 +41,7 @@ function normalizedObjectTypes(options: SyncPackStateRowsApplyOptions) {
     'node_reading',
     'node_review',
     'topic_daily_count',
+    'foreground_daily_time',
     'pdf_page_text',
     'setting',
     'watched_folder',

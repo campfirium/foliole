@@ -9,6 +9,7 @@ import type { NativeDisplayScaleCommandMap } from './nativeDisplayScaleContract.
 import type { NativeEditorOperationHistoryCommandMap } from './nativeEditorOperationHistoryContract.js';
 import type { NativeExternalSearchCommandMap } from './nativeExternalSearchCommandMap.js';
 import type { NativeFoliolePublishCommandMap } from './nativeFoliolePublishContract.js';
+import type { ForegroundTimeHistoryArgs, ForegroundTimeHistory } from './nativeForegroundTimeContract.js';
 import type { NativeImportCommandMap } from './nativeImportCommandMap.js';
 import type { NativeInitialLibrarySetupCommandMap } from './nativeInitialLibrarySetupContract.js';
 import type { NativeInvokeTuple } from './nativeInvokeTypes.js';
@@ -170,6 +171,10 @@ export type NativeCommandMap = NativeAssistantCommandMap & NativeAideStorageComm
   [NATIVE_COMMANDS.saveNodeReadingState]: {
     args: NativeSaveNodeReadingStateArgs;
     result: null;
+  };
+  [NATIVE_COMMANDS.loadForegroundTimeHistory]: {
+    args: ForegroundTimeHistoryArgs;
+    result: ForegroundTimeHistory;
   };
   [NATIVE_COMMANDS.loadReviewCalendarHistory]: {
     args: NativeReviewCalendarHistoryArgs;

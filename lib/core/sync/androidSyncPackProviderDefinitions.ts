@@ -41,6 +41,8 @@ const payloadPlans = [
   { objectType: 'order_version', sql: `SELECT version_id __object_id, child_ids_json,
     created_at, kind, parent_id, parent_version_ids_json, version_id
     FROM source.parent_order_versions` },
+  { objectType: 'foreground_daily_time', sql: `SELECT id __object_id, source_id, day_key, duration_ms
+    FROM source.foreground_daily_time` },
   { objectType: 'topic_daily_count', sql: `SELECT id __object_id, day_key, node_id
     FROM source.topic_daily_count_entries` },
   { objectType: 'external_folder', sql: `SELECT f.id __object_id, f.id, f.folder_path, f.attachment_mode,
@@ -108,7 +110,7 @@ export const ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS = {
           WHERE alternative.alternative_id = state.object_id)) ELSE state.deleted_at END
      FROM source.sync_object_state state WHERE state.state_seq > ? AND state.state_seq <= ? AND state.object_type IN
        ('external_document','external_folder','import_source','node','node_open_state','node_reading',
-        'node_review','node_text_alternative','parent_child_order','order_version','node_position','pdf_page_text','setting','view_state','watched_folder','topic_daily_count')
+        'node_review','node_text_alternative','parent_child_order','order_version','node_position','pdf_page_text','setting','view_state','watched_folder','topic_daily_count','foreground_daily_time')
        AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS
          (SELECT 1 FROM source.nodes WHERE id = state.object_id))
        AND (state.object_type NOT IN ('node_reading','node_review') OR state.deleted_at IS NOT NULL OR EXISTS

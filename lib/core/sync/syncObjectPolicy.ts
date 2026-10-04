@@ -12,7 +12,7 @@ export type SyncPolicyCategory =
 
 export interface SyncObjectPolicy {
   category: SyncPolicyCategory;
-  conflict: 'append_only_idempotent' | 'cache_refresh' | 'device_private' | 'host_private' | 'lww' | 'review_merge';
+  conflict: 'append_only_idempotent' | 'max_counter' | 'cache_refresh' | 'device_private' | 'host_private' | 'lww' | 'review_merge';
   scope: SyncScope;
   key: string;
   objectType: string | null;
@@ -40,6 +40,8 @@ export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
   policy('node_review', 'node_review', 'review', 'workspace', 'review_merge', ['node_review'], true),
   policy('node_text_alternative', 'node_text_alternative', 'content', 'workspace', 'lww', ['node_text_alternatives'], true),
   policy('review_log', null, 'review', 'event', 'append_only_idempotent', ['review_log'], true),
+  policy('foreground_daily_time', 'foreground_daily_time', 'activity', 'workspace', 'max_counter',
+    ['foreground_daily_time'], true),
   policy('topic_daily_count', 'topic_daily_count', 'review', 'workspace', 'append_only_idempotent',
     ['topic_daily_count_entries', 'topic_daily_counts'], true),
   policy('setting.workspace', 'setting', 'settings', 'workspace', 'lww', ['setting_records'], true),

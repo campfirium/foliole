@@ -43,6 +43,7 @@ vi.mock('./database/connection.js', async (importOriginal) => ({
   runWithDatabaseConnectionOwner: (execute: () => unknown) => execute()
 }));
 vi.mock('./database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop') }));
+vi.mock('./foregroundTimeRuntime.js', () => ({ startDesktopForegroundTime: vi.fn(), stopDesktopForegroundTime: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./database/migrate.js', () => ({ initializeDatabase: mocks.initializeDatabase }));
 vi.mock('./database/searchAliasMirror.js', () => ({ startSearchAliasMirror: vi.fn().mockResolvedValue(undefined), stopSearchAliasMirror: vi.fn() }));
 vi.mock('./database/nodeMutations.js', () => ({ flushAllDirtyNodeSyncVersions: vi.fn() }));

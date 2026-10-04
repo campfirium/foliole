@@ -13,7 +13,7 @@ export const SYNC_IDENTITY_NATIVE_STATE_COPY_SQL = `INSERT INTO sync_object_stat
   WHERE state.object_type IN
     ('external_document','external_folder','import_source','node','node_open_state','node_reading',
      'node_review','node_text_alternative','parent_child_order','order_version','node_position','pdf_page_text','setting',
-     'view_state','watched_folder','topic_daily_count')
+     'view_state','watched_folder','topic_daily_count','foreground_daily_time')
     AND (state.object_type != 'node' OR state.deleted_at IS NOT NULL OR EXISTS
       (SELECT 1 FROM source.nodes WHERE id = state.object_id))
     AND (state.object_type NOT IN ('node_reading','node_review') OR state.deleted_at IS NOT NULL OR EXISTS

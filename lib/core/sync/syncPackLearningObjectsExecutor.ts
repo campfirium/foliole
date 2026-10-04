@@ -11,7 +11,7 @@ export async function applySyncPackLearningObjectsWithDbPort(
 ) {
   const records = (await loadSyncPackSyncObjectsWithDbPort(port, options))
     .filter((record) => record.object_type === 'node_reading' || record.object_type === 'node_review' ||
-      record.object_type === 'topic_daily_count');
+      record.object_type === 'topic_daily_count' || record.object_type === 'foreground_daily_time');
   for (const record of records) {
     await applySyncObjectPayloadWithDbPort(port, record, options.hostName ? { hostName: options.hostName } : {});
   }

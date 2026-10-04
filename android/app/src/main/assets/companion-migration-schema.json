@@ -543,6 +543,15 @@
         }
       ],
       "beforeVersion": 66
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add daily foreground time.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 67
     }
   ],
   "planKeys": {

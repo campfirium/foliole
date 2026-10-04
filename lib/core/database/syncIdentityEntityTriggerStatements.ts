@@ -65,6 +65,7 @@ export const SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS = [
     "$.scope || ':' || $.platform || ':' || $.form_factor || ':' || $.host_name || ':' || $.key",
     ['setting']),
   ...entityTriggers('watched_folder_bindings', '$.binding_id', ['watched_folder']),
+  ...entityTriggers('foreground_daily_time', '$.id', ['foreground_daily_time']),
   ...entityTriggers('topic_daily_count_entries', '$.id', ['topic_daily_count']),
   ...sourceTriggers(),
   ...viewStateTriggers('workspace_meta',

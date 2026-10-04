@@ -10,6 +10,7 @@ import {
   CapacitorCompanionDatabaseOwner,
   type CapacitorCompanionDatabaseManager
 } from './capacitorCompanionDatabaseOwner';
+import { stopCompanionForegroundTime } from './companionForegroundTime';
 
 export type IosCompanionDatabaseManager = CapacitorCompanionDatabaseManager;
 
@@ -25,6 +26,7 @@ export function getIosCompanionDatabaseOwner() {
 }
 
 export async function closeIosCompanionDatabase() {
+  await stopCompanionForegroundTime();
   const owner = activeOwner;
   activeOwner = null;
   invalidateCompanionReadingScope();

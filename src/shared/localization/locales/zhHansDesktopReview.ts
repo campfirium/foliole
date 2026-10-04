@@ -1,6 +1,11 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_REVIEW_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.foregroundTime.previous': '上个月',
+  'desktop.foregroundTime.next': '下个月',
+  'desktop.foregroundTime.title': '前台时长',
+  'desktop.foregroundTime.short': '时长',
+  'desktop.foregroundTime.failed': '无法读取使用时长。',
   'desktop.reviewCalendar.title': '复习统计',
   'desktop.reviewCalendar.day': '日',
   'desktop.reviewCalendar.previous': '前六个月',

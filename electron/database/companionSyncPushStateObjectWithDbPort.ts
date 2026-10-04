@@ -1,5 +1,6 @@
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../../lib/core/database/syncStateSequenceSchemaStatements.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
+import { shouldApplyForegroundTime } from '../../lib/core/sync/syncForegroundDailyTime.js';
 import { applySyncObjectPayloadWithDbPort } from '../../lib/core/sync/syncObjectPayloadExecutor.js';
 import type { NativeSyncObjectRecord, NativeSyncObjectType } from '../../lib/platform/nativeSyncContract.js';
 
@@ -10,7 +11,7 @@ import type {
 } from './companionSyncPushTypes.js';
 import { materializeDesktopSettingRecord } from './desktopSettingMaterializer.js';
 
-export type StatePushObjectType = Extract<NativeSyncObjectType, 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'parent_child_order' | 'setting' | 'view_state' | 'topic_daily_count'>;
+export type StatePushObjectType = Extract<NativeSyncObjectType, 'node_open_state' | 'node_reading' | 'node_review' | 'node_text_alternative' | 'parent_child_order' | 'setting' | 'view_state' | 'topic_daily_count' | 'foreground_daily_time'>;
 
 interface SyncObjectStateRow extends DbRow {
   content_hash: string;
@@ -24,6 +25,7 @@ export function isStateObjectPush(item: CompanionSyncPushPayload) {
     || item.identity.objectType === 'node_reading'
     || item.identity.objectType === 'node_review'
     || item.identity.objectType === 'topic_daily_count'
+    || item.identity.objectType === 'foreground_daily_time'
     || item.identity.objectType === 'node_text_alternative'
     || item.identity.objectType === 'parent_child_order'
     || item.identity.objectType === 'setting'
@@ -43,7 +45,9 @@ export async function applyStateObjectPushWithDbPort(
     if (sameStateObject(current, record, objectType)) {
       return emptyResult(stateAck(item, current, 'already_applied'));
     }
-    if (objectType === 'node_open_state') {
+    if (objectType === 'foreground_daily_time') {
+      if (!await shouldApplyForegroundTime(tx, record)) return emptyResult(stateAck(item, current, 'already_applied'));
+    } else if (objectType === 'node_open_state') {
       if (current && current.content_hash !== item.base.baseContentHash
         && current.updated_at >= record.updated_at) {
         return emptyResult(stateAck(item, current, 'already_applied'));

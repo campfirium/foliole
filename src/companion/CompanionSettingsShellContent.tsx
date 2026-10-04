@@ -4,6 +4,7 @@ import { getCompanionRuntimeCapability } from '../shared/platform/companionRunti
 
 import { useOptionalCompanionCustomCss } from './CompanionCustomCssProvider';
 import { CompanionCustomCssSettingsContent } from './CompanionCustomCssSettingsContent';
+import { CompanionForegroundTimeContent } from './CompanionForegroundTimeContent';
 import {
   CompanionPlaceholderSettingsContent,
   CompanionSettingsDetail,
@@ -74,12 +75,18 @@ function CompanionSettingsContentSurface(props: CompanionSettingsContentProps) {
     return (
       <CompanionSettingsList
         onOpenAppearance={() => props.onOpenSyncSettingsPage('appearance')}
+        onOpenForegroundTime={() => props.onOpenSyncSettingsPage('foregroundTime')}
         onOpenDebug={() => props.onOpenSyncSettingsPage('debug')}
         onOpenStorage={() => props.onOpenSyncSettingsPage('storage')}
         onOpenSync={props.onOpenSyncSettings}
         showStorage={showStorage}
       />
     );
+  }
+  if (props.settingsPage === 'foregroundTime') {
+    return <CompanionSettingsDetail onBack={props.onBackToSettingsList} page="foregroundTime" title={t('desktop.foregroundTime.title')}>
+      <CompanionForegroundTimeContent />
+    </CompanionSettingsDetail>;
   }
   if (props.settingsPage === 'storage') {
     return (

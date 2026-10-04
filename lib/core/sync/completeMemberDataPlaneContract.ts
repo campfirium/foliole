@@ -17,6 +17,7 @@ export const COMPLETE_MEMBER_SHARED_POLICY_KEYS = [
   'pdf_page_text',
   'review_log',
   'topic_daily_count',
+  'foreground_daily_time',
   'setting.workspace',
   'watched_folder'
 ] as const;

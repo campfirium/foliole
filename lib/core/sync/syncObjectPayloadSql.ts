@@ -8,6 +8,8 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'created_at', created_at, 'kind', kind, 'parent_id', parent_id,
     'parent_version_ids_json', parent_version_ids_json, 'version_id', version_id)
     AS payload_json FROM parent_order_versions WHERE version_id = ?`,
+  foreground_daily_time: `SELECT json_object('source_id', source_id, 'day_key', day_key, 'duration_ms', duration_ms)
+    AS payload_json FROM foreground_daily_time WHERE id = ?`,
   topic_daily_count: `SELECT json_object('day_key', day_key, 'node_id', node_id)
     AS payload_json FROM topic_daily_count_entries WHERE id = ?`,
   parent_child_order: `SELECT json_object(

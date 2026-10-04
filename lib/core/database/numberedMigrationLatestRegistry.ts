@@ -2,6 +2,7 @@ import { retireAttachmentManifest } from './attachmentManifestRetirementMigratio
 import { retireAttachmentRegistry } from './attachmentRegistryRetirement.js';
 import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
+import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { migrateIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { initializeLegacyBodyMigrationSchema } from './legacyBodyMigrationSchema.js';
 import { retireLegacyStorage } from './legacyStorageRetirementMigration.js';
@@ -197,5 +198,9 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   } },
   { version: 133, migrate: (sqlite) => {
     for (const statement of SYNC_IDENTITY_FACT_STAGING_SCHEMA) sqlite.exec(statement);
+  } },
+  { version: 134, migrate: (sqlite) => {
+    for (const statement of FOREGROUND_TIME_SCHEMA) sqlite.exec(statement);
+    for (const statement of SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS) sqlite.exec(statement);
   } }
 ];

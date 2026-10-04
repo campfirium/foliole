@@ -472,6 +472,7 @@
     "nodeTextAlternative": "node_text_alternative",
     "settingRecord": "setting",
     "topicDailyCount": "topic_daily_count",
+    "foregroundDailyTime": "foreground_daily_time",
     "viewState": "view_state"
   },
   "syncObjectPolicy": {
@@ -664,6 +665,18 @@
         "userVisible": true
       },
       {
+        "category": "activity",
+        "conflict": "max_counter",
+        "scope": "workspace",
+        "key": "foreground_daily_time",
+        "objectType": "foreground_daily_time",
+        "pushIssue": "review_required",
+        "storage": [
+          "foreground_daily_time"
+        ],
+        "userVisible": true
+      },
+      {
         "category": "review",
         "conflict": "append_only_idempotent",
         "scope": "workspace",
@@ -752,6 +765,7 @@
     "reviewRequiredPushIssueObjectTypes": [
       "external_document",
       "external_folder",
+      "foreground_daily_time",
       "import_source",
       "node",
       "node_reading",

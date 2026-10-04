@@ -65,22 +65,29 @@ export function buildSyncPackApplyableRowsSql(options: SyncPackApplyableRowsOpti
     `FROM ${alias}.sync_object_state incoming ` +
     `LEFT JOIN main.sync_object_state current ON current.object_type = incoming.object_type ` +
     `AND current.object_id = incoming.object_id WHERE ` +
-    `(incoming.object_type NOT IN ('node_reading', 'node_review') ` +
+    `(incoming.object_type NOT IN ('node_reading', 'node_review', 'foreground_daily_time') ` +
     `OR current.content_hash IS NOT incoming.content_hash ` +
     `OR current.deleted_at IS NOT incoming.deleted_at) AND ` +
-    `(current.object_id IS NULL OR (${ownerEpochFilter}) OR (` +
-    `incoming.object_type <> 'setting' OR incoming.object_id <> 'user_space:windows:desktop:*:readwise_active_host'` +
+    `(current.object_id IS NULL OR ${foregroundTimePackFilter(alias)} OR (${ownerEpochFilter}) OR (` +
+    `incoming.object_type <> 'foreground_daily_time' AND (incoming.object_type <> 'setting' OR incoming.object_id <> 'user_space:windows:desktop:*:readwise_active_host'` +
     `) AND (incoming.object_type IN ('node', 'node_reading', 'node_review', 'view_state') OR (` +
     `(current.updated_at < incoming.updated_at OR (current.updated_at = incoming.updated_at ` +
     `AND (current.content_hash < incoming.content_hash OR (current.content_hash = incoming.content_hash ` +
     `AND incoming.deleted_at IS NOT NULL)))) ` +
     `AND (current.sync_dirty <> 1 OR ` +
-    `${acceptedDeliveryFilter(options)}))))` +
+    `${acceptedDeliveryFilter(options)})))))` +
     ` AND (incoming.object_type <> 'node' OR incoming.deleted_at IS NOT NULL OR EXISTS (` +
     `SELECT 1 FROM ${alias}.nodes node_payload WHERE node_payload.id = incoming.object_id))` +
     typeFilter(options.objectType) +
     excludedNodeFilter(options) +
     `)`;
+}
+
+function foregroundTimePackFilter(alias: string) {
+  return `(incoming.object_type = 'foreground_daily_time' AND incoming.deleted_at IS NULL AND
+    COALESCE((SELECT json_extract(payload_json, '$.duration_ms') FROM ${alias}.sync_objects
+      WHERE object_type = incoming.object_type AND object_id = incoming.object_id), -1) >=
+    COALESCE((SELECT duration_ms FROM main.foreground_daily_time WHERE id = incoming.object_id), -1))`;
 }
 
 export function buildSyncPackNodeUpsertSql(options: SyncPackNodeApplyOptions = {}) {

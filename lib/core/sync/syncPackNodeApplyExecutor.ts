@@ -220,6 +220,7 @@ const SYNC_PACK_SURFACE_OBJECT_TYPES = [
   'node_reading',
   'node_review',
   'topic_daily_count',
+  'foreground_daily_time',
   'node_open_state',
   'node_text_alternative',
   'parent_child_order',

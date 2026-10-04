@@ -4,6 +4,7 @@ import type { CompanionTabAction } from './CompanionFloatingBars';
 import type { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
 
 export type CompanionSettingsPage =
+  | 'foregroundTime'
   | 'list'
   | 'sync'
   | 'device'

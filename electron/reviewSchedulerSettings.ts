@@ -10,6 +10,13 @@ import {
 
 import { loadJsonSetting, saveJsonSetting } from './database/settingsStore.js';
 
+const settingsListeners = new Set<(hour: number) => void>();
+
+export function subscribeReviewDayBoundary(handler: (hour: number) => void) {
+  settingsListeners.add(handler);
+  return () => { settingsListeners.delete(handler); };
+}
+
 const REVIEW_SCHEDULER_SETTINGS_KEY = 'review_scheduler_settings';
 
 export function loadReviewSchedulerSettings(): ReviewSchedulerSettings {
@@ -23,6 +30,9 @@ export function saveReviewSchedulerSettings(
   const current = loadReviewSchedulerSettings();
   const normalized = mergeReviewSchedulerSettingsPatch(current, { ...settings, updatedAt: now });
   saveJsonSetting(REVIEW_SCHEDULER_SETTINGS_KEY, normalized, now);
+  if (current.newDayStartsAtHour !== normalized.newDayStartsAtHour) {
+    for (const handler of settingsListeners) handler(normalized.newDayStartsAtHour);
+  }
   return normalized;
 }
 

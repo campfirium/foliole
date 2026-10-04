@@ -14,6 +14,13 @@ import {
   saveReviewSchedulerSettingsToRuntime
 } from '../../../shared/platform/settingsRuntimeRepository';
 
+const settingsListeners = new Set<(hour: number) => void>();
+
+export function subscribeReviewDayBoundary(handler: (hour: number) => void) {
+  settingsListeners.add(handler);
+  return () => { settingsListeners.delete(handler); };
+}
+
 let currentReviewSchedulerSettings = DEFAULT_REVIEW_SCHEDULER_SETTINGS;
 
 export function getCurrentReviewSchedulerSettings() {
@@ -21,7 +28,11 @@ export function getCurrentReviewSchedulerSettings() {
 }
 
 function syncCurrentReviewSchedulerSettings(settings: ReviewSchedulerSettings) {
+  const previousHour = currentReviewSchedulerSettings.newDayStartsAtHour;
   currentReviewSchedulerSettings = settings;
+  if (previousHour !== settings.newDayStartsAtHour) {
+    for (const handler of settingsListeners) handler(settings.newDayStartsAtHour);
+  }
   return settings;
 }
 
