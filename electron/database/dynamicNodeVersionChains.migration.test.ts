@@ -27,10 +27,15 @@ function oldChain(db: Database.Database, group: boolean) {
 
 function expectChain(db: Database.Database, group: boolean) {
   expect(db.prepare('SELECT version_id, body_text, parent_version_id FROM node_sync_versions ORDER BY created_at').all())
-    .toEqual(group ? [
-      { version_id: 'base', body_text: 'base', parent_version_id: null },
-      { version_id: 'head', body_text: 'current', parent_version_id: 'base' }
-    ] : [{ version_id: 'head', body_text: 'current', parent_version_id: null }]);
+    .toEqual([
+      { version_id: 'base', body_text: group ? 'base' : null, parent_version_id: null },
+      { version_id: 'shell', body_text: null, parent_version_id: 'base' },
+      { version_id: 'head', body_text: 'current', parent_version_id: 'shell' }
+    ]);
+  expect(db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual([
+    { version_id: 'head', parent_version_id: 'shell', ordinal: 0 },
+    { version_id: 'shell', parent_version_id: 'base', ordinal: 0 }
+  ]);
   expect(db.pragma('foreign_key_check')).toEqual([]);
 }
 
@@ -40,6 +45,7 @@ it.each([false, true])('upgrades desktop history and old empty shells once (grou
     initializeDatabaseSchema(db);
     db.exec("INSERT INTO settings VALUES ('host_name', '\"local\"', 'now')");
     oldChain(db, group);
+    db.exec('DROP TABLE node_version_member_positions');
     db.pragma('user_version = 119');
     initializeDatabaseSchema(db);
     expectChain(db, group);
@@ -74,7 +80,7 @@ it.each(['desktop', 'companion'])('retires unproven legacy history even with an 
   } finally { db.close(); }
 });
 
-it.each(['desktop', 'companion'])('retires an unused broken legacy chain while keeping current content (%s)', async (host) => {
+it.each(['desktop', 'companion'])('preserves broken historical metadata while keeping current content (%s)', async (host) => {
   const db = new Database(':memory:');
   try {
     if (host === 'desktop') initializeDatabaseSchema(db);
@@ -85,6 +91,13 @@ it.each(['desktop', 'companion'])('retires an unused broken legacy chain while k
       db.pragma('user_version = 119');
       initializeDatabaseSchema(db);
     } else await migrateCompanionDatabase(createBetterSqliteDbPort(db), 56, 57);
-    expectChain(db, false);
+    expect(db.prepare('SELECT version_id, parent_version_id FROM node_sync_versions ORDER BY created_at').all())
+      .toEqual([
+        { version_id: 'base', parent_version_id: 'missing-legacy' },
+        { version_id: 'shell', parent_version_id: 'base' },
+        { version_id: 'head', parent_version_id: 'shell' }
+      ]);
+    expect(db.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'head'").get())
+      .toEqual({ body_text: 'current' });
   } finally { db.close(); }
 });

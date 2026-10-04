@@ -4,6 +4,7 @@ import { CHAIN_EDGES_SQL, CHAIN_VERSIONS_SQL, chainMutationStatements, chainRefe
 import { collectNodeVersionPayloads } from '../sync/nodeVersionPayloadCollector.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 
 const BACKFILL_LOCAL_ORIGINS_SQL = `INSERT OR IGNORE INTO node_version_local_origins (version_id)
   SELECT version.version_id FROM node_sync_versions version
@@ -11,6 +12,8 @@ const BACKFILL_LOCAL_ORIGINS_SQL = `INSERT OR IGNORE INTO node_version_local_ori
 
 /** Runs once at the schema boundary; ordinary saves use the same planner thereafter. */
 export function migrateDynamicNodeVersionChains(sqlite: DatabaseMigrationTarget) {
+  // The current retention query needs this table before its later numbered migration.
+  for (const statement of NODE_VERSION_MEMBER_POSITION_SCHEMA) sqlite.exec(statement);
   sqlite.exec(BACKFILL_LOCAL_ORIGINS_SQL);
   sqlite.exec('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
   const nodes = sqlite.prepare('SELECT id, current_version_id FROM nodes WHERE current_version_id IS NOT NULL AND sync_dirty = 0')
