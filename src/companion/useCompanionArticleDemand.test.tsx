@@ -52,9 +52,9 @@ describe('article demand routing', () => {
     snapshot.nodesById['article-2']!.parentNodeId = 'article-1';
     const workspace = createWorkspaceSync(snapshot);
     const { result } = renderHook(() => useCompanionArticleSurface(workspace, createFloatingBar()));
-    workspace.openReadableArticle.mockClear();
     act(() => result.current.handleSelectBrowseNode('article-1'));
     expect(result.current.browsedFolder?.nodeId).toBe('article-1');
+    expect(result.current.readableArticle).toBeNull();
     expect(workspace.openReadableArticle).toHaveBeenLastCalledWith(null);
   });
 });

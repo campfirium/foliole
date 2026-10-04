@@ -24,6 +24,7 @@ const guard = () => ({ nodeId: 'note', scope: getCompanionReadingScope(), versio
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.native.mockReturnValue(true);
+  mocks.apply.mockResolvedValue(['note']);
   mocks.writer.mockImplementation((task: () => Promise<unknown>) => task());
   mocks.version.mockImplementation(async (node) => ({ version_id: 'v2', node }));
   mocks.read.mockResolvedValue({ ...snapshot().nodesById.note, content: 'Passage\n※ Saved note' });

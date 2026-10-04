@@ -110,8 +110,8 @@ it('collapses a real read-only editor selection after an outside pointer tap', (
   article.append(host, outside);
   document.body.append(article);
   const editor = new CodeMirrorEditorAdapter(host, { initialContent: 'Selected text and unselected text', readOnly: true });
-  // jsdom has no layout coordinates; keep the real editor selection state.
-  vi.spyOn(editor, 'getDocumentPositionAtClientPoint').mockReturnValue(null);
+  // jsdom has no layout coordinates; report a position after the selected text.
+  vi.spyOn(editor, 'getDocumentPositionAtClientPoint').mockReturnValue(8);
   editor.setSelection({ from: 0, to: 8 });
   const { result, unmount } = renderHook(() => useCompanionSelectionAnnotationToolbar({
     canCreateAnnotation: true, nodeId: 'node-1', snapshot: null

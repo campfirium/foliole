@@ -20,9 +20,11 @@ interface AndroidBlobValue {
 
 export interface IsolatedCapacitorDatabase {
   close(): Promise<void>;
+  dispose(): Promise<void>;
   name: string;
   open(): Promise<void>;
   port: DbPort;
+  prepareAttachedRead(): Promise<string>;
 }
 
 export function createIsolatedCapacitorDatabaseManager(platform = Capacitor.getPlatform()) {
@@ -37,7 +39,18 @@ export function createIsolatedCapacitorDatabaseManager(platform = Capacitor.getP
         name,
         port: createCapacitorSqliteDbPort(connection, platform),
         open: () => connection.open(),
-        close: () => manager.closeConnection(name, false)
+        close: () => manager.closeConnection(name, false),
+        async dispose() {
+          try { await connection.delete(); }
+          finally { await manager.closeConnection(name, false); }
+        },
+        async prepareAttachedRead() {
+          const url = (await connection.getUrl()).url;
+          if (!url) throw new Error('Isolated database path is missing');
+          const filePath = url.startsWith('file:') ? decodeURIComponent(new URL(url).pathname) : url;
+          await connection.close();
+          return filePath;
+        }
       };
     }
   };

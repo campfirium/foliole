@@ -1,5 +1,4 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
-import { CapacitorSQLite } from '@capacitor-community/sqlite';
 
 import type { DbPort } from '../../lib/core/sync/dbPort';
 import type { SyncPackFactIndex } from '../../lib/core/sync/syncPackFactPresence';
@@ -89,8 +88,7 @@ export async function runSyncFactProbeAcceptance() {
     return { status: 'passed', scenario: 'sync-fact-probe', appId: identity.id,
       platform, results, pageApply };
   } finally {
-    try { await CapacitorSQLite.deleteDatabase({ database: name, readonly: false }); }
-    finally { await database.close(); }
+    await database.dispose();
   }
 }
 

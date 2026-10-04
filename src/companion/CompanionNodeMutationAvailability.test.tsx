@@ -29,14 +29,15 @@ vi.mock('./companionWorkspaceSyncEndpoint', () => ({
 
 import { ReadableArticleOrFallback } from './CompanionReadableArticleFallback';
 import { CompanionShellReadableArticle } from './CompanionShellReadableArticle';
+import { createCompanionArticleSnapshot } from './useCompanionArticleSurfaceTestSupport';
 
-const readableArticle = { nodeId: 'topic-1', title: 'Topic' };
+const readableArticle = { nodeId: 'article-1', title: 'Topic' };
 const surface = {
   handleViewScroll: vi.fn(),
   readableArticle
 } as never;
 const workspaceSync = {
-  state: { workspace_snapshot: null },
+  state: { workspace_snapshot: createCompanionArticleSnapshot() },
   status: 'idle'
 } as never;
 const IMMERSIVE_HANDLER_KEYS = [

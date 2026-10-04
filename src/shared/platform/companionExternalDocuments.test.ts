@@ -103,7 +103,7 @@ describe('companion external documents bridge', () => {
       document_id: 'folder-1:doc.md',
       excerpt: 'cached external content'
     })]);
-    expect(iosReads.search).toHaveBeenCalledWith('external', 5);
+    expect(iosReads.search).toHaveBeenCalledWith('external', 5, 0);
   });
 
   it('loads, searches, and browses synced external documents on iOS', async () => {
@@ -122,7 +122,7 @@ describe('companion external documents bridge', () => {
       entries: [expect.objectContaining({ documentId: 'folder-1:doc.md' })],
       folders: [expect.objectContaining({ id: 'folder-1' })]
     });
-    expect(iosReads.search).toHaveBeenCalledWith('external', 5);
+    expect(iosReads.search).toHaveBeenCalledWith('external', 5, 0);
     expect(iosReads.document).toHaveBeenCalledWith('folder-1:doc.md');
     expect(iosReads.directory).toHaveBeenCalledWith();
   });

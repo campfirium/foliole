@@ -142,7 +142,7 @@ async function testNativePluginBridge() {
     page_width: 100,
     text: 'indexed pdf text'
   }]);
-  expect(iosReadsMock.searchPdf).toHaveBeenCalledWith('pdf', 5);
+  expect(iosReadsMock.searchPdf).toHaveBeenCalledWith('pdf', 5, 0);
   await expectNativeSaveBridge(api);
 }
 

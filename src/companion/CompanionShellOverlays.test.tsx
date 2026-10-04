@@ -9,6 +9,7 @@ function createOverlayProps() {
   return {
     activeAction: 'review',
     activeSecondaryDestinationId: null,
+    captureDraftScope: 'test-capture',
     companionTabConfig: DEFAULT_COMPANION_TAB_CONFIG,
     currentReviewCard: null,
     isBottomBarDisabled: false,

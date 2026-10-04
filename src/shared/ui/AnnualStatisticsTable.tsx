@@ -37,7 +37,7 @@ export function AnnualStatisticsTable(props: AnnualStatisticsTableProps) {
 
 function StatisticsHeaders(props: AnnualStatisticsTableProps) {
   const years = groupYears(props.groups);
-  return <thead className="sticky top-0 z-10 bg-settings-group">
+  return <thead className="sticky top-0 z-surface bg-settings-group">
     <tr><th />{years.map((year) => <th key={year.year} colSpan={year.count * 2}
       className="h-6 text-left text-ui-xs font-normal text-foreground/50">{year.year}</th>)}</tr>
     <tr><th rowSpan={2} scope="col" className="pr-2.5 text-right text-ui-xs font-normal text-foreground/56">{props.dayLabel}</th>

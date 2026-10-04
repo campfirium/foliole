@@ -1,10 +1,8 @@
-import { CapacitorSQLite, SQLiteConnection } from '@capacitor-community/sqlite';
-
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements';
 import type { DbPort } from '../../lib/core/sync/dbPort';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema';
-import { createCapacitorSqliteDbPort } from '../shared/platform/capacitorSqliteDbPort';
+import { createIsolatedCapacitorDatabaseManager } from '../shared/platform/capacitorSqliteDbPort';
 
 const COUNT = 32;
 const UPDATED = '2026-10-03T00:00:00.000Z';
@@ -62,26 +60,22 @@ export async function measureKnownReadingPage(port: DbPort) {
 }
 
 export async function runIsolatedKnownReadingPage() {
-  const manager = new SQLiteConnection(CapacitorSQLite);
+  const manager = createIsolatedCapacitorDatabaseManager('android');
   const receiverName = `sync-page-receiver-${Date.now()}`;
   const packName = `sync-page-pack-${Date.now()}`;
-  const receiver = await manager.createConnection(receiverName, false, 'no-encryption', 1, false);
-  const pack = await manager.createConnection(packName, false, 'no-encryption', 1, false);
+  const receiver = await manager.create(receiverName);
+  const pack = await manager.create(packName);
   try {
     await receiver.open();
     await pack.open();
-    const receiverPort = createCapacitorSqliteDbPort(receiver, 'android');
-    const packPort = createCapacitorSqliteDbPort(pack, 'android');
+    const receiverPort = receiver.port;
+    const packPort = pack.port;
     await seedKnownReadingPage(receiverPort, packPort);
-    const url = (await pack.getUrl()).url;
-    if (!url) throw new Error('Isolated pack path is missing');
-    const packPath = url.startsWith('file:') ? decodeURIComponent(new URL(url).pathname) : url;
-    await pack.close();
+    const packPath = await pack.prepareAttachedRead();
     await receiverPort.run(`ATTACH DATABASE '${packPath.replaceAll("'", "''")}' AS inc`);
     try { return await measureKnownReadingPage(receiverPort); }
     finally { await receiverPort.run('DETACH DATABASE inc'); }
   } finally {
-    try { await receiver.delete(); } finally { await manager.closeConnection(receiverName, false); }
-    try { await pack.delete(); } finally { await manager.closeConnection(packName, false); }
+    try { await receiver.dispose(); } finally { await pack.dispose(); }
   }
 }
