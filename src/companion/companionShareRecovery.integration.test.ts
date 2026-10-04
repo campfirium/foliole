@@ -13,6 +13,7 @@ vi.mock('@capacitor/core', () => ({
 }));
 
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector';
+import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
 import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import {
@@ -75,6 +76,24 @@ afterEach(async () => {
   await closeIosCompanionDatabase();
   if (database?.open) database.close();
   rmSync(root, { recursive: true, force: true });
+});
+
+it('keeps an empty native inbox from creating workspace facts', async () => {
+  writeFileSync(path.join(root, 'pending.json'), '{"items":[]}');
+  await consumeCompanionShareInbox(await workspace());
+  expect(facts()).toEqual({ topics: [], versions: [] });
+  expect(native.acknowledgeShare).not.toHaveBeenCalled();
+});
+
+it('currently saves a callerless native delivery without another user action', async () => {
+  expect(facts()).toEqual({ topics: [], versions: [] });
+  await consumeCompanionShareInbox(await workspace());
+  expect(facts().topics).toEqual([expect.objectContaining({ id: topicId, parent_id: INBOX_NODE_ID })]);
+  expect(facts().versions).toEqual([expect.objectContaining({ version_id: `ver_share_${deliveryId}` })]);
+  await closeIosCompanionDatabase();
+  await openLibrary();
+  expect((await loadCompanionWorkspaceNode(topicId))?.content).toBe(text);
+  expect(pending().items).toHaveLength(0);
 });
 
 it('does not acknowledge a failed save and recovers through the production writer', async () => {

@@ -23,6 +23,11 @@ function stableShareVersionId(deliveryId: string) {
 }
 
 export async function consumeCompanionShareInbox(workspace: ShareInboxWorkspace) {
+  // Android product decision (2026-10-04): save valid shares without secondary confirmation.
+  // The public entry cannot prove a Sharesheet selection; unsolicited content from another
+  // installed app is an accepted quick-capture tradeoff. Do not add confirmation solely
+  // for this exposure. Keep payload validation, collision checks and resource limits;
+  // reassess the decision if evidence establishes broader impact.
   let snapshot = workspace.state.workspace_snapshot;
   for (const item of await loadPendingCompanionShares()) {
     const text = combineNativeCompanionShareParts(item.parts);

@@ -81,6 +81,11 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void receiveSharedText(Intent intent) {
+        // Product decision (2026-10-04): keep public text sharing and automatic Inbox capture.
+        // Another installed app can send an explicit Intent without a Sharesheet selection;
+        // receipt does not prove user intent. This content-injection tradeoff is accepted
+        // for quick capture. Missing secondary confirmation alone is not a defect.
+        // Reassess if evidence shows broader impact; input/resource validation still applies.
         try {
             if (FolioleCompanionShareInboxStore.enqueue(getApplicationContext(), intent)) {
                 FolioleCompanionShareInboxPlugin.notifyInboxChanged();
