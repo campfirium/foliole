@@ -171,8 +171,14 @@ function AnnotationToolbar(props: AnnotationToolbarProps) {
 export function EditorContextMenu(props: EditorContextMenuProps) {
   const t = useTranslation();
   if (props.kind === 'image') {
+    const imagePayload = props.selectionPayload?.imageRegions?.length ? props.selectionPayload : null;
     return (
-      <AppSelectionDropdownMenu left={props.left} onClose={props.onClose} top={props.top}>
+      <AppSelectionDropdownMenu left={props.left} onClose={props.onClose} preserveAnnotationToolbar top={props.top}>
+        {imagePayload ? (
+          <AppSelectionDropdownMenuItem onClick={() => props.onCreateHighlightFromPayload(imagePayload)}>
+            {t('desktop.editor.imageMenu.excerpt')}
+          </AppSelectionDropdownMenuItem>
+        ) : null}
         <AppSelectionDropdownMenuItem onClick={props.onCopyImage}>{t('desktop.editor.imageMenu.copy')}</AppSelectionDropdownMenuItem>
         <AppSelectionDropdownMenuItem onClick={props.onCutImage}>{t('desktop.editor.imageMenu.cut')}</AppSelectionDropdownMenuItem>
         <AppSelectionDropdownMenuItem onClick={props.onExportImage}>{t('desktop.editor.imageMenu.export')}</AppSelectionDropdownMenuItem>

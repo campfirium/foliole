@@ -40,7 +40,13 @@ function captureWorkspaceNodeDocumentLoadBaseline(nodeId: string): WorkspaceNode
   };
 }
 
-function isDocumentOlderThanNode(document: WorkspaceNodeDocument, nodeUpdatedAt: string) {
+function isDocumentOlderThanNode(
+  document: WorkspaceNodeDocument,
+  node: { currentVersionId?: string | null; updatedAt?: string } | undefined
+) {
+  if (document.currentVersionId && node?.currentVersionId
+    && document.currentVersionId === node.currentVersionId) return false;
+  const nodeUpdatedAt = normalizedUpdatedAt(node?.updatedAt);
   const documentUpdatedAt = normalizedUpdatedAt(document.updatedAt);
   return Boolean(nodeUpdatedAt && documentUpdatedAt && documentUpdatedAt < nodeUpdatedAt);
 }
@@ -55,7 +61,7 @@ function isLoadResultCurrent(
     return false;
   }
   const nodeUpdatedAt = normalizedUpdatedAt(node.updatedAt);
-  if (isDocumentOlderThanNode(document, nodeUpdatedAt)) {
+  if (isDocumentOlderThanNode(document, node)) {
     return false;
   }
   const cachedDocument = readCachedWorkspaceNodeDocument(nodeId);
@@ -89,9 +95,7 @@ async function loadWorkspaceNodeDocumentFromPendingRuntime(
 }
 
 function isCachedDocumentCurrent(nodeId: string, document: WorkspaceNodeDocument) {
-  const nodeUpdatedAt = useWorkspaceStore.getState().nodesById[nodeId]?.updatedAt?.trim();
-  const cachedUpdatedAt = document.updatedAt?.trim();
-  return !nodeUpdatedAt || !cachedUpdatedAt || cachedUpdatedAt >= nodeUpdatedAt;
+  return !isDocumentOlderThanNode(document, useWorkspaceStore.getState().nodesById[nodeId]);
 }
 
 export function isWorkspaceNodeDocumentResultCurrent(
@@ -99,7 +103,7 @@ export function isWorkspaceNodeDocumentResultCurrent(
   document: WorkspaceNodeDocument
 ) {
   const node = useWorkspaceStore.getState().nodesById[nodeId];
-  if (!node || isDocumentOlderThanNode(document, normalizedUpdatedAt(node.updatedAt))) {
+  if (!node || isDocumentOlderThanNode(document, node)) {
     return false;
   }
   const cachedDocument = readCachedWorkspaceNodeDocument(nodeId);

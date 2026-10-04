@@ -45,6 +45,7 @@ export interface WorkspaceRuntimeNode {
 
 export interface WorkspaceRuntimeNodeDocument {
   content: string;
+  currentVersionId?: string | null;
   hideTitleHeading: boolean;
   imageRegions?: NativeNodeSnapshotArgs['imageRegions'];
   imageSources?: Record<string, string> | null;

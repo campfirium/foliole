@@ -30,6 +30,7 @@ export const EN_DESKTOP_SEARCH_TRANSLATIONS = {
   'desktop.editorPreview.imageTitle': 'Image preview',
   'desktop.editorPreview.closeImage': 'Close image preview',
   'desktop.editor.formula.editSource': 'Edit formula source',
+  'desktop.editor.imageMenu.excerpt': 'Excerpt image',
   'desktop.editor.imageMenu.copy': 'Copy image',
   'desktop.editor.imageMenu.cut': 'Cut image',
   'desktop.editor.imageMenu.export': 'Export image',

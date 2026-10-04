@@ -91,10 +91,11 @@ afterEach(() => {
   resetTestAttachmentResources();
 });
 
-it('opens image commands with a highlightable payload when the target is an attachment image', () => {
+it('uses the clicked image as the excerpt target even when a wider selection overlaps it', () => {
   const editorRef = {
     current: createEditorAdapter({
-      getContent: vi.fn(() => IMAGE_MARKDOWN)
+      getContent: vi.fn(() => IMAGE_MARKDOWN),
+      getSelectionRanges: vi.fn(() => [{ from: 0, to: IMAGE_MARKDOWN.length }])
     })
   };
   const imageTarget = createImageTarget();
@@ -168,7 +169,9 @@ it('creates a highlight from an image context menu target', () => {
   });
 
   act(() => {
-    result.current.handleCreateHighlight();
+    if (result.current.contextMenu?.payload) {
+      result.current.handleCreateHighlightFromPayload(result.current.contextMenu.payload);
+    }
   });
 
   expect(createHighlightNodeFromSelection).toHaveBeenCalledWith(

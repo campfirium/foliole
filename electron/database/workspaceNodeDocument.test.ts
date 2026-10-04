@@ -71,12 +71,15 @@ it('includes the node updated timestamp in loaded documents', () => {
   connection.driver.execute(
     `INSERT INTO nodes (
        id, parent_id, kind, title, is_title_manual, hide_title_heading,
-       content, created_at, updated_at
-     ) VALUES ('node-1', NULL, 'topic', 'Node 1', 1, 0, 'body', ?, ?)`,
+       content, current_version_id, created_at, updated_at
+     ) VALUES ('node-1', NULL, 'topic', 'Node 1', 1, 0, 'body', 'version-1', ?, ?)`,
     ['2026-04-27T00:00:00.000Z', '2026-04-27T00:00:03.000Z']
   );
 
-  expect(loadWorkspaceNodeDocument('node-1')?.updatedAt).toBe('2026-04-27T00:00:03.000Z');
+  expect(loadWorkspaceNodeDocument('node-1')).toMatchObject({
+    currentVersionId: 'version-1',
+    updatedAt: '2026-04-27T00:00:03.000Z'
+  });
 });
 
 it('keeps newer stored content when an older node snapshot arrives later', () => {

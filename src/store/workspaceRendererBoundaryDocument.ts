@@ -8,6 +8,7 @@ import { resolveNodeContentState, resolveNodeRevealState } from './workspaceRend
 export interface WorkspaceNodeDocument {
   bodyStatus?: WorkspaceNodeDocumentStatus;
   content: string;
+  currentVersionId?: string | null;
   hideTitleHeading: boolean;
   imageRegions?: Node['imageRegions'];
   imageSources?: Node['imageSources'];

@@ -77,6 +77,7 @@ export interface NativeWorkspaceSnapshot {
 
 export interface NativeWorkspaceNodeDocument {
   content: string;
+  currentVersionId?: string | null;
   hideTitleHeading: boolean;
   kind: NodeKind;
   imageRegions?: NativeWorkspaceImageRegionGroup[] | null;

@@ -24,16 +24,6 @@ export interface SelectionContextMenuState extends WorkspaceEditorContextMenu {
 
 export type EditorContextMenuState = ImageContextMenuState | SelectionContextMenuState;
 
-function selectionPayloadOverlapsImage(
-  payload: SelectionCommandPayload | null,
-  imageRange: { from: number; to: number }
-) {
-  if (!payload) {
-    return false;
-  }
-  return payload.entries.some((entry) => entry.range.from < imageRange.to && entry.range.to > imageRange.from);
-}
-
 export function createSelectionCommandRunner(
   args: {
     activeNodeId: string | null;
@@ -85,10 +75,8 @@ export function createHandleEditorContextMenu(args: {
       );
       args.setContextMenu({
         ...imageContextMenu,
-        canRunCommands: Boolean(
-          selectionPayloadOverlapsImage(commandPayload, imageContextMenu.imageRange) ? commandPayload : fallbackPayload
-        ),
-        payload: selectionPayloadOverlapsImage(commandPayload, imageContextMenu.imageRange) ? commandPayload : fallbackPayload
+        canRunCommands: Boolean(fallbackPayload),
+        payload: fallbackPayload
       });
       return;
     }

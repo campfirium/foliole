@@ -189,6 +189,26 @@ it('lets outside workspace item clicks finish without mutating editor selection'
   expect(result.current.contextMenu).toBeNull();
 });
 
+it('keeps a selection dropdown open through a menu item pointer press', () => {
+  const adapter = createEditorAdapter({ getSelectionRanges: vi.fn(() => [{ from: 0, to: 7 }]) });
+  const { result } = renderHook(() =>
+    useEditorContextCommands(buildHookArgs({ editorRef: { current: adapter } }))
+  );
+  const selectedSpan = document.createElement('span');
+  selectedSpan.textContent = 'Welcome';
+  appendEditorTarget(selectedSpan);
+  act(() => selectedSpan.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 })));
+  expect(result.current.contextMenu?.mode).toBe('annotation-toolbar');
+
+  const menu = document.createElement('div');
+  menu.dataset.annotationToolbar = 'true';
+  const item = document.createElement('button');
+  menu.append(item);
+  document.body.append(menu);
+  act(() => item.dispatchEvent(new Event('pointerdown', { bubbles: true })));
+  expect(result.current.contextMenu?.mode).toBe('annotation-toolbar');
+});
+
 it('keeps the selection toolbar closed when the floating toolbar setting is off', () => {
   const selectedText = document.createTextNode('Welcome');
   const selectedSpan = document.createElement('span');

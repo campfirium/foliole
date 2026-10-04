@@ -41,6 +41,7 @@ describe('native invoke contract dispatch', () => {
   it('dispatches typed renderer requests through the unified Electron command handler', async () => {
     vi.mocked(loadWorkspaceNodeDocument).mockReturnValue({
       content: '# Node',
+      currentVersionId: 'version-1',
       hideTitleHeading: false,
       imageRegions: [],
       imageSources: {},

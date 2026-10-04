@@ -44,17 +44,24 @@ beforeEach(() => {
   window.localStorage.clear();
 });
 
-it('keeps annotation actions out of the image context menu', () => {
+it('excerpts the current image from its context menu', () => {
+  const payload = { ...createLongClozePayload(), imageRegions: [{ attachmentId: 'image', regions: [{ height: 1, id: 'region', width: 1, x: 0, y: 0 }] }] };
+  const onCreateHighlightFromPayload = vi.fn();
   renderWithLocalization(
     <EditorContextMenu
       kind="image"
       left={16}
+      selectionPayload={payload}
       top={24}
-      {...requiredActionProps()}
+      {...requiredActionProps({ onCreateHighlightFromPayload })}
     />
   );
 
-  expect(screen.queryByRole('menuitem', { name: 'Highlight' })).toBeNull();
+  const excerptItem = screen.getByRole('menuitem', { name: 'Excerpt image' });
+  expect(excerptItem.closest('[data-annotation-toolbar="true"]')).not.toBeNull();
+  fireEvent.pointerDown(excerptItem);
+  fireEvent.click(excerptItem);
+  expect(onCreateHighlightFromPayload).toHaveBeenCalledWith(payload);
   expect(screen.queryByRole('menuitem', { name: 'Cloze' })).toBeNull();
   expect(screen.getByRole('menuitem', { name: 'Copy image' })).toBeInTheDocument();
 });

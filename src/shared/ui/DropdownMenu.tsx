@@ -20,6 +20,7 @@ interface AppSelectionDropdownMenuProps {
   left: number;
   onClose: () => void;
   outsidePointerMode?: 'blocking' | 'passthrough';
+  preserveAnnotationToolbar?: boolean;
   top: number;
 }
 
@@ -135,6 +136,7 @@ function AppSelectionDropdownMenu({
   left,
   onClose,
   outsidePointerMode = 'blocking',
+  preserveAnnotationToolbar = false,
   top
 }: AppSelectionDropdownMenuProps) {
   const t = useTranslation();
@@ -170,6 +172,7 @@ function AppSelectionDropdownMenu({
       ) : null}
       <div
         aria-label={t('shared.selection.commands')}
+        {...(preserveAnnotationToolbar ? { 'data-annotation-toolbar': 'true' } : {})}
         className={cn(
           dropdownMenuContentClassName(),
           'fixed p-2'

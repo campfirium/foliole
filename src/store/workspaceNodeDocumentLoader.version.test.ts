@@ -86,6 +86,19 @@ it('rejects an older cached body after workspace metadata advances', async () =>
   });
 });
 
+it('loads a saved body when only the node metadata timestamp advanced', async () => {
+  useWorkspaceStore.setState((state) => ({ nodesById: {
+    ...state.nodesById,
+    'node-1': { ...state.nodesById['node-1']!, currentVersionId: 'version-1' }
+  } }));
+  const saved = { ...document('Saved image excerpt', OLD_UPDATED_AT), currentVersionId: 'version-1' };
+  const invoke = vi.fn().mockResolvedValue(saved);
+  vi.mocked(getRuntimeInvoke).mockReturnValue(invoke);
+
+  await expect(loadWorkspaceNodeDocument('node-1', { forceLoad: true })).resolves.toEqual(saved);
+  expect(invoke).toHaveBeenCalledTimes(1);
+});
+
 it.each([
   ['the same version', CURRENT_UPDATED_AT, CURRENT_UPDATED_AT],
   ['a newer cache version', NEW_UPDATED_AT, CURRENT_UPDATED_AT],

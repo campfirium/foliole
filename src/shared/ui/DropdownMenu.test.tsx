@@ -21,12 +21,13 @@ beforeAll(async () => {
 
 it('prevents selection-safe menu items from stealing focus on pointer down', () => {
   renderWithLocalization(
-    <AppSelectionDropdownMenu left={40} onClose={() => undefined} top={56}>
+    <AppSelectionDropdownMenu left={40} onClose={() => undefined} preserveAnnotationToolbar top={56}>
       <AppSelectionDropdownMenuItem>Highlight</AppSelectionDropdownMenuItem>
     </AppSelectionDropdownMenu>
   );
 
   const item = screen.getByRole('menuitem', { name: 'Highlight' });
+  expect(item.closest('[data-annotation-toolbar="true"]')).not.toBeNull();
   const pointerDown = createEvent.pointerDown(item);
   fireEvent(item, pointerDown);
   expect(pointerDown.defaultPrevented).toBe(true);

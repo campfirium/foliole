@@ -53,6 +53,7 @@ export function removeCachedWorkspaceNodeDocument(nodeId: string) {
 export function toWorkspaceNodeDocument(node: Node): WorkspaceNodeDocument {
   return {
     content: node.content,
+    currentVersionId: node.currentVersionId ?? null,
     hideTitleHeading: node.hideTitleHeading ?? false,
     imageRegions: node.imageRegions ?? null,
     imageSources: node.imageSources ?? null,
