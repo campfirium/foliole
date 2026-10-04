@@ -52,6 +52,7 @@ const { runIdentityDeleteRestore, runIdentityDivergence,
 const { runScenario } = await import('./run.js');
 const { runIdentityReorderedParents } = await import('./reorderedParents.js');
 const { runIdentityReorderSchedules } = await import('./reorderedParentSchedules.js');
+const { runIdentityOrderIntent } = await import('./orderIntentScenarios.js');
 const { runIdentityRetainedOfflineFork } = await import('./nodeRetentionScenarios.js');
 const { runIdentityIncomparableProjection } = await import('./nodeProjectionScenario.js');
 const { runIdentityNestedOrder } = await import('./nestedOrder.js');
@@ -109,4 +110,12 @@ it('global ID repairs a required base and preserves an indirectly relayed offlin
 
 it('global ID converges independently projected heads with incomparable bases after collection and restart', async () => {
   await runIdentityIncomparableProjection(path.join(output, 'incomparable-projection'));
+}, 600_000);
+
+it('global ID preserves independently identical user reorders after exchange and restart for root and nested parents', async () => {
+  await runIdentityOrderIntent(path.join(output, 'same-reorder'), 'same-reorder');
+}, 600_000);
+
+it('global ID places an added child immediately after its original preceding anchor when anchors reverse', async () => {
+  await runIdentityOrderIntent(path.join(output, 'reversed-anchors'), 'reversed-anchors');
 }, 600_000);
