@@ -3,9 +3,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { runMacosA5Action } from './macos-a5-dev.mjs';
+import { dispatchMacosA5Action } from './macos-a5-action-dispatch.mjs';
 import {
   macosA5ActionEnv, macosA5ErrorEvidence, macosA5ParallelDesktopEnv
 } from './macos-a5-extended-actions.mjs';
@@ -154,15 +155,21 @@ describe('macOS fixed A5 development entry', () => {
     expect(macosA5ErrorEvidence(new Error('missing'))).toBe('');
   });
 
-  it('checks pairing credentials before workspace readiness in fixed status', () => {
-    const dispatcher = fs.readFileSync('scripts/android/macos-a5-action-dispatch.mjs', 'utf8');
-    const statusBlock = dispatcher.slice(
-      dispatcher.indexOf("if (action === 'status')"),
-      dispatcher.indexOf("if (action === 'sync-group-stopped-status')")
-    );
+  it('queries fixed device status without running data acceptance checks', async () => {
+    const paths = { adb: '/adb' };
+    const assertFixed = vi.fn();
+    const forbidden = vi.fn(() => { throw new Error('Data acceptance must be explicit'); });
+    await dispatchMacosA5Action({ action: 'status', paths, assertFixed,
+      pairingReadiness: forbidden, readiness: forbidden, protectData: forbidden,
+      build: forbidden, deploy: forbidden, execute: forbidden, checked: forbidden });
+    expect(assertFixed).toHaveBeenCalledExactlyOnceWith(paths);
+    expect(forbidden).not.toHaveBeenCalled();
+  });
 
-    expect(statusBlock.indexOf('pairingReadiness(paths)')).toBeGreaterThan(-1);
-    expect(statusBlock.indexOf('pairingReadiness(paths)')).toBeLessThan(statusBlock.indexOf('readiness(paths)'));
+  it('reports an unavailable fixed device as a status failure', async () => {
+    const assertFixed = () => { throw new Error('Fixed A5 is not ready'); };
+    await expect(dispatchMacosA5Action({ action: 'status', paths: {}, assertFixed }))
+      .rejects.toThrow('Fixed A5 is not ready');
   });
 
   it('offers one fixed stopped status for a consistent T132 database snapshot', () => {

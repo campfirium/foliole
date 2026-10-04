@@ -34,7 +34,7 @@ export async function dispatchMacosA5Action({
     else build(paths);
   }
   if (action === 'status') {
-    assertFixed(paths); pairingReadiness(paths); readiness(paths);
+    assertFixed(paths);
   }
   if (action === 'sync-logs') {
     const { readA5SyncLogs } = await import('./macos-a5-sync-logs.mjs');
