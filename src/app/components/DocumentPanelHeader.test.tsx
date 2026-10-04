@@ -2,7 +2,6 @@ import { screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
@@ -62,7 +61,6 @@ it('shows the breadcrumb title without a kind label in the document header', () 
       onSelectBreadcrumbNode={vi.fn()}
       onToggleSourceUpdatePanel={vi.fn()}
       priorityQuickSetShortcutLabel="Ctrl+M"
-      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showSourceUpdateAction={false}
     />
   );
@@ -93,7 +91,6 @@ it('keeps navigation, breadcrumb, and priority controls on the document content 
       onSelectBreadcrumbNode={vi.fn()}
       onToggleSourceUpdatePanel={vi.fn()}
       priorityQuickSetShortcutLabel="Ctrl+M"
-      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showSourceUpdateAction={false}
     />
   );
@@ -147,7 +144,6 @@ it('keeps the folder-mode header free of document controls', () => {
       onSelectBreadcrumbNode={vi.fn()}
       onToggleSourceUpdatePanel={vi.fn()}
       priorityQuickSetShortcutLabel="Ctrl+M"
-      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showSourceUpdateAction={false}
     />
   );
@@ -199,7 +195,6 @@ it('shows a backlinks trigger with count and opens the inline backlinks menu', (
       onSelectBreadcrumbNode={vi.fn()}
       onToggleSourceUpdatePanel={vi.fn()}
       priorityQuickSetShortcutLabel="Ctrl+M"
-      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showSourceUpdateAction={false}
     />
   );

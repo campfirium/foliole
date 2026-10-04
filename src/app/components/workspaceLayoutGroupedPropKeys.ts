@@ -55,7 +55,7 @@ export const REVIEW_KEYS = defineLayoutKeys<WorkspaceLayoutReviewProps>()([
   'reviewSessionMode', 'onStartStudyMode', 'onToggleReviewSession', 'onRevealAnswer', 'onGradeReview',
   'onReadReviewTopic', 'onPostponeReviewTopic', 'onOpenPostponeTopicPanel', 'onDismissReviewTopic',
   'onRevisitReviewTopicSoon', 'onContinueReading', 'onResumeReviewItem', 'onExitReviewMode',
-  'onSetReviewSessionMode', 'reviewSchedulerSettings'
+  'onSetReviewSessionMode'
 ] as const);
 
 export const LAYOUT_CHROME_KEYS = defineLayoutKeys<WorkspaceLayoutChromeProps>()([

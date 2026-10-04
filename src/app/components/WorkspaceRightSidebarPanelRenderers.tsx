@@ -75,14 +75,13 @@ type ReviewQueueSidebarProps = {
 function renderDevPanel(
   props: Pick<
     WorkspaceRightSidebarPanelProps,
-    'activeNodeId' | 'nodesById' | 'reviewSchedulerSettings'
+    'activeNodeId' | 'nodesById'
   >
 ) {
   return (
     <WorkspaceRightSidebarDevPanel
       activeNodeId={props.activeNodeId}
       nodesById={props.nodesById}
-      reviewSchedulerSettings={props.reviewSchedulerSettings}
     />
   );
 }

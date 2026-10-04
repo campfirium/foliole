@@ -5,8 +5,8 @@ import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import type { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
 import { useDocumentHeaderMenuSettings } from '../../features/settings/context/DocumentHeaderMenuSettingsProvider';
+import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import type { DocumentHeaderMenuItemConfig } from '../../features/settings/model/documentHeaderMenuSettings';
-import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../shared/config/appSettings';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
@@ -60,7 +60,7 @@ function SourceUpdateAction({
   );
 }
 
-export function renderDefaultDocumentHeaderRightSlot(args: {
+export function DefaultDocumentHeaderRightSlot(args: {
   activeNodeId: string | null;
   backlinks: BacklinkItem[];
   editableNodeId: string | null;
@@ -68,14 +68,14 @@ export function renderDefaultDocumentHeaderRightSlot(args: {
   onNodePriorityChange: (nodeId: string, priority: number | null) => void;
   onSelectBacklinkNode: (nodeId: string) => void;
   priorityQuickSetShortcutLabel: string;
-  reviewSchedulerSettings: ReviewSchedulerSettings;
 }) {
+  const { reviewSchedulerSettings } = useReviewSchedulerSettings();
   return (
     <>
       <DocumentPanelHeaderBacklinksMenu backlinks={args.backlinks} onSelectNode={args.onSelectBacklinkNode} />
       <DocumentPriorityControl
         activeNodeId={args.activeNodeId}
-        defaultPriority={args.reviewSchedulerSettings.pushQueue.defaultPriority}
+        defaultPriority={reviewSchedulerSettings.pushQueue.defaultPriority}
         editableNodeId={args.editableNodeId}
         nodesById={args.nodesById}
         onPriorityChange={args.onNodePriorityChange}

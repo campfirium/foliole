@@ -3,12 +3,11 @@ import type { ReactNode } from 'react';
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { useAppearanceSettings } from '../../features/settings/context/AppearanceSettingsProvider';
-import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { AppToolbar } from '../../shared/ui';
 
 import {
-  renderDefaultDocumentHeaderRightSlot,
+  DefaultDocumentHeaderRightSlot,
   renderDocumentHeaderActions
 } from './DocumentPanelHeaderActions';
 import { DocumentPanelHeaderCenter } from './DocumentPanelHeaderCenter';
@@ -39,7 +38,6 @@ export interface DocumentPanelHeaderProps {
   onSelectBreadcrumbNode: (nodeId: string) => void;
   onToggleSourceUpdatePanel: () => void;
   priorityQuickSetShortcutLabel: string;
-  reviewSchedulerSettings: ReviewSchedulerSettings;
   rightSlot?: ReactNode;
   showDocumentControls?: boolean;
   showPublishActions?: boolean;
@@ -78,7 +76,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
     toggleEditorDisplayMode: args.toggleEditorDisplayMode
   });
   const rightSlot = args.rightSlot ?? (
-    showDocumentControls ? renderDefaultDocumentHeaderRightSlot(args) : null
+    showDocumentControls ? <DefaultDocumentHeaderRightSlot {...args} /> : null
   );
   const navigationSlot = !args.isFolderListView ? <DocumentPanelHeaderNavigation {...navigationProps} /> : null;
 

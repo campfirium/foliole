@@ -78,7 +78,6 @@ it('opens pdf highlight parent through unified node selection when parent is not
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
-      reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}
     />
   );
@@ -131,7 +130,6 @@ it('opens parent node with text highlight focus when highlight parent is not act
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
-      reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}
     />
   );
@@ -179,7 +177,6 @@ it('routes current-parent pdf highlights through unified node selection without 
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
-      reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}
     />
   );
@@ -226,7 +223,6 @@ it('routes current-parent text highlights through unified node selection without
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
-      reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}
     />
   );
@@ -266,7 +262,6 @@ it('renders the outline panel from active topic headings', async () => {
       onSelectNode={vi.fn()}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
-      reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}
     />
   );

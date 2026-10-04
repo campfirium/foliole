@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import type { Node, NodeReadingProfile } from '../../features/nodes/model/nodeTypes';
-import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
+import { useReviewSchedulerSettings } from '../../features/settings/context/ReviewSchedulerSettingsProvider';
 import { cn } from '../../shared/lib/utils';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import {
@@ -30,7 +30,6 @@ import {
 interface WorkspaceRightSidebarDevPanelProps {
   activeNodeId: string | null;
   nodesById: Record<string, Node>;
-  reviewSchedulerSettings: ReviewSchedulerSettings;
 }
 
 function SchedulingInfoRow({ label, value }: { label: string; value: string }) {
@@ -164,6 +163,7 @@ function DevPanelContent({ data, t }: { data: SchedulingPanelData; t: Scheduling
 
 export function WorkspaceRightSidebarDevPanel(props: WorkspaceRightSidebarDevPanelProps) {
   const t = useTranslation();
+  const { reviewSchedulerSettings } = useReviewSchedulerSettings();
   if (!props.activeNodeId) {
     return <EmptyDevPanelState t={t} />;
   }
@@ -171,7 +171,7 @@ export function WorkspaceRightSidebarDevPanel(props: WorkspaceRightSidebarDevPan
   const data = resolveSchedulingPanelData({
     activeNodeId: props.activeNodeId,
     nodesById: props.nodesById,
-    reviewSchedulerSettings: props.reviewSchedulerSettings
+    reviewSchedulerSettings
   });
   if (!data) {
     return null;

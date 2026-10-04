@@ -2,7 +2,6 @@ import { screen } from '@testing-library/react';
 import { expect, it } from 'vitest';
 
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { inspectorListInsetClassName } from '../../shared/ui';
 
@@ -29,7 +28,6 @@ it('keeps scheduling header, dividers, and rows on the same right panel inset', 
     <WorkspaceRightSidebarDevPanel
       activeNodeId="topic-1"
       nodesById={{ 'topic-1': createTopicNode() }}
-      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
     />
   );
 

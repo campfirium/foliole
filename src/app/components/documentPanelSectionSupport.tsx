@@ -5,7 +5,6 @@ import type { EditorSearchDecorations, EditorSelection } from '../../features/ed
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import { resolveInternalLinkTargetId } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import type { Translate } from '../../shared/localization/LocalizationProvider';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 
@@ -19,8 +18,7 @@ export function buildResolvedDocumentPanelProps(props: DocumentPanelSectionProps
     isPriorityQuickSetActive: props.isPriorityQuickSetActive ?? false,
     onNodePriorityChange: props.onNodePriorityChange ?? (() => undefined),
     onNodeShortTermChange: props.onNodeShortTermChange ?? (() => undefined),
-    priorityQuickSetShortcutLabel: props.priorityQuickSetShortcutLabel ?? '',
-    reviewSchedulerSettings: props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS
+    priorityQuickSetShortcutLabel: props.priorityQuickSetShortcutLabel ?? ''
   };
 }
 

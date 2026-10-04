@@ -2,7 +2,6 @@ import { Suspense, type RefObject } from 'react';
 
 import type { NativeAssistantWorkspaceContext } from '../../../lib/platform/nativeAssistantContract';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ReviewFlowWindow } from '../../store/workspaceReviewFlowWindow';
 
 import { measureWorkspaceDiagnostic } from './workspaceInputLagRenderDiagnostic';
@@ -42,7 +41,6 @@ export interface WorkspaceRightSidebarPanelProps {
   reviewCurrentNodeId: string | null;
   reviewFlowWindow?: ReviewFlowWindow;
   reviewQueueNodeIds: string[];
-  reviewSchedulerSettings: ReviewSchedulerSettings;
   scrollElementRef?: RefObject<HTMLDivElement>;
   trashedNodeIds: string[];
 }

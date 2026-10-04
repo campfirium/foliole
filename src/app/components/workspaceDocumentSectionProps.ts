@@ -83,7 +83,6 @@ function buildDocumentEditorProps(
     onRevealDocumentPosition: props.onRevealDocumentPosition,
     onRevealDocumentSelection: props.onRevealDocumentSelection,
     priorityQuickSetShortcutLabel: props.priorityQuickSetShortcutLabel,
-    reviewSchedulerSettings: props.reviewSchedulerSettings,
     showAnswerSection: props.showAnswerSection
   };
 }

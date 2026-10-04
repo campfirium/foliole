@@ -111,7 +111,6 @@ export type WorkspaceLayoutReviewProps = Pick<WorkspaceLayoutFieldTypes,
   | 'onResumeReviewItem'
   | 'onExitReviewMode'
   | 'onSetReviewSessionMode'
-  | 'reviewSchedulerSettings'
 >;
 
 export type WorkspaceLayoutChromeProps = Pick<WorkspaceLayoutFieldTypes,

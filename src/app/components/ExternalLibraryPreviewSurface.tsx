@@ -3,7 +3,6 @@ import { useRef } from 'react';
 
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import type { ExternalDocumentPreview } from '../../shared/platform/externalDocumentPreviewRepository';
 import { PanelScaleSurface } from '../../shared/ui';
@@ -127,7 +126,6 @@ function ExternalPreviewHeader(args: {
         }}
         onToggleSourceUpdatePanel={() => undefined}
         priorityQuickSetShortcutLabel=""
-        reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
         rightSlot={(
           <ExternalPreviewHeaderActions
             importedNodeId={args.preview.importedNodeId ?? null}

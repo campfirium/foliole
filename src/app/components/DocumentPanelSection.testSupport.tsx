@@ -7,6 +7,7 @@ import '../../test/reactPdfMock';
 import { MouseGestureSettingsProvider } from '../../features/settings/context/MouseGestureSettingsProvider';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
 import { LocalizationProvider } from '../../shared/localization/LocalizationProvider';
+import { TestReviewSchedulerSettingsProvider } from '../../shared/localization/testLocalization';
 import type { loadRuntimeNodeSourceDetails as loadRuntimeNodeSourceDetailsRuntime } from '../../shared/platform/nodeSourceRuntimeRepository';
 
 import { requestDocumentComparisonViewToggle, requestSourceUpdateReview } from './documentComparisonView';
@@ -194,7 +195,9 @@ export function createSectionElement(overrides: Partial<ComponentProps<typeof Do
   return (
     <LocalizationProvider>
       <MouseGestureSettingsProvider>
-        <DocumentPanelSection {...buildSectionProps(overrides)} />
+        <TestReviewSchedulerSettingsProvider>
+          <DocumentPanelSection {...buildSectionProps(overrides)} />
+        </TestReviewSchedulerSettingsProvider>
       </MouseGestureSettingsProvider>
     </LocalizationProvider>
   );

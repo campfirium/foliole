@@ -3,7 +3,6 @@ import { useRef, useState } from 'react';
 
 import { MarkdownEditor } from '../../features/editor/components/MarkdownEditor';
 import type { Node } from '../../features/nodes/model/nodeTypes';
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import { useTranslation, type Translate } from '../../shared/localization/LocalizationProvider';
 import { restoreRuntimeRemovedSource } from '../../shared/platform/removedSourcesRuntimeRepository';
 import { AppEmptyState } from '../../shared/ui';
@@ -86,7 +85,6 @@ function RemovedPreviewHeader(props: {
       onSelectBreadcrumbNode={() => undefined}
       onToggleSourceUpdatePanel={() => undefined}
       priorityQuickSetShortcutLabel=""
-      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showDocumentControls={false}
       showSourceUpdateAction={false}
     />

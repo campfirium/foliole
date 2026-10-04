@@ -249,7 +249,6 @@ function buildProps(isImmersiveMode: boolean, nodesById: Record<string, unknown>
     setNodeViewState: () => undefined,
     reviewCurrentNodeId: null,
     reviewPanelQueueNodeIds: [],
-    reviewSchedulerSettings: null,
     trashedNodeIds: []
   } as never);
 }

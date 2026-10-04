@@ -48,7 +48,6 @@ function renderOutlineSidebar(args: {
       onSelectNode={vi.fn()}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
-      reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}
       {...(args.outlineDocument ? { outlineDocument: args.outlineDocument } : {})}
     />

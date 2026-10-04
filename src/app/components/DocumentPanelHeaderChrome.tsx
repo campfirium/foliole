@@ -2,7 +2,6 @@ import type { FolderListSortDirection, FolderListSortKey } from '../../features/
 import type { BacklinkItem } from '../../features/nodes/model/internalLinks';
 import type { Node } from '../../features/nodes/model/nodeTypes';
 import { isVirtualNode, isVirtualRootNode } from '../../features/nodes/model/specialNodes';
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import { getStoredAppLocale } from '../../shared/localization/appLanguage';
 import { resolveSystemEntryDisplayName } from '../../shared/localization/systemEntryNames';
 
@@ -96,7 +95,6 @@ export function renderDocumentPanelHeader(args: {
       onSelectBreadcrumbNode={breadcrumb.onSelectBreadcrumbNode}
       onToggleSourceUpdatePanel={args.onToggleSourceUpdatePanel}
       priorityQuickSetShortcutLabel={args.props.priorityQuickSetShortcutLabel ?? ''}
-      reviewSchedulerSettings={args.props.reviewSchedulerSettings ?? DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       rightSlot={
         args.props.isFoliolePublishedContext && args.props.activeNodeId ? (
           <FoliolePublishedHeaderActions nodeId={args.props.activeNodeId} />

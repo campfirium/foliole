@@ -75,7 +75,6 @@ function createSurfaceActionProps() {
     onSetReadingPositionSelection: vi.fn(),
     onShouldSuppressSelectionRestore: vi.fn(() => false),
     priorityQuickSetShortcutLabel: '',
-    reviewSchedulerSettings: {} as never,
     setNodeViewState: vi.fn(),
     setReadingPositionSelection: vi.fn(),
     showAnswerSection: false,

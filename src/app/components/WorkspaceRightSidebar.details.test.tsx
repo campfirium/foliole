@@ -53,7 +53,6 @@ it('renders backlinks in the dedicated inspector panel and opens the linked note
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
-      reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}
     />
   );
@@ -103,7 +102,6 @@ it('does not list cloze nodes in the highlights panel', () => {
       onSelectNode={onSelectNode}
       reviewCurrentNodeId={null}
       reviewQueueNodeIds={[]}
-      reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}
     />
   );

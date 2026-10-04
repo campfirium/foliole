@@ -9,7 +9,6 @@ import type { ReadingPositionRestoreCommand } from '../../features/editor/model/
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
 import type { ReviewSessionMode } from '../../features/review/model/reviewSessionMode';
 import type { ReviewGrade, SchedulerPreviewResult } from '../../features/review/model/reviewTypes';
-import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { SettingsCategoryId } from '../../features/settings/model/settingsPanelOptions';
 import type {
   ExternalLibraryBrowseEntry,
@@ -224,6 +223,5 @@ export interface WorkspaceLayoutFieldTypes {
   onResumeReviewItem: () => void;
   onExitReviewMode: () => void;
   onSetReviewSessionMode: (mode: ReviewSessionMode) => void;
-  reviewSchedulerSettings: ReviewSchedulerSettings;
   selectedTrashNodeId: string | null;
 }

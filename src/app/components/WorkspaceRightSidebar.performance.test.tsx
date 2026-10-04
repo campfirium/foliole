@@ -68,7 +68,6 @@ it('does not render the review queue panel before workspace hydration completes'
         onSelectNode={STABLE_NOOP}
         reviewCurrentNodeId={null}
         reviewQueueNodeIds={[]}
-        reviewSchedulerSettings={{} as never}
         trashedNodeIds={[]}
       />
     );
@@ -157,7 +156,6 @@ function createReviewQueueSidebarElement(node: Node, reviewFlowWindow?: ReviewFl
       reviewCurrentNodeId="node-1"
       {...(reviewFlowWindow ? { reviewFlowWindow } : {})}
       reviewQueueNodeIds={['node-1']}
-      reviewSchedulerSettings={{} as never}
       trashedNodeIds={[]}
     />
   );

@@ -1,7 +1,6 @@
 import { fireEvent, screen } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
-import { DEFAULT_REVIEW_SCHEDULER_SETTINGS } from '../../features/settings/model/reviewSchedulerSettings';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { DocumentPanelHeader } from './DocumentPanelHeader';
@@ -57,7 +56,6 @@ it('routes breadcrumb clicks to onSelectBreadcrumbNode', () => {
       onSelectBreadcrumbNode={onSelectBreadcrumbNode}
       onToggleSourceUpdatePanel={vi.fn()}
       priorityQuickSetShortcutLabel="Ctrl+M"
-      reviewSchedulerSettings={DEFAULT_REVIEW_SCHEDULER_SETTINGS}
       showSourceUpdateAction={false}
     />
   );

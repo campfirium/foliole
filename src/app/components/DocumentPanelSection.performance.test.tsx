@@ -1,6 +1,8 @@
-import { act, render, waitFor } from '@testing-library/react';
+import { act, waitFor } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
+
+import { renderWithLocalization as render } from '../../shared/localization/testLocalization';
 
 import '../../test/reactPdfMock';
 

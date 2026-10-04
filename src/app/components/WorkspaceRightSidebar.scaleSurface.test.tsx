@@ -29,7 +29,6 @@ function SidebarHarness({ activePanelId }: { activePanelId: 'assistant' | 'outli
           onSelectNode={vi.fn()}
           reviewCurrentNodeId={null}
           reviewQueueNodeIds={[]}
-          reviewSchedulerSettings={{} as never}
           trashedNodeIds={[]}
         />
       </DisplayScaleProvider>

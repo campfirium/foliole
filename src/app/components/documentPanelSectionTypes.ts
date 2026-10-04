@@ -7,7 +7,6 @@ import type { EditorViewportMode } from '../../features/editor/adapters/EditorAd
 import type { ClipboardAnchorRange } from '../../features/editor/model/anchorClipboardPayload';
 import type { EditorRestoreSelectionMode } from '../../features/editor/model/editorRestoreCommand';
 import type { Node, NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
-import type { ReviewSchedulerSettings } from '../../features/settings/model/reviewSchedulerSettings';
 import type { ExternalLinkOpenRequest } from '../../shared/platform/externalLinkOpenRequest';
 import type { NodeViewState } from '../../store/workspaceStore';
 import type { SelectionCommandPayload } from '../contextCommands';
@@ -96,7 +95,6 @@ export interface DocumentPanelSectionProps {
   onSelectNodeInVirtualView?: (nodeId: string) => void;
   onSelectTrashNode?: ((nodeId: string) => void) | undefined;
   priorityQuickSetShortcutLabel?: string;
-  reviewSchedulerSettings?: ReviewSchedulerSettings;
   nodeOrder: string[];
   trashedNodeIds: string[];
   nodesById: Record<string, Node>;

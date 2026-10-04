@@ -173,7 +173,6 @@ function selectWorkspaceRightSidebarProps({
     reviewCurrentNodeId: props.review.reviewCurrentNodeId,
     reviewFlowWindow: props.review.reviewFlowWindow,
     reviewQueueNodeIds: props.review.reviewPanelQueueNodeIds,
-    reviewSchedulerSettings: props.review.reviewSchedulerSettings,
     trashedNodeIds: props.trash.trashedNodeIds,
     ...definedProps({
       isWorkspaceHydrated: props.layoutChrome.isWorkspaceHydrated,
