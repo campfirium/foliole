@@ -100,7 +100,7 @@ async function stageFullCandidates(candidateDb: Database.Database,
 
 export async function probeDesktopSyncIdentities(args: ProbeArgs) {
   await fs.mkdir(args.outputRoot, { recursive: true });
-  const staging = await fs.mkdtemp(path.join(args.outputRoot, '.identity-probe-'));
+  const staging = await fs.mkdtemp(path.toNamespacedPath(path.join(args.outputRoot, '.identity-probe-')));
   let local: Awaited<ReturnType<typeof createSyncIdentitySourceView>> | undefined;
   let candidateDb: Database.Database | undefined;
   try {

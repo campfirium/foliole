@@ -15,7 +15,9 @@ export interface SyncPackSourceViewIdentity {
 /** The caller owns the source connection and the lifetime of this temporary view. */
 export async function createSyncPackSourceView(source: Database.Database, outputPath: string) {
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
-  const staging = await fs.mkdtemp(path.join(path.dirname(outputPath), '.sync-view-'));
+  const staging = await fs.mkdtemp(path.toNamespacedPath(
+    path.join(path.dirname(outputPath), '.sync-view-')
+  ));
   const stagedPath = path.join(staging, 'source.db');
   try {
     await source.backup(path.toNamespacedPath(stagedPath), { progress: () => 128 });

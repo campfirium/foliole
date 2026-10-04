@@ -29,7 +29,7 @@ const ids = vi.hoisted(() => ({
 }));
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_data_dir: mockedSyncPackBuilderAppDataDir,
-  app_cache_dir: path.join(mockedSyncPackBuilderAppDataDir, 'cache'),
+  app_cache_dir: path.join(mockedSyncPackBuilderAppDataDir, 'cache', 'scope-'.repeat(16), 'peer-'.repeat(16)),
   app_config_dir: path.join(mockedSyncPackBuilderAppDataDir, 'config'),
   app_log_dir: path.join(mockedSyncPackBuilderAppDataDir, 'logs')
 }) }));

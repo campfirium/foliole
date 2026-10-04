@@ -51,7 +51,7 @@ async function ensureRestoreView(root: string) {
 }
 
 async function createIdentityView(root: string) {
-  const staging = await fs.mkdtemp(path.join(root, '.preparing-'));
+  const staging = await fs.mkdtemp(path.toNamespacedPath(path.join(root, '.preparing-')));
   try {
     const view = await createSyncIdentitySourceView(openDatabaseConnection().sqlite,
       path.join(staging, 'source.db'));

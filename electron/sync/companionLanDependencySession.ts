@@ -125,7 +125,7 @@ export async function createCompanionDependencySession(args: {
 }) {
   const base = sessionRoot(args.groupId, args.toPeerId);
   await fs.mkdir(base, { recursive: true });
-  const staging = await fs.mkdtemp(path.join(base, '.preparing-'));
+  const staging = await fs.mkdtemp(path.toNamespacedPath(path.join(base, '.preparing-')));
   const view = await createSyncPackSourceView(openDatabaseConnection().sqlite, path.join(staging, 'source.db'));
   try {
     const index = loadDesktopSyncPackFactIndex(view.driver, { fromStateSeq: args.index.from_state_seq,
