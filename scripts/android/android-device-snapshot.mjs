@@ -11,6 +11,7 @@ import { inspectAndroidAttachmentArchive } from './android-attachment-archive-ev
 
 import { openReadonlySqliteDatabase } from './sqlite-readonly.mjs';
 import { classifySqliteReadError } from './android-database-read-error.mjs';
+import { transferAdbFile } from './android-device-file-transfer.mjs';
 
 const execFileAsync = promisify(execFile);
 
@@ -20,6 +21,9 @@ async function runAdb(options, args, execOptions = {}) {
   let lastError = null;
   for (const adbPath of candidates) {
     try {
+      if (execOptions.outputPath) {
+        return await transferAdbFile(adbPath, adbArgs, execOptions.outputPath);
+      }
       return await execFileAsync(adbPath, adbArgs, { maxBuffer: 1024 * 1024 * 80, ...execOptions });
     } catch (error) {
       lastError = error;
@@ -83,11 +87,13 @@ export async function pullDatabaseFile(options, remotePath, destination, execute
     if (error.code === 1) return false;
     throw error;
   }
-  const { stdout } = await executeAdb(options, [
+  await executeAdb(options, [
     'exec-out', 'run-as', options.appId, 'cat', remotePath
-  ], { encoding: 'buffer' });
-  if (!stdout || stdout.length === 0) throw new Error(`Android database file is empty: ${remotePath}`);
-  await writeFile(destination, stdout);
+  ], { outputPath: destination });
+  if ((await stat(destination)).size === 0) {
+    await rm(destination, { force: true });
+    throw new Error(`Android database file is empty: ${remotePath}`);
+  }
   return true;
 }
 
