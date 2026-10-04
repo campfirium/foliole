@@ -169,6 +169,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(65, 'installSchema', 'Failed to add node member position declarations.'),
   step(66, 'installSchema', 'Failed to add independent identity fact staging.'),
   step(67, 'installSchema', 'Failed to add daily foreground time.'),
+  step(69, 'installSchema', 'Failed to add retained version query indexes.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

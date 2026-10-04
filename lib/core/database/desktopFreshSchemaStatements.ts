@@ -12,6 +12,7 @@ import { LEGACY_BODY_MIGRATION_SCHEMA } from './legacyBodyMigrationSchema.js';
 import { isLegacyOrderingSchema } from './legacyStorageRetirementMigration.js';
 import { LOCAL_FILE_SCHEMA_STATEMENTS } from './localFileSchemaStatements.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
+import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from './nodeVersionRetentionIndexSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { WATCHED_FOLDER_CONFLICT_SCHEMA_STATEMENTS } from './numberedMigrationWatchedFolderConflicts.js';
 import { PDF_INDEX_STATE_SCHEMA_STATEMENTS } from './pdfIndexStateSchema.js';
@@ -34,6 +35,7 @@ import { SYNC_SCHEMA_STATEMENTS } from './syncSchemaStatements.js';
 
 export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...DESKTOP_CORE_SCHEMA_STATEMENTS,
+  ...NODE_VERSION_RETENTION_INDEX_SCHEMA,
   ...REVIEW_DAILY_COUNT_SCHEMA,
   ...FOREGROUND_TIME_SCHEMA,
   ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS.slice(0, 6),

@@ -9,6 +9,7 @@ import { retireLegacyStorage } from './legacyStorageRetirementMigration.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
 import { migrateNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
+import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from './nodeVersionRetentionIndexSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetentionSchemaStatements.js';
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { createDataMigrationStateTable } from './numberedMigrationDataState.js';
@@ -203,5 +204,8 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 134, migrate: (sqlite) => {
     for (const statement of FOREGROUND_TIME_SCHEMA) sqlite.exec(statement);
     for (const statement of SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS) sqlite.exec(statement);
+  } },
+  { version: 135, migrate: (sqlite) => {
+    for (const statement of NODE_VERSION_RETENTION_INDEX_SCHEMA) sqlite.exec(statement);
   } }
 ];

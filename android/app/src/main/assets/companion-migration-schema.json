@@ -552,6 +552,15 @@
         }
       ],
       "beforeVersion": 67
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to add retained version query indexes.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 69
     }
   ],
   "planKeys": {
