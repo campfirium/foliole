@@ -54,6 +54,52 @@ describe('desktop Sync Group join provider', () => {
     expect(restarted.pending(NOW)).toEqual([]);
   });
 
+});
+
+describe('desktop Sync Group join admission bounds', () => {
+  it('caps pending requests and releases capacity on rejection and expiration', async () => {
+    const provider = createProvider();
+    const applicant = await input('capacity');
+    const requests = Array.from({ length: 16 }, () => provider.receive(applicant, NOW));
+    expect(() => provider.receive(applicant, NOW)).toThrow('sync_group_join_capacity_exceeded');
+    expect(provider.pending(NOW)).toHaveLength(16);
+    provider.reject(requests[0]!.request_id, NOW);
+    expect(provider.receive(applicant, NOW).status).toBe('pending');
+    expect(provider.receive(applicant, NOW + 120_000).status).toBe('pending');
+    expect(provider.pending(NOW + 120_000)).toHaveLength(1);
+  });
+
+  it('bounds total retention without evicting accepted requests and releases collected capacity', async () => {
+    const provider = createProvider();
+    const applicant = await input('accepted-capacity');
+    applicant.device.device_name += 'x'.repeat(16 * 1024 - Buffer.byteLength(JSON.stringify(applicant)));
+    const accepted = [];
+    for (let index = 0; index < 32; index += 1) {
+      const request = provider.receive(applicant, NOW);
+      accepted.push(await provider.accept(request.request_id, NOW));
+    }
+    expect(provider.pending(NOW)).toEqual([]);
+    expect(() => provider.receive(applicant, NOW)).toThrow('sync_group_join_capacity_exceeded');
+    expect(provider.collect(accepted[0]!.request_id, NOW)).toEqual(accepted[0]);
+    expect(provider.receive(applicant, NOW).status).toBe('pending');
+    for (const acceptance of accepted.slice(1)) {
+      expect(provider.collect(acceptance.request_id, NOW)).toEqual(acceptance);
+    }
+  });
+
+  it('rejects oversized retained fields without consuming capacity', async () => {
+    const provider = createProvider();
+    const applicant = await input('large');
+    expect(() => provider.receive({ ...applicant, device: {
+      ...applicant.device, device_name: '界'.repeat(6000)
+    } }, NOW)).toThrow('request_too_large');
+    expect(provider.pending(NOW)).toEqual([]);
+    applicant.device.device_name += 'x'.repeat(16 * 1024 - Buffer.byteLength(JSON.stringify(applicant)));
+    expect(provider.receive(applicant, NOW).status).toBe('pending');
+    applicant.device.device_name += 'x';
+    expect(() => provider.receive(applicant, NOW)).toThrow('request_too_large');
+  });
+
   it('rejects requests for another group', async () => {
     const provider = createProvider();
     const otherGroup = { ...(await input('other')), group_id: 'group-b' };

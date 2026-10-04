@@ -6,6 +6,7 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { loadDesktopSyncGroupJoinProvider } from './desktopSyncGroupJoinProvider.js';
+import { MAX_SYNC_GROUP_JOIN_REQUEST_BYTES } from './syncGroupJoinProvider.js';
 
 type JsonResponder = (
   request: http.IncomingMessage,
@@ -23,7 +24,7 @@ export async function handleSyncGroupJoinRequest(
   const provider = loadDesktopSyncGroupJoinProvider();
   if (!provider) return writeJson(request, response, 409, { error: 'sync_group_not_available' });
   try {
-    const input: unknown = JSON.parse(await readCompanionRequestBody(request));
+    const input: unknown = JSON.parse(await readCompanionRequestBody(request, MAX_SYNC_GROUP_JOIN_REQUEST_BYTES));
     const created = await runWithDatabaseConnectionOwner(async () => {
       await assertSyncGroupJoinMergeAllowed(createBetterSqliteDbPort(openDatabaseConnection().sqlite), input);
       return provider.receive(input as Parameters<typeof provider.receive>[0]);
@@ -66,7 +67,8 @@ function writeJoinError(
   writeJson: JsonResponder
 ) {
   const message = error instanceof Error ? error.message : 'sync_group_join_request_invalid';
-  const status = message === 'request_too_large' ? 413
+  const status = message === 'sync_group_join_capacity_exceeded' ? 429
+    : message === 'request_too_large' ? 413
     : message.includes('identity_mismatch') || message.includes('incompatible') ? 409 : 400;
   writeJson(request, response, status, { error: message });
 }

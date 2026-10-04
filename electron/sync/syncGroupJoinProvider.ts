@@ -14,6 +14,11 @@ import {
 
 import { encryptDesktopSyncGroupJoinInfo } from './desktopSyncGroupJoinCrypto.js';
 
+// Admission bounds include accepted requests until collection or the existing TTL expires.
+export const MAX_SYNC_GROUP_JOIN_REQUEST_BYTES = 16 * 1024;
+const MAX_PENDING_JOIN_REQUESTS = 16;
+const MAX_RETAINED_JOIN_REQUESTS = 32;
+
 interface StoredJoinRequest {
   acceptance: SyncGroupJoinAcceptance | null;
   request: SyncGroupJoinRequest;
@@ -34,8 +39,15 @@ export class DesktopSyncGroupJoinProvider {
 
   receive(input: SyncGroupJoinRequestInput, nowMs = Date.now()) {
     this.#prune(nowMs);
+    if (Buffer.byteLength(JSON.stringify(input), 'utf8') > MAX_SYNC_GROUP_JOIN_REQUEST_BYTES) {
+      throw new Error('request_too_large');
+    }
     const parsed = parseSyncGroupJoinRequestInput(input);
     if (parsed.group_id !== this.#groupInfo.group_id) throw new Error('sync_group_identity_mismatch');
+    const pendingCount = [...this.#requests.values()].filter(({ request }) => request.status === 'pending').length;
+    if (pendingCount >= MAX_PENDING_JOIN_REQUESTS || this.#requests.size >= MAX_RETAINED_JOIN_REQUESTS) {
+      throw new Error('sync_group_join_capacity_exceeded');
+    }
     const request: SyncGroupJoinRequest = {
       ...parsed,
       expires_at: new Date(nowMs + SYNC_GROUP_JOIN_REQUEST_TTL_MS).toISOString(),
