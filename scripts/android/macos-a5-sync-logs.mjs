@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const SYNC_PREFIX = '[FolioleSync] ';
-const STAGES = new Set(['push', 'structure_page', 'resources']);
+const STAGES = new Set(['push', 'structure_page', 'resources',
+  'identity_source', 'identity_tombstones', 'identity_index', 'identity_snapshot_copy', 'identity_facts', 'identity_seal']);
 const STATUSES = new Set(['started', 'completed', 'failed']);
 const NUMBER_FIELDS = ['page', 'fromCursor', 'toCursor', 'appliedObjects', 'appliedBlobs', 'elapsedMs'];
 

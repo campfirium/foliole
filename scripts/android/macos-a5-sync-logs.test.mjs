@@ -39,3 +39,11 @@ it('reads fixed A5 Logcat without changing the app or exposing other messages', 
     fs.rmSync(artifactsRoot, { recursive: true, force: true });
   }
 });
+
+it('retains snapshot phase timing without exposing private source paths', () => {
+  const rows = parseA5SyncLogcat('1759480001.003 12 13 I Capacitor/Console: [FolioleSync] '
+    + JSON.stringify({ runId: 'snapshot-1', stage: 'identity_facts', status: 'completed',
+      elapsedMs: 1234, snapshotPath: '/private/library.db', token: 'private-token' }));
+  expect(rows).toEqual([{ at: '2025-10-03T08:26:41.003Z', runId: 'snapshot-1',
+    stage: 'identity_facts', status: 'completed', elapsedMs: 1234 }]);
+});
