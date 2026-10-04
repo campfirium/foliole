@@ -1,4 +1,4 @@
-import { deflateRawSync } from 'node:zlib';
+import { crc32, deflateRawSync } from 'node:zlib';
 
 interface TestZipEntry {
   compression?: 'deflate' | 'store';
@@ -27,7 +27,7 @@ export function createTestZip(entries: TestZipEntry[]) {
     localHeader.writeUInt16LE(0, 6);
     localHeader.writeUInt16LE(method, 8);
     localHeader.writeUInt32LE(0, 10);
-    localHeader.writeUInt32LE(0, 14);
+    localHeader.writeUInt32LE(crc32(content), 14);
     localHeader.writeUInt32LE(compressed.length, 18);
     localHeader.writeUInt32LE(content.length, 22);
     localHeader.writeUInt16LE(name.length, 26);
@@ -41,7 +41,7 @@ export function createTestZip(entries: TestZipEntry[]) {
     centralHeader.writeUInt16LE(0, 8);
     centralHeader.writeUInt16LE(method, 10);
     centralHeader.writeUInt32LE(0, 12);
-    centralHeader.writeUInt32LE(0, 16);
+    centralHeader.writeUInt32LE(crc32(content), 16);
     centralHeader.writeUInt32LE(compressed.length, 20);
     centralHeader.writeUInt32LE(content.length, 24);
     centralHeader.writeUInt16LE(name.length, 28);

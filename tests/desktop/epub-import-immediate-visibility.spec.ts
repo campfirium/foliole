@@ -7,6 +7,7 @@ import {
   createDegradedMultiChapterBookEpub,
   createMultiChapterBookEpub
 } from '../../electron/import/readwiseBooksEndToEnd.fixture';
+import { createLargeStoredImageBook } from '../../electron/ipc/epubStreaming.testSupport';
 
 import { expect, test } from './harness/fixtures';
 import { expectWorkspaceShell } from './harness/settings';
@@ -90,4 +91,24 @@ test('shows successful and degraded EPUB chapters immediately without restarting
 
   await desktopWindow.screenshot({ path: SCREENSHOT_PATH });
   await testInfo.attach('epub-import-immediate-visibility', { path: SCREENSHOT_PATH });
+});
+
+test('imports a large EPUB with large images through the desktop import command', async ({
+  desktopApp, desktopWindow
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const fixturePath = testInfo.outputPath('large.epub');
+  await fs.mkdir(path.dirname(fixturePath), { recursive: true });
+  await createLargeStoredImageBook(fixturePath);
+  try {
+    await desktopWindow.evaluate(() => window.localStorage.setItem('foliole-app-language', 'en'));
+    await desktopWindow.reload();
+    await expectWorkspaceShell(desktopWindow);
+    await importEpub(desktopApp, desktopWindow, fixturePath, 'Free reading');
+    await expectLatestImportStatus(desktopWindow, 'imported');
+    await expectReadableBook(desktopWindow, 'Large Book', 'Large chapter', 'All images survive.');
+    const screenshot = testInfo.outputPath('large-epub-import.png');
+    await desktopWindow.screenshot({ path: screenshot });
+    await testInfo.attach('large-epub-import', { path: screenshot });
+  } finally { await fs.rm(fixturePath, { force: true }); }
 });

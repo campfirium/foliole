@@ -22,10 +22,7 @@ const MIME_TYPE_EXTENSION_MAP = new Map([
   ['image/webp', '.webp']
 ]);
 
-const FILE_EXTENSION_MIME_TYPE_MAP = new Map(
-  Array.from(MIME_TYPE_EXTENSION_MAP.entries()).map(([mimeType, extension]) => [extension, mimeType])
-);
-FILE_EXTENSION_MIME_TYPE_MAP.set('.jpeg', 'image/jpeg');
+export { resolveImageMimeType } from './imageFileMimeType.js';
 
 interface ImportImageAttachmentBytesInput {
   bytes: Uint8Array;
@@ -125,9 +122,6 @@ export function normalizeImageFileName(originalName: string | null | undefined, 
   return `pasted-image${extension}`;
 }
 
-export function resolveImageMimeType(fileNameOrPath: string) {
-  return FILE_EXTENSION_MIME_TYPE_MAP.get(path.extname(fileNameOrPath).toLowerCase()) ?? null;
-}
 
 export async function importImageAttachmentBytes(
   input: ImportImageAttachmentBytesInput

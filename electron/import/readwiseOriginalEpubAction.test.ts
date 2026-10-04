@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../attachments/managedAttachmentFileStage.js', () => ({
   cleanCreatedManagedAttachmentFiles: vi.fn()
 }));
-vi.mock('./readwiseApiOriginalFile.js', () => ({ downloadReadwiseOriginalFile: mocks.download }));
+vi.mock('./readwiseApiOriginalFile.js', () => ({ downloadReadwiseOriginalEpubFile: mocks.download }));
 vi.mock('./readwiseOriginalEpubAnnotations.js', () => ({
   buildLocalReadwiseOriginalEpubDocument: mocks.buildDocument
 }));
@@ -52,7 +52,7 @@ beforeEach(() => {
   mocks.isReady.mockReturnValue(true);
   mocks.captureSnapshot.mockReturnValue('snapshot');
   mocks.fetchRemote.mockResolvedValue({ rawSourceUrl: 'https://example.s3.amazonaws.com/book.epub' });
-  mocks.download.mockResolvedValue(new Uint8Array([1, 2, 3]));
+  mocks.download.mockResolvedValue({ filePath: '/tmp/book.epub', dispose: async () => undefined });
   mocks.prepare.mockResolvedValue({ stages: [] });
   mocks.buildDocument.mockReturnValue({ id: 'document' });
 });

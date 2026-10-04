@@ -3,6 +3,10 @@ import path from 'node:path';
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { collectMarkdownImageReferences } from '../../lib/core/import/markdownImageReferences.js';
 
+import { EpubArchiveEntries } from './epubArchiveEntries.js';
+import { createFileBackedEpubImage } from './epubStagedContent.js';
+
+
 export interface ManifestItem {
   href: string;
   mediaType: string | null;
@@ -74,19 +78,17 @@ export function buildRootCoverFromImage(input: {
   opfXml: string;
 }) {
   for (const item of parseCoverImageItems(input.opfXml, input.manifest)) {
-    const bytes = input.entries.get(item.href);
-    if (!bytes || !item.mediaType) {
+    const filePath = input.entries instanceof EpubArchiveEntries ? input.entries.files.get(item.href) : undefined;
+    const bytes = filePath ? undefined : input.entries.get(item.href);
+    if ((!bytes && !filePath) || !item.mediaType) {
       continue;
     }
     return {
       content: `![Cover](${item.href})`,
       degradedReason: null,
-      embeddedImages: [{
-        bytes,
-        destination: item.href,
-        mimeType: item.mediaType,
-        originalName: path.posix.basename(item.href)
-      }]
+      embeddedImages: [filePath
+        ? createFileBackedEpubImage({ destination: item.href, mimeType: item.mediaType, originalName: path.posix.basename(item.href) }, filePath)
+        : { bytes: bytes!, destination: item.href, mimeType: item.mediaType, originalName: path.posix.basename(item.href) }]
     } satisfies RootBookContent;
   }
   return null;

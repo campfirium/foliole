@@ -16,6 +16,7 @@ const PDF_MIME = 'application/pdf';
 const EPUB_MIME = 'application/epub+zip';
 type OriginalFileCategory = 'epub' | 'pdf';
 
+export { downloadReadwiseOriginalEpubFile } from './readwiseOriginalEpubFileDownload.js';
 export { downloadReadwiseOriginalFile } from './readwiseOriginalFileDownload.js';
 
 export interface PreparedReadwiseOriginalFile {

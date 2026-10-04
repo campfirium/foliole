@@ -5,12 +5,14 @@ import {
 } from '../../lib/core/import/markdownImageReferences.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { prepareCanonicalImageAttachment } from '../attachments/importImageAttachmentBytes.js';
+import { prepareCanonicalImageAttachmentFile, stageManagedAttachmentFileCopy } from '../attachments/managedAttachmentFileCopy.js';
 import {
   cleanCreatedManagedAttachmentFiles,
   stageManagedAttachmentFile,
   type StagedManagedAttachment
 } from '../attachments/managedAttachmentFileStage.js';
-import { readRawEpubBookBytes, type RawEpubBook } from '../ipc/epubImportBook.js';
+import { readRawEpubBook, readRawEpubBookBytes, type RawEpubBook } from '../ipc/epubImportBook.js';
+import { epubImageFilePath } from '../ipc/epubStagedContent.js';
 
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 
@@ -45,13 +47,17 @@ async function prepareBody(
       rewritten += reference.fullMatch;
       continue;
     }
-    const canonical = prepareCanonicalImageAttachment(image.bytes);
+    const filePath = epubImageFilePath(image);
+    const canonical = filePath ? await prepareCanonicalImageAttachmentFile(filePath) : prepareCanonicalImageAttachment(image.bytes);
     if (!canonical) throw new Error('original_epub_image_invalid');
     attachmentIds.add(canonical.hash);
     references.set(canonical.storageKey, { storage_key: canonical.storageKey, original_name: image.originalName, role: 'image' });
     let stage = stages.get(canonical.hash);
     if (!stage) {
-      stage = await stageManagedAttachmentFile({
+      stage = filePath ? await stageManagedAttachmentFileCopy({
+        sourcePath: filePath, contentHash: canonical.hash, mimeType: canonical.mimeType,
+        now, originalName: image.originalName
+      }) : await stageManagedAttachmentFile({
         bytes: image.bytes,
         mimeType: canonical.mimeType,
         now,
@@ -84,14 +90,18 @@ function nodeDepth(nodes: RawEpubBook['nodes'], key: string) {
 }
 
 export async function prepareOriginalEpubCandidate(input: {
-  bytes: Uint8Array;
+  bytes?: Uint8Array;
+  filePath?: string;
   now: string;
   title: string;
 }): Promise<PreparedOriginalEpubCandidate> {
-  const book = readRawEpubBookBytes(input.bytes, `${input.title}.epub`);
-  if (!book.nodes.some((node) => node.content.trim())) throw new Error('original_epub_body_missing');
+  if (!input.filePath && !input.bytes) throw new Error('original_epub_source_missing');
+  const book = input.filePath ? await readRawEpubBook({
+    adapterId: 'text_file', kind: 'epub', filePath: input.filePath, sourceName: `${input.title}.epub`
+  }) : await readRawEpubBookBytes(input.bytes!, `${input.title}.epub`);
   const stages = new Map<string, StagedManagedAttachment>();
   try {
+    if (!book.nodes.some((node) => node.content.trim())) throw new Error('original_epub_body_missing');
     const root = await prepareBody(book.rootContent, book.rootEmbeddedImages, input.now, stages);
     const preparedNodes: PreparedReadwiseApiEpubImages['sections'] = [];
     for (const node of book.nodes) {
@@ -127,5 +137,7 @@ export async function prepareOriginalEpubCandidate(input: {
   } catch (error) {
     await cleanCreatedManagedAttachmentFiles([...stages.values()]);
     throw error;
+  } finally {
+    await book.dispose?.();
   }
 }

@@ -88,7 +88,7 @@ async function inspect(app: ElectronApplication) {
         fetchCount: runtime.__T183_EPUB_FETCH_COUNT__ ?? 0,
         nodeId: source.nodeId,
         referenceCount: driver.queryOne(
-          "SELECT COUNT(*) count FROM node_attachments WHERE node_id=? AND role='reference'", [source.nodeId]
+          "SELECT COUNT(*) count FROM nodes n, json_each(n.resource_references) r WHERE n.id=? AND json_extract(r.value, '$.role')='reference'", [source.nodeId]
         ).count,
         state: JSON.parse(source.state)
       };

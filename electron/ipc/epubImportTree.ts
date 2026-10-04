@@ -103,6 +103,7 @@ function appendTocNode(
     parentKey: string | null;
     sliceByTitle: boolean;
     usedKeys: Set<string>;
+    storeNode: (node: RawBookNode) => RawBookNode;
   }
 ) {
   const { chapter, entry, key, parentKey } = input;
@@ -117,35 +118,37 @@ function appendTocNode(
     ? `EPUB TOC fragment could not be matched: ${entry.href ?? fragment}`
     : null;
   const title = entry.title || chapter?.title || `Chapter ${nodes.length + 1}`;
-  nodes.push({
+  nodes.push(input.storeNode({
     content: splitChapterBody || placeholderParent ? `**${title}**` : content,
     degradedReason: splitChapterBody ? null : (missingFragmentReason ?? chapter?.degradedReason ?? null),
     embeddedImages: splitChapterBody ? [] : (chapter?.embeddedImages ?? []),
     key,
     parentKey,
     title
-  });
+  }));
   if (splitChapterBody && chapter) {
-    nodes.push({
+    nodes.push(input.storeNode({
       content,
       degradedReason: chapter.degradedReason,
       embeddedImages: chapter.embeddedImages,
       key: allocateUniqueKey(`${key}::chapter-body`, input.usedKeys),
       parentKey: key,
       title: resolveChapterBodyTitle(entry.title, chapter.title)
-    });
+    }));
   }
 }
 
 export function buildBookNodes(input: {
   chapters: SpineChapterNode[];
   toc: EpubTocEntry[];
+  storeNode?: (node: RawBookNode) => RawBookNode;
 }) {
+  const storeNode = input.storeNode ?? ((node: RawBookNode) => node);
   if (input.toc.length === 0) {
     const usedKeys = new Set<string>();
-    return input.chapters.map((chapter) => copyChapterNode(
+    return input.chapters.map((chapter) => storeNode(copyChapterNode(
       { ...chapter, key: allocateUniqueKey(chapter.key, usedKeys) }
-    ));
+    )));
   }
 
   const consumedChapterKeys = new Set<string>();
@@ -178,7 +181,7 @@ export function buildBookNodes(input: {
       if (matchedChapter) {
         consumedChapterKeys.add(matchedChapter.key);
       }
-      appendTocNode(nodes, { chapter: matchedChapter, entry, key, parentKey, sliceByTitle, usedKeys });
+      appendTocNode(nodes, { chapter: matchedChapter, entry, key, parentKey, sliceByTitle, usedKeys, storeNode });
       visitEntries(entry.children, key);
     });
   };

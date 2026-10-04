@@ -1,4 +1,3 @@
-import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
 import type { ReadwiseImportDestination } from '../../lib/core/import/readwiseAutoImportPolicy.js';
@@ -120,8 +119,7 @@ async function prepareCachedOriginalEpub(
   try {
     const storagePath = resolveAttachmentStoragePath(state.contentHash, undefined, state.mimeType);
     ensureMacosFileSecurityScopedAccess(path.dirname(storagePath));
-    const bytes = await fs.readFile(storagePath);
-    return prepareOriginalEpubCandidate({ bytes, now: new Date().toISOString(), title });
+    return await prepareOriginalEpubCandidate({ filePath: storagePath, now: new Date().toISOString(), title });
   } catch {
     return null;
   }

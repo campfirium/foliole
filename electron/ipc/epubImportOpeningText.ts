@@ -27,7 +27,7 @@ export function persistImportedOpeningTexts(input: {
     nodeRows: [
       { content: input.finalizedRoot.content, id: input.rootNodeId, kind: 'topic', parent_id: null, title: input.rootTitle },
       ...input.finalizedNodes.map((node) => ({
-        content: node.content,
+        get content() { return node.content; },
         id: input.nodeIdsByKey.get(node.key) ?? node.key,
         kind: 'topic',
         parent_id: node.parentKey ? (input.nodeIdsByKey.get(node.parentKey) ?? input.rootNodeId) : input.rootNodeId,

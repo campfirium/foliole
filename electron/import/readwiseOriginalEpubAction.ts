@@ -12,7 +12,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { IPC_READWISE_BOOK_EPUB_PROGRESS_EVENT_CHANNEL } from '../ipc/contracts.js';
 
 import type { ReadwiseApiFetchDependencies } from './readwiseApiImportFetch.js';
-import { downloadReadwiseOriginalFile } from './readwiseApiOriginalFile.js';
+import { downloadReadwiseOriginalEpubFile } from './readwiseApiOriginalFile.js';
 import { buildLocalReadwiseOriginalEpubDocument } from './readwiseOriginalEpubAnnotations.js';
 import { commitReadwiseOriginalEpub } from './readwiseOriginalEpubCommit.js';
 import { prepareOriginalEpubCandidate, type PreparedOriginalEpubCandidate } from './readwiseOriginalEpubPreparation.js';
@@ -72,10 +72,12 @@ export async function useReadwiseOriginalEpub(
       documentId: target.documentId
     });
     publish(window, nodeId, operationId, 'downloading_epub', 'Downloading EPUB…', 0.2);
-    const bytes = await downloadReadwiseOriginalFile(remote.rawSourceUrl, 'epub', dependencies);
+    const file = await downloadReadwiseOriginalEpubFile(remote.rawSourceUrl, dependencies);
     publish(window, nodeId, operationId, 'reading_epub', 'Reading EPUB…', 0.35);
     const importedAt = new Date().toISOString();
-    candidate = await prepareOriginalEpubCandidate({ bytes, now: importedAt, title: target.title });
+    try {
+      candidate = await prepareOriginalEpubCandidate({ filePath: file.filePath, now: importedAt, title: target.title });
+    } finally { await file.dispose(); }
     const preparedCandidate = candidate;
     const document = buildLocalReadwiseOriginalEpubDocument(target);
     publish(window, nodeId, operationId, 'locating_highlights', 'Locating highlights…', 0.6);

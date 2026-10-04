@@ -3,7 +3,10 @@ import path from 'node:path';
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { ASSET_MARKDOWN_SCHEME } from '../../lib/platform/assetMarkdownUrl.js';
-import { resolveImageMimeType } from '../attachments/importImageAttachmentBytes.js';
+import { resolveImageMimeType } from '../attachments/imageFileMimeType.js';
+
+import { EpubArchiveEntries } from './epubArchiveEntries.js';
+import { createFileBackedEpubImage } from './epubStagedContent.js';
 
 function decodeDestination(destination: string) {
   try {
@@ -55,8 +58,9 @@ export function collectManagedEpubImages(
     if (!archivePath) {
       continue;
     }
-    const bytes = entries.get(archivePath);
-    if (!bytes) {
+    const filePath = entries instanceof EpubArchiveEntries ? entries.files.get(archivePath) : undefined;
+    const bytes = filePath ? undefined : entries.get(archivePath);
+    if (!bytes && !filePath) {
       continue;
     }
     const mimeType = resolveImageMimeType(archivePath);
@@ -64,12 +68,12 @@ export function collectManagedEpubImages(
       continue;
     }
     seenDestinations.add(parsedTarget.destination);
-    managedImages.push({
-      bytes,
+    const metadata = {
       destination: parsedTarget.destination,
       mimeType,
       originalName: path.posix.basename(archivePath)
-    });
+    };
+    managedImages.push(filePath ? createFileBackedEpubImage(metadata, filePath) : { ...metadata, bytes: bytes! });
   }
 
   return managedImages;
