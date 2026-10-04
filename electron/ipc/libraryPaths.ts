@@ -29,7 +29,7 @@ import {
   saveDefaultLibraryHome
 } from './libraryPathBootstrap.js';
 import { migrateLegacyDefaultInbox } from './libraryPathLegacyInboxMigration.js';
-import { migrateLibraryPathChange } from './libraryPathMigration.js';
+import { migrateLibraryPathChange, runLibraryHomeMigration } from './libraryPathMigration.js';
 import {
   allowLibraryHomeDatabaseRestore,
   beginLibraryHomeMigration,
@@ -186,6 +186,12 @@ export async function loadLibraryPathSettings(): Promise<NativeLibraryPaths> {
 export async function updateLibraryPathSetting(
   args: NativeUpdateLibraryPathSettingArgs
 ): Promise<NativeLibraryPaths> {
+  return args.location === 'library_home'
+    ? runLibraryHomeMigration(() => applyLibraryPathSetting(args))
+    : applyLibraryPathSetting(args);
+}
+
+async function applyLibraryPathSetting(args: NativeUpdateLibraryPathSettingArgs): Promise<NativeLibraryPaths> {
   if (args.location !== 'library_home' && resolveExplicitLibraryHome()) {
     throw new Error('library path overrides are disabled for explicit --library-home launches');
   }

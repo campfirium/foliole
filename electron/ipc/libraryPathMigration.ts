@@ -1,16 +1,14 @@
 import path from 'node:path';
 
 import type { LibraryPathOverrides, ResolvedLibraryPaths } from '../../lib/platform/libraryPaths.js';
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, runWithDatabaseConnectionMaintenance } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { desktopTaskScheduler } from '../desktopTaskScheduler.js';
 
 import { moveDirectoryContents, pathExists } from './libraryPathFileMove.js';
-import {
-  beginLibraryHomeMigration,
-  endLibraryHomeMigration,
-  markLibraryHomeDatabaseMoved
-} from './libraryPathMigrationRuntime.js';
+import { markLibraryHomeDatabaseMoved } from './libraryPathMigrationRuntime.js';
+
+let libraryHomeTaskPause: { active: number; resume: Promise<() => void> } | null = null;
 
 function releaseLibraryMigrationDatabaseHandles() {
   closeExternalSearchCacheDatabase();
@@ -20,6 +18,26 @@ function releaseLibraryMigrationDatabaseHandles() {
 async function pauseExternalSearchRefresh() {
   const runtime = await import('../externalSearchBackgroundRefreshRuntime.js');
   await runtime.pauseExternalSearchBackgroundRefresh();
+}
+
+export async function runLibraryHomeMigration<T>(execute: () => Promise<T>) {
+  const pause = libraryHomeTaskPause ?? {
+    active: 0,
+    resume: desktopTaskScheduler.pauseResource('library')
+  };
+  libraryHomeTaskPause = pause;
+  pause.active += 1;
+  try {
+    await pause.resume;
+    await pauseExternalSearchRefresh();
+    return await runWithDatabaseConnectionMaintenance(execute);
+  } finally {
+    pause.active -= 1;
+    if (pause.active === 0) {
+      libraryHomeTaskPause = null;
+      (await pause.resume)();
+    }
+  }
 }
 
 function isPathInside(parentPath: string, candidatePath: string) {
@@ -64,31 +82,23 @@ async function migrateLibraryHome(args: {
   nextOverrides: LibraryPathOverrides;
   nextPaths: ResolvedLibraryPaths;
 }) {
-  const resumeLibraryTasks = await desktopTaskScheduler.pauseResource('library');
-  beginLibraryHomeMigration();
-  try {
-    await pauseExternalSearchRefresh();
-    releaseLibraryMigrationDatabaseHandles();
-    await assertExistingLibraryConfirmed({ ...args, location: 'library_home' });
-    if (await shouldAdoptExistingLibrary({ ...args, location: 'library_home' })) {
-      return;
-    }
+  releaseLibraryMigrationDatabaseHandles();
+  await assertExistingLibraryConfirmed({ ...args, location: 'library_home' });
+  if (await shouldAdoptExistingLibrary({ ...args, location: 'library_home' })) {
+    return;
+  }
 
-    await moveDirectoryContents(args.currentPaths.data_dir, args.nextPaths.data_dir, releaseLibraryMigrationDatabaseHandles);
-    markLibraryHomeDatabaseMoved(args.currentPaths.database_path);
+  await moveDirectoryContents(args.currentPaths.data_dir, args.nextPaths.data_dir, releaseLibraryMigrationDatabaseHandles);
+  markLibraryHomeDatabaseMoved(args.currentPaths.database_path);
 
-    if (shouldMoveDefaultScopedPath(args.currentOverrides.assets_dir, args.nextOverrides.assets_dir)) {
-      await moveDirectoryContents(args.currentPaths.assets_dir, args.nextPaths.assets_dir, releaseLibraryMigrationDatabaseHandles);
-    }
-    if (shouldMoveDefaultScopedPath(args.currentOverrides.inbox, args.nextOverrides.inbox)) {
-      await moveDirectoryContents(args.currentPaths.inbox, args.nextPaths.inbox, releaseLibraryMigrationDatabaseHandles);
-    }
-    if (shouldMoveDefaultScopedPath(args.currentOverrides.mirror, args.nextOverrides.mirror)) {
-      await moveDirectoryContents(args.currentPaths.mirror, args.nextPaths.mirror, releaseLibraryMigrationDatabaseHandles);
-    }
-  } finally {
-    endLibraryHomeMigration();
-    resumeLibraryTasks();
+  if (shouldMoveDefaultScopedPath(args.currentOverrides.assets_dir, args.nextOverrides.assets_dir)) {
+    await moveDirectoryContents(args.currentPaths.assets_dir, args.nextPaths.assets_dir, releaseLibraryMigrationDatabaseHandles);
+  }
+  if (shouldMoveDefaultScopedPath(args.currentOverrides.inbox, args.nextOverrides.inbox)) {
+    await moveDirectoryContents(args.currentPaths.inbox, args.nextPaths.inbox, releaseLibraryMigrationDatabaseHandles);
+  }
+  if (shouldMoveDefaultScopedPath(args.currentOverrides.mirror, args.nextOverrides.mirror)) {
+    await moveDirectoryContents(args.currentPaths.mirror, args.nextPaths.mirror, releaseLibraryMigrationDatabaseHandles);
   }
 }
 

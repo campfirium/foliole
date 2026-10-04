@@ -97,7 +97,7 @@ function dispatchRoutedCommand(
     if (isForegroundNodeMutationCommand(request.command)) {
       return runDesktopDatabaseWrite('foreground', execute);
     }
-    return shouldCoordinateStorageDispatch(request.command)
+    return shouldCoordinateStorageDispatch(request.command, args)
       ? runWithDatabaseConnectionOwner(execute)
       : execute();
   }
@@ -110,7 +110,10 @@ function dispatchRoutedCommand(
   return handleReviewCommand(request);
 }
 
-function shouldCoordinateStorageDispatch(command: string) {
+function shouldCoordinateStorageDispatch(command: string, args: Record<string, unknown>) {
+  if (command === NATIVE_COMMANDS.updateLibraryPathSetting && args.location === 'library_home') {
+    return false;
+  }
   return !STORAGE_COMMANDS_WITH_INTERNAL_COORDINATION.has(command);
 }
 
