@@ -4,9 +4,9 @@ import { expect, it, vi } from 'vitest';
 import { renderCompanionShellContent } from './CompanionShellContent';
 
 vi.mock('./CompanionShellReadableArticle', () => ({
-  CompanionShellReadableArticle: (props: { nextTopic?: { title: string; onOpen(): void } }) => (
-    <div>{props.nextTopic ? <button onClick={props.nextTopic.onOpen} type="button">
-      Next topic {props.nextTopic.title}
+  CompanionShellReadableArticle: (props: { onOpenNextTopic?: () => void }) => (
+    <div>{props.onOpenNextTopic ? <button onClick={props.onOpenNextTopic} type="button">
+      Next topic
     </button> : null}</div>
   )
 }));
@@ -19,7 +19,7 @@ function renderReadingRoute(isBrowseDirectoryOpen: boolean, flow = false) {
     isBrowseDirectoryOpen,
     isOnlyReviewOpen: false,
     isSearchArticleOpen: false,
-    nextDirectoryTopic: { nodeId: 'B', title: 'B' },
+    nextDirectoryTopicId: 'B',
     onBackDirectorySelection: vi.fn(),
     onBackToSettingsList: vi.fn(),
     onChangeDirectorySelection: vi.fn(),
@@ -50,7 +50,7 @@ function renderReadingRoute(isBrowseDirectoryOpen: boolean, flow = false) {
 
 it('opens the next directory topic through normal browse navigation', () => {
   const select = renderReadingRoute(true);
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic B' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
   expect(select).toHaveBeenCalledExactlyOnceWith('B');
 });
 

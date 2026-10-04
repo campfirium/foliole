@@ -2,7 +2,6 @@ import { useState } from 'react';
 
 import type { WorkspaceSnapshot } from '../../lib/core/database/workspaceSnapshot';
 import { resolveCompanionFolderViewByNodeId } from '../shared/platform/companionBrowseLists';
-import { resolveCompanionArticleTitle } from '../shared/platform/companionReadableArticle';
 import { isCanonicalVisibleNodeId } from '../shared/workspaceCanonicalSelectors';
 
 import type { CompanionDirectorySelection } from './CompanionDirectoryModel';
@@ -22,7 +21,7 @@ export function useCompanionDirectoryReadingSequence(args: {
       : null);
   }
 
-  let nextTopic: { nodeId: string; title: string } | null = null;
+  let nextTopicNodeId: string | null = null;
   if (sequence && args.selection.kind === 'internal' &&
       args.selection.nodeId === sequence.folderNodeId && args.selectedNodeId && args.snapshot) {
     const currentIndex = sequence.nodeIds.indexOf(args.selectedNodeId);
@@ -32,10 +31,10 @@ export function useCompanionDirectoryReadingSequence(args: {
       const node = args.snapshot.nodesById[nodeId];
       if (node?.kind !== 'topic' || node.parentNodeId !== sequence.folderNodeId) continue;
       if (resolveCompanionFolderViewByNodeId(args.snapshot, nodeId)) continue;
-      nextTopic = { nodeId, title: resolveCompanionArticleTitle(node) };
+      nextTopicNodeId = nodeId;
       break;
     }
   }
 
-  return { capture, nextTopic };
+  return { capture, nextTopicNodeId };
 }

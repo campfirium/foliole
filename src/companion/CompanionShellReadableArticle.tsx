@@ -36,7 +36,7 @@ function canContinueToNext(article: NonNullable<Surface['readableArticle']>) {
   return !article.bodyStatus || article.bodyStatus === 'ready' || article.bodyStatus === 'empty';
 }
 
-export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; nextTopic?: { title: string; onOpen(): void } | undefined; onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
+export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; onOpenNextTopic?: (() => void) | undefined; onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
   const breadcrumbItems = useReviewBreadcrumbItems(props.workspaceSync.state.workspace_snapshot,
     props.flow ? props.surface.effectiveReviewSession.currentCard?.nodeId ?? null : null);
   if (!props.surface.readableArticle) return null;
@@ -84,8 +84,8 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
         reviewCardKey={props.surface.effectiveReviewSession.currentCard?.nodeId ?? null}
         statusLabel={props.surface.readingError ?? props.surface.reviewError ?? props.surface.flowError}
         visible={!activity.editing}
-      /> : props.nextTopic && canContinue ? <CompanionNextTopicFooter key={props.surface.readableArticle.nodeId}
-        activity={activity} onOpen={props.nextTopic.onOpen} title={props.nextTopic.title} /> : null}
+      /> : props.onOpenNextTopic && canContinue ? <CompanionNextTopicFooter key={props.surface.readableArticle.nodeId}
+        activity={activity} onOpen={props.onOpenNextTopic} /> : null}
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
       onExit={props.onExit}
       onScrollTopChange={props.surface.handleViewScroll}

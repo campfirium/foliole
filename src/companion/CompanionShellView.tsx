@@ -59,7 +59,7 @@ function renderCompanionMainContent(model: CompanionShellModel) {
         onCaptureDirectoryReadingOrder: model.directoryReadingSequence.capture,
         isBrowseDirectoryOpen: model.isBrowseDirectoryOpen,
         isOnlyReviewOpen: model.isOnlyReviewOpen,
-        nextDirectoryTopic: model.directoryReadingSequence.nextTopic,
+        nextDirectoryTopicId: model.directoryReadingSequence.nextTopicNodeId,
         isSearchArticleOpen: model.isSearchArticleOpen,
         onExitSearchArticle: model.handleExitSearchArticle,
         onExitSearchExternalDocument: model.handleExitSearchExternalDocument,

@@ -31,7 +31,7 @@ function renderSurface(bodyStatus: 'empty' | 'failed' | 'missing', title: string
     isBrowseDirectoryOpen: directory,
     isOnlyReviewOpen: false,
     isSearchArticleOpen: false,
-    nextDirectoryTopic: directory ? { nodeId: 'topic-2', title: 'Next topic' } : null,
+    nextDirectoryTopicId: directory ? 'topic-2' : null,
     onBackDirectorySelection: vi.fn(),
     onBackToSettingsList: vi.fn(),
     onChangeDirectorySelection: vi.fn(),

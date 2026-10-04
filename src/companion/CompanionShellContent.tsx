@@ -47,7 +47,7 @@ type CompanionShellContentProps = CompanionShellSearchRouteProps & {
   reviewBreadcrumbItems: ReviewBreadcrumbItem[];
   settingsPage: CompanionSettingsPage;
   surface: Surface;
-  nextDirectoryTopic?: { nodeId: string; title: string } | null;
+  nextDirectoryTopicId?: string | null;
   workspaceError: string | null;
   workspaceSync: WorkspaceSync;
 };
@@ -91,7 +91,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
 
 function renderRecentContent(props: CompanionShellContentProps) {
   if (props.isBrowseDirectoryOpen) {
-    const nextDirectoryTopic = props.nextDirectoryTopic;
+    const nextDirectoryTopicId = props.nextDirectoryTopicId;
     if (
       (props.directorySelection.kind === 'internal' ||
         props.directorySelection.kind === 'trash' ||
@@ -102,10 +102,8 @@ function renderRecentContent(props: CompanionShellContentProps) {
       return (
         <CompanionShellReadableArticle
           onExit={DirectoryArticle.resolveCompanionDirectoryArticleExit(props)}
-          nextTopic={nextDirectoryTopic ? {
-            title: nextDirectoryTopic.title,
-            onOpen: () => props.surface.handleSelectBrowseNode(nextDirectoryTopic.nodeId)
-          } : undefined}
+          onOpenNextTopic={nextDirectoryTopicId
+            ? () => props.surface.handleSelectBrowseNode(nextDirectoryTopicId) : undefined}
           surface={props.surface}
           workspaceSync={props.workspaceSync}
         />

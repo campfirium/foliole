@@ -45,7 +45,7 @@ function DirectoryReadingHarness() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selection = { kind: 'internal' as const, nodeId: 'folder' };
   const sequence = useCompanionDirectoryReadingSequence({ selection, selectedNodeId: selectedId, snapshot });
-  const next = sequence.nextTopic;
+  const nextTopicNodeId = sequence.nextTopicNodeId;
 
   function open(nodeId: string) {
     setSelectedId(nodeId);
@@ -60,8 +60,8 @@ function DirectoryReadingHarness() {
 
   return selectedId ? <>
     <article>{selectedId} body</article>
-    {next ? <CompanionNextTopicFooter activity={new CompanionReadingActivity(selectedId, () => undefined)}
-      onOpen={() => open(next.nodeId)} title={next.title} /> : null}
+    {nextTopicNodeId ? <CompanionNextTopicFooter activity={new CompanionReadingActivity(selectedId, () => undefined)}
+      onOpen={() => open(nextTopicNodeId)} /> : null}
     <button onClick={() => setSelectedId(null)} type="button">Exit</button>
   </> : <CompanionDirectoryContent
     onChangeSelection={vi.fn()} onExitArticle={vi.fn()}
@@ -75,9 +75,10 @@ it('continues through the opened directory order without a previous control or a
   fireEvent.click(screen.getByRole('button', { name: 'Open topic A' }));
   expect(screen.getByText('A body')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Previous topic/i })).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic B' }));
+  expect(screen.getByRole('button', { name: 'Next topic' })).not.toHaveTextContent('B');
+  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
   expect(await screen.findByText('B body')).toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic C' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
   expect(await screen.findByText('C body')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Next topic/i })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
@@ -89,12 +90,12 @@ it('keeps the current topic open when a pending edit cannot be saved', async () 
   activity.flushDraft = vi.fn().mockRejectedValueOnce(new Error('save failed'));
   const open = vi.fn();
   render(<LocalizationProvider initialLanguagePreference="en">
-    <CompanionNextTopicFooter activity={activity} onOpen={open} title="B" />
+    <CompanionNextTopicFooter activity={activity} onOpen={open} />
   </LocalizationProvider>);
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic B' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Finish or retry the current change');
   expect(open).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic B' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
   await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
 });
 
@@ -104,9 +105,9 @@ it('does not reopen the next topic after the reader was exited during a save', a
   activity.flushDraft = () => new Promise<void>((resolve) => { finishSave = resolve; });
   const open = vi.fn();
   const view = render(<LocalizationProvider initialLanguagePreference="en">
-    <CompanionNextTopicFooter activity={activity} onOpen={open} title="B" />
+    <CompanionNextTopicFooter activity={activity} onOpen={open} />
   </LocalizationProvider>);
-  fireEvent.click(screen.getByRole('button', { name: 'Next topic B' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next topic' }));
   await waitFor(() => expect(finishSave).toBeDefined());
   view.unmount();
   finishSave?.();
