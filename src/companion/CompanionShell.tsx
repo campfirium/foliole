@@ -20,6 +20,7 @@ import { useCompanionDirectorySelectionState } from './useCompanionDirectorySele
 import { useCompanionExternalDirectory } from './useCompanionExternalDirectory';
 import { useCompanionSearchNavigation } from './useCompanionSearchNavigation';
 import { useCompanionShellActions } from './useCompanionShellActions';
+import { useDirectoryReadingSequence, useSortedArticleSurface } from './useCompanionShellReading';
 import { useCompanionSyncSettingsPage } from './useCompanionSyncSettingsPage';
 import { useCompanionTabsConfig } from './useCompanionTabsConfig';
 import { useCompanionWorkspaceSync } from './useCompanionWorkspaceSync';
@@ -145,10 +146,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const [isCaptureSheetOpen, setIsCaptureSheetOpen] = useState(false);
   const [isOnlyReviewOpen, setIsOnlyReviewOpen] = useState(false);
   const workspaceSync = useCompanionWorkspaceSync(bootstrapState);
-  const surface = useCompanionArticleSurface(workspaceSync, floatingBar, {
-    sortDirection: browseSort.browseSortDirection,
-    sortKey: browseSort.browseSortKey
-  }, { isOnlyReviewOpen });
+  const surface = useSortedArticleSurface(workspaceSync, floatingBar, browseSort, isOnlyReviewOpen);
   const companionTabs = useCompanionTabsConfig();
   const { setSettingsPage, settingsPage } = useCompanionSyncSettingsPage({
     activeAction: surface.activeAction,
@@ -157,6 +155,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   const reviewChrome = useCompanionReviewChrome({ floatingBar, surface, workspaceSync });
   const searchArticle = useCompanionSearchNavigation(surface);
   const directoryState = useCompanionDirectorySelectionState(isBrowseDirectoryOpen);
+  const directoryReadingSequence = useDirectoryReadingSequence(directoryState, surface, workspaceSync);
   const externalDirectory = useCompanionExternalDirectory();
   const handleContainerScroll = useCompanionShellScrollHandler(floatingBar, surface);
   const handleSaveCaptureText = useMemo(() => createCompanionCaptureTextSaveHandler(workspaceSync), [workspaceSync]);
@@ -179,7 +178,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
   });
   useResetCompanionSubsurfaces({ activeAction: surface.activeAction, setIsBrowseDirectoryOpen, setIsOnlyReviewOpen });
 
-  return buildCompanionShellModel({
+  const model = buildCompanionShellModel({
     actions,
     browseSort,
     companionTabs,
@@ -198,6 +197,7 @@ function useCompanionShellModel(bootstrapState: NativeCompanionBootstrapState) {
     surface,
     workspaceSync
   });
+  return { ...model, directoryReadingSequence };
 }
 
 export type CompanionShellModel = ReturnType<typeof useCompanionShellModel>;

@@ -41,11 +41,13 @@ type CompanionShellContentProps = CompanionShellSearchRouteProps & {
   onChangeDirectorySelection: (selection: CompanionDirectorySelection) => void;
   onOpenSyncSettingsPage: (page: CompanionSettingsPage) => void;
   onOpenSyncSettings: () => void;
+  onCaptureDirectoryReadingOrder?: (nodeId: string, readingOrder: readonly string[] | null) => void;
   onResetDirectorySelection: () => void;
   onSelectReviewBreadcrumbItem: (id: string) => void;
   reviewBreadcrumbItems: ReviewBreadcrumbItem[];
   settingsPage: CompanionSettingsPage;
   surface: Surface;
+  nextDirectoryTopic?: { nodeId: string; title: string } | null;
   workspaceError: string | null;
   workspaceSync: WorkspaceSync;
 };
@@ -89,6 +91,7 @@ function RecentBrowseContent(props: { surface: Surface; workspaceSync: Workspace
 
 function renderRecentContent(props: CompanionShellContentProps) {
   if (props.isBrowseDirectoryOpen) {
+    const nextDirectoryTopic = props.nextDirectoryTopic;
     if (
       (props.directorySelection.kind === 'internal' ||
         props.directorySelection.kind === 'trash' ||
@@ -99,6 +102,10 @@ function renderRecentContent(props: CompanionShellContentProps) {
       return (
         <CompanionShellReadableArticle
           onExit={DirectoryArticle.resolveCompanionDirectoryArticleExit(props)}
+          nextTopic={nextDirectoryTopic ? {
+            title: nextDirectoryTopic.title,
+            onOpen: () => props.surface.handleSelectBrowseNode(nextDirectoryTopic.nodeId)
+          } : undefined}
           surface={props.surface}
           workspaceSync={props.workspaceSync}
         />
@@ -111,7 +118,10 @@ function renderRecentContent(props: CompanionShellContentProps) {
           props.surface.handleExitDirectoryArticle();
           props.onChangeDirectorySelection(selection);
         }}
-        onSelectNode={props.surface.handleSelectBrowseNode}
+        onSelectNode={(nodeId, readingOrder) => {
+          props.onCaptureDirectoryReadingOrder?.(nodeId, readingOrder);
+          props.surface.handleSelectBrowseNode(nodeId);
+        }}
         selection={props.directorySelection}
         snapshot={props.workspaceSync.state.workspace_snapshot}
         sortDirection={props.browseSortDirection ?? DEFAULT_FOLDER_LIST_SORT_DIRECTION}

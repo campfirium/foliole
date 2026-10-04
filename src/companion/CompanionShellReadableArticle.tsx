@@ -1,4 +1,5 @@
 import { CompanionBottomReviewBar } from './CompanionBottomReviewBar';
+import { CompanionNextTopicFooter } from './CompanionNextTopicFooter';
 import { ImmersiveReadableArticle } from './CompanionReadableArticleSurface';
 import { ReviewBreadcrumb } from './CompanionReviewBreadcrumb';
 import { useReviewBreadcrumbItems } from './companionReviewBreadcrumbs';
@@ -31,11 +32,16 @@ export function continueCompanionAttachmentResourceSync(workspaceSync: Workspace
   void workspaceSync.pullFromDesktop(endpointUrl).catch(() => undefined);
 }
 
-export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
+function canContinueToNext(article: NonNullable<Surface['readableArticle']>) {
+  return !article.bodyStatus || article.bodyStatus === 'ready' || article.bodyStatus === 'empty';
+}
+
+export function CompanionShellReadableArticle(props: { flow?: boolean; searchMatch?: CompanionSearchMatch | null | undefined; nextTopic?: { title: string; onOpen(): void } | undefined; onExit: () => void; surface: Surface; workspaceSync: WorkspaceSync }) {
   const breadcrumbItems = useReviewBreadcrumbItems(props.workspaceSync.state.workspace_snapshot,
     props.flow ? props.surface.effectiveReviewSession.currentCard?.nodeId ?? null : null);
   if (!props.surface.readableArticle) return null;
   const activity = props.surface.readingActivity;
+  const canContinue = canContinueToNext(props.surface.readableArticle);
   const nodeMutationProps = {
     ...(supportsCompanionNodeMutationSurface('existing-highlight-edit') ? {
       onAddExistingHighlightNote: (...args: Parameters<ReturnType<typeof createCompanionExistingHighlightNoteHandler>>) =>
@@ -78,7 +84,8 @@ export function CompanionShellReadableArticle(props: { flow?: boolean; searchMat
         reviewCardKey={props.surface.effectiveReviewSession.currentCard?.nodeId ?? null}
         statusLabel={props.surface.readingError ?? props.surface.reviewError ?? props.surface.flowError}
         visible={!activity.editing}
-      /> : null}
+      /> : props.nextTopic && canContinue ? <CompanionNextTopicFooter key={props.surface.readableArticle.nodeId}
+        activity={activity} onOpen={props.nextTopic.onOpen} title={props.nextTopic.title} /> : null}
       onAttachmentResourceSynced={() => continueCompanionAttachmentResourceSync(props.workspaceSync)}
       onExit={props.onExit}
       onScrollTopChange={props.surface.handleViewScroll}

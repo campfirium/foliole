@@ -9,6 +9,8 @@ export const ZH_HANS_COMPANION_READING_TRANSLATIONS: Partial<Record<TranslationK
   'companion.reading.info': '信息',
   'companion.reading.outline': '大纲',
   'companion.reading.more': '更多阅读操作',
+  'companion.reading.nextTopic': '下一项',
+  'companion.reading.nextTopicError': '请先完成或重试当前更改，再继续阅读。',
   'companion.reading.editTopic': '编辑主题',
   'companion.reading.cancelEditing': '取消',
   'companion.reading.editContent': '编辑内容',

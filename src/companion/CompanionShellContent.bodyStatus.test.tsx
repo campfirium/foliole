@@ -22,15 +22,16 @@ function createSurface(bodyStatus: 'empty' | 'failed' | 'missing', title: string
   };
 }
 
-function renderSurface(bodyStatus: 'empty' | 'failed' | 'missing', title: string) {
+function renderSurface(bodyStatus: 'empty' | 'failed' | 'missing', title: string, directory = false) {
   return render(renderCompanionShellContent({
     browseSortDirection: 'desc',
     browseSortKey: 'dateLastOpened',
-    directorySelection: { kind: 'root' },
+    directorySelection: directory ? { kind: 'internal', nodeId: 'folder' } : { kind: 'root' },
     hasSnapshot: true,
-    isBrowseDirectoryOpen: false,
+    isBrowseDirectoryOpen: directory,
     isOnlyReviewOpen: false,
     isSearchArticleOpen: false,
+    nextDirectoryTopic: directory ? { nodeId: 'topic-2', title: 'Next topic' } : null,
     onBackDirectorySelection: vi.fn(),
     onBackToSettingsList: vi.fn(),
     onChangeDirectorySelection: vi.fn(),
@@ -62,6 +63,12 @@ describe('CompanionShellContent body status', () => {
     renderSurface('missing', 'Synced topic');
     expect(screen.getByText('Waiting for topic body.')).toBeInTheDocument();
     expect(screen.getByText('This device has the topic list, but this body has not reached the device yet.')).toBeInTheDocument();
+  });
+
+  it('does not offer the next topic before the current body arrives', () => {
+    renderSurface('missing', 'Synced topic', true);
+    expect(screen.getByText('Waiting for topic body.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Next topic/ })).not.toBeInTheDocument();
   });
 
   it('shows an empty state when the selected topic has no body', () => {

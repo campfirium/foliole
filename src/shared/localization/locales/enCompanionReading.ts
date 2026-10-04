@@ -7,6 +7,8 @@ export const EN_COMPANION_READING_TRANSLATIONS = {
   'companion.reading.info': 'Info',
   'companion.reading.outline': 'Outline',
   'companion.reading.more': 'More reading actions',
+  'companion.reading.nextTopic': 'Next topic',
+  'companion.reading.nextTopicError': 'Finish or retry the current change before continuing.',
   'companion.reading.editTopic': 'Edit topic',
   'companion.reading.cancelEditing': 'Cancel',
   'companion.reading.editContent': 'Edit content',
