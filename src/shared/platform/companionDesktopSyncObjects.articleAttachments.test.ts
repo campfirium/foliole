@@ -2,7 +2,7 @@ import { beforeEach, expect, it } from 'vitest';
 
 import {
   articleNeedsMock, articleUnreadableMock, attachmentResolutionMock, attachmentResourceMock,
-  resetCompanionDesktopSyncMocks, resourceArticleQueueMock, syncBridgeMock
+  resetCompanionDesktopSyncMocks, resourceArticleQueueMock
 } from './companionDesktopSyncObjects.testHarness';
 
 const endpoint = 'http://10.0.2.2:38641/';
@@ -10,47 +10,45 @@ const image = { attachment_id: 'a'.repeat(64), content_hash: 'a'.repeat(64), sto
 beforeEach(resetCompanionDesktopSyncMocks);
 
 it('does not enumerate or request attachments without queued article demand', async () => {
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   resourceArticleQueueMock.pending = [];
   articleNeedsMock.mockResolvedValue([image]);
-  syncBridgeMock.applyCompanionDesktopSyncPack.mockResolvedValue({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 });
-  await syncCompanionObjectsFromDesktop(endpoint);
-  await syncCompanionObjectsFromDesktop(endpoint, { resourcesOnly: true });
+  await pullResourceStages(endpoint, undefined, [], 'desktop-test-device');
+  await pullResourceStages(endpoint, undefined, [], 'desktop-test-device');
   expect(articleNeedsMock).not.toHaveBeenCalled();
   expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).not.toHaveBeenCalled();
-  expect(syncBridgeMock.loadCompanionMissingAttachmentResources).not.toHaveBeenCalled();
 });
 
 it('checks actual local files instead of requesting every participating reference', async () => {
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   articleNeedsMock.mockResolvedValue([image]);
   attachmentResolutionMock.resolveRuntimeAttachmentResource.mockResolvedValue({ status: 'ready' });
-  const result = await syncCompanionObjectsFromDesktop(endpoint);
+  const result = await pullResourceStages(endpoint, undefined, [], 'desktop-test-device');
   expect(attachmentResolutionMock.resolveRuntimeAttachmentResource).toHaveBeenCalledWith(`asset://${image.storage_key}`, { refresh: true });
   expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).not.toHaveBeenCalled();
   expect(result.syncedAttachmentIds).toEqual([]);
 });
 
-it('retries a missing file from the durable article queue after a resource-only restart', async () => {
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+it('retries a missing file from the retained article queue across resource passes', async () => {
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   articleNeedsMock.mockResolvedValue([image]);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockResolvedValue([]);
-  const first = await syncCompanionObjectsFromDesktop(endpoint);
-  expect(first.appliedPackObjectCount).toBe(3);
+  const first = await pullResourceStages(endpoint, undefined, [], 'desktop-test-device');
+  expect(resourceArticleQueueMock.pending).toEqual(['article']);
   expect(first.remainingAttachmentResourceCount).toBe(1);
-  await syncCompanionObjectsFromDesktop(endpoint, { resourcesOnly: true });
+  await pullResourceStages(endpoint, undefined, [], 'desktop-test-device');
   expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).toHaveBeenCalledTimes(2);
-  await syncCompanionObjectsFromDesktop(endpoint);
+  await pullResourceStages(endpoint, undefined, [], 'desktop-test-device');
   expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).toHaveBeenCalledTimes(3);
 });
 
 it('retains an article until its body can be read for attachment discovery', async () => {
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   articleUnreadableMock.mockResolvedValueOnce(['article']);
-  const first = await syncCompanionObjectsFromDesktop(endpoint);
+  const first = await pullResourceStages(endpoint, undefined, [], 'desktop-test-device');
   expect(first.remainingAttachmentResourceCount).toBe(1);
   expect(resourceArticleQueueMock.pending).toEqual(['article']);
 
-  await syncCompanionObjectsFromDesktop(endpoint, { resourcesOnly: true });
+  await pullResourceStages(endpoint, undefined, [], 'desktop-test-device');
   expect(resourceArticleQueueMock.pending).toEqual([]);
 });

@@ -1,81 +1,33 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const syncBridgeMock = vi.hoisted(() => ({
-  applyCompanionDesktopSyncPack: vi.fn(async () => ({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 })),
-  loadCompanionMissingAttachmentResources: vi.fn(async () => []),
-  loadCompanionMissingContentBlobs: vi.fn(async () => [] as Array<{ hash: string; size_bytes?: number }>),
-  loadCompanionMissingContentBlobHashes: vi.fn(async () => [] as string[]),
-  loadCompanionSyncPackPosition: vi.fn(async () => ({ cursor: 0 })),
-  loadCompanionSyncPackCursor: vi.fn(async () => null),
-  loadCompanionSyncReviewLog: vi.fn(async () => []),
-  loadCompanionSyncReviewLogPushCursor: vi.fn(async () => null),
-  loadCompanionSyncStateChanges: vi.fn(async () => []),
-  loadCompanionSyncStatePushCursor: vi.fn(async () => null),
-  saveCompanionSyncPackCursor: vi.fn(async (cursor: number | null) => cursor),
-  saveCompanionSyncPushAcks: vi.fn(async () => [] as string[]),
-  stageCompanionSyncPushItems: vi.fn(async () => undefined),
-  syncCompanionContentBlob: vi.fn(async ({ hash }: { hash: string }) => ({ availability: 'cached', hash }))
+const runtime = vi.hoisted(() => ({ sync: vi.fn() }));
+vi.mock('./companion/sync/syncGroupIdentityCompanionResult', () => ({
+  syncCompanionIdentityObjects: runtime.sync
 }));
 
-const pairingMock = vi.hoisted(() => ({
-  createSignedRequestHeaders: vi.fn(async () => ({ 'X-Signature': 'signed' })),
-  prepareNativeCompanionWorkgroupRequestIfPresent: vi.fn(async () => null),
-  loadCompanionPairingState: vi.fn(async () => ({
-    authorization_id: 'authorization-android-test',
-    device_kind: 'android',
-    remote_peer_id: 'authorization-desktop-test',
-    remote_peer_name: 'Desktop Test Host'
-  }))
-}));
+import { syncCompanionObjectsFromDesktop } from './companionDesktopSyncObjects';
 
-vi.mock('./companionSyncObjects', () => syncBridgeMock);
-vi.mock('./companion/sync/syncGroupStore', () => ({
-  loadCompanionSyncGroup: vi.fn(async () => ({ group_id: 'group-test' }))
-}));
-vi.mock('./companion/network/syncGroupPeerIdentity', () => ({
-  resolveCompanionSyncPeerId: vi.fn(async () => 'authorization-desktop-test'),
-  resolveCompanionSyncPeerHostName: vi.fn(async () => 'Desktop')
-}));
-vi.mock('./companionDesktopSyncSummary', () => ({
-  loadCompanionDesktopSyncSummary: vi.fn(async () => ({
-    localDirtyCount: null,
-    pendingAckCount: null,
-    pushIssueCount: null,
-    remainingAttachmentBreakdown: undefined,
-    remainingAttachmentResourceBytes: null,
-    remainingAttachmentResourceCount: null,
-    remainingContentBreakdown: undefined,
-    remainingContentBlobBytes: null,
-    remainingContentBlobCount: null,
-    remainingFailedAttachmentResourceBytes: null,
-    remainingFailedAttachmentResourceCount: null,
-    remainingFailedContentBlobBytes: null,
-    remainingFailedContentBlobCount: null,
-    remainingStructureChangeCount: null
-  }))
-}));
-vi.mock('./companion/network/signedRequest', () => pairingMock);
-
-beforeEach(() => {
-  vi.resetAllMocks();
-});
+beforeEach(() => vi.resetAllMocks());
 
 it('reuses an in-flight sync for repeated requests to the same endpoint', async () => {
-  const packResolvers: Array<() => void> = [];
-  syncBridgeMock.applyCompanionDesktopSyncPack.mockImplementation(async () => (
-    await new Promise<{ applied_blob_count: number; applied_object_count: number; to_state_seq: number }>((resolve) => {
-      packResolvers.push(() => resolve({ applied_blob_count: 0, applied_object_count: 0, to_state_seq: 0 }));
-    })
-  ));
+  let complete!: (value: { appliedObjectIds: string[] }) => void;
+  runtime.sync.mockReturnValueOnce(new Promise(resolve => { complete = resolve; }));
+  const first = syncCompanionObjectsFromDesktop('http://peer.test');
+  expect(syncCompanionObjectsFromDesktop('http://peer.test')).toBe(first);
+  expect(runtime.sync).toHaveBeenCalledOnce();
+  complete({ appliedObjectIds: [] });
+  await expect(first).resolves.toMatchObject({ appliedObjectIds: [] });
+  runtime.sync.mockResolvedValueOnce({ appliedObjectIds: ['later'] });
+  await expect(syncCompanionObjectsFromDesktop('http://peer.test'))
+    .resolves.toMatchObject({ appliedObjectIds: ['later'] });
+  expect(runtime.sync).toHaveBeenCalledTimes(2);
+});
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const firstSync = syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-  const secondSync = syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
-
-  expect(secondSync).toBe(firstSync);
-  await vi.waitFor(() => expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledTimes(1));
-
-  packResolvers[0]?.();
-  await expect(firstSync).resolves.toEqual(expect.objectContaining({ appliedObjectIds: [] }));
-  expect(syncBridgeMock.applyCompanionDesktopSyncPack).toHaveBeenCalledTimes(1);
+it('allows a fresh request after an identity exchange fails', async () => {
+  runtime.sync.mockRejectedValueOnce(new Error('connection_lost'));
+  await expect(syncCompanionObjectsFromDesktop('http://retry.test')).rejects.toThrow('connection_lost');
+  runtime.sync.mockResolvedValueOnce({ appliedObjectIds: [] });
+  await expect(syncCompanionObjectsFromDesktop('http://retry.test'))
+    .resolves.toMatchObject({ appliedObjectIds: [] });
+  expect(runtime.sync).toHaveBeenCalledTimes(2);
 });

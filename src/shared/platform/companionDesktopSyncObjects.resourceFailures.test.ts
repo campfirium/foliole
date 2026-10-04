@@ -26,8 +26,8 @@ async function testContinuesContentBatchAfterSingleBodyFailure() {
   });
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [cachedHash], status: 'ok' }), { status: 200 })));
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
+  const result = await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(result.contentBlobError).toBeNull();
   expect(result.syncedContentBlobHashes).toEqual([cachedHash]);
@@ -35,7 +35,8 @@ async function testContinuesContentBatchAfterSingleBodyFailure() {
 }
 
 async function testKeepsEarlierContentWhenLaterBatchFails() {
-  const { CONTENT_BLOB_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { CONTENT_BLOB_BATCH_LIMIT } = await import('./companionDesktopSyncResources');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   const cachedHashes = Array.from({ length: CONTENT_BLOB_BATCH_LIMIT }, (_, index) => `${index}`.padStart(64, '0'));
   const failedHash = 'f'.repeat(64);
   syncBridgeMock.loadCompanionMissingContentBlobs
@@ -52,7 +53,7 @@ async function testKeepsEarlierContentWhenLaterBatchFails() {
   });
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: cachedHashes, status: 'ok' }), { status: 200 })));
 
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const result = await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(result.contentBlobError).toBeNull();
   expect(result.syncedContentBlobHashes).toEqual(cachedHashes);
@@ -76,8 +77,8 @@ async function testAcknowledgesContentBodyBatchOnce() {
     synced_hashes: JSON.parse(body).hashes as string[]
   }));
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
+  const result = await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(result.syncedContentBlobHashes).toEqual([firstHash, secondHash]);
   expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -96,8 +97,8 @@ async function testKeepsDownloadedContentWhenAckFails() {
     synced_hashes: JSON.parse(body).hashes as string[]
   }));
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
+  const result = await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(result.contentBlobError).toBeNull();
   expect(result.syncedContentBlobHashes).toEqual([bodyHash]);
@@ -109,15 +110,16 @@ async function testFailsContentStageWhenWholeBodyBatchFails() {
   syncBridgeMock.loadCompanionMissingContentBlobs.mockResolvedValueOnce([{ hash: failedHash, size_bytes: 1024 }]);
   syncBridgeMock.syncCompanionContentBlob.mockRejectedValue(new Error('Desktop returned 404.'));
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
+  const result = await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(result.contentBlobError).toBe('Topic body batch could not download any requested body.');
   expect(result.syncedContentBlobHashes).toEqual([]);
 }
 
 async function testKeepsEarlierAttachmentsWhenLaterBatchFails() {
-  const { ATTACHMENT_RESOURCE_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { ATTACHMENT_RESOURCE_BATCH_LIMIT } = await import('./companionDesktopSyncResources');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   const resources = Array.from({ length: ATTACHMENT_RESOURCE_BATCH_LIMIT }, (_, index) => ({
     attachment_id: `att-${index}`,
     content_hash: `hash-att-${index}`,
@@ -135,7 +137,7 @@ async function testKeepsEarlierAttachmentsWhenLaterBatchFails() {
     return syncedIds;
   });
 
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const result = await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(result.attachmentResourceError).toBeNull();
   expect(result.syncedAttachmentIds).toHaveLength(ATTACHMENT_RESOURCE_BATCH_LIMIT);
@@ -148,8 +150,8 @@ async function testFailsAttachmentStageWhenWholeBatchReturnsEmpty() {
   ]);
   attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop.mockResolvedValue([]);
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
+  const result = await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(result.attachmentResourceError).toBeNull();
   expect(articleNeedsMock).toHaveBeenCalledTimes(1);
@@ -168,5 +170,5 @@ describe('companion desktop sync resource failures', () => {
   it('keeps downloaded content bodies when the ack request fails', testKeepsDownloadedContentWhenAckFails);
   it('fails the content body stage when a whole batch cannot cache anything', testFailsContentStageWhenWholeBodyBatchFails);
   it('keeps earlier attachments when a later batch fails', testKeepsEarlierAttachmentsWhenLaterBatchFails);
-  it('keeps applied structure when every attachment stays missing', testFailsAttachmentStageWhenWholeBatchReturnsEmpty);
+  it('reports missing attachments without claiming they downloaded', testFailsAttachmentStageWhenWholeBatchReturnsEmpty);
 });

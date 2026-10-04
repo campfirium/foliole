@@ -8,7 +8,7 @@ import {
 
 async function testReportsContentProgressAfterEachBatch() {
   const { CONTENT_BLOB_BATCH_LIMIT } = await import('./companionDesktopSyncResources');
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   const hashes = Array.from({ length: CONTENT_BLOB_BATCH_LIMIT + 1 }, (_, index) => `${index}`.padStart(64, '0'));
   syncBridgeMock.loadCompanionMissingContentBlobs
     .mockResolvedValueOnce(hashes.slice(0, CONTENT_BLOB_BATCH_LIMIT).map((hash) => ({ hash, size_bytes: 2 })))
@@ -17,7 +17,7 @@ async function testReportsContentProgressAfterEachBatch() {
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: hashes, status: 'ok' }), { status: 200 })));
   const onProgress = vi.fn();
 
-  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
+  await pullResourceStages('http://10.0.2.2:38641/', onProgress, [], 'desktop-test-device');
 
   expect(syncBridgeMock.syncCompanionContentBlobs.mock.calls.map(([request]) => JSON.parse(request.body).hashes))
     .toEqual([hashes.slice(0, CONTENT_BLOB_BATCH_LIMIT), hashes.slice(CONTENT_BLOB_BATCH_LIMIT)]);
@@ -52,7 +52,7 @@ async function testContinuesAfterByteLimitedContentBatches() {
 
 async function testReportsAttachmentProgressAfterEachConcurrentChunk() {
   const { ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT } = await import('./companionDesktopAttachmentResources');
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   const resources = Array.from({ length: ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT + 1 }, (_, index) => ({
     attachment_id: `att-${index}`,
     content_hash: `hash-att-${index}`,
@@ -74,7 +74,7 @@ async function testReportsAttachmentProgressAfterEachConcurrentChunk() {
   });
   const onProgress = vi.fn();
 
-  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
+  await pullResourceStages('http://10.0.2.2:38641/', onProgress, [], 'desktop-test-device');
 
   expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
     completed: ATTACHMENT_RESOURCE_CONCURRENT_FETCH_LIMIT,

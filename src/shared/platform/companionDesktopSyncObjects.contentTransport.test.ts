@@ -24,8 +24,8 @@ async function testRoutesAckThroughNativeHttp() {
   });
   vi.stubGlobal('fetch', vi.fn());
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  await expect(syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/')).resolves.toMatchObject({
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
+  await expect(pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device')).resolves.toMatchObject({
     syncedContentBlobHashes: [bodyHash]
   });
   expect(fetch).not.toHaveBeenCalled();
@@ -43,8 +43,8 @@ async function testKeepsFailedBodyUnresolvedWithoutAnUnverifiedFallback() {
   syncBridgeMock.syncCompanionContentBlobs.mockRejectedValueOnce(new Error('Batch endpoint unavailable.'));
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 })));
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
+  const result = await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(result.syncedContentBlobHashes).toEqual([]);
   expect(result.contentBlobError).toBeTruthy();

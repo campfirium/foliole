@@ -17,8 +17,8 @@ async function testPullsContentBlobs() {
   fetchMock.mockResolvedValue(new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 }));
   vi.stubGlobal('fetch', fetchMock);
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
+  const result = await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(result.syncedContentBlobHashes).toEqual([bodyHash]);
   expect(syncBridgeMock.syncCompanionContentBlobs).toHaveBeenCalledWith({
@@ -37,9 +37,9 @@ async function testPullsAttachmentResources() {
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   const onProgress = vi.fn();
-  const result = await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
+  const result = await pullResourceStages('http://10.0.2.2:38641/', onProgress, [], 'desktop-test-device');
 
   expect(articleNeedsMock).toHaveBeenCalledWith(['article']);
   expect(attachmentResourceMock.syncCompanionAttachmentResourceRequestsFromDesktop).toHaveBeenCalledWith(
@@ -62,7 +62,6 @@ async function testReportsAttachmentBreakdown() {
     { attachment_id: 'att-1', content_hash: 'hash-att-1', size_bytes: 2048 }
   ]);
   diagnosticsMock.loadLocalSyncDiagnostics
-    .mockResolvedValueOnce(null)
     .mockResolvedValueOnce({
       content: {
         missing_active_topic_attachment_resource_count: 1,
@@ -80,9 +79,9 @@ async function testReportsAttachmentBreakdown() {
     })
     .mockResolvedValueOnce(null);
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   const onProgress = vi.fn();
-  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
+  await pullResourceStages('http://10.0.2.2:38641/', onProgress, [], 'desktop-test-device');
 
   expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
     completed: 0,
@@ -113,9 +112,9 @@ async function testReportsContentBreakdown() {
     .mockResolvedValueOnce(null);
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 })));
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
   const onProgress = vi.fn();
-  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onProgress });
+  await pullResourceStages('http://10.0.2.2:38641/', onProgress, [], 'desktop-test-device');
 
   expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({
     contentBreakdown: {
@@ -144,27 +143,11 @@ async function testPullsBodiesBeforeAttachments() {
   ]);
   vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [bodyHash], status: 'ok' }), { status: 200 })));
 
-  const { syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/');
+  const { pullResourceStages } = await import('./companionDesktopSyncResourceStages');
+  await pullResourceStages('http://10.0.2.2:38641/', undefined, [], 'desktop-test-device');
 
   expect(syncBridgeMock.loadCompanionMissingContentBlobs.mock.invocationCallOrder[0]!)
     .toBeLessThan(articleNeedsMock.mock.invocationCallOrder[0]!);
-}
-
-async function testRefreshesStructureBeforeContentBatch() {
-  const hashes = Array.from({ length: 32 }, (_, index) => `${String(index % 10)}`.repeat(64));
-  syncBridgeMock.loadCompanionMissingContentBlobs
-    .mockResolvedValueOnce(hashes.map((hash) => ({ hash })))
-    .mockResolvedValueOnce([]);
-  const onStructureSynced = vi.fn();
-  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ acked_hashes: [], status: 'ok' }), { status: 200 })));
-
-  const { CONTENT_BLOB_BATCH_LIMIT, syncCompanionObjectsFromDesktop } = await import('./companionDesktopSyncObjects');
-  await syncCompanionObjectsFromDesktop('http://10.0.2.2:38641/', { onStructureSynced });
-
-  expect(onStructureSynced.mock.invocationCallOrder[0]!)
-    .toBeLessThan(syncBridgeMock.loadCompanionMissingContentBlobs.mock.invocationCallOrder[0]!);
-  expect(syncBridgeMock.loadCompanionMissingContentBlobs).toHaveBeenCalledWith(CONTENT_BLOB_BATCH_LIMIT);
 }
 
 describe('companion desktop sync resources', () => {
@@ -180,6 +163,5 @@ describe('companion desktop sync resources', () => {
 
   it('starts topic body resource work before attachment resource work', testPullsBodiesBeforeAttachments);
 
-  it('refreshes structure before running bounded content blob batches', testRefreshesStructureBeforeContentBatch);
 
 });
