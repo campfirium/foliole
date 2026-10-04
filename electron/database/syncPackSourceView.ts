@@ -18,8 +18,8 @@ export async function createSyncPackSourceView(source: Database.Database, output
   const staging = await fs.mkdtemp(path.join(path.dirname(outputPath), '.sync-view-'));
   const stagedPath = path.join(staging, 'source.db');
   try {
-    await source.backup(stagedPath, { progress: () => 128 });
-    const snapshot = new Database(stagedPath);
+    await source.backup(path.toNamespacedPath(stagedPath), { progress: () => 128 });
+    const snapshot = new Database(path.toNamespacedPath(stagedPath));
     try { stampSourceView(snapshot); } finally { snapshot.close(); }
     await fs.chmod(stagedPath, 0o600);
     // Linking publishes a complete file and refuses to replace an existing view.
@@ -31,7 +31,7 @@ export async function createSyncPackSourceView(source: Database.Database, output
 }
 
 export function openSyncPackSourceView(filePath: string, expected?: SyncPackSourceViewIdentity) {
-  const sqlite = new Database(filePath, { readonly: true, fileMustExist: true });
+  const sqlite = new Database(path.toNamespacedPath(filePath), { readonly: true, fileMustExist: true });
   try {
     const identity = readSourceViewIdentity(sqlite);
     if (expected && (identity.sourceViewId !== expected.sourceViewId ||

@@ -3,7 +3,11 @@ import type http from 'node:http';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const authenticatedPostMock = vi.hoisted(() => ({
-  handleAuthenticatedPost: vi.fn()
+  handleAuthenticatedPost: vi.fn(),
+  appendMainProcessDiagnosticLog: vi.fn()
+}));
+vi.mock('../diagnostics/mainProcessDiagnostics.js', () => ({
+  appendMainProcessDiagnosticLog: authenticatedPostMock.appendMainProcessDiagnosticLog
 }));
 
 vi.mock('../database/workspaceSnapshot.js', () => ({
@@ -69,12 +73,19 @@ it('ends unhandled route errors with a generic json response', async () => {
   authenticatedPostMock.handleAuthenticatedPost.mockRejectedValue(new Error('route failed'));
   const response = createResponse();
 
-  await createHandler()({ headers: {}, method: 'POST', url: '/companion/content-blobs' } as http.IncomingMessage, response);
+  await createHandler()({ headers: {}, method: 'POST',
+    url: '/companion/content-blobs?token=private-token' } as http.IncomingMessage, response);
 
   expect(response.writeHead).toHaveBeenCalledWith(500, expect.objectContaining({
     'Content-Type': 'application/json; charset=utf-8'
   }));
   expect(response.end).toHaveBeenCalledWith(JSON.stringify({ error: 'internal_server_error' }));
+  expect(authenticatedPostMock.appendMainProcessDiagnosticLog).toHaveBeenCalledWith(
+    'companion_lan_request_failed', {
+      error: expect.objectContaining({ message: 'route failed' }),
+      requestPath: '/companion/content-blobs'
+    }
+  );
 });
 
 it('does not write a fallback response after the route already ended the response', async () => {

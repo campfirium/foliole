@@ -185,3 +185,19 @@ it('pages review operations by immutable ID and excludes other articles', async 
     expect(ids).toEqual(Array.from({ length: 7 }, (_, i) => `op-${i}`));
   } finally { view.close(); }
 });
+
+it('publishes and reopens original facts beneath a long native cache path', async () => {
+  const filePath = path.join(root, 'group-'.repeat(12), 'peer-'.repeat(12),
+    'restore-'.repeat(12), 'view.db');
+  const view = await createSyncPackSourceView(source, filePath);
+  const identity = { sourceViewId: view.sourceViewId, sourceEpoch: view.sourceEpoch,
+    frontierStateSeq: view.frontierStateSeq };
+  view.close();
+  const reopened = openSyncPackSourceView(filePath, identity);
+  try {
+    expect(reopened.driver.queryOne('SELECT count(*) AS count FROM node_sync_versions'))
+      .toEqual({ count: 23 });
+    expect(reopened.driver.queryOne("SELECT body_text FROM node_sync_versions WHERE version_id = 'v23'"))
+      .toEqual({ body_text: 'b'.repeat(741 * 1024) });
+  } finally { reopened.close(); }
+});

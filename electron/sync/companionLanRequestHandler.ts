@@ -2,6 +2,7 @@ import type http from 'node:http';
 
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
+import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
 import { buildCompanionSyncDiagnostics } from './buildCompanionSyncDiagnostics.js';
 import { handleCompanionAttachmentGet } from './companionLanAttachmentGet.js';
@@ -71,6 +72,9 @@ async function writeUnhandledRequestError(
   error: unknown
 ) {
   console.warn('[companion-sync] unhandled LAN request error', { error, url: request.url ?? null });
+  appendMainProcessDiagnosticLog('companion_lan_request_failed', {
+    error, requestPath: request.url?.split('?')[0] ?? null
+  });
   if (response.headersSent) {
     response.destroy();
     return;

@@ -1,4 +1,5 @@
 import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
@@ -18,7 +19,7 @@ export async function createSyncIdentitySourceView(source: Database.Database, ou
   const expectedId = view.sourceViewId;
   view.close();
   try {
-    const snapshot = new Database(outputPath, { fileMustExist: true });
+    const snapshot = new Database(path.toNamespacedPath(outputPath), { fileMustExist: true });
     try {
       await prepareReadySyncIdentityIndex(createBetterSqliteDbPort(snapshot));
       await buildSyncIdentityNodeFactIndex(createBetterSqliteDbPort(snapshot));
@@ -39,7 +40,7 @@ export function openSyncIdentitySourceView(filePath: string, expectedId?: string
     throw new Error('sync_identity_source_view_changed');
   }
   try {
-    const sqlite = new Database(filePath, { readonly: true, fileMustExist: true });
+    const sqlite = new Database(path.toNamespacedPath(filePath), { readonly: true, fileMustExist: true });
     try { verifyDesktopIdentityFactProof(sqlite); }
     catch (error) { sqlite.close(); throw error; }
     return { sourceViewId: view.sourceViewId, sourceEpoch: view.sourceEpoch,
