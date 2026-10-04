@@ -29,6 +29,7 @@ export const controlledSyncSqliteTests = [
   'lib/core/sync/syncIdentityNodeFactBuildPage.test.ts',
   'scripts/sync/identity-simulator/performance.http.test.mjs',
   'scripts/sync/identity-simulator/performancePreparation.test.mjs',
+  'scripts/sync/identity-simulator/tombstoneOriginal.http.test.mjs',
   'src/shared/platform/companion/sync/pack-apply/companionSyncIdentityRestoreApply.test.ts',
   'src/shared/platform/companion/sync/syncGroupIdentityCandidateStore.test.ts',
   'src/shared/platform/companionContentBlobSync.sqlite.test.ts',
