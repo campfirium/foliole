@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest';
 import { createEmptyResourceStages } from '../../companionDesktopSyncResourceStages';
 
 const runtime = vi.hoisted(() => ({
-  round: vi.fn(), restore: vi.fn(), summary: vi.fn(), hostName: vi.fn(),
+  framed: vi.fn(), round: vi.fn(), restore: vi.fn(), summary: vi.fn(), hostName: vi.fn(),
   resources: vi.fn()
 }));
 vi.mock('../runtime/iosCompanionActiveDatabaseReads', () => ({
@@ -11,6 +11,9 @@ vi.mock('../runtime/iosCompanionActiveDatabaseReads', () => ({
 }));
 vi.mock('./syncGroupIdentityRound', () => ({
   runCompanionSyncIdentityRound: runtime.round
+}));
+vi.mock('./framed/companionFramedSyncInventoryRound', () => ({
+  sendCompanionFramedSyncInventoryDifferences: runtime.framed
 }));
 vi.mock('./syncGroupIdentityRestoreRound', () => ({
   runCompanionSyncIdentityRestoreRound: runtime.restore
@@ -32,6 +35,29 @@ vi.mock('./diagnostics/companionDesktopSyncTrace', () => ({
 }));
 
 import { syncCompanionIdentityObjects } from './syncGroupIdentityCompanionResult';
+
+it('routes an explicitly negotiated v22 peer through the framed Node round', async () => {
+  vi.clearAllMocks();
+  runtime.framed.mockResolvedValue({
+    deferredObjects: [{ globalId: 'later', objectType: 'node' }],
+    received: [{ objectId: 'pulled' }], sent: [{ objectId: 'pushed' }]
+  });
+  const refreshed = vi.fn();
+
+  const result = await syncCompanionIdentityObjects('http://peer', {
+    framedPeer: { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: 22 },
+    onStructureSynced: refreshed
+  });
+
+  expect(runtime.framed).toHaveBeenCalledWith({
+    endpoint_url: 'http://peer', receiver_device_id: 'desktop',
+    receiver_library_epoch: 'desktop-epoch', sync_group_id: 'group'
+  });
+  expect(runtime.round).not.toHaveBeenCalled();
+  expect(refreshed).toHaveBeenCalledOnce();
+  expect(result).toMatchObject({ appliedNodeIds: ['pulled'], pushedNodeIds: ['pushed'],
+    localDirtyCount: 1, remainingStructureChangeCount: 1 });
+});
 
 it('reports a verified identity round through the companion result surface', async () => {
   vi.clearAllMocks();

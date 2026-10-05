@@ -1,4 +1,9 @@
 export interface CompanionDesktopSyncOptions {
+  framedPeer?: {
+    deviceId: string;
+    libraryEpoch: string;
+    protocolVersion: number;
+  };
   includeResources?: boolean;
   onProgress?: (progress: CompanionDesktopSyncProgress) => void;
   onStructureSynced?: () => Promise<void> | void;

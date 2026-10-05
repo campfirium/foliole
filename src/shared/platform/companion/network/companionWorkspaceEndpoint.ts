@@ -16,6 +16,7 @@ export interface CompanionWorkspaceSyncTarget {
   deviceName?: string;
   endpointUrl: string;
   groupId?: string;
+  protocolVersion?: number;
 }
 
 export async function bindCompanionWorkspaceSyncTarget(target: CompanionWorkspaceSyncTarget) {
@@ -52,7 +53,10 @@ export async function resolveReachableCompanionWorkspaceSyncEndpoints(
     return { deviceId: match.discovery.provider_device_id,
       deviceName: match.discovery.provider_device_name ?? known?.device_name
         ?? match.discovery.provider_device_id,
-      endpointUrl: match.endpointUrl, groupId: group.group_id };
+      endpointUrl: match.endpointUrl, groupId: group.group_id,
+      ...(match.compatibility.negotiated_version
+        ? { protocolVersion: match.compatibility.negotiated_version }
+        : {}) };
   });
 }
 

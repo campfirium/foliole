@@ -62,6 +62,19 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
   });
 });
 
+it('keeps the protocol version negotiated with each discovered desktop', async () => {
+  runtime.discover.mockResolvedValue([{
+    compatibility: { negotiated_version: 22, status: 'compatible' }, endpointUrl: 'http://mac:38641',
+    discovery: { group_id: 'group-1', provider_device_id: 'device-mac',
+      provider_device_name: 'Mac', provider_platform: 'darwin' }
+  }]);
+
+  await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
+    deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641',
+    groupId: 'group-1', protocolVersion: 22
+  }]);
+});
+
 it('routes a Windows 11 desktop using its product-facing discovery label', async () => {
   runtime.discover.mockResolvedValue([{
     compatibility: { status: 'compatible' }, endpointUrl: 'http://windows:38641',

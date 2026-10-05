@@ -78,6 +78,11 @@ async function runOwnedTarget(args: {
     return await args.runStreamSync({
       ...args.syncArgs,
       endpointUrl,
+      ...(args.target.deviceId && memberState.peerLibraryEpoch && args.target.protocolVersion ? { framedPeer: {
+        deviceId: args.target.deviceId,
+        libraryEpoch: memberState.peerLibraryEpoch,
+        protocolVersion: args.target.protocolVersion
+      } } : {}),
       runId,
       ...(memberState.restoreFromPeer ? { restoreId: memberState.restoreFromPeer } : {}),
       startedAt,

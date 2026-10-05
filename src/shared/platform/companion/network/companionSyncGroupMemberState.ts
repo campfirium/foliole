@@ -16,7 +16,8 @@ export const COMPANION_SYNC_GROUP_MEMBER_STATE_PATH = '/sync-group/member-state'
 
 export async function exchangeCompanionSyncGroupMemberState(target: CompanionWorkspaceSyncTarget) {
   if (!isNativeCompanionNetworkRuntime()) return {
-    localExited: false, normalSyncReady: true, peerRemoved: false, restoreFromPeer: null
+    localExited: false, normalSyncReady: true, peerLibraryEpoch: null,
+    peerRemoved: false, restoreFromPeer: null
   };
   if (!target.deviceId || !target.groupId) throw new Error('sync_group_member_state_target_missing');
   const state = await loadCompanionSyncGroupMemberState();
@@ -32,6 +33,7 @@ export async function exchangeCompanionSyncGroupMemberState(target: CompanionWor
   return {
     localExited: applied.local_exited,
     normalSyncReady: applied.normal_sync_ready,
+    peerLibraryEpoch: incoming.library_epoch,
     peerRemoved: await isCompanionSyncGroupDeviceBlocked(target.groupId, target.deviceId),
     restoreFromPeer: localRestore && !localRestore.applied && incoming.restore?.applied &&
       incoming.restore.event.restore_id === localRestore.event.restore_id &&

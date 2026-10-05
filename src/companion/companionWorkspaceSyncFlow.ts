@@ -2,6 +2,7 @@ import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativ
 import type { SyncTriggerReason } from '../../lib/platform/syncTriggerContract';
 import {
   syncCompanionObjectsFromDesktop,
+  type CompanionDesktopSyncOptions,
   type CompanionDesktopSyncProgress
 } from '../shared/platform/companionDesktopSyncObjects';
 import {
@@ -36,6 +37,7 @@ export type ForegroundAutoSyncOutcome = 'backlog' | 'completed' | 'failed' | 'sk
 export interface RunCompanionStreamSyncArgs {
   cancelled: () => boolean;
   endpointUrl: string;
+  framedPeer?: NonNullable<CompanionDesktopSyncOptions['framedPeer']>;
   runId: string;
   restoreId?: string;
   startedAt: string;
@@ -107,6 +109,7 @@ export async function runCompanionStreamSync(args: RunCompanionStreamSyncArgs) {
     });
   };
   const result = await syncCompanionObjectsFromDesktop(args.endpointUrl, {
+    ...(args.framedPeer ? { framedPeer: args.framedPeer } : {}),
     ...(args.restoreId ? { restoreId: args.restoreId } : {}),
     runId: args.runId,
     onProgress: args.setSyncProgress,

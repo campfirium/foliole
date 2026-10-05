@@ -47,7 +47,7 @@ beforeEach(() => {
 it('persists member state before allowing companion data sync', async () => {
   await expect(exchangeCompanionSyncGroupMemberState({
     deviceId: 'device-desktop', deviceName: 'Mac', endpointUrl: 'http://mac:38641', groupId: 'group-1'
-  })).resolves.toEqual({ localExited: false, normalSyncReady: true,
+  })).resolves.toEqual({ localExited: false, normalSyncReady: true, peerLibraryEpoch: 'epoch',
     peerRemoved: false, restoreFromPeer: null });
 
   expect(mocks.sign).toHaveBeenCalledWith(expect.objectContaining({
