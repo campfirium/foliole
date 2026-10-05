@@ -15,7 +15,18 @@ public final class FramedSyncReceiptReader {
         String receiverDeviceId,
         String receiverLibraryEpoch
     ) throws Exception {
-        FramedSyncStreamReader reader = new FramedSyncStreamReader(input);
+        return read(new FramedSyncStreamReader(input), groupKey, transferId, contentId,
+            receiverDeviceId, receiverLibraryEpoch);
+    }
+
+    public static TransferReceipt read(
+        FramedSyncStreamReader reader,
+        byte[] groupKey,
+        byte[] transferId,
+        byte[] contentId,
+        String receiverDeviceId,
+        String receiverLibraryEpoch
+    ) throws Exception {
         FramedSyncPreamble preamble = reader.readPreamble();
         if (preamble.contextKind() != 2 ||
             !MessageDigest.isEqual(preamble.contextId(), transferId)) {

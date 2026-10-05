@@ -81,6 +81,22 @@ public final class FramedSyncOutboundSQLite implements AutoCloseable, FramedSync
         return Collections.unmodifiableList(frames);
     }
 
+    public synchronized FramedSyncTransferWriter.Attempt loadLatestReplayableAttempt(
+        byte[] transferId
+    ) {
+        if (transferId == null || transferId.length != FramedSyncContract.DIGEST_BYTES) {
+            throw new IllegalArgumentException("transfer_id_invalid");
+        }
+        try (Cursor row = database.rawQuery(
+            "SELECT attempt_id, preamble FROM framed_sync_android_outbound_attempts " +
+                "WHERE hex(transfer_id) = ? AND state = 'replayable' ORDER BY rowid DESC LIMIT 1",
+            FramedSyncSQLiteValues.blobArgs(transferId))) {
+            return row.moveToFirst()
+                ? new FramedSyncTransferWriter.Attempt(transferId, row.getBlob(0), row.getBlob(1))
+                : null;
+        }
+    }
+
     @Override public synchronized void close() { database.close(); }
 
     private FramedSyncStageOutcome insertOrCompareAttempt(

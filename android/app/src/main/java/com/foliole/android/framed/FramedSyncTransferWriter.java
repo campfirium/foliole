@@ -72,7 +72,14 @@ public final class FramedSyncTransferWriter {
 
     public static void replay(Attempt attempt, FramedSyncOutboundStaging staging, OutputStream output)
         throws Exception {
-        FramedSyncStreamWriter writer = new FramedSyncStreamWriter(output);
+        replay(attempt, staging, new FramedSyncStreamWriter(output));
+    }
+
+    public static void replay(
+        Attempt attempt,
+        FramedSyncOutboundStaging staging,
+        FramedSyncStreamWriter writer
+    ) throws Exception {
         writer.writePreamble(attempt.preamble());
         for (FramedSyncAuthenticatedFrame frame :
             staging.loadReplayableOutboundFrames(attempt.transferId(), attempt.attemptId())) {

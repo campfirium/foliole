@@ -143,6 +143,11 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionSyncGroupSigning.sign(getContext(), call));
     }
 
+    @PluginMethod public void sendFramedSyncTransfer(PluginCall call) {
+        async(call, "Failed to send framed Sync transfer.", () ->
+            FolioleCompanionFramedSyncOutbound.send(getContext(), call));
+    }
+
     @PluginMethod public void downloadAttachmentResourceBatch(PluginCall call) {
         async(call, "Failed to download companion attachment resources.", () ->
             FolioleCompanionResourcePluginActions.downloadAttachmentResourceBatch(getContext(), call));
