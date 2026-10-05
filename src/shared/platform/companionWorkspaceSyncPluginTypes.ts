@@ -1,5 +1,7 @@
 import type { AttachmentMaintenanceHostPlugin } from '../../../lib/platform/attachmentMaintenanceHostContract';
 import type {
+  NativeCompanionFramedSyncInventoryRequest,
+  NativeCompanionFramedSyncInventoryResult,
   NativeCompanionFramedSyncTransferReceipt,
   NativeCompanionFramedSyncTransferRequest,
   NativeCompanionSignedRequestHeaders
@@ -86,6 +88,9 @@ export interface CompanionWorkspaceSyncPlugin
   sendFramedSyncTransfer(
     args: NativeCompanionFramedSyncTransferRequest
   ): Promise<NativeCompanionFramedSyncTransferReceipt>;
+  readFramedSyncInventory(
+    args: NativeCompanionFramedSyncInventoryRequest
+  ): Promise<NativeCompanionFramedSyncInventoryResult>;
   signCompanionSyncRequest(args: {
     body?: string;
     body_hash: string;

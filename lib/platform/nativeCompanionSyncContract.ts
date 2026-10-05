@@ -22,6 +22,27 @@ export interface NativeCompanionFramedSyncTransferReceipt {
   transfer_id: string;
 }
 
+export interface NativeCompanionFramedSyncInventoryRequest {
+  endpoint_url: string;
+  receiver_device_id: string;
+  receiver_library_epoch: string;
+  sync_group_id: string;
+}
+
+export interface NativeCompanionFramedSyncInventoryEntry {
+  frontier_fact_ids: readonly string[];
+  global_id: string;
+  object_type: string;
+  required_relation_ids: readonly string[];
+  resource_hashes: readonly string[];
+  review_fact_ids: readonly string[];
+  shared_state_hash: string;
+}
+
+export interface NativeCompanionFramedSyncInventoryResult {
+  entries: readonly NativeCompanionFramedSyncInventoryEntry[];
+}
+
 export interface NativeCompanionSyncEvent {
   endpoint_url: string | null;
   id: string;
