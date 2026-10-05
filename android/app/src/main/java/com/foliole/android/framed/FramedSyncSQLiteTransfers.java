@@ -38,7 +38,7 @@ final class FramedSyncSQLiteTransfers {
             totalBlobBytes != proposal.getTotalBlobBytes()) {
             throw invalid("inbound_header_proposal_mismatch");
         }
-        requireProposed(frame.transferId());
+        prepareForHeader(frame.transferId());
         if (attemptExists(frame.transferId(), frame.attemptId())) throw invalid("attempt_id_reuse");
         ContentValues attempt = new ContentValues();
         attempt.put("transfer_id", frame.transferId());
@@ -109,8 +109,11 @@ final class FramedSyncSQLiteTransfers {
         database.update("framed_sync_android_attempts", attempt,
             "hex(transfer_id) = ? AND hex(attempt_id) = ?",
             FramedSyncSQLiteValues.blobArgs(transferId, attemptId));
-        database.execSQL("UPDATE framed_sync_android_transfers SET active_attempt_id = NULL, " +
-            "state = 'proposed' WHERE hex(transfer_id) = ? AND hex(active_attempt_id) = ?",
+        ContentValues transfer = new ContentValues();
+        transfer.putNull("active_attempt_id");
+        transfer.put("state", receiptExists(transferId) ? "applied" : "proposed");
+        database.update("framed_sync_android_transfers", transfer,
+            "hex(transfer_id) = ? AND hex(active_attempt_id) = ?",
             FramedSyncSQLiteValues.blobArgs(transferId, attemptId));
     }
 
@@ -146,13 +149,28 @@ final class FramedSyncSQLiteTransfers {
         }
     }
 
-    private void requireProposed(byte[] transferId) throws FramedSyncValidationException {
+    private void prepareForHeader(byte[] transferId)
+        throws FramedSyncValidationException {
         try (Cursor row = database.query("framed_sync_android_transfers",
             new String[] {"state", "active_attempt_id"}, "hex(transfer_id) = ?",
             FramedSyncSQLiteValues.blobArgs(transferId), null, null, null)) {
-            if (!row.moveToFirst() || !"proposed".equals(row.getString(0)) || !row.isNull(1)) {
+            if (!row.moveToFirst()) throw invalid("inbound_active_attempt_conflict");
+            if ("proposed".equals(row.getString(0)) && row.isNull(1)) return;
+            if (receiptExists(transferId)) {
+                if (!row.isNull(1)) clearAttempt(transferId, row.getBlob(1));
+                return;
+            }
+            if (!"proposed".equals(row.getString(0)) || !row.isNull(1)) {
                 throw invalid("inbound_active_attempt_conflict");
             }
+        }
+    }
+
+    private boolean receiptExists(byte[] transferId) {
+        try (Cursor row = database.query("framed_sync_android_receipts", new String[] {"1"},
+            "hex(transfer_id) = ?", FramedSyncSQLiteValues.blobArgs(transferId),
+            null, null, null)) {
+            return row.moveToFirst();
         }
     }
 
