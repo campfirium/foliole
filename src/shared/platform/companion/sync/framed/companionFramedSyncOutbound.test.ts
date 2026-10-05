@@ -35,7 +35,7 @@ it('freezes a current node fact and durable hold before returning native wire in
         body_text: 'Outbound body', content_hash: '44'.repeat(32),
         current_version_id: 'version-1', id: 'node-1'
       }];
-      if (sql.includes('SELECT * FROM node_sync_versions WHERE version_id IN')) {
+      if (sql.includes('FROM node_sync_versions WHERE version_id IN')) {
         return [versionRow('version-1')];
       }
       return [];
@@ -70,7 +70,7 @@ it('prepares the exact version chain with its parent and review facts', async ()
     query: vi.fn(async (sql: string): Promise<DbRow[]> => {
       if (sql.includes('SELECT node.id')) return [{ body_text: 'body',
         content_hash: '44'.repeat(32), current_version_id: 'version-1', id: 'node-1' }];
-      if (sql.includes('SELECT * FROM node_sync_versions WHERE version_id IN')) return [
+      if (sql.includes('FROM node_sync_versions WHERE version_id IN')) return [
         versionRow('parent-1', 'Parent body'), versionRow('version-1', 'Child body', 'parent-1')
       ];
       if (sql.includes('SELECT version_id, parent_version_id')) return [parent];
