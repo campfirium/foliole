@@ -50,10 +50,12 @@ public final class FramedSyncTransferReader {
                 trailerSeen = message.payload().payloadCase() == FramedSyncPayload.Case.TRANSFER_TRAILER;
                 sequence += 1;
             }
-            if (!trailerSeen) throw invalid("transfer_trailer_missing");
+            if (!trailerSeen) throw FramedSyncStreamReader.interrupted("transfer_trailer_missing");
             return new Result(transferId, attemptId);
         } catch (Exception error) {
-            if (admitted) staging.invalidateInboundAttempt(transferId, attemptId);
+            if (admitted && !FramedSyncStreamReader.isTransportInterruption(error)) {
+                staging.invalidateInboundAttempt(transferId, attemptId);
+            }
             throw error;
         }
     }

@@ -1,8 +1,13 @@
 package com.foliole.android.framed;
 
+import java.io.IOException;
 import java.io.InputStream;
 
 public final class FramedSyncStreamReader {
+    static final class TransportInterruption extends IllegalArgumentException {
+        TransportInterruption(String code) { super(code); }
+    }
+
     private final InputStream input;
     private boolean preambleRead;
 
@@ -29,6 +34,14 @@ public final class FramedSyncStreamReader {
         return new FramedSyncWireFrame(headerBytes, header, ciphertext);
     }
 
+    static TransportInterruption interrupted(String code) {
+        return new TransportInterruption(code);
+    }
+
+    static boolean isTransportInterruption(Exception error) {
+        return error instanceof IOException || error instanceof TransportInterruption;
+    }
+
     private byte[] readExact(int length, String truncatedError, boolean allowCleanEnd)
         throws Exception {
         byte[] result = new byte[length];
@@ -37,11 +50,11 @@ public final class FramedSyncStreamReader {
             int count = input.read(result, offset, length - offset);
             if (count < 0) {
                 if (allowCleanEnd && offset == 0) return null;
-                throw new IllegalArgumentException(truncatedError);
+                throw interrupted(truncatedError);
             }
             if (count == 0) {
                 int value = input.read();
-                if (value < 0) throw new IllegalArgumentException(truncatedError);
+                if (value < 0) throw interrupted(truncatedError);
                 result[offset++] = (byte) value;
             } else {
                 offset += count;
