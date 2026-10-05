@@ -57,6 +57,16 @@ describe('framed production reachability', () => {
     expect(() => assertFramedProductionCutover(audit)).not.toThrow();
   });
 
+  it('treats an absent legacy implementation as retired', () => {
+    const root = temporaryRepository({
+      'src/coordinator.ts': `export { value } from './framed.js';`,
+      'src/framed.ts': 'export const value = true;'
+    });
+    const audit = auditFramedProductionReachability(root, fixtureManifest());
+    expect(audit.status).toBe('cutover_ready');
+    expect(audit.legacyProductionPaths).toEqual([]);
+  });
+
   it('keeps test and fixture references out of production reachability', () => {
     const root = temporaryRepository({
       'src/coordinator.ts': `export { value } from './framed.js';`,

@@ -152,7 +152,7 @@ function auditPlatform(root, name, config) {
   const graph = buildGraph(root, config);
   const framedFiles = config.framed.map((entry) => entry.file);
   const targets = [...Object.values(config.legacy).flat(), ...framedFiles];
-  for (const file of [...config.roots, ...Object.values(config.legacy).flat()]) {
+  for (const file of config.roots) {
     if (!fs.existsSync(path.join(root, file))) throw new Error(`reachability_manifest_path_missing:${file}`);
   }
   const legacy = Object.fromEntries(Object.entries(config.legacy).map(([category, files]) => [category,
