@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 import FolioleFramedSyncRuntime
 import SQLite3
@@ -68,51 +67,41 @@ final class FolioleReadOnlySQLite {
 }
 
 enum FolioleCompanionFramedSyncInventory {
-    static func read(_ snapshot: URL) throws -> [Foliole_Sync_V22_InventoryEntry] {
-        let database = try FolioleReadOnlySQLite(url: snapshot)
-        let parents = try related(database.rows("""
-            SELECT version.object_id, parent.version_id, parent.parent_version_id, parent.ordinal
-            FROM node_sync_version_parents parent JOIN node_sync_versions version
-              ON version.version_id = parent.version_id
-            ORDER BY version.object_id, parent.version_id, parent.ordinal, parent.parent_version_id
-            """), parent: true)
-        let reviews = try related(database.rows(
-            "SELECT node_id, op_id FROM review_log ORDER BY node_id, op_id"), parent: false)
-        let rows = try database.rows("""
-            SELECT node.id, node.current_version_id, version.body_text, version.content_hash
-            FROM nodes node JOIN node_sync_versions version ON version.version_id = node.current_version_id
-            ORDER BY node.id LIMIT 4097
-            """)
-        guard rows.count <= 4_096 else { throw invalid("inventory_entry_limit_exceeded") }
+    static func read(_ value: [String: Any]) throws -> [Foliole_Sync_V22_InventoryEntry] {
+        guard let rows = value["entries"] as? [[String: Any]], rows.count <= 4_096 else {
+            throw invalid("inventory_input_invalid")
+        }
         return try rows.map { row in
-            let nodeID = row[0] ?? "", body = row[2] ?? ""
             var entry = Foliole_Sync_V22_InventoryEntry()
-            entry.objectType = "node"; entry.globalID = nodeID
-            entry.sharedStateHash = try digest(row[3] ?? "")
-            entry.frontierFactIds = [row[1] ?? ""]
-            entry.requiredRelationIds = parents[nodeID] ?? []
-            entry.reviewFactIds = reviews[nodeID] ?? []
-            entry.resourceHashes = [Data(SHA256.hash(data: Data(body.utf8)))]
+            entry.objectType = try text(row, "object_type")
+            entry.globalID = try text(row, "global_id")
+            entry.sharedStateHash = try digest(text(row, "shared_state_hash"))
+            entry.frontierFactIds = try strings(row, "frontier_fact_ids")
+            entry.requiredRelationIds = try strings(row, "required_relation_ids")
+            entry.reviewFactIds = try strings(row, "review_fact_ids")
+            entry.resourceHashes = try strings(row, "resource_hashes").map(digest)
             return entry
         }
     }
 
-    private static func related(
-        _ rows: [[String?]], parent: Bool
-    ) throws -> [String: [String]] {
-        try rows.reduce(into: [String: [String]]()) { result, row in
-            let owner = row[0] ?? "", value: String
-            if parent {
-                let tuple: [Any] = [row[1] ?? "", row[2] ?? "", Int64(row[3] ?? "") ?? 0]
-                value = String(data: try JSONSerialization.data(withJSONObject: tuple), encoding: .utf8) ?? ""
-            } else { value = row[1] ?? "" }
-            result[owner, default: []].append(value)
+    private static func text(_ row: [String: Any], _ key: String) throws -> String {
+        guard let value = row[key] as? String,
+              !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw invalid("inventory_identity_required")
         }
+        return value
+    }
+
+    private static func strings(_ row: [String: Any], _ key: String) throws -> [String] {
+        guard let values = row[key] as? [String], values.allSatisfy({ !$0.isEmpty }) else {
+            throw invalid("inventory_input_invalid")
+        }
+        return values
     }
 
     private static func digest(_ value: String) throws -> Data {
         guard value.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else {
-            throw invalid("framed_sync_inventory_state_hash_invalid")
+            throw invalid("framed_sync_inventory_digest_invalid")
         }
         var result = Data(capacity: 32)
         for offset in stride(from: 0, to: value.count, by: 2) {

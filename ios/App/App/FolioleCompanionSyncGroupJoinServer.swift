@@ -111,7 +111,7 @@ final class FolioleCompanionSyncGroupJoinServer {
         guard contentType == FolioleFramedSyncHTTPTransport.contentType else {
             return try send(connection, 415, ["error": "framed_sync_content_type_required"])
         }
-        guard let snapshots, let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
+        guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
         let peer = try authenticate(request)
         let initiator = try framedIdentity(request, "initiator_device_id")
         guard initiator == peer else { throw Self.invalid("framed_sync_initiator_identity_mismatch") }
@@ -145,14 +145,13 @@ final class FolioleCompanionSyncGroupJoinServer {
             maximumFrames: FolioleFramedSyncInventoryWire.maximumSessionFrames
         )
         let roundID = try FolioleFramedSyncInventoryWire.decodeRoundID(session.messages)
-        let response = try snapshots.refresh(peer) {
-            try FolioleFramedSyncSessionWriter.encode(
-                groupKey: groupKey, context: context,
-                messages: FolioleFramedSyncInventoryWire.encode(
-                    entries: try FolioleCompanionFramedSyncInventory.read($0), roundID: roundID
-                )
+        let inventory = try dataBridge.request("read_framed_inventory", [:])
+        let response = try FolioleFramedSyncSessionWriter.encode(
+            groupKey: groupKey, context: context,
+            messages: FolioleFramedSyncInventoryWire.encode(
+                entries: try FolioleCompanionFramedSyncInventory.read(inventory), roundID: roundID
             )
-        }
+        )
         let wire = FolioleCompanionHttpMessage.response(
             status: 200, contentType: FolioleFramedSyncHTTPTransport.contentType, body: response,
             headers: ["X-Foliole-Device-Id": localDevice, "X-Foliole-Library-Epoch": localEpoch]

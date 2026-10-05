@@ -63,6 +63,22 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
         XCTAssertEqual(request.bodyData, body)
         XCTAssertTrue(request.body.isEmpty)
     }
+
+    func testDecodesSharedActiveDatabaseInventory() throws {
+        let entries = try FolioleCompanionFramedSyncInventory.read(["entries": [[
+            "object_type": "node", "global_id": "node-1",
+            "shared_state_hash": String(repeating: "11", count: 32),
+            "frontier_fact_ids": ["version-1"],
+            "required_relation_ids": ["[\"version-1\",\"version-0\",2]"],
+            "review_fact_ids": ["review-1"],
+            "resource_hashes": [String(repeating: "22", count: 32)]
+        ]]])
+
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries[0].frontierFactIds, ["version-1"])
+        XCTAssertEqual(entries[0].requiredRelationIds, ["[\"version-1\",\"version-0\",2]"])
+        XCTAssertEqual(entries[0].reviewFactIds, ["review-1"])
+    }
 }
 
 private extension Data {
