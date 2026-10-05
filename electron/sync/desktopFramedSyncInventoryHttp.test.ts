@@ -6,8 +6,14 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
-import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
-import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
+import {
+  FRAMED_SYNC_FRAME_TYPES,
+  FRAMED_SYNC_PROTOCOL_VERSION
+} from '../../lib/core/sync/framedSyncContract.js';
+import {
+  decodeFrameHeader,
+  decodeFramedSyncPreamble
+} from '../../lib/core/sync/framedSyncFraming.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
@@ -19,6 +25,8 @@ import {
   requestDesktopFramedSyncDifferenceHttp,
   respondDesktopFramedSyncInventory
 } from './desktopFramedSyncInventoryHttp.js';
+import { encryptProtocolFrame, newTransferAttempt } from './desktopFramedSyncProcessWire.js';
+import { receiveDesktopFramedSyncReceipt } from './desktopFramedSyncReceiptReceiver.js';
 
 const databases: Database.Database[] = [];
 const servers: http.Server[] = [];
@@ -70,6 +78,35 @@ function nodeSnapshot(nodeId: string) {
     resource_references: null, reveal: null, sequential_reading_enabled: false,
     shelved_at: null, title: nodeId, updated_at: time, virtual_filter: null
   };
+}
+
+async function commitTestReceipt(
+  responder: ReturnType<typeof peer>,
+  staging: ReturnType<typeof createDesktopFramedSyncStaging>,
+  transferId: Uint8Array
+) {
+  const publication = await staging.loadOutboundPublication(transferId);
+  if (!publication) throw new Error('test_publication_missing');
+  const receipt = {
+    appliedStateHash: new Uint8Array(32).fill(9), contentId: publication.contentId,
+    receiverDeviceId: 'device-a', receiverLibraryEpoch: 'epoch-a', transferId
+  };
+  const receiptAttempt = newTransferAttempt(transferId);
+  const receiptFrame = await encryptProtocolFrame({
+    attempt: receiptAttempt, frameType: FRAMED_SYNC_FRAME_TYPES.transferReceipt,
+    groupKey, payload: receipt, payloadCase: 'transfer_receipt', sequence: 0n, transferId
+  });
+  await receiveDesktopFramedSyncReceipt({
+    db: responder.db, groupKey, staging,
+    stream: {
+      frames: (async function* () {
+        yield { ciphertext: receiptFrame.ciphertext,
+          header: decodeFrameHeader(receiptFrame.frameHeader), headerBytes: receiptFrame.frameHeader };
+      })(),
+      preamble: receiptAttempt.preamble
+    },
+    transferId
+  });
 }
 
 it('exchanges authenticated encrypted inventories over the production binary HTTP shape', async () => {
@@ -149,4 +186,13 @@ it('returns an exact frozen transfer stream for a requested remote Node differen
   expect((await responder.db.query<{ state: string }>(
     'SELECT state FROM framed_sync_outbound_attempts'
   ))[0]?.state).toBe('replayable');
+
+  const transferId = decodeFramedSyncPreamble(transfer.preamble).contextId;
+  await commitTestReceipt(responder, staging, transferId);
+  expect((await responder.db.query<{ state: string }>(
+    'SELECT state FROM framed_sync_outbound_publications'
+  ))[0]?.state).toBe('receipt_committed');
+  expect((await responder.db.query<{ count: number }>(
+    'SELECT COUNT(*) AS count FROM framed_sync_outbound_holds'
+  ))[0]?.count).toBe(0);
 });

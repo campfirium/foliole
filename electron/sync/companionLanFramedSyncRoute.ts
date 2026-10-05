@@ -1,5 +1,6 @@
 import type http from 'node:http';
 
+import { FRAMED_SYNC_FRAME_TYPES } from '../../lib/core/sync/framedSyncContract.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -15,6 +16,8 @@ import {
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { respondDesktopFramedSyncInventory } from './desktopFramedSyncInventoryHttp.js';
 import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
+import { receiveDesktopFramedSyncReceipt } from './desktopFramedSyncReceiptReceiver.js';
+import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
 
 export async function handleProductionCompanionFramedSyncPost(args: {
   deviceId: string;
@@ -40,10 +43,20 @@ export async function handleProductionCompanionFramedSyncPost(args: {
   await handleCompanionLanFramedSyncPost({
     authenticate: () => runtime.auth,
     localIdentity: { deviceId: args.deviceId, libraryEpoch: runtime.libraryEpoch },
-    onStream: ({ context, stream }) => decodeFramedSyncPreamble(stream.preamble).contextKind === 'session'
-      ? respondDesktopFramedSyncInventory({ context, db: runtime.db, groupKey: runtime.groupKey,
-        groupSecret: Buffer.from(runtime.groupKey).toString('base64url'), noncePort, staging, stream })
-      : receiveDesktopFramedSyncTransfer({
+    onStream: async ({ context, stream }) => {
+      const preamble = decodeFramedSyncPreamble(stream.preamble);
+      if (preamble.contextKind === 'session') return respondDesktopFramedSyncInventory({
+        context, db: runtime.db, groupKey: runtime.groupKey,
+        groupSecret: Buffer.from(runtime.groupKey).toString('base64url'), noncePort, staging, stream
+      });
+      const inspected = await inspectFirstFrame(stream);
+      if (inspected.first.header.frameType === FRAMED_SYNC_FRAME_TYPES.transferReceipt) {
+        return receiveDesktopFramedSyncReceipt({
+          db: runtime.db, groupKey: runtime.groupKey, staging,
+          stream: inspected.stream, transferId: preamble.contextId
+        });
+      }
+      return receiveDesktopFramedSyncTransfer({
         context: {
           groupId: context.groupId,
           protocolVersion: context.protocolVersion,
@@ -55,10 +68,27 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         db: runtime.db,
         groupKey: runtime.groupKey,
         staging,
-        stream
-      }),
+        stream: inspected.stream
+      });
+    },
     request: args.request,
     response: args.response
   });
   return true;
+}
+
+async function inspectFirstFrame(stream: FramedSyncStreamBody<FramedSyncWireFrame>) {
+  const iterator = stream.frames[Symbol.asyncIterator]();
+  const next = await iterator.next();
+  if (next.done) throw new Error('framed_sync_frame_missing');
+  const first = next.value;
+  async function* frames() {
+    yield first;
+    for (;;) {
+      const value = await iterator.next();
+      if (value.done) return;
+      yield value.value;
+    }
+  }
+  return { first, stream: { frames: frames(), preamble: stream.preamble } };
 }
