@@ -4,6 +4,32 @@ import XCTest
 @testable import FolioleSyncPackValidator
 
 final class FolioleFramedSyncTransferTests: XCTestCase {
+    func testCanonicalContentIdentityMatchesSharedGoldenVector() throws {
+        let articleBlob = blob(0x77, byteLength: 42, role: .nodeBody, required: true)
+        let reviewBlob = blob(0x66, byteLength: 512, role: .image, required: false)
+        let article = fact(
+            kind: .nodeVersion, objectType: "node", globalID: "node-1", factID: "version-7",
+            sharedStateHash: Data(repeating: 0x44, count: 32), blobs: [articleBlob], fields: [
+                field("title", .stringValue("A framed article")),
+                field("deleted", .boolValue(false)),
+                field("revision", .unsignedValue(7))
+            ]
+        )
+        let review = fact(
+            kind: .review, objectType: "review", globalID: "node-1", factID: "review-3",
+            sharedStateHash: Data(repeating: 0x55, count: 32), blobs: [reviewBlob], fields: [
+                field("rating", .signedValue(-1)), field("note", .nullValue(true))
+            ]
+        )
+
+        XCTAssertEqual(
+            try FolioleFramedSyncCanonicalManifest.contentID(
+                facts: [review, article], blobs: [articleBlob, reviewBlob]
+            ).hex,
+            "d2dca32bfb3f929303143a893241d87c1ed85088c1ca6db8e3230a47b7d9c13c"
+        )
+    }
+
     func testAuthenticatedTransferBecomesReadyForSharedApply() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("foliole-ios-transfer-\(UUID().uuidString)")
@@ -63,6 +89,38 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
     private func context() -> FolioleFramedSyncTransferContext {
         .init(groupID: "group-a", senderDeviceID: "ios-a", senderLibraryEpoch: "epoch-a",
               receiverDeviceID: "ios-b", receiverLibraryEpoch: "epoch-b")
+    }
+
+    private func blob(
+        _ byte: UInt8, byteLength: UInt64, role: Foliole_Sync_V22_BlobRole, required: Bool
+    ) -> Foliole_Sync_V22_BlobReference {
+        var value = Foliole_Sync_V22_BlobReference()
+        value.sha256 = Data(repeating: byte, count: 32); value.byteLength = byteLength
+        value.role = role; value.required = required
+        return value
+    }
+
+    private func field(
+        _ name: String, _ valueCase: Foliole_Sync_V22_CanonicalValue.OneOf_Value
+    ) -> Foliole_Sync_V22_CanonicalField {
+        var value = Foliole_Sync_V22_CanonicalValue(); value.value = valueCase
+        var result = Foliole_Sync_V22_CanonicalField(); result.name = name; result.value = value
+        return result
+    }
+
+    private func fact(
+        kind: Foliole_Sync_V22_FactKind, objectType: String, globalID: String, factID: String,
+        sharedStateHash: Data, blobs: [Foliole_Sync_V22_BlobReference],
+        fields: [Foliole_Sync_V22_CanonicalField]
+    ) -> Foliole_Sync_V22_FactRecord {
+        var identity = Foliole_Sync_V22_FactIdentity()
+        identity.kind = kind; identity.objectType = objectType
+        identity.globalID = globalID; identity.factID = factID
+        var body = Foliole_Sync_V22_CanonicalObject(); body.fields = fields
+        var result = Foliole_Sync_V22_FactRecord()
+        result.identity = identity; result.sharedStateHash = sharedStateHash
+        result.body = body; result.blobs = blobs
+        return result
     }
 
     private func transferWire(
