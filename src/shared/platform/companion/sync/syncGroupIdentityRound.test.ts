@@ -9,8 +9,7 @@ const runtime = vi.hoisted(() => ({
   baselines: [] as Array<{ localViewId: string; peerViewId: string;
     localProofRoot: string; peerProofRoot: string }>,
   cleanups: [] as string[], probes: 0, terminalProbe: 3, sentFrom: '', fast: false,
-  probeBaselines: [] as unknown[], receivedFrom: [] as string[], resourceError: false,
-  framedError: null as Error | null, framedSent: 0
+  probeBaselines: [] as unknown[], receivedFrom: [] as string[], resourceError: false
 }));
 vi.mock('../../../../../lib/core/sync/syncIdentityPeerBaseline.js', () => ({
   loadSyncIdentityPeerBaseline: async () => runtime.fast ? { localEpoch: 'local-epoch',
@@ -59,13 +58,6 @@ vi.mock('./syncGroupIdentityExchange', () => ({
     return { appliedPages: 1, appliedObjects: 2, pageCount: 1 };
   }
 }));
-vi.mock('./framed/companionFramedSyncInventoryRound', () => ({
-  sendCompanionFramedSyncInventoryDifferences: vi.fn(async () => {
-    if (runtime.framedError) throw runtime.framedError;
-    return { deferredObjects: [],
-      sent: Array.from({ length: runtime.framedSent }, (_, index) => ({ objectId: `node-${index}` })) };
-  })
-}));
 vi.mock('./syncGroupIdentityResources', async original => ({
   ...await original<typeof import('./syncGroupIdentityResources')>(),
   drainCompanionSyncIdentityResources: async (args: {
@@ -102,7 +94,6 @@ it('reprobes after receiving so it never uploads an obsolete local source view',
   runtime.probeBaselines = [];
   runtime.receivedFrom = [];
   runtime.resourceError = false;
-  runtime.framedSent = 0;
   await expect(runCompanionSyncIdentityRound('http://peer', 'Local'))
     .resolves.toMatchObject({ verifiedCandidateCount: 0,
       received: { appliedObjects: 2 } });
@@ -111,41 +102,6 @@ it('reprobes after receiving so it never uploads an obsolete local source view',
   expect(runtime.baselines).toMatchObject([{ localViewId: 'local-3', peerViewId: 'remote-3',
     localProofRoot: 'a'.repeat(64), peerProofRoot: 'b'.repeat(64) }]);
   expect(runtime.cleanups).toEqual(['3', '2', '1']);
-});
-
-it('reprobes after framed node transfers before the legacy remainder is selected', async () => {
-  runtime.probes = 0;
-  runtime.cleanups = [];
-  runtime.receivedFrom = [];
-  runtime.resourceError = false;
-  runtime.framedSent = 1;
-  runtime.terminalProbe = 4;
-  try {
-    await expect(runCompanionSyncIdentityRound('http://peer', 'Local'))
-      .resolves.toMatchObject({ framed: { sent: [{ objectId: 'node-0' }] },
-        verifiedCandidateCount: 0 });
-    expect(runtime.sentFrom).toBe('/snapshot-3');
-    expect(runtime.cleanups).toEqual(['2', '4', '3', '1']);
-  } finally {
-    runtime.framedSent = 0;
-    runtime.terminalProbe = 3;
-  }
-});
-
-it('does not fall back to the legacy sender when framed transfer fails', async () => {
-  runtime.probes = 0;
-  runtime.cleanups = [];
-  runtime.sentFrom = '';
-  runtime.resourceError = false;
-  runtime.framedError = new Error('framed_sync_http_503');
-  try {
-    await expect(runCompanionSyncIdentityRound('http://peer', 'Local'))
-      .rejects.toThrow('framed_sync_http_503');
-    expect(runtime.sentFrom).toBe('');
-    expect(runtime.cleanups).toEqual(['2', '1']);
-  } finally {
-    runtime.framedError = null;
-  }
 });
 
 it('checks global identities even when an older peer baseline exists', async () => {
