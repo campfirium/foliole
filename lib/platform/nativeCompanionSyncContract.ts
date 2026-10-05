@@ -44,6 +44,16 @@ export interface NativeCompanionFramedSyncInventoryEntry {
 
 export interface NativeCompanionFramedSyncInventoryResult {
   entries: readonly NativeCompanionFramedSyncInventoryEntry[];
+  round_id: string;
+}
+
+export interface NativeCompanionFramedSyncPullRequest extends NativeCompanionFramedSyncInventoryRequest {
+  frontier_fact_ids: readonly string[];
+  object_id: string;
+  required_relation_ids: readonly string[];
+  resource_hashes: readonly string[];
+  review_fact_ids: readonly string[];
+  round_id: string;
 }
 
 export interface NativeCompanionSyncEvent {

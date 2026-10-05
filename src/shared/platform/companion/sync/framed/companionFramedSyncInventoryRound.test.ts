@@ -1,11 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  localEntry: vi.fn(), localInventory: vi.fn(), remoteInventory: vi.fn(), send: vi.fn()
+  localEntry: vi.fn(), localInventory: vi.fn(), pull: vi.fn(), remoteInventory: vi.fn(), send: vi.fn()
 }));
 
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({
-  FolioleCompanionSync: { readFramedSyncInventory: mocks.remoteInventory }
+  FolioleCompanionSync: {
+    pullFramedSyncObject: mocks.pull, readFramedSyncInventory: mocks.remoteInventory
+  }
 }));
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => ({ read: (task: (db: object) => unknown) => task({}) })
@@ -32,16 +34,18 @@ const entry = (id: string, state = '1', relations: string[] = []) => ({
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mocks.remoteInventory.mockResolvedValue({ entries: [] });
+  mocks.remoteInventory.mockResolvedValue({ entries: [], round_id: '8'.repeat(32) });
   mocks.localInventory.mockResolvedValue({ entries: [entry('node-a'), entry('node-b')] });
   mocks.localEntry.mockImplementation(async (_db, key: { globalId: string }) =>
     key.globalId === 'node-a' ? entry('node-a') : entry('node-b', '3'));
   mocks.send.mockResolvedValue({ transfer_id: 'a'.repeat(64) });
+  mocks.pull.mockResolvedValue({ transfer_id: 'b'.repeat(64) });
 });
 
 it('revalidates each selected current node before invoking the native sender', async () => {
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
     deferredObjects: [{ globalId: 'node-b', objectType: 'node' }],
+    received: [],
     sent: [{ objectId: 'node-a', receipt: { transfer_id: 'a'.repeat(64) } }]
   });
   expect(mocks.remoteInventory).toHaveBeenCalledWith(request);
@@ -56,7 +60,9 @@ it('revalidates each selected current node before invoking the native sender', a
 });
 
 it('rejects malformed remote inventory before selecting objects', async () => {
-  mocks.remoteInventory.mockResolvedValue({ entries: [{ ...entry('remote'), shared_state_hash: 'bad' }] });
+  mocks.remoteInventory.mockResolvedValue({
+    entries: [{ ...entry('remote'), shared_state_hash: 'bad' }], round_id: '8'.repeat(32)
+  });
   await expect(sendCompanionFramedSyncInventoryDifferences(request))
     .rejects.toThrow('framed_sync_inventory_shared_state_hash_invalid');
   expect(mocks.send).not.toHaveBeenCalled();
@@ -65,7 +71,7 @@ it('rejects malformed remote inventory before selecting objects', async () => {
 it('rejects legacy non-node inventory identities', async () => {
   mocks.remoteInventory.mockResolvedValue({ entries: [{
     ...entry('remote'), object_type: 'node_review'
-  }] });
+  }], round_id: '8'.repeat(32) });
   await expect(sendCompanionFramedSyncInventoryDifferences(request))
     .rejects.toThrow('framed_sync_inventory_identity_invalid');
   expect(mocks.send).not.toHaveBeenCalled();
@@ -73,14 +79,37 @@ it('rejects legacy non-node inventory identities', async () => {
 
 it('sends exact relation ids without redundantly including the current node', async () => {
   mocks.localInventory.mockResolvedValue({ entries: [entry('node-c', '1', ['relation-1'])] });
-  mocks.remoteInventory.mockResolvedValue({ entries: [entry('node-c')] });
+  mocks.remoteInventory.mockResolvedValue({ entries: [entry('node-c')], round_id: '8'.repeat(32) });
   mocks.localEntry.mockResolvedValue(entry('node-c', '1', ['relation-1']));
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
     deferredObjects: [],
+    received: [],
     sent: [{ objectId: 'node-c', receipt: { transfer_id: 'a'.repeat(64) } }]
   });
   expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({
     includeCurrentNode: false, objectId: 'node-c', requiredRelationIds: ['relation-1'],
     reviewFactIds: []
   }));
+});
+
+it('pulls a remote-only Node with the same inventory round identity', async () => {
+  mocks.localInventory.mockResolvedValue({ entries: [] });
+  mocks.remoteInventory.mockResolvedValue({
+    entries: [entry('remote-node')], round_id: '8'.repeat(32)
+  });
+
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+    deferredObjects: [], received: [{
+      objectId: 'remote-node', receipt: { transfer_id: 'b'.repeat(64) }
+    }], sent: []
+  });
+  expect(mocks.pull).toHaveBeenCalledWith({
+    ...request,
+    frontier_fact_ids: ['version-remote-node'],
+    object_id: 'remote-node',
+    required_relation_ids: [],
+    resource_hashes: ['2'.repeat(64)],
+    review_fact_ids: [],
+    round_id: '8'.repeat(32)
+  });
 });

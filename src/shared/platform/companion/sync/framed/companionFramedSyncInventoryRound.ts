@@ -1,4 +1,4 @@
-import { hexToBytes } from '@noble/hashes/utils.js';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import {
   compareFramedSyncInventories,
@@ -61,7 +61,11 @@ export function decodeCompanionFramedSyncInventory(
   value: NativeCompanionFramedSyncInventoryResult
 ) {
   if (!value || !Array.isArray(value.entries)) throw new Error('framed_sync_inventory_result_invalid');
-  return value.entries.map(decodeEntry);
+  const roundId = typeof value.round_id === 'string' && /^[a-f0-9]{32}$/u.test(value.round_id)
+    ? hexToBytes(value.round_id)
+    : null;
+  if (!roundId) throw new Error('framed_sync_inventory_round_id_invalid');
+  return { entries: value.entries.map(decodeEntry), roundId };
 }
 
 export async function readCompanionRemoteFramedSyncInventory(
@@ -74,21 +78,24 @@ export function selectCompanionFramedSyncCurrentNodes(args: {
   local: readonly FramedSyncInventoryEntry[];
   remote: readonly FramedSyncInventoryEntry[];
 }) {
-  const sendable = compareFramedSyncInventories(args)
-    .filter((difference) => difference.direction === 'local_to_remote');
-  return { deferredObjects: [] as FramedSyncDeferredObject[], sendable };
+  const differences = compareFramedSyncInventories(args);
+  return {
+    deferredObjects: [] as FramedSyncDeferredObject[],
+    pullable: differences.filter((difference) => difference.direction === 'remote_to_local'),
+    sendable: differences.filter((difference) => difference.direction === 'local_to_remote')
+  };
 }
 
 export async function sendCompanionFramedSyncInventoryDifferences(
   args: NativeCompanionFramedSyncInventoryRequest
 ) {
   const owner = getIosCompanionDatabaseOwner();
-  const [localValue, remote] = await Promise.all([
+  const [localValue, remoteResult] = await Promise.all([
     owner.read(readCompanionFramedSyncInventory),
     readCompanionRemoteFramedSyncInventory(args)
   ]);
-  const local = decodeCompanionFramedSyncInventory(localValue);
-  const selection = selectCompanionFramedSyncCurrentNodes({ local, remote });
+  const local = localValue.entries.map(decodeEntry);
+  const selection = selectCompanionFramedSyncCurrentNodes({ local, remote: remoteResult.entries });
   const deferredObjects = [...selection.deferredObjects];
   const sent: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
   for (const difference of selection.sendable) {
@@ -114,5 +121,20 @@ export async function sendCompanionFramedSyncInventoryDifferences(
     });
     sent.push({ objectId: difference.globalId, receipt });
   }
-  return { deferredObjects, sent };
+  const received: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
+  for (const difference of selection.pullable) {
+    const receipt = await FolioleCompanionSync.pullFramedSyncObject({
+      ...args,
+      frontier_fact_ids: difference.need.sharedState || difference.need.resourceHashes.length
+        ? difference.sourceSnapshot.frontierFactIds
+        : difference.need.frontierFactIds,
+      object_id: difference.globalId,
+      required_relation_ids: difference.need.requiredRelationIds,
+      resource_hashes: difference.need.resourceHashes.map(bytesToHex),
+      review_fact_ids: difference.need.reviewFactIds,
+      round_id: bytesToHex(remoteResult.roundId)
+    });
+    received.push({ objectId: difference.globalId, receipt });
+  }
+  return { deferredObjects, received, sent };
 }

@@ -2,6 +2,7 @@ import type { AttachmentMaintenanceHostPlugin } from '../../../lib/platform/atta
 import type {
   NativeCompanionFramedSyncInventoryRequest,
   NativeCompanionFramedSyncInventoryResult,
+  NativeCompanionFramedSyncPullRequest,
   NativeCompanionFramedSyncTransferReceipt,
   NativeCompanionFramedSyncTransferRequest,
   NativeCompanionSignedRequestHeaders
@@ -91,6 +92,9 @@ export interface CompanionWorkspaceSyncPlugin
   readFramedSyncInventory(
     args: NativeCompanionFramedSyncInventoryRequest
   ): Promise<NativeCompanionFramedSyncInventoryResult>;
+  pullFramedSyncObject(
+    args: NativeCompanionFramedSyncPullRequest
+  ): Promise<NativeCompanionFramedSyncTransferReceipt>;
   signCompanionSyncRequest(args: {
     body?: string;
     body_hash: string;
