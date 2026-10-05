@@ -1,4 +1,7 @@
 apply plugin: 'com.android.application'
+apply plugin: 'com.google.protobuf'
+
+def framedSyncProtobufVersion = '4.34.1'
 
 android {
     namespace = "com.foliole.android"
@@ -33,6 +36,11 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    sourceSets {
+        main {
+            proto.srcDir "$rootDir/../lib/core/sync/proto"
+        }
+    }
 }
 
 repositories {
@@ -48,11 +56,25 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
+    implementation "com.google.protobuf:protobuf-javalite:$framedSyncProtobufVersion"
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     androidTestImplementation project(':capacitor-community-sqlite')
     implementation project(':capacitor-cordova-android-plugins')
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:$framedSyncProtobufVersion"
+    }
+    generateProtoTasks {
+        all().configureEach { task ->
+            task.builtins {
+                java { option 'lite' }
+            }
+        }
+    }
 }
 
 apply from: 'capacitor.build.gradle'
