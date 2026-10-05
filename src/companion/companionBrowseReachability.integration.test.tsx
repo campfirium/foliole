@@ -56,14 +56,17 @@ async function seedLibrary() {
   const insert = database!.prepare(`INSERT INTO nodes
     (id, parent_id, title, kind, content, is_title_manual, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, 1, '2026-10-03', '2026-10-03')`);
-  insert.run('folder', null, 'Folder', 'folder', '');
-  insert.run('other', null, 'Other', 'folder', '');
-  insert.run('special-virtual-root', null, 'Virtual', 'folder', '');
-  insert.run('manual', 'special-virtual-root', 'Manual', 'folder', '');
-  const ids = Array.from({ length: 180 }, (_, index) => `topic-${String(index).padStart(3, '0')}`);
-  for (const id of ids) insert.run(id, 'folder', id, 'topic', `Body for ${id}`);
-  database!.prepare('UPDATE nodes SET virtual_filter = ?, manual_child_order = ? WHERE id = ?')
-    .run(JSON.stringify(createManualVirtualNodeFilter()), JSON.stringify(ids), 'manual');
+  database!.transaction(() => {
+    insert.run('folder', null, 'Folder', 'folder', '');
+    insert.run('other', null, 'Other', 'folder', '');
+    insert.run('special-virtual-root', null, 'Virtual', 'folder', '');
+    insert.run('manual', 'special-virtual-root', 'Manual', 'folder', '');
+    const ids = Array.from({ length: 180 }, (_, index) =>
+      `topic-${String(index).padStart(3, '0')}`);
+    for (const id of ids) insert.run(id, 'folder', id, 'topic', `Body for ${id}`);
+    database!.prepare('UPDATE nodes SET virtual_filter = ?, manual_child_order = ? WHERE id = ?')
+      .run(JSON.stringify(createManualVirtualNodeFilter()), JSON.stringify(ids), 'manual');
+  })();
 }
 
 async function disposeLibrary() {
