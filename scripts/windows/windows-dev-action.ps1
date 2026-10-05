@@ -69,8 +69,12 @@ try {
     } elseif ($Action -eq "internal-install") {
       Push-Location $repoRoot
       try {
-        & $systemNode $systemNpmCli run windows:package:internal:install
+        & $systemNode $systemNpmCli ci
         $runnerExit = $LASTEXITCODE
+        if ($runnerExit -eq 0) {
+          & $systemNode $systemNpmCli run windows:package:internal:install
+          $runnerExit = $LASTEXITCODE
+        }
       } finally {
         Pop-Location
       }
