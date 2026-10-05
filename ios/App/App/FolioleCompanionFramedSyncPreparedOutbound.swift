@@ -8,7 +8,7 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
     let facts: [Foliole_Sync_V22_FactRecord]
     let blobs: [FolioleFramedSyncOutboundBlob]
 
-    static func decode(_ value: [String: Any]) throws -> Self {
+    static func decode(_ value: [String: Any], resourceFiles: [String: URL] = [:]) throws -> Self {
         let contentID = try digest(value, "content_id")
         guard try digest(value, "manifest_hash") == contentID else {
             throw invalid("framed_sync_manifest_identity_mismatch")
@@ -16,7 +16,7 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
         let facts = try decodeFacts(value)
         return .init(
             contentID: contentID, transferID: try digest(value, "transfer_id"), facts: facts,
-            blobs: try decodeBlobs(value, facts: facts)
+            blobs: try decodeBlobs(value, facts: facts, resourceFiles: resourceFiles)
         )
     }
 
@@ -40,7 +40,7 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
     }
 
     private static func decodeBlobs(
-        _ value: [String: Any], facts: [Foliole_Sync_V22_FactRecord]
+        _ value: [String: Any], facts: [Foliole_Sync_V22_FactRecord], resourceFiles: [String: URL]
     ) throws -> [FolioleFramedSyncOutboundBlob] {
         guard let encoded = value["blobs"] as? [Any] else { throw invalid("framed_sync_blobs_required") }
         var declared = [Data: Foliole_Sync_V22_BlobReference]()
@@ -52,8 +52,7 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
         }
         guard encoded.count == declared.count else { throw invalid("framed_sync_blob_set_mismatch") }
         return try encoded.map { item in
-            guard let blob = item as? [String: Any], let text = blob["data_text"] as? String,
-                  let lengthText = blob["byte_length"] as? String,
+            guard let blob = item as? [String: Any], let lengthText = blob["byte_length"] as? String,
                   let length = UInt64(lengthText), String(length) == lengthText,
                   let required = blob["required"] as? Bool,
                   let role = blob["role"] as? NSNumber, validInteger(role) else {
@@ -62,11 +61,21 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
             let hash = try digest(blob, "sha256")
             guard let reference = declared.removeValue(forKey: hash),
                   reference.byteLength == length, reference.required == required,
-                  Int(reference.role.rawValue) == role.intValue,
-                  UInt64(Data(text.utf8).count) == length else {
+                  Int(reference.role.rawValue) == role.intValue else {
                 throw invalid("framed_sync_blob_identity_mismatch")
             }
-            return .init(reference: reference, data: Data(text.utf8))
+            if reference.role == .nodeBody {
+                guard let text = blob["data_text"] as? String,
+                      UInt64(Data(text.utf8).count) == length else {
+                    throw invalid("framed_sync_blob_identity_mismatch")
+                }
+                return .init(reference: reference, source: .data(Data(text.utf8)))
+            }
+            guard let storageKey = blob["storage_key"] as? String,
+                  let file = resourceFiles[storageKey] else {
+                throw invalid("framed_sync_outbound_resource_unavailable")
+            }
+            return .init(reference: reference, source: .file(file))
         }
     }
 

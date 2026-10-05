@@ -4,7 +4,21 @@ import FolioleFramedSyncRuntime
 
 struct FolioleFramedSyncOutboundBlob {
     let reference: Foliole_Sync_V22_BlobReference
-    let data: Data
+    let source: Source
+
+    enum Source {
+        case data(Data)
+        case file(URL)
+    }
+
+    init(reference: Foliole_Sync_V22_BlobReference, source: Source) {
+        self.reference = reference
+        self.source = source
+    }
+
+    init(reference: Foliole_Sync_V22_BlobReference, data: Data) {
+        self.init(reference: reference, source: .data(data))
+    }
 }
 
 struct FolioleFramedSyncOutboundAttempt {
@@ -22,7 +36,9 @@ enum FolioleFramedSyncTransferWriter {
         staging: FolioleFramedSyncOutboundStaging
     ) throws -> FolioleFramedSyncOutboundAttempt {
         let facts = facts.sorted(by: factOrder)
-        let blobs = try verifiedBlobs(facts: facts, blobs: blobs)
+        let blobs = try FolioleFramedSyncOutboundBlobVerifier.verify(
+            facts: facts, blobs: blobs, chunkBytes: blobChunkBytes
+        )
         let references = blobs.map(\.reference)
         let contentID = try FolioleFramedSyncCanonicalManifest.contentID(facts: facts, blobs: references)
         let transferID = context.deriveTransferID(contentID: contentID)
@@ -48,18 +64,10 @@ enum FolioleFramedSyncTransferWriter {
             )
         }
         for blob in blobs {
-            guard !blob.data.isEmpty else { continue }
-            for offset in stride(from: 0, through: max(blob.data.count - 1, 0), by: blobChunkBytes) {
-                let end = min(offset + blobChunkBytes, blob.data.count)
-                var chunk = Foliole_Sync_V22_BlobChunk()
-                chunk.transferID = transferID; chunk.blobHash = blob.reference.sha256
-                chunk.offset = UInt64(offset); chunk.data = blob.data[offset..<end]
-                var message = Foliole_Sync_V22_ProtocolMessage(); message.payload = .blobChunk(chunk)
-                sequence = try persist(
-                    message, type: .blobChunk, sequence: sequence, groupKey: groupKey,
-                    preamble: preamble, transferID: transferID, attemptID: attemptID, staging: staging
-                )
-            }
+            sequence = try persistBlob(
+                blob, sequence: sequence, groupKey: groupKey, preamble: preamble,
+                transferID: transferID, attemptID: attemptID, staging: staging
+            )
         }
         _ = try persist(
             trailer(transferID: transferID, contentID: contentID, facts: facts, blobs: references),
@@ -75,17 +83,23 @@ enum FolioleFramedSyncTransferWriter {
         staging: FolioleFramedSyncOutboundStaging
     ) throws -> Data {
         let output = OutputStream.toMemory()
-        let writer = FolioleFramedSyncStreamWriter(output: output)
-        try writer.write(preamble: attempt.preamble)
-        for frame in try staging.replayableFrames(
-            transferID: attempt.transferID, attemptID: attempt.attemptID
-        ) {
-            try writer.write(header: frame.header, ciphertext: frame.ciphertext)
-        }
+        try replay(attempt, staging: staging, output: output)
         guard let data = output.property(forKey: .dataWrittenToMemoryStreamKey) as? Data else {
             throw invalid("framed_sync_stream_write_failed")
         }
         return data
+    }
+
+    static func replay(
+        _ attempt: FolioleFramedSyncOutboundAttempt,
+        staging: FolioleFramedSyncOutboundStaging,
+        output: OutputStream
+    ) throws {
+        let writer = FolioleFramedSyncStreamWriter(output: output)
+        try writer.write(preamble: attempt.preamble)
+        try staging.replayFrames(
+            transferID: attempt.transferID, attemptID: attempt.attemptID, writer: writer
+        )
     }
 
     private static func persist(
@@ -142,37 +156,43 @@ enum FolioleFramedSyncTransferWriter {
         return message
     }
 
-    private static func verifiedBlobs(
-        facts: [Foliole_Sync_V22_FactRecord], blobs: [FolioleFramedSyncOutboundBlob]
-    ) throws -> [FolioleFramedSyncOutboundBlob] {
-        var declared = [Data: Foliole_Sync_V22_BlobReference]()
-        for reference in facts.flatMap(\.blobs) {
-            if let existing = declared[reference.sha256], !sameBlob(existing, reference) {
-                throw invalid("framed_sync_blob_identity_conflict")
-            }
-            declared[reference.sha256] = reference
+    private static func persistBlob(
+        _ blob: FolioleFramedSyncOutboundBlob, sequence: UInt64, groupKey: Data,
+        preamble: FolioleFramedSyncPreamble, transferID: Data, attemptID: Data,
+        staging: FolioleFramedSyncOutboundStaging
+    ) throws -> UInt64 {
+        var next = sequence, offset: UInt64 = 0
+        try forEachChunk(blob.source) { data in
+            var chunk = Foliole_Sync_V22_BlobChunk()
+            chunk.transferID = transferID; chunk.blobHash = blob.reference.sha256
+            chunk.offset = offset; chunk.data = data
+            var message = Foliole_Sync_V22_ProtocolMessage(); message.payload = .blobChunk(chunk)
+            next = try persist(
+                message, type: .blobChunk, sequence: next, groupKey: groupKey,
+                preamble: preamble, transferID: transferID, attemptID: attemptID, staging: staging
+            )
+            offset += UInt64(data.count)
         }
-        guard declared.count == blobs.count else { throw invalid("framed_sync_blob_set_mismatch") }
-        let sorted = blobs.sorted { $0.reference.sha256.lexicographicallyPrecedes($1.reference.sha256) }
-        guard Set(declared.keys) == Set(sorted.map(\.reference.sha256)),
-              Set(sorted.map(\.reference.sha256)).count == sorted.count else {
-            throw invalid("framed_sync_blob_set_mismatch")
-        }
-        for blob in sorted {
-            guard let expected = declared[blob.reference.sha256], sameBlob(expected, blob.reference),
-                  blob.reference.byteLength == UInt64(blob.data.count),
-                  Data(SHA256.hash(data: blob.data)) == blob.reference.sha256 else {
-                throw invalid("framed_sync_blob_content_mismatch")
-            }
-        }
-        return sorted
+        return next
     }
 
-    private static func sameBlob(
-        _ left: Foliole_Sync_V22_BlobReference, _ right: Foliole_Sync_V22_BlobReference
-    ) -> Bool {
-        left.sha256 == right.sha256 && left.byteLength == right.byteLength &&
-            left.role == right.role && left.required == right.required
+    private static func forEachChunk(
+        _ source: FolioleFramedSyncOutboundBlob.Source, _ consume: (Data) throws -> Void
+    ) throws {
+        switch source {
+        case .data(let data):
+            var offset = 0
+            while offset < data.count {
+                let end = min(offset + blobChunkBytes, data.count)
+                try consume(data[offset..<end]); offset = end
+            }
+        case .file(let url):
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+            while let data = try handle.read(upToCount: blobChunkBytes), !data.isEmpty {
+                try consume(data)
+            }
+        }
     }
 
     private static func makePreamble(

@@ -5,13 +5,19 @@ protocol FolioleFramedSyncOutboundStaging {
     func prepare(transferID: Data, attemptID: Data, preamble: Data) throws -> FolioleFramedSyncStageOutcome
     func commit(_ frame: FolioleFramedSyncAuthenticatedFrame) throws -> FolioleFramedSyncStageOutcome
     func finalize(transferID: Data, attemptID: Data) throws -> FolioleFramedSyncStageOutcome
-    func replayableFrames(transferID: Data, attemptID: Data) throws -> [FolioleFramedSyncAuthenticatedFrame]
+    func replayFrames(
+        transferID: Data, attemptID: Data, writer: FolioleFramedSyncStreamWriter
+    ) throws
 }
 
 final class FolioleFramedSyncOutboundSQLite: FolioleFramedSyncOutboundStaging {
     private let database: FolioleFramedSyncTransferDatabase
+    private let frames: FolioleFramedSyncOutboundFrameFiles
 
-    init(database: FolioleFramedSyncTransferDatabase) { self.database = database }
+    init(database: FolioleFramedSyncTransferDatabase) throws {
+        self.database = database
+        frames = try .init(database: database)
+    }
 
     func prepare(
         transferID: Data, attemptID: Data, preamble: Data
@@ -49,24 +55,7 @@ final class FolioleFramedSyncOutboundSQLite: FolioleFramedSyncOutboundStaging {
                   attempt?[1] as? String == "prepared" else {
                 throw invalid("outbound_attempt_not_prepared")
             }
-            let rows = try database.rows("""
-                SELECT frame_header, ciphertext, authenticated_plaintext
-                FROM framed_sync_ios_outbound_frames
-                WHERE transfer_id = ? AND attempt_id = ? AND sequence = ?
-                """, [frame.transferID, frame.attemptID, String(header.sequence)])
-            if let row = rows.first {
-                guard row[0] as? Data == frame.header,
-                      row[1] as? Data == frame.ciphertext,
-                      row[2] as? Data == frame.plaintext else {
-                    throw invalid("outbound_frame_identity_conflict")
-                }
-                return .identical
-            }
-            try database.execute("""
-                INSERT INTO framed_sync_ios_outbound_frames VALUES (?, ?, ?, ?, ?, ?)
-                """, [frame.transferID, frame.attemptID, String(header.sequence),
-                        frame.header, frame.ciphertext, frame.plaintext])
-            return .created
+            return try frames.commit(frame, header: header)
         }
     }
 
@@ -89,45 +78,27 @@ final class FolioleFramedSyncOutboundSQLite: FolioleFramedSyncOutboundStaging {
         }
     }
 
-    func replayableFrames(
-        transferID: Data, attemptID: Data
-    ) throws -> [FolioleFramedSyncAuthenticatedFrame] {
-        let rows = try database.rows("""
-            SELECT a.preamble, f.frame_header, f.ciphertext, f.authenticated_plaintext
-            FROM framed_sync_ios_outbound_attempts a
-            JOIN framed_sync_ios_outbound_frames f
-              ON f.transfer_id = a.transfer_id AND f.attempt_id = a.attempt_id
-            WHERE a.transfer_id = ? AND a.attempt_id = ? AND a.state = 'replayable'
-            ORDER BY length(f.sequence), f.sequence
-            """, [transferID, attemptID])
-        return try rows.map { row in
-            guard let preamble = row[0] as? Data, let header = row[1] as? Data,
-                  let ciphertext = row[2] as? Data, let plaintext = row[3] as? Data else {
-                throw invalid("outbound_frame_storage_invalid")
-            }
-            return .init(transferID: transferID, attemptID: attemptID, preamble: preamble,
-                         header: header, ciphertext: ciphertext, plaintext: plaintext)
-        }
+    func replayFrames(
+        transferID: Data, attemptID: Data, writer: FolioleFramedSyncStreamWriter
+    ) throws {
+        try frames.replay(transferID: transferID, attemptID: attemptID, writer: writer)
     }
 
     private func requireCompleteFrames(transferID: Data, attemptID: Data) throws {
-        let rows = try database.rows("""
-            SELECT sequence, frame_header FROM framed_sync_ios_outbound_frames
-            WHERE transfer_id = ? AND attempt_id = ? ORDER BY length(sequence), sequence
-            """, [transferID, attemptID])
-        var expected: UInt64 = 0
-        var finalType: FolioleFramedSyncFrameType?
-        for row in rows {
-            guard let sequenceText = row[0] as? String, let sequence = UInt64(sequenceText),
-                  let encodedHeader = row[1] as? Data, sequence == expected else {
-                throw invalid("outbound_frame_sequence_not_contiguous")
-            }
-            finalType = try FolioleFramedSyncWireHeader(decoding: encodedHeader).frameType
-            expected += 1
-        }
-        guard expected > 0, finalType == .transferTrailer else {
-            throw invalid("outbound_transfer_trailer_required")
-        }
+        try frames.requireComplete(transferID: transferID, attemptID: attemptID)
+    }
+
+    func loadLatestReplayableAttempt(transferID: Data) throws -> FolioleFramedSyncOutboundAttempt? {
+        guard transferID.count == 32 else { throw invalid("transfer_id_invalid") }
+        let row = try database.rows("""
+            SELECT attempt_id, preamble FROM framed_sync_ios_outbound_attempts a
+            WHERE transfer_id = ? AND state = 'replayable' AND EXISTS (
+              SELECT 1 FROM \(FolioleFramedSyncOutboundFrameFiles.table) f
+              WHERE f.transfer_id = a.transfer_id AND f.attempt_id = a.attempt_id)
+            ORDER BY rowid DESC LIMIT 1
+            """, [transferID]).first
+        guard let attemptID = row?[0] as? Data, let preamble = row?[1] as? Data else { return nil }
+        return .init(transferID: transferID, attemptID: attemptID, preamble: preamble)
     }
 
     private func requireBinding(transferID: Data, attemptID: Data, encodedPreamble: Data) throws {

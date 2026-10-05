@@ -13,7 +13,7 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         defer { try? FileManager.default.removeItem(at: directory) }
         let databaseURL = directory.appendingPathComponent("outbound.db")
         let database = try FolioleFramedSyncTransferDatabase(url: databaseURL)
-        let staging = FolioleFramedSyncOutboundSQLite(database: database)
+        let staging = try FolioleFramedSyncOutboundSQLite(database: database)
         let body = Data("outbound body".utf8)
         let fact = makeFact(body: body)
         let attempt = try FolioleFramedSyncTransferWriter.prepare(
@@ -80,7 +80,7 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("foliole-ios-multi-fact-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let staging = FolioleFramedSyncOutboundSQLite(database: try .init(
+        let staging = try FolioleFramedSyncOutboundSQLite(database: try .init(
             url: directory.appendingPathComponent("outbound.db")
         ))
         let facts = [
@@ -102,7 +102,7 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("foliole-ios-empty-body-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
-        let staging = FolioleFramedSyncOutboundSQLite(database: try .init(
+        let staging = try FolioleFramedSyncOutboundSQLite(database: try .init(
             url: directory.appendingPathComponent("outbound.db")
         ))
         let body = Data()

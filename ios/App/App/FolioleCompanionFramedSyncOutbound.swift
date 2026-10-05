@@ -25,42 +25,62 @@ extension FolioleCompanionSyncPlugin {
         guard let includeCurrentNode = call.getBool("include_current_node") else {
             throw invalid("include_current_node_required")
         }
-        let preparedValue = try groupData.request("prepare_framed_outbound", [
+        var selection: [String: Any] = [
             "group_id": groupID, "object_id": try framedRequired(call, "object_id"),
             "include_current_node": includeCurrentNode,
             "required_relation_ids": try framedStringArray(call, "required_relation_ids"),
             "review_fact_ids": try framedStringArray(call, "review_fact_ids"),
             "sender_device_id": senderDeviceID, "sender_library_epoch": senderEpoch,
             "receiver_device_id": receiverDeviceID, "receiver_library_epoch": receiverEpoch
-        ])
+        ]
+        let inspected = try groupData.request("inspect_framed_outbound", selection)
+        let resources = try FolioleCompanionFramedSyncResources.describe(inspected)
+        selection.merge(resources.0) { _, replacement in replacement }
+        let preparedValue = try groupData.request("prepare_framed_outbound", selection)
         let groupKey = try Base64URL.decode(workgroupKey)
         guard groupKey.count == 32 else { throw invalid("sync_group_key_invalid") }
-        let prepared = try FolioleCompanionFramedSyncPreparedOutbound.decode(preparedValue)
+        let prepared = try FolioleCompanionFramedSyncPreparedOutbound.decode(
+            preparedValue, resourceFiles: resources.1
+        )
         let context = FolioleFramedSyncTransferContext(
             groupID: groupID, senderDeviceID: senderDeviceID, senderLibraryEpoch: senderEpoch,
             receiverDeviceID: receiverDeviceID, receiverLibraryEpoch: receiverEpoch
         )
         let database = try FolioleFramedSyncTransferDatabase(url: framedOutboundDatabaseURL())
-        let staging = FolioleFramedSyncOutboundSQLite(database: database)
-        let attempt = try FolioleFramedSyncTransferWriter.prepare(
-            groupKey: groupKey, context: context, facts: prepared.facts,
-            blobs: prepared.blobs, staging: staging
-        )
+        let staging = try FolioleFramedSyncOutboundSQLite(database: database)
+        let attempt = try staging.loadLatestReplayableAttempt(transferID: prepared.transferID) ??
+            FolioleFramedSyncTransferWriter.prepare(
+                groupKey: groupKey, context: context, facts: prepared.facts,
+                blobs: prepared.blobs, staging: staging
+            )
         guard attempt.transferID == prepared.transferID else {
             throw invalid("framed_sync_transfer_identity_mismatch")
         }
-        let body = try FolioleFramedSyncTransferWriter.replay(attempt, staging: staging)
         let path = try framedPath(senderDeviceID, senderEpoch, receiverDeviceID, receiverEpoch)
-        let headers = framedHeaders(
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foliole-framed-outbound-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let requestURL = directory.appendingPathComponent("request.bin")
+        let responseURL = directory.appendingPathComponent("response.bin")
+        guard let output = OutputStream(url: requestURL, append: false) else {
+            throw invalid("framed_sync_stream_write_failed")
+        }
+        try FolioleFramedSyncTransferWriter.replay(attempt, staging: staging, output: output)
+        let headers = try framedHeaders(
             groupID: groupID, deviceID: senderDeviceID, workgroupKey: workgroupKey,
-            path: path, body: body
+            path: path, bodyURL: requestURL
         )
-        let receiptData = try await framedPost(
-            endpoint: endpoint, path: path, peer: .init(
+        guard let base = URL(string: endpoint), let url = URL(string: path, relativeTo: base) else {
+            throw invalid("framed_sync_endpoint_invalid")
+        }
+        _ = try await FolioleFramedSyncHTTPTransport.post(
+            endpoint: url.absoluteURL, peer: .init(
                 groupID: groupID, deviceID: receiverDeviceID,
                 libraryEpoch: receiverEpoch, memberAuthHeaders: headers
-            ), body: body
+            ), requestBodyURL: requestURL, responseBodyURL: responseURL
         )
+        let receiptData = try Data(contentsOf: responseURL)
         let receipt = try FolioleFramedSyncReceiptReader.read(
             receiptData, groupKey: groupKey, transferID: attempt.transferID, contentID: prepared.contentID,
             receiverDeviceID: receiverDeviceID, receiverLibraryEpoch: receiverEpoch
@@ -111,6 +131,27 @@ extension FolioleCompanionSyncPlugin {
         let timestamp = ISO8601DateFormatter().string(from: Date())
         let nonce = UUID().uuidString.lowercased()
         let digest = Data(SHA256.hash(data: body)).hex
+        let canonical = ["POST", path, timestamp, nonce, digest].joined(separator: "\n")
+        let signature = HMAC<SHA256>.authenticationCode(
+            for: Data(canonical.utf8), using: SymmetricKey(data: Data(workgroupKey.utf8))
+        ).map { String(format: "%02x", $0) }.joined()
+        return ["X-Device-Id": deviceID, "X-Nonce": nonce, "X-Signature": signature,
+                "X-Timestamp": timestamp, "X-Sync-Group-Id": groupID,
+                "X-Foliole-Body-Sha256": digest]
+    }
+
+    func framedHeaders(
+        groupID: String, deviceID: String, workgroupKey: String, path: String, bodyURL: URL
+    ) throws -> [String: String] {
+        let handle = try FileHandle(forReadingFrom: bodyURL)
+        defer { try? handle.close() }
+        var hasher = SHA256()
+        while let chunk = try handle.read(upToCount: 64 * 1024), !chunk.isEmpty {
+            hasher.update(data: chunk)
+        }
+        let timestamp = ISO8601DateFormatter().string(from: Date())
+        let nonce = UUID().uuidString.lowercased()
+        let digest = Data(hasher.finalize()).hex
         let canonical = ["POST", path, timestamp, nonce, digest].joined(separator: "\n")
         let signature = HMAC<SHA256>.authenticationCode(
             for: Data(canonical.utf8), using: SymmetricKey(data: Data(workgroupKey.utf8))
