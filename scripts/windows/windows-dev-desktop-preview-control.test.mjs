@@ -58,12 +58,15 @@ it('aligns the fixed checkout before installing the internal package', () => {
   const source = fs.readFileSync('scripts/windows/windows-dev-action.ps1', 'utf8');
   const pull = '& $systemNode $puller';
   const dependencies = '& $systemNode $systemNpmCli ci';
+  const electron = '& $systemNode $electronInstaller';
   const install = '& $systemNode $systemNpmCli run windows:package:internal:install';
   expect(source).toContain('$Action -eq "internal-install"');
   expect(source).toContain(dependencies);
+  expect(source).toContain(electron);
   expect(source).toContain(install);
   expect(source.indexOf(pull)).toBeLessThan(source.indexOf(dependencies));
-  expect(source.indexOf(dependencies)).toBeLessThan(source.indexOf(install));
+  expect(source.indexOf(dependencies)).toBeLessThan(source.indexOf(electron));
+  expect(source.indexOf(electron)).toBeLessThan(source.indexOf(install));
 });
 
 it('aligns the fixed checkout before opening the installed Internal app', () => {

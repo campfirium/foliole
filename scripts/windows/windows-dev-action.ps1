@@ -72,6 +72,11 @@ try {
         & $systemNode $systemNpmCli ci
         $runnerExit = $LASTEXITCODE
         if ($runnerExit -eq 0) {
+          $electronInstaller = Join-Path $repoRoot "node_modules\electron\install.js"
+          & $systemNode $electronInstaller
+          $runnerExit = $LASTEXITCODE
+        }
+        if ($runnerExit -eq 0) {
           & $systemNode $systemNpmCli run windows:package:internal:install
           $runnerExit = $LASTEXITCODE
         }
