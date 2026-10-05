@@ -16,7 +16,6 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
-import java.util.Collections;
 import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -34,7 +33,10 @@ final class FolioleCompanionFramedSyncInventoryClient {
         String receiverEpoch = required(call, "receiver_library_epoch");
         FolioleCompanionCurrentGroupCredential credential =
             FolioleCompanionCurrentGroupCredential.load(groupId);
-        String senderEpoch = localEpoch();
+        FolioleCompanionSyncGroupDataBridge bridge = FolioleCompanionSyncGroupDataBridge.current();
+        String senderEpoch = localEpoch(bridge);
+        List<InventoryEntry> localEntries = FolioleCompanionFramedSyncInventory.read(
+            bridge.request("read_framed_inventory", new JSONObject()));
         byte[] groupKey = groupKey(credential.workgroupKey);
         byte[] roundId = random(16);
         FramedSyncSessionContext sessionContext = new FramedSyncSessionContext(
@@ -42,7 +44,7 @@ final class FolioleCompanionFramedSyncInventoryClient {
         byte[] request;
         try (FramedSyncSessionNonceSQLite nonces = new FramedSyncSessionNonceSQLite(context)) {
             request = FramedSyncSessionWriter.encode(groupKey, sessionContext,
-                FramedSyncInventoryWire.encode(Collections.emptyList(), roundId), nonces);
+                FramedSyncInventoryWire.encode(localEntries, roundId), nonces);
         }
         String path = path(credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
         List<InventoryEntry> entries = FramedSyncHttpTransport.post(
@@ -98,8 +100,8 @@ final class FolioleCompanionFramedSyncInventoryClient {
         return URLEncoder.encode(value, "UTF-8");
     }
 
-    private static String localEpoch() throws Exception {
-        String value = FolioleCompanionSyncGroupDataBridge.current().request(
+    private static String localEpoch(FolioleCompanionSyncGroupDataBridge bridge) throws Exception {
+        String value = bridge.request(
             "load_member_state", new JSONObject()).optString("library_epoch", null);
         if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException("library_epoch_required");
