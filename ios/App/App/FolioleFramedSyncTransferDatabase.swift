@@ -128,6 +128,20 @@ enum FolioleFramedSyncTransferSchema {
         transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, sequence TEXT NOT NULL,
         frame_header BLOB NOT NULL, ciphertext BLOB NOT NULL, authenticated_plaintext BLOB NOT NULL,
         PRIMARY KEY (transfer_id, attempt_id, sequence))
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS framed_sync_ios_outbound_attempts (
+        transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, preamble BLOB NOT NULL,
+        state TEXT NOT NULL CHECK (state IN ('prepared','replayable')),
+        PRIMARY KEY (transfer_id, attempt_id))
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS framed_sync_ios_outbound_frames (
+        transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, sequence TEXT NOT NULL,
+        frame_header BLOB NOT NULL, ciphertext BLOB NOT NULL, authenticated_plaintext BLOB NOT NULL,
+        PRIMARY KEY (transfer_id, attempt_id, sequence),
+        FOREIGN KEY (transfer_id, attempt_id) REFERENCES framed_sync_ios_outbound_attempts
+        (transfer_id, attempt_id) ON DELETE CASCADE)
         """
     ]
 }
