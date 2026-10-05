@@ -19,10 +19,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
-import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -98,17 +95,8 @@ final class FolioleCompanionFramedSyncOutbound {
         String path,
         String bodySha256
     ) throws Exception {
-        String timestamp = Instant.now().toString();
-        String nonce = UUID.randomUUID().toString();
-        String canonical = "POST\n" + path + "\n" + timestamp + "\n" + nonce + "\n" + bodySha256;
-        Map<String, String> headers = new LinkedHashMap<>();
-        headers.put("X-Device-Id", credential.deviceId);
-        headers.put("X-Nonce", nonce);
-        headers.put("X-Signature", FolioleCompanionSyncGroupHmac.sign(credential.workgroupKey, canonical));
-        headers.put("X-Timestamp", timestamp);
-        headers.put("X-Sync-Group-Id", groupId);
-        headers.put("X-Foliole-Body-Sha256", bodySha256);
-        return headers;
+        return FolioleCompanionSyncGroupSigning.framedHeaders(
+            credential, groupId, path, bodySha256);
     }
 
     private static String bodySha256(

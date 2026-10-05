@@ -14,10 +14,18 @@ public final class FramedSyncSessionReader {
         FramedSyncSessionContext context,
         int maxFrames
     ) throws Exception {
+        return read(new FramedSyncStreamReader(input), groupKey, context, maxFrames);
+    }
+
+    public static Result read(
+        FramedSyncStreamReader stream,
+        byte[] groupKey,
+        FramedSyncSessionContext context,
+        int maxFrames
+    ) throws Exception {
         if (maxFrames < 1 || maxFrames > FramedSyncContract.MAX_DECODED_REPEATED_ITEMS + 2) {
             throw new IllegalArgumentException("session_frame_limit_invalid");
         }
-        FramedSyncStreamReader stream = new FramedSyncStreamReader(input);
         FramedSyncPreamble preamble = stream.readPreamble();
         byte[] sessionId = context.validate(preamble);
         List<FramedSyncValidatedMessage> messages = new ArrayList<>();

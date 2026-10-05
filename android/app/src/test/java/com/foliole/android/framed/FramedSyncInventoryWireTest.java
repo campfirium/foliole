@@ -24,5 +24,7 @@ public final class FramedSyncInventoryWireTest {
 
         assertEquals(3, messages.size());
         assertArrayEquals(roundId, FramedSyncInventoryWire.decodeRoundId(messages));
+        assertEquals(Collections.singletonList(entry),
+            FramedSyncInventoryWire.decodeEntries(messages, roundId));
     }
 }

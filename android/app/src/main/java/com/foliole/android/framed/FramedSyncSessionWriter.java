@@ -1,5 +1,6 @@
 package com.foliole.android.framed;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.security.SecureRandom;
 import java.util.List;
@@ -39,6 +40,15 @@ public final class FramedSyncSessionWriter {
                 groupKey, preamble, header, plaintext, index));
         }
         return output.toByteArray();
+    }
+
+    public static void replay(byte[] encoded, FramedSyncStreamWriter output) throws Exception {
+        FramedSyncStreamReader input = new FramedSyncStreamReader(new ByteArrayInputStream(encoded));
+        output.writePreamble(input.readPreamble().encoded());
+        for (FramedSyncWireFrame frame = input.readFrame(); frame != null; frame = input.readFrame()) {
+            output.writeFrame(frame.headerBytes(), frame.ciphertext());
+        }
+        output.flush();
     }
 
     private static byte[] random(int length) {

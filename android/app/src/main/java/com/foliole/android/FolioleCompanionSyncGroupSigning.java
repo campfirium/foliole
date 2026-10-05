@@ -7,6 +7,11 @@ import com.getcapacitor.PluginCall;
 
 import org.json.JSONObject;
 
+import java.time.Instant;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+
 final class FolioleCompanionSyncGroupSigning {
     private FolioleCompanionSyncGroupSigning() {}
 
@@ -33,6 +38,25 @@ final class FolioleCompanionSyncGroupSigning {
             .put("X-Nonce", nonce)
             .put("X-Signature", FolioleCompanionSyncGroupHmac.sign(credential.workgroupKey, canonical))
             .put("X-Timestamp", timestamp));
+    }
+
+    static Map<String, String> framedHeaders(
+        FolioleCompanionCurrentGroupCredential credential,
+        String groupId,
+        String path,
+        String bodySha256
+    ) throws Exception {
+        String timestamp = Instant.now().toString();
+        String nonce = UUID.randomUUID().toString();
+        String canonical = "POST\n" + path + "\n" + timestamp + "\n" + nonce + "\n" + bodySha256;
+        Map<String, String> headers = new LinkedHashMap<>();
+        headers.put("X-Device-Id", credential.deviceId);
+        headers.put("X-Nonce", nonce);
+        headers.put("X-Signature", FolioleCompanionSyncGroupHmac.sign(credential.workgroupKey, canonical));
+        headers.put("X-Timestamp", timestamp);
+        headers.put("X-Sync-Group-Id", groupId);
+        headers.put("X-Foliole-Body-Sha256", bodySha256);
+        return headers;
     }
 
     private static String required(PluginCall call, String key) {

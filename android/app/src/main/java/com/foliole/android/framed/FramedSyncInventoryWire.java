@@ -52,6 +52,22 @@ public final class FramedSyncInventoryWire {
         return roundId;
     }
 
+    public static List<InventoryEntry> decodeEntries(
+        List<FramedSyncValidatedMessage> messages,
+        byte[] expectedRoundId
+    ) throws Exception {
+        byte[] roundId = decodeRoundId(messages);
+        if (!MessageDigest.isEqual(roundId, expectedRoundId)) {
+            throw invalid("inventory_round_identity_mismatch");
+        }
+        List<InventoryEntry> entries = new ArrayList<>();
+        for (int index = 1; index < messages.size() - 1; index++) {
+            InventoryChunk chunk = (InventoryChunk) messages.get(index).payload().value();
+            entries.addAll(chunk.getEntriesList());
+        }
+        return Collections.unmodifiableList(entries);
+    }
+
     public static List<FramedSyncValidatedMessage> encode(
         List<InventoryEntry> entries, byte[] roundId
     ) throws Exception {
