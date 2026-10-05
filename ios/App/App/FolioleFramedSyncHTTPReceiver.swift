@@ -116,3 +116,39 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
         session = nil
     }
 }
+
+struct FolioleFramedSyncSessionReadResult {
+    let sessionID: Data
+    let messages: [FolioleFramedSyncValidatedMessage]
+}
+
+enum FolioleFramedSyncSessionReader {
+    static func read(
+        _ data: Data, groupKey: Data, context: FolioleFramedSyncSessionContext,
+        maximumFrames: Int
+    ) throws -> FolioleFramedSyncSessionReadResult {
+        guard (1...100_002).contains(maximumFrames) else {
+            throw FolioleFramedSyncValidationError("session_frame_limit_invalid")
+        }
+        let stream = InputStream(data: data)
+        let reader = FolioleFramedSyncStreamReader(input: stream)
+        let preamble = try reader.nextPreamble()
+        let sessionID = try context.validate(preamble)
+        var messages = [FolioleFramedSyncValidatedMessage]()
+        var sequence: UInt64 = 0
+        while let frame = try reader.nextFrame() {
+            guard messages.count < maximumFrames else {
+                throw FolioleFramedSyncValidationError("session_frame_limit_exceeded")
+            }
+            let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
+                groupKey: groupKey, preamble: preamble,
+                frame: frame, expectedSequence: sequence
+            )
+            messages.append(try FolioleFramedSyncCodec.decode(
+                plaintext, authenticatedFrameType: frame.header.frameType.rawValue
+            ))
+            sequence += 1
+        }
+        return .init(sessionID: sessionID, messages: messages)
+    }
+}

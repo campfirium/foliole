@@ -24,36 +24,38 @@ afterEach(() => {
   roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true }));
 });
 
-it('applies an authenticated Android fact and persists its receipt in the business database', async () => {
+it.each(['android', 'ios'] as const)(
+  'applies an authenticated %s fact and persists its receipt in the business database', async (kind) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-framed-apply-'));
   roots.push(root);
   const stagingPath = path.join(root, 'staging.db');
   const main = tracked(new Database(':memory:'));
   const staging = tracked(new Database(stagingPath));
   main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
-  installStaging(staging);
+  const prefix = `framed_sync_${kind}`;
+  installStaging(staging, prefix);
 
   const projection = projectDesktopFramedSyncNodeRecord(nodeRecord());
   const transferId = new Uint8Array(32).fill(1);
   const contentId = new Uint8Array(32).fill(2);
   const attemptId = new Uint8Array(16).fill(3);
   const blob = projection.manifest.blobs[0]!;
-  staging.prepare(`INSERT INTO framed_sync_android_transfers VALUES
+  staging.prepare(`INSERT INTO ${prefix}_transfers VALUES
     (?, ?, ?, ?, ?, ?, ?, 'ready_to_apply')`)
     .run(transferId, contentId, 'sender', 'sender-epoch', 'receiver', 'receiver-epoch', attemptId);
-  staging.prepare('INSERT INTO framed_sync_android_frames VALUES (?, ?, ?, ?, ?)').run(
+  staging.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, ?, ?, ?)`).run(
     transferId, attemptId, '0', 3,
     encodeValidatedProtocolMessage('fact', factToWire(projection.manifest.facts[0]!))
   );
-  staging.prepare('INSERT INTO framed_sync_android_available_blobs VALUES (?, ?, ?)')
+  staging.prepare(`INSERT INTO ${prefix}_available_blobs VALUES (?, ?, ?)`)
     .run(blob.sha256, Number(blob.byteLength), projection.bodyBlob);
-  staging.prepare('INSERT INTO framed_sync_android_blob_pins VALUES (?, ?, ?, ?, ?)')
+  staging.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, ?, ?)`)
     .run(transferId, blob.sha256, Number(blob.byteLength), blob.role, 1);
 
   const input = {
     receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch',
     senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch',
-    stagingKind: 'android' as const, stagingPath, transferId
+    stagingKind: kind, stagingPath, transferId
   };
   const port = createBetterSqliteDbPort(main, { name: 'framed-apply-test' });
   const receipt = await applyCompanionFramedSyncTransfer(port, input);
@@ -71,18 +73,18 @@ function tracked(database: Database.Database) {
   return database;
 }
 
-function installStaging(database: Database.Database) {
-  database.exec(`CREATE TABLE framed_sync_android_transfers (
+function installStaging(database: Database.Database, prefix: string) {
+  database.exec(`CREATE TABLE ${prefix}_transfers (
       transfer_id BLOB PRIMARY KEY, content_id BLOB NOT NULL,
       sender_device_id TEXT NOT NULL, sender_library_epoch TEXT NOT NULL,
       receiver_device_id TEXT NOT NULL, receiver_library_epoch TEXT NOT NULL,
       active_attempt_id BLOB NOT NULL, state TEXT NOT NULL);
-    CREATE TABLE framed_sync_android_frames (
+    CREATE TABLE ${prefix}_frames (
       transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, sequence TEXT NOT NULL,
       frame_type INTEGER NOT NULL, authenticated_plaintext BLOB NOT NULL);
-    CREATE TABLE framed_sync_android_available_blobs (
+    CREATE TABLE ${prefix}_available_blobs (
       sha256 BLOB PRIMARY KEY, byte_length INTEGER NOT NULL, data BLOB NOT NULL);
-    CREATE TABLE framed_sync_android_blob_pins (
+    CREATE TABLE ${prefix}_blob_pins (
       transfer_id BLOB NOT NULL, sha256 BLOB NOT NULL, byte_length INTEGER NOT NULL,
       role INTEGER NOT NULL, required INTEGER NOT NULL);`);
 }

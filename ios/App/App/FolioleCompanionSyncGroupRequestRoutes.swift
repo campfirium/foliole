@@ -36,6 +36,9 @@ extension FolioleCompanionSyncGroupJoinServer {
             stateChanged()
             return
         }
+        if request.method == "POST" && route == "/companion/framed-sync" {
+            return try respondFramedSync(connection, request)
+        }
         if request.method == "GET" && FolioleCompanionSyncIdentityRoutes.supports(route) {
             return try respondIdentity(connection, request)
         }

@@ -1,4 +1,6 @@
+import CryptoKit
 import Foundation
+import FolioleFramedSyncRuntime
 import SQLite3
 
 // sql-surface: ios-isolated-snapshot-owner
@@ -123,5 +125,71 @@ enum FolioleCompanionSyncGroupResources {
     private static func invalid(_ message: String) -> NSError {
         NSError(domain: "FolioleCompanionSyncGroupResources", code: 1,
                 userInfo: [NSLocalizedDescriptionKey: message])
+    }
+}
+
+enum FolioleFramedSyncInventoryWire {
+    static let maximumSessionFrames = 34
+    private static let chunkSize = 128
+
+    static func decodeRoundID(_ messages: [FolioleFramedSyncValidatedMessage]) throws -> Data {
+        guard (2...maximumSessionFrames).contains(messages.count),
+              case .inventoryBegin(let begin) = messages.first?.payload,
+              case .inventoryEnd(let end) = messages.last?.payload else {
+            throw invalid("inventory_exchange_incomplete")
+        }
+        var count: UInt64 = 0
+        var chunkBytes = Data()
+        for (offset, message) in messages.dropFirst().dropLast().enumerated() {
+            guard case .inventoryChunk(let chunk) = message.payload,
+                  chunk.roundID == begin.roundID,
+                  chunk.chunkIndex == UInt32(offset) else {
+                throw invalid("inventory_chunk_sequence_invalid")
+            }
+            count += UInt64(chunk.entries.count)
+            chunkBytes.append(try FolioleFramedSyncCodec.encode(message))
+        }
+        guard end.roundID == begin.roundID,
+              end.inventoryHash == Data(SHA256.hash(data: chunkBytes)),
+              count == begin.entryCount else {
+            throw invalid("inventory_exchange_incomplete")
+        }
+        return begin.roundID
+    }
+
+    static func encode(
+        entries: [Foliole_Sync_V22_InventoryEntry], roundID: Data
+    ) throws -> [FolioleFramedSyncValidatedMessage] {
+        guard entries.count <= 4_096, roundID.count == 16 else {
+            throw FolioleFramedSyncValidationError("inventory_input_invalid")
+        }
+        var begin = Foliole_Sync_V22_InventoryBegin()
+        begin.roundID = roundID; begin.entryCount = UInt64(entries.count)
+        var result = [try validated { $0.inventoryBegin = begin }]
+        var chunkBytes = Data()
+        for offset in stride(from: 0, to: entries.count, by: chunkSize) {
+            var chunk = Foliole_Sync_V22_InventoryChunk()
+            chunk.roundID = roundID; chunk.chunkIndex = UInt32(offset / chunkSize)
+            chunk.entries = Array(entries[offset..<min(offset + chunkSize, entries.count)])
+            let message = try validated { $0.inventoryChunk = chunk }
+            chunkBytes.append(try FolioleFramedSyncCodec.encode(message)); result.append(message)
+        }
+        var end = Foliole_Sync_V22_InventoryEnd()
+        end.roundID = roundID; end.inventoryHash = Data(SHA256.hash(data: chunkBytes))
+        result.append(try validated { $0.inventoryEnd = end })
+        return result
+    }
+
+    private static func validated(
+        _ update: (inout Foliole_Sync_V22_ProtocolMessage) -> Void
+    ) throws -> FolioleFramedSyncValidatedMessage {
+        var message = Foliole_Sync_V22_ProtocolMessage(); update(&message)
+        return try FolioleFramedSyncCodec.validateOutbound(
+            message, authenticatedFrameType: FolioleFramedSyncFrameType.sessionControl.rawValue
+        )
+    }
+
+    private static func invalid(_ code: String) -> FolioleFramedSyncValidationError {
+        FolioleFramedSyncValidationError(code)
     }
 }

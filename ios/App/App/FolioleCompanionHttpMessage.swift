@@ -20,8 +20,10 @@ struct FolioleCompanionHttpMessage {
             throw invalid("invalid_http_headers")
         }
         let requestLine = headers.split(separator: "\r\n").first.map(String.init) ?? ""
-        let pushLimit = requestLine.hasPrefix("POST /companion/sync-identity-push ")
-            ? 2 * 1024 * 1024 : maximumBytes
+        let pushLimit = requestLine.hasPrefix("POST /companion/framed-sync")
+            ? 36 * 1024 * 1024
+            : requestLine.hasPrefix("POST /companion/sync-identity-push ")
+                ? 2 * 1024 * 1024 : maximumBytes
         guard data.count <= pushLimit else { throw invalid("request_too_large") }
         let length = headers.split(separator: "\r\n").dropFirst().compactMap { line -> Int? in
             let parts = line.split(separator: ":", maxSplits: 1)
@@ -54,7 +56,9 @@ struct FolioleCompanionHttpMessage {
             }
         }
         let body: [String: Any]
-        if rawBody.isEmpty { body = [:] }
+        let mediaType = headers["content-type"]?.split(separator: ";", maxSplits: 1).first?
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if rawBody.isEmpty || mediaType == FolioleFramedSyncHTTPTransport.contentType { body = [:] }
         else {
             let value = try JSONSerialization.jsonObject(with: rawBody)
             guard let object = value as? [String: Any] else { throw invalid("invalid_json_body") }
@@ -73,14 +77,15 @@ struct FolioleCompanionHttpMessage {
 
     static func response(
         status: Int, contentType: String, body: Data, originalContentType: String? = nil,
-        totalBytes: Int? = nil
+        totalBytes: Int? = nil, headers: [String: String] = [:]
     ) -> Data {
         let reason = status == 200 ? "OK" : status == 202 ? "Accepted" : status == 401 ? "Unauthorized" :
             status == 404 ? "Not Found" : status == 409 ? "Conflict" :
             status == 413 ? "Payload Too Large" : status == 500 ? "Internal Server Error" : "Bad Request"
         let original = originalContentType.map { "X-Foliole-Original-Content-Type: \($0)\r\n" } ?? ""
         let total = totalBytes.map { "X-Foliole-Resource-Total-Bytes: \($0)\r\n" } ?? ""
-        let head = "HTTP/1.1 \(status) \(reason)\r\nContent-Type: \(contentType)\r\n" + original + total +
+        let extra = headers.keys.sorted().map { "\($0): \(headers[$0]!)\r\n" }.joined()
+        let head = "HTTP/1.1 \(status) \(reason)\r\nContent-Type: \(contentType)\r\n" + original + total + extra +
             "Content-Length: \(body.count)\r\nConnection: close\r\n\r\n"
         return Data(head.utf8) + body
     }

@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import FolioleFramedSyncRuntime
 
 enum FolioleCompanionSyncGroupJoinCrypto {
     private static let algorithm = "ECDH-P256-HKDF-SHA256-AES-GCM"
@@ -57,4 +58,119 @@ enum Base64URL {
         NSError(domain: "FolioleCompanionBase64URL", code: 1,
                 userInfo: [NSLocalizedDescriptionKey: "base64url_invalid"])
     }
+}
+
+struct FolioleFramedSyncSessionContext {
+    private static let domain = Data("foliole-framed-sync-session-context-v1".utf8)
+    let groupID: String
+    let initiatorDeviceID: String
+    let initiatorLibraryEpoch: String
+    let responderDeviceID: String
+    let responderLibraryEpoch: String
+
+    init(
+        groupID: String, initiatorDeviceID: String, initiatorLibraryEpoch: String,
+        responderDeviceID: String, responderLibraryEpoch: String
+    ) throws {
+        self.groupID = try Self.text(groupID)
+        self.initiatorDeviceID = try Self.text(initiatorDeviceID)
+        self.initiatorLibraryEpoch = try Self.text(initiatorLibraryEpoch)
+        self.responderDeviceID = try Self.text(responderDeviceID)
+        self.responderLibraryEpoch = try Self.text(responderLibraryEpoch)
+    }
+
+    func validate(_ preamble: FolioleFramedSyncPreamble) throws -> Data {
+        guard preamble.contextKind == 1 else { throw invalid("session_preamble_required") }
+        guard preamble.startingSequence == 0 else { throw invalid("session_starting_sequence_invalid") }
+        let sessionID = preamble.identifier
+        guard deriveContextID(sessionID: sessionID) == preamble.contextID else {
+            throw invalid("session_context_mismatch")
+        }
+        return sessionID
+    }
+
+    func deriveContextID(sessionID: Data) -> Data {
+        var bytes = Self.domain + Data([0, 0, 22])
+        [groupID, initiatorDeviceID, initiatorLibraryEpoch,
+         responderDeviceID, responderLibraryEpoch].forEach { bytes.appendLengthPrefixed($0) }
+        bytes.append(sessionID)
+        return Data(SHA256.hash(data: bytes))
+    }
+
+    private static func text(_ value: String) throws -> String {
+        guard !value.isEmpty, value.utf8.count <= 64 * 1024 else {
+            throw invalid("session_context_text_invalid")
+        }
+        return value
+    }
+
+    private func invalid(_ code: String) -> FolioleFramedSyncValidationError { Self.invalid(code) }
+    private static func invalid(_ code: String) -> FolioleFramedSyncValidationError {
+        FolioleFramedSyncValidationError(code)
+    }
+}
+
+enum FolioleFramedSyncFrameCrypto {
+    static func encrypt(
+        groupKey: Data, preamble: FolioleFramedSyncPreamble,
+        header: Data, plaintext: Data, sequence: UInt64
+    ) throws -> Data {
+        let sealed = try AES.GCM.seal(
+            plaintext, using: try frameKey(groupKey, preamble),
+            nonce: try nonce(preamble.noncePrefix, sequence),
+            authenticating: preamble.encoded + header
+        )
+        return sealed.ciphertext + sealed.tag
+    }
+
+    static func decrypt(
+        groupKey: Data, preamble: FolioleFramedSyncPreamble,
+        frame: FolioleFramedSyncWireFrame, expectedSequence: UInt64
+    ) throws -> Data {
+        guard frame.header.sequence == expectedSequence else {
+            throw FolioleFramedSyncValidationError("frame_sequence_not_contiguous")
+        }
+        guard preamble.compression == 0 else {
+            throw FolioleFramedSyncValidationError("gzip_decoder_required")
+        }
+        guard frame.ciphertext.count >= 16 else {
+            throw FolioleFramedSyncValidationError("frame_authentication_failed")
+        }
+        let box = try AES.GCM.SealedBox(
+            nonce: try nonce(preamble.noncePrefix, frame.header.sequence),
+            ciphertext: frame.ciphertext.dropLast(16), tag: frame.ciphertext.suffix(16)
+        )
+        do {
+            return try AES.GCM.open(
+                box, using: try frameKey(groupKey, preamble),
+                authenticating: preamble.encoded + frame.headerBytes
+            )
+        } catch {
+            throw FolioleFramedSyncValidationError("frame_authentication_failed")
+        }
+    }
+
+    private static func frameKey(
+        _ groupKey: Data, _ preamble: FolioleFramedSyncPreamble
+    ) throws -> SymmetricKey {
+        guard groupKey.count == 32 else {
+            throw FolioleFramedSyncValidationError("group_key_must_be_32_bytes")
+        }
+        let label = preamble.contextKind == 1
+            ? "Foliole framed sync v22 session" : "Foliole framed sync v22 transfer"
+        return HKDF<SHA256>.deriveKey(
+            inputKeyMaterial: SymmetricKey(data: groupKey), salt: preamble.identifier,
+            info: Data(label.utf8) + Data([0]) + preamble.contextID, outputByteCount: 32
+        )
+    }
+
+    private static func nonce(_ prefix: Data, _ sequence: UInt64) throws -> AES.GCM.Nonce {
+        var bytes = prefix
+        bytes.appendUInt64BE(sequence)
+        return try AES.GCM.Nonce(data: bytes)
+    }
+}
+
+extension FolioleFramedSyncPreamble {
+    var compression: UInt8 { encoded[13] }
 }

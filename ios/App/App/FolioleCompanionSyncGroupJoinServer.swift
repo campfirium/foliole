@@ -1,4 +1,5 @@
 import Foundation
+import FolioleFramedSyncRuntime
 import Network
 
 final class FolioleCompanionSyncGroupJoinServer {
@@ -12,6 +13,7 @@ final class FolioleCompanionSyncGroupJoinServer {
     let stateChanged: () -> Void
     private(set) var port: UInt16?
     let runtimeInstanceId: String
+    let framedTransfers: FolioleFramedSyncTransferReceiver?
 
     init(
         discovery: [String: Any], provider: FolioleCompanionSyncGroupJoinProvider,
@@ -22,6 +24,14 @@ final class FolioleCompanionSyncGroupJoinServer {
         self.provider = provider
         self.dataBridge = dataBridge
         snapshots = dataBridge.map(FolioleCompanionSyncGroupSnapshot.init)
+        if dataBridge != nil {
+            let support = try FileManager.default.url(
+                for: .applicationSupportDirectory, in: .userDomainMask,
+                appropriateFor: nil, create: true
+            )
+            let url = support.appendingPathComponent("Foliole/framed-sync/ios-transfer.db")
+            framedTransfers = try .init(database: FolioleFramedSyncTransferDatabase(url: url))
+        } else { framedTransfers = nil }
         self.stateChanged = stateChanged
         runtimeInstanceId = discovery["runtime_instance_id"] as? String ?? ""
         listener = try NWListener(using: .tcp, on: .any)
@@ -91,6 +101,69 @@ final class FolioleCompanionSyncGroupJoinServer {
             workgroupKey: provider.workgroupKey, totalBytes: totalBytes
         )
         connection.send(content: response, completion: .contentProcessed { _ in connection.cancel() })
+    }
+
+    func respondFramedSync(
+        _ connection: NWConnection, _ request: FolioleCompanionHttpMessage
+    ) throws {
+        let contentType = request.header("content-type")?.split(separator: ";", maxSplits: 1).first?
+            .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard contentType == FolioleFramedSyncHTTPTransport.contentType else {
+            return try send(connection, 415, ["error": "framed_sync_content_type_required"])
+        }
+        guard let snapshots, let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
+        let peer = try authenticate(request)
+        let initiator = try framedIdentity(request, "initiator_device_id")
+        guard initiator == peer else { throw Self.invalid("framed_sync_initiator_identity_mismatch") }
+        let initiatorEpoch = try framedIdentity(request, "initiator_library_epoch")
+        let responder = try framedIdentity(request, "responder_device_id")
+        let responderEpoch = try framedIdentity(request, "responder_library_epoch")
+        let localDevice = try Self.requiredDiscovery(discovery, "provider_device_id")
+        let memberState = try dataBridge.request("load_member_state", [:])
+        guard let localEpoch = memberState["library_epoch"] as? String, !localEpoch.isEmpty,
+              responder == localDevice, responderEpoch == localEpoch else {
+            return try send(connection, 409, ["error": "framed_sync_responder_identity_mismatch"])
+        }
+        let preamble = try FolioleFramedSyncPreamble(
+            decoding: Data(request.bodyData.prefix(FolioleFramedSyncPreamble.byteCount))
+        )
+        if preamble.contextKind == 2 {
+            return try respondFramedTransfer(
+                connection, request, peer: peer, localDevice: localDevice, localEpoch: localEpoch,
+                initiator: initiator, initiatorEpoch: initiatorEpoch,
+                groupKey: Base64URL.decode(provider.workgroupKey)
+            )
+        }
+        let context = try FolioleFramedSyncSessionContext(
+            groupID: provider.groupId, initiatorDeviceID: initiator,
+            initiatorLibraryEpoch: initiatorEpoch, responderDeviceID: responder,
+            responderLibraryEpoch: responderEpoch
+        )
+        let groupKey = try Base64URL.decode(provider.workgroupKey)
+        let session = try FolioleFramedSyncSessionReader.read(
+            request.bodyData, groupKey: groupKey, context: context,
+            maximumFrames: FolioleFramedSyncInventoryWire.maximumSessionFrames
+        )
+        let roundID = try FolioleFramedSyncInventoryWire.decodeRoundID(session.messages)
+        let response = try snapshots.refresh(peer) {
+            try FolioleFramedSyncSessionWriter.encode(
+                groupKey: groupKey, context: context,
+                messages: FolioleFramedSyncInventoryWire.encode(
+                    entries: try FolioleCompanionFramedSyncInventory.read($0), roundID: roundID
+                )
+            )
+        }
+        let wire = FolioleCompanionHttpMessage.response(
+            status: 200, contentType: FolioleFramedSyncHTTPTransport.contentType, body: response,
+            headers: ["X-Foliole-Device-Id": localDevice, "X-Foliole-Library-Epoch": localEpoch]
+        )
+        connection.send(content: wire, completion: .contentProcessed { _ in connection.cancel() })
+    }
+
+    private func framedIdentity(_ request: FolioleCompanionHttpMessage, _ name: String) throws -> String {
+        guard let value = Self.query(request.path, name)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else { throw Self.invalid("framed_sync_identity_context_required") }
+        return value
     }
 
     private func respondError(_ connection: NWConnection, _ error: Error) {
