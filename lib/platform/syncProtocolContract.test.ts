@@ -16,10 +16,10 @@ function descriptor(overrides: Partial<SyncProtocolDescriptor> = {}) {
 }
 
 describe('syncProtocolContract', () => {
-  it('accepts the exact v22 descriptor and returns a negotiated version', () => {
+  it('accepts the exact v21 descriptor and returns a negotiated version', () => {
     expect(evaluateSyncProtocolCompatibility(descriptor())).toEqual({
       missing_capabilities: [],
-      negotiated_version: 22,
+      negotiated_version: 21,
       reason: null,
       status: 'compatible'
     });
@@ -33,7 +33,7 @@ describe('syncProtocolContract', () => {
     [descriptor({ max_supported_version: 11, min_supported_version: 11, version: 11 }), 'protocol_version_unsupported'],
     [descriptor({ max_supported_version: 15, min_supported_version: 15, version: 15 }), 'protocol_version_unsupported'],
     [descriptor({ version: 2 }), 'protocol_version_unsupported'],
-    [descriptor({ min_supported_version: 23 }), 'protocol_metadata_invalid'],
+    [descriptor({ min_supported_version: 22 }), 'protocol_metadata_invalid'],
     [descriptor({ max_supported_version: 5, min_supported_version: 5, version: 5 }), 'protocol_version_unsupported']
   ])('rejects %j as %s', (remote, reason) => {
     expect(evaluateSyncProtocolCompatibility(remote)).toMatchObject({ reason, status: 'incompatible' });
@@ -65,7 +65,7 @@ describe('syncProtocolContract', () => {
     const hint = parseSyncProtocolTxt(txt);
     expect(txt).not.toHaveProperty('protocol_capabilities');
     expect(Object.entries(txt).every(([key, value]) => Buffer.byteLength(`${key}=${value}`) <= 255)).toBe(true);
-    expect(hint).toEqual({ max_supported_version: 22, min_supported_version: 22, version: 22 });
+    expect(hint).toEqual({ max_supported_version: 21, min_supported_version: 21, version: 21 });
     expect(evaluateSyncProtocolVersionHint(hint)).toMatchObject({ status: 'compatible' });
     expect(syncProtocolVersionHintMatchesDescriptor(hint, CURRENT_SYNC_PROTOCOL_DESCRIPTOR)).toBe(true);
   });
@@ -80,7 +80,7 @@ describe('syncProtocolContract', () => {
   });
 });
 
-it('requires the display-name contract as part of the exact v22 generation', () => {
+it('requires the display-name contract as part of the exact v21 generation', () => {
   const legacyV2 = descriptor({
     max_supported_version: 2,
     min_supported_version: 2,
@@ -95,7 +95,7 @@ it('requires the display-name contract as part of the exact v22 generation', () 
     status: 'incompatible'
   });
   expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR))
-    .toMatchObject({ negotiated_version: 22, status: 'compatible' });
+    .toMatchObject({ negotiated_version: 21, status: 'compatible' });
 });
 
 it('rejects peers that cannot preserve article image sources', () => {

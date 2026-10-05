@@ -174,9 +174,9 @@
         "workgroup-aead-v1",
         "workgroup-restore-v1"
       ],
-      "max_supported_version": 22,
-      "min_supported_version": 22,
-      "version": 22
+      "max_supported_version": 21,
+      "min_supported_version": 21,
+      "version": 21
     },
     "resourceKinds": [
       "attachment",
@@ -259,9 +259,9 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 22,
-    "min_supported_version": 22,
-    "version": 22
+    "max_supported_version": 21,
+    "min_supported_version": 21,
+    "version": 21
   },
   "schemaVersion": 92,
   "stateCopyIndex": 2,

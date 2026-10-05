@@ -46,13 +46,13 @@ describe('prepared complete member data plane contract', () => {
     expect(COMPLETE_MEMBER_DATA_PLANE_CONTRACT.lifecycle).toEqual(['delete', 'restore']);
   });
 
-  it('keeps the complete member capability in the production v22 descriptor', () => {
-    expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(22);
+  it('keeps the complete member capability in the production v21 descriptor', () => {
+    expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(21);
     expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities).toContain(COMPLETE_MEMBER_DATA_PLANE_CAPABILITY);
     expect(PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR).toMatchObject({
-      version: 22,
-      min_supported_version: 22,
-      max_supported_version: 22
+      version: 21,
+      min_supported_version: 21,
+      max_supported_version: 21
     });
     expect(PREPARED_COMPLETE_MEMBER_PROTOCOL_DESCRIPTOR.capabilities)
       .toContain(COMPLETE_MEMBER_DATA_PLANE_CAPABILITY);
