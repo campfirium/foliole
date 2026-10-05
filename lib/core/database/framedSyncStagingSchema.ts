@@ -65,13 +65,27 @@ export const FRAMED_SYNC_STAGING_SCHEMA = [
     byte_offset INTEGER NOT NULL CHECK (byte_offset >= 0), data BLOB NOT NULL,
     PRIMARY KEY (transfer_id, attempt_id, sha256, byte_offset), FOREIGN KEY (transfer_id, attempt_id)
       REFERENCES framed_sync_inbound_attempts(transfer_id, attempt_id) ON DELETE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS framed_sync_resource_blob_chunks (
+    transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, sha256 BLOB NOT NULL,
+    byte_offset INTEGER NOT NULL CHECK (byte_offset >= 0), byte_length INTEGER NOT NULL CHECK (byte_length > 0),
+    chunk_sha256 BLOB NOT NULL, PRIMARY KEY (transfer_id, attempt_id, sha256, byte_offset),
+    FOREIGN KEY (transfer_id, attempt_id)
+      REFERENCES framed_sync_inbound_attempts(transfer_id, attempt_id) ON DELETE CASCADE)`,
   `CREATE TABLE IF NOT EXISTS framed_sync_available_blobs (
     sha256 BLOB PRIMARY KEY, byte_length INTEGER NOT NULL CHECK (byte_length >= 0), data BLOB NOT NULL)`,
+  `CREATE TABLE IF NOT EXISTS framed_sync_available_resources (
+    sha256 BLOB PRIMARY KEY, byte_length INTEGER NOT NULL CHECK (byte_length >= 0), storage_key TEXT NOT NULL)`,
   `CREATE TABLE IF NOT EXISTS framed_sync_blob_pins (
     transfer_id BLOB NOT NULL REFERENCES framed_sync_inbound_transfers(transfer_id) ON DELETE CASCADE,
     sha256 BLOB NOT NULL REFERENCES framed_sync_available_blobs(sha256),
     byte_length INTEGER NOT NULL CHECK (byte_length >= 0), role INTEGER NOT NULL,
     required INTEGER NOT NULL CHECK (required IN (0, 1)), PRIMARY KEY (transfer_id, sha256))`,
+  `CREATE TABLE IF NOT EXISTS framed_sync_resource_pins (
+    transfer_id BLOB NOT NULL REFERENCES framed_sync_inbound_transfers(transfer_id) ON DELETE CASCADE,
+    sha256 BLOB NOT NULL REFERENCES framed_sync_available_resources(sha256),
+    byte_length INTEGER NOT NULL CHECK (byte_length >= 0), role INTEGER NOT NULL,
+    required INTEGER NOT NULL CHECK (required IN (0, 1)), storage_key TEXT NOT NULL,
+    PRIMARY KEY (transfer_id, sha256))`,
   `CREATE TABLE IF NOT EXISTS framed_sync_receipts (
     transfer_id BLOB PRIMARY KEY, content_id BLOB NOT NULL, receiver_device_id TEXT NOT NULL,
     receiver_library_epoch TEXT NOT NULL, applied_state_hash BLOB NOT NULL)`,

@@ -8,6 +8,7 @@ import {
   createDesktopFramedSyncReceiptStaging,
   type DesktopFramedSyncTerminationPort
 } from './desktopFramedSyncReceiptStaging.js';
+import { createDesktopFramedSyncResourceStaging } from './desktopFramedSyncResourceStaging.js';
 
 export type DesktopFramedSyncStagingPort = FramedSyncStagingPort & DesktopFramedSyncTerminationPort;
 
@@ -16,6 +17,7 @@ export function createDesktopFramedSyncStaging(db: DbPort): DesktopFramedSyncSta
     ...createDesktopFramedSyncOutboundStaging(db),
     ...createDesktopFramedSyncInboundStaging(db),
     ...createDesktopFramedSyncBlobStaging(db),
+    ...createDesktopFramedSyncResourceStaging(db),
     ...createDesktopFramedSyncReceiptStaging(db)
   };
 }

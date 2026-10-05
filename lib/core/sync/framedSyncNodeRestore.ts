@@ -123,7 +123,8 @@ export function restoreFramedSyncNodeRecord(input: {
 }): NativeSyncNodeRecord {
   const { bodyBlob, fact, manifestBlob } = input;
   assertNodeVersionFactShape(fact);
-  if (fact.blobs.length !== 1 || !sameBlob(fact.blobs[0]!, manifestBlob) ||
+  const bodyDescriptors = fact.blobs.filter((blob) => blob.role === 1);
+  if (bodyDescriptors.length !== 1 || !sameBlob(bodyDescriptors[0]!, manifestBlob) ||
       manifestBlob.byteLength !== BigInt(bodyBlob.byteLength) ||
       !sameBlob(manifestBlob, { ...manifestBlob, sha256: sha256(bodyBlob) })) {
     throw new Error('node_version_projection_body_blob_invalid');

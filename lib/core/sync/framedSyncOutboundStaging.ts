@@ -12,6 +12,7 @@ import {
   commitFramedSyncFrame,
   finalizeFramedSyncAttempt,
   loadReplayableFramedSyncFrames,
+  streamReplayableFramedSyncFrames,
   persistFramedSyncAttempt
 } from './framedSyncAttemptStaging.js';
 import type { PreparedTransferAttempt, StoredEncryptedFrame } from './framedSyncContract.js';
@@ -69,6 +70,9 @@ export function createFramedSyncOutboundStaging(db: DbPort) {
     },
     loadReplayableFrames(transferId: Uint8Array, attemptId: Uint8Array) {
       return loadReplayableFramedSyncFrames(db, transferId, 'transfer', attemptId);
+    },
+    streamReplayableFrames(transferId: Uint8Array, attemptId: Uint8Array) {
+      return streamReplayableFramedSyncFrames(db, transferId, 'transfer', attemptId);
     }
   };
 }

@@ -3,21 +3,24 @@ import type { OutboundPublishInput } from '../../lib/core/sync/framedSyncStaging
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 
 import { processFrameStream } from './desktopFramedSyncProcessWire.js';
-import { framedSyncEncodedLength, framedSyncEncodedSha256 } from './desktopFramedSyncStream.js';
+import { inspectFramedSyncEncodedStream } from './desktopFramedSyncStream.js';
 
 export async function loadDesktopFramedSyncPreparedTransferBody(input: {
   attempt: PreparedTransferAttempt;
   publication: OutboundPublishInput;
   staging: FramedSyncStagingPort;
 }) {
-  const frames = await input.staging.loadReplayableFrames(
+  const inspectFrames = input.staging.streamReplayableFrames(
     input.publication.transferId,
     input.attempt.attemptId
   );
+  const inspected = await inspectFramedSyncEncodedStream(input.attempt.preamble, processFrameStream(inspectFrames));
   return {
-    bodySha256: framedSyncEncodedSha256(input.attempt.preamble, frames),
-    contentLength: framedSyncEncodedLength(input.attempt.preamble, frames),
-    frames: processFrameStream(frames),
+    ...inspected,
+    frames: processFrameStream(input.staging.streamReplayableFrames(
+      input.publication.transferId,
+      input.attempt.attemptId
+    )),
     preamble: input.attempt.preamble
   };
 }

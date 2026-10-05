@@ -36,6 +36,10 @@ export interface FramedSyncStagingPort {
     transferId: Uint8Array,
     attemptId: Uint8Array
   ): Promise<readonly StoredEncryptedFrame[]>;
+  streamReplayableFrames(
+    transferId: Uint8Array,
+    attemptId: Uint8Array
+  ): AsyncIterable<StoredEncryptedFrame>;
   commitOutboundReceipt(receipt: TransferReceiptStage): Promise<'committed' | 'identical'>;
   releaseOutboundHolds(transferId: Uint8Array): Promise<void>;
 
@@ -53,11 +57,20 @@ export interface FramedSyncStagingPort {
   loadAttemptFacts(transferId: Uint8Array, attemptId: Uint8Array): Promise<readonly InboundFactInput[]>;
   commitBlobOfferAndMissingSet(input: BlobOfferTransactionInput): Promise<readonly Uint8Array[]>;
   writeBlobChunk(input: BlobChunkInput): Promise<'created' | 'identical'>;
+  stageResourceBlobChunk(input: BlobChunkInput & Readonly<{
+    chunkSha256: Uint8Array;
+  }>): Promise<'created' | 'identical'>;
   verifyAndMarkBlobAvailable(
     transferId: Uint8Array,
     attemptId: Uint8Array,
     sha256: Uint8Array
   ): Promise<'available' | 'identical'>;
+  verifyAndMarkResourceBlobAvailable(input: Readonly<{
+    attemptId: Uint8Array;
+    sha256: Uint8Array;
+    storageKey: string;
+    transferId: Uint8Array;
+  }>): Promise<'available' | 'identical'>;
   markReadyToApply(transferId: Uint8Array): Promise<void>;
   commitApplyAndReceipt(input: ApplyCommitInput): Promise<TransferReceiptStage>;
   loadReceipt(transferId: Uint8Array): Promise<TransferReceiptStage | null>;

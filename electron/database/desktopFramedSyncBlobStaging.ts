@@ -163,7 +163,9 @@ function createBlobPromotionStaging(db: DbPort) {
           WHERE transfer_id = ? AND attempt_id = ?`, [transferId, framedSyncBytes(value, 'active_attempt_id')]);
         if (Number(facts?.count) !== declaration.facts.length) failFramedSync('inbound_facts_incomplete');
         const rows = await tx.query<DbRow>('SELECT * FROM framed_sync_blob_pins WHERE transfer_id = ?', [transferId]);
-        const pins = rows.map((row) => ({ byteLength: framedSyncBigInt(row, 'byte_length'), durable: true as const,
+        const resourceRows = await tx.query<DbRow>(
+          'SELECT * FROM framed_sync_resource_pins WHERE transfer_id = ?', [transferId]);
+        const pins = [...rows, ...resourceRows].map((row) => ({ byteLength: framedSyncBigInt(row, 'byte_length'), durable: true as const,
           required: Number(row.required) === 1, role: Number(row.role), sha256: framedSyncBytes(row, 'sha256'),
           transferId, verified: true as const }));
         assertRequiredBlobsAvailable(transferId, declaration.blobs.filter((blob) => blob.required), pins);
@@ -188,6 +190,7 @@ function createBlobPromotionStaging(db: DbPort) {
           failFramedSync('termination_ack_required_for_pin_release');
         }
         await tx.run('DELETE FROM framed_sync_blob_pins WHERE transfer_id = ?', [transferId]);
+        await tx.run('DELETE FROM framed_sync_resource_pins WHERE transfer_id = ?', [transferId]);
       });
     }
   };

@@ -18,13 +18,16 @@ export class DesktopFramedSyncInboundBlobSet {
   readonly #entries: Map<string, Entry>;
 
   constructor(descriptors: readonly ManifestBlobDescriptor[]) {
-    this.#entries = new Map(descriptors.map((descriptor) => [bytesToHex(descriptor.sha256), {
+    const bodyDescriptors = descriptors.filter((descriptor) => descriptor.role === 1);
+    this.#entries = new Map(bodyDescriptors.map((descriptor) => [bytesToHex(descriptor.sha256), {
       chunks: [], descriptor
     }]));
-    if (this.#entries.size !== descriptors.length) {
+    if (this.#entries.size !== bodyDescriptors.length) {
       throw new Error('framed_sync_blob_content_set_mismatch');
     }
   }
+
+  has(sha256Value: Uint8Array) { return this.#entries.has(bytesToHex(sha256Value)); }
 
   append(sha256Value: Uint8Array, offset: bigint, data: Uint8Array) {
     const entry = this.#entries.get(bytesToHex(sha256Value));

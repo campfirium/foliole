@@ -76,7 +76,10 @@ function snapshotFields(snapshot: NativeSyncNodeRecord['snapshot'], bodyHash: st
   ] satisfies CanonicalField[];
 }
 
-export function projectFramedSyncNodeRecord(record: NativeSyncNodeRecord): FramedSyncNodeProjection {
+export function projectFramedSyncNodeRecord(
+  record: NativeSyncNodeRecord,
+  resourceBlobs: readonly CanonicalBlob[] = []
+): FramedSyncNodeProjection {
   if (!record.version_id || record.snapshot.id !== record.object_id ||
       !record.content_hash || !/^[a-f0-9]{64}$/u.test(record.content_hash)) {
     throw new Error('node_version_projection_identity_invalid');
@@ -89,7 +92,7 @@ export function projectFramedSyncNodeRecord(record: NativeSyncNodeRecord): Frame
     byteLength: BigInt(bodyBlob.byteLength), required: true, role: 1, sha256: bodyHash
   };
   const fact: CanonicalFact = {
-    blobs: [blob],
+    blobs: [blob, ...resourceBlobs],
     body: [
       field('ancestor_version_ids', stringList(record.ancestor_version_ids)),
       field('content_hash', scalarValue(record.content_hash)),
@@ -110,18 +113,21 @@ export function projectFramedSyncNodeRecord(record: NativeSyncNodeRecord): Frame
     sharedStateHash: hexToBytes(record.content_hash)
   };
   assertNodeVersionFactShape(fact);
-  return { bodyBlob, manifest: { blobs: [blob], facts: [fact] } };
+  return { bodyBlob, manifest: { blobs: fact.blobs, facts: [fact] } };
 }
 
 export function restoreFramedSyncProjectedNodeRecord(
   projection: FramedSyncNodeProjection
 ): NativeSyncNodeRecord {
-  if (projection.manifest.facts.length !== 1 || projection.manifest.blobs.length !== 1) {
+  if (projection.manifest.facts.length !== 1) {
     throw new Error('node_version_projection_manifest_invalid');
   }
+  const fact = projection.manifest.facts[0];
+  const manifestBlob = projection.manifest.blobs.find((blob) => blob.role === 1);
+  if (!fact || !manifestBlob) throw new Error('node_version_projection_manifest_invalid');
   return restoreFramedSyncNodeRecord({
     bodyBlob: projection.bodyBlob,
-    fact: projection.manifest.facts[0]!,
-    manifestBlob: projection.manifest.blobs[0]!
+    fact,
+    manifestBlob
   });
 }

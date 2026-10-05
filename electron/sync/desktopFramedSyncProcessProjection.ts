@@ -4,6 +4,7 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 import { openDatabaseConnection } from '../database/connection.js';
 
 import { projectDesktopFramedSyncNodeRecord } from './desktopFramedSyncNodeProjection.js';
+import { resolveDesktopFramedSyncNodeResources } from './desktopFramedSyncNodeResources.js';
 import {
   projectDesktopFramedSyncParentRelation,
   projectDesktopFramedSyncReview
@@ -12,7 +13,8 @@ import {
 /** Build the complete minimal-process transfer from the selected node version. */
 export function projectDesktopFramedSyncProcessTransfer(record: NativeSyncNodeRecord) {
   if (!record.version_id) throw new Error('framed_sync_process_version_required');
-  const projection = projectDesktopFramedSyncNodeRecord(record);
+  const resources = resolveDesktopFramedSyncNodeResources(record);
+  const projection = projectDesktopFramedSyncNodeRecord(record, resources.map((resource) => resource.blob));
   const driver = openDatabaseConnection().driver;
   const parents = driver.queryAll<DbRow>(`SELECT version.object_id, parent.version_id,
     parent.parent_version_id, parent.ordinal FROM node_sync_version_parents parent
@@ -22,6 +24,7 @@ export function projectDesktopFramedSyncProcessTransfer(record: NativeSyncNodeRe
     FROM review_log WHERE node_id = ? ORDER BY reviewed_at, op_id`, [record.object_id]);
   return {
     bodyBlob: projection.bodyBlob,
+    resources,
     manifest: {
       blobs: projection.manifest.blobs,
       facts: [

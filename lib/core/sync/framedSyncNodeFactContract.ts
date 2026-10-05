@@ -3,6 +3,7 @@ import type {
   CanonicalField,
   CanonicalValue
 } from './framedSyncCanonicalManifest.js';
+import { readFramedSyncNodeResources } from './framedSyncNodeResources.js';
 
 export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
   bodyFields: [
@@ -109,13 +110,15 @@ function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: strin
       snapshotBodyHash !== bodyHash) {
     throw new Error('node_version_fact_body_blob_hash_mismatch');
   }
+  return stringValue(get('resource_references'), true);
 }
 
 export function assertNodeVersionFactShape(fact: CanonicalFact) {
   if (fact.kind !== FRAMED_SYNC_NODE_VERSION_FACT.factKind ||
       fact.objectType !== FRAMED_SYNC_NODE_VERSION_FACT.factObjectType ||
       !fact.globalId || !fact.factId) throw new Error('node_version_fact_identity_invalid');
-  if (fact.blobs.length !== 1 || fact.blobs[0]!.role !== 1 || !fact.blobs[0]!.required) {
+  const bodyBlobs = fact.blobs.filter((blob) => blob.role === 1);
+  if (bodyBlobs.length !== 1 || fact.blobs.some((blob) => !blob.required)) {
     throw new Error('node_version_fact_body_blob_invalid');
   }
   const fields = exactFields(
@@ -134,5 +137,13 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
       contentHash !== hex(fact.sharedStateHash)) {
     throw new Error('node_version_fact_shared_state_hash_mismatch');
   }
-  assertSnapshot(get('snapshot'), fact.globalId, hex(fact.blobs[0]!.sha256));
+  const references = readFramedSyncNodeResources(
+    assertSnapshot(get('snapshot'), fact.globalId, hex(bodyBlobs[0]!.sha256))
+  );
+  const resources = fact.blobs.filter((blob) => blob.role !== 1);
+  if (resources.length !== references.length || references.some((reference) =>
+    !resources.some((blob) => hex(blob.sha256) === reference.contentHash &&
+      blob.role === reference.role))) {
+    throw new Error('node_version_fact_resource_blobs_invalid');
+  }
 }

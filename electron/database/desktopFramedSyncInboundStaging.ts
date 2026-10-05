@@ -47,10 +47,12 @@ export async function clearInboundAttempt(tx: DbPort, transferId: Uint8Array, at
   await tx.run(`UPDATE framed_sync_inbound_attempts SET state = 'invalidated' WHERE transfer_id = ? AND attempt_id = ?`,
     [transferId, attemptId]);
   for (const table of ['framed_sync_inbound_facts', 'framed_sync_blob_chunks',
+    'framed_sync_resource_blob_chunks',
     'framed_sync_inbound_frames', 'framed_sync_blob_offers']) {
     await tx.run(`DELETE FROM ${table} WHERE transfer_id = ? AND attempt_id = ?`, [transferId, attemptId]);
   }
   await tx.run('DELETE FROM framed_sync_blob_pins WHERE transfer_id = ?', [transferId]);
+  await tx.run('DELETE FROM framed_sync_resource_pins WHERE transfer_id = ?', [transferId]);
   await tx.run(`UPDATE framed_sync_inbound_transfers SET header_json = NULL, manifest_hash = NULL,
     canonical_manifest = NULL, active_attempt_id = NULL, state = 'proposed'
     WHERE transfer_id = ? AND active_attempt_id = ?`, [transferId, attemptId]);

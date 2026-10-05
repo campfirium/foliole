@@ -23,6 +23,7 @@ import {
 import { loadStoredSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
 import { orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import { projectDesktopFramedSyncNodeRecord } from '../sync/desktopFramedSyncNodeProjection.js';
+import { resolveDesktopFramedSyncNodeResources } from '../sync/desktopFramedSyncNodeResources.js';
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
 
@@ -109,7 +110,11 @@ export async function selectDesktopFramedSyncNodeManifest(
     }
     return record;
   });
-  const projections = orderNodeVersionHistory(selectedRecords).map(projectDesktopFramedSyncNodeRecord);
+  const projections = orderNodeVersionHistory(selectedRecords).map((record) =>
+    projectDesktopFramedSyncNodeRecord(
+      record,
+      resolveDesktopFramedSyncNodeResources(record).map((resource) => resource.blob)
+    ));
   const related = await selectFramedSyncRelationReviewFactsWithDbPort(tx, difference);
   if (related.kind === 'deferred') throw new Error('framed_sync_source_changed');
   const blobs = new Map<string, CanonicalBlob>();
@@ -152,7 +157,16 @@ export async function publishDesktopFramedSyncNodeOutbound(
       return { deferredObjects: [{ globalId: difference.globalId, objectType: 'node' }],
         kind: 'deferred' };
     }
-    const manifest = await selectDesktopFramedSyncNodeManifest(tx, difference);
+    let manifest: CanonicalManifest;
+    try {
+      manifest = await selectDesktopFramedSyncNodeManifest(tx, difference);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'framed_sync_outbound_resource_unavailable') {
+        return { deferredObjects: [{ globalId: difference.globalId, objectType: 'node' }],
+          kind: 'deferred' };
+      }
+      throw error;
+    }
     const contentId = await canonicalContentId(manifest);
     const transferId = await canonicalTransferId(input.context, contentId);
     const publication: OutboundPublishInput = {

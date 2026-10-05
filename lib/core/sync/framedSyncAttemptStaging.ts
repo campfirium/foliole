@@ -82,3 +82,21 @@ export async function loadReplayableFramedSyncFrames(db: DbPort, transferId: Uin
   [transferId, purpose, attemptId]);
   return rows.map(storedFrame);
 }
+
+export async function* streamReplayableFramedSyncFrames(db: DbPort, transferId: Uint8Array,
+  purpose: AttemptPurpose, attemptId: Uint8Array) {
+  const attempt = await loadAttempt(db, transferId, purpose, attemptId);
+  if (!attempt || framedSyncText(attempt, 'state') !== 'replayable') {
+    failFramedSync('outbound_attempt_not_replayable');
+  }
+  const count = await readFramedSyncRow(db, `SELECT COUNT(*) AS count FROM framed_sync_outbound_frames
+    WHERE transfer_id = ? AND purpose = ? AND attempt_id = ?`, [transferId, purpose, attemptId]);
+  if (!count) failFramedSync('outbound_frame_count_missing');
+  for (let sequence = 0n; sequence < framedSyncBigInt(count, 'count'); sequence += 1n) {
+    const row = await readFramedSyncRow(db, `SELECT * FROM framed_sync_outbound_frames
+      WHERE transfer_id = ? AND purpose = ? AND attempt_id = ? AND sequence = ?`,
+    [transferId, purpose, attemptId, sequence.toString()]);
+    if (!row) failFramedSync('outbound_frame_sequence_gap');
+    yield storedFrame(row);
+  }
+}

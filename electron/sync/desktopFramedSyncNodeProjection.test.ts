@@ -49,7 +49,7 @@ function record(overrides: Partial<NativeSyncNodeRecord> = {}): NativeSyncNodeRe
       parent_id: 'folder-1',
       position: 4,
       priority: 2,
-      resource_references: '[{"attachmentId":"pdf-hash"}]',
+      resource_references: '[]',
       reveal: 'answer',
       sequential_reading_enabled: false,
       shelved_at: '2026-10-05T02:00:00.000Z',

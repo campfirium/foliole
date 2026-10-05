@@ -4,12 +4,13 @@ import { expect, it, vi } from 'vitest';
 import type { DbPort, DbRow } from './dbPort.js';
 import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
 
-function port(bodyText: string | null) {
+function port(bodyText: string | null, resourceReferences = '[]', isTombstone = 0) {
   const db = {
     query: vi.fn(async (sql: string): Promise<DbRow[]> => {
       if (sql.includes('SELECT node.id')) return [{
-        body_text: bodyText, content_hash: '4'.repeat(64), current_version_id: 'version-1',
-        id: 'node-1', is_tombstone: 0
+        body_text: bodyText, content_hash: '4'.repeat(64),
+        current_version_id: isTombstone ? 'tombstone-1' : 'version-1',
+        id: 'node-1', is_tombstone: isTombstone, resource_references: resourceReferences
       }];
       return [];
     })
@@ -27,15 +28,23 @@ it('hashes the exact readable current body in inventory', async () => {
     .toBe('230d8358dc8e8890b4c58deeb62912ee2f20357ae92a5cc861b98e68fe31acb5');
 });
 
+it('declares hashes for the binary resources owned by the current Node', async () => {
+  const image = '1'.repeat(64);
+  const pdf = '2'.repeat(64);
+  const entry = await readFramedSyncInventoryEntry(port('body', JSON.stringify([
+    { original_name: 'Document.pdf', role: 'reference', storage_key: `${pdf}.pdf` },
+    { original_name: 'Cover.png', role: 'image', storage_key: `${image}.png` }
+  ])), { globalId: 'node-1', objectType: 'node' });
+
+  expect(entry!.resourceHashes.map(bytesToHex)).toEqual([
+    '230d8358dc8e8890b4c58deeb62912ee2f20357ae92a5cc861b98e68fe31acb5',
+    image,
+    pdf
+  ]);
+});
+
 it('keeps a deleted Node in inventory with its tombstone version and empty body dependency', async () => {
-  const tombstonePort = port(null);
-  tombstonePort.query = vi.fn(async (sql: string): Promise<DbRow[]> => {
-    if (sql.includes('SELECT node.id')) return [{
-      body_text: null, content_hash: '5'.repeat(64), current_version_id: 'tombstone-1',
-      id: 'node-1', is_tombstone: 1
-    }];
-    return [];
-  });
+  const tombstonePort = port(null, '[]', 1);
   const value = await readFramedSyncInventoryEntry(tombstonePort, {
     globalId: 'node-1', objectType: 'node'
   });

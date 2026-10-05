@@ -1,7 +1,4 @@
-import {
-  canonicalTransferId,
-  type CanonicalFact
-} from '../../lib/core/sync/framedSyncCanonicalManifest.js';
+import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type {
   FramedSyncContext,
   PublishedTransfer,
@@ -16,6 +13,12 @@ import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagin
 import type { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { DesktopFramedSyncInboundBlobSet } from './desktopFramedSyncInboundBlobSet.js';
+import { DesktopFramedSyncInboundResourceStore } from './desktopFramedSyncInboundResourceStore.js';
+import {
+  assertCanonicalTransferIdentity,
+  headerFromWire,
+  publishedFromHeader
+} from './desktopFramedSyncProcessHeader.js';
 import {
   admitDesktopFramedSyncTransfer,
   finishDesktopFramedSyncTransfer,
@@ -23,17 +26,17 @@ import {
   stageDesktopFramedSyncFact
 } from './desktopFramedSyncProcessInbound.js';
 import { buildReceiptStream } from './desktopFramedSyncProcessReceipt.js';
-import { wireToBlob, wireToFact } from './desktopFramedSyncProcessWire.js';
+import { wireToFact } from './desktopFramedSyncProcessWire.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
 
 type Db = ReturnType<typeof createBetterSqliteDbPort>;
-type Row = Record<string, unknown>;
 type State = {
   attemptAdmitted: boolean;
   blobs: DesktopFramedSyncInboundBlobSet | null;
   existingReceipt: TransferReceiptStage | null;
   facts: CanonicalFact[];
   published: PublishedTransfer | null;
+  resources: DesktopFramedSyncInboundResourceStore | null;
 };
 type ReceiverInput = Readonly<{
   context: FramedSyncContext;
@@ -43,7 +46,6 @@ type ReceiverInput = Readonly<{
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
 }>;
 
-const row = (value: unknown) => value as Row;
 const bytes = (value: unknown) => new Uint8Array(value as Uint8Array);
 const integer = (value: unknown) => BigInt(String(value));
 
@@ -56,7 +58,8 @@ export async function receiveDesktopFramedSyncTransfer(input: ReceiverInput) {
     transferId: preamble.contextId
   });
   const state: State = {
-    attemptAdmitted: false, blobs: null, existingReceipt: null, facts: [], published: null
+    attemptAdmitted: false, blobs: null, existingReceipt: null, facts: [], published: null,
+    resources: null
   };
   let sequence = preamble.startingSequence;
   try {
@@ -98,6 +101,7 @@ export async function receiveDesktopFramedSyncTransfer(input: ReceiverInput) {
       sequence = received.nextSequence;
     }
   } catch (error) {
+    await state.resources?.discard();
     if (state.attemptAdmitted && state.published && !state.existingReceipt) {
       await input.staging.invalidateInboundAttempt(state.published.transferId, preamble.attemptId);
     }
@@ -120,16 +124,7 @@ async function handleFrame(input: {
   const published = state.published;
   if (!published) throw new Error('transfer_header_required');
   if (decoded.payloadCase === 'transfer_header') {
-    const header = headerFromWire(decoded.payload, published);
-    state.blobs = new DesktopFramedSyncInboundBlobSet(header.blobs);
-    state.existingReceipt = await input.staging.loadReceipt(published.transferId);
-    if (!state.existingReceipt) await admitDesktopFramedSyncTransfer({
-      attemptId: input.preambleAttemptId,
-      firstFrame: input.frame,
-      header,
-      staging: input.staging
-    });
-    state.attemptAdmitted = !state.existingReceipt;
+    await handleHeader(input, published);
   } else if (state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
     return receiptStream(input, state.existingReceipt);
   } else if (!state.existingReceipt && decoded.payloadCase === 'fact') {
@@ -140,16 +135,11 @@ async function handleFrame(input: {
     const data = bytes(decoded.payload.data);
     const offset = integer(decoded.payload.offset);
     const sha256 = bytes(decoded.payload.blobHash);
-    state.blobs?.append(sha256, offset, data);
-    await stageDesktopFramedSyncBlob({
-      data,
-      frame: input.frame,
-      offset,
-      sha256,
-      staging: input.staging
-    });
+    await handleBlob(input, sha256, offset, data);
   } else if (!state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
-    if (state.facts.length === 0 || !state.blobs) throw new Error('transfer_payload_incomplete');
+    if (state.facts.length === 0 || !state.blobs || !state.resources) {
+      throw new Error('transfer_payload_incomplete');
+    }
     const receipt = await finishDesktopFramedSyncTransfer({
       blobs: state.blobs.complete(),
       blobCount: integer(decoded.payload.blobCount),
@@ -159,6 +149,7 @@ async function handleFrame(input: {
       factCount: integer(decoded.payload.factCount),
       frame: input.frame,
       manifestHash: bytes(decoded.payload.manifestHash),
+      resources: state.resources,
       staging: input.staging
     });
     state.existingReceipt = receipt;
@@ -167,48 +158,40 @@ async function handleFrame(input: {
   return null;
 }
 
+async function handleHeader(input: Parameters<typeof handleFrame>[0], published: PublishedTransfer) {
+  const header = headerFromWire(input.decoded.payload, published);
+  input.state.blobs = new DesktopFramedSyncInboundBlobSet(header.blobs);
+  input.state.resources = new DesktopFramedSyncInboundResourceStore({
+    attemptId: input.preambleAttemptId,
+    descriptors: header.blobs,
+    staging: input.staging,
+    transferId: published.transferId
+  });
+  input.state.existingReceipt = await input.staging.loadReceipt(published.transferId);
+  if (!input.state.existingReceipt) await admitDesktopFramedSyncTransfer({
+    attemptId: input.preambleAttemptId,
+    firstFrame: input.frame,
+    header,
+    staging: input.staging
+  });
+  input.state.attemptAdmitted = !input.state.existingReceipt;
+}
+
+async function handleBlob(input: Parameters<typeof handleFrame>[0], sha256: Uint8Array,
+  offset: bigint, data: Uint8Array) {
+  if (input.state.blobs?.has(sha256)) {
+    input.state.blobs.append(sha256, offset, data);
+    await stageDesktopFramedSyncBlob({
+      data, frame: input.frame, offset, sha256, staging: input.staging
+    });
+    return;
+  }
+  if (!input.state.resources?.has(sha256)) throw new Error('framed_sync_blob_content_set_mismatch');
+  await input.staging.commitAuthenticatedFrame(input.frame);
+  await input.state.resources.append(sha256, offset, data);
+}
+
 function receiptStream(input: Pick<Parameters<typeof handleFrame>[0], 'db' | 'groupKey' | 'staging'>,
   receipt: TransferReceiptStage) {
   return buildReceiptStream({ ...input, receipt });
-}
-
-function publishedFromHeader(payload: Readonly<Record<string, unknown>>, context: FramedSyncContext) {
-  const manifest = row(payload.manifest);
-  const blobs = (manifest.blobs as unknown[]).map(wireToBlob);
-  return {
-    blobCount: BigInt(blobs.length),
-    contentId: bytes(manifest.contentId),
-    context,
-    factCount: BigInt((manifest.facts as unknown[]).length),
-    manifestHash: bytes(manifest.contentId),
-    totalBlobBytes: blobs.reduce((total, blob) => total + blob.byteLength, 0n),
-    transferId: bytes(payload.transferId)
-  } satisfies PublishedTransfer;
-}
-
-async function assertCanonicalTransferIdentity(published: PublishedTransfer) {
-  const canonical = await canonicalTransferId(published.context, published.contentId);
-  const matches = canonical.byteLength === published.transferId.byteLength &&
-    canonical.every((value, index) => value === published.transferId[index]);
-  if (!matches) throw new Error('inbound_transfer_identity_mismatch');
-}
-
-function headerFromWire(payload: Readonly<Record<string, unknown>>, published: PublishedTransfer) {
-  const manifest = row(payload.manifest);
-  return {
-    blobs: (manifest.blobs as unknown[]).map(wireToBlob),
-    facts: (manifest.facts as unknown[]).map((value) => {
-      const item = row(value);
-      const identity = row(item.identity);
-      return {
-        factId: String(identity.factId),
-        globalId: String(identity.globalId),
-        kind: Number(identity.kind),
-        objectType: String(identity.objectType),
-        requiredBlobHashes: (item.requiredBlobHashes as unknown[]).map(bytes),
-        sharedStateHash: bytes(item.sharedStateHash)
-      };
-    }),
-    published
-  };
 }

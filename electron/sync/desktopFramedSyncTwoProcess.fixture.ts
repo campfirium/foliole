@@ -7,6 +7,7 @@ import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
+import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourceProcessScenario.js';
 import { markDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
 
 export { createDesktopFramedSyncProcessPort } from './desktopFramedSyncProcessPort.js';
@@ -157,6 +158,7 @@ async function run(command: Command) {
     return snapshot();
   }
   if (command.action === 'seed') return seed(command.args);
+  if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
   if (command.action === 'seedBatch') return seedBatch(command.args);
   if (command.action === 'snapshot') return snapshot();
   if (command.action === 'round') return (await loadProcessPort()).round(command.args.input);

@@ -7,6 +7,7 @@ import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/cor
 
 const EXPECTED_STAGING_TABLES = [
   'framed_sync_available_blobs',
+  'framed_sync_available_resources',
   'framed_sync_blob_chunks',
   'framed_sync_blob_offers',
   'framed_sync_blob_pins',
@@ -21,6 +22,8 @@ const EXPECTED_STAGING_TABLES = [
   'framed_sync_outbound_holds',
   'framed_sync_outbound_publications',
   'framed_sync_receipts',
+  'framed_sync_resource_blob_chunks',
+  'framed_sync_resource_pins',
   'framed_sync_session_send_states',
   'framed_sync_termination_acks',
   'framed_sync_termination_requests'

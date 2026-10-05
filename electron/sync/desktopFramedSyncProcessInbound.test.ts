@@ -48,7 +48,8 @@ function finish(facts: readonly CanonicalFact[], blobs: Parameters<typeof finish
       ciphertext: new Uint8Array(), frameHeader: new Uint8Array(), frameType: 5,
       preamble: new Uint8Array(), sequence: 0n, transferId: hash(9)
     },
-    manifestHash: hash(8), staging: {} as FramedSyncStagingPort
+    manifestHash: hash(8), resources: { complete: vi.fn() },
+    staging: {} as FramedSyncStagingPort
   });
 }
 
@@ -91,7 +92,7 @@ it('atomically applies multiple versions of the same node', async () => {
       ciphertext: new Uint8Array(), frameHeader: new Uint8Array(), frameType: 5,
       preamble: new Uint8Array(), sequence: 0n, transferId: hash(9)
     },
-    manifestHash: hash(8), staging
+    manifestHash: hash(8), resources: { complete: vi.fn() }, staging
   });
 
   expect(mocks.applyNode).toHaveBeenCalledWith(expect.anything(), [
@@ -134,7 +135,7 @@ it('writes the actual post-apply node state hash into the receipt', async () => 
       ciphertext: new Uint8Array(), frameHeader: new Uint8Array(), frameType: 5,
       preamble: new Uint8Array(), sequence: 0n, transferId: hash(9)
     },
-    manifestHash: hash(8), staging
+    manifestHash: hash(8), resources: { complete: vi.fn() }, staging
   });
 
   expect(mocks.commitReceipt).toHaveBeenCalledWith(expect.objectContaining({ appliedStateHash }));

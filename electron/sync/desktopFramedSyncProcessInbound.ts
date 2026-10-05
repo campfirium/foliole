@@ -16,6 +16,7 @@ import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecu
 import { applyDesktopFramedSyncRelationReviewFactsWithDbPort } from '../database/desktopFramedSyncRelationReviewApply.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 
+import type { DesktopFramedSyncInboundResourceStore } from './desktopFramedSyncInboundResourceStore.js';
 import { restoreDesktopFramedSyncNodeRecord } from './desktopFramedSyncNodeProjection.js';
 
 type Header = Readonly<{
@@ -103,6 +104,7 @@ export async function finishDesktopFramedSyncTransfer(input: {
   factCount: bigint;
   frame: InboundFrameInput;
   manifestHash: Uint8Array;
+  resources: Pick<DesktopFramedSyncInboundResourceStore, 'complete'>;
   staging: FramedSyncStagingPort;
 }) {
   const prepared = prepareInboundApply(input.facts, input.blobs);
@@ -119,6 +121,7 @@ export async function finishDesktopFramedSyncTransfer(input: {
     manifestHash: input.manifestHash,
     transferId: input.frame.transferId
   });
+  await input.resources.complete(prepared.records);
   await input.staging.markReadyToApply(input.frame.transferId);
   const receipt = await input.db.transaction(async (tx) => {
     if (prepared.records.length) await applySyncNodesWithDbPort(tx, prepared.records);
@@ -156,13 +159,15 @@ function prepareInboundApply(
     return { globalId, records: [], relationReviewFacts };
   }
   const contentByHash = new Map(blobs.map((entry) => [hex(entry.sha256), entry]));
-  const requiredHashes = new Set(nodeFacts.flatMap((fact) => fact.blobs.map((entry) => hex(entry.sha256))));
+  const bodyDescriptors = nodeFacts.map((fact) => fact.blobs.filter((entry) => entry.role === 1));
+  const requiredHashes = new Set(bodyDescriptors.flatMap((entries) => entries.map((entry) => hex(entry.sha256))));
   if (contentByHash.size !== blobs.length || requiredHashes.size !== blobs.length ||
-      nodeFacts.some((fact) => fact.blobs.length !== 1)) {
+      bodyDescriptors.some((entries) => entries.length !== 1)) {
     throw new Error('framed_sync_blob_content_set_mismatch');
   }
-  const records = nodeFacts.map((nodeFact) => {
-    const content = contentByHash.get(hex(nodeFact.blobs[0]!.sha256));
+  const records = nodeFacts.map((nodeFact, index) => {
+    const body = bodyDescriptors[index]![0]!;
+    const content = contentByHash.get(hex(body.sha256));
     if (!content) throw new Error('framed_sync_blob_content_set_mismatch');
     return restoreDesktopFramedSyncNodeRecord({
       bodyBlob: content.data,

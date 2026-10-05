@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 import { afterEach, expect, it } from 'vitest';
 
@@ -14,9 +15,9 @@ import {
 import { framedSyncEncodedLength, framedSyncEncodedSha256 } from './desktopFramedSyncStream.js';
 import {
   createDesktopFramedSyncTwoProcessFixture,
-  type DesktopFramedSyncFixtureProcess,
-  readDesktopFramedSyncLibraryEvidence
+  type DesktopFramedSyncFixtureProcess
 } from './desktopFramedSyncTwoProcess.testSupport.js';
+import { readDesktopFramedSyncLibraryEvidence } from './desktopFramedSyncTwoProcessEvidence.js';
 
 let root = '';
 const processes: DesktopFramedSyncFixtureProcess[] = [];
@@ -87,23 +88,27 @@ it('moves one object and version body through the production framed-sync process
   const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(sent.framedSync).toEqual({
     availableBlobs: 0,
+    availableResources: 0,
     inboundFacts: 0,
     inboundFrames: 0,
     inboundStates: [],
     outboundFrames: 4,
     outboundHolds: 0,
     outboundStates: [{ state: 'receipt_committed' }],
-    receipts: 1
+    receipts: 1,
+    resourceChunks: 0
   });
   expect(received.framedSync).toEqual({
     availableBlobs: 1,
+    availableResources: 0,
     inboundFacts: 1,
     inboundFrames: 4,
     inboundStates: [{ state: 'applied' }],
     outboundFrames: 1,
     outboundHolds: 0,
     outboundStates: [],
-    receipts: 1
+    receipts: 1,
+    resourceChunks: 0
   });
   expect(received.nodes).toEqual([
     expect.objectContaining({ content: '', id: 't326-one-object', title: 'One object' })
@@ -121,6 +126,35 @@ it('moves one object and version body through the production framed-sync process
     .toMatchObject({ outboundFrames: 8, outboundHolds: 0, receipts: 1 });
   expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).framedSync)
     .toMatchObject({ inboundFrames: 4, outboundFrames: 1, receipts: 1 });
+});
+
+it('streams a Node image into the receiver Assets store before committing its receipt', async () => {
+  const fixture = await setup();
+  const bytes = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.alloc(1024 * 1024 + 37, 0x51)
+  ]);
+  const seeded = await fixture.left.seedResource({
+    bytes,
+    nodeId: 't326-binary-resource'
+  });
+
+  await fixture.left.synchronize(fixture.rightSnapshot.origin, 't326-binary-resource');
+
+  const target = path.join(fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets',
+    seeded.storageKey);
+  await expect(fs.readFile(target)).resolves.toEqual(bytes);
+  const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  expect(received.nodes).toEqual([expect.objectContaining({
+    id: 't326-binary-resource',
+    resource_references: expect.stringContaining(seeded.storageKey)
+  })]);
+  expect(received.framedSync).toMatchObject({
+    availableResources: 1,
+    receipts: 1,
+    resourceChunks: 3
+  });
+  expect(await fs.readdir(path.dirname(target))).toEqual([seeded.storageKey]);
 });
 
 it('rejects an unauthenticated framed-sync request before staging any bytes', async () => {

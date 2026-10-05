@@ -155,3 +155,21 @@ export function framedSyncEncodedSha256(
   }
   return hash.digest('hex');
 }
+
+export async function inspectFramedSyncEncodedStream(
+  preamble: Uint8Array,
+  frames: AsyncIterable<FramedSyncEncodedFrame>
+) {
+  decodeFramedSyncPreamble(preamble);
+  const hash = createHash('sha256').update(preamble);
+  let contentLength = preamble.byteLength;
+  for await (const frame of frames) {
+    const header = decodeFrameHeader(frame.headerBytes);
+    if (frame.ciphertext.byteLength !== header.ciphertextBytes) {
+      throw new Error('framed_sync_frame_body_length_mismatch');
+    }
+    hash.update(frame.headerBytes).update(frame.ciphertext);
+    contentLength += frame.headerBytes.byteLength + frame.ciphertext.byteLength;
+  }
+  return { bodySha256: hash.digest('hex'), contentLength };
+}

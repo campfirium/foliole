@@ -31,13 +31,17 @@ export function newTransferAttempt(transferId: Uint8Array): PreparedTransferAtte
 }
 
 export async function* processFrameStream(
-  frames: readonly Readonly<{
+  frames: AsyncIterable<Readonly<{
     ciphertext: Uint8Array;
     frameHeader?: Uint8Array;
     headerBytes?: Uint8Array;
-  }>[]
+  }>> | Iterable<Readonly<{
+    ciphertext: Uint8Array;
+    frameHeader?: Uint8Array;
+    headerBytes?: Uint8Array;
+  }>>
 ) {
-  for (const frame of frames) {
+  for await (const frame of frames) {
     const headerBytes = frame.headerBytes ?? frame.frameHeader;
     if (!headerBytes) throw new Error('framed_sync_frame_header_missing');
     yield { ciphertext: frame.ciphertext, headerBytes };

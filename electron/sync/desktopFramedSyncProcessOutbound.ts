@@ -4,21 +4,20 @@ import {
   FRAMED_SYNC_PROTOCOL_VERSION,
   type FramedSyncContext,
   type PreparedTransferAttempt,
-  type PublishedTransfer,
-  type StoredEncryptedFrame
+  type PublishedTransfer
 } from '../../lib/core/sync/framedSyncContract.js';
 import type { OutboundPublishInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
-import { buildFramedSyncTransferPayloads } from '../../lib/core/sync/framedSyncTransferPayloads.js';
 import { loadStoredSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
 import { loadSyncNodes, loadSyncNodeVersionsSince } from '../database/syncNodes.js';
 
+import { loadDesktopFramedSyncBlobSources } from './desktopFramedSyncBlobSources.js';
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
-import { projectDesktopFramedSyncNodeRecord } from './desktopFramedSyncNodeProjection.js';
 import { loadDesktopFramedSyncPreparedTransferBody } from './desktopFramedSyncPreparedTransferBody.js';
 import { projectDesktopFramedSyncProcessTransfer } from './desktopFramedSyncProcessProjection.js';
 import { readReceipt } from './desktopFramedSyncProcessReceipt.js';
-import { encryptProtocolFrame, newTransferAttempt } from './desktopFramedSyncProcessWire.js';
+import { newTransferAttempt } from './desktopFramedSyncProcessWire.js';
+import { writeDesktopFramedSyncTransferFrames } from './desktopFramedSyncTransferFrameWriter.js';
 
 type Identity = Readonly<{ deviceId: string; libraryEpoch: string }>;
 type Projection = ReturnType<typeof projectDesktopFramedSyncProcessTransfer>;
@@ -43,7 +42,7 @@ export async function synchronizeDesktopFramedSync(input: {
   const published = publication(context, projection, contentId, transferId);
   await input.staging.publishOutbound({ ...published, manifest: projection.manifest });
   const attempt = await persistDesktopFramedSyncAttempt({
-    blobContents: [{ data: projection.bodyBlob, sha256: projection.manifest.blobs[0]!.sha256 }],
+    blobSources: loadDesktopFramedSyncBlobSources([source], projection.manifest),
     groupSecret: input.groupSecret,
     publication: { ...published, manifest: projection.manifest },
     staging: input.staging
@@ -70,12 +69,8 @@ export async function prepareDesktopFramedSyncPublishedTransfer(input: {
     input.db,
     stored.manifest.facts.filter((fact) => fact.objectType === 'node').map((fact) => fact.factId)
   );
-  const blobContents = [...records.values()].map((record) => {
-    const projected = projectDesktopFramedSyncNodeRecord(record);
-    return { data: projected.bodyBlob, sha256: projected.manifest.blobs[0]!.sha256 };
-  });
   return persistDesktopFramedSyncAttempt({
-    blobContents,
+    blobSources: loadDesktopFramedSyncBlobSources([...records.values()], stored.manifest),
     groupSecret: input.groupSecret,
     publication: stored,
     staging: input.staging
@@ -83,7 +78,7 @@ export async function prepareDesktopFramedSyncPublishedTransfer(input: {
 }
 
 async function persistDesktopFramedSyncAttempt(input: {
-  blobContents: ReadonlyArray<{ data: Uint8Array; sha256: Uint8Array }>;
+  blobSources: ReturnType<typeof loadDesktopFramedSyncBlobSources>;
   groupSecret: string;
   publication: OutboundPublishInput;
   staging: FramedSyncStagingPort;
@@ -91,15 +86,20 @@ async function persistDesktopFramedSyncAttempt(input: {
   const published = publishedTransfer(input.publication);
   const attempt = newTransferAttempt(published.transferId);
   await input.staging.persistOutboundAttempt(published.transferId, attempt);
-  await createTransferFrames({
-    attempt,
-    blobContents: input.blobContents,
-    groupKey: groupKey(input.groupSecret),
-    manifest: input.publication.manifest,
-    published,
-    staging: input.staging
-  });
-  await input.staging.finalizeOutboundAttempt(published.transferId, attempt.attemptId);
+  try {
+    await writeDesktopFramedSyncTransferFrames({
+      attempt,
+      groupKey: groupKey(input.groupSecret),
+      manifest: input.publication.manifest,
+      published,
+      sources: input.blobSources,
+      staging: input.staging
+    });
+    await input.staging.finalizeOutboundAttempt(published.transferId, attempt.attemptId);
+  } catch (error) {
+    await input.staging.abandonOutboundAttempt(published.transferId, attempt.attemptId);
+    throw error;
+  }
   return attempt;
 }
 
@@ -143,39 +143,6 @@ async function transmitDesktopFramedSyncPublication(input: {
   });
   await input.staging.commitOutboundReceipt(receipt);
   await input.staging.releaseOutboundHolds(published.transferId);
-}
-
-async function createTransferFrames(input: {
-  attempt: ReturnType<typeof newTransferAttempt>;
-  blobContents: ReadonlyArray<{ data: Uint8Array; sha256: Uint8Array }>;
-  groupKey: Uint8Array;
-  manifest: OutboundPublishInput['manifest'];
-  published: PublishedTransfer;
-  staging: FramedSyncStagingPort;
-}) {
-  const { attempt, published } = input;
-  const payloads = buildFramedSyncTransferPayloads({
-    attemptId: attempt.attemptId,
-    blobContents: input.blobContents,
-    manifest: input.manifest,
-    published
-  });
-  const frames: StoredEncryptedFrame[] = [];
-  for (let index = 0; index < payloads.length; index += 1) {
-    const { payloadCase, frameType, payload } = payloads[index]!;
-    const frame = await encryptProtocolFrame({
-      attempt,
-      frameType,
-      groupKey: input.groupKey,
-      payload,
-      payloadCase,
-      sequence: BigInt(index),
-      transferId: published.transferId
-    });
-    await input.staging.commitOutboundFrame(published.transferId, attempt.attemptId, frame);
-    frames.push(frame);
-  }
-  return frames;
 }
 
 function publishedTransfer(input: OutboundPublishInput): PublishedTransfer {

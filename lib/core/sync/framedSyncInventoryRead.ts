@@ -3,6 +3,7 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
+import { readFramedSyncNodeResources } from './framedSyncNodeResources.js';
 import { framedSyncParentRelationFactId } from './framedSyncRelationReviewFact.js';
 import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
 
@@ -14,6 +15,7 @@ interface NodeRow extends DbRow {
   current_version_id: string;
   id: string;
   is_tombstone: number;
+  resource_references: string;
 }
 
 interface ParentRow extends DbRow {
@@ -33,6 +35,7 @@ const encoder = new TextEncoder();
 function nodeSql(key?: InventoryKey) {
   return `SELECT * FROM (
       SELECT node.id, node.current_version_id, version.body_text, version.content_hash,
+        COALESCE(json_extract(version.snapshot_json, '$.resource_references'), '[]') AS resource_references,
         0 AS is_tombstone
       FROM nodes node JOIN node_sync_versions version
         ON version.version_id = node.current_version_id
@@ -41,7 +44,9 @@ function nodeSql(key?: InventoryKey) {
       )
       UNION ALL
       SELECT tombstone.node_id AS id, tombstone.version_id AS current_version_id,
-        NULL AS body_text, tombstone.content_hash, 1 AS is_tombstone
+        NULL AS body_text, tombstone.content_hash,
+        COALESCE(json_extract(tombstone.snapshot_json, '$.resource_references'), '[]') AS resource_references,
+        1 AS is_tombstone
       FROM node_sync_tombstones tombstone
     ) inventory
     ${key ? 'WHERE inventory.id = ?' : ''}
@@ -84,7 +89,11 @@ FramedSyncInventoryEntry {
     globalId: row.id,
     objectType: 'node',
     requiredRelationIds: parents.map(framedSyncParentRelationFactId),
-    resourceHashes: bodyText === null ? [] : [sha256(encoder.encode(bodyText))],
+    resourceHashes: [
+      ...(bodyText === null ? [] : [sha256(encoder.encode(bodyText))]),
+      ...readFramedSyncNodeResources(row.resource_references).map((resource) =>
+        hexToBytes(resource.contentHash))
+    ],
     reviewFactIds: reviews.map((review) => review.op_id),
     sharedStateHash: hexToBytes(row.content_hash)
   };
