@@ -38,6 +38,15 @@ public final class FramedSyncPreamble {
         return encoded.clone();
     }
 
+    public int compression() { return Byte.toUnsignedInt(encoded[13]); }
+    public int contextKind() { return Byte.toUnsignedInt(encoded[12]); }
+    public byte[] contextId() { return Arrays.copyOfRange(encoded, 16, 48); }
+    public byte[] identifier() { return Arrays.copyOfRange(encoded, 48, 64); }
+    public byte[] noncePrefix() { return Arrays.copyOfRange(encoded, 64, 68); }
+    public long startingSequence() {
+        return ByteBuffer.wrap(encoded, 68, 8).order(ByteOrder.BIG_ENDIAN).getLong();
+    }
+
     private static IllegalArgumentException invalid() {
         return new IllegalArgumentException("framed_sync_preamble_invalid");
     }
