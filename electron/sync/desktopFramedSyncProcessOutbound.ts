@@ -6,6 +6,7 @@ import {
   type StoredEncryptedFrame
 } from '../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
+import { buildFramedSyncTransferPayloads } from '../../lib/core/sync/framedSyncTransferPayloads.js';
 import { loadSyncNodes, loadSyncNodeVersionsSince } from '../database/syncNodes.js';
 
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
@@ -13,12 +14,8 @@ import { projectDesktopFramedSyncProcessTransfer } from './desktopFramedSyncProc
 import { readReceipt } from './desktopFramedSyncProcessReceipt.js';
 import {
   encryptProtocolFrame,
-  factToWire,
-  manifestToWire,
   newTransferAttempt,
-  processFrameStream,
-  TRANSFER_FRAME_TYPES,
-  wireUint64
+  processFrameStream
 } from './desktopFramedSyncProcessWire.js';
 import { framedSyncEncodedLength, framedSyncEncodedSha256 } from './desktopFramedSyncStream.js';
 
@@ -88,34 +85,12 @@ async function createTransferFrames(input: {
   staging: FramedSyncStagingPort;
 }) {
   const { attempt, projection, published } = input;
-  const payloads: Array<Readonly<{
-    frameType: number;
-    payload: unknown;
-    payloadCase: Parameters<typeof encryptProtocolFrame>[0]['payloadCase'];
-  }>> = [{
-    payloadCase: 'transfer_header', frameType: TRANSFER_FRAME_TYPES.transferHeader, payload: {
-      attemptId: attempt.attemptId,
-      manifest: manifestToWire(projection.manifest, published.context.groupId, published.contentId),
-      transferId: published.transferId
-    }
-  }];
-  for (const fact of projection.manifest.facts) payloads.push({
-    payloadCase: 'fact', frameType: TRANSFER_FRAME_TYPES.fact, payload: factToWire(fact)
+  const payloads = buildFramedSyncTransferPayloads({
+    attemptId: attempt.attemptId,
+    blobContents: [{ data: projection.bodyBlob, sha256: projection.manifest.blobs[0]!.sha256 }],
+    manifest: projection.manifest,
+    published
   });
-  payloads.push(
-    { payloadCase: 'blob_chunk', frameType: TRANSFER_FRAME_TYPES.blobChunk, payload: {
-      blobHash: projection.manifest.blobs[0]!.sha256,
-      data: projection.bodyBlob,
-      offset: wireUint64(0n),
-      transferId: published.transferId
-    } },
-    { payloadCase: 'transfer_trailer', frameType: TRANSFER_FRAME_TYPES.transferTrailer, payload: {
-      blobCount: wireUint64(published.blobCount),
-      factCount: wireUint64(published.factCount),
-      manifestHash: published.manifestHash,
-      transferId: published.transferId
-    } }
-  );
   const frames: StoredEncryptedFrame[] = [];
   for (let index = 0; index < payloads.length; index += 1) {
     const { payloadCase, frameType, payload } = payloads[index]!;
