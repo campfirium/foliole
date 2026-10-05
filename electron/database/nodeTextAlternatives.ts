@@ -2,6 +2,8 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { parseNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
+import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../../lib/core/database/syncStateSequenceSchemaStatements.js';
 import type { DbRow } from '../../lib/core/sync/dbPort.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
@@ -89,7 +91,43 @@ function promotedRecord(current: NativeSyncNodeRecord, body: string, now: string
   return {
     ancestor_version_ids: [current.version_id!, ...current.ancestor_version_ids],
     body_text: body,
-    content_hash: hash(JSON.stringify({ body, snapshot })),
+    content_hash: computeNodeSyncHash({
+      anchorLink: snapshot.anchor_link,
+      ...(snapshot.anchor_resolution_status === undefined ? {} : {
+        anchorResolutionStatus: snapshot.anchor_resolution_status
+      }),
+      ...(snapshot.anchor_source_version_id === undefined ? {} : {
+        anchorSourceVersionId: snapshot.anchor_source_version_id
+      }),
+      attachments: snapshot.attachments.map((attachment) => ({
+        attachmentId: attachment.attachment_id,
+        role: attachment.role
+      })),
+      resourceReferences: parseNodeResourceReferences(snapshot.resource_references),
+      content: body,
+      createdAt: snapshot.created_at,
+      deletedAt: snapshot.deleted_at,
+      desiredRetention: snapshot.desired_retention,
+      enableShortTerm: snapshot.enable_short_term ?? null,
+      sequentialReadingEnabled: snapshot.sequential_reading_enabled ?? null,
+      shelvedAt: snapshot.shelved_at ?? null,
+      manualChildOrder: snapshot.manual_child_order ?? null,
+      hideTitleHeading: snapshot.hide_title_heading,
+      id: snapshot.id,
+      imageRegions: snapshot.image_regions,
+      imageSources: snapshot.image_sources ?? null,
+      importContentFingerprint: snapshot.import_content_fingerprint ?? null,
+      importSourceFingerprint: snapshot.import_source_fingerprint ?? null,
+      isTitleManual: snapshot.is_title_manual,
+      kind: snapshot.kind,
+      openingText: snapshot.opening_text,
+      parentId: snapshot.parent_id,
+      priority: snapshot.priority,
+      reveal: snapshot.reveal,
+      title: snapshot.title,
+      updatedAt: snapshot.updated_at,
+      virtualFilter: snapshot.virtual_filter
+    }),
     host_name: 'desktop-alternative-promotion',
     object_id: current.object_id,
     object_type: 'node',

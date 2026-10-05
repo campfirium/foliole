@@ -64,7 +64,8 @@ const LOCAL_REFERENCES_SQL = `SELECT version.version_id, 0 FROM node_sync_versio
     UNION SELECT source_version_id, 0 FROM node_text_alternatives WHERE node_id = ? AND status = 'available'
     UNION SELECT anchor_source_version_id, 0 FROM nodes WHERE anchor_source_version_id IN
       (SELECT version_id FROM node_sync_versions WHERE object_id = ?)
-    UNION SELECT current_version_id, 0 FROM sync_object_state WHERE object_type = 'node' AND object_id = ?`;
+    UNION SELECT current_version_id, 0 FROM sync_object_state
+      WHERE object_type = 'node' AND object_id = ? AND current_version_id IS NOT NULL`;
 
 export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false,
   schema = 'main') {

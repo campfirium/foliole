@@ -19,9 +19,14 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { resolveNodeBody } from '../../lib/core/database/nodeBodyResolution.js';
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import {
+  computeNodeSyncVersionHashFromDriver,
+  loadNodeSyncVersionSourceFromDriver
+} from './nodeSyncVersionSourceFromDriver.js';
 import {
   dismissNodeTextAlternative,
   loadNodeTextAlternativePreview,
@@ -79,6 +84,24 @@ it('promotes the alternate body through a new formal child version', async () =>
     sync_dirty: 1
   });
   expect(row?.current_version_id).toMatch(/^ver_[0-9a-f-]{36}$/);
+  const driver = openDatabaseConnection().driver;
+  const source = loadNodeSyncVersionSourceFromDriver(driver, 'topic-1');
+  if (!source) throw new Error('Promoted node source is missing');
+  const body = resolveNodeBody(source);
+  if (body.status === 'unavailable') throw new Error('Promoted node body is unavailable');
+  const canonicalHash = computeNodeSyncVersionHashFromDriver(
+    driver, { ...source, content: body.content }, 'topic-1'
+  );
+  const hashes = driver.queryOne<{ state_hash: string; version_hash: string }>(
+    `SELECT state.content_hash AS state_hash, version.content_hash AS version_hash
+     FROM sync_object_state state
+     JOIN node_sync_versions version ON version.version_id = state.current_version_id
+     WHERE state.object_type = 'node' AND state.object_id = 'topic-1'`
+  );
+  expect(hashes).toEqual({
+    state_hash: canonicalHash,
+    version_hash: canonicalHash
+  });
 });
 
 it('previews Blob-only authority and hides an alternative while the Blob is unavailable', () => {
