@@ -4,7 +4,6 @@ import {
   compareFramedSyncInventories,
   revalidateFramedSyncInventorySource,
   type FramedSyncDeferredObject,
-  type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import type {
@@ -39,7 +38,7 @@ function digest(value: unknown, name: string) {
 }
 
 function decodeEntry(value: NativeCompanionFramedSyncInventoryEntry): FramedSyncInventoryEntry {
-  if (!value || typeof value !== 'object' || !value.object_type || !value.global_id) {
+  if (!value || typeof value !== 'object' || value.object_type !== 'node' || !value.global_id) {
     throw new Error('framed_sync_inventory_identity_invalid');
   }
   return {
@@ -75,14 +74,9 @@ export function selectCompanionFramedSyncCurrentNodes(args: {
   local: readonly FramedSyncInventoryEntry[];
   remote: readonly FramedSyncInventoryEntry[];
 }) {
-  const deferredObjects: FramedSyncDeferredObject[] = [];
-  const sendable: FramedSyncInventoryDifference[] = [];
-  for (const difference of compareFramedSyncInventories(args)) {
-    if (difference.direction !== 'local_to_remote') continue;
-    if (difference.objectType === 'node') sendable.push(difference);
-    else deferredObjects.push({ globalId: difference.globalId, objectType: difference.objectType });
-  }
-  return { deferredObjects, sendable };
+  const sendable = compareFramedSyncInventories(args)
+    .filter((difference) => difference.direction === 'local_to_remote');
+  return { deferredObjects: [] as FramedSyncDeferredObject[], sendable };
 }
 
 export async function sendCompanionFramedSyncInventoryDifferences(

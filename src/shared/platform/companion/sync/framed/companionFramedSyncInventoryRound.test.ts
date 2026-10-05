@@ -62,6 +62,15 @@ it('rejects malformed remote inventory before selecting objects', async () => {
   expect(mocks.send).not.toHaveBeenCalled();
 });
 
+it('rejects legacy non-node inventory identities', async () => {
+  mocks.remoteInventory.mockResolvedValue({ entries: [{
+    ...entry('remote'), object_type: 'node_review'
+  }] });
+  await expect(sendCompanionFramedSyncInventoryDifferences(request))
+    .rejects.toThrow('framed_sync_inventory_identity_invalid');
+  expect(mocks.send).not.toHaveBeenCalled();
+});
+
 it('sends exact relation ids without redundantly including the current node', async () => {
   mocks.localInventory.mockResolvedValue({ entries: [entry('node-c', '1', ['relation-1'])] });
   mocks.remoteInventory.mockResolvedValue({ entries: [entry('node-c')] });
