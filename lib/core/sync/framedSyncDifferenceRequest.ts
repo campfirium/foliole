@@ -1,5 +1,8 @@
 import { bytes, list, row, text } from './framedSyncDecodedValues.js';
-import type { FramedSyncInventoryDifference } from './framedSyncInventory.js';
+import type {
+  FramedSyncInventoryDifference,
+  FramedSyncInventoryEntry
+} from './framedSyncInventory.js';
 import {
   encodeValidatedProtocolMessage,
   type ValidatedProtocolMessage
@@ -24,8 +27,12 @@ export function projectFramedSyncDifferenceRequest(input: {
   if (difference.direction !== 'remote_to_local' || difference.objectType !== 'node') {
     throw new Error('framed_sync_difference_request_direction_invalid');
   }
+  const versionIds = new Set(difference.need.frontierFactIds);
+  if (difference.need.sharedState || difference.need.resourceHashes.length) {
+    for (const id of difference.sourceSnapshot.frontierFactIds) versionIds.add(id);
+  }
   const facts = [
-    ...difference.need.frontierFactIds.map((id) => identity(difference.globalId, id, 2)),
+    ...[...versionIds].map((id) => identity(difference.globalId, id, 2)),
     ...difference.need.requiredRelationIds.map((id) => identity(difference.globalId, id, 3)),
     ...difference.need.reviewFactIds.map((id) => identity(difference.globalId, id, 4))
   ];
@@ -62,3 +69,48 @@ export function decodeFramedSyncDifferenceRequest(message: ValidatedProtocolMess
     roundId: bytes(payload.roundId, 'round_id').slice()
   };
 }
+
+export function resolveFramedSyncDifferenceRequest(
+  current: FramedSyncInventoryEntry,
+  request: ReturnType<typeof decodeFramedSyncDifferenceRequest>
+): FramedSyncInventoryDifference {
+  if (current.objectType !== 'node' || request.facts.some((fact) =>
+    fact.objectType !== current.objectType || fact.globalId !== current.globalId)) {
+    throw new Error('framed_sync_difference_request_identity_mismatch');
+  }
+  const ids = (kind: FramedSyncRequestedFact['kind']) =>
+    request.facts.filter((fact) => fact.kind === kind).map((fact) => fact.factId);
+  const frontierFactIds = ids(2);
+  const requiredRelationIds = ids(3);
+  const reviewFactIds = ids(4);
+  assertSubset(frontierFactIds, current.frontierFactIds, 'fact');
+  assertSubset(requiredRelationIds, current.requiredRelationIds, 'relation');
+  assertSubset(reviewFactIds, current.reviewFactIds, 'review');
+  const resources = new Set(current.resourceHashes.map(hex));
+  if (request.blobHashes.some((hash) => !resources.has(hex(hash)))) {
+    throw new Error('framed_sync_difference_request_blob_unavailable');
+  }
+  return {
+    direction: 'local_to_remote',
+    globalId: current.globalId,
+    need: {
+      frontierFactIds,
+      requiredRelationIds,
+      resourceHashes: request.blobHashes,
+      reviewFactIds,
+      sharedState: frontierFactIds.length > 0
+    },
+    objectType: current.objectType,
+    sourceSnapshot: current
+  };
+}
+
+function assertSubset(requested: readonly string[], available: readonly string[], name: string) {
+  const values = new Set(available);
+  if (requested.some((value) => !values.has(value))) {
+    throw new Error(`framed_sync_difference_request_${name}_unavailable`);
+  }
+}
+
+const hex = (value: Uint8Array) => [...value]
+  .map((byte) => byte.toString(16).padStart(2, '0')).join('');

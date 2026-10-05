@@ -3,7 +3,8 @@ import { expect, it } from 'vitest';
 import { FRAMED_SYNC_FRAME_TYPES } from './framedSyncContract.js';
 import {
   decodeFramedSyncDifferenceRequest,
-  projectFramedSyncDifferenceRequest
+  projectFramedSyncDifferenceRequest,
+  resolveFramedSyncDifferenceRequest
 } from './framedSyncDifferenceRequest.js';
 import type { FramedSyncInventoryDifference } from './framedSyncInventory.js';
 import { decodeAndValidateProtocolMessage } from './framedSyncProtocolCodec.js';
@@ -39,6 +40,25 @@ it('projects one remote Node difference into exact requested fact identities and
   ]);
   expect(decoded.blobHashes).toEqual([hash(3)]);
   expect(decoded.roundId).toEqual(hash(8, 16));
+  expect(resolveFramedSyncDifferenceRequest(difference().sourceSnapshot, decoded)).toMatchObject({
+    direction: 'local_to_remote', globalId: 'node-1', need: {
+      frontierFactIds: ['version-2'], requiredRelationIds: ['relation-1'],
+      reviewFactIds: ['review-1'], sharedState: true
+    }
+  });
+});
+
+it('rejects a request for facts or blobs outside the current frozen inventory entry', () => {
+  const projected = projectFramedSyncDifferenceRequest({ difference: difference(), roundId: hash(8, 16) });
+  const decoded = decodeFramedSyncDifferenceRequest(decodeAndValidateProtocolMessage(
+    projected.encoded, FRAMED_SYNC_FRAME_TYPES.sessionControl
+  ));
+  expect(() => resolveFramedSyncDifferenceRequest({
+    ...difference().sourceSnapshot, frontierFactIds: ['other-version']
+  }, decoded)).toThrow('framed_sync_difference_request_fact_unavailable');
+  expect(() => resolveFramedSyncDifferenceRequest({
+    ...difference().sourceSnapshot, resourceHashes: [hash(9)]
+  }, decoded)).toThrow('framed_sync_difference_request_blob_unavailable');
 });
 
 it('rejects a local-to-remote difference because it does not need a pull request', () => {
