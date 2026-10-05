@@ -83,7 +83,8 @@ function nodeSnapshot(nodeId: string) {
 async function commitTestReceipt(
   responder: ReturnType<typeof peer>,
   staging: ReturnType<typeof createDesktopFramedSyncStaging>,
-  transferId: Uint8Array
+  transferId: Uint8Array,
+  requestContext = context
 ) {
   const publication = await staging.loadOutboundPublication(transferId);
   if (!publication) throw new Error('test_publication_missing');
@@ -97,6 +98,14 @@ async function commitTestReceipt(
     groupKey, payload: receipt, payloadCase: 'transfer_receipt', sequence: 0n, transferId
   });
   await receiveDesktopFramedSyncReceipt({
+    context: {
+      groupId: requestContext.groupId,
+      protocolVersion: requestContext.protocolVersion,
+      receiverDeviceId: requestContext.responderDeviceId,
+      receiverLibraryEpoch: requestContext.responderLibraryEpoch,
+      senderDeviceId: requestContext.initiatorDeviceId,
+      senderLibraryEpoch: requestContext.initiatorLibraryEpoch
+    },
     db: responder.db, groupKey, staging,
     stream: {
       frames: (async function* () {
@@ -188,6 +197,9 @@ it('returns an exact frozen transfer stream for a requested remote Node differen
   ))[0]?.state).toBe('replayable');
 
   const transferId = decodeFramedSyncPreamble(transfer.preamble).contextId;
+  await expect(commitTestReceipt(responder, staging, transferId, {
+    ...context, initiatorDeviceId: 'device-c'
+  })).rejects.toThrow('framed_sync_receipt_request_context_mismatch');
   await commitTestReceipt(responder, staging, transferId);
   expect((await responder.db.query<{ state: string }>(
     'SELECT state FROM framed_sync_outbound_publications'

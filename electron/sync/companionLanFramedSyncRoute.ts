@@ -1,6 +1,9 @@
 import type http from 'node:http';
 
-import { FRAMED_SYNC_FRAME_TYPES } from '../../lib/core/sync/framedSyncContract.js';
+import {
+  FRAMED_SYNC_FRAME_TYPES,
+  type FramedSyncContext
+} from '../../lib/core/sync/framedSyncContract.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -50,21 +53,16 @@ export async function handleProductionCompanionFramedSyncPost(args: {
         groupSecret: Buffer.from(runtime.groupKey).toString('base64url'), noncePort, staging, stream
       });
       const inspected = await inspectFirstFrame(stream);
+      const transferContext = toTransferContext(context);
       if (inspected.first.header.frameType === FRAMED_SYNC_FRAME_TYPES.transferReceipt) {
         return receiveDesktopFramedSyncReceipt({
+          context: transferContext,
           db: runtime.db, groupKey: runtime.groupKey, staging,
           stream: inspected.stream, transferId: preamble.contextId
         });
       }
       return receiveDesktopFramedSyncTransfer({
-        context: {
-          groupId: context.groupId,
-          protocolVersion: context.protocolVersion,
-          receiverDeviceId: context.responderDeviceId,
-          receiverLibraryEpoch: context.responderLibraryEpoch,
-          senderDeviceId: context.initiatorDeviceId,
-          senderLibraryEpoch: context.initiatorLibraryEpoch
-        },
+        context: transferContext,
         db: runtime.db,
         groupKey: runtime.groupKey,
         staging,
@@ -75,6 +73,24 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     response: args.response
   });
   return true;
+}
+
+function toTransferContext(context: Readonly<{
+  groupId: string;
+  initiatorDeviceId: string;
+  initiatorLibraryEpoch: string;
+  protocolVersion: number;
+  responderDeviceId: string;
+  responderLibraryEpoch: string;
+}>): FramedSyncContext {
+  return {
+    groupId: context.groupId,
+    protocolVersion: context.protocolVersion,
+    receiverDeviceId: context.responderDeviceId,
+    receiverLibraryEpoch: context.responderLibraryEpoch,
+    senderDeviceId: context.initiatorDeviceId,
+    senderLibraryEpoch: context.initiatorLibraryEpoch
+  };
 }
 
 async function inspectFirstFrame(stream: FramedSyncStreamBody<FramedSyncWireFrame>) {
