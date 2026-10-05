@@ -12,6 +12,7 @@ import {
   compareFramedSyncInventories,
   type FramedSyncInventoryEntry
 } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { publishDesktopFramedSyncNodeOutbound } from './desktopFramedSyncOutboundSelection.js';
@@ -77,12 +78,43 @@ beforeEach(() => {
       parent_version_id TEXT, host_name TEXT NOT NULL, created_at TEXT NOT NULL,
       content_hash TEXT NOT NULL, body_text TEXT, snapshot_json TEXT NOT NULL);
     CREATE TABLE node_sync_version_parents (version_id TEXT NOT NULL, parent_version_id TEXT NOT NULL,
-      ordinal INTEGER NOT NULL, PRIMARY KEY (version_id, parent_version_id));`);
+      ordinal INTEGER NOT NULL, PRIMARY KEY (version_id, parent_version_id));
+    CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT NOT NULL,
+      parent_version_id TEXT, host_name TEXT NOT NULL, content_hash TEXT NOT NULL,
+      snapshot_json TEXT NOT NULL, deleted_at TEXT NOT NULL, created_at TEXT NOT NULL);
+    CREATE TABLE review_log (node_id TEXT NOT NULL, op_id TEXT NOT NULL);`);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   port = createBetterSqliteDbPort(sqlite);
 });
 
 afterEach(() => sqlite.close());
+
+it('publishes a deleted Node as its tombstone version fact', async () => {
+  const contentHash = '9'.repeat(64);
+  const deleted = JSON.parse(snapshot('tombstone-1', contentHash, ''));
+  deleted.deleted_at = '2026-10-05T02:00:00.000Z';
+  sqlite.prepare(`INSERT INTO node_sync_tombstones VALUES
+    ('node-1', 'tombstone-1', NULL, 'host-a', ?, ?, ?, '2026-10-05T02:00:00.000Z')`)
+    .run(contentHash, JSON.stringify(deleted), '2026-10-05T02:00:00.000Z');
+  const frozen = await readFramedSyncInventoryEntry(port, {
+    globalId: 'node-1', objectType: 'node'
+  });
+  if (!frozen) throw new Error('tombstone_inventory_missing');
+  const [difference] = compareFramedSyncInventories({ local: [frozen], remote: [] });
+  if (!difference) throw new Error('difference_missing');
+
+  const result = await publishDesktopFramedSyncNodeOutbound({
+    context: context('receiver-a'), difference, port,
+    readCurrentInventoryEntry: readFramedSyncInventoryEntry
+  });
+
+  expect(result.kind).toBe('published');
+  if (result.kind !== 'published') return;
+  const tombstone = result.publication.manifest.facts.find((fact) => fact.kind === 2);
+  expect(tombstone?.factId).toBe('tombstone-1');
+  expect(tombstone?.body.find((field) => field.name === 'is_tombstone')?.value)
+    .toEqual({ kind: 'bool', value: true });
+});
 
 it('publishes the exact frozen node fact, blob reference, and receiver-scoped hold', async () => {
   const contentHash = '1'.repeat(64);

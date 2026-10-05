@@ -7,6 +7,7 @@ export interface StoredSyncNodeVersionRow extends DbRow {
   content_hash: string;
   created_at: string;
   host_name: string;
+  is_tombstone?: number;
   object_id: string;
   parent_version_id: string | null;
   snapshot_json: string;
@@ -59,7 +60,13 @@ export async function loadStoredSyncNodeVersionRecords(port: DbPort, versionIds:
   if (uniqueIds.length === 0) return records;
   const placeholders = uniqueIds.map(() => '?').join(', ');
   const rows = await port.query<StoredSyncNodeVersionRow>(
-    `SELECT * FROM node_sync_versions WHERE version_id IN (${placeholders})`, uniqueIds
+    `SELECT version_id, object_id, parent_version_id, host_name, created_at,
+      content_hash, body_text, snapshot_json, 0 AS is_tombstone
+     FROM node_sync_versions WHERE version_id IN (${placeholders})
+     UNION ALL
+     SELECT version_id, node_id AS object_id, parent_version_id, host_name, created_at,
+      content_hash, NULL AS body_text, snapshot_json, 1 AS is_tombstone
+     FROM node_sync_tombstones WHERE version_id IN (${placeholders})`, [...uniqueIds, ...uniqueIds]
   );
   const edges = await port.query<{ version_id: string; parent_version_id: string }>(
     `SELECT version_id, parent_version_id FROM node_sync_version_parents
@@ -135,7 +142,8 @@ async function storedVersionToRecord(
   requireBody = true
 ): Promise<NativeSyncNodeRecord> {
   const snapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
-  const body = storedSyncNodeVersionBody(row);
+  const isTombstone = row.is_tombstone === 1;
+  const body = isTombstone ? '' : storedSyncNodeVersionBody(row);
   if (body === null && requireBody) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
   const parents = knownParents ?? await loadParents(port, row.version_id);
   return {
@@ -143,6 +151,7 @@ async function storedVersionToRecord(
     body_text: body,
     content_hash: row.content_hash,
     host_name: row.host_name,
+    is_tombstone: isTombstone,
     object_id: row.object_id,
     object_type: 'node',
     parent_version_id: parents[0] ?? null,

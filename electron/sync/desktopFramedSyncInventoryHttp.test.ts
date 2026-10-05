@@ -56,6 +56,9 @@ function peer(nodeId: string, body: string, hashByte: string) {
       body_text TEXT, content_hash TEXT NOT NULL, snapshot_json TEXT NOT NULL);
     CREATE TABLE node_sync_version_parents (version_id TEXT NOT NULL,
       parent_version_id TEXT NOT NULL, ordinal INTEGER NOT NULL);
+    CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT NOT NULL,
+      parent_version_id TEXT, host_name TEXT NOT NULL, content_hash TEXT NOT NULL,
+      snapshot_json TEXT NOT NULL, deleted_at TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE review_log (node_id TEXT NOT NULL, op_id TEXT NOT NULL);`);
   for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   sqlite.prepare('INSERT INTO nodes VALUES (?, ?)').run(nodeId, `version-${nodeId}`);

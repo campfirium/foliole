@@ -13,6 +13,7 @@ interface NodeRow extends DbRow {
   content_hash: string;
   current_version_id: string;
   id: string;
+  is_tombstone: number;
 }
 
 interface ParentRow extends DbRow {
@@ -30,11 +31,21 @@ interface ReviewRow extends DbRow {
 const encoder = new TextEncoder();
 
 function nodeSql(key?: InventoryKey) {
-  return `SELECT node.id, node.current_version_id, version.body_text, version.content_hash
-    FROM nodes node JOIN node_sync_versions version
-      ON version.version_id = node.current_version_id
-    ${key ? "WHERE node.id = ?" : ''}
-    ORDER BY node.id`;
+  return `SELECT * FROM (
+      SELECT node.id, node.current_version_id, version.body_text, version.content_hash,
+        0 AS is_tombstone
+      FROM nodes node JOIN node_sync_versions version
+        ON version.version_id = node.current_version_id
+      WHERE NOT EXISTS (
+        SELECT 1 FROM node_sync_tombstones tombstone WHERE tombstone.node_id = node.id
+      )
+      UNION ALL
+      SELECT tombstone.node_id AS id, tombstone.version_id AS current_version_id,
+        NULL AS body_text, tombstone.content_hash, 1 AS is_tombstone
+      FROM node_sync_tombstones tombstone
+    ) inventory
+    ${key ? 'WHERE inventory.id = ?' : ''}
+    ORDER BY inventory.id`;
 }
 
 async function loadRelatedFacts(port: DbPort, nodeIds: readonly string[]) {
@@ -67,13 +78,14 @@ FramedSyncInventoryEntry {
   if (!/^[a-f0-9]{64}$/u.test(row.content_hash)) {
     throw new Error('framed_sync_inventory_state_hash_invalid');
   }
-  if (row.body_text === null) throw new Error('framed_sync_inventory_body_unavailable');
+  const bodyText = row.body_text ?? (row.is_tombstone ? '' : null);
+  if (bodyText === null) throw new Error('framed_sync_inventory_body_unavailable');
   return {
     frontierFactIds: [row.current_version_id],
     globalId: row.id,
     objectType: 'node',
     requiredRelationIds: parents.map(framedSyncParentRelationFactId),
-    resourceHashes: [sha256(encoder.encode(row.body_text))],
+    resourceHashes: [sha256(encoder.encode(bodyText))],
     reviewFactIds: reviews.map((review) => review.op_id),
     sharedStateHash: hexToBytes(row.content_hash)
   };
