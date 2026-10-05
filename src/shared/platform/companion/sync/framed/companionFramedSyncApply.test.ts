@@ -86,7 +86,7 @@ it.each(['android', 'ios'] as const)(
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 2 });
 });
 
-it('rejects tombstone facts, multiple identities, and mismatched blob sets', async () => {
+it('rejects unsupported facts, multiple identities, and mismatched blob sets', async () => {
   const projection = projectFramedSyncNodeRecord(nodeRecord());
   const node = projection.manifest.facts[0]!;
   const review = reviewFact('unsupported');
