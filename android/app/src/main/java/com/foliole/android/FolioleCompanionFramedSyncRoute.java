@@ -30,7 +30,6 @@ final class FolioleCompanionFramedSyncRoute {
     static void handle(
         JSONObject config,
         FolioleCompanionSyncGroupDataBridge bridge,
-        FolioleCompanionSyncGroupSnapshot snapshots,
         FolioleCompanionHttpRequest request,
         OutputStream output,
         String authenticatedPeer,
@@ -63,8 +62,7 @@ final class FolioleCompanionFramedSyncRoute {
             FramedSyncPreamble preamble = peekPreamble(input);
             byte[] response = preamble.contextKind() == 1
                 ? inventory(input, groupKey, new FramedSyncSessionContext(groupId,
-                    authenticatedPeer, senderEpoch, localDeviceId, localEpoch), snapshots,
-                    authenticatedPeer, nonceStore)
+                    authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge, nonceStore)
                 : transfer(input, groupKey, new FramedSyncTransferContext(groupId,
                     authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge,
                     transferStore, localDeviceId, localEpoch);
@@ -78,16 +76,15 @@ final class FolioleCompanionFramedSyncRoute {
         InputStream input,
         byte[] groupKey,
         FramedSyncSessionContext context,
-        FolioleCompanionSyncGroupSnapshot snapshots,
-        String peer,
+        FolioleCompanionSyncGroupDataBridge bridge,
         FramedSyncSessionNonceStore nonceStore
     ) throws Exception {
         FramedSyncSessionReader.Result requestSession = FramedSyncSessionReader.read(
             input, groupKey, context, FramedSyncInventoryWire.MAX_SESSION_FRAMES);
         byte[] roundId = FramedSyncInventoryWire.decodeRoundId(requestSession.messages());
-        return snapshots.refresh(peer, snapshot -> FramedSyncSessionWriter.encode(
-            groupKey, context, FramedSyncInventoryWire.encode(
-                FolioleCompanionFramedSyncInventory.read(snapshot), roundId), nonceStore));
+        JSONObject inventory = bridge.request("read_framed_inventory", new JSONObject());
+        return FramedSyncSessionWriter.encode(groupKey, context, FramedSyncInventoryWire.encode(
+            FolioleCompanionFramedSyncInventory.read(inventory), roundId), nonceStore);
     }
 
     private static byte[] transfer(

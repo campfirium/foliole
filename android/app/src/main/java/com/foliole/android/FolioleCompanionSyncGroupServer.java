@@ -91,7 +91,7 @@ final class FolioleCompanionSyncGroupServer {
             FolioleCompanionSyncIdentityPushRoute.handle(context, config, dataBridge,
                 request, output, auth.authenticate(request), new JSONObject(decryptRequest(request)));
         else if (request.method.equals("POST") && path.equals("/companion/framed-sync"))
-            FolioleCompanionFramedSyncRoute.handle(config, dataBridge, snapshots,
+            FolioleCompanionFramedSyncRoute.handle(config, dataBridge,
                 request, output, auth.authenticate(request), framedSyncNonces, framedSyncTransfers);
         else if (request.method.equals("GET") && path.equals("/companion/sync-pack"))
             FolioleCompanionSyncPackRoutes.pack(context, config, dataBridge, snapshots,
