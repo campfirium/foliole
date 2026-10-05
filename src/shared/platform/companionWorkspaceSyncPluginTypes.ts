@@ -1,5 +1,9 @@
 import type { AttachmentMaintenanceHostPlugin } from '../../../lib/platform/attachmentMaintenanceHostContract';
-import type { NativeCompanionSignedRequestHeaders } from '../../../lib/platform/nativeCompanionSyncContract';
+import type {
+  NativeCompanionFramedSyncTransferReceipt,
+  NativeCompanionFramedSyncTransferRequest,
+  NativeCompanionSignedRequestHeaders
+} from '../../../lib/platform/nativeCompanionSyncContract';
 import type { RemoteImageResourcePlugin } from '../../../lib/platform/remoteImageResourceContract';
 import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
 import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
@@ -79,6 +83,9 @@ export interface CompanionWorkspaceSyncPlugin
     request_id: string;
     result?: Record<string, unknown>;
   }): Promise<void>;
+  sendFramedSyncTransfer(
+    args: NativeCompanionFramedSyncTransferRequest
+  ): Promise<NativeCompanionFramedSyncTransferReceipt>;
   signCompanionSyncRequest(args: {
     body?: string;
     body_hash: string;

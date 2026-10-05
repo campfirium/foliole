@@ -6,6 +6,22 @@ import type { SyncTriggerReason } from './syncTriggerContract.js';
 
 export type { NativeCompanionSignedRequestHeaders } from './nativeCompanionSignedRequestContract.js';
 
+export interface NativeCompanionFramedSyncTransferRequest {
+  endpoint_url: string;
+  object_id: string;
+  receiver_device_id: string;
+  receiver_library_epoch: string;
+  sync_group_id: string;
+}
+
+export interface NativeCompanionFramedSyncTransferReceipt {
+  applied_state_hash: string;
+  content_id: string;
+  receiver_device_id: string;
+  receiver_library_epoch: string;
+  transfer_id: string;
+}
+
 export interface NativeCompanionSyncEvent {
   endpoint_url: string | null;
   id: string;
