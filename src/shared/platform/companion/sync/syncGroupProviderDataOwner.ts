@@ -1,11 +1,6 @@
 import type { PluginListenerHandle } from '@capacitor/core';
 
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import {
-  confirmOutboundNodeVersionPack,
-  stageOutboundNodeVersionHolds
-} from '../../../../../lib/core/sync/nodeVersionDeliveryProof';
-import { parseNodeVersionReceipt } from '../../../../../lib/core/sync/nodeVersionReceiptContract';
 import { assertSyncGroupJoinMergeAllowed } from '../../../../../lib/core/sync/syncGroupJoinMergeGuard';
 import {
   COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
@@ -18,7 +13,7 @@ import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository'
 import { handleCompanionAttachmentCheckpoint } from '../runtime/companionAttachmentCheckpoint';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
-import { applyCompanionFramedSyncDataOperation } from './framed/companionFramedSyncDataOperation';
+import * as framedSyncData from './framed/companionFramedSyncDataOperation';
 import { applyCompanionSyncIdentityPackWithDbPort } from './pack-apply/companionSyncIdentityPackApply';
 import { prepareCompanionSyncIdentityPack } from './syncGroupIdentityPackPrepare';
 import { readCompanionSyncIdentitySource } from './syncGroupIdentitySourceRead';
@@ -28,6 +23,7 @@ import {
 } from './syncGroupMemberStateStore';
 import { loadCurrentCredential, loadGroupPayload } from './syncGroupProviderCredentialStore';
 import { createCompanionSyncGroupSourceSnapshot } from './syncGroupSourceSnapshot';
+import { confirmVersionPack, stageVersionPack } from './syncGroupVersionPackDataOwner';
 
 let listenerReady: Promise<void> | null = null;
 
@@ -79,9 +75,10 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
     const page = requiredObject(requiredObject(payload.manifest).identity_page);
     return { applied: result.applied, pageId: requiredText(page.page_id) };
   });
-  if (operation === CONTRACT.operations.applyFramedTransfer) {
-    return writer((db) => applyCompanionFramedSyncDataOperation(db, payload));
-  }
+  if (operation === CONTRACT.operations.applyFramedTransfer)
+    return writer((db) => framedSyncData.applyCompanionFramedSyncDataOperation(db, payload));
+  if (operation === CONTRACT.operations.readFramedInventory)
+    return getIosCompanionDatabaseOwner().read(framedSyncData.readCompanionFramedSyncInventory);
   if (operation === CONTRACT.operations.applyMemberState) {
     return applyCompanionSyncGroupMemberState(
       parseSyncGroupMemberState(payload.state),
@@ -98,51 +95,6 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
   if (operation === CONTRACT.operations.stageVersionPack) return stageVersionPack(payload);
   if (operation === CONTRACT.operations.confirmVersionPack) return confirmVersionPack(payload);
   throw new Error('sync_group_data_operation_unsupported');
-}
-
-function confirmVersionPack(payload: Record<string, unknown>) {
-  const receipt = parseNodeVersionReceipt(payload.receipt);
-  const peerId = requiredText(payload.authenticated_device_id);
-  return writer(async (db) => {
-    const [local] = await db.query<{ group_id: string; local_device_identity_key: string }>(
-      `SELECT group_id, local_device_identity_key FROM sync_group_local_state
-       WHERE singleton_id = 1 AND state = 'active'`
-    );
-    if (!local || receipt.groupId !== local.group_id ||
-        receipt.sourceDeviceId !== local.local_device_identity_key || receipt.deviceId !== peerId) {
-      throw new Error('node_version_receipt_identity_mismatch');
-    }
-    await confirmOutboundNodeVersionPack(db, {
-      confirmedAt: new Date().toISOString(), deviceId: peerId, groupId: local.group_id,
-      libraryEpoch: receipt.libraryEpoch, packId: receipt.packId,
-      proofRevision: receipt.proofRevision, results: receipt.results
-    });
-    return { accepted: true };
-  });
-}
-
-function stageVersionPack(payload: Record<string, unknown>) {
-  const heads = versionPairs(payload.heads);
-  const payloads = versionPairs(payload.payloads);
-  return writer((db) => db.transaction(async (tx) => {
-    const [local] = await tx.query<{ group_id: string }>(
-      `SELECT group_id FROM sync_group_local_state WHERE singleton_id = 1 AND state = 'active'`
-    );
-    if (!local) throw new Error('node_version_pack_group_unavailable');
-    await stageOutboundNodeVersionHolds(tx, {
-      createdAt: new Date().toISOString(), deviceId: requiredText(payload.peer_id),
-      groupId: local.group_id, heads, packId: requiredText(payload.pack_id), payloads
-    });
-    return { staged: true };
-  }));
-}
-
-function versionPairs(value: unknown) {
-  if (!Array.isArray(value)) throw new Error('node_version_pack_pairs_invalid');
-  return value.map((entry: unknown) => {
-    const row = requiredObject(entry);
-    return { objectId: requiredText(row.object_id), versionId: requiredText(row.version_id) };
-  });
 }
 
 async function registerDevice(payload: Record<string, unknown>) {

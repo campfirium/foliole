@@ -4,6 +4,8 @@ import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 
 import { applyCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
 
+export { readCompanionFramedSyncInventory } from './companionFramedSyncInventory.js';
+
 function requiredText(value: unknown) {
   if (typeof value !== 'string' || !value.trim()) throw new Error('sync_group_data_text_required');
   return value.trim();
