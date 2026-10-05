@@ -3,6 +3,7 @@ import Foundation
 import FolioleFramedSyncRuntime
 import SQLite3
 
+// sql-surface: ios-isolated-framed-staging-owner
 final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
     private var database: OpaquePointer?
     private let resources: FolioleFramedSyncInboundResources

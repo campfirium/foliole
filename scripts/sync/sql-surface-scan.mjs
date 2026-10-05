@@ -47,6 +47,7 @@ const IOS_FORMAL_SWIFT_SOURCE = /(?:^|\/)ios\/App\/App\/[^/]+\.swift$/;
 const SQLITE_OPEN = /\bsqlite3_open(?:_v2)?\s*\(/;
 const IOS_SNAPSHOT_OWNER = /\/\/ sql-surface: ios-isolated-snapshot-owner\b/;
 const IOS_PACK_OWNER = /\/\/ sql-surface: ios-isolated-pack-owner\b/;
+const IOS_FRAMED_STAGING_OWNER = /\/\/ sql-surface: ios-isolated-framed-staging-owner\b/;
 
 const files = listFiles();
 const findings = [];
@@ -82,6 +83,9 @@ function isBoundedIsolatedSqlite(text) {
   if (IOS_SNAPSHOT_OWNER.test(text)) {
     return closesHandle && /\bSQLITE_OPEN_READONLY\b/u.test(text) &&
       !/\bSQLITE_OPEN_(?:CREATE|READWRITE)\b/u.test(text);
+  }
+  if (IOS_FRAMED_STAGING_OWNER.test(text)) {
+    return closesHandle && /\bSQLITE_OPEN_(?:CREATE|READWRITE)\b/u.test(text);
   }
   return IOS_PACK_OWNER.test(text) && closesHandle &&
     /\bSQLITE_OPEN_READONLY\b/u.test(text) && /\bSQLITE_OPEN_(?:CREATE|READWRITE)\b/u.test(text);

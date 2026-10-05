@@ -2,6 +2,7 @@ import Foundation
 import FolioleFramedSyncRuntime
 import SQLite3
 
+// sql-surface: ios-isolated-framed-staging-owner
 final class FolioleFramedSyncTransferDatabase {
     let url: URL
     private var database: OpaquePointer?

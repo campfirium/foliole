@@ -14,11 +14,13 @@ describe('iOS desktop HTTP security host contract', () => {
   it('routes every native desktop request through the redirect blocker', () => {
     const client = readAppSource('FolioleCompanionDesktopHttpClient.swift');
     const attachments = readAppSource('FolioleCompanionAttachmentResourceDownload.swift');
-    const syncPack = readAppSource('FolioleCompanionSyncPackTransfer.swift');
+    const framedReceiver = readAppSource('FolioleFramedSyncHTTPReceiver.swift');
+    const framedTransport = readAppSource('FolioleFramedSyncHTTPTransport.swift');
 
     expect(client.match(/FolioleCompanionDesktopHttpTransport\.data\(for: request\)/g)).toHaveLength(2);
-    expect(attachments).toContain('FolioleCompanionDesktopHttpTransport.download(for: urlRequest)');
-    expect(syncPack).toContain('FolioleCompanionDesktopHttpTransport.download(for: request)');
+    expect(attachments).toContain('FolioleCompanionDesktopHttpTransport.download(for: request)');
+    expect(framedTransport).toMatch(/FolioleFramedSyncHTTPReceiver[\s\S]*receiver\.upload/u);
+    expect(framedReceiver).toMatch(/willPerformHTTPRedirection[\s\S]*completionHandler\(nil\)/u);
     expect(client).toContain('session.data(for: request, delegate: FolioleCompanionRedirectBlocker())');
     expect(client).toContain('session.download(for: request, delegate: FolioleCompanionRedirectBlocker())');
     expect(client).toMatch(/willPerformHTTPRedirection[\s\S]*completionHandler\(nil\)/);
@@ -26,10 +28,12 @@ describe('iOS desktop HTTP security host contract', () => {
     expect(client).toContain('configuration.requestCachePolicy = .reloadIgnoringLocalCacheData');
     expect(client).toContain('configuration.httpShouldSetCookies = false');
     expect(client).toContain('configuration.urlCredentialStorage = nil');
+    expect(framedTransport).toContain('configuration.httpShouldSetCookies = false');
+    expect(framedTransport).toContain('configuration.urlCredentialStorage = nil');
   });
 
-  it('keeps sync-pack transfer on HTTP or HTTPS', () => {
-    const syncPack = readAppSource('FolioleCompanionSyncPackTransfer.swift');
-    expect(syncPack).toContain('["http", "https"].contains(endpoint.scheme?.lowercased() ?? "")');
+  it('keeps framed transfer on HTTP or HTTPS', () => {
+    const framedTransport = readAppSource('FolioleFramedSyncHTTPTransport.swift');
+    expect(framedTransport).toContain('["http", "https"].contains(endpoint.scheme?.lowercased() ?? "")');
   });
 });

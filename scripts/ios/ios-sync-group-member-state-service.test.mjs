@@ -4,6 +4,7 @@ import {
   IOS_HOSTED_PROVIDER_DEVICE_ID,
   IOS_HOSTED_SYNC_GROUP_ID
 } from '../../lib/platform/iosHostedSyncGroupContract.ts';
+import { SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION } from '../../lib/platform/syncGroupMemberStateContract.ts';
 
 import { routeIosHostedMemberStateRequest } from './ios-sync-group-member-state-service.ts';
 
@@ -22,13 +23,17 @@ const provider = {
 };
 
 describe('iOS hosted member-state service', () => {
-  it('answers a member with provider-owned identity before sync-pack transfer', () => {
+  it('answers a member with provider-owned identity before framed transfer', () => {
     const response = routeIosHostedMemberStateRequest({
       bodyText: JSON.stringify({
-        contract_version: 1,
+        contract_version: SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION,
         devices: [provider],
         group_id: IOS_HOSTED_SYNC_GROUP_ID,
+        library_epoch: 'hosted-provider-epoch',
+        proof_revision: 0,
         removals: [],
+        restore: null,
+        source_proof_revisions: {},
         sender_device_identity_key: 'ios-member'
       }),
       method: 'POST',
@@ -36,14 +41,14 @@ describe('iOS hosted member-state service', () => {
     });
 
     expect(JSON.parse(response?.body ?? '{}')).toMatchObject({
-      contract_version: 1,
+      contract_version: SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION,
       group_id: IOS_HOSTED_SYNC_GROUP_ID,
       sender_device_identity_key: IOS_HOSTED_PROVIDER_DEVICE_ID
     });
   });
 
   it('does not intercept unrelated signed requests', () => {
-    expect(routeIosHostedMemberStateRequest({ bodyText: '', method: 'GET', url: '/companion/sync-pack' }))
+    expect(routeIosHostedMemberStateRequest({ bodyText: '', method: 'POST', url: '/companion/framed-sync' }))
       .toBeNull();
   });
 });

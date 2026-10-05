@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = process.cwd();
 const APP = path.join(ROOT, 'ios/App/App');
-const ISOLATED_SQLITE_MARKER = /sql-surface: ios-isolated-(?:pack|snapshot)-owner/;
+const ISOLATED_SQLITE_MARKER = /sql-surface: ios-isolated-(?:pack|snapshot|framed-staging)-owner/;
 const RETIRED_ACTIVE_DATABASE_TOKENS = [
   'FolioleCompanionLearningWriteDatabase',
   'FolioleCompanionGeneratedReadQueryRunner',
@@ -24,7 +24,7 @@ describe('iOS active database ownership', () => {
     for (const token of RETIRED_ACTIVE_DATABASE_TOKENS) expect(source.join('\n')).not.toContain(token);
   });
 
-  it('exposes only Sync Group, network, discovery, file, and staged-pack methods from Swift', async () => {
+  it('exposes only Sync Group, network, discovery, file, and framed-transfer methods from Swift', async () => {
     const plugin = await readFile(path.join(APP, 'FolioleCompanionSyncPlugin.swift'), 'utf8');
     const methods = [...plugin.matchAll(/CAPPluginMethod\(name: "([^"]+)"/g)].map((match) => match[1]).sort();
 
@@ -33,9 +33,10 @@ describe('iOS active database ownership', () => {
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState',
       'loadSyncParticipationState', 'maintainAttachmentFiles', 'readRemoteImageResponse',
-      'rejectSyncGroupJoinRequest', 'resolveAttachmentResource',
+      'pullFramedSyncObject', 'readFramedSyncInventory', 'rejectSyncGroupJoinRequest',
+      'resolveAttachmentResource',
       'resolveSyncGroupDataRequest', 'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
-      'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
+      'sendFramedSyncTransfer', 'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
       'stopDiscoverySession', 'stopSyncGroupProvider', 'writeImageAttachment'
     ].sort());
   });
