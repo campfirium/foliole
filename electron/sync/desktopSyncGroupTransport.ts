@@ -1,10 +1,12 @@
 import { getPeerCursor, setPeerCursor } from '../../lib/core/database/syncState.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { reconcileVersionedInlineBodies } from '../database/syncBodyProjectionReconcile.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadPendingWatchedFolderConflicts } from '../database/watchedFolderConflictDecisions.js';
 
+import { runDesktopFramedSyncInventoryRound } from './desktopFramedSyncInventoryRound.js';
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import { reportDesktopSyncGroupCursorCommitted } from './desktopSyncGroupCursorCommit.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupHttp.js';
@@ -51,6 +53,9 @@ async function continuePeerSync(target: DesktopSyncGroupPeer, activity?: Desktop
   if (memberState.normalSyncReady === false && !restoreId) return skipPeerSync(target, activity, 'not_ready');
   if (restoreId) await runPeerSyncStage('member_state', () =>
     exchangeDesktopSyncGroupMemberState(target), target, activity);
+  if (CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version >= FRAMED_SYNC_PROTOCOL_VERSION) {
+    return continueFramedPeerSync(target, memberState, activity);
+  }
   if (CURRENT_SYNC_PROTOCOL_DESCRIPTOR.version >= 21) {
     if (restoreId) {
       await runPeerSyncStage('sync_pack', () =>
@@ -90,6 +95,22 @@ async function continuePeerSync(target: DesktopSyncGroupPeer, activity?: Desktop
   await runPeerSyncStage('resources', () => drainDesktopSyncGroupResourceArticles(target), target, activity);
   const complete = await runWithDatabaseConnectionOwner(() => resourcesComplete());
   return { complete, cursor: nextCursor };
+}
+
+async function continueFramedPeerSync(target: DesktopSyncGroupPeer, memberState: Readonly<{
+  localLibraryEpoch: string;
+  remoteLibraryEpoch: string;
+}>, activity?: DesktopSyncActivityContext) {
+  const pendingConflicts = await runWithDatabaseConnectionOwner(() => loadPendingWatchedFolderConflicts());
+  if (pendingConflicts.length) return skipPeerSync(target, activity, 'watched_conflict');
+  const result = await runPeerSyncStage('sync_pack', () => runDesktopFramedSyncInventoryRound({
+    localLibraryEpoch: memberState.localLibraryEpoch,
+    peer: target,
+    remoteLibraryEpoch: memberState.remoteLibraryEpoch
+  }), target, activity);
+  await runWithDatabaseConnectionOwner(() =>
+    reconcileVersionedInlineBodies(openDatabaseConnection().driver));
+  return { complete: result.complete };
 }
 
 async function skipPeerSync(peer: DesktopSyncGroupPeer, activity: DesktopSyncActivityContext | undefined,

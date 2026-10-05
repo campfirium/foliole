@@ -67,7 +67,12 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
   const request = await runWithDatabaseConnectionOwner(() => {
     const workgroup = loadDesktopWorkgroupKey(peer.group_id);
     if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
-    return { body: JSON.stringify(loadDesktopSyncGroupMemberState()), secret: workgroup.group_key };
+    const state = loadDesktopSyncGroupMemberState();
+    return {
+      body: JSON.stringify(state),
+      localLibraryEpoch: state.library_epoch,
+      secret: workgroup.group_key
+    };
   });
   const payload = await postDesktopWorkgroupJson({
     body: request.body,
@@ -85,9 +90,11 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     const localRestore = applied.state.restore;
     if (localRestore && !localRestore.applied) clearDesktopSyncGroupMemberStateReadiness();
     return {
+      localLibraryEpoch: request.localLibraryEpoch,
       localExited: applied.localExited,
       normalSyncReady: applied.normalSyncReady,
       peerBlocked: isDesktopSyncGroupDeviceBlocked(peer.group_id, peer.peer_device_id),
+      remoteLibraryEpoch: incoming.library_epoch,
       restoreFromPeer: localRestore && !localRestore.applied &&
         incoming.restore?.applied &&
         incoming.restore.event.restore_id === localRestore.event.restore_id &&

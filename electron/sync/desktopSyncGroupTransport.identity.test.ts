@@ -1,5 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+vi.mock('../../lib/platform/syncProtocolContract.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/platform/syncProtocolContract.js')>();
+  return { ...actual, CURRENT_SYNC_PROTOCOL_DESCRIPTOR: {
+    ...actual.CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    version: 21, min_supported_version: 21, max_supported_version: 21
+  } };
+});
+
 const runtime = vi.hoisted(() => ({
   exchangeMemberState: vi.fn(), runIdentityRound: vi.fn(),
   runIdentityRestore: vi.fn(), drainIdentityResources: vi.fn(),
