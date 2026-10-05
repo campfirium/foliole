@@ -67,12 +67,13 @@ FramedSyncInventoryEntry {
   if (!/^[a-f0-9]{64}$/u.test(row.content_hash)) {
     throw new Error('framed_sync_inventory_state_hash_invalid');
   }
+  if (row.body_text === null) throw new Error('framed_sync_inventory_body_unavailable');
   return {
     frontierFactIds: [row.current_version_id],
     globalId: row.id,
     objectType: 'node',
     requiredRelationIds: parents.map(framedSyncParentRelationFactId),
-    resourceHashes: [sha256(encoder.encode(row.body_text ?? ''))],
+    resourceHashes: [sha256(encoder.encode(row.body_text))],
     reviewFactIds: reviews.map((review) => review.op_id),
     sharedStateHash: hexToBytes(row.content_hash)
   };
