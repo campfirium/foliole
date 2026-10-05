@@ -48,6 +48,7 @@ enum FolioleFramedSyncTransferWriter {
             )
         }
         for blob in blobs {
+            guard !blob.data.isEmpty else { continue }
             for offset in stride(from: 0, through: max(blob.data.count - 1, 0), by: blobChunkBytes) {
                 let end = min(offset + blobChunkBytes, blob.data.count)
                 var chunk = Foliole_Sync_V22_BlobChunk()

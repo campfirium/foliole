@@ -98,6 +98,41 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         XCTAssertEqual(types, [.transferHeader, .fact, .fact, .transferTrailer])
     }
 
+    func testEmptyBodyBlobIsDeclaredButDoesNotEmitAnEmptyBlobChunk() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foliole-ios-empty-body-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let staging = FolioleFramedSyncOutboundSQLite(database: try .init(
+            url: directory.appendingPathComponent("outbound.db")
+        ))
+        let body = Data()
+        let fact = makeFact(body: body)
+        let attempt = try FolioleFramedSyncTransferWriter.prepare(
+            groupKey: groupKey, context: context(), facts: [fact],
+            blobs: [.init(reference: fact.blobs[0], data: body)], staging: staging
+        )
+        let wire = try FolioleFramedSyncTransferWriter.replay(attempt, staging: staging)
+        let reader = FolioleFramedSyncStreamReader(input: InputStream(data: wire))
+        let preamble = try reader.nextPreamble()
+        var types = [FolioleFramedSyncFrameType]()
+        var trailer: Foliole_Sync_V22_TransferTrailer?
+        var sequence: UInt64 = 0
+        while let frame = try reader.nextFrame() {
+            types.append(frame.header.frameType)
+            let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
+                groupKey: groupKey, preamble: preamble, frame: frame,
+                expectedSequence: sequence
+            )
+            let message = try FolioleFramedSyncCodec.decode(
+                plaintext, authenticatedFrameType: frame.header.frameType.rawValue
+            )
+            if case .transferTrailer(let value) = message.payload { trailer = value }
+            sequence += 1
+        }
+        XCTAssertEqual(types, [.transferHeader, .fact, .transferTrailer])
+        XCTAssertEqual(trailer?.blobCount, 1)
+    }
+
     func testPreparedOutboundRequiresTheNewFactListAndBlobListContract() throws {
         let fact = bloblessFact(kind: .review, id: "review-1")
         var message = Foliole_Sync_V22_ProtocolMessage(); message.payload = .fact(fact)
