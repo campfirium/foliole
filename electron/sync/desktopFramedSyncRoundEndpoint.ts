@@ -13,7 +13,10 @@ import type {
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 import { publishDesktopFramedSyncNodeOutbound } from '../database/desktopFramedSyncOutboundSelection.js';
 
-import { synchronizeDesktopFramedSync } from './desktopFramedSyncProcessOutbound.js';
+import {
+  prepareDesktopFramedSyncPublishedTransfer,
+  sendDesktopFramedSyncPublishedTransfer
+} from './desktopFramedSyncProcessOutbound.js';
 import {
   readDesktopFramedSyncRoundInventory,
   readDesktopFramedSyncRoundInventoryEntry
@@ -34,6 +37,10 @@ type EndpointInput = Readonly<{
   staging: FramedSyncStagingPort;
 }>;
 
+type EndpointState = EndpointInput & Readonly<{
+  attempts: Map<string, Parameters<typeof sendDesktopFramedSyncPublishedTransfer>[0]['attempt']>;
+}>;
+
 const hex = (value: Uint8Array) => Buffer.from(value).toString('hex');
 
 function transferContext(input: EndpointInput): FramedSyncContext {
@@ -47,7 +54,7 @@ function transferContext(input: EndpointInput): FramedSyncContext {
   };
 }
 
-async function selectOutbound(input: EndpointInput, difference: FramedSyncInventoryDifference):
+async function selectOutbound(input: EndpointState, difference: FramedSyncInventoryDifference):
 Promise<FramedSyncRoundSelection> {
   const result = await publishDesktopFramedSyncNodeOutbound({
     context: transferContext(input),
@@ -59,25 +66,28 @@ Promise<FramedSyncRoundSelection> {
   if (result.kind === 'deferred') {
     return { deferredObjects: result.deferredObjects, kind: 'deferred' };
   }
+  const attempt = await prepareDesktopFramedSyncPublishedTransfer({
+    db: input.db,
+    groupSecret: input.groupSecret,
+    publication: result.publication,
+    staging: input.staging
+  });
+  input.attempts.set(hex(result.publication.transferId), attempt);
   return { kind: 'published', publication: result.publication };
 }
 
-async function sendPublishedTransfer(input: EndpointInput, args: Readonly<{
-  difference: FramedSyncInventoryDifference;
+async function sendPublishedTransfer(input: EndpointState, args: Readonly<{
   publication: Parameters<FramedSyncStagingPort['publishOutbound']>[0];
 }>) {
-  const sent = await synchronizeDesktopFramedSync({
-    groupId: input.groupId,
+  const attempt = input.attempts.get(hex(args.publication.transferId));
+  if (!attempt) throw new Error('framed_sync_round_attempt_missing');
+  await sendDesktopFramedSyncPublishedTransfer({
+    attempt,
     groupSecret: input.groupSecret,
-    local: input.local,
-    nodeId: args.difference.globalId,
     peerOrigin: input.peerOrigin,
-    remote: input.peer,
+    publication: args.publication,
     staging: input.staging
   });
-  if (sent.transferId !== hex(args.publication.transferId)) {
-    throw new Error('framed_sync_round_transfer_identity_changed');
-  }
   const receipt = await input.staging.loadReceipt(args.publication.transferId);
   return receipt ? 'committed' as const : 'pending' as const;
 }
@@ -85,14 +95,15 @@ async function sendPublishedTransfer(input: EndpointInput, args: Readonly<{
 export function createDesktopFramedSyncRoundEndpoint(
   input: EndpointInput
 ): FramedSyncRoundEndpoint {
+  const attempts: EndpointState['attempts'] = new Map();
+  const state = { ...input, attempts };
   return {
     deviceId: input.local.deviceId,
     libraryEpoch: input.local.libraryEpoch,
     readInventory: () => readDesktopFramedSyncRoundInventory(input.db),
     readInventoryEntry: (key) => readDesktopFramedSyncRoundInventoryEntry(input.db, key),
-    selectOutbound: (difference) => selectOutbound(input, difference),
-    sendPublishedTransfer: ({ difference, publication }) =>
-      sendPublishedTransfer(input, { difference, publication }),
+    selectOutbound: (difference) => selectOutbound(state, difference),
+    sendPublishedTransfer: ({ publication }) => sendPublishedTransfer(state, { publication }),
     staging: input.staging
   };
 }

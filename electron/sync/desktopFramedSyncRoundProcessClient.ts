@@ -21,6 +21,7 @@ Promise<unknown> }>;
 type ProcessSnapshot = Readonly<{ deviceId: string; origin: string }>;
 
 export type DesktopFramedSyncRoundProcessOptions = Readonly<{
+  beforeSend?: (side: 'left' | 'right') => Promise<void>;
   emptyDeferredSide?: 'left' | 'right';
   inventoryOverride?: Readonly<Partial<Record<'left' | 'right', readonly FramedSyncInventoryEntry[]>>>;
   pendingSide?: 'left' | 'right';
@@ -93,6 +94,7 @@ function createEndpoint(args: {
     },
     sendPublishedTransfer: async ({ publication: selected }) => {
       if (args.options.pendingSide === args.side) return 'pending';
+      await args.options.beforeSend?.(args.side);
       return z.enum(['committed', 'pending']).parse(await invokeRound(args.process, {
         kind: 'send', transferId: hex(selected.transferId)
       }));

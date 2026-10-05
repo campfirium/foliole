@@ -142,3 +142,38 @@ it('replays the durable receipt after receiver restart when the round repeats a 
     .toMatchObject({ inboundFrames: 4, outboundFrames: 1, receipts: 1 });
   expect(await readDesktopFramedSyncRoundControlLog(restarted.process)).toContain('round_receipt');
 });
+
+it('sends the frozen publication when the current node changes after selection', async () => {
+  const fixture = await setup();
+  await fixture.left.seed({
+    content: 'Frozen body', nodeId: 't326-round-frozen', title: 'Frozen title'
+  });
+  let changed = false;
+
+  const receipt = await coordinateDesktopFramedSyncProcessRound({
+    left: fixture.leftSnapshot,
+    leftProcess: fixture.left,
+    options: {
+      beforeSend: async (side) => {
+        if (side !== 'left' || changed) return;
+        changed = true;
+        await fixture.left.seed({
+          content: 'Edited after selection', nodeId: 't326-round-frozen', title: 'Edited title'
+        });
+      }
+    },
+    right: fixture.rightSnapshot,
+    rightProcess: fixture.right
+  });
+
+  expect(receipt.result).toBe('converged');
+  const right = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  expect(right.nodes).toEqual([
+    expect.objectContaining({ id: 't326-round-frozen', title: 'Frozen title' })
+  ]);
+  expect(right.versions).toEqual([
+    expect.objectContaining({ body_text: 'Frozen body', object_id: 't326-round-frozen' })
+  ]);
+  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).nodes)
+    .toEqual([expect.objectContaining({ id: 't326-round-frozen', title: 'Edited title' })]);
+});
