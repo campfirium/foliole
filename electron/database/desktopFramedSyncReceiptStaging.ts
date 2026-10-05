@@ -12,6 +12,10 @@ import type {
   StoredEncryptedFrame,
   TransferReceiptStage
 } from '../../lib/core/sync/framedSyncContract.js';
+import {
+  createFramedSyncOutboundReceiptStaging,
+  framedSyncReceiptMatches
+} from '../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
 import type { ApplyCommitInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 
 import {
@@ -21,54 +25,12 @@ import {
   persistFramedSyncAttempt
 } from './desktopFramedSyncAttemptStaging.js';
 
-function receiptMatches(left: TransferReceiptStage, right: TransferReceiptStage) {
-  return sameFramedSyncBytes(left.transferId, right.transferId) &&
-    sameFramedSyncBytes(left.contentId, right.contentId) &&
-    sameFramedSyncBytes(left.appliedStateHash, right.appliedStateHash) &&
-    left.receiverDeviceId === right.receiverDeviceId && left.receiverLibraryEpoch === right.receiverLibraryEpoch;
-}
-
 export interface DesktopFramedSyncTerminationPort {
   persistTerminationRequest(input: Readonly<{
     authorDeviceId: string;
     memberId: string;
     transferId: Uint8Array;
   }>): Promise<'created' | 'identical'>;
-}
-
-function createOutboundReceiptStaging(db: DbPort) {
-  return {
-    async commitOutboundReceipt(value: TransferReceiptStage) {
-      return db.transaction(async (tx) => {
-        const owner = await readFramedSyncRow(tx,
-          'SELECT * FROM framed_sync_outbound_publications WHERE transfer_id = ?', [value.transferId]);
-        if (!owner || !sameFramedSyncBytes(framedSyncBytes(owner, 'content_id'), value.contentId) ||
-          framedSyncText(owner, 'receiver_device_id') !== value.receiverDeviceId ||
-          framedSyncText(owner, 'receiver_library_epoch') !== value.receiverLibraryEpoch) {
-          failFramedSync('outbound_receipt_mismatch');
-        }
-        const existing = await readFramedSyncRow(tx,
-          'SELECT * FROM framed_sync_receipts WHERE transfer_id = ?', [value.transferId]);
-        if (existing) return receiptMatches(readFramedSyncReceipt(existing), value)
-          ? 'identical' as const : failFramedSync('receipt_identity_conflict');
-        await tx.run('INSERT INTO framed_sync_receipts VALUES (?, ?, ?, ?, ?)', [value.transferId,
-          value.contentId, value.receiverDeviceId, value.receiverLibraryEpoch, value.appliedStateHash]);
-        await tx.run(`UPDATE framed_sync_outbound_publications SET state = 'receipt_committed'
-          WHERE transfer_id = ?`, [value.transferId]);
-        return 'committed' as const;
-      });
-    },
-
-    async releaseOutboundHolds(transferId: Uint8Array) {
-      await db.transaction(async (tx) => {
-        if (!await readFramedSyncRow(tx,
-          'SELECT 1 AS present FROM framed_sync_receipts WHERE transfer_id = ?', [transferId])) {
-          failFramedSync('receipt_required_for_hold_release');
-        }
-        await tx.run('DELETE FROM framed_sync_outbound_holds WHERE transfer_id = ?', [transferId]);
-      });
-    }
-  };
 }
 
 function createInboundReceiptStaging(db: DbPort) {
@@ -84,7 +46,7 @@ function createInboundReceiptStaging(db: DbPort) {
         const receipt: TransferReceiptStage = { ...input };
         const existing = await readFramedSyncRow(tx,
           'SELECT * FROM framed_sync_receipts WHERE transfer_id = ?', [input.transferId]);
-        if (existing && !receiptMatches(readFramedSyncReceipt(existing), receipt)) {
+        if (existing && !framedSyncReceiptMatches(readFramedSyncReceipt(existing), receipt)) {
           failFramedSync('receipt_identity_conflict');
         }
         if (!existing) await tx.run('INSERT INTO framed_sync_receipts VALUES (?, ?, ?, ?, ?)', [input.transferId,
@@ -108,7 +70,9 @@ function createReceiptAttemptStaging(db: DbPort) {
     async persistReceiptAttempt(receipt: TransferReceiptStage, attempt: PreparedTransferAttempt) {
       const stored = await readFramedSyncRow(db,
         'SELECT * FROM framed_sync_receipts WHERE transfer_id = ?', [receipt.transferId]);
-      if (!stored || !receiptMatches(readFramedSyncReceipt(stored), receipt)) failFramedSync('receipt_not_committed');
+      if (!stored || !framedSyncReceiptMatches(readFramedSyncReceipt(stored), receipt)) {
+        failFramedSync('receipt_not_committed');
+      }
       return persistFramedSyncAttempt(db, receipt.transferId, 'receipt', attempt);
     },
 
@@ -166,7 +130,7 @@ function createReceiptAttemptStaging(db: DbPort) {
 
 export function createDesktopFramedSyncReceiptStaging(db: DbPort) {
   return {
-    ...createOutboundReceiptStaging(db),
+    ...createFramedSyncOutboundReceiptStaging(db),
     ...createInboundReceiptStaging(db),
     ...createReceiptAttemptStaging(db)
   };
