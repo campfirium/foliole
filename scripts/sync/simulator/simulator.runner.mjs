@@ -41,7 +41,6 @@ vi.mock('../../../electron/ipc/libraryPaths.js', async () => {
 vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: () => [] },
   app: { getPath: () => { throw new Error('simulator_os_path_forbidden'); }, isPackaged: false },
   ipcMain: { handle: () => {}, on: () => {} }, nativeImage: {} }));
-// Background UI/import cadence is outside the local data plane. Never launch watchers.
 vi.mock('../../../electron/import/keepImportMonitor.js', () => ({ refreshKeepImportMonitorFromSettings: async () => {} }));
 
 vi.stubGlobal('window', { setTimeout, clearTimeout });

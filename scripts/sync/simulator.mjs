@@ -56,7 +56,7 @@ function main() {
     else delete env[`FOLIOLE_SIM_${variable}`];
   }
   const child = spawnSync(process.execPath, ['scripts/electron-sqlite-runner.mjs',
-    'scripts/test-files.mjs', 'scripts/sync/simulator/simulator.http.test.mjs'], { env, stdio: 'inherit' });
+    'scripts/test-files.mjs', 'scripts/sync/simulator/simulator.runner.mjs'], { env, stdio: 'inherit' });
   const results = selected.map((scenario) => {
     try { const { status, error } = JSON.parse(readFileSync(path.join(out, scenario, 'result.json'), 'utf8'));
       return { scenario, status, error }; }
