@@ -39,9 +39,15 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
             responderDeviceID: "desktop-b", responderLibraryEpoch: "epoch-b"
         )
         let roundID = Data(repeating: 7, count: 16)
+        let entries = try FolioleCompanionFramedSyncInventory.read(["entries": [[
+            "object_type": "node", "global_id": "node-1",
+            "shared_state_hash": String(repeating: "11", count: 32),
+            "frontier_fact_ids": ["version-1"], "required_relation_ids": [String](),
+            "review_fact_ids": [String](), "resource_hashes": [String]()
+        ]]])
         let wire = try FolioleFramedSyncSessionWriter.encode(
             groupKey: Data(0...31), context: context,
-            messages: try FolioleFramedSyncInventoryWire.encode(entries: [], roundID: roundID),
+            messages: try FolioleFramedSyncInventoryWire.encode(entries: entries, roundID: roundID),
             nonceDirectory: directory
         )
         let decoded = try FolioleFramedSyncSessionReader.read(
@@ -49,6 +55,7 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
             maximumFrames: FolioleFramedSyncInventoryWire.maximumSessionFrames
         )
         XCTAssertEqual(try FolioleFramedSyncInventoryWire.decodeRoundID(decoded.messages), roundID)
+        XCTAssertEqual(try FolioleFramedSyncInventoryWire.decodeEntries(decoded.messages)[0].globalID, "node-1")
         XCTAssertTrue(FileManager.default.fileExists(
             atPath: directory.appendingPathComponent(decoded.sessionID.hex).path
         ))

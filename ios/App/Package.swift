@@ -26,6 +26,7 @@ let package = Package(
                 "Info.plist", "PrivacyInfo.xcprivacy", "capacitor.config.json",
                 "FolioleCompanionSyncPlugin.swift", "FolioleCompanionSyncGroupProviderPlugin.swift",
                 "FolioleCompanionFramedSyncOutbound.swift",
+                "FolioleCompanionFramedSyncInventoryClient.swift",
                 "FolioleCompanionSyncIdentityClientPlugin.swift",
                 "FolioleCompanionSyncGroupDataBridge.swift", "FolioleCompanionSyncGroupSigning.swift",
                 "FolioleCompanionSyncParticipation.swift", "FolioleCompanionSyncTrigger.swift",

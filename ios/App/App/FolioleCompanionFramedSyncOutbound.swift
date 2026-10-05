@@ -73,7 +73,7 @@ extension FolioleCompanionSyncPlugin {
         return result
     }
 
-    private func framedPost(
+    func framedPost(
         endpoint: String, path: String, peer: FolioleFramedSyncHTTPPeer, body: Data
     ) async throws -> Data {
         guard let base = URL(string: endpoint), let url = URL(string: path, relativeTo: base) else {
@@ -93,7 +93,7 @@ extension FolioleCompanionSyncPlugin {
         return try Data(contentsOf: responseURL)
     }
 
-    private func framedHeaders(
+    func framedHeaders(
         groupID: String, deviceID: String, workgroupKey: String, path: String, body: Data
     ) -> [String: String] {
         let timestamp = ISO8601DateFormatter().string(from: Date())
@@ -108,7 +108,7 @@ extension FolioleCompanionSyncPlugin {
                 "X-Foliole-Body-Sha256": digest]
     }
 
-    private func framedPath(
+    func framedPath(
         _ senderDeviceID: String, _ senderEpoch: String,
         _ receiverDeviceID: String, _ receiverEpoch: String
     ) throws -> String {
@@ -162,7 +162,7 @@ extension FolioleCompanionSyncPlugin {
         })
     }
 
-    private func framedRequired(_ call: CAPPluginCall, _ key: String) throws -> String {
+    func framedRequired(_ call: CAPPluginCall, _ key: String) throws -> String {
         guard let value = call.getString(key)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !value.isEmpty else { throw invalid("\(key)_required") }
         return value

@@ -133,6 +133,18 @@ enum FolioleFramedSyncInventoryWire {
     private static let chunkSize = 128
 
     static func decodeRoundID(_ messages: [FolioleFramedSyncValidatedMessage]) throws -> Data {
+        try decode(messages).roundID
+    }
+
+    static func decodeEntries(
+        _ messages: [FolioleFramedSyncValidatedMessage]
+    ) throws -> [Foliole_Sync_V22_InventoryEntry] {
+        try decode(messages).entries
+    }
+
+    private static func decode(
+        _ messages: [FolioleFramedSyncValidatedMessage]
+    ) throws -> (roundID: Data, entries: [Foliole_Sync_V22_InventoryEntry]) {
         guard (2...maximumSessionFrames).contains(messages.count),
               case .inventoryBegin(let begin) = messages.first?.payload,
               case .inventoryEnd(let end) = messages.last?.payload else {
@@ -140,6 +152,7 @@ enum FolioleFramedSyncInventoryWire {
         }
         var count: UInt64 = 0
         var chunkBytes = Data()
+        var entries = [Foliole_Sync_V22_InventoryEntry]()
         for (offset, message) in messages.dropFirst().dropLast().enumerated() {
             guard case .inventoryChunk(let chunk) = message.payload,
                   chunk.roundID == begin.roundID,
@@ -147,6 +160,7 @@ enum FolioleFramedSyncInventoryWire {
                 throw invalid("inventory_chunk_sequence_invalid")
             }
             count += UInt64(chunk.entries.count)
+            entries.append(contentsOf: chunk.entries)
             chunkBytes.append(try FolioleFramedSyncCodec.encode(message))
         }
         guard end.roundID == begin.roundID,
@@ -154,7 +168,7 @@ enum FolioleFramedSyncInventoryWire {
               count == begin.entryCount else {
             throw invalid("inventory_exchange_incomplete")
         }
-        return begin.roundID
+        return (begin.roundID, entries)
     }
 
     static func encode(
