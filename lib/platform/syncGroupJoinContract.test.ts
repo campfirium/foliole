@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 import {
   parseSyncGroupJoinGroupInfo,
   parseSyncGroupJoinRequestInput,
+  syncGroupJoinAttemptFingerprint,
   SYNC_GROUP_JOIN_CONTRACT_VERSION
 } from './syncGroupJoinContract.js';
 
 const PUBLIC_KEY = `BA${'A'.repeat(85)}`;
 
 it.each([null, {}, { library_epoch: 'epoch', proof_revision: -1, source_proof_revisions: {} },
-  { library_epoch: 'epoch', proof_revision: 1, source_proof_revisions: { peer: -1 } }])(
+  { library_epoch: 'epoch', proof_revision: 1, source_proof_revisions: { peer: -1 } },
+  { library_epoch: ' epoch', proof_revision: 1, source_proof_revisions: {} },
+  { library_epoch: 'epoch', proof_revision: 1, source_proof_revisions: { ' peer': 1 } }])(
   'rejects an invalid merge proof instead of treating it as overwrite', (merge_proof) => {
     expect(() => parseSyncGroupJoinRequestInput({
       contract_version: SYNC_GROUP_JOIN_CONTRACT_VERSION,
@@ -19,6 +22,24 @@ it.each([null, {}, { library_epoch: 'epoch', proof_revision: -1, source_proof_re
     })).toThrow('sync_group_join_merge_proof_invalid');
   }
 );
+
+it('fingerprints the complete attempt with canonical proof ordering', () => {
+  const base = {
+    contract_version: SYNC_GROUP_JOIN_CONTRACT_VERSION,
+    device: { canonical_library_path: '/library',
+      device_anchor: 'a1111111-1111-4111-8111-111111111111',
+      device_name: 'Phone', path_flavor: 'posix' as const, platform: 'ios-capacitor' },
+    ephemeral_public_key: PUBLIC_KEY, group_id: 'group-a'
+  };
+  const first = syncGroupJoinAttemptFingerprint({ ...base, merge_proof: {
+    library_epoch: 'epoch', proof_revision: 2, source_proof_revisions: { peer_b: 2, peer_a: 1 }
+  } });
+  const reordered = syncGroupJoinAttemptFingerprint({ ...base, merge_proof: {
+    library_epoch: 'epoch', proof_revision: 2, source_proof_revisions: { peer_a: 1, peer_b: 2 }
+  } });
+  expect(reordered).toBe(first);
+  expect(syncGroupJoinAttemptFingerprint({ ...base, group_id: 'group-b' })).not.toBe(first);
+});
 
 describe('Sync Group join contract', () => {
   it('binds one canonical Device request to one ephemeral public key', () => {

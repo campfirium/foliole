@@ -1,6 +1,9 @@
 import Foundation
 
 final class FolioleCompanionSyncGroupJoinProvider {
+    private static let maximumPendingRequests = 16
+    private static let maximumRequestBytes = 16 * 1024
+    private static let maximumRetainedRequests = 32
     private let groupInfo: [String: Any]
     private let lock = NSLock()
     private var requests: [String: FolioleCompanionSyncGroupJoinRequest] = [:]
@@ -21,9 +24,19 @@ final class FolioleCompanionSyncGroupJoinProvider {
     func receive(_ input: [String: Any], now: Date = Date()) throws -> [String: Any] {
         try lock.withLock {
             prune(now: now)
+            guard try JSONSerialization.data(withJSONObject: input).count <= Self.maximumRequestBytes else {
+                throw FolioleCompanionSyncGroupJoinRequest.invalid("request_too_large")
+            }
             let request = try FolioleCompanionSyncGroupJoinRequest(value: input, now: now)
             guard request.groupId == groupInfo["group_id"] as? String else {
                 throw FolioleCompanionSyncGroupJoinRequest.invalid("sync_group_identity_mismatch")
+            }
+            if let retry = requests.values.first(where: { $0.fingerprint == request.fingerprint }) {
+                return retry.publicValue()
+            }
+            if requests.values.filter(\.isPending).count >= Self.maximumPendingRequests ||
+                requests.count >= Self.maximumRetainedRequests {
+                throw FolioleCompanionSyncGroupJoinRequest.invalid("sync_group_join_capacity_exceeded")
             }
             requests[request.requestId] = request
             return request.publicValue()

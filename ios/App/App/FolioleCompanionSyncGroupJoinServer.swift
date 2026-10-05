@@ -169,6 +169,7 @@ final class FolioleCompanionSyncGroupJoinServer {
         let message = error.localizedDescription
         let status = (error as NSError).domain == "FolioleCompanionSyncGroupWorkgroup" ? 401 :
             message == "request_too_large" ? 413 :
+            message == "sync_group_join_capacity_exceeded" ? 429 :
             message.contains("identity_mismatch") || message == "sync_group_member_state_required" ? 409 : 400
         try? send(connection, status, ["error": message])
     }

@@ -5,7 +5,13 @@ import android.util.Base64;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Locale;
@@ -24,6 +30,7 @@ final class FolioleCompanionJoinRequest {
     final JSONObject device;
     final String expiresAt;
     final long expiresAtMs;
+    final String fingerprint;
     final String groupId;
     final String platform;
     final String publicKey;
@@ -50,6 +57,7 @@ final class FolioleCompanionJoinRequest {
         publicKey = validatePublicKey(required(value, "ephemeral_public_key"));
         deviceName = required(deviceValue, "device_name");
         platform = required(deviceValue, "platform");
+        fingerprint = fingerprint(value);
         requestId = UUID.randomUUID().toString();
         requestedAt = timestamp(nowMs);
         expiresAtMs = nowMs + TTL_MS;
@@ -74,6 +82,61 @@ final class FolioleCompanionJoinRequest {
             .put(device.getString("device_anchor"))
             .put(device.getString("canonical_library_path"))
             .toString().replace("\\/", "/");
+    }
+
+    private static String fingerprint(JSONObject value) throws Exception {
+        ArrayList<String> fields = new ArrayList<>(Arrays.asList(
+            "foliole-sync-group-join-attempt-v1", "1", required(value, "group_id"),
+            required(value, "ephemeral_public_key"),
+            required(value.getJSONObject("device"), "canonical_library_path"),
+            required(value.getJSONObject("device"), "device_anchor"),
+            required(value.getJSONObject("device"), "device_name"),
+            required(value.getJSONObject("device"), "path_flavor"),
+            required(value.getJSONObject("device"), "platform")
+        ));
+        JSONObject proof = value.optJSONObject("merge_proof");
+        fields.add(proof == null ? "no-proof" : "proof");
+        if (proof != null) {
+            JSONObject revisions = proof.optJSONObject("source_proof_revisions");
+            long revision = nonnegativeInteger(proof.opt("proof_revision"));
+            if (revisions == null) throw new IllegalArgumentException("sync_group_join_merge_proof_invalid");
+            ArrayList<String> keys = new ArrayList<>();
+            java.util.Iterator<String> iterator = revisions.keys();
+            while (iterator.hasNext()) keys.add(iterator.next());
+            Collections.sort(keys);
+            fields.add(required(proof, "library_epoch"));
+            fields.add(Long.toString(revision));
+            fields.add(Integer.toString(keys.size()));
+            for (String key : keys) {
+                if (key.isEmpty() || !key.equals(key.trim())) {
+                    throw new IllegalArgumentException("sync_group_join_merge_proof_invalid");
+                }
+                fields.add(key);
+                fields.add(Long.toString(nonnegativeInteger(revisions.opt(key))));
+            }
+        } else if (value.has("merge_proof")) {
+            throw new IllegalArgumentException("sync_group_join_merge_proof_invalid");
+        }
+        ByteArrayOutputStream canonical = new ByteArrayOutputStream();
+        for (String field : fields) {
+            byte[] bytes = field.getBytes(StandardCharsets.UTF_8);
+            canonical.write(ByteBuffer.allocate(4).putInt(bytes.length).array());
+            canonical.write(bytes);
+        }
+        byte[] digest = MessageDigest.getInstance("SHA-256").digest(canonical.toByteArray());
+        StringBuilder hex = new StringBuilder(digest.length * 2);
+        for (byte item : digest) hex.append(String.format(Locale.ROOT, "%02x", item & 0xff));
+        return hex.toString();
+    }
+
+    private static long nonnegativeInteger(Object value) {
+        if (!(value instanceof Number)) throw new IllegalArgumentException("sync_group_join_merge_proof_invalid");
+        double number = ((Number) value).doubleValue();
+        long integer = ((Number) value).longValue();
+        if (!Double.isFinite(number) || number != integer || integer < 0 || number > 9_007_199_254_740_991d) {
+            throw new IllegalArgumentException("sync_group_join_merge_proof_invalid");
+        }
+        return integer;
     }
 
     private static void validateDevice(JSONObject device) throws Exception {

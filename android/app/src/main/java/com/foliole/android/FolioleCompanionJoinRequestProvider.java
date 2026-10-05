@@ -5,11 +5,15 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
 final class FolioleCompanionJoinRequestProvider {
+    private static final int MAX_PENDING_REQUESTS = 16;
+    private static final int MAX_REQUEST_BYTES = 16 * 1024;
+    private static final int MAX_RETAINED_REQUESTS = 32;
     private static final Pattern BASE64_URL = Pattern.compile("^[A-Za-z0-9_-]+$");
     private final JSONObject groupInfo;
     private final Map<String, FolioleCompanionJoinRequest> requests = new LinkedHashMap<>();
@@ -31,9 +35,24 @@ final class FolioleCompanionJoinRequestProvider {
 
     synchronized JSObject receive(JSONObject input, long nowMs) throws Exception {
         prune(nowMs);
+        if (input.toString().getBytes(StandardCharsets.UTF_8).length > MAX_REQUEST_BYTES) {
+            throw new IllegalArgumentException("request_too_large");
+        }
         FolioleCompanionJoinRequest request = new FolioleCompanionJoinRequest(input, nowMs);
         if (!groupInfo.getString("group_id").equals(request.groupId)) {
             throw new IllegalArgumentException("sync_group_identity_mismatch");
+        }
+        for (FolioleCompanionJoinRequest stored : requests.values()) {
+            if (stored.fingerprint.equals(request.fingerprint)) {
+                return new JSObject(stored.publicJson().toString());
+            }
+        }
+        int pending = 0;
+        for (FolioleCompanionJoinRequest stored : requests.values()) {
+            if (stored.acceptance == null) pending += 1;
+        }
+        if (pending >= MAX_PENDING_REQUESTS || requests.size() >= MAX_RETAINED_REQUESTS) {
+            throw new IllegalArgumentException("sync_group_join_capacity_exceeded");
         }
         requests.put(request.requestId, request);
         return new JSObject(request.publicJson().toString());

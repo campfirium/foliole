@@ -51,6 +51,61 @@ public final class FolioleCompanionJoinRequestProviderTest {
         assertEquals(0, provider.pending(NOW).length());
     }
 
+    @Test public void retriesReuseTheSameRequestUntilItLeavesRetention() throws Exception {
+        FolioleCompanionJoinRequestProvider provider = provider();
+        KeyPair requester = keyPair();
+        JSONObject input = requestInput(requester);
+        JSONObject first = provider.receive(input, NOW);
+        assertEquals(first.toString(), provider.receive(input, NOW + 1).toString());
+        String requestId = first.getString("request_id");
+        provider.accept(requestId, NOW + 2);
+        JSONObject acceptedRetry = provider.receive(input, NOW + 3);
+        assertEquals(requestId, acceptedRetry.getString("request_id"));
+        assertEquals("accepted", acceptedRetry.getString("status"));
+        provider.collect(requestId, NOW + 4);
+        assertFalse(requestId.equals(provider.receive(input, NOW + 5).getString("request_id")));
+
+        JSONObject distinct = requestInput(keyPair());
+        assertFalse(provider.receive(distinct, NOW + 6).getString("request_id")
+            .equals(provider.receive(input, NOW + 6).getString("request_id")));
+    }
+
+    @Test public void retriesDoNotConsumePendingCapacity() throws Exception {
+        FolioleCompanionJoinRequestProvider provider = provider();
+        JSONObject input = requestInput(keyPair());
+        String first = provider.receive(input, NOW).getString("request_id");
+        for (int index = 0; index < 20; index += 1) {
+            assertEquals(first, provider.receive(input, NOW + index).getString("request_id"));
+        }
+        for (int index = 1; index < 16; index += 1) {
+            JSONObject distinct = new JSONObject(input.toString());
+            distinct.getJSONObject("device").put("device_name", "A5-" + index);
+            provider.receive(distinct, NOW);
+        }
+        JSONObject overflow = new JSONObject(input.toString());
+        overflow.getJSONObject("device").put("device_name", "overflow");
+        try {
+            provider.receive(overflow, NOW);
+            fail("Distinct request exceeded pending capacity.");
+        } catch (IllegalArgumentException expected) {
+            assertEquals("sync_group_join_capacity_exceeded", expected.getMessage());
+        }
+    }
+
+    @Test public void oversizedRequestsDoNotConsumeCapacity() throws Exception {
+        FolioleCompanionJoinRequestProvider provider = provider();
+        JSONObject oversized = requestInput(keyPair());
+        oversized.getJSONObject("device").put("device_name",
+            new String(new char[6000]).replace('\0', '界'));
+        try {
+            provider.receive(oversized, NOW);
+            fail("Oversized request was accepted.");
+        } catch (IllegalArgumentException expected) {
+            assertEquals("request_too_large", expected.getMessage());
+        }
+        assertEquals(0, provider.pending(NOW).length());
+    }
+
     @Test public void malformedRequestsMatchTheSharedContract() throws Exception {
         assertRejected(requestInput(keyPair()).put("contract_version", "1"));
         JSONObject paddedKey = requestInput(keyPair());

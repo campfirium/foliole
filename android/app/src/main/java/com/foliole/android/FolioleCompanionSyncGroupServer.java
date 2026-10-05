@@ -67,7 +67,8 @@ final class FolioleCompanionSyncGroupServer {
                 int status = "sync_group_member_state_required".equals(error.getMessage()) ? 409 : 401;
                 FolioleCompanionHttpResponse.json(owned.getOutputStream(), status, error(error.getMessage()));
             } catch (IllegalArgumentException error) {
-                FolioleCompanionHttpResponse.json(owned.getOutputStream(), 400, error(error.getMessage()));
+                int status = "sync_group_join_capacity_exceeded".equals(error.getMessage()) ? 429 : 400;
+                FolioleCompanionHttpResponse.json(owned.getOutputStream(), status, error(error.getMessage()));
             } catch (Exception error) {
                 android.util.Log.w("FolioleSyncProvider", "Request failed", error);
                 FolioleCompanionHttpResponse.json(owned.getOutputStream(), 500, error("provider_error"));

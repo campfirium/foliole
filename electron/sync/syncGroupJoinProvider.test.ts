@@ -22,6 +22,35 @@ beforeEach(() => {
 });
 
 describe('desktop Sync Group join provider', () => {
+  it('reuses one request for retries until rejection, expiration, or collection', async () => {
+    const provider = createProvider();
+    const applicant = await input('retry');
+    const first = provider.receive(applicant, NOW);
+    expect(provider.receive(applicant, NOW + 1)).toEqual(first);
+    await provider.accept(first.request_id, NOW + 2);
+    expect(provider.receive(applicant, NOW + 3)).toMatchObject({
+      request_id: first.request_id, requested_at: first.requested_at, status: 'accepted'
+    });
+    provider.collect(first.request_id, NOW + 4);
+    expect(provider.receive(applicant, NOW + 5).request_id).not.toBe(first.request_id);
+
+    const rejectedApplicant = await input('rejected-retry');
+    const rejected = provider.receive(rejectedApplicant, NOW + 6);
+    provider.reject(rejected.request_id, NOW + 7);
+    expect(provider.receive(rejectedApplicant, NOW + 8).request_id).not.toBe(rejected.request_id);
+    const expiringApplicant = await input('expired-retry');
+    const expiring = provider.receive(expiringApplicant, NOW + 9);
+    expect(provider.receive(expiringApplicant, NOW + 120_010).request_id)
+      .not.toBe(expiring.request_id);
+  });
+
+  it('treats a new ephemeral key as a distinct attempt', async () => {
+    const provider = createProvider();
+    const first = provider.receive(await input('attempt-a'), NOW);
+    const second = provider.receive(await input('attempt-b'), NOW);
+    expect(second.request_id).not.toBe(first.request_id);
+  });
+
   it('delivers only encrypted group information to the accepted request key', async () => {
     const provider = createProvider();
     const keyId = 'requester-a';
@@ -59,29 +88,40 @@ describe('desktop Sync Group join provider', () => {
 describe('desktop Sync Group join admission bounds', () => {
   it('caps pending requests and releases capacity on rejection and expiration', async () => {
     const provider = createProvider();
-    const applicant = await input('capacity');
-    const requests = Array.from({ length: 16 }, () => provider.receive(applicant, NOW));
-    expect(() => provider.receive(applicant, NOW)).toThrow('sync_group_join_capacity_exceeded');
+    const requests = [];
+    let firstApplicant: SyncGroupJoinRequestInput | null = null;
+    for (let index = 0; index < 16; index += 1) {
+      const applicant = await input(`capacity-${index}`);
+      firstApplicant ??= applicant;
+      requests.push(provider.receive(applicant, NOW));
+    }
+    expect(provider.receive(firstApplicant!, NOW).request_id).toBe(requests[0]!.request_id);
+    const overflow = await input('capacity-overflow');
+    expect(() => provider.receive(overflow, NOW)).toThrow('sync_group_join_capacity_exceeded');
     expect(provider.pending(NOW)).toHaveLength(16);
     provider.reject(requests[0]!.request_id, NOW);
-    expect(provider.receive(applicant, NOW).status).toBe('pending');
-    expect(provider.receive(applicant, NOW + 120_000).status).toBe('pending');
+    expect(provider.receive(await input('capacity-released'), NOW).status).toBe('pending');
+    expect(provider.receive(await input('capacity-after-expiry'), NOW + 120_000).status).toBe('pending');
     expect(provider.pending(NOW + 120_000)).toHaveLength(1);
   });
 
   it('bounds total retention without evicting accepted requests and releases collected capacity', async () => {
     const provider = createProvider();
-    const applicant = await input('accepted-capacity');
-    applicant.device.device_name += 'x'.repeat(16 * 1024 - Buffer.byteLength(JSON.stringify(applicant)));
     const accepted = [];
+    let firstApplicant: SyncGroupJoinRequestInput | null = null;
     for (let index = 0; index < 32; index += 1) {
+      const applicant = await input(`accepted-capacity-${index}`);
+      applicant.device.device_name += 'x'.repeat(16 * 1024 - Buffer.byteLength(JSON.stringify(applicant)));
+      firstApplicant ??= applicant;
       const request = provider.receive(applicant, NOW);
       accepted.push(await provider.accept(request.request_id, NOW));
     }
     expect(provider.pending(NOW)).toEqual([]);
-    expect(() => provider.receive(applicant, NOW)).toThrow('sync_group_join_capacity_exceeded');
+    expect(provider.receive(firstApplicant!, NOW).request_id).toBe(accepted[0]!.request_id);
+    const overflow = await input('accepted-capacity-overflow');
+    expect(() => provider.receive(overflow, NOW)).toThrow('sync_group_join_capacity_exceeded');
     expect(provider.collect(accepted[0]!.request_id, NOW)).toEqual(accepted[0]);
-    expect(provider.receive(applicant, NOW).status).toBe('pending');
+    expect(provider.receive(overflow, NOW).status).toBe('pending');
     for (const acceptance of accepted.slice(1)) {
       expect(provider.collect(acceptance.request_id, NOW)).toEqual(acceptance);
     }

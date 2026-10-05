@@ -19,6 +19,65 @@ final class FolioleSyncGroupJoinProviderTests: XCTestCase {
         XCTAssertNil(try provider.collect(requestId, now: now.addingTimeInterval(3)))
     }
 
+    func testRetriesReuseTheSameRequestUntilItLeavesRetention() throws {
+        let requester = P256.KeyAgreement.PrivateKey()
+        let provider = try provider()
+        let input = request(publicKey: requester.publicKey.x963Representation)
+        let first = try provider.receive(input, now: now)
+        XCTAssertEqual(try provider.receive(input, now: now.addingTimeInterval(1)) as NSDictionary,
+                       first as NSDictionary)
+        let requestId = try XCTUnwrap(first["request_id"] as? String)
+        _ = try provider.accept(requestId, now: now.addingTimeInterval(2))
+        let acceptedRetry = try provider.receive(input, now: now.addingTimeInterval(3))
+        XCTAssertEqual(acceptedRetry["request_id"] as? String, requestId)
+        XCTAssertEqual(acceptedRetry["status"] as? String, "accepted")
+        _ = try provider.collect(requestId, now: now.addingTimeInterval(4))
+        XCTAssertNotEqual(try provider.receive(input, now: now.addingTimeInterval(5))["request_id"] as? String,
+                          requestId)
+        XCTAssertNotEqual(
+            try provider.receive(request(
+                publicKey: P256.KeyAgreement.PrivateKey().publicKey.x963Representation
+            ), now: now.addingTimeInterval(6))["request_id"] as? String,
+            try provider.receive(input, now: now.addingTimeInterval(6))["request_id"] as? String
+        )
+    }
+
+    func testRetriesDoNotConsumePendingCapacity() throws {
+        let provider = try provider()
+        let input = request(publicKey: P256.KeyAgreement.PrivateKey().publicKey.x963Representation)
+        let first = try XCTUnwrap(provider.receive(input, now: now)["request_id"] as? String)
+        for index in 0..<20 {
+            XCTAssertEqual(try provider.receive(input, now: now.addingTimeInterval(Double(index)))["request_id"] as? String,
+                           first)
+        }
+        for index in 1..<16 {
+            var distinct = input
+            var device = try XCTUnwrap(distinct["device"] as? [String: Any])
+            device["device_name"] = "iPhone-\(index)"
+            distinct["device"] = device
+            _ = try provider.receive(distinct, now: now)
+        }
+        var overflow = input
+        var device = try XCTUnwrap(overflow["device"] as? [String: Any])
+        device["device_name"] = "overflow"
+        overflow["device"] = device
+        XCTAssertThrowsError(try provider.receive(overflow, now: now)) {
+            XCTAssertEqual($0.localizedDescription, "sync_group_join_capacity_exceeded")
+        }
+    }
+
+    func testOversizedRequestsDoNotConsumeCapacity() throws {
+        let provider = try provider()
+        var oversized = request(publicKey: P256.KeyAgreement.PrivateKey().publicKey.x963Representation)
+        var device = try XCTUnwrap(oversized["device"] as? [String: Any])
+        device["device_name"] = String(repeating: "界", count: 6_000)
+        oversized["device"] = device
+        XCTAssertThrowsError(try provider.receive(oversized, now: now)) {
+            XCTAssertEqual($0.localizedDescription, "request_too_large")
+        }
+        XCTAssertEqual(provider.pending(now: now).count, 0)
+    }
+
     func testRejectTimeoutAndRestartRemoveTemporaryRequests() throws {
         let service = FolioleCompanionSyncGroupJoinService()
         _ = try service.install(groupInfo: groupInfo(), discovery: discovery(), stateChanged: {})

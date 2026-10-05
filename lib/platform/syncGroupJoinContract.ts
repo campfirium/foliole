@@ -1,3 +1,6 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
+
 import type { SyncGroupJoinEncryptedInfoPayload } from './nativeCompanionSyncContract.js';
 import { parseSyncGroupJoinMergeProof, type SyncGroupJoinMergeProof } from './syncGroupJoinMergeProof.js';
 import {
@@ -46,6 +49,7 @@ export interface SyncGroupJoinAcceptance {
 
 const UUID_V4_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
 const BASE64_URL_PATTERN = /^[A-Za-z0-9_-]+$/u;
+const encoder = new TextEncoder();
 
 export function parseSyncGroupJoinRequestInput(value: unknown): SyncGroupJoinRequestInput {
   const raw = record(value, 'sync_group_join_request_invalid');
@@ -85,6 +89,33 @@ export function parseSyncGroupJoinRequestId(value: unknown) {
 export function isSyncGroupJoinRequestExpired(request: Pick<SyncGroupJoinRequest, 'expires_at'>, nowMs = Date.now()) {
   const expiresAt = Date.parse(request.expires_at);
   return !Number.isFinite(expiresAt) || expiresAt <= nowMs;
+}
+
+/** Stable identity for retrying the same parsed join attempt. */
+export function syncGroupJoinAttemptFingerprint(input: SyncGroupJoinRequestInput) {
+  const value = parseSyncGroupJoinRequestInput(input);
+  const fields = [
+    'foliole-sync-group-join-attempt-v1', String(value.contract_version),
+    value.group_id, value.ephemeral_public_key,
+    value.device.canonical_library_path, value.device.device_anchor,
+    value.device.device_name, value.device.path_flavor, value.device.platform
+  ];
+  const proof = value.merge_proof;
+  fields.push(proof ? 'proof' : 'no-proof');
+  if (proof) {
+    const revisions = Object.entries(proof.source_proof_revisions)
+      .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+    fields.push(proof.library_epoch, String(proof.proof_revision), String(revisions.length));
+    for (const [key, revision] of revisions) fields.push(key, String(revision));
+  }
+  const digest = sha256.create();
+  for (const field of fields) {
+    const bytes = encoder.encode(field);
+    const length = new Uint8Array(4);
+    new DataView(length.buffer).setUint32(0, bytes.length, false);
+    digest.update(length).update(bytes);
+  }
+  return bytesToHex(digest.digest());
 }
 
 function parseDeviceFacts(value: unknown): SyncGroupJoinDeviceFacts {

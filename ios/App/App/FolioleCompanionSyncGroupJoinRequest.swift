@@ -1,4 +1,5 @@
 import CoreFoundation
+import CryptoKit
 import Foundation
 
 final class FolioleCompanionSyncGroupJoinRequest {
@@ -8,6 +9,7 @@ final class FolioleCompanionSyncGroupJoinRequest {
     let deviceName: String
     let device: [String: Any]
     let expiresAt: Date
+    let fingerprint: String
     let groupId: String
     let platform: String
     let publicKey: String
@@ -34,6 +36,7 @@ final class FolioleCompanionSyncGroupJoinRequest {
         publicKey = try Self.validatePublicKey(Self.required(value, "ephemeral_public_key"))
         deviceName = try Self.required(device, "device_name")
         platform = try Self.required(device, "platform")
+        fingerprint = try Self.fingerprint(value)
         requestId = UUID().uuidString.lowercased()
         requestedAt = now
         expiresAt = now.addingTimeInterval(Self.timeToLive)
@@ -61,6 +64,59 @@ final class FolioleCompanionSyncGroupJoinRequest {
             throw Self.invalid("sync_group_device_identity_invalid")
         }
         return device.merging(["device_identity_key": identity]) { _, new in new }
+    }
+
+    private static func fingerprint(_ value: [String: Any]) throws -> String {
+        let device = try requiredObject(value, "device")
+        var fields = [
+            "foliole-sync-group-join-attempt-v1", "1", try required(value, "group_id"),
+            try required(value, "ephemeral_public_key"),
+            try required(device, "canonical_library_path"), try required(device, "device_anchor"),
+            try required(device, "device_name"), try required(device, "path_flavor"),
+            try required(device, "platform")
+        ]
+        if let proof = value["merge_proof"] as? [String: Any] {
+            guard let revisions = proof["source_proof_revisions"] as? [String: Any] else {
+                throw invalid("sync_group_join_merge_proof_invalid")
+            }
+            fields.append("proof")
+            fields.append(try required(proof, "library_epoch"))
+            fields.append(String(try nonnegativeInteger(proof["proof_revision"])))
+            let keys = revisions.keys.sorted()
+            fields.append(String(keys.count))
+            for key in keys {
+                guard !key.isEmpty, key == key.trimmingCharacters(in: .whitespacesAndNewlines) else {
+                    throw invalid("sync_group_join_merge_proof_invalid")
+                }
+                fields.append(key)
+                fields.append(String(try nonnegativeInteger(revisions[key])))
+            }
+        } else {
+            guard value["merge_proof"] == nil else { throw invalid("sync_group_join_merge_proof_invalid") }
+            fields.append("no-proof")
+        }
+        var canonical = Data()
+        for field in fields {
+            let bytes = Data(field.utf8)
+            var length = UInt32(bytes.count).bigEndian
+            canonical.append(Data(bytes: &length, count: MemoryLayout<UInt32>.size))
+            canonical.append(bytes)
+        }
+        return SHA256.hash(data: canonical).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func requiredObject(_ value: [String: Any], _ key: String) throws -> [String: Any] {
+        guard let object = value[key] as? [String: Any] else { throw invalid("\(key)_invalid") }
+        return object
+    }
+
+    private static func nonnegativeInteger(_ value: Any?) throws -> Int64 {
+        guard let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
+              number.doubleValue.isFinite, number.doubleValue == Double(number.int64Value),
+              number.int64Value >= 0, number.doubleValue <= 9_007_199_254_740_991 else {
+            throw invalid("sync_group_join_merge_proof_invalid")
+        }
+        return number.int64Value
     }
 
     private static func validateDevice(_ device: [String: Any]) throws {

@@ -5,6 +5,7 @@ import {
   parseSyncGroupJoinGroupInfo,
   parseSyncGroupJoinRequestId,
   parseSyncGroupJoinRequestInput,
+  syncGroupJoinAttemptFingerprint,
   SYNC_GROUP_JOIN_REQUEST_TTL_MS,
   type SyncGroupJoinAcceptance,
   type SyncGroupJoinGroupInfo,
@@ -21,6 +22,7 @@ const MAX_RETAINED_JOIN_REQUESTS = 32;
 
 interface StoredJoinRequest {
   acceptance: SyncGroupJoinAcceptance | null;
+  fingerprint: string;
   request: SyncGroupJoinRequest;
 }
 
@@ -44,6 +46,9 @@ export class DesktopSyncGroupJoinProvider {
     }
     const parsed = parseSyncGroupJoinRequestInput(input);
     if (parsed.group_id !== this.#groupInfo.group_id) throw new Error('sync_group_identity_mismatch');
+    const fingerprint = syncGroupJoinAttemptFingerprint(parsed);
+    const retry = [...this.#requests.values()].find((stored) => stored.fingerprint === fingerprint);
+    if (retry) return publicRequest(retry.request);
     const pendingCount = [...this.#requests.values()].filter(({ request }) => request.status === 'pending').length;
     if (pendingCount >= MAX_PENDING_JOIN_REQUESTS || this.#requests.size >= MAX_RETAINED_JOIN_REQUESTS) {
       throw new Error('sync_group_join_capacity_exceeded');
@@ -55,7 +60,7 @@ export class DesktopSyncGroupJoinProvider {
       requested_at: new Date(nowMs).toISOString(),
       status: 'pending'
     };
-    this.#requests.set(request.request_id, { acceptance: null, request });
+    this.#requests.set(request.request_id, { acceptance: null, fingerprint, request });
     return publicRequest(request);
   }
 

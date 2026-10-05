@@ -37,14 +37,21 @@ it('bounds unauthenticated HTTP admission while preserving approval, rejection a
     });
     return { status: response.status, body: await response.json() as { request_id: string; error?: string } };
   };
-  const requests = [];
-  for (let index = 0; index < 16; index += 1) {
-    const result = await post('join-requests', input);
+  const first = await post('join-requests', input);
+  expect(first.status).toBe(202);
+  for (let index = 0; index < 20; index += 1) {
+    expect(await post('join-requests', input)).toEqual(first);
+  }
+  const requests = [first.body.request_id];
+  for (let index = 1; index < 16; index += 1) {
+    const result = await post('join-requests', { ...input,
+      device: { ...input.device, device_name: `Applicant ${index}` } });
     expect(result.status).toBe(202);
     requests.push(result.body.request_id);
   }
   for (let index = 0; index < 20; index += 1) {
-    expect(await post('join-requests', input)).toMatchObject({
+    expect(await post('join-requests', { ...input,
+      device: { ...input.device, device_name: `Overflow ${index}` } })).toMatchObject({
       status: 429, body: { error: 'sync_group_join_capacity_exceeded' }
     });
   }
@@ -52,7 +59,8 @@ it('bounds unauthenticated HTTP admission while preserving approval, rejection a
   expect(overview.join_requests).toHaveLength(16);
   expect((await post('join-acceptance', { request_id: requests[0] })).status).toBe(409);
   await worker.send('joinReject', { requestId: requests[1] });
-  expect((await post('join-requests', input)).status).toBe(202);
+  expect((await post('join-requests', { ...input,
+    device: { ...input.device, device_name: 'Replacement' } })).status).toBe(202);
   await worker.send('joinAccept', { requestId: requests[0] });
   const collected = await post('join-acceptance', { request_id: requests[0] });
   expect(collected.status).toBe(200);
