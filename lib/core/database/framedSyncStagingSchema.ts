@@ -1,4 +1,8 @@
 export const FRAMED_SYNC_STAGING_SCHEMA = [
+  `CREATE TABLE IF NOT EXISTS framed_sync_session_send_states (
+    session_id BLOB PRIMARY KEY, context_id BLOB NOT NULL, nonce_prefix BLOB NOT NULL,
+    starting_sequence TEXT NOT NULL CHECK (starting_sequence = '0'),
+    state TEXT NOT NULL CHECK (state IN ('prepared', 'abandoned')))`,
   `CREATE TABLE IF NOT EXISTS framed_sync_outbound_publications (
     transfer_id BLOB PRIMARY KEY, content_id BLOB NOT NULL, manifest_hash BLOB NOT NULL,
     canonical_manifest BLOB NOT NULL, manifest_json TEXT NOT NULL, protocol_version INTEGER NOT NULL,

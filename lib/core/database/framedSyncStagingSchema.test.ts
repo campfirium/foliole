@@ -18,7 +18,8 @@ afterEach(() => sqlite.close());
 it('installs every framed sync staging relation without a migration registry', () => {
   const tables = sqlite.prepare(`SELECT name FROM sqlite_master
     WHERE type = 'table' AND name LIKE 'framed_sync_%' ORDER BY name`).all();
-  expect(tables).toHaveLength(17);
+  expect(tables).toHaveLength(18);
+  expect(tables).toContainEqual({ name: 'framed_sync_session_send_states' });
   expect(tables).toContainEqual({ name: 'framed_sync_outbound_publications' });
   expect(tables).toContainEqual({ name: 'framed_sync_inbound_attempts' });
   expect(tables).toContainEqual({ name: 'framed_sync_blob_pins' });

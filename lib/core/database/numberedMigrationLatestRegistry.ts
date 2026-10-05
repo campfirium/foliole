@@ -215,5 +215,8 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 137, migrate: migrateExternalResourceCanonicalHashes },
   { version: 138, migrate: (sqlite) => {
     for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
+  } },
+  { version: 139, migrate: (sqlite) => {
+    for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   } }
 ];

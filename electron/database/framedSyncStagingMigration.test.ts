@@ -21,6 +21,7 @@ const EXPECTED_STAGING_TABLES = [
   'framed_sync_outbound_holds',
   'framed_sync_outbound_publications',
   'framed_sync_receipts',
+  'framed_sync_session_send_states',
   'framed_sync_termination_acks',
   'framed_sync_termination_requests'
 ] as const;
