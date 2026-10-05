@@ -4,13 +4,16 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
+import { bytesToHex } from '@noble/hashes/utils.js';
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/companionSchemaStatements.js';
+import type { CanonicalBlob, CanonicalFact } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
+import { projectFramedSyncReview } from '../../../../../../lib/core/sync/framedSyncRelationReviewFact.js';
 import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
 import type { NativeSyncNodeRecord } from '../../../../../../lib/platform/nativeSyncContract.js';
 
@@ -25,7 +28,7 @@ afterEach(() => {
 });
 
 it.each(['android', 'ios'] as const)(
-  'applies an authenticated %s fact and persists its receipt in the business database', async (kind) => {
+  'atomically applies one %s node with auxiliary facts and its business receipt', async (kind) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-framed-apply-'));
   roots.push(root);
   const stagingPath = path.join(root, 'staging.db');
@@ -37,20 +40,12 @@ it.each(['android', 'ios'] as const)(
 
   const projection = projectFramedSyncNodeRecord(nodeRecord());
   const transferId = new Uint8Array(32).fill(1);
-  const contentId = new Uint8Array(32).fill(2);
-  const attemptId = new Uint8Array(16).fill(3);
   const blob = projection.manifest.blobs[0]!;
-  staging.prepare(`INSERT INTO ${prefix}_transfers VALUES
-    (?, ?, ?, ?, ?, ?, ?, 'ready_to_apply')`)
-    .run(transferId, contentId, 'sender', 'sender-epoch', 'receiver', 'receiver-epoch', attemptId);
-  staging.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, ?, ?, ?)`).run(
-    transferId, attemptId, '0', 3,
-    encodeValidatedProtocolMessage('fact', factToWire(projection.manifest.facts[0]!))
-  );
-  staging.prepare(`INSERT INTO ${prefix}_available_blobs VALUES (?, ?, ?)`)
-    .run(blob.sha256, Number(blob.byteLength), projection.bodyBlob);
-  staging.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, ?, ?)`)
-    .run(transferId, blob.sha256, Number(blob.byteLength), blob.role, 1);
+  const review = reviewFact('review-1');
+  stage(staging, prefix, {
+    blob: { data: projection.bodyBlob, descriptor: blob },
+    facts: [projection.manifest.facts[0]!, review], transferId
+  });
 
   const input = {
     receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch',
@@ -65,8 +60,111 @@ it.each(['android', 'ios'] as const)(
   expect(main.prepare(`SELECT n.title, CAST(cbd.data AS TEXT) AS content, n.current_version_id
       FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`)
     .get('node-1')).toEqual({ content: 'Transferred body', current_version_id: 'version-1', title: 'Node' });
+  expect(main.prepare('SELECT op_id FROM review_log').all()).toEqual([{ op_id: 'review-1' }]);
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 1 });
+  expect(bytesToHex(receipt.appliedStateHash)).toBe('4'.repeat(64));
 });
+
+it.each(['android', 'ios'] as const)(
+  'applies a zero-blob %s review-only transfer and receipts the current node state', async (kind) => {
+  const { main, port, prefix, staging, stagingPath } = harness(kind);
+  const projection = projectFramedSyncNodeRecord(nodeRecord());
+  const first = new Uint8Array(32).fill(1);
+  stage(staging, prefix, { blob: { data: projection.bodyBlob,
+    descriptor: projection.manifest.blobs[0]! }, facts: projection.manifest.facts, transferId: first });
+  await applyCompanionFramedSyncTransfer(port, input(kind, stagingPath, first));
+  const second = new Uint8Array(32).fill(7);
+  stage(staging, prefix, {
+    facts: [reviewFact('review-only-1'), reviewFact('review-only-2')], transferId: second
+  });
+
+  const receipt = await applyCompanionFramedSyncTransfer(port, input(kind, stagingPath, second));
+
+  expect(main.prepare('SELECT op_id FROM review_log ORDER BY op_id').all())
+    .toEqual([{ op_id: 'review-only-1' }, { op_id: 'review-only-2' }]);
+  expect(bytesToHex(receipt.appliedStateHash)).toBe('4'.repeat(64));
+  expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 2 });
+});
+
+it('rejects multiple nodes, unknown fact kinds, and mismatched blob sets', async () => {
+  const projection = projectFramedSyncNodeRecord(nodeRecord());
+  const node = projection.manifest.facts[0]!;
+  const review = reviewFact('unsupported');
+  const cases: readonly Readonly<{
+    error: string;
+    facts: readonly CanonicalFact[];
+    blob?: { data: Uint8Array; descriptor: CanonicalBlob };
+  }>[] = [
+    { error: 'framed_sync_android_fact_set_unsupported', facts: [node, node] },
+    { error: 'framed_sync_android_fact_set_unsupported', facts: [{ ...review, kind: 5 }] },
+    { error: 'framed_sync_android_fact_identity_mismatch',
+      facts: [review, reviewFact('other-node', 'node-2')] },
+    { blob: { data: projection.bodyBlob, descriptor: {
+      ...projection.manifest.blobs[0]!, sha256: new Uint8Array(32).fill(9)
+    } }, error: 'framed_sync_android_blob_identity_mismatch', facts: [node] }
+  ];
+  for (const [index, value] of cases.entries()) {
+    const { port, prefix, staging, stagingPath } = harness('android');
+    const transferId = new Uint8Array(32).fill(10 + index);
+    stage(staging, prefix, { ...value, transferId });
+    await expect(applyCompanionFramedSyncTransfer(
+      port, input('android', stagingPath, transferId)
+    )).rejects.toThrow(value.error);
+  }
+});
+
+function harness(kind: 'android' | 'ios') {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-framed-apply-'));
+  roots.push(root);
+  const stagingPath = path.join(root, 'staging.db');
+  const main = tracked(new Database(':memory:'));
+  const staging = tracked(new Database(stagingPath));
+  main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  const prefix = `framed_sync_${kind}`;
+  installStaging(staging, prefix);
+  return { main, port: createBetterSqliteDbPort(main, { name: 'framed-apply-test' }),
+    prefix, staging, stagingPath };
+}
+
+function input(kind: 'android' | 'ios', stagingPath: string, transferId: Uint8Array) {
+  return { receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch',
+    senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch',
+    stagingKind: kind, stagingPath, transferId };
+}
+
+function reviewFact(opId: string, nodeId = 'node-1') {
+  const time = '2026-10-05T02:00:00.000Z';
+  return projectFramedSyncReview({
+    difficulty_after: 3.75, difficulty_before: 2.25, due_after: time, due_before: time,
+    grade: 3, host_name: 'sender', id: `row-${opId}`, node_id: nodeId, op_id: opId,
+    reviewed_at: time, scheduler_version: 'fsrs-6', stability_after: 4.5, stability_before: 2.5
+  });
+}
+
+function stage(database: Database.Database, prefix: string, value: {
+  blob?: { data: Uint8Array; descriptor: CanonicalBlob };
+  facts: readonly CanonicalFact[];
+  transferId: Uint8Array;
+}) {
+  const attemptId = new Uint8Array(16).fill(value.transferId[0]);
+  database.prepare(`INSERT INTO ${prefix}_transfers VALUES
+    (?, ?, ?, ?, ?, ?, ?, 'ready_to_apply')`).run(
+    value.transferId, new Uint8Array(32).fill(value.transferId[0]),
+    'sender', 'sender-epoch', 'receiver', 'receiver-epoch', attemptId
+  );
+  const insertFrame = database.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, ?, ?, ?)`);
+  value.facts.forEach((fact, index) => insertFrame.run(
+    value.transferId, attemptId, String(index), 3,
+    encodeValidatedProtocolMessage('fact', factToWire(fact))
+  ));
+  if (!value.blob) return;
+  const { data, descriptor } = value.blob;
+  database.prepare(`INSERT OR IGNORE INTO ${prefix}_available_blobs VALUES (?, ?, ?)`)
+    .run(descriptor.sha256, Number(descriptor.byteLength), data);
+  database.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, ?, ?)`)
+    .run(value.transferId, descriptor.sha256, Number(descriptor.byteLength), descriptor.role,
+      descriptor.required ? 1 : 0);
+}
 
 function tracked(database: Database.Database) {
   databases.push(database);

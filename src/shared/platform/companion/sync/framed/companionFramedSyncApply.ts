@@ -1,5 +1,3 @@
-import { bytesToHex } from '@noble/hashes/utils.js';
-
 import {
   framedSyncBytes,
   framedSyncText,
@@ -7,8 +5,12 @@ import {
   sameFramedSyncBytes
 } from '../../../../../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
-import type { CanonicalBlob } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
+import type {
+  CanonicalBlob,
+  CanonicalFact
+} from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { TransferReceiptStage } from '../../../../../../lib/core/sync/framedSyncContract.js';
+import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { restoreFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeRestore.js';
 import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewApply.js';
@@ -79,33 +81,60 @@ async function loadTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
   return { blobRows, contentId: framedSyncBytes(transfer, 'content_id'), facts };
 }
 
-function assertSingleNode(
-  facts: ReturnType<typeof canonicalFactFromValidatedMessage>[],
-  blobRows: DbRow[]
-) {
-  const nodeFacts = facts.filter((fact) => fact.kind === 2);
-  const relationReviewFacts = facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
-  if (nodeFacts.length !== 1 || nodeFacts.length + relationReviewFacts.length !== facts.length ||
-      blobRows.length !== 1) {
-    throw new Error('framed_sync_android_fact_set_unsupported');
-  }
-  const manifestBlob = blob(blobRows[0]!);
-  const nodeFact = nodeFacts[0]!;
-  const factBlob = nodeFact.blobs[0];
-  if (!factBlob || bytesToHex(factBlob.sha256) !== bytesToHex(manifestBlob.sha256)) {
-    throw new Error('framed_sync_android_blob_identity_mismatch');
-  }
-  return { node: restoreFramedSyncNodeRecord({
-    bodyBlob: framedSyncBytes(blobRows[0]!, 'data'),
-    fact: nodeFact,
-    manifestBlob
-  }), nodeFact, relationReviewFacts };
+type DecodedTransfer =
+  | Readonly<{
+    globalId: string;
+    kind: 'node_and_aux';
+    node: ReturnType<typeof restoreFramedSyncNodeRecord>;
+    relationReviewFacts: readonly CanonicalFact[];
+  }>
+  | Readonly<{
+    globalId: string;
+    kind: 'aux_only';
+    relationReviewFacts: readonly CanonicalFact[];
+  }>;
+
+function sameBlob(left: CanonicalBlob, right: CanonicalBlob) {
+  return left.byteLength === right.byteLength && left.required === right.required &&
+    left.role === right.role && sameFramedSyncBytes(left.sha256, right.sha256);
 }
 
-function receiptMatches(left: TransferReceiptStage, right: TransferReceiptStage) {
+function decodeTransfer(facts: CanonicalFact[], blobRows: DbRow[]): DecodedTransfer {
+  const nodeFacts = facts.filter((fact) => fact.kind === 2);
+  const relationReviewFacts = facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
+  if (!facts.length || nodeFacts.length > 1 ||
+      nodeFacts.length + relationReviewFacts.length !== facts.length) {
+    throw new Error('framed_sync_android_fact_set_unsupported');
+  }
+  const globalId = facts[0]!.globalId;
+  if (facts.some((fact) => fact.objectType !== 'node' || fact.globalId !== globalId)) {
+    throw new Error('framed_sync_android_fact_identity_mismatch');
+  }
+  if (!nodeFacts.length) {
+    if (blobRows.length) throw new Error('framed_sync_android_blob_set_mismatch');
+    return { globalId, kind: 'aux_only', relationReviewFacts };
+  }
+  const nodeFact = nodeFacts[0]!;
+  if (blobRows.length !== 1 || nodeFact.blobs.length !== 1) {
+    throw new Error('framed_sync_android_blob_identity_mismatch');
+  }
+  const manifestBlob = blob(blobRows[0]!);
+  if (!sameBlob(nodeFact.blobs[0]!, manifestBlob)) {
+    throw new Error('framed_sync_android_blob_identity_mismatch');
+  }
+  return {
+    globalId,
+    kind: 'node_and_aux',
+    node: restoreFramedSyncNodeRecord({
+      bodyBlob: framedSyncBytes(blobRows[0]!, 'data'), fact: nodeFact, manifestBlob
+    }),
+    relationReviewFacts
+  };
+}
+
+function receiptIdentityMatches(left: TransferReceiptStage, right: Omit<TransferReceiptStage, 'appliedStateHash'>) {
   return sameFramedSyncBytes(left.transferId, right.transferId) &&
     sameFramedSyncBytes(left.contentId, right.contentId) &&
-    sameFramedSyncBytes(left.appliedStateHash, right.appliedStateHash) &&
     left.receiverDeviceId === right.receiverDeviceId &&
     left.receiverLibraryEpoch === right.receiverLibraryEpoch;
 }
@@ -119,9 +148,8 @@ export async function applyCompanionFramedSyncTransfer(
   await db.run(`ATTACH DATABASE ${sqlString(input.stagingPath)} AS ${tables.alias}`);
   try {
     const staged = await loadTransfer(db, input);
-    const decoded = assertSingleNode(staged.facts, staged.blobRows);
-    const receipt: TransferReceiptStage = {
-      appliedStateHash: decoded.nodeFact.sharedStateHash,
+    const decoded = decodeTransfer(staged.facts, staged.blobRows);
+    const receiptIdentity = {
       contentId: staged.contentId,
       receiverDeviceId: input.receiverDeviceId,
       receiverLibraryEpoch: input.receiverLibraryEpoch,
@@ -133,17 +161,25 @@ export async function applyCompanionFramedSyncTransfer(
       );
       if (existing) {
         const stored = readFramedSyncReceipt(existing);
-        if (!receiptMatches(stored, receipt)) throw new Error('receipt_identity_conflict');
+        if (!receiptIdentityMatches(stored, receiptIdentity)) throw new Error('receipt_identity_conflict');
         return stored;
       }
-      await upsertTextBodyBlob(
-        tx,
-        decoded.node.body_text ?? '',
-        decoded.node.snapshot.updated_at,
-        decoded.node.snapshot.body_blob_hash!
-      );
-      await applySyncNodesWithDbPort(tx, [decoded.node], { enqueueSearchInvalidations: false });
+      if (decoded.kind === 'node_and_aux') {
+        await upsertTextBodyBlob(
+          tx, decoded.node.body_text ?? '', decoded.node.snapshot.updated_at,
+          decoded.node.snapshot.body_blob_hash!
+        );
+        await applySyncNodesWithDbPort(tx, [decoded.node], { enqueueSearchInvalidations: false });
+      }
       await applyFramedSyncRelationReviewFactsWithDbPort(tx, decoded.relationReviewFacts);
+      const current = await readFramedSyncInventoryEntry(
+        tx, { globalId: decoded.globalId, objectType: 'node' }
+      );
+      if (!current) throw new Error('framed_sync_applied_state_missing');
+      const receipt: TransferReceiptStage = {
+        ...receiptIdentity,
+        appliedStateHash: current.sharedStateHash
+      };
       await tx.run('INSERT INTO framed_sync_receipts VALUES (?, ?, ?, ?, ?)', [receipt.transferId,
         receipt.contentId, receipt.receiverDeviceId, receipt.receiverLibraryEpoch, receipt.appliedStateHash]);
       return receipt;
