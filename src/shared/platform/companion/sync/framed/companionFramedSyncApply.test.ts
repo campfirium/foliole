@@ -8,9 +8,9 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
-import { projectDesktopFramedSyncNodeRecord } from '../../../../../../electron/sync/desktopFramedSyncNodeProjection.js';
 import { factToWire } from '../../../../../../electron/sync/desktopFramedSyncProcessWire.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/companionSchemaStatements.js';
+import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import type { NativeSyncNodeRecord } from '../../../../../../lib/platform/nativeSyncContract.js';
 
@@ -35,7 +35,7 @@ it.each(['android', 'ios'] as const)(
   const prefix = `framed_sync_${kind}`;
   installStaging(staging, prefix);
 
-  const projection = projectDesktopFramedSyncNodeRecord(nodeRecord());
+  const projection = projectFramedSyncNodeRecord(nodeRecord());
   const transferId = new Uint8Array(32).fill(1);
   const contentId = new Uint8Array(32).fill(2);
   const attemptId = new Uint8Array(16).fill(3);
