@@ -32,8 +32,9 @@ it.each(['member-left', 'group-left', 'group-switched', 'orphan-payload', 'local
     if (change === 'orphan-payload') source.db.prepare('DELETE FROM node_version_outbound_holds').run();
     if (change === 'local-device') source.db.prepare('UPDATE node_version_outbound_holds SET device_identity_key = ?').run(source.id);
     await collectNodeVersionPayloads(source.port, 'topic');
+    const releasedWithoutDelivery = change === 'orphan-payload' || change === 'local-device';
     expect(history(source).map((row) => [row.version_id, row.body_text, row.parent_version_id]))
-      .toEqual([[sent, null, null], [head, 'current', sent]]);
+      .toEqual([[sent, releasedWithoutDelivery ? 'sent' : null, null], [head, 'current', sent]]);
   }
 );
 

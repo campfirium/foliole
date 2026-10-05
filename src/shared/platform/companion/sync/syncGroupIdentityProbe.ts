@@ -1,6 +1,6 @@
 import { diffSyncIdentityGlobalPages, type SyncIdentityGlobalPage,
   type SyncIdentityInventory } from '../../../../../lib/core/sync/syncIdentityPagedDiff.js';
-import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import { FolioleCompanionLegacyIdentitySource } from '../../companionWorkspaceRuntimeRepository';
 
 import { countCompanionIdentityCandidates, initializeCompanionIdentityCandidates,
   stageCompanionIdentityCandidates, type CompanionIdentityCandidateRow
@@ -40,7 +40,7 @@ async function stageFullCandidates(endpointUrl: string, snapshotPath: string,
 }
 
 export async function probeCompanionSyncIdentities(endpointUrl: string) {
-  const local = await FolioleCompanionSync.createIdentitySourceView();
+  const local = await FolioleCompanionLegacyIdentitySource.createIdentitySourceView();
   const snapshotPath = local.snapshot_path;
   try {
     const remote = await readCompanionRemoteIdentityGlobalSummary(endpointUrl);
@@ -59,9 +59,9 @@ export async function probeCompanionSyncIdentities(endpointUrl: string) {
       localEpoch: summary.source_epoch, localWatermark: summary.watermark,
       sourceViewId: remote.source_view_id, sourceEpoch: remote.source_epoch,
       sourceWatermark: remote.watermark,
-      cleanup: () => FolioleCompanionSync.closeIdentitySourceView({ snapshot_path: snapshotPath }) };
+      cleanup: () => FolioleCompanionLegacyIdentitySource.closeIdentitySourceView({ snapshot_path: snapshotPath }) };
   } catch (error) {
-    await FolioleCompanionSync.closeIdentitySourceView({ snapshot_path: snapshotPath });
+    await FolioleCompanionLegacyIdentitySource.closeIdentitySourceView({ snapshot_path: snapshotPath });
     throw error;
   }
 }

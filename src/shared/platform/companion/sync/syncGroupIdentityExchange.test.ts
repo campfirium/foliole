@@ -8,7 +8,7 @@ const runtime = vi.hoisted(() => ({
   downloaded: [] as string[], posted: [] as string[], built: [] as string[]
 }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
-  FolioleCompanionSync: { buildIdentitySourcePack: async (args: {
+  FolioleCompanionLegacyIdentitySource: { buildIdentitySourcePack: async (args: {
     page: { page_id: string } }) => {
     runtime.built.push(args.page.page_id);
     return { archive_base64url: 'archive' };

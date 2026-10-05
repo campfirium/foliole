@@ -2,7 +2,7 @@ import { createSyncIdentityDigest } from '../../../../../lib/core/sync/syncIdent
 import { diffSyncIdentityGlobalPages } from '../../../../../lib/core/sync/syncIdentityPagedDiff.js';
 import { parseSyncIdentityRestoreSet } from '../../../../../lib/core/sync/syncIdentityRestoreSet.js';
 import { fetchDesktopJson } from '../../companionDesktopSyncHttp';
-import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import { FolioleCompanionLegacyIdentitySource } from '../../companionWorkspaceRuntimeRepository';
 
 import { countCompanionIdentityCandidates,
   initializeCompanionIdentityCandidates, stageCompanionIdentityCandidates,
@@ -25,7 +25,7 @@ export async function probeCompanionSyncIdentityRestoreSet(args: {
       set.target_peer_id !== args.localDeviceId) {
     throw new Error('sync_identity_restore_source_mismatch');
   }
-  const local = await FolioleCompanionSync.createIdentitySourceView();
+  const local = await FolioleCompanionLegacyIdentitySource.createIdentitySourceView();
   const snapshotPath = local.snapshot_path;
   try {
     await initializeCompanionIdentityCandidates(snapshotPath);
@@ -49,9 +49,9 @@ export async function probeCompanionSyncIdentityRestoreSet(args: {
     const count = await countCompanionIdentityCandidates(snapshotPath);
     if (count !== set.object_count) throw new Error('sync_identity_restore_set_invalid');
     return { count, set, snapshotPath,
-      cleanup: () => FolioleCompanionSync.closeIdentitySourceView({ snapshot_path: snapshotPath }) };
+      cleanup: () => FolioleCompanionLegacyIdentitySource.closeIdentitySourceView({ snapshot_path: snapshotPath }) };
   } catch (error) {
-    await FolioleCompanionSync.closeIdentitySourceView({ snapshot_path: snapshotPath });
+    await FolioleCompanionLegacyIdentitySource.closeIdentitySourceView({ snapshot_path: snapshotPath });
     throw error;
   }
 }

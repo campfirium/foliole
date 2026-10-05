@@ -4,6 +4,8 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { computeSyncContentHash } from '../../../../../lib/core/database/syncState';
+import { buildCanonicalExternalDocumentPayload } from '../../../../../lib/core/sync/canonicalExternalResourcePayload';
 import { PACK_SCHEMA } from '../../../../../lib/core/sync/syncPackSchema';
 import { searchCompanionFullTextSnapshot } from '../../companionFullTextSearch';
 import { applyCompanionSyncPackNodesWithDbPort } from '../../companionSyncPackNodes';
@@ -22,13 +24,26 @@ function createPack(root: string, seq: number) {
   pack.prepare('INSERT INTO pack_manifest VALUES (?,?)').run('manifest_json', JSON.stringify({
     from_state_seq: seq - 1, to_state_seq: seq, frontier_state_seq: 2, source_epoch: 'search-test'
   }));
+  const document = buildCanonicalExternalDocumentPayload({
+    body_blob_hash: null,
+    content_hash: `hash-${seq}`,
+    document_id: '000000',
+    extension: 'md',
+    file_name: 'a.md',
+    folder_id: 'folder',
+    reference_json: null,
+    reference_kind: 'local_path',
+    relative_path: 'a.md',
+    title: 'Updated'
+  });
   pack.prepare(`INSERT INTO external_documents
     (document_id,folder_id,relative_path,file_name,extension,source_size_bytes,source_modified_at,
      source_modified_ms,content_hash,title,content,indexed_at,created_at,updated_at)
     VALUES ('000000','folder','a.md','a.md','md',0,'now',0,?,'Updated',?,'now','now',?)`)
     .run(`hash-${seq}`, `alpha pack ${seq}`, `2026-10-03T0${seq}:00:00Z`);
   pack.prepare('INSERT INTO sync_object_state VALUES (?,?,?,?,?,?,NULL)')
-    .run('external_document', '000000', seq, `hash-${seq}`, 'source', `2026-10-03T0${seq}:00:00Z`);
+    .run('external_document', '000000', seq,
+      computeSyncContentHash('external_document', document), 'source', `2026-10-03T0${seq}:00:00Z`);
   pack.close();
   return file;
 }

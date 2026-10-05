@@ -10,7 +10,7 @@ const runtime = vi.hoisted(() => ({
     source_fingerprint: string | null; receiver_fingerprint: string | null }>
 }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
-  FolioleCompanionSync: {
+  FolioleCompanionLegacyIdentitySource: {
     createIdentitySourceView: async () => ({ snapshot_path: '/tmp/cache/foliole-provider-source-test.db',
       source_view_id: '11111111-1111-1111-1111-111111111111' }),
     closeIdentitySourceView: async () => { runtime.closed += 1; }

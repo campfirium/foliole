@@ -6,7 +6,7 @@ import { buildSyncIdentityRestoreSet } from '../../../../../lib/core/sync/syncId
 const remote = vi.hoisted(() => ({ fetch: vi.fn(), readPage: vi.fn(),
   create: vi.fn(), close: vi.fn(), initialize: vi.fn(), stage: vi.fn(), count: vi.fn() }));
 vi.mock('../../companionDesktopSyncHttp', () => ({ fetchDesktopJson: remote.fetch }));
-vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
+vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionLegacyIdentitySource: {
   createIdentitySourceView: remote.create, closeIdentitySourceView: remote.close
 } }));
 vi.mock('./syncGroupIdentityCandidateStore', () => ({

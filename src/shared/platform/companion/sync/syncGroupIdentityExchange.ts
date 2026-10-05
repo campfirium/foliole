@@ -1,7 +1,7 @@
 import { parseSyncIdentityPackPage,
   type SyncIdentityPackPage } from '../../../../../lib/core/sync/syncIdentityPackPage.js';
 import { postDesktopJson } from '../../companionDesktopSyncHttp';
-import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
+import { FolioleCompanionLegacyIdentitySource } from '../../companionWorkspaceRuntimeRepository';
 
 import { downloadAndApplyCompanionSyncIdentityPage } from './pack-apply/companionSyncIdentityDownload';
 import { readCompanionIdentityCandidatePage } from './syncGroupIdentityCandidateStore';
@@ -21,7 +21,7 @@ interface ExchangeArgs {
 
 async function sendLocalPage(args: ExchangeArgs, page: SyncIdentityPackPage) {
   const parsed = parseSyncIdentityPackPage(page);
-  const native = await FolioleCompanionSync.buildIdentitySourcePack({
+  const native = await FolioleCompanionLegacyIdentitySource.buildIdentitySourcePack({
     snapshot_path: args.snapshotPath, page: parsed
   });
   const result = await postDesktopJson<{ applied: boolean; pageId: string; factTail?: unknown }>(args.endpointUrl,

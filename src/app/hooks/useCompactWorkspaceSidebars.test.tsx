@@ -60,6 +60,17 @@ function installViewport(initialWidth: number) {
 
 afterEach(() => vi.unstubAllGlobals());
 
+it('keeps sidebars docked when media queries are unavailable', () => {
+  vi.stubGlobal('matchMedia', undefined);
+  const chrome = createChrome();
+  const { result } = renderHook(() => useCompactWorkspaceSidebars(chrome));
+
+  expect(result.current.isListCollapsed).toBe(false);
+  expect(result.current.isRightSidebarCollapsed).toBe(false);
+  act(() => result.current.onToggleListVisibility());
+  expect(chrome.onToggleListVisibility).toHaveBeenCalledOnce();
+});
+
 it('opens one temporary sidebar at a time without changing docked preferences', () => {
   installViewport(1000);
   const chrome = createChrome();

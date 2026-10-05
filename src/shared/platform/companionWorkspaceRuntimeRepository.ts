@@ -3,6 +3,7 @@ import { registerPlugin } from '@capacitor/core';
 import type { CompanionWorkspaceDiscoveryPayload } from '../../../lib/platform/nativeCompanionSyncContract';
 import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
 
+import type { CompanionLegacyIdentitySourcePlugin } from './companion/sync/companionLegacyIdentitySourcePluginTypes';
 import {
   getCompanionRuntimeCapability,
   isCompanionRuntimeCapabilityAvailable,
@@ -15,6 +16,8 @@ export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
 export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 
 export const FolioleCompanionSync = registerPlugin<CompanionWorkspaceSyncPlugin>('FolioleCompanionSync');
+export const FolioleCompanionLegacyIdentitySource = FolioleCompanionSync as
+  CompanionWorkspaceSyncPlugin & CompanionLegacyIdentitySourcePlugin;
 
 export function beginNativeCompanionSyncRun(reason: SyncTriggerReason, runId: string) {
   requireCompanionNativePlugin('sync-trigger', 'FolioleCompanionSync');

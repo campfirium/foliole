@@ -12,6 +12,7 @@ import { createSyncIdentitySourceView } from '../../../../../../electron/databas
 import { insertNodeSyncState, mockedSyncPackBuilderAppDataDir, resolveSyncPackPath,
   setupSyncPackBuilderTestLifecycle } from '../../../../../../electron/database/syncPackBuilderTestSupport.js';
 import { extractSyncIdentityPackDatabaseFromFile } from '../../../../../../electron/sync/syncPackContainerReader.js';
+import { migratePrivateStateCanonicalHashes } from '../../../../../../lib/core/database/numberedMigrationPrivateStateCanonicalHashes.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { verifySyncIdentityFactProof } from '../../../../../../lib/core/sync/syncIdentityFactProofSeal.js';
 import { readReadySyncIdentityGlobalPage, readReadySyncIdentityInventory } from '../../../../../../lib/core/sync/syncIdentityGlobalRead.js';
@@ -68,6 +69,7 @@ function seedSource() {
     VALUES ('group', ?, ?, ?, ?, 'mac', 'active', 'now', 'now')`,
   [ids[name], name === 'source' ? '11111111-1111-4111-8111-111111111111' :
     '22222222-2222-4222-8222-222222222222', `/${name}`, name]);
+  migratePrivateStateCanonicalHashes(openDatabaseConnection().sqlite);
 }
 
 async function prepareTarget(source: Database.Database, targetPath: string,

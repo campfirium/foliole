@@ -11,7 +11,7 @@ vi.mock('./companion/sync/pack-apply/companionSyncIdentityDownload', () => ({
   downloadAndApplyCompanionSyncIdentityPage: runtime.transfer
 }));
 vi.mock('./companionWorkspaceRuntimeRepository', () => ({
-  FolioleCompanionSync: { buildIdentitySourcePack: runtime.build }
+  FolioleCompanionLegacyIdentitySource: { buildIdentitySourcePack: runtime.build }
 }));
 vi.mock('./companionDesktopSyncHttp', () => ({ postDesktopJson: runtime.post }));
 

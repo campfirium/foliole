@@ -1,7 +1,9 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { computeSyncContentHash } from '../../../lib/core/database/syncState';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from '../../../lib/core/database/syncStateSequenceSchemaStatements';
+import { buildCanonicalSettingSyncPayload } from '../../../lib/core/sync/canonicalPrivateStatePayload';
 import { COMPANION_DATABASE_VERSION } from '../../../lib/platform/nativeCompanionContract';
 import type { NativeSyncObjectRecord } from '../../../lib/platform/nativeSyncContract';
 
@@ -30,7 +32,7 @@ it('applies state objects through the Capacitor DbPort adapter and shared core',
     value_json: '{"theme":"dark"}'
   });
   expect(db.prepare('SELECT content_hash, sync_dirty FROM sync_object_state').get() as unknown).toEqual({
-    content_hash: 'setting-hash-1',
+    content_hash: settingObject().content_hash,
     sync_dirty: 0
   });
 });
@@ -69,19 +71,20 @@ it('opens the Android companion database before applying state objects', async (
 });
 
 function settingObject(): NativeSyncObjectRecord {
+  const payload = buildCanonicalSettingSyncPayload({
+    host_name: '*',
+    form_factor: 'mobile',
+    key: 'app_settings',
+    platform: 'android',
+    scope: 'user_space',
+    value_json: '{"theme":"dark"}'
+  });
   return {
-    content_hash: 'setting-hash-1',
+    content_hash: computeSyncContentHash('setting', payload),
     deleted_at: null,
     object_id: 'user_space:android:mobile:*:app_settings',
     object_type: 'setting',
-    payload_json: JSON.stringify({
-      host_name: '*',
-      form_factor: 'mobile',
-      key: 'app_settings',
-      platform: 'android',
-      scope: 'user_space',
-      value_json: '{"theme":"dark"}'
-    }),
+    payload_json: JSON.stringify(payload),
     updated_at: '2026-05-04T01:00:00.000Z'
   };
 }

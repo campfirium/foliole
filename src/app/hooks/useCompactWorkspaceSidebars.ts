@@ -13,6 +13,9 @@ export interface CompactWorkspaceSidebars {
 }
 
 function readFloatingSidebars() {
+  if (typeof window.matchMedia !== 'function') {
+    return { leftFloating: false, rightFloating: false };
+  }
   return {
     leftFloating: window.matchMedia('(max-width: 1080px)').matches,
     rightFloating: window.matchMedia('(max-width: 1279px)').matches
@@ -24,6 +27,7 @@ function useFloatingSidebarState(isImmersiveMode: boolean) {
   const [openSide, setOpenSide] = useState<WorkspaceSidebarSide | null>(null);
   const dismiss = useCallback(() => setOpenSide(null), []);
   useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return;
     const queries = ['(max-width: 1080px)', '(max-width: 1279px)'].map((query) => window.matchMedia(query));
     const update = () => {
       setFloating(readFloatingSidebars());

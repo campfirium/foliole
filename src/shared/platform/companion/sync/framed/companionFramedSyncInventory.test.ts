@@ -10,14 +10,19 @@ it('serializes the active companion inventory without a database snapshot', asyn
   sqlite.exec(`
     CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT NOT NULL);
     CREATE TABLE node_sync_versions (
-      version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL, body_text TEXT, content_hash TEXT NOT NULL
+      version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL, body_text TEXT,
+      content_hash TEXT NOT NULL, snapshot_json TEXT NOT NULL
+    );
+    CREATE TABLE node_sync_tombstones (
+      node_id TEXT PRIMARY KEY, version_id TEXT NOT NULL, content_hash TEXT NOT NULL,
+      snapshot_json TEXT NOT NULL
     );
     CREATE TABLE node_sync_version_parents (
       version_id TEXT NOT NULL, parent_version_id TEXT NOT NULL, ordinal INTEGER NOT NULL
     );
     CREATE TABLE review_log (node_id TEXT NOT NULL, op_id TEXT NOT NULL);
     INSERT INTO nodes VALUES ('node-a', 'version-a');
-    INSERT INTO node_sync_versions VALUES ('version-a', 'node-a', 'body', '${'11'.repeat(32)}');
+    INSERT INTO node_sync_versions VALUES ('version-a', 'node-a', 'body', '${'11'.repeat(32)}', '{}');
   `);
 
   await expect(readCompanionFramedSyncInventory(createBetterSqliteDbPort(sqlite)))
