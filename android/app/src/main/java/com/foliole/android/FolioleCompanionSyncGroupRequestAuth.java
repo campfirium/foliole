@@ -30,7 +30,8 @@ final class FolioleCompanionSyncGroupRequestAuth {
         String encodedSecret = FolioleCompanionCurrentGroupCredential.load(
             groupId
         ).workgroupKey;
-        String canonical = request.method + "\n" + request.path + "\n" + timestamp + "\n" + nonce + "\n" + sha256(request.body);
+        String canonical = request.method + "\n" + request.path + "\n" + timestamp + "\n" + nonce + "\n" +
+            request.signatureBodySha256();
         String expected = FolioleCompanionSyncGroupHmac.sign(encodedSecret, canonical);
         if (!MessageDigest.isEqual(expected.getBytes(StandardCharsets.US_ASCII), signature.getBytes(StandardCharsets.US_ASCII))) {
             throw new SecurityException("invalid_signature");
@@ -53,11 +54,5 @@ final class FolioleCompanionSyncGroupRequestAuth {
         if (!editor.putLong(identity, now + 60_000).commit()) {
             throw new IllegalStateException("Failed to persist workgroup request nonce.");
         }
-    }
-
-    private static String sha256(byte[] value) throws Exception {
-        StringBuilder result = new StringBuilder();
-        for (byte item : MessageDigest.getInstance("SHA-256").digest(value)) result.append(String.format("%02x", item));
-        return result.toString();
     }
 }

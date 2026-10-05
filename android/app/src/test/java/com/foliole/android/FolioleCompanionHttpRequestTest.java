@@ -10,6 +10,8 @@ import java.nio.charset.StandardCharsets;
 import org.junit.Test;
 
 public final class FolioleCompanionHttpRequestTest {
+    private static final String BODY_HASH = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
     @Test public void exposesChunkedFramedBodyAsAStream() throws Exception {
         byte[] input = ("POST /companion/framed-sync?peer=a HTTP/1.1\r\n" +
             "Transfer-Encoding: chunked\r\nContent-Type: application/vnd.foliole.framed-sync\r\n\r\n" +
@@ -25,6 +27,27 @@ public final class FolioleCompanionHttpRequestTest {
 
         assertEquals(0, request.body.length);
         assertArrayEquals(new byte[] { 'a', 'b', 'c', 0, 'x', 'y', 'z' }, body.toByteArray());
+    }
+
+    @Test public void usesTheDeclaredBinaryBodyHashForFramedAuthentication() throws Exception {
+        byte[] input = ("POST /companion/framed-sync HTTP/1.1\r\n" +
+            "Content-Length: 3\r\nX-Foliole-Body-Sha256: " + BODY_HASH + "\r\n\r\nabc")
+            .getBytes(StandardCharsets.US_ASCII);
+        FolioleCompanionHttpRequest request = FolioleCompanionHttpRequest.read(
+            new ByteArrayInputStream(input));
+
+        assertEquals(BODY_HASH, request.signatureBodySha256());
+    }
+
+    @Test public void keepsLegacyBodyAuthenticationBoundToActualBytes() throws Exception {
+        byte[] input = ("POST /companion/member-state HTTP/1.1\r\n" +
+            "Content-Length: 3\r\nX-Foliole-Body-Sha256: " + BODY_HASH + "\r\n\r\nabc")
+            .getBytes(StandardCharsets.US_ASCII);
+        FolioleCompanionHttpRequest request = FolioleCompanionHttpRequest.read(
+            new ByteArrayInputStream(input));
+
+        assertEquals("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+            request.signatureBodySha256());
     }
 
     @Test public void rejectsATruncatedFramedBodyWhileStreaming() throws Exception {

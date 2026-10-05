@@ -5,6 +5,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -58,8 +59,24 @@ final class FolioleCompanionHttpRequest {
     InputStream bodyStream() { return bodyStream; }
     String header(String name) { return headers.get(name.toLowerCase()); }
 
+    String signatureBodySha256() throws Exception {
+        if (!framedPath(path)) return sha256(body);
+        String value = header("x-foliole-body-sha256");
+        if (value == null) throw new SecurityException("missing_headers");
+        if (!value.matches("^[0-9a-f]{64}$")) throw new SecurityException("invalid_signature");
+        return value;
+    }
+
     private static boolean framedPath(String path) {
         return path.equals("/companion/framed-sync") || path.startsWith("/companion/framed-sync?");
+    }
+
+    private static String sha256(byte[] value) throws Exception {
+        StringBuilder result = new StringBuilder();
+        for (byte item : MessageDigest.getInstance("SHA-256").digest(value)) {
+            result.append(String.format("%02x", item));
+        }
+        return result.toString();
     }
 
     private static String line(BufferedInputStream input) throws Exception {
