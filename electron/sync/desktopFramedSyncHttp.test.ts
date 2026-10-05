@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import http from 'node:http';
 
 import { afterEach, describe, expect, it } from 'vitest';
@@ -15,7 +15,7 @@ import {
   FRAMED_SYNC_PATH
 } from './companionLanFramedSyncPost.js';
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
-import { framedSyncEncodedLength } from './desktopFramedSyncStream.js';
+import { framedSyncEncodedLength, framedSyncEncodedSha256 } from './desktopFramedSyncStream.js';
 
 const servers: http.Server[] = [];
 const secret = Buffer.alloc(32, 3).toString('base64url');
@@ -46,7 +46,7 @@ describe('desktop framed sync HTTP client', () => {
       expect(request.headers['transfer-encoding']).toBeUndefined();
       expect(request.url).toContain('initiator_library_epoch=epoch-a');
       expect(request.url).toContain('responder_library_epoch=epoch-b');
-      expect(request.headers['x-signature']).toBe(expectedSignature(request));
+      expect(request.headers['x-signature']).toBe(expectedSignature(request, received));
       response.writeHead(200, {
         'Content-Type': FRAMED_SYNC_CONTENT_TYPE,
         [FRAMED_SYNC_DEVICE_ID_HEADER]: 'device-b',
@@ -100,16 +100,17 @@ describe('desktop framed sync HTTP client', () => {
 function requestBody() {
   const frames = [{ ciphertext: Uint8Array.of(0, 255, 7), headerBytes: header }];
   return {
+    bodySha256: framedSyncEncodedSha256(preamble, frames),
     contentLength: framedSyncEncodedLength(preamble, frames),
     frames: requestFrames(),
     preamble
   };
 }
 
-function expectedSignature(request: http.IncomingMessage) {
+function expectedSignature(request: http.IncomingMessage, body: Uint8Array) {
   const canonical = [
     'POST', request.url, request.headers['x-timestamp'], request.headers['x-nonce'],
-    'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+    createHash('sha256').update(body).digest('hex')
   ].join('\n');
   return createHmac('sha256', secret).update(canonical).digest('hex');
 }

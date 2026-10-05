@@ -15,6 +15,7 @@ import {
 
 export const FRAMED_SYNC_PATH = '/companion/framed-sync';
 export const FRAMED_SYNC_CONTENT_TYPE = 'application/vnd.foliole.framed-sync';
+export const FRAMED_SYNC_BODY_SHA256_HEADER = 'x-foliole-body-sha256';
 export const FRAMED_SYNC_LIBRARY_EPOCH_HEADER = 'x-foliole-library-epoch';
 export const FRAMED_SYNC_DEVICE_ID_HEADER = 'x-foliole-device-id';
 const IDENTITY_PARAMS = Object.freeze({
@@ -76,8 +77,17 @@ function authenticateContext(args: {
   const { request, response } = args;
   const identity = readIdentity(new URL(request.url ?? '/', 'http://127.0.0.1'));
   const groupId = readHeader(request, 'x-sync-group-id');
+  const bodySha256 = readHeader(request, FRAMED_SYNC_BODY_SHA256_HEADER);
   if (!identity || !groupId) {
     writeError(response, 400, 'framed_sync_identity_context_required');
+    return null;
+  }
+  if (!bodySha256) {
+    writeError(response, 401, 'missing_headers');
+    return null;
+  }
+  if (!/^[0-9a-f]{64}$/u.test(bodySha256)) {
+    writeError(response, 401, 'invalid_signature');
     return null;
   }
   if (identity.responderDeviceId !== args.localIdentity.deviceId ||
@@ -86,6 +96,7 @@ function authenticateContext(args: {
     return null;
   }
   const auth = (args.authenticate ?? authenticateCompanionRequest)({
+    bodySha256,
     request,
     requireMemberState: true
   });

@@ -23,6 +23,7 @@ import {
 
 import {
   framedSyncEncodedLength,
+  framedSyncEncodedSha256,
   type FramedSyncEncodedFrame,
   type FramedSyncWireFrame,
   type FramedSyncWritableBody
@@ -76,6 +77,7 @@ export async function encodeDesktopFramedSyncSession(args: {
     frames.push({ ciphertext, headerBytes });
   }
   return {
+    bodySha256: framedSyncEncodedSha256(preamble, frames),
     contentLength: framedSyncEncodedLength(preamble, frames),
     frames: asyncFrames(frames),
     preamble

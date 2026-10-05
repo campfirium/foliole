@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import http from 'node:http';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -12,6 +13,7 @@ import {
 } from '../../lib/core/sync/framedSyncFraming.js';
 
 import {
+  FRAMED_SYNC_BODY_SHA256_HEADER,
   FRAMED_SYNC_CONTENT_TYPE,
   framedSyncPathWithIdentity,
   handleCompanionLanFramedSyncPost
@@ -58,6 +60,7 @@ async function startHandler(authenticate: typeof authenticateCompanionRequest,
 function requestHeaders() {
   return {
     'content-type': FRAMED_SYNC_CONTENT_TYPE,
+    [FRAMED_SYNC_BODY_SHA256_HEADER]: createHash('sha256').update(binaryBody).digest('hex'),
     'x-sync-group-id': 'group-a'
   };
 }

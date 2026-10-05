@@ -4,9 +4,8 @@ import { loadBackupRestorePendingSync } from '../database/backupRestorePendingSy
 import { isDesktopSyncGroupDeviceBlocked } from '../database/syncGroupMemberStateStore.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 
-import { SYNC_IDENTITY_CHANGED_PAGE_PATH, SYNC_IDENTITY_FACT_PAGE_PATH,
-  SYNC_IDENTITY_FACT_SUMMARY_PATH, SYNC_IDENTITY_NODE_FACTS_PATH,
-  SYNC_IDENTITY_PAGE_PATH } from './companionLanIdentityGet.js';
+import { SYNC_IDENTITY_FACT_SUMMARY_PATH,
+  SYNC_IDENTITY_NODE_FACTS_PATH } from './companionLanIdentityGet.js';
 import { SYNC_IDENTITY_GLOBAL_PAGE_PATH } from './companionLanIdentityGlobalGet.js';
 import { SYNC_IDENTITY_PACK_PATH } from './companionLanIdentityPackPost.js';
 import { SYNC_IDENTITY_RESTORE_SET_PATH } from './companionLanIdentityRestore.js';
@@ -44,6 +43,7 @@ export function clearCompanionRequestNonceCache() {
 
 export function authenticateCompanionRequest(args: {
   allowUnknownDevice?: boolean;
+  bodySha256?: string;
   bodyText?: string;
   nowMs?: number;
   requireMemberState?: boolean;
@@ -59,6 +59,7 @@ export function authenticateCompanionRequest(args: {
   const nowMs = args.nowMs ?? Date.now();
   if (!isFreshTimestamp(headers.timestamp, nowMs)) return failure('expired_timestamp', 401);
   const valid = verifyCompanionRequestSignature({
+    ...(args.bodySha256 === undefined ? {} : { bodySha256: args.bodySha256 }),
     ...(args.bodyText === undefined ? {} : { bodyText: args.bodyText }),
     method: args.request.method ?? 'GET', nonce: headers.nonce,
     pathWithQuery: pathWithQuery(args.request), secret: workgroupKey.group_key,
@@ -79,10 +80,9 @@ export function authenticateCompanionRequest(args: {
     const url = new URL(args.request.url ?? '/', 'http://localhost');
     const restoreGet = args.request.method === 'GET' &&
       ['/companion/sync-pack', '/companion/sync-pack-facts',
-          SYNC_IDENTITY_RESTORE_SET_PATH, SYNC_IDENTITY_PAGE_PATH,
+          SYNC_IDENTITY_RESTORE_SET_PATH,
           SYNC_IDENTITY_GLOBAL_PAGE_PATH,
-          SYNC_IDENTITY_FACT_SUMMARY_PATH, SYNC_IDENTITY_FACT_PAGE_PATH,
-          SYNC_IDENTITY_NODE_FACTS_PATH, SYNC_IDENTITY_CHANGED_PAGE_PATH]
+          SYNC_IDENTITY_FACT_SUMMARY_PATH, SYNC_IDENTITY_NODE_FACTS_PATH]
         .includes(url.pathname);
     const restorePack = args.request.method === 'POST' &&
       url.pathname === SYNC_IDENTITY_PACK_PATH;

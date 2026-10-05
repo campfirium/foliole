@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import {
   FRAMED_SYNC_LIMITS,
   FRAMED_SYNC_PREAMBLE
@@ -25,6 +27,7 @@ export type FramedSyncStreamBody<Frame extends FramedSyncEncodedFrame = FramedSy
 }>;
 
 export type FramedSyncWritableBody = FramedSyncStreamBody & Readonly<{
+  bodySha256: string;
   contentLength: number;
 }>;
 
@@ -129,4 +132,26 @@ export function framedSyncEncodedLength(
     }
     return total + headerBytes.byteLength + frame.ciphertext.byteLength;
   }, preamble.byteLength);
+}
+
+export function framedSyncEncodedSha256(
+  preamble: Uint8Array,
+  frames: readonly Readonly<{
+    ciphertext: Uint8Array;
+    frameHeader?: Uint8Array;
+    headerBytes?: Uint8Array;
+  }>[]
+) {
+  decodeFramedSyncPreamble(preamble);
+  const hash = createHash('sha256').update(preamble);
+  for (const frame of frames) {
+    const headerBytes = frame.headerBytes ?? frame.frameHeader;
+    if (!headerBytes) throw new Error('framed_sync_frame_header_missing');
+    const header = decodeFrameHeader(headerBytes);
+    if (frame.ciphertext.byteLength !== header.ciphertextBytes) {
+      throw new Error('framed_sync_frame_body_length_mismatch');
+    }
+    hash.update(headerBytes).update(frame.ciphertext);
+  }
+  return hash.digest('hex');
 }

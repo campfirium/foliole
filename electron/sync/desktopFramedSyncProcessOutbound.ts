@@ -20,7 +20,7 @@ import {
   TRANSFER_FRAME_TYPES,
   wireUint64
 } from './desktopFramedSyncProcessWire.js';
-import { framedSyncEncodedLength } from './desktopFramedSyncStream.js';
+import { framedSyncEncodedLength, framedSyncEncodedSha256 } from './desktopFramedSyncStream.js';
 
 type Identity = Readonly<{ deviceId: string; libraryEpoch: string }>;
 type Projection = ReturnType<typeof projectDesktopFramedSyncProcessTransfer>;
@@ -56,6 +56,7 @@ export async function synchronizeDesktopFramedSync(input: {
   await input.staging.finalizeOutboundAttempt(transferId, attempt.attemptId);
   const response = await postDesktopFramedSync({
     body: {
+      bodySha256: framedSyncEncodedSha256(attempt.preamble, frames),
       contentLength: framedSyncEncodedLength(attempt.preamble, frames),
       frames: processFrameStream(frames),
       preamble: attempt.preamble

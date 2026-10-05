@@ -9,6 +9,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
  * this model. Revisit the protocol if that isolation becomes a product requirement.
  */
 export function verifyCompanionRequestSignature(args: {
+  bodySha256?: string;
   bodyText?: string;
   method: string;
   nonce: string;
@@ -17,7 +18,9 @@ export function verifyCompanionRequestSignature(args: {
   signature: string;
   timestamp: string;
 }) {
-  const bodyHash = createHash('sha256').update(args.bodyText ?? '').digest('hex');
+  if (args.bodyText !== undefined && args.bodySha256 !== undefined) return false;
+  if (args.bodySha256 !== undefined && !/^[0-9a-f]{64}$/u.test(args.bodySha256)) return false;
+  const bodyHash = args.bodySha256 ?? createHash('sha256').update(args.bodyText ?? '').digest('hex');
   const canonical = [
     args.method.toUpperCase(),
     args.pathWithQuery,

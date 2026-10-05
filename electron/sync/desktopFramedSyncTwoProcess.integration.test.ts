@@ -11,7 +11,7 @@ import {
   processFrameStream,
   TRANSFER_FRAME_TYPES
 } from './desktopFramedSyncProcessWire.js';
-import { framedSyncEncodedLength } from './desktopFramedSyncStream.js';
+import { framedSyncEncodedLength, framedSyncEncodedSha256 } from './desktopFramedSyncStream.js';
 import {
   createDesktopFramedSyncTwoProcessFixture,
   type DesktopFramedSyncFixtureProcess,
@@ -165,6 +165,7 @@ it('rejects a non-canonical transfer identity before staging its authenticated h
   });
   await expect(postDesktopFramedSync({
     body: {
+      bodySha256: framedSyncEncodedSha256(attempt.preamble, [frame]),
       contentLength: framedSyncEncodedLength(attempt.preamble, [frame]),
       frames: processFrameStream([frame]),
       preamble: attempt.preamble

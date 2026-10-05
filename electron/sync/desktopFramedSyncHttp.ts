@@ -6,6 +6,7 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncCont
 import type { FramedSyncSessionContext } from '../../lib/core/sync/framedSyncSession.js';
 
 import {
+  FRAMED_SYNC_BODY_SHA256_HEADER,
   FRAMED_SYNC_CONTENT_TYPE,
   FRAMED_SYNC_DEVICE_ID_HEADER,
   FRAMED_SYNC_LIBRARY_EPOCH_HEADER,
@@ -39,6 +40,7 @@ export async function postDesktopFramedSync(args: {
   const url = new URL(pathWithQuery, ensureTrailingSlash(args.endpointUrl));
   const headers = {
     ...createDesktopSyncGroupSignedHeaders({
+      bodySha256: args.body.bodySha256,
       groupId: args.groupId,
       localDeviceId: args.localDeviceId,
       method: 'POST',
@@ -48,6 +50,7 @@ export async function postDesktopFramedSync(args: {
     Accept: FRAMED_SYNC_CONTENT_TYPE,
     'Content-Length': String(args.body.contentLength),
     'Content-Type': FRAMED_SYNC_CONTENT_TYPE,
+    [FRAMED_SYNC_BODY_SHA256_HEADER]: args.body.bodySha256,
   };
   const transport = url.protocol === 'https:' ? https : http;
   const request = transport.request(url, { headers, method: 'POST' });
