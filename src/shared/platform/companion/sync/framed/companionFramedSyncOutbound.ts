@@ -1,7 +1,6 @@
-import { bytesToHex } from '@noble/hashes/utils.js';
-
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { canonicalContentId, canonicalTransferId } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { createCompanionFramedSyncOutboundValue } from '../../../../../../lib/core/sync/framedSyncCompanionOutboundContract.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 import { createFramedSyncOutboundStaging } from '../../../../../../lib/core/sync/framedSyncOutboundStaging.js';
@@ -42,13 +41,13 @@ export async function prepareCompanionFramedSyncOutbound(
   });
   const blob = projection.manifest.blobs[0]!;
   const fact = projection.manifest.facts[0]!;
-  return {
-    blob: { byte_length: blob.byteLength.toString(), data_text: record.body_text ?? '',
-      required: blob.required, role: blob.role, sha256: bytesToHex(blob.sha256) },
-    content_id: bytesToHex(contentId),
-    fact_message_bytes: Array.from(encodeValidatedProtocolMessage('fact', factToWire(fact))),
-    manifest_hash: bytesToHex(contentId),
-    publication_state: state,
-    transfer_id: bytesToHex(transferId)
-  };
+  return createCompanionFramedSyncOutboundValue({
+    blob,
+    contentId,
+    dataText: record.body_text ?? '',
+    factMessageBytes: encodeValidatedProtocolMessage('fact', factToWire(fact)),
+    manifestHash: contentId,
+    publicationState: state,
+    transferId
+  });
 }
