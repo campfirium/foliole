@@ -46,6 +46,7 @@ let package = Package(
                 "FolioleCompanionDesktopHttpClient.swift",
                 "FolioleFramedSyncHTTPReceiver.swift",
                 "FolioleFramedSyncHTTPTransport.swift",
+                "FolioleCompanionFramedSyncPreparedOutbound.swift",
                 "FolioleFramedSyncOutboundStaging.swift",
                 "FolioleFramedSyncReceiptReader.swift",
                 "FolioleFramedSyncSQLiteStaging.swift",

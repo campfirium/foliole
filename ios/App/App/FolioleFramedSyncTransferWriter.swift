@@ -144,19 +144,34 @@ enum FolioleFramedSyncTransferWriter {
     private static func verifiedBlobs(
         facts: [Foliole_Sync_V22_FactRecord], blobs: [FolioleFramedSyncOutboundBlob]
     ) throws -> [FolioleFramedSyncOutboundBlob] {
-        let declared = facts.flatMap(\.blobs)
+        var declared = [Data: Foliole_Sync_V22_BlobReference]()
+        for reference in facts.flatMap(\.blobs) {
+            if let existing = declared[reference.sha256], !sameBlob(existing, reference) {
+                throw invalid("framed_sync_blob_identity_conflict")
+            }
+            declared[reference.sha256] = reference
+        }
         guard declared.count == blobs.count else { throw invalid("framed_sync_blob_set_mismatch") }
         let sorted = blobs.sorted { $0.reference.sha256.lexicographicallyPrecedes($1.reference.sha256) }
-        guard Set(declared.map(\.sha256)) == Set(sorted.map(\.reference.sha256)) else {
+        guard Set(declared.keys) == Set(sorted.map(\.reference.sha256)),
+              Set(sorted.map(\.reference.sha256)).count == sorted.count else {
             throw invalid("framed_sync_blob_set_mismatch")
         }
         for blob in sorted {
-            guard blob.reference.byteLength == UInt64(blob.data.count),
+            guard let expected = declared[blob.reference.sha256], sameBlob(expected, blob.reference),
+                  blob.reference.byteLength == UInt64(blob.data.count),
                   Data(SHA256.hash(data: blob.data)) == blob.reference.sha256 else {
                 throw invalid("framed_sync_blob_content_mismatch")
             }
         }
         return sorted
+    }
+
+    private static func sameBlob(
+        _ left: Foliole_Sync_V22_BlobReference, _ right: Foliole_Sync_V22_BlobReference
+    ) -> Bool {
+        left.sha256 == right.sha256 && left.byteLength == right.byteLength &&
+            left.role == right.role && left.required == right.required
     }
 
     private static func makePreamble(

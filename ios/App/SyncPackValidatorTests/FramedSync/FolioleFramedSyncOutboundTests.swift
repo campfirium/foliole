@@ -76,6 +76,50 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         }
     }
 
+    func testMultiFactTransferAllowsRelationAndReviewWithoutBlobs() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foliole-ios-multi-fact-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let staging = FolioleFramedSyncOutboundSQLite(database: try .init(
+            url: directory.appendingPathComponent("outbound.db")
+        ))
+        let facts = [
+            bloblessFact(kind: .parentEdge, id: "[\"version-1\",\"version-0\",0]"),
+            bloblessFact(kind: .review, id: "review-1")
+        ]
+        let attempt = try FolioleFramedSyncTransferWriter.prepare(
+            groupKey: groupKey, context: context(), facts: facts, blobs: [], staging: staging
+        )
+        let wire = try FolioleFramedSyncTransferWriter.replay(attempt, staging: staging)
+        let reader = FolioleFramedSyncStreamReader(input: InputStream(data: wire))
+        _ = try reader.nextPreamble()
+        var types = [FolioleFramedSyncFrameType]()
+        while let frame = try reader.nextFrame() { types.append(frame.header.frameType) }
+        XCTAssertEqual(types, [.transferHeader, .fact, .fact, .transferTrailer])
+    }
+
+    func testPreparedOutboundRequiresTheNewFactListAndBlobListContract() throws {
+        let fact = bloblessFact(kind: .review, id: "review-1")
+        var message = Foliole_Sync_V22_ProtocolMessage(); message.payload = .fact(fact)
+        let validated = try FolioleFramedSyncCodec.validateOutbound(
+            message, authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue
+        )
+        let bytes = try FolioleFramedSyncCodec.encode(validated)
+        let digest = Data(repeating: 9, count: 32).hex
+        let decoded = try FolioleCompanionFramedSyncPreparedOutbound.decode([
+            "blobs": [[String: Any]](), "content_id": digest,
+            "fact_message_bytes_list": [Array(bytes)], "manifest_hash": digest,
+            "transfer_id": Data(repeating: 8, count: 32).hex
+        ])
+        XCTAssertEqual(decoded.facts.map(\.identity.factID), ["review-1"])
+        XCTAssertTrue(decoded.blobs.isEmpty)
+        XCTAssertThrowsError(try FolioleCompanionFramedSyncPreparedOutbound.decode([
+            "blob": [String: Any](), "content_id": digest,
+            "fact_message_bytes": Array(bytes), "manifest_hash": digest,
+            "transfer_id": Data(repeating: 8, count: 32).hex
+        ]))
+    }
+
     private func context() -> FolioleFramedSyncTransferContext {
         .init(groupID: "group", senderDeviceID: "sender", senderLibraryEpoch: "sender-epoch",
               receiverDeviceID: "receiver", receiverLibraryEpoch: "receiver-epoch")
@@ -91,6 +135,18 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         var fact = Foliole_Sync_V22_FactRecord()
         fact.identity = identity; fact.sharedStateHash = Data(repeating: 0, count: 32)
         fact.body = .init(); fact.blobs = [blob]
+        return fact
+    }
+
+    private func bloblessFact(
+        kind: Foliole_Sync_V22_FactKind, id: String
+    ) -> Foliole_Sync_V22_FactRecord {
+        var identity = Foliole_Sync_V22_FactIdentity()
+        identity.kind = kind; identity.objectType = "node"
+        identity.globalID = "node-1"; identity.factID = id
+        var fact = Foliole_Sync_V22_FactRecord()
+        fact.identity = identity; fact.sharedStateHash = Data(repeating: UInt8(kind.rawValue), count: 32)
+        fact.body = .init()
         return fact
     }
 }

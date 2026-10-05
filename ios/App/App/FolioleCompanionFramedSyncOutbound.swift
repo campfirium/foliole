@@ -22,17 +22,20 @@ extension FolioleCompanionSyncPlugin {
         let workgroupKey = try required(credential, "workgroup_key")
         let state = try groupData.request("load_member_state", [:])
         let senderEpoch = try required(state, "library_epoch")
-        let prepared = try groupData.request("prepare_framed_outbound", [
+        guard let includeCurrentNode = call.getBool("include_current_node") else {
+            throw invalid("include_current_node_required")
+        }
+        let preparedValue = try groupData.request("prepare_framed_outbound", [
             "group_id": groupID, "object_id": try framedRequired(call, "object_id"),
+            "include_current_node": includeCurrentNode,
+            "required_relation_ids": try framedStringArray(call, "required_relation_ids"),
+            "review_fact_ids": try framedStringArray(call, "review_fact_ids"),
             "sender_device_id": senderDeviceID, "sender_library_epoch": senderEpoch,
             "receiver_device_id": receiverDeviceID, "receiver_library_epoch": receiverEpoch
         ])
         let groupKey = try Base64URL.decode(workgroupKey)
         guard groupKey.count == 32 else { throw invalid("sync_group_key_invalid") }
-        let contentID = try framedDigest(prepared, "content_id")
-        let expectedTransferID = try framedDigest(prepared, "transfer_id")
-        let fact = try framedFact(prepared)
-        let blobData = try framedBlobData(prepared)
+        let prepared = try FolioleCompanionFramedSyncPreparedOutbound.decode(preparedValue)
         let context = FolioleFramedSyncTransferContext(
             groupID: groupID, senderDeviceID: senderDeviceID, senderLibraryEpoch: senderEpoch,
             receiverDeviceID: receiverDeviceID, receiverLibraryEpoch: receiverEpoch
@@ -40,10 +43,10 @@ extension FolioleCompanionSyncPlugin {
         let database = try FolioleFramedSyncTransferDatabase(url: framedOutboundDatabaseURL())
         let staging = FolioleFramedSyncOutboundSQLite(database: database)
         let attempt = try FolioleFramedSyncTransferWriter.prepare(
-            groupKey: groupKey, context: context, facts: [fact],
-            blobs: [.init(reference: try framedSingleBlob(fact), data: blobData)], staging: staging
+            groupKey: groupKey, context: context, facts: prepared.facts,
+            blobs: prepared.blobs, staging: staging
         )
-        guard attempt.transferID == expectedTransferID else {
+        guard attempt.transferID == prepared.transferID else {
             throw invalid("framed_sync_transfer_identity_mismatch")
         }
         let body = try FolioleFramedSyncTransferWriter.replay(attempt, staging: staging)
@@ -59,7 +62,7 @@ extension FolioleCompanionSyncPlugin {
             ), body: body
         )
         let receipt = try FolioleFramedSyncReceiptReader.read(
-            receiptData, groupKey: groupKey, transferID: attempt.transferID, contentID: contentID,
+            receiptData, groupKey: groupKey, transferID: attempt.transferID, contentID: prepared.contentID,
             receiverDeviceID: receiverDeviceID, receiverLibraryEpoch: receiverEpoch
         )
         let result: [String: Any] = [
@@ -123,49 +126,18 @@ extension FolioleCompanionSyncPlugin {
         return path
     }
 
-    private func framedFact(_ value: [String: Any]) throws -> Foliole_Sync_V22_FactRecord {
-        guard let raw = value["fact_message_bytes"] as? [Any] else {
-            throw invalid("framed_sync_fact_bytes_required")
-        }
-        let numbers = raw.compactMap { $0 as? NSNumber }
-        guard numbers.count == raw.count else { throw invalid("framed_sync_fact_bytes_invalid") }
-        let message = try FolioleFramedSyncCodec.decode(
-            Data(numbers.map(\.uint8Value)), authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue
-        )
-        guard case .fact(let fact) = message.payload else { throw invalid("framed_sync_fact_required") }
-        return fact
-    }
-
-    private func framedBlobData(_ value: [String: Any]) throws -> Data {
-        guard let blob = value["blob"] as? [String: Any],
-              let text = blob["data_text"] as? String else { throw invalid("framed_sync_blob_required") }
-        return Data(text.utf8)
-    }
-
-    private func framedSingleBlob(
-        _ fact: Foliole_Sync_V22_FactRecord
-    ) throws -> Foliole_Sync_V22_BlobReference {
-        guard fact.blobs.count == 1, let blob = fact.blobs.first else {
-            throw invalid("framed_sync_blob_set_unsupported")
-        }
-        return blob
-    }
-
-    private func framedDigest(_ value: [String: Any], _ key: String) throws -> Data {
-        guard let text = value[key] as? String,
-              text.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else {
-            throw invalid("framed_sync_digest_invalid")
-        }
-        return Data(stride(from: 0, to: text.count, by: 2).compactMap { offset in
-            let start = text.index(text.startIndex, offsetBy: offset)
-            return UInt8(text[start..<text.index(start, offsetBy: 2)], radix: 16)
-        })
-    }
-
     func framedRequired(_ call: CAPPluginCall, _ key: String) throws -> String {
         guard let value = call.getString(key)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !value.isEmpty else { throw invalid("\(key)_required") }
         return value
+    }
+
+    private func framedStringArray(_ call: CAPPluginCall, _ key: String) throws -> [String] {
+        guard let raw = call.getArray(key) else { throw invalid("\(key)_required") }
+        let values = raw.compactMap { ($0 as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        guard values.count == raw.count, values.allSatisfy({ !$0.isEmpty }),
+              Set(values).count == values.count else { throw invalid("\(key)_invalid") }
+        return values
     }
 
     private func framedOutboundDatabaseURL() throws -> URL {
