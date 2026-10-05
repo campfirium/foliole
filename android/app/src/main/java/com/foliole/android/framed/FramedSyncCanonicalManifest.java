@@ -37,6 +37,27 @@ final class FramedSyncCanonicalManifest {
         }
     }
 
+    static byte[] transferId(FramedSyncTransferContext context, byte[] contentId)
+        throws FramedSyncValidationException {
+        if (contentId == null || contentId.length != FramedSyncContract.DIGEST_BYTES) {
+            throw invalid("content_id_invalid");
+        }
+        Writer writer = new Writer();
+        writer.string("foliole-framed-sync-transfer-v1");
+        writer.u32(FramedSyncContract.PROTOCOL_VERSION);
+        writer.string(context.groupId());
+        writer.string(context.senderDeviceId());
+        writer.string(context.senderLibraryEpoch());
+        writer.string(context.receiverDeviceId());
+        writer.string(context.receiverLibraryEpoch());
+        writer.data(contentId);
+        try {
+            return MessageDigest.getInstance("SHA-256").digest(writer.bytes());
+        } catch (java.security.NoSuchAlgorithmException error) {
+            throw new IllegalStateException(error);
+        }
+    }
+
     private static void writeFact(Writer writer, FactRecord fact)
         throws FramedSyncValidationException {
         var identity = fact.getIdentity();

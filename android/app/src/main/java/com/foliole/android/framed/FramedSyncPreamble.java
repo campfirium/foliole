@@ -28,6 +28,20 @@ public final class FramedSyncPreamble {
         return decode(output.array());
     }
 
+    public static FramedSyncPreamble transfer(
+        byte[] transferId, byte[] attemptId, byte[] noncePrefix
+    ) {
+        if (transferId == null || transferId.length != FramedSyncContract.DIGEST_BYTES ||
+            attemptId == null || attemptId.length != FramedSyncContract.IDENTIFIER_BYTES ||
+            noncePrefix == null || noncePrefix.length != 4) throw invalid();
+        ByteBuffer output = ByteBuffer.allocate(BYTES).order(ByteOrder.BIG_ENDIAN);
+        output.put(MAGIC).putShort((short) BYTES)
+            .putShort((short) FramedSyncContract.PROTOCOL_VERSION)
+            .put((byte) 2).put((byte) 0).putShort((short) 0)
+            .put(transferId).put(attemptId).put(noncePrefix).putLong(0);
+        return decode(output.array());
+    }
+
     public static FramedSyncPreamble decode(byte[] encoded) {
         if (encoded.length != BYTES) throw invalid();
         ByteBuffer input = ByteBuffer.wrap(encoded).order(ByteOrder.BIG_ENDIAN);
