@@ -102,8 +102,11 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
         manifest["to_state_seq"] = nil
         manifest["frontier_state_seq"] = nil
         manifest["identity_page"] = [
-            "contract": "global-id-v1", "source_peer_id": expectedSourcePeerId,
-            "target_peer_id": "android-fixture", "page_id": String(repeating: "a", count: 64)
+            "contract": "global-id-v1", "group_id": "group-a",
+            "source_peer_id": expectedSourcePeerId, "target_peer_id": "android-fixture",
+            "source_view_id": "00000000-0000-4000-8000-000000000000",
+            "page_index": 0, "previous_page_id": NSNull(), "objects": [],
+            "page_id": "9d21d2d0a75f17c66c2bb9dd9463c2d680bab26f00d786de100ffd96b55a53b3"
         ]
         entries["manifest.json"] = try JSONSerialization.data(withJSONObject: manifest)
         let archiveURL = try temporaryArchiveURL(entries: entries)
@@ -118,7 +121,9 @@ final class FolioleSyncPackValidatorTests: XCTestCase {
         try prepared.databaseBytes.write(to: databaseURL)
         XCTAssertThrowsError(try FolioleCompanionSyncPackDatabaseValidator.validate(
             databaseURL: databaseURL, prepared: prepared, contract: contract
-        ))
+        )) { error in
+            XCTAssertEqual(error.localizedDescription, "sync_identity_pack_inner_manifest_mismatch")
+        }
     }
 
     func testRejectsSchema77BeforeSQLiteWrite() throws {
