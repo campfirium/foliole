@@ -53,6 +53,11 @@ public final class FramedSyncResourceStagingTest {
             adapter.commitAuthenticatedFrame(frame(ATTEMPT_B, 4, FramedSyncFrameType.TRANSFER_TRAILER,
                 trailerWithResource(), new byte[] {5}));
             assertEquals(1, count(database, "framed_sync_android_available_resources"));
+            assertEquals(32, scalarInt(database,
+                "SELECT length(authenticated_plaintext) FROM framed_sync_android_frames " +
+                "WHERE sequence = '3'"));
+            assertEquals(32, scalarInt(database,
+                "SELECT length(ciphertext) FROM framed_sync_android_frames WHERE sequence = '3'"));
             String key = FramedSyncResourceFiles.hex(RESOURCE_HASH) + ".pdf";
             File target = new File(attachments, key);
             File partial = FramedSyncResourceFiles.partial(
@@ -126,6 +131,13 @@ public final class FramedSyncResourceStagingTest {
 
     private static int count(SQLiteDatabase database, String table) {
         try (Cursor row = database.rawQuery("SELECT COUNT(*) FROM " + table, null)) {
+            row.moveToFirst();
+            return row.getInt(0);
+        }
+    }
+
+    private static int scalarInt(SQLiteDatabase database, String sql) {
+        try (Cursor row = database.rawQuery(sql, null)) {
             row.moveToFirst();
             return row.getInt(0);
         }

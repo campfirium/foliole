@@ -8,6 +8,7 @@ import com.foliole.sync.v22.TransferHeader;
 import com.foliole.sync.v22.TransferProposal;
 import com.foliole.sync.v22.TransferTrailer;
 import java.io.File;
+import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
 
@@ -38,13 +39,13 @@ final class FramedSyncSQLiteInboundFrames {
         FramedSyncStageOutcome outcome;
         database.beginTransaction();
         try {
-            FramedSyncStageOutcome existing = existingFrame(frame, wireHeader);
+            FramedSyncStageOutcome existing = existingFrame(frame, wireHeader, message);
             if (existing != null) {
                 database.setTransactionSuccessful();
                 return existing;
             }
             preparePayload(frame, message);
-            insertFrame(frame, wireHeader);
+            insertFrame(frame, wireHeader, message);
             if (message.payload().payloadCase() == FramedSyncPayload.Case.FACT) {
                 facts.stage(frame, (FactRecord) message.payload().value());
             } else if (message.payload().payloadCase() == FramedSyncPayload.Case.BLOB_CHUNK) {
@@ -133,7 +134,8 @@ final class FramedSyncSQLiteInboundFrames {
 
     private FramedSyncStageOutcome existingFrame(
         FramedSyncAuthenticatedFrame frame,
-        FramedSyncWireHeader header
+        FramedSyncWireHeader header,
+        FramedSyncValidatedMessage message
     ) throws FramedSyncValidationException {
         try (Cursor row = database.query("framed_sync_android_frames",
             new String[] {"frame_type", "preamble", "frame_header", "ciphertext", "authenticated_plaintext"},
@@ -141,16 +143,21 @@ final class FramedSyncSQLiteInboundFrames {
             FramedSyncSQLiteValues.blobArgs(frame.transferId(), frame.attemptId(),
                 Long.toUnsignedString(header.sequence())), null, null, null)) {
             if (!row.moveToFirst()) return null;
+            byte[][] identities = storedBodyIdentities(frame, message);
             boolean same = row.getInt(0) == header.frameType() && Arrays.equals(row.getBlob(1), frame.preamble()) &&
                 Arrays.equals(row.getBlob(2), frame.frameHeader()) &&
-                Arrays.equals(row.getBlob(3), frame.ciphertext()) &&
-                Arrays.equals(row.getBlob(4), frame.plaintext());
+                Arrays.equals(row.getBlob(3), identities[0]) && Arrays.equals(row.getBlob(4), identities[1]);
             if (!same) throw invalid("inbound_frame_identity_conflict");
             return FramedSyncStageOutcome.IDENTICAL;
         }
     }
 
-    private void insertFrame(FramedSyncAuthenticatedFrame frame, FramedSyncWireHeader header) {
+    private void insertFrame(
+        FramedSyncAuthenticatedFrame frame,
+        FramedSyncWireHeader header,
+        FramedSyncValidatedMessage message
+    ) {
+        byte[][] identities = storedBodyIdentities(frame, message);
         ContentValues values = new ContentValues();
         values.put("transfer_id", frame.transferId());
         values.put("attempt_id", frame.attemptId());
@@ -158,9 +165,30 @@ final class FramedSyncSQLiteInboundFrames {
         values.put("frame_type", header.frameType());
         values.put("preamble", frame.preamble());
         values.put("frame_header", frame.frameHeader());
-        values.put("ciphertext", frame.ciphertext());
-        values.put("authenticated_plaintext", frame.plaintext());
+        values.put("ciphertext", identities[0]);
+        values.put("authenticated_plaintext", identities[1]);
         database.insertOrThrow("framed_sync_android_frames", null, values);
+    }
+
+    private byte[][] storedBodyIdentities(
+        FramedSyncAuthenticatedFrame frame,
+        FramedSyncValidatedMessage message
+    ) {
+        if (message.payload().payloadCase() != FramedSyncPayload.Case.BLOB_CHUNK) {
+            return new byte[][] {frame.ciphertext(), frame.plaintext()};
+        }
+        com.foliole.sync.v22.BlobChunk chunk =
+            (com.foliole.sync.v22.BlobChunk) message.payload().value();
+        if (!blobs.isResourceChunk(frame.transferId(), frame.attemptId(),
+            chunk.getBlobHash().toByteArray())) {
+            return new byte[][] {frame.ciphertext(), frame.plaintext()};
+        }
+        return new byte[][] {sha256(frame.ciphertext()), sha256(frame.plaintext())};
+    }
+
+    private static byte[] sha256(byte[] value) {
+        try { return MessageDigest.getInstance("SHA-256").digest(value); }
+        catch (Exception error) { throw new IllegalStateException(error); }
     }
 
     private static FramedSyncValidationException invalid(String code) {

@@ -103,6 +103,11 @@ final class FramedSyncSQLiteBlobs {
         return resources.directory();
     }
 
+    boolean isResourceChunk(byte[] transferId, byte[] attemptId, byte[] hash) {
+        BlobReference descriptor = loadOffer(transferId, attemptId, hash);
+        return descriptor != null && descriptor.getRoleValue() != 1;
+    }
+
     private byte[] assemble(byte[] transferId, byte[] attemptId, byte[] hash, long byteLength)
         throws FramedSyncValidationException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
