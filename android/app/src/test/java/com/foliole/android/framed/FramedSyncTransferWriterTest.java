@@ -16,6 +16,8 @@ import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import org.junit.Test;
 
@@ -30,7 +32,9 @@ public final class FramedSyncTransferWriterTest {
             "group", "sender", "sender-epoch", "receiver", "receiver-epoch");
 
         FramedSyncTransferWriter.Attempt attempt = FramedSyncTransferWriter.prepare(
-            GROUP_KEY, context, fact, body, staging);
+            GROUP_KEY, context, Collections.singletonList(fact),
+            Collections.singletonList(new FramedSyncTransferWriter.BlobContent(
+                fact.getBlobs(0).getSha256().toByteArray(), body)), staging);
         assertTrue(staging.preparedBeforeFirstFrame);
         assertTrue(staging.finalized);
 
@@ -52,6 +56,38 @@ public final class FramedSyncTransferWriterTest {
         assertEquals(null, reader.readFrame());
     }
 
+    @Test public void ordersMultipleFactsAndSupportsNoBlobTransfer() throws Exception {
+        FactRecord review = factWithoutBlob(FactKind.FACT_KIND_REVIEW, "review-1");
+        FactRecord relation = factWithoutBlob(FactKind.FACT_KIND_PARENT_EDGE, "parent-1");
+        MemoryStaging staging = new MemoryStaging();
+        FramedSyncTransferContext context = new FramedSyncTransferContext(
+            "group", "sender", "sender-epoch", "receiver", "receiver-epoch");
+
+        FramedSyncTransferWriter.Attempt attempt = FramedSyncTransferWriter.prepare(
+            GROUP_KEY, context, Arrays.asList(review, relation), Collections.emptyList(), staging);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        FramedSyncTransferWriter.replay(attempt, staging, output);
+        FramedSyncStreamReader reader = new FramedSyncStreamReader(
+            new ByteArrayInputStream(output.toByteArray()));
+        FramedSyncPreamble preamble = reader.readPreamble();
+        int[] expectedTypes = { 2, 3, 3, 5 };
+        List<FramedSyncValidatedMessage> decoded = new ArrayList<>();
+        for (int sequence = 0; sequence < expectedTypes.length; sequence++) {
+            FramedSyncWireFrame frame = reader.readFrame();
+            decoded.add(FramedSyncCodec.decode(
+                FramedSyncFrameCrypto.decrypt(GROUP_KEY, preamble, frame, sequence),
+                expectedTypes[sequence]));
+        }
+        assertEquals(FactKind.FACT_KIND_PARENT_EDGE,
+            ((FactRecord) decoded.get(1).payload().value()).getIdentity().getKind());
+        assertEquals(FactKind.FACT_KIND_REVIEW,
+            ((FactRecord) decoded.get(2).payload().value()).getIdentity().getKind());
+        com.foliole.sync.v22.TransferTrailer trailer =
+            (com.foliole.sync.v22.TransferTrailer) decoded.get(3).payload().value();
+        assertEquals(2, trailer.getFactCount());
+        assertEquals(0, trailer.getBlobCount());
+    }
+
     private static FactRecord fact(byte[] body) throws Exception {
         BlobReference blob = BlobReference.newBuilder()
             .setSha256(ByteString.copyFrom(MessageDigest.getInstance("SHA-256").digest(body)))
@@ -61,6 +97,13 @@ public final class FramedSyncTransferWriterTest {
             .setGlobalId("node-1").setFactId("version-1"))
             .setSharedStateHash(ByteString.copyFrom(new byte[32]))
             .setBody(CanonicalObject.getDefaultInstance()).addBlobs(blob).build();
+    }
+
+    private static FactRecord factWithoutBlob(FactKind kind, String factId) {
+        return FactRecord.newBuilder().setIdentity(FactIdentity.newBuilder()
+            .setKind(kind).setObjectType("node").setGlobalId("node-1").setFactId(factId))
+            .setSharedStateHash(ByteString.copyFrom(new byte[32]))
+            .setBody(CanonicalObject.getDefaultInstance()).build();
     }
 
     private static final class MemoryStaging implements FramedSyncOutboundStaging {

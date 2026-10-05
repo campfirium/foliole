@@ -79,9 +79,7 @@ export function selectCompanionFramedSyncCurrentNodes(args: {
   const sendable: FramedSyncInventoryDifference[] = [];
   for (const difference of compareFramedSyncInventories(args)) {
     if (difference.direction !== 'local_to_remote') continue;
-    const nodePayloadNeeded = difference.need.sharedState ||
-      difference.need.frontierFactIds.length > 0 || difference.need.resourceHashes.length > 0;
-    if (difference.objectType === 'node' && nodePayloadNeeded) sendable.push(difference);
+    if (difference.objectType === 'node') sendable.push(difference);
     else deferredObjects.push({ globalId: difference.globalId, objectType: difference.objectType });
   }
   return { deferredObjects, sendable };
@@ -113,8 +111,12 @@ export async function sendCompanionFramedSyncInventoryDifferences(
     }
     const receipt = await sendCompanionFramedSyncObject({
       endpointUrl: args.endpoint_url, groupId: args.sync_group_id,
+      includeCurrentNode: difference.need.sharedState ||
+        difference.need.frontierFactIds.length > 0 || difference.need.resourceHashes.length > 0,
       objectId: difference.globalId, receiverDeviceId: args.receiver_device_id,
-      receiverLibraryEpoch: args.receiver_library_epoch
+      receiverLibraryEpoch: args.receiver_library_epoch,
+      requiredRelationIds: difference.need.requiredRelationIds,
+      reviewFactIds: difference.need.reviewFactIds
     });
     sent.push({ objectId: difference.globalId, receipt });
   }

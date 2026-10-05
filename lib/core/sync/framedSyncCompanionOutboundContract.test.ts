@@ -9,10 +9,10 @@ const digest = (byte: number) => new Uint8Array(32).fill(byte);
 
 function input() {
   return {
-    blob: { byteLength: BigInt(data.byteLength), required: true, role: 1, sha256: sha256(data) },
+    blobs: [{ blob: { byteLength: BigInt(data.byteLength), required: true, role: 1,
+      sha256: sha256(data) }, dataText: body }],
     contentId: digest(1),
-    dataText: body,
-    factMessageBytes: new Uint8Array([10, 20, 30]),
+    factMessageBytesList: [new Uint8Array([10, 20, 30])],
     manifestHash: digest(1),
     publicationState: 'created' as const,
     transferId: digest(2)
@@ -21,12 +21,12 @@ function input() {
 
 it('creates the exact JSON-safe value consumed by native companion senders', () => {
   expect(createCompanionFramedSyncOutboundValue(input())).toEqual({
-    blob: {
+    blobs: [{
       byte_length: String(data.byteLength), data_text: body, required: true, role: 1,
       sha256: Buffer.from(sha256(data)).toString('hex')
-    },
+    }],
     content_id: '01'.repeat(32),
-    fact_message_bytes: [10, 20, 30],
+    fact_message_bytes_list: [[10, 20, 30]],
     manifest_hash: '01'.repeat(32),
     publication_state: 'created',
     transfer_id: '02'.repeat(32)
@@ -34,7 +34,8 @@ it('creates the exact JSON-safe value consumed by native companion senders', () 
 });
 
 it('rejects a body that does not match the published blob', () => {
-  expect(() => createCompanionFramedSyncOutboundValue({ ...input(), dataText: 'changed' }))
+  expect(() => createCompanionFramedSyncOutboundValue({ ...input(),
+    blobs: [{ ...input().blobs[0]!, dataText: 'changed' }] }))
     .toThrow('framed_sync_companion_blob_mismatch');
 });
 

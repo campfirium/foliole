@@ -4,9 +4,12 @@ import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeReposito
 interface SendCompanionFramedSyncObjectArgs {
   endpointUrl: string;
   groupId: string;
+  includeCurrentNode: boolean;
   objectId: string;
   receiverDeviceId: string;
   receiverLibraryEpoch: string;
+  requiredRelationIds: readonly string[];
+  reviewFactIds: readonly string[];
 }
 
 const HEX_DIGEST = /^[a-f0-9]{64}$/u;
@@ -27,9 +30,12 @@ function assertReceipt(
 export async function sendCompanionFramedSyncObject(args: SendCompanionFramedSyncObjectArgs) {
   const receipt = await FolioleCompanionSync.sendFramedSyncTransfer({
     endpoint_url: args.endpointUrl,
+    include_current_node: args.includeCurrentNode,
     object_id: args.objectId,
     receiver_device_id: args.receiverDeviceId,
     receiver_library_epoch: args.receiverLibraryEpoch,
+    required_relation_ids: args.requiredRelationIds,
+    review_fact_ids: args.reviewFactIds,
     sync_group_id: args.groupId
   });
   assertReceipt(args, receipt);

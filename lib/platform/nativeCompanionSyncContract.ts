@@ -8,9 +8,12 @@ export type { NativeCompanionSignedRequestHeaders } from './nativeCompanionSigne
 
 export interface NativeCompanionFramedSyncTransferRequest {
   endpoint_url: string;
+  include_current_node: boolean;
   object_id: string;
   receiver_device_id: string;
   receiver_library_epoch: string;
+  required_relation_ids: readonly string[];
+  review_fact_ids: readonly string[];
   sync_group_id: string;
 }
 

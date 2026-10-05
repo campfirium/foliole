@@ -23,8 +23,7 @@ final class FramedSyncCanonicalManifest {
         throws FramedSyncValidationException {
         Writer writer = new Writer();
         writer.data(DOMAIN);
-        List<FactRecord> sortedFacts = new ArrayList<>(facts);
-        sortedFacts.sort(FramedSyncCanonicalManifest::compareFacts);
+        List<FactRecord> sortedFacts = sortedFacts(facts);
         writer.u32(sortedFacts.size());
         for (FactRecord fact : sortedFacts) writeFact(writer, fact);
         List<BlobReference> sortedBlobs = sortedBlobs(blobs);
@@ -134,7 +133,13 @@ final class FramedSyncCanonicalManifest {
         }
     }
 
-    private static List<BlobReference> sortedBlobs(List<BlobReference> values) {
+    static List<FactRecord> sortedFacts(List<FactRecord> values) {
+        List<FactRecord> result = new ArrayList<>(values);
+        result.sort(FramedSyncCanonicalManifest::compareFacts);
+        return result;
+    }
+
+    static List<BlobReference> sortedBlobs(List<BlobReference> values) {
         List<BlobReference> result = new ArrayList<>(values);
         result.sort((left, right) -> compareBytes(left.getSha256(), right.getSha256()));
         return result;

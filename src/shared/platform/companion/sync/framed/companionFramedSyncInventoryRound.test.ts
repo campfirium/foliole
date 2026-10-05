@@ -47,9 +47,11 @@ it('revalidates each selected current node before invoking the native sender', a
   expect(mocks.remoteInventory).toHaveBeenCalledWith(request);
   expect(mocks.send).toHaveBeenCalledOnce();
   expect(mocks.send).toHaveBeenCalledWith({
-    endpointUrl: request.endpoint_url, groupId: request.sync_group_id, objectId: 'node-a',
+    endpointUrl: request.endpoint_url, groupId: request.sync_group_id,
+    includeCurrentNode: true, objectId: 'node-a',
     receiverDeviceId: request.receiver_device_id,
-    receiverLibraryEpoch: request.receiver_library_epoch
+    receiverLibraryEpoch: request.receiver_library_epoch,
+    requiredRelationIds: [], reviewFactIds: []
   });
 });
 
@@ -60,12 +62,16 @@ it('rejects malformed remote inventory before selecting objects', async () => {
   expect(mocks.send).not.toHaveBeenCalled();
 });
 
-it('defers a relation-only difference that the current node projection cannot carry', async () => {
+it('sends exact relation ids without redundantly including the current node', async () => {
   mocks.localInventory.mockResolvedValue({ entries: [entry('node-c', '1', ['relation-1'])] });
   mocks.remoteInventory.mockResolvedValue({ entries: [entry('node-c')] });
+  mocks.localEntry.mockResolvedValue(entry('node-c', '1', ['relation-1']));
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
-    deferredObjects: [{ globalId: 'node-c', objectType: 'node' }], sent: []
+    deferredObjects: [],
+    sent: [{ objectId: 'node-c', receipt: { transfer_id: 'a'.repeat(64) } }]
   });
-  expect(mocks.localEntry).not.toHaveBeenCalled();
-  expect(mocks.send).not.toHaveBeenCalled();
+  expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({
+    includeCurrentNode: false, objectId: 'node-c', requiredRelationIds: ['relation-1'],
+    reviewFactIds: []
+  }));
 });

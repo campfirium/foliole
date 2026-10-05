@@ -17,33 +17,35 @@ import {
 import type { PreparedTransferAttempt, StoredEncryptedFrame } from './framedSyncContract.js';
 import { assertOutboundPublication, type OutboundPublishInput } from './framedSyncStagingContract.js';
 
+export async function publishFramedSyncOutboundWithDbPort(db: DbPort, input: OutboundPublishInput) {
+  const verified = await assertOutboundPublication(input);
+  const prior = await readFramedSyncRow(db,
+    'SELECT * FROM framed_sync_outbound_publications WHERE transfer_id = ?', [input.transferId]);
+  if (prior) return sameFramedSyncBytes(framedSyncBytes(prior, 'content_id'), input.contentId) &&
+    sameFramedSyncBytes(framedSyncBytes(prior, 'canonical_manifest'), verified.canonicalBytes)
+    ? 'identical' as const : failFramedSync('outbound_publication_conflict');
+  const context = input.context;
+  await db.run(`INSERT INTO framed_sync_outbound_publications VALUES
+    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')`, [input.transferId, input.contentId,
+    input.manifestHash, verified.canonicalBytes, encodeFramedSyncManifest(input.manifest),
+    context.protocolVersion, context.groupId, context.senderDeviceId, context.senderLibraryEpoch,
+    context.receiverDeviceId, context.receiverLibraryEpoch, input.manifest.facts.length,
+    input.manifest.blobs.length, input.manifest.blobs.reduce((sum, blob) => sum + blob.byteLength, 0n)]);
+  for (const fact of input.manifest.facts) await db.run(
+    'INSERT INTO framed_sync_outbound_fact_refs VALUES (?, ?, ?, ?, ?)',
+    [input.transferId, fact.kind, fact.objectType, fact.globalId, fact.factId]);
+  for (const blob of input.manifest.blobs) await db.run(
+    'INSERT INTO framed_sync_outbound_blob_refs VALUES (?, ?, ?, ?, ?)',
+    [input.transferId, blob.sha256, blob.byteLength, blob.role, blob.required ? 1 : 0]);
+  await db.run('INSERT INTO framed_sync_outbound_holds VALUES (?, ?)',
+    [input.transferId, context.receiverDeviceId]);
+  return 'created' as const;
+}
+
 export function createFramedSyncOutboundStaging(db: DbPort) {
   return {
     async publishOutbound(input: OutboundPublishInput) {
-      const verified = await assertOutboundPublication(input);
-      return db.transaction(async (tx) => {
-        const prior = await readFramedSyncRow(tx,
-          'SELECT * FROM framed_sync_outbound_publications WHERE transfer_id = ?', [input.transferId]);
-        if (prior) return sameFramedSyncBytes(framedSyncBytes(prior, 'content_id'), input.contentId) &&
-          sameFramedSyncBytes(framedSyncBytes(prior, 'canonical_manifest'), verified.canonicalBytes)
-          ? 'identical' as const : failFramedSync('outbound_publication_conflict');
-        const context = input.context;
-        await tx.run(`INSERT INTO framed_sync_outbound_publications VALUES
-          (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')`, [input.transferId, input.contentId,
-          input.manifestHash, verified.canonicalBytes, encodeFramedSyncManifest(input.manifest),
-          context.protocolVersion, context.groupId, context.senderDeviceId, context.senderLibraryEpoch,
-          context.receiverDeviceId, context.receiverLibraryEpoch, input.manifest.facts.length,
-          input.manifest.blobs.length, input.manifest.blobs.reduce((sum, blob) => sum + blob.byteLength, 0n)]);
-        for (const fact of input.manifest.facts) await tx.run(
-          'INSERT INTO framed_sync_outbound_fact_refs VALUES (?, ?, ?, ?, ?)',
-          [input.transferId, fact.kind, fact.objectType, fact.globalId, fact.factId]);
-        for (const blob of input.manifest.blobs) await tx.run(
-          'INSERT INTO framed_sync_outbound_blob_refs VALUES (?, ?, ?, ?, ?)',
-          [input.transferId, blob.sha256, blob.byteLength, blob.role, blob.required ? 1 : 0]);
-        await tx.run('INSERT INTO framed_sync_outbound_holds VALUES (?, ?)',
-          [input.transferId, context.receiverDeviceId]);
-        return 'created' as const;
-      });
+      return db.transaction((tx) => publishFramedSyncOutboundWithDbPort(tx, input));
     },
 
     async loadOutboundPublication(transferId: Uint8Array) {

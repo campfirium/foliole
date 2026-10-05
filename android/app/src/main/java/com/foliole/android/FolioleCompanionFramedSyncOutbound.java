@@ -2,23 +2,20 @@ package com.foliole.android;
 
 import android.content.Context;
 import android.util.Base64;
-import com.foliole.android.framed.FramedSyncCodec;
-import com.foliole.android.framed.FramedSyncFrameType;
 import com.foliole.android.framed.FramedSyncHttpTransport;
 import com.foliole.android.framed.FramedSyncOutboundSQLite;
 import com.foliole.android.framed.FramedSyncReceiptReader;
 import com.foliole.android.framed.FramedSyncTransferContext;
 import com.foliole.android.framed.FramedSyncTransferWriter;
-import com.foliole.sync.v22.FactRecord;
 import com.foliole.sync.v22.TransferReceipt;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
+import java.util.List;
 import java.util.Map;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -31,7 +28,8 @@ final class FolioleCompanionFramedSyncOutbound {
     static JSObject send(Context context, PluginCall call) throws Exception {
         String groupId = required(call, "sync_group_id");
         String endpointUrl = required(call, "endpoint_url");
-        String objectId = required(call, "object_id");
+        FolioleCompanionFramedSyncOutboundInput.Request input =
+            FolioleCompanionFramedSyncOutboundInput.request(call);
         String receiverDeviceId = required(call, "receiver_device_id");
         String receiverEpoch = required(call, "receiver_library_epoch");
         FolioleCompanionCurrentGroupCredential credential =
@@ -39,20 +37,22 @@ final class FolioleCompanionFramedSyncOutbound {
         String senderEpoch = requiredMemberState("library_epoch");
         FramedSyncTransferContext transferContext = new FramedSyncTransferContext(
             groupId, credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
-        JSONObject prepared = prepare(groupId, objectId, credential.deviceId, senderEpoch,
+        JSONObject prepared = prepare(groupId, input.objectId, input.includeCurrentNode,
+            input.requiredRelationIds, input.reviewFactIds, credential.deviceId, senderEpoch,
             receiverDeviceId, receiverEpoch);
         byte[] groupKey = decodeGroupKey(credential.workgroupKey);
         byte[] contentId = digest(prepared.getString("content_id"));
+        requireSame(contentId, digest(prepared.getString("manifest_hash")),
+            "framed_sync_manifest_identity_mismatch");
         byte[] expectedTransferId = digest(prepared.getString("transfer_id"));
-        FactRecord fact = fact(prepared.getJSONArray("fact_message_bytes"));
-        byte[] blob = prepared.getJSONObject("blob").getString("data_text")
-            .getBytes(StandardCharsets.UTF_8);
+        var facts = FolioleCompanionFramedSyncOutboundInput.facts(prepared);
+        var blobs = FolioleCompanionFramedSyncOutboundInput.blobs(prepared, facts);
 
         try (FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context)) {
             FramedSyncTransferWriter.Attempt replayable =
                 staging.loadLatestReplayableAttempt(expectedTransferId);
             final FramedSyncTransferWriter.Attempt attempt = replayable != null ? replayable :
-                FramedSyncTransferWriter.prepare(groupKey, transferContext, fact, blob, staging);
+                FramedSyncTransferWriter.prepare(groupKey, transferContext, facts, blobs, staging);
             requireSame(expectedTransferId, attempt.transferId(), "framed_sync_transfer_identity_mismatch");
             String path = path(credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
             Map<String, String> headers = signedHeaders(
@@ -68,12 +68,17 @@ final class FolioleCompanionFramedSyncOutbound {
     }
 
     private static JSONObject prepare(
-        String groupId, String objectId, String senderDeviceId, String senderEpoch,
+        String groupId, String objectId, boolean includeCurrentNode,
+        List<String> requiredRelationIds, List<String> reviewFactIds,
+        String senderDeviceId, String senderEpoch,
         String receiverDeviceId, String receiverEpoch
     ) throws Exception {
         return FolioleCompanionSyncGroupDataBridge.current().request(
             "prepare_framed_outbound", new JSONObject()
                 .put("group_id", groupId).put("object_id", objectId)
+                .put("include_current_node", includeCurrentNode)
+                .put("required_relation_ids", new JSONArray(requiredRelationIds))
+                .put("review_fact_ids", new JSONArray(reviewFactIds))
                 .put("sender_device_id", senderDeviceId).put("sender_library_epoch", senderEpoch)
                 .put("receiver_device_id", receiverDeviceId)
                 .put("receiver_library_epoch", receiverEpoch));
@@ -117,13 +122,6 @@ final class FolioleCompanionFramedSyncOutbound {
         };
     }
 
-    private static FactRecord fact(JSONArray encoded) throws Exception {
-        byte[] bytes = new byte[encoded.length()];
-        for (int index = 0; index < encoded.length(); index++) bytes[index] = (byte) encoded.getInt(index);
-        return (FactRecord) FramedSyncCodec.decode(
-            bytes, FramedSyncFrameType.FACT.wireValue()).payload().value();
-    }
-
     private static JSObject result(TransferReceipt receipt) {
         return new JSObject()
             .put("applied_state_hash", hex(receipt.getAppliedStateHash().toByteArray()))
@@ -162,6 +160,7 @@ final class FolioleCompanionFramedSyncOutbound {
         if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException(key + "_required");
         return value.trim();
     }
+
 
     private static byte[] decodeGroupKey(String value) {
         byte[] result = Base64.decode(value, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
