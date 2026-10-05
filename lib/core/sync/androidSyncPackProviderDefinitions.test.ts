@@ -30,7 +30,7 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
       'system-entry-display-names-v1', 'watched-device-binding-v1',
       'watched-source-identity-and-path-v1', 'workgroup-aead-v1', 'workgroup-restore-v1'
     ],
-    version: 21
+    version: 22
   });
   expect(definitions.payloadPlans).toContainEqual(expect.objectContaining({
     objectType: 'watched_folder', sql: expect.stringContaining('s.host_name')

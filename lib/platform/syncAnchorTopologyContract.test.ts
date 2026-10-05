@@ -30,7 +30,7 @@ it('uses the prepared anchor topology as the production sync contract while pres
   expect(PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR.version).toBe(fixture.prepared_protocol_version);
   expect(PREPARED_ANCHOR_SYNC_PROTOCOL_DESCRIPTOR).toEqual(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
   expect(CURRENT_SYNC_PROTOCOL_DESCRIPTOR).toMatchObject({
-    min_supported_version: 21, max_supported_version: 21,
+    min_supported_version: 22, max_supported_version: 22,
     capabilities: expect.arrayContaining([
       'node-owned-resource-references-v1', 'parent-child-order-v1',
       'dynamic-node-version-chains-v1', 'desktop-soft-anchor-v1',
