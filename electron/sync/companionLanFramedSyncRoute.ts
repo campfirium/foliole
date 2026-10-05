@@ -42,7 +42,7 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     localIdentity: { deviceId: args.deviceId, libraryEpoch: runtime.libraryEpoch },
     onStream: ({ context, stream }) => decodeFramedSyncPreamble(stream.preamble).contextKind === 'session'
       ? respondDesktopFramedSyncInventory({ context, db: runtime.db, groupKey: runtime.groupKey,
-        noncePort, stream })
+        groupSecret: Buffer.from(runtime.groupKey).toString('base64url'), noncePort, staging, stream })
       : receiveDesktopFramedSyncTransfer({
         context: {
           groupId: context.groupId,

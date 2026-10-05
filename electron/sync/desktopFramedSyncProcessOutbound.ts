@@ -15,14 +15,10 @@ import { loadSyncNodes, loadSyncNodeVersionsSince } from '../database/syncNodes.
 
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
 import { projectDesktopFramedSyncNodeRecord } from './desktopFramedSyncNodeProjection.js';
+import { loadDesktopFramedSyncPreparedTransferBody } from './desktopFramedSyncPreparedTransferBody.js';
 import { projectDesktopFramedSyncProcessTransfer } from './desktopFramedSyncProcessProjection.js';
 import { readReceipt } from './desktopFramedSyncProcessReceipt.js';
-import {
-  encryptProtocolFrame,
-  newTransferAttempt,
-  processFrameStream
-} from './desktopFramedSyncProcessWire.js';
-import { framedSyncEncodedLength, framedSyncEncodedSha256 } from './desktopFramedSyncStream.js';
+import { encryptProtocolFrame, newTransferAttempt } from './desktopFramedSyncProcessWire.js';
 
 type Identity = Readonly<{ deviceId: string; libraryEpoch: string }>;
 type Projection = ReturnType<typeof projectDesktopFramedSyncProcessTransfer>;
@@ -127,19 +123,10 @@ async function transmitDesktopFramedSyncPublication(input: {
   staging: FramedSyncStagingPort;
 }) {
   const published = publishedTransfer(input.publication);
-  const frames = await input.staging.loadReplayableFrames(
-    published.transferId,
-    input.attempt.attemptId
-  );
-  const attempt = input.attempt;
+  const body = await loadDesktopFramedSyncPreparedTransferBody(input);
   const context = published.context;
   const response = await postDesktopFramedSync({
-    body: {
-      bodySha256: framedSyncEncodedSha256(attempt.preamble, frames),
-      contentLength: framedSyncEncodedLength(attempt.preamble, frames),
-      frames: processFrameStream(frames),
-      preamble: attempt.preamble
-    },
+    body,
     endpointUrl: input.peerOrigin,
     groupId: context.groupId,
     localDeviceId: context.senderDeviceId,

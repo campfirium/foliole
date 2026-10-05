@@ -7,12 +7,16 @@ import { afterEach, expect, it } from 'vitest';
 
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
+import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 
 import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.js';
 import {
   exchangeDesktopFramedSyncInventoryHttp,
+  requestDesktopFramedSyncDifferenceHttp,
   respondDesktopFramedSyncInventory
 } from './desktopFramedSyncInventoryHttp.js';
 
@@ -40,16 +44,32 @@ function peer(nodeId: string, body: string, hashByte: string) {
   databases.push(sqlite);
   sqlite.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT NOT NULL);
     CREATE TABLE node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL,
-      body_text TEXT, content_hash TEXT NOT NULL);
+      parent_version_id TEXT, host_name TEXT NOT NULL, created_at TEXT NOT NULL,
+      body_text TEXT, content_hash TEXT NOT NULL, snapshot_json TEXT NOT NULL);
     CREATE TABLE node_sync_version_parents (version_id TEXT NOT NULL,
       parent_version_id TEXT NOT NULL, ordinal INTEGER NOT NULL);
     CREATE TABLE review_log (node_id TEXT NOT NULL, op_id TEXT NOT NULL);`);
   for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   sqlite.prepare('INSERT INTO nodes VALUES (?, ?)').run(nodeId, `version-${nodeId}`);
-  sqlite.prepare('INSERT INTO node_sync_versions VALUES (?, ?, ?, ?)')
-    .run(`version-${nodeId}`, nodeId, body, hashByte.repeat(64));
+  sqlite.prepare('INSERT INTO node_sync_versions VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    .run(`version-${nodeId}`, nodeId, null, 'host', '2026-10-05T00:00:00.000Z', body,
+      hashByte.repeat(64), JSON.stringify(nodeSnapshot(nodeId)));
   const db = createBetterSqliteDbPort(sqlite);
   return { db, noncePort: createDesktopFramedSyncSessionNoncePort(db) };
+}
+
+function nodeSnapshot(nodeId: string) {
+  const time = '2026-10-05T00:00:00.000Z';
+  return {
+    anchor_link: null, anchor_resolution_status: null, anchor_source_version_id: null,
+    attachments: [], body_blob_hash: null, created_at: time, deleted_at: null,
+    desired_retention: null, enable_short_term: false, hide_title_heading: false,
+    id: nodeId, image_regions: null, image_sources: null, import_content_fingerprint: null,
+    import_source_fingerprint: null, is_title_manual: true, kind: 'topic',
+    manual_child_order: null, opening_text: null, parent_id: null, position: 0, priority: 0,
+    resource_references: null, reveal: null, sequential_reading_enabled: false,
+    shelved_at: null, title: nodeId, updated_at: time, virtual_filter: null
+  };
 }
 
 it('exchanges authenticated encrypted inventories over the production binary HTTP shape', async () => {
@@ -61,8 +81,8 @@ it('exchanges authenticated encrypted inventories over the production binary HTT
       localIdentity: { deviceId: 'device-b', libraryEpoch: 'epoch-b' },
       onStream: ({ context: authenticatedContext, stream }) =>
         respondDesktopFramedSyncInventory({
-          context: authenticatedContext, db: responder.db, groupKey,
-          noncePort: responder.noncePort, stream
+          context: authenticatedContext, db: responder.db, groupKey, groupSecret,
+          noncePort: responder.noncePort, staging: createDesktopFramedSyncStaging(responder.db), stream
         }),
       request,
       response
@@ -85,4 +105,48 @@ it('exchanges authenticated encrypted inventories over the production binary HTT
   expect(result.local.map((entry) => entry.globalId)).toEqual(['node-a']);
   expect(result.remote.map((entry) => entry.globalId)).toEqual(['node-b']);
   expect(result.roundId).toHaveLength(16);
+});
+
+it('returns an exact frozen transfer stream for a requested remote Node difference', async () => {
+  const initiator = peer('node-a', 'alpha', 'a');
+  const responder = peer('node-b', 'beta', 'b');
+  const staging = createDesktopFramedSyncStaging(responder.db);
+  const server = http.createServer((request, response) => {
+    void handleCompanionLanFramedSyncPost({
+      authenticate: () => ({ device_id: 'device-a', device_name: 'Device A', ok: true }),
+      localIdentity: { deviceId: 'device-b', libraryEpoch: 'epoch-b' },
+      onStream: ({ context: authenticatedContext, stream }) =>
+        respondDesktopFramedSyncInventory({
+          context: authenticatedContext, db: responder.db, groupKey, groupSecret,
+          noncePort: responder.noncePort, staging, stream
+        }),
+      request,
+      response
+    });
+  });
+  servers.push(server);
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  if (!address || typeof address === 'string') throw new Error('test_server_address_invalid');
+  const endpointUrl = `http://127.0.0.1:${address.port}`;
+  const inventory = await exchangeDesktopFramedSyncInventoryHttp({
+    context, db: initiator.db, endpointUrl, groupKey, groupSecret, noncePort: initiator.noncePort
+  });
+  const difference = compareFramedSyncInventories({
+    local: inventory.local, remote: inventory.remote
+  }).find((value) => value.direction === 'remote_to_local');
+  if (!difference) throw new Error('test_remote_difference_missing');
+
+  const transfer = await requestDesktopFramedSyncDifferenceHttp({
+    context, difference, endpointUrl, groupKey, groupSecret,
+    noncePort: initiator.noncePort, roundId: inventory.roundId
+  });
+
+  expect(decodeFramedSyncPreamble(transfer.preamble).contextKind).toBe('transfer');
+  const frameTypes: number[] = [];
+  for await (const frame of transfer.frames) frameTypes.push(frame.header.frameType);
+  expect(frameTypes).toEqual([2, 3, 4, 5]);
+  expect((await responder.db.query<{ state: string }>(
+    'SELECT state FROM framed_sync_outbound_attempts'
+  ))[0]?.state).toBe('replayable');
 });
