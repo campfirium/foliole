@@ -96,11 +96,6 @@ extension FolioleCompanionSyncPlugin {
             groupKey: groupKey, context: sessionContext, messages: [request]
         )
         let path = try framedPath(localDeviceID, localEpoch, remoteDeviceID, remoteEpoch)
-        let response = try await framedPost(
-            endpoint: endpoint, path: path,
-            peer: framedPeer(groupID, remoteDeviceID, remoteEpoch, localDeviceID, workgroupKey, path, requestBody),
-            body: requestBody
-        )
         let transferContext = FolioleFramedSyncTransferContext(
             groupID: groupID, senderDeviceID: remoteDeviceID, senderLibraryEpoch: remoteEpoch,
             receiverDeviceID: localDeviceID, receiverLibraryEpoch: localEpoch
@@ -108,7 +103,13 @@ extension FolioleCompanionSyncPlugin {
         let receiver = try FolioleFramedSyncTransferReceiver(
             database: FolioleFramedSyncTransferDatabase(url: framedInboundDatabaseURL())
         )
-        let received = try receiver.receive(response, groupKey: groupKey, context: transferContext)
+        let received = try await withFramedPostResponseFile(
+            endpoint: endpoint, path: path,
+            peer: framedPeer(groupID, remoteDeviceID, remoteEpoch, localDeviceID, workgroupKey, path, requestBody),
+            body: requestBody
+        ) { responseURL in
+            try receiver.receive(responseURL, groupKey: groupKey, context: transferContext)
+        }
         let applied = try groupData.request("apply_framed_transfer", [
             "staging_kind": "ios", "staging_path": receiver.databaseURL.path,
             "transfer_id": received.transferID.hex,

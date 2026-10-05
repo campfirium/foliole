@@ -79,6 +79,15 @@ extension FolioleCompanionSyncPlugin {
     func framedPost(
         endpoint: String, path: String, peer: FolioleFramedSyncHTTPPeer, body: Data
     ) async throws -> Data {
+        try await withFramedPostResponseFile(
+            endpoint: endpoint, path: path, peer: peer, body: body
+        ) { try Data(contentsOf: $0) }
+    }
+
+    func withFramedPostResponseFile<T>(
+        endpoint: String, path: String, peer: FolioleFramedSyncHTTPPeer, body: Data,
+        consume: (URL) throws -> T
+    ) async throws -> T {
         guard let base = URL(string: endpoint), let url = URL(string: path, relativeTo: base) else {
             throw invalid("framed_sync_endpoint_invalid")
         }
@@ -93,7 +102,7 @@ extension FolioleCompanionSyncPlugin {
             endpoint: url.absoluteURL, peer: peer,
             requestBodyURL: requestURL, responseBodyURL: responseURL
         )
-        return try Data(contentsOf: responseURL)
+        return try consume(responseURL)
     }
 
     func framedHeaders(

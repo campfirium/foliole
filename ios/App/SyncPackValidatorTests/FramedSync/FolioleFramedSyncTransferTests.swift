@@ -40,9 +40,11 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
         let contentID = try FolioleFramedSyncCanonicalManifest.contentID(facts: [], blobs: [])
         let transferID = context.deriveTransferID(contentID: contentID)
         let wire = try transferWire(context: context, contentID: contentID, transferID: transferID)
+        let responseURL = directory.appendingPathComponent("response.bin")
+        try wire.write(to: responseURL)
 
         XCTAssertEqual(
-            try receiver.receive(wire, groupKey: Data(0...31), context: context).transferID,
+            try receiver.receive(responseURL, groupKey: Data(0...31), context: context).transferID,
             transferID
         )
         let row = try database.rows(

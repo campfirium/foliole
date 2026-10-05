@@ -19,7 +19,22 @@ final class FolioleFramedSyncTransferReceiver {
     func receive(
         _ data: Data, groupKey: Data, context: FolioleFramedSyncTransferContext
     ) throws -> FolioleFramedSyncReceivedTransfer {
-        let reader = FolioleFramedSyncStreamReader(input: InputStream(data: data))
+        try receive(InputStream(data: data), groupKey: groupKey, context: context)
+    }
+
+    func receive(
+        _ fileURL: URL, groupKey: Data, context: FolioleFramedSyncTransferContext
+    ) throws -> FolioleFramedSyncReceivedTransfer {
+        guard let input = InputStream(url: fileURL) else {
+            throw invalid("framed_sync_response_file_unavailable")
+        }
+        return try receive(input, groupKey: groupKey, context: context)
+    }
+
+    private func receive(
+        _ input: InputStream, groupKey: Data, context: FolioleFramedSyncTransferContext
+    ) throws -> FolioleFramedSyncReceivedTransfer {
+        let reader = FolioleFramedSyncStreamReader(input: input)
         let preamble = try reader.nextPreamble()
         guard preamble.contextKind == 2, preamble.startingSequence == 0 else {
             throw invalid("transfer_preamble_required")
