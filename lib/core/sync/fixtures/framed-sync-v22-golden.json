@@ -1,0 +1,179 @@
+{
+  "blob_contract": {
+    "byte_length": 524289,
+    "byte_pattern": "byte_at_offset_equals_offset_mod_251",
+    "chunks": [
+      {
+        "byte_length": 524288,
+        "offset": 0,
+        "sha256_hex": "61d1d9c5745bdaa4fab39240651bc242a5186b15393fd475082fcf6e84f400ab"
+      },
+      {
+        "byte_length": 1,
+        "offset": 524288,
+        "sha256_hex": "7c5bd2d144fdde498406edcb9fe60ce65b0dfa5f2dd7a7617f505e3d46d68bdb"
+      }
+    ],
+    "empty_sha256_hex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sha256_hex": "5584f83643017fcea9b7d65d3d3f890b5219eb1abfcb8896a2d4ef554d4612ec",
+    "wrong_last_chunk_sha256_hex": "7902699be42c8a8e46fbbb4501726517e86b22c56a189f7625a6da49081b2451"
+  },
+  "canonical": {
+    "content_id_hex": "d2dca32bfb3f929303143a893241d87c1ed85088c1ca6db8e3230a47b7d9c13c",
+    "manifest_base64": "AAAAHmZvbGlvbGUtZnJhbWVkLXN5bmMtY29udGVudC12MQAAAAIAAAACAAAABG5vZGUAAAAGbm9kZS0xAAAACXZlcnNpb24tNwAAACBERERERERERERERERERERERERERERERERERERERERERAAAAAMAAAAHZGVsZXRlZAEAAAAIcmV2aXNpb24EAAAAAAAAAAcAAAAFdGl0bGUFAAAAEEEgZnJhbWVkIGFydGljbGUAAAABAAAAIHd3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3AAAAAAAAACoAAAABAQAAAAQAAAAGcmV2aWV3AAAABm5vZGUtMQAAAAhyZXZpZXctMwAAACBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQAAAAIAAAAEbm90ZQAAAAAGcmF0aW5nA///////////AAAAAQAAACBmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZgAAAAAAAAIAAAAAAgAAAAACAAAAIGZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmAAAAAAAAAgAAAAACAAAAACB3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3dwAAAAAAAAAqAAAAAQE=",
+    "transfer_id_hex": "1f2e3a7a1512d4495ce41664551701547c5c18daede9ab3648318e8bea71775d"
+  },
+  "corpus_version": 1,
+  "crypto": {
+    "session": {
+      "aad_hex": "464f4c53594e43320060001601000000b91385f313c79240f0d205a2c74a2e23c18773b07a39c6e016c57aef8d000baf00112233445566778899aabbccddeeff05060708000000000000000000000000000000000000000000000000000000000000001e000000000000000000010000",
+      "ciphertext_hex": "88f392bc50b6f68cdfff1040146ef627cbdf6c05ca8b1be83a40fa1309f1",
+      "context_id_hex": "b91385f313c79240f0d205a2c74a2e23c18773b07a39c6e016c57aef8d000baf",
+      "frame_header_hex": "0000001e000000000000000000010000",
+      "hkdf_info_hex": "466f6c696f6c65206672616d65642073796e63207632322073657373696f6e00b91385f313c79240f0d205a2c74a2e23c18773b07a39c6e016c57aef8d000baf",
+      "key_hex": "aa2f5ab7291a764391908ec6a01c85dd3c96b70b2dfbb2dad0d708926a2dd140",
+      "nonce_hex": "050607080000000000000000",
+      "plaintext_hex": "73657373696f6e2d766563746f72",
+      "preamble_hex": "464f4c53594e43320060001601000000b91385f313c79240f0d205a2c74a2e23c18773b07a39c6e016c57aef8d000baf00112233445566778899aabbccddeeff0506070800000000000000000000000000000000000000000000000000000000",
+      "session_id_hex": "00112233445566778899aabbccddeeff"
+    },
+    "transfer": {
+      "aad_hex": "464f4c53594e43320060001602000000202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f101112131415161718191a1b1c1d1e1f01020304000000000000000000000000000000000000000000000000000000000000001c000000000000000000020000",
+      "attempt_id_hex": "101112131415161718191a1b1c1d1e1f",
+      "compression": "none",
+      "ciphertext_hex": "d4111f27f24e9dbc7c26aaa8aeb2678bf2c78ed9a9a755f53c65737c",
+      "group_key_hex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+      "frame_header_hex": "0000001c000000000000000000020000",
+      "hkdf_info_hex": "466f6c696f6c65206672616d65642073796e6320763232207472616e7366657200202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+      "key_hex": "3489980c1430c991c600f91b5abc94993951237ce652e3c96c98961a1963106e",
+      "nonce_hex": "010203040000000000000000",
+      "plaintext_hex": "6672616d652d766563746f72",
+      "preamble_hex": "464f4c53594e43320060001602000000202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f101112131415161718191a1b1c1d1e1f0102030400000000000000000000000000000000000000000000000000000000",
+      "transfer_id_hex": "202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f"
+    }
+  },
+  "malformed": [
+    {
+      "hex": "00100001000000000000000000030000",
+      "name": "wire-frame-length-over-1MiB"
+    },
+    {
+      "hex": "ffffffff000000000000000000030000",
+      "name": "wire-frame-length-u32-max"
+    },
+    {
+      "hex": "00000010000000000000000000000000",
+      "name": "unspecified-frame-type"
+    },
+    {
+      "hex": "00000010000000000000000000030001",
+      "name": "nonzero-frame-flags"
+    }
+  ],
+  "messages": [
+    {
+      "base64": "CkEIFhIHZ3JvdXAtYRoIZGV2aWNlLWEiB2Vwb2NoLWEqEAARIjNEVWZ3iJmqu8zd7v8yDwoLZnJhbWVkLXN5bmMQAQ==",
+      "byte_length": 67,
+      "name": "handshake",
+      "payload_case": "handshake"
+    },
+    {
+      "base64": "EiUIFhIQABEiM0RVZneImaq7zN3u/xoPCgtmcmFtZWQtc3luYxAB",
+      "byte_length": 39,
+      "name": "handshake-acceptance",
+      "payload_case": "handshake_acceptance"
+    },
+    {
+      "base64": "GhQKEAARIjNEVWZ3iJmqu8zd7v8QAQ==",
+      "byte_length": 22,
+      "name": "inventory-begin",
+      "payload_case": "inventory_begin"
+    },
+    {
+      "base64": "IocBChAAESIzRFVmd4iZqrvM3e7/EAEacQoEbm9kZRIGbm9kZS0xGiAiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIJdmVyc2lvbi03KghwYXJlbnQtMTIIcmV2aWV3LTE6IDMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz",
+      "byte_length": 138,
+      "name": "inventory-chunk",
+      "payload_case": "inventory_chunk"
+    },
+    {
+      "base64": "KjQKEAARIjNEVWZ3iJmqu8zd7v8SICIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIi",
+      "byte_length": 54,
+      "name": "inventory-end",
+      "payload_case": "inventory_end"
+    },
+    {
+      "base64": "MlEKEAARIjNEVWZ3iJmqu8zd7v8SGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tNxogMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM=",
+      "byte_length": 83,
+      "name": "difference-request",
+      "payload_case": "difference_request"
+    },
+    {
+      "base64": "OnIKIBEREREREREREREREREREREREREREREREREREREREREREiAiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIhoIZGV2aWNlLWEiB2Vwb2NoLWEqCGRldmljZS1iMgdlcG9jaC1iOAFAAUiBgCA=",
+      "byte_length": 116,
+      "name": "transfer-proposal",
+      "payload_case": "transfer_proposal"
+    },
+    {
+      "base64": "Qk4KIBEREREREREREREREREREREREREREREREREREREREREREioKIDMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzEIGAIBgBIAE=",
+      "byte_length": 80,
+      "name": "blob-offer",
+      "payload_case": "blob_offer"
+    },
+    {
+      "base64": "SkQKIBEREREREREREREREREREREREREREREREREREREREREREiAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMw==",
+      "byte_length": 70,
+      "name": "missing-blob-set",
+      "payload_case": "missing_blob_set"
+    },
+    {
+      "base64": "UvMBCiARERERERERERERERERERERERERERERERERERERERERERIQABEiM0RVZneImaq7zN3u/xq8AQgWEgdncm91cC1hGiAiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiJhChsIAhIEbm9kZRoGbm9kZS0xIgl2ZXJzaW9uLTcSICIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiGiAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMyoqCiAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMxCBgCAYASAB",
+      "byte_length": 246,
+      "name": "transfer-header",
+      "payload_case": "transfer_header"
+    },
+    {
+      "base64": "WoEBChsIAhIEbm9kZRoGbm9kZS0xIgl2ZXJzaW9uLTcSICIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiGhQKEgoFdGl0bGUSCSIHQXJ0aWNsZSIqCiAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMxCBgCAYASAB",
+      "byte_length": 132,
+      "name": "fact",
+      "payload_case": "fact"
+    },
+    {
+      "base64": "YksKIBEREREREREREREREREREREREREREREREREREREREREREiAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMxiAgCAiAQA=",
+      "byte_length": 77,
+      "name": "blob-chunk",
+      "payload_case": "blob_chunk"
+    },
+    {
+      "base64": "akgKIBEREREREREREREREREREREREREREREREREREREREREREiAiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIhgBIAE=",
+      "byte_length": 74,
+      "name": "transfer-trailer",
+      "payload_case": "transfer_trailer"
+    },
+    {
+      "base64": "cnkKIBEREREREREREREREREREREREREREREREREREREREREREiAiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIhoIZGV2aWNlLWIiB2Vwb2NoLWIqIDMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMz",
+      "byte_length": 123,
+      "name": "transfer-receipt",
+      "payload_case": "transfer_receipt"
+    },
+    {
+      "base64": "ejEKEAARIjNEVWZ3iJmqu8zd7v8QAhobCAISBG5vZGUaBm5vZGUtMSIJdmVyc2lvbi03",
+      "byte_length": 51,
+      "name": "round-receipt",
+      "payload_case": "round_receipt"
+    },
+    {
+      "base64": "ggEuCiARERERERERERERERERERERERERERERERERERERERERERIIZGV2aWNlLWIYAQ==",
+      "byte_length": 49,
+      "name": "transfer-termination",
+      "payload_case": "transfer_termination"
+    },
+    {
+      "base64": "igE0CAISDmxpbWl0IGV4Y2VlZGVkGiAREREREREREREREREREREREREREREREREREREREREREQ==",
+      "byte_length": 55,
+      "name": "protocol-error",
+      "payload_case": "error"
+    }
+  ],
+  "protocol_version": 22,
+  "schema_sha256": "c7ff918a990897e16d7c7b4c9b40bd2c2c27c7bb160497969fe2a71fdef5848a"
+}

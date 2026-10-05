@@ -1,0 +1,791 @@
+{
+  "nested": {
+    "foliole": {
+      "nested": {
+        "sync": {
+          "nested": {
+            "v22": {
+              "options": {
+                "java_package": "com.foliole.sync.v22",
+                "java_multiple_files": true
+              },
+              "nested": {
+                "FactKind": {
+                  "values": {
+                    "FACT_KIND_UNSPECIFIED": 0,
+                    "FACT_KIND_OBJECT_STATE": 1,
+                    "FACT_KIND_NODE_VERSION": 2,
+                    "FACT_KIND_PARENT_EDGE": 3,
+                    "FACT_KIND_REVIEW": 4,
+                    "FACT_KIND_TOMBSTONE": 5,
+                    "FACT_KIND_MEMBER_POSITION": 6,
+                    "FACT_KIND_RESOURCE_REFERENCE": 7,
+                    "FACT_KIND_GROUP_MEMBERSHIP": 8
+                  }
+                },
+                "BlobRole": {
+                  "values": {
+                    "BLOB_ROLE_UNSPECIFIED": 0,
+                    "BLOB_ROLE_NODE_BODY": 1,
+                    "BLOB_ROLE_IMAGE": 2,
+                    "BLOB_ROLE_PDF": 3,
+                    "BLOB_ROLE_ATTACHMENT": 4,
+                    "BLOB_ROLE_EXTERNAL_DOCUMENT": 5
+                  }
+                },
+                "CanonicalField": {
+                  "fields": {
+                    "name": {
+                      "type": "string",
+                      "id": 1
+                    },
+                    "value": {
+                      "type": "CanonicalValue",
+                      "id": 2
+                    }
+                  }
+                },
+                "CanonicalList": {
+                  "fields": {
+                    "values": {
+                      "rule": "repeated",
+                      "type": "CanonicalValue",
+                      "id": 1
+                    }
+                  }
+                },
+                "CanonicalObject": {
+                  "fields": {
+                    "fields": {
+                      "rule": "repeated",
+                      "type": "CanonicalField",
+                      "id": 1
+                    }
+                  }
+                },
+                "CanonicalValue": {
+                  "oneofs": {
+                    "value": {
+                      "oneof": [
+                        "boolValue",
+                        "signedValue",
+                        "unsignedValue",
+                        "stringValue",
+                        "bytesValue",
+                        "listValue",
+                        "objectValue",
+                        "nullValue"
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "boolValue": {
+                      "type": "bool",
+                      "id": 1,
+                      "protoName": "bool_value"
+                    },
+                    "signedValue": {
+                      "type": "sint64",
+                      "id": 2,
+                      "protoName": "signed_value"
+                    },
+                    "unsignedValue": {
+                      "type": "uint64",
+                      "id": 3,
+                      "protoName": "unsigned_value"
+                    },
+                    "stringValue": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "string_value"
+                    },
+                    "bytesValue": {
+                      "type": "bytes",
+                      "id": 5,
+                      "protoName": "bytes_value"
+                    },
+                    "listValue": {
+                      "type": "CanonicalList",
+                      "id": 6,
+                      "protoName": "list_value"
+                    },
+                    "objectValue": {
+                      "type": "CanonicalObject",
+                      "id": 7,
+                      "protoName": "object_value"
+                    },
+                    "nullValue": {
+                      "type": "bool",
+                      "id": 8,
+                      "protoName": "null_value"
+                    }
+                  }
+                },
+                "FactIdentity": {
+                  "fields": {
+                    "kind": {
+                      "type": "FactKind",
+                      "id": 1
+                    },
+                    "objectType": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "object_type"
+                    },
+                    "globalId": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "global_id"
+                    },
+                    "factId": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "fact_id"
+                    }
+                  }
+                },
+                "BlobReference": {
+                  "fields": {
+                    "sha256": {
+                      "type": "bytes",
+                      "id": 1
+                    },
+                    "byteLength": {
+                      "type": "uint64",
+                      "id": 2,
+                      "protoName": "byte_length"
+                    },
+                    "role": {
+                      "type": "BlobRole",
+                      "id": 3
+                    },
+                    "required": {
+                      "type": "bool",
+                      "id": 4
+                    }
+                  }
+                },
+                "FactRecord": {
+                  "fields": {
+                    "identity": {
+                      "type": "FactIdentity",
+                      "id": 1
+                    },
+                    "sharedStateHash": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "shared_state_hash"
+                    },
+                    "body": {
+                      "type": "CanonicalObject",
+                      "id": 3
+                    },
+                    "blobs": {
+                      "rule": "repeated",
+                      "type": "BlobReference",
+                      "id": 4
+                    }
+                  }
+                },
+                "InventoryEntry": {
+                  "fields": {
+                    "objectType": {
+                      "type": "string",
+                      "id": 1,
+                      "protoName": "object_type"
+                    },
+                    "globalId": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "global_id"
+                    },
+                    "sharedStateHash": {
+                      "type": "bytes",
+                      "id": 3,
+                      "protoName": "shared_state_hash"
+                    },
+                    "frontierFactIds": {
+                      "rule": "repeated",
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "frontier_fact_ids"
+                    },
+                    "requiredRelationIds": {
+                      "rule": "repeated",
+                      "type": "string",
+                      "id": 5,
+                      "protoName": "required_relation_ids"
+                    },
+                    "reviewFactIds": {
+                      "rule": "repeated",
+                      "type": "string",
+                      "id": 6,
+                      "protoName": "review_fact_ids"
+                    },
+                    "resourceHashes": {
+                      "rule": "repeated",
+                      "type": "bytes",
+                      "id": 7,
+                      "protoName": "resource_hashes"
+                    }
+                  }
+                },
+                "Compression": {
+                  "values": {
+                    "COMPRESSION_NONE": 0,
+                    "COMPRESSION_GZIP": 1
+                  }
+                },
+                "FrameType": {
+                  "values": {
+                    "FRAME_TYPE_UNSPECIFIED": 0,
+                    "FRAME_TYPE_SESSION_CONTROL": 1,
+                    "FRAME_TYPE_TRANSFER_HEADER": 2,
+                    "FRAME_TYPE_FACT": 3,
+                    "FRAME_TYPE_BLOB_CHUNK": 4,
+                    "FRAME_TYPE_TRANSFER_TRAILER": 5,
+                    "FRAME_TYPE_TRANSFER_RECEIPT": 6
+                  }
+                },
+                "RoundResult": {
+                  "values": {
+                    "ROUND_RESULT_UNSPECIFIED": 0,
+                    "ROUND_RESULT_DRAINED": 1,
+                    "ROUND_RESULT_CONVERGED": 2
+                  }
+                },
+                "ErrorCode": {
+                  "values": {
+                    "ERROR_CODE_UNSPECIFIED": 0,
+                    "ERROR_CODE_PROTOCOL_INCOMPATIBLE": 1,
+                    "ERROR_CODE_LIMIT_EXCEEDED": 2,
+                    "ERROR_CODE_AUTHENTICATION_FAILED": 3,
+                    "ERROR_CODE_IDENTITY_COLLISION": 4,
+                    "ERROR_CODE_MANIFEST_INCOMPLETE": 5,
+                    "ERROR_CODE_BLOB_INCOMPLETE": 6,
+                    "ERROR_CODE_STATE_CHANGED": 7,
+                    "ERROR_CODE_MEMBER_REMOVED": 8
+                  }
+                },
+                "Capability": {
+                  "fields": {
+                    "name": {
+                      "type": "string",
+                      "id": 1
+                    },
+                    "version": {
+                      "type": "uint32",
+                      "id": 2
+                    }
+                  }
+                },
+                "Handshake": {
+                  "fields": {
+                    "protocolVersion": {
+                      "type": "uint32",
+                      "id": 1,
+                      "protoName": "protocol_version"
+                    },
+                    "groupId": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "group_id"
+                    },
+                    "deviceId": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "device_id"
+                    },
+                    "libraryEpoch": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "library_epoch"
+                    },
+                    "sessionId": {
+                      "type": "bytes",
+                      "id": 5,
+                      "protoName": "session_id"
+                    },
+                    "capabilities": {
+                      "rule": "repeated",
+                      "type": "Capability",
+                      "id": 6
+                    }
+                  }
+                },
+                "HandshakeAcceptance": {
+                  "fields": {
+                    "protocolVersion": {
+                      "type": "uint32",
+                      "id": 1,
+                      "protoName": "protocol_version"
+                    },
+                    "sessionId": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "session_id"
+                    },
+                    "capabilities": {
+                      "rule": "repeated",
+                      "type": "Capability",
+                      "id": 3
+                    }
+                  }
+                },
+                "InventoryBegin": {
+                  "fields": {
+                    "roundId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "round_id"
+                    },
+                    "entryCount": {
+                      "type": "uint64",
+                      "id": 2,
+                      "protoName": "entry_count"
+                    }
+                  }
+                },
+                "InventoryChunk": {
+                  "fields": {
+                    "roundId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "round_id"
+                    },
+                    "chunkIndex": {
+                      "type": "uint32",
+                      "id": 2,
+                      "protoName": "chunk_index"
+                    },
+                    "entries": {
+                      "rule": "repeated",
+                      "type": "InventoryEntry",
+                      "id": 3
+                    }
+                  }
+                },
+                "InventoryEnd": {
+                  "fields": {
+                    "roundId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "round_id"
+                    },
+                    "inventoryHash": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "inventory_hash"
+                    }
+                  }
+                },
+                "DifferenceRequest": {
+                  "fields": {
+                    "roundId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "round_id"
+                    },
+                    "facts": {
+                      "rule": "repeated",
+                      "type": "FactIdentity",
+                      "id": 2
+                    },
+                    "blobHashes": {
+                      "rule": "repeated",
+                      "type": "bytes",
+                      "id": 3,
+                      "protoName": "blob_hashes"
+                    }
+                  }
+                },
+                "FactDescriptor": {
+                  "fields": {
+                    "identity": {
+                      "type": "FactIdentity",
+                      "id": 1
+                    },
+                    "sharedStateHash": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "shared_state_hash"
+                    },
+                    "requiredBlobHashes": {
+                      "rule": "repeated",
+                      "type": "bytes",
+                      "id": 3,
+                      "protoName": "required_blob_hashes"
+                    }
+                  }
+                },
+                "TransferManifest": {
+                  "fields": {
+                    "protocolVersion": {
+                      "type": "uint32",
+                      "id": 1,
+                      "protoName": "protocol_version"
+                    },
+                    "groupId": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "group_id"
+                    },
+                    "contentId": {
+                      "type": "bytes",
+                      "id": 3,
+                      "protoName": "content_id"
+                    },
+                    "facts": {
+                      "rule": "repeated",
+                      "type": "FactDescriptor",
+                      "id": 4
+                    },
+                    "blobs": {
+                      "rule": "repeated",
+                      "type": "BlobReference",
+                      "id": 5
+                    }
+                  }
+                },
+                "TransferProposal": {
+                  "fields": {
+                    "transferId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "transfer_id"
+                    },
+                    "contentId": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "content_id"
+                    },
+                    "senderDeviceId": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "sender_device_id"
+                    },
+                    "senderLibraryEpoch": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "sender_library_epoch"
+                    },
+                    "receiverDeviceId": {
+                      "type": "string",
+                      "id": 5,
+                      "protoName": "receiver_device_id"
+                    },
+                    "receiverLibraryEpoch": {
+                      "type": "string",
+                      "id": 6,
+                      "protoName": "receiver_library_epoch"
+                    },
+                    "factCount": {
+                      "type": "uint64",
+                      "id": 7,
+                      "protoName": "fact_count"
+                    },
+                    "blobCount": {
+                      "type": "uint64",
+                      "id": 8,
+                      "protoName": "blob_count"
+                    },
+                    "totalBlobBytes": {
+                      "type": "uint64",
+                      "id": 9,
+                      "protoName": "total_blob_bytes"
+                    }
+                  }
+                },
+                "BlobOffer": {
+                  "fields": {
+                    "transferId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "transfer_id"
+                    },
+                    "blobs": {
+                      "rule": "repeated",
+                      "type": "BlobReference",
+                      "id": 2
+                    }
+                  }
+                },
+                "MissingBlobSet": {
+                  "fields": {
+                    "transferId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "transfer_id"
+                    },
+                    "missingHashes": {
+                      "rule": "repeated",
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "missing_hashes"
+                    }
+                  }
+                },
+                "TransferHeader": {
+                  "fields": {
+                    "transferId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "transfer_id"
+                    },
+                    "attemptId": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "attempt_id"
+                    },
+                    "manifest": {
+                      "type": "TransferManifest",
+                      "id": 3
+                    }
+                  }
+                },
+                "BlobChunk": {
+                  "fields": {
+                    "transferId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "transfer_id"
+                    },
+                    "blobHash": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "blob_hash"
+                    },
+                    "offset": {
+                      "type": "uint64",
+                      "id": 3
+                    },
+                    "data": {
+                      "type": "bytes",
+                      "id": 4
+                    }
+                  }
+                },
+                "TransferTrailer": {
+                  "fields": {
+                    "transferId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "transfer_id"
+                    },
+                    "manifestHash": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "manifest_hash"
+                    },
+                    "factCount": {
+                      "type": "uint64",
+                      "id": 3,
+                      "protoName": "fact_count"
+                    },
+                    "blobCount": {
+                      "type": "uint64",
+                      "id": 4,
+                      "protoName": "blob_count"
+                    }
+                  }
+                },
+                "TransferReceipt": {
+                  "fields": {
+                    "transferId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "transfer_id"
+                    },
+                    "contentId": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "content_id"
+                    },
+                    "receiverDeviceId": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "receiver_device_id"
+                    },
+                    "receiverLibraryEpoch": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "receiver_library_epoch"
+                    },
+                    "appliedStateHash": {
+                      "type": "bytes",
+                      "id": 5,
+                      "protoName": "applied_state_hash"
+                    }
+                  }
+                },
+                "RoundReceipt": {
+                  "fields": {
+                    "roundId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "round_id"
+                    },
+                    "result": {
+                      "type": "RoundResult",
+                      "id": 2
+                    },
+                    "deferredFacts": {
+                      "rule": "repeated",
+                      "type": "FactIdentity",
+                      "id": 3,
+                      "protoName": "deferred_facts"
+                    }
+                  }
+                },
+                "TransferTermination": {
+                  "fields": {
+                    "transferId": {
+                      "type": "bytes",
+                      "id": 1,
+                      "protoName": "transfer_id"
+                    },
+                    "memberId": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "member_id"
+                    },
+                    "acknowledged": {
+                      "type": "bool",
+                      "id": 3
+                    }
+                  }
+                },
+                "ProtocolError": {
+                  "fields": {
+                    "code": {
+                      "type": "ErrorCode",
+                      "id": 1
+                    },
+                    "message": {
+                      "type": "string",
+                      "id": 2
+                    },
+                    "transferId": {
+                      "type": "bytes",
+                      "id": 3,
+                      "protoName": "transfer_id"
+                    }
+                  }
+                },
+                "ProtocolMessage": {
+                  "oneofs": {
+                    "payload": {
+                      "oneof": [
+                        "handshake",
+                        "handshakeAcceptance",
+                        "inventoryBegin",
+                        "inventoryChunk",
+                        "inventoryEnd",
+                        "differenceRequest",
+                        "transferProposal",
+                        "blobOffer",
+                        "missingBlobSet",
+                        "transferHeader",
+                        "fact",
+                        "blobChunk",
+                        "transferTrailer",
+                        "transferReceipt",
+                        "roundReceipt",
+                        "transferTermination",
+                        "error"
+                      ]
+                    }
+                  },
+                  "fields": {
+                    "handshake": {
+                      "type": "Handshake",
+                      "id": 1
+                    },
+                    "handshakeAcceptance": {
+                      "type": "HandshakeAcceptance",
+                      "id": 2,
+                      "protoName": "handshake_acceptance"
+                    },
+                    "inventoryBegin": {
+                      "type": "InventoryBegin",
+                      "id": 3,
+                      "protoName": "inventory_begin"
+                    },
+                    "inventoryChunk": {
+                      "type": "InventoryChunk",
+                      "id": 4,
+                      "protoName": "inventory_chunk"
+                    },
+                    "inventoryEnd": {
+                      "type": "InventoryEnd",
+                      "id": 5,
+                      "protoName": "inventory_end"
+                    },
+                    "differenceRequest": {
+                      "type": "DifferenceRequest",
+                      "id": 6,
+                      "protoName": "difference_request"
+                    },
+                    "transferProposal": {
+                      "type": "TransferProposal",
+                      "id": 7,
+                      "protoName": "transfer_proposal"
+                    },
+                    "blobOffer": {
+                      "type": "BlobOffer",
+                      "id": 8,
+                      "protoName": "blob_offer"
+                    },
+                    "missingBlobSet": {
+                      "type": "MissingBlobSet",
+                      "id": 9,
+                      "protoName": "missing_blob_set"
+                    },
+                    "transferHeader": {
+                      "type": "TransferHeader",
+                      "id": 10,
+                      "protoName": "transfer_header"
+                    },
+                    "fact": {
+                      "type": "FactRecord",
+                      "id": 11
+                    },
+                    "blobChunk": {
+                      "type": "BlobChunk",
+                      "id": 12,
+                      "protoName": "blob_chunk"
+                    },
+                    "transferTrailer": {
+                      "type": "TransferTrailer",
+                      "id": 13,
+                      "protoName": "transfer_trailer"
+                    },
+                    "transferReceipt": {
+                      "type": "TransferReceipt",
+                      "id": 14,
+                      "protoName": "transfer_receipt"
+                    },
+                    "roundReceipt": {
+                      "type": "RoundReceipt",
+                      "id": 15,
+                      "protoName": "round_receipt"
+                    },
+                    "transferTermination": {
+                      "type": "TransferTermination",
+                      "id": 16,
+                      "protoName": "transfer_termination"
+                    },
+                    "error": {
+                      "type": "ProtocolError",
+                      "id": 17
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

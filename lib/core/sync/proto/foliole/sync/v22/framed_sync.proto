@@ -1,0 +1,220 @@
+syntax = "proto3";
+package foliole.sync.v22;
+option java_package = "com.foliole.sync.v22";
+option java_multiple_files = true;
+enum FactKind {
+  FACT_KIND_UNSPECIFIED = 0;
+  FACT_KIND_OBJECT_STATE = 1;
+  FACT_KIND_NODE_VERSION = 2;
+  FACT_KIND_PARENT_EDGE = 3;
+  FACT_KIND_REVIEW = 4;
+  FACT_KIND_TOMBSTONE = 5;
+  FACT_KIND_MEMBER_POSITION = 6;
+  FACT_KIND_RESOURCE_REFERENCE = 7;
+  FACT_KIND_GROUP_MEMBERSHIP = 8;
+}
+enum BlobRole {
+  BLOB_ROLE_UNSPECIFIED = 0;
+  BLOB_ROLE_NODE_BODY = 1;
+  BLOB_ROLE_IMAGE = 2;
+  BLOB_ROLE_PDF = 3;
+  BLOB_ROLE_ATTACHMENT = 4;
+  BLOB_ROLE_EXTERNAL_DOCUMENT = 5;
+}
+message CanonicalField { string name = 1; CanonicalValue value = 2; }
+message CanonicalList { repeated CanonicalValue values = 1; }
+message CanonicalObject { repeated CanonicalField fields = 1; }
+message CanonicalValue {
+  oneof value {
+    bool bool_value = 1;
+    sint64 signed_value = 2;
+    uint64 unsigned_value = 3;
+    string string_value = 4;
+    bytes bytes_value = 5;
+    CanonicalList list_value = 6;
+    CanonicalObject object_value = 7;
+    bool null_value = 8;
+  }
+}
+message FactIdentity {
+  FactKind kind = 1;
+  string object_type = 2;
+  string global_id = 3;
+  string fact_id = 4;
+}
+message BlobReference {
+  bytes sha256 = 1;
+  uint64 byte_length = 2;
+  BlobRole role = 3;
+  bool required = 4;
+}
+message FactRecord {
+  FactIdentity identity = 1;
+  bytes shared_state_hash = 2;
+  CanonicalObject body = 3;
+  repeated BlobReference blobs = 4;
+}
+message InventoryEntry {
+  string object_type = 1;
+  string global_id = 2;
+  bytes shared_state_hash = 3;
+  repeated string frontier_fact_ids = 4;
+  repeated string required_relation_ids = 5;
+  repeated string review_fact_ids = 6;
+  repeated bytes resource_hashes = 7;
+}
+enum Compression {
+  COMPRESSION_NONE = 0;
+  COMPRESSION_GZIP = 1;
+}
+enum FrameType {
+  FRAME_TYPE_UNSPECIFIED = 0;
+  FRAME_TYPE_SESSION_CONTROL = 1;
+  FRAME_TYPE_TRANSFER_HEADER = 2;
+  FRAME_TYPE_FACT = 3;
+  FRAME_TYPE_BLOB_CHUNK = 4;
+  FRAME_TYPE_TRANSFER_TRAILER = 5;
+  FRAME_TYPE_TRANSFER_RECEIPT = 6;
+}
+enum RoundResult {
+  ROUND_RESULT_UNSPECIFIED = 0;
+  ROUND_RESULT_DRAINED = 1;
+  ROUND_RESULT_CONVERGED = 2;
+}
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  ERROR_CODE_PROTOCOL_INCOMPATIBLE = 1;
+  ERROR_CODE_LIMIT_EXCEEDED = 2;
+  ERROR_CODE_AUTHENTICATION_FAILED = 3;
+  ERROR_CODE_IDENTITY_COLLISION = 4;
+  ERROR_CODE_MANIFEST_INCOMPLETE = 5;
+  ERROR_CODE_BLOB_INCOMPLETE = 6;
+  ERROR_CODE_STATE_CHANGED = 7;
+  ERROR_CODE_MEMBER_REMOVED = 8;
+}
+message Capability {
+  string name = 1;
+  uint32 version = 2;
+}
+message Handshake {
+  uint32 protocol_version = 1;
+  string group_id = 2;
+  string device_id = 3;
+  string library_epoch = 4;
+  bytes session_id = 5;
+  repeated Capability capabilities = 6;
+}
+message HandshakeAcceptance {
+  uint32 protocol_version = 1;
+  bytes session_id = 2;
+  repeated Capability capabilities = 3;
+}
+message InventoryBegin {
+  bytes round_id = 1;
+  uint64 entry_count = 2;
+}
+message InventoryChunk {
+  bytes round_id = 1;
+  uint32 chunk_index = 2;
+  repeated InventoryEntry entries = 3;
+}
+message InventoryEnd {
+  bytes round_id = 1;
+  bytes inventory_hash = 2;
+}
+message DifferenceRequest {
+  bytes round_id = 1;
+  repeated FactIdentity facts = 2;
+  repeated bytes blob_hashes = 3;
+}
+message FactDescriptor {
+  FactIdentity identity = 1;
+  bytes shared_state_hash = 2;
+  repeated bytes required_blob_hashes = 3;
+}
+message TransferManifest {
+  uint32 protocol_version = 1;
+  string group_id = 2;
+  bytes content_id = 3;
+  repeated FactDescriptor facts = 4;
+  repeated BlobReference blobs = 5;
+}
+message TransferProposal {
+  bytes transfer_id = 1;
+  bytes content_id = 2;
+  string sender_device_id = 3;
+  string sender_library_epoch = 4;
+  string receiver_device_id = 5;
+  string receiver_library_epoch = 6;
+  uint64 fact_count = 7;
+  uint64 blob_count = 8;
+  uint64 total_blob_bytes = 9;
+}
+message BlobOffer {
+  bytes transfer_id = 1;
+  repeated BlobReference blobs = 2;
+}
+message MissingBlobSet {
+  bytes transfer_id = 1;
+  repeated bytes missing_hashes = 2;
+}
+message TransferHeader {
+  bytes transfer_id = 1;
+  bytes attempt_id = 2;
+  TransferManifest manifest = 3;
+}
+message BlobChunk {
+  bytes transfer_id = 1;
+  bytes blob_hash = 2;
+  uint64 offset = 3;
+  bytes data = 4;
+}
+message TransferTrailer {
+  bytes transfer_id = 1;
+  bytes manifest_hash = 2;
+  uint64 fact_count = 3;
+  uint64 blob_count = 4;
+}
+message TransferReceipt {
+  bytes transfer_id = 1;
+  bytes content_id = 2;
+  string receiver_device_id = 3;
+  string receiver_library_epoch = 4;
+  bytes applied_state_hash = 5;
+}
+message RoundReceipt {
+  bytes round_id = 1;
+  RoundResult result = 2;
+  repeated FactIdentity deferred_facts = 3;
+}
+message TransferTermination {
+  bytes transfer_id = 1;
+  string member_id = 2;
+  bool acknowledged = 3;
+}
+message ProtocolError {
+  ErrorCode code = 1;
+  string message = 2;
+  bytes transfer_id = 3;
+}
+message ProtocolMessage {
+  oneof payload {
+    Handshake handshake = 1;
+    HandshakeAcceptance handshake_acceptance = 2;
+    InventoryBegin inventory_begin = 3;
+    InventoryChunk inventory_chunk = 4;
+    InventoryEnd inventory_end = 5;
+    DifferenceRequest difference_request = 6;
+    TransferProposal transfer_proposal = 7;
+    BlobOffer blob_offer = 8;
+    MissingBlobSet missing_blob_set = 9;
+    TransferHeader transfer_header = 10;
+    FactRecord fact = 11;
+    BlobChunk blob_chunk = 12;
+    TransferTrailer transfer_trailer = 13;
+    TransferReceipt transfer_receipt = 14;
+    RoundReceipt round_receipt = 15;
+    TransferTermination transfer_termination = 16;
+    ProtocolError error = 17;
+  }
+}

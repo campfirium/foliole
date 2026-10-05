@@ -1,0 +1,125 @@
+{
+  "accepted_messages": [
+    {
+      "base64": "Ws0BChsIAhIEbm9kZRoGbm9kZS0xIgl2ZXJzaW9uLTESIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBGosBCogBCgZuZXN0ZWQSfjJ8CnoyeAp2MnQKcjJwCm4ybApqMmgKZjJkCmIyYApeMlwKWjJYClYyVApSMlAKTjJMCkoySApGMkQKQjJACj4yPAo6MjgKNjI0CjIyMAouMiwKKjIoCiYyJAoiMiAKHjIcChoyGAoWMhQKEjIQCg4yDAoKMggKBjIECgJAAQ==",
+      "byte_length": 208,
+      "frame_type": 3,
+      "name": "canonical-depth-exact",
+      "payload_case": "fact"
+    },
+    {
+      "base64": "CqYGCBYSB2dyb3VwLWEaCGRldmljZS1hIgdlcG9jaC1hKhADAwMDAwMDAwMDAwMDAwMDMgkKBWNhcC0wEAEyCQoFY2FwLTEQATIJCgVjYXAtMhABMgkKBWNhcC0zEAEyCQoFY2FwLTQQATIJCgVjYXAtNRABMgkKBWNhcC02EAEyCQoFY2FwLTcQATIJCgVjYXAtOBABMgkKBWNhcC05EAEyCgoGY2FwLTEwEAEyCgoGY2FwLTExEAEyCgoGY2FwLTEyEAEyCgoGY2FwLTEzEAEyCgoGY2FwLTE0EAEyCgoGY2FwLTE1EAEyCgoGY2FwLTE2EAEyCgoGY2FwLTE3EAEyCgoGY2FwLTE4EAEyCgoGY2FwLTE5EAEyCgoGY2FwLTIwEAEyCgoGY2FwLTIxEAEyCgoGY2FwLTIyEAEyCgoGY2FwLTIzEAEyCgoGY2FwLTI0EAEyCgoGY2FwLTI1EAEyCgoGY2FwLTI2EAEyCgoGY2FwLTI3EAEyCgoGY2FwLTI4EAEyCgoGY2FwLTI5EAEyCgoGY2FwLTMwEAEyCgoGY2FwLTMxEAEyCgoGY2FwLTMyEAEyCgoGY2FwLTMzEAEyCgoGY2FwLTM0EAEyCgoGY2FwLTM1EAEyCgoGY2FwLTM2EAEyCgoGY2FwLTM3EAEyCgoGY2FwLTM4EAEyCgoGY2FwLTM5EAEyCgoGY2FwLTQwEAEyCgoGY2FwLTQxEAEyCgoGY2FwLTQyEAEyCgoGY2FwLTQzEAEyCgoGY2FwLTQ0EAEyCgoGY2FwLTQ1EAEyCgoGY2FwLTQ2EAEyCgoGY2FwLTQ3EAEyCgoGY2FwLTQ4EAEyCgoGY2FwLTQ5EAEyCgoGY2FwLTUwEAEyCgoGY2FwLTUxEAEyCgoGY2FwLTUyEAEyCgoGY2FwLTUzEAEyCgoGY2FwLTU0EAEyCgoGY2FwLTU1EAEyCgoGY2FwLTU2EAEyCgoGY2FwLTU3EAEyCgoGY2FwLTU4EAEyCgoGY2FwLTU5EAEyCgoGY2FwLTYwEAEyCgoGY2FwLTYxEAEyCgoGY2FwLTYyEAEyCgoGY2FwLTYzEAE=",
+      "byte_length": 809,
+      "frame_type": 1,
+      "name": "capability-count-exact",
+      "payload_case": "handshake"
+    },
+    {
+      "base64": "WloKGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tMRIgAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEaGQoXCgh1bnNpZ25lZBILGP///////////wE=",
+      "byte_length": 92,
+      "frame_type": 3,
+      "name": "uint64-max-exact",
+      "payload_case": "fact"
+    }
+  ],
+  "corpus_version": 1,
+  "messages": [
+    {
+      "base64": "WlMKGRIEbm9kZRoGbm9kZS0xIgl2ZXJzaW9uLTESIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBGhQKEgoFdGl0bGUSCSIHQXJ0aWNsZQ==",
+      "byte_length": 85,
+      "frame_type": 3,
+      "name": "unspecified-fact-kind",
+      "payload_case": "fact",
+      "expected_error": "fact_kind_invalid"
+    },
+    {
+      "base64": "WkoKEAgCEgRub2RlGgZub2RlLTESIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBGhQKEgoFdGl0bGUSCSIHQXJ0aWNsZQ==",
+      "byte_length": 76,
+      "frame_type": 3,
+      "name": "empty-fact-id",
+      "payload_case": "fact",
+      "expected_error": "protocol_string_required"
+    },
+    {
+      "base64": "WlQKGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tMRIfAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBARoUChIKBXRpdGxlEgkiB0FydGljbGU=",
+      "byte_length": 86,
+      "frame_type": 3,
+      "name": "short-shared-state-hash",
+      "payload_case": "fact",
+      "expected_error": "shared_state_hash_must_be_32_bytes"
+    },
+    {
+      "base64": "WlYKGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tMRIhAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBGhQKEgoFdGl0bGUSCSIHQXJ0aWNsZQ==",
+      "byte_length": 88,
+      "frame_type": 3,
+      "name": "long-shared-state-hash",
+      "payload_case": "fact",
+      "expected_error": "shared_state_hash_must_be_32_bytes"
+    },
+    {
+      "base64": "Wn8KGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tMRIgAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEaFAoSCgV0aXRsZRIJIgdBcnRpY2xlIigKIAICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICEAEYCSAB",
+      "byte_length": 129,
+      "frame_type": 3,
+      "name": "unknown-blob-role",
+      "payload_case": "fact",
+      "expected_error": "blob_role_invalid"
+    },
+    {
+      "base64": "Wl0KGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tMRIgAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEaHAoMCgV0aXRsZRIDIgFBCgwKBXRpdGxlEgMiAUI=",
+      "byte_length": 95,
+      "frame_type": 3,
+      "name": "duplicate-canonical-field",
+      "payload_case": "fact",
+      "expected_error": "canonical_field_duplicate"
+    },
+    {
+      "base64": "Wk4KGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tMRIgAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEaDQoLCgVlbXB0eRICQAA=",
+      "byte_length": 80,
+      "frame_type": 3,
+      "name": "false-null-marker",
+      "payload_case": "fact",
+      "expected_error": "canonical_null_invalid"
+    },
+    {
+      "base64": "CkQIFhIHZ3JvdXAtYRoIZGV2aWNlLWEiB2Vwb2NoLWEqEAMDAwMDAwMDAwMDAwMDAwMyCAoEc2FtZRABMggKBHNhbWUQAg==",
+      "byte_length": 70,
+      "frame_type": 1,
+      "name": "duplicate-capability-name",
+      "payload_case": "handshake",
+      "expected_error": "capability_duplicate"
+    },
+    {
+      "base64": "CrIGCBYSB2dyb3VwLWEaCGRldmljZS1hIgdlcG9jaC1hKhADAwMDAwMDAwMDAwMDAwMDMgkKBWNhcC0wEAEyCQoFY2FwLTEQATIJCgVjYXAtMhABMgkKBWNhcC0zEAEyCQoFY2FwLTQQATIJCgVjYXAtNRABMgkKBWNhcC02EAEyCQoFY2FwLTcQATIJCgVjYXAtOBABMgkKBWNhcC05EAEyCgoGY2FwLTEwEAEyCgoGY2FwLTExEAEyCgoGY2FwLTEyEAEyCgoGY2FwLTEzEAEyCgoGY2FwLTE0EAEyCgoGY2FwLTE1EAEyCgoGY2FwLTE2EAEyCgoGY2FwLTE3EAEyCgoGY2FwLTE4EAEyCgoGY2FwLTE5EAEyCgoGY2FwLTIwEAEyCgoGY2FwLTIxEAEyCgoGY2FwLTIyEAEyCgoGY2FwLTIzEAEyCgoGY2FwLTI0EAEyCgoGY2FwLTI1EAEyCgoGY2FwLTI2EAEyCgoGY2FwLTI3EAEyCgoGY2FwLTI4EAEyCgoGY2FwLTI5EAEyCgoGY2FwLTMwEAEyCgoGY2FwLTMxEAEyCgoGY2FwLTMyEAEyCgoGY2FwLTMzEAEyCgoGY2FwLTM0EAEyCgoGY2FwLTM1EAEyCgoGY2FwLTM2EAEyCgoGY2FwLTM3EAEyCgoGY2FwLTM4EAEyCgoGY2FwLTM5EAEyCgoGY2FwLTQwEAEyCgoGY2FwLTQxEAEyCgoGY2FwLTQyEAEyCgoGY2FwLTQzEAEyCgoGY2FwLTQ0EAEyCgoGY2FwLTQ1EAEyCgoGY2FwLTQ2EAEyCgoGY2FwLTQ3EAEyCgoGY2FwLTQ4EAEyCgoGY2FwLTQ5EAEyCgoGY2FwLTUwEAEyCgoGY2FwLTUxEAEyCgoGY2FwLTUyEAEyCgoGY2FwLTUzEAEyCgoGY2FwLTU0EAEyCgoGY2FwLTU1EAEyCgoGY2FwLTU2EAEyCgoGY2FwLTU3EAEyCgoGY2FwLTU4EAEyCgoGY2FwLTU5EAEyCgoGY2FwLTYwEAEyCgoGY2FwLTYxEAEyCgoGY2FwLTYyEAEyCgoGY2FwLTYzEAEyCgoGY2FwLTY0EAE=",
+      "byte_length": 821,
+      "frame_type": 1,
+      "name": "capability-count-over-limit",
+      "payload_case": "handshake",
+      "expected_error": "protocol_repeated_limit_exceeded"
+    },
+    {
+      "base64": "WtMBChsIAhIEbm9kZRoGbm9kZS0xIgl2ZXJzaW9uLTESIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBGpEBCo4BCgZuZXN0ZWQSgwEygAEKfjJ8CnoyeAp2MnQKcjJwCm4ybApqMmgKZjJkCmIyYApeMlwKWjJYClYyVApSMlAKTjJMCkoySApGMkQKQjJACj4yPAo6MjgKNjI0CjIyMAouMiwKKjIoCiYyJAoiMiAKHjIcChoyGAoWMhQKEjIQCg4yDAoKMggKBjIECgJAAQ==",
+      "byte_length": 214,
+      "frame_type": 3,
+      "name": "canonical-depth-over-limit",
+      "payload_case": "fact",
+      "expected_error": "canonical_depth_limit_exceeded"
+    },
+    {
+      "base64": "YlIKIAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBEiACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAhj///////////8BIgEB",
+      "byte_length": 84,
+      "frame_type": 4,
+      "name": "uint64-addition-overflow",
+      "payload_case": "blob_chunk",
+      "expected_error": "blob_chunk_range_invalid"
+    },
+    {
+      "base64": "WlUKGwgCEgRub2RlGgZub2RlLTEiCXZlcnNpb24tMRIgAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEaFAoSCgV0aXRsZRIJIgdBcnRpY2xl",
+      "byte_length": 87,
+      "frame_type": 2,
+      "name": "fact-authenticated-as-transfer-header",
+      "payload_case": "fact",
+      "expected_error": "frame_payload_type_mismatch"
+    }
+  ],
+  "protocol_version": 22
+}
