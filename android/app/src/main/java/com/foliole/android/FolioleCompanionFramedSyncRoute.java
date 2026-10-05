@@ -99,17 +99,19 @@ final class FolioleCompanionFramedSyncRoute {
         String localDeviceId,
         String localEpoch
     ) throws Exception {
-        FramedSyncTransferReader.Result received = store.receive(input, groupKey, context);
-        JSONObject applied = bridge.request("apply_framed_transfer", new JSONObject()
-            .put("staging_kind", "android")
-            .put("staging_path", store.path())
-            .put("transfer_id", hex(received.transferId()))
-            .put("sender_device_id", context.senderDeviceId())
-            .put("sender_library_epoch", context.senderLibraryEpoch())
-            .put("receiver_device_id", localDeviceId)
-            .put("receiver_library_epoch", localEpoch));
-        TransferReceipt receipt = receipt(applied, received.transferId(), localDeviceId, localEpoch);
-        return store.receipt(groupKey, receipt);
+        synchronized (store) {
+            FramedSyncTransferReader.Result received = store.receive(input, groupKey, context);
+            JSONObject applied = bridge.request("apply_framed_transfer", new JSONObject()
+                .put("staging_kind", "android")
+                .put("staging_path", store.path())
+                .put("transfer_id", hex(received.transferId()))
+                .put("sender_device_id", context.senderDeviceId())
+                .put("sender_library_epoch", context.senderLibraryEpoch())
+                .put("receiver_device_id", localDeviceId)
+                .put("receiver_library_epoch", localEpoch));
+            TransferReceipt receipt = receipt(applied, received.transferId(), localDeviceId, localEpoch);
+            return store.receipt(groupKey, receipt);
+        }
     }
 
     private static TransferReceipt receipt(

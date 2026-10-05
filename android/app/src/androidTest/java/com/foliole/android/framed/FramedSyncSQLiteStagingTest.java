@@ -109,6 +109,26 @@ public final class FramedSyncSQLiteStagingTest {
         }
     }
 
+    @Test
+    public void replacesAReadyAttemptWhenTheNativeReceiptWasNotYetCommitted() throws Exception {
+        File file = File.createTempFile("framed-sync-ready-retry", ".db");
+        try (SQLiteDatabase database = SQLiteDatabase.openOrCreateDatabase(file, null)) {
+            FramedSyncSQLiteStaging staging = completeTransfer(database);
+            assertEquals(FramedSyncStageOutcome.IDENTICAL, staging.admitInboundTransfer(proposal()));
+
+            new FramedSyncInboundStagingAdapter(staging).commitAuthenticatedFrame(
+                frame(ATTEMPT_A, 0, FramedSyncFrameType.TRANSFER_HEADER,
+                    header(ATTEMPT_A), new byte[] {60}));
+            assertEquals("receiving", scalar(database,
+                "SELECT state FROM framed_sync_android_transfers", new byte[0]));
+            staging.invalidateInboundAttempt(TRANSFER_ID, ATTEMPT_A);
+            assertEquals("proposed", scalar(database,
+                "SELECT state FROM framed_sync_android_transfers", new byte[0]));
+        } finally {
+            file.delete();
+        }
+    }
+
     private static FramedSyncSQLiteStaging completeTransfer(SQLiteDatabase database) throws Exception {
         FramedSyncSQLiteStaging staging = new FramedSyncSQLiteStaging(database);
         FramedSyncInboundStagingAdapter adapter = new FramedSyncInboundStagingAdapter(staging);

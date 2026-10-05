@@ -156,8 +156,11 @@ final class FramedSyncSQLiteTransfers {
             FramedSyncSQLiteValues.blobArgs(transferId), null, null, null)) {
             if (!row.moveToFirst()) throw invalid("inbound_active_attempt_conflict");
             if ("proposed".equals(row.getString(0)) && row.isNull(1)) return;
-            if (receiptExists(transferId)) {
-                if (!row.isNull(1)) clearAttempt(transferId, row.getBlob(1));
+            String state = row.getString(0);
+            boolean receiptBacked = receiptExists(transferId);
+            if (!row.isNull(1) && (receiptBacked || "receiving".equals(state) ||
+                "ready_to_apply".equals(state))) {
+                clearAttempt(transferId, row.getBlob(1));
                 return;
             }
             if (!"proposed".equals(row.getString(0)) || !row.isNull(1)) {
