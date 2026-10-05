@@ -1,6 +1,7 @@
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
+import { createFramedSyncOutboundReceiptStaging } from '../../../../../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
 
 import { applyCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
 
@@ -42,4 +43,21 @@ export async function applyCompanionFramedSyncDataOperation(
     receiver_library_epoch: receipt.receiverLibraryEpoch,
     transfer_id: bytesToHex(receipt.transferId)
   };
+}
+
+export async function completeCompanionFramedSyncOutbound(
+  db: DbPort,
+  payload: Record<string, unknown>
+) {
+  const receipt = {
+    appliedStateHash: requiredDigest(payload.applied_state_hash),
+    contentId: requiredDigest(payload.content_id),
+    receiverDeviceId: requiredText(payload.receiver_device_id),
+    receiverLibraryEpoch: requiredText(payload.receiver_library_epoch),
+    transferId: requiredDigest(payload.transfer_id)
+  };
+  const staging = createFramedSyncOutboundReceiptStaging(db);
+  const state = await staging.commitOutboundReceipt(receipt);
+  await staging.releaseOutboundHolds(receipt.transferId);
+  return { receipt_state: state, transfer_id: bytesToHex(receipt.transferId) };
 }

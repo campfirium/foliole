@@ -77,6 +77,32 @@ it('runs provider live-database writes through the shared writer queue', async (
   expect(mocks.resolve).toHaveBeenCalledWith({ request_id: 'request-1', result: { recorded: true } });
 });
 
+it('commits a matching framed receipt before releasing its outbound hold', async () => {
+  const transferId = '11'.repeat(32);
+  const contentId = '22'.repeat(32);
+  mocks.query.mockResolvedValueOnce([{
+    content_id: Uint8Array.from({ length: 32 }, () => 0x22),
+    receiver_device_id: 'peer-1',
+    receiver_library_epoch: 'epoch-1'
+  }]).mockResolvedValueOnce([]).mockResolvedValueOnce([{ present: 1 }]);
+  mocks.listener?.({
+    operation: 'complete_framed_outbound',
+    payload: {
+      applied_state_hash: '33'.repeat(32), content_id: contentId,
+      receiver_device_id: 'peer-1', receiver_library_epoch: 'epoch-1', transfer_id: transferId
+    },
+    request_id: 'framed-receipt'
+  });
+  await vi.waitFor(() => expect(mocks.resolve).toHaveBeenCalledWith({
+    request_id: 'framed-receipt', result: { receipt_state: 'committed', transfer_id: transferId }
+  }));
+  expect(mocks.writer).toHaveBeenCalledOnce();
+  expect(mocks.run).toHaveBeenCalledWith(
+    'DELETE FROM framed_sync_outbound_holds WHERE transfer_id = ?',
+    [Uint8Array.from({ length: 32 }, () => 0x11)]
+  );
+});
+
 it('creates provider read snapshots through the Capacitor database owner', async () => {
   mocks.listener?.({
     operation: 'create_snapshot',

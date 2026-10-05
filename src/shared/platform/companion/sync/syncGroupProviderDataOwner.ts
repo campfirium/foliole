@@ -77,6 +77,8 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
   });
   if (operation === CONTRACT.operations.applyFramedTransfer)
     return writer((db) => framedSyncData.applyCompanionFramedSyncDataOperation(db, payload));
+  if (operation === CONTRACT.operations.completeFramedOutbound)
+    return writer((db) => framedSyncData.completeCompanionFramedSyncOutbound(db, payload));
   if (operation === CONTRACT.operations.readFramedInventory)
     return getIosCompanionDatabaseOwner().read(framedSyncData.readCompanionFramedSyncInventory);
   if (operation === CONTRACT.operations.applyMemberState) {

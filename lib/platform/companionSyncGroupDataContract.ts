@@ -6,6 +6,7 @@ export const COMPANION_SYNC_GROUP_DATA_CONTRACT = Object.freeze({
     prepareIdentityPack: 'prepare_identity_pack',
     applyIdentityPack: 'apply_identity_pack',
     applyFramedTransfer: 'apply_framed_transfer',
+    completeFramedOutbound: 'complete_framed_outbound',
     readFramedInventory: 'read_framed_inventory',
     attachmentCheckpoint: 'attachment_checkpoint',
     confirmVersionPack: 'confirm_version_pack',
