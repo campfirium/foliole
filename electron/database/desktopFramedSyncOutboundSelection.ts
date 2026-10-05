@@ -10,15 +10,18 @@ import {
 import type { FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
 import {
   revalidateFramedSyncInventorySource,
+  requiredFramedSyncNodeVersionIds,
   type FramedSyncDeferredObject,
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from '../../lib/core/sync/framedSyncInventory.js';
+import { selectFramedSyncRelationReviewFactsWithDbPort } from '../../lib/core/sync/framedSyncRelationReviewSelection.js';
 import {
   assertOutboundPublication,
   type OutboundPublishInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
 import { loadStoredSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
+import { orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import { projectDesktopFramedSyncNodeRecord } from '../sync/desktopFramedSyncNodeProjection.js';
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
@@ -90,18 +93,6 @@ async function stagePublication(tx: DbPort, input: OutboundPublishInput) {
   return 'created' as const;
 }
 
-function selectedNodeVersionIds(difference: FramedSyncInventoryDifference) {
-  if (difference.need.requiredRelationIds.length || difference.need.reviewFactIds.length) {
-    throw new Error('framed_sync_outbound_node_fact_kind_unsupported');
-  }
-  const ids = new Set(difference.need.frontierFactIds);
-  if (difference.need.sharedState || difference.need.resourceHashes.length) {
-    for (const id of difference.sourceSnapshot.frontierFactIds) ids.add(id);
-  }
-  if (ids.size === 0) throw new Error('framed_sync_outbound_node_fact_missing');
-  return [...ids];
-}
-
 export async function selectDesktopFramedSyncNodeManifest(
   tx: DbPort,
   difference: FramedSyncInventoryDifference
@@ -109,15 +100,18 @@ export async function selectDesktopFramedSyncNodeManifest(
   if (difference.direction !== 'local_to_remote' || difference.objectType !== 'node') {
     throw new Error('framed_sync_outbound_node_difference_invalid');
   }
-  const versionIds = selectedNodeVersionIds(difference);
+  const versionIds = requiredFramedSyncNodeVersionIds(difference);
   const records = await loadStoredSyncNodeVersionRecords(tx, versionIds);
-  const projections = versionIds.map((versionId) => {
+  const selectedRecords = versionIds.map((versionId) => {
     const record = records.get(versionId);
     if (!record || record.object_id !== difference.globalId) {
       throw new Error(`framed_sync_outbound_node_fact_unavailable:${versionId}`);
     }
-    return projectDesktopFramedSyncNodeRecord(record);
+    return record;
   });
+  const projections = orderNodeVersionHistory(selectedRecords).map(projectDesktopFramedSyncNodeRecord);
+  const related = await selectFramedSyncRelationReviewFactsWithDbPort(tx, difference);
+  if (related.kind === 'deferred') throw new Error('framed_sync_source_changed');
   const blobs = new Map<string, CanonicalBlob>();
   for (const projection of projections) for (const blob of projection.manifest.blobs) {
     const key = bytesToHex(blob.sha256);
@@ -128,7 +122,12 @@ export async function selectDesktopFramedSyncNodeManifest(
   for (const required of difference.need.resourceHashes) {
     if (!blobs.has(bytesToHex(required))) throw new Error('framed_sync_outbound_resource_unavailable');
   }
-  return { blobs: [...blobs.values()], facts: projections.flatMap((value) => value.manifest.facts) };
+  const facts = [
+    ...projections.flatMap((value) => value.manifest.facts),
+    ...related.facts
+  ];
+  if (!facts.length) throw new Error('framed_sync_outbound_fact_set_empty');
+  return { blobs: [...blobs.values()], facts };
 }
 
 export async function publishDesktopFramedSyncNodeOutbound(

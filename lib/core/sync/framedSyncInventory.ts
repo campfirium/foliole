@@ -1,4 +1,5 @@
 import { assertFramedSyncDigest } from './framedSyncContract.js';
+import { parseFramedSyncParentRelationFactId } from './framedSyncRelationReviewFact.js';
 import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
 
 export type FramedSyncInventoryEntry = Readonly<{
@@ -31,6 +32,20 @@ export type FramedSyncDeferredObject = Readonly<{
   globalId: string;
   objectType: string;
 }>;
+
+export function requiredFramedSyncNodeVersionIds(difference: FramedSyncInventoryDifference) {
+  if (difference.objectType !== 'node') throw new Error('framed_sync_inventory_identity_invalid');
+  const ids = new Set(difference.need.frontierFactIds);
+  if (difference.need.sharedState || difference.need.resourceHashes.length > 0) {
+    for (const id of difference.sourceSnapshot.frontierFactIds) ids.add(id);
+  }
+  for (const relationId of difference.need.requiredRelationIds) {
+    const relation = parseFramedSyncParentRelationFactId(relationId);
+    ids.add(relation.version_id);
+    ids.add(relation.parent_version_id);
+  }
+  return [...ids];
+}
 
 function compareKey(left: FramedSyncInventoryEntry, right: FramedSyncInventoryEntry) {
   return compareSyncIdentityText(left.objectType, right.objectType) ||

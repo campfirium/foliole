@@ -86,7 +86,7 @@ it.each(['android', 'ios'] as const)(
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 2 });
 });
 
-it('rejects multiple nodes, unknown fact kinds, and mismatched blob sets', async () => {
+it('rejects tombstone facts, multiple identities, and mismatched blob sets', async () => {
   const projection = projectFramedSyncNodeRecord(nodeRecord());
   const node = projection.manifest.facts[0]!;
   const review = reviewFact('unsupported');
@@ -95,7 +95,6 @@ it('rejects multiple nodes, unknown fact kinds, and mismatched blob sets', async
     facts: readonly CanonicalFact[];
     blob?: { data: Uint8Array; descriptor: CanonicalBlob };
   }>[] = [
-    { error: 'framed_sync_android_fact_set_unsupported', facts: [node, node] },
     { error: 'framed_sync_android_fact_set_unsupported', facts: [{ ...review, kind: 5 }] },
     { error: 'framed_sync_android_fact_identity_mismatch',
       facts: [review, reviewFact('other-node', 'node-2')] },
@@ -111,6 +110,39 @@ it('rejects multiple nodes, unknown fact kinds, and mismatched blob sets', async
       port, input('android', stagingPath, transferId)
     )).rejects.toThrow(value.error);
   }
+});
+
+it.each(['android', 'ios'] as const)(
+  'atomically applies a %s parent-first version chain for one node', async (kind) => {
+  const { main, port, prefix, staging, stagingPath } = harness(kind);
+  const root = projectFramedSyncNodeRecord(nodeRecord());
+  const childRecord = nodeRecord();
+  childRecord.ancestor_version_ids = ['version-1'];
+  childRecord.body_text = 'Transferred child body';
+  childRecord.content_hash = '5'.repeat(64);
+  childRecord.parent_version_id = 'version-1';
+  childRecord.parent_version_ids = ['version-1'];
+  childRecord.version_id = 'version-2';
+  childRecord.snapshot.title = 'Child';
+  childRecord.snapshot.updated_at = '2026-10-05T01:01:00.000Z';
+  childRecord.updated_at = childRecord.snapshot.updated_at;
+  childRecord.version_created_at = childRecord.snapshot.updated_at;
+  const child = projectFramedSyncNodeRecord(childRecord);
+  const transferId = new Uint8Array(32).fill(6);
+  stage(staging, prefix, {
+    blobs: [
+      { data: root.bodyBlob, descriptor: root.manifest.blobs[0]! },
+      { data: child.bodyBlob, descriptor: child.manifest.blobs[0]! }
+    ],
+    facts: [...root.manifest.facts, ...child.manifest.facts], transferId
+  });
+
+  await applyCompanionFramedSyncTransfer(port, input(kind, stagingPath, transferId));
+
+  expect(main.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').all())
+    .toEqual([{ version_id: 'version-1' }, { version_id: 'version-2' }]);
+  expect(main.prepare('SELECT title, current_version_id FROM nodes WHERE id = ?').get('node-1'))
+    .toEqual({ current_version_id: 'version-2', title: 'Child' });
 });
 
 function harness(kind: 'android' | 'ios') {
@@ -143,6 +175,7 @@ function reviewFact(opId: string, nodeId = 'node-1') {
 
 function stage(database: Database.Database, prefix: string, value: {
   blob?: { data: Uint8Array; descriptor: CanonicalBlob };
+  blobs?: readonly { data: Uint8Array; descriptor: CanonicalBlob }[];
   facts: readonly CanonicalFact[];
   transferId: Uint8Array;
 }) {
@@ -157,13 +190,13 @@ function stage(database: Database.Database, prefix: string, value: {
     value.transferId, attemptId, String(index), 3,
     encodeValidatedProtocolMessage('fact', factToWire(fact))
   ));
-  if (!value.blob) return;
-  const { data, descriptor } = value.blob;
-  database.prepare(`INSERT OR IGNORE INTO ${prefix}_available_blobs VALUES (?, ?, ?)`)
-    .run(descriptor.sha256, Number(descriptor.byteLength), data);
-  database.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, ?, ?)`)
-    .run(value.transferId, descriptor.sha256, Number(descriptor.byteLength), descriptor.role,
-      descriptor.required ? 1 : 0);
+  for (const { data, descriptor } of value.blobs ?? (value.blob ? [value.blob] : [])) {
+    database.prepare(`INSERT OR IGNORE INTO ${prefix}_available_blobs VALUES (?, ?, ?)`)
+      .run(descriptor.sha256, Number(descriptor.byteLength), data);
+    database.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, ?, ?)`)
+      .run(value.transferId, descriptor.sha256, Number(descriptor.byteLength), descriptor.role,
+        descriptor.required ? 1 : 0);
+  }
 }
 
 function tracked(database: Database.Database) {

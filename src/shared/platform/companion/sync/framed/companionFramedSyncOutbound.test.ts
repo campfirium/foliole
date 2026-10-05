@@ -18,6 +18,15 @@ const snapshot = {
   virtual_filter: null
 };
 
+function versionRow(versionId: string, bodyText = 'Outbound body', parentVersionId: string | null = null) {
+  return {
+    body_text: bodyText, content_hash: '44'.repeat(32), created_at: time,
+    host_name: 'sender', object_id: 'node-1', parent_version_id: parentVersionId,
+    snapshot_json: JSON.stringify({ ...snapshot, body_blob_hash: null, content: bodyText }),
+    version_id: versionId
+  };
+}
+
 it('freezes a current node fact and durable hold before returning native wire input', async () => {
   const run = vi.fn(async () => ({ changes: 1, lastInsertRowId: null }));
   const port = {
@@ -26,11 +35,9 @@ it('freezes a current node fact and durable hold before returning native wire in
         body_text: 'Outbound body', content_hash: '44'.repeat(32),
         current_version_id: 'version-1', id: 'node-1'
       }];
-      if (sql.includes('SELECT v.* FROM nodes')) return [{
-        body_text: 'Outbound body', content_hash: '44'.repeat(32), created_at: time,
-        host_name: 'sender', object_id: 'node-1', parent_version_id: null,
-        snapshot_json: JSON.stringify(snapshot), version_id: 'version-1'
-      }];
+      if (sql.includes('SELECT * FROM node_sync_versions WHERE version_id IN')) {
+        return [versionRow('version-1')];
+      }
       return [];
     }),
     run,
@@ -51,7 +58,7 @@ it('freezes a current node fact and durable hold before returning native wire in
   ]);
 });
 
-it('prepares exact parent and review facts without a redundant node blob', async () => {
+it('prepares the exact version chain with its parent and review facts', async () => {
   const relationId = JSON.stringify(['version-1', 'parent-1', 0]);
   const review = { difficulty_after: 3.75, difficulty_before: 2.25,
     due_after: '2026-10-08T01:00:00Z', due_before: '2026-10-06T01:00:00Z', grade: 3,
@@ -63,6 +70,10 @@ it('prepares exact parent and review facts without a redundant node blob', async
     query: vi.fn(async (sql: string): Promise<DbRow[]> => {
       if (sql.includes('SELECT node.id')) return [{ body_text: 'body',
         content_hash: '44'.repeat(32), current_version_id: 'version-1', id: 'node-1' }];
+      if (sql.includes('SELECT * FROM node_sync_versions WHERE version_id IN')) return [
+        versionRow('parent-1', 'Parent body'), versionRow('version-1', 'Child body', 'parent-1')
+      ];
+      if (sql.includes('SELECT version_id, parent_version_id')) return [parent];
       if (sql.includes('parent.ordinal = ?')) return [parent];
       if (sql.includes('FROM node_sync_version_parents parent')) return [{ ...parent, node_id: 'node-1' }];
       if (sql.includes('FROM review_log WHERE node_id = ? AND op_id = ?')) return [review];
@@ -78,8 +89,8 @@ it('prepares exact parent and review facts without a redundant node blob', async
     required_relation_ids: [relationId], review_fact_ids: ['review-1'],
     sender_device_id: 'sender', sender_library_epoch: 'sender-epoch'
   });
-  expect(result.blobs).toEqual([]);
+  expect(result.blobs.map((blob) => blob.data_text)).toEqual(['Parent body', 'Child body']);
   expect(result.fact_message_bytes_list.map((bytes) =>
     decodeAndValidateProtocolMessage(Uint8Array.from(bytes), 3).payloadCase))
-    .toEqual(['fact', 'fact']);
+    .toEqual(['fact', 'fact', 'fact', 'fact']);
 });

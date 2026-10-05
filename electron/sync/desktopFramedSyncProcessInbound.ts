@@ -121,7 +121,7 @@ export async function finishDesktopFramedSyncTransfer(input: {
   });
   await input.staging.markReadyToApply(input.frame.transferId);
   const receipt = await input.db.transaction(async (tx) => {
-    if (prepared.record) await applySyncNodesWithDbPort(tx, [prepared.record]);
+    if (prepared.records.length) await applySyncNodesWithDbPort(tx, prepared.records);
     await applyDesktopFramedSyncRelationReviewFactsWithDbPort(tx, prepared.relationReviewFacts);
     const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
       globalId: prepared.globalId, objectType: 'node'
@@ -147,29 +147,32 @@ function prepareInboundApply(
   const relationReviewFacts = facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
   const supported = nodeFacts.length + relationReviewFacts.length === facts.length;
   const globalId = facts[0]?.globalId;
-  if (!globalId || !supported || nodeFacts.length > 1 ||
+  if (!globalId || !supported ||
       facts.some((fact) => fact.objectType !== 'node' || fact.globalId !== globalId)) {
     throw new Error('framed_sync_process_fact_set_invalid');
   }
-  const nodeFact = nodeFacts[0];
-  if (!nodeFact) {
+  if (!nodeFacts.length) {
     if (blobs.length !== 0) throw new Error('framed_sync_blob_content_set_mismatch');
-    return { globalId, nodeFact, record: null, relationReviewFacts };
+    return { globalId, records: [], relationReviewFacts };
   }
-  if (nodeFact.blobs.length !== 1 || blobs.length !== 1 ||
-      !sameBytes(nodeFact.blobs[0]!.sha256, blobs[0]!.sha256)) {
+  const contentByHash = new Map(blobs.map((entry) => [hex(entry.sha256), entry]));
+  const requiredHashes = new Set(nodeFacts.flatMap((fact) => fact.blobs.map((entry) => hex(entry.sha256))));
+  if (contentByHash.size !== blobs.length || requiredHashes.size !== blobs.length ||
+      nodeFacts.some((fact) => fact.blobs.length !== 1)) {
     throw new Error('framed_sync_blob_content_set_mismatch');
   }
-  const record = restoreDesktopFramedSyncNodeRecord({
-    bodyBlob: blobs[0]!.data,
-    manifest: { blobs: nodeFact.blobs, facts: [nodeFact] }
+  const records = nodeFacts.map((nodeFact) => {
+    const content = contentByHash.get(hex(nodeFact.blobs[0]!.sha256));
+    if (!content) throw new Error('framed_sync_blob_content_set_mismatch');
+    return restoreDesktopFramedSyncNodeRecord({
+      bodyBlob: content.data,
+      manifest: { blobs: nodeFact.blobs, facts: [nodeFact] }
+    });
   });
-  return { globalId, nodeFact, record, relationReviewFacts };
+  return { globalId, records, relationReviewFacts };
 }
 
-function sameBytes(left: Uint8Array, right: Uint8Array) {
-  return left.byteLength === right.byteLength && left.every((byte, index) => byte === right[index]);
-}
+const hex = (value: Uint8Array) => Buffer.from(value).toString('hex');
 
 const MANIFEST_PREFIX_BYTES = 4 + new TextEncoder().encode('foliole-framed-sync-content-v1').byteLength + 4;
 

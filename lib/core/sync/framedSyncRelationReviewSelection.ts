@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 import type { DbPort, DbRow } from './dbPort.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
 import {
@@ -8,7 +6,7 @@ import {
   type FramedSyncInventoryEntry
 } from './framedSyncInventory.js';
 import {
-  framedSyncParentRelationFactId,
+  parseFramedSyncParentRelationFactId,
   projectFramedSyncParentRelation,
   projectFramedSyncReview
 } from './framedSyncRelationReviewFact.js';
@@ -28,22 +26,6 @@ export type FramedSyncRelationReviewSelectionInput = Readonly<{
   ) => Promise<FramedSyncInventoryEntry | null>;
 }>;
 
-const relationIdSchema = z.tuple([
-  z.string().min(1), z.string().min(1),
-  z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
-]);
-
-function parseRelationId(value: string) {
-  let parsed: unknown;
-  try { parsed = JSON.parse(value); } catch { throw new Error('framed_sync_parent_relation_id_invalid'); }
-  const [version_id, parent_version_id, ordinal] = relationIdSchema.parse(parsed);
-  const row = { ordinal, parent_version_id, version_id };
-  if (framedSyncParentRelationFactId(row) !== value) {
-    throw new Error('framed_sync_parent_relation_id_invalid');
-  }
-  return row;
-}
-
 function assertRequest(difference: FramedSyncInventoryDifference) {
   if (difference.direction !== 'local_to_remote' || difference.objectType !== 'node') {
     throw new Error('framed_sync_relation_review_difference_invalid');
@@ -62,7 +44,7 @@ function assertRequest(difference: FramedSyncInventoryDifference) {
 }
 
 async function loadParent(tx: DbPort, nodeId: string, factId: string) {
-  const key = parseRelationId(factId);
+  const key = parseFramedSyncParentRelationFactId(factId);
   const rows = await tx.query<DbRow>(`SELECT version.object_id, parent.version_id,
     parent.parent_version_id, parent.ordinal FROM node_sync_version_parents parent
     JOIN node_sync_versions version ON version.version_id = parent.version_id

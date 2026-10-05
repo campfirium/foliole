@@ -107,6 +107,22 @@ export function framedSyncParentRelationFactId(source: {
   return JSON.stringify([source.version_id, source.parent_version_id, source.ordinal]);
 }
 
+export function parseFramedSyncParentRelationFactId(value: string) {
+  let parsed: unknown;
+  try { parsed = JSON.parse(value); } catch {
+    throw new Error('framed_sync_parent_relation_id_invalid');
+  }
+  const [version_id, parent_version_id, ordinal] = z.tuple([
+    z.string().min(1), z.string().min(1),
+    z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
+  ]).parse(parsed);
+  const row = { ordinal, parent_version_id, version_id };
+  if (framedSyncParentRelationFactId(row) !== value) {
+    throw new Error('framed_sync_parent_relation_id_invalid');
+  }
+  return row;
+}
+
 export function projectFramedSyncParentRelation(source: unknown): CanonicalFact {
   const row = parentSourceSchema.parse(source);
   const fact = withSharedStateHash({

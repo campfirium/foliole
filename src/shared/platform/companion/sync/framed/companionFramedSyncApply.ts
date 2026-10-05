@@ -1,3 +1,5 @@
+import { bytesToHex } from '@noble/hashes/utils.js';
+
 import {
   framedSyncBytes,
   framedSyncText,
@@ -81,18 +83,11 @@ async function loadTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
   return { blobRows, contentId: framedSyncBytes(transfer, 'content_id'), facts };
 }
 
-type DecodedTransfer =
-  | Readonly<{
-    globalId: string;
-    kind: 'node_and_aux';
-    node: ReturnType<typeof restoreFramedSyncNodeRecord>;
-    relationReviewFacts: readonly CanonicalFact[];
-  }>
-  | Readonly<{
-    globalId: string;
-    kind: 'aux_only';
-    relationReviewFacts: readonly CanonicalFact[];
-  }>;
+type DecodedTransfer = Readonly<{
+  globalId: string;
+  nodes: ReadonlyArray<ReturnType<typeof restoreFramedSyncNodeRecord>>;
+  relationReviewFacts: readonly CanonicalFact[];
+}>;
 
 function sameBlob(left: CanonicalBlob, right: CanonicalBlob) {
   return left.byteLength === right.byteLength && left.required === right.required &&
@@ -102,8 +97,7 @@ function sameBlob(left: CanonicalBlob, right: CanonicalBlob) {
 function decodeTransfer(facts: CanonicalFact[], blobRows: DbRow[]): DecodedTransfer {
   const nodeFacts = facts.filter((fact) => fact.kind === 2);
   const relationReviewFacts = facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
-  if (!facts.length || nodeFacts.length > 1 ||
-      nodeFacts.length + relationReviewFacts.length !== facts.length) {
+  if (!facts.length || nodeFacts.length + relationReviewFacts.length !== facts.length) {
     throw new Error('framed_sync_android_fact_set_unsupported');
   }
   const globalId = facts[0]!.globalId;
@@ -112,21 +106,28 @@ function decodeTransfer(facts: CanonicalFact[], blobRows: DbRow[]): DecodedTrans
   }
   if (!nodeFacts.length) {
     if (blobRows.length) throw new Error('framed_sync_android_blob_set_mismatch');
-    return { globalId, kind: 'aux_only', relationReviewFacts };
+    return { globalId, nodes: [], relationReviewFacts };
   }
-  const nodeFact = nodeFacts[0]!;
-  if (blobRows.length !== 1 || nodeFact.blobs.length !== 1) {
-    throw new Error('framed_sync_android_blob_identity_mismatch');
-  }
-  const manifestBlob = blob(blobRows[0]!);
-  if (!sameBlob(nodeFact.blobs[0]!, manifestBlob)) {
+  const rowsByHash = new Map(blobRows.map((row) => [bytesToHex(framedSyncBytes(row, 'sha256')), row]));
+  const requiredHashes = new Set(nodeFacts.flatMap(
+    (fact) => fact.blobs.map((entry) => bytesToHex(entry.sha256))
+  ));
+  if (rowsByHash.size !== blobRows.length || requiredHashes.size !== blobRows.length ||
+      nodeFacts.some((fact) => fact.blobs.length !== 1)) {
     throw new Error('framed_sync_android_blob_identity_mismatch');
   }
   return {
     globalId,
-    kind: 'node_and_aux',
-    node: restoreFramedSyncNodeRecord({
-      bodyBlob: framedSyncBytes(blobRows[0]!, 'data'), fact: nodeFact, manifestBlob
+    nodes: nodeFacts.map((nodeFact) => {
+      const row = rowsByHash.get(bytesToHex(nodeFact.blobs[0]!.sha256));
+      if (!row) throw new Error('framed_sync_android_blob_identity_mismatch');
+      const manifestBlob = blob(row);
+      if (!sameBlob(nodeFact.blobs[0]!, manifestBlob)) {
+        throw new Error('framed_sync_android_blob_identity_mismatch');
+      }
+      return restoreFramedSyncNodeRecord({
+        bodyBlob: framedSyncBytes(row, 'data'), fact: nodeFact, manifestBlob
+      });
     }),
     relationReviewFacts
   };
@@ -164,13 +165,14 @@ export async function applyCompanionFramedSyncTransfer(
         if (!receiptIdentityMatches(stored, receiptIdentity)) throw new Error('receipt_identity_conflict');
         return stored;
       }
-      if (decoded.kind === 'node_and_aux') {
+      for (const node of decoded.nodes) {
         await upsertTextBodyBlob(
-          tx, decoded.node.body_text ?? '', decoded.node.snapshot.updated_at,
-          decoded.node.snapshot.body_blob_hash!
+          tx, node.body_text ?? '', node.snapshot.updated_at, node.snapshot.body_blob_hash!
         );
-        await applySyncNodesWithDbPort(tx, [decoded.node], { enqueueSearchInvalidations: false });
       }
+      if (decoded.nodes.length) await applySyncNodesWithDbPort(
+        tx, decoded.nodes, { enqueueSearchInvalidations: false }
+      );
       await applyFramedSyncRelationReviewFactsWithDbPort(tx, decoded.relationReviewFacts);
       const current = await readFramedSyncInventoryEntry(
         tx, { globalId: decoded.globalId, objectType: 'node' }
