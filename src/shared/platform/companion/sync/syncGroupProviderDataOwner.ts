@@ -14,6 +14,7 @@ import { handleCompanionAttachmentCheckpoint } from '../runtime/companionAttachm
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import * as framedSyncData from './framed/companionFramedSyncDataOperation';
+import { prepareCompanionFramedSyncOutbound } from './framed/companionFramedSyncOutbound';
 import { applyCompanionSyncIdentityPackWithDbPort } from './pack-apply/companionSyncIdentityPackApply';
 import { prepareCompanionSyncIdentityPack } from './syncGroupIdentityPackPrepare';
 import { readCompanionSyncIdentitySource } from './syncGroupIdentitySourceRead';
@@ -79,6 +80,8 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
     return writer((db) => framedSyncData.applyCompanionFramedSyncDataOperation(db, payload));
   if (operation === CONTRACT.operations.completeFramedOutbound)
     return writer((db) => framedSyncData.completeCompanionFramedSyncOutbound(db, payload));
+  if (operation === CONTRACT.operations.prepareFramedOutbound)
+    return writer((db) => prepareCompanionFramedSyncOutbound(db, payload));
   if (operation === CONTRACT.operations.readFramedInventory)
     return getIosCompanionDatabaseOwner().read(framedSyncData.readCompanionFramedSyncInventory);
   if (operation === CONTRACT.operations.applyMemberState) {
