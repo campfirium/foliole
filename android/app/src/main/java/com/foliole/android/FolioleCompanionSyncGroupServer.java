@@ -8,22 +8,23 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import com.foliole.android.framed.FramedSyncSessionNonceSQLite;
 
 final class FolioleCompanionSyncGroupServer {
     private static final int SYNC_PORT = BuildConfig.FOLIOLE_COMPANION_SYNC_PORT;
     private final Context context;
     private final JSONObject config;
     private final FolioleCompanionSyncGroupDataBridge dataBridge;
+    private final FolioleCompanionSyncGroupSessionAuth auth;
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final FolioleCompanionJoinRequestProvider joins;
     private final ServerSocket server;
     private final FolioleCompanionSyncGroupSnapshot snapshots;
+    private final FramedSyncSessionNonceSQLite framedSyncNonces;
     private final Runnable stateChanged;
-    private final Map<String, String> memberStateReady = new ConcurrentHashMap<>();
     private volatile boolean running = true;
 
     FolioleCompanionSyncGroupServer(
@@ -32,7 +33,10 @@ final class FolioleCompanionSyncGroupServer {
     ) throws Exception {
         this.context = context.getApplicationContext(); this.config = config;
         this.joins = joins; this.dataBridge = dataBridge; this.stateChanged = stateChanged;
+        auth = new FolioleCompanionSyncGroupSessionAuth(this.context,
+            config.getJSONObject("sync_group").getString("group_id"), dataBridge);
         snapshots = new FolioleCompanionSyncGroupSnapshot(this.context, dataBridge);
+        framedSyncNonces = new FramedSyncSessionNonceSQLite(this.context);
         server = new ServerSocket(SYNC_PORT); executor.execute(this::acceptLoop);
     }
 
@@ -41,7 +45,7 @@ final class FolioleCompanionSyncGroupServer {
     void stop() {
         running = false;
         try { server.close(); } catch (Exception ignored) {}
-        executor.shutdownNow(); snapshots.close();
+        executor.shutdownNow(); snapshots.close(); framedSyncNonces.close();
     }
 
     private void acceptLoop() {
@@ -76,19 +80,22 @@ final class FolioleCompanionSyncGroupServer {
         else if (request.method.equals("POST") && path.equals("/sync-group/member-state")) memberState(request, output);
         else if (request.method.equals("GET") && FolioleCompanionSyncIdentityRoutes.supports(path))
             FolioleCompanionSyncIdentityRoutes.handle(context, config, dataBridge, snapshots,
-                request, output, authenticate(request));
+                request, output, auth.authenticate(request));
         else if (request.method.equals("POST") && path.equals("/companion/sync-identity-pack"))
             FolioleCompanionSyncIdentityRoutes.pack(context, config, dataBridge, snapshots,
-                request, output, authenticate(request), new JSONObject(decryptRequest(request)));
+                request, output, auth.authenticate(request), new JSONObject(decryptRequest(request)));
         else if (request.method.equals("POST") && path.equals("/companion/sync-identity-push"))
             FolioleCompanionSyncIdentityPushRoute.handle(context, config, dataBridge,
-                request, output, authenticate(request), new JSONObject(decryptRequest(request)));
+                request, output, auth.authenticate(request), new JSONObject(decryptRequest(request)));
+        else if (request.method.equals("POST") && path.equals("/companion/framed-sync"))
+            FolioleCompanionFramedSyncRoute.handle(config, dataBridge, snapshots,
+                request, output, auth.authenticate(request), framedSyncNonces);
         else if (request.method.equals("GET") && path.equals("/companion/sync-pack"))
             FolioleCompanionSyncPackRoutes.pack(context, config, dataBridge, snapshots,
-                request, output, authenticate(request));
+                request, output, auth.authenticate(request));
         else if (request.method.equals("GET") && path.equals("/companion/sync-pack-facts"))
             FolioleCompanionSyncPackRoutes.facts(context, config, snapshots,
-                request, output, authenticate(request));
+                request, output, auth.authenticate(request));
         else if (request.method.equals("POST") && path.equals("/companion/version-pack-receipt"))
             versionPackReceipt(request, output);
         else if (request.method.equals("POST") && path.equals("/companion/resource-availability")) availability(request, output);
@@ -134,7 +141,7 @@ final class FolioleCompanionSyncGroupServer {
     }
 
     private void versionPackReceipt(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        String peer = authenticate(request);
+        String peer = auth.authenticate(request);
         try {
             JSONObject receipt = new JSONObject(decryptRequest(request));
             JSONObject result = dataBridge.request("confirm_version_pack", new JSONObject()
@@ -146,20 +153,17 @@ final class FolioleCompanionSyncGroupServer {
     }
 
     private void memberState(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        String peer = authenticate(request, true);
+        String peer = auth.authenticate(request, true);
         JSONObject incoming = new JSONObject(decryptRequest(request));
         JSONObject applied = dataBridge.request("apply_member_state", new JSONObject()
             .put("authenticated_device_id", peer).put("state", incoming));
-        if (applied.optBoolean("normal_sync_ready", false)) {
-            memberStateReady.put(peer, restoreToken(applied.getJSONObject("state")));
-        }
-        else memberStateReady.remove(peer);
+        auth.update(peer, applied);
         workgroupJson(request, output, 200, applied.getJSONObject("state"));
         stateChanged.run();
     }
 
     private void contentBlob(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        String peer = authenticate(request);
+        String peer = auth.authenticate(request);
         FolioleCompanionSyncGroupResources.Resource resource = snapshots.read(
             peer, snapshot -> FolioleCompanionSyncGroupResources.contentBlob(snapshot, query(request.path, "hash")));
         if (resource == null) workgroupJson(request, output, 404, error("blob_not_found"));
@@ -167,7 +171,7 @@ final class FolioleCompanionSyncGroupServer {
     }
 
     private void availability(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        String peer = authenticate(request);
+        String peer = auth.authenticate(request);
         String body = decryptRequest(request);
         try {
             JSONObject result = snapshots.refresh(peer, snapshot -> FolioleCompanionResourceAvailability.reply(
@@ -179,14 +183,14 @@ final class FolioleCompanionSyncGroupServer {
     }
 
     private void contentBlobs(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        String peer = authenticate(request);
+        String peer = auth.authenticate(request);
         FolioleCompanionSyncGroupContentBlobBatch.Result batch = snapshots.read(
             peer, snapshot -> FolioleCompanionSyncGroupContentBlobBatch.load(snapshot, decryptRequest(request)));
         workgroupBytes(request, output, batch.mimeType, batch.body);
     }
 
     private void attachment(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
-        String peer = authenticate(request);
+        String peer = auth.authenticate(request);
         FolioleCompanionSyncGroupResources.Resource resource = snapshots.read(
             peer, snapshot -> FolioleCompanionSyncGroupResources.attachmentRange(
                 context, query(request.path, "attachment_id"), query(request.path, "content_hash"), query(request.path, "storage_key"),
@@ -194,34 +198,6 @@ final class FolioleCompanionSyncGroupServer {
         if (resource == null) workgroupJson(request, output, 404, error("missing_file"));
         else FolioleCompanionWorkgroupHttp.writeBytes(context, config, request, output,
             200, resource.mimeType, resource.body, resource.totalBytes);
-    }
-
-    private String authenticate(FolioleCompanionHttpRequest request) throws Exception {
-        String peer = authenticate(request, false);
-        String approvedRestore = memberStateReady.get(peer);
-        if (approvedRestore == null) throw new SecurityException("sync_group_member_state_required");
-        JSONObject current = dataBridge.request("load_member_state", new JSONObject());
-        JSONObject restore = current.optJSONObject("restore");
-        if (restore != null && !restore.optBoolean("applied", false)) {
-            memberStateReady.remove(peer);
-            throw new SecurityException("sync_group_member_state_required");
-        }
-        if (!approvedRestore.equals(restoreToken(current))) {
-            memberStateReady.remove(peer);
-            throw new SecurityException("sync_group_member_state_required");
-        }
-        return peer;
-    }
-
-    private static String restoreToken(JSONObject state) {
-        JSONObject restore = state.optJSONObject("restore");
-        JSONObject event = restore == null ? null : restore.optJSONObject("event");
-        return event == null ? "" : event.optString("restore_id", "");
-    }
-
-    private String authenticate(FolioleCompanionHttpRequest request, boolean allowUnknown) throws Exception {
-        return FolioleCompanionSyncGroupRequestAuth.authenticate(context, request,
-            config.getJSONObject("sync_group").getString("group_id"), dataBridge, allowUnknown);
     }
 
     private String decryptRequest(FolioleCompanionHttpRequest request) throws Exception {

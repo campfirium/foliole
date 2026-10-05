@@ -16,6 +16,19 @@ final class FolioleCompanionHttpResponse {
         bytes(output, status, contentType, null, body);
     }
 
+    static void framed(
+        OutputStream output, byte[] body, String deviceId, String libraryEpoch
+    ) throws Exception {
+        String headers = "HTTP/1.1 200 OK\r\n" +
+            "Content-Type: application/vnd.foliole.framed-sync\r\n" +
+            "X-Foliole-Device-Id: " + deviceId + "\r\n" +
+            "X-Foliole-Library-Epoch: " + libraryEpoch + "\r\n" +
+            "Content-Length: " + body.length + "\r\nConnection: close\r\n\r\n";
+        output.write(headers.getBytes(StandardCharsets.US_ASCII));
+        output.write(body);
+        output.flush();
+    }
+
     static void bytes(OutputStream output, int status, String contentType, String originalContentType, byte[] body) throws Exception {
         bytes(output, status, contentType, originalContentType, body, -1);
     }
