@@ -7,10 +7,11 @@ import { assertFramedSyncDigest, FRAMED_SYNC_LIMITS } from './framedSyncContract
 export type CompanionFramedSyncOutboundValue = Readonly<{
   blobs: readonly Readonly<{
     byte_length: string;
-    data_text: string;
+    data_text?: string;
     required: boolean;
     role: number;
     sha256: string;
+    storage_key?: string;
   }>[];
   content_id: string;
   fact_message_bytes_list: readonly (readonly number[])[];
@@ -20,7 +21,11 @@ export type CompanionFramedSyncOutboundValue = Readonly<{
 }>;
 
 type OutboundValueInput = Readonly<{
-  blobs: readonly Readonly<{ blob: CanonicalBlob; dataText: string }>[];
+  blobs: readonly Readonly<{
+    blob: CanonicalBlob;
+    dataText?: string;
+    storageKey?: string;
+  }>[];
   contentId: Uint8Array;
   factMessageBytesList: readonly Uint8Array[];
   manifestHash: Uint8Array;
@@ -35,6 +40,16 @@ function sameBytes(left: Uint8Array, right: Uint8Array) {
 }
 
 function assertBlob(input: OutboundValueInput['blobs'][number]) {
+  if (input.storageKey !== undefined) {
+    if (input.dataText !== undefined || input.blob.role === 1 ||
+        !input.storageKey.startsWith(`${bytesToHex(input.blob.sha256)}.`)) {
+      throw new Error('framed_sync_companion_blob_mismatch');
+    }
+    return;
+  }
+  if (input.dataText === undefined || input.blob.role !== 1) {
+    throw new Error('framed_sync_companion_blob_mismatch');
+  }
   const data = encoder.encode(input.dataText);
   if (BigInt(data.byteLength) !== input.blob.byteLength ||
       !sameBytes(sha256(data), input.blob.sha256)) {
@@ -66,9 +81,11 @@ export function createCompanionFramedSyncOutboundValue(
   }
   for (const bytes of input.factMessageBytesList) assertFactMessage(bytes);
   return {
-    blobs: input.blobs.map(({ blob, dataText }) => ({
-      byte_length: blob.byteLength.toString(), data_text: dataText,
-      required: blob.required, role: blob.role, sha256: bytesToHex(blob.sha256)
+    blobs: input.blobs.map(({ blob, dataText, storageKey }) => ({
+      byte_length: blob.byteLength.toString(),
+      ...(dataText === undefined ? {} : { data_text: dataText }),
+      required: blob.required, role: blob.role, sha256: bytesToHex(blob.sha256),
+      ...(storageKey === undefined ? {} : { storage_key: storageKey })
     })),
     content_id: bytesToHex(input.contentId),
     fact_message_bytes_list: input.factMessageBytesList.map((bytes) => Array.from(bytes)),

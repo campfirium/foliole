@@ -15,7 +15,9 @@ import com.foliole.sync.v22.TransferTrailer;
 import com.google.protobuf.ByteString;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,7 +37,7 @@ public final class FramedSyncTransferWriterTest {
 
         FramedSyncTransferWriter.Attempt attempt = FramedSyncTransferWriter.prepare(
             GROUP_KEY, context, Collections.singletonList(fact),
-            Collections.singletonList(new FramedSyncTransferWriter.BlobContent(
+            Collections.singletonList(new FramedSyncBlobContent(
                 fact.getBlobs(0).getSha256().toByteArray(), body)), staging);
         assertTrue(staging.preparedBeforeFirstFrame);
         assertTrue(staging.finalized);
@@ -98,7 +100,7 @@ public final class FramedSyncTransferWriterTest {
             GROUP_KEY, new FramedSyncTransferContext(
                 "group", "sender", "sender-epoch", "receiver", "receiver-epoch"),
             Collections.singletonList(fact),
-            Collections.singletonList(new FramedSyncTransferWriter.BlobContent(
+            Collections.singletonList(new FramedSyncBlobContent(
                 fact.getBlobs(0).getSha256().toByteArray(), body)), staging);
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         FramedSyncTransferWriter.replay(attempt, staging, output);
@@ -120,6 +122,48 @@ public final class FramedSyncTransferWriterTest {
         assertArrayEquals(MessageDigest.getInstance("SHA-256").digest(body),
             descriptor.getSha256().toByteArray());
         assertEquals(1, ((TransferTrailer) decoded.get(2).payload().value()).getBlobCount());
+    }
+
+    @Test public void streamsAFileBlobAcrossExactChunkBoundaries() throws Exception {
+        byte[] body = "body".getBytes(StandardCharsets.UTF_8);
+        byte[] resource = new byte[FramedSyncContract.BLOB_CHUNK_BYTES + 17];
+        for (int index = 0; index < resource.length; index++) resource[index] = (byte) index;
+        byte[] resourceHash = MessageDigest.getInstance("SHA-256").digest(resource);
+        BlobReference resourceBlob = BlobReference.newBuilder()
+            .setSha256(ByteString.copyFrom(resourceHash)).setByteLength(resource.length)
+            .setRole(BlobRole.BLOB_ROLE_PDF).setRequired(true).build();
+        FactRecord fact = fact(body).toBuilder().addBlobs(resourceBlob).build();
+        File file = File.createTempFile("framed-sync-resource", ".pdf");
+        try {
+            Files.write(file.toPath(), resource);
+            MemoryStaging staging = new MemoryStaging();
+            FramedSyncTransferWriter.Attempt attempt = FramedSyncTransferWriter.prepare(
+                GROUP_KEY, new FramedSyncTransferContext(
+                    "group", "sender", "sender-epoch", "receiver", "receiver-epoch"),
+                Collections.singletonList(fact), Arrays.asList(
+                    new FramedSyncBlobContent(fact.getBlobs(0).getSha256().toByteArray(), body),
+                    FramedSyncBlobContent.file(resourceHash, file)), staging);
+            ByteArrayOutputStream wire = new ByteArrayOutputStream();
+            FramedSyncTransferWriter.replay(attempt, staging, wire);
+            FramedSyncStreamReader reader = new FramedSyncStreamReader(
+                new ByteArrayInputStream(wire.toByteArray()));
+            FramedSyncPreamble preamble = reader.readPreamble();
+            ByteArrayOutputStream restored = new ByteArrayOutputStream();
+            for (int sequence = 0; ; sequence++) {
+                FramedSyncWireFrame frame = reader.readFrame();
+                if (frame == null) break;
+                byte[] plaintext = FramedSyncFrameCrypto.decrypt(GROUP_KEY, preamble, frame, sequence);
+                if (frame.header().frameType() != FramedSyncFrameType.BLOB_CHUNK.wireValue()) continue;
+                var chunk = (com.foliole.sync.v22.BlobChunk) FramedSyncCodec.decode(
+                    plaintext, frame.header().frameType()).payload().value();
+                if (MessageDigest.isEqual(resourceHash, chunk.getBlobHash().toByteArray())) {
+                    restored.write(chunk.getData().toByteArray());
+                }
+            }
+            assertArrayEquals(resource, restored.toByteArray());
+        } finally {
+            file.delete();
+        }
     }
 
     private static FactRecord fact(byte[] body) throws Exception {
@@ -154,7 +198,7 @@ public final class FramedSyncTransferWriterTest {
         }
 
         @Override public FramedSyncStageOutcome commitOutboundFrame(FramedSyncAuthenticatedFrame frame) {
-            preparedBeforeFirstFrame = prepared && frames.isEmpty();
+            if (frames.isEmpty()) preparedBeforeFirstFrame = prepared;
             frames.add(frame);
             return FramedSyncStageOutcome.CREATED;
         }
@@ -164,10 +208,12 @@ public final class FramedSyncTransferWriterTest {
             return FramedSyncStageOutcome.CREATED;
         }
 
-        @Override public List<FramedSyncAuthenticatedFrame> loadReplayableOutboundFrames(
-            byte[] transferId, byte[] attemptId
-        ) {
-            return frames;
+        @Override public void replayOutboundFrames(
+            byte[] transferId, byte[] attemptId, FramedSyncStreamWriter writer
+        ) throws Exception {
+            for (FramedSyncAuthenticatedFrame frame : frames) {
+                writer.writeFrame(frame.frameHeader(), frame.ciphertext());
+            }
         }
     }
 }

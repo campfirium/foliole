@@ -37,16 +37,21 @@ final class FolioleCompanionFramedSyncOutbound {
         String senderEpoch = requiredMemberState("library_epoch");
         FramedSyncTransferContext transferContext = new FramedSyncTransferContext(
             groupId, credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
-        JSONObject prepared = prepare(groupId, input.objectId, input.includeCurrentNode,
+        JSONObject selection = selection(groupId, input.objectId, input.includeCurrentNode,
             input.requiredRelationIds, input.reviewFactIds, credential.deviceId, senderEpoch,
             receiverDeviceId, receiverEpoch);
+        JSONObject inspected = FolioleCompanionSyncGroupDataBridge.current().request(
+            "inspect_framed_outbound", selection);
+        JSONObject prepared = FolioleCompanionSyncGroupDataBridge.current().request(
+            "prepare_framed_outbound", new JSONObject(selection.toString()).put("resource_files",
+                FolioleCompanionFramedSyncResources.describe(context, inspected)));
         byte[] groupKey = decodeGroupKey(credential.workgroupKey);
         byte[] contentId = digest(prepared.getString("content_id"));
         requireSame(contentId, digest(prepared.getString("manifest_hash")),
             "framed_sync_manifest_identity_mismatch");
         byte[] expectedTransferId = digest(prepared.getString("transfer_id"));
         var facts = FolioleCompanionFramedSyncOutboundInput.facts(prepared);
-        var blobs = FolioleCompanionFramedSyncOutboundInput.blobs(prepared, facts);
+        var blobs = FolioleCompanionFramedSyncOutboundInput.blobs(context, prepared, facts);
 
         try (FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context)) {
             FramedSyncTransferWriter.Attempt replayable =
@@ -67,21 +72,20 @@ final class FolioleCompanionFramedSyncOutbound {
         }
     }
 
-    private static JSONObject prepare(
+    private static JSONObject selection(
         String groupId, String objectId, boolean includeCurrentNode,
         List<String> requiredRelationIds, List<String> reviewFactIds,
         String senderDeviceId, String senderEpoch,
         String receiverDeviceId, String receiverEpoch
     ) throws Exception {
-        return FolioleCompanionSyncGroupDataBridge.current().request(
-            "prepare_framed_outbound", new JSONObject()
+        return new JSONObject()
                 .put("group_id", groupId).put("object_id", objectId)
                 .put("include_current_node", includeCurrentNode)
                 .put("required_relation_ids", new JSONArray(requiredRelationIds))
                 .put("review_fact_ids", new JSONArray(reviewFactIds))
                 .put("sender_device_id", senderDeviceId).put("sender_library_epoch", senderEpoch)
                 .put("receiver_device_id", receiverDeviceId)
-                .put("receiver_library_epoch", receiverEpoch));
+                .put("receiver_library_epoch", receiverEpoch);
     }
 
     private static void complete(TransferReceipt receipt) throws Exception {

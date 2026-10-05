@@ -106,7 +106,7 @@ public final class FramedSyncTransferRecoveryTest {
         var record = fact("original").getFact();
         FramedSyncTransferWriter.Attempt attempt = FramedSyncTransferWriter.prepare(
             GROUP_KEY, CONTEXT, Collections.singletonList(record),
-            Collections.singletonList(new FramedSyncTransferWriter.BlobContent(BLOB_HASH, BLOB)), staging);
+            Collections.singletonList(new FramedSyncBlobContent(BLOB_HASH, BLOB)), staging);
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         FramedSyncTransferWriter.replay(attempt, staging, output);
         return output.toByteArray();
@@ -140,8 +140,13 @@ public final class FramedSyncTransferRecoveryTest {
         }
         @Override public FramedSyncStageOutcome finalizeOutboundAttempt(
             byte[] transferId, byte[] attemptId) { return FramedSyncStageOutcome.CREATED; }
-        @Override public List<FramedSyncAuthenticatedFrame> loadReplayableOutboundFrames(
-            byte[] transferId, byte[] attemptId) { return frames; }
+        @Override public void replayOutboundFrames(
+            byte[] transferId, byte[] attemptId, FramedSyncStreamWriter writer
+        ) throws Exception {
+            for (FramedSyncAuthenticatedFrame frame : frames) {
+                writer.writeFrame(frame.frameHeader(), frame.ciphertext());
+            }
+        }
     }
 
     private interface ThrowingRunnable { void run() throws Exception; }

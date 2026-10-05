@@ -2,8 +2,12 @@ import { expect, it, vi } from 'vitest';
 
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
+import { canonicalFactFromValidatedMessage } from '../../../../../../lib/core/sync/framedSyncWireFact.js';
 
-import { prepareCompanionFramedSyncOutbound } from './companionFramedSyncOutbound.js';
+import {
+  inspectCompanionFramedSyncOutbound,
+  prepareCompanionFramedSyncOutbound
+} from './companionFramedSyncOutbound.js';
 
 const time = '2026-10-05T01:00:00.000Z';
 const snapshot = {
@@ -93,4 +97,48 @@ it('prepares the exact version chain with its parent and review facts', async ()
   expect(result.fact_message_bytes_list.map((bytes) =>
     decodeAndValidateProtocolMessage(Uint8Array.from(bytes), 3).payloadCase))
     .toEqual(['fact', 'fact', 'fact', 'fact']);
+});
+
+it('inspects and freezes canonical resource files without returning data_text', async () => {
+  const hash = 'ab'.repeat(32);
+  const storageKey = `${hash}.pdf`;
+  const resourceReferences = JSON.stringify([
+    { original_name: 'Paper.pdf', role: 'reference', storage_key: storageKey }
+  ]);
+  const port = {
+    query: vi.fn(async (sql: string): Promise<DbRow[]> => {
+      if (sql.includes('SELECT * FROM (')) return [{
+        body_text: 'Outbound body', content_hash: '44'.repeat(32), current_version_id: 'version-1',
+        id: 'node-1', is_tombstone: 0, resource_references: resourceReferences
+      }];
+      if (sql.includes('FROM node_sync_versions WHERE version_id IN')) return [{
+        ...versionRow('version-1'),
+        snapshot_json: JSON.stringify({ ...snapshot, resource_references: resourceReferences })
+      }];
+      return [];
+    }),
+    run: vi.fn(async () => ({ changes: 1, lastInsertRowId: null })),
+    transaction: async <T>(task: (tx: DbPort) => Promise<T>) => task(port as DbPort)
+  } as DbPort;
+  const payload = {
+    group_id: 'group-1', include_current_node: true, object_id: 'node-1',
+    receiver_device_id: 'receiver', required_relation_ids: [], review_fact_ids: [],
+    receiver_library_epoch: 'receiver-epoch', sender_device_id: 'sender',
+    sender_library_epoch: 'sender-epoch'
+  };
+
+  await expect(inspectCompanionFramedSyncOutbound(port, payload)).resolves.toEqual({
+    resource_storage_keys: [storageKey]
+  });
+  const result = await prepareCompanionFramedSyncOutbound(port, {
+    ...payload, resource_files: [{ byte_length: '17', storage_key: storageKey }]
+  });
+
+  expect(result.blobs).toContainEqual({
+    byte_length: '17', required: true, role: 3, sha256: hash, storage_key: storageKey
+  });
+  expect(result.blobs.find((blob) => blob.storage_key === storageKey)).not.toHaveProperty('data_text');
+  const fact = canonicalFactFromValidatedMessage(decodeAndValidateProtocolMessage(
+    Uint8Array.from(result.fact_message_bytes_list[0]!), 3));
+  expect(fact.blobs.map((blob) => blob.role)).toEqual([1, 3]);
 });

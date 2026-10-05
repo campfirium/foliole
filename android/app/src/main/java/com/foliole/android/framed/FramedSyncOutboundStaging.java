@@ -1,7 +1,5 @@
 package com.foliole.android.framed;
 
-import java.util.List;
-
 public interface FramedSyncOutboundStaging {
     FramedSyncStageOutcome prepareOutboundAttempt(
         byte[] transferId,
@@ -15,8 +13,9 @@ public interface FramedSyncOutboundStaging {
     FramedSyncStageOutcome finalizeOutboundAttempt(byte[] transferId, byte[] attemptId)
         throws Exception;
 
-    List<FramedSyncAuthenticatedFrame> loadReplayableOutboundFrames(
+    void replayOutboundFrames(
         byte[] transferId,
-        byte[] attemptId
+        byte[] attemptId,
+        FramedSyncStreamWriter writer
     ) throws Exception;
 }

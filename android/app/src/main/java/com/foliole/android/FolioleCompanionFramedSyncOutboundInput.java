@@ -1,10 +1,12 @@
 package com.foliole.android;
 
+import android.content.Context;
 import com.foliole.android.framed.FramedSyncCodec;
+import com.foliole.android.framed.FramedSyncBlobContent;
 import com.foliole.android.framed.FramedSyncFrameType;
-import com.foliole.android.framed.FramedSyncTransferWriter;
 import com.foliole.sync.v22.FactRecord;
 import com.getcapacitor.PluginCall;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -42,38 +44,49 @@ final class FolioleCompanionFramedSyncOutboundInput {
         return result;
     }
 
-    static List<FramedSyncTransferWriter.BlobContent> blobs(
+    static List<FramedSyncBlobContent> blobs(
+        Context context,
         JSONObject prepared,
         List<FactRecord> facts
     ) throws Exception {
         JSONArray encoded = prepared.getJSONArray("blobs");
-        List<FramedSyncTransferWriter.BlobContent> result = new ArrayList<>();
+        List<FramedSyncBlobContent> result = new ArrayList<>();
         for (int index = 0; index < encoded.length(); index++) {
             JSONObject blob = encoded.getJSONObject(index);
             byte[] hash = digest(blob.getString("sha256"));
-            byte[] data = blob.getString("data_text").getBytes(StandardCharsets.UTF_8);
             String lengthText = blob.getString("byte_length");
             long length = Long.parseUnsignedLong(lengthText);
             Object roleValue = blob.get("role");
             Object requiredValue = blob.get("required");
-            if (!Long.toUnsignedString(length).equals(lengthText) || length != data.length ||
+            if (!Long.toUnsignedString(length).equals(lengthText) ||
                 !(roleValue instanceof Number) || ((Number) roleValue).doubleValue() !=
                     ((Number) roleValue).intValue() || !(requiredValue instanceof Boolean) ||
-                !descriptorMatches(facts, hash, ((Number) roleValue).intValue(),
+                !descriptorMatches(facts, hash, length, ((Number) roleValue).intValue(),
                     (Boolean) requiredValue)) {
                 throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
             }
-            result.add(new FramedSyncTransferWriter.BlobContent(hash, data));
+            int role = ((Number) roleValue).intValue();
+            if (role == 1) {
+                byte[] data = blob.getString("data_text").getBytes(StandardCharsets.UTF_8);
+                if (length != data.length) throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
+                result.add(new FramedSyncBlobContent(hash, data));
+            } else {
+                File file = FolioleCompanionFramedSyncResources.resolveFile(
+                    context, blob.getString("storage_key"));
+                if (file.length() != length) throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
+                result.add(FramedSyncBlobContent.file(hash, file));
+            }
         }
         return result;
     }
 
     private static boolean descriptorMatches(
-        List<FactRecord> facts, byte[] hash, int role, boolean required
+        List<FactRecord> facts, byte[] hash, long length, int role, boolean required
     ) {
         for (FactRecord fact : facts) for (var blob : fact.getBlobsList()) {
             if (MessageDigest.isEqual(hash, blob.getSha256().toByteArray()) &&
-                role == blob.getRoleValue() && required == blob.getRequired()) return true;
+                length == blob.getByteLength() && role == blob.getRoleValue() &&
+                required == blob.getRequired()) return true;
         }
         return false;
     }

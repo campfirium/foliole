@@ -43,3 +43,14 @@ it('rejects divergent content and manifest identities', () => {
   expect(() => createCompanionFramedSyncOutboundValue({ ...input(), manifestHash: digest(3) }))
     .toThrow('framed_sync_companion_manifest_identity_mismatch');
 });
+
+it('projects a native resource reference without a data_text surrogate', () => {
+  const hash = digest(7);
+  const storageKey = `${'07'.repeat(32)}.pdf`;
+  expect(createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{
+    blob: { byteLength: 4096n, required: true, role: 3, sha256: hash }, storageKey
+  }] }).blobs).toEqual([{
+    byte_length: '4096', required: true, role: 3, sha256: '07'.repeat(32),
+    storage_key: storageKey
+  }]);
+});
