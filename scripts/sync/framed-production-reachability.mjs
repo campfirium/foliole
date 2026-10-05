@@ -20,8 +20,7 @@ export const REACHABILITY_MANIFEST = Object.freeze({
         'electron/sync/companionLanIdentityGet.ts', 'electron/sync/companionLanIdentityPackPost.ts',
         'electron/sync/companionLanIdentityPushPost.ts'],
       fixed_partition: ['electron/sync/desktopSyncIdentityFactProbe.ts',
-        'lib/core/sync/syncIdentityNodeFactIndex.ts'],
-      protocol_fallback: ['electron/sync/desktopSyncGroupTransport.ts']
+        'lib/core/sync/syncIdentityNodeFactIndex.ts']
     },
     framed: [
       { root: 'electron/sync/desktopSyncCoordinator.ts', file: 'electron/sync/desktopFramedSyncHttp.ts' },
@@ -40,7 +39,7 @@ export const REACHABILITY_MANIFEST = Object.freeze({
       fixed_partition: ['lib/core/sync/syncIdentityNodeFactIndex.ts']
     },
     framed: [{ root: 'src/shared/platform/companionDesktopSyncObjects.ts',
-      file: 'lib/core/sync/framedSyncProtocolCodec.ts' }]
+      file: 'src/shared/platform/companion/sync/framed/companionFramedSyncInventoryRound.ts' }]
   },
   android: {
     kind: 'symbols', extension: '.java', scopes: ['android/app/src/main/java/com/foliole/android',
@@ -48,7 +47,7 @@ export const REACHABILITY_MANIFEST = Object.freeze({
     roots: ['android/app/src/main/java/com/foliole/android/FolioleCompanionSyncGroupServer.java',
       'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPlugin.java'],
     legacy: {
-      source_view: ['android/app/src/main/java/com/foliole/android/FolioleCompanionIdentitySourceView.java'],
+      source_view: ['android/app/src/main/java/com/foliole/android/FolioleCompanionSyncIdentityClientView.java'],
       sqlite_pack: ['android/app/src/main/java/com/foliole/android/FolioleCompanionSyncIdentityPackBuilder.java',
         'android/app/src/main/java/com/foliole/android/FolioleCompanionSyncPackRoutes.java'],
       identity_page_push: ['android/app/src/main/java/com/foliole/android/FolioleCompanionSyncIdentityRoutes.java',
@@ -58,9 +57,10 @@ export const REACHABILITY_MANIFEST = Object.freeze({
       file: 'android/app/src/main/java/com/foliole/android/framed/FramedSyncCodec.java' }]
   },
   ios: {
-    kind: 'symbols', extension: '.swift', scopes: ['ios/App/App', 'ios/App/SyncPackValidatorTests'],
+    kind: 'symbols', extension: '.swift', scopes: ['ios/App/App', 'ios/App/FramedSyncRuntimePackage/Sources',
+      'ios/App/SyncPackValidatorTests'],
     roots: ['ios/App/App/FolioleCompanionSyncGroupRequestRoutes.swift',
-      'ios/App/App/FolioleCompanionSyncIdentityClientPlugin.swift'],
+      'ios/App/App/FolioleCompanionSyncPlugin.swift'],
     legacy: {
       source_view: ['ios/App/App/FolioleCompanionSyncIdentityClientView.swift'],
       sqlite_pack: ['ios/App/App/FolioleCompanionSyncIdentityPackBuilder.swift',
@@ -69,7 +69,7 @@ export const REACHABILITY_MANIFEST = Object.freeze({
         'ios/App/App/FolioleCompanionSyncIdentityPushRoute.swift']
     },
     framed: [{ root: 'ios/App/App/FolioleCompanionSyncGroupRequestRoutes.swift',
-      file: 'ios/App/App/FolioleFramedSyncCodec.swift' }]
+      file: 'ios/App/FramedSyncRuntimePackage/Sources/FolioleFramedSyncRuntime/FolioleFramedSyncCodec.swift' }]
   }
 });
 

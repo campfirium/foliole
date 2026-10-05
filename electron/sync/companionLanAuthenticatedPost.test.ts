@@ -95,12 +95,7 @@ beforeEach(() => {
   );
 });
 
-it('binds sync push provenance to the authenticated Host', async () => {
-  authMock.authenticateCompanionRequest.mockImplementation(() => {
-    expect(databaseOwnerMock.active).toBe(true);
-    return { device_id: 'device-android', device_name: 'Android A5', ok: true } as never;
-  });
-  syncPushMock.handleCompanionSyncPush.mockResolvedValue({ acks: [] });
+it('retires the legacy sync push before authentication', async () => {
   const response = createResponse();
   const writeJson = createWriteJson();
   const requestBody = JSON.stringify({ items: [] });
@@ -111,8 +106,10 @@ it('binds sync push provenance to the authenticated Host', async () => {
 
   await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
 
-  expect(syncPushMock.handleCompanionSyncPush).toHaveBeenCalledWith(requestBody, 'Android A5', 'device-android');
-  expect(writeJson).toHaveBeenCalledWith(request, response, 200, { acks: [] }, 'POST, OPTIONS');
+  expect(syncPushMock.handleCompanionSyncPush).not.toHaveBeenCalled();
+  expect(authMock.authenticateCompanionRequest).not.toHaveBeenCalled();
+  expect(writeJson).toHaveBeenCalledWith(request, response, 410,
+    { error: 'framed_sync_required' }, 'POST, OPTIONS');
 });
 
 it('routes Readwise stop only after member authentication and decryption', async () => {
@@ -190,19 +187,20 @@ it('returns unknown post paths before reading oversized bodies', async () => {
   expect(syncPushMock.handleCompanionSyncPush).not.toHaveBeenCalled();
 });
 
-it('returns controlled json for oversized known post bodies before auth', async () => {
+it('retires legacy post paths before reading their bodies', async () => {
   const response = createResponse();
   const writeJson = createWriteJson();
   const request = createOversizedRequest('/companion/content-blobs');
 
   await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
 
-  expect(writeJson).toHaveBeenCalledWith(request, response, 413, { error: 'request_too_large' }, 'POST, OPTIONS');
+  expect(writeJson).toHaveBeenCalledWith(request, response, 410,
+    { error: 'framed_sync_required' }, 'POST, OPTIONS');
   expect(authMock.authenticateCompanionRequest).not.toHaveBeenCalled();
   expect(contentBlobMock.loadCompanionContentBlobBatch).not.toHaveBeenCalled();
 });
 
-it('serves signed content body blob batches', async () => {
+it('retires legacy content blob batches', async () => {
   const response = createResponse();
   const writeJson = vi.fn((_request, targetResponse, statusCode, payload) => {
     targetResponse.writeHead(statusCode, { 'Content-Type': 'application/json; charset=utf-8' });
@@ -216,10 +214,10 @@ it('serves signed content body blob batches', async () => {
 
   await handleAuthenticatedPost(request, response, new URL(request.url, 'http://127.0.0.1'), writeJson);
 
-  expect(contentBlobMock.loadCompanionContentBlobBatch).toHaveBeenCalledWith(requestBody);
-  expect(workgroupHttpMock.writeWorkgroupBinary).toHaveBeenCalledWith(
-    request, response, 200, Buffer.from('multipart-body'), 'multipart/mixed; boundary=foliole-test'
-  );
+  expect(contentBlobMock.loadCompanionContentBlobBatch).not.toHaveBeenCalled();
+  expect(workgroupHttpMock.writeWorkgroupBinary).not.toHaveBeenCalled();
+  expect(writeJson).toHaveBeenCalledWith(request, response, 410,
+    { error: 'framed_sync_required' }, 'POST, OPTIONS');
 });
 
 it('allows an unknown key holder to exchange member state before data sync', async () => {

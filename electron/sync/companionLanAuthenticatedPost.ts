@@ -1,27 +1,10 @@
 import type http from 'node:http';
 
-import { RESOURCE_AVAILABILITY_PATH } from '../../lib/platform/resourceAvailabilityContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonitor.js';
 
-import {
-  acknowledgeCompanionContentBlobs,
-  CONTENT_BLOB_ACK_PATH,
-  CONTENT_BLOB_BATCH_PATH,
-  loadCompanionContentBlobBatch
-} from './companionLanContentBlobs.js';
-import { handleCompanionIdentityPackPost,
-  SYNC_IDENTITY_PACK_PATH } from './companionLanIdentityPackPost.js';
-import { handleCompanionIdentityPushPost,
-  SYNC_IDENTITY_PUSH_PATH, SYNC_IDENTITY_PUSH_REQUEST_LIMIT } from './companionLanIdentityPushPost.js';
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
-import { writeWorkgroupBinary } from './companionLanResponses.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
-import { handleCompanionSyncPush, SYNC_PUSH_PATH } from './companionLanSyncPush.js';
-import {
-  acceptCompanionVersionPackReceipt,
-  VERSION_PACK_RECEIPT_PATH
-} from './companionLanVersionPackReceipt.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import {
   acceptDesktopSyncGroupMemberState,
@@ -30,8 +13,17 @@ import {
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { handleReadwiseGroupSetup, READWISE_GROUP_SETUP_PATH } from './readwiseGroupSetup.js';
 import { handleReadwiseOwnerStop, READWISE_OWNER_STOP_PATH } from './readwiseOwnerStop.js';
-import { loadResourceAvailability } from './resourceAvailability.js';
 import { decryptWorkgroupRequestBody } from './workgroupHttpCrypto.js';
+
+const RETIRED_DATA_PATHS = new Set([
+  '/companion/content-blob-ack',
+  '/companion/content-blobs',
+  '/companion/resource-availability',
+  '/companion/sync-identity-pack',
+  '/companion/sync-identity-push',
+  '/companion/sync-push',
+  '/companion/version-pack-receipt'
+]);
 
 type WriteJson = (
   request: http.IncomingMessage,
@@ -41,40 +33,20 @@ type WriteJson = (
   methods?: string
 ) => void;
 
-function resolveAuthenticatedPostRoute(parsedRequestUrl: URL) {
-  if (parsedRequestUrl.pathname === READWISE_GROUP_SETUP_PATH) return 'readwise-group-setup';
-  if (parsedRequestUrl.pathname === READWISE_OWNER_STOP_PATH) return 'readwise-owner-stop';
-  if (parsedRequestUrl.pathname === RESOURCE_AVAILABILITY_PATH) return 'resource-availability';
-  if (parsedRequestUrl.pathname === CONTENT_BLOB_ACK_PATH) return 'content-blob-ack';
-  if (parsedRequestUrl.pathname === CONTENT_BLOB_BATCH_PATH) return 'content-blob-batch';
-  if (parsedRequestUrl.pathname === SYNC_PUSH_PATH) return 'sync-push';
-  if (parsedRequestUrl.pathname === SYNC_IDENTITY_PACK_PATH) return 'identity-pack';
-  if (parsedRequestUrl.pathname === SYNC_IDENTITY_PUSH_PATH) return 'identity-push';
-  if (parsedRequestUrl.pathname === VERSION_PACK_RECEIPT_PATH) return 'version-pack-receipt';
-  if (parsedRequestUrl.pathname === SYNC_GROUP_MEMBER_STATE_PATH) return 'member-state';
-  if (isRetiredSyncJsonEndpoint(parsedRequestUrl)) return 'retired-sync-json';
+function resolveAuthenticatedPostRoute(url: URL) {
+  if (url.pathname === READWISE_GROUP_SETUP_PATH) return 'readwise-group-setup';
+  if (url.pathname === READWISE_OWNER_STOP_PATH) return 'readwise-owner-stop';
+  if (url.pathname === SYNC_GROUP_MEMBER_STATE_PATH) return 'member-state';
+  if (RETIRED_DATA_PATHS.has(url.pathname) || isRetiredSyncJsonEndpoint(url)) return 'retired';
   return null;
 }
 
-async function readAuthenticatedPostBody(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  writeJson: WriteJson
-) {
-  try {
-    return await readCompanionRequestBody(request,
-      request.url?.startsWith(SYNC_IDENTITY_PUSH_PATH) ? SYNC_IDENTITY_PUSH_REQUEST_LIMIT : undefined);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'invalid_request_body';
-    await runWithDatabaseConnectionOwner(() => writeJson(
-      request, response, message === 'request_too_large' ? 413 : 400,
-      { error: message }, 'POST, OPTIONS'
-    ));
-    return null;
-  }
+async function publishMemberStateEffects() {
+  notifyDesktopSyncGroupOverviewChanged();
+  setImmediate(() => { void refreshKeepImportMonitorFromSettings(); });
 }
 
-async function handleAuthenticatedRoute(args: {
+async function writeRouteResponse(args: {
   auth: Extract<ReturnType<typeof authenticateCompanionRequest>, { ok: true }>;
   bodyText: string;
   request: http.IncomingMessage;
@@ -83,101 +55,45 @@ async function handleAuthenticatedRoute(args: {
   writeJson: WriteJson;
 }) {
   const { auth, bodyText, request, response, route, writeJson } = args;
-  if (['identity-pack', 'identity-push', 'version-pack-receipt'].includes(route)) return handlePackRoute(args);
-  if (route === 'readwise-group-setup') {
-    await writeReadwiseGroupSetupResponse(args);
-  } else if (route === 'readwise-owner-stop') {
+  if (route === 'retired') {
+    writeJson(request, response, 410, { error: 'framed_sync_required' }, 'POST, OPTIONS');
+    return;
+  }
+  if (route === 'readwise-owner-stop') {
     try {
-      writeJson(request, response, 200, handleReadwiseOwnerStop(bodyText, auth.device_id), 'POST, OPTIONS');
+      writeJson(request, response, 200, handleReadwiseOwnerStop(bodyText, auth.device_id),
+        'POST, OPTIONS');
     } catch (error) {
       writeJson(request, response, 409, {
         error: error instanceof Error ? error.message : 'readwise_stop_failed'
       }, 'POST, OPTIONS');
     }
-  } else if (route === 'resource-availability') {
+    return;
+  }
+  if (route === 'readwise-group-setup') {
     try {
-      writeJson(request, response, 200, await loadResourceAvailability(bodyText), 'POST, OPTIONS');
+      writeJson(request, response, 200,
+        await handleReadwiseGroupSetup(bodyText, auth.device_id), 'POST, OPTIONS');
     } catch (error) {
-      writeJson(request, response, 400, {
-        error: error instanceof Error ? error.message : 'resource_availability_invalid_request'
+      writeJson(request, response, 409, {
+        error: error instanceof Error ? error.message : 'readwise_group_setup_failed'
       }, 'POST, OPTIONS');
     }
-  } else if (route === 'content-blob-ack') {
-    const ack = acknowledgeCompanionContentBlobs(bodyText);
-    writeJson(request, response, ack.status === 'ok' ? 200 : ack.statusCode,
-      ack.status === 'ok' ? ack : { error: ack.error }, 'POST, OPTIONS');
-  } else if (route === 'content-blob-batch') {
-    const batch = loadCompanionContentBlobBatch(bodyText);
-    if (batch.status === 'ready') writeWorkgroupBinary(request, response, 200, batch.body, batch.mimeType);
-    else writeJson(request, response, batch.statusCode, { error: batch.error }, 'POST, OPTIONS');
-  } else if (route === 'sync-push') {
-    try {
-      writeJson(request, response, 200, await handleCompanionSyncPush(bodyText, auth.device_name, auth.device_id), 'POST, OPTIONS');
-    } catch (error) {
-      writeJson(request, response, 400, {
-        error: error instanceof Error ? error.message : 'invalid_sync_push_payload'
-      }, 'POST, OPTIONS');
-    }
-  } else if (route === 'member-state') {
-    try {
-      const applied = acceptDesktopSyncGroupMemberState(bodyText, auth.device_id);
-      writeJson(request, response, 200, applied.state, 'POST, OPTIONS');
-      publishMemberStateEffects();
-      if (applied.localExited) setImmediate(() => {
+    return;
+  }
+  try {
+    const applied = acceptDesktopSyncGroupMemberState(bodyText, auth.device_id);
+    writeJson(request, response, 200, applied.state, 'POST, OPTIONS');
+    await publishMemberStateEffects();
+    if (applied.localExited) {
+      setImmediate(() => {
         void import('./lanWorkspaceSyncServer.js').then(({ stopLanWorkspaceSyncServer }) =>
           stopLanWorkspaceSyncServer());
       });
-    } catch (error) {
-      writeJson(request, response, 400, {
-        error: error instanceof Error ? error.message : 'sync_group_member_state_invalid'
-      }, 'POST, OPTIONS');
     }
-  }
-}
-
-function handlePackRoute(args: Parameters<typeof handleAuthenticatedRoute>[0]) {
-  if (args.route === 'identity-pack') return handleCompanionIdentityPackPost(
-    args.request, args.response, args.bodyText, args.auth.device_id);
-  if (args.route === 'identity-push') return handleCompanionIdentityPushPost(
-    args.request, args.response, args.bodyText, args.auth);
-  return handleVersionPackReceipt(args);
-}
-
-async function handleVersionPackReceipt(args: {
-  auth: Extract<ReturnType<typeof authenticateCompanionRequest>, { ok: true }>;
-  bodyText: string;
-  request: http.IncomingMessage;
-  response: http.ServerResponse;
-  writeJson: WriteJson;
-}) {
-  try {
-    args.writeJson(args.request, args.response, 200,
-      await acceptCompanionVersionPackReceipt(args.bodyText, args.auth.device_id), 'POST, OPTIONS');
   } catch (error) {
-    args.writeJson(args.request, args.response, 409, {
-      error: error instanceof Error ? error.message : 'node_version_receipt_invalid'
-    }, 'POST, OPTIONS');
-  }
-}
-
-function publishMemberStateEffects() {
-  notifyDesktopSyncGroupOverviewChanged();
-  setImmediate(() => { void refreshKeepImportMonitorFromSettings(); });
-}
-
-async function writeReadwiseGroupSetupResponse(args: {
-  auth: Extract<ReturnType<typeof authenticateCompanionRequest>, { ok: true }>;
-  bodyText: string;
-  request: http.IncomingMessage;
-  response: http.ServerResponse;
-  writeJson: WriteJson;
-}) {
-  const { auth, bodyText, request, response, writeJson } = args;
-  try {
-    writeJson(request, response, 200, await handleReadwiseGroupSetup(bodyText, auth.device_id), 'POST, OPTIONS');
-  } catch (error) {
-    writeJson(request, response, 409, {
-      error: error instanceof Error ? error.message : 'readwise_group_setup_failed'
+    writeJson(request, response, 400, {
+      error: error instanceof Error ? error.message : 'sync_group_member_state_invalid'
     }, 'POST, OPTIONS');
   }
 }
@@ -189,45 +105,42 @@ export async function handleAuthenticatedPost(
   writeJson: WriteJson
 ) {
   const route = resolveAuthenticatedPostRoute(parsedRequestUrl);
-  if (route === 'retired-sync-json') {
-    await runWithDatabaseConnectionOwner(() => writeJson(
-      request, response, 410, { error: 'sync_json_endpoint_retired' }, 'POST, OPTIONS'
-    ));
-    return true;
-  }
   if (!route) {
-    await runWithDatabaseConnectionOwner(() => writeJson(
-      request, response, 404, { error: 'not_found' }, 'POST, OPTIONS'
-    ));
+    writeJson(request, response, 404, { error: 'not_found' }, 'POST, OPTIONS');
     return true;
   }
-  const bodyText = await readAuthenticatedPostBody(request, response, writeJson);
-  if (bodyText === null) {
+  if (route === 'retired') {
+    writeJson(request, response, 410, { error: 'framed_sync_required' }, 'POST, OPTIONS');
     return true;
   }
-  await runWithDatabaseConnectionOwner(async () => {
-    // A trusted group-key holder may be unknown to this peer during membership
-    // convergence or recovery. Member-state learns that participant before data
-    // sync; this is intentional in the single-user trust model documented in
-    // companionRequestSignature.ts, not a per-device revocation boundary.
-    const auth = authenticateCompanionRequest({
-      allowUnknownDevice: route === 'member-state', bodyText, request,
-      requireMemberState: route !== 'member-state'
+  let bodyText: string;
+  try {
+    bodyText = await readCompanionRequestBody(request);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'invalid_request_body';
+    writeJson(request, response, message === 'request_too_large' ? 413 : 400,
+      { error: message }, 'POST, OPTIONS');
+    return true;
+  }
+  const auth = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequest({
+    allowUnknownDevice: route === 'member-state', bodyText, request,
+    requireMemberState: route !== 'member-state'
+  }));
+  if (!auth.ok) {
+    writeJson(request, response, auth.status_code, { error: auth.error }, 'POST, OPTIONS');
+    return true;
+  }
+  let decryptedBody: string;
+  try {
+    decryptedBody = decryptWorkgroupRequestBody(request, bodyText).toString('utf8');
+  } catch (error) {
+    writeJson(request, response, 401, {
+      error: error instanceof Error ? error.message : 'workgroup_aead_invalid'
     });
-    if (!auth.ok) {
-      writeJson(request, response, auth.status_code, { error: auth.error });
-      return;
-    }
-    let plaintext: string;
-    try {
-      plaintext = decryptWorkgroupRequestBody(request, bodyText).toString('utf8');
-    } catch (error) {
-      writeJson(request, response, 401, {
-        error: error instanceof Error ? error.message : 'workgroup_aead_invalid'
-      });
-      return;
-    }
-    await handleAuthenticatedRoute({ auth, bodyText: plaintext, request, response, route, writeJson });
-  });
+    return true;
+  }
+  await runWithDatabaseConnectionOwner(() => writeRouteResponse({
+    auth, bodyText: decryptedBody, request, response, route, writeJson
+  }));
   return true;
 }

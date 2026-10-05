@@ -42,11 +42,12 @@ it('atomically applies a missing root-to-base-to-child chain before committing i
 async () => {
   const fixture = await setup();
   const nodeId = 't326-three-generation-chain';
-  for (const [title, content] of [
+  const edits: Array<readonly [string, string]> = [
     ['Root', 'Root body'],
     ['Base', 'Base body'],
     ['Child', 'Child body']
-  ]) {
+  ];
+  for (const [title, content] of edits) {
     await fixture.left.seed({ content, nodeId, title });
   }
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath)).toMatchObject({

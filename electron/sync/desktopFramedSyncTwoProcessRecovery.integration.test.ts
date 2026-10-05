@@ -60,7 +60,7 @@ it('invalidates provisional fact and blob state after trailer authentication fai
 
   expect(readRecoveryEvidence(fixture.rightSnapshot.databasePath)).toMatchObject({
     attemptAudit: ['blob', 'fact'],
-    availableBlobs: 1,
+    availableBlobs: 0,
     blobChunks: 0,
     blobPins: 0,
     inboundAttempts: ['invalidated'],
@@ -77,6 +77,7 @@ it('invalidates provisional fact and blob state after trailer authentication fai
     body_text: 'Body recovered after an invalid attempt', object_id: 't326-attempt-recovery'
   })]);
   expect(readRecoveryEvidence(fixture.rightSnapshot.databasePath)).toMatchObject({
+    availableBlobs: 1,
     inboundAttempts: ['invalidated', 'promoted'],
     inboundFacts: 1,
     inboundFrames: 4,

@@ -123,24 +123,13 @@ describe('Sync Group member-state data gate', () => {
     })).toEqual({ error: 'sync_group_member_state_required', ok: false, status_code: 409 });
   });
 
-  it('allows a pending peer to request its restore pack and prerequisite facts', () => {
+  it('allows a restore-ready peer to use the framed data plane', () => {
     readiness.ready.mockReturnValue(true);
     readiness.mode.mockReturnValue('restore');
     expect(authenticateCompanionRequest({ nowMs: NOW_MS,
-      request: request('device-b', 'normal-during-restore'), requireMemberState: true
-    })).toMatchObject({ error: 'sync_group_member_state_required', ok: false });
-    expect(authenticateCompanionRequest({ nowMs: NOW_MS,
-      request: request('device-b', 'restore-pack', 'group-secret',
-        '/companion/sync-pack?after_state_seq=0&restore_id=restore-1'), requireMemberState: true
+      request: request('device-b', 'framed-restore', 'group-secret',
+        '/companion/framed-sync'), requireMemberState: true
     })).toMatchObject({ device_id: 'device-b', ok: true });
-    expect(authenticateCompanionRequest({ nowMs: NOW_MS,
-      request: request('device-b', 'restore-facts', 'group-secret',
-        '/companion/sync-pack-facts?after_state_seq=0&restore_id=restore-1'), requireMemberState: true
-    })).toMatchObject({ device_id: 'device-b', ok: true });
-    expect(authenticateCompanionRequest({ nowMs: NOW_MS,
-      request: request('device-b', 'unscoped-facts', 'group-secret',
-        '/companion/sync-pack-facts?after_state_seq=0'), requireMemberState: true
-    })).toMatchObject({ error: 'sync_group_member_state_required', ok: false });
   });
 });
 

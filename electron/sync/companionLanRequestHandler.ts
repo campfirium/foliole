@@ -5,21 +5,13 @@ import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
 import type { buildCompanionSyncDiagnostics } from './buildCompanionSyncDiagnostics.js';
-import { handleCompanionAttachmentGet } from './companionLanAttachmentGet.js';
-import { ATTACHMENT_RESOURCE_PATH } from './companionLanAttachmentResources.js';
 import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
-import {
-  CONTENT_BLOB_ACK_PATH,
-  CONTENT_BLOB_RESOURCE_PATH,
-  loadCompanionContentBlobResource
-} from './companionLanContentBlobs.js';
 import { loadCompanionLanDiscovery } from './companionLanDiscovery.js';
 import { handleProductionCompanionFramedSyncPost } from './companionLanFramedSyncRoute.js';
-import { handleCompanionIdentityGet } from './companionLanIdentityGet.js';
 import {
   buildWorkspaceSnapshotPayload,
 } from './companionLanPayloads.js';
-import { writeJson, writeOptions, writeWorkgroupBinary } from './companionLanResponses.js';
+import { writeJson, writeOptions } from './companionLanResponses.js';
 import {
   isRetiredSyncJsonEndpoint,
   SYNC_INDEX_PATH,
@@ -28,9 +20,6 @@ import {
   SYNC_REVIEW_LOG_PATH,
   SYNC_STATE_PATH
 } from './companionLanSyncObjects.js';
-import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
-import { handleCompanionSyncPackFactsGet, SYNC_PACK_FACTS_PATH } from './companionLanSyncPackFacts.js';
-import { handleSyncPackGet } from './companionLanSyncPackGet.js';
 import {
   handleWorkspaceMetadataGet,
   SYNC_DIAGNOSTICS_PATH,
@@ -44,31 +33,36 @@ import {
 } from './syncGroupJoinEndpoints.js';
 
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
+export const ATTACHMENT_RESOURCE_PATH = '/companion/attachment-resource';
 export const SYNC_GROUP_JOIN_ACCEPTANCE_PATH = '/sync-group/join-acceptance';
 export const SYNC_GROUP_JOIN_REQUESTS_PATH = '/sync-group/join-requests';
 export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
 export { SYNC_DIAGNOSTICS_PATH, WORKSPACE_VERSION_PATH };
-export { SYNC_IDENTITY_GLOBAL_PAGE_PATH, SYNC_IDENTITY_GLOBAL_SUMMARY_PATH
-} from './companionLanIdentityGlobalGet.js';
-export { SYNC_IDENTITY_FACT_SUMMARY_PATH,
-  SYNC_IDENTITY_NODE_FACTS_PATH,
-} from './companionLanIdentityGet.js';
-export { SYNC_IDENTITY_RESTORE_SET_PATH } from './companionLanIdentityRestore.js';
-export { SYNC_IDENTITY_PACK_PATH } from './companionLanIdentityPackPost.js';
-export { SYNC_IDENTITY_PUSH_PATH } from './companionLanIdentityPushPost.js';
 export {
-  ATTACHMENT_RESOURCE_PATH,
-  CONTENT_BLOB_RESOURCE_PATH,
-  CONTENT_BLOB_ACK_PATH,
   SYNC_INDEX_PATH,
   SYNC_NODE_VERSIONS_PATH,
   SYNC_OBJECTS_PATH,
-  SYNC_PACK_PATH,
-  SYNC_PACK_FACTS_PATH,
   SYNC_REVIEW_LOG_PATH,
   SYNC_GROUP_MEMBER_STATE_PATH,
   SYNC_STATE_PATH
 };
+
+const RETIRED_GET_PATHS = new Set([
+  '/companion/attachment-resource',
+  '/companion/content-blob',
+  '/companion/sync-identity-changed-page',
+  '/companion/sync-identity-fact-global-page',
+  '/companion/sync-identity-fact-page',
+  '/companion/sync-identity-fact-summary',
+  '/companion/sync-identity-global-page',
+  '/companion/sync-identity-global-summary',
+  '/companion/sync-identity-node-facts',
+  '/companion/sync-identity-page',
+  '/companion/sync-identity-restore-set',
+  '/companion/sync-identity-summary',
+  '/companion/sync-pack',
+  '/companion/sync-pack-facts'
+]);
 
 async function writeUnhandledRequestError(
   request: http.IncomingMessage,
@@ -126,21 +120,9 @@ async function handleAuthenticatedGet(
     deviceId: string;
   }
 ) {
-  if (request.method === 'GET' && isRetiredSyncJsonEndpoint(parsedRequestUrl)) {
-    writeJson(request, response, 410, { error: 'sync_json_endpoint_retired' }, 'GET, OPTIONS');
-    return;
-  }
-  if (parsedRequestUrl.pathname === ATTACHMENT_RESOURCE_PATH) {
-    await handleCompanionAttachmentGet(request, response, parsedRequestUrl);
-    return;
-  }
-  if (parsedRequestUrl.pathname === CONTENT_BLOB_RESOURCE_PATH) {
-    const resource = await loadCompanionContentBlobResource(parsedRequestUrl.searchParams.get('hash'));
-    if (resource.status === 'ready') {
-      writeWorkgroupBinary(request, response, 200, resource.body, resource.mimeType);
-    } else {
-      writeJson(request, response, resource.statusCode, { error: resource.error }, 'GET, OPTIONS');
-    }
+  if (request.method === 'GET' &&
+      (isRetiredSyncJsonEndpoint(parsedRequestUrl) || RETIRED_GET_PATHS.has(parsedRequestUrl.pathname))) {
+    writeJson(request, response, 410, { error: 'framed_sync_required' }, 'GET, OPTIONS');
     return;
   }
   if (handleWorkspaceMetadataGet(request, response, parsedRequestUrl, args)) return;
@@ -192,13 +174,6 @@ export function createLanWorkspaceSyncRequestHandler(args: {
       });
       return;
     }
-    if (parsedRequestUrl.pathname === SYNC_PACK_PATH) {
-      await handleSyncPackGet(request, response, parsedRequestUrl, auth.device_id, writeJson);
-      return;
-    }
-    if (await handleCompanionSyncPackFactsGet(request, response, parsedRequestUrl, auth.device_id, writeJson)) return;
-    if (await runWithDatabaseConnectionOwner(() => handleCompanionIdentityGet(
-      request, response, parsedRequestUrl, auth.device_id))) return;
     await runWithDatabaseConnectionOwner(() => handleAuthenticatedGet(
       request, response, parsedRequestUrl, {
         ...args,

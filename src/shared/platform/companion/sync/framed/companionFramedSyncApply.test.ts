@@ -180,10 +180,12 @@ function stage(database: Database.Database, prefix: string, value: {
   facts: readonly CanonicalFact[];
   transferId: Uint8Array;
 }) {
-  const attemptId = new Uint8Array(16).fill(value.transferId[0]);
+  const discriminator = value.transferId.at(0);
+  if (discriminator === undefined) throw new Error('transfer_id_empty');
+  const attemptId = new Uint8Array(16).fill(discriminator);
   database.prepare(`INSERT INTO ${prefix}_transfers VALUES
     (?, ?, ?, ?, ?, ?, ?, 'ready_to_apply')`).run(
-    value.transferId, new Uint8Array(32).fill(value.transferId[0]),
+    value.transferId, new Uint8Array(32).fill(discriminator),
     'sender', 'sender-epoch', 'receiver', 'receiver-epoch', attemptId
   );
   const insertFrame = database.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, ?, ?, ?)`);
@@ -219,7 +221,7 @@ function nodeRecord(): NativeSyncNodeRecord {
       id: 'node-1', image_regions: null, image_sources: null,
       import_content_fingerprint: null, import_source_fingerprint: null,
       is_title_manual: true, kind: 'topic', manual_child_order: null, opening_text: null,
-      parent_id: null, position: 0, priority: 0, resource_references: null, reveal: null,
+      parent_id: null, position: 0, priority: 0, resource_references: '[]', reveal: null,
       sequential_reading_enabled: false, shelved_at: null, title: 'Node', updated_at: time,
       virtual_filter: null
     }

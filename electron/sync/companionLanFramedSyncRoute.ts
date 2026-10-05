@@ -2,6 +2,7 @@ import type http from 'node:http';
 
 import {
   FRAMED_SYNC_FRAME_TYPES,
+  FRAMED_SYNC_PROTOCOL_VERSION,
   type FramedSyncContext
 } from '../../lib/core/sync/framedSyncContract.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
@@ -83,9 +84,12 @@ function toTransferContext(context: Readonly<{
   responderDeviceId: string;
   responderLibraryEpoch: string;
 }>): FramedSyncContext {
+  if (context.protocolVersion !== FRAMED_SYNC_PROTOCOL_VERSION) {
+    throw new Error('framed_sync_protocol_version_invalid');
+  }
   return {
     groupId: context.groupId,
-    protocolVersion: context.protocolVersion,
+    protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
     receiverDeviceId: context.responderDeviceId,
     receiverLibraryEpoch: context.responderLibraryEpoch,
     senderDeviceId: context.initiatorDeviceId,

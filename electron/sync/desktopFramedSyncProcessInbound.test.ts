@@ -38,7 +38,7 @@ function finish(facts: readonly CanonicalFact[], blobs: Parameters<typeof finish
   return finishDesktopFramedSyncTransfer({
     blobs, blobCount: BigInt(blobs.length),
     context: {
-      groupId: 'group', protocolVersion: 21, receiverDeviceId: 'receiver',
+      groupId: 'group', protocolVersion: 22, receiverDeviceId: 'receiver',
       receiverLibraryEpoch: 'epoch-r', senderDeviceId: 'sender', senderLibraryEpoch: 'epoch-s'
     },
     db: { transaction: vi.fn() } as unknown as DbPort,

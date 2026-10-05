@@ -49,8 +49,9 @@ it('projects one remote Node difference into exact requested fact identities and
 });
 
 it('echoes the complete observed Node snapshot instead of only the missing subset', () => {
-  const input = difference();
-  input.sourceSnapshot.requiredRelationIds = ['relation-1', 'relation-already-local'];
+  const base = difference();
+  const input = { ...base, sourceSnapshot: { ...base.sourceSnapshot,
+    requiredRelationIds: ['relation-1', 'relation-already-local'] } };
   const decoded = decodeFramedSyncDifferenceRequest(decodeAndValidateProtocolMessage(
     projectFramedSyncDifferenceRequest({ difference: input, roundId: hash(8, 16) }).encoded,
     FRAMED_SYNC_FRAME_TYPES.sessionControl

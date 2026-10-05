@@ -25,7 +25,7 @@ it.each([null, {}, { library_epoch: 'epoch', proof_revision: -1, source_proof_re
 
 it('fingerprints the complete attempt with canonical proof ordering', () => {
   const base = {
-    contract_version: SYNC_GROUP_JOIN_CONTRACT_VERSION,
+    contract_version: SYNC_GROUP_JOIN_CONTRACT_VERSION as 1,
     device: { canonical_library_path: '/library',
       device_anchor: 'a1111111-1111-4111-8111-111111111111',
       device_name: 'Phone', path_flavor: 'posix' as const, platform: 'ios-capacitor' },

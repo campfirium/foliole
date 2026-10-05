@@ -112,14 +112,8 @@
 		203B00000000000000000001 /* FolioleCompanionResourceAvailability.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000001 /* FolioleCompanionResourceAvailability.swift */; };
 		203B00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift */; };
 		203B00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift */; };
-		203B00000000000000000004 /* FolioleCompanionSyncIdentityRoutes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000004 /* FolioleCompanionSyncIdentityRoutes.swift */; };
-		203B00000000000000000005 /* FolioleCompanionSyncIdentityPackBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000005 /* FolioleCompanionSyncIdentityPackBuilder.swift */; };
 		203B00000000000000000022 /* FolioleCompanionIdentityPageContract.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000022 /* FolioleCompanionIdentityPageContract.swift */; };
-		203B00000000000000000023 /* FolioleCompanionIdentityFactChunkWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000023 /* FolioleCompanionIdentityFactChunkWriter.swift */; };
-		203B00000000000000000006 /* FolioleCompanionSyncIdentityPushRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000006 /* FolioleCompanionSyncIdentityPushRoute.swift */; };
 		203B00000000000000000007 /* FolioleCompanionSyncPackReceivedArchive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000007 /* FolioleCompanionSyncPackReceivedArchive.swift */; };
-		203B00000000000000000008 /* FolioleCompanionSyncIdentityClientView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000008 /* FolioleCompanionSyncIdentityClientView.swift */; };
-		203B00000000000000000009 /* FolioleCompanionSyncIdentityClientPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 203A00000000000000000009 /* FolioleCompanionSyncIdentityClientPlugin.swift */; };
 		221B00000000000000000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A00000000000000000001 /* ShareViewController.swift */; };
 		221B00000000000000000002 /* FolioleShareInboxQueue.swift in Share Sources */ = {isa = PBXBuildFile; fileRef = 221A00000000000000000002 /* FolioleShareInboxQueue.swift */; };
 		221B00000000000000000003 /* FolioleShareInboxQueue.swift in App Sources */ = {isa = PBXBuildFile; fileRef = 221A00000000000000000002 /* FolioleShareInboxQueue.swift */; };
@@ -737,14 +731,8 @@
 				203B00000000000000000001 /* FolioleCompanionResourceAvailability.swift in Sources */,
 				203B00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift in Sources */,
 				203B00000000000000000003 /* FolioleCompanionSyncGroupRequestRoutes.swift in Sources */,
-				203B00000000000000000004 /* FolioleCompanionSyncIdentityRoutes.swift in Sources */,
-				203B00000000000000000005 /* FolioleCompanionSyncIdentityPackBuilder.swift in Sources */,
 				203B00000000000000000022 /* FolioleCompanionIdentityPageContract.swift in Sources */,
-				203B00000000000000000023 /* FolioleCompanionIdentityFactChunkWriter.swift in Sources */,
-				203B00000000000000000006 /* FolioleCompanionSyncIdentityPushRoute.swift in Sources */,
 				203B00000000000000000007 /* FolioleCompanionSyncPackReceivedArchive.swift in Sources */,
-				203B00000000000000000008 /* FolioleCompanionSyncIdentityClientView.swift in Sources */,
-				203B00000000000000000009 /* FolioleCompanionSyncIdentityClientPlugin.swift in Sources */,
 				50F034111FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift in Sources */,
 				50F195111FED79650016851F /* FolioleCompanionSyncGroupMemberStateEndpoint.swift in Sources */,
 				50F195311FED79650016851F /* FolioleCompanionSyncGroupDiscoveryPayload.swift in Sources */,

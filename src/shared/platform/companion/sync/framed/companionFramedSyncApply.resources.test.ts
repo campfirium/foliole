@@ -113,7 +113,7 @@ function nodeRecord(): NativeSyncNodeRecord {
       id: 'node-1', image_regions: null, image_sources: null,
       import_content_fingerprint: null, import_source_fingerprint: null, is_title_manual: true,
       kind: 'topic', manual_child_order: null, opening_text: null, parent_id: null,
-      position: 0, priority: 0, resource_references: null, reveal: null,
+      position: 0, priority: 0, resource_references: '[]', reveal: null,
       sequential_reading_enabled: false, shelved_at: null, title: 'Node', updated_at: time,
       virtual_filter: null
     }

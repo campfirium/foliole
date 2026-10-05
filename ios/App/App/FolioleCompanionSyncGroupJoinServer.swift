@@ -7,7 +7,6 @@ final class FolioleCompanionSyncGroupJoinServer {
     let dataBridge: FolioleCompanionSyncGroupDataRequesting?
     private let listener: NWListener
     let provider: FolioleCompanionSyncGroupJoinProvider
-    let snapshots: FolioleCompanionSyncGroupSnapshot?
     var memberStateReady = [String: String]()
     private let queue = DispatchQueue(label: "com.campfirium.foliole.ios.sync-group-provider")
     let stateChanged: () -> Void
@@ -23,7 +22,6 @@ final class FolioleCompanionSyncGroupJoinServer {
         self.discovery = discovery
         self.provider = provider
         self.dataBridge = dataBridge
-        snapshots = dataBridge.map(FolioleCompanionSyncGroupSnapshot.init)
         if dataBridge != nil {
             let support = try FileManager.default.url(
                 for: .applicationSupportDirectory, in: .userDomainMask,
@@ -61,7 +59,7 @@ final class FolioleCompanionSyncGroupJoinServer {
         return try outcome.get()
     }
 
-    func stop() { listener.cancel(); snapshots?.close() }
+    func stop() { listener.cancel() }
 
     func updateDiscovery(_ value: [String: Any]) {
         queue.sync {

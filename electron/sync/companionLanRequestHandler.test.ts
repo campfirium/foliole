@@ -98,7 +98,6 @@ vi.mock('./workgroupHttpCrypto.js', () => ({
 }));
 
 import {
-  CONTENT_BLOB_RESOURCE_PATH,
   createLanWorkspaceSyncRequestHandler,
   WORKSPACE_VERSION_PATH,
   WORKSPACE_SNAPSHOT_PATH
@@ -136,7 +135,7 @@ beforeEach(() => {
   });
 });
 
-it('dispatches the framed sync binary route before legacy authenticated POST handlers', async () => {
+it('dispatches the framed sync binary route before authenticated JSON handlers', async () => {
   framedSyncRouteMock.handle.mockResolvedValueOnce(true);
   const response = createResponse();
   const request = {
@@ -149,24 +148,13 @@ it('dispatches the framed sync binary route before legacy authenticated POST han
   });
 });
 
-it('prepares the signed sync pack under the database owner and streams after releasing it', async () => {
+it('rejects the retired SQLite sync-pack endpoint', async () => {
   const response = createResponse();
   await createHandler()({
     headers: {}, method: 'GET', url: '/companion/sync-pack?after_state_seq=0&fact_index_id=probe-1'
   } as http.IncomingMessage, response);
 
-  expect(response.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
-  expect(databaseOwnerMock.run).toHaveBeenCalledTimes(3);
-  expect(response.writtenWhileOwned()).toBe(false);
-});
-
-it('requires fact probing before serving a sync pack', async () => {
-  const response = createResponse();
-  syncPackMock.buildCompanionSyncPackResource.mockClear();
-  await createHandler()({
-    headers: {}, method: 'GET', url: '/companion/sync-pack?after_state_seq=0'
-  } as http.IncomingMessage, response);
-  expect(response.writeHead).toHaveBeenCalledWith(409, expect.any(Object));
+  expect(response.writeHead).toHaveBeenCalledWith(410, expect.any(Object));
   expect(syncPackMock.buildCompanionSyncPackResource).not.toHaveBeenCalled();
 });
 
@@ -247,20 +235,15 @@ it('loads lightweight version metadata for the version endpoint', async () => {
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });
 
-it('serves signed content body blobs without loading the workspace snapshot', async () => {
+it('rejects the retired out-of-band content blob endpoint', async () => {
   const response = createResponse();
   await createHandler()({
     headers: {},
     method: 'GET',
-    url: `${CONTENT_BLOB_RESOURCE_PATH}?hash=abc`
+    url: '/companion/content-blob?hash=abc'
   } as http.IncomingMessage, response);
 
-  expect(response.writeHead).toHaveBeenCalledWith(200, {
-    'Content-Length': Buffer.byteLength('encrypted-resource'),
-    'Content-Type': 'application/vnd.foliole.workgroup-aead+json',
-    'X-Foliole-Original-Content-Type': 'text/plain'
-  });
-  expect(response.end).toHaveBeenCalledWith(Buffer.from('encrypted-resource'));
-  expect(contentBlobResourceMock.loadCompanionContentBlobResource).toHaveBeenCalledWith('abc');
+  expect(response.writeHead).toHaveBeenCalledWith(410, expect.any(Object));
+  expect(contentBlobResourceMock.loadCompanionContentBlobResource).not.toHaveBeenCalled();
   expect(workspaceSnapshotMock.loadWorkspaceSnapshot).not.toHaveBeenCalled();
 });

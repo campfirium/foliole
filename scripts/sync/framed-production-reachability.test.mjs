@@ -36,13 +36,13 @@ function fixtureManifest() {
 }
 
 describe('framed production reachability', () => {
-  it('reports the current repository as pending cutover without claiming legacy retirement', () => {
+  it('proves the current production roots use only framed transport', () => {
     const audit = auditFramedProductionReachability(process.cwd());
-    expect(audit.status).toBe('pending_cutover');
-    expect(audit.cutoverReady).toBe(false);
-    expect(new Set(audit.legacyProductionPaths.map((item) => item.platform)))
-      .toEqual(new Set(['electron', 'companion', 'android', 'ios']));
-    expect(() => assertFramedProductionCutover(audit)).toThrow('framed_production_cutover_incomplete');
+    expect(audit.status).toBe('cutover_ready');
+    expect(audit.cutoverReady).toBe(true);
+    expect(audit.legacyProductionPaths).toEqual([]);
+    expect(audit.missingFramedPaths).toEqual([]);
+    expect(() => assertFramedProductionCutover(audit)).not.toThrow();
   });
 
   it('uses import edges and ignores comments or ordinary strings', () => {

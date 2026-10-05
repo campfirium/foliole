@@ -32,6 +32,14 @@ const databases: Database.Database[] = [];
 const servers: http.Server[] = [];
 const groupSecret = Buffer.alloc(32, 8).toString('base64url');
 const groupKey = new Uint8Array(Buffer.from(groupSecret, 'base64url'));
+type RequestContext = Readonly<{
+  groupId: string;
+  initiatorDeviceId: string;
+  initiatorLibraryEpoch: string;
+  protocolVersion: typeof FRAMED_SYNC_PROTOCOL_VERSION;
+  responderDeviceId: string;
+  responderLibraryEpoch: string;
+}>;
 const context = {
   groupId: 'group-a',
   initiatorDeviceId: 'device-a',
@@ -39,7 +47,7 @@ const context = {
   protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
   responderDeviceId: 'device-b',
   responderLibraryEpoch: 'epoch-b'
-} as const;
+} as const satisfies RequestContext;
 
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) =>
@@ -87,7 +95,7 @@ async function commitTestReceipt(
   responder: ReturnType<typeof peer>,
   staging: ReturnType<typeof createDesktopFramedSyncStaging>,
   transferId: Uint8Array,
-  requestContext = context
+  requestContext: RequestContext = context
 ) {
   const publication = await staging.loadOutboundPublication(transferId);
   if (!publication) throw new Error('test_publication_missing');

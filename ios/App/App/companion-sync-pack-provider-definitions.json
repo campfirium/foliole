@@ -152,6 +152,7 @@
         "device-delivery-receipts-v1",
         "device-sync-groups-v1",
         "dynamic-node-version-chains-v1",
+        "framed-sync-v22",
         "global-object-identity-v2",
         "group-key-routing-v1",
         "independent-node-fact-pages-v1",
@@ -174,9 +175,9 @@
         "workgroup-aead-v1",
         "workgroup-restore-v1"
       ],
-      "max_supported_version": 21,
-      "min_supported_version": 21,
-      "version": 21
+      "max_supported_version": 22,
+      "min_supported_version": 22,
+      "version": 22
     },
     "resourceKinds": [
       "attachment",
@@ -237,6 +238,7 @@
       "device-delivery-receipts-v1",
       "device-sync-groups-v1",
       "dynamic-node-version-chains-v1",
+      "framed-sync-v22",
       "global-object-identity-v2",
       "group-key-routing-v1",
       "independent-node-fact-pages-v1",
@@ -259,9 +261,9 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 21,
-    "min_supported_version": 21,
-    "version": 21
+    "max_supported_version": 22,
+    "min_supported_version": 22,
+    "version": 22
   },
   "schemaVersion": 92,
   "stateCopyIndex": 2,
