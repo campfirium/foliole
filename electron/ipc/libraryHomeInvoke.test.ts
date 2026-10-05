@@ -44,7 +44,7 @@ beforeEach(async () => {
 afterEach(async () => {
   vi.restoreAllMocks();
   closeDatabaseConnection();
-  await fs.rm(tempRoot, { recursive: true, force: true });
+  await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 });
 });
 
 function updateHome(target: string, confirmed = false) {

@@ -7,6 +7,10 @@ import ts from 'typescript';
 
 const TS_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
 
+function repositoryPath(file) {
+  return file.replaceAll('\\', '/');
+}
+
 export const REACHABILITY_MANIFEST = Object.freeze({
   electron: {
     kind: 'typescript',
@@ -74,6 +78,7 @@ export const REACHABILITY_MANIFEST = Object.freeze({
 });
 
 export function classifyReference(file) {
+  file = repositoryPath(file);
   if (/\.fixture\.|\.testSupport\.|\/fixtures\//u.test(file)) return 'fixture';
   if (/\.(?:test|spec)\.|\/(?:test|tests|androidTest|SyncPackValidatorTests)\//u.test(file)) return 'test';
   return 'production';
@@ -83,16 +88,16 @@ function filesUnder(root, relative, extension) {
   const absolute = path.join(root, relative);
   if (!fs.existsSync(absolute)) return [];
   return fs.readdirSync(absolute, { withFileTypes: true }).flatMap((entry) => {
-    const next = path.join(relative, entry.name);
+    const next = repositoryPath(path.join(relative, entry.name));
     return entry.isDirectory() ? filesUnder(root, next, extension) : next.endsWith(extension) ? [next] : [];
   });
 }
 
 function resolveImport(root, importer, specifier) {
   if (!specifier.startsWith('.')) return null;
-  const base = path.normalize(path.join(path.dirname(importer), specifier)).replace(/\.js$/u, '');
+  const base = repositoryPath(path.normalize(path.join(path.dirname(importer), specifier))).replace(/\.js$/u, '');
   const candidates = [base, ...TS_EXTENSIONS.map((ext) => `${base}${ext}`),
-    ...TS_EXTENSIONS.map((ext) => path.join(base, `index${ext}`))];
+    ...TS_EXTENSIONS.map((ext) => repositoryPath(path.join(base, `index${ext}`)))];
   return candidates.find((candidate) => fs.existsSync(path.join(root, candidate))) ?? null;
 }
 

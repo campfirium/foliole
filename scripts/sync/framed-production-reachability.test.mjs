@@ -102,6 +102,7 @@ describe('reference classification', () => {
     ['src/runtime.ts', 'production'],
     ['src/runtime.test.ts', 'test'],
     ['android/app/src/androidTest/Runtime.java', 'test'],
+    ['android\\app\\src\\androidTest\\Runtime.java', 'test'],
     ['electron/runtime.fixture.ts', 'fixture'],
     ['electron/runtime.testSupport.ts', 'fixture']
   ])('classifies %s as %s', (file, expected) => {
