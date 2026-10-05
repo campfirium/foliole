@@ -6,6 +6,7 @@ import type { DbPort, DbRow } from './dbPort.js';
 import { nodePositionFactId, nodePositionWriteStatements, type NodePositionPayload } from './nodeVersionMemberPositionFact.js';
 import { describeLocalNodePosition, LOCAL_NODE_POSITION_OWNER_SQL,
   LOCAL_NODE_POSITION_SQL } from './nodeVersionMemberPositionRead.js';
+import { nodePositionReady, nodePositionReadyWithDriver } from './nodeVersionPositionReadiness.js';
 
 type Owner = Pick<NodePositionPayload, 'group_id' | 'device_identity_key' | 'library_epoch' | 'proof_revision'>;
 type PositionRow = { version_id: string; adopted: number; complete: number } & DbRow;
@@ -53,7 +54,7 @@ export async function publishLocalNodePositionPage(port: DbPort, nodeIds: string
   for (const row of rows) {
     const payload = declaration(row.node_id, owner, positionRowsSchema.parse(JSON.parse(row.rows_json)),
       byFact.get(nodePositionFactId({ ...owner, object_id: row.node_id })));
-    if (!payload) continue;
+    if (!payload || !await nodePositionReady(port, row.node_id, payload.adopted_version_id)) continue;
     await port.run(ADVANCE_REVISION_SQL);
     for (const statement of nodePositionWriteStatements(payload)) await port.run(statement.sql, statement.params);
     owner.proof_revision = payload.proof_revision;
@@ -69,7 +70,7 @@ export async function publishLocalNodePosition(port: DbPort, nodeId: string) {
     [nodePositionFactId({ ...owner, object_id: nodeId })]);
   const rows = await port.query<PositionRow>(LOCAL_NODE_POSITION_SQL, [nodeId, nodeId]);
   const payload = declaration(nodeId, owner, rows, known);
-  if (!payload) return;
+  if (!payload || !await nodePositionReady(port, nodeId, payload.adopted_version_id)) return;
   await port.run(ADVANCE_REVISION_SQL);
   for (const statement of nodePositionWriteStatements(payload)) await port.run(statement.sql, statement.params);
 }
@@ -83,7 +84,7 @@ export function publishLocalNodePositionWithDriver(driver: DatabaseDriver, nodeI
     [nodePositionFactId({ ...owner, object_id: nodeId })]);
   const payload = declaration(nodeId, owner,
     driver.queryAll<PositionRow>(LOCAL_NODE_POSITION_SQL, [nodeId, nodeId]), known ?? undefined);
-  if (!payload) return;
+  if (!payload || !nodePositionReadyWithDriver(driver, nodeId, payload.adopted_version_id)) return;
   driver.execute(ADVANCE_REVISION_SQL);
   for (const statement of nodePositionWriteStatements(payload)) driver.execute(statement.sql, statement.params);
 }

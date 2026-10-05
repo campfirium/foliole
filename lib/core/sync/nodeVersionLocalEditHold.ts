@@ -40,6 +40,6 @@ export async function releaseLocalEditBase(port: DbPort, holdId: string, nodeId:
 export async function retainSubmittedLocalEdit(port: DbPort, nodeId: string, baseId: string, versionId: string) {
   await port.run(`INSERT OR IGNORE INTO node_version_local_holds (hold_id, object_id, version_id, created_at)
     SELECT hold_id || ':edit:' || ?, object_id, ?, created_at FROM node_version_local_holds
-    WHERE object_id = ? AND version_id = ? AND instr(hold_id, ':edit:') = 0`,
+    WHERE object_id = ? AND version_id = ? AND instr(hold_id, ':edit:') = 0 AND substr(hold_id, 1, 14) <> 'sync-exchange:'`,
   [versionId, versionId, nodeId, baseId]);
 }

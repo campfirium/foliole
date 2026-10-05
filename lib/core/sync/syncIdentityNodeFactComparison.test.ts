@@ -23,6 +23,13 @@ function description(full: boolean): SyncIdentityNodeFactDescription {
     requirements: [{ version_id: 'restored', frozen: 0 }], reviews: [] };
 }
 
+function branch(headId: string, parentId: string | null = null): SyncIdentityNodeFactDescription {
+  return { nodeId: 'topic', headId,
+    versions: parentId ? [version(parentId), version(headId, parentId)] : [version(headId)],
+    parents: parentId ? [{ version_id: headId, parent_version_id: parentId, ordinal: 0 }] : [],
+    requirements: [{ version_id: headId, frozen: 0 }], reviews: [] };
+}
+
 it('requests a missing original tombstone head from a peer that retains it', () => {
   const missing = { ...description(true), versions: [], parents: [] };
   expect(compareSyncIdentityNodeFacts(missing, description(true))).toEqual({
@@ -80,6 +87,7 @@ it('retains an unabsorbed leaf branch behind an unchanged current state', () => 
 
 it('detects a missing primary edge even when legacy parent metadata remains', () => {
   const left = description(true);
+  left.requirements.push({ version_id: 'base', frozen: 0 });
   left.parents = left.parents.filter((edge) => edge.version_id !== 'restored');
   expect(compareSyncIdentityNodeFacts(left, description(true))).toEqual({
     leftNeedsRepair: true, rightNeedsRepair: false
@@ -92,4 +100,39 @@ it('rejects an immutable version identity collision', () => {
   right.versions[1] = { ...right.versions[1]!, content_hash: 'different' };
   expect(() => compareSyncIdentityNodeFacts(left, right))
     .toThrow('sync_pack_node_version_immutable_mismatch:other');
+});
+
+it('repairs an ancestor head without repairing its descendant', () => {
+  const ancestor = branch('base');
+  const descendant = branch('next', 'base');
+  expect(compareSyncIdentityNodeFacts(ancestor, descendant)).toEqual({
+    leftNeedsRepair: true, rightNeedsRepair: false
+  });
+  expect(compareSyncIdentityNodeFacts(descendant, ancestor)).toEqual({
+    leftNeedsRepair: false, rightNeedsRepair: true
+  });
+});
+
+it('repairs both concurrent heads from their shared original parent graph', () => {
+  const left = branch('left', 'base');
+  const right = branch('right', 'base');
+  expect(compareSyncIdentityNodeFacts(left, right)).toEqual({
+    leftNeedsRepair: true, rightNeedsRepair: true
+  });
+});
+
+it('rejects a shared immutable collision before comparing different heads', () => {
+  const left = branch('left', 'base');
+  const right = branch('right', 'base');
+  right.versions[0] = { ...right.versions[0]!, content_hash: 'different' };
+  expect(() => compareSyncIdentityNodeFacts(left, right))
+    .toThrow('sync_pack_node_version_immutable_mismatch:base');
+});
+
+it('does not resurrect retired parent edges between shared historical identities', () => {
+  const left = description(true);
+  left.parents = left.parents.filter((edge) => edge.version_id !== 'merged');
+  expect(compareSyncIdentityNodeFacts(left, description(true))).toEqual({
+    leftNeedsRepair: false, rightNeedsRepair: false
+  });
 });

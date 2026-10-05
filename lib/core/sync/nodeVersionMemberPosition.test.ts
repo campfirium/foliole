@@ -78,3 +78,25 @@ it('keeps exit claims until all live positions absorb them, and stale relays can
   expect(await applyNodeMemberPosition(port, record(position({ adopted_version_id: 'B' })))).toBe(false);
   expect(readPosition().resolved_revision).toBe(4);
 });
+
+it('does not publish a complete fork tip while its necessary common base body is absent', async () => {
+  sqlite.exec(`INSERT INTO node_sync_versions
+    (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
+    VALUES ('fork', 'node', 'B', 'local', 'now', 'fork-hash', 'fork-body', '{"content":"fork-body"}');
+    INSERT INTO node_sync_version_parents VALUES ('fork', 'B', 0);
+    UPDATE node_sync_versions SET body_text = NULL, snapshot_json = '{"content":null}' WHERE version_id = 'B'`);
+  await port.transaction((tx) => publishLocalNodePosition(tx, 'node'));
+  expect(readPosition('local')).toBeUndefined();
+});
+
+it('keeps an exit claim when a newly received local fork has not absorbed it', async () => {
+  await applyNodeMemberPosition(port, record(position({ adopted_version_id: 'B' })));
+  await port.transaction((tx) => publishLocalNodePosition(tx, 'node'));
+  sqlite.exec(`UPDATE sync_group_devices SET state = 'left' WHERE device_identity_key = 'remote';
+    INSERT INTO node_sync_versions
+    (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
+    VALUES ('fork', 'node', 'A', 'remote', 'now', 'fork-hash', 'fork-body', '{"content":"fork-body"}');
+    INSERT INTO node_sync_version_parents VALUES ('fork', 'A', 0)`);
+  await port.run(RETIRE_RESOLVED_NODE_POSITIONS_SQL, ['node']);
+  expect(readPosition().resolved_revision).toBeNull();
+});

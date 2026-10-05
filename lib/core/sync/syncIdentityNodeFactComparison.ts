@@ -1,4 +1,5 @@
 import { planNodeVersionChain, type ChainVersion } from './nodeVersionChainPlan.js';
+import { requiredNodeVersionRelations } from './nodeVersionRequiredRelations.js';
 import type { SyncParentFact, SyncVersionFact } from './syncPackFactPresence.js';
 
 export interface SyncIdentityNodeFactDescription {
@@ -50,12 +51,12 @@ function assertDescription(side: SyncIdentityNodeFactDescription) {
   }
 }
 
-function assertSameIdentities(left: SyncIdentityNodeFactDescription,
+export function assertCompatibleSyncIdentityNodeFacts(left: SyncIdentityNodeFactDescription,
   right: SyncIdentityNodeFactDescription) {
   assertDescription(left);
   assertDescription(right);
-  if (left.nodeId !== right.nodeId || left.headId !== right.headId) {
-    throw new Error('sync_identity_node_heads_divergent');
+  if (left.nodeId !== right.nodeId) {
+    throw new Error('sync_identity_node_fact_description_invalid');
   }
   const versions = new Map(left.versions.map((fact) => [fact.version_id, fact]));
   for (const fact of right.versions) {
@@ -83,7 +84,7 @@ function graphVersion(fact: SyncVersionFact): ChainVersion {
     snapshot_json: fact.body_hash === null ? '{"content":null}' : '{}' };
 }
 
-function projected(description: SyncIdentityNodeFactDescription,
+export function selectRequiredSyncIdentityNodeFacts(description: SyncIdentityNodeFactDescription,
   requirements: SyncIdentityNodeFactDescription['requirements']) {
   const protectedIds = new Set([description.headId,
     ...requirements.map((row) => row.version_id)]);
@@ -112,11 +113,11 @@ function projected(description: SyncIdentityNodeFactDescription,
     .map((row) => ({ immutable: immutableVersion(row),
       bodyHash: row.body_hash, ancestors: closure(row.version_id) }))
     .sort((a, b) => String(a.immutable[0]).localeCompare(String(b.immutable[0])));
-  const missingPrimary = description.versions.some((row) =>
-    requiredBodies.has(row.version_id) && row.parent_version_id !== null &&
-    !description.parents.some((edge) => edge.version_id === row.version_id &&
-      edge.parent_version_id === row.parent_version_id && edge.ordinal === 0));
-  return { facts, missingPrimary };
+  const requiredParents = requiredNodeVersionRelations(plan.relations, requiredBodies, description.parents);
+  const versionIds = new Set([...requiredBodies, ...requiredParents.flatMap((edge) =>
+    [edge.version_id, edge.parent_version_id])]);
+  return { facts, bodyIds: [...requiredBodies].sort(), versionIds: [...versionIds].sort(),
+    parents: requiredParents };
 }
 
 function mergedGraph(left: SyncIdentityNodeFactDescription,
@@ -159,27 +160,27 @@ function missingTerminalVersion(side: SyncIdentityNodeFactDescription,
 }
 
 function missingOriginalRelation(side: SyncIdentityNodeFactDescription,
-  evidence: SyncIdentityNodeFactDescription) {
-  const versions = new Set(side.versions.map((row) => row.version_id));
+  requiredParents: SyncParentFact[]) {
   const parents = new Set(side.parents.map((row) =>
     JSON.stringify([row.version_id, row.ordinal, row.parent_version_id])));
-  return evidence.parents.some((row) => versions.has(row.version_id) &&
-    versions.has(row.parent_version_id) && !parents.has(JSON.stringify([
+  return requiredParents.some((row) => !parents.has(JSON.stringify([
       row.version_id, row.ordinal, row.parent_version_id])));
 }
 
 /** Compare each device against evidence under its own retention obligations. */
 export function compareSyncIdentityNodeFacts(left: SyncIdentityNodeFactDescription,
   right: SyncIdentityNodeFactDescription) {
-  assertSameIdentities(left, right);
+  assertCompatibleSyncIdentityNodeFacts(left, right);
   const evidence = mergedGraph(left, right);
-  const requiredLeft = projected(evidence, left.requirements);
-  const requiredRight = projected(evidence, right.requirements);
+  const requiredLeft = selectRequiredSyncIdentityNodeFacts(
+    { ...evidence, headId: left.headId }, left.requirements);
+  const requiredRight = selectRequiredSyncIdentityNodeFacts(
+    { ...evidence, headId: right.headId }, right.requirements);
   const ownProjection = (side: SyncIdentityNodeFactDescription,
-    required: ReturnType<typeof projected>) => {
+    required: ReturnType<typeof selectRequiredSyncIdentityNodeFacts>) => {
     try {
-      const held = projected(side, side.requirements);
-      return held.missingPrimary || JSON.stringify(held.facts) !== JSON.stringify(required.facts);
+      const held = selectRequiredSyncIdentityNodeFacts(side, side.requirements);
+      return JSON.stringify(held.facts) !== JSON.stringify(required.facts);
     } catch (error) {
       if (error instanceof Error && error.message.startsWith('sync_identity_fact_projection_')) {
         return true;
@@ -187,8 +188,8 @@ export function compareSyncIdentityNodeFacts(left: SyncIdentityNodeFactDescripti
       throw error;
     }
   };
-  return { leftNeedsRepair: missingOriginalRelation(left, evidence) || missingTerminalVersion(left, evidence) ||
+  return { leftNeedsRepair: missingOriginalRelation(left, requiredLeft.parents) || missingTerminalVersion(left, evidence) ||
       ownProjection(left, requiredLeft) || needsReviewRepair(left, right),
-    rightNeedsRepair: missingOriginalRelation(right, evidence) || missingTerminalVersion(right, evidence) ||
+    rightNeedsRepair: missingOriginalRelation(right, requiredRight.parents) || missingTerminalVersion(right, evidence) ||
       ownProjection(right, requiredRight) || needsReviewRepair(right, left) };
 }
