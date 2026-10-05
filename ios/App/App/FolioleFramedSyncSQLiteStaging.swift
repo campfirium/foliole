@@ -1,11 +1,19 @@
+import CryptoKit
 import Foundation
 import FolioleFramedSyncRuntime
 import SQLite3
 
 final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
     private var database: OpaquePointer?
+    private let resources: FolioleFramedSyncInboundResources
 
-    init(databaseURL: URL) throws {
+    init(databaseURL: URL, resourceRoot: URL? = nil) throws {
+        let transferDatabase = try FolioleFramedSyncTransferDatabase(url: databaseURL)
+        resources = try .init(
+            database: transferDatabase,
+            root: resourceRoot ?? databaseURL.deletingLastPathComponent()
+                .appendingPathComponent("attachments", isDirectory: true)
+        )
         let flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX
         guard sqlite3_open_v2(databaseURL.path, &database, flags, nil) == SQLITE_OK,
               let database else {
@@ -30,6 +38,11 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
             throw FolioleFramedSyncValidationError("framed_sync_stage_plaintext_mismatch")
         }
         let header = try FolioleFramedSyncWireHeader(decoding: frame.header)
+        let resourceChunk: Foliole_Sync_V22_BlobChunk?
+        if case .blobChunk(let chunk) = validated.payload,
+           try resources.isResource(
+            transferID: frame.transferID, attemptID: frame.attemptID, hash: chunk.blobHash
+           ) { resourceChunk = chunk } else { resourceChunk = nil }
         try execute("BEGIN IMMEDIATE")
         do {
             if case .transferHeader(let value) = validated.payload {
@@ -37,13 +50,29 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
             } else {
                 try requireReceivingAttempt(frame)
             }
-            let outcome = try insertOrCompare(frame, header: header)
+            let outcome = try insertOrCompare(frame, header: header, digestOnly: resourceChunk != nil)
             try execute("COMMIT")
+            if case .transferHeader(let value) = validated.payload {
+                try resources.admit(
+                    transferID: frame.transferID, attemptID: frame.attemptID,
+                    blobs: value.manifest.blobs
+                )
+            } else if let resourceChunk {
+                try resources.stage(
+                    transferID: frame.transferID, attemptID: frame.attemptID, chunk: resourceChunk
+                )
+            }
             return outcome
         } catch {
             try? execute("ROLLBACK")
             throw error
         }
+    }
+
+    func finishResources(
+        transferID: Data, attemptID: Data
+    ) throws -> Set<Data> {
+        try resources.finish(transferID: transferID, attemptID: attemptID)
     }
 
     private func admitHeader(
@@ -92,7 +121,8 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
 
     private func insertOrCompare(
         _ frame: FolioleFramedSyncAuthenticatedFrame,
-        header: FolioleFramedSyncWireHeader
+        header: FolioleFramedSyncWireHeader,
+        digestOnly: Bool
     ) throws -> FolioleFramedSyncStageOutcome {
         let key: [Any] = [frame.transferID, frame.attemptID, String(header.sequence)]
         let existing = try row("""
@@ -101,20 +131,24 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
             WHERE transfer_id = ? AND attempt_id = ? AND sequence = ?
             """, values: key)
         if let existing {
+            let ciphertext = digestOnly ? Data(SHA256.hash(data: frame.ciphertext)) : frame.ciphertext
+            let plaintext = digestOnly ? Data(SHA256.hash(data: frame.plaintext)) : frame.plaintext
             let expected: [Any] = [Int(header.frameType.rawValue), frame.preamble, frame.header,
-                                   frame.ciphertext, frame.plaintext]
+                                   ciphertext, plaintext]
             guard valuesEqual(existing, expected) else {
                 throw FolioleFramedSyncValidationError("inbound_frame_identity_conflict")
             }
             return .identical
         }
+        let ciphertext = digestOnly ? Data(SHA256.hash(data: frame.ciphertext)) : frame.ciphertext
+        let plaintext = digestOnly ? Data(SHA256.hash(data: frame.plaintext)) : frame.plaintext
         try execute("""
             INSERT INTO framed_sync_ios_frames
               (transfer_id, attempt_id, sequence, frame_type, preamble, frame_header,
                ciphertext, authenticated_plaintext)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, values: key + [Int(header.frameType.rawValue), frame.preamble, frame.header,
-                                  frame.ciphertext, frame.plaintext])
+                                  ciphertext, plaintext])
         return .created
     }
 

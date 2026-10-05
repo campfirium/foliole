@@ -14,12 +14,17 @@ extension FolioleCompanionSyncGroupJoinServer {
             receiverLibraryEpoch: localEpoch
         )
         let received = try framedTransfers.receive(request.bodyData, groupKey: groupKey, context: context)
-        let applied = try dataBridge.request("apply_framed_transfer", [
-            "staging_kind": "ios", "staging_path": framedTransfers.databaseURL.path,
-            "transfer_id": received.transferID.hex,
-            "sender_device_id": peer, "sender_library_epoch": initiatorEpoch,
-            "receiver_device_id": localDevice, "receiver_library_epoch": localEpoch
-        ])
+        let applied = try framedTransfers.withPublishedResources(
+            transferID: received.transferID
+        ) { resourceKeys in
+            try dataBridge.request("apply_framed_transfer", [
+                "staging_kind": "ios", "staging_path": framedTransfers.databaseURL.path,
+                "transfer_id": received.transferID.hex,
+                "sender_device_id": peer, "sender_library_epoch": initiatorEpoch,
+                "receiver_device_id": localDevice, "receiver_library_epoch": localEpoch,
+                "resource_storage_keys": resourceKeys
+            ])
+        }
         guard applied["transfer_id"] as? String == received.transferID.hex,
               applied["receiver_device_id"] as? String == localDevice,
               applied["receiver_library_epoch"] as? String == localEpoch else {

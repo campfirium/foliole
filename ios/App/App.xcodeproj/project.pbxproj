@@ -38,6 +38,9 @@
 		326B00000000000000000012 /* FolioleCompanionFramedSyncResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000012 /* FolioleCompanionFramedSyncResources.swift */; };
 		326B00000000000000000013 /* FolioleFramedSyncOutboundBlobVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000013 /* FolioleFramedSyncOutboundBlobVerifier.swift */; };
 		326B00000000000000000014 /* FolioleFramedSyncOutboundFrameFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000014 /* FolioleFramedSyncOutboundFrameFiles.swift */; };
+		326B00000000000000000015 /* FolioleFramedSyncInboundResources.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000015 /* FolioleFramedSyncInboundResources.swift */; };
+		326B00000000000000000016 /* FolioleFramedSyncResourceFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000016 /* FolioleFramedSyncResourceFiles.swift */; };
+		326B00000000000000000017 /* FolioleFramedSyncResourcePublication.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000017 /* FolioleFramedSyncResourcePublication.swift */; };
 		50F020041FED79650016851F /* companion-bridge-contract-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F020061FED79650016851F /* companion-bridge-contract-definitions.json */; };
 		50F020051FED79650016851F /* companion-sync-protocol-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F020071FED79650016851F /* companion-sync-protocol-definitions.json */; };
 		50F021111FED79650016851F /* FolioleCompanionContractStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021011FED79650016851F /* FolioleCompanionContractStore.swift */; };
@@ -203,6 +206,9 @@
 		326A00000000000000000012 /* FolioleCompanionFramedSyncResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionFramedSyncResources.swift; sourceTree = "<group>"; };
 		326A00000000000000000013 /* FolioleFramedSyncOutboundBlobVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncOutboundBlobVerifier.swift; sourceTree = "<group>"; };
 		326A00000000000000000014 /* FolioleFramedSyncOutboundFrameFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncOutboundFrameFiles.swift; sourceTree = "<group>"; };
+		326A00000000000000000015 /* FolioleFramedSyncInboundResources.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncInboundResources.swift; sourceTree = "<group>"; };
+		326A00000000000000000016 /* FolioleFramedSyncResourceFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncResourceFiles.swift; sourceTree = "<group>"; };
+		326A00000000000000000017 /* FolioleFramedSyncResourcePublication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncResourcePublication.swift; sourceTree = "<group>"; };
 		50F022041FED79650016851F /* FolioleCompanionBonjourDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionBonjourDiscovery.swift; sourceTree = "<group>"; };
 		50F0220A1FED79650016851F /* FolioleCompanionBonjourEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionBonjourEndpoint.swift; sourceTree = "<group>"; };
 		50F022051FED79650016851F /* FolioleCompanionSyncPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPlugin.swift; sourceTree = "<group>"; };
@@ -381,6 +387,9 @@
 				326A00000000000000000012 /* FolioleCompanionFramedSyncResources.swift */,
 				326A00000000000000000013 /* FolioleFramedSyncOutboundBlobVerifier.swift */,
 				326A00000000000000000014 /* FolioleFramedSyncOutboundFrameFiles.swift */,
+				326A00000000000000000015 /* FolioleFramedSyncInboundResources.swift */,
+				326A00000000000000000016 /* FolioleFramedSyncResourceFiles.swift */,
+				326A00000000000000000017 /* FolioleFramedSyncResourcePublication.swift */,
 				50F022041FED79650016851F /* FolioleCompanionBonjourDiscovery.swift */,
 				50F0220A1FED79650016851F /* FolioleCompanionBonjourEndpoint.swift */,
 				50F022051FED79650016851F /* FolioleCompanionSyncPlugin.swift */,
@@ -700,6 +709,9 @@
 				326B00000000000000000012 /* FolioleCompanionFramedSyncResources.swift in Sources */,
 				326B00000000000000000013 /* FolioleFramedSyncOutboundBlobVerifier.swift in Sources */,
 				326B00000000000000000014 /* FolioleFramedSyncOutboundFrameFiles.swift in Sources */,
+				326B00000000000000000015 /* FolioleFramedSyncInboundResources.swift in Sources */,
+				326B00000000000000000016 /* FolioleFramedSyncResourceFiles.swift in Sources */,
+				326B00000000000000000017 /* FolioleFramedSyncResourcePublication.swift in Sources */,
 				50F022141FED79650016851F /* FolioleCompanionBonjourDiscovery.swift in Sources */,
 				50F0221A1FED79650016851F /* FolioleCompanionBonjourEndpoint.swift in Sources */,
 				50F022151FED79650016851F /* FolioleCompanionSyncPlugin.swift in Sources */,

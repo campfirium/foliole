@@ -110,12 +110,17 @@ extension FolioleCompanionSyncPlugin {
         ) { responseURL in
             try receiver.receive(responseURL, groupKey: groupKey, context: transferContext)
         }
-        let applied = try groupData.request("apply_framed_transfer", [
-            "staging_kind": "ios", "staging_path": receiver.databaseURL.path,
-            "transfer_id": received.transferID.hex,
-            "sender_device_id": remoteDeviceID, "sender_library_epoch": remoteEpoch,
-            "receiver_device_id": localDeviceID, "receiver_library_epoch": localEpoch
-        ])
+        let applied = try receiver.withPublishedResources(
+            transferID: received.transferID
+        ) { resourceKeys in
+            try groupData.request("apply_framed_transfer", [
+                "staging_kind": "ios", "staging_path": receiver.databaseURL.path,
+                "transfer_id": received.transferID.hex,
+                "sender_device_id": remoteDeviceID, "sender_library_epoch": remoteEpoch,
+                "receiver_device_id": localDeviceID, "receiver_library_epoch": localEpoch,
+                "resource_storage_keys": resourceKeys
+            ])
+        }
         try requireReceipt(applied, transferID: received.transferID, receiver: localDeviceID, epoch: localEpoch)
         let receiptBody = try receiver.receipt(groupKey: groupKey, value: applied)
         _ = try await framedPost(

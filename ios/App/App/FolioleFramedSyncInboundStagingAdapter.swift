@@ -21,6 +21,7 @@ protocol FolioleFramedSyncDurableStaging {
         validated: FolioleFramedSyncValidatedMessage,
         context: FolioleFramedSyncTransferContext
     ) throws -> FolioleFramedSyncStageOutcome
+    func finishResources(transferID: Data, attemptID: Data) throws -> Set<Data>
 }
 
 final class FolioleFramedSyncInboundStagingAdapter {
@@ -28,8 +29,14 @@ final class FolioleFramedSyncInboundStagingAdapter {
 
     init(staging: FolioleFramedSyncDurableStaging) { self.staging = staging }
 
-    convenience init(databaseURL: URL) throws {
-        try self.init(staging: FolioleFramedSyncSQLiteStaging(databaseURL: databaseURL))
+    convenience init(databaseURL: URL, resourceRoot: URL? = nil) throws {
+        try self.init(staging: FolioleFramedSyncSQLiteStaging(
+            databaseURL: databaseURL, resourceRoot: resourceRoot
+        ))
+    }
+
+    func finishResources(transferID: Data, attemptID: Data) throws -> Set<Data> {
+        try staging.finishResources(transferID: transferID, attemptID: attemptID)
     }
 
     func commitAuthenticatedFrame(

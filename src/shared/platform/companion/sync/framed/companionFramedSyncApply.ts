@@ -62,13 +62,13 @@ async function loadTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
     FROM ${tables.alias}.${tables.prefix}_blob_pins pin
     JOIN ${tables.alias}.${tables.prefix}_available_blobs available ON available.sha256 = pin.sha256
     WHERE pin.transfer_id = ? AND pin.role = 1`, [input.transferId]);
-  const resourceRows = input.stagingKind === 'android' ? await db.query<DbRow>(
+  const resourceRows = await db.query<DbRow>(
     `SELECT pin.sha256, pin.byte_length, pin.role, pin.required, pin.storage_key
-      FROM framed_android.framed_sync_android_resource_pins pin
-      JOIN framed_android.framed_sync_android_available_resources available
+      FROM ${tables.alias}.${tables.prefix}_resource_pins pin
+      JOIN ${tables.alias}.${tables.prefix}_available_resources available
         ON available.sha256 = pin.sha256 AND available.byte_length = pin.byte_length
           AND available.storage_key = pin.storage_key
-      WHERE pin.transfer_id = ?`, [input.transferId]) : [];
+      WHERE pin.transfer_id = ?`, [input.transferId]);
   return { bodyRows, contentId: framedSyncBytes(transfer, 'content_id'), facts, resourceRows };
 }
 

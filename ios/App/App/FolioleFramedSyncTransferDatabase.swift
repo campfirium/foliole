@@ -112,6 +112,28 @@ enum FolioleFramedSyncTransferSchema {
         role INTEGER NOT NULL, required INTEGER NOT NULL, PRIMARY KEY (transfer_id, sha256))
         """,
         """
+        CREATE TABLE IF NOT EXISTS framed_sync_ios_blob_offers (
+        transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, sha256 BLOB NOT NULL,
+        byte_length INTEGER NOT NULL, role INTEGER NOT NULL, required INTEGER NOT NULL,
+        PRIMARY KEY (transfer_id, attempt_id, sha256))
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS framed_sync_ios_resource_blob_chunks (
+        transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, sha256 BLOB NOT NULL,
+        byte_offset INTEGER NOT NULL, byte_length INTEGER NOT NULL, chunk_sha256 BLOB NOT NULL,
+        PRIMARY KEY (transfer_id, attempt_id, sha256, byte_offset))
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS framed_sync_ios_available_resources (
+        sha256 BLOB PRIMARY KEY, byte_length INTEGER NOT NULL, storage_key TEXT NOT NULL)
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS framed_sync_ios_resource_pins (
+        transfer_id BLOB NOT NULL, sha256 BLOB NOT NULL, byte_length INTEGER NOT NULL,
+        role INTEGER NOT NULL, required INTEGER NOT NULL, storage_key TEXT NOT NULL,
+        PRIMARY KEY (transfer_id, sha256))
+        """,
+        """
         CREATE TABLE IF NOT EXISTS framed_sync_ios_receipts (
         transfer_id BLOB PRIMARY KEY, content_id BLOB NOT NULL,
         receiver_device_id TEXT NOT NULL, receiver_library_epoch TEXT NOT NULL,

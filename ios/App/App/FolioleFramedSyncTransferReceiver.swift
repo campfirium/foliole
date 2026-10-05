@@ -8,12 +8,27 @@ struct FolioleFramedSyncReceivedTransfer {
 
 final class FolioleFramedSyncTransferReceiver {
     private let database: FolioleFramedSyncTransferDatabase
+    private let resourceRoot: URL?
     var databaseURL: URL { database.url }
 
-    init(database: FolioleFramedSyncTransferDatabase) { self.database = database }
+    init(database: FolioleFramedSyncTransferDatabase, resourceRoot: URL? = nil) {
+        self.database = database; self.resourceRoot = resourceRoot
+    }
 
     func receipt(groupKey: Data, value: [String: Any]) throws -> Data {
         try FolioleFramedSyncReceiptWriter.encode(groupKey: groupKey, value: value, database: database)
+    }
+
+    func withPublishedResources<T>(
+        transferID: Data, operation: ([String]) throws -> T
+    ) throws -> T {
+        let root = try resourceRoot ?? FolioleCompanionFramedSyncResources.attachmentRoot()
+        let publication = try FolioleFramedSyncResourcePublication(
+            database: database, root: root, transferID: transferID
+        )
+        let result = try operation(publication.storageKeys)
+        publication.commit()
+        return result
     }
 
     func receive(
@@ -39,13 +54,16 @@ final class FolioleFramedSyncTransferReceiver {
         guard preamble.contextKind == 2, preamble.startingSequence == 0 else {
             throw invalid("transfer_preamble_required")
         }
-        let staging = try FolioleFramedSyncInboundStagingAdapter(databaseURL: database.url)
+        let root = try resourceRoot ?? FolioleCompanionFramedSyncResources.attachmentRoot()
+        let staging = try FolioleFramedSyncInboundStagingAdapter(
+            databaseURL: database.url, resourceRoot: root
+        )
         var transfer = Transfer(preamble: preamble)
         while let frame = try reader.nextFrame() {
-            guard transfer.frames.count < 4_130 else { throw invalid("transfer_frame_limit_exceeded") }
+            guard transfer.frameCount < 4_130 else { throw invalid("transfer_frame_limit_exceeded") }
             let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
                 groupKey: groupKey, preamble: preamble, frame: frame,
-                expectedSequence: UInt64(transfer.frames.count)
+                expectedSequence: UInt64(transfer.frameCount)
             )
             let message = try FolioleFramedSyncCodec.decode(
                 plaintext, authenticatedFrameType: frame.header.frameType.rawValue
@@ -57,48 +75,12 @@ final class FolioleFramedSyncTransferReceiver {
                 ciphertext: frame.ciphertext, plaintext: plaintext
             ), context: context)
         }
-        var durable = try rebuild(
-            preamble: preamble, groupKey: groupKey, context: context
+        let resources = try staging.finishResources(
+            transferID: preamble.contextID, attemptID: preamble.identifier
         )
-        try durable.finish()
-        try markReady(durable)
+        try transfer.finish(resourceHashes: resources)
+        try markReady(transfer)
         return .init(transferID: preamble.contextID)
-    }
-
-    private func rebuild(
-        preamble: FolioleFramedSyncPreamble, groupKey: Data,
-        context: FolioleFramedSyncTransferContext
-    ) throws -> Transfer {
-        let rows = try database.rows("""
-            SELECT frame_header, ciphertext FROM framed_sync_ios_frames
-            WHERE transfer_id = ? AND attempt_id = ? ORDER BY CAST(sequence AS INTEGER)
-            """, [preamble.contextID, preamble.identifier])
-        let output = OutputStream.toMemory()
-        let writer = FolioleFramedSyncStreamWriter(output: output)
-        try writer.write(preamble: preamble.encoded)
-        for row in rows {
-            guard let header = row[0] as? Data, let ciphertext = row[1] as? Data else {
-                throw invalid("inbound_durable_frame_invalid")
-            }
-            try writer.write(header: header, ciphertext: ciphertext)
-        }
-        guard let data = output.property(forKey: .dataWrittenToMemoryStreamKey) as? Data else {
-            throw invalid("framed_sync_stream_write_failed")
-        }
-        let reader = FolioleFramedSyncStreamReader(input: InputStream(data: data))
-        _ = try reader.nextPreamble()
-        var result = Transfer(preamble: preamble)
-        while let frame = try reader.nextFrame() {
-            let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
-                groupKey: groupKey, preamble: preamble, frame: frame,
-                expectedSequence: UInt64(result.frames.count)
-            )
-            let message = try FolioleFramedSyncCodec.decode(
-                plaintext, authenticatedFrameType: frame.header.frameType.rawValue
-            )
-            try result.append(frame, plaintext: plaintext, message: message, context: context)
-        }
-        return result
     }
 
     private func markReady(_ value: Transfer) throws {
@@ -123,13 +105,12 @@ final class FolioleFramedSyncTransferReceiver {
 }
 
 private struct Transfer {
-    struct Frame { let frame: FolioleFramedSyncWireFrame; let plaintext: Data }
     struct Blob { let reference: Foliole_Sync_V22_BlobReference; let data: Data }
     let preamble: FolioleFramedSyncPreamble
     var header: Foliole_Sync_V22_TransferHeader?
     var facts = [Foliole_Sync_V22_FactRecord]()
     var chunks = [Data: [(UInt64, Data)]]()
-    var frames = [Frame]()
+    var frameCount = 0
     var trailer: Foliole_Sync_V22_TransferTrailer?
     var blobs = [Blob]()
     var transferID: Data { preamble.contextID }
@@ -140,7 +121,7 @@ private struct Transfer {
         message: FolioleFramedSyncValidatedMessage, context: FolioleFramedSyncTransferContext
     ) throws {
         guard trailer == nil else { throw invalid("transfer_trailer_not_final") }
-        if frames.isEmpty {
+        if frameCount == 0 {
             guard case .transferHeader(let value) = message.payload else {
                 throw invalid("transfer_header_required")
             }
@@ -153,10 +134,10 @@ private struct Transfer {
             default: throw invalid("transfer_frame_payload_required")
             }
         }
-        frames.append(.init(frame: frame, plaintext: plaintext))
+        frameCount += 1
     }
 
-    mutating func finish() throws {
+    mutating func finish(resourceHashes: Set<Data>) throws {
         guard let header, let trailer,
               trailer.transferID == transferID,
               Int(trailer.factCount) == facts.count,
@@ -164,7 +145,13 @@ private struct Transfer {
               Int(trailer.blobCount) == header.manifest.blobs.count else {
             throw invalid("inbound_attempt_manifest_mismatch")
         }
-        blobs = try header.manifest.blobs.compactMap(assemble)
+        blobs = try header.manifest.blobs.filter { $0.role == .nodeBody }.compactMap(assemble)
+        let expectedResources = Set(header.manifest.blobs.filter { $0.role != .nodeBody && $0.required }
+            .map(\.sha256))
+        guard expectedResources.isSubset(of: resourceHashes),
+              resourceHashes.isSubset(of: Set(header.manifest.blobs.map(\.sha256))) else {
+            throw invalid("inbound_attempt_manifest_mismatch")
+        }
         let contentID = try FolioleFramedSyncCanonicalManifest.contentID(
             facts: facts, blobs: header.manifest.blobs
         )
@@ -189,7 +176,9 @@ private struct Transfer {
               UInt64(chunk.data.count) <= reference.byteLength - chunk.offset else {
             throw invalid("blob_chunk_not_admitted")
         }
-        chunks[chunk.blobHash, default: []].append((chunk.offset, chunk.data))
+        if reference.role == .nodeBody {
+            chunks[chunk.blobHash, default: []].append((chunk.offset, chunk.data))
+        }
     }
 
     private func assemble(_ reference: Foliole_Sync_V22_BlobReference) throws -> Blob? {

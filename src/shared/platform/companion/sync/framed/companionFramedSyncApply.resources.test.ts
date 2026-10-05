@@ -27,14 +27,16 @@ afterEach(() => {
   roots.splice(0).forEach((root) => fs.rmSync(root, { force: true, recursive: true }));
 });
 
-it('applies and receipts an Android Node only with its natively published resource key', async () => {
+it.each(['android', 'ios'] as const)(
+  'applies and receipts a %s Node only with its natively published resource key', async (kind) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-framed-resource-apply-'));
   roots.push(root);
   const stagingPath = path.join(root, 'staging.db');
   const main = tracked(new Database(':memory:'));
   const staging = tracked(new Database(stagingPath));
   main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
-  installCompanionFramedSyncStaging(staging, 'framed_sync_android');
+  const prefix = `framed_sync_${kind}`;
+  installCompanionFramedSyncStaging(staging, prefix);
   const record = nodeRecord();
   const resourceBytes = new TextEncoder().encode('%PDF-1.7\nresource');
   const resourceHash = sha256(resourceBytes);
@@ -47,14 +49,14 @@ it('applies and receipts an Android Node only with its natively published resour
   }]);
   const transferId = new Uint8Array(32).fill(8);
   const attemptId = new Uint8Array(16).fill(8);
-  stage(staging, transferId, attemptId, projection, storageKey, resourceBytes.byteLength);
+  stage(staging, prefix, transferId, attemptId, projection, storageKey, resourceBytes.byteLength);
 
   const receipt = await applyCompanionFramedSyncTransfer(createBetterSqliteDbPort(main, {
     name: 'framed-resource-apply-test'
   }), {
     receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch',
     resourceStorageKeys: [storageKey], senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch',
-    stagingKind: 'android', stagingPath, transferId
+    stagingKind: kind, stagingPath, transferId
   });
 
   const applied = main.prepare('SELECT resource_references FROM nodes WHERE id = ?')
@@ -63,31 +65,33 @@ it('applies and receipts an Android Node only with its natively published resour
     JSON.parse(record.snapshot.resource_references));
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 1 });
   expect(bytesToHex(receipt.appliedStateHash)).toBe('4'.repeat(64));
-});
+  }
+);
 
 function stage(
   database: Database.Database,
+  prefix: string,
   transferId: Uint8Array,
   attemptId: Uint8Array,
   projection: ReturnType<typeof projectFramedSyncNodeRecord>,
   storageKey: string,
   resourceLength: number
 ) {
-  database.prepare(`INSERT INTO framed_sync_android_transfers VALUES
+  database.prepare(`INSERT INTO ${prefix}_transfers VALUES
     (?, ?, ?, ?, ?, ?, ?, 'ready_to_apply')`).run(transferId, new Uint8Array(32).fill(8),
     'sender', 'sender-epoch', 'receiver', 'receiver-epoch', attemptId);
-  database.prepare('INSERT INTO framed_sync_android_frames VALUES (?, ?, ?, 3, ?)').run(
+  database.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, ?, 3, ?)`).run(
     transferId, attemptId, '0', encodeValidatedProtocolMessage(
       'fact', factToWire(projection.manifest.facts[0]!)));
   const body = projection.manifest.blobs[0]!;
-  database.prepare('INSERT INTO framed_sync_android_available_blobs VALUES (?, ?, ?)')
+  database.prepare(`INSERT INTO ${prefix}_available_blobs VALUES (?, ?, ?)`)
     .run(body.sha256, Number(body.byteLength), projection.bodyBlob);
-  database.prepare('INSERT INTO framed_sync_android_blob_pins VALUES (?, ?, ?, 1, 1)')
+  database.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, 1, 1)`)
     .run(transferId, body.sha256, Number(body.byteLength));
   const resource = projection.manifest.blobs[1]!;
-  database.prepare('INSERT INTO framed_sync_android_available_resources VALUES (?, ?, ?)')
+  database.prepare(`INSERT INTO ${prefix}_available_resources VALUES (?, ?, ?)`)
     .run(resource.sha256, resourceLength, storageKey);
-  database.prepare('INSERT INTO framed_sync_android_resource_pins VALUES (?, ?, ?, 3, 1, ?)')
+  database.prepare(`INSERT INTO ${prefix}_resource_pins VALUES (?, ?, ?, 3, 1, ?)`)
     .run(transferId, resource.sha256, resourceLength, storageKey);
 }
 

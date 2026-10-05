@@ -46,7 +46,7 @@ enum FolioleCompanionFramedSyncResources {
         return .init(byteLength: UInt64(size), storageKey: storageKey, url: url)
     }
 
-    private static func attachmentRoot() throws -> URL {
+    static func attachmentRoot() throws -> URL {
         let support = try FileManager.default.url(
             for: .applicationSupportDirectory, in: .userDomainMask,
             appropriateFor: nil, create: true
