@@ -18,6 +18,7 @@ import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository'
 import { handleCompanionAttachmentCheckpoint } from '../runtime/companionAttachmentCheckpoint';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
+import { applyCompanionFramedSyncDataOperation } from './framed/companionFramedSyncDataOperation';
 import { applyCompanionSyncIdentityPackWithDbPort } from './pack-apply/companionSyncIdentityPackApply';
 import { prepareCompanionSyncIdentityPack } from './syncGroupIdentityPackPrepare';
 import { readCompanionSyncIdentitySource } from './syncGroupIdentitySourceRead';
@@ -78,6 +79,9 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
     const page = requiredObject(requiredObject(payload.manifest).identity_page);
     return { applied: result.applied, pageId: requiredText(page.page_id) };
   });
+  if (operation === CONTRACT.operations.applyFramedTransfer) {
+    return writer((db) => applyCompanionFramedSyncDataOperation(db, payload));
+  }
   if (operation === CONTRACT.operations.applyMemberState) {
     return applyCompanionSyncGroupMemberState(
       parseSyncGroupMemberState(payload.state),

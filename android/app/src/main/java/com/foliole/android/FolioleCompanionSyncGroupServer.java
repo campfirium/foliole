@@ -12,6 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.foliole.android.framed.FramedSyncSessionNonceSQLite;
+import com.foliole.android.framed.FramedSyncTransferSQLite;
 
 final class FolioleCompanionSyncGroupServer {
     private static final int SYNC_PORT = BuildConfig.FOLIOLE_COMPANION_SYNC_PORT;
@@ -24,6 +25,7 @@ final class FolioleCompanionSyncGroupServer {
     private final ServerSocket server;
     private final FolioleCompanionSyncGroupSnapshot snapshots;
     private final FramedSyncSessionNonceSQLite framedSyncNonces;
+    private final FramedSyncTransferSQLite framedSyncTransfers;
     private final Runnable stateChanged;
     private volatile boolean running = true;
 
@@ -37,6 +39,7 @@ final class FolioleCompanionSyncGroupServer {
             config.getJSONObject("sync_group").getString("group_id"), dataBridge);
         snapshots = new FolioleCompanionSyncGroupSnapshot(this.context, dataBridge);
         framedSyncNonces = new FramedSyncSessionNonceSQLite(this.context);
+        framedSyncTransfers = new FramedSyncTransferSQLite(this.context);
         server = new ServerSocket(SYNC_PORT); executor.execute(this::acceptLoop);
     }
 
@@ -45,7 +48,7 @@ final class FolioleCompanionSyncGroupServer {
     void stop() {
         running = false;
         try { server.close(); } catch (Exception ignored) {}
-        executor.shutdownNow(); snapshots.close(); framedSyncNonces.close();
+        executor.shutdownNow(); snapshots.close(); framedSyncNonces.close(); framedSyncTransfers.close();
     }
 
     private void acceptLoop() {
@@ -89,7 +92,7 @@ final class FolioleCompanionSyncGroupServer {
                 request, output, auth.authenticate(request), new JSONObject(decryptRequest(request)));
         else if (request.method.equals("POST") && path.equals("/companion/framed-sync"))
             FolioleCompanionFramedSyncRoute.handle(config, dataBridge, snapshots,
-                request, output, auth.authenticate(request), framedSyncNonces);
+                request, output, auth.authenticate(request), framedSyncNonces, framedSyncTransfers);
         else if (request.method.equals("GET") && path.equals("/companion/sync-pack"))
             FolioleCompanionSyncPackRoutes.pack(context, config, dataBridge, snapshots,
                 request, output, auth.authenticate(request));

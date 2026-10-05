@@ -62,8 +62,8 @@ public final class FramedSyncTransferContext {
     String groupId() { return groupId; }
     String receiverDeviceId() { return receiverDeviceId; }
     String receiverLibraryEpoch() { return receiverLibraryEpoch; }
-    String senderDeviceId() { return senderDeviceId; }
-    String senderLibraryEpoch() { return senderLibraryEpoch; }
+    public String senderDeviceId() { return senderDeviceId; }
+    public String senderLibraryEpoch() { return senderLibraryEpoch; }
 
     private void validate() throws FramedSyncValidationException {
         FramedSyncValueValidator.text(groupId, "group_id");
