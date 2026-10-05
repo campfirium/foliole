@@ -1,10 +1,10 @@
 import type http from 'node:http';
 
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { loadWorkspaceSnapshot, loadWorkspaceVersionMetadata } from '../database/workspaceSnapshot.js';
+import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
-import { buildCompanionSyncDiagnostics } from './buildCompanionSyncDiagnostics.js';
+import type { buildCompanionSyncDiagnostics } from './buildCompanionSyncDiagnostics.js';
 import { handleCompanionAttachmentGet } from './companionLanAttachmentGet.js';
 import { ATTACHMENT_RESOURCE_PATH } from './companionLanAttachmentResources.js';
 import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
@@ -14,10 +14,10 @@ import {
   loadCompanionContentBlobResource
 } from './companionLanContentBlobs.js';
 import { loadCompanionLanDiscovery } from './companionLanDiscovery.js';
+import { handleProductionCompanionFramedSyncPost } from './companionLanFramedSyncRoute.js';
 import { handleCompanionIdentityGet } from './companionLanIdentityGet.js';
 import {
   buildWorkspaceSnapshotPayload,
-  buildWorkspaceVersionPayload
 } from './companionLanPayloads.js';
 import { writeJson, writeOptions, writeWorkgroupBinary } from './companionLanResponses.js';
 import {
@@ -31,6 +31,11 @@ import {
 import { SYNC_PACK_PATH } from './companionLanSyncPack.js';
 import { handleCompanionSyncPackFactsGet, SYNC_PACK_FACTS_PATH } from './companionLanSyncPackFacts.js';
 import { handleSyncPackGet } from './companionLanSyncPackGet.js';
+import {
+  handleWorkspaceMetadataGet,
+  SYNC_DIAGNOSTICS_PATH,
+  WORKSPACE_VERSION_PATH
+} from './companionLanWorkspaceMetadataGet.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { SYNC_GROUP_MEMBER_STATE_PATH } from './desktopSyncGroupMemberState.js';
 import {
@@ -41,14 +46,13 @@ import {
 export const DISCOVERY_ENDPOINT_PATH = '/companion/discovery';
 export const SYNC_GROUP_JOIN_ACCEPTANCE_PATH = '/sync-group/join-acceptance';
 export const SYNC_GROUP_JOIN_REQUESTS_PATH = '/sync-group/join-requests';
-export const WORKSPACE_VERSION_PATH = '/companion/workspace-version';
 export const WORKSPACE_SNAPSHOT_PATH = '/companion/workspace-snapshot';
-export const SYNC_DIAGNOSTICS_PATH = '/companion/diagnostics/sync';
+export { SYNC_DIAGNOSTICS_PATH, WORKSPACE_VERSION_PATH };
 export { SYNC_IDENTITY_GLOBAL_PAGE_PATH, SYNC_IDENTITY_GLOBAL_SUMMARY_PATH
 } from './companionLanIdentityGlobalGet.js';
-export { SYNC_IDENTITY_FACT_PAGE_PATH, SYNC_IDENTITY_FACT_SUMMARY_PATH,
+export { SYNC_IDENTITY_FACT_SUMMARY_PATH,
   SYNC_IDENTITY_NODE_FACTS_PATH,
-  SYNC_IDENTITY_PAGE_PATH, SYNC_IDENTITY_SUMMARY_PATH } from './companionLanIdentityGet.js';
+} from './companionLanIdentityGet.js';
 export { SYNC_IDENTITY_RESTORE_SET_PATH } from './companionLanIdentityRestore.js';
 export { SYNC_IDENTITY_PACK_PATH } from './companionLanIdentityPackPost.js';
 export { SYNC_IDENTITY_PUSH_PATH } from './companionLanIdentityPushPost.js';
@@ -86,32 +90,6 @@ async function writeUnhandledRequestError(
   }
 }
 
-function handleWorkspaceMetadataGet(
-  request: http.IncomingMessage,
-  response: http.ServerResponse,
-  parsedRequestUrl: URL,
-  args: {
-    appVersion: string;
-    authenticatedDeviceId: string;
-    getSyncStatus: () => Parameters<typeof buildCompanionSyncDiagnostics>[0]['serverStatus'];
-    deviceId: string;
-  }
-) {
-  if (parsedRequestUrl.pathname === WORKSPACE_VERSION_PATH) {
-    const version = loadWorkspaceVersionMetadata();
-    writeJson(request, response, 200, buildWorkspaceVersionPayload(args.appVersion, args.deviceId, version));
-    return true;
-  }
-  if (parsedRequestUrl.pathname === SYNC_DIAGNOSTICS_PATH) {
-    writeJson(request, response, 200, buildCompanionSyncDiagnostics({
-      appVersion: args.appVersion,
-      serverStatus: args.getSyncStatus()
-    }), 'GET, OPTIONS');
-    return true;
-  }
-  return false;
-}
-
 async function handlePostRequest(
   request: http.IncomingMessage,
   response: http.ServerResponse,
@@ -131,6 +109,9 @@ async function handlePostRequest(
     await handleSyncGroupJoinAcceptance(request, response, writeJson);
     return true;
   }
+  if (await handleProductionCompanionFramedSyncPost({
+    deviceId: args.deviceId, request, response
+  })) return true;
   return false;
 }
 

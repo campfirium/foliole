@@ -50,6 +50,9 @@ const databaseOwnerMock = vi.hoisted(() => ({
     try { return await execute(); } finally { databaseOwnerMock.active = false; }
   })
 }));
+const framedSyncRouteMock = vi.hoisted(() => ({
+  handle: vi.fn(async () => false)
+}));
 
 vi.mock('../database/connection.js', () => ({
   registerDatabaseConnectionCleanup: vi.fn(),
@@ -82,6 +85,9 @@ vi.mock('./companionLanSyncPack.js', () => ({
 vi.mock('./buildCompanionSyncDiagnostics.js', () => ({
   buildCompanionSyncDiagnostics: diagnosticsMock.buildCompanionSyncDiagnostics
 }));
+vi.mock('./companionLanFramedSyncRoute.js', () => ({
+  handleProductionCompanionFramedSyncPost: framedSyncRouteMock.handle
+}));
 vi.mock('./workgroupHttpCrypto.js', () => ({
   createWorkgroupResponseStreamCipher: vi.fn(() => ({
     authTag: () => Buffer.alloc(16), cipher: new PassThrough(),
@@ -101,6 +107,7 @@ import {
 beforeEach(() => {
   vi.resetAllMocks();
   databaseOwnerMock.active = false;
+  framedSyncRouteMock.handle.mockResolvedValue(false);
   contentBlobResourceMock.loadCompanionContentBlobResource.mockResolvedValue({
     body: Buffer.from('body-bytes'),
     mimeType: 'text/plain',
@@ -126,6 +133,19 @@ beforeEach(() => {
     storage: { active_node_count: 1 },
     sync_state: { max_state_seq: 4 },
     verdicts: []
+  });
+});
+
+it('dispatches the framed sync binary route before legacy authenticated POST handlers', async () => {
+  framedSyncRouteMock.handle.mockResolvedValueOnce(true);
+  const response = createResponse();
+  const request = {
+    headers: {}, method: 'POST', url: '/companion/framed-sync'
+  } as http.IncomingMessage;
+  await createHandler()(request, response);
+
+  expect(framedSyncRouteMock.handle).toHaveBeenCalledWith({
+    deviceId: 'desktop-local', request, response
   });
 });
 
