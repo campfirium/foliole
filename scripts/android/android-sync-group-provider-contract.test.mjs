@@ -15,9 +15,13 @@ it('serves one active Group/Device provider surface on the stable LAN port', asy
   expect(server).toContain('private static final int SYNC_PORT = BuildConfig.FOLIOLE_COMPANION_SYNC_PORT;');
   for (const route of [
     '/companion/discovery', '/sync-group/join-requests', '/sync-group/join-acceptance',
+    '/sync-group/member-state', '/companion/framed-sync'
+  ]) expect(server).toContain(`path.equals("${route}")`);
+  for (const retiredRoute of [
     '/companion/sync-pack', '/companion/content-blobs', '/companion/content-blob',
     '/companion/attachment-resource'
-  ]) expect(server).toContain(`path.equals("${route}")`);
+  ]) expect(server).not.toContain(`path.equals("${retiredRoute}")`);
+  expect(server).toMatch(/FolioleCompanionFramedSyncRoute\.handle[\s\S]*auth\.authenticate\(request\)/u);
   expect(server).not.toMatch(/pairing|authorization_id|timeline_id/iu);
   expect(server).toMatch(/joins\.receive[\s\S]*stateChanged\.run\(\)/u);
 });
@@ -31,17 +35,19 @@ it('authenticates provider reads with the group key and an active Device fact', 
   expect(auth).not.toMatch(/Pairing|Member|authorization_id/u);
 });
 
-it('pins one independent source snapshot to each Device sync-pack cycle', async () => {
+it('routes inventory and transfers through the framed session boundary', async () => {
   const server = await readJava('FolioleCompanionSyncGroupServer.java');
-  const routes = await readJava('FolioleCompanionSyncPackRoutes.java');
-  const snapshot = await readJava('FolioleCompanionSyncGroupSnapshot.java');
-  expect(server).toMatch(/SyncPackRoutes\.pack\(context, config, dataBridge, snapshots,[\s\S]*request, output, authenticate\(request\)\)/u);
-  expect(server).toMatch(/SyncPackRoutes\.facts\(context, config, snapshots,[\s\S]*request, output, authenticate\(request\)\)/u);
-  expect(routes).toMatch(/frontier == null \? snapshots\.refresh\(peer, build\)\s*: snapshots\.read\(peer, build\)/u);
-  expect(routes).toMatch(/factView == null && frontier == null \? snapshots\.refresh\(peer, build\)\s*: snapshots\.read\(peer, build\)/u);
-  expect(server).toMatch(/contentBlobs[\s\S]*snapshots\.read\([\s\S]*peer/u);
-  expect(snapshot).toContain('snapshots.put(peerDeviceId, next)');
-  expect(snapshot).toContain('"create_snapshot"');
+  const route = await readJava('FolioleCompanionFramedSyncRoute.java');
+  const apply = await readJava('FolioleCompanionFramedSyncApply.java');
+  expect(server).toContain('new FramedSyncSessionNonceSQLite(this.context)');
+  expect(server).toContain('new FramedSyncTransferSQLite(this.context)');
+  expect(route).toContain('FramedSyncSessionReader.read(');
+  expect(route).toContain('bridge.request("read_framed_inventory", new JSONObject())');
+  expect(route).toContain('FramedSyncTransferReader.Result received = store.receive(');
+  expect(route).toMatch(/FolioleCompanionFramedSyncApply\.apply[\s\S]*store\.receipt/u);
+  expect(apply).toContain('bridge.request("apply_framed_transfer"');
+  expect(apply).toMatch(/staging\.publishResources[\s\S]*resources\.commit\(\)/u);
+  expect(server).not.toMatch(/SyncPackRoutes|SyncGroupSnapshot|contentBlobs/u);
 });
 
 it('publishes Device discovery facts and waits for NSD retirement', async () => {
