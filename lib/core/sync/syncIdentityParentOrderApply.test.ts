@@ -136,3 +136,43 @@ it('drops a deleted ghost even when both received orders are byte-identical', as
     expect(staged.map((merge) => JSON.parse(merge.childIdsJson))).toEqual([['live']]);
   } finally { sqlite.close(); }
 });
+
+it.each([ROOT_CHILD_ORDER_ID, 'folder'])('sorts only tied additions by natural name and stable ID in %s', async (parentId) => {
+  const sqlite = fixture();
+  try {
+    const actualParent = parentId === ROOT_CHILD_ORDER_ID ? null : parentId;
+    for (const [id, title] of [['base', 'Z'], ['x', 'Item 10'], ['y', 'Item 2'],
+      ['same-a', 'Same'], ['same-b', 'Same']]) {
+      sqlite.prepare('INSERT INTO nodes VALUES (?, ?, ?, NULL)').run(id, title, actualParent);
+    }
+    putOrder(sqlite, 'main', parentId, ['base', 'x', 'same-b']);
+    putOrder(sqlite, 'inc', parentId, ['base', 'y', 'same-a']);
+    const staged = await stageSyncIdentityParentOrderMerges(createBetterSqliteDbPort(sqlite));
+    expect(staged.map((row) => JSON.parse(row.childIdsJson)))
+      .toEqual([['base', 'y', 'x', 'same-a', 'same-b']]);
+  } finally { sqlite.close(); }
+});
+
+it('rolls order, hash, head and generated merge back together if receive fails', async () => {
+  const sqlite = fixture();
+  try {
+    for (const id of ['a', 'b', 'c']) sqlite.prepare('INSERT INTO nodes VALUES (?, ?, NULL, NULL)').run(id, id);
+    putOrder(sqlite, 'main', ROOT_CHILD_ORDER_ID, ['a', 'b']);
+    putOrder(sqlite, 'inc', ROOT_CHILD_ORDER_ID, ['a', 'c']);
+    const snapshot = () => ({ order: sqlite.prepare('SELECT * FROM parent_child_order').all(),
+      states: sqlite.prepare('SELECT * FROM sync_object_state ORDER BY object_type, object_id').all(),
+      heads: sqlite.prepare('SELECT * FROM parent_order_heads').all(),
+      versions: sqlite.prepare('SELECT * FROM parent_order_versions ORDER BY version_id').all() });
+    const before = snapshot();
+    const port = createBetterSqliteDbPort(sqlite);
+    const staged = await stageSyncIdentityParentOrderMerges(port);
+    await expect(port.transaction(async (tx) => {
+      await persistSyncIdentityParentOrderMerges(tx, staged, 'local');
+      throw new Error('receive_failed');
+    })).rejects.toThrow('receive_failed');
+    expect(snapshot()).toEqual(before);
+    await port.transaction((tx) => persistSyncIdentityParentOrderMerges(tx, staged, 'local'));
+    expect(sqlite.prepare('SELECT child_ids_json FROM parent_child_order').pluck().get())
+      .toBe(JSON.stringify(['a', 'b', 'c']));
+  } finally { sqlite.close(); }
+});

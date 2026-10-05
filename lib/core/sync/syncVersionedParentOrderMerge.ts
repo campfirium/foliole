@@ -25,14 +25,17 @@ function compareIds(left: string, right: string) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function additions(order: readonly string[], base: ReadonlySet<string>, sourceId: string) {
+function additions(order: readonly string[], base: ReadonlySet<string>, sourceId: string,
+  anchors: ReadonlySet<string>) {
   const result: Addition[] = [];
   let before: string | null = null;
   for (let index = 0; index < order.length; index += 1) {
     const id = order[index]!;
-    if (base.has(id)) { before = id; continue; }
-    const after = order.slice(index + 1).find((next) => base.has(next)) ?? null;
-    result.push({ id, before, after, sourceId });
+    if (!base.has(id)) {
+      const after = order.slice(index + 1).find((next) => anchors.has(next)) ?? null;
+      result.push({ id, before, after, sourceId });
+    }
+    if (anchors.has(id)) before = id;
   }
   return result;
 }
@@ -82,10 +85,10 @@ function sortSlot(slot: readonly string[], sources: readonly ParentOrderUserFact
 
 function insertAdditions(common: readonly string[], sources: readonly ParentOrderUserFact[],
   base: ReadonlySet<string>, members: ReadonlySet<string>,
-  compareAdded: (left: string, right: string) => number) {
+  compareAdded: (left: string, right: string) => number, anchors = base) {
   const selected = new Map<string, Addition>();
   for (const source of [...sources].sort((a, b) => compareIds(a.versionId, b.versionId))) {
-    for (const addition of additions(source.order, base, source.versionId)) {
+    for (const addition of additions(source.order, base, source.versionId, anchors)) {
       if (members.has(addition.id) && !selected.has(addition.id)) {
         selected.set(addition.id, addition);
       }
@@ -143,7 +146,7 @@ export function mergeVersionedParentOrders(args: {
     : changed[0];
   const common = winner?.common ?? baseCommon;
   const order = insertAdditions(common, sources, presentOnEveryFact,
-    args.members, args.compareAdded);
+    args.members, args.compareAdded, new Set(args.base));
   const undecided = [...args.members].filter((id) => !order.includes(id)).sort((a, b) =>
     args.compareAdded(a, b) || compareIds(a, b));
   order.push(...undecided);

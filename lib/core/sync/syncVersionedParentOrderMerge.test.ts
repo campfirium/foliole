@@ -39,6 +39,17 @@ it('puts an addition after its former preceding anchor when anchors reverse', ()
   expect(result.order).toEqual(['b', 'a', 'x']);
 });
 
+it.each([
+  [['a', 'c', 'd', 'x'], ['a', 'x', 'c', 'd']],
+  [['a', 'd', 'x'], ['a', 'd', 'x']]
+])('uses only the original surviving anchors of an addition', (currentMembers, expected) => {
+  const result = mergeVersionedParentOrders({ base: ['a', 'b', 'c', 'd'], facts: [
+    { versionId: 'v1', order: ['a', 'b', 'x', 'c', 'd'] },
+    { versionId: 'v2', order: ['a', 'b', 'c', 'd'] }
+  ], members: new Set(currentMembers), compareAdded });
+  expect(result.order).toEqual(expected);
+});
+
 it('preserves one source’s known addition order while interleaving independent additions', () => {
   const result = mergeVersionedParentOrders({ base: ['a', 'b'], facts: [
     { versionId: 'v1', order: ['a', 'z', 'x', 'b'] },

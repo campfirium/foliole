@@ -26,8 +26,20 @@ it('keeps original user priority and immutable losers across pairwise merge grou
     .toEqual(expected);
   expect(resolve([...all, bc.version], [bc.version.versionId, left.versionId]))
     .toEqual(expected);
+  expect(resolve([...all, ab.version, bc.version],
+    [ab.version.versionId, bc.version.versionId])).toEqual(expected);
   expect(expected.order).toEqual(left.order);
   expect(expected.losingVersionIds).toEqual([right.versionId, third.versionId]);
+});
+
+it('inherits a user successor and preserves a sole changed common order', () => {
+  expect(resolve([base, left], [base.versionId, left.versionId]).version).toEqual(left);
+  const unchanged: ParentOrderVersion = { versionId: 'user-0', kind: 'user',
+    order: base.order, parentVersionIds: [base.versionId] };
+  const result = resolve([base, left, unchanged], [unchanged.versionId, left.versionId]);
+  expect(result.order).toEqual(left.order);
+  expect(result.winningVersionId).toBe(left.versionId);
+  expect(result.losingVersionIds).toEqual([]);
 });
 
 it('combines concurrent membership additions without creating a user reorder vote', () => {
@@ -55,4 +67,18 @@ it('adopts a causally later user choice after an automatic merge', () => {
 it('requires complete ancestry before adopting a received head', () => {
   expect(() => resolve([left], [left.versionId]))
     .toThrow('sync_parent_order_lineage_unproven');
+});
+
+it('keeps the shared base when the other branch has no user reorder', () => {
+  const baseline: ParentOrderVersion = { versionId: 'initial', kind: 'baseline',
+    order: ['a', 'b', 'c', 'd'], parentVersionIds: [] };
+  const added: ParentOrderVersion = { versionId: 'added', kind: 'user',
+    order: ['a', 'b', 'x', 'c', 'd'], parentVersionIds: ['initial'] };
+  const removed: ParentOrderVersion = { versionId: 'removed', kind: 'membership',
+    order: ['a', 'd'], parentVersionIds: ['initial'] };
+  const versions = [baseline, added, removed];
+  const result = resolve(versions, ['removed', 'added'], ['a', 'd', 'x']);
+  expect(result.order).toEqual(['a', 'd', 'x']);
+  expect(resolve(versions, ['added', 'removed'], ['a', 'd', 'x']))
+    .toEqual(result);
 });

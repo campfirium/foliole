@@ -36,7 +36,11 @@ export function resolveParentOrderHeads(args: {
     other.versionId !== version.versionId && graph.visit(other.versionId).has(version.versionId)));
   const superseded = new Set(facts.flatMap((fact) => [...(fact.supersedes ?? [])]));
   const activeUsers = facts.filter((fact) => !superseded.has(fact.versionId));
-  const sourceIds = (activeUsers.length ? activeUsers : tips).map((version) => version.versionId);
+  const sourceIds = activeUsers.length ? [
+    ...activeUsers.map((version) => version.versionId),
+    ...tips.filter((tip) => !activeUsers.some((user) => graph.visit(tip.versionId)
+      .has(user.versionId))).map((tip) => tip.versionId)
+  ] : tips.map((version) => version.versionId);
   const baseHeads = sourceIds.length ? sourceIds : args.headIds;
   const firstId = baseHeads[0];
   if (!firstId) throw new Error('sync_parent_order_heads_missing');
