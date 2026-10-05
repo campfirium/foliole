@@ -10,7 +10,7 @@ const runtime = vi.hoisted(() => ({
     localProofRoot: string; peerProofRoot: string }>,
   cleanups: [] as string[], probes: 0, terminalProbe: 3, sentFrom: '', fast: false,
   probeBaselines: [] as unknown[], receivedFrom: [] as string[], resourceError: false,
-  framedSent: 0
+  framedError: null as Error | null, framedSent: 0
 }));
 vi.mock('../../../../../lib/core/sync/syncIdentityPeerBaseline.js', () => ({
   loadSyncIdentityPeerBaseline: async () => runtime.fast ? { localEpoch: 'local-epoch',
@@ -60,8 +60,11 @@ vi.mock('./syncGroupIdentityExchange', () => ({
   }
 }));
 vi.mock('./framed/companionFramedSyncInventoryRound', () => ({
-  sendCompanionFramedSyncInventoryDifferences: vi.fn(async () => ({ deferredObjects: [],
-    sent: Array.from({ length: runtime.framedSent }, (_, index) => ({ objectId: `node-${index}` })) }))
+  sendCompanionFramedSyncInventoryDifferences: vi.fn(async () => {
+    if (runtime.framedError) throw runtime.framedError;
+    return { deferredObjects: [],
+      sent: Array.from({ length: runtime.framedSent }, (_, index) => ({ objectId: `node-${index}` })) };
+  })
 }));
 vi.mock('./syncGroupIdentityResources', async original => ({
   ...await original<typeof import('./syncGroupIdentityResources')>(),
@@ -126,6 +129,22 @@ it('reprobes after framed node transfers before the legacy remainder is selected
   } finally {
     runtime.framedSent = 0;
     runtime.terminalProbe = 3;
+  }
+});
+
+it('does not fall back to the legacy sender when framed transfer fails', async () => {
+  runtime.probes = 0;
+  runtime.cleanups = [];
+  runtime.sentFrom = '';
+  runtime.resourceError = false;
+  runtime.framedError = new Error('framed_sync_http_503');
+  try {
+    await expect(runCompanionSyncIdentityRound('http://peer', 'Local'))
+      .rejects.toThrow('framed_sync_http_503');
+    expect(runtime.sentFrom).toBe('');
+    expect(runtime.cleanups).toEqual(['2', '1']);
+  } finally {
+    runtime.framedError = null;
   }
 });
 
