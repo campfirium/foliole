@@ -34,6 +34,7 @@
 		326B0000000000000000000E /* FolioleCompanionFramedSyncOutbound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A0000000000000000000E /* FolioleCompanionFramedSyncOutbound.swift */; };
 		326B0000000000000000000F /* FolioleCompanionFramedSyncInventoryClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A0000000000000000000F /* FolioleCompanionFramedSyncInventoryClient.swift */; };
 		326B00000000000000000010 /* FolioleCompanionFramedSyncPreparedOutbound.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000010 /* FolioleCompanionFramedSyncPreparedOutbound.swift */; };
+		326B00000000000000000011 /* FolioleFramedSyncInboundStagingAdapter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000011 /* FolioleFramedSyncInboundStagingAdapter.swift */; };
 		50F020041FED79650016851F /* companion-bridge-contract-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F020061FED79650016851F /* companion-bridge-contract-definitions.json */; };
 		50F020051FED79650016851F /* companion-sync-protocol-definitions.json in Resources */ = {isa = PBXBuildFile; fileRef = 50F020071FED79650016851F /* companion-sync-protocol-definitions.json */; };
 		50F021111FED79650016851F /* FolioleCompanionContractStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F021011FED79650016851F /* FolioleCompanionContractStore.swift */; };
@@ -195,6 +196,7 @@
 		326A0000000000000000000E /* FolioleCompanionFramedSyncOutbound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionFramedSyncOutbound.swift; sourceTree = "<group>"; };
 		326A0000000000000000000F /* FolioleCompanionFramedSyncInventoryClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionFramedSyncInventoryClient.swift; sourceTree = "<group>"; };
 		326A00000000000000000010 /* FolioleCompanionFramedSyncPreparedOutbound.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionFramedSyncPreparedOutbound.swift; sourceTree = "<group>"; };
+		326A00000000000000000011 /* FolioleFramedSyncInboundStagingAdapter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncInboundStagingAdapter.swift; sourceTree = "<group>"; };
 		50F022041FED79650016851F /* FolioleCompanionBonjourDiscovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionBonjourDiscovery.swift; sourceTree = "<group>"; };
 		50F0220A1FED79650016851F /* FolioleCompanionBonjourEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionBonjourEndpoint.swift; sourceTree = "<group>"; };
 		50F022051FED79650016851F /* FolioleCompanionSyncPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncPlugin.swift; sourceTree = "<group>"; };
@@ -369,6 +371,7 @@
 				326A0000000000000000000E /* FolioleCompanionFramedSyncOutbound.swift */,
 				326A0000000000000000000F /* FolioleCompanionFramedSyncInventoryClient.swift */,
 				326A00000000000000000010 /* FolioleCompanionFramedSyncPreparedOutbound.swift */,
+				326A00000000000000000011 /* FolioleFramedSyncInboundStagingAdapter.swift */,
 				50F022041FED79650016851F /* FolioleCompanionBonjourDiscovery.swift */,
 				50F0220A1FED79650016851F /* FolioleCompanionBonjourEndpoint.swift */,
 				50F022051FED79650016851F /* FolioleCompanionSyncPlugin.swift */,
@@ -684,6 +687,7 @@
 				326B0000000000000000000E /* FolioleCompanionFramedSyncOutbound.swift in Sources */,
 				326B0000000000000000000F /* FolioleCompanionFramedSyncInventoryClient.swift in Sources */,
 				326B00000000000000000010 /* FolioleCompanionFramedSyncPreparedOutbound.swift in Sources */,
+				326B00000000000000000011 /* FolioleFramedSyncInboundStagingAdapter.swift in Sources */,
 				50F022141FED79650016851F /* FolioleCompanionBonjourDiscovery.swift in Sources */,
 				50F0221A1FED79650016851F /* FolioleCompanionBonjourEndpoint.swift in Sources */,
 				50F022151FED79650016851F /* FolioleCompanionSyncPlugin.swift in Sources */,

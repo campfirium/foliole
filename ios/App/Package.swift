@@ -49,6 +49,7 @@ let package = Package(
                 "FolioleCompanionFramedSyncPreparedOutbound.swift",
                 "FolioleFramedSyncOutboundStaging.swift",
                 "FolioleFramedSyncReceiptReader.swift",
+                "FolioleFramedSyncInboundStagingAdapter.swift",
                 "FolioleFramedSyncSQLiteStaging.swift",
                 "FolioleFramedSyncCanonicalManifest.swift",
                 "FolioleFramedSyncReceiptWriter.swift",

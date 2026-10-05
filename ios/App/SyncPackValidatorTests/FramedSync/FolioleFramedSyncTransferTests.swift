@@ -54,6 +54,41 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
         XCTAssertEqual(try database.rows("SELECT 1 FROM framed_sync_ios_frames").count, 2)
     }
 
+    func testInterruptedAttemptReopensReplaysAndCompletesFromDurableFrames() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foliole-ios-transfer-resume-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let databaseURL = directory.appendingPathComponent("stage.db")
+        let context = context()
+        let contentID = try FolioleFramedSyncCanonicalManifest.contentID(facts: [], blobs: [])
+        let transferID = context.deriveTransferID(contentID: contentID)
+        let wire = try transferWire(context: context, contentID: contentID, transferID: transferID)
+        let partial = try firstFrameWire(wire)
+
+        do {
+            let database = try FolioleFramedSyncTransferDatabase(url: databaseURL)
+            let receiver = FolioleFramedSyncTransferReceiver(database: database)
+            XCTAssertThrowsError(try receiver.receive(
+                partial, groupKey: Data(0...31), context: context
+            ))
+            XCTAssertEqual(try database.rows(
+                "SELECT state FROM framed_sync_ios_transfers"
+            ).first?[0] as? String, "receiving")
+            XCTAssertEqual(try database.rows("SELECT 1 FROM framed_sync_ios_frames").count, 1)
+            XCTAssertEqual(try database.rows("SELECT 1 FROM framed_sync_ios_blob_pins").count, 0)
+        }
+
+        let reopened = try FolioleFramedSyncTransferDatabase(url: databaseURL)
+        let receiver = FolioleFramedSyncTransferReceiver(database: reopened)
+        XCTAssertEqual(try receiver.receive(
+            wire, groupKey: Data(0...31), context: context
+        ).transferID, transferID)
+        XCTAssertEqual(try reopened.rows(
+            "SELECT state FROM framed_sync_ios_transfers"
+        ).first?[0] as? String, "ready_to_apply")
+        XCTAssertEqual(try reopened.rows("SELECT 1 FROM framed_sync_ios_frames").count, 2)
+    }
+
     func testReceiptIsEncryptedAndBoundToTransfer() throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("foliole-ios-receipt-\(UUID().uuidString)")
@@ -166,5 +201,16 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
         bytes.replaceSubrange(48..<64, with: attemptID)
         bytes.replaceSubrange(64..<68, with: Data([1, 2, 3, 4]))
         return try .init(decoding: bytes)
+    }
+
+    private func firstFrameWire(_ wire: Data) throws -> Data {
+        let reader = FolioleFramedSyncStreamReader(input: InputStream(data: wire))
+        let preamble = try reader.nextPreamble()
+        let frame = try XCTUnwrap(reader.nextFrame())
+        let output = OutputStream.toMemory()
+        let writer = FolioleFramedSyncStreamWriter(output: output)
+        try writer.write(preamble: preamble.encoded)
+        try writer.write(header: frame.headerBytes, ciphertext: frame.ciphertext)
+        return try XCTUnwrap(output.property(forKey: .dataWrittenToMemoryStreamKey) as? Data)
     }
 }

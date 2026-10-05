@@ -9,13 +9,13 @@ final class FolioleFramedSyncStagingTests: XCTestCase {
         let fixture = try makeFixture()
         var adapter: FolioleFramedSyncInboundStagingAdapter? = try .init(databaseURL: fixture.databaseURL)
 
-        XCTAssertEqual(try adapter?.commitAuthenticatedFrame(fixture.frame), .created)
-        XCTAssertEqual(try adapter?.commitAuthenticatedFrame(fixture.frame), .identical)
+        XCTAssertEqual(try adapter?.commitAuthenticatedFrame(fixture.frame, context: fixture.context), .created)
+        XCTAssertEqual(try adapter?.commitAuthenticatedFrame(fixture.frame, context: fixture.context), .identical)
         adapter = nil
 
         XCTAssertEqual(try frameCount(fixture.databaseURL), 1)
         let reopened = try FolioleFramedSyncInboundStagingAdapter(databaseURL: fixture.databaseURL)
-        XCTAssertEqual(try reopened.commitAuthenticatedFrame(fixture.frame), .identical)
+        XCTAssertEqual(try reopened.commitAuthenticatedFrame(fixture.frame, context: fixture.context), .identical)
     }
 
     func testInvalidPayloadAndConflictingReplayNeverOverwriteDurableFrame() throws {
@@ -31,10 +31,10 @@ final class FolioleFramedSyncStagingTests: XCTestCase {
             ciphertext: invalid.ciphertext,
             plaintext: Data([1, 2, 3])
         )
-        XCTAssertThrowsError(try adapter.commitAuthenticatedFrame(invalid))
+        XCTAssertThrowsError(try adapter.commitAuthenticatedFrame(invalid, context: fixture.context))
         XCTAssertEqual(try frameCount(fixture.databaseURL), 0)
 
-        XCTAssertEqual(try adapter.commitAuthenticatedFrame(fixture.frame), .created)
+        XCTAssertEqual(try adapter.commitAuthenticatedFrame(fixture.frame, context: fixture.context), .created)
         let conflict = FolioleFramedSyncAuthenticatedFrame(
             transferID: fixture.frame.transferID,
             attemptID: fixture.frame.attemptID,
@@ -43,7 +43,7 @@ final class FolioleFramedSyncStagingTests: XCTestCase {
             ciphertext: Data(repeating: 9, count: fixture.frame.ciphertext.count),
             plaintext: fixture.frame.plaintext
         )
-        XCTAssertThrowsError(try adapter.commitAuthenticatedFrame(conflict)) { error in
+        XCTAssertThrowsError(try adapter.commitAuthenticatedFrame(conflict, context: fixture.context)) { error in
             XCTAssertEqual(
                 error as? FolioleFramedSyncValidationError,
                 FolioleFramedSyncValidationError("inbound_frame_identity_conflict")
@@ -69,7 +69,7 @@ final class FolioleFramedSyncStagingTests: XCTestCase {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         addTeardownBlock { try? FileManager.default.removeItem(at: directory) }
         let databaseURL = directory.appendingPathComponent("stage.sqlite")
-        try createDatabase(databaseURL, transferID: message.transferID, attemptID: message.attemptID)
+        _ = try FolioleFramedSyncTransferDatabase(url: databaseURL)
         let ciphertext = Data([0, 255, 7])
         let header = try FolioleFramedSyncWireHeader(
             ciphertextBytes: ciphertext.count,
@@ -78,6 +78,11 @@ final class FolioleFramedSyncStagingTests: XCTestCase {
         ).encode()
         return StagingFixture(
             databaseURL: databaseURL,
+            context: .init(
+                groupID: message.manifest.groupID, senderDeviceID: "sender",
+                senderLibraryEpoch: "sender-epoch", receiverDeviceID: "receiver",
+                receiverLibraryEpoch: "receiver-epoch"
+            ),
             frame: FolioleFramedSyncAuthenticatedFrame(
                 transferID: message.transferID,
                 attemptID: message.attemptID,
@@ -89,39 +94,13 @@ final class FolioleFramedSyncStagingTests: XCTestCase {
         )
     }
 
-    private func createDatabase(_ url: URL, transferID: Data, attemptID: Data) throws {
-        var database: OpaquePointer?
-        guard sqlite3_open(url.path, &database) == SQLITE_OK, let database else {
-            throw FolioleFramedSyncValidationError("test_database_open_failed")
-        }
-        defer { sqlite3_close(database) }
-        try execute(database, """
-            PRAGMA foreign_keys = ON;
-            CREATE TABLE framed_sync_inbound_transfers (
-              transfer_id BLOB PRIMARY KEY, active_attempt_id BLOB
-            );
-            CREATE TABLE framed_sync_inbound_attempts (
-              transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, state TEXT NOT NULL,
-              PRIMARY KEY (transfer_id, attempt_id)
-            );
-            CREATE TABLE framed_sync_inbound_frames (
-              transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, sequence TEXT NOT NULL,
-              frame_type INTEGER NOT NULL, preamble BLOB NOT NULL, frame_header BLOB NOT NULL,
-              ciphertext BLOB NOT NULL, authenticated_plaintext BLOB NOT NULL,
-              PRIMARY KEY (transfer_id, attempt_id, sequence)
-            );
-            INSERT INTO framed_sync_inbound_transfers VALUES (X'\(transferID.hex)', X'\(attemptID.hex)');
-            INSERT INTO framed_sync_inbound_attempts VALUES (X'\(transferID.hex)', X'\(attemptID.hex)', 'receiving');
-            """)
-    }
-
     private func frameCount(_ url: URL) throws -> Int {
         var database: OpaquePointer?
         guard sqlite3_open_v2(url.path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK,
               let database else { throw FolioleFramedSyncValidationError("test_database_open_failed") }
         defer { sqlite3_close(database) }
         var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(database, "SELECT count(*) FROM framed_sync_inbound_frames", -1,
+        guard sqlite3_prepare_v2(database, "SELECT count(*) FROM framed_sync_ios_frames", -1,
                                  &statement, nil) == SQLITE_OK, let statement else {
             throw FolioleFramedSyncValidationError("test_database_query_failed")
         }
@@ -132,18 +111,10 @@ final class FolioleFramedSyncStagingTests: XCTestCase {
         return Int(sqlite3_column_int(statement, 0))
     }
 
-    private func execute(_ database: OpaquePointer, _ sql: String) throws {
-        guard sqlite3_exec(database, sql, nil, nil, nil) == SQLITE_OK else {
-            throw FolioleFramedSyncValidationError("test_database_setup_failed")
-        }
-    }
 }
 
 private struct StagingFixture {
     let databaseURL: URL
+    let context: FolioleFramedSyncTransferContext
     let frame: FolioleFramedSyncAuthenticatedFrame
-}
-
-private extension Data {
-    var hex: String { map { String(format: "%02x", $0) }.joined() }
 }

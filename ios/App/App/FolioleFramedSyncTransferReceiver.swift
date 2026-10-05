@@ -24,6 +24,7 @@ final class FolioleFramedSyncTransferReceiver {
         guard preamble.contextKind == 2, preamble.startingSequence == 0 else {
             throw invalid("transfer_preamble_required")
         }
+        let staging = try FolioleFramedSyncInboundStagingAdapter(databaseURL: database.url)
         var transfer = Transfer(preamble: preamble)
         while let frame = try reader.nextFrame() {
             guard transfer.frames.count < 4_130 else { throw invalid("transfer_frame_limit_exceeded") }
@@ -35,35 +36,59 @@ final class FolioleFramedSyncTransferReceiver {
                 plaintext, authenticatedFrameType: frame.header.frameType.rawValue
             )
             try transfer.append(frame, plaintext: plaintext, message: message, context: context)
+            _ = try staging.commitAuthenticatedFrame(.init(
+                transferID: preamble.contextID, attemptID: preamble.identifier,
+                preamble: preamble.encoded, header: frame.headerBytes,
+                ciphertext: frame.ciphertext, plaintext: plaintext
+            ), context: context)
         }
-        try transfer.finish()
-        try persist(transfer, context: context)
+        var durable = try rebuild(
+            preamble: preamble, groupKey: groupKey, context: context
+        )
+        try durable.finish()
+        try markReady(durable)
         return .init(transferID: preamble.contextID)
     }
 
-    private func persist(_ value: Transfer, context: FolioleFramedSyncTransferContext) throws {
-        guard let header = value.header else { throw invalid("transfer_header_required") }
-        let manifest = header.manifest
-        try database.transaction {
-            try database.execute("DELETE FROM framed_sync_ios_frames WHERE transfer_id = ?", [value.transferID])
-            try database.execute("DELETE FROM framed_sync_ios_blob_pins WHERE transfer_id = ?", [value.transferID])
-            try database.execute("DELETE FROM framed_sync_ios_transfers WHERE transfer_id = ?", [value.transferID])
-            try database.execute("""
-                INSERT INTO framed_sync_ios_transfers VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ready_to_apply')
-                """, [
-                value.transferID, manifest.contentID, manifest.facts.count, manifest.blobs.count,
-                manifest.blobs.reduce(UInt64(0)) { $0 + $1.byteLength },
-                context.senderDeviceID, context.senderLibraryEpoch,
-                context.receiverDeviceID, context.receiverLibraryEpoch, value.attemptID
-            ])
-            for item in value.frames {
-                try database.execute("INSERT INTO framed_sync_ios_frames VALUES (?, ?, ?, ?, ?, ?, ?, ?)", [
-                    value.transferID, value.attemptID, String(item.frame.header.sequence),
-                    Int(item.frame.header.frameType.rawValue), value.preamble.encoded,
-                    item.frame.headerBytes, item.frame.ciphertext, item.plaintext
-                ])
+    private func rebuild(
+        preamble: FolioleFramedSyncPreamble, groupKey: Data,
+        context: FolioleFramedSyncTransferContext
+    ) throws -> Transfer {
+        let rows = try database.rows("""
+            SELECT frame_header, ciphertext FROM framed_sync_ios_frames
+            WHERE transfer_id = ? AND attempt_id = ? ORDER BY CAST(sequence AS INTEGER)
+            """, [preamble.contextID, preamble.identifier])
+        let output = OutputStream.toMemory()
+        let writer = FolioleFramedSyncStreamWriter(output: output)
+        try writer.write(preamble: preamble.encoded)
+        for row in rows {
+            guard let header = row[0] as? Data, let ciphertext = row[1] as? Data else {
+                throw invalid("inbound_durable_frame_invalid")
             }
+            try writer.write(header: header, ciphertext: ciphertext)
+        }
+        guard let data = output.property(forKey: .dataWrittenToMemoryStreamKey) as? Data else {
+            throw invalid("framed_sync_stream_write_failed")
+        }
+        let reader = FolioleFramedSyncStreamReader(input: InputStream(data: data))
+        _ = try reader.nextPreamble()
+        var result = Transfer(preamble: preamble)
+        while let frame = try reader.nextFrame() {
+            let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
+                groupKey: groupKey, preamble: preamble, frame: frame,
+                expectedSequence: UInt64(result.frames.count)
+            )
+            let message = try FolioleFramedSyncCodec.decode(
+                plaintext, authenticatedFrameType: frame.header.frameType.rawValue
+            )
+            try result.append(frame, plaintext: plaintext, message: message, context: context)
+        }
+        return result
+    }
+
+    private func markReady(_ value: Transfer) throws {
+        try database.transaction {
+            try database.execute("DELETE FROM framed_sync_ios_blob_pins WHERE transfer_id = ?", [value.transferID])
             for blob in value.blobs {
                 try database.execute("INSERT OR IGNORE INTO framed_sync_ios_available_blobs VALUES (?, ?, ?)",
                                      [blob.reference.sha256, blob.reference.byteLength, blob.data])
@@ -72,6 +97,10 @@ final class FolioleFramedSyncTransferReceiver {
                     Int(blob.reference.role.rawValue), blob.reference.required ? 1 : 0
                 ])
             }
+            try database.execute("""
+                UPDATE framed_sync_ios_transfers SET state = 'ready_to_apply'
+                WHERE transfer_id = ? AND active_attempt_id = ? AND state = 'receiving'
+                """, [value.transferID, value.attemptID])
         }
     }
 
