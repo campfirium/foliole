@@ -14,6 +14,9 @@ export function readPackRowsFromZip(packPath: string, tempRoot: string) {
   fsSync.writeFileSync(incomingPath, incomingBytes);
   const db = new BetterSqlite3(incomingPath, { readonly: true });
   try {
+    const hasNodeResources = Boolean(db.prepare(
+      "SELECT 1 FROM pragma_table_info('nodes') WHERE name = 'resource_references'"
+    ).pluck().get());
     return {
       blobDataTable: db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'content_blob_data'").get(),
       blobs: db.prepare('SELECT hash, kind FROM content_blobs').all(),
@@ -24,7 +27,9 @@ export function readPackRowsFromZip(packPath: string, tempRoot: string) {
         "SELECT value FROM pack_manifest WHERE key = 'manifest_json'"
       ).pluck().get())),
       manifest,
-      nodeResources: db.prepare("SELECT id, resource_references FROM nodes WHERE resource_references <> '[]'").all(),
+      nodeResources: hasNodeResources
+        ? db.prepare("SELECT id, resource_references FROM nodes WHERE resource_references <> '[]'").all()
+        : [],
       nodeTombstones: manifest.tables.some(({ name }: { name: string }) => name === 'node_sync_tombstones')
         ? db.prepare('SELECT node_id, version_id, deleted_at FROM node_sync_tombstones').all()
         : [],
