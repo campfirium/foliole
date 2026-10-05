@@ -10,6 +10,8 @@ import com.foliole.sync.v22.CanonicalObject;
 import com.foliole.sync.v22.FactIdentity;
 import com.foliole.sync.v22.FactKind;
 import com.foliole.sync.v22.FactRecord;
+import com.foliole.sync.v22.TransferHeader;
+import com.foliole.sync.v22.TransferTrailer;
 import com.google.protobuf.ByteString;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -86,6 +88,38 @@ public final class FramedSyncTransferWriterTest {
             (com.foliole.sync.v22.TransferTrailer) decoded.get(3).payload().value();
         assertEquals(2, trailer.getFactCount());
         assertEquals(0, trailer.getBlobCount());
+    }
+
+    @Test public void writesZeroByteBlobInManifestWithoutAnEmptyChunk() throws Exception {
+        byte[] body = new byte[0];
+        FactRecord fact = fact(body);
+        MemoryStaging staging = new MemoryStaging();
+        FramedSyncTransferWriter.Attempt attempt = FramedSyncTransferWriter.prepare(
+            GROUP_KEY, new FramedSyncTransferContext(
+                "group", "sender", "sender-epoch", "receiver", "receiver-epoch"),
+            Collections.singletonList(fact),
+            Collections.singletonList(new FramedSyncTransferWriter.BlobContent(
+                fact.getBlobs(0).getSha256().toByteArray(), body)), staging);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        FramedSyncTransferWriter.replay(attempt, staging, output);
+        FramedSyncStreamReader reader = new FramedSyncStreamReader(
+            new ByteArrayInputStream(output.toByteArray()));
+        FramedSyncPreamble preamble = reader.readPreamble();
+        List<FramedSyncValidatedMessage> decoded = new ArrayList<>();
+        int[] expectedTypes = { 2, 3, 5 };
+        for (int sequence = 0; sequence < expectedTypes.length; sequence++) {
+            FramedSyncWireFrame frame = reader.readFrame();
+            decoded.add(FramedSyncCodec.decode(
+                FramedSyncFrameCrypto.decrypt(GROUP_KEY, preamble, frame, sequence),
+                expectedTypes[sequence]));
+        }
+        assertEquals(null, reader.readFrame());
+        TransferHeader header = (TransferHeader) decoded.get(0).payload().value();
+        BlobReference descriptor = header.getManifest().getBlobs(0);
+        assertEquals(0, descriptor.getByteLength());
+        assertArrayEquals(MessageDigest.getInstance("SHA-256").digest(body),
+            descriptor.getSha256().toByteArray());
+        assertEquals(1, ((TransferTrailer) decoded.get(2).payload().value()).getBlobCount());
     }
 
     private static FactRecord fact(byte[] body) throws Exception {

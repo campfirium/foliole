@@ -76,17 +76,15 @@ public final class FramedSyncTransferWriter {
         }
         for (BlobContent content : contents) {
             byte[] data = content.data();
-            for (int offset = 0; offset < data.length || offset == 0;
-                offset += FramedSyncContract.BLOB_CHUNK_BYTES) {
+            for (int offset = 0; offset < data.length; offset += FramedSyncContract.BLOB_CHUNK_BYTES) {
                 int length = Math.min(FramedSyncContract.BLOB_CHUNK_BYTES, data.length - offset);
                 ProtocolMessage chunk = ProtocolMessage.newBuilder().setBlobChunk(BlobChunk.newBuilder()
                     .setTransferId(ByteString.copyFrom(transferId))
                     .setBlobHash(ByteString.copyFrom(content.sha256()))
                     .setOffset(Integer.toUnsignedLong(offset))
-                    .setData(ByteString.copyFrom(data, offset, Math.max(length, 0)))).build();
+                    .setData(ByteString.copyFrom(data, offset, length))).build();
                 sequence = persist(groupKey, preamble, transferId, attemptId, sequence,
                     FramedSyncFrameType.BLOB_CHUNK, chunk, staging);
-                if (data.length == 0) break;
             }
         }
         persist(groupKey, preamble, transferId, attemptId, sequence,
