@@ -1,7 +1,9 @@
 import type http from 'node:http';
 
+import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
+import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
 import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
@@ -11,6 +13,7 @@ import {
   handleCompanionLanFramedSyncPost
 } from './companionLanFramedSyncPost.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import { respondDesktopFramedSyncInventory } from './desktopFramedSyncInventoryHttp.js';
 import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
 
 export async function handleProductionCompanionFramedSyncPost(args: {
@@ -33,23 +36,27 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     };
   });
   const staging = createDesktopFramedSyncStaging(runtime.db);
+  const noncePort = createDesktopFramedSyncSessionNoncePort(runtime.db);
   await handleCompanionLanFramedSyncPost({
     authenticate: () => runtime.auth,
     localIdentity: { deviceId: args.deviceId, libraryEpoch: runtime.libraryEpoch },
-    onStream: ({ context, stream }) => receiveDesktopFramedSyncTransfer({
-      context: {
-        groupId: context.groupId,
-        protocolVersion: context.protocolVersion,
-        receiverDeviceId: context.responderDeviceId,
-        receiverLibraryEpoch: context.responderLibraryEpoch,
-        senderDeviceId: context.initiatorDeviceId,
-        senderLibraryEpoch: context.initiatorLibraryEpoch
-      },
-      db: runtime.db,
-      groupKey: runtime.groupKey,
-      staging,
-      stream
-    }),
+    onStream: ({ context, stream }) => decodeFramedSyncPreamble(stream.preamble).contextKind === 'session'
+      ? respondDesktopFramedSyncInventory({ context, db: runtime.db, groupKey: runtime.groupKey,
+        noncePort, stream })
+      : receiveDesktopFramedSyncTransfer({
+        context: {
+          groupId: context.groupId,
+          protocolVersion: context.protocolVersion,
+          receiverDeviceId: context.responderDeviceId,
+          receiverLibraryEpoch: context.responderLibraryEpoch,
+          senderDeviceId: context.initiatorDeviceId,
+          senderLibraryEpoch: context.initiatorLibraryEpoch
+        },
+        db: runtime.db,
+        groupKey: runtime.groupKey,
+        staging,
+        stream
+      }),
     request: args.request,
     response: args.response
   });
