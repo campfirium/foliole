@@ -123,10 +123,9 @@ export async function finishDesktopFramedSyncTransfer(input: {
   const receipt = await input.db.transaction(async (tx) => {
     if (prepared.record) await applySyncNodesWithDbPort(tx, [prepared.record]);
     await applyDesktopFramedSyncRelationReviewFactsWithDbPort(tx, prepared.relationReviewFacts);
-    const appliedStateHash = prepared.nodeFact?.sharedStateHash ??
-      (await readFramedSyncInventoryEntry(tx, {
-        globalId: prepared.globalId, objectType: 'node'
-      }))?.sharedStateHash;
+    const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
+      globalId: prepared.globalId, objectType: 'node'
+    }))?.sharedStateHash;
     if (!appliedStateHash) throw new Error('framed_sync_process_inventory_missing');
     return createDesktopFramedSyncStaging(tx).commitApplyAndReceipt({
       appliedStateHash,

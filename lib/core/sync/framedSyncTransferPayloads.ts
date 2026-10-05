@@ -57,7 +57,7 @@ export function buildFramedSyncTransferPayloads(input: Readonly<{
     payload: factToWire(fact)
   });
   for (const content of verifiedBlobContents(input.manifest, input.blobContents)) {
-    const count = Math.max(1, Math.ceil(content.data.byteLength / FRAMED_SYNC_LIMITS.blobChunkBytes));
+    const count = Math.ceil(content.data.byteLength / FRAMED_SYNC_LIMITS.blobChunkBytes);
     for (let index = 0; index < count; index += 1) {
       const offset = index * FRAMED_SYNC_LIMITS.blobChunkBytes;
       payloads.push({

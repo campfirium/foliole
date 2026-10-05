@@ -54,3 +54,19 @@ it('rejects blob bytes that do not match the published manifest', () => {
     published: value.published
   })).toThrow('framed_sync_blob_content_mismatch');
 });
+
+it('declares an empty blob without emitting an invalid empty chunk', () => {
+  const value = fixture();
+  const data = new Uint8Array();
+  const blob = { ...value.blob, byteLength: 0n, sha256: sha256(data) };
+  const manifest = { blobs: [blob], facts: [{ ...value.manifest.facts[0]!, blobs: [blob] }] };
+  const payloads = buildFramedSyncTransferPayloads({
+    attemptId: new Uint8Array(16),
+    blobContents: [{ data, sha256: blob.sha256 }],
+    manifest,
+    published: { ...value.published, totalBlobBytes: 0n }
+  });
+  expect(payloads.map((payload) => payload.payloadCase)).toEqual([
+    'transfer_header', 'fact', 'transfer_trailer'
+  ]);
+});
