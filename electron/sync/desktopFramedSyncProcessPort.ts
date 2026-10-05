@@ -24,7 +24,7 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
   if (!group) throw new Error('sync_group_not_available');
   const groupKey = new Uint8Array(Buffer.from(group.workgroup_key, 'base64url'));
   const round = createDesktopFramedSyncRoundProcessAdapter({
-    db, groupId: group.group_id, local: identity, staging
+    db, groupId: group.group_id, groupSecret: group.workgroup_key, local: identity, staging
   });
   return {
     handleHttpRequest: (request: IncomingMessage, response: ServerResponse) =>
@@ -48,12 +48,27 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
         response
       }),
     round,
-    synchronize: ({ nodeId, peerOrigin }: Readonly<{ nodeId?: string; peerOrigin: string }>) =>
-      synchronizeDesktopFramedSync({
+    synchronize: async ({ nodeId, peerOrigin }: Readonly<{ nodeId?: string; peerOrigin: string }>) => {
+      const remoteDeviceId = await fetchFixturePeerDeviceId(peerOrigin);
+      return synchronizeDesktopFramedSync({
+        groupId: group.group_id,
+        groupSecret: group.workgroup_key,
         local: identity,
         ...(nodeId === undefined ? {} : { nodeId }),
         peerOrigin,
+        remote: { deviceId: remoteDeviceId, libraryEpoch: `${remoteDeviceId}-epoch` },
         staging
-      })
+      });
+    }
   };
+}
+
+async function fetchFixturePeerDeviceId(peerOrigin: string) {
+  const response = await fetch(`${peerOrigin}/health`);
+  if (!response.ok) throw new Error('framed_sync_fixture_peer_health_failed');
+  const payload = await response.json() as Record<string, unknown>;
+  if (typeof payload.deviceId !== 'string' || !payload.deviceId) {
+    throw new Error('framed_sync_fixture_peer_identity_missing');
+  }
+  return payload.deviceId;
 }

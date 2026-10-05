@@ -76,6 +76,7 @@ type CachedSelection = Readonly<{
 type AdapterInput = Readonly<{
   db: DbPort;
   groupId: string;
+  groupSecret: string;
   local: DesktopFramedSyncRoundIdentity;
   staging: FramedSyncStagingPort;
 }>;

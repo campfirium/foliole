@@ -27,6 +27,7 @@ export type DesktopFramedSyncRoundIdentity = Readonly<{
 type EndpointInput = Readonly<{
   db: DbPort;
   groupId: string;
+  groupSecret: string;
   local: DesktopFramedSyncRoundIdentity;
   peer: DesktopFramedSyncRoundIdentity;
   peerOrigin: string;
@@ -66,9 +67,12 @@ async function sendPublishedTransfer(input: EndpointInput, args: Readonly<{
   publication: Parameters<FramedSyncStagingPort['publishOutbound']>[0];
 }>) {
   const sent = await synchronizeDesktopFramedSync({
+    groupId: input.groupId,
+    groupSecret: input.groupSecret,
     local: input.local,
     nodeId: args.difference.globalId,
     peerOrigin: input.peerOrigin,
+    remote: input.peer,
     staging: input.staging
   });
   if (sent.transferId !== hex(args.publication.transferId)) {

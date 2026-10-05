@@ -6,7 +6,6 @@ import {
   type StoredEncryptedFrame
 } from '../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
-import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 import { loadSyncNodes, loadSyncNodeVersionsSince } from '../database/syncNodes.js';
 
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
@@ -22,21 +21,19 @@ import {
   wireUint64
 } from './desktopFramedSyncProcessWire.js';
 
-type LocalIdentity = Readonly<{ deviceId: string; libraryEpoch: string }>;
+type Identity = Readonly<{ deviceId: string; libraryEpoch: string }>;
 type Projection = ReturnType<typeof projectDesktopFramedSyncProcessTransfer>;
 
 export async function synchronizeDesktopFramedSync(input: {
-  local: LocalIdentity;
+  groupId: string;
+  groupSecret: string;
+  local: Identity;
   nodeId?: string;
   peerOrigin: string;
+  remote: Identity;
   staging: FramedSyncStagingPort;
 }) {
-  const group = requiredGroup();
-  const remoteDeviceId = await fetch(`${input.peerOrigin}/health`).then(async (response) => {
-    if (!response.ok) throw new Error('framed_sync_peer_health_failed');
-    return String((await response.json() as Record<string, unknown>).deviceId);
-  });
-  const context = transferContext(input.local, remoteDeviceId, group.group_id);
+  const context = transferContext(input.local, input.remote, input.groupId);
   const source = input.nodeId
     ? loadSyncNodes([input.nodeId])[0]
     : loadSyncNodeVersionsSince(null, 1)[0];
@@ -50,7 +47,7 @@ export async function synchronizeDesktopFramedSync(input: {
   await input.staging.persistOutboundAttempt(transferId, attempt);
   const frames = await createTransferFrames({
     attempt,
-    groupKey: groupKey(group.workgroup_key),
+    groupKey: groupKey(input.groupSecret),
     projection,
     published,
     staging: input.staging
@@ -59,16 +56,16 @@ export async function synchronizeDesktopFramedSync(input: {
   const response = await postDesktopFramedSync({
     body: { frames: processFrameStream(frames), preamble: attempt.preamble },
     endpointUrl: input.peerOrigin,
-    groupId: group.group_id,
+    groupId: input.groupId,
     localDeviceId: context.senderDeviceId,
     localLibraryEpoch: context.senderLibraryEpoch,
     pathWithQuery: '/companion/framed-sync',
     remoteDeviceId: context.receiverDeviceId,
     remoteLibraryEpoch: context.receiverLibraryEpoch,
-    secret: group.workgroup_key
+    secret: input.groupSecret
   });
   const receipt = await readReceipt({
-    groupKey: groupKey(group.workgroup_key),
+    groupKey: groupKey(input.groupSecret),
     published,
     stream: response.stream
   });
@@ -131,12 +128,12 @@ async function createTransferFrames(input: {
   return frames;
 }
 
-function transferContext(local: LocalIdentity, remoteDeviceId: string, groupId: string): FramedSyncContext {
+function transferContext(local: Identity, remote: Identity, groupId: string): FramedSyncContext {
   return {
     groupId,
     protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-    receiverDeviceId: remoteDeviceId,
-    receiverLibraryEpoch: `${remoteDeviceId}-epoch`,
+    receiverDeviceId: remote.deviceId,
+    receiverLibraryEpoch: remote.libraryEpoch,
     senderDeviceId: local.deviceId,
     senderLibraryEpoch: local.libraryEpoch
   };
@@ -153,12 +150,6 @@ function publication(context: FramedSyncContext, projection: Projection, content
     totalBlobBytes: projection.manifest.blobs.reduce((total, blob) => total + blob.byteLength, 0n),
     transferId
   };
-}
-
-function requiredGroup() {
-  const group = loadDesktopSyncGroupInfo();
-  if (!group) throw new Error('sync_group_not_available');
-  return group;
 }
 
 const groupKey = (secret: string) => new Uint8Array(Buffer.from(secret, 'base64url'));
