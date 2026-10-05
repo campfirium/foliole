@@ -1,7 +1,9 @@
 package com.foliole.android;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -11,9 +13,13 @@ final class FolioleCompanionHttpRequest {
     final Map<String, String> headers;
     final String method;
     final String path;
+    private final InputStream bodyStream;
 
-    private FolioleCompanionHttpRequest(String method, String path, Map<String, String> headers, byte[] body) {
+    private FolioleCompanionHttpRequest(
+        String method, String path, Map<String, String> headers, byte[] body, InputStream bodyStream
+    ) {
         this.method = method; this.path = path; this.headers = headers; this.body = body;
+        this.bodyStream = bodyStream;
     }
 
     static FolioleCompanionHttpRequest read(java.io.InputStream raw) throws Exception {
@@ -25,6 +31,11 @@ final class FolioleCompanionHttpRequest {
         for (String value = line(input); !value.isEmpty(); value = line(input)) {
             int separator = value.indexOf(':');
             if (separator > 0) headers.put(value.substring(0, separator).trim().toLowerCase(), value.substring(separator + 1).trim());
+        }
+        if (parts[0].equalsIgnoreCase("POST") && framedPath(parts[1])) {
+            InputStream bodyStream = FolioleCompanionHttpBodyStream.open(input, headers);
+            return new FolioleCompanionHttpRequest(
+                parts[0].toUpperCase(), parts[1], headers, new byte[0], bodyStream);
         }
         int length = Integer.parseInt(headers.getOrDefault("content-length", "0"));
         int limit = parts[0].equalsIgnoreCase("POST") &&
@@ -39,11 +50,17 @@ final class FolioleCompanionHttpRequest {
             if (count < 0) throw new IllegalArgumentException("truncated_http_body");
             offset += count;
         }
-        return new FolioleCompanionHttpRequest(parts[0].toUpperCase(), parts[1], headers, body);
+        return new FolioleCompanionHttpRequest(parts[0].toUpperCase(), parts[1], headers,
+            body, new ByteArrayInputStream(body));
     }
 
     String bodyText() { return new String(body, StandardCharsets.UTF_8); }
+    InputStream bodyStream() { return bodyStream; }
     String header(String name) { return headers.get(name.toLowerCase()); }
+
+    private static boolean framedPath(String path) {
+        return path.equals("/companion/framed-sync") || path.startsWith("/companion/framed-sync?");
+    }
 
     private static String line(BufferedInputStream input) throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
