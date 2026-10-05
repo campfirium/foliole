@@ -97,6 +97,19 @@ export async function sendCompanionFramedSyncInventoryDifferences(
   const local = localValue.entries.map(decodeEntry);
   const selection = selectCompanionFramedSyncCurrentNodes({ local, remote: remoteResult.entries });
   const deferredObjects = [...selection.deferredObjects];
+  const received: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
+  for (const difference of selection.pullable) {
+    const receipt = await FolioleCompanionSync.pullFramedSyncObject({
+      ...args,
+      frontier_fact_ids: difference.sourceSnapshot.frontierFactIds,
+      object_id: difference.globalId,
+      required_relation_ids: difference.sourceSnapshot.requiredRelationIds,
+      resource_hashes: difference.sourceSnapshot.resourceHashes.map(bytesToHex),
+      review_fact_ids: difference.sourceSnapshot.reviewFactIds,
+      round_id: bytesToHex(remoteResult.roundId)
+    });
+    received.push({ objectId: difference.globalId, receipt });
+  }
   const sent: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
   for (const difference of selection.sendable) {
     const currentValue = await owner.read((db) =>
@@ -120,19 +133,6 @@ export async function sendCompanionFramedSyncInventoryDifferences(
       reviewFactIds: difference.need.reviewFactIds
     });
     sent.push({ objectId: difference.globalId, receipt });
-  }
-  const received: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
-  for (const difference of selection.pullable) {
-    const receipt = await FolioleCompanionSync.pullFramedSyncObject({
-      ...args,
-      frontier_fact_ids: difference.sourceSnapshot.frontierFactIds,
-      object_id: difference.globalId,
-      required_relation_ids: difference.sourceSnapshot.requiredRelationIds,
-      resource_hashes: difference.sourceSnapshot.resourceHashes.map(bytesToHex),
-      review_fact_ids: difference.sourceSnapshot.reviewFactIds,
-      round_id: bytesToHex(remoteResult.roundId)
-    });
-    received.push({ objectId: difference.globalId, receipt });
   }
   return { deferredObjects, received, sent };
 }

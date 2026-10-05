@@ -113,3 +113,22 @@ it('pulls a remote-only Node with the same inventory round identity', async () =
     round_id: '8'.repeat(32)
   });
 });
+
+it('pulls a divergent Node before revalidating and deferring its stale outbound side', async () => {
+  mocks.localInventory.mockResolvedValue({ entries: [entry('node-a', '1')] });
+  mocks.remoteInventory.mockResolvedValue({
+    entries: [entry('node-a', '5')], round_id: '8'.repeat(32)
+  });
+  mocks.localEntry.mockResolvedValue(entry('node-a', '5'));
+
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+    deferredObjects: [{ globalId: 'node-a', objectType: 'node' }],
+    received: [{ objectId: 'node-a', receipt: { transfer_id: 'b'.repeat(64) } }],
+    sent: []
+  });
+  expect(mocks.pull).toHaveBeenCalledOnce();
+  expect(mocks.send).not.toHaveBeenCalled();
+  expect(mocks.pull.mock.invocationCallOrder[0]).toBeLessThan(
+    mocks.localEntry.mock.invocationCallOrder[0]!
+  );
+});
