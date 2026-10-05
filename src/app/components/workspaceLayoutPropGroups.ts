@@ -1,3 +1,5 @@
+import type { CompactWorkspaceSidebars } from '../hooks/useCompactWorkspaceSidebars';
+
 import type { WorkspaceLayoutFieldTypes } from './workspaceLayoutProps';
 
 export type WorkspaceLayoutNavigationProps = Pick<WorkspaceLayoutFieldTypes,
@@ -134,7 +136,7 @@ export type WorkspaceLayoutChromeProps = Pick<WorkspaceLayoutFieldTypes,
   | 'onToggleListVisibility'
   | 'onToggleBothSidebarVisibility'
   | 'onToggleRightSidebarVisibility'
->;
+> & { compactSidebars?: CompactWorkspaceSidebars };
 
 export type WorkspaceLayoutImportProps = Pick<WorkspaceLayoutFieldTypes,
   | 'isImportManagementOpen'

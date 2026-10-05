@@ -16,6 +16,7 @@ import { useControllerStartupEffects } from './appControllerStartupEffects';
 import { useWorkspaceControllerState, useWorkspaceSelectors } from './appControllerState';
 import type { AppControllerResult } from './appControllerTypes';
 import { useCommandShortcutState } from './reviewHotkeysState';
+import { useCompactWorkspaceSidebars } from './useCompactWorkspaceSidebars';
 import { useControllerAuxiliaryState } from './useControllerAuxiliaryState';
 import { useControllerPaletteItems } from './useControllerPaletteItems';
 import { useControllerPriorityQuickSet } from './useControllerPriorityQuickSet';
@@ -64,7 +65,8 @@ function useDerivedControllerState(args: {
       ws: args.ws
     })
   );
-  return { layoutProps, paletteItems };
+  const layoutChrome = useCompactWorkspaceSidebars(layoutProps.layoutChrome);
+  return { layoutProps: { ...layoutProps, layoutChrome }, paletteItems };
 }
 
 function buildControllerLayoutState(args: {

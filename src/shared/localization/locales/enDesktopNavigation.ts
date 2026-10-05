@@ -24,6 +24,7 @@ export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
   'desktop.workspace.appearanceMode.systemCurrent': 'Follow system (currently {resolved})',
   'desktop.workspace.toggleLeftPanel': 'Toggle left panel',
   'desktop.workspace.toggleRightSidebar': 'Toggle right sidebar',
+  'desktop.workspace.closeSidebar': 'Close sidebar',
   'desktop.workspace.moreRightPanels': 'More right sidebar panels',
   'desktop.workspace.pinnedPanel': 'Top',
   'desktop.workspace.demo.actions': 'Demo actions',

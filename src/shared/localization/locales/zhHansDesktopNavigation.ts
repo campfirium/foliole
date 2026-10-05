@@ -26,6 +26,7 @@ export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<Translation
   'desktop.workspace.appearanceMode.systemCurrent': '跟随系统（当前为{resolved}）',
   'desktop.workspace.toggleLeftPanel': '切换左侧面板',
   'desktop.workspace.toggleRightSidebar': '切换右侧栏',
+  'desktop.workspace.closeSidebar': '收起侧栏',
   'desktop.workspace.moreRightPanels': '更多右侧栏面板',
   'desktop.workspace.pinnedPanel': '置顶',
   'desktop.workspace.demo.actions': 'Demo 操作',

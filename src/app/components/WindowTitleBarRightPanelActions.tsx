@@ -20,11 +20,11 @@ import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 const TITLEBAR_ICON_SIZE = 16;
 const TITLEBAR_ICON_STROKE = 1.75;
-const RIGHT_PANEL_ACTION_BASE_CLASS = 'window-titlebar-leading-button pointer-events-auto relative';
-const RIGHT_PANEL_ACTION_ACTIVE_CLASS =
+export const RIGHT_PANEL_ACTION_BASE_CLASS = 'window-titlebar-leading-button pointer-events-auto relative';
+export const RIGHT_PANEL_ACTION_ACTIVE_CLASS =
   'after:absolute after:bottom-1 after:left-1 after:right-1 after:h-[2px] after:rounded-full after:bg-foreground/12';
 
-function getRightPanelLabel(panelId: WorkspaceRightPanelId, t: Translate) {
+export function getRightPanelLabel(panelId: WorkspaceRightPanelId, t: Translate) {
   if (panelId === 'review-queue') return t('desktop.rightPanel.flow');
   if (panelId === 'outline') return t('desktop.rightPanel.outline');
   if (panelId === 'highlights') return t('desktop.rightPanel.highlights');

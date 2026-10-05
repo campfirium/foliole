@@ -43,6 +43,7 @@ export function selectWorkspaceGridColumnProps({
     isImmersiveMode: props.layoutChrome.isImmersiveMode,
     isListCollapsed: props.layoutChrome.isListCollapsed,
     isRightSidebarCollapsed: props.layoutChrome.isRightSidebarCollapsed,
+    compactSidebars: props.layoutChrome.compactSidebars,
     listAreaProps: selectWorkspaceListAreaProps({ listNodesById, onFocusTopicEditor, onSelectNode, props }),
     listSplitterProps: selectWorkspaceListSplitterProps(props),
     rightSidebarProps: selectWorkspaceRightSidebarProps({

@@ -128,7 +128,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
   useEffect(() => subscribeWorkspaceRightPanelRequests(handleSelectRightPanel), [handleSelectRightPanel]);
 
   return (
-    <main aria-label={t('desktop.workspace.main')} className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
+    <main aria-label={t('desktop.workspace.main')} data-floating-sidebar={layoutChrome.compactSidebars?.openSide ?? undefined} className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
       <WorkspaceMainChrome
         activeRightPanelId={activeRightPanelId}
         onOpenTrashView={handleOpenTrashView}

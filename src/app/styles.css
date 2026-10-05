@@ -6,6 +6,7 @@
 @import "./tokens/focus.css";
 @import "./tokens/z-index.css";
 @import "./styles/window-titlebar-controls.css";
+@import "./styles/workspace-floating-sidebars.css";
 
 * {
   box-sizing: border-box;
@@ -268,17 +269,17 @@
 
 @media (max-width: 1279px) {
   .workspace-responsive-shell {
-    --window-titlebar-right-width: var(--window-titlebar-controls-width, 138px) !important;
+    --window-titlebar-right-width: calc(var(--window-titlebar-controls-width, 138px) + var(--workspace-rail-width)) !important;
     --workspace-right-sidebar-current-width: 0px !important;
     --workspace-right-sidebar-splitter-width: 0px !important;
   }
 
   .workspace-responsive-shell .window-titlebar-right-anchor-shell {
-    display: none !important;
+    display: block;
   }
 
   .workspace-responsive-shell .window-titlebar {
-    --window-titlebar-right-width: var(--window-titlebar-controls-width, 138px) !important;
+    --window-titlebar-right-width: calc(var(--window-titlebar-controls-width, 138px) + var(--workspace-rail-width)) !important;
     --workspace-right-sidebar-current-width: 0px !important;
   }
 }

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
@@ -44,10 +44,11 @@ beforeEach(() => {
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 1024 });
 });
 
-it('hides the full right sidebar titlebar anchor below the sidebar breakpoint', () => {
-  const { container } = renderTitleBar();
-
-  expect(container.querySelector('.window-titlebar-right-anchor-shell')).toHaveClass('max-[1279px]:hidden');
+it('retains the right sidebar toggle in compact windows', () => {
+  const onToggleRightSidebarVisibility = vi.fn();
+  renderTitleBar({ isRightSidebarCollapsed: true, onToggleRightSidebarVisibility });
+  fireEvent.click(screen.getByRole('button', { name: 'Toggle right sidebar' }));
+  expect(onToggleRightSidebarVisibility).toHaveBeenCalledOnce();
 });
 
 it('keeps right titlebar width anchored to the right sidebar width when the titlebar has spare space', () => {

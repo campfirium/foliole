@@ -1,4 +1,7 @@
+import type { CompactWorkspaceSidebars } from '../hooks/useCompactWorkspaceSidebars';
+
 import type { StudySessionCompleteSummaryProps } from './StudySessionCompleteSummary';
+import { WorkspaceCompactRightPanelActions, WorkspaceCompactSidebarBackdrop } from './WorkspaceCompactSidebarControls';
 import type { WorkspaceDocumentSurfaceProps } from './workspaceDocumentSurfaceProps';
 import {
   WorkspaceDocumentArea,
@@ -18,6 +21,7 @@ export interface WorkspaceGridColumnProps {
   isImmersiveMode: boolean;
   isListCollapsed: boolean;
   isRightSidebarCollapsed: boolean;
+  compactSidebars?: CompactWorkspaceSidebars | undefined;
   listAreaProps: WorkspaceListAreaProps;
   listSplitterProps: WorkspaceListSplitterProps;
   rightSidebarProps: WorkspaceRightSidebarProps;
@@ -37,10 +41,17 @@ function renderDocumentColumn(
 }
 
 function renderListColumns(
-  args: Pick<WorkspaceGridColumnProps, 'isListCollapsed' | 'listAreaProps' | 'listSplitterProps'>
+  args: Pick<WorkspaceGridColumnProps, 'isListCollapsed' | 'listAreaProps' | 'listSplitterProps' | 'compactSidebars'>
 ) {
   return [
-    <div aria-hidden={args.isListCollapsed} className="flex min-w-0 flex-col overflow-hidden max-[1080px]:hidden" key="list">
+    <div
+      aria-hidden={args.isListCollapsed}
+      hidden={args.compactSidebars?.leftFloating && args.isListCollapsed}
+      className={args.compactSidebars?.leftFloating
+        ? 'workspace-floating-sidebar workspace-floating-sidebar-left flex min-w-0 flex-col overflow-hidden'
+        : 'flex min-w-0 flex-col overflow-hidden max-[1080px]:hidden'}
+      key="list"
+    >
       <WorkspaceListArea {...args.listAreaProps} />
     </div>,
     <div aria-hidden={args.isListCollapsed} className="flex min-w-0 overflow-visible max-[1080px]:hidden" key="list-splitter">
@@ -52,7 +63,7 @@ function renderListColumns(
 function renderRightSidebarColumns(
   args: Pick<
     WorkspaceGridColumnProps,
-    'isRightSidebarCollapsed' | 'rightSidebarProps' | 'rightSidebarSplitterProps'
+    'isRightSidebarCollapsed' | 'rightSidebarProps' | 'rightSidebarSplitterProps' | 'compactSidebars'
   >
 ) {
   return [
@@ -65,9 +76,15 @@ function renderRightSidebarColumns(
     </div>,
     <div
       aria-hidden={args.isRightSidebarCollapsed}
-      className="hidden min-w-0 flex-col overflow-hidden xl:flex"
+      hidden={args.compactSidebars?.rightFloating && args.isRightSidebarCollapsed}
+      className={args.compactSidebars?.rightFloating
+        ? 'workspace-floating-sidebar workspace-floating-sidebar-right flex min-w-0 flex-col overflow-hidden'
+        : 'hidden min-w-0 flex-col overflow-hidden xl:flex'}
       key="right-sidebar"
     >
+      {args.compactSidebars?.rightFloating
+        ? <WorkspaceCompactRightPanelActions activePanelId={args.rightSidebarProps.activePanelId} />
+        : null}
       <WorkspaceRightSidebar {...args.rightSidebarProps} />
     </div>
   ];
@@ -79,6 +96,7 @@ export function renderWorkspaceGridColumns(args: WorkspaceGridColumnProps) {
   }
 
   return [
+    ...(args.compactSidebars ? [<WorkspaceCompactSidebarBackdrop key="sidebar-backdrop" sidebars={args.compactSidebars} />] : []),
     ...renderListColumns(args),
     renderDocumentColumn(args),
     ...renderRightSidebarColumns(args)

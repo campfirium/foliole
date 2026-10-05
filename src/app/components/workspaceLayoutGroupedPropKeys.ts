@@ -58,7 +58,8 @@ export const REVIEW_KEYS = defineLayoutKeys<WorkspaceLayoutReviewProps>()([
   'onSetReviewSessionMode'
 ] as const);
 
-export const LAYOUT_CHROME_KEYS = defineLayoutKeys<WorkspaceLayoutChromeProps>()([
+// Temporary sidebar state is derived after the persisted layout fields are grouped.
+export const LAYOUT_CHROME_KEYS = defineLayoutKeys<Omit<WorkspaceLayoutChromeProps, 'compactSidebars'>>()([
   'isWorkspaceHydrated', 'isImmersiveMode', 'isResizingList', 'isResizingRightSidebar', 'isListCollapsed',
   'isRightSidebarCollapsed', 'listWidth', 'rightSidebarWidth', 'onResetLayout', 'onSplitterKeyDown',
   'onSplitterPointerDown', 'onRightSidebarSplitterKeyDown', 'onRightSidebarSplitterPointerDown',

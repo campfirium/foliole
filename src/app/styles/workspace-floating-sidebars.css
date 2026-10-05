@@ -1,0 +1,23 @@
+.workspace-floating-sidebar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: var(--z-workspace-overlay);
+  box-shadow: var(--shadow-panel);
+}
+
+.workspace-floating-sidebar[hidden] {
+  display: none;
+}
+
+.workspace-floating-sidebar-left {
+  left: 0;
+  width: min(var(--workspace-list-width), 100%);
+  background: var(--workspace-region-main-folder-bg);
+}
+
+.workspace-floating-sidebar-right {
+  right: 0;
+  width: min(var(--workspace-right-sidebar-width), 100%);
+  background: var(--workspace-region-main-sidebar-bg);
+}
