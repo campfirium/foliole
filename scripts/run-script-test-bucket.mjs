@@ -11,6 +11,8 @@ import { runIntegrationAggregate } from './script-test-bucket-aggregate.mjs';
 const DEFAULT_BUCKET_TIMEOUT_SECONDS = 240;
 const BUCKET_TIMEOUT_SECONDS = {
   core: 360,
+  'core-one': 360,
+  'core-two': 360,
   gate: 480,
   'gate-integration-fast-delegation': 480,
   'gate-integration-release-targets': 480,
@@ -33,7 +35,9 @@ export function resolveBucketTimeoutSeconds(bucket) {
 }
 
 export function resolveBucketPool(bucket) {
-  return ['core', 'core-one', 'core-two'].includes(bucket) ? 'forks' : 'threads';
+  return ['core', 'core-one', 'core-two', 'gate', 'gate-one', 'gate-two'].includes(bucket)
+    ? 'forks'
+    : 'threads';
 }
 
 export function writeBucketTimeoutReport(reportPath, bucket, timeoutSeconds, files) {

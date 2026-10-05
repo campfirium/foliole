@@ -86,6 +86,8 @@ jobs:
         run: npm run electron:rebuild:native
       - name: Verify Electron sqlite runner
         run: node scripts/quality/hosted-electron-sqlite-preflight.mjs
+      - name: Compile Electron workers
+        run: npm run electron:compile
       - name: Run canonical Electron bucket
         run: node scripts/quality/hosted-quality-bucket.mjs
       - name: Upload Electron test logs

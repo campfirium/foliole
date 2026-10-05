@@ -40,7 +40,7 @@
     "typecheck:shared": "npm run typecheck:shared:raw",
     "typecheck:shared:raw": "tsc -p tsconfig.shared.json --noEmit",
     "typecheck:desktop": "npm run typecheck:desktop:raw",
-    "typecheck:desktop:raw": "node --max-old-space-size=1792 node_modules/typescript/bin/tsc --noEmit && node --max-old-space-size=1792 node_modules/typescript/bin/tsc -p electron/tsconfig.json --noEmit",
+    "typecheck:desktop:raw": "node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p tsconfig.desktop-source.json --noEmit && node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p tsconfig.desktop-test-ts.json --noEmit && node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p tsconfig.desktop-test-tsx.json --noEmit && node --max-old-space-size=1536 node_modules/typescript/bin/tsc -p electron/tsconfig.json --noEmit",
     "typecheck:android": "npm run typecheck:android:raw",
     "typecheck:android:raw": "tsc -p tsconfig.android.json --noEmit && tsc -p tsconfig.android-contracts.json --noEmit && node scripts/check-android-contract-tsconfig-coverage.mjs",
     "test:desktop": "node scripts/quality/quality-command-contracts.mjs allow test:desktop && node scripts/electron-sqlite-runner.mjs scripts/run-vitest-with-summary.mjs .tmp/vitest/desktop.json -- --silent=passed-only --pool=threads --maxWorkers=2 --no-file-parallelism src/app src/features src/shared/platform src/shared/ui src/test src/startupBootstrap.test.ts src/startupViewMode.test.ts electron",

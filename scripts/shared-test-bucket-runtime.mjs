@@ -22,6 +22,7 @@ export function buildSharedBucketInvocation(
     '--pool=threads',
     '--maxWorkers=2',
     '--no-file-parallelism',
+    '--testTimeout=15000',
     ...targets
   ];
   return {

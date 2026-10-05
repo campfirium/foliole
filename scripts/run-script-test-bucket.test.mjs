@@ -171,6 +171,8 @@ describe('run-script-test-bucket', () => {
       process.env.SCRIPT_TEST_BUCKET_GATE_TIMEOUT_SECONDS = 'invalid';
       expect(resolveBucketTimeoutSeconds('gate')).toBe(480);
       delete process.env.SCRIPT_TEST_BUCKET_TIMEOUT_SECONDS;
+      expect(resolveBucketTimeoutSeconds('core-one')).toBe(360);
+      expect(resolveBucketTimeoutSeconds('core-two')).toBe(360);
       expect(resolveBucketTimeoutSeconds('gate-integration')).toBe(240);
     } finally {
       if (oldSpecific === undefined) {

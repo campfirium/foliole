@@ -116,7 +116,7 @@ describe('run-shared-test-bucket', () => {
       args: [
         'scripts/run-vitest-with-summary.mjs', 'report.json', '--',
         '--silent=passed-only', '--pool=threads', '--maxWorkers=2',
-        '--no-file-parallelism', 'src/shared'
+        '--no-file-parallelism', '--testTimeout=15000', 'src/shared'
       ],
       electronPath: '/electron',
       options: {
