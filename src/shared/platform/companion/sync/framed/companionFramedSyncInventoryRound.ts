@@ -125,13 +125,11 @@ export async function sendCompanionFramedSyncInventoryDifferences(
   for (const difference of selection.pullable) {
     const receipt = await FolioleCompanionSync.pullFramedSyncObject({
       ...args,
-      frontier_fact_ids: difference.need.sharedState || difference.need.resourceHashes.length
-        ? difference.sourceSnapshot.frontierFactIds
-        : difference.need.frontierFactIds,
+      frontier_fact_ids: difference.sourceSnapshot.frontierFactIds,
       object_id: difference.globalId,
-      required_relation_ids: difference.need.requiredRelationIds,
-      resource_hashes: difference.need.resourceHashes.map(bytesToHex),
-      review_fact_ids: difference.need.reviewFactIds,
+      required_relation_ids: difference.sourceSnapshot.requiredRelationIds,
+      resource_hashes: difference.sourceSnapshot.resourceHashes.map(bytesToHex),
+      review_fact_ids: difference.sourceSnapshot.reviewFactIds,
       round_id: bytesToHex(remoteResult.roundId)
     });
     received.push({ objectId: difference.globalId, receipt });

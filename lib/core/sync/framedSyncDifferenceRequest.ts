@@ -27,16 +27,17 @@ export function projectFramedSyncDifferenceRequest(input: {
   if (difference.direction !== 'remote_to_local' || difference.objectType !== 'node') {
     throw new Error('framed_sync_difference_request_direction_invalid');
   }
-  const versionIds = new Set(difference.need.frontierFactIds);
-  if (difference.need.sharedState || difference.need.resourceHashes.length) {
-    for (const id of difference.sourceSnapshot.frontierFactIds) versionIds.add(id);
-  }
+  const versionIds = new Set(difference.sourceSnapshot.frontierFactIds);
   const facts = [
     ...[...versionIds].map((id) => identity(difference.globalId, id, 2)),
-    ...difference.need.requiredRelationIds.map((id) => identity(difference.globalId, id, 3)),
-    ...difference.need.reviewFactIds.map((id) => identity(difference.globalId, id, 4))
+    ...difference.sourceSnapshot.requiredRelationIds.map((id) => identity(difference.globalId, id, 3)),
+    ...difference.sourceSnapshot.reviewFactIds.map((id) => identity(difference.globalId, id, 4))
   ];
-  const payload = { blobHashes: difference.need.resourceHashes, facts, roundId: input.roundId };
+  const payload = {
+    blobHashes: difference.sourceSnapshot.resourceHashes,
+    facts,
+    roundId: input.roundId
+  };
   return {
     encoded: encodeValidatedProtocolMessage('difference_request', payload),
     payload
@@ -83,13 +84,10 @@ export function resolveFramedSyncDifferenceRequest(
   const frontierFactIds = ids(2);
   const requiredRelationIds = ids(3);
   const reviewFactIds = ids(4);
-  assertSubset(frontierFactIds, current.frontierFactIds, 'fact');
-  assertSubset(requiredRelationIds, current.requiredRelationIds, 'relation');
-  assertSubset(reviewFactIds, current.reviewFactIds, 'review');
-  const resources = new Set(current.resourceHashes.map(hex));
-  if (request.blobHashes.some((hash) => !resources.has(hex(hash)))) {
-    throw new Error('framed_sync_difference_request_blob_unavailable');
-  }
+  assertSame(frontierFactIds, current.frontierFactIds);
+  assertSame(requiredRelationIds, current.requiredRelationIds);
+  assertSame(reviewFactIds, current.reviewFactIds);
+  assertSame(request.blobHashes.map(hex), current.resourceHashes.map(hex));
   return {
     direction: 'local_to_remote',
     globalId: current.globalId,
@@ -105,10 +103,10 @@ export function resolveFramedSyncDifferenceRequest(
   };
 }
 
-function assertSubset(requested: readonly string[], available: readonly string[], name: string) {
-  const values = new Set(available);
-  if (requested.some((value) => !values.has(value))) {
-    throw new Error(`framed_sync_difference_request_${name}_unavailable`);
+function assertSame(requested: readonly string[], current: readonly string[]) {
+  const values = new Set(current);
+  if (requested.length !== current.length || requested.some((value) => !values.has(value))) {
+    throw new Error('framed_sync_difference_request_source_changed');
   }
 }
 

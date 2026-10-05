@@ -48,17 +48,33 @@ it('projects one remote Node difference into exact requested fact identities and
   });
 });
 
-it('rejects a request for facts or blobs outside the current frozen inventory entry', () => {
+it('echoes the complete observed Node snapshot instead of only the missing subset', () => {
+  const input = difference();
+  input.sourceSnapshot.requiredRelationIds = ['relation-1', 'relation-already-local'];
+  const decoded = decodeFramedSyncDifferenceRequest(decodeAndValidateProtocolMessage(
+    projectFramedSyncDifferenceRequest({ difference: input, roundId: hash(8, 16) }).encoded,
+    FRAMED_SYNC_FRAME_TYPES.sessionControl
+  ));
+
+  expect(decoded.facts.filter((fact) => fact.kind === 3).map((fact) => fact.factId))
+    .toEqual(['relation-1', 'relation-already-local']);
+});
+
+it('rejects when the Node inventory changes after the requester observed it', () => {
   const projected = projectFramedSyncDifferenceRequest({ difference: difference(), roundId: hash(8, 16) });
   const decoded = decodeFramedSyncDifferenceRequest(decodeAndValidateProtocolMessage(
     projected.encoded, FRAMED_SYNC_FRAME_TYPES.sessionControl
   ));
   expect(() => resolveFramedSyncDifferenceRequest({
     ...difference().sourceSnapshot, frontierFactIds: ['other-version']
-  }, decoded)).toThrow('framed_sync_difference_request_fact_unavailable');
+  }, decoded)).toThrow('framed_sync_difference_request_source_changed');
   expect(() => resolveFramedSyncDifferenceRequest({
     ...difference().sourceSnapshot, resourceHashes: [hash(9)]
-  }, decoded)).toThrow('framed_sync_difference_request_blob_unavailable');
+  }, decoded)).toThrow('framed_sync_difference_request_source_changed');
+  expect(() => resolveFramedSyncDifferenceRequest({
+    ...difference().sourceSnapshot,
+    requiredRelationIds: ['relation-1', 'relation-added-after-inventory']
+  }, decoded)).toThrow('framed_sync_difference_request_source_changed');
 });
 
 it('rejects a local-to-remote difference because it does not need a pull request', () => {
