@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import {
   applySyncPackMetadataObjectsWithDbPort,
@@ -67,16 +68,11 @@ it('filters view state records to the current Host', () => {
 
 it('applies setting payload records from sync objects', async () => {
   const runs: Array<{ params: unknown[]; sql: string }> = [];
+  const payload = { host_name: 'Android test host', form_factor: 'phone', key: 'theme',
+    platform: 'android', scope: 'host', value_json: '{"mode":"dark"}' };
   const port = {
     query: vi.fn(async () => [
-      {
-        content_hash: 'hash-setting',
-        deleted_at: null,
-        object_id: 'host:android:phone:Android test host:theme',
-        object_type: 'setting',
-        payload_json: JSON.stringify({ host_name: 'Android test host', key: 'theme', scope: 'host', value_json: '{"mode":"dark"}' }),
-        updated_at: '2026-05-04T02:00:00.000Z'
-      }
+      canonicalRow('setting', 'host:android:phone:Android test host:theme', payload)
     ]),
     run: vi.fn(async (sql: string, params: unknown[] = []) => {
       runs.push({ params, sql });
@@ -96,7 +92,7 @@ it('applies setting payload records from sync objects', async () => {
       'Android test host',
       'theme',
       '{"mode":"dark"}',
-      'hash-setting',
+      computeSyncContentHash('setting', payload),
       '2026-05-04T02:00:00.000Z',
       null
     ],
@@ -106,6 +102,9 @@ it('applies setting payload records from sync objects', async () => {
 
 it('applies import source and Source Host payload records', async () => {
   const runs: Array<{ params: unknown[]; sql: string }> = [];
+  const folderPayload = { attachment_mode: 'document_relative_first_then_fixed_root',
+    excluded_dirs_json: '[]', host_name: 'Desktop Host', host_platform: 'darwin',
+    id: 'folder-1', source_ref: 'external:folder-1' };
   const port = {
     query: vi.fn(async () => [
       {
@@ -119,16 +118,7 @@ it('applies import source and Source Host payload records', async () => {
           remote_provider: 'readwise' }),
         updated_at: '2026-05-04T02:00:00.000Z'
       },
-      {
-        content_hash: 'hash-folder',
-        deleted_at: null,
-        object_id: 'folder-1',
-        object_type: 'external_folder',
-        payload_json: JSON.stringify({ folder_path: '/library', document_count: 3,
-          host_name: 'Desktop Host', host_platform: 'darwin', source_ref: 'external:folder-1',
-          type_settings_json: '{"connectionStatus":"connected"}' }),
-        updated_at: '2026-05-04T02:01:00.000Z'
-      },
+      canonicalRow('external_folder', 'folder-1', folderPayload, '2026-05-04T02:01:00.000Z'),
       {
         content_hash: 'hash-watched',
         deleted_at: null,
@@ -159,14 +149,14 @@ it('applies import source and Source Host payload records', async () => {
   expect(runs[1]?.params.slice(0, 5))
     .toEqual(['external:folder-1', 'external', 'folder-1', 'Desktop Host', 'darwin']);
   expect(runs[2]?.sql).toContain('INSERT INTO external_search_folders');
-  expect(runs[2]?.params.slice(0, 3)).toEqual(['folder-1', '/library', 'document_relative_first_then_fixed_root']);
+  expect(runs[2]?.params.slice(0, 3)).toEqual(['folder-1', '', 'document_relative_first_then_fixed_root']);
   expect(runs[3]?.sql).toContain('INSERT INTO desktop_sources');
   expect(runs[3]?.params.slice(0, 5))
     .toEqual(['watched:watched-1', 'watched', 'watched-1', 'Desktop Host', 'darwin']);
   expect(runs[4]?.sql).toContain('INSERT INTO watched_folder_bindings');
 });
 
-it('rejects a Source payload without its Host projection', async () => {
+it('rejects a noncanonical Source payload before its Host projection', async () => {
   const run = vi.fn();
   const port = {
     query: vi.fn(async () => [{
@@ -180,20 +170,19 @@ it('rejects a Source payload without its Host projection', async () => {
   } as unknown as DbPort;
 
   await expect(applySyncPackMetadataObjectsWithDbPort(port, { incomingAlias: 'incoming' }))
-    .rejects.toThrow('invalid_source_host_payload');
+    .rejects.toThrow('sync_content_hash_mismatch:external_folder');
   expect(run).not.toHaveBeenCalled();
 });
 
 it('rejects a conflicting Source identity before applying its folder row', async () => {
   const runs: string[] = [];
+  const payload = { attachment_mode: 'document_relative_first_then_fixed_root',
+    excluded_dirs_json: '[]', host_name: 'Desktop Host', host_platform: 'darwin',
+    id: 'folder-1', source_ref: 'external:folder-1' };
   const port = {
-    query: vi.fn(async () => [{
-      content_hash: 'hash-folder', deleted_at: null, object_id: 'folder-1',
-      object_type: 'external_folder', payload_json: JSON.stringify({
-        folder_path: '/library', host_name: 'Desktop Host', host_platform: 'darwin',
-        source_ref: 'external:folder-1', type_settings_json: '{}'
-      }), updated_at: '2026-05-04T02:01:00.000Z'
-    }]),
+    query: vi.fn(async () => [
+      canonicalRow('external_folder', 'folder-1', payload, '2026-05-04T02:01:00.000Z')
+    ]),
     run: vi.fn(async (sql: string) => {
       runs.push(sql);
       return { changes: 0, lastInsertRowId: null };
@@ -215,4 +204,14 @@ function syncObjectRow(objectType: string, objectId: string) {
     payload_json: '{}',
     updated_at: '2026-05-04T02:00:00.000Z'
   };
+}
+
+function canonicalRow(
+  objectType: Parameters<typeof computeSyncContentHash>[0],
+  objectId: string,
+  payload: Parameters<typeof computeSyncContentHash>[1],
+  updatedAt = '2026-05-04T02:00:00.000Z'
+) {
+  return { content_hash: computeSyncContentHash(objectType, payload), deleted_at: null,
+    object_id: objectId, object_type: objectType, payload_json: JSON.stringify(payload), updated_at: updatedAt };
 }

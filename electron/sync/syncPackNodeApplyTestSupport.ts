@@ -1,11 +1,17 @@
 import Database from 'better-sqlite3';
 
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 export function createIncomingPack(filePath: string) {
   const db = new Database(filePath);
   try {
+    const settingPayload = {
+      form_factor: 'phone', host_name: 'Android test host', key: 'theme', platform: 'android',
+      scope: 'host', value_json: '{"mode":"dark"}'
+    };
+    const settingHash = computeSyncContentHash('setting', settingPayload);
     for (const statement of PACK_SCHEMA) db.exec(statement);
     db.prepare('INSERT INTO pack_manifest (key, value) VALUES (?, ?)').run(
       'manifest_json',
@@ -20,16 +26,13 @@ export function createIncomingPack(filePath: string) {
     db.prepare(
       `INSERT INTO sync_object_state (
          object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, deleted_at
-       ) VALUES ('setting', 'host:android:phone:Android test host:theme', 2, 'hash-setting-1',
+       ) VALUES ('setting', 'host:android:phone:Android test host:theme', 2, ?,
          'Android test host', '2026-05-04T01:01:00.000Z', NULL)`
-    ).run();
+    ).run(settingHash);
     db.prepare(
       `INSERT INTO sync_objects (object_type, object_id, content_hash, payload_json, updated_at, deleted_at)
-       VALUES ('setting', 'host:android:phone:Android test host:theme', 'hash-setting-1', ?, '2026-05-04T01:01:00.000Z', NULL)`
-    ).run(JSON.stringify({
-      form_factor: 'phone', host_name: 'Android test host', key: 'theme', platform: 'android',
-      scope: 'host', value_json: '{"mode":"dark"}'
-    }));
+       VALUES ('setting', 'host:android:phone:Android test host:theme', ?, ?, '2026-05-04T01:01:00.000Z', NULL)`
+    ).run(settingHash, JSON.stringify(settingPayload));
     db.prepare(
       `INSERT INTO nodes (
          id, parent_id, kind, title, is_title_manual, hide_title_heading, body_blob_hash,

@@ -8,6 +8,7 @@ import { afterEach, beforeEach } from 'vitest';
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
@@ -167,6 +168,10 @@ export function insertNodeAttachmentRows() {
 
 export function insertExternalFolderSyncState() {
   const driver = openDatabaseConnection().driver;
+  const contentHash = computeSyncContentHash('external_folder', {
+    attachment_mode: 'document_relative_first_then_fixed_root', excluded_dirs_json: '[".git"]',
+    host_name: 'desktop', host_platform: 'darwin', id: 'folder-1', source_ref: 'external:folder-1'
+  });
   driver.execute(`INSERT INTO desktop_sources (source_ref, source_type, config_ref, host_name,
     host_platform, root_path, path_flavor, type_settings_json, created_at, updated_at)
     VALUES ('external:folder-1', 'external', 'folder-1', 'desktop', 'darwin',
@@ -183,8 +188,8 @@ export function insertExternalFolderSyncState() {
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
-     ) VALUES ('external_folder', 'folder-1', 4, 'external-folder-hash',
-       'desktop', '2026-04-27T00:03:00.000Z', 1)`
+     ) VALUES ('external_folder', 'folder-1', 4, ?,
+       'desktop', '2026-04-27T00:03:00.000Z', 1)`, [contentHash]
   );
 }
 

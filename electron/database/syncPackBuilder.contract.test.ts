@@ -50,6 +50,10 @@ afterEach(async () => {
 
 function insertNodeSyncState() {
   const driver = openDatabaseConnection().driver;
+  const settingHash = computeSyncContentHash('setting', {
+    form_factor: 'desktop', host_name: '*', key: 'app_settings', platform: 'windows',
+    scope: 'user_space', value_json: '{"theme":"dark"}'
+  });
   const bodyHash = upsertTextBodyBlob(driver, 'node body must stay out of pack', '2026-04-27T00:00:00.000Z');
   driver.execute(
     `INSERT INTO nodes (
@@ -91,13 +95,13 @@ function insertNodeSyncState() {
     `INSERT INTO setting_records (
        key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at
      ) VALUES ('app_settings', 'user_space', 'windows', 'desktop', '*', '{"theme":"dark"}',
-       'setting-hash', '2026-04-27T00:01:00.000Z')`
+       ?, '2026-04-27T00:01:00.000Z')`, [settingHash]
   );
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
-     ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 2, 'setting-hash',
-       'desktop', '2026-04-27T00:01:00.000Z', 1)`
+     ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 2, ?,
+       'desktop', '2026-04-27T00:01:00.000Z', 1)`, [settingHash]
   );
 }
 

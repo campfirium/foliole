@@ -87,14 +87,20 @@ it('packs external folder metadata as a generic sync object', async () => {
   const result = await buildDesktopSyncPack({ fromPeerId: 'authorization-desktop', outputPath: packPath, packId: 'pack-external-folder-1', fromStateSeq: 0 });
 
   expect(result).toMatchObject({ objectCount: 1, packId: 'pack-external-folder-1', toStateSeq: 4 });
-  expect(readPackRows(packPath)).toMatchObject({
+  const rows = readPackRows(packPath);
+  expect(rows).toMatchObject({
     stateRows: [{ object_id: 'folder-1', object_type: 'external_folder', state_seq: 4 }],
     syncObjects: [expect.objectContaining({
       object_id: 'folder-1',
-      object_type: 'external_folder',
-      payload_json: expect.stringContaining('/library')
+      object_type: 'external_folder'
     })]
   });
+  const folderRow = rows.syncObjects[0] as { payload_json?: string } | undefined;
+  expect(JSON.parse(String(folderRow?.payload_json))).toEqual({
+    attachment_mode: 'document_relative_first_then_fixed_root', excluded_dirs_json: '[".git"]',
+    host_name: 'desktop', host_platform: 'darwin', id: 'folder-1', source_ref: 'external:folder-1'
+  });
+  expect(String(folderRow?.payload_json)).not.toContain('/library');
 });
 
 it('packs import source metadata as a generic sync object', async () => {
