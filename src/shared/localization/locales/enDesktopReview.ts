@@ -2,7 +2,7 @@ export const EN_DESKTOP_REVIEW_TRANSLATIONS = {
   'desktop.foregroundTime.previous': 'Previous month',
   'desktop.foregroundTime.next': 'Next month',
   'desktop.foregroundTime.title': 'Foreground time',
-  'desktop.foregroundTime.short': 'Time',
+  'desktop.foregroundTime.short': 'Min',
   'desktop.foregroundTime.failed': 'Could not load usage time.',
   'desktop.reviewCalendar.title': 'Review statistics',
   'desktop.reviewCalendar.day': 'Day',
