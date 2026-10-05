@@ -8,10 +8,10 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
-import { factToWire } from '../../../../../../electron/sync/desktopFramedSyncProcessWire.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/companionSchemaStatements.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
+import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
 import type { NativeSyncNodeRecord } from '../../../../../../lib/platform/nativeSyncContract.js';
 
 import { applyCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
