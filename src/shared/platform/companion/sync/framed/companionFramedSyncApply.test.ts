@@ -18,6 +18,7 @@ import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjec
 import type { NativeSyncNodeRecord } from '../../../../../../lib/platform/nativeSyncContract.js';
 
 import { applyCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
+import { installCompanionFramedSyncStaging } from './companionFramedSyncApply.testSupport.js';
 
 const roots: string[] = [];
 const databases: Database.Database[] = [];
@@ -36,7 +37,7 @@ it.each(['android', 'ios'] as const)(
   const staging = tracked(new Database(stagingPath));
   main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
   const prefix = `framed_sync_${kind}`;
-  installStaging(staging, prefix);
+  installCompanionFramedSyncStaging(staging, prefix);
 
   const projection = projectFramedSyncNodeRecord(nodeRecord());
   const transferId = new Uint8Array(32).fill(1);
@@ -153,7 +154,7 @@ function harness(kind: 'android' | 'ios') {
   const staging = tracked(new Database(stagingPath));
   main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
   const prefix = `framed_sync_${kind}`;
-  installStaging(staging, prefix);
+  installCompanionFramedSyncStaging(staging, prefix);
   return { main, port: createBetterSqliteDbPort(main, { name: 'framed-apply-test' }),
     prefix, staging, stagingPath };
 }
@@ -202,22 +203,6 @@ function stage(database: Database.Database, prefix: string, value: {
 function tracked(database: Database.Database) {
   databases.push(database);
   return database;
-}
-
-function installStaging(database: Database.Database, prefix: string) {
-  database.exec(`CREATE TABLE ${prefix}_transfers (
-      transfer_id BLOB PRIMARY KEY, content_id BLOB NOT NULL,
-      sender_device_id TEXT NOT NULL, sender_library_epoch TEXT NOT NULL,
-      receiver_device_id TEXT NOT NULL, receiver_library_epoch TEXT NOT NULL,
-      active_attempt_id BLOB NOT NULL, state TEXT NOT NULL);
-    CREATE TABLE ${prefix}_frames (
-      transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, sequence TEXT NOT NULL,
-      frame_type INTEGER NOT NULL, authenticated_plaintext BLOB NOT NULL);
-    CREATE TABLE ${prefix}_available_blobs (
-      sha256 BLOB PRIMARY KEY, byte_length INTEGER NOT NULL, data BLOB NOT NULL);
-    CREATE TABLE ${prefix}_blob_pins (
-      transfer_id BLOB NOT NULL, sha256 BLOB NOT NULL, byte_length INTEGER NOT NULL,
-      role INTEGER NOT NULL, required INTEGER NOT NULL);`);
 }
 
 function nodeRecord(): NativeSyncNodeRecord {

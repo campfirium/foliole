@@ -3,6 +3,7 @@ package com.foliole.android.framed;
 import android.database.sqlite.SQLiteDatabase;
 import com.foliole.sync.v22.TransferProposal;
 import com.foliole.sync.v22.TransferReceipt;
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
@@ -12,12 +13,16 @@ public final class FramedSyncSQLiteStaging implements FramedSyncDurableStaging {
     private final FramedSyncSQLiteReceiptReplay receiptReplay;
 
     public FramedSyncSQLiteStaging(SQLiteDatabase database) {
+        this(database, null);
+    }
+
+    public FramedSyncSQLiteStaging(SQLiteDatabase database, File resourceDirectory) {
         if (database == null) throw new NullPointerException("database");
         if (!database.isOpen() || database.isReadOnly()) {
             throw new IllegalArgumentException("framed_sync_database_not_writable");
         }
         FramedSyncSQLiteSchema.install(database);
-        inbound = new FramedSyncSQLiteInboundFrames(database);
+        inbound = new FramedSyncSQLiteInboundFrames(database, resourceDirectory);
         receipts = new FramedSyncSQLiteReceipts(database);
         receiptReplay = new FramedSyncSQLiteReceiptReplay(database, receipts);
     }
@@ -72,5 +77,9 @@ public final class FramedSyncSQLiteStaging implements FramedSyncDurableStaging {
         byte[] attemptId
     ) throws Exception {
         return receiptReplay.load(transferId, attemptId);
+    }
+
+    FramedSyncResourcePublication publishResources(byte[] transferId) throws Exception {
+        return inbound.publishResources(transferId);
     }
 }

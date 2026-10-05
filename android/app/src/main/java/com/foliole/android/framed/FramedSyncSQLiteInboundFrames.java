@@ -7,6 +7,7 @@ import com.foliole.sync.v22.FactRecord;
 import com.foliole.sync.v22.TransferHeader;
 import com.foliole.sync.v22.TransferProposal;
 import com.foliole.sync.v22.TransferTrailer;
+import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
@@ -16,11 +17,11 @@ final class FramedSyncSQLiteInboundFrames {
     private final FramedSyncSQLiteFacts facts;
     private final FramedSyncSQLiteBlobs blobs;
 
-    FramedSyncSQLiteInboundFrames(SQLiteDatabase database) {
+    FramedSyncSQLiteInboundFrames(SQLiteDatabase database, File resourceDirectory) {
         this.database = database;
         transfers = new FramedSyncSQLiteTransfers(database);
         facts = new FramedSyncSQLiteFacts(database, transfers);
-        blobs = new FramedSyncSQLiteBlobs(database);
+        blobs = new FramedSyncSQLiteBlobs(database, resourceDirectory);
     }
 
     FramedSyncStageOutcome admit(TransferProposal proposal) throws Exception {
@@ -62,7 +63,12 @@ final class FramedSyncSQLiteInboundFrames {
     }
 
     void invalidate(byte[] transferId, byte[] attemptId) throws Exception {
+        blobs.cleanupAttempt(transferId, attemptId);
         transfers.invalidate(transferId, attemptId);
+    }
+
+    FramedSyncResourcePublication publishResources(byte[] transferId) throws Exception {
+        return new FramedSyncResourcePublication(database, blobs.resourceDirectory(), transferId);
     }
 
     private void preparePayload(
@@ -90,7 +96,7 @@ final class FramedSyncSQLiteInboundFrames {
         if (header == null || !framesAreContinuous(frame) || trailer.getFactCount() != storedFacts.size() ||
             trailer.getFactCount() != header.getManifest().getFactsCount() ||
             trailer.getBlobCount() != header.getManifest().getBlobsCount()) {
-            transfers.clearAttempt(frame.transferId(), frame.attemptId());
+            clearAttempt(frame.transferId(), frame.attemptId());
             return "inbound_attempt_manifest_mismatch";
         }
         byte[] contentId = FramedSyncCanonicalManifest.contentId(
@@ -98,11 +104,16 @@ final class FramedSyncSQLiteInboundFrames {
         if (!Arrays.equals(contentId, trailer.getManifestHash().toByteArray()) ||
             !Arrays.equals(contentId, header.getManifest().getContentId().toByteArray()) ||
             !blobs.verifyAndPromote(frame.transferId(), frame.attemptId())) {
-            transfers.clearAttempt(frame.transferId(), frame.attemptId());
+            clearAttempt(frame.transferId(), frame.attemptId());
             return "inbound_attempt_manifest_mismatch";
         }
         transfers.promote(frame.transferId(), frame.attemptId());
         return null;
+    }
+
+    private void clearAttempt(byte[] transferId, byte[] attemptId) {
+        blobs.cleanupAttempt(transferId, attemptId);
+        transfers.clearAttempt(transferId, attemptId);
     }
 
     private boolean framesAreContinuous(FramedSyncAuthenticatedFrame frame) {

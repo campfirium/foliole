@@ -98,11 +98,14 @@ final class FramedSyncSQLiteTransfers {
 
     void clearAttempt(byte[] transferId, byte[] attemptId) {
         for (String table : new String[] {"framed_sync_android_facts", "framed_sync_android_blob_chunks",
-            "framed_sync_android_frames", "framed_sync_android_blob_offers"}) {
+            "framed_sync_android_resource_blob_chunks", "framed_sync_android_frames",
+            "framed_sync_android_blob_offers"}) {
             database.delete(table, "hex(transfer_id) = ? AND hex(attempt_id) = ?",
                 FramedSyncSQLiteValues.blobArgs(transferId, attemptId));
         }
         database.delete("framed_sync_android_blob_pins", "hex(transfer_id) = ?",
+            FramedSyncSQLiteValues.blobArgs(transferId));
+        database.delete("framed_sync_android_resource_pins", "hex(transfer_id) = ?",
             FramedSyncSQLiteValues.blobArgs(transferId));
         ContentValues attempt = new ContentValues();
         attempt.put("state", "invalidated");

@@ -57,6 +57,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionCurrentGroupCredential.java',
       'FolioleCompanionDeviceAnchorStore.java',
       'FolioleCompanionDesktopHttpClient.java',
+      'FolioleCompanionFramedSyncApply.java',
       'FolioleCompanionHttpRequest.java',
       'FolioleCompanionHttpResponse.java',
       'FolioleCompanionJoinRequest.java',

@@ -2,6 +2,7 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { createFramedSyncOutboundReceiptStaging } from '../../../../../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
+import { parseCanonicalAttachmentStorageKey } from '../../../../../../lib/platform/attachmentResource.js';
 
 import { applyCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
 
@@ -23,6 +24,17 @@ function stagingKind(value: unknown) {
   return value;
 }
 
+function resourceStorageKeys(value: unknown) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error('framed_sync_resource_storage_keys_invalid');
+  return value.map((entry) => {
+    if (typeof entry !== 'string' || !parseCanonicalAttachmentStorageKey(entry)) {
+      throw new Error('framed_sync_resource_storage_keys_invalid');
+    }
+    return entry;
+  });
+}
+
 export async function applyCompanionFramedSyncDataOperation(
   db: DbPort,
   payload: Record<string, unknown>
@@ -34,7 +46,8 @@ export async function applyCompanionFramedSyncDataOperation(
     senderLibraryEpoch: requiredText(payload.sender_library_epoch),
     stagingKind: stagingKind(payload.staging_kind),
     stagingPath: requiredText(payload.staging_path),
-    transferId: requiredDigest(payload.transfer_id)
+    transferId: requiredDigest(payload.transfer_id),
+    resourceStorageKeys: resourceStorageKeys(payload.resource_storage_keys)
   });
   return {
     applied_state_hash: bytesToHex(receipt.appliedStateHash),

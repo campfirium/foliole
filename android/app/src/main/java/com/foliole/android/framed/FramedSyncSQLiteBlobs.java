@@ -7,14 +7,17 @@ import com.foliole.sync.v22.BlobChunk;
 import com.foliole.sync.v22.BlobReference;
 import com.foliole.sync.v22.TransferHeader;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.security.MessageDigest;
 import java.util.Arrays;
 
 final class FramedSyncSQLiteBlobs {
     private final SQLiteDatabase database;
+    private final FramedSyncSQLiteResourceBlobs resources;
 
-    FramedSyncSQLiteBlobs(SQLiteDatabase database) {
+    FramedSyncSQLiteBlobs(SQLiteDatabase database, File resourceDirectory) {
         this.database = database;
+        resources = new FramedSyncSQLiteResourceBlobs(database, resourceDirectory);
     }
 
     void stageOffers(byte[] transferId, byte[] attemptId, TransferHeader header)
@@ -39,6 +42,9 @@ final class FramedSyncSQLiteBlobs {
         throws Exception {
         BlobReference descriptor = loadOffer(transferId, attemptId, chunk.getBlobHash().toByteArray());
         if (descriptor == null) throw invalid("blob_chunk_not_admitted");
+        if (descriptor.getRoleValue() != 1) {
+            return resources.stage(transferId, attemptId, descriptor, chunk);
+        }
         long length = chunk.getData().size();
         if (chunk.getOffset() < 0 || chunk.getOffset() > descriptor.getByteLength() - length) {
             throw invalid("blob_chunk_range_invalid");
@@ -70,6 +76,11 @@ final class FramedSyncSQLiteBlobs {
                 long byteLength = offers.getLong(1);
                 int role = offers.getInt(2);
                 boolean required = offers.getInt(3) == 1;
+                if (role != 1) {
+                    if (!resources.verifyAndPin(
+                        transferId, attemptId, hash, byteLength, role, required)) return false;
+                    continue;
+                }
                 byte[] data = available(hash, byteLength);
                 if (data == null) data = assemble(transferId, attemptId, hash, byteLength);
                 if (data == null) {
@@ -82,6 +93,14 @@ final class FramedSyncSQLiteBlobs {
             }
         }
         return true;
+    }
+
+    void cleanupAttempt(byte[] transferId, byte[] attemptId) {
+        resources.cleanupAttempt(transferId, attemptId);
+    }
+
+    File resourceDirectory() {
+        return resources.directory();
     }
 
     private byte[] assemble(byte[] transferId, byte[] attemptId, byte[] hash, long byteLength)

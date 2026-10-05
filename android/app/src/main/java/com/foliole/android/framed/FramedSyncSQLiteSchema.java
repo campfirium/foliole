@@ -51,7 +51,25 @@ final class FramedSyncSQLiteSchema {
             "FOREIGN KEY (transfer_id) REFERENCES framed_sync_android_transfers(transfer_id) " +
             "ON DELETE CASCADE, FOREIGN KEY (sha256) REFERENCES " +
             "framed_sync_android_available_blobs(sha256))");
+        installResources(database);
         installReceipts(database);
+    }
+
+    private static void installResources(SQLiteDatabase database) {
+        database.execSQL("CREATE TABLE IF NOT EXISTS framed_sync_android_resource_blob_chunks (" +
+            "transfer_id BLOB NOT NULL, attempt_id BLOB NOT NULL, sha256 BLOB NOT NULL, " +
+            "byte_offset INTEGER NOT NULL, byte_length INTEGER NOT NULL, chunk_sha256 BLOB NOT NULL, " +
+            "PRIMARY KEY (transfer_id, attempt_id, sha256, byte_offset), " +
+            "FOREIGN KEY (transfer_id, attempt_id) REFERENCES framed_sync_android_attempts" +
+            "(transfer_id, attempt_id) ON DELETE CASCADE)");
+        database.execSQL("CREATE TABLE IF NOT EXISTS framed_sync_android_available_resources (" +
+            "sha256 BLOB PRIMARY KEY, byte_length INTEGER NOT NULL, storage_key TEXT NOT NULL)");
+        database.execSQL("CREATE TABLE IF NOT EXISTS framed_sync_android_resource_pins (" +
+            "transfer_id BLOB NOT NULL, sha256 BLOB NOT NULL, byte_length INTEGER NOT NULL, " +
+            "role INTEGER NOT NULL, required INTEGER NOT NULL, storage_key TEXT NOT NULL, " +
+            "PRIMARY KEY (transfer_id, sha256), FOREIGN KEY (transfer_id) REFERENCES " +
+            "framed_sync_android_transfers(transfer_id) ON DELETE CASCADE, FOREIGN KEY (sha256) " +
+            "REFERENCES framed_sync_android_available_resources(sha256))");
     }
 
     private static void installReceipts(SQLiteDatabase database) {

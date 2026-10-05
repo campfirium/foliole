@@ -1,5 +1,3 @@
-import { bytesToHex } from '@noble/hashes/utils.js';
-
 import {
   framedSyncBytes,
   framedSyncText,
@@ -7,18 +5,15 @@ import {
   sameFramedSyncBytes
 } from '../../../../../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
-import type {
-  CanonicalBlob,
-  CanonicalFact
-} from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { TransferReceiptStage } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
-import { restoreFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeRestore.js';
 import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewApply.js';
 import { canonicalFactFromValidatedMessage } from '../../../../../../lib/core/sync/framedSyncWireFact.js';
 import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
 import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
+
+import { decodeCompanionFramedSyncTransfer } from './companionFramedSyncDecode.js';
 
 const STAGING_TABLES = {
   android: { alias: 'framed_android', prefix: 'framed_sync_android' },
@@ -33,6 +28,7 @@ export interface CompanionFramedSyncApplyInput {
   stagingKind: keyof typeof STAGING_TABLES;
   stagingPath: string;
   transferId: Uint8Array;
+  resourceStorageKeys?: readonly string[];
 }
 
 function sqlString(value: string) {
@@ -42,20 +38,6 @@ function sqlString(value: string) {
 
 function sameText(row: DbRow, name: string, expected: string) {
   if (framedSyncText(row, name) !== expected) throw new Error('framed_sync_transfer_context_mismatch');
-}
-
-function blob(row: DbRow): CanonicalBlob {
-  const byteLength = row.byte_length;
-  const role = row.role;
-  const required = row.required;
-  if ((typeof byteLength !== 'number' && typeof byteLength !== 'string' && typeof byteLength !== 'bigint') ||
-      typeof role !== 'number' || typeof required !== 'number') throw new Error('framed_sync_blob_row_invalid');
-  return {
-    byteLength: BigInt(byteLength),
-    required: required === 1,
-    role,
-    sha256: framedSyncBytes(row, 'sha256')
-  };
 }
 
 async function loadTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
@@ -76,61 +58,18 @@ async function loadTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
   const facts = factFrames.map((row) => canonicalFactFromValidatedMessage(
     decodeAndValidateProtocolMessage(framedSyncBytes(row, 'authenticated_plaintext'), Number(row.frame_type))
   ));
-  const blobRows = await db.query<DbRow>(`SELECT pin.sha256, pin.byte_length, pin.role, pin.required, available.data
+  const bodyRows = await db.query<DbRow>(`SELECT pin.sha256, pin.byte_length, pin.role, pin.required, available.data
     FROM ${tables.alias}.${tables.prefix}_blob_pins pin
     JOIN ${tables.alias}.${tables.prefix}_available_blobs available ON available.sha256 = pin.sha256
-    WHERE pin.transfer_id = ?`, [input.transferId]);
-  return { blobRows, contentId: framedSyncBytes(transfer, 'content_id'), facts };
-}
-
-type DecodedTransfer = Readonly<{
-  globalId: string;
-  nodes: ReadonlyArray<ReturnType<typeof restoreFramedSyncNodeRecord>>;
-  relationReviewFacts: readonly CanonicalFact[];
-}>;
-
-function sameBlob(left: CanonicalBlob, right: CanonicalBlob) {
-  return left.byteLength === right.byteLength && left.required === right.required &&
-    left.role === right.role && sameFramedSyncBytes(left.sha256, right.sha256);
-}
-
-function decodeTransfer(facts: CanonicalFact[], blobRows: DbRow[]): DecodedTransfer {
-  const nodeFacts = facts.filter((fact) => fact.kind === 2);
-  const relationReviewFacts = facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
-  if (!facts.length || nodeFacts.length + relationReviewFacts.length !== facts.length) {
-    throw new Error('framed_sync_android_fact_set_unsupported');
-  }
-  const globalId = facts[0]!.globalId;
-  if (facts.some((fact) => fact.objectType !== 'node' || fact.globalId !== globalId)) {
-    throw new Error('framed_sync_android_fact_identity_mismatch');
-  }
-  if (!nodeFacts.length) {
-    if (blobRows.length) throw new Error('framed_sync_android_blob_set_mismatch');
-    return { globalId, nodes: [], relationReviewFacts };
-  }
-  const rowsByHash = new Map(blobRows.map((row) => [bytesToHex(framedSyncBytes(row, 'sha256')), row]));
-  const requiredHashes = new Set(nodeFacts.flatMap(
-    (fact) => fact.blobs.map((entry) => bytesToHex(entry.sha256))
-  ));
-  if (rowsByHash.size !== blobRows.length || requiredHashes.size !== blobRows.length ||
-      nodeFacts.some((fact) => fact.blobs.length !== 1)) {
-    throw new Error('framed_sync_android_blob_identity_mismatch');
-  }
-  return {
-    globalId,
-    nodes: nodeFacts.map((nodeFact) => {
-      const row = rowsByHash.get(bytesToHex(nodeFact.blobs[0]!.sha256));
-      if (!row) throw new Error('framed_sync_android_blob_identity_mismatch');
-      const manifestBlob = blob(row);
-      if (!sameBlob(nodeFact.blobs[0]!, manifestBlob)) {
-        throw new Error('framed_sync_android_blob_identity_mismatch');
-      }
-      return restoreFramedSyncNodeRecord({
-        bodyBlob: framedSyncBytes(row, 'data'), fact: nodeFact, manifestBlob
-      });
-    }),
-    relationReviewFacts
-  };
+    WHERE pin.transfer_id = ? AND pin.role = 1`, [input.transferId]);
+  const resourceRows = input.stagingKind === 'android' ? await db.query<DbRow>(
+    `SELECT pin.sha256, pin.byte_length, pin.role, pin.required, pin.storage_key
+      FROM framed_android.framed_sync_android_resource_pins pin
+      JOIN framed_android.framed_sync_android_available_resources available
+        ON available.sha256 = pin.sha256 AND available.byte_length = pin.byte_length
+          AND available.storage_key = pin.storage_key
+      WHERE pin.transfer_id = ?`, [input.transferId]) : [];
+  return { bodyRows, contentId: framedSyncBytes(transfer, 'content_id'), facts, resourceRows };
 }
 
 function receiptIdentityMatches(left: TransferReceiptStage, right: Omit<TransferReceiptStage, 'appliedStateHash'>) {
@@ -149,7 +88,9 @@ export async function applyCompanionFramedSyncTransfer(
   await db.run(`ATTACH DATABASE ${sqlString(input.stagingPath)} AS ${tables.alias}`);
   try {
     const staged = await loadTransfer(db, input);
-    const decoded = decodeTransfer(staged.facts, staged.blobRows);
+    const decoded = decodeCompanionFramedSyncTransfer({ bodyRows: staged.bodyRows,
+      facts: staged.facts, resourceRows: staged.resourceRows,
+      resourceStorageKeys: input.resourceStorageKeys ?? [] });
     const receiptIdentity = {
       contentId: staged.contentId,
       receiverDeviceId: input.receiverDeviceId,

@@ -12,7 +12,6 @@ import com.foliole.android.framed.FramedSyncTransferSQLite;
 import com.foliole.sync.v22.TransferReceipt;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
-import com.google.protobuf.ByteString;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
@@ -53,7 +52,7 @@ final class FolioleCompanionFramedSyncPull {
                 signedHeaders(credential, groupId, path, request),
                 writer -> FramedSyncSessionWriter.replay(request, writer),
                 response -> staging.receive(response, groupKey, transferContext));
-            TransferReceipt receipt = apply(
+            TransferReceipt receipt = FolioleCompanionFramedSyncApply.apply(
                 bridge, staging, received.transferId(), transferContext, credential.deviceId, localEpoch);
             byte[] encodedReceipt = staging.receipt(groupKey, receipt);
             FramedSyncHttpTransport.postNoResponse(
@@ -62,35 +61,6 @@ final class FolioleCompanionFramedSyncPull {
                 writer -> FramedSyncSessionWriter.replay(encodedReceipt, writer));
             return result(receipt);
         }
-    }
-
-    private static TransferReceipt apply(
-        FolioleCompanionSyncGroupDataBridge bridge,
-        FramedSyncTransferSQLite staging,
-        byte[] transferId,
-        FramedSyncTransferContext context,
-        String localDeviceId,
-        String localEpoch
-    ) throws Exception {
-        JSONObject applied = bridge.request("apply_framed_transfer", new JSONObject()
-            .put("staging_kind", "android").put("staging_path", staging.path())
-            .put("transfer_id", hex(transferId))
-            .put("sender_device_id", context.senderDeviceId())
-            .put("sender_library_epoch", context.senderLibraryEpoch())
-            .put("receiver_device_id", localDeviceId)
-            .put("receiver_library_epoch", localEpoch));
-        byte[] returnedTransferId = digest(applied.optString("transfer_id"));
-        if (!MessageDigest.isEqual(transferId, returnedTransferId) ||
-            !localDeviceId.equals(applied.optString("receiver_device_id")) ||
-            !localEpoch.equals(applied.optString("receiver_library_epoch"))) {
-            throw new IllegalArgumentException("framed_sync_receipt_identity_mismatch");
-        }
-        return TransferReceipt.newBuilder()
-            .setTransferId(ByteString.copyFrom(returnedTransferId))
-            .setContentId(ByteString.copyFrom(digest(applied.optString("content_id"))))
-            .setReceiverDeviceId(localDeviceId).setReceiverLibraryEpoch(localEpoch)
-            .setAppliedStateHash(ByteString.copyFrom(
-                digest(applied.optString("applied_state_hash")))).build();
     }
 
     private static JSObject result(TransferReceipt receipt) {
@@ -133,17 +103,6 @@ final class FolioleCompanionFramedSyncPull {
     private static byte[] groupKey(String value) {
         byte[] result = Base64.decode(value, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
         if (result.length != 32) throw new SecurityException("sync_group_key_invalid");
-        return result;
-    }
-
-    private static byte[] digest(String value) {
-        if (value == null || !value.matches("[a-f0-9]{64}")) {
-            throw new IllegalArgumentException("framed_sync_receipt_digest_invalid");
-        }
-        byte[] result = new byte[32];
-        for (int index = 0; index < result.length; index++) {
-            result[index] = (byte) Integer.parseInt(value.substring(index * 2, index * 2 + 2), 16);
-        }
         return result;
     }
 

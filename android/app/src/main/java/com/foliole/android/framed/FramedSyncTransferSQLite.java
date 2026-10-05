@@ -15,7 +15,8 @@ public final class FramedSyncTransferSQLite implements AutoCloseable {
     public FramedSyncTransferSQLite(Context context) {
         file = context.getApplicationContext().getDatabasePath(DATABASE_NAME);
         database = SQLiteDatabase.openOrCreateDatabase(file, null);
-        staging = new FramedSyncSQLiteStaging(database);
+        staging = new FramedSyncSQLiteStaging(database,
+            new File(context.getApplicationContext().getFilesDir(), "attachments"));
     }
 
     public synchronized FramedSyncTransferReader.Result receive(
@@ -32,6 +33,11 @@ public final class FramedSyncTransferSQLite implements AutoCloseable {
 
     public String path() {
         return file.getAbsolutePath();
+    }
+
+    public synchronized FramedSyncResourcePublication publishResources(byte[] transferId)
+        throws Exception {
+        return staging.publishResources(transferId);
     }
 
     @Override
