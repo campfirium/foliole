@@ -20,6 +20,10 @@ public final class FramedSyncHttpTransport {
         T read(FramedSyncStreamReader reader) throws Exception;
     }
 
+    public interface RawResponseBody<T> {
+        T read(InputStream input) throws Exception;
+    }
+
     private FramedSyncHttpTransport() {}
 
     public static <T> T post(
@@ -30,6 +34,20 @@ public final class FramedSyncHttpTransport {
         Map<String, String> memberAuthHeaders,
         RequestBody requestBody,
         ResponseBody<T> responseBody
+    ) throws Exception {
+        return postStream(url, groupId, expectedRemoteDeviceId, expectedRemoteLibraryEpoch,
+            memberAuthHeaders, requestBody,
+            input -> responseBody.read(new FramedSyncStreamReader(input)));
+    }
+
+    public static <T> T postStream(
+        URL url,
+        String groupId,
+        String expectedRemoteDeviceId,
+        String expectedRemoteLibraryEpoch,
+        Map<String, String> memberAuthHeaders,
+        RequestBody requestBody,
+        RawResponseBody<T> responseBody
     ) throws Exception {
         requireText(groupId, "sync_group_id_required");
         requireText(expectedRemoteDeviceId, "remote_device_id_required");
@@ -57,11 +75,27 @@ public final class FramedSyncHttpTransport {
             if (status != 200) throw new IllegalStateException("framed_sync_http_" + status);
             requireResponseIdentity(connection, expectedRemoteDeviceId, expectedRemoteLibraryEpoch);
             try (InputStream input = connection.getInputStream()) {
-                return responseBody.read(new FramedSyncStreamReader(input));
+                return responseBody.read(input);
             }
         } finally {
             connection.disconnect();
         }
+    }
+
+    public static void postNoResponse(
+        URL url,
+        String groupId,
+        String expectedRemoteDeviceId,
+        String expectedRemoteLibraryEpoch,
+        Map<String, String> memberAuthHeaders,
+        RequestBody requestBody
+    ) throws Exception {
+        postStream(url, groupId, expectedRemoteDeviceId, expectedRemoteLibraryEpoch,
+            memberAuthHeaders, requestBody, input -> {
+                byte[] buffer = new byte[8192];
+                while (input.read(buffer) != -1) {}
+                return null;
+            });
     }
 
     private static void requireMemberAuth(Map<String, String> headers, String groupId) {

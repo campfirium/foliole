@@ -153,6 +153,11 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionFramedSyncInventoryClient.read(getContext(), call));
     }
 
+    @PluginMethod public void pullFramedSyncObject(PluginCall call) {
+        async(call, "Failed to pull framed Sync object.", () ->
+            FolioleCompanionFramedSyncPull.pull(getContext(), call));
+    }
+
     @PluginMethod public void downloadAttachmentResourceBatch(PluginCall call) {
         async(call, "Failed to download companion attachment resources.", () ->
             FolioleCompanionResourcePluginActions.downloadAttachmentResourceBatch(getContext(), call));

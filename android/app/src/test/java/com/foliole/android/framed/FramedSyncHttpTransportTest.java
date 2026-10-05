@@ -64,6 +64,32 @@ public final class FramedSyncHttpTransportTest {
             writer -> {}, reader -> null);
     }
 
+    @Test
+    public void validatesAndDrainsAnAcknowledgementWithoutDependingOnItsPayload() throws Exception {
+        AtomicReference<byte[]> received = new AtomicReference<>();
+        AtomicReference<Throwable> serverFailure = new AtomicReference<>();
+        try (ServerSocket server = new ServerSocket(0)) {
+            Thread serverThread = new Thread(() -> serveOne(server, received,
+                new AtomicReference<>(), new AtomicReference<>(), serverFailure));
+            serverThread.start();
+            URL url = new URL("http://127.0.0.1:" + server.getLocalPort() +
+                "/companion/framed-sync");
+            byte[] preamble = FramedSyncStreamTest.preamble();
+            byte[] header = FramedSyncWireHeader.encode(1, 0, 6);
+            byte[] body = new byte[] {9};
+
+            FramedSyncHttpTransport.postNoResponse(
+                url, "group-a", "desktop-b", "epoch-b", memberAuth(), writer -> {
+                    writer.writePreamble(preamble);
+                    writer.writeFrame(header, body);
+                });
+
+            serverThread.join(2_000);
+            if (serverFailure.get() != null) throw new AssertionError(serverFailure.get());
+            assertEquals(preamble.length + header.length + body.length, received.get().length);
+        }
+    }
+
     private static Map<String, String> memberAuth() {
         Map<String, String> result = new LinkedHashMap<>();
         result.put("X-Sync-Group-Id", "group-a");

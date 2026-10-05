@@ -55,10 +55,10 @@ final class FolioleCompanionFramedSyncInventoryClient {
             reader -> FramedSyncInventoryWire.decodeEntries(
                 FramedSyncSessionReader.read(reader, groupKey, sessionContext,
                     FramedSyncInventoryWire.MAX_SESSION_FRAMES).messages(), roundId));
-        return json(entries);
+        return json(entries, roundId);
     }
 
-    private static JSObject json(List<InventoryEntry> entries) {
+    private static JSObject json(List<InventoryEntry> entries, byte[] roundId) {
         JSArray values = new JSArray();
         for (InventoryEntry entry : entries) values.put(new JSObject()
             .put("frontier_fact_ids", strings(entry.getFrontierFactIdsList()))
@@ -68,7 +68,7 @@ final class FolioleCompanionFramedSyncInventoryClient {
             .put("resource_hashes", hashes(entry.getResourceHashesList()))
             .put("review_fact_ids", strings(entry.getReviewFactIdsList()))
             .put("shared_state_hash", hex(entry.getSharedStateHash().toByteArray())));
-        return new JSObject().put("entries", values);
+        return new JSObject().put("entries", values).put("round_id", hex(roundId));
     }
 
     private static JSONArray strings(List<String> values) {
