@@ -7,6 +7,7 @@ import { resolveCompanionSyncPeerHostName,
   resolveCompanionSyncPeerId } from '../network/syncGroupPeerIdentity';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
+import { sendCompanionFramedSyncInventoryDifferences } from './framed/companionFramedSyncInventoryRound';
 import { receiveCompanionSyncIdentityCandidates,
   sendCompanionSyncIdentityCandidates } from './syncGroupIdentityExchange';
 import { probeCompanionSyncIdentities } from './syncGroupIdentityProbe';
@@ -24,6 +25,23 @@ async function recordCompletedBaseline(pair: {
       localProofRoot: checked.localProofRoot, peerProofRoot: checked.peerProofRoot })));
 }
 
+async function refreshAfterFramedTransfer(args: {
+  candidate: Awaited<ReturnType<typeof probeCompanionSyncIdentities>>;
+  endpointUrl: string;
+  groupId: string;
+  outbound: Awaited<ReturnType<typeof probeCompanionSyncIdentities>>;
+  peerId: string;
+}) {
+  const framed = await sendCompanionFramedSyncInventoryDifferences({
+    endpoint_url: args.endpointUrl, receiver_device_id: args.peerId,
+    receiver_library_epoch: args.outbound.sourceEpoch, sync_group_id: args.groupId
+  });
+  if (framed.sent.length === 0) return { addedCandidateCount: 0, framed, outbound: args.outbound };
+  const refreshed = await probeCompanionSyncIdentities(args.endpointUrl);
+  if (args.outbound !== args.candidate) await args.outbound.cleanup();
+  return { addedCandidateCount: refreshed.count, framed, outbound: refreshed };
+}
+
 /** A bilateral v21 exchange is complete only after a fresh fixed-view probe is empty. */
 export async function runCompanionSyncIdentityRound(endpointUrl: string, hostName: string,
   options: { includeResources?: boolean;
@@ -36,6 +54,7 @@ export async function runCompanionSyncIdentityRound(endpointUrl: string, hostNam
   const pair = { groupId: group.group_id,
     localDeviceId: group.local_device_identity_key, peerDeviceId: peerId };
   const candidate = await probeCompanionSyncIdentities(endpointUrl);
+  let candidateCount = candidate.count;
   let outbound: Awaited<ReturnType<typeof probeCompanionSyncIdentities>> | undefined;
   let verification: Awaited<ReturnType<typeof probeCompanionSyncIdentities>> | undefined;
   try {
@@ -47,6 +66,11 @@ export async function runCompanionSyncIdentityRound(endpointUrl: string, hostNam
       snapshotPath: candidate.snapshotPath });
     const receivedPages = firstReceived.appliedPages;
     outbound = receivedPages > 0 ? await probeCompanionSyncIdentities(endpointUrl) : candidate;
+    if (outbound !== candidate) candidateCount += outbound.count;
+    const refreshed = await refreshAfterFramedTransfer({ candidate, endpointUrl,
+      groupId: group.group_id, outbound, peerId });
+    outbound = refreshed.outbound;
+    candidateCount += refreshed.addedCandidateCount;
     const sent = await sendCompanionSyncIdentityCandidates({ ...identity,
       localViewId: outbound.localViewId, remoteViewId: outbound.sourceViewId,
       snapshotPath: outbound.snapshotPath });
@@ -66,10 +90,9 @@ export async function runCompanionSyncIdentityRound(endpointUrl: string, hostNam
     if (options.includeResources !== false) {
       await recordCompletedBaseline(pair, checked);
     }
-    return { received: firstReceived, sent,
+    return { framed: refreshed.framed, received: firstReceived, sent,
       resources,
-      candidateCount: candidate.count + (outbound !== candidate ? outbound.count : 0) +
-        completion.candidateCount,
+      candidateCount: candidateCount + completion.candidateCount,
       timeCandidateCount: 0, usedTimeCandidates: false,
       verifiedCandidateCount: checked.count };
   } finally {
