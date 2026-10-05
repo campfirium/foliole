@@ -24,6 +24,10 @@ export type FramedSyncStreamBody<Frame extends FramedSyncEncodedFrame = FramedSy
   preamble: Uint8Array;
 }>;
 
+export type FramedSyncWritableBody = FramedSyncStreamBody & Readonly<{
+  contentLength: number;
+}>;
+
 type BinaryChunk = Uint8Array | string;
 
 class ExactByteReader {
@@ -105,4 +109,24 @@ export async function* encodeFramedSyncStream(
     yield frame.headerBytes;
     yield frame.ciphertext;
   }
+}
+
+export function framedSyncEncodedLength(
+  preamble: Uint8Array,
+  frames: readonly Readonly<{
+    ciphertext: Uint8Array;
+    frameHeader?: Uint8Array;
+    headerBytes?: Uint8Array;
+  }>[]
+) {
+  decodeFramedSyncPreamble(preamble);
+  return frames.reduce((total, frame) => {
+    const headerBytes = frame.headerBytes ?? frame.frameHeader;
+    if (!headerBytes) throw new Error('framed_sync_frame_header_missing');
+    const header = decodeFrameHeader(headerBytes);
+    if (frame.ciphertext.byteLength !== header.ciphertextBytes) {
+      throw new Error('framed_sync_frame_body_length_mismatch');
+    }
+    return total + headerBytes.byteLength + frame.ciphertext.byteLength;
+  }, preamble.byteLength);
 }

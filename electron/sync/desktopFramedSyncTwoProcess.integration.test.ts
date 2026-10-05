@@ -11,6 +11,7 @@ import {
   processFrameStream,
   TRANSFER_FRAME_TYPES
 } from './desktopFramedSyncProcessWire.js';
+import { framedSyncEncodedLength } from './desktopFramedSyncStream.js';
 import {
   createDesktopFramedSyncTwoProcessFixture,
   type DesktopFramedSyncFixtureProcess,
@@ -163,7 +164,11 @@ it('rejects a non-canonical transfer identity before staging its authenticated h
     transferId: tamperedTransferId
   });
   await expect(postDesktopFramedSync({
-    body: { frames: processFrameStream([frame]), preamble: attempt.preamble },
+    body: {
+      contentLength: framedSyncEncodedLength(attempt.preamble, [frame]),
+      frames: processFrameStream([frame]),
+      preamble: attempt.preamble
+    },
     endpointUrl: fixture.rightSnapshot.origin,
     groupId: 't326-group',
     localDeviceId: 'desktop-a',

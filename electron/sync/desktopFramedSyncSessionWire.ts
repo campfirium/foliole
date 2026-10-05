@@ -21,10 +21,11 @@ import {
   type FramedSyncSessionNoncePort
 } from '../../lib/core/sync/framedSyncSession.js';
 
-import type {
-  FramedSyncEncodedFrame,
-  FramedSyncStreamBody,
-  FramedSyncWireFrame
+import {
+  framedSyncEncodedLength,
+  type FramedSyncEncodedFrame,
+  type FramedSyncWireFrame,
+  type FramedSyncWritableBody
 } from './desktopFramedSyncStream.js';
 
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
@@ -43,7 +44,7 @@ export async function encodeDesktopFramedSyncSession(args: {
   groupKey: Uint8Array;
   messages: readonly FramedSyncSessionMessage[];
   noncePort: FramedSyncSessionNoncePort;
-}): Promise<FramedSyncStreamBody> {
+}): Promise<FramedSyncWritableBody> {
   const sessionId = randomBytes(16);
   const noncePrefix = randomBytes(4);
   const contextId = await deriveSessionContextId({ ...args.authenticatedContext, sessionId });
@@ -74,7 +75,11 @@ export async function encodeDesktopFramedSyncSession(args: {
     });
     frames.push({ ciphertext, headerBytes });
   }
-  return { frames: asyncFrames(frames), preamble };
+  return {
+    contentLength: framedSyncEncodedLength(preamble, frames),
+    frames: asyncFrames(frames),
+    preamble
+  };
 }
 
 async function* asyncFrames(frames: readonly FramedSyncEncodedFrame[]) {

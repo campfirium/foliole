@@ -14,12 +14,12 @@ import {
 import {
   encodeFramedSyncStream,
   readFramedSyncStream,
-  type FramedSyncStreamBody
+  type FramedSyncWritableBody
 } from './desktopFramedSyncStream.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 
 export async function postDesktopFramedSync(args: {
-  body: FramedSyncStreamBody;
+  body: FramedSyncWritableBody;
   endpointUrl: string;
   groupId: string;
   localDeviceId: string;
@@ -46,6 +46,7 @@ export async function postDesktopFramedSync(args: {
       secret: args.secret
     }),
     Accept: FRAMED_SYNC_CONTENT_TYPE,
+    'Content-Length': String(args.body.contentLength),
     'Content-Type': FRAMED_SYNC_CONTENT_TYPE,
   };
   const transport = url.protocol === 'https:' ? https : http;

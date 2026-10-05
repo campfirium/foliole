@@ -15,6 +15,7 @@ import {
   FRAMED_SYNC_PATH
 } from './companionLanFramedSyncPost.js';
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
+import { framedSyncEncodedLength } from './desktopFramedSyncStream.js';
 
 const servers: http.Server[] = [];
 const secret = Buffer.alloc(32, 3).toString('base64url');
@@ -41,6 +42,8 @@ describe('desktop framed sync HTTP client', () => {
       received = Buffer.concat(chunks);
       expect(request.headers['x-device-id']).toBe('device-a');
       expect(request.headers['x-sync-group-id']).toBe('group-a');
+      expect(request.headers['content-length']).toBe(String(preamble.byteLength + header.byteLength + 3));
+      expect(request.headers['transfer-encoding']).toBeUndefined();
       expect(request.url).toContain('initiator_library_epoch=epoch-a');
       expect(request.url).toContain('responder_library_epoch=epoch-b');
       expect(request.headers['x-signature']).toBe(expectedSignature(request));
@@ -59,7 +62,7 @@ describe('desktop framed sync HTTP client', () => {
     const endpointUrl = serverOrigin(server);
 
     const result = await postDesktopFramedSync({
-      body: { frames: requestFrames(), preamble }, endpointUrl, groupId: 'group-a',
+      body: requestBody(), endpointUrl, groupId: 'group-a',
       localDeviceId: 'device-a', localLibraryEpoch: 'epoch-a', pathWithQuery: FRAMED_SYNC_PATH,
       remoteDeviceId: 'device-b', remoteLibraryEpoch: 'epoch-b', secret
     });
@@ -86,13 +89,22 @@ describe('desktop framed sync HTTP client', () => {
     servers.push(server);
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     await expect(postDesktopFramedSync({
-      body: { frames: requestFrames(), preamble },
+      body: requestBody(),
       endpointUrl: serverOrigin(server),
       groupId: 'group-a', localDeviceId: 'device-a', localLibraryEpoch: 'epoch-a',
       pathWithQuery: FRAMED_SYNC_PATH, remoteDeviceId: 'device-b', remoteLibraryEpoch: 'epoch-b', secret
     })).rejects.toThrow('framed_sync_response_identity_mismatch');
   });
 });
+
+function requestBody() {
+  const frames = [{ ciphertext: Uint8Array.of(0, 255, 7), headerBytes: header }];
+  return {
+    contentLength: framedSyncEncodedLength(preamble, frames),
+    frames: requestFrames(),
+    preamble
+  };
+}
 
 function expectedSignature(request: http.IncomingMessage) {
   const canonical = [
