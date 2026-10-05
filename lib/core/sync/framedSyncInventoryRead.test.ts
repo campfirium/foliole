@@ -46,8 +46,10 @@ it('keeps a deleted Node in inventory with its tombstone version and empty body 
   );
 });
 
-it('does not advertise a retired body as an available empty blob', async () => {
+it('keeps a body-missing Node discoverable without claiming unavailable blob bytes', async () => {
   await expect(readFramedSyncInventoryEntry(port(null), {
     globalId: 'node-1', objectType: 'node'
-  })).rejects.toThrow('framed_sync_inventory_body_unavailable');
+  })).resolves.toMatchObject({
+    frontierFactIds: ['version-1'], globalId: 'node-1', resourceHashes: []
+  });
 });

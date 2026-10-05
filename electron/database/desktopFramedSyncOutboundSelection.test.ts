@@ -89,6 +89,20 @@ beforeEach(() => {
 
 afterEach(() => sqlite.close());
 
+it('defers only the Node when its selected body blob is unavailable', async () => {
+  const contentHash = '8'.repeat(64);
+  const missing = { ...entry('version-1', '', contentHash), resourceHashes: [] };
+  const [difference] = compareFramedSyncInventories({ local: [missing], remote: [] });
+  if (!difference) throw new Error('difference_missing');
+
+  await expect(publishDesktopFramedSyncNodeOutbound({
+    context: context('receiver-a'), difference, port,
+    readCurrentInventoryEntry: async () => missing
+  })).resolves.toEqual({
+    deferredObjects: [{ globalId: 'node-1', objectType: 'node' }], kind: 'deferred'
+  });
+});
+
 it('publishes a deleted Node as its tombstone version fact', async () => {
   const contentHash = '9'.repeat(64);
   const deleted = JSON.parse(snapshot('tombstone-1', contentHash, ''));

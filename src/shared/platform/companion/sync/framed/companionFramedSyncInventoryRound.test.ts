@@ -132,3 +132,14 @@ it('pulls a divergent Node before revalidating and deferring its stale outbound 
     mocks.localEntry.mock.invocationCallOrder[0]!
   );
 });
+
+it('defers a body-missing local Node without failing the rest of the round', async () => {
+  const missing = { ...entry('node-a'), resource_hashes: [] };
+  mocks.localInventory.mockResolvedValue({ entries: [missing] });
+  mocks.localEntry.mockResolvedValue(missing);
+
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+    deferredObjects: [{ globalId: 'node-a', objectType: 'node' }], received: [], sent: []
+  });
+  expect(mocks.send).not.toHaveBeenCalled();
+});

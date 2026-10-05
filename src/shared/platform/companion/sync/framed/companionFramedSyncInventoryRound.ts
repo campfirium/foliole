@@ -123,6 +123,12 @@ export async function sendCompanionFramedSyncInventoryDifferences(
       deferredObjects.push(...revalidated.deferredObjects);
       continue;
     }
+    if (current && current.resourceHashes.length === 0 &&
+        (difference.need.sharedState || difference.need.frontierFactIds.length > 0 ||
+          difference.need.requiredRelationIds.length > 0)) {
+      deferredObjects.push({ globalId: difference.globalId, objectType: 'node' });
+      continue;
+    }
     const receipt = await sendCompanionFramedSyncObject({
       endpointUrl: args.endpoint_url, groupId: args.sync_group_id,
       includeCurrentNode: difference.need.sharedState ||

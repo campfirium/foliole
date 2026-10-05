@@ -147,6 +147,11 @@ export async function publishDesktopFramedSyncNodeOutbound(
     if (validation.deferredObjects.length) {
       return { deferredObjects: validation.deferredObjects, kind: 'deferred' };
     }
+    if (current && current.resourceHashes.length === 0 &&
+        requiredFramedSyncNodeVersionIds(difference).length > 0) {
+      return { deferredObjects: [{ globalId: difference.globalId, objectType: 'node' }],
+        kind: 'deferred' };
+    }
     const manifest = await selectDesktopFramedSyncNodeManifest(tx, difference);
     const contentId = await canonicalContentId(manifest);
     const transferId = await canonicalTransferId(input.context, contentId);

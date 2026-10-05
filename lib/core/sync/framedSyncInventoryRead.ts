@@ -79,13 +79,12 @@ FramedSyncInventoryEntry {
     throw new Error('framed_sync_inventory_state_hash_invalid');
   }
   const bodyText = row.body_text ?? (row.is_tombstone ? '' : null);
-  if (bodyText === null) throw new Error('framed_sync_inventory_body_unavailable');
   return {
     frontierFactIds: [row.current_version_id],
     globalId: row.id,
     objectType: 'node',
     requiredRelationIds: parents.map(framedSyncParentRelationFactId),
-    resourceHashes: [sha256(encoder.encode(bodyText))],
+    resourceHashes: bodyText === null ? [] : [sha256(encoder.encode(bodyText))],
     reviewFactIds: reviews.map((review) => review.op_id),
     sharedStateHash: hexToBytes(row.content_hash)
   };
