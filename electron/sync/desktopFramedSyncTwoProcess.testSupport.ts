@@ -205,8 +205,10 @@ export function readDesktopFramedSyncLibraryEvidence(databasePath: string) {
       nodes: sqlite.prepare(
         'SELECT id, title, content, current_version_id FROM nodes WHERE id LIKE ? ORDER BY id'
       ).all('t326-%'),
-      parents: sqlite.prepare(`SELECT version_id, parent_version_id, ordinal
-        FROM node_sync_version_parents WHERE version_id LIKE 't326-%' ORDER BY version_id, ordinal`).all(),
+      parents: sqlite.prepare(`SELECT parent.version_id, parent.parent_version_id, parent.ordinal
+        FROM node_sync_version_parents parent
+        JOIN node_sync_versions version ON version.version_id = parent.version_id
+        WHERE version.object_id LIKE 't326-%' ORDER BY parent.version_id, parent.ordinal`).all(),
       reviews: sqlite.prepare(`SELECT op_id, node_id, grade FROM review_log
         WHERE node_id LIKE 't326-%' ORDER BY op_id`).all(),
       versions: sqlite.prepare(

@@ -10,6 +10,7 @@ import {
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from './framedSyncInventory.js';
+import { deferUnresolvedBidirectionalObjects } from './framedSyncInventoryRoundResolution.js';
 import {
   decodeAndValidateProtocolMessage,
   encodeValidatedProtocolMessage
@@ -202,6 +203,9 @@ export async function coordinateFramedSyncInventoryRound(args: {
     if (state === 'pending') outstandingDifferences.push(difference);
     transfers.push({ direction: difference.direction, globalId: difference.globalId,
       objectType: difference.objectType, publication: selection.publication, state });
+  }
+  if (!outstandingDifferences.length) {
+    await deferUnresolvedBidirectionalObjects(args.local, args.remote, differences, deferred);
   }
   const deferredObjects = [...deferred.values()];
   const result = classifyFramedSyncInventoryRound({ deferredObjects, outstandingDifferences });

@@ -97,8 +97,6 @@ export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false
     UNION SELECT version.version_id, 0 FROM node_sync_versions version
       WHERE version.object_id = ? AND ${retireLegacyHistory ? '0' : '1'} AND (version.body_text IS NOT NULL
         OR json_type(version.snapshot_json, '$.content') = 'text' OR json_type(version.snapshot_json, '$.content') IS NULL)
-        AND NOT EXISTS (SELECT 1 FROM node_version_local_origins origin
-        WHERE origin.version_id = version.version_id)
       AND EXISTS (SELECT 1 FROM sync_group_devices peer JOIN sync_group_local_state local
         ON local.group_id = peer.group_id AND local.state = 'active'
         WHERE peer.state = 'active' AND peer.device_identity_key <> local.local_device_identity_key
