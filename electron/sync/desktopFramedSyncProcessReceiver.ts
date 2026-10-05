@@ -15,6 +15,7 @@ import { receiveFramedSyncFrame } from '../../lib/core/sync/framedSyncReceiver.j
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 import type { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
+import { DesktopFramedSyncInboundBlobSet } from './desktopFramedSyncInboundBlobSet.js';
 import {
   admitDesktopFramedSyncTransfer,
   finishDesktopFramedSyncTransfer,
@@ -29,7 +30,7 @@ type Db = ReturnType<typeof createBetterSqliteDbPort>;
 type Row = Record<string, unknown>;
 type State = {
   attemptAdmitted: boolean;
-  blob: Uint8Array | null;
+  blobs: DesktopFramedSyncInboundBlobSet | null;
   existingReceipt: TransferReceiptStage | null;
   facts: CanonicalFact[];
   published: PublishedTransfer | null;
@@ -55,7 +56,7 @@ export async function receiveDesktopFramedSyncTransfer(input: ReceiverInput) {
     transferId: preamble.contextId
   });
   const state: State = {
-    attemptAdmitted: false, blob: null, existingReceipt: null, facts: [], published: null
+    attemptAdmitted: false, blobs: null, existingReceipt: null, facts: [], published: null
   };
   let sequence = preamble.startingSequence;
   try {
@@ -119,11 +120,13 @@ async function handleFrame(input: {
   const published = state.published;
   if (!published) throw new Error('transfer_header_required');
   if (decoded.payloadCase === 'transfer_header') {
+    const header = headerFromWire(decoded.payload, published);
+    state.blobs = new DesktopFramedSyncInboundBlobSet(header.blobs);
     state.existingReceipt = await input.staging.loadReceipt(published.transferId);
     if (!state.existingReceipt) await admitDesktopFramedSyncTransfer({
       attemptId: input.preambleAttemptId,
       firstFrame: input.frame,
-      header: headerFromWire(decoded.payload, published),
+      header,
       staging: input.staging
     });
     state.attemptAdmitted = !state.existingReceipt;
@@ -134,18 +137,21 @@ async function handleFrame(input: {
     state.facts.push(fact);
     await stageDesktopFramedSyncFact({ fact, frame: input.frame, staging: input.staging });
   } else if (!state.existingReceipt && decoded.payloadCase === 'blob_chunk') {
-    state.blob = bytes(decoded.payload.data);
+    const data = bytes(decoded.payload.data);
+    const offset = integer(decoded.payload.offset);
+    const sha256 = bytes(decoded.payload.blobHash);
+    state.blobs?.append(sha256, offset, data);
     await stageDesktopFramedSyncBlob({
-      data: state.blob,
+      data,
       frame: input.frame,
-      offset: integer(decoded.payload.offset),
-      sha256: bytes(decoded.payload.blobHash),
+      offset,
+      sha256,
       staging: input.staging
     });
   } else if (!state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
-    if (state.facts.length === 0 || !state.blob) throw new Error('transfer_payload_incomplete');
+    if (state.facts.length === 0 || !state.blobs) throw new Error('transfer_payload_incomplete');
     const receipt = await finishDesktopFramedSyncTransfer({
-      blob: state.blob,
+      blobs: state.blobs.complete(),
       blobCount: integer(decoded.payload.blobCount),
       context: input.context,
       db: input.db,
