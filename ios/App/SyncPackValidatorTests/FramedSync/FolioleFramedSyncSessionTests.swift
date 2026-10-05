@@ -61,6 +61,41 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
         ))
     }
 
+    func testDifferenceRequestKeepsRoundAndRequestsOnlyNodeFactsAndBlobs() throws {
+        let roundID = Data(repeating: 7, count: 16)
+        let message = try FolioleFramedSyncDifferenceRequest.make(
+            roundID: roundID, objectID: "node-1",
+            frontierFactIDs: ["version-2"], requiredRelationIDs: ["edge-1"],
+            resourceHashes: [Data(repeating: 8, count: 32)], reviewFactIDs: ["review-1"]
+        )
+        let encoded = try FolioleFramedSyncCodec.encode(message)
+        let decoded = try FolioleFramedSyncCodec.decode(
+            encoded, authenticatedFrameType: FolioleFramedSyncFrameType.sessionControl.rawValue
+        )
+        guard case .differenceRequest(let request) = decoded.payload else {
+            return XCTFail("expected difference request")
+        }
+        XCTAssertEqual(request.roundID, roundID)
+        XCTAssertEqual(request.facts.map(\.objectType), ["node", "node", "node"])
+        XCTAssertEqual(request.facts.map(\.globalID), ["node-1", "node-1", "node-1"])
+        XCTAssertEqual(request.facts.map(\.factID), ["version-2", "edge-1", "review-1"])
+        XCTAssertEqual(request.facts.map(\.kind), [.nodeVersion, .parentEdge, .review])
+        XCTAssertEqual(request.blobHashes, [Data(repeating: 8, count: 32)])
+    }
+
+    func testDifferenceRequestRejectsInvalidRoundAndBlobWidths() throws {
+        XCTAssertThrowsError(try FolioleFramedSyncDifferenceRequest.make(
+            roundID: Data(repeating: 1, count: 15), objectID: "node-1",
+            frontierFactIDs: ["version-1"], requiredRelationIDs: [],
+            resourceHashes: [], reviewFactIDs: []
+        ))
+        XCTAssertThrowsError(try FolioleFramedSyncDifferenceRequest.make(
+            roundID: Data(repeating: 1, count: 16), objectID: "node-1",
+            frontierFactIDs: ["version-1"], requiredRelationIDs: [],
+            resourceHashes: [Data(repeating: 2, count: 31)], reviewFactIDs: []
+        ))
+    }
+
     func testHTTPParserPreservesBinaryFramedBody() throws {
         let body = Data([0, 255, 1, 254])
         let head = "POST /companion/framed-sync HTTP/1.1\r\n" +

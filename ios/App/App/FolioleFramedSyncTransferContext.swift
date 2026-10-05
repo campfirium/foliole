@@ -30,6 +30,36 @@ struct FolioleFramedSyncTransferContext {
     }
 }
 
+enum FolioleFramedSyncDifferenceRequest {
+    static func make(
+        roundID: Data, objectID: String, frontierFactIDs: [String],
+        requiredRelationIDs: [String], resourceHashes: [Data], reviewFactIDs: [String]
+    ) throws -> FolioleFramedSyncValidatedMessage {
+        var value = Foliole_Sync_V22_DifferenceRequest()
+        value.roundID = roundID
+        value.facts = frontierFactIDs.map { identity(.nodeVersion, objectID, $0) }
+            + requiredRelationIDs.map { identity(.parentEdge, objectID, $0) }
+            + reviewFactIDs.map { identity(.review, objectID, $0) }
+        value.blobHashes = resourceHashes
+        var message = Foliole_Sync_V22_ProtocolMessage()
+        message.payload = .differenceRequest(value)
+        return try FolioleFramedSyncCodec.validateOutbound(
+            message, authenticatedFrameType: FolioleFramedSyncFrameType.sessionControl.rawValue
+        )
+    }
+
+    private static func identity(
+        _ kind: Foliole_Sync_V22_FactKind, _ objectID: String, _ factID: String
+    ) -> Foliole_Sync_V22_FactIdentity {
+        var value = Foliole_Sync_V22_FactIdentity()
+        value.kind = kind
+        value.objectType = "node"
+        value.globalID = objectID
+        value.factID = factID
+        return value
+    }
+}
+
 extension FolioleFramedSyncPreamble {
     var contextKind: UInt8 { encoded[12] }
     var contextID: Data { encoded[16..<48] }

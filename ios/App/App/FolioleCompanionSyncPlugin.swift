@@ -32,6 +32,7 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "rejectSyncGroupJoinRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "resolveSyncGroupDataRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readFramedSyncInventory", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "pullFramedSyncObject", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sendFramedSyncTransfer", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncPaused", returnType: CAPPluginReturnPromise),
