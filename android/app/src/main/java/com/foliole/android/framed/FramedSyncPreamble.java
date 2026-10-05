@@ -14,6 +14,20 @@ public final class FramedSyncPreamble {
         this.encoded = encoded;
     }
 
+    public static FramedSyncPreamble session(
+        byte[] contextId, byte[] sessionId, byte[] noncePrefix
+    ) {
+        if (contextId == null || contextId.length != FramedSyncContract.DIGEST_BYTES ||
+            sessionId == null || sessionId.length != FramedSyncContract.IDENTIFIER_BYTES ||
+            noncePrefix == null || noncePrefix.length != 4) throw invalid();
+        ByteBuffer output = ByteBuffer.allocate(BYTES).order(ByteOrder.BIG_ENDIAN);
+        output.put(MAGIC).putShort((short) BYTES)
+            .putShort((short) FramedSyncContract.PROTOCOL_VERSION)
+            .put((byte) 1).put((byte) 0).putShort((short) 0)
+            .put(contextId).put(sessionId).put(noncePrefix).putLong(0);
+        return decode(output.array());
+    }
+
     public static FramedSyncPreamble decode(byte[] encoded) {
         if (encoded.length != BYTES) throw invalid();
         ByteBuffer input = ByteBuffer.wrap(encoded).order(ByteOrder.BIG_ENDIAN);

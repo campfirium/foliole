@@ -18,6 +18,26 @@ public final class FramedSyncFrameCrypto {
 
     private FramedSyncFrameCrypto() {}
 
+    static byte[] encrypt(
+        byte[] groupKey,
+        FramedSyncPreamble preamble,
+        byte[] headerBytes,
+        byte[] plaintext,
+        long sequence
+    ) throws FramedSyncValidationException {
+        try {
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(frameKey(groupKey, preamble), "AES"),
+                new GCMParameterSpec(128, nonce(preamble.noncePrefix(), sequence)));
+            cipher.updateAAD(concat(preamble.encoded(), headerBytes));
+            return cipher.doFinal(plaintext);
+        } catch (FramedSyncValidationException error) {
+            throw error;
+        } catch (GeneralSecurityException error) {
+            throw invalid("frame_encryption_failed");
+        }
+    }
+
     public static byte[] decrypt(
         byte[] groupKey,
         FramedSyncPreamble preamble,
