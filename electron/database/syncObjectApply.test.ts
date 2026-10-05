@@ -19,6 +19,9 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { buildCanonicalExternalFolderPayload } from '../../lib/core/sync/canonicalExternalResourcePayload.js';
+import { buildCanonicalSettingSyncPayload } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 import { resolveAttachmentFile } from '../attachments/resourceResolver.js';
 
@@ -49,19 +52,14 @@ function insertNode(nodeId: string) {
 
 it('applies generic sync object payloads and marks them clean', async () => {
   insertNode('node-1');
+  const setting = buildCanonicalSettingSyncPayload({ form_factor: 'desktop', host_name: '*',
+    key: 'app_settings', platform: 'windows', scope: 'user_space', value_json: '{"theme":"dark"}' });
   const records: NativeSyncObjectRecord[] = [{
-    content_hash: 'hash-setting',
+    content_hash: computeSyncContentHash('setting', setting),
     deleted_at: null,
     object_id: 'user_space:windows:desktop:*:app_settings',
     object_type: 'setting',
-    payload_json: JSON.stringify({
-      device_id: '*',
-      form_factor: 'desktop',
-      key: 'app_settings',
-      platform: 'windows',
-      scope: 'user_space',
-      value_json: '{"theme":"dark"}'
-    }),
+    payload_json: JSON.stringify(setting),
     updated_at: '2026-04-21T16:20:00.000Z'
   }, {
     content_hash: 'hash-reading',
@@ -99,16 +97,14 @@ it('applies generic sync object payloads and marks them clean', async () => {
 });
 
 it('applies generic sync object payloads through the shared async executor', async () => {
+  const payload = buildCanonicalSettingSyncPayload({ form_factor: 'desktop', host_name: '*',
+    key: 'async_settings', platform: 'windows', scope: 'user_space', value_json: '{"mode":"async"}' });
   const record: NativeSyncObjectRecord = {
-    content_hash: 'hash-setting-async',
+    content_hash: computeSyncContentHash('setting', payload),
     deleted_at: null,
     object_id: 'user_space:windows:desktop:*:async_settings',
     object_type: 'setting',
-    payload_json: JSON.stringify({
-      key: 'async_settings',
-      scope: 'user_space',
-      value_json: '{"mode":"async"}'
-    }),
+    payload_json: JSON.stringify(payload),
     updated_at: '2026-04-21T16:22:00.000Z'
   };
 
@@ -123,6 +119,10 @@ it('applies generic sync object payloads through the shared async executor', asy
 });
 
 it('applies import source and external folder payloads', async () => {
+  const folder = buildCanonicalExternalFolderPayload({
+    attachment_mode: 'document_relative_first_then_fixed_root', excluded_dirs_json: '[".git"]',
+    host_name: 'Desktop test host', host_platform: 'darwin', id: 'folder-1', source_ref: 'external:folder-1'
+  });
   const records: NativeSyncObjectRecord[] = [{
     content_hash: 'hash-import-source',
     deleted_at: null,
@@ -139,19 +139,11 @@ it('applies import source and external folder payloads', async () => {
     }),
     updated_at: '2026-04-21T16:00:00.000Z'
   }, {
-    content_hash: 'hash-external-folder',
+    content_hash: computeSyncContentHash('external_folder', folder),
     deleted_at: null,
     object_id: 'folder-1',
     object_type: 'external_folder',
-    payload_json: JSON.stringify({
-      attachment_mode: 'document_relative_first_then_fixed_root',
-      excluded_dirs_json: '[".git"]',
-      folder_path: '/docs',
-      host_name: 'Desktop test host',
-      host_platform: 'darwin',
-      source_ref: 'external:folder-1',
-      type_settings_json: '{}'
-    }),
+    payload_json: JSON.stringify(folder),
     updated_at: '2026-04-21T16:00:00.000Z'
   }];
 
@@ -161,7 +153,7 @@ it('applies import source and external folder payloads', async () => {
   expect(driver.queryOne<{ source_name: string }>('SELECT source_name FROM import_sources WHERE source_fingerprint = ?', ['source-1']))
     .toEqual({ source_name: 'alpha.md' });
   expect(driver.queryOne<{ folder_path: string }>('SELECT folder_path FROM external_search_folders WHERE id = ?', ['folder-1']))
-    .toEqual({ folder_path: '/docs' });
+    .toEqual({ folder_path: '' });
 });
 
 it('ignores legacy attachment metadata without creating ownership or possession', async () => {

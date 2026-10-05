@@ -178,10 +178,13 @@ it('loads import source and external folder sync object payloads', () => {
     source_fingerprint: 'source-1',
     source_name: 'alpha.md'
   });
-  expect(JSON.parse(records[0]?.payload_json ?? '{}')).toMatchObject({
-    folder_path: '/docs',
-    excluded_dirs_json: '[".git"]'
+  const folderPayload = JSON.parse(records[0]?.payload_json ?? '{}');
+  expect(folderPayload).toMatchObject({
+    excluded_dirs_json: '[".git"]',
+    id: 'folder-1',
+    source_ref: 'external:folder-1'
   });
+  expect(folderPayload).not.toHaveProperty('folder_path');
 });
 
 it('does not synthesize legacy attachment metadata or possession from stale sync state', () => {
@@ -209,7 +212,7 @@ it('excludes pack-owned documents from JSON sync object streams', () => {
   expect(loadSyncStateObjectsSince(0)).toEqual([]);
 });
 
-it('exports view state source but excludes it from canonical content hash', () => {
+it('exports canonical view state identity while excluding local source and clocks', () => {
   insertViewStateRecord();
 
   const [record] = loadSyncObjects(['session_resume:windows:desktop:desktop-test:node:node-1'], ['view_state']);
@@ -217,10 +220,14 @@ it('exports view state source but excludes it from canonical content hash', () =
 
   expect(payload).toMatchObject({
     node_id: 'node-1',
+    host_name: 'desktop-test',
+    form_factor: 'desktop',
+    key: 'node:node-1',
+    platform: 'windows',
+    scope: 'session_resume',
     scroll_top: 128,
     selection_from: null,
-    selection_to: null,
-    source: 'close-flush'
+    selection_to: null
   });
   expect(computeSyncContentHash('view_state', withoutNodeViewStateHashSource({
     host_name: 'Android test host',

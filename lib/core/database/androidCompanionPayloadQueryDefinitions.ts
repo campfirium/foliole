@@ -130,8 +130,7 @@ export const ANDROID_COMPANION_PAYLOAD_QUERY_DEFINITIONS = {
     },
     sql:
       "SELECT json_object('key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor, " +
-      "'host_name', host_name, 'value_json', value_json, 'content_hash', content_hash, 'updated_at', updated_at, " +
-      "'deleted_at', deleted_at) AS payload_json FROM setting_records " +
+      "'host_name', host_name, 'value_json', value_json) AS payload_json FROM setting_records " +
       "WHERE scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key = ? LIMIT 1"
   },
   syncPayloadWatchedFolder: {

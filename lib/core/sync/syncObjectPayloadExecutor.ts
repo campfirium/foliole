@@ -1,8 +1,4 @@
-import {
-  assertSystemEntryDisplayNamesSettingIdentity,
-  assertSystemEntryDisplayNamesSettingPayload
-} from '../../platform/systemEntryDisplayNameContract.js';
-
+import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import type { DbPort } from './dbPort.js';
 import { applyNodeMemberPosition } from './nodeVersionMemberPositionApply.js';
 import { applyForegroundDailyTime } from './syncForegroundDailyTime.js';
@@ -16,6 +12,7 @@ import {
 import { applyNodeOpenStateObject } from './syncObjectOpenStatePayloadExecutor.js';
 import { applyParentChildOrderObject } from './syncObjectParentChildOrderPayload.js';
 import { asObject, integer, numberOrNull, text } from './syncObjectPayloadValues.js';
+import { applySettingObject, applyViewStateObject } from './syncObjectPrivateStatePayloadExecutor.js';
 import { applyWatchedFolderObject } from './syncObjectWatchedFolderPayloadExecutor.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 import { applyParentOrderFactObject } from './syncParentOrderFactApply.js';
@@ -95,6 +92,9 @@ async function applyNodeTextAlternativeObject(port: DbPort, record: SyncPackSync
 }
 
 async function applyExternalDocumentObject(port: DbPort, record: SyncPackSyncObjectRecord) {
+  if (!hasCanonicalExternalResourceContentHash(record)) {
+    throw new Error('sync_content_hash_mismatch:external_document');
+  }
   const payload = asObject(record);
   if (record.deleted_at) {
     await port.run('UPDATE external_documents SET is_present = 0, missing_at = ?, updated_at = ? WHERE document_id = ?', [
@@ -109,51 +109,17 @@ async function applyExternalDocumentObject(port: DbPort, record: SyncPackSyncObj
     `missing_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(document_id) DO UPDATE SET folder_id = excluded.folder_id, relative_path = excluded.relative_path, ` +
     `file_name = excluded.file_name, extension = excluded.extension, source_size_bytes = excluded.source_size_bytes, ` +
-    `source_modified_at = excluded.source_modified_at, source_modified_ms = excluded.source_modified_ms, ` +
-    `content_hash = excluded.content_hash, title = excluded.title, opening_text = excluded.opening_text, ` +
-    `body_blob_hash = excluded.body_blob_hash, content = excluded.content, indexed_at = excluded.indexed_at, ` +
-    `is_present = excluded.is_present, reference_kind = excluded.reference_kind, ` +
-    `reference_json = excluded.reference_json, missing_at = excluded.missing_at, updated_at = excluded.updated_at`,
+    `content_hash = excluded.content_hash, title = excluded.title, body_blob_hash = excluded.body_blob_hash, ` +
+    `is_present = 1, reference_kind = excluded.reference_kind, reference_json = excluded.reference_json, ` +
+    `missing_at = NULL, updated_at = excluded.updated_at`,
     [record.object_id, text(payload.folder_id) ?? '', text(payload.relative_path) ?? '', text(payload.file_name) ?? '',
       text(payload.extension) ?? '', integer(payload.source_size_bytes), text(payload.source_modified_at) ?? record.updated_at,
       integer(payload.source_modified_ms), text(payload.content_hash) ?? record.content_hash, text(payload.title) ?? '',
       text(payload.opening_text), text(payload.body_blob_hash), text(payload.content) ?? '',
-      text(payload.indexed_at) ?? record.updated_at, integer(payload.is_present) === 0 ? 0 : 1,
+      text(payload.indexed_at) ?? record.updated_at, 1,
       text(payload.reference_kind) ?? 'local_path', text(payload.reference_json), text(payload.missing_at),
       text(payload.created_at) ?? record.updated_at, record.updated_at]
   );
-}
-
-async function applySettingObject(
-  port: DbPort,
-  record: SyncPackSyncObjectRecord,
-  options: SyncObjectPayloadApplyOptions
-) {
-  const parts = record.object_id.split(':', 5);
-  if (parts.length !== 5 || parts.some((part) => !part)) throw new Error('invalid_setting_host_scope');
-  const [scope, platform, formFactor, hostName, key] = parts as [string, string, string, string, string];
-  const isDisplayNames = assertSystemEntryDisplayNamesSettingIdentity(record.object_id);
-  if (scope !== 'user_space' && (!options.hostName || hostName !== options.hostName)) return false;
-  if (record.deleted_at) {
-    await port.run(
-      `DELETE FROM setting_records WHERE scope = ? AND platform = ? AND form_factor = ? AND host_name = ? AND key = ?`,
-      [scope, platform, formFactor, hostName, key]
-    );
-    return true;
-  }
-  const payload = asObject(record);
-  if (isDisplayNames) assertSystemEntryDisplayNamesSettingPayload(record.object_id, payload);
-  await port.run(
-    `INSERT INTO setting_records (scope, platform, form_factor, host_name, key, value_json, content_hash, updated_at, deleted_at) ` +
-    `VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
-    `ON CONFLICT(key, scope, platform, form_factor, host_name) DO UPDATE SET ` +
-    `value_json = excluded.value_json, content_hash = excluded.content_hash, updated_at = excluded.updated_at, deleted_at = excluded.deleted_at`,
-    [text(payload.scope) ?? scope, text(payload.platform) ?? platform,
-      text(payload.form_factor) ?? formFactor, text(payload.host_name) ?? hostName,
-      text(payload.key) ?? key, text(payload.value_json) ?? 'null',
-      record.content_hash, record.updated_at, null]
-  );
-  return true;
 }
 
 async function applyPdfPageTextObject(port: DbPort, record: SyncPackSyncObjectRecord) {
@@ -169,62 +135,4 @@ async function applyPdfPageTextObject(port: DbPort, record: SyncPackSyncObjectRe
     `ON CONFLICT(attachment_id, page) DO UPDATE SET text = excluded.text, page_width = excluded.page_width, page_height = excluded.page_height`,
     [attachmentId, page, text(payload.text) ?? '', numberOrNull(payload.page_width), numberOrNull(payload.page_height)]
   );
-}
-
-async function applyViewStateObject(
-  port: DbPort,
-  record: SyncPackSyncObjectRecord,
-  options: SyncObjectPayloadApplyOptions
-) {
-  if (!isLocalAndroidViewStateObject(record.object_id, options.hostName)) return false;
-  const parts = record.object_id.split(':');
-  if (parts.length < 5 || !parts[3]) throw new Error('invalid_view_state_host_scope');
-  const hostName = parts[3];
-  const key = parts.slice(4).join(':');
-  if (record.deleted_at) {
-    if (key === 'active_node') await port.run("DELETE FROM workspace_meta WHERE key = 'active_node_id'");
-    if (key.startsWith('node:')) await port.run('DELETE FROM node_view_state WHERE node_id = ? AND host_name = ?', [key.slice(5), hostName]);
-    return true;
-  }
-  const payload = asObject(record);
-  if (key === 'active_node') {
-    await applyActiveNodeViewStateObject(port, record, text(payload.active_node_id));
-  } else if (key.startsWith('node:')) {
-    await port.run(
-      `INSERT INTO node_view_state (node_id, host_name, scroll_top, selection_from, selection_to, source, updated_at) ` +
-      `VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(node_id, host_name) DO UPDATE SET scroll_top = excluded.scroll_top, ` +
-      `selection_from = excluded.selection_from, selection_to = excluded.selection_to, source = excluded.source, updated_at = excluded.updated_at`,
-      [key.slice(5), hostName, Math.max(0, integer(payload.scroll_top)),
-        numberOrNull(payload.selection_from), numberOrNull(payload.selection_to),
-        Object.hasOwn(payload, 'source') ? 'sync-apply' : 'user-scroll', record.updated_at]
-    );
-  }
-  return true;
-}
-
-async function applyActiveNodeViewStateObject(
-  port: DbPort,
-  record: SyncPackSyncObjectRecord,
-  activeNodeId: string | null
-) {
-  if (!activeNodeId) {
-    await port.run("DELETE FROM workspace_meta WHERE key = 'active_node_id'");
-    return;
-  }
-  const [node] = await port.query<{ id: string }>(
-    'SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL',
-    [activeNodeId]
-  );
-  if (!node) return;
-  await port.run(
-    `INSERT INTO workspace_meta (key, value, updated_at) VALUES ('active_node_id', ?, ?) ` +
-    `ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
-    [activeNodeId, record.updated_at]
-  );
-}
-
-function isLocalAndroidViewStateObject(objectId: string, hostName?: string) {
-  if (!hostName) return false;
-  const parts = objectId.split(':');
-  return parts.length >= 5 && parts[1] === 'android' && parts[3] === hostName;
 }

@@ -1,4 +1,5 @@
-import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
@@ -44,7 +45,7 @@ export function loadRefreshableExternalSearchFolders() {
 function recordSync(folder: ReturnType<typeof normalizedInput>[number], now: string, hostName: string, deletedAt?: string) {
   const driver = openDatabaseConnection().driver;
   const row = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.external_folder, [folder.id]);
-  upsertSyncObjectState(driver, {
+  upsertExternalResourceSyncState(driver, {
     objectType: 'external_folder', objectId: folder.id,
     contentHash: computeSyncContentHash('external_folder', deletedAt
       ? { deleted_at: deletedAt, folder_id: folder.id }

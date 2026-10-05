@@ -18,6 +18,12 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import {
+  buildCanonicalExternalDocumentPayload,
+  buildCanonicalExternalFolderPayload
+} from '../../lib/core/sync/canonicalExternalResourcePayload.js';
+import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -109,26 +115,17 @@ function importSourceRecord(): NativeSyncObjectRecord {
 }
 
 function externalDocumentRecord(overrides: Partial<NativeSyncObjectRecord> = {}): NativeSyncObjectRecord {
+  const payload = buildCanonicalExternalDocumentPayload({
+    body_blob_hash: 'blob-document-1', content_hash: 'body-content-hash',
+    document_id: 'folder-1:article.md', extension: '.md', file_name: 'article.md', folder_id: 'folder-1',
+    reference_json: null, reference_kind: 'local_path', relative_path: 'article.md', title: 'Imported Article'
+  });
   return {
-    content_hash: 'document-hash-1',
+    content_hash: computeSyncContentHash('external_document', payload),
     deleted_at: null,
     object_id: 'folder-1:article.md',
     object_type: 'external_document',
-    payload_json: JSON.stringify({
-      body_blob_hash: 'blob-document-1',
-      content: 'Imported article body',
-      extension: '.md',
-      file_name: 'article.md',
-      folder_id: 'folder-1',
-      indexed_at: '2026-04-21T16:00:00.000Z',
-      is_present: 1,
-      opening_text: 'Imported article body',
-      relative_path: 'article.md',
-      source_modified_at: '2026-04-21T15:55:00.000Z',
-      source_modified_ms: 1777,
-      source_size_bytes: 88,
-      title: 'Imported Article'
-    }),
+    payload_json: JSON.stringify(payload),
     updated_at: '2026-04-21T16:00:00.000Z',
     ...overrides
   };
@@ -189,7 +186,8 @@ it('covers imported article source and external document presence transitions', 
   await expect(applySyncObjectsAsync([importSourceRecord(), externalDocumentRecord()])).resolves.toEqual([]);
   await expect(applySyncObjectsAsync([
     externalDocumentRecord({
-      content_hash: 'document-missing-hash',
+      content_hash: computeSyncContentHash('external_document',
+        buildCanonicalSyncTombstone('folder-1:article.md')),
       deleted_at: '2026-04-22T16:00:00.000Z',
       payload_json: null,
       updated_at: '2026-04-22T16:00:00.000Z'
@@ -214,4 +212,26 @@ it('covers imported article source and external document presence transitions', 
      WHERE object_type = 'external_document' AND object_id = ?`,
     ['folder-1:article.md']
   )).toEqual({ deleted_at: '2026-04-22T16:00:00.000Z', dirty: 0 });
+});
+
+it('rejects tampered external resources without blocking another object', async () => {
+  const document = buildCanonicalExternalDocumentPayload({ body_blob_hash: null,
+    content_hash: 'body-hash', document_id: 'folder-1:tampered.md', extension: 'md',
+    file_name: 'tampered.md', folder_id: 'folder-1', reference_json: null,
+    reference_kind: 'local_path', relative_path: 'tampered.md', title: 'Original' });
+  const folder = buildCanonicalExternalFolderPayload({ attachment_mode: 'document_relative',
+    excluded_dirs_json: '[]', host_name: 'desktop', host_platform: 'darwin',
+    id: 'folder-1', source_ref: 'source-1' });
+  const applied = await applySyncObjectsAsync([
+    { content_hash: computeSyncContentHash('external_document', document), deleted_at: null,
+      object_id: document.document_id, object_type: 'external_document',
+      payload_json: JSON.stringify({ ...document, title: 'Tampered' }), updated_at: '2026-04-22' },
+    { content_hash: computeSyncContentHash('external_folder', folder), deleted_at: null,
+      object_id: folder.id, object_type: 'external_folder',
+      payload_json: JSON.stringify({ ...folder, excluded_dirs_json: '["tampered"]' }), updated_at: '2026-04-22' },
+    importSourceRecord()
+  ]);
+  expect(applied).toEqual(['import_source:source-1']);
+  expect(openDatabaseConnection().driver.queryOne('SELECT document_id FROM external_documents')).toBeUndefined();
+  expect(openDatabaseConnection().driver.queryOne('SELECT id FROM external_search_folders')).toBeUndefined();
 });

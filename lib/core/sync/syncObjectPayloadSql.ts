@@ -16,12 +16,8 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
     'parent_id', parent_id, 'child_ids_json', child_ids_json
   ) AS payload_json FROM parent_child_order WHERE parent_id = ?`,
   external_folder: `SELECT json_object(
-    'id', f.id, 'folder_path', f.folder_path, 'attachment_mode', f.attachment_mode,
-    'attachment_root_path', f.attachment_root_path, 'excluded_dirs_json', f.excluded_dirs_json,
-    'status', f.status, 'document_count', f.document_count, 'indexed_at', f.indexed_at,
-    'last_error', f.last_error, 'host_name', s.host_name, 'host_platform', s.host_platform,
-    'type_settings_json', s.type_settings_json, 'created_at', f.created_at,
-    'updated_at', f.updated_at, 'source_ref', f.source_ref
+    'id', f.id, 'attachment_mode', f.attachment_mode, 'excluded_dirs_json', f.excluded_dirs_json,
+    'host_name', s.host_name, 'host_platform', s.host_platform, 'source_ref', f.source_ref
   ) AS payload_json FROM external_search_folders f
     JOIN desktop_sources s ON s.source_ref = f.source_ref WHERE f.id = ?`,
   import_source: `SELECT json_object(
@@ -60,8 +56,7 @@ export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
   ) AS payload_json FROM pdf_page_text WHERE attachment_id || ':' || page = ?`,
   setting: `SELECT json_object(
     'key', key, 'scope', scope, 'platform', platform, 'form_factor', form_factor,
-    'host_name', host_name, 'value_json', value_json, 'content_hash', content_hash,
-    'updated_at', updated_at, 'deleted_at', deleted_at
+    'host_name', host_name, 'value_json', value_json
   ) AS payload_json FROM setting_records
     WHERE scope || ':' || platform || ':' || form_factor || ':' || host_name || ':' || key = ?`,
   watched_folder: `SELECT json_object(

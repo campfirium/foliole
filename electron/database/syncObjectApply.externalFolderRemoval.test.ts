@@ -18,6 +18,8 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { upsertDesktopSource } from './desktopSources.js';
@@ -41,7 +43,7 @@ afterEach(async () => {
 
 it('deletes a folder mirror when its source tombstone is applied', async () => {
   await applySyncObjectsAsync([{
-    content_hash: 'folder-delete-hash',
+    content_hash: computeSyncContentHash('external_folder', buildCanonicalSyncTombstone('folder-1')),
     deleted_at: '2026-08-18T03:00:00.000Z',
     object_id: 'folder-1',
     object_type: 'external_folder',

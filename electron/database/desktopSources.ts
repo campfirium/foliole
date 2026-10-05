@@ -2,10 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
 import { loadDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
 import { loadOrCreateDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
-import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { computeSyncContentHash, type SyncObjectStateInput,
+  upsertSyncObjectState } from '../../lib/core/database/syncState.js';
 import type { ImportManagerSourceDraft } from '../../lib/core/import/importManagerSettings.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 
@@ -212,14 +214,18 @@ function recordHostProjectionSync(
   const objectType = source.source_type === 'external' ? 'external_folder' : 'watched_folder';
   const row = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE[objectType], [source.object_id]);
   if (!row) return;
-  upsertSyncObjectState(driver, {
+  const state: SyncObjectStateInput = {
     contentHash: computeSyncContentHash(objectType, JSON.parse(row.payload_json)),
     lastModifiedByHostName: input.currentHostName,
     objectId: source.object_id,
     objectType,
     syncDirty: true,
     updatedAt: input.updatedAt
+  };
+  if (objectType === 'external_folder') upsertExternalResourceSyncState(driver, {
+    ...state, objectType
   });
+  else upsertSyncObjectState(driver, state);
 }
 
 export function recordDesktopImportLocation(input: {

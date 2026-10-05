@@ -17,6 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import type { buildCanonicalExternalFolderPayload } from '../../lib/core/sync/canonicalExternalResourcePayload.js';
 import { saveImportManagerSettings } from '../import/importManagerSettings.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -28,6 +30,7 @@ import {
 import { removeExternalSearchFolder } from './externalSearchFolderRemoval.js';
 import { saveExternalSearchFolders } from './externalSearchFolders.js';
 import { initializeDatabase } from './migrate.js';
+import { loadSyncObjects } from './syncObjects.js';
 
 let tempRoot = '';
 
@@ -74,6 +77,29 @@ it('records external search folders as sync objects', () => {
   expect(openDatabaseConnection().driver.queryOne<{ count: number }>(
     `SELECT COUNT(*) AS count FROM sync_change_log WHERE object_type = 'external_folder' AND object_id = 'folder-1'`
   )).toEqual({ count: 0 });
+});
+
+it('exports only shared folder facts and ignores local path changes in its hash', () => {
+  const folder = { attachment_mode: 'document_relative_first_then_fixed_root' as const,
+    attachment_root_path: '/attachments', excluded_dirs: ['.git'], folder_path: '/library', id: 'folder-1' };
+  saveExternalSearchFolders([folder]);
+  const before = openDatabaseConnection().driver.queryOne<{ content_hash: string; state_seq: number }>(
+    "SELECT content_hash, state_seq FROM sync_object_state WHERE object_type = 'external_folder'"
+  )!;
+  const [record] = loadSyncObjects(['folder-1'], ['external_folder']);
+  const payload = JSON.parse(record?.payload_json ?? '{}') as ReturnType<
+    typeof buildCanonicalExternalFolderPayload
+  >;
+  expect(payload).toEqual(expect.objectContaining({ attachment_mode: folder.attachment_mode,
+    excluded_dirs_json: '[".git"]', id: 'folder-1', source_ref: expect.any(String) }));
+  expect(payload).not.toHaveProperty('folder_path');
+  expect(payload).not.toHaveProperty('status');
+  expect(before.content_hash).toBe(computeSyncContentHash('external_folder', payload));
+
+  saveExternalSearchFolders([{ ...folder, attachment_root_path: '/other', folder_path: '/moved' }]);
+  expect(openDatabaseConnection().driver.queryOne(
+    "SELECT content_hash, state_seq FROM sync_object_state WHERE object_type = 'external_folder'"
+  )).toEqual(before);
 });
 
 it('only removes an external folder through the explicit removal action', () => {

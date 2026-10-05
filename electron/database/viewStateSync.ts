@@ -1,8 +1,6 @@
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
-import {
-  type NodeViewStateWriteSource,
-  withoutNodeViewStateHashSource
-} from '../../lib/platform/persistedNodeViewState.js';
+import { buildCanonicalViewStateSyncPayload } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
+import type { NodeViewStateWriteSource } from '../../lib/platform/persistedNodeViewState.js';
 
 import type { DatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -32,15 +30,15 @@ function toViewStateObjectId(hostName: string, key: string) {
 function writeViewStateObject(connection: DatabaseConnection, key: string, payload: Record<string, unknown>, updatedAt: string) {
   const hostName = loadOrCreateDesktopHostName(updatedAt);
   const objectId = toViewStateObjectId(hostName, key);
-  const syncPayload = {
+  const syncPayload = buildCanonicalViewStateSyncPayload({
     host_name: hostName,
     form_factor: FORM_FACTOR,
     key,
     platform: PLATFORM,
     scope: VIEW_STATE_SCOPE,
     ...payload
-  };
-  const contentHash = computeSyncContentHash('view_state', withoutNodeViewStateHashSource(syncPayload));
+  } as Parameters<typeof buildCanonicalViewStateSyncPayload>[0]);
+  const contentHash = computeSyncContentHash('view_state', syncPayload);
   const existing = connection.driver.queryOne<{ content_hash: string }>(
     `SELECT content_hash FROM sync_object_state
      WHERE object_type = 'view_state' AND object_id = ?`, [objectId]);

@@ -1,4 +1,6 @@
-import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -20,8 +22,8 @@ export function removeExternalSearchFolder(folderId: string) {
     tx.execute('DELETE FROM external_folder_host_preferences WHERE folder_id = ?', [id]);
     tx.execute('DELETE FROM external_search_folders WHERE id = ?', [id]);
     tx.execute('DELETE FROM desktop_sources WHERE source_ref = ?', [existing.source_ref]);
-    upsertSyncObjectState(tx, {
-      contentHash: computeSyncContentHash('external_folder', { deleted_at: removedAt, folder_id: id }),
+    upsertExternalResourceSyncState(tx, {
+      contentHash: computeSyncContentHash('external_folder', buildCanonicalSyncTombstone(id)),
       deletedAt: removedAt,
       lastModifiedByHostName: hostName,
       objectId: id,

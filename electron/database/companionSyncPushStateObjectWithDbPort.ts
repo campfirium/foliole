@@ -1,4 +1,5 @@
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../../lib/core/database/syncStateSequenceSchemaStatements.js';
+import { hasCanonicalPrivateStateContentHash } from '../../lib/core/sync/canonicalPrivateStateContentHash.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import { shouldApplyForegroundTime } from '../../lib/core/sync/syncForegroundDailyTime.js';
 import { applySyncObjectPayloadWithDbPort } from '../../lib/core/sync/syncObjectPayloadExecutor.js';
@@ -42,6 +43,9 @@ export async function applyStateObjectPushWithDbPort(
     const record = buildStateObjectRecord(item, objectType);
     if (!record || item.base.kind !== 'content_hash') return rejectedStateObjectPushResult(item, `invalid_${objectType}_push`);
     if (objectType === 'view_state') return rejectedStateObjectPushResult(item, 'device_private_view_state_push');
+    if (!hasCanonicalPrivateStateContentHash(record)) {
+      return rejectedStateObjectPushResult(item, `invalid_${objectType}_content_hash`);
+    }
     if (sameStateObject(current, record, objectType)) {
       return emptyResult(stateAck(item, current, 'already_applied'));
     }

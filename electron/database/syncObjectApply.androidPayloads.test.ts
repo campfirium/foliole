@@ -20,6 +20,8 @@ vi.mock('../ipc/paths.js', () => ({
 import { ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS } from '../../lib/core/database/androidCompanionDocumentResourceQueryDefinitions.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { buildCanonicalExternalDocumentPayload } from '../../lib/core/sync/canonicalExternalResourcePayload.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
@@ -106,31 +108,20 @@ it('accepts Android-exported numeric strings when applying pdf page text', async
 
 it('accepts Android-exported numeric strings when applying external documents', async () => {
   const bodyHash = upsertTextBodyBlob(openDatabaseConnection().driver, 'body', '2026-04-25T08:00:00.000Z');
+  const referenceJson = JSON.stringify({
+    connection_ref: 'connection', reader_url: 'https://readwise.io/reader/read/remote-1',
+    remote_document_id: 'remote-1', source_url: 'https://example.com/remote-1'
+  });
+  const payload = buildCanonicalExternalDocumentPayload({ body_blob_hash: bodyHash,
+    content_hash: 'body-content-hash', document_id: 'document-1', extension: '.md', file_name: 'doc.md',
+    folder_id: 'folder-1', reference_json: referenceJson, reference_kind: 'readwise_remote',
+    relative_path: 'doc.md', title: 'Remote title' });
   await applySyncObjectsAsync([{
-    content_hash: 'hash-document',
+    content_hash: computeSyncContentHash('external_document', payload),
     deleted_at: null,
     object_id: 'document-1',
     object_type: 'external_document',
-    payload_json: JSON.stringify({
-      content: 'body',
-      body_blob_hash: bodyHash,
-      extension: '.md',
-      file_name: 'doc.md',
-      folder_id: 'folder-1',
-      is_present: '1',
-      opening_text: 'Remote opening',
-      reference_json: JSON.stringify({
-        connection_ref: 'connection',
-        reader_url: 'https://readwise.io/reader/read/remote-1',
-        remote_document_id: 'remote-1',
-        source_url: 'https://example.com/remote-1'
-      }),
-      reference_kind: 'readwise_remote',
-      relative_path: 'doc.md',
-      source_modified_ms: '1777',
-      source_size_bytes: '88',
-      title: 'Remote title'
-    }),
+    payload_json: JSON.stringify(payload),
     updated_at: '2026-04-25T08:05:00.000Z'
   }]);
 
@@ -146,15 +137,10 @@ it('accepts Android-exported numeric strings when applying external documents', 
     .toEqual({
       body_blob_hash: bodyHash,
       is_present: 1,
-      reference_json: JSON.stringify({
-        connection_ref: 'connection',
-        reader_url: 'https://readwise.io/reader/read/remote-1',
-        remote_document_id: 'remote-1',
-        source_url: 'https://example.com/remote-1'
-      }),
+      reference_json: referenceJson,
       reference_kind: 'readwise_remote',
-      source_modified_ms: 1777,
-      source_size_bytes: 88
+      source_modified_ms: 0,
+      source_size_bytes: 0
     });
 
   const queries = ANDROID_COMPANION_DOCUMENT_RESOURCE_QUERY_DEFINITIONS;

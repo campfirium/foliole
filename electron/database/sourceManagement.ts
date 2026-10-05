@@ -1,4 +1,7 @@
-import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import { computeSyncContentHash, type SyncObjectStateInput,
+  upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 import type {
   NativeSourceManagementAction,
@@ -92,13 +95,19 @@ function recordSourceSync(source: DesktopSourceRecord, now: string, deleted: boo
   const objectType = source.source_type === 'external' ? 'external_folder' : 'watched_folder';
   const row = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE[objectType], [source.config_ref]);
   const payload = deleted
-    ? { deleted_at: now, [objectType === 'external_folder' ? 'folder_id' : 'binding_id']: source.config_ref }
+    ? objectType === 'external_folder'
+      ? buildCanonicalSyncTombstone(source.config_ref)
+      : { deleted_at: now, binding_id: source.config_ref }
     : JSON.parse(row?.payload_json ?? '{}');
-  upsertSyncObjectState(driver, {
+  const state: SyncObjectStateInput = {
     contentHash: computeSyncContentHash(objectType, payload), deletedAt: deleted ? now : null,
     lastModifiedByHostName: loadCurrentDesktopHost().name, objectId: source.config_ref,
     objectType, syncDirty: true, updatedAt: now
+  };
+  if (objectType === 'external_folder') upsertExternalResourceSyncState(driver, {
+    ...state, objectType
   });
+  else upsertSyncObjectState(driver, state);
 }
 
 function removeSource(source: DesktopSourceRecord, now: string) {

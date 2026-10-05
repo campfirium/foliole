@@ -2,6 +2,7 @@ import { resolveDesktopSettingIdentity, resolveDesktopSettingPolicy } from '../.
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { loadOrCreateDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { buildCanonicalSettingSyncPayload } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
 
 export interface SettingRecordInput {
   key: string;
@@ -14,7 +15,7 @@ export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordI
   const hostName = loadOrCreateDatabaseHostName(driver, input.updatedAt);
   const identity = resolveDesktopSettingIdentity(input.key, hostName);
   if (!identity) return;
-  const contentHash = computeSyncContentHash('setting', {
+  const payload = buildCanonicalSettingSyncPayload({
     host_name: identity.hostName,
     form_factor: identity.formFactor,
     key: input.key,
@@ -22,6 +23,7 @@ export function writeSettingRecord(driver: DatabaseDriver, input: SettingRecordI
     scope: identity.scope,
     value_json: input.valueJson
   });
+  const contentHash = computeSyncContentHash('setting', payload);
   const existing = driver.queryOne<{ content_hash: string }>(
     `SELECT content_hash FROM sync_object_state
      WHERE object_type = 'setting' AND object_id = ?`, [identity.objectId]);

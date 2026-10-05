@@ -1,4 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { canonicalPrivateStatePayloadJson } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 import type {
   NativeSyncObjectRecord,
@@ -26,19 +27,25 @@ function readViewStatePayloadJson(driver: DatabaseDriver, objectId: string) {
   if (!hostName) return null;
   const key = parts.slice(4).join(':');
   if (key === 'active_node') {
-    return driver.queryOne<{ payload_json: string | null }>(
-      `SELECT json_object('active_node_id', value, 'updated_at', updated_at) AS payload_json
-       FROM workspace_meta WHERE key = 'active_node_id'`
-    )?.payload_json ?? null;
+    const row = driver.queryOne<{ active_node_id: string | null }>(
+      `SELECT NULLIF(value, '') AS active_node_id FROM workspace_meta WHERE key = 'active_node_id'`
+    );
+    return canonicalPrivateStatePayloadJson('view_state', {
+      active_node_id: row?.active_node_id ?? null, form_factor: parts[2], host_name: hostName,
+      key, platform: parts[1], scope: parts[0]
+    });
   }
   if (key.startsWith('node:')) {
-    return driver.queryOne<{ payload_json: string | null }>(
-      `SELECT json_object(
-         'node_id', node_id, 'scroll_top', scroll_top, 'selection_from', selection_from,
-         'selection_to', selection_to, 'source', source, 'updated_at', updated_at
-       ) AS payload_json FROM node_view_state WHERE node_id = ? AND host_name = ?`,
+    const row = driver.queryOne<{
+      node_id: string; scroll_top: number; selection_from: number | null; selection_to: number | null;
+    }>(
+      `SELECT node_id, scroll_top, selection_from, selection_to
+       FROM node_view_state WHERE node_id = ? AND host_name = ?`,
       [key.slice(5), hostName]
-    )?.payload_json ?? null;
+    );
+    return row ? canonicalPrivateStatePayloadJson('view_state', {
+      ...row, form_factor: parts[2], host_name: hostName, key, platform: parts[1], scope: parts[0]
+    }) : null;
   }
   return null;
 }
@@ -47,7 +54,9 @@ function readPayloadJson(driver: DatabaseDriver, type: JsonSyncObjectType, objec
   if (type === 'view_state') return readViewStatePayloadJson(driver, objectId);
   const sql = SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE[type as keyof typeof SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE];
   if (!sql) return null;
-  return driver.queryOne<{ payload_json: string | null }>(sql, [objectId])?.payload_json ?? null;
+  const payloadJson = driver.queryOne<{ payload_json: string | null }>(sql, [objectId])?.payload_json ?? null;
+  if (type !== 'setting' || !payloadJson) return payloadJson;
+  try { return canonicalPrivateStatePayloadJson(type, JSON.parse(payloadJson)); } catch { return null; }
 }
 
 export function hasSyncObjectPayloadFromDriver(
@@ -58,8 +67,7 @@ export function hasSyncObjectPayloadFromDriver(
     const hostName = parts[3];
     const key = parts.slice(4).join(':');
     if (!hostName) return false;
-    if (key === 'active_node') return Boolean(driver.queryOne(
-      "SELECT 1 FROM workspace_meta WHERE key = 'active_node_id' LIMIT 1"));
+    if (key === 'active_node') return true;
     if (key.startsWith('node:')) return Boolean(driver.queryOne(
       'SELECT 1 FROM node_view_state WHERE node_id = ? AND host_name = ? LIMIT 1',
       [key.slice(5), hostName]));

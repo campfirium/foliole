@@ -7,6 +7,7 @@ import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from './desktopSourceConnect
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatements.js';
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from './framedSyncStagingSchema.js';
 import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
 import { LEGACY_BODY_MIGRATION_SCHEMA } from './legacyBodyMigrationSchema.js';
 import { isLegacyOrderingSchema } from './legacyStorageRetirementMigration.js';
@@ -51,6 +52,7 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...SYNC_IDENTITY_RECEIPT_SCHEMA_STATEMENTS,
   ...SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS,
   ...SYNC_PACK_DEPENDENCY_STAGING_SCHEMA,
+  ...FRAMED_SYNC_STAGING_SCHEMA,
   ...SYNC_GROUP_SCHEMA_STATEMENTS,
   ...SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS,
   ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS,

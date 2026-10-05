@@ -1,9 +1,13 @@
 import { createHash } from 'node:crypto';
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
+import { buildCanonicalExternalDocumentPayload } from '../../lib/core/sync/canonicalExternalResourcePayload.js';
+import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -46,14 +50,13 @@ function toExternalDocumentPayload(folder: NativeExternalSearchFolder, document:
   };
 }
 
-function recordExternalDocumentSync(args: {
+function recordExternalDocumentSync(driver: DatabaseDriver, args: {
   contentHash: string;
   hostName: string;
   documentId: string;
   updatedAt: string;
 }) {
-  const connection = openDatabaseConnection();
-  upsertSyncObjectState(connection.driver, {
+  upsertExternalResourceSyncState(driver, {
     objectType: 'external_document',
     objectId: args.documentId,
     contentHash: args.contentHash,
@@ -63,16 +66,20 @@ function recordExternalDocumentSync(args: {
   });
 }
 
-function tombstoneExternalDocument(documentId: string, hostName: string, deletedAt: string) {
-  const connection = openDatabaseConnection();
-  const contentHash = computeSyncContentHash('external_document', { deleted_at: deletedAt, document_id: documentId });
-  connection.driver.execute(
+function tombstoneExternalDocument(
+  driver: DatabaseDriver,
+  documentId: string,
+  hostName: string,
+  deletedAt: string
+) {
+  const contentHash = computeSyncContentHash('external_document', buildCanonicalSyncTombstone(documentId));
+  driver.execute(
     `UPDATE external_documents
      SET is_present = 0, missing_at = ?, updated_at = ?
      WHERE document_id = ?`,
     [deletedAt, deletedAt, documentId]
   );
-  upsertSyncObjectState(connection.driver, {
+  upsertExternalResourceSyncState(driver, {
     objectType: 'external_document',
     objectId: documentId,
     contentHash,
@@ -85,23 +92,30 @@ function tombstoneExternalDocument(documentId: string, hostName: string, deleted
 
 export function upsertExternalDocuments(folder: NativeExternalSearchFolder, documents: ScannedDocument[], indexedAt: string) {
   const hostName = loadOrCreateDesktopHostName(indexedAt);
-  for (const document of documents) {
-    upsertExternalDocument(folder, document, indexedAt, hostName);
-  }
+  openDatabaseConnection().driver.transaction((driver) => {
+    for (const document of documents) {
+      upsertExternalDocument(driver, folder, document, indexedAt, hostName);
+    }
+  });
 }
 
 function upsertExternalDocument(
+  driver: DatabaseDriver,
   folder: NativeExternalSearchFolder,
   document: ScannedDocument,
   indexedAt: string,
   hostName: string
 ) {
-  const connection = openDatabaseConnection();
   const payload = toExternalDocumentPayload(folder, document, indexedAt);
   const documentId = toDocumentId(folder.id, document.relativePath);
-  const syncContentHash = computeSyncContentHash('external_document', payload);
-  const bodyBlobHash = upsertTextBodyBlob(connection.driver, payload.content, indexedAt);
-  connection.driver.execute(
+  const bodyBlobHash = upsertTextBodyBlob(driver, payload.content, indexedAt);
+  const syncContentHash = computeSyncContentHash('external_document', buildCanonicalExternalDocumentPayload({
+    body_blob_hash: bodyBlobHash, content_hash: payload.content_hash, document_id: documentId,
+    extension: payload.extension, file_name: payload.file_name, folder_id: payload.folder_id,
+    reference_json: payload.reference_json, reference_kind: payload.reference_kind,
+    relative_path: payload.relative_path, title: payload.title
+  }));
+  driver.execute(
     `INSERT INTO external_documents (
          document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
          source_modified_at, source_modified_ms, content_hash, title, opening_text,
@@ -130,7 +144,7 @@ function upsertExternalDocument(
       payload.title, payload.opening_text, bodyBlobHash, '', payload.reference_kind,
       payload.reference_json, payload.indexed_at, indexedAt, indexedAt]
   );
-  recordExternalDocumentSync({ contentHash: syncContentHash, hostName, documentId, updatedAt: indexedAt });
+  recordExternalDocumentSync(driver, { contentHash: syncContentHash, hostName, documentId, updatedAt: indexedAt });
 }
 
 export function replaceExternalDocumentsForFolder(
@@ -138,23 +152,29 @@ export function replaceExternalDocumentsForFolder(
   documents: ScannedDocument[],
   indexedAt: string
 ) {
-  const existing = openDatabaseConnection().driver.queryAll<{ document_id: string; relative_path: string }>(
-    'SELECT document_id, relative_path FROM external_documents WHERE folder_id = ? AND is_present = 1',
-    [folder.id]
-  );
-  const nextRelativePaths = new Set(documents.map((document) => document.relativePath));
-  upsertExternalDocuments(folder, documents, indexedAt);
   const hostName = loadOrCreateDesktopHostName(indexedAt);
-  for (const row of existing) {
-    if (!nextRelativePaths.has(row.relative_path)) {
-      tombstoneExternalDocument(row.document_id, hostName, indexedAt);
+  openDatabaseConnection().driver.transaction((driver) => {
+    const existing = driver.queryAll<{ document_id: string; relative_path: string }>(
+      'SELECT document_id, relative_path FROM external_documents WHERE folder_id = ? AND is_present = 1',
+      [folder.id]
+    );
+    const nextRelativePaths = new Set(documents.map((document) => document.relativePath));
+    for (const document of documents) {
+      upsertExternalDocument(driver, folder, document, indexedAt, hostName);
     }
-  }
+    for (const row of existing) {
+      if (!nextRelativePaths.has(row.relative_path)) {
+        tombstoneExternalDocument(driver, row.document_id, hostName, indexedAt);
+      }
+    }
+  });
 }
 
 export function markExternalDocumentsMissing(missing: MissingExternalDocument[], folderId: string, missingAt: string) {
   const hostName = loadOrCreateDesktopHostName(missingAt);
-  for (const document of missing) {
-    tombstoneExternalDocument(toDocumentId(folderId, document.relativePath), hostName, missingAt);
-  }
+  openDatabaseConnection().driver.transaction((driver) => {
+    for (const document of missing) {
+      tombstoneExternalDocument(driver, toDocumentId(folderId, document.relativePath), hostName, missingAt);
+    }
+  });
 }

@@ -18,6 +18,8 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { buildCanonicalViewStateSyncPayload } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
@@ -52,24 +54,14 @@ function insertDeletedNode(nodeId: string) {
   );
 }
 
-it('applies legacy mobile view state payloads as user scroll source', async () => {
+it('applies canonical mobile view state payloads as sync writes', async () => {
   insertNode('node-1');
 
-  await applySyncObjectsAsync([{
-    content_hash: 'hash-active-view',
-    deleted_at: null,
-    object_id: 'session_resume:android:phone:android-test:active_node',
-    object_type: 'view_state',
-    payload_json: JSON.stringify({ active_node_id: 'node-1' }),
-    updated_at: '2026-04-22T08:10:00.000Z'
-  }, {
-    content_hash: 'hash-node-view',
-    deleted_at: null,
-    object_id: 'session_resume:android:phone:android-test:node:node-1',
-    object_type: 'view_state',
-    payload_json: JSON.stringify({ node_id: 'node-1', scroll_top: 128 }),
-    updated_at: '2026-04-22T08:11:00.000Z'
-  }], { hostName: 'android-test' });
+  await applySyncObjectsAsync([
+    viewRecord('active_node', { active_node_id: 'node-1' }, '2026-04-22T08:10:00.000Z'),
+    viewRecord('node:node-1', { node_id: 'node-1', scroll_top: 128,
+      selection_from: null, selection_to: null }, '2026-04-22T08:11:00.000Z')
+  ], { hostName: 'android-test' });
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ value: string }>("SELECT value FROM workspace_meta WHERE key = 'active_node_id'"))
@@ -77,26 +69,15 @@ it('applies legacy mobile view state payloads as user scroll source', async () =
   expect(driver.queryOne<{ host_name: string; scroll_top: number; source: string }>(
     'SELECT host_name, scroll_top, source FROM node_view_state WHERE node_id = ?',
     ['node-1']
-  )).toEqual({ host_name: 'android-test', scroll_top: 128, source: 'user-scroll' });
+  )).toEqual({ host_name: 'android-test', scroll_top: 128, source: 'sync-apply' });
 });
 
 it('marks sourced view state sync payloads as sync apply writes', async () => {
   insertNode('node-1');
 
-  await applySyncObjectsAsync([{
-    content_hash: 'hash-node-view',
-    deleted_at: null,
-    object_id: 'session_resume:android:phone:android-test:node:node-1',
-    object_type: 'view_state',
-    payload_json: JSON.stringify({
-      node_id: 'node-1',
-      scroll_top: 128,
-      selection_from: null,
-      selection_to: null,
-      source: 'user-scroll'
-    }),
-    updated_at: '2026-04-22T08:11:00.000Z'
-  }], { hostName: 'android-test' });
+  await applySyncObjectsAsync([viewRecord('node:node-1', { node_id: 'node-1', scroll_top: 128,
+    selection_from: null, selection_to: null }, '2026-04-22T08:11:00.000Z')],
+  { hostName: 'android-test' });
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ source: string }>(
@@ -109,35 +90,28 @@ it('ignores active node view state for deleted or missing nodes', async () => {
   insertNode('node-1');
   insertDeletedNode('node-deleted');
 
-  await applySyncObjectsAsync([{
-    content_hash: 'hash-active-view',
-    deleted_at: null,
-    object_id: 'session_resume:android:phone:android-test:active_node',
-    object_type: 'view_state',
-    payload_json: JSON.stringify({ active_node_id: 'node-1' }),
-    updated_at: '2026-04-22T08:10:00.000Z'
-  }], { hostName: 'android-test' });
+  await applySyncObjectsAsync([viewRecord('active_node', { active_node_id: 'node-1' },
+    '2026-04-22T08:10:00.000Z')], { hostName: 'android-test' });
 
-  await applySyncObjectsAsync([{
-    content_hash: 'hash-deleted-active-view',
-    deleted_at: null,
-    object_id: 'session_resume:android:phone:android-test:active_node',
-    object_type: 'view_state',
-    payload_json: JSON.stringify({ active_node_id: 'node-deleted' }),
-    updated_at: '2026-04-22T08:11:00.000Z'
-  }, {
-    content_hash: 'hash-missing-active-view',
-    deleted_at: null,
-    object_id: 'session_resume:android:phone:android-test:active_node',
-    object_type: 'view_state',
-    payload_json: JSON.stringify({ active_node_id: 'node-missing' }),
-    updated_at: '2026-04-22T08:12:00.000Z'
-  }], { hostName: 'android-test' });
+  await applySyncObjectsAsync([
+    viewRecord('active_node', { active_node_id: 'node-deleted' }, '2026-04-22T08:11:00.000Z'),
+    viewRecord('active_node', { active_node_id: 'node-missing' }, '2026-04-22T08:12:00.000Z')
+  ], { hostName: 'android-test' });
 
   expect(openDatabaseConnection().driver.queryOne<{ value: string }>(
     "SELECT value FROM workspace_meta WHERE key = 'active_node_id'"
   )).toEqual({ value: 'node-1' });
 });
+
+function viewRecord(key: string, state: Record<string, unknown>, updatedAt: string) {
+  const payload = buildCanonicalViewStateSyncPayload({
+    form_factor: 'phone', host_name: 'android-test', key, platform: 'android',
+    scope: 'session_resume', ...state
+  } as Parameters<typeof buildCanonicalViewStateSyncPayload>[0]);
+  return { content_hash: computeSyncContentHash('view_state', payload), deleted_at: null,
+    object_id: `session_resume:android:phone:android-test:${key}`, object_type: 'view_state' as const,
+    payload_json: JSON.stringify(payload), updated_at: updatedAt };
+}
 
 it('does not apply view state without the matching local Android device id', async () => {
   insertNode('node-1');

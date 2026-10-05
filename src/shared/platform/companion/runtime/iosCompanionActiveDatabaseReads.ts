@@ -1,5 +1,6 @@
 import { buildCompanionPayloadQueryDefinitions } from '../../../../../lib/core/database/androidCompanionPayloadQueryDefinitions';
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionQueryDefinitions';
+import { canonicalPrivateStatePayloadJson } from '../../../../../lib/core/sync/canonicalPrivateStatePayload';
 import type { DbRow } from '../../../../../lib/core/sync/dbPort';
 import type {
   NativeSyncIndexEntry,
@@ -182,8 +183,20 @@ async function loadPayload(row: NativeSyncObjectRecord) {
   if (!definition) throw new Error(`unsupported_ios_sync_object:${row.object_type}`);
   const params = await payloadParams(row, definition.syncPayload.argMode);
   const payload = (await readIosCompanionDatabase<DbRow[]>((db) => db.query(definition.sql, params)))[0];
-  if (typeof payload?.payload_json === 'string') return payload.payload_json;
-  return JSON.stringify(payload ?? {});
+  const payloadJson = typeof payload?.payload_json === 'string' ? payload.payload_json : JSON.stringify(payload ?? {});
+  if (row.object_type !== 'view_state') return payloadJson;
+  const parts = row.object_id.split(':');
+  const key = parts.slice(4).join(':');
+  return canonicalPrivateStatePayloadJson('view_state', {
+    form_factor: parts[2], host_name: parts[3], key, platform: parts[1], scope: parts[0],
+    ...parsePayloadObject(payloadJson), source: undefined
+  }) ?? '{}';
+}
+
+function parsePayloadObject(payloadJson: string) {
+  const parsed = JSON.parse(payloadJson) as unknown;
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+    ? parsed as Record<string, unknown> : {};
 }
 
 function payloadDefinition(row: NativeSyncObjectRecord) {

@@ -1,4 +1,5 @@
-import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from '../../lib/core/sync/syncObjectPayloadSql.js';
 import type { NativeExternalSearchReconnectPreview } from '../../lib/platform/nativeExternalSearchContract.js';
 import { assertNoUnsafePathOverlap } from '../libraryPathSafety.js';
@@ -21,7 +22,7 @@ function recordConnectionSync(folderId: string, now: string) {
   const driver = openDatabaseConnection().driver;
   const row = driver.queryOne<{ payload_json: string }>(SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE.external_folder, [folderId]);
   if (!row) throw new Error('external_folder_not_found');
-  upsertSyncObjectState(openDatabaseConnection().driver, {
+  upsertExternalResourceSyncState(openDatabaseConnection().driver, {
     contentHash: computeSyncContentHash('external_folder', JSON.parse(row.payload_json)),
     lastModifiedByHostName: loadOrCreateDesktopHostName(now),
     objectId: folderId,

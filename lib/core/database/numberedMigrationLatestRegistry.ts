@@ -3,6 +3,7 @@ import { retireAttachmentRegistry } from './attachmentRegistryRetirement.js';
 import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
+import { FRAMED_SYNC_STAGING_SCHEMA } from './framedSyncStagingSchema.js';
 import { migrateIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { initializeLegacyBodyMigrationSchema } from './legacyBodyMigrationSchema.js';
 import { retireLegacyStorage } from './legacyStorageRetirementMigration.js';
@@ -14,11 +15,13 @@ import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from './nodeVersionRetention
 import { migrateAuthorHostSnapshots } from './numberedMigrationAuthorHostSnapshots.js';
 import { createDataMigrationStateTable } from './numberedMigrationDataState.js';
 import { migrateDeliveryAuthorizations } from './numberedMigrationDeliveryAuthorizations.js';
+import { migrateExternalResourceCanonicalHashes } from './numberedMigrationExternalResourceCanonicalHashes.js';
 import { addColumnIfMissing, tableExists } from './numberedMigrationHelpers.js';
 import { migrateHostPermanentState } from './numberedMigrationHostPermanentState.js';
 import { migrateOpaqueSyncRefs } from './numberedMigrationOpaqueSyncRefs.js';
 import { migrateParentChildOrder } from './numberedMigrationParentChildOrder.js';
 import { retirePrimaryDeviceState } from './numberedMigrationPrimaryDeviceRetirement.js';
+import { migratePrivateStateCanonicalHashes } from './numberedMigrationPrivateStateCanonicalHashes.js';
 import { reopenReadwiseBoundOriginalFiles } from './numberedMigrationReadwiseBoundOriginalFiles.js';
 import { reopenIncompleteReadwiseCompletion } from './numberedMigrationReadwiseCompletionRepair.js';
 import { migrateReadwiseHostSettings } from './numberedMigrationReadwiseHostSettings.js';
@@ -207,5 +210,10 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   } },
   { version: 135, migrate: (sqlite) => {
     for (const statement of NODE_VERSION_RETENTION_INDEX_SCHEMA) sqlite.exec(statement);
+  } },
+  { version: 136, migrate: migratePrivateStateCanonicalHashes },
+  { version: 137, migrate: migrateExternalResourceCanonicalHashes },
+  { version: 138, migrate: (sqlite) => {
+    for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   } }
 ];

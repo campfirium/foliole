@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { computeSyncContentHash, upsertSyncObjectState } from '../../lib/core/database/syncState.js';
+import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
@@ -11,6 +12,8 @@ import {
   parseReadwiseExternalReference,
   serializeReadwiseExternalReference
 } from '../../lib/core/readwise/readwiseExternalReference.js';
+import { buildCanonicalExternalDocumentPayload } from '../../lib/core/sync/canonicalExternalResourcePayload.js';
+import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -87,8 +90,8 @@ export function hideReadwiseApiExternalDocument(connectionRef: string, remoteDoc
     'UPDATE external_documents SET is_present = 0, missing_at = ?, updated_at = ? WHERE document_id = ?',
     [updatedAt, updatedAt, documentId]
   );
-  const hash = computeSyncContentHash('external_document', { deleted_at: updatedAt, document_id: documentId });
-  upsertSyncObjectState(connection.driver, {
+  const hash = computeSyncContentHash('external_document', buildCanonicalSyncTombstone(documentId));
+  upsertExternalResourceSyncState(connection.driver, {
     contentHash: hash, deletedAt: updatedAt, lastModifiedByHostName: loadOrCreateDesktopHostName(updatedAt),
     objectId: documentId, objectType: 'external_document', syncDirty: true, updatedAt
   });
@@ -153,12 +156,12 @@ export function hideReadwiseApiExternalDocumentsExcept(
 
 function recordSync(
   documentId: string,
-  payload: Parameters<typeof computeSyncContentHash>[1],
+  payload: ReturnType<typeof buildCanonicalExternalDocumentPayload> & Record<string, unknown>,
   updatedAt: string
 ) {
   const connection = openDatabaseConnection();
-  upsertSyncObjectState(connection.driver, {
-    contentHash: computeSyncContentHash('external_document', payload),
+  upsertExternalResourceSyncState(connection.driver, {
+    contentHash: computeSyncContentHash('external_document', buildCanonicalExternalDocumentPayload(payload)),
     lastModifiedByHostName: loadOrCreateDesktopHostName(updatedAt), objectId: documentId,
     objectType: 'external_document', syncDirty: true, updatedAt
   });
