@@ -60,7 +60,9 @@ final class FolioleCompanionFramedSyncRoute {
             FramedSyncPreamble preamble = peekPreamble(input);
             byte[] response = preamble.contextKind() == 1
                 ? inventory(input, groupKey, new FramedSyncSessionContext(groupId,
-                    authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge, nonceStore)
+                    authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge, nonceStore, new JSONObject()
+                    .put("group_id", groupId).put("peer_device_id", authenticatedPeer)
+                    .put("peer_library_epoch", senderEpoch))
                 : transfer(input, groupKey, new FramedSyncTransferContext(groupId,
                     authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge,
                     transferStore, localDeviceId, localEpoch);
@@ -75,12 +77,13 @@ final class FolioleCompanionFramedSyncRoute {
         byte[] groupKey,
         FramedSyncSessionContext context,
         FolioleCompanionSyncGroupDataBridge bridge,
-        FramedSyncSessionNonceStore nonceStore
+        FramedSyncSessionNonceStore nonceStore,
+        JSONObject peerContext
     ) throws Exception {
         FramedSyncSessionReader.Result requestSession = FramedSyncSessionReader.read(
             input, groupKey, context, FramedSyncInventoryWire.MAX_SESSION_FRAMES);
         byte[] roundId = FramedSyncInventoryWire.decodeRoundId(requestSession.messages());
-        JSONObject inventory = bridge.request("read_framed_inventory", new JSONObject());
+        JSONObject inventory = bridge.request("read_framed_inventory", peerContext);
         return FramedSyncSessionWriter.encode(groupKey, context, FramedSyncInventoryWire.encode(
             FolioleCompanionFramedSyncInventory.read(inventory), roundId), nonceStore);
     }

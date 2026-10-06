@@ -58,6 +58,7 @@ async function createNamedTopic(page: Page) {
   await expect(rename).toBeFocused();
   await page.keyboard.insertText(TOPIC_TITLE);
   await page.keyboard.press('Enter');
+  await editor.click();
   await expect(editor).toBeFocused();
   await page.keyboard.insertText(TOPIC_BODY);
   const topic = page.getByRole('treeitem', { name: TOPIC_TITLE, exact: true });

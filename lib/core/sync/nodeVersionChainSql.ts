@@ -16,7 +16,8 @@ const CHAIN_READ_TABLES = new Set([
   'node_version_member_positions', 'node_version_local_origins', 'node_version_outbound_holds',
   'node_version_outbound_payload_holds', 'node_version_local_holds',
   'sync_change_log', 'node_sync_conflicts', 'node_text_alternatives',
-  'nodes', 'node_sync_tombstones', 'sync_object_state'
+  'nodes', 'node_sync_tombstones', 'sync_object_state',
+  'framed_sync_outbound_fact_refs', 'framed_sync_outbound_holds'
 ]);
 
 /** Bind the fixed retention read queries to an attached immutable source view. */
@@ -47,7 +48,10 @@ UNION SELECT payload.version_id, 1 FROM node_version_outbound_payload_holds payl
   JOIN sync_group_local_state local ON local.group_id = hold.group_id AND local.state = 'active'
   JOIN sync_group_devices peer ON peer.group_id = hold.group_id
     AND peer.device_identity_key = hold.device_identity_key AND peer.state = 'active'
-  WHERE payload.object_id = ? AND peer.device_identity_key <> local.local_device_identity_key`;
+  WHERE payload.object_id = ? AND peer.device_identity_key <> local.local_device_identity_key
+UNION SELECT ref.fact_id, 1 FROM framed_sync_outbound_fact_refs ref
+  JOIN framed_sync_outbound_holds hold ON hold.transfer_id = ref.transfer_id
+  WHERE ref.fact_kind = 2 AND ref.object_type = 'node' AND ref.global_id = ?`;
 
 const LOCAL_REFERENCES_SQL = `SELECT version.version_id, 0 FROM node_sync_versions version
       WHERE version.object_id = ? AND NOT EXISTS (
@@ -108,7 +112,7 @@ export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false
     UNION ${MEMBER_POSITIONS_SQL}
     UNION ${OUTBOUND_REFERENCES_SQL}
     UNION ${LOCAL_REFERENCES_SQL}`, schema),
-    params: Array<string>(16).fill(nodeId)
+    params: Array<string>(17).fill(nodeId)
   };
 }
 

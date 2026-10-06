@@ -16,6 +16,7 @@ export interface NativeCompanionFramedSyncTransferRequest {
   review_fact_ids: readonly string[];
   state_fact_ids: readonly string[];
   sync_group_id: string;
+  transfer_id?: string;
 }
 
 export interface NativeCompanionFramedSyncTransferReceipt {

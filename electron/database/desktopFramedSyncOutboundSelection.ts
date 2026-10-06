@@ -22,6 +22,7 @@ import {
   type OutboundPublishInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
 import { loadStoredSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
+import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import { projectDesktopFramedSyncNodeRecord } from '../sync/desktopFramedSyncNodeProjection.js';
 import { resolveDesktopFramedSyncNodeResources } from '../sync/desktopFramedSyncNodeResources.js';
@@ -116,6 +117,12 @@ export async function selectDesktopFramedSyncNodeManifest(
       record,
       resolveDesktopFramedSyncNodeResources(record).map((resource) => resource.blob)
     ));
+  for (const projection of projections) {
+    const blob = projection.manifest.blobs.find((value) => value.role === 1);
+    if (!blob) throw new Error('framed_sync_body_descriptor_missing');
+    await upsertTextBodyBlob(tx, new TextDecoder().decode(projection.bodyBlob),
+      new Date().toISOString(), bytesToHex(blob.sha256));
+  }
   const related = await selectFramedSyncRelationReviewFactsWithDbPort(tx, difference);
   if (related.kind === 'deferred') throw new Error('framed_sync_source_changed');
   const stateFacts = await Promise.all((difference.need.stateFactIds ?? []).map((factId) =>

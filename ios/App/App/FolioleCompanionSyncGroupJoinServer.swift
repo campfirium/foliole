@@ -143,7 +143,10 @@ final class FolioleCompanionSyncGroupJoinServer {
             maximumFrames: FolioleFramedSyncInventoryWire.maximumSessionFrames
         )
         let roundID = try FolioleFramedSyncInventoryWire.decodeRoundID(session.messages)
-        let inventory = try dataBridge.request("read_framed_inventory", [:])
+        let inventory = try dataBridge.request("read_framed_inventory", [
+            "group_id": provider.groupId, "peer_device_id": initiator,
+            "peer_library_epoch": initiatorEpoch
+        ])
         let response = try FolioleFramedSyncSessionWriter.encode(
             groupKey: groupKey, context: context,
             messages: FolioleFramedSyncInventoryWire.encode(

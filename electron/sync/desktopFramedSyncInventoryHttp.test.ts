@@ -5,6 +5,7 @@ import http from 'node:http';
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
+import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import {
   FRAMED_SYNC_FRAME_TYPES,
@@ -68,6 +69,8 @@ function peer(nodeId: string, body: string, hashByte: string) {
       parent_version_id TEXT, host_name TEXT NOT NULL, content_hash TEXT NOT NULL,
       snapshot_json TEXT NOT NULL, deleted_at TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE review_log (node_id TEXT NOT NULL, op_id TEXT NOT NULL);`);
+  for (const statement of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter((value) =>
+    value.startsWith('CREATE TABLE IF NOT EXISTS content_blob'))) sqlite.exec(statement);
   for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   sqlite.prepare('INSERT INTO nodes VALUES (?, ?)').run(nodeId, `version-${nodeId}`);
   sqlite.prepare('INSERT INTO node_sync_versions VALUES (?, ?, ?, ?, ?, ?, ?, ?)')

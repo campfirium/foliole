@@ -1,3 +1,4 @@
+import { framedSyncBytes, readFramedSyncRow } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { canonicalContentId, canonicalTransferId } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import {
@@ -8,10 +9,10 @@ import {
 } from '../../lib/core/sync/framedSyncContract.js';
 import type { OutboundPublishInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
-import { loadStoredSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
+import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { loadSyncNodes, loadSyncNodeVersionsSince } from '../database/syncNodes.js';
 
-import { loadDesktopFramedSyncBlobSources } from './desktopFramedSyncBlobSources.js';
+import { loadDesktopFramedSyncBlobSources, loadDesktopFramedSyncPublishedBlobSources } from './desktopFramedSyncBlobSources.js';
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
 import { loadDesktopFramedSyncPreparedTransferBody } from './desktopFramedSyncPreparedTransferBody.js';
 import { projectDesktopFramedSyncProcessTransfer } from './desktopFramedSyncProcessProjection.js';
@@ -23,6 +24,7 @@ type Identity = Readonly<{ deviceId: string; libraryEpoch: string }>;
 type Projection = ReturnType<typeof projectDesktopFramedSyncProcessTransfer>;
 
 export async function synchronizeDesktopFramedSync(input: {
+  db: DbPort;
   groupId: string;
   groupSecret: string;
   local: Identity;
@@ -40,7 +42,13 @@ export async function synchronizeDesktopFramedSync(input: {
   const contentId = await canonicalContentId(projection.manifest);
   const transferId = await canonicalTransferId(context, contentId);
   const published = publication(context, projection, contentId, transferId);
-  await input.staging.publishOutbound({ ...published, manifest: projection.manifest });
+  await input.db.transaction(async (tx) => {
+    const blob = projection.manifest.blobs.find((value) => value.role === 1);
+    if (!blob) throw new Error('framed_sync_body_descriptor_missing');
+    await upsertTextBodyBlob(tx, source.body_text ?? '', new Date().toISOString(),
+      Buffer.from(blob.sha256).toString('hex'));
+    await input.staging.publishOutbound({ ...published, manifest: projection.manifest });
+  });
   const attempt = await persistDesktopFramedSyncAttempt({
     blobSources: loadDesktopFramedSyncBlobSources([source], projection.manifest),
     groupSecret: input.groupSecret,
@@ -65,12 +73,19 @@ export async function prepareDesktopFramedSyncPublishedTransfer(input: {
 }) {
   const stored = await input.staging.loadOutboundPublication(input.publication.transferId);
   if (!stored) throw new Error('framed_sync_outbound_publication_missing');
-  const records = await loadStoredSyncNodeVersionRecords(
-    input.db,
-    stored.manifest.facts.filter((fact) => fact.objectType === 'node').map((fact) => fact.factId)
-  );
+  const replayable = await readFramedSyncRow(input.db, `SELECT * FROM framed_sync_outbound_attempts
+    WHERE transfer_id = ? AND purpose = 'transfer' AND state = 'replayable' ORDER BY rowid LIMIT 1`,
+  [stored.transferId]);
+  if (replayable) return {
+    attemptId: framedSyncBytes(replayable, 'attempt_id'),
+    noncePrefix: framedSyncBytes(replayable, 'nonce_prefix'),
+    preamble: framedSyncBytes(replayable, 'preamble'),
+    state: 'prepared' as const
+  };
+  await input.db.run(`UPDATE framed_sync_outbound_attempts SET state = 'abandoned'
+    WHERE transfer_id = ? AND purpose = 'transfer' AND state = 'prepared'`, [stored.transferId]);
   return persistDesktopFramedSyncAttempt({
-    blobSources: loadDesktopFramedSyncBlobSources([...records.values()], stored.manifest),
+    blobSources: await loadDesktopFramedSyncPublishedBlobSources(input.db, stored.manifest),
     groupSecret: input.groupSecret,
     publication: stored,
     staging: input.staging

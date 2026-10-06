@@ -1,5 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+import { z } from 'zod';
+
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -7,9 +9,10 @@ import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncSta
 import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 
 import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.js';
+import { createDesktopFramedSyncFixtureReceiver } from './desktopFramedSyncFixtureReceiver.js';
 import { synchronizeDesktopFramedSync } from './desktopFramedSyncProcessOutbound.js';
-import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
 import { createDesktopFramedSyncRoundProcessAdapter } from './desktopFramedSyncRoundProcessAdapter.js';
+import { saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
 
 type FactoryInput = Readonly<{ databasePath: string; deviceId: string; localOrigin: string }>;
 
@@ -26,31 +29,30 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
   const round = createDesktopFramedSyncRoundProcessAdapter({
     db, groupId: group.group_id, groupSecret: group.workgroup_key, local: identity, staging
   });
+  const receiver = createDesktopFramedSyncFixtureReceiver({ db, groupKey,
+    groupSecret: group.workgroup_key, staging });
   return {
     handleHttpRequest: (request: IncomingMessage, response: ServerResponse) =>
       handleCompanionLanFramedSyncPost({
         localIdentity: identity,
-        onStream: ({ context, stream }) => receiveDesktopFramedSyncTransfer({
-          context: {
-            groupId: context.groupId,
-            protocolVersion: context.protocolVersion,
-            receiverDeviceId: context.responderDeviceId,
-            receiverLibraryEpoch: context.responderLibraryEpoch,
-            senderDeviceId: context.initiatorDeviceId,
-            senderLibraryEpoch: context.initiatorLibraryEpoch
-          },
-          db,
-          groupKey,
-          staging,
-          stream
-        }),
+        onStream: receiver.receive,
         request,
         response
       }),
-    round,
+    round: async (value: unknown) => {
+      if (z.object({ kind: z.literal('pause_before_apply') }).safeParse(value).success) {
+        receiver.pauseBeforeApply();
+        return null;
+      }
+      return round(value);
+    },
     synchronize: async ({ nodeId, peerOrigin }: Readonly<{ nodeId?: string; peerOrigin: string }>) => {
       const remoteDeviceId = await fetchFixturePeerDeviceId(peerOrigin);
+      saveDesktopSyncGroupRoute({ endpoint_url: peerOrigin, group_id: group.group_id,
+        local_device_id: identity.deviceId, peer_device_id: remoteDeviceId,
+        peer_device_name: remoteDeviceId, peer_platform: 'desktop' });
       return synchronizeDesktopFramedSync({
+        db,
         groupId: group.group_id,
         groupSecret: group.workgroup_key,
         local: identity,

@@ -35,6 +35,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionShareInboxPlugin.java',
       'FolioleCompanionSyncPackTransferPlugin.java',
       'FolioleCompanionSyncParticipationActions.java',
+      'FolioleCompanionSyncAsync.java',
       'FolioleCompanionSyncPlugin.java',
       'FolioleCompanionSyncTrigger.java'
     ]

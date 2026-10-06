@@ -17,6 +17,7 @@ import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagin
 import { publishDesktopFramedSyncNodeOutbound } from '../database/desktopFramedSyncOutboundSelection.js';
 
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
+import { resumeDesktopFramedSyncPendingPublications } from './desktopFramedSyncPendingPublications.js';
 import { loadDesktopFramedSyncPreparedTransferBody } from './desktopFramedSyncPreparedTransferBody.js';
 import { prepareDesktopFramedSyncPublishedTransfer } from './desktopFramedSyncProcessOutbound.js';
 import {
@@ -28,6 +29,7 @@ import {
   encodeDesktopFramedSyncSession
 } from './desktopFramedSyncSessionWire.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
 
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
 
@@ -51,6 +53,14 @@ export async function respondDesktopFramedSyncInventory(args: {
     return respondDesktopFramedSyncDifferenceRequest({ ...args, request });
   }
   const { roundId } = await decodeFramedSyncInventory(request);
+  const route = loadDesktopSyncGroupRoutes(args.context.groupId).find((peer) =>
+    peer.peer_device_id === args.context.initiatorDeviceId);
+  if (route) await resumeDesktopFramedSyncPendingPublications({
+    db: args.db, groupId: args.context.groupId, groupSecret: args.groupSecret,
+    local: { deviceId: args.context.responderDeviceId, libraryEpoch: args.context.responderLibraryEpoch },
+    peer: { deviceId: args.context.initiatorDeviceId, libraryEpoch: args.context.initiatorLibraryEpoch },
+    peerOrigin: route.endpoint_url, staging: args.staging
+  });
   const entries = await readDesktopFramedSyncRoundInventory(args.db);
   const messages = await encodeFramedSyncInventory({ entries, roundId });
   return encodeDesktopFramedSyncSession({

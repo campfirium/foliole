@@ -12,6 +12,8 @@ import { decodeAndValidateProtocolMessage } from '../../lib/core/sync/framedSync
 import type { OutboundPublishInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 
+import { prepareInterruptedDesktopFramedSyncAttempt } from './desktopFramedSyncInterruptedAttempt.fixture.js';
+import { runDesktopFramedSyncInventoryRound } from './desktopFramedSyncInventoryRound.js';
 import {
   createDesktopFramedSyncRoundEndpoint,
   type DesktopFramedSyncRoundIdentity
@@ -20,6 +22,7 @@ import {
   readDesktopFramedSyncRoundInventory,
   readDesktopFramedSyncRoundInventoryEntry
 } from './desktopFramedSyncRoundInventory.js';
+import { saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
 
 const bytes = z.instanceof(Uint8Array);
 const identity = z.object({ deviceId: z.string().min(1), libraryEpoch: z.string().min(1) });
@@ -55,11 +58,15 @@ const authenticatedContext = z.object({
   responderLibraryEpoch: z.string().min(1)
 });
 const command = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('remember_peer'), peer: identity, peerOrigin: z.string().url() }),
+  z.object({ kind: z.literal('reconcile'), peer: identity, peerOrigin: z.string().url() }),
   z.object({ kind: z.literal('read_inventory') }),
   z.object({ globalId: z.string().min(1), kind: z.literal('read_entry'),
     objectType: z.string().min(1) }),
   z.object({ difference, kind: z.literal('select'), peer: identity,
     peerOrigin: z.string().url() }),
+  z.object({ kind: z.literal('prepare_interrupted'), mode: z.enum(['finalised', 'partial']),
+    transferId: z.string().regex(/^[a-f0-9]{64}$/u) }),
   z.object({ kind: z.literal('publish'), transferId: z.string().regex(/^[a-f0-9]{64}$/u) }),
   z.object({ kind: z.literal('send'), transferId: z.string().regex(/^[a-f0-9]{64}$/u) }),
   z.object({ authenticatedContext, authorDeviceId: z.string().min(1), encodedMessage: bytes,
@@ -88,6 +95,16 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
   const controlLog: string[] = [];
   return async (value: unknown): Promise<unknown> => {
     const request = command.parse(value);
+    if (request.kind === 'remember_peer') return saveDesktopSyncGroupRoute({
+      endpoint_url: request.peerOrigin, group_id: input.groupId, local_device_id: input.local.deviceId,
+      peer_device_id: request.peer.deviceId, peer_device_name: request.peer.deviceId, peer_platform: 'desktop'
+    });
+    if (request.kind === 'reconcile') return runDesktopFramedSyncInventoryRound({
+      localLibraryEpoch: input.local.libraryEpoch, remoteLibraryEpoch: request.peer.libraryEpoch,
+      peer: { endpoint_url: request.peerOrigin, group_id: input.groupId,
+        local_device_id: input.local.deviceId, peer_device_id: request.peer.deviceId,
+        peer_device_name: request.peer.deviceId, peer_platform: 'desktop' }
+    });
     if (request.kind === 'read_inventory') {
       return readDesktopFramedSyncRoundInventory(input.db);
     }
@@ -110,6 +127,11 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
       }
       return selection;
     }
+    if (request.kind === 'prepare_interrupted') {
+      const selected = requiredSelection(selections, request.transferId);
+      return prepareInterruptedDesktopFramedSyncAttempt({ ...input,
+        mode: request.mode, publication: selected.publication });
+    }
     if (request.kind === 'publish') {
       const selected = requiredSelection(selections, request.transferId);
       return input.staging.publishOutbound(selected.publication);
@@ -123,19 +145,7 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
       });
     }
     if (request.kind === 'receive_control') {
-      const preamble = decodeFramedSyncPreamble(request.preamble);
-      const decoded = decodeAndValidateProtocolMessage(
-        request.encodedMessage,
-        FRAMED_SYNC_FRAME_TYPES.sessionControl
-      );
-      await assertSessionEnvelopeBinding(
-        request.authenticatedContext,
-        preamble,
-        decoded,
-        request.authorDeviceId
-      );
-      controlLog.push(decoded.payloadCase);
-      return decoded.payloadCase;
+      return receiveFixtureControl(request, controlLog);
     }
     return [...controlLog];
   };
@@ -145,4 +155,21 @@ function requiredSelection(selections: ReadonlyMap<string, CachedSelection>, tra
   const selected = selections.get(transferId);
   if (!selected) throw new Error('framed_sync_round_selection_missing');
   return selected;
+}
+
+async function receiveFixtureControl(request: Extract<z.infer<typeof command>, { kind: 'receive_control' }>,
+  controlLog: string[]) {
+  const preamble = decodeFramedSyncPreamble(request.preamble);
+  const decoded = decodeAndValidateProtocolMessage(
+    request.encodedMessage,
+    FRAMED_SYNC_FRAME_TYPES.sessionControl
+  );
+  await assertSessionEnvelopeBinding(
+    request.authenticatedContext,
+    preamble,
+    decoded,
+    request.authorDeviceId
+  );
+  controlLog.push(decoded.payloadCase);
+  return decoded.payloadCase;
 }

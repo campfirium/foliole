@@ -136,7 +136,9 @@ function createInboundAdmissionStaging(db: DbPort) {
         if (value.header_json) return sameFramedSyncBytes(framedSyncBytes(value, 'active_attempt_id'), input.attemptId) &&
           encodeFramedSyncHeader(input) === framedSyncText(value, 'header_json')
           ? 'identical' as const : failFramedSync('inbound_header_conflict');
-        await tx.run(`INSERT INTO framed_sync_inbound_attempts VALUES (?, ?, 'receiving')`,
+        await tx.run(`INSERT INTO framed_sync_inbound_attempts VALUES (?, ?, 'receiving')
+          ON CONFLICT(transfer_id, attempt_id) DO UPDATE SET state = 'receiving'
+          WHERE framed_sync_inbound_attempts.state = 'invalidated'`,
           [input.proposal.transferId, input.attemptId]);
         await tx.run(`UPDATE framed_sync_inbound_transfers SET header_json = ?, manifest_hash = ?,
           active_attempt_id = ?, state = 'header_declared' WHERE transfer_id = ?`,

@@ -35,16 +35,25 @@ export async function createDesktopFramedSyncTwoProcessFixture() {
   );
   const script = path.join(root, 'desktop-framed-sync-fixture.mjs');
   await buildFixture(script);
-  const left = startFixtureProcess({ deviceId: 'desktop-a', root: path.join(root, 'a'), script });
+  let left = startFixtureProcess({ deviceId: 'desktop-a', root: path.join(root, 'a'), script });
   let right = startFixtureProcess({ deviceId: 'desktop-b', root: path.join(root, 'b'), script });
   try {
     const [leftSnapshot, rightSnapshot] = await Promise.all([left.init(), right.init()]);
     return {
-      left,
+      get left() { return left; },
       leftSnapshot,
+      async restartLeft() {
+        await left.close();
+        left = startFixtureProcess({ deviceId: 'desktop-a', root: path.join(root, 'a'), script });
+        return { process: left, snapshot: await left.init() };
+      },
       get right() { return right; },
       rightSnapshot,
       root,
+      async startThird() {
+        const third = startFixtureProcess({ deviceId: 'desktop-c', root: path.join(root, 'c'), script });
+        return { process: third, snapshot: await third.init() };
+      },
       async restartRight() {
         await right.close();
         right = startFixtureProcess({ deviceId: 'desktop-b', root: path.join(root, 'b'), script });

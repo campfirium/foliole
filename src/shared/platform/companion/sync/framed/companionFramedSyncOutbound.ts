@@ -21,9 +21,11 @@ import {
 } from '../../../../../../lib/core/sync/framedSyncNodeResources.js';
 import { publishFramedSyncOutboundWithDbPort } from '../../../../../../lib/core/sync/framedSyncOutboundStaging.js';
 import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
+import { loadFramedSyncPublishedOutboundValue } from '../../../../../../lib/core/sync/framedSyncPublishedOutboundValue.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewSelection.js';
 import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
 import { loadStoredSyncNodeVersionRecords } from '../../../../../../lib/core/sync/syncNodeGraph.js';
+import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { orderNodeVersionHistory } from '../../../../../../lib/core/sync/syncNodeVersionHistory.js';
 
 function sameBlob(left: CanonicalBlob, right: CanonicalBlob) {
@@ -110,6 +112,12 @@ export async function inspectCompanionFramedSyncOutbound(
   db: DbPort,
   payload: Record<string, unknown>
 ) {
+  if (payload.transfer_id !== undefined) {
+    const value = await loadFramedSyncPublishedOutboundValue(
+      db, context(payload), requiredText(payload.transfer_id));
+    return { resource_storage_keys: value.blobs.flatMap((blob) =>
+      blob.storage_key === undefined ? [] : [blob.storage_key]) };
+  }
   const selection = await selectOutbound(db, payload);
   const keys = new Set(selection.records.flatMap((record) =>
     readFramedSyncNodeResources(record.snapshot.resource_references).map((resource) => resource.storageKey)));
@@ -122,6 +130,8 @@ export async function prepareCompanionFramedSyncOutbound(
   payload: Record<string, unknown>
 ) {
   return db.transaction(async (tx) => {
+    if (payload.transfer_id !== undefined) return loadFramedSyncPublishedOutboundValue(
+      tx, context(payload), requiredText(payload.transfer_id));
     const selection = await selectOutbound(tx, payload);
     const suppliedResources = resourceFiles(payload.resource_files);
     const consumedResources = new Set<string>();
@@ -159,6 +169,7 @@ export async function prepareCompanionFramedSyncOutbound(
       facts: [...projections.flatMap((value) => value.projection.manifest.facts),
         ...selection.selected.facts, ...selection.stateFacts] };
     if (!manifest.facts.length) throw new Error('framed_sync_outbound_fact_set_empty');
+    await persistBodies(tx, blobs);
     const transferContext = context(payload);
     const contentId = await canonicalContentId(manifest);
     const transferId = await canonicalTransferId(transferContext, contentId);
@@ -173,4 +184,11 @@ export async function prepareCompanionFramedSyncOutbound(
       manifestHash: contentId, publicationState: state, transferId
     });
   });
+}
+
+async function persistBodies(db: DbPort, blobs: Map<string, { blob: CanonicalBlob; dataText?: string; storageKey?: string }>) {
+  for (const { blob, dataText } of blobs.values()) {
+    if (dataText !== undefined) await upsertTextBodyBlob(db, dataText,
+      new Date().toISOString(), bytesToHex(blob.sha256));
+  }
 }

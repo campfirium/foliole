@@ -34,7 +34,7 @@ export function inspectBodyCandidate(hash: string, row?: { kind: string; data: u
 }
 
 export function bodyHolderQueries(tables: Set<string>, hash: string, text: string) {
-  return TEXT_BODY_HOLDERS.filter(([table]) => tables.has(table)).map(([table, column, kind]) => {
+  const queries = TEXT_BODY_HOLDERS.filter(([table]) => tables.has(table)).map(([table, column, kind]) => {
     let condition = `${column} = ?`;
     let params: DbParams = [hash];
     if (kind === 'text') {
@@ -48,4 +48,10 @@ export function bodyHolderQueries(tables: Set<string>, hash: string, text: strin
     }
     return { sql: `SELECT 1 AS held FROM ${table} WHERE ${column} IS NOT NULL AND (${condition}) LIMIT 1`, params };
   });
+  if (tables.has('framed_sync_outbound_holds') && tables.has('framed_sync_outbound_blob_refs')) {
+    queries.push({ sql: `SELECT 1 AS held FROM framed_sync_outbound_blob_refs ref
+      JOIN framed_sync_outbound_holds hold ON hold.transfer_id = ref.transfer_id
+      WHERE ref.role = 1 AND lower(hex(ref.sha256)) = ? LIMIT 1`, params: [hash] });
+  }
+  return queries;
 }

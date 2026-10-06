@@ -61,7 +61,7 @@ export async function prepareDesktopFramedSyncInbound(input: {
   };
 }
 
-function prepareInboundApply(
+export function prepareInboundApply(
   facts: readonly CanonicalFact[],
   blobs: readonly FramedSyncBlobContent[]
 ) {

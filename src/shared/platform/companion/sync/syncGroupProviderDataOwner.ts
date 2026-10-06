@@ -18,6 +18,7 @@ import {
   inspectCompanionFramedSyncOutbound,
   prepareCompanionFramedSyncOutbound
 } from './framed/companionFramedSyncOutbound';
+import { resumeCompanionFramedSyncRespondingPeer } from './framed/companionFramedSyncPeerRoutes';
 import { applyCompanionSyncIdentityPackWithDbPort } from './pack-apply/companionSyncIdentityPackApply';
 import { prepareCompanionSyncIdentityPack } from './syncGroupIdentityPackPrepare';
 import { readCompanionSyncIdentitySource } from './syncGroupIdentitySourceRead';
@@ -87,8 +88,7 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
     return getIosCompanionDatabaseOwner().read((db) => inspectCompanionFramedSyncOutbound(db, payload));
   if (operation === CONTRACT.operations.prepareFramedOutbound)
     return writer((db) => prepareCompanionFramedSyncOutbound(db, payload));
-  if (operation === CONTRACT.operations.readFramedInventory)
-    return getIosCompanionDatabaseOwner().read(framedSyncData.readCompanionFramedSyncInventory);
+  if (operation === CONTRACT.operations.readFramedInventory) return readFramedInventory(payload);
   if (operation === CONTRACT.operations.applyMemberState) {
     return applyCompanionSyncGroupMemberState(
       parseSyncGroupMemberState(payload.state),
@@ -196,4 +196,9 @@ function requiredNumber(value: unknown) {
 function requiredObject(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('sync_group_data_object_required');
   return value as Record<string, unknown>;
+}
+
+async function readFramedInventory(payload: Record<string, unknown>) {
+  await resumeCompanionFramedSyncRespondingPeer(payload);
+  return getIosCompanionDatabaseOwner().read(framedSyncData.readCompanionFramedSyncInventory);
 }

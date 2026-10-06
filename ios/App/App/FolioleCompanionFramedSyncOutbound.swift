@@ -34,6 +34,7 @@ extension FolioleCompanionSyncPlugin {
             "sender_device_id": senderDeviceID, "sender_library_epoch": senderEpoch,
             "receiver_device_id": receiverDeviceID, "receiver_library_epoch": receiverEpoch
         ]
+        if let transferID = call.getString("transfer_id") { selection["transfer_id"] = transferID }
         let inspected = try groupData.request("inspect_framed_outbound", selection)
         let resources = try FolioleCompanionFramedSyncResources.describe(inspected)
         selection.merge(resources.0) { _, replacement in replacement }

@@ -1,7 +1,5 @@
-import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type {
   FramedSyncContext,
-  PublishedTransfer,
   TransferReceiptStage
 } from '../../lib/core/sync/framedSyncContract.js';
 import { deriveTransferFrameKey } from '../../lib/core/sync/framedSyncCrypto.js';
@@ -12,36 +10,26 @@ import { receiveFramedSyncFrame } from '../../lib/core/sync/framedSyncReceiver.j
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 import type { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
-import { DesktopFramedSyncInboundBlobSet } from './desktopFramedSyncInboundBlobSet.js';
-import { DesktopFramedSyncInboundResourceStore } from './desktopFramedSyncInboundResourceStore.js';
+import { applyPreparedDesktopFramedSyncInbound } from './desktopFramedSyncApplyPrepared.js';
 import {
   prepareDesktopFramedSyncInbound,
   type PreparedDesktopFramedSyncInbound
 } from './desktopFramedSyncPreparedInbound.js';
 import {
   assertCanonicalTransferIdentity,
-  headerFromWire,
   publishedFromHeader
 } from './desktopFramedSyncProcessHeader.js';
 import {
-  admitDesktopFramedSyncTransfer,
   finishDesktopFramedSyncTransfer,
-  stageDesktopFramedSyncBlob,
   stageDesktopFramedSyncFact
 } from './desktopFramedSyncProcessInbound.js';
 import { buildReceiptStream } from './desktopFramedSyncProcessReceipt.js';
 import { wireToFact } from './desktopFramedSyncProcessWire.js';
+import { handleDesktopFramedSyncReceiverHeader, handleDesktopFramedSyncReceiverBlob, type DesktopFramedSyncReceiverState }
+  from './desktopFramedSyncReceiverHeader.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
 
 type Db = ReturnType<typeof createBetterSqliteDbPort>;
-type State = {
-  attemptAdmitted: boolean;
-  blobs: DesktopFramedSyncInboundBlobSet | null;
-  existingReceipt: TransferReceiptStage | null;
-  facts: CanonicalFact[];
-  published: PublishedTransfer | null;
-  resources: DesktopFramedSyncInboundResourceStore | null;
-};
 type ReceiverInput = Readonly<{
   context: FramedSyncContext;
   db: Db;
@@ -83,9 +71,9 @@ async function processDesktopFramedSyncTransfer(
     groupKey: input.groupKey,
     transferId: preamble.contextId
   });
-  const state: State = {
+  const state: DesktopFramedSyncReceiverState = {
     attemptAdmitted: false, blobs: null, existingReceipt: null, facts: [], published: null,
-    resources: null
+    resources: null, ready: null
   };
   try {
     return await consumeTransferFrames({
@@ -106,7 +94,7 @@ async function consumeTransferFrames(args: {
   preamble: TransferPreamble;
   sequence: bigint;
   stageOnly: boolean;
-  state: State;
+  state: DesktopFramedSyncReceiverState;
 }): Promise<FinishResult> {
   let sequence = args.sequence;
   for await (const wire of args.input.stream.frames) {
@@ -156,13 +144,16 @@ async function handleFrame(input: {
   preambleAttemptId: Uint8Array;
   stageOnly: boolean;
   staging: FramedSyncStagingPort;
-  state: State;
+  state: DesktopFramedSyncReceiverState;
 }) {
   const { decoded, state } = input;
   const published = state.published;
   if (!published) throw new Error('transfer_header_required');
   if (decoded.payloadCase === 'transfer_header') {
-    await handleHeader(input, published);
+    await handleDesktopFramedSyncReceiverHeader(input, published);
+  } else if (state.ready) {
+    if (decoded.payloadCase !== 'transfer_trailer') return null;
+    return applyReadyTransfer(input, state.ready);
   } else if (state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
     if (input.stageOnly) throw new Error('framed_sync_restore_transfer_already_applied');
     return receiptStream(input, state.existingReceipt);
@@ -174,7 +165,7 @@ async function handleFrame(input: {
     const data = bytes(decoded.payload.data);
     const offset = integer(decoded.payload.offset);
     const sha256 = bytes(decoded.payload.blobHash);
-    await handleBlob(input, sha256, offset, data);
+    await handleDesktopFramedSyncReceiverBlob(input, sha256, offset, data);
   } else if (!state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
     if (state.facts.length === 0 || !state.blobs || !state.resources) {
       throw new Error('transfer_payload_incomplete');
@@ -202,40 +193,17 @@ async function handleFrame(input: {
   return null;
 }
 
-async function handleHeader(input: Parameters<typeof handleFrame>[0], published: PublishedTransfer) {
-  const header = headerFromWire(input.decoded.payload, published);
-  input.state.blobs = new DesktopFramedSyncInboundBlobSet(header.blobs);
-  input.state.resources = new DesktopFramedSyncInboundResourceStore({
-    attemptId: input.preambleAttemptId,
-    descriptors: header.blobs,
-    staging: input.staging,
-    transferId: published.transferId
-  });
-  input.state.existingReceipt = await input.staging.loadReceipt(published.transferId);
-  if (!input.state.existingReceipt) await admitDesktopFramedSyncTransfer({
-    attemptId: input.preambleAttemptId,
-    firstFrame: input.frame,
-    header,
-    staging: input.staging
-  });
-  input.state.attemptAdmitted = !input.state.existingReceipt;
-}
-
-async function handleBlob(input: Parameters<typeof handleFrame>[0], sha256: Uint8Array,
-  offset: bigint, data: Uint8Array) {
-  if (input.state.blobs?.has(sha256)) {
-    input.state.blobs.append(sha256, offset, data);
-    await stageDesktopFramedSyncBlob({
-      data, frame: input.frame, offset, sha256, staging: input.staging
-    });
-    return;
-  }
-  if (!input.state.resources?.has(sha256)) throw new Error('framed_sync_blob_content_set_mismatch');
-  await input.staging.commitAuthenticatedFrame(input.frame);
-  await input.state.resources.append(sha256, offset, data);
-}
-
 function receiptStream(input: Pick<Parameters<typeof handleFrame>[0], 'db' | 'groupKey' | 'staging'>,
   receipt: TransferReceiptStage) {
   return buildReceiptStream({ ...input, receipt });
+}
+
+async function applyReadyTransfer(input: Parameters<typeof handleFrame>[0],
+  ready: PreparedDesktopFramedSyncInbound) {
+  if (input.stageOnly) return ready;
+  const applied = await applyPreparedDesktopFramedSyncInbound({ db: input.db, transfers: [ready] });
+  const receipt = applied.receipts[0];
+  if (!receipt) throw new Error('framed_sync_ready_receipt_missing');
+  input.state.existingReceipt = receipt;
+  return { ...await receiptStream(input, receipt), generatedChanges: applied.generatedChanges };
 }

@@ -162,7 +162,7 @@ it('replays the durable receipt after receiver restart when the round repeats a 
   expect(replay.result).toBe('converged');
   expect(replay.transfers.map((transfer) => transfer.state)).toEqual(['committed']);
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync)
-    .toMatchObject({ outboundFrames: 8, outboundHolds: 0, receipts: 1 });
+    .toMatchObject({ outboundFrames: 4, outboundHolds: 0, receipts: 1 });
   expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).framedSync)
     .toMatchObject({ inboundFrames: 4, outboundFrames: 1, receipts: 1 });
   expect(await readDesktopFramedSyncRoundControlLog(restarted.process)).toContain('round_receipt');

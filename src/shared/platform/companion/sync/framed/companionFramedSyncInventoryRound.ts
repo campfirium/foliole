@@ -21,6 +21,8 @@ import {
   readCompanionFramedSyncInventory,
   readCompanionFramedSyncInventoryEntry
 } from './companionFramedSyncInventory.js';
+import { rememberCompanionFramedSyncPeerRoute } from './companionFramedSyncPeerRoutes.js';
+import { resumeCompanionFramedSyncPendingPublications } from './companionFramedSyncPendingPublications.js';
 import { sendCompanionFramedSyncObject } from './companionFramedSyncTransfer.js';
 
 const HEX_DIGEST = /^[a-f0-9]{64}$/u;
@@ -116,7 +118,9 @@ export function decodeCompanionFramedSyncInventory(
 export async function readCompanionRemoteFramedSyncInventory(
   args: NativeCompanionFramedSyncInventoryRequest
 ) {
-  return decodeCompanionFramedSyncInventory(await FolioleCompanionSync.readFramedSyncInventory(args));
+  const result = decodeCompanionFramedSyncInventory(await FolioleCompanionSync.readFramedSyncInventory(args));
+  await rememberCompanionFramedSyncPeerRoute(args);
+  return result;
 }
 
 export function selectCompanionFramedSyncCurrentNodes(args: {
@@ -134,6 +138,7 @@ export function selectCompanionFramedSyncCurrentNodes(args: {
 export async function sendCompanionFramedSyncInventoryDifferences(
   args: NativeCompanionFramedSyncInventoryRequest
 ) {
+  await resumeCompanionFramedSyncPendingPublications(args);
   const owner = getIosCompanionDatabaseOwner();
   const [localValue, remoteResult] = await Promise.all([
     owner.read(readCompanionFramedSyncInventory),

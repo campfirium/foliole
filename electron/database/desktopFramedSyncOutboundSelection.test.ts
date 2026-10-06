@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
@@ -83,6 +84,8 @@ beforeEach(() => {
       parent_version_id TEXT, host_name TEXT NOT NULL, content_hash TEXT NOT NULL,
       snapshot_json TEXT NOT NULL, deleted_at TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE review_log (node_id TEXT NOT NULL, op_id TEXT NOT NULL);`);
+  for (const sql of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter((value) =>
+    value.startsWith('CREATE TABLE IF NOT EXISTS content_blob'))) sqlite.exec(sql);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   port = createBetterSqliteDbPort(sqlite);
 });

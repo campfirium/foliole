@@ -1,5 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+vi.mock('./companionFramedSyncPeerRoutes', () => ({
+  rememberCompanionFramedSyncPeerRoute: vi.fn(async () => undefined)
+}));
+
+vi.mock('./companionFramedSyncPendingPublications', () => ({
+  resumeCompanionFramedSyncPendingPublications: vi.fn(async () => 0)
+}));
+
 const mocks = vi.hoisted(() => ({
   localEntry: vi.fn(), localInventory: vi.fn(), pull: vi.fn(), remoteInventory: vi.fn(), send: vi.fn()
 }));

@@ -1,10 +1,14 @@
 import { createReadStream } from 'node:fs';
 
+import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { CanonicalBlob, CanonicalManifest } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
+import { framedSyncPublicationResources } from '../../lib/core/sync/framedSyncPublicationResources.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
+import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
 
 import { projectDesktopFramedSyncNodeRecord } from './desktopFramedSyncNodeProjection.js';
 import { resolveDesktopFramedSyncNodeResources } from './desktopFramedSyncNodeResources.js';
@@ -65,4 +69,30 @@ function addSource(sources: Map<string, DesktopFramedSyncBlobSource>, source: De
     throw new Error('framed_sync_outbound_blob_identity_conflict');
   }
   if (!prior) sources.set(key, source);
+}
+
+export async function loadDesktopFramedSyncPublishedBlobSources(db: DbPort, manifest: CanonicalManifest) {
+  const resources = framedSyncPublicationResources(manifest);
+  const sources: DesktopFramedSyncBlobSource[] = [];
+  for (const blob of manifest.blobs) {
+    const hash = bytesToHex(blob.sha256);
+    if (blob.role === 1) {
+      const [row] = await db.query<{ data: Uint8Array }>(
+        'SELECT data FROM content_blob_data WHERE hash = ?', [hash]);
+      if (!row || !(row.data instanceof Uint8Array) ||
+          BigInt(row.data.byteLength) !== blob.byteLength || bytesToHex(sha256(row.data)) !== hash) {
+        throw new Error('framed_sync_published_body_unavailable');
+      }
+      sources.push({ blob, chunks: byteChunks(row.data) });
+    } else {
+      const resource = resources.get(hash);
+      const resolved = resource && resolveAttachmentFileForSync(resource.storageKey);
+      if (!resource || resource.role !== blob.role || !resolved || resolved.status !== 'ready' ||
+          BigInt(resolved.sizeBytes) !== blob.byteLength) {
+        throw new Error('framed_sync_published_resource_unavailable');
+      }
+      sources.push({ blob, chunks: fileChunks(resolved.filePath) });
+    }
+  }
+  return sources;
 }

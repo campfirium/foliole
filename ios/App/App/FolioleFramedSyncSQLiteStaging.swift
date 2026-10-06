@@ -96,14 +96,18 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
             return
         }
         let matched = try row("""
-            SELECT 1 FROM framed_sync_ios_transfers WHERE transfer_id = ? AND content_id = ?
+            SELECT state, active_attempt_id FROM framed_sync_ios_transfers WHERE transfer_id = ? AND content_id = ?
               AND fact_count = ? AND blob_count = ? AND total_blob_bytes = ?
               AND sender_device_id = ? AND sender_library_epoch = ?
               AND receiver_device_id = ? AND receiver_library_epoch = ?
-              AND active_attempt_id = ? AND state = 'receiving'
-            """, values: [frame.transferID] + values)
-        guard matched != nil else {
+              AND state IN ('receiving', 'ready_to_apply')
+            """, values: [frame.transferID] + Array(values.dropLast()))
+        guard let matched, matched[0] as? String == "receiving" || matched[1] as? Data == frame.attemptID else {
             throw FolioleFramedSyncValidationError("inbound_header_conflict")
+        }
+        if matched[1] as? Data != frame.attemptID {
+            try execute("UPDATE framed_sync_ios_transfers SET active_attempt_id = ? WHERE transfer_id = ?",
+                        values: [frame.attemptID, frame.transferID])
         }
     }
 
@@ -112,7 +116,7 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
         SELECT 1 FROM framed_sync_ios_transfers t
         JOIN framed_sync_ios_frames first ON first.transfer_id = t.transfer_id
           AND first.attempt_id = t.active_attempt_id AND first.sequence = '0'
-        WHERE t.transfer_id = ? AND t.active_attempt_id = ? AND t.state = 'receiving'
+        WHERE t.transfer_id = ? AND t.active_attempt_id = ? AND t.state IN ('receiving', 'ready_to_apply')
           AND first.preamble = ?
         """
         guard try row(sql, values: [frame.transferID, frame.attemptID, frame.preamble]) != nil else {
@@ -140,6 +144,10 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
                 throw FolioleFramedSyncValidationError("inbound_frame_identity_conflict")
             }
             return .identical
+        }
+        guard try row("SELECT 1 FROM framed_sync_ios_transfers WHERE transfer_id = ? AND state = 'receiving'",
+                      values: [frame.transferID]) != nil else {
+            throw FolioleFramedSyncValidationError("inbound_ready_frame_missing")
         }
         let ciphertext = digestOnly ? Data(SHA256.hash(data: frame.ciphertext)) : frame.ciphertext
         let plaintext = digestOnly ? Data(SHA256.hash(data: frame.plaintext)) : frame.plaintext

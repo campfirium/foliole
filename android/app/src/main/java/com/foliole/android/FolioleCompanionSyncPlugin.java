@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 public class FolioleCompanionSyncPlugin extends Plugin {
     private FolioleCompanionNsdDiscoverySession discoverySession;
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService framedSendExecutor = Executors.newSingleThreadExecutor();
     private boolean lifecycleActive = true;
 
     @Override public void load() {
@@ -129,7 +130,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     @PluginMethod public void sendFramedSyncTransfer(PluginCall call) {
-        async(call, "Failed to send framed Sync transfer.", () ->
+        FolioleCompanionSyncAsync.run(framedSendExecutor, call, "Failed to send framed Sync transfer.", () ->
             FolioleCompanionFramedSyncOutbound.send(getContext(), call));
     }
 
@@ -182,14 +183,8 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionResourcePluginActions.resolveAttachmentResource(getContext(), call));
     }
 
-    private void async(PluginCall call, String message, FileWork work) {
-        fileExecutor.execute(() -> {
-            try {
-                call.resolve(work.run());
-            } catch (Exception exception) {
-                call.reject(FolioleCompanionPluginErrors.withCause(message, exception), exception);
-            }
-        });
+    private void async(PluginCall call, String message, FolioleCompanionSyncAsync.Work work) {
+        FolioleCompanionSyncAsync.run(fileExecutor, call, message, work);
     }
 
     private void dispatchDataRequest(JSObject event) throws Exception {
@@ -243,6 +238,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         });
         super.handleOnDestroy();
         fileExecutor.shutdown();
+        framedSendExecutor.shutdown();
     }
 
     @Override protected void handleOnPause() {
@@ -260,5 +256,4 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         });
     }
 
-    private interface FileWork { JSObject run() throws Exception; }
 }

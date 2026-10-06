@@ -37,11 +37,7 @@ type EndpointInput = Readonly<{
   staging: FramedSyncStagingPort;
 }>;
 
-type EndpointState = EndpointInput & Readonly<{
-  attempts: Map<string, Parameters<typeof sendDesktopFramedSyncPublishedTransfer>[0]['attempt']>;
-}>;
-
-const hex = (value: Uint8Array) => Buffer.from(value).toString('hex');
+type EndpointState = EndpointInput;
 
 function transferContext(input: EndpointInput): FramedSyncContext {
   return {
@@ -66,21 +62,15 @@ Promise<FramedSyncRoundSelection> {
   if (result.kind === 'deferred') {
     return { deferredObjects: result.deferredObjects, kind: 'deferred' };
   }
-  const attempt = await prepareDesktopFramedSyncPublishedTransfer({
-    db: input.db,
-    groupSecret: input.groupSecret,
-    publication: result.publication,
-    staging: input.staging
-  });
-  input.attempts.set(hex(result.publication.transferId), attempt);
   return { kind: 'published', publication: result.publication };
 }
 
 async function sendPublishedTransfer(input: EndpointState, args: Readonly<{
   publication: Parameters<FramedSyncStagingPort['publishOutbound']>[0];
 }>) {
-  const attempt = input.attempts.get(hex(args.publication.transferId));
-  if (!attempt) throw new Error('framed_sync_round_attempt_missing');
+  const attempt = await prepareDesktopFramedSyncPublishedTransfer({
+    db: input.db, groupSecret: input.groupSecret, publication: args.publication, staging: input.staging
+  });
   await sendDesktopFramedSyncPublishedTransfer({
     attempt,
     groupSecret: input.groupSecret,
@@ -95,8 +85,7 @@ async function sendPublishedTransfer(input: EndpointState, args: Readonly<{
 export function createDesktopFramedSyncRoundEndpoint(
   input: EndpointInput
 ): FramedSyncRoundEndpoint {
-  const attempts: EndpointState['attempts'] = new Map();
-  const state = { ...input, attempts };
+  const state = input;
   return {
     deviceId: input.local.deviceId,
     libraryEpoch: input.local.libraryEpoch,

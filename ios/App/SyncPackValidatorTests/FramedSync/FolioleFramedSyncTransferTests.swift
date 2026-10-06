@@ -39,7 +39,7 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
         let context = context()
         let contentID = try FolioleFramedSyncCanonicalManifest.contentID(facts: [], blobs: [])
         let transferID = context.deriveTransferID(contentID: contentID)
-        let wire = try transferWire(context: context, contentID: contentID, transferID: transferID)
+        let wire = try FramedSyncRecoveryWire.transfer(context: context, contentID: contentID, transferID: transferID)
         let responseURL = directory.appendingPathComponent("response.bin")
         try wire.write(to: responseURL)
 
@@ -54,6 +54,10 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
         XCTAssertEqual(row?[1] as? String, "ios-a")
         XCTAssertEqual(row?[2] as? String, "ios-b")
         XCTAssertEqual(try database.rows("SELECT 1 FROM framed_sync_ios_frames").count, 2)
+        let reopened = try FolioleFramedSyncTransferDatabase(url: directory.appendingPathComponent("stage.db"))
+        XCTAssertEqual(try FolioleFramedSyncTransferReceiver(database: reopened).receive(
+            wire, groupKey: Data(0...31), context: context).transferID, transferID)
+        XCTAssertEqual(try reopened.rows("SELECT 1 FROM framed_sync_ios_frames").count, 2)
     }
 
     func testInterruptedAttemptReopensReplaysAndCompletesFromDurableFrames() throws {
@@ -64,8 +68,8 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
         let context = context()
         let contentID = try FolioleFramedSyncCanonicalManifest.contentID(facts: [], blobs: [])
         let transferID = context.deriveTransferID(contentID: contentID)
-        let wire = try transferWire(context: context, contentID: contentID, transferID: transferID)
-        let partial = try firstFrameWire(wire)
+        let wire = try FramedSyncRecoveryWire.transfer(context: context, contentID: contentID, transferID: transferID)
+        let partial = try FramedSyncRecoveryWire.firstFrame(wire)
 
         do {
             let database = try FolioleFramedSyncTransferDatabase(url: databaseURL)
@@ -123,6 +127,25 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
         XCTAssertEqual(try database.rows("SELECT 1 FROM framed_sync_ios_receipt_frames").count, 1)
     }
 
+    func testNewAttemptReplacesInterruptedAttemptWithTheSamePublication() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foliole-ios-retry-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let database = try FolioleFramedSyncTransferDatabase(url: directory.appendingPathComponent("stage.db"))
+        let receiver = FolioleFramedSyncTransferReceiver(database: database)
+        let context = context()
+        let contentID = try FolioleFramedSyncCanonicalManifest.contentID(facts: [], blobs: [])
+        let transferID = context.deriveTransferID(contentID: contentID)
+        let first = try FramedSyncRecoveryWire.transfer(context: context, contentID: contentID, transferID: transferID)
+        XCTAssertThrowsError(try receiver.receive(
+            FramedSyncRecoveryWire.firstFrame(first), groupKey: Data(0...31), context: context))
+        let second = try FramedSyncRecoveryWire.transfer(context: context, contentID: contentID, transferID: transferID,
+                                      attemptID: Data(repeating: 9, count: 16))
+        XCTAssertEqual(try receiver.receive(second, groupKey: Data(0...31), context: context).transferID, transferID)
+        XCTAssertEqual(try database.rows("SELECT state FROM framed_sync_ios_transfers").first?[0] as? String,
+                       "ready_to_apply")
+    }
+
     private func context() -> FolioleFramedSyncTransferContext {
         .init(groupID: "group-a", senderDeviceID: "ios-a", senderLibraryEpoch: "epoch-a",
               receiverDeviceID: "ios-b", receiverLibraryEpoch: "epoch-b")
@@ -160,59 +183,5 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
         return result
     }
 
-    private func transferWire(
-        context: FolioleFramedSyncTransferContext, contentID: Data, transferID: Data
-    ) throws -> Data {
-        let attemptID = Data(repeating: 7, count: 16)
-        var manifest = Foliole_Sync_V22_TransferManifest()
-        manifest.protocolVersion = 22; manifest.groupID = context.groupID; manifest.contentID = contentID
-        var header = Foliole_Sync_V22_TransferHeader()
-        header.transferID = transferID; header.attemptID = attemptID; header.manifest = manifest
-        var trailer = Foliole_Sync_V22_TransferTrailer()
-        trailer.transferID = transferID; trailer.manifestHash = contentID
-        var first = Foliole_Sync_V22_ProtocolMessage(); first.payload = .transferHeader(header)
-        var last = Foliole_Sync_V22_ProtocolMessage(); last.payload = .transferTrailer(trailer)
-        let preamble = try transferPreamble(transferID: transferID, attemptID: attemptID)
-        let output = OutputStream.toMemory(); let writer = FolioleFramedSyncStreamWriter(output: output)
-        try writer.write(preamble: preamble.encoded)
-        for (sequence, item) in [first, last].enumerated() {
-            let validated = try FolioleFramedSyncCodec.validateOutbound(
-                item, authenticatedFrameType: sequence == 0
-                    ? FolioleFramedSyncFrameType.transferHeader.rawValue
-                    : FolioleFramedSyncFrameType.transferTrailer.rawValue
-            )
-            let plaintext = try FolioleFramedSyncCodec.encode(validated)
-            let frameType: FolioleFramedSyncFrameType = sequence == 0 ? .transferHeader : .transferTrailer
-            let header = try FolioleFramedSyncWireHeader(
-                ciphertextBytes: plaintext.count + 16, sequence: UInt64(sequence), frameType: frameType
-            ).encode()
-            let ciphertext = try FolioleFramedSyncFrameCrypto.encrypt(
-                groupKey: Data(0...31), preamble: preamble, header: header,
-                plaintext: plaintext, sequence: UInt64(sequence)
-            )
-            try writer.write(header: header, ciphertext: ciphertext)
-        }
-        return try XCTUnwrap(output.property(forKey: .dataWrittenToMemoryStreamKey) as? Data)
-    }
 
-    private func transferPreamble(transferID: Data, attemptID: Data) throws -> FolioleFramedSyncPreamble {
-        var bytes = Data(repeating: 0, count: FolioleFramedSyncPreamble.byteCount)
-        bytes.replaceSubrange(0..<8, with: Data("FOLSYNC2".utf8)); bytes[9] = 96
-        bytes[11] = 22; bytes[12] = 2
-        bytes.replaceSubrange(16..<48, with: transferID)
-        bytes.replaceSubrange(48..<64, with: attemptID)
-        bytes.replaceSubrange(64..<68, with: Data([1, 2, 3, 4]))
-        return try .init(decoding: bytes)
-    }
-
-    private func firstFrameWire(_ wire: Data) throws -> Data {
-        let reader = FolioleFramedSyncStreamReader(input: InputStream(data: wire))
-        let preamble = try reader.nextPreamble()
-        let frame = try XCTUnwrap(reader.nextFrame())
-        let output = OutputStream.toMemory()
-        let writer = FolioleFramedSyncStreamWriter(output: output)
-        try writer.write(preamble: preamble.encoded)
-        try writer.write(header: frame.headerBytes, ciphertext: frame.ciphertext)
-        return try XCTUnwrap(output.property(forKey: .dataWrittenToMemoryStreamKey) as? Data)
-    }
 }

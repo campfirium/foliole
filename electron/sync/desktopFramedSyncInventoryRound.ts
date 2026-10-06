@@ -15,6 +15,7 @@ import {
   exchangeDesktopFramedSyncInventoryHttp,
   requestDesktopFramedSyncDifferenceHttp
 } from './desktopFramedSyncInventoryHttp.js';
+import { resumeDesktopFramedSyncPendingPublications } from './desktopFramedSyncPendingPublications.js';
 import { readReceipt } from './desktopFramedSyncProcessReceipt.js';
 import { buildReceiptStream } from './desktopFramedSyncProcessReceipt.js';
 import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
@@ -32,6 +33,10 @@ export async function runDesktopFramedSyncInventoryRound(args: {
   const runtime = await loadRoundRuntime(args.peer.group_id);
   const local = { deviceId: args.peer.local_device_id, libraryEpoch: args.localLibraryEpoch };
   const remote = { deviceId: args.peer.peer_device_id, libraryEpoch: args.remoteLibraryEpoch };
+  if (!args.restoreId) await resumeDesktopFramedSyncPendingPublications({
+    db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
+    local, peer: remote, peerOrigin: args.peer.endpoint_url, staging: runtime.staging
+  });
   const context: InboundRound['context'] = {
     groupId: args.peer.group_id,
     initiatorDeviceId: local.deviceId,
