@@ -26,7 +26,6 @@ export const controlledSyncSqliteTests = [
   'electron/database/syncStateIdentityConflict.test.ts',
   'electron/database/privateStateCanonicalHashMigration.test.ts',
   'electron/ipc/storageParentOrderCommands.test.ts',
-  'electron/sync/companionLanIdentityGet.http.test.ts',
   'electron/sync/desktopSyncGroupResources.giant.test.ts',
   'electron/sync/desktopSyncIdentityBlobIntegrity.test.ts',
   'electron/sync/desktopSyncIdentityCandidatePages.test.ts',
