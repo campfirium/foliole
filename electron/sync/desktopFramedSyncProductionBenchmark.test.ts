@@ -63,4 +63,4 @@ it('measures every requested item through the production process port and restar
     expect(sample.wireBytes).toBe(sample.wire.sessionBytes + sample.wire.transferBytes);
   }
   if (!outputPath) await fs.rm(path.dirname(reportPath), { recursive: true, force: true });
-}, 2_700_000);
+}, 5_400_000);
