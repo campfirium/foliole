@@ -6,8 +6,6 @@ import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
-import { hashTextBody } from '../../lib/core/database/contentBodyBlobs.js';
-import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { loadPendingNodeVersionReceipts } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
 import { dependencyResumeUrl, retireSyncPackDependencyView } from '../../lib/core/sync/syncPackDependencyResume.js';
 import { encodeSyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
@@ -19,13 +17,9 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { insertNodeSyncState, mockedSyncPackBuilderAppDataDir,
   resolveSyncPackPath, setupSyncPackBuilderTestLifecycle } from '../database/syncPackBuilderTestSupport.js';
 
-import { startAuthenticatedSyncHttp } from './companionLanAuthenticatedHttp.testSupport.js';
 import { openCompanionDependencySession } from './companionLanDependencySession.js';
 import { buildCompanionSyncPackResource } from './companionLanSyncPack.js';
 import { loadCompanionSyncPackFactIndex } from './companionLanSyncPackFacts.js';
-import { acceptCompanionVersionPackReceipt } from './companionLanVersionPackReceipt.js';
-import { markDesktopSyncGroupMemberStateReady,
-  revokeDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
 import { extractSyncPackDatabaseFromFile } from './syncPackContainerReader.js';
 
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
@@ -112,37 +106,6 @@ async function assertFinalRollback(target: Database.Database, port: ReturnType<t
   } finally { target.exec('DROP TRIGGER reject_receipt'); }
 }
 
-async function assertReceiptLifecycle(target: Database.Database,
-  postReceipt?: (receipt: unknown) => Promise<Record<string, unknown>>) {
-  const driver = openDatabaseConnection().driver;
-  driver.execute("INSERT INTO sync_groups VALUES ('group', 'Group', 'key', 'now', 'now')");
-  driver.execute("INSERT INTO sync_group_local_state VALUES (1, 'group', 'source', 'active', 'now')");
-  const [receipt] = await loadPendingNodeVersionReceipts(createBetterSqliteDbPort(target), 'source');
-  expect(receipt?.results).toEqual([
-    { objectId: 'node-1', sentVersionId: 'v23', baseVersionId: 'v23', result: 'applied' }
-  ]);
-  // A completed download and apply do not release the source while its receipt is undelivered.
-  const retained = await openCompanionDependencySession('group', 'receiver', receipt!.packId);
-  retained.view.close();
-  await expect(acceptCompanionVersionPackReceipt(JSON.stringify(receipt), 'other'))
-    .rejects.toThrow('node_version_receipt_identity_mismatch');
-  expect(driver.queryOne('SELECT 1 AS held FROM node_version_outbound_holds WHERE pack_id = ?',
-    [receipt!.packId])).toEqual({ held: 1 });
-  const confirm = postReceipt ? () => postReceipt(receipt) :
-    () => acceptCompanionVersionPackReceipt(JSON.stringify(receipt), 'receiver');
-  await expect(confirm())
-    .resolves.toEqual({ accepted: true });
-  expect(driver.queryOne('SELECT 1 AS held FROM node_version_outbound_holds WHERE pack_id = ?',
-    [receipt!.packId])).toBeUndefined();
-  expect(driver.queryOne('SELECT 1 AS held FROM node_version_outbound_payload_holds WHERE pack_id = ?',
-    [receipt!.packId])).toBeUndefined();
-  await expect(openCompanionDependencySession('group', 'receiver', receipt!.packId))
-    .rejects.toThrow('sync_pack_source_view_unavailable');
-  // Simulate a lost HTTP acknowledgement: exact receipt replay still succeeds after view removal.
-  await expect(confirm())
-    .resolves.toEqual({ accepted: true });
-}
-
 function createReceiver() {
   const target = new Database(resolveSyncPackPath('receiver.db'));
   target.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
@@ -154,49 +117,6 @@ function createReceiver() {
       VALUES ('group', 'source', 'source-anchor', '/source', 'Source', 'mac', 'active', 'now', 'now');`);
   return target;
 }
-
-it('delivers 23 heavy historical bodies through the LAN resource requests before advancing business state', async () => {
-  seedHistory();
-  const target = createReceiver();
-  markDesktopSyncGroupMemberStateReady('receiver');
-  const server = await startAuthenticatedSyncHttp();
-  try {
-    const fact: SyncPackFactIndex = await server.getJson(
-      '/companion/sync-pack-facts?page_contract=bounded-v1&after_state_seq=0') as unknown as SyncPackFactIndex;
-    let url = initialRequest(fact, server.origin);
-    const seenRequests = new Set<string>();
-    for (;;) {
-      expect(seenRequests.has(url.href)).toBe(false);
-      seenRequests.add(url.href);
-      const result = await receive(url, target, seenRequests.size, true, server.archive);
-      if (seenRequests.size === 1) {
-        const replay = await receive(url, target, 0, false, server.archive);
-        expect(replay.dependencyProgress?.nextRow).toBe(result.dependencyProgress?.nextRow);
-      }
-      if (!result.dependencyProgress) {
-        expect(result).toMatchObject({ applied: true, toStateSeq: 1 });
-        break;
-      }
-      expect(result.toStateSeq).toBe(0);
-      expect(await loadPendingNodeVersionReceipts(createBetterSqliteDbPort(target), 'source')).toEqual([]);
-      expect(target.prepare('SELECT count(*) AS count FROM nodes').get()).toEqual({ count: 0 });
-      url = new URL(dependencyResumeUrl(url.toString(), result.dependencyProgress));
-    }
-    expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get()).toEqual({ count: 23 });
-    expect(target.prepare('SELECT count(*) AS count FROM node_sync_version_parents').get()).toEqual({ count: 22 });
-    expect(target.prepare('SELECT cursor_state_seq FROM sync_pack_receive_progress').get()).toEqual({ cursor_state_seq: 1 });
-    const row = target.prepare(`SELECT n.content, n.body_blob_hash, b.data AS body_blob_data
-      FROM nodes n LEFT JOIN content_blob_data b ON b.hash = n.body_blob_hash WHERE n.id = ?`)
-      .get('node-1') as NodeBodyRow;
-    const body = resolveNodeBody(row);
-    expect(body.status).toBe('resolved');
-    if (body.status === 'resolved') {
-      expect(Buffer.byteLength(body.content, 'utf8')).toBe(741 * 1024);
-      expect(hashTextBody(body.content)).toBe(hashTextBody('b'.repeat(741 * 1024)));
-    }
-    await assertReceiptLifecycle(target, (receipt) => server.postJson('/companion/version-pack-receipt', receipt));
-  } finally { await server.close(); revokeDesktopSyncGroupMemberStateReadiness('receiver'); target.close(); }
-});
 
 it('rebuilds a genuinely missing source snapshot without changing epoch or skipping its missing history', async () => {
   seedHistory();

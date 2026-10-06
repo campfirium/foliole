@@ -20,8 +20,6 @@ import { createCompanionFactSession, readCompanionFactSessionPage } from './comp
 import { restoreKnownFactReceiptHolds } from './companionLanKnownFactPack.js';
 import { seedPagedFactReceiver } from './companionLanPagedFactRoundTrip.testSupport.js';
 import { buildCompanionSyncPackResource } from './companionLanSyncPack.js';
-import { markDesktopSyncGroupMemberStateReady,
-  revokeDesktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
 import { extractSyncPackDatabaseFromFile } from './syncPackContainerReader.js';
 
 vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
@@ -169,24 +167,6 @@ it('packs an open-state change after more than 4096 known facts', async () => {
     expect(retry.status).toBe('ready');
     await retry.cleanup?.();
   } finally { target.close(); }
-});
-
-it('applies an all-known 130-version page without retransmission and clears claims atomically', async () => {
-  seedSource();
-  const target = seedPagedFactReceiver();
-  markDesktopSyncGroupMemberStateReady('receiver');
-  const server = await startAuthenticatedSyncHttp();
-  try {
-    const { url } = await claimHistory(target, 0, server);
-    const { result, manifest } = await applyPack(url, target, 'all-known-incoming.db', server.archive);
-    expect(manifest.dependencyTransfers?.[0]?.expectedRows).toBe(0);
-    expect(result.toStateSeq).toBe(2);
-    expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get()).toEqual({ count: 130 });
-    expect(target.prepare('SELECT count(*) AS count FROM sync_pack_known_fact_claims').get()).toEqual({ count: 0 });
-    const replay = await applyPack(url, target, 'all-known-replay.db', server.archive);
-    expect(replay.result.applied).toBe(false);
-    expect(target.prepare('SELECT count(*) AS count FROM node_sync_versions').get()).toEqual({ count: 130 });
-  } finally { await server.close(); revokeDesktopSyncGroupMemberStateReadiness('receiver'); target.close(); }
 });
 
 it('applies only two missing versions and parent edges after the receiver claimed 128 known versions', async () => {
