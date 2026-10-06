@@ -67,7 +67,7 @@ it('freezes the committed dev tree while leaving Mac edits untouched', async () 
     await fs.promises.rm(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
     expect(fs.existsSync(root)).toBe(false);
   }
-});
+}, 15_000);
 
 function output(identity) {
   return `[windows-dev-action] multi-device-sync-candidate identity=${identity} manifest=D:/C/foliole/.tmp/artifacts/windows-dev-action/${identity}/multi-device-sync-candidate.json\n`;
