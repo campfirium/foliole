@@ -114,6 +114,29 @@ it('pulls a remote-only Node with the same inventory round identity', async () =
   });
 });
 
+it('pulls a missing parent before retrying a child that arrived first', async () => {
+  mocks.localInventory.mockResolvedValue({ entries: [] });
+  mocks.remoteInventory.mockResolvedValue({
+    entries: [entry('child'), entry('parent')], round_id: '8'.repeat(32)
+  });
+  let childAttempts = 0;
+  mocks.pull.mockImplementation(async ({ object_id: objectId }: { object_id: string }) => {
+    if (objectId === 'child' && childAttempts++ === 0) {
+      throw new Error('Failed to pull framed Sync object. Cause: framed_sync_node_parent_missing:parent');
+    }
+    return { transfer_id: objectId === 'parent' ? 'c'.repeat(64) : 'b'.repeat(64) };
+  });
+
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+    deferredObjects: [], received: [
+      { objectId: 'parent', receipt: { transfer_id: 'c'.repeat(64) } },
+      { objectId: 'child', receipt: { transfer_id: 'b'.repeat(64) } }
+    ], sent: []
+  });
+  expect(mocks.pull.mock.calls.map(([value]) => value.object_id))
+    .toEqual(['child', 'parent', 'child']);
+});
+
 it('pulls a divergent Node before revalidating and deferring its stale outbound side', async () => {
   mocks.localInventory.mockResolvedValue({ entries: [entry('node-a', '1')] });
   mocks.remoteInventory.mockResolvedValue({

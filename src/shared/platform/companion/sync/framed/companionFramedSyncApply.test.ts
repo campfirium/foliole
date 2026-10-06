@@ -146,6 +146,22 @@ it.each(['android', 'ios'] as const)(
     .toEqual({ current_version_id: 'version-2', title: 'Child' });
 });
 
+it('reports a missing parent dependency before SQLite rejects the framed Node', async () => {
+  const { main, port, prefix, staging, stagingPath } = harness('android');
+  const record = nodeRecord();
+  record.object_id = 'child';
+  record.snapshot.id = 'child';
+  record.snapshot.parent_id = 'parent';
+  const projection = projectFramedSyncNodeRecord(record);
+  const transferId = new Uint8Array(32).fill(8);
+  stage(staging, prefix, { blob: { data: projection.bodyBlob,
+    descriptor: projection.manifest.blobs[0]! }, facts: projection.manifest.facts, transferId });
+
+  await expect(applyCompanionFramedSyncTransfer(port, input('android', stagingPath, transferId)))
+    .rejects.toThrow('framed_sync_node_parent_missing:parent');
+  expect(main.prepare('SELECT COUNT(*) AS count FROM nodes').get()).toEqual({ count: 0 });
+});
+
 function harness(kind: 'android' | 'ios') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-framed-apply-'));
   roots.push(root);
