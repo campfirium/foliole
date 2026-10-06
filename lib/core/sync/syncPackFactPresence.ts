@@ -66,7 +66,10 @@ export function describeVersionFact(row: {
   const snapshot = JSON.parse(row.snapshot_json) as Record<string, unknown>;
   const body = row.body_text ?? (typeof snapshot.content === 'string'
     ? snapshot.content : snapshot.content === undefined ? '' : null);
-  delete snapshot.content;
+  const metadata: Record<string, unknown> = row.snapshot_metadata === undefined
+    ? snapshot : JSON.parse(row.snapshot_metadata);
+  delete metadata.content;
+  delete metadata.body_blob_hash;
   return {
     body_hash: body === null ? null : hashText(body),
     content_hash: row.content_hash,
@@ -74,7 +77,7 @@ export function describeVersionFact(row: {
     host_name: row.host_name,
     object_id: row.object_id,
     parent_version_id: row.parent_version_id,
-    snapshot_metadata: row.snapshot_metadata ?? JSON.stringify(snapshot),
+    snapshot_metadata: JSON.stringify(metadata),
     version_id: row.version_id
   };
 }

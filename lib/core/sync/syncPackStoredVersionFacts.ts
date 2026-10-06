@@ -27,8 +27,8 @@ async function assertExistingVersionsMatch(port: DbPort, alias: string) {
     !['version_id', 'parent_version_id', 'body_text', 'snapshot_json'].includes(column));
   const mismatch = [
     ...immutableColumns.map((column) => `existing.${column} IS NOT incoming.${column}`),
-    `json_remove(existing.snapshot_json, '$.content') IS NOT
-      json_remove(incoming.snapshot_json, '$.content')`,
+    `json_remove(existing.snapshot_json, '$.content', '$.body_blob_hash') IS NOT
+      json_remove(incoming.snapshot_json, '$.content', '$.body_blob_hash')`,
     `(${versionBodySql('existing')} IS NOT NULL AND ${versionBodySql('incoming')} IS NOT NULL
       AND ${versionBodySql('existing')} IS NOT ${versionBodySql('incoming')})`
   ].join(' OR ');

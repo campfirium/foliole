@@ -128,7 +128,8 @@ export function chainMutationStatements(plan: ReturnType<typeof planNodeVersionC
   if (plan.skipped || !plan.removed?.length) return statements;
   for (const id of plan.removed) statements.push({
     sql: `UPDATE node_sync_versions SET body_text = NULL,
-      snapshot_json = json_set(snapshot_json, '$.content', NULL) WHERE version_id = ?`,
+      snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_blob_hash', NULL)
+      WHERE version_id = ?`,
     params: [id]
   });
   return statements;

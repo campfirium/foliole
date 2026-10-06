@@ -34,7 +34,8 @@ export function planNodeVersionChain(versions: ChainVersion[], edges: ChainEdge[
   if ([...keep].some((id) => !rows.has(id) || !hasBody(rows.get(id)!))) {
     return { skipped: 'protected_body_unavailable' as const };
   }
-  const removed = versions.filter((row) => !keep.has(row.version_id) && hasBody(row)).slice(0, limit);
+  const removed = versions.filter((row) => !keep.has(row.version_id) &&
+    (hasBody(row) || hasBodyBlobReference(row))).slice(0, limit);
   const relations = versions.map((row) => ({ id: row.version_id,
     parents: parents.get(row.version_id)! }));
   return { removed: removed.map((row) => row.version_id), relations,
@@ -81,4 +82,9 @@ function hasBody(row: ChainVersion) {
   if (row.body_text !== null) return true;
   const content = (JSON.parse(row.snapshot_json) as { content?: unknown }).content;
   return content === undefined || typeof content === 'string';
+}
+
+function hasBodyBlobReference(row: ChainVersion) {
+  const snapshot: { body_blob_hash?: unknown } = JSON.parse(row.snapshot_json);
+  return typeof snapshot.body_blob_hash === 'string';
 }

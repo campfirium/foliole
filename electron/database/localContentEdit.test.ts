@@ -81,7 +81,8 @@ it('merges a delayed edit using its real parent and preserves both branches', as
   expect(result.current.parent_version_ids).toEqual([remote, 'ver_local-edit'].sort());
   const sqlite = openDatabaseConnection().sqlite;
   const originalGraph = () => sqlite.prepare(`SELECT version_id, object_id, parent_version_id,
-    host_name, created_at, content_hash, json_remove(snapshot_json, '$.content') AS snapshot_metadata
+    host_name, created_at, content_hash,
+    json_remove(snapshot_json, '$.content', '$.body_blob_hash') AS snapshot_metadata
     FROM node_sync_versions WHERE object_id = ? ORDER BY version_id`).all('node-1');
   const originalEdges = () => sqlite.prepare(`SELECT version_id, parent_version_id, ordinal
     FROM node_sync_version_parents WHERE version_id IN
@@ -104,10 +105,11 @@ it('merges a delayed edit using its real parent and preserves both branches', as
   await releaseLocalEditBase(createBetterSqliteDbPort(sqlite), 'draft', 'node-1');
   expect(originalGraph()).toEqual(graph);
   expect(originalEdges()).toEqual(edges);
-  expect(sqlite.prepare(`SELECT version_id, body_text, json_extract(snapshot_json, '$.content') AS content
+  expect(sqlite.prepare(`SELECT version_id, body_text, json_extract(snapshot_json, '$.content') AS content,
+      json_extract(snapshot_json, '$.body_blob_hash') AS body_blob_hash
     FROM node_sync_versions WHERE version_id IN (?, ?, ?) ORDER BY version_id`)
     .all(base, remote, 'ver_local-edit')).toEqual([base, remote, 'ver_local-edit'].sort()
-      .map((version_id) => ({ version_id, body_text: null, content: null })));
+      .map((version_id) => ({ version_id, body_text: null, content: null, body_blob_hash: null })));
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
     .get(result.current.version_id)).toEqual({ body_text: 'Apples and tea\nBread\nMilk and coffee\n' });
 });

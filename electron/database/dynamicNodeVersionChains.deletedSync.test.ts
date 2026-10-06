@@ -25,7 +25,8 @@ async function confirm(source: Peer, target: Peer, packId: string) {
 function originalFacts(peer: Peer) {
   return {
     versions: peer.db.prepare(`SELECT version_id, object_id, parent_version_id,
-      host_name, created_at, content_hash, json_remove(snapshot_json, '$.content') AS metadata
+      host_name, created_at, content_hash,
+      json_remove(snapshot_json, '$.content', '$.body_blob_hash') AS metadata
       FROM node_sync_versions WHERE object_id = 'topic' ORDER BY version_id`).all(),
     parents: peer.db.prepare(`SELECT edge.* FROM node_sync_version_parents edge
       JOIN node_sync_versions version ON version.version_id = edge.version_id
