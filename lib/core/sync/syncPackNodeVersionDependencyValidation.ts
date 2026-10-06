@@ -45,8 +45,8 @@ export async function validateStoredVersionDependencies(
     const incomingChild = byId.get(edge.version_id);
     const [storedChild] = await port.query<{ parent_version_id: string | null }>(
       'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?', [edge.version_id]);
-    if (convergedReplays.has(edge.version_id) && storedChild && incomingChild &&
-        storedChild.parent_version_id !== incomingChild.parent_version_id) continue;
+    if (convergedReplays.has(edge.version_id) && storedChild && (!incomingChild ||
+        storedChild.parent_version_id !== incomingChild.parent_version_id)) continue;
     // An existing contracted chain is kept as-is; incoming edges cannot expand it.
     if (storedChild && incomingChild && storedChild.parent_version_id !== incomingChild.parent_version_id) {
       if (!equivalentFrontiers.has(edge.version_id)) {
