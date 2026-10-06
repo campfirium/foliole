@@ -10,7 +10,7 @@ import {
   prepareCanonicalImageAttachment
 } from '../attachments/importImageAttachmentBytes.js';
 import { electronClipboardAccess } from '../clipboardAccess.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { buildImportNodeMutationPatch, withTextImportNodeMutationPatch } from '../import/importNodeMutationPatch.js';
 import {
@@ -54,7 +54,7 @@ async function runLocalImageFileImport(filePath: string, args?: NativeTextImport
     sourceName: path.basename(filePath)
   };
   return toNativeTextImportResult(
-    runPreparedImport(
+    await runWithDatabaseConnectionOwner(() => runPreparedImport(
       buildPreparedImportRecord(source, {
         content: createLocalImageInboxMarkdown(filePath),
         highlightPolicy: resolveImportHighlightPolicy(args),
@@ -63,7 +63,7 @@ async function runLocalImageFileImport(filePath: string, args?: NativeTextImport
         ...importTargetParentNodeProps(args),
         titleStrategy: resolveImportNodeTitleStrategy(args)
       })
-    )
+    ))
   );
 }
 
@@ -85,17 +85,19 @@ async function runClipboardFileImport(filePaths: string[], args?: NativeTextImpo
       'Clipboard file format is not supported. Supported formats: PDF, EPUB, Markdown, HTML, text, png, jpg, jpeg, webp, and gif.'
     );
   }
-  const nodeMutationPatch = buildImportNodeMutationPatch(results);
+  const nodeMutationPatch = await runWithDatabaseConnectionOwner(() => buildImportNodeMutationPatch(results));
   const patchedResult = nodeMutationPatch ? { ...lastResult, node_mutation_patch: nodeMutationPatch } : lastResult;
   notifyManagedInboxUpdated(patchedResult.import_id, patchedResult.node_mutation_patch);
   return patchedResult;
 }
 
-function updateImportedNodeContent(nodeId: string, content: string, nodeTitle: string, importedAt: string) {
-  const connection = openDatabaseConnection();
-  connection.driver.transaction(() => {
-    writeNodeBody({ driver: connection.driver, content: content, nodeId: nodeId,
-      title: nodeTitle, updatedAt: importedAt });
+async function updateImportedNodeContent(nodeId: string, content: string, nodeTitle: string, importedAt: string) {
+  await runWithDatabaseConnectionOwner(() => {
+    const connection = openDatabaseConnection();
+    connection.driver.transaction(() => {
+      writeNodeBody({ driver: connection.driver, content: content, nodeId: nodeId,
+        title: nodeTitle, updatedAt: importedAt });
+    });
   });
 }
 
@@ -113,7 +115,7 @@ async function runClipboardImageImport(args?: NativeTextImportArgs) {
   const importedAt = new Date().toISOString();
   const content = `![Pasted image](${buildAssetMarkdownUrl(storageKey)})`;
   const result = toNativeTextImportResult(
-    runPreparedImport(
+    await runWithDatabaseConnectionOwner(() => runPreparedImport(
       buildPreparedImportRecord(
         {
           filePath: `clipboard://image/${hash}`,
@@ -131,7 +133,7 @@ async function runClipboardImageImport(args?: NativeTextImportArgs) {
           titleStrategy: resolveImportNodeTitleStrategy(args)
         }
       )
-    )
+    ))
   );
   if (result.node_id) {
     const attachmentResult = await importImageAttachmentBytes({
@@ -142,10 +144,10 @@ async function runClipboardImageImport(args?: NativeTextImportArgs) {
       originalName
     });
     if (attachmentResult.status !== 'imported') {
-      updateImportedNodeContent(result.node_id, `[${attachmentResult.message}]`, 'Pasted image', importedAt);
+      await updateImportedNodeContent(result.node_id, `[${attachmentResult.message}]`, 'Pasted image', importedAt);
     }
   }
-  const patchedResult = withTextImportNodeMutationPatch(result);
+  const patchedResult = await runWithDatabaseConnectionOwner(() => withTextImportNodeMutationPatch(result));
   notifyManagedInboxUpdated(patchedResult.import_id, patchedResult.node_mutation_patch);
   return patchedResult;
 }
@@ -195,16 +197,17 @@ async function runClipboardTextImport(args?: NativeTextImportArgs) {
     return null;
   }
   const importedAt = new Date().toISOString();
-  const result = toNativeTextImportResult(
-    runPreparedImport(
-      createClipboardTextPreparedRecord({
-        ...(args === undefined ? {} : { args }),
-        importedAt,
-        ...textContent
-      })
+  const patchedResult = await runWithDatabaseConnectionOwner(() => withTextImportNodeMutationPatch(
+    toNativeTextImportResult(
+      runPreparedImport(
+        createClipboardTextPreparedRecord({
+          ...(args === undefined ? {} : { args }),
+          importedAt,
+          ...textContent
+        })
+      )
     )
-  );
-  const patchedResult = withTextImportNodeMutationPatch(result);
+  ));
   notifyManagedInboxUpdated(patchedResult.import_id, patchedResult.node_mutation_patch);
   return patchedResult;
 }

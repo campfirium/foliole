@@ -26,7 +26,10 @@ vi.mock('../attachments/importImageAttachmentBytes.js', () => ({
   importImageAttachmentBytes: vi.fn(),
   normalizeImageFileName: vi.fn((originalName: string | null | undefined) => originalName || 'pasted-image.png')
 }));
-vi.mock('../database/connection.js', () => ({ openDatabaseConnection: vi.fn() }));
+vi.mock('../database/connection.js', () => ({
+  openDatabaseConnection: vi.fn(),
+  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
+}));
 vi.mock('../../lib/core/database/searchIndexInvalidations.js', () => ({
   enqueueWorkspaceSearchInvalidationForNodeIds: vi.fn()
 }));

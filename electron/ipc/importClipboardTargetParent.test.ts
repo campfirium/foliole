@@ -30,7 +30,10 @@ vi.mock('../attachments/importImageAttachmentBytes.js', () => ({
   importImageAttachmentBytes: vi.fn(),
   normalizeImageFileName: vi.fn((name: string) => name)
 }));
-vi.mock('../database/connection.js', () => ({ openDatabaseConnection: vi.fn() }));
+vi.mock('../database/connection.js', () => ({
+  openDatabaseConnection: vi.fn(),
+  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
+}));
 
 import { runClipboardImport } from './importClipboard.js';
 

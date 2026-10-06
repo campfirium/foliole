@@ -65,7 +65,8 @@ vi.mock('../attachments/importImageAttachmentBytes.js', () => ({
   prepareCanonicalImageAttachment
 }));
 vi.mock('../database/connection.js', () => ({
-  openDatabaseConnection: vi.fn(() => ({ driver: databaseDriver }))
+  openDatabaseConnection: vi.fn(() => ({ driver: databaseDriver })),
+  runWithDatabaseConnectionOwner: vi.fn((execute: () => unknown) => execute())
 }));
 vi.mock('../../lib/core/database/searchIndexInvalidations.js', () => ({
   enqueueWorkspaceSearchInvalidationForNodeIds: vi.fn()
