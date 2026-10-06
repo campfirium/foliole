@@ -2,7 +2,6 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
 import type { SyncGroupJoinEncryptedInfoPayload } from './nativeCompanionSyncContract.js';
-import { parseSyncGroupJoinMergeProof, type SyncGroupJoinMergeProof } from './syncGroupJoinMergeProof.js';
 import {
   canonicalizeLibraryPath,
   parseDeviceAnchor,
@@ -25,7 +24,6 @@ export interface SyncGroupJoinRequestInput {
   device: SyncGroupJoinDeviceFacts;
   ephemeral_public_key: string;
   group_id: string;
-  merge_proof?: SyncGroupJoinMergeProof;
 }
 
 export interface SyncGroupJoinRequest extends SyncGroupJoinRequestInput {
@@ -53,8 +51,7 @@ const encoder = new TextEncoder();
 
 export function parseSyncGroupJoinRequestInput(value: unknown): SyncGroupJoinRequestInput {
   const raw = record(value, 'sync_group_join_request_invalid');
-  exactKeys(raw, ['contract_version', 'device', 'ephemeral_public_key', 'group_id',
-    ...('merge_proof' in raw ? ['merge_proof'] : [])]);
+  exactKeys(raw, ['contract_version', 'device', 'ephemeral_public_key', 'group_id']);
   if (raw.contract_version !== SYNC_GROUP_JOIN_CONTRACT_VERSION) {
     throw new Error('sync_group_join_contract_incompatible');
   }
@@ -63,7 +60,6 @@ export function parseSyncGroupJoinRequestInput(value: unknown): SyncGroupJoinReq
     device: parseDeviceFacts(raw.device),
     ephemeral_public_key: parseP256PublicKey(raw.ephemeral_public_key),
     group_id: requiredString(raw.group_id, 'group_id_invalid'),
-    ...('merge_proof' in raw ? { merge_proof: parseSyncGroupJoinMergeProof(raw.merge_proof) } : {})
   };
 }
 
@@ -100,14 +96,6 @@ export function syncGroupJoinAttemptFingerprint(input: SyncGroupJoinRequestInput
     value.device.canonical_library_path, value.device.device_anchor,
     value.device.device_name, value.device.path_flavor, value.device.platform
   ];
-  const proof = value.merge_proof;
-  fields.push(proof ? 'proof' : 'no-proof');
-  if (proof) {
-    const revisions = Object.entries(proof.source_proof_revisions)
-      .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
-    fields.push(proof.library_epoch, String(proof.proof_revision), String(revisions.length));
-    for (const [key, revision] of revisions) fields.push(key, String(revision));
-  }
   const digest = sha256.create();
   for (const field of fields) {
     const bytes = encoder.encode(field);

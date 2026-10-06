@@ -1,3 +1,5 @@
+import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { reconcileVersionedInlineBodies } from '../database/syncBodyProjectionReconcile.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
@@ -68,7 +70,8 @@ async function continuePeerSync(
   const pendingConflicts = await runWithDatabaseConnectionOwner(
     () => loadPendingWatchedFolderConflicts()
   );
-  if (pendingConflicts.length) return skipPeerSync(target, activity, 'watched_conflict');
+  const adoption = await loadSyncGroupLocalAdoption(createBetterSqliteDbPort(openDatabaseConnection().sqlite));
+  if (pendingConflicts.length && !adoption) return skipPeerSync(target, activity, 'watched_conflict');
   const result = await runPeerSyncStage('sync_pack', () => runDesktopFramedSyncInventoryRound({
     localLibraryEpoch: memberState.localLibraryEpoch,
     peer: target,

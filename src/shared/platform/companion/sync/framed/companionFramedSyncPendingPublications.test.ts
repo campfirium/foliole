@@ -7,6 +7,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../../../../../lib/core/database/framedSyncStagingSchema.js';
+import { SYNC_GROUP_METADATA_SCHEMA } from '../../../../../../lib/core/database/syncGroupSchemaStatements.js';
 import { canonicalContentId, canonicalTransferId } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { publishFramedSyncOutboundWithDbPort } from '../../../../../../lib/core/sync/framedSyncOutboundStaging.js';
 
@@ -58,6 +59,7 @@ function database(persistent = false) {
     directory = mkdtempSync(path.join(root, 'peer-route-'));
   }
   sqlite = new Database(persistent ? path.join(directory, 'route.db') : ':memory:');
+  sqlite.exec(SYNC_GROUP_METADATA_SCHEMA);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   sqlite.exec(`CREATE TABLE sync_group_local_state (singleton_id INTEGER, state TEXT,
     group_id TEXT, local_device_identity_key TEXT);

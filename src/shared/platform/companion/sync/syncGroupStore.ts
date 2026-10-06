@@ -1,8 +1,9 @@
 import { collectAllNodeVersionChains } from '../../../../../lib/core/database/dynamicNodeVersionChainMigration';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { beginSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { publishSyncGroupRestoreEvent } from '../../../../../lib/core/sync/syncGroupRestorePublication';
 import type { SyncGroupLibraryFacts, SyncGroupPayload } from '../../../../../lib/platform/syncGroupContract';
-import type { SyncGroupJoinMode } from '../../../../../lib/platform/syncGroupJoinMode';
+import { parseSyncGroupJoinMode, type SyncGroupJoinMode } from '../../../../../lib/platform/syncGroupJoinMode';
 import type { SyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 import { createCompanionUuid } from '../../companionUuid';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
@@ -33,7 +34,8 @@ export function loadCompanionSyncGroupLibraryFacts(): Promise<SyncGroupLibraryFa
 }
 
 export function joinCompanionSyncGroup(args: {
-  mode?: SyncGroupJoinMode;
+  mode: SyncGroupJoinMode;
+  endpointUrl?: string;
   device: SyncGroupDeviceIdentity;
   deviceName: string;
   displayName: string;
@@ -46,6 +48,7 @@ export function joinCompanionSyncGroup(args: {
   workgroupKey: string;
 }) {
   return owner().runWriter((db) => db.transaction(async (tx) => {
+    const mode = parseSyncGroupJoinMode(args.mode);
     if (await loadGroup(tx)) throw new Error('sync_group_identity_mismatch');
     const now = new Date().toISOString();
     await tx.run(
@@ -69,10 +72,17 @@ export function joinCompanionSyncGroup(args: {
        VALUES (1, ?, ?, 'active', ?)`,
       [args.device.group_id, args.device.identity_key, now]
     );
-    if (args.mode === 'overwrite') await publishSyncGroupRestoreEvent(tx, {
+    if (mode === 'overwrite') await publishSyncGroupRestoreEvent(tx, {
       group_id: args.device.group_id, restore_id: `restore-${createCompanionUuid()}`,
       restored_at: now, source_device_identity_key: args.device.identity_key
     });
+    if (mode === 'use-group') {
+      if (!args.endpointUrl) throw new Error('sync_group_endpoint_required');
+      await beginSyncGroupLocalAdoption(tx, { endpointUrl: args.endpointUrl,
+        groupId: args.device.group_id, libraryEpoch: `adoption-${createCompanionUuid()}`,
+        providerDeviceId: args.provider.device.identity_key,
+        providerDeviceName: args.provider.deviceName, providerPlatform: args.provider.platform });
+    }
     return (await loadGroup(tx))!;
   }));
 }
@@ -88,6 +98,7 @@ export function leaveCompanionSyncGroupDevice() {
       [now, now, group.group_id, group.local_device_identity_key]
     );
     await tx.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
+    await tx.run('DELETE FROM sync_group_metadata');
     await tx.run('DELETE FROM sync_delivery_receipts');
     await tx.run('DELETE FROM sync_peer_cursors');
     await tx.run('DELETE FROM sync_group_nonce_ledger');

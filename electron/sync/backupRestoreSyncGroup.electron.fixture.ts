@@ -6,7 +6,12 @@ export const app = {
   getVersion: () => '0.7.14', isPackaged: false,
   on: () => undefined, commandLine: { appendSwitch: () => undefined }
 };
-export const BrowserWindow = { getAllWindows: () => [], getFocusedWindow: () => null };
+export const windowEvents: Array<{ channel: string; payload: unknown }> = [];
+const window = { isDestroyed: () => false, webContents: {
+  isDestroyed: () => false,
+  send: (channel: string, payload: unknown) => windowEvents.push({ channel, payload })
+} };
+export const BrowserWindow = { getAllWindows: () => [window], getFocusedWindow: () => null };
 export const Notification = class { static isSupported() { return false; } };
 export const shell = { trashItem: async () => { throw new Error('test must not trash files'); } };
 export const nativeTheme = {};

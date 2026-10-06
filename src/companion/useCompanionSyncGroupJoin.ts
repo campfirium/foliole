@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { NativeCompanionBootstrapState } from '../../lib/platform/nativeCompanionContract';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
+import { completeCompanionSyncGroupAdoption } from '../shared/platform/companion/sync/completeCompanionSyncGroupAdoption';
 import { publishCompanionSyncMutationRevision } from '../shared/platform/companion/sync/mutation/companionSyncMutationRevision';
 import { loadCompanionSyncGroup } from '../shared/platform/companion/sync/syncGroupStore';
 import { startCompanionSyncGroupDiscoverySession } from '../shared/platform/companion/syncGroupDiscoverySession';
@@ -11,7 +12,6 @@ import {
   requestCompanionSyncGroupJoin
 } from '../shared/platform/companionSyncGroupJoinClient';
 import { chooseSyncGroupJoinMode } from '../shared/ui/chooseSyncGroupJoinMode';
-import { requestSyncGroupJoinWithChoice } from '../shared/ui/requestSyncGroupJoinWithChoice';
 
 import type {
   CompanionSyncGroupDiscovery,
@@ -138,13 +138,12 @@ function useJoinRequest(args: { config: SyncGroupJoinArgs; discoveries: Companio
     if (!mode) return null;
     setStatus('requesting'); args.config.onError(null);
     try {
-      const result = await requestSyncGroupJoinWithChoice(t, mode, (selected) => requestCompanionSyncGroupJoin({
+      const result = await requestCompanionSyncGroupJoin({
         databasePath,
         endpointUrl: candidate.endpointUrl,
         groupId: candidate.groupId,
-        mode: selected
-      }));
-      if (!result) { setStatus('idle'); return null; }
+        mode
+      });
       const next = pendingFromCandidate(result, candidate);
       pendingRequestRef.current = next;
       setPendingRequest(next); setStatus('awaiting-acceptance');
@@ -194,7 +193,10 @@ export function useCompanionSyncGroupJoin(args: SyncGroupJoinArgs) {
   useEffect(() => () => { void stopRef.current?.(); }, []);
   useEffect(() => { pendingRequestRef.current = pendingRequest; }, [pendingRequest]);
   useEffect(() => {
-    void loadCompanionSyncGroup().then((group) => setJoined(Boolean(group))).catch(() => setJoined(false));
+    void loadCompanionSyncGroup().then(async (group) => {
+      if (group) await completeCompanionSyncGroupAdoption();
+      setJoined(Boolean(group));
+    }).catch(() => setJoined(false));
   }, [args.bootstrapState.database_path]);
   useJoinAcceptancePolling(pendingRequest, complete);
   return { cancel, complete, discoveries, discover, joined, pendingRequest, request, status };

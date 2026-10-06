@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { SYNC_GROUP_LOCAL_ADOPTION_KEY } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import type { SyncGroupJoinGroupInfo } from '../../lib/platform/syncGroupJoinContract.js';
 import { parseSyncGroupJoinMode } from '../../lib/platform/syncGroupJoinMode.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -22,6 +23,19 @@ export async function commitDesktopSyncGroupJoin(pending: DesktopSyncGroupPendin
       group_id: joined.group_id, restore_id: `restore-${randomUUID()}`,
       restored_at: new Date().toISOString(), source_device_identity_key: joined.local_device_identity_key
     });
+    if (mode === 'use-group') {
+      tx.execute('DELETE FROM sync_group_restore_events WHERE group_id = ?', [info.group_id]);
+      tx.execute('DELETE FROM node_version_local_source_revisions');
+      const libraryEpoch = `adoption-${randomUUID()}`;
+      tx.execute(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      [SYNC_GROUP_LOCAL_ADOPTION_KEY, JSON.stringify({ libraryEpoch, groupId: info.group_id,
+        endpointUrl: pending.candidate.endpoint_url, providerDeviceId: pending.candidate.provider_device_id,
+        providerDeviceName: pending.candidate.provider_device_name, providerPlatform: pending.candidate.provider_platform }),
+        new Date().toISOString()]);
+      tx.execute('UPDATE node_version_local_proof_state SET library_epoch = ?, proof_revision = 0 WHERE singleton_id = 1',
+        [libraryEpoch]);
+    }
     return joined;
   });
   saveDesktopSyncGroupPendingJoin(null);

@@ -4,6 +4,7 @@ import {
   type TransferReceiptStage
 } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import type { SyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 
 import { applyPreparedDesktopFramedSyncInbound } from './desktopFramedSyncApplyPrepared.js';
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
@@ -21,7 +22,8 @@ export async function runDesktopFramedSyncRestoreRound(input: {
   exchange: Parameters<typeof exchangeDesktopFramedSyncInventoryHttp>[0];
   inbound: InboundRound;
   inventories: Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>>;
-  restoreId: string;
+  restoreId?: string;
+  adoption?: SyncGroupLocalAdoption;
 }) {
   const differences = compareFramedSyncInventories({
     local: [], remote: input.inventories.remote
@@ -44,10 +46,11 @@ export async function runDesktopFramedSyncRestoreRound(input: {
     local: input.inventories.remote,
     remote: confirmed.remote
   }).length !== 0) throw new Error('framed_sync_source_changed');
-  await preserveDesktopIdentityRestore(input.inbound.context.groupId, input.restoreId);
+  if (input.restoreId) await preserveDesktopIdentityRestore(input.inbound.context.groupId, input.restoreId);
   const applied = await applyPreparedDesktopFramedSyncInbound({
     db: input.inbound.db,
-    restore: { groupId: input.inbound.context.groupId, restoreId: input.restoreId },
+    ...(input.adoption ? { adoption: input.adoption } : {}),
+    ...(input.restoreId ? { restore: { groupId: input.inbound.context.groupId, restoreId: input.restoreId } } : {}),
     transfers: prepared
   });
   for (const [index, transfer] of prepared.entries()) {

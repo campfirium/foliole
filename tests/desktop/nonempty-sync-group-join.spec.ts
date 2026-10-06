@@ -63,29 +63,6 @@ async function seedDiscoveredCandidate(session: DesktopSession, candidate: Candi
   }, candidate);
 }
 
-async function syncDiscoveredPeer(session: DesktopSession, groupId: string, endpointUrl: string) {
-  await session.electronApp.evaluate(async ({ app }, input) => {
-    const pathApi = process.getBuiltinModule('node:path');
-    const moduleApi = process.getBuiltinModule('node:module');
-    if (!pathApi || !moduleApi) throw new Error('Node built-ins unavailable.');
-    const loadModule = moduleApi.createRequire(pathApi.join(app.getAppPath(), 'main.js'));
-    const store = loadModule(pathApi.join(app.getAppPath(), 'database', 'syncGroupStore.js'));
-    const routes = loadModule(pathApi.join(app.getAppPath(), 'sync', 'desktopSyncGroupRoutes.js'));
-    const transport = loadModule(pathApi.join(app.getAppPath(), 'sync', 'desktopSyncGroupTransport.js'));
-    const group = store.loadDesktopSyncGroup();
-    const local = group?.devices.find((device: { device_identity_key: string }) =>
-      device.device_identity_key === group.local_device_identity_key);
-    const peer = group?.devices.find((device: { device_identity_key: string }) =>
-      device.device_identity_key !== group.local_device_identity_key);
-    if (!local || !peer || group.group_id !== input.groupId) throw new Error('Missing Sync Group Device route.');
-    const route = routes.saveDesktopSyncGroupRoute({ endpoint_url: input.endpointUrl,
-      group_id: group.group_id, local_device_id: local.device_identity_key,
-      peer_device_id: peer.device_identity_key, peer_device_name: peer.device_name,
-      peer_platform: peer.platform });
-    await transport.continueDesktopSyncGroupSync(route);
-  }, { endpointUrl, groupId });
-}
-
 async function hasPersistedNode(session: DesktopSession, nodeId: string) {
   return await session.electronApp.evaluate(({ app }, id) => {
     const pathApi = process.getBuiltinModule('node:path');
@@ -119,6 +96,10 @@ async function createProvider(session: DesktopSession, windowPage: WindowPage) {
     return port;
   }).not.toBeNull();
   const endpoint = `http://127.0.0.1:${port}`;
+  await expect.poll(async () => {
+    const descriptor = await fetch(`${endpoint}/companion/discovery`).then((response) => response.json());
+    return descriptor.topology_role;
+  }).toBe('anchor');
   const discovery = await fetch(`${endpoint}/companion/discovery`).then((response) => response.json()) as {
     group_display_name: string; group_tag: string; provider_device_id: string;
     provider_device_name: string; provider_platform: string;
@@ -150,7 +131,6 @@ async function restartAndVerify(env: NodeJS.ProcessEnv, groupId: string, nodeIds
 
 async function joinAndConverge(args: {
   joiningEnv: NodeJS.ProcessEnv;
-  joiningPort: number;
   joiningSession: DesktopSession;
   provider: Awaited<ReturnType<typeof createProvider>>;
   providerSession: DesktopSession;
@@ -165,7 +145,7 @@ async function joinAndConverge(args: {
   await invoke(joiningWindow, 'pause_companion_sync');
   await seedDiscoveredCandidate(args.joiningSession, args.provider.candidate);
   await invoke(joiningWindow, 'request_sync_group_join', {
-    endpoint_url: args.provider.candidate.endpoint_url, mode: 'merge'
+    endpoint_url: args.provider.candidate.endpoint_url, mode: 'use-group'
   });
   let requestId: string | null = null;
   await expect.poll(async () => {
@@ -179,16 +159,14 @@ async function joinAndConverge(args: {
   await invoke(joiningWindow, 'complete_sync_group_join');
   await expect.poll(() => hasPersistedNode(args.joiningSession, args.provider.topicId), { timeout: 20_000 }).toBe(true);
   await expect.poll(() => hasNode(joiningWindow, args.provider.topicId), { timeout: 20_000 }).toBe(true);
-  await syncDiscoveredPeer(args.providerSession, args.provider.candidate.group_id,
-    `http://127.0.0.1:${args.joiningPort}`);
-  await expect.poll(() => hasPersistedNode(args.providerSession, joiningTopicId), { timeout: 20_000 }).toBe(true);
-  await expect.poll(() => hasNode(desktopWindow, joiningTopicId), { timeout: 20_000 }).toBe(true);
+  expect(await hasPersistedNode(args.joiningSession, joiningTopicId)).toBe(false);
+  expect(await hasPersistedNode(args.providerSession, joiningTopicId)).toBe(false);
   await args.joiningSession.close();
   return restartAndVerify(args.joiningEnv, args.provider.candidate.group_id,
-    [args.provider.topicId, joiningTopicId]);
+    [args.provider.topicId]);
 }
 
-test('two nonempty desktop Libraries join and converge through ordinary Sync Group sync', async ({ browserName }, testInfo) => {
+test('a nonempty desktop Library joins using group data and retains that data after restart', async ({ browserName }, testInfo) => {
   void browserName;
   let providerSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
   let joiningSession: Awaited<ReturnType<typeof launchDesktopSession>> | null = null;
@@ -212,7 +190,7 @@ test('two nonempty desktop Libraries join and converge through ordinary Sync Gro
     };
     joiningSession = await launchDesktopSession({ env: joiningEnv });
     joiningSession = await joinAndConverge({
-      joiningEnv, joiningPort, joiningSession, provider, providerSession
+      joiningEnv, joiningSession, provider, providerSession
     });
   } catch (error) {
     if (providerSession) {

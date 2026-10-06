@@ -32,7 +32,7 @@ export async function exchangeCompanionSyncGroupMemberState(target: CompanionWor
   const localRestore = applied.state.restore;
   return {
     localExited: applied.local_exited,
-    normalSyncReady: applied.normal_sync_ready,
+    normalSyncReady: applied.normal_sync_ready && !incoming.adopting_from,
     peerLibraryEpoch: incoming.library_epoch,
     peerRemoved: await isCompanionSyncGroupDeviceBlocked(target.groupId, target.deviceId),
     restoreFromPeer: localRestore && !localRestore.applied && incoming.restore?.applied &&

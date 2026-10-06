@@ -3,6 +3,7 @@ import type { DbPort } from './dbPort.js';
 // Materialized Sync Pack data is removed before the winning full pack is applied.
 // The caller owns a transaction that covers both operations and the restore receipt.
 const CLEAR_TABLES = [
+  'framed_sync_receipts',
   'node_version_local_origins', 'node_version_outbound_payload_holds', 'node_version_outbound_holds',
   'node_version_local_holds', 'node_version_pack_receipts', 'node_version_confirmation_state',
   'node_version_inbound_receipts', 'node_version_device_bases', 'node_version_member_positions',

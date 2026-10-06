@@ -40,7 +40,7 @@ async function discoverMac() {
 }
 
 async function joinMac(discovered: Awaited<ReturnType<typeof discoverMac>>, databasePath: string) {
-  const pending = await requestCompanionSyncGroupJoin({ mode: 'merge', databasePath,
+  const pending = await requestCompanionSyncGroupJoin({ mode: 'use-group', databasePath,
     endpointUrl: discovered.endpointUrl, groupId: GROUP_ID });
   postResult({ error: null, phase: 'join-requested', request_id: pending.request_id,
     scenario: SCENARIO, status: 'passed' });

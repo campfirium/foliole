@@ -4,6 +4,7 @@ import type {
   NativeCompanionFramedSyncInventoryResult,
   NativeCompanionFramedSyncPullRequest,
   NativeCompanionFramedSyncTransferReceipt,
+  NativeCompanionFramedSyncStagedTransfer,
   NativeCompanionFramedSyncTransferRequest,
   NativeCompanionSignedRequestHeaders
 } from '../../../lib/platform/nativeCompanionSyncContract';
@@ -87,6 +88,9 @@ export interface CompanionWorkspaceSyncPlugin
   readFramedSyncInventory(
     args: NativeCompanionFramedSyncInventoryRequest
   ): Promise<NativeCompanionFramedSyncInventoryResult>;
+  pullFramedSyncObject(
+    args: NativeCompanionFramedSyncPullRequest & { stage_only: true }
+  ): Promise<NativeCompanionFramedSyncStagedTransfer>;
   pullFramedSyncObject(
     args: NativeCompanionFramedSyncPullRequest
   ): Promise<NativeCompanionFramedSyncTransferReceipt>;

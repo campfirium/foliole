@@ -8,6 +8,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
 import { FRAMED_SYNC_INVENTORY_TABLES } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
+import { SYNC_GROUP_METADATA_SCHEMA } from '../../lib/core/database/syncGroupSchemaStatements.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
 import {
@@ -87,6 +88,7 @@ beforeEach(() => {
     CREATE TABLE review_log (node_id TEXT NOT NULL, op_id TEXT NOT NULL);`);
   for (const sql of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter((value) =>
     value.startsWith('CREATE TABLE IF NOT EXISTS content_blob'))) sqlite.exec(sql);
+  sqlite.exec(SYNC_GROUP_METADATA_SCHEMA);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   for (const sql of FRAMED_SYNC_INVENTORY_TABLES) sqlite.exec(sql);
   port = createBetterSqliteDbPort(sqlite);

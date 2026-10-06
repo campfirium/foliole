@@ -2,20 +2,23 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import type { SyncGroupDiscoverySnapshot } from '../../lib/platform/syncGroupDiscoveryContract';
-import { registerAppChoiceHandler } from '../shared/ui/appChoice';
 
 vi.mock('../shared/localization/LocalizationProvider', () => ({ useTranslation: () => (key: string) => key }));
-const choice = vi.hoisted(() => ({ select: vi.fn(async () => 'merge' as string | null) }));
+const choice = vi.hoisted(() => ({ select: vi.fn(async () => 'use-group' as string | null) }));
 vi.mock('../shared/ui/chooseSyncGroupJoinMode', () => ({ chooseSyncGroupJoinMode: choice.select }));
 
 const runtime = vi.hoisted(() => ({
   callback: null as null | ((snapshot: SyncGroupDiscoverySnapshot) => void),
   complete: vi.fn(),
   loadGroup: vi.fn(),
+  adopt: vi.fn(),
   request: vi.fn(),
   stop: vi.fn()
 }));
 
+vi.mock('../shared/platform/companion/sync/completeCompanionSyncGroupAdoption', () => ({
+  completeCompanionSyncGroupAdoption: runtime.adopt
+}));
 vi.mock('../shared/platform/companion/sync/syncGroupStore', () => ({
   loadCompanionSyncGroup: runtime.loadGroup
 }));
@@ -43,34 +46,12 @@ const candidate = {
   provider_platform: 'ios-capacitor'
 };
 
-it.each([null, 'overwrite'])('handles restoration on the mobile applicant with choice %s', async (selected) => {
-  const remove = registerAppChoiceHandler(async () => selected);
-  runtime.request.mockRejectedValueOnce(new Error('sync_group_merge_requires_overwrite'));
-  const onSaveEndpoint = vi.fn(async () => undefined);
-  const { result } = renderHook(() => useCompanionSyncGroupJoin({
-    bootstrapState: { database_path: '/library/foliole.db' } as never, onError: vi.fn(), onSaveEndpoint
-  }));
-  try {
-    await act(() => result.current.discover());
-    act(() => runtime.callback?.({ candidates: [candidate], change: 'found', error_code: null, status: 'results' }));
-    await act(() => result.current.request(candidate.endpoint_url));
-    expect(runtime.request).toHaveBeenCalledTimes(selected ? 2 : 1);
-    if (selected) expect(runtime.request).toHaveBeenLastCalledWith(expect.objectContaining({
-      endpointUrl: candidate.endpoint_url, groupId: candidate.group_id, mode: 'overwrite'
-    }));
-    else {
-      expect(result.current.status).toBe('idle');
-      expect(result.current.pendingRequest).toBeNull();
-      expect(onSaveEndpoint).not.toHaveBeenCalled();
-    }
-  } finally { remove(); }
-});
-
 beforeEach(() => {
   vi.clearAllMocks();
   runtime.callback = null;
-  choice.select.mockResolvedValue('merge');
+  choice.select.mockResolvedValue('use-group');
   runtime.loadGroup.mockResolvedValue(null);
+  runtime.adopt.mockResolvedValue(undefined);
   runtime.request.mockResolvedValue({
     endpoint_url: candidate.endpoint_url,
     expires_at: '2026-08-26T16:00:00.000Z',
@@ -216,4 +197,30 @@ it.each(['overwrite', null])('requests membership only after choosing %s', async
   } else {
     expect(runtime.request).toHaveBeenCalledWith(expect.objectContaining({ mode: 'overwrite' }));
   }
+});
+
+it('waits for a resumed local replacement before showing successful membership', async () => {
+  let finish!: () => void;
+  runtime.loadGroup.mockResolvedValue({ group_id: candidate.group_id });
+  runtime.adopt.mockImplementation(() => new Promise<void>((resolve) => { finish = resolve; }));
+  const { result } = renderHook(() => useCompanionSyncGroupJoin({
+    bootstrapState: { database_path: '/library/foliole.db' } as never,
+    onError: vi.fn(), onSaveEndpoint: vi.fn()
+  }));
+  await waitFor(() => expect(runtime.adopt).toHaveBeenCalledOnce());
+  expect(result.current.joined).toBe(false);
+  await act(async () => finish());
+  expect(result.current.joined).toBe(true);
+});
+
+it('passes the group-to-device choice through the applicant UI', async () => {
+  choice.select.mockResolvedValue('use-group');
+  const { result } = renderHook(() => useCompanionSyncGroupJoin({
+    bootstrapState: { database_path: '/library/foliole.db' } as never,
+    onError: vi.fn(), onSaveEndpoint: vi.fn()
+  }));
+  await act(() => result.current.discover());
+  act(() => runtime.callback?.({ candidates: [candidate], change: 'found', error_code: null, status: 'results' }));
+  await act(() => result.current.request(candidate.endpoint_url));
+  expect(runtime.request).toHaveBeenCalledWith(expect.objectContaining({ mode: 'use-group' }));
 });

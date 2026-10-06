@@ -1,23 +1,9 @@
-import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
-import {
-  framedSyncBytes,
-  framedSyncText,
-  readFramedSyncReceipt,
-  sameFramedSyncBytes
-} from '../../../../../../lib/core/database/framedSyncStagingSerialization.js';
+import { framedSyncBytes, framedSyncText } from '../../../../../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
-import type { TransferReceiptStage } from '../../../../../../lib/core/sync/framedSyncContract.js';
-import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
-import { assertFramedSyncNodeParentDependencies } from '../../../../../../lib/core/sync/framedSyncNodeParentDependencies.js';
-import { applyFramedSyncObjectStateRecord } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
-import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewApply.js';
 import { canonicalFactFromValidatedMessage } from '../../../../../../lib/core/sync/framedSyncWireFact.js';
-import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
-import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import { isNodeVersionIdentityOnly } from '../../../../../../lib/core/sync/syncNodeVersionHistory.js';
-import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
 
+import { applyPreparedCompanionFramedSyncTransfers } from './companionFramedSyncApplyPrepared.js';
 import { decodeCompanionFramedSyncTransfer } from './companionFramedSyncDecode.js';
 
 const STAGING_TABLES = {
@@ -77,17 +63,7 @@ async function loadTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
   return { bodyRows, contentId: framedSyncBytes(transfer, 'content_id'), facts, resourceRows };
 }
 
-function receiptIdentityMatches(left: TransferReceiptStage, right: Omit<TransferReceiptStage, 'appliedStateHash'>) {
-  return sameFramedSyncBytes(left.transferId, right.transferId) &&
-    sameFramedSyncBytes(left.contentId, right.contentId) &&
-    left.receiverDeviceId === right.receiverDeviceId &&
-    left.receiverLibraryEpoch === right.receiverLibraryEpoch;
-}
-
-export async function applyCompanionFramedSyncTransfer(
-  db: DbPort,
-  input: CompanionFramedSyncApplyInput
-) {
+export async function prepareCompanionFramedSyncTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
   const tables = STAGING_TABLES[input.stagingKind];
   if (!tables) throw new Error('framed_sync_staging_kind_invalid');
   await db.run(`ATTACH DATABASE ${sqlString(input.stagingPath)} AS ${tables.alias}`);
@@ -96,59 +72,14 @@ export async function applyCompanionFramedSyncTransfer(
     const decoded = decodeCompanionFramedSyncTransfer({ bodyRows: staged.bodyRows,
       facts: staged.facts, resourceRows: staged.resourceRows,
       resourceStorageKeys: input.resourceStorageKeys ?? [] });
-    const receiptIdentity = {
-      contentId: staged.contentId,
-      receiverDeviceId: input.receiverDeviceId,
-      receiverLibraryEpoch: input.receiverLibraryEpoch,
-      transferId: input.transferId
-    };
-    return await db.transaction(async (tx) => {
-      const [existing] = await tx.query<DbRow>(
-        'SELECT * FROM framed_sync_receipts WHERE transfer_id = ?', [input.transferId]
-      );
-      if (existing) {
-        const stored = readFramedSyncReceipt(existing);
-        if (!receiptIdentityMatches(stored, receiptIdentity)) throw new Error('receipt_identity_conflict');
-        return stored;
-      }
-      await recordFramedSyncResourceAvailability(tx,
-        (input.resourceStorageKeys ?? []).map((key) => key.slice(0, 64)), true);
-      await assertFramedSyncNodeParentDependencies(tx, decoded.nodes);
-      for (const node of decoded.nodes) {
-        if (isNodeVersionIdentityOnly(node)) continue;
-        await upsertTextBodyBlob(
-          tx, node.body_text ?? '', node.snapshot.updated_at, node.snapshot.body_blob_hash!
-        );
-      }
-      if (decoded.nodes.length) await applySyncNodesWithDbPort(
-        tx, decoded.nodes, { enqueueSearchInvalidations: false }
-      );
-      await applyFramedSyncRelationReviewFactsWithDbPort(tx, decoded.relationReviewFacts);
-      for (const body of decoded.externalBodies ?? []) {
-        await upsertTextBodyBlob(tx, body.text, new Date().toISOString(), body.hash);
-      }
-      await applyStateRecords(tx, decoded.readingStates);
-      const current = await readFramedSyncInventoryEntry(
-        tx, { globalId: decoded.globalId, objectType: decoded.objectType }
-      );
-      if (!current) throw new Error('framed_sync_applied_state_missing');
-      const receipt: TransferReceiptStage = {
-        ...receiptIdentity,
-        appliedStateHash: current.sharedStateHash
-      };
-      await tx.run('INSERT INTO framed_sync_receipts VALUES (?, ?, ?, ?, ?)', [receipt.transferId,
-        receipt.contentId, receipt.receiverDeviceId, receipt.receiverLibraryEpoch, receipt.appliedStateHash]);
-      return receipt;
-    });
+    return { contentId: staged.contentId, decoded, input };
   } finally {
     await db.run(`DETACH DATABASE ${tables.alias}`);
   }
 }
 
-async function applyStateRecords(
-  db: DbPort, records: Awaited<ReturnType<typeof decodeCompanionFramedSyncTransfer>>['readingStates']
-) {
-  const hostName = records.some((record) => record.object_type === 'setting')
-    ? await iosCompanionHostName(db) : undefined;
-  for (const record of records) await applyFramedSyncObjectStateRecord(db, record, hostName ? { hostName } : {});
+export async function applyCompanionFramedSyncTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
+  const prepared = await prepareCompanionFramedSyncTransfer(db, input);
+  const result = await applyPreparedCompanionFramedSyncTransfers(db, [prepared]);
+  return result[0]!;
 }

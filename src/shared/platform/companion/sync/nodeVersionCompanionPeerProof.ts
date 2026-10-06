@@ -1,4 +1,5 @@
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
+import { reconcileAdoptedPeerEpoch } from '../../../../../lib/core/sync/syncGroupAdoptedPeerEpoch';
 import type { SyncGroupMemberStatePayload } from '../../../../../lib/platform/syncGroupMemberStateContract';
 
 export async function loadCompanionLocalNodeProof(db: DbPort) {
@@ -16,6 +17,7 @@ export async function loadCompanionLocalNodeProof(db: DbPort) {
 export async function assertCompanionPeerProofFresh(
   db: DbPort, incoming: SyncGroupMemberStatePayload, localDeviceId: string
 ) {
+  await reconcileAdoptedPeerEpoch(db, incoming);
   const [known] = await db.query<{ library_epoch: string; proof_revision: number }>(
     `SELECT library_epoch, proof_revision FROM node_version_device_revisions
      WHERE group_id = ? AND device_identity_key = ?`,

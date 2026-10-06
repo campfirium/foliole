@@ -18,7 +18,7 @@ vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({
   }
 }));
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({
-  getIosCompanionDatabaseOwner: () => ({ read: (task: (db: object) => unknown) => task({}) })
+  getIosCompanionDatabaseOwner: () => ({ read: (task: (db: object) => unknown) => task({ query: async () => [] }) })
 }));
 vi.mock('./companionFramedSyncInventory', () => ({
   readCompanionFramedSyncInventory: mocks.localInventory,

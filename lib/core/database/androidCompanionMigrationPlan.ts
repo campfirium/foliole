@@ -171,6 +171,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(67, 'installSchema', 'Failed to add daily foreground time.'),
   step(69, 'installSchema', 'Failed to add retained version query indexes.'),
   step(70, 'installSchema', 'Failed to install shared companion retention indexes.'),
+  step(72, 'installSchema', 'Failed to install local sync admission metadata.'),
   step(71, 'installSchema', 'Failed to install write-maintained framed inventory.'),
 ] as const;
 

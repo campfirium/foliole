@@ -5,6 +5,8 @@ import {
 } from '../../lib/core/sync/framedSyncContract.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { deliverFramedSyncDifferencesInDependencyOrder } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
@@ -30,10 +32,11 @@ export async function runDesktopFramedSyncInventoryRound(args: {
   remoteLibraryEpoch: string;
   restoreId?: string;
 }) {
-  const runtime = await loadRoundRuntime(args.peer.group_id);
+  const runtime = await loadRoundRuntime(args.peer);
+  const { adoption } = runtime;
   const local = { deviceId: args.peer.local_device_id, libraryEpoch: args.localLibraryEpoch };
   const remote = { deviceId: args.peer.peer_device_id, libraryEpoch: args.remoteLibraryEpoch };
-  if (!args.restoreId) await resumeDesktopFramedSyncPendingPublications({
+  if (!args.restoreId && !adoption) await resumeDesktopFramedSyncPendingPublications({
     db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
     local, peer: remote, peerOrigin: args.peer.endpoint_url, staging: runtime.staging
   });
@@ -63,9 +66,10 @@ export async function runDesktopFramedSyncInventoryRound(args: {
     roundId: inventories.roundId,
     staging: runtime.staging
   };
-  if (args.restoreId) {
+  if (args.restoreId || adoption) {
     return runDesktopFramedSyncRestoreRound({
-      restoreId: args.restoreId,
+      ...(adoption ? { adoption } : {}),
+      ...(args.restoreId && !adoption ? { restoreId: args.restoreId } : {}),
       inventories,
       inbound,
       exchange: {
@@ -88,17 +92,16 @@ async function transferDifferences(
   endpoint: ReturnType<typeof createDesktopFramedSyncRoundEndpoint>,
   inbound: InboundRound
 ) {
-  let pending = 0;
   let transferred = 0;
-  for (const difference of differences) {
+  const deferred = await deliverFramedSyncDifferencesInDependencyOrder(differences, async (difference) => {
     if (difference.direction === 'remote_to_local') {
       const state = await receiveRemoteDifference(difference, inbound);
-      if (state === 'pending') pending += 1;
-      else transferred += 1;
-      continue;
+      if (state === 'pending') return 'deferred';
+      transferred += 1;
+      return 'delivered';
     }
     const selection = await endpoint.selectOutbound(difference);
-    if (selection.kind === 'deferred') { pending += 1; continue; }
+    if (selection.kind === 'deferred') return 'deferred';
     await endpoint.staging.publishOutbound(selection.publication);
     const state = await endpoint.sendPublishedTransfer({
       difference,
@@ -106,9 +109,9 @@ async function transferDifferences(
       receiver: 'remote'
     });
     transferred += 1;
-    if (state === 'pending') pending += 1;
-  }
-  return { complete: pending === 0, pending, transferred };
+    return state === 'pending' ? 'deferred' : 'delivered';
+  });
+  return { complete: deferred.length === 0, pending: deferred.length, transferred };
 }
 
 export type InboundRound = Readonly<{
@@ -209,18 +212,28 @@ function sameBytes(left: Uint8Array, right: Uint8Array) {
     left.every((byte, index) => byte === right[index]);
 }
 
-function loadRoundRuntime(groupId: string) {
-  return runWithDatabaseConnectionOwner(() => {
-    const workgroup = loadDesktopWorkgroupKey(groupId);
+function loadRoundRuntime(peer: DesktopSyncGroupPeer) {
+  return runWithDatabaseConnectionOwner(async () => {
+    const workgroup = loadDesktopWorkgroupKey(peer.group_id);
     if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
     const connection = openDatabaseConnection();
     const db = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-framed-sync-round' });
+    const adoption = await loadSyncGroupLocalAdoption(db);
+    assertAdoptionSource(adoption, peer);
     return {
-      db,
+      adoption, db,
       groupKey: new Uint8Array(Buffer.from(workgroup.group_key, 'base64url')),
       groupSecret: workgroup.group_key,
       noncePort: createDesktopFramedSyncSessionNoncePort(db),
       staging: createDesktopFramedSyncStaging(db)
     };
   });
+}
+
+function assertAdoptionSource(
+  adoption: Awaited<ReturnType<typeof loadSyncGroupLocalAdoption>>, peer: DesktopSyncGroupPeer
+) {
+  if (adoption && (adoption.providerDeviceId !== peer.peer_device_id || adoption.groupId !== peer.group_id)) {
+    throw new Error('sync_group_local_adoption_source_mismatch');
+  }
 }

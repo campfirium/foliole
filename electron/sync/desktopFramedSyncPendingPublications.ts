@@ -1,5 +1,6 @@
 import { readFramedSyncPublication } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbRow } from '../../lib/core/sync/dbPort.js';
+import { loadSyncGroupLocalAdoption, isSyncGroupPeerAdopting } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 
 import { prepareDesktopFramedSyncPublishedTransfer,
   sendDesktopFramedSyncPublishedTransfer } from './desktopFramedSyncProcessOutbound.js';
@@ -9,6 +10,8 @@ type EndpointInput = Parameters<typeof createDesktopFramedSyncRoundEndpoint>[0];
 
 /** Reconnect drains durable deliveries even when the current inventories agree. */
 export async function resumeDesktopFramedSyncPendingPublications(input: EndpointInput) {
+  if (await loadSyncGroupLocalAdoption(input.db) ||
+      await isSyncGroupPeerAdopting(input.db, input.groupId, input.peer.deviceId)) return 0;
   const rows = await input.db.query<DbRow>(`SELECT publication.*
     FROM framed_sync_outbound_publications publication
     JOIN framed_sync_outbound_holds hold ON hold.transfer_id = publication.transfer_id

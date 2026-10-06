@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+
 import { framedSyncMemberRemovalReleaseStatements } from '../../lib/core/sync/framedSyncMemberRemovalRelease.js';
 import type { SyncGroupDevicePayload } from '../../lib/platform/syncGroupContract.js';
 import type {
@@ -14,10 +15,9 @@ import {
 
 import { openDatabaseConnection } from './connection.js';
 import {
-  assertDesktopPeerProofFresh,
-  loadDesktopLocalNodeProof,
-  recordDesktopAcknowledgedPeerProof
+  loadDesktopLocalNodeProof
 } from './nodeVersionPeerProof.js';
+import { applyDesktopSyncGroupAdoptionPeerProof, loadDesktopCompletedAdoptionSource, loadDesktopSyncGroupLocalAdoption, saveDesktopSyncGroupPeerAdoption } from './syncGroupLocalAdoptionStore.js';
 import {
   loadDesktopSyncGroupRestoreState,
   receiveDesktopSyncGroupRestoreState,
@@ -44,17 +44,21 @@ export function loadDesktopSyncGroupMemberState(args?: {
         FROM sync_group_local_state WHERE singleton_id = 1 AND state = 'active'`);
   if (!context) throw new Error('sync_group_not_available');
   const proof = loadDesktopLocalNodeProof();
+  const adoption = loadDesktopSyncGroupLocalAdoption(driver);
+  const adoptedFrom = !adoption && loadDesktopCompletedAdoptionSource(driver, String(context.group_id), proof.library_epoch);
   return {
     contract_version: SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION,
+    ...(adoption ? { adopting_from: adoption.providerDeviceId } : {}),
+    ...(adoptedFrom ? { adopted_from: adoptedFrom } : {}),
     devices: loadDevices(String(context.group_id)),
     group_id: String(context.group_id),
     library_epoch: proof.library_epoch,
     proof_revision: proof.proof_revision,
     source_proof_revisions: proof.source_proof_revisions,
     removals: loadRemovals(String(context.group_id)),
-    restore: loadDesktopSyncGroupRestoreState(driver, String(context.group_id)),
+    restore: adoption ? null : loadDesktopSyncGroupRestoreState(driver, String(context.group_id)),
     sender_device_identity_key: String(context.local_device_identity_key),
-    ...loadWatchedFolderGroupMemberState()
+    ...(adoption ? {} : loadWatchedFolderGroupMemberState())
   };
 }
 
@@ -97,8 +101,11 @@ export function applyDesktopSyncGroupMemberState(
   let localExited = false;
   let normalSyncReady = false;
   driver.transaction(() => {
+    saveDesktopSyncGroupPeerAdoption(driver, local, incoming, now);
     const localRestore = receiveDesktopSyncGroupRestoreState(driver, incoming.group_id, incoming.restore);
-    normalSyncReady = syncGroupRestorePeersReady(localRestore, incoming.restore);
+    normalSyncReady = local.adopting_from
+      ? local.adopting_from === authenticatedDeviceId && !incoming.adopting_from && incoming.restore?.applied !== false
+      : incoming.adopting_from === local.sender_device_identity_key || syncGroupRestorePeersReady(localRestore, incoming.restore);
     if (!normalSyncReady) {
       if (localRestore?.applied && localRestore.event.source_device_identity_key === local.sender_device_identity_key &&
           incoming.restore?.event.restore_id === localRestore.event.restore_id) {
@@ -108,11 +115,10 @@ export function applyDesktopSyncGroupMemberState(
       }
       return;
     }
-    assertDesktopPeerProofFresh(incoming);
-    recordDesktopAcknowledgedPeerProof(incoming, local.sender_device_identity_key);
+    applyDesktopSyncGroupAdoptionPeerProof(incoming, local);
     for (const removal of incoming.removals) mergeRemoval(incoming.group_id, removal);
     for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key);
-    applyWatchedFolderGroupMemberState(incoming, authenticatedDeviceId);
+    if (!local.adopting_from) applyWatchedFolderGroupMemberState(incoming, authenticatedDeviceId);
     for (const removal of loadRemovals(incoming.group_id)) {
       if (removal.superseded_at || removal.completed_at) continue;
       const targetsLocal = removal.target_device_identity_key === local.sender_device_identity_key;

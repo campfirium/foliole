@@ -2,6 +2,7 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { createFramedSyncOutboundReceiptStaging } from '../../../../../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
+import { loadSyncGroupLocalAdoption, isSyncGroupPeerAdopting } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
@@ -33,6 +34,8 @@ export async function resumeCompanionFramedSyncPendingPublications(
   args: NativeCompanionFramedSyncInventoryRequest
 ) {
   const owner = getIosCompanionDatabaseOwner();
+  if (await owner.read(loadSyncGroupLocalAdoption) || await owner.read((db) =>
+    isSyncGroupPeerAdopting(db, args.sync_group_id, args.receiver_device_id))) return 0;
   const pending = await owner.read((db) => readCompanionFramedSyncPendingPublications(db, args));
   for (const publication of pending) {
     if (publication.state === 'receipt_committed') {

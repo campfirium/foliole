@@ -1,11 +1,12 @@
+import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import {
   parseSyncGroupJoinGroupInfo,
   SYNC_GROUP_JOIN_CONTRACT_VERSION,
   type SyncGroupJoinAcceptance
 } from '../../lib/platform/syncGroupJoinContract.js';
 import { parseSyncGroupJoinMode } from '../../lib/platform/syncGroupJoinMode.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 
@@ -23,6 +24,7 @@ import {
 } from './desktopSyncGroupJoinState.js';
 import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
+import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
 import {
   removeDesktopSyncGroupRoute, saveDesktopSyncGroupRoute, type DesktopSyncGroupPeer
 } from './desktopSyncGroupRoutes.js';
@@ -56,7 +58,6 @@ export async function requestDesktopSyncGroupJoin(endpointUrl: string, modeValue
       },
       ephemeral_public_key: key.publicKey,
       group_id: candidate.group_id,
-      ...(mode === 'merge' ? { merge_proof: loadDesktopLocalNodeProof() } : {})
     }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST'
@@ -86,7 +87,25 @@ export async function completeDesktopSyncGroupJoin(options: CompleteDesktopSyncG
 
 async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGroupJoinOptions) {
   const pending = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroupJoinState().pending);
-  if (!pending) throw new Error('sync_group_join_not_pending');
+  if (!pending) {
+    const adoption = await loadSyncGroupLocalAdoption(createBetterSqliteDbPort(openDatabaseConnection().sqlite));
+    if (!adoption) throw new Error('sync_group_join_not_pending');
+    const group = loadDesktopSyncGroup();
+    if (!group || group.group_id !== adoption.groupId) {
+      throw new Error('sync_group_local_adoption_source_unavailable');
+    }
+    const route = loadDesktopSyncGroupRoutes(adoption.groupId).find((peer) => peer.peer_device_id === adoption.providerDeviceId) ?? {
+      endpoint_url: adoption.endpointUrl, group_id: adoption.groupId,
+      local_device_id: group.local_device_identity_key, peer_device_id: adoption.providerDeviceId,
+      peer_device_name: adoption.providerDeviceName, peer_platform: adoption.providerPlatform,
+      route_kind: ['android-capacitor', 'ios-capacitor'].includes(adoption.providerPlatform.toLowerCase())
+        ? 'mobile_guide' as const : 'anchor' as const
+    };
+    saveDesktopSyncGroupRoute(route);
+    await options.onMembershipCommitted?.();
+    await runDesktopSyncCoordinator('initial', route);
+    return loadDesktopSyncGroup();
+  }
   if (Date.now() >= new Date(pending.request.expires_at).getTime()) {
     saveDesktopSyncGroupPendingJoin(null);
     throw new Error('sync_group_join_request_expired');
@@ -112,7 +131,8 @@ async function completeDesktopSyncGroupJoinOnce(options: CompleteDesktopSyncGrou
     });
     notifyDesktopSyncGroupOverviewChanged();
   }
-  queueInitialSync(route);
+  if (pending.mode === 'use-group') await runDesktopSyncCoordinator('initial', route);
+  else queueInitialSync(route);
   return runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup());
 }
 

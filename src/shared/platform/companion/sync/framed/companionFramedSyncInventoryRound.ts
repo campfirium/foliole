@@ -8,6 +8,7 @@ import {
   type FramedSyncInventoryEntry
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { deliverFramedSyncDifferencesInDependencyOrder } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import type {
   NativeCompanionFramedSyncInventoryEntry,
   NativeCompanionFramedSyncInventoryRequest,
@@ -24,6 +25,7 @@ import {
 import { rememberCompanionFramedSyncPeerRoute } from './companionFramedSyncPeerRoutes.js';
 import { resumeCompanionFramedSyncPendingPublications } from './companionFramedSyncPendingPublications.js';
 import { sendCompanionFramedSyncObject } from './companionFramedSyncTransfer.js';
+import { adoptCompanionSyncGroupData } from './companionSyncGroupLocalAdoption.js';
 
 const HEX_DIGEST = /^[a-f0-9]{64}$/u;
 
@@ -141,6 +143,8 @@ export function selectCompanionFramedSyncCurrentNodes(args: {
 export async function sendCompanionFramedSyncInventoryDifferences(
   args: NativeCompanionFramedSyncInventoryRequest
 ) {
+  const adoption = await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption);
+  if (adoption) return adoptCompanionSyncGroupData(args, adoption);
   await resumeCompanionFramedSyncPendingPublications(args);
   const owner = getIosCompanionDatabaseOwner();
   const [localValue, remoteResult] = await Promise.all([

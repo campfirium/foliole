@@ -23,6 +23,7 @@ import {
   assertOutboundPublication,
   type OutboundPublishInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
+import { assertSyncGroupLocalPublicationAllowed } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadRetainedSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { isNodeVersionIdentityOnly, orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
@@ -160,6 +161,7 @@ export async function publishDesktopFramedSyncNodeOutbound(
   input: DesktopFramedSyncOutboundInput
 ): Promise<DesktopFramedSyncOutboundResult> {
   return input.port.transaction(async (tx) => {
+    await assertSyncGroupLocalPublicationAllowed(tx);
     const difference = input.difference;
     if (difference.direction !== 'local_to_remote') {
       throw new Error('framed_sync_outbound_direction_invalid');

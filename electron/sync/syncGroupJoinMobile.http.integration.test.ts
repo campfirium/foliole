@@ -69,9 +69,13 @@ async function restoredApplicant(platform: string) {
   await source.send('seed', { id: 'local-topic', content: 'Restored local data' });
   const backup = await source.send('backup');
   await provider.send('seed', { id: 'remote-topic', content: 'New remote data' });
-  await provider.send('joinProviderEnable');
-  await source.send('sync', { ...peer });
-  await provider.send('sync', { ...local });
+  await provider.send('joinProviderEnable', { anchor: true });
+  for (const [worker, target] of [[source, peer], [provider, local]] as const) {
+    await worker.send('sync', { ...target }).catch((error: Error) => {
+      if (!error.message.includes('sync_group_sync_incomplete')) throw error;
+    });
+    await worker.send('sync', { ...target });
+  }
   const proofs = await provider.send('proofs') as unknown as Array<{
     device_identity_key: string; library_epoch: string; proof_revision: number
   }>;
@@ -88,14 +92,14 @@ async function restoredApplicant(platform: string) {
   return { groupId, local, peer, provider };
 }
 
-it.each(['ios-capacitor', 'android-capacitor'])('%s preserves restore refusal over HTTP and explicitly joins by overwrite', async (platform) => {
+it.each(['ios-capacitor', 'android-capacitor'])('%s rejects the removed merge mode and explicitly joins by overwrite', async (platform) => {
   const { groupId, local, peer, provider } = await restoredApplicant(platform);
   const clientPath = '../../src/shared/platform/companionSyncGroupJoinClient';
   const { requestCompanionSyncGroupJoin, completeCompanionSyncGroupJoin } = await import(clientPath);
   const args = { databasePath: local.database, endpointUrl: peer.origin, groupId };
   const before = sqlite!.prepare('SELECT id, content FROM nodes ORDER BY id').all();
   await expect(requestCompanionSyncGroupJoin({ ...args, mode: 'merge' }))
-    .rejects.toThrow('sync_group_merge_requires_overwrite');
+    .rejects.toThrow('sync_group_join_mode_required');
   expect(sqlite!.prepare('SELECT id, content FROM nodes ORDER BY id').all()).toEqual(before);
   expect(sqlite!.prepare('SELECT * FROM sync_group_local_state').all()).toHaveLength(0);
   expect((await provider.send('joinOverview') as unknown as { join_requests: unknown[] }).join_requests).toHaveLength(0);

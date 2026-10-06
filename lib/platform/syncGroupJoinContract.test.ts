@@ -13,17 +13,17 @@ it.each([null, {}, { library_epoch: 'epoch', proof_revision: -1, source_proof_re
   { library_epoch: 'epoch', proof_revision: 1, source_proof_revisions: { peer: -1 } },
   { library_epoch: ' epoch', proof_revision: 1, source_proof_revisions: {} },
   { library_epoch: 'epoch', proof_revision: 1, source_proof_revisions: { ' peer': 1 } }])(
-  'rejects an invalid merge proof instead of treating it as overwrite', (merge_proof) => {
+  'rejects the removed merge proof field', (merge_proof) => {
     expect(() => parseSyncGroupJoinRequestInput({
       contract_version: SYNC_GROUP_JOIN_CONTRACT_VERSION,
       device: { canonical_library_path: '/library', device_anchor: 'a1111111-1111-4111-8111-111111111111',
         device_name: 'Phone', path_flavor: 'posix', platform: 'ios-capacitor' },
       ephemeral_public_key: PUBLIC_KEY, group_id: 'group-a', merge_proof
-    })).toThrow('sync_group_join_merge_proof_invalid');
+    })).toThrow('sync_group_join_payload_shape_invalid');
   }
 );
 
-it('fingerprints the complete attempt with canonical proof ordering', () => {
+it('fingerprints the complete device-scoped join attempt', () => {
   const base = {
     contract_version: SYNC_GROUP_JOIN_CONTRACT_VERSION as 1,
     device: { canonical_library_path: '/library',
@@ -31,13 +31,8 @@ it('fingerprints the complete attempt with canonical proof ordering', () => {
       device_name: 'Phone', path_flavor: 'posix' as const, platform: 'ios-capacitor' },
     ephemeral_public_key: PUBLIC_KEY, group_id: 'group-a'
   };
-  const first = syncGroupJoinAttemptFingerprint({ ...base, merge_proof: {
-    library_epoch: 'epoch', proof_revision: 2, source_proof_revisions: { peer_b: 2, peer_a: 1 }
-  } });
-  const reordered = syncGroupJoinAttemptFingerprint({ ...base, merge_proof: {
-    library_epoch: 'epoch', proof_revision: 2, source_proof_revisions: { peer_a: 1, peer_b: 2 }
-  } });
-  expect(reordered).toBe(first);
+  const first = syncGroupJoinAttemptFingerprint(base);
+  expect(syncGroupJoinAttemptFingerprint({ ...base })).toBe(first);
   expect(syncGroupJoinAttemptFingerprint({ ...base, group_id: 'group-b' })).not.toBe(first);
 });
 

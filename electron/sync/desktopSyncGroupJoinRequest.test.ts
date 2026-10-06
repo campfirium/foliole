@@ -56,6 +56,7 @@ vi.mock('../database/connection.js', () => ({
 vi.mock('../database/syncGroupStore.js', () => ({
   joinDesktopSyncGroup: mocks.join, loadDesktopSyncGroup: () => mocks.existingGroup
 }));
+vi.mock('../database/syncGroupBackupRestore.js', () => ({ publishBackupRestoreEvent: vi.fn() }));
 vi.mock('../deviceAnchorStore.js', () => ({
   loadDesktopDeviceIdentity: async () => ({ identity: DEVICE })
 }));
@@ -93,7 +94,7 @@ afterEach(() => {
 
 it('requests a Device-scoped join without retired library or authorization metadata', async () => {
   mocks.state.candidates = [CANDIDATE];
-  await requestDesktopSyncGroupJoin(CANDIDATE.endpoint_url, 'merge');
+  await requestDesktopSyncGroupJoin(CANDIDATE.endpoint_url, 'overwrite');
 
   const request = mocks.requestJson.mock.calls[0]![1] as { body: string };
   expect(JSON.parse(request.body)).toEqual({
@@ -104,10 +105,7 @@ it('requests a Device-scoped join without retired library or authorization metad
       device_name: 'Desktop B', path_flavor: process.platform === 'win32' ? 'windows' : 'posix',
       platform: resolveDesktopPlatformLabel()
     },
-    ephemeral_public_key: 'public', group_id: 'group-1',
-    merge_proof: {
-      library_epoch: 'library-epoch-1', proof_revision: 0, source_proof_revisions: {}
-    }
+    ephemeral_public_key: 'public', group_id: 'group-1'
   });
   expect(request.body).not.toMatch(/authorization|library_facts|member|timeline/u);
   expect(mocks.savePending).toHaveBeenCalledOnce();
@@ -115,7 +113,7 @@ it('requests a Device-scoped join without retired library or authorization metad
 
 it('commits membership before queueing initial convergence', async () => {
   mocks.state.pending = {
-    candidate: CANDIDATE, mode: 'merge', key: { privateKey: 'private', publicKey: 'public' },
+    candidate: CANDIDATE, mode: 'overwrite', key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
       group_id: 'group-1', request_id: 'request-1', status: 'pending' }
   };
@@ -138,7 +136,7 @@ it('commits membership before queueing initial convergence', async () => {
 
 it('keeps the committed membership successful when initial sync fails', async () => {
   mocks.state.pending = {
-    candidate: CANDIDATE, mode: 'merge', key: { privateKey: 'private', publicKey: 'public' },
+    candidate: CANDIDATE, mode: 'overwrite', key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
       group_id: 'group-1', request_id: 'request-1', status: 'pending' }
   };
@@ -156,7 +154,7 @@ it('keeps the committed membership successful when initial sync fails', async ()
 it('drops the one-time mobile guide route after initial convergence', async () => {
   const mobile = { ...CANDIDATE, provider_platform: 'android-capacitor' };
   mocks.state.pending = {
-    candidate: mobile, mode: 'merge', key: { privateKey: 'private', publicKey: 'public' },
+    candidate: mobile, mode: 'overwrite', key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: mobile.endpoint_url, expires_at: '2099-08-27T00:02:00.000Z',
       group_id: 'group-1', request_id: 'request-1', status: 'pending' }
   };
@@ -170,7 +168,7 @@ it('drops the one-time mobile guide route after initial convergence', async () =
 
 it('clears an expired request without contacting or migrating its endpoint', async () => {
   mocks.state.pending = {
-    candidate: CANDIDATE, mode: 'merge', key: { privateKey: 'private', publicKey: 'public' },
+    candidate: CANDIDATE, mode: 'overwrite', key: { privateKey: 'private', publicKey: 'public' },
     request: { endpoint_url: CANDIDATE.endpoint_url, expires_at: '2020-08-27T00:02:00.000Z',
       group_id: 'group-1', request_id: 'request-1', status: 'pending' }
   };

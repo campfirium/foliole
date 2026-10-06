@@ -7,6 +7,7 @@ import { readFramedSyncNodeResources } from '../../lib/core/sync/framedSyncNodeR
 import { applyFramedSyncObjectStateRecord } from '../../lib/core/sync/framedSyncObjectStateFact.js';
 import { recordFramedSyncPeerEpoch } from '../../lib/core/sync/framedSyncPeerEpoch.js';
 import { advanceLocalSourceRevision } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
+import { assertSyncGroupLocalPublicationAllowed, finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import {
   loadLatestSyncGroupRestoreEvent,
   markSyncGroupRestoreApplied
@@ -22,13 +23,19 @@ import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncSta
 import { materializeDesktopSettingRecord, readDesktopHostName } from '../database/desktopSettingMaterializer.js';
 
 import type { PreparedDesktopFramedSyncInbound } from './desktopFramedSyncPreparedInbound.js';
+import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
 export async function applyPreparedDesktopFramedSyncInbound(input: {
   db: DbPort;
+  adoption?: SyncGroupLocalAdoption;
   restore?: Readonly<{ groupId: string; restoreId: string }>;
   transfers: readonly PreparedDesktopFramedSyncInbound[];
 }) {
   const applied = await input.db.transaction(async (tx) => {
+    if (!input.adoption && !input.restore) await assertSyncGroupLocalPublicationAllowed(tx);
+    const removedNodes = input.adoption || input.restore
+      ? await tx.query<{ id: string }>('SELECT id FROM nodes') : [];
+    if (input.adoption) await clearWorkgroupSyncDataForRestore(tx, input.adoption.libraryEpoch);
     const restore = input.restore ? await prepareRestore(tx, input.restore) : null;
     const records = input.transfers.flatMap((transfer) => transfer.records);
     await recordFramedSyncResourceAvailability(tx, records.filter((record) => !isNodeVersionIdentityOnly(record)).flatMap((record) =>
@@ -37,7 +44,7 @@ export async function applyPreparedDesktopFramedSyncInbound(input: {
     await assertFramedSyncNodeParentDependencies(tx, records);
     if (records.length) {
       await promoteFramedNodeBodies(tx, records);
-      if (restore) {
+      if (restore || input.adoption) {
         await applySyncNodesWithDbPort(tx, records, { operation: 'local_restore' });
       } else {
         const result = await applyConvergentSyncNodesWithDbPort(tx, records);
@@ -61,9 +68,18 @@ export async function applyPreparedDesktopFramedSyncInbound(input: {
     }
     await recordSourceProgress(tx, input.transfers);
     if (restore) await markSyncGroupRestoreApplied(tx, restore.event);
+    if (input.adoption) await finishSyncGroupLocalAdoption(tx, input.adoption);
     const receipts = await Promise.all(input.transfers.map((transfer) =>
       createReceipt(tx, transfer)));
-    return { generatedChanges, receipts };
+    return { generatedChanges, receipts, removedNodeIds: removedNodes.map((node) => node.id) };
+  });
+  if (input.adoption || input.restore) notifyWorkspaceSyncApplied({
+    appliedNodeIds: [...new Set([...applied.removedNodeIds,
+      ...input.transfers.filter((transfer) => transfer.objectType === 'node').map((transfer) => transfer.globalId)])],
+    appliedObjectIds: input.transfers.filter((transfer) => transfer.objectType !== 'node')
+      .map((transfer) => `${transfer.objectType}:${transfer.globalId}`),
+    appliedReviewOpIds: input.transfers.flatMap((transfer) => transfer.relationReviewFacts)
+      .filter((fact) => fact.kind === 4).map((fact) => fact.factId)
   });
   await Promise.all(input.transfers.map((transfer) =>
     transfer.staging.releasePins(transfer.transferId, 'business_reference_committed')));
@@ -108,7 +124,7 @@ async function createReceipt(
   const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
     globalId: transfer.globalId, objectType: transfer.objectType
   }))?.sharedStateHash;
-  if (!appliedStateHash) throw new Error('framed_sync_process_inventory_missing');
+  if (!appliedStateHash) throw new Error(`framed_sync_process_inventory_missing:${transfer.objectType}:${transfer.globalId}`);
   return createDesktopFramedSyncStaging(tx).commitApplyAndReceipt({
     appliedStateHash,
     contentId: transfer.manifestHash,

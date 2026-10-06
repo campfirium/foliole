@@ -52,6 +52,9 @@ final class FolioleCompanionFramedSyncPull {
                 signedHeaders(credential, groupId, path, request),
                 writer -> FramedSyncSessionWriter.replay(request, writer),
                 response -> staging.receive(response, groupKey, transferContext));
+            if (Boolean.TRUE.equals(call.getBoolean("stage_only", false))) {
+                return FolioleCompanionFramedSyncApply.stage(staging, received.transferId(), transferContext, credential.deviceId, localEpoch);
+            }
             TransferReceipt receipt = FolioleCompanionFramedSyncApply.apply(
                 bridge, staging, received.transferId(), transferContext, credential.deviceId, localEpoch);
             byte[] encodedReceipt = staging.receipt(groupKey, receipt);

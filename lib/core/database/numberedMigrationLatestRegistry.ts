@@ -55,6 +55,7 @@ import { REVIEW_DAILY_COUNT_SCHEMA } from './reviewDailyCountSchema.js';
 import { initializeStoredSourceSearch } from './storedSourceSearchSchema.js';
 import { SYNC_DELIVERY_TRIGGER_STATEMENTS } from './syncDeliveryTriggerStatements.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from './syncGroupRestoreSchemaStatements.js';
+import { SYNC_GROUP_METADATA_SCHEMA } from './syncGroupSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from './syncGroupSchemaStatements.js';
 import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS,
   SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS_V129 } from './syncIdentityEntityTriggerStatements.js';
@@ -223,5 +224,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 140, migrate: (sqlite) => {
     for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   } },
-  { version: 141, migrate: migrateFramedSyncInventory }
+  { version: 141, migrate: migrateFramedSyncInventory },
+  { version: 142, migrate: (sqlite) => sqlite.exec(SYNC_GROUP_METADATA_SCHEMA) }
 ];

@@ -19,16 +19,20 @@ import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import { loadDesktopDeviceIdentity } from '../deviceAnchorStore.js';
 import { handleSyncGroupCommand } from '../ipc/syncGroupCommands.js';
 
+import { windowEvents } from './backupRestoreSyncGroup.electron.fixture.js';
 import { appendRestoreFacts, deletePausedNode, restoreFactsSnapshot, safetySnapshotFacts } from './backupRestoreSyncGroup.facts.fixture.js';
+import { loadDesktopAnchorTopologyState, saveDesktopAnchorTopologyState } from './desktopAnchorTopologyRole.js';
 import { resumeDesktopCompanionSync, enableDesktopCompanionSync } from './desktopCompanionSyncParticipation.js';
 import { loadDesktopCompanionSyncParticipation } from './desktopCompanionSyncPreference.js';
 import { runDesktopSyncCoordinator } from './desktopSyncCoordinator.js';
+import { completeDesktopSyncGroupJoin } from './desktopSyncGroupJoin.js';
 import { saveDesktopSyncGroupCandidates } from './desktopSyncGroupJoinState.js';
 import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
 import { downloadAndApplyDesktopSyncGroupPack } from './desktopSyncGroupPackApply.js';
 import { drainDesktopSyncGroupResourceArticles } from './desktopSyncGroupResourceArticleDrain.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 import { createWorkspaceSyncHttpServer, stopLanWorkspaceSyncServer } from './lanWorkspaceSyncServer.js';
+import { preserveWithConcurrentTransaction } from './preserveDesktopGroupRestore.fixture.js';
 import { runResourceConcurrencyFixture } from './resourceAvailabilityConcurrency.fixture.js';
 
 let server: ReturnType<typeof createWorkspaceSyncHttpServer> | null = null;
@@ -51,7 +55,7 @@ async function initializeGroup(args: Record<string, unknown>) {
 function seed(args: Record<string, unknown>) {
   const body = args.id ? String(args.content) : `${String(args.content)}\n![Restore image](asset://9fb389cdb800b9b838af19935ce1615574a0e4d43f7c9b2786560ee9dba67322.png)`;
   upsertNodeSnapshot({ nodeId: String(args.id ?? 'topic'), kind: 'topic', title: String(args.content),
-    content: body, parentNodeId: null, position: 0, anchorLink: null, reveal: null,
+    content: body, parentNodeId: args.parentId ? String(args.parentId) : null, position: 0, anchorLink: null, reveal: null,
     isTitleManual: true, createdAt: '2026-10-01T00:00:00.000Z', updatedAt: new Date().toISOString() });
   flushDirtyNodeSyncVersions();
 }
@@ -112,14 +116,21 @@ async function runJoinFixture(action: string, args: Record<string, unknown>) {
   if (action === 'joinRequest') {
     const discovery = await fetch(`${String(args.origin)}/companion/discovery`).then((response) => response.json());
     saveDesktopSyncGroupCandidates([{ ...discovery, endpoint_url: String(args.origin) }]);
-    return handleSyncGroupCommand(NATIVE_COMMANDS.requestSyncGroupJoin, { endpoint_url: args.origin, mode: args.mode ?? 'merge' });
+    return handleSyncGroupCommand(NATIVE_COMMANDS.requestSyncGroupJoin, { endpoint_url: args.origin, mode: args.mode });
   }
   if (action === 'joinAccept' || action === 'joinReject') {
     return handleSyncGroupCommand(action === 'joinAccept' ? NATIVE_COMMANDS.acceptSyncGroupJoinRequest :
       NATIVE_COMMANDS.rejectSyncGroupJoinRequest, { request_id: args.requestId });
   }
+  if (action === 'joinInterrupt') return completeDesktopSyncGroupJoin({
+    onMembershipCommitted() { throw new Error('test_join_interrupted_after_membership'); }
+  });
   if (action === 'joinComplete') return handleSyncGroupCommand(NATIVE_COMMANDS.completeSyncGroupJoin, {});
-  if (action === 'joinProviderEnable') return handleSyncGroupCommand(NATIVE_COMMANDS.enableCompanionSync, {});
+  if (action === 'joinProviderEnable') {
+    const result = await handleSyncGroupCommand(NATIVE_COMMANDS.enableCompanionSync, {});
+    if (args.anchor) saveDesktopAnchorTopologyState({ ...loadDesktopAnchorTopologyState(), role: 'anchor' });
+    return result;
+  }
   if (action === 'joinOverview') return handleSyncGroupCommand(NATIVE_COMMANDS.loadSyncGroupOverview, {});
   throw new Error('unknown join fixture action');
 }
@@ -132,7 +143,7 @@ async function restoreBackup(args: Record<string, unknown>, localOnly: boolean) 
 
 async function run(action: string, args: Record<string, unknown>) {
   if (['initLocal', 'pendingRestore', 'joinRequest', 'joinAccept', 'joinReject', 'joinComplete',
-    'joinProviderEnable', 'joinOverview'].includes(action)) {
+    'joinProviderEnable', 'joinOverview', 'joinInterrupt'].includes(action)) {
     return runJoinFixture(action, args);
   }
   if (action === 'init') return initializeGroup(args);
@@ -173,6 +184,8 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'enable') return enableDesktopCompanionSync({ appVersion: '0.7.14',
     deviceId: loadDesktopSyncGroup()!.local_device_identity_key });
   if (action === 'pull') return pull(args);
+  if (action === 'windowEvents') return windowEvents.splice(0);
+  if (action === 'preserveConcurrent') return preserveWithConcurrentTransaction(String(args.groupId));
   if (action === 'snapshot') return runWithDatabaseConnectionOwner(snapshot);
   if (action === 'reopen') {
     await stopLanWorkspaceSyncServer();

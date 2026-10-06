@@ -1,6 +1,6 @@
 import type http from 'node:http';
 
-import { assertSyncGroupJoinMergeAllowed } from '../../lib/core/sync/syncGroupJoinMergeGuard.js';
+import { assertSyncGroupJoinAdmission } from '../../lib/core/sync/syncGroupJoinAdmission.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 
@@ -26,7 +26,7 @@ export async function handleSyncGroupJoinRequest(
   try {
     const input: unknown = JSON.parse(await readCompanionRequestBody(request, MAX_SYNC_GROUP_JOIN_REQUEST_BYTES));
     const created = await runWithDatabaseConnectionOwner(async () => {
-      await assertSyncGroupJoinMergeAllowed(createBetterSqliteDbPort(openDatabaseConnection().sqlite), input);
+      await assertSyncGroupJoinAdmission(createBetterSqliteDbPort(openDatabaseConnection().sqlite), input);
       return provider.receive(input as Parameters<typeof provider.receive>[0]);
     });
     writeJson(request, response, 202, created);

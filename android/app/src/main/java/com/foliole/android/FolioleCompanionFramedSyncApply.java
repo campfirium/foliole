@@ -5,6 +5,7 @@ import com.foliole.android.framed.FramedSyncTransferContext;
 import com.foliole.android.framed.FramedSyncTransferSQLite;
 import com.foliole.sync.v22.TransferReceipt;
 import com.google.protobuf.ByteString;
+import com.getcapacitor.JSObject;
 import java.security.MessageDigest;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -32,6 +33,21 @@ final class FolioleCompanionFramedSyncApply {
             TransferReceipt receipt = receipt(applied, transferId, localDeviceId, localEpoch);
             resources.commit();
             return receipt;
+        }
+    }
+
+    static JSObject stage(FramedSyncTransferSQLite staging, byte[] transferId,
+        FramedSyncTransferContext context, String localDeviceId, String localEpoch) throws Exception {
+        try (FramedSyncResourcePublication resources = staging.publishResources(transferId)) {
+            JSObject value = new JSObject().put("staging_kind", "android")
+                .put("staging_path", staging.path()).put("transfer_id", hex(transferId))
+                .put("sender_device_id", context.senderDeviceId())
+                .put("sender_library_epoch", context.senderLibraryEpoch())
+                .put("receiver_device_id", localDeviceId)
+                .put("receiver_library_epoch", localEpoch)
+                .put("resource_storage_keys", new JSONArray(resources.storageKeys()));
+            resources.commit();
+            return value;
         }
     }
 

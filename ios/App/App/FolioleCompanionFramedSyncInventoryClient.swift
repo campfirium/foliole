@@ -111,6 +111,15 @@ extension FolioleCompanionSyncPlugin {
         ) { responseURL in
             try receiver.receive(responseURL, groupKey: groupKey, context: transferContext)
         }
+        if call.getBool("stage_only") == true {
+            return try receiver.withPublishedResources(transferID: received.transferID) { resourceKeys in
+                ["staging_kind": "ios", "staging_path": receiver.databaseURL.path,
+                 "transfer_id": received.transferID.hex,
+                 "sender_device_id": remoteDeviceID, "sender_library_epoch": remoteEpoch,
+                 "receiver_device_id": localDeviceID, "receiver_library_epoch": localEpoch,
+                 "resource_storage_keys": resourceKeys]
+            }
+        }
         let applied = try receiver.withPublishedResources(
             transferID: received.transferID
         ) { resourceKeys in

@@ -3,7 +3,6 @@ import { useCallback } from 'react';
 import type { DesktopSyncGroupOverviewPayload } from '../../../../lib/platform/nativeCompanionSyncContract';
 import { useTranslation } from '../../localization/LocalizationProvider';
 import { chooseSyncGroupJoinMode } from '../../ui/chooseSyncGroupJoinMode';
-import { requestSyncGroupJoinWithChoice } from '../../ui/requestSyncGroupJoinWithChoice';
 import {
   completeDesktopSyncGroupJoin,
   discoverDesktopSyncGroups,
@@ -66,9 +65,7 @@ export function useDesktopSyncGroupJoinActions(args: {
       const mode = await chooseSyncGroupJoinMode(t);
       if (!mode) return;
       return run('request-sync-group-join', async () => {
-        const overview = await requestSyncGroupJoinWithChoice(t, mode,
-          (selected) => requestDesktopSyncGroupJoin(endpointUrl, selected));
-        if (!overview) return null;
+        const overview = await requestDesktopSyncGroupJoin(endpointUrl, mode);
         await stopDiscoveringDesktopSyncGroups();
         setOverview(overview);
         const expiresAt = overview.join_request?.expires_at;

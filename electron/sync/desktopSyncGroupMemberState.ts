@@ -93,7 +93,7 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     return {
       localLibraryEpoch: request.localLibraryEpoch,
       localExited: applied.localExited,
-      normalSyncReady: applied.normalSyncReady,
+      normalSyncReady: applied.normalSyncReady && !incoming.adopting_from,
       peerBlocked: isDesktopSyncGroupDeviceBlocked(peer.group_id, peer.peer_device_id),
       remoteLibraryEpoch: incoming.library_epoch,
       restoreFromPeer: localRestore && !localRestore.applied &&

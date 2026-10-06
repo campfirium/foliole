@@ -8,7 +8,7 @@ export async function chooseSyncGroupJoinMode(t: Translate): Promise<SyncGroupJo
     title: t('syncGroup.join.mode.title'),
     description: t('syncGroup.join.mode.description'),
     choices: [
-      { value: 'merge', label: t('syncGroup.join.mode.merge') },
+      { value: 'use-group', label: t('syncGroup.join.mode.useGroup') },
       { value: 'overwrite', label: t('syncGroup.join.mode.overwrite') }
     ]
   });

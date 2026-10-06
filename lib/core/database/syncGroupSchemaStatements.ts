@@ -1,4 +1,9 @@
+export const SYNC_GROUP_METADATA_SCHEMA = `CREATE TABLE IF NOT EXISTS sync_group_metadata (
+  key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL, updated_at TEXT NOT NULL
+)`;
+
 export const SYNC_GROUP_SCHEMA_STATEMENTS = [
+  SYNC_GROUP_METADATA_SCHEMA,
   `CREATE TABLE IF NOT EXISTS sync_groups (
     group_id TEXT PRIMARY KEY,
     display_name TEXT NOT NULL,

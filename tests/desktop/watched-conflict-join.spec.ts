@@ -195,7 +195,7 @@ for (const savingSide of ['member', 'provider'] as const) test(
       await addWatchedSource(member.electronApp, folder, 'member-rule');
       await invoke(memberPage, 'enable_companion_sync');
       await discoverCandidate(member.electronApp, candidate);
-      await invoke(memberPage, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url, mode: 'merge' });
+      await invoke(memberPage, 'request_sync_group_join', { endpoint_url: candidate.endpoint_url, mode: 'use-group' });
       let requestId: string | null = null;
       await expect.poll(async () => {
         const state = await invoke<{ join_requests: Array<{ request_id: string }> }>(

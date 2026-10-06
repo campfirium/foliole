@@ -7,8 +7,7 @@ import { parseSyncGroupJoinMode, type SyncGroupJoinMode } from '../../../lib/pla
 import { createSyncGroupDeviceIdentity } from '../../../lib/platform/syncGroupUnifiedContract';
 
 import { requestCompanionSyncGroupEndpoint } from './companion/network/companionSyncGroupHttpRequest';
-import { getIosCompanionDatabaseOwner } from './companion/runtime/iosCompanionDatabaseBootstrap';
-import { loadCompanionLocalNodeProof } from './companion/sync/nodeVersionCompanionPeerProof';
+import { completeCompanionSyncGroupAdoption } from './companion/sync/completeCompanionSyncGroupAdoption';
 import { joinCompanionSyncGroup, loadCompanionSyncGroup } from './companion/sync/syncGroupStore';
 import {
   createCompanionSyncGroupJoinPublicKey,
@@ -29,7 +28,6 @@ export async function requestCompanionSyncGroupJoin(args: {
   const mode = parseSyncGroupJoinMode(args.mode);
   if (await loadCompanionSyncGroup()) throw new Error('sync_group_identity_mismatch');
   const device = await FolioleCompanionSync.loadSyncGroupDeviceIdentity({ database_path: args.databasePath });
-  const proof = mode === 'merge' ? await getIosCompanionDatabaseOwner().read(loadCompanionLocalNodeProof) : null;
   const keyId = createCompanionUuid();
   const publicKey = await createCompanionSyncGroupJoinPublicKey(keyId);
   const endpointUrl = normalizeEndpointUrl(args.endpointUrl);
@@ -39,14 +37,13 @@ export async function requestCompanionSyncGroupJoin(args: {
       device,
       ephemeral_public_key: publicKey,
       group_id: args.groupId,
-      ...(proof ? { merge_proof: proof } : {})
     }),
     headers: { 'Content-Type': 'application/json' }, method: 'POST'
   });
   if (!response.ok) {
     dropCompanionSyncGroupJoinPrivateKey(keyId);
     const error = await response.json().catch(() => null) as { error?: unknown } | null;
-    if (error?.error === 'sync_group_merge_requires_overwrite') throw new Error(error.error);
+    if (typeof error?.error === 'string') throw new Error(error.error);
     throw new Error(`sync_group_join_request_http_${response.status}`);
   }
   const payload = await response.json() as { expires_at: string; request_id: string };
@@ -63,6 +60,15 @@ export async function completeCompanionSyncGroupJoin(args: {
   providerPlatform: string;
   requestId: string;
 }) {
+  const existing = await loadCompanionSyncGroup();
+  if (existing) {
+    if (!existing.devices.some((device) => device.device_identity_key === args.providerDeviceId)) {
+      throw new Error('sync_group_identity_mismatch');
+    }
+    await completeCompanionSyncGroupAdoption();
+    cancelCompanionSyncGroupJoin(args.requestId);
+    return existing;
+  }
   const endpointUrl = normalizeEndpointUrl(args.endpointUrl);
   const response = await requestCompanionSyncGroupEndpoint(`${endpointUrl}/sync-group/join-acceptance`, {
     body: JSON.stringify({ request_id: args.requestId }),
@@ -80,6 +86,7 @@ export async function completeCompanionSyncGroupJoin(args: {
   const provider = providerFromDiscovery(args, info.group_id);
   const group = await joinCompanionSyncGroup({
     mode: pending!.mode,
+    endpointUrl,
     device: createSyncGroupDeviceIdentity({ device_anchor: facts.device_anchor, group_id: info.group_id,
       library_path: facts.canonical_library_path, path_flavor: facts.path_flavor }),
     deviceName: facts.device_name,
@@ -88,6 +95,7 @@ export async function completeCompanionSyncGroupJoin(args: {
     provider,
     workgroupKey: info.workgroup_key
   });
+  if (pending!.mode === 'use-group') await completeCompanionSyncGroupAdoption();
   dropCompanionSyncGroupJoinPrivateKey(keyId);
   keyIds.delete(args.requestId);
   return group;

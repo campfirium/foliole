@@ -6,6 +6,7 @@ import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../../../../lib/cor
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupRestoreSchemaStatements';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
 import type { DbParams, DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 
 const database = vi.hoisted(() => ({ driver: null as unknown as DbPort }));
@@ -62,9 +63,11 @@ beforeEach(async () => {
   };
   database.driver = driver;
   await joinCompanionSyncGroup({
+    mode: 'use-group', endpointUrl: 'http://provider',
     device: local, deviceName: 'iPhone', displayName: 'Studio', platform: 'ios-capacitor',
     provider: { device: provider, deviceName: 'Mac', platform: 'darwin' }, workgroupKey: 'secret'
   });
+  await finishSyncGroupLocalAdoption(driver, (await loadSyncGroupLocalAdoption(driver))!);
 });
 
 afterEach(() => sqlite.close());

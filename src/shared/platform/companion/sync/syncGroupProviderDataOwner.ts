@@ -1,7 +1,7 @@
 import type { PluginListenerHandle } from '@capacitor/core';
 
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { assertSyncGroupJoinMergeAllowed } from '../../../../../lib/core/sync/syncGroupJoinMergeGuard';
+import { assertSyncGroupJoinAdmission } from '../../../../../lib/core/sync/syncGroupJoinAdmission';
 import {
   COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
   type CompanionSyncGroupDataRequest
@@ -61,7 +61,7 @@ async function handleRequest(request: CompanionSyncGroupDataRequest) {
 
 function dispatch(operation: string, payload: Record<string, unknown>) {
   if (operation === CONTRACT.operations.validateJoin) return getIosCompanionDatabaseOwner().read(async (db) => {
-    await assertSyncGroupJoinMergeAllowed(db, payload);
+    await assertSyncGroupJoinAdmission(db, payload);
     return { allowed: true };
   });
   if (operation === CONTRACT.operations.attachmentCheckpoint) return handleCompanionAttachmentCheckpoint(getIosCompanionDatabaseOwner(), payload);

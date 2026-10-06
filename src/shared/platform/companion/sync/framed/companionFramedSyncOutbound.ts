@@ -27,6 +27,7 @@ import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/
 import { loadFramedSyncPublishedOutboundValue } from '../../../../../../lib/core/sync/framedSyncPublishedOutboundValue.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewSelection.js';
 import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
+import { assertSyncGroupLocalPublicationAllowed } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadRetainedSyncNodeVersionRecords } from '../../../../../../lib/core/sync/syncNodeGraph.js';
 import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { isNodeVersionIdentityOnly, orderNodeVersionHistory } from '../../../../../../lib/core/sync/syncNodeVersionHistory.js';
@@ -139,6 +140,7 @@ export async function prepareCompanionFramedSyncOutbound(
   payload: Record<string, unknown>
 ) {
   return db.transaction(async (tx) => {
+    await assertSyncGroupLocalPublicationAllowed(tx);
     if (payload.transfer_id !== undefined) return loadFramedSyncPublishedOutboundValue(
       tx, context(payload), requiredText(payload.transfer_id));
     const selection = await selectOutbound(tx, payload);

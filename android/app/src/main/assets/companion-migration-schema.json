@@ -574,6 +574,15 @@
     {
       "actions": [
         {
+          "errorMessage": "Failed to install local sync admission metadata.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 72
+    },
+    {
+      "actions": [
+        {
           "errorMessage": "Failed to install write-maintained framed inventory.",
           "type": "installSchema"
         }

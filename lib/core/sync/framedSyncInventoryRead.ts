@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { DbPort, DbRow } from './dbPort.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInventory.js';
+import { loadSyncGroupLocalAdoption } from './syncGroupLocalAdoption.js';
 import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
@@ -47,7 +48,7 @@ async function read(port: DbPort, key?: InventoryKey) {
 }
 
 export function readFramedSyncInventory(port: DbPort) {
-  return port.transaction((tx) => read(tx));
+  return port.transaction(async (tx) => await loadSyncGroupLocalAdoption(tx) ? [] : read(tx));
 }
 
 export async function readFramedSyncInventoryEntry(port: DbPort, key: InventoryKey) {

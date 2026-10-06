@@ -130,6 +130,7 @@ export function leaveDesktopSyncGroupDevice(deviceIdentityKey: string, leftAt = 
     );
     if (local?.local_device_identity_key === deviceIdentityKey) {
       driver.execute('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
+      driver.execute('DELETE FROM sync_group_metadata');
       retagLocalWatchedFolderBindings(driver, deviceIdentityKey,
         loadStandaloneWatchedDeviceId(driver) ?? deviceIdentityKey, leftAt);
       driver.execute('DELETE FROM sync_delivery_receipts');

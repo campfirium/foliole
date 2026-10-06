@@ -1,5 +1,7 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 import { framedSyncMemberRemovalReleaseStatements } from '../../../../../lib/core/sync/framedSyncMemberRemovalRelease.js';
+import { retirePeerPositionStatements } from '../../../../../lib/core/sync/syncGroupAdoptedPeerEpoch';
+import { completedSyncGroupAdoptionSource, loadSyncGroupLocalAdoption, syncGroupPeerAdoptionKey, SYNC_GROUP_COMPLETED_ADOPTION_KEY } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import {
   loadLatestSyncGroupRestoreEvent,
   receiveSyncGroupRestoreEvent
@@ -43,15 +45,31 @@ export function applyCompanionSyncGroupMemberState(
           incoming.sender_device_identity_key !== authenticatedDeviceId) {
         throw new Error('sync_group_member_state_identity_mismatch');
       }
+      const peerAdoptionKey = syncGroupPeerAdoptionKey(context.groupId, authenticatedDeviceId);
+      if (incoming.adopting_from === context.localDeviceId) await tx.run(
+        `INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, 'true', ?)
+         ON CONFLICT(key) DO UPDATE SET value = 'true', updated_at = excluded.updated_at`,
+        [peerAdoptionKey, new Date().toISOString()]);
+      else await tx.run('DELETE FROM sync_group_metadata WHERE key = ?', [peerAdoptionKey]);
       let localRestore = await loadLatestSyncGroupRestoreEvent(tx, context.groupId);
       if (incoming.restore) {
         localRestore = await receiveSyncGroupRestoreEvent(tx, incoming.restore.event);
       }
-      const normalSyncReady = syncGroupRestorePeersReady(localRestore, incoming.restore);
+      const adoption = await loadSyncGroupLocalAdoption(tx);
+      const normalSyncReady = adoption
+        ? adoption.providerDeviceId === authenticatedDeviceId && !incoming.adopting_from && incoming.restore?.applied !== false
+        : incoming.adopting_from === context.localDeviceId || syncGroupRestorePeersReady(localRestore, incoming.restore);
       if (!normalSyncReady) return {
         local_exited: false, normal_sync_ready: false, state: await loadState(tx, context)
       };
-      await assertCompanionPeerProofFresh(tx, incoming, context.localDeviceId);
+      if (!adoption && incoming.adopting_from !== context.localDeviceId) {
+        await assertCompanionPeerProofFresh(tx, incoming, context.localDeviceId);
+      }
+      if (incoming.adopting_from === context.localDeviceId) {
+        await tx.run('DELETE FROM node_version_device_revisions WHERE group_id = ? AND device_identity_key = ?',
+          [incoming.group_id, authenticatedDeviceId]);
+        for (const statement of retirePeerPositionStatements(incoming)) await tx.run(statement.sql, statement.params);
+      }
       for (const removal of incoming.removals) await mergeRemoval(tx, incoming.group_id, removal);
       for (const device of incoming.devices) await mergeDevice(tx, incoming.group_id, device, context.localDeviceId);
       const now = new Date().toISOString();
@@ -92,15 +110,21 @@ async function loadContext(db: DbPort): Promise<Context | null> {
 
 async function loadState(db: DbPort, context: Context): Promise<SyncGroupMemberStatePayload> {
   const proof = await loadCompanionLocalNodeProof(db);
+  const adoption = await loadSyncGroupLocalAdoption(db);
+  const [completed] = await db.query<{ value: string }>('SELECT value FROM sync_group_metadata WHERE key = ?',
+    [SYNC_GROUP_COMPLETED_ADOPTION_KEY]);
+  const adoptedFrom = !adoption && completedSyncGroupAdoptionSource(completed?.value, context.groupId, proof.library_epoch);
   return {
     contract_version: SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION,
+    ...(adoption ? { adopting_from: adoption.providerDeviceId } : {}),
+    ...(adoptedFrom ? { adopted_from: adoptedFrom } : {}),
     devices: await loadDevices(db, context.groupId),
     group_id: context.groupId,
     library_epoch: proof.library_epoch,
     proof_revision: proof.proof_revision,
     source_proof_revisions: proof.source_proof_revisions,
     removals: await loadRemovals(db, context.groupId),
-    restore: await loadLatestSyncGroupRestoreEvent(db, context.groupId),
+    restore: adoption ? null : await loadLatestSyncGroupRestoreEvent(db, context.groupId),
     sender_device_identity_key: context.localDeviceId
   };
 }
@@ -220,6 +244,7 @@ async function persistLocalExit(db: DbPort, context: Context, now: string) {
   await db.run(`UPDATE sync_group_devices SET state = 'left', left_at = ?, updated_at = ?
     WHERE group_id = ? AND device_identity_key = ?`, [now, now, context.groupId, context.localDeviceId]);
   await db.run('DELETE FROM sync_group_local_state WHERE singleton_id = 1');
+  await db.run('DELETE FROM sync_group_metadata');
   await db.run('DELETE FROM sync_delivery_receipts');
   await db.run('DELETE FROM sync_peer_cursors');
   await db.run('DELETE FROM sync_group_nonce_ledger');

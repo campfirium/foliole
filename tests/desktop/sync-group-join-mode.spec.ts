@@ -69,7 +69,7 @@ async function bindReturnRoute(provider: DesktopSession, joining: DesktopSession
   }, `http://127.0.0.1:${port}`);
 }
 
-for (const mode of ['merge', 'overwrite']) {
+for (const mode of ['overwrite', 'use-group']) {
   test(`chooses ${mode} before joining and applying group data`, async ({ desktopSession }, info) => {
     const provider = await launchDesktopSession({ env: { ...process.env,
       FOLIOLE_ELECTRON_TEST_STATE_ROOT: info.outputPath('provider'),
@@ -86,93 +86,32 @@ for (const mode of ['merge', 'overwrite']) {
       await settings.getByRole('button', { name: /^(Join|加入)$/ }).click();
       const choice = desktopSession.firstWindow.getByRole('dialog', { name: /^(Join sync group|加入同步组)$/ });
       await expect(choice).toBeVisible();
+      await expect(choice.getByRole('button', { name: /^(Merge data|合并资料)$/ })).toHaveCount(0);
       expect((await invoke<Overview>(provider, 'load_sync_group_overview')).join_requests).toEqual([]);
       await fs.mkdir('.tmp/artifacts/sync-group-join-mode', { recursive: true });
       const screenshot = await desktopSession.firstWindow.screenshot({ path: path.resolve('.tmp/artifacts/sync-group-join-mode', `${mode}.png`) });
       await info.attach('join-mode-dialog', { body: screenshot, contentType: 'image/png' });
-      await choice.getByRole('button', { name: mode === 'merge' ? /^(Merge data|合并资料)$/ : /Use this device’s data to overwrite|用本机资料覆盖整个组/ }).click();
+      await choice.getByRole('button', { name: mode === 'use-group'
+        ? /Use the sync group’s data to overwrite|用同步组资料覆盖本机/
+        : /Use this device’s data to overwrite|用本机资料覆盖整个组/ }).click();
       await expect.poll(async () => (await invoke<Overview>(provider, 'load_sync_group_overview')).join_requests.length).toBe(1);
       const requestId = (await invoke<Overview>(provider, 'load_sync_group_overview')).join_requests[0]!.request_id;
       expect((await invoke<Overview>(desktopSession, 'load_sync_group_overview')).sync_group).toBeNull();
       await invoke(provider, 'accept_sync_group_join_request', { request_id: requestId });
       await expect.poll(async () => (await invoke<Overview>(desktopSession, 'load_sync_group_overview')).sync_group?.group_id).toBe(groupId);
-      await bindReturnRoute(provider, desktopSession);
-      await invoke(provider, 'sync_companion_now');
-      await expect.poll(() => persisted(provider, localId), { timeout: 20000 }).toBe(true);
-      expect(await persisted(provider, remoteId)).toBe(mode === 'merge');
-      expect(await persisted(desktopSession, localId)).toBe(true);
-      await expect.poll(() => persisted(desktopSession, remoteId), { timeout: 20000 }).toBe(mode === 'merge');
+      if (mode === 'use-group') {
+        await expect.poll(() => persisted(desktopSession, remoteId), { timeout: 20000 }).toBe(true);
+        expect(await persisted(desktopSession, localId)).toBe(false);
+        expect(await persisted(provider, remoteId)).toBe(true);
+        expect(await persisted(provider, localId)).toBe(false);
+      } else {
+        await bindReturnRoute(provider, desktopSession);
+        await invoke(provider, 'sync_companion_now');
+        await expect.poll(() => persisted(provider, localId), { timeout: 20000 }).toBe(true);
+        expect(await persisted(provider, remoteId)).toBe(false);
+        expect(await persisted(desktopSession, localId)).toBe(true);
+        await expect.poll(() => persisted(desktopSession, remoteId), { timeout: 20000 }).toBe(false);
+      }
     } finally { await provider.close(); }
   });
 }
-
-async function prepareRestoredApplicant(joining: DesktopSession, provider: DesktopSession) {
-  const localId = await topic(joining);
-  const backup = await invoke<{ destinationPath: string }>(joining, 'backup_sqlite_database', { destinationPath: null });
-  const remoteId = await topic(provider);
-  const groupId = await candidate(joining, provider);
-  const port = (await invoke<Overview>(provider, 'load_sync_group_overview')).server_status.port;
-  await invoke(joining, 'request_sync_group_join', { endpoint_url: `http://127.0.0.1:${port}`, mode: 'merge' });
-  await approvePending(provider);
-  await invoke(joining, 'complete_sync_group_join');
-  await bindReturnRoute(provider, joining);
-  await invoke(provider, 'sync_companion_now');
-  await expect.poll(() => persisted(provider, localId), { timeout: 20000 }).toBe(true);
-  await expect.poll(() => persisted(joining, remoteId), { timeout: 20000 }).toBe(true);
-  await invoke(joining, 'sync_companion_now');
-  await invoke(joining, 'leave_sync_group');
-  const sourcePath = backup.destinationPath;
-  const preview = await invoke<{ revision: string }>(joining, 'inspect_backup_restore_sync', { sourcePath });
-  await invoke(joining, 'restore_sqlite_database', { sourcePath,
-    choice: { source: 'current', action: 'local', revision: preview.revision } });
-  await candidate(joining, provider);
-  await joining.firstWindow.reload();
-  await expectWorkspaceShell(joining.firstWindow);
-  return { groupId, localId, remoteId };
-}
-
-async function approvePending(provider: DesktopSession) {
-  await expect.poll(async () => (await invoke<Overview>(provider, 'load_sync_group_overview')).join_requests.length).toBe(1);
-  const requestId = (await invoke<Overview>(provider, 'load_sync_group_overview')).join_requests[0]!.request_id;
-  await invoke(provider, 'accept_sync_group_join_request', { request_id: requestId });
-}
-
-test('offers cancel or whole-group overwrite on the restored applicant before changing data', async ({ desktopSession }, info) => {
-  const provider = await launchDesktopSession({ env: { ...process.env,
-    FOLIOLE_ELECTRON_TEST_STATE_ROOT: info.outputPath('provider'),
-    FOLIOLE_COMPANION_SYNC_PORT: String(await freePort()) } }) as DesktopSession;
-  try {
-    await desktopSession.electronApp.evaluate((_electron, port) => {
-      process.env.FOLIOLE_COMPANION_SYNC_PORT = String(port);
-    }, await freePort());
-    await invoke(desktopSession, 'enable_companion_sync');
-    const { groupId, localId, remoteId } = await prepareRestoredApplicant(desktopSession, provider);
-    const settings = await openSettingsCategory(desktopSession.firstWindow, 'Sync');
-    for (const proceed of [false, true]) {
-      await settings.getByRole('button', { name: /^(Join|加入)$/ }).click();
-      const mode = desktopSession.firstWindow.getByRole('dialog', { name: /^(Join sync group|加入同步组)$/ });
-      await mode.getByRole('button', { name: /^(Merge data|合并资料)$/ }).click();
-      const protection = desktopSession.firstWindow.getByRole('dialog', { name: /^(Cannot merge data|无法合并资料)$/ });
-      await expect(protection).toBeVisible();
-      expect((await invoke<Overview>(provider, 'load_sync_group_overview')).join_requests).toEqual([]);
-      expect((await invoke<Overview>(desktopSession, 'load_sync_group_overview')).sync_group).toBeNull();
-      expect(await persisted(desktopSession, localId)).toBe(true);
-      expect(await persisted(desktopSession, remoteId)).toBe(false);
-      expect(await persisted(provider, remoteId)).toBe(true);
-      await info.attach('restore-protection-on-applicant', {
-        body: await desktopSession.firstWindow.screenshot(), contentType: 'image/png'
-      });
-      await protection.getByRole('button', { name: proceed
-        ? /Use this device’s data to overwrite|用本机资料覆盖整个组/ : /^(Cancel|取消)$/ }).click();
-      await expect(protection).not.toBeVisible();
-      if (!proceed) expect((await invoke<Overview>(provider, 'load_sync_group_overview')).join_requests).toEqual([]);
-    }
-    await approvePending(provider);
-    await expect.poll(async () => (await invoke<Overview>(desktopSession, 'load_sync_group_overview')).sync_group?.group_id).toBe(groupId);
-    await bindReturnRoute(provider, desktopSession);
-    await invoke(provider, 'sync_companion_now');
-    await expect.poll(() => persisted(provider, remoteId), { timeout: 20000 }).toBe(false);
-    expect(await persisted(provider, localId)).toBe(true);
-    expect(await persisted(desktopSession, localId)).toBe(true);
-  } finally { await provider.close(); }
-});

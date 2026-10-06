@@ -27,6 +27,8 @@ export interface SyncGroupRemovalDecisionPayload {
 
 export interface SyncGroupMemberStatePayload {
   contract_version: typeof SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION;
+  adopting_from?: string;
+  adopted_from?: string;
   devices: SyncGroupDevicePayload[];
   group_id: string;
   library_epoch: string;
@@ -44,6 +46,8 @@ export function parseSyncGroupMemberState(value: unknown): SyncGroupMemberStateP
   const raw = value as Partial<SyncGroupMemberStatePayload>;
   if (raw.contract_version !== SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION ||
       !text(raw.group_id) || !text(raw.sender_device_identity_key) ||
+      (raw.adopting_from !== undefined && (!text(raw.adopting_from) || raw.adopting_from === raw.sender_device_identity_key)) ||
+      (raw.adopted_from !== undefined && (!text(raw.adopted_from) || raw.adopted_from === raw.sender_device_identity_key || raw.adopting_from !== undefined)) ||
       !text(raw.library_epoch) || !Number.isSafeInteger(raw.proof_revision) ||
       (raw.proof_revision ?? -1) < 0 ||
       !validSourceProofRevisions(raw.source_proof_revisions) ||

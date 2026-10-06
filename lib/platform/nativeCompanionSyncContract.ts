@@ -28,6 +28,17 @@ export interface NativeCompanionFramedSyncTransferReceipt {
   transfer_id: string;
 }
 
+export interface NativeCompanionFramedSyncStagedTransfer {
+  staging_kind: 'android' | 'ios';
+  staging_path: string;
+  transfer_id: string;
+  sender_device_id: string;
+  sender_library_epoch: string;
+  receiver_device_id: string;
+  receiver_library_epoch: string;
+  resource_storage_keys: readonly string[];
+}
+
 export interface NativeCompanionFramedSyncInventoryRequest {
   endpoint_url: string;
   receiver_device_id: string;

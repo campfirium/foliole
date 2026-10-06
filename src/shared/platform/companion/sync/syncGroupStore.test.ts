@@ -31,8 +31,8 @@ const provider = createSyncGroupDeviceIdentity({
   device_anchor: 'b2222222-2222-4222-8222-222222222222', group_id: 'group-1',
   library_path: '/desktop/foliole.db', path_flavor: 'posix'
 });
-const join = (mode: SyncGroupJoinMode = 'merge') => joinCompanionSyncGroup({
-  mode,
+const join = (mode: SyncGroupJoinMode = 'use-group') => joinCompanionSyncGroup({
+  mode, endpointUrl: 'http://provider',
   device: local, deviceName: 'iPhone', displayName: 'Maci Sync Group', platform: 'ios-capacitor',
   provider: { device: provider, deviceName: 'Maci', platform: 'darwin' }, workgroupKey: 'secret'
 });
@@ -99,8 +99,8 @@ it('publishes an applied whole-group overwrite together with mobile membership',
   expect(sqlite.prepare('SELECT id FROM nodes').pluck().get()).toBe('local-note');
 });
 
-it('does not publish an overwrite when merging', async () => {
-  await join('merge');
+it('does not publish a group overwrite while preparing local replacement', async () => {
+  await join('use-group');
   expect(sqlite.prepare('SELECT COUNT(*) FROM sync_group_restore_events').pluck().get()).toBe(0);
 });
 

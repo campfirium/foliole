@@ -29,6 +29,7 @@ import {
   encodeDesktopFramedSyncSession
 } from './desktopFramedSyncSessionWire.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+import { desktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
 import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
 
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
@@ -55,7 +56,7 @@ export async function respondDesktopFramedSyncInventory(args: {
   const { roundId } = await decodeFramedSyncInventory(request);
   const route = loadDesktopSyncGroupRoutes(args.context.groupId).find((peer) =>
     peer.peer_device_id === args.context.initiatorDeviceId);
-  if (route) await resumeDesktopFramedSyncPendingPublications({
+  if (route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') await resumeDesktopFramedSyncPendingPublications({
     db: args.db, groupId: args.context.groupId, groupSecret: args.groupSecret,
     local: { deviceId: args.context.responderDeviceId, libraryEpoch: args.context.responderLibraryEpoch },
     peer: { deviceId: args.context.initiatorDeviceId, libraryEpoch: args.context.initiatorLibraryEpoch },
