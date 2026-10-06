@@ -101,7 +101,7 @@ public final class FramedSyncHttpTransport {
                 if (output.size() + count > ERROR_BODY_LIMIT_BYTES) return null;
                 output.write(buffer, 0, count);
             }
-            String body = output.toString(StandardCharsets.UTF_8).trim();
+            String body = new String(output.toByteArray(), StandardCharsets.UTF_8).trim();
             String prefix = "{\"error\":\"";
             if (!body.startsWith(prefix) || !body.endsWith("\"}")) return null;
             String error = body.substring(prefix.length(), body.length() - 2);

@@ -124,6 +124,12 @@ async function runJoinFixture(action: string, args: Record<string, unknown>) {
   throw new Error('unknown join fixture action');
 }
 
+async function restoreBackup(args: Record<string, unknown>, localOnly: boolean) {
+  const preview = await inspectBackupRestoreSync(String(args.file));
+  return restoreApplicationDatabaseBackup({ sourcePath: String(args.file),
+    choice: { source: 'current', action: localOnly ? 'local' : args.pause ? 'pause' : 'overwrite', revision: preview.revision } });
+}
+
 async function run(action: string, args: Record<string, unknown>) {
   if (['initLocal', 'pendingRestore', 'joinRequest', 'joinAccept', 'joinReject', 'joinComplete',
     'joinProviderEnable', 'joinOverview'].includes(action)) {
@@ -154,22 +160,14 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'safety') return safetySnapshotFacts();
   if (action === 'backup') return createApplicationDatabaseBackup();
   if (action === 'leave') return handleSyncGroupCommand(NATIVE_COMMANDS.leaveSyncGroup, {});
-  if (action === 'restoreLocal') {
-    const preview = await inspectBackupRestoreSync(String(args.file));
-    return restoreApplicationDatabaseBackup({ sourcePath: String(args.file),
-      choice: { source: 'current', action: 'local', revision: preview.revision } });
-  }
+  if (action === 'restoreLocal') return restoreBackup(args, true);
   if (action === 'sync') {
     const group = await runWithDatabaseConnectionOwner(() => loadDesktopSyncGroup()!);
     return runDesktopSyncCoordinator('manual', { endpoint_url: String(args.origin),
       group_id: group.group_id, local_device_id: group.local_device_identity_key,
       peer_device_id: String(args.identity), peer_device_name: 'Peer', peer_platform: 'darwin' });
   }
-  if (action === 'restore') {
-    const preview = await inspectBackupRestoreSync(String(args.file));
-    return restoreApplicationDatabaseBackup({ sourcePath: String(args.file),
-      choice: { source: 'current', action: args.pause ? 'pause' : 'overwrite', revision: preview.revision } });
-  }
+  if (action === 'restore') return restoreBackup(args, false);
   if (action === 'resume') return resumeDesktopCompanionSync({ appVersion: '0.7.14',
     deviceId: loadDesktopSyncGroup()!.local_device_identity_key }, args.confirm ? loadBackupRestorePendingSync()?.restoreId : undefined);
   if (action === 'enable') return enableDesktopCompanionSync({ appVersion: '0.7.14',

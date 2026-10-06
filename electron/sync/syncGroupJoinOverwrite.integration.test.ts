@@ -42,6 +42,20 @@ async function setup(registerMembers = true) {
   return { script, peers, groupId };
 }
 
+async function assertMergeRefused(
+  source: ReturnType<typeof startRestoreFixture>,
+  provider: ReturnType<typeof startRestoreFixture>,
+  origin: string
+) {
+  await expect(source.send('joinRequest', { origin, mode: 'merge' }))
+    .rejects.toThrow('sync_group_merge_requires_overwrite');
+  expect((await source.send('snapshot')).group).toBeUndefined();
+  expect((await source.send('snapshot')).library.nodesById['local-note']?.content).toBe('Local chosen data');
+  expect((await provider.send('snapshot')).library.nodesById['remote-note']).toBeDefined();
+  expect((await provider.send('joinOverview') as unknown as { join_requests: unknown[] })
+    .join_requests).toHaveLength(0);
+}
+
 it('supplies an overwrite to the approving device without prior local membership records', async () => {
   const { peers } = await setup(false);
   const [source, provider] = workers;
@@ -92,13 +106,7 @@ for (const mode of ['merge', 'overwrite']) {
     expect((await source!.send('snapshot')).restore).toBeNull();
     expect((await source!.send('snapshot')).group).toBeUndefined();
     if (mode === 'merge') {
-      await expect(source!.send('joinRequest', { origin: peers[1]!.origin, mode }))
-        .rejects.toThrow('sync_group_merge_requires_overwrite');
-      expect((await source!.send('snapshot')).group).toBeUndefined();
-      expect((await source!.send('snapshot')).library.nodesById['local-note']?.content).toBe('Local chosen data');
-      expect((await provider!.send('snapshot')).library.nodesById['remote-note']).toBeDefined();
-      expect((await provider!.send('joinOverview') as unknown as { join_requests: unknown[] })
-        .join_requests).toHaveLength(0);
+      await assertMergeRefused(source!, provider!, peers[1]!.origin);
     }
     const request = await source!.send('joinRequest', { origin: peers[1]!.origin, mode: 'overwrite' }) as unknown as {
       join_request: { request_id: string }

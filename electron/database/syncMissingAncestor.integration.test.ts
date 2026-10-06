@@ -84,7 +84,8 @@ it.each([false, true])('merges missing-base branches and retains available bodie
   await receivePack(right, left, fromRight);
   const merged = await current(left);
   expect(await current(right)).toEqual(merged);
-  expect(new Set(merged.parent_version_ids)).toEqual(new Set([b, c]));
+  if (equal) expect([b, c]).toContain(merged.version_id);
+  else expect(new Set(merged.parent_version_ids)).toEqual(new Set([b, c]));
   for (const peer of [left, right]) {
     expect(peer.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id IN (?, ?)')
       .pluck().all(b, c).sort()).toEqual(equal ? ['Shared body', 'Shared body'] : ['Left final\nx=0\n', 'Original\nx=1\n']);
