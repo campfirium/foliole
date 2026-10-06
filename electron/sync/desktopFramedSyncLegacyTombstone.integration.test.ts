@@ -61,17 +61,19 @@ it('converges a proven legacy permanent deletion through a normal two-process HT
   }
 }, 60_000);
 
-it('synchronizes a standalone historical tombstone to an empty peer without inventing member positions', async () => {
+it.each([false, true])('synchronizes a standalone historical tombstone with missing parent=%s without inventing member positions', async (missingParent) => {
   await startLibraries();
   const fixture = await createDesktopFramedSyncTwoProcessFixture();
   try {
     const donor = createPeer('historical-fact-donor');
+    if (missingParent) edit(donor, 'Historical parent body');
     const versionId = edit(donor, 'Historical original body');
     donor.db.exec("ATTACH DATABASE ':memory:' AS search");
     initializeWorkspaceSearchSidecar({ sqlite: donor.db, driver: donor.driver });
     deleteNodesPermanently(donor.driver, { nodeIds: ['topic'], nodeOrder: [],
       deletedAt: '2026-07-24T02:12:44.137Z' });
     const record = (await loadRetainedSyncNodeVersionRecords(donor.port, [versionId])).get(versionId)!;
+    expect(Boolean(record.parent_version_id)).toBe(missingParent);
     const source = new Database(fixture.leftSnapshot.databasePath);
     try {
       await applyRemoteNodeTombstone(createBetterSqliteDbPort(source), record, false);
