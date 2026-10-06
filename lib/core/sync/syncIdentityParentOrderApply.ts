@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { ensureSyncSpecialRootNodes } from './syncPackSpecialRootApply.js';
 import { parseParentOrderFact } from './syncParentOrderFact.js';
 import { loadParentOrderMembers } from './syncParentOrderMembers.js';
 import { resolveParentOrderHeads } from './syncParentOrderResolve.js';
@@ -92,8 +93,11 @@ export async function stageSyncIdentityParentOrderRecordMerge(port: DbPort,
       throw new Error('sync_parent_order_head_unproven');
     }
   }
-  const membership = await loadParentOrderMembers(port, parentId,
-    [...new Set([...left, ...right])], incomingAlias);
+  const memberIds = [...new Set([...left, ...right])];
+  await ensureSyncSpecialRootNodes(port, memberIds.map((nodeId) => ({
+    nodeId, referencedAt: new Date().toISOString()
+  })));
+  const membership = await loadParentOrderMembers(port, parentId, memberIds, incomingAlias);
   const result = resolveParentOrderHeads({ versions, headIds, ...membership });
   const childIdsJson = JSON.stringify(result.order);
   return { parentId, childIdsJson, version: result.version,

@@ -16,8 +16,15 @@ export async function ensureSyncPackSpecialRootParents(
     `SELECT parent_id, MIN(updated_at) AS referenced_at FROM ${alias}.nodes
      WHERE parent_id IS NOT NULL GROUP BY parent_id`
   );
+  await ensureSyncSpecialRootNodes(port, references.map((reference) => ({
+    nodeId: reference.parent_id, referencedAt: reference.referenced_at
+  })));
+}
+
+export async function ensureSyncSpecialRootNodes(port: DbPort,
+  references: readonly { nodeId: string; referencedAt: string }[]) {
   for (const reference of references) {
-    const definition = specialRootNodeDefinition(reference.parent_id);
+    const definition = specialRootNodeDefinition(reference.nodeId);
     if (!definition) continue;
     await port.run(
       `INSERT INTO main.nodes (
@@ -25,7 +32,7 @@ export async function ensureSyncPackSpecialRootParents(
         content, created_at, updated_at
       ) VALUES (?, NULL, 'folder', ?, 1, 0, '', ?, ?)
       ON CONFLICT(id) DO NOTHING`,
-      [reference.parent_id, definition.title, reference.referenced_at, reference.referenced_at]
+      [reference.nodeId, definition.title, reference.referencedAt, reference.referencedAt]
     );
   }
 }

@@ -10,7 +10,7 @@ export const SPECIAL_ROOT_NODE_IDS = Object.keys(SPECIAL_ROOT_NODE_RECORDS) as A
 type SpecialRootNodeId = keyof typeof SPECIAL_ROOT_NODE_RECORDS;
 
 export function isSpecialRootNode(nodeId: string): nodeId is SpecialRootNodeId {
-  return nodeId in SPECIAL_ROOT_NODE_RECORDS;
+  return Object.hasOwn(SPECIAL_ROOT_NODE_RECORDS, nodeId);
 }
 
 export function specialRootNodeDefinition(nodeId: string) {
