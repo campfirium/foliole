@@ -144,7 +144,7 @@ it('defers a source changed during publication and continues the inventory round
   });
   mocks.pull.mockImplementation(async ({ object_id: objectId }: { object_id: string }) => {
     if (objectId === 'changed') {
-      throw new Error('framed_sync_http_400:framed_sync_source_changed');
+      throw new Error('framed_sync_http_400:framed_sync_difference_request_source_changed');
     }
     return { transfer_id: 'b'.repeat(64) };
   });

@@ -94,6 +94,7 @@ public final class FramedSyncHttpTransportTest {
     public void preservesRecoverableDetailsNeededForRoundContinuation() throws Exception {
         assertPreservedError("framed_sync_node_parent_missing:parent-1");
         assertPreservedError("framed_sync_source_changed");
+        assertPreservedError("framed_sync_difference_request_source_changed");
     }
 
     private static void assertPreservedError(String detail) throws Exception {

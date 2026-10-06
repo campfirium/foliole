@@ -13,6 +13,8 @@ public final class FramedSyncHttpTransport {
     public static final String CONTENT_TYPE = "application/vnd.foliole.framed-sync";
     private static final int CONNECT_TIMEOUT_MS = 15_000;
     private static final int ERROR_BODY_LIMIT_BYTES = 4 * 1024;
+    private static final String DIFFERENCE_SOURCE_CHANGED =
+        "framed_sync_difference_request_source_changed";
     private static final String MISSING_PARENT = "framed_sync_node_parent_missing:";
     private static final String SOURCE_CHANGED = "framed_sync_source_changed";
     private static final int READ_TIMEOUT_MS = 60_000;
@@ -103,7 +105,7 @@ public final class FramedSyncHttpTransport {
             String prefix = "{\"error\":\"";
             if (!body.startsWith(prefix) || !body.endsWith("\"}")) return null;
             String error = body.substring(prefix.length(), body.length() - 2);
-            if (SOURCE_CHANGED.equals(error)) return error;
+            if (SOURCE_CHANGED.equals(error) || DIFFERENCE_SOURCE_CHANGED.equals(error)) return error;
             if (!error.startsWith(MISSING_PARENT)) return null;
             String parentId = error.substring(MISSING_PARENT.length());
             return parentId.matches("[A-Za-z0-9_-]{1,128}") ? error : null;

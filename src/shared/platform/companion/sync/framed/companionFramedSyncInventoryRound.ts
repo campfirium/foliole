@@ -86,8 +86,9 @@ async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventory
       received.set(difference.globalId, await pullDifference(args, difference, roundId));
       return 'delivered';
     } catch (error) {
-      if (!String(error instanceof Error ? error.message : error)
-        .endsWith(':framed_sync_source_changed')) throw error;
+      const message = String(error instanceof Error ? error.message : error);
+      if (!['framed_sync_difference_request_source_changed', 'framed_sync_source_changed']
+        .some((code) => message.endsWith(`:${code}`))) throw error;
       defer(difference);
       return 'deferred';
     }
