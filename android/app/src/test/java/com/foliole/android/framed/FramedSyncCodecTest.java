@@ -4,6 +4,9 @@ import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import com.foliole.sync.v22.CanonicalField;
+import com.foliole.sync.v22.CanonicalObject;
+import com.foliole.sync.v22.CanonicalValue;
 import com.foliole.sync.v22.ProtocolMessage;
 import java.util.EnumMap;
 import java.util.Map;
@@ -77,6 +80,26 @@ public class FramedSyncCodecTest {
             fail("accepted invalid outbound message");
         } catch (FramedSyncValidationException expected) {
             assertEquals("fact_kind_invalid", expected.code());
+        }
+    }
+
+    @Test
+    public void canonicalTextMayBeEmptyWhileProtocolIdentitiesMayNot() throws Exception {
+        ProtocolMessage decoded = ProtocolMessage.parseFrom(golden("fact").bytes);
+        CanonicalField emptyBody = CanonicalField.newBuilder().setName("body")
+            .setValue(CanonicalValue.newBuilder().setStringValue("")).build();
+        ProtocolMessage emptyCanonicalText = decoded.toBuilder().setFact(decoded.getFact().toBuilder()
+            .setBody(CanonicalObject.newBuilder().addFields(emptyBody))).build();
+        FramedSyncCodec.validateOutbound(
+            emptyCanonicalText, FramedSyncFrameType.FACT.wireValue());
+
+        ProtocolMessage emptyIdentity = decoded.toBuilder().setFact(decoded.getFact().toBuilder()
+            .setIdentity(decoded.getFact().getIdentity().toBuilder().setFactId(""))).build();
+        try {
+            FramedSyncCodec.validateOutbound(emptyIdentity, FramedSyncFrameType.FACT.wireValue());
+            fail("accepted an empty protocol identity");
+        } catch (FramedSyncValidationException expected) {
+            assertEquals("protocol_string_required", expected.code());
         }
     }
 

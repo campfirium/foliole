@@ -93,6 +93,35 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
         }
     }
 
+    func testCanonicalTextMayBeEmptyWhileProtocolIdentitiesMayNot() throws {
+        let golden = try XCTUnwrap(try FramedSyncFixture.load().corpus.messages.first {
+            $0.payloadCase == "fact"
+        })
+        let data = try XCTUnwrap(Data(base64Encoded: golden.base64))
+        var message = try Foliole_Sync_V22_ProtocolMessage(serializedBytes: data)
+        var value = Foliole_Sync_V22_CanonicalValue()
+        value.stringValue = ""
+        var field = Foliole_Sync_V22_CanonicalField()
+        field.name = "body"
+        field.value = value
+        message.fact.body.fields = [field]
+        XCTAssertNoThrow(try FolioleFramedSyncCodec.validateOutbound(
+            message,
+            authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue
+        ))
+
+        message.fact.identity.factID = ""
+        XCTAssertThrowsError(try FolioleFramedSyncCodec.validateOutbound(
+            message,
+            authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue
+        )) { error in
+            XCTAssertEqual(
+                error as? FolioleFramedSyncValidationError,
+                FolioleFramedSyncValidationError("protocol_string_required")
+            )
+        }
+    }
+
     private func frameType(for payloadCase: String) throws -> FolioleFramedSyncFrameType {
         switch payloadCase {
         case "transfer_header": .transferHeader

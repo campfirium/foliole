@@ -39,6 +39,17 @@ describe('framed sync production protobuf codec', () => {
       .toMatchObject({ offset: '0' });
   });
 
+  it('preserves empty canonical text while requiring nonempty protocol identities', () => {
+    const encoded = encodeValidatedProtocolMessage('fact', fact({
+      body: { fields: [{ name: 'body', value: { stringValue: '' } }] }
+    }));
+    expect(decodeAndValidateProtocolMessage(encoded, FRAMED_SYNC_FRAME_TYPES.fact).payload)
+      .toMatchObject({ body: { fields: [{ name: 'body', value: { stringValue: '' } }] } });
+    expect(() => encodeValidatedProtocolMessage('fact', fact({
+      identity: { ...identity, factId: '' }
+    }))).toThrow('protocol_string_required');
+  });
+
   it.each([
     ['unspecified fact kind', fact({ identity: { ...identity, kind: 0 } }), 'fact_kind_invalid'],
     ['empty fact id', fact({ identity: { ...identity, factId: '' } }), 'protocol_string_required'],

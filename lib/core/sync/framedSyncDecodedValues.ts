@@ -43,8 +43,8 @@ export function hex(value: Uint8Array) {
   return [...value].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export function text(value: unknown, name: string) {
-  if (typeof value !== 'string' || !value) throw new Error(`${name}_required`);
+export function protocolString(value: unknown) {
+  if (typeof value !== 'string') throw new Error('protocol_string_required');
   for (let index = 0; index < value.length; index += 1) {
     const unit = value.charCodeAt(index);
     if (unit >= 0xd800 && unit <= 0xdbff) {
@@ -58,6 +58,12 @@ export function text(value: unknown, name: string) {
     throw new Error('protocol_string_limit_exceeded');
   }
   return value;
+}
+
+export function text(value: unknown, name: string) {
+  if (typeof value !== 'string') throw new Error(`${name}_required`);
+  if (!value) throw new Error('protocol_string_required');
+  return protocolString(value);
 }
 
 export function unsigned(value: unknown, name: string) {
@@ -75,7 +81,7 @@ export function enumValue(value: unknown, max: number, name: string) {
 
 export function walk(value: unknown, depth: number, budget: Budget): void {
   if (depth > MAX_PROTOBUF_CONTAINER_DEPTH) throw new Error('protocol_depth_limit_exceeded');
-  if (typeof value === 'string') { text(value, 'protocol_string'); return; }
+  if (typeof value === 'string') { protocolString(value); return; }
   if (ArrayBuffer.isView(value)) {
     if (value.byteLength > FRAMED_SYNC_LIMITS.maxDecompressedFrameBytes) {
       throw new Error('protocol_bytes_limit_exceeded');

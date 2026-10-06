@@ -30,6 +30,10 @@ final class FramedSyncValueValidator {
 
     static void text(String value, String name) throws FramedSyncValidationException {
         if (value.isEmpty()) throw invalid("protocol_string_required");
+        protocolString(value);
+    }
+
+    static void protocolString(String value) throws FramedSyncValidationException {
         for (int index = 0; index < value.length(); index++) {
             char unit = value.charAt(index);
             if (Character.isHighSurrogate(unit)) {
@@ -150,7 +154,7 @@ final class FramedSyncValueValidator {
         requireDepth(depth);
         switch (value.getValueCase()) {
             case STRING_VALUE:
-                text(value.getStringValue(), "protocol_string");
+                protocolString(value.getStringValue());
                 break;
             case BYTES_VALUE:
                 if (value.getBytesValue().size() > FramedSyncContract.MAX_FRAME_MESSAGE_BYTES) {

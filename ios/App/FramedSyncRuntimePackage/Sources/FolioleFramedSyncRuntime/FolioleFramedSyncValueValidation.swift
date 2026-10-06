@@ -15,6 +15,10 @@ enum FolioleFramedSyncValueValidator {
 
     static func text(_ value: String, _ name: String) throws {
         guard !value.isEmpty else { throw FolioleFramedSyncValidationError("protocol_string_required") }
+        try protocolString(value)
+    }
+
+    static func protocolString(_ value: String) throws {
         guard value.lengthOfBytes(using: .utf8) <= FolioleFramedSyncLimits.maxProtocolStringBytes else {
             throw FolioleFramedSyncValidationError("protocol_string_limit_exceeded")
         }
@@ -139,7 +143,7 @@ enum FolioleFramedSyncValueValidator {
             throw FolioleFramedSyncValidationError("canonical_value_case_invalid")
         }
         switch selected {
-        case .stringValue(let value): try text(value, "protocol_string")
+        case .stringValue(let value): try protocolString(value)
         case .bytesValue(let value):
             guard value.count <= FolioleFramedSyncLimits.maxFrameMessageBytes else {
                 throw FolioleFramedSyncValidationError("protocol_bytes_limit_exceeded")
