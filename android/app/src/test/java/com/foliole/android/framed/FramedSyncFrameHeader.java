@@ -4,7 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 final class FramedSyncFrameHeader {
-    static final int MAX_FRAME_BYTES = 1024 * 1024;
+    static final int MAX_FRAME_BYTES = 2 * 1024 * 1024 + 16;
 
     private FramedSyncFrameHeader() {}
 

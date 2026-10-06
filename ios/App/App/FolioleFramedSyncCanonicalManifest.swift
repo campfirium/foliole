@@ -10,10 +10,14 @@ enum FolioleFramedSyncCanonicalManifest {
         writer.string("foliole-framed-sync-content-v1")
         let facts = facts.sorted(by: factOrder)
         writer.u32(facts.count)
-        for fact in facts { try write(fact, to: &writer) }
+        for fact in facts {
+            try write(fact, to: &writer)
+            try writer.assertBudget()
+        }
         let blobs = blobs.sorted { $0.sha256.lexicographicallyPrecedes($1.sha256) }
         writer.u32(blobs.count)
         for blob in blobs { write(blob, to: &writer) }
+        try writer.assertBudget()
         return Data(SHA256.hash(data: writer.data))
     }
 
@@ -77,6 +81,11 @@ enum FolioleFramedSyncCanonicalManifest {
 
 private struct Writer {
     var data = Data()
+    func assertBudget() throws {
+        guard data.count <= FolioleFramedSyncLimits.maxCanonicalManifestBytes else {
+            throw FolioleFramedSyncValidationError("canonical_manifest_limit_exceeded")
+        }
+    }
     mutating func byte(_ value: Int) { data.append(UInt8(value)) }
     mutating func bytes(_ value: Data) { u32(value.count); data.append(value) }
     mutating func string(_ value: String) { bytes(Data(value.utf8)) }

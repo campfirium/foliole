@@ -23,7 +23,7 @@ public struct FolioleFramedSyncPreamble: Sendable, Equatable {
 
 public struct FolioleFramedSyncWireHeader: Sendable, Equatable {
     public static let byteCount = 16
-    public static let maxCiphertextBytes = 1024 * 1024
+    public static let maxCiphertextBytes = 2 * 1024 * 1024 + 16
 
     public let ciphertextBytes: Int
     public let sequence: UInt64

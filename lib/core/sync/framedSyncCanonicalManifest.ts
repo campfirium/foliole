@@ -104,7 +104,7 @@ class Writer {
   }
 
   private append(value: Uint8Array) {
-    if (this.size + value.byteLength > FRAMED_SYNC_LIMITS.maxManifestBytes) {
+    if (this.size + value.byteLength > FRAMED_SYNC_LIMITS.maxCanonicalManifestBytes) {
       throw new Error('canonical_manifest_limit_exceeded');
     }
     this.chunks.push(value);

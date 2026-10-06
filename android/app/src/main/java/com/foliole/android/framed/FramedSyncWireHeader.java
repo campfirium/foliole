@@ -5,7 +5,7 @@ import java.nio.ByteOrder;
 
 public final class FramedSyncWireHeader {
     public static final int BYTES = 16;
-    public static final int MAX_CIPHERTEXT_BYTES = 1024 * 1024;
+    public static final int MAX_CIPHERTEXT_BYTES = 2 * 1024 * 1024 + 16;
 
     private final int ciphertextBytes;
     private final int frameType;

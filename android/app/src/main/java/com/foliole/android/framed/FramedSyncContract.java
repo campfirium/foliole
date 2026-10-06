@@ -9,7 +9,8 @@ public final class FramedSyncContract {
     public static final long MAX_TRANSFER_BYTES = 32L * 1024 * 1024 * 1024;
     public static final int MAX_BLOBS_PER_TRANSFER = 4_096;
     public static final int MAX_CANONICAL_DEPTH = 32;
-    public static final int MAX_CANONICAL_STRING_BYTES = 1024 * 1024;
+    public static final int MAX_CANONICAL_STRING_BYTES = 1536 * 1024;
+    public static final int MAX_CANONICAL_MANIFEST_BYTES = 8 * 1024 * 1024;
     public static final int MAX_CANONICAL_FIELDS = 100_000;
     public static final int MAX_DECODED_REPEATED_ITEMS = 100_000;
     public static final int MAX_FACTS_PER_TRANSFER = 4_096;

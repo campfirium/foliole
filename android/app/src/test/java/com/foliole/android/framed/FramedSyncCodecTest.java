@@ -18,7 +18,9 @@ public class FramedSyncCodecTest {
     @Test
     public void canonicalPayloadUsesItsOwnStringBudget() throws Exception {
         ProtocolMessage message = ProtocolMessage.parseFrom(golden("fact").bytes);
-        for (int size : new int[] {65_537, 170_000, 1_048_577}) {
+        for (int size : new int[] {65_537, 170_000, 1_048_577,
+                FramedSyncContract.MAX_CANONICAL_STRING_BYTES,
+                FramedSyncContract.MAX_CANONICAL_STRING_BYTES + 1}) {
             CanonicalField field = CanonicalField.newBuilder().setName("payload_json")
                 .setValue(CanonicalValue.newBuilder().setStringValue("x".repeat(size))).build();
             ProtocolMessage payload = message.toBuilder().setFact(message.getFact().toBuilder()

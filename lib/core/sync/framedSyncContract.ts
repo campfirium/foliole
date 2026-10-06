@@ -16,7 +16,8 @@ export const FRAMED_SYNC_LIMITS = Object.freeze({
   maxChunksPerTransfer: 69_632,
   maxCanonicalDepth: 32,
   maxCanonicalFields: 100_000,
-  maxCanonicalStringBytes: 1024 * 1024,
+  maxCanonicalStringBytes: 1536 * 1024,
+  maxCanonicalManifestBytes: 8 * 1024 * 1024,
   maxControlMessageBytes: 768 * 1024,
   maxDecompressedFrameBytes: 2 * 1024 * 1024,
   maxDecodedFields: 100_000,
@@ -33,7 +34,7 @@ export const FRAMED_SYNC_LIMITS = Object.freeze({
   maxProtocolCapabilities: 64,
   maxProtocolStringBytes: 64 * 1024,
   maxTransferBytes: 32 * 1024 * 1024 * 1024,
-  maxCiphertextBodyBytes: 1024 * 1024,
+  maxCiphertextBodyBytes: 2 * 1024 * 1024 + 16,
   preambleBytes: 96
 } as const);
 

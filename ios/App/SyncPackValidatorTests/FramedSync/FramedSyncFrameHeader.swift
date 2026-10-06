@@ -2,7 +2,7 @@ import Foundation
 
 struct FramedSyncFrameHeader {
     static let byteCount = 16
-    static let maximumCiphertextBytes: UInt32 = 1_048_576
+    static let maximumCiphertextBytes: UInt32 = 2 * 1024 * 1024 + 16
 
     let ciphertextBytes: UInt32
     let flags: UInt16

@@ -11,7 +11,9 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
             serializedBytes: XCTUnwrap(Data(base64Encoded: golden.base64)))
         var field = Foliole_Sync_V22_CanonicalField()
         field.name = "payload_json"
-        for size in [65_537, 170_000, 1_048_577] {
+        for size in [65_537, 170_000, 1_048_577,
+                     FolioleFramedSyncLimits.maxCanonicalStringBytes,
+                     FolioleFramedSyncLimits.maxCanonicalStringBytes + 1] {
             field.value.stringValue = String(repeating: "x", count: size)
             message.fact.body.fields = [field]
             if size > FolioleFramedSyncLimits.maxCanonicalStringBytes {

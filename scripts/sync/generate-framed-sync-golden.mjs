@@ -196,7 +196,7 @@ async function document() {
     corpus_version: 1,
     crypto: { session: sessionCryptoVector(), transfer: transferCryptoVector() },
     malformed: [
-      malformedFrameHeader('wire-frame-length-over-1MiB', 1_048_577, 3),
+      malformedFrameHeader('wire-frame-length-over-decoded-frame-and-tag', 2 * 1024 * 1024 + 17, 3),
       malformedFrameHeader('wire-frame-length-u32-max', 0xffff_ffff, 3),
       malformedFrameHeader('unspecified-frame-type', 16, 0),
       malformedFrameHeader('nonzero-frame-flags', 16, 3, 1)

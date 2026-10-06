@@ -9,7 +9,8 @@ public enum FolioleFramedSyncLimits {
     static let maxTransferBytes: UInt64 = 32 * 1024 * 1024 * 1024
     static let maxBlobsPerTransfer = 4_096
     static let maxCanonicalDepth = 32
-    static let maxCanonicalStringBytes = 1024 * 1024
+    static let maxCanonicalStringBytes = 1536 * 1024
+    public static let maxCanonicalManifestBytes = 8 * 1024 * 1024
     static let maxDecodedRepeatedItems = 100_000
     static let maxFactsPerTransfer = 4_096
     public static let maxInventoryEntries = 100_000

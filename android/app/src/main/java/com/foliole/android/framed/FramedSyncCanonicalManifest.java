@@ -25,10 +25,14 @@ final class FramedSyncCanonicalManifest {
         writer.data(DOMAIN);
         List<FactRecord> sortedFacts = sortedFacts(facts);
         writer.u32(sortedFacts.size());
-        for (FactRecord fact : sortedFacts) writeFact(writer, fact);
+        for (FactRecord fact : sortedFacts) {
+            writeFact(writer, fact);
+            writer.assertBudget();
+        }
         List<BlobReference> sortedBlobs = sortedBlobs(blobs);
         writer.u32(sortedBlobs.size());
         for (BlobReference blob : sortedBlobs) writeBlob(writer, blob);
+        writer.assertBudget();
         try {
             return MessageDigest.getInstance("SHA-256").digest(writer.bytes());
         } catch (java.security.NoSuchAlgorithmException error) {
@@ -192,5 +196,10 @@ final class FramedSyncCanonicalManifest {
             }
         }
         byte[] bytes() { return output.toByteArray(); }
+        void assertBudget() throws FramedSyncValidationException {
+            if (output.size() > FramedSyncContract.MAX_CANONICAL_MANIFEST_BYTES) {
+                throw invalid("canonical_manifest_limit_exceeded");
+            }
+        }
     }
 }

@@ -70,14 +70,14 @@ final class FramedSyncContractTests: XCTestCase {
         XCTAssertEqual(
             Set(corpus.malformed.map(\.name)),
             [
-                "wire-frame-length-over-1MiB",
+                "wire-frame-length-over-decoded-frame-and-tag",
                 "wire-frame-length-u32-max",
                 "unspecified-frame-type",
                 "nonzero-frame-flags"
             ]
         )
         let expectedErrors: [String: FrameHeaderError] = [
-            "wire-frame-length-over-1MiB": .ciphertextLimitExceeded,
+            "wire-frame-length-over-decoded-frame-and-tag": .ciphertextLimitExceeded,
             "wire-frame-length-u32-max": .ciphertextLimitExceeded,
             "unspecified-frame-type": .invalidHeader,
             "nonzero-frame-flags": .invalidHeader
