@@ -76,7 +76,7 @@ final class FramedSyncSQLiteBlobs {
                 long byteLength = offers.getLong(1);
                 int role = offers.getInt(2);
                 boolean required = offers.getInt(3) == 1;
-                if (role != 1) {
+                if (role != 1 && role != 5) {
                     if (!resources.verifyAndPin(
                         transferId, attemptId, hash, byteLength, role, required)) return false;
                     continue;
@@ -105,7 +105,7 @@ final class FramedSyncSQLiteBlobs {
 
     boolean isResourceChunk(byte[] transferId, byte[] attemptId, byte[] hash) {
         BlobReference descriptor = loadOffer(transferId, attemptId, hash);
-        return descriptor != null && descriptor.getRoleValue() != 1;
+        return descriptor != null && descriptor.getRoleValue() != 1 && descriptor.getRoleValue() != 5;
     }
 
     private byte[] assemble(byte[] transferId, byte[] attemptId, byte[] hash, long byteLength)

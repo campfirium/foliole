@@ -10,10 +10,12 @@ import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabase
 export function readCompanionFramedSyncPendingPublications(
   db: DbPort, args: NativeCompanionFramedSyncInventoryRequest
 ) {
-  return db.query<{ object_id: string; state: string; transfer_id: string }>(
+  return db.query<{ object_id: string; object_type: string; state: string; transfer_id: string }>(
     `SELECT lower(hex(p.transfer_id)) AS transfer_id, p.state,
        (SELECT global_id FROM framed_sync_outbound_fact_refs f
-        WHERE f.transfer_id = p.transfer_id ORDER BY rowid LIMIT 1) AS object_id
+        WHERE f.transfer_id = p.transfer_id ORDER BY rowid LIMIT 1) AS object_id,
+       (SELECT object_type FROM framed_sync_outbound_fact_refs f
+        WHERE f.transfer_id = p.transfer_id ORDER BY rowid LIMIT 1) AS object_type
      FROM framed_sync_outbound_publications p
      JOIN framed_sync_outbound_holds h ON h.transfer_id = p.transfer_id
      JOIN sync_group_local_state local ON local.singleton_id = 1 AND local.state = 'active'
@@ -38,7 +40,7 @@ export async function resumeCompanionFramedSyncPendingPublications(
         createFramedSyncOutboundReceiptStaging(db).releaseOutboundHolds(hexToBytes(publication.transfer_id))));
     } else {
       const receipt = await FolioleCompanionSync.sendFramedSyncTransfer({ ...args,
-        include_current_node: false, object_id: publication.object_id,
+        include_current_node: false, object_id: publication.object_id, object_type: publication.object_type,
         required_relation_ids: [], review_fact_ids: [], state_fact_ids: [],
         transfer_id: publication.transfer_id });
       if (receipt.transfer_id !== publication.transfer_id ||

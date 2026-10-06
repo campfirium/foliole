@@ -66,7 +66,7 @@ final class FolioleCompanionFramedSyncOutboundInput {
                 throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
             }
             int role = ((Number) roleValue).intValue();
-            if (role == 1) {
+            if ((role == 1 || role == 5)) {
                 byte[] data = blob.getString("data_text").getBytes(StandardCharsets.UTF_8);
                 if (length != data.length) throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
                 result.add(new FramedSyncBlobContent(hash, data));

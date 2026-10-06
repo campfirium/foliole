@@ -3,8 +3,8 @@ import type { FramedSyncInventoryDifference } from './framedSyncInventory.js';
 const PARENT_MISSING = 'framed_sync_node_parent_missing:';
 export type FramedSyncDifferenceDelivery = 'delivered' | 'deferred';
 
-function key(value: Pick<FramedSyncInventoryDifference, 'direction' | 'globalId'>) {
-  return `${value.direction}\0${value.globalId}`;
+function key(value: Pick<FramedSyncInventoryDifference, 'direction' | 'globalId' | 'objectType'>) {
+  return `${value.direction}\0${value.objectType}\0${value.globalId}`;
 }
 
 function missingParentId(error: unknown) {
@@ -35,7 +35,7 @@ export async function deliverFramedSyncDifferencesInDependencyOrder(
         result = await deliver(difference);
       } catch (error) {
         const parentId = missingParentId(error);
-        const parent = parentId ? available.get(key({ ...difference, globalId: parentId })) : null;
+        const parent = parentId ? available.get(key({ ...difference, objectType: 'node', globalId: parentId })) : null;
         if (!parent) throw error;
         if (!await visit(parent)) {
           deferred.set(differenceKey, difference);

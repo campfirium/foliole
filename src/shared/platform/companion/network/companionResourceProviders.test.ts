@@ -1,5 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
+vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({ getIosCompanionDatabaseOwner: () => ({
+  runWriter: async (task: (db: { run: () => Promise<void> }) => Promise<void>) => task({ run: async () => undefined })
+}) }));
+
 const mocks = vi.hoisted(() => ({ group: vi.fn(), blocked: vi.fn(async () => false), discovery: vi.fn(),
   nativeCandidates: vi.fn(), exchange: vi.fn(), post: vi.fn() }));
 vi.mock('../sync/syncGroupStore', () => ({ loadCompanionSyncGroup: mocks.group }));

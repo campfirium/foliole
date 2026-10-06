@@ -68,7 +68,7 @@ final class FramedSyncSQLiteResourceBlobs {
     void cleanupAttempt(byte[] transferId, byte[] attemptId) {
         if (directory == null) return;
         try (Cursor rows = database.query("framed_sync_android_blob_offers", new String[] {"sha256"},
-            "hex(transfer_id) = ? AND hex(attempt_id) = ? AND role != 1",
+            "hex(transfer_id) = ? AND hex(attempt_id) = ? AND role NOT IN (1, 5)",
             FramedSyncSQLiteValues.blobArgs(transferId, attemptId), null, null, null)) {
             while (rows.moveToNext()) {
                 FramedSyncResourceFiles.partial(directory, transferId, attemptId, rows.getBlob(0)).delete();

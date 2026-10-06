@@ -12,11 +12,11 @@ export type FramedSyncRequestedFact = Readonly<{
   factId: string;
   globalId: string;
   kind: 1 | 2 | 3 | 4;
-  objectType: 'node';
+  objectType: string;
 }>;
 
-function identity(globalId: string, factId: string, kind: FramedSyncRequestedFact['kind']) {
-  return { factId, globalId, kind, objectType: 'node' as const };
+function identity(globalId: string, factId: string, kind: FramedSyncRequestedFact['kind'], objectType: string) {
+  return { factId, globalId, kind, objectType };
 }
 
 export function projectFramedSyncDifferenceRequest(input: {
@@ -24,16 +24,16 @@ export function projectFramedSyncDifferenceRequest(input: {
   roundId: Uint8Array;
 }) {
   const { difference } = input;
-  if (difference.direction !== 'remote_to_local' || difference.objectType !== 'node') {
+  if (difference.direction !== 'remote_to_local') {
     throw new Error('framed_sync_difference_request_direction_invalid');
   }
   const versionIds = new Set(difference.sourceSnapshot.frontierFactIds);
   const facts = [
     ...(difference.sourceSnapshot.stateFactIds ?? [])
-      .map((id) => identity(difference.globalId, id, 1)),
-    ...[...versionIds].map((id) => identity(difference.globalId, id, 2)),
-    ...difference.sourceSnapshot.requiredRelationIds.map((id) => identity(difference.globalId, id, 3)),
-    ...difference.sourceSnapshot.reviewFactIds.map((id) => identity(difference.globalId, id, 4))
+      .map((id) => identity(difference.globalId, id, 1, difference.objectType)),
+    ...[...versionIds].map((id) => identity(difference.globalId, id, 2, difference.objectType)),
+    ...difference.sourceSnapshot.requiredRelationIds.map((id) => identity(difference.globalId, id, 3, difference.objectType)),
+    ...difference.sourceSnapshot.reviewFactIds.map((id) => identity(difference.globalId, id, 4, difference.objectType))
   ];
   const payload = {
     blobHashes: difference.sourceSnapshot.resourceHashes,
@@ -58,7 +58,7 @@ export function decodeFramedSyncDifferenceRequest(message: ValidatedProtocolMess
       throw new Error('framed_sync_difference_request_fact_kind_invalid');
     }
     const objectType = text(fact.objectType, 'object_type');
-    if (objectType !== 'node') throw new Error('framed_sync_difference_request_object_type_invalid');
+    if (objectType !== 'node' && kind !== 1) throw new Error('framed_sync_difference_request_object_type_invalid');
     return {
       factId: text(fact.factId, 'fact_id'),
       globalId: text(fact.globalId, 'global_id'),
@@ -77,7 +77,7 @@ export function resolveFramedSyncDifferenceRequest(
   current: FramedSyncInventoryEntry,
   request: ReturnType<typeof decodeFramedSyncDifferenceRequest>
 ): FramedSyncInventoryDifference {
-  if (current.objectType !== 'node' || request.facts.some((fact) =>
+  if (request.facts.some((fact) =>
     fact.objectType !== current.objectType || fact.globalId !== current.globalId)) {
     throw new Error('framed_sync_difference_request_identity_mismatch');
   }
@@ -101,7 +101,7 @@ export function resolveFramedSyncDifferenceRequest(
       resourceHashes: request.blobHashes,
       reviewFactIds,
       stateFactIds,
-      sharedState: frontierFactIds.length > 0
+      sharedState: frontierFactIds.length > 0 || (current.objectType !== 'node' && stateFactIds.length > 0)
     },
     objectType: current.objectType,
     sourceSnapshot: current

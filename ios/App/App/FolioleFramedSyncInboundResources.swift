@@ -39,7 +39,7 @@ final class FolioleFramedSyncInboundResources {
     func isResource(transferID: Data, attemptID: Data, hash: Data) throws -> Bool {
         try database.rows("""
             SELECT 1 FROM framed_sync_ios_blob_offers
-            WHERE transfer_id = ? AND attempt_id = ? AND sha256 = ? AND role != 1
+            WHERE transfer_id = ? AND attempt_id = ? AND sha256 = ? AND role NOT IN (1, 5)
             """, [transferID, attemptID, hash]).first != nil
     }
 
@@ -48,7 +48,7 @@ final class FolioleFramedSyncInboundResources {
     ) throws {
         guard let offer = try database.rows("""
             SELECT byte_length FROM framed_sync_ios_blob_offers
-            WHERE transfer_id = ? AND attempt_id = ? AND sha256 = ? AND role != 1
+            WHERE transfer_id = ? AND attempt_id = ? AND sha256 = ? AND role NOT IN (1, 5)
             """, [transferID, attemptID, chunk.blobHash]).first,
               let total = offer[0] as? Int else { throw invalid("blob_chunk_not_admitted") }
         try validateChunk(total: UInt64(total), offset: chunk.offset, length: chunk.data.count)
@@ -76,7 +76,7 @@ final class FolioleFramedSyncInboundResources {
     func finish(transferID: Data, attemptID: Data) throws -> Set<Data> {
         let offers = try database.rows("""
             SELECT sha256, byte_length, role, required FROM framed_sync_ios_blob_offers
-            WHERE transfer_id = ? AND attempt_id = ? AND role != 1
+            WHERE transfer_id = ? AND attempt_id = ? AND role NOT IN (1, 5)
             ORDER BY hex(sha256)
             """, [transferID, attemptID])
         try database.execute("DELETE FROM framed_sync_ios_resource_pins WHERE transfer_id = ?", [transferID])

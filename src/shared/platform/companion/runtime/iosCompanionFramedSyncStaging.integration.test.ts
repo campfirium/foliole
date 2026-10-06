@@ -3,7 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 
 import Database from 'better-sqlite3';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
+  maintainAttachmentFiles: vi.fn(async () => ({ files: [] }))
+} }));
 
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/companionSchemaStatements';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../../../../lib/core/database/framedSyncStagingSchema';
@@ -30,7 +34,9 @@ describe('iOS active companion framed sync staging', () => {
     const fixture = databaseFixture(false);
     await initializeIosCompanionDatabase(nativeState(), fixture.manager);
 
-    expect(framedTables(fixture.sqlite)).toHaveLength(FRAMED_SYNC_STAGING_SCHEMA.length);
+    expect(framedTables(fixture.sqlite)).toEqual(expect.arrayContaining(
+      FRAMED_SYNC_STAGING_SCHEMA.map((sql) => sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/u)![1])
+    ));
     expect(fixture.sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
   });
 
@@ -47,7 +53,9 @@ describe('iOS active companion framed sync staging', () => {
 
     await initializeIosCompanionDatabase(nativeState(), fixture.manager);
 
-    expect(framedTables(fixture.sqlite)).toHaveLength(FRAMED_SYNC_STAGING_SCHEMA.length);
+    expect(framedTables(fixture.sqlite)).toEqual(expect.arrayContaining(
+      FRAMED_SYNC_STAGING_SCHEMA.map((sql) => sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/u)![1])
+    ));
     expect(fixture.sqlite.prepare("SELECT title FROM nodes WHERE id = 'kept-node'").pluck().get()).toBe('Kept');
     expect(fixture.sqlite.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
   });

@@ -6,6 +6,7 @@ interface SendCompanionFramedSyncObjectArgs {
   groupId: string;
   includeCurrentNode: boolean;
   objectId: string;
+  objectType: string;
   receiverDeviceId: string;
   receiverLibraryEpoch: string;
   requiredRelationIds: readonly string[];
@@ -33,6 +34,7 @@ export async function sendCompanionFramedSyncObject(args: SendCompanionFramedSyn
     endpoint_url: args.endpointUrl,
     include_current_node: args.includeCurrentNode,
     object_id: args.objectId,
+    object_type: args.objectType,
     receiver_device_id: args.receiverDeviceId,
     receiver_library_epoch: args.receiverLibraryEpoch,
     required_relation_ids: args.requiredRelationIds,

@@ -40,7 +40,15 @@ final class FolioleAttachmentMaintenanceFiles {
             requireFile(file);
             if (!file.delete()) throw new IllegalStateException("attachment_remove_failed");
         } else throw new IllegalArgumentException("invalid_attachment_operation");
-        return new JSObject();
+        return new JSObject().put("available", available(context, key));
+    }
+
+    private static boolean available(Context context, String key) {
+        for (boolean trash : new boolean[] { false, true }) {
+            File file = new File(directory(context, trash), key);
+            if (file.exists()) { requireFile(file); return true; }
+        }
+        return false;
     }
 
     static File directory(Context context, boolean trash) {

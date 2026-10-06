@@ -18,7 +18,7 @@ public final class FolioleCompanionFramedSyncPullInputTest {
         byte[] resourceHash = bytes(32, 2);
         FolioleCompanionFramedSyncPullInput.Request input =
             new FolioleCompanionFramedSyncPullInput.Request(
-                "node-1", roundId, Arrays.asList("version-2", "version-1"),
+                "node-1", "node", roundId, Arrays.asList("version-2", "version-1"),
                 Collections.singletonList("[\"version-2\",\"version-1\",2]"),
                 Collections.singletonList(resourceHash),
                 Collections.singletonList("review-1"), Collections.singletonList("node_reading:" + "a".repeat(64)));
@@ -39,6 +39,19 @@ public final class FolioleCompanionFramedSyncPullInputTest {
         assertEquals("node", request.getFacts(0).getObjectType());
         assertEquals("node-1", request.getFacts(0).getGlobalId());
         assertArrayEquals(resourceHash, request.getBlobHashes(0).toByteArray());
+    }
+
+    @Test public void preservesOriginalIndependentObjectIdentity() throws Exception {
+        var input = new FolioleCompanionFramedSyncPullInput.Request(
+            "original-document", "external_document", bytes(16, 1), Collections.emptyList(),
+            Collections.emptyList(), Collections.singletonList(bytes(32, 2)),
+            Collections.emptyList(), Collections.singletonList("external_document:" + "a".repeat(64)));
+        DifferenceRequest request = (DifferenceRequest) FolioleCompanionFramedSyncPullInput.messages(input)
+            .get(0).payload().value();
+        assertEquals(FactKind.FACT_KIND_OBJECT_STATE, request.getFacts(0).getKind());
+        assertEquals("external_document", request.getFacts(0).getObjectType());
+        assertEquals("original-document", request.getFacts(0).getGlobalId());
+        assertEquals(1, request.getBlobHashesCount());
     }
 
     private static byte[] bytes(int length, int value) {

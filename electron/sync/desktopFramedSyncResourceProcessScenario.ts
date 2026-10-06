@@ -2,10 +2,9 @@ import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
-import { openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
+import { persistNodeResourceReference } from '../database/nodeResources.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
@@ -33,10 +32,9 @@ export async function seedDesktopFramedSyncResourceScenario(input: Readonly<{
     title: 'Binary resource',
     updatedAt: now
   });
-  openDatabaseConnection().driver.execute(`UPDATE nodes SET resource_references = ?, sync_dirty = 1
-    WHERE id = ?`, [serializeNodeResourceReferences([{
+  persistNodeResourceReference(input.nodeId, {
     original_name: 'Cover.png', role: 'image', storage_key: storageKey
-  }]), input.nodeId]);
+  });
   flushDirtyNodeSyncVersions();
   return { hash, storageKey };
 }

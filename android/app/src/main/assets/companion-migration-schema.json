@@ -570,6 +570,15 @@
         }
       ],
       "beforeVersion": 70
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install write-maintained framed inventory.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 71
     }
   ],
   "planKeys": {

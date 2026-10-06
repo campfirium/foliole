@@ -7,10 +7,16 @@ import { readFramedSyncInventoryEntry } from './framedSyncInventoryRead.js';
 function port(bodyText: string | null, resourceReferences = '[]', isTombstone = 0) {
   const db = {
     query: vi.fn(async (sql: string): Promise<DbRow[]> => {
-      if (sql.includes('SELECT node.id')) return [{
-        body_text: bodyText, content_hash: '4'.repeat(64),
-        current_version_id: isTombstone ? 'tombstone-1' : 'version-1',
-        id: 'node-1', is_tombstone: isTombstone, resource_references: resourceReferences
+      if (sql.includes('FROM framed_sync_inventory')) return [{
+        content_hash: '4'.repeat(64), object_id: 'node-1',
+        frontier_json: JSON.stringify([isTombstone ? 'tombstone-1' : 'version-1']),
+        relations_json: '[]', reviews_json: '[]', states_json: '[]',
+        resources_json: JSON.stringify([
+          ...(bodyText === null && !isTombstone ? [] : [isTombstone
+            ? 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+            : '230d8358dc8e8890b4c58deeb62912ee2f20357ae92a5cc861b98e68fe31acb5']),
+          ...JSON.parse(resourceReferences).map((item: { storage_key: string }) => item.storage_key.slice(0, 64))
+        ])
       }];
       return [];
     })
@@ -19,7 +25,7 @@ function port(bodyText: string | null, resourceReferences = '[]', isTombstone = 
   return db;
 }
 
-it('hashes the exact readable current body in inventory', async () => {
+it('reads the exact stored current body dependency hash from the durable inventory', async () => {
   const entry = await readFramedSyncInventoryEntry(port('body'), {
     globalId: 'node-1', objectType: 'node'
   });
@@ -36,11 +42,11 @@ it('declares hashes for the binary resources owned by the current Node', async (
     { original_name: 'Cover.png', role: 'image', storage_key: `${image}.png` }
   ])), { globalId: 'node-1', objectType: 'node' });
 
-  expect(entry!.resourceHashes.map(bytesToHex)).toEqual([
+  expect(entry!.resourceHashes.map(bytesToHex).sort()).toEqual([
     '230d8358dc8e8890b4c58deeb62912ee2f20357ae92a5cc861b98e68fe31acb5',
     image,
     pdf
-  ]);
+  ].sort());
 });
 
 it('keeps a deleted Node in inventory with its tombstone version and empty body dependency', async () => {

@@ -1,6 +1,8 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { parseNodeResourceReferences, serializeNodeResourceReferences, upsertNodeResourceReference, type NodeResourceReference } from '../../lib/core/database/nodeResourceReferences.js';
 import { enqueuePdfSearchInvalidationForNodeIds } from '../../lib/core/database/searchIndexInvalidations.js';
+import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
 
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
@@ -16,6 +18,10 @@ function updateNodeResources(nodeId: string, update: (value: string) => string) 
     const row = driver.queryOne<NodeResourcesRow>('SELECT resource_references FROM nodes WHERE id = ?', [nodeId]);
     if (!row) throw new Error(`node_resource_owner_missing:${nodeId}`);
     const resources = update(row.resource_references);
+    for (const reference of parseNodeResourceReferences(resources)) {
+      const available = resolveAttachmentFileForSync(reference.storage_key).status === 'ready';
+      driver.execute(FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL, [reference.storage_key.slice(0, 64), available ? 1 : 0]);
+    }
     if (resources === row.resource_references) return 'reused' as const;
     const now = new Date().toISOString();
     const hostName = loadOrCreateDesktopHostName(now);

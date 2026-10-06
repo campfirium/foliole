@@ -19,7 +19,7 @@ final class FolioleCompanionFramedSyncPullInput {
 
     static Request request(PluginCall call) throws Exception {
         return new Request(
-            required(call, "object_id"),
+            required(call, "object_id"), required(call, "object_type"),
             fixedHex(call, "round_id", 16),
             requiredStrings(call, "frontier_fact_ids"),
             requiredStrings(call, "required_relation_ids"),
@@ -30,10 +30,10 @@ final class FolioleCompanionFramedSyncPullInput {
     static List<FramedSyncValidatedMessage> messages(Request input) throws Exception {
         DifferenceRequest.Builder difference = DifferenceRequest.newBuilder()
             .setRoundId(ByteString.copyFrom(input.roundId));
-        addFacts(difference, input.objectId, input.frontierFactIds, FactKind.FACT_KIND_NODE_VERSION);
-        addFacts(difference, input.objectId, input.requiredRelationIds, FactKind.FACT_KIND_PARENT_EDGE);
-        addFacts(difference, input.objectId, input.reviewFactIds, FactKind.FACT_KIND_REVIEW);
-        addFacts(difference, input.objectId, input.stateFactIds, FactKind.FACT_KIND_OBJECT_STATE);
+        addFacts(difference, input.objectType, input.objectId, input.frontierFactIds, FactKind.FACT_KIND_NODE_VERSION);
+        addFacts(difference, input.objectType, input.objectId, input.requiredRelationIds, FactKind.FACT_KIND_PARENT_EDGE);
+        addFacts(difference, input.objectType, input.objectId, input.reviewFactIds, FactKind.FACT_KIND_REVIEW);
+        addFacts(difference, input.objectType, input.objectId, input.stateFactIds, FactKind.FACT_KIND_OBJECT_STATE);
         for (byte[] hash : input.resourceHashes) difference.addBlobHashes(ByteString.copyFrom(hash));
         FramedSyncValidatedMessage message = FramedSyncCodec.validateOutbound(
             ProtocolMessage.newBuilder().setDifferenceRequest(difference).build(),
@@ -43,12 +43,12 @@ final class FolioleCompanionFramedSyncPullInput {
 
     private static void addFacts(
         DifferenceRequest.Builder request,
-        String objectId,
+        String objectType, String objectId,
         List<String> factIds,
         FactKind kind
     ) {
         for (String factId : factIds) request.addFacts(FactIdentity.newBuilder()
-            .setKind(kind).setObjectType("node").setGlobalId(objectId).setFactId(factId));
+            .setKind(kind).setObjectType(objectType).setGlobalId(objectId).setFactId(factId));
     }
 
     private static List<byte[]> digestList(PluginCall call, String key) throws Exception {
@@ -111,6 +111,7 @@ final class FolioleCompanionFramedSyncPullInput {
     static final class Request {
         final List<String> frontierFactIds;
         final String objectId;
+        final String objectType;
         final List<String> requiredRelationIds;
         final List<byte[]> resourceHashes;
         final List<String> reviewFactIds;
@@ -118,7 +119,7 @@ final class FolioleCompanionFramedSyncPullInput {
         final byte[] roundId;
 
         Request(
-            String objectId,
+            String objectId, String objectType,
             byte[] roundId,
             List<String> frontierFactIds,
             List<String> requiredRelationIds,
@@ -126,6 +127,7 @@ final class FolioleCompanionFramedSyncPullInput {
             List<String> reviewFactIds, List<String> stateFactIds
         ) {
             this.objectId = objectId;
+            this.objectType = objectType;
             this.roundId = roundId.clone();
             this.frontierFactIds = new ArrayList<>(frontierFactIds);
             this.requiredRelationIds = new ArrayList<>(requiredRelationIds);

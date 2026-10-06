@@ -1,3 +1,4 @@
+import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import {
   framedSyncBytes,
   framedSyncText,
@@ -8,12 +9,13 @@ import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import type { TransferReceiptStage } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { assertFramedSyncNodeParentDependencies } from '../../../../../../lib/core/sync/framedSyncNodeParentDependencies.js';
+import { applyFramedSyncObjectStateRecord } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewApply.js';
 import { canonicalFactFromValidatedMessage } from '../../../../../../lib/core/sync/framedSyncWireFact.js';
 import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
 import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import { applySyncObjectInTransaction } from '../../../../../../lib/core/sync/syncObjectApplyExecutor.js';
+import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
 
 import { decodeCompanionFramedSyncTransfer } from './companionFramedSyncDecode.js';
 
@@ -63,7 +65,7 @@ async function loadTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
   const bodyRows = await db.query<DbRow>(`SELECT pin.sha256, pin.byte_length, pin.role, pin.required, available.data
     FROM ${tables.alias}.${tables.prefix}_blob_pins pin
     JOIN ${tables.alias}.${tables.prefix}_available_blobs available ON available.sha256 = pin.sha256
-    WHERE pin.transfer_id = ? AND pin.role = 1`, [input.transferId]);
+    WHERE pin.transfer_id = ? AND pin.role IN (1, 5)`, [input.transferId]);
   const resourceRows = await db.query<DbRow>(
     `SELECT pin.sha256, pin.byte_length, pin.role, pin.required, pin.storage_key
       FROM ${tables.alias}.${tables.prefix}_resource_pins pin
@@ -108,6 +110,8 @@ export async function applyCompanionFramedSyncTransfer(
         if (!receiptIdentityMatches(stored, receiptIdentity)) throw new Error('receipt_identity_conflict');
         return stored;
       }
+      await recordFramedSyncResourceAvailability(tx,
+        (input.resourceStorageKeys ?? []).map((key) => key.slice(0, 64)), true);
       await assertFramedSyncNodeParentDependencies(tx, decoded.nodes);
       for (const node of decoded.nodes) {
         await upsertTextBodyBlob(
@@ -118,9 +122,12 @@ export async function applyCompanionFramedSyncTransfer(
         tx, decoded.nodes, { enqueueSearchInvalidations: false }
       );
       await applyFramedSyncRelationReviewFactsWithDbPort(tx, decoded.relationReviewFacts);
-      for (const state of decoded.readingStates) await applySyncObjectInTransaction(tx, state);
+      for (const body of decoded.externalBodies ?? []) {
+        await upsertTextBodyBlob(tx, body.text, new Date().toISOString(), body.hash);
+      }
+      await applyStateRecords(tx, decoded.readingStates);
       const current = await readFramedSyncInventoryEntry(
-        tx, { globalId: decoded.globalId, objectType: 'node' }
+        tx, { globalId: decoded.globalId, objectType: decoded.objectType }
       );
       if (!current) throw new Error('framed_sync_applied_state_missing');
       const receipt: TransferReceiptStage = {
@@ -134,4 +141,12 @@ export async function applyCompanionFramedSyncTransfer(
   } finally {
     await db.run(`DETACH DATABASE ${tables.alias}`);
   }
+}
+
+async function applyStateRecords(
+  db: DbPort, records: Awaited<ReturnType<typeof decodeCompanionFramedSyncTransfer>>['readingStates']
+) {
+  const hostName = records.some((record) => record.object_type === 'setting')
+    ? await iosCompanionHostName(db) : undefined;
+  for (const record of records) await applyFramedSyncObjectStateRecord(db, record, hostName ? { hostName } : {});
 }

@@ -32,7 +32,7 @@ export class DesktopFramedSyncInboundResourceStore {
     this.#transferId = input.transferId;
     const transfer = bytesToHex(input.transferId);
     const attempt = bytesToHex(input.attemptId);
-    this.#entries = new Map(input.descriptors.filter((descriptor) => descriptor.role !== 1)
+    this.#entries = new Map(input.descriptors.filter((descriptor) => descriptor.role !== 1 && descriptor.role !== 5)
       .map((descriptor) => {
         const hash = bytesToHex(descriptor.sha256);
         const target = resolveAttachmentStoragePath(hash, undefined, mimeForRole(descriptor.role));

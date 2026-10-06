@@ -9,12 +9,16 @@ import type {
   CanonicalBlob,
   CanonicalFact
 } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { decodeFramedExternalDocumentBodies } from '../../../../../../lib/core/sync/framedSyncExternalDocumentBody.js';
 import { restoreFramedSyncNodeReadingFact } from '../../../../../../lib/core/sync/framedSyncNodeReadingFact.js';
 import { readFramedSyncNodeResources } from '../../../../../../lib/core/sync/framedSyncNodeResources.js';
 import { restoreFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeRestore.js';
+import { restoreFramedSyncObjectStateFact } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 
 export type DecodedCompanionTransfer = Readonly<{
+  externalBodies?: readonly Readonly<{ hash: string; text: string }>[];
   globalId: string;
+  objectType: string;
   nodes: Array<ReturnType<typeof restoreFramedSyncNodeRecord>>;
   relationReviewFacts: readonly CanonicalFact[];
   readingStates: Array<ReturnType<typeof restoreFramedSyncNodeReadingFact>>;
@@ -91,19 +95,28 @@ export function decodeCompanionFramedSyncTransfer(input: {
   const nodeFacts = input.facts.filter((fact) => fact.kind === 2);
   const relationReviewFacts = input.facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
   const readingStates = input.facts.filter((fact) => fact.kind === 1)
-    .map(restoreFramedSyncNodeReadingFact);
+    .map((fact) => fact.objectType === 'node' ? restoreFramedSyncNodeReadingFact(fact) : restoreFramedSyncObjectStateFact(fact));
   if (!input.facts.length || nodeFacts.length + relationReviewFacts.length + readingStates.length !== input.facts.length) {
     throw new Error('framed_sync_android_fact_set_unsupported');
   }
   const globalId = input.facts[0]!.globalId;
-  if (input.facts.some((fact) => fact.objectType !== 'node' || fact.globalId !== globalId)) {
+  const objectType = input.facts[0]!.objectType;
+  if (input.facts.some((fact) => fact.objectType !== objectType || fact.globalId !== globalId)) {
     throw new Error('framed_sync_android_fact_identity_mismatch');
   }
   if (!nodeFacts.length) {
-    if (input.bodyRows.length || input.resourceRows.length || input.resourceStorageKeys.length) {
+    if (input.resourceRows.length || input.resourceStorageKeys.length) {
       throw new Error('framed_sync_android_blob_set_mismatch');
     }
-    return { globalId, nodes: [], relationReviewFacts, readingStates };
+    const bodyRows = uniqueRows(input.bodyRows);
+    for (const descriptor of input.facts.flatMap((fact) => fact.blobs)) {
+      const row = bodyRows.get(bytesToHex(descriptor.sha256));
+      if (!row || !sameBlob(descriptor, blob(row))) throw new Error('framed_sync_android_blob_identity_mismatch');
+    }
+    const externalBodies = decodeFramedExternalDocumentBodies(input.facts, input.bodyRows.map((row) => ({
+      sha256: framedSyncBytes(row, 'sha256'), data: framedSyncBytes(row, 'data')
+    })));
+    return { externalBodies, globalId, objectType, nodes: [], relationReviewFacts, readingStates };
   }
   const bodies = uniqueRows(input.bodyRows);
   const requiredBodies = new Set(nodeFacts.flatMap((fact) => fact.blobs.filter((entry) => entry.role === 1)
@@ -111,5 +124,5 @@ export function decodeCompanionFramedSyncTransfer(input: {
   if (bodies.size !== requiredBodies.size) throw new Error('framed_sync_android_blob_identity_mismatch');
   const nodes = nodeFacts.map((fact) => decodeNode(fact, bodies));
   validateResources(nodeFacts, nodes, input.resourceRows, input.resourceStorageKeys);
-  return { globalId, nodes, relationReviewFacts, readingStates };
+  return { globalId, objectType, nodes, relationReviewFacts, readingStates };
 }

@@ -1,10 +1,12 @@
-import { bytesToHex } from '@noble/hashes/utils.js';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import {
   canonicalContentId,
   canonicalTransferId,
-  type CanonicalBlob
+  type CanonicalBlob,
+  type CanonicalFact,
+  type CanonicalManifest
 } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { createCompanionFramedSyncOutboundValue } from '../../../../../../lib/core/sync/framedSyncCompanionOutboundContract.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../../../../../lib/core/sync/framedSyncContract.js';
@@ -19,6 +21,7 @@ import {
   createFramedSyncNodeResourceBlob,
   readFramedSyncNodeResources
 } from '../../../../../../lib/core/sync/framedSyncNodeResources.js';
+import { selectFramedSyncObjectStateFact } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 import { publishFramedSyncOutboundWithDbPort } from '../../../../../../lib/core/sync/framedSyncOutboundStaging.js';
 import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { loadFramedSyncPublishedOutboundValue } from '../../../../../../lib/core/sync/framedSyncPublishedOutboundValue.js';
@@ -80,18 +83,24 @@ function resourceFiles(value: unknown) {
 
 async function selectOutbound(db: DbPort, payload: Record<string, unknown>) {
   const objectId = requiredText(payload.object_id);
+  const objectType = requiredText(payload.object_type);
   const includeCurrentNode = requiredBoolean(payload.include_current_node);
   const requiredRelationIds = requiredStrings(payload.required_relation_ids, 'relation_ids');
   const reviewFactIds = requiredStrings(payload.review_fact_ids, 'review_fact_ids');
   const stateFactIds = requiredStrings(payload.state_fact_ids, 'state_fact_ids');
-  const current = await readFramedSyncInventoryEntry(db, { globalId: objectId, objectType: 'node' });
+  const current = await readFramedSyncInventoryEntry(db, { globalId: objectId, objectType });
   if (!current) throw new Error('framed_sync_source_empty');
   const difference: FramedSyncInventoryDifference = {
-    direction: 'local_to_remote', globalId: objectId, objectType: 'node', sourceSnapshot: current,
+    direction: 'local_to_remote', globalId: objectId, objectType, sourceSnapshot: current,
     need: { frontierFactIds: includeCurrentNode ? current.frontierFactIds : [],
       requiredRelationIds, resourceHashes: includeCurrentNode ? current.resourceHashes : [],
       reviewFactIds, stateFactIds, sharedState: includeCurrentNode }
   };
+  if (objectType !== 'node') {
+    const ids = stateFactIds.length ? stateFactIds : current.stateFactIds ?? [];
+    const stateFacts = await Promise.all(ids.map((id) => selectFramedSyncObjectStateFact(db, difference, id)));
+    return { records: [], selected: { kind: 'selected' as const, facts: [] }, stateFacts };
+  }
   const selected = await selectFramedSyncRelationReviewFactsWithDbPort(db, difference);
   if (selected.kind === 'deferred') throw new Error('framed_sync_source_changed');
   const versionIds = requiredFramedSyncNodeVersionIds(difference);
@@ -165,24 +174,13 @@ export async function prepareCompanionFramedSyncOutbound(
       }
       blobs.set(key, { blob: resource.blob, storageKey: resource.storageKey });
     }
+    await addStateBodies(tx, selection.stateFacts, blobs);
     const manifest = { blobs: [...blobs.values()].map((value) => value.blob),
       facts: [...projections.flatMap((value) => value.projection.manifest.facts),
         ...selection.selected.facts, ...selection.stateFacts] };
     if (!manifest.facts.length) throw new Error('framed_sync_outbound_fact_set_empty');
     await persistBodies(tx, blobs);
-    const transferContext = context(payload);
-    const contentId = await canonicalContentId(manifest);
-    const transferId = await canonicalTransferId(transferContext, contentId);
-    const state = await publishFramedSyncOutboundWithDbPort(tx, {
-      contentId, context: transferContext, manifest, manifestHash: contentId, transferId
-    });
-    return createCompanionFramedSyncOutboundValue({
-      blobs: [...blobs.values()],
-      contentId,
-      factMessageBytesList: manifest.facts.map((fact) =>
-        encodeValidatedProtocolMessage('fact', factToWire(fact))),
-      manifestHash: contentId, publicationState: state, transferId
-    });
+    return publishSelection(tx, context(payload), manifest, [...blobs.values()]);
   });
 }
 
@@ -191,4 +189,28 @@ async function persistBodies(db: DbPort, blobs: Map<string, { blob: CanonicalBlo
     if (dataText !== undefined) await upsertTextBodyBlob(db, dataText,
       new Date().toISOString(), bytesToHex(blob.sha256));
   }
+}
+
+async function addStateBodies(db: DbPort, facts: readonly CanonicalFact[],
+  blobs: Map<string, { blob: CanonicalBlob; dataText?: string; storageKey?: string }>) {
+  for (const fact of facts) for (const blob of fact.blobs) {
+    const [body] = await db.query<{ data_hex: string }>(
+      'SELECT hex(data) AS data_hex FROM content_blob_data WHERE hash = ?', [bytesToHex(blob.sha256)]);
+    if (!body) throw new Error('framed_sync_external_document_body_invalid');
+    blobs.set(bytesToHex(blob.sha256), { blob, dataText: new TextDecoder('utf-8', { fatal: true })
+      .decode(hexToBytes(body.data_hex)) });
+  }
+}
+
+async function publishSelection(db: DbPort, transferContext: FramedSyncContext, manifest: CanonicalManifest,
+  blobs: readonly { blob: CanonicalBlob; dataText?: string; storageKey?: string }[]) {
+  const contentId = await canonicalContentId(manifest);
+  const transferId = await canonicalTransferId(transferContext, contentId);
+  const state = await publishFramedSyncOutboundWithDbPort(db, {
+    contentId, context: transferContext, manifest, manifestHash: contentId, transferId
+  });
+  return createCompanionFramedSyncOutboundValue({ blobs, contentId,
+    factMessageBytesList: manifest.facts.map((fact) =>
+      encodeValidatedProtocolMessage('fact', factToWire(fact))),
+    manifestHash: contentId, publicationState: state, transferId });
 }

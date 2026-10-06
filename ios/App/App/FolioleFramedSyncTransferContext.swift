@@ -34,14 +34,14 @@ enum FolioleFramedSyncDifferenceRequest {
     static func make(
         roundID: Data, objectID: String, frontierFactIDs: [String],
         requiredRelationIDs: [String], resourceHashes: [Data], reviewFactIDs: [String],
-        stateFactIDs: [String]
+        stateFactIDs: [String], objectType: String = "node"
     ) throws -> FolioleFramedSyncValidatedMessage {
         var value = Foliole_Sync_V22_DifferenceRequest()
         value.roundID = roundID
-        value.facts = frontierFactIDs.map { identity(.nodeVersion, objectID, $0) }
-            + requiredRelationIDs.map { identity(.parentEdge, objectID, $0) }
-            + reviewFactIDs.map { identity(.review, objectID, $0) }
-            + stateFactIDs.map { identity(.objectState, objectID, $0) }
+        value.facts = frontierFactIDs.map { identity(.nodeVersion, objectID, $0, objectType) }
+            + requiredRelationIDs.map { identity(.parentEdge, objectID, $0, objectType) }
+            + reviewFactIDs.map { identity(.review, objectID, $0, objectType) }
+            + stateFactIDs.map { identity(.objectState, objectID, $0, objectType) }
         value.blobHashes = resourceHashes
         var message = Foliole_Sync_V22_ProtocolMessage()
         message.payload = .differenceRequest(value)
@@ -51,11 +51,11 @@ enum FolioleFramedSyncDifferenceRequest {
     }
 
     private static func identity(
-        _ kind: Foliole_Sync_V22_FactKind, _ objectID: String, _ factID: String
+        _ kind: Foliole_Sync_V22_FactKind, _ objectID: String, _ factID: String, _ objectType: String
     ) -> Foliole_Sync_V22_FactIdentity {
         var value = Foliole_Sync_V22_FactIdentity()
         value.kind = kind
-        value.objectType = "node"
+        value.objectType = objectType
         value.globalID = objectID
         value.factID = factID
         return value

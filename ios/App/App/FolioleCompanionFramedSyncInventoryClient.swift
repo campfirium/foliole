@@ -91,7 +91,7 @@ extension FolioleCompanionSyncPlugin {
             requiredRelationIDs: framedArray(call, "required_relation_ids"),
             resourceHashes: framedDigests(call, "resource_hashes"),
             reviewFactIDs: framedArray(call, "review_fact_ids"),
-            stateFactIDs: framedArray(call, "state_fact_ids")
+            stateFactIDs: framedArray(call, "state_fact_ids"), objectType: framedRequired(call, "object_type")
         )
         let requestBody = try FolioleFramedSyncSessionWriter.encode(
             groupKey: groupKey, context: sessionContext, messages: [request]

@@ -7,6 +7,7 @@ import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from './desktopSourceConnect
 import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from './desktopSourceSchemaStatements.js';
 import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from './externalDocumentSchemaStatements.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
+import { FRAMED_SYNC_INVENTORY_SCHEMA } from './framedSyncInventorySchema.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from './framedSyncStagingSchema.js';
 import { KEEP_IMPORT_SCHEMA_STATEMENTS } from './keepImportSchemaStatements.js';
 import { LEGACY_BODY_MIGRATION_SCHEMA } from './legacyBodyMigrationSchema.js';
@@ -67,5 +68,6 @@ export const DESKTOP_FRESH_SCHEMA_STATEMENTS = [
   ...STORED_SOURCE_SEARCH_SCHEMA,
   ...LEGACY_BODY_MIGRATION_SCHEMA,
   ...DATA_MIGRATION_STATE_SCHEMA_STATEMENTS,
-  ...SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS
+  ...SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS,
+  ...FRAMED_SYNC_INVENTORY_SCHEMA
 ].filter((statement) => !isRetiredAttachmentSchema(statement) && !isLegacyOrderingSchema(statement));

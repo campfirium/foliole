@@ -47,7 +47,7 @@ export function loadDesktopFramedSyncBlobSources(
   for (const record of records) {
     const resources = resolveDesktopFramedSyncNodeResources(record);
     const projection = projectDesktopFramedSyncNodeRecord(record, resources.map((value) => value.blob));
-    const bodyBlob = projection.manifest.blobs.find((blob) => blob.role === 1);
+    const bodyBlob = projection.manifest.blobs.find((blob) => (blob.role === 1 || blob.role === 5));
     if (!bodyBlob) throw new Error('framed_sync_node_body_blob_missing');
     addSource(sources, { blob: bodyBlob, chunks: byteChunks(projection.bodyBlob) });
     for (const resource of resources) {
@@ -76,7 +76,7 @@ export async function loadDesktopFramedSyncPublishedBlobSources(db: DbPort, mani
   const sources: DesktopFramedSyncBlobSource[] = [];
   for (const blob of manifest.blobs) {
     const hash = bytesToHex(blob.sha256);
-    if (blob.role === 1) {
+    if ((blob.role === 1 || blob.role === 5)) {
       const [row] = await db.query<{ data: Uint8Array }>(
         'SELECT data FROM content_blob_data WHERE hash = ?', [hash]);
       if (!row || !(row.data instanceof Uint8Array) ||

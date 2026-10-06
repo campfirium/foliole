@@ -31,14 +31,18 @@ function versionRow(versionId: string, bodyText = 'Outbound body', parentVersion
   };
 }
 
+function inventoryRow(resources: string[] = [], relations: string[] = [], reviews: string[] = []) {
+  return { content_hash: '44'.repeat(32), object_id: 'node-1',
+    frontier_json: '["version-1"]', relations_json: JSON.stringify(relations),
+    reviews_json: JSON.stringify(reviews), states_json: '[]',
+    resources_json: JSON.stringify(['45d3ac1a76e0116aed14599baa78ba59b7c8a43212c0821bebf7d94913965c0e', ...resources]) };
+}
+
 it('freezes a current node fact and durable hold before returning native wire input', async () => {
   const run = vi.fn(async () => ({ changes: 1, lastInsertRowId: null }));
   const port = {
     query: vi.fn(async (sql: string): Promise<DbRow[]> => {
-      if (sql.includes('SELECT node.id')) return [{
-        body_text: 'Outbound body', content_hash: '44'.repeat(32),
-        current_version_id: 'version-1', id: 'node-1'
-      }];
+      if (sql.includes('FROM framed_sync_inventory')) return [inventoryRow()];
       if (sql.includes('FROM node_sync_versions WHERE version_id IN')) {
         return [versionRow('version-1')];
       }
@@ -48,7 +52,7 @@ it('freezes a current node fact and durable hold before returning native wire in
     transaction: async <T>(task: (tx: DbPort) => Promise<T>) => task(port as DbPort)
   } as DbPort;
   const result = await prepareCompanionFramedSyncOutbound(port, {
-    group_id: 'group-1', include_current_node: true, object_id: 'node-1',
+    group_id: 'group-1', include_current_node: true, object_id: 'node-1', object_type: 'node',
     receiver_device_id: 'receiver', required_relation_ids: [], review_fact_ids: [], state_fact_ids: [],
     receiver_library_epoch: 'receiver-epoch', sender_device_id: 'sender',
     sender_library_epoch: 'sender-epoch'
@@ -72,8 +76,7 @@ it('prepares the exact version chain with its parent and review facts', async ()
     parent_version_id: 'parent-1', version_id: 'version-1' };
   const port = {
     query: vi.fn(async (sql: string): Promise<DbRow[]> => {
-      if (sql.includes('SELECT node.id')) return [{ body_text: 'body',
-        content_hash: '44'.repeat(32), current_version_id: 'version-1', id: 'node-1' }];
+      if (sql.includes('FROM framed_sync_inventory')) return [inventoryRow([], [relationId], ['review-1'])];
       if (sql.includes('FROM node_sync_versions WHERE version_id IN')) return [
         versionRow('parent-1', 'Parent body'), versionRow('version-1', 'Child body', 'parent-1')
       ];
@@ -88,7 +91,7 @@ it('prepares the exact version chain with its parent and review facts', async ()
     transaction: async <T>(task: (tx: DbPort) => Promise<T>) => task(port as DbPort)
   } as DbPort;
   const result = await prepareCompanionFramedSyncOutbound(port, {
-    group_id: 'group-1', include_current_node: false, object_id: 'node-1',
+    group_id: 'group-1', include_current_node: false, object_id: 'node-1', object_type: 'node',
     receiver_device_id: 'receiver', receiver_library_epoch: 'receiver-epoch',
     required_relation_ids: [relationId], review_fact_ids: ['review-1'], state_fact_ids: [],
     sender_device_id: 'sender', sender_library_epoch: 'sender-epoch'
@@ -107,10 +110,7 @@ it('inspects and freezes canonical resource files without returning data_text', 
   ]);
   const port = {
     query: vi.fn(async (sql: string): Promise<DbRow[]> => {
-      if (sql.includes('SELECT * FROM (')) return [{
-        body_text: 'Outbound body', content_hash: '44'.repeat(32), current_version_id: 'version-1',
-        id: 'node-1', is_tombstone: 0, resource_references: resourceReferences
-      }];
+      if (sql.includes('FROM framed_sync_inventory')) return [inventoryRow([hash])];
       if (sql.includes('FROM node_sync_versions WHERE version_id IN')) return [{
         ...versionRow('version-1'),
         snapshot_json: JSON.stringify({ ...snapshot, resource_references: resourceReferences })
@@ -121,7 +121,7 @@ it('inspects and freezes canonical resource files without returning data_text', 
     transaction: async <T>(task: (tx: DbPort) => Promise<T>) => task(port as DbPort)
   } as DbPort;
   const payload = {
-    group_id: 'group-1', include_current_node: true, object_id: 'node-1',
+    group_id: 'group-1', include_current_node: true, object_id: 'node-1', object_type: 'node',
     receiver_device_id: 'receiver', required_relation_ids: [], review_fact_ids: [], state_fact_ids: [],
     receiver_library_epoch: 'receiver-epoch', sender_device_id: 'sender',
     sender_library_epoch: 'sender-epoch'

@@ -10,7 +10,8 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
-import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/companionSchemaStatements.js';
+import { bootstrapCompanionDatabase } from '../../../../../../lib/core/database/companionDatabaseLifecycle.js';
+import { readFramedSyncInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
@@ -32,9 +33,11 @@ it.each(['android', 'ios'] as const)(
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-framed-resource-apply-'));
   roots.push(root);
   const stagingPath = path.join(root, 'staging.db');
-  const main = tracked(new Database(':memory:'));
+  const main = tracked(new Database(path.join(root, 'main.db')));
   const staging = tracked(new Database(stagingPath));
-  main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  await bootstrapCompanionDatabase(createBetterSqliteDbPort(main), {
+    allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06'
+  });
   const prefix = `framed_sync_${kind}`;
   installCompanionFramedSyncStaging(staging, prefix);
   const record = nodeRecord();
@@ -65,6 +68,9 @@ it.each(['android', 'ios'] as const)(
     JSON.parse(record.snapshot.resource_references));
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 1 });
   expect(bytesToHex(receipt.appliedStateHash)).toBe('4'.repeat(64));
+  expect((await readFramedSyncInventory(createBetterSqliteDbPort(main)))
+    .find((entry) => entry.objectType === 'node' && entry.globalId === 'node-1')!
+    .resourceHashes.map(bytesToHex)).toContain(bytesToHex(resourceHash));
   }
 );
 

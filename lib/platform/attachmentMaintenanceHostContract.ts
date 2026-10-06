@@ -7,5 +7,5 @@ export interface AttachmentMaintenanceHostPlugin {
     storageKey?: string;
     state?: string;
     databasePath?: string;
-  }): Promise<{ files?: AttachmentFileEntry[]; state?: string | null; generation?: string }>;
+  }): Promise<{ available?: boolean; files?: AttachmentFileEntry[]; state?: string | null; generation?: string }>;
 }

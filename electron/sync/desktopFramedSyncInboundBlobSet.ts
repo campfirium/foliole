@@ -18,7 +18,7 @@ export class DesktopFramedSyncInboundBlobSet {
   readonly #entries: Map<string, Entry>;
 
   constructor(descriptors: readonly ManifestBlobDescriptor[]) {
-    const bodyDescriptors = descriptors.filter((descriptor) => descriptor.role === 1);
+    const bodyDescriptors = descriptors.filter((descriptor) => (descriptor.role === 1 || descriptor.role === 5));
     this.#entries = new Map(bodyDescriptors.map((descriptor) => [bytesToHex(descriptor.sha256), {
       chunks: [], descriptor
     }]));

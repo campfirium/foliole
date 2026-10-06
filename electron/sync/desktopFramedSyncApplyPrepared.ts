@@ -1,7 +1,10 @@
+import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { TransferReceiptStage } from '../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { assertFramedSyncNodeParentDependencies } from '../../lib/core/sync/framedSyncNodeParentDependencies.js';
+import { readFramedSyncNodeResources } from '../../lib/core/sync/framedSyncNodeResources.js';
+import { applyFramedSyncObjectStateRecord } from '../../lib/core/sync/framedSyncObjectStateFact.js';
 import { recordFramedSyncPeerEpoch } from '../../lib/core/sync/framedSyncPeerEpoch.js';
 import { advanceLocalSourceRevision } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
 import {
@@ -12,10 +15,10 @@ import { clearWorkgroupSyncDataForRestore } from '../../lib/core/sync/syncGroupR
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { applyDesktopFramedSyncRelationReviewFactsWithDbPort } from '../database/desktopFramedSyncRelationReviewApply.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
+import { materializeDesktopSettingRecord, readDesktopHostName } from '../database/desktopSettingMaterializer.js';
 
 import type { PreparedDesktopFramedSyncInbound } from './desktopFramedSyncPreparedInbound.js';
 
@@ -27,6 +30,8 @@ export async function applyPreparedDesktopFramedSyncInbound(input: {
   const applied = await input.db.transaction(async (tx) => {
     const restore = input.restore ? await prepareRestore(tx, input.restore) : null;
     const records = input.transfers.flatMap((transfer) => transfer.records);
+    await recordFramedSyncResourceAvailability(tx, records.flatMap((record) =>
+      readFramedSyncNodeResources(record.snapshot.resource_references).map((resource) => resource.contentHash)), true);
     let generatedChanges = false;
     await assertFramedSyncNodeParentDependencies(tx, records);
     if (records.length) {
@@ -41,8 +46,17 @@ export async function applyPreparedDesktopFramedSyncInbound(input: {
     await applyDesktopFramedSyncRelationReviewFactsWithDbPort(
       tx, input.transfers.flatMap((transfer) => transfer.relationReviewFacts)
     );
-    for (const record of input.transfers.flatMap((transfer) => transfer.stateRecords)) {
-      await applySyncObjectInTransaction(tx, record);
+    for (const body of input.transfers.flatMap((transfer) => transfer.externalBodies ?? [])) {
+      await upsertTextBodyBlob(tx, body.text, new Date().toISOString(), body.hash);
+    }
+    const stateRecords = input.transfers.flatMap((transfer) => transfer.stateRecords);
+    const hostName = stateRecords.some((record) => record.object_type === 'setting')
+      ? await readDesktopHostName(tx) : null;
+    for (const record of stateRecords) {
+      await applyFramedSyncObjectStateRecord(tx, record, {
+        ...(hostName ? { hostName } : {}),
+        onPayloadAppliedInTransaction: materializeDesktopSettingRecord
+      });
     }
     await recordSourceProgress(tx, input.transfers);
     if (restore) await markSyncGroupRestoreApplied(tx, restore.event);
@@ -91,7 +105,7 @@ async function createReceipt(
   transfer: PreparedDesktopFramedSyncInbound
 ): Promise<TransferReceiptStage> {
   const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
-    globalId: transfer.globalId, objectType: 'node'
+    globalId: transfer.globalId, objectType: transfer.objectType
   }))?.sharedStateHash;
   if (!appliedStateHash) throw new Error('framed_sync_process_inventory_missing');
   return createDesktopFramedSyncStaging(tx).commitApplyAndReceipt({

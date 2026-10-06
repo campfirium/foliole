@@ -16,6 +16,7 @@ import {
   type FramedSyncInventoryEntry
 } from '../../lib/core/sync/framedSyncInventory.js';
 import { selectFramedSyncNodeReadingFact } from '../../lib/core/sync/framedSyncNodeReadingFact.js';
+import { selectFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from '../../lib/core/sync/framedSyncRelationReviewSelection.js';
 import {
   assertOutboundPublication,
@@ -100,8 +101,14 @@ export async function selectDesktopFramedSyncNodeManifest(
   tx: DbPort,
   difference: FramedSyncInventoryDifference
 ): Promise<CanonicalManifest> {
-  if (difference.direction !== 'local_to_remote' || difference.objectType !== 'node') {
+  if (difference.direction !== 'local_to_remote') {
     throw new Error('framed_sync_outbound_node_difference_invalid');
+  }
+  if (difference.objectType !== 'node') {
+    const facts = await Promise.all((difference.need.stateFactIds?.length ? difference.need.stateFactIds :
+      difference.sourceSnapshot.stateFactIds ?? []).map((factId) =>
+      selectFramedSyncObjectStateFact(tx, difference, factId)));
+    return { blobs: facts.flatMap((fact) => fact.blobs), facts };
   }
   const versionIds = requiredFramedSyncNodeVersionIds(difference);
   const records = await loadStoredSyncNodeVersionRecords(tx, versionIds);
@@ -163,7 +170,7 @@ export async function publishDesktopFramedSyncNodeOutbound(
     if (validation.deferredObjects.length) {
       return { deferredObjects: validation.deferredObjects, kind: 'deferred' };
     }
-    if (current && current.resourceHashes.length === 0 &&
+    if (difference.objectType === 'node' && current && current.resourceHashes.length === 0 &&
         requiredFramedSyncNodeVersionIds(difference).length > 0) {
       return { deferredObjects: [{ globalId: difference.globalId, objectType: 'node' }],
         kind: 'deferred' };

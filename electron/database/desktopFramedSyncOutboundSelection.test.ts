@@ -6,6 +6,7 @@ import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
+import { FRAMED_SYNC_INVENTORY_TABLES } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
@@ -87,6 +88,7 @@ beforeEach(() => {
   for (const sql of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter((value) =>
     value.startsWith('CREATE TABLE IF NOT EXISTS content_blob'))) sqlite.exec(sql);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
+  for (const sql of FRAMED_SYNC_INVENTORY_TABLES) sqlite.exec(sql);
   port = createBetterSqliteDbPort(sqlite);
 });
 
@@ -113,6 +115,9 @@ it('publishes a deleted Node as its tombstone version fact', async () => {
   sqlite.prepare(`INSERT INTO node_sync_tombstones VALUES
     ('node-1', 'tombstone-1', NULL, 'host-a', ?, ?, ?, '2026-10-05T02:00:00.000Z')`)
     .run(contentHash, JSON.stringify(deleted), '2026-10-05T02:00:00.000Z');
+  sqlite.prepare(`INSERT INTO framed_sync_inventory VALUES
+    ('node', 'node-1', ?, '["tombstone-1"]', '[]', '[]', '[]', ?)`).run(contentHash,
+  JSON.stringify([hex(hash(''))]));
   const frozen = await readFramedSyncInventoryEntry(port, {
     globalId: 'node-1', objectType: 'node'
   });

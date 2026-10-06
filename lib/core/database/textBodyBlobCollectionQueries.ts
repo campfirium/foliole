@@ -51,7 +51,7 @@ export function bodyHolderQueries(tables: Set<string>, hash: string, text: strin
   if (tables.has('framed_sync_outbound_holds') && tables.has('framed_sync_outbound_blob_refs')) {
     queries.push({ sql: `SELECT 1 AS held FROM framed_sync_outbound_blob_refs ref
       JOIN framed_sync_outbound_holds hold ON hold.transfer_id = ref.transfer_id
-      WHERE ref.role = 1 AND lower(hex(ref.sha256)) = ? LIMIT 1`, params: [hash] });
+      WHERE ref.role IN (1, 5) AND lower(hex(ref.sha256)) = ? LIMIT 1`, params: [hash] });
   }
   return queries;
 }

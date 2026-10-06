@@ -27,6 +27,7 @@ import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwners
 import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigration.js';
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
+import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
 import { migrateCompanionNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
@@ -89,6 +90,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 62 && targetVersion >= 62) await retireCompanionLegacyStorage(db);
   if (currentVersion < 64 && targetVersion >= 64) await migrateCompanionParentOrderVersions(db);
   if (targetVersion >= 63) await installSyncIdentityEntityTriggers(db);
+  if (currentVersion < 71 && targetVersion >= 71) await migrateCompanionFramedSyncInventory(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }
@@ -111,6 +113,7 @@ export async function createCompanionDatabase(
   await installCompanionSchema(db);
   await repairCompanionDatabase(db);
   if (targetVersion >= 63) await installSyncIdentityEntityTriggers(db);
+  if (targetVersion >= 71) await migrateCompanionFramedSyncInventory(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

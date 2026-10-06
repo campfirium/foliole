@@ -1,5 +1,6 @@
 import { maintainAttachments } from '../../../../../lib/core/attachments/attachmentMaintenance';
 import { attachmentDatabaseRevision, readAttachmentReferenceSnapshot } from '../../../../../lib/core/attachments/attachmentReferenceSnapshot';
+import { recordFramedSyncResourceAvailability } from '../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import type { AttachmentMaintenanceRequest, AttachmentObservationState } from '../../../../../lib/platform/attachmentMaintenanceContract';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
@@ -9,6 +10,11 @@ export function runCompanionAttachmentMaintenance(request: AttachmentMaintenance
   const owner = getIosCompanionDatabaseOwner();
   return owner.runWriter(async (db) => {
     const files = FolioleCompanionSync.maintainAttachmentFiles.bind(FolioleCompanionSync);
+    const updateAvailability = async (operation: 'move' | 'remove-trash', storageKey: string, trash?: boolean) => {
+      const result = await files({ operation, storageKey, ...(trash === undefined ? {} : { trash }) });
+      if (typeof result.available !== 'boolean') throw new Error('attachment_availability_missing');
+      await recordFramedSyncResourceAvailability(db, [storageKey.slice(0, 64)], result.available);
+    };
     const now = new Date();
     const day = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}`;
     return maintainAttachments({
@@ -36,8 +42,8 @@ export function runCompanionAttachmentMaintenance(request: AttachmentMaintenance
         signal?.throwIfAborted();
         return action();
       }),
-      move: async (storageKey, trash) => { await files({ operation: 'move', storageKey, trash }); },
-      removeTrash: async (storageKey) => { await files({ operation: 'remove-trash', storageKey }); }
+      move: (storageKey, trash) => updateAvailability('move', storageKey, trash),
+      removeTrash: (storageKey) => updateAvailability('remove-trash', storageKey)
     }, request, day, signal);
   });
 }

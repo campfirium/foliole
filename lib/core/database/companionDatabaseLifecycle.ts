@@ -5,12 +5,14 @@ import { createCompanionDatabase, migrateCompanionDatabase } from './companionDa
 import { rehashCompanionHostState } from './companionHostStateHashes.js';
 import { transferCompanionSourceHosts } from './companionSourceHostOwnershipMigration.js';
 import { renameCompanionLocalSyncGroupDevice } from './companionSyncGroupDeviceRename.js';
+import { initializeFramedSyncResourceAvailability } from './framedSyncResourceAvailability.js';
 import { INBOX_NODE_ID } from './specialNodeIds.js';
 
 export type CompanionJournalMode = 'delete' | 'wal';
 
 export interface CompanionDatabaseBootstrapRequest {
   allowCreate: boolean;
+  inventoryResourceStorageKeys?: () => Promise<readonly string[]>;
   beforeVersionCommit?: () => void | Promise<void>;
   expectedHostName?: string;
   expectedJournalMode?: CompanionJournalMode;
@@ -58,6 +60,9 @@ export async function bootstrapCompanionDatabase(
     }
     else {
       await migrateCompanionDatabase(tx, version, COMPANION_DATABASE_VERSION, request.beforeVersionCommit);
+      if (version < 71 && request.inventoryResourceStorageKeys) {
+        await initializeFramedSyncResourceAvailability(tx, await request.inventoryResourceStorageKeys());
+      }
       await transferCompanionHostState(tx, previousHostName, currentHostName, request.now);
     }
   });

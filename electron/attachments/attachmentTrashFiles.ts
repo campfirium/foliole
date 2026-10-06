@@ -56,3 +56,12 @@ function assertRegularFile(file: string) {
   const stat = fs.lstatSync(file);
   if (!stat.isFile() || stat.isSymbolicLink()) throw new Error('attachment_file_unsafe');
 }
+
+export function attachmentFileAvailable(assetsDir: string, storageKey: string) {
+  if (!parseCanonicalAttachmentStorageKey(storageKey)) throw new Error('attachment_storage_key_invalid');
+  for (const root of [assetsDir, attachmentTrashDirectory(assetsDir)]) {
+    const file = path.join(root, storageKey);
+    if (fs.existsSync(file)) { assertRegularFile(file); return true; }
+  }
+  return false;
+}

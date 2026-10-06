@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import { readUserVersion } from '../../lib/core/database/databaseUserVersion.js';
+import { FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import {
   DATABASE_SCHEMA_VERSION,
   initializeDatabaseConnection,
@@ -9,6 +10,7 @@ import {
 import { NUMBERED_MIGRATION_BASE_VERSION } from '../../lib/core/database/numberedMigrations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import { publishAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
+import { attachmentTrashDirectory, inventoryAttachmentDirectory } from '../attachments/attachmentTrashFiles.js';
 import { resolveDesktopHostName } from '../sync/companionLanPayloads.js';
 
 import {
@@ -106,7 +108,8 @@ function initializeSchemaWorkspaceAndSearch(
   currentHostName: string,
   deferSearchIndex = false
 ) {
-  const fresh = readUserVersion(connection.sqlite) === 0;
+  const version = readUserVersion(connection.sqlite);
+  const fresh = version === 0;
   const attachmentTargets = captureLegacyAttachmentTargets(connection);
   const initializedConnection = initializeDatabaseConnection(connection, {
     beforeVersionCommit: () => {
@@ -115,6 +118,13 @@ function initializeSchemaWorkspaceAndSearch(
       migrateOrphanedInactiveReadingState(connection);
       prepareLegacyAttachmentFiles(resolveRuntimeDataPaths().assetsDir, attachmentTargets);
       migrateLegacyAttachmentReferences(connection, attachmentTargets, currentHostName);
+      if (version < 141) {
+        const assets = resolveRuntimeDataPaths().assetsDir;
+        const files = [...inventoryAttachmentDirectory(assets), ...inventoryAttachmentDirectory(attachmentTrashDirectory(assets))];
+        for (const hash of new Set(files.map((file) => file.storageKey.slice(0, 64)))) {
+          connection.driver.execute(FRAMED_SYNC_RESOURCE_AVAILABILITY_SQL, [hash, 1]);
+        }
+      }
     }
   });
   // Renderer drafts and their retry queue do not survive a process restart.

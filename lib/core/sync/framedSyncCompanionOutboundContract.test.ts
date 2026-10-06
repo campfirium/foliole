@@ -54,3 +54,12 @@ it('projects a native resource reference without a data_text surrogate', () => {
     storage_key: storageKey
   }]);
 });
+
+it('preserves an external document text body in the original role and rejects file substitution', () => {
+  const blob = { ...input().blobs[0]!.blob, role: 5 };
+  expect(createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob, dataText: body }] }).blobs)
+    .toContainEqual(expect.objectContaining({ role: 5, data_text: body }));
+  expect(() => createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob,
+    storageKey: `${Buffer.from(blob.sha256).toString('hex')}.zip` }] }))
+    .toThrow('framed_sync_companion_blob_mismatch');
+});

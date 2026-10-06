@@ -16,6 +16,7 @@ import { softDeleteNodes, upsertNodeSnapshot } from '../database/nodeMutations.j
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { runDesktopAttachmentMaintenance } from './attachmentMaintenanceService.js';
+import { moveAttachmentToTrash } from './attachmentTrashFiles.js';
 
 beforeEach(() => { appData = fs.mkdtempSync(path.join(os.tmpdir(), 'attachment-maintenance-')); initializeDatabase(); });
 afterEach(() => { closeDatabaseConnection(); fs.rmSync(appData, { recursive: true, force: true }); });
@@ -69,4 +70,21 @@ it('does not count when a retained content blob is unreadable', async () => {
   openDatabaseConnection().sqlite.prepare('DELETE FROM content_blob_data').run();
   await expect(runDesktopAttachmentMaintenance({ action: 'observe' })).rejects.toThrow('body_unreadable');
   expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ lastObservationDay: null, eligibleBytes: 0 });
+});
+
+it('keeps recoverable files available through trash and removes availability only after physical retirement', async () => {
+  const key = file('orphan with original bytes');
+  const hash = key.slice(0, 64);
+  await runDesktopAttachmentMaintenance({ action: 'configure', settings: { automatic: false, observationThreshold: 1 } });
+  await runDesktopAttachmentMaintenance({ action: 'observe' });
+  await runDesktopAttachmentMaintenance({ action: 'clean' });
+  const available = () => openDatabaseConnection().sqlite.prepare(
+    'SELECT available FROM framed_sync_resource_availability WHERE hash = ?').pluck().get(hash);
+  expect(available()).toBe(1);
+  await runDesktopAttachmentMaintenance({ action: 'restore', storageKeys: [key] });
+  expect(available()).toBe(1);
+  moveAttachmentToTrash(resolveRuntimeDataPaths().assetsDir, key);
+  await runDesktopAttachmentMaintenance({ action: 'empty-trash' });
+  expect(available()).toBe(0);
+  expect(fs.existsSync(path.join(resolveRuntimeDataPaths().assetsDir, key))).toBe(false);
 });

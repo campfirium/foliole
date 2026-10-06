@@ -52,14 +52,15 @@ export async function stageSyncIdentityParentOrderMerges(port: DbPort, incomingA
     WHERE payload.object_type = 'parent_child_order' ORDER BY payload.object_id`);
   const staged: StagedOrderMerge[] = [];
   for (const row of incoming) {
-    const merge = await stageOne(port, row, incomingAlias);
+    const merge = await stageSyncIdentityParentOrderRecordMerge(port, row, incomingAlias);
     if (merge) staged.push(merge);
   }
   return staged;
 }
 
-async function stageOne(port: DbPort, incoming: OrderRow,
-  incomingAlias: string): Promise<StagedOrderMerge | null> {
+export async function stageSyncIdentityParentOrderRecordMerge(port: DbPort,
+  incoming: Pick<OrderRow, 'parent_id' | 'payload_json' | 'content_hash' | 'deleted_at' | 'current_version_id'>,
+  incomingAlias = 'main'): Promise<StagedOrderMerge | null> {
   const parentId = incoming.parent_id;
   const [local] = await port.query<OrderRow>(`SELECT entity.parent_id, entity.child_ids_json,
     state.content_hash, state.deleted_at, state.updated_at, state.sync_dirty,

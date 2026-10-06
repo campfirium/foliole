@@ -91,7 +91,7 @@ function parseSettingIdentity(objectId: string): Omit<DesktopSettingIdentity, 'o
   return { formFactor, hostName, key, platform, scope };
 }
 
-async function readDesktopHostName(port: DbPort) {
+export async function readDesktopHostName(port: DbPort) {
   const row = (await port.query<StoredSettingRow>(
     "SELECT value FROM settings WHERE key = 'host_name' LIMIT 1"
   ))[0];

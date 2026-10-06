@@ -41,13 +41,13 @@ function sameBytes(left: Uint8Array, right: Uint8Array) {
 
 function assertBlob(input: OutboundValueInput['blobs'][number]) {
   if (input.storageKey !== undefined) {
-    if (input.dataText !== undefined || input.blob.role === 1 ||
+    if (input.dataText !== undefined || (input.blob.role === 1 || input.blob.role === 5) ||
         !input.storageKey.startsWith(`${bytesToHex(input.blob.sha256)}.`)) {
       throw new Error('framed_sync_companion_blob_mismatch');
     }
     return;
   }
-  if (input.dataText === undefined || input.blob.role !== 1) {
+  if (input.dataText === undefined || (input.blob.role !== 1 && input.blob.role !== 5)) {
     throw new Error('framed_sync_companion_blob_mismatch');
   }
   const data = encoder.encode(input.dataText);

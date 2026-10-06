@@ -1,12 +1,13 @@
 import { maintainAttachments } from '../../lib/core/attachments/attachmentMaintenance.js';
 import { attachmentDatabaseRevision, readAttachmentReferenceSnapshot } from '../../lib/core/attachments/attachmentReferenceSnapshot.js';
+import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import type { AttachmentMaintenanceRequest } from '../../lib/platform/attachmentMaintenanceContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { attachmentDatabaseGeneration, readAttachmentObservationState, writeAttachmentObservationState } from './attachmentMaintenanceState.js';
-import { attachmentTrashDirectory, inventoryAttachmentDirectory, moveAttachmentToTrash,
+import { attachmentFileAvailable, attachmentTrashDirectory, inventoryAttachmentDirectory, moveAttachmentToTrash,
   removeTrashedAttachment, restoreAttachmentFromTrash } from './attachmentTrashFiles.js';
 
 export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRequest, signal?: AbortSignal) {
@@ -38,7 +39,19 @@ export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRe
         return action();
       });
     }),
-    move: async (key, trash) => { (trash ? moveAttachmentToTrash : restoreAttachmentFromTrash)(assetsDir, key); },
-    removeTrash: async (key) => removeTrashedAttachment(assetsDir, key)
+    move: async (key, trash) => {
+      (trash ? moveAttachmentToTrash : restoreAttachmentFromTrash)(assetsDir, key);
+      await updateAvailability(assetsDir, key);
+    },
+    removeTrash: async (key) => {
+      removeTrashedAttachment(assetsDir, key);
+      await updateAvailability(assetsDir, key);
+    }
   }, request, day, signal);
+}
+
+function updateAvailability(assetsDir: string, key: string) {
+  return runWithDatabaseConnectionOwner(() => recordFramedSyncResourceAvailability(
+    createBetterSqliteDbPort(openDatabaseConnection().sqlite), [key.slice(0, 64)],
+    attachmentFileAvailable(assetsDir, key)));
 }

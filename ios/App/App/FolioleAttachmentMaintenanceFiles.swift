@@ -42,7 +42,15 @@ enum FolioleAttachmentMaintenanceFiles {
             try requireFile(file)
             try manager.removeItem(at: file)
         } else { throw invalid() }
-        return [:]
+        return ["available": try available(key)]
+    }
+
+    private static func available(_ key: String) throws -> Bool {
+        for trash in [false, true] {
+            let file = try directory(trash).appendingPathComponent(key)
+            if manager.fileExists(atPath: file.path) { try requireFile(file); return true }
+        }
+        return false
     }
 
     static func move(_ key: String, toTrash: Bool) throws {

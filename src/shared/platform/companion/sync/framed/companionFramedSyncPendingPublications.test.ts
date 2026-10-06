@@ -77,7 +77,7 @@ it('drains only the current peer publication even without a new inventory differ
   mocks.send.mockResolvedValue({ transfer_id: id, receiver_device_id: 'B', receiver_library_epoch: 'B-epoch' });
   await expect(resumeCompanionFramedSyncPendingPublications(request)).resolves.toBe(1);
   expect(mocks.send).toHaveBeenCalledExactlyOnceWith({ ...request, transfer_id: id,
-    include_current_node: false, object_id: 'node', required_relation_ids: [],
+    include_current_node: false, object_id: 'node', object_type: 'node', required_relation_ids: [],
     review_fact_ids: [], state_fact_ids: [] });
 });
 

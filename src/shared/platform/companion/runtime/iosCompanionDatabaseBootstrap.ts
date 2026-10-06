@@ -4,6 +4,7 @@ import type {
   NativeCompanionBootstrapPayload,
   NativeCompanionBootstrapState
 } from '../../../../../lib/platform/nativeCompanionContract';
+import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { invalidateCompanionReadingScope } from '../reading/companionReadingScope';
 
 import {
@@ -42,6 +43,12 @@ export async function initializeIosCompanionDatabase(
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
   const result = await owner.open({
     allowCreate: true,
+    inventoryResourceStorageKeys: async () => {
+      const results = await Promise.all([false, true].map((trash) =>
+        FolioleCompanionSync.maintainAttachmentFiles({ operation: 'inventory', trash })));
+      if (results.some((result) => !result.files)) throw new Error('attachment_inventory_missing');
+      return results.flatMap((result) => result.files!.map((file) => file.storageKey));
+    },
     expectedHostName: nativeState.host_name,
     now: nativeState.booted_at,
     ...(options.afterRepair ? { beforeVersionCommit: () => options.afterRepair?.(0) } : {})

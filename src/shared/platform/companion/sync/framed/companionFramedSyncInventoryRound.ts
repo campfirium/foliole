@@ -42,7 +42,8 @@ function digest(value: unknown, name: string) {
 }
 
 function decodeEntry(value: NativeCompanionFramedSyncInventoryEntry): FramedSyncInventoryEntry {
-  if (!value || typeof value !== 'object' || value.object_type !== 'node' || !value.global_id) {
+  if (!value || typeof value !== 'object' || typeof value.object_type !== 'string' || !value.global_id ||
+      (value.object_type !== 'node' && (value.frontier_fact_ids.length > 0 || value.required_relation_ids.length > 0 || value.review_fact_ids.length > 0))) {
     throw new Error('framed_sync_inventory_identity_invalid');
   }
   return {
@@ -68,6 +69,7 @@ async function pullDifference(args: NativeCompanionFramedSyncInventoryRequest,
     ...args,
     frontier_fact_ids: difference.sourceSnapshot.frontierFactIds,
     object_id: difference.globalId,
+    object_type: difference.objectType,
     required_relation_ids: difference.sourceSnapshot.requiredRelationIds,
     resource_hashes: difference.sourceSnapshot.resourceHashes.map(bytesToHex),
     review_fact_ids: difference.sourceSnapshot.reviewFactIds,
@@ -78,7 +80,7 @@ async function pullDifference(args: NativeCompanionFramedSyncInventoryRequest,
 
 async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventoryRequest,
   differences: readonly FramedSyncInventoryDifference[], roundId: Uint8Array) {
-  const received = new Map<string, NativeCompanionFramedSyncTransferReceipt>();
+  const received = new Map<string, { objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }>();
   const deferredObjects = new Map<string, FramedSyncDeferredObject>();
   const defer = (difference: Pick<FramedSyncInventoryDifference, 'globalId' | 'objectType'>) =>
     deferredObjects.set(`${difference.objectType}\0${difference.globalId}`, {
@@ -87,7 +89,8 @@ async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventory
   const dependencyDeferred = await deliverFramedSyncDifferencesInDependencyOrder(
     differences, async (difference) => {
     try {
-      received.set(difference.globalId, await pullDifference(args, difference, roundId));
+      received.set(`${difference.objectType}\0${difference.globalId}`, { objectId: difference.globalId,
+        receipt: await pullDifference(args, difference, roundId) });
       return 'delivered';
     } catch (error) {
       const message = String(error instanceof Error ? error.message : error);
@@ -100,7 +103,7 @@ async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventory
   for (const difference of dependencyDeferred) defer(difference);
   return {
     deferredObjects: [...deferredObjects.values()],
-    received: [...received].map(([objectId, receipt]) => ({ objectId, receipt }))
+    received: [...received.values()]
   };
 }
 
@@ -162,7 +165,7 @@ export async function sendCompanionFramedSyncInventoryDifferences(
       deferredObjects.push(...revalidated.deferredObjects);
       continue;
     }
-    if (current && current.resourceHashes.length === 0 &&
+    if (difference.objectType === 'node' && current && current.resourceHashes.length === 0 &&
         (difference.need.sharedState || difference.need.frontierFactIds.length > 0 ||
           difference.need.requiredRelationIds.length > 0)) {
       deferredObjects.push({ globalId: difference.globalId, objectType: 'node' });
@@ -172,7 +175,7 @@ export async function sendCompanionFramedSyncInventoryDifferences(
       endpointUrl: args.endpoint_url, groupId: args.sync_group_id,
       includeCurrentNode: difference.need.sharedState ||
         difference.need.frontierFactIds.length > 0 || difference.need.resourceHashes.length > 0,
-      objectId: difference.globalId, receiverDeviceId: args.receiver_device_id,
+      objectId: difference.globalId, objectType: difference.objectType, receiverDeviceId: args.receiver_device_id,
       receiverLibraryEpoch: args.receiver_library_epoch,
       requiredRelationIds: difference.need.requiredRelationIds,
       reviewFactIds: difference.need.reviewFactIds,

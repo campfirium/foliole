@@ -10,6 +10,7 @@ import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/companionSchemaStatements.js';
+import { migrateCompanionFramedSyncInventory } from '../../../../../../lib/core/database/framedSyncInventoryMigration.js';
 import type { CanonicalBlob, CanonicalFact } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
@@ -36,6 +37,7 @@ it.each(['android', 'ios'] as const)(
   const main = tracked(new Database(':memory:'));
   const staging = tracked(new Database(stagingPath));
   main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  await migrateCompanionFramedSyncInventory(createBetterSqliteDbPort(main));
   const prefix = `framed_sync_${kind}`;
   installCompanionFramedSyncStaging(staging, prefix);
 
@@ -68,7 +70,7 @@ it.each(['android', 'ios'] as const)(
 
 it.each(['android', 'ios'] as const)(
   'applies a zero-blob %s review-only transfer and receipts the current node state', async (kind) => {
-  const { main, port, prefix, staging, stagingPath } = harness(kind);
+  const { main, port, prefix, staging, stagingPath } = await harness(kind);
   const projection = projectFramedSyncNodeRecord(nodeRecord());
   const first = new Uint8Array(32).fill(1);
   stage(staging, prefix, { blob: { data: projection.bodyBlob,
@@ -104,7 +106,7 @@ it('rejects unsupported facts, multiple identities, and mismatched blob sets', a
     } }, error: 'framed_sync_android_blob_identity_mismatch', facts: [node] }
   ];
   for (const [index, value] of cases.entries()) {
-    const { port, prefix, staging, stagingPath } = harness('android');
+    const { port, prefix, staging, stagingPath } = await harness('android');
     const transferId = new Uint8Array(32).fill(10 + index);
     stage(staging, prefix, { ...value, transferId });
     await expect(applyCompanionFramedSyncTransfer(
@@ -115,7 +117,7 @@ it('rejects unsupported facts, multiple identities, and mismatched blob sets', a
 
 it.each(['android', 'ios'] as const)(
   'atomically applies a %s parent-first version chain for one node', async (kind) => {
-  const { main, port, prefix, staging, stagingPath } = harness(kind);
+  const { main, port, prefix, staging, stagingPath } = await harness(kind);
   const root = projectFramedSyncNodeRecord(nodeRecord());
   const childRecord = nodeRecord();
   childRecord.ancestor_version_ids = ['version-1'];
@@ -147,7 +149,7 @@ it.each(['android', 'ios'] as const)(
 });
 
 it('reports a missing parent dependency before SQLite rejects the framed Node', async () => {
-  const { main, port, prefix, staging, stagingPath } = harness('android');
+  const { main, port, prefix, staging, stagingPath } = await harness('android');
   const record = nodeRecord();
   record.object_id = 'child';
   record.snapshot.id = 'child';
@@ -162,13 +164,14 @@ it('reports a missing parent dependency before SQLite rejects the framed Node', 
   expect(main.prepare('SELECT COUNT(*) AS count FROM nodes').get()).toEqual({ count: 0 });
 });
 
-function harness(kind: 'android' | 'ios') {
+async function harness(kind: 'android' | 'ios') {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-framed-apply-'));
   roots.push(root);
   const stagingPath = path.join(root, 'staging.db');
   const main = tracked(new Database(':memory:'));
   const staging = tracked(new Database(stagingPath));
   main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  await migrateCompanionFramedSyncInventory(createBetterSqliteDbPort(main));
   const prefix = `framed_sync_${kind}`;
   installCompanionFramedSyncStaging(staging, prefix);
   return { main, port: createBetterSqliteDbPort(main, { name: 'framed-apply-test' }),

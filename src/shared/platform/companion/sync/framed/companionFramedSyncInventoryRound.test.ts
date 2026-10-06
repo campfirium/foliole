@@ -60,7 +60,7 @@ it('revalidates each selected current node before invoking the native sender', a
   expect(mocks.send).toHaveBeenCalledOnce();
   expect(mocks.send).toHaveBeenCalledWith({
     endpointUrl: request.endpoint_url, groupId: request.sync_group_id,
-    includeCurrentNode: true, objectId: 'node-a',
+    includeCurrentNode: true, objectId: 'node-a', objectType: 'node',
     receiverDeviceId: request.receiver_device_id,
     receiverLibraryEpoch: request.receiver_library_epoch,
     requiredRelationIds: [], reviewFactIds: [], stateFactIds: []
@@ -95,7 +95,7 @@ it('sends exact relation ids without redundantly including the current node', as
     sent: [{ objectId: 'node-c', receipt: { transfer_id: 'a'.repeat(64) } }]
   });
   expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({
-    includeCurrentNode: false, objectId: 'node-c', requiredRelationIds: ['relation-1'],
+    includeCurrentNode: false, objectId: 'node-c', objectType: 'node', requiredRelationIds: ['relation-1'],
     reviewFactIds: [], stateFactIds: []
   }));
 });
@@ -114,7 +114,7 @@ it('pulls a remote-only Node with the same inventory round identity', async () =
   expect(mocks.pull).toHaveBeenCalledWith({
     ...request,
     frontier_fact_ids: ['version-remote-node'],
-    object_id: 'remote-node',
+    object_id: 'remote-node', object_type: 'node',
     required_relation_ids: [],
     resource_hashes: ['2'.repeat(64)],
     review_fact_ids: [], state_fact_ids: [],

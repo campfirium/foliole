@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import type { ArticleAttachmentNeed } from '../../lib/core/sync/articleAttachmentNeeds.js';
 import { createAttachmentReceiveCheckpoint } from '../../lib/core/sync/attachmentReceiveCheckpoint.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
@@ -96,6 +97,7 @@ async function transferAttachment(peer: DesktopResourceProvider, attachment: Art
       }
       return { body, totalBytes: Number(totalBytes) };
     } });
+  await runWithDatabaseConnectionOwner(() => recordFramedSyncResourceAvailability(port, [attachment.contentHash], true));
 }
 
 async function download(peer: DesktopResourceProvider, pathWithQuery: string,

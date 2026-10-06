@@ -64,7 +64,7 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
                   Int(reference.role.rawValue) == role.intValue else {
                 throw invalid("framed_sync_blob_identity_mismatch")
             }
-            if reference.role == .nodeBody {
+            if (reference.role == .nodeBody || reference.role == .externalDocument) {
                 guard let text = blob["data_text"] as? String,
                       UInt64(Data(text.utf8).count) == length else {
                     throw invalid("framed_sync_blob_identity_mismatch")

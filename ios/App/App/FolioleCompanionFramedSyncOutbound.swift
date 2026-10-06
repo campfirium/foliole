@@ -26,6 +26,7 @@ extension FolioleCompanionSyncPlugin {
             throw invalid("include_current_node_required")
         }
         var selection: [String: Any] = [
+            "object_type": try framedRequired(call, "object_type"),
             "group_id": groupID, "object_id": try framedRequired(call, "object_id"),
             "include_current_node": includeCurrentNode,
             "required_relation_ids": try framedStringArray(call, "required_relation_ids"),

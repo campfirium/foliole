@@ -145,8 +145,8 @@ private struct Transfer {
               Int(trailer.blobCount) == header.manifest.blobs.count else {
             throw invalid("inbound_attempt_manifest_mismatch")
         }
-        blobs = try header.manifest.blobs.filter { $0.role == .nodeBody }.compactMap(assemble)
-        let expectedResources = Set(header.manifest.blobs.filter { $0.role != .nodeBody && $0.required }
+        blobs = try header.manifest.blobs.filter { ($0.role == .nodeBody || $0.role == .externalDocument) }.compactMap(assemble)
+        let expectedResources = Set(header.manifest.blobs.filter { $0.role != .nodeBody && $0.role != .externalDocument && $0.required }
             .map(\.sha256))
         guard expectedResources.isSubset(of: resourceHashes),
               resourceHashes.isSubset(of: Set(header.manifest.blobs.map(\.sha256))) else {
@@ -176,7 +176,7 @@ private struct Transfer {
               UInt64(chunk.data.count) <= reference.byteLength - chunk.offset else {
             throw invalid("blob_chunk_not_admitted")
         }
-        if reference.role == .nodeBody {
+        if (reference.role == .nodeBody || reference.role == .externalDocument) {
             chunks[chunk.blobHash, default: []].append((chunk.offset, chunk.data))
         }
     }

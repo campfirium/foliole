@@ -35,7 +35,7 @@ export async function loadFramedSyncPublishedOutboundValue(
   const blobs = [];
   for (const blob of manifest.blobs) {
     const hash = bytesToHex(blob.sha256);
-    if (blob.role === 1) {
+    if ((blob.role === 1 || blob.role === 5)) {
       const [body] = await db.query<{ data_hex: string }>(
         'SELECT hex(data) AS data_hex FROM content_blob_data WHERE hash = ?', [hash]);
       if (!body) throw new Error('framed_sync_published_body_unavailable');

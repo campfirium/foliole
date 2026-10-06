@@ -10,6 +10,7 @@ export interface NativeCompanionFramedSyncTransferRequest {
   endpoint_url: string;
   include_current_node: boolean;
   object_id: string;
+  object_type: string;
   receiver_device_id: string;
   receiver_library_epoch: string;
   required_relation_ids: readonly string[];
@@ -53,6 +54,7 @@ export interface NativeCompanionFramedSyncInventoryResult {
 export interface NativeCompanionFramedSyncPullRequest extends NativeCompanionFramedSyncInventoryRequest {
   frontier_fact_ids: readonly string[];
   object_id: string;
+  object_type: string;
   required_relation_ids: readonly string[];
   resource_hashes: readonly string[];
   review_fact_ids: readonly string[];

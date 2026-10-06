@@ -40,6 +40,7 @@ final class FolioleCompanionFramedSyncOutbound {
         JSONObject selection = selection(groupId, input.objectId, input.includeCurrentNode,
             input.requiredRelationIds, input.reviewFactIds, input.stateFactIds, credential.deviceId, senderEpoch,
             receiverDeviceId, receiverEpoch);
+        selection.put("object_type", call.getString("object_type"));
         String publishedTransferId = call.getString("transfer_id");
         if (publishedTransferId != null) selection.put("transfer_id", publishedTransferId);
         JSONObject inspected = FolioleCompanionSyncGroupDataBridge.current().request(

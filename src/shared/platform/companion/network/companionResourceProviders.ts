@@ -1,9 +1,11 @@
+import { recordFramedSyncResourceAvailability } from '../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { observeResourceProviders, transferResourceProviders,
   type ResourceProvider, type ResourceTransfer } from '../../../../../lib/core/sync/resourceProviderPass';
 import { RESOURCE_AVAILABILITY_PATH, type ResourceNeed } from '../../../../../lib/platform/resourceAvailabilityContract';
 import { postDesktopJson } from '../../companionDesktopSyncHttp';
 import { loadCompanionDiscoveryCandidates, type DiscoveryCandidate } from '../../companionWorkspaceDiscovery';
 import { FolioleCompanionSync, normalizeEndpointUrl } from '../../companionWorkspaceRuntimeRepository';
+import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 import { isCompanionSyncGroupDeviceBlocked } from '../sync/syncGroupMemberStateStore';
 import { loadCompanionSyncGroup } from '../sync/syncGroupStore';
 
@@ -63,6 +65,10 @@ export async function runCompanionResourceProviderBatch(args: {
       return result;
     }
   });
+  const readyAttachments = args.needs.filter((need) => need.kind === 'attachment' &&
+    result.ready.includes(`attachment:${need.id}`)).map((need) => need.id);
+  if (readyAttachments.length) await getIosCompanionDatabaseOwner().runWriter((db) =>
+    recordFramedSyncResourceAvailability(db, readyAttachments, true));
   const issues = [...observed.issues, ...result.issues];
   if (issues.length) console.warn('[sync] resource provider failures', { issues });
   return { ...result, issues };

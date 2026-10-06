@@ -1,6 +1,8 @@
 import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
+import { decodeFramedExternalDocumentBodies } from '../../lib/core/sync/framedSyncExternalDocumentBody.js';
 import { restoreFramedSyncNodeReadingFact } from '../../lib/core/sync/framedSyncNodeReadingFact.js';
+import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
 import type {
   FramedSyncStagingPort,
   InboundFrameInput
@@ -16,7 +18,9 @@ import { restoreDesktopFramedSyncNodeRecord } from './desktopFramedSyncNodeProje
 
 export type PreparedDesktopFramedSyncInbound = Readonly<{
   context: FramedSyncContext;
+  externalBodies?: readonly Readonly<{ hash: string; text: string }>[];
   globalId: string;
+  objectType: string;
   manifestHash: Uint8Array;
   records: readonly NativeSyncNodeRecord[];
   relationReviewFacts: readonly CanonicalFact[];
@@ -70,15 +74,17 @@ export function prepareInboundApply(
   const relationReviewFacts = facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
   const supported = nodeFacts.length + stateFacts.length + relationReviewFacts.length === facts.length;
   const globalId = facts[0]?.globalId;
+  const objectType = facts[0]?.objectType;
   if (!globalId || !supported ||
-      facts.some((fact) => fact.objectType !== 'node' || fact.globalId !== globalId)) {
+      facts.some((fact) => fact.objectType !== objectType || fact.globalId !== globalId)) {
     throw new Error('framed_sync_process_fact_set_invalid');
   }
   if (!nodeFacts.length) {
-    if (blobs.length !== 0) throw new Error('framed_sync_blob_content_set_mismatch');
+    const externalBodies = decodeFramedExternalDocumentBodies(stateFacts, blobs);
     return {
-      globalId, records: [], relationReviewFacts,
-      stateRecords: stateFacts.map(restoreFramedSyncNodeReadingFact)
+      externalBodies, globalId, objectType: objectType!, records: [], relationReviewFacts,
+      stateRecords: stateFacts.map((fact) => fact.objectType === 'node'
+        ? restoreFramedSyncNodeReadingFact(fact) : restoreFramedSyncObjectStateFact(fact))
     };
   }
   const contentByHash = new Map(blobs.map((entry) => [hex(entry.sha256), entry]));
@@ -99,8 +105,9 @@ export function prepareInboundApply(
     });
   });
   return {
-    globalId, records, relationReviewFacts,
-    stateRecords: stateFacts.map(restoreFramedSyncNodeReadingFact)
+    globalId, objectType: objectType!, records, relationReviewFacts,
+    stateRecords: stateFacts.map((fact) => fact.objectType === 'node'
+        ? restoreFramedSyncNodeReadingFact(fact) : restoreFramedSyncObjectStateFact(fact))
   };
 }
 
