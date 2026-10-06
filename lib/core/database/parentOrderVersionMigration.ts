@@ -18,7 +18,7 @@ export function migrateParentOrderVersions(sqlite: DatabaseMigrationTarget) {
   const head = sqlite.prepare(`INSERT INTO parent_order_heads (parent_id, version_id) VALUES (?, ?)`);
   const existingHead = sqlite.prepare('SELECT 1 FROM parent_order_heads WHERE parent_id = ?');
   for (const row of rows) {
-    if (existingHead.get(row.parent_id)) continue;
+    if (existingHead.all(row.parent_id).length > 0) continue;
     const order = JSON.parse(row.child_ids_json) as string[];
     const id = parentOrderBaselineVersionId(row.parent_id, order);
     insert.run(id, row.parent_id, JSON.stringify(order), PARENT_ORDER_BASELINE_TIME);
