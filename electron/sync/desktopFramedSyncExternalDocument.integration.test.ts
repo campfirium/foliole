@@ -13,7 +13,7 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
-it('fills missing external document bytes through a normal round with unchanged original identity and hash', async () => {
+it.each([false, true])('fills missing external document bytes with original identity and hash, receiver restart=%s', async (recovery) => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture();
   const body = 'External original article with nonempty bytes';
   const hash = hashTextBody(body);
@@ -39,7 +39,19 @@ it('fills missing external document bytes through a normal round with unchanged 
     expect(source.sharedStateHash).toEqual(missing.sharedStateHash);
     expect(source.resourceHashes).toHaveLength(1);
     expect(missing.resourceHashes).toEqual([]);
-    expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
+    let receiver = fixture.rightSnapshot;
+    if (recovery) {
+      await fixture.right.invoke('round', { input: { kind: 'pause_before_apply' } });
+      await expect(reconnectFixturePeer(fixture.left, receiver)).rejects.toThrow('fixture_paused_before_apply');
+      const pending = new Database(receiver.databasePath, { readonly: true });
+      try {
+        expect(pending.prepare("SELECT COUNT(*) FROM framed_sync_inbound_transfers WHERE state = 'ready_to_apply'").pluck().get()).toBe(1);
+        expect(pending.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(0);
+        expect(pending.prepare('SELECT COUNT(*) FROM content_blob_data WHERE hash = ?').pluck().get(hash)).toBe(0);
+      } finally { pending.close(); }
+      receiver = (await fixture.restartRight()).snapshot;
+    }
+    expect(await reconnectFixturePeer(fixture.left, receiver)).toMatchObject({ complete: true });
     const db = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
     try {
       expect(db.prepare('SELECT CAST(data AS TEXT) FROM content_blob_data WHERE hash = ?').pluck().get(hash)).toBe(body);

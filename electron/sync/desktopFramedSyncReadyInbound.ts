@@ -30,7 +30,7 @@ export async function loadDesktopFramedSyncReadyInbound(input: {
     input.published.contentId)) throw new Error('framed_sync_ready_content_mismatch');
   const blobs = await input.db.query<DbRow>(`SELECT blob.sha256, blob.data
     FROM framed_sync_blob_pins pin JOIN framed_sync_available_blobs blob ON blob.sha256 = pin.sha256
-    WHERE pin.transfer_id = ? AND pin.role = 1`, [input.published.transferId]);
+    WHERE pin.transfer_id = ? AND pin.role IN (1, 5)`, [input.published.transferId]);
   return {
     ...prepareInboundApply(facts, blobs.map((blob) => ({
       sha256: framedSyncBytes(blob, 'sha256'), data: framedSyncBytes(blob, 'data')
