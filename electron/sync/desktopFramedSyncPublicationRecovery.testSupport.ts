@@ -49,7 +49,7 @@ export function publicationEvidence(databasePath: string) {
       publications: db.prepare(`SELECT lower(hex(transfer_id)) AS id, manifest_json, receiver_device_id,
         state FROM framed_sync_outbound_publications ORDER BY rowid`).all(),
       holds: db.prepare('SELECT member_id FROM framed_sync_outbound_holds ORDER BY member_id').all(),
-      receipts: db.prepare(`SELECT lower(hex(transfer_id)) AS id, receiver_device_id
+      receipts: db.prepare<[], { id: string; receiver_device_id: string }>(`SELECT lower(hex(transfer_id)) AS id, receiver_device_id
         FROM framed_sync_receipts ORDER BY rowid`).all(),
       attempts: db.prepare(`SELECT lower(hex(attempt_id)) AS id, state
         FROM framed_sync_outbound_attempts WHERE purpose = 'transfer' ORDER BY rowid`).all(),

@@ -15,6 +15,7 @@ import {
   FRAMED_SYNC_NODE_VERSION_FACT
 } from './framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeRecord } from './framedSyncNodeRestore.js';
+import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
 
 export type FramedSyncNodeProjection = Readonly<{
   bodyBlob: Uint8Array;
@@ -37,7 +38,7 @@ const stringList = (values: readonly string[]): CanonicalValue => ({
 });
 const field = (name: string, value: CanonicalValue): CanonicalField => ({ name, value });
 
-function snapshotFields(snapshot: NativeSyncNodeRecord['snapshot'], bodyHash: string) {
+function snapshotFields(snapshot: NativeSyncNodeRecord['snapshot'], bodyHash: string | null) {
   return [
     field('anchor_link', scalarValue(snapshot.anchor_link)),
     field('anchor_resolution_status', scalarValue(snapshot.anchor_resolution_status)),
@@ -91,8 +92,16 @@ export function projectFramedSyncNodeRecord(
   const blob: CanonicalBlob = {
     byteLength: BigInt(bodyBlob.byteLength), required: true, role: 1, sha256: bodyHash
   };
+  const fact = projectNodeFact(record, bytesToHex(bodyHash), [blob, ...resourceBlobs]);
+  return { bodyBlob, manifest: { blobs: fact.blobs, facts: [fact] } };
+}
+
+function projectNodeFact(record: NativeSyncNodeRecord, bodyHash: string | null,
+  blobs: readonly CanonicalBlob[], retired = false): CanonicalFact {
+  if (!record.version_id || !record.content_hash || record.snapshot.id !== record.object_id ||
+      !/^[a-f0-9]{64}$/u.test(record.content_hash)) throw new Error('node_version_projection_identity_invalid');
   const fact: CanonicalFact = {
-    blobs: [blob, ...resourceBlobs],
+    blobs,
     body: [
       field('ancestor_version_ids', stringList(record.ancestor_version_ids)),
       field('content_hash', scalarValue(record.content_hash)),
@@ -102,7 +111,7 @@ export function projectFramedSyncNodeRecord(
       field('parent_version_ids', stringList(record.parent_version_ids ?? (
         record.parent_version_id ? [record.parent_version_id] : []
       ))),
-      field('snapshot', { kind: 'object', value: snapshotFields(record.snapshot, bytesToHex(bodyHash)) }),
+      field('snapshot', { kind: 'object', value: snapshotFields(record.snapshot, bodyHash) }),
       field('updated_at', scalarValue(record.updated_at)),
       field('version_created_at', scalarValue(record.version_created_at))
     ],
@@ -112,8 +121,15 @@ export function projectFramedSyncNodeRecord(
     objectType: FRAMED_SYNC_NODE_VERSION_FACT.factObjectType,
     sharedStateHash: hexToBytes(record.content_hash)
   };
-  assertNodeVersionFactShape(fact);
-  return { bodyBlob, manifest: { blobs: fact.blobs, facts: [fact] } };
+  const result = retired ? { ...fact, body: [...fact.body,
+    field('body_retired', { kind: 'bool', value: true })] } : fact;
+  assertNodeVersionFactShape(result);
+  return result;
+}
+
+export function projectFramedSyncNodeIdentityFact(record: NativeSyncNodeRecord) {
+  if (!isNodeVersionIdentityOnly(record)) throw new Error('node_version_identity_only_required');
+  return projectNodeFact(record, record.snapshot.body_blob_hash ?? null, [], true);
 }
 
 export function restoreFramedSyncProjectedNodeRecord(

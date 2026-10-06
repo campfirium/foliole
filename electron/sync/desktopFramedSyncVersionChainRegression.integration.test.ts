@@ -3,6 +3,8 @@ import { promises as fs } from 'node:fs';
 
 import { afterEach, expect, it } from 'vitest';
 
+import { readFixtureInventory, reconnectFixturePeer }
+  from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import {
   coordinateDesktopFramedSyncProcessRound,
   readDesktopFramedSyncRoundControlLog
@@ -12,6 +14,8 @@ import {
   type DesktopFramedSyncFixtureProcess,
   readDesktopFramedSyncLibraryEvidence
 } from './desktopFramedSyncTwoProcess.testSupport.js';
+
+
 
 let root = '';
 const processes: DesktopFramedSyncFixtureProcess[] = [];
@@ -81,8 +85,11 @@ async () => {
     expect(byVersion.has(edge.version_id)).toBe(true);
   }
   expect(received.framedSync).toMatchObject({
-    inboundStates: [{ state: 'applied' }], receipts: 1
+    inboundStates: receipt.transfers.map(() => ({ state: 'applied' })),
+    receipts: receipt.transfers.length
   });
+  await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+  expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
 });
 
 it('does not report convergence for divergent roots without a common base', async () => {
@@ -107,7 +114,12 @@ it('does not report convergence for divergent roots without a common base', asyn
   });
 
   expect(receipt.result).toBe('drained');
-  expect(receipt.deferredObjects).toEqual([{ globalId: nodeId, objectType: 'node' }]);
+  expect(receipt.deferredObjects).toContainEqual(expect.objectContaining({ globalId: nodeId, objectType: 'node' }));
+  for (const [snapshot, before] of [[fixture.leftSnapshot, beforeLeft], [fixture.rightSnapshot, beforeRight]] as const) {
+    const after = readDesktopFramedSyncLibraryEvidence(snapshot.databasePath);
+    expect(after.nodes[0]).toMatchObject({ title: (before.nodes[0] as { title: string }).title });
+    expect(after.versions).toEqual(expect.arrayContaining(before.versions));
+  }
   expect(await readDesktopFramedSyncRoundControlLog(fixture.left)).toContain('round_receipt');
   expect(await readDesktopFramedSyncRoundControlLog(fixture.right)).toContain('round_receipt');
 });

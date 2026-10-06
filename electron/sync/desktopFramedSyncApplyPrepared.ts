@@ -15,6 +15,7 @@ import { clearWorkgroupSyncDataForRestore } from '../../lib/core/sync/syncGroupR
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
+import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { applyDesktopFramedSyncRelationReviewFactsWithDbPort } from '../database/desktopFramedSyncRelationReviewApply.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
@@ -30,7 +31,7 @@ export async function applyPreparedDesktopFramedSyncInbound(input: {
   const applied = await input.db.transaction(async (tx) => {
     const restore = input.restore ? await prepareRestore(tx, input.restore) : null;
     const records = input.transfers.flatMap((transfer) => transfer.records);
-    await recordFramedSyncResourceAvailability(tx, records.flatMap((record) =>
+    await recordFramedSyncResourceAvailability(tx, records.filter((record) => !isNodeVersionIdentityOnly(record)).flatMap((record) =>
       readFramedSyncNodeResources(record.snapshot.resource_references).map((resource) => resource.contentHash)), true);
     let generatedChanges = false;
     await assertFramedSyncNodeParentDependencies(tx, records);
@@ -122,6 +123,7 @@ async function promoteFramedNodeBodies(
   records: readonly NativeSyncNodeRecord[]
 ) {
   for (const record of records) {
+    if (isNodeVersionIdentityOnly(record)) continue;
     const hash = record.snapshot.body_blob_hash;
     if (!hash || typeof record.body_text !== 'string') {
       throw new Error('framed_sync_node_body_projection_missing');

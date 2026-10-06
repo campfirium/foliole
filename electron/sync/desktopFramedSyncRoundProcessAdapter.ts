@@ -33,6 +33,7 @@ const entry = z.object({
   requiredRelationIds: z.array(z.string().min(1)),
   resourceHashes: z.array(bytes),
   reviewFactIds: z.array(z.string().min(1)),
+  stateFactIds: z.array(z.string().min(1)).default([]),
   sharedStateHash: bytes
 });
 const need = z.object({
@@ -40,6 +41,7 @@ const need = z.object({
   requiredRelationIds: z.array(z.string().min(1)),
   resourceHashes: z.array(bytes),
   reviewFactIds: z.array(z.string().min(1)),
+  stateFactIds: z.array(z.string().min(1)).default([]),
   sharedState: z.boolean()
 });
 const difference = z.object({

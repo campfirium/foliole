@@ -11,7 +11,7 @@ export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
     'parent_version_id', 'parent_version_ids', 'snapshot', 'updated_at',
     'version_created_at'
   ],
-  bodyTextTransport: 'required BLOB_ROLE_NODE_BODY addressed by snapshot.body_blob_hash',
+  bodyTextTransport: 'required BLOB_ROLE_NODE_BODY unless body_retired declares identity-only history',
   factKind: 2,
   factObjectType: 'node',
   globalIdSource: 'NativeSyncNodeRecord.object_id',
@@ -81,7 +81,7 @@ function hex(value: Uint8Array) {
   return [...value].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: string) {
+function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: string | null) {
   if (value.kind !== 'object') throw new Error('node_version_fact_snapshot_invalid');
   const fields = exactFields(
     value.value,
@@ -105,24 +105,32 @@ function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: strin
     throw new Error('node_version_fact_anchor_resolution_invalid');
   }
   if (stringValue(get('id')) !== globalId) throw new Error('node_version_fact_snapshot_identity_invalid');
-  const snapshotBodyHash = stringValue(get('body_blob_hash'));
-  if (snapshotBodyHash === null || !/^[a-f0-9]{64}$/u.test(snapshotBodyHash) ||
-      snapshotBodyHash !== bodyHash) {
+  const snapshotBodyHash = stringValue(get('body_blob_hash'), bodyHash === null);
+  if ((snapshotBodyHash !== null && !/^[a-f0-9]{64}$/u.test(snapshotBodyHash)) ||
+      (bodyHash !== null && snapshotBodyHash !== bodyHash)) {
     throw new Error('node_version_fact_body_blob_hash_mismatch');
   }
   return stringValue(get('resource_references'), true);
+}
+
+export function isFramedSyncNodeIdentityFact(fact: CanonicalFact) {
+  return fact.body.some((field) => field.name === 'body_retired' &&
+    field.value.kind === 'bool' && field.value.value);
 }
 
 export function assertNodeVersionFactShape(fact: CanonicalFact) {
   if (fact.kind !== FRAMED_SYNC_NODE_VERSION_FACT.factKind ||
       fact.objectType !== FRAMED_SYNC_NODE_VERSION_FACT.factObjectType ||
       !fact.globalId || !fact.factId) throw new Error('node_version_fact_identity_invalid');
+  const retired = isFramedSyncNodeIdentityFact(fact);
   const bodyBlobs = fact.blobs.filter((blob) => blob.role === 1);
-  if (bodyBlobs.length !== 1 || fact.blobs.some((blob) => !blob.required)) {
+  if ((retired ? fact.blobs.length !== 0 : bodyBlobs.length !== 1) ||
+      fact.blobs.some((blob) => !blob.required)) {
     throw new Error('node_version_fact_body_blob_invalid');
   }
   const fields = exactFields(
-    fact.body, FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'node_version_fact_body_shape_invalid'
+    fact.body, retired ? [...FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'body_retired'] :
+      FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'node_version_fact_body_shape_invalid'
   );
   const get = (name: string) => required(fields, name);
   stringList(get('ancestor_version_ids'));
@@ -132,15 +140,18 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
   }
   stringValue(get('updated_at'));
   boolValue(get('is_tombstone'));
+  const tombstone = get('is_tombstone');
+  if (retired && tombstone.kind === 'bool' && tombstone.value) throw new Error('node_version_retired_tombstone_invalid');
   const contentHash = stringValue(get('content_hash'));
   if (contentHash === null || !/^[a-f0-9]{64}$/u.test(contentHash) ||
       contentHash !== hex(fact.sharedStateHash)) {
     throw new Error('node_version_fact_shared_state_hash_mismatch');
   }
   const references = readFramedSyncNodeResources(
-    assertSnapshot(get('snapshot'), fact.globalId, hex(bodyBlobs[0]!.sha256))
+    assertSnapshot(get('snapshot'), fact.globalId, retired ? null : hex(bodyBlobs[0]!.sha256))
   );
   const resources = fact.blobs.filter((blob) => blob.role !== 1);
+  if (retired) return;
   if (resources.length !== references.length || references.some((reference) =>
     !resources.some((blob) => hex(blob.sha256) === reference.contentHash &&
       blob.role === reference.role))) {

@@ -11,6 +11,7 @@ import type {
 } from './framedSyncCanonicalManifest.js';
 import {
   assertNodeVersionFactShape,
+  isFramedSyncNodeIdentityFact,
   FRAMED_SYNC_NODE_VERSION_FACT
 } from './framedSyncNodeFactContract.js';
 
@@ -83,7 +84,7 @@ function readSnapshot(value: CanonicalValue): NativeSyncNodeRecord['snapshot'] {
       return { attachment_id: readString(requiredValue(item, 'attachment_id'))!,
         role: readString(requiredValue(item, 'role'))! };
     }),
-    body_blob_hash: readString(get('body_blob_hash')),
+    body_blob_hash: readString(get('body_blob_hash'), true),
     created_at: readString(get('created_at'))!,
     deleted_at: readString(get('deleted_at'), true),
     desired_retention: readNumber(get('desired_retention')),
@@ -129,18 +130,29 @@ export function restoreFramedSyncNodeRecord(input: {
       !sameBlob(manifestBlob, { ...manifestBlob, sha256: sha256(bodyBlob) })) {
     throw new Error('node_version_projection_body_blob_invalid');
   }
-  const values = fieldsByName(fact.body, FRAMED_SYNC_NODE_VERSION_FACT.bodyFields,
+  return restoreNodeFields(fact, decoder.decode(bodyBlob), bytesToHex(manifestBlob.sha256));
+}
+
+export function restoreFramedSyncNodeIdentityFact(fact: CanonicalFact): NativeSyncNodeRecord {
+  assertNodeVersionFactShape(fact);
+  if (!isFramedSyncNodeIdentityFact(fact)) throw new Error('node_version_identity_only_required');
+  return restoreNodeFields(fact, null, null);
+}
+
+function restoreNodeFields(fact: CanonicalFact, body: string | null, bodyHash: string | null): NativeSyncNodeRecord {
+  const values = fieldsByName(fact.body, body === null ? [...FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'body_retired'] :
+      FRAMED_SYNC_NODE_VERSION_FACT.bodyFields,
     'node_version_fact_body_shape_invalid');
   const get = (name: string) => requiredValue(values, name);
   const contentHash = readString(get('content_hash'))!;
   if (bytesToHex(fact.sharedStateHash) !== contentHash) throw new Error('node_version_shared_state_hash_mismatch');
   const snapshot = readSnapshot(get('snapshot'));
-  if (snapshot.id !== fact.globalId || snapshot.body_blob_hash !== bytesToHex(manifestBlob.sha256)) {
+  if (snapshot.id !== fact.globalId || (bodyHash !== null && snapshot.body_blob_hash !== bodyHash)) {
     throw new Error('node_version_projection_identity_invalid');
   }
   return {
     ancestor_version_ids: readStringList(get('ancestor_version_ids')),
-    body_text: decoder.decode(bodyBlob),
+    body_text: body,
     content_hash: contentHash,
     host_name: readString(get('host_name'), true),
     is_tombstone: readBool(get('is_tombstone'))!,
@@ -148,7 +160,7 @@ export function restoreFramedSyncNodeRecord(input: {
     object_type: 'node',
     parent_version_id: readString(get('parent_version_id'), true),
     parent_version_ids: readStringList(get('parent_version_ids')),
-    snapshot,
+    snapshot: body === null ? { ...snapshot, content: null } : snapshot,
     updated_at: readString(get('updated_at'))!,
     version_created_at: readString(get('version_created_at'), true),
     version_id: fact.factId

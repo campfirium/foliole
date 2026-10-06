@@ -17,7 +17,7 @@ const CHAIN_READ_TABLES = new Set([
   'node_version_outbound_payload_holds', 'node_version_local_holds',
   'sync_change_log', 'node_sync_conflicts', 'node_text_alternatives',
   'nodes', 'node_sync_tombstones', 'sync_object_state',
-  'framed_sync_outbound_fact_refs', 'framed_sync_outbound_holds'
+  'framed_sync_outbound_fact_refs', 'framed_sync_outbound_holds', 'framed_sync_outbound_publications'
 ]);
 
 /** Bind the fixed retention read queries to an attached immutable source view. */
@@ -49,9 +49,16 @@ UNION SELECT payload.version_id, 1 FROM node_version_outbound_payload_holds payl
   JOIN sync_group_devices peer ON peer.group_id = hold.group_id
     AND peer.device_identity_key = hold.device_identity_key AND peer.state = 'active'
   WHERE payload.object_id = ? AND peer.device_identity_key <> local.local_device_identity_key
-UNION SELECT ref.fact_id, 1 FROM framed_sync_outbound_fact_refs ref
+UNION SELECT ref.fact_id, 0 FROM framed_sync_outbound_fact_refs ref
   JOIN framed_sync_outbound_holds hold ON hold.transfer_id = ref.transfer_id
-  WHERE ref.fact_kind = 2 AND ref.object_type = 'node' AND ref.global_id = ?`;
+  WHERE ref.fact_kind = 2 AND ref.object_type = 'node' AND ref.global_id = ?
+    AND NOT EXISTS (SELECT 1 FROM framed_sync_outbound_publications publication,
+      json_each(publication.manifest_json, '$.facts') fact, json_each(fact.value, '$.body') field
+      WHERE publication.transfer_id = ref.transfer_id
+        AND json_extract(fact.value, '$.factId') = ref.fact_id
+        AND json_extract(field.value, '$.name') = 'body_retired'
+        AND json_extract(field.value, '$.value.kind') = 'bool'
+        AND json_extract(field.value, '$.value.value') = 1)`;
 
 const LOCAL_REFERENCES_SQL = `SELECT version.version_id, 0 FROM node_sync_versions version
       WHERE version.object_id = ? AND NOT EXISTS (

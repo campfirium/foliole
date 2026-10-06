@@ -55,6 +55,24 @@ export async function loadRetainedSyncNodeVersionFact(port: DbPort, versionId: s
 }
 
 export async function loadStoredSyncNodeVersionRecords(port: DbPort, versionIds: string[]) {
+  return loadVersionRecords(port, versionIds, true);
+}
+
+export async function loadRetainedSyncNodeVersionRecords(port: DbPort, versionIds: string[]) {
+  const records = await loadVersionRecords(port, versionIds, false);
+  for (const record of records.values()) {
+    if (record.body_text !== null) continue;
+    const [protectedHead] = await port.query(
+      `SELECT 1 FROM nodes WHERE current_version_id = ?
+       UNION SELECT 1 WHERE NOT EXISTS (SELECT 1 FROM node_sync_version_parents
+         WHERE parent_version_id = ?) AND NOT EXISTS (SELECT 1 FROM node_sync_versions
+         WHERE parent_version_id = ?)`, [record.version_id!, record.version_id!, record.version_id!]);
+    if (protectedHead) throw new Error(`sync_node_version_body_unavailable:${record.version_id}`);
+  }
+  return records;
+}
+
+async function loadVersionRecords(port: DbPort, versionIds: string[], requireBody: boolean) {
   const uniqueIds = [...new Set(versionIds)];
   const records = new Map<string, NativeSyncNodeRecord>();
   if (uniqueIds.length === 0) return records;
@@ -81,7 +99,7 @@ export async function loadStoredSyncNodeVersionRecords(port: DbPort, versionIds:
   for (const row of rows) {
     const lineage = parents.get(row.version_id) ??
       (row.parent_version_id ? [row.parent_version_id] : []);
-    records.set(row.version_id, await storedVersionToRecord(port, row, false, lineage));
+    records.set(row.version_id, await storedVersionToRecord(port, row, false, lineage, requireBody));
   }
   return records;
 }

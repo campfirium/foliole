@@ -32,7 +32,7 @@ export async function applyNodeMemberPosition(port: DbPort, record: SyncPackSync
   for (const versionId of [payload.adopted_version_id, ...pending]) {
     const [version] = await port.query<{ object_id: string }>(
       'SELECT object_id FROM node_sync_versions WHERE version_id = ?', [versionId]);
-    if (version?.object_id !== payload.object_id) throw new Error('node_position_lineage_unproven');
+    if (version?.object_id !== payload.object_id) throw new Error(`node_position_lineage_unproven:${payload.object_id}`);
   }
   for (const statement of nodePositionWriteStatements(payload)) await port.run(statement.sql, statement.params);
   return true;

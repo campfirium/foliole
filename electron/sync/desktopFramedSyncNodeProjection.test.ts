@@ -5,6 +5,9 @@ import {
   canonicalManifestBytes,
   type CanonicalValue
 } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { assertNodeVersionFactShape } from '../../lib/core/sync/framedSyncNodeFactContract.js';
+import { projectFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeProjection.js';
+import { restoreFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeRestore.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import {
@@ -153,4 +156,22 @@ describe('desktop framed sync node projection', () => {
       bodyBlob: new TextEncoder().encode('changed body')
     })).toThrow('node_version_projection_body_blob_invalid');
   });
+});
+
+it('declares retired history explicitly without inventing body or resource blobs', () => {
+  const source = record({ body_text: null, snapshot: { ...record().snapshot, content: null,
+    body_blob_hash: 'a'.repeat(64), resource_references: JSON.stringify([
+      { storage_key: `${'b'.repeat(64)}.pdf`, role: 'reference', original_name: 'Old.pdf' }
+    ]) } });
+  const fact = projectFramedSyncNodeIdentityFact(source);
+  expect(fact.blobs).toEqual([]);
+  expect(restoreFramedSyncNodeIdentityFact(fact)).toMatchObject(source);
+  expect(() => projectDesktopFramedSyncNodeRecord(source)).toThrow('node_version_body_unavailable');
+  expect(() => assertNodeVersionFactShape({ ...fact,
+    body: fact.body.filter((field) => field.name !== 'body_retired') }))
+    .toThrow('node_version_fact_body_blob_invalid');
+  const full = projectDesktopFramedSyncNodeRecord(record()).manifest.facts[0]!;
+  expect(() => assertNodeVersionFactShape({ ...full, body: [...full.body,
+    { name: 'body_retired', value: { kind: 'bool', value: true } }] }))
+    .toThrow('node_version_fact_body_blob_invalid');
 });

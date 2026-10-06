@@ -15,6 +15,7 @@ import {
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from '../../lib/core/sync/framedSyncInventory.js';
+import { projectFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { selectFramedSyncNodeReadingFact } from '../../lib/core/sync/framedSyncNodeReadingFact.js';
 import { selectFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from '../../lib/core/sync/framedSyncRelationReviewSelection.js';
@@ -22,9 +23,9 @@ import {
   assertOutboundPublication,
   type OutboundPublishInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
-import { loadStoredSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
+import { loadRetainedSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import { orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
+import { isNodeVersionIdentityOnly, orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import { projectDesktopFramedSyncNodeRecord } from '../sync/desktopFramedSyncNodeProjection.js';
 import { resolveDesktopFramedSyncNodeResources } from '../sync/desktopFramedSyncNodeResources.js';
 
@@ -111,7 +112,7 @@ export async function selectDesktopFramedSyncNodeManifest(
     return { blobs: facts.flatMap((fact) => fact.blobs), facts };
   }
   const versionIds = requiredFramedSyncNodeVersionIds(difference);
-  const records = await loadStoredSyncNodeVersionRecords(tx, versionIds);
+  const records = await loadRetainedSyncNodeVersionRecords(tx, versionIds);
   const selectedRecords = versionIds.map((versionId) => {
     const record = records.get(versionId);
     if (!record || record.object_id !== difference.globalId) {
@@ -120,11 +121,13 @@ export async function selectDesktopFramedSyncNodeManifest(
     return record;
   });
   const projections = orderNodeVersionHistory(selectedRecords).map((record) =>
+    isNodeVersionIdentityOnly(record) ? { manifest: { blobs: [], facts: [projectFramedSyncNodeIdentityFact(record)] } } :
     projectDesktopFramedSyncNodeRecord(
       record,
       resolveDesktopFramedSyncNodeResources(record).map((resource) => resource.blob)
     ));
   for (const projection of projections) {
+    if (!('bodyBlob' in projection)) continue;
     const blob = projection.manifest.blobs.find((value) => value.role === 1);
     if (!blob) throw new Error('framed_sync_body_descriptor_missing');
     await upsertTextBodyBlob(tx, new TextDecoder().decode(projection.bodyBlob),

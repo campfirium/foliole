@@ -15,7 +15,7 @@ import {
   type FramedSyncInventoryDifference
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
-import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
+import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 import { selectFramedSyncNodeReadingFact } from '../../../../../../lib/core/sync/framedSyncNodeReadingFact.js';
 import {
   createFramedSyncNodeResourceBlob,
@@ -27,9 +27,9 @@ import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/
 import { loadFramedSyncPublishedOutboundValue } from '../../../../../../lib/core/sync/framedSyncPublishedOutboundValue.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewSelection.js';
 import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
-import { loadStoredSyncNodeVersionRecords } from '../../../../../../lib/core/sync/syncNodeGraph.js';
+import { loadRetainedSyncNodeVersionRecords } from '../../../../../../lib/core/sync/syncNodeGraph.js';
 import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import { orderNodeVersionHistory } from '../../../../../../lib/core/sync/syncNodeVersionHistory.js';
+import { isNodeVersionIdentityOnly, orderNodeVersionHistory } from '../../../../../../lib/core/sync/syncNodeVersionHistory.js';
 
 function sameBlob(left: CanonicalBlob, right: CanonicalBlob) {
   return left.byteLength === right.byteLength && left.required === right.required &&
@@ -104,7 +104,7 @@ async function selectOutbound(db: DbPort, payload: Record<string, unknown>) {
   const selected = await selectFramedSyncRelationReviewFactsWithDbPort(db, difference);
   if (selected.kind === 'deferred') throw new Error('framed_sync_source_changed');
   const versionIds = requiredFramedSyncNodeVersionIds(difference);
-  const records = await loadStoredSyncNodeVersionRecords(db, versionIds);
+  const records = await loadRetainedSyncNodeVersionRecords(db, versionIds);
   const selectedRecords = versionIds.map((versionId) => {
     const record = records.get(versionId);
     if (!record || record.object_id !== objectId) {
@@ -128,7 +128,7 @@ export async function inspectCompanionFramedSyncOutbound(
       blob.storage_key === undefined ? [] : [blob.storage_key]) };
   }
   const selection = await selectOutbound(db, payload);
-  const keys = new Set(selection.records.flatMap((record) =>
+  const keys = new Set(selection.records.filter((record) => !isNodeVersionIdentityOnly(record)).flatMap((record) =>
     readFramedSyncNodeResources(record.snapshot.resource_references).map((resource) => resource.storageKey)));
   return { resource_storage_keys: [...keys].sort() };
 }
@@ -145,6 +145,8 @@ export async function prepareCompanionFramedSyncOutbound(
     const suppliedResources = resourceFiles(payload.resource_files);
     const consumedResources = new Set<string>();
     const projections = selection.records.map((record) => {
+      if (isNodeVersionIdentityOnly(record)) return { record, resources: [],
+        projection: { manifest: { blobs: [], facts: [projectFramedSyncNodeIdentityFact(record)] } } };
       const resources = readFramedSyncNodeResources(record.snapshot.resource_references).map((resource) => {
         const length = suppliedResources.get(resource.storageKey);
         if (length === undefined) throw new Error('framed_sync_outbound_resource_unavailable');

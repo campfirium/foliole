@@ -1,6 +1,6 @@
 import type { FramedSyncInventoryDifference } from './framedSyncInventory.js';
 
-const PARENT_MISSING = 'framed_sync_node_parent_missing:';
+const MISSING_DEPENDENCIES = ['framed_sync_node_parent_missing:', 'node_position_lineage_unproven:'];
 export type FramedSyncDifferenceDelivery = 'delivered' | 'deferred';
 
 function key(value: Pick<FramedSyncInventoryDifference, 'direction' | 'globalId' | 'objectType'>) {
@@ -9,10 +9,10 @@ function key(value: Pick<FramedSyncInventoryDifference, 'direction' | 'globalId'
 
 function missingParentId(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
-  const offset = message.indexOf(PARENT_MISSING);
-  return offset < 0
-    ? null
-    : message.slice(offset + PARENT_MISSING.length).trim().split(/\s/u, 1)[0] || null;
+  const prefix = MISSING_DEPENDENCIES.find((candidate) => message.includes(candidate));
+  return prefix
+    ? message.slice(message.indexOf(prefix) + prefix.length).trim().split(/\s/u, 1)[0] || null
+    : null;
 }
 
 export async function deliverFramedSyncDifferencesInDependencyOrder(

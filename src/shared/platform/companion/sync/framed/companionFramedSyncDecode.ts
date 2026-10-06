@@ -10,10 +10,12 @@ import type {
   CanonicalFact
 } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { decodeFramedExternalDocumentBodies } from '../../../../../../lib/core/sync/framedSyncExternalDocumentBody.js';
+import { isFramedSyncNodeIdentityFact } from '../../../../../../lib/core/sync/framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeReadingFact } from '../../../../../../lib/core/sync/framedSyncNodeReadingFact.js';
 import { readFramedSyncNodeResources } from '../../../../../../lib/core/sync/framedSyncNodeResources.js';
-import { restoreFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeRestore.js';
+import { restoreFramedSyncNodeIdentityFact, restoreFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeRestore.js';
 import { restoreFramedSyncObjectStateFact } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
+import { isNodeVersionIdentityOnly } from '../../../../../../lib/core/sync/syncNodeVersionHistory.js';
 
 export type DecodedCompanionTransfer = Readonly<{
   externalBodies?: readonly Readonly<{ hash: string; text: string }>[];
@@ -46,6 +48,7 @@ function uniqueRows(rows: DbRow[]) {
 }
 
 function decodeNode(fact: CanonicalFact, bodies: ReadonlyMap<string, DbRow>) {
+  if (isFramedSyncNodeIdentityFact(fact)) return restoreFramedSyncNodeIdentityFact(fact);
   const descriptors = fact.blobs.filter((entry) => entry.role === 1);
   if (descriptors.length !== 1) throw new Error('framed_sync_android_blob_identity_mismatch');
   const row = bodies.get(bytesToHex(descriptors[0]!.sha256));
@@ -62,6 +65,7 @@ function validateResources(
   const byHash = uniqueRows(rows);
   const expectedKeys = new Set<string>();
   facts.forEach((fact, index) => {
+    if (isNodeVersionIdentityOnly(nodes[index]!)) return;
     const resourceDescriptors = fact.blobs.filter((entry) => entry.role !== 1);
     const descriptors = new Map(resourceDescriptors
       .map((entry) => [bytesToHex(entry.sha256), entry]));

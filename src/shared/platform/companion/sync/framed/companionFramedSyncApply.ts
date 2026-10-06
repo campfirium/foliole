@@ -15,6 +15,7 @@ import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../
 import { canonicalFactFromValidatedMessage } from '../../../../../../lib/core/sync/framedSyncWireFact.js';
 import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
 import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
+import { isNodeVersionIdentityOnly } from '../../../../../../lib/core/sync/syncNodeVersionHistory.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
 
 import { decodeCompanionFramedSyncTransfer } from './companionFramedSyncDecode.js';
@@ -114,6 +115,7 @@ export async function applyCompanionFramedSyncTransfer(
         (input.resourceStorageKeys ?? []).map((key) => key.slice(0, 64)), true);
       await assertFramedSyncNodeParentDependencies(tx, decoded.nodes);
       for (const node of decoded.nodes) {
+        if (isNodeVersionIdentityOnly(node)) continue;
         await upsertTextBodyBlob(
           tx, node.body_text ?? '', node.snapshot.updated_at, node.snapshot.body_blob_hash!
         );

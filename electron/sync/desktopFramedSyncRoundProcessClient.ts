@@ -55,7 +55,7 @@ const publication = z.object({ contentId: bytes, context,
   transferId: bytes });
 const entry = z.object({ frontierFactIds: z.array(z.string()), globalId: z.string(),
   objectType: z.string(), requiredRelationIds: z.array(z.string()), resourceHashes: z.array(bytes),
-  reviewFactIds: z.array(z.string()), sharedStateHash: bytes });
+  reviewFactIds: z.array(z.string()), stateFactIds: z.array(z.string()).default([]), sharedStateHash: bytes });
 const inventory = z.array(entry);
 const selection = z.discriminatedUnion('kind', [
   z.object({ deferredObjects: z.array(z.object({ globalId: z.string(), objectType: z.string() })),

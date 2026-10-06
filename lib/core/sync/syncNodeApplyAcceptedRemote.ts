@@ -124,7 +124,7 @@ export async function applyAcceptedRemoteNode(input: {
     await input.tx.run('INSERT OR IGNORE INTO node_version_local_origins (version_id) VALUES (?)', [input.record.version_id]);
     await input.tx.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
   }
-  if (!input.record.snapshot.deleted_at && input.record.snapshot.content !== undefined) {
+  if (!input.record.snapshot.deleted_at && typeof input.record.snapshot.content === 'string') {
     const repairResult = await repairDirectChildAnchorsForAppliedParent({
       content: input.record.snapshot.content,
       excludedNodeIds: input.remoteNodeIdsInBatch,

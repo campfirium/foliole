@@ -1,7 +1,9 @@
 import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
 import { decodeFramedExternalDocumentBodies } from '../../lib/core/sync/framedSyncExternalDocumentBody.js';
+import { isFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeReadingFact } from '../../lib/core/sync/framedSyncNodeReadingFact.js';
+import { restoreFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeRestore.js';
 import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
 import type {
   FramedSyncStagingPort,
@@ -92,10 +94,11 @@ export function prepareInboundApply(
   const requiredHashes = new Set(bodyDescriptors.flatMap((entries) =>
     entries.map((entry) => hex(entry.sha256))));
   if (contentByHash.size !== blobs.length || requiredHashes.size !== blobs.length ||
-      bodyDescriptors.some((entries) => entries.length !== 1)) {
+      bodyDescriptors.some((entries, index) => entries.length !== (isFramedSyncNodeIdentityFact(nodeFacts[index]!) ? 0 : 1))) {
     throw new Error('framed_sync_blob_content_set_mismatch');
   }
   const records = nodeFacts.map((nodeFact, index) => {
+    if (isFramedSyncNodeIdentityFact(nodeFact)) return restoreFramedSyncNodeIdentityFact(nodeFact);
     const body = bodyDescriptors[index]![0]!;
     const content = contentByHash.get(hex(body.sha256));
     if (!content) throw new Error('framed_sync_blob_content_set_mismatch');

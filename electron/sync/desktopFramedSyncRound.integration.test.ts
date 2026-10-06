@@ -3,6 +3,8 @@ import { promises as fs } from 'node:fs';
 
 import { afterEach, expect, it } from 'vitest';
 
+import { publicationEvidence, readFixtureInventory, reconnectFixturePeer }
+  from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import {
   coordinateDesktopFramedSyncProcessRound,
   readDesktopFramedSyncRoundControlLog
@@ -12,6 +14,8 @@ import {
   type DesktopFramedSyncFixtureProcess,
   readDesktopFramedSyncLibraryEvidence
 } from './desktopFramedSyncTwoProcess.testSupport.js';
+
+
 
 let root = '';
 const processes: DesktopFramedSyncFixtureProcess[] = [];
@@ -53,8 +57,8 @@ async () => {
     rightProcess: fixture.right
   });
 
-  expect(receipt.result).toBe('converged');
-  expect(receipt.transfers.map((transfer) =>
+  expect(receipt.result).toBe('drained');
+  expect(receipt.transfers.filter((transfer) => transfer.objectType === 'node').map((transfer) =>
     [transfer.direction, transfer.globalId, transfer.state])).toEqual([
     ['local_to_remote', 't326-round-a', 'committed'],
     ['remote_to_local', 't326-round-b', 'committed']
@@ -67,8 +71,10 @@ async () => {
   ];
   expect(left.nodes).toEqual(expectedNodes);
   expect(right.nodes).toEqual(expectedNodes);
-  expect(left.framedSync).toMatchObject({ outboundHolds: 0, receipts: 2 });
-  expect(right.framedSync).toMatchObject({ outboundHolds: 0, receipts: 2 });
+  expect(left.framedSync).toMatchObject({ outboundHolds: 0, receipts: receipt.transfers.length });
+  expect(right.framedSync).toMatchObject({ outboundHolds: 0, receipts: receipt.transfers.length });
+  await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+  expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
   expect(await readDesktopFramedSyncRoundControlLog(fixture.left)).toContain('round_receipt');
   expect(await readDesktopFramedSyncRoundControlLog(fixture.right)).toContain('round_receipt');
 });
@@ -96,6 +102,8 @@ it('converges a child sorted before its missing parent through the production ro
     expect.objectContaining({ id: 't326-a-child', parent_id: 't326-z-parent' }),
     expect.objectContaining({ id: 't326-z-parent', parent_id: null })
   ]);
+  await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+  expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
 });
 
 it('keeps a published transfer pending and emits no terminal round receipt', async () => {
@@ -111,9 +119,13 @@ it('keeps a published transfer pending and emits no terminal round receipt', asy
   });
 
   expect(receipt.result).toBe('pending');
-  expect(receipt.transfers.map((transfer) => transfer.state)).toEqual(['pending']);
+  expect(receipt.transfers.length).toBeGreaterThan(0);
+  expect(receipt.transfers.every((transfer) => transfer.state === 'pending')).toBe(true);
+  expect(receipt.transfers).toContainEqual(expect.objectContaining({ globalId: 't326-round-pending' }));
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync)
-    .toMatchObject({ outboundHolds: 1, outboundStates: [{ state: 'published' }] });
+    .toMatchObject({ outboundHolds: receipt.transfers.length });
+  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync.outboundStates)
+    .toEqual(receipt.transfers.map(() => ({ state: 'published' })));
   expect(await readDesktopFramedSyncRoundControlLog(fixture.left)).not.toContain('round_receipt');
   expect(await readDesktopFramedSyncRoundControlLog(fixture.right)).not.toContain('round_receipt');
 });
@@ -131,10 +143,10 @@ it('turns an empty deferred selection into drained terminal receipts without pub
   });
 
   expect(receipt).toMatchObject({
-    deferredObjects: [{ globalId: 't326-round-deferred', objectType: 'node' }],
     result: 'drained',
     transfers: []
   });
+  expect(receipt.deferredObjects).toContainEqual(expect.objectContaining({ globalId: 't326-round-deferred', objectType: 'node' }));
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync)
     .toMatchObject({ outboundHolds: 0, outboundStates: [] });
   expect(await readDesktopFramedSyncRoundControlLog(fixture.left)).toContain('round_receipt');
@@ -151,6 +163,7 @@ it('replays the durable receipt after receiver restart when the round repeats a 
   const restarted = await fixture.restartRight();
   processes.push(restarted.process);
 
+  const beforeReplay = publicationEvidence(restarted.snapshot.databasePath);
   const replay = await coordinateDesktopFramedSyncProcessRound({
     left: fixture.leftSnapshot,
     leftProcess: fixture.left,
@@ -159,12 +172,15 @@ it('replays the durable receipt after receiver restart when the round repeats a 
     rightProcess: restarted.process
   });
 
-  expect(replay.result).toBe('converged');
-  expect(replay.transfers.map((transfer) => transfer.state)).toEqual(['committed']);
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync)
-    .toMatchObject({ outboundFrames: 4, outboundHolds: 0, receipts: 1 });
-  expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).framedSync)
-    .toMatchObject({ inboundFrames: 4, outboundFrames: 1, receipts: 1 });
+  expect(replay.transfers.every((transfer) => transfer.state === 'committed')).toBe(true);
+  expect(replay.transfers).toContainEqual(expect.objectContaining({ globalId: 't326-round-replay' }));
+  const target = replay.transfers.find((transfer) => transfer.globalId === 't326-round-replay')!;
+  const targetId = Buffer.from(target.publication.transferId).toString('hex');
+  expect(beforeReplay.receipts).toContainEqual(expect.objectContaining({ id: targetId }));
+  expect(publicationEvidence(restarted.snapshot.databasePath).receipts
+    .filter((receipt) => receipt.id === targetId)).toHaveLength(1);
+  expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync.outboundHolds)
+    .toBe(0);
   expect(await readDesktopFramedSyncRoundControlLog(restarted.process)).toContain('round_receipt');
 });
 
@@ -191,7 +207,7 @@ it('sends the frozen publication when the current node changes after selection',
     rightProcess: fixture.right
   });
 
-  expect(receipt.result).toBe('converged');
+  expect(receipt.result).toBe('drained');
   const right = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(right.nodes).toEqual([
     expect.objectContaining({ id: 't326-round-frozen', title: 'Frozen title' })
