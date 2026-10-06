@@ -31,6 +31,7 @@ vi.mock('../database/importPipeline.js', () => ({ runPreparedImport }));
 vi.mock('../import/managedInboxEvents.js', () => ({ notifyManagedInboxUpdated: vi.fn() }));
 
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+
 import { runClipboardImport } from './importClipboard.js';
 
 function deferred() {
