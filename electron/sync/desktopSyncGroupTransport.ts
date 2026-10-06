@@ -74,6 +74,14 @@ async function continuePeerSync(
     peer: target,
     remoteLibraryEpoch: memberState.remoteLibraryEpoch
   }), target, activity);
+  if (result.complete) {
+    await runPeerSyncStage(
+      'member_state',
+      () => exchangeDesktopSyncGroupMemberState(target),
+      target,
+      activity
+    );
+  }
   await runWithDatabaseConnectionOwner(() =>
     reconcileVersionedInlineBodies(openDatabaseConnection().driver));
   return { complete: result.complete };

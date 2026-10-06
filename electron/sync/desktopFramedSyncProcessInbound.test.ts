@@ -6,8 +6,8 @@ import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManif
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 
 const mocks = vi.hoisted(() => ({
-  applyNode: vi.fn(), applyRelations: vi.fn(), commitReceipt: vi.fn(),
-  inventory: vi.fn(), restoreNode: vi.fn(), upsertBody: vi.fn()
+  advanceRevision: vi.fn(), applyNode: vi.fn(), applyRelations: vi.fn(), commitReceipt: vi.fn(),
+  inventory: vi.fn(), recordPeerEpoch: vi.fn(), restoreNode: vi.fn(), upsertBody: vi.fn()
 }));
 
 vi.mock('../../lib/core/sync/framedSyncInventoryRead.js', () => ({
@@ -15,6 +15,12 @@ vi.mock('../../lib/core/sync/framedSyncInventoryRead.js', () => ({
 }));
 vi.mock('../../lib/core/sync/syncNodeApplyExecutor.js', () => ({
   applySyncNodesWithDbPort: mocks.applyNode
+}));
+vi.mock('../../lib/core/sync/framedSyncPeerEpoch.js', () => ({
+  recordFramedSyncPeerEpoch: mocks.recordPeerEpoch
+}));
+vi.mock('../../lib/core/sync/nodeVersionInboundReceipt.js', () => ({
+  advanceLocalSourceRevision: mocks.advanceRevision
 }));
 vi.mock('../../lib/core/sync/syncNodeTextBodyBlobs.js', () => ({
   upsertTextBodyBlob: mocks.upsertBody
@@ -105,6 +111,10 @@ it('atomically applies multiple versions of the same node', async () => {
     expect.objectContaining({ version_id: second.factId })
   ]);
   expect(mocks.upsertBody).toHaveBeenCalledTimes(2);
+  expect(mocks.advanceRevision).toHaveBeenCalledWith(expect.anything(), 'sender');
+  expect(mocks.recordPeerEpoch).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+    groupId: 'group', libraryEpoch: 'epoch-s', peerDeviceId: 'sender'
+  }));
 });
 
 it('rejects a node fact whose blob content set does not match', async () => {

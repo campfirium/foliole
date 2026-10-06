@@ -12,7 +12,11 @@ import {
 } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { openDatabaseConnection } from './connection.js';
-import { assertDesktopPeerProofFresh, loadDesktopLocalNodeProof } from './nodeVersionPeerProof.js';
+import {
+  assertDesktopPeerProofFresh,
+  loadDesktopLocalNodeProof,
+  recordDesktopAcknowledgedPeerProof
+} from './nodeVersionPeerProof.js';
 import {
   loadDesktopSyncGroupRestoreState,
   receiveDesktopSyncGroupRestoreState,
@@ -104,6 +108,7 @@ export function applyDesktopSyncGroupMemberState(
       return;
     }
     assertDesktopPeerProofFresh(incoming);
+    recordDesktopAcknowledgedPeerProof(incoming, local.sender_device_identity_key);
     for (const removal of incoming.removals) mergeRemoval(incoming.group_id, removal);
     for (const device of incoming.devices) mergeDevice(incoming.group_id, device, local.sender_device_identity_key);
     applyWatchedFolderGroupMemberState(incoming, authenticatedDeviceId);

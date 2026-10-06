@@ -7,12 +7,14 @@ import {
 import type { FramedSyncContext, PublishedTransfer } from '../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { assertFramedSyncNodeParentDependencies } from '../../lib/core/sync/framedSyncNodeParentDependencies.js';
+import { recordFramedSyncPeerEpoch } from '../../lib/core/sync/framedSyncPeerEpoch.js';
 import type {
   FramedSyncStagingPort,
   InboundFactDescriptor,
   InboundFrameInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncBlobContent } from '../../lib/core/sync/framedSyncTransferPayloads.js';
+import { advanceLocalSourceRevision } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -133,6 +135,13 @@ export async function finishDesktopFramedSyncTransfer(input: {
       await applySyncNodesWithDbPort(tx, prepared.records);
     }
     await applyDesktopFramedSyncRelationReviewFactsWithDbPort(tx, prepared.relationReviewFacts);
+    await advanceLocalSourceRevision(tx, input.context.senderDeviceId);
+    await recordFramedSyncPeerEpoch(tx, {
+      groupId: input.context.groupId,
+      libraryEpoch: input.context.senderLibraryEpoch,
+      peerDeviceId: input.context.senderDeviceId,
+      transferId: input.frame.transferId
+    });
     const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
       globalId: prepared.globalId, objectType: 'node'
     }))?.sharedStateHash;

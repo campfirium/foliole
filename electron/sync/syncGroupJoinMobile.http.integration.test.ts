@@ -72,6 +72,11 @@ async function restoredApplicant(platform: string) {
   await provider.send('joinProviderEnable');
   await source.send('sync', { ...peer });
   await provider.send('sync', { ...local });
+  const proofs = await provider.send('proofs') as unknown as Array<{
+    device_identity_key: string; library_epoch: string; proof_revision: number
+  }>;
+  expect(proofs.find((proof) => proof.device_identity_key === local.identity)?.proof_revision)
+    .toBeGreaterThan(0);
   await source.send('leave');
   await source.send('restoreLocal', { file: backup.destinationPath });
   await source.close();

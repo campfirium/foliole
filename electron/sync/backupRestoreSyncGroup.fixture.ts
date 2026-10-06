@@ -147,6 +147,10 @@ async function run(action: string, args: Record<string, unknown>) {
   if (action === 'facts') return appendRestoreFacts();
   if (action === 'delete') return deletePausedNode();
   if (action === 'readFacts') return restoreFactsSnapshot();
+  if (action === 'proofs') return openDatabaseConnection().driver.queryAll(
+    `SELECT device_identity_key, library_epoch, proof_revision
+     FROM node_version_device_revisions ORDER BY device_identity_key`
+  );
   if (action === 'safety') return safetySnapshotFacts();
   if (action === 'backup') return createApplicationDatabaseBackup();
   if (action === 'leave') return handleSyncGroupCommand(NATIVE_COMMANDS.leaveSyncGroup, {});

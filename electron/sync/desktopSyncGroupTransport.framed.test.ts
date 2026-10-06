@@ -52,6 +52,7 @@ it('routes a normal compatible peer through the framed inventory round', async (
   expect(runtime.framedRound).toHaveBeenCalledWith({
     localLibraryEpoch: 'epoch-a', peer, remoteLibraryEpoch: 'epoch-b'
   });
+  expect(runtime.exchangeMemberState).toHaveBeenCalledTimes(2);
   expect(runtime.reconcileBodies).toHaveBeenCalledOnce();
 });
 
@@ -67,6 +68,6 @@ it('rechecks restore readiness and still uses the framed inventory round', async
     peerBlocked: false, remoteLibraryEpoch: 'epoch-b', restoreFromPeer: 'restore'
   }).mockResolvedValueOnce({ normalSyncReady: true });
   await expect(continueDesktopSyncGroupSync(peer)).resolves.toEqual({ complete: true });
-  expect(runtime.exchangeMemberState).toHaveBeenCalledTimes(2);
+  expect(runtime.exchangeMemberState).toHaveBeenCalledTimes(3);
   expect(runtime.framedRound).toHaveBeenCalledOnce();
 });

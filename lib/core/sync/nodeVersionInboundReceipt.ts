@@ -116,7 +116,7 @@ export async function recordInboundNodeVersionReceipt(
   return results;
 }
 
-async function advanceLocalSourceRevision(port: DbPort, sourceDeviceId: string) {
+export async function advanceLocalSourceRevision(port: DbPort, sourceDeviceId: string) {
   const [proof] = await port.query<{ library_epoch: string; proof_revision: number }>(
     'SELECT library_epoch, proof_revision FROM node_version_local_proof_state WHERE singleton_id = 1'
   );
