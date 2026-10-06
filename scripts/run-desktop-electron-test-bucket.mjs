@@ -161,6 +161,7 @@ function runVitest(reportPath, targets, workers = 2) {
     '--',
     '--silent=passed-only',
     '--pool=forks',
+    '--disableConsoleIntercept',
     `--maxWorkers=${workers}`,
     '--no-file-parallelism',
     '--testTimeout=30000',

@@ -76,9 +76,10 @@ it('partitions every Electron bucket into one hosted shard', () => {
   ))).toBe(true);
 });
 
-it('uses fork workers for Electron native modules', () => {
+it('uses fork workers without console RPC for Electron native modules', () => {
   const source = fs.readFileSync('scripts/run-desktop-electron-test-bucket.mjs', 'utf8');
   expect(source).toContain("'--pool=forks'");
+  expect(source).toContain("'--disableConsoleIntercept'");
   expect(source).not.toContain("'--pool=threads'");
 });
 
