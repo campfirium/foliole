@@ -22,6 +22,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
@@ -46,7 +48,6 @@ afterEach(async () => {
 });
 
 function settingRecord(args: {
-  contentHash: string;
   deletedAt?: string | null;
   formFactor: string;
   hostName: string;
@@ -56,26 +57,24 @@ function settingRecord(args: {
   updatedAt: string;
   valueJson?: string;
 }): NativeSyncObjectRecord {
+  const objectId = `${args.scope}:${args.platform}:${args.formFactor}:${args.hostName}:${args.key}`;
+  const payload = {
+    form_factor: args.formFactor, host_name: args.hostName, key: args.key,
+    platform: args.platform, scope: args.scope, value_json: args.valueJson ?? 'null'
+  };
   return {
-    content_hash: args.contentHash,
+    content_hash: computeSyncContentHash('setting', args.deletedAt
+      ? buildCanonicalSyncTombstone(objectId) : payload),
     deleted_at: args.deletedAt ?? null,
-    object_id: `${args.scope}:${args.platform}:${args.formFactor}:${args.hostName}:${args.key}`,
+    object_id: objectId,
     object_type: 'setting',
-    payload_json: args.deletedAt ? null : JSON.stringify({
-      form_factor: args.formFactor,
-      host_name: args.hostName,
-      key: args.key,
-      platform: args.platform,
-      scope: args.scope,
-      value_json: args.valueJson ?? 'null'
-    }),
+    payload_json: args.deletedAt ? null : JSON.stringify(payload),
     updated_at: args.updatedAt
   };
 }
 
 it('materializes an accepted workspace setting and preserves it after database restart', async () => {
   const record = settingRecord({
-    contentHash: 'remote-app-settings',
     formFactor: 'desktop',
     hostName: '*',
     key: 'app_settings',
@@ -97,7 +96,6 @@ it('materializes an accepted workspace setting and preserves it after database r
 
 it('materializes the Readwise import tag without turning it into Host state', async () => {
   const record = settingRecord({
-    contentHash: 'remote-readwise-policy',
     formFactor: 'desktop',
     hostName: '*',
     key: 'import_manager_settings',
@@ -123,13 +121,13 @@ it('waits for the matching cutover proof before materializing API mode', async (
     sourceHost: 'Source Mac', startedAt: '2027-09-15T00:01:00.000Z'
   };
   const mode = settingRecord({
-    contentHash: 'readwise-mode-api', formFactor: 'desktop', hostName: '*',
+    formFactor: 'desktop', hostName: '*',
     key: 'readwise_source_mode', platform: 'windows', scope: 'user_space',
     updatedAt: completion.completedAt,
     valueJson: JSON.stringify({ completion, mode: 'api', version: 1 })
   });
   const cutover = settingRecord({
-    contentHash: 'readwise-cutover-api', formFactor: 'desktop', hostName: '*',
+    formFactor: 'desktop', hostName: '*',
     key: 'readwise_source_cutover_v2', platform: 'windows', scope: 'user_space',
     updatedAt: completion.completedAt,
     valueJson: JSON.stringify({
@@ -149,7 +147,7 @@ it('waits for the matching cutover proof before materializing API mode', async (
 
 it('does not materialize API mode when the cutover proof differs', async () => {
   const mode = settingRecord({
-    contentHash: 'readwise-mode-unproved', formFactor: 'desktop', hostName: '*',
+    formFactor: 'desktop', hostName: '*',
     key: 'readwise_source_mode', platform: 'windows', scope: 'user_space',
     updatedAt: '2026-09-15T00:02:00.000Z',
     valueJson: JSON.stringify({
@@ -160,7 +158,7 @@ it('does not materialize API mode when the cutover proof differs', async () => {
     })
   });
   const cutover = settingRecord({
-    contentHash: 'readwise-cutover-different', formFactor: 'desktop', hostName: '*',
+    formFactor: 'desktop', hostName: '*',
     key: 'readwise_source_cutover_v2', platform: 'windows', scope: 'user_space',
     updatedAt: '2026-09-15T00:01:00.000Z',
     valueJson: JSON.stringify({
@@ -177,7 +175,6 @@ it('does not materialize API mode when the cutover proof differs', async () => {
 it('materializes a tombstone as projection deletion and consumers recover defaults', async () => {
   saveJsonSetting('review_scheduler_settings', { desiredRetention: 0.9 }, '2026-07-10T00:01:00.000Z');
   const tombstone = settingRecord({
-    contentHash: 'remote-review-delete',
     deletedAt: '2026-07-10T00:02:00.000Z',
     formFactor: 'desktop',
     hostName: '*',
@@ -195,7 +192,6 @@ it('materializes a tombstone as projection deletion and consumers recover defaul
 it('does not materialize foreign Android Host settings into the desktop projection', async () => {
   saveJsonSetting('app_settings', { theme: 'light' }, '2026-07-10T00:01:00.000Z');
   const androidRecord = settingRecord({
-    contentHash: 'android-app-settings',
     formFactor: 'phone',
     hostName: 'android-host',
     key: 'app_settings',

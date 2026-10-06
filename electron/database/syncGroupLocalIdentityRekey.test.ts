@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { DESKTOP_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopCoreSchemaStatements.js';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
+import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from '../../lib/core/database/nodeVersionMemberPositionSchema.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
 import { SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/syncSchemaStatements.js';
@@ -21,6 +22,7 @@ beforeEach(() => {
     ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS,
     ...SYNC_SCHEMA_STATEMENTS,
     ...SYNC_GROUP_SCHEMA_STATEMENTS,
+    ...NODE_VERSION_MEMBER_POSITION_SCHEMA,
     ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS
   ]) sqlite.exec(statement);
   seedLocalHistory();

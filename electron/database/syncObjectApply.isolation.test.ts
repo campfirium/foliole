@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -41,6 +42,10 @@ afterEach(async () => {
 
 it('skips malformed records without blocking later valid records', async () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  const validPayload = {
+    key: 'sync_reminder', scope: 'user_space', platform: 'android',
+    form_factor: 'phone', host_name: '*', value_json: '{"enabled":true}'
+  };
   const records = [{
     content_hash: 'bad-hash',
     deleted_at: null,
@@ -55,18 +60,11 @@ it('skips malformed records without blocking later valid records', async () => {
     payload_json: JSON.stringify({ key: 'missing_object_id' }),
     updated_at: '2026-04-21T16:00:30.000Z'
   }, {
-    content_hash: 'good-hash',
+    content_hash: computeSyncContentHash('setting', validPayload),
     deleted_at: null,
     object_id: 'user_space:android:phone:*:sync_reminder',
     object_type: 'setting',
-    payload_json: JSON.stringify({
-      key: 'sync_reminder',
-      scope: 'user_space',
-      platform: 'android',
-      form_factor: 'phone',
-      host_name: '*',
-      value_json: '{"enabled":true}'
-    }),
+    payload_json: JSON.stringify(validPayload),
     updated_at: '2026-04-21T16:01:00.000Z'
   }] as unknown as NativeSyncObjectRecord[];
 

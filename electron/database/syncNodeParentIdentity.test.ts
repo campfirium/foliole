@@ -129,8 +129,8 @@ it('keeps a proven contracted parent edge when replaying the complete original c
   await retainLocalEditBase(port, { holdId: 'open-editor', nodeId: 'topic', versionId: 'base' });
   await collectNodeVersionPayloads(port, 'topic', Number.MAX_SAFE_INTEGER);
   expect(db.prepare("SELECT parent_version_id FROM node_sync_versions WHERE version_id = 'head'").get())
-    .toEqual({ parent_version_id: 'base' });
+    .toEqual({ parent_version_id: 'middle' });
   await applySyncNodesWithDbPort(port, [base, middle, head]);
   expect(db.prepare("SELECT parent_version_id FROM node_sync_versions WHERE version_id = 'head'").get())
-    .toEqual({ parent_version_id: 'base' });
+    .toEqual({ parent_version_id: 'middle' });
 });

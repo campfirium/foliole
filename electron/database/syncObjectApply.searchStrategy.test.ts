@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../lib/core/database/fullTextSearchIndexStrategy.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -42,19 +43,16 @@ it('applies full-text search index strategy settings through the shared setting 
   const valueJson = JSON.stringify({
     [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram'
   });
+  const payload = {
+    host_name: '*', form_factor: 'desktop', key: 'app_settings',
+    platform: 'windows', scope: 'user_space', value_json: valueJson
+  };
   const record: NativeSyncObjectRecord = {
-    content_hash: 'hash-search-strategy',
+    content_hash: computeSyncContentHash('setting', payload),
     deleted_at: null,
     object_id: 'user_space:windows:desktop:*:app_settings',
     object_type: 'setting',
-    payload_json: JSON.stringify({
-      host_name: '*',
-      form_factor: 'desktop',
-      key: 'app_settings',
-      platform: 'windows',
-      scope: 'user_space',
-      value_json: valueJson
-    }),
+    payload_json: JSON.stringify(payload),
     updated_at: '2026-04-21T16:23:00.000Z'
   };
 

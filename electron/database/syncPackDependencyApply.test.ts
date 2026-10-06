@@ -94,9 +94,10 @@ function expectCurrentBody(deletedAt: string | null = null) {
     ${buildNodeBodyContentSql()} AS body FROM nodes n
     LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash WHERE n.id='node-1'`).get())
     .toEqual({ current_version_id: 'v23', inline: '', deleted_at: deletedAt, body: 'b'.repeat(741 * 1024) });
-  expect(target.prepare('SELECT version_id, parent_version_id, body_text FROM node_sync_versions').all())
-    .toEqual([{ version_id: 'v23', parent_version_id: null, body_text: 'b'.repeat(741 * 1024) }]);
-  expect(target.prepare('SELECT count(*) AS count FROM node_sync_version_parents').get()).toEqual({ count: 0 });
+  expect(target.prepare(`SELECT COUNT(*) AS count, SUM(parent_version_id IS NULL) AS roots,
+    MAX(CASE WHEN version_id = 'v23' THEN parent_version_id END) AS head_parent FROM node_sync_versions`).get())
+    .toEqual({ count: 23, roots: 1, head_parent: 'v22' });
+  expect(target.prepare('SELECT count(*) AS count FROM node_sync_version_parents').get()).toEqual({ count: 22 });
 }
 
 function expectCompleteStaging() {

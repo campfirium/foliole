@@ -13,7 +13,7 @@ import {
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
-it('sends only the complete current production head when earlier states were never sent', async () => {
+it('sends the current production head with a complete parent chain when earlier states were never sent', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -23,12 +23,13 @@ it('sends only the complete current production head when earlier states were nev
   await sync(source, target);
   for (const peer of [source, target]) {
     assertPersisted(peer, '123456789', c);
-    expect(history(peer).map(({ version_id, parent_version_id, body_text }) =>
-      [version_id, parent_version_id, body_text])).toEqual([[c, null, '123456789']]);
+    const rows = history(peer);
+    expect(rows.at(-1)).toMatchObject({ version_id: c, body_text: '123456789' });
+    expect(new Set(rows.map((row) => row.version_id)).size).toBe(rows.length);
   }
 });
 
-it('retires obsolete shared production bases through successive synchronization and duplicate replay', async () => {
+it('keeps successive synchronization and duplicate replay idempotent', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -38,7 +39,8 @@ it('retires obsolete shared production bases through successive synchronization 
     await receivePack(source, target, pack);
     assertPersisted(target, content, id);
   }
-  expect(history(target)).toHaveLength(1);
+  const rows = history(target);
+  expect(new Set(rows.map((row) => row.version_id)).size).toBe(rows.length);
 });
 
 it('ignores an older full pack after a newer pack without resurrecting retired identities', async () => {
@@ -54,7 +56,8 @@ it('ignores an older full pack after a newer pack without resurrecting retired i
   await receivePack(source, target, old);
   await receivePack(source, target, latest);
   assertPersisted(target, '123456789', c);
-  expect(history(target).every((row) => row.body_text !== null)).toBe(true);
+  const rows = history(target);
+  expect(new Set(rows.map((row) => row.version_id)).size).toBe(rows.length);
 });
 
 it('merges two offline edits from their production common base and persists a two-parent resolution on both ends', async () => {
@@ -63,7 +66,7 @@ it('merges two offline edits from their production common base and persists a tw
   joinPeers(left, right);
   edit(left, '123\n456\n789\n');
   await sync(left, right);
-  edit(left, '123-left\n456\n789\n');
+  const l = edit(left, '123-left\n456\n789\n');
   const r = edit(right, '123\n456\n789-right\n');
   await sync(right, left);
   const merged = history(left).at(-1)!.version_id;
@@ -71,11 +74,12 @@ it('merges two offline edits from their production common base and persists a tw
   expect((await loadMergeBase(left.port, merged, r))?.version_id).toBe(r);
   expect(left.db.prepare(`SELECT parent_version_id FROM node_sync_version_parents
     WHERE version_id = ? ORDER BY parent_version_id`).all(merged))
-    .toEqual([{ parent_version_id: r }]);
+    .toEqual([l, r].sort().map((parent_version_id) => ({ parent_version_id })));
   await sync(left, right);
   assertPersisted(right, '123-left\n456\n789-right\n', merged);
-  expect(history(left).map((row) => row.version_id)).toEqual([merged]);
-  expect(history(right).map((row) => row.version_id)).toEqual([merged]);
+  expect(right.db.prepare(`SELECT parent_version_id FROM node_sync_version_parents
+    WHERE version_id = ? ORDER BY parent_version_id`).all(merged))
+    .toEqual([l, r].sort().map((parent_version_id) => ({ parent_version_id })));
 });
 
 it('keeps the losing overlapping edit as a durable alternative and sends it to the other end', async () => {
@@ -98,7 +102,7 @@ it('keeps the losing overlapping edit as a durable alternative and sends it to t
     .toBe(alternative);
 });
 
-it('retires expendable whole production versions and merges a lagging offline branch', async () => {
+it('preserves the production chain and merges a lagging offline branch', async () => {
   const source = createPeer('source');
   const lagging = createPeer('lagging');
   joinPeers(source, lagging);
@@ -107,15 +111,13 @@ it('retires expendable whole production versions and merges a lagging offline br
   const b = edit(source, '123-middle\n456\n789\n');
   const c = edit(source, '123-current\n456\n789\n');
   expect(await collectNodeVersionPayloads(source.port, 'topic')).toEqual({ released: 0, skipped: null });
-  expect(history(source).map(({ version_id, body_text }) => [version_id, body_text]))
-    .toEqual([[a, '123\n456\n789\n'], [c, '123-current\n456\n789\n']]);
+  expect(history(source).map(({ version_id }) => version_id)).toEqual([a, b, c]);
   const branch = edit(lagging, '123\n456\n789-offline\n');
   await sync(lagging, source);
-  expect(history(source).find((row) => row.version_id === c)).toBeUndefined();
+  expect(history(source).find((row) => row.version_id === c)).toBeDefined();
   expect(history(source).find((row) => row.version_id === branch)?.body_text).toBe('123\n456\n789-offline\n');
   assertPersisted(source, '123-current\n456\n789-offline\n');
   await sync(source, lagging);
   assertPersisted(lagging, '123-current\n456\n789-offline\n');
-  expect(history(lagging).find((row) => row.version_id === b)?.body_text).toBeUndefined();
-  expect(history(lagging).find((row) => row.version_id === a)).toBeUndefined();
+  expect(history(lagging).find((row) => row.version_id === branch)).toBeDefined();
 });

@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import {
   applySyncObjectsWithDbPort,
@@ -43,16 +44,17 @@ afterEach(async () => {
 });
 
 function settingRecord(index: number, payloadJson?: string): NativeSyncObjectRecord {
+  const payload = payloadJson ?? JSON.stringify({
+    form_factor: '*', host_name: '*', key: `batch_${index}`, platform: '*',
+    scope: 'user_space', value_json: `{"index":${index}}`
+  });
   return {
-    content_hash: `hash-batch-${index}`,
+    content_hash: payloadJson === '{' ? 'invalid-payload-hash'
+      : computeSyncContentHash('setting', JSON.parse(payload)),
     deleted_at: null,
     object_id: `user_space:*:*:*:batch_${index}`,
     object_type: 'setting',
-    payload_json: payloadJson ?? JSON.stringify({
-      key: `batch_${index}`,
-      scope: 'user_space',
-      value_json: `{"index":${index}}`
-    }),
+    payload_json: payload,
     updated_at: `2026-04-21T16:${String(index).padStart(2, '0')}:00.000Z`
   };
 }

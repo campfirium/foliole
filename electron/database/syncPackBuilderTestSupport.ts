@@ -9,6 +9,7 @@ import { afterEach, beforeEach } from 'vitest';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { buildCanonicalSettingSyncPayload } from '../../lib/core/sync/canonicalPrivateStatePayload.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
@@ -38,6 +39,11 @@ export function resolveSyncPackPath(fileName: string) {
 export function insertNodeSyncState() {
   const driver = openDatabaseConnection().driver;
   const bodyHash = upsertTextBodyBlob(driver, 'node body must stay out of pack', '2026-04-27T00:00:00.000Z');
+  const settingPayload = buildCanonicalSettingSyncPayload({
+    form_factor: 'desktop', host_name: '*', key: 'app_settings', platform: 'windows',
+    scope: 'user_space', value_json: '{"theme":"dark","fullTextSearch.indexStrategy":"unicode61"}'
+  });
+  const settingHash = computeSyncContentHash('setting', settingPayload);
   driver.execute(
     `INSERT INTO nodes (
        id, kind, title, is_title_manual, hide_title_heading, opening_text, content, body_blob_hash,
@@ -63,13 +69,13 @@ export function insertNodeSyncState() {
        key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at
      ) VALUES ('app_settings', 'user_space', 'windows', 'desktop', '*',
        '{"theme":"dark","fullTextSearch.indexStrategy":"unicode61"}',
-       'setting-hash', '2026-04-27T00:01:00.000Z')`
+       ?, '2026-04-27T00:01:00.000Z')`, [settingHash]
   );
   driver.execute(
     `INSERT INTO sync_object_state (
        object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty
-     ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 2, 'setting-hash',
-       'desktop', '2026-04-27T00:01:00.000Z', 1)`
+     ) VALUES ('setting', 'user_space:windows:desktop:*:app_settings', 2, ?,
+       'desktop', '2026-04-27T00:01:00.000Z', 1)`, [settingHash]
   );
 }
 

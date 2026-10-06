@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { buildSyncPackApplyableRowsSql } from '../../lib/core/sync/syncPackApplyStatements.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { PACK_SCHEMA } from '../../lib/core/sync/syncPackSchema.js';
@@ -63,14 +64,15 @@ it('applies payload and state atomically and retires the obsolete accepted setti
     await port.run('DETACH DATABASE inc');
   }
 
+  const contentHash = settingPayloadHash(appSettingsPayload());
   expect(sqlite.prepare(
     `SELECT value_json, content_hash FROM setting_records
      WHERE key = 'app_settings' AND scope = 'user_space'`
-  ).get()).toEqual({ content_hash: 'new-hash', value_json: '{"theme":"light"}' });
+  ).get()).toEqual({ content_hash: contentHash, value_json: '{"theme":"light"}' });
   expect(sqlite.prepare(
     `SELECT content_hash, sync_dirty FROM sync_object_state
      WHERE object_type = 'setting' AND object_id = 'user_space:all:all:*:app_settings'`
-  ).get()).toEqual({ content_hash: 'new-hash', sync_dirty: 0 });
+  ).get()).toEqual({ content_hash: contentHash, sync_dirty: 0 });
   expect(sqlite.prepare(
     `SELECT status FROM sync_delivery_receipts WHERE peer_id = 'peer-b'`
   ).get()).toBeUndefined();
@@ -97,7 +99,7 @@ it('converges a newer Readwise owner despite a pending local receipt and rejects
     .toEqual({ value_json: remoteOwner });
   expect(sqlite.prepare(`SELECT content_hash, sync_dirty FROM sync_object_state
     WHERE object_type = 'setting' AND object_id = ?`).get(objectId))
-    .toEqual({ content_hash: 'owner-3', sync_dirty: 0 });
+    .toEqual({ content_hash: settingPayloadHash(ownerPayload(remoteOwner)), sync_dirty: 0 });
   makeReadwiseOwnerPackStale(objectId, localOwner);
   await port.run(`ATTACH DATABASE '${incomingPath.replaceAll("'", "''")}' AS inc`);
   try {
@@ -110,23 +112,21 @@ it('converges a newer Readwise owner despite a pending local receipt and rejects
 });
 
 function seedLocalAcceptedSetting() {
-  openDatabaseConnection().sqlite.exec(`
-    INSERT INTO setting_records (
-      key, scope, platform, form_factor, host_name, value_json, content_hash, updated_at
-    ) VALUES ('app_settings', 'user_space', 'all', 'all', '*',
-      '{"theme":"dark"}', 'old-hash', '2026-09-07T07:00:00.000Z');
-    INSERT INTO sync_object_state (
-      object_type, object_id, state_seq, content_hash, last_modified_by_host_name,
-      updated_at, sync_dirty, deleted_at
-    ) VALUES ('setting', 'user_space:all:all:*:app_settings', 4, 'old-hash',
-      'Local Host', '2026-09-07T07:00:00.000Z', 1, NULL);
-    INSERT INTO sync_delivery_receipts (
-      peer_id, stream_name, operation_id, object_type, object_id, payload_identity,
-      local_position, status, remote_position, issue_reason, created_at, updated_at
-    ) VALUES ('peer-b', 'state', 'setting:app_settings:4', 'setting',
-      'user_space:all:all:*:app_settings', 'old-hash', '4', 'accepted', '7', NULL,
-      '2026-09-07T07:00:00.000Z', '2026-09-07T07:00:00.000Z');
-  `);
+  const sqlite = openDatabaseConnection().sqlite;
+  const payload = { ...appSettingsPayload(), value_json: '{"theme":"dark"}' };
+  const contentHash = settingPayloadHash(payload);
+  sqlite.prepare(`INSERT INTO setting_records (key, scope, platform, form_factor, host_name,
+    value_json, content_hash, updated_at) VALUES ('app_settings', 'user_space', 'all', 'all', '*',
+    '{"theme":"dark"}', ?, '2026-09-07T07:00:00.000Z')`).run(contentHash);
+  sqlite.prepare(`INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash,
+    last_modified_by_host_name, updated_at, sync_dirty, deleted_at) VALUES
+    ('setting', 'user_space:all:all:*:app_settings', 4, ?, 'Local Host',
+    '2026-09-07T07:00:00.000Z', 1, NULL)`).run(contentHash);
+  sqlite.prepare(`INSERT INTO sync_delivery_receipts (peer_id, stream_name, operation_id,
+    object_type, object_id, payload_identity, local_position, status, remote_position,
+    issue_reason, created_at, updated_at) VALUES ('peer-b', 'state', 'setting:app_settings:4',
+    'setting', 'user_space:all:all:*:app_settings', ?, '4', 'accepted', '7', NULL,
+    '2026-09-07T07:00:00.000Z', '2026-09-07T07:00:00.000Z')`).run(contentHash);
 }
 
 function createIncomingSettingPack(filePath: string) {
@@ -137,18 +137,15 @@ function createIncomingSettingPack(filePath: string) {
       'manifest_json', JSON.stringify({ source_epoch: 'source-test', frontier_state_seq: 7,
         from_state_seq: 0, to_state_seq: 7 })
     );
-    db.exec(`
-      INSERT INTO sync_object_state (
-        object_type, object_id, state_seq, content_hash, last_modified_by_host_name,
-        updated_at, deleted_at
-      ) VALUES ('setting', 'user_space:all:all:*:app_settings', 7, 'new-hash',
-        'Peer B', '2026-09-07T08:00:00.000Z', NULL);
-      INSERT INTO sync_objects (
-        object_type, object_id, content_hash, payload_json, updated_at, deleted_at
-      ) VALUES ('setting', 'user_space:all:all:*:app_settings', 'new-hash',
-        '{"key":"app_settings","scope":"user_space","platform":"all","form_factor":"all","host_name":"*","value_json":"{\\"theme\\":\\"light\\"}"}',
-        '2026-09-07T08:00:00.000Z', NULL);
-    `);
+    const payload = appSettingsPayload();
+    const contentHash = settingPayloadHash(payload);
+    db.prepare(`INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash,
+      last_modified_by_host_name, updated_at, deleted_at) VALUES
+      ('setting', 'user_space:all:all:*:app_settings', 7, ?, 'Peer B',
+      '2026-09-07T08:00:00.000Z', NULL)`).run(contentHash);
+    db.prepare(`INSERT INTO sync_objects (object_type, object_id, content_hash, payload_json,
+      updated_at, deleted_at) VALUES ('setting', 'user_space:all:all:*:app_settings', ?, ?,
+      '2026-09-07T08:00:00.000Z', NULL)`).run(contentHash, JSON.stringify(payload));
   } finally {
     db.close();
   }
@@ -163,42 +160,56 @@ function ownerPayload(valueJson: string) {
     platform: 'windows', form_factor: 'desktop', host_name: '*', value_json: valueJson });
 }
 
+function appSettingsPayload() {
+  return { key: 'app_settings', scope: 'user_space', platform: 'all',
+    form_factor: 'all', host_name: '*', value_json: '{"theme":"light"}' };
+}
+
+function settingPayloadHash(payload: string | ReturnType<typeof appSettingsPayload>) {
+  return computeSyncContentHash('setting', typeof payload === 'string' ? JSON.parse(payload) : payload);
+}
+
 function seedReadwiseOwnerHandoffPack(sqlite: Database.Database, objectId: string,
   localOwner: string, remoteOwner: string) {
+  const localHash = settingPayloadHash(ownerPayload(localOwner));
+  const remotePayload = ownerPayload(remoteOwner);
+  const remoteHash = settingPayloadHash(remotePayload);
   sqlite.prepare(`INSERT INTO setting_records (key, scope, platform, form_factor, host_name,
     value_json, content_hash, updated_at) VALUES (?, 'user_space', 'windows', 'desktop', '*', ?, ?, ?)`)
-    .run('readwise_active_host', localOwner, 'owner-2', '2026-09-24T03:20:00.000Z');
+    .run('readwise_active_host', localOwner, localHash, '2026-09-24T03:20:00.000Z');
   sqlite.prepare(`INSERT INTO settings (key, value, updated_at) VALUES (?, ?, ?)`)
     .run('readwise_active_host', localOwner, '2026-09-24T03:20:00.000Z');
   sqlite.prepare(`INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash,
     last_modified_by_host_name, updated_at, sync_dirty, deleted_at)
-    VALUES ('setting', ?, 8, 'owner-2', 'Windows', '2026-09-24T03:20:00.000Z', 1, NULL)`)
-    .run(objectId);
+    VALUES ('setting', ?, 8, ?, 'Windows', '2026-09-24T03:20:00.000Z', 1, NULL)`)
+    .run(objectId, localHash);
   sqlite.prepare(`INSERT INTO sync_delivery_receipts (peer_id, stream_name, operation_id,
     object_type, object_id, payload_identity, local_position, status, remote_position,
-    issue_reason, created_at, updated_at) VALUES ('mac-peer', 'state', 'owner-2',
-    'setting', ?, 'owner-2', '8', 'pending', NULL, NULL, ?, ?)`)
-    .run(objectId, '2026-09-24T03:20:00.000Z', '2026-09-24T03:20:00.000Z');
+    issue_reason, created_at, updated_at) VALUES ('mac-peer', 'state', ?,
+    'setting', ?, ?, '8', 'pending', NULL, NULL, ?, ?)`)
+    .run(localHash, objectId, localHash, '2026-09-24T03:20:00.000Z', '2026-09-24T03:20:00.000Z');
   const incoming = new Database(incomingPath);
   try {
     incoming.prepare(`INSERT INTO sync_object_state (object_type, object_id, state_seq,
       content_hash, last_modified_by_host_name, updated_at, deleted_at)
-      VALUES ('setting', ?, 9, 'owner-3', 'Mac', '2026-09-24T03:21:00.000Z', NULL)`)
-      .run(objectId);
+      VALUES ('setting', ?, 9, ?, 'Mac', '2026-09-24T03:21:00.000Z', NULL)`)
+      .run(objectId, remoteHash);
     incoming.prepare(`INSERT INTO sync_objects (object_type, object_id, content_hash,
-      payload_json, updated_at, deleted_at) VALUES ('setting', ?, 'owner-3', ?,
+      payload_json, updated_at, deleted_at) VALUES ('setting', ?, ?, ?,
       '2026-09-24T03:21:00.000Z', NULL)`)
-      .run(objectId, ownerPayload(remoteOwner));
+      .run(objectId, remoteHash, remotePayload);
   } finally { incoming.close(); }
 }
 
 function makeReadwiseOwnerPackStale(objectId: string, localOwner: string) {
   const stalePack = new Database(incomingPath);
   try {
-    stalePack.prepare(`UPDATE sync_object_state SET content_hash = 'owner-2',
-      updated_at = '2026-09-24T03:22:00.000Z' WHERE object_id = ?`).run(objectId);
-    stalePack.prepare(`UPDATE sync_objects SET content_hash = 'owner-2',
+    const payload = ownerPayload(localOwner);
+    const contentHash = settingPayloadHash(payload);
+    stalePack.prepare(`UPDATE sync_object_state SET content_hash = ?,
+      updated_at = '2026-09-24T03:22:00.000Z' WHERE object_id = ?`).run(contentHash, objectId);
+    stalePack.prepare(`UPDATE sync_objects SET content_hash = ?,
       payload_json = ?, updated_at = '2026-09-24T03:22:00.000Z' WHERE object_id = ?`)
-      .run(ownerPayload(localOwner), objectId);
+      .run(contentHash, payload, objectId);
   } finally { stalePack.close(); }
 }
