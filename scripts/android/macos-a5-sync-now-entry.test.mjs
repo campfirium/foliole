@@ -5,7 +5,8 @@ import { runMacosA5SyncNowEntry } from './macos-a5-sync-now-entry.mjs';
 it('runs one public Sync Now action and consumes only its mechanical lifecycle result', async () => {
   const close = vi.fn(async () => undefined);
   const assertActive = vi.fn();
-  const openDesktopSession = vi.fn(async () => ({ assertActive, close }));
+  const enable = vi.fn(async () => undefined);
+  const openDesktopSession = vi.fn(async () => ({ assertActive, close, enable }));
   const runAction = vi.fn(async () => ({
     manifestPath: '/artifacts/a5-sync-now/build-1/sync-group-maintenance-manifest.json',
     output: ''
@@ -26,6 +27,8 @@ it('runs one public Sync Now action and consumes only its mechanical lifecycle r
 
   expect(markMutationBoundary).toHaveBeenCalledOnce();
   expect(assertActive).toHaveBeenCalledOnce();
+  expect(enable).toHaveBeenCalledOnce();
+  expect(enable.mock.invocationCallOrder[0]).toBeLessThan(runAction.mock.invocationCallOrder[0]);
   expect(runAction).toHaveBeenCalledWith(expect.objectContaining({
     action: 'sync-now', buildIdentity: 'build-1', serial: '87a33a4b'
   }));
@@ -43,7 +46,9 @@ it('closes the desktop runtime when the public action fails', async () => {
     }, serial: '87a33a4b'
   }, {
     buildDesktop: vi.fn(),
-    openDesktopSession: async () => ({ assertActive: vi.fn(), close }),
+    openDesktopSession: async () => ({
+      assertActive: vi.fn(), close, enable: vi.fn(async () => undefined)
+    }),
     runAction: async () => { throw new Error('action lifecycle missing'); }
   })).rejects.toThrow('action lifecycle missing');
   expect(close).toHaveBeenCalledOnce();

@@ -24,6 +24,7 @@ export async function runMacosA5SyncNowEntry(args, dependencies = {}) {
   });
   try {
     session.assertActive();
+    await session.enable();
     const result = await runAction({
       action: 'sync-now', buildIdentity, env: args.env, evidenceRoot,
       execute: args.execute, paths: args.paths, serial: args.serial
