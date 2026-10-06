@@ -1,5 +1,8 @@
 import http, { createServer } from 'node:http';
 
+import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
+import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
+
 import { FRAMED_SYNC_PATH } from './companionLanFramedSyncPost.js';
 
 export type DesktopFramedSyncFault = 'corrupt_trailer' | 'drop_receipt_response';
@@ -7,9 +10,16 @@ export type DesktopFramedSyncFault = 'corrupt_trailer' | 'drop_receipt_response'
 export async function createDesktopFramedSyncFaultProxy(input: Readonly<{
   fault: DesktopFramedSyncFault;
   targetOrigin: string;
+  dropReceiptResponseAt?: number;
 }>) {
+  let transferCount = 0;
   const server = createServer((request, response) => {
-    void forwardRequest({ ...input, request, response }).catch(() => response.destroy());
+    void forwardRequest({ ...input, request, response,
+      shouldDropReceipt: () => {
+        transferCount += 1;
+        return input.dropReceiptResponseAt === undefined || transferCount === input.dropReceiptResponseAt;
+      }
+    }).catch(() => response.destroy());
   });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
@@ -31,12 +41,15 @@ async function forwardRequest(input: Readonly<{
   request: http.IncomingMessage;
   response: http.ServerResponse;
   targetOrigin: string;
+  shouldDropReceipt: () => boolean;
 }>) {
   const chunks: Buffer[] = [];
   for await (const chunk of input.request) chunks.push(Buffer.from(chunk));
   const body = Buffer.concat(chunks);
   const isTransfer = input.request.method === 'POST' &&
-    new URL(input.request.url ?? '/', input.targetOrigin).pathname === FRAMED_SYNC_PATH;
+    new URL(input.request.url ?? '/', input.targetOrigin).pathname === FRAMED_SYNC_PATH &&
+    decodeFramedSyncPreamble(body.subarray(0, FRAMED_SYNC_LIMITS.preambleBytes)).contextKind === 'transfer';
+  const dropReceipt = isTransfer && input.shouldDropReceipt();
   const forwardedBody = input.fault === 'corrupt_trailer' && isTransfer
     ? corruptFinalByte(body)
     : body;
@@ -46,7 +59,7 @@ async function forwardRequest(input: Readonly<{
   delete headers['transfer-encoding'];
   await new Promise<void>((resolve, reject) => {
     const upstream = http.request(target, { headers, method: input.request.method }, (reply) => {
-      if (input.fault === 'drop_receipt_response' && isTransfer) {
+      if (input.fault === 'drop_receipt_response' && dropReceipt) {
         reply.resume();
         input.response.destroy();
         reply.once('end', resolve);

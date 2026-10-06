@@ -5,9 +5,10 @@ import path from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { z } from 'zod';
 
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { LIBRARY_ASSETS_DIRNAME } from '../../lib/platform/libraryPaths.js';
 
-import { publicationEvidence, publishFixtureDelivery, reconnectFixturePeer }
+import { publicationEvidence, publishFixtureDelivery, readFixtureInventory, reconnectFixturePeer }
   from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence,
   type DesktopFramedSyncFixtureProcess } from './desktopFramedSyncTwoProcess.testSupport.js';
@@ -26,12 +27,26 @@ it('recovers an unacknowledged publication on normal peer reconnect with no inve
   processes.push(fixture.left, fixture.right);
   const nodeId = 't326-reconnect';
   await fixture.left.seed({ content: 'Original body', nodeId, title: 'Original title' });
+  const differences = compareFramedSyncInventories({ local: await readFixtureInventory(fixture.left),
+    remote: await readFixtureInventory(fixture.right) });
+  expect(differences.length).toBeGreaterThan(0);
+  expect(differences.every((value) => value.direction === 'local_to_remote')).toBe(true);
   const proxy = await createDesktopFramedSyncFaultProxy({
+    dropReceiptResponseAt: differences.length,
     fault: 'drop_receipt_response', targetOrigin: fixture.rightSnapshot.origin
   });
-  try { await expect(fixture.left.synchronize(proxy.origin, nodeId)).rejects.toThrow(); }
+  try { await expect(reconnectFixturePeer(fixture.left, { ...fixture.rightSnapshot, origin: proxy.origin }))
+    .rejects.toThrow(); }
   finally { await proxy.close(); }
-  expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).framedSync.receipts).toBe(1);
+  const pending = publicationEvidence(fixture.leftSnapshot.databasePath).publications
+    .map((value) => z.object({ id: z.string(), state: z.string() }).parse(value))
+    .filter((value) => value.state === 'published');
+  expect(pending).toHaveLength(1);
+  const id = pending[0]!.id;
+  expect(publicationEvidence(fixture.rightSnapshot.databasePath).receipts)
+    .toContainEqual({ id, receiver_device_id: 'desktop-b' });
+  expect(compareFramedSyncInventories({ local: await readFixtureInventory(fixture.left),
+    remote: await readFixtureInventory(fixture.right) })).toEqual([]);
   const restarted = await fixture.restartLeft();
   processes.push(restarted.process);
   await restarted.process.invoke('round', { input: {
@@ -40,8 +55,9 @@ it('recovers an unacknowledged publication on normal peer reconnect with no inve
   } });
   const sender = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
   expect(sender.framedSync.outboundHolds).toBe(0);
-  expect(sender.framedSync.receipts).toBe(1);
-  expect(sender.framedSync.outboundStates).toEqual([{ state: 'receipt_committed' }]);
+  const recovered = publicationEvidence(restarted.snapshot.databasePath);
+  expect(recovered.receipts).toContainEqual({ id, receiver_device_id: 'desktop-b' });
+  expect(recovered.publications).toContainEqual(expect.objectContaining({ id, state: 'receipt_committed' }));
 });
 
 it.each(['publication', 'partial', 'finalised'] as const)(
@@ -123,12 +139,14 @@ it('replays ready staging after receiver restart before apply and persists the o
   expect(ready.framedSync.inboundStates).toEqual([{ state: 'ready_to_apply' }]);
   expect(ready.nodes).toEqual([]);
   expect(ready.framedSync.receipts).toBe(0);
+  const id = z.object({ id: z.string() }).parse(
+    publicationEvidence(fixture.leftSnapshot.databasePath).publications[0]).id;
   const restarted = await fixture.restartRight();
   processes.push(restarted.process);
   await reconnectFixturePeer(fixture.left, restarted.snapshot);
   const applied = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
-  expect(applied.framedSync.inboundStates).toEqual([{ state: 'applied' }]);
-  expect(applied.framedSync.receipts).toBe(1);
+  expect(publicationEvidence(restarted.snapshot.databasePath).receipts)
+    .toContainEqual({ id, receiver_device_id: 'desktop-b' });
   expect(applied.versions).toContainEqual(expect.objectContaining({ body_text: 'Ready body' }));
 });
 

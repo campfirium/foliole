@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { framedSyncMemberRemovalReleaseStatements } from '../../lib/core/sync/framedSyncMemberRemovalRelease.js';
 import type { SyncGroupDevicePayload } from '../../lib/platform/syncGroupContract.js';
 import type {
   SyncGroupMemberStatePayload,
@@ -256,5 +257,8 @@ function completeEligibleRemovals(groupId: string, localDeviceId: string, now: s
     driver.execute(`UPDATE sync_group_devices SET state = 'left', left_at = COALESCE(left_at, ?), updated_at = ?
       WHERE group_id = ? AND device_identity_key = ?`,
     [now, now, groupId, removal.target_device_identity_key]);
+  }
+  for (const statement of framedSyncMemberRemovalReleaseStatements(groupId, localDeviceId)) {
+    driver.execute(statement.sql, statement.params);
   }
 }

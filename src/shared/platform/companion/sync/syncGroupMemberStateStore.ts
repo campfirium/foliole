@@ -1,4 +1,5 @@
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { framedSyncMemberRemovalReleaseStatements } from '../../../../../lib/core/sync/framedSyncMemberRemovalRelease.js';
 import {
   loadLatestSyncGroupRestoreEvent,
   receiveSyncGroupRestoreEvent
@@ -209,6 +210,9 @@ async function completeEligibleRemovals(db: DbPort, context: Context, now: strin
     await db.run(`UPDATE sync_group_devices SET state = 'left', left_at = COALESCE(left_at, ?), updated_at = ?
       WHERE group_id = ? AND device_identity_key = ?`,
     [now, now, context.groupId, removal.target_device_identity_key]);
+  }
+  for (const statement of framedSyncMemberRemovalReleaseStatements(context.groupId, context.localDeviceId)) {
+    await db.run(statement.sql, statement.params);
   }
 }
 

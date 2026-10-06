@@ -14,9 +14,13 @@ const entries = z.array(z.object({
   stateFactIds: z.array(z.string()).default([])
 }));
 
+export async function readFixtureInventory(process: DesktopFramedSyncFixtureProcess) {
+  return entries.parse(await process.invoke('round', { input: { kind: 'read_inventory' } }));
+}
+
 export async function publishFixtureDelivery(process: DesktopFramedSyncFixtureProcess,
   peer: DesktopFramedSyncFixtureSnapshot, mode: 'publication' | 'partial' | 'finalised') {
-  const local = entries.parse(await process.invoke('round', { input: { kind: 'read_inventory' } }));
+  const local = await readFixtureInventory(process);
   const [difference] = compareFramedSyncInventories({ local, remote: [] });
   if (!difference) throw new Error('fixture_difference_missing');
   const selected = z.object({ kind: z.literal('published'),
