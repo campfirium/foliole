@@ -24,9 +24,10 @@ export function acceptDesktopSyncGroupMemberState(bodyText: string, authenticate
   const incoming = parseSyncGroupMemberState(JSON.parse(bodyText));
   const applied = applyMemberStateWithDecisionChange(incoming, authenticatedDeviceId);
   const restore = applied.state.restore;
-  const canSupplyRestore = restore?.applied && !incoming.restore?.applied &&
-    restore.event.restore_id === incoming.restore?.event.restore_id &&
-    restore.event.source_device_identity_key === applied.state.sender_device_identity_key;
+  const canSupplyRestore = Boolean(restore?.applied &&
+    restore.event.source_device_identity_key === applied.state.sender_device_identity_key &&
+    (incoming.restore === null || (!incoming.restore.applied &&
+      restore.event.restore_id === incoming.restore.event.restore_id)));
   if (applied.normalSyncReady) markDesktopSyncGroupMemberStateReady(authenticatedDeviceId);
   else if (canSupplyRestore) markDesktopSyncGroupMemberStateReady(authenticatedDeviceId, 'restore');
   else revokeDesktopSyncGroupMemberStateReadiness(authenticatedDeviceId);
