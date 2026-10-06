@@ -91,27 +91,26 @@ public final class FramedSyncHttpTransportTest {
     }
 
     @Test
-    public void preservesMissingParentDetailsNeededForDependencyOrderedRetry() throws Exception {
-        AtomicReference<Throwable> serverFailure = new AtomicReference<>();
+    public void preservesRecoverableDetailsNeededForRoundContinuation() throws Exception {
+        assertPreservedError("framed_sync_node_parent_missing:parent-1");
+        assertPreservedError("framed_sync_source_changed");
+    }
+
+    private static void assertPreservedError(String detail) throws Exception {
+        AtomicReference<Throwable> failure = new AtomicReference<>();
         try (ServerSocket server = new ServerSocket(0)) {
-            Thread serverThread = new Thread(() -> serveMissingParent(server, serverFailure));
-            serverThread.start();
-            URL url = new URL("http://127.0.0.1:" + server.getLocalPort() +
-                "/companion/framed-sync");
-
+            Thread thread = new Thread(() -> serveError(server, failure, detail));
+            thread.start();
             try {
-                FramedSyncHttpTransport.post(
-                    url, "group-a", "desktop-b", "epoch-b", memberAuth(),
-                    writer -> {}, reader -> null);
-                throw new AssertionError("Expected the missing-parent response to fail.");
+                FramedSyncHttpTransport.post(new URL("http://127.0.0.1:" +
+                    server.getLocalPort() + "/companion/framed-sync"), "group-a",
+                    "desktop-b", "epoch-b", memberAuth(), writer -> {}, reader -> null);
+                throw new AssertionError("Expected the recoverable response to fail.");
             } catch (IllegalStateException error) {
-                assertEquals(
-                    "framed_sync_http_400:framed_sync_node_parent_missing:parent-1",
-                    error.getMessage());
+                assertEquals("framed_sync_http_400:" + detail, error.getMessage());
             }
-
-            serverThread.join(2_000);
-            if (serverFailure.get() != null) throw new AssertionError(serverFailure.get());
+            thread.join(2_000);
+            if (failure.get() != null) throw new AssertionError(failure.get());
         }
     }
 
@@ -159,17 +158,15 @@ public final class FramedSyncHttpTransportTest {
         }
     }
 
-    private static void serveMissingParent(
-        ServerSocket server,
-        AtomicReference<Throwable> failure
+    private static void serveError(
+        ServerSocket server, AtomicReference<Throwable> failure, String detail
     ) {
         try (Socket socket = server.accept()) {
             BufferedInputStream input = new BufferedInputStream(socket.getInputStream());
             line(input);
             for (String value = line(input); !value.isEmpty(); value = line(input)) {}
             readChunked(input);
-            byte[] response = "{\"error\":\"framed_sync_node_parent_missing:parent-1\"}"
-                .getBytes(StandardCharsets.UTF_8);
+            byte[] response = ("{\"error\":\"" + detail + "\"}").getBytes(StandardCharsets.UTF_8);
             String headers = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json" +
                 "\r\nContent-Length: " + response.length + "\r\nConnection: close\r\n\r\n";
             OutputStream output = socket.getOutputStream();

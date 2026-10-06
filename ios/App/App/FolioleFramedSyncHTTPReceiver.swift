@@ -7,6 +7,8 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     private let expectedDeviceID: String
     private let expectedLibraryEpoch: String
     private var continuation: CheckedContinuation<URL, Error>?
+    private var errorBody = Data()
+    private var errorStatusCode: Int?
     private var output: OutputStream?
     private var session: URLSession?
 
@@ -57,6 +59,11 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
             guard let http = response as? HTTPURLResponse else {
                 throw FolioleFramedSyncValidationError("framed_sync_response_not_http")
             }
+            if http.statusCode != 200 {
+                errorStatusCode = http.statusCode
+                completionHandler(.allow)
+                return
+            }
             try FolioleFramedSyncHTTPTransport.validateResponse(
                 http,
                 expectedDeviceID: expectedDeviceID,
@@ -75,11 +82,24 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     }
 
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        if errorStatusCode != nil {
+            if errorBody.count + data.count <= 4 * 1024 { errorBody.append(data) }
+            else { errorBody = Data(repeating: 0, count: 4 * 1024 + 1) }
+            return
+        }
         do { try write(data) } catch { dataTask.cancel(); finish(.failure(error)) }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         if let error { finish(.failure(error)); return }
+        if let statusCode = errorStatusCode {
+            finish(.failure(FolioleFramedSyncValidationError(
+                FolioleFramedSyncHTTPTransport.httpErrorCode(
+                    statusCode: statusCode, body: errorBody
+                )
+            )))
+            return
+        }
         do {
             output?.close()
             output = nil

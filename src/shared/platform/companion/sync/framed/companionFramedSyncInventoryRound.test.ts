@@ -137,6 +137,25 @@ it('pulls a missing parent before retrying a child that arrived first', async ()
     .toEqual(['child', 'parent', 'child']);
 });
 
+it('defers a source changed during publication and continues the inventory round', async () => {
+  mocks.localInventory.mockResolvedValue({ entries: [] });
+  mocks.remoteInventory.mockResolvedValue({
+    entries: [entry('changed'), entry('stable')], round_id: '8'.repeat(32)
+  });
+  mocks.pull.mockImplementation(async ({ object_id: objectId }: { object_id: string }) => {
+    if (objectId === 'changed') {
+      throw new Error('framed_sync_http_400:framed_sync_source_changed');
+    }
+    return { transfer_id: 'b'.repeat(64) };
+  });
+
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+    deferredObjects: [{ globalId: 'changed', objectType: 'node' }],
+    received: [{ objectId: 'stable', receipt: { transfer_id: 'b'.repeat(64) } }],
+    sent: []
+  });
+});
+
 it('pulls a divergent Node before revalidating and deferring its stale outbound side', async () => {
   mocks.localInventory.mockResolvedValue({ entries: [entry('node-a', '1')] });
   mocks.remoteInventory.mockResolvedValue({

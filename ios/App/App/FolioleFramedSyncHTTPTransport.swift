@@ -75,6 +75,21 @@ enum FolioleFramedSyncHTTPTransport {
         }
     }
 
+    static func httpErrorCode(statusCode: Int, body: Data) -> String {
+        let fallback = "framed_sync_http_\(statusCode)"
+        guard body.count <= 4 * 1024,
+              let object = try? JSONSerialization.jsonObject(with: body) as? [String: String],
+              let detail = object["error"] else { return fallback }
+        if detail == "framed_sync_source_changed" { return "\(fallback):\(detail)" }
+        let prefix = "framed_sync_node_parent_missing:"
+        let parentID = String(detail.dropFirst(prefix.count))
+        guard detail.hasPrefix(prefix), !parentID.isEmpty,
+              parentID.range(of: "^[A-Za-z0-9_-]{1,128}$", options: .regularExpression) != nil else {
+            return fallback
+        }
+        return "\(fallback):\(detail)"
+    }
+
     private static func makeConfiguration() -> URLSessionConfiguration {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpCookieStorage = nil

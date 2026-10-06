@@ -112,6 +112,21 @@ final class FolioleFramedSyncHTTPTransportTests: XCTestCase {
         ))
     }
 
+    func testResponsePreservesOnlyRecoverableProtocolErrors() {
+        XCTAssertEqual(FolioleFramedSyncHTTPTransport.httpErrorCode(
+            statusCode: 400,
+            body: Data(#"{"error":"framed_sync_source_changed"}"#.utf8)
+        ), "framed_sync_http_400:framed_sync_source_changed")
+        XCTAssertEqual(FolioleFramedSyncHTTPTransport.httpErrorCode(
+            statusCode: 400,
+            body: Data(#"{"error":"framed_sync_node_parent_missing:parent-1"}"#.utf8)
+        ), "framed_sync_http_400:framed_sync_node_parent_missing:parent-1")
+        XCTAssertEqual(FolioleFramedSyncHTTPTransport.httpErrorCode(
+            statusCode: 400,
+            body: Data(#"{"error":"private_server_detail"}"#.utf8)
+        ), "framed_sync_http_400")
+    }
+
     private func peer() -> FolioleFramedSyncHTTPPeer {
         FolioleFramedSyncHTTPPeer(
             groupID: "group-a",
