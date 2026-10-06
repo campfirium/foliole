@@ -22,7 +22,10 @@ export type FramedSyncStagingTable =
 export type ProductionBenchmarkDatabaseSnapshot = Readonly<{
   appliedItems: number;
   stagingRows: Readonly<Record<FramedSyncStagingTable, number>>;
-  wireBytes: number;
+  pendingTransferIds: readonly string[];
+  publicationIds: readonly string[];
+  receiptIds: readonly string[];
+  readyTransferIds: readonly string[];
 }>;
 
 export function readProductionBenchmarkDatabase(
@@ -61,23 +64,14 @@ export function readProductionBenchmarkDatabase(
     return {
       appliedItems,
       stagingRows,
-      wireBytes: readPersistedWireBytes(sqlite, present)
+      pendingTransferIds: sqlite.prepare("SELECT lower(hex(transfer_id)) FROM framed_sync_outbound_publications WHERE state = 'published'").pluck().all().map(String),
+      publicationIds: sqlite.prepare('SELECT lower(hex(transfer_id)) FROM framed_sync_outbound_publications').pluck().all().map(String),
+      receiptIds: sqlite.prepare('SELECT lower(hex(transfer_id)) FROM framed_sync_receipts').pluck().all().map(String),
+      readyTransferIds: sqlite.prepare("SELECT lower(hex(transfer_id)) FROM framed_sync_inbound_transfers WHERE state = 'ready_to_apply'").pluck().all().map(String)
     };
   } finally {
     sqlite.close();
   }
-}
-
-function readPersistedWireBytes(sqlite: Database.Database, present: ReadonlySet<string>) {
-  if (!present.has('framed_sync_outbound_attempts') ||
-      !present.has('framed_sync_outbound_frames')) return 0;
-  const preambles = Number(sqlite.prepare(
-    'SELECT COALESCE(SUM(length(preamble)), 0) FROM framed_sync_outbound_attempts'
-  ).pluck().get());
-  const frames = Number(sqlite.prepare(`SELECT COALESCE(SUM(
-    length(frame_header) + length(ciphertext)), 0) FROM framed_sync_outbound_frames`
-  ).pluck().get());
-  return preambles + frames;
 }
 
 export function productionBenchmarkStageCounts(input: Readonly<{

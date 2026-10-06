@@ -1,12 +1,14 @@
 import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { promisify } from 'node:util';
 
 import {
   createDesktopFramedSyncProductionBenchmarkAdapter
 } from './desktopFramedSyncProductionBenchmarkAdapter.js';
+import { startRssSampling } from './desktopFramedSyncProductionBenchmarkRss.js';
 import {
   productionBenchmarkStageCounts,
   readProductionBenchmarkDatabase,
@@ -30,13 +32,22 @@ export type DesktopFramedSyncProductionBenchmarkAdapter = Readonly<{
   residentProcessIds(input: Readonly<{ fixture: Fixture }>): readonly number[];
   restartReceiverAndRecover(input: Readonly<{ fixture: Fixture; itemCount: ItemCount }>): Promise<void>;
   stageUntilRestartBoundary(input: Readonly<{ fixture: Fixture; itemCount: ItemCount }>): Promise<void>;
+  wireBytes(input: Readonly<{ fixture: Fixture; itemCount: ItemCount }>): Readonly<{
+    sessionBytes: number; transferBytes: number
+  }>;
 }>;
 
 type CompletedSample = Readonly<{
+  startedAt: string;
   durationMs: number;
   itemCount: ItemCount;
   peakRssBytes: number;
+  sampledProcessIds: readonly number[];
+  backgroundLoad: readonly number[];
   restartRecoveryMs: number;
+  discoveryAndStageMs: number;
+  restartBoundary: ProductionBenchmarkDatabaseSnapshot;
+  wire: ReturnType<DesktopFramedSyncProductionBenchmarkAdapter['wireBytes']>;
   stageCounts: ReturnType<typeof productionBenchmarkStageCounts>;
   stagingRows: Readonly<{
     receiver: ProductionBenchmarkDatabaseSnapshot['stagingRows'];
@@ -46,36 +57,49 @@ type CompletedSample = Readonly<{
   wireBytes: number;
 }>;
 
-type FailedSample = Readonly<{ error: string; itemCount: ItemCount; status: 'failed' }>;
+type FailedSample = Readonly<{ error: string; itemCount: ItemCount; startedAt: string; status: 'failed' }>;
 export type ProductionBenchmarkSample = CompletedSample | FailedSample;
 
 export async function runDesktopFramedSyncProductionBenchmark(input: Readonly<{
   adapter?: DesktopFramedSyncProductionBenchmarkAdapter;
   itemCounts?: readonly number[];
   measuredRuns?: number;
+  outputPath?: string;
   warmupRuns?: number;
 }> = {}) {
   const adapter = input.adapter ?? createDesktopFramedSyncProductionBenchmarkAdapter();
   const itemCounts = input.itemCounts ?? PRODUCTION_BENCHMARK_ITEM_COUNTS;
+  const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD']);
+  const revision = stdout.trim();
   const environment = { coreCount: os.cpus().length, loadAverage: os.loadavg(), platform: process.platform };
   const methodology = {
     measuredRuns: input.measuredRuns ?? 5,
     rss: '20 ms external resident-set samples summed across both fixture processes',
     staging: 'row counts read from both real SQLite libraries after restart recovery',
     warmupRuns: input.warmupRuns ?? 1,
-    wire: 'persisted preamble + authenticated frame header + ciphertext bytes; excludes HTTP headers and chunk framing'
+    wire: 'observed HTTP request and response body bytes, including inventory sessions, transfer replays and error responses; excludes HTTP headers and chunk framing'
   };
   const samples: ProductionBenchmarkSample[] = [];
-  let warmupFailures = 0;
+  const warmupSamples: ProductionBenchmarkSample[] = [];
+  const sampleFile = input.outputPath ? `${input.outputPath}.samples.jsonl` : null;
+  if (sampleFile) {
+    await fs.mkdir(path.dirname(sampleFile), { recursive: true });
+    await fs.writeFile(sampleFile, '');
+  }
   for (const itemCount of itemCounts) {
     for (let run = 0; run < methodology.warmupRuns + methodology.measuredRuns; run += 1) {
       const sample = await captureSample(adapter, itemCount);
-      if (run < methodology.warmupRuns && sample.status === 'failed') warmupFailures += 1;
+      if (sampleFile) await fs.appendFile(sampleFile, `${JSON.stringify({
+        environment, methodology, revision, run, sample, warmup: run < methodology.warmupRuns
+      })}\n`);
+      if (run < methodology.warmupRuns) warmupSamples.push(sample);
       if (run >= methodology.warmupRuns) samples.push(sample);
     }
   }
+  const warmupFailures = warmupSamples.filter((sample) => sample.status === 'failed').length;
   return {
     environment,
+    revision,
     methodology,
     samples,
     summaries: itemCounts.map((itemCount) => summarize(samples, itemCount)),
@@ -83,7 +107,8 @@ export async function runDesktopFramedSyncProductionBenchmark(input: Readonly<{
       ? 'failed' as const : 'completed' as const,
     verdict: 'inconclusive' as const,
     verdictReason: 'absolute cost baseline only; limiter profile is deliberately not part of reported runs',
-    warmupFailures
+    warmupFailures,
+    warmupSamples
   };
 }
 
@@ -93,35 +118,49 @@ async function captureSample(
 ): Promise<ProductionBenchmarkSample> {
   let fixture: Fixture | undefined;
   let rss: ReturnType<typeof startRssSampling> | undefined;
+  const startedAt = new Date().toISOString();
   try {
     fixture = await createDesktopFramedSyncTwoProcessFixture();
     const activeFixture = fixture;
     await adapter.prepare({ fixture: activeFixture, itemCount });
     rss = startRssSampling(() => adapter.residentProcessIds({ fixture: activeFixture }));
-    const startedAt = performance.now();
+    const startedMs = performance.now();
     await adapter.stageUntilRestartBoundary({ fixture, itemCount });
+    const discoveryAndStageMs = performance.now() - startedMs;
     const beforeRestart = readProductionBenchmarkDatabase(fixture.rightSnapshot.databasePath);
-    if (beforeRestart.stagingRows.framed_sync_inbound_facts === 0 ||
-        beforeRestart.appliedItems >= itemCount) throw new Error('restart_boundary_not_durable_or_already_applied');
+    if (beforeRestart.readyTransferIds.length === 0 ||
+        beforeRestart.appliedItems !== 0 || beforeRestart.stagingRows.framed_sync_receipts !== 0) throw new Error('restart_boundary_not_durable_or_already_applied');
     const restartStartedAt = performance.now();
     await adapter.restartReceiverAndRecover({ fixture, itemCount });
     const restartRecoveryMs = performance.now() - restartStartedAt;
-    const peakRssBytes = await rss.stop();
+    const { peakRssBytes, sampledProcessIds } = await rss.stop();
     const sender = readProductionBenchmarkDatabase(fixture.leftSnapshot.databasePath);
     const receiver = readProductionBenchmarkDatabase(fixture.rightSnapshot.databasePath);
     assertCompletedWork({ itemCount, receiver, sender });
+    for (const id of beforeRestart.readyTransferIds) {
+      if (!receiver.receiptIds.includes(id) || !sender.receiptIds.includes(id)) {
+        throw new Error('production_benchmark_original_delivery_not_recovered');
+      }
+    }
+    const wire = adapter.wireBytes({ fixture, itemCount });
     return {
-      durationMs: performance.now() - startedAt,
+      discoveryAndStageMs,
+      restartBoundary: beforeRestart,
+      wire,
+      startedAt,
+      durationMs: performance.now() - startedMs,
       itemCount,
       peakRssBytes,
+      sampledProcessIds,
+      backgroundLoad: os.loadavg(),
       restartRecoveryMs,
       stageCounts: productionBenchmarkStageCounts({ receiver, sender }),
       stagingRows: { receiver: receiver.stagingRows, sender: sender.stagingRows },
       status: 'completed',
-      wireBytes: receiver.wireBytes + sender.wireBytes
+      wireBytes: wire.sessionBytes + wire.transferBytes
     };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error), itemCount, status: 'failed' };
+    return { error: error instanceof Error ? error.message : String(error), itemCount, startedAt, status: 'failed' };
   } finally {
     if (rss) await rss.stop().catch(() => undefined);
     if (fixture) await closeFixture(fixture);
@@ -134,19 +173,16 @@ function assertCompletedWork(input: Readonly<{
   sender: ProductionBenchmarkDatabaseSnapshot;
 }>) {
   const counts = productionBenchmarkStageCounts(input);
-  const expected = {
-    appliedItems: input.itemCount,
-    authenticatedFrames: input.itemCount * 4,
-    availableBlobs: input.itemCount,
-    outboundFrames: input.itemCount * 4,
-    publishedFacts: input.itemCount,
-    receipts: input.itemCount,
-    stagedFacts: input.itemCount
-  };
-  for (const [name, value] of Object.entries(expected)) {
-    if (counts[name as keyof typeof counts] !== value) {
-      throw new Error(`production_benchmark_work_count_mismatch:${name}:${
-        counts[name as keyof typeof counts]}:${value}`);
+  if (counts.appliedItems !== input.itemCount ||
+      counts.stagedFacts !== counts.publishedFacts ||
+      counts.receipts !== input.sender.stagingRows.framed_sync_outbound_publications ||
+      counts.availableBlobs < input.itemCount ||
+      input.sender.pendingTransferIds.length || input.receiver.pendingTransferIds.length) {
+    throw new Error('production_benchmark_work_incomplete');
+  }
+  for (const transfer of input.sender.publicationIds) {
+    if (!input.sender.receiptIds.includes(transfer) || !input.receiver.receiptIds.includes(transfer)) {
+      throw new Error('production_benchmark_receipt_missing');
     }
   }
 }
@@ -178,40 +214,6 @@ function spread(values: readonly number[]) {
   const lower = ordered.at(midpoint - 1);
   const median = ordered.length % 2 === 1 || lower === undefined ? upper : (lower + upper) / 2;
   return { maximum, median, minimum };
-}
-
-function startRssSampling(processIds: () => readonly number[]) {
-  let active = true;
-  let peakRssBytes = 0;
-  const polling = (async () => {
-    while (active) {
-      peakRssBytes = Math.max(peakRssBytes, await sampleRssBytes(processIds()));
-      await new Promise((resolve) => setTimeout(resolve, 20));
-    }
-    peakRssBytes = Math.max(peakRssBytes, await sampleRssBytes(processIds()));
-  })();
-  return { async stop() { active = false; await polling; return peakRssBytes; } };
-}
-
-async function sampleRssBytes(pids: readonly number[]) {
-  if (pids.length === 0) throw new Error('rss_process_ids_missing');
-  const readings = await Promise.all(pids.map(async (pid) => {
-    let stdout: string;
-    try {
-      ({ stdout } = await execFileAsync('ps', ['-o', 'rss=', '-p', String(pid)]));
-    } catch (error) {
-      if (isProcessGone(error)) return 0;
-      throw error;
-    }
-    const kibibytes = Number(stdout.trim());
-    if (!Number.isSafeInteger(kibibytes) || kibibytes < 0) throw new Error('rss_sample_invalid');
-    return kibibytes * 1024;
-  }));
-  return readings.reduce((total, bytes) => total + bytes, 0);
-}
-
-function isProcessGone(error: unknown) {
-  return typeof error === 'object' && error !== null && 'code' in error && error.code === 1;
 }
 
 async function closeFixture(fixture: Fixture) {
