@@ -82,3 +82,32 @@ it('keeps the shared base when the other branch has no user reorder', () => {
   expect(resolve(versions, ['added', 'removed'], ['a', 'd', 'x']))
     .toEqual(result);
 });
+
+it('inherits the complete arrangement after 10000 causally ordered membership changes', () => {
+  const versions: ParentOrderVersion[] = [base];
+  for (let index = 0; index < 10000; index += 1) {
+    versions.push({ versionId: `membership-${index}`, kind: 'membership',
+      order: base.order, parentVersionIds: [versions.at(-1)!.versionId] });
+  }
+  const head = versions.at(-1)!;
+  expect(resolve([...versions].reverse(), [head.versionId])).toMatchObject({
+    order: base.order, version: head, losingVersionIds: []
+  });
+});
+
+it('preserves original user causality through a deep membership history', () => {
+  const versions: ParentOrderVersion[] = [base];
+  for (let index = 0; index < 10000; index += 1) {
+    const previous = versions.at(-1)!;
+    versions.push(index === 2500 || index === 7500
+      ? { ...(index === 2500 ? left : right), parentVersionIds: [previous.versionId] }
+      : { versionId: `membership-${index}`, kind: 'membership',
+        order: previous.order, parentVersionIds: [previous.versionId] });
+  }
+  const head = versions.at(-1)!;
+  expect(resolve(versions, [head.versionId])).toMatchObject({
+    order: right.order, version: head, losingVersionIds: []
+  });
+  expect(resolve([...versions].reverse(), [head.versionId]))
+    .toEqual(resolve(versions, [head.versionId]));
+});
