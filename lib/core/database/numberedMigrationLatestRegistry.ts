@@ -4,6 +4,7 @@ import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigrat
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
 import { migrateFramedSyncInventory } from './framedSyncInventoryMigration.js';
+import { migrateFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from './framedSyncStagingSchema.js';
 import { migrateFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
 import { migrateIndependentNodeVersions } from './independentNodeVersionMigration.js';
@@ -229,5 +230,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 141, migrate: migrateFramedSyncInventory },
   { version: 142, migrate: (sqlite) => sqlite.exec(SYNC_GROUP_METADATA_SCHEMA) },
   { version: 143, migrate: migrateRetiredExternalDocuments },
-  { version: 144, migrate: migrateFramedSyncTombstoneInventory }
+  { version: 144, migrate: migrateFramedSyncTombstoneInventory },
+  { version: 145, migrate: migrateFramedSyncPermanentDeleteHistory }
 ];

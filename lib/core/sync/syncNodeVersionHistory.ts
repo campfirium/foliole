@@ -3,6 +3,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import type { DbPort } from './dbPort.js';
 import { upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
 import { buildRemoteNodeVersionUpsert } from './syncNodeApplyStatements.js';
+import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
 import { includeLegacyVersionParents, validateStoredVersionDependencies } from './syncPackNodeVersionDependencyValidation.js';
 
 export function isNodeVersionIdentityOnly(record: NativeSyncNodeRecord) {
@@ -37,14 +38,9 @@ export function orderNodeVersionHistory(records: NativeSyncNodeRecord[]) {
 
 export async function prepareIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {
   const eligible: NativeSyncNodeRecord[] = [];
-  const blocked = new Map<string, boolean>();
   for (const record of records) {
-    if (record.is_tombstone || !buildRemoteNodeVersionUpsert(record)) continue;
-    if (!blocked.has(record.object_id)) {
-      const tombstones = await port.query('SELECT 1 FROM node_sync_tombstones WHERE node_id = ?', [record.object_id]);
-      blocked.set(record.object_id, tombstones.length > 0);
-    }
-    if (!blocked.get(record.object_id)) eligible.push(record);
+    if (!buildRemoteNodeVersionUpsert(record) || record.is_tombstone && !hasCompleteTombstoneVersion(record)) continue;
+    eligible.push(record);
   }
   const ordered = orderNodeVersionHistory(eligible);
   const identities = ordered.map((record) => ({ object_id: record.object_id,
@@ -57,12 +53,5 @@ export async function prepareIncomingNodeVersionHistory(port: DbPort, records: N
 }
 
 export async function retainIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {
-  const present = new Map<string, boolean>();
-  for (const record of records) {
-    if (!present.has(record.object_id)) {
-      const nodes = await port.query('SELECT 1 FROM nodes WHERE id = ?', [record.object_id]);
-      present.set(record.object_id, nodes.length > 0);
-    }
-    if (present.get(record.object_id)) await upsertRemoteVersion(port, record);
-  }
+  for (const record of records) await upsertRemoteVersion(port, record);
 }

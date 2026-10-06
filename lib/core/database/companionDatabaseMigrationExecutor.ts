@@ -28,6 +28,7 @@ import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigrati
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
+import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
@@ -93,6 +94,7 @@ export async function migrateCompanionDatabase(
   if (targetVersion >= 63) await installSyncIdentityEntityTriggers(db);
   if (currentVersion < 71 && targetVersion >= 71) await migrateCompanionFramedSyncInventory(db);
   if (currentVersion < 73 && targetVersion >= 73) await migrateCompanionFramedSyncTombstoneInventory(db);
+  if (currentVersion < 74 && targetVersion >= 74) await migrateCompanionFramedSyncPermanentDeleteHistory(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

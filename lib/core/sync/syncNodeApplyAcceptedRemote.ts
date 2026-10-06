@@ -14,7 +14,8 @@ import {
 } from './syncNodeApplyStatements.js';
 import { enqueueAppliedNodeSearchInvalidations, type LocalSyncNodeSearchInvalidationState } from './syncNodeSearchInvalidations.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
-import { upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
+import { hashTextBodyContent, upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
+import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
 
 export interface AcceptedRemoteNodeResult {
   appliedIds: string[];
@@ -41,6 +42,16 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
         existing.host_name !== record.host_name || existing.created_at !== record.version_created_at ||
         (existing.body_text !== null && incomingBody !== null && existing.body_text !== incomingBody)) {
       throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
+    }
+    if (existing.body_text === null && hasCompleteTombstoneVersion(record)) {
+      const body = record.body_text!;
+      const bodyHash = await hashTextBodyContent(body, {});
+      await port.run(
+        `UPDATE node_sync_versions SET body_text = ?,
+         snapshot_json = json_set(snapshot_json, '$.body_blob_hash', ?)
+         WHERE version_id = ? AND body_text IS NULL`,
+        [body, bodyHash, record.version_id]
+      );
     }
     return;
   }

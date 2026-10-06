@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { matchingTombstoneVersionSql } from './syncNodeTombstoneVersion.js';
 
 export interface StoredSyncNodeVersionRow extends DbRow {
   body_text: string | null;
@@ -82,9 +83,11 @@ async function loadVersionRecords(port: DbPort, versionIds: string[], requireBod
       content_hash, body_text, snapshot_json, 0 AS is_tombstone
      FROM node_sync_versions WHERE version_id IN (${placeholders})
      UNION ALL
-     SELECT version_id, node_id AS object_id, parent_version_id, host_name, created_at,
-      content_hash, NULL AS body_text, snapshot_json, 1 AS is_tombstone
-     FROM node_sync_tombstones WHERE version_id IN (${placeholders})`, [...uniqueIds, ...uniqueIds]
+     SELECT tomb.version_id, tomb.node_id AS object_id, tomb.parent_version_id, tomb.host_name, tomb.created_at,
+      tomb.content_hash, version.body_text, tomb.snapshot_json, 1 AS is_tombstone
+     FROM node_sync_tombstones tomb LEFT JOIN node_sync_versions version
+       ON ${matchingTombstoneVersionSql('version', 'tomb')}
+     WHERE tomb.version_id IN (${placeholders})`, [...uniqueIds, ...uniqueIds]
   );
   const edges = await port.query<{ version_id: string; parent_version_id: string }>(
     `SELECT version_id, parent_version_id FROM node_sync_version_parents
@@ -161,7 +164,7 @@ async function storedVersionToRecord(
 ): Promise<NativeSyncNodeRecord> {
   const snapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
   const isTombstone = row.is_tombstone === 1;
-  const body = isTombstone ? '' : storedSyncNodeVersionBody(row);
+  const body = isTombstone ? row.body_text ?? '' : storedSyncNodeVersionBody(row);
   if (body === null && requireBody) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
   const parents = knownParents ?? await loadParents(port, row.version_id);
   return {
