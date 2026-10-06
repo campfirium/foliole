@@ -1,15 +1,19 @@
 package com.foliole.android.framed;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Map;
 
 public final class FramedSyncHttpTransport {
     public static final String CONTENT_TYPE = "application/vnd.foliole.framed-sync";
     private static final int CONNECT_TIMEOUT_MS = 15_000;
+    private static final int ERROR_BODY_LIMIT_BYTES = 4 * 1024;
+    private static final String MISSING_PARENT = "framed_sync_node_parent_missing:";
     private static final int READ_TIMEOUT_MS = 60_000;
 
     public interface RequestBody {
@@ -72,13 +76,37 @@ public final class FramedSyncHttpTransport {
                 writer.flush();
             }
             int status = connection.getResponseCode();
-            if (status != 200) throw new IllegalStateException("framed_sync_http_" + status);
+            if (status != 200) {
+                String detail = readSafeErrorDetail(connection.getErrorStream());
+                throw new IllegalStateException(
+                    "framed_sync_http_" + status + (detail == null ? "" : ":" + detail));
+            }
             requireResponseIdentity(connection, expectedRemoteDeviceId, expectedRemoteLibraryEpoch);
             try (InputStream input = connection.getInputStream()) {
                 return responseBody.read(input);
             }
         } finally {
             connection.disconnect();
+        }
+    }
+
+    private static String readSafeErrorDetail(InputStream input) {
+        if (input == null) return null;
+        try (InputStream stream = input; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[512];
+            for (int count; (count = stream.read(buffer)) >= 0;) {
+                if (output.size() + count > ERROR_BODY_LIMIT_BYTES) return null;
+                output.write(buffer, 0, count);
+            }
+            String body = output.toString(StandardCharsets.UTF_8).trim();
+            String prefix = "{\"error\":\"";
+            if (!body.startsWith(prefix) || !body.endsWith("\"}")) return null;
+            String error = body.substring(prefix.length(), body.length() - 2);
+            if (!error.startsWith(MISSING_PARENT)) return null;
+            String parentId = error.substring(MISSING_PARENT.length());
+            return parentId.matches("[A-Za-z0-9_-]{1,128}") ? error : null;
+        } catch (Exception ignored) {
+            return null;
         }
     }
 

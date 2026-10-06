@@ -90,6 +90,31 @@ public final class FramedSyncHttpTransportTest {
         }
     }
 
+    @Test
+    public void preservesMissingParentDetailsNeededForDependencyOrderedRetry() throws Exception {
+        AtomicReference<Throwable> serverFailure = new AtomicReference<>();
+        try (ServerSocket server = new ServerSocket(0)) {
+            Thread serverThread = new Thread(() -> serveMissingParent(server, serverFailure));
+            serverThread.start();
+            URL url = new URL("http://127.0.0.1:" + server.getLocalPort() +
+                "/companion/framed-sync");
+
+            try {
+                FramedSyncHttpTransport.post(
+                    url, "group-a", "desktop-b", "epoch-b", memberAuth(),
+                    writer -> {}, reader -> null);
+                throw new AssertionError("Expected the missing-parent response to fail.");
+            } catch (IllegalStateException error) {
+                assertEquals(
+                    "framed_sync_http_400:framed_sync_node_parent_missing:parent-1",
+                    error.getMessage());
+            }
+
+            serverThread.join(2_000);
+            if (serverFailure.get() != null) throw new AssertionError(serverFailure.get());
+        }
+    }
+
     private static Map<String, String> memberAuth() {
         Map<String, String> result = new LinkedHashMap<>();
         result.put("X-Sync-Group-Id", "group-a");
@@ -127,6 +152,28 @@ public final class FramedSyncHttpTransportTest {
                 "\r\nContent-Length: " + response.length + "\r\nConnection: close\r\n\r\n";
             OutputStream output = socket.getOutputStream();
             output.write(responseHeaders.getBytes(StandardCharsets.US_ASCII));
+            output.write(response);
+            output.flush();
+        } catch (Throwable error) {
+            failure.set(error);
+        }
+    }
+
+    private static void serveMissingParent(
+        ServerSocket server,
+        AtomicReference<Throwable> failure
+    ) {
+        try (Socket socket = server.accept()) {
+            BufferedInputStream input = new BufferedInputStream(socket.getInputStream());
+            line(input);
+            for (String value = line(input); !value.isEmpty(); value = line(input)) {}
+            readChunked(input);
+            byte[] response = "{\"error\":\"framed_sync_node_parent_missing:parent-1\"}"
+                .getBytes(StandardCharsets.UTF_8);
+            String headers = "HTTP/1.1 400 Bad Request\r\nContent-Type: application/json" +
+                "\r\nContent-Length: " + response.length + "\r\nConnection: close\r\n\r\n";
+            OutputStream output = socket.getOutputStream();
+            output.write(headers.getBytes(StandardCharsets.US_ASCII));
             output.write(response);
             output.flush();
         } catch (Throwable error) {
