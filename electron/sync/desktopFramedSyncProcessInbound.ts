@@ -104,10 +104,11 @@ export async function finishDesktopFramedSyncTransfer(input: {
   staging: FramedSyncStagingPort;
 }) {
   const prepared = await prepareDesktopFramedSyncInbound(input);
-  return (await applyPreparedDesktopFramedSyncInbound({
+  const applied = await applyPreparedDesktopFramedSyncInbound({
     db: input.db,
     transfers: [prepared]
-  }))[0]!;
+  });
+  return { generatedChanges: applied.generatedChanges, receipt: applied.receipts[0]! };
 }
 
 const MANIFEST_PREFIX_BYTES = 4 + new TextEncoder().encode('foliole-framed-sync-content-v1').byteLength + 4;

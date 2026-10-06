@@ -1,6 +1,7 @@
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import type {
   PublishedTransfer,
+  StoredEncryptedFrame,
   TransferReceiptStage
 } from '../../lib/core/sync/framedSyncContract.js';
 import { deriveTransferFrameKey } from '../../lib/core/sync/framedSyncCrypto.js';
@@ -55,7 +56,7 @@ export async function buildReceiptStream(input: {
   return receiptBody(attempt.preamble, [frame]);
 }
 
-function receiptBody(preamble: Uint8Array, frames: Parameters<typeof processFrameStream>[0]) {
+function receiptBody(preamble: Uint8Array, frames: readonly StoredEncryptedFrame[]) {
   return {
     bodySha256: framedSyncEncodedSha256(preamble, frames),
     contentLength: framedSyncEncodedLength(preamble, frames),

@@ -10,6 +10,7 @@ import {
 } from '../../lib/core/sync/syncGroupRestoreEvents.js';
 import { clearWorkgroupSyncDataForRestore } from '../../lib/core/sync/syncGroupRestoreReset.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -23,13 +24,19 @@ export async function applyPreparedDesktopFramedSyncInbound(input: {
   restore?: Readonly<{ groupId: string; restoreId: string }>;
   transfers: readonly PreparedDesktopFramedSyncInbound[];
 }) {
-  const receipts = await input.db.transaction(async (tx) => {
+  const applied = await input.db.transaction(async (tx) => {
     const restore = input.restore ? await prepareRestore(tx, input.restore) : null;
     const records = input.transfers.flatMap((transfer) => transfer.records);
+    let generatedChanges = false;
     await assertFramedSyncNodeParentDependencies(tx, records);
     if (records.length) {
       await promoteFramedNodeBodies(tx, records);
-      await applySyncNodesWithDbPort(tx, records);
+      if (restore) {
+        await applySyncNodesWithDbPort(tx, records, { operation: 'local_restore' });
+      } else {
+        const result = await applyConvergentSyncNodesWithDbPort(tx, records);
+        generatedChanges = result.handledConflictCount > 0;
+      }
     }
     await applyDesktopFramedSyncRelationReviewFactsWithDbPort(
       tx, input.transfers.flatMap((transfer) => transfer.relationReviewFacts)
@@ -39,11 +46,13 @@ export async function applyPreparedDesktopFramedSyncInbound(input: {
     }
     await recordSourceProgress(tx, input.transfers);
     if (restore) await markSyncGroupRestoreApplied(tx, restore.event);
-    return Promise.all(input.transfers.map((transfer) => createReceipt(tx, transfer)));
+    const receipts = await Promise.all(input.transfers.map((transfer) =>
+      createReceipt(tx, transfer)));
+    return { generatedChanges, receipts };
   });
   await Promise.all(input.transfers.map((transfer) =>
     transfer.staging.releasePins(transfer.transferId, 'business_reference_committed')));
-  return receipts;
+  return applied;
 }
 
 async function prepareRestore(
@@ -100,7 +109,7 @@ async function promoteFramedNodeBodies(
 ) {
   for (const record of records) {
     const hash = record.snapshot.body_blob_hash;
-    if (!hash || record.body_text === null) {
+    if (!hash || typeof record.body_text !== 'string') {
       throw new Error('framed_sync_node_body_projection_missing');
     }
     await upsertTextBodyBlob(db, record.body_text, record.updated_at, hash);

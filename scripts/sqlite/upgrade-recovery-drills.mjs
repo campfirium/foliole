@@ -32,7 +32,7 @@ const quarterly = [...release,
   'electron/database/workgroupRestoreOffline.test.ts',
   'electron/database/workgroupRestoreStaleTraffic.test.ts',
   'electron/database/workgroupRestoreConvergence.test.ts',
-  'electron/sync/workgroupRestore.mobileHttp.integration.test.ts',
+  'electron/sync/syncGroupJoinMobile.http.integration.test.ts',
   'electron/database/dynamicNodeVersionChains.recovery.test.ts'
 ];
 const profiles = { changed, release, quarterly };

@@ -45,13 +45,13 @@ export async function runDesktopFramedSyncRestoreRound(input: {
     remote: confirmed.remote
   }).length !== 0) throw new Error('framed_sync_source_changed');
   await preserveDesktopIdentityRestore(input.inbound.context.groupId, input.restoreId);
-  const receipts = await applyPreparedDesktopFramedSyncInbound({
+  const applied = await applyPreparedDesktopFramedSyncInbound({
     db: input.inbound.db,
     restore: { groupId: input.inbound.context.groupId, restoreId: input.restoreId },
     transfers: prepared
   });
   for (const [index, transfer] of prepared.entries()) {
-    await postReceipt(input.inbound, transfer.context, receipts[index]!);
+    await postReceipt(input.inbound, transfer.context, applied.receipts[index]!);
   }
   return { complete: true, pending: 0, transferred: prepared.length };
 }

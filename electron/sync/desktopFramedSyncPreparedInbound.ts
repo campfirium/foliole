@@ -6,8 +6,10 @@ import type {
   InboundFrameInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncBlobContent } from '../../lib/core/sync/framedSyncTransferPayloads.js';
-import type { SyncPackSyncObjectRecord } from '../../lib/core/sync/syncPackSyncObjectsExecutor.js';
-import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
+import type {
+  NativeSyncNodeRecord,
+  NativeSyncObjectRecord
+} from '../../lib/platform/nativeSyncContract.js';
 
 import type { DesktopFramedSyncInboundResourceStore } from './desktopFramedSyncInboundResourceStore.js';
 import { restoreDesktopFramedSyncNodeRecord } from './desktopFramedSyncNodeProjection.js';
@@ -18,7 +20,7 @@ export type PreparedDesktopFramedSyncInbound = Readonly<{
   manifestHash: Uint8Array;
   records: readonly NativeSyncNodeRecord[];
   relationReviewFacts: readonly CanonicalFact[];
-  stateRecords: readonly SyncPackSyncObjectRecord[];
+  stateRecords: readonly NativeSyncObjectRecord[];
   staging: FramedSyncStagingPort;
   transferId: Uint8Array;
 }>;

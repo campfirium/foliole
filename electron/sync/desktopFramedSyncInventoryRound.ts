@@ -32,7 +32,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
   const runtime = await loadRoundRuntime(args.peer.group_id);
   const local = { deviceId: args.peer.local_device_id, libraryEpoch: args.localLibraryEpoch };
   const remote = { deviceId: args.peer.peer_device_id, libraryEpoch: args.remoteLibraryEpoch };
-  const context = {
+  const context: InboundRound['context'] = {
     groupId: args.peer.group_id,
     initiatorDeviceId: local.deviceId,
     initiatorLibraryEpoch: local.libraryEpoch,
@@ -87,8 +87,9 @@ async function transferDifferences(
   let transferred = 0;
   for (const difference of differences) {
     if (difference.direction === 'remote_to_local') {
-      await receiveRemoteDifference(difference, inbound);
-      transferred += 1;
+      const state = await receiveRemoteDifference(difference, inbound);
+      if (state === 'pending') pending += 1;
+      else transferred += 1;
       continue;
     }
     const selection = await endpoint.selectOutbound(difference);
@@ -120,17 +121,27 @@ async function receiveRemoteDifference(
   difference: Parameters<typeof requestDesktopFramedSyncDifferenceHttp>[0]['difference'],
   input: InboundRound
 ) {
-  const stream = await requestDesktopFramedSyncDifferenceHttp({
-    ...input, difference
-  });
-  const context = reverseTransferContext(input.context);
-  const receiptBody = await receiveDesktopFramedSyncTransfer({
-    context, db: input.db, groupKey: input.groupKey, staging: input.staging, stream
-  });
-  const transferId = decodeFramedSyncPreamble(receiptBody.preamble).contextId;
-  const receipt = await input.staging.loadReceipt(transferId);
-  if (!receipt) throw new Error('framed_sync_inbound_receipt_missing');
-  await postInboundReceipt(input, context, receipt, receiptBody);
+  try {
+    const stream = await requestDesktopFramedSyncDifferenceHttp({ ...input, difference });
+    const context = reverseTransferContext(input.context);
+    const receiptBody = await receiveDesktopFramedSyncTransfer({
+      context, db: input.db, groupKey: input.groupKey, staging: input.staging, stream
+    });
+    const transferId = decodeFramedSyncPreamble(receiptBody.preamble).contextId;
+    const receipt = await input.staging.loadReceipt(transferId);
+    if (!receipt) throw new Error('framed_sync_inbound_receipt_missing');
+    await postInboundReceipt(input, context, receipt, receiptBody);
+    return receiptBody.generatedChanges ? 'pending' as const : 'committed' as const;
+  } catch (error) {
+    if (isRetryableInboundRace(error)) return 'pending' as const;
+    throw error;
+  }
+}
+
+function isRetryableInboundRace(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return ['framed_sync_difference_request_source_changed', 'framed_sync_source_changed',
+    'inbound_header_conflict'].some((code) => message.includes(code));
 }
 
 async function postInboundReceipt(

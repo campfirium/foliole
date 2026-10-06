@@ -1,9 +1,10 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
 
+import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.js';
+
 import type { DbPort, DbRow } from './dbPort.js';
 import type { CanonicalFact, CanonicalValue } from './framedSyncCanonicalManifest.js';
 import { SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE } from './syncObjectPayloadSql.js';
-import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 interface StateRow extends DbRow {
   content_hash: string;
@@ -47,7 +48,7 @@ export async function selectFramedSyncNodeReadingFact(
   };
 }
 
-export function restoreFramedSyncNodeReadingFact(fact: CanonicalFact): SyncPackSyncObjectRecord {
+export function restoreFramedSyncNodeReadingFact(fact: CanonicalFact): NativeSyncObjectRecord {
   if (fact.kind !== 1 || fact.objectType !== 'node' ||
       fact.factId !== readingFactId(readString(fact, 'content_hash'))) {
     throw new Error('framed_sync_node_reading_fact_invalid');

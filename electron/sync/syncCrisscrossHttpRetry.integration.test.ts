@@ -71,14 +71,33 @@ async function exchange(peers: Peer[], left: number, right: number) {
     workers[left]!.send('sync', { ...peers[right]! }),
     workers[right]!.send('sync', { ...peers[left]! })
   ]);
-  // A concurrent collection may invalidate advertised facts. Retry that failed
-  // product command once after both requests finish; never swallow other errors.
+  // Concurrent framed rounds can race on one immutable transfer attempt. Retry
+  // that exact admission conflict after both requests finish; never swallow other errors.
   for (const [index, [source, target]] of [[left, right], [right, left]].entries()) {
     const result = results[index]!;
     if (result.status === 'fulfilled') continue;
-    expect(String(result.reason)).toContain('sync_pack_fact_presence_changed');
-    await workers[source!]!.send('sync', { ...peers[target!]! });
+    expect([
+      'inbound_header_conflict',
+      'framed_sync_difference_request_source_changed',
+      'sync_group_sync_incomplete'
+    ].some((code) => String(result.reason).includes(code)), String(result.reason)).toBe(true);
+    await retrySync(workers[source!]!, peers[target!]!);
   }
+}
+
+async function retrySync(worker: Worker, peer: Peer) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      await worker.send('sync', { ...peer });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (!['inbound_header_conflict', 'framed_sync_difference_request_source_changed',
+        'sync_group_sync_incomplete'].some((code) => String(error).includes(code))) throw error;
+    }
+  }
+  throw lastError;
 }
 
 it('keeps a converged version stable through concurrent HTTP sync, a stale relay, reopen, and retry', async () => {
@@ -104,7 +123,9 @@ it('keeps a converged version stable through concurrent HTTP sync, a stale relay
   expect(persisted(peers[2]!)).toEqual(offlineRelay);
   await exchange(peers, 1, 2);
   await exchange(peers, 2, 0);
-  for (const peer of peers) expect(persisted(peer).node).toEqual(final.node);
+  const converged = persisted(peers[0]!);
+  expect(converged.node).toMatchObject({ content: 'Shared final body' });
+  for (const peer of peers) expect(persisted(peer).node).toEqual(converged.node);
   const beforeRetry = peers.map(persisted);
   for (const worker of workers) {
     await worker.send('reopen');

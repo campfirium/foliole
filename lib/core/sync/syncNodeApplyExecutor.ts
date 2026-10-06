@@ -123,9 +123,12 @@ async function decideNodeApply(
   }
   const decision = decideIncomingNodeApply(localNode, record, operation);
   if (decision !== 'record_conflict' || localNode?.sync_dirty !== 0) return decision;
-  return await hasContentEquivalentIncomingLineage(port, localNode.current_version_id, record)
+  if (!await hasContentEquivalentIncomingLineage(port, localNode.current_version_id, record)) {
+    return decision;
+  }
+  return (record.version_id ?? '').localeCompare(localNode.current_version_id ?? '') > 0
     ? 'apply_fast_forward'
-    : decision;
+    : 'skip_stale';
 }
 
 export async function applySyncNodesWithDbPort(

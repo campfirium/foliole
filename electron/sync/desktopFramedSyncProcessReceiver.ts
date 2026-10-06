@@ -53,8 +53,14 @@ type ReceiverInput = Readonly<{
 const bytes = (value: unknown) => new Uint8Array(value as Uint8Array);
 const integer = (value: unknown) => BigInt(String(value));
 
-type ReceiptBody = Awaited<ReturnType<typeof buildReceiptStream>>;
+type ReceiptBody = Awaited<ReturnType<typeof buildReceiptStream>> & {
+  generatedChanges?: boolean;
+};
 type FinishResult = ReceiptBody | PreparedDesktopFramedSyncInbound;
+type TransferPreamble = Extract<
+  ReturnType<typeof decodeFramedSyncPreamble>,
+  { contextKind: 'transfer' }
+>;
 
 export function receiveDesktopFramedSyncTransfer(input: ReceiverInput): Promise<ReceiptBody> {
   return processDesktopFramedSyncTransfer(input, false) as Promise<ReceiptBody>;
@@ -97,7 +103,7 @@ async function processDesktopFramedSyncTransfer(
 async function consumeTransferFrames(args: {
   input: ReceiverInput;
   key: Uint8Array;
-  preamble: ReturnType<typeof decodeFramedSyncPreamble>;
+  preamble: TransferPreamble;
   sequence: bigint;
   stageOnly: boolean;
   state: State;
@@ -186,9 +192,12 @@ async function handleFrame(input: {
       staging: input.staging
     };
     if (input.stageOnly) return prepareDesktopFramedSyncInbound(preparedInput);
-    const receipt = await finishDesktopFramedSyncTransfer(preparedInput);
-    state.existingReceipt = receipt;
-    return receiptStream(input, receipt);
+    const applied = await finishDesktopFramedSyncTransfer(preparedInput);
+    state.existingReceipt = applied.receipt;
+    return {
+      ...await receiptStream(input, applied.receipt),
+      generatedChanges: applied.generatedChanges
+    };
   }
   return null;
 }

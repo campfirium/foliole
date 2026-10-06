@@ -16,6 +16,12 @@ vi.mock('../../lib/core/sync/framedSyncInventoryRead.js', () => ({
 vi.mock('../../lib/core/sync/syncNodeApplyExecutor.js', () => ({
   applySyncNodesWithDbPort: mocks.applyNode
 }));
+vi.mock('../../lib/core/sync/syncNodeConvergence.js', () => ({
+  applyConvergentSyncNodesWithDbPort: async (...args: unknown[]) => {
+    await mocks.applyNode(...args);
+    return { handledConflictCount: 0 };
+  }
+}));
 vi.mock('../../lib/core/sync/framedSyncPeerEpoch.js', () => ({
   recordFramedSyncPeerEpoch: mocks.recordPeerEpoch
 }));
