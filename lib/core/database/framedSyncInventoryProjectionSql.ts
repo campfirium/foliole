@@ -1,5 +1,11 @@
 const EMPTY_BODY_HASH = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
+export function framedSyncResourceVersionSql(state: string) {
+  return `COALESCE(${state}.current_version_id, (SELECT tomb.version_id FROM node_sync_tombstones tomb
+    WHERE tomb.node_id = ${state}.object_id AND tomb.content_hash = ${state}.content_hash
+      AND tomb.deleted_at = ${state}.deleted_at))`;
+}
+
 export function framedSyncVersionSummarySql(where: string) {
   return `INSERT OR REPLACE INTO framed_sync_version_summary
     (version_id, object_id, body_hash, resource_hashes_json)
@@ -33,10 +39,10 @@ export function framedSyncNodeInventorySql(id: string) {
         WHERE object_type = 'node_reading' AND object_id = state.object_id), '[]'),
       COALESCE((SELECT json_group_array(hash) FROM (
         SELECT body_hash AS hash FROM framed_sync_version_summary
-          WHERE version_id = state.current_version_id AND body_hash IS NOT NULL
+          WHERE version_id = ${framedSyncResourceVersionSql('state')} AND body_hash IS NOT NULL
         UNION SELECT resource.value AS hash FROM framed_sync_version_summary version,
           json_each(version.resource_hashes_json) resource
-          WHERE version.version_id = state.current_version_id
+          WHERE version.version_id = ${framedSyncResourceVersionSql('state')}
             AND EXISTS (SELECT 1 FROM framed_sync_resource_availability availability
               WHERE availability.hash = resource.value AND availability.available = 1)
         ORDER BY hash)), '[]')

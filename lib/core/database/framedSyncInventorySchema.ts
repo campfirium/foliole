@@ -1,5 +1,6 @@
 import {
   framedSyncNodeInventorySql,
+  framedSyncResourceVersionSql,
   framedSyncTombstoneSummarySql,
   framedSyncVersionSummarySql
 } from './framedSyncInventoryProjectionSql.js';
@@ -83,7 +84,7 @@ export const FRAMED_SYNC_INVENTORY_TRIGGERS = [
     ${framedSyncNodeInventorySql(`${ref}.node_id`)}`),
   ...triggers('framed_sync_resource_availability', (ref) => `
     ${framedSyncNodeInventorySql(`SELECT state.object_id FROM sync_object_state state
-      JOIN framed_sync_version_summary version ON version.version_id = state.current_version_id,
+      JOIN framed_sync_version_summary version ON version.version_id = ${framedSyncResourceVersionSql('state')},
       json_each(version.resource_hashes_json) resource
       WHERE state.object_type = 'node' AND resource.value = ${ref}.hash`)}
   `)
