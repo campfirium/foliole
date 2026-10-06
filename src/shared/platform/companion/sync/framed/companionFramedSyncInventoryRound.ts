@@ -75,18 +75,26 @@ async function pullDifference(args: NativeCompanionFramedSyncInventoryRequest,
 async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventoryRequest,
   differences: readonly FramedSyncInventoryDifference[], roundId: Uint8Array) {
   const received = new Map<string, NativeCompanionFramedSyncTransferReceipt>();
-  const deferredObjects: FramedSyncDeferredObject[] = [];
-  await deliverFramedSyncDifferencesInDependencyOrder(differences, async (difference) => {
+  const deferredObjects = new Map<string, FramedSyncDeferredObject>();
+  const defer = (difference: Pick<FramedSyncInventoryDifference, 'globalId' | 'objectType'>) =>
+    deferredObjects.set(`${difference.objectType}\0${difference.globalId}`, {
+      globalId: difference.globalId, objectType: difference.objectType
+    });
+  const dependencyDeferred = await deliverFramedSyncDifferencesInDependencyOrder(
+    differences, async (difference) => {
     try {
       received.set(difference.globalId, await pullDifference(args, difference, roundId));
+      return 'delivered';
     } catch (error) {
       if (!String(error instanceof Error ? error.message : error)
         .endsWith(':framed_sync_source_changed')) throw error;
-      deferredObjects.push({ globalId: difference.globalId, objectType: difference.objectType });
+      defer(difference);
+      return 'deferred';
     }
   });
+  for (const difference of dependencyDeferred) defer(difference);
   return {
-    deferredObjects,
+    deferredObjects: [...deferredObjects.values()],
     received: [...received].map(([objectId, receipt]) => ({ objectId, receipt }))
   };
 }

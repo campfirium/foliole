@@ -185,17 +185,21 @@ export async function coordinateFramedSyncInventoryRound(args: {
   const deferred = new Map<string, FramedSyncDeferredObject>();
   const outstandingDifferences: FramedSyncInventoryDifference[] = [];
   const transfers: TransferResult[] = [];
-  await deliverFramedSyncDifferencesInDependencyOrder(differences, async (difference) => {
+  const dependencyDeferred = await deliverFramedSyncDifferencesInDependencyOrder(
+    differences, async (difference) => {
     const source = sourceFor(difference.direction, args.local, args.remote);
     const current = await source.endpoint.readInventoryEntry(difference);
     const ready = revalidateFramedSyncInventorySource({ currentSource: current ? [current] : [],
       differences: [localDifference(difference)], direction: 'local_to_remote' });
-    if (ready.deferredObjects.length) { addDeferred(deferred, ready.deferredObjects); return; }
+    if (ready.deferredObjects.length) {
+      addDeferred(deferred, ready.deferredObjects);
+      return 'deferred';
+    }
     const selection = await source.endpoint.selectOutbound(localDifference(difference));
     if (selection.kind === 'deferred') {
       addDeferred(deferred, selection.deferredObjects);
       addDeferred(deferred, [{ globalId: difference.globalId, objectType: difference.objectType }]);
-      return;
+      return 'deferred';
     }
     await source.endpoint.staging.publishOutbound(selection.publication);
     const state = await source.endpoint.sendPublishedTransfer({
@@ -204,7 +208,9 @@ export async function coordinateFramedSyncInventoryRound(args: {
     if (state === 'pending') outstandingDifferences.push(difference);
     transfers.push({ direction: difference.direction, globalId: difference.globalId,
       objectType: difference.objectType, publication: selection.publication, state });
+    return 'delivered';
   });
+  addDeferred(deferred, dependencyDeferred);
   if (!outstandingDifferences.length) {
     await deferUnresolvedBidirectionalObjects(args.local, args.remote, differences, deferred);
   }
