@@ -1,3 +1,4 @@
+import { retireExternalFolderDocuments } from '../../lib/core/database/externalFolderDocumentRetirement.js';
 import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
 import { computeSyncContentHash, type SyncObjectStateInput,
   upsertSyncObjectState } from '../../lib/core/database/syncState.js';
@@ -113,6 +114,9 @@ function recordSourceSync(source: DesktopSourceRecord, now: string, deleted: boo
 function removeSource(source: DesktopSourceRecord, now: string) {
   const driver = openDatabaseConnection().driver;
   if (source.source_type === 'external') {
+    retireExternalFolderDocuments(driver, {
+      folderId: source.config_ref, deletedAt: now, hostName: loadCurrentDesktopHost().name
+    });
     driver.execute('DELETE FROM external_documents WHERE folder_id = ?', [source.config_ref]);
     driver.execute('DELETE FROM external_folder_host_preferences WHERE folder_id = ?', [source.config_ref]);
     driver.execute('DELETE FROM external_search_folders WHERE source_ref = ?', [source.source_ref]);

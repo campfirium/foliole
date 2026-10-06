@@ -1,3 +1,5 @@
+import { retireExternalFolderDocumentsWithDbPort } from '../database/externalFolderDocumentRetirement.js';
+
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import type { DbPort } from './dbPort.js';
 import { asObject, text } from './syncObjectPayloadValues.js';
@@ -9,6 +11,9 @@ export async function applyExternalFolderObject(port: DbPort, record: SyncPackSy
     throw new Error('sync_content_hash_mismatch:external_folder');
   }
   if (record.deleted_at) {
+    await retireExternalFolderDocumentsWithDbPort(port, {
+      folderId: record.object_id, deletedAt: record.deleted_at, hostName: 'sync-remote'
+    });
     await port.run('DELETE FROM external_documents WHERE folder_id = ?', [record.object_id]);
     await port.run('DELETE FROM external_search_folders WHERE id = ?', [record.object_id]);
     return;

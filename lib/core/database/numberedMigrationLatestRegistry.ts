@@ -26,6 +26,7 @@ import { migratePrivateStateCanonicalHashes } from './numberedMigrationPrivateSt
 import { reopenReadwiseBoundOriginalFiles } from './numberedMigrationReadwiseBoundOriginalFiles.js';
 import { reopenIncompleteReadwiseCompletion } from './numberedMigrationReadwiseCompletionRepair.js';
 import { migrateReadwiseHostSettings } from './numberedMigrationReadwiseHostSettings.js';
+import { migrateRetiredExternalDocuments } from './numberedMigrationRetiredExternalDocuments.js';
 import type { NumberedSchemaMigration } from './numberedMigrations.js';
 import { migrateSinglePrincipalSyncGroup } from './numberedMigrationSinglePrincipalSyncGroup.js';
 import { migrateSourceHostOwnership } from './numberedMigrationSourceHostOwnership.js';
@@ -225,5 +226,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   } },
   { version: 141, migrate: migrateFramedSyncInventory },
-  { version: 142, migrate: (sqlite) => sqlite.exec(SYNC_GROUP_METADATA_SCHEMA) }
+  { version: 142, migrate: (sqlite) => sqlite.exec(SYNC_GROUP_METADATA_SCHEMA) },
+  { version: 143, migrate: migrateRetiredExternalDocuments }
 ];

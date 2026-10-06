@@ -1,3 +1,4 @@
+import { retireExternalFolderDocuments } from '../../lib/core/database/externalFolderDocumentRetirement.js';
 import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTombstone.js';
@@ -18,6 +19,7 @@ export function removeExternalSearchFolder(folderId: string) {
   const hostName = loadOrCreateDesktopHostName(removedAt);
   if (existing.host_name !== hostName) throw new Error('external_folder_not_local');
   driver.transaction((tx) => {
+    retireExternalFolderDocuments(tx, { folderId: id, deletedAt: removedAt, hostName });
     tx.execute('DELETE FROM external_documents WHERE folder_id = ?', [id]);
     tx.execute('DELETE FROM external_folder_host_preferences WHERE folder_id = ?', [id]);
     tx.execute('DELETE FROM external_search_folders WHERE id = ?', [id]);
