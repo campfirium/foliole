@@ -4,11 +4,11 @@ import path from 'node:path';
 
 import { runMacosA5SyncGroupMaintenance } from '../sync-group/a5-sync-group-action.mjs';
 import { buildMacosA5Desktop } from './macos-a5-extended-actions.mjs';
-import { openMacosPairSyncDesktopSession } from './macos-pair-sync-desktop-session.mjs';
+import { openMacosSyncGroupDesktopSession } from './macos-sync-group-desktop-session.mjs';
 
 export async function runMacosA5SyncNowEntry(args, dependencies = {}) {
   const buildDesktop = dependencies.buildDesktop ?? buildMacosA5Desktop;
-  const openDesktopSession = dependencies.openDesktopSession ?? openMacosPairSyncDesktopSession;
+  const openDesktopSession = dependencies.openDesktopSession ?? openMacosSyncGroupDesktopSession;
   const runAction = dependencies.runAction ?? runMacosA5SyncGroupMaintenance;
   args.assertFixed();
   args.build();
