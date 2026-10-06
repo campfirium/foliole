@@ -143,10 +143,10 @@ async function handleReadwiseImportCommand(
     return cancelReadwiseApiReconcile();
   }
   if (request.command === NATIVE_COMMANDS.previewReadwiseImportCleanup) {
-    return previewReadwiseImportCleanup();
+    return runWithDatabaseConnectionOwner(previewReadwiseImportCleanup);
   }
   if (request.command === NATIVE_COMMANDS.runReadwiseImportCleanup) {
-    const result = runReadwiseImportCleanup();
+    const result = await runWithDatabaseConnectionOwner(runReadwiseImportCleanup);
     if (result.deleted_count > 0) {
       notifyWorkspaceContentChanged();
     }

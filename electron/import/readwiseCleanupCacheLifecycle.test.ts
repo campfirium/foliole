@@ -16,7 +16,11 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import {
+  closeDatabaseConnection,
+  openDatabaseConnection,
+  runWithDatabaseConnectionOwner
+} from '../database/connection.js';
 import { upsertKeepImportItemCache } from '../database/keepImportItemCache.js';
 import { upsertKeepImportItem } from '../database/keepImportItems.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -148,7 +152,8 @@ it.each([null, 'detached'])('skips a prepared passive refresh after cleanup of n
   if (!config) throw new Error('Fixture rule unavailable');
   const source = await buildKeepImportSourceDescriptor(config, 'sample.md');
   const pending = refreshKeepImportItemCache(config, source, AT, { force: true, requireTracking: true });
-  clearReadwiseTracking({ deletedNodeIds: [], detachedNodeIds: nodeId ? [nodeId] : [] });
+  await runWithDatabaseConnectionOwner(() =>
+    clearReadwiseTracking({ deletedNodeIds: [], detachedNodeIds: nodeId ? [nodeId] : [] }));
   await pending;
   expect(snapshot()).toEqual({ cache: [], tracking: [] });
 });
