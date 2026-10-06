@@ -47,6 +47,6 @@ function normalizeSnapshot(value: unknown) {
   const ignored = new Set(['content', 'position', 'updated_at']);
   return Object.fromEntries(Object.entries(value as Record<string, unknown>)
     .filter(([key]) => !ignored.has(key))
-    .map(([key, item]) => [key, item ?? null])
+    .map(([key, item]): [string, unknown] => [key, item ?? null])
     .sort(([left], [right]) => left.localeCompare(right)));
 }
