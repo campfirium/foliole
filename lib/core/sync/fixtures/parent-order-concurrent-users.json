@@ -1,0 +1,77 @@
+{
+  "revision": "96490e954bea5d6e610794c8b9504807f581ecda",
+  "name": "concurrent users",
+  "versions": [
+    {
+      "versionId": "base",
+      "kind": "baseline",
+      "order": [
+        "a",
+        "b",
+        "c"
+      ],
+      "parentVersionIds": []
+    },
+    {
+      "versionId": "user-a",
+      "kind": "user",
+      "order": [
+        "b",
+        "a",
+        "c"
+      ],
+      "parentVersionIds": [
+        "base"
+      ]
+    },
+    {
+      "versionId": "user-b",
+      "kind": "user",
+      "order": [
+        "c",
+        "a",
+        "b"
+      ],
+      "parentVersionIds": [
+        "base"
+      ]
+    }
+  ],
+  "headIds": [
+    "user-a",
+    "user-b"
+  ],
+  "members": [
+    "a",
+    "b",
+    "c",
+    "d"
+  ],
+  "expected": {
+    "order": [
+      "b",
+      "a",
+      "c",
+      "d"
+    ],
+    "mergeId": "1d7008af9933bcf8102f1c8b9a71f94c23e9c9c23021aee29afe9cf1e22a7594",
+    "winningVersionId": "user-a",
+    "losingVersionIds": [
+      "user-b"
+    ],
+    "version": {
+      "versionId": "ord_merge_1d7008af9933bcf8102f1c8b9a71f94c23e9c9c23021aee29afe9cf1e22a7594",
+      "kind": "merge",
+      "order": [
+        "b",
+        "a",
+        "c",
+        "d"
+      ],
+      "parentVersionIds": [
+        "user-a",
+        "user-b"
+      ]
+    }
+  }
+}

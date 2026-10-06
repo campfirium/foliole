@@ -6,9 +6,9 @@ import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStat
 
 import type { DbPort, DbRow } from './dbPort.js';
 import { ensureSyncSpecialRootNodes } from './syncPackSpecialRootApply.js';
-import { parseParentOrderFact } from './syncParentOrderFact.js';
 import { loadParentOrderMembers } from './syncParentOrderMembers.js';
-import { resolveParentOrderHeads } from './syncParentOrderResolve.js';
+import { readParentOrderResolutionHistory, readParentOrderResolutionSnapshots } from './syncParentOrderResolutionRead.js';
+import { resolvePlannedParentOrderHeads } from './syncParentOrderResolve.js';
 import type { ParentOrderVersion } from './syncParentOrderVersionGraph.js';
 import { advanceParentOrderHead, insertParentOrderVersion,
   PARENT_ORDER_BASELINE_TIME } from './syncParentOrderVersionStore.js';
@@ -62,6 +62,12 @@ export async function stageSyncIdentityParentOrderMerges(port: DbPort, incomingA
 export async function stageSyncIdentityParentOrderRecordMerge(port: DbPort,
   incoming: Pick<OrderRow, 'parent_id' | 'payload_json' | 'content_hash' | 'deleted_at' | 'current_version_id'>,
   incomingAlias = 'main'): Promise<StagedOrderMerge | null> {
+  return port.transaction((tx) => stageParentOrderRecordMerge(tx, incoming, incomingAlias));
+}
+
+async function stageParentOrderRecordMerge(port: DbPort,
+  incoming: Pick<OrderRow, 'parent_id' | 'payload_json' | 'content_hash' | 'deleted_at' | 'current_version_id'>,
+  incomingAlias: string): Promise<StagedOrderMerge | null> {
   const parentId = incoming.parent_id;
   const [local] = await port.query<OrderRow>(`SELECT entity.parent_id, entity.child_ids_json,
     state.content_hash, state.deleted_at, state.updated_at, state.sync_dirty,
@@ -82,13 +88,11 @@ export async function stageSyncIdentityParentOrderRecordMerge(port: DbPort,
   if (!incoming.current_version_id || (local && !local.current_version_id)) {
     throw new Error('sync_parent_order_head_unproven');
   }
-  const rows = await port.query<DbRow>(`SELECT * FROM parent_order_versions WHERE parent_id = ?`,
-    [parentId]);
-  const versions = rows.map((row) => parseParentOrderFact(row).version);
+  const history = await readParentOrderResolutionHistory(port, parentId, headIds);
   for (const [headId, order] of [[local?.current_version_id, left],
     [incoming.current_version_id, right]] as const) {
     if (!headId) continue;
-    const version = versions.find((item) => item.versionId === headId);
+    const version = history.versions.get(headId);
     if (!version || JSON.stringify(version.order) !== JSON.stringify(order)) {
       throw new Error('sync_parent_order_head_unproven');
     }
@@ -98,7 +102,8 @@ export async function stageSyncIdentityParentOrderRecordMerge(port: DbPort,
     nodeId, referencedAt: new Date().toISOString()
   })));
   const membership = await loadParentOrderMembers(port, parentId, memberIds, incomingAlias);
-  const result = resolveParentOrderHeads({ versions, headIds, ...membership });
+  const resolution = await readParentOrderResolutionSnapshots(port, history, headIds);
+  const result = resolvePlannedParentOrderHeads({ ...resolution, ...membership });
   const childIdsJson = JSON.stringify(result.order);
   return { parentId, childIdsJson, version: result.version,
     contentHash: mergedOrderHash(parentId, childIdsJson),

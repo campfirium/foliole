@@ -1,0 +1,89 @@
+{
+  "revision": "96490e954bea5d6e610794c8b9504807f581ecda",
+  "name": "duplicate original delivery",
+  "versions": [
+    {
+      "versionId": "base",
+      "kind": "baseline",
+      "order": [
+        "a",
+        "b",
+        "c"
+      ],
+      "parentVersionIds": []
+    },
+    {
+      "versionId": "user-a",
+      "kind": "user",
+      "order": [
+        "b",
+        "a",
+        "c"
+      ],
+      "parentVersionIds": [
+        "base"
+      ]
+    },
+    {
+      "versionId": "user-a",
+      "kind": "user",
+      "order": [
+        "b",
+        "a",
+        "c"
+      ],
+      "parentVersionIds": [
+        "base"
+      ]
+    },
+    {
+      "versionId": "user-b",
+      "kind": "user",
+      "order": [
+        "c",
+        "a",
+        "b"
+      ],
+      "parentVersionIds": [
+        "base"
+      ]
+    }
+  ],
+  "headIds": [
+    "user-a",
+    "user-b"
+  ],
+  "members": [
+    "a",
+    "b",
+    "c",
+    "d"
+  ],
+  "expected": {
+    "order": [
+      "b",
+      "a",
+      "c",
+      "d"
+    ],
+    "mergeId": "1ea90c8f41dd08fcbce3280d1f5472c66ec0f5e98736e705e860029f85e4fa4d",
+    "winningVersionId": "user-a",
+    "losingVersionIds": [
+      "user-b"
+    ],
+    "version": {
+      "versionId": "ord_merge_1ea90c8f41dd08fcbce3280d1f5472c66ec0f5e98736e705e860029f85e4fa4d",
+      "kind": "merge",
+      "order": [
+        "b",
+        "a",
+        "c",
+        "d"
+      ],
+      "parentVersionIds": [
+        "user-a",
+        "user-b"
+      ]
+    }
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "revision": "96490e954bea5d6e610794c8b9504807f581ecda",
+  "name": "superseded users with membership side",
+  "versions": [
+    {
+      "versionId": "base",
+      "kind": "baseline",
+      "order": [
+        "a",
+        "b",
+        "c"
+      ],
+      "parentVersionIds": []
+    },
+    {
+      "versionId": "user-a",
+      "kind": "user",
+      "order": [
+        "b",
+        "a",
+        "c"
+      ],
+      "parentVersionIds": [
+        "base"
+      ]
+    },
+    {
+      "versionId": "user-b",
+      "kind": "user",
+      "order": [
+        "c",
+        "a",
+        "b"
+      ],
+      "parentVersionIds": [
+        "base"
+      ]
+    },
+    {
+      "versionId": "merge-ab",
+      "kind": "merge",
+      "order": [
+        "b",
+        "a",
+        "c"
+      ],
+      "parentVersionIds": [
+        "user-a",
+        "user-b"
+      ]
+    },
+    {
+      "versionId": "user-z",
+      "kind": "user",
+      "order": [
+        "c",
+        "a",
+        "b"
+      ],
+      "parentVersionIds": [
+        "merge-ab"
+      ]
+    },
+    {
+      "versionId": "member-side",
+      "kind": "membership",
+      "order": [
+        "a",
+        "b",
+        "c",
+        "d"
+      ],
+      "parentVersionIds": [
+        "base"
+      ]
+    }
+  ],
+  "headIds": [
+    "user-z",
+    "member-side"
+  ],
+  "members": [
+    "a",
+    "b",
+    "c",
+    "d"
+  ],
+  "expected": {
+    "order": [
+      "c",
+      "d",
+      "a",
+      "b"
+    ],
+    "mergeId": "162a76f2601c421443b65af65c05ecc1f1021ed39adbc2197aba2a0143438b4c",
+    "winningVersionId": "user-z",
+    "losingVersionIds": [],
+    "version": {
+      "versionId": "ord_merge_162a76f2601c421443b65af65c05ecc1f1021ed39adbc2197aba2a0143438b4c",
+      "kind": "merge",
+      "order": [
+        "c",
+        "d",
+        "a",
+        "b"
+      ],
+      "parentVersionIds": [
+        "member-side",
+        "user-z"
+      ]
+    }
+  }
+}
