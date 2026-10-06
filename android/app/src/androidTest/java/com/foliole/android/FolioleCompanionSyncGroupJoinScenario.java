@@ -58,7 +58,7 @@ final class FolioleCompanionSyncGroupJoinScenario {
             Log.i(LOG_TAG, "stage=device-requested");
             String requestState = FolioleCompanionSemanticActions.waitForAnyVisible(
                 instrumentation, webView, stageDeadline(),
-                "companion-sync-awaiting-approval", "companion-sync-error"
+                "companion-sync-awaiting-approval", "companion-sync-error", "companion-sync-now"
             );
             if ("companion-sync-error".equals(requestState)) {
                 JSONObject error = FolioleCompanionWebViewSemanticAdapter.readAttribute(
@@ -68,7 +68,9 @@ final class FolioleCompanionSyncGroupJoinScenario {
                     "Sync Group Device request failed: " + error.optString("value", "unknown")
                 );
             }
-            Log.i(LOG_TAG, "stage=awaiting-approval");
+            if ("companion-sync-awaiting-approval".equals(requestState)) {
+                Log.i(LOG_TAG, "stage=awaiting-approval");
+            }
             FolioleCompanionSemanticActions.waitForUniqueVisible(
                 instrumentation, webView, "companion-sync-now", stageDeadline()
             );

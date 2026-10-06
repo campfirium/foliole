@@ -189,6 +189,9 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('stage=device-visible');
   expect(source).toContain('stage=device-requested');
   expect(source).toContain('stage=awaiting-approval');
+  expect(source).toContain(
+    '"companion-sync-awaiting-approval", "companion-sync-error", "companion-sync-now"'
+  );
   expect(source).toContain('stage=initial-sync-terminal');
   expect(source).toContain('FolioleCompanionInitialSyncProof.waitForTerminal');
   expect(source).toContain('FolioleCompanionSyncNowAction.waitUntilEnabled');
