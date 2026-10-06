@@ -7,7 +7,7 @@ import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagin
 
 const mocks = vi.hoisted(() => ({
   applyNode: vi.fn(), applyRelations: vi.fn(), commitReceipt: vi.fn(),
-  inventory: vi.fn(), restoreNode: vi.fn()
+  inventory: vi.fn(), restoreNode: vi.fn(), upsertBody: vi.fn()
 }));
 
 vi.mock('../../lib/core/sync/framedSyncInventoryRead.js', () => ({
@@ -15,6 +15,9 @@ vi.mock('../../lib/core/sync/framedSyncInventoryRead.js', () => ({
 }));
 vi.mock('../../lib/core/sync/syncNodeApplyExecutor.js', () => ({
   applySyncNodesWithDbPort: mocks.applyNode
+}));
+vi.mock('../../lib/core/sync/syncNodeTextBodyBlobs.js', () => ({
+  upsertTextBodyBlob: mocks.upsertBody
 }));
 vi.mock('../database/desktopFramedSyncRelationReviewApply.js', () => ({
   applyDesktopFramedSyncRelationReviewFactsWithDbPort: mocks.applyRelations
@@ -66,8 +69,10 @@ it('atomically applies multiple versions of the same node', async () => {
   const secondDescriptor = { byteLength: 1n, required: true, role: 1, sha256: hash(2) };
   const first = fact(2, 'node-a', [firstDescriptor]);
   const second = { ...fact(2, 'node-a', [secondDescriptor]), factId: 'version-2' };
-  mocks.restoreNode.mockImplementation(({ manifest }) => ({
-    object_id: 'node-a', snapshot: { parent_id: null }, version_id: manifest.facts[0].factId
+  mocks.restoreNode.mockImplementation(({ bodyBlob, manifest }) => ({
+    body_text: new TextDecoder().decode(bodyBlob), object_id: 'node-a',
+    snapshot: { body_blob_hash: Buffer.from(manifest.blobs[0].sha256).toString('hex'), parent_id: null },
+    updated_at: '2026-10-06T00:00:00.000Z', version_id: manifest.facts[0].factId
   }));
   mocks.inventory.mockResolvedValue({ sharedStateHash: hash(7) });
   mocks.commitReceipt.mockImplementation(async (value) => value);
@@ -99,6 +104,7 @@ it('atomically applies multiple versions of the same node', async () => {
     expect.objectContaining({ version_id: first.factId }),
     expect.objectContaining({ version_id: second.factId })
   ]);
+  expect(mocks.upsertBody).toHaveBeenCalledTimes(2);
 });
 
 it('rejects a node fact whose blob content set does not match', async () => {
@@ -113,7 +119,11 @@ it('writes the actual post-apply node state hash into the receipt', async () => 
   const incoming = fact(2, 'node-a', [descriptor]);
   const appliedStateHash = hash(7);
   mocks.inventory.mockResolvedValue({ sharedStateHash: appliedStateHash });
-  mocks.restoreNode.mockReturnValue({ object_id: 'node-a', snapshot: { parent_id: null } });
+  mocks.restoreNode.mockReturnValue({
+    body_text: '\u0001', object_id: 'node-a',
+    snapshot: { body_blob_hash: '01'.repeat(32), parent_id: null },
+    updated_at: '2026-10-06T00:00:00.000Z'
+  });
   mocks.commitReceipt.mockImplementation(async (value) => value);
   const staging = {
     commitAuthenticatedFrame: vi.fn(), finalizeInboundAttempt: vi.fn(),

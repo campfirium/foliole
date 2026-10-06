@@ -16,7 +16,12 @@ import {
   processFrameStream,
   TRANSFER_FRAME_TYPES
 } from './desktopFramedSyncProcessWire.js';
-import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+import {
+  framedSyncEncodedLength,
+  framedSyncEncodedSha256,
+  type FramedSyncStreamBody,
+  type FramedSyncWireFrame
+} from './desktopFramedSyncStream.js';
 
 const bytes = (value: unknown) => new Uint8Array(value as Uint8Array);
 
@@ -32,7 +37,7 @@ export async function buildReceiptStream(input: {
       input.receipt.transferId,
       replay.attemptId
     );
-    return { frames: processFrameStream(frames), preamble: replay.preamble };
+    return receiptBody(replay.preamble, frames);
   }
   const attempt = newTransferAttempt(input.receipt.transferId);
   await input.staging.persistReceiptAttempt(input.receipt, attempt);
@@ -47,7 +52,16 @@ export async function buildReceiptStream(input: {
   });
   await input.staging.commitReceiptFrame(input.receipt.transferId, attempt.attemptId, frame);
   await input.staging.finalizeReceiptAttempt(input.receipt.transferId, attempt.attemptId);
-  return { frames: processFrameStream([frame]), preamble: attempt.preamble };
+  return receiptBody(attempt.preamble, [frame]);
+}
+
+function receiptBody(preamble: Uint8Array, frames: Parameters<typeof processFrameStream>[0]) {
+  return {
+    bodySha256: framedSyncEncodedSha256(preamble, frames),
+    contentLength: framedSyncEncodedLength(preamble, frames),
+    frames: processFrameStream(frames),
+    preamble
+  };
 }
 
 export async function readReceipt(input: {

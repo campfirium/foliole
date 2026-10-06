@@ -14,6 +14,8 @@ import type {
 } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncBlobContent } from '../../lib/core/sync/framedSyncTransferPayloads.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
+import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { applyDesktopFramedSyncRelationReviewFactsWithDbPort } from '../database/desktopFramedSyncRelationReviewApply.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 
@@ -126,7 +128,10 @@ export async function finishDesktopFramedSyncTransfer(input: {
   await input.staging.markReadyToApply(input.frame.transferId);
   const receipt = await input.db.transaction(async (tx) => {
     await assertFramedSyncNodeParentDependencies(tx, prepared.records);
-    if (prepared.records.length) await applySyncNodesWithDbPort(tx, prepared.records);
+    if (prepared.records.length) {
+      await promoteFramedNodeBodies(tx, prepared.records);
+      await applySyncNodesWithDbPort(tx, prepared.records);
+    }
     await applyDesktopFramedSyncRelationReviewFactsWithDbPort(tx, prepared.relationReviewFacts);
     const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
       globalId: prepared.globalId, objectType: 'node'
@@ -142,6 +147,19 @@ export async function finishDesktopFramedSyncTransfer(input: {
   });
   await input.staging.releasePins(input.frame.transferId, 'business_reference_committed');
   return receipt;
+}
+
+async function promoteFramedNodeBodies(
+  db: DbPort,
+  records: readonly NativeSyncNodeRecord[]
+) {
+  for (const record of records) {
+    const hash = record.snapshot.body_blob_hash;
+    if (!hash || record.body_text === null) {
+      throw new Error('framed_sync_node_body_projection_missing');
+    }
+    await upsertTextBodyBlob(db, record.body_text, record.updated_at, hash);
+  }
 }
 
 function prepareInboundApply(

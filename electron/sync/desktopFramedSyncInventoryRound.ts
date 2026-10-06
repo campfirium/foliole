@@ -1,11 +1,22 @@
-import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import {
+  FRAMED_SYNC_PROTOCOL_VERSION,
+  type FramedSyncContext,
+  type TransferReceiptStage
+} from '../../lib/core/sync/framedSyncContract.js';
+import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 
-import { exchangeDesktopFramedSyncInventoryHttp } from './desktopFramedSyncInventoryHttp.js';
+import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
+import {
+  exchangeDesktopFramedSyncInventoryHttp,
+  requestDesktopFramedSyncDifferenceHttp
+} from './desktopFramedSyncInventoryHttp.js';
+import { readReceipt } from './desktopFramedSyncProcessReceipt.js';
+import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
 import { createDesktopFramedSyncRoundEndpoint } from './desktopFramedSyncRoundEndpoint.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
@@ -18,15 +29,16 @@ export async function runDesktopFramedSyncInventoryRound(args: {
   const runtime = await loadRoundRuntime(args.peer.group_id);
   const local = { deviceId: args.peer.local_device_id, libraryEpoch: args.localLibraryEpoch };
   const remote = { deviceId: args.peer.peer_device_id, libraryEpoch: args.remoteLibraryEpoch };
+  const context = {
+    groupId: args.peer.group_id,
+    initiatorDeviceId: local.deviceId,
+    initiatorLibraryEpoch: local.libraryEpoch,
+    protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    responderDeviceId: remote.deviceId,
+    responderLibraryEpoch: remote.libraryEpoch
+  };
   const inventories = await exchangeDesktopFramedSyncInventoryHttp({
-    context: {
-      groupId: args.peer.group_id,
-      initiatorDeviceId: local.deviceId,
-      initiatorLibraryEpoch: local.libraryEpoch,
-      protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-      responderDeviceId: remote.deviceId,
-      responderLibraryEpoch: remote.libraryEpoch
-    },
+    context,
     db: runtime.db,
     endpointUrl: args.peer.endpoint_url,
     groupKey: runtime.groupKey,
@@ -43,17 +55,31 @@ export async function runDesktopFramedSyncInventoryRound(args: {
     peerOrigin: args.peer.endpoint_url,
     staging: runtime.staging
   });
-  return sendLocalDifferences(differences, endpoint);
+  return transferDifferences(differences, endpoint, {
+    context,
+    db: runtime.db,
+    endpointUrl: args.peer.endpoint_url,
+    groupKey: runtime.groupKey,
+    groupSecret: runtime.groupSecret,
+    noncePort: runtime.noncePort,
+    roundId: inventories.roundId,
+    staging: runtime.staging
+  });
 }
 
-async function sendLocalDifferences(
+async function transferDifferences(
   differences: ReturnType<typeof compareFramedSyncInventories>,
-  endpoint: ReturnType<typeof createDesktopFramedSyncRoundEndpoint>
+  endpoint: ReturnType<typeof createDesktopFramedSyncRoundEndpoint>,
+  inbound: InboundRound
 ) {
-  let pending = differences.filter((difference) => difference.direction === 'remote_to_local').length;
+  let pending = 0;
   let transferred = 0;
   for (const difference of differences) {
-    if (difference.direction !== 'local_to_remote') continue;
+    if (difference.direction === 'remote_to_local') {
+      await receiveRemoteDifference(difference, inbound);
+      transferred += 1;
+      continue;
+    }
     const selection = await endpoint.selectOutbound(difference);
     if (selection.kind === 'deferred') { pending += 1; continue; }
     await endpoint.staging.publishOutbound(selection.publication);
@@ -66,6 +92,82 @@ async function sendLocalDifferences(
     if (state === 'pending') pending += 1;
   }
   return { complete: pending === 0, pending, transferred };
+}
+
+type InboundRound = Readonly<{
+  context: Parameters<typeof requestDesktopFramedSyncDifferenceHttp>[0]['context'];
+  db: Awaited<ReturnType<typeof loadRoundRuntime>>['db'];
+  endpointUrl: string;
+  groupKey: Uint8Array;
+  groupSecret: string;
+  noncePort: Awaited<ReturnType<typeof loadRoundRuntime>>['noncePort'];
+  roundId: Uint8Array;
+  staging: Awaited<ReturnType<typeof loadRoundRuntime>>['staging'];
+}>;
+
+async function receiveRemoteDifference(
+  difference: Parameters<typeof requestDesktopFramedSyncDifferenceHttp>[0]['difference'],
+  input: InboundRound
+) {
+  const stream = await requestDesktopFramedSyncDifferenceHttp({
+    ...input, difference
+  });
+  const context = reverseTransferContext(input.context);
+  const receiptBody = await receiveDesktopFramedSyncTransfer({
+    context, db: input.db, groupKey: input.groupKey, staging: input.staging, stream
+  });
+  const transferId = decodeFramedSyncPreamble(receiptBody.preamble).contextId;
+  const receipt = await input.staging.loadReceipt(transferId);
+  if (!receipt) throw new Error('framed_sync_inbound_receipt_missing');
+  const response = await postDesktopFramedSync({
+    body: receiptBody,
+    endpointUrl: input.endpointUrl,
+    groupId: input.context.groupId,
+    localDeviceId: input.context.initiatorDeviceId,
+    localLibraryEpoch: input.context.initiatorLibraryEpoch,
+    pathWithQuery: '/companion/framed-sync',
+    remoteDeviceId: input.context.responderDeviceId,
+    remoteLibraryEpoch: input.context.responderLibraryEpoch,
+    secret: input.groupSecret
+  });
+  const acknowledged = await readReceipt({
+    groupKey: input.groupKey,
+    published: receiptPublication(context, receipt),
+    stream: response.stream
+  });
+  if (!sameBytes(acknowledged.appliedStateHash, receipt.appliedStateHash)) {
+    throw new Error('framed_sync_receipt_ack_mismatch');
+  }
+}
+
+function reverseTransferContext(
+  context: InboundRound['context']
+): FramedSyncContext {
+  return {
+    groupId: context.groupId,
+    protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    receiverDeviceId: context.initiatorDeviceId,
+    receiverLibraryEpoch: context.initiatorLibraryEpoch,
+    senderDeviceId: context.responderDeviceId,
+    senderLibraryEpoch: context.responderLibraryEpoch
+  };
+}
+
+function receiptPublication(context: FramedSyncContext, receipt: TransferReceiptStage) {
+  return {
+    blobCount: 0n,
+    contentId: receipt.contentId,
+    context,
+    factCount: 0n,
+    manifestHash: receipt.contentId,
+    totalBlobBytes: 0n,
+    transferId: receipt.transferId
+  };
+}
+
+function sameBytes(left: Uint8Array, right: Uint8Array) {
+  return left.byteLength === right.byteLength &&
+    left.every((byte, index) => byte === right[index]);
 }
 
 function loadRoundRuntime(groupId: string) {
