@@ -46,7 +46,7 @@ it('keeps both bodies when a pack joins a nonempty topic branch', async () => {
   closeDatabaseConnection();
   const target = await applyConflictPack('target', incomingPath, 'target-device', true);
   expect(target.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
-  expect(target.parents).toEqual(['branch-a']);
+  expect(target.parents).toEqual(['branch-a', 'branch-b']);
   const alternative = target.alternative;
   expect(new Set([alternative.body_text, target.projection.content])).toEqual(
     new Set(['Local body', 'Remote body'])
@@ -59,7 +59,9 @@ it('keeps both bodies when a pack joins a nonempty topic branch', async () => {
     `SELECT version_id, body_text FROM node_sync_versions
      WHERE object_id = 'shared-topic' ORDER BY version_id`
   ).all()).toEqual([
+    { version_id: 'base', body_text: null },
     { version_id: 'branch-a', body_text: 'Local body' },
+    { version_id: 'branch-b', body_text: null },
     { version_id: target.current_version_id, body_text: 'Remote body' }
   ]);
   expect(reopened.sqlite.prepare(

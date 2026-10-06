@@ -8,6 +8,9 @@ import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSc
 import { DATABASE_SCHEMA_VERSION } from '../../lib/core/database/databaseSchemaVersion.js';
 import { DESKTOP_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopCoreSchemaStatements.js';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
+import { WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceConnectionSchemaStatements.js';
+import { DESKTOP_SOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopSourceSchemaStatements.js';
+import { EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS } from '../../lib/core/database/externalDocumentSchemaStatements.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
@@ -49,6 +52,9 @@ it('runs the registered desktop upgrade and preserves mounted references and PDF
   const db = new Database(':memory:');
   try {
     db.exec([...DESKTOP_CORE_SCHEMA_STATEMENTS, ...DESKTOP_RESOURCE_SCHEMA_STATEMENTS,
+      ...EXTERNAL_DOCUMENT_SCHEMA_STATEMENTS,
+      ...DESKTOP_SOURCE_SCHEMA_STATEMENTS,
+      ...WATCHED_FOLDER_BINDING_SCHEMA_STATEMENTS,
       ...SYNC_SCHEMA_STATEMENTS, ...SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS,
       ...SYNC_GROUP_SCHEMA_STATEMENTS, ...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS].join(';'));
     seedLegacy(db);

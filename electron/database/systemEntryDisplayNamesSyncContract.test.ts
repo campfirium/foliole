@@ -7,6 +7,8 @@ import { inflateSync } from 'node:zlib';
 
 import { expect, it, vi } from 'vitest';
 
+import { FOREGROUND_TIME_SCHEMA } from '../../lib/core/database/foregroundTimeSchema.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { applySyncPackSettingObjectsWithDbPort } from '../../lib/core/sync/syncPackSyncObjectsExecutor.js';
 import {
   SYSTEM_ENTRY_DISPLAY_NAMES_SETTING_IDENTITY,
@@ -71,7 +73,9 @@ it('rejects an invalid map before either sqlite target can materialize it', asyn
     form_factor: 'desktop', host_name: '*', key: SYSTEM_ENTRY_DISPLAY_NAMES_SETTING_KEY,
     platform: 'windows', scope: 'user_space', value_json: invalid
   });
-  incoming.prepare('UPDATE sync_objects SET payload_json = ?').run(envelope);
+  const contentHash = computeSyncContentHash('setting', JSON.parse(envelope));
+  incoming.prepare('UPDATE sync_objects SET payload_json = ?, content_hash = ?').run(envelope, contentHash);
+  incoming.prepare('UPDATE sync_object_state SET content_hash = ?').run(contentHash);
   incoming.close();
 
   const target = createTarget();
@@ -159,6 +163,7 @@ function createTarget() {
       payload_identity TEXT, status TEXT, remote_position TEXT
     );
   `);
+  for (const statement of FOREGROUND_TIME_SCHEMA) sqlite.exec(statement);
   return sqlite;
 }
 

@@ -214,9 +214,9 @@ it('creates a tombstone sync version when soft deleting a versioned node', () =>
     'SELECT parent_version_id, snapshot_json FROM node_sync_versions WHERE version_id = ?',
     [node?.current_version_id ?? '']
   );
-  expect(tombstone?.parent_version_id).toBeNull();
+  expect(tombstone?.parent_version_id).toBe(activeVersionId);
   expect(connection.driver.queryOne('SELECT version_id FROM node_sync_versions WHERE version_id = ?',
-    [activeVersionId ?? ''])).toBeUndefined();
+    [activeVersionId ?? ''])).toBeDefined();
   expect(JSON.parse(tombstone?.snapshot_json ?? '{}')).toMatchObject({
     deleted_at: '2026-04-21T10:02:00.000Z',
     id: 'node-1'
@@ -232,7 +232,7 @@ it('creates a tombstone sync version when soft deleting a versioned node', () =>
   });
 });
 
-it('keeps only the complete tombstone when deleting an unversioned node without holders', () => {
+it('keeps the initial version and complete tombstone when deleting an unversioned node without holders', () => {
   upsertTestNode();
 
   softDeleteNodes({ nodeIds: ['node-1'], deletedAt: '2026-04-21T10:02:00.000Z' });
@@ -247,9 +247,11 @@ it('keeps only the complete tombstone when deleting an unversioned node without 
      ORDER BY parent_version_id IS NOT NULL ASC`,
     ['node-1']
   );
-  expect(versions).toHaveLength(1);
-  const [deletedVersion] = versions;
-  expect(deletedVersion?.parent_version_id).toBeNull();
+  expect(versions).toHaveLength(2);
+  const deletedVersion = versions.find((version) =>
+    JSON.parse(version.snapshot_json).deleted_at === '2026-04-21T10:02:00.000Z');
+  const originalVersion = versions.find((version) => version !== deletedVersion);
+  expect(deletedVersion?.parent_version_id).toBe(originalVersion?.version_id);
   expect(connection.driver.queryOne('SELECT body_text FROM node_sync_versions WHERE version_id = ?',
     [deletedVersion?.version_id ?? ''])).toEqual({ body_text: 'Hello world' });
   expect(JSON.parse(deletedVersion?.snapshot_json ?? '{}')).toMatchObject({

@@ -14,6 +14,10 @@ import { buildCanonicalAttachmentStorageKey } from '../../lib/platform/attachmen
 import { IOS_SYNC_PACK_RESTORE_VERSION_ID } from '../../lib/platform/iosSyncPackAcceptanceContract.js';
 
 import { readHostedPack } from './ios-hosted-sync-pack-evidence.js';
+import {
+  canonicalizeOracleExternalDocumentHashes,
+  canonicalizeOracleSettingPayloads
+} from './ios-hosted-sync-pack-oracle-canonicalization.js';
 import { upgradeHostedOracleResources } from './ios-hosted-sync-pack-oracle-upgrade.js';
 import {
   hostedPackSemanticDigest,
@@ -36,7 +40,9 @@ export async function seedHostedSourceFromOracle(args: {
         frontier_state_seq: pack.manifest.to_state_seq }));
     ensureOracleNodeTombstones(args.source);
     ensureOracleExternalReferenceColumns(args.source);
+    canonicalizeOracleExternalDocumentHashes(args.source);
     canonicalizeOracleAttachmentPayloads(args.source);
+    canonicalizeOracleSettingPayloads(args.source);
     // The successor predicts this scenario's new restore, not a historical user version.
     if (pack.manifest.pack_id === 'ios-acceptance-successor') {
       await canonicalizeScenarioRestoreVersion(args.source);

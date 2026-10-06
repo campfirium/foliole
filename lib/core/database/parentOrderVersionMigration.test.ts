@@ -42,3 +42,20 @@ it('seeds the same baseline identity through the companion migration path', asyn
       .toBe(parentOrderBaselineVersionId('root', ['b', 'a']));
   } finally { sqlite.close(); }
 });
+
+it.each(['desktop', 'companion'] as const)('preserves an existing %s order head', async (host) => {
+  const sqlite = new Database(':memory:');
+  for (const statement of SYNC_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  try {
+    sqlite.exec(`CREATE TABLE parent_child_order (
+      parent_id TEXT PRIMARY KEY, child_ids_json TEXT NOT NULL, updated_at TEXT NOT NULL
+    ); INSERT INTO parent_child_order VALUES ('root', '["new"]', 'new-time')`);
+    migrateParentOrderVersions(sqlite);
+    const head = sqlite.prepare('SELECT version_id FROM parent_order_heads').pluck().get();
+    sqlite.prepare("UPDATE parent_child_order SET child_ids_json = '[\"legacy\"]'").run();
+    if (host === 'desktop') migrateParentOrderVersions(sqlite);
+    else await migrateCompanionParentOrderVersions(createBetterSqliteDbPort(sqlite));
+    expect(sqlite.prepare('SELECT version_id FROM parent_order_heads').pluck().get()).toBe(head);
+    expect(sqlite.prepare('SELECT COUNT(*) FROM parent_order_versions').pluck().get()).toBe(1);
+  } finally { sqlite.close(); }
+});

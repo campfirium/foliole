@@ -139,7 +139,7 @@ it('deletes subtree nodes and rewrites node_order while clearing review side tab
   expect(getNodeReadingRow('node-child')).toBeUndefined();
 });
 
-it.each([false, true])('keeps a complete permanent-delete fact with editor base retention=%s', async (retained) => {
+it.each([false, true])('keeps a complete permanent-delete chain with editor base retention=%s', async (retained) => {
   seedNode('node-root', null, 0);
   const activeVersionId = flushNodeSyncVersion('node-root', '2026-03-06T00:01:00.000Z');
   const connection = openDatabaseConnection();
@@ -163,7 +163,7 @@ it.each([false, true])('keeps a complete permanent-delete fact with editor base 
     version_id: string;
   };
   expect(tombstone.version_id).not.toBe(activeVersionId);
-  expect(tombstone.parent_version_id).toBe(retained ? activeVersionId : null);
+  expect(tombstone.parent_version_id).toBe(activeVersionId);
   expect(connection.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
     .pluck().get(tombstone.version_id)).toBe('# node-root');
   expect(tombstone.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);

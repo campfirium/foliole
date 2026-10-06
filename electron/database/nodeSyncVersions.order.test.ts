@@ -118,9 +118,10 @@ it('packs an ordinary order change as one parent object without article rows', a
   expect(pack.toStateSeq).toBeGreaterThan(previousSeq);
   expect(rows.nodes).toEqual([]);
   expect(rows.nodeVersions).toEqual([]);
-  expect(rows.syncObjects).toEqual([expect.objectContaining({
-    object_type: 'parent_child_order', payload_json: expect.stringContaining('node-2')
-  })]);
+  expect(rows.syncObjects).toEqual([
+    expect.objectContaining({ object_type: 'order_version', payload_json: expect.stringContaining('node-2') }),
+    expect.objectContaining({ object_type: 'parent_child_order', payload_json: expect.stringContaining('node-2') })
+  ]);
 });
 
 it('leaves a shifted sibling clean when a different node moves', () => {

@@ -8,6 +8,7 @@ import { afterEach, expect, it } from 'vitest';
 
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
+import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
@@ -47,7 +48,7 @@ it('retires companion old ordering without overriding current ordering and does 
     expect(db.prepare('SELECT * FROM parent_child_order').all()).toEqual(before);
     expect(db.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(nodes);
   }
-  expect(db.pragma('user_version', { simple: true })).toBe(62);
+  expect(db.pragma('user_version', { simple: true })).toBe(COMPANION_DATABASE_VERSION);
 });
 
 it('restores companion historical storage and schema version when the migration cannot commit', async () => {

@@ -10,21 +10,20 @@ import { buildPack, closeLibraries, createPeer, edit, history, joinPeers, startL
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
-function expectDeletion(peer: Peer, previous: string, retained: boolean) {
+function expectDeletion(peer: Peer, previous: string, retainsBody: boolean) {
   const tombstone = permanentlyDelete(peer);
   const versions = history(peer);
   expect(tombstone.version_id).not.toBe(previous);
-  expect(tombstone.parent_version_id).toBe(retained ? previous : null);
+  expect(tombstone.parent_version_id).toBe(previous);
   expect(JSON.parse(tombstone.snapshot_json)).toMatchObject({ id: 'topic', deleted_at: '2026-10-01T00:00:00.000Z' });
   expect(versions.find(row => row.version_id === tombstone.version_id)?.body_text).toBe('body');
-  expect(versions.some(row => row.version_id === previous)).toBe(retained);
-  if (retained) expect(versions.find(row => row.version_id === previous)?.body_text).toBe('body');
+  expect(versions.find(row => row.version_id === previous)?.body_text).toBe(retainsBody ? 'body' : null);
   expect(peer.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").get()).toBeUndefined();
   expect(peer.db.prepare("SELECT current_version_id, deleted_at FROM sync_object_state WHERE object_type = 'node' AND object_id = 'topic'").get())
     .toEqual({ current_version_id: tombstone.version_id, deleted_at: '2026-10-01T00:00:00.000Z' });
 }
 
-it('retires an unheld pre-delete version outside a group and keeps the complete deletion fact', () => {
+it('keeps an unheld pre-delete version outside a group and the complete deletion fact', () => {
   const peer = createPeer('local');
   expectDeletion(peer, edit(peer, 'body'), false);
 });
@@ -34,7 +33,7 @@ it('does not treat group membership alone as a concrete send', () => {
   joinPeers(peer, createPeer('remote'));
   peer.db.exec("UPDATE sync_group_devices SET joined_at = '2025-01-01T00:00:00.000Z'");
   const version = edit(peer, 'body');
-  expectDeletion(peer, version, false);
+  expectDeletion(peer, version, true);
 });
 
 it('keeps an actual frozen outbound parent complete through permanent node deletion', async () => {

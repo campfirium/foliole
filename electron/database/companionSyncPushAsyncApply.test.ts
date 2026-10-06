@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -50,11 +51,11 @@ afterEach(async () => {
 });
 
 function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPayload {
-  return {
+  const push: SyncPushPayload = {
     authorHostName: 'android-device',
     base: { baseContentHash: 'desktop-base', kind: 'content_hash' },
     clientOpId: 'setting:device:android:phone:android-device:app_settings:13',
-    contentHash: 'android-next',
+    contentHash: '',
     deletedAt: null,
     identity: {
       objectId: 'device:android:phone:android-device:app_settings', objectType: 'setting', scope: 'device'
@@ -70,6 +71,10 @@ function createSettingPush(overrides: Partial<SyncPushPayload> = {}): SyncPushPa
     updatedAt: '2026-04-30T01:00:00.000Z',
     ...overrides
   };
+  if (overrides.contentHash === undefined) {
+    push.contentHash = computeSyncContentHash('setting', JSON.parse(push.payloadJson!));
+  }
+  return push;
 }
 
 function createReviewLogPush(opId = 'op-1'): SyncPushPayload {
@@ -100,7 +105,6 @@ async function verifyDesktopWorkspaceSettingPush() {
   const result = await applyCompanionSyncPushAsync([createSettingPush({
     base: { baseContentHash: null, kind: 'content_hash' },
     clientOpId: 'setting:user_space:windows:desktop:*:app_settings:14',
-    contentHash: 'desktop-next',
     identity: { objectId: 'user_space:windows:desktop:*:app_settings', objectType: 'setting', scope: 'user_space' },
     payloadJson: JSON.stringify({
       host_name: '*', form_factor: 'desktop', key: 'app_settings', platform: 'windows',

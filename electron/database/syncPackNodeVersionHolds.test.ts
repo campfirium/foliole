@@ -89,7 +89,7 @@ it('keeps unconfirmed pack payloads across a database restart and releases them 
     // Confirmation already collects the chain; repeating collection is idempotent.
     expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
     expect(sqlite.prepare(`SELECT version_id FROM node_sync_versions ORDER BY version_id`).all())
-      .toEqual([{ version_id: 'C' }, { version_id: 'D' }]);
+      .toEqual(['A', 'B', 'C', 'D'].map((version_id) => ({ version_id })));
   } finally {
     sqlite.close();
     fs.rmSync(root, { recursive: true, force: true });

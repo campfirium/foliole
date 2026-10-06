@@ -38,7 +38,7 @@ it('keeps a cached original when image localization replaces the node body', () 
   expect(peer.db.prepare('SELECT data FROM content_blob_data WHERE hash=?').get(hashTextBody(original))).toEqual({ data: Buffer.from(original) });
 });
 
-it('keeps an editor base through two-peer sync and reclaims its body only when the last hold exits', async () => {
+it('keeps an editor base as durable history after the last hold exits', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -52,21 +52,21 @@ it('keeps an editor base through two-peer sync and reclaims its body only when t
   for (const peer of [source, target]) {
     expect(peer.db.prepare('SELECT data FROM content_blob_data WHERE hash=?').get(hashTextBody('Previous body'))).toBeDefined();
     await releaseLocalEditBase(peer.port, 'editor', 'topic');
-    expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(old)).toBeUndefined();
-    expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Previous body'))).toBeUndefined();
+    expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(old)).toBeDefined();
+    expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Previous body'))).toBeDefined();
     assertPersisted(peer, 'Current body');
   }
 });
 
-it('reclaims released bodies through the synchronous host chain collector too', () => {
+it('keeps released bodies through the synchronous host chain collector too', () => {
   const peer = createPeer('source');
   const old = edit(peer, 'Old local body');
   peer.db.prepare('INSERT INTO node_version_local_holds VALUES (?,?,?,?)').run('editor','topic',old,NOW);
   edit(peer, 'Current local body');
   peer.db.prepare('DELETE FROM node_version_local_holds WHERE hold_id=?').run('editor');
   collectNodeVersionChainWithDriver(peer.driver, 'topic');
-  expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(old)).toBeUndefined();
-  expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Old local body'))).toBeUndefined();
+  expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(old)).toBeDefined();
+  expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Old local body'))).toBeDefined();
   assertPersisted(peer, 'Current local body');
 });
 
@@ -90,7 +90,7 @@ it('rolls back a body replacement when holder facts cannot be checked safely', (
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Replacement fact'))).toBeUndefined();
 });
 
-it('reclaims the replaced body after the sync page releases its temporary fact claims', async () => {
+it('keeps the replaced body after the sync page releases its temporary fact claims', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -111,6 +111,6 @@ it('reclaims the replaced body after the sync page releases its temporary fact c
   assertPersisted(source, 'Current synced body');
   assertPersisted(target, 'Current synced body');
   expect(target.db.prepare('SELECT * FROM sync_pack_known_fact_claims').all()).toEqual([]);
-  expect(target.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(oldVersion)).toBeUndefined();
-  expect(target.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Previous synced body'))).toBeUndefined();
+  expect(target.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(oldVersion)).toBeDefined();
+  expect(target.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Previous synced body'))).toBeDefined();
 });

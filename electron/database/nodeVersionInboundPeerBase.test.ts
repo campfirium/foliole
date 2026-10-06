@@ -72,7 +72,7 @@ it('persists authenticated inbound progress without manufacturing a pack receipt
   expect(base()).toEqual({ version_id: 'C', library_epoch: 'epoch', proof_revision: 1, pack_id: 'pack-1' });
   await collectNodeVersionPayloads(port, 'node');
   expect(sqlite.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').all())
-    .toEqual([{ version_id: 'C' }, { version_id: 'E' }]);
+    .toEqual(['A', 'B', 'C', 'D', 'E'].map((version_id) => ({ version_id })));
   expect(sqlite.prepare('SELECT * FROM node_version_pack_receipts').all()).toEqual([]);
 });
 
@@ -94,7 +94,7 @@ it.each([false, true])('releases a delayed older pack without regressing the pee
   expect(base()).toMatchObject({ version_id: 'C', library_epoch: 'epoch' });
   expect(sqlite.prepare('SELECT * FROM node_version_outbound_holds').all()).toEqual([]);
   expect(sqlite.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').all())
-    .toEqual([{ version_id: 'C' }, { version_id: 'E' }]);
+    .toEqual(['A', 'B', 'C', 'D', 'E'].map((version_id) => ({ version_id })));
 });
 
 it.each(['unknown', 'left', 'blocked', 'self', 'missing-base'])('does not advance an unqualified peer (%s)', async (condition) => {

@@ -15,7 +15,7 @@ import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 const TABLES = ['node_version_confirmation_state', 'node_version_local_origins', 'node_version_device_bases', 'node_version_device_revisions',
   'node_version_outbound_holds', 'node_version_outbound_payload_holds', 'node_version_local_holds',
   'node_version_pack_receipts', 'node_version_local_proof_state', 'node_version_inbound_receipts',
-  'node_version_local_source_revisions'];
+  'node_version_local_source_revisions', 'node_version_member_positions'];
 
 function dropRetentionTables(sqlite: Database.Database) {
   for (const name of TABLES) sqlite.exec(`DROP TABLE ${name}`);

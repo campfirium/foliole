@@ -2,7 +2,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { ROOT_CHILD_ORDER_ID } from '../../lib/core/database/parentChildOrder.js';
 
 import { migrateNumberedFixtureTo } from './numberedMigrationTestSupport.js';
@@ -48,7 +48,7 @@ it('retires obsolete tables without replaying old ordering or overwriting curren
   expect(legacyTables(db)).toEqual([]);
   expect(db.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(nodes);
   expect(db.prepare('SELECT * FROM parent_child_order').all()).toEqual(orders);
-  expect(db.pragma('user_version', { simple: true })).toBe(128);
+  expect(db.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
 it('shortens historical duplicate previews while preserving full recovery bodies and search contents', () => {

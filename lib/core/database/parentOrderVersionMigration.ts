@@ -16,7 +16,9 @@ export function migrateParentOrderVersions(sqlite: DatabaseMigrationTarget) {
     (version_id, parent_id, kind, child_ids_json, parent_version_ids_json, created_at)
     VALUES (?, ?, 'baseline', ?, '[]', ?)`);
   const head = sqlite.prepare(`INSERT INTO parent_order_heads (parent_id, version_id) VALUES (?, ?)`);
+  const existingHead = sqlite.prepare('SELECT 1 FROM parent_order_heads WHERE parent_id = ?');
   for (const row of rows) {
+    if (existingHead.get(row.parent_id)) continue;
     const order = JSON.parse(row.child_ids_json) as string[];
     const id = parentOrderBaselineVersionId(row.parent_id, order);
     insert.run(id, row.parent_id, JSON.stringify(order), PARENT_ORDER_BASELINE_TIME);
@@ -34,6 +36,9 @@ export async function migrateCompanionParentOrderVersions(port: DbPort) {
   const rows = await port.query<OrderRow>(`SELECT parent_id, child_ids_json
     FROM parent_child_order ORDER BY parent_id`);
   for (const row of rows) {
+    const [existingHead] = await port.query(`SELECT 1 FROM parent_order_heads
+      WHERE parent_id = ?`, [row.parent_id]);
+    if (existingHead) continue;
     const order = JSON.parse(row.child_ids_json) as string[];
     const id = parentOrderBaselineVersionId(row.parent_id, order);
     await port.run(`INSERT INTO parent_order_versions

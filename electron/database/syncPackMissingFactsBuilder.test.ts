@@ -95,8 +95,10 @@ it('packs only the new version when the receiver has the earlier 23 still-held b
     { version_id: 'v24', parent_version_id: 'v23', ordinal: 0 }
   ]);
   for (const versionId of versions) await releaseLocalEditBase(port, `draft-${versionId}`, 'node-1');
-  expect(driver.queryAll('SELECT version_id, parent_version_id, body_text FROM node_sync_versions WHERE object_id = ?',
-    ['node-1'])).toEqual([{ version_id: 'v24', parent_version_id: null, body_text: 'b'.repeat(200_000) }]);
+  const retained = driver.queryAll<{ parent_version_id: string | null; version_id: string }>(
+    'SELECT version_id, parent_version_id FROM node_sync_versions WHERE object_id = ?', ['node-1']);
+  expect(retained).toHaveLength(24);
+  expect(retained).toContainEqual({ version_id: 'v24', parent_version_id: 'v23' });
 });
 
 it('omits an already held review operation from the transfer', async () => {
