@@ -40,7 +40,9 @@ it('shows a choice after a confirmation without overlapping or losing an input r
   fireEvent.click(screen.getByRole('button', { name: 'Done' }));
   await expect(confirmation).resolves.toBe(true);
   expect(await screen.findByRole('dialog')).toHaveTextContent('Choose device');
-  fireEvent.click(screen.getByRole('button', { name: 'Mac' }));
+  const deviceChoice = screen.getByTestId('app-choice');
+  expect(deviceChoice).toHaveAttribute('data-choice-value', 'mac');
+  fireEvent.click(deviceChoice);
   await expect(choice).resolves.toBe('mac');
   expect(await screen.findByRole('dialog')).toHaveTextContent('Rename');
   fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), { target: { value: 'Updated' } });

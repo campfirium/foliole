@@ -173,7 +173,7 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('long stageDeadline()');
   expect(source).not.toContain('long requestDeadline');
   expect(source).not.toContain('"companion-sync-now", deadline');
-  expect(source.match(/stageDeadline\(\)/gu)).toHaveLength(9);
+  expect(source.match(/stageDeadline\(\)/gu)).toHaveLength(10);
   expect(source).toContain('stage=settings-open');
   expect(source).toContain('"companion-sync-discover"');
   expect(source).toContain('expectedGroupId');
@@ -187,6 +187,8 @@ it('short-circuits the physical A5 journey with named product stages', () => {
   expect(source).toContain('clickUniqueVisibleMatchingAttribute');
   expect(source).toContain('stage=discovery-requested');
   expect(source).toContain('stage=device-visible');
+  expect(source).toContain('"app-choice", "data-choice-value"');
+  expect(source).toContain('stage=merge-selected');
   expect(source).toContain('stage=device-requested');
   expect(source).toContain('stage=awaiting-approval');
   expect(source).toContain(
