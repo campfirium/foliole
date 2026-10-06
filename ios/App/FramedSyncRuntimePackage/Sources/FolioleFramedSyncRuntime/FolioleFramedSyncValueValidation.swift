@@ -143,7 +143,10 @@ enum FolioleFramedSyncValueValidator {
             throw FolioleFramedSyncValidationError("canonical_value_case_invalid")
         }
         switch selected {
-        case .stringValue(let value): try protocolString(value)
+        case .stringValue(let value):
+            guard value.lengthOfBytes(using: .utf8) <= FolioleFramedSyncLimits.maxCanonicalStringBytes else {
+                throw FolioleFramedSyncValidationError("canonical_string_limit_exceeded")
+            }
         case .bytesValue(let value):
             guard value.count <= FolioleFramedSyncLimits.maxFrameMessageBytes else {
                 throw FolioleFramedSyncValidationError("protocol_bytes_limit_exceeded")

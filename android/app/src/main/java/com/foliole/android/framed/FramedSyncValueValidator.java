@@ -34,6 +34,12 @@ final class FramedSyncValueValidator {
     }
 
     static void protocolString(String value) throws FramedSyncValidationException {
+        boundedString(value, FramedSyncContract.MAX_PROTOCOL_STRING_BYTES,
+            "protocol_string_limit_exceeded");
+    }
+
+    private static void boundedString(String value, int limit, String error)
+        throws FramedSyncValidationException {
         for (int index = 0; index < value.length(); index++) {
             char unit = value.charAt(index);
             if (Character.isHighSurrogate(unit)) {
@@ -44,8 +50,8 @@ final class FramedSyncValueValidator {
                 throw invalid("protocol_unicode_invalid");
             }
         }
-        if (value.getBytes(StandardCharsets.UTF_8).length > FramedSyncContract.MAX_PROTOCOL_STRING_BYTES) {
-            throw invalid("protocol_string_limit_exceeded");
+        if (value.getBytes(StandardCharsets.UTF_8).length > limit) {
+            throw invalid(error);
         }
     }
 
@@ -154,7 +160,8 @@ final class FramedSyncValueValidator {
         requireDepth(depth);
         switch (value.getValueCase()) {
             case STRING_VALUE:
-                protocolString(value.getStringValue());
+                boundedString(value.getStringValue(), FramedSyncContract.MAX_CANONICAL_STRING_BYTES,
+                    "canonical_string_limit_exceeded");
                 break;
             case BYTES_VALUE:
                 if (value.getBytesValue().size() > FramedSyncContract.MAX_FRAME_MESSAGE_BYTES) {

@@ -81,6 +81,20 @@ describe('framed sync production protobuf codec', () => {
   });
 });
 
+it('preserves canonical payload text larger than the protocol identity budget', () => {
+    const payload = JSON.stringify({ importedState: 'x'.repeat(170_000) });
+    const encoded = encodeValidatedProtocolMessage('fact', fact({
+      body: { fields: [{ name: 'payload_json', value: { stringValue: payload } }] }
+    }));
+    expect(decodeAndValidateProtocolMessage(encoded, FRAMED_SYNC_FRAME_TYPES.fact).payload)
+      .toMatchObject({ body: { fields: [{ name: 'payload_json', value: { stringValue: payload } }] } });
+    expect(() => encodeValidatedProtocolMessage('fact', fact({
+      body: { fields: [{ name: 'payload_json', value: {
+        stringValue: 'x'.repeat(FRAMED_SYNC_LIMITS.maxCanonicalStringBytes + 1)
+      } }] }
+    }))).toThrow('canonical_string_limit_exceeded');
+  });
+
 describe('framed sync production protobuf codec boundaries', () => {
   it('accepts exact boundaries and rejects depth, duplicates, Unicode, and ranges beyond them', () => {
     expect(() => encodeValidatedProtocolMessage('handshake', {

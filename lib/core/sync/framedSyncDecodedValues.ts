@@ -44,6 +44,10 @@ export function hex(value: Uint8Array) {
 }
 
 export function protocolString(value: unknown) {
+  return boundedString(value, FRAMED_SYNC_LIMITS.maxProtocolStringBytes, 'protocol_string_limit_exceeded');
+}
+
+function boundedString(value: unknown, limit: number, error: string) {
   if (typeof value !== 'string') throw new Error('protocol_string_required');
   for (let index = 0; index < value.length; index += 1) {
     const unit = value.charCodeAt(index);
@@ -54,8 +58,8 @@ export function protocolString(value: unknown) {
       index += 1;
     } else if (unit >= 0xdc00 && unit <= 0xdfff) throw new Error('protocol_unicode_invalid');
   }
-  if (encoder.encode(value).byteLength > FRAMED_SYNC_LIMITS.maxProtocolStringBytes) {
-    throw new Error('protocol_string_limit_exceeded');
+  if (encoder.encode(value).byteLength > limit) {
+    throw new Error(error);
   }
   return value;
 }
@@ -97,7 +101,11 @@ export function walk(value: unknown, depth: number, budget: Budget): void {
   const entries = Object.entries(value as Row);
   budget.fields += entries.length;
   if (budget.fields > FRAMED_SYNC_LIMITS.maxDecodedFields) throw new Error('protocol_field_limit_exceeded');
-  for (const [, item] of entries) walk(item, depth + 1, budget);
+  for (const [key, item] of entries) {
+    if (key === 'stringValue') {
+      boundedString(item, FRAMED_SYNC_LIMITS.maxCanonicalStringBytes, 'canonical_string_limit_exceeded');
+    } else walk(item, depth + 1, budget);
+  }
 }
 
 export function unique(values: readonly string[], name: string) {

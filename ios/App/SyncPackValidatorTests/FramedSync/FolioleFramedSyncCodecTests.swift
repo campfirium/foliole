@@ -3,6 +3,33 @@ import XCTest
 @testable import FolioleFramedSyncRuntime
 
 final class FolioleFramedSyncCodecTests: XCTestCase {
+    func testCanonicalPayloadUsesItsOwnStringBudget() throws {
+        let golden = try XCTUnwrap(try FramedSyncFixture.load().corpus.messages.first {
+            $0.payloadCase == "fact"
+        })
+        var message = try Foliole_Sync_V22_ProtocolMessage(
+            serializedBytes: XCTUnwrap(Data(base64Encoded: golden.base64)))
+        var field = Foliole_Sync_V22_CanonicalField()
+        field.name = "payload_json"
+        for size in [65_537, 170_000, 1_048_577] {
+            field.value.stringValue = String(repeating: "x", count: size)
+            message.fact.body.fields = [field]
+            if size > FolioleFramedSyncLimits.maxCanonicalStringBytes {
+                XCTAssertThrowsError(try FolioleFramedSyncCodec.validateOutbound(message,
+                    authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue)) { error in
+                    XCTAssertEqual((error as? FolioleFramedSyncValidationError)?.code,
+                                   "canonical_string_limit_exceeded")
+                }
+            } else {
+                let valid = try FolioleFramedSyncCodec.validateOutbound(message,
+                    authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue)
+                let encoded = try FolioleFramedSyncCodec.encode(valid)
+                XCTAssertEqual(try FolioleFramedSyncCodec.encode(FolioleFramedSyncCodec.decode(encoded,
+                    authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue)), encoded)
+            }
+        }
+    }
+
     func testGoldenCorpusDecodesToValidatedCasesAndReencodesExactly() throws {
         let corpus = try FramedSyncFixture.load().corpus
         XCTAssertEqual(corpus.messages.count, 17)

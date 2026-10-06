@@ -16,6 +16,27 @@ public class FramedSyncCodecTest {
     private static final Map<FramedSyncPayload.Case, String> CORPUS_NAMES = corpusNames();
 
     @Test
+    public void canonicalPayloadUsesItsOwnStringBudget() throws Exception {
+        ProtocolMessage message = ProtocolMessage.parseFrom(golden("fact").bytes);
+        for (int size : new int[] {65_537, 170_000, 1_048_577}) {
+            CanonicalField field = CanonicalField.newBuilder().setName("payload_json")
+                .setValue(CanonicalValue.newBuilder().setStringValue("x".repeat(size))).build();
+            ProtocolMessage payload = message.toBuilder().setFact(message.getFact().toBuilder()
+                .setBody(CanonicalObject.newBuilder().addFields(field))).build();
+            try {
+                FramedSyncValidatedMessage valid = FramedSyncCodec.validateOutbound(
+                    payload, FramedSyncFrameType.FACT.wireValue());
+                if (size > FramedSyncContract.MAX_CANONICAL_STRING_BYTES) fail("accepted oversized canonical text");
+                assertEquals(payload, FramedSyncCodec.decode(FramedSyncCodec.encode(valid),
+                    FramedSyncFrameType.FACT.wireValue()).wireMessage());
+            } catch (FramedSyncValidationException error) {
+                if (size <= FramedSyncContract.MAX_CANONICAL_STRING_BYTES) throw error;
+                assertEquals("canonical_string_limit_exceeded", error.code());
+            }
+        }
+    }
+
+    @Test
     public void runtimeCodecValidatesAndReencodesAllGoldenMessages() throws Exception {
         assertEquals(17, FramedSyncContractSource.messages().size());
         for (FramedSyncContractSource.MessageVector vector : FramedSyncContractSource.messages()) {
