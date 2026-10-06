@@ -6,6 +6,7 @@ import type {
   NativeDirectoryImportResult,
   NativeDirectoryImportSourceAdapter
 } from '../../lib/platform/nativeContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { recordPreparedImportFailure, runPreparedImport } from '../database/importPipeline.js';
 import { runEpubImport } from '../ipc/epubImport.js';
 import {
@@ -70,7 +71,8 @@ async function tryCreateIncomingUpdateEntry(
   }
   const relativePath = resolveImportRelativePath(options.importRootPath, source.filePath);
   const target = relativePath
-    ? resolveIncomingUpdateTarget({ relativePath, sourceLocator: source.filePath })
+    ? await runWithDatabaseConnectionOwner(() =>
+      resolveIncomingUpdateTarget({ relativePath, sourceLocator: source.filePath }))
     : null;
   if (!target) {
     return null;
@@ -81,12 +83,12 @@ async function tryCreateIncomingUpdateEntry(
     sourceTrackingMode: 'untracked',
     titleStrategy: options.titleStrategy
   });
-  const importId = upsertPendingIncomingUpdate({
+  const importId = await runWithDatabaseConnectionOwner(() => upsertPendingIncomingUpdate({
     importedAt,
     sourcePath: target.sourcePath,
     topicId: target.topicId,
     updatedContent: prepared.content
-  });
+  }));
   return {
     adapter: source.adapterId,
     content_fingerprint: prepared.contentFingerprint,
@@ -135,7 +137,9 @@ async function runSingleDirectoryImport(
   if (incomingUpdateEntry) {
     return incomingUpdateEntry;
   }
-  const targetParentNodeId = options.resolveTargetParentNodeId?.(source, importedAt);
+  const targetParentNodeId = options.resolveTargetParentNodeId
+    ? await runWithDatabaseConnectionOwner(() => options.resolveTargetParentNodeId?.(source, importedAt))
+    : undefined;
   try {
     if (source.kind === 'epub') {
       return toNativeDirectoryImportEntry(source.adapterId, await runEpubImport(source, importedAt));
@@ -152,13 +156,13 @@ async function runSingleDirectoryImport(
     const preparedRecord = await prepareDirectoryImportRecord(source, options, importedAt, targetParentNodeId);
     return toNativeDirectoryImportEntry(
       source.adapterId,
-      runPreparedImport(preparedRecord)
+      await runWithDatabaseConnectionOwner(() => runPreparedImport(preparedRecord))
     );
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown import failure';
     return toNativeDirectoryImportEntry(
       source.adapterId,
-      recordPreparedImportFailure(
+      await runWithDatabaseConnectionOwner(() => recordPreparedImportFailure(
         buildPreparedImportRecord(source, {
           content: '',
           highlightPolicy: options.highlightPolicy,
@@ -168,7 +172,7 @@ async function runSingleDirectoryImport(
           titleStrategy: options.titleStrategy
         }),
         failureReason
-      )
+      ))
     );
   }
 }

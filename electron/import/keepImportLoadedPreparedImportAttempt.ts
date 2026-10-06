@@ -1,4 +1,5 @@
 import type { PreparedImportRecord } from '../../lib/core/import/contract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import { recordReadwiseImportSourceMapping } from '../database/readwiseSourceMapping.js';
@@ -64,7 +65,8 @@ async function runPreparedImportWithResponsiveBoundary(prepared: PreparedImportR
     prepared.sourceProfile === 'body_with_highlight_sidecar' &&
     countPreparedImportHighlights(prepared) >= 300
   ) {
-    return runPreparedImportInWorkerWithSignal({ prepared, ...(signal ? { signal } : {}) });
+    return runWithDatabaseConnectionOwner(() =>
+      runPreparedImportInWorkerWithSignal({ prepared, ...(signal ? { signal } : {}) }));
   }
   const record = runPreparedImport(prepared);
   throwIfKeepImportAborted(signal);

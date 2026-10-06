@@ -1,5 +1,3 @@
-import type http from 'node:http';
-
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type { WorkspaceSearchResult } from '../../lib/core/database/workspaceSearch.js';
@@ -17,7 +15,12 @@ import {
   type AgentMaterialSearchResult
 } from './agentControlMaterialsProjection.js';
 
-export const AGENT_CONTROL_JSON_BODY_LIMIT_BYTES = 16_384;
+export {
+  AGENT_CONTROL_JSON_BODY_LIMIT_BYTES,
+  readAgentControlJsonBody,
+  type AgentControlJsonBodyResult
+} from './agentControlRequestBody.js';
+
 export const AGENT_CONTROL_MATERIAL_CONTENT_LIMIT = 4_000;
 export const AGENT_CONTROL_MATERIAL_CHILDREN_LIMIT = 30;
 export const AGENT_CONTROL_MATERIAL_CHILD_PREVIEW_LIMIT = 220;
@@ -37,10 +40,6 @@ interface MaterialRow extends DatabaseRow, NodeBodyRow {
   title: string;
   updated_at: string;
 }
-
-export type AgentControlJsonBodyResult =
-  | { ok: true; value: unknown }
-  | { error: string; errorCategory: string; ok: false; statusCode: number };
 
 export interface AgentMaterialReadPayload {
   anchor_kind?: 'cloze' | 'highlight';
@@ -94,25 +93,6 @@ export interface AgentMaterialChildrenPayload {
   limit: number;
   parent: AgentMaterialListParentSummary | null;
   parent_id: string | null;
-}
-
-export async function readAgentControlJsonBody(request: http.IncomingMessage): Promise<AgentControlJsonBodyResult> {
-  const chunks: Buffer[] = [];
-  let size = 0;
-  for await (const chunk of request) {
-    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
-    size += buffer.length;
-    if (size > AGENT_CONTROL_JSON_BODY_LIMIT_BYTES) {
-      return { error: 'request_body_too_large', errorCategory: 'request_body_too_large', ok: false, statusCode: 413 };
-    }
-    chunks.push(buffer);
-  }
-  try {
-    const text = Buffer.concat(chunks).toString('utf8').trim();
-    return { ok: true, value: text ? JSON.parse(text) : {} };
-  } catch {
-    return { error: 'invalid_json', errorCategory: 'invalid_json', ok: false, statusCode: 400 };
-  }
 }
 
 export function normalizeBodyObject(value: unknown): Record<string, unknown> | null {

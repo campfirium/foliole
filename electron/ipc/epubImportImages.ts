@@ -4,7 +4,7 @@ import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
 import { importEpubImageFile } from '../attachments/importEpubImageFile.js';
 import { importImageAttachmentBytes } from '../attachments/importImageAttachmentBytes.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { appendReason } from './epubImportResult.js';
 import { epubImageFilePath } from './epubStagedContent.js';
@@ -66,10 +66,12 @@ export async function importEmbeddedImagesForNode<T extends PreparedImportNodeCo
   const { rewrittenContent, degradedMessages } = await rewriteEmbeddedImages(nodeId, node);
   if (rewrittenContent === node.content && degradedMessages.length === 0) return node;
 
-  const connection = openDatabaseConnection();
-  connection.driver.transaction(() => {
-    writeNodeBody({ driver: connection.driver, content: rewrittenContent, nodeId: nodeId,
-      title: node.title, updatedAt: importedAt });
+  await runWithDatabaseConnectionOwner(() => {
+    const connection = openDatabaseConnection();
+    connection.driver.transaction(() => {
+      writeNodeBody({ driver: connection.driver, content: rewrittenContent, nodeId: nodeId,
+        title: node.title, updatedAt: importedAt });
+    });
   });
 
   return {

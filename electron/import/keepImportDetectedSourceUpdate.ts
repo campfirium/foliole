@@ -1,4 +1,5 @@
 import type { KeepImportItemStatus } from '../../lib/core/database/keepImportItems.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import type { KeepImportItemRow } from '../database/keepImportItems.js';
 import { readKeepImportItem, upsertKeepImportItem } from '../database/keepImportItems.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -44,10 +45,12 @@ function persistSourceUpdateState(
 
 export async function persistDetectedSourceUpdate(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
   const importedAt = new Date().toISOString();
-  const existingItem = readKeepImportItem(config.ruleId, source.sourceName);
+  const existingItem = await runWithDatabaseConnectionOwner(() =>
+    readKeepImportItem(config.ruleId, source.sourceName));
   if (existingItem) {
     const sourceSignature = await resolveKeepImportSourceSignature(config, source);
-    persistSourceUpdateState(config, existingItem, source.sourceName, importedAt, sourceSignature);
+    await runWithDatabaseConnectionOwner(() =>
+      persistSourceUpdateState(config, existingItem, source.sourceName, importedAt, sourceSignature));
   }
   return {
     detail: SOURCE_UPDATE_DETAIL,

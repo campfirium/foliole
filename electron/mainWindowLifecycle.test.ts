@@ -104,7 +104,9 @@ it('routes Sync Group join requests through the main window opener', async () =>
 it('refreshes the persisted local Host name even while Sync is paused', async () => {
   const { startCompanionSyncIfEnabled } = await import('./mainWindowLifecycle.js');
 
-  await startCompanionSyncIfEnabled({ appVersion: '0.7.5', isEnabled: () => false, deviceId: 'desktop-a' });
+  await startCompanionSyncIfEnabled({
+    appVersion: '0.7.5', isEnabled: () => false, loadDeviceId: () => 'desktop-a'
+  });
 
   expect(mocks.updateLocalSyncGroupHostName).toHaveBeenCalledWith('Maci');
 });
@@ -112,7 +114,9 @@ it('refreshes the persisted local Host name even while Sync is paused', async ()
 it('reconciles enabled Sync through the workgroup security boundary', async () => {
   const { startCompanionSyncIfEnabled } = await import('./mainWindowLifecycle.js');
 
-  await startCompanionSyncIfEnabled({ appVersion: '0.7.5', isEnabled: () => true, deviceId: 'desktop-a' });
+  await startCompanionSyncIfEnabled({
+    appVersion: '0.7.5', isEnabled: () => true, loadDeviceId: () => 'desktop-a'
+  });
 
   expect(mocks.reconcileDesktopCompanionSyncRuntime).toHaveBeenCalledWith({
     appVersion: '0.7.5', deviceId: 'desktop-a'

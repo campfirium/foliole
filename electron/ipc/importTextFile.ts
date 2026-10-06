@@ -80,11 +80,11 @@ export async function runImportForFilePath(filePath: string, args?: NativeTextIm
   try {
     if (source.kind === 'epub') {
       return toNativeTextImportResult(
-        await runWithDatabaseConnectionOwner(() => runEpubImport(source, importedAt, {
+        await runEpubImport(source, importedAt, {
           ...(args?.sequential_reading_mode === 'free' || args?.sequential_reading_mode === 'sequential'
             ? { sequentialReadingMode: args.sequential_reading_mode }
             : {})
-        }))
+        })
       );
     }
     const prepared = await loadPreparedImportRecord(source, {
@@ -115,25 +115,23 @@ export async function runImportForFilePath(filePath: string, args?: NativeTextIm
 }
 
 export function runImportForMirrorDocument(documentId: string, args?: NativeTextImportArgs) {
-  const source = loadExternalSearchMirrorImportSource(documentId);
-  if (!source) throw new Error('External document mirror is unavailable.');
-  const importedAt = new Date().toISOString();
-  const prepared = buildPreparedImportRecord(
-    { filePath: `mirror-document:${documentId}`, kind: 'text', sourceName: source.fileName },
-    {
-      content: source.content,
-      highlightPolicy: resolveImportHighlightPolicy(args),
-      importedAt,
-      sourceIdentity: `mirror-document:${documentId}`,
-      sourceLocator: `mirror-document:${documentId}`,
-      sourceTrackingMode: 'untracked',
-      ...importTargetParentNodeProps(args),
-      titleStrategy: resolveImportNodeTitleStrategy(args)
-    }
-  );
-  const result = withTextImportNodeMutationPatch(toNativeTextImportResult(runPreparedImport(prepared)));
-  if (result.import_id) notifyManagedInboxUpdated(result.import_id, result.node_mutation_patch);
-  return result;
+  return runWithDatabaseConnectionOwner(() => {
+    const source = loadExternalSearchMirrorImportSource(documentId);
+    if (!source) throw new Error('External document mirror is unavailable.');
+    const importedAt = new Date().toISOString();
+    const prepared = buildPreparedImportRecord(
+      { filePath: `mirror-document:${documentId}`, kind: 'text', sourceName: source.fileName },
+      {
+        content: source.content, highlightPolicy: resolveImportHighlightPolicy(args), importedAt,
+        sourceIdentity: `mirror-document:${documentId}`, sourceLocator: `mirror-document:${documentId}`,
+        sourceTrackingMode: 'untracked', ...importTargetParentNodeProps(args),
+        titleStrategy: resolveImportNodeTitleStrategy(args)
+      }
+    );
+    const result = withTextImportNodeMutationPatch(toNativeTextImportResult(runPreparedImport(prepared)));
+    if (result.import_id) notifyManagedInboxUpdated(result.import_id, result.node_mutation_patch);
+    return result;
+  });
 }
 
 export async function selectImportTextFile(window?: BrowserWindow | null): Promise<NativeImportedTextFile | null> {

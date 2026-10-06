@@ -1,3 +1,4 @@
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { submitDesktopOperation } from '../desktopOperations.js';
 
 import * as articleMirror from './exportArticleMirror.js';
@@ -32,9 +33,11 @@ async function drainQueue() {
         const nodeIds = pendingNodeIds;
         pendingNodeIds = new Set();
         const articleIds = new Set<string>();
-        for (const nodeId of nodeIds) {
-          for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) articleIds.add(articleId);
-        }
+        await runWithDatabaseConnectionOwner(() => {
+          for (const nodeId of nodeIds) {
+            for (const articleId of articleMirror.resolveArticleIdsFromNodeId(nodeId)) articleIds.add(articleId);
+          }
+        });
         if (articleIds.size > 0) await syncIncrementalMirrorOutput([...articleIds], context);
         await context.yieldIfNeeded();
       }

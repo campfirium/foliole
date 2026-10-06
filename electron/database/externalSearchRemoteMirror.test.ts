@@ -68,8 +68,8 @@ it('reads a remote document by id without using its source path', () => {
   expect(loadExternalSearchMirrorPreview('remote-doc')).toMatchObject({ content: '# Topic\nBody', document_id: 'remote-doc' });
 });
 
-it('imports remote mirror content without authorizing or reading the remote path', () => {
-  const result = runImportForMirrorDocument('remote-doc');
+it('imports remote mirror content without authorizing or reading the remote path', async () => {
+  const result = await runImportForMirrorDocument('remote-doc');
   expect(result).toMatchObject({ node_id: expect.any(String), source_locator: 'mirror-document:remote-doc' });
   expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
     `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`, [result.node_id]

@@ -1,6 +1,7 @@
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type { NativeExternalSearchFolder } from '../../lib/platform/nativeStorageContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { rewriteExternalPreviewContent } from '../database/externalSearchPreviewContent.js';
 import { readKeepImportItemCache, upsertKeepImportItemCache } from '../database/keepImportItemCache.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -45,7 +46,8 @@ export async function refreshKeepImportItemCache(
   refreshedAt: string,
   options: { force?: boolean; requireTracking?: boolean } = {}
 ) {
-  const existing = readKeepImportItemCache(config.ruleId, source.sourceName);
+  const existing = await runWithDatabaseConnectionOwner(() =>
+    readKeepImportItemCache(config.ruleId, source.sourceName));
   if (!options.force && existing && canReuseExistingCache(existing, source)) {
     return;
   }
@@ -56,7 +58,7 @@ export async function refreshKeepImportItemCache(
     source.filePath,
     createPreviewFolder(config.directoryPath)
   );
-  upsertKeepImportItemCache({
+  await runWithDatabaseConnectionOwner(() => upsertKeepImportItemCache({
     content: previewContent,
     contentPreview: resolveNodeOpeningText(prepared.content, title),
     refreshedAt,
@@ -65,5 +67,5 @@ export async function refreshKeepImportItemCache(
     sourcePath: source.sourceName,
     sourceSizeBytes: source.sizeBytes,
     title
-  }, { requireTracking: options.requireTracking === true });
+  }, { requireTracking: options.requireTracking === true }));
 }

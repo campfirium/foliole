@@ -22,8 +22,8 @@ vi.mock('../database/watchedFolderBindings.js', () => ({
 }));
 vi.mock('../managedPathSafety.js', () => ({ loadManagedPathCandidates: () => [] }));
 vi.mock('./keepImportService.js', () => ({
-  runKeepImportRule: () => {
-    if (state.busy) throw new Error('sqlite connection is owned by another asynchronous transaction');
+  runKeepImportRule: async () => {
+    if (state.busy) await new Promise<void>((resolve) => { state.release = resolve; });
     return state.run();
   }
 }));

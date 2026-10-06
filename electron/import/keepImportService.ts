@@ -1,6 +1,7 @@
 import type { ImportHighlightPolicy } from '../../lib/core/import/contract.js';
 import type { ImportSourceAction } from '../../lib/core/import/importSourceActions.js';
 import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeKeepImportContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { discoverDirectoryImportSources, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { loadImportManagerSettings } from './importManagerSettings.js';
@@ -49,7 +50,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
 }
 
 async function runKeepImportRuleNow(config: KeepImportRuleConfig) {
-  assertReadwiseCanRun(config);
+  await runWithDatabaseConnectionOwner(() => assertReadwiseCanRun(config));
   throwIfKeepImportAborted(config.signal);
   const discoveredSources = await discoverKeepImportSources(config);
   throwIfKeepImportAborted(config.signal);
@@ -60,7 +61,7 @@ async function runKeepImportRuleNow(config: KeepImportRuleConfig) {
     }))
   );
   throwIfKeepImportAborted(config.signal);
-  assertReadwiseCanRun(config);
+  await runWithDatabaseConnectionOwner(() => assertReadwiseCanRun(config));
   await reconcileKeepImportCatalog(config, discoveredSources);
   const runEntries: KeepImportRunEntry[] = [];
   for (const [index, planned] of sourcePlan.entries()) {
@@ -73,7 +74,8 @@ async function discoverKeepImportSources(config: KeepImportRuleConfig) {
   if (config.sourceType !== 'readwise') {
     return discoverDirectoryImportSources(config.directoryPath);
   }
-  const readwiseSource = loadImportManagerSettings().readwiseSources.find((entry) => entry.id === config.ruleId);
+  const readwiseSource = (await runWithDatabaseConnectionOwner(loadImportManagerSettings))
+    .readwiseSources.find((entry) => entry.id === config.ruleId);
   if (!readwiseSource?.highlightPath.trim() || readwiseSource.kind === 'books') {
     return discoverDirectoryImportSources(config.directoryPath);
   }
@@ -89,7 +91,7 @@ async function runPlannedKeepImportSource(
   index: number,
   sourceTotalCount: number
 ) {
-  assertReadwiseCanRun(config);
+  await runWithDatabaseConnectionOwner(() => assertReadwiseCanRun(config));
   const { source } = planned;
   await yieldKeepImportRunner(config.signal);
   config.onProgress?.({

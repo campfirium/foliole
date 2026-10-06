@@ -5,7 +5,17 @@ import type { AddressInfo } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+
+vi.mock('../database/connection.js', () => ({
+  openDatabaseConnection: () => ({ driver: {} }),
+  registerDatabaseConnectionCleanup: vi.fn(),
+  registerDatabaseConnectionReady: vi.fn(),
+  runWithDatabaseConnectionOwner: (execute: () => unknown) => execute()
+}));
+vi.mock('../../lib/core/database/syncDeviceIdentity.js', () => ({
+  loadDatabaseDeviceId: () => 'device-test'
+}));
 
 import { getEnabledAgentControlCapabilities } from './agentControlCapabilities.js';
 import {

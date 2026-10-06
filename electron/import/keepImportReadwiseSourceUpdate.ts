@@ -1,3 +1,4 @@
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { readKeepImportItem, readKeepImportNodeContent } from '../database/keepImportItems.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
@@ -16,7 +17,8 @@ export async function shouldDeferReadwiseToSourceUpdate(
   if (config.sourceType !== 'readwise') {
     return true;
   }
-  const existingItem = readKeepImportItem(config.ruleId, source.sourceName);
+  const existingItem = await runWithDatabaseConnectionOwner(() =>
+    readKeepImportItem(config.ruleId, source.sourceName));
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
   if (!hasPrimarySourceChanged(existingItem, sourceSignature)) {
     return false;
@@ -27,7 +29,8 @@ export async function shouldDeferReadwiseToSourceUpdate(
   if (!existingItem?.last_node_id) {
     return true;
   }
-  const existingContent = readKeepImportNodeContent(existingItem.last_node_id);
+  const existingContent = await runWithDatabaseConnectionOwner(() =>
+    readKeepImportNodeContent(existingItem.last_node_id!));
   if (existingContent === null) {
     return true;
   }

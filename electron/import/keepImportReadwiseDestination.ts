@@ -5,6 +5,7 @@ import type { ImportManagerSourceDraft, ReadwiseSourceKind } from '../../lib/cor
 import type { ReadwiseAutoImportPolicy } from '../../lib/core/import/readwiseAutoImportPolicy.js';
 import { extractReadwiseFullDocumentFrontmatter } from '../../lib/core/import/readwiseFullDocumentParsing.js';
 import type { ReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { readKeepImportItem, readKeepImportNodeContent, readKeepImportNodeState, upsertKeepImportItem } from '../database/keepImportItems.js';
 import { hasReadwiseExternalDocument } from '../database/readwiseManagedExternalDocuments.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -19,11 +20,11 @@ import { resolveReadwiseSourceImportDecision } from './readwisePreparedImport.js
 
 type ResolvedReadwiseSource = ImportManagerSourceDraft & { kind: ReadwiseSourceKind };
 
-function resolveReadwiseSource(config: KeepImportRuleConfig) {
+async function resolveReadwiseSource(config: KeepImportRuleConfig) {
   if (config.sourceType !== 'readwise') {
     return null;
   }
-  const settings = loadImportManagerSettings();
+  const settings = await runWithDatabaseConnectionOwner(loadImportManagerSettings);
   const readwiseSource = settings.readwiseSources.find((entry) => entry.id === config.ruleId);
   if (!readwiseSource?.highlightPath.trim() || !readwiseSource.primaryPath.trim() || !readwiseSource.kind) {
     return null;
@@ -40,7 +41,7 @@ function resolveReadwiseSource(config: KeepImportRuleConfig) {
 }
 
 export async function resolveReadwiseKeepImportDestination(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
-  const resolved = resolveReadwiseSource(config);
+  const resolved = await resolveReadwiseSource(config);
   if (!resolved) {
     return 'inbox';
   }
@@ -60,7 +61,7 @@ export async function shouldRunUnchangedReadwiseDestination(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor
 ) {
-  const resolved = resolveReadwiseSource(config);
+  const resolved = await resolveReadwiseSource(config);
   if (!resolved) {
     return false;
   }
@@ -75,13 +76,17 @@ export async function shouldRunUnchangedReadwiseDestination(
     return false;
   }
   if (destination === 'external') {
-    return !hasReadwiseExternalDocument(resolved.readwiseSource.kind, source.sourceName);
+    return !await runWithDatabaseConnectionOwner(() =>
+      hasReadwiseExternalDocument(resolved.readwiseSource.kind, source.sourceName));
   }
-  const existingItem = readKeepImportItem(config.ruleId, source.sourceName);
-  if (!existingItem?.last_node_id || !readKeepImportNodeState(existingItem.last_node_id)) {
+  const existingItem = await runWithDatabaseConnectionOwner(() =>
+    readKeepImportItem(config.ruleId, source.sourceName));
+  if (!existingItem?.last_node_id || !await runWithDatabaseConnectionOwner(() =>
+      readKeepImportNodeState(existingItem.last_node_id!))) {
     return true;
   }
-  const existingContent = readKeepImportNodeContent(existingItem.last_node_id);
+  const existingContent = await runWithDatabaseConnectionOwner(() =>
+    readKeepImportNodeContent(existingItem.last_node_id!));
   if (!existingContent) {
     return true;
   }
@@ -94,7 +99,7 @@ export async function shouldRunUnchangedReadwiseDestination(
 }
 
 export async function runReadwiseExternalDocumentImport(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
-  const resolved = resolveReadwiseSource(config);
+  const resolved = await resolveReadwiseSource(config);
   if (!resolved) {
     return { detail: 'Readwise source is not configured.', failureReason: 'Readwise source is not configured.', importStatus: 'failed' as const };
   }
@@ -110,18 +115,20 @@ export async function runReadwiseExternalDocumentImport(config: KeepImportRuleCo
       kind: resolved.readwiseSource.kind,
       readwiseConfig: resolved.readwiseConfig
     });
-    const result = upsertReadwiseExternalDocument({
+    const result = await runWithDatabaseConnectionOwner(() => upsertReadwiseExternalDocument({
       content: prepared.content,
       indexedAt: importedAt,
       kind: resolved.readwiseSource.kind,
       primaryPath: resolved.readwiseSource.primaryPath.trim(),
       source
-    });
-    persistReadwiseExternalTracking(config, source, sourceSignature, importedAt, 'imported');
+    }));
+    await runWithDatabaseConnectionOwner(() =>
+      persistReadwiseExternalTracking(config, source, sourceSignature, importedAt, 'imported'));
     return { detail: result.documentId, failureReason: null, importStatus: 'imported' as const };
   } catch (error) {
     const failureReason = error instanceof Error ? error.message : 'Unknown Readwise external import failure';
-    persistReadwiseExternalTracking(config, source, sourceSignature, importedAt, 'failed');
+    await runWithDatabaseConnectionOwner(() =>
+      persistReadwiseExternalTracking(config, source, sourceSignature, importedAt, 'failed'));
     return { detail: failureReason, failureReason, importStatus: 'failed' as const };
   }
 }

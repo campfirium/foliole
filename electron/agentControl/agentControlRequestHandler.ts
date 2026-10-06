@@ -4,6 +4,7 @@ import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 
 import { recordAgentControlAuditEvent, type AgentControlAuditSink } from './agentControlAudit.js';
 import { isCapabilityEnabled } from './agentControlCapabilities.js';
+import { prepareAgentControlJsonBody } from './agentControlRequestBody.js';
 import {
   capabilityForProtectedPath,
   isProtectedRouteCapabilityDisabled
@@ -165,6 +166,8 @@ async function handleRequest(
     return;
   }
   const capability = capabilityForProtectedPath(request.method, url.pathname);
+  if (capability && !requireAuthorized(request, response, options, capability)) return;
+  if (capability) await prepareAgentControlJsonBody(request);
   if (capability && await runWithDatabaseConnectionOwner(async () => {
     if (await handleAgentControlMaterialRoute(request, response, options, url.pathname)) return true;
     return handleAgentControlVirtualFolderRoute(request, response, options, url.pathname);

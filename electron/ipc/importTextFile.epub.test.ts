@@ -105,7 +105,7 @@ it('routes EPUB previews and imports through the dedicated extractor', async () 
   expect(runPreparedImport).not.toHaveBeenCalled();
 });
 
-it('waits for an active database owner before importing an EPUB', async () => {
+it('starts EPUB preparation before waiting for the database owner', async () => {
   let releaseOwner: (() => void) | undefined;
   const gate = new Promise<void>((resolve) => { releaseOwner = resolve; });
   const activeOwner = runWithDatabaseConnectionOwner(() => gate);
@@ -113,7 +113,7 @@ it('waits for an active database owner before importing an EPUB', async () => {
     const importing = runTextFileImport();
     await vi.waitFor(() => expect(showOpenDialog).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(runEpubImport).not.toHaveBeenCalled();
+    expect(runEpubImport).toHaveBeenCalledTimes(1);
     releaseOwner?.();
     await activeOwner;
     await expect(importing).resolves.toMatchObject({ node_id: 'node-import-epub' });

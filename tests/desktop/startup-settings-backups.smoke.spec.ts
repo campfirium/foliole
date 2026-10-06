@@ -58,6 +58,7 @@ test.describe('desktop smoke', () => {
     await expect(hasRestoreDriftTopic(desktopWindow)).resolves.toBe(false);
     await expect(desktopWindow.getByText('Backup restore drift')).toHaveCount(0);
     await desktopWindow.screenshot({ path: '.tmp/artifacts/desktop-acceptance/backup-restore-success-notice.png' });
+    await desktopWindow.getByRole('button', { name: /^(Done|完成)$/ }).click();
     await createPostRestoreTopic(desktopWindow);
     await expect.poll(() => hasTopic(desktopWindow, POST_RESTORE_TOPIC_TITLE)).toBe(true);
     await openBackupsSection(desktopWindow);

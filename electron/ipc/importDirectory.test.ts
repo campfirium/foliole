@@ -58,6 +58,8 @@ vi.mock('electron', () => ({
   shell: { trashItem }
 }));
 
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+
 import { runDirectoryImport } from './importDirectory.js';
 import { createPersistedRecord, createTempRoot } from './importDirectory.test-support.js';
 import {
@@ -178,6 +180,33 @@ it('imports markdown and HTML directories through the shared normalization and p
     })
   );
   expect(notifyManagedInboxUpdated.mock.calls[0]?.[0]).toEqual(expect.any(String));
+});
+
+it('waits per source and preserves partial success when one source commit fails', async () => {
+  const root = await createGenericImportRoot();
+  await authorizeSelectedImportDirectoryPath(root);
+  runPreparedImport.mockImplementation((prepared) => {
+    if (prepared.sourceName === 'a-note.md') throw new Error('injected source failure');
+    return createPersistedRecord(prepared);
+  });
+  let release!: () => void;
+  const competing = runWithDatabaseConnectionOwner(() =>
+    new Promise<void>((resolve) => { release = resolve; }));
+  const imported = runDirectoryImport(undefined, { directory_path: root });
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(runPreparedImport).not.toHaveBeenCalled();
+
+  release();
+  await competing;
+  await expect(imported).resolves.toMatchObject({
+    discovered_count: 2,
+    failed_count: 1,
+    imported_count: 1,
+    entries: expect.arrayContaining([
+      expect.objectContaining({ result_status: 'failed', source_name: 'a-note.md' }),
+      expect.objectContaining({ result_status: 'imported', source_name: path.join('b-web', 'embed.html') })
+    ])
+  });
 });
 
 it('persists the MAS bookmark returned by the directory picker', async () => {

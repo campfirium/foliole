@@ -15,9 +15,15 @@ const databaseOwnerMock = vi.hoisted(() => ({
 vi.mock('../database/connection.js', () => ({
   runWithDatabaseConnectionOwner: databaseOwnerMock.run
 }));
+vi.mock('../import/keepImportMonitor.js', () => ({
+  refreshKeepImportMonitorFromSettings: vi.fn()
+}));
 
 const authMock = vi.hoisted(() => ({
-  authenticateCompanionRequest: vi.fn(() => ({ ok: true }))
+  authenticateCompanionRequest: vi.fn((args?: unknown) => {
+    void args;
+    return { ok: true };
+  })
 }));
 const contentBlobMock = vi.hoisted(() => ({
   loadCompanionContentBlobBatch: vi.fn(() => ({
@@ -41,7 +47,12 @@ const workgroupHttpMock = vi.hoisted(() => ({
 }));
 
 vi.mock('./companionRequestAuth.js', () => ({
-  authenticateCompanionRequest: authMock.authenticateCompanionRequest
+  authenticateCompanionRequestContext: (args: unknown) => {
+    const auth = authMock.authenticateCompanionRequest(args);
+    return auth.ok ? { auth, allowUnknownDevice: false, groupId: 'group', requireMemberState: false,
+      workgroup: { group_key: 'key', group_tag: 'tag' } } : auth;
+  },
+  revalidateCompanionRequestAuthorization: (context: { auth: unknown }) => context.auth
 }));
 vi.mock('./companionLanContentBlobs.js', () => ({
   CONTENT_BLOB_ACK_PATH: '/companion/content-blob/ack',
@@ -75,7 +86,7 @@ vi.mock('./companionLanResponses.js', () => ({
   writeWorkgroupBinary: workgroupHttpMock.writeWorkgroupBinary
 }));
 vi.mock('./workgroupHttpCrypto.js', () => ({
-  decryptWorkgroupRequestBody: workgroupHttpMock.decryptWorkgroupRequestBody
+  decryptWorkgroupRequestBodyWithCredential: workgroupHttpMock.decryptWorkgroupRequestBody
 }));
 
 import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
@@ -83,6 +94,11 @@ import { handleAuthenticatedPost } from './companionLanAuthenticatedPost.js';
 beforeEach(() => {
   vi.resetAllMocks();
   databaseOwnerMock.active = false;
+  databaseOwnerMock.run.mockImplementation(async (execute: () => unknown) => {
+    databaseOwnerMock.active = true;
+    try { return await execute(); }
+    finally { databaseOwnerMock.active = false; }
+  });
   authMock.authenticateCompanionRequest.mockReturnValue({ ok: true });
   contentBlobMock.loadCompanionContentBlobBatch.mockReturnValue({
     body: Buffer.from('multipart-body'),
@@ -128,7 +144,8 @@ it('routes Readwise stop only after member authentication and decryption', async
   expect(authMock.authenticateCompanionRequest).toHaveBeenCalledWith({
     allowUnknownDevice: false, bodyText: requestBody, request, requireMemberState: true
   });
-  expect(workgroupHttpMock.decryptWorkgroupRequestBody).toHaveBeenCalledWith(request, requestBody);
+  expect(workgroupHttpMock.decryptWorkgroupRequestBody).toHaveBeenCalledWith(
+    request, requestBody, { group_key: 'key', group_tag: 'tag' });
   expect(readwiseStopMock.handle).toHaveBeenCalledWith(requestBody, 'candidate');
   expect(writeJson).toHaveBeenCalledWith(request, response, 200,
     { status: 'stopped', requestId: 'request-one' }, 'POST, OPTIONS');

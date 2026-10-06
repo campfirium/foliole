@@ -9,11 +9,9 @@ import { stopLanWorkspaceSyncServer } from './lanWorkspaceSyncServer.js';
 export async function reconcileBackupRestoreSyncRuntime() {
   try {
     await stopLanWorkspaceSyncServer();
-    await runWithDatabaseConnectionOwner(async () => {
-      const group = loadDesktopSyncGroup();
-      await reconcileDesktopCompanionSyncRuntime({ appVersion: app.getVersion(),
-        deviceId: group?.local_device_identity_key ?? 'unavailable' });
-    });
+    const deviceId = await runWithDatabaseConnectionOwner(() =>
+      loadDesktopSyncGroup()?.local_device_identity_key ?? 'unavailable');
+    await reconcileDesktopCompanionSyncRuntime({ appVersion: app.getVersion(), deviceId });
   } catch (error) {
     console.warn('[backup] library restored; sync runtime reconciliation failed', error);
   }

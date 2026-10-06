@@ -29,7 +29,7 @@ vi.mock('./backupFileDisposition.js', () => ({
 import { registerGeneratedBackup } from './backupManagement.js';
 import { createApplicationDatabaseBackup, reconcileAutomaticDatabaseBackups } from './backupRestore.js';
 import { loadBackupSettings, normalizeBackupSettings, resolveManagedBackupDirectory, saveBackupSettings } from './backupSettings.js';
-import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 
 let tempRoot = '';
@@ -121,6 +121,23 @@ it('copies automatic backups into the extra location without blocking primary re
   await expect(fs.access(path.join(extraDir, 'foliole-external.db'))).rejects.toMatchObject({ code: 'ENOENT' });
   await expect(fs.access(path.join(extraDir, path.basename(openDatabaseConnection().searchDbPath)))).rejects.toMatchObject({ code: 'ENOENT' });
   await expectBackupDirectoryExcludesSidecars(resolveManagedBackupDirectory(loadBackupSettings()));
+});
+
+it('queues automatic snapshot creation behind an existing owner and then completes', async () => {
+  saveBackupSettings({ daily_max_count: 1, hourly_max_count: 0, monthly_max_count: 0, weekly_max_count: 0 });
+  const destination = path.join(resolveManagedBackupDirectory(loadBackupSettings()), 'foliole-auto-270103-093000.db.gz');
+  let release!: () => void;
+  const competing = runWithDatabaseConnectionOwner(() =>
+    new Promise<void>((resolve) => { release = resolve; }));
+  const now = new Date(2027, 0, 3, 9, 30, 0);
+  const reconcile = reconcileAutomaticDatabaseBackups(now);
+  await new Promise((resolve) => setImmediate(resolve));
+  await expect(fs.access(destination)).rejects.toMatchObject({ code: 'ENOENT' });
+
+  release();
+  await competing;
+  await reconcile;
+  await expect(fs.stat(destination)).resolves.toBeDefined();
 });
 
 async function createBackupFixture(directoryPath: string, fileName: string, content: string, updatedAt: string) {

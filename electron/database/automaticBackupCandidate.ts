@@ -15,6 +15,7 @@ import {
 } from './sqliteBackupRestore.js';
 
 interface CreateAutomaticBackupCandidateOptions extends BackupSqliteDatabaseOptions {
+  createSnapshot?: (destinationPath: string) => Promise<SqliteBackupResult>;
   destinationPath: string;
   latestOrdinary: ApplicationDatabaseBackupEntry | null;
 }
@@ -27,7 +28,9 @@ export async function commitAutomaticBackupWhenChanged(
     `.${path.basename(options.destinationPath)}-${randomUUID()}.source.db`
   );
   try {
-    const result = await backupSqliteDatabase({ ...options, destinationPath: candidatePath });
+    const result = options.createSnapshot
+      ? await options.createSnapshot(candidatePath)
+      : await backupSqliteDatabase({ ...options, destinationPath: candidatePath });
     verifySqliteDatabaseFile(candidatePath);
     if (options.latestOrdinary && await matchesRestorePoint(candidatePath, options.latestOrdinary)) {
       return null;

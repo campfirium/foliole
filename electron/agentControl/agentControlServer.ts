@@ -4,7 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 
 import { loadDatabaseDeviceId } from '../../lib/core/database/syncDeviceIdentity.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { resolveAppPaths } from '../ipc/paths.js';
 import { notifyWorkspaceContentChanged } from '../ipc/workspaceContentChangedEvents.js';
 
@@ -77,18 +77,10 @@ function hashRuntimeDeviceId(deviceId: string | null) {
   return deviceId ? createHash('sha256').update(deviceId).digest('hex').slice(0, 16) : null;
 }
 
-function loadRuntimeDatabaseDeviceId() {
-  try {
-    return loadDatabaseDeviceId(openDatabaseConnection().driver);
-  } catch {
-    return null;
-  }
-}
-
-function createRuntimeIdentity(startedAt: string): AgentControlRuntimeIdentity {
+function createRuntimeIdentity(startedAt: string, deviceId: string | null): AgentControlRuntimeIdentity {
   return {
     boot_id: randomUUID(),
-    database_device_id_hash: hashRuntimeDeviceId(loadRuntimeDatabaseDeviceId()),
+    database_device_id_hash: hashRuntimeDeviceId(deviceId),
     pid: process.pid,
     started_at: startedAt
   };
@@ -123,7 +115,10 @@ export async function ensureAgentControlApiServer(args: {
   if (activeServer) return activeStatus;
 
   const token = createAgentControlToken();
-  const runtimeIdentity = createRuntimeIdentity(new Date().toISOString());
+  const runtimeIdentity = createRuntimeIdentity(
+    new Date().toISOString(),
+    await runWithDatabaseConnectionOwner(() => loadDatabaseDeviceId(openDatabaseConnection().driver))
+  );
   const server = createAgentControlHttpServer({
     appVersion: args.appVersion,
     auditSink: args.auditSink ?? createDiagnosticAgentControlAuditSink(),

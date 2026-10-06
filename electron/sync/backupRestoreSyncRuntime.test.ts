@@ -33,3 +33,24 @@ it('waits for an existing SQLite owner before reading restored group settings', 
   await expect(outcome).resolves.toBe('success');
   expect(reconcileDesktopCompanionSyncRuntime).toHaveBeenCalledOnce();
 });
+
+it('releases SQLite ownership before waiting for sync service reconciliation', async () => {
+  let finish!: () => void;
+  vi.mocked(reconcileDesktopCompanionSyncRuntime).mockImplementationOnce(() =>
+    new Promise((resolve) => { finish = () => resolve({
+      active_device_count: 0,
+      advertised_urls: [],
+      last_error: null,
+      pending_join_request_count: 0,
+      port: null,
+      state: 'stopped',
+      topology_role: 'observing',
+      topology_status: 'observing'
+    }); }));
+
+  const reconciliation = reconcileBackupRestoreSyncRuntime();
+  await vi.waitFor(() => expect(reconcileDesktopCompanionSyncRuntime).toHaveBeenCalledOnce());
+  await expect(runWithDatabaseConnectionOwner(() => 'ordinary-ipc')).resolves.toBe('ordinary-ipc');
+  finish();
+  await reconciliation;
+});

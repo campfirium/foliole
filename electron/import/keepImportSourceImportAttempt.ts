@@ -1,4 +1,5 @@
 import { NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { recordPreparedImportFailure } from '../database/importPipeline.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 import { buildPreparedImportRecord } from '../ipc/importSourcePipeline.js';
@@ -59,16 +60,18 @@ export async function runKeepImportSourceImportAttempt(
   throwIfKeepImportAborted(config.signal);
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
   throwIfKeepImportAborted(config.signal);
-  const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
+  const blockedState = await runWithDatabaseConnectionOwner(() =>
+    isBlockedByDeletedNode(config.ruleId, source.sourceName));
   const hasSourceUpdate = resolvePersistedSourceUpdateFlag(
     blockedState.existingItem,
     hasPrimarySourceChanged(blockedState.existingItem, sourceSignature)
   );
   try {
     const loaded = await loadPreparedKeepImportRecord(config, source, importedAt);
-    const prepared = applyWatchedPreparedImportIdentity(config, source, loaded);
+    const prepared = await runWithDatabaseConnectionOwner(() =>
+      applyWatchedPreparedImportIdentity(config, source, loaded));
     throwIfKeepImportAborted(config.signal);
-    return await runLoadedPreparedImportAttempt({
+    return await runWithDatabaseConnectionOwner(() => runLoadedPreparedImportAttempt({
       automaticDuplicateNoop: options.automaticDuplicateNoop,
       config,
       hasSourceUpdate: options.clearSourceUpdateOnSuccess ? false : hasSourceUpdate,
@@ -77,7 +80,7 @@ export async function runKeepImportSourceImportAttempt(
       ...(config.signal ? { signal: config.signal } : {}),
       source,
       sourceSignature
-    });
+    }));
   } catch (error) {
     if (isKeepImportAbortError(error)) {
       throw error;
@@ -92,13 +95,13 @@ export async function runKeepImportSourceImportAttempt(
       };
     }
     const failureReason = error instanceof Error ? error.message : 'Unknown keep import failure';
-    return recordFailedKeepImportAttempt({
+    return runWithDatabaseConnectionOwner(() => recordFailedKeepImportAttempt({
       config,
       failureReason,
       hasSourceUpdate,
       importedAt,
       source,
       sourceSignature
-    });
+    }));
   }
 }

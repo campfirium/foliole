@@ -67,3 +67,32 @@ it('queues product routes behind the active database owner', async () => {
   expect(mocks.handleMaterialRoute).toHaveBeenCalledTimes(1);
   expect(mocks.handleVirtualFolderRoute).not.toHaveBeenCalled();
 });
+
+it('does not acquire the database owner while an authorized request body is still uploading', async () => {
+  mocks.handleMaterialRoute.mockImplementation(async (_request, response: http.ServerResponse) => {
+    response.writeHead(200, { 'Content-Type': 'application/json' });
+    response.end('{"ok":true}');
+    return true;
+  });
+  server = http.createServer(createAgentControlRequestHandler({
+    appVersion: 'test', auditSink: vi.fn(),
+    runtimeIdentity: { boot_id: 'boot', database_device_id_hash: null, pid: 1, started_at: 'now' },
+    token: 'token'
+  }));
+  await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve));
+  const port = (server.address() as AddressInfo).port;
+  const response = new Promise<number>((resolve, reject) => {
+    const request = http.request({ host: '127.0.0.1', port,
+      path: '/agent-control/v1/materials/read', method: 'POST',
+      headers: { authorization: 'Bearer token', 'content-type': 'application/json' } },
+    (result) => { result.resume(); result.on('end', () => resolve(result.statusCode ?? 0)); });
+    request.on('error', reject);
+    request.write('{"id":');
+    setTimeout(() => request.end('"node-1"}'), 40);
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(mocks.runWithDatabaseConnectionOwner).not.toHaveBeenCalled();
+  await expect(response).resolves.toBe(200);
+  expect(mocks.runWithDatabaseConnectionOwner).toHaveBeenCalledTimes(1);
+});

@@ -5,7 +5,6 @@ import { resolveFolioleAppVersion } from './appVersion.js';
 import { markAppQuittingForBackgroundPresence } from './backgroundPresence.js';
 import { shouldShowInitialWindow } from './backgroundStartup.js';
 import { createBeforeQuitCoordinator } from './beforeQuitCoordinator.js';
-import { runWithDatabaseConnectionOwner } from './database/connection.js';
 import { beginDatabaseStartup, markDatabaseReady, markDatabaseStartupFailed } from './database/databaseReadiness.js';
 import { waitForApplicationDatabaseRestoreSettlement } from './database/databaseRestoreSettlement.js';
 import { loadOrCreateDesktopDeviceId } from './database/deviceIdentity.js';
@@ -239,11 +238,11 @@ export function installMainLifecycle(args: MainLifecycleArgs) {
           capturePanelLaunchIntent: capturePanelLaunchIntent.hasInitialIntent,
           openedAtLogin: wasOpenedAtLogin()
         }),
-        startCompanionSyncIfEnabled: () => runWithDatabaseConnectionOwner(() => startCompanionSyncIfEnabled({
+        startCompanionSyncIfEnabled: () => startCompanionSyncIfEnabled({
           appVersion: resolveFolioleAppVersion(app),
           isEnabled: isDesktopCompanionSyncParticipating,
-          deviceId: loadOrCreateDesktopDeviceId()
-        }))
+          loadDeviceId: loadOrCreateDesktopDeviceId
+        })
       });
       externalDocumentFileOpen.setReadyWindow(mainWindow);
       return mainWindow;

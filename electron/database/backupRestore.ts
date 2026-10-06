@@ -27,6 +27,7 @@ import { cleanupOrphanedBackupTemporaryFiles } from './backupTemporaryFileCleanu
 import { backupCompressedSqliteDatabase } from './compressedSqliteBackup.js';
 import {
   openDatabaseConnection,
+  runWithDatabaseConnectionOwner,
   runWithDatabaseConnectionMaintenance
 } from './connection.js';
 import { restoreDatabaseBackupInMaintenance } from './databaseBackupRestoration.js';
@@ -63,7 +64,7 @@ const reconciledCadenceBuckets = new Map<string, string>();
 
 async function pruneBackupsNow() {
   await waitForManagedSafetySnapshotSettlements();
-  const settings = loadBackupSettings();
+  const settings = await runWithDatabaseConnectionOwner(loadBackupSettings);
   const backupDirectory = resolveManagedBackupDirectory(settings);
   const result = await pruneManagedDatabaseBackups(backupDirectory, settings, {
     disposeFile: moveManagedBackupToTrash
@@ -77,18 +78,24 @@ async function createAutomaticBackup(
   backupDirectory: string,
   latestOrdinary: ApplicationDatabaseBackupEntry | null
 ) {
-  const settings = loadBackupSettings();
+  const settings = await runWithDatabaseConnectionOwner(loadBackupSettings);
   const destinationPath = path.join(backupDirectory, automaticBackupFileName(now));
   if (existsSync(destinationPath)) {
     console.warn('[backup] automatic restore point already exists', destinationPath);
     return false;
   }
-  const connection = openDatabaseConnection();
   const result = await commitAutomaticBackupWhenChanged({
     destinationPath,
     latestOrdinary,
-    sourceDatabase: connection.sqlite,
-    sourcePath: connection.dbPath
+    sourcePath: await runWithDatabaseConnectionOwner(() => openDatabaseConnection().dbPath),
+    createSnapshot: (candidatePath) => runWithDatabaseConnectionOwner(() => {
+      const connection = openDatabaseConnection();
+      return backupSqliteDatabase({
+        destinationPath: candidatePath,
+        sourceDatabase: connection.sqlite,
+        sourcePath: connection.dbPath
+      });
+    })
   });
   if (!result) return false;
   registerGeneratedBackup(result.destinationPath);
@@ -107,14 +114,14 @@ async function createAutomaticBackup(
 
 export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
   await waitForManagedSafetySnapshotSettlements();
-  const settings = loadBackupSettings();
+  const settings = await runWithDatabaseConnectionOwner(loadBackupSettings);
   const cadence = finestEnabledFrequency(settings);
-  const connection = openDatabaseConnection();
+  const databasePath = await runWithDatabaseConnectionOwner(() => openDatabaseConnection().dbPath);
   const noCleanup = { deletedCount: 0, failedCount: 0, releasedBytes: 0 };
   const backupDirectory = ensureManagedBackupDirectory(settings);
   if (!cadence) return noCleanup;
   const cadenceBucket = frequencyBucketKey(now, cadence);
-  if (reconciledCadenceBuckets.get(connection.dbPath) === cadenceBucket) return noCleanup;
+  if (reconciledCadenceBuckets.get(databasePath) === cadenceBucket) return noCleanup;
   const temporaryCleanup = await cleanupOrphanedBackupTemporaryFiles(backupDirectory);
   if (temporaryCleanup.deletedCount > 0) {
     console.info('[backup] removed interrupted compression files', temporaryCleanup);
@@ -127,7 +134,7 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
   const latestOrdinary = existingEntries.find((entry) =>
     entry.kind === 'automatic' || entry.kind === 'manual') ?? null;
   const created = !alreadyExists && await createAutomaticBackup(now, backupDirectory, latestOrdinary);
-  reconciledCadenceBuckets.set(connection.dbPath, cadenceBucket);
+  reconciledCadenceBuckets.set(databasePath, cadenceBucket);
   if (created) {
     const pruneResult = await pruneManagedDatabaseBackups(backupDirectory, settings, {
       disposeFile: moveManagedBackupToTrash,
@@ -142,19 +149,21 @@ export async function reconcileAutomaticDatabaseBackups(now = new Date()) {
 export async function createApplicationDatabaseBackup(
   options: CreateApplicationDatabaseBackupOptions = {}
 ): Promise<ApplicationDatabaseBackupResult> {
-  const connection = initializeDatabase();
+  await runWithDatabaseConnectionOwner(() => initializeDatabase());
   const now = new Date();
-  const settings = loadBackupSettings();
+  const settings = await runWithDatabaseConnectionOwner(loadBackupSettings);
   const backupDirectory = ensureManagedBackupDirectory(settings);
   const destinationPath =
     options.destinationPath ?? buildManagedBackupPath(now, backupDirectory);
-  const backupOptions = {
-    sourcePath: connection.dbPath,
-    destinationPath,
-    sourceDatabase: connection.sqlite
-  };
+  const sourcePath = await runWithDatabaseConnectionOwner(() => openDatabaseConnection().dbPath);
+  const createSnapshot = (targetPath: string) => runWithDatabaseConnectionOwner(() => {
+    const connection = openDatabaseConnection();
+    return backupSqliteDatabase({ sourcePath: connection.dbPath, destinationPath: targetPath,
+      sourceDatabase: connection.sqlite });
+  });
+  const backupOptions = { sourcePath, destinationPath, createSnapshot };
   const result = options.destinationPath
-    ? await backupSqliteDatabase(backupOptions)
+    ? await createSnapshot(destinationPath)
     : await backupCompressedSqliteDatabase(backupOptions);
   if (options.destinationPath) {
     verifySqliteDatabaseFile(result.destinationPath);
@@ -215,5 +224,6 @@ export async function restoreApplicationDatabaseBackup(
 
 export async function listApplicationDatabaseBackups(): Promise<ApplicationDatabaseBackupEntry[]> {
   await waitForManagedSafetySnapshotSettlements();
-  return listManagedDatabaseBackups(resolveManagedBackupDirectory());
+  const directory = await runWithDatabaseConnectionOwner(() => resolveManagedBackupDirectory());
+  return listManagedDatabaseBackups(directory);
 }

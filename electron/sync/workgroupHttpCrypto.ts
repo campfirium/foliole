@@ -29,8 +29,16 @@ function credentials(request: http.IncomingMessage) {
 }
 
 export function decryptWorkgroupRequestBody(request: http.IncomingMessage, envelopeText: string) {
-  const envelope = JSON.parse(envelopeText) as WorkgroupAeadEnvelope;
   const stored = credentials(request);
+  return decryptWorkgroupRequestBodyWithCredential(request, envelopeText, stored);
+}
+
+export function decryptWorkgroupRequestBodyWithCredential(
+  request: http.IncomingMessage,
+  envelopeText: string,
+  stored: { group_key: string; group_tag: string }
+) {
+  const envelope = JSON.parse(envelopeText) as WorkgroupAeadEnvelope;
   return decryptWorkgroupPayloadNode({
     context: context(request, 'request', envelope.content_type, stored.group_tag), envelope,
     groupKey: stored.group_key

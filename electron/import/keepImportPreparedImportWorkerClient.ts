@@ -59,13 +59,13 @@ function rejectWorkerImport(run: WorkerImportRun, abort: () => void, error: Erro
   run.reject(error);
 }
 
-function terminateWorkerImport(run: WorkerImportRun, abort: () => void, error: Error) {
+async function terminateWorkerImport(run: WorkerImportRun, abort: () => void, error: Error) {
   if (run.settled) {
     return;
   }
   run.settled = true;
   cleanupWorkerImport(run, abort);
-  void run.worker.terminate();
+  await run.worker.terminate().catch(() => undefined);
   run.reject(error);
 }
 
@@ -119,10 +119,10 @@ export function runPreparedImportInWorkerWithSignal(input: {
       worker
     };
     const abort = () => {
-      terminateWorkerImport(run, abort, createAbortError());
+      void terminateWorkerImport(run, abort, createAbortError());
     };
     run.timeout = setTimeout(() => {
-      terminateWorkerImport(run, abort, new Error('Readwise import worker timed out.'));
+      void terminateWorkerImport(run, abort, new Error('Readwise import worker timed out.'));
     }, WORKER_IMPORT_TIMEOUT_MS);
     input.signal?.addEventListener('abort', abort, { once: true });
     bindWorkerImportHandlers(run, abort);

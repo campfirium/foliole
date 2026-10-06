@@ -23,7 +23,10 @@ export function isCompressedSqliteTemporaryPathActive(filePath: string) {
 }
 
 export async function backupCompressedSqliteDatabase(
-  options: BackupSqliteDatabaseOptions & { destinationPath: string }
+  options: BackupSqliteDatabaseOptions & {
+    createSnapshot?: (destinationPath: string) => Promise<SqliteBackupResult>;
+    destinationPath: string;
+  }
 ): Promise<SqliteBackupResult> {
   const destinationPath = path.resolve(options.destinationPath);
   const temporaryPath = siblingTemporaryPath(destinationPath, 'source.db');
@@ -31,7 +34,9 @@ export async function backupCompressedSqliteDatabase(
   activeTemporaryPaths.add(temporaryPath);
   activeTemporaryPaths.add(compressedTemporaryPath);
   try {
-    const result = await backupSqliteDatabase({ ...options, destinationPath: temporaryPath });
+    const result = options.createSnapshot
+      ? await options.createSnapshot(temporaryPath)
+      : await backupSqliteDatabase({ ...options, destinationPath: temporaryPath });
     verifySqliteDatabaseFile(temporaryPath);
     await assertCompressionSpace(temporaryPath, path.dirname(destinationPath));
     await writeCompressedSqliteFile(temporaryPath, compressedTemporaryPath);

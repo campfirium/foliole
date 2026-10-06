@@ -1,21 +1,25 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import type { NativeMirrorOutputRebuildResult } from '../../lib/platform/nativeUtilityContract.js';
-import { openDatabaseConnection } from '../database/connection.js';
-import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
+import type { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 import type { DesktopTaskContext } from '../desktopTaskTypes.js';
-import { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
+import type { loadLibraryPathSettingsSync } from '../ipc/libraryPaths.js';
 
 import type { MirrorRenderableNode } from './articleMirrorOutput.js';
-import { collectArticleMirrorPlans, type ArticleMirrorPlan } from './articleMirrorPlanning.js';
+import type { ArticleMirrorPlan } from './articleMirrorPlanning.js';
 import { renderArticleMirrorInWorker } from './articleMirrorRenderWorkerClient.js';
 import { pruneMirrorOutputToTargets } from './mirrorOutputPrune.js';
 import {
+  captureMirrorOutputSnapshot,
+  isMirrorArticleStillAbsent,
+  isMirrorPlanCurrent,
+  mirrorPlanRevision
+} from './mirrorOutputSnapshot.js';
+import {
   clearMirrorArticleRecords,
   deleteMirrorArticleRecord,
-  loadMirrorArticleRecords,
   type MirrorArticleRecord,
   readMirrorFileUpdatedAt,
   removeLegacyMirrorArtifacts,
@@ -34,29 +38,6 @@ interface MirrorSyncOptions {
   taskContext?: DesktopTaskContext;
 }
 
-function hydrateMirrorPlanBodies(
-  snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>,
-  plan: ArticleMirrorPlan
-) {
-  const nodeIds = [plan.articleId, ...plan.derivedNodeIds, ...plan.manualTopicIds];
-  if (nodeIds.length === 0) return snapshot;
-  const placeholders = nodeIds.map(() => '?').join(', ');
-  const rows = openDatabaseConnection().driver.queryAll<NodeBodyRow & { id: string }>(
-    `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data
-     FROM nodes n
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-     WHERE n.id IN (${placeholders}) AND n.deleted_at IS NULL`,
-    nodeIds
-  );
-  for (const row of rows) {
-    const node = snapshot.nodesById[row.id];
-    if (node) {
-      node.content = requireResolvedNodeBody(row, row.id).content;
-    }
-  }
-  return snapshot;
-}
-
 function requireRenderableNode(
   snapshot: NonNullable<ReturnType<typeof loadWorkspaceSnapshot>>,
   nodeId: string
@@ -71,7 +52,6 @@ async function renderMirrorPlan(
   plan: ArticleMirrorPlan,
   signal?: AbortSignal
 ) {
-  hydrateMirrorPlanBodies(snapshot, plan);
   return renderArticleMirrorInWorker({
     article: requireRenderableNode(snapshot, plan.articleId),
     derivedChildren: plan.derivedNodeIds.map((nodeId) => requireRenderableNode(snapshot, nodeId)),
@@ -80,8 +60,10 @@ async function renderMirrorPlan(
 }
 
 async function prepareFullMirrorRebuild(mirrorRoot: string) {
-  await resetMirrorRoot(mirrorRoot);
-  clearMirrorArticleRecords();
+  await runWithDatabaseConnectionOwner(async () => {
+    await resetMirrorRoot(mirrorRoot);
+    clearMirrorArticleRecords();
+  });
 }
 
 async function removeObsoleteMirrorRecords(
@@ -102,8 +84,11 @@ async function removeObsoleteMirrorRecords(
     if (targetArticleIds.has(record.articleId)) {
       continue;
     }
-    await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(mirrorRoot, record.relativePath), protectedPaths);
-    deleteMirrorArticleRecord(record.articleId);
+    await runWithDatabaseConnectionOwner(async () => {
+      if (!isMirrorArticleStillAbsent(record.articleId)) return;
+      await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(mirrorRoot, record.relativePath), protectedPaths);
+      deleteMirrorArticleRecord(record.articleId);
+    });
   }
 }
 
@@ -123,6 +108,29 @@ function shouldWriteTarget(mode: MirrorSyncMode, fileUpdatedAt: string | null, r
   return record.mirroredAt < sourceUpdatedAt;
 }
 
+async function commitRenderedMirror(args: {
+  markdown: string;
+  paths: ReturnType<typeof loadLibraryPathSettingsSync>;
+  persistedRecord: MirrorArticleRecord | null;
+  plan: ArticleMirrorPlan;
+  protectedPaths: Set<string>;
+  revision: string;
+  updatedAt: string;
+}) {
+  return runWithDatabaseConnectionOwner(async () => {
+    if (!isMirrorPlanCurrent(args.plan.articleId, args.revision)) return false;
+    if (args.persistedRecord && args.persistedRecord.relativePath !== args.plan.relativePath) {
+      await removeMirrorFileAndLegacyDirectory(
+        resolveAbsoluteMirrorPath(args.paths.mirror, args.persistedRecord.relativePath), args.protectedPaths);
+    }
+    await fs.mkdir(path.dirname(args.plan.targetPath), { recursive: true });
+    await fs.writeFile(args.plan.targetPath, args.markdown, 'utf8');
+    saveMirrorArticleRecord({ articleId: args.plan.articleId,
+      mirroredAt: args.updatedAt, relativePath: args.plan.relativePath });
+    return true;
+  });
+}
+
 async function processMirrorPlans(args: {
   mode: MirrorSyncMode;
   options: MirrorSyncOptions;
@@ -135,6 +143,7 @@ async function processMirrorPlans(args: {
   changedOwners: Set<string>;
 }) {
   let rebuiltArticleCount = 0;
+  const pendingArticleIds: string[] = [];
   let visitedArticleCount = 0;
   for (const plan of args.plans) {
     if (args.options.taskContext?.signal.aborted) {
@@ -147,21 +156,23 @@ async function processMirrorPlans(args: {
       (fileUpdatedAt ? { articleId: plan.articleId, mirroredAt: fileUpdatedAt, relativePath: plan.relativePath } : null);
     const pathChanged = Boolean(persistedRecord && persistedRecord.relativePath !== plan.relativePath);
     if (shouldWriteTarget(args.mode, fileUpdatedAt, effectiveRecord, plan.sourceUpdatedAt) || pathChanged || args.changedOwners.has(plan.articleId)) {
-      if (persistedRecord && persistedRecord.relativePath !== plan.relativePath) {
-        await removeMirrorFileAndLegacyDirectory(resolveAbsoluteMirrorPath(args.paths.mirror, persistedRecord.relativePath), args.protectedPaths);
-      }
       await args.options.taskContext?.yieldIfNeeded();
       const markdown = await renderMirrorPlan(
         args.snapshot,
         plan,
         args.options.taskContext?.signal
       );
-      await fs.mkdir(path.dirname(plan.targetPath), { recursive: true });
-      await fs.writeFile(plan.targetPath, markdown, 'utf8');
-      saveMirrorArticleRecord({ articleId: plan.articleId, mirroredAt: args.updatedAt, relativePath: plan.relativePath });
-      rebuiltArticleCount += 1;
+      const revision = mirrorPlanRevision(args.snapshot, plan);
+      const committed = await commitRenderedMirror({ markdown, paths: args.paths, persistedRecord,
+        plan, protectedPaths: args.protectedPaths, revision, updatedAt: args.updatedAt });
+      if (committed) rebuiltArticleCount += 1;
+      else {
+        pendingArticleIds.push(plan.articleId);
+        args.options.taskContext?.progress({ completed: visitedArticleCount,
+          message: 'mirror source changed; retry queued', total: args.plans.length, unit: 'article' });
+      }
     } else if (!persistedRecord && effectiveRecord) {
-      saveMirrorArticleRecord(effectiveRecord);
+      await runWithDatabaseConnectionOwner(() => saveMirrorArticleRecord(effectiveRecord));
     }
     visitedArticleCount += 1;
     args.options.taskContext?.progress({
@@ -172,7 +183,7 @@ async function processMirrorPlans(args: {
     });
     await args.options.taskContext?.yieldIfNeeded();
   }
-  return rebuiltArticleCount;
+  return { pendingArticleIds, rebuiltArticleCount };
 }
 
 async function syncMirrorOutput(
@@ -180,10 +191,8 @@ async function syncMirrorOutput(
   options: MirrorSyncOptions = {}
 ): Promise<NativeMirrorOutputRebuildResult> {
   const updatedAt = new Date().toISOString();
-  const paths = loadLibraryPathSettingsSync();
-  const snapshot = loadWorkspaceSnapshot({ includeBody: false });
-  const plans = snapshot ? collectArticleMirrorPlans(snapshot, paths.mirror) : [];
-  const recordsByArticleId = loadMirrorArticleRecords();
+  const captured = await runWithDatabaseConnectionOwner(captureMirrorOutputSnapshot);
+  const { paths, plans, recordsByArticleId, snapshot } = captured;
   const targetArticleIds = new Set(plans.map((plan) => plan.articleId));
   const selectedArticleIds = options.articleIds?.length ? new Set(options.articleIds) : undefined;
   const changedOwners = collectChangedMirrorOwners(plans, recordsByArticleId);
@@ -194,20 +203,40 @@ async function syncMirrorOutput(
   if (mode === 'full') {
     await prepareFullMirrorRebuild(paths.mirror);
   } else if (mode === 'incremental') {
-    await pruneMirrorOutputToTargets(paths.mirror, plans.map((plan) => plan.targetPath));
+    await runWithDatabaseConnectionOwner(() => {
+      const current = captureMirrorOutputSnapshot();
+      return pruneMirrorOutputToTargets(current.paths.mirror, current.plans.map((plan) => plan.targetPath));
+    });
   }
 
   await removeObsoleteMirrorRecords(mode, paths.mirror, recordsByArticleId, targetArticleIds, protectedPaths, selectedArticleIds);
 
-  await removeLegacyMirrorArtifacts(paths.mirror, selectedPlans.map((plan) => plan.targetPath), protectedPaths);
+  await runWithDatabaseConnectionOwner(() => {
+    const current = captureMirrorOutputSnapshot();
+    const currentProtectedPaths = collectProtectedMirrorPaths(current.plans.map((plan) => plan.targetPath));
+    return removeLegacyMirrorArtifacts(
+      current.paths.mirror, current.plans.map((plan) => plan.targetPath), currentProtectedPaths);
+  });
 
-  const rebuiltArticleCount = snapshot
+  const processed = snapshot
     ? await processMirrorPlans({ mode, options, paths, plans: selectedPlans, recordsByArticleId, updatedAt, snapshot, protectedPaths, changedOwners })
-    : 0;
+    : { pendingArticleIds: [], rebuiltArticleCount: 0 };
+
+  if (processed.pendingArticleIds.length > 0) {
+    const retry = await syncMirrorOutput('incremental', {
+      articleIds: processed.pendingArticleIds,
+      ...(options.taskContext ? { taskContext: options.taskContext } : {})
+    });
+    return {
+      ...retry,
+      queued_article_count: processed.rebuiltArticleCount + retry.queued_article_count,
+      rebuilt_article_count: processed.rebuiltArticleCount + retry.rebuilt_article_count
+    };
+  }
 
   return {
-    queued_article_count: mode === 'full' ? plans.length : rebuiltArticleCount,
-    rebuilt_article_count: rebuiltArticleCount,
+    queued_article_count: mode === 'full' ? plans.length : processed.rebuiltArticleCount,
+    rebuilt_article_count: processed.rebuiltArticleCount,
     failed_article_count: 0,
     pending_article_count: 0,
     updated_at: updatedAt

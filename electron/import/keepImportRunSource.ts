@@ -1,3 +1,4 @@
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { readKeepImportItem } from '../database/keepImportItems.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
@@ -43,8 +44,9 @@ function notifyKeepImportUpdated(importId: string, enabled: boolean) {
   }
 }
 
-function notifyPendingSourceUpdate(config: KeepImportRuleConfig, sourcePath: string) {
-  const existingItem = readKeepImportItem(config.ruleId, sourcePath);
+async function notifyPendingSourceUpdate(config: KeepImportRuleConfig, sourcePath: string) {
+  const existingItem = await runWithDatabaseConnectionOwner(() =>
+    readKeepImportItem(config.ruleId, sourcePath));
   if (existingItem?.has_source_update) {
     notifyManagedInboxUpdated(`keep-update-${config.ruleId}-${sourcePath}`);
   }
@@ -59,19 +61,20 @@ async function persistBlockedDeletedKeepImport(
 ): Promise<KeepImportRunEntry> {
   const importedAt = new Date().toISOString();
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
-  const blockedState = isBlockedByDeletedNode(config.ruleId, source.sourceName);
+  const blockedState = await runWithDatabaseConnectionOwner(() =>
+    isBlockedByDeletedNode(config.ruleId, source.sourceName));
   const hasSourceUpdate = resolvePersistedSourceUpdateFlag(
     blockedState.existingItem,
     hasPrimarySourceChanged(blockedState.existingItem, sourceSignature)
   );
-  const record = persistBlockedKeepImportState(
+  const record = await runWithDatabaseConnectionOwner(() => persistBlockedKeepImportState(
     config,
     source,
     sourceSignature,
     importedAt,
     blockedState.existingItem?.last_node_id ?? null,
     hasSourceUpdate
-  );
+  ));
   notifyKeepImportUpdated(record.importId, notifyUpdate);
   return {
     action: 'skipped',
@@ -142,7 +145,7 @@ async function runSingleKeepImportSourceResolved(
     !(await shouldRunUnchangedReadwiseDestination(config, source))
   ) {
     const cleanupDetail = await applySuccessfulSourceHandling(config, source);
-    notifyPendingSourceUpdate(config, source.sourceName);
+    await notifyPendingSourceUpdate(config, source.sourceName);
     return createSkippedKeepImportEntry({
       detail: cleanupDetail ?? preview.detail,
       failureReason: null,

@@ -20,7 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 vi.mock('./backupFileDisposition.js', () => ({ moveManagedBackupToTrash: trashItem }));
 
 import { createApplicationDatabaseBackup, restoreApplicationDatabaseBackup } from './backupRestore.js';
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection, runWithDatabaseConnectionOwner } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
 import * as searchAliasMirror from './searchAliasMirror.js';
@@ -57,6 +57,32 @@ it('creates an independent gzip backup and restores it through the existing sqli
   expect(currentContent()).toBe('# original');
   await expect(fs.access(backup.destinationPath)).resolves.toBeUndefined();
   await expectNoRestoreSources(path.dirname(mockedAppDataDir));
+});
+
+it('releases SQLite ownership after the snapshot while compression is still waiting', async () => {
+  seedNode('# snapshot');
+  const originalStatfs = fs.statfs.bind(fs);
+  let entered!: () => void;
+  let release!: () => void;
+  const compressionEntered = new Promise<void>((resolve) => { entered = resolve; });
+  const compressionGate = new Promise<void>((resolve) => { release = resolve; });
+  const statfs = vi.spyOn(fs, 'statfs').mockImplementationOnce(async (directoryPath) => {
+    entered();
+    await compressionGate;
+    return originalStatfs(directoryPath);
+  });
+  try {
+    const backup = createApplicationDatabaseBackup();
+    await compressionEntered;
+    await expect(runWithDatabaseConnectionOwner(() =>
+      openDatabaseConnection().sqlite.prepare("SELECT COUNT(*) FROM nodes WHERE id = 'node-1'").pluck().get()))
+      .resolves.toBe(1);
+    release();
+    await expect(backup).resolves.toMatchObject({ destinationPath: expect.stringMatching(/\.db\.gz$/) });
+  } finally {
+    release();
+    statfs.mockRestore();
+  }
 });
 
 it('keeps the current database available when a compressed backup is truncated', async () => {

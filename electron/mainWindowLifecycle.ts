@@ -1,5 +1,6 @@
 import type { BrowserWindow } from 'electron';
 
+import { runWithDatabaseConnectionOwner } from './database/connection.js';
 import { updateLocalSyncGroupHostName } from './database/syncGroupIdentityStore.js';
 import { IPC_SYNC_GROUP_JOIN_REQUESTS_CHANGED_CHANNEL } from './ipc/contracts.js';
 import { getMainWindow, setMainWindow } from './mainWindowRegistry.js';
@@ -50,11 +51,12 @@ export function installSyncGroupJoinRequestFocusHandler(openMainWindow: () => Pr
 export async function startCompanionSyncIfEnabled(args: {
   appVersion: string;
   isEnabled: () => boolean;
-  deviceId: string;
+  loadDeviceId: () => string;
 }) {
-  updateLocalSyncGroupHostName(resolveDesktopHostName());
-  if (!args.isEnabled()) {
-    return;
-  }
-  await reconcileDesktopCompanionSyncRuntime({ appVersion: args.appVersion, deviceId: args.deviceId });
+  const startup = await runWithDatabaseConnectionOwner(() => {
+    updateLocalSyncGroupHostName(resolveDesktopHostName());
+    return { deviceId: args.loadDeviceId(), enabled: args.isEnabled() };
+  });
+  if (!startup.enabled) return;
+  await reconcileDesktopCompanionSyncRuntime({ appVersion: args.appVersion, deviceId: startup.deviceId });
 }

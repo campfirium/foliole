@@ -10,6 +10,7 @@ import type {
   NativeReadwiseSyncPreviewEntry,
   NativeReadwiseSyncPreviewResult,
 } from '../../lib/platform/nativeImportContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
 import { canCurrentHostRunReadwise } from '../database/readwiseHostAssignment.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
@@ -72,7 +73,7 @@ function resolveLocationCounts(entries: ReadwiseSyncPreviewEntry[]) {
   };
 }
 
-function resolvePreviewStatus(input: {
+async function resolvePreviewStatus(input: {
   decision: Awaited<ReturnType<typeof resolveReadwiseSourceImportDecision>>;
   existingItem: ReturnType<typeof readKeepImportItem>;
   readwiseSource: ReadwiseImportSource;
@@ -82,12 +83,10 @@ function resolvePreviewStatus(input: {
   if (input.decision.destination === 'off') {
     return 'off' as const;
   }
-  return resolveTrackingStatus(
-    input.readwiseSource.id,
-    input.source,
+  return runWithDatabaseConnectionOwner(() => resolveTrackingStatus(
+    input.readwiseSource.id, input.source,
     hasHighlightSourceChanged(input.existingItem, input.sourceSignature),
-    hasPrimarySourceChanged(input.existingItem, input.sourceSignature)
-  );
+    hasPrimarySourceChanged(input.existingItem, input.sourceSignature)));
 }
 
 async function buildSourceEntry(
@@ -104,8 +103,9 @@ async function buildSourceEntry(
   const sourceSignature = await resolveReadwiseSourceSignature(source, {
     highlightDirectoryPath: readwiseSource.highlightPath
   });
-  const existingItem = readKeepImportItem(readwiseSource.id, source.sourceName);
-  const status = resolvePreviewStatus({ decision, existingItem, readwiseSource, source, sourceSignature });
+  const existingItem = await runWithDatabaseConnectionOwner(() =>
+    readKeepImportItem(readwiseSource.id, source.sourceName));
+  const status = await resolvePreviewStatus({ decision, existingItem, readwiseSource, source, sourceSignature });
   const hasHighlightFile = sourceSignature.highlight !== null;
   const primaryPath = path.join(readwiseSource.primaryPath, source.sourceName);
   const hasPrimaryFile = source.filePath === primaryPath;
@@ -163,9 +163,10 @@ export async function previewReadwiseReaderImport(
 ): Promise<ReadwiseSyncPreviewResult> {
   const settings = settingsInput
     ? normalizeImportManagerSettings(settingsInput)
-    : loadImportManagerSettings();
+    : await runWithDatabaseConnectionOwner(loadImportManagerSettings);
   if (settings.readwiseSourceMode === 'api') return previewReadwiseApiImport(settings);
-  if (!settings.readwiseReaderConfig.enabled || !canCurrentHostRunReadwise('relay')) {
+  if (!settings.readwiseReaderConfig.enabled ||
+      !await runWithDatabaseConnectionOwner(() => canCurrentHostRunReadwise('relay'))) {
     return {
       active_count: 0,
       blocked_count: 0,

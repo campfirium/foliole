@@ -1,3 +1,4 @@
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { readKeepImportItem } from '../database/keepImportItems.js';
 import { loadPreparedImportRecord, type DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
@@ -14,7 +15,7 @@ export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfi
   if (config.sourceType !== 'readwise') {
     return true;
   }
-  const settings = loadImportManagerSettings();
+  const settings = await runWithDatabaseConnectionOwner(loadImportManagerSettings);
   const readwiseSource = settings.readwiseSources.find((entry) => entry.id === config.ruleId);
   if (!readwiseSource?.highlightPath.trim()) {
     return false;
@@ -25,7 +26,8 @@ export async function shouldKeepImportReadwiseSource(config: KeepImportRuleConfi
   const sourceSignature = await readwiseKeepAdapter.resolveSourceSignature(source, {
     highlightDirectoryPath: readwiseSource.highlightPath.trim()
   });
-  const existingItem = readKeepImportItem(config.ruleId, source.sourceName);
+  const existingItem = await runWithDatabaseConnectionOwner(() =>
+    readKeepImportItem(config.ruleId, source.sourceName));
   if (
     existingItem &&
     !hasPrimarySourceChanged(existingItem, sourceSignature) &&
@@ -49,7 +51,7 @@ export async function loadPreparedKeepImportRecord(
   importedAt: string
 ) {
   if (config.sourceType === 'readwise') {
-    const settings = loadImportManagerSettings();
+    const settings = await runWithDatabaseConnectionOwner(loadImportManagerSettings);
     const readwiseSource = settings.readwiseSources.find((entry) => entry.id === config.ruleId);
     if (readwiseSource?.highlightPath.trim() && readwiseSource.kind) {
       return readwiseKeepAdapter.loadPreparedRecord(source, {
@@ -66,7 +68,7 @@ export async function loadPreparedKeepImportRecord(
       highlightDirectoryPath: config.highlightDirectoryPath.trim(),
       highlightPolicy: config.highlightPolicy,
       importedAt,
-      titleStrategy: loadImportManagerSettings().titleStrategy
+      titleStrategy: (await runWithDatabaseConnectionOwner(loadImportManagerSettings)).titleStrategy
     });
   }
 
@@ -74,13 +76,13 @@ export async function loadPreparedKeepImportRecord(
     highlightPolicy: config.highlightPolicy,
     importedAt,
     sourceTrackingMode: 'tracked',
-    titleStrategy: loadImportManagerSettings().titleStrategy
+    titleStrategy: (await runWithDatabaseConnectionOwner(loadImportManagerSettings)).titleStrategy
   });
 }
 
 export async function resolveKeepImportSourceSignature(config: KeepImportRuleConfig, source: DirectoryImportSourceDescriptor) {
   if (config.sourceType === 'readwise') {
-    const settings = loadImportManagerSettings();
+    const settings = await runWithDatabaseConnectionOwner(loadImportManagerSettings);
     const readwiseSource = settings.readwiseSources.find((entry) => entry.id === config.ruleId);
     if (readwiseSource?.highlightPath.trim()) {
       return readwiseKeepAdapter.resolveSourceSignature(source, {

@@ -1,6 +1,7 @@
 import { BrowserWindow, dialog, type OpenDialogOptions } from 'electron';
 
 import { NATIVE_COMMANDS } from '../../lib/platform/nativeCommands.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { recordDesktopImportLocation } from '../database/desktopSources.js';
 import { resolveExternalSourceLocationByAddress } from '../database/externalSearchCacheRead.js';
 import { loadReadwiseApiExternalReference } from '../database/readwiseApiExternalDocuments.js';
@@ -188,9 +189,11 @@ async function handleTextImportCommand(
   if (request.command === NATIVE_COMMANDS.importExternalSearchDocument) {
     const documentId = typeof args.document_id === 'string' ? args.document_id.trim() : '';
     if (documentId) {
-      const result = loadReadwiseApiExternalReference(documentId)
-        ? await promoteReadwiseApiExternalDocument(documentId)
-        : runImportForMirrorDocument(documentId, args);
+      const isReadwiseDocument = await runWithDatabaseConnectionOwner(() =>
+        Boolean(loadReadwiseApiExternalReference(documentId)));
+      const result = isReadwiseDocument
+        ? await runWithDatabaseConnectionOwner(() => promoteReadwiseApiExternalDocument(documentId))
+        : await runImportForMirrorDocument(documentId, args);
       notifyIfTextImportChanged(result, resolveTargetWindow(context));
       return result;
     }
@@ -198,13 +201,13 @@ async function handleTextImportCommand(
     const sourceLocation = resolveExternalSourceLocationByAddress(filePath);
     const result = await runImportForFilePath(filePath, args);
     if (sourceLocation) {
-      recordDesktopImportLocation({
+      await runWithDatabaseConnectionOwner(() => recordDesktopImportLocation({
         configRef: sourceLocation.folder_id,
         location: sourceLocation.relative_path,
         sourceFingerprint: result.source_fingerprint,
         sourceType: 'external',
         updatedAt: result.imported_at
-      });
+      }));
     }
     notifyIfTextImportChanged(result, resolveTargetWindow(context));
     return result;

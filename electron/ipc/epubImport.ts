@@ -4,7 +4,7 @@ import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 import type { PreparedImportEmbeddedImage } from '../../lib/core/import/contract.js';
 import { createEpubGeneratedNodeId } from '../../lib/core/import/epubGeneratedNodeIdentity.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 
 import { readRawEpubBook } from './epubImportBook.js';
@@ -63,7 +63,12 @@ function buildRootContent(title: string, body: string) {
   return trimmedBody ? `# ${title}\n\n${trimmedBody}` : `# ${title}`;
 }
 
-async function syncBookNodes(parentNodeId: string, sourceFingerprint: string, importedAt: string, nodes: PreparedBookNode[], root?: string) {
+function createBookNodes(
+  parentNodeId: string,
+  sourceFingerprint: string,
+  importedAt: string,
+  nodes: PreparedBookNode[]
+) {
   const connection = openDatabaseConnection();
   const nodeIdsByKey = new Map<string, string>();
 
@@ -90,6 +95,15 @@ async function syncBookNodes(parentNodeId: string, sourceFingerprint: string, im
     });
   });
 
+  return nodeIdsByKey;
+}
+
+async function finalizeBookNodes(
+  nodes: PreparedBookNode[],
+  nodeIdsByKey: Map<string, string>,
+  importedAt: string,
+  root?: string
+) {
   const finalizedNodes: PreparedBookNode[] = [];
   for (const node of nodes) {
     const nodeId = nodeIdsByKey.get(node.key);
@@ -100,7 +114,7 @@ async function syncBookNodes(parentNodeId: string, sourceFingerprint: string, im
     const finalized = await importEmbeddedImagesForNode(nodeId, importedAt, node);
     finalizedNodes.push(root ? stageEpubText(finalized, ['content'], root) : finalized);
   }
-  return { finalizedNodes, nodeIdsByKey };
+  return finalizedNodes;
 }
 
 export async function loadEpubPreview(source: ImportSourceDescriptor) {
@@ -129,42 +143,34 @@ export async function runEpubImport(source: ImportSourceDescriptor, importedAt: 
       sourceProfile: 'epub',
       titleStrategy: 'heading'
     });
-    if (options?.targetNodeId) {
-      ensureTrackedImportTarget(rootNode, options.targetNodeId);
-    }
-    const imported = runPreparedImport(rootNode);
-    if (!imported.nodeId) {
-      throw new Error('EPUB import failed: parent node was not created');
-    }
-
-    const finalizedRoot = await importEmbeddedImagesForNode(imported.nodeId, importedAt, {
-      content: rootNode.content,
-      degradedReason: rootNode.degradedReason,
-      embeddedImages: book.rootEmbeddedImages,
-      title: rootNode.nodeTitle
+    const { imported, nodeId, nodeIdsByKey } = await runWithDatabaseConnectionOwner(() => {
+      if (options?.targetNodeId) ensureTrackedImportTarget(rootNode, options.targetNodeId);
+      const imported = runPreparedImport(rootNode);
+      const nodeId = imported.nodeId;
+      if (!nodeId) throw new Error('EPUB import failed: parent node was not created');
+      return { imported, nodeId, nodeIdsByKey: createBookNodes(
+        nodeId, imported.sourceFingerprint, importedAt, nodes) };
     });
-    const { finalizedNodes, nodeIdsByKey } = await syncBookNodes(imported.nodeId, imported.sourceFingerprint, importedAt, nodes, book.workingDirectory);
-    if (options?.sequentialReadingMode) {
-      const connection = openDatabaseConnection();
-      applyEpubSequentialReadingMode({
-        driver: connection.driver,
-        importedAt,
-        mode: options.sequentialReadingMode,
-        nodeIds: [...nodeIdsByKey.values()],
-        sourceNodeId: imported.nodeId
-      });
-    }
-    persistImportedOpeningTexts({
-      finalizedNodes,
-      finalizedRoot,
-      nodeIdsByKey,
-      rootNodeId: imported.nodeId,
-      rootTitle: rootNode.nodeTitle
+    const finalizedRoot = await importEmbeddedImagesForNode(nodeId, importedAt, {
+      content: rootNode.content, degradedReason: rootNode.degradedReason,
+      embeddedImages: book.rootEmbeddedImages, title: rootNode.nodeTitle
     });
-    const aggregateReason = finalizedNodes.reduce<string | null>(
-      (reason, node) => appendReason(reason, node.degradedReason),
-      appendReason(imported.degradedReason, finalizedRoot.degradedReason)
-    );
-    return applyAggregateDegrade(imported, aggregateReason);
+    const finalizedNodes = await finalizeBookNodes(
+      nodes, nodeIdsByKey, importedAt, book.workingDirectory);
+    return runWithDatabaseConnectionOwner(() => {
+      if (options?.sequentialReadingMode) {
+        applyEpubSequentialReadingMode({
+          driver: openDatabaseConnection().driver, importedAt, mode: options.sequentialReadingMode,
+          nodeIds: [...nodeIdsByKey.values()], sourceNodeId: nodeId
+        });
+      }
+      persistImportedOpeningTexts({ finalizedNodes, finalizedRoot, nodeIdsByKey,
+        rootNodeId: nodeId, rootTitle: rootNode.nodeTitle });
+      const aggregateReason = finalizedNodes.reduce<string | null>(
+        (reason, node) => appendReason(reason, node.degradedReason),
+        appendReason(imported.degradedReason, finalizedRoot.degradedReason)
+      );
+      return applyAggregateDegrade(imported, aggregateReason);
+    });
   } finally { await book.dispose?.(); }
 }

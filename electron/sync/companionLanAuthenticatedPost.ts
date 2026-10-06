@@ -5,7 +5,10 @@ import { refreshKeepImportMonitorFromSettings } from '../import/keepImportMonito
 
 import { readCompanionRequestBody } from './companionLanRequestBody.js';
 import { isRetiredSyncJsonEndpoint } from './companionLanSyncObjects.js';
-import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import {
+  authenticateCompanionRequestContext,
+  revalidateCompanionRequestAuthorization
+} from './companionRequestAuth.js';
 import {
   acceptDesktopSyncGroupMemberState,
   SYNC_GROUP_MEMBER_STATE_PATH
@@ -13,7 +16,7 @@ import {
 import { notifyDesktopSyncGroupOverviewChanged } from './desktopSyncGroupOverviewNotifier.js';
 import { handleReadwiseGroupSetup, READWISE_GROUP_SETUP_PATH } from './readwiseGroupSetup.js';
 import { handleReadwiseOwnerStop, READWISE_OWNER_STOP_PATH } from './readwiseOwnerStop.js';
-import { decryptWorkgroupRequestBody } from './workgroupHttpCrypto.js';
+import { decryptWorkgroupRequestBodyWithCredential } from './workgroupHttpCrypto.js';
 
 const RETIRED_DATA_PATHS = new Set([
   '/companion/content-blob-ack',
@@ -47,7 +50,7 @@ async function publishMemberStateEffects() {
 }
 
 async function writeRouteResponse(args: {
-  auth: Extract<ReturnType<typeof authenticateCompanionRequest>, { ok: true }>;
+  auth: Extract<ReturnType<typeof revalidateCompanionRequestAuthorization>, { ok: true }>;
   bodyText: string;
   request: http.IncomingMessage;
   response: http.ServerResponse;
@@ -122,25 +125,33 @@ export async function handleAuthenticatedPost(
       { error: message }, 'POST, OPTIONS');
     return true;
   }
-  const auth = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequest({
+  const authContext = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequestContext({
     allowUnknownDevice: route === 'member-state', bodyText, request,
     requireMemberState: route !== 'member-state'
   }));
-  if (!auth.ok) {
-    writeJson(request, response, auth.status_code, { error: auth.error }, 'POST, OPTIONS');
+  if (!('auth' in authContext)) {
+    writeJson(request, response, authContext.status_code, { error: authContext.error }, 'POST, OPTIONS');
     return true;
   }
   let decryptedBody: string;
   try {
-    decryptedBody = decryptWorkgroupRequestBody(request, bodyText).toString('utf8');
+    decryptedBody = decryptWorkgroupRequestBodyWithCredential(
+      request, bodyText, authContext.workgroup).toString('utf8');
   } catch (error) {
     writeJson(request, response, 401, {
       error: error instanceof Error ? error.message : 'workgroup_aead_invalid'
     });
     return true;
   }
-  await runWithDatabaseConnectionOwner(() => writeRouteResponse({
-    auth, bodyText: decryptedBody, request, response, route, writeJson
-  }));
+  await runWithDatabaseConnectionOwner(() => {
+    const revalidated = revalidateCompanionRequestAuthorization(authContext);
+    if (!revalidated.ok) {
+      writeJson(request, response, revalidated.status_code, { error: revalidated.error }, 'POST, OPTIONS');
+      return;
+    }
+    return writeRouteResponse({
+      auth: revalidated, bodyText: decryptedBody, request, response, route, writeJson
+    });
+  });
   return true;
 }

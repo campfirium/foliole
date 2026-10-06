@@ -1,6 +1,7 @@
 import { dialog, type BrowserWindow } from 'electron';
 
 import type { NativeDirectoryImportArgs, NativeDirectoryImportResult } from '../../lib/platform/nativeContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { runDirectoryImportBatch } from '../import/directoryImportBatch.js';
 import { resolveManagedImportTargetParentNodeId } from '../import/importFolderTargets.js';
 import { loadImportManagerSettings } from '../import/importManagerSettings.js';
@@ -39,7 +40,7 @@ function resolveLatestImportId(result: NativeDirectoryImportResult) {
 }
 
 async function resolveManagedInboxRootPath() {
-  const libraryPaths = await loadLibraryPathSettings();
+  const libraryPaths = await runWithDatabaseConnectionOwner(() => loadLibraryPathSettings());
   const managedPaths = resolveManagedInboxPaths(resolveAppPaths().app_data_dir, libraryPaths.inbox);
   assertMirrorSeparatedFromImportPath({
     importPath: managedPaths.rootPath,
@@ -108,8 +109,10 @@ export async function runDirectoryImport(
     assertSafeDirectoryImportRoot(rootPath, sourceAdapter);
 
     const highlightPolicy = resolveImportHighlightPolicy(args);
-    const titleStrategy = args?.title_strategy ? resolveImportNodeTitleStrategy(args) : loadImportManagerSettings().titleStrategy;
-    const libraryPaths = await loadLibraryPathSettings();
+    const titleStrategy = args?.title_strategy
+      ? resolveImportNodeTitleStrategy(args)
+      : await runWithDatabaseConnectionOwner(() => loadImportManagerSettings().titleStrategy);
+    const libraryPaths = await runWithDatabaseConnectionOwner(() => loadLibraryPathSettings());
     if (sourceAdapter === 'foliole_managed_inbox_folder') {
       assertMirrorSeparatedFromImportPath({
         importPath: rootPath,
@@ -123,14 +126,15 @@ export async function runDirectoryImport(
         ? { excludedPaths: [libraryPaths.mirror], includeLocalImages: true, supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS }
         : { excludedPaths: [libraryPaths.mirror] }
     );
-    const result = withDirectoryImportNodeMutationPatch(await runDirectoryImportBatch({
+    const imported = await runDirectoryImportBatch({
       consumePolicy,
       highlightPolicy,
       rootPath,
       sourceAdapter,
       sources,
       titleStrategy
-    }));
+    });
+    const result = await runWithDatabaseConnectionOwner(() => withDirectoryImportNodeMutationPatch(imported));
     const latestImportId = resolveLatestImportId(result);
     if (latestImportId) {
       notifyManagedInboxUpdated(latestImportId, result.node_mutation_patch);
@@ -148,7 +152,7 @@ export async function runManagedInboxImport(
   options: { importRootPath?: string } = {}
 ) {
   try {
-    const libraryPaths = await loadLibraryPathSettings();
+    const libraryPaths = await runWithDatabaseConnectionOwner(() => loadLibraryPathSettings());
     const importedAt = new Date().toISOString();
     const isImportRoot = options.importRootPath === rootPath;
     assertSafeDirectoryImportRoot(rootPath, 'foliole_managed_inbox_folder');
@@ -157,8 +161,8 @@ export async function runManagedInboxImport(
       label: isImportRoot ? 'Import' : 'Inbox',
       mirrorPath: libraryPaths.mirror
     });
-    const titleStrategy = loadImportManagerSettings().titleStrategy;
-    const result = withDirectoryImportNodeMutationPatch(await runDirectoryImportBatch({
+    const titleStrategy = await runWithDatabaseConnectionOwner(() => loadImportManagerSettings().titleStrategy);
+    const imported = await runDirectoryImportBatch({
       consumePolicy: 'clear',
       highlightPolicy: 'reference_only',
       ...(isImportRoot
@@ -180,7 +184,8 @@ export async function runManagedInboxImport(
         supportedKinds: MANAGED_INBOX_SUPPORTED_KINDS
       }),
       titleStrategy
-    }));
+    });
+    const result = await runWithDatabaseConnectionOwner(() => withDirectoryImportNodeMutationPatch(imported));
     await logDirectoryImportCompleted(result);
     return result;
   } catch (error) {

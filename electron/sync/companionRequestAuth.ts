@@ -31,6 +31,14 @@ interface CompanionRequestAuthFailure {
 
 export type CompanionRequestAuthResult = CompanionRequestAuthFailure | CompanionRequestAuthSuccess;
 
+export interface CompanionRequestAuthContext {
+  allowUnknownDevice: boolean;
+  auth: CompanionRequestAuthSuccess;
+  groupId: string;
+  requireMemberState: boolean;
+  workgroup: NonNullable<ReturnType<typeof loadDesktopWorkgroupKey>>;
+}
+
 export function clearCompanionRequestNonceCache() {
   usedNonceExpiryByDevice.clear();
 }
@@ -43,6 +51,18 @@ export function authenticateCompanionRequest(args: {
   requireMemberState?: boolean;
   request: http.IncomingMessage;
 }): CompanionRequestAuthResult {
+  const result = authenticateCompanionRequestContext(args);
+  return 'auth' in result ? result.auth : result;
+}
+
+export function authenticateCompanionRequestContext(args: {
+  allowUnknownDevice?: boolean;
+  bodySha256?: string;
+  bodyText?: string;
+  nowMs?: number;
+  requireMemberState?: boolean;
+  request: http.IncomingMessage;
+}): CompanionRequestAuthFailure | CompanionRequestAuthContext {
   if (loadBackupRestorePendingSync()) return failure('backup_restore_sync_confirmation_required', 409);
   const headers = readAuthenticationHeaders(args.request);
   if (!headers.deviceId || !headers.groupId || !headers.nonce || !headers.signature || !headers.timestamp) {
@@ -69,7 +89,29 @@ export function authenticateCompanionRequest(args: {
   if (device && args.requireMemberState && !isDesktopSyncGroupMemberStateReady(headers.deviceId)) {
     return failure('sync_group_member_state_required', 409);
   }
-  return { device_id: headers.deviceId, device_name: device?.device_name ?? headers.deviceId, ok: true };
+  return {
+    allowUnknownDevice: Boolean(args.allowUnknownDevice),
+    auth: { device_id: headers.deviceId, device_name: device?.device_name ?? headers.deviceId, ok: true },
+    groupId: headers.groupId,
+    requireMemberState: Boolean(args.requireMemberState),
+    workgroup: workgroupKey
+  };
+}
+
+export function revalidateCompanionRequestAuthorization(
+  context: CompanionRequestAuthContext
+): CompanionRequestAuthFailure | CompanionRequestAuthSuccess {
+  if (loadBackupRestorePendingSync()) return failure('backup_restore_sync_confirmation_required', 409);
+  const currentKey = loadDesktopWorkgroupKey(context.groupId);
+  if (!currentKey || currentKey.group_key !== context.workgroup.group_key) {
+    return failure('sync_group_workgroup_key_missing', 401);
+  }
+  const device = validateActiveDevice(context.groupId, context.auth.device_id);
+  if (!device && !context.allowUnknownDevice) return failure('sync_group_device_not_active', 401);
+  if (device && context.requireMemberState && !isDesktopSyncGroupMemberStateReady(context.auth.device_id)) {
+    return failure('sync_group_member_state_required', 409);
+  }
+  return { ...context.auth, device_name: device?.device_name ?? context.auth.device_id };
 }
 
 function validateActiveDevice(groupId: string, deviceId: string) {

@@ -1,6 +1,7 @@
 import { buildImportedHighlightPreviewFromMatches } from '../../lib/core/import/importedHighlightPreview.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import type { NativeKeepImportPreviewResult } from '../../lib/platform/nativeKeepImportContract.js';
+import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { readKeepImportItem, readKeepImportNodeState } from '../database/keepImportItems.js';
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
@@ -37,7 +38,8 @@ export async function classifySource(
 ): Promise<KeepImportPreviewEntry> {
   const sourcePath = source.sourceName;
   const sourceSignature = await resolveKeepImportSourceSignature(config, source);
-  const blockedState = isBlockedByDeletedNode(config.ruleId, sourcePath);
+  const blockedState = await runWithDatabaseConnectionOwner(() =>
+    isBlockedByDeletedNode(config.ruleId, sourcePath));
   const deleted = blockedState.deleted;
   const existingItem = blockedState.existingItem;
   const notImported = !existingItem?.last_node_id &&
