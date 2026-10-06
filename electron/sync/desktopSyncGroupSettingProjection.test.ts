@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncPackSettingObjectsWithDbPort } from '../../lib/core/sync/syncPackSyncObjectsExecutor.js';
 import { materializeDesktopSettingRecord } from '../database/desktopSettingMaterializer.js';
@@ -7,11 +8,12 @@ import { materializeDesktopSettingRecord } from '../database/desktopSettingMater
 it('makes an incoming Readwise owner visible to the receiving desktop', async () => {
   const owner = JSON.stringify({ device_identity_key: 'mac-device', epoch: 1, host_name: 'Mac' });
   const updatedAt = '2026-09-24T03:16:00.000Z';
+  const payload = { key: 'readwise_active_host', scope: 'user_space',
+    platform: 'windows', form_factor: 'desktop', host_name: '*', value_json: owner };
   const record = {
-    content_hash: 'owner-hash', deleted_at: null,
+    content_hash: computeSyncContentHash('setting', payload), deleted_at: null,
     object_id: 'user_space:windows:desktop:*:readwise_active_host', object_type: 'setting',
-    payload_json: JSON.stringify({ key: 'readwise_active_host', scope: 'user_space',
-      platform: 'windows', form_factor: 'desktop', host_name: '*', value_json: owner }),
+    payload_json: JSON.stringify(payload),
     updated_at: updatedAt
   };
   const run = vi.fn(async () => ({ changes: 1, lastInsertRowId: null }));

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+import { FOREGROUND_TIME_SCHEMA } from '../../lib/core/database/foregroundTimeSchema.js';
 import { applySyncPackStateRowsWithDbPort } from '../../lib/core/sync/syncPackStateRowsExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
@@ -73,6 +74,7 @@ function createFixture(type: string, incomingHash: string) {
     );
     CREATE TABLE inc.nodes (id TEXT, current_version_id TEXT);
   `);
+  for (const statement of FOREGROUND_TIME_SCHEMA) db.exec(statement);
   db.prepare(`INSERT INTO sync_object_state VALUES (?, 'node-1', 7, NULL,
     'same-hash', 'host-a', '2026-05-01T00:00:00Z', NULL, 0)`).run(type);
   db.prepare(`INSERT INTO inc.sync_object_state VALUES (?, 'node-1', 10, ?,
