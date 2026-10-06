@@ -14,6 +14,7 @@ import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
 import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 
 import {
+  FRAMED_SYNC_BODY_SHA256_HEADER,
   FRAMED_SYNC_PATH,
   handleCompanionLanFramedSyncPost
 } from './companionLanFramedSyncPost.js';
@@ -35,8 +36,13 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     const connection = openDatabaseConnection();
     const group = loadDesktopSyncGroupInfo();
     if (!group) throw new Error('sync_group_not_available');
+    const bodySha256 = readHeader(args.request, FRAMED_SYNC_BODY_SHA256_HEADER);
     return {
-      auth: authenticateCompanionRequest({ request: args.request, requireMemberState: true }),
+      auth: authenticateCompanionRequest({
+        ...(bodySha256 === undefined ? {} : { bodySha256 }),
+        request: args.request,
+        requireMemberState: true
+      }),
       db: createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-framed-sync-lan' }),
       groupKey: new Uint8Array(Buffer.from(group.workgroup_key, 'base64url')),
       libraryEpoch: loadDesktopLocalNodeProof().library_epoch
@@ -74,6 +80,11 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     response: args.response
   });
   return true;
+}
+
+function readHeader(request: http.IncomingMessage, name: string) {
+  const value = request.headers[name];
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 function toTransferContext(context: Readonly<{
