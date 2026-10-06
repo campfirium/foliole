@@ -33,7 +33,8 @@ public final class FramedSyncResourceStagingTest {
     @Test
     public void streamsVerifiesPublishesAndRollsBackAResourceFile() throws Exception {
         File root = new File(androidx.test.platform.app.InstrumentationRegistry
-            .getInstrumentation().getTargetContext().getCacheDir(), "framed-resource-test");
+            .getInstrumentation().getTargetContext().getExternalFilesDir(null),
+            "framed-resource-test");
         delete(root);
         File attachments = new File(root, "attachments");
         root.mkdirs();

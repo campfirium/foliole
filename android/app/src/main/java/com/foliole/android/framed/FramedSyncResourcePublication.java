@@ -2,7 +2,6 @@ package com.foliole.android.framed;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.system.Os;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -57,8 +56,14 @@ public final class FramedSyncResourcePublication implements AutoCloseable {
             requireValid(target, hash, length, role, key);
         } else {
             requireValid(partial, hash, length, role, key);
-            Os.link(partial.getAbsolutePath(), target.getAbsolutePath());
-            created.add(target);
+            File publication = FramedSyncResourceFiles.publication(
+                directory, transferId, attemptId, hash);
+            if (FramedSyncResourceFiles.copyForPublication(partial, target, publication)) {
+                requireValid(target, hash, length, role, key);
+                created.add(target);
+            } else {
+                requireValid(target, hash, length, role, key);
+            }
         }
         storageKeys.add(key);
         if (partial.exists()) partials.add(partial);

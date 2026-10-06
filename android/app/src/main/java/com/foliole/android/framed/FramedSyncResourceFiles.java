@@ -2,6 +2,7 @@ package com.foliole.android.framed;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
@@ -15,6 +16,37 @@ final class FramedSyncResourceFiles {
     static File partial(File directory, byte[] transferId, byte[] attemptId, byte[] hash) {
         return new File(directory, ".framed-sync-" + hex(transferId) + "-" + hex(attemptId) +
             "-" + hex(hash) + ".partial");
+    }
+
+    static File publication(File directory, byte[] transferId, byte[] attemptId, byte[] hash) {
+        return new File(directory, ".framed-sync-publish-" + hex(transferId) + "-" +
+            hex(attemptId) + "-" + hex(hash) + ".partial");
+    }
+
+    static boolean copyForPublication(File source, File target, File temporary) throws Exception {
+        if (target.exists()) return false;
+        if (temporary.exists() && !temporary.delete()) {
+            throw new FramedSyncValidationException("resource_publication_cleanup_failed");
+        }
+        boolean moved = false;
+        try {
+            byte[] buffer = new byte[64 * 1024];
+            try (InputStream input = new FileInputStream(source);
+                 FileOutputStream output = new FileOutputStream(temporary)) {
+                for (int length; (length = input.read(buffer)) >= 0;) {
+                    if (length > 0) output.write(buffer, 0, length);
+                }
+                output.getFD().sync();
+            }
+            if (target.exists()) return false;
+            if (!temporary.renameTo(target)) {
+                throw new FramedSyncValidationException("resource_publication_rename_failed");
+            }
+            moved = true;
+            return true;
+        } finally {
+            if (!moved && temporary.exists()) temporary.delete();
+        }
     }
 
     static String verify(File file, byte[] expectedHash, long expectedLength, int role)

@@ -1,7 +1,10 @@
 package com.foliole.android.framed;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -44,6 +47,28 @@ public final class FramedSyncResourceFilesTest {
             byte[] hash = MessageDigest.getInstance("SHA-256").digest(bytes);
             assertEquals(FramedSyncResourceFiles.hex(hash) + ".epub",
                 FramedSyncResourceFiles.verify(epub, hash, bytes.length, 4));
+        } finally {
+            delete(root);
+        }
+    }
+
+    @Test
+    public void publishesByDurableCopyWithoutConsumingTheRetryablePartial() throws Exception {
+        File root = Files.createTempDirectory("foliole-framed-publication").toFile();
+        try {
+            File partial = new File(root, "resource.partial");
+            File target = new File(root, "resource.pdf");
+            File publication = new File(root, "resource.publish");
+            byte[] bytes = "%PDF-1.7\nresource".getBytes();
+            Files.write(partial.toPath(), bytes);
+
+            assertTrue(FramedSyncResourceFiles.copyForPublication(
+                partial, target, publication));
+            assertTrue(partial.isFile());
+            assertArrayEquals(bytes, Files.readAllBytes(target.toPath()));
+            assertFalse(publication.exists());
+            assertFalse(FramedSyncResourceFiles.copyForPublication(
+                partial, target, publication));
         } finally {
             delete(root);
         }
