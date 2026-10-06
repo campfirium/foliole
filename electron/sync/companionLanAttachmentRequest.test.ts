@@ -1,19 +1,17 @@
-import { promises as fs } from 'node:fs';
 import type http from 'node:http';
-import os from 'node:os';
-import path from 'node:path';
 import { PassThrough, Writable } from 'node:stream';
 
-import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { expect, it, vi } from 'vitest';
 
 const attachmentMock = vi.hoisted(() => ({ load: vi.fn() }));
+const workspaceMock = vi.hoisted(() => ({ load: vi.fn() }));
 
 vi.mock('../database/connection.js', () => ({
   registerDatabaseConnectionCleanup: vi.fn(),
   runWithDatabaseConnectionOwner: async (execute: () => unknown) => execute()
 }));
 vi.mock('../database/workspaceSnapshot.js', () => ({
-  loadWorkspaceSnapshot: vi.fn(), loadWorkspaceVersionMetadata: vi.fn()
+  loadWorkspaceSnapshot: workspaceMock.load, loadWorkspaceVersionMetadata: vi.fn()
 }));
 vi.mock('./companionRequestAuth.js', () => ({
   authenticateCompanionRequest: vi.fn(() => ({ device_id: 'android-fixture', ok: true }))
@@ -41,63 +39,27 @@ import {
   ATTACHMENT_RESOURCE_PATH, createLanWorkspaceSyncRequestHandler
 } from './companionLanRequestHandler.js';
 
-let tempRoot = '';
-let attachmentPath = '';
-
-beforeEach(async () => {
-  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-lan-attachment-'));
-  attachmentPath = path.join(tempRoot, 'attachment.bin');
-  await fs.writeFile(attachmentPath, 'attachment-bytes');
-  vi.resetAllMocks();
-  attachmentMock.load.mockResolvedValue({
-    contentLength: Buffer.byteLength('attachment-bytes'), filePath: attachmentPath,
-    mimeType: 'image/png', status: 'ready'
-  });
-});
-
-afterEach(async () => fs.rm(tempRoot, { force: true, recursive: true }));
-
 function responseFixture() {
-  const chunks: Buffer[] = [];
   const response = new Writable({
-    write(chunk, _encoding, done) { chunks.push(Buffer.from(chunk)); done(); }
-  }) as unknown as http.ServerResponse & { body: () => Buffer };
+    write(_chunk, _encoding, done) { done(); }
+  }) as unknown as http.ServerResponse;
   response.writeHead = vi.fn() as never;
-  response.body = () => Buffer.concat(chunks);
   return response;
 }
 
-function handler() {
-  return createLanWorkspaceSyncRequestHandler({
+it('retires the legacy attachment GET before loading resources or a workspace snapshot', async () => {
+  const response = responseFixture();
+  const handler = createLanWorkspaceSyncRequestHandler({
     appVersion: '0.1.0-test', deviceId: 'desktop-local', getSyncStatus: () => null,
     onJoinRequestCreated: null, updateGroupStatus: vi.fn()
   });
-}
-
-it('serves signed attachment resources without loading a workspace snapshot', async () => {
-  const response = responseFixture();
-  await handler()({ headers: {}, method: 'GET',
+  await handler({ headers: {}, method: 'GET',
     url: `${ATTACHMENT_RESOURCE_PATH}?attachment_id=att-1&content_hash=hash-1`
   } as http.IncomingMessage, response);
 
-  expect(response.writeHead).toHaveBeenCalledWith(200, {
-    'Content-Type': 'application/vnd.foliole.workgroup-aead+json',
-    'X-Foliole-Original-Content-Type': 'image/png'
-  });
-  expect(response.body().toString()).toBe(Buffer.from('attachment-bytes').toString('base64url'));
-  expect(attachmentMock.load).toHaveBeenCalledWith('att-1', 'hash-1', null, undefined);
-});
-
-it('returns attachment resource errors as json', async () => {
-  attachmentMock.load.mockResolvedValue({
-    error: 'content_hash_mismatch', status: 'error', statusCode: 409
-  });
-  const response = responseFixture();
-  await handler()({ headers: {}, method: 'GET',
-    url: `${ATTACHMENT_RESOURCE_PATH}?attachment_id=att-1&content_hash=wrong`
-  } as http.IncomingMessage, response);
-
-  expect(response.writeHead).toHaveBeenCalledWith(409, expect.objectContaining({
+  expect(response.writeHead).toHaveBeenCalledWith(410, expect.objectContaining({
     'Content-Type': 'application/json; charset=utf-8'
   }));
+  expect(attachmentMock.load).not.toHaveBeenCalled();
+  expect(workspaceMock.load).not.toHaveBeenCalled();
 });
