@@ -15,6 +15,7 @@ import {
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from '../../lib/core/sync/framedSyncInventory.js';
+import { selectFramedSyncNodeReadingFact } from '../../lib/core/sync/framedSyncNodeReadingFact.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from '../../lib/core/sync/framedSyncRelationReviewSelection.js';
 import {
   assertOutboundPublication,
@@ -117,6 +118,8 @@ export async function selectDesktopFramedSyncNodeManifest(
     ));
   const related = await selectFramedSyncRelationReviewFactsWithDbPort(tx, difference);
   if (related.kind === 'deferred') throw new Error('framed_sync_source_changed');
+  const stateFacts = await Promise.all((difference.need.stateFactIds ?? []).map((factId) =>
+    selectFramedSyncNodeReadingFact(tx, difference.globalId, factId)));
   const blobs = new Map<string, CanonicalBlob>();
   for (const projection of projections) for (const blob of projection.manifest.blobs) {
     const key = bytesToHex(blob.sha256);
@@ -129,6 +132,7 @@ export async function selectDesktopFramedSyncNodeManifest(
   }
   const facts = [
     ...projections.flatMap((value) => value.manifest.facts),
+    ...stateFacts,
     ...related.facts
   ];
   if (!facts.length) throw new Error('framed_sync_outbound_fact_set_empty');

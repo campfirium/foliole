@@ -29,7 +29,7 @@ function entryToWire(entry: FramedSyncInventoryEntry) {
     frontierFactIds: entry.frontierFactIds, globalId: entry.globalId,
     objectType: entry.objectType, requiredRelationIds: entry.requiredRelationIds,
     resourceHashes: entry.resourceHashes, reviewFactIds: entry.reviewFactIds,
-    sharedStateHash: entry.sharedStateHash
+    sharedStateHash: entry.sharedStateHash, stateFactIds: entry.stateFactIds ?? []
   };
 }
 
@@ -37,6 +37,7 @@ function entriesFromWire(value: unknown): readonly FramedSyncInventoryEntry[] {
   return list(row(value).entries).map((item) => {
     const entry = row(item);
     const strings = (key: string) => list(entry[key]).map((part) => text(part, key));
+    const stateFactIds = strings('stateFactIds');
     return {
       frontierFactIds: strings('frontierFactIds'),
       globalId: text(entry.globalId, 'global_id'),
@@ -44,7 +45,8 @@ function entriesFromWire(value: unknown): readonly FramedSyncInventoryEntry[] {
       requiredRelationIds: strings('requiredRelationIds'),
       resourceHashes: list(entry.resourceHashes).map((hash) => bytes(hash, 'resource_hash').slice()),
       reviewFactIds: strings('reviewFactIds'),
-      sharedStateHash: bytes(entry.sharedStateHash, 'shared_state_hash').slice()
+      sharedStateHash: bytes(entry.sharedStateHash, 'shared_state_hash').slice(),
+      ...(stateFactIds.length ? { stateFactIds } : {})
     };
   });
 }

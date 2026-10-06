@@ -11,7 +11,7 @@ import {
 export type FramedSyncRequestedFact = Readonly<{
   factId: string;
   globalId: string;
-  kind: 2 | 3 | 4;
+  kind: 1 | 2 | 3 | 4;
   objectType: 'node';
 }>;
 
@@ -29,6 +29,8 @@ export function projectFramedSyncDifferenceRequest(input: {
   }
   const versionIds = new Set(difference.sourceSnapshot.frontierFactIds);
   const facts = [
+    ...(difference.sourceSnapshot.stateFactIds ?? [])
+      .map((id) => identity(difference.globalId, id, 1)),
     ...[...versionIds].map((id) => identity(difference.globalId, id, 2)),
     ...difference.sourceSnapshot.requiredRelationIds.map((id) => identity(difference.globalId, id, 3)),
     ...difference.sourceSnapshot.reviewFactIds.map((id) => identity(difference.globalId, id, 4))
@@ -52,7 +54,7 @@ export function decodeFramedSyncDifferenceRequest(message: ValidatedProtocolMess
   const facts = list(payload.facts).map((value): FramedSyncRequestedFact => {
     const fact = row(value);
     const kind = Number(fact.kind);
-    if (kind !== 2 && kind !== 3 && kind !== 4) {
+    if (kind !== 1 && kind !== 2 && kind !== 3 && kind !== 4) {
       throw new Error('framed_sync_difference_request_fact_kind_invalid');
     }
     const objectType = text(fact.objectType, 'object_type');
@@ -82,11 +84,13 @@ export function resolveFramedSyncDifferenceRequest(
   const ids = (kind: FramedSyncRequestedFact['kind']) =>
     request.facts.filter((fact) => fact.kind === kind).map((fact) => fact.factId);
   const frontierFactIds = ids(2);
+  const stateFactIds = ids(1);
   const requiredRelationIds = ids(3);
   const reviewFactIds = ids(4);
   assertSame(frontierFactIds, current.frontierFactIds);
   assertSame(requiredRelationIds, current.requiredRelationIds);
   assertSame(reviewFactIds, current.reviewFactIds);
+  assertSame(stateFactIds, current.stateFactIds ?? []);
   assertSame(request.blobHashes.map(hex), current.resourceHashes.map(hex));
   return {
     direction: 'local_to_remote',
@@ -96,6 +100,7 @@ export function resolveFramedSyncDifferenceRequest(
       requiredRelationIds,
       resourceHashes: request.blobHashes,
       reviewFactIds,
+      stateFactIds,
       sharedState: frontierFactIds.length > 0
     },
     objectType: current.objectType,

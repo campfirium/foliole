@@ -64,18 +64,7 @@ function validateRemainingPayload(payloadCase: ProtocolPayloadCase, payload: Rec
     }
   } else if (payloadCase === 'inventory_chunk') {
     fixedBytes(payload.roundId, 16, 'round_id');
-    const entries = list(payload.entries, FRAMED_SYNC_LIMITS.maxFactsPerTransfer);
-    unique(entries.map((item) => {
-      const entry = row(item); text(entry.objectType, 'object_type'); text(entry.globalId, 'global_id');
-      digest(entry.sharedStateHash, 'shared_state_hash');
-      for (const key of ['frontierFactIds', 'requiredRelationIds', 'reviewFactIds']) {
-        unique(list(entry[key], FRAMED_SYNC_LIMITS.maxFactsPerTransfer)
-          .map((id) => text(id, key)), key);
-      }
-      unique(list(entry.resourceHashes, FRAMED_SYNC_LIMITS.maxBlobsPerTransfer)
-        .map((hash) => hex(digest(hash, 'resource_hash'))), 'resource_hash');
-      return `${entry.objectType}\0${entry.globalId}`;
-    }), 'inventory_entry');
+    validateInventoryEntries(payload.entries);
   } else if (payloadCase === 'inventory_end') {
     fixedBytes(payload.roundId, 16, 'round_id'); digest(payload.inventoryHash, 'inventory_hash');
   } else if (payloadCase === 'transfer_proposal') {
@@ -115,4 +104,21 @@ function validateRemainingPayload(payloadCase: ProtocolPayloadCase, payload: Rec
     const transferId = bytes(payload.transferId, 'transfer_id');
     if (transferId.byteLength !== 0) assertFramedSyncDigest(transferId, 'transfer_id');
   }
+}
+
+function validateInventoryEntries(value: unknown) {
+  const entries = list(value, FRAMED_SYNC_LIMITS.maxFactsPerTransfer);
+  unique(entries.map((item) => {
+    const entry = row(item); text(entry.objectType, 'object_type'); text(entry.globalId, 'global_id');
+    digest(entry.sharedStateHash, 'shared_state_hash');
+    for (const key of [
+      'frontierFactIds', 'requiredRelationIds', 'reviewFactIds', 'stateFactIds'
+    ]) {
+      unique(list(entry[key], FRAMED_SYNC_LIMITS.maxFactsPerTransfer)
+        .map((id) => text(id, key)), key);
+    }
+    unique(list(entry.resourceHashes, FRAMED_SYNC_LIMITS.maxBlobsPerTransfer)
+      .map((hash) => hex(digest(hash, 'resource_hash'))), 'resource_hash');
+    return `${entry.objectType}\0${entry.globalId}`;
+  }), 'inventory_entry');
 }

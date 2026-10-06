@@ -227,6 +227,12 @@
                       "type": "bytes",
                       "id": 7,
                       "protoName": "resource_hashes"
+                    },
+                    "stateFactIds": {
+                      "rule": "repeated",
+                      "type": "string",
+                      "id": 8,
+                      "protoName": "state_fact_ids"
                     }
                   }
                 },

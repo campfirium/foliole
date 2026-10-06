@@ -59,6 +59,14 @@ export async function applySyncObjectsWithDbPort(
   return appliedIds;
 }
 
+export function applySyncObjectInTransaction(
+  port: DbPort,
+  record: NativeSyncObjectRecord,
+  options: ApplySyncObjectsWithDbPortOptions = {}
+) {
+  return applySingleSyncObjectInTransaction(port, validateSyncObjectRecord(record), options);
+}
+
 function validateSyncObjectRecord(value: unknown): SyncPackSyncObjectRecord {
   if (!isRecord(value)) throw new Error('Invalid sync object record');
   const objectType = requireString(value, 'object_type') as NativeSyncObjectRecord['object_type'];

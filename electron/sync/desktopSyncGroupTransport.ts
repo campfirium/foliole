@@ -72,7 +72,8 @@ async function continuePeerSync(
   const result = await runPeerSyncStage('sync_pack', () => runDesktopFramedSyncInventoryRound({
     localLibraryEpoch: memberState.localLibraryEpoch,
     peer: target,
-    remoteLibraryEpoch: memberState.remoteLibraryEpoch
+    remoteLibraryEpoch: memberState.remoteLibraryEpoch,
+    ...(memberState.restoreFromPeer ? { restoreId: memberState.restoreFromPeer } : {})
   }), target, activity);
   if (result.complete) {
     await runPeerSyncStage(

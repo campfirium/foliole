@@ -62,6 +62,7 @@ message InventoryEntry {
   repeated string required_relation_ids = 5;
   repeated string review_fact_ids = 6;
   repeated bytes resource_hashes = 7;
+  repeated string state_fact_ids = 8;
 }
 enum Compression {
   COMPRESSION_NONE = 0;

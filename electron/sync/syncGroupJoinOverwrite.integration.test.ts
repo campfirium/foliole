@@ -72,6 +72,11 @@ for (const mode of ['merge', 'overwrite']) {
     await provider!.send('joinProviderEnable');
     await source!.send('sync', { ...peers[1]! });
     await provider!.send('sync', { ...peers[0]! });
+    const proofs = await provider!.send('proofs') as unknown as Array<{
+      device_identity_key: string; proof_revision: number
+    }>;
+    expect(proofs.find((proof) => proof.device_identity_key === peers[0]!.identity)?.proof_revision)
+      .toBeGreaterThan(0);
     expect((await source!.send('snapshot')).library.nodesById['remote-note']).toBeDefined();
     await offline!.close();
     workers.pop();
@@ -100,7 +105,7 @@ for (const mode of ['merge', 'overwrite']) {
     };
     await provider!.send('joinAccept', { requestId: request.join_request.request_id });
     await source!.send('joinComplete');
-    await provider!.send('pull', { ...peers[0]! });
+    await provider!.send('sync', { ...peers[0]! });
     await expect.poll(async () => (await provider!.send('snapshot')).library.nodesById['remote-note'],
       { timeout: 20000 }).toBeUndefined();
     const local = await source!.send('reopen');
@@ -153,7 +158,7 @@ async function assertOfflineCatchup(script: string, groupId: string, peer: Await
   workers.push(returning);
   await returning.send('init', { groupId, name: 'Offline' });
   await returning.send('enable');
-  await returning.send('pull', { ...peer });
+  await returning.send('sync', { ...peer });
   const caughtUp = await returning.send('reopen');
   expect(caughtUp.library.nodesById['offline-note']).toBeUndefined();
   expect(caughtUp.library.nodesById['local-note']?.content).toBe('Local chosen data');

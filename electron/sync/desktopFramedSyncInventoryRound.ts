@@ -16,7 +16,9 @@ import {
   requestDesktopFramedSyncDifferenceHttp
 } from './desktopFramedSyncInventoryHttp.js';
 import { readReceipt } from './desktopFramedSyncProcessReceipt.js';
+import { buildReceiptStream } from './desktopFramedSyncProcessReceipt.js';
 import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
+import { runDesktopFramedSyncRestoreRound } from './desktopFramedSyncRestoreRound.js';
 import { createDesktopFramedSyncRoundEndpoint } from './desktopFramedSyncRoundEndpoint.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
@@ -25,6 +27,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
   localLibraryEpoch: string;
   peer: DesktopSyncGroupPeer;
   remoteLibraryEpoch: string;
+  restoreId?: string;
 }) {
   const runtime = await loadRoundRuntime(args.peer.group_id);
   const local = { deviceId: args.peer.local_device_id, libraryEpoch: args.localLibraryEpoch };
@@ -45,17 +48,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
     groupSecret: runtime.groupSecret,
     noncePort: runtime.noncePort
   });
-  const differences = compareFramedSyncInventories(inventories);
-  const endpoint = createDesktopFramedSyncRoundEndpoint({
-    db: runtime.db,
-    groupId: args.peer.group_id,
-    groupSecret: runtime.groupSecret,
-    local,
-    peer: remote,
-    peerOrigin: args.peer.endpoint_url,
-    staging: runtime.staging
-  });
-  return transferDifferences(differences, endpoint, {
+  const inbound = {
     context,
     db: runtime.db,
     endpointUrl: args.peer.endpoint_url,
@@ -64,7 +57,25 @@ export async function runDesktopFramedSyncInventoryRound(args: {
     noncePort: runtime.noncePort,
     roundId: inventories.roundId,
     staging: runtime.staging
+  };
+  if (args.restoreId) {
+    return runDesktopFramedSyncRestoreRound({
+      restoreId: args.restoreId,
+      inventories,
+      inbound,
+      exchange: {
+        context, db: runtime.db, endpointUrl: args.peer.endpoint_url,
+        groupKey: runtime.groupKey, groupSecret: runtime.groupSecret,
+        noncePort: runtime.noncePort
+      }
+    });
+  }
+  const differences = compareFramedSyncInventories(inventories);
+  const endpoint = createDesktopFramedSyncRoundEndpoint({
+    db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
+    local, peer: remote, peerOrigin: args.peer.endpoint_url, staging: runtime.staging
   });
+  return transferDifferences(differences, endpoint, inbound);
 }
 
 async function transferDifferences(
@@ -94,7 +105,7 @@ async function transferDifferences(
   return { complete: pending === 0, pending, transferred };
 }
 
-type InboundRound = Readonly<{
+export type InboundRound = Readonly<{
   context: Parameters<typeof requestDesktopFramedSyncDifferenceHttp>[0]['context'];
   db: Awaited<ReturnType<typeof loadRoundRuntime>>['db'];
   endpointUrl: string;
@@ -119,6 +130,18 @@ async function receiveRemoteDifference(
   const transferId = decodeFramedSyncPreamble(receiptBody.preamble).contextId;
   const receipt = await input.staging.loadReceipt(transferId);
   if (!receipt) throw new Error('framed_sync_inbound_receipt_missing');
+  await postInboundReceipt(input, context, receipt, receiptBody);
+}
+
+async function postInboundReceipt(
+  input: InboundRound,
+  context: FramedSyncContext,
+  receipt: TransferReceiptStage,
+  body?: Awaited<ReturnType<typeof buildReceiptStream>>
+) {
+  const receiptBody = body ?? await buildReceiptStream({
+    db: input.db, groupKey: input.groupKey, receipt, staging: input.staging
+  });
   const response = await postDesktopFramedSync({
     body: receiptBody,
     endpointUrl: input.endpointUrl,

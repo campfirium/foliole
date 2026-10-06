@@ -10,6 +10,7 @@ export type FramedSyncInventoryEntry = Readonly<{
   resourceHashes: readonly Uint8Array[];
   reviewFactIds: readonly string[];
   sharedStateHash: Uint8Array;
+  stateFactIds?: readonly string[];
 }>;
 
 export type FramedSyncInventoryNeed = Readonly<{
@@ -18,6 +19,7 @@ export type FramedSyncInventoryNeed = Readonly<{
   resourceHashes: readonly Uint8Array[];
   reviewFactIds: readonly string[];
   sharedState: boolean;
+  stateFactIds?: readonly string[];
 }>;
 
 export type FramedSyncInventoryDifference = Readonly<{
@@ -72,6 +74,7 @@ function assertEntry(entry: FramedSyncInventoryEntry) {
   assertUnique(entry.frontierFactIds, 'frontier_fact_id');
   assertUnique(entry.requiredRelationIds, 'required_relation_id');
   assertUnique(entry.reviewFactIds, 'review_fact_id');
+  assertUnique(entry.stateFactIds ?? [], 'state_fact_id');
   const hashes = entry.resourceHashes.map((hash) =>
     bytesKey(assertFramedSyncDigest(hash, 'resource_hash')));
   if (new Set(hashes).size !== hashes.length) throw new Error('resource_hash_duplicate');
@@ -105,6 +108,7 @@ function needFrom(source: FramedSyncInventoryEntry, destination?: FramedSyncInve
       source.requiredRelationIds, destination?.requiredRelationIds ?? []),
     resourceHashes: missingHashes(source.resourceHashes, destination?.resourceHashes ?? []),
     reviewFactIds: missingStrings(source.reviewFactIds, destination?.reviewFactIds ?? []),
+    stateFactIds: missingStrings(source.stateFactIds ?? [], destination?.stateFactIds ?? []),
     sharedState: !destination || !sameBytes(source.sharedStateHash, destination.sharedStateHash)
   } satisfies FramedSyncInventoryNeed;
 }
@@ -112,6 +116,7 @@ function needFrom(source: FramedSyncInventoryEntry, destination?: FramedSyncInve
 function hasNeed(need: FramedSyncInventoryNeed) {
   return need.sharedState || need.frontierFactIds.length > 0 ||
     need.requiredRelationIds.length > 0 || need.reviewFactIds.length > 0 ||
+    (need.stateFactIds?.length ?? 0) > 0 ||
     need.resourceHashes.length > 0;
 }
 
@@ -123,6 +128,7 @@ function cloneEntry(entry: FramedSyncInventoryEntry): FramedSyncInventoryEntry {
     requiredRelationIds: [...entry.requiredRelationIds],
     resourceHashes: entry.resourceHashes.map((hash) => hash.slice()),
     reviewFactIds: [...entry.reviewFactIds],
+    stateFactIds: [...(entry.stateFactIds ?? [])],
     sharedStateHash: entry.sharedStateHash.slice()
   };
 }
@@ -189,6 +195,7 @@ function sameEntry(left: FramedSyncInventoryEntry, right: FramedSyncInventoryEnt
     sameStrings(left.frontierFactIds, right.frontierFactIds) &&
     sameStrings(left.requiredRelationIds, right.requiredRelationIds) &&
     sameStrings(left.reviewFactIds, right.reviewFactIds) &&
+    sameStrings(left.stateFactIds ?? [], right.stateFactIds ?? []) &&
     sameHashes(left.resourceHashes, right.resourceHashes);
 }
 

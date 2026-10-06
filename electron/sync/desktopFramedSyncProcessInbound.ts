@@ -5,24 +5,15 @@ import {
   type CanonicalManifest
 } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { FramedSyncContext, PublishedTransfer } from '../../lib/core/sync/framedSyncContract.js';
-import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
-import { assertFramedSyncNodeParentDependencies } from '../../lib/core/sync/framedSyncNodeParentDependencies.js';
-import { recordFramedSyncPeerEpoch } from '../../lib/core/sync/framedSyncPeerEpoch.js';
 import type {
   FramedSyncStagingPort,
   InboundFactDescriptor,
   InboundFrameInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
-import type { FramedSyncBlobContent } from '../../lib/core/sync/framedSyncTransferPayloads.js';
-import { advanceLocalSourceRevision } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
-import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
-import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
-import { applyDesktopFramedSyncRelationReviewFactsWithDbPort } from '../database/desktopFramedSyncRelationReviewApply.js';
-import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 
+import { applyPreparedDesktopFramedSyncInbound } from './desktopFramedSyncApplyPrepared.js';
 import type { DesktopFramedSyncInboundResourceStore } from './desktopFramedSyncInboundResourceStore.js';
-import { restoreDesktopFramedSyncNodeRecord } from './desktopFramedSyncNodeProjection.js';
+import { prepareDesktopFramedSyncInbound } from './desktopFramedSyncPreparedInbound.js';
 
 type Header = Readonly<{
   blobs: CanonicalManifest['blobs'];
@@ -101,7 +92,7 @@ export async function stageDesktopFramedSyncBlob(input: {
 }
 
 export async function finishDesktopFramedSyncTransfer(input: {
-  blobs: readonly FramedSyncBlobContent[];
+  blobs: Parameters<typeof prepareDesktopFramedSyncInbound>[0]['blobs'];
   blobCount: bigint;
   context: FramedSyncContext;
   db: DbPort;
@@ -112,101 +103,12 @@ export async function finishDesktopFramedSyncTransfer(input: {
   resources: Pick<DesktopFramedSyncInboundResourceStore, 'complete'>;
   staging: FramedSyncStagingPort;
 }) {
-  const prepared = prepareInboundApply(input.facts, input.blobs);
-  await input.staging.commitAuthenticatedFrame(input.frame);
-  for (const blob of input.blobs) {
-    await input.staging.verifyAndMarkBlobAvailable(
-      input.frame.transferId, input.frame.attemptId, blob.sha256
-    );
-  }
-  await input.staging.finalizeInboundAttempt({
-    attemptId: input.frame.attemptId,
-    blobCount: input.blobCount,
-    factCount: input.factCount,
-    manifestHash: input.manifestHash,
-    transferId: input.frame.transferId
-  });
-  await input.resources.complete(prepared.records);
-  await input.staging.markReadyToApply(input.frame.transferId);
-  const receipt = await input.db.transaction(async (tx) => {
-    await assertFramedSyncNodeParentDependencies(tx, prepared.records);
-    if (prepared.records.length) {
-      await promoteFramedNodeBodies(tx, prepared.records);
-      await applySyncNodesWithDbPort(tx, prepared.records);
-    }
-    await applyDesktopFramedSyncRelationReviewFactsWithDbPort(tx, prepared.relationReviewFacts);
-    await advanceLocalSourceRevision(tx, input.context.senderDeviceId);
-    await recordFramedSyncPeerEpoch(tx, {
-      groupId: input.context.groupId,
-      libraryEpoch: input.context.senderLibraryEpoch,
-      peerDeviceId: input.context.senderDeviceId,
-      transferId: input.frame.transferId
-    });
-    const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
-      globalId: prepared.globalId, objectType: 'node'
-    }))?.sharedStateHash;
-    if (!appliedStateHash) throw new Error('framed_sync_process_inventory_missing');
-    return createDesktopFramedSyncStaging(tx).commitApplyAndReceipt({
-      appliedStateHash,
-      contentId: input.manifestHash,
-      receiverDeviceId: input.context.receiverDeviceId,
-      receiverLibraryEpoch: input.context.receiverLibraryEpoch,
-      transferId: input.frame.transferId
-    });
-  });
-  await input.staging.releasePins(input.frame.transferId, 'business_reference_committed');
-  return receipt;
+  const prepared = await prepareDesktopFramedSyncInbound(input);
+  return (await applyPreparedDesktopFramedSyncInbound({
+    db: input.db,
+    transfers: [prepared]
+  }))[0]!;
 }
-
-async function promoteFramedNodeBodies(
-  db: DbPort,
-  records: readonly NativeSyncNodeRecord[]
-) {
-  for (const record of records) {
-    const hash = record.snapshot.body_blob_hash;
-    if (!hash || record.body_text === null) {
-      throw new Error('framed_sync_node_body_projection_missing');
-    }
-    await upsertTextBodyBlob(db, record.body_text, record.updated_at, hash);
-  }
-}
-
-function prepareInboundApply(
-  facts: readonly CanonicalFact[],
-  blobs: readonly FramedSyncBlobContent[]
-) {
-  const nodeFacts = facts.filter((fact) => fact.kind === 2);
-  const relationReviewFacts = facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
-  const supported = nodeFacts.length + relationReviewFacts.length === facts.length;
-  const globalId = facts[0]?.globalId;
-  if (!globalId || !supported ||
-      facts.some((fact) => fact.objectType !== 'node' || fact.globalId !== globalId)) {
-    throw new Error('framed_sync_process_fact_set_invalid');
-  }
-  if (!nodeFacts.length) {
-    if (blobs.length !== 0) throw new Error('framed_sync_blob_content_set_mismatch');
-    return { globalId, records: [], relationReviewFacts };
-  }
-  const contentByHash = new Map(blobs.map((entry) => [hex(entry.sha256), entry]));
-  const bodyDescriptors = nodeFacts.map((fact) => fact.blobs.filter((entry) => entry.role === 1));
-  const requiredHashes = new Set(bodyDescriptors.flatMap((entries) => entries.map((entry) => hex(entry.sha256))));
-  if (contentByHash.size !== blobs.length || requiredHashes.size !== blobs.length ||
-      bodyDescriptors.some((entries) => entries.length !== 1)) {
-    throw new Error('framed_sync_blob_content_set_mismatch');
-  }
-  const records = nodeFacts.map((nodeFact, index) => {
-    const body = bodyDescriptors[index]![0]!;
-    const content = contentByHash.get(hex(body.sha256));
-    if (!content) throw new Error('framed_sync_blob_content_set_mismatch');
-    return restoreDesktopFramedSyncNodeRecord({
-      bodyBlob: content.data,
-      manifest: { blobs: nodeFact.blobs, facts: [nodeFact] }
-    });
-  });
-  return { globalId, records, relationReviewFacts };
-}
-
-const hex = (value: Uint8Array) => Buffer.from(value).toString('hex');
 
 const MANIFEST_PREFIX_BYTES = 4 + new TextEncoder().encode('foliole-framed-sync-content-v1').byteLength + 4;
 
