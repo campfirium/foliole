@@ -1,4 +1,4 @@
-import { readFramedSyncPublication } from '../../lib/core/database/framedSyncStagingSerialization.js';
+import { framedSyncBytes } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbRow } from '../../lib/core/sync/dbPort.js';
 import { loadSyncGroupLocalAdoption, isSyncGroupPeerAdopting } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 
@@ -12,7 +12,7 @@ type EndpointInput = Parameters<typeof createDesktopFramedSyncRoundEndpoint>[0];
 export async function resumeDesktopFramedSyncPendingPublications(input: EndpointInput) {
   if (await loadSyncGroupLocalAdoption(input.db) ||
       await isSyncGroupPeerAdopting(input.db, input.groupId, input.peer.deviceId)) return 0;
-  const rows = await input.db.query<DbRow>(`SELECT publication.*
+  const rows = await input.db.query<DbRow>(`SELECT publication.transfer_id, publication.state
     FROM framed_sync_outbound_publications publication
     JOIN framed_sync_outbound_holds hold ON hold.transfer_id = publication.transfer_id
     WHERE publication.state IN ('published', 'receipt_committed') AND publication.group_id = ?
@@ -22,11 +22,13 @@ export async function resumeDesktopFramedSyncPendingPublications(input: Endpoint
   [input.groupId, input.local.deviceId, input.local.libraryEpoch,
     input.peer.deviceId, input.peer.libraryEpoch]);
   for (const row of rows) {
-    const publication = readFramedSyncPublication(row);
+    const transferId = framedSyncBytes(row, 'transfer_id');
     if (row.state === 'receipt_committed') {
-      await input.staging.releaseOutboundHolds(publication.transferId);
+      await input.staging.releaseOutboundHolds(transferId);
       continue;
     }
+    const publication = await input.staging.loadOutboundPublication(transferId);
+    if (!publication) throw new Error('framed_sync_outbound_publication_missing');
     const attempt = await prepareDesktopFramedSyncPublishedTransfer({ ...input, publication });
     await sendDesktopFramedSyncPublishedTransfer({ ...input, attempt, publication });
   }
