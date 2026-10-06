@@ -136,7 +136,9 @@ function startFixtureProcess(input: Readonly<{ deviceId: string; root: string; s
     child,
     diagnostics: () => diagnostics, invoke: send,
     init: async () => parseSnapshot(await send('init')),
-    seed: async (args: Readonly<{ content: string; nodeId: string; title: string }>) =>
+    seed: async (args: Readonly<{
+      content: string; nodeId: string; parentNodeId?: string; title: string
+    }>) =>
       parseSnapshot(await send('seed', args)),
     seedResource: (args: Readonly<{ bytes: Uint8Array; nodeId: string }>) => seedResource(send, args),
     seedRelationReview: async (role: 'receiver' | 'receiver_conflict' | 'sender') =>

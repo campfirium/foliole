@@ -7,12 +7,12 @@ import {
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import type { TransferReceiptStage } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
+import { assertFramedSyncNodeParentDependencies } from '../../../../../../lib/core/sync/framedSyncNodeParentDependencies.js';
 import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewApply.js';
 import { canonicalFactFromValidatedMessage } from '../../../../../../lib/core/sync/framedSyncWireFact.js';
 import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
 import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import type { NativeSyncNodeRecord } from '../../../../../../lib/platform/nativeSyncContract.js';
 
 import { decodeCompanionFramedSyncTransfer } from './companionFramedSyncDecode.js';
 
@@ -80,17 +80,6 @@ function receiptIdentityMatches(left: TransferReceiptStage, right: Omit<Transfer
     left.receiverLibraryEpoch === right.receiverLibraryEpoch;
 }
 
-async function assertNodeParentDependencies(db: DbPort, nodes: readonly NativeSyncNodeRecord[]) {
-  const incomingIds = new Set(nodes.map((node) => node.object_id));
-  for (const node of nodes) {
-    const parentId = node.snapshot.parent_id;
-    if (!parentId || incomingIds.has(parentId)) continue;
-    const [parent] = await db.query<DbRow>('SELECT 1 AS present FROM nodes WHERE id = ? LIMIT 1',
-      [parentId]);
-    if (!parent) throw new Error(`framed_sync_node_parent_missing:${parentId}`);
-  }
-}
-
 export async function applyCompanionFramedSyncTransfer(
   db: DbPort,
   input: CompanionFramedSyncApplyInput
@@ -118,7 +107,7 @@ export async function applyCompanionFramedSyncTransfer(
         if (!receiptIdentityMatches(stored, receiptIdentity)) throw new Error('receipt_identity_conflict');
         return stored;
       }
-      await assertNodeParentDependencies(tx, decoded.nodes);
+      await assertFramedSyncNodeParentDependencies(tx, decoded.nodes);
       for (const node of decoded.nodes) {
         await upsertTextBodyBlob(
           tx, node.body_text ?? '', node.snapshot.updated_at, node.snapshot.body_blob_hash!

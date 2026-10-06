@@ -27,7 +27,7 @@ export function readDesktopFramedSyncLibraryEvidence(databasePath: string) {
       },
       journalMode: sqlite.pragma('journal_mode', { simple: true }),
       nodes: sqlite.prepare(
-        `SELECT id, title, content, current_version_id, resource_references
+        `SELECT id, title, content, current_version_id, parent_id, resource_references
          FROM nodes WHERE id LIKE ? ORDER BY id`
       ).all('t326-%'),
       parents: sqlite.prepare(`SELECT parent.version_id, parent.parent_version_id, parent.ordinal

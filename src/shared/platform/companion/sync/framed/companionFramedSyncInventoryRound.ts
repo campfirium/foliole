@@ -7,6 +7,7 @@ import {
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
+import { deliverFramedSyncDifferencesInDependencyOrder } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import type {
   NativeCompanionFramedSyncInventoryEntry,
   NativeCompanionFramedSyncInventoryRequest,
@@ -58,13 +59,6 @@ function decodeOptionalEntry(value: NativeCompanionFramedSyncInventoryEntry | nu
   return value ? decodeEntry(value) : null;
 }
 
-function missingParentId(error: unknown) {
-  const marker = 'framed_sync_node_parent_missing:';
-  const message = error instanceof Error ? error.message : String(error);
-  const offset = message.indexOf(marker);
-  return offset < 0 ? null : message.slice(offset + marker.length).trim() || null;
-}
-
 async function pullDifference(args: NativeCompanionFramedSyncInventoryRequest,
   difference: FramedSyncInventoryDifference, roundId: Uint8Array) {
   return FolioleCompanionSync.pullFramedSyncObject({
@@ -80,29 +74,10 @@ async function pullDifference(args: NativeCompanionFramedSyncInventoryRequest,
 
 async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventoryRequest,
   differences: readonly FramedSyncInventoryDifference[], roundId: Uint8Array) {
-  const available = new Map(differences.map((difference) => [difference.globalId, difference]));
-  const active = new Set<string>();
   const received = new Map<string, NativeCompanionFramedSyncTransferReceipt>();
-  async function pull(difference: FramedSyncInventoryDifference): Promise<void> {
-    if (received.has(difference.globalId)) return;
-    if (active.has(difference.globalId)) throw new Error('framed_sync_node_parent_cycle');
-    active.add(difference.globalId);
-    try {
-      let receipt: NativeCompanionFramedSyncTransferReceipt;
-      try {
-        receipt = await pullDifference(args, difference, roundId);
-      } catch (error) {
-        const parent = available.get(missingParentId(error) ?? '');
-        if (!parent) throw error;
-        await pull(parent);
-        receipt = await pullDifference(args, difference, roundId);
-      }
-      received.set(difference.globalId, receipt);
-    } finally {
-      active.delete(difference.globalId);
-    }
-  }
-  for (const difference of differences) await pull(difference);
+  await deliverFramedSyncDifferencesInDependencyOrder(differences, async (difference) => {
+    received.set(difference.globalId, await pullDifference(args, difference, roundId));
+  });
   return [...received].map(([objectId, receipt]) => ({ objectId, receipt }));
 }
 

@@ -67,7 +67,7 @@ it('atomically applies multiple versions of the same node', async () => {
   const first = fact(2, 'node-a', [firstDescriptor]);
   const second = { ...fact(2, 'node-a', [secondDescriptor]), factId: 'version-2' };
   mocks.restoreNode.mockImplementation(({ manifest }) => ({
-    object_id: 'node-a', version_id: manifest.facts[0].factId
+    object_id: 'node-a', snapshot: { parent_id: null }, version_id: manifest.facts[0].factId
   }));
   mocks.inventory.mockResolvedValue({ sharedStateHash: hash(7) });
   mocks.commitReceipt.mockImplementation(async (value) => value);
@@ -113,7 +113,7 @@ it('writes the actual post-apply node state hash into the receipt', async () => 
   const incoming = fact(2, 'node-a', [descriptor]);
   const appliedStateHash = hash(7);
   mocks.inventory.mockResolvedValue({ sharedStateHash: appliedStateHash });
-  mocks.restoreNode.mockReturnValue({ object_id: 'node-a' });
+  mocks.restoreNode.mockReturnValue({ object_id: 'node-a', snapshot: { parent_id: null } });
   mocks.commitReceipt.mockImplementation(async (value) => value);
   const staging = {
     commitAuthenticatedFrame: vi.fn(), finalizeInboundAttempt: vi.fn(),

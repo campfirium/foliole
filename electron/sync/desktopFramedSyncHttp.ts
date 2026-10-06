@@ -57,7 +57,7 @@ export async function postDesktopFramedSync(args: {
   const responsePromise = waitForResponse(request);
   const sendPromise = writeBody(request, encodeFramedSyncStream(args.body));
   const [response] = await Promise.all([responsePromise, sendPromise]);
-  assertSuccessfulResponse(response, args);
+  await assertSuccessfulResponse(response, args);
   const stream = await readFramedSyncStream(response);
   const context: Omit<FramedSyncSessionContext, 'sessionId'> = {
     groupId: args.groupId,
@@ -93,13 +93,13 @@ async function writeBody(request: ClientRequest, body: AsyncIterable<Uint8Array>
   }
 }
 
-function assertSuccessfulResponse(response: IncomingMessage, args: {
+async function assertSuccessfulResponse(response: IncomingMessage, args: {
   remoteDeviceId: string;
   remoteLibraryEpoch: string;
 }) {
   if (response.statusCode !== 200) {
-    response.resume();
-    throw new Error(`framed_sync_http_${response.statusCode ?? 0}`);
+    const detail = await readErrorDetail(response);
+    throw new Error(`framed_sync_http_${response.statusCode ?? 0}${detail ? `:${detail}` : ''}`);
   }
   if (!hasContentType(response.headers['content-type'], FRAMED_SYNC_CONTENT_TYPE)) {
     response.destroy();
@@ -109,6 +109,24 @@ function assertSuccessfulResponse(response: IncomingMessage, args: {
       readHeader(response, FRAMED_SYNC_LIBRARY_EPOCH_HEADER) !== args.remoteLibraryEpoch) {
     response.destroy();
     throw new Error('framed_sync_response_identity_mismatch');
+  }
+}
+
+async function readErrorDetail(response: IncomingMessage) {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of response) {
+    size += chunk.length;
+    if (size > 64 * 1024) return null;
+    chunks.push(Buffer.from(chunk));
+  }
+  try {
+    const value: unknown = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    return typeof value === 'object' && value !== null &&
+      typeof (value as Record<string, unknown>).error === 'string'
+      ? (value as Record<string, string>).error : null;
+  } catch {
+    return null;
   }
 }
 

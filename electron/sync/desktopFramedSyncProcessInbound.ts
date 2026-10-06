@@ -6,6 +6,7 @@ import {
 } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { FramedSyncContext, PublishedTransfer } from '../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { assertFramedSyncNodeParentDependencies } from '../../lib/core/sync/framedSyncNodeParentDependencies.js';
 import type {
   FramedSyncStagingPort,
   InboundFactDescriptor,
@@ -124,6 +125,7 @@ export async function finishDesktopFramedSyncTransfer(input: {
   await input.resources.complete(prepared.records);
   await input.staging.markReadyToApply(input.frame.transferId);
   const receipt = await input.db.transaction(async (tx) => {
+    await assertFramedSyncNodeParentDependencies(tx, prepared.records);
     if (prepared.records.length) await applySyncNodesWithDbPort(tx, prepared.records);
     await applyDesktopFramedSyncRelationReviewFactsWithDbPort(tx, prepared.relationReviewFacts);
     const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {

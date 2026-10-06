@@ -1,5 +1,3 @@
-import path from 'node:path';
-
 export const coreSuites = {
   journey: ['electron/database/coreWorkspaceJourney.integration.test.ts'],
   editing: ['electron/database/localContentEdit.test.ts', 'electron/database/parentContentMutation.test.ts'],
@@ -10,6 +8,23 @@ export const coreSuites = {
     'electron/database/workspaceSearch.batchIndex.test.ts'],
   import: ['electron/database/importPipeline.test.ts', 'electron/database/importPipeline.deleted-instance.test.ts']
 };
+
+export const framedSyncSuites = [
+  'electron/sync/companionLanFramedSyncRoute.test.ts',
+  'electron/sync/desktopFramedSyncHttp.test.ts',
+  'electron/sync/desktopFramedSyncRelationReviewProcess.integration.test.ts',
+  'electron/sync/desktopFramedSyncRound.integration.test.ts',
+  'electron/sync/desktopFramedSyncTwoProcess.integration.test.ts',
+  'electron/sync/desktopFramedSyncTwoProcessRecovery.integration.test.ts',
+  'electron/sync/desktopFramedSyncVersionChainRegression.integration.test.ts',
+  'src/shared/platform/companion/runtime/iosCompanionFramedSyncStaging.integration.test.ts',
+  'src/shared/platform/companion/sync/framed/companionFramedSyncApply.resources.test.ts',
+  'src/shared/platform/companion/sync/framed/companionFramedSyncApply.test.ts',
+  'src/shared/platform/companion/sync/framed/companionFramedSyncInventory.test.ts',
+  'src/shared/platform/companion/sync/framed/companionFramedSyncInventoryRound.test.ts',
+  'src/shared/platform/companion/sync/framed/companionFramedSyncOutbound.test.ts',
+  'src/shared/platform/companion/sync/framed/companionFramedSyncTransfer.test.ts'
+];
 
 export function parseMaintenanceArgs(argv) {
   const options = { scope: 'all', id: `run-${Date.now()}` };
@@ -24,7 +39,7 @@ export function parseMaintenanceArgs(argv) {
   return options;
 }
 
-export function maintenanceSteps(scope, out) {
+export function maintenanceSteps(scope) {
   const selected = Object.keys(coreSuites).filter((name) => scope === 'all' || scope === 'core' || scope === name);
   const steps = selected.map((name) => ({
     name, args: ['run', 'test:sqlite:electron', '--', ...coreSuites[name]],
@@ -35,8 +50,10 @@ export function maintenanceSteps(scope, out) {
       'src/app/components/SearchPalette.aliases.test.tsx', 'src/app/components/SearchPalette.runtime.test.tsx'],
     report: '.tmp/vitest/files.json' });
   if (scope === 'all' || scope === 'sync') steps.push({
-    name: 'sync', args: ['run', 'sync:simulate', '--', '--path', 'both', '--seed', '283', '--scale', '1',
-      '--out', path.join(out, 'sync')], report: path.join(out, 'sync', 'summary.json')
+    name: 'sync-framed', args: ['run', 'test:sqlite:electron', '--', ...framedSyncSuites],
+    report: '.tmp/vitest/files.json'
+  }, {
+    name: 'sync-framed-cross-host', args: ['run', 'sync:framed:cross-host'], report: null
   });
   return steps;
 }

@@ -1,4 +1,16 @@
-# 本机同步集成测试
+# Legacy 同步模拟器（仅供历史性能对照）
+
+此入口覆盖已经退役的 sync-pack/source-view 数据面，不代表当前 framed sync 产品链路，
+也不再由 `npm run integration:maintain -- --scope sync` 调用。T276 的既有性能验收仍引用它，
+因此暂时保留；T276 迁移或关闭后应连同该入口一起删除，不得为新同步行为继续扩展场景。
+
+当前系统集成入口是：
+
+```bash
+npm run integration:maintain -- --scope sync
+```
+
+以下内容只说明历史入口的复现方式。
 
 运行现有生产同步代码，以两份独立磁盘数据库和本机 HTTP 替代真机。
 包含认证、加密、事实核对、分页结构包、正文与附件、应用、回执和重启恢复。

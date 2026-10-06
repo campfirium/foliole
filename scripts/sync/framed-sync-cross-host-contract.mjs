@@ -11,7 +11,8 @@ const COMMANDS = [
   ['./gradlew', ['--no-daemon', 'testDebugUnitTest',
     '--tests', 'com.foliole.android.framed.FramedSyncGoldenCorpusTest',
     '--tests', 'com.foliole.android.framed.FramedSyncCodecTest',
-    '--tests', 'com.foliole.android.framed.FramedSyncMaliciousBoundaryTest']],
+    '--tests', 'com.foliole.android.framed.FramedSyncMaliciousBoundaryTest',
+    '--tests', 'com.foliole.android.framed.FramedSyncHttpTransportTest']],
   ['swift', ['test', '--package-path', 'ios/App', '--filter', 'FramedSync']]
 ];
 

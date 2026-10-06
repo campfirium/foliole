@@ -62,11 +62,13 @@ function runStep(step, out) {
     finishedAt: new Date().toISOString(), exitCode: result.status ?? 1,
     signal: result.signal, error: result.error?.message ?? null, log };
   try {
-    const report = path.resolve(root, step.report);
-    if (existsSync(report) && Date.parse(startedAt) <= statSync(report).mtimeMs) {
-      const target = path.join(out, `${step.name}.report.json`);
-      copyFileSync(report, target);
-      record.report = target;
+    if (step.report !== null) {
+      const report = path.resolve(root, step.report);
+      if (existsSync(report) && Date.parse(startedAt) <= statSync(report).mtimeMs) {
+        const target = path.join(out, `${step.name}.report.json`);
+        copyFileSync(report, target);
+        record.report = target;
+      }
     }
   } catch (error) {
     record.error = error.message;
@@ -77,14 +79,8 @@ function runStep(step, out) {
 }
 
 function checkReport(step, record) {
+  if (step.report === null) return;
   const report = record.report ? readVitestReport(record.report) : null;
-  if (step.name === 'sync') {
-    if (!report?.results?.length || report.results.some((result) => result.status !== 'passed')) {
-      record.error = 'sync_report_missing_or_failed';
-      record.exitCode = 1;
-    }
-    return;
-  }
   if (!report || !validateExpectedTestFiles(report,
     JSON.stringify(step.args.slice(3).map((file) => path.join(root, file)))) ||
     report.numPendingTests > 0 || report.numTodoTests > 0 || report.numFailedTests > 0) {
@@ -96,14 +92,14 @@ function checkReport(step, record) {
 function main() {
   const options = parseMaintenanceArgs(process.argv.slice(2));
   if (options.list) {
-    process.stdout.write(JSON.stringify(maintenanceSteps(options.scope, '<output>'), null, 2) + '\n');
+    process.stdout.write(JSON.stringify(maintenanceSteps(options.scope), null, 2) + '\n');
     return;
   }
   const out = createOutput(options.id);
   const before = snapshot(out, 'source-before');
   preserveChanges(out);
   const results = [];
-  for (const step of maintenanceSteps(options.scope, out)) {
+  for (const step of maintenanceSteps(options.scope)) {
     process.stdout.write(`Running ${step.name}; log: ${path.join(out, `${step.name}.log`)}\n`);
     results.push(runStep(step, out));
     writeFileSync(path.join(out, 'progress.json'), JSON.stringify(results, null, 2));

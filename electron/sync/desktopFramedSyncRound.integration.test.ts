@@ -73,6 +73,31 @@ async () => {
   expect(await readDesktopFramedSyncRoundControlLog(fixture.right)).toContain('round_receipt');
 });
 
+it('converges a child sorted before its missing parent through the production round', async () => {
+  const fixture = await setup();
+  await fixture.left.seed({
+    content: 'Parent body', nodeId: 't326-z-parent', title: 'Parent'
+  });
+  await fixture.left.seed({
+    content: 'Child body', nodeId: 't326-a-child',
+    parentNodeId: 't326-z-parent', title: 'Child'
+  });
+
+  const receipt = await coordinateDesktopFramedSyncProcessRound({
+    left: fixture.leftSnapshot,
+    leftProcess: fixture.left,
+    right: fixture.rightSnapshot,
+    rightProcess: fixture.right
+  });
+
+  expect(receipt.result).toBe('converged');
+  const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  expect(received.nodes).toEqual([
+    expect.objectContaining({ id: 't326-a-child', parent_id: 't326-z-parent' }),
+    expect.objectContaining({ id: 't326-z-parent', parent_id: null })
+  ]);
+});
+
 it('keeps a published transfer pending and emits no terminal round receipt', async () => {
   const fixture = await setup();
   await fixture.left.seed({ content: 'Pending body', nodeId: 't326-round-pending', title: 'Pending' });

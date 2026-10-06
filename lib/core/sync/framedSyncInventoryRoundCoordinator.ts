@@ -10,6 +10,7 @@ import {
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from './framedSyncInventory.js';
+import { deliverFramedSyncDifferencesInDependencyOrder } from './framedSyncInventoryRoundDelivery.js';
 import { deferUnresolvedBidirectionalObjects } from './framedSyncInventoryRoundResolution.js';
 import {
   decodeAndValidateProtocolMessage,
@@ -184,17 +185,17 @@ export async function coordinateFramedSyncInventoryRound(args: {
   const deferred = new Map<string, FramedSyncDeferredObject>();
   const outstandingDifferences: FramedSyncInventoryDifference[] = [];
   const transfers: TransferResult[] = [];
-  for (const difference of differences) {
+  await deliverFramedSyncDifferencesInDependencyOrder(differences, async (difference) => {
     const source = sourceFor(difference.direction, args.local, args.remote);
     const current = await source.endpoint.readInventoryEntry(difference);
     const ready = revalidateFramedSyncInventorySource({ currentSource: current ? [current] : [],
       differences: [localDifference(difference)], direction: 'local_to_remote' });
-    if (ready.deferredObjects.length) { addDeferred(deferred, ready.deferredObjects); continue; }
+    if (ready.deferredObjects.length) { addDeferred(deferred, ready.deferredObjects); return; }
     const selection = await source.endpoint.selectOutbound(localDifference(difference));
     if (selection.kind === 'deferred') {
       addDeferred(deferred, selection.deferredObjects);
       addDeferred(deferred, [{ globalId: difference.globalId, objectType: difference.objectType }]);
-      continue;
+      return;
     }
     await source.endpoint.staging.publishOutbound(selection.publication);
     const state = await source.endpoint.sendPublishedTransfer({
@@ -203,7 +204,7 @@ export async function coordinateFramedSyncInventoryRound(args: {
     if (state === 'pending') outstandingDifferences.push(difference);
     transfers.push({ direction: difference.direction, globalId: difference.globalId,
       objectType: difference.objectType, publication: selection.publication, state });
-  }
+  });
   if (!outstandingDifferences.length) {
     await deferUnresolvedBidirectionalObjects(args.local, args.remote, differences, deferred);
   }

@@ -96,7 +96,7 @@ function seed(args: Readonly<Record<string, unknown>>) {
     isTitleManual: true,
     kind: 'topic',
     nodeId: String(args.nodeId),
-    parentNodeId: null,
+    parentNodeId: typeof args.parentNodeId === 'string' ? args.parentNodeId : null,
     position: 0,
     reveal: null,
     title: String(args.title),
