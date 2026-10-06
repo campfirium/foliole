@@ -32,7 +32,7 @@ it('serializes the active companion inventory without a database snapshot', asyn
       object_type: 'node',
       required_relation_ids: [],
       resource_hashes: ['230d8358dc8e8890b4c58deeb62912ee2f20357ae92a5cc861b98e68fe31acb5'],
-      review_fact_ids: [],
+      review_fact_ids: [], state_fact_ids: [],
       shared_state_hash: '11'.repeat(32)
     }] });
   sqlite.close();

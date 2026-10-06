@@ -14,6 +14,7 @@ import {
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
+import { selectFramedSyncNodeReadingFact } from '../../../../../../lib/core/sync/framedSyncNodeReadingFact.js';
 import {
   createFramedSyncNodeResourceBlob,
   readFramedSyncNodeResources
@@ -80,13 +81,14 @@ async function selectOutbound(db: DbPort, payload: Record<string, unknown>) {
   const includeCurrentNode = requiredBoolean(payload.include_current_node);
   const requiredRelationIds = requiredStrings(payload.required_relation_ids, 'relation_ids');
   const reviewFactIds = requiredStrings(payload.review_fact_ids, 'review_fact_ids');
+  const stateFactIds = requiredStrings(payload.state_fact_ids, 'state_fact_ids');
   const current = await readFramedSyncInventoryEntry(db, { globalId: objectId, objectType: 'node' });
   if (!current) throw new Error('framed_sync_source_empty');
   const difference: FramedSyncInventoryDifference = {
     direction: 'local_to_remote', globalId: objectId, objectType: 'node', sourceSnapshot: current,
     need: { frontierFactIds: includeCurrentNode ? current.frontierFactIds : [],
       requiredRelationIds, resourceHashes: includeCurrentNode ? current.resourceHashes : [],
-      reviewFactIds, sharedState: includeCurrentNode }
+      reviewFactIds, stateFactIds, sharedState: includeCurrentNode }
   };
   const selected = await selectFramedSyncRelationReviewFactsWithDbPort(db, difference);
   if (selected.kind === 'deferred') throw new Error('framed_sync_source_changed');
@@ -99,7 +101,9 @@ async function selectOutbound(db: DbPort, payload: Record<string, unknown>) {
     }
     return record;
   });
-  return { records: orderNodeVersionHistory(selectedRecords), selected };
+  const stateFacts = await Promise.all(stateFactIds.map((factId) =>
+    selectFramedSyncNodeReadingFact(db, objectId, factId)));
+  return { records: orderNodeVersionHistory(selectedRecords), selected, stateFacts };
 }
 
 export async function inspectCompanionFramedSyncOutbound(
@@ -153,7 +157,7 @@ export async function prepareCompanionFramedSyncOutbound(
     }
     const manifest = { blobs: [...blobs.values()].map((value) => value.blob),
       facts: [...projections.flatMap((value) => value.projection.manifest.facts),
-        ...selection.selected.facts] };
+        ...selection.selected.facts, ...selection.stateFacts] };
     if (!manifest.facts.length) throw new Error('framed_sync_outbound_fact_set_empty');
     const transferContext = context(payload);
     const contentId = await canonicalContentId(manifest);

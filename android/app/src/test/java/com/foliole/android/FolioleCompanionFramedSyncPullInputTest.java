@@ -21,7 +21,7 @@ public final class FolioleCompanionFramedSyncPullInputTest {
                 "node-1", roundId, Arrays.asList("version-2", "version-1"),
                 Collections.singletonList("[\"version-2\",\"version-1\",2]"),
                 Collections.singletonList(resourceHash),
-                Collections.singletonList("review-1"));
+                Collections.singletonList("review-1"), Collections.singletonList("node_reading:" + "a".repeat(64)));
 
         List<FramedSyncValidatedMessage> messages =
             FolioleCompanionFramedSyncPullInput.messages(input);
@@ -31,7 +31,8 @@ public final class FolioleCompanionFramedSyncPullInputTest {
         assertEquals(FramedSyncPayload.Case.DIFFERENCE_REQUEST,
             messages.get(0).payload().payloadCase());
         assertArrayEquals(roundId, request.getRoundId().toByteArray());
-        assertEquals(4, request.getFactsCount());
+        assertEquals(5, request.getFactsCount());
+        assertEquals(FactKind.FACT_KIND_OBJECT_STATE, request.getFacts(4).getKind());
         assertEquals(FactKind.FACT_KIND_NODE_VERSION, request.getFacts(0).getKind());
         assertEquals(FactKind.FACT_KIND_PARENT_EDGE, request.getFacts(2).getKind());
         assertEquals(FactKind.FACT_KIND_REVIEW, request.getFacts(3).getKind());

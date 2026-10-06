@@ -12,6 +12,11 @@ public final class FramedSyncContract {
     public static final int MAX_CANONICAL_FIELDS = 100_000;
     public static final int MAX_DECODED_REPEATED_ITEMS = 100_000;
     public static final int MAX_FACTS_PER_TRANSFER = 4_096;
+    public static final int MAX_INVENTORY_ENTRIES = 100_000;
+    public static final int MAX_INVENTORY_ENTRIES_PER_FRAME = 128;
+    public static final int MAX_INVENTORY_FACT_IDS_PER_ENTRY = 100_000;
+    public static final int MAX_SESSION_BYTES = 64 * 1024 * 1024;
+    public static final int MAX_SESSION_FRAMES = 16_384;
     public static final int MAX_FACT_BLOB_EDGES = 4_096;
     public static final int MAX_PROTOCOL_CAPABILITIES = 64;
     public static final int MAX_PROTOCOL_STRING_BYTES = 64 * 1024;

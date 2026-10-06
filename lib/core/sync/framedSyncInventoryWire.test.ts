@@ -45,6 +45,25 @@ it('roundtrips a multi-chunk inventory with one stable round identity', async ()
   });
 });
 
+it.each([4097, 10000])('exchanges every entry in a %i object inventory', async (count) => {
+  const input = entries(count);
+  const encoded = await encodeFramedSyncInventory({ entries: input, roundId });
+  const decoded = await decodeFramedSyncInventory(validate(encoded));
+  expect(decoded.entries).toEqual(input);
+});
+
+it('splits large history entries by encoded frame size without losing state facts', async () => {
+  const input = entries(4).map((entry) => ({ ...entry,
+    frontierFactIds: Array.from({ length: 3000 }, (_, index) => `version-${index}-${'v'.repeat(100)}`),
+    stateFactIds: ['node_reading:' + 'a'.repeat(64)]
+  }));
+  const encoded = await encodeFramedSyncInventory({ entries: input, roundId });
+  expect(encoded.filter((message) => message.payloadCase === 'inventory_chunk').length)
+    .toBeGreaterThan(1);
+  const decoded = await decodeFramedSyncInventory(validate(encoded));
+  expect(decoded.entries).toEqual(input);
+});
+
 it('rejects missing chunks and an inventory hash mismatch', async () => {
   const messages = await encodeFramedSyncInventory({ entries: entries(129), roundId });
   const withoutChunk = validate(messages.filter((_message, index) => index !== 1));

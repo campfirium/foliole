@@ -99,9 +99,9 @@ describe('framed sync production protobuf codec exact boundaries', () => {
 describe('framed sync production protobuf codec count boundaries', () => {
   it.each([
     ['inventory entry count', 'inventory_begin', {
-      roundId: roundId(), entryCount: FRAMED_SYNC_LIMITS.maxFactsPerTransfer
+      roundId: roundId(), entryCount: FRAMED_SYNC_LIMITS.maxInventoryEntries
     }, {
-      roundId: roundId(), entryCount: FRAMED_SYNC_LIMITS.maxFactsPerTransfer + 1
+      roundId: roundId(), entryCount: FRAMED_SYNC_LIMITS.maxInventoryEntries + 1
     }, 'inventory_entry_limit_exceeded'],
     ['proposal fact count', 'transfer_proposal', transferProposal({
       factCount: FRAMED_SYNC_LIMITS.maxFactsPerTransfer

@@ -13,7 +13,7 @@ final class FolioleCompanionFramedSyncInventory {
 
     static List<InventoryEntry> read(JSONObject value) throws Exception {
         JSONArray encoded = value.getJSONArray("entries");
-        if (encoded.length() > FramedSyncContract.MAX_FACTS_PER_TRANSFER) {
+        if (encoded.length() > FramedSyncContract.MAX_INVENTORY_ENTRIES) {
             throw new IllegalArgumentException("inventory_entry_limit_exceeded");
         }
         List<InventoryEntry> result = new ArrayList<>();
@@ -25,7 +25,8 @@ final class FolioleCompanionFramedSyncInventory {
                 .setSharedStateHash(ByteString.copyFrom(digest(entry.getString("shared_state_hash"))))
                 .addAllFrontierFactIds(strings(entry.getJSONArray("frontier_fact_ids")))
                 .addAllRequiredRelationIds(strings(entry.getJSONArray("required_relation_ids")))
-                .addAllReviewFactIds(strings(entry.getJSONArray("review_fact_ids")));
+                .addAllReviewFactIds(strings(entry.getJSONArray("review_fact_ids")))
+                .addAllStateFactIds(strings(entry.getJSONArray("state_fact_ids")));
             JSONArray hashes = entry.getJSONArray("resource_hashes");
             for (int hash = 0; hash < hashes.length(); hash++) {
                 builder.addResourceHashes(ByteString.copyFrom(digest(hashes.getString(hash))));

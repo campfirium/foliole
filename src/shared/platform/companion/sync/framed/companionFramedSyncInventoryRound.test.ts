@@ -28,7 +28,7 @@ const request = {
 };
 const entry = (id: string, state = '1', relations: string[] = []) => ({
   frontier_fact_ids: [`version-${id}`], global_id: id, object_type: 'node',
-  required_relation_ids: relations, resource_hashes: ['2'.repeat(64)], review_fact_ids: [],
+  required_relation_ids: relations, resource_hashes: ['2'.repeat(64)], review_fact_ids: [], state_fact_ids: [],
   shared_state_hash: state.repeat(64)
 });
 
@@ -55,7 +55,7 @@ it('revalidates each selected current node before invoking the native sender', a
     includeCurrentNode: true, objectId: 'node-a',
     receiverDeviceId: request.receiver_device_id,
     receiverLibraryEpoch: request.receiver_library_epoch,
-    requiredRelationIds: [], reviewFactIds: []
+    requiredRelationIds: [], reviewFactIds: [], stateFactIds: []
   });
 });
 
@@ -88,7 +88,7 @@ it('sends exact relation ids without redundantly including the current node', as
   });
   expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({
     includeCurrentNode: false, objectId: 'node-c', requiredRelationIds: ['relation-1'],
-    reviewFactIds: []
+    reviewFactIds: [], stateFactIds: []
   }));
 });
 
@@ -109,7 +109,7 @@ it('pulls a remote-only Node with the same inventory round identity', async () =
     object_id: 'remote-node',
     required_relation_ids: [],
     resource_hashes: ['2'.repeat(64)],
-    review_fact_ids: [],
+    review_fact_ids: [], state_fact_ids: [],
     round_id: '8'.repeat(32)
   });
 });

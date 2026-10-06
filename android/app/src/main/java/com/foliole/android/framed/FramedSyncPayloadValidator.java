@@ -105,7 +105,7 @@ final class FramedSyncPayloadValidator {
     private static void inventoryBegin(com.foliole.sync.v22.InventoryBegin value)
         throws FramedSyncValidationException {
         fixedRound(value.getRoundId());
-        if (Long.compareUnsigned(value.getEntryCount(), FramedSyncContract.MAX_FACTS_PER_TRANSFER) > 0) {
+        if (Long.compareUnsigned(value.getEntryCount(), FramedSyncContract.MAX_INVENTORY_ENTRIES) > 0) {
             throw invalid("inventory_entry_limit_exceeded");
         }
     }
@@ -113,7 +113,7 @@ final class FramedSyncPayloadValidator {
     private static void inventoryChunk(com.foliole.sync.v22.InventoryChunk value)
         throws FramedSyncValidationException {
         fixedRound(value.getRoundId());
-        FramedSyncValueValidator.list(value.getEntriesList(), FramedSyncContract.MAX_FACTS_PER_TRANSFER);
+        FramedSyncValueValidator.list(value.getEntriesList(), FramedSyncContract.MAX_INVENTORY_ENTRIES_PER_FRAME);
         List<String> keys = new ArrayList<>();
         for (InventoryEntry entry : value.getEntriesList()) {
             FramedSyncValueValidator.text(entry.getObjectType(), "object_type");
@@ -122,6 +122,7 @@ final class FramedSyncPayloadValidator {
             stringList(entry.getFrontierFactIdsList(), "frontierFactIds");
             stringList(entry.getRequiredRelationIdsList(), "requiredRelationIds");
             stringList(entry.getReviewFactIdsList(), "reviewFactIds");
+            stringList(entry.getStateFactIdsList(), "stateFactIds");
             digestList(entry.getResourceHashesList(), "resource_hash", FramedSyncContract.MAX_BLOBS_PER_TRANSFER);
             keys.add(entry.getObjectType() + "\0" + entry.getGlobalId());
         }
@@ -215,7 +216,7 @@ final class FramedSyncPayloadValidator {
 
     private static void stringList(List<String> values, String name)
         throws FramedSyncValidationException {
-        FramedSyncValueValidator.list(values, FramedSyncContract.MAX_FACTS_PER_TRANSFER);
+        FramedSyncValueValidator.list(values, FramedSyncContract.MAX_INVENTORY_FACT_IDS_PER_ENTRY);
         for (String value : values) FramedSyncValueValidator.text(value, name);
         FramedSyncValueValidator.unique(values, name);
     }

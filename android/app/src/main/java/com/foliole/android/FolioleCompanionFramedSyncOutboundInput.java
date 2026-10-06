@@ -19,7 +19,7 @@ final class FolioleCompanionFramedSyncOutboundInput {
 
     static Request request(PluginCall call) throws Exception {
         return new Request(required(call, "object_id"), requiredBoolean(call, "include_current_node"),
-            requiredStrings(call, "required_relation_ids"), requiredStrings(call, "review_fact_ids"));
+            requiredStrings(call, "required_relation_ids"), requiredStrings(call, "review_fact_ids"), requiredStrings(call, "state_fact_ids"));
     }
 
     static List<FactRecord> facts(JSONObject prepared) throws Exception {
@@ -130,15 +130,17 @@ final class FolioleCompanionFramedSyncOutboundInput {
         final String objectId;
         final List<String> requiredRelationIds;
         final List<String> reviewFactIds;
+        final List<String> stateFactIds;
 
         Request(
             String objectId, boolean includeCurrentNode,
-            List<String> requiredRelationIds, List<String> reviewFactIds
+            List<String> requiredRelationIds, List<String> reviewFactIds, List<String> stateFactIds
         ) {
             this.objectId = objectId;
             this.includeCurrentNode = includeCurrentNode;
             this.requiredRelationIds = requiredRelationIds;
             this.reviewFactIds = reviewFactIds;
+            this.stateFactIds = stateFactIds;
         }
     }
 }

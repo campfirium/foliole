@@ -13,6 +13,7 @@ import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../
 import { canonicalFactFromValidatedMessage } from '../../../../../../lib/core/sync/framedSyncWireFact.js';
 import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
 import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
+import { applySyncObjectInTransaction } from '../../../../../../lib/core/sync/syncObjectApplyExecutor.js';
 
 import { decodeCompanionFramedSyncTransfer } from './companionFramedSyncDecode.js';
 
@@ -117,6 +118,7 @@ export async function applyCompanionFramedSyncTransfer(
         tx, decoded.nodes, { enqueueSearchInvalidations: false }
       );
       await applyFramedSyncRelationReviewFactsWithDbPort(tx, decoded.relationReviewFacts);
+      for (const state of decoded.readingStates) await applySyncObjectInTransaction(tx, state);
       const current = await readFramedSyncInventoryEntry(
         tx, { globalId: decoded.globalId, objectType: 'node' }
       );

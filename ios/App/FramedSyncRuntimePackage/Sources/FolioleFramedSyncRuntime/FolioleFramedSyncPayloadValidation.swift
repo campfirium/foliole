@@ -45,14 +45,14 @@ enum FolioleFramedSyncPayloadValidator {
 
     private static func inventoryBegin(_ value: Foliole_Sync_V22_InventoryBegin) throws {
         try roundID(value.roundID)
-        guard value.entryCount <= UInt64(FolioleFramedSyncLimits.maxFactsPerTransfer) else {
+        guard value.entryCount <= UInt64(FolioleFramedSyncLimits.maxInventoryEntries) else {
             throw FolioleFramedSyncValidationError("inventory_entry_limit_exceeded")
         }
     }
 
     private static func inventoryChunk(_ value: Foliole_Sync_V22_InventoryChunk) throws {
         try roundID(value.roundID)
-        try Value.list(value.entries, limit: FolioleFramedSyncLimits.maxFactsPerTransfer)
+        try Value.list(value.entries, limit: FolioleFramedSyncLimits.maxInventoryEntriesPerFrame)
         var keys = [String]()
         for entry in value.entries {
             try Value.text(entry.objectType, "object_type")
@@ -61,6 +61,7 @@ enum FolioleFramedSyncPayloadValidator {
             try stringList(entry.frontierFactIds, "frontierFactIds")
             try stringList(entry.requiredRelationIds, "requiredRelationIds")
             try stringList(entry.reviewFactIds, "reviewFactIds")
+            try stringList(entry.stateFactIds, "stateFactIds")
             try digestList(entry.resourceHashes, "resource_hash", FolioleFramedSyncLimits.maxBlobsPerTransfer)
             keys.append("\(entry.objectType)\0\(entry.globalID)")
         }
@@ -171,7 +172,7 @@ enum FolioleFramedSyncPayloadValidator {
     }
 
     private static func stringList(_ values: [String], _ name: String) throws {
-        try Value.list(values, limit: FolioleFramedSyncLimits.maxFactsPerTransfer)
+        try Value.list(values, limit: FolioleFramedSyncLimits.maxInventoryFactIDsPerEntry)
         try values.forEach { try Value.text($0, name) }
         try Value.unique(values, name)
     }

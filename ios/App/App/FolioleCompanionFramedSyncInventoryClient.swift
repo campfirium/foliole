@@ -90,7 +90,8 @@ extension FolioleCompanionSyncPlugin {
             frontierFactIDs: framedArray(call, "frontier_fact_ids"),
             requiredRelationIDs: framedArray(call, "required_relation_ids"),
             resourceHashes: framedDigests(call, "resource_hashes"),
-            reviewFactIDs: framedArray(call, "review_fact_ids")
+            reviewFactIDs: framedArray(call, "review_fact_ids"),
+            stateFactIDs: framedArray(call, "state_fact_ids")
         )
         let requestBody = try FolioleFramedSyncSessionWriter.encode(
             groupKey: groupKey, context: sessionContext, messages: [request]
@@ -198,6 +199,7 @@ extension FolioleCompanionSyncPlugin {
             "required_relation_ids": entry.requiredRelationIds,
             "resource_hashes": entry.resourceHashes.map(\.hex),
             "review_fact_ids": entry.reviewFactIds,
+            "state_fact_ids": entry.stateFactIds,
             "shared_state_hash": entry.sharedStateHash.hex
         ]
     }

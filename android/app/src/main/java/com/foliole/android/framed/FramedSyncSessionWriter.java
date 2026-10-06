@@ -16,7 +16,7 @@ public final class FramedSyncSessionWriter {
         List<FramedSyncValidatedMessage> messages,
         FramedSyncSessionNonceStore nonceStore
     ) throws Exception {
-        if (messages == null || messages.size() > FramedSyncContract.MAX_DECODED_REPEATED_ITEMS + 2) {
+        if (messages == null || messages.size() > FramedSyncContract.MAX_SESSION_FRAMES) {
             throw new IllegalArgumentException("session_frame_limit_invalid");
         }
         byte[] sessionId = random(FramedSyncContract.IDENTIFIER_BYTES);
@@ -33,6 +33,9 @@ public final class FramedSyncSessionWriter {
                 throw new FramedSyncValidationException("session_control_payload_required");
             }
             byte[] plaintext = FramedSyncCodec.encode(messages.get(index));
+            if ((long) output.size() + plaintext.length + 32 > FramedSyncContract.MAX_SESSION_BYTES) {
+                throw new FramedSyncValidationException("session_byte_limit_exceeded");
+            }
             byte[] header = FramedSyncWireHeader.encode(
                 plaintext.length + 16, index, FramedSyncFrameType.SESSION_CONTROL.wireValue());
             output.write(header);

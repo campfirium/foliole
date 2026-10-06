@@ -132,7 +132,7 @@ enum FolioleFramedSyncSessionWriter {
         messages: [FolioleFramedSyncValidatedMessage],
         nonceDirectory: URL = defaultNonceDirectory()
     ) throws -> Data {
-        guard messages.count <= 100_002 else {
+        guard messages.count <= FolioleFramedSyncLimits.maxSessionFrames else {
             throw FolioleFramedSyncValidationError("session_frame_limit_invalid")
         }
         let sessionID = withUnsafeBytes(of: UUID().uuid) { Data($0) }
@@ -149,11 +149,16 @@ enum FolioleFramedSyncSessionWriter {
         let output = OutputStream.toMemory()
         let writer = FolioleFramedSyncStreamWriter(output: output)
         try writer.write(preamble: preamble.encoded)
+        var sessionBytes = FolioleFramedSyncPreamble.byteCount
         for (index, message) in messages.enumerated() {
             guard message.payload.isSessionControl else {
                 throw FolioleFramedSyncValidationError("session_control_payload_required")
             }
             let plaintext = try FolioleFramedSyncCodec.encode(message)
+            sessionBytes += plaintext.count + 32
+            guard sessionBytes <= FolioleFramedSyncLimits.maxSessionBytes else {
+                throw FolioleFramedSyncValidationError("session_byte_limit_exceeded")
+            }
             let header = try FolioleFramedSyncWireHeader(
                 ciphertextBytes: plaintext.count + 16,
                 sequence: UInt64(index), frameType: .sessionControl

@@ -1,4 +1,4 @@
-import { FRAMED_SYNC_FRAME_TYPES } from '../../lib/core/sync/framedSyncContract.js';
+import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
 import { deriveSessionFrameKey, encryptFrame } from '../../lib/core/sync/framedSyncCrypto.js';
 import { assertSessionEnvelopeBinding } from '../../lib/core/sync/framedSyncEnvelopeContract.js';
 import {
@@ -60,9 +60,13 @@ export async function encodeDesktopFramedSyncSession(args: {
     groupKey: args.groupKey, sessionContextId: contextId, sessionId
   });
   const frames: FramedSyncEncodedFrame[] = [];
+  let sessionBytes = preamble.byteLength;
+  if (args.messages.length > FRAMED_SYNC_LIMITS.maxSessionFrames) throw new Error('session_frame_limit_exceeded');
   for (let index = 0; index < args.messages.length; index += 1) {
     const message = args.messages[index]!;
     const plaintext = encodeValidatedProtocolMessage(message.payloadCase, message.payload);
+    sessionBytes += plaintext.byteLength + 32;
+    if (sessionBytes > FRAMED_SYNC_LIMITS.maxSessionBytes) throw new Error('session_byte_limit_exceeded');
     const sequence = BigInt(index);
     const headerBytes = encodeFrameHeader({
       ciphertextBytes: plaintext.byteLength + 16,
@@ -106,7 +110,11 @@ export async function decodeDesktopFramedSyncSession(args: {
   });
   const messages: ValidatedProtocolMessage[] = [];
   let expectedSequence = 0n;
+  let sessionBytes = args.preamble.byteLength;
   for await (const frame of args.frames) {
+    sessionBytes += frame.headerBytes.byteLength + frame.ciphertext.byteLength;
+    if (messages.length >= FRAMED_SYNC_LIMITS.maxSessionFrames) throw new Error('session_frame_limit_exceeded');
+    if (sessionBytes > FRAMED_SYNC_LIMITS.maxSessionBytes) throw new Error('session_byte_limit_exceeded');
     const received = await receiveFramedSyncFrame({
       ciphertext: frame.ciphertext, expectedSequence, frameHeader: frame.headerBytes,
       key, preamble: args.preamble

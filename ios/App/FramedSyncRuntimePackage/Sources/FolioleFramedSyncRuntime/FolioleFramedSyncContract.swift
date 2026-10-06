@@ -1,6 +1,6 @@
 import Foundation
 
-enum FolioleFramedSyncLimits {
+public enum FolioleFramedSyncLimits {
     static let protocolVersion: UInt32 = 22
     static let digestBytes = 32
     static let identifierBytes = 16
@@ -11,10 +11,15 @@ enum FolioleFramedSyncLimits {
     static let maxCanonicalDepth = 32
     static let maxDecodedRepeatedItems = 100_000
     static let maxFactsPerTransfer = 4_096
+    public static let maxInventoryEntries = 100_000
+    public static let maxInventoryEntriesPerFrame = 128
+    public static let maxInventoryFactIDsPerEntry = 100_000
+    public static let maxSessionBytes = 64 * 1024 * 1024
+    public static let maxSessionFrames = 16_384
     static let maxFactBlobEdges = 4_096
     static let maxProtocolCapabilities = 64
     static let maxProtocolStringBytes = 64 * 1024
-    static let maxControlMessageBytes = 768 * 1024
+    public static let maxControlMessageBytes = 768 * 1024
     static let maxManifestBytes = 768 * 1024
     static let maxFrameMessageBytes = 2 * 1024 * 1024
 }

@@ -68,7 +68,7 @@ final class FolioleReadOnlySQLite {
 
 enum FolioleCompanionFramedSyncInventory {
     static func read(_ value: [String: Any]) throws -> [Foliole_Sync_V22_InventoryEntry] {
-        guard let rows = value["entries"] as? [[String: Any]], rows.count <= 4_096 else {
+        guard let rows = value["entries"] as? [[String: Any]], rows.count <= FolioleFramedSyncLimits.maxInventoryEntries else {
             throw invalid("inventory_input_invalid")
         }
         return try rows.map { row in
@@ -79,6 +79,7 @@ enum FolioleCompanionFramedSyncInventory {
             entry.frontierFactIds = try strings(row, "frontier_fact_ids")
             entry.requiredRelationIds = try strings(row, "required_relation_ids")
             entry.reviewFactIds = try strings(row, "review_fact_ids")
+            entry.stateFactIds = try strings(row, "state_fact_ids")
             entry.resourceHashes = try strings(row, "resource_hashes").map(digest)
             return entry
         }

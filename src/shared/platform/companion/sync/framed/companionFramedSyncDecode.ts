@@ -9,6 +9,7 @@ import type {
   CanonicalBlob,
   CanonicalFact
 } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { restoreFramedSyncNodeReadingFact } from '../../../../../../lib/core/sync/framedSyncNodeReadingFact.js';
 import { readFramedSyncNodeResources } from '../../../../../../lib/core/sync/framedSyncNodeResources.js';
 import { restoreFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeRestore.js';
 
@@ -16,6 +17,7 @@ export type DecodedCompanionTransfer = Readonly<{
   globalId: string;
   nodes: Array<ReturnType<typeof restoreFramedSyncNodeRecord>>;
   relationReviewFacts: readonly CanonicalFact[];
+  readingStates: Array<ReturnType<typeof restoreFramedSyncNodeReadingFact>>;
 }>;
 
 function blob(row: DbRow): CanonicalBlob {
@@ -88,7 +90,9 @@ export function decodeCompanionFramedSyncTransfer(input: {
 }): DecodedCompanionTransfer {
   const nodeFacts = input.facts.filter((fact) => fact.kind === 2);
   const relationReviewFacts = input.facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
-  if (!input.facts.length || nodeFacts.length + relationReviewFacts.length !== input.facts.length) {
+  const readingStates = input.facts.filter((fact) => fact.kind === 1)
+    .map(restoreFramedSyncNodeReadingFact);
+  if (!input.facts.length || nodeFacts.length + relationReviewFacts.length + readingStates.length !== input.facts.length) {
     throw new Error('framed_sync_android_fact_set_unsupported');
   }
   const globalId = input.facts[0]!.globalId;
@@ -99,7 +103,7 @@ export function decodeCompanionFramedSyncTransfer(input: {
     if (input.bodyRows.length || input.resourceRows.length || input.resourceStorageKeys.length) {
       throw new Error('framed_sync_android_blob_set_mismatch');
     }
-    return { globalId, nodes: [], relationReviewFacts };
+    return { globalId, nodes: [], relationReviewFacts, readingStates };
   }
   const bodies = uniqueRows(input.bodyRows);
   const requiredBodies = new Set(nodeFacts.flatMap((fact) => fact.blobs.filter((entry) => entry.role === 1)
@@ -107,5 +111,5 @@ export function decodeCompanionFramedSyncTransfer(input: {
   if (bodies.size !== requiredBodies.size) throw new Error('framed_sync_android_blob_identity_mismatch');
   const nodes = nodeFacts.map((fact) => decodeNode(fact, bodies));
   validateResources(nodeFacts, nodes, input.resourceRows, input.resourceStorageKeys);
-  return { globalId, nodes, relationReviewFacts };
+  return { globalId, nodes, relationReviewFacts, readingStates };
 }

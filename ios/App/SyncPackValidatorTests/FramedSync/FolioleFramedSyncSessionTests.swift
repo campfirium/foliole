@@ -43,7 +43,7 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
             "object_type": "node", "global_id": "node-1",
             "shared_state_hash": String(repeating: "11", count: 32),
             "frontier_fact_ids": ["version-1"], "required_relation_ids": [String](),
-            "review_fact_ids": [String](), "resource_hashes": [String]()
+            "review_fact_ids": [String](), "state_fact_ids": [String](), "resource_hashes": [String]()
         ]]])
         let wire = try FolioleFramedSyncSessionWriter.encode(
             groupKey: Data(0...31), context: context,
@@ -66,7 +66,7 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
         let message = try FolioleFramedSyncDifferenceRequest.make(
             roundID: roundID, objectID: "node-1",
             frontierFactIDs: ["version-2"], requiredRelationIDs: ["edge-1"],
-            resourceHashes: [Data(repeating: 8, count: 32)], reviewFactIDs: ["review-1"]
+            resourceHashes: [Data(repeating: 8, count: 32)], reviewFactIDs: ["review-1"], stateFactIDs: ["node_reading:" + String(repeating: "ab", count: 32)]
         )
         let encoded = try FolioleFramedSyncCodec.encode(message)
         let decoded = try FolioleFramedSyncCodec.decode(
@@ -76,10 +76,10 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
             return XCTFail("expected difference request")
         }
         XCTAssertEqual(request.roundID, roundID)
-        XCTAssertEqual(request.facts.map(\.objectType), ["node", "node", "node"])
-        XCTAssertEqual(request.facts.map(\.globalID), ["node-1", "node-1", "node-1"])
-        XCTAssertEqual(request.facts.map(\.factID), ["version-2", "edge-1", "review-1"])
-        XCTAssertEqual(request.facts.map(\.kind), [.nodeVersion, .parentEdge, .review])
+        XCTAssertEqual(request.facts.map(\.objectType), ["node", "node", "node", "node"])
+        XCTAssertEqual(request.facts.map(\.globalID), ["node-1", "node-1", "node-1", "node-1"])
+        XCTAssertEqual(request.facts.map(\.factID), ["version-2", "edge-1", "review-1", "node_reading:" + String(repeating: "ab", count: 32)])
+        XCTAssertEqual(request.facts.map(\.kind), [.nodeVersion, .parentEdge, .review, .objectState])
         XCTAssertEqual(request.blobHashes, [Data(repeating: 8, count: 32)])
     }
 
@@ -87,12 +87,12 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
         XCTAssertThrowsError(try FolioleFramedSyncDifferenceRequest.make(
             roundID: Data(repeating: 1, count: 15), objectID: "node-1",
             frontierFactIDs: ["version-1"], requiredRelationIDs: [],
-            resourceHashes: [], reviewFactIDs: []
+            resourceHashes: [], reviewFactIDs: [], stateFactIDs: []
         ))
         XCTAssertThrowsError(try FolioleFramedSyncDifferenceRequest.make(
             roundID: Data(repeating: 1, count: 16), objectID: "node-1",
             frontierFactIDs: ["version-1"], requiredRelationIDs: [],
-            resourceHashes: [Data(repeating: 2, count: 31)], reviewFactIDs: []
+            resourceHashes: [Data(repeating: 2, count: 31)], reviewFactIDs: [], stateFactIDs: []
         ))
     }
 
@@ -112,7 +112,7 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
             "shared_state_hash": String(repeating: "11", count: 32),
             "frontier_fact_ids": ["version-1"],
             "required_relation_ids": ["[\"version-1\",\"version-0\",2]"],
-            "review_fact_ids": ["review-1"],
+            "review_fact_ids": ["review-1"], "state_fact_ids": ["node_reading:" + String(repeating: "ab", count: 32)],
             "resource_hashes": [String(repeating: "22", count: 32)]
         ]]])
 
@@ -120,7 +120,25 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
         XCTAssertEqual(entries[0].frontierFactIds, ["version-1"])
         XCTAssertEqual(entries[0].requiredRelationIds, ["[\"version-1\",\"version-0\",2]"])
         XCTAssertEqual(entries[0].reviewFactIds, ["review-1"])
+        XCTAssertEqual(entries[0].stateFactIds, ["node_reading:" + String(repeating: "ab", count: 32)])
     }
+    func testInventoryPreserves4097And10000Entries() throws {
+        for count in [4097, 10000] {
+            let entries = (0..<count).map { index in
+                var entry = Foliole_Sync_V22_InventoryEntry()
+                entry.objectType = "node"
+                entry.globalID = "node-\(index)"
+                entry.sharedStateHash = Data(repeating: 1, count: 32)
+                entry.frontierFactIds = ["version-\(index)"]
+                entry.stateFactIds = ["node_reading:\(index)"]
+                return entry
+            }
+            let messages = try FolioleFramedSyncInventoryWire.encode(
+                entries: entries, roundID: Data(repeating: 3, count: 16))
+            XCTAssertEqual(try FolioleFramedSyncInventoryWire.decodeEntries(messages), entries)
+        }
+    }
+
 }
 
 private extension Data {

@@ -51,6 +51,7 @@ function decodeEntry(value: NativeCompanionFramedSyncInventoryEntry): FramedSync
     resourceHashes: strings(value.resource_hashes, 'resource_hashes')
       .map((hash) => digest(hash, 'resource_hash')),
     reviewFactIds: strings(value.review_fact_ids, 'review_fact_ids'),
+    stateFactIds: strings(value.state_fact_ids, 'state_fact_ids'),
     sharedStateHash: digest(value.shared_state_hash, 'shared_state_hash')
   };
 }
@@ -68,6 +69,7 @@ async function pullDifference(args: NativeCompanionFramedSyncInventoryRequest,
     required_relation_ids: difference.sourceSnapshot.requiredRelationIds,
     resource_hashes: difference.sourceSnapshot.resourceHashes.map(bytesToHex),
     review_fact_ids: difference.sourceSnapshot.reviewFactIds,
+    state_fact_ids: difference.sourceSnapshot.stateFactIds ?? [],
     round_id: bytesToHex(roundId)
   });
 }
@@ -168,7 +170,8 @@ export async function sendCompanionFramedSyncInventoryDifferences(
       objectId: difference.globalId, receiverDeviceId: args.receiver_device_id,
       receiverLibraryEpoch: args.receiver_library_epoch,
       requiredRelationIds: difference.need.requiredRelationIds,
-      reviewFactIds: difference.need.reviewFactIds
+      reviewFactIds: difference.need.reviewFactIds,
+      stateFactIds: difference.need.stateFactIds ?? []
     });
     sent.push({ objectId: difference.globalId, receipt });
   }

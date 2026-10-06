@@ -30,6 +30,7 @@ extension FolioleCompanionSyncPlugin {
             "include_current_node": includeCurrentNode,
             "required_relation_ids": try framedStringArray(call, "required_relation_ids"),
             "review_fact_ids": try framedStringArray(call, "review_fact_ids"),
+            "state_fact_ids": try framedStringArray(call, "state_fact_ids"),
             "sender_device_id": senderDeviceID, "sender_library_epoch": senderEpoch,
             "receiver_device_id": receiverDeviceID, "receiver_library_epoch": receiverEpoch
         ]

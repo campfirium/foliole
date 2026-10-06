@@ -10,6 +10,7 @@ interface SendCompanionFramedSyncObjectArgs {
   receiverLibraryEpoch: string;
   requiredRelationIds: readonly string[];
   reviewFactIds: readonly string[];
+  stateFactIds: readonly string[];
 }
 
 const HEX_DIGEST = /^[a-f0-9]{64}$/u;
@@ -36,6 +37,7 @@ export async function sendCompanionFramedSyncObject(args: SendCompanionFramedSyn
     receiver_library_epoch: args.receiverLibraryEpoch,
     required_relation_ids: args.requiredRelationIds,
     review_fact_ids: args.reviewFactIds,
+    state_fact_ids: args.stateFactIds,
     sync_group_id: args.groupId
   });
   assertReceipt(args, receipt);

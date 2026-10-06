@@ -49,7 +49,7 @@ it('freezes a current node fact and durable hold before returning native wire in
   } as DbPort;
   const result = await prepareCompanionFramedSyncOutbound(port, {
     group_id: 'group-1', include_current_node: true, object_id: 'node-1',
-    receiver_device_id: 'receiver', required_relation_ids: [], review_fact_ids: [],
+    receiver_device_id: 'receiver', required_relation_ids: [], review_fact_ids: [], state_fact_ids: [],
     receiver_library_epoch: 'receiver-epoch', sender_device_id: 'sender',
     sender_library_epoch: 'sender-epoch'
   });
@@ -90,7 +90,7 @@ it('prepares the exact version chain with its parent and review facts', async ()
   const result = await prepareCompanionFramedSyncOutbound(port, {
     group_id: 'group-1', include_current_node: false, object_id: 'node-1',
     receiver_device_id: 'receiver', receiver_library_epoch: 'receiver-epoch',
-    required_relation_ids: [relationId], review_fact_ids: ['review-1'],
+    required_relation_ids: [relationId], review_fact_ids: ['review-1'], state_fact_ids: [],
     sender_device_id: 'sender', sender_library_epoch: 'sender-epoch'
   });
   expect(result.blobs.map((blob) => blob.data_text)).toEqual(['Parent body', 'Child body']);
@@ -122,7 +122,7 @@ it('inspects and freezes canonical resource files without returning data_text', 
   } as DbPort;
   const payload = {
     group_id: 'group-1', include_current_node: true, object_id: 'node-1',
-    receiver_device_id: 'receiver', required_relation_ids: [], review_fact_ids: [],
+    receiver_device_id: 'receiver', required_relation_ids: [], review_fact_ids: [], state_fact_ids: [],
     receiver_library_epoch: 'receiver-epoch', sender_device_id: 'sender',
     sender_library_epoch: 'sender-epoch'
   };

@@ -129,7 +129,7 @@ enum FolioleCompanionSyncGroupResources {
 }
 
 enum FolioleFramedSyncInventoryWire {
-    static let maximumSessionFrames = 34
+    static let maximumSessionFrames = FolioleFramedSyncLimits.maxSessionFrames
     private static let chunkSize = 128
 
     static func decodeRoundID(_ messages: [FolioleFramedSyncValidatedMessage]) throws -> Data {
@@ -151,7 +151,8 @@ enum FolioleFramedSyncInventoryWire {
             throw invalid("inventory_exchange_incomplete")
         }
         var count: UInt64 = 0
-        var chunkBytes = Data()
+        var chunkHash = SHA256()
+        var sessionBytes = 0
         var entries = [Foliole_Sync_V22_InventoryEntry]()
         for (offset, message) in messages.dropFirst().dropLast().enumerated() {
             guard case .inventoryChunk(let chunk) = message.payload,
@@ -160,11 +161,19 @@ enum FolioleFramedSyncInventoryWire {
                 throw invalid("inventory_chunk_sequence_invalid")
             }
             count += UInt64(chunk.entries.count)
+            guard count <= begin.entryCount, count <= FolioleFramedSyncLimits.maxInventoryEntries else {
+                throw invalid("inventory_entry_limit_exceeded")
+            }
             entries.append(contentsOf: chunk.entries)
-            chunkBytes.append(try FolioleFramedSyncCodec.encode(message))
+            let encoded = try FolioleFramedSyncCodec.encode(message)
+            sessionBytes += encoded.count + 32
+            guard sessionBytes <= FolioleFramedSyncLimits.maxSessionBytes else {
+                throw invalid("inventory_session_limit_exceeded")
+            }
+            chunkHash.update(data: encoded)
         }
         guard end.roundID == begin.roundID,
-              end.inventoryHash == Data(SHA256.hash(data: chunkBytes)),
+              end.inventoryHash == Data(chunkHash.finalize()),
               count == begin.entryCount else {
             throw invalid("inventory_exchange_incomplete")
         }
@@ -174,24 +183,49 @@ enum FolioleFramedSyncInventoryWire {
     static func encode(
         entries: [Foliole_Sync_V22_InventoryEntry], roundID: Data
     ) throws -> [FolioleFramedSyncValidatedMessage] {
-        guard entries.count <= 4_096, roundID.count == 16 else {
+        guard entries.count <= FolioleFramedSyncLimits.maxInventoryEntries, roundID.count == 16 else {
             throw FolioleFramedSyncValidationError("inventory_input_invalid")
         }
         var begin = Foliole_Sync_V22_InventoryBegin()
         begin.roundID = roundID; begin.entryCount = UInt64(entries.count)
         var result = [try validated { $0.inventoryBegin = begin }]
-        var chunkBytes = Data()
-        for offset in stride(from: 0, to: entries.count, by: chunkSize) {
-            var chunk = Foliole_Sync_V22_InventoryChunk()
-            chunk.roundID = roundID; chunk.chunkIndex = UInt32(offset / chunkSize)
-            chunk.entries = Array(entries[offset..<min(offset + chunkSize, entries.count)])
-            let message = try validated { $0.inventoryChunk = chunk }
-            chunkBytes.append(try FolioleFramedSyncCodec.encode(message)); result.append(message)
+        var chunkHash = SHA256()
+        var sessionBytes = 0
+        var offset = 0
+        while offset < entries.count {
+            var count = min(chunkSize, entries.count - offset)
+            var wire = try chunk(entries, roundID: roundID, offset: offset, count: count, index: result.count - 1)
+            while try wire.serializedData().count > FolioleFramedSyncLimits.maxControlMessageBytes && count > 1 {
+                count = max(1, count / 2)
+                wire = try chunk(entries, roundID: roundID, offset: offset, count: count, index: result.count - 1)
+            }
+            let message = try FolioleFramedSyncCodec.validateOutbound(
+                wire, authenticatedFrameType: FolioleFramedSyncFrameType.sessionControl.rawValue)
+            let encoded = try FolioleFramedSyncCodec.encode(message)
+            sessionBytes += encoded.count + 32
+            guard sessionBytes <= FolioleFramedSyncLimits.maxSessionBytes,
+                  result.count + 2 <= maximumSessionFrames else {
+                throw invalid("inventory_session_limit_exceeded")
+            }
+            chunkHash.update(data: encoded)
+            result.append(message)
+            offset += count
         }
         var end = Foliole_Sync_V22_InventoryEnd()
-        end.roundID = roundID; end.inventoryHash = Data(SHA256.hash(data: chunkBytes))
+        end.roundID = roundID; end.inventoryHash = Data(chunkHash.finalize())
         result.append(try validated { $0.inventoryEnd = end })
         return result
+    }
+
+    private static func chunk(
+        _ entries: [Foliole_Sync_V22_InventoryEntry], roundID: Data, offset: Int, count: Int, index: Int
+    ) throws -> Foliole_Sync_V22_ProtocolMessage {
+        var chunk = Foliole_Sync_V22_InventoryChunk()
+        chunk.roundID = roundID; chunk.chunkIndex = UInt32(index)
+        chunk.entries = Array(entries[offset..<offset + count])
+        var wire = Foliole_Sync_V22_ProtocolMessage()
+        wire.inventoryChunk = chunk
+        return wire
     }
 
     private static func validated(

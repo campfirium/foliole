@@ -24,7 +24,7 @@ final class FolioleCompanionFramedSyncPullInput {
             requiredStrings(call, "frontier_fact_ids"),
             requiredStrings(call, "required_relation_ids"),
             digestList(call, "resource_hashes"),
-            requiredStrings(call, "review_fact_ids"));
+            requiredStrings(call, "review_fact_ids"), requiredStrings(call, "state_fact_ids"));
     }
 
     static List<FramedSyncValidatedMessage> messages(Request input) throws Exception {
@@ -33,6 +33,7 @@ final class FolioleCompanionFramedSyncPullInput {
         addFacts(difference, input.objectId, input.frontierFactIds, FactKind.FACT_KIND_NODE_VERSION);
         addFacts(difference, input.objectId, input.requiredRelationIds, FactKind.FACT_KIND_PARENT_EDGE);
         addFacts(difference, input.objectId, input.reviewFactIds, FactKind.FACT_KIND_REVIEW);
+        addFacts(difference, input.objectId, input.stateFactIds, FactKind.FACT_KIND_OBJECT_STATE);
         for (byte[] hash : input.resourceHashes) difference.addBlobHashes(ByteString.copyFrom(hash));
         FramedSyncValidatedMessage message = FramedSyncCodec.validateOutbound(
             ProtocolMessage.newBuilder().setDifferenceRequest(difference).build(),
@@ -113,6 +114,7 @@ final class FolioleCompanionFramedSyncPullInput {
         final List<String> requiredRelationIds;
         final List<byte[]> resourceHashes;
         final List<String> reviewFactIds;
+        final List<String> stateFactIds;
         final byte[] roundId;
 
         Request(
@@ -121,7 +123,7 @@ final class FolioleCompanionFramedSyncPullInput {
             List<String> frontierFactIds,
             List<String> requiredRelationIds,
             List<byte[]> resourceHashes,
-            List<String> reviewFactIds
+            List<String> reviewFactIds, List<String> stateFactIds
         ) {
             this.objectId = objectId;
             this.roundId = roundId.clone();
@@ -129,6 +131,7 @@ final class FolioleCompanionFramedSyncPullInput {
             this.requiredRelationIds = new ArrayList<>(requiredRelationIds);
             this.resourceHashes = new ArrayList<>(resourceHashes);
             this.reviewFactIds = new ArrayList<>(reviewFactIds);
+            this.stateFactIds = new ArrayList<>(stateFactIds);
         }
     }
 }

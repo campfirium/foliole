@@ -14,6 +14,7 @@ export interface NativeCompanionFramedSyncTransferRequest {
   receiver_library_epoch: string;
   required_relation_ids: readonly string[];
   review_fact_ids: readonly string[];
+  state_fact_ids: readonly string[];
   sync_group_id: string;
 }
 
@@ -39,6 +40,7 @@ export interface NativeCompanionFramedSyncInventoryEntry {
   required_relation_ids: readonly string[];
   resource_hashes: readonly string[];
   review_fact_ids: readonly string[];
+  state_fact_ids: readonly string[];
   shared_state_hash: string;
 }
 
@@ -53,6 +55,7 @@ export interface NativeCompanionFramedSyncPullRequest extends NativeCompanionFra
   required_relation_ids: readonly string[];
   resource_hashes: readonly string[];
   review_fact_ids: readonly string[];
+  state_fact_ids: readonly string[];
   round_id: string;
 }
 

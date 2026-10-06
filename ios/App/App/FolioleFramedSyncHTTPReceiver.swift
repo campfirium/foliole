@@ -147,8 +147,11 @@ enum FolioleFramedSyncSessionReader {
         _ data: Data, groupKey: Data, context: FolioleFramedSyncSessionContext,
         maximumFrames: Int
     ) throws -> FolioleFramedSyncSessionReadResult {
-        guard (1...100_002).contains(maximumFrames) else {
+        guard (1...FolioleFramedSyncLimits.maxSessionFrames).contains(maximumFrames) else {
             throw FolioleFramedSyncValidationError("session_frame_limit_invalid")
+        }
+        guard data.count <= FolioleFramedSyncLimits.maxSessionBytes else {
+            throw FolioleFramedSyncValidationError("session_byte_limit_exceeded")
         }
         let stream = InputStream(data: data)
         let reader = FolioleFramedSyncStreamReader(input: stream)

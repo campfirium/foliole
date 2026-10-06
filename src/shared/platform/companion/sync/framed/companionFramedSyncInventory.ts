@@ -15,6 +15,7 @@ function serialize(entry: FramedSyncInventoryEntry) {
     required_relation_ids: entry.requiredRelationIds,
     resource_hashes: entry.resourceHashes.map(hex),
     review_fact_ids: entry.reviewFactIds,
+    state_fact_ids: entry.stateFactIds ?? [],
     shared_state_hash: hex(entry.sharedStateHash)
   };
 }

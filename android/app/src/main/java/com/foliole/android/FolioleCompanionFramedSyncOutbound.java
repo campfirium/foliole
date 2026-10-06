@@ -38,7 +38,7 @@ final class FolioleCompanionFramedSyncOutbound {
         FramedSyncTransferContext transferContext = new FramedSyncTransferContext(
             groupId, credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
         JSONObject selection = selection(groupId, input.objectId, input.includeCurrentNode,
-            input.requiredRelationIds, input.reviewFactIds, credential.deviceId, senderEpoch,
+            input.requiredRelationIds, input.reviewFactIds, input.stateFactIds, credential.deviceId, senderEpoch,
             receiverDeviceId, receiverEpoch);
         JSONObject inspected = FolioleCompanionSyncGroupDataBridge.current().request(
             "inspect_framed_outbound", selection);
@@ -74,7 +74,7 @@ final class FolioleCompanionFramedSyncOutbound {
 
     private static JSONObject selection(
         String groupId, String objectId, boolean includeCurrentNode,
-        List<String> requiredRelationIds, List<String> reviewFactIds,
+        List<String> requiredRelationIds, List<String> reviewFactIds, List<String> stateFactIds,
         String senderDeviceId, String senderEpoch,
         String receiverDeviceId, String receiverEpoch
     ) throws Exception {
@@ -83,6 +83,7 @@ final class FolioleCompanionFramedSyncOutbound {
                 .put("include_current_node", includeCurrentNode)
                 .put("required_relation_ids", new JSONArray(requiredRelationIds))
                 .put("review_fact_ids", new JSONArray(reviewFactIds))
+                .put("state_fact_ids", new JSONArray(stateFactIds))
                 .put("sender_device_id", senderDeviceId).put("sender_library_epoch", senderEpoch)
                 .put("receiver_device_id", receiverDeviceId)
                 .put("receiver_library_epoch", receiverEpoch);

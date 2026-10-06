@@ -33,13 +33,15 @@ struct FolioleFramedSyncTransferContext {
 enum FolioleFramedSyncDifferenceRequest {
     static func make(
         roundID: Data, objectID: String, frontierFactIDs: [String],
-        requiredRelationIDs: [String], resourceHashes: [Data], reviewFactIDs: [String]
+        requiredRelationIDs: [String], resourceHashes: [Data], reviewFactIDs: [String],
+        stateFactIDs: [String]
     ) throws -> FolioleFramedSyncValidatedMessage {
         var value = Foliole_Sync_V22_DifferenceRequest()
         value.roundID = roundID
         value.facts = frontierFactIDs.map { identity(.nodeVersion, objectID, $0) }
             + requiredRelationIDs.map { identity(.parentEdge, objectID, $0) }
             + reviewFactIDs.map { identity(.review, objectID, $0) }
+            + stateFactIDs.map { identity(.objectState, objectID, $0) }
         value.blobHashes = resourceHashes
         var message = Foliole_Sync_V22_ProtocolMessage()
         message.payload = .differenceRequest(value)

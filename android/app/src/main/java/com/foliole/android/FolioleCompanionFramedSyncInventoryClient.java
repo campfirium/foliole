@@ -67,6 +67,7 @@ final class FolioleCompanionFramedSyncInventoryClient {
             .put("required_relation_ids", strings(entry.getRequiredRelationIdsList()))
             .put("resource_hashes", hashes(entry.getResourceHashesList()))
             .put("review_fact_ids", strings(entry.getReviewFactIdsList()))
+            .put("state_fact_ids", strings(entry.getStateFactIdsList()))
             .put("shared_state_hash", hex(entry.getSharedStateHash().toByteArray())));
         return new JSObject().put("entries", values).put("round_id", hex(roundId));
     }
