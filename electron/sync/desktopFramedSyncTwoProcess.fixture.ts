@@ -1,16 +1,16 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
+import { loadWorkspaceSnapshot as loadWorkspaceSnapshotWithDriver } from '../../lib/core/database/workspaceSnapshot.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
-import { initializeDatabase } from '../database/migrate.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
+import { fixtureBodyStorage, fixtureInitializationPhase, initializeFixtureDatabase } from './desktopFramedSyncChunkedFixtureInitialization.js';
 import { runDesktopFramedSyncOrderCommand } from './desktopFramedSyncOrder.fixture.js';
 import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecovery.fixture.js';
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
 import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourceProcessScenario.js';
-import { markDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
 
 export { createDesktopFramedSyncProcessPort } from './desktopFramedSyncProcessPort.js';
 
@@ -28,6 +28,8 @@ type Command = Readonly<{
 
 const stateRoot = requiredEnvironment('FOLIOLE_ELECTRON_TEST_STATE_ROOT');
 const deviceId = requiredEnvironment('FOLIOLE_FRAMED_SYNC_DEVICE_ID');
+const bodyStorage = fixtureBodyStorage();
+const initializationPhase = fixtureInitializationPhase();
 let origin = '';
 let portPromise: Promise<ProcessPort> | null = null;
 
@@ -80,6 +82,7 @@ async function loadProcessPort() {
     }
     const port: unknown = await loaded.createDesktopFramedSyncProcessPort({
       databasePath: openDatabaseConnection().dbPath,
+      bodyStorage,
       deviceId,
       localOrigin: origin
     });
@@ -142,14 +145,15 @@ function snapshot() {
     origin,
     pid: process.pid,
     stateRoot,
-    workspace: loadWorkspaceSnapshot({ includeBody: true })
+    workspace: bodyStorage === 'chunked'
+      ? loadWorkspaceSnapshotWithDriver(openDatabaseConnection().driver, { includeBody: false }, 'chunked')
+      : loadWorkspaceSnapshot({ includeBody: true })
   };
 }
 
 async function run(command: Command) {
   if (command.action === 'init') {
-    initializeDatabase(undefined, { deferSearchIndex: true, recovery: 'fail' });
-    initializeSyncGroup();
+    await initializeFixtureDatabase(bodyStorage, initializationPhase, deviceId);
     await new Promise<void>((resolve, reject) => {
       server.once('error', reject);
       server.listen(0, '127.0.0.1', resolve);
@@ -201,22 +205,6 @@ async function run(command: Command) {
     return null;
   }
   throw new Error(`fixture_action_unknown:${command.action}`);
-}
-
-function initializeSyncGroup() {
-  const driver = openDatabaseConnection().driver;
-  const now = '2026-10-05T00:00:00.000Z';
-  const groupKey = Buffer.alloc(32, 7).toString('base64url');
-  driver.execute(`INSERT OR IGNORE INTO sync_groups VALUES ('t326-group', 'T326', ?, ?, ?)`,
-    [groupKey, now, now]);
-  for (const memberId of ['desktop-a', 'desktop-b']) {
-    driver.execute(`INSERT OR IGNORE INTO sync_group_devices VALUES
-      ('t326-group', ?, ?, ?, ?, 'desktop', 'active', ?, NULL, ?, ?)`,
-    [memberId, `${memberId}-anchor`, `/t326/${memberId}`, memberId, now, now, now]);
-  }
-  driver.execute(`INSERT OR IGNORE INTO sync_group_local_state VALUES (1, 't326-group', ?, 'active', ?)`,
-    [deviceId, now]);
-  markDesktopSyncGroupMemberStateReady(deviceId === 'desktop-a' ? 'desktop-b' : 'desktop-a');
 }
 
 function writeHttpError(response: ServerResponse, error: unknown) {

@@ -11,6 +11,7 @@ import { applyNodeMemberPosition, applyVersionMemberPosition } from './nodeVersi
 import { collectParentOrderBodies } from './parentOrderBodyRetention.js';
 import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
 import { persistSyncIdentityParentOrderMerges, stageSyncIdentityParentOrderRecordMerge } from './syncIdentityParentOrderApply.js';
+import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 import { applySyncObjectInTransaction, type ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 import { applyParentOrderFactObject } from './syncParentOrderFactApply.js';
 
@@ -24,7 +25,8 @@ const nullable = (value: string | null): CanonicalValue => value === null
   ? { kind: 'null' } : { kind: 'string', value };
 
 export async function selectFramedSyncObjectStateFact(
-  db: DbPort, key: { globalId: string; objectType: string }, factId: string
+  db: DbPort, key: { globalId: string; objectType: string }, factId: string,
+  bodyStorage: NodeVersionBodyStorage = 'continuous'
 ): Promise<CanonicalFact> {
   assertType(key.objectType, key.globalId);
   const [state] = await db.query<StateRow>(`SELECT content_hash, current_version_id, deleted_at, updated_at
@@ -33,7 +35,7 @@ export async function selectFramedSyncObjectStateFact(
   const payload = state.deleted_at ? null : await readFramedSyncObjectPayload(db, key);
   if (!state.deleted_at && !payload) throw new Error('framed_sync_source_changed');
   const blobs = key.objectType === 'external_document'
-    ? await selectFramedExternalDocumentBody(db, payload) : [];
+    ? await selectFramedExternalDocumentBody(db, payload, bodyStorage) : [];
   return { blobs, body: [
     { name: 'content_hash', value: nullable(state.content_hash) },
     { name: 'current_version_id', value: nullable(state.current_version_id) },

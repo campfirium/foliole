@@ -8,14 +8,19 @@ import type { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncP
 import { respondDesktopFramedSyncInventory } from './desktopFramedSyncInventoryHttp.js';
 import { receiveDesktopFramedSyncTransfer, stageDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
 import { receiveDesktopFramedSyncReceipt } from './desktopFramedSyncReceiptReceiver.js';
+import { receiveVerifiedDesktopFramedSyncTransfer } from './desktopFramedSyncVerifiedReceiver.js';
 
-type Input = Readonly<{ db: DbPort; groupKey: Uint8Array; groupSecret: string; staging: FramedSyncStagingPort }>;
+type Input = Readonly<{ db: DbPort; groupKey: Uint8Array; groupSecret: string; staging: FramedSyncStagingPort;
+  bodyStorage?: 'continuous' | 'chunked' }>;
 type StreamInput = Parameters<Parameters<typeof handleCompanionLanFramedSyncPost>[0]['onStream']>[0];
 
 export function createDesktopFramedSyncFixtureReceiver(input: Input) {
   let paused = false;
   return {
-    pauseBeforeApply() { paused = true; },
+    pauseBeforeApply() {
+      if (input.bodyStorage === 'chunked') throw new Error('fixture_chunked_pause_unsupported');
+      paused = true;
+    },
     receive: async ({ context, stream }: StreamInput) => {
       const transferContext = {
         groupId: context.groupId, protocolVersion: context.protocolVersion,
@@ -35,7 +40,9 @@ export function createDesktopFramedSyncFixtureReceiver(input: Input) {
         await stageDesktopFramedSyncTransfer({ ...input, context: transferContext, stream: inspected.stream });
         throw new Error('fixture_paused_before_apply');
       }
-      return receiveDesktopFramedSyncTransfer({ ...input, context: transferContext, stream: inspected.stream });
+      return input.bodyStorage === 'chunked'
+        ? receiveVerifiedDesktopFramedSyncTransfer({ ...input, context: transferContext, stream: inspected.stream })
+        : receiveDesktopFramedSyncTransfer({ ...input, context: transferContext, stream: inspected.stream });
     }
   };
 }

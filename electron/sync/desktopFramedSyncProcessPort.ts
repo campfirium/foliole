@@ -14,14 +14,14 @@ import { synchronizeDesktopFramedSync } from './desktopFramedSyncProcessOutbound
 import { createDesktopFramedSyncRoundProcessAdapter } from './desktopFramedSyncRoundProcessAdapter.js';
 import { saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
 
-type FactoryInput = Readonly<{ databasePath: string; deviceId: string; localOrigin: string }>;
+type FactoryInput = Readonly<{ databasePath: string; deviceId: string; localOrigin: string; bodyStorage?: 'continuous' | 'chunked' }>;
 
 export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
   const connection = openDatabaseConnection();
   if (connection.dbPath !== input.databasePath) throw new Error('framed_sync_database_path_mismatch');
   for (const statement of FRAMED_SYNC_STAGING_SCHEMA) connection.sqlite.exec(statement);
   const db = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-framed-sync-process' });
-  const staging = createDesktopFramedSyncStaging(db);
+  const staging = createDesktopFramedSyncStaging(db, input.bodyStorage);
   const identity = { deviceId: input.deviceId, libraryEpoch: `${input.deviceId}-epoch` };
   const group = loadDesktopSyncGroupInfo();
   if (!group) throw new Error('sync_group_not_available');
@@ -30,7 +30,7 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
     db, groupId: group.group_id, groupSecret: group.workgroup_key, local: identity, staging
   });
   const receiver = createDesktopFramedSyncFixtureReceiver({ db, groupKey,
-    groupSecret: group.workgroup_key, staging });
+    groupSecret: group.workgroup_key, staging, bodyStorage: input.bodyStorage ?? 'continuous' });
   return {
     handleHttpRequest: (request: IncomingMessage, response: ServerResponse) =>
       handleCompanionLanFramedSyncPost({

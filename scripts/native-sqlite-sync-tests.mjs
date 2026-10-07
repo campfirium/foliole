@@ -1,4 +1,13 @@
 export const controlledSyncSqliteTests = [
+  'electron/sync/desktopFramedSyncVerifiedOutboundNodeFacts.integration.test.ts',
+  'electron/sync/desktopFramedSyncVerifiedRestore.integration.test.ts',
+  'electron/sync/desktopFramedSyncVerifiedTwoProcess.integration.test.ts',
+  'electron/sync/desktopFramedSyncBlobSources.integration.test.ts',
+  'electron/sync/desktopFramedSyncVerifiedReceiver.integration.test.ts',
+  'lib/core/sync/syncGroupRestoreResetStable.integration.test.ts',
+  'lib/core/sync/framedSyncExternalDocumentBody.integration.test.ts',
+  'electron/sync/desktopFramedSyncVerifiedApply.integration.test.ts',
+  'lib/core/database/nodeSyncTombstonesStable.integration.test.ts',
   'electron/import/incomingUpdates.test.ts',
   'electron/database/keepImportItemCacheStable.integration.test.ts',
   'electron/database/framedSyncNativeAvailableMigration.integration.test.ts',

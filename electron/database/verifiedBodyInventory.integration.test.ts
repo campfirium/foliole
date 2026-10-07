@@ -2,13 +2,19 @@
 import { expect, it } from 'vitest';
 
 import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
+import { migrateBodyContentOwners } from '../../lib/core/database/bodyContentOwnerMigration.js';
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { nodeSyncSnapshotHashMetadata } from '../../lib/core/database/nodeSyncSnapshotMetadata.js';
+import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { migrateVerifiedBodyInventory } from '../../lib/core/database/verifiedBodyInventoryMigration.js';
+import { readFramedSyncInventory, readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { writeVerifiedCurrentNode } from '../../lib/core/sync/syncNodeVerifiedCurrentWrite.js';
 import { upsertVerifiedSyncNodeVersion } from '../../lib/core/sync/syncNodeVerifiedVersionWrite.js';
+import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { alternativeForBody } from '../../lib/core/sync/topicTextState.js';
 
 import { referencedNode } from './syncNodeVerifiedTopicConflict.testSupport.js';
@@ -16,6 +22,44 @@ import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
 const timestamp = '2026-10-07T00:00:00.000Z';
 const inventory = (host: ReturnType<typeof textDevice>) => host.sqlite.prepare('SELECT * FROM framed_sync_inventory ORDER BY object_id').all();
+
+async function seedExternalInventory(host: ReturnType<typeof textDevice>, body: string, available: boolean) {
+  const id = available ? 'readable' : 'unavailable';
+  const hash = hashTextBody(body);
+  const payload = { body_blob_hash: hash, content_hash: 'original-source-hash', document_id: id,
+    extension: 'md', file_name: `${id}.md`, folder_id: 'folder', reference_json: null,
+    reference_kind: 'local_path', relative_path: `${id}.md`, title: id };
+  if (available) await upsertTextBodyBlob(host.db, body, timestamp, hash);
+  await applySyncObjectInTransaction(host.db, { object_type: 'external_document', object_id: id,
+    content_hash: computeSyncContentHash('external_document', payload), deleted_at: null,
+    payload_json: JSON.stringify(payload), updated_at: timestamp });
+  return hash;
+}
+
+it.each(['', '\ufeff中文😀\0Original'])('reads the same complete inventory and entries after continuous storage is removed', async (body) => {
+  const host = textDevice();
+  try {
+    await applySyncNodesWithDbPort(host.db, [textBranch('current', body, undefined, timestamp)]);
+    await seedExternalInventory(host, body, true);
+    const missingHash = await seedExternalInventory(host, 'Missing original', false);
+    const before = await readFramedSyncInventory(host.db);
+    const keys = before.map((entry) => ({ globalId: entry.globalId, objectType: entry.objectType }));
+    const entries = await Promise.all(keys.map((key) => readFramedSyncInventoryEntry(host.db, key)));
+    await host.db.transaction(async (tx) => {
+      await migrateBodyContentStorage(tx);
+      await migrateBodyContentOwners(tx, 'desktop');
+      await migrateVerifiedBodyInventory(tx);
+      await tx.run('DROP TABLE content_blob_data');
+    });
+    expect(await readFramedSyncInventory(host.db, 'chunked')).toEqual(before);
+    expect(await Promise.all(keys.map((key) => readFramedSyncInventoryEntry(host.db, key, 'chunked')))).toEqual(entries);
+    expect(before.find((entry) => entry.globalId === 'readable')!.resourceHashes).toHaveLength(1);
+    expect(before.find((entry) => entry.globalId === 'unavailable')!.resourceHashes).toEqual([]);
+    host.sqlite.prepare('INSERT INTO content_bodies (hash, byte_length, verified) VALUES (?, 16, 0)').run(missingHash);
+    expect((await readFramedSyncInventoryEntry(host.db, { globalId: 'unavailable', objectType: 'external_document' }, 'chunked'))!.resourceHashes).toEqual([]);
+    await expect(readFramedSyncInventory(host.db)).rejects.toThrow('no such table: content_blob_data');
+  } finally { host.sqlite.close(); }
+});
 
 it('preserves discovery identities and current resources across the stable-body schema transition and later writes', async () => {
   const old = textDevice();

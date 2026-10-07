@@ -8,6 +8,7 @@ import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInven
 import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
 import { loadSyncGroupLocalAdoption } from './syncGroupLocalAdoption.js';
 import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
+import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
 interface InventoryRow extends DbRow {
@@ -37,30 +38,30 @@ function entry(row: InventoryRow): FramedSyncInventoryEntry {
   };
 }
 
-async function read(port: DbPort, key?: InventoryKey) {
-  if (key && key.objectType !== 'node') return readFramedSyncObjectStateInventory(port, key);
+async function read(port: DbPort, key: InventoryKey | undefined, storage: NodeVersionBodyStorage) {
+  if (key && key.objectType !== 'node') return readFramedSyncObjectStateInventory(port, key, storage);
   const rows = await port.query<InventoryRow>(`SELECT * FROM framed_sync_inventory
     WHERE object_type = 'node' ${key ? 'AND object_id = ?' : ''} ORDER BY object_id`,
   key ? [key.globalId] : []);
   const nodes = rows.map(entry);
-  const states = key ? [] : await readFramedSyncObjectStateInventory(port);
+  const states = key ? [] : await readFramedSyncObjectStateInventory(port, undefined, storage);
   return [...nodes, ...states].sort((left, right) =>
     compareSyncIdentityText(left.objectType, right.objectType) ||
     compareSyncIdentityText(left.globalId, right.globalId));
 }
 
-export function readFramedSyncInventory(port: DbPort) {
+export function readFramedSyncInventory(port: DbPort, storage: NodeVersionBodyStorage = 'continuous') {
   return port.transaction(async (tx) => {
     if (await loadSyncGroupLocalAdoption(tx)) return [];
     await expireFramedSyncCompletions(tx);
     for (const row of await tx.query<{ parent_id: string }>('SELECT parent_id FROM parent_order_heads')) {
       await publishParentOrderPosition(tx, row.parent_id);
     }
-    return read(tx);
+    return read(tx, undefined, storage);
   });
 }
 
-export async function readFramedSyncInventoryEntry(port: DbPort, key: InventoryKey) {
-  const values = await port.transaction((tx) => read(tx, key));
+export async function readFramedSyncInventoryEntry(port: DbPort, key: InventoryKey, storage: NodeVersionBodyStorage = 'continuous') {
+  const values = await port.transaction((tx) => read(tx, key, storage));
   return values[0] ?? null;
 }

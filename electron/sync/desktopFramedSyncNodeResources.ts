@@ -12,7 +12,7 @@ export type DesktopFramedSyncNodeResource = Readonly<{
 }>;
 
 export function resolveDesktopFramedSyncNodeResources(
-  record: NativeSyncNodeRecord
+  record: Readonly<{ snapshot: Pick<NativeSyncNodeRecord['snapshot'], 'resource_references'> }>
 ): readonly DesktopFramedSyncNodeResource[] {
   return readFramedSyncNodeResources(record.snapshot.resource_references).map((resource) => {
     const resolved = resolveAttachmentFileForSync(resource.storageKey);

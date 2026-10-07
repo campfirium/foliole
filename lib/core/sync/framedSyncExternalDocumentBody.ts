@@ -4,10 +4,17 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import type { DbPort } from './dbPort.js';
 import type { CanonicalBlob, CanonicalFact } from './framedSyncCanonicalManifest.js';
 import type { FramedSyncBlobContent } from './framedSyncTransferPayloads.js';
+import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
+import { loadVerifiedBodyRef } from './verifiedBody.js';
 
-export async function selectFramedExternalDocumentBody(db: DbPort, payload: string | null): Promise<CanonicalBlob[]> {
+export async function selectFramedExternalDocumentBody(db: DbPort, payload: string | null,
+  bodyStorage: NodeVersionBodyStorage = 'continuous'): Promise<CanonicalBlob[]> {
   const hash = payload === null ? null : JSON.parse(payload).body_blob_hash as unknown;
   if (typeof hash !== 'string') return [];
+  if (bodyStorage === 'chunked') {
+    const ref = await loadVerifiedBodyRef(db, hash);
+    return ref ? [{ byteLength: BigInt(ref.byteLength), required: true, role: 5, sha256: hexToBytes(ref.hash) }] : [];
+  }
   const [row] = await db.query<{ data_hex: string }>(
     'SELECT hex(data) AS data_hex FROM content_blob_data WHERE hash = ?', [hash]);
   if (!row) return [];

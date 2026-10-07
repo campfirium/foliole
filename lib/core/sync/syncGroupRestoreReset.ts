@@ -25,7 +25,7 @@ const CLEAR_TABLES = [
   'pdf_index_state'
 ] as const;
 
-export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: string) {
+export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: string, bodyStorage: 'continuous' | 'chunked' = 'continuous') {
   if (!restoreId.trim()) throw new Error('sync_group_restore_id_invalid');
   const tableNames = new Set((await port.query<{ name: string }>(
     "SELECT name FROM sqlite_master WHERE type = 'table'"
@@ -35,7 +35,10 @@ export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: 
   )).map((row) => row.id) : [];
   await port.run('PRAGMA defer_foreign_keys = ON');
   for (const table of CLEAR_TABLES) {
-    if (tableNames.has(table)) await port.run(`DELETE FROM main.${table}`);
+    if (!tableNames.has(table)) continue;
+    if (bodyStorage === 'chunked' && table === 'content_blob_data') continue;
+    await port.run(`DELETE FROM main.${table}${bodyStorage === 'chunked' && table === 'content_blobs'
+      ? " WHERE kind != 'text_body'" : ''}`);
   }
   if (tableNames.has('sync_identity_dirty_keys')) {
     await port.run('DELETE FROM main.sync_identity_dirty_keys');

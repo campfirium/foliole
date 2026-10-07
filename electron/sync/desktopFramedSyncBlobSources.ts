@@ -6,6 +6,8 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { CanonicalBlob, CanonicalManifest } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
 import { framedSyncPublicationResources } from '../../lib/core/sync/framedSyncPublicationResources.js';
+import type { NodeVersionBodyStorage } from '../../lib/core/sync/syncNodeTombstoneVersion.js';
+import { loadVerifiedBodyRef, streamBodyBytes } from '../../lib/core/sync/verifiedBody.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { resolveAttachmentFileForSync } from '../attachments/resourceResolver.js';
 
@@ -90,12 +92,19 @@ function addSource(sources: Map<string, DesktopFramedSyncBlobSource>, source: De
   if (!prior) sources.set(key, source);
 }
 
-export async function loadDesktopFramedSyncPublishedBlobSources(db: DbPort, manifest: CanonicalManifest) {
+export async function loadDesktopFramedSyncPublishedBlobSources(db: DbPort, manifest: CanonicalManifest,
+  bodyStorage: NodeVersionBodyStorage = 'continuous') {
   const resources = framedSyncPublicationResources(manifest);
   const sources: DesktopFramedSyncBlobSource[] = [];
   for (const blob of manifest.blobs) {
     const hash = bytesToHex(blob.sha256);
     if ((blob.role === 1 || blob.role === 5)) {
+      if (bodyStorage === 'chunked') {
+        const ref = await loadVerifiedBodyRef(db, hash);
+        if (!ref || BigInt(ref.byteLength) !== blob.byteLength) throw new Error('framed_sync_published_body_unavailable');
+        sources.push({ blob, chunks: () => streamBodyBytes(db, ref) });
+        continue;
+      }
       const [row] = await db.query<{ size: number }>(
         'SELECT length(data) AS size FROM content_blob_data WHERE hash = ?', [hash]);
       if (!row || BigInt(row.size) !== blob.byteLength) {

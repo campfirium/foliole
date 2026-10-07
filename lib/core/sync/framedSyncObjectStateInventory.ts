@@ -2,6 +2,7 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
+import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 import { SYNC_POLICY_HOST_PRIVATE_OBJECT_TYPES } from './syncObjectPolicy.js';
 
 /** Existing write-maintained object identities, matching the native identity copy surface. */
@@ -31,13 +32,15 @@ interface StateRow extends DbRow {
 }
 
 export async function readFramedSyncObjectStateInventory(
-  port: DbPort, key?: Readonly<{ globalId: string; objectType: string }>
+  port: DbPort, key?: Readonly<{ globalId: string; objectType: string }>, storage: NodeVersionBodyStorage = 'continuous'
 ): Promise<FramedSyncInventoryEntry[]> {
   const types = sharedTypes.map((type) => `'${type}'`).join(',');
   const rows = await port.query<StateRow>(`SELECT object_type, object_id, content_hash, current_version_id,
     CASE WHEN object_type = 'external_document' AND deleted_at IS NULL THEN
       (SELECT body_blob_hash FROM external_documents WHERE document_id = object_id
-        AND EXISTS (SELECT 1 FROM content_blob_data WHERE hash = body_blob_hash))
+        AND EXISTS (${storage === 'chunked'
+    ? 'SELECT 1 FROM content_bodies WHERE hash = body_blob_hash AND verified = 1'
+    : 'SELECT 1 FROM content_blob_data WHERE hash = body_blob_hash'}))
       ELSE NULL END AS body_blob_hash
     FROM sync_object_state WHERE object_type IN (${types})
       AND (object_type != 'setting' OR object_id LIKE '${sharedSettingPrefix}%')

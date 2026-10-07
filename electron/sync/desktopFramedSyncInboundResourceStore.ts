@@ -13,6 +13,8 @@ import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js
 
 import { hashResourceFile } from './resourceFileHash.js';
 
+type ResourceRecord = Readonly<{ snapshot: Pick<NativeSyncNodeRecord['snapshot'], 'resource_references'> }>;
+
 type Entry = Readonly<{ descriptor: ManifestBlobDescriptor; partialPath: string }>;
 
 export class DesktopFramedSyncInboundResourceStore {
@@ -72,7 +74,7 @@ export class DesktopFramedSyncInboundResourceStore {
     } finally { await handle.close(); }
   }
 
-  async complete(records: readonly NativeSyncNodeRecord[]) {
+  async complete(records: readonly ResourceRecord[]) {
     const keys = resourceStorageKeys(records);
     for (const [hash, entry] of this.#entries) {
       const storageKey = keys.get(hash);
@@ -112,7 +114,7 @@ export class DesktopFramedSyncInboundResourceStore {
   }
 }
 
-function resourceStorageKeys(records: readonly NativeSyncNodeRecord[]) {
+function resourceStorageKeys(records: readonly ResourceRecord[]) {
   const result = new Map<string, string>();
   for (const record of records) for (const resource of
     readFramedSyncNodeResources(record.snapshot.resource_references)) {

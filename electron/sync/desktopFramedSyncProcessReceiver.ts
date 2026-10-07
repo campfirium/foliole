@@ -3,23 +3,18 @@ import type {
   TransferReceiptStage
 } from '../../lib/core/sync/framedSyncContract.js';
 import { deriveTransferFrameKey } from '../../lib/core/sync/framedSyncCrypto.js';
-import { assertTransferEnvelopeBinding } from '../../lib/core/sync/framedSyncEnvelopeContract.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { decodeAndValidateProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
-import { receiveFramedSyncFrame } from '../../lib/core/sync/framedSyncReceiver.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 import type { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { applyPreparedDesktopFramedSyncInbound } from './desktopFramedSyncApplyPrepared.js';
+import { authenticatedDesktopFramedSyncTransferFrames } from './desktopFramedSyncAuthenticatedTransferFrames.js';
 import { collectReplayedParentOrderFact, replayDesktopFramedSyncOrderBody } from './desktopFramedSyncOrderBodyReplay.js';
 import {
   prepareDesktopFramedSyncInbound,
   type PreparedDesktopFramedSyncInbound
 } from './desktopFramedSyncPreparedInbound.js';
-import {
-  assertCanonicalTransferIdentity,
-  publishedFromHeader
-} from './desktopFramedSyncProcessHeader.js';
 import {
   stageDesktopFramedSyncFact
 } from './desktopFramedSyncProcessInbound.js';
@@ -96,41 +91,15 @@ async function consumeTransferFrames(args: {
   stageOnly: boolean;
   state: DesktopFramedSyncReceiverState;
 }): Promise<FinishResult> {
-  let sequence = args.sequence;
-  for await (const wire of args.input.stream.frames) {
-    const received = await receiveFramedSyncFrame({
-      ciphertext: wire.ciphertext, expectedSequence: sequence,
-      frameHeader: wire.headerBytes, key: args.key, preamble: args.input.stream.preamble
-    });
-    const decoded = decodeAndValidateProtocolMessage(received.plaintext, received.frameType);
-    const repeatedHeader = args.state.published !== null && decoded.payloadCase === 'transfer_header';
-    if (!args.state.published) {
-      if (decoded.payloadCase !== 'transfer_header') throw new Error('transfer_header_required');
-      args.state.published = publishedFromHeader(decoded.payload, args.input.context);
-    }
-    if (repeatedHeader) throw new Error('transfer_header_repeated');
-    assertTransferEnvelopeBinding(
-      args.state.published, args.preamble, decoded, args.input.context.senderDeviceId
-    );
-    if (decoded.payloadCase === 'transfer_header') {
-      await assertCanonicalTransferIdentity(args.state.published);
-    }
+  for await (const event of authenticatedDesktopFramedSyncTransferFrames({
+    context: args.input.context, key: args.key, preamble: args.preamble, stream: args.input.stream
+  })) {
+    args.state.published = event.published;
     const response = await handleFrame({
-      ...args.input,
-      decoded,
-      frame: {
-        attemptId: args.preamble.attemptId, authenticatedPlaintext: received.plaintext,
-        ciphertext: wire.ciphertext, frameHeader: wire.headerBytes,
-        frameType: received.frameType, preamble: args.input.stream.preamble, sequence,
-        transferId: args.state.published.transferId
-      },
-      groupKey: args.input.groupKey,
-      preambleAttemptId: args.preamble.attemptId,
-      stageOnly: args.stageOnly,
-      state: args.state
+      ...args.input, decoded: event.decoded, frame: event.frame,
+      preambleAttemptId: args.preamble.attemptId, stageOnly: args.stageOnly, state: args.state
     });
     if (response) return response;
-    sequence = received.nextSequence;
   }
   throw new Error('transfer_trailer_missing');
 }

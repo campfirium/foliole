@@ -1,12 +1,8 @@
 import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import type { TransferReceiptStage } from '../../lib/core/sync/framedSyncContract.js';
-import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { assertFramedSyncNodeParentDependencies } from '../../lib/core/sync/framedSyncNodeParentDependencies.js';
 import { readFramedSyncNodeResources } from '../../lib/core/sync/framedSyncNodeResources.js';
 import { applyFramedSyncObjectStateRecord } from '../../lib/core/sync/framedSyncObjectStateFact.js';
-import { recordFramedSyncPeerEpoch } from '../../lib/core/sync/framedSyncPeerEpoch.js';
-import { advanceLocalSourceRevision } from '../../lib/core/sync/nodeVersionInboundReceipt.js';
 import { assertSyncGroupLocalPublicationAllowed, finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import {
   loadLatestSyncGroupRestoreEvent,
@@ -19,9 +15,9 @@ import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js
 import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { applyDesktopFramedSyncRelationReviewFactsWithDbPort } from '../database/desktopFramedSyncRelationReviewApply.js';
-import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 import { materializeDesktopSettingRecord, readDesktopHostName } from '../database/desktopSettingMaterializer.js';
 
+import { createDesktopFramedReceipt as createReceipt, recordDesktopFramedSourceProgress as recordSourceProgress } from './desktopFramedSyncApplyLifecycle.js';
 import type { PreparedDesktopFramedSyncInbound } from './desktopFramedSyncPreparedInbound.js';
 import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
@@ -96,42 +92,6 @@ async function prepareRestore(
   }
   await clearWorkgroupSyncDataForRestore(tx, restore.restoreId);
   return latest;
-}
-
-async function recordSourceProgress(
-  tx: DbPort,
-  transfers: readonly PreparedDesktopFramedSyncInbound[]
-) {
-  const senders = new Set<string>();
-  for (const transfer of transfers) {
-    if (!senders.has(transfer.context.senderDeviceId)) {
-      await advanceLocalSourceRevision(tx, transfer.context.senderDeviceId);
-      senders.add(transfer.context.senderDeviceId);
-    }
-    await recordFramedSyncPeerEpoch(tx, {
-      groupId: transfer.context.groupId,
-      libraryEpoch: transfer.context.senderLibraryEpoch,
-      peerDeviceId: transfer.context.senderDeviceId,
-      transferId: transfer.transferId
-    });
-  }
-}
-
-async function createReceipt(
-  tx: DbPort,
-  transfer: PreparedDesktopFramedSyncInbound
-): Promise<TransferReceiptStage> {
-  const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
-    globalId: transfer.globalId, objectType: transfer.objectType
-  }))?.sharedStateHash;
-  if (!appliedStateHash) throw new Error(`framed_sync_process_inventory_missing:${transfer.objectType}:${transfer.globalId}`);
-  return createDesktopFramedSyncStaging(tx).commitApplyAndReceipt({
-    appliedStateHash,
-    contentId: transfer.manifestHash,
-    receiverDeviceId: transfer.context.receiverDeviceId,
-    receiverLibraryEpoch: transfer.context.receiverLibraryEpoch,
-    transferId: transfer.transferId
-  });
 }
 
 async function promoteFramedNodeBodies(
