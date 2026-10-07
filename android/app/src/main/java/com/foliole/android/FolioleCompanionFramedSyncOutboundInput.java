@@ -49,6 +49,16 @@ final class FolioleCompanionFramedSyncOutboundInput {
         JSONObject prepared,
         List<FactRecord> facts
     ) throws Exception {
+        return blobs(context, prepared, facts, null);
+    }
+
+    interface BodyFileResolver {
+        File resolve(byte[] hash, long byteLength) throws Exception;
+    }
+
+    static List<FramedSyncBlobContent> blobs(
+        Context context, JSONObject prepared, List<FactRecord> facts, BodyFileResolver bodyFiles
+    ) throws Exception {
         JSONArray encoded = prepared.getJSONArray("blobs");
         List<FramedSyncBlobContent> result = new ArrayList<>();
         for (int index = 0; index < encoded.length(); index++) {
@@ -66,7 +76,18 @@ final class FolioleCompanionFramedSyncOutboundInput {
                 throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
             }
             int role = ((Number) roleValue).intValue();
-            if ((role == 1 || role == 5)) {
+            if (blob.has("body_source")) {
+                if (!"verified_chunks".equals(blob.get("body_source")) ||
+                    blob.has("data_text") || blob.has("storage_key") ||
+                    (role != 1 && role != 5) || bodyFiles == null) {
+                    throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
+                }
+                File file = bodyFiles.resolve(hash, length);
+                if (file == null || !file.isFile() || file.length() != length) {
+                    throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
+                }
+                result.add(FramedSyncBlobContent.file(hash, file));
+            } else if ((role == 1 || role == 5)) {
                 byte[] data = blob.getString("data_text").getBytes(StandardCharsets.UTF_8);
                 if (length != data.length) throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
                 result.add(new FramedSyncBlobContent(hash, data));

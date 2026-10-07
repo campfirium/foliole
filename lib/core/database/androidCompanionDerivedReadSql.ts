@@ -47,22 +47,23 @@ const READABLE_ARTICLE_CONTENT = androidResolvedContentExpression(
 );
 const READABLE_ARTICLE_PDF_ATTACHMENT_ID = androidReadableArticleReferencePdfAttachmentSql();
 const READABLE_ARTICLE_PDF_TEXT = androidReadableArticlePdfTextSql(READABLE_ARTICLE_PDF_ATTACHMENT_ID);
-const READABLE_ARTICLE_STATUS = androidBodyStatusExpression({
-  availabilityExpression: 'cb.availability',
-  bodyBlobDataExpression: READABLE_ARTICLE_BODY_BLOB_DATA,
-  bodyBlobHashExpression: 'n.body_blob_hash',
-  contentExpression: READABLE_ARTICLE_CONTENT,
-  emptyWhenBlank: true
-});
-
-export function androidReadableArticleSql(whereClause: string) {
+export function androidReadableArticleSql(whereClause: string, body?: Readonly<{
+  dataExpression: string;
+  contentExpression: string;
+  join: string;
+}>) {
+  const data = body?.dataExpression ?? READABLE_ARTICLE_BODY_BLOB_DATA;
+  const content = body?.contentExpression ?? READABLE_ARTICLE_CONTENT;
+  const status = androidBodyStatusExpression({ availabilityExpression: 'cb.availability',
+    bodyBlobDataExpression: data, bodyBlobHashExpression: 'n.body_blob_hash',
+    contentExpression: content, emptyWhenBlank: true });
   return (
     'SELECT n.id, ' +
     `${READABLE_ARTICLE_TITLE_EXPRESSION} AS title, n.body_blob_hash, n.reveal, ` +
-    `${readableArticleContentSql()} AS content, ${READABLE_ARTICLE_STATUS} AS content_status, ` +
+    `${readableArticleContentSql(content)} AS content, ${status} AS content_status, ` +
     `(${READABLE_ARTICLE_PDF_ATTACHMENT_ID}) AS pdf_attachment_id ` +
     'FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
-    'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ' +
+    (body?.join ?? 'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ') +
     whereClause
   );
 }
@@ -85,12 +86,12 @@ export function androidReadableArticleReferencePdfAttachmentSql(nodeIdExpression
       AND mime_type = 'application/pdf' ORDER BY attachment_id LIMIT 1`;
 }
 
-function readableArticleContentSql() {
+function readableArticleContentSql(content: string) {
   return (
-    `CASE WHEN instr(COALESCE(${READABLE_ARTICLE_CONTENT}, ''), ${androidSqlString(PDF_PLACEHOLDER_TEXT)}) > 0 ` +
+    `CASE WHEN instr(COALESCE(${content}, ''), ${androidSqlString(PDF_PLACEHOLDER_TEXT)}) > 0 ` +
     `AND (${READABLE_ARTICLE_PDF_TEXT}) IS NOT NULL ` +
     `THEN '# ' || ${READABLE_ARTICLE_TITLE_EXPRESSION} || ${PDF_TEXT_SEPARATOR} || (${READABLE_ARTICLE_PDF_TEXT}) ` +
-    `ELSE ${READABLE_ARTICLE_CONTENT} END`
+    `ELSE ${content} END`
   );
 }
 

@@ -14,6 +14,7 @@ import type {
   FramedSyncSessionNoncePort
 } from '../../lib/core/sync/framedSyncSession.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
+import type { NodeVersionBodyStorage } from '../../lib/core/sync/syncNodeTombstoneVersion.js';
 import { publishDesktopFramedSyncNodeOutbound } from '../database/desktopFramedSyncOutboundSelection.js';
 
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
@@ -35,6 +36,7 @@ import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
 
 export async function respondDesktopFramedSyncInventory(args: {
+  bodyStorage?: NodeVersionBodyStorage;
   context: AuthenticatedContext;
   db: DbPort;
   groupKey: Uint8Array;
@@ -57,12 +59,13 @@ export async function respondDesktopFramedSyncInventory(args: {
   const route = loadDesktopSyncGroupRoutes(args.context.groupId).find((peer) =>
     peer.peer_device_id === args.context.initiatorDeviceId);
   if (route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') await resumeDesktopFramedSyncPendingPublications({
+    bodyStorage: args.bodyStorage ?? 'continuous',
     db: args.db, groupId: args.context.groupId, groupSecret: args.groupSecret,
     local: { deviceId: args.context.responderDeviceId, libraryEpoch: args.context.responderLibraryEpoch },
     peer: { deviceId: args.context.initiatorDeviceId, libraryEpoch: args.context.initiatorLibraryEpoch },
     peerOrigin: route.endpoint_url, staging: args.staging, remoteInventory
   });
-  const entries = await readDesktopFramedSyncRoundInventory(args.db);
+  const entries = await readDesktopFramedSyncRoundInventory(args.db, args.bodyStorage ?? 'continuous');
   const messages = await encodeFramedSyncInventory({ entries, roundId });
   return encodeDesktopFramedSyncSession({
     authenticatedContext: args.context,
@@ -79,10 +82,11 @@ async function respondDesktopFramedSyncDifferenceRequest(args: Parameters<
   const request = decodeFramedSyncDifferenceRequest(args.request[0]!);
   const first = request.facts[0];
   if (!first) throw new Error('framed_sync_difference_request_fact_required');
-  const current = await readDesktopFramedSyncRoundInventoryEntry(args.db, first);
+  const current = await readDesktopFramedSyncRoundInventoryEntry(args.db, first, args.bodyStorage ?? 'continuous');
   if (!current) throw new Error('framed_sync_difference_request_source_missing');
   const difference = resolveFramedSyncDifferenceRequest(current, request);
   const selection = await publishDesktopFramedSyncNodeOutbound({
+    bodyStorage: args.bodyStorage ?? 'continuous',
     context: {
       groupId: args.context.groupId,
       protocolVersion: args.context.protocolVersion,
@@ -93,10 +97,12 @@ async function respondDesktopFramedSyncDifferenceRequest(args: Parameters<
     },
     difference,
     port: args.db,
-    readCurrentInventoryEntry: readDesktopFramedSyncRoundInventoryEntry
+    readCurrentInventoryEntry: (tx, key) =>
+      readDesktopFramedSyncRoundInventoryEntry(tx, key, args.bodyStorage ?? 'continuous')
   });
   if (selection.kind === 'deferred') throw new Error('framed_sync_source_changed');
   const attempt = await prepareDesktopFramedSyncPublishedTransfer({
+    bodyStorage: args.bodyStorage ?? 'continuous',
     db: args.db,
     groupSecret: args.groupSecret,
     publication: selection.publication,
@@ -108,6 +114,7 @@ async function respondDesktopFramedSyncDifferenceRequest(args: Parameters<
 }
 
 export async function exchangeDesktopFramedSyncInventoryHttp(args: {
+  bodyStorage?: NodeVersionBodyStorage;
   context: AuthenticatedContext;
   db: DbPort;
   endpointUrl: string;
@@ -116,7 +123,7 @@ export async function exchangeDesktopFramedSyncInventoryHttp(args: {
   noncePort: FramedSyncSessionNoncePort;
 }) {
   const roundId = crypto.getRandomValues(new Uint8Array(16));
-  const local = await readDesktopFramedSyncRoundInventory(args.db);
+  const local = await readDesktopFramedSyncRoundInventory(args.db, args.bodyStorage ?? 'continuous');
   const messages = await encodeFramedSyncInventory({ entries: local, roundId });
   const body = await encodeDesktopFramedSyncSession({
     authenticatedContext: args.context,

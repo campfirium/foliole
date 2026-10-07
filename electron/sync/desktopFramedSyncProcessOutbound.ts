@@ -12,6 +12,7 @@ import type { OutboundPublishInput } from '../../lib/core/sync/framedSyncStaging
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 import { collectDeliveredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyRetention.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
+import type { NodeVersionBodyStorage } from '../../lib/core/sync/syncNodeTombstoneVersion.js';
 import { loadSyncNodes, loadSyncNodeVersionsSince } from '../database/syncNodes.js';
 
 import { loadDesktopFramedSyncBlobSources, loadDesktopFramedSyncPublishedBlobSources } from './desktopFramedSyncBlobSources.js';
@@ -69,6 +70,7 @@ export async function synchronizeDesktopFramedSync(input: {
 }
 
 export async function prepareDesktopFramedSyncPublishedTransfer(input: {
+  bodyStorage?: NodeVersionBodyStorage;
   db: DbPort;
   groupSecret: string;
   publication: OutboundPublishInput;
@@ -88,7 +90,7 @@ export async function prepareDesktopFramedSyncPublishedTransfer(input: {
   await input.db.run(`UPDATE framed_sync_outbound_attempts SET state = 'abandoned'
     WHERE transfer_id = ? AND purpose = 'transfer' AND state = 'prepared'`, [stored.transferId]);
   return persistDesktopFramedSyncAttempt({
-    blobSources: await loadDesktopFramedSyncPublishedBlobSources(input.db, stored.manifest),
+    blobSources: await loadDesktopFramedSyncPublishedBlobSources(input.db, stored.manifest, input.bodyStorage ?? 'continuous'),
     groupSecret: input.groupSecret,
     publication: stored,
     staging: input.staging

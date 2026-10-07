@@ -69,7 +69,7 @@ function edit(baseVersionId: string, content: string, versionId = 'ver_local-edi
   });
 }
 
-it('merges a delayed edit using its real parent and preserves both branches', async () => {
+it('retains complete delayed edits using their real parent and preserves both branches', async () => {
   upsertVersionedNodeSnapshot(nodeInput('Apples\nBread\nMilk\n', '2026-07-25T04:30:00.000Z'));
   const base = currentVersion();
   await retainLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite),
@@ -77,9 +77,15 @@ it('merges a delayed edit using its real parent and preserves both branches', as
   upsertVersionedNodeSnapshot(nodeInput('Apples\nBread\nMilk and coffee\n', '2026-07-25T04:35:00.000Z'));
   const remote = currentVersion();
   const result = await edit(base, 'Apples and tea\nBread\nMilk\n');
-  expect(result.current.body_text).toBe('Apples and tea\nBread\nMilk and coffee\n');
+  expect(result.current.body_text).toBe('Apples\nBread\nMilk and coffee\n');
   expect(result.current.parent_version_ids).toEqual([remote, 'ver_local-edit'].sort());
   const sqlite = openDatabaseConnection().sqlite;
+  expect(sqlite.prepare(`SELECT CAST(body.data AS TEXT) AS body_text FROM nodes n
+    JOIN node_sync_versions version ON version.version_id = n.current_version_id,
+    json_each(version.snapshot_json, '$.text_alternatives') alternative
+    JOIN content_blob_data body ON body.hash = json_extract(alternative.value, '$.body_blob_hash')
+    WHERE n.id = 'node-1'`).all())
+    .toEqual([{ body_text: 'Apples and tea\nBread\nMilk\n' }]);
   const originalGraph = () => sqlite.prepare(`SELECT version_id, object_id, parent_version_id,
     host_name, created_at, content_hash,
     json_remove(snapshot_json, '$.content', '$.body_blob_hash') AS snapshot_metadata
@@ -111,7 +117,7 @@ it('merges a delayed edit using its real parent and preserves both branches', as
     .all(base, remote, 'ver_local-edit')).toEqual([base, remote, 'ver_local-edit'].sort()
       .map((version_id) => ({ version_id, body_text: null, content: null, body_blob_hash: null })));
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
-    .get(result.current.version_id)).toEqual({ body_text: 'Apples and tea\nBread\nMilk and coffee\n' });
+    .get(result.current.version_id)).toEqual({ body_text: 'Apples\nBread\nMilk and coffee\n' });
 });
 
 it('retains an overlapping edit using the existing alternative policy', async () => {
@@ -121,7 +127,11 @@ it('retains an overlapping edit using the existing alternative policy', async ()
     { holdId: 'draft', nodeId: 'node-1', versionId: base });
   upsertVersionedNodeSnapshot(nodeInput('Remote replacement text', '2026-07-25T04:35:00.000Z'));
   const result = await edit(base, 'Local replacement');
-  const alternatives = openDatabaseConnection().sqlite.prepare('SELECT body_text FROM node_text_alternatives').all();
+  const alternatives = openDatabaseConnection().sqlite.prepare(`SELECT CAST(body.data AS TEXT) AS body_text
+    FROM nodes n JOIN node_sync_versions version ON version.version_id = n.current_version_id,
+    json_each(version.snapshot_json, '$.text_alternatives') alternative
+    JOIN content_blob_data body ON body.hash = json_extract(alternative.value, '$.body_blob_hash')
+    WHERE n.id = 'node-1'`).all();
   expect([result.current.body_text, ...alternatives.map((row) => (row as { body_text: string }).body_text)].sort())
     .toEqual(['Local replacement', 'Remote replacement text'].sort());
 });

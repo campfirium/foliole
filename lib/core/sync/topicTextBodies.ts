@@ -5,12 +5,21 @@ import { hashTextBody } from '../database/textBodyHash.js';
 import type { DbPort } from './dbPort.js';
 import { upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
 import { textAlternatives, type TopicTextBody, type TopicTextAlternative } from './topicTextState.js';
+import { loadVerifiedBodyRef, readBodyText } from './verifiedBody.js';
 
 export async function loadTopicTextBodies(db: DbPort, record: NativeSyncNodeRecord): Promise<TopicTextBody[]> {
   return Promise.all(textAlternatives(record).map((entry) => loadTopicTextBody(db, entry)));
 }
 
-export async function loadTopicTextBody(db: DbPort, entry: TopicTextAlternative): Promise<TopicTextBody> {
+export async function loadTopicTextBody(db: DbPort, entry: TopicTextAlternative,
+  bodyStorage: 'continuous' | 'chunked' = 'continuous'): Promise<TopicTextBody> {
+  if (bodyStorage === 'chunked') {
+    const ref = await loadVerifiedBodyRef(db, entry.body_blob_hash);
+    if (!ref) throw new Error(`text_alternative_body_unavailable:${entry.id}`);
+    const text = await readBodyText(db, ref);
+    if (hashTextBody(text) !== entry.body_blob_hash) throw new Error('text_alternative_body_hash_mismatch');
+    return { hash: entry.body_blob_hash, text };
+  }
   const [row] = await db.query<{ data: Uint8Array | string }>(
     'SELECT data FROM content_blob_data WHERE hash = ?', [entry.body_blob_hash]);
   if (!row) throw new Error(`text_alternative_body_unavailable:${entry.id}`);

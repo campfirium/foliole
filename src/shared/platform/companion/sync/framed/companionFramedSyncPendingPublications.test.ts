@@ -72,7 +72,7 @@ function database(persistent = false) {
   mocks.inventory.mockResolvedValue({ entries: [], round_id: '0'.repeat(32) });
 }
 
-it('drains only the current peer publication even without a new inventory difference', async () => {
+it.each(['continuous', 'chunked'] as const)('drains only the current peer publication with %s storage even without a new inventory difference', async (bodyStorage) => {
   database();
   const id = await publish();
   await publish('C');
@@ -82,7 +82,7 @@ it('drains only the current peer publication even without a new inventory differ
     sqlite.prepare("UPDATE framed_sync_outbound_publications SET state = 'receipt_committed' WHERE hex(transfer_id) = ?").run(id.toUpperCase());
     return { transfer_id: id, receiver_device_id: 'B', receiver_library_epoch: 'B-epoch' };
   });
-  await expect(resumeCompanionFramedSyncPendingPublications(request)).resolves.toBe(1);
+  await expect(resumeCompanionFramedSyncPendingPublications(request, undefined, bodyStorage)).resolves.toBe(1);
   expect(mocks.send).toHaveBeenCalledExactlyOnceWith({ ...request, transfer_id: id,
     include_current_node: false, object_id: 'node', object_type: 'node', required_relation_ids: [],
     review_fact_ids: [], state_fact_ids: [] });

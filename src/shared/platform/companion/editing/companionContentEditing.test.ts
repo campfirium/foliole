@@ -66,19 +66,25 @@ afterEach(async () => {
   rmSync(directory, { recursive: true, force: true });
 });
 
-it.each(['android', 'ios'])('%s merges the real input base and persists the next input branch across reopen', async (platform) => {
+it.each(['android', 'ios'])('%s retains complete input branches and persists the next input across reopen', async (platform) => {
   state.platform = platform;
   await readCompanionContentSource('topic', 'editor-session');
   await insert(node({ content: 'Apples\nBread\nMilk coffee\n', currentVersionId: 'base' }), 'remote');
   const first = await saveCompanionContentEdit(edit('Apples tea\nBread\nMilk\n'));
-  expect(first.content).toBe('Apples tea\nBread\nMilk coffee\n');
-  await saveCompanionContentEdit(edit('Apples tea\nBread jam\nMilk\n', 'local-2', first.submittedVersionId));
+  const alternatives = database.prepare(`SELECT CAST(body.data AS TEXT) AS content FROM nodes n
+    JOIN node_sync_versions version ON version.version_id = n.current_version_id,
+    json_each(version.snapshot_json, '$.text_alternatives') alternative
+    JOIN content_blob_data body ON body.hash = json_extract(alternative.value, '$.body_blob_hash')
+    WHERE n.id = 'topic'`).all() as { content: string }[];
+  expect([first.content, ...alternatives.map((entry) => entry.content)].sort())
+    .toEqual(['Apples tea\nBread\nMilk\n', 'Apples\nBread\nMilk coffee\n'].sort());
+  const second = await saveCompanionContentEdit(edit('Apples tea\nBread jam\nMilk\n', 'local-2', first.submittedVersionId));
   await state.owner!.close();
   database.close();
   database = new Database(path.join(directory, 'companion.db'));
   expect(database.prepare(`SELECT CAST(data.data AS TEXT) AS content FROM nodes n
     JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`).get('topic')).toEqual({
-    content: 'Apples tea\nBread jam\nMilk coffee\n'
+    content: second.content
   });
 });
 
@@ -151,7 +157,11 @@ it('retains overlapping input as current content or an existing text alternative
   await readCompanionContentSource('topic', 'editor-session');
   await insert(node({ content: 'Apples coffee\nBread\nMilk\n', currentVersionId: 'base' }), 'remote');
   const saved = await saveCompanionContentEdit(edit('Apples tea\nBread\nMilk\n'));
-  const rows = database.prepare('SELECT body_text FROM node_text_alternatives').all() as { body_text: string }[];
+  const rows = database.prepare(`SELECT CAST(body.data AS TEXT) AS body_text FROM nodes n
+    JOIN node_sync_versions version ON version.version_id = n.current_version_id,
+    json_each(version.snapshot_json, '$.text_alternatives') alternative
+    JOIN content_blob_data body ON body.hash = json_extract(alternative.value, '$.body_blob_hash')
+    WHERE n.id = 'topic'`).all() as { body_text: string }[];
   expect([saved.content, ...rows.map((row) => row.body_text)]).toEqual(expect.arrayContaining([
     'Apples coffee\nBread\nMilk\n', 'Apples tea\nBread\nMilk\n'
   ]));

@@ -13,7 +13,9 @@ const COMMANDS = [
     '--tests', 'com.foliole.android.framed.FramedSyncCodecTest',
     '--tests', 'com.foliole.android.framed.FramedSyncMaliciousBoundaryTest',
     '--tests', 'com.foliole.android.framed.FramedSyncHttpTransportTest',
-    '--tests', 'com.foliole.android.framed.FramedSyncBodyChunkStreamTest']],
+    '--tests', 'com.foliole.android.framed.FramedSyncBodyChunkStreamTest',
+    '--tests', 'com.foliole.android.framed.FramedSyncVerifiedBodySpoolTest',
+    '--tests', 'com.foliole.android.framed.FramedSyncBodyRangeResponseTest']],
   ['swift', ['test', '--package-path', 'ios/App', '--filter', 'FramedSync']]
 ];
 

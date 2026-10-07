@@ -21,7 +21,7 @@ export function fixtureInitializationPhase() {
 }
 
 /** Only the parent fixture's explicit fresh phase may transform its disposable library. */
-async function initializeChunkedFixtureBodies() {
+export async function initializeChunkedFixtureBodies() {
   const connection = openDatabaseConnection();
   await createBetterSqliteDbPort(connection.sqlite).transaction(async (tx) => {
     await migrateBodyContentStorage(tx);

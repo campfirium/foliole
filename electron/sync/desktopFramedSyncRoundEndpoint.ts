@@ -11,6 +11,7 @@ import type {
   FramedSyncRoundSelection
 } from '../../lib/core/sync/framedSyncInventoryRoundCoordinator.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
+import type { NodeVersionBodyStorage } from '../../lib/core/sync/syncNodeTombstoneVersion.js';
 import { publishDesktopFramedSyncNodeOutbound } from '../database/desktopFramedSyncOutboundSelection.js';
 
 import {
@@ -28,6 +29,7 @@ export type DesktopFramedSyncRoundIdentity = Readonly<{
 }>;
 
 type EndpointInput = Readonly<{
+  bodyStorage?: NodeVersionBodyStorage;
   db: DbPort;
   groupId: string;
   groupSecret: string;
@@ -53,11 +55,12 @@ function transferContext(input: EndpointInput): FramedSyncContext {
 async function selectOutbound(input: EndpointState, difference: FramedSyncInventoryDifference):
 Promise<FramedSyncRoundSelection> {
   const result = await publishDesktopFramedSyncNodeOutbound({
+    bodyStorage: input.bodyStorage ?? 'continuous',
     context: transferContext(input),
     difference,
     port: input.db,
     readCurrentInventoryEntry: (tx, key) =>
-      readDesktopFramedSyncRoundInventoryEntry(tx, key)
+      readDesktopFramedSyncRoundInventoryEntry(tx, key, input.bodyStorage ?? 'continuous')
   });
   if (result.kind === 'deferred') {
     return { deferredObjects: result.deferredObjects, kind: 'deferred' };
@@ -69,6 +72,7 @@ async function sendPublishedTransfer(input: EndpointState, args: Readonly<{
   publication: Parameters<FramedSyncStagingPort['publishOutbound']>[0];
 }>) {
   const attempt = await prepareDesktopFramedSyncPublishedTransfer({
+    bodyStorage: input.bodyStorage ?? 'continuous',
     db: input.db, groupSecret: input.groupSecret, publication: args.publication, staging: input.staging
   });
   await sendDesktopFramedSyncPublishedTransfer({
@@ -90,8 +94,8 @@ export function createDesktopFramedSyncRoundEndpoint(
   return {
     deviceId: input.local.deviceId,
     libraryEpoch: input.local.libraryEpoch,
-    readInventory: () => readDesktopFramedSyncRoundInventory(input.db),
-    readInventoryEntry: (key) => readDesktopFramedSyncRoundInventoryEntry(input.db, key),
+    readInventory: () => readDesktopFramedSyncRoundInventory(input.db, input.bodyStorage ?? 'continuous'),
+    readInventoryEntry: (key) => readDesktopFramedSyncRoundInventoryEntry(input.db, key, input.bodyStorage ?? 'continuous'),
     selectOutbound: (difference) => selectOutbound(state, difference),
     sendPublishedTransfer: ({ publication }) => sendPublishedTransfer(state, { publication }),
     staging: input.staging

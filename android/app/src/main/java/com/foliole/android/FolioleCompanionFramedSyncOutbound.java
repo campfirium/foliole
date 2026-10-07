@@ -48,15 +48,26 @@ final class FolioleCompanionFramedSyncOutbound {
         JSONObject prepared = FolioleCompanionSyncGroupDataBridge.current().request(
             "prepare_framed_outbound", new JSONObject(selection.toString()).put("resource_files",
                 FolioleCompanionFramedSyncResources.describe(context, inspected)));
+        return sendPrepared(context, credential, transferContext, endpointUrl, selection, prepared);
+    }
+
+    private static JSObject sendPrepared(Context context, FolioleCompanionCurrentGroupCredential credential,
+        FramedSyncTransferContext transferContext, String endpointUrl, JSONObject selection,
+        JSONObject prepared) throws Exception {
+        String groupId = selection.getString("group_id");
+        String senderEpoch = selection.getString("sender_library_epoch");
+        String receiverDeviceId = selection.getString("receiver_device_id");
+        String receiverEpoch = selection.getString("receiver_library_epoch");
         byte[] groupKey = decodeGroupKey(credential.workgroupKey);
         byte[] contentId = digest(prepared.getString("content_id"));
         requireSame(contentId, digest(prepared.getString("manifest_hash")),
             "framed_sync_manifest_identity_mismatch");
         byte[] expectedTransferId = digest(prepared.getString("transfer_id"));
         var facts = FolioleCompanionFramedSyncOutboundInput.facts(prepared);
-        var blobs = FolioleCompanionFramedSyncOutboundInput.blobs(context, prepared, facts);
-
-        try (FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context)) {
+        try (var bodyFiles = new FolioleCompanionFramedSyncBodyFiles(context, selection,
+                prepared.getString("transfer_id"));
+             FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context)) {
+            var blobs = FolioleCompanionFramedSyncOutboundInput.blobs(context, prepared, facts, bodyFiles::resolve);
             staging.discardOutboundAttempts(expectedTransferId);
             try {
                 FramedSyncTransferWriter.Attempt replayable =

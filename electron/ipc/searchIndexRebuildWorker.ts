@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { parentPort, workerData } from 'node:worker_threads';
 
 import { processClaimedInvalidationRows } from '../../lib/core/database/searchIndexInvalidations.js';
+import { rebuildWorkspaceSearchIndexes } from '../../lib/core/database/workspaceSearchIndex.js';
 import {
   readWorkspaceSearchSidecarRebuildStatus,
   rebuildWorkspaceSearchSidecar,
@@ -40,13 +41,14 @@ function runWorker(input: SearchIndexWorkerInput): WorkerOutput {
       let coveredId = 0;
       const status = rebuildWorkspaceSearchSidecar(connection, {
         strategy: input.strategy, source: input.source, retirePending: false,
-        onCoveredId: (id) => { coveredId = id; }
+        onCoveredId: (id) => { coveredId = id; },
+        rebuildWorkspaceSearchIndexes: (driver) => rebuildWorkspaceSearchIndexes(driver, input.bodyStorage)
       });
       return { ok: true, status, coveredId };
     }
     const status = readWorkspaceSearchSidecarRebuildStatus(sqlite);
     if (!status || status.status !== 'ready') throw new Error(status?.error ?? 'Search index is not ready.');
-    processClaimedInvalidationRows(connection.driver, input.rows);
+    processClaimedInvalidationRows(connection.driver, input.rows, input.bodyStorage);
     return { ok: true, status };
   } catch (error) {
     return toWorkerError(error);

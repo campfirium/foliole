@@ -21,7 +21,8 @@ export interface CompanionNodeTextAlternative {
   updated_at: string;
 }
 
-export async function loadCompanionNodeTextAlternative(nodeId: string, alternativeId?: string) {
+export async function loadCompanionNodeTextAlternative(nodeId: string, alternativeId?: string,
+  bodyStorage: 'continuous' | 'chunked' = 'continuous') {
   if (!isAvailableNativeCompanionRuntime()) return null;
   return writeIosCompanionDatabase(async (db) => {
     const now = new Date().toISOString();
@@ -35,7 +36,7 @@ export async function loadCompanionNodeTextAlternative(nodeId: string, alternati
       .filter((entry) => entry.expires_at > now);
     const selected = alternatives.find((entry) => entry.id === alternativeId) ?? alternatives[0];
     if (!selected) return null;
-    const body = await loadTopicTextBody(db, selected);
+    const body = await loadTopicTextBody(db, selected, bodyStorage);
     return { alternative_id: selected.id, alternatives, body_text: body.text,
       created_at: selected.created_at, node_id: nodeId, source_host_name: selected.source_host_name,
       source_version_id: record.version_id!, status: 'available' as const, updated_at: record.updated_at };

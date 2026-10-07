@@ -1,6 +1,7 @@
 import type { PluginListenerHandle } from '@capacitor/core';
 
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { readFramedSyncPublishedBodyRangeOperation } from '../../../../../lib/core/sync/framedSyncPublishedBodyRangeOperation';
 import { assertSyncGroupJoinAdmission } from '../../../../../lib/core/sync/syncGroupJoinAdmission';
 import {
   COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
@@ -89,6 +90,8 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
   if (operation === CONTRACT.operations.prepareFramedOutbound)
     return writer((db) => prepareCompanionFramedSyncOutbound(db, payload));
   if (operation === CONTRACT.operations.readFramedInventory) return readFramedInventory(payload);
+  if (operation === CONTRACT.operations.readFramedBodyRange) return getIosCompanionDatabaseOwner()
+    .read((db) => readFramedSyncPublishedBodyRangeOperation(db, payload));
   if (operation === CONTRACT.operations.applyMemberState) {
     return applyCompanionSyncGroupMemberState(
       parseSyncGroupMemberState(payload.state),

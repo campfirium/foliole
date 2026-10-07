@@ -2,6 +2,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { expect, it } from 'vitest';
 
 import { createCompanionFramedSyncOutboundValue } from './framedSyncCompanionOutboundContract.js';
+import { verifiedBodyRefFromHeader } from './verifiedBody.js';
 
 const body = 'Companion body 🌿';
 const data = new TextEncoder().encode(body);
@@ -61,5 +62,18 @@ it('preserves an external document text body in the original role and rejects fi
     .toContainEqual(expect.objectContaining({ role: 5, data_text: body }));
   expect(() => createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob,
     storageKey: `${Buffer.from(blob.sha256).toString('hex')}.zip` }] }))
+    .toThrow('framed_sync_companion_blob_mismatch');
+});
+
+it.each([1, 5])('projects a verified body source without text or an attachment surrogate for role %s', (role) => {
+  const hash = Buffer.from(sha256(data)).toString('hex');
+  const bodyRef = verifiedBodyRefFromHeader({ hash, byte_length: data.byteLength,
+    utf16_length: body.length, frontmatter_end: null });
+  const blob = { ...input().blobs[0]!.blob, role };
+  expect(createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob, bodyRef }] }).blobs)
+    .toEqual([{ byte_length: String(data.byteLength), body_source: 'verified_chunks', required: true, role, sha256: hash }]);
+  expect(() => createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob, bodyRef, dataText: body }] }))
+    .toThrow('framed_sync_companion_blob_mismatch');
+  expect(() => createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob: { ...blob, role: 3 }, bodyRef }] }))
     .toThrow('framed_sync_companion_blob_mismatch');
 });

@@ -8,7 +8,10 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
     let facts: [Foliole_Sync_V22_FactRecord]
     let blobs: [FolioleFramedSyncOutboundBlob]
 
-    static func decode(_ value: [String: Any], resourceFiles: [String: URL] = [:]) throws -> Self {
+    static func decode(
+        _ value: [String: Any], resourceFiles: [String: URL] = [:],
+        verifiedBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)? = nil
+    ) throws -> Self {
         let contentID = try digest(value, "content_id")
         guard try digest(value, "manifest_hash") == contentID else {
             throw invalid("framed_sync_manifest_identity_mismatch")
@@ -16,7 +19,7 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
         let facts = try decodeFacts(value)
         return .init(
             contentID: contentID, transferID: try digest(value, "transfer_id"), facts: facts,
-            blobs: try decodeBlobs(value, facts: facts, resourceFiles: resourceFiles)
+            blobs: try decodeBlobs(value, facts: facts, resourceFiles: resourceFiles, verifiedBodyFile: verifiedBodyFile)
         )
     }
 
@@ -40,7 +43,8 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
     }
 
     private static func decodeBlobs(
-        _ value: [String: Any], facts: [Foliole_Sync_V22_FactRecord], resourceFiles: [String: URL]
+        _ value: [String: Any], facts: [Foliole_Sync_V22_FactRecord], resourceFiles: [String: URL],
+        verifiedBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)?
     ) throws -> [FolioleFramedSyncOutboundBlob] {
         guard let encoded = value["blobs"] as? [Any] else { throw invalid("framed_sync_blobs_required") }
         var declared = [Data: Foliole_Sync_V22_BlobReference]()
@@ -64,19 +68,33 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
                   Int(reference.role.rawValue) == role.intValue else {
                 throw invalid("framed_sync_blob_identity_mismatch")
             }
-            if (reference.role == .nodeBody || reference.role == .externalDocument) {
-                guard let text = blob["data_text"] as? String,
-                      UInt64(Data(text.utf8).count) == length else {
-                    throw invalid("framed_sync_blob_identity_mismatch")
-                }
-                return .init(reference: reference, source: .data(Data(text.utf8)))
-            }
-            guard let storageKey = blob["storage_key"] as? String,
-                  let file = resourceFiles[storageKey] else {
-                throw invalid("framed_sync_outbound_resource_unavailable")
-            }
-            return .init(reference: reference, source: .file(file))
+            return try decodeSource(blob, reference: reference, resourceFiles: resourceFiles,
+                                    verifiedBodyFile: verifiedBodyFile)
         }
+    }
+
+    private static func decodeSource(
+        _ blob: [String: Any], reference: Foliole_Sync_V22_BlobReference, resourceFiles: [String: URL],
+        verifiedBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)?
+    ) throws -> FolioleFramedSyncOutboundBlob {
+        let isBody = reference.role == .nodeBody || reference.role == .externalDocument
+        if blob["body_source"] != nil {
+            guard blob["body_source"] as? String == "verified_chunks", isBody,
+                  blob["data_text"] == nil, blob["storage_key"] == nil,
+                  let verifiedBodyFile else { throw invalid("framed_sync_blob_identity_mismatch") }
+            return .init(reference: reference, source: .file(try verifiedBodyFile(reference)))
+        }
+        if isBody {
+            guard let text = blob["data_text"] as? String,
+                  UInt64(Data(text.utf8).count) == reference.byteLength else {
+                throw invalid("framed_sync_blob_identity_mismatch")
+            }
+            return .init(reference: reference, source: .data(Data(text.utf8)))
+        }
+        guard let storageKey = blob["storage_key"] as? String, let file = resourceFiles[storageKey] else {
+            throw invalid("framed_sync_outbound_resource_unavailable")
+        }
+        return .init(reference: reference, source: .file(file))
     }
 
     private static func digest(_ value: [String: Any], _ key: String) throws -> Data {

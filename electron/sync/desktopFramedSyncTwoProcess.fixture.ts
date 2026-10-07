@@ -6,7 +6,7 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
-import { fixtureBodyStorage, fixtureInitializationPhase, initializeFixtureDatabase } from './desktopFramedSyncChunkedFixtureInitialization.js';
+import { fixtureBodyStorage, fixtureInitializationPhase, initializeChunkedFixtureBodies, initializeFixtureDatabase } from './desktopFramedSyncChunkedFixtureInitialization.js';
 import { runDesktopFramedSyncOrderCommand } from './desktopFramedSyncOrder.fixture.js';
 import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecovery.fixture.js';
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
@@ -28,7 +28,7 @@ type Command = Readonly<{
 
 const stateRoot = requiredEnvironment('FOLIOLE_ELECTRON_TEST_STATE_ROOT');
 const deviceId = requiredEnvironment('FOLIOLE_FRAMED_SYNC_DEVICE_ID');
-const bodyStorage = fixtureBodyStorage();
+let bodyStorage: 'continuous' | 'chunked' = fixtureBodyStorage();
 const initializationPhase = fixtureInitializationPhase();
 let origin = '';
 let portPromise: Promise<ProcessPort> | null = null;
@@ -164,6 +164,7 @@ async function run(command: Command) {
     return snapshot();
   }
   if (command.action === 'seed') return seed(command.args);
+  if (command.action === 'activate_chunked') return activateChunkedSource();
   if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
   if (command.action === 'seedBatch') return seedBatch(command.args);
   if (['reorder', 'restore_order', 'standalone_edit', 'rejoin', 'register_order_member'].includes(command.action)) {
@@ -205,6 +206,13 @@ async function run(command: Command) {
     return null;
   }
   throw new Error(`fixture_action_unknown:${command.action}`);
+}
+
+async function activateChunkedSource() {
+  if (bodyStorage !== 'continuous' || portPromise) throw new Error('fixture_source_upgrade_requires_unopened_port');
+  await initializeChunkedFixtureBodies();
+  bodyStorage = 'chunked';
+  return snapshot();
 }
 
 function writeHttpError(response: ServerResponse, error: unknown) {

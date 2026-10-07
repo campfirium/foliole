@@ -2,6 +2,7 @@ import { buildCompanionPayloadQueryDefinitions } from '../../../../../lib/core/d
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionQueryDefinitions';
 import { canonicalPrivateStatePayloadJson } from '../../../../../lib/core/sync/canonicalPrivateStatePayload';
 import type { DbRow } from '../../../../../lib/core/sync/dbPort';
+import type { NodeVersionBodyStorage } from '../../../../../lib/core/sync/syncNodeTombstoneVersion';
 import type {
   NativeSyncIndexEntry,
   NativeSyncNodeConflictRecord,
@@ -152,12 +153,12 @@ export function searchIosExternalDocuments(query: string, limit = 20, offset = 0
   return search<ExternalSearchResult & DbRow>('externalDocumentSearch', query, limit, offset);
 }
 
-export async function loadIosMissingContentBlobs(limit = 50) {
+export async function loadIosMissingContentBlobs(limit = 50, bodyStorage: NodeVersionBodyStorage = 'continuous') {
   const [rows, summary] = await Promise.all([
     queryIosCompanionDatabase<{ hash: string; size_bytes: number } & DbRow>('contentBlobMissingHashes', [
       Math.max(1, Math.min(500, limit))
-    ]),
-    queryIosCompanionDatabase<DbRow>('contentBlobMissingSummaryRows')
+    ], bodyStorage),
+    queryIosCompanionDatabase<DbRow>('contentBlobMissingSummaryRows', [], bodyStorage)
   ]);
   const blobs = rows.slice(0, Math.max(1, limit));
   const failed = summary.filter((row) => row.availability === 'failed');

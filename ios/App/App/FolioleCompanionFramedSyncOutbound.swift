@@ -42,13 +42,35 @@ extension FolioleCompanionSyncPlugin {
         let preparedValue = try groupData.request("prepare_framed_outbound", selection)
         let groupKey = try Base64URL.decode(workgroupKey)
         guard groupKey.count == 32 else { throw invalid("sync_group_key_invalid") }
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foliole-framed-outbound-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
         let prepared = try FolioleCompanionFramedSyncPreparedOutbound.decode(
-            preparedValue, resourceFiles: resources.1
+            preparedValue, resourceFiles: resources.1, verifiedBodyFile: { reference in
+                try self.preparedFramedBody(reference, selection: selection,
+                    transferID: self.required(preparedValue, "transfer_id"), directory: directory)
+            }
         )
         let context = FolioleFramedSyncTransferContext(
             groupID: groupID, senderDeviceID: senderDeviceID, senderLibraryEpoch: senderEpoch,
             receiverDeviceID: receiverDeviceID, receiverLibraryEpoch: receiverEpoch
         )
+        return try await sendPreparedFramedTransfer(
+            prepared, context: context, groupKey: groupKey, workgroupKey: workgroupKey,
+            endpoint: endpoint, directory: directory
+        )
+    }
+
+    private func sendPreparedFramedTransfer(
+        _ prepared: FolioleCompanionFramedSyncPreparedOutbound, context: FolioleFramedSyncTransferContext,
+        groupKey: Data, workgroupKey: String, endpoint: String, directory: URL
+    ) async throws -> [String: Any] {
+        let groupID = context.groupID
+        let senderDeviceID = context.senderDeviceID
+        let senderEpoch = context.senderLibraryEpoch
+        let receiverDeviceID = context.receiverDeviceID
+        let receiverEpoch = context.receiverLibraryEpoch
         let database = try FolioleFramedSyncTransferDatabase(url: FolioleFramedSyncOutboundSQLite.applicationDatabaseURL())
         let staging = try FolioleFramedSyncOutboundSQLite(database: database)
         try staging.discard(transferID: prepared.transferID)
@@ -62,10 +84,6 @@ extension FolioleCompanionSyncPlugin {
             throw invalid("framed_sync_transfer_identity_mismatch")
         }
         let path = try framedPath(senderDeviceID, senderEpoch, receiverDeviceID, receiverEpoch)
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("foliole-framed-outbound-\(UUID().uuidString)", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: directory) }
         let requestURL = directory.appendingPathComponent("request.bin")
         let responseURL = directory.appendingPathComponent("response.bin")
         guard let output = OutputStream(url: requestURL, append: false) else {

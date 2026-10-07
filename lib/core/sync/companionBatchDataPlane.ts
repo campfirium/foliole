@@ -1,7 +1,9 @@
 import { isCanonicalAttachmentStorageKey } from '../../platform/attachmentResource.js';
 
+import { adoptCompanionContentPackBodies } from './companionContentPackBody.js';
 import type { DbPort } from './dbPort.js';
 import { refreshNodeInlineBodiesForHashes } from './nodeInlineBodyProjection.js';
+import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 
 const CONTENT_PACK_ALIAS = 'content_batch';
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
@@ -16,7 +18,7 @@ export interface CompanionAttachmentManifestEntry {
 
 export async function applyCompanionContentPack(
   port: DbPort,
-  args: { failedHashes: string[]; now: string; packPath: string }
+  args: { bodyStorage?: NodeVersionBodyStorage; failedHashes: string[]; now: string; packPath: string }
 ) {
   await port.run(`ATTACH DATABASE ${sqlString(args.packPath)} AS ${CONTENT_PACK_ALIAS}`);
   try {
@@ -25,7 +27,9 @@ export async function applyCompanionContentPack(
     const acceptedHashes = accepted.map(({ hash }) => hash);
     const failedHashes = uniqueHashes([...args.failedHashes, ...(await loadRejectedContentHashes(port))]);
     await port.transaction(async (tx) => {
-      await tx.run(`INSERT OR REPLACE INTO content_blob_data (hash, data)
+      if (args.bodyStorage === 'chunked') {
+        await adoptCompanionContentPackBodies(tx, acceptedHashes, args.now);
+      } else await tx.run(`INSERT OR REPLACE INTO content_blob_data (hash, data)
         SELECT pack.hash, pack.data
         FROM ${CONTENT_PACK_ALIAS}.content_blob_batch pack
         INNER JOIN content_blobs manifest ON manifest.hash = pack.hash
@@ -43,7 +47,7 @@ export async function applyCompanionContentPack(
       for (const hash of failedHashes) {
         await tx.run("UPDATE content_blobs SET availability = 'failed' WHERE hash = ?", [hash]);
       }
-      await refreshNodeInlineBodiesForHashes(tx, acceptedHashes);
+      if (args.bodyStorage !== 'chunked') await refreshNodeInlineBodiesForHashes(tx, acceptedHashes);
     });
     return { failedHashes, syncedHashes: acceptedHashes };
   } finally {

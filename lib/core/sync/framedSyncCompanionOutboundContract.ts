@@ -3,11 +3,13 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 
 import type { CanonicalBlob } from './framedSyncCanonicalManifest.js';
 import { assertFramedSyncDigest, FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
+import type { VerifiedBodyRef } from './verifiedBody.js';
 
 export type CompanionFramedSyncOutboundValue = Readonly<{
   blobs: readonly Readonly<{
     byte_length: string;
     data_text?: string;
+    body_source?: 'verified_chunks';
     required: boolean;
     role: number;
     sha256: string;
@@ -24,6 +26,7 @@ type OutboundValueInput = Readonly<{
   blobs: readonly Readonly<{
     blob: CanonicalBlob;
     dataText?: string;
+    bodyRef?: VerifiedBodyRef;
     storageKey?: string;
   }>[];
   contentId: Uint8Array;
@@ -40,6 +43,15 @@ function sameBytes(left: Uint8Array, right: Uint8Array) {
 }
 
 function assertBlob(input: OutboundValueInput['blobs'][number]) {
+  if (input.bodyRef !== undefined) {
+    if (input.dataText !== undefined || input.storageKey !== undefined ||
+        (input.blob.role !== 1 && input.blob.role !== 5) ||
+        input.bodyRef.hash !== bytesToHex(input.blob.sha256) ||
+        BigInt(input.bodyRef.byteLength) !== input.blob.byteLength) {
+      throw new Error('framed_sync_companion_blob_mismatch');
+    }
+    return;
+  }
   if (input.storageKey !== undefined) {
     if (input.dataText !== undefined || (input.blob.role === 1 || input.blob.role === 5) ||
         !input.storageKey.startsWith(`${bytesToHex(input.blob.sha256)}.`)) {
@@ -81,9 +93,10 @@ export function createCompanionFramedSyncOutboundValue(
   }
   for (const bytes of input.factMessageBytesList) assertFactMessage(bytes);
   return {
-    blobs: input.blobs.map(({ blob, dataText, storageKey }) => ({
+    blobs: input.blobs.map(({ blob, dataText, storageKey, bodyRef }) => ({
       byte_length: blob.byteLength.toString(),
       ...(dataText === undefined ? {} : { data_text: dataText }),
+      ...(bodyRef === undefined ? {} : { body_source: 'verified_chunks' as const }),
       required: blob.required, role: blob.role, sha256: bytesToHex(blob.sha256),
       ...(storageKey === undefined ? {} : { storage_key: storageKey })
     })),

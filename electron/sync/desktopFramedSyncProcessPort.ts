@@ -12,6 +12,7 @@ import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.j
 import { createDesktopFramedSyncFixtureReceiver } from './desktopFramedSyncFixtureReceiver.js';
 import { synchronizeDesktopFramedSync } from './desktopFramedSyncProcessOutbound.js';
 import { createDesktopFramedSyncRoundProcessAdapter } from './desktopFramedSyncRoundProcessAdapter.js';
+import { synchronizeVerifiedDesktopFramedSync } from './desktopFramedSyncVerifiedProcessOutbound.js';
 import { saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
 
 type FactoryInput = Readonly<{ databasePath: string; deviceId: string; localOrigin: string; bodyStorage?: 'continuous' | 'chunked' }>;
@@ -27,7 +28,8 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
   if (!group) throw new Error('sync_group_not_available');
   const groupKey = new Uint8Array(Buffer.from(group.workgroup_key, 'base64url'));
   const round = createDesktopFramedSyncRoundProcessAdapter({
-    db, groupId: group.group_id, groupSecret: group.workgroup_key, local: identity, staging
+    db, groupId: group.group_id, groupSecret: group.workgroup_key, local: identity, staging,
+    bodyStorage: input.bodyStorage ?? 'continuous'
   });
   const receiver = createDesktopFramedSyncFixtureReceiver({ db, groupKey,
     groupSecret: group.workgroup_key, staging, bodyStorage: input.bodyStorage ?? 'continuous' });
@@ -51,7 +53,9 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
       saveDesktopSyncGroupRoute({ endpoint_url: peerOrigin, group_id: group.group_id,
         local_device_id: identity.deviceId, peer_device_id: remoteDeviceId,
         peer_device_name: remoteDeviceId, peer_platform: 'desktop' });
-      return synchronizeDesktopFramedSync({
+      const synchronize = input.bodyStorage === 'chunked'
+        ? synchronizeVerifiedDesktopFramedSync : synchronizeDesktopFramedSync;
+      return synchronize({
         db,
         groupId: group.group_id,
         groupSecret: group.workgroup_key,

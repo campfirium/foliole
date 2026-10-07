@@ -4,6 +4,7 @@ import {
   readFramedSyncInventory,
   readFramedSyncInventoryEntry
 } from '../../../../../../lib/core/sync/framedSyncInventoryRead';
+import type { NodeVersionBodyStorage } from '../../../../../../lib/core/sync/syncNodeTombstoneVersion.js';
 
 const hex = (value: Uint8Array) => Array.from(value, (item) => item.toString(16).padStart(2, '0')).join('');
 
@@ -20,15 +21,16 @@ function serialize(entry: FramedSyncInventoryEntry) {
   };
 }
 
-export async function readCompanionFramedSyncInventory(db: DbPort) {
-  const entries = await readFramedSyncInventory(db);
+export async function readCompanionFramedSyncInventory(db: DbPort, bodyStorage: NodeVersionBodyStorage = 'continuous') {
+  const entries = await readFramedSyncInventory(db, bodyStorage);
   return { entries: entries.map(serialize) };
 }
 
 export async function readCompanionFramedSyncInventoryEntry(
   db: DbPort,
-  key: Readonly<{ globalId: string; objectType: string }>
+  key: Readonly<{ globalId: string; objectType: string }>,
+  bodyStorage: NodeVersionBodyStorage = 'continuous'
 ) {
-  const entry = await readFramedSyncInventoryEntry(db, key);
+  const entry = await readFramedSyncInventoryEntry(db, key, bodyStorage);
   return entry ? serialize(entry) : null;
 }

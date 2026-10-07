@@ -29,6 +29,7 @@ vi.mock('./companionFramedSyncTransfer', () => ({
 }));
 
 import { sendCompanionFramedSyncInventoryDifferences } from './companionFramedSyncInventoryRound.js';
+import { resumeCompanionFramedSyncPendingPublications } from './companionFramedSyncPendingPublications.js';
 
 const request = {
   endpoint_url: 'http://desktop:43110', receiver_device_id: 'desktop-1',
@@ -219,4 +220,13 @@ it('defers a body-missing local Node without failing the rest of the round', asy
     deferredObjects: [{ globalId: 'node-a', objectType: 'node' }], received: [], sent: []
   });
   expect(mocks.send).not.toHaveBeenCalled();
+});
+
+it.each(['continuous', 'chunked'] as const)('uses the explicit %s storage for discovery, replay and source revalidation', async (bodyStorage) => {
+  await sendCompanionFramedSyncInventoryDifferences(request, bodyStorage);
+  expect(mocks.localInventory).toHaveBeenCalledWith(expect.anything(), bodyStorage);
+  expect(mocks.localEntry).toHaveBeenCalledWith(expect.anything(),
+    expect.objectContaining({ globalId: 'node-a' }), bodyStorage);
+  expect(resumeCompanionFramedSyncPendingPublications).toHaveBeenCalledWith(request, [], bodyStorage);
+  expect(mocks.send).toHaveBeenCalledOnce();
 });

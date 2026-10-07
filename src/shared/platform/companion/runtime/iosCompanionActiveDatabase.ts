@@ -1,5 +1,7 @@
+import { companionContentResourceQueryDefinition } from '../../../../../lib/core/database/androidCompanionContentResourceQueryDefinitions';
 import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionQueryDefinitions';
 import type { DbParams, DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import type { NodeVersionBodyStorage } from '../../../../../lib/core/sync/syncNodeTombstoneVersion';
 
 import { getIosCompanionDatabaseOwner } from './iosCompanionDatabaseBootstrap';
 
@@ -14,8 +16,11 @@ export function writeIosCompanionDatabase<T>(task: (db: DbPort) => Promise<T>) {
   return owner().runWriter(task);
 }
 
-export function queryIosCompanionDatabase<T extends DbRow>(name: QueryName, params: DbParams = []) {
-  const definition = ANDROID_COMPANION_QUERY_DEFINITIONS[name] as QueryDefinition;
+export function queryIosCompanionDatabase<T extends DbRow>(name: QueryName, params: DbParams = [],
+  bodyStorage: NodeVersionBodyStorage = 'continuous') {
+  const definition = (name === 'contentBlobMissingHashes' || name === 'contentBlobMissingSummaryRows' || name === 'contentBlobDataExisting'
+    ? companionContentResourceQueryDefinition(name, bodyStorage)
+    : ANDROID_COMPANION_QUERY_DEFINITIONS[name]) as QueryDefinition;
   return readIosCompanionDatabase<T[]>((db) => db.query(definition.sql, params).then((rows) => (
     rows.map((row) => normalizeRow(row, 'columns' in definition ? definition.columns : undefined) as T)
   )));

@@ -9,6 +9,7 @@ import {
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
+import type { NodeVersionBodyStorage } from '../../../../../../lib/core/sync/syncNodeTombstoneVersion.js';
 import type {
   NativeCompanionFramedSyncInventoryEntry,
   NativeCompanionFramedSyncInventoryRequest,
@@ -142,18 +143,19 @@ export function selectCompanionFramedSyncCurrentNodes(args: {
 }
 
 export async function sendCompanionFramedSyncInventoryDifferences(
-  args: NativeCompanionFramedSyncInventoryRequest
+  args: NativeCompanionFramedSyncInventoryRequest,
+  bodyStorage: NodeVersionBodyStorage = 'continuous'
 ) {
   const adoption = await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption);
   if (adoption) return adoptCompanionSyncGroupData(args, adoption);
   const owner = getIosCompanionDatabaseOwner();
   let [localValue, remoteResult] = await Promise.all([
-    owner.read(readCompanionFramedSyncInventory),
+    owner.read((db) => readCompanionFramedSyncInventory(db, bodyStorage)),
     readCompanionRemoteFramedSyncInventory(args)
   ]);
-  if (await resumeCompanionFramedSyncPendingPublications(args, remoteResult.entries)) {
+  if (await resumeCompanionFramedSyncPendingPublications(args, remoteResult.entries, bodyStorage)) {
     [localValue, remoteResult] = await Promise.all([
-      owner.read(readCompanionFramedSyncInventory), readCompanionRemoteFramedSyncInventory(args)
+      owner.read((db) => readCompanionFramedSyncInventory(db, bodyStorage)), readCompanionRemoteFramedSyncInventory(args)
     ]);
   }
   const local = localValue.entries.map(decodeCompanionInventoryEntry);
@@ -166,7 +168,7 @@ export async function sendCompanionFramedSyncInventoryDifferences(
   const sent: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
   const sendDeferred = await deliverFramedSyncDifferencesInDependencyOrder(selection.sendable, async (difference) => {
     const currentValue = await owner.read((db) =>
-      readCompanionFramedSyncInventoryEntry(db, difference));
+      readCompanionFramedSyncInventoryEntry(db, difference, bodyStorage));
     const current = decodeOptionalEntry(currentValue);
     const revalidated = revalidateFramedSyncInventorySource({
       currentSource: current ? [current] : [], differences: [difference],

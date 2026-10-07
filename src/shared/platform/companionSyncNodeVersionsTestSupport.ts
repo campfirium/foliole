@@ -30,7 +30,9 @@ export function createFakeCapacitorConnection(database: Database.Database) {
     open: async () => undefined,
     query: async (sql: string, params: unknown[] = []) => {
       const prepared = prepareStatement(database, sql, params);
-      return { values: prepared.statement.all(...prepared.params) };
+      return { values: prepared.statement.all(...prepared.params).map((row) =>
+        Object.fromEntries(Object.entries(row as DbRow).map(([key, value]) =>
+          [key, Buffer.isBuffer(value) ? Array.from(value) : value]))) };
     },
     rollbackTransaction: async () => {
       database.exec('ROLLBACK');
@@ -98,6 +100,13 @@ function prepareStatement(database: Database.Database, sql: string, params: unkn
 function decodeParams(params: unknown[]) {
   return params.map((param) => {
     if (isBufferJson(param)) return Uint8Array.from(param.data);
+    if (param && typeof param === 'object' && !Array.isArray(param)) {
+      const entries = Object.entries(param);
+      if (entries.every(([key, value], index) => key === String(index) &&
+          Number.isInteger(value) && Number(value) >= 0 && Number(value) <= 255)) {
+        return Uint8Array.from(entries.map(([, value]) => Number(value)));
+      }
+    }
     return param;
   });
 }

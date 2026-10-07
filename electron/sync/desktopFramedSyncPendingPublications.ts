@@ -32,6 +32,7 @@ export async function resumeDesktopFramedSyncPendingPublications(input: Endpoint
     input.peer.deviceId, input.peer.libraryEpoch]);
   if (!rows.length) return 0;
   const remoteInventory = input.remoteInventory ?? (await exchangeDesktopFramedSyncInventoryHttp({
+    bodyStorage: input.bodyStorage ?? 'continuous',
     context: { protocolVersion: 22, groupId: input.groupId,
       initiatorDeviceId: input.local.deviceId, initiatorLibraryEpoch: input.local.libraryEpoch,
       responderDeviceId: input.peer.deviceId, responderLibraryEpoch: input.peer.libraryEpoch },

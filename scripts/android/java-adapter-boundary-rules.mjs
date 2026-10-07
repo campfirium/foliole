@@ -59,6 +59,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionDeviceAnchorStore.java',
       'FolioleCompanionDesktopHttpClient.java',
       'FolioleCompanionFramedSyncApply.java',
+      'FolioleCompanionFramedSyncBodyFiles.java',
       'FolioleCompanionFramedSyncInventory.java',
       'FolioleCompanionFramedSyncInventoryClient.java',
       'FolioleCompanionFramedSyncOutbound.java',

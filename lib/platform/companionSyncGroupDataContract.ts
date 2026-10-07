@@ -10,6 +10,7 @@ export const COMPANION_SYNC_GROUP_DATA_CONTRACT = Object.freeze({
     inspectFramedOutbound: 'inspect_framed_outbound',
     prepareFramedOutbound: 'prepare_framed_outbound',
     readFramedInventory: 'read_framed_inventory',
+    readFramedBodyRange: 'read_framed_body_range',
     attachmentCheckpoint: 'attachment_checkpoint',
     confirmVersionPack: 'confirm_version_pack',
     applyMemberState: 'apply_member_state',

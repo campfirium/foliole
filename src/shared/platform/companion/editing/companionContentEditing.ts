@@ -1,9 +1,10 @@
 import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from '../../../../../lib/core/database/workspaceVisibleNodesSql';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalContentEdit } from '../../../../../lib/core/sync/localContentEdit';
+import { loadCurrentEditorSyncNode, loadEditorSyncNodeVersion } from '../../../../../lib/core/sync/localContentEditBody';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../../../../lib/core/sync/nodeVersionLocalEditHold';
 import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
-import { loadCurrentSyncNodeRecord, loadStoredSyncNodeVersionRecord } from '../../../../../lib/core/sync/syncNodeGraph';
+import type { NodeVersionBodyStorage } from '../../../../../lib/core/sync/syncNodeTombstoneVersion';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { isNativeCompanionNodeVersionWriteRuntime } from '../../companionWorkspaceRuntimeRepository';
 import { readIosCompanionDatabase, writeIosCompanionDatabase } from '../runtime/iosCompanionActiveDatabase';
@@ -13,12 +14,13 @@ import { runCompanionHighValueMutationTask } from '../sync/mutation/companionSyn
 import { readCompanionContentAnchors, remapCompanionContentAnchors } from './companionContentAnchorRemap';
 import type { CompanionContentEdit, CompanionContentSource } from './companionContentEditContract';
 
-export async function readCompanionContentSource(nodeId: string, holdId?: string): Promise<CompanionContentSource> {
+export async function readCompanionContentSource(nodeId: string, holdId?: string,
+  bodyStorage: NodeVersionBodyStorage = 'continuous'): Promise<CompanionContentSource> {
   const read = async (db: DbPort) => {
     await requireEditableTopic(db, nodeId);
-    const current = await loadCurrentSyncNodeRecord(db, nodeId, false);
+    const current = await loadCurrentEditorSyncNode(db, nodeId, false, bodyStorage);
     if (!current?.version_id || current.snapshot.deleted_at) throw new Error('content_edit_node_unavailable');
-    if (holdId) await retainLocalEditBase(db, { holdId, nodeId, versionId: current.version_id });
+    if (holdId) await retainLocalEditBase(db, { holdId, nodeId, versionId: current.version_id, bodyStorage });
     return { content: current.body_text ?? '', versionId: current.version_id };
   };
   return holdId
@@ -26,26 +28,28 @@ export async function readCompanionContentSource(nodeId: string, holdId?: string
     : readIosCompanionDatabase(read);
 }
 
-export async function retainCompanionContentBase(nodeId: string, versionId: string, holdId: string) {
+export async function retainCompanionContentBase(nodeId: string, versionId: string, holdId: string,
+  bodyStorage: NodeVersionBodyStorage = 'continuous') {
   return runCompanionSyncWriterTask(() => writeIosCompanionDatabase((db) => db.transaction((tx) =>
-    retainLocalEditBase(tx, { holdId, nodeId, versionId })
+    retainLocalEditBase(tx, { holdId, nodeId, versionId, bodyStorage })
   )));
 }
 
-export async function releaseCompanionContentBase(nodeId: string, holdId: string) {
+export async function releaseCompanionContentBase(nodeId: string, holdId: string,
+  bodyStorage: NodeVersionBodyStorage = 'continuous') {
   return runCompanionSyncWriterTask(() => writeIosCompanionDatabase((db) =>
-    releaseLocalEditBase(db, holdId, nodeId)
+    releaseLocalEditBase(db, holdId, nodeId, bodyStorage)
   ));
 }
 
-export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
+export async function saveCompanionContentEdit(edit: CompanionContentEdit, bodyStorage: NodeVersionBodyStorage = 'continuous') {
   if (!isNativeCompanionNodeVersionWriteRuntime()) throw new Error('content_edit_runtime_unavailable');
   return runCompanionHighValueMutationTask(async () => {
     const result = await writeIosCompanionDatabase((port) => port.transaction(async (db) => {
       await requireEditableTopic(db, edit.nodeId);
-      const base = await loadStoredSyncNodeVersionRecord(db, edit.baseVersionId, false);
+      const base = await loadEditorSyncNodeVersion(db, edit.baseVersionId, false, bodyStorage);
       if (!base || base.snapshot.kind !== 'topic') throw new Error('content_edit_base_unavailable');
-      const previous = await loadCurrentSyncNodeRecord(db, edit.nodeId, false);
+      const previous = await loadCurrentEditorSyncNode(db, edit.nodeId, false, bodyStorage);
       const children = await readCompanionContentAnchors(db, edit.nodeId);
       const hostName = await iosCompanionHostName(db);
       const result = await applyLocalContentEdit(db, {
@@ -53,14 +57,14 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
         hideTitleHeading: Boolean(base.snapshot.hide_title_heading),
         hostName,
         title: base.snapshot.title
-      }, undefined, { enqueueSearchInvalidations: false });
+      }, undefined, { enqueueSearchInvalidations: false, bodyStorage });
       if (!result.current.version_id) throw new Error('content_edit_result_unavailable');
       if (edit.holdId) {
         await retainLocalEditBase(db, {
-          holdId: edit.holdId, nodeId: edit.nodeId, versionId: result.submittedVersionId
+          holdId: edit.holdId, nodeId: edit.nodeId, versionId: result.submittedVersionId, bodyStorage
         });
       }
-      await remapCompanionContentAnchors({ db, children, hostName, updatedAt: edit.updatedAt,
+      await remapCompanionContentAnchors({ db, children, hostName, bodyStorage, updatedAt: edit.updatedAt,
         previousContent: previous?.body_text ?? '', nextContent: result.current.body_text ?? '' });
       return {
         content: result.current.body_text ?? '',
@@ -68,7 +72,7 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
         submittedVersionId: result.submittedVersionId
       };
     }));
-    await writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, edit.nodeId))
+    await writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, edit.nodeId, 32, false, bodyStorage))
       .catch((error: unknown) => { console.warn('[node-version-retention] local collection failed', error); });
     return result;
   });

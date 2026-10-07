@@ -1,8 +1,8 @@
 import { parseStoredAnchorLink } from '../../../../../lib/core/database/anchorLinkCodec';
-import { ANDROID_COMPANION_QUERY_DEFINITIONS } from '../../../../../lib/core/database/androidCompanionQueryDefinitions';
+import { loadCompanionNodeDocument } from '../../../../../lib/core/database/companionNodeDocumentRead';
 import type { WorkspaceSnapshot } from '../../../../../lib/core/database/workspaceSnapshot';
 import type { DbRow } from '../../../../../lib/core/sync/dbPort';
-import { resolveLoadedCompanionArticle, type CompanionNodeDocument } from '../../companionReadableArticle';
+import { resolveLoadedCompanionArticle } from '../../companionReadableArticle';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { CompanionReadingSnapshotChanged } from './companionReadingDemand';
@@ -31,16 +31,13 @@ function matchesAnnotations(snapshot: WorkspaceSnapshot, nodeId: string, rows: A
 export function readCompanionArticle(
   snapshot: WorkspaceSnapshot,
   nodeId: string,
-  isCurrent: () => boolean
+  isCurrent: () => boolean,
+  bodyStorage: 'continuous' | 'chunked' = 'continuous'
 ) {
   const scope = getCompanionReadingScope();
   return getIosCompanionDatabaseOwner().read(async (db) => {
     if (scope !== getCompanionReadingScope() || !isCurrent()) return null;
-    const sql = ANDROID_COMPANION_QUERY_DEFINITIONS.readableArticleByNodeId.sql;
-    const [document] = await db.query<CompanionNodeDocument & DbRow>(
-      `SELECT article.*, n.current_version_id, n.deleted_at, n.parent_id
-       FROM (${sql}) article JOIN nodes n ON n.id = article.id`, [nodeId]
-    );
+    const document = await loadCompanionNodeDocument(db, nodeId, bodyStorage);
     if (!document) return null;
     const annotations = await db.query<Annotation>(
       `SELECT n.id, n.current_version_id, n.body_blob_hash, n.anchor_link

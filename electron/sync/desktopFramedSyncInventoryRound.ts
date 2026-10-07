@@ -6,11 +6,6 @@ import {
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
-import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
-import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
-import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
 import {
@@ -23,32 +18,30 @@ import { buildReceiptStream } from './desktopFramedSyncProcessReceipt.js';
 import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
 import { runDesktopFramedSyncRestoreRound } from './desktopFramedSyncRestoreRound.js';
 import { createDesktopFramedSyncRoundEndpoint } from './desktopFramedSyncRoundEndpoint.js';
+import { loadRoundRuntime } from './desktopFramedSyncRoundRuntime.js';
+import { receiveVerifiedDesktopFramedSyncTransfer } from './desktopFramedSyncVerifiedReceiver.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
-import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
 export async function runDesktopFramedSyncInventoryRound(args: {
+  bodyStorage?: 'continuous' | 'chunked';
   localLibraryEpoch: string;
   peer: DesktopSyncGroupPeer;
   remoteLibraryEpoch: string;
   restoreId?: string;
 }) {
-  const runtime = await loadRoundRuntime(args.peer);
+  const bodyStorage = args.bodyStorage ?? 'continuous';
+  const runtime = await loadRoundRuntime(args.peer, bodyStorage);
   const { adoption } = runtime;
   const local = { deviceId: args.peer.local_device_id, libraryEpoch: args.localLibraryEpoch };
   const remote = { deviceId: args.peer.peer_device_id, libraryEpoch: args.remoteLibraryEpoch };
   if (!args.restoreId && !adoption) await resumeDesktopFramedSyncPendingPublications({
+    bodyStorage,
     db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
     local, peer: remote, peerOrigin: args.peer.endpoint_url, staging: runtime.staging
   });
-  const context: InboundRound['context'] = {
-    groupId: args.peer.group_id,
-    initiatorDeviceId: local.deviceId,
-    initiatorLibraryEpoch: local.libraryEpoch,
-    protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-    responderDeviceId: remote.deviceId,
-    responderLibraryEpoch: remote.libraryEpoch
-  };
+  const context = roundContext(args.peer.group_id, local, remote);
   const inventories = await exchangeDesktopFramedSyncInventoryHttp({
+    bodyStorage,
     context,
     db: runtime.db,
     endpointUrl: args.peer.endpoint_url,
@@ -57,6 +50,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
     noncePort: runtime.noncePort
   });
   const inbound = {
+    bodyStorage,
     context,
     db: runtime.db,
     endpointUrl: args.peer.endpoint_url,
@@ -73,6 +67,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
       inventories,
       inbound,
       exchange: {
+        bodyStorage,
         context, db: runtime.db, endpointUrl: args.peer.endpoint_url,
         groupKey: runtime.groupKey, groupSecret: runtime.groupSecret,
         noncePort: runtime.noncePort
@@ -81,6 +76,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
   }
   const differences = compareFramedSyncInventories(inventories);
   const endpoint = createDesktopFramedSyncRoundEndpoint({
+    bodyStorage,
     db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
     local, peer: remote, peerOrigin: args.peer.endpoint_url, staging: runtime.staging
   });
@@ -116,6 +112,7 @@ async function transferDifferences(
 }
 
 export type InboundRound = Readonly<{
+  bodyStorage?: 'continuous' | 'chunked';
   context: Parameters<typeof requestDesktopFramedSyncDifferenceHttp>[0]['context'];
   db: Awaited<ReturnType<typeof loadRoundRuntime>>['db'];
   endpointUrl: string;
@@ -133,7 +130,9 @@ async function receiveRemoteDifference(
   try {
     const stream = await requestDesktopFramedSyncDifferenceHttp({ ...input, difference });
     const context = reverseTransferContext(input.context);
-    const receiptBody = await receiveDesktopFramedSyncTransfer({
+    const receive = input.bodyStorage === 'chunked'
+      ? receiveVerifiedDesktopFramedSyncTransfer : receiveDesktopFramedSyncTransfer;
+    const receiptBody = await receive({
       context, db: input.db, groupKey: input.groupKey, staging: input.staging, stream
     });
     const transferId = decodeFramedSyncPreamble(receiptBody.preamble).contextId;
@@ -213,28 +212,9 @@ function sameBytes(left: Uint8Array, right: Uint8Array) {
     left.every((byte, index) => byte === right[index]);
 }
 
-function loadRoundRuntime(peer: DesktopSyncGroupPeer) {
-  return runWithDatabaseConnectionOwner(async () => {
-    const workgroup = loadDesktopWorkgroupKey(peer.group_id);
-    if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
-    const connection = openDatabaseConnection();
-    const db = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-framed-sync-round' });
-    const adoption = await loadSyncGroupLocalAdoption(db);
-    assertAdoptionSource(adoption, peer);
-    return {
-      adoption, db,
-      groupKey: new Uint8Array(Buffer.from(workgroup.group_key, 'base64url')),
-      groupSecret: workgroup.group_key,
-      noncePort: createDesktopFramedSyncSessionNoncePort(db),
-      staging: createDesktopFramedSyncStaging(db)
-    };
-  });
-}
-
-function assertAdoptionSource(
-  adoption: Awaited<ReturnType<typeof loadSyncGroupLocalAdoption>>, peer: DesktopSyncGroupPeer
-) {
-  if (adoption && (adoption.providerDeviceId !== peer.peer_device_id || adoption.groupId !== peer.group_id)) {
-    throw new Error('sync_group_local_adoption_source_mismatch');
-  }
+function roundContext(groupId: string, local: { deviceId: string; libraryEpoch: string },
+  remote: { deviceId: string; libraryEpoch: string }): InboundRound['context'] {
+  return { groupId, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: local.deviceId, initiatorLibraryEpoch: local.libraryEpoch,
+    responderDeviceId: remote.deviceId, responderLibraryEpoch: remote.libraryEpoch };
 }

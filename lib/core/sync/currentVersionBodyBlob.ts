@@ -1,11 +1,13 @@
 import { CONTENT_BLOB_BATCH_MAX_BYTES } from '../../platform/resourceAvailabilityContract.js';
 
+import { materializeCurrentVerifiedBodyBlobs } from './currentVersionVerifiedBodyBlob.js';
 import type { DbPort, DbParams } from './dbPort.js';
 import { hashSqliteByteChunks } from './hashSqliteByteChunks.js';
 import { refreshNodeInlineBodiesForHashes } from './nodeInlineBodyProjection.js';
 import { hashTextBodyContent } from './syncNodeTextBodyBlobs.js';
+import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 
-type BodyScope = { hashes: readonly string[] } | { incomingAlias: string };
+export type BodyScope = { hashes: readonly string[] } | { incomingAlias: string };
 interface CurrentBodyRow {
   [key: string]: unknown;
   id: string;
@@ -28,7 +30,9 @@ function scopeFilter(scope: BodyScope): { sql: string; params: DbParams } {
 }
 
 /** Caller owns the transaction: publish verified bytes and availability together. */
-export async function materializeCurrentVersionBodyBlobs(port: DbPort, scope: BodyScope) {
+export async function materializeCurrentVersionBodyBlobs(port: DbPort, scope: BodyScope,
+  bodyStorage: NodeVersionBodyStorage = 'continuous') {
+  if (bodyStorage === 'chunked') return materializeCurrentVerifiedBodyBlobs(port, scope);
   const filter = scopeFilter(scope);
   let after = '';
   let count = 0;
