@@ -13,6 +13,9 @@ public class FolioleCompanionBootstrapPlugin extends Plugin {
     @PluginMethod
     public void loadBootstrap(PluginCall call) {
         try {
+            try (var outbound = new com.foliole.android.framed.FramedSyncOutboundSQLite(getContext())) {
+                outbound.discardInterruptedAttempts();
+            }
             FolioleCompanionBootstrapState state = new FolioleCompanionBootstrapState(
                 getContext(), Instant.now().toString(), null, false
             );

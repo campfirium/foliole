@@ -11,13 +11,18 @@ public class FolioleCompanionBootstrapPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     @objc func loadBootstrap(_ call: CAPPluginCall) {
-        call.resolve([
-            "booted_at": ISO8601DateFormatter().string(from: Date()),
-            "database_path": NSNull(),
-            "database_ready": false,
-            "host_name": loadHostName(),
-            "runtime_kind": "ios-capacitor"
-        ])
+        do {
+            let database = try FolioleFramedSyncTransferDatabase(
+                url: FolioleFramedSyncOutboundSQLite.applicationDatabaseURL())
+            try FolioleFramedSyncOutboundSQLite(database: database).discardInterruptedAttempts()
+            call.resolve([
+                "booted_at": ISO8601DateFormatter().string(from: Date()),
+                "database_path": NSNull(),
+                "database_ready": false,
+                "host_name": loadHostName(),
+                "runtime_kind": "ios-capacitor"
+            ])
+        } catch { call.reject("Failed to recover companion transport: \(error.localizedDescription)") }
     }
 
     private func loadHostName() -> String {

@@ -31,6 +31,20 @@ final class FolioleFramedSyncOutboundSQLite: FolioleFramedSyncOutboundStaging {
         }
     }
 
+    // Bootstrap calls this before any sender starts; frozen input remains in the shared owner.
+    func discardInterruptedAttempts() throws {
+        for row in try database.rows("SELECT DISTINCT transfer_id FROM framed_sync_ios_outbound_attempts") {
+            guard let transferID = row[0] as? Data else { throw invalid("outbound_attempt_storage_invalid") }
+            try discard(transferID: transferID)
+        }
+    }
+
+    static func applicationDatabaseURL() throws -> URL {
+        let root = try FileManager.default.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: true)
+        return root.appendingPathComponent("Foliole/framed-sync/outbound.sqlite")
+    }
+
     func prepare(
         transferID: Data, attemptID: Data, preamble: Data
     ) throws -> FolioleFramedSyncStageOutcome {

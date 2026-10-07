@@ -49,7 +49,7 @@ extension FolioleCompanionSyncPlugin {
             groupID: groupID, senderDeviceID: senderDeviceID, senderLibraryEpoch: senderEpoch,
             receiverDeviceID: receiverDeviceID, receiverLibraryEpoch: receiverEpoch
         )
-        let database = try FolioleFramedSyncTransferDatabase(url: framedOutboundDatabaseURL())
+        let database = try FolioleFramedSyncTransferDatabase(url: FolioleFramedSyncOutboundSQLite.applicationDatabaseURL())
         let staging = try FolioleFramedSyncOutboundSQLite(database: database)
         try staging.discard(transferID: prepared.transferID)
         defer { try? staging.discard(transferID: prepared.transferID) }
@@ -196,11 +196,4 @@ extension FolioleCompanionSyncPlugin {
         return values
     }
 
-    private func framedOutboundDatabaseURL() throws -> URL {
-        let root = try FileManager.default.url(
-            for: .applicationSupportDirectory, in: .userDomainMask,
-            appropriateFor: nil, create: true
-        )
-        return root.appendingPathComponent("Foliole/framed-sync/outbound.sqlite")
-    }
 }

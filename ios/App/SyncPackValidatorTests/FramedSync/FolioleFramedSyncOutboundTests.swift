@@ -45,7 +45,10 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         XCTAssertEqual(try database.rows(
             "SELECT state FROM framed_sync_ios_outbound_attempts"
         ).first?[0] as? String, "replayable")
-        try reopened.discard(transferID: attempt.transferID)
+        let sourceURL = directory.appendingPathComponent("original-body.bin")
+        try body.write(to: sourceURL)
+        try reopened.discardInterruptedAttempts()
+        XCTAssertEqual(try Data(contentsOf: sourceURL), body)
         XCTAssertNil(try reopened.loadLatestReplayableAttempt(transferID: attempt.transferID))
         XCTAssertTrue(try database.rows("SELECT * FROM framed_sync_ios_outbound_file_frames").isEmpty)
         let files = try FileManager.default.contentsOfDirectory(

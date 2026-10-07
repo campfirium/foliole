@@ -64,7 +64,7 @@ public final class FramedSyncOutboundFileStagingTest {
         assertEquals(1, wires.length);
         assertTrue(wires[0].length() > resource.length);
         try (FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context)) {
-            staging.discardOutboundAttempts(attempt.transferId());
+            staging.discardInterruptedAttempts();
             assertNull(staging.loadLatestReplayableAttempt(attempt.transferId()));
         }
         assertEquals(0, wireDirectory.listFiles((directory, name) -> name.endsWith(".wire")).length);

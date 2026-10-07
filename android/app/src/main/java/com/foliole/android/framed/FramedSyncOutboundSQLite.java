@@ -103,6 +103,16 @@ public final class FramedSyncOutboundSQLite implements AutoCloseable, FramedSync
         } finally { database.endTransaction(); }
     }
 
+    /** Bootstrap runs before senders start; only rebuildable transport attempts are retired. */
+    public synchronized void discardInterruptedAttempts() throws Exception {
+        java.util.List<byte[]> transfers = new java.util.ArrayList<>();
+        try (Cursor rows = database.rawQuery(
+            "SELECT DISTINCT transfer_id FROM framed_sync_android_outbound_attempts", null)) {
+            while (rows.moveToNext()) transfers.add(rows.getBlob(0));
+        }
+        for (byte[] transferId : transfers) discardOutboundAttempts(transferId);
+    }
+
     @Override public synchronized void close() { database.close(); }
 
     private FramedSyncStageOutcome insertOrCompareAttempt(
