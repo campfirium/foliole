@@ -9,10 +9,12 @@ struct FolioleFramedSyncReceivedTransfer {
 final class FolioleFramedSyncTransferReceiver {
     private let database: FolioleFramedSyncTransferDatabase
     private let resourceRoot: URL?
+    private let chunkedBodies: Bool
     var databaseURL: URL { database.url }
 
-    init(database: FolioleFramedSyncTransferDatabase, resourceRoot: URL? = nil) {
+    init(database: FolioleFramedSyncTransferDatabase, resourceRoot: URL? = nil, chunkedBodies: Bool = false) {
         self.database = database; self.resourceRoot = resourceRoot
+        self.chunkedBodies = chunkedBodies
     }
 
     func receipt(groupKey: Data, value: [String: Any]) throws -> Data {
@@ -58,7 +60,7 @@ final class FolioleFramedSyncTransferReceiver {
         let staging = try FolioleFramedSyncInboundStagingAdapter(
             databaseURL: database.url, resourceRoot: root
         )
-        var transfer = Transfer(preamble: preamble)
+        var transfer = Transfer(preamble: preamble, chunkedBodies: chunkedBodies)
         while let frame = try reader.nextFrame() {
             guard transfer.frameCount < 4_130 else { throw invalid("transfer_frame_limit_exceeded") }
             let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
@@ -84,15 +86,23 @@ final class FolioleFramedSyncTransferReceiver {
     }
 
     private func markReady(_ value: Transfer) throws {
+        guard let header = value.header else { throw invalid("transfer_header_required") }
         try database.transaction {
             try database.execute("DELETE FROM framed_sync_ios_blob_pins WHERE transfer_id = ?", [value.transferID])
-            for blob in value.blobs {
-                try database.execute("INSERT OR IGNORE INTO framed_sync_ios_available_blobs VALUES (?, ?, ?)",
-                                     [blob.reference.sha256, blob.reference.byteLength, blob.data])
-                try database.execute("INSERT INTO framed_sync_ios_blob_pins VALUES (?, ?, ?, ?, ?)", [
-                    value.transferID, blob.reference.sha256, blob.reference.byteLength,
-                    Int(blob.reference.role.rawValue), blob.reference.required ? 1 : 0
-                ])
+            if chunkedBodies {
+                let bodies = FolioleFramedSyncChunkedBodies(
+                    database: database, transferID: value.transferID, attemptID: value.attemptID
+                )
+                for reference in header.manifest.blobs
+                    where reference.role == .nodeBody || reference.role == .externalDocument {
+                    if try bodies.verifyAndPromote(reference) { try pin(reference, transferID: value.transferID) }
+                }
+            } else {
+                for blob in value.blobs {
+                    try database.execute("INSERT OR IGNORE INTO framed_sync_ios_available_blobs VALUES (?, ?, ?)",
+                                         [blob.reference.sha256, blob.reference.byteLength, blob.data])
+                    try pin(blob.reference, transferID: value.transferID)
+                }
             }
             try database.execute("""
                 UPDATE framed_sync_ios_transfers SET state = 'ready_to_apply'
@@ -102,12 +112,20 @@ final class FolioleFramedSyncTransferReceiver {
         }
     }
 
+    private func pin(_ reference: Foliole_Sync_V22_BlobReference, transferID: Data) throws {
+        try database.execute("INSERT INTO framed_sync_ios_blob_pins VALUES (?, ?, ?, ?, ?)", [
+            transferID, reference.sha256, reference.byteLength,
+            Int(reference.role.rawValue), reference.required ? 1 : 0
+        ])
+    }
+
     private func invalid(_ code: String) -> FolioleFramedSyncValidationError { .init(code) }
 }
 
 private struct Transfer {
     struct Blob { let reference: Foliole_Sync_V22_BlobReference; let data: Data }
     let preamble: FolioleFramedSyncPreamble
+    let chunkedBodies: Bool
     var header: Foliole_Sync_V22_TransferHeader?
     var facts = [Foliole_Sync_V22_FactRecord]()
     var chunks = [Data: [(UInt64, Data)]]()
@@ -146,7 +164,9 @@ private struct Transfer {
               Int(trailer.blobCount) == header.manifest.blobs.count else {
             throw invalid("inbound_attempt_manifest_mismatch")
         }
-        blobs = try header.manifest.blobs.filter { ($0.role == .nodeBody || $0.role == .externalDocument) }.compactMap(assemble)
+        if !chunkedBodies {
+            blobs = try header.manifest.blobs.filter { ($0.role == .nodeBody || $0.role == .externalDocument) }.compactMap(assemble)
+        }
         let expectedResources = Set(header.manifest.blobs.filter { $0.role != .nodeBody && $0.role != .externalDocument && $0.required }
             .map(\.sha256))
         guard expectedResources.isSubset(of: resourceHashes),
@@ -177,7 +197,7 @@ private struct Transfer {
               UInt64(chunk.data.count) <= reference.byteLength - chunk.offset else {
             throw invalid("blob_chunk_not_admitted")
         }
-        if (reference.role == .nodeBody || reference.role == .externalDocument) {
+        if !chunkedBodies && (reference.role == .nodeBody || reference.role == .externalDocument) {
             chunks[chunk.blobHash, default: []].append((chunk.offset, chunk.data))
         }
     }

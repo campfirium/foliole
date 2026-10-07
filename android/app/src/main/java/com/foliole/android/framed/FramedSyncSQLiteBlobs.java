@@ -13,10 +13,16 @@ import java.util.Arrays;
 
 final class FramedSyncSQLiteBlobs {
     private final SQLiteDatabase database;
+    private final FramedSyncSQLiteChunkedBodies chunkedBodies;
     private final FramedSyncSQLiteResourceBlobs resources;
 
     FramedSyncSQLiteBlobs(SQLiteDatabase database, File resourceDirectory) {
+        this(database, resourceDirectory, false);
+    }
+
+    FramedSyncSQLiteBlobs(SQLiteDatabase database, File resourceDirectory, boolean useChunkedBodies) {
         this.database = database;
+        chunkedBodies = useChunkedBodies ? new FramedSyncSQLiteChunkedBodies(database) : null;
         resources = new FramedSyncSQLiteResourceBlobs(database, resourceDirectory);
     }
 
@@ -79,6 +85,17 @@ final class FramedSyncSQLiteBlobs {
                 if (!FramedSyncBodyRoles.isBody(role)) {
                     if (!resources.verifyAndPin(
                         transferId, attemptId, hash, byteLength, role, required)) return false;
+                    continue;
+                }
+                if (chunkedBodies != null) {
+                    FramedSyncBodyChunkStream.Result result = chunkedBodies.verifyAndPromote(
+                        transferId, attemptId, hash, byteLength);
+                    if (result == FramedSyncBodyChunkStream.Result.INVALID) return false;
+                    if (result == FramedSyncBodyChunkStream.Result.MISSING) {
+                        if (required) return false;
+                        continue;
+                    }
+                    pin(transferId, hash, byteLength, role, required);
                     continue;
                 }
                 byte[] data = available(hash, byteLength);

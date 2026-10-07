@@ -7,11 +7,19 @@ enum FolioleFramedSyncCompletedInboundCleanup {
     static func migratePayloads(database: FolioleFramedSyncTransferDatabase) throws {
         guard let version = try database.rows("PRAGMA user_version").first?[0] as? Int, version < 1 else { return }
         try database.transaction {
-            for row in try database.rows("SELECT rowid, frame_type, ciphertext, length(authenticated_plaintext) FROM framed_sync_ios_frames") {
+            var after: Int?
+            while true {
+                let cursor = after.map { $0 as Any } ?? NSNull()
+                guard let row = try database.rows("""
+                    SELECT rowid, frame_type, ciphertext, length(authenticated_plaintext)
+                    FROM framed_sync_ios_frames WHERE (? IS NULL OR rowid > ?)
+                    ORDER BY rowid LIMIT 1
+                    """, [cursor, cursor]).first else { break }
                 guard let id = row[0] as? Int, let type = row[1] as? Int,
                       let ciphertext = row[2] as? Data, let size = row[3] as? Int else {
                     throw FolioleFramedSyncValidationError("framed_sync_migration_frame_invalid")
                 }
+                after = id
                 if type == 4 && size == 32 { continue }
                 try database.execute("UPDATE framed_sync_ios_frames SET ciphertext = ? WHERE rowid = ?",
                                      [Data(SHA256.hash(data: ciphertext)), id])
@@ -36,10 +44,18 @@ enum FolioleFramedSyncCompletedInboundCleanup {
     }
 
     static func retireReadyCopies(database: FolioleFramedSyncTransferDatabase, transferID: Data) throws {
-        for row in try database.rows("SELECT rowid, authenticated_plaintext FROM framed_sync_ios_frames WHERE transfer_id = ? AND frame_type = 4 AND length(authenticated_plaintext) != 32", [transferID]) {
+        var after: Int?
+        while true {
+            let cursor = after.map { $0 as Any } ?? NSNull()
+            guard let row = try database.rows("""
+                SELECT rowid, authenticated_plaintext FROM framed_sync_ios_frames
+                WHERE transfer_id = ? AND frame_type = 4 AND length(authenticated_plaintext) != 32
+                  AND (? IS NULL OR rowid > ?) ORDER BY rowid LIMIT 1
+                """, [transferID, cursor, cursor]).first else { break }
             guard let id = row[0] as? Int, let plaintext = row[1] as? Data else {
                 throw FolioleFramedSyncValidationError("framed_sync_migration_frame_invalid")
             }
+            after = id
             try database.execute("UPDATE framed_sync_ios_frames SET authenticated_plaintext = ? WHERE rowid = ?",
                                  [Data(SHA256.hash(data: plaintext)), id])
         }

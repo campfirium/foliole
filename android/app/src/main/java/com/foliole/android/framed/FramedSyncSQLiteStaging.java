@@ -17,13 +17,17 @@ public final class FramedSyncSQLiteStaging implements FramedSyncDurableStaging {
     }
 
     public FramedSyncSQLiteStaging(SQLiteDatabase database, File resourceDirectory) {
+        this(database, resourceDirectory, false);
+    }
+
+    public FramedSyncSQLiteStaging(SQLiteDatabase database, File resourceDirectory, boolean chunkedBodies) {
         if (database == null) throw new NullPointerException("database");
         if (!database.isOpen() || database.isReadOnly()) {
             throw new IllegalArgumentException("framed_sync_database_not_writable");
         }
         FramedSyncSQLiteSchema.install(database);
         FramedSyncCompletedInboundCleanup.migratePayloads(database);
-        inbound = new FramedSyncSQLiteInboundFrames(database, resourceDirectory);
+        inbound = new FramedSyncSQLiteInboundFrames(database, resourceDirectory, chunkedBodies);
         receipts = new FramedSyncSQLiteReceipts(database);
         receiptReplay = new FramedSyncSQLiteReceiptReplay(database, receipts);
     }

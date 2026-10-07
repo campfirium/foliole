@@ -8,7 +8,8 @@ import { loadCurrentVerifiedSyncNode, loadVerifiedSyncNodeVersion } from './sync
 import { requireReadableVerifiedNode, type ReadableVerifiedSyncNode } from './topicTextVerifiedMerge.js';
 
 /** Folder and item field merging keeps the existing whole-body three-way selection. */
-export async function resolveVerifiedSnapshotConflict(db: DbPort, incoming: readonly VerifiedFramedSyncNode[], kind: 'folder' | 'item') {
+export async function resolveVerifiedSnapshotConflict(db: DbPort, incoming: readonly VerifiedFramedSyncNode[],
+  kind: 'folder' | 'item', enqueueSearchInvalidations = true) {
   const ordered = [...incoming].sort((left, right) =>
     (left.metadata.version_id ?? '').localeCompare(right.metadata.version_id ?? ''));
   let current = await loadCurrentVerifiedSyncNode(db, ordered[0]!.metadata.object_id);
@@ -29,7 +30,7 @@ export async function resolveVerifiedSnapshotConflict(db: DbPort, incoming: read
     const body = selectedBody(base?.body.kind === 'readable' ? base.body.ref.hash : null, local, other, winner);
     const resolution = await buildVerifiedResolutionRecord(db, [local, other], winner, body.body.ref, merged.snapshot);
     const applied = await applyVerifiedSyncNodesWithDbPort(db, [resolution], {
-      includeAlreadyApplied: true, operation: 'local_mutation'
+      includeAlreadyApplied: true, operation: 'local_mutation', enqueueSearchInvalidations
     });
     if (!applied.appliedIds.includes(local.metadata.object_id)) throw new Error(`sync_${kind}_resolution_not_applied:${local.metadata.object_id}`);
     current = resolution;

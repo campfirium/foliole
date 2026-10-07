@@ -23,7 +23,7 @@ public enum FolioleFramedSyncLimits {
     static let maxProtocolStringBytes = 64 * 1024
     public static let maxControlMessageBytes = 768 * 1024
     static let maxManifestBytes = 768 * 1024
-    static let maxFrameMessageBytes = 2 * 1024 * 1024
+    public static let maxFrameMessageBytes = 2 * 1024 * 1024
 }
 
 public enum FolioleFramedSyncFrameType: UInt16, Sendable {

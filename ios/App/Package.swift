@@ -68,6 +68,8 @@ let package = Package(
                 "FolioleFramedSyncTransferContext.swift",
                 "FolioleFramedSyncTransferDatabase.swift",
                 "FolioleFramedSyncTransferReceiver.swift",
+                "FolioleFramedSyncBodyFrameIndex.swift",
+                "FolioleFramedSyncChunkedBodies.swift",
                 "FolioleFramedSyncTransferWriter.swift",
                 "FolioleCompanionDeviceAnchorStore.swift",
                 "FolioleCompanionHttpMessage.swift",

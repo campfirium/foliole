@@ -1,5 +1,6 @@
 export const controlledSyncSqliteTests = [
   'electron/sync/desktopFramedSyncVerifiedOutboundNodeFacts.integration.test.ts',
+  'electron/sync/desktopFramedSyncVerifiedManifest.integration.test.ts',
   'electron/sync/desktopFramedSyncVerifiedRestore.integration.test.ts',
   'electron/sync/desktopFramedSyncVerifiedTwoProcess.integration.test.ts',
   'electron/sync/desktopFramedSyncBlobSources.integration.test.ts',
@@ -17,6 +18,8 @@ export const controlledSyncSqliteTests = [
   'electron/database/nodeSyncVersionStable.integration.test.ts',
   'electron/sync/desktopFramedSyncReadyApplyRollback.integration.test.ts',
   'electron/sync/desktopFramedSyncReadyFacts.integration.test.ts',
+  'electron/sync/framedSyncReadyFactFrames.integration.test.ts',
+  'electron/sync/companionFramedSyncVerifiedApply.integration.test.ts',
   'lib/core/sync/framedSyncVerifiedFactApply.integration.test.ts',
   'lib/core/database/nodeBodyResolutionStable.integration.test.ts',
   'lib/core/database/storedSourceSearchBodyIndex.integration.test.ts',

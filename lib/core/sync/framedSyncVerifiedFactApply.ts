@@ -28,7 +28,7 @@ async function externalBody(db: DbPort, fact: CanonicalFact,
 
 /** Bodies are adopted from their ready owner inside the enclosing host business transaction. */
 export async function applyVerifiedFramedFactUnit(db: DbPort, facts: readonly CanonicalFact[], options: {
-  operation?: 'local_restore'; objectOptions?: ApplySyncObjectsWithDbPortOptions;
+  operation?: 'local_restore'; objectOptions?: ApplySyncObjectsWithDbPortOptions; enqueueSearchInvalidations?: boolean;
 } = {}) {
   const first = facts[0];
   assertBusinessUnit(facts);
@@ -44,7 +44,7 @@ function assertBusinessUnit(facts: readonly CanonicalFact[]) {
 
 /** Restore/adoption keeps the original all-node, relation/review, then state phases in one transaction. */
 export async function applyVerifiedFramedFactUnits(db: DbPort, units: readonly (readonly CanonicalFact[])[], options: {
-  operation?: 'local_restore'; objectOptions?: ApplySyncObjectsWithDbPortOptions;
+  operation?: 'local_restore'; objectOptions?: ApplySyncObjectsWithDbPortOptions; enqueueSearchInvalidations?: boolean;
 } = {}) {
   units.forEach(assertBusinessUnit);
   const facts = units.flatMap((unit) => [...unit]);
@@ -54,8 +54,11 @@ export async function applyVerifiedFramedFactUnits(db: DbPort, units: readonly (
     await assertFramedSyncNodeParentDependencies(tx, nodes.filter((node) => node.body.kind === 'readable').map((node) => node.metadata));
     let generatedChanges = false;
     if (nodes.length) {
-      if (options.operation === 'local_restore') await applyVerifiedSyncNodesWithDbPort(tx, nodes, { operation: 'local_restore' });
-      else generatedChanges = (await applyConvergentVerifiedSyncNodesWithDbPort(tx, nodes)).handledConflictCount > 0;
+      const enqueueSearchInvalidations = options.enqueueSearchInvalidations !== false;
+      if (options.operation === 'local_restore') await applyVerifiedSyncNodesWithDbPort(tx, nodes,
+        { operation: 'local_restore', enqueueSearchInvalidations });
+      else generatedChanges = (await applyConvergentVerifiedSyncNodesWithDbPort(tx, nodes,
+        enqueueSearchInvalidations)).handledConflictCount > 0;
     }
     await applyFramedSyncRelationReviewFactsWithDbPort(tx, facts.filter((fact) => fact.kind === 3 || fact.kind === 4));
     for (const fact of facts) {

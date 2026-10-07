@@ -19,10 +19,14 @@ final class FramedSyncSQLiteInboundFrames {
     private final FramedSyncSQLiteBlobs blobs;
 
     FramedSyncSQLiteInboundFrames(SQLiteDatabase database, File resourceDirectory) {
+        this(database, resourceDirectory, false);
+    }
+
+    FramedSyncSQLiteInboundFrames(SQLiteDatabase database, File resourceDirectory, boolean chunkedBodies) {
         this.database = database;
         transfers = new FramedSyncSQLiteTransfers(database);
         facts = new FramedSyncSQLiteFacts(database, transfers);
-        blobs = new FramedSyncSQLiteBlobs(database, resourceDirectory);
+        blobs = new FramedSyncSQLiteBlobs(database, resourceDirectory, chunkedBodies);
     }
 
     FramedSyncStageOutcome admit(TransferProposal proposal) throws Exception {

@@ -1,14 +1,12 @@
 import { framedSyncBytes, readFramedSyncContext, readFramedSyncHeader, readFramedSyncRow,
   sameFramedSyncBytes } from '../../lib/core/database/framedSyncStagingSerialization.js';
-import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
+import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { canonicalTransferId } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
-import { FRAMED_SYNC_FRAME_TYPES, type PublishedTransfer } from '../../lib/core/sync/framedSyncContract.js';
-import { decodeAndValidateProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
+import type { PublishedTransfer } from '../../lib/core/sync/framedSyncContract.js';
+import { readFramedSyncReadyFactFrames } from '../../lib/core/sync/framedSyncReadyFactFrames.js';
 import { assertInboundHeaderMatchesProposal, assertInboundManifestMatchesProposal } from '../../lib/core/sync/framedSyncStagingContract.js';
-import { canonicalFactFromValidatedMessage } from '../../lib/core/sync/framedSyncWireFact.js';
 
 type ReadyPublication = Pick<PublishedTransfer, 'context' | 'contentId' | 'manifestHash' | 'transferId'>;
-type ReadyFactFrame = DbRow & { sequence: string };
 
 /** Recover authenticated metadata only; durable body pins remain owned by the ready transfer. */
 export async function loadDesktopFramedSyncReadyFacts(db: DbPort, published: ReadyPublication) {
@@ -27,7 +25,7 @@ export async function loadDesktopFramedSyncReadyFacts(db: DbPort, published: Rea
   if (!sameFramedSyncBytes(await canonicalTransferId(context, published.contentId), published.transferId)) {
     throw new Error('inbound_transfer_identity_mismatch');
   }
-  const facts = await readReadyFactFrames(db, published.transferId, framedSyncBytes(row, 'active_attempt_id'));
+  const facts = await readFramedSyncReadyFactFrames(db, published.transferId, framedSyncBytes(row, 'active_attempt_id'), 'desktop');
   const manifest = { facts, blobs: header.blobs };
   await assertInboundManifestMatchesProposal({ attemptId: header.attemptId, header, proposal: header.proposal,
     publication: { ...header.published, manifest }, reservationId: header.reservationId });
@@ -37,23 +35,4 @@ export async function loadDesktopFramedSyncReadyFacts(db: DbPort, published: Rea
   return { facts, blobs: header.blobs, context, contentId: published.contentId,
     manifestHash: published.manifestHash, transferId: published.transferId,
     globalId: first.globalId, objectType: first.objectType };
-}
-
-async function readReadyFactFrames(db: DbPort, transferId: Uint8Array, attemptId: Uint8Array) {
-  const facts: ReturnType<typeof canonicalFactFromValidatedMessage>[] = [];
-  let after: string | null = null;
-  for (;;) {
-    const frames: ReadyFactFrame[] = await db.query<ReadyFactFrame>(`SELECT sequence, authenticated_plaintext
-      FROM framed_sync_inbound_frames WHERE transfer_id = ? AND attempt_id = ? AND frame_type = ?
-        AND (? IS NULL OR length(sequence) > ? OR
-          (length(sequence) = ? AND sequence COLLATE BINARY > ?))
-      ORDER BY length(sequence), sequence COLLATE BINARY LIMIT 1`,
-    [transferId, attemptId, FRAMED_SYNC_FRAME_TYPES.fact, after, after?.length ?? null,
-      after?.length ?? null, after]);
-    const frame: ReadyFactFrame | undefined = frames[0];
-    if (!frame) return facts;
-    facts.push(canonicalFactFromValidatedMessage(decodeAndValidateProtocolMessage(
-      framedSyncBytes(frame, 'authenticated_plaintext'), FRAMED_SYNC_FRAME_TYPES.fact)));
-    after = frame.sequence;
-  }
 }
