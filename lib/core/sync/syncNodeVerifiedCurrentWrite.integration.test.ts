@@ -16,6 +16,66 @@ import { readBodyText } from './verifiedBody.js';
 const timestamp = '2026-10-07T00:00:00.000Z';
 const readNode = (host: ReturnType<typeof textDevice>) => host.sqlite.prepare("SELECT * FROM nodes WHERE id = 'topic'").get() as Record<string, unknown>;
 
+it.each(['remote_sync', 'local_mutation', 'local_restore'] as const)(
+  'preserves the previous baseline and local origin for %s through stable ownership', async (operation) => {
+    for (const previous of [{ dirty: 0, base: null }, { dirty: 1, base: null }, { dirty: 1, base: 'original-base' }]) {
+      const old = textDevice();
+      const stable = textDevice();
+      try {
+        const epochs = [old, stable].map((host) =>
+          host.sqlite.prepare('SELECT library_epoch FROM node_version_local_proof_state').pluck().get());
+        const base = textBranch('base', 'Original', undefined, timestamp);
+        for (const host of [old, stable]) {
+          await applySyncNodesWithDbPort(host.db, [base]);
+          host.sqlite.prepare('UPDATE sync_object_state SET sync_dirty = ?, base_content_hash = ?')
+            .run(previous.dirty, previous.base);
+          if (operation === 'local_restore') {
+            host.sqlite.prepare('UPDATE nodes SET deleted_at = ?').run(timestamp);
+            host.sqlite.prepare('UPDATE sync_object_state SET deleted_at = ?').run(timestamp);
+          }
+        }
+        await migrateBodyContentStorage(stable.db);
+        const original = textBranch('next', 'Selected🙂'.repeat(100000), base, '2026-10-07T01:00:00.000Z');
+        const expected = await applySyncNodesWithDbPort(old.db, [original], { operation });
+        expect(expected.appliedIds).toEqual(['topic']);
+        const record = await referencedNode(stable.db, original);
+        const reads = observeReads(stable.db);
+        await writeVerifiedCurrentNode(reads.port, record, { invalidatedAt: timestamp, operation });
+        expect(reads.sizes).toEqual([]);
+        expect(readNode(stable)).toEqual(readNode(old));
+        for (const table of ['sync_object_state', 'node_version_local_origins']) {
+          expect(stable.sqlite.prepare(`SELECT * FROM ${table}`).all())
+            .toEqual(old.sqlite.prepare(`SELECT * FROM ${table}`).all());
+        }
+        expect(stable.sqlite.prepare('SELECT singleton_id, proof_revision FROM node_version_local_proof_state').all())
+          .toEqual(old.sqlite.prepare('SELECT singleton_id, proof_revision FROM node_version_local_proof_state').all());
+        expect([old, stable].map((host) =>
+          host.sqlite.prepare('SELECT library_epoch FROM node_version_local_proof_state').pluck().get())).toEqual(epochs);
+      } finally { old.sqlite.close(); stable.sqlite.close(); }
+    }
+  }
+);
+
+it('rolls back local origin and current ownership when durable local proof cannot advance', async () => {
+  const host = textDevice();
+  try {
+    await migrateBodyContentStorage(host.db);
+    const record = await referencedNode(host.db, textBranch('version', 'Selected', undefined, timestamp));
+    host.sqlite.exec(`CREATE TRIGGER fail_local_proof BEFORE UPDATE ON node_version_local_proof_state
+      BEGIN SELECT RAISE(ABORT, 'proof_unavailable'); END`);
+    await expect(writeVerifiedCurrentNode(host.db, record, { invalidatedAt: timestamp, operation: 'local_mutation' }))
+      .rejects.toThrow('proof_unavailable');
+    for (const table of ['nodes', 'node_sync_versions', 'content_blobs', 'sync_object_state', 'node_version_local_origins']) {
+      expect(host.sqlite.prepare(`SELECT count(*) FROM ${table}`).pluck().get()).toBe(0);
+    }
+    expect(host.sqlite.prepare('SELECT proof_revision FROM node_version_local_proof_state').pluck().get()).toBe(0);
+    host.sqlite.exec('DROP TRIGGER fail_local_proof');
+    await writeVerifiedCurrentNode(host.db, record, { invalidatedAt: timestamp, operation: 'local_mutation' });
+    expect(host.sqlite.prepare('SELECT version_id FROM node_version_local_origins').all()).toEqual([{ version_id: 'version' }]);
+    expect(host.sqlite.prepare('SELECT proof_revision FROM node_version_local_proof_state').pluck().get()).toBe(1);
+  } finally { host.sqlite.close(); }
+});
+
 it.each(['', '\ufeff---\r\nkey: ' + 'x'.repeat(3 * 1024 * 1024) + '\r\n---\r\nBody'])(
   'writes the selected current version and queues indexing without reading its text', async (body) => {
     const old = textDevice();

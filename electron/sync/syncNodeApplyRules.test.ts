@@ -59,6 +59,7 @@ it('keeps only the latest head per remote branch', () => {
       createNodeRecord({
         object_id: 'node-1',
         version_created_at: '2026-04-21T12:00:00.000Z',
+        parent_version_id: 'phone#1',
         version_id: 'phone#2'
       }),
       createNodeRecord({

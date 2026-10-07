@@ -6,6 +6,7 @@ import {
   type SyncNodeAnchorRepairRecord,
   type SyncNodeAnchorUnmappedRecord
 } from './syncNodeAnchorRepair.js';
+import { loadAppliedNodeMutationState, recordAppliedNodeLocalOrigin } from './syncNodeAppliedMutationState.js';
 import type { SyncNodeApplyOperation } from './syncNodeApplyRules.js';
 import {
   buildRemoteNodeUpdate,
@@ -26,11 +27,6 @@ export interface AcceptedRemoteNodeResult {
 
 export interface AcceptedRemoteNodeOptions {
   enqueueSearchInvalidations?: boolean;
-}
-
-async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: readonly (string | number | bigint | Uint8Array | null)[] = []) {
-  const rows = await port.query<T>(sql, params);
-  return rows[0] ?? null;
 }
 
 async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
@@ -112,20 +108,7 @@ export async function applyAcceptedRemoteNode(input: {
   result: AcceptedRemoteNodeResult;
   tx: DbPort;
 }) {
-  const localMutation = input.operation === 'local_mutation' || input.operation === 'local_restore';
-  const previousState = localMutation
-    ? await queryOne<{ base_content_hash: string | null; content_hash: string; sync_dirty: number }>(
-      input.tx,
-      `SELECT base_content_hash, content_hash, sync_dirty FROM sync_object_state
-       WHERE object_type = 'node' AND object_id = ?`,
-      [input.record.object_id]
-    )
-    : null;
-  const baseContentHash = previousState
-    ? (previousState.sync_dirty === 1
-      ? previousState.base_content_hash ?? previousState.content_hash
-      : previousState.content_hash)
-    : null;
+  const syncState = await loadAppliedNodeMutationState(input.tx, input.record.object_id, input.operation);
   await applyRemoteNode(
     input.tx,
     input.record,
@@ -133,10 +116,7 @@ export async function applyAcceptedRemoteNode(input: {
     input.localNode !== null,
     0
   );
-  if (localMutation && input.record.version_id) {
-    await input.tx.run('INSERT OR IGNORE INTO node_version_local_origins (version_id) VALUES (?)', [input.record.version_id]);
-    await input.tx.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
-  }
+  await recordAppliedNodeLocalOrigin(input.tx, input.record.version_id, input.operation);
   if (!input.record.snapshot.deleted_at && typeof input.record.snapshot.content === 'string') {
     const repairResult = await repairDirectChildAnchorsForAppliedParent({
       content: input.record.snapshot.content,
@@ -149,10 +129,7 @@ export async function applyAcceptedRemoteNode(input: {
     input.result.anchorRepairRecords.push(...repairResult.repaired);
     input.result.unmappedAnchorRecords.push(...repairResult.unmapped);
   }
-  await upsertAppliedNodeSyncState(input.tx, input.record, {
-    baseContentHash,
-    syncDirty: localMutation ? 1 : 0
-  });
+  await upsertAppliedNodeSyncState(input.tx, input.record, syncState);
   if (input.options.enqueueSearchInvalidations !== false) {
     await enqueueAppliedNodeSearchInvalidations(input.tx, input.localNode, input.record, input.invalidatedAt);
   }
