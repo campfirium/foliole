@@ -7,6 +7,7 @@ import { migrateBodyContentStorage } from '../database/bodyContentMigration.js';
 import { upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
 import { loadRetainedSyncNodeVersionFact } from './syncNodeGraph.js';
 import { loadCurrentVerifiedSyncNode, loadVerifiedSyncNodeVersion } from './syncNodeVerifiedGraph.js';
+import { loadRetainedVerifiedSyncNodeVersions } from './syncNodeVerifiedRetainedVersions.js';
 import { readBodyText } from './verifiedBody.js';
 
 it.each(['', '\ufeff---\r\n中文: 😀\r\n---\r\n' + 'x'.repeat(3 * 1024 * 1024)])(
@@ -50,6 +51,8 @@ it('distinguishes empty, retired and unavailable versions and refuses unreadable
     expect((await loadVerifiedSyncNodeVersion(source.db, 'retired'))?.body).toEqual({ kind: 'retired' });
     expect((await loadVerifiedSyncNodeVersion(source.db, 'unavailable'))?.body)
       .toEqual({ kind: 'unavailable', hash: 'f'.repeat(64) });
+    await expect(loadRetainedVerifiedSyncNodeVersions(source.db, ['unavailable']))
+      .rejects.toThrow('sync_node_version_body_unavailable:unavailable');
     await source.db.run('DELETE FROM content_bodies WHERE hash = ?', [empty.body.ref.hash]);
     expect((await loadVerifiedSyncNodeVersion(source.db, empty.metadata.version_id!))?.body)
       .toEqual({ kind: 'unavailable', hash: empty.body.ref.hash });

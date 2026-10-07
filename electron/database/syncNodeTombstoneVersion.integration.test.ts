@@ -15,13 +15,14 @@ import { hasCompleteVerifiedTombstoneVersion } from '../../lib/core/sync/syncNod
 import { loadRetainedSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
 import { hasCompleteTombstoneVersion } from '../../lib/core/sync/syncNodeTombstoneVersion.js';
 import { loadVerifiedSyncNodeVersion } from '../../lib/core/sync/syncNodeVerifiedGraph.js';
+import { loadRetainedVerifiedSyncNodeVersions } from '../../lib/core/sync/syncNodeVerifiedRetainedVersions.js';
 import { upsertVerifiedSyncNodeVersion } from '../../lib/core/sync/syncNodeVerifiedVersionWrite.js';
 import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import { readBodyText } from '../../lib/core/sync/verifiedBody.js';
 
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
 import { closeLibraries, createPeer, edit, startLibraries } from './syncEmptyLibraryTestSupport.js';
-import { nodeMetadata } from './syncNodeVerifiedTopicConflict.testSupport.js';
+import { nodeMetadata, observeReads } from './syncNodeVerifiedTopicConflict.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -39,6 +40,42 @@ async function deletedHistory(body: string) {
   const tombstone = records.get(version)!;
   return { source, tombstone, records: [...records.values()] };
 }
+
+it.each(['', 'Original body', '\ufeff中文😀' + 'x'.repeat(3 * 1024 * 1024)])(
+  'reads retained tombstone facts through original verified references without transporting text', async (body) => {
+    const { source, tombstone, records } = await deletedHistory(body);
+    await expect(loadRetainedSyncNodeVersionRecords(observeReads(source.port).port, [tombstone.version_id!]))
+      .rejects.toThrow('unexpected_full_body_read');
+    await migrateBodyContentStorage(source.port);
+    const reads = observeReads(source.port);
+    const restored = await loadRetainedVerifiedSyncNodeVersions(reads.port,
+      [...records.map((record) => record.version_id!), tombstone.version_id!, 'missing']);
+    const current = restored.get(tombstone.version_id!)!;
+    expect(current.metadata).toEqual(nodeMetadata(tombstone));
+    expect(current.metadata.is_tombstone).toBe(true);
+    expect(current.body.kind).toBe('readable');
+    expect(restored.size).toBe(records.length);
+    expect(reads.sizes).toEqual([]);
+    if (current.body.kind !== 'readable') throw new Error('original_tombstone_body_required');
+    expect(await readBodyText(source.port, current.body.ref)).toBe(body);
+    source.db.prepare('UPDATE node_sync_tombstones SET host_name = ? WHERE version_id = ?')
+      .run('different-owner', tombstone.version_id);
+    const mismatched = (await loadRetainedVerifiedSyncNodeVersions(reads.port, [tombstone.version_id!]))
+      .get(tombstone.version_id!)!;
+    expect(mismatched.body).toEqual({ kind: 'retired' });
+    expect(mismatched.metadata.host_name).toBe('different-owner');
+    source.db.prepare('UPDATE node_sync_tombstones SET host_name = ? WHERE version_id = ?')
+      .run(tombstone.host_name, tombstone.version_id);
+    source.db.prepare(`UPDATE node_sync_versions SET body_state = 'retired', body_blob_hash = NULL,
+      snapshot_json = json_set(snapshot_json, '$.body_blob_hash', NULL) WHERE version_id = ?`)
+      .run(tombstone.version_id);
+    const retired = (await loadRetainedVerifiedSyncNodeVersions(reads.port, [tombstone.version_id!]))
+      .get(tombstone.version_id!)!;
+    expect(retired.metadata).toEqual(nodeMetadata(tombstone));
+    expect(retired.body).toEqual({ kind: 'retired' });
+    expect(reads.sizes).toEqual([]);
+  }
+);
 
 it.each([
   { label: 'empty body', body: '' }, { label: 'original body', body: 'Original body' },
