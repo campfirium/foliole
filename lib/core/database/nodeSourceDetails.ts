@@ -1,5 +1,6 @@
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import { loadNodeBodyResolution, resolveNodeBody, type NodeBodyRow } from './nodeBodyResolution.js';
+import { resolveNodeBody, type NodeBodyRow } from './nodeBodyResolution.js';
+import { loadNodeConsumerBody } from './nodeConsumerBodyResolution.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 
 interface ImportSourceRow extends DatabaseRow {
@@ -72,10 +73,10 @@ export interface NodeSourceDetails {
   sourceNodeId: string;
 }
 
-function resolveSourceNodeContext(driver: DatabaseDriver, nodeId: string) {
+function resolveSourceNodeContext(driver: DatabaseDriver, nodeId: string, storage: 'continuous' | 'chunked') {
   const node = driver.queryOne<NodeContextRow>(
-    `SELECT n.id, n.parent_id, n.anchor_link, n.content, n.body_blob_hash, cbd.data AS body_blob_data
-     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+    `SELECT n.id, n.parent_id, n.anchor_link, ${storage === 'continuous' ? 'n.content, n.body_blob_hash, cbd.data AS body_blob_data' : "'' AS content, n.body_blob_hash, NULL AS body_blob_data"}
+     FROM nodes n ${storage === 'continuous' ? 'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash' : ''}
      WHERE n.id = ?`,
     [nodeId]
   );
@@ -83,7 +84,7 @@ function resolveSourceNodeContext(driver: DatabaseDriver, nodeId: string) {
     return null;
   }
   if (node.anchor_link && node.parent_id) {
-    const body = loadNodeBodyResolution(driver, node.parent_id);
+    const body = loadNodeConsumerBody(driver, node.parent_id, storage);
     return {
       inheritedFromParent: true,
       sourceNodeContent: body?.status === 'resolved' ? body.content : null,
@@ -91,7 +92,8 @@ function resolveSourceNodeContext(driver: DatabaseDriver, nodeId: string) {
       sourceNodeId: node.parent_id
     };
   }
-  const body = resolveNodeBody(node);
+  const body = storage === 'continuous' ? resolveNodeBody(node) : loadNodeConsumerBody(driver, node.id, storage);
+  if (!body) return null;
   return {
     inheritedFromParent: false,
     sourceNodeContent: body.status === 'resolved' ? body.content : null,
@@ -193,8 +195,8 @@ function readPdfPageDimensions(driver: DatabaseDriver, nodeId: string) {
   );
 }
 
-export function loadNodeSourceDetails(driver: DatabaseDriver, nodeId: string, runLimit = 6): NodeSourceDetails | null {
-  const context = resolveSourceNodeContext(driver, nodeId);
+export function loadNodeSourceDetails(driver: DatabaseDriver, nodeId: string, runLimit = 6, storage: 'continuous' | 'chunked' = 'continuous'): NodeSourceDetails | null {
+  const context = resolveSourceNodeContext(driver, nodeId, storage);
   if (!context) {
     return null;
   }

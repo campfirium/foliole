@@ -21,7 +21,6 @@ import {
   publishedFromHeader
 } from './desktopFramedSyncProcessHeader.js';
 import {
-  finishDesktopFramedSyncTransfer,
   stageDesktopFramedSyncFact
 } from './desktopFramedSyncProcessInbound.js';
 import { buildReceiptStream } from './desktopFramedSyncProcessReceipt.js';
@@ -185,13 +184,10 @@ async function handleFrame(input: {
       resources: state.resources,
       staging: input.staging
     };
-    if (input.stageOnly) return prepareDesktopFramedSyncInbound(preparedInput);
-    const applied = await finishDesktopFramedSyncTransfer(preparedInput);
-    state.existingReceipt = applied.receipt;
-    return {
-      ...await receiptStream(input, applied.receipt),
-      generatedChanges: applied.generatedChanges
-    };
+    const ready = await prepareDesktopFramedSyncInbound(preparedInput);
+    state.ready = ready;
+    state.attemptAdmitted = false;
+    return applyReadyTransfer(input, ready);
   }
   return null;
 }

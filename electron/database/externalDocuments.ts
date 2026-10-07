@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
+import { requestSearchIndexInvalidationProcessing } from '../../lib/core/database/searchIndexInvalidationRuntime.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { resolveImportedNodeTitle } from '../../lib/core/import/importedNodeTitle.js';
 import { resolveNodeOpeningText } from '../../lib/core/nodes/nodeOpeningPreview.js';
@@ -97,6 +98,7 @@ export function upsertExternalDocuments(folder: NativeExternalSearchFolder, docu
       upsertExternalDocument(driver, folder, document, indexedAt, hostName);
     }
   });
+  requestSearchIndexInvalidationProcessing();
 }
 
 function upsertExternalDocument(
@@ -168,6 +170,7 @@ export function replaceExternalDocumentsForFolder(
       }
     }
   });
+  requestSearchIndexInvalidationProcessing();
 }
 
 export function markExternalDocumentsMissing(missing: MissingExternalDocument[], folderId: string, missingAt: string) {
@@ -177,4 +180,5 @@ export function markExternalDocumentsMissing(missing: MissingExternalDocument[],
       tombstoneExternalDocument(driver, toDocumentId(folderId, document.relativePath), hostName, missingAt);
     }
   });
+  requestSearchIndexInvalidationProcessing();
 }

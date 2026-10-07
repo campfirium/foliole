@@ -1,7 +1,11 @@
+import type { NodeVersionBodyStorage } from '../sync/syncNodeTombstoneVersion.js';
+
 import type { DatabaseDriver } from './driver.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { requestSearchIndexInvalidationProcessing } from './searchIndexInvalidationRuntime.js';
 import { DELETE_NODE_SEARCH_PENDING_SQL, INSERT_NODE_SEARCH_PENDING_SQL, normalizeSearchPendingStates } from './searchPendingState.js';
+import { syncStoredSourceSearchIndexForTargets } from './storedSourceSearchBodyIndex.js';
+import type { StoredSourceInvalidationType } from './storedSourceSearchInvalidations.js';
 import { syncPdfSearchIndexForAttachmentIds, syncWorkspaceSearchIndexForNodeIds } from './workspaceSearchIndex.js';
 import {
   advanceWorkspaceSearchSourceRevision,
@@ -10,13 +14,15 @@ import {
 } from './workspaceSearchSourceState.js';
 import { deleteWorkspaceSearchIndexForSubtreeRootIds } from './workspaceSearchSubtreeIndex.js';
 
-export type SearchIndexInvalidationType =
+export type NodeSearchIndexInvalidationType =
   | 'attachment_pdf'
   | 'node_pdf'
   | 'node_subtree_deleted'
   | 'node_subtree_path'
   | 'node_subtree_restored'
   | 'node_workspace';
+
+export type SearchIndexInvalidationType = NodeSearchIndexInvalidationType | StoredSourceInvalidationType;
 
 export interface SearchIndexInvalidationRow {
   [column: string]: unknown;
@@ -27,7 +33,7 @@ export interface SearchIndexInvalidationRow {
 
 interface SearchIndexInvalidationInput {
   targetId: string;
-  type: SearchIndexInvalidationType;
+  type: NodeSearchIndexInvalidationType;
 }
 
 interface EnqueueSearchIndexInvalidationOptions {
@@ -127,12 +133,13 @@ export function enqueuePdfSearchInvalidationForAttachmentIds(driver: DatabaseDri
   enqueueSearchIndexInvalidations(driver, attachmentIds.map((targetId) => ({ targetId, type: 'attachment_pdf' })));
 }
 
-export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 500) {
+export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 500,
+  storage: NodeVersionBodyStorage = 'continuous') {
   const rows = claimSearchIndexInvalidations(driver, limit);
   if (rows.length === 0) return { failed: 0, processed: 0 };
 
   try {
-    processClaimedInvalidationRows(driver, rows);
+    processClaimedInvalidationRows(driver, rows, storage);
     completeInvalidations(driver, rows.map((row) => row.id));
     return { failed: 0, processed: rows.length };
   } catch (error) {
@@ -176,15 +183,22 @@ export function readSearchIndexInvalidationBacklog(driver: DatabaseDriver) {
   ) ?? { failed_count: 0, pending_count: 0, running_count: 0, total_count: 0 };
 }
 
-export function processClaimedInvalidationRows(driver: DatabaseDriver, rows: SearchIndexInvalidationRow[]) {
+export function processClaimedInvalidationRows(driver: DatabaseDriver, rows: SearchIndexInvalidationRow[],
+  storage: NodeVersionBodyStorage = 'continuous') {
+  const sources = rows.flatMap((row) => row.invalidation_type === 'stored_source_external' ||
+    row.invalidation_type === 'stored_source_removed'
+    ? [{ type: row.invalidation_type, targetId: row.target_id }] : []);
+  syncStoredSourceSearchIndexForTargets(driver, sources);
   const attachmentIds = rows.filter((row) => row.invalidation_type === 'attachment_pdf').map((row) => row.target_id);
   for (const attachmentId of attachmentIds) {
     driver.execute('DELETE FROM search.pdf_search WHERE attachment_id = ?', [attachmentId]);
   }
   syncPdfSearchIndexForAttachmentIds(driver, attachmentIds);
-  const nodeIds = rows.filter((row) => row.invalidation_type !== 'attachment_pdf').map((row) => row.target_id);
+  const nodeIds = rows.filter((row) => row.invalidation_type !== 'attachment_pdf' &&
+    row.invalidation_type !== 'stored_source_external' && row.invalidation_type !== 'stored_source_removed')
+    .map((row) => row.target_id);
   deleteWorkspaceSearchIndexForSubtreeRootIds(driver, nodeIds);
-  syncWorkspaceSearchIndexForNodeIds(driver, nodeIds);
+  syncWorkspaceSearchIndexForNodeIds(driver, nodeIds, storage);
 }
 
 export function completeInvalidations(driver: DatabaseDriver, ids: number[]) {

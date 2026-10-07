@@ -1,11 +1,12 @@
 import type { PersistedNodeViewState } from '../../platform/persistedNodeViewState.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import { buildNodeBodyContentSql } from './nodeBodyResolution.js';
+import { loadNodeConsumerBody } from './nodeConsumerBodyResolution.js';
 import { loadNodeOpenStateById, type NodeOpenState } from './nodeOpenState.js';
 import { projectParentChildOrder, readOrderMembers, readParentChildOrders } from './parentChildOrder.js';
 import { requireDatabaseHostName } from './syncHostIdentity.js';
 import { attachWorkspaceNodeAttachments } from './workspaceSnapshotAttachments.js';
+import { buildBodySelection } from './workspaceSnapshotBodySelection.js';
 import { normalizeWorkspaceSnapshot, resolveWorkspaceSnapshotActiveNodeId } from './workspaceSnapshotContract.js';
 import {
   buildOrderedNodeIds,
@@ -93,31 +94,6 @@ const READWISE_SOURCE_JOIN_SQL = `LEFT JOIN (
   FROM import_sources WHERE remote_provider = 'readwise' AND latest_node_id IS NOT NULL
 ) readwise_source ON readwise_source.latest_node_id = n.id AND readwise_source.source_rank = 1`;
 
-function buildBodySelection(options: WorkspaceSnapshotLoadOptions) {
-  if (options.includeBody) {
-    return {
-      bodyJoin: 'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash',
-      bodyStatusExpression: `CASE
-         WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability
-         WHEN n.body_blob_hash IS NOT NULL AND cbd.hash IS NULL THEN 'missing'
-         WHEN TRIM(${buildNodeBodyContentSql()}) = '' THEN 'empty'
-         ELSE 'ready'
-       END`,
-      contentExpression: buildNodeBodyContentSql()
-    };
-  }
-  return {
-    bodyJoin: '',
-    bodyStatusExpression: `CASE
-         WHEN n.body_blob_hash IS NOT NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability
-         WHEN n.body_blob_hash IS NOT NULL AND (cb.hash IS NULL OR cb.availability = 'missing') THEN 'missing'
-         WHEN n.body_blob_hash IS NOT NULL THEN 'ready'
-         WHEN TRIM(n.content) = '' THEN 'empty'
-         ELSE 'ready'
-       END`,
-    contentExpression: "''"
-  };
-}
 
 function buildWorkspaceRowsSql(options: WorkspaceSnapshotLoadOptions) {
   const { bodyJoin, bodyStatusExpression, contentExpression } = buildBodySelection(options);
@@ -226,8 +202,17 @@ function buildSnapshotRows(
   });
 }
 
-export function loadWorkspaceSnapshot(driver: DatabaseDriver, options: WorkspaceSnapshotLoadOptions = {}): WorkspaceSnapshot | null {
-  const rows = queryWorkspaceRows(driver, options);
+export function loadWorkspaceSnapshot(driver: DatabaseDriver, options: WorkspaceSnapshotLoadOptions = {}, storage: 'continuous' | 'chunked' = 'continuous'): WorkspaceSnapshot | null {
+  const rows = queryWorkspaceRows(driver, storage === 'chunked' ? { ...options, includeBody: false } : options);
+  if (storage === 'chunked' && options.includeBody) {
+    for (const row of rows) {
+      const body = loadNodeConsumerBody(driver, row.id, storage);
+      row.content = body?.status === 'resolved' ? body.content : '';
+      row.body_status = body?.status === 'resolved'
+        ? (driver.queryOne<{ empty: number }>("SELECT TRIM(?) = '' AS empty", [body.content])?.empty ? 'empty' : 'ready')
+        : (row.body_status === 'failed' || row.body_status === 'fetching' ? row.body_status : 'missing');
+    }
+  }
   if (rows.length === 0) {
     return null;
   }

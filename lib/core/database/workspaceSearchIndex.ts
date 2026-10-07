@@ -3,6 +3,9 @@ import { NodeBodyUnavailableError } from './nodeBodyResolution.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { refreshWorkspacePdfPageMap } from './workspacePdfPageMap.js';
 import { NODE_PATHS_CTE_SQL, NODE_SEARCH_INSERT_AFFECTED_SQL, NODE_SEARCH_REBUILD_SQL, PDF_SEARCH_INSERT_AFFECTED_SQL, PDF_SEARCH_REBUILD_SQL } from './workspaceSearchIndexSql.js';
+import { insertStableNodeSearchRows, prepareStableNodeSearchRows } from './workspaceSearchStableNodeIndex.js';
+
+type SearchBodyStorage = 'continuous' | 'chunked';
 
 const TEMP_SEED_IDS_SQL = `CREATE TEMP TABLE IF NOT EXISTS temp_workspace_search_seed_ids (
   id TEXT PRIMARY KEY
@@ -83,7 +86,8 @@ function prepareAffectedNodeIds(driver: DatabaseDriver, nodeIds: string[], optio
   return { expandedCount: countTempAffectedIds(driver), seedCount: seedIds.length };
 }
 
-function requireAvailableNodeBodies(driver: DatabaseDriver, affectedOnly: boolean) {
+function requireAvailableNodeBodies(driver: DatabaseDriver, affectedOnly: boolean, storage: SearchBodyStorage) {
+  if (storage === 'chunked') return prepareStableNodeSearchRows(driver, affectedOnly);
   const rows = driver.queryAll<{ id: string }>(`${NODE_PATHS_CTE_SQL}
     SELECT n.id FROM nodes n INNER JOIN node_paths paths ON paths.node_id = n.id
     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
@@ -92,24 +96,26 @@ function requireAvailableNodeBodies(driver: DatabaseDriver, affectedOnly: boolea
   if (rows.length > 0) throw new NodeBodyUnavailableError(rows.map((row) => row.id));
 }
 
-export function rebuildWorkspaceSearchIndexes(driver: DatabaseDriver) {
-  requireAvailableNodeBodies(driver, false);
+export function rebuildWorkspaceSearchIndexes(driver: DatabaseDriver, storage: SearchBodyStorage = 'continuous') {
+  requireAvailableNodeBodies(driver, false, storage);
   driver.execute('DELETE FROM search.node_search');
   driver.execute('DELETE FROM search.pdf_search');
-  driver.execute(NODE_SEARCH_REBUILD_SQL);
+  if (storage === 'chunked') insertStableNodeSearchRows(driver);
+  else driver.execute(NODE_SEARCH_REBUILD_SQL);
   driver.execute(PDF_SEARCH_REBUILD_SQL);
   refreshWorkspacePdfPageMap(driver);
 }
 
-export function syncNodeSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: string[]) {
+export function syncNodeSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: string[], storage: SearchBodyStorage = 'continuous') {
   const startedAt = Date.now();
   const affected = prepareAffectedNodeIds(driver, nodeIds, { includeDescendants: false });
   if (affected.expandedCount === 0) {
     return;
   }
-  requireAvailableNodeBodies(driver, true);
+  requireAvailableNodeBodies(driver, true, storage);
   driver.execute('DELETE FROM search.node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
-  driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
+  if (storage === 'chunked') insertStableNodeSearchRows(driver);
+  else driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 
@@ -125,16 +131,17 @@ export function syncPdfSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: st
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
 }
 
-export function syncWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: string[]) {
+export function syncWorkspaceSearchIndexForNodeIds(driver: DatabaseDriver, nodeIds: string[], storage: SearchBodyStorage = 'continuous') {
   const startedAt = Date.now();
   const affected = prepareAffectedNodeIds(driver, nodeIds, { includeDescendants: true });
   if (affected.expandedCount === 0) {
     return;
   }
-  requireAvailableNodeBodies(driver, true);
+  requireAvailableNodeBodies(driver, true, storage);
   driver.execute('DELETE FROM search.node_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
   driver.execute('DELETE FROM search.pdf_search WHERE node_id IN (SELECT id FROM temp_workspace_search_affected_ids)');
-  driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
+  if (storage === 'chunked') insertStableNodeSearchRows(driver);
+  else driver.execute(NODE_SEARCH_INSERT_AFFECTED_SQL);
   driver.execute(PDF_SEARCH_INSERT_AFFECTED_SQL);
   refreshWorkspacePdfPageMap(driver);
   traceSearchIndexSync(affected.seedCount, affected.expandedCount, Date.now() - startedAt);
