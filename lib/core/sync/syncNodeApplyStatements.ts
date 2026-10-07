@@ -5,6 +5,7 @@ import { parseNodeResourceReferences, serializeNodeResourceReferences } from '..
 import { hashTextBody } from '../database/textBodyHash.js';
 
 import type { DbParams } from './dbPort.js';
+import type { FramedSyncNodeMetadata } from './framedSyncNodeRestore.js';
 
 export interface SyncNodeStatement {
   params: DbParams;
@@ -90,7 +91,8 @@ export function buildRemoteNodeUpdate(
   };
 }
 
-function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: string, syncDirty: number): DbParams {
+export function buildRemoteNodeMetadataParams(record: FramedSyncNodeMetadata, bodyBlobHash: string,
+  syncDirty: number, inlineContent: string): DbParams {
   const { snapshot } = record;
   const provenance = normalizeNodeImportProvenance({
     importContentFingerprint: snapshot.import_content_fingerprint,
@@ -109,7 +111,7 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
       snapshot.title,
       snapshot.is_title_manual ? 1 : 0,
       snapshot.hide_title_heading ? 1 : 0,
-      projectNodeInlineContent(snapshot.content ?? ''),
+      inlineContent,
       bodyBlobHash,
       snapshot.opening_text,
       snapshot.virtual_filter,
@@ -129,6 +131,10 @@ function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: strin
       snapshot.updated_at,
       snapshot.deleted_at
     ];
+}
+
+function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: string, syncDirty: number): DbParams {
+  return buildRemoteNodeMetadataParams(record, bodyBlobHash, syncDirty, projectNodeInlineContent(record.snapshot.content ?? ''));
 }
 
 export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): SyncNodeStatement | null {

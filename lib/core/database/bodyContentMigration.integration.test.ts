@@ -20,6 +20,7 @@ function oldDatabase() {
   sqlite.exec(`CREATE TABLE node_sync_versions (
     version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL, body_text TEXT, snapshot_json TEXT NOT NULL,
     content_hash TEXT NOT NULL, parent_version_id TEXT, host_name TEXT, created_at TEXT)`);
+  sqlite.exec('CREATE TABLE nodes (id TEXT PRIMARY KEY, content TEXT NOT NULL, body_blob_hash TEXT, updated_at TEXT NOT NULL)');
   return { sqlite, db: createBetterSqliteDbPort(sqlite) };
 }
 
@@ -75,6 +76,53 @@ it('maps readable, empty, retired and unavailable versions without two persisten
     ]);
     const history = await loadVerifiedBodyRef(db, hash('history'));
     expect(await readBodyText(db, history!)).toBe('history');
+  } finally { sqlite.close(); }
+});
+
+it('migrates unversioned current bodies and empties inline copies while preserving unavailable identities', async () => {
+  const { sqlite, db } = oldDatabase();
+  try {
+    const body = '\ufeff---\r\nkey: ' + 'x'.repeat(3 * 1024 * 1024) + '\r\n---\r\nOriginal';
+    const existing = insertBody(sqlite, '---\nkey: value\n---\nHashed');
+    const missing = hash('unavailable');
+    const insert = sqlite.prepare("INSERT INTO nodes VALUES (?, ?, ?, '2026-10-07T00:00:00Z')");
+    insert.run('inline', body, null);
+    insert.run('empty', '', '   ');
+    insert.run('hashed', '---\nkey: value\n---\n', existing);
+    insert.run('unavailable', 'old prefix', missing);
+    await migrateBodyContentStorage(db);
+    expect(sqlite.prepare('SELECT id, content, body_blob_hash FROM nodes ORDER BY id').all()).toEqual([
+      { id: 'empty', content: '', body_blob_hash: hash('') },
+      { id: 'hashed', content: '', body_blob_hash: existing },
+      { id: 'inline', content: '', body_blob_hash: hash(body) },
+      { id: 'unavailable', content: '', body_blob_hash: missing }
+    ]);
+    const ref = await loadVerifiedBodyRef(db, hash(body));
+    expect(await readBodyText(db, ref!)).toBe(body);
+    expect(ref!.frontmatterEnd).toBe(Buffer.byteLength(body) - Buffer.byteLength('Original'));
+    expect(await loadVerifiedBodyRef(db, missing)).toBeNull();
+    expect(sqlite.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
+    expect(sqlite.prepare('SELECT original_size_bytes FROM content_blobs WHERE hash = ?').pluck().get(hash(body)))
+      .toBe(Buffer.byteLength(body));
+  } finally { sqlite.close(); }
+});
+
+it('restores every original source when current-owner adoption fails after version migration', async () => {
+  const { sqlite, db } = oldDatabase();
+  try {
+    const digest = insertBody(sqlite, 'Original version');
+    insertVersion(sqlite, 'current', 'Original version', { content: 'Original version', body_blob_hash: digest });
+    sqlite.prepare("INSERT INTO nodes VALUES ('inline', 'Unversioned body', NULL, '2026-10-07T00:00:00Z')").run();
+    const before = sqlite.prepare('SELECT * FROM node_sync_versions').all();
+    sqlite.exec(`CREATE TRIGGER fail_current_adoption BEFORE UPDATE ON nodes
+      BEGIN SELECT RAISE(ABORT, 'current_owner_unavailable'); END`);
+    await expect(migrateBodyContentStorage(db)).rejects.toThrow('current_owner_unavailable');
+    expect(sqlite.prepare('SELECT * FROM node_sync_versions').all()).toEqual(before);
+    expect(sqlite.prepare("SELECT content, body_blob_hash FROM nodes WHERE id = 'inline'").get())
+      .toEqual({ content: 'Unversioned body', body_blob_hash: null });
+    expect(sqlite.prepare('SELECT data FROM content_blob_data WHERE hash = ?').get(digest))
+      .toEqual({ data: Buffer.from('Original version') });
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'content_bodies'").get()).toBeUndefined();
   } finally { sqlite.close(); }
 });
 

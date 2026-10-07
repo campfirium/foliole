@@ -75,7 +75,7 @@ export async function enqueueAppliedNodeBodySearchInvalidation(port: DbPort, nod
 export async function enqueueAppliedNodeSearchInvalidations(
   port: DbPort,
   _localNode: LocalSyncNodeSearchInvalidationState | null,
-  record: NativeSyncNodeRecord,
+  record: Pick<NativeSyncNodeRecord, 'object_id'>,
   updatedAt: string
 ) {
   await advanceWorkspaceSearchSourceRevision(port, updatedAt);

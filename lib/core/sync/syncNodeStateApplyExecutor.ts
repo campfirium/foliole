@@ -10,7 +10,7 @@ export interface AppliedNodeSyncStateOptions {
 
 export async function upsertAppliedNodeSyncState(
   port: DbPort,
-  record: NativeSyncNodeRecord,
+  record: Pick<NativeSyncNodeRecord, 'object_id' | 'version_id' | 'content_hash' | 'host_name' | 'updated_at' | 'snapshot'>,
   options: AppliedNodeSyncStateOptions = {}
 ) {
   const syncDirty = options.syncDirty ?? 0;
