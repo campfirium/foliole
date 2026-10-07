@@ -14,7 +14,7 @@ export function* utf8BodyTextChunks(content: string) {
 }
 
 /** Stable storage aligns raw byte blocks; UTF-8 characters may cross the byte boundary. */
-export async function* alignedBodyTextChunks(content: string, byteLength: number) {
+export function* alignedBodyTextChunks(content: string, byteLength: number) {
   let remaining = byteLength;
   let block = new Uint8Array(Math.min(remaining, BODY_CONTENT_CHUNK_BYTES));
   let written = 0;

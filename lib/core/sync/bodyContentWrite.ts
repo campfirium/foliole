@@ -1,3 +1,4 @@
+import { assertBodyManifestIdentity, bodyAdoptionStatement, BODY_MANIFEST_SQL, type BodyManifest } from '../database/bodyContentAdoption.js';
 import { BODY_CONTENT_CHUNK_BYTES } from '../database/bodyContentSchema.js';
 import { alignedBodyTextChunks } from '../database/bodyTextChunks.js';
 import { hashTextBodyWithLength } from '../database/textBodyHash.js';
@@ -19,7 +20,7 @@ export async function stageTextBodyContent(db: DbPort, content: string): Promise
 export async function stageBodyContent(db: DbPort, input: {
   hash: string;
   byteLength: number;
-  chunks: AsyncIterable<Uint8Array>;
+  chunks: Iterable<Uint8Array> | AsyncIterable<Uint8Array>;
 }): Promise<VerifiedBodyRef> {
   if (!/^[a-f0-9]{64}$/u.test(input.hash) || !Number.isSafeInteger(input.byteLength) ||
       input.byteLength < 0 || input.byteLength > 8 * 1024 * 1024 * 1024) {
@@ -52,18 +53,9 @@ export async function stageBodyContent(db: DbPort, input: {
 export async function adoptVerifiedBody(db: DbPort, ref: VerifiedBodyRef, now: string) {
   const stored = await loadVerifiedBodyRef(db, ref.hash);
   if (!stored || stored.byteLength !== ref.byteLength) throw new Error('body_content_unavailable');
-  await db.run(`INSERT INTO content_blobs (
-      hash, storage_key, kind, mime_type, compression, original_size_bytes, stored_size_bytes,
-      original_sha256, stored_sha256, availability, created_at, cached_at, last_verified_at
-    ) VALUES (?, ?, 'text_body', 'text/plain', 'none', ?, ?, ?, ?, 'local', ?, ?, ?)
-    ON CONFLICT(hash) DO NOTHING`,
-  [ref.hash, `text/${ref.hash}`, ref.byteLength, ref.byteLength, ref.hash, ref.hash, now, now, now]);
-  const [manifest] = await db.query<{ original_sha256: string; stored_sha256: string;
-    original_size_bytes: number; stored_size_bytes: number; compression: string }>(
-    `SELECT original_sha256, stored_sha256, original_size_bytes, stored_size_bytes, compression
-     FROM content_blobs WHERE hash = ?`, [ref.hash]);
-  if (!manifest || manifest.original_sha256 !== ref.hash || manifest.stored_sha256 !== ref.hash ||
-      manifest.original_size_bytes !== ref.byteLength || manifest.stored_size_bytes !== ref.byteLength ||
-      manifest.compression !== 'none') throw new Error('body_manifest_identity_conflict');
+  const statement = bodyAdoptionStatement(ref, now);
+  await db.run(statement.sql, statement.params);
+  const [manifest] = await db.query<BodyManifest>(BODY_MANIFEST_SQL, [ref.hash]);
+  assertBodyManifestIdentity(manifest, ref);
   return ref.hash;
 }

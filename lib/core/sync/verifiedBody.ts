@@ -1,16 +1,10 @@
-import { sha256 } from '@noble/hashes/sha2.js';
-import { bytesToHex } from '@noble/hashes/utils.js';
 import { z } from 'zod';
 
 import { BODY_CONTENT_CHUNK_BYTES } from '../database/bodyContentSchema.js';
 
-import { BodyFrontmatterRange } from './bodyFrontmatterRange.js';
+import { BodyContentVerification, bodyIdentity } from './bodyContentVerification.js';
 import type { DbPort } from './dbPort.js';
 
-const bodyIdentity = z.object({
-  hash: z.string().regex(/^[a-f0-9]{64}$/u),
-  byteLength: z.number().int().nonnegative().max(8 * 1024 * 1024 * 1024)
-});
 const verifiedBodyBrand: unique symbol = Symbol('verifiedBody');
 
 export type VerifiedBodyRef = Readonly<z.infer<typeof bodyIdentity> & {
@@ -23,6 +17,13 @@ export async function loadVerifiedBodyRef(db: DbPort, hash: string): Promise<Ver
   const [row] = await db.query<{ hash: string; byte_length: number; frontmatter_end: number | null; utf16_length: number }>(
     'SELECT hash, byte_length, frontmatter_end, utf16_length FROM content_bodies WHERE hash = ? AND verified = 1', [hash]);
   if (!row) return null;
+  return verifiedBodyRefFromHeader(row);
+}
+
+/** Called only with a verified persisted header or after raw-byte verification commits. */
+export function verifiedBodyRefFromHeader(row: {
+  hash: string; byte_length: number; frontmatter_end: number | null; utf16_length: number;
+}): VerifiedBodyRef {
   const frontmatterEnd = z.number().int().nonnegative().max(row.byte_length).nullable().parse(row.frontmatter_end);
   const utf16Length = z.number().int().nonnegative().max(row.byte_length).parse(row.utf16_length);
   return { ...bodyIdentity.parse({ hash: row.hash, byteLength: row.byte_length }),
@@ -77,35 +78,22 @@ export async function readBodyText(db: DbPort, ref: VerifiedBodyRef) {
 }
 
 export async function verifyBodyContent(db: DbPort, identity: z.infer<typeof bodyIdentity>): Promise<VerifiedBodyRef> {
-  const value = bodyIdentity.parse(identity);
-  const hash = sha256.create();
-  const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
-  const frontmatter = new BodyFrontmatterRange();
-  let offset = 0;
-  let utf16Length = 0;
+  const verification = new BodyContentVerification(identity);
+  const value = verification.identity;
   try {
     for (;;) {
       const [row] = await db.query<{ byte_offset: number; data: Uint8Array }>(
         `SELECT byte_offset, data FROM content_body_chunks
-         WHERE hash = ? AND byte_offset >= ? ORDER BY byte_offset LIMIT 1`, [value.hash, offset]);
+         WHERE hash = ? AND byte_offset >= ? ORDER BY byte_offset LIMIT 1`, [value.hash, verification.offset]);
       if (!row) break;
-      const expected = Math.min(BODY_CONTENT_CHUNK_BYTES, value.byteLength - offset);
-      if (row.byte_offset !== offset || !(row.data instanceof Uint8Array) ||
-          expected < 1 || row.data.byteLength !== expected) throw new Error('body_coverage_incomplete');
-      hash.update(row.data);
-      utf16Length += decoder.decode(row.data, { stream: true }).length;
-      frontmatter.push(row.data);
-      offset += row.data.byteLength;
+      verification.push(row.byte_offset, row.data);
     }
-    utf16Length += decoder.decode().length;
-    if (offset !== value.byteLength) throw new Error('body_coverage_incomplete');
-    if (bytesToHex(hash.digest()) !== value.hash) throw new Error('body_hash_mismatch');
-    const frontmatterEnd = frontmatter.finish();
+    const { utf16Length, frontmatterEnd } = verification.finish();
     const result = await db.run(`UPDATE content_bodies SET verified = 1, frontmatter_end = ?, utf16_length = ?
       WHERE hash = ? AND byte_length = ?`, [frontmatterEnd, utf16Length, value.hash, value.byteLength]);
     if (result.changes !== 1) throw new Error('body_identity_missing');
     return { ...value, frontmatterEnd, utf16Length, [verifiedBodyBrand]: true };
   } finally {
-    hash.destroy();
+    verification.destroy();
   }
 }
