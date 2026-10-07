@@ -2,14 +2,55 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { retireDuplicateNodeInlineContent } from '../../lib/core/database/nodeInlineRetirement.js';
-import { collectTextBodyBlobCandidates } from '../../lib/core/database/textBodyBlobCollection.js';
+import { collectTextBodyBlobCandidates, collectTextBodyBlobCandidatesWithPort } from '../../lib/core/database/textBodyBlobCollection.js';
 
 import { closeLibraries, createPeer, edit, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { observeReads } from './syncNodeVerifiedTopicConflict.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 const NOW = '2026-10-01T01:00:00.000Z';
+
+it('protects and releases large raw text and nested JSON holders without complete body bridge reads', async () => {
+  const peer = createPeer('source');
+  const body = '\uFEFF' + ('🙂雪\u0000'.repeat(400000));
+  const hash = upsertTextBodyBlob(peer.driver, body, NOW);
+  peer.db.prepare('INSERT INTO editor_operation_history VALUES (1, ?, ?)')
+    .run(JSON.stringify({ original: body }), NOW);
+  peer.db.prepare(`INSERT INTO keep_import_item_cache
+    (rule_id, source_path, title, content, source_mtime_ms, source_size_bytes, refreshed_at)
+    VALUES ('large', 'original', 'Original', ?, 0, 0, ?)`)
+    .run(body, NOW);
+  const sizes: number[] = [];
+  const inspect = <T extends DatabaseRow>(row: T | undefined) => {
+    for (const value of Object.values(row ?? {})) {
+      const size = typeof value === 'string' ? Buffer.byteLength(value)
+        : value instanceof Uint8Array ? value.byteLength : 0;
+      expect(size).toBeLessThanOrEqual(512 * 1024);
+      if (size) sizes.push(size);
+    }
+    return row;
+  };
+  const driver: DatabaseDriver = { ...peer.driver,
+    queryOne: <T extends DatabaseRow>(sql: string, params?: Parameters<DatabaseDriver['queryOne']>[1]) =>
+      inspect(peer.driver.queryOne<T>(sql, params)),
+    transaction: (run) => peer.driver.transaction(() => run(driver))
+  };
+  expect(collectTextBodyBlobCandidates(driver, [hash]).deletedHashes).toEqual([]);
+  expect(Math.max(...sizes)).toBeLessThanOrEqual(512 * 1024);
+  expect(sizes.length).toBeGreaterThan(1);
+  const reads = observeReads(peer.port);
+  expect((await collectTextBodyBlobCandidatesWithPort(reads.port, [hash])).deletedHashes).toEqual([]);
+  peer.db.prepare('DELETE FROM editor_operation_history').run();
+  expect((await collectTextBodyBlobCandidatesWithPort(reads.port, [hash])).deletedHashes).toEqual([]);
+  peer.db.prepare('DELETE FROM keep_import_item_cache').run();
+  expect(await collectTextBodyBlobCandidatesWithPort(reads.port, [hash]))
+    .toEqual({ deletedHashes: [hash], deletedBytes: Buffer.byteLength(body) });
+  expect(Math.max(...reads.sizes)).toBeLessThanOrEqual(512 * 1024);
+  expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(hash)).toBeUndefined();
+});
 
 it('collects only selected unheld text bodies and is idempotent', () => {
   const peer = createPeer('source');

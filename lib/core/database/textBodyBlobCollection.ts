@@ -1,12 +1,12 @@
 import type { DbPort } from '../sync/dbPort.js';
 
 import type { DatabaseDriver } from './driver.js';
+import { verifyTextBodyCandidate, verifyTextBodyCandidateWithPort } from './textBodyBlobCandidate.js';
 import {
-  BODY_CANDIDATE_SQL, bodyHolderQueries, DELETE_BODY_DATA_SQL, DELETE_BODY_METADATA_SQL, inspectBodyCandidate
+  bodyHolderQueries, DELETE_BODY_DATA_SQL, DELETE_BODY_METADATA_SQL
 } from './textBodyBlobCollectionQueries.js';
 
 const TABLES_SQL = "SELECT name FROM sqlite_master WHERE type = 'table'";
-type Candidate = { kind: string; data: string };
 
 /** Only selected candidates are considered; malformed holder facts abort the transaction. */
 export function collectTextBodyBlobCandidates(driver: DatabaseDriver, hashes: readonly string[]) {
@@ -15,9 +15,9 @@ export function collectTextBodyBlobCandidates(driver: DatabaseDriver, hashes: re
     const deletedHashes: string[] = [];
     let deletedBytes = 0;
     for (const hash of new Set(hashes)) {
-      const body = inspectBodyCandidate(hash, driver.queryOne<Candidate>(BODY_CANDIDATE_SQL, [hash]));
+      const body = verifyTextBodyCandidate(driver, hash);
       if (!body) continue;
-      if (bodyHolderQueries(tables, hash, body.text).some(({ sql, params }) => driver.queryOne(sql, params))) continue;
+      if (bodyHolderQueries(tables, hash).some(({ sql, params }) => driver.queryOne(sql, params))) continue;
       driver.execute(DELETE_BODY_DATA_SQL, [hash]);
       driver.execute(DELETE_BODY_METADATA_SQL, [hash]);
       deletedHashes.push(hash);
@@ -34,9 +34,8 @@ export async function collectTextBodyBlobCandidatesWithPort(port: DbPort, hashes
     const deletedHashes: string[] = [];
     let deletedBytes = 0;
     for (const hash of new Set(hashes)) {
-      const [row] = await tx.query<Candidate>(BODY_CANDIDATE_SQL, [hash]);
-      const body = inspectBodyCandidate(hash, row);
-      if (!body || await hasBodyHolder(tx, tables, hash, body.text)) continue;
+      const body = await verifyTextBodyCandidateWithPort(tx, hash);
+      if (!body || await hasBodyHolder(tx, tables, hash)) continue;
       await tx.run(DELETE_BODY_DATA_SQL, [hash]);
       await tx.run(DELETE_BODY_METADATA_SQL, [hash]);
       deletedHashes.push(hash);
@@ -46,8 +45,8 @@ export async function collectTextBodyBlobCandidatesWithPort(port: DbPort, hashes
   });
 }
 
-async function hasBodyHolder(tx: DbPort, tables: Set<string>, hash: string, text: string) {
-  for (const { sql, params } of bodyHolderQueries(tables, hash, text)) {
+async function hasBodyHolder(tx: DbPort, tables: Set<string>, hash: string) {
+  for (const { sql, params } of bodyHolderQueries(tables, hash)) {
     if ((await tx.query(sql, params)).length) return true;
   }
   return false;

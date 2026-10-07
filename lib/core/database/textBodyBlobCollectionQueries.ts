@@ -1,7 +1,5 @@
 import type { DbParams } from '../sync/dbPort.js';
 
-import { hashTextBody } from './textBodyHash.js';
-
 // Desktop-only holders are absent from companion schemas; existing holder columns are mandatory.
 export const TEXT_BODY_HOLDERS = [
   ['nodes', 'body_blob_hash', 'hash'], ['external_documents', 'body_blob_hash', 'hash'],
@@ -19,32 +17,22 @@ export const TEXT_BODY_HOLDERS = [
   ['readwise_api_reconcile_stage', 'payload_json', 'json']
 ] as const;
 
-export const BODY_CANDIDATE_SQL = `SELECT b.kind, CAST(data.data AS TEXT) AS data FROM content_blobs b
-  JOIN content_blob_data data ON data.hash = b.hash WHERE b.hash = ?`;
 export const DELETE_BODY_DATA_SQL = 'DELETE FROM content_blob_data WHERE hash = ?';
 export const DELETE_BODY_METADATA_SQL = "DELETE FROM content_blobs WHERE hash = ? AND kind = 'text_body'";
 
-export function inspectBodyCandidate(hash: string, row?: { kind: string; data: unknown }) {
-  if (!/^[a-f0-9]{64}$/.test(hash)) throw new Error('text_body_collection_invalid_hash');
-  if (!row || row.kind !== 'text_body') return null;
-  const text = typeof row.data === 'string' ? row.data
-    : row.data instanceof Uint8Array ? new TextDecoder().decode(row.data) : null;
-  if (text === null || hashTextBody(text) !== hash) throw new Error(`text_body_collection_invalid_bytes:${hash}`);
-  return { text, bytes: new TextEncoder().encode(text).byteLength };
-}
-
-export function bodyHolderQueries(tables: Set<string>, hash: string, text: string) {
+export function bodyHolderQueries(tables: Set<string>, hash: string) {
+  const text = '(SELECT CAST(data AS TEXT) FROM content_blob_data WHERE hash = ?)';
   const queries = TEXT_BODY_HOLDERS.filter(([table]) => tables.has(table)).map(([table, column, kind]) => {
     let condition = `${column} = ?`;
     let params: DbParams = [hash];
     if (kind === 'text') {
-      condition = `${column} = ? OR instr(${column}, ?) > 0`;
-      params = [text, hash];
+      condition = `${column} = ${text} OR instr(${column}, ?) > 0`;
+      params = [hash, hash];
     } else if (kind === 'json') {
       condition = `EXISTS (SELECT 1 FROM json_tree(${table}.${column}) fact
-        WHERE (fact.type = 'text' AND (fact.value = ? OR instr(fact.value, ?) > 0))
-          OR (typeof(fact.key) = 'text' AND (fact.key = ? OR instr(fact.key, ?) > 0)))`;
-      params = [text, hash, text, hash];
+        WHERE (fact.type = 'text' AND (fact.value = ${text} OR instr(fact.value, ?) > 0))
+          OR (typeof(fact.key) = 'text' AND (fact.key = ${text} OR instr(fact.key, ?) > 0)))`;
+      params = [hash, hash, hash, hash];
     }
     const payload = table === 'node_sync_versions' && kind === 'json'
       ? ` AND (body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text')` : '';

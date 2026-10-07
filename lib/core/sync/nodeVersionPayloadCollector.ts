@@ -1,4 +1,4 @@
-import { RELEASED_VERSION_BODY_SQL, releasedVersionBodyHashes, type ReleasedVersionBody } from '../database/releasedVersionBodyHashes.js';
+import { releasedVersionBodyHashesWithPort } from '../database/releasedVersionBodyHashes.js';
 import { collectTextBodyBlobCandidatesWithPort } from '../database/textBodyBlobCollection.js';
 
 import type { DbPort } from './dbPort.js';
@@ -28,12 +28,12 @@ export async function collectNodeVersionPayloads(port: DbPort, nodeId: string, l
     const frozen = new Set(refs.filter((row) => row.frozen && row.version_id).map((row) => row.version_id!));
     const plan = planNodeVersionMetadataChain(await tx.query<ChainVersionMetadata>(CHAIN_VERSION_METADATA_SQL, [nodeId]),
       await tx.query<ChainEdge>(CHAIN_EDGES_SQL, [nodeId]), keep, frozen, limit, new Set([node.current_version_id]));
-    const releasedBodies: ReleasedVersionBody[] = [];
+    const releasedHashes = new Set<string>();
     for (const id of plan.removed ?? []) {
-      releasedBodies.push(...await tx.query<ReleasedVersionBody>(RELEASED_VERSION_BODY_SQL, [id]));
+      for (const hash of await releasedVersionBodyHashesWithPort(tx, id)) releasedHashes.add(hash);
     }
     for (const statement of chainMutationStatements(plan)) await tx.run(statement.sql, statement.params);
-    if (releasedBodies.length) await collectTextBodyBlobCandidatesWithPort(tx, releasedVersionBodyHashes(releasedBodies));
+    if (releasedHashes.size) await collectTextBodyBlobCandidatesWithPort(tx, [...releasedHashes]);
     return { released: plan.removed?.length ?? 0, skipped: plan.skipped };
   });
 }
