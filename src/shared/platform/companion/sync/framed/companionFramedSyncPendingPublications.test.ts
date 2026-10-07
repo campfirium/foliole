@@ -10,6 +10,7 @@ import { FRAMED_SYNC_STAGING_SCHEMA } from '../../../../../../lib/core/database/
 import { SYNC_GROUP_METADATA_SCHEMA } from '../../../../../../lib/core/database/syncGroupSchemaStatements.js';
 import { canonicalContentId, canonicalTransferId } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { publishFramedSyncOutboundWithDbPort } from '../../../../../../lib/core/sync/framedSyncOutboundStaging.js';
+import { PARENT_ORDER_VERSION_SCHEMA } from '../../../../../../lib/core/sync/syncParentOrderVersionStore.js';
 
 const mocks = vi.hoisted(() => ({ db: undefined as unknown, send: vi.fn() }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({
@@ -60,7 +61,7 @@ function database(persistent = false) {
   }
   sqlite = new Database(persistent ? path.join(directory, 'route.db') : ':memory:');
   sqlite.exec(SYNC_GROUP_METADATA_SCHEMA);
-  for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
+  for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...PARENT_ORDER_VERSION_SCHEMA]) sqlite.exec(sql);
   sqlite.exec(`CREATE TABLE sync_group_local_state (singleton_id INTEGER, state TEXT,
     group_id TEXT, local_device_identity_key TEXT);
     INSERT INTO sync_group_local_state VALUES (1, 'active', 'group', 'A');

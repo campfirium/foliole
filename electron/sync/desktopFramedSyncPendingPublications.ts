@@ -1,10 +1,13 @@
 import { framedSyncBytes } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbRow } from '../../lib/core/sync/dbPort.js';
+import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { sendWithRequiredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyDelivery.js';
+import { collectDeliveredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyRetention.js';
 import { loadSyncGroupLocalAdoption, isSyncGroupPeerAdopting } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 
 import { prepareDesktopFramedSyncPublishedTransfer,
   sendDesktopFramedSyncPublishedTransfer } from './desktopFramedSyncProcessOutbound.js';
-import type { createDesktopFramedSyncRoundEndpoint } from './desktopFramedSyncRoundEndpoint.js';
+import { createDesktopFramedSyncRoundEndpoint } from './desktopFramedSyncRoundEndpoint.js';
 
 type EndpointInput = Parameters<typeof createDesktopFramedSyncRoundEndpoint>[0];
 
@@ -25,12 +28,27 @@ export async function resumeDesktopFramedSyncPendingPublications(input: Endpoint
     const transferId = framedSyncBytes(row, 'transfer_id');
     if (row.state === 'receipt_committed') {
       await input.staging.releaseOutboundHolds(transferId);
+      await collectDeliveredParentOrderBodies(input.db, transferId);
       continue;
     }
     const publication = await input.staging.loadOutboundPublication(transferId);
     if (!publication) throw new Error('framed_sync_outbound_publication_missing');
     const attempt = await prepareDesktopFramedSyncPublishedTransfer({ ...input, publication });
-    await sendDesktopFramedSyncPublishedTransfer({ ...input, attempt, publication });
+    await sendWithRequiredParentOrderBodies(
+      () => sendDesktopFramedSyncPublishedTransfer({ ...input, attempt, publication }),
+      (versionId) => supplyOrderBody(input, versionId));
   }
   return rows.length;
+}
+
+async function supplyOrderBody(input: EndpointInput, versionId: string) {
+  const endpoint = createDesktopFramedSyncRoundEndpoint(input);
+  const entry = await endpoint.readInventoryEntry({ globalId: versionId, objectType: 'order_version' });
+  if (!entry) throw new Error(`sync_parent_order_body_unavailable:${versionId}`);
+  const [difference] = compareFramedSyncInventories({ local: [entry], remote: [] });
+  const selection = await endpoint.selectOutbound(difference!);
+  if (selection.kind === 'deferred') throw new Error('framed_sync_required_body_source_changed');
+  await endpoint.staging.publishOutbound(selection.publication);
+  if (await endpoint.sendPublishedTransfer({ difference: difference!, publication: selection.publication,
+    receiver: 'remote' }) !== 'committed') throw new Error('framed_sync_required_body_pending');
 }

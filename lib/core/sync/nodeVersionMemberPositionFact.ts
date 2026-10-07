@@ -15,10 +15,14 @@ export const nodePositionPayloadSchema = z.object({
   updated_at: z.string().min(1)
 }).strict();
 export type NodePositionPayload = z.infer<typeof nodePositionPayloadSchema>;
+export type VersionPositionDomain = 'node' | 'parent_child_order';
+export const versionPositionStorage = (domain: VersionPositionDomain) => domain === 'node'
+  ? { table: 'node_version_member_positions', objectType: 'node_position', versionTable: 'node_sync_versions', ownerColumn: 'object_id' }
+  : { table: 'parent_order_member_positions', objectType: 'parent_order_position', versionTable: 'parent_order_versions', ownerColumn: 'parent_id' };
 
 export function nodePositionFactId(position: Pick<NodePositionPayload,
-  'group_id' | 'device_identity_key' | 'object_id'>) {
-  return `pos_${hashText(JSON.stringify([position.group_id,
+  'group_id' | 'device_identity_key' | 'object_id'>, domain: VersionPositionDomain = 'node') {
+  return `${domain === 'node' ? 'pos' : 'ord_pos'}_${hashText(JSON.stringify([position.group_id,
     position.device_identity_key, position.object_id]))}`;
 }
 
@@ -33,10 +37,11 @@ export function parseNodePositionPayload(raw: unknown) {
 }
 
 /** Store the latest original declaration; relays preserve its revision and complete position set. */
-export function nodePositionWriteStatements(value: NodePositionPayload) {
+export function nodePositionWriteStatements(value: NodePositionPayload, domain: VersionPositionDomain = 'node') {
   const payload = nodePositionPayloadSchema.parse(value);
-  const id = nodePositionFactId(payload);
-  return [{ sql: `INSERT INTO node_version_member_positions
+  const id = nodePositionFactId(payload, domain);
+  const storage = versionPositionStorage(domain);
+  return [{ sql: `INSERT INTO ${storage.table}
     (fact_id, group_id, device_identity_key, object_id, library_epoch, proof_revision,
       adopted_version_id, pending_version_ids_json, updated_at, resolved_revision)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
@@ -50,7 +55,7 @@ export function nodePositionWriteStatements(value: NodePositionPayload) {
   { sql: `INSERT INTO sync_object_state
     (object_type, object_id, state_seq, current_version_id, content_hash,
       last_modified_by_host_name, updated_at, deleted_at, sync_dirty)
-    VALUES ('node_position', ?, ${NEXT_SYNC_STATE_SEQ_SQL}, NULL, ?, ?, ?, NULL, 0)
+    VALUES ('${storage.objectType}', ?, ${NEXT_SYNC_STATE_SEQ_SQL}, NULL, ?, ?, ?, NULL, 0)
     ON CONFLICT(object_type, object_id) DO UPDATE SET state_seq = excluded.state_seq,
       content_hash = excluded.content_hash, updated_at = excluded.updated_at,
       last_modified_by_host_name = excluded.last_modified_by_host_name`,

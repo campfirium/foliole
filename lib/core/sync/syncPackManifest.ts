@@ -52,6 +52,7 @@ export const SYNC_PACK_PAYLOAD_OBJECT_TYPES = new Set([
   'parent_child_order',
   'order_version',
   'node_position',
+  'parent_order_position',
   'pdf_page_text',
   'setting',
   'watched_folder',

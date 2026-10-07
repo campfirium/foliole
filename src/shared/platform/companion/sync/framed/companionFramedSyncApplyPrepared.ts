@@ -6,6 +6,7 @@ import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/fr
 import { assertFramedSyncNodeParentDependencies } from '../../../../../../lib/core/sync/framedSyncNodeParentDependencies.js';
 import { applyFramedSyncObjectStateRecord } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewApply.js';
+import { replayRetiredParentOrderBodies } from '../../../../../../lib/core/sync/parentOrderBodyReplay.js';
 import { assertSyncGroupLocalPublicationAllowed, finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { clearWorkgroupSyncDataForRestore } from '../../../../../../lib/core/sync/syncGroupRestoreReset.js';
 import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
@@ -28,6 +29,7 @@ export function applyPreparedCompanionFramedSyncTransfers(
       const [existing] = await tx.query<DbRow>('SELECT * FROM framed_sync_receipts WHERE transfer_id = ?',
         [transfer.input.transferId]);
       if (!existing) pending.push(transfer);
+      else await replayRetiredParentOrderBodies(tx, transfer.decoded.readingStates);
     }
     await applyFacts(tx, pending, Boolean(adoption));
     const receipts = await Promise.all(transfers.map((transfer) => commitReceipt(tx, transfer)));

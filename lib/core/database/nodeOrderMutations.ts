@@ -1,3 +1,4 @@
+import { collectParentOrderBodiesWithDriver } from '../sync/parentOrderBodyRetention.js';
 import { restoreParentOrderSnapshot } from '../sync/syncVersionedParentOrderMerge.js';
 
 import type { DatabaseDriver } from './driver.js';
@@ -22,6 +23,7 @@ function persistParentOrder(driver: DatabaseDriver, parentId: string, before: st
       contentHash: computeSyncContentHash('parent_child_order', { parent_id: parentId, child_ids_json: childIdsJson }),
       lastModifiedByHostName: hostName, updatedAt: now, syncDirty: true
     });
+    collectParentOrderBodiesWithDriver(driver, parentId);
   });
 }
 
@@ -106,6 +108,7 @@ export function restoreSavedParentOrder(driver: DatabaseDriver, input: {
       `SELECT parent_id, child_ids_json FROM parent_order_versions WHERE version_id = ?`,
       [input.versionId]);
     if (saved?.parent_id !== input.parentId) throw new Error('sync_parent_order_snapshot_missing');
+    if (saved.child_ids_json === 'null') throw new Error('sync_parent_order_body_unavailable');
     const current = readParentChildOrders(driver).get(input.parentId) ?? [];
     const members = readOrderMembers(driver).filter((row) =>
       !row.deleted_at && parentOrderId(row.parent_id) === input.parentId);

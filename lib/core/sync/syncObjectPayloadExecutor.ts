@@ -1,6 +1,6 @@
 import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import type { DbPort } from './dbPort.js';
-import { applyNodeMemberPosition } from './nodeVersionMemberPositionApply.js';
+import { applyNodeMemberPosition, applyVersionMemberPosition } from './nodeVersionMemberPositionApply.js';
 import { applyForegroundDailyTime } from './syncForegroundDailyTime.js';
 import { applyExternalFolderObject } from './syncObjectExternalFolderPayloadExecutor.js';
 import { applyImportSourceObject } from './syncObjectImportSourcePayloadExecutor.js';
@@ -40,6 +40,8 @@ export async function applySyncObjectPayloadWithDbPort(
       return applyParentChildOrderObject(port, record);
     case 'node_position':
       return applyNodeMemberPosition(port, record);
+    case 'parent_order_position':
+      return applyVersionMemberPosition(port, record, 'parent_child_order');
     case 'order_version':
       return applyParentOrderFactObject(port, record);
     case 'node_reading':

@@ -45,6 +45,20 @@ it('recovers an unacknowledged publication on normal peer reconnect with no inve
   const id = pending[0]!.id;
   expect(publicationEvidence(fixture.rightSnapshot.databasePath).receipts)
     .toContainEqual({ id, receiver_device_id: 'desktop-b' });
+  const positionDifferences = compareFramedSyncInventories({ local: await readFixtureInventory(fixture.left),
+    remote: await readFixtureInventory(fixture.right) });
+  expect(positionDifferences.every((value) => value.objectType === 'parent_order_position')).toBe(true);
+  for (const difference of positionDifferences) {
+    const localSource = difference.direction === 'local_to_remote';
+    const source = localSource ? fixture.left : fixture.right;
+    const peer = localSource ? fixture.rightSnapshot : fixture.leftSnapshot;
+    const selected = z.object({ publication: z.object({ transferId: z.instanceof(Uint8Array) }) })
+      .parse(await source.invoke('round', { input: { kind: 'select',
+        difference: { ...difference, direction: 'local_to_remote' },
+        peer: { deviceId: peer.deviceId, libraryEpoch: `${peer.deviceId}-epoch` }, peerOrigin: peer.origin } }));
+    await source.invoke('round', { input: { kind: 'send',
+      transferId: Buffer.from(selected.publication.transferId).toString('hex') } });
+  }
   expect(compareFramedSyncInventories({ local: await readFixtureInventory(fixture.left),
     remote: await readFixtureInventory(fixture.right) })).toEqual([]);
   const restarted = await fixture.restartLeft();

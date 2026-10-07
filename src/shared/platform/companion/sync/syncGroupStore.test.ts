@@ -5,6 +5,7 @@ import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../../../../lib/cor
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupRestoreSchemaStatements';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/syncGroupSchemaStatements';
 import type { DbParams, DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
+import { PARENT_ORDER_VERSION_SCHEMA } from '../../../../../lib/core/sync/syncParentOrderVersionStore';
 import type { SyncGroupJoinMode } from '../../../../../lib/platform/syncGroupJoinMode';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
 
@@ -39,6 +40,7 @@ const join = (mode: SyncGroupJoinMode = 'use-group') => joinCompanionSyncGroup({
 
 beforeEach(() => {
   sqlite = new Database(':memory:');
+  for (const statement of PARENT_ORDER_VERSION_SCHEMA) sqlite.exec(statement);
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
   for (const statement of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(statement);
   sqlite.exec('CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT)');

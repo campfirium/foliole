@@ -1,4 +1,9 @@
 export const SYNC_OBJECT_PAYLOAD_SQL_BY_TYPE = {
+  parent_order_position: `SELECT json_object('adopted_version_id', adopted_version_id,
+    'device_identity_key', device_identity_key, 'group_id', group_id,
+    'library_epoch', library_epoch, 'object_id', object_id,
+    'pending_version_ids_json', pending_version_ids_json, 'proof_revision', proof_revision,
+    'updated_at', updated_at) AS payload_json FROM parent_order_member_positions WHERE fact_id = ?`,
   node_position: `SELECT json_object('adopted_version_id', adopted_version_id,
     'device_identity_key', device_identity_key, 'group_id', group_id,
     'library_epoch', library_epoch, 'object_id', object_id,

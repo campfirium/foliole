@@ -6,6 +6,7 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
+import { runDesktopFramedSyncOrderCommand } from './desktopFramedSyncOrder.fixture.js';
 import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecovery.fixture.js';
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
 import { seedDesktopFramedSyncResourceCommand } from './desktopFramedSyncResourceProcessScenario.js';
@@ -161,6 +162,9 @@ async function run(command: Command) {
   if (command.action === 'seed') return seed(command.args);
   if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
   if (command.action === 'seedBatch') return seedBatch(command.args);
+  if (['reorder', 'restore_order', 'standalone_edit', 'rejoin', 'register_order_member'].includes(command.action)) {
+    return runDesktopFramedSyncOrderCommand(command.action, command.args);
+  }
   if (command.action === 'collect_content') return collectDesktopFramedSyncFixtureContent();
   if (command.action === 'snapshot') return snapshot();
   if (command.action === 'round') return (await loadProcessPort()).round(command.args.input);

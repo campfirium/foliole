@@ -7,7 +7,7 @@ import {
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
-import { deliverFramedSyncDifferencesInDependencyOrder } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import type {
   NativeCompanionFramedSyncInventoryEntry,
@@ -81,7 +81,8 @@ async function pullDifference(args: NativeCompanionFramedSyncInventoryRequest,
 }
 
 async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventoryRequest,
-  differences: readonly FramedSyncInventoryDifference[], roundId: Uint8Array) {
+  differences: readonly FramedSyncInventoryDifference[], roundId: Uint8Array,
+  dependencies: readonly FramedSyncInventoryDifference[]) {
   const received = new Map<string, { objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }>();
   const deferredObjects = new Map<string, FramedSyncDeferredObject>();
   const defer = (difference: Pick<FramedSyncInventoryDifference, 'globalId' | 'objectType'>) =>
@@ -101,7 +102,7 @@ async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventory
       defer(difference);
       return 'deferred';
     }
-  });
+  }, dependencies);
   for (const difference of dependencyDeferred) defer(difference);
   return {
     deferredObjects: [...deferredObjects.values()],
@@ -154,10 +155,12 @@ export async function sendCompanionFramedSyncInventoryDifferences(
   const local = localValue.entries.map(decodeEntry);
   const selection = selectCompanionFramedSyncCurrentNodes({ local, remote: remoteResult.entries });
   const deferredObjects = [...selection.deferredObjects];
-  const pulled = await pullInventoryDifferences(args, selection.pullable, remoteResult.roundId);
+  const dependencies = framedSyncOrderBodyDependencies({ local, remote: remoteResult.entries });
+  const pulled = await pullInventoryDifferences(args, selection.pullable, remoteResult.roundId,
+    dependencies.filter((difference) => difference.direction === 'remote_to_local'));
   deferredObjects.push(...pulled.deferredObjects);
   const sent: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
-  for (const difference of selection.sendable) {
+  const sendDeferred = await deliverFramedSyncDifferencesInDependencyOrder(selection.sendable, async (difference) => {
     const currentValue = await owner.read((db) =>
       readCompanionFramedSyncInventoryEntry(db, difference));
     const current = decodeOptionalEntry(currentValue);
@@ -166,14 +169,12 @@ export async function sendCompanionFramedSyncInventoryDifferences(
       direction: 'local_to_remote'
     });
     if (revalidated.deferredObjects.length) {
-      deferredObjects.push(...revalidated.deferredObjects);
-      continue;
+      return 'deferred';
     }
     if (difference.objectType === 'node' && current && current.resourceHashes.length === 0 &&
         (difference.need.sharedState || difference.need.frontierFactIds.length > 0 ||
           difference.need.requiredRelationIds.length > 0)) {
-      deferredObjects.push({ globalId: difference.globalId, objectType: 'node' });
-      continue;
+      return 'deferred';
     }
     const receipt = await sendCompanionFramedSyncObject({
       endpointUrl: args.endpoint_url, groupId: args.sync_group_id,
@@ -186,6 +187,8 @@ export async function sendCompanionFramedSyncInventoryDifferences(
       stateFactIds: difference.need.stateFactIds ?? []
     });
     sent.push({ objectId: difference.globalId, receipt });
-  }
+    return 'delivered';
+  }, dependencies.filter((difference) => difference.direction === 'local_to_remote'));
+  deferredObjects.push(...sendDeferred.map(({ globalId, objectType }) => ({ globalId, objectType })));
   return { deferredObjects, received: pulled.received, sent };
 }

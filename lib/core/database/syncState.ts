@@ -15,6 +15,7 @@ export type SyncObjectType =
   | 'parent_child_order'
   | 'order_version'
   | 'node_position'
+  | 'parent_order_position'
   | 'node_open_state'
   | 'node_reading'
   | 'node_review'

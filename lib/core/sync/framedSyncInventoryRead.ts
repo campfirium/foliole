@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { DbPort, DbRow } from './dbPort.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInventory.js';
+import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
 import { loadSyncGroupLocalAdoption } from './syncGroupLocalAdoption.js';
 import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
 
@@ -48,7 +49,13 @@ async function read(port: DbPort, key?: InventoryKey) {
 }
 
 export function readFramedSyncInventory(port: DbPort) {
-  return port.transaction(async (tx) => await loadSyncGroupLocalAdoption(tx) ? [] : read(tx));
+  return port.transaction(async (tx) => {
+    if (await loadSyncGroupLocalAdoption(tx)) return [];
+    for (const row of await tx.query<{ parent_id: string }>('SELECT parent_id FROM parent_order_heads')) {
+      await publishParentOrderPosition(tx, row.parent_id);
+    }
+    return read(tx);
+  });
 }
 
 export async function readFramedSyncInventoryEntry(port: DbPort, key: InventoryKey) {

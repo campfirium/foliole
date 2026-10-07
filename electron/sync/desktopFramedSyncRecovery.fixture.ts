@@ -1,5 +1,6 @@
 import { collectTextBodyBlobCandidates } from '../../lib/core/database/textBodyBlobCollection.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
+import { collectParentOrderBodies } from '../../lib/core/sync/parentOrderBodyRetention.js';
 import { runDesktopAttachmentMaintenance } from '../attachments/attachmentMaintenanceService.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -10,6 +11,9 @@ export async function collectDesktopFramedSyncFixtureContent() {
   const db = createBetterSqliteDbPort(connection.sqlite);
   for (const row of await db.query<{ id: string }>('SELECT id FROM nodes')) {
     await collectNodeVersionPayloads(db, row.id, 32, true);
+  }
+  for (const row of await db.query<{ parent_id: string }>('SELECT parent_id FROM parent_order_heads')) {
+    await collectParentOrderBodies(db, row.parent_id);
   }
   const hashes = connection.driver.queryAll<{ hash: string }>(
     "SELECT hash FROM content_blobs WHERE kind = 'text_body'").map((row) => row.hash);

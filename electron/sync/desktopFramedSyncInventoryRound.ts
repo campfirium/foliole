@@ -5,7 +5,7 @@ import {
 } from '../../lib/core/sync/framedSyncContract.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
-import { deliverFramedSyncDifferencesInDependencyOrder } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
@@ -84,13 +84,14 @@ export async function runDesktopFramedSyncInventoryRound(args: {
     db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
     local, peer: remote, peerOrigin: args.peer.endpoint_url, staging: runtime.staging
   });
-  return transferDifferences(differences, endpoint, inbound);
+  return transferDifferences(differences, endpoint, inbound, framedSyncOrderBodyDependencies(inventories));
 }
 
 async function transferDifferences(
   differences: ReturnType<typeof compareFramedSyncInventories>,
   endpoint: ReturnType<typeof createDesktopFramedSyncRoundEndpoint>,
-  inbound: InboundRound
+  inbound: InboundRound,
+  dependencies: ReturnType<typeof framedSyncOrderBodyDependencies>
 ) {
   let transferred = 0;
   const deferred = await deliverFramedSyncDifferencesInDependencyOrder(differences, async (difference) => {
@@ -110,7 +111,7 @@ async function transferDifferences(
     });
     transferred += 1;
     return state === 'pending' ? 'deferred' : 'delivered';
-  });
+  }, dependencies);
   return { complete: deferred.length === 0, pending: deferred.length, transferred };
 }
 

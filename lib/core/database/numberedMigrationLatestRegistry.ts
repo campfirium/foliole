@@ -42,6 +42,7 @@ import {
 } from './numberedMigrationWatchedFolderConflicts.js';
 import { migrateWatchedSourceIdentity } from './numberedMigrationWatchedSourceIdentity.js';
 import { recoverWatchedSourcesAndPaths } from './numberedMigrationWatchedSourceRecovery.js';
+import { PARENT_ORDER_BODY_RETENTION_SCHEMA } from './parentOrderBodyRetentionSchema.js';
 import { migrateParentOrderVersions } from './parentOrderVersionMigration.js';
 import { migrateReadwiseApiImport } from './readwiseApiImportMigration.js';
 import { migrateReadwiseApiReconcile } from './readwiseApiReconcileMigration.js';
@@ -231,5 +232,8 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 142, migrate: (sqlite) => sqlite.exec(SYNC_GROUP_METADATA_SCHEMA) },
   { version: 143, migrate: migrateRetiredExternalDocuments },
   { version: 144, migrate: migrateFramedSyncTombstoneInventory },
-  { version: 145, migrate: migrateFramedSyncPermanentDeleteHistory }
+  { version: 145, migrate: migrateFramedSyncPermanentDeleteHistory },
+  { version: 146, migrate: (sqlite) => {
+    for (const statement of PARENT_ORDER_BODY_RETENTION_SCHEMA) sqlite.exec(statement);
+  } }
 ];

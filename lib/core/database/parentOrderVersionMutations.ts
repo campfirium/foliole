@@ -1,4 +1,5 @@
 import { createOpaqueVersionRef } from '../sync/opaqueSyncRefs.js';
+import { publishParentOrderPositionWithDriver } from '../sync/parentOrderMemberPosition.js';
 import { parentOrderFactStateStatement } from '../sync/syncParentOrderFact.js';
 import { PARENT_ORDER_BASELINE_TIME,
   parentOrderBaselineVersionId } from '../sync/syncParentOrderVersionStore.js';
@@ -51,5 +52,6 @@ export function recordLocalParentOrderVersion(driver: DatabaseDriver, args: {
   driver.execute(state.sql, state.params);
   driver.execute(`INSERT INTO parent_order_heads (parent_id, version_id) VALUES (?, ?)
     ON CONFLICT(parent_id) DO UPDATE SET version_id = excluded.version_id`, [args.parentId, id]);
+  publishParentOrderPositionWithDriver(driver, args.parentId);
   return id;
 }

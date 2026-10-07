@@ -1,6 +1,8 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import { PARENT_ORDER_BODY_RETENTION_SCHEMA } from '../database/parentOrderBodyRetentionSchema.js';
+
 import type { DbPort, DbRow } from './dbPort.js';
 import { parentOrderFactStateStatement } from './syncParentOrderFact.js';
 import type { ParentOrderVersion } from './syncParentOrderVersionGraph.js';
@@ -19,7 +21,8 @@ export const PARENT_ORDER_VERSION_SCHEMA = [
   `CREATE TABLE IF NOT EXISTS parent_order_heads (
     parent_id TEXT PRIMARY KEY,
     version_id TEXT NOT NULL REFERENCES parent_order_versions(version_id)
-  )`
+  )`,
+  ...PARENT_ORDER_BODY_RETENTION_SCHEMA
 ] as const;
 
 export const PARENT_ORDER_BASELINE_TIME = '1970-01-01T00:00:00.000Z';
@@ -76,13 +79,22 @@ export async function insertParentOrderVersion(port: DbPort, parentId: string,
   const [existing] = await port.query<VersionRow>(`SELECT * FROM parent_order_versions
     WHERE version_id = ?`, [version.versionId]);
   if (existing) {
+    const restored = existing.child_ids_json === 'null';
+    const [fingerprint] = restored ? await port.query<{ content_hash: string }>(`SELECT content_hash
+      FROM sync_object_state WHERE object_type = 'order_version' AND object_id = ?`,
+    [version.versionId]) : [];
     if (existing.parent_id !== parentId || existing.kind !== version.kind ||
-        existing.child_ids_json !== JSON.stringify(version.order) ||
+        (!restored && existing.child_ids_json !== JSON.stringify(version.order)) ||
         existing.parent_version_ids_json !== JSON.stringify(version.parentVersionIds) ||
         existing.created_at !== createdAt) {
       throw new Error('sync_parent_order_fact_collision');
     }
     const state = parentOrderFactStateStatement(parentId, version, createdAt);
+    if (restored && fingerprint?.content_hash !== state.params[1]) {
+      throw new Error('sync_parent_order_fact_collision');
+    }
+    if (restored) await port.run('UPDATE parent_order_versions SET child_ids_json = ? WHERE version_id = ?',
+      [JSON.stringify(version.order), version.versionId]);
     await port.run(state.sql, state.params);
     return false;
   }
@@ -103,9 +115,9 @@ export async function insertParentOrderVersion(port: DbPort, parentId: string,
 }
 
 export async function advanceParentOrderHead(port: DbPort, parentId: string, versionId: string) {
-  const [version] = await port.query<{ parent_id: string }>(`SELECT parent_id
+  const [version] = await port.query<{ parent_id: string; child_ids_json: string }>(`SELECT parent_id, child_ids_json
     FROM parent_order_versions WHERE version_id = ?`, [versionId]);
-  if (version?.parent_id !== parentId) throw new Error('sync_parent_order_head_unproven');
+  if (version?.parent_id !== parentId || version.child_ids_json === 'null') throw new Error('sync_parent_order_head_unproven');
   await port.run(`INSERT INTO parent_order_heads (parent_id, version_id) VALUES (?, ?)
     ON CONFLICT(parent_id) DO UPDATE SET version_id = excluded.version_id`, [parentId, versionId]);
 }
@@ -122,7 +134,7 @@ export async function readParentOrderVersionPage(port: DbPort, parentId: string,
     throw new Error('sync_parent_order_page_invalid');
   }
   const rows = await port.query<VersionRow>(`SELECT * FROM parent_order_versions
-    WHERE parent_id = ? AND version_id > ? ORDER BY version_id LIMIT ?`,
+    WHERE parent_id = ? AND version_id > ? AND child_ids_json != 'null' ORDER BY version_id LIMIT ?`,
   [parentId, afterVersionId, limit + 1]);
   const versions: ReturnType<typeof toStoredVersion>[] = [];
   for (const row of rows.slice(0, limit)) {

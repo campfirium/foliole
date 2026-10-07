@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { NODE_VERSION_RETENTION_SCHEMA_STATEMENTS } from '../../lib/core/database/nodeVersionRetentionSchemaStatements.js';
 import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupSchemaStatements.js';
+import { PARENT_ORDER_VERSION_SCHEMA } from '../../lib/core/sync/syncParentOrderVersionStore.js';
 import { createSyncGroupDeviceIdentity } from '../../lib/platform/syncGroupUnifiedContract.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
@@ -33,7 +34,7 @@ beforeEach(() => {
   for (const statement of SYNC_GROUP_SCHEMA_STATEMENTS) sqlite.exec(statement);
   sqlite.exec('CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT)');
   sqlite.exec('CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT)');
-  for (const statement of NODE_VERSION_RETENTION_SCHEMA_STATEMENTS) sqlite.exec(statement);
+  for (const statement of [...NODE_VERSION_RETENTION_SCHEMA_STATEMENTS, ...PARENT_ORDER_VERSION_SCHEMA]) sqlite.exec(statement);
   sqlite.exec('CREATE TABLE sync_delivery_receipts (peer_id TEXT)');
   sqlite.exec('CREATE TABLE sync_peer_cursors (peer_id TEXT)');
   connection.current = { driver: createBetterSqlite3Driver(sqlite) };

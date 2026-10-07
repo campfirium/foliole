@@ -7,7 +7,7 @@ import { SYNC_POLICY_HOST_PRIVATE_OBJECT_TYPES } from './syncObjectPolicy.js';
 /** Existing write-maintained object identities, matching the native identity copy surface. */
 export const FRAMED_SYNC_STATE_OBJECT_TYPES = [
   'external_document', 'external_folder', 'import_source', 'node_open_state', 'node_review',
-  'node_text_alternative', 'parent_child_order', 'order_version', 'node_position',
+  'node_text_alternative', 'parent_child_order', 'order_version', 'node_position', 'parent_order_position',
   'pdf_page_text', 'setting', 'view_state', 'watched_folder', 'topic_daily_count',
   'foreground_daily_time'
 ] as const;

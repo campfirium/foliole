@@ -1,14 +1,20 @@
 import type { DbPort, DbRow } from './dbPort.js';
 import { nodePositionFactId, nodePositionPayloadSchema, nodePositionWriteStatements,
-  parseNodePositionPayload } from './nodeVersionMemberPositionFact.js';
+  parseNodePositionPayload, versionPositionStorage, type VersionPositionDomain } from './nodeVersionMemberPositionFact.js';
 import { hashText } from './syncNodeResolution.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 /** An authenticated relay carries the owner's original, comparable declaration. */
 export async function applyNodeMemberPosition(port: DbPort, record: SyncPackSyncObjectRecord) {
+  return applyVersionMemberPosition(port, record, 'node');
+}
+
+export async function applyVersionMemberPosition(port: DbPort, record: SyncPackSyncObjectRecord,
+  domain: VersionPositionDomain) {
+  const storage = versionPositionStorage(domain);
   if (record.deleted_at || !record.payload_json) throw new Error('node_position_fact_invalid');
   const { payload, pending } = parseNodePositionPayload(JSON.parse(record.payload_json));
-  if (record.object_id !== nodePositionFactId(payload) ||
+  if (record.object_id !== nodePositionFactId(payload, domain) ||
       record.content_hash !== hashText(JSON.stringify(payload))) throw new Error('node_position_fact_hash_mismatch');
   const [member] = await port.query<{ state: string; local_device_identity_key: string }>(
     `SELECT member.state, local.local_device_identity_key FROM sync_group_devices member
@@ -18,7 +24,7 @@ export async function applyNodeMemberPosition(port: DbPort, record: SyncPackSync
   if (!member) throw new Error('node_position_member_unknown');
   const [known] = await port.query<DbRow>(`SELECT adopted_version_id, device_identity_key,
     group_id, library_epoch, object_id, pending_version_ids_json, proof_revision, updated_at
-    FROM node_version_member_positions WHERE fact_id = ?`, [record.object_id]);
+    FROM ${storage.table} WHERE fact_id = ?`, [record.object_id]);
   if (known) {
     const previous = nodePositionPayloadSchema.parse(known);
     if (previous.library_epoch !== payload.library_epoch) throw new Error('node_position_epoch_changed');
@@ -31,10 +37,12 @@ export async function applyNodeMemberPosition(port: DbPort, record: SyncPackSync
   if (member.local_device_identity_key === payload.device_identity_key) return false;
   for (const versionId of [payload.adopted_version_id, ...pending]) {
     const [version] = await port.query<{ object_id: string }>(
-      'SELECT object_id FROM node_sync_versions WHERE version_id = ?', [versionId]);
-    if (version?.object_id !== payload.object_id) throw new Error(`node_position_lineage_unproven:${payload.object_id}`);
+      `SELECT ${storage.ownerColumn} AS object_id FROM ${storage.versionTable} WHERE version_id = ?`, [versionId]);
+    if (version?.object_id !== payload.object_id) throw new Error(domain === 'node'
+      ? `node_position_lineage_unproven:${payload.object_id}`
+      : `parent_order_position_lineage_unproven:${versionId}`);
   }
-  for (const statement of nodePositionWriteStatements(payload)) await port.run(statement.sql, statement.params);
+  for (const statement of nodePositionWriteStatements(payload, domain)) await port.run(statement.sql, statement.params);
   return true;
 }
 

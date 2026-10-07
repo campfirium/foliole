@@ -7,7 +7,9 @@ import type { CanonicalFact, CanonicalValue } from './framedSyncCanonicalManifes
 import { assertFramedExternalDocumentBody, selectFramedExternalDocumentBody } from './framedSyncExternalDocumentBody.js';
 import { framedSyncObjectStateFactId, FRAMED_SYNC_STATE_OBJECT_TYPES, isFramedSyncSharedStateObject } from './framedSyncObjectStateInventory.js';
 import { readFramedSyncObjectPayload } from './framedSyncObjectStatePayload.js';
-import { applyNodeMemberPosition } from './nodeVersionMemberPositionApply.js';
+import { applyNodeMemberPosition, applyVersionMemberPosition } from './nodeVersionMemberPositionApply.js';
+import { collectParentOrderBodies } from './parentOrderBodyRetention.js';
+import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
 import { persistSyncIdentityParentOrderMerges, stageSyncIdentityParentOrderRecordMerge } from './syncIdentityParentOrderApply.js';
 import { applySyncObjectInTransaction, type ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 import { applyParentOrderFactObject } from './syncParentOrderFactApply.js';
@@ -72,11 +74,21 @@ export async function applyFramedSyncObjectStateRecord(db: DbPort,
   options: ApplySyncObjectsWithDbPortOptions = {}) {
   if (record.object_type === 'order_version') return applyParentOrderFactObject(db, record);
   if (record.object_type === 'node_position') return applyNodeMemberPosition(db, record);
+  if (record.object_type === 'parent_order_position') {
+    await applyVersionMemberPosition(db, record, 'parent_child_order');
+    const payload = JSON.parse(record.payload_json!) as { object_id: string };
+    await collectParentOrderBodies(db, payload.object_id);
+    return;
+  }
   if (record.object_type === 'parent_child_order') {
     const merged = await stageSyncIdentityParentOrderRecordMerge(db, { ...record,
       parent_id: record.object_id, current_version_id: record.current_version_id ?? null });
     await applySyncObjectInTransaction(db, record);
-    if (merged) await persistSyncIdentityParentOrderMerges(db, [merged], 'sync-remote');
+    if (merged) {
+      await persistSyncIdentityParentOrderMerges(db, [merged], 'sync-remote');
+      await publishParentOrderPosition(db, record.object_id);
+    }
+    await collectParentOrderBodies(db, record.object_id);
     return;
   }
   return applySyncObjectInTransaction(db, record, options);

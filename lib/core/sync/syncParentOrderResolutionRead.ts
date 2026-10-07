@@ -1,5 +1,5 @@
 import type { DbPort, DbRow } from './dbPort.js';
-import { parseParentOrderFact } from './syncParentOrderFact.js';
+import { parseManagedParentOrderFact, parseParentOrderFact } from './syncParentOrderFact.js';
 import type { ParentOrderLineage } from './syncParentOrderGraph.js';
 import { planParentOrderResolution } from './syncParentOrderResolutionPlan.js';
 import type { ParentOrderVersion } from './syncParentOrderVersionGraph.js';
@@ -11,9 +11,14 @@ export async function readParentOrderResolutionHistory(db: DbPort, parentId: str
   const lineage: ParentOrderLineage[] = [];
   const versions = new Map<string, ParentOrderVersion>();
   for (const row of rows) {
-    const version = await readSnapshot(db, row.version_id);
+    const [stored] = await db.query<DbRow>('SELECT * FROM parent_order_versions WHERE version_id = ?', [row.version_id]);
+    if (!stored) throw new Error('sync_parent_order_lineage_unproven');
+    const version = parseManagedParentOrderFact(stored).version;
     lineage.push({ versionId: version.versionId, kind: version.kind, parentVersionIds: version.parentVersionIds });
-    if (headIds.includes(version.versionId)) versions.set(version.versionId, version);
+    if (headIds.includes(version.versionId)) {
+      if (version.order === null) throw new Error(`sync_parent_order_body_unavailable:${version.versionId}`);
+      versions.set(version.versionId, parseParentOrderFact(stored).version);
+    }
   }
   return { lineage, versions };
 }
@@ -32,5 +37,6 @@ export async function readParentOrderResolutionSnapshots(db: DbPort,
 async function readSnapshot(db: DbPort, id: string) {
   const [row] = await db.query<DbRow>('SELECT * FROM parent_order_versions WHERE version_id = ?', [id]);
   if (!row) throw new Error('sync_parent_order_lineage_unproven');
+  if (row.child_ids_json === 'null') throw new Error(`sync_parent_order_body_unavailable:${id}`);
   return parseParentOrderFact(row).version;
 }

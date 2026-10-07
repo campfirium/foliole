@@ -11,6 +11,7 @@ import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagin
 import type { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { applyPreparedDesktopFramedSyncInbound } from './desktopFramedSyncApplyPrepared.js';
+import { collectReplayedParentOrderFact, replayDesktopFramedSyncOrderBody } from './desktopFramedSyncOrderBodyReplay.js';
 import {
   prepareDesktopFramedSyncInbound,
   type PreparedDesktopFramedSyncInbound
@@ -156,16 +157,18 @@ async function handleFrame(input: {
     return applyReadyTransfer(input, state.ready);
   } else if (state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
     if (input.stageOnly) throw new Error('framed_sync_restore_transfer_already_applied');
+    await replayDesktopFramedSyncOrderBody({ db: input.db, facts: state.facts, published,
+      receipt: state.existingReceipt, trailer: decoded.payload });
     return receiptStream(input, state.existingReceipt);
+  } else if (state.existingReceipt && decoded.payloadCase === 'fact') {
+    collectReplayedParentOrderFact(state.facts, published, wireToFact(decoded.payload));
   } else if (!state.existingReceipt && decoded.payloadCase === 'fact') {
     const fact = wireToFact(decoded.payload);
     state.facts.push(fact);
     await stageDesktopFramedSyncFact({ fact, frame: input.frame, staging: input.staging });
   } else if (!state.existingReceipt && decoded.payloadCase === 'blob_chunk') {
-    const data = bytes(decoded.payload.data);
-    const offset = integer(decoded.payload.offset);
-    const sha256 = bytes(decoded.payload.blobHash);
-    await handleDesktopFramedSyncReceiverBlob(input, sha256, offset, data);
+    await handleDesktopFramedSyncReceiverBlob(input, bytes(decoded.payload.blobHash),
+      integer(decoded.payload.offset), bytes(decoded.payload.data));
   } else if (!state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
     if (state.facts.length === 0 || !state.blobs || !state.resources) {
       throw new Error('transfer_payload_incomplete');
