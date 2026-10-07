@@ -38,7 +38,7 @@ export async function hasContentEquivalentIncomingLineage(
     sameSharedSnapshot(JSON.parse(local.snapshot_json), record.snapshot);
 }
 
-function sameSharedSnapshot(left: unknown, right: unknown) {
+export function sameSharedSnapshot(left: unknown, right: unknown) {
   return JSON.stringify(normalizeSnapshot(left)) === JSON.stringify(normalizeSnapshot(right));
 }
 

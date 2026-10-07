@@ -18,19 +18,28 @@ export type IncomingNodeApplyDecision =
 
 export type SyncNodeApplyOperation = 'local_mutation' | 'local_restore' | 'remote_sync';
 
-export function latestBranchHeadRecords(records: NativeSyncNodeRecord[]) {
+type NodeVersionMetadata = Pick<NativeSyncNodeRecord, 'version_id' | 'parent_version_id' | 'ancestor_version_ids'>;
+type BranchMetadata = NodeVersionMetadata & Pick<NativeSyncNodeRecord, 'parent_version_ids'>;
+type NodeParentMetadata = Pick<NativeSyncNodeRecord, 'object_id'> & {
+  snapshot: Pick<NativeSyncNodeRecord['snapshot'], 'parent_id'>;
+};
+export type SyncNodeApplyMetadata = NodeVersionMetadata & {
+  snapshot: Pick<NativeSyncNodeRecord['snapshot'], 'deleted_at'>;
+};
+
+export function latestBranchHeadRecords<T extends BranchMetadata>(records: T[]): T[] {
   const versions = new Map(records.map((record) => [record.version_id, record]));
   const ancestors = new Set(records.flatMap((record) => [...record.ancestor_version_ids, ...record.parent_version_ids ?? [],
     ...(record.parent_version_id ? [record.parent_version_id] : [])]));
   return [...versions.values()].filter((record) => !record.version_id || !ancestors.has(record.version_id));
 }
 
-export function orderNodesForApply(records: NativeSyncNodeRecord[]) {
+export function orderNodesForApply<T extends NodeParentMetadata>(records: T[]): T[] {
   const byId = new Map(records.map((record) => [record.object_id, record]));
-  const ordered: NativeSyncNodeRecord[] = [];
-  const visited = new Set<NativeSyncNodeRecord>();
+  const ordered: T[] = [];
+  const visited = new Set<T>();
 
-  function visit(record: NativeSyncNodeRecord) {
+  function visit(record: T) {
     if (visited.has(record)) {
       return;
     }
@@ -48,7 +57,7 @@ export function orderNodesForApply(records: NativeSyncNodeRecord[]) {
   return ordered;
 }
 
-export function isRemoteFastForward(record: NativeSyncNodeRecord, localVersionId: string | null | undefined) {
+export function isRemoteFastForward(record: NodeVersionMetadata, localVersionId: string | null | undefined) {
   if (!localVersionId || record.version_id === localVersionId) {
     return true;
   }
@@ -58,7 +67,7 @@ export function isRemoteFastForward(record: NativeSyncNodeRecord, localVersionId
   return record.ancestor_version_ids.includes(localVersionId);
 }
 
-export function blocksIncomingNodeVersion(local: LocalSyncNodeState, record: NativeSyncNodeRecord) {
+export function blocksIncomingNodeVersion(local: LocalSyncNodeState, record: Pick<SyncNodeApplyMetadata, 'version_id' | 'snapshot'>) {
   if (record.version_id === local.current_version_id) {
     return false;
   }
@@ -73,7 +82,7 @@ export function blocksIncomingNodeVersion(local: LocalSyncNodeState, record: Nat
 
 function isExplicitLocalRestore(
   local: LocalSyncNodeState,
-  record: NativeSyncNodeRecord,
+  record: Pick<SyncNodeApplyMetadata, 'version_id' | 'parent_version_id' | 'snapshot'>,
   operation: SyncNodeApplyOperation
 ) {
   return operation === 'local_restore'
@@ -85,7 +94,7 @@ function isExplicitLocalRestore(
 
 function isExplicitLocalMutation(
   local: LocalSyncNodeState,
-  record: NativeSyncNodeRecord,
+  record: Pick<SyncNodeApplyMetadata, 'version_id' | 'parent_version_id' | 'snapshot'>,
   operation: SyncNodeApplyOperation
 ) {
   return operation === 'local_mutation'
@@ -97,7 +106,7 @@ function isExplicitLocalMutation(
 
 export function decideIncomingNodeApply(
   local: LocalSyncNodeState | null,
-  record: NativeSyncNodeRecord,
+  record: SyncNodeApplyMetadata,
   operation: SyncNodeApplyOperation = 'remote_sync'
 ): IncomingNodeApplyDecision {
   if (!local) {

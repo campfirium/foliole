@@ -10,17 +10,19 @@ export function isNodeVersionIdentityOnly(record: NativeSyncNodeRecord) {
   return !record.is_tombstone && record.body_text === null && record.snapshot.content === null;
 }
 
-function parentIds(record: NativeSyncNodeRecord) {
+type VersionParentMetadata = Pick<NativeSyncNodeRecord, 'version_id' | 'parent_version_id' | 'parent_version_ids'>;
+
+function parentIds(record: VersionParentMetadata) {
   return record.parent_version_ids ?? (record.parent_version_id ? [record.parent_version_id] : []);
 }
 
-export function orderNodeVersionHistory(records: NativeSyncNodeRecord[]) {
+export function orderNodeVersionHistory<T extends VersionParentMetadata>(records: T[]): T[] {
   const byId = new Map(records.filter((record) => record.version_id)
     .map((record) => [record.version_id!, record]));
-  const ordered: NativeSyncNodeRecord[] = [];
-  const visited = new Set<NativeSyncNodeRecord>();
-  const visiting = new Set<NativeSyncNodeRecord>();
-  function visit(record: NativeSyncNodeRecord) {
+  const ordered: T[] = [];
+  const visited = new Set<T>();
+  const visiting = new Set<T>();
+  function visit(record: T) {
     if (visited.has(record)) return;
     if (visiting.has(record)) throw new Error(`sync_node_version_cycle:${record.version_id}`);
     visiting.add(record);

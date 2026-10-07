@@ -2,8 +2,11 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import { parseManualChildOrder, stringifyManualChildOrder } from '../nodes/manualChildOrder.js';
 
 type Snapshot = NativeSyncNodeRecord['snapshot'];
+type NodeTimeMetadata = Pick<NativeSyncNodeRecord, 'version_created_at' | 'updated_at' | 'version_id'>;
+export type NodeSnapshotMetadata = Omit<Snapshot, 'content'>;
+type NodeSnapshotRecordMetadata = NodeTimeMetadata & { snapshot: NodeSnapshotMetadata };
 
-export function laterNodeRecord(left: NativeSyncNodeRecord, right: NativeSyncNodeRecord) {
+export function laterNodeRecord<T extends NodeTimeMetadata>(left: T, right: T): T {
   const leftKey = `${left.version_created_at ?? left.updated_at ?? ''}\n${left.version_id ?? ''}`;
   const rightKey = `${right.version_created_at ?? right.updated_at ?? ''}\n${right.version_id ?? ''}`;
   return leftKey >= rightKey ? left : right;
@@ -13,7 +16,9 @@ function sameValue(left: unknown, right: unknown) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function mergeManualMembers(base: Snapshot | null, left: Snapshot, right: Snapshot, winner: Snapshot) {
+function mergeManualMembers(
+  base: NodeSnapshotMetadata | null, left: NodeSnapshotMetadata, right: NodeSnapshotMetadata, winner: NodeSnapshotMetadata
+) {
   const baseIds = parseManualChildOrder(base?.manual_child_order) ?? [];
   const leftIds = parseManualChildOrder(left.manual_child_order) ?? [];
   const rightIds = parseManualChildOrder(right.manual_child_order) ?? [];
@@ -29,12 +34,12 @@ function mergeManualMembers(base: Snapshot | null, left: Snapshot, right: Snapsh
   return stringifyManualChildOrder(ordered);
 }
 
-export function mergeNodeSnapshot(
-  base: Snapshot | null,
-  left: NativeSyncNodeRecord,
-  right: NativeSyncNodeRecord,
+export function mergeNodeSnapshot<T extends NodeSnapshotRecordMetadata>(
+  base: T['snapshot'] | null,
+  left: T,
+  right: T,
   mergeFolderMembers: boolean
-): { snapshot: Snapshot; winner: NativeSyncNodeRecord } {
+): { snapshot: T['snapshot']; winner: T } {
   const winner = laterNodeRecord(left, right);
   const merged = { ...winner.snapshot } as Record<string, unknown>;
   const leftValues = left.snapshot as unknown as Record<string, unknown>;
@@ -52,5 +57,5 @@ export function mergeNodeSnapshot(
   if (mergeFolderMembers) {
     merged.manual_child_order = mergeManualMembers(base, left.snapshot, right.snapshot, winner.snapshot);
   }
-  return { snapshot: merged as unknown as Snapshot, winner };
+  return { snapshot: merged as unknown as T['snapshot'], winner };
 }
