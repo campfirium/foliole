@@ -7,6 +7,7 @@ import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
 import { fixtureBodyStorage, fixtureInitializationPhase, initializeChunkedFixtureBodies, initializeFixtureDatabase } from './desktopFramedSyncChunkedFixtureInitialization.js';
+import { runIdentityRestoreFixtureCommand } from './desktopFramedSyncIdentityRestore.fixture.js';
 import { runDesktopFramedSyncOrderCommand } from './desktopFramedSyncOrder.fixture.js';
 import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecovery.fixture.js';
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
@@ -165,6 +166,9 @@ async function run(command: Command) {
   }
   if (command.action === 'seed') return seed(command.args);
   if (command.action === 'activate_chunked') return activateChunkedSource();
+  if (['begin_identity_restore', 'identity_restore_round'].includes(command.action)) {
+    return runIdentityRestoreFixtureCommand(command.action, command.args, { bodyStorage, deviceId, stateRoot });
+  }
   if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
   if (command.action === 'seedBatch') return seedBatch(command.args);
   if (['reorder', 'restore_order', 'standalone_edit', 'rejoin', 'register_order_member'].includes(command.action)) {

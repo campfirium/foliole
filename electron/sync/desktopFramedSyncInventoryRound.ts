@@ -20,6 +20,7 @@ import { runDesktopFramedSyncRestoreRound } from './desktopFramedSyncRestoreRoun
 import { createDesktopFramedSyncRoundEndpoint } from './desktopFramedSyncRoundEndpoint.js';
 import { loadRoundRuntime } from './desktopFramedSyncRoundRuntime.js';
 import { receiveVerifiedDesktopFramedSyncTransfer } from './desktopFramedSyncVerifiedReceiver.js';
+import { runVerifiedDesktopFramedSyncRestoreRound } from './desktopFramedSyncVerifiedRestoreRound.js';
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 
 export async function runDesktopFramedSyncInventoryRound(args: {
@@ -61,7 +62,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
     staging: runtime.staging
   };
   if (args.restoreId || adoption) {
-    return runDesktopFramedSyncRestoreRound({
+    return restoreRoundForStorage(bodyStorage)({
       ...(adoption ? { adoption } : {}),
       ...(args.restoreId && !adoption ? { restoreId: args.restoreId } : {}),
       inventories,
@@ -217,4 +218,9 @@ function roundContext(groupId: string, local: { deviceId: string; libraryEpoch: 
   return { groupId, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
     initiatorDeviceId: local.deviceId, initiatorLibraryEpoch: local.libraryEpoch,
     responderDeviceId: remote.deviceId, responderLibraryEpoch: remote.libraryEpoch };
+}
+
+function restoreRoundForStorage(storage: 'continuous' | 'chunked') {
+  return storage === 'chunked'
+    ? runVerifiedDesktopFramedSyncRestoreRound : runDesktopFramedSyncRestoreRound;
 }

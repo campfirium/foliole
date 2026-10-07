@@ -15,6 +15,7 @@ export const controlledSyncSqliteTests = [
   'electron/sync/desktopFramedSyncVerifiedManifest.integration.test.ts',
   'electron/sync/desktopFramedSyncVerifiedRestore.integration.test.ts',
   'electron/sync/desktopFramedSyncVerifiedTwoProcess.integration.test.ts',
+  'electron/sync/desktopFramedSyncVerifiedRestoreTwoProcess.integration.test.ts',
   'electron/sync/desktopFramedSyncBlobSources.integration.test.ts',
   'electron/sync/desktopFramedSyncVerifiedReceiver.integration.test.ts',
   'lib/core/sync/syncGroupRestoreResetStable.integration.test.ts',

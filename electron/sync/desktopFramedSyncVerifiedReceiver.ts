@@ -20,10 +20,23 @@ type ReceiverInput = Readonly<{
   context: FramedSyncContext; db: DbPort; groupKey: Uint8Array; staging: FramedSyncStagingPort;
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
 }>;
-type FrameInput = ReceiverInput & { event: AuthenticatedTransferFrame; state: DesktopFramedVerifiedReceiverState };
+type FrameInput = ReceiverInput & { stageOnly: boolean; event: AuthenticatedTransferFrame; state: DesktopFramedVerifiedReceiverState };
 
 /** Explicit candidate for ordinary receive; production activation follows owner migration. */
 export async function receiveVerifiedDesktopFramedSyncTransfer(input: ReceiverInput) {
+  const result = await processVerifiedTransfer(input, false);
+  if ('facts' in result) throw new Error('framed_sync_receipt_required');
+  return result;
+}
+
+/** Retain ready ownership until the complete restore or adoption transaction commits. */
+export async function stageVerifiedDesktopFramedSyncTransfer(input: ReceiverInput) {
+  const result = await processVerifiedTransfer(input, true);
+  if (!('facts' in result)) throw new Error('framed_sync_ready_transfer_missing');
+  return result;
+}
+
+async function processVerifiedTransfer(input: ReceiverInput, stageOnly: boolean) {
   const preamble = decodeFramedSyncPreamble(input.stream.preamble);
   if (preamble.contextKind !== 'transfer') throw new Error('transfer_preamble_required');
   const key = await deriveTransferFrameKey({
@@ -33,7 +46,7 @@ export async function receiveVerifiedDesktopFramedSyncTransfer(input: ReceiverIn
   try {
     for await (const event of authenticatedDesktopFramedSyncTransferFrames({ ...input, key, preamble })) {
       state.published = event.published;
-      const response = await handleVerifiedFrame({ ...input, event, state });
+      const response = await handleVerifiedFrame({ ...input, event, state, stageOnly });
       if (response) return response;
     }
     throw new Error('transfer_trailer_missing');
@@ -51,8 +64,9 @@ async function handleVerifiedFrame(input: FrameInput) {
   const { state } = input;
   if (decoded.payloadCase === 'transfer_header') {
     await state.admit({ db: input.db, event: input.event, staging: input.staging });
+    if (input.stageOnly && state.existingReceipt) throw new Error('framed_sync_restore_transfer_already_applied');
   } else if (state.ready) {
-    if (decoded.payloadCase === 'transfer_trailer') return applyReady(input);
+    if (decoded.payloadCase === 'transfer_trailer') return input.stageOnly ? state.ready : applyReady(input);
   } else if (state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
     await replayDesktopFramedSyncOrderBody({ db: input.db, facts: state.facts, published,
       receipt: state.existingReceipt, trailer: decoded.payload });
@@ -77,6 +91,10 @@ async function handleVerifiedFrame(input: FrameInput) {
     }
   } else if (!state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
     await finishVerifiedTransfer(input);
+    if (input.stageOnly) {
+      if (!state.ready) throw new Error('framed_sync_ready_transfer_missing');
+      return state.ready;
+    }
     return applyReady(input);
   }
   return null;

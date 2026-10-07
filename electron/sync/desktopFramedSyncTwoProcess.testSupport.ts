@@ -54,10 +54,10 @@ export async function createDesktopFramedSyncTwoProcessFixture(options: { rightB
         const third = startFixtureProcess({ deviceId: 'desktop-c', root: path.join(root, 'c'), script });
         return { process: third, snapshot: await third.init() };
       },
-      async restartRight() {
+      async restartRight(bodyStorage: 'continuous' | 'chunked' = options.rightBodyStorage ?? 'continuous') {
         await right.close();
         right = startFixtureProcess({ deviceId: 'desktop-b', root: path.join(root, 'b'), script,
-          bodyStorage: options.rightBodyStorage ?? 'continuous', initializationPhase: 'reopen' });
+          bodyStorage, initializationPhase: 'reopen' });
         return { process: right, snapshot: await right.init() };
       }
     };
