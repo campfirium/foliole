@@ -42,7 +42,7 @@ final class FramedSyncSQLiteBlobs {
         throws Exception {
         BlobReference descriptor = loadOffer(transferId, attemptId, chunk.getBlobHash().toByteArray());
         if (descriptor == null) throw invalid("blob_chunk_not_admitted");
-        if (descriptor.getRoleValue() != 1) {
+        if (!FramedSyncBodyRoles.isBody(descriptor.getRoleValue())) {
             return resources.stage(transferId, attemptId, descriptor, chunk);
         }
         long length = chunk.getData().size();
@@ -76,7 +76,7 @@ final class FramedSyncSQLiteBlobs {
                 long byteLength = offers.getLong(1);
                 int role = offers.getInt(2);
                 boolean required = offers.getInt(3) == 1;
-                if (role != 1 && role != 5) {
+                if (!FramedSyncBodyRoles.isBody(role)) {
                     if (!resources.verifyAndPin(
                         transferId, attemptId, hash, byteLength, role, required)) return false;
                     continue;
@@ -105,7 +105,7 @@ final class FramedSyncSQLiteBlobs {
 
     boolean isResourceChunk(byte[] transferId, byte[] attemptId, byte[] hash) {
         BlobReference descriptor = loadOffer(transferId, attemptId, hash);
-        return descriptor != null && descriptor.getRoleValue() != 1 && descriptor.getRoleValue() != 5;
+        return descriptor != null && !FramedSyncBodyRoles.isBody(descriptor.getRoleValue());
     }
 
     private byte[] assemble(byte[] transferId, byte[] attemptId, byte[] hash, long byteLength)

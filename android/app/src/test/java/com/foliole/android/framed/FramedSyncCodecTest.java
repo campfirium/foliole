@@ -16,6 +16,15 @@ public class FramedSyncCodecTest {
     private static final Map<FramedSyncPayload.Case, String> CORPUS_NAMES = corpusNames();
 
     @Test
+    public void stagesNodeAndExternalDocumentRolesAsBodiesAndKeepsResourceRolesSeparate() {
+        assertEquals(true, FramedSyncBodyRoles.isBody(1));
+        assertEquals(true, FramedSyncBodyRoles.isBody(5));
+        for (int role : new int[] {2, 3, 4}) {
+            assertEquals(false, FramedSyncBodyRoles.isBody(role));
+        }
+    }
+
+    @Test
     public void canonicalPayloadUsesItsOwnStringBudget() throws Exception {
         ProtocolMessage message = ProtocolMessage.parseFrom(golden("fact").bytes);
         for (int size : new int[] {65_537, 170_000, 1_048_577,

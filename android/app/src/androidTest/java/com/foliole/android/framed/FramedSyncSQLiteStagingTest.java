@@ -16,6 +16,40 @@ import org.junit.runner.RunWith;
 @RunWith(AndroidJUnit4.class)
 public final class FramedSyncSQLiteStagingTest {
     @Test
+    public void stagesAndPromotesExternalDocumentBytesAsBodyWithoutResourceStorage() throws Exception {
+        File file = File.createTempFile("framed-sync-external-body", ".db");
+        try (SQLiteDatabase database = SQLiteDatabase.openOrCreateDatabase(file, null)) {
+            FramedSyncSQLiteStaging staging = new FramedSyncSQLiteStaging(database);
+            staging.admitInboundTransfer(proposal());
+            database.execSQL("INSERT INTO framed_sync_android_attempts VALUES (?, ?, 'receiving')",
+                new Object[] {TRANSFER_ID, ATTEMPT_B});
+            var original = header(ATTEMPT_B).getTransferHeader();
+            var descriptor = original.getManifest().getBlobs(0).toBuilder().setRoleValue(5).build();
+            var externalHeader = original.toBuilder().setManifest(original.getManifest().toBuilder()
+                .clearBlobs().addBlobs(descriptor)).build();
+            FramedSyncSQLiteBlobs blobs = new FramedSyncSQLiteBlobs(database, null);
+            blobs.stageOffers(TRANSFER_ID, ATTEMPT_B, externalHeader);
+            assertEquals(FramedSyncStageOutcome.CREATED,
+                blobs.stageChunk(TRANSFER_ID, ATTEMPT_B, chunk().getBlobChunk()));
+            assertEquals(FramedSyncStageOutcome.IDENTICAL,
+                blobs.stageChunk(TRANSFER_ID, ATTEMPT_B, chunk().getBlobChunk()));
+            assertEquals(1, count(database, "framed_sync_android_blob_chunks"));
+            assertEquals(0, count(database, "framed_sync_android_resource_blob_chunks"));
+            assertEquals(true, blobs.verifyAndPromote(TRANSFER_ID, ATTEMPT_B));
+            new FramedSyncSQLiteTransfers(database).promote(TRANSFER_ID, ATTEMPT_B);
+            assertEquals("ready_to_apply", scalar(database,
+                "SELECT state FROM framed_sync_android_transfers", new byte[0]));
+            assertEquals("5", scalar(database,
+                "SELECT role FROM framed_sync_android_blob_pins", new byte[0]));
+            try (Cursor row = database.rawQuery("SELECT data FROM framed_sync_android_available_blobs", null)) {
+                row.moveToFirst();
+                assertArrayEquals(BLOB, row.getBlob(0));
+            }
+            assertEquals(0, count(database, "framed_sync_android_available_resources"));
+        } finally { file.delete(); }
+    }
+
+    @Test
     public void validatesBeforeWritingAndIsolatesAttemptsFactsAndBlobs() throws Exception {
         File file = File.createTempFile("framed-sync-staging", ".db");
         try (SQLiteDatabase database = SQLiteDatabase.openOrCreateDatabase(file, null)) {
