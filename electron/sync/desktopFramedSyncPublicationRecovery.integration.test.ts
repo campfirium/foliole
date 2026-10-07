@@ -63,14 +63,21 @@ it('recovers an unacknowledged publication on normal peer reconnect with no inve
     remote: await readFixtureInventory(fixture.right) })).toEqual([]);
   const restarted = await fixture.restartLeft();
   processes.push(restarted.process);
-  await restarted.process.invoke('round', { input: {
-    kind: 'reconcile', peer: { deviceId: 'desktop-b', libraryEpoch: 'desktop-b-epoch' },
-    peerOrigin: fixture.rightSnapshot.origin
-  } });
+  const observation = await createDesktopFramedSyncFaultProxy({
+    fault: 'observe', targetOrigin: fixture.rightSnapshot.origin
+  });
+  try {
+    await restarted.process.invoke('round', { input: {
+      kind: 'reconcile', peer: { deviceId: 'desktop-b', libraryEpoch: 'desktop-b-epoch' },
+      peerOrigin: observation.origin
+    } });
+    expect(observation.wireBytes().transferBytes).toBe(0);
+    expect(observation.wireBytes().sessionBytes).toBeGreaterThan(0);
+  } finally { await observation.close(); }
   const sender = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
   expect(sender.framedSync.outboundHolds).toBe(0);
   const recovered = publicationEvidence(restarted.snapshot.databasePath);
-  expect(recovered.receipts).toContainEqual({ id, receiver_device_id: 'desktop-b' });
+  expect(recovered.receipts).not.toContainEqual({ id, receiver_device_id: 'desktop-b' });
   expect(recovered.publications).toContainEqual(expect.objectContaining({ id, state: 'receipt_committed' }));
 });
 
@@ -83,7 +90,6 @@ it.each(['publication', 'partial', 'finalised'] as const)(
     await fixture.left.seed({ content: 'Root body', nodeId, title: 'Root' });
     await fixture.left.seed({ content: 'Frozen body', nodeId, title: 'Frozen' });
     const id = await publishFixtureDelivery(fixture.left, fixture.rightSnapshot, mode);
-    const before = publicationEvidence(fixture.leftSnapshot.databasePath);
     await fixture.left.seed({ content: 'Latest body', nodeId, title: 'Latest' });
     await fixture.left.invoke('collect_content');
     const retained = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
@@ -93,17 +99,11 @@ it.each(['publication', 'partial', 'finalised'] as const)(
     await reconnectFixturePeer(restarted.process, fixture.rightSnapshot);
     const after = publicationEvidence(restarted.snapshot.databasePath);
     expect(after.publications[0]).toEqual(expect.objectContaining({
-      id, manifest_json: before.publications[0] && z.object({ manifest_json: z.string() })
-        .parse(before.publications[0]).manifest_json, state: 'receipt_committed'
+      id, manifest_json: '{"blobs":[],"facts":[]}', state: 'receipt_committed'
     }));
     expect(after.receipts).toContainEqual({ id, receiver_device_id: 'desktop-b' });
-    if (mode === 'finalised') expect(after.frames.slice(0, before.frames.length)).toEqual(before.frames);
-    if (mode === 'partial') {
-      expect(after.attempts[0]).toEqual(expect.objectContaining({ state: 'abandoned' }));
-      expect(after.attempts[1]).not.toEqual(expect.objectContaining({
-        id: z.object({ id: z.string() }).parse(before.attempts[0]).id
-      }));
-    }
+    expect(after.frames).toEqual([]);
+    expect(after.attempts).toEqual([]);
     expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).versions)
       .toContainEqual(expect.objectContaining({ body_text: 'Frozen body' }));
     expect(after.holds).toEqual([]);

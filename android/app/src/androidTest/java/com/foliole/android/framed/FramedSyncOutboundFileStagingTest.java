@@ -2,6 +2,7 @@ package com.foliole.android.framed;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import android.content.Context;
@@ -57,12 +58,17 @@ public final class FramedSyncOutboundFileStagingTest {
                 "SELECT MAX(length(plaintext_sha256)) FROM framed_sync_android_outbound_file_frames"));
         } finally {
             resourceFile.delete();
-            context.deleteDatabase("foliole-framed-sync-outbound.db");
         }
         File[] wires = wireDirectory.listFiles((directory, name) -> name.endsWith(".wire"));
         assertNotNull(wires);
         assertEquals(1, wires.length);
         assertTrue(wires[0].length() > resource.length);
+        try (FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context)) {
+            staging.discardOutboundAttempts(attempt.transferId());
+            assertNull(staging.loadLatestReplayableAttempt(attempt.transferId()));
+        }
+        assertEquals(0, wireDirectory.listFiles((directory, name) -> name.endsWith(".wire")).length);
+        context.deleteDatabase("foliole-framed-sync-outbound.db");
         delete(wireDirectory);
     }
 

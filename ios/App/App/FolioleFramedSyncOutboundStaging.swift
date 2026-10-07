@@ -19,6 +19,18 @@ final class FolioleFramedSyncOutboundSQLite: FolioleFramedSyncOutboundStaging {
         frames = try .init(database: database)
     }
 
+    func discard(transferID: Data) throws {
+        try database.transaction {
+            let attempts = try database.rows(
+                "SELECT attempt_id FROM framed_sync_ios_outbound_attempts WHERE transfer_id = ?", [transferID])
+            for row in attempts {
+                guard let attemptID = row[0] as? Data else { throw invalid("outbound_attempt_storage_invalid") }
+                try frames.remove(transferID: transferID, attemptID: attemptID)
+            }
+            try database.execute("DELETE FROM framed_sync_ios_outbound_attempts WHERE transfer_id = ?", [transferID])
+        }
+    }
+
     func prepare(
         transferID: Data, attemptID: Data, preamble: Data
     ) throws -> FolioleFramedSyncStageOutcome {

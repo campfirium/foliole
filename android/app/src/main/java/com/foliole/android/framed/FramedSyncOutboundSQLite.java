@@ -89,6 +89,20 @@ public final class FramedSyncOutboundSQLite implements AutoCloseable, FramedSync
         }
     }
 
+    public synchronized void discardOutboundAttempts(byte[] transferId) throws Exception {
+        database.beginTransaction();
+        try {
+            try (Cursor rows = database.rawQuery(
+                "SELECT attempt_id FROM framed_sync_android_outbound_attempts WHERE hex(transfer_id) = ?",
+                FramedSyncSQLiteValues.blobArgs(transferId))) {
+                while (rows.moveToNext()) frames.remove(transferId, rows.getBlob(0));
+            }
+            database.delete("framed_sync_android_outbound_attempts", "hex(transfer_id) = ?",
+                FramedSyncSQLiteValues.blobArgs(transferId));
+            database.setTransactionSuccessful();
+        } finally { database.endTransaction(); }
+    }
+
     @Override public synchronized void close() { database.close(); }
 
     private FramedSyncStageOutcome insertOrCompareAttempt(

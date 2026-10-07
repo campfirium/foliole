@@ -1,6 +1,7 @@
 import { framedSyncBytes, readFramedSyncRow } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { canonicalContentId, canonicalTransferId } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { retireFramedSyncCompletedPublication } from '../../lib/core/sync/framedSyncCompletedPublication.js';
 import {
   FRAMED_SYNC_PROTOCOL_VERSION,
   type FramedSyncContext,
@@ -9,6 +10,7 @@ import {
 } from '../../lib/core/sync/framedSyncContract.js';
 import type { OutboundPublishInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
+import { collectDeliveredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyRetention.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { loadSyncNodes, loadSyncNodeVersionsSince } from '../database/syncNodes.js';
 
@@ -57,6 +59,7 @@ export async function synchronizeDesktopFramedSync(input: {
   });
   await transmitDesktopFramedSyncPublication({
     attempt,
+    db: input.db,
     groupSecret: input.groupSecret,
     peerOrigin: input.peerOrigin,
     publication: { ...published, manifest: projection.manifest },
@@ -119,6 +122,7 @@ async function persistDesktopFramedSyncAttempt(input: {
 }
 
 export async function sendDesktopFramedSyncPublishedTransfer(input: {
+  db: DbPort;
   attempt: PreparedTransferAttempt;
   groupSecret: string;
   peerOrigin: string;
@@ -131,6 +135,7 @@ export async function sendDesktopFramedSyncPublishedTransfer(input: {
 }
 
 async function transmitDesktopFramedSyncPublication(input: {
+  db: DbPort;
   attempt: PreparedTransferAttempt;
   groupSecret: string;
   peerOrigin: string;
@@ -140,24 +145,31 @@ async function transmitDesktopFramedSyncPublication(input: {
   const published = publishedTransfer(input.publication);
   const body = await loadDesktopFramedSyncPreparedTransferBody(input);
   const context = published.context;
-  const response = await postDesktopFramedSync({
-    body,
-    endpointUrl: input.peerOrigin,
-    groupId: context.groupId,
-    localDeviceId: context.senderDeviceId,
-    localLibraryEpoch: context.senderLibraryEpoch,
-    pathWithQuery: '/companion/framed-sync',
-    remoteDeviceId: context.receiverDeviceId,
-    remoteLibraryEpoch: context.receiverLibraryEpoch,
-    secret: input.groupSecret
-  });
-  const receipt = await readReceipt({
-    groupKey: groupKey(input.groupSecret),
-    published,
-    stream: response.stream
-  });
-  await input.staging.commitOutboundReceipt(receipt);
-  await input.staging.releaseOutboundHolds(published.transferId);
+  try {
+    const response = await postDesktopFramedSync({
+      body,
+      endpointUrl: input.peerOrigin,
+      groupId: context.groupId,
+      localDeviceId: context.senderDeviceId,
+      localLibraryEpoch: context.senderLibraryEpoch,
+      pathWithQuery: '/companion/framed-sync',
+      remoteDeviceId: context.receiverDeviceId,
+      remoteLibraryEpoch: context.receiverLibraryEpoch,
+      secret: input.groupSecret
+    });
+    const receipt = await readReceipt({
+      groupKey: groupKey(input.groupSecret),
+      published,
+      stream: response.stream
+    });
+    await input.staging.commitOutboundReceipt(receipt);
+    await input.staging.releaseOutboundHolds(published.transferId);
+    await collectDeliveredParentOrderBodies(input.db, published.transferId);
+    await retireFramedSyncCompletedPublication(input.db, published.transferId);
+  } catch (error) {
+    await input.staging.abandonOutboundAttempt(published.transferId, input.attempt.attemptId);
+    throw error;
+  }
 }
 
 function publishedTransfer(input: OutboundPublishInput): PublishedTransfer {

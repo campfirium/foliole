@@ -51,7 +51,10 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
             } else {
                 try requireReceivingAttempt(frame)
             }
-            let outcome = try insertOrCompare(frame, header: header, digestOnly: resourceChunk != nil)
+            let ready = try row("SELECT 1 FROM framed_sync_ios_transfers WHERE transfer_id = ? AND state = 'ready_to_apply'",
+                                values: [frame.transferID]) != nil
+            let outcome = try insertOrCompare(frame, header: header,
+                                             digestOnly: resourceChunk != nil || (ready && header.frameType == .blobChunk))
             try execute("COMMIT")
             if case .transferHeader(let value) = validated.payload {
                 try resources.admit(
@@ -136,7 +139,7 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
             WHERE transfer_id = ? AND attempt_id = ? AND sequence = ?
             """, values: key)
         if let existing {
-            let ciphertext = digestOnly ? Data(SHA256.hash(data: frame.ciphertext)) : frame.ciphertext
+            let ciphertext = Data(SHA256.hash(data: frame.ciphertext))
             let plaintext = digestOnly ? Data(SHA256.hash(data: frame.plaintext)) : frame.plaintext
             let expected: [Any] = [Int(header.frameType.rawValue), frame.preamble, frame.header,
                                    ciphertext, plaintext]
@@ -149,7 +152,7 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
                       values: [frame.transferID]) != nil else {
             throw FolioleFramedSyncValidationError("inbound_ready_frame_missing")
         }
-        let ciphertext = digestOnly ? Data(SHA256.hash(data: frame.ciphertext)) : frame.ciphertext
+        let ciphertext = Data(SHA256.hash(data: frame.ciphertext))
         let plaintext = digestOnly ? Data(SHA256.hash(data: frame.plaintext)) : frame.plaintext
         try execute("""
             INSERT INTO framed_sync_ios_frames

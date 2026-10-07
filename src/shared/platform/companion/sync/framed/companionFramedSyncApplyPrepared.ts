@@ -1,6 +1,7 @@
 import { recordFramedSyncResourceAvailability } from '../../../../../../lib/core/database/framedSyncResourceAvailability.js';
 import { readFramedSyncReceipt, sameFramedSyncBytes } from '../../../../../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
+import { markFramedSyncCompletion } from '../../../../../../lib/core/sync/framedSyncCompletionRetention.js';
 import type { TransferReceiptStage } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { assertFramedSyncNodeParentDependencies } from '../../../../../../lib/core/sync/framedSyncNodeParentDependencies.js';
@@ -80,5 +81,6 @@ async function commitReceipt(db: DbPort, transfer: Prepared): Promise<TransferRe
   const receipt = { ...identity, appliedStateHash: current.sharedStateHash };
   await db.run('INSERT INTO framed_sync_receipts VALUES (?, ?, ?, ?, ?)', [receipt.transferId,
     receipt.contentId, receipt.receiverDeviceId, receipt.receiverLibraryEpoch, receipt.appliedStateHash]);
+  await markFramedSyncCompletion(db, receipt.transferId);
   return receipt;
 }

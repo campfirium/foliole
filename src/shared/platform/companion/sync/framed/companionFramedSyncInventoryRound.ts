@@ -43,7 +43,7 @@ function digest(value: unknown, name: string) {
   return hexToBytes(value);
 }
 
-function decodeEntry(value: NativeCompanionFramedSyncInventoryEntry): FramedSyncInventoryEntry {
+export function decodeCompanionInventoryEntry(value: NativeCompanionFramedSyncInventoryEntry): FramedSyncInventoryEntry {
   if (!value || typeof value !== 'object' || typeof value.object_type !== 'string' || !value.global_id ||
       (value.object_type !== 'node' && (value.frontier_fact_ids.length > 0 || value.required_relation_ids.length > 0 || value.review_fact_ids.length > 0))) {
     throw new Error('framed_sync_inventory_identity_invalid');
@@ -62,7 +62,7 @@ function decodeEntry(value: NativeCompanionFramedSyncInventoryEntry): FramedSync
 }
 
 function decodeOptionalEntry(value: NativeCompanionFramedSyncInventoryEntry | null) {
-  return value ? decodeEntry(value) : null;
+  return value ? decodeCompanionInventoryEntry(value) : null;
 }
 
 async function pullDifference(args: NativeCompanionFramedSyncInventoryRequest,
@@ -118,7 +118,7 @@ export function decodeCompanionFramedSyncInventory(
     ? hexToBytes(value.round_id)
     : null;
   if (!roundId) throw new Error('framed_sync_inventory_round_id_invalid');
-  return { entries: value.entries.map(decodeEntry), roundId };
+  return { entries: value.entries.map(decodeCompanionInventoryEntry), roundId };
 }
 
 export async function readCompanionRemoteFramedSyncInventory(
@@ -146,13 +146,17 @@ export async function sendCompanionFramedSyncInventoryDifferences(
 ) {
   const adoption = await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption);
   if (adoption) return adoptCompanionSyncGroupData(args, adoption);
-  await resumeCompanionFramedSyncPendingPublications(args);
   const owner = getIosCompanionDatabaseOwner();
-  const [localValue, remoteResult] = await Promise.all([
+  let [localValue, remoteResult] = await Promise.all([
     owner.read(readCompanionFramedSyncInventory),
     readCompanionRemoteFramedSyncInventory(args)
   ]);
-  const local = localValue.entries.map(decodeEntry);
+  if (await resumeCompanionFramedSyncPendingPublications(args, remoteResult.entries)) {
+    [localValue, remoteResult] = await Promise.all([
+      owner.read(readCompanionFramedSyncInventory), readCompanionRemoteFramedSyncInventory(args)
+    ]);
+  }
+  const local = localValue.entries.map(decodeCompanionInventoryEntry);
   const selection = selectCompanionFramedSyncCurrentNodes({ local, remote: remoteResult.entries });
   const deferredObjects = [...selection.deferredObjects];
   const dependencies = framedSyncOrderBodyDependencies({ local, remote: remoteResult.entries });

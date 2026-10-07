@@ -57,21 +57,24 @@ final class FolioleCompanionFramedSyncOutbound {
         var blobs = FolioleCompanionFramedSyncOutboundInput.blobs(context, prepared, facts);
 
         try (FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context)) {
-            FramedSyncTransferWriter.Attempt replayable =
-                staging.loadLatestReplayableAttempt(expectedTransferId);
-            final FramedSyncTransferWriter.Attempt attempt = replayable != null ? replayable :
-                FramedSyncTransferWriter.prepare(groupKey, transferContext, facts, blobs, staging);
-            requireSame(expectedTransferId, attempt.transferId(), "framed_sync_transfer_identity_mismatch");
-            String path = path(credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
-            Map<String, String> headers = signedHeaders(
-                credential, groupId, path, bodySha256(attempt, staging));
-            TransferReceipt receipt = FramedSyncHttpTransport.post(
-                new URL(join(endpointUrl, path)), groupId, receiverDeviceId, receiverEpoch, headers,
-                writer -> FramedSyncTransferWriter.replay(attempt, staging, writer),
-                reader -> FramedSyncReceiptReader.read(reader, groupKey, attempt.transferId(),
-                    contentId, receiverDeviceId, receiverEpoch));
-            complete(receipt);
-            return result(receipt);
+            staging.discardOutboundAttempts(expectedTransferId);
+            try {
+                FramedSyncTransferWriter.Attempt replayable =
+                    staging.loadLatestReplayableAttempt(expectedTransferId);
+                final FramedSyncTransferWriter.Attempt attempt = replayable != null ? replayable :
+                    FramedSyncTransferWriter.prepare(groupKey, transferContext, facts, blobs, staging);
+                requireSame(expectedTransferId, attempt.transferId(), "framed_sync_transfer_identity_mismatch");
+                String path = path(credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
+                Map<String, String> headers = signedHeaders(
+                    credential, groupId, path, bodySha256(attempt, staging));
+                TransferReceipt receipt = FramedSyncHttpTransport.post(
+                    new URL(join(endpointUrl, path)), groupId, receiverDeviceId, receiverEpoch, headers,
+                    writer -> FramedSyncTransferWriter.replay(attempt, staging, writer),
+                    reader -> FramedSyncReceiptReader.read(reader, groupKey, attempt.transferId(),
+                        contentId, receiverDeviceId, receiverEpoch));
+                complete(receipt);
+                return result(receipt);
+            } finally { staging.discardOutboundAttempts(expectedTransferId); }
         }
     }
 

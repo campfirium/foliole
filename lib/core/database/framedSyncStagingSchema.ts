@@ -1,4 +1,7 @@
+import { FRAMED_SYNC_COMPLETION_SCHEMA } from './framedSyncCompletionSchema.js';
+
 export const FRAMED_SYNC_STAGING_SCHEMA = [
+  FRAMED_SYNC_COMPLETION_SCHEMA,
   `CREATE TABLE IF NOT EXISTS framed_sync_session_send_states (
     session_id BLOB PRIMARY KEY, context_id BLOB NOT NULL, nonce_prefix BLOB NOT NULL,
     starting_sequence TEXT NOT NULL CHECK (starting_sequence = '0'),

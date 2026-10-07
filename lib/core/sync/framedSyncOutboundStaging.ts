@@ -1,7 +1,8 @@
 import {
-  encodeFramedSyncManifest,
+  decodeFramedSyncManifest,
   failFramedSync,
   framedSyncBytes,
+  framedSyncText,
   readFramedSyncPublication,
   readFramedSyncRow,
   sameFramedSyncBytes
@@ -15,20 +16,31 @@ import {
   streamReplayableFramedSyncFrames,
   persistFramedSyncAttempt
 } from './framedSyncAttemptStaging.js';
+import { canonicalManifestBytes } from './framedSyncCanonicalManifest.js';
 import type { PreparedTransferAttempt, StoredEncryptedFrame } from './framedSyncContract.js';
+import { encodePublicationInventory } from './framedSyncPublicationInventory.js';
 import { assertOutboundPublication, type OutboundPublishInput } from './framedSyncStagingContract.js';
 
 export async function publishFramedSyncOutboundWithDbPort(db: DbPort, input: OutboundPublishInput) {
   const verified = await assertOutboundPublication(input);
   const prior = await readFramedSyncRow(db,
     'SELECT * FROM framed_sync_outbound_publications WHERE transfer_id = ?', [input.transferId]);
-  if (prior) return sameFramedSyncBytes(framedSyncBytes(prior, 'content_id'), input.contentId) &&
-    sameFramedSyncBytes(framedSyncBytes(prior, 'canonical_manifest'), verified.canonicalBytes)
-    ? 'identical' as const : failFramedSync('outbound_publication_conflict');
+  if (prior) {
+    if (!sameFramedSyncBytes(framedSyncBytes(prior, 'content_id'), input.contentId)) {
+      failFramedSync('outbound_publication_conflict');
+    }
+    const storedManifest = decodeFramedSyncManifest(framedSyncText(prior, 'manifest_json'));
+    if (storedManifest.facts.length) return sameFramedSyncBytes(
+      canonicalManifestBytes(storedManifest), verified.canonicalBytes)
+      ? 'identical' as const : failFramedSync('outbound_publication_conflict');
+    if (prior.state !== 'receipt_committed') failFramedSync('outbound_publication_conflict');
+    await db.run(`UPDATE framed_sync_outbound_publications SET manifest_json = ?, state = 'published'
+      WHERE transfer_id = ?`, [encodePublicationInventory(input.manifest, input.inventoryDifference), input.transferId]);
+  }
   const context = input.context;
-  await db.run(`INSERT INTO framed_sync_outbound_publications VALUES
+  if (!prior) await db.run(`INSERT INTO framed_sync_outbound_publications VALUES
     (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')`, [input.transferId, input.contentId,
-    input.manifestHash, verified.canonicalBytes, encodeFramedSyncManifest(input.manifest),
+    input.manifestHash, new Uint8Array(), encodePublicationInventory(input.manifest, input.inventoryDifference),
     context.protocolVersion, context.groupId, context.senderDeviceId, context.senderLibraryEpoch,
     context.receiverDeviceId, context.receiverLibraryEpoch, input.manifest.facts.length,
     input.manifest.blobs.length, input.manifest.blobs.reduce((sum, blob) => sum + blob.byteLength, 0n)]);
@@ -66,6 +78,8 @@ export function createFramedSyncOutboundStaging(db: DbPort) {
     },
     async abandonOutboundAttempt(transferId: Uint8Array, attemptId: Uint8Array) {
       await db.run(`UPDATE framed_sync_outbound_attempts SET state = 'abandoned'
+        WHERE transfer_id = ? AND purpose = 'transfer' AND attempt_id = ?`, [transferId, attemptId]);
+      await db.run(`DELETE FROM framed_sync_outbound_frames
         WHERE transfer_id = ? AND purpose = 'transfer' AND attempt_id = ?`, [transferId, attemptId]);
     },
     loadReplayableFrames(transferId: Uint8Array, attemptId: Uint8Array) {

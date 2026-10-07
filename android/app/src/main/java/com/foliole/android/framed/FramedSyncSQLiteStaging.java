@@ -22,6 +22,7 @@ public final class FramedSyncSQLiteStaging implements FramedSyncDurableStaging {
             throw new IllegalArgumentException("framed_sync_database_not_writable");
         }
         FramedSyncSQLiteSchema.install(database);
+        FramedSyncCompletedInboundCleanup.migratePayloads(database);
         inbound = new FramedSyncSQLiteInboundFrames(database, resourceDirectory);
         receipts = new FramedSyncSQLiteReceipts(database);
         receiptReplay = new FramedSyncSQLiteReceiptReplay(database, receipts);

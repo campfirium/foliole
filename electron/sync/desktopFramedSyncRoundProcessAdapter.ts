@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { expireFramedSyncCompletions } from '../../lib/core/sync/framedSyncCompletionRetention.js';
 import {
   FRAMED_SYNC_FRAME_TYPES,
   FRAMED_SYNC_PROTOCOL_VERSION
@@ -62,6 +63,7 @@ const authenticatedContext = z.object({
 const command = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('remember_peer'), peer: identity, peerOrigin: z.string().url() }),
   z.object({ kind: z.literal('reconcile'), peer: identity, peerOrigin: z.string().url() }),
+  z.object({ kind: z.literal('expire_completions'), now: z.number().int().nonnegative() }),
   z.object({ kind: z.literal('read_inventory') }),
   z.object({ globalId: z.string().min(1), kind: z.literal('read_entry'),
     objectType: z.string().min(1) }),
@@ -107,12 +109,8 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
         local_device_id: input.local.deviceId, peer_device_id: request.peer.deviceId,
         peer_device_name: request.peer.deviceId, peer_platform: 'desktop' }
     });
-    if (request.kind === 'read_inventory') {
-      return readDesktopFramedSyncRoundInventory(input.db);
-    }
-    if (request.kind === 'read_entry') {
-      return readDesktopFramedSyncRoundInventoryEntry(input.db, request);
-    }
+    const read = readFixtureCommand(request, input.db);
+    if (read) return read;
     if (request.kind === 'select') {
       const endpoint = createDesktopFramedSyncRoundEndpoint({
         ...input,
@@ -151,6 +149,13 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
     }
     return [...controlLog];
   };
+}
+
+function readFixtureCommand(request: z.infer<typeof command>, db: DbPort) {
+  if (request.kind === 'expire_completions') return expireFramedSyncCompletions(db, request.now);
+  if (request.kind === 'read_inventory') return readDesktopFramedSyncRoundInventory(db);
+  if (request.kind === 'read_entry') return readDesktopFramedSyncRoundInventoryEntry(db, request);
+  return undefined;
 }
 
 function requiredSelection(selections: ReadonlyMap<string, CachedSelection>, transferId: string) {

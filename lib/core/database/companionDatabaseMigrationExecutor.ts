@@ -27,7 +27,9 @@ import { migrateCompanionSourceHostOwnership } from './companionSourceHostOwners
 import { migrateCompanionSyncGroupHosts } from './companionSyncGroupHostsMigration.js';
 import { migrateCompanionWatchedBindings } from './companionWatchedBindingsMigration.js';
 import { migrateCompanionDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
+import { FRAMED_SYNC_COMPLETION_BACKFILL } from './framedSyncCompletionSchema.js';
 import { migrateCompanionFramedSyncInventory } from './framedSyncInventoryMigration.js';
+import { migrateCompanionFramedSyncPayloads } from './framedSyncPayloadMigration.js';
 import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
@@ -97,6 +99,10 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 73 && targetVersion >= 73) await migrateCompanionFramedSyncTombstoneInventory(db);
   if (currentVersion < 74 && targetVersion >= 74) await migrateCompanionFramedSyncPermanentDeleteHistory(db);
   if (currentVersion < 76 && targetVersion >= 76) await migrateCompanionTopicTextState(db);
+  if (currentVersion < 77 && targetVersion >= 77) {
+    await db.run(FRAMED_SYNC_COMPLETION_BACKFILL);
+    await migrateCompanionFramedSyncPayloads(db);
+  }
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

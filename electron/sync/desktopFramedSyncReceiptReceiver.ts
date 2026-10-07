@@ -1,4 +1,5 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { retireFramedSyncCompletedPublication } from '../../lib/core/sync/framedSyncCompletedPublication.js';
 import type {
   FramedSyncContext,
   PublishedTransfer
@@ -37,6 +38,7 @@ export async function receiveDesktopFramedSyncReceipt(input: {
   await input.staging.commitOutboundReceipt(receipt);
   await input.staging.releaseOutboundHolds(input.transferId);
   await collectDeliveredParentOrderBodies(input.db, input.transferId);
+  await retireFramedSyncCompletedPublication(input.db, input.transferId);
   return buildReceiptStream({
     db: input.db, groupKey: input.groupKey, receipt, staging: input.staging
   });

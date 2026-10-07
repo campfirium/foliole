@@ -17,6 +17,7 @@ public final class FramedSyncTransferSQLite implements AutoCloseable {
         database = SQLiteDatabase.openOrCreateDatabase(file, null);
         staging = new FramedSyncSQLiteStaging(database,
             new File(context.getApplicationContext().getFilesDir(), "attachments"));
+        FramedSyncCompletedInboundCleanup.recover(database);
     }
 
     public synchronized FramedSyncTransferReader.Result receive(
@@ -28,7 +29,9 @@ public final class FramedSyncTransferSQLite implements AutoCloseable {
     }
 
     public synchronized byte[] receipt(byte[] groupKey, TransferReceipt receipt) throws Exception {
-        return FramedSyncReceiptWriter.encode(groupKey, receipt, staging);
+        byte[] encoded = FramedSyncReceiptWriter.encode(groupKey, receipt, staging);
+        FramedSyncCompletedInboundCleanup.retire(database, receipt.getTransferId().toByteArray());
+        return encoded;
     }
 
     public String path() {

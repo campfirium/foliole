@@ -64,6 +64,7 @@ let package = Package(
                 "FolioleFramedSyncSQLiteStaging.swift",
                 "FolioleFramedSyncCanonicalManifest.swift",
                 "FolioleFramedSyncReceiptWriter.swift",
+                "FolioleFramedSyncCompletedInboundCleanup.swift",
                 "FolioleFramedSyncTransferContext.swift",
                 "FolioleFramedSyncTransferDatabase.swift",
                 "FolioleFramedSyncTransferReceiver.swift",

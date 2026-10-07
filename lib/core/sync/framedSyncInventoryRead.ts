@@ -2,6 +2,7 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 import { z } from 'zod';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { expireFramedSyncCompletions } from './framedSyncCompletionRetention.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInventory.js';
 import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
@@ -51,6 +52,7 @@ async function read(port: DbPort, key?: InventoryKey) {
 export function readFramedSyncInventory(port: DbPort) {
   return port.transaction(async (tx) => {
     if (await loadSyncGroupLocalAdoption(tx)) return [];
+    await expireFramedSyncCompletions(tx);
     for (const row of await tx.query<{ parent_id: string }>('SELECT parent_id FROM parent_order_heads')) {
       await publishParentOrderPosition(tx, row.parent_id);
     }

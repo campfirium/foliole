@@ -18,9 +18,9 @@ import {
 import { projectFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { selectFramedSyncNodeReadingFact } from '../../lib/core/sync/framedSyncNodeReadingFact.js';
 import { selectFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
+import { publishFramedSyncOutboundWithDbPort } from '../../lib/core/sync/framedSyncOutboundStaging.js';
 import { selectFramedSyncRelationReviewFactsWithDbPort } from '../../lib/core/sync/framedSyncRelationReviewSelection.js';
 import {
-  assertOutboundPublication,
   type OutboundPublishInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
 import { assertSyncGroupLocalPublicationAllowed } from '../../lib/core/sync/syncGroupLocalAdoption.js';
@@ -54,49 +54,6 @@ export type DesktopFramedSyncOutboundInput = Readonly<{
 function sameBlob(left: CanonicalBlob, right: CanonicalBlob) {
   return left.byteLength === right.byteLength && left.required === right.required &&
     left.role === right.role && bytesToHex(left.sha256) === bytesToHex(right.sha256);
-}
-
-function sameBytes(left: Uint8Array, right: Uint8Array) {
-  return left.byteLength === right.byteLength && left.every((byte, index) => byte === right[index]);
-}
-
-function encodeManifest(manifest: CanonicalManifest) {
-  return JSON.stringify(manifest, (_key, value: unknown) => {
-    if (typeof value === 'bigint') return value.toString();
-    return value instanceof Uint8Array ? [...value] : value;
-  });
-}
-
-async function stagePublication(tx: DbPort, input: OutboundPublishInput) {
-  const verified = await assertOutboundPublication(input);
-  const [prior] = await tx.query<{ canonical_manifest: Uint8Array; content_id: Uint8Array }>(
-    'SELECT content_id, canonical_manifest FROM framed_sync_outbound_publications WHERE transfer_id = ?',
-    [input.transferId]
-  );
-  if (prior) {
-    if (sameBytes(prior.content_id, input.contentId) &&
-        sameBytes(prior.canonical_manifest, verified.canonicalBytes)) return 'identical' as const;
-    throw new Error('outbound_publication_conflict');
-  }
-  const context = input.context;
-  await tx.run(`INSERT INTO framed_sync_outbound_publications VALUES
-    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')`, [input.transferId,
-    input.contentId, input.manifestHash, verified.canonicalBytes, encodeManifest(input.manifest),
-    context.protocolVersion, context.groupId, context.senderDeviceId, context.senderLibraryEpoch,
-    context.receiverDeviceId, context.receiverLibraryEpoch, input.manifest.facts.length,
-    input.manifest.blobs.length,
-    input.manifest.blobs.reduce((total, blob) => total + blob.byteLength, 0n)]);
-  for (const fact of input.manifest.facts) {
-    await tx.run('INSERT INTO framed_sync_outbound_fact_refs VALUES (?, ?, ?, ?, ?)',
-      [input.transferId, fact.kind, fact.objectType, fact.globalId, fact.factId]);
-  }
-  for (const blob of input.manifest.blobs) {
-    await tx.run('INSERT INTO framed_sync_outbound_blob_refs VALUES (?, ?, ?, ?, ?)',
-      [input.transferId, blob.sha256, blob.byteLength, blob.role, blob.required ? 1 : 0]);
-  }
-  await tx.run('INSERT INTO framed_sync_outbound_holds VALUES (?, ?)',
-    [input.transferId, context.receiverDeviceId]);
-  return 'created' as const;
 }
 
 export async function selectDesktopFramedSyncNodeManifest(
@@ -194,12 +151,13 @@ export async function publishDesktopFramedSyncNodeOutbound(
     const transferId = await canonicalTransferId(input.context, contentId);
     const publication: OutboundPublishInput = {
       contentId,
+      inventoryDifference: difference,
       context: input.context,
       manifest,
       manifestHash: contentId.slice(),
       transferId
     };
-    const stagingResult = await stagePublication(tx, publication);
+    const stagingResult = await publishFramedSyncOutboundWithDbPort(tx, publication);
     return { deferredObjects: [], kind: 'published', publication, stagingResult };
   });
 }

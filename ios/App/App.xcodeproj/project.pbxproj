@@ -23,6 +23,7 @@
 		326B00000000000000000003 /* FolioleFramedSyncHTTPReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000003 /* FolioleFramedSyncHTTPReceiver.swift */; };
 		326B00000000000000000004 /* FolioleFramedSyncSQLiteStaging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000004 /* FolioleFramedSyncSQLiteStaging.swift */; };
 		326B00000000000000000005 /* FolioleFramedSyncCanonicalManifest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000005 /* FolioleFramedSyncCanonicalManifest.swift */; };
+		331B00000000000000000001 /* FolioleFramedSyncCompletedInboundCleanup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 331A00000000000000000001 /* FolioleFramedSyncCompletedInboundCleanup.swift */; };
 		326B00000000000000000006 /* FolioleFramedSyncReceiptWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000006 /* FolioleFramedSyncReceiptWriter.swift */; };
 		326B00000000000000000007 /* FolioleFramedSyncTransferContext.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000007 /* FolioleFramedSyncTransferContext.swift */; };
 		326B00000000000000000008 /* FolioleFramedSyncTransferDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000008 /* FolioleFramedSyncTransferDatabase.swift */; };
@@ -185,6 +186,7 @@
 		326A00000000000000000003 /* FolioleFramedSyncHTTPReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncHTTPReceiver.swift; sourceTree = "<group>"; };
 		326A00000000000000000004 /* FolioleFramedSyncSQLiteStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncSQLiteStaging.swift; sourceTree = "<group>"; };
 		326A00000000000000000005 /* FolioleFramedSyncCanonicalManifest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncCanonicalManifest.swift; sourceTree = "<group>"; };
+		331A00000000000000000001 /* FolioleFramedSyncCompletedInboundCleanup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncCompletedInboundCleanup.swift; sourceTree = "<group>"; };
 		326A00000000000000000006 /* FolioleFramedSyncReceiptWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncReceiptWriter.swift; sourceTree = "<group>"; };
 		326A00000000000000000007 /* FolioleFramedSyncTransferContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncTransferContext.swift; sourceTree = "<group>"; };
 		326A00000000000000000008 /* FolioleFramedSyncTransferDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncTransferDatabase.swift; sourceTree = "<group>"; };
@@ -367,6 +369,7 @@
 				326A00000000000000000004 /* FolioleFramedSyncSQLiteStaging.swift */,
 				326A00000000000000000005 /* FolioleFramedSyncCanonicalManifest.swift */,
 				326A00000000000000000006 /* FolioleFramedSyncReceiptWriter.swift */,
+				331A00000000000000000001 /* FolioleFramedSyncCompletedInboundCleanup.swift */,
 				326A00000000000000000007 /* FolioleFramedSyncTransferContext.swift */,
 				326A00000000000000000008 /* FolioleFramedSyncTransferDatabase.swift */,
 				326A00000000000000000009 /* FolioleFramedSyncTransferReceiver.swift */,
@@ -689,6 +692,7 @@
 				326B00000000000000000004 /* FolioleFramedSyncSQLiteStaging.swift in Sources */,
 				326B00000000000000000005 /* FolioleFramedSyncCanonicalManifest.swift in Sources */,
 				326B00000000000000000006 /* FolioleFramedSyncReceiptWriter.swift in Sources */,
+				331B00000000000000000001 /* FolioleFramedSyncCompletedInboundCleanup.swift in Sources */,
 				326B00000000000000000007 /* FolioleFramedSyncTransferContext.swift in Sources */,
 				326B00000000000000000008 /* FolioleFramedSyncTransferDatabase.swift in Sources */,
 				326B00000000000000000009 /* FolioleFramedSyncTransferReceiver.swift in Sources */,

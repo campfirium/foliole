@@ -11,6 +11,7 @@ import {
   type FramedSyncContext,
   type PublishedTransfer
 } from './framedSyncContract.js';
+import type { FramedSyncInventoryDifference } from './framedSyncInventory.js';
 
 export const FRAMED_SYNC_STAGING_KEYS = Object.freeze({
   attemptFrame: ['stream_kind', 'transfer_id', 'attempt_id', 'sequence'],
@@ -23,6 +24,7 @@ export const FRAMED_SYNC_STAGING_KEYS = Object.freeze({
 } as const);
 
 export type OutboundPublishInput = Readonly<{
+  inventoryDifference?: FramedSyncInventoryDifference;
   contentId: Uint8Array;
   context: FramedSyncContext;
   manifest: CanonicalManifest;

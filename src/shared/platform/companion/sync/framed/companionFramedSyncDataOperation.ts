@@ -1,6 +1,7 @@
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
+import { retireFramedSyncCompletedPublication } from '../../../../../../lib/core/sync/framedSyncCompletedPublication.js';
 import { createFramedSyncOutboundReceiptStaging } from '../../../../../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
 import { collectDeliveredParentOrderBodies } from '../../../../../../lib/core/sync/parentOrderBodyRetention.js';
 import { parseCanonicalAttachmentStorageKey } from '../../../../../../lib/platform/attachmentResource.js';
@@ -74,5 +75,6 @@ export async function completeCompanionFramedSyncOutbound(
   const state = await staging.commitOutboundReceipt(receipt);
   await staging.releaseOutboundHolds(receipt.transferId);
   await collectDeliveredParentOrderBodies(db, receipt.transferId);
+  await retireFramedSyncCompletedPublication(db, receipt.transferId);
   return { receipt_state: state, transfer_id: bytesToHex(receipt.transferId) };
 }

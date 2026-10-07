@@ -24,6 +24,9 @@ const REPO_ROOT = path.resolve(__dirname, '../..');
 const DESKTOP_SCHEMA_FILES = {
   CORE_INDEX_SCHEMA_STATEMENTS: 'lib/core/database/coreIndexSchemaStatements.ts',
   FOREGROUND_TIME_SCHEMA: 'lib/core/database/foregroundTimeSchema.ts',
+  FRAMED_SYNC_STAGING_SCHEMA: 'lib/core/database/framedSyncStagingSchema.ts',
+  FRAMED_SYNC_INVENTORY_TABLES: 'lib/core/database/framedSyncInventorySchema.ts',
+  FRAMED_SYNC_INVENTORY_SCHEMA: 'lib/core/database/framedSyncInventorySchema.ts',
   REVIEW_DAILY_COUNT_SCHEMA: 'lib/core/database/reviewDailyCountSchema.ts',
   NODE_SYNC_TOMBSTONE_SCHEMA_STATEMENTS: 'lib/core/database/nodeSyncTombstoneSchemaStatements.ts',
   DESKTOP_CORE_SCHEMA_STATEMENTS: 'lib/core/database/desktopCoreSchemaStatements.ts',
@@ -79,6 +82,11 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
   for (const [name, relativePath] of Object.entries(DESKTOP_SCHEMA_FILES)) {
     arrays[name] = extractStatementsFromArray(readRepoFile(repoRoot, relativePath), name, arrays);
   }
+  arrays.PARENT_ORDER_BODY_RETENTION_SCHEMA = arrays.NODE_VERSION_MEMBER_POSITION_SCHEMA.map((sql) =>
+    sql.replaceAll('node_version_member_positions', 'parent_order_member_positions'));
+  arrays.PARENT_ORDER_VERSION_SCHEMA = extractStatementsFromArray(
+    readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.PARENT_ORDER_VERSION_SCHEMA),
+    'PARENT_ORDER_VERSION_SCHEMA', arrays);
   const source = readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.DESKTOP_FRESH_SCHEMA_STATEMENTS);
   const body = extractArrayBody(source, 'DESKTOP_FRESH_SCHEMA_STATEMENTS');
   const statements = extractStatementsFromBody(body, arrays);
@@ -86,6 +94,10 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
     readRepoFile(repoRoot, 'lib/core/database/numberedMigrationParentChildOrder.ts'), arrays));
   statements.push(...extractStatementsFromBody(
     readRepoFile(repoRoot, 'lib/core/database/nodeVersionConfirmationSchema.ts'), arrays));
+  statements.push(...extractStatementsFromBody(
+    readRepoFile(repoRoot, 'lib/core/database/framedSyncCompletionSchema.ts'), arrays));
+  statements.push(extractStatementsFromBody(
+    readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.SYNC_GROUP_SCHEMA_STATEMENTS), arrays)[0]);
   return statements.filter((statement) =>
     !/CREATE (?:TABLE|INDEX) IF NOT EXISTS (?:attachments|node_attachments|idx_node_attachments_attachment_id|node_order)\b/.test(statement));
 }

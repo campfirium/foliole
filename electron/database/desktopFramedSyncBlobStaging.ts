@@ -10,6 +10,7 @@ import {
   sameFramedSyncBytes
 } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
+import { retireFramedSyncAppliedInbound } from '../../lib/core/sync/framedSyncAppliedInboundCleanup.js';
 import {
   acceptBlobChunk,
   assertRequiredBlobsAvailable,
@@ -18,6 +19,7 @@ import {
   verifyCompleteBlob,
   type DurableBlobPin
 } from '../../lib/core/sync/framedSyncBlobContract.js';
+import { retireFramedSyncReadyPayloads } from '../../lib/core/sync/framedSyncReadyPayloadCleanup.js';
 import type { BlobChunkInput, BlobOfferTransactionInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 
 function assertAvailableBlobMatches(row: DbRow, byteLength: bigint, data?: Uint8Array) {
@@ -173,6 +175,7 @@ function createBlobPromotionStaging(db: DbPort) {
           WHERE transfer_id = ? AND attempt_id = ?`, [transferId, framedSyncBytes(value, 'active_attempt_id')]);
         await tx.run(`UPDATE framed_sync_inbound_transfers SET state = 'ready_to_apply' WHERE transfer_id = ?`,
           [transferId]);
+        await retireFramedSyncReadyPayloads(tx, transferId);
       });
     },
 
@@ -191,6 +194,7 @@ function createBlobPromotionStaging(db: DbPort) {
         }
         await tx.run('DELETE FROM framed_sync_blob_pins WHERE transfer_id = ?', [transferId]);
         await tx.run('DELETE FROM framed_sync_resource_pins WHERE transfer_id = ?', [transferId]);
+        if (reason === 'business_reference_committed') await retireFramedSyncAppliedInbound(tx, transferId);
       });
     }
   };

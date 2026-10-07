@@ -100,7 +100,7 @@ async function selectOutbound(db: DbPort, payload: Record<string, unknown>) {
   if (objectType !== 'node') {
     const ids = stateFactIds.length ? stateFactIds : current.stateFactIds ?? [];
     const stateFacts = await Promise.all(ids.map((id) => selectFramedSyncObjectStateFact(db, difference, id)));
-    return { records: [], selected: { kind: 'selected' as const, facts: [] }, stateFacts };
+    return { difference, records: [], selected: { kind: 'selected' as const, facts: [] }, stateFacts };
   }
   const selected = await selectFramedSyncRelationReviewFactsWithDbPort(db, difference);
   if (selected.kind === 'deferred') throw new Error('framed_sync_source_changed');
@@ -115,7 +115,7 @@ async function selectOutbound(db: DbPort, payload: Record<string, unknown>) {
   });
   const stateFacts = await Promise.all(stateFactIds.map((factId) =>
     selectFramedSyncNodeReadingFact(db, objectId, factId)));
-  return { records: orderNodeVersionHistory(selectedRecords), selected, stateFacts };
+  return { difference, records: orderNodeVersionHistory(selectedRecords), selected, stateFacts };
 }
 
 export async function inspectCompanionFramedSyncOutbound(
@@ -187,7 +187,7 @@ export async function prepareCompanionFramedSyncOutbound(
         ...selection.selected.facts, ...selection.stateFacts] };
     if (!manifest.facts.length) throw new Error('framed_sync_outbound_fact_set_empty');
     await persistBodies(tx, blobs);
-    return publishSelection(tx, context(payload), manifest, [...blobs.values()]);
+    return publishSelection(tx, context(payload), manifest, [...blobs.values()], selection.difference);
   });
 }
 
@@ -210,11 +210,12 @@ async function addStateBodies(db: DbPort, facts: readonly CanonicalFact[],
 }
 
 async function publishSelection(db: DbPort, transferContext: FramedSyncContext, manifest: CanonicalManifest,
-  blobs: readonly { blob: CanonicalBlob; dataText?: string; storageKey?: string }[]) {
+  blobs: readonly { blob: CanonicalBlob; dataText?: string; storageKey?: string }[],
+  inventoryDifference: FramedSyncInventoryDifference) {
   const contentId = await canonicalContentId(manifest);
   const transferId = await canonicalTransferId(transferContext, contentId);
   const state = await publishFramedSyncOutboundWithDbPort(db, {
-    contentId, context: transferContext, manifest, manifestHash: contentId, transferId
+    contentId, context: transferContext, inventoryDifference, manifest, manifestHash: contentId, transferId
   });
   return createCompanionFramedSyncOutboundValue({ blobs, contentId,
     factMessageBytesList: manifest.facts.map((fact) =>

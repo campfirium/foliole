@@ -174,6 +174,7 @@ export const ANDROID_COMPANION_MIGRATION_PLAN = [
   step(72, 'installSchema', 'Failed to install local sync admission metadata.'),
   step(71, 'installSchema', 'Failed to install write-maintained framed inventory.'),
   step(75, 'installSchema', 'Failed to install arrangement version retention.'),
+  step(77, 'installSchema', 'Failed to install resumable framed publication completion.'),
 ] as const;
 
 function step(beforeVersion: number, type: string, errorMessage: string) {

@@ -84,7 +84,7 @@ async function finalizeInbound(db: DbPort, input: InboundFinalizeInput) {
       return 'invalid' as const;
     }
     await tx.run(`UPDATE framed_sync_inbound_transfers SET canonical_manifest = ?, state = 'receiving'
-      WHERE transfer_id = ?`, [rebuilt, input.transferId]);
+      WHERE transfer_id = ?`, [rebuiltHash, input.transferId]);
     return 'created' as const;
   });
   if (outcome === 'invalid') failFramedSync('inbound_attempt_manifest_mismatch');
@@ -173,15 +173,19 @@ function createInboundAttemptStaging(db: DbPort) {
         const existing = await readFramedSyncRow(tx, `SELECT * FROM framed_sync_inbound_frames
           WHERE transfer_id = ? AND attempt_id = ? AND sequence = ?`,
         [input.transferId, input.attemptId, input.sequence.toString()]);
-        if (existing) return sameFramedSyncBytes(framedSyncBytes(existing, 'ciphertext'), input.ciphertext) &&
-          sameFramedSyncBytes(framedSyncBytes(existing, 'authenticated_plaintext'), input.authenticatedPlaintext) &&
+        const ciphertextDigest = new Uint8Array(createHash('sha256').update(input.ciphertext).digest());
+        const plaintext = transfer.state === 'ready_to_apply' && input.frameType === 4
+          ? new Uint8Array(createHash('sha256').update(input.authenticatedPlaintext).digest())
+          : input.authenticatedPlaintext;
+        if (existing) return sameFramedSyncBytes(framedSyncBytes(existing, 'ciphertext'), ciphertextDigest) &&
+          sameFramedSyncBytes(framedSyncBytes(existing, 'authenticated_plaintext'), plaintext) &&
           sameFramedSyncBytes(framedSyncBytes(existing, 'frame_header'), input.frameHeader) &&
           sameFramedSyncBytes(framedSyncBytes(existing, 'preamble'), input.preamble) &&
           Number(existing.frame_type) === input.frameType
           ? 'identical' as const : failFramedSync('inbound_frame_identity_conflict');
         await tx.run('INSERT INTO framed_sync_inbound_frames VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [input.transferId,
           input.attemptId, input.sequence.toString(), input.frameType, input.preamble, input.frameHeader,
-          input.ciphertext, input.authenticatedPlaintext]);
+          ciphertextDigest, plaintext]);
         return 'created' as const;
       });
     },

@@ -72,6 +72,7 @@ async function sendPublishedTransfer(input: EndpointState, args: Readonly<{
     db: input.db, groupSecret: input.groupSecret, publication: args.publication, staging: input.staging
   });
   await sendDesktopFramedSyncPublishedTransfer({
+    db: input.db,
     attempt,
     groupSecret: input.groupSecret,
     peerOrigin: input.peerOrigin,

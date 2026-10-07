@@ -98,6 +98,7 @@ final class FolioleFramedSyncTransferReceiver {
                 UPDATE framed_sync_ios_transfers SET state = 'ready_to_apply'
                 WHERE transfer_id = ? AND active_attempt_id = ? AND state = 'receiving'
                 """, [value.transferID, value.attemptID])
+            try FolioleFramedSyncCompletedInboundCleanup.retireReadyCopies(database: database, transferID: value.transferID)
         }
     }
 

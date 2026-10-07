@@ -597,6 +597,15 @@
         }
       ],
       "beforeVersion": 75
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install resumable framed publication completion.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 77
     }
   ],
   "planKeys": {

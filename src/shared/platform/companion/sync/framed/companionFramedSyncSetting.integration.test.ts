@@ -11,7 +11,9 @@ import { bootstrapCompanionDatabase } from '../../../../../../lib/core/database/
 import { computeSyncContentHash } from '../../../../../../lib/core/database/syncState.js';
 import { buildCanonicalSettingSyncPayload } from '../../../../../../lib/core/sync/canonicalPrivateStatePayload.js';
 import { buildCanonicalSyncTombstone } from '../../../../../../lib/core/sync/canonicalSyncTombstone.js';
+import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import type { CanonicalFact } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { expireFramedSyncCompletions, FRAMED_SYNC_RECEIPT_RETENTION_MS } from '../../../../../../lib/core/sync/framedSyncCompletionRetention.js';
 import { selectFramedSyncObjectStateFact } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
@@ -34,6 +36,16 @@ function stage(database: Database.Database, prefix: string, fact: CanonicalFact,
   return transferId;
 }
 
+async function seedPrivateSetting(receiver: DbPort, kind: 'android' | 'ios') {
+  const payload = buildCanonicalSettingSyncPayload({ form_factor: 'phone', host_name: 'receiver',
+    key: 'app_settings', platform: kind, scope: 'user_space', value_json: '{"local":true}' });
+  await applySyncObjectInTransaction(receiver, { object_type: 'setting',
+    object_id: `host:${kind}:phone:receiver:discourse_publish_settings`,
+    content_hash: computeSyncContentHash('setting', payload), deleted_at: null,
+    payload_json: JSON.stringify(payload), updated_at: '2026-10-06' }, { hostName: 'receiver' });
+  return payload;
+}
+
 it.each(['android', 'ios'] as const)('applies shared settings and tombstones while preserving private settings through %s restart', async (kind) => {
   const source = createPeer('setting-source');
   const file = path.join(root, 'companion-setting.db');
@@ -46,12 +58,7 @@ it.each(['android', 'ios'] as const)('applies shared settings and tombstones whi
   try {
     await bootstrapCompanionDatabase(receiver, { allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06' });
     installCompanionFramedSyncStaging(staging, prefix);
-    const privatePayload = buildCanonicalSettingSyncPayload({ form_factor: 'phone', host_name: 'receiver',
-      key: 'app_settings', platform: kind, scope: 'user_space', value_json: '{"local":true}' });
-    const privateId = `host:${kind}:phone:receiver:discourse_publish_settings`;
-    await applySyncObjectInTransaction(receiver, { object_type: 'setting', object_id: privateId,
-      content_hash: computeSyncContentHash('setting', privatePayload), deleted_at: null,
-      payload_json: JSON.stringify(privatePayload), updated_at: '2026-10-06' }, { hostName: 'receiver' });
+    const privatePayload = await seedPrivateSetting(receiver, kind);
     for (const host of ['*']) {
       const id = `user_space:${kind}:phone:${host}:app_settings`;
       const payload = buildCanonicalSettingSyncPayload({ form_factor: 'phone', host_name: host,
@@ -70,20 +77,26 @@ it.each(['android', 'ios'] as const)('applies shared settings and tombstones whi
         await applyCompanionFramedSyncTransfer(receiver, input);
         expect(await selectFramedSyncObjectStateFact(receiver,
           { globalId: id, objectType: 'setting' }, `setting:${contentHash}`)).toEqual(fact);
+        return input;
       };
-      await apply(hash);
+      const originalInput = await apply(hash);
       expect(sqlite.prepare('SELECT value_json FROM setting_records WHERE host_name = ? AND key = ?')
         .pluck().get(host, payload.key)).toBe(payload.value_json);
       const deletedHash = computeSyncContentHash('setting', buildCanonicalSyncTombstone(id));
       await applySyncObjectInTransaction(source.port, { ...record, content_hash: deletedHash,
         deleted_at: '2026-10-07', payload_json: null, updated_at: '2026-10-07' }, { hostName: host });
       await apply(deletedHash);
+      expect(await expireFramedSyncCompletions(receiver, Date.now() + FRAMED_SYNC_RECEIPT_RETENTION_MS + 1000)).toBe(2);
+      await applyCompanionFramedSyncTransfer(receiver, originalInput);
+      await applyCompanionFramedSyncTransfer(receiver, originalInput);
+      expect(sqlite.prepare('SELECT content_hash, deleted_at FROM sync_object_state WHERE object_id = ?').get(id))
+        .toEqual({ content_hash: deletedHash, deleted_at: '2026-10-07' });
       expect(sqlite.prepare('SELECT value_json FROM setting_records WHERE host_name = ? AND key = ?').get(host, payload.key)).toBeUndefined();
     }
     await bootstrapCompanionDatabase(receiver, { allowCreate: false, expectedHostName: 'receiver', now: '2026-10-08' });
     const reopened = new Database(file, { readonly: true });
     try {
-      expect(reopened.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(2);
+      expect(reopened.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(1);
       expect(reopened.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_type = 'setting' AND deleted_at IS NOT NULL").pluck().get()).toBe(1);
       expect(reopened.prepare('SELECT value_json FROM setting_records WHERE key = ? AND host_name = ?').pluck().get(privatePayload.key, 'receiver')).toBe(privatePayload.value_json);
       expect(reopened.prepare("SELECT value FROM companion_meta WHERE key = 'host_name'").pluck().get()).toBe('receiver');

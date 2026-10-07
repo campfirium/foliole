@@ -74,6 +74,11 @@ final class FolioleFramedSyncOutboundFrameFiles {
         }
     }
 
+    func remove(transferID: Data, attemptID: Data) throws {
+        let file = frameFile(transferID: transferID, attemptID: attemptID)
+        if FileManager.default.fileExists(atPath: file.path) { try FileManager.default.removeItem(at: file) }
+    }
+
     func requireComplete(transferID: Data, attemptID: Data) throws {
         let rows = try database.rows("""
             SELECT sequence, frame_header FROM \(Self.table)

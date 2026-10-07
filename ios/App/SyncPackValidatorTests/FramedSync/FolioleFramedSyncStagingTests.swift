@@ -5,6 +5,21 @@ import XCTest
 @testable import FolioleSyncPackValidator
 
 final class FolioleFramedSyncStagingTests: XCTestCase {
+    func testUpgradesLegacyCiphertextWithoutLosingAuthenticatedInput() throws {
+        let fixture = try makeFixture()
+        var adapter: FolioleFramedSyncInboundStagingAdapter? = try .init(databaseURL: fixture.databaseURL)
+        XCTAssertEqual(try adapter?.commitAuthenticatedFrame(fixture.frame, context: fixture.context), .created)
+        adapter = nil
+        let database = try FolioleFramedSyncTransferDatabase(url: fixture.databaseURL)
+        try database.execute("UPDATE framed_sync_ios_frames SET ciphertext = ?", [fixture.frame.ciphertext])
+        try database.execute("PRAGMA user_version = 0")
+        let reopened = try FolioleFramedSyncInboundStagingAdapter(databaseURL: fixture.databaseURL)
+        XCTAssertEqual(try reopened.commitAuthenticatedFrame(fixture.frame, context: fixture.context), .identical)
+        XCTAssertEqual(try database.rows("SELECT authenticated_plaintext FROM framed_sync_ios_frames").first?[0] as? Data,
+                       fixture.frame.plaintext)
+        XCTAssertEqual(try database.rows("SELECT length(ciphertext) FROM framed_sync_ios_frames").first?[0] as? Int, 32)
+    }
+
     func testValidatedFrameIsIdempotentAndSurvivesAdapterRestart() throws {
         let fixture = try makeFixture()
         var adapter: FolioleFramedSyncInboundStagingAdapter? = try .init(databaseURL: fixture.databaseURL)

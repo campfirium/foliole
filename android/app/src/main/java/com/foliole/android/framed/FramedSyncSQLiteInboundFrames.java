@@ -175,13 +175,18 @@ final class FramedSyncSQLiteInboundFrames {
         FramedSyncValidatedMessage message
     ) {
         if (message.payload().payloadCase() != FramedSyncPayload.Case.BLOB_CHUNK) {
-            return new byte[][] {frame.ciphertext(), frame.plaintext()};
+            return new byte[][] {sha256(frame.ciphertext()), frame.plaintext()};
         }
         com.foliole.sync.v22.BlobChunk chunk =
             (com.foliole.sync.v22.BlobChunk) message.payload().value();
+        try (var row = database.rawQuery("SELECT 1 FROM framed_sync_android_transfers " +
+            "WHERE hex(transfer_id) = ? AND state = 'ready_to_apply'",
+            FramedSyncSQLiteValues.blobArgs(frame.transferId()))) {
+            if (row.moveToFirst()) return new byte[][] {sha256(frame.ciphertext()), sha256(frame.plaintext())};
+        }
         if (!blobs.isResourceChunk(frame.transferId(), frame.attemptId(),
             chunk.getBlobHash().toByteArray())) {
-            return new byte[][] {frame.ciphertext(), frame.plaintext()};
+            return new byte[][] {sha256(frame.ciphertext()), frame.plaintext()};
         }
         return new byte[][] {sha256(frame.ciphertext()), sha256(frame.plaintext())};
     }

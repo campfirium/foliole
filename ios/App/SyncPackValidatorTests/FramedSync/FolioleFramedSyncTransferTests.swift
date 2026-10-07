@@ -121,10 +121,9 @@ final class FolioleFramedSyncTransferTests: XCTestCase {
         XCTAssertEqual(preamble.contextID, transferID)
         XCTAssertEqual(receipt.transferID, transferID)
         XCTAssertNil(try reader.nextFrame())
-        XCTAssertEqual(try database.rows(
-            "SELECT state FROM framed_sync_ios_receipt_attempts"
-        ).first?[0] as? String, "replayable")
-        XCTAssertEqual(try database.rows("SELECT 1 FROM framed_sync_ios_receipt_frames").count, 1)
+        XCTAssertEqual(try database.rows("SELECT 1 FROM framed_sync_ios_receipts").count, 0)
+        XCTAssertEqual(try database.rows("SELECT 1 FROM framed_sync_ios_receipt_attempts").count, 0)
+        XCTAssertEqual(try database.rows("SELECT 1 FROM framed_sync_ios_receipt_frames").count, 0)
     }
 
     func testNewAttemptReplacesInterruptedAttemptWithTheSamePublication() throws {

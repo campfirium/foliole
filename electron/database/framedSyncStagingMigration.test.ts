@@ -11,10 +11,13 @@ const EXPECTED_STAGING_TABLES = [
   'framed_sync_blob_chunks',
   'framed_sync_blob_offers',
   'framed_sync_blob_pins',
+  'framed_sync_completion_windows',
+  'framed_sync_fact_summary',
   'framed_sync_inbound_attempts',
   'framed_sync_inbound_facts',
   'framed_sync_inbound_frames',
   'framed_sync_inbound_transfers',
+  'framed_sync_inventory',
   'framed_sync_outbound_attempts',
   'framed_sync_outbound_blob_refs',
   'framed_sync_outbound_fact_refs',
@@ -22,11 +25,13 @@ const EXPECTED_STAGING_TABLES = [
   'framed_sync_outbound_holds',
   'framed_sync_outbound_publications',
   'framed_sync_receipts',
+  'framed_sync_resource_availability',
   'framed_sync_resource_blob_chunks',
   'framed_sync_resource_pins',
   'framed_sync_session_send_states',
   'framed_sync_termination_acks',
-  'framed_sync_termination_requests'
+  'framed_sync_termination_requests',
+  'framed_sync_version_summary'
 ] as const;
 
 let sqlite: Database.Database;
@@ -55,7 +60,7 @@ it('upgrades the prior production schema without changing business rows and rema
     .run('existing-setting', 'preserved-value', '2026-10-05T00:00:00.000Z');
   removeStagingTables();
   const businessSchema = readBusinessSchema();
-  sqlite.pragma(`user_version = ${DATABASE_SCHEMA_VERSION - 1}`);
+  sqlite.pragma('user_version = 137');
 
   initializeDatabaseSchema(sqlite);
 

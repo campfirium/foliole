@@ -42,7 +42,7 @@ it('routes inventory and transfers through the framed session boundary', async (
   expect(server).toContain('new FramedSyncSessionNonceSQLite(this.context)');
   expect(server).toContain('new FramedSyncTransferSQLite(this.context)');
   expect(route).toContain('FramedSyncSessionReader.read(');
-  expect(route).toContain('bridge.request("read_framed_inventory", new JSONObject())');
+  expect(route).toContain('bridge.request("read_framed_inventory", peerContext)');
   expect(route).toContain('FramedSyncTransferReader.Result received = store.receive(');
   expect(route).toMatch(/FolioleCompanionFramedSyncApply\.apply[\s\S]*store\.receipt/u);
   expect(apply).toContain('bridge.request("apply_framed_transfer"');

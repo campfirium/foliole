@@ -12,9 +12,9 @@ import { canonicalContentId, canonicalTransferId } from '../../../../../../lib/c
 import { publishFramedSyncOutboundWithDbPort } from '../../../../../../lib/core/sync/framedSyncOutboundStaging.js';
 import { PARENT_ORDER_VERSION_SCHEMA } from '../../../../../../lib/core/sync/syncParentOrderVersionStore.js';
 
-const mocks = vi.hoisted(() => ({ db: undefined as unknown, send: vi.fn() }));
+const mocks = vi.hoisted(() => ({ db: undefined as unknown, send: vi.fn(), inventory: vi.fn() }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({
-  FolioleCompanionSync: { sendFramedSyncTransfer: mocks.send }
+  FolioleCompanionSync: { sendFramedSyncTransfer: mocks.send, readFramedSyncInventory: mocks.inventory }
 }));
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({
   getIosCompanionDatabaseOwner: () => ({
@@ -69,6 +69,7 @@ function database(persistent = false) {
     INSERT INTO node_version_local_proof_state VALUES (1, 'A-epoch');`);
   sqlite.exec('CREATE TABLE companion_meta (key TEXT PRIMARY KEY, value TEXT, updated_at TEXT)');
   mocks.db = createBetterSqliteDbPort(sqlite);
+  mocks.inventory.mockResolvedValue({ entries: [], round_id: '0'.repeat(32) });
 }
 
 it('drains only the current peer publication even without a new inventory difference', async () => {
@@ -77,7 +78,10 @@ it('drains only the current peer publication even without a new inventory differ
   await publish('C');
   await publish('B', 'old-epoch');
   await publish('B', 'A-epoch', 'old-peer-epoch');
-  mocks.send.mockResolvedValue({ transfer_id: id, receiver_device_id: 'B', receiver_library_epoch: 'B-epoch' });
+  mocks.send.mockImplementation(async () => {
+    sqlite.prepare("UPDATE framed_sync_outbound_publications SET state = 'receipt_committed' WHERE hex(transfer_id) = ?").run(id.toUpperCase());
+    return { transfer_id: id, receiver_device_id: 'B', receiver_library_epoch: 'B-epoch' };
+  });
   await expect(resumeCompanionFramedSyncPendingPublications(request)).resolves.toBe(1);
   expect(mocks.send).toHaveBeenCalledExactlyOnceWith({ ...request, transfer_id: id,
     include_current_node: false, object_id: 'node', object_type: 'node', required_relation_ids: [],
@@ -102,11 +106,15 @@ it('finishes receipt-backed hold release without resending or releasing C', asyn
 it('resumes a responding peer after reloading its exact verified route', async () => {
   database(true);
   const id = await publish();
-  mocks.send.mockResolvedValue({ transfer_id: id, receiver_device_id: 'B', receiver_library_epoch: 'B-epoch' });
+  mocks.send.mockImplementation(async () => {
+    sqlite.prepare("UPDATE framed_sync_outbound_publications SET state = 'receipt_committed' WHERE hex(transfer_id) = ?").run(id.toUpperCase());
+    return { transfer_id: id, receiver_device_id: 'B', receiver_library_epoch: 'B-epoch' };
+  });
   await rememberCompanionFramedSyncPeerRoute(request);
   sqlite.close();
   sqlite = new Database(path.join(directory, 'route.db'));
   mocks.db = createBetterSqliteDbPort(sqlite);
+  mocks.inventory.mockResolvedValue({ entries: [], round_id: '0'.repeat(32) });
   await resumeCompanionFramedSyncRespondingPeer({ group_id: 'group',
     peer_device_id: 'B', peer_library_epoch: 'other-epoch' });
   expect(mocks.send).not.toHaveBeenCalled();

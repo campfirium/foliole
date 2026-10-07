@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 import type { CanonicalManifest, CanonicalValue } from '../sync/framedSyncCanonicalManifest.js';
 import type { FramedSyncContext, PublishedTransfer, TransferReceiptStage } from '../sync/framedSyncContract.js';
+import { decodePublicationInventory } from '../sync/framedSyncPublicationInventory.js';
 import type {
   InboundHeaderDeclarationInput,
   InboundProposalInput,
@@ -77,7 +78,9 @@ export function readFramedSyncProposal(row: DbRow): InboundProposalInput {
     totalBlobBytes: framedSyncBigInt(row, 'total_blob_bytes'), transferId: framedSyncBytes(row, 'transfer_id') };
 }
 export function readFramedSyncPublication(row: DbRow): OutboundPublishInput {
-  return { contentId: framedSyncBytes(row, 'content_id'), context: readFramedSyncContext(row),
+  const inventoryDifference = decodePublicationInventory(framedSyncText(row, 'manifest_json'));
+  return { ...(inventoryDifference ? { inventoryDifference } : {}),
+    contentId: framedSyncBytes(row, 'content_id'), context: readFramedSyncContext(row),
     manifest: decodeFramedSyncManifest(framedSyncText(row, 'manifest_json')),
     manifestHash: framedSyncBytes(row, 'manifest_hash'), transferId: framedSyncBytes(row, 'transfer_id') };
 }

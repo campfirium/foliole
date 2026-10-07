@@ -51,6 +51,8 @@ extension FolioleCompanionSyncPlugin {
         )
         let database = try FolioleFramedSyncTransferDatabase(url: framedOutboundDatabaseURL())
         let staging = try FolioleFramedSyncOutboundSQLite(database: database)
+        try staging.discard(transferID: prepared.transferID)
+        defer { try? staging.discard(transferID: prepared.transferID) }
         let attempt = try staging.loadLatestReplayableAttempt(transferID: prepared.transferID) ??
             FolioleFramedSyncTransferWriter.prepare(
                 groupKey: groupKey, context: context, facts: prepared.facts,
@@ -96,6 +98,7 @@ extension FolioleCompanionSyncPlugin {
             "transfer_id": receipt.transferID.hex
         ]
         _ = try groupData.request("complete_framed_outbound", result)
+        try staging.discard(transferID: prepared.transferID)
         return result
     }
 

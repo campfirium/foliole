@@ -83,6 +83,7 @@ final class FramedSyncSQLiteTransfers {
         transfer.put("state", "ready_to_apply");
         database.update("framed_sync_android_transfers", transfer, "hex(transfer_id) = ?",
             FramedSyncSQLiteValues.blobArgs(transferId));
+        FramedSyncCompletedInboundCleanup.retireReadyCopies(database, transferId);
     }
 
     void invalidate(byte[] transferId, byte[] attemptId) throws Exception {

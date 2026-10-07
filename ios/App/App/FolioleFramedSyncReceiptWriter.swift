@@ -41,6 +41,7 @@ enum FolioleFramedSyncReceiptWriter {
         guard let data = output.property(forKey: .dataWrittenToMemoryStreamKey) as? Data else {
             throw FolioleFramedSyncValidationError("framed_sync_stream_write_failed")
         }
+        try FolioleFramedSyncCompletedInboundCleanup.retire(database: database, transferID: receipt.transferID)
         return data
     }
 

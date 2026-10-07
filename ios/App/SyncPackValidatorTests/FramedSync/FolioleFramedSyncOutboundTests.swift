@@ -45,6 +45,12 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         XCTAssertEqual(try database.rows(
             "SELECT state FROM framed_sync_ios_outbound_attempts"
         ).first?[0] as? String, "replayable")
+        try reopened.discard(transferID: attempt.transferID)
+        XCTAssertNil(try reopened.loadLatestReplayableAttempt(transferID: attempt.transferID))
+        XCTAssertTrue(try database.rows("SELECT * FROM framed_sync_ios_outbound_file_frames").isEmpty)
+        let files = try FileManager.default.contentsOfDirectory(
+            at: directory.appendingPathComponent("outbound-frames"), includingPropertiesForKeys: nil)
+        XCTAssertTrue(files.isEmpty)
     }
 
     func testReceiptReaderAcceptsOnlyTheExpectedReceiverAndContent() throws {

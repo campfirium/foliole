@@ -16,6 +16,8 @@ final class FolioleFramedSyncTransferDatabase {
         sqlite3_busy_timeout(database, 5_000)
         try execute("PRAGMA foreign_keys = ON")
         try FolioleFramedSyncTransferSchema.install(self)
+        try FolioleFramedSyncCompletedInboundCleanup.migratePayloads(database: self)
+        try FolioleFramedSyncCompletedInboundCleanup.recover(database: self)
     }
 
     deinit { if let database { sqlite3_close(database) } }

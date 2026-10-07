@@ -7,6 +7,7 @@ import {
   sameFramedSyncBytes
 } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { markFramedSyncCompletion } from '../../lib/core/sync/framedSyncCompletionRetention.js';
 import type {
   PreparedTransferAttempt,
   StoredEncryptedFrame,
@@ -51,6 +52,7 @@ function createInboundReceiptStaging(db: DbPort) {
         }
         if (!existing) await tx.run('INSERT INTO framed_sync_receipts VALUES (?, ?, ?, ?, ?)', [input.transferId,
           input.contentId, input.receiverDeviceId, input.receiverLibraryEpoch, input.appliedStateHash]);
+        await markFramedSyncCompletion(tx, input.transferId);
         await tx.run(`UPDATE framed_sync_inbound_transfers SET state = 'applied' WHERE transfer_id = ?`,
           [input.transferId]);
         return receipt;

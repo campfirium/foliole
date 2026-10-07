@@ -39,6 +39,9 @@ export async function handleDesktopFramedSyncReceiverHeader(input: HeaderInput, 
     transferId: published.transferId
   });
   input.state.existingReceipt = await input.staging.loadReceipt(published.transferId);
+  if (input.state.existingReceipt && await input.staging.loadInboundProposal(published.transferId)) {
+    await input.staging.releasePins(published.transferId, 'business_reference_committed');
+  }
   if (!input.state.existingReceipt) input.state.ready = await loadDesktopFramedSyncReadyInbound({
     db: input.db, published, staging: input.staging
   });

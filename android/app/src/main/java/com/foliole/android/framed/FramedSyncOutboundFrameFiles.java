@@ -79,6 +79,11 @@ final class FramedSyncOutboundFrameFiles {
         }
     }
 
+    void remove(byte[] transferId, byte[] attemptId) throws Exception {
+        File file = wireFile(transferId, attemptId);
+        if (file.exists() && !file.delete()) throw invalid("outbound_frame_cleanup_failed");
+    }
+
     void requireComplete(byte[] transferId, byte[] attemptId) throws Exception {
         long expected = 0;
         int lastType = -1;

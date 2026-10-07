@@ -3,7 +3,9 @@ import { retireAttachmentRegistry } from './attachmentRegistryRetirement.js';
 import { migrateDynamicNodeVersionChains } from './dynamicNodeVersionChainMigration.js';
 import { EDITOR_OPERATION_HISTORY_SCHEMA_STATEMENTS } from './editorOperationHistorySchema.js';
 import { FOREGROUND_TIME_SCHEMA } from './foregroundTimeSchema.js';
+import { FRAMED_SYNC_COMPLETION_BACKFILL, FRAMED_SYNC_COMPLETION_SCHEMA } from './framedSyncCompletionSchema.js';
 import { migrateFramedSyncInventory } from './framedSyncInventoryMigration.js';
+import { migrateDesktopFramedSyncPayloads } from './framedSyncPayloadMigration.js';
 import { migrateFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from './framedSyncStagingSchema.js';
 import { migrateFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
@@ -237,5 +239,9 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 146, migrate: (sqlite) => {
     for (const statement of PARENT_ORDER_BODY_RETENTION_SCHEMA) sqlite.exec(statement);
   } },
-  { version: 147, migrate: migrateTopicTextState }
+  { version: 147, migrate: migrateTopicTextState },
+  { version: 148, migrate: (sqlite) => {
+    sqlite.exec(`${FRAMED_SYNC_COMPLETION_SCHEMA}; ${FRAMED_SYNC_COMPLETION_BACKFILL}`);
+    migrateDesktopFramedSyncPayloads(sqlite);
+  } }
 ];

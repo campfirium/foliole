@@ -53,14 +53,14 @@ export async function respondDesktopFramedSyncInventory(args: {
   if (request[0]?.payloadCase === 'difference_request') {
     return respondDesktopFramedSyncDifferenceRequest({ ...args, request });
   }
-  const { roundId } = await decodeFramedSyncInventory(request);
+  const { roundId, entries: remoteInventory } = await decodeFramedSyncInventory(request);
   const route = loadDesktopSyncGroupRoutes(args.context.groupId).find((peer) =>
     peer.peer_device_id === args.context.initiatorDeviceId);
   if (route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') await resumeDesktopFramedSyncPendingPublications({
     db: args.db, groupId: args.context.groupId, groupSecret: args.groupSecret,
     local: { deviceId: args.context.responderDeviceId, libraryEpoch: args.context.responderLibraryEpoch },
     peer: { deviceId: args.context.initiatorDeviceId, libraryEpoch: args.context.initiatorLibraryEpoch },
-    peerOrigin: route.endpoint_url, staging: args.staging
+    peerOrigin: route.endpoint_url, staging: args.staging, remoteInventory
   });
   const entries = await readDesktopFramedSyncRoundInventory(args.db);
   const messages = await encodeFramedSyncInventory({ entries, roundId });
