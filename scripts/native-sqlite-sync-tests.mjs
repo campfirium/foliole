@@ -1,6 +1,8 @@
 export const controlledSyncSqliteTests = [
   'electron/sync/desktopFramedSyncBoundedReads.integration.test.ts',
   'lib/core/database/bodyContentMigration.integration.test.ts',
+  'lib/core/database/bodyContentMigrationSource.integration.test.ts',
+  'lib/core/database/bodyContentOwnerMigration.integration.test.ts',
   'lib/core/sync/framedSyncVerifiedNode.integration.test.ts',
   'lib/core/sync/syncNodeAnchorRemapBody.integration.test.ts',
   'lib/core/sync/syncNodeResolutionBody.integration.test.ts',
@@ -9,6 +11,8 @@ export const controlledSyncSqliteTests = [
   'lib/core/sync/bodyFrontmatterText.integration.test.ts',
   'lib/core/sync/syncNodeVerifiedVersionWrite.integration.test.ts',
   'lib/core/sync/syncNodeVerifiedCurrentWrite.integration.test.ts',
+  'lib/core/sync/syncNodeVerifiedApplyExecutor.integration.test.ts',
+  'lib/core/sync/syncNodeVerifiedSnapshotConflict.integration.test.ts',
   'electron/database/verifiedBodyInventory.integration.test.ts',
   'electron/database/nodeVersionChainMetadata.integration.test.ts',
   'electron/database/nodeVersionBoundedCollection.integration.test.ts',

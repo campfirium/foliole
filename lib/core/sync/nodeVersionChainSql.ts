@@ -1,5 +1,6 @@
 import type { DbParams } from './dbPort.js';
 import type { planNodeVersionChain } from './nodeVersionChainPlan.js';
+import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 
 export const CHAIN_VERSIONS_SQL = 'SELECT * FROM node_sync_versions WHERE object_id = ?';
 export const CHAIN_HEAD_SQL = `SELECT COALESCE(node.current_version_id, tomb.version_id) AS current_version_id,
@@ -16,7 +17,7 @@ const CHAIN_READ_TABLES = new Set([
   'node_version_member_positions', 'node_version_local_origins', 'node_version_outbound_holds',
   'node_version_outbound_payload_holds', 'node_version_local_holds',
   'sync_change_log', 'node_sync_conflicts', 'node_text_alternatives',
-  'nodes', 'node_sync_tombstones', 'sync_object_state',
+  'nodes', 'node_sync_tombstones', 'sync_object_state', 'content_bodies',
   'framed_sync_outbound_fact_refs', 'framed_sync_outbound_holds', 'framed_sync_outbound_publications'
 ]);
 
@@ -79,7 +80,12 @@ const LOCAL_REFERENCES_SQL = `SELECT version.version_id, 0 FROM node_sync_versio
       WHERE object_type = 'node' AND object_id = ? AND current_version_id IS NOT NULL`;
 
 export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false,
-  schema = 'main') {
+  schema = 'main', bodyStorage: NodeVersionBodyStorage = 'continuous') {
+  const bodyAvailable = bodyStorage === 'chunked'
+    ? `version.body_state = 'readable' AND EXISTS (SELECT 1 FROM content_bodies body
+        WHERE body.hash = version.body_blob_hash AND body.verified = 1)`
+    : `version.body_text IS NOT NULL OR json_type(version.snapshot_json, '$.content') = 'text'
+        OR json_type(version.snapshot_json, '$.content') IS NULL`;
   return {
     sql: qualifyNodeVersionReadSql(`SELECT base.version_id, 0 AS frozen FROM node_version_device_bases base
       JOIN sync_group_local_state local ON local.group_id = base.group_id AND local.state = 'active'
@@ -106,8 +112,7 @@ export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false
             JOIN proven ON proven.version_id = version.version_id WHERE version.parent_version_id IS NOT NULL
         ) SELECT 1 FROM proven WHERE proven.version_id = receipt.payload_identity)
     UNION SELECT version.version_id, 0 FROM node_sync_versions version
-      WHERE version.object_id = ? AND ${retireLegacyHistory ? '0' : '1'} AND (version.body_text IS NOT NULL
-        OR json_type(version.snapshot_json, '$.content') = 'text' OR json_type(version.snapshot_json, '$.content') IS NULL)
+      WHERE version.object_id = ? AND ${retireLegacyHistory ? '0' : '1'} AND (${bodyAvailable})
       AND EXISTS (SELECT 1 FROM sync_group_devices peer JOIN sync_group_local_state local
         ON local.group_id = peer.group_id AND local.state = 'active'
         WHERE peer.state = 'active' AND peer.device_identity_key <> local.local_device_identity_key
@@ -123,11 +128,14 @@ export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false
   };
 }
 
-export function chainMutationStatements(plan: ReturnType<typeof planNodeVersionChain>) {
+export function chainMutationStatements(
+  plan: ReturnType<typeof planNodeVersionChain>, bodyStorage: NodeVersionBodyStorage = 'continuous'
+) {
   const statements: Array<{ sql: string; params: DbParams }> = [];
   if (plan.skipped || !plan.removed?.length) return statements;
   for (const id of plan.removed) statements.push({
-    sql: `UPDATE node_sync_versions SET body_text = NULL,
+    sql: `UPDATE node_sync_versions SET body_text = NULL,${bodyStorage === 'chunked'
+      ? " body_state = 'retired', body_blob_hash = NULL," : ''}
       snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_blob_hash', NULL)
       WHERE version_id = ?`,
     params: [id]
