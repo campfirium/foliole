@@ -14,6 +14,9 @@ vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: vi.fn(() => ({ sqlite: {} })),
   runWithDatabaseConnectionOwner: vi.fn((run: () => unknown) => run())
 }));
+vi.mock('./workspaceSyncAppliedEvents.js', () => ({
+  notifyWorkspaceSyncApplied: vi.fn()
+}));
 vi.mock('../database/desktopFramedSyncSessionStaging.js', () => ({
   createDesktopFramedSyncSessionNoncePort: vi.fn(() => ({}))
 }));

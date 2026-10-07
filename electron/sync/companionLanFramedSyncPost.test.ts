@@ -57,10 +57,10 @@ async function startHandler(authenticate: typeof authenticateCompanionRequest,
   return `http://127.0.0.1:${address.port}`;
 }
 
-function requestHeaders() {
+function requestHeaders(body: Uint8Array = binaryBody) {
   return {
     'content-type': FRAMED_SYNC_CONTENT_TYPE,
-    [FRAMED_SYNC_BODY_SHA256_HEADER]: createHash('sha256').update(binaryBody).digest('hex'),
+    [FRAMED_SYNC_BODY_SHA256_HEADER]: createHash('sha256').update(body).digest('hex'),
     'x-sync-group-id': 'group-a'
   };
 }
@@ -100,10 +100,26 @@ describe('companion LAN framed sync POST', () => {
     });
     const origin = await startHandler(authenticate, () => {});
     const response = await fetch(`${origin}${requestPath}`, {
-      body, headers: requestHeaders(), method: 'POST'
+      body, headers: requestHeaders(body), method: 'POST'
     });
     expect(response.status).toBe(status);
     await expect(response.json()).resolves.toEqual({ error });
+  });
+
+  it('rejects a signed declaration with different actual bytes before frame dispatch', async () => {
+    const authenticate: typeof authenticateCompanionRequest = () => ({
+      device_id: 'device-a', device_name: 'Device A', ok: true
+    });
+    const dispatched = vi.fn();
+    const origin = await startHandler(authenticate, dispatched);
+    const body = Buffer.from(binaryBody);
+    body[body.length - 1] = body[body.length - 1]! ^ 1;
+    const response = await fetch(`${origin}${requestPath}`, {
+      body, headers: requestHeaders(), method: 'POST'
+    });
+    expect(response.status).toBe(401);
+    await expect(response.json()).resolves.toEqual({ error: 'invalid_signature' });
+    expect(dispatched).not.toHaveBeenCalled();
   });
 });
 

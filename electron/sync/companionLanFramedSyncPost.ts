@@ -6,6 +6,7 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncCont
 import type { FramedSyncSessionContext } from '../../lib/core/sync/framedSyncSession.js';
 
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import { withVerifiedFramedHttpBody } from './desktopFramedSyncHttpBody.js';
 import {
   encodeFramedSyncStream,
   readFramedSyncStream,
@@ -49,22 +50,29 @@ export async function handleCompanionLanFramedSyncPost(args: {
   }
   const context = authenticateContext(args);
   if (!context) return;
+  const contentLength = readHeader(request, 'content-length');
   try {
-    const stream = await readFramedSyncStream(request);
-    const reply = await args.onStream({ context, stream });
-    response.writeHead(200, {
-      'Content-Type': FRAMED_SYNC_CONTENT_TYPE,
-      [FRAMED_SYNC_DEVICE_ID_HEADER]: args.localIdentity.deviceId,
-      [FRAMED_SYNC_LIBRARY_EPOCH_HEADER]: args.localIdentity.libraryEpoch
+    await withVerifiedFramedHttpBody({
+      body: request,
+      expectedSha256: readHeader(request, FRAMED_SYNC_BODY_SHA256_HEADER)!,
+      ...(contentLength === null ? {} : { contentLength })
+    }, async (body) => {
+      const stream = await readFramedSyncStream(body);
+      const reply = await args.onStream({ context, stream });
+      response.writeHead(200, {
+        'Content-Type': FRAMED_SYNC_CONTENT_TYPE,
+        [FRAMED_SYNC_DEVICE_ID_HEADER]: args.localIdentity.deviceId,
+        [FRAMED_SYNC_LIBRARY_EPOCH_HEADER]: args.localIdentity.libraryEpoch
+      });
+      await pipeline(Readable.from(encodeFramedSyncStream(reply)), response);
     });
-    await pipeline(Readable.from(encodeFramedSyncStream(reply)), response);
   } catch (error) {
     if (response.headersSent) {
       response.destroy(error instanceof Error ? error : undefined);
       return;
     }
     const message = error instanceof Error ? error.message : 'framed_sync_request_invalid';
-    writeError(response, message === 'wire_frame_limit_exceeded' ? 413 : 400, message);
+    writeError(response, message === 'invalid_signature' ? 401 : message === 'wire_frame_limit_exceeded' ? 413 : 400, message);
   }
 }
 

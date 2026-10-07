@@ -34,8 +34,8 @@ export type FramedSyncWritableBody = FramedSyncStreamBody & Readonly<{
 type BinaryChunk = Uint8Array | string;
 
 class ExactByteReader {
-  private buffered = Buffer.alloc(0);
-  private ended = false;
+  private buffered: Uint8Array = new Uint8Array();
+  private offset = 0;
 
   constructor(private readonly iterator: AsyncIterator<BinaryChunk>) {}
 
@@ -43,25 +43,30 @@ class ExactByteReader {
   async read(length: number, truncatedError: string, allowCleanEnd: true): Promise<Uint8Array | null>;
   async read(length: number, truncatedError: string,
     allowCleanEnd = false): Promise<Uint8Array | null> {
-    while (this.buffered.byteLength < length && !this.ended) {
-      const next = await this.iterator.next();
-      if (next.done) {
-        this.ended = true;
-      } else {
-        const chunk = typeof next.value === 'string'
-          ? Buffer.from(next.value)
-          : Buffer.from(next.value.buffer, next.value.byteOffset, next.value.byteLength);
-        if (chunk.byteLength) this.buffered = Buffer.concat([this.buffered, chunk]);
+    const result = new Uint8Array(length);
+    let written = 0;
+    while (written < length) {
+      if (this.offset === this.buffered.byteLength) {
+        const next = await this.iterator.next();
+        if (next.done) {
+          if (allowCleanEnd && written === 0) return null;
+          throw new Error(truncatedError);
+        }
+        this.buffered = typeof next.value === 'string' ? Buffer.from(next.value) : next.value;
+        this.offset = 0;
+        if (this.buffered.byteLength === 0) continue;
       }
+      const count = Math.min(length - written, this.buffered.byteLength - this.offset);
+      result.set(this.buffered.subarray(this.offset, this.offset + count), written);
+      written += count;
+      this.offset += count;
     }
-    if (allowCleanEnd && this.buffered.byteLength === 0 && this.ended) return null;
-    if (this.buffered.byteLength < length) throw new Error(truncatedError);
-    const result = new Uint8Array(this.buffered.subarray(0, length));
-    this.buffered = this.buffered.subarray(length);
     return result;
   }
 
   async close() {
+    this.buffered = new Uint8Array();
+    this.offset = 0;
     await this.iterator.return?.();
   }
 }
@@ -70,12 +75,17 @@ export async function readFramedSyncStream(
   source: AsyncIterable<BinaryChunk>
 ): Promise<FramedSyncStreamBody<FramedSyncWireFrame>> {
   const reader = new ExactByteReader(source[Symbol.asyncIterator]());
-  const preamble = await reader.read(
-    FRAMED_SYNC_LIMITS.preambleBytes,
-    'framed_sync_preamble_truncated'
-  );
-  decodeFramedSyncPreamble(preamble);
-  return { preamble, frames: readFrames(reader) };
+  try {
+    const preamble = await reader.read(
+      FRAMED_SYNC_LIMITS.preambleBytes,
+      'framed_sync_preamble_truncated'
+    );
+    decodeFramedSyncPreamble(preamble);
+    return { preamble, frames: readFrames(reader) };
+  } catch (error) {
+    await reader.close();
+    throw error;
+  }
 }
 
 async function* readFrames(reader: ExactByteReader): AsyncGenerator<FramedSyncWireFrame> {

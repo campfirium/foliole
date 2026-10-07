@@ -96,4 +96,50 @@ describe('desktop framed sync stream', () => {
     await expect(collect(encodeFramedSyncStream({ frames: shortFrame(), preamble })))
       .rejects.toThrow('framed_sync_frame_body_length_mismatch');
   });
+
+});
+
+it('preserves large binary frames from reused source buffers without reading ahead', async () => {
+    const size = 2 * 1024 * 1024;
+    const largeHeader = encodeFrameHeader({ ciphertextBytes: size, flags: 0, frameType: 1, sequence: 0n });
+    let pulls = 0;
+    const reusable = new Uint8Array(64 * 1024);
+    async function* source() {
+      yield preamble;
+      yield new Uint8Array();
+      yield largeHeader;
+      for (let index = 0; index < size / reusable.byteLength; index += 1) {
+        reusable.fill(index);
+        pulls += 1;
+        yield reusable;
+      }
+      yield header;
+      reusable.fill(255);
+      pulls += 1;
+      yield reusable.subarray(0, 4);
+    }
+    const stream = await readFramedSyncStream(source());
+    const iterator = stream.frames[Symbol.asyncIterator]();
+    const first = await iterator.next();
+    if (first.done) throw new Error('frame_missing');
+    expect(pulls).toBe(32);
+    expect(first.value.ciphertext.byteLength).toBe(size);
+    const second = await iterator.next();
+    if (second.done) throw new Error('frame_missing');
+    expect(second.value.ciphertext).toEqual(new Uint8Array(4).fill(255));
+    for (let index = 0; index < 32; index += 1) {
+      expect(first.value.ciphertext[index * reusable.byteLength]).toBe(index);
+      expect(first.value.ciphertext[(index + 1) * reusable.byteLength - 1]).toBe(index);
+    }
+    expect((await iterator.next()).done).toBe(true);
+});
+
+it('closes the source when the preamble is rejected before frame iteration starts', async () => {
+    let closed = false;
+    async function* source() {
+      try { yield new Uint8Array(preamble.byteLength); }
+      finally { closed = true; }
+    }
+    await expect(readFramedSyncStream(source())).rejects.toThrow();
+    expect(closed).toBe(true);
 });
