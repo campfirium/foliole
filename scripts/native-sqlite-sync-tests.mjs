@@ -33,6 +33,7 @@ export const controlledSyncSqliteTests = [
   'electron/sync/desktopFramedSyncReadyFacts.integration.test.ts',
   'electron/sync/framedSyncReadyFactFrames.integration.test.ts',
   'electron/sync/companionFramedSyncVerifiedApply.integration.test.ts',
+  'src/shared/platform/companion/sync/framed/companionFramedSyncVerifiedAdoption.sqlite.test.ts',
   'lib/core/sync/framedSyncVerifiedFactApply.integration.test.ts',
   'lib/core/database/nodeBodyResolutionStable.integration.test.ts',
   'lib/core/database/storedSourceSearchBodyIndex.integration.test.ts',

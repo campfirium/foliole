@@ -1,8 +1,12 @@
 // @vitest-environment node
+import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
-import { readFramedSyncReadyFactFrames, type FramedSyncReadyFactSource } from '../../lib/core/sync/framedSyncReadyFactFrames.js';
+import { encodeValidatedProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
+import { readFramedSyncReadyFactFrames, streamFramedSyncReadyFactFrames, type FramedSyncReadyFactSource } from '../../lib/core/sync/framedSyncReadyFactFrames.js';
+import { factToWire } from '../../lib/core/sync/framedSyncWireProjection.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { reopenedReadyFixture } from './desktopFramedSyncReadyFacts.testSupport.js';
 
@@ -57,4 +61,66 @@ it.each(sources)('rejects malformed authenticated %s fact bytes without changing
     expect(host.sqlite.prepare('SELECT state FROM framed_sync_inbound_transfers').pluck().get()).toBe('ready_to_apply');
     expect(host.sqlite.prepare('SELECT count(*) FROM framed_sync_blob_pins').pluck().get()).toBe(1);
   } finally { host.close(); }
+});
+
+function streamFixture(source: FramedSyncReadyFactSource) {
+  const sqlite = new Database(':memory:');
+  const alias = source === 'android' ? 'framed_android' : 'framed_ios';
+  if (source !== 'desktop') sqlite.exec(`ATTACH DATABASE ':memory:' AS ${alias}`);
+  const table = source === 'desktop' ? 'framed_sync_inbound_frames' : `${alias}.framed_sync_${source}_frames`;
+  sqlite.exec(`CREATE TABLE ${table} (transfer_id BLOB, attempt_id BLOB, sequence TEXT,
+    frame_type INTEGER, authenticated_plaintext BLOB, PRIMARY KEY (transfer_id, attempt_id, sequence))`);
+  const transferId = new Uint8Array(32).fill(1);
+  const attemptId = new Uint8Array(16).fill(2);
+  const facts = ['2', '9', '10', '100'].map((sequence) => ({ sequence, fact: {
+    blobs: [], body: [], factId: `fact-${sequence}`, globalId: 'node', kind: 1,
+    objectType: 'node', sharedStateHash: new Uint8Array(32).fill(3)
+  } }));
+  const insert = sqlite.prepare(`INSERT INTO ${table} VALUES (?, ?, ?, ?, ?)`);
+  for (const { sequence, fact } of [...facts].reverse()) insert.run(transferId, attemptId, sequence, 3,
+    encodeValidatedProtocolMessage('fact', factToWire(fact)));
+  insert.run(new Uint8Array(32).fill(4), attemptId, '0', 3, Uint8Array.of(255));
+  insert.run(transferId, new Uint8Array(16).fill(5), '1', 3, Uint8Array.of(255));
+  insert.run(transferId, attemptId, '3', 1, Uint8Array.of(255));
+  return { sqlite, db: createBetterSqliteDbPort(sqlite), table, transferId, attemptId, facts };
+}
+
+it.each(sources)('replays the %s stream in decimal order while isolating transfer, attempt and control payloads', async (source) => {
+  const host = streamFixture(source);
+  try {
+    for (let replay = 0; replay < 2; replay++) {
+      const result = [];
+      for await (const frame of streamFramedSyncReadyFactFrames(host.db, host.transferId, host.attemptId, source)) result.push(frame);
+      expect(result).toEqual(host.facts);
+    }
+    expect(await readFramedSyncReadyFactFrames(host.db, host.transferId, host.attemptId, source))
+      .toEqual(host.facts.map((frame) => frame.fact));
+  } finally { host.sqlite.close(); }
+});
+
+it.each(sources)('stops %s payload queries immediately on return and rejects the next malformed fact on replay', async (source) => {
+  const host = streamFixture(source);
+  try {
+    host.sqlite.prepare(`UPDATE ${host.table} SET authenticated_plaintext = ?
+      WHERE transfer_id = ? AND attempt_id = ? AND sequence = '9'`)
+      .run(new Uint8Array(3 * 1024 * 1024).fill(255), host.transferId, host.attemptId);
+    const seen: string[] = [];
+    const observed: DbPort = { ...host.db,
+      async query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
+        const rows = await host.db.query<T>(sql, params);
+        expect(rows.length).toBeLessThanOrEqual(1);
+        seen.push(...rows.map((row) => String(row.sequence)));
+        return rows;
+      }
+    };
+    const stream = streamFramedSyncReadyFactFrames(observed, host.transferId, host.attemptId, source);
+    expect((await stream.next()).value).toEqual(host.facts[0]);
+    await stream.return(undefined);
+    expect(seen).toEqual(['2']);
+    expect(await stream.next()).toEqual({ done: true, value: undefined });
+    expect(seen).toEqual(['2']);
+    const replay = streamFramedSyncReadyFactFrames(host.db, host.transferId, host.attemptId, source);
+    expect((await replay.next()).value).toEqual(host.facts[0]);
+    await expect(replay.next()).rejects.toThrow();
+  } finally { host.sqlite.close(); }
 });

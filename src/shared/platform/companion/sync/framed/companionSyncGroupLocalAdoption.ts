@@ -1,19 +1,23 @@
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
+import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { compareFramedSyncInventories } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { loadSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
+import type { NodeVersionBodyStorage } from '../../../../../../lib/core/sync/syncNodeTombstoneVersion.js';
 import type { NativeCompanionFramedSyncInventoryRequest, NativeCompanionFramedSyncStagedTransfer } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCompanionSyncGroup } from '../syncGroupStore.js';
 
-import { prepareCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
+import { prepareCompanionFramedSyncTransfer, type CompanionFramedSyncApplyInput } from './companionFramedSyncApply.js';
 import { applyPreparedCompanionFramedSyncTransfers } from './companionFramedSyncApplyPrepared.js';
 import { readCompanionRemoteFramedSyncInventory } from './companionFramedSyncInventoryRound.js';
+import { applyVerifiedCompanionFramedSyncTransfers } from './companionFramedSyncVerifiedApply.js';
 
 export async function adoptCompanionSyncGroupData(
-  args: NativeCompanionFramedSyncInventoryRequest, adoption: SyncGroupLocalAdoption
+  args: NativeCompanionFramedSyncInventoryRequest, adoption: SyncGroupLocalAdoption,
+  bodyStorage: NodeVersionBodyStorage = 'continuous'
 ) {
   if (args.sync_group_id !== adoption.groupId || args.receiver_device_id !== adoption.providerDeviceId) {
     throw new Error('sync_group_local_adoption_source_mismatch');
@@ -47,14 +51,7 @@ export async function adoptCompanionSyncGroupData(
   const receipts = await runCompanionSyncWriterTask(() => owner.runWriter(async (db) => {
     const current = await loadSyncGroupLocalAdoption(db);
     if (!current || current.libraryEpoch !== adoption.libraryEpoch) throw new Error('sync_group_local_adoption_changed');
-    const prepared = [];
-    for (const transfer of staged) prepared.push(await prepareCompanionFramedSyncTransfer(db, {
-      stagingKind: transfer.staging_kind, stagingPath: transfer.staging_path,
-      transferId: hexToBytes(transfer.transfer_id), senderDeviceId: transfer.sender_device_id,
-      senderLibraryEpoch: transfer.sender_library_epoch, receiverDeviceId: transfer.receiver_device_id,
-      receiverLibraryEpoch: transfer.receiver_library_epoch, resourceStorageKeys: transfer.resource_storage_keys
-    }));
-    return applyPreparedCompanionFramedSyncTransfers(db, prepared, adoption);
+    return applyStagedAdoption(db, staged, adoption, bodyStorage);
   }));
   for (const difference of differences) await FolioleCompanionSync.pullFramedSyncObject({
     ...args, frontier_fact_ids: difference.sourceSnapshot.frontierFactIds,
@@ -78,4 +75,20 @@ function adoptionResult(
         receiver_library_epoch: receipt.receiverLibraryEpoch }
     }))
   };
+}
+
+async function applyStagedAdoption(db: DbPort, staged: readonly NativeCompanionFramedSyncStagedTransfer[],
+  adoption: SyncGroupLocalAdoption, bodyStorage: NodeVersionBodyStorage) {
+  const inputs = staged.map(stagedApplyInput);
+  if (bodyStorage === 'chunked') return applyVerifiedCompanionFramedSyncTransfers(db, inputs, adoption);
+  const prepared = [];
+  for (const input of inputs) prepared.push(await prepareCompanionFramedSyncTransfer(db, input));
+  return applyPreparedCompanionFramedSyncTransfers(db, prepared, adoption);
+}
+
+function stagedApplyInput(transfer: NativeCompanionFramedSyncStagedTransfer): CompanionFramedSyncApplyInput {
+  return { stagingKind: transfer.staging_kind, stagingPath: transfer.staging_path,
+    transferId: hexToBytes(transfer.transfer_id), senderDeviceId: transfer.sender_device_id,
+    senderLibraryEpoch: transfer.sender_library_epoch, receiverDeviceId: transfer.receiver_device_id,
+    receiverLibraryEpoch: transfer.receiver_library_epoch, resourceStorageKeys: transfer.resource_storage_keys };
 }

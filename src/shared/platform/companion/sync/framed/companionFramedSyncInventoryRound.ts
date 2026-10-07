@@ -147,7 +147,7 @@ export async function sendCompanionFramedSyncInventoryDifferences(
   bodyStorage: NodeVersionBodyStorage = 'continuous'
 ) {
   const adoption = await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption);
-  if (adoption) return adoptCompanionSyncGroupData(args, adoption);
+  if (adoption) return adoptCompanionSyncGroupData(args, adoption, bodyStorage);
   const owner = getIosCompanionDatabaseOwner();
   let [localValue, remoteResult] = await Promise.all([
     owner.read((db) => readCompanionFramedSyncInventory(db, bodyStorage)),
