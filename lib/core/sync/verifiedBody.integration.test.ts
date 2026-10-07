@@ -9,7 +9,7 @@ import { createBetterSqliteDbPort } from '../../../electron/database/betterSqlit
 import { BODY_CONTENT_CHUNK_BYTES, BODY_CONTENT_SCHEMA } from '../database/bodyContentSchema.js';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../database/desktopResourceSchemaStatements.js';
 
-import { adoptVerifiedBody, stageBodyContent } from './bodyContentWrite.js';
+import { adoptVerifiedBody, stageBodyContent, stageTextBodyContent } from './bodyContentWrite.js';
 import { loadVerifiedBodyRef, readBodyRange, readBodyText, verifyBodyContent } from './verifiedBody.js';
 
 function open() {
@@ -112,5 +112,18 @@ it('cannot move an unverified chunk into a verified body', async () => {
     await expect(db.run('UPDATE content_body_chunks SET hash = ? WHERE hash = ?', [ref.hash, stagedHash]))
       .rejects.toThrow('body_content_immutable');
     expect(await readBodyText(db, ref)).toBe('verified');
+  } finally { sqlite.close(); }
+});
+
+it('stages editor text directly into aligned stable chunks with the same content identity', async () => {
+  const { sqlite, db } = open();
+  try {
+    const content = 'x'.repeat(BODY_CONTENT_CHUNK_BYTES - 1) + '😀中' + 'y'.repeat(2 * BODY_CONTENT_CHUNK_BYTES);
+    const ref = await db.transaction((tx) => stageTextBodyContent(tx, content));
+    expect(ref.hash).toBe(hash(Buffer.from(content)));
+    expect(ref.byteLength).toBe(Buffer.byteLength(content));
+    expect(await readBodyText(db, ref)).toBe(content);
+    expect(sqlite.prepare('SELECT max(length(data)) AS size FROM content_body_chunks').get())
+      .toEqual({ size: BODY_CONTENT_CHUNK_BYTES });
   } finally { sqlite.close(); }
 });

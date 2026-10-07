@@ -1,3 +1,5 @@
+import { hashTextBody } from '../database/textBodyHash.js';
+
 import type { DbPort } from './dbPort.js';
 
 export interface TextBodyHashOptions {
@@ -12,11 +14,7 @@ export async function hashTextBodyContent(content: string, options: TextBodyHash
   if (options.hashTextBody) {
     return options.hashTextBody(content);
   }
-  const digest = await globalThis.crypto?.subtle.digest('SHA-256', textBodyBlobBytes(content));
-  if (!digest) {
-    throw new Error('sync_text_body_hash_unavailable');
-  }
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return hashTextBody(content);
 }
 
 export async function upsertTextBodyBlob(

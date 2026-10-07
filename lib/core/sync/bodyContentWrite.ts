@@ -1,10 +1,18 @@
 import { BODY_CONTENT_CHUNK_BYTES } from '../database/bodyContentSchema.js';
+import { alignedBodyTextChunks } from '../database/bodyTextChunks.js';
+import { hashTextBodyWithLength } from '../database/textBodyHash.js';
 
 import type { DbPort } from './dbPort.js';
 import { loadVerifiedBodyRef, verifyBodyContent, type VerifiedBodyRef } from './verifiedBody.js';
 
 function sameBytes(left: Uint8Array, right: Uint8Array) {
   return left.byteLength === right.byteLength && left.every((byte, index) => byte === right[index]);
+}
+
+/** Editor/background imports may supply one complete text; storage never creates a complete byte copy. */
+export async function stageTextBodyContent(db: DbPort, content: string): Promise<VerifiedBodyRef> {
+  const identity = hashTextBodyWithLength(content);
+  return stageBodyContent(db, { ...identity, chunks: alignedBodyTextChunks(content, identity.byteLength) });
 }
 
 /** Caller owns the transaction and the staged-content owner until adoption commits. */
