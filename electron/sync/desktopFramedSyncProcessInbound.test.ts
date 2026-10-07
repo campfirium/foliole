@@ -45,7 +45,9 @@ import { finishDesktopFramedSyncTransfer } from './desktopFramedSyncProcessInbou
 
 const hash = (value: number) => new Uint8Array(32).fill(value);
 const fact = (kind: number, globalId = 'node-a', blobs: CanonicalFact['blobs'] = []): CanonicalFact => ({
-  blobs, body: [], factId: `fact-${kind}-${globalId}`, globalId, kind,
+  blobs, body: blobs.length ? [{ name: 'snapshot', value: { kind: 'object', value: [
+    { name: 'body_blob_hash', value: { kind: 'string', value: Buffer.from(blobs[0]!.sha256).toString('hex') } }
+  ] } }] : [], factId: `fact-${kind}-${globalId}`, globalId, kind,
   objectType: 'node', sharedStateHash: hash(kind)
 });
 
@@ -92,7 +94,7 @@ it('atomically applies multiple versions of the same node', async () => {
     commitAuthenticatedFrame: vi.fn(), finalizeInboundAttempt: vi.fn(),
     markReadyToApply: vi.fn(), releasePins: vi.fn(), verifyAndMarkBlobAvailable: vi.fn()
   } as unknown as FramedSyncStagingPort;
-  const db = { transaction: (task: (tx: DbPort) => unknown) => task({} as DbPort) } as DbPort;
+  const db = { transaction: (task: (tx: DbPort) => unknown) => task({ query: vi.fn().mockResolvedValue([]) } as unknown as DbPort) } as DbPort;
 
   await finishDesktopFramedSyncTransfer({
     blobs: [
@@ -146,7 +148,7 @@ it('writes the actual post-apply node state hash into the receipt', async () => 
     markReadyToApply: vi.fn(), releasePins: vi.fn(), verifyAndMarkBlobAvailable: vi.fn()
   } as unknown as FramedSyncStagingPort;
   const db = {
-    transaction: (task: (tx: DbPort) => unknown) => task({} as DbPort)
+    transaction: (task: (tx: DbPort) => unknown) => task({ query: vi.fn().mockResolvedValue([]) } as unknown as DbPort)
   } as DbPort;
 
   await finishDesktopFramedSyncTransfer({

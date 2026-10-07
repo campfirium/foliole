@@ -39,7 +39,7 @@ async function setup() {
   return fixture;
 }
 
-it('invalidates provisional fact and blob state after trailer authentication fails, then retries', async () => {
+it('rejects a tampered signed HTTP body before staging, then retries', async () => {
   const fixture = await setup();
   await fixture.left.seed({
     content: 'Body recovered after an invalid attempt',
@@ -59,15 +59,19 @@ it('invalidates provisional fact and blob state after trailer authentication fai
   )).rejects.toThrow();
 
   expect(readRecoveryEvidence(fixture.rightSnapshot.databasePath)).toMatchObject({
-    attemptAudit: ['blob', 'fact'],
+    attemptAudit: [],
     availableBlobs: 0,
     blobChunks: 0,
     blobPins: 0,
-    inboundAttempts: ['invalidated'],
+    inboundAttempts: [],
     inboundFacts: 0,
     inboundFrames: 0,
-    inboundStates: ['proposed'],
+    inboundStates: [],
     receipts: 0
+  });
+
+  expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath)).toMatchObject({
+    nodes: [], versions: []
   });
 
   await fixture.left.synchronize(fixture.rightSnapshot.origin, 't326-attempt-recovery');
@@ -77,10 +81,12 @@ it('invalidates provisional fact and blob state after trailer authentication fai
     body_text: 'Body recovered after an invalid attempt', object_id: 't326-attempt-recovery'
   })]);
   expect(readRecoveryEvidence(fixture.rightSnapshot.databasePath)).toMatchObject({
-    availableBlobs: 1,
-    inboundAttempts: ['invalidated', 'promoted'],
-    inboundFacts: 1,
-    inboundFrames: 4,
+    availableBlobs: 0,
+    blobChunks: 0,
+    blobPins: 0,
+    inboundAttempts: [],
+    inboundFacts: 0,
+    inboundFrames: 0,
     inboundStates: ['applied'],
     receipts: 1
   });
@@ -106,13 +112,17 @@ it('replays the original durable receipt after its HTTP response is lost and the
 
   const firstReceipt = readRecoveryEvidence(fixture.rightSnapshot.databasePath);
   expect(firstReceipt).toMatchObject({
-    inboundFrames: 4,
+    inboundFrames: 0,
     inboundStates: ['applied'],
     receiptAttempts: 1,
     receiptFrames: 1,
     receipts: 1
   });
   expect(firstReceipt.receiptCiphertexts).toHaveLength(1);
+  const applied = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  expect(applied.versions).toEqual([expect.objectContaining({
+    body_text: 'Body applied before receipt loss', object_id: 't326-receipt-replay'
+  })]);
   expect(readRecoveryEvidence(fixture.leftSnapshot.databasePath)).toMatchObject({
     outboundHolds: 1,
     outboundStates: ['published'],
@@ -125,7 +135,7 @@ it('replays the original durable receipt after its HTTP response is lost and the
 
   const replayed = readRecoveryEvidence(restarted.snapshot.databasePath);
   expect(replayed).toMatchObject({
-    inboundFrames: 4,
+    inboundFrames: 0,
     inboundStates: ['applied'],
     receiptAttempts: 1,
     receiptFrames: 1,
@@ -133,8 +143,8 @@ it('replays the original durable receipt after its HTTP response is lost and the
   });
   expect(replayed.receiptCiphertexts).toEqual(firstReceipt.receiptCiphertexts);
   const received = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
-  expect(received.nodes).toHaveLength(1);
-  expect(received.versions).toHaveLength(1);
+  expect(received.nodes).toEqual(applied.nodes);
+  expect(received.versions).toEqual(applied.versions);
   expect(readRecoveryEvidence(fixture.leftSnapshot.databasePath)).toMatchObject({
     outboundHolds: 0,
     outboundStates: ['receipt_committed'],

@@ -92,17 +92,17 @@ it('moves one object and version body through the production framed-sync process
     inboundFacts: 0,
     inboundFrames: 0,
     inboundStates: [],
-    outboundFrames: 4,
+    outboundFrames: 0,
     outboundHolds: 0,
     outboundStates: [{ state: 'receipt_committed' }],
     receipts: 1,
     resourceChunks: 0
   });
   expect(received.framedSync).toEqual({
-    availableBlobs: 1,
+    availableBlobs: 0,
     availableResources: 0,
-    inboundFacts: 1,
-    inboundFrames: 4,
+    inboundFacts: 0,
+    inboundFrames: 0,
     inboundStates: [{ state: 'applied' }],
     outboundFrames: 1,
     outboundHolds: 0,
@@ -116,6 +116,7 @@ it('moves one object and version body through the production framed-sync process
   expect(received.versions).toEqual([
     expect.objectContaining({ body_text: 'Body from desktop A', object_id: 't326-one-object' })
   ]);
+  expect(sent.versions).toEqual(received.versions);
   const receivedNode = received.nodes[0] as { current_version_id: string };
   const receivedVersion = received.versions[0] as { version_id: string };
   expect(receivedNode.current_version_id).toBe(receivedVersion.version_id);
@@ -123,9 +124,11 @@ it('moves one object and version body through the production framed-sync process
   processes.push(restarted.process);
   await fixture.left.synchronize(restarted.snapshot.origin);
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath).framedSync)
-    .toMatchObject({ outboundFrames: 8, outboundHolds: 0, receipts: 1 });
-  expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).framedSync)
-    .toMatchObject({ inboundFrames: 4, outboundFrames: 1, receipts: 1 });
+    .toMatchObject({ outboundFrames: 0, outboundHolds: 0, receipts: 1 });
+  const reopened = readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath);
+  expect(reopened.framedSync).toMatchObject({ inboundFrames: 0, outboundFrames: 1, receipts: 1 });
+  expect(reopened.nodes).toEqual(received.nodes);
+  expect(reopened.versions).toEqual(received.versions);
 });
 
 it('streams a Node image into the receiver Assets store before committing its receipt', async () => {
@@ -150,11 +153,15 @@ it('streams a Node image into the receiver Assets store before committing its re
     resource_references: expect.stringContaining(seeded.storageKey)
   })]);
   expect(received.framedSync).toMatchObject({
-    availableResources: 1,
+    availableResources: 0,
     receipts: 1,
-    resourceChunks: 3
+    resourceChunks: 0
   });
   expect(await fs.readdir(path.dirname(target))).toEqual([seeded.storageKey]);
+  const restarted = await fixture.restartRight();
+  processes.push(restarted.process);
+  await expect(fs.readFile(target)).resolves.toEqual(bytes);
+  expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).nodes).toEqual(received.nodes);
 });
 
 it('rejects an unauthenticated framed-sync request before staging any bytes', async () => {
