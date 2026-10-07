@@ -71,6 +71,7 @@ let package = Package(
                 "FolioleFramedSyncTransferWriter.swift",
                 "FolioleCompanionDeviceAnchorStore.swift",
                 "FolioleCompanionHttpMessage.swift",
+                "FolioleCompanionHttpRequestReader.swift",
                 "FolioleCompanionSyncGroupJoinCrypto.swift",
                 "FolioleCompanionSyncGroupAdvertisement.swift",
                 "FolioleCompanionSyncGroupDiscoveryPayload.swift",

@@ -153,13 +153,27 @@ enum FolioleFramedSyncSessionReader {
         guard data.count <= FolioleFramedSyncLimits.maxSessionBytes else {
             throw FolioleFramedSyncValidationError("session_byte_limit_exceeded")
         }
-        let stream = InputStream(data: data)
+        return try read(InputStream(data: data), groupKey: groupKey, context: context, maximumFrames: maximumFrames)
+    }
+
+    static func read(
+        _ stream: InputStream, groupKey: Data, context: FolioleFramedSyncSessionContext,
+        maximumFrames: Int
+    ) throws -> FolioleFramedSyncSessionReadResult {
+        guard (1...FolioleFramedSyncLimits.maxSessionFrames).contains(maximumFrames) else {
+            throw FolioleFramedSyncValidationError("session_frame_limit_invalid")
+        }
         let reader = FolioleFramedSyncStreamReader(input: stream)
         let preamble = try reader.nextPreamble()
         let sessionID = try context.validate(preamble)
         var messages = [FolioleFramedSyncValidatedMessage]()
         var sequence: UInt64 = 0
+        var bytes = FolioleFramedSyncPreamble.byteCount
         while let frame = try reader.nextFrame() {
+            bytes += FolioleFramedSyncWireHeader.byteCount + frame.ciphertext.count
+            guard bytes <= FolioleFramedSyncLimits.maxSessionBytes else {
+                throw FolioleFramedSyncValidationError("session_byte_limit_exceeded")
+            }
             guard messages.count < maximumFrames else {
                 throw FolioleFramedSyncValidationError("session_frame_limit_exceeded")
             }

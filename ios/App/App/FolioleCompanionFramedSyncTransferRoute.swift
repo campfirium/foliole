@@ -13,7 +13,12 @@ extension FolioleCompanionSyncGroupJoinServer {
             senderLibraryEpoch: initiatorEpoch, receiverDeviceID: localDevice,
             receiverLibraryEpoch: localEpoch
         )
-        let received = try framedTransfers.receive(request.bodyData, groupKey: groupKey, context: context)
+        let received: FolioleFramedSyncReceivedTransfer
+        if let file = request.bodyFile {
+            received = try framedTransfers.receive(file.url, groupKey: groupKey, context: context)
+        } else {
+            received = try framedTransfers.receive(request.bodyData, groupKey: groupKey, context: context)
+        }
         let applied = try framedTransfers.withPublishedResources(
             transferID: received.transferID
         ) { resourceKeys in

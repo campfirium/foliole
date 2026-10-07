@@ -75,6 +75,7 @@
 		50F030131FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F030031FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift */; };
 		50F031111FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F031011FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift */; };
 		50F032111FED79650016851F /* FolioleCompanionSyncGroupSigning.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F032011FED79650016851F /* FolioleCompanionSyncGroupSigning.swift */; };
+		3EA054724CF949E9B23137FB /* FolioleCompanionHttpRequestReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99E07FE14EB14B5AA44D5BF4 /* FolioleCompanionHttpRequestReader.swift */; };
 		50F033111FED79650016851F /* FolioleCompanionHttpMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F033011FED79650016851F /* FolioleCompanionHttpMessage.swift */; };
 		50F034111FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F034011FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift */; };
 		50F195111FED79650016851F /* FolioleCompanionSyncGroupMemberStateEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50F195011FED79650016851F /* FolioleCompanionSyncGroupMemberStateEndpoint.swift */; };
@@ -228,6 +229,7 @@
 		50F030031FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinProvider.swift; sourceTree = "<group>"; };
 		50F031011FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupDataBridge.swift; sourceTree = "<group>"; };
 		50F032011FED79650016851F /* FolioleCompanionSyncGroupSigning.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupSigning.swift; sourceTree = "<group>"; };
+		99E07FE14EB14B5AA44D5BF4 /* FolioleCompanionHttpRequestReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionHttpRequestReader.swift; sourceTree = "<group>"; };
 		50F033011FED79650016851F /* FolioleCompanionHttpMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionHttpMessage.swift; sourceTree = "<group>"; };
 		50F034011FED79650016851F /* FolioleCompanionSyncGroupJoinServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupJoinServer.swift; sourceTree = "<group>"; };
 		50F195011FED79650016851F /* FolioleCompanionSyncGroupMemberStateEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionSyncGroupMemberStateEndpoint.swift; sourceTree = "<group>"; };
@@ -409,6 +411,7 @@
 				50F030031FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift */,
 				50F031011FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift */,
 				50F032011FED79650016851F /* FolioleCompanionSyncGroupSigning.swift */,
+				99E07FE14EB14B5AA44D5BF4 /* FolioleCompanionHttpRequestReader.swift */,
 				50F033011FED79650016851F /* FolioleCompanionHttpMessage.swift */,
 				203A00000000000000000001 /* FolioleCompanionResourceAvailability.swift */,
 				203A00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift */,
@@ -731,6 +734,7 @@
 				50F030131FED79650016851F /* FolioleCompanionSyncGroupJoinProvider.swift in Sources */,
 				50F031111FED79650016851F /* FolioleCompanionSyncGroupDataBridge.swift in Sources */,
 				50F032111FED79650016851F /* FolioleCompanionSyncGroupSigning.swift in Sources */,
+				3EA054724CF949E9B23137FB /* FolioleCompanionHttpRequestReader.swift in Sources */,
 				50F033111FED79650016851F /* FolioleCompanionHttpMessage.swift in Sources */,
 				203B00000000000000000001 /* FolioleCompanionResourceAvailability.swift in Sources */,
 				203B00000000000000000002 /* FolioleCompanionResourceTransferValidation.swift in Sources */,

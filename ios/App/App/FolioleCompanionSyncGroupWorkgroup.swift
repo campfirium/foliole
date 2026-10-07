@@ -21,7 +21,7 @@ enum FolioleCompanionSyncGroupWorkgroup {
         guard try header(request, "x-sync-group-id") == groupId,
               let date = requestDate(timestamp),
               abs(date.timeIntervalSinceNow) <= clockWindow else { throw invalid("expired_or_missing_headers") }
-        let digest = SHA256.hash(data: request.bodyData).hex
+        let digest = try request.rawBodyDigest()
         let canonical = [request.method, request.path, timestamp, nonce, digest].joined(separator: "\n")
         let expected = HMAC<SHA256>.authenticationCode(
             for: Data(canonical.utf8), using: SymmetricKey(data: Data(workgroupKey.utf8))
@@ -161,8 +161,4 @@ enum FolioleCompanionSyncGroupWorkgroup {
         NSError(domain: "FolioleCompanionSyncGroupWorkgroup", code: 1,
                 userInfo: [NSLocalizedDescriptionKey: message])
     }
-}
-
-private extension Digest {
-    var hex: String { map { String(format: "%02x", $0) }.joined() }
 }

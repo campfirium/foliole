@@ -1,73 +1,73 @@
+import CryptoKit
 import Foundation
 
 struct FolioleCompanionHttpMessage {
     static let maximumBytes = 256 * 1024
     let body: [String: Any]
     let bodyData: Data
+    let bodyFile: FolioleCompanionHttpBodyFile?
     let headers: [String: String]
     let method: String
     let path: String
 
+    init(body: [String: Any], bodyData: Data, headers: [String: String], method: String,
+         path: String, bodyFile: FolioleCompanionHttpBodyFile? = nil) {
+        self.body = body
+        self.bodyData = bodyData
+        self.headers = headers
+        self.method = method
+        self.path = path
+        self.bodyFile = bodyFile
+    }
+
     func header(_ name: String) -> String? { headers[name.lowercased()] }
 
+    func rawBodyDigest() throws -> String {
+        if let bodyFile {
+            guard let digest = bodyFile.digest else { throw Self.invalid("incomplete_http_request") }
+            return digest
+        }
+        return SHA256.hash(data: bodyData).map { String(format: "%02x", $0) }.joined()
+    }
+
+    func bodyPrefix(_ count: Int) throws -> Data {
+        if let bodyFile { return try bodyFile.prefix(count) }
+        return Data(bodyData.prefix(count))
+    }
+
+    func bodyStream() throws -> InputStream {
+        if let bodyFile {
+            guard let stream = InputStream(url: bodyFile.url) else { throw Self.invalid("http_body_file_unavailable") }
+            return stream
+        }
+        return InputStream(data: bodyData)
+    }
+
     static func expectedLength(_ data: Data) throws -> Int? {
-        guard let separator = data.range(of: Data("\r\n\r\n".utf8)) else {
-            if data.count > 16 * 1024 { throw invalid("http_header_too_large") }
-            return nil
-        }
-        guard separator.lowerBound <= 16 * 1024 else { throw invalid("http_header_too_large") }
-        guard let headers = String(data: data[..<separator.lowerBound], encoding: .utf8) else {
-            throw invalid("invalid_http_headers")
-        }
-        let requestLine = headers.split(separator: "\r\n").first.map(String.init) ?? ""
-        let pushLimit = requestLine.hasPrefix("POST /companion/framed-sync")
-            ? 36 * 1024 * 1024
-            : requestLine.hasPrefix("POST /companion/sync-identity-push ")
-                ? 2 * 1024 * 1024 : maximumBytes
-        guard data.count <= pushLimit else { throw invalid("request_too_large") }
-        let length = headers.split(separator: "\r\n").dropFirst().compactMap { line -> Int? in
-            let parts = line.split(separator: ":", maxSplits: 1)
-            guard parts.count == 2, parts[0].trimmingCharacters(in: .whitespaces).lowercased() == "content-length"
-            else { return nil }
-            return Int(parts[1].trimmingCharacters(in: .whitespaces))
-        }.first ?? 0
-        guard length >= 0, separator.upperBound + length <= pushLimit else {
-            throw invalid("request_too_large")
-        }
-        return separator.upperBound + length
+        guard let head = try FolioleCompanionHttpHead.parse(data) else { return nil }
+        return head.bodyOffset + head.bodyLength
     }
 
     static func parse(_ data: Data) throws -> FolioleCompanionHttpMessage {
-        guard let expected = try expectedLength(data), data.count >= expected,
-              let separator = data.range(of: Data("\r\n\r\n".utf8)),
-              let head = String(data: data[..<separator.lowerBound], encoding: .utf8),
-              let requestLine = head.split(separator: "\r\n").first else {
-            throw invalid("invalid_http_request")
-        }
-        let parts = requestLine.split(separator: " ")
-        guard parts.count == 3 else { throw invalid("invalid_http_request") }
-        let rawBody = Data(data[separator.upperBound..<expected])
-        let headerLines = head.split(separator: "\r\n").dropFirst()
-        let headers = headerLines.reduce(into: [String: String]()) { result, line in
-            let pair = line.split(separator: ":", maxSplits: 1)
-            if pair.count == 2 {
-                result[pair[0].trimmingCharacters(in: .whitespaces).lowercased()] =
-                    pair[1].trimmingCharacters(in: .whitespaces)
-            }
-        }
-        let body: [String: Any]
-        let mediaType = headers["content-type"]?.split(separator: ";", maxSplits: 1).first?
+        guard let head = try FolioleCompanionHttpHead.parse(data),
+              data.count == head.bodyOffset + head.bodyLength else { throw invalid("invalid_http_request") }
+        return try from(head: head, data: Data(data.dropFirst(head.bodyOffset)))
+    }
+
+    static func from(head: FolioleCompanionHttpHead, data: Data,
+                     file: FolioleCompanionHttpBodyFile? = nil) throws -> Self {
+        let mediaType = head.headers["content-type"]?.split(separator: ";", maxSplits: 1).first?
             .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if rawBody.isEmpty || mediaType == FolioleFramedSyncHTTPTransport.contentType { body = [:] }
+        let body: [String: Any]
+        if file != nil || data.isEmpty || mediaType == FolioleFramedSyncHTTPTransport.contentType { body = [:] }
         else {
-            let value = try JSONSerialization.jsonObject(with: rawBody)
-            guard let object = value as? [String: Any] else { throw invalid("invalid_json_body") }
+            guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw invalid("invalid_json_body")
+            }
             body = object
         }
-        return FolioleCompanionHttpMessage(
-            body: body, bodyData: rawBody, headers: headers,
-            method: String(parts[0]), path: String(parts[1])
-        )
+        return Self(body: body, bodyData: data, headers: head.headers, method: head.method,
+                    path: head.path, bodyFile: file)
     }
 
     static func response(status: Int, value: [String: Any]) throws -> Data {

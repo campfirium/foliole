@@ -52,7 +52,7 @@ final class FolioleCompanionSyncGroupJoinServer {
             default: break
             }
         }
-        listener.newConnectionHandler = { [weak self] connection in self?.receive(connection, Data()) }
+        listener.newConnectionHandler = { [weak self] connection in self?.receive(connection) }
         listener.start(queue: queue)
         guard ready.wait(timeout: .now() + 5) == .success,
               let outcome = result.value else { throw Self.invalid("sync_group_provider_start_timed_out") }
@@ -68,23 +68,21 @@ final class FolioleCompanionSyncGroupJoinServer {
         }
     }
 
-    private func receive(_ connection: NWConnection, _ accumulated: Data) {
+    private func receive(_ connection: NWConnection) {
         connection.start(queue: queue)
-        read(connection, accumulated)
+        read(connection, FolioleCompanionHttpRequestReader())
     }
 
-    private func read(_ connection: NWConnection, _ accumulated: Data) {
+    private func read(_ connection: NWConnection, _ reader: FolioleCompanionHttpRequestReader) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) {
             [weak self] data, _, complete, error in
             guard let self else { connection.cancel(); return }
-            var next = accumulated
-            if let data { next.append(data) }
             do {
-                if let expected = try FolioleCompanionHttpMessage.expectedLength(next), next.count >= expected {
-                    try self.respond(connection, FolioleCompanionHttpMessage.parse(next)); return
+                if let data, let request = try reader.append(data) {
+                    try self.respond(connection, request); return
                 }
                 if complete || error != nil { throw Self.invalid("incomplete_http_request") }
-                self.read(connection, next)
+                self.read(connection, reader)
             } catch { self.respondError(connection, error) }
         }
     }
@@ -123,7 +121,7 @@ final class FolioleCompanionSyncGroupJoinServer {
             return try send(connection, 409, ["error": "framed_sync_responder_identity_mismatch"])
         }
         let preamble = try FolioleFramedSyncPreamble(
-            decoding: Data(request.bodyData.prefix(FolioleFramedSyncPreamble.byteCount))
+            decoding: request.bodyPrefix(FolioleFramedSyncPreamble.byteCount)
         )
         if preamble.contextKind == 2 {
             return try respondFramedTransfer(
@@ -139,7 +137,7 @@ final class FolioleCompanionSyncGroupJoinServer {
         )
         let groupKey = try Base64URL.decode(provider.workgroupKey)
         let session = try FolioleFramedSyncSessionReader.read(
-            request.bodyData, groupKey: groupKey, context: context,
+            try request.bodyStream(), groupKey: groupKey, context: context,
             maximumFrames: FolioleFramedSyncInventoryWire.maximumSessionFrames
         )
         let roundID = try FolioleFramedSyncInventoryWire.decodeRoundID(session.messages)
