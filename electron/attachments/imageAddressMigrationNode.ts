@@ -46,22 +46,23 @@ function assertNotEditing(driver: DatabaseDriver, nodeId: string) {
   if (hold) throw new Error('image_migration_editor_active');
 }
 
-function versionChanges(driver: DatabaseDriver, ids: string[], hostName: string, now: string) {
+function versionChanges(driver: DatabaseDriver, ids: string[], hostName: string, now: string,
+  storage: 'continuous' | 'chunked') {
   for (const id of ids) {
     driver.execute('UPDATE nodes SET sync_dirty = 1, last_modified_by_host_name = ? WHERE id = ?', [hostName, id]);
-    if (!flushNodeSyncVersionWithDriver(driver, id, hostName, now)) {
+    if (!flushNodeSyncVersionWithDriver(driver, id, hostName, now, undefined, storage)) {
       throw new Error('image_migration_version_unavailable');
     }
   }
 }
 
 export function migrateImageAddressInNode(driver: DatabaseDriver, nodeId: string,
-  image: VerifiedMigrationImage, hostName: string, now = new Date().toISOString()) {
+  image: VerifiedMigrationImage, hostName: string, now = new Date().toISOString(), bodyStorage: 'continuous' | 'chunked' = 'continuous') {
   return driver.transaction(() => {
     const row = driver.queryOne<{ resource_references: string | null; image_sources: string | null }>(
       'SELECT resource_references, image_sources FROM nodes WHERE id = ? AND deleted_at IS NULL', [nodeId]);
     if (!row) return false;
-    const body = loadNodeBodyResolution(driver, nodeId);
+    const body = loadNodeBodyResolution(driver, nodeId, bodyStorage);
     if (!body || body.status !== 'resolved') throw new Error('image_migration_body_unavailable');
     const keys = collectArticleImageStorageKeys(body.content).filter((key) => isSameImage(key, image));
     const nextContent = keys.reduce((content, key) => replaceArticleImageSource(content, key, image.storageKey), body.content);
@@ -70,15 +71,15 @@ export function migrateImageAddressInNode(driver: DatabaseDriver, nodeId: string
     assertNotEditing(driver, nodeId);
     const children = driver.queryAll<{ id: string }>('SELECT id FROM nodes WHERE parent_id = ? AND deleted_at IS NULL', [nodeId]);
     for (const id of [nodeId, ...children.map((child) => child.id)]) {
-      flushNodeSyncVersionWithDriver(driver, id, hostName, now);
+      flushNodeSyncVersionWithDriver(driver, id, hostName, now, undefined, bodyStorage);
     }
-    const change = applyParentContentChange({ driver, nodeId, nextContent, previousContent: body.content, updatedAt: now });
+    const change = applyParentContentChange({ bodyStorage, driver, nodeId, nextContent, previousContent: body.content, updatedAt: now });
     if (change.skippedAnchors.some((anchor) => anchor.reason === 'invalid_anchor_link')) {
       throw new Error('image_migration_anchor_invalid');
     }
     driver.execute('UPDATE nodes SET resource_references = ?, image_sources = ?, updated_at = ? WHERE id = ?',
       [references, remapSources(row.image_sources, keys, image.storageKey), now, nodeId]);
-    versionChanges(driver, [nodeId, ...change.affectedChildIds], hostName, now);
+    versionChanges(driver, [nodeId, ...change.affectedChildIds], hostName, now, bodyStorage);
     return true;
   });
 }

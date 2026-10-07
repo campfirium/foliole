@@ -16,11 +16,17 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
+import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
+import { observeDriver } from '../database/bodyContentDriver.testSupport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
+import { migrateImageAddressInNode } from './imageAddressMigrationNode.js';
 import { learnRemoteImageSourceOrigin } from './remoteImageLearnedSources.js';
-import { resolveRemoteImageSourceContext } from './remoteImageSourceContext.js';
+import { resolveRemoteImageSourceContext, resolveRemoteImageSourceOriginWithDriver } from './remoteImageSourceContext.js';
 
 let tempRoot = '';
 
@@ -83,4 +89,31 @@ it('preserves import source, run, derived-parent frontmatter, and learned priori
   expect(resolveRemoteImageSourceContext('child-1', sourceUrl)).toMatchObject({
     source: 'learned', sourceOrigin: 'https://learned.example/'
   });
+});
+
+it('preserves single-article consumer results after explicit chunked migration without continuous or inline fallback', async () => {
+  const { sqlite, driver } = openDatabaseConnection();
+  const body = `---\nurl: https://body.example/article\n---\n${'中😀'.repeat(400_000)}`;
+  const hash = upsertTextBodyBlob(driver, body, 'now');
+  sqlite.prepare(`INSERT INTO nodes (id,kind,title,content,body_blob_hash,created_at,updated_at)
+    VALUES ('article','topic','Title','stale inline',?,'now','now')`).run(hash);
+  const image = { contentHash: 'a'.repeat(64), storageKey: `${'a'.repeat(64)}.png` };
+  const expectedOrigin = resolveRemoteImageSourceOriginWithDriver(driver, 'article');
+  const expectedChange = applyParentContentChange({ driver, nodeId: 'article', nextContent: body, updatedAt: 'now' });
+  expect(migrateImageAddressInNode(driver, 'article', image, 'host', 'now')).toBe(false);
+  await migrateBodyContentStorage(createBetterSqliteDbPort(sqlite));
+  sqlite.prepare("UPDATE nodes SET content = 'stale inline' WHERE id = 'article'").run();
+  const observed = observeDriver(driver);
+  expect(resolveRemoteImageSourceOriginWithDriver(observed.driver, 'article', 'chunked')).toBe(expectedOrigin);
+  expect(applyParentContentChange({ bodyStorage: 'chunked', driver: observed.driver,
+    nodeId: 'article', nextContent: body, updatedAt: 'now' })).toEqual(expectedChange);
+  expect(migrateImageAddressInNode(observed.driver, 'article', image, 'host', 'now', 'chunked')).toBe(false);
+  expect(observed.sizes.length).toBeGreaterThan(0);
+  sqlite.prepare('DELETE FROM content_bodies WHERE hash = ?').run(hash);
+  expect(resolveRemoteImageSourceOriginWithDriver(driver, 'article', 'chunked')).toBeNull();
+  expect(() => applyParentContentChange({ bodyStorage: 'chunked', driver, nodeId: 'article',
+    nextContent: 'Replacement', previousContent: body, updatedAt: 'later' })).toThrow('node_body_unavailable:article');
+  expect(() => migrateImageAddressInNode(driver, 'article', image, 'host', 'now', 'chunked'))
+    .toThrow('image_migration_body_unavailable');
+  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id = 'article'")?.content).toBe('stale inline');
 });

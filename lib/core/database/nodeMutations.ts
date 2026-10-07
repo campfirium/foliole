@@ -79,7 +79,8 @@ function resolveStoredOpeningText(input: Pick<UpsertNodeSnapshotInput, 'content'
 function runNodeTableUpsert(
   run: ReturnType<typeof createUpsertNodeStatement>['run'],
   input: UpsertNodeSnapshotInput,
-  bodyBlobHash: string | null
+  bodyBlobHash: string | null,
+  storage: 'continuous' | 'chunked'
 ) {
   run([
     input.nodeId,
@@ -94,7 +95,7 @@ function runNodeTableUpsert(
     input.title,
     input.isTitleManual ? 1 : 0,
     input.hideTitleHeading === true ? 1 : 0,
-    projectNodeInlineContent(input.content),
+    storage === 'chunked' ? '' : projectNodeInlineContent(input.content),
     bodyBlobHash,
     resolveStoredOpeningText(input),
     stringifyVirtualNodeFilter(input.virtualFilter ?? null),
@@ -110,6 +111,7 @@ function runNodeTableUpsert(
 
 export interface UpsertNodeSnapshotOptions {
   searchInvalidation?: NodeSearchInvalidationOptions;
+  bodyStorage?: 'continuous' | 'chunked';
 }
 
 function createUpsertNodeSnapshotStatements(driver: DatabaseDriver) {
@@ -154,11 +156,11 @@ export function upsertNodeSnapshot(
       && input.title.trim() === 'Untitled'
       && !driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [input.nodeId]);
     const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input, options.searchInvalidation);
-    ensureSpecialRootNodesForInput(driver, input);
+    ensureSpecialRootNodesForInput(driver, input, options.bodyStorage);
     const previousBody = driver.queryOne<{ body_blob_hash: string | null }>(
       'SELECT body_blob_hash FROM nodes WHERE id = ?', [input.nodeId]);
-    const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt);
-    runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
+    const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt, options.bodyStorage);
+    runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash, options.bodyStorage ?? 'continuous');
     ensureNodeParentMembership(driver, input.nodeId);
     writeNodeReadingSnapshotWithSync(driver, input, {
       deleteDeviceState: statements.deleteNodeReadingHostState.run,
@@ -177,7 +179,7 @@ export function upsertNodeSnapshot(
     });
     enqueueSearchInvalidation();
     if (previousBody?.body_blob_hash && previousBody.body_blob_hash !== bodyBlobHash) {
-      collectTextBodyBlobCandidates(driver, [previousBody.body_blob_hash]);
+      collectTextBodyBlobCandidates(driver, [previousBody.body_blob_hash], options.bodyStorage);
     }
   });
 }

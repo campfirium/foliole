@@ -3,7 +3,7 @@ import type { NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js'
 import { parseNodeResourceReferences, projectNodeResourceLinks } from '../../lib/core/database/nodeResourceReferences.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
 import { loadTopicTextStateWithDriver } from '../../lib/core/database/topicTextStateWithDriver.js';
-import { normalizeTextAlternatives } from '../../lib/core/sync/topicTextState.js';
+import { normalizeTextAlternatives, normalizeTextAlternativesForHash } from '../../lib/core/sync/topicTextState.js';
 
 export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
@@ -39,16 +39,17 @@ export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   virtual_filter: string | null;
 }
 
-export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, nodeId: string) {
+export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, nodeId: string,
+  storage: 'continuous' | 'chunked' = 'continuous') {
   return driver.queryOne<NodeSyncVersionSourceRow>(
     `SELECT id, parent_id, kind, priority, desired_retention, enable_short_term,
        sequential_reading_enabled, shelved_at, manual_child_order, title, is_title_manual,
-       hide_title_heading, content, nodes.body_blob_hash, cbd.data AS body_blob_data,
+       hide_title_heading, ${storage === 'continuous' ? 'content, nodes.body_blob_hash, cbd.data AS body_blob_data' : "'' AS content, nodes.body_blob_hash, NULL AS body_blob_data"},
        opening_text, virtual_filter, reveal,
        anchor_link, anchor_resolution_status, anchor_source_version_id, image_regions, image_sources, resource_references, import_content_fingerprint, import_source_fingerprint,
        current_version_id, sync_dirty, created_at, updated_at, deleted_at
      FROM nodes
-     LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash
+     ${storage === 'continuous' ? 'LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash' : ''}
      WHERE nodes.id = ?`,
     [nodeId]
   );
@@ -57,10 +58,13 @@ export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, node
 export function buildNodeSyncSnapshotFromDriver(
   driver: DatabaseDriver,
   row: NodeSyncVersionSourceRow,
-  nodeId: string
+  nodeId: string,
+  bodyHash?: string
 ) {
   return {
-    text_alternatives: normalizeTextAlternatives(loadTopicTextStateWithDriver(driver, nodeId), row.content ?? '', row.updated_at),
+    text_alternatives: bodyHash === undefined
+      ? normalizeTextAlternatives(loadTopicTextStateWithDriver(driver, nodeId), row.content ?? '', row.updated_at)
+      : normalizeTextAlternativesForHash(loadTopicTextStateWithDriver(driver, nodeId), bodyHash, row.updated_at),
     anchor_link: row.anchor_link,
     anchor_resolution_status: row.anchor_resolution_status,
     anchor_source_version_id: row.anchor_source_version_id,

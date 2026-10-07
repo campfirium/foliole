@@ -2,33 +2,36 @@
 import { expect, it } from 'vitest';
 
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
+import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
 import { encodeValidatedProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
 import { factToWire } from '../../lib/core/sync/framedSyncWireProjection.js';
 
 import { loadDesktopFramedSyncReadyFacts } from './desktopFramedSyncReadyFacts.js';
 import { reopenedReadyFixture } from './desktopFramedSyncReadyFacts.testSupport.js';
 
-it('recovers the exact metadata after SQLite restart without reading body bytes', async () => {
-  const host = await reopenedReadyFixture();
+it.each([1, 13])('recovers %i ordered facts after SQLite restart without reading body bytes', async (factCount) => {
+  const host = await reopenedReadyFixture(factCount);
   try {
     const queries: string[] = [];
     const metadata: DbPort = { ...host.db,
       async query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
         queries.push(sql);
         const rows = await host.db.query<T>(sql, params);
+        const isFrame = /FROM framed_sync_inbound_frames/u.test(sql);
+        if (isFrame) expect(rows.length).toBeLessThanOrEqual(1);
         for (const row of rows) for (const value of Object.values(row)) {
           const size = typeof value === 'string' ? Buffer.byteLength(value) : value instanceof Uint8Array ? value.length : 0;
-          expect(size).toBeLessThan(4096);
+          expect(size).toBeLessThan(isFrame ? 4096 : FRAMED_SYNC_LIMITS.maxManifestBytes);
         }
         return rows;
       }
     };
     const ready = await loadDesktopFramedSyncReadyFacts(metadata, host.published);
-    expect(ready?.facts).toEqual([host.fact]);
+    expect(ready?.facts).toEqual(host.facts);
     expect(ready?.blobs).toEqual([host.descriptor]);
     expect(ready?.context).toEqual(host.published.context);
     expect(ready?.globalId).toBe('node');
-    expect(queries).toHaveLength(2);
+    expect(queries.some((sql) => /FROM framed_sync_inbound_frames/u.test(sql))).toBe(true);
     expect(queries.every((sql) => !/available_blobs|content_body_chunks|content_blob_data/u.test(sql))).toBe(true);
     expect(host.sqlite.prepare('SELECT length(data) FROM framed_sync_available_blobs').pluck().get()).toBeGreaterThan(3 * 1024 * 1024);
   } finally { host.close(); }

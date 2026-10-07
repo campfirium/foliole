@@ -1,5 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 import {
@@ -70,38 +70,31 @@ function readImportRunOrigin(driver: DatabaseDriver, nodeId: string) {
   return rows.map((row) => normalizeRemoteImageSourceOrigin(row.source_locator)).find(Boolean) ?? null;
 }
 
-function readFrontmatterOrigin(driver: DatabaseDriver, nodeId: string) {
-  const row = driver.queryOne<NodeBodyRow>(
-    `SELECT n.content, n.body_blob_hash, cbd.data AS body_blob_data
-     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-     WHERE n.id = ?`,
-    [nodeId]
-  );
-  if (!row) return null;
-  const body = resolveNodeBody(row);
-  return body.status === 'resolved'
+function readFrontmatterOrigin(driver: DatabaseDriver, nodeId: string, bodyStorage: 'continuous' | 'chunked') {
+  const body = loadNodeBodyResolution(driver, nodeId, bodyStorage);
+  return body?.status === 'resolved'
     ? normalizeRemoteImageSourceOrigin(extractFrontmatterUrl(body.content))
     : null;
 }
 
-export function resolveRemoteImageSourceOriginWithDriver(driver: DatabaseDriver, nodeId: string) {
+export function resolveRemoteImageSourceOriginWithDriver(driver: DatabaseDriver, nodeId: string, bodyStorage: 'continuous' | 'chunked' = 'continuous') {
   const sourceNodeId = readSourceNodeId(driver, nodeId);
   if (!sourceNodeId) return null;
   return readImportSourceOrigin(driver, sourceNodeId)
     ?? readImportRunOrigin(driver, sourceNodeId)
-    ?? readFrontmatterOrigin(driver, sourceNodeId);
+    ?? readFrontmatterOrigin(driver, sourceNodeId, bodyStorage);
 }
 
-export function resolveRemoteImageSourceOriginForNode(nodeId: string | null) {
+export function resolveRemoteImageSourceOriginForNode(nodeId: string | null, bodyStorage: 'continuous' | 'chunked' = 'continuous') {
   const normalizedNodeId = nodeId?.trim() ?? '';
   if (!normalizedNodeId) {
     return null;
   }
-  return resolveRemoteImageSourceOriginWithDriver(openDatabaseConnection().driver, normalizedNodeId);
+  return resolveRemoteImageSourceOriginWithDriver(openDatabaseConnection().driver, normalizedNodeId, bodyStorage);
 }
 
-export function resolveRemoteImageSourceContext(nodeId: string | null, sourceUrl: string): RemoteImageSourceContext {
-  const nodeSourceOrigin = resolveRemoteImageSourceOriginForNode(nodeId);
+export function resolveRemoteImageSourceContext(nodeId: string | null, sourceUrl: string, bodyStorage: 'continuous' | 'chunked' = 'continuous'): RemoteImageSourceContext {
+  const nodeSourceOrigin = resolveRemoteImageSourceOriginForNode(nodeId, bodyStorage);
   const learned = loadRemoteImageLearnedSource(sourceUrl);
   if (nodeSourceOrigin) {
     return {

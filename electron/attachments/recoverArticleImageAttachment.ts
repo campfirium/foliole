@@ -20,31 +20,31 @@ import { importImageAttachmentResource } from './importImageAttachmentResource.j
 import { fetchRemoteImageResource } from './remoteImagePipeline.js';
 import { resolveAttachmentFile } from './resourceResolver.js';
 
-function readArticle(nodeId: string): RecoverableImageArticle | null {
-  const body = loadNodeBodyResolution(openDatabaseConnection().driver, nodeId);
+function readArticle(nodeId: string, bodyStorage: 'continuous' | 'chunked'): RecoverableImageArticle | null {
+  const body = loadNodeBodyResolution(openDatabaseConnection().driver, nodeId, bodyStorage);
   const imageSources = readNodeImageSources(nodeId);
   return body?.status === 'resolved' && imageSources ? { content: body.content, imageSources } : null;
 }
 
-function commitArticle(nodeId: string, before: RecoverableImageArticle, after: RecoverableImageArticle, resource?: NodeResourceReference) {
+function commitArticle(nodeId: string, before: RecoverableImageArticle, after: RecoverableImageArticle, bodyStorage: 'continuous' | 'chunked', resource?: NodeResourceReference) {
   const driver = openDatabaseConnection().driver;
   return driver.transaction(() => {
-    const current = readArticle(nodeId);
+    const current = readArticle(nodeId, bodyStorage);
     if (!current || current.content !== before.content ||
         serializeImageSources(current.imageSources) !== serializeImageSources(before.imageSources)) return false;
     const node = driver.queryOne<{ title: string }>('SELECT title FROM nodes WHERE id = ?', [nodeId]);
     if (!node) return false;
     const now = new Date().toISOString();
-    writeNodeBody({ content: after.content, driver, nodeId, title: node.title, updatedAt: now });
+    writeNodeBody({ bodyStorage, content: after.content, driver, nodeId, title: node.title, updatedAt: now });
     driver.execute('UPDATE nodes SET image_sources = ?, sync_dirty = 1, last_modified_by_host_name = ? WHERE id = ?',
       [serializeImageSources(after.imageSources), loadOrCreateDesktopHostName(now), nodeId]);
     if (resource) persistNodeResourceReference(nodeId, resource);
-    flushNodeSyncVersion(nodeId, now);
+    flushNodeSyncVersion(nodeId, now, bodyStorage);
     return true;
   });
 }
 
-export async function recoverArticleImageAttachment(args: NativeImportRemoteImageAttachmentArgs): Promise<NativeImportLocalImageAttachmentResult> {
+export async function recoverArticleImageAttachment(args: NativeImportRemoteImageAttachmentArgs, bodyStorage: 'continuous' | 'chunked' = 'continuous'): Promise<NativeImportLocalImageAttachmentResult> {
   const storageKey = args.recoverStorageKey ?? '';
   const snapshot = readAttachmentLibraryPathSnapshot();
   const error = { status: 'error' as const, error_code: 'source_not_found' as const,
@@ -57,7 +57,7 @@ export async function recoverArticleImageAttachment(args: NativeImportRemoteImag
     port: {
       read: async () => runWithDatabaseConnectionOwner(() => {
         if (readAttachmentLibraryPathSnapshot()?.libraryScope !== snapshot.libraryScope) return null;
-        const article = readArticle(args.nodeId);
+        const article = readArticle(args.nodeId, bodyStorage);
         return args.expectedContent !== undefined && article?.content !== args.expectedContent ? null : article;
       }),
       exists: async (key) => {
@@ -74,7 +74,7 @@ export async function recoverArticleImageAttachment(args: NativeImportRemoteImag
       },
       commit: async (before, after) => runWithDatabaseConnectionOwner(() => {
         if (readAttachmentLibraryPathSnapshot()?.libraryScope !== snapshot.libraryScope) return false;
-        return commitArticle(args.nodeId, before, after, imported?.status === 'imported' ? {
+        return commitArticle(args.nodeId, before, after, bodyStorage, imported?.status === 'imported' ? {
           storage_key: imported.storage_key, original_name: imported.original_name, role: 'image'
         } : undefined);
       })

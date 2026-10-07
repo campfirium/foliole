@@ -12,12 +12,13 @@ export function writeNodeBody(input: {
   nodeId: string;
   title: string;
   updatedAt: string;
+  bodyStorage?: 'continuous' | 'chunked';
 }) {
   return input.driver.transaction(() => {
     const previous = input.driver.queryOne<{ body_blob_hash: string | null }>(
       'SELECT body_blob_hash FROM nodes WHERE id = ?', [input.nodeId]);
     if (!previous) throw new Error('node_body_target_missing');
-    const bodyBlobHash = upsertTextBodyBlob(input.driver, input.content, input.updatedAt);
+    const bodyBlobHash = upsertTextBodyBlob(input.driver, input.content, input.updatedAt, input.bodyStorage);
     input.driver.execute(
       `UPDATE nodes
        SET sync_dirty = CASE WHEN body_blob_hash IS NOT ? THEN 1 ELSE sync_dirty END,
@@ -25,7 +26,7 @@ export function writeNodeBody(input: {
        WHERE id = ?`,
       [
         bodyBlobHash,
-        projectNodeInlineContent(input.content),
+        input.bodyStorage === 'chunked' ? '' : projectNodeInlineContent(input.content),
         bodyBlobHash,
         resolveNodeOpeningText(input.content, input.title),
         input.updatedAt,
@@ -34,7 +35,7 @@ export function writeNodeBody(input: {
     );
     enqueueWorkspaceSearchInvalidationForNodeIds(input.driver, [input.nodeId]);
     if (previous?.body_blob_hash && previous.body_blob_hash !== bodyBlobHash) {
-      collectTextBodyBlobCandidates(input.driver, [previous.body_blob_hash]);
+      collectTextBodyBlobCandidates(input.driver, [previous.body_blob_hash], input.bodyStorage);
     }
     return bodyBlobHash;
   });

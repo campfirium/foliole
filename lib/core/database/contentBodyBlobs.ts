@@ -1,10 +1,14 @@
 
+import { adoptVerifiedBodyWithDriver, stageTextBodyContentWithDriver } from './bodyContentWriteWithDriver.js';
 import type { DatabaseDriver } from './driver.js';
 import { hashTextBody } from './textBodyHash.js';
 
 export { hashTextBody } from './textBodyHash.js';
 
-export function upsertTextBodyBlob(driver: DatabaseDriver, content: string, now: string) {
+export function upsertTextBodyBlob(driver: DatabaseDriver, content: string, now: string,
+  storage: 'continuous' | 'chunked' = 'continuous') {
+  if (storage === 'chunked') return driver.transaction((tx) =>
+    adoptVerifiedBodyWithDriver(tx, stageTextBodyContentWithDriver(tx, content), now));
   const hash = hashTextBody(content);
   const size = Buffer.byteLength(content, 'utf8');
   driver.execute(

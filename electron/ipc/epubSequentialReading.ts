@@ -1,5 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
 import { writeNodeReadingSnapshotWithSync } from '../../lib/core/database/nodeReadingSyncState.js';
 import {
   buildSequentialReadingReleaseUpdates,
@@ -8,7 +8,7 @@ import {
 } from '../../lib/core/review/sequentialReadingRelease.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 
-interface NodeReadingRow extends DatabaseRow, NodeBodyRow {
+interface NodeReadingRow extends DatabaseRow {
   interval_duration_ms: number | null;
   interval_growth_factor: number | null;
   last_handled_at: string | null;
@@ -20,9 +20,9 @@ interface NodeReadingRow extends DatabaseRow, NodeBodyRow {
   state: string | null;
 }
 
-function toCandidate(row: NodeReadingRow): SequentialReadingReleaseCandidate {
+function toCandidate(row: NodeReadingRow, content: string): SequentialReadingReleaseCandidate {
   return {
-    content: row.content,
+    content,
     nodeId: row.node_id,
     priority: row.priority,
     reading: row.state === 'active' || row.state === 'done' || row.state === 'dismissed' || row.state === 'locked'
@@ -40,23 +40,23 @@ function toCandidate(row: NodeReadingRow): SequentialReadingReleaseCandidate {
   };
 }
 
-function readSequentialReadingCandidates(driver: DatabaseDriver, nodeIds: string[], hostName: string) {
+function readSequentialReadingCandidates(driver: DatabaseDriver, nodeIds: string[], hostName: string, bodyStorage: 'continuous' | 'chunked') {
   const selectNode = driver.prepare(
-    `SELECT n.id AS node_id, n.content, n.body_blob_hash, cbd.data AS body_blob_data, n.priority,
+    `SELECT n.id AS node_id, n.priority,
             rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at,
             rd.next_at, rd.priority AS reading_priority, rd.repetition_count, rd.state,
             rds.reading_position
      FROM nodes n
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      LEFT JOIN node_reading rd ON rd.node_id = n.id
      LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
      WHERE n.id = ? AND n.deleted_at IS NULL`
   );
   return nodeIds.flatMap((nodeId) => {
-    const row = selectNode.get([hostName, nodeId]) as (NodeReadingRow & { reading_priority: number | null }) | undefined;
+    const row = selectNode.get<NodeReadingRow & { reading_priority: number | null }>([hostName, nodeId]);
     if (!row) return [];
-    const body = requireResolvedNodeBody(row, row.node_id);
-    return [toCandidate({ ...row, content: body.content, priority: row.reading_priority ?? row.priority })];
+    const body = loadNodeBodyResolution(driver, row.node_id, bodyStorage);
+    if (body?.status !== 'resolved') throw new NodeBodyUnavailableError([row.node_id]);
+    return [toCandidate({ ...row, priority: row.reading_priority ?? row.priority }, body.content)];
   });
 }
 
@@ -94,6 +94,7 @@ function prepareSequentialReadingStatements(driver: DatabaseDriver) {
 }
 
 export function applyEpubSequentialReadingMode(args: {
+  bodyStorage?: 'continuous' | 'chunked';
   driver: DatabaseDriver;
   importedAt: string;
   mode: SequentialReadingReleaseMode;
@@ -102,7 +103,7 @@ export function applyEpubSequentialReadingMode(args: {
 }) {
   const hostName = loadOrCreateDesktopHostName(args.importedAt);
   const statements = prepareSequentialReadingStatements(args.driver);
-  const candidates = readSequentialReadingCandidates(args.driver, args.nodeIds, hostName);
+  const candidates = readSequentialReadingCandidates(args.driver, args.nodeIds, hostName, args.bodyStorage ?? 'continuous');
   const updates = buildSequentialReadingReleaseUpdates({
     candidates,
     defaultPriority: 0,

@@ -3,15 +3,17 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
 import { migrateBodyContentOwners } from '../../lib/core/database/bodyContentOwnerMigration.js';
 import { BODY_CONTENT_CHUNK_BYTES } from '../../lib/core/database/bodyContentSchema.js';
+import { migrateFramedSyncAvailableBlobs } from '../../lib/core/database/framedSyncAvailableBlobMigration.js';
 import { canonicalContentId, canonicalManifestBytes, canonicalTransferId } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 import { textDevice } from '../database/topicTextState.testSupport.js';
 
-export async function desktopBodyFixture(text: string, role = 1) {
+export async function desktopBodyFixture(text: string, role = 1, storage: 'continuous' | 'chunked' = 'continuous') {
   const host = textDevice();
   await host.db.transaction(async (tx) => {
     await migrateBodyContentStorage(tx);
     await migrateBodyContentOwners(tx, 'desktop');
+    if (storage === 'chunked') await migrateFramedSyncAvailableBlobs(tx, 'desktop');
   });
   const data = new TextEncoder().encode(text);
   const descriptor = { sha256: sha256(data), byteLength: BigInt(data.length), role, required: true };
@@ -22,7 +24,7 @@ export async function desktopBodyFixture(text: string, role = 1) {
     receiverLibraryEpoch: 'receiver-epoch', senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch' };
   const contentId = await canonicalContentId(manifest);
   const published = { contentId, context, manifestHash: contentId, transferId: await canonicalTransferId(context, contentId) };
-  const staging = createDesktopFramedSyncStaging(host.db);
+  const staging = createDesktopFramedSyncStaging(host.db, storage);
   const proposal = { ...published, factCount: 1n, blobCount: 1n, totalBlobBytes: descriptor.byteLength };
   const { reservationId } = await staging.admitInboundProposal(proposal);
   const attemptId = new Uint8Array(16).fill(7);

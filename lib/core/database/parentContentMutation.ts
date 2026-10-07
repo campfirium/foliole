@@ -1,6 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
 import { writeNodeBody } from './nodeBodyMutation.js';
-import { requireResolvedNodeBody } from './nodeBodyResolution.js';
+import { loadNodeBodyResolution, NodeBodyUnavailableError } from './nodeBodyResolution.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 import {
   remapRawStoredAnchorLink,
@@ -9,9 +9,6 @@ import {
 
 interface ParentNodeRow {
   [column: string]: unknown;
-  body_blob_data: unknown;
-  body_blob_hash: string | null;
-  content: string;
   id: string;
   title: string;
 }
@@ -37,12 +34,18 @@ type RawAnchorRemapResult =
 
 function readParentNode(driver: DatabaseDriver, nodeId: string) {
   return driver.queryOne<ParentNodeRow>(
-    `SELECT n.id, n.title, n.content, n.body_blob_hash, cbd.data AS body_blob_data
+    `SELECT n.id, n.title
      FROM nodes n
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE n.id = ? AND n.deleted_at IS NULL`,
     [nodeId]
   ) ?? null;
+}
+
+function readParentBody(driver: DatabaseDriver, parent: ParentNodeRow | null, bodyStorage?: 'continuous' | 'chunked') {
+  if (!parent) return null;
+  const resolution = loadNodeBodyResolution(driver, parent.id, bodyStorage);
+  if (resolution?.status === 'unavailable') throw new NodeBodyUnavailableError([parent.id]);
+  return resolution;
 }
 
 function readChildAnchors(driver: DatabaseDriver, parentNodeId: string) {
@@ -73,6 +76,7 @@ function writeUpdatedParent(
   title: string
 ) {
   writeNodeBody({
+    ...(input.bodyStorage ? { bodyStorage: input.bodyStorage } : {}),
     content: input.nextContent,
     driver: input.driver,
     nodeId: input.nodeId,
@@ -82,6 +86,7 @@ function writeUpdatedParent(
 }
 
 export function applyParentContentChange(input: {
+  bodyStorage?: 'continuous' | 'chunked';
   driver: DatabaseDriver;
   nextContent: string;
   nodeId: string;
@@ -90,7 +95,7 @@ export function applyParentContentChange(input: {
   updatedAt: string;
 }): ParentContentChangeResult {
   const parent = readParentNode(input.driver, input.nodeId);
-  const resolvedParent = parent ? requireResolvedNodeBody(parent, parent.id) : null;
+  const resolvedParent = readParentBody(input.driver, parent, input.bodyStorage);
   const previousContent = input.previousContent ?? resolvedParent?.content ?? '';
   const title = input.title ?? parent?.title ?? '';
   if (previousContent === input.nextContent) {

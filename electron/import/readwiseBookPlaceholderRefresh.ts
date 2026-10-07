@@ -4,7 +4,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { buildReadwiseBookPlaceholderContent, buildReadwiseBookPlaceholderNodeId } from './readwiseBookNodes.js';
 import type { ReadwiseBookInventoryItem } from './readwiseBooksInventory.js';
 
-export function refreshReadwiseBookPlaceholderNode(book: ReadwiseBookInventoryItem) {
+export function refreshReadwiseBookPlaceholderNode(book: ReadwiseBookInventoryItem, bodyStorage: 'continuous' | 'chunked' = 'continuous') {
   const placeholderNodeId = buildReadwiseBookPlaceholderNodeId(book.bookKey);
   if (book.generatedNodeId !== placeholderNodeId) {
     return;
@@ -12,6 +12,7 @@ export function refreshReadwiseBookPlaceholderNode(book: ReadwiseBookInventoryIt
   const connection = openDatabaseConnection();
   connection.driver.transaction(() => {
     applyParentContentChange({
+      bodyStorage,
       driver: connection.driver,
       nextContent: buildReadwiseBookPlaceholderContent(book),
       nodeId: placeholderNodeId,

@@ -10,6 +10,7 @@ import { afterEach, expect, it } from 'vitest';
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { BODY_CONTENT_CHUNK_BYTES, BODY_CONTENT_SCHEMA } from '../../../../../../lib/core/database/bodyContentSchema.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/companionSchemaStatements.js';
+import { migrateFramedSyncAvailableBlobs } from '../../../../../../lib/core/database/framedSyncAvailableBlobMigration.js';
 import type { DbParams, DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import { readBodyText } from '../../../../../../lib/core/sync/verifiedBody.js';
 
@@ -135,4 +136,20 @@ it.each(['android', 'ios'] as const)('rejects %s corrupt raw bytes and existing 
   host.main.prepare('INSERT INTO content_body_chunks VALUES (?, 0, ?)').run(hash, new TextEncoder().encode('Original'));
   await expect(host.port.transaction((tx) => adoptCompanionStagedBody(tx, host.input, host.descriptor, now)))
     .rejects.toThrow('body_chunk_identity_conflict');
+});
+
+it.each(['android', 'ios'] as const)('adopts %s migrated ready chunks while preserving rollback and post-cleanup body ownership', async (kind) => {
+  const text = '\ufeff中😀\0'.repeat(450000);
+  const host = fixture(kind, text);
+  await host.port.transaction((tx) => migrateFramedSyncAvailableBlobs(tx, kind));
+  const reads = observed(host.port);
+  await expect(host.port.transaction(async () => {
+    await adoptCompanionStagedBody(reads.port, host.input, host.descriptor, now, 'chunked');
+    throw new Error('business_failure');
+  })).rejects.toThrow('business_failure');
+  expect(host.main.prepare('SELECT COUNT(*) FROM content_bodies').pluck().get()).toBe(0);
+  const ref = await host.port.transaction((tx) => adoptCompanionStagedBody(tx, host.input, host.descriptor, now, 'chunked'));
+  expect(Math.max(...reads.sizes)).toBeLessThanOrEqual(BODY_CONTENT_CHUNK_BYTES);
+  host.staging.exec(`DELETE FROM ${host.tables.prefix}_blob_pins; DELETE FROM ${host.tables.prefix}_available_blobs`);
+  expect(await readBodyText(host.port, ref)).toBe(text);
 });

@@ -44,10 +44,10 @@ export async function refreshKeepImportItemCache(
   config: KeepImportRuleConfig,
   source: DirectoryImportSourceDescriptor,
   refreshedAt: string,
-  options: { force?: boolean; requireTracking?: boolean } = {}
+  options: { force?: boolean; requireTracking?: boolean; bodyStorage?: 'continuous' | 'chunked' } = {}
 ) {
   const existing = await runWithDatabaseConnectionOwner(() =>
-    readKeepImportItemCache(config.ruleId, source.sourceName));
+    readKeepImportItemCache(config.ruleId, source.sourceName, options.bodyStorage));
   if (!options.force && existing && canReuseExistingCache(existing, source)) {
     return;
   }
@@ -67,5 +67,6 @@ export async function refreshKeepImportItemCache(
     sourcePath: source.sourceName,
     sourceSizeBytes: source.sizeBytes,
     title
-  }, { requireTracking: options.requireTracking === true }));
+  }, { requireTracking: options.requireTracking === true,
+    ...(options.bodyStorage ? { bodyStorage: options.bodyStorage } : {}) }));
 }
