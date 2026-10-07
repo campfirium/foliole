@@ -16,13 +16,14 @@ import {
   streamReplayableFramedSyncFrames,
   persistFramedSyncAttempt
 } from './framedSyncAttemptStaging.js';
-import { canonicalManifestBytes } from './framedSyncCanonicalManifest.js';
+import { sameCanonicalManifest } from './framedSyncCanonicalEquality.js';
+import { canonicalContentId } from './framedSyncCanonicalManifest.js';
 import type { PreparedTransferAttempt, StoredEncryptedFrame } from './framedSyncContract.js';
 import { encodePublicationInventory } from './framedSyncPublicationInventory.js';
 import { assertOutboundPublication, type OutboundPublishInput } from './framedSyncStagingContract.js';
 
 export async function publishFramedSyncOutboundWithDbPort(db: DbPort, input: OutboundPublishInput) {
-  const verified = await assertOutboundPublication(input);
+  await assertOutboundPublication(input);
   const prior = await readFramedSyncRow(db,
     'SELECT * FROM framed_sync_outbound_publications WHERE transfer_id = ?', [input.transferId]);
   if (prior) {
@@ -30,9 +31,11 @@ export async function publishFramedSyncOutboundWithDbPort(db: DbPort, input: Out
       failFramedSync('outbound_publication_conflict');
     }
     const storedManifest = decodeFramedSyncManifest(framedSyncText(prior, 'manifest_json'));
-    if (storedManifest.facts.length) return sameFramedSyncBytes(
-      canonicalManifestBytes(storedManifest), verified.canonicalBytes)
-      ? 'identical' as const : failFramedSync('outbound_publication_conflict');
+    if (storedManifest.facts.length) {
+      await canonicalContentId(storedManifest);
+      return sameCanonicalManifest(storedManifest, input.manifest)
+        ? 'identical' as const : failFramedSync('outbound_publication_conflict');
+    }
     if (prior.state !== 'receipt_committed') failFramedSync('outbound_publication_conflict');
     await db.run(`UPDATE framed_sync_outbound_publications SET manifest_json = ?, state = 'published'
       WHERE transfer_id = ?`, [encodePublicationInventory(input.manifest, input.inventoryDifference), input.transferId]);

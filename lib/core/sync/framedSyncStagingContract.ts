@@ -1,7 +1,6 @@
 import type { ManifestBlobDescriptor } from './framedSyncBlobContract.js';
 import {
   canonicalContentId,
-  canonicalManifestBytes,
   canonicalTransferId,
   type CanonicalManifest
 } from './framedSyncCanonicalManifest.js';
@@ -153,14 +152,13 @@ export function assertInboundProposalLimits(input: InboundProposalInput) {
 }
 
 export async function assertOutboundPublication(input: OutboundPublishInput) {
-  const canonicalBytes = canonicalManifestBytes(input.manifest);
   const contentId = await canonicalContentId(input.manifest);
   const transferId = await canonicalTransferId(input.context, contentId);
   if (!sameBytes(contentId, input.contentId) || !sameBytes(contentId, input.manifestHash)) {
     throw new Error('outbound_manifest_identity_mismatch');
   }
   if (!sameBytes(transferId, input.transferId)) throw new Error('outbound_transfer_identity_mismatch');
-  return { canonicalBytes, contentId, transferId };
+  return { contentId, transferId };
 }
 
 export async function assertInboundManifestMatchesProposal(input: InboundManifestInput) {

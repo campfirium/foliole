@@ -1,4 +1,10 @@
 export const controlledSyncSqliteTests = [
+  'electron/sync/desktopFramedSyncBoundedReads.integration.test.ts',
+  'lib/core/database/bodyContentMigration.integration.test.ts',
+  'lib/core/sync/framedSyncVerifiedNode.integration.test.ts',
+  'lib/core/sync/syncNodeAnchorRemapBody.integration.test.ts',
+  'lib/core/sync/syncNodeResolutionBody.integration.test.ts',
+  'lib/core/sync/verifiedBody.integration.test.ts',
   'electron/database/hashSqliteByteChunks.test.ts',
   'electron/database/desktopFramedSyncOutboundSelection.test.ts',
   'electron/database/desktopFramedSyncRelationReviewApply.test.ts',

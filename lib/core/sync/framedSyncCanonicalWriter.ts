@@ -17,12 +17,18 @@ export class CanonicalWriter {
   }
 
   string(value: string) {
-    assertUnicodeScalars(value);
-    const bytes = textEncoder.encode(value);
-    if (bytes.byteLength > FRAMED_SYNC_LIMITS.maxCanonicalStringBytes) {
+    const size = unicodeByteLength(value);
+    if (size > FRAMED_SYNC_LIMITS.maxCanonicalStringBytes) {
       throw new Error('canonical_string_limit_exceeded');
     }
-    this.data(bytes);
+    this.u32(size);
+    for (let start = 0; start < value.length;) {
+      let end = Math.min(start + 16 * 1024, value.length);
+      const last = value.charCodeAt(end - 1);
+      if (end < value.length && last >= 0xd800 && last <= 0xdbff) end -= 1;
+      this.append(textEncoder.encode(value.slice(start, end)));
+      start = end;
+    }
   }
 
   u32(value: number) {
@@ -71,7 +77,8 @@ export class CanonicalWriter {
 }
 
 
-function assertUnicodeScalars(value: string) {
+function unicodeByteLength(value: string) {
+  let bytes = 0;
   for (let index = 0; index < value.length; index += 1) {
     const unit = value.charCodeAt(index);
     if (unit >= 0xd800 && unit <= 0xdbff) {
@@ -79,6 +86,9 @@ function assertUnicodeScalars(value: string) {
       const next = value.charCodeAt(index + 1);
       if (next < 0xdc00 || next > 0xdfff) throw new Error('canonical_unicode_invalid');
       index += 1;
+      bytes += 4;
     } else if (unit >= 0xdc00 && unit <= 0xdfff) throw new Error('canonical_unicode_invalid');
+    else bytes += unit < 0x80 ? 1 : unit < 0x800 ? 2 : 3;
   }
+  return bytes;
 }
