@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 final class FolioleCompanionHttpRequest {
@@ -28,15 +29,20 @@ final class FolioleCompanionHttpRequest {
         String requestLine = line(input);
         String[] parts = requestLine.split(" ");
         if (parts.length < 2) throw new IllegalArgumentException("invalid_http_request");
+        int headerBytes = requestLine.length() + 2;
         Map<String, String> headers = new LinkedHashMap<>();
         for (String value = line(input); !value.isEmpty(); value = line(input)) {
+            headerBytes += value.length() + 2;
+            if (headerBytes > 16 * 1024) throw new IllegalArgumentException("http_header_too_large");
             int separator = value.indexOf(':');
-            if (separator > 0) headers.put(value.substring(0, separator).trim().toLowerCase(), value.substring(separator + 1).trim());
+            if (separator > 0 && value.substring(0, separator).trim().equalsIgnoreCase("content-length") &&
+                headers.containsKey("content-length")) throw new IllegalArgumentException("invalid_http_headers");
+            if (separator > 0) headers.put(value.substring(0, separator).trim().toLowerCase(Locale.ROOT), value.substring(separator + 1).trim());
         }
         if (parts[0].equalsIgnoreCase("POST") && framedPath(parts[1])) {
             InputStream bodyStream = FolioleCompanionHttpBodyStream.open(input, headers);
             return new FolioleCompanionHttpRequest(
-                parts[0].toUpperCase(), parts[1], headers, new byte[0], bodyStream);
+                parts[0].toUpperCase(Locale.ROOT), parts[1], headers, new byte[0], bodyStream);
         }
         int length = Integer.parseInt(headers.getOrDefault("content-length", "0"));
         int limit = parts[0].equalsIgnoreCase("POST") &&
@@ -51,13 +57,13 @@ final class FolioleCompanionHttpRequest {
             if (count < 0) throw new IllegalArgumentException("truncated_http_body");
             offset += count;
         }
-        return new FolioleCompanionHttpRequest(parts[0].toUpperCase(), parts[1], headers,
+        return new FolioleCompanionHttpRequest(parts[0].toUpperCase(Locale.ROOT), parts[1], headers,
             body, new ByteArrayInputStream(body));
     }
 
     String bodyText() { return new String(body, StandardCharsets.UTF_8); }
     InputStream bodyStream() { return bodyStream; }
-    String header(String name) { return headers.get(name.toLowerCase()); }
+    String header(String name) { return headers.get(name.toLowerCase(Locale.ROOT)); }
 
     String signatureBodySha256() throws Exception {
         if (!framedPath(path)) return sha256(body);

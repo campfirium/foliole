@@ -67,6 +67,7 @@ export const CLASSIFICATIONS = {
       'FolioleCompanionFramedSyncPullInput.java',
       'FolioleCompanionFramedSyncResources.java',
       'FolioleCompanionFramedSyncRoute.java',
+      'FolioleCompanionFramedHttpBody.java',
       'FolioleCompanionHttpBodyStream.java',
       'FolioleCompanionHttpRequest.java',
       'FolioleCompanionHttpResponse.java',

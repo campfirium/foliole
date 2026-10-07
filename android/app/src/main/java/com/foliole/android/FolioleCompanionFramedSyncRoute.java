@@ -13,6 +13,7 @@ import com.foliole.android.framed.FramedSyncTransferSQLite;
 import com.foliole.android.framed.FramedSyncValidationException;
 import com.foliole.sync.v22.TransferReceipt;
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLDecoder;
@@ -32,7 +33,8 @@ final class FolioleCompanionFramedSyncRoute {
         OutputStream output,
         String authenticatedPeer,
         FramedSyncSessionNonceStore nonceStore,
-        FramedSyncTransferSQLite transferStore
+        FramedSyncTransferSQLite transferStore,
+        File requestDirectory
     ) throws Exception {
         if (!contentType(request)) {
             FolioleCompanionHttpResponse.json(
@@ -55,10 +57,12 @@ final class FolioleCompanionFramedSyncRoute {
         }
         String senderEpoch = identity.get("initiator_library_epoch");
         byte[] groupKey = groupKey(groupId);
-        try {
-            BufferedInputStream input = new BufferedInputStream(request.bodyStream(), FramedSyncPreamble.BYTES);
+        byte[] response;
+        try (FolioleCompanionFramedHttpBody body = FolioleCompanionFramedHttpBody.spool(
+                request.bodyStream(), requestDirectory, request.signatureBodySha256());
+             BufferedInputStream input = new BufferedInputStream(body.open(), FramedSyncPreamble.BYTES)) {
             FramedSyncPreamble preamble = peekPreamble(input);
-            byte[] response = preamble.contextKind() == 1
+            response = preamble.contextKind() == 1
                 ? inventory(input, groupKey, new FramedSyncSessionContext(groupId,
                     authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge, nonceStore, new JSONObject()
                     .put("group_id", groupId).put("peer_device_id", authenticatedPeer)
@@ -66,10 +70,10 @@ final class FolioleCompanionFramedSyncRoute {
                 : transfer(input, groupKey, new FramedSyncTransferContext(groupId,
                     authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge,
                     transferStore, localDeviceId, localEpoch);
-            FolioleCompanionHttpResponse.framed(output, response, localDeviceId, localEpoch);
         } catch (FramedSyncValidationException error) {
             throw new IllegalArgumentException(error.code());
         }
+        FolioleCompanionHttpResponse.framed(output, response, localDeviceId, localEpoch);
     }
 
     private static byte[] inventory(
