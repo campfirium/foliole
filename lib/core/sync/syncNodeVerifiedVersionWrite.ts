@@ -1,3 +1,5 @@
+import { recordFramedSyncResourceAvailability } from '../database/framedSyncResourceAvailability.js';
+
 import { adoptVerifiedBody } from './bodyContentWrite.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import type { VerifiedFramedSyncNode } from './framedSyncVerifiedNode.js';
@@ -69,4 +71,6 @@ async function adoptVersionBodies(db: DbPort, record: VerifiedFramedSyncNode) {
     if (!ref) throw new Error(`text_alternative_body_unavailable:${entry.id}`);
     await adoptVerifiedBody(db, ref, record.metadata.updated_at);
   }
+  await recordFramedSyncResourceAvailability(db,
+    (record.metadata.snapshot.text_alternatives ?? []).map((entry) => entry.body_blob_hash), true);
 }

@@ -1,4 +1,4 @@
-import { matchingTombstoneVersionSql } from '../sync/syncNodeTombstoneVersion.js';
+import { matchingTombstoneVersionSql, type NodeVersionBodyStorage } from '../sync/syncNodeTombstoneVersion.js';
 
 const EMPTY_BODY_HASH = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
@@ -8,20 +8,23 @@ export function framedSyncResourceVersionSql(state: string) {
       AND tomb.deleted_at = ${state}.deleted_at))`;
 }
 
-export function framedSyncVersionSummarySql(where: string) {
+export function framedSyncVersionSummarySql(where: string, bodyStorage: NodeVersionBodyStorage = 'continuous') {
+  const readable = bodyStorage === 'chunked' ? "version.body_state = 'readable'" : 'version.body_text IS NOT NULL';
+  const bodyHash = bodyStorage === 'chunked' ?
+    "CASE WHEN body_state = 'readable' THEN body_blob_hash ELSE NULL END" : `CASE WHEN body_text IS NULL THEN NULL
+        WHEN body_text = '' THEN '${EMPTY_BODY_HASH}'
+        ELSE COALESCE(json_extract(snapshot_json, '$.body_blob_hash'),
+          (SELECT body_blob_hash FROM nodes WHERE current_version_id = version.version_id)) END`;
   return `INSERT OR REPLACE INTO framed_sync_version_summary
     (version_id, object_id, body_hash, resource_hashes_json)
     SELECT version_id, object_id,
-      CASE WHEN body_text IS NULL THEN NULL
-        WHEN body_text = '' THEN '${EMPTY_BODY_HASH}'
-        ELSE COALESCE(json_extract(snapshot_json, '$.body_blob_hash'),
-          (SELECT body_blob_hash FROM nodes WHERE current_version_id = version.version_id)) END,
+      ${bodyHash},
       COALESCE((SELECT json_group_array(hash) FROM (
         SELECT DISTINCT substr(json_extract(value, '$.storage_key'), 1, 64) AS hash
         FROM json_each(COALESCE(json_extract(version.snapshot_json, '$.resource_references'), '[]'))
         UNION SELECT json_extract(value, '$.body_blob_hash') AS hash
         FROM json_each(COALESCE(json_extract(version.snapshot_json, '$.text_alternatives'), '[]'))
-        WHERE version.body_text IS NOT NULL
+        WHERE ${readable}
         ORDER BY hash)), '[]')
     FROM node_sync_versions version WHERE ${where};`;
 }
@@ -56,12 +59,12 @@ export function framedSyncNodeInventorySql(id: string) {
       AND EXISTS (SELECT 1 FROM framed_sync_version_summary WHERE object_id = state.object_id);`;
 }
 
-export function framedSyncTombstoneSummarySql(where: string) {
+export function framedSyncTombstoneSummarySql(where: string, bodyStorage: NodeVersionBodyStorage = 'continuous') {
   return `INSERT INTO framed_sync_version_summary
     (version_id, object_id, body_hash, resource_hashes_json)
     SELECT tomb.version_id, tomb.node_id,
       CASE WHEN EXISTS (SELECT 1 FROM node_sync_versions version
-        WHERE ${matchingTombstoneVersionSql('version', 'tomb')})
+        WHERE ${matchingTombstoneVersionSql('version', 'tomb', bodyStorage)})
         THEN COALESCE((SELECT body_hash FROM framed_sync_version_summary
           WHERE version_id = tomb.version_id), '${EMPTY_BODY_HASH}') ELSE '${EMPTY_BODY_HASH}' END,
       COALESCE((SELECT json_group_array(hash) FROM (
