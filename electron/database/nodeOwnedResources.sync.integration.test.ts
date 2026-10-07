@@ -103,10 +103,13 @@ it.each([{ operation: 'import', initial: '[]', current: references },
     await retainLocalEditBase(source.port, { holdId: 'editor', nodeId: 'article', versionId: base });
     source.db.prepare("UPDATE nodes SET resource_references = ?, sync_dirty = 1 WHERE id = 'article'").run(current);
     flushNodeSyncVersionWithDriver(source.driver, 'article', 'source');
-    await applyLocalContentEdit(source.port, { nodeId: 'article', baseVersionId: base, versionId: 'delayed-edit',
-      content: 'Edited body', title: 'Article', hideTitleHeading: false, hostName: 'source', updatedAt: new Date(Date.now() + 1000).toISOString() });
+    const edit = { nodeId: 'article', baseVersionId: base, versionId: 'delayed-edit',
+      content: 'Edited body', title: 'Article', hideTitleHeading: false, hostName: 'source',
+      updatedAt: new Date(Date.now() + 1000).toISOString() };
+    const result = await applyLocalContentEdit(source.port, edit);
     expect(source.db.prepare("SELECT resource_references FROM nodes WHERE id = 'article'").pluck().get()).toBe(current);
     expect(source.db.prepare("SELECT body_text FROM node_sync_versions WHERE version_id = 'delayed-edit'").pluck().get())
       .toBe('Edited body');
+    expect((await applyLocalContentEdit(source.port, edit)).current.version_id).toBe(result.current.version_id);
   } finally { source.db.close(); }
 });
