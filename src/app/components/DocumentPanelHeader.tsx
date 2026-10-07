@@ -41,6 +41,7 @@ export interface DocumentPanelHeaderProps {
   rightSlot?: ReactNode;
   showDocumentControls?: boolean;
   showPublishActions?: boolean;
+  textAlternativeCount?: number;
   showSourceUpdateAction: boolean;
 }
 
@@ -71,6 +72,7 @@ function renderDocumentHeaderContent(args: DocumentPanelHeaderProps & {
     onRunDocumentCommand: args.onRunDocumentCommand,
     showDocumentControls,
     showPublishActions: args.showPublishActions ?? false,
+    textAlternativeCount: args.textAlternativeCount ?? 0,
     showSourceUpdateAction: args.showSourceUpdateAction,
     t: args.t,
     toggleEditorDisplayMode: args.toggleEditorDisplayMode

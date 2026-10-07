@@ -2,6 +2,7 @@ import type { DbRow } from './dbPort.js';
 import type { SyncIdentityFactTransfer } from './syncIdentityFactTransfer.js';
 import { syncIdentityFactKey } from './syncIdentityFactTransfer.js';
 import { SYNC_PACK_NODE_VERSION_COLUMNS } from './syncPackNodeVersions.js';
+import { topicTextPackSnapshotSql } from './topicTextPackPayload.js';
 
 export const IDENTITY_REVIEW_COLUMNS = ['id', 'op_id', 'host_name', 'node_id', 'grade',
   'scheduler_version', 'reviewed_at', 'due_before', 'stability_before', 'difficulty_before',
@@ -35,8 +36,10 @@ export function syncIdentityFactSourceQuery(nodeId: string, facts: SyncIdentityF
   params.push(facts.limit + 1);
   const order = facts.section === 'parents' ? 'version_id, ordinal, parent_version_id' : key;
   const suffix = `FROM ${schema}.${table} WHERE ${where} ORDER BY ${order} LIMIT ?`;
-  const json = `json_object(${columns.flatMap((column) => [`'${column}'`, column]).join(', ')})`;
-  return { table, columns, sql: `SELECT ${columns.join(', ')} ${suffix}`,
+  const project = (column: string) => table === 'node_sync_versions' && column === 'snapshot_json'
+    ? topicTextPackSnapshotSql(table, schema) : column;
+  const json = `json_object(${columns.flatMap((column) => [`'${column}'`, project(column)]).join(', ')})`;
+  return { table, columns, sql: `SELECT ${columns.map((column) => `${project(column)} AS ${column}`).join(', ')} ${suffix}`,
     lengthsSql: `SELECT length(CAST(${json} AS BLOB)) AS payload_bytes ${suffix}`, params };
 }
 

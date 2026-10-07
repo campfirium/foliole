@@ -30,6 +30,7 @@ export function DocumentPanelSectionOverlayHost(args: {
         manualContent: args.model.manualContent,
         props: args.props,
         setComparisonSource: args.model.setComparisonSource,
+        selectTextAlternative: args.model.selectTextAlternative,
         sourceUpdatePreview: args.model.sourceUpdatePreview
       })}
     />

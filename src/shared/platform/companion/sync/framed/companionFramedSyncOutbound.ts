@@ -168,7 +168,10 @@ export async function prepareCompanionFramedSyncOutbound(
       if (prior && !sameBlob(prior.blob, blob)) {
         throw new Error('framed_sync_outbound_blob_identity_conflict');
       }
-      if (blob.role === 1) blobs.set(key, { blob, dataText: record.body_text ?? '' });
+      if (blob.role === 1) {
+        const alternative = record.alternative_bodies?.find((value) => value.hash === key);
+        blobs.set(key, { blob, dataText: alternative?.text ?? record.body_text ?? '' });
+      }
     }
     for (const { resources } of projections) for (const resource of resources) {
       const key = bytesToHex(resource.blob.sha256);

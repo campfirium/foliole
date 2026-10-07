@@ -1,9 +1,12 @@
+import { textAlternativesSchema, type TopicTextAlternative } from '../../../lib/core/sync/topicTextState';
+
 export interface RuntimeNodeSourceUpdatePreview {
   checkedAt: string;
   currentHighlightCount: number;
   currentContent: string;
   incomingUpdateId: string | null;
   alternativeId?: string | null;
+  alternatives?: TopicTextAlternative[];
   kind: 'incoming_update' | 'source_update' | 'sync_alternative';
   sourceNodeId: string;
   updatedHighlightCount: number;
@@ -31,7 +34,10 @@ export function toRuntimeNodeSourceUpdatePreview(value: unknown): RuntimeNodeSou
   ) {
     return null;
   }
+  const alternatives = textAlternativesSchema.safeParse(payload.alternatives ?? []);
+  if (!alternatives.success) return null;
   return {
+    ...(alternatives.data.length ? { alternatives: alternatives.data } : {}),
     checkedAt: payload.checked_at,
     currentHighlightCount: payload.current_highlight_count,
     currentContent: payload.current_content,

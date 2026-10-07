@@ -17,6 +17,15 @@ function descriptor(overrides: Partial<SyncProtocolDescriptor> = {}) {
 
 const REQUIRED_CAPABILITIES = [...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities];
 
+it('rejects peers that cannot retain the whole body and its alternatives', () => {
+  const oldPeer = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
+    .filter((capability) => capability !== 'topic-text-attachments-v1') });
+  expect(evaluateSyncProtocolCompatibility(oldPeer)).toMatchObject({
+    status: 'incompatible', reason: 'required_capability_missing',
+    missing_capabilities: ['topic-text-attachments-v1']
+  });
+});
+
 describe('syncProtocolContract', () => {
   it('accepts the exact v22 descriptor and returns a negotiated version', () => {
     expect(evaluateSyncProtocolCompatibility(descriptor())).toEqual({

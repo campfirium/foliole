@@ -65,6 +65,7 @@ export function renderDocumentPanelHeader(args: {
   onChangeSortKey: (value: FolderListSortKey) => void;
   onToggleSourceUpdatePanel: () => void;
   props: DocumentPanelSectionProps;
+  textAlternativeCount?: number;
   showSourceUpdateAction: boolean;
 }) {
   const breadcrumb = resolveDocumentHeaderBreadcrumb(args.props);
@@ -109,6 +110,7 @@ export function renderDocumentPanelHeader(args: {
       }
       showDocumentControls
       showPublishActions={Boolean(activeNode?.kind === 'topic' && !activeNode.anchorLink && !args.props.isTrashViewOpen && !args.props.isFoliolePublishedContext)}
+      textAlternativeCount={args.textAlternativeCount ?? 0}
       showSourceUpdateAction={args.showSourceUpdateAction}
     />
   );

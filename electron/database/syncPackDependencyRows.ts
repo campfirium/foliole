@@ -2,6 +2,7 @@ import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver
 import { SYNC_PACK_DEPENDENCY_MAX_BYTES, SYNC_PACK_DEPENDENCY_MAX_ROWS } from '../../lib/core/sync/syncPackDependencyTransfer.js';
 import type { SyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
 import { SYNC_PACK_NODE_VERSION_COLUMNS } from '../../lib/core/sync/syncPackNodeVersions.js';
+import { topicTextPackSnapshotSql } from '../../lib/core/sync/topicTextPackPayload.js';
 
 export type SyncPackDependencyTable = 'node_sync_versions' | 'node_sync_version_parents' | 'review_log';
 
@@ -75,7 +76,8 @@ export function readSyncPackDependencyPage(driver: DatabaseDriver, args: {
     : `${factKey} NOT IN (SELECT value FROM json_each(?))`;
   const kind = table === 'node_sync_versions' ? 'versions' :
     table === 'node_sync_version_parents' ? 'parents' : 'reviews';
-  const json = `json_object(${query.columns.map((column) => `'${column}', row.${column}`).join(', ')})`;
+  const json = `json_object(${query.columns.map((column) => `'${column}', ${table === 'node_sync_versions' && column === 'snapshot_json'
+    ? topicTextPackSnapshotSql('row', 'main') : `row.${column}`}`).join(', ')})`;
   const lengths = driver.queryAll<{ row_key: string; ordinal: number; payload_bytes: number }>(
     `${query.prefix} SELECT ${query.key} AS row_key, ${query.ordinal} AS ordinal,
        length(CAST(${json} AS BLOB)) AS payload_bytes FROM ${query.from}

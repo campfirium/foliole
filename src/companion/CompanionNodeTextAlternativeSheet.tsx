@@ -1,5 +1,7 @@
+
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 import type { CompanionNodeTextAlternative } from '../shared/platform/companion/runtime/companionNodeTextAlternativeRepository';
+import { TextAlternativeSelector } from '../shared/ui/TextAlternativeSelector';
 
 import { ReadingBottomSheet } from './CompanionReadingSheets';
 
@@ -8,6 +10,7 @@ export function CompanionNodeTextAlternativeSheet(props: {
   busy: boolean;
   currentBody: string;
   error: boolean;
+  onSelectAlternative?: (id: string) => void;
   onDismiss(): void;
   onOpenChange(open: boolean): void;
   onSetAsBody(): void;
@@ -22,6 +25,9 @@ export function CompanionNodeTextAlternativeSheet(props: {
       title={t('companion.reading.alternative.title')}
     >
       <div className="space-y-4 border-t border-companion-divider pt-4">
+        {props.onSelectAlternative ? <TextAlternativeSelector
+          alternatives={props.alternative.alternatives ?? []}
+          selectedId={props.alternative.alternative_id} onSelect={props.onSelectAlternative} /> : null}
         <TextPanel body={props.currentBody} label={t('companion.reading.alternative.current')} />
         <TextPanel body={props.alternative.body_text} label={t('companion.reading.alternative.other')} />
         {props.error ? (

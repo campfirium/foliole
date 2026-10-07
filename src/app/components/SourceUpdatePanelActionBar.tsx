@@ -71,7 +71,7 @@ function SourceActions(props: SourceUpdatePanelActionBarProps & {
           <ReviewOverlayActionButton
             className="min-w-24 text-foreground/68"
             disabled={disabled}
-            label={t('desktop.sourceUpdate.dismiss')}
+            label={t(isAlternative ? 'desktop.sourceUpdate.alternative.remove' : 'desktop.sourceUpdate.dismiss')}
             onClick={() => props.onAction('dismiss', props.onDismissIncomingUpdate!)}
           />
         </>

@@ -27,6 +27,7 @@ type TextAlternativeState = {
   error: boolean;
   open: boolean;
   setAsBody(): void;
+  selectAlternative?: (id: string) => void;
   setOpen(open: boolean): void;
 };
 
@@ -155,6 +156,7 @@ function TextAlternativeLayer(props: { currentBody: string; state: TextAlternati
       busy={props.state.busy}
       currentBody={props.currentBody}
       error={props.state.error}
+      {...(props.state.selectAlternative ? { onSelectAlternative: props.state.selectAlternative } : {})}
       onDismiss={props.state.dismiss}
       onOpenChange={props.state.setOpen}
       onSetAsBody={props.state.setAsBody}

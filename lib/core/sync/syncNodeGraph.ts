@@ -2,6 +2,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 
 import type { DbPort, DbRow } from './dbPort.js';
 import { matchingTombstoneVersionSql } from './syncNodeTombstoneVersion.js';
+import { loadTopicTextBodies } from './topicTextBodies.js';
 
 export interface StoredSyncNodeVersionRow extends DbRow {
   body_text: string | null;
@@ -167,7 +168,7 @@ async function storedVersionToRecord(
   const body = isTombstone ? row.body_text ?? '' : storedSyncNodeVersionBody(row);
   if (body === null && requireBody) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
   const parents = knownParents ?? await loadParents(port, row.version_id);
-  return {
+  const record: NativeSyncNodeRecord = {
     ancestor_version_ids: includeAncestors ? await loadAncestors(port, row.version_id) : [],
     body_text: body,
     content_hash: row.content_hash,
@@ -182,6 +183,10 @@ async function storedVersionToRecord(
     version_created_at: row.created_at,
     version_id: row.version_id
   };
+  if (body !== null && snapshot.text_alternatives?.length) {
+    record.alternative_bodies = await loadTopicTextBodies(port, record);
+  }
+  return record;
 }
 
 async function loadParents(port: DbPort, versionId: string) {

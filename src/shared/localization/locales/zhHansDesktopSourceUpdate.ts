@@ -1,6 +1,12 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_SOURCE_UPDATE_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.sourceUpdate.alternative.title': '备选正文',
+  'desktop.sourceUpdate.alternative.remove': '移除此备选',
+  'desktop.sourceUpdate.alternative.selector': '备选正文（{count}）',
+  'desktop.sourceUpdate.alternative.option': '{host} · {date}',
+  'desktop.sourceUpdate.alternative.expires': '保留至 {date}',
+  'desktop.sourceUpdate.alternative.hint': '最多保留 3 份备选正文，每份保留 30 天',
   'desktop.sourceUpdate.dialogTitle': '对比视图',
   'desktop.sourceUpdate.close': '关闭来源更新面板',
   'desktop.sourceUpdate.accept': '接受更新',

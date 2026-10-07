@@ -30,11 +30,14 @@ import { buildDesktopSyncPack } from './syncPackBuilder.js';
 let tempRoot = '';
 
 beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-07T01:00:00.000Z'));
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-sync-pack-nonempty-topic-'));
 });
 
 afterEach(async () => {
   closeDatabaseConnection();
+  vi.useRealTimers();
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
@@ -51,23 +54,19 @@ it('keeps both bodies when a pack joins a nonempty topic branch', async () => {
   expect(new Set([alternative.body_text, target.projection.content])).toEqual(
     new Set(['Local body', 'Remote body'])
   );
-  expect(alternative.status).toBe('available');
+  expect(alternative.expires_at).toBe('2026-11-06T01:00:00.000Z');
   const source = await applyConflictPack('source', reverseIncomingPath, 'source-device', false);
   expect(source).toEqual(target);
   const reopened = openLibrary('target');
   expect(reopened.sqlite.prepare(
-    `SELECT version_id, body_text FROM node_sync_versions
+    `SELECT version_id FROM node_sync_versions
      WHERE object_id = 'shared-topic' ORDER BY version_id`
-  ).all()).toEqual([
-    { version_id: 'base', body_text: null },
-    { version_id: 'branch-a', body_text: 'Local body' },
-    { version_id: 'branch-b', body_text: null },
-    { version_id: target.current_version_id, body_text: 'Remote body' }
-  ]);
+  ).all()).toEqual(['base', 'branch-a', 'branch-b', target.current_version_id]
+    .sort().map((version_id) => ({ version_id })));
   expect(reopened.sqlite.prepare(
     `SELECT COUNT(*) AS count FROM node_text_alternatives
      WHERE node_id = 'shared-topic' AND status = 'available'`
-  ).get()).toEqual({ count: 1 });
+  ).get()).toEqual({ count: 0 });
 });
 
 async function applyConflictPack(
@@ -100,10 +99,6 @@ async function applyConflictPack(
     `SELECT parent_version_id AS id FROM node_sync_version_parents
      WHERE version_id = ? ORDER BY parent_version_id`
   ).all(current.current_version_id) as Array<{ id: string }>).map((row) => row.id);
-  const alternative = connection.sqlite.prepare(
-    `SELECT body_text, status, source_version_id FROM node_text_alternatives WHERE node_id = 'shared-topic'`
-  ).get() as { body_text: string; status: string; source_version_id: string };
-  expect(alternative.source_version_id).toBe('branch-a');
   const projection = connection.sqlite.prepare(
     `SELECT ${buildNodeBodyContentSql()} AS content FROM nodes n
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = 'shared-topic'`
@@ -111,6 +106,13 @@ async function applyConflictPack(
   const version = connection.sqlite.prepare(
     'SELECT snapshot_json, content_hash FROM node_sync_versions WHERE version_id = ?'
   ).get(current.current_version_id) as { snapshot_json: string; content_hash: string };
+  const state = JSON.parse(version.snapshot_json);
+  expect(state.text_alternatives).toHaveLength(1);
+  const reference = state.text_alternatives[0];
+  const bytes = connection.sqlite.prepare(
+    'SELECT data FROM content_blob_data WHERE hash = ?'
+  ).get(reference.body_blob_hash) as { data: Buffer };
+  const alternative = { ...reference, body_text: bytes.data.toString('utf8') };
   closeDatabaseConnection();
   return { alternative, current_version_id: current.current_version_id, parents, projection,
     snapshot: JSON.parse(version.snapshot_json), contentHash: version.content_hash };

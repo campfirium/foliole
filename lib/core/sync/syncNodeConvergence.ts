@@ -1,19 +1,21 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
+import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { reviveDeletedFoldersForLaterChildren } from './syncFolderChildRevival.js';
 import { resolveFolderConflict } from './syncFolderResolution.js';
 import { resolveItemConflict } from './syncItemResolution.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
-import { loadCurrentSyncNodeRecord, storedSyncNodeVersionBody } from './syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
 import {
   buildResolutionRecord,
   chooseEvidenceProjection,
-  chooseProjection,
-  reconcileResolutionAlternatives
+  chooseProjection
 } from './syncNodeResolution.js';
-import { mergeSyncText } from './syncTextDiff3.js';
-import { loadTopicConflictBase } from './syncTopicConflictBase.js';
+import { loadTopicTextBodies } from './topicTextBodies.js';
+import { loadTopicTextConflictMetadata, selectChangedTopicMain } from './topicTextConflictMetadata.js';
+import { expireTopicText } from './topicTextExpiry.js';
+import { mergeTopicTextAttachments } from './topicTextMerge.js';
 
 export async function applyConvergentSyncNodesWithDbPort(
   port: DbPort,
@@ -41,6 +43,9 @@ export async function applyConvergentSyncNodesWithDbPort(
   }
   if (result.blockedIds.length > 0) {
     throw new Error(`sync_node_apply_blocked:${result.blockedIds.join(',')}`);
+  }
+  for (const nodeId of new Set(records.map((record) => record.object_id))) {
+    await expireTopicText(port, nodeId, new Date().toISOString());
   }
   await reviveDeletedFoldersForLaterChildren(
     port, records, new Set([...result.appliedIds, ...resolvedNodeIds])
@@ -73,45 +78,32 @@ export async function resolveTopicConflict(
   port: DbPort,
   incomingRecords: NativeSyncNodeRecord[]
 ) {
-  const ordered = [...incomingRecords].sort((left, right) =>
+  let ordered = [...incomingRecords].sort((left, right) =>
     (left.version_id ?? '').localeCompare(right.version_id ?? ''));
   const local = await loadCurrentSyncNodeRecord(port, ordered[0]!.object_id);
   if (!local?.version_id || ordered.some((record) => !record.version_id)) {
     throw new Error(`sync_topic_conflict_version_missing:${ordered[0]!.object_id}`);
   }
-  let body = local.body_text ?? local.snapshot.content ?? '';
-  let winner = local;
-  let alternative: NativeSyncNodeRecord | null = null;
-  let parent = { value: local.snapshot.parent_id, source: local };
-  let deletion = { value: local.snapshot.deleted_at, source: local };
-  for (const incoming of ordered) {
-    const { base, matchingHeads } = await loadTopicConflictBase(port, local, incoming, body);
-    const baseSnapshot = base ? JSON.parse(base.snapshot_json) as NativeSyncNodeRecord['snapshot'] : null;
-    parent = selectOperationValue(baseSnapshot?.parent_id, parent, incoming.snapshot.parent_id, incoming);
-    deletion = selectOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
-    const baseBody = base ? storedSyncNodeVersionBody(base) : '';
-    const incomingBody = incoming.body_text ?? incoming.snapshot.content ?? '';
-    const merge = matchingHeads || body === incomingBody ? { kind: 'merged' as const, text: body } : baseBody === null || !base
-      ? { kind: 'conflict' as const }
-      : mergeSyncText(baseBody, body, incomingBody);
-    if (merge.kind === 'merged') {
-      body = merge.text;
-      winner = chooseProjection(winner, incoming, matchingHeads ? body : baseBody ?? '', 0, 0);
-      continue;
-    }
-    const projection = await chooseEvidenceProjection(port, winner, incoming, baseBody ?? '');
-    body = projection.body;
-    winner = projection.winner;
-    alternative = projection.loser;
-  }
+  ordered = ordered.filter((record) => record.version_id !== local.version_id &&
+    !local.ancestor_version_ids.includes(record.version_id!));
+  if (!ordered.length) return local;
+  const { body, winner, parent, deletion } = await selectTopicState(port, local, ordered);
   const currentSnapshot = { ...winner.snapshot };
   delete currentSnapshot.position;
   const resolution = buildResolutionRecord([local, ...ordered], winner, body, {
     ...currentSnapshot,
     deleted_at: deletion.value,
-    parent_id: parent.value
+    parent_id: parent.value,
+    text_selection: winner.snapshot.text_selection ?? {
+      version_id: winner.version_id!, created_at: winner.version_created_at!
+    },
+    text_alternatives: []
   });
-  const applied = await applySyncNodesWithDbPort(port, [resolution], {
+  resolution.snapshot.text_alternatives = resolution.snapshot.deleted_at ? [] :
+    await mergeTopicTextAttachments(port, [local, ...ordered], winner, new Date().toISOString());
+  const complete = buildResolutionRecord([local, ...ordered], winner, body, resolution.snapshot);
+  complete.alternative_bodies = await loadTopicTextBodies(port, complete);
+  const applied = await applySyncNodesWithDbPort(port, [complete], {
     enqueueSearchInvalidations: false,
     includeAlreadyApplied: true,
     operation: 'local_mutation'
@@ -119,8 +111,30 @@ export async function resolveTopicConflict(
   if (!applied.appliedIds.includes(local.object_id)) {
     throw new Error(`sync_topic_resolution_not_applied:${local.object_id}`);
   }
-  await reconcileResolutionAlternatives(port, resolution, alternative);
-  return resolution;
+  await collectNodeVersionPayloads(port, local.object_id, Number.MAX_SAFE_INTEGER);
+  return complete;
+}
+
+async function selectTopicState(port: DbPort, local: NativeSyncNodeRecord, ordered: NativeSyncNodeRecord[]) {
+  let body = local.body_text ?? local.snapshot.content ?? '';
+  let winner = local;
+  let parent = { value: local.snapshot.parent_id, source: local };
+  let deletion = { value: local.snapshot.deleted_at, source: local };
+  for (const incoming of ordered) {
+    const baseSnapshot = await loadTopicTextConflictMetadata(port, local, incoming);
+    parent = selectOperationValue(baseSnapshot?.parent_id, parent, incoming.snapshot.parent_id, incoming);
+    deletion = selectOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
+    if (body === (incoming.body_text ?? incoming.snapshot.content ?? '')) {
+      winner = chooseProjection(winner, incoming, '', 0, 0);
+      continue;
+    }
+    const changed = await selectChangedTopicMain(port, winner, incoming);
+    const projection = changed ? { winner: changed, body: changed.body_text ?? changed.snapshot.content ?? '' }
+      : await chooseEvidenceProjection(port, winner, incoming, '');
+    body = projection.body;
+    winner = projection.winner;
+  }
+  return { body, winner, parent, deletion };
 }
 
 function selectOperationValue<T>(

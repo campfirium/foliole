@@ -70,6 +70,7 @@ import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from './syncPackDependencyStaging
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaStatements.js';
 import { repairSyncStateEntities } from './syncStateEntityRepair.js';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
+import { migrateTopicTextState } from './topicTextStateMigration.js';
 import { removeUntrackedImportCaches } from './untrackedImportCacheMigration.js';
 
 const SYNC_DELIVERY_TRIGGER_TARGETS = [
@@ -235,5 +236,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 145, migrate: migrateFramedSyncPermanentDeleteHistory },
   { version: 146, migrate: (sqlite) => {
     for (const statement of PARENT_ORDER_BODY_RETENTION_SCHEMA) sqlite.exec(statement);
-  } }
+  } },
+  { version: 147, migrate: migrateTopicTextState }
 ];

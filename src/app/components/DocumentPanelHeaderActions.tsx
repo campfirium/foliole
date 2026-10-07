@@ -35,11 +35,13 @@ const PUBLISH_COMMAND_IDS = new Set<string>([
 
 function SourceUpdateAction({
   isOpen,
+  count,
   onRunCommand,
   t,
   visible
 }: {
   isOpen: boolean;
+  count: number;
   onRunCommand?: (commandId: string) => void;
   t: Translate;
   visible: boolean;
@@ -53,8 +55,10 @@ function SourceUpdateAction({
       className="text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground data-[active=true]:bg-foreground/[0.06] data-[active=true]:text-foreground"
       data-active={isOpen}
       data-command-id={APP_COMMAND_IDS.reviewSourceUpdate}
-      icon={<RefreshCw aria-hidden="true" size={16} strokeWidth={1.8} />}
-      label={t('desktop.command.reviewSourceUpdate')}
+      icon={<span className="relative"><RefreshCw aria-hidden="true" size={16} strokeWidth={1.8} />
+        {count ? <span className="absolute -right-2 -top-2 text-ui-xs tabular-nums">{count}</span> : null}
+      </span>}
+      label={count ? t('desktop.sourceUpdate.alternative.selector', { count }) : t('desktop.command.reviewSourceUpdate')}
       onClick={() => onRunCommand?.(APP_COMMAND_IDS.reviewSourceUpdate)}
     />
   );
@@ -92,6 +96,7 @@ interface DocumentHeaderActionsProps {
   isSourceUpdatePanelOpen: boolean;
   onToggleSourceUpdatePanel: () => void;
   onRunDocumentCommand?: ((commandId: string) => void) | undefined;
+  textAlternativeCount?: number;
   showSourceUpdateAction: boolean;
   showDocumentControls: boolean;
   showPublishActions: boolean;
@@ -168,6 +173,7 @@ function DocumentHeaderActions(args: DocumentHeaderActionsProps): ReactNode {
   return (
     <ToolbarActionGroup ariaLabel={args.t('desktop.document.editorActions')} className="justify-end">
       <SourceUpdateAction
+        count={args.textAlternativeCount ?? 0}
         isOpen={args.isSourceUpdatePanelOpen}
         {...(args.onRunDocumentCommand ? { onRunCommand: args.onRunDocumentCommand } : {})}
         t={args.t}

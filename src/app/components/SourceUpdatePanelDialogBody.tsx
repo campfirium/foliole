@@ -1,3 +1,4 @@
+import type { TopicTextAlternative } from '../../../lib/core/sync/topicTextState';
 import type { EditorAdapter, EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 
 import type { DocumentComparisonMode } from './documentComparisonView';
@@ -16,6 +17,9 @@ export interface SourceUpdatePanelDialogBodyProps {
     updated: EditorDiffDecorations | null;
   };
   panelProps: {
+    alternatives?: TopicTextAlternative[];
+    selectedAlternativeId?: string | null;
+    onSelectAlternative?: (id: string) => void;
     comparisonMode: DocumentComparisonMode;
     comparisonSource: 'manual' | 'source';
     currentContent: string;
@@ -45,8 +49,11 @@ export interface SourceUpdatePanelDialogBodyProps {
 
 export function SourceUpdatePanelDialogBody(props: SourceUpdatePanelDialogBodyProps) {
   return (
-    <section className="relative flex h-full min-h-0 flex-col overflow-hidden">
+    <section className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
       <SourceUpdatePanelHeader
+        {...(props.panelProps.alternatives ? { alternatives: props.panelProps.alternatives } : {})}
+        {...(props.panelProps.selectedAlternativeId ? { selectedAlternativeId: props.panelProps.selectedAlternativeId } : {})}
+        {...(props.panelProps.onSelectAlternative ? { onSelectAlternative: props.panelProps.onSelectAlternative } : {})}
         comparisonMode={props.panelProps.comparisonMode}
         comparisonSource={props.panelProps.comparisonSource}
         onSourceChange={props.panelProps.onSourceChange}

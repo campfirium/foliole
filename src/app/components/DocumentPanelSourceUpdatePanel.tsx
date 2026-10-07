@@ -1,3 +1,5 @@
+import type { TopicTextAlternative } from '../../../lib/core/sync/topicTextState';
+
 import type { DocumentComparisonMode } from './documentComparisonView';
 import { DocumentSourceUpdatePanel } from './DocumentSourceUpdatePanel';
 
@@ -7,6 +9,9 @@ interface DocumentPanelSourceUpdatePanelProps {
   documentMaxWidth: number;
   editorAppearanceKey: string;
   editorNodeId: string | null;
+  alternatives?: TopicTextAlternative[];
+  selectedAlternativeId?: string | null;
+  onSelectAlternative?: (id: string) => void;
   comparisonMode: DocumentComparisonMode;
   comparisonSource: 'manual' | 'source';
   manualContent: string;
@@ -28,6 +33,9 @@ interface DocumentPanelSourceUpdatePanelProps {
 export function DocumentPanelSourceUpdatePanel(props: DocumentPanelSourceUpdatePanelProps) {
   return (
     <DocumentSourceUpdatePanel
+      {...(props.alternatives ? { alternatives: props.alternatives } : {})}
+      {...(props.selectedAlternativeId ? { selectedAlternativeId: props.selectedAlternativeId } : {})}
+      {...(props.onSelectAlternative ? { onSelectAlternative: props.onSelectAlternative } : {})}
       currentContent={props.currentContent}
       currentHighlightCount={props.currentHighlightCount}
       currentNodeId={props.editorNodeId}

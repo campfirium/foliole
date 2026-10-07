@@ -28,7 +28,7 @@ export async function restoreIncomingNodeMergeBases(port: DbPort, alias: string)
            WHEN json_type(incoming.snapshot_json, '$.content') = 'text'
              THEN json_extract(incoming.snapshot_json, '$.content')
            WHEN json_type(incoming.snapshot_json, '$.content') IS NULL THEN '' ELSE NULL END,
-         snapshot_json = incoming.snapshot_json
+         snapshot_json = json_remove(incoming.snapshot_json, '$.text_alternative_bodies')
        FROM ${alias}.node_sync_versions AS incoming
        WHERE stored.version_id = ? AND incoming.version_id = stored.version_id
          AND (incoming.body_text IS NOT NULL

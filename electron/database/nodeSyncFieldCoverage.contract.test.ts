@@ -53,7 +53,9 @@ const WIRE_SNAPSHOT_FIELDS = expectCompleteWireSnapshotFields([
   'shelved_at',
   'title',
   'updated_at',
-  'virtual_filter'
+  'virtual_filter',
+  'text_alternatives',
+  'text_selection'
 ] as const);
 
 it('keeps node sync field coverage explicit across schema, hash, snapshot, and apply paths', () => {
@@ -144,7 +146,7 @@ function desktopSnapshotFields() {
 }
 
 function wireSnapshotFields() {
-  return WIRE_SNAPSHOT_FIELDS.filter((field) => field !== 'position').sort();
+  return WIRE_SNAPSHOT_FIELDS.filter((field) => field !== 'position' && field !== 'text_alternatives' && field !== 'text_selection').sort();
 }
 
 function remoteNodeUpsertColumns() {

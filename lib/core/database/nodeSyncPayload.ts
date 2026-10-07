@@ -1,3 +1,5 @@
+import type { TopicTextAlternative } from '../sync/topicTextState.js';
+
 import { normalizeNodeImportProvenance } from './nodeImportProvenance.js';
 import { serializeNodeResourceReferences, type NodeResourceReference } from './nodeResourceReferences.js';
 
@@ -7,6 +9,7 @@ export interface NodeSyncAttachmentRef {
 }
 
 export interface NodeSyncHashInput {
+  textAlternatives?: readonly TopicTextAlternative[];
   anchorLink: string | null;
   anchorResolutionStatus?: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing' | null;
   anchorSourceVersionId?: string | null;
@@ -62,6 +65,7 @@ function normalizeAttachments(attachments: NodeSyncAttachmentRef[]) {
 export function buildCanonicalNodeSyncPayload(input: NodeSyncHashInput) {
   const provenance = normalizeNodeImportProvenance(input);
   return {
+    ...(input.textAlternatives?.length ? { text_alternatives: [...input.textAlternatives] } : {}),
     anchor_link: normalizeNullableText(input.anchorLink),
     anchor_resolution_status: normalizeNullableText(input.anchorResolutionStatus ?? null),
     anchor_source_version_id: normalizeNullableText(input.anchorSourceVersionId ?? null),

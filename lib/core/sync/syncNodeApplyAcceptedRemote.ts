@@ -16,6 +16,7 @@ import { enqueueAppliedNodeSearchInvalidations, type LocalSyncNodeSearchInvalida
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { hashTextBodyContent, upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
 import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
+import { retainTopicTextBodies } from './topicTextBodies.js';
 
 export interface AcceptedRemoteNodeResult {
   appliedIds: string[];
@@ -35,6 +36,7 @@ async function queryOne<T extends DbRow>(port: DbPort, sql: string, params: read
 async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
   const statement = buildRemoteNodeVersionUpsert(record);
   if (!statement) return;
+  if (record.body_text !== null) await retainTopicTextBodies(port, record);
   const [existing] = await port.query<DbRow>('SELECT * FROM node_sync_versions WHERE version_id = ?', [record.version_id]);
   if (existing) {
     const incomingBody = record.body_text ?? record.snapshot.content;

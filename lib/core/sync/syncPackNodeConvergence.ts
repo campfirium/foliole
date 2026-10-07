@@ -46,7 +46,10 @@ export async function applySyncPackVersionedNodesWithDbPort(
       ...record,
       ancestor_version_ids: ancestry.ancestorIds(versionId),
       body_text: bodyText,
-      snapshot: buildCurrentSnapshot(row, bodyText),
+      snapshot: { ...buildCurrentSnapshot(row, bodyText),
+        ...(record.snapshot.text_alternatives ? { text_alternatives: record.snapshot.text_alternatives } : {}),
+        ...(record.snapshot.text_selection ? { text_selection: record.snapshot.text_selection } : {})
+      },
       updated_at: row.updated_at
     });
   }

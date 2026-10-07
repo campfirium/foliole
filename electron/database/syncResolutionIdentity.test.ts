@@ -91,6 +91,13 @@ it('resolves incomparable bases in one exchange while preserving both bodies aft
   expect(right.snapshot.title).toBe('Title B');
   expect(left.content_hash).not.toBe(right.content_hash);
   expect(left.version_id).not.toBe(right.version_id);
+  // Main selection is comparable only once both devices know the same child associations.
+  for (const [name, other, version] of [['left', 'right', b], ['right', 'left', a]] as const) {
+    await open(name).run(`INSERT INTO nodes
+      (id, kind, title, parent_id, anchor_source_version_id, created_at, updated_at)
+      VALUES (?, 'note', 'Note', 'topic', ?, ?, ?)`,
+    [`note-${other}`, version.version_id, version.updated_at, version.updated_at]);
+  }
   open('left');
   const finalLeft = await push(right);
   open('right');
@@ -103,9 +110,7 @@ it('resolves incomparable bases in one exchange while preserving both bodies aft
     const port = open(name);
     const reopened = (await loadCurrentSyncNodeRecord(port, 'topic'))!;
     expect(reopened.version_id).toBe(finalRight.version_id);
-    const alternatives = await port.query<{ body_text: string }>(
-      "SELECT body_text FROM node_text_alternatives WHERE node_id = 'topic' AND status = 'available'");
-    expect(new Set([reopened.body_text, ...alternatives.map((row) => row.body_text)]))
+    expect(new Set([reopened.body_text, ...reopened.alternative_bodies?.map((row) => row.text) ?? []]))
       .toEqual(new Set([a.body_text, b.body_text]));
     const [before] = await port.query<{ count: number }>('SELECT COUNT(*) AS count FROM node_sync_versions');
     expect((await push(left)).version_id).toBe(finalRight.version_id);

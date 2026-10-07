@@ -12,13 +12,16 @@ import {
 } from './framedSyncCanonicalManifest.js';
 import {
   assertNodeVersionFactShape,
+  framedSyncMainBodyBlob,
   FRAMED_SYNC_NODE_VERSION_FACT
 } from './framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeRecord } from './framedSyncNodeRestore.js';
 import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
+import { projectTopicTextBodyBlobs } from './topicTextFramedBodies.js';
 
 export type FramedSyncNodeProjection = Readonly<{
   bodyBlob: Uint8Array;
+  alternativeBodyBlobs?: ReadonlyArray<{ blob: CanonicalBlob; data: Uint8Array }>;
   manifest: CanonicalManifest;
 }>;
 
@@ -50,6 +53,8 @@ function snapshotFields(snapshot: NativeSyncNodeRecord['snapshot'], bodyHash: st
       ]
     })) }),
     field('body_blob_hash', scalarValue(bodyHash)),
+    field('text_alternatives', scalarValue(snapshot.text_alternatives ? JSON.stringify(snapshot.text_alternatives) : null)),
+    field('text_selection', scalarValue(snapshot.text_selection ? JSON.stringify(snapshot.text_selection) : null)),
     field('created_at', scalarValue(snapshot.created_at)),
     field('deleted_at', scalarValue(snapshot.deleted_at)),
     field('desired_retention', numberValue(snapshot.desired_retention)),
@@ -92,8 +97,9 @@ export function projectFramedSyncNodeRecord(
   const blob: CanonicalBlob = {
     byteLength: BigInt(bodyBlob.byteLength), required: true, role: 1, sha256: bodyHash
   };
-  const fact = projectNodeFact(record, bytesToHex(bodyHash), [blob, ...resourceBlobs]);
-  return { bodyBlob, manifest: { blobs: fact.blobs, facts: [fact] } };
+  const alternativeBodyBlobs = projectTopicTextBodyBlobs(record);
+  const fact = projectNodeFact(record, bytesToHex(bodyHash), [blob, ...alternativeBodyBlobs.map((value) => value.blob), ...resourceBlobs]);
+  return { bodyBlob, alternativeBodyBlobs, manifest: { blobs: fact.blobs, facts: [fact] } };
 }
 
 function projectNodeFact(record: NativeSyncNodeRecord, bodyHash: string | null,
@@ -139,11 +145,14 @@ export function restoreFramedSyncProjectedNodeRecord(
     throw new Error('node_version_projection_manifest_invalid');
   }
   const fact = projection.manifest.facts[0];
-  const manifestBlob = projection.manifest.blobs.find((blob) => blob.role === 1);
+  const manifestBlob = fact && framedSyncMainBodyBlob(fact);
   if (!fact || !manifestBlob) throw new Error('node_version_projection_manifest_invalid');
   return restoreFramedSyncNodeRecord({
     bodyBlob: projection.bodyBlob,
     fact,
-    manifestBlob
+    manifestBlob,
+    alternativeBodies: (projection.alternativeBodyBlobs ?? []).map((value) => ({
+      hash: bytesToHex(value.blob.sha256), text: new TextDecoder().decode(value.data)
+    }))
   });
 }

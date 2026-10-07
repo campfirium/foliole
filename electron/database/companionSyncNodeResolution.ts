@@ -3,6 +3,5 @@ export {
   chooseEvidenceProjection,
   chooseProjection,
   hashText,
-  semanticSnapshot,
-  storeAlternative
+  semanticSnapshot
 } from '../../lib/core/sync/syncNodeResolution.js';

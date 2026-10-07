@@ -70,6 +70,7 @@ export function describeVersionFact(row: {
     ? snapshot : JSON.parse(row.snapshot_metadata);
   delete metadata.content;
   delete metadata.body_blob_hash;
+  delete metadata.text_alternative_bodies;
   return {
     body_hash: body === null ? null : hashText(body),
     content_hash: row.content_hash,

@@ -15,6 +15,7 @@ const DEFAULT_STATE: NodeSourceUpdatePreviewState = {
 };
 
 export function useNodeSourceUpdatePreview(nodeId: string | null) {
+  const [selectedId, setSelectedId] = useState<string | undefined>();
   const [state, setState] = useState<NodeSourceUpdatePreviewState>(DEFAULT_STATE);
 
   useEffect(() => {
@@ -28,7 +29,7 @@ export function useNodeSourceUpdatePreview(nodeId: string | null) {
 
     const loadPreview = async () => {
       setState((current) => ({ isLoading: true, value: current.value }));
-      const value = await loadRuntimeNodeTextAlternativePreview(nodeId)
+      const value = await loadRuntimeNodeTextAlternativePreview(nodeId, selectedId)
         ?? await loadRuntimeNodeSourceUpdatePreview(nodeId);
       if (!isDisposed) {
         setState({ isLoading: false, value });
@@ -51,7 +52,7 @@ export function useNodeSourceUpdatePreview(nodeId: string | null) {
       isDisposed = true;
       unlisten?.();
     };
-  }, [nodeId]);
+  }, [nodeId, selectedId]);
 
-  return state;
+  return { ...state, selectAlternative: setSelectedId };
 }

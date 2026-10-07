@@ -36,6 +36,7 @@ interface DocumentPanelShellProps {
   onPreviewTopicSearchDecorations: (searchDecorations: EditorSearchDecorations | null) => void;
   onToggleSourceUpdatePanel: () => void;
   props: DocumentPanelSectionProps;
+  textAlternativeCount?: number;
   showSourceUpdateAction: boolean;
 }
 
@@ -57,6 +58,7 @@ function renderDocumentPanelChrome(args: {
   props: DocumentPanelSectionProps;
   setFolderListSortDirection: (value: FolderListSortDirection) => void;
   setFolderListSortKey: (value: FolderListSortKey) => void;
+  textAlternativeCount?: number;
   showSourceUpdateAction: boolean;
 }) {
   if (args.props.isImmersiveMode) {
@@ -76,6 +78,7 @@ function renderDocumentPanelChrome(args: {
         onChangeSortKey: args.setFolderListSortKey,
         onToggleSourceUpdatePanel: args.onToggleSourceUpdatePanel,
         props: args.props,
+        textAlternativeCount: args.textAlternativeCount ?? 0,
         showSourceUpdateAction: args.showSourceUpdateAction
       })}
       <DocumentPriorityQuickSetHint
@@ -148,13 +151,10 @@ export function DocumentPanelSectionShell({
   onPreviewTopicSearchDecorations,
   onToggleSourceUpdatePanel,
   props,
+  textAlternativeCount = 0,
   showSourceUpdateAction
 }: DocumentPanelShellProps) {
-  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
-  const folderListSort = useDocumentPanelFolderListSort(
-    props.activeNodeId,
-    Boolean(isFolderListView && activeNode?.kind === 'folder' && activeNode.manualChildOrder?.length)
-  );
+  const folderListSort = useShellFolderSort(props, isFolderListView);
   const folderListSortKey = folderListSort.key;
   const folderListSortDirection = folderListSort.direction;
 
@@ -172,6 +172,7 @@ export function DocumentPanelSectionShell({
     props,
     setFolderListSortDirection: folderListSort.setDirection,
     setFolderListSortKey: folderListSort.setKey,
+    textAlternativeCount,
     showSourceUpdateAction
   });
   return (
@@ -192,4 +193,10 @@ export function DocumentPanelSectionShell({
       props={props}
     />
   );
+}
+
+function useShellFolderSort(props: DocumentPanelSectionProps, isFolderListView: boolean) {
+  const activeNode = props.activeNodeId ? props.nodesById[props.activeNodeId] : null;
+  return useDocumentPanelFolderListSort(props.activeNodeId,
+    Boolean(isFolderListView && activeNode?.kind === 'folder' && activeNode.manualChildOrder?.length));
 }

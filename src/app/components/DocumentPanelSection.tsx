@@ -188,6 +188,7 @@ export function DocumentPanelSection(props: DocumentPanelSectionProps) {
           onEditorReady: interactions.handleEditorReady
         }}
         onPreviewDocumentSelection={interactions.handlePreviewDocumentSelection}
+        textAlternativeCount={model.sourceUpdatePreview?.alternatives?.length ?? 0}
         showSourceUpdateAction={model.canOpenComparisonView && Boolean(model.sourceUpdatePreview)}
       />
       <NodeLinkHoverPreviewPanel preview={nodeLinkPreview.preview} />

@@ -27,8 +27,9 @@ export function useCompanionNodeTextAlternative(args: {
     setError(false);
     try {
       await updateCompanionNodeTextAlternativeStatus(alternative.alternative_id, 'dismissed');
-      setAlternative(null);
-      setOpen(false);
+      const next = await loadCompanionNodeTextAlternative(args.nodeId);
+      setAlternative(next);
+      if (!next) setOpen(false);
     } catch {
       setError(true);
     } finally {
@@ -41,10 +42,12 @@ export function useCompanionNodeTextAlternative(args: {
     setBusy(true);
     setError(false);
     try {
+      const result = await updateCompanionNodeTextAlternativeStatus(alternative.alternative_id, 'promoted');
+      if (result.status !== 'promoted') throw new Error('text_alternative_unavailable');
       await args.onSetAsBody(args.nodeId, alternative.body_text);
-      await updateCompanionNodeTextAlternativeStatus(alternative.alternative_id, 'promoted');
-      setAlternative(null);
-      setOpen(false);
+      const next = await loadCompanionNodeTextAlternative(args.nodeId);
+      setAlternative(next);
+      if (!next) setOpen(false);
     } catch {
       setError(true);
     } finally {
@@ -52,5 +55,14 @@ export function useCompanionNodeTextAlternative(args: {
     }
   }
 
-  return { alternative, busy, dismiss, error, open, setAsBody, setOpen };
+  async function selectAlternative(id: string) {
+    if (busy) return;
+    setBusy(true);
+    setError(false);
+    try { setAlternative(await loadCompanionNodeTextAlternative(args.nodeId, id)); }
+    catch { setError(true); }
+    finally { setBusy(false); }
+  }
+
+  return { selectAlternative, alternative, busy, dismiss, error, open, setAsBody, setOpen };
 }

@@ -47,9 +47,12 @@ export function loadDesktopFramedSyncBlobSources(
   for (const record of records) {
     const resources = resolveDesktopFramedSyncNodeResources(record);
     const projection = projectDesktopFramedSyncNodeRecord(record, resources.map((value) => value.blob));
-    const bodyBlob = projection.manifest.blobs.find((blob) => (blob.role === 1 || blob.role === 5));
+    const bodyBlob = projection.manifest.blobs.find((blob) => blob.role === 1);
     if (!bodyBlob) throw new Error('framed_sync_node_body_blob_missing');
     addSource(sources, { blob: bodyBlob, chunks: byteChunks(projection.bodyBlob) });
+    for (const alternative of projection.alternativeBodyBlobs ?? []) {
+      addSource(sources, { blob: alternative.blob, chunks: byteChunks(alternative.data) });
+    }
     for (const resource of resources) {
       addSource(sources, { blob: resource.blob, chunks: fileChunks(resource.filePath) });
     }

@@ -34,7 +34,8 @@ export function flushNodeSyncVersionWithDriver(
          version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [resolvedVersionId, row.id, row.current_version_id, hostName, now, contentHash, body.content,
-        JSON.stringify(buildNodeSyncSnapshotFromDriver(driver, resolvedRow, nodeId))]
+        JSON.stringify({ ...buildNodeSyncSnapshotFromDriver(driver, resolvedRow, nodeId),
+          text_selection: { version_id: resolvedVersionId, created_at: now } })]
     );
     driver.execute('INSERT INTO node_version_local_origins (version_id) VALUES (?)', [resolvedVersionId]);
     if (row.current_version_id) {

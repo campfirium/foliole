@@ -10,6 +10,7 @@ import { replayRetiredParentOrderBodies } from '../../../../../../lib/core/sync/
 import { assertSyncGroupLocalPublicationAllowed, finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { clearWorkgroupSyncDataForRestore } from '../../../../../../lib/core/sync/syncGroupRestoreReset.js';
 import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
+import { applyConvergentSyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeConvergence.js';
 import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { isNodeVersionIdentityOnly } from '../../../../../../lib/core/sync/syncNodeVersionHistory.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
@@ -47,9 +48,12 @@ async function applyFacts(db: DbPort, transfers: readonly Prepared[], replacing:
     if (isNodeVersionIdentityOnly(node)) continue;
     await upsertTextBodyBlob(db, node.body_text ?? '', node.snapshot.updated_at, node.snapshot.body_blob_hash!);
   }
-  if (nodes.length) await applySyncNodesWithDbPort(db, nodes, {
-    enqueueSearchInvalidations: false, ...(replacing ? { operation: 'local_restore' as const } : {})
-  });
+  if (nodes.length) {
+    if (replacing) await applySyncNodesWithDbPort(db, nodes, {
+      enqueueSearchInvalidations: false, operation: 'local_restore'
+    });
+    else await applyConvergentSyncNodesWithDbPort(db, nodes);
+  }
   await applyFramedSyncRelationReviewFactsWithDbPort(db, transfers.flatMap((transfer) => transfer.decoded.relationReviewFacts));
   for (const body of transfers.flatMap((transfer) => transfer.decoded.externalBodies ?? [])) {
     await upsertTextBodyBlob(db, body.text, new Date().toISOString(), body.hash);

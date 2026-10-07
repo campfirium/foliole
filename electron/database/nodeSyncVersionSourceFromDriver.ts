@@ -2,6 +2,8 @@ import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver
 import type { NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { parseNodeResourceReferences, projectNodeResourceLinks } from '../../lib/core/database/nodeResourceReferences.js';
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash.js';
+import { loadTopicTextStateWithDriver } from '../../lib/core/database/topicTextStateWithDriver.js';
+import { normalizeTextAlternatives } from '../../lib/core/sync/topicTextState.js';
 
 export interface NodeSyncVersionSourceRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
@@ -53,11 +55,12 @@ export function loadNodeSyncVersionSourceFromDriver(driver: DatabaseDriver, node
 }
 
 export function buildNodeSyncSnapshotFromDriver(
-  _driver: DatabaseDriver,
+  driver: DatabaseDriver,
   row: NodeSyncVersionSourceRow,
   nodeId: string
 ) {
   return {
+    text_alternatives: normalizeTextAlternatives(loadTopicTextStateWithDriver(driver, nodeId), row.content ?? '', row.updated_at),
     anchor_link: row.anchor_link,
     anchor_resolution_status: row.anchor_resolution_status,
     anchor_source_version_id: row.anchor_source_version_id,
@@ -91,11 +94,12 @@ export function buildNodeSyncSnapshotFromDriver(
 }
 
 export function computeNodeSyncVersionHashFromDriver(
-  _driver: DatabaseDriver,
+  driver: DatabaseDriver,
   row: NodeSyncVersionSourceRow,
   nodeId: string
 ) {
   return computeNodeSyncHash({
+    textAlternatives: normalizeTextAlternatives(loadTopicTextStateWithDriver(driver, nodeId), row.content ?? '', row.updated_at),
     anchorLink: row.anchor_link,
     anchorResolutionStatus: row.anchor_resolution_status,
     anchorSourceVersionId: row.anchor_source_version_id,

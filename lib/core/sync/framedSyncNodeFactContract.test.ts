@@ -22,6 +22,8 @@ function snapshot(bodyHash: string): CanonicalField[] {
       { name: 'role', value: string('image') }
     ] }] },
     body_blob_hash: string(bodyHash),
+    text_alternatives: nullableString(null),
+    text_selection: nullableString(null),
     created_at: string('2026-10-05T00:00:00.000Z'),
     deleted_at: nullableString(null),
     desired_retention: { kind: 'signed', value: 3n },
@@ -121,4 +123,11 @@ it('requires one required NODE_BODY blob matching snapshot.body_blob_hash', () =
       ? { ...field, value: string('03'.repeat(32)) }
       : field)
   }))).toThrow('node_version_fact_body_blob_hash_mismatch');
+});
+
+it('rejects an external document body attached to an unrelated node fact', () => {
+  const value = fact();
+  expect(() => assertNodeVersionFactShape({ ...value, blobs: [
+    ...value.blobs, { byteLength: 4n, required: true, role: 5, sha256: digest(3) }
+  ] })).toThrow('node_version_fact_resource_blobs_invalid');
 });

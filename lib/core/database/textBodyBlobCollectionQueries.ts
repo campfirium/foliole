@@ -46,7 +46,9 @@ export function bodyHolderQueries(tables: Set<string>, hash: string, text: strin
           OR (typeof(fact.key) = 'text' AND (fact.key = ? OR instr(fact.key, ?) > 0)))`;
       params = [text, hash, text, hash];
     }
-    return { sql: `SELECT 1 AS held FROM ${table} WHERE ${column} IS NOT NULL AND (${condition}) LIMIT 1`, params };
+    const payload = table === 'node_sync_versions' && kind === 'json'
+      ? ` AND (body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text')` : '';
+    return { sql: `SELECT 1 AS held FROM ${table} WHERE ${column} IS NOT NULL${payload} AND (${condition}) LIMIT 1`, params };
   });
   if (tables.has('framed_sync_outbound_holds') && tables.has('framed_sync_outbound_blob_refs')) {
     queries.push({ sql: `SELECT 1 AS held FROM framed_sync_outbound_blob_refs ref

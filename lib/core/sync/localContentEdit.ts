@@ -9,6 +9,7 @@ import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { resolveTopicConflict } from './syncNodeConvergence.js';
 import { loadCurrentSyncNodeRecord, loadStoredSyncNodeVersionRecord } from './syncNodeGraph.js';
 import { hashText } from './syncNodeResolution.js';
+import { normalizeTextAlternatives } from './topicTextState.js';
 
 export interface LocalContentEdit {
   baseVersionId: string;
@@ -63,7 +64,9 @@ function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & 
     content: input.content,
     hide_title_heading: input.hideTitleHeading,
     title: input.title,
-    updated_at: input.updatedAt
+    updated_at: input.updatedAt,
+    text_selection: { version_id: input.versionId, created_at: input.updatedAt },
+    text_alternatives: normalizeTextAlternatives(base.snapshot.text_alternatives ?? [], input.content, input.updatedAt)
   };
   return {
     ...base,

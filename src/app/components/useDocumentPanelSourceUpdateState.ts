@@ -169,6 +169,7 @@ export function useDocumentPanelSourceUpdateState(props: DocumentPanelSectionPro
     isSourceUpdatePanelOpen: isOpen,
     manualContent,
     setComparisonSource: controls.handleSourceChange,
+    selectTextAlternative: preview.selectAlternative,
     sourceUpdatePreview: preview,
     ...sourceActions
   };

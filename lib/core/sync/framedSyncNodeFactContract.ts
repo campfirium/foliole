@@ -1,9 +1,12 @@
+import { z } from 'zod';
+
 import type {
   CanonicalFact,
   CanonicalField,
   CanonicalValue
 } from './framedSyncCanonicalManifest.js';
 import { readFramedSyncNodeResources } from './framedSyncNodeResources.js';
+import { textAlternativesSchema } from './topicTextState.js';
 
 export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
   bodyFields: [
@@ -17,7 +20,7 @@ export const FRAMED_SYNC_NODE_VERSION_FACT = Object.freeze({
   globalIdSource: 'NativeSyncNodeRecord.object_id',
   snapshotFields: [
     'anchor_link', 'anchor_resolution_status', 'anchor_source_version_id', 'attachments',
-    'body_blob_hash', 'created_at', 'deleted_at', 'desired_retention', 'enable_short_term',
+    'body_blob_hash', 'text_alternatives', 'text_selection', 'created_at', 'deleted_at', 'desired_retention', 'enable_short_term',
     'hide_title_heading', 'id', 'image_regions', 'image_sources',
     'import_content_fingerprint', 'import_source_fingerprint', 'is_title_manual', 'kind',
     'manual_child_order', 'opening_text', 'parent_id', 'position', 'priority',
@@ -99,6 +102,11 @@ function assertSnapshot(value: CanonicalValue, globalId: string, bodyHash: strin
   for (const name of ['enable_short_term', 'sequential_reading_enabled']) boolValue(get(name), true);
   for (const name of ['desired_retention', 'position', 'priority']) numberValue(get(name));
   attachments(get('attachments'));
+  const alternativesText = stringValue(get('text_alternatives'), true);
+  if (alternativesText !== null) textAlternativesSchema.parse(JSON.parse(alternativesText));
+  const selection = stringValue(get('text_selection'), true);
+  if (selection !== null) z.object({ version_id: z.string().min(1), created_at: z.string().datetime() })
+    .parse(JSON.parse(selection));
   const resolution = stringValue(get('anchor_resolution_status'), true);
   if (resolution !== null && resolution !== 'resolved' &&
       resolution !== 'unmapped_ambiguous' && resolution !== 'unmapped_missing') {
@@ -123,7 +131,11 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
       fact.objectType !== FRAMED_SYNC_NODE_VERSION_FACT.factObjectType ||
       !fact.globalId || !fact.factId) throw new Error('node_version_fact_identity_invalid');
   const retired = isFramedSyncNodeIdentityFact(fact);
-  const bodyBlobs = fact.blobs.filter((blob) => blob.role === 1);
+  const snapshot = fact.body.find((field) => field.name === 'snapshot')?.value;
+  if (snapshot?.kind !== 'object') throw new Error('node_version_fact_snapshot_invalid');
+  const textBlobs = fact.blobs.filter((blob) => blob.role === 1);
+  const mainBody = framedSyncMainBodyBlob(fact) ?? (textBlobs.length === 1 ? textBlobs[0] : undefined);
+  const bodyBlobs = mainBody ? [mainBody] : [];
   if ((retired ? fact.blobs.length !== 0 : bodyBlobs.length !== 1) ||
       fact.blobs.some((blob) => !blob.required)) {
     throw new Error('node_version_fact_body_blob_invalid');
@@ -151,10 +163,28 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
     assertSnapshot(get('snapshot'), fact.globalId, retired ? null : hex(bodyBlobs[0]!.sha256))
   );
   const resources = fact.blobs.filter((blob) => blob.role !== 1);
+  const snapshotValue = get('snapshot');
+  if (snapshotValue.kind !== 'object') throw new Error('node_version_fact_snapshot_invalid');
+  const alternativesValue = snapshotValue.value.find((field) => field.name === 'text_alternatives')!.value;
+  const alternativesText = stringValue(alternativesValue, true);
+  const alternatives = textAlternativesSchema.parse(JSON.parse(alternativesText ?? '[]'));
+  const alternativeBlobs = fact.blobs.filter((blob) => blob.role === 1 && blob !== mainBody);
+  if (!retired && (alternativeBlobs.length !== alternatives.length || alternatives.some((entry) =>
+    !alternativeBlobs.some((blob) => hex(blob.sha256) === entry.body_blob_hash)))) {
+    throw new Error('node_version_fact_body_blob_invalid');
+  }
   if (retired) return;
   if (resources.length !== references.length || references.some((reference) =>
     !resources.some((blob) => hex(blob.sha256) === reference.contentHash &&
       blob.role === reference.role))) {
     throw new Error('node_version_fact_resource_blobs_invalid');
   }
+}
+
+/** Body descriptors share the text role; the snapshot identifies the main one. */
+export function framedSyncMainBodyBlob(fact: CanonicalFact) {
+  const snapshot = fact.body.find((field) => field.name === 'snapshot')?.value;
+  if (snapshot?.kind !== 'object') return undefined;
+  const hash = snapshot.value.find((field) => field.name === 'body_blob_hash')?.value;
+  return hash?.kind === 'string' ? fact.blobs.find((blob) => blob.role === 1 && hex(blob.sha256) === hash.value) : undefined;
 }

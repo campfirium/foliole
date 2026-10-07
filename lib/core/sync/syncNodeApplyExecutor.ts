@@ -123,6 +123,10 @@ async function decideNodeApply(
   }
   const decision = decideIncomingNodeApply(localNode, record, operation);
   if (decision !== 'record_conflict' || localNode?.sync_dirty !== 0) return decision;
+  if (localNode.current_version_id && record.version_id &&
+      await isStoredAncestorVersion(port, localNode.current_version_id, record.version_id)) {
+    return 'apply_fast_forward';
+  }
   if (!await hasContentEquivalentIncomingLineage(port, localNode.current_version_id, record)) {
     return decision;
   }

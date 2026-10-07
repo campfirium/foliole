@@ -1,60 +1,26 @@
-import { expect, it, vi } from 'vitest';
+import { expect, it } from 'vitest';
 
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
-import type { DbPort } from './dbPort.js';
-import { reconcileResolutionAlternatives, storeAlternative } from './syncNodeResolution.js';
+import { alternativeForBody, normalizeTextAlternatives } from './topicTextState.js';
 
-function alternative(): NativeSyncNodeRecord {
-  return {
-    ancestor_version_ids: [],
-    body_text: 'Losing body',
-    content_hash: 'hash-1',
-    host_name: 'Maci',
-    object_id: 'node-1',
-    object_type: 'node',
-    parent_version_id: null,
-    parent_version_ids: [],
-    snapshot: { content: 'Losing body' } as NativeSyncNodeRecord['snapshot'],
-    updated_at: '2026-08-15T05:00:00.000Z',
-    version_created_at: '2026-08-15T05:00:00.000Z',
-    version_id: 'Maci#1'
-  };
+const now = '2026-10-07T00:00:00.000Z';
+function alternative(body: string, versionId: string) {
+  return alternativeForBody({ object_id: 'topic', body_text: body, version_id: versionId,
+    version_created_at: now, host_name: 'Host', snapshot: {} } as NativeSyncNodeRecord, now);
 }
 
-it('does not redirty an existing deterministic conflict alternative', async () => {
-  let insertCount = 0;
-  const run = vi.fn(async (sql: string) => ({
-    changes: sql.includes('INSERT INTO node_text_alternatives')
-      ? (insertCount++ === 0 ? 1 : 0) : 0
-  }));
-  const port = { query: vi.fn(async () => []), run } as unknown as DbPort;
-
-  await storeAlternative(port, alternative(), '2026-08-15T05:00:00.001Z');
-  await storeAlternative(port, alternative(), '2026-08-15T05:00:00.001Z');
-
-  expect(run.mock.calls.filter(([sql]) => String(sql).includes(
-    'INSERT INTO sync_object_state'
-  ))).toHaveLength(1);
+it('deduplicates the same body across original versions and preserves its earliest expiry', () => {
+  const first = alternative('Other', 'first');
+  const second = { ...alternative('Other', 'second'), expires_at: '2026-12-07T00:00:00.000Z' };
+  expect(normalizeTextAlternatives([second, first], 'Main', now)).toEqual([first]);
 });
 
-it('tombstones existing alternatives instead of publishing one for a deleted resolution', async () => {
-  const calls: Array<{ params: readonly unknown[] | undefined; sql: string }> = [];
-  const port = {
-    query: vi.fn(async () => [{ alternative_id: 'alternative#existing' }]),
-    run: vi.fn(async (sql: string, params?: readonly unknown[]) => {
-      calls.push({ params, sql });
-      return { changes: 1 };
-    })
-  } as unknown as DbPort;
-  const resolution = alternative();
-  resolution.snapshot.deleted_at = '2026-08-15T05:00:00.001Z';
-  resolution.version_created_at = '2026-08-15T05:00:00.002Z';
-
-  await reconcileResolutionAlternatives(port, resolution, alternative());
-
-  expect(calls.some(({ sql }) => sql.startsWith('DELETE FROM node_text_alternatives'))).toBe(true);
-  expect(calls.some(({ params, sql }) => sql.includes("VALUES ('node_text_alternative'")
-    && params?.[0] === 'alternative#existing')).toBe(true);
-  expect(calls.some(({ sql }) => sql.includes('INSERT INTO node_text_alternatives'))).toBe(false);
+it('excludes the main body, expired bodies and excess oldest attachments', () => {
+  const entries = ['Main', 'A', 'B', 'C', 'D'].map((body, index) => ({
+    ...alternative(body, body), created_at: `2026-10-0${index + 1}T00:00:00.000Z`
+  }));
+  const retained = normalizeTextAlternatives(entries, 'Main', now);
+  expect(retained.map((entry) => entry.id)).toEqual(entries.slice(2).reverse().map((entry) => entry.id));
+  expect(normalizeTextAlternatives(retained, 'Main', '2026-12-07T00:00:00.000Z')).toEqual([]);
 });

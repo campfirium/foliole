@@ -83,6 +83,7 @@ enum FolioleCompanionSyncIdentityPackBuilder {
                     }
                 }
             }
+            try FolioleCompanionSyncPackPayloadWriter.copyTopicTextBodies(database)
             if let missing = try database.namedRows(definitions.identityMissingOriginalHeadSql).first?["version_id"] as? String {
                 throw invalid("sync_pack_fact_body_unavailable:\(missing)")
             }

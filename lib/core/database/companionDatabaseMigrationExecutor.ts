@@ -36,6 +36,7 @@ import { migrateCompanionNodeVersionConfirmations } from './nodeVersionConfirmat
 import { migrateCompanionParentOrderVersions } from './parentOrderVersionMigration.js';
 import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS } from './syncIdentityEntityTriggerStatements.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
+import { migrateCompanionTopicTextState } from './topicTextStateMigration.js';
 
 type MigrationAction = (typeof ANDROID_COMPANION_MIGRATION_PLAN)[number]['actions'][number];
 type RepairName = keyof typeof REPAIRS;
@@ -95,6 +96,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 71 && targetVersion >= 71) await migrateCompanionFramedSyncInventory(db);
   if (currentVersion < 73 && targetVersion >= 73) await migrateCompanionFramedSyncTombstoneInventory(db);
   if (currentVersion < 74 && targetVersion >= 74) await migrateCompanionFramedSyncPermanentDeleteHistory(db);
+  if (currentVersion < 76 && targetVersion >= 76) await migrateCompanionTopicTextState(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

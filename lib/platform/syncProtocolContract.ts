@@ -32,6 +32,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     DESKTOP_SOFT_ANCHOR_CAPABILITY,
     'device-sync-groups-v1',
     'framed-sync-v22',
+    'topic-text-attachments-v1',
     'group-key-routing-v1',
     'lan-sync-v1',
     'node-tombstone-pack-v1',

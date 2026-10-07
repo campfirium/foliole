@@ -13,7 +13,7 @@ export async function loadVerifiedExistingSyncPackVersions(port: DbPort, alias: 
 export async function rehydrateStoredVersionBodies(port: DbPort, alias: string) {
   await port.run(
     `UPDATE main.node_sync_versions AS stored SET
-       body_text = ${versionBodySql('incoming')}, snapshot_json = incoming.snapshot_json
+       body_text = ${versionBodySql('incoming')}, snapshot_json = json_remove(incoming.snapshot_json, '$.text_alternative_bodies')
      FROM ${alias}.node_sync_versions AS incoming
      WHERE stored.version_id = incoming.version_id
        AND ${eligiblePackVersion('incoming', alias)}
@@ -27,8 +27,8 @@ async function assertExistingVersionsMatch(port: DbPort, alias: string) {
     !['version_id', 'parent_version_id', 'body_text', 'snapshot_json'].includes(column));
   const mismatch = [
     ...immutableColumns.map((column) => `existing.${column} IS NOT incoming.${column}`),
-    `json_remove(existing.snapshot_json, '$.content', '$.body_blob_hash') IS NOT
-      json_remove(incoming.snapshot_json, '$.content', '$.body_blob_hash')`,
+    `json_remove(existing.snapshot_json, '$.content', '$.body_blob_hash', '$.text_alternative_bodies') IS NOT
+      json_remove(incoming.snapshot_json, '$.content', '$.body_blob_hash', '$.text_alternative_bodies')`,
     `(${versionBodySql('existing')} IS NOT NULL AND ${versionBodySql('incoming')} IS NOT NULL
       AND ${versionBodySql('existing')} IS NOT ${versionBodySql('incoming')})`
   ].join(' OR ');

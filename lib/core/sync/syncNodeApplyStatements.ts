@@ -2,6 +2,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import { normalizeNodeImportProvenance } from '../database/nodeImportProvenance.js';
 import { projectNodeInlineContent } from '../database/nodeInlineProjection.js';
 import { parseNodeResourceReferences, serializeNodeResourceReferences } from '../database/nodeResourceReferences.js';
+import { hashTextBody } from '../database/textBodyHash.js';
 
 import type { DbParams } from './dbPort.js';
 
@@ -144,7 +145,8 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
       record.content_hash ?? '',
       record.body_text === null && record.snapshot.content === null
         ? null : record.body_text ?? record.snapshot.content ?? '',
-      JSON.stringify(record.snapshot)
+      JSON.stringify({ ...record.snapshot, body_blob_hash: record.snapshot.body_blob_hash ??
+        (record.body_text !== null ? hashTextBody(record.body_text ?? record.snapshot.content ?? '') : null) })
     ],
     sql: UPSERT_REMOTE_NODE_VERSION_SQL
   };

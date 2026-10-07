@@ -1,5 +1,6 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
+import { z } from 'zod';
 
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
@@ -11,9 +12,12 @@ import type {
 } from './framedSyncCanonicalManifest.js';
 import {
   assertNodeVersionFactShape,
+  framedSyncMainBodyBlob,
   isFramedSyncNodeIdentityFact,
   FRAMED_SYNC_NODE_VERSION_FACT
 } from './framedSyncNodeFactContract.js';
+import { restoreTopicTextBodyBlobs } from './topicTextFramedBodies.js';
+import { textAlternativesSchema, type TopicTextBody } from './topicTextState.js';
 
 const decoder = new TextDecoder('utf-8', { fatal: true });
 
@@ -85,6 +89,13 @@ function readSnapshot(value: CanonicalValue): NativeSyncNodeRecord['snapshot'] {
         role: readString(requiredValue(item, 'role'))! };
     }),
     body_blob_hash: readString(get('body_blob_hash'), true),
+    ...(readString(get('text_alternatives'), true) === null ? {} : {
+      text_alternatives: textAlternativesSchema.parse(JSON.parse(readString(get('text_alternatives'))!))
+    }),
+    ...(readString(get('text_selection'), true) === null ? {} : {
+      text_selection: z.object({ version_id: z.string().min(1), created_at: z.string().datetime() })
+        .parse(JSON.parse(readString(get('text_selection'))!))
+    }),
     created_at: readString(get('created_at'))!,
     deleted_at: readString(get('deleted_at'), true),
     desired_retention: readNumber(get('desired_retention')),
@@ -121,16 +132,18 @@ export function restoreFramedSyncNodeRecord(input: {
   bodyBlob: Uint8Array;
   fact: CanonicalFact;
   manifestBlob: CanonicalBlob;
+  alternativeBodies?: readonly TopicTextBody[];
 }): NativeSyncNodeRecord {
   const { bodyBlob, fact, manifestBlob } = input;
   assertNodeVersionFactShape(fact);
-  const bodyDescriptors = fact.blobs.filter((blob) => blob.role === 1);
+  const bodyDescriptors = [framedSyncMainBodyBlob(fact)].filter((blob): blob is CanonicalBlob => Boolean(blob));
   if (bodyDescriptors.length !== 1 || !sameBlob(bodyDescriptors[0]!, manifestBlob) ||
       manifestBlob.byteLength !== BigInt(bodyBlob.byteLength) ||
       !sameBlob(manifestBlob, { ...manifestBlob, sha256: sha256(bodyBlob) })) {
     throw new Error('node_version_projection_body_blob_invalid');
   }
-  return restoreNodeFields(fact, decoder.decode(bodyBlob), bytesToHex(manifestBlob.sha256));
+  const record = restoreNodeFields(fact, decoder.decode(bodyBlob), bytesToHex(manifestBlob.sha256));
+  return restoreTopicTextBodyBlobs(record, input.alternativeBodies ?? [], fact.blobs);
 }
 
 export function restoreFramedSyncNodeIdentityFact(fact: CanonicalFact): NativeSyncNodeRecord {

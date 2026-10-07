@@ -1,7 +1,7 @@
 import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
 import { decodeFramedExternalDocumentBodies } from '../../lib/core/sync/framedSyncExternalDocumentBody.js';
-import { isFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeFactContract.js';
+import { framedSyncMainBodyBlob, isFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeReadingFact } from '../../lib/core/sync/framedSyncNodeReadingFact.js';
 import { restoreFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeRestore.js';
 import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
@@ -90,9 +90,9 @@ export function prepareInboundApply(
     };
   }
   const contentByHash = new Map(blobs.map((entry) => [hex(entry.sha256), entry]));
-  const bodyDescriptors = nodeFacts.map((fact) => fact.blobs.filter((entry) => entry.role === 1));
-  const requiredHashes = new Set(bodyDescriptors.flatMap((entries) =>
-    entries.map((entry) => hex(entry.sha256))));
+  const bodyDescriptors = nodeFacts.map((fact) => { const body = framedSyncMainBodyBlob(fact); return body ? [body] : []; });
+  const requiredHashes = new Set(nodeFacts.flatMap((fact) => fact.blobs
+    .filter((entry) => entry.role === 1 || entry.role === 5).map((entry) => hex(entry.sha256))));
   if (contentByHash.size !== blobs.length || requiredHashes.size !== blobs.length ||
       bodyDescriptors.some((entries, index) => entries.length !== (isFramedSyncNodeIdentityFact(nodeFacts[index]!) ? 0 : 1))) {
     throw new Error('framed_sync_blob_content_set_mismatch');
@@ -104,6 +104,11 @@ export function prepareInboundApply(
     if (!content) throw new Error('framed_sync_blob_content_set_mismatch');
     return restoreDesktopFramedSyncNodeRecord({
       bodyBlob: content.data,
+      alternativeBodyBlobs: nodeFact.blobs.filter((entry) => entry.role === 1 && entry !== body).map((blob) => {
+        const value = contentByHash.get(hex(blob.sha256));
+        if (!value) throw new Error('text_alternative_body_unavailable');
+        return { blob, data: value.data };
+      }),
       manifest: { blobs: nodeFact.blobs, facts: [nodeFact] }
     });
   });

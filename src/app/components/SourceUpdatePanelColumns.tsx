@@ -185,7 +185,7 @@ export function SourceUpdatePanelColumns(props: SourceUpdatePanelColumnsProps) {
           labelMode={t(props.props.comparisonMode === 'manual'
             ? 'desktop.sourceUpdate.manual.mode'
             : 'desktop.sourceUpdate.updated.mode')}
-          labelTitle={t(props.props.comparisonMode === 'manual'
+          labelTitle={t(props.props.comparisonMode === 'sync_alternative' ? 'desktop.sourceUpdate.alternative.title' : props.props.comparisonMode === 'manual'
             ? 'desktop.sourceUpdate.manual.title'
             : 'desktop.sourceUpdate.updated.title')}
           paneProps={updatedPaneProps}

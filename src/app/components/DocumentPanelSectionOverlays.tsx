@@ -1,6 +1,8 @@
+
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import { isTextAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import { APP_COMMAND_IDS } from '../../shared/commands/ids';
+import type { RuntimeNodeSourceUpdatePreview } from '../../shared/platform/nodeSourceUpdateRuntimePayloads';
 
 import type { DocumentComparisonMode } from './documentComparisonView';
 import { DocumentPanelContextMenu } from './DocumentPanelContextMenu';
@@ -27,7 +29,8 @@ export interface DocumentPanelSectionOverlaysProps {
   manualContent: string;
   setComparisonSource: (source: 'manual' | 'source') => void;
   props: DocumentPanelSectionProps;
-  sourceUpdatePreview: { currentHighlightCount: number; updatedContent: string; updatedHighlightCount: number } | null;
+  sourceUpdatePreview: RuntimeNodeSourceUpdatePreview | null;
+  selectTextAlternative?: (id: string) => void;
 }
 
 export function resolveAdjustableHighlight(props: DocumentPanelSectionProps) {
@@ -55,6 +58,9 @@ function renderComparisonPanel(props: DocumentPanelSectionOverlaysProps) {
   const preview = props.sourceUpdatePreview;
   return (
     <DocumentPanelSourceUpdatePanel
+      alternatives={preview?.alternatives ?? []}
+      selectedAlternativeId={preview?.alternativeId ?? null}
+      {...(props.selectTextAlternative ? { onSelectAlternative: props.selectTextAlternative } : {})}
       comparisonMode={props.comparisonMode}
       comparisonSource={props.comparisonSource}
       currentContent={props.currentSourceUpdateContent}

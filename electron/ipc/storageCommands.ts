@@ -138,7 +138,8 @@ async function handleStorageReadCommand(command: string, args: Record<string, un
     return loadNodeSourceUpdatePreview(asString(args.node_id, 'node_id'));
   }
   if (command === NATIVE_COMMANDS.loadNodeTextAlternativePreview) {
-    return loadNodeTextAlternativePreview(asString(args.node_id, 'node_id'));
+    return loadNodeTextAlternativePreview(asString(args.node_id, 'node_id'),
+      typeof args.alternative_id === 'string' ? args.alternative_id : undefined);
   }
   return undefined;
 }
@@ -221,7 +222,9 @@ async function handleTextAlternativeMutation(
     return result;
   }
   if (command === NATIVE_COMMANDS.dismissNodeTextAlternative) {
-    return dismissNodeTextAlternative(asString(args.alternative_id, 'alternative_id'));
+    const result = await dismissNodeTextAlternative(asString(args.alternative_id, 'alternative_id'));
+    if (result.status === 'dismissed') notifyWorkspaceContentChanged(window);
+    return result;
   }
   return undefined;
 }

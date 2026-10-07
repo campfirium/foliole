@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from 'react';
 
+import type { TopicTextAlternative } from '../../../lib/core/sync/topicTextState';
 import type { EditorAdapter } from '../../features/editor/adapters/EditorAdapter';
 import type { EditorDiffDecorations } from '../../features/editor/adapters/EditorAdapter';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -22,6 +23,9 @@ import { useSourceUpdatePanelLiveProps } from './useSourceUpdatePanelLiveProps';
 import { useSourceUpdatePanelSnapshots } from './useSourceUpdatePanelSnapshots';
 
 export interface DocumentSourceUpdatePanelProps {
+  alternatives?: TopicTextAlternative[];
+  selectedAlternativeId?: string | null;
+  onSelectAlternative?: (id: string) => void;
   comparisonMode: DocumentComparisonMode;
   comparisonSource: 'manual' | 'source';
   currentContent: string;

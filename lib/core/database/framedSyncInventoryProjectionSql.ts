@@ -19,6 +19,9 @@ export function framedSyncVersionSummarySql(where: string) {
       COALESCE((SELECT json_group_array(hash) FROM (
         SELECT DISTINCT substr(json_extract(value, '$.storage_key'), 1, 64) AS hash
         FROM json_each(COALESCE(json_extract(version.snapshot_json, '$.resource_references'), '[]'))
+        UNION SELECT json_extract(value, '$.body_blob_hash') AS hash
+        FROM json_each(COALESCE(json_extract(version.snapshot_json, '$.text_alternatives'), '[]'))
+        WHERE version.body_text IS NOT NULL
         ORDER BY hash)), '[]')
     FROM node_sync_versions version WHERE ${where};`;
 }

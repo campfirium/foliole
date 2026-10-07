@@ -18,43 +18,27 @@ export type IncomingNodeApplyDecision =
 
 export type SyncNodeApplyOperation = 'local_mutation' | 'local_restore' | 'remote_sync';
 
-function branchRecordKey(record: NativeSyncNodeRecord) {
-  return `${record.object_id}\n${record.host_name?.trim() || 'remote'}`;
-}
-
-function compareRecordHead(left: NativeSyncNodeRecord, right: NativeSyncNodeRecord) {
-  const timeCompare = (left.version_created_at ?? left.updated_at ?? '').localeCompare(
-    right.version_created_at ?? right.updated_at ?? ''
-  );
-  return timeCompare === 0 ? (left.version_id ?? '').localeCompare(right.version_id ?? '') : timeCompare;
-}
-
 export function latestBranchHeadRecords(records: NativeSyncNodeRecord[]) {
-  const byBranch = new Map<string, NativeSyncNodeRecord>();
-  for (const record of records) {
-    const key = branchRecordKey(record);
-    const current = byBranch.get(key);
-    if (!current || compareRecordHead(current, record) < 0) {
-      byBranch.set(key, record);
-    }
-  }
-  return [...byBranch.values()];
+  const versions = new Map(records.map((record) => [record.version_id, record]));
+  const ancestors = new Set(records.flatMap((record) => [...record.ancestor_version_ids, ...record.parent_version_ids ?? [],
+    ...(record.parent_version_id ? [record.parent_version_id] : [])]));
+  return [...versions.values()].filter((record) => !record.version_id || !ancestors.has(record.version_id));
 }
 
 export function orderNodesForApply(records: NativeSyncNodeRecord[]) {
   const byId = new Map(records.map((record) => [record.object_id, record]));
   const ordered: NativeSyncNodeRecord[] = [];
-  const visited = new Set<string>();
+  const visited = new Set<NativeSyncNodeRecord>();
 
   function visit(record: NativeSyncNodeRecord) {
-    if (visited.has(record.object_id)) {
+    if (visited.has(record)) {
       return;
     }
     const parent = record.snapshot.parent_id ? byId.get(record.snapshot.parent_id) : null;
     if (parent) {
       visit(parent);
     }
-    visited.add(record.object_id);
+    visited.add(record);
     ordered.push(record);
   }
 

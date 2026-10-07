@@ -110,6 +110,7 @@ export interface NativeSyncNodeAttachmentRef {
 }
 
 export interface NativeSyncNodeRecord {
+  alternative_bodies?: Array<{ hash: string; text: string }>;
   ancestor_version_ids: string[];
   body_text?: string | null;
   content_hash: string | null;
@@ -120,6 +121,11 @@ export interface NativeSyncNodeRecord {
   parent_version_id: string | null;
   parent_version_ids?: string[];
   snapshot: {
+    text_alternatives?: Array<{
+      id: string; body_blob_hash: string; source_host_name: string;
+      created_at: string; expires_at: string;
+    }>;
+    text_selection?: { version_id: string; created_at: string };
     anchor_link: string | null;
     anchor_resolution_status?: 'resolved' | 'unmapped_ambiguous' | 'unmapped_missing' | null;
     anchor_source_version_id?: string | null;

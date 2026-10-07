@@ -10,7 +10,7 @@ import type {
   CanonicalFact
 } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { decodeFramedExternalDocumentBodies } from '../../../../../../lib/core/sync/framedSyncExternalDocumentBody.js';
-import { isFramedSyncNodeIdentityFact } from '../../../../../../lib/core/sync/framedSyncNodeFactContract.js';
+import { framedSyncMainBodyBlob, isFramedSyncNodeIdentityFact } from '../../../../../../lib/core/sync/framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeReadingFact } from '../../../../../../lib/core/sync/framedSyncNodeReadingFact.js';
 import { readFramedSyncNodeResources } from '../../../../../../lib/core/sync/framedSyncNodeResources.js';
 import { restoreFramedSyncNodeIdentityFact, restoreFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeRestore.js';
@@ -49,14 +49,20 @@ function uniqueRows(rows: DbRow[]) {
 
 function decodeNode(fact: CanonicalFact, bodies: ReadonlyMap<string, DbRow>) {
   if (isFramedSyncNodeIdentityFact(fact)) return restoreFramedSyncNodeIdentityFact(fact);
-  const descriptors = fact.blobs.filter((entry) => entry.role === 1);
+  const descriptors = [framedSyncMainBodyBlob(fact)].filter((entry): entry is CanonicalBlob => Boolean(entry));
   if (descriptors.length !== 1) throw new Error('framed_sync_android_blob_identity_mismatch');
   const row = bodies.get(bytesToHex(descriptors[0]!.sha256));
   if (!row || !sameBlob(descriptors[0]!, blob(row))) {
     throw new Error('framed_sync_android_blob_identity_mismatch');
   }
   return restoreFramedSyncNodeRecord({ bodyBlob: framedSyncBytes(row, 'data'), fact,
-    manifestBlob: blob(row) });
+    manifestBlob: blob(row),
+    alternativeBodies: fact.blobs.filter((entry) => entry.role === 1 && entry !== descriptors[0]).map((entry) => {
+      const body = bodies.get(bytesToHex(entry.sha256));
+      if (!body || !sameBlob(entry, blob(body))) throw new Error('text_alternative_body_blob_invalid');
+      return { hash: bytesToHex(entry.sha256), text: new TextDecoder('utf-8', { fatal: true })
+        .decode(framedSyncBytes(body, 'data')) };
+    }) });
 }
 
 function validateResources(
@@ -66,7 +72,7 @@ function validateResources(
   const expectedKeys = new Set<string>();
   facts.forEach((fact, index) => {
     if (isNodeVersionIdentityOnly(nodes[index]!)) return;
-    const resourceDescriptors = fact.blobs.filter((entry) => entry.role !== 1);
+    const resourceDescriptors = fact.blobs.filter((entry) => entry.role !== 1 && entry.role !== 5);
     const descriptors = new Map(resourceDescriptors
       .map((entry) => [bytesToHex(entry.sha256), entry]));
     const resources = readFramedSyncNodeResources(nodes[index]!.snapshot.resource_references);
@@ -123,7 +129,7 @@ export function decodeCompanionFramedSyncTransfer(input: {
     return { externalBodies, globalId, objectType, nodes: [], relationReviewFacts, readingStates };
   }
   const bodies = uniqueRows(input.bodyRows);
-  const requiredBodies = new Set(nodeFacts.flatMap((fact) => fact.blobs.filter((entry) => entry.role === 1)
+  const requiredBodies = new Set(nodeFacts.flatMap((fact) => fact.blobs.filter((entry) => entry.role === 1 || entry.role === 5)
     .map((entry) => bytesToHex(entry.sha256))));
   if (bodies.size !== requiredBodies.size) throw new Error('framed_sync_android_blob_identity_mismatch');
   const nodes = nodeFacts.map((fact) => decodeNode(fact, bodies));

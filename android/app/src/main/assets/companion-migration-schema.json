@@ -588,6 +588,15 @@
         }
       ],
       "beforeVersion": 71
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install arrangement version retention.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 75
     }
   ],
   "planKeys": {

@@ -51,8 +51,9 @@ export type NativeImportCommandMap = {
     } | null;
   };
   [NATIVE_COMMANDS.loadNodeTextAlternativePreview]: {
-    args: { node_id: string };
+    args: { node_id: string; alternative_id?: string };
     result: {
+      alternatives?: Array<{ id: string; body_blob_hash: string; source_host_name: string; created_at: string; expires_at: string }>;
       alternative_id: string;
       checked_at: string;
       current_content: string;
