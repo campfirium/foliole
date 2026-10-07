@@ -29,6 +29,10 @@ export function availableTextAlternatives(record: NativeSyncNodeRecord, now: str
 
 export function alternativeForBody(record: NativeSyncNodeRecord, formedAt: string): TopicTextAlternative {
   const hash = hashTextBody(record.body_text ?? record.snapshot.content ?? '');
+  return alternativeForBodyHash(record, hash, formedAt);
+}
+
+export function alternativeForBodyHash(record: NativeSyncNodeRecord, hash: string, formedAt: string): TopicTextAlternative {
   const origin = record.snapshot.text_selection?.version_id ?? record.version_id;
   return {
     id: `alternative#${hashTextBody(`${record.object_id}\n${origin}\n${hash}`).slice(0, 24)}`,
@@ -40,7 +44,10 @@ export function alternativeForBody(record: NativeSyncNodeRecord, formedAt: strin
 }
 
 export function normalizeTextAlternatives(entries: readonly TopicTextAlternative[], body: string, now: string) {
-  const bodyHash = hashTextBody(body);
+  return normalizeTextAlternativesForHash(entries, hashTextBody(body), now);
+}
+
+export function normalizeTextAlternativesForHash(entries: readonly TopicTextAlternative[], bodyHash: string, now: string) {
   const byHash = new Map<string, TopicTextAlternative>();
   for (const entry of entries) {
     if (entry.body_blob_hash === bodyHash || entry.expires_at <= now) continue;

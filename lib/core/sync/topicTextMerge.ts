@@ -10,7 +10,7 @@ import { alternativeForBody, normalizeTextAlternatives, textAlternatives } from 
 /** Merge attachment membership against shared history without comparing full text lines. */
 export async function mergeTopicTextAttachments(db: DbPort, records: NativeSyncNodeRecord[],
   winner: NativeSyncNodeRecord, formedAt: string) {
-  const removed = await removedAttachments(db, records);
+  const removed = await removedTopicTextAttachments(db, records);
   const winnerBody = winner.body_text ?? winner.snapshot.content ?? '';
   const entries = records.flatMap(textAlternatives).filter((entry) => !removed.has(entry.id));
   for (const record of records) {
@@ -31,7 +31,7 @@ export async function mergeTopicTextAttachments(db: DbPort, records: NativeSyncN
   return normalizeTextAlternatives(entries, winnerBody, formedAt);
 }
 
-async function removedAttachments(db: DbPort, records: NativeSyncNodeRecord[]) {
+export async function removedTopicTextAttachments(db: DbPort, records: NativeSyncNodeRecord[]) {
   const removed = new Set<string>();
   for (let index = 0; index < records.length; index++) {
     const left = records[index]!;

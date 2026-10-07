@@ -1,6 +1,7 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import { writeBodyJson } from './bodyJson.js';
 import type { DbPort } from './dbPort.js';
 import type { FramedSyncNodeMetadata } from './framedSyncNodeRestore.js';
 import type { VerifiedFramedSyncNode } from './framedSyncVerifiedNode.js';
@@ -11,21 +12,7 @@ import {
   nextResolutionTimestamp,
   normalizeResolutionMetadataSnapshot
 } from './syncNodeResolutionMetadata.js';
-import { streamBodyText, type VerifiedBodyRef } from './verifiedBody.js';
-
-async function writeBodyJson(db: DbPort, body: VerifiedBodyRef, write: (text: string) => void) {
-  write('"');
-  for await (const chunk of streamBodyText(db, body)) {
-    for (let start = 0; start < chunk.length;) {
-      let end = Math.min(start + 8192, chunk.length);
-      const last = chunk.charCodeAt(end - 1);
-      if (end < chunk.length && last >= 0xd800 && last <= 0xdbff) end -= 1;
-      write(JSON.stringify(chunk.slice(start, end)).slice(1, -1));
-      start = end;
-    }
-  }
-  write('"');
-}
+import type { VerifiedBodyRef } from './verifiedBody.js';
 
 /** Preserve the existing {body,snapshot.content} identity without materializing either string. */
 async function resolutionContentHash(db: DbPort, body: VerifiedBodyRef, snapshot: FramedSyncNodeMetadata['snapshot']) {

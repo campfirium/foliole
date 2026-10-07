@@ -7,6 +7,7 @@ import { resolveFolderConflict } from './syncFolderResolution.js';
 import { resolveItemConflict } from './syncItemResolution.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
+import { selectNodeOperationValue } from './syncNodeOperationValue.js';
 import {
   buildResolutionRecord,
   chooseEvidenceProjection,
@@ -122,8 +123,8 @@ async function selectTopicState(port: DbPort, local: NativeSyncNodeRecord, order
   let deletion = { value: local.snapshot.deleted_at, source: local };
   for (const incoming of ordered) {
     const baseSnapshot = await loadTopicTextConflictMetadata(port, local, incoming);
-    parent = selectOperationValue(baseSnapshot?.parent_id, parent, incoming.snapshot.parent_id, incoming);
-    deletion = selectOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
+    parent = selectNodeOperationValue(baseSnapshot?.parent_id, parent, incoming.snapshot.parent_id, incoming);
+    deletion = selectNodeOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
     if (body === (incoming.body_text ?? incoming.snapshot.content ?? '')) {
       winner = chooseProjection(winner, incoming, '', 0, 0);
       continue;
@@ -135,21 +136,6 @@ async function selectTopicState(port: DbPort, local: NativeSyncNodeRecord, order
     winner = projection.winner;
   }
   return { body, winner, parent, deletion };
-}
-
-function selectOperationValue<T>(
-  base: T | undefined,
-  current: { source: NativeSyncNodeRecord; value: T },
-  incomingValue: T,
-  incoming: NativeSyncNodeRecord
-) {
-  if (base !== undefined) {
-    if (current.value === base && incomingValue !== base) return { value: incomingValue, source: incoming };
-    if (incomingValue === base) return current;
-  }
-  const currentKey = `${current.source.version_created_at ?? ''}\n${current.source.version_id ?? ''}`;
-  const incomingKey = `${incoming.version_created_at ?? ''}\n${incoming.version_id ?? ''}`;
-  return incomingKey > currentKey ? { value: incomingValue, source: incoming } : current;
 }
 
 function groupByObjectId(records: NativeSyncNodeRecord[]) {

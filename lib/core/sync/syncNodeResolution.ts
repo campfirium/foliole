@@ -35,10 +35,16 @@ export function chooseProjection(
   localAnchors: number,
   incomingAnchors: number
 ) {
-  if (localAnchors !== incomingAnchors) return localAnchors > incomingAnchors ? local : incoming;
   const localBody = local.body_text ?? local.snapshot.content ?? '';
   const incomingBody = incoming.body_text ?? incoming.snapshot.content ?? '';
-  if (localBody.length !== incomingBody.length) return localBody.length > incomingBody.length ? local : incoming;
+  return chooseNodeTextProjection(local, incoming, localBody.length, incomingBody.length, localAnchors, incomingAnchors);
+}
+
+export function chooseNodeTextProjection<T extends Pick<NativeSyncNodeRecord, 'snapshot' | 'version_id' | 'version_created_at'>>(
+  local: T, incoming: T, localLength: number, incomingLength: number, localAnchors: number, incomingAnchors: number
+): T {
+  if (localAnchors !== incomingAnchors) return localAnchors > incomingAnchors ? local : incoming;
+  if (localLength !== incomingLength) return localLength > incomingLength ? local : incoming;
   const localKey = `${local.snapshot.text_selection?.created_at ?? local.version_created_at ?? ''}\n${local.snapshot.text_selection?.version_id ?? local.version_id ?? ''}`;
   const incomingKey = `${incoming.snapshot.text_selection?.created_at ?? incoming.version_created_at ?? ''}\n${incoming.snapshot.text_selection?.version_id ?? incoming.version_id ?? ''}`;
   return localKey >= incomingKey ? local : incoming;

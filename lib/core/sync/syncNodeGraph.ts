@@ -1,6 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { cachedSyncNodeParents, loadAncestorDistances, loadSyncNodeVersionAncestors, loadSyncNodeVersionParents } from './syncNodeLineage.js';
 import { matchingTombstoneVersionSql } from './syncNodeTombstoneVersion.js';
 import { loadTopicTextBodies } from './topicTextBodies.js';
 
@@ -140,13 +141,13 @@ export async function loadMergeBaseCandidates(port: DbPort, leftId: string, righ
   const visited = new Set<string>();
   for (const candidate of common) {
     if (!maximal.has(candidate)) continue;
-    const pending = [...await cachedParents(port, candidate, parents)];
+    const pending = [...await cachedSyncNodeParents(port, candidate, parents)];
     while (pending.length) {
       const ancestor = pending.pop()!;
       if (visited.has(ancestor)) continue;
       visited.add(ancestor);
       maximal.delete(ancestor);
-      pending.push(...await cachedParents(port, ancestor, parents));
+      pending.push(...await cachedSyncNodeParents(port, ancestor, parents));
     }
   }
   return [...maximal];
@@ -167,9 +168,9 @@ async function storedVersionToRecord(
   const isTombstone = row.is_tombstone === 1;
   const body = isTombstone ? row.body_text ?? '' : storedSyncNodeVersionBody(row);
   if (body === null && requireBody) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
-  const parents = knownParents ?? await loadParents(port, row.version_id);
+  const parents = knownParents ?? await loadSyncNodeVersionParents(port, row.version_id);
   const record: NativeSyncNodeRecord = {
-    ancestor_version_ids: includeAncestors ? await loadAncestors(port, row.version_id) : [],
+    ancestor_version_ids: includeAncestors ? await loadSyncNodeVersionAncestors(port, row.version_id) : [],
     body_text: body,
     content_hash: row.content_hash,
     host_name: row.host_name,
@@ -187,49 +188,4 @@ async function storedVersionToRecord(
     record.alternative_bodies = await loadTopicTextBodies(port, record);
   }
   return record;
-}
-
-async function loadParents(port: DbPort, versionId: string) {
-  const rows = await port.query<{ parent_version_id: string }>(
-    `SELECT parent_version_id FROM node_sync_version_parents
-     WHERE version_id = ? ORDER BY ordinal ASC`,
-    [versionId]
-  );
-  if (rows.length > 0) return rows.map((row) => row.parent_version_id);
-  const [legacy] = await port.query<{ parent_version_id: string | null }>(
-    'SELECT parent_version_id FROM node_sync_versions WHERE version_id = ? LIMIT 1',
-    [versionId]
-  );
-  return legacy?.parent_version_id ? [legacy.parent_version_id] : [];
-}
-
-async function loadAncestors(port: DbPort, versionId: string) {
-  return [...(await loadAncestorDistances(port, versionId)).keys()].filter((id) => id !== versionId);
-}
-
-async function loadAncestorDistances(
-  port: DbPort,
-  versionId: string,
-  parents = new Map<string, string[]>()
-) {
-  const distances = new Map<string, number>([[versionId, 0]]);
-  const pending: Array<{ distance: number; id: string }> = [{ distance: 0, id: versionId }];
-  while (pending.length > 0) {
-    const current = pending.shift()!;
-    for (const parentId of await cachedParents(port, current.id, parents)) {
-      const distance = current.distance + 1;
-      if ((distances.get(parentId) ?? Number.POSITIVE_INFINITY) <= distance) continue;
-      distances.set(parentId, distance);
-      pending.push({ distance, id: parentId });
-    }
-  }
-  return distances;
-}
-
-async function cachedParents(port: DbPort, versionId: string, cache: Map<string, string[]>) {
-  const stored = cache.get(versionId);
-  if (stored) return stored;
-  const parents = await loadParents(port, versionId);
-  cache.set(versionId, parents);
-  return parents;
 }

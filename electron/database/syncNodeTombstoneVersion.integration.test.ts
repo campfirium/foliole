@@ -1,20 +1,27 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { deleteNodesPermanently } from '../../lib/core/database/nodePermanentDeleteMutations.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
+import { stageTextBodyContent } from '../../lib/core/sync/bodyContentWrite.js';
 import { readFramedSyncInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord, restoreFramedSyncProjectedNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { restoreFramedSyncNodeIdentityFact } from '../../lib/core/sync/framedSyncNodeRestore.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { hasCompleteVerifiedTombstoneVersion } from '../../lib/core/sync/syncNodeBodyPayloadHash.js';
 import { loadRetainedSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
 import { hasCompleteTombstoneVersion } from '../../lib/core/sync/syncNodeTombstoneVersion.js';
+import { loadVerifiedSyncNodeVersion } from '../../lib/core/sync/syncNodeVerifiedGraph.js';
+import { upsertVerifiedSyncNodeVersion } from '../../lib/core/sync/syncNodeVerifiedVersionWrite.js';
 import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
+import { readBodyText } from '../../lib/core/sync/verifiedBody.js';
 
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
 import { closeLibraries, createPeer, edit, startLibraries } from './syncEmptyLibraryTestSupport.js';
+import { nodeMetadata } from './syncNodeVerifiedTopicConflict.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -33,14 +40,26 @@ async function deletedHistory(body: string) {
   return { source, tombstone, records: [...records.values()] };
 }
 
-it.each(['', 'Original body'])('recognizes a complete original deleted version with body=%j', async (body) => {
-  const { tombstone } = await deletedHistory(body);
+it.each([
+  { label: 'empty body', body: '' }, { label: 'original body', body: 'Original body' },
+  { label: 'large escaped body', body: '\ufeff"\\\t\u0000中文😀\r\n' + 'x'.repeat(3 * 1024 * 1024) }
+])('recognizes a complete original deleted version with $label', async ({ body }) => {
+  const { source, tombstone } = await deletedHistory(body);
   expect(tombstone.body_text).toBe(body);
   expect(hasCompleteTombstoneVersion(tombstone)).toBe(true);
   expect(hasCompleteTombstoneVersion({ ...tombstone, body_text: 'Different body' })).toBe(false);
   const withoutResources = { ...tombstone.snapshot };
   delete withoutResources.resource_references;
   expect(hasCompleteTombstoneVersion({ ...tombstone, snapshot: withoutResources })).toBe(false);
+  await migrateBodyContentStorage(source.port);
+  const ref = await source.port.transaction((tx) => stageTextBodyContent(tx, body));
+  const record = { metadata: nodeMetadata(tombstone), body: { kind: 'readable' as const, ref }, alternativeBodies: [] };
+  expect(await hasCompleteVerifiedTombstoneVersion(source.port, record)).toBe(true);
+  expect(await hasCompleteVerifiedTombstoneVersion(source.port, {
+    ...record, metadata: nodeMetadata({ ...tombstone, snapshot: withoutResources })
+  })).toBe(false);
+  const other = await source.port.transaction((tx) => stageTextBodyContent(tx, 'Different body'));
+  expect(await hasCompleteVerifiedTombstoneVersion(source.port, { ...record, body: { kind: 'readable', ref: other } })).toBe(false);
 });
 
 it.each(['desktop', 'companion'])('initializes the %s original deletion body summary once without changing facts', async (host) => {
@@ -117,4 +136,29 @@ it('fills an authenticated retired deletion version without reviving its node', 
   expect((await readFramedSyncInventory(receiver.port)).find((item) => item.globalId === 'topic')
     ?.resourceHashes.map((hash) => Buffer.from(hash).toString('hex')))
     .toEqual([tombstone.snapshot.body_blob_hash]);
+});
+
+it('fills a retired deletion body through stable references and ignores an incomplete transport body', async () => {
+  const { tombstone } = await deletedHistory('Original body');
+  const receiver = createPeer('stable-receiver');
+  await migrateBodyContentStorage(receiver.port);
+  const metadata = nodeMetadata(tombstone);
+  await upsertVerifiedSyncNodeVersion(receiver.port, {
+    metadata: { ...metadata, is_tombstone: false }, body: { kind: 'retired' }, alternativeBodies: []
+  });
+  const empty = await receiver.port.transaction((tx) => stageTextBodyContent(tx, ''));
+  expect(await upsertVerifiedSyncNodeVersion(receiver.port, {
+    metadata, body: { kind: 'readable', ref: empty }, alternativeBodies: []
+  })).toBe('incomplete');
+  expect((await loadVerifiedSyncNodeVersion(receiver.port, tombstone.version_id!))?.body).toEqual({ kind: 'retired' });
+  const body = await receiver.port.transaction((tx) => stageTextBodyContent(tx, tombstone.body_text!));
+  expect(await upsertVerifiedSyncNodeVersion(receiver.port, {
+    metadata, body: { kind: 'readable', ref: body }, alternativeBodies: []
+  })).toBe('identical');
+  const restored = await loadVerifiedSyncNodeVersion(receiver.port, tombstone.version_id!);
+  if (restored?.body.kind !== 'readable') throw new Error('readable_deleted_version_required');
+  expect(await readBodyText(receiver.port, restored.body.ref)).toBe('Original body');
+  expect(receiver.db.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
+  expect(receiver.db.prepare("SELECT id FROM nodes WHERE id = 'topic'").all()).toEqual([]);
+  expect(receiver.db.prepare('SELECT COUNT(*) FROM node_sync_version_parents').pluck().get()).toBe(1);
 });
