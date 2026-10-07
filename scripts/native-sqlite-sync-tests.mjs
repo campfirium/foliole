@@ -10,6 +10,7 @@ export const controlledSyncSqliteTests = [
   'lib/core/sync/syncNodeVerifiedVersionWrite.integration.test.ts',
   'lib/core/sync/syncNodeVerifiedCurrentWrite.integration.test.ts',
   'electron/database/verifiedBodyInventory.integration.test.ts',
+  'electron/database/nodeVersionChainMetadata.integration.test.ts',
   'lib/core/sync/verifiedBody.integration.test.ts',
   'electron/database/hashSqliteByteChunks.test.ts',
   'electron/database/desktopFramedSyncOutboundSelection.test.ts',

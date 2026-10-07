@@ -6,6 +6,7 @@ import { expect, it } from 'vitest';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
+import { FRAMED_SYNC_INVENTORY_TRIGGERS } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { isRetiredAttachmentSchema } from '../../lib/core/database/retiredAttachmentSchema.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
@@ -37,6 +38,11 @@ it('adds retention state and a stable library epoch without touching desktop ver
         (version_id, object_id, host_name, created_at, content_hash, body_text, snapshot_json)
       VALUES ('original', 'node', 'local', 'now', 'hash', 'original body', '{"content":"original body"}');`);
     dropRetentionTables(sqlite);
+    // Version 105 predates inventory triggers that reference the table rebuilt by the next migration.
+    for (const statement of FRAMED_SYNC_INVENTORY_TRIGGERS) {
+      const name = /^CREATE TRIGGER IF NOT EXISTS (\w+)/u.exec(statement)![1];
+      sqlite.exec(`DROP TRIGGER ${name}`);
+    }
     for (const statement of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema)) sqlite.exec(statement);
     sqlite.pragma('user_version = 105');
 

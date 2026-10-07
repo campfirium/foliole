@@ -1,6 +1,7 @@
 import type { DbPort } from '../sync/dbPort.js';
-import { planNodeVersionChain, type ChainEdge, type ChainVersion } from '../sync/nodeVersionChainPlan.js';
-import { CHAIN_EDGES_SQL, CHAIN_VERSIONS_SQL, chainMutationStatements, chainReferencesQuery } from '../sync/nodeVersionChainSql.js';
+import { CHAIN_VERSION_METADATA_SQL } from '../sync/nodeVersionChainMetadata.js';
+import { planNodeVersionMetadataChain, type ChainEdge, type ChainVersionMetadata } from '../sync/nodeVersionChainPlan.js';
+import { CHAIN_EDGES_SQL, chainMutationStatements, chainReferencesQuery } from '../sync/nodeVersionChainSql.js';
 import { collectNodeVersionPayloads } from '../sync/nodeVersionPayloadCollector.js';
 
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
@@ -23,7 +24,7 @@ export function migrateDynamicNodeVersionChains(sqlite: DatabaseMigrationTarget)
     const refs = sqlite.prepare(query.sql).all(...query.params) as Array<{ version_id: string | null; frozen: number }>;
     const keep = new Set([node.current_version_id, ...refs.flatMap((ref) => ref.version_id ? [ref.version_id] : [])]);
     const frozen = new Set(refs.filter((ref) => ref.frozen && ref.version_id).map((ref) => ref.version_id!));
-    const plan = planNodeVersionChain(sqlite.prepare(CHAIN_VERSIONS_SQL).all(node.id) as ChainVersion[],
+    const plan = planNodeVersionMetadataChain(sqlite.prepare(CHAIN_VERSION_METADATA_SQL).all(node.id) as ChainVersionMetadata[],
       sqlite.prepare(CHAIN_EDGES_SQL).all(node.id) as ChainEdge[], keep, frozen, Number.MAX_SAFE_INTEGER, new Set([node.current_version_id]));
     for (const statement of chainMutationStatements(plan)) sqlite.prepare(statement.sql).run(...statement.params);
   }

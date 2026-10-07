@@ -2,8 +2,9 @@ import { RELEASED_VERSION_BODY_SQL, releasedVersionBodyHashes, type ReleasedVers
 import { collectTextBodyBlobCandidatesWithPort } from '../database/textBodyBlobCollection.js';
 
 import type { DbPort } from './dbPort.js';
-import { planNodeVersionChain, type ChainEdge, type ChainVersion } from './nodeVersionChainPlan.js';
-import { CHAIN_EDGES_SQL, CHAIN_HEAD_SQL, CHAIN_VERSIONS_SQL, chainMutationStatements, chainReferencesQuery } from './nodeVersionChainSql.js';
+import { CHAIN_VERSION_METADATA_SQL } from './nodeVersionChainMetadata.js';
+import { planNodeVersionMetadataChain, type ChainEdge, type ChainVersionMetadata } from './nodeVersionChainPlan.js';
+import { CHAIN_EDGES_SQL, CHAIN_HEAD_SQL, chainMutationStatements, chainReferencesQuery } from './nodeVersionChainSql.js';
 import { RETIRE_RESOLVED_NODE_POSITIONS_SQL } from './nodeVersionRetiredPositions.js';
 
 export interface NodeVersionCollectionResult {
@@ -25,7 +26,7 @@ export async function collectNodeVersionPayloads(port: DbPort, nodeId: string, l
     const refs = await tx.query<{ version_id: string | null; frozen: number }>(references.sql, references.params);
     const keep = new Set([node.current_version_id, ...refs.flatMap((row) => row.version_id ? [row.version_id] : [])]);
     const frozen = new Set(refs.filter((row) => row.frozen && row.version_id).map((row) => row.version_id!));
-    const plan = planNodeVersionChain(await tx.query<ChainVersion>(CHAIN_VERSIONS_SQL, [nodeId]),
+    const plan = planNodeVersionMetadataChain(await tx.query<ChainVersionMetadata>(CHAIN_VERSION_METADATA_SQL, [nodeId]),
       await tx.query<ChainEdge>(CHAIN_EDGES_SQL, [nodeId]), keep, frozen, limit, new Set([node.current_version_id]));
     const releasedBodies: ReleasedVersionBody[] = [];
     for (const id of plan.removed ?? []) {
