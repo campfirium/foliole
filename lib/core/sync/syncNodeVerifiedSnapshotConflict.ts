@@ -29,7 +29,7 @@ export async function resolveVerifiedSnapshotConflict(db: DbPort, incoming: read
     const body = selectedBody(base?.body.kind === 'readable' ? base.body.ref.hash : null, local, other, winner);
     const resolution = await buildVerifiedResolutionRecord(db, [local, other], winner, body.body.ref, merged.snapshot);
     const applied = await applyVerifiedSyncNodesWithDbPort(db, [resolution], {
-      enqueueSearchInvalidations: false, includeAlreadyApplied: true, operation: 'local_mutation'
+      includeAlreadyApplied: true, operation: 'local_mutation'
     });
     if (!applied.appliedIds.includes(local.metadata.object_id)) throw new Error(`sync_${kind}_resolution_not_applied:${local.metadata.object_id}`);
     current = resolution;
