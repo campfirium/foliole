@@ -22,12 +22,16 @@ export async function retireFramedSyncReadyPayloads(db: DbPort, transferId: Uint
   for (const table of ['framed_sync_inbound_facts', 'framed_sync_blob_chunks']) {
     await db.run(`DELETE FROM ${table} WHERE transfer_id = ?`, [transferId]);
   }
-  const frames = await db.query<DbRow>(`SELECT rowid AS frame_row, authenticated_plaintext
-    FROM framed_sync_inbound_frames WHERE transfer_id = ? AND frame_type = 4
-      AND length(authenticated_plaintext) != 32`, [transferId]);
-  for (const frame of frames) {
+  let after = 0;
+  for (;;) {
+    const [frame] = await db.query<DbRow>(`SELECT rowid AS frame_row, authenticated_plaintext
+      FROM framed_sync_inbound_frames WHERE transfer_id = ? AND frame_type = 4
+        AND rowid > ? AND length(authenticated_plaintext) != 32 ORDER BY rowid LIMIT 1`,
+    [transferId, after]);
+    if (!frame) return;
     if (typeof frame.frame_row !== 'number') throw new Error('framed_sync_cleanup_frame_invalid');
     await db.run('UPDATE framed_sync_inbound_frames SET authenticated_plaintext = ? WHERE rowid = ?',
       [sha256(framedSyncBytes(frame, 'authenticated_plaintext')), frame.frame_row]);
+    after = frame.frame_row;
   }
 }

@@ -152,13 +152,19 @@ export function deriveMarkdownImageTextAnchorRegions(input: {
   content: string;
   locators: Array<Pick<TextAnchorLocator, 'from' | 'to'>>;
 }) {
+  return deriveMarkdownImageTextAnchorRegionsFromTexts(input.anchorId, input.locators.map((locator) => {
+    const from = Math.max(0, Math.min(locator.from, input.content.length));
+    const to = Math.max(from, Math.min(locator.to, input.content.length));
+    return input.content.slice(from, to);
+  }));
+}
+
+export function deriveMarkdownImageTextAnchorRegionsFromTexts(anchorId: string, texts: readonly string[]) {
   const groups: MarkdownImageAnchorRegionGroup[] = [];
   let imageIndex = 0;
 
-  input.locators.forEach((locator) => {
-    const from = Math.max(0, Math.min(locator.from, input.content.length));
-    const to = Math.max(from, Math.min(locator.to, input.content.length));
-    collectMarkdownImageReferences(input.content.slice(from, to)).forEach((image) => {
+  texts.forEach((text) => {
+    collectMarkdownImageReferences(text).forEach((image) => {
       const target = parseMarkdownImageTarget(image.rawTarget);
       const storageKey = target ? parseAssetMarkdownUrl(target.destination) : null;
       const attachmentId = storageKey
@@ -167,7 +173,7 @@ export function deriveMarkdownImageTextAnchorRegions(input: {
       if (!attachmentId) {
         return;
       }
-      appendFullImageRegion(groups, attachmentId, `${input.anchorId}-image-${imageIndex}`);
+      appendFullImageRegion(groups, attachmentId, `${anchorId}-image-${imageIndex}`);
       imageIndex += 1;
     });
   });

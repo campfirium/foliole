@@ -87,8 +87,8 @@ function createBlobTransferStaging(db: DbPort) {
           failFramedSync('blob_chunk_not_admitted');
         }
         const rows = await tx.query<DbRow>(`SELECT byte_offset, data FROM framed_sync_blob_chunks
-          WHERE transfer_id = ? AND attempt_id = ? AND sha256 = ?`,
-        [input.transferId, input.attemptId, input.sha256]);
+          WHERE transfer_id = ? AND attempt_id = ? AND sha256 = ? AND byte_offset = ?`,
+        [input.transferId, input.attemptId, input.sha256, input.offset]);
         const accepted = acceptBlobChunk({
           byteLength: framedSyncBigInt(descriptor, 'byte_length'), sha256: input.sha256
         }, rows.map((row) => ({

@@ -1,4 +1,5 @@
 import type { TextAnchorLocator } from './textAnchorLocator.js';
+import { TextOccurrences } from './textOccurrences.js';
 
 const CONTEXT_WINDOW = 120;
 
@@ -18,16 +19,6 @@ function countCommonPrefix(left: string, right: string) {
     length += 1;
   }
   return length;
-}
-
-function collectOriginalTextCandidates(nextContent: string, originalText: string) {
-  const candidates: number[] = [];
-  let index = nextContent.indexOf(originalText);
-  while (index >= 0) {
-    candidates.push(index);
-    index = nextContent.indexOf(originalText, index + 1);
-  }
-  return candidates;
 }
 
 function scoreCandidate(args: {
@@ -55,25 +46,23 @@ export function resolveBestOriginalTextCandidate(args: {
   preferredIndex: number;
   previousContent: string;
 }) {
-  const candidates = collectOriginalTextCandidates(args.nextContent, args.originalText);
-  if (candidates.length === 0) {
-    return null;
-  }
-  let bestIndex = candidates[0]!;
+  if (args.originalText.length === 0) return null;
+  let candidateFrom = args.nextContent.indexOf(args.originalText);
+  if (candidateFrom < 0) return null;
+  let bestIndex = candidateFrom;
   let bestScore = Number.NEGATIVE_INFINITY;
   let tied = false;
-  candidates.forEach((candidateFrom) => {
+  while (candidateFrom >= 0) {
     const score = scoreCandidate({ ...args, candidateFrom });
     if (score > bestScore) {
       bestIndex = candidateFrom;
       bestScore = score;
       tied = false;
-      return;
-    }
-    if (score === bestScore) {
+    } else if (score === bestScore) {
       tied = true;
     }
-  });
+    candidateFrom = args.nextContent.indexOf(args.originalText, candidateFrom + 1);
+  }
   if (tied && args.nextContent.slice(args.locator.from, args.locator.to) === args.originalText) {
     bestIndex = args.locator.from;
   }
@@ -84,10 +73,11 @@ export function repairTextAnchorLocatorInContent(content: string, locator: TextA
   if (content.slice(locator.from, locator.to) === locator.originalText) {
     return locator;
   }
-  const candidates = collectOriginalTextCandidates(content, locator.originalText);
-  if (candidates.length !== 1) {
+  const occurrences = new TextOccurrences(locator.originalText);
+  occurrences.push(content);
+  if (occurrences.count !== 1 || occurrences.first === null) {
     return null;
   }
-  const from = candidates[0]!;
+  const from = occurrences.first;
   return { from, originalText: locator.originalText, to: from + locator.originalText.length };
 }

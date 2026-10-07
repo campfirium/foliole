@@ -16,6 +16,8 @@ import {
   FRAMED_SYNC_NODE_VERSION_FACT
 } from './framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeRecord } from './framedSyncNodeRestore.js';
+import type { FramedSyncNodeMetadata } from './framedSyncNodeRestore.js';
+import type { VerifiedFramedSyncNode } from './framedSyncVerifiedNode.js';
 import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
 import { projectTopicTextBodyBlobs } from './topicTextFramedBodies.js';
 
@@ -102,7 +104,7 @@ export function projectFramedSyncNodeRecord(
   return { bodyBlob, alternativeBodyBlobs, manifest: { blobs: fact.blobs, facts: [fact] } };
 }
 
-function projectNodeFact(record: NativeSyncNodeRecord, bodyHash: string | null,
+function projectNodeFact(record: FramedSyncNodeMetadata, bodyHash: string | null,
   blobs: readonly CanonicalBlob[], retired = false): CanonicalFact {
   if (!record.version_id || !record.content_hash || record.snapshot.id !== record.object_id ||
       !/^[a-f0-9]{64}$/u.test(record.content_hash)) throw new Error('node_version_projection_identity_invalid');
@@ -131,6 +133,20 @@ function projectNodeFact(record: NativeSyncNodeRecord, bodyHash: string | null,
     field('body_retired', { kind: 'bool', value: true })] } : fact;
   assertNodeVersionFactShape(result);
   return result;
+}
+
+/** The formal body identity supplies the descriptor without reading or encoding its bytes. */
+export function projectVerifiedFramedSyncNode(node: VerifiedFramedSyncNode,
+  resourceBlobs: readonly CanonicalBlob[] = []): CanonicalFact {
+  if (node.body.kind === 'retired') {
+    return projectNodeFact(node.metadata, node.metadata.snapshot.body_blob_hash ?? null, [], true);
+  }
+  const ref = node.body.ref;
+  if (node.metadata.snapshot.body_blob_hash !== ref.hash) throw new Error('node_version_projection_identity_invalid');
+  const blobs = [ref, ...node.alternativeBodies].map((body): CanonicalBlob => ({
+    byteLength: BigInt(body.byteLength), required: true, role: 1, sha256: hexToBytes(body.hash)
+  }));
+  return projectNodeFact(node.metadata, ref.hash, [...blobs, ...resourceBlobs]);
 }
 
 export function projectFramedSyncNodeIdentityFact(record: NativeSyncNodeRecord) {

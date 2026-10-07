@@ -152,6 +152,25 @@ export function restoreFramedSyncNodeIdentityFact(fact: CanonicalFact): NativeSy
   return restoreNodeFields(fact, null, null);
 }
 
+export type FramedSyncNodeMetadata = Omit<NativeSyncNodeRecord, 'body_text' | 'alternative_bodies' | 'snapshot'> & {
+  snapshot: Omit<NativeSyncNodeRecord['snapshot'], 'content'>;
+};
+
+/** Restore only the signed node/version fields. Body ownership is verified independently. */
+export function restoreFramedSyncNodeMetadata(fact: CanonicalFact): FramedSyncNodeMetadata {
+  assertNodeVersionFactShape(fact);
+  const retired = isFramedSyncNodeIdentityFact(fact);
+  const body = framedSyncMainBodyBlob(fact);
+  if (!retired && !body) throw new Error('node_version_projection_body_blob_invalid');
+  const record = restoreNodeFields(fact, retired ? null : '', body ? bytesToHex(body.sha256) : null);
+  const metadata = { ...record };
+  delete metadata.body_text;
+  delete metadata.alternative_bodies;
+  const snapshotMetadata = { ...record.snapshot };
+  delete snapshotMetadata.content;
+  return { ...metadata, snapshot: snapshotMetadata };
+}
+
 function restoreNodeFields(fact: CanonicalFact, body: string | null, bodyHash: string | null): NativeSyncNodeRecord {
   const values = fieldsByName(fact.body, body === null ? [...FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'body_retired'] :
       FRAMED_SYNC_NODE_VERSION_FACT.bodyFields,

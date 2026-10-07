@@ -1,6 +1,5 @@
 import { createReadStream } from 'node:fs';
 
-import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
@@ -31,6 +30,23 @@ function fileChunks(filePath: string) {
     for await (const chunk of createReadStream(filePath, {
       highWaterMark: FRAMED_SYNC_LIMITS.blobChunkBytes
     })) yield new Uint8Array(chunk);
+  };
+}
+
+function storedBodyChunks(db: DbPort, blob: CanonicalBlob) {
+  return async function* chunks() {
+    const hash = bytesToHex(blob.sha256);
+    for (let offset = 0; BigInt(offset) < blob.byteLength; offset += FRAMED_SYNC_LIMITS.blobChunkBytes) {
+      const limit = Number(blob.byteLength - BigInt(offset) < BigInt(FRAMED_SYNC_LIMITS.blobChunkBytes)
+        ? blob.byteLength - BigInt(offset) : BigInt(FRAMED_SYNC_LIMITS.blobChunkBytes));
+      const [row] = await db.query<{ data: Uint8Array }>(
+        'SELECT substr(data, ?, ?) AS data FROM content_blob_data WHERE hash = ?',
+        [offset + 1, limit, hash]);
+      if (!row || !(row.data instanceof Uint8Array) || row.data.byteLength !== limit) {
+        throw new Error('framed_sync_published_body_unavailable');
+      }
+      yield row.data;
+    }
   };
 }
 
@@ -80,13 +96,12 @@ export async function loadDesktopFramedSyncPublishedBlobSources(db: DbPort, mani
   for (const blob of manifest.blobs) {
     const hash = bytesToHex(blob.sha256);
     if ((blob.role === 1 || blob.role === 5)) {
-      const [row] = await db.query<{ data: Uint8Array }>(
-        'SELECT data FROM content_blob_data WHERE hash = ?', [hash]);
-      if (!row || !(row.data instanceof Uint8Array) ||
-          BigInt(row.data.byteLength) !== blob.byteLength || bytesToHex(sha256(row.data)) !== hash) {
+      const [row] = await db.query<{ size: number }>(
+        'SELECT length(data) AS size FROM content_blob_data WHERE hash = ?', [hash]);
+      if (!row || BigInt(row.size) !== blob.byteLength) {
         throw new Error('framed_sync_published_body_unavailable');
       }
-      sources.push({ blob, chunks: byteChunks(row.data) });
+      sources.push({ blob, chunks: storedBodyChunks(db, blob) });
     } else {
       const resource = resources.get(hash);
       const resolved = resource && resolveAttachmentFileForSync(resource.storageKey);
