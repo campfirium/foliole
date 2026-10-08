@@ -281,7 +281,7 @@
     "eslint-plugin-import": "^2.31.0",
     "globals": "^15.15.0",
     "jsdom": "^26.0.0",
-    "knip": "6.38.0",
+    "knip": "6.39.0",
     "playwright": "1.63.0",
     "postcss": "8.5.28",
     "postject": "1.0.0-alpha.6",
