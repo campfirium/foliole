@@ -1,11 +1,12 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { normalizeNodeImportProvenance } from '../database/nodeImportProvenance.js';
-import { projectNodeInlineContent } from '../database/nodeInlineProjection.js';
 import { parseNodeResourceReferences, serializeNodeResourceReferences } from '../database/nodeResourceReferences.js';
 import { hashTextBody } from '../database/textBodyHash.js';
 
 import type { DbParams } from './dbPort.js';
 import type { FramedSyncNodeMetadata } from './framedSyncNodeRestore.js';
+import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
+import { serializeTopicTextSnapshot } from './topicTextBodies.js';
 
 export interface SyncNodeStatement {
   params: DbParams;
@@ -94,6 +95,7 @@ export function buildRemoteNodeUpdate(
 export function buildRemoteNodeMetadataParams(record: FramedSyncNodeMetadata, bodyBlobHash: string,
   syncDirty: number, inlineContent: string): DbParams {
   const { snapshot } = record;
+  assertSyncNodeTextWithinBudget(snapshot);
   const provenance = normalizeNodeImportProvenance({
     importContentFingerprint: snapshot.import_content_fingerprint,
     importSourceFingerprint: snapshot.import_source_fingerprint
@@ -134,10 +136,11 @@ export function buildRemoteNodeMetadataParams(record: FramedSyncNodeMetadata, bo
 }
 
 function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: string, syncDirty: number): DbParams {
-  return buildRemoteNodeMetadataParams(record, bodyBlobHash, syncDirty, projectNodeInlineContent(record.snapshot.content ?? ''));
+  return buildRemoteNodeMetadataParams(record, bodyBlobHash, syncDirty, record.snapshot.content ?? '');
 }
 
 export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): SyncNodeStatement | null {
+  assertSyncNodeTextWithinBudget(record.snapshot);
   if (!record.version_id || !record.host_name || !record.version_created_at) {
     return null;
   }
@@ -151,8 +154,9 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
       record.content_hash ?? '',
       record.body_text === null && record.snapshot.content === null
         ? null : record.body_text ?? record.snapshot.content ?? '',
-      JSON.stringify({ ...record.snapshot, body_blob_hash: record.snapshot.body_blob_hash ??
-        (record.body_text !== null ? hashTextBody(record.body_text ?? record.snapshot.content ?? '') : null) })
+      serializeTopicTextSnapshot({ ...record, snapshot: { ...record.snapshot,
+        body_blob_hash: record.snapshot.body_blob_hash ??
+          (record.body_text !== null ? hashTextBody(record.body_text ?? record.snapshot.content ?? '') : null) } })
     ],
     sql: UPSERT_REMOTE_NODE_VERSION_SQL
   };

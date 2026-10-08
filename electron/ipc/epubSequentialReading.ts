@@ -40,7 +40,7 @@ function toCandidate(row: NodeReadingRow, content: string): SequentialReadingRel
   };
 }
 
-function readSequentialReadingCandidates(driver: DatabaseDriver, nodeIds: string[], hostName: string, bodyStorage: 'continuous' | 'chunked') {
+function readSequentialReadingCandidates(driver: DatabaseDriver, nodeIds: string[], hostName: string) {
   const selectNode = driver.prepare(
     `SELECT n.id AS node_id, n.priority,
             rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at,
@@ -54,7 +54,7 @@ function readSequentialReadingCandidates(driver: DatabaseDriver, nodeIds: string
   return nodeIds.flatMap((nodeId) => {
     const row = selectNode.get<NodeReadingRow & { reading_priority: number | null }>([hostName, nodeId]);
     if (!row) return [];
-    const body = loadNodeBodyResolution(driver, row.node_id, bodyStorage);
+    const body = loadNodeBodyResolution(driver, row.node_id);
     if (body?.status !== 'resolved') throw new NodeBodyUnavailableError([row.node_id]);
     return [toCandidate({ ...row, priority: row.reading_priority ?? row.priority }, body.content)];
   });
@@ -94,7 +94,6 @@ function prepareSequentialReadingStatements(driver: DatabaseDriver) {
 }
 
 export function applyEpubSequentialReadingMode(args: {
-  bodyStorage?: 'continuous' | 'chunked';
   driver: DatabaseDriver;
   importedAt: string;
   mode: SequentialReadingReleaseMode;
@@ -103,7 +102,7 @@ export function applyEpubSequentialReadingMode(args: {
 }) {
   const hostName = loadOrCreateDesktopHostName(args.importedAt);
   const statements = prepareSequentialReadingStatements(args.driver);
-  const candidates = readSequentialReadingCandidates(args.driver, args.nodeIds, hostName, args.bodyStorage ?? 'continuous');
+  const candidates = readSequentialReadingCandidates(args.driver, args.nodeIds, hostName);
   const updates = buildSequentialReadingReleaseUpdates({
     candidates,
     defaultPriority: 0,

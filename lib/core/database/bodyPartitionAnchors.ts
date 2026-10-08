@@ -11,7 +11,7 @@ function textRanges(value: string) {
   if ('from' in locator && 'to' in locator && typeof locator.from === 'number' && typeof locator.to === 'number') {
     return [{ from: locator.from, to: locator.to }];
   }
-  throw new Error('body_partition_non_text_anchor');
+  return [];
 }
 
 export function bodyAnchorRanges(value: string) {

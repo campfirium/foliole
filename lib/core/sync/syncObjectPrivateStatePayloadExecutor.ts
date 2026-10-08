@@ -2,6 +2,7 @@ import {
   assertSystemEntryDisplayNamesSettingIdentity,
   assertSystemEntryDisplayNamesSettingPayload
 } from '../../platform/systemEntryDisplayNameContract.js';
+import { resolveSettingDataPolicy } from '../database/settingDataPolicy.js';
 
 import { hasCanonicalPrivateStateContentHash } from './canonicalPrivateStateContentHash.js';
 import type { DbPort } from './dbPort.js';
@@ -19,6 +20,7 @@ export async function applySettingObject(
   if (parts.length !== 5 || parts.some((part) => !part)) throw new Error('invalid_setting_host_scope');
   const [scope, platform, formFactor, hostName, key] = parts as [string, string, string, string, string];
   const isDisplayNames = assertSystemEntryDisplayNamesSettingIdentity(record.object_id);
+  if (scope === 'user_space' && resolveSettingDataPolicy(key).ownership !== 'workspace') return false;
   if (scope !== 'user_space' && (!options.hostName || hostName !== options.hostName)) return false;
   if (record.deleted_at) {
     await port.run(

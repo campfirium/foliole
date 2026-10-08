@@ -19,7 +19,7 @@ export function applyReadwiseSourceProjection(
     driver: tx,
     nextContent: document.body,
     nodeId: row.id,
-    previousContent: requireResolvedNodeBody(row, row.id).content,
+    previousContent: requireResolvedNodeBody(row).content,
     title: row.title,
     updatedAt: now
   }).written);

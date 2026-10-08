@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
+import { isNodeTitleTruncated, NODE_TITLE_MAX_CHARS, normalizeNodeTitle } from '../nodes/nodeTitleBudget.js';
 
-import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
-import { projectNodeInlineContent } from './nodeInlineProjection.js';
 import { applyParentContentChange } from './parentContentMutation.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
+import { hashTextBody } from './textBodyHash.js';
 
 const INBOX_NODE_ID = 'special-inbox';
 
@@ -24,29 +24,26 @@ interface ExistingNodeRow {
   parent_id: string | null;
 }
 
-function escapeLikePattern(value: string) {
-  return value.replaceAll('\\', '\\\\').replaceAll('%', '\\%').replaceAll('_', '\\_');
+function resolveNextImportedTitle(driver: DatabaseDriver, desiredTitle: string, reports?: string[]) {
+  const base = normalizeNodeTitle(desiredTitle.trim() || 'Untitled');
+  let candidate = base;
+  let sequence = 1;
+  while (driver.queryOne('SELECT id FROM nodes WHERE deleted_at IS NULL AND title = ?', [candidate])) {
+    const suffix = ` ${++sequence}`;
+    let prefix = '';
+    let count = 0;
+    for (const character of base) {
+      if (++count > NODE_TITLE_MAX_CHARS - suffix.length) break;
+      prefix += character;
+    }
+    if (isNodeTitleTruncated(`${base}${suffix}`)) reports?.push('Imported topic title was shortened to 100 characters.');
+    candidate = `${prefix}${suffix}`;
+  }
+  return candidate;
 }
 
-function resolveNextImportedTitle(driver: DatabaseDriver, desiredTitle: string) {
-  const trimmedTitle = desiredTitle.trim() || 'Untitled';
-  const duplicateRows = driver.queryAll<{ title: string }>(
-    `SELECT title
-     FROM nodes
-     WHERE deleted_at IS NULL
-       AND (title = ? OR title LIKE ? ESCAPE '\\')`,
-    [trimmedTitle, `${escapeLikePattern(trimmedTitle)} %`]
-  );
-  const occupiedTitles = new Set(duplicateRows.map((row) => row.title));
-  if (!occupiedTitles.has(trimmedTitle)) {
-    return trimmedTitle;
-  }
-
-  let suffix = 2;
-  while (occupiedTitles.has(`${trimmedTitle} ${suffix}`)) {
-    suffix += 1;
-  }
-  return `${trimmedTitle} ${suffix}`;
+function reportTitleShortening(title: string, reports?: string[]) {
+  if (isNodeTitleTruncated(title)) reports?.push('Imported topic title was shortened to 100 characters.');
 }
 
 function ensureInboxNode(driver: DatabaseDriver, importedAt: string) {
@@ -70,15 +67,17 @@ export function writeNewNode(input: {
   importedAt: string;
   targetParentNodeId?: string | null;
   title: string;
+  budgetFailures?: string[];
 }) {
   const parentNodeId = input.targetParentNodeId || INBOX_NODE_ID;
   if (parentNodeId === INBOX_NODE_ID) {
     ensureInboxNode(input.driver, input.importedAt);
   }
   const nodeId = `node-${randomUUID()}`;
-  const resolvedTitle = resolveNextImportedTitle(input.driver, input.title);
+  const resolvedTitle = resolveNextImportedTitle(input.driver, input.title, input.budgetFailures);
+  reportTitleShortening(input.title, input.budgetFailures);
   const openingText = resolveNodeOpeningText(input.content, resolvedTitle);
-  const bodyBlobHash = upsertTextBodyBlob(input.driver, input.content, input.importedAt);
+  const bodyBlobHash = hashTextBody(input.content);
   input.driver.execute(
     `INSERT INTO nodes (
      id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
@@ -89,7 +88,7 @@ export function writeNewNode(input: {
       parentNodeId,
       resolvedTitle,
       input.hideTitleHeading ? 1 : 0,
-      projectNodeInlineContent(input.content),
+      input.content,
       bodyBlobHash,
       openingText,
       input.importedAt,
@@ -107,13 +106,17 @@ export function updateExistingNode(input: {
   hideTitleHeading: boolean;
   importedAt: string;
   title: string;
+  budgetFailures?: string[];
 }) {
+  const stored = input.driver.queryOne<{ title: string }>('SELECT title FROM nodes WHERE id = ?', [input.existingNode.id]);
+  const title = stored?.title === input.title ? input.title : normalizeNodeTitle(input.title);
+  if (title !== input.title) reportTitleShortening(input.title, input.budgetFailures);
   input.driver.execute(
     `UPDATE nodes
      SET kind = 'topic', title = ?, is_title_manual = 1, hide_title_heading = ?, updated_at = ?, deleted_at = NULL
      WHERE id = ?`,
     [
-      input.title,
+      title,
       input.hideTitleHeading ? 1 : 0,
       input.importedAt,
       input.existingNode.id
@@ -124,7 +127,7 @@ export function updateExistingNode(input: {
     nextContent: input.content,
     nodeId: input.existingNode.id,
     previousContent: input.existingNode.content,
-    title: input.title,
+    title,
     updatedAt: input.importedAt
   });
   if (!contentChange.written) {

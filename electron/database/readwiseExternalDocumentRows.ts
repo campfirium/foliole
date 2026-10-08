@@ -53,9 +53,9 @@ export function readReadwiseExternalDocumentRows(folderId?: string) {
   return openDatabaseConnection().sqlite
     .prepare(
       `SELECT document_id, folder_id, relative_path, file_name, extension, source_modified_at,
-              CASE WHEN d.body_blob_hash IS NULL THEN d.content ELSE CAST(cbd.data AS TEXT) END AS content,
+              d.content,
               title, opening_text, reference_kind, reference_json, updated_at
-       FROM external_documents d LEFT JOIN content_blob_data cbd ON cbd.hash = d.body_blob_hash
+       FROM external_documents d
        WHERE is_present = 1
          AND folder_id LIKE '${READWISE_EXTERNAL_FOLDER_PREFIX}-%'
          ${filter}

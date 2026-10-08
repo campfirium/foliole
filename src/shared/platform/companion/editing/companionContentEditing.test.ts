@@ -7,6 +7,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers';
+import { NODE_TEXT_MAX_BYTES } from '../../../../../lib/core/nodes/nodeTextBudget';
 import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor';
 import { createFakeCapacitorConnection, installCompanionNodeSchema } from '../../companionSyncNodeVersionsTestSupport';
 import { CapacitorCompanionDatabaseOwner } from '../runtime/capacitorCompanionDatabaseOwner';
@@ -71,10 +72,9 @@ it.each(['android', 'ios'])('%s retains complete input branches and persists the
   await readCompanionContentSource('topic', 'editor-session');
   await insert(node({ content: 'Apples\nBread\nMilk coffee\n', currentVersionId: 'base' }), 'remote');
   const first = await saveCompanionContentEdit(edit('Apples tea\nBread\nMilk\n'));
-  const alternatives = database.prepare(`SELECT CAST(body.data AS TEXT) AS content FROM nodes n
+  const alternatives = database.prepare(`SELECT json_extract(body.value, '$.text') AS content FROM nodes n
     JOIN node_sync_versions version ON version.version_id = n.current_version_id,
-    json_each(version.snapshot_json, '$.text_alternatives') alternative
-    JOIN content_blob_data body ON body.hash = json_extract(alternative.value, '$.body_blob_hash')
+    json_each(version.snapshot_json, '$.text_alternative_bodies') body
     WHERE n.id = 'topic'`).all() as { content: string }[];
   expect([first.content, ...alternatives.map((entry) => entry.content)].sort())
     .toEqual(['Apples tea\nBread\nMilk\n', 'Apples\nBread\nMilk coffee\n'].sort());
@@ -82,8 +82,7 @@ it.each(['android', 'ios'])('%s retains complete input branches and persists the
   await state.owner!.close();
   database.close();
   database = new Database(path.join(directory, 'companion.db'));
-  expect(database.prepare(`SELECT CAST(data.data AS TEXT) AS content FROM nodes n
-    JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`).get('topic')).toEqual({
+  expect(database.prepare(`SELECT content FROM nodes WHERE id = ?`).get('topic')).toEqual({
     content: second.content
   });
 });
@@ -157,10 +156,9 @@ it('retains overlapping input as current content or an existing text alternative
   await readCompanionContentSource('topic', 'editor-session');
   await insert(node({ content: 'Apples coffee\nBread\nMilk\n', currentVersionId: 'base' }), 'remote');
   const saved = await saveCompanionContentEdit(edit('Apples tea\nBread\nMilk\n'));
-  const rows = database.prepare(`SELECT CAST(body.data AS TEXT) AS body_text FROM nodes n
+  const rows = database.prepare(`SELECT json_extract(body.value, '$.text') AS body_text FROM nodes n
     JOIN node_sync_versions version ON version.version_id = n.current_version_id,
-    json_each(version.snapshot_json, '$.text_alternatives') alternative
-    JOIN content_blob_data body ON body.hash = json_extract(alternative.value, '$.body_blob_hash')
+    json_each(version.snapshot_json, '$.text_alternative_bodies') body
     WHERE n.id = 'topic'`).all() as { body_text: string }[];
   expect([saved.content, ...rows.map((row) => row.body_text)]).toEqual(expect.arrayContaining([
     'Apples coffee\nBread\nMilk\n', 'Apples tea\nBread\nMilk\n'
@@ -203,8 +201,7 @@ it('rejects an input whose parent was moved to trash before the writer ran', asy
   database.prepare('UPDATE nodes SET parent_id = ? WHERE id = ?').run('folder', 'topic');
   database.prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?').run(now, 'folder');
   await expect(saveCompanionContentEdit(edit('Protected draft'))).rejects.toThrow('cannot be edited');
-  expect(database.prepare(`SELECT CAST(data.data AS TEXT) AS content FROM nodes n
-    JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`).get('topic'))
+  expect(database.prepare(`SELECT content FROM nodes WHERE id = ?`).get('topic'))
     .toEqual({ content: baseline });
 });
 
@@ -228,4 +225,15 @@ it('rejects reading editable content below a trashed ancestor', async () => {
   database.prepare('UPDATE nodes SET parent_id = ? WHERE id = ?').run('folder', 'topic');
   database.prepare('UPDATE nodes SET deleted_at = ? WHERE id = ?').run(now, 'folder');
   await expect(readCompanionContentSource('topic')).rejects.toThrow('cannot be edited');
+});
+
+it('rejects an oversized annotation edit before changing database facts', async () => {
+  await insert(node({ currentVersionId: 'base', anchorLink: { id: 'link', kind: 'highlight',
+    locator: { from: 0, to: 6, originalText: 'Apples' } } }), 'annotation-base');
+  const before = database.prepare('SELECT * FROM nodes ORDER BY id').all();
+  const versions = database.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  await expect(saveCompanionContentEdit(edit('雪'.repeat(Math.floor(NODE_TEXT_MAX_BYTES / 3) + 1), 'oversized', 'annotation-base')))
+    .rejects.toThrow('node_text_too_large:content');
+  expect(database.prepare('SELECT * FROM nodes ORDER BY id').all()).toEqual(before);
+  expect(database.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(versions);
 });

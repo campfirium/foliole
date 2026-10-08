@@ -1,4 +1,3 @@
-import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
 
 const SPECIAL_ROOT_NODE_RECORDS = {
@@ -18,41 +17,37 @@ export function specialRootNodeDefinition(nodeId: string) {
   return isSpecialRootNode(nodeId) ? SPECIAL_ROOT_NODE_RECORDS[nodeId] : null;
 }
 
-function ensureSpecialRootNode(driver: DatabaseDriver, nodeId: SpecialRootNodeId, updatedAt: string,
-  storage: 'continuous' | 'chunked') {
+function ensureSpecialRootNode(driver: DatabaseDriver, nodeId: SpecialRootNodeId, updatedAt: string) {
   const existingNode = driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [nodeId]);
   if (existingNode) {
     return;
   }
-  const hash = storage === 'chunked' ? upsertTextBodyBlob(driver, '', updatedAt, storage) : null;
   driver.execute(
     `INSERT INTO nodes (
        id, parent_id, kind, priority, desired_retention, title, is_title_manual, hide_title_heading,
        content, body_blob_hash, opening_text, virtual_filter, reveal, anchor_link, image_regions, created_at, updated_at, deleted_at
      ) VALUES (?, NULL, 'folder', NULL, NULL, ?, 1, 0, '', ?, NULL, NULL, NULL, NULL, NULL, ?, ?, NULL)`,
-    [nodeId, SPECIAL_ROOT_NODE_RECORDS[nodeId].title, hash, updatedAt, updatedAt]
+    [nodeId, SPECIAL_ROOT_NODE_RECORDS[nodeId].title, null, updatedAt, updatedAt]
   );
 }
 
 export function ensureSpecialRootNodesForInput(
   driver: DatabaseDriver,
-  input: { nodeId: string; parentNodeId: string | null; updatedAt: string },
-  storage: 'continuous' | 'chunked' = 'continuous'
+  input: { nodeId: string; parentNodeId: string | null; updatedAt: string }
 ) {
   if (isSpecialRootNode(input.nodeId)) {
-    ensureSpecialRootNode(driver, input.nodeId, input.updatedAt, storage);
+    ensureSpecialRootNode(driver, input.nodeId, input.updatedAt);
   }
   if (input.parentNodeId && isSpecialRootNode(input.parentNodeId)) {
-    ensureSpecialRootNode(driver, input.parentNodeId, input.updatedAt, storage);
+    ensureSpecialRootNode(driver, input.parentNodeId, input.updatedAt);
   }
 }
 
-export function ensureSpecialRootNodesForOrder(driver: DatabaseDriver, nodeIds: string[],
-  storage: 'continuous' | 'chunked' = 'continuous') {
+export function ensureSpecialRootNodesForOrder(driver: DatabaseDriver, nodeIds: string[]) {
   const updatedAt = new Date().toISOString();
   for (const nodeId of nodeIds) {
     if (isSpecialRootNode(nodeId)) {
-      ensureSpecialRootNode(driver, nodeId, updatedAt, storage);
+      ensureSpecialRootNode(driver, nodeId, updatedAt);
     }
   }
 }

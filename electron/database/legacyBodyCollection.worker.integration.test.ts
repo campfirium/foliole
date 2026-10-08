@@ -33,7 +33,6 @@ it('rechecks newly saved and in-flight pack holders in real workers while two in
     .run('retained-history', 'topic', oldVersion, 'now');
   const soonHeld = upsertTextBodyBlob(source.driver, 'Saved while worker is starting', 'now');
   const garbage = upsertTextBodyBlob(source.driver, 'Garbage fixture', 'now');
-  runLegacyBodyCollectionBatch({ driver: source.driver, sqlite: source.db }, 32);
   let saved!: () => void;
   const savedDuringWorker = new Promise<void>((resolve) => { saved = resolve; });
   onWorkerOnline = () => { edit(source, 'Saved while worker is starting'); onWorkerOnline = null; saved(); };

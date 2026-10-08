@@ -44,7 +44,7 @@ function prepared(content: string, minute = 0) {
 
 function storedBody(id: string) {
   const body = loadNodeBodyResolution(openDatabaseConnection().driver, id);
-  if (!body || body.status === 'unavailable') throw new Error('fixture_body_missing');
+  if (!body) throw new Error('fixture_body_missing');
   return body.content;
 }
 

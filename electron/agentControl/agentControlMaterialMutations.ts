@@ -204,7 +204,7 @@ function toUpsertInput(
 }
 
 function readRowContent(row: MaterialSnapshotRow) {
-  return requireResolvedNodeBody(row, row.id).content;
+  return requireResolvedNodeBody(row).content;
 }
 
 function toOptionalBoolean(value: number | null) {

@@ -13,7 +13,7 @@ export async function loadVerifiedExistingSyncPackVersions(port: DbPort, alias: 
 export async function rehydrateStoredVersionBodies(port: DbPort, alias: string) {
   await port.run(
     `UPDATE main.node_sync_versions AS stored SET
-       body_text = ${versionBodySql('incoming')}, snapshot_json = json_remove(incoming.snapshot_json, '$.text_alternative_bodies')
+       body_text = ${versionBodySql('incoming')}, snapshot_json = incoming.snapshot_json
      FROM ${alias}.node_sync_versions AS incoming
      WHERE stored.version_id = incoming.version_id
        AND ${eligiblePackVersion('incoming', alias)}

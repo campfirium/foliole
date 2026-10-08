@@ -6,16 +6,14 @@ import {
 
 import { loadCompanionSearchSnapshot } from './companion/runtime/companionSearchSnapshot';
 import { loadCompanionWorkspaceNode } from './companion/runtime/companionWorkspaceNodeStore';
-import { loadIosSyncIndex, loadIosSyncObjects, searchIosTopics } from './companion/runtime/iosCompanionActiveDatabaseReads';
+import { searchIosTopics } from './companion/runtime/iosCompanionActiveDatabaseReads';
 import { normalizeExternalDocumentSearchResult, searchCompanionExternalDocuments } from './companionExternalDocuments';
 import { searchCompanionPdfPageText } from './companionSyncObjects';
 import {
   isNativeCompanionExternalDocumentSearchRuntime,
-  isNativeCompanionSyncObjectReadRuntime,
   isNativeCompanionTopicSearchRuntime
 } from './companionWorkspaceRuntimeRepository';
-
-const APP_SETTINGS_KEY = 'app_settings';
+import { getWhitelistedLocalStorageItem } from './storage';
 
 export interface CompanionTopicSearchResult {
   bodyStatus: 'empty' | 'failed' | 'fetching' | 'missing' | 'ready';
@@ -32,11 +30,6 @@ export interface CompanionFullTextSearchResults {
   pdf: Awaited<ReturnType<typeof searchCompanionPdfPageText>>;
   strategy: FullTextSearchIndexStrategy;
   topics: CompanionTopicSearchResult[];
-}
-
-interface SyncSettingPayload {
-  key?: string;
-  value_json?: string;
 }
 
 interface NativeTopicSearchResult {
@@ -95,20 +88,9 @@ async function loadCompanionFullTextSearchStrategyOrDefault() {
 }
 
 export async function loadCompanionFullTextSearchStrategy() {
-  if (!isNativeCompanionSyncObjectReadRuntime()) {
-    return normalizeFullTextSearchIndexStrategy(null);
-  }
-  const index = { entries: await loadIosSyncIndex() };
-  const settingObjectIds = index.entries
-    .filter((entry) => entry.object_type === 'setting' && entry.object_id.endsWith(`:${APP_SETTINGS_KEY}`))
-    .map((entry) => entry.object_id);
-  if (settingObjectIds.length === 0) return normalizeFullTextSearchIndexStrategy(null);
-  const objects = { objects: await loadIosSyncObjects(settingObjectIds, ['setting']) };
-  const settings = objects.objects
-    .map((object) => parseSettingPayload(object.payload_json))
-    .filter((payload): payload is SyncSettingPayload => Boolean(payload?.key === APP_SETTINGS_KEY && payload.value_json))
-    .at(-1);
-  return normalizeFullTextSearchIndexStrategy(parseAppSettings(settings?.value_json)?.[FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]);
+  return normalizeFullTextSearchIndexStrategy(
+    getWhitelistedLocalStorageItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY)
+  );
 }
 
 async function searchCompanionTopics(query: string, limit?: number, offset = 0) {
@@ -133,25 +115,6 @@ function toCompanionTopicSearchResult(result: NativeTopicSearchResult): Companio
 function normalizeBodyStatus(status: NativeTopicSearchResult['content_status']): CompanionTopicSearchResult['bodyStatus'] {
   return status === 'empty' || status === 'failed' || status === 'fetching' || status === 'missing' ? status : 'ready';
 }
-
-function parseSettingPayload(payloadJson: string | null): SyncSettingPayload | null {
-  if (!payloadJson) return null;
-  try {
-    return JSON.parse(payloadJson) as SyncSettingPayload;
-  } catch {
-    return null;
-  }
-}
-
-function parseAppSettings(valueJson: string | undefined): Record<string, unknown> | null {
-  if (!valueJson) return null;
-  try {
-    return JSON.parse(valueJson) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
 
 export async function isCompanionSearchTopicAvailable(nodeId: string) {
   if (!isNativeCompanionTopicSearchRuntime()) return false;

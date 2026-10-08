@@ -11,8 +11,6 @@ vi.mock('../ipc/paths.js', () => ({ resolveAppPaths: () => ({
   app_config_dir: path.join(appData, 'config'), app_log_dir: path.join(appData, 'logs')
 }) }));
 
-import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
-import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { closeExternalSearchCacheDatabase } from '../database/externalSearchCacheDatabase.js';
 import { initializeDatabase } from '../database/migrate.js';
@@ -143,16 +141,16 @@ it('restores article sources from a consistent SQLite backup', async () => {
   expect(loadWorkspaceNodeDocument('article')).toMatchObject({ content, imageSources: { [imported.storage_key]: sourceUrl } });
 });
 
-it('uses explicitly chunked article text and refuses missing bodies during recovery', async () => {
+it('recovers from the owned article body without legacy caches and rejects stale renderer content', async () => {
   const { imported, content } = await localized();
   const args = { nodeId: 'article', sourceUrl: '', recoverStorageKey: imported.storage_key, expectedContent: content };
   const expected = await recoverArticleImageAttachment(args);
-  const { sqlite, driver } = openDatabaseConnection();
-  await migrateBodyContentStorage(createBetterSqliteDbPort(sqlite));
+  const { sqlite } = openDatabaseConnection();
+  sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
   transport.mockClear();
-  expect(await recoverArticleImageAttachment(args, 'chunked')).toEqual(expected);
-  const hash = driver.queryOne<{ body_blob_hash: string }>("SELECT body_blob_hash FROM nodes WHERE id = 'article'")?.body_blob_hash;
-  sqlite.prepare('DELETE FROM content_bodies WHERE hash = ?').run(hash);
-  expect(await recoverArticleImageAttachment(args, 'chunked')).toMatchObject({ status: 'error', error_code: 'source_not_found' });
+  expect(await recoverArticleImageAttachment(args)).toEqual(expected);
+  saveNode('article', `${content}\nChanged after renderer read`);
+  expect(await recoverArticleImageAttachment(args)).toMatchObject({ status: 'error', error_code: 'source_not_found' });
   expect(transport).not.toHaveBeenCalled();
+  expect(loadWorkspaceNodeDocument('article')?.content).toBe(`${content}\nChanged after renderer read`);
 });

@@ -1,7 +1,7 @@
 import { parseStoredAnchorLink, type StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { findUniqueAvailableImportedBodyOccurrence } from '../../lib/core/database/importHighlightBodyMatching.js';
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
 export interface ReadwiseSourceLocalAnchor extends DatabaseRow {
@@ -32,13 +32,9 @@ export function relocateReadwiseSourceLocalAnchors(input: {
   rootNodeId: string;
 }) {
   const driver = openDatabaseConnection().driver;
-  const body = driver.queryOne<NodeBodyRow>(
-    `SELECT n.content, n.body_blob_hash, cbd.data body_blob_data FROM nodes n
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`,
-    [input.rootNodeId]
-  );
+  const body = loadNodeBodyResolution(driver, input.rootNodeId);
   if (!body) throw new Error('readwise_resync_root_missing');
-  const content = requireResolvedNodeBody(body, input.rootNodeId).content;
+  const content = body.content;
   for (const row of input.localAnchors) {
     const current = driver.queryOne<{ id: string }>(
       'SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL', [row.id]

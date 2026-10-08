@@ -1,5 +1,5 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import { NodeBodyUnavailableError, resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { parseNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
 import { collectArticleImageStorageKeys } from '../../lib/core/import/replaceArticleImageSource.js';
 import { buildCanonicalAttachmentStorageKey, parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
@@ -26,23 +26,20 @@ interface AttachmentCleanupPlan {
 
 function collectNodeKeys(rows: NodeResourcesRow[]) {
   const keys = new Set<string>();
-  const unavailable: string[] = [];
   for (const row of rows) {
     const body = resolveNodeBody(row);
-    if (body.status === 'unavailable') unavailable.push(row.id);
-    else for (const key of collectArticleImageStorageKeys(body.content)) keys.add(key);
+    for (const key of collectArticleImageStorageKeys(body.content)) keys.add(key);
     for (const reference of parseNodeResourceReferences(row.resource_references)) {
       if (reference.role === 'reference') keys.add(reference.storage_key);
     }
   }
-  if (unavailable.length) throw new NodeBodyUnavailableError(unavailable);
   return keys;
 }
 
 export function createAttachmentCleanupPlan(nodeIds: string[]): AttachmentCleanupPlan {
   const rows = openDatabaseConnection().driver.queryAll<NodeResourcesRow>(
-    `SELECT n.id, n.content, n.body_blob_hash, n.resource_references, cbd.data AS body_blob_data
-     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash`
+    `SELECT n.id, n.content, n.body_blob_hash, n.resource_references
+     FROM nodes n`
   );
   const removed = new Set(nodeIds);
   const candidates = collectNodeKeys(rows.filter((row) => removed.has(row.id)));

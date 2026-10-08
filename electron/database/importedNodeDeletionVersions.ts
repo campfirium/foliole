@@ -12,7 +12,7 @@ export function prepareImportedNodeDeletionVersions(driver: DatabaseDriver, node
     if (!versioned) continue;
     driver.execute(`UPDATE nodes SET deleted_at = ?, updated_at = ?, last_modified_by_host_name = ?, sync_dirty = 1
       WHERE id = ?`, [deletedAt, deletedAt, hostName, nodeId]);
-    if (!flushNodeSyncVersionWithDriver(driver, nodeId, hostName, deletedAt)) {
+    if (!flushNodeSyncVersionWithDriver(driver, nodeId, hostName, deletedAt, undefined)) {
       throw new Error('imported_node_deletion_body_unavailable');
     }
   }

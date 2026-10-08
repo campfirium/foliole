@@ -154,7 +154,7 @@ export function readCollectionVirtualFolderTopics(name: string) {
 }
 
 export function readTopicContent(row: Pick<AgentVirtualFolderTopicRow, 'body_blob_data' | 'body_blob_hash' | 'content' | 'id'>) {
-  return requireResolvedNodeBody(row, row.id).content;
+  return requireResolvedNodeBody(row).content;
 }
 
 function orderedMemberTopics(folder: FolderRow, rows: AgentVirtualFolderTopicRow[]) {

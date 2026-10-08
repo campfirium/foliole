@@ -28,8 +28,7 @@ export const NODE_SEARCH_INSERT_AFFECTED_SQL = `${NODE_PATHS_CTE_SQL}
   FROM nodes n
   LEFT JOIN node_paths paths
     ON paths.node_id = n.id
-  LEFT JOIN content_blob_data cbd
-    ON cbd.hash = n.body_blob_hash
+
   WHERE n.id IN (SELECT id FROM temp_workspace_search_affected_ids)
 
     AND paths.node_id IS NOT NULL`;
@@ -63,8 +62,7 @@ export const NODE_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
   FROM nodes n
   LEFT JOIN node_paths paths
     ON paths.node_id = n.id
-  LEFT JOIN content_blob_data cbd
-    ON cbd.hash = n.body_blob_hash`;
+`;
 
 export const PDF_SEARCH_REBUILD_SQL = `${NODE_PATHS_CTE_SQL}
   INSERT INTO search.pdf_search (title, path, text, node_id, attachment_id, page, updated_at, page_text_length, is_trashed)

@@ -184,7 +184,7 @@ it('keeps image excerpt regions byte-for-byte while relocating the image occurre
   expect(child.image_regions).toBe(imageRegions);
 });
 
-it('uses Blob-only parent content when remapping anchors', () => {
+it('uses node-owned parent content without requiring the retired body blob when remapping anchors', () => {
   const previousContent = 'Lead\n\nTarget sentence.';
   seedNode({ content: previousContent, nodeId: 'node-parent', parentNodeId: null });
   seedNode({
@@ -198,7 +198,7 @@ it('uses Blob-only parent content when remapping anchors', () => {
     },
     content: 'Target sentence.', nodeId: 'node-child', parentNodeId: 'node-parent'
   });
-  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', 'node-parent']);
+  openDatabaseConnection().driver.execute('DELETE FROM content_blob_data');
 
   applyParentContentChange({
     driver: openDatabaseConnection().driver,
@@ -211,24 +211,19 @@ it('uses Blob-only parent content when remapping anchors', () => {
   expect(locator.from).toBe('Intro\nLead\n\n'.length);
 });
 
-it('does not rewrite a parent or anchors when its Blob is unavailable', () => {
+it('does not rewrite original nodes or anchors when the requested parent is missing', () => {
   seedNode({ content: 'Authority', nodeId: 'node-parent', parentNodeId: null });
   seedNode({
     anchorLink: { id: 'anchor-missing', kind: 'highlight', locator: { from: 0, originalText: 'Authority', to: 9 } },
     content: 'Authority', nodeId: 'node-child', parentNodeId: 'node-parent'
   });
   const connection = openDatabaseConnection();
-  const hash = connection.driver.queryOne<{ body_blob_hash: string }>(
-    'SELECT body_blob_hash FROM nodes WHERE id = ?', ['node-parent']
-  )?.body_blob_hash ?? '';
-  connection.driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['stale inline', 'node-parent']);
-  connection.driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
   const before = readNode('node-child').anchor_link;
 
   expect(() => applyParentContentChange({
-    driver: connection.driver, nextContent: 'Replacement', nodeId: 'node-parent', updatedAt: '2026-05-13T00:00:01.000Z'
-  })).toThrow(`node_body_unavailable:node-parent`);
+    driver: connection.driver, nextContent: 'Replacement', nodeId: 'missing-parent', updatedAt: '2026-05-13T00:00:01.000Z'
+  })).toThrow('node_body_target_missing');
   expect(connection.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('node-parent'))
-    .toBe('stale inline');
+    .toBe('Authority');
   expect(readNode('node-child').anchor_link).toBe(before);
 });

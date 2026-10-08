@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
+import { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import { clearAttachmentLibraryPathSnapshot } from '../attachments/attachmentLibraryPathSnapshot.js';
 import { resolveBootstrapLibraryPaths } from '../ipc/libraryPathBootstrap.js';
 import { assertLibraryHomeMigrationCanOpenDatabase } from '../ipc/libraryPathMigrationRuntime.js';
@@ -10,6 +11,7 @@ import { ensureLibraryPathLayout } from '../ipc/libraryPaths.js';
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { migrateDatabaseFileNames, type DatabaseFileNameMigrationResult } from './databaseFileNameMigration.js';
 import { resolveSearchDatabasePath as resolveSearchDatabasePathFromDatabasePath } from './databaseFilePaths.js';
+import { bindFramedSyncPayloadBudget } from './framedSyncPayloadBudgetOwner.js';
 import { guardBetterSqliteDatabase } from './guardedBetterSqliteDatabase.js';
 import { SqliteConnectionCoordinator } from './sqliteConnectionCoordinator.js';
 
@@ -23,6 +25,7 @@ export interface DatabaseConnection {
   sqlite: SqliteDatabase;
   dbPath: string;
   searchDbPath: string;
+  framedSyncPayloadBudget: FramedSyncPayloadBudget;
 }
 
 interface OpenDatabaseConnectionOptions {
@@ -93,11 +96,15 @@ export function openDatabaseConnection(options: OpenDatabaseConnectionOptions = 
   attachSearchDatabase(rawSqlite, searchDbPath);
   const sqlite = guardBetterSqliteDatabase(rawSqlite, mainDatabaseCoordinator);
 
+  const framedSyncPayloadBudget = new FramedSyncPayloadBudget();
+  bindFramedSyncPayloadBudget(rawSqlite, framedSyncPayloadBudget);
+  bindFramedSyncPayloadBudget(sqlite, framedSyncPayloadBudget);
   cachedConnection = {
     driver: createBetterSqlite3Driver(sqlite),
     sqlite,
     dbPath,
-    searchDbPath
+    searchDbPath,
+    framedSyncPayloadBudget
   };
   return cachedConnection;
 }
@@ -123,6 +130,8 @@ export function enableDatabaseWriteAheadLog(connection: DatabaseConnection) {
 }
 
 export function closeDatabaseConnection() {
+  mainDatabaseCoordinator.assertCanClose();
+  cachedConnection?.framedSyncPayloadBudget.close();
   clearAttachmentLibraryPathSnapshot();
   for (const callback of connectionCleanupCallbacks) {
     callback();

@@ -13,11 +13,10 @@ export async function ensureReadwiseApiCandidateIndex(
   connectionRef: string,
   dependencies: ReadwiseApiFetchDependencies = {},
   purpose: ReadwiseApiScopePurpose = 'api',
-  onIndexProgress?: (processed: number) => void
+  onIndexProgress: ((processed: number) => void) | undefined = undefined
 ) {
   await runWithDatabaseConnectionOwner(() => assertReadwiseApiScopeAllowed(purpose));
-  await buildReadwiseApiCandidateIndex({
-    connectionRef, dependencies, includeParentContent: false,
+  await buildReadwiseApiCandidateIndex({ connectionRef, dependencies, includeParentContent: false,
     ...(onIndexProgress ? { onProgress: onIndexProgress } : {}), settings
   });
   return runWithDatabaseConnectionOwner(() => loadReadwiseApiCandidates(connectionRef));

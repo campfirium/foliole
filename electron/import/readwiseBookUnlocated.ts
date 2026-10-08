@@ -26,7 +26,7 @@ export function ensureReadwiseUnlocatedNode(input: {
     reveal: null,
     title: '※',
     updatedAt: input.importedAt
-  });
+  }, {  });
   return nodeId;
 }
 

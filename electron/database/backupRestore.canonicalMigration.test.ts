@@ -46,7 +46,7 @@ it('restores v127 legacy storage and duplicate previews through the normal backu
   const order = db.prepare('SELECT * FROM parent_child_order ORDER BY parent_id').all();
   const backupPath = path.join(tempRoot, 'legacy-cache.db');
   await db.backup(backupPath);
-  initializeDatabase();
+  await initializeDatabase();
   await restoreApplicationDatabaseBackup({ sourcePath: backupPath });
   const restored = openDatabaseConnection().sqlite;
   expect(restored.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
@@ -67,7 +67,7 @@ it('restores v127 legacy storage and duplicate previews through the normal backu
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-restore-canonical-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
+  await initializeDatabase();
 });
 
 afterEach(async () => {
@@ -83,6 +83,7 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
   const connection = openDatabaseConnection();
   const assetsDir = path.join(mockedAppDataDir, 'Foliole', 'Assets');
 
+  removeLaterInventoryTriggers();
   connection.sqlite.exec(`CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY,
     content_hash TEXT, storage_key TEXT, size_bytes INTEGER, mime_type TEXT, availability TEXT, created_at TEXT);
     PRAGMA user_version = 97;`);
@@ -94,7 +95,7 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
   prepareLegacyOrder();
   const backupPath = path.join(tempRoot, 'pre-retirement.db');
   await connection.sqlite.backup(backupPath);
-  initializeDatabase();
+  await initializeDatabase();
   expect(readRetiredTable()).toBeUndefined();
   expect(readBody()).toContain(`asset://${hash}.jpg`);
   expect(readResourceReferences()).toEqual([{ storage_key: `${hash}.jpg`, role: 'image', original_name: 'legacy.jpg' }]);
@@ -105,7 +106,7 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
   await expect(fs.readFile(path.join(assetsDir, `${hash}.jpg`))).resolves.toEqual(bytes);
   expect((await fs.readdir(assetsDir)).sort()).toEqual([...new Set([`${hash}.jpg`, existingName])].sort());
   await expect(fs.readFile(path.join(assetsDir, existingName))).resolves.toEqual(bytes);
-  initializeDatabase();
+  await initializeDatabase();
   expect(readRetiredTable()).toBeUndefined();
   expect(readBody()).toContain(`asset://${hash}.jpg`);
   const versions = openDatabaseConnection().sqlite.prepare(
@@ -126,6 +127,13 @@ function prepareLegacyOrder() {
     DELETE FROM sync_object_state WHERE object_type = 'parent_child_order';`);
   const insert = sqlite.prepare('INSERT INTO node_order (node_id, position) VALUES (?, ?)');
   nodeOrder.forEach((id, position) => insert.run(id, position));
+}
+
+function removeLaterInventoryTriggers() {
+  const sqlite = openDatabaseConnection().sqlite;
+  const triggers = sqlite.prepare<[], { name: string }>(
+    "SELECT name FROM sqlite_master WHERE type = 'trigger' AND name GLOB 'trg_framed_inventory_*'").all();
+  for (const { name } of triggers) sqlite.exec(`DROP TRIGGER "${name}"`);
 }
 
 function seedLegacyAttachment(hash: string, sizeBytes: number, storageKey: string) {
@@ -161,10 +169,9 @@ function readResourceReferences() {
 }
 
 function readBody() {
-  const row = openDatabaseConnection().sqlite.prepare(`SELECT cbd.data
-    FROM nodes n JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-    WHERE n.id = 'node-legacy'`).get() as { data: Buffer };
-  return row.data.toString('utf8');
+  const row = openDatabaseConnection().sqlite.prepare(`SELECT content
+    FROM nodes WHERE id = 'node-legacy'`).get() as { content: string };
+  return row.content;
 }
 
 it.each([false, true])('rejects unsupported backups even with startup schema skip=%s', async (skipSchema) => {
@@ -192,6 +199,7 @@ it('rolls back when the required canonical attachment contains different bytes',
   seedCurrentTopic();
   const bytes = Buffer.from('original attachment');
   const hash = createHash('sha256').update(bytes).digest('hex');
+  removeLaterInventoryTriggers();
   connection.sqlite.exec(`CREATE TABLE attachment_blobs (attachment_id TEXT PRIMARY KEY,
     content_hash TEXT, storage_key TEXT, size_bytes INTEGER, mime_type TEXT, availability TEXT, created_at TEXT);
     PRAGMA user_version = 97;`);

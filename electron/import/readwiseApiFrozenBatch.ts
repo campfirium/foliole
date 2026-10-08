@@ -38,18 +38,15 @@ export async function prepareReadwiseApiFrozenResources(input: {
     && !frozen.originalEpub)) return frozen;
   const existing = loadReadwiseApiImportSource(input.connectionRef, input.document.id);
   const destination = existing ? 'inbox' : input.destination;
-  const forceEpubStructure = shouldRebuildPristineReadwiseEpub({
-    connectionRef: input.connectionRef,
+  const forceEpubStructure = shouldRebuildPristineReadwiseEpub({ connectionRef: input.connectionRef,
     document: input.document
   });
   const { originalEpub, originalFile } = await prepareOriginalResources(input, frozen, destination,
     existing?.state.originalFile ?? null);
-  const epubImages = originalEpub ? null : await prepareReadwiseApiEpubImagesIfNeeded({
-    config: input.config, connectionRef: input.connectionRef, destination,
+  const epubImages = originalEpub ? null : await prepareReadwiseApiEpubImagesIfNeeded({ config: input.config, connectionRef: input.connectionRef, destination,
     document: input.document, forceEpubStructure
   });
-  const epubCover = originalEpub ? null : await prepareReadwiseApiEpubCoverIfNeeded({
-    config: input.config, connectionRef: input.connectionRef, destination,
+  const epubCover = originalEpub ? null : await prepareReadwiseApiEpubCoverIfNeeded({ config: input.config, connectionRef: input.connectionRef, destination,
     document: input.document, forceEpubStructure
   });
   const resources: ReadwiseApiPreparedResources = {

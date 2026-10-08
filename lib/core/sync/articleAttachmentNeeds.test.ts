@@ -37,12 +37,12 @@ it('collects current parsed image demand and valid PDFs only for participating a
   expect(await loadArticleAttachmentNeeds(port, [])).toEqual({ needs: [], unreadableArticleIds: [] });
 });
 
-it('does not guess from stale inline text until the current body is readable', async () => {
-  put('one', `![stale](asset://${old}.png)`, 'body');
+it('uses owned current text and ignores obsolete shared body data', async () => {
+  put('one', `![current](asset://${image})`, 'body');
   db.prepare('INSERT INTO content_blobs VALUES (?, ?)').run('body', 'none');
-  expect(await loadArticleAttachmentNeeds(port, ['one'])).toEqual({ needs: [], unreadableArticleIds: ['one'] });
-  db.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run('body', Buffer.from(`![new](asset://${image})`));
-  expect((await loadArticleAttachmentNeeds(port, ['one'])).needs.map((need) => need.storageKey)).toEqual([image]);
+  db.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run('body', Buffer.from(`![old](asset://${old}.png)`));
+  expect((await loadArticleAttachmentNeeds(port, ['one'])).needs.map((need) => need.storageKey))
+    .toEqual([image]);
 });
 
 it('does not use registry byte counts as file transfer truth', async () => {

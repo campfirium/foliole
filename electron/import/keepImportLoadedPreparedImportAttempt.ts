@@ -11,6 +11,7 @@ import { canRunWatchedFolderConflictSource } from '../database/watchedFolderConf
 import type { DirectoryImportSourceDescriptor } from '../ipc/importSourcePipeline.js';
 
 import { persistAutomaticDuplicateNoop } from './keepImportDuplicateNoop.js';
+import { assertKeepImportSourceCanRun } from './keepImportExecutionGuard.js';
 import { processSearchIndexForKeepImportSource } from './keepImportIndexingProgress.js';
 import { runPreparedImportInWorkerWithSignal } from './keepImportPreparedImportWorkerClient.js';
 import type { KeepImportProgressSink } from './keepImportProgress.js';
@@ -68,7 +69,7 @@ async function runPreparedImportWithResponsiveBoundary(prepared: PreparedImportR
     return runWithDatabaseConnectionOwner(() =>
       runPreparedImportInWorkerWithSignal({ prepared, ...(signal ? { signal } : {}) }));
   }
-  const record = runPreparedImport(prepared);
+  const record = runPreparedImport(prepared, { });
   throwIfKeepImportAborted(signal);
   return record;
 }
@@ -135,10 +136,21 @@ function assertReadwiseOwner(config: KeepImportRuleConfig, signal?: AbortSignal)
 function assertCurrentImportOwner(config: KeepImportRuleConfig, signal?: AbortSignal) {
   assertReadwiseOwner(config, signal);
   if (config.sourceType === 'readwise') return;
+  if (config.sourceType === 'generic') assertKeepImportSourceCanRun(config);
   const binding = resolveExecutableWatchedBinding(config.ruleId, config.directoryPath);
   if (binding.bindingId && !canRunWatchedFolderConflictSource(binding.bindingId)) {
     throw new Error('watched_folder_conflict_paused');
   }
+}
+
+function readAutomaticDuplicate(input: Parameters<typeof runLoadedPreparedImportAttempt>[0]) {
+  return input.automaticDuplicateNoop ? persistAutomaticDuplicateNoop({
+    config: input.config,
+    hasSourceUpdate: input.hasSourceUpdate,
+    prepared: input.prepared,
+    source: input.source,
+    sourceSignature: input.sourceSignature
+  }) : null;
 }
 
 export async function runLoadedPreparedImportAttempt(input: {
@@ -156,15 +168,7 @@ export async function runLoadedPreparedImportAttempt(input: {
 }) {
   assertCurrentImportOwner(input.config, input.signal);
   const highlightTotalCount = countPreparedImportHighlights(input.prepared);
-  const duplicateNoop = input.automaticDuplicateNoop
-    ? persistAutomaticDuplicateNoop({
-      config: input.config,
-      hasSourceUpdate: input.hasSourceUpdate,
-      prepared: input.prepared,
-      source: input.source,
-      sourceSignature: input.sourceSignature
-    })
-    : null;
+  const duplicateNoop = readAutomaticDuplicate(input);
   if (duplicateNoop) {
     assertReadwiseOwner(input.config);
     const cleanupDetail = await applySuccessfulSourceHandling(input.config, input.source);

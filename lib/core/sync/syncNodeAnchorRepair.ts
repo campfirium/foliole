@@ -2,8 +2,6 @@ import { parseStoredAnchorLink } from '../database/anchorLinkCodec.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import { remapRawAnchorLinkInContent } from './syncNodeAnchorRemap.js';
-import { remapRawAnchorLinkInBody } from './syncNodeAnchorRemapBody.js';
-import type { VerifiedBodyRef } from './verifiedBody.js';
 
 export type SyncNodeAnchorUnmappedReason =
   | 'ambiguous_text'
@@ -57,7 +55,7 @@ async function* loadDirectChildAnchors(port: DbPort, parentNodeId: string) {
 }
 
 export async function repairDirectChildAnchorsForAppliedParent(input: {
-  content: string | VerifiedBodyRef;
+  content: string;
   excludedNodeIds?: ReadonlySet<string>;
   parentNodeId: string;
   port: DbPort;
@@ -74,10 +72,7 @@ export async function repairDirectChildAnchorsForAppliedParent(input: {
       continue;
     }
     const anchorId = parseStoredAnchorLink(row.anchor_link)?.id ?? null;
-    const result = typeof input.content === 'string'
-      ? remapChildAnchorInContent(row, input.content)
-      : await remapRawAnchorLinkInBody({ db: input.port, body: input.content,
-        imageRegions: row.image_regions, value: row.anchor_link });
+    const result = remapChildAnchorInContent(row, input.content);
     if (!result) {
       await writeAnchorStatus(input.port, row.id, 'resolved', input.sourceVersionId, input.updatedAt);
       continue;

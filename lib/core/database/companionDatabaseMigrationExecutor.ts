@@ -1,3 +1,4 @@
+import { COMPANION_TEXT_BODY_OWNERSHIP_VERSION } from '../../platform/nativeCompanionContract.js';
 import type { DbPort } from '../sync/dbPort.js';
 
 import {
@@ -38,6 +39,7 @@ import { migrateCompanionNodeVersionConfirmations } from './nodeVersionConfirmat
 import { migrateCompanionParentOrderVersions } from './parentOrderVersionMigration.js';
 import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS } from './syncIdentityEntityTriggerStatements.js';
 import { repairCompanionSyncStateEntities } from './syncStateEntityRepair.js';
+import { migrateCompanionTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateCompanionTopicTextState } from './topicTextStateMigration.js';
 
 type MigrationAction = (typeof ANDROID_COMPANION_MIGRATION_PLAN)[number]['actions'][number];
@@ -102,6 +104,9 @@ export async function migrateCompanionDatabase(
   if (currentVersion < 77 && targetVersion >= 77) {
     await db.run(FRAMED_SYNC_COMPLETION_BACKFILL);
     await migrateCompanionFramedSyncPayloads(db);
+  }
+  if (currentVersion < COMPANION_TEXT_BODY_OWNERSHIP_VERSION && targetVersion >= COMPANION_TEXT_BODY_OWNERSHIP_VERSION) {
+    await migrateCompanionTextBodyOwnership(db);
   }
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);

@@ -3,10 +3,16 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import type { DbPort } from './dbPort.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord, loadMergeBase, storedSyncNodeVersionBody } from './syncNodeGraph.js';
+import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { buildResolutionRecord } from './syncNodeResolution.js';
 import { mergeNodeSnapshot } from './syncNodeSnapshotMerge.js';
 
-export async function resolveItemConflict(port: DbPort, incomingRecords: NativeSyncNodeRecord[]) {
+export function resolveItemConflict(port: DbPort, incomingRecords: NativeSyncNodeRecord[]) {
+  return resolveItemSourceConflict(port, arraySyncNodeRecordSource(incomingRecords));
+}
+
+export async function resolveItemSourceConflict<M extends SyncNodeRecordMetadata>(port: DbPort, source: SyncNodeRecordSource<M>) {
+  const incomingRecords = source.records;
   const ordered = [...incomingRecords].sort((left, right) =>
     (left.version_id ?? '').localeCompare(right.version_id ?? ''));
   let local = await loadCurrentSyncNodeRecord(port, ordered[0]!.object_id);
@@ -19,7 +25,8 @@ export async function resolveItemConflict(port: DbPort, incomingRecords: NativeS
   if (state?.sync_dirty === 1) {
     throw new Error(`sync_item_local_change_unversioned:${local.object_id}`);
   }
-  for (const incoming of ordered) {
+  for (const metadata of ordered) {
+    const incoming = await source.load(port, metadata);
     const base = await loadMergeBase(port, local.version_id!, incoming.version_id!);
     if (base && storedSyncNodeVersionBody(base) === null) {
       throw new Error(`sync_item_merge_base_body_unavailable:${base.version_id}`);

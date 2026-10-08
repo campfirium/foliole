@@ -45,7 +45,7 @@ import { resetMirrorTestWorkspace } from './mirrorTestDatabase.js';
 
 let tempRoot = '';
 
-it('keeps an existing mirror intact when its hashed article body is unavailable', async () => {
+it('exports the same complete article after removing obsolete body caches', async () => {
   seedArticleWithLocatorHighlight();
   await exportArticleToMirror('node-article');
   const outputPath = path.join(tempRoot, 'Library', 'Mirror', 'Mirror Export Demo.md');
@@ -53,7 +53,7 @@ it('keeps an existing mirror intact when its hashed article body is unavailable'
   const { driver } = openDatabaseConnection();
   driver.execute(`DELETE FROM content_blob_data WHERE hash =
     (SELECT body_blob_hash FROM nodes WHERE id = 'node-article')`);
-  await expect(exportArticleToMirror('node-article')).rejects.toThrow('node_body_unavailable:node-article');
+  await exportArticleToMirror('node-article');
   await expect(fs.readFile(outputPath, 'utf8')).resolves.toBe(before);
 });
 

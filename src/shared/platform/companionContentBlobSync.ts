@@ -1,4 +1,3 @@
-import type { NodeVersionBodyStorage } from '../../../lib/core/sync/syncNodeTombstoneVersion';
 
 import { commitStagedCompanionContentBatch } from './companion/runtime/companionBatchDataPlane';
 import { materializeCompanionCurrentBodies } from './companion/runtime/companionCurrentVersionBodies';
@@ -9,11 +8,11 @@ import {
   isNativeCompanionContentBlobRuntime
 } from './companionWorkspaceRuntimeRepository';
 
-export async function loadCompanionMissingContentBlobHashes(limit = 50, bodyStorage: NodeVersionBodyStorage = 'continuous') {
+export async function loadCompanionMissingContentBlobHashes(limit = 50) {
   if (!isNativeCompanionContentBlobRuntime()) {
     return [] as string[];
   }
-  return (await loadMissingAfterMaterializing(limit, bodyStorage)).hashes;
+  return (await loadMissingAfterMaterializing(limit)).hashes;
 }
 
 export interface CompanionMissingContentBlobBatch {
@@ -29,11 +28,11 @@ function normalizeNumber(value: unknown) {
   return typeof value === 'number' ? value : null;
 }
 
-export async function loadCompanionMissingContentBlobBatch(limit = 50, bodyStorage: NodeVersionBodyStorage = 'continuous'): Promise<CompanionMissingContentBlobBatch> {
+export async function loadCompanionMissingContentBlobBatch(limit = 50): Promise<CompanionMissingContentBlobBatch> {
   if (!isNativeCompanionContentBlobRuntime()) {
     return { blobs: [], failedBytes: null, failedCount: null, hashes: [], total: null, totalBytes: null };
   }
-  const result = await loadMissingAfterMaterializing(limit, bodyStorage);
+  const result = await loadMissingAfterMaterializing(limit);
   const blobs = Array.isArray(result.blobs)
     ? result.blobs
     : result.hashes.map((hash) => ({ hash }));
@@ -47,14 +46,14 @@ export async function loadCompanionMissingContentBlobBatch(limit = 50, bodyStora
   };
 }
 
-export async function loadCompanionMissingContentBlobs(limit = 50, bodyStorage: NodeVersionBodyStorage = 'continuous'): Promise<Array<{ hash: string; size_bytes?: number }>> {
-  return (await loadCompanionMissingContentBlobBatch(limit, bodyStorage)).blobs;
+export async function loadCompanionMissingContentBlobs(limit = 50): Promise<Array<{ hash: string; size_bytes?: number }>> {
+  return (await loadCompanionMissingContentBlobBatch(limit)).blobs;
 }
 
-async function loadMissingAfterMaterializing(limit: number, bodyStorage: NodeVersionBodyStorage) {
+async function loadMissingAfterMaterializing(limit: number) {
   for (;;) {
-    const result = await loadIosMissingContentBlobs(limit, bodyStorage);
-    if (await materializeCompanionCurrentBodies(result.hashes, bodyStorage) === 0) return result;
+    const result = await loadIosMissingContentBlobs(limit);
+    if (await materializeCompanionCurrentBodies(result.hashes) === 0) return result;
   }
 }
 
@@ -62,7 +61,7 @@ export async function syncCompanionContentBlob(args: {
   hash: string;
   headers: Record<string, string>;
   url: string;
-}, bodyStorage: NodeVersionBodyStorage = 'continuous') {
+}) {
   if (!isNativeCompanionContentBlobRuntime()) {
     return { availability: 'missing', hash: args.hash };
   }
@@ -70,7 +69,7 @@ export async function syncCompanionContentBlob(args: {
     body: JSON.stringify({ hashes: [args.hash] }),
     headers: args.headers,
     url: args.url
-  }, bodyStorage);
+  });
   return {
     availability: result.synced_hashes.includes(args.hash) ? 'cached' : 'missing',
     hash: args.hash
@@ -81,13 +80,13 @@ export async function syncCompanionContentBlobs(args: {
   body: string;
   headers: Record<string, string>;
   url: string;
-}, bodyStorage: NodeVersionBodyStorage = 'continuous') {
+}) {
   if (!isNativeCompanionContentBlobRuntime()) {
     throw new Error('Native content body batch sync is unavailable.');
   }
   const download = await FolioleCompanionSync.downloadContentBlobBatch(args);
   const commit = await commitStagedCompanionContentBatch(
-    getIosCompanionDatabaseOwner(), FolioleCompanionSync, download, undefined, bodyStorage
+    getIosCompanionDatabaseOwner(), FolioleCompanionSync, download
   );
   return {
     failed_hash_errors: Object.fromEntries(commit.failedHashes.map((hash) => [

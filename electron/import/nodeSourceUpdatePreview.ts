@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { openDatabaseConnection } from '../database/connection.js';
 import { readKeepImportItem } from '../database/keepImportItems.js';
 import { loadNodeSourceDetails } from '../database/nodeSourceDetails.js';
@@ -11,6 +10,7 @@ import { loadImportManagerSettings } from './importManagerSettings.js';
 import { loadPendingIncomingUpdate } from './incomingUpdates.js';
 import { loadPreparedKeepImportRecord, resolveKeepImportSourceSignature } from './keepImportPreparedRecord.js';
 import type { KeepImportRuleConfig } from './keepImportService.js';
+import { readSourceNode, type SourceNodeRow } from './nodeSourcePreviewBody.js';
 import {
   normalizeComparableSourcePreviewContent,
   normalizeNodeSourcePreviewContent
@@ -18,12 +18,6 @@ import {
 import { loadReadwiseApiUpdatePreview } from './readwiseApiSourceUpdatePreview.js';
 
 export { normalizeNodeSourcePreviewContent } from './nodeSourceUpdatePreviewContent.js';
-
-interface SourceNodeRow extends NodeBodyRow {
-  content: string;
-  id: string;
-  updated_at: string;
-}
 
 export interface NodeSourceUpdatePreview {
   checked_at: string;
@@ -34,17 +28,6 @@ export interface NodeSourceUpdatePreview {
   source_node_id: string;
   updated_highlight_count: number;
   updated_content: string;
-}
-
-function readSourceNode(nodeId: string) {
-  const row = openDatabaseConnection().driver.queryOne<SourceNodeRow>(
-    `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data, n.updated_at
-     FROM nodes n
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-     WHERE n.id = ?`,
-    [nodeId]
-  );
-  return row ? { ...row, content: requireResolvedNodeBody(row, row.id).content } : undefined;
 }
 
 function countCurrentHighlights(nodeId: string) {

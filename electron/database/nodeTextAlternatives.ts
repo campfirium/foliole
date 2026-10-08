@@ -2,37 +2,35 @@ import { randomUUID } from 'node:crypto';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
-import { loadNodeConsumerBody } from '../../lib/core/database/nodeConsumerBodyResolution.js';
-import { loadTopicTextBodiesWithDriver } from '../../lib/core/database/topicTextBodiesWithDriver.js';
 import { loadTopicTextStateWithDriver } from '../../lib/core/database/topicTextStateWithDriver.js';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs.js';
+import { readTopicTextSnapshot } from '../../lib/core/sync/topicTextBodies.js';
 import { expireTopicText } from '../../lib/core/sync/topicTextExpiry.js';
 import { mutateTopicText } from '../../lib/core/sync/topicTextMutation.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { openDatabaseConnection } from './connection.js';
 
-export async function loadNodeTextAlternativePreview(nodeId: string, alternativeId?: string, storage: 'continuous' | 'chunked' = 'continuous') {
+export async function loadNodeTextAlternativePreview(nodeId: string, alternativeId?: string) {
   const connection = openDatabaseConnection();
   await expireTopicText(createBetterSqliteDbPort(connection.sqlite), nodeId, new Date().toISOString());
-  return loadNodeTextAlternativePreviewWithDriver(connection.driver, nodeId, alternativeId, storage);
+  return loadNodeTextAlternativePreviewWithDriver(connection.driver, nodeId, alternativeId);
 }
 
 export function loadNodeTextAlternativePreviewWithDriver(
-  driver: DatabaseDriver, nodeId: string, alternativeId?: string, storage: 'continuous' | 'chunked' = 'continuous'
+  driver: DatabaseDriver, nodeId: string, alternativeId?: string
 ) {
   const now = new Date().toISOString();
   const alternatives = loadTopicTextStateWithDriver(driver, nodeId).filter((entry) => entry.expires_at > now);
   const selected = (alternativeId ? alternatives.find((entry) => entry.id === alternativeId) : null) ?? alternatives[0];
   if (!selected) return null;
-  const row = driver.queryOne<NodeBodyRow & DatabaseRow>(
-    `SELECT ${storage === 'continuous' ? 'n.content, n.body_blob_hash, cbd.data AS body_blob_data' : "'' AS content, n.body_blob_hash, NULL AS body_blob_data"} FROM nodes n
-     ${storage === 'continuous' ? 'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash' : ''} WHERE n.id = ? AND n.deleted_at IS NULL`, [nodeId]);
+  const row = driver.queryOne<NodeBodyRow & DatabaseRow & { snapshot_json: string }>(
+    `SELECT n.content, n.body_blob_hash, v.snapshot_json FROM nodes n
+     JOIN node_sync_versions v ON v.version_id = n.current_version_id
+     WHERE n.id = ? AND n.deleted_at IS NULL`, [nodeId]);
   if (!row) return null;
-  const body = storage === 'continuous' ? resolveNodeBody(row) : loadNodeConsumerBody(driver, nodeId, storage);
-  if (!body) return null;
-  if (body.status === 'unavailable') return null;
-  const selectedBody = loadTopicTextBodiesWithDriver(driver, [selected], storage)[0]!;
+  const body = resolveNodeBody(row);
+  const selectedBody = readTopicTextSnapshot(row.snapshot_json).bodies.find((entry) => entry.hash === selected.body_blob_hash)!;
   return {
     alternative_id: selected.id, alternatives, checked_at: now,
     current_content: body.content, current_highlight_count: 0, kind: 'sync_alternative' as const,

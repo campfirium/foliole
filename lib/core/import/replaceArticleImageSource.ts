@@ -1,11 +1,8 @@
 import { buildAssetMarkdownUrl, parseAssetMarkdownUrl } from '../../platform/assetMarkdownUrl.js';
 import { folioleMarkdownParser } from '../markdown/folioleMarkdownParser.js';
+import { normalizeMarkdownReferenceLabel as normalizeLabel } from '../markdown/markdownReferenceLabel.js';
 
 type SyntaxNode = ReturnType<typeof folioleMarkdownParser.parse>['topNode'];
-
-function normalizeLabel(value: string) {
-  return value.replace(/^\[|\]$/g, '').trim().replace(/\s+/g, ' ').toLowerCase();
-}
 
 function referenceTargets(tree: ReturnType<typeof folioleMarkdownParser.parse>, content: string) {
   const references = new Map<string, { raw: string; title: string }>();

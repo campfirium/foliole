@@ -1,17 +1,11 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
-import { adoptVerifiedBodyWithDriver } from './bodyContentWriteWithDriver.js';
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import { computeNodeSyncHash } from './nodeSyncHash.js';
-import { computeNodeSyncHashWithBody } from './nodeSyncHashWithBody.js';
 import { upsertSyncObjectState } from './syncState.js';
-import { loadVerifiedBodyRefWithDriver } from './verifiedBodyWithDriver.js';
-
-type BodyStorage = 'continuous' | 'chunked';
 
 interface TombstoneSourceRow extends DatabaseRow {
-  body_state?: 'readable' | 'retired' | 'unavailable';
-  body_blob_hash?: string | null;
+  body_text: string | null;
   content_hash: string;
   host_name: string;
   parent_version_id: string | null;
@@ -62,15 +56,14 @@ function forceDeletedSnapshot(snapshotJson: string, deletedAt: string) {
   };
 }
 
-function prepareTombstoneSource(driver: DatabaseDriver, storage: BodyStorage) {
+function prepareTombstoneSource(driver: DatabaseDriver) {
   return driver.prepare(
     `SELECT
        v.version_id,
        v.parent_version_id,
        v.host_name,
        v.content_hash,
-       ${storage === 'chunked' ? `json_set(v.snapshot_json, '$.content', NULL) AS snapshot_json,
-         v.body_state, v.body_blob_hash` : 'v.snapshot_json'}
+       v.body_text, v.snapshot_json
      FROM nodes n
      INNER JOIN node_sync_versions v
        ON v.version_id = n.current_version_id
@@ -78,7 +71,7 @@ function prepareTombstoneSource(driver: DatabaseDriver, storage: BodyStorage) {
   );
 }
 
-function prepareTombstoneUpsert(driver: DatabaseDriver, storage: BodyStorage) {
+function prepareTombstoneUpsert(driver: DatabaseDriver) {
   return driver.prepare(
     `INSERT INTO node_sync_tombstones (
        node_id,
@@ -88,8 +81,8 @@ function prepareTombstoneUpsert(driver: DatabaseDriver, storage: BodyStorage) {
        content_hash,
        snapshot_json,
        deleted_at,
-       created_at${storage === 'chunked' ? ', inline_body_hash' : ''}
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?${storage === 'chunked' ? ', ?' : ''})
+       created_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(node_id) DO UPDATE SET
        version_id = excluded.version_id,
        parent_version_id = excluded.parent_version_id,
@@ -97,11 +90,7 @@ function prepareTombstoneUpsert(driver: DatabaseDriver, storage: BodyStorage) {
        content_hash = excluded.content_hash,
        snapshot_json = excluded.snapshot_json,
        deleted_at = excluded.deleted_at,
-       created_at = excluded.created_at${storage === 'chunked' ? `,
-       inline_body_hash = CASE WHEN excluded.inline_body_hash IS NULL
-         AND node_sync_tombstones.version_id = excluded.version_id
-         AND node_sync_tombstones.content_hash = excluded.content_hash
-         THEN node_sync_tombstones.inline_body_hash ELSE excluded.inline_body_hash END` : ''}`
+       created_at = excluded.created_at`
   );
 }
 
@@ -110,24 +99,25 @@ function writeNodeSyncTombstoneRow(
   upsert: ReturnType<DatabaseDriver['prepare']>,
   nodeId: string,
   row: TombstoneSourceRow,
-  deletedAt: string,
-  storage: BodyStorage
+  deletedAt: string
 ) {
   const snapshot = forceDeletedSnapshot(row.snapshot_json, deletedAt);
   const sourceSnapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
   const sameDeletion = sourceSnapshot.deleted_at === deletedAt && sourceSnapshot.updated_at === deletedAt;
-  const proof = prepareTombstoneBody(driver, row, snapshot, sameDeletion, deletedAt, storage);
-  const contentHash = sameDeletion ? row.content_hash : proof.contentHash;
+  if (typeof row.body_text === 'string') snapshot.content = row.body_text;
+  if (!sameDeletion && snapshot.content === null) {
+    throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
+  }
+  const contentHash = sameDeletion ? row.content_hash : computeNodeSyncHash(snapshotHashInput(snapshot));
   upsert.run([
     nodeId,
     row.version_id,
     row.parent_version_id,
     row.host_name,
     contentHash,
-    JSON.stringify(storage === 'chunked' ? { ...snapshot, content: null } : snapshot),
+    JSON.stringify(snapshot),
     deletedAt,
-    deletedAt,
-    ...(storage === 'chunked' ? [proof.bodyHash] : [])
+    deletedAt
   ]);
   upsertSyncObjectState(driver, {
     contentHash,
@@ -144,30 +134,16 @@ function writeNodeSyncTombstoneRow(
 export function writeNodeSyncTombstonesForPermanentDelete(
   driver: DatabaseDriver,
   nodeIds: string[],
-  deletedAt: string | null | undefined,
-  storage: BodyStorage = 'continuous'
+  deletedAt: string | null | undefined
 ) {
   if (!deletedAt || nodeIds.length === 0) return;
-  const source = prepareTombstoneSource(driver, storage);
-  const upsert = prepareTombstoneUpsert(driver, storage);
+  const source = prepareTombstoneSource(driver);
+  const upsert = prepareTombstoneUpsert(driver);
 
   for (const nodeId of nodeIds) {
     const row = source.get<TombstoneSourceRow>([nodeId]);
     if (row) {
-      writeNodeSyncTombstoneRow(driver, upsert, nodeId, row, deletedAt, storage);
+      writeNodeSyncTombstoneRow(driver, upsert, nodeId, row, deletedAt);
     }
   }
-}
-
-function prepareTombstoneBody(driver: DatabaseDriver, row: TombstoneSourceRow,
-  snapshot: NativeSyncNodeRecord['snapshot'], sameDeletion: boolean, deletedAt: string, storage: BodyStorage) {
-  if (storage === 'continuous') return { bodyHash: null,
-    contentHash: sameDeletion ? row.content_hash : computeNodeSyncHash(snapshotHashInput(snapshot)) };
-  const ref = row.body_state === 'readable' && row.body_blob_hash
-    ? loadVerifiedBodyRefWithDriver(driver, row.body_blob_hash) : null;
-  if (!sameDeletion && !ref) throw new Error('body_content_unavailable');
-  const contentHash = !sameDeletion && ref
-    ? computeNodeSyncHashWithBody(driver, snapshotHashInput(snapshot), ref) : row.content_hash;
-  if (ref) adoptVerifiedBodyWithDriver(driver, ref, deletedAt);
-  return { bodyHash: ref?.hash ?? null, contentHash };
 }

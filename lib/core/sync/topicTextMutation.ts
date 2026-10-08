@@ -4,7 +4,7 @@ import type { DbPort } from './dbPort.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
-import { loadTopicTextBodies } from './topicTextBodies.js';
+import { validateTopicTextBodies } from './topicTextBodies.js';
 import { topicTextSnapshotHash } from './topicTextSnapshotHash.js';
 import { availableTextAlternatives, normalizeTextAlternatives } from './topicTextState.js';
 
@@ -20,7 +20,7 @@ export async function mutateTopicText(db: DbPort, input: {
     if (!selected) return unavailable(input);
     let body = current.body_text ?? current.snapshot.content ?? '';
     if (input.action === 'promoted') {
-      const bodies = await loadTopicTextBodies(tx, current);
+      const bodies = validateTopicTextBodies(current.snapshot.text_alternatives ?? [], current.alternative_bodies ?? []);
       const selectedBody = bodies.find((value) => value.hash === selected.body_blob_hash);
       if (!selectedBody) throw new Error('text_alternative_body_unavailable');
       body = selectedBody.text;

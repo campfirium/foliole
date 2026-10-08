@@ -142,6 +142,15 @@ export function resolveNumberedSchemaMigrations(args: {
   migrations?: NumberedSchemaMigration[];
   targetVersion: number;
 }): NumberedSchemaMigration[] {
+  return resolveNumberedMigrationSequence({ ...args, migrations: args.migrations ?? NUMBERED_SCHEMA_MIGRATIONS });
+}
+
+export function resolveNumberedMigrationSequence<T extends { version: number }>(args: {
+  currentVersion: number;
+  legacyMessage: string;
+  migrations: readonly T[];
+  targetVersion: number;
+}): T[] {
   if (args.currentVersion < NUMBERED_MIGRATION_BASE_VERSION) {
     throw new Error(args.legacyMessage);
   }
@@ -149,8 +158,8 @@ export function resolveNumberedSchemaMigrations(args: {
     throw new Error(`database schema version ${args.currentVersion} is newer than supported`);
   }
 
-  const migrationsByVersion = indexMigrations(args.migrations ?? NUMBERED_SCHEMA_MIGRATIONS);
-  const pendingMigrations: NumberedSchemaMigration[] = [];
+  const migrationsByVersion = indexMigrations(args.migrations);
+  const pendingMigrations: T[] = [];
   for (let version = args.currentVersion + 1; version <= args.targetVersion; version += 1) {
     const migration = migrationsByVersion.get(version);
     if (!migration) {
@@ -176,8 +185,8 @@ export function applyNumberedSchemaMigrations(args: {
   }
 }
 
-function indexMigrations(migrations: NumberedSchemaMigration[]) {
-  const migrationsByVersion = new Map<number, NumberedSchemaMigration>();
+function indexMigrations<T extends { version: number }>(migrations: readonly T[]) {
+  const migrationsByVersion = new Map<number, T>();
   for (const migration of migrations) {
     if (migrationsByVersion.has(migration.version)) {
       throw new Error(`duplicate database schema migration registered for version ${migration.version}`);

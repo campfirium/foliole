@@ -14,6 +14,7 @@ const sharedCursorMock = vi.hoisted(() => ({
   saveNumber: vi.fn(async (_kind: string, cursor) => cursor)
 }));
 const iosSyncbackStoreMock = vi.hoisted(() => ({
+  loadPendingCount: vi.fn(async () => 3),
   loadNodeVersions: vi.fn(async () => [{ object_id: 'ios-created-node', version_id: 'ios-device#1' }]),
   loadNodeVersionPushCursor: vi.fn(async () => null),
   loadReviewLog: vi.fn(async () => [{ op_id: 'ios-op-1' }]),
@@ -110,6 +111,10 @@ it('bridges native sync cursors and pending summary', async () => {
     { object_id: 'ios-node-1', object_type: 'node_review', state_seq: 7 }
   ]);
   await expect(api.loadCompanionPendingSyncSummary()).resolves.toEqual({ pendingCount: 3 });
+  expect(iosSyncbackStoreMock.loadPendingCount).toHaveBeenCalledWith('desktop-peer',
+    { state: 6, node: null, review: null });
+  expect(iosSyncbackStoreMock.loadNodeVersions).not.toHaveBeenCalled();
+  expect(iosSyncbackStoreMock.loadReviewLog).not.toHaveBeenCalled();
   expect(writerQueueMock.run).toHaveBeenCalledTimes(2);
 });
 

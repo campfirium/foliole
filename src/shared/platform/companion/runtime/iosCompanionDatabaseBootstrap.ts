@@ -12,6 +12,7 @@ import {
   type CapacitorCompanionDatabaseManager
 } from './capacitorCompanionDatabaseOwner';
 import { stopCompanionForegroundTime } from './companionForegroundTime';
+import { closeCompanionFramedPayloadBudget, configureCompanionFramedPayloadBudget } from './companionFramedPayloadBudget';
 
 export type IosCompanionDatabaseManager = CapacitorCompanionDatabaseManager;
 
@@ -20,24 +21,41 @@ export interface IosCompanionDatabaseBootstrapOptions {
 }
 
 let activeOwner: CapacitorCompanionDatabaseOwner | null = null;
+let lifecycleTail: Promise<void> = Promise.resolve();
 
 export function getIosCompanionDatabaseOwner() {
   if (!activeOwner) throw new Error('iOS companion database owner is not ready.');
   return activeOwner;
 }
 
-export async function closeIosCompanionDatabase() {
-  await stopCompanionForegroundTime();
+export function closeIosCompanionDatabase() {
+  return enqueueLifecycle(closeActiveDatabase);
+}
+
+async function closeActiveDatabase() {
   const owner = activeOwner;
-  activeOwner = null;
+  if (owner) await closeCompanionFramedPayloadBudget(owner);
+  await stopCompanionForegroundTime();
+  if (activeOwner === owner) activeOwner = null;
   invalidateCompanionReadingScope();
   await owner?.close();
 }
 
-export async function initializeIosCompanionDatabase(
+export function initializeIosCompanionDatabase(
   nativeState: NativeCompanionBootstrapPayload,
   manager: IosCompanionDatabaseManager = new SQLiteConnection(CapacitorSQLite),
   options: IosCompanionDatabaseBootstrapOptions = {}
+): Promise<NativeCompanionBootstrapState> {
+  return enqueueLifecycle(async () => {
+    await closeActiveDatabase();
+    return initializeDatabase(nativeState, manager, options);
+  });
+}
+
+async function initializeDatabase(
+  nativeState: NativeCompanionBootstrapPayload,
+  manager: IosCompanionDatabaseManager,
+  options: IosCompanionDatabaseBootstrapOptions
 ): Promise<NativeCompanionBootstrapState> {
   const platform = nativeState.runtime_kind === 'android-capacitor' ? 'android' : 'ios';
   const owner = new CapacitorCompanionDatabaseOwner(manager, platform);
@@ -53,6 +71,12 @@ export async function initializeIosCompanionDatabase(
     now: nativeState.booted_at,
     ...(options.afterRepair ? { beforeVersionCommit: () => options.afterRepair?.(0) } : {})
   });
+  try {
+    await configureCompanionFramedPayloadBudget(owner);
+  } catch (error) {
+    await owner.close();
+    throw error;
+  }
   activeOwner = owner;
   invalidateCompanionReadingScope();
   return {
@@ -63,4 +87,10 @@ export async function initializeIosCompanionDatabase(
     device_name: result.deviceId,
     host_name: result.hostName
   };
+}
+
+function enqueueLifecycle<T>(task: () => Promise<T>) {
+  const result = lifecycleTail.then(task);
+  lifecycleTail = result.then(() => undefined, () => undefined);
+  return result;
 }

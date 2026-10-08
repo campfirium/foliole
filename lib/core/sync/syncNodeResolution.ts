@@ -6,6 +6,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 
 import type { DbPort } from './dbPort.js';
 import { createOpaqueVersionRef } from './opaqueSyncRefs.js';
+import type { SyncNodeRecordMetadata } from './syncNodeRecordSource.js';
 import {
   canonicalResolutionJson,
   nextResolutionTimestamp,
@@ -51,7 +52,7 @@ export function chooseNodeTextProjection<T extends Pick<NativeSyncNodeRecord, 's
 }
 
 export function buildResolutionRecord(
-  records: NativeSyncNodeRecord[],
+  records: readonly SyncNodeRecordMetadata[],
   winner: NativeSyncNodeRecord,
   body: string,
   resolvedSnapshot?: NativeSyncNodeRecord['snapshot']

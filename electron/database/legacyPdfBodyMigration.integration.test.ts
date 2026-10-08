@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { readDataMigrationState } from '../../lib/core/database/dataMigrationState.js';
+import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { migrateLegacyBodyConsistency, needsLegacyBodyConsistencySnapshot } from './legacyBodyConsistencyMigration.js';
 import { BODY_COLLECTION_ID, BODY_REPAIR_ID } from './legacyBodyMigrationState.js';
@@ -16,6 +18,7 @@ const BODY = '# Topic\n\nFirst page.\n\nSecond page.';
 function seed() {
   const peer = createPeer('pdf');
   const version = edit(peer, BODY);
+  upsertTextBodyBlob(peer.driver, BODY, 'now');
   peer.db.prepare("UPDATE nodes SET content = ?, resource_references = ?, import_source_fingerprint = 'source' WHERE id = ?")
     .run(PLACEHOLDER, JSON.stringify([{ storage_key: `${PDF}.pdf`, role: 'reference', original_name: 'source.pdf' }]), 'topic');
   peer.db.prepare('UPDATE node_sync_versions SET body_text = ? WHERE version_id = ?').run(PLACEHOLDER, version);
@@ -32,7 +35,7 @@ function migrate(peer: ReturnType<typeof createPeer>) {
   peer.driver.transaction(() => migrateLegacyBodyConsistency({ driver: peer.driver, sqlite: peer.db }, peer.name, false));
 }
 
-it('repairs the proven PDF placeholder, preserves old facts and retires only its inline shell', () => {
+it('repairs the proven PDF placeholder and preserves both original version facts and full current text', () => {
   const { peer, version } = seed();
   const old = history(peer)[0];
   expect(needsLegacyBodyConsistencySnapshot({ driver: peer.driver, sqlite: peer.db })).toBe(true);
@@ -40,7 +43,7 @@ it('repairs the proven PDF placeholder, preserves old facts and retires only its
   expect(history(peer)).toHaveLength(2);
   expect(history(peer).find((row) => row.version_id === version)).toEqual(old);
   expect(history(peer).find((row) => row.version_id !== version)).toMatchObject({ body_text: BODY, parent_version_id: version });
-  expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe('');
+  expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe(BODY);
   expect(readDataMigrationState(peer.db, BODY_REPAIR_ID)?.status).toBe('completed');
   const after = history(peer);
   migrate(peer);
@@ -58,9 +61,21 @@ it('finishes a previously protected library even when collection already complet
   peer.db.prepare('UPDATE pdf_page_text SET text = ? WHERE page = 2').run('Second page.');
   migrate(peer);
   expect(history(peer)).toHaveLength(2);
-  expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe('');
+  expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe(BODY);
   expect(peer.db.prepare('SELECT * FROM legacy_body_migration_protections').all()).toEqual([]);
   expect(readDataMigrationState(peer.db, BODY_COLLECTION_ID)?.status).toBe('completed');
+});
+
+it('converts a proven PDF placeholder and repairs its version in one schema upgrade transaction', () => {
+  const { peer, version } = seed();
+  const old = history(peer)[0];
+  peer.db.pragma('user_version = 149');
+  initializeDatabaseSchema(peer.db, { beforeVersionCommit: () =>
+    migrateLegacyBodyConsistency({ driver: peer.driver, sqlite: peer.db }, peer.name, false) });
+  expect(history(peer).find((row) => row.version_id === version)).toEqual(old);
+  expect(history(peer).find((row) => row.version_id !== version)).toMatchObject({ body_text: BODY, parent_version_id: version });
+  peer.db.exec('DELETE FROM content_blob_data');
+  expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe(BODY);
 });
 
 it.each(['different-inline', 'different-pages', 'missing-source', 'missing-reference', 'dirty', 'editing'] as const)(

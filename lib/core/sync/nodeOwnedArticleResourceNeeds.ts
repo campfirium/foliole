@@ -17,12 +17,7 @@ export async function loadNodeOwnedArticleResourceNeeds(port: DbPort, articleIds
   const unreadableArticleIds: string[] = [];
   for (const id of new Set(articleIds)) {
     const [article] = await port.query<ArticleResources>(
-      `SELECT n.body_blob_hash AS body_hash, n.resource_references,
-       CASE WHEN n.body_blob_hash IS NOT NULL AND n.body_blob_hash <> ''
-         THEN CASE WHEN cb.compression = 'none' THEN CAST(cbd.data AS TEXT) END
-         ELSE n.content END AS content
-       FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
-       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`, [id]
+      `SELECT body_blob_hash AS body_hash, resource_references, content FROM nodes WHERE id = ?`, [id]
     );
     if (!article) continue;
     for (const reference of parseNodeResourceReferences(article.resource_references)) {

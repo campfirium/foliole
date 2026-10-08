@@ -30,9 +30,8 @@ function readMirrorDocument(documentId: string) {
   return openDatabaseConnection().driver.queryOne<MirrorDocumentRow>(
     `SELECT d.document_id, d.folder_id, d.relative_path, d.file_name, d.extension,
       d.source_size_bytes, d.source_modified_at, d.title, d.opening_text,
-      COALESCE(CAST(cbd.data AS TEXT), d.content) AS content
+      d.content
      FROM external_documents d
-     LEFT JOIN content_blob_data cbd ON cbd.hash = d.body_blob_hash
      WHERE d.document_id = ? AND d.is_present = 1`,
     [documentId]
   ) ?? null;

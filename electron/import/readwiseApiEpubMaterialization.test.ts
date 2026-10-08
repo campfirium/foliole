@@ -15,16 +15,18 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
-import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDesktopDeviceProfileFixture } from '../database/deviceIdentityTestSupport.js';
 
+import { annotation, epubFixture } from './readwiseApiEpubMaterialization.testSupport.js';
 import {
   materializeReadwiseApiDocument,
   shouldPrepareReadwiseApiEpubImages
 } from './readwiseApiMaterialization.js';
+
 
 let tempRoot = '';
 
@@ -40,7 +42,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('creates one body topic per marked heading and places annotations across every level', () => {
+it('creates EPUB topics and places annotations across every level', async () => {
   const document = epubFixture();
   const config = createDefaultReadwiseReaderConfig();
 
@@ -55,16 +57,17 @@ it('creates one body topic per marked heading and places annotations across ever
   )!;
   expect(JSON.parse(persistedState.remote_import_state_json).epubProjection)
     .toMatchObject({ sourceHash: expect.stringMatching(/^[0-9a-f]{64}$/u), version: 1 });
-  const descendants = driver.queryAll<{ content: string; id: string; parent_id: string; title: string }>(
+  const descendants = driver.queryAll<{ id: string; parent_id: string; title: string }>(
     `WITH RECURSIVE tree AS (
-       SELECT n.id, n.parent_id, n.title, ${buildNodeBodyContentSql()} AS content
-       FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-       WHERE n.parent_id = ? AND n.deleted_at IS NULL
-       UNION ALL SELECT n.id, n.parent_id, n.title, ${buildNodeBodyContentSql()} AS content
-       FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash JOIN tree ON n.parent_id = tree.id
+       SELECT id, parent_id, title FROM nodes WHERE parent_id = ? AND deleted_at IS NULL
+       UNION ALL SELECT n.id, n.parent_id, n.title FROM nodes n JOIN tree ON n.parent_id = tree.id
        WHERE n.deleted_at IS NULL
      ) SELECT * FROM tree`, [source.latest_node_id]
-  );
+  ).map((row) => {
+    const body = loadNodeBodyResolution(driver, row.id);
+    if (!body) throw new Error('fixture_body_unavailable');
+    return { ...row, content: body.content };
+  });
   const chapter = descendants.find((node) => node.title === 'Chapter 6: Shape')!;
   expect(descendants.filter((node) => node.parent_id === chapter.id).map((node) => node.title))
     .toEqual(expect.arrayContaining(['First section', 'Second section']));
@@ -172,7 +175,7 @@ it('keeps a legacy flat API EPUB until an explicit structure re-import', () => {
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%'"))
     .toEqual({ count: 0 });
-  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE title = 'Book'`)?.content)
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes WHERE title = 'Book'`)?.content)
     .toBe('Legacy flat body');
 
   materializeReadwiseApiDocument({
@@ -180,7 +183,7 @@ it('keeps a legacy flat API EPUB until an explicit structure re-import', () => {
   });
   expect(driver.queryOne<{ count: number }>("SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%'"))
     .toEqual({ count: 3 });
-  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE title = 'Book'`)?.content)
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes WHERE title = 'Book'`)?.content)
     .toContain('Front matter');
 });
 
@@ -202,42 +205,28 @@ it('retires obsolete generated topics when an explicit rebuild has no marked hea
   expect(driver.queryOne<{ count: number }>(
     "SELECT COUNT(*) count FROM nodes WHERE id LIKE 'node-epub-%' AND deleted_at IS NULL"
   )).toEqual({ count: 0 });
-  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE title = 'Book'`)?.content)
+  expect(driver.queryOne<{ content: string }>(`SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes WHERE title = 'Book'`)?.content)
     .toContain('Ordinary EPUB body');
 });
 
-function epubFixture(): PreparedReadwiseApiDocument {
-  return {
-    annotations: [
-      annotation('front', 'Front matter'),
-      annotation('intro', 'Intro'),
-      annotation('unique', 'Unique second excerpt'),
-      annotation('ambiguous', 'Repeated excerpt')
-    ],
-    body: '# Chapter 6: Shape\n\nIntro\n\n## First section\n\nRepeated excerpt\n\n## Second section\n\nRepeated excerpt\n\nUnique second excerpt',
-    category: 'epub',
-    coverImageUrl: null,
-    degradedReason: null,
-    epubStructure: {
-      degradedReason: null,
-      imageCount: 0,
-      markerCount: 3,
-      rootBody: 'Front matter',
-      sections: [
-        { content: '# Chapter 6: Shape\n\nIntro', headingLevel: 1, markerKey: 'chapter', title: 'Chapter 6: Shape' },
-        { content: '## First section\n\nRepeated excerpt\n\nRepeated excerpt', headingLevel: 2, markerKey: 'first', title: 'First section' },
-        { content: '## Second section\n\nRepeated excerpt\n\nUnique second excerpt', headingLevel: 2, markerKey: 'second', title: 'Second section' }
-      ]
-    },
-    id: 'epub-1',
-    metadata: { author: null, category: 'epub', readerUrl: null, sourceUrl: null, title: 'Book' },
-    title: 'Book', unmatchedAnnotationCount: 0, updatedAt: '2026-09-08T00:00:00.000Z'
-  };
-}
-
-function annotation(remoteId: string, text: string) {
-  return {
-    content: text, contentHash: remoteId, kind: 'highlight' as const, locatorText: text,
-    parentRemoteId: 'epub-1', remoteId, updatedAt: '2026-09-08T00:00:00.000Z'
-  };
-}
+it('persists owned unlocated EPUB highlights and reuses complete chapter bodies without legacy caches', async () => {
+  const { driver, sqlite } = openDatabaseConnection();
+  sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
+  const document = epubFixture();
+  document.annotations.push(annotation('unlocated', 'Not found anywhere'));
+  const input = { config: createDefaultReadwiseReaderConfig(),
+    connectionRef: 'connection', destination: 'inbox' as const, document };
+  expect(materializeReadwiseApiDocument(input)).toMatchObject({ annotationCount: 5, status: 'imported' });
+  const missing = driver.queryOne<{ id: string; parent_id: string }>(
+    "SELECT id, parent_id FROM nodes WHERE id LIKE 'node-readwise-%' AND parent_id LIKE 'node-readwise-unlocated-%'"
+  )!;
+  expect(loadNodeBodyResolution(driver, missing.id)).toMatchObject({ content: 'Not found anywhere' });
+  expect(loadNodeBodyResolution(driver, missing.parent_id)).toMatchObject({ content: '# ※' });
+  const before = sqlite.prepare('SELECT * FROM import_sources ORDER BY source_fingerprint').all();
+  const annotationsBefore = sqlite.prepare("SELECT id, parent_id, content, anchor_link FROM nodes WHERE anchor_link IS NOT NULL ORDER BY id").all();
+  sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
+  expect(materializeReadwiseApiDocument(input)).toMatchObject({ annotationCount: 0, status: 'imported' });
+  expect(sqlite.prepare("SELECT id, parent_id, content, anchor_link FROM nodes WHERE anchor_link IS NOT NULL ORDER BY id").all()).toEqual(annotationsBefore);
+  expect(sqlite.prepare('SELECT * FROM import_sources ORDER BY source_fingerprint').all()).toEqual(before);
+  expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+});

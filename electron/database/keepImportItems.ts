@@ -8,7 +8,7 @@ import {
   type KeepImportItemRow,
   type UpsertKeepImportItemInput
 } from '../../lib/core/database/keepImportItems.js';
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
 
 import { openDatabaseConnection } from './connection.js';
 
@@ -34,14 +34,16 @@ export function readKeepImportNodeState(nodeId: string) {
 }
 
 export function readKeepImportNodeContent(nodeId: string) {
-  const row = openDatabaseConnection().driver.queryOne<NodeBodyRow & { id: string }>(
-      `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data
-       FROM nodes n
-       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+  const driver = openDatabaseConnection().driver;
+  const row = driver.queryOne<{ id: string }>(
+      `SELECT n.id FROM nodes n
        WHERE n.id = ? AND n.deleted_at IS NULL`,
       [nodeId]
   );
-  return row ? requireResolvedNodeBody(row, row.id).content : null;
+  if (!row) return null;
+  const body = loadNodeBodyResolution(driver, row.id);
+  if (!body) throw new NodeBodyUnavailableError([row.id]);
+  return body.content;
 }
 
 export function listRemovedKeepImportItems() {

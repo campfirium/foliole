@@ -8,11 +8,16 @@ import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js'
 import { runLegacyBodyCollectionBatch } from './legacyBodyCollectionBatch.js';
 import { migrateLegacyBodyConsistency } from './legacyBodyConsistencyMigration.js';
 import { BODY_COLLECTION_ID, BODY_REPAIR_ID } from './legacyBodyMigrationState.js';
-import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
+import { assertPersisted, closeLibraries, createPeer, edit as editNode, history, joinPeers, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 const NOW = '2026-10-01T00:00:00Z';
+function edit(peer: ReturnType<typeof createPeer>, body: string) {
+  const version = editNode(peer, body);
+  upsertTextBodyBlob(peer.driver, body, NOW);
+  return version;
+}
 function upgrade(peer: ReturnType<typeof createPeer>) {
   initializeDatabaseSchema(peer.db, { beforeVersionCommit: () => migrateLegacyBodyConsistency(
     { driver: peer.driver, sqlite: peer.db }, peer.name, false) });
@@ -88,24 +93,21 @@ it('rolls back the entire upgrade and its marker when version publication fails'
   expect(history(peer)).toEqual(before);
 });
 
-it('commits inline retirement before collection, preserves contradictions and resumes the failed batch', () => {
+it('preserves complete current text and resumes the failed cache collection batch', () => {
   const peer = createPeer('source');
   edit(peer, 'Canonical');
   peer.db.prepare('UPDATE nodes SET content = ?').run('Contradictory original');
   const garbage = upsertTextBodyBlob(peer.driver, 'Unused', NOW);
-  batch(peer);
-  batch(peer);
   const cursor = peer.db.prepare('SELECT cursor FROM legacy_body_migration_progress WHERE migration_id = ?').get(BODY_COLLECTION_ID);
   peer.db.exec("CREATE TRIGGER reject_gc BEFORE DELETE ON content_blobs BEGIN SELECT RAISE(ABORT, 'batch_failed'); END");
   expect(() => { while (!batch(peer).completed) { /* process until failed deletion */ } }).toThrow('batch_failed');
   expect(peer.db.prepare('SELECT data FROM content_blob_data WHERE hash = ?').get(garbage)).toBeDefined();
   expect(peer.db.prepare('SELECT error FROM legacy_body_migration_progress WHERE migration_id = ?').pluck().get(BODY_COLLECTION_ID)).toBe('batch_failed');
-  expect(cursor).toBeDefined();
+  expect(cursor).toBeUndefined();
   peer.db.exec('DROP TRIGGER reject_gc');
   while (!batch(peer).completed) { /* resume same cursor */ }
   expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe('Contradictory original');
-  expect(peer.db.prepare('SELECT reason FROM legacy_body_migration_protections WHERE migration_id = ?').pluck().get(BODY_COLLECTION_ID))
-    .toBe('contradictory_inline_body');
+  expect(peer.db.prepare('SELECT * FROM legacy_body_migration_protections WHERE migration_id = ?').all(BODY_COLLECTION_ID)).toEqual([]);
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash = ?').get(garbage)).toBeUndefined();
 });
 
@@ -137,21 +139,25 @@ it('repairs an unavailable current version of an empty canonical body using the 
   expect(peer.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(version)).toBeNull();
 });
 
-it.each(['node_dirty', 'editor_active'] as const)('pauses %s inline retirement and resumes only protected nodes after reopen', (reason) => {
+it.each(['inline', 'retry'] as const)('resumes an old %s cursor without reducing current text or changing version facts', (phase) => {
   const peer = createPeer('source');
   const version = edit(peer, 'Canonical');
-  peer.db.prepare('UPDATE nodes SET content = ?').run('Canonical');
-  if (reason === 'node_dirty') peer.db.prepare('UPDATE nodes SET sync_dirty = 1').run();
-  else peer.db.prepare('INSERT INTO node_version_local_holds VALUES (?, ?, ?, ?)').run('editor', 'topic', version, NOW);
-  batch(peer, 32);
-  expect(batch(peer, 32)).toMatchObject({ completed: false, paused: true, phase: 'retry' });
-  expect(readDataMigrationState(peer.db, BODY_COLLECTION_ID)?.status).toBe('running');
-  expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe('Canonical');
-  peer.db.prepare('UPDATE nodes SET sync_dirty = 0').run();
-  peer.db.prepare('DELETE FROM node_version_local_holds').run();
-  // Unrelated new data must not trigger another full inline or blob scan.
-  const laterGarbage = upsertTextBodyBlob(peer.driver, 'Created after the collection pass', NOW);
+  peer.db.prepare('INSERT INTO node_version_local_holds VALUES (?, ?, ?, ?)').run('editor', 'topic', version, NOW);
+  peer.db.prepare('INSERT INTO legacy_body_migration_progress VALUES (?, ?, ?, 0, 0, 0, NULL)')
+    .run(BODY_COLLECTION_ID, phase, 'obsolete-cursor');
+  peer.db.prepare('INSERT INTO legacy_body_migration_protections VALUES (?, ?, ?)')
+    .run(BODY_COLLECTION_ID, 'topic', 'editor_active');
+  const garbage = upsertTextBodyBlob(peer.driver, 'Unused cache', NOW);
+  const nodes = peer.db.prepare('SELECT * FROM nodes').all();
+  const versions = history(peer);
+  const holds = peer.db.prepare('SELECT * FROM node_version_local_holds').all();
   expect(batch(peer, 32)).toMatchObject({ completed: true, paused: false });
-  expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe('');
+  expect(readDataMigrationState(peer.db, BODY_COLLECTION_ID)?.status).toBe('completed');
+  expect(peer.db.prepare('SELECT * FROM nodes').all()).toEqual(nodes);
+  expect(history(peer)).toEqual(versions);
+  expect(peer.db.prepare('SELECT * FROM node_version_local_holds').all()).toEqual(holds);
+  expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash = ?').get(garbage)).toBeUndefined();
+  const laterGarbage = upsertTextBodyBlob(peer.driver, 'Created after the collection pass', NOW);
+  expect(batch(peer, 32)).toEqual({ completed: true, paused: false });
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash = ?').get(laterGarbage)).toBeDefined();
 });

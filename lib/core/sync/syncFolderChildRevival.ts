@@ -1,11 +1,11 @@
-import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord, loadStoredSyncNodeVersionRecord } from './syncNodeGraph.js';
+import type { SyncNodeRecordMetadata } from './syncNodeRecordSource.js';
 import { buildResolutionRecord } from './syncNodeResolution.js';
 
-async function isNewFolderPlacement(port: DbPort, child: NativeSyncNodeRecord) {
+async function isNewFolderPlacement(port: DbPort, child: SyncNodeRecordMetadata) {
   if (!child.parent_version_id) return true;
   const previous = await loadStoredSyncNodeVersionRecord(port, child.parent_version_id, false);
   return previous !== null && previous.snapshot.parent_id !== child.snapshot.parent_id;
@@ -13,7 +13,7 @@ async function isNewFolderPlacement(port: DbPort, child: NativeSyncNodeRecord) {
 
 export async function reviveDeletedFoldersForLaterChildren(
   port: DbPort,
-  records: NativeSyncNodeRecord[],
+  records: readonly SyncNodeRecordMetadata[],
   appliedNodeIds: ReadonlySet<string>
 ) {
   for (const child of records) {

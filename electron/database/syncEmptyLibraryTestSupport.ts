@@ -93,12 +93,11 @@ export function history(peer: Peer) {
 export function assertPersisted(peer: Peer, content: string, versionId?: string) {
   const reopened = new Database(peer.file, { readonly: true });
   try {
-    const node = reopened.prepare(`SELECT n.content, n.current_version_id, cbd.data
-      FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = 'topic'`)
-      .get() as { content: string; current_version_id: string; data: Uint8Array };
+    const node = reopened.prepare(`SELECT content, current_version_id FROM nodes WHERE id = 'topic'`)
+      .get() as { content: string; current_version_id: string };
     expect(loadNodeBodyResolution(createBetterSqlite3Driver(reopened), 'topic'))
       .toMatchObject({ status: 'resolved', content });
-    expect(Buffer.from(node.data).toString('utf8')).toBe(content);
+    expect(node.content).toBe(content);
     if (versionId) expect(node.current_version_id).toBe(versionId);
     const broken = reopened.prepare(`SELECT v.version_id FROM node_sync_versions v
       LEFT JOIN node_sync_versions p ON p.version_id = v.parent_version_id

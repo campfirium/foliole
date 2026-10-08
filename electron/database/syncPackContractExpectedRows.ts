@@ -20,6 +20,6 @@ export const SYNC_PACK_CONTRACT_TABLES = [
   { name: 'node_sync_tombstones', row_count: 0 },
   { name: 'node_sync_version_parents', row_count: 0 },
   { name: 'external_documents', row_count: 1 },
-  { name: 'content_blobs', row_count: 2 },
+  { name: 'content_blobs', row_count: 1 },
   { name: 'review_log', row_count: 0 }
 ];

@@ -9,13 +9,12 @@ export function readBodyPartIds(driver: DatabaseDriver, nodeId: string) {
   ).map((row) => row.id);
 }
 
-export function readPartitionedNodeBody(driver: DatabaseDriver, nodeId: string,
-  bodyStorage: 'continuous' | 'chunked' = 'continuous'): string {
+export function readPartitionedNodeBody(driver: DatabaseDriver, nodeId: string): string {
   const ids = readBodyPartIds(driver, nodeId);
-  const body = loadNodeBodyResolution(driver, nodeId, bodyStorage);
-  if (!body || body.status === 'unavailable') throw new NodeBodyUnavailableError([nodeId]);
+  const body = loadNodeBodyResolution(driver, nodeId);
+  if (!body) throw new NodeBodyUnavailableError([nodeId]);
   return body.content + ids.map((id, index) => {
     if (id !== bodyPartNodeId(nodeId, index)) throw new Error('body_partition_incomplete');
-    return readPartitionedNodeBody(driver, id, bodyStorage);
+    return readPartitionedNodeBody(driver, id);
   }).join('');
 }

@@ -1,11 +1,9 @@
 import { IDENTITY_REVIEW_COLUMNS } from './syncIdentityFactSourceRows.js';
 import { SYNC_PACK_NODE_VERSION_COLUMNS } from './syncPackNodeVersions.js';
-import { topicTextPackSnapshotSql } from './topicTextPackPayload.js';
 
 function factPlan(section: string, table: string, columns: readonly string[], owner: string,
   key: string, order: string, after: string) {
-  const project = (column: string, alias: string) => table === 'node_sync_versions' && column === 'snapshot_json'
-    ? topicTextPackSnapshotSql(alias, 'source') : `${alias}.${column}`;
+  const project = (column: string, alias: string) => `${alias}.${column}`;
   const json = `json_object(${columns.flatMap((column) => [`'${column}'`, project(column, table)]).join(', ')})`;
   const candidates = `SELECT rowid AS source_rowid, ${order}, ${key} AS fact_key,
     length(CAST(${json} AS BLOB)) AS payload_bytes FROM source.${table}

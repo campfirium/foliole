@@ -3,13 +3,13 @@ import { tableExists } from './numberedMigrationHelpers.js';
 import { STORED_IMPORT_LOCATOR_SCHEMA, STORED_IMPORT_ROWS_SQL } from './storedImportLocatorSchema.js';
 
 const EXTERNAL_ROWS_SQL = `SELECT d.title, d.file_name || ' ' || d.relative_path,
-  COALESCE(CAST(cbd.data AS TEXT), d.content), 'external', d.document_id,
+  d.content, 'external', d.document_id,
   json_object('document_id', d.document_id, 'folder_id', d.folder_id,
     'relative_path', d.relative_path, 'file_name', d.file_name, 'extension', d.extension,
     'title', d.title, 'opening_text', d.opening_text, 'reference_kind', d.reference_kind,
     'reference_json', d.reference_json, 'source_modified_at', d.source_modified_at, 'updated_at', d.updated_at),
   d.updated_at
-FROM external_documents d LEFT JOIN content_blob_data cbd ON cbd.hash = d.body_blob_hash
+FROM external_documents d
 WHERE d.is_present = 1`;
 
 const REMOVED_ROWS_SQL = `SELECT COALESCE(NULLIF(c.title, ''), i.source_path), i.source_path,
@@ -33,6 +33,11 @@ function sourceTrigger(table: string, event: 'INSERT' | 'UPDATE' | 'DELETE', kin
   return `CREATE TRIGGER IF NOT EXISTS stored_search_${table}_${event.toLowerCase()} AFTER ${event} ON ${table}
     BEGIN ${oldDelete} ${newDelete} ${insert} END`;
 }
+
+export const STORED_EXTERNAL_SOURCE_SEARCH_TRIGGERS = (['INSERT', 'UPDATE', 'DELETE'] as const).map((event) => ({
+  name: `stored_search_external_documents_${event.toLowerCase()}`,
+  sql: sourceTrigger('external_documents', event, 'external', 'source_key = ROW.document_id')
+}));
 
 export const STORED_SOURCE_SEARCH_SCHEMA = [
   `CREATE VIRTUAL TABLE IF NOT EXISTS stored_source_search USING fts5(

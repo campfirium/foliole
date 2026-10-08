@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import { hashTextBody } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseDriver } from '../../lib/core/database/driver.js';
 import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
 import { requestSearchIndexInvalidationProcessing } from '../../lib/core/database/searchIndexInvalidationRuntime.js';
@@ -110,7 +110,7 @@ function upsertExternalDocument(
 ) {
   const payload = toExternalDocumentPayload(folder, document, indexedAt);
   const documentId = toDocumentId(folder.id, document.relativePath);
-  const bodyBlobHash = upsertTextBodyBlob(driver, payload.content, indexedAt);
+  const bodyBlobHash = hashTextBody(payload.content);
   const syncContentHash = computeSyncContentHash('external_document', buildCanonicalExternalDocumentPayload({
     body_blob_hash: bodyBlobHash, content_hash: payload.content_hash, document_id: documentId,
     extension: payload.extension, file_name: payload.file_name, folder_id: payload.folder_id,
@@ -143,7 +143,7 @@ function upsertExternalDocument(
          updated_at = excluded.updated_at`,
     [documentId, payload.folder_id, payload.relative_path, payload.file_name, payload.extension,
       payload.source_size_bytes, payload.source_modified_at, payload.source_modified_ms, payload.content_hash,
-      payload.title, payload.opening_text, bodyBlobHash, '', payload.reference_kind,
+      payload.title, payload.opening_text, bodyBlobHash, payload.content, payload.reference_kind,
       payload.reference_json, payload.indexed_at, indexedAt, indexedAt]
   );
   recordExternalDocumentSync(driver, { contentHash: syncContentHash, hostName, documentId, updatedAt: indexedAt });

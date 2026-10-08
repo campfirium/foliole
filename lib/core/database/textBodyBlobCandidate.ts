@@ -3,7 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../sync/dbPort.js';
 
-import { BODY_CONTENT_CHUNK_BYTES } from './bodyContentSchema.js';
+import { BODY_READ_CHUNK_BYTES } from './bodyReadBudget.js';
 import type { DatabaseDriver } from './driver.js';
 
 export const BODY_CANDIDATE_SQL = `SELECT b.kind, length(CAST(data.data AS BLOB)) AS byte_length
@@ -40,8 +40,8 @@ export function verifyTextBodyCandidate(driver: DatabaseDriver, hash: string) {
   const digest = sha256.create();
   const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
   try {
-    for (let offset = 0; offset < bytes; offset += BODY_CONTENT_CHUNK_BYTES) {
-      const length = Math.min(BODY_CONTENT_CHUNK_BYTES, bytes - offset);
+    for (let offset = 0; offset < bytes; offset += BODY_READ_CHUNK_BYTES) {
+      const length = Math.min(BODY_READ_CHUNK_BYTES, bytes - offset);
       digest.update(checkedChunk(hash, length, decoder,
         driver.queryOne<{ data: Uint8Array }>(RANGE_SQL, [offset + 1, length, hash])));
     }
@@ -58,8 +58,8 @@ export async function verifyTextBodyCandidateWithPort(port: DbPort, hash: string
   const digest = sha256.create();
   const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
   try {
-    for (let offset = 0; offset < bytes; offset += BODY_CONTENT_CHUNK_BYTES) {
-      const length = Math.min(BODY_CONTENT_CHUNK_BYTES, bytes - offset);
+    for (let offset = 0; offset < bytes; offset += BODY_READ_CHUNK_BYTES) {
+      const length = Math.min(BODY_READ_CHUNK_BYTES, bytes - offset);
       const [row] = await port.query<{ data: Uint8Array }>(RANGE_SQL, [offset + 1, length, hash]);
       digest.update(checkedChunk(hash, length, decoder, row));
     }

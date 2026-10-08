@@ -51,7 +51,7 @@ beforeEach(async () => {
   closeDatabaseConnection();
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-node-source-update-preview-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
+  await initializeDatabase();
 });
 
 afterEach(async () => {
@@ -60,7 +60,8 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 });
 
-it('returns source update content after the readwise body changes upstream', async () => {
+it('returns source update content after the owned readwise body changes upstream', async () => {
+  openDatabaseConnection().sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
   const fixture = await seedReadwiseArticleFixture(tempRoot);
   saveReadwiseKeepImportSettings(fixture);
   await runKeepImportRule({
@@ -183,7 +184,7 @@ it('accepts pending incoming updates into the mirror topic and clears the pendin
   });
 
   expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
-    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`,
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes WHERE nodes.id = ?`,
     ['topic-incoming-accept']
   )?.content).toBe('Accepted incoming content');
   await expect(loadNodeSourceUpdatePreview('topic-incoming-accept')).resolves.toBeNull();
@@ -205,7 +206,7 @@ it('dismisses pending incoming updates without changing the topic content', asyn
   });
 
   expect(openDatabaseConnection().driver.queryOne<{ content: string }>(
-    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.id = ?`,
+    `SELECT ${buildNodeBodyContentSql('nodes')} AS content FROM nodes WHERE nodes.id = ?`,
     ['topic-incoming-dismiss']
   )?.content).toBe('Current mirror content');
   await expect(loadNodeSourceUpdatePreview('topic-incoming-dismiss')).resolves.toBeNull();

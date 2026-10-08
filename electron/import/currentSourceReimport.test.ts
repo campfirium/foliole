@@ -153,7 +153,7 @@ it('overwrites local article edits even when the source file is unchanged', asyn
     node_id: first.last_node_id,
     status: 'reimported'
   });
-  expect(body).toMatchObject({ content: '# Entry\n\nSource body\n', source: 'blob', status: 'resolved' });
+  expect(body).toMatchObject({ content: '# Entry\n\nSource body\n', source: 'node', status: 'resolved' });
   expect(node.deleted_at).toBeNull();
   expect(latestRun).toMatchObject({
     duplicate_semantic: 'updated',

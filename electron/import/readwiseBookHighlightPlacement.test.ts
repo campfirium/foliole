@@ -98,7 +98,7 @@ async function createBooksFixture() {
 function readImportedBook(rootNodeId: string) {
   const connection = openDatabaseConnection().sqlite;
   const chapters = connection
-    .prepare(`SELECT nodes.id, nodes.title, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? AND nodes.deleted_at IS NULL ORDER BY nodes.created_at ASC`)
+    .prepare(`SELECT nodes.id, nodes.title, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes WHERE nodes.parent_id = ? AND nodes.deleted_at IS NULL ORDER BY nodes.created_at ASC`)
     .all(rootNodeId) as Array<{ content: string; id: string; title: string }>;
   const derivedRootChildren = connection
     .prepare('SELECT id FROM nodes WHERE parent_id = ? AND anchor_link IS NOT NULL AND deleted_at IS NULL')
@@ -143,14 +143,13 @@ async function importManualReadwiseBook() {
   return { ...readImportedBook(importedNodeId), importedNodeId };
 }
 
-async function verifyBlobOnlyPlacement(input: {
+async function verifyOwnedBodyPlacement(input: {
   chapterOneId: string;
   chapterTwoId: string;
   connection: ReturnType<typeof openDatabaseConnection>['sqlite'];
   importedNodeId: string;
 }) {
-  input.connection.prepare('UPDATE nodes SET content = ? WHERE id IN (?, ?)')
-    .run('', input.chapterOneId, input.chapterTwoId);
+  input.connection.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
   const args = {
     highlightMarkdownPath: path.join(tempRoot, 'Readwise', 'Books', 'Manual Book.md'),
     importedAt: '2026-08-01T00:00:00.000Z',
@@ -159,18 +158,10 @@ async function verifyBlobOnlyPlacement(input: {
   };
   await expect(placeReadwiseBookHighlights(args)).resolves.toEqual({ matchedCount: 2, unmatchedCount: 0 });
 
-  const unavailableHash = input.connection.prepare('SELECT body_blob_hash FROM nodes WHERE id = ?')
-    .get(input.chapterOneId) as { body_blob_hash: string };
-  const childCount = input.connection.prepare('SELECT COUNT(*) AS count FROM nodes WHERE parent_id IN (?, ?)')
-    .get(input.chapterOneId, input.chapterTwoId) as { count: number };
-  input.connection.prepare('DELETE FROM content_blob_data WHERE hash = ?').run(unavailableHash.body_blob_hash);
-  await expect(placeReadwiseBookHighlights({ ...args, importedAt: '2026-08-01T00:01:00.000Z' }))
-    .rejects.toThrow(`node_body_unavailable:${input.chapterOneId}`);
-  expect(input.connection.prepare('SELECT COUNT(*) AS count FROM nodes WHERE parent_id IN (?, ?)')
-    .get(input.chapterOneId, input.chapterTwoId)).toEqual(childCount);
+
 }
 
-it('anchors readwise book highlights under Blob-only imported chapters', async () => {
+it('anchors Readwise book highlights under complete owned chapters', async () => {
   const { chapters, connection, derivedRootChildren, importedNodeId } = await importManualReadwiseBook();
   const chapterOne = chapters.find((row) => row.title === 'Chapter 1');
   const chapterTwo = chapters.find((row) => row.title === 'Chapter 2');
@@ -178,10 +169,10 @@ it('anchors readwise book highlights under Blob-only imported chapters', async (
   expect(derivedRootChildren).toEqual([]);
 
   const chapterOneDerived = connection
-    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? AND nodes.deleted_at IS NULL ORDER BY nodes.created_at ASC`)
+    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes WHERE nodes.parent_id = ? AND nodes.deleted_at IS NULL ORDER BY nodes.created_at ASC`)
     .all(chapterOne?.id) as Array<{ anchor_link: string; content: string; title: string }>;
   const chapterTwoDerived = connection
-    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE nodes.parent_id = ? AND nodes.deleted_at IS NULL ORDER BY nodes.created_at ASC`)
+    .prepare(`SELECT nodes.title, ${buildNodeBodyContentSql('nodes')} AS content, nodes.anchor_link FROM nodes WHERE nodes.parent_id = ? AND nodes.deleted_at IS NULL ORDER BY nodes.created_at ASC`)
     .all(chapterTwo?.id) as Array<{ anchor_link: string; content: string; title: string }>;
   const chapterOneAnchorLink = parseAnchorLink(chapterOneDerived[0]!.anchor_link);
   const chapterTwoAnchorLink = parseAnchorLink(chapterTwoDerived[0]!.anchor_link);
@@ -220,7 +211,7 @@ it('anchors readwise book highlights under Blob-only imported chapters', async (
     }
   ]);
 
-  await verifyBlobOnlyPlacement({
+  await verifyOwnedBodyPlacement({
     chapterOneId: chapterOne!.id,
     chapterTwoId: chapterTwo!.id,
     connection,

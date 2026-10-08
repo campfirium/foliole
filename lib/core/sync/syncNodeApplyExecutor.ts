@@ -20,9 +20,10 @@ import { toSyncNodeConflictRecord } from './syncNodeConflictRecord.js';
 import { isStoredAncestorVersion } from './syncNodeGraph.js';
 import { hasContentEquivalentIncomingLineage } from './syncNodeLineageEquivalence.js';
 import { prepareSyncNodeTextBodyHashes } from './syncNodePreparedTextBodyHashes.js';
+import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
 import { applyRemoteNodeTombstone, loadNodeSyncTombstone } from './syncNodeTombstoneApply.js';
-import { isNodeVersionIdentityOnly, prepareIncomingNodeVersionHistory, retainIncomingNodeVersionHistory } from './syncNodeVersionHistory.js';
+import { prepareIncomingNodeVersionSource, retainIncomingNodeVersionSource } from './syncNodeVersionHistory.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 
 interface LocalSyncNodeStateRow extends DbRow, LocalSyncNodeState {
@@ -61,7 +62,7 @@ function assertLocalRestoreApplied(
 async function assertLocalRestoreCanApply(
   port: DbPort,
   operation: SyncNodeApplyOperation | undefined,
-  records: NativeSyncNodeRecord[]
+  records: readonly SyncNodeRecordMetadata[]
 ) {
   if (operation !== 'local_restore') return;
   for (const record of records) {
@@ -91,7 +92,7 @@ async function loadLocalNodeSyncState(port: DbPort, nodeId: string) {
 async function handleTombstoneGuard(input: {
   options: ApplySyncNodesWithDbPortOptions;
   record: NativeSyncNodeRecord;
-  result: ApplySyncNodesWithDbPortResult;
+  result: Pick<ApplySyncNodesWithDbPortResult, 'appliedIds' | 'tombstoneBlockedIds'>;
   tx: DbPort;
 }) {
   const localTombstone = await loadNodeSyncTombstone(input.tx, input.record.object_id);
@@ -140,60 +141,58 @@ export async function applySyncNodesWithDbPort(
   records: NativeSyncNodeRecord[],
   options: ApplySyncNodesWithDbPortOptions = {}
 ): Promise<ApplySyncNodesWithDbPortResult> {
-  const result: ApplySyncNodesWithDbPortResult = {
-    appliedIds: [],
-    anchorRepairRecords: [],
-    blockedIds: [],
-    conflictRecords: [],
-    conflictNodes: [],
-    skippedConflictCopyIds: [],
-    tombstoneBlockedIds: [],
-    unmappedAnchorRecords: []
-  };
-  const ordered = orderNodesForApply(latestBranchHeadRecords(records.filter((record) => !isNodeVersionIdentityOnly(record))));
-  const remoteNodeIdsInBatch = new Set(ordered.map((record) => record.object_id));
-  const preparedTextBodyHashes = await prepareSyncNodeTextBodyHashes(ordered, options);
-  const invalidatedAt = new Date().toISOString();
+  const result = await applySyncNodeSourceWithDbPort(port, arraySyncNodeRecordSource(records), options);
+  return { ...result, conflictRecords: result.conflictNodes.map(toSyncNodeConflictRecord) };
+}
 
+export type ApplySyncNodeSourceResult<M extends SyncNodeRecordMetadata> =
+  Omit<ApplySyncNodesWithDbPortResult, 'conflictNodes' | 'conflictRecords'> & { conflictNodes: M[] };
+
+export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMetadata>(
+  port: DbPort, source: SyncNodeRecordSource<M>, options: ApplySyncNodesWithDbPortOptions = {}
+): Promise<ApplySyncNodeSourceResult<M>> {
+  const result: ApplySyncNodeSourceResult<M> = {
+    appliedIds: [], anchorRepairRecords: [], blockedIds: [], conflictNodes: [],
+    skippedConflictCopyIds: [], tombstoneBlockedIds: [], unmappedAnchorRecords: []
+  };
+  const ordered = orderNodesForApply(latestBranchHeadRecords(source.records.filter((record) => !source.isIdentityOnly(record))));
+  const remoteNodeIdsInBatch = new Set(ordered.map((record) => record.object_id));
+  const invalidatedAt = new Date().toISOString();
   await assertLocalRestoreCanApply(port, options.operation, ordered);
   await port.transaction(async (tx) => {
-    const history = await prepareIncomingNodeVersionHistory(tx, records);
-    await retainIncomingNodeVersionHistory(tx, history);
-    for (const record of ordered) {
-      if (await handleTombstoneGuard({ options, record, result, tx })) {
-        continue;
+    const history = await prepareIncomingNodeVersionSource(tx, source);
+    await retainIncomingNodeVersionSource(tx, source, history);
+    for (const metadata of ordered) {
+      const record = await source.load(tx, metadata);
+      if (await applyIncomingRecord({ tx, record, result, options, invalidatedAt, remoteNodeIdsInBatch })) {
+        result.conflictNodes.push(metadata);
       }
-      const localNode = await loadLocalNodeSyncState(tx, record.object_id);
-      const decision = await decideNodeApply(tx, localNode, record, options.operation);
-      if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
-        await applyAcceptedRemoteNode({
-          invalidatedAt, localNode, operation: options.operation ?? 'remote_sync', options, preparedTextBodyHashes,
-          record, remoteNodeIdsInBatch, result, tx
-        });
-        continue;
-      }
-      await upsertRemoteVersion(tx, record);
-      if (decision === 'already_applied') {
-        const stateResult = await upsertAppliedNodeSyncState(tx, record);
-        if (stateResult.changes > 0 || options.includeAlreadyApplied) {
-          result.appliedIds.push(record.object_id);
-        }
-        continue;
-      }
-      if (decision === 'skip_stale') continue;
-      if (decision === 'block_incoming') {
-        result.blockedIds.push(record.object_id);
-        continue;
-      }
-      result.conflictRecords.push(toSyncNodeConflictRecord(record));
-      result.conflictNodes.push(record);
     }
-    await retainIncomingNodeVersionHistory(tx, history);
+    await retainIncomingNodeVersionSource(tx, source, history);
     assertLocalRestoreApplied(options.operation, result.appliedIds.length, ordered.length);
-    if (result.appliedIds.length > 0) {
-      await pruneLearningRowsWithoutVisibleNodes(tx);
-    }
+    if (result.appliedIds.length > 0) await pruneLearningRowsWithoutVisibleNodes(tx);
   });
-
   return result;
+}
+
+async function applyIncomingRecord(input: {
+  tx: DbPort; record: NativeSyncNodeRecord; result: Omit<ApplySyncNodesWithDbPortResult, 'conflictNodes' | 'conflictRecords'>;
+  options: ApplySyncNodesWithDbPortOptions; invalidatedAt: string; remoteNodeIdsInBatch: ReadonlySet<string>;
+}) {
+  const { tx, record, result, options } = input;
+  if (await handleTombstoneGuard({ options, record, result, tx })) return false;
+  const localNode = await loadLocalNodeSyncState(tx, record.object_id);
+  const decision = await decideNodeApply(tx, localNode, record, options.operation);
+  if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
+    const preparedTextBodyHashes = await prepareSyncNodeTextBodyHashes([record], options);
+    await applyAcceptedRemoteNode({ ...input, localNode, preparedTextBodyHashes,
+      operation: options.operation ?? 'remote_sync' });
+    return false;
+  }
+  await upsertRemoteVersion(tx, record);
+  if (decision === 'already_applied') {
+    const stateResult = await upsertAppliedNodeSyncState(tx, record);
+    if (stateResult.changes > 0 || options.includeAlreadyApplied) result.appliedIds.push(record.object_id);
+  } else if (decision === 'block_incoming') result.blockedIds.push(record.object_id);
+  return decision === 'record_conflict';
 }

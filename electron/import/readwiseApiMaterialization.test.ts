@@ -16,6 +16,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { buildFtsSearchQueryPlan } from '../../lib/core/database/ftsSearchQuery.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import {
@@ -49,7 +50,8 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('preserves the local body and materializes distinct remote annotation identities once', () => {
+it.each([false, true])('preserves owned local edits and distinct annotations with retired cache absent=%s', async (absent) => {
+  if (absent) openDatabaseConnection().sqlite.exec('DROP TABLE content_blob_data');
   const config = createDefaultReadwiseReaderConfig();
   const first = documentFixture([{ content: 'Repeated excerpt', remoteId: 'highlight-1' }]);
   expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: first }))
@@ -62,9 +64,11 @@ it('preserves the local body and materializes distinct remote annotation identit
   const row = driver.queryOne<{ content: string; title: string }>(
     'SELECT content, title FROM nodes WHERE id = ?', [source.latest_node_id]
   )!;
+  const resolved = loadNodeBodyResolution(driver, source.latest_node_id);
+  if (!resolved) throw new Error('import_body_missing');
   applyParentContentChange({
-    driver, nextContent: `${row.content}\n\nLocal edit`, nodeId: source.latest_node_id,
-    previousContent: row.content, title: row.title, updatedAt: '2026-09-07T01:00:00.000Z'
+    driver, nextContent: `${resolved.content}\n\nLocal edit`, nodeId: source.latest_node_id,
+    previousContent: resolved.content, title: row.title, updatedAt: '2026-09-07T01:00:00.000Z'
   });
 
   const second = documentFixture([
@@ -74,12 +78,8 @@ it('preserves the local body and materializes distinct remote annotation identit
   expect(materializeReadwiseApiDocument({ config, connectionRef: 'connection', destination: 'inbox', document: second }))
     .toMatchObject({ annotationCount: 1, status: 'imported' });
 
-  const body = driver.queryOne<{ body: string }>(
-    `SELECT CAST(cbd.data AS TEXT) body FROM nodes n JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-     WHERE n.id = ?`, [source.latest_node_id]
-  );
-  expect(body?.body).toContain('Local edit');
-  expect(body?.body).not.toContain('Replaced remote body');
+  const body = loadNodeBodyResolution(driver, source.latest_node_id);
+  expect(body).toMatchObject({ content: `${resolved.content}\n\nLocal edit` });
   const importState = driver.queryOne<{ remote_import_state_json: string }>(
     'SELECT remote_import_state_json FROM import_sources WHERE latest_node_id = ?', [source.latest_node_id]
   );

@@ -33,6 +33,7 @@ vi.mock('electron', () => ({
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
+import { upsertChangedWatchedFolderSource } from '../database/watchedFolderBindings.js';
 
 import { runKeepImportRule } from './keepImportService.js';
 
@@ -46,7 +47,7 @@ beforeEach(async () => {
     await fs.mkdir(path.dirname(trashPath), { recursive: true });
     await fs.rename(filePath, trashPath);
   });
-  initializeDatabase();
+  await initializeDatabase();
 });
 
 afterEach(async () => {
@@ -65,6 +66,7 @@ it('deletes primary and split highlight files after a successful delete-handling
   await fs.mkdir(highlightDir, { recursive: true });
   await fs.writeFile(sourceFile, 'Before matching highlight after.', 'utf8');
   await fs.writeFile(highlightFile, '- matching highlight', 'utf8');
+  configureSource('draft-import-source-401', sourceDir, highlightDir);
 
   await runKeepImportRule({
     actionMode: 'delete',
@@ -98,6 +100,7 @@ it('deletes leftover unchanged files when delete handling is enabled after impor
   await fs.mkdir(highlightDir, { recursive: true });
   await fs.writeFile(sourceFile, 'Before matching highlight after.', 'utf8');
   await fs.writeFile(highlightFile, '- matching highlight', 'utf8');
+  configureSource('draft-import-source-402', sourceDir, highlightDir);
 
   await runKeepImportRule({
     actionMode: 'keep',
@@ -124,3 +127,10 @@ it('deletes leftover unchanged files when delete handling is enabled after impor
   expect(trashItem).toHaveBeenCalledWith(sourceFile);
   expect(trashItem).toHaveBeenCalledWith(highlightFile);
 });
+
+function configureSource(id: string, primaryPath: string, highlightPath: string) {
+  upsertChangedWatchedFolderSource({
+    id, primaryPath, highlightPath, highlightMode: 'split', actionMode: 'keep',
+    archivePath: '', keepPreview: null, keepState: 'enabled'
+  }, '2026-10-08T00:00:00.000Z');
+}

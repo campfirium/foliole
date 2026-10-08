@@ -1,14 +1,14 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
-import { loadMergeBase } from '../../lib/core/sync/syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord, loadMergeBase } from '../../lib/core/sync/syncNodeGraph.js';
 
 import {
   assertPersisted, buildPack, closeLibraries, createPeer, edit, history, joinPeers,
   receivePack, startLibraries, sync
 } from './syncEmptyLibraryTestSupport.js';
+import { wholeBodies } from './topicTextState.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -60,7 +60,7 @@ it('ignores an older full pack after a newer pack without resurrecting retired i
   expect(new Set(rows.map((row) => row.version_id)).size).toBe(rows.length);
 });
 
-it('merges two offline edits from their production common base and persists a two-parent resolution on both ends', async () => {
+it('keeps both complete offline texts and a two-parent resolution without merging their lines', async () => {
   const left = createPeer('left');
   const right = createPeer('right');
   joinPeers(left, right);
@@ -69,14 +69,17 @@ it('merges two offline edits from their production common base and persists a tw
   const l = edit(left, '123-left\n456\n789\n');
   const r = edit(right, '123\n456\n789-right\n');
   await sync(right, left);
-  const merged = history(left).at(-1)!.version_id;
-  assertPersisted(left, '123-left\n456\n789-right\n', merged);
+  const resolved = (await loadCurrentSyncNodeRecord(left.port, 'topic'))!;
+  const merged = resolved.version_id!;
+  expect(wholeBodies(resolved)).toEqual(new Set(['123-left\n456\n789\n', '123\n456\n789-right\n']));
+  assertPersisted(left, resolved.body_text!, merged);
   expect((await loadMergeBase(left.port, merged, r))?.version_id).toBe(r);
   expect(left.db.prepare(`SELECT parent_version_id FROM node_sync_version_parents
     WHERE version_id = ? ORDER BY parent_version_id`).all(merged))
     .toEqual([l, r].sort().map((parent_version_id) => ({ parent_version_id })));
   await sync(left, right);
-  assertPersisted(right, '123-left\n456\n789-right\n', merged);
+  assertPersisted(right, resolved.body_text!, merged);
+  expect(wholeBodies((await loadCurrentSyncNodeRecord(right.port, 'topic'))!)).toEqual(wholeBodies(resolved));
   expect(right.db.prepare(`SELECT parent_version_id FROM node_sync_version_parents
     WHERE version_id = ? ORDER BY parent_version_id`).all(merged))
     .toEqual([l, r].sort().map((parent_version_id) => ({ parent_version_id })));
@@ -91,18 +94,14 @@ it('keeps the losing overlapping edit as a durable alternative and sends it to t
   edit(left, '123456');
   edit(right, '123789');
   await sync(right, left);
-  const body = loadNodeBodyResolution(left.driver, 'topic');
-  if (body?.status !== 'resolved') throw new Error('winner_body_unavailable');
-  const winner = body.content;
-  const alternative = left.db.prepare("SELECT body_text FROM node_text_alternatives WHERE status = 'available'").pluck().get();
-  expect([winner, alternative].sort()).toEqual(['123456', '123789']);
+  const resolved = (await loadCurrentSyncNodeRecord(left.port, 'topic'))!;
+  expect(wholeBodies(resolved)).toEqual(new Set(['123456', '123789']));
   await sync(left, right);
-  assertPersisted(right, winner);
-  expect(right.db.prepare("SELECT body_text FROM node_text_alternatives WHERE status = 'available'").pluck().get())
-    .toBe(alternative);
+  assertPersisted(right, resolved.body_text!, resolved.version_id!);
+  expect(wholeBodies((await loadCurrentSyncNodeRecord(right.port, 'topic'))!)).toEqual(wholeBodies(resolved));
 });
 
-it('preserves the production chain and merges a lagging offline branch', async () => {
+it('preserves the production chain and both complete texts from a lagging offline branch', async () => {
   const source = createPeer('source');
   const lagging = createPeer('lagging');
   joinPeers(source, lagging);
@@ -115,9 +114,12 @@ it('preserves the production chain and merges a lagging offline branch', async (
   const branch = edit(lagging, '123\n456\n789-offline\n');
   await sync(lagging, source);
   expect(history(source).find((row) => row.version_id === c)).toBeDefined();
-  expect(history(source).find((row) => row.version_id === branch)?.body_text).toBe('123\n456\n789-offline\n');
-  assertPersisted(source, '123-current\n456\n789-offline\n');
+  expect(history(source).find((row) => row.version_id === branch)).toBeDefined();
+  const resolved = (await loadCurrentSyncNodeRecord(source.port, 'topic'))!;
+  expect(wholeBodies(resolved)).toEqual(new Set(['123-current\n456\n789\n', '123\n456\n789-offline\n']));
+  assertPersisted(source, resolved.body_text!, resolved.version_id!);
   await sync(source, lagging);
-  assertPersisted(lagging, '123-current\n456\n789-offline\n');
+  assertPersisted(lagging, resolved.body_text!, resolved.version_id!);
+  expect(wholeBodies((await loadCurrentSyncNodeRecord(lagging.port, 'topic'))!)).toEqual(wholeBodies(resolved));
   expect(history(lagging).find((row) => row.version_id === branch)).toBeDefined();
 });

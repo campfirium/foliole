@@ -24,8 +24,8 @@ const ID = 'orphaned-inactive-reading-state-v1';
 beforeEach(async () => { appRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-reading-retention-')); });
 afterEach(async () => { closeDatabaseConnection(); await fs.rm(appRoot, { recursive: true, force: true }); });
 
-function seedLegacyOrphan() {
-  const connection = initializeDatabase();
+async function seedLegacyOrphan() {
+  const connection = await initializeDatabase();
   upsertNodeSnapshot(connection.driver, { nodeId: 'old', kind: 'topic', title: 'Old', content: 'Body',
     parentNodeId: null, isTitleManual: true, reveal: null, anchorLink: null, position: 0,
     createdAt: '2026-08-01T00:00:00Z', updatedAt: '2026-08-01T00:00:00Z' });
@@ -40,21 +40,21 @@ function seedLegacyOrphan() {
 }
 
 it('repairs an already upgraded library on reopen once and preserves its deleted node', async () => {
-  const connection = seedLegacyOrphan();
+  const connection = await seedLegacyOrphan();
   const before = connection.sqlite.prepare("SELECT * FROM nodes WHERE id = 'old'").get();
   closeDatabaseConnection();
-  const reopened = initializeDatabase();
+  const reopened = await initializeDatabase();
   expect(reopened.sqlite.prepare("SELECT * FROM nodes WHERE id = 'old'").get()).toEqual(before);
   expect(reopened.sqlite.prepare("SELECT COUNT(*) FROM sync_object_state WHERE object_type = 'node_reading'").pluck().get()).toBe(0);
   const state = reopened.sqlite.prepare('SELECT * FROM data_migration_state WHERE migration_id = ?').get(ID);
   expect(state).toMatchObject({ status: 'completed' });
   expect((await listApplicationDatabaseBackups()).some((backup) => backup.kind === 'snapshot')).toBe(true);
   closeDatabaseConnection();
-  expect(initializeDatabase().sqlite.prepare('SELECT * FROM data_migration_state WHERE migration_id = ?').get(ID)).toEqual(state);
+  expect((await initializeDatabase()).sqlite.prepare('SELECT * FROM data_migration_state WHERE migration_id = ?').get(ID)).toEqual(state);
 });
 
-it('rolls back retired flags and completion together when startup migration fails', () => {
-  const connection = seedLegacyOrphan();
+it('rolls back retired flags and completion together when startup migration fails', async () => {
+  const connection = await seedLegacyOrphan();
   connection.sqlite.exec(`CREATE TRIGGER reject_reading_migration BEFORE INSERT ON data_migration_state
     WHEN NEW.migration_id = '${ID}' BEGIN SELECT RAISE(ABORT, 'fixture failure'); END`);
   expect(() => connection.sqlite.transaction(() => migrateOrphanedInactiveReadingState(connection))()).toThrow('fixture failure');

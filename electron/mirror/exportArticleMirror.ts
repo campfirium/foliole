@@ -89,7 +89,7 @@ export function loadArticleNode(articleId: string): MirrorNodeRow | null {
     `SELECT n.*, cbd.data AS body_blob_data FROM nodes n
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`
   ).get(articleId) as (MirrorNodeRow & NodeBodyRow) | undefined;
-  return row ? { ...row, content: row.deleted_at ? '' : requireResolvedNodeBody(row, articleId).content } : null;
+  return row ? { ...row, content: row.deleted_at ? '' : requireResolvedNodeBody(row).content } : null;
 }
 
 function loadArticleChildren(articleId: string): MirrorNodeRow[] {
@@ -98,7 +98,7 @@ function loadArticleChildren(articleId: string): MirrorNodeRow[] {
     `SELECT n.*, cbd.data AS body_blob_data FROM nodes n
      LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.parent_id = ?`
   ).all(articleId) as (MirrorNodeRow & NodeBodyRow)[];
-  return rows.map((row) => ({ ...row, content: requireResolvedNodeBody(row, row.id).content }));
+  return rows.map((row) => ({ ...row, content: requireResolvedNodeBody(row).content }));
 }
 
 function loadAncestorChain(parentId: string): AncestorRow[] {

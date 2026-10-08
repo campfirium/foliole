@@ -35,7 +35,7 @@ function runWorkerImport(input: WorkerInput): WorkerOutput {
     sqlite.pragma('foreign_keys = ON');
     return {
       ok: true,
-      record: runPreparedImport(createBetterSqlite3Driver(sqlite), input.prepared)
+      record: runPreparedImport(createBetterSqlite3Driver(sqlite), input.prepared, { })
     };
   } catch (error) {
     return toWorkerError(error);

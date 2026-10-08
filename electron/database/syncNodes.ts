@@ -1,6 +1,6 @@
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { projectNodeResourceLinks } from '../../lib/core/database/nodeResourceReferences.js';
-import { loadTopicTextBodiesWithDriver } from '../../lib/core/database/topicTextBodiesWithDriver.js';
+import { readTopicTextSnapshot } from '../../lib/core/sync/topicTextBodies.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { openDatabaseConnection } from './connection.js';
@@ -121,10 +121,11 @@ function parseSnapshot(row: SyncNodeRow): NativeSyncNodeRecord['snapshot'] {
 }
 
 function toNativeSyncNodeRecord(row: SyncNodeRow): NativeSyncNodeRecord {
-  const snapshot = parseSnapshot(row);
+  const { snapshot, bodies } = row.snapshot_json ? readTopicTextSnapshot(row.snapshot_json) :
+    { snapshot: parseSnapshot(row), bodies: [] };
   return {
     ...(snapshot.text_alternatives?.length ? {
-      alternative_bodies: loadTopicTextBodiesWithDriver(openDatabaseConnection().driver, snapshot.text_alternatives)
+      alternative_bodies: bodies
     } : {}),
     ancestor_version_ids: listAncestorVersionIds(row.version_id, row.parent_version_id),
     body_text: row.body_text ?? snapshot.content ?? '',

@@ -19,7 +19,7 @@ it('uses the desktop sync-pack envelope, table, and protocol contracts', () => {
       'article-image-sources-v1', 'author-host-snapshots-v1',
       'bounded-sync-pack-pages-v1', 'canonical-attachment-storage-key-v1',
       'complete-member-data-plane', 'desktop-soft-anchor-v1', 'device-delivery-receipts-v1',
-      'device-sync-groups-v1', 'dynamic-node-version-chains-v1', 'framed-sync-v22',
+      'device-sync-groups-v1', 'dynamic-node-version-chains-v1', 'framed-sync-transfer-sequences-v1', 'framed-sync-v22',
       'global-object-identity-v2', 'group-key-routing-v1', 'independent-node-fact-pages-v1',
       'lan-sync-v1', 'node-owned-resource-references-v1', 'node-tombstone-pack-v1',
       'opaque-sync-refs-v1',

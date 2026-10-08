@@ -1,10 +1,13 @@
 import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from '../database/syncStateSequenceSchemaStatements.js';
+import { hashTextBody } from '../database/textBodyHash.js';
 
+import { hasCanonicalExternalResourceContentHash } from './canonicalExternalResourceContentHash.js';
 import type { DbPort, DbRow } from './dbPort.js';
 import { shouldApplyForegroundTime } from './syncForegroundDailyTime.js';
 import { pruneLearningRowsWithoutVisibleNodes } from './syncNodeVisibilityPruning.js';
 import { applySyncObjectPayloadWithDbPort } from './syncObjectPayloadExecutor.js';
+import { asObject, text } from './syncObjectPayloadValues.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
 
 const REMOTE_DEVICE_ID = 'sync-remote';
@@ -123,6 +126,7 @@ async function applySingleSyncObjectInTransaction(
 ) {
   const status = await getSyncObjectApplyStatus(port, record);
   if (status === 'already_applied') {
+    await restoreMissingExternalBody(port, record);
     return options.includeAlreadyApplied ? `${record.object_type}:${record.object_id}` : null;
   }
   if (status === 'stale') return null;
@@ -135,6 +139,23 @@ async function applySingleSyncObjectInTransaction(
   await options.onPayloadAppliedInTransaction?.(port, record);
   await upsertAppliedSyncObjectState(port, record);
   return `${record.object_type}:${record.object_id}`;
+}
+
+async function restoreMissingExternalBody(port: DbPort, record: SyncPackSyncObjectRecord) {
+  if (record.object_type !== 'external_document' || record.deleted_at) return;
+  const payload = asObject(record);
+  const content = text(payload.content);
+  const hash = text(payload.body_blob_hash);
+  if (content === null || hash === null) return;
+  if (!hasCanonicalExternalResourceContentHash(record) || hashTextBody(content) !== hash) {
+    throw new Error('framed_sync_external_document_body_invalid');
+  }
+  const [current] = await port.query<{ content: string; body_blob_hash: string | null }>(
+    'SELECT content, body_blob_hash FROM external_documents WHERE document_id = ?', [record.object_id]);
+  if (!current || current.body_blob_hash !== hash || current.content === content) return;
+  if (current.content !== '') throw new Error('external_document_body_contradictory');
+  await port.run('UPDATE external_documents SET content = ? WHERE document_id = ? AND body_blob_hash = ?',
+    [content, record.object_id, hash]);
 }
 
 async function upsertAppliedSyncObjectState(port: DbPort, record: SyncPackSyncObjectRecord) {

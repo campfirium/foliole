@@ -12,6 +12,7 @@ import {
   createSyncGroupDeviceIdentity,
   devicePathFlavorFromCanonicalLibraryPath
 } from '../../lib/platform/syncGroupUnifiedContract.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../lib/platform/syncProtocolContract.js';
 
 import { openDatabaseConnection } from './connection.js';
 import {
@@ -48,6 +49,7 @@ export function loadDesktopSyncGroupMemberState(args?: {
   const adoptedFrom = !adoption && loadDesktopCompletedAdoptionSource(driver, String(context.group_id), proof.library_epoch);
   return {
     contract_version: SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION,
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     ...(adoption ? { adopting_from: adoption.providerDeviceId } : {}),
     ...(adoptedFrom ? { adopted_from: adoptedFrom } : {}),
     devices: loadDevices(String(context.group_id)),

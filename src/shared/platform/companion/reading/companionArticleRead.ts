@@ -31,13 +31,12 @@ function matchesAnnotations(snapshot: WorkspaceSnapshot, nodeId: string, rows: A
 export function readCompanionArticle(
   snapshot: WorkspaceSnapshot,
   nodeId: string,
-  isCurrent: () => boolean,
-  bodyStorage: 'continuous' | 'chunked' = 'continuous'
+  isCurrent: () => boolean
 ) {
   const scope = getCompanionReadingScope();
   return getIosCompanionDatabaseOwner().read(async (db) => {
     if (scope !== getCompanionReadingScope() || !isCurrent()) return null;
-    const document = await loadCompanionNodeDocument(db, nodeId, bodyStorage);
+    const document = await loadCompanionNodeDocument(db, nodeId);
     if (!document) return null;
     const annotations = await db.query<Annotation>(
       `SELECT n.id, n.current_version_id, n.body_blob_hash, n.anchor_link

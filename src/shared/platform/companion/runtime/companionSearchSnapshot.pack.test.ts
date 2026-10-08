@@ -14,7 +14,10 @@ import { createSearchLibrary } from './companionSearchSnapshot.testSupport';
 import { writeIosCompanionDatabase } from './iosCompanionActiveDatabase';
 
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({})
+  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({
+    configureFramedSyncPayloadBudget: async () => undefined,
+    closeFramedSyncPayloadBudget: async () => undefined
+  })
 }));
 
 function createPack(root: string, seq: number) {

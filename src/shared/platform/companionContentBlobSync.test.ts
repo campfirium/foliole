@@ -84,8 +84,7 @@ describe('companion content blob sync split bridge', () => {
     expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
       iosDatabaseMock.owner,
       capacitorMock.plugin,
-      expect.objectContaining({ batch_token: 'content-batch-token' }),
-      undefined, 'continuous'
+      expect.objectContaining({ batch_token: 'content-batch-token' })
     );
     expect(capacitorMock.plugin.syncContentBlob).not.toHaveBeenCalled();
     expect(capacitorMock.plugin.downloadContentBlobBatch.mock.invocationCallOrder[0]!)
@@ -110,8 +109,7 @@ describe('companion content blob sync split bridge', () => {
     expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
       iosDatabaseMock.owner,
       capacitorMock.plugin,
-      expect.objectContaining({ batch_token: 'failed-content-batch-token' }),
-      undefined, 'continuous'
+      expect.objectContaining({ batch_token: 'failed-content-batch-token' })
     );
   });
 });
@@ -127,7 +125,7 @@ describe('iOS companion content blob sync bridge', () => {
     const api = await import('./companionContentBlobSync');
 
     await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual(['a'.repeat(64)]);
-    expect(iosDatabaseMock.missing).toHaveBeenCalledWith(3, 'continuous');
+    expect(iosDatabaseMock.missing).toHaveBeenCalledWith(3);
   });
 
   it('requeries missing bodies after local materialization before returning download demand', async () => {
@@ -136,7 +134,7 @@ describe('iOS companion content blob sync bridge', () => {
     iosDatabaseMock.missing.mockResolvedValueOnce({ blobs: [{ hash: 'a'.repeat(64) }], hashes: ['a'.repeat(64)] })
       .mockResolvedValueOnce({ blobs: [], hashes: [] });
     await expect(api.loadCompanionMissingContentBlobHashes(3)).resolves.toEqual([]);
-    expect(iosDatabaseMock.materialize).toHaveBeenCalledWith(['a'.repeat(64)], 'continuous');
+    expect(iosDatabaseMock.materialize).toHaveBeenCalledWith(['a'.repeat(64)]);
     expect(capacitorMock.plugin.downloadContentBlobBatch).not.toHaveBeenCalled();
   });
 
@@ -165,8 +163,7 @@ describe('iOS companion content blob sync bridge', () => {
     expect(iosDatabaseMock.commit).toHaveBeenCalledWith(
       iosDatabaseMock.owner,
       capacitorMock.plugin,
-      expect.objectContaining({ batch_token: 'content-batch-token' }),
-      undefined, 'continuous'
+      expect.objectContaining({ batch_token: 'content-batch-token' })
     );
     expect(iosDatabaseMock.commit).toHaveBeenCalledTimes(1);
   });

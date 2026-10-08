@@ -3,7 +3,6 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
-import { retireDuplicateNodeInlineContent } from '../../lib/core/database/nodeInlineRetirement.js';
 import { collectTextBodyBlobCandidates, collectTextBodyBlobCandidatesWithPort } from '../../lib/core/database/textBodyBlobCollection.js';
 
 import { closeLibraries, createPeer, edit, startLibraries } from './syncEmptyLibraryTestSupport.js';
@@ -39,8 +38,7 @@ it('protects and releases large raw text and nested JSON holders without complet
     transaction: (run) => peer.driver.transaction(() => run(driver))
   };
   expect(collectTextBodyBlobCandidates(driver, [hash]).deletedHashes).toEqual([]);
-  expect(Math.max(...sizes)).toBeLessThanOrEqual(512 * 1024);
-  expect(sizes.length).toBeGreaterThan(1);
+  expect(sizes.every((size) => size <= 512 * 1024)).toBe(true);
   const reads = observeReads(peer.port);
   expect((await collectTextBodyBlobCandidatesWithPort(reads.port, [hash])).deletedHashes).toEqual([]);
   peer.db.prepare('DELETE FROM editor_operation_history').run();
@@ -138,29 +136,15 @@ it('preserves malformed holder facts and aborts collection', () => {
   expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(hash)).toBeDefined();
 });
 
-it('retires only exact inline duplicates without changing node or version facts', () => {
+it('preserves complete node and version text while collecting obsolete cache candidates', () => {
   const peer = createPeer('source');
   const body = '---\nauthor: Ada\n---\nComplete article';
   const version = edit(peer, body);
-  peer.db.prepare('UPDATE nodes SET content = ? WHERE id = ?').run(body, 'topic');
-  const before = peer.db.prepare('SELECT current_version_id, updated_at, sync_dirty FROM nodes WHERE id = ?').get('topic');
+  const hash = upsertTextBodyBlob(peer.driver, body, NOW);
+  const before = peer.db.prepare('SELECT * FROM nodes WHERE id = ?').get('topic');
   const fact = peer.db.prepare('SELECT * FROM node_sync_versions WHERE version_id = ?').get(version);
-  expect(retireDuplicateNodeInlineContent(peer.driver, ['topic'])).toEqual({ changed: 1, protectedNodeIds: [] });
-  expect(peer.db.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic')).toBe('---\nauthor: Ada\n---\n');
-  expect(peer.db.prepare('SELECT current_version_id, updated_at, sync_dirty FROM nodes WHERE id = ?').get('topic')).toEqual(before);
+  expect(collectTextBodyBlobCandidates(peer.driver, [hash]).deletedHashes).toEqual([]);
+  expect(peer.db.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic')).toBe(body);
+  expect(peer.db.prepare('SELECT * FROM nodes WHERE id = ?').get('topic')).toEqual(before);
   expect(peer.db.prepare('SELECT * FROM node_sync_versions WHERE version_id = ?').get(version)).toEqual(fact);
-  expect(retireDuplicateNodeInlineContent(peer.driver, ['topic']).changed).toBe(0);
-  peer.db.prepare('UPDATE nodes SET content = ? WHERE id = ?').run('Contradictory fact', 'topic');
-  expect(retireDuplicateNodeInlineContent(peer.driver, ['topic']).protectedNodeIds).toEqual(['topic']);
-  expect(peer.db.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic')).toBe('Contradictory fact');
-});
-
-it('does not retire inline facts when the referenced blob metadata is not a text body', () => {
-  const peer = createPeer('source');
-  edit(peer, 'Original inline fact');
-  peer.db.prepare('UPDATE nodes SET content = ?').run('Original inline fact');
-  peer.db.prepare("UPDATE content_blobs SET kind = 'image'").run();
-  expect(retireDuplicateNodeInlineContent(peer.driver, ['topic']))
-    .toEqual({ changed: 0, protectedNodeIds: ['topic'] });
-  expect(peer.db.prepare('SELECT content FROM nodes').pluck().get()).toBe('Original inline fact');
 });

@@ -22,6 +22,7 @@ import { createDefaultReadwiseHostSettings } from '../../lib/core/import/readwis
 import { closeDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import {
+  clearReadwiseDeviceConnection,
   loadReadwiseDeviceConnection,
   migrateLegacyReadwiseDeviceConnection,
   saveReadwiseDeviceConnection
@@ -33,7 +34,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-device-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
+  await initializeDatabase();
 });
 
 afterEach(async () => {
@@ -85,4 +86,16 @@ it('reads the newest token from the former per-source registry', async () => {
   expect(loadReadwiseDeviceConnection()).toEqual({
     secretRef: 'current.bin', state: 'connected', verifiedAt: '2026-09-16T00:00:00.000Z'
   });
+});
+
+it('clears the local source configuration without removing original files', async () => {
+  const original = path.join(tempRoot, 'original.md');
+  await fs.writeFile(original, 'Original source content');
+  saveReadwiseDeviceConnection({ secretRef: 'local.bin', state: 'connected', verifiedAt: null });
+  clearReadwiseDeviceConnection();
+  clearReadwiseDeviceConnection();
+  expect(loadReadwiseDeviceConnection()).toEqual({ secretRef: null, state: 'disconnected', verifiedAt: null });
+  await expect(fs.stat(path.join(mockedAppDataDir, 'config', 'readwise-api-connections-v1.json')))
+    .rejects.toMatchObject({ code: 'ENOENT' });
+  expect(await fs.readFile(original, 'utf8')).toBe('Original source content');
 });

@@ -78,7 +78,7 @@ export function materializeReadwiseApiDocument(input: ReadwiseApiMaterialization
     return result(input.document.id, 'skipped');
   }
   if (!input.document.body.trim() && !existing?.body?.trim()) {
-    const record = runPreparedImport(prepareReadwiseApiImportRecord(input, existing, importedAt));
+    const record = runPreparedImport(prepareReadwiseApiImportRecord(input, existing, importedAt), { });
     saveState(input, record.sourceFingerprint, existing?.annotations ?? [], {
       annotations: existing?.state.annotations ?? [],
       bodyAuthority: existing?.state.bodyAuthority ?? 'reader_html',
@@ -134,11 +134,13 @@ function materializeAvailableDocument(
   }));
   prepared.matchedHighlights = materialized.filter((annotation) => annotation.locatorText);
   prepared.unmatchedHighlights = materialized.filter((annotation) => !annotation.locatorText);
-  const record = runPreparedImport(prepared, input.resetImportedStructure ? {
+  const record = runPreparedImport(prepared, {
+    ...(input.resetImportedStructure ? {
     ...(input.relocationPolicy ? { ambiguityPolicy: input.relocationPolicy } : {}),
     ...(existing?.nodeId ? { forceUpdateExistingNodeId: existing.nodeId } : {}),
     resetImportedStructure: true
-  } : undefined);
+    } : {})
+  });
   if (!record.nodeId) return result(input.document.id, 'degraded');
 
   const nextAnnotationStates = [

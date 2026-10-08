@@ -5,6 +5,7 @@ import { migrateCompanionDatabase } from '../../lib/core/database/companionDatab
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { retainLocalEditBase, releaseLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
+import { loadRetainedSyncNodeVersionFact } from '../../lib/core/sync/syncNodeGraph.js';
 import { mutateTopicText } from '../../lib/core/sync/topicTextMutation.js';
 
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
@@ -52,10 +53,11 @@ it('releases dismissed body bytes after whole-version edit holds end while retai
   await mutateTopicText(host.db, { nodeId: 'topic', alternativeId: entry.id, action: 'dismissed',
     now: new Date().toISOString(), versionId: 'dismiss', hostName: 'Host' });
   await collectNodeVersionPayloads(host.db, 'topic', 100);
-  expect(host.sqlite.prepare('SELECT 1 FROM content_blob_data WHERE hash = ?').get(entry.body_blob_hash)).toBeDefined();
+  expect((await loadRetainedSyncNodeVersionFact(host.db, merged.version_id!))?.alternative_bodies)
+    .toContainEqual({ hash: entry.body_blob_hash, text: 'Disposable alternative' });
   await releaseLocalEditBase(host.db, 'draft', 'topic');
   await collectNodeVersionPayloads(host.db, 'topic', 100);
-  expect(host.sqlite.prepare('SELECT 1 FROM content_blob_data WHERE hash = ?').get(entry.body_blob_hash)).toBeUndefined();
+  expect((await loadRetainedSyncNodeVersionFact(host.db, merged.version_id!))?.alternative_bodies).toBeUndefined();
   expect(host.sqlite.prepare('SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ? ORDER BY ordinal')
     .all(merged.version_id)).toEqual([{ parent_version_id: 'a' }, { parent_version_id: 'b' }]);
 });

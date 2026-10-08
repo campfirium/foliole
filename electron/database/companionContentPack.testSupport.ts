@@ -5,9 +5,7 @@ import { join } from 'node:path';
 
 import Database from 'better-sqlite3';
 
-import { BODY_CONTENT_SCHEMA } from '../../lib/core/database/bodyContentSchema.js';
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 
@@ -21,7 +19,6 @@ export function contentPackFixture(bodies: readonly string[]) {
   pack.exec('CREATE TABLE content_blob_batch (hash TEXT PRIMARY KEY, size_bytes INTEGER NOT NULL, data BLOB NOT NULL)');
   const sqlite = new Database(':memory:');
   initializeDatabaseConnection({ sqlite });
-  for (const sql of BODY_CONTENT_SCHEMA) sqlite.exec(sql);
   const entries = bodies.map((body) => {
     const bytes = Buffer.from(body);
     const hash = packHash(bytes);
@@ -36,29 +33,4 @@ export function contentPackFixture(bodies: readonly string[]) {
   const db = createBetterSqliteDbPort(sqlite);
   return { sqlite, db, entries, path,
     close() { sqlite.close(); rmSync(directory, { recursive: true, force: true }); } };
-}
-
-export function observeChunkedPack(db: DbPort) {
-  const sizes: number[] = [];
-  const queries: string[] = [];
-  function wrap(port: DbPort): DbPort {
-    return { ...port,
-      query: async <T extends DbRow>(sql: string, params?: Parameters<DbPort['query']>[1]) => {
-        if (sql.includes('content_blob_data')) throw new Error('unexpected_continuous_body_read');
-        if (sql.includes('content_batch.content_blob_batch') && /SELECT\s+(?:\*|data|pack\.data)\b/iu.test(sql)) {
-          throw new Error('unexpected_complete_pack_read');
-        }
-        queries.push(sql);
-        const rows = await port.query<T>(sql, params);
-        for (const row of rows) if (row.data instanceof Uint8Array) sizes.push(row.data.byteLength);
-        return rows;
-      },
-      run: async (sql, params) => {
-        if (sql.includes('content_blob_data')) throw new Error('unexpected_continuous_body_write');
-        return port.run(sql, params);
-      },
-      transaction: (task) => port.transaction((tx) => task(wrap(tx)))
-    };
-  }
-  return { db: wrap(db), sizes, queries };
 }

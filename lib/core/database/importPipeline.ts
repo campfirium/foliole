@@ -1,9 +1,7 @@
 import type { PersistedImportRecord, PreparedImportRecord } from '../import/contract.js';
-import type { PreparedImportHighlightRecord } from '../import/contract.js';
 
 import type { DatabaseDriver } from './driver.js';
-import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
-import { applyImportedHighlightAnchors } from './importHighlightAnchors.js';
+import { filterImportHighlightsWithinBudget } from './importHighlightTextBudget.js';
 import { resolveAnchoredImport } from './importPipelineAnchoring.js';
 import {
   hasLandedImportEvidence,
@@ -11,7 +9,7 @@ import {
   type ImportSourceRow,
   resolveExistingImportTarget
 } from './importPipelineExistingTarget.js';
-import { replaceImportedHighlightNodes } from './importPipelineHighlightNodes.js';
+import { persistImportedHighlightNodes } from './importPipelineHighlightPersistence.js';
 import { updateExistingNode, writeNewNode } from './importPipelineNodes.js';
 import { establishImportedNodeIdentity } from './importPipelineProvenance.js';
 import {
@@ -28,42 +26,6 @@ export interface RunPreparedImportOptions {
   forceUpdateExistingNodeId?: string;
   preserveExistingHighlightNodes?: boolean;
   resetImportedStructure?: boolean;
-}
-
-function persistImportedHighlightNodes(input: {
-  anchoredContent: string;
-  driver: DatabaseDriver;
-  duplicateSemantic: PersistedImportRecord['duplicateSemantic'];
-  importedAt: string;
-  nodeId: string;
-  prepared: PreparedImportRecord;
-  preserveExistingHighlightNodes: boolean;
-  resetImportedStructure: boolean;
-  prepareDeletionVersions?: RunPreparedImportOptions['prepareDeletionVersions'];
-  matchedAnchoredHighlights: Array<PreparedImportHighlightRecord | ReturnType<typeof applyImportedHighlightAnchors>['highlights'][number]>;
-}) {
-  if (input.preserveExistingHighlightNodes) return;
-  if (input.prepared.sourceProfile !== 'body_with_highlight_sidecar' || input.resetImportedStructure) {
-    replaceImportedHighlightNodes({
-      driver: input.driver,
-      highlights: input.matchedAnchoredHighlights as ReturnType<typeof applyImportedHighlightAnchors>['highlights'],
-      importedAt: input.importedAt,
-      ...(input.prepareDeletionVersions ? { prepareDeletionVersions: input.prepareDeletionVersions } : {}),
-      parentNodeId: input.nodeId,
-      parentContent: input.anchoredContent
-    });
-    return;
-  }
-  if (input.duplicateSemantic !== 'new') {
-    return;
-  }
-  insertImportedHighlightNodes({
-    driver: input.driver,
-    highlights: input.matchedAnchoredHighlights,
-    importedAt: input.importedAt,
-    parentNodeId: input.nodeId,
-    parentContent: input.anchoredContent
-  });
 }
 
 function finalizeImportRecord(driver: DatabaseDriver, record: PersistedImportRecord) {
@@ -105,6 +67,7 @@ function resolvePreparedNodeId(input: {
   existingNode: ExistingNodeRow | null;
   prepared: PreparedImportRecord;
   resetImportedStructure: boolean;
+  budgetFailures: string[];
 }) {
   if (input.duplicateSemantic === 'updated' && input.existingNode && !input.existingNode.deleted_at) {
     if (input.prepared.sourceProfile === 'body_with_highlight_sidecar' && !input.resetImportedStructure) {
@@ -113,7 +76,7 @@ function resolvePreparedNodeId(input: {
         existingNode: input.existingNode,
         hideTitleHeading: input.prepared.hideTitleHeading,
         importedAt: input.baseRecord.importedAt,
-        prepared: input.prepared
+        prepared: input.prepared, budgetFailures: input.budgetFailures
       });
     }
     return updateExistingNode({
@@ -122,7 +85,7 @@ function resolvePreparedNodeId(input: {
       existingNode: input.existingNode,
       hideTitleHeading: input.prepared.hideTitleHeading,
       importedAt: input.baseRecord.importedAt,
-      title: input.prepared.nodeTitle
+      title: input.prepared.nodeTitle, budgetFailures: input.budgetFailures
     });
   }
   return writeNewNode({
@@ -131,11 +94,39 @@ function resolvePreparedNodeId(input: {
     hideTitleHeading: input.prepared.hideTitleHeading,
     importedAt: input.baseRecord.importedAt,
     ...(input.prepared.targetParentNodeId === undefined ? {} : { targetParentNodeId: input.prepared.targetParentNodeId }),
-    title: input.prepared.nodeTitle
+    title: input.prepared.nodeTitle, budgetFailures: input.budgetFailures
   });
 }
 
+function finalizeDuplicateImport(driver: DatabaseDriver, prepared: PreparedImportRecord,
+  existingNode: ExistingNodeRow | null, baseRecord: PersistedImportRecord, budgetFailures: string[]) {
+  if (prepared.sourceProfile === 'body_with_highlight_sidecar' && existingNode && !existingNode.deleted_at) {
+    updateExistingReadwiseNode({ driver, existingNode,
+      hideTitleHeading: prepared.hideTitleHeading, importedAt: baseRecord.importedAt, prepared, budgetFailures
+    });
+  }
+  if (!baseRecord.nodeId) throw new Error('duplicate_import_node_missing');
+  establishImportedNodeIdentity(driver, baseRecord, baseRecord.nodeId);
+  return finalizeImportRecord(driver, withAnnotationFailures(baseRecord, budgetFailures));
+}
+
+function withAnnotationFailures(record: PersistedImportRecord, failures: string[]): PersistedImportRecord {
+  if (!failures.length) return record;
+  return { ...record, resultStatus: 'degraded',
+    degradedReason: [record.degradedReason, ...new Set(failures)].filter(Boolean).join('; ') };
+}
+
 function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportRecord, options: RunPreparedImportOptions) {
+  const budgetFailures: string[] = [];
+  const rejectedHighlights = options.preserveExistingHighlightNodes ? [] : filterImportHighlightsWithinBudget(
+    [...(prepared.matchedHighlights ?? []), ...(prepared.unmatchedHighlights ?? [])], prepared.content, budgetFailures
+  ).rejected;
+  if (rejectedHighlights.length) {
+    const rejected = new Set(rejectedHighlights);
+    prepared = { ...prepared,
+      ...(prepared.matchedHighlights ? { matchedHighlights: prepared.matchedHighlights.filter(highlight => !rejected.has(highlight)) } : {}),
+      ...(prepared.unmatchedHighlights ? { unmatchedHighlights: prepared.unmatchedHighlights.filter(highlight => !rejected.has(highlight)) } : {}) };
+  }
   const { existingNode, existingSource, forceUpdateExisting } = resolveExistingImportTarget(
     driver,
     prepared,
@@ -148,27 +139,14 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
       : false
   });
   if (duplicateSemantic === 'duplicate') {
-    if (prepared.sourceProfile === 'body_with_highlight_sidecar' && existingNode && !existingNode.deleted_at) {
-      updateExistingReadwiseNode({
-        driver,
-        existingNode,
-        hideTitleHeading: prepared.hideTitleHeading,
-        importedAt: baseRecord.importedAt,
-        prepared
-      });
-    }
-    if (!baseRecord.nodeId) {
-      throw new Error('duplicate_import_node_missing');
-    }
-    establishImportedNodeIdentity(driver, baseRecord, baseRecord.nodeId);
-    return finalizeImportRecord(driver, baseRecord);
+    return finalizeDuplicateImport(driver, prepared, existingNode, baseRecord, budgetFailures);
   }
   if (prepared.content.trim().length === 0) {
-    return finalizeImportRecord(driver, {
+    return finalizeImportRecord(driver, withAnnotationFailures({
       ...baseRecord,
       degradedReason: prepared.degradedReason ?? 'empty_content',
       resultStatus: 'degraded'
-    });
+    }, budgetFailures));
   }
   const anchoredImport = resolveAnchoredImport(prepared, options);
   const nodeId = resolvePreparedNodeId({
@@ -178,7 +156,7 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     duplicateSemantic,
     existingNode,
     prepared,
-    resetImportedStructure: Boolean(options.resetImportedStructure)
+    resetImportedStructure: Boolean(options.resetImportedStructure), budgetFailures
   });
   persistImportedHighlightNodes({
     anchoredContent: anchoredImport.content,
@@ -186,14 +164,14 @@ function performPreparedImport(driver: DatabaseDriver, prepared: PreparedImportR
     duplicateSemantic,
     importedAt: baseRecord.importedAt,
     ...(options.prepareDeletionVersions ? { prepareDeletionVersions: options.prepareDeletionVersions } : {}),
-    matchedAnchoredHighlights: anchoredImport.highlights,
+    matchedAnchoredHighlights: anchoredImport.highlights, rejectedHighlights,
     nodeId,
     prepared,
     preserveExistingHighlightNodes: Boolean(options.preserveExistingHighlightNodes),
-    resetImportedStructure: Boolean(options.resetImportedStructure)
+    resetImportedStructure: Boolean(options.resetImportedStructure), budgetFailures
   });
   establishImportedNodeIdentity(driver, baseRecord, nodeId);
-  return finalizeImportRecord(driver, { ...baseRecord, nodeId });
+  return finalizeImportRecord(driver, withAnnotationFailures({ ...baseRecord, nodeId }, budgetFailures));
 }
 
 export function runPreparedImport(
@@ -210,7 +188,7 @@ export function recordPreparedImportFailure(
   failureReason: string
 ): PersistedImportRecord {
   return driver.transaction(() => {
-    const { existingNode, existingSource } = resolveExistingImportTarget(driver, prepared);
+    const { existingNode, existingSource } = resolveExistingImportTarget(driver, prepared, undefined);
     const duplicateSemantic = resolveDuplicateSemantic(
       existingSource,
       existingNode,

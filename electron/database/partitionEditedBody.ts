@@ -19,7 +19,7 @@ export function partitionEditedBody(input: NativePartitionBodyMutationArgs) {
     const node = driver.queryOne<{ kind: string }>('SELECT kind FROM nodes WHERE id = ? AND deleted_at IS NULL', [input.sourceNodeId]);
     if (!node || node.kind !== 'topic') throw new Error('body_partition_source_missing');
     const body = loadNodeBodyResolution(driver, input.sourceNodeId);
-    if (!body || body.status === 'unavailable') throw new NodeBodyUnavailableError([input.sourceNodeId]);
+    if (!body) throw new NodeBodyUnavailableError([input.sourceNodeId]);
     if (body.content !== input.expectedContent) throw new Error('body_partition_source_changed');
     const previous = readPartitionedNodeBody(driver, input.sourceNodeId);
     const content = input.content + previous.slice(body.content.length);

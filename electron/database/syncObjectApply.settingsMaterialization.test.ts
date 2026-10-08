@@ -27,8 +27,9 @@ import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTo
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 import { loadReviewSchedulerSettings } from '../reviewSchedulerSettings.js';
 
-import { closeDatabaseConnection } from './connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDesktopDeviceProfileFixture } from './deviceIdentityTestSupport.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { initializeDatabase } from './migrate.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 import { applySyncObjectsAsync } from './syncObjectApply.js';
@@ -38,7 +39,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-setting-materialization-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
+  await initializeDatabase();
   initializeDesktopDeviceProfileFixture('desktop-host');
 });
 
@@ -77,30 +78,45 @@ it('materializes an accepted workspace setting and preserves it after database r
   const record = settingRecord({
     formFactor: 'desktop',
     hostName: '*',
-    key: 'app_settings',
+    key: 'search_aliases_document',
     platform: 'windows',
     scope: 'user_space',
     updatedAt: '2026-07-10T00:01:00.000Z',
-    valueJson: '{"theme":"dark"}'
+    valueJson: '{"aliases":["shared-search"]}'
   });
 
   await expect(applySyncObjectsAsync([record])).resolves.toEqual([
-    'setting:user_space:windows:desktop:*:app_settings'
+    'setting:user_space:windows:desktop:*:search_aliases_document'
   ]);
-  expect(loadJsonSetting('app_settings')).toEqual({ theme: 'dark' });
+  expect(loadJsonSetting('search_aliases_document')).toEqual({ aliases: ['shared-search'] });
 
   closeDatabaseConnection();
-  initializeDatabase();
-  expect(loadJsonSetting('app_settings')).toEqual({ theme: 'dark' });
+  await initializeDatabase();
+  expect(loadJsonSetting('search_aliases_document')).toEqual({ aliases: ['shared-search'] });
 });
 
-it('materializes the Readwise import tag without turning it into Host state', async () => {
+it('ignores legacy shared device preferences without creating accepted state', async () => {
+  saveJsonSetting('app_settings', { theme: 'light', fontSize: 19 });
+  const record = settingRecord({ formFactor: 'desktop', hostName: '*', key: 'app_settings',
+    platform: 'windows', scope: 'user_space', updatedAt: '2099-07-10T00:01:00.000Z',
+    valueJson: '{"theme":"dark","fontSize":12}' });
+  await expect(applySyncObjectsAsync([record])).resolves.toEqual([]);
+  expect(loadJsonSetting('app_settings')).toEqual({ theme: 'light', fontSize: 19 });
+  const driver = openDatabaseConnection().driver;
+  expect(driver.queryAll('SELECT * FROM setting_records WHERE key = ? AND scope = ?',
+    ['app_settings', 'user_space'])).toEqual([]);
+  expect(driver.queryAll('SELECT * FROM sync_object_state WHERE object_type = ? AND object_id = ?',
+    ['setting', record.object_id])).toEqual([]);
+});
+
+it('materializes the current Host import config and keeps other Host values isolated', async () => {
+  const host = loadOrCreateDesktopHostName();
   const record = settingRecord({
     formFactor: 'desktop',
-    hostName: '*',
+    hostName: host,
     key: 'import_manager_settings',
     platform: 'windows',
-    scope: 'user_space',
+    scope: 'host',
     updatedAt: '2026-09-11T00:00:00.000Z',
     valueJson: JSON.stringify({
       readwiseAutoImportPolicy: { importTag: 'favorite', version: 3 },
@@ -113,6 +129,14 @@ it('materializes the Readwise import tag without turning it into Host state', as
     readwiseAutoImportPolicy: { importTag: 'favorite', version: 3 }
   });
   expect(loadJsonSetting('readwise_import_settings')).toBeNull();
+  const foreign = settingRecord({ formFactor: 'desktop', hostName: 'other-desktop-host',
+    key: 'import_manager_settings', platform: 'windows', scope: 'host',
+    updatedAt: '2026-09-12T00:00:00.000Z',
+    valueJson: JSON.stringify({ readwiseAutoImportPolicy: { importTag: 'foreign', version: 3 }, version: 5 }) });
+  await expect(applySyncObjectsAsync([foreign])).resolves.toEqual([]);
+  expect(loadJsonSetting('import_manager_settings')).toMatchObject({
+    readwiseAutoImportPolicy: { importTag: 'favorite', version: 3 }
+  });
 });
 
 it('waits for the matching cutover proof before materializing API mode', async () => {

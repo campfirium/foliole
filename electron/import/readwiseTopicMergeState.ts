@@ -22,7 +22,7 @@ export function readReadwiseTopicMergeSourceNode(nodeId: string) {
      WHERE nodes.id = ?`,
     [nodeId]
   );
-  return row ? { ...row, content: requireResolvedNodeBody(row, row.id).content } : null;
+  return row ? { ...row, content: requireResolvedNodeBody(row).content } : null;
 }
 
 export function readReadwiseTopicHighlightContents(nodeId: string) {

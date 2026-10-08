@@ -7,6 +7,7 @@ import { FRAMED_SYNC_COMPLETION_BACKFILL, FRAMED_SYNC_COMPLETION_SCHEMA } from '
 import { migrateFramedSyncInventory } from './framedSyncInventoryMigration.js';
 import { migrateDesktopFramedSyncPayloads } from './framedSyncPayloadMigration.js';
 import { migrateFramedSyncPermanentDeleteHistory } from './framedSyncPermanentDeleteHistoryMigration.js';
+import { FRAMED_SYNC_RESOURCE_DEMAND_SCHEMA } from './framedSyncResourceDemandSchema.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from './framedSyncStagingSchema.js';
 import { migrateFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
 import { migrateIndependentNodeVersions } from './independentNodeVersionMigration.js';
@@ -72,6 +73,7 @@ import { SYNC_PACK_DEPENDENCY_STAGING_SCHEMA } from './syncPackDependencyStaging
 import { SYNC_PACK_PROGRESS_SCHEMA_STATEMENTS } from './syncPackProgressSchemaStatements.js';
 import { repairSyncStateEntities } from './syncStateEntityRepair.js';
 import { SYNC_STATE_SEQUENCE_SCHEMA_STATEMENTS } from './syncStateSequenceSchemaStatements.js';
+import { migrateTextBodyOwnership } from './textBodyOwnershipMigration.js';
 import { migrateTopicTextState } from './topicTextStateMigration.js';
 import { removeUntrackedImportCaches } from './untrackedImportCacheMigration.js';
 
@@ -243,5 +245,7 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
   { version: 148, migrate: (sqlite) => {
     sqlite.exec(`${FRAMED_SYNC_COMPLETION_SCHEMA}; ${FRAMED_SYNC_COMPLETION_BACKFILL}`);
     migrateDesktopFramedSyncPayloads(sqlite);
-  } }
+  } },
+  { version: 149, migrate: (sqlite) => sqlite.exec(FRAMED_SYNC_RESOURCE_DEMAND_SCHEMA) },
+  { version: 150, migrate: migrateTextBodyOwnership }
 ];

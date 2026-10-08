@@ -1,4 +1,5 @@
 import type { DbPort, DbRow } from './dbPort.js';
+import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
 import { applyRetiredParentOrderBody } from './parentOrderRetiredBodyApply.js';
 import { hashText } from './syncNodeResolution.js';
 import type { SyncPackSyncObjectRecord } from './syncPackSyncObjectsExecutor.js';
@@ -11,7 +12,11 @@ export async function applyParentOrderFactObject(port: DbPort, record: SyncPackS
   const raw: unknown = JSON.parse(record.payload_json);
   const managed = parseManagedParentOrderFact(raw);
   if (record.object_id !== managed.version.versionId) throw new Error('sync_parent_order_fact_hash_mismatch');
-  if (managed.version.order === null) return applyRetiredParentOrderBody(port, raw, record.content_hash);
+  if (managed.version.order === null) {
+    const result = await applyRetiredParentOrderBody(port, raw, record.content_hash);
+    await publishParentOrderPosition(port, managed.parentId);
+    return result;
+  }
   const fact = parseParentOrderFact(JSON.parse(record.payload_json));
   const payload = parentOrderFactPayload(fact.parentId, fact.version, fact.createdAt);
   if (record.object_id !== fact.version.versionId ||
@@ -19,6 +24,7 @@ export async function applyParentOrderFactObject(port: DbPort, record: SyncPackS
     throw new Error('sync_parent_order_fact_hash_mismatch');
   }
   await insertParentOrderVersion(port, fact.parentId, fact.version, fact.createdAt, 'staged');
+  await publishParentOrderPosition(port, fact.parentId);
 }
 
 export async function applySyncPackParentOrderFacts(port: DbPort, incomingAlias = 'inc') {

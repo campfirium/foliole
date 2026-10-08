@@ -18,20 +18,22 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import type { NativeTextImportResult } from '../../lib/platform/nativeContract.js';
-import { closeDatabaseConnection } from '../database/connection.js';
+import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { runPreparedImport } from '../database/importPipeline.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { buildImportNodeMutationPatch } from './importNodeMutationPatch.js';
 
+let tempRoot = '';
 beforeEach(async () => {
-  const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-import-patch-'));
+  tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-import-patch-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
+  await initializeDatabase();
 });
 
-afterEach(() => {
+afterEach(async () => {
   closeDatabaseConnection();
+  await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
 function toNativeResult(
@@ -56,9 +58,9 @@ function toNativeResult(
   };
 }
 
-it('builds a node mutation patch from imported sqlite nodes without loading a full workspace snapshot', () => {
+it.each(['Imported body', '\ufeffOwned 中😀\0 body'])('builds a complete node mutation patch from owned SQLite text', (content) => {
   const imported = runPreparedImport({
-    content: 'Imported body',
+    content,
     contentFingerprint: 'content-fp',
     degradedReason: null,
     importedAt: '2026-06-09T10:00:00.000Z',
@@ -79,12 +81,13 @@ it('builds a node mutation patch from imported sqlite nodes without loading a fu
     nodeOrder: expect.arrayContaining([imported.nodeId]),
     nodes: [
       expect.objectContaining({
-        content: 'Imported body',
+        content,
         nodeId: imported.nodeId,
         title: 'Imported note'
       })
     ]
   });
+  expect(openDatabaseConnection().driver.queryAll('SELECT hash FROM content_blob_data')).toEqual([]);
 });
 
 it('does not reduce a persisted EPUB hierarchy to a root-only mutation patch', () => {

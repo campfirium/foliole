@@ -87,16 +87,15 @@ export function migrateLegacyBodyConsistency(connection: Pick<DatabaseConnection
       protectBodyMigration(driver, BODY_REPAIR_ID, row.id, inspection.reason);
       protectedCount++;
     } else {
+      if (inspection.retirePlaceholder) {
+        driver.execute('UPDATE nodes SET content = ? WHERE id = ?', [decodeTextBodyBlobData(row.data)!, row.id]);
+        driver.execute('DELETE FROM legacy_body_migration_protections WHERE migration_id = ? AND object_id = ?',
+          [BODY_COLLECTION_ID, row.id]);
+      }
       if (inspection.repair && row.current_version_id && repairCurrentVersionBodyWithDriver(driver, {
         nodeId: row.id, expectedVersionId: row.current_version_id, expectedBodyBlobHash: row.body_blob_hash,
         hostName, now: new Date().toISOString()
       })) progress.changed++;
-      if (inspection.retirePlaceholder) {
-        driver.execute('UPDATE nodes SET content = ? WHERE id = ?',
-          [projectNodeInlineContent(decodeTextBodyBlobData(row.data)!), row.id]);
-        driver.execute('DELETE FROM legacy_body_migration_protections WHERE migration_id = ? AND object_id = ?',
-          [BODY_COLLECTION_ID, row.id]);
-      }
     }
   }
   saveBodyMigrationProgress(connection, progress, protectedCount === 0);

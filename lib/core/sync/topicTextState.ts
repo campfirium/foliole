@@ -3,6 +3,8 @@ import { z } from 'zod';
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { hashTextBody } from '../database/textBodyHash.js';
 
+import type { SyncNodeRecordMetadata } from './syncNodeRecordSource.js';
+
 export const TEXT_ALTERNATIVE_LIMIT = 3;
 export const TEXT_ALTERNATIVE_LIFETIME_MS = 30 * 24 * 60 * 60 * 1_000;
 
@@ -19,7 +21,7 @@ export const textAlternativesSchema = z.array(textAlternativeSchema).max(TEXT_AL
 export type TopicTextAlternative = z.infer<typeof textAlternativeSchema>;
 export type TopicTextBody = { hash: string; text: string };
 
-export function textAlternatives(record: NativeSyncNodeRecord) {
+export function textAlternatives(record: SyncNodeRecordMetadata) {
   return record.snapshot.text_alternatives ?? [];
 }
 
@@ -32,7 +34,7 @@ export function alternativeForBody(record: NativeSyncNodeRecord, formedAt: strin
   return alternativeForBodyHash(record, hash, formedAt);
 }
 
-export function alternativeForBodyHash(record: NativeSyncNodeRecord, hash: string, formedAt: string): TopicTextAlternative {
+export function alternativeForBodyHash(record: SyncNodeRecordMetadata, hash: string, formedAt: string): TopicTextAlternative {
   const origin = record.snapshot.text_selection?.version_id ?? record.version_id;
   return {
     id: `alternative#${hashTextBody(`${record.object_id}\n${origin}\n${hash}`).slice(0, 24)}`,

@@ -3,7 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../sync/dbPort.js';
 
-import { BODY_CONTENT_CHUNK_BYTES } from './bodyContentSchema.js';
+import { BODY_READ_CHUNK_BYTES } from './bodyReadBudget.js';
 import type { DatabaseDriver } from './driver.js';
 
 const SNAPSHOT_BODY = "CASE WHEN json_type(snapshot_json, '$.content') = 'text' THEN json_extract(snapshot_json, '$.content') END";
@@ -48,8 +48,8 @@ export function releasedVersionBodyHashesWithDriver(driver: DatabaseDriver, vers
     if (size === null) continue;
     const digest = sha256.create();
     try {
-      for (let offset = 0; offset < size; offset += BODY_CONTENT_CHUNK_BYTES) {
-        const length = Math.min(BODY_CONTENT_CHUNK_BYTES, size - offset);
+      for (let offset = 0; offset < size; offset += BODY_READ_CHUNK_BYTES) {
+        const length = Math.min(BODY_READ_CHUNK_BYTES, size - offset);
         digest.update(checkedBytes(driver.queryOne<{ data: Uint8Array }>(rangeSql(source),
           [offset + 1, length, versionId]), length));
       }
@@ -73,8 +73,8 @@ export async function releasedVersionBodyHashesWithPort(port: DbPort, versionId:
     if (size === null) continue;
     const digest = sha256.create();
     try {
-      for (let offset = 0; offset < size; offset += BODY_CONTENT_CHUNK_BYTES) {
-        const length = Math.min(BODY_CONTENT_CHUNK_BYTES, size - offset);
+      for (let offset = 0; offset < size; offset += BODY_READ_CHUNK_BYTES) {
+        const length = Math.min(BODY_READ_CHUNK_BYTES, size - offset);
         const [chunk] = await port.query<{ data: Uint8Array }>(rangeSql(source), [offset + 1, length, versionId]);
         digest.update(checkedBytes(chunk, length));
       }

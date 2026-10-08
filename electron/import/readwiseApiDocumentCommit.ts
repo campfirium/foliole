@@ -89,16 +89,13 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   });
   if (!originalFileCategory || result.status !== 'imported') return result;
 
-  const existing = await runWithDatabaseConnectionOwner(() => (
-    loadReadwiseApiImportSource(input.connectionRef, input.document.id)
-  ));
+  const existing = await loadCommittedSource(input);
   if (!prepared || (previousOriginalFile?.status === 'localized' && !input.preparedResources?.replaceOriginalFile)) {
     await placePdfHighlightsIfAvailable(input, existing?.nodeId ?? null, previousOriginalFile);
     return result;
   }
   await runWithDatabaseConnectionOwner(() => input.assertEligible?.());
-  const finalState = await persistPreparedOriginalFile({
-    category: originalFileCategory, document: input.document, nodeId: existing?.nodeId ?? null,
+  const finalState = await persistPreparedOriginalFile({ category: originalFileCategory, document: input.document, nodeId: existing?.nodeId ?? null,
     prepared, previous: previousOriginalFile
   });
   await runWithDatabaseConnectionOwner(() => (
@@ -108,6 +105,12 @@ export async function commitReadwiseApiDocument(input: ReadwiseApiDocumentCommit
   return result;
 }
 
+function loadCommittedSource(input: ReadwiseApiDocumentCommitInput) {
+  return runWithDatabaseConnectionOwner(() => (
+    loadReadwiseApiImportSource(input.connectionRef, input.document.id)
+  ));
+}
+
 async function placePdfHighlightsIfAvailable(
   input: ReadwiseApiDocumentCommitInput,
   nodeId: string | null,
@@ -115,8 +118,7 @@ async function placePdfHighlightsIfAvailable(
 ) {
   if (input.document.category !== 'pdf' || !nodeId || originalFile?.status !== 'localized') return;
   try {
-    await placeReadwisePdfHighlightsFromAttachment({
-      attachmentId: originalFile.attachmentId,
+    await placeReadwisePdfHighlightsFromAttachment({ attachmentId: originalFile.attachmentId,
       connectionRef: input.connectionRef,
       documentId: input.document.id,
       nodeId

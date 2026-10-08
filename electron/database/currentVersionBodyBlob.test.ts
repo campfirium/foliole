@@ -4,7 +4,6 @@ import { afterEach, expect, it } from 'vitest';
 
 import { materializeCurrentVersionBodyBlobs } from '../../lib/core/sync/currentVersionBodyBlob.js';
 import type { DbRow } from '../../lib/core/sync/dbPort.js';
-import { reconcileSyncPackInlineBodies } from '../../lib/core/sync/syncPackBodyProjection.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -24,14 +23,14 @@ it.each(['多字节\r\nbody\u0000end', '', 'e\u0301\né'])('materializes exact U
   const data = seedCurrentBody(db, body);
   const before = bodyState(db);
   const port = createBetterSqliteDbPort(db);
-  await port.transaction((tx) => reconcileSyncPackInlineBodies(tx, 'inc', false));
+  await port.transaction((tx) => materializeCurrentVersionBodyBlobs(tx, { incomingAlias: 'inc' }));
   const after = bodyState(db);
   expect(after.bytes).toEqual([{ hash: data.hash, data: data.bytes }]);
   expect(after.nodes).toEqual(before.nodes);
   expect(after.versions).toEqual(before.versions);
   expect(after.state).toEqual(before.state);
   expect(after.blobs[0]).toMatchObject({ availability: 'cached', hash: data.hash });
-  await port.transaction((tx) => reconcileSyncPackInlineBodies(tx, 'inc', false));
+  await port.transaction((tx) => materializeCurrentVersionBodyBlobs(tx, { incomingAlias: 'inc' }));
   expect(bodyState(db)).toEqual(after);
 });
 
@@ -60,7 +59,7 @@ it.each([
   db.exec(mutation);
   const before = bodyState(db);
   const port = createBetterSqliteDbPort(db);
-  await port.transaction((tx) => reconcileSyncPackInlineBodies(tx, 'inc', false));
+  await port.transaction((tx) => materializeCurrentVersionBodyBlobs(tx, { incomingAlias: 'inc' }));
   expect(bodyState(db)).toEqual(before);
 });
 
@@ -80,7 +79,7 @@ it('rejects equal-length corrupted bytes instead of replacing the declared hash'
     snapshot_json = json_set(snapshot_json, '$.content', 'abd')`);
   const before = bodyState(db);
   const port = createBetterSqliteDbPort(db);
-  await port.transaction((tx) => reconcileSyncPackInlineBodies(tx, 'inc', false));
+  await port.transaction((tx) => materializeCurrentVersionBodyBlobs(tx, { incomingAlias: 'inc' }));
   expect(bodyState(db)).toEqual(before);
 });
 
@@ -111,11 +110,11 @@ it('materializes large original bodies in SQLite without returning them whole to
   expect(db.prepare('SELECT length(data) FROM content_blob_data').pluck().get()).toBe(2 * 1024 * 1024 + 1);
 });
 
-it('materializes the production split-body version whose snapshot contains an empty projection', async () => {
+it('caches the production version while preserving its complete node and version text', async () => {
   const db = database();
   const { bytes, hash } = seedCurrentBody(db);
   db.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run(hash, bytes);
-  db.exec("UPDATE nodes SET sync_dirty = 1 WHERE id = 'article'");
+  db.prepare("UPDATE nodes SET content = ?, sync_dirty = 1 WHERE id = 'article'").run(bytes.toString());
   const versionId = flushNodeSyncVersionWithDriver(createBetterSqlite3Driver(db), 'article', 'source');
   const version = db.prepare('SELECT body_text, snapshot_json FROM node_sync_versions WHERE version_id=?')
     .get(versionId) as { body_text: string; snapshot_json: string };
@@ -125,7 +124,7 @@ it('materializes the production split-body version whose snapshot contains an em
   db.exec("UPDATE content_blobs SET availability = 'missing'");
   const before = bodyState(db);
   const port = createBetterSqliteDbPort(db);
-  await port.transaction((tx) => reconcileSyncPackInlineBodies(tx, 'inc', false));
+  await port.transaction((tx) => materializeCurrentVersionBodyBlobs(tx, { incomingAlias: 'inc' }));
   const after = bodyState(db);
   expect(after.bytes).toEqual([{ hash, data: bytes }]);
   expect(after.nodes).toEqual(before.nodes);

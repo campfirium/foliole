@@ -125,7 +125,7 @@ export function readAgentControlMaterial(nodeId: string): AgentMaterialReadPaylo
   );
   const node = rows[0];
   if (!node) return null;
-  const content = requireResolvedNodeBody(node, node.id).content;
+  const content = requireResolvedNodeBody(node).content;
   const truncated = content.length > AGENT_CONTROL_MATERIAL_CONTENT_LIMIT;
   const children = readAgentControlMaterialChildren(node.id);
   return {
@@ -193,7 +193,7 @@ function countAgentControlMaterialChildren(nodeId: string | null) {
 }
 
 function toChildSummary(row: MaterialRow): AgentMaterialChildSummary {
-  const content = requireResolvedNodeBody(row, row.id).content;
+  const content = requireResolvedNodeBody(row).content;
   return {
     ...projectAgentMaterialIdentity(row),
     content_preview: content.slice(0, AGENT_CONTROL_MATERIAL_CHILD_PREVIEW_LIMIT),

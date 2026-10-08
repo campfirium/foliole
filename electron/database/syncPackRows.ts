@@ -205,7 +205,7 @@ export function loadPackRowsForStateRows(
   const externalDocuments = queryRowsByIds<ExternalDocumentPackRow>(driver,
     `SELECT document_id, folder_id, relative_path, file_name, extension, source_size_bytes,
        source_modified_at, source_modified_ms, content_hash, title, opening_text, body_blob_hash,
-       '' AS content, reference_kind, reference_json, indexed_at, is_present, missing_at, created_at, updated_at
+       content, reference_kind, reference_json, indexed_at, is_present, missing_at, created_at, updated_at
      FROM external_documents WHERE document_id IN (__IDS__)`,
     externalDocumentIds
   );

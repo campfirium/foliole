@@ -53,11 +53,11 @@ function insertNode(nodeId: string) {
 it('applies generic sync object payloads and marks them clean', async () => {
   insertNode('node-1');
   const setting = buildCanonicalSettingSyncPayload({ form_factor: 'desktop', host_name: '*',
-    key: 'app_settings', platform: 'windows', scope: 'user_space', value_json: '{"theme":"dark"}' });
+    key: 'search_aliases_document', platform: 'windows', scope: 'user_space', value_json: '{"theme":"dark"}' });
   const records: NativeSyncObjectRecord[] = [{
     content_hash: computeSyncContentHash('setting', setting),
     deleted_at: null,
-    object_id: 'user_space:windows:desktop:*:app_settings',
+    object_id: 'user_space:windows:desktop:*:search_aliases_document',
     object_type: 'setting',
     payload_json: JSON.stringify(setting),
     updated_at: '2026-04-21T16:20:00.000Z'
@@ -80,12 +80,12 @@ it('applies generic sync object payloads and marks them clean', async () => {
   }];
 
   await expect(applySyncObjectsAsync(records)).resolves.toEqual([
-    'setting:user_space:windows:desktop:*:app_settings',
+    'setting:user_space:windows:desktop:*:search_aliases_document',
     'node_reading:node-1'
   ]);
 
   const driver = openDatabaseConnection().driver;
-  expect(driver.queryOne<{ value_json: string }>('SELECT value_json FROM setting_records WHERE key = ?', ['app_settings']))
+  expect(driver.queryOne<{ value_json: string }>('SELECT value_json FROM setting_records WHERE key = ?', ['search_aliases_document']))
     .toEqual({ value_json: '{"theme":"dark"}' });
   expect(driver.queryOne<{ count: number }>(
     'SELECT COUNT(*) AS count FROM node_reading_host_state WHERE node_id = ?',
@@ -98,23 +98,23 @@ it('applies generic sync object payloads and marks them clean', async () => {
 
 it('applies generic sync object payloads through the shared async executor', async () => {
   const payload = buildCanonicalSettingSyncPayload({ form_factor: 'desktop', host_name: '*',
-    key: 'async_settings', platform: 'windows', scope: 'user_space', value_json: '{"mode":"async"}' });
+    key: 'review_scheduler_settings', platform: 'windows', scope: 'user_space', value_json: '{"mode":"async"}' });
   const record: NativeSyncObjectRecord = {
     content_hash: computeSyncContentHash('setting', payload),
     deleted_at: null,
-    object_id: 'user_space:windows:desktop:*:async_settings',
+    object_id: 'user_space:windows:desktop:*:review_scheduler_settings',
     object_type: 'setting',
     payload_json: JSON.stringify(payload),
     updated_at: '2026-04-21T16:22:00.000Z'
   };
 
   await expect(applySyncObjectsAsync([record])).resolves.toEqual([
-    'setting:user_space:windows:desktop:*:async_settings'
+    'setting:user_space:windows:desktop:*:review_scheduler_settings'
   ]);
 
   expect(openDatabaseConnection().driver.queryOne<{ value_json: string }>(
     'SELECT value_json FROM setting_records WHERE key = ?',
-    ['async_settings']
+    ['review_scheduler_settings']
   )).toEqual({ value_json: '{"mode":"async"}' });
 });
 

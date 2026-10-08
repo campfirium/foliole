@@ -7,18 +7,17 @@ import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 
 export { flushNodeSyncVersionWithDriver };
 
-export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOString(),
-  storage: 'continuous' | 'chunked' = 'continuous'): string | null {
+export function flushNodeSyncVersion(nodeId: string, now = new Date().toISOString()): string | null {
   const connection = openDatabaseConnection();
   return flushNodeSyncVersionWithDriver(
     connection.driver,
     nodeId,
     loadOrCreateDesktopHostName(now),
-    now, undefined, storage
+    now
   );
 }
 
-export function flushDirtyNodeSyncVersions(now = new Date().toISOString(), storage: 'continuous' | 'chunked' = 'continuous') {
+export function flushDirtyNodeSyncVersions(now = new Date().toISOString()) {
   const driver = openDatabaseConnection().driver;
   const nodeIds = driver.queryAll<{ id: string }>(
     `SELECT id FROM nodes
@@ -26,11 +25,11 @@ export function flushDirtyNodeSyncVersions(now = new Date().toISOString(), stora
      ORDER BY updated_at ASC`,
     SPECIAL_ROOT_NODE_IDS
   ).map((row) => row.id);
-  for (const nodeId of nodeIds) flushNodeSyncVersion(nodeId, now, storage);
+  for (const nodeId of nodeIds) flushNodeSyncVersion(nodeId, now);
   return [...new Set([...nodeIds, ...backfillMissingNodeSyncState(driver)])];
 }
 
-export function flushUntrackedDirtyNodeSyncVersions(now = new Date().toISOString(), storage: 'continuous' | 'chunked' = 'continuous') {
+export function flushUntrackedDirtyNodeSyncVersions(now = new Date().toISOString()) {
   const driver = openDatabaseConnection().driver;
   const nodeIds = driver.queryAll<{ id: string }>(
     `SELECT n.id FROM nodes n
@@ -40,5 +39,5 @@ export function flushUntrackedDirtyNodeSyncVersions(now = new Date().toISOString
      ORDER BY n.updated_at ASC, n.id ASC`,
     SPECIAL_ROOT_NODE_IDS
   ).map((row) => row.id);
-  for (const nodeId of nodeIds) flushNodeSyncVersion(nodeId, now, storage);
+  for (const nodeId of nodeIds) flushNodeSyncVersion(nodeId, now);
 }

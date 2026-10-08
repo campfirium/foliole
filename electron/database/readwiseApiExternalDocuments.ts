@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+import { hashTextBody } from '../../lib/core/database/contentBodyBlobs.js';
 import { upsertExternalResourceSyncState } from '../../lib/core/database/externalResourceSyncState.js';
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import type { ReadwiseSourceKind } from '../../lib/core/import/importManagerSettings.js';
@@ -34,7 +34,7 @@ export function upsertReadwiseApiExternalDocument(input: {
     source_url: input.document.metadata.sourceUrl
   });
   const contentHash = sha256(input.document.body);
-  const bodyBlobHash = upsertTextBodyBlob(connection.driver, input.document.body, input.indexedAt);
+  const bodyBlobHash = hashTextBody(input.document.body);
   const payload = {
     body_blob_hash: bodyBlobHash,
     content: input.document.body,

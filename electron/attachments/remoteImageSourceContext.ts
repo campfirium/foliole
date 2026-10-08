@@ -70,31 +70,31 @@ function readImportRunOrigin(driver: DatabaseDriver, nodeId: string) {
   return rows.map((row) => normalizeRemoteImageSourceOrigin(row.source_locator)).find(Boolean) ?? null;
 }
 
-function readFrontmatterOrigin(driver: DatabaseDriver, nodeId: string, bodyStorage: 'continuous' | 'chunked') {
-  const body = loadNodeBodyResolution(driver, nodeId, bodyStorage);
+function readFrontmatterOrigin(driver: DatabaseDriver, nodeId: string) {
+  const body = loadNodeBodyResolution(driver, nodeId);
   return body?.status === 'resolved'
     ? normalizeRemoteImageSourceOrigin(extractFrontmatterUrl(body.content))
     : null;
 }
 
-export function resolveRemoteImageSourceOriginWithDriver(driver: DatabaseDriver, nodeId: string, bodyStorage: 'continuous' | 'chunked' = 'continuous') {
+export function resolveRemoteImageSourceOriginWithDriver(driver: DatabaseDriver, nodeId: string) {
   const sourceNodeId = readSourceNodeId(driver, nodeId);
   if (!sourceNodeId) return null;
   return readImportSourceOrigin(driver, sourceNodeId)
     ?? readImportRunOrigin(driver, sourceNodeId)
-    ?? readFrontmatterOrigin(driver, sourceNodeId, bodyStorage);
+    ?? readFrontmatterOrigin(driver, sourceNodeId);
 }
 
-export function resolveRemoteImageSourceOriginForNode(nodeId: string | null, bodyStorage: 'continuous' | 'chunked' = 'continuous') {
+export function resolveRemoteImageSourceOriginForNode(nodeId: string | null) {
   const normalizedNodeId = nodeId?.trim() ?? '';
   if (!normalizedNodeId) {
     return null;
   }
-  return resolveRemoteImageSourceOriginWithDriver(openDatabaseConnection().driver, normalizedNodeId, bodyStorage);
+  return resolveRemoteImageSourceOriginWithDriver(openDatabaseConnection().driver, normalizedNodeId);
 }
 
-export function resolveRemoteImageSourceContext(nodeId: string | null, sourceUrl: string, bodyStorage: 'continuous' | 'chunked' = 'continuous'): RemoteImageSourceContext {
-  const nodeSourceOrigin = resolveRemoteImageSourceOriginForNode(nodeId, bodyStorage);
+export function resolveRemoteImageSourceContext(nodeId: string | null, sourceUrl: string): RemoteImageSourceContext {
+  const nodeSourceOrigin = resolveRemoteImageSourceOriginForNode(nodeId);
   const learned = loadRemoteImageLearnedSource(sourceUrl);
   if (nodeSourceOrigin) {
     return {

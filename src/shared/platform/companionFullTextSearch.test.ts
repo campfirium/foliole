@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY } from '../../../lib/core/database/fullTextSearchIndexStrategy';
 
+import { setWhitelistedLocalStorageItem } from './storage';
+
 const capacitorMock = vi.hoisted(() => ({
   isNative: vi.fn(() => true),
   platform: vi.fn(() => 'android'),
@@ -77,6 +79,7 @@ vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
 }));
 
 beforeEach(() => {
+  window.localStorage.clear();
   vi.resetModules();
   vi.clearAllMocks();
   capacitorMock.isNative.mockReturnValue(true);
@@ -101,6 +104,7 @@ beforeEach(() => {
 
 async function expectIosCompleteSearch() {
   capacitorMock.platform.mockReturnValue('ios');
+  setWhitelistedLocalStorageItem(FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY, 'cjk-trigram');
   iosReads.topics.mockResolvedValueOnce([{
     content_status: 'missing', excerpt: 'topic body', id: 'topic-1', match_start: 4,
     opening_text: 'topic opening', title: 'Topic One', updated_at: '2026-04-26T01:00:00.000Z'
@@ -111,7 +115,7 @@ async function expectIosCompleteSearch() {
   iosReads.objects.mockResolvedValueOnce([{
       payload_json: JSON.stringify({
         key: 'app_settings',
-        value_json: JSON.stringify({ [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram' })
+        value_json: JSON.stringify({ [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'word-based' })
       })
   }]);
   const api = await import('./companionFullTextSearch');
@@ -125,6 +129,28 @@ async function expectIosCompleteSearch() {
   expect(iosReads.topics).toHaveBeenCalledWith('alpha', 5, 0);
   expect(iosReads.pdf).toHaveBeenCalledWith('alpha', 5, 0);
   expect(iosReads.external).toHaveBeenCalledWith('alpha', 5, 0);
+  expect(iosReads.index).not.toHaveBeenCalled();
+  expect(iosReads.objects).not.toHaveBeenCalled();
+}
+
+async function expectLocalSearchStrategy() {
+  const { setFullTextSearchIndexStrategy } = await import('./searchEnhancementSettings');
+  setFullTextSearchIndexStrategy('cjk-trigram');
+  iosReads.index.mockResolvedValueOnce([
+    { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }
+  ]);
+  iosReads.objects.mockResolvedValueOnce([{
+      payload_json: JSON.stringify({
+        key: 'app_settings',
+        value_json: JSON.stringify({ [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'word-based' })
+      })
+    }
+  ]);
+  const api = await import('./companionFullTextSearch');
+
+  await expect(api.loadCompanionFullTextSearchStrategy()).resolves.toBe('cjk-trigram');
+  expect(iosReads.index).not.toHaveBeenCalled();
+  expect(iosReads.objects).not.toHaveBeenCalled();
 }
 
 describe('companion full text search', () => {
@@ -142,23 +168,9 @@ describe('companion full text search', () => {
     expect(iosReads.external).toHaveBeenCalledWith('alpha', 5, 0);
   });
 
-  it('loads the full-text search language from synced app settings', async () => {
-    iosReads.index.mockResolvedValueOnce([
-      { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }
-    ]);
-    iosReads.objects.mockResolvedValueOnce([{
-        payload_json: JSON.stringify({
-          key: 'app_settings',
-          value_json: JSON.stringify({ [FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]: 'cjk-trigram' })
-        })
-      }
-    ]);
-    const api = await import('./companionFullTextSearch');
+  it('loads the full-text search language from local settings despite different source app settings', expectLocalSearchStrategy);
 
-    await expect(api.loadCompanionFullTextSearchStrategy()).resolves.toBe('cjk-trigram');
-  });
-
-  it('keeps native search available when synced app settings cannot be read', async () => {
+  it('uses the default local strategy when source app settings cannot be read', async () => {
     iosReads.index.mockResolvedValueOnce([
       { object_id: 'user_space:windows:desktop:*:app_settings', object_type: 'setting' }
     ]);
@@ -171,9 +183,11 @@ describe('companion full text search', () => {
       strategy: 'word-based',
       topics: [expect.objectContaining({ bodyStatus: 'missing', nodeId: 'topic-1', title: 'Topic One' })]
     });
+    expect(iosReads.index).not.toHaveBeenCalled();
+    expect(iosReads.objects).not.toHaveBeenCalled();
   });
 
-  it('searches all synced reading material through the native bridge on iOS', expectIosCompleteSearch);
+  it('uses local search strategy despite different source app settings while preserving iOS results', expectIosCompleteSearch);
 
   it('returns empty results outside native hosts or for an empty query', async () => {
     const api = await import('./companionFullTextSearch');

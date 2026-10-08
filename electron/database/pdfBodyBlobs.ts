@@ -21,7 +21,7 @@ function buildPdfBodyContent(title: string, pages: PdfPageTextInput[]) {
   return text ? `# ${title.trim() || 'Untitled'}\n\n${text}` : '';
 }
 
-function listPdfReferenceNodes(attachmentId: string, bodyStorage: 'continuous' | 'chunked') {
+function listPdfReferenceNodes(attachmentId: string) {
   const driver = openDatabaseConnection().driver;
   const candidates = driver.queryAll<PdfReferenceNodeRow>(
     `SELECT n.id, n.title FROM nodes n
@@ -31,7 +31,7 @@ function listPdfReferenceNodes(attachmentId: string, bodyStorage: 'continuous' |
     [`${attachmentId}.pdf`]
   );
   return candidates.filter((node) => {
-    const body = loadNodeBodyResolution(driver, node.id, bodyStorage);
+    const body = loadNodeBodyResolution(driver, node.id);
     if (body?.status !== 'resolved') return false;
     return driver.queryOne<{ matches: number }>('SELECT ? LIKE ? AS matches',
       [body.content, `%${PDF_READER_PLACEHOLDER_TEXT}%`])?.matches === 1;
@@ -42,22 +42,21 @@ export function syncPdfBodyBlobsForReferenceNodes(
   attachmentId: string,
   pages: PdfPageTextInput[],
   hostName: string,
-  now: string,
-  bodyStorage: 'continuous' | 'chunked' = 'continuous'
+  now: string
 ) {
-  const nodes = listPdfReferenceNodes(attachmentId, bodyStorage);
+  const nodes = listPdfReferenceNodes(attachmentId);
   const updatedNodeIds: string[] = [];
   for (const node of nodes) {
     const bodyContent = buildPdfBodyContent(node.title, pages);
     if (!bodyContent) {
       continue;
     }
-    writeNodeBody({ bodyStorage, content: bodyContent, driver: openDatabaseConnection().driver, nodeId: node.id, title: node.title, updatedAt: now });
+    writeNodeBody({ content: bodyContent, driver: openDatabaseConnection().driver, nodeId: node.id, title: node.title, updatedAt: now });
     openDatabaseConnection().driver.execute(
       `UPDATE nodes SET last_modified_by_host_name = ?, sync_dirty = 1 WHERE id = ?`,
       [hostName, node.id]
     );
-    flushNodeSyncVersion(node.id, now, bodyStorage);
+    flushNodeSyncVersion(node.id, now);
     updatedNodeIds.push(node.id);
   }
   return updatedNodeIds;

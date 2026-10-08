@@ -111,7 +111,7 @@ async function applyExternalDocumentObject(port: DbPort, record: SyncPackSyncObj
     `missing_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ` +
     `ON CONFLICT(document_id) DO UPDATE SET folder_id = excluded.folder_id, relative_path = excluded.relative_path, ` +
     `file_name = excluded.file_name, extension = excluded.extension, source_size_bytes = excluded.source_size_bytes, ` +
-    `content_hash = excluded.content_hash, title = excluded.title, body_blob_hash = excluded.body_blob_hash, ` +
+    `content_hash = excluded.content_hash, title = excluded.title, body_blob_hash = excluded.body_blob_hash, content = excluded.content, ` +
     `is_present = 1, reference_kind = excluded.reference_kind, reference_json = excluded.reference_json, ` +
     `missing_at = NULL, updated_at = excluded.updated_at`,
     [record.object_id, text(payload.folder_id) ?? '', text(payload.relative_path) ?? '', text(payload.file_name) ?? '',

@@ -40,6 +40,8 @@ function migrationStatements(nodeValue: unknown, alternativesValue: unknown[], n
     text_alternatives: normalizeTextAlternatives(entries, body, now),
     text_selection: { version_id: node.version_id, created_at: node.created_at } });
   const hashes = new Set(record.snapshot.text_alternatives?.map((entry) => entry.body_blob_hash));
+  record.alternative_bodies = alternatives.filter((entry) => hashes.has(hashTextBody(entry.body_text)))
+    .map((entry) => ({ hash: hashTextBody(entry.body_text), text: entry.body_text }));
   const mainHash = hashTextBody(body);
   return bodyStatements([{ body_text: body }, ...alternatives.filter((entry) => hashes.has(hashTextBody(entry.body_text)))], now)
     .concat([{ sql: 'UPDATE node_sync_versions SET snapshot_json = ? WHERE version_id = ?',

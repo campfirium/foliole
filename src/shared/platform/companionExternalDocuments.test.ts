@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
+
+import { setWhitelistedLocalStorageItem } from './storage';
+
 const capacitorMock = vi.hoisted(() => ({
   isNative: vi.fn(() => true),
   platform: vi.fn(() => 'android'),
@@ -74,6 +78,7 @@ vi.mock('./companion/runtime/iosCompanionActiveDatabaseReads', () => ({
 }));
 
 beforeEach(() => {
+  window.localStorage.clear();
   vi.resetModules();
   vi.clearAllMocks();
   capacitorMock.isNative.mockReturnValue(true);
@@ -149,7 +154,11 @@ describe('companion external documents bridge', () => {
 });
 
 describe('companion external directory ordering', () => {
-  it('orders cached external folders by synced app settings', async () => {
+  it.each(['android', 'ios'])('uses %s local folder order despite different source app settings', async (platform) => {
+    capacitorMock.platform.mockReturnValue(platform);
+    setWhitelistedLocalStorageItem(APP_SETTINGS_STORAGE_KEYS.externalLibraryFolderOrder, JSON.stringify([
+      { folderPath: 'library/2think', id: 'folder-2' }, { folderPath: 'library/1act', id: 'folder-1' }
+    ]));
     iosReads.directory.mockResolvedValueOnce({
       entries: [],
       folders: [
@@ -165,8 +174,8 @@ describe('companion external directory ordering', () => {
           key: 'app_settings',
           value_json: JSON.stringify({
             'foliole-external-library-folder-order': JSON.stringify([
-              { folderPath: 'library/2think', id: 'folder-2' },
-              { folderPath: 'library/1act', id: 'folder-1' }
+              { folderPath: 'library/1act', id: 'folder-1' },
+              { folderPath: 'library/2think', id: 'folder-2' }
             ])
           })
         })
@@ -180,6 +189,8 @@ describe('companion external directory ordering', () => {
         { id: 'folder-1' }
       ]
     });
+    expect(iosReads.index).not.toHaveBeenCalled();
+    expect(iosReads.objects).not.toHaveBeenCalled();
   });
 });
 

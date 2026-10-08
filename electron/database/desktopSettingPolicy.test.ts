@@ -1,3 +1,5 @@
+import { hostname } from 'node:os';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -9,12 +11,20 @@ import {
 
 describe('desktop setting policy', () => {
   it.each([
-    ['app_settings', 'user_space', true],
-    ['backup_settings', 'user_space', true],
-    ['import_manager_settings', 'user_space', true],
-    ['library_path_settings', 'user_space', true],
+    ['app_settings', 'host', true],
+    ['backup_settings', 'host', true],
+    ['import_manager_settings', 'host', true],
+    ['library_path_settings', 'host', true],
+    ['readwise_api_import_state', 'host', true],
     ['review_scheduler_settings', 'user_space', true],
+    ['search_aliases_document', 'user_space', true],
     ['system_entry_display_names', 'user_space', true],
+    ['readwise_active_host', 'user_space', true],
+    ['readwise_remote_source', 'user_space', true],
+    ['readwise_source_mode', 'user_space', true],
+    ['readwise_source_mode_conflict', 'user_space', true],
+    ['readwise_source_cutover', 'user_space', true],
+    ['readwise_source_cutover_v2', 'user_space', true],
     ['window_state', 'session_resume', true],
     ['readwise_book_epub_picker_state', 'session_resume', true],
     ['discourse_publish_settings', 'host', true],
@@ -43,11 +53,14 @@ describe('desktop setting policy', () => {
   });
 
   it('materializes only declared records matching the local desktop identity', () => {
-    const identity = resolveDesktopSettingIdentity('app_settings', 'desktop-device');
+    const host = hostname();
+    const identity = resolveDesktopSettingIdentity('app_settings', host);
     expect(identity).not.toBeNull();
-    expect(canMaterializeDesktopSetting(identity!, 'desktop-device')).toBe(true);
-    expect(canMaterializeDesktopSetting({ ...identity!, platform: 'android' }, 'desktop-device')).toBe(false);
-    const session = resolveDesktopSettingIdentity('window_state', 'desktop-device');
+    expect(identity).toMatchObject({ hostName: host, scope: 'host' });
+    expect(canMaterializeDesktopSetting(identity!, host)).toBe(true);
+    expect(canMaterializeDesktopSetting(identity!, 'other-device')).toBe(false);
+    expect(canMaterializeDesktopSetting({ ...identity!, platform: 'android' }, host)).toBe(false);
+    const session = resolveDesktopSettingIdentity('window_state', host);
     expect(canMaterializeDesktopSetting(session!, 'other-device')).toBe(false);
   });
 });

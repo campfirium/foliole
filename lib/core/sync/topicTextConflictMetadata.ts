@@ -1,10 +1,10 @@
-import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
 import { loadMergeBaseCandidates } from './syncNodeGraph.js';
+import type { SyncNodeRecordMetadata } from './syncNodeRecordSource.js';
 
 export async function loadTopicTextConflictMetadata(db: DbPort,
-  left: NativeSyncNodeRecord, right: NativeSyncNodeRecord) {
+  left: SyncNodeRecordMetadata, right: SyncNodeRecordMetadata) {
   const ids = await loadMergeBaseCandidates(db, left.version_id!, right.version_id!);
   const values: Array<{ parent_id: string | null; deleted_at: string | null; selection_id: string }> = [];
   for (const id of ids) {
@@ -20,11 +20,11 @@ export async function loadTopicTextConflictMetadata(db: DbPort,
     value.parent_id === first.parent_id && value.deleted_at === first.deleted_at && value.selection_id === first.selection_id) ? first : null;
 }
 
-export function mainSelectionId(record: NativeSyncNodeRecord) {
+export function mainSelectionId(record: SyncNodeRecordMetadata) {
   return record.snapshot.text_selection?.version_id ?? record.version_id;
 }
 
-export async function selectChangedTopicMain(db: DbPort, left: NativeSyncNodeRecord, right: NativeSyncNodeRecord) {
+export async function selectChangedTopicMain<T extends SyncNodeRecordMetadata>(db: DbPort, left: T, right: T) {
   const base = await loadTopicTextConflictMetadata(db, left, right);
   if (!base) return null;
   const leftUnchanged = mainSelectionId(left) === base.selection_id;

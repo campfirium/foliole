@@ -16,11 +16,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
-import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
-import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { observeDriver } from '../database/bodyContentDriver.testSupport.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { initializeDatabase } from '../database/migrate.js';
 
@@ -91,29 +88,26 @@ it('preserves import source, run, derived-parent frontmatter, and learned priori
   });
 });
 
-it('preserves single-article consumer results after explicit chunked migration without continuous or inline fallback', async () => {
+it('uses the complete owned article body for source context and mutations without legacy caches', () => {
   const { sqlite, driver } = openDatabaseConnection();
-  const body = `---\nurl: https://body.example/article\n---\n${'中😀'.repeat(400_000)}`;
-  const hash = upsertTextBodyBlob(driver, body, 'now');
+  const body = `---\nurl: https://body.example/article\n---\n${'中😀'.repeat(100_000)}`;
+  const hash = hashTextBody(body);
   sqlite.prepare(`INSERT INTO nodes (id,kind,title,content,body_blob_hash,created_at,updated_at)
-    VALUES ('article','topic','Title','stale inline',?,'now','now')`).run(hash);
+    VALUES ('article','topic','Title',?,?,'now','now')`).run(body, hash);
   const image = { contentHash: 'a'.repeat(64), storageKey: `${'a'.repeat(64)}.png` };
   const expectedOrigin = resolveRemoteImageSourceOriginWithDriver(driver, 'article');
+  expect(expectedOrigin).toBe('https://body.example/');
   const expectedChange = applyParentContentChange({ driver, nodeId: 'article', nextContent: body, updatedAt: 'now' });
   expect(migrateImageAddressInNode(driver, 'article', image, 'host', 'now')).toBe(false);
-  await migrateBodyContentStorage(createBetterSqliteDbPort(sqlite));
-  sqlite.prepare("UPDATE nodes SET content = 'stale inline' WHERE id = 'article'").run();
-  const observed = observeDriver(driver);
-  expect(resolveRemoteImageSourceOriginWithDriver(observed.driver, 'article', 'chunked')).toBe(expectedOrigin);
-  expect(applyParentContentChange({ bodyStorage: 'chunked', driver: observed.driver,
+  sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
+  expect(resolveRemoteImageSourceOriginWithDriver(driver, 'article')).toBe(expectedOrigin);
+  expect(applyParentContentChange({ driver,
     nodeId: 'article', nextContent: body, updatedAt: 'now' })).toEqual(expectedChange);
-  expect(migrateImageAddressInNode(observed.driver, 'article', image, 'host', 'now', 'chunked')).toBe(false);
-  expect(observed.sizes.length).toBeGreaterThan(0);
-  sqlite.prepare('DELETE FROM content_bodies WHERE hash = ?').run(hash);
-  expect(resolveRemoteImageSourceOriginWithDriver(driver, 'article', 'chunked')).toBeNull();
-  expect(() => applyParentContentChange({ bodyStorage: 'chunked', driver, nodeId: 'article',
-    nextContent: 'Replacement', previousContent: body, updatedAt: 'later' })).toThrow('node_body_unavailable:article');
-  expect(() => migrateImageAddressInNode(driver, 'article', image, 'host', 'now', 'chunked'))
-    .toThrow('image_migration_body_unavailable');
-  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id = 'article'")?.content).toBe('stale inline');
+  expect(migrateImageAddressInNode(driver, 'article', image, 'host', 'now')).toBe(false);
+  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id = 'article'")?.content).toBe(body);
+  expect(applyParentContentChange({ driver, nodeId: 'article',
+    nextContent: 'Replacement', previousContent: body, updatedAt: 'later' })).toMatchObject({ written: true });
+  expect(resolveRemoteImageSourceOriginWithDriver(driver, 'article')).toBeNull();
+  expect(migrateImageAddressInNode(driver, 'article', image, 'host', 'now')).toBe(false);
+  expect(driver.queryOne<{ content: string }>("SELECT content FROM nodes WHERE id = 'article'")?.content).toBe('Replacement');
 });

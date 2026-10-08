@@ -31,6 +31,10 @@ export function saveReadwiseDeviceConnection(connection: ReadwiseHostApiConnecti
   writeRegistry({ connection, version: 2 });
 }
 
+export function clearReadwiseDeviceConnection() {
+  fs.rmSync(registryPath(), { force: true });
+}
+
 export function deleteReadwiseDeviceConnection() {
   writeRegistry({ connection: disconnected(), version: 2 });
 }

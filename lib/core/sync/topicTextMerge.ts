@@ -1,19 +1,25 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
-import { hashTextBody } from '../database/textBodyHash.js';
 
 import type { DbPort } from './dbPort.js';
 import { loadMergeBaseCandidates } from './syncNodeGraph.js';
-import { upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
+import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { selectChangedTopicMain } from './topicTextConflictMetadata.js';
 import { alternativeForBody, normalizeTextAlternatives, textAlternatives } from './topicTextState.js';
 
 /** Merge attachment membership against shared history without comparing full text lines. */
-export async function mergeTopicTextAttachments(db: DbPort, records: NativeSyncNodeRecord[],
+export function mergeTopicTextAttachments(db: DbPort, records: NativeSyncNodeRecord[],
   winner: NativeSyncNodeRecord, formedAt: string) {
+  return mergeTopicTextSourceAttachments(db, arraySyncNodeRecordSource(records), winner, formedAt);
+}
+
+export async function mergeTopicTextSourceAttachments<M extends SyncNodeRecordMetadata>(db: DbPort, source: SyncNodeRecordSource<M>,
+  winner: NativeSyncNodeRecord, formedAt: string) {
+  const records = source.records;
   const removed = await removedTopicTextAttachments(db, records);
   const winnerBody = winner.body_text ?? winner.snapshot.content ?? '';
   const entries = records.flatMap(textAlternatives).filter((entry) => !removed.has(entry.id));
-  for (const record of records) {
+  for (const metadata of records) {
+    const record = await source.load(db, metadata);
     const body = record.body_text ?? record.snapshot.content ?? '';
     if (body === winnerBody) continue;
     if (await selectChangedTopicMain(db, record, winner) === winner) continue;
@@ -25,13 +31,12 @@ export async function mergeTopicTextAttachments(db: DbPort, records: NativeSyncN
       if (source) entry.source_host_name = source.host_name;
     }
     if (removed.has(entry.id)) continue;
-    await upsertTextBodyBlob(db, body, formedAt, hashTextBody(body));
     entries.push(entry);
   }
   return normalizeTextAlternatives(entries, winnerBody, formedAt);
 }
 
-export async function removedTopicTextAttachments(db: DbPort, records: NativeSyncNodeRecord[]) {
+export async function removedTopicTextAttachments(db: DbPort, records: readonly SyncNodeRecordMetadata[]) {
   const removed = new Set<string>();
   for (let index = 0; index < records.length; index++) {
     const left = records[index]!;

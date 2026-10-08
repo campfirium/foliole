@@ -3,10 +3,7 @@ import { expect, it } from 'vitest';
 
 import { createBetterSqlite3Driver } from '../../../electron/database/betterSqlite3Driver.js';
 import { textDevice } from '../../../electron/database/topicTextState.testSupport.js';
-import { adoptVerifiedBody, stageTextBodyContent } from '../sync/bodyContentWrite.js';
 
-import { migrateBodyContentStorage } from './bodyContentMigration.js';
-import { migrateBodyContentOwners } from './bodyContentOwnerMigration.js';
 import { claimSearchIndexInvalidations, completeInvalidations, processClaimedInvalidationRows, processSearchIndexInvalidations } from './searchIndexInvalidations.js';
 import { migrateStoredSourceSearchQueue } from './storedSourceSearchQueueMigration.js';
 
@@ -31,18 +28,17 @@ const rows = (host: Host) => host.sqlite.prepare('SELECT * FROM stored_source_se
 async function upgrade(host: Host) {
   await host.db.transaction(async (tx) => {
     await migrateStoredSourceSearchQueue(tx);
-    await migrateBodyContentStorage(tx);
-    await migrateBodyContentOwners(tx, 'desktop');
   });
 }
 
-it.each(['', null, '\ufeff中😀\0文'.repeat(300000)])('keeps original FTS fields while independently indexing stable bodies', async (body) => {
+it.each(['', null, '\ufeff中😀\0文'.repeat(60000)])('keeps original FTS fields while indexing full owned source bodies', async (body) => {
   const old = textDevice(); const stable = textDevice();
   try {
     for (const host of [old, stable]) seed(host, body);
     const original = rows(old);
     await upgrade(stable);
     expect(rows(stable)).toEqual(original);
+    stable.sqlite.exec('UPDATE external_documents SET content = content; UPDATE keep_import_item_cache SET content = content');
     expect(stable.sqlite.prepare('SELECT count(*) FROM search_index_invalidations').pluck().get()).toBeGreaterThan(0);
     const driver = createBetterSqlite3Driver(stable.sqlite);
     const result = processSearchIndexInvalidations(driver);
@@ -58,23 +54,22 @@ it.each(['', null, '\ufeff中😀\0文'.repeat(300000)])('keeps original FTS fie
   } finally { old.sqlite.close(); stable.sqlite.close(); }
 });
 
-it('keeps committed sources and pending generations after indexing failure, then retries after content is available', async () => {
+it('keeps committed sources and pending generations after index failure, then retries', async () => {
   const host = textDevice();
   try {
     seed(host, 'Original'); await upgrade(host);
     const driver = createBetterSqlite3Driver(host.sqlite);
     expect(processSearchIndexInvalidations(driver).failed).toBe(0);
-    const ref = await stageTextBodyContent(host.db, 'Replacement');
-    await adoptVerifiedBody(host.db, ref, now);
-    host.sqlite.prepare('UPDATE external_documents SET body_blob_hash = ?, title = ?').run(ref.hash, 'Committed title');
-    host.sqlite.prepare('DELETE FROM content_bodies WHERE hash = ?').run(ref.hash);
+    host.sqlite.exec("UPDATE external_documents SET content = 'Replacement', title = 'Committed title'");
     const before = rows(host);
+    host.sqlite.exec('ALTER TABLE stored_source_search RENAME TO unavailable_source_search');
     expect(processSearchIndexInvalidations(driver)).toEqual({ failed: 1, processed: 0 });
-    expect(rows(host)).toEqual(before);
-    expect(host.sqlite.prepare('SELECT title FROM external_documents').pluck().get()).toBe('Committed title');
+    expect(host.sqlite.prepare('SELECT * FROM unavailable_source_search ORDER BY kind, source_key').all()).toEqual(before);
+    expect(host.sqlite.prepare('SELECT title, content FROM external_documents').get())
+      .toEqual({ title: 'Committed title', content: 'Replacement' });
     expect(host.sqlite.prepare('SELECT status, last_error FROM search_index_invalidations').get())
-      .toEqual({ status: 'pending', last_error: `stored_source_body_unavailable:${ref.hash}` });
-    await stageTextBodyContent(host.db, 'Replacement');
+      .toMatchObject({ status: 'pending', last_error: expect.stringContaining('stored_source_search') });
+    host.sqlite.exec('ALTER TABLE unavailable_source_search RENAME TO stored_source_search');
     expect(processSearchIndexInvalidations(driver)).toEqual({ failed: 0, processed: 1 });
     expect(host.sqlite.prepare("SELECT title, content FROM stored_source_search WHERE kind = 'external'").get())
       .toEqual({ title: 'Committed title', content: 'Replacement' });

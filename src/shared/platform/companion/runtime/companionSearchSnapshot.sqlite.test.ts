@@ -4,7 +4,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { afterEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({})
+  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({
+    configureFramedSyncPayloadBudget: async () => undefined,
+    closeFramedSyncPayloadBudget: async () => undefined
+  })
 }));
 
 import { searchCompanionFullTextSnapshot } from '../../companionFullTextSearch';

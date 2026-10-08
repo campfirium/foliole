@@ -27,26 +27,26 @@ beforeEach(() => {
   mocks.worker.mockResolvedValue({ ok: true, status: { status: 'ready' }, coveredId: 5 });
 });
 
-it.each(['continuous', 'chunked'] as const)('carries %s through required rebuild and incremental work', async (bodyStorage) => {
+it('rebuilds when required and completes the claimed incremental work', async () => {
   mocks.prepare.mockReturnValue('word-based');
   const signal = new AbortController().signal;
-  expect(await runWorkspaceSearchMaintenanceInWorker(20, signal, bodyStorage)).toEqual({ failed: 0, processed: 1 });
-  expect(mocks.worker).toHaveBeenNthCalledWith(1, { strategy: 'word-based', source: mocks.source, bodyStorage }, signal);
-  expect(mocks.worker).toHaveBeenNthCalledWith(2, { rows: mocks.claim.mock.results[0]!.value, bodyStorage }, signal);
+  expect(await runWorkspaceSearchMaintenanceInWorker(20, signal)).toEqual({ failed: 0, processed: 1 });
+  expect(mocks.worker).toHaveBeenNthCalledWith(1, { strategy: 'word-based', source: mocks.source }, signal);
+  expect(mocks.worker).toHaveBeenNthCalledWith(2, { rows: mocks.claim.mock.results[0]!.value }, signal);
   expect(mocks.retire).toHaveBeenCalledWith(mocks.driver, 5);
   expect(mocks.complete).toHaveBeenCalledWith(mocks.driver, [7]);
 });
 
-it('keeps unspecified storage continuous for both public entry points', async () => {
+it('uses the same worker for both public entry points', async () => {
   await runWorkspaceSearchRebuildInWorker('word-based');
   await runWorkspaceSearchMaintenanceInWorker(20);
-  expect(mocks.worker.mock.calls.map(([input]) => input.bodyStorage)).toEqual(['continuous', 'continuous']);
+  expect(mocks.worker).toHaveBeenCalledTimes(2);
 });
 
-it('retains failure bookkeeping when explicitly chunked worker processing fails', async () => {
+it('retains failure bookkeeping when worker processing fails', async () => {
   const failure = new Error('body unavailable');
   mocks.worker.mockRejectedValue(failure);
-  expect(await runWorkspaceSearchMaintenanceInWorker(20, undefined, 'chunked')).toEqual({ failed: 1, processed: 0 });
+  expect(await runWorkspaceSearchMaintenanceInWorker(20)).toEqual({ failed: 1, processed: 0 });
   expect(mocks.fail).toHaveBeenCalledWith(mocks.driver, [7], failure);
   expect(mocks.complete).not.toHaveBeenCalled();
 });

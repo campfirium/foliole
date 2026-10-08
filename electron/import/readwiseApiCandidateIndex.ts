@@ -120,7 +120,7 @@ function savePage(
 async function assembleCandidates(
   connectionRef: string, settings: ImportManagerSettings,
   request: ReturnType<typeof createReadwiseApiRequest>, includeParentContent: boolean,
-  onProgress?: (processed: number) => void
+  onProgress: ((processed: number) => void) | undefined
 ) {
   const { run, facts } = await runWithDatabaseConnectionOwner(() => ({
     run: loadOrCreateReadwiseApiCandidateRun(connectionRef, settings.readwiseAutoImportPolicy),
@@ -144,8 +144,7 @@ async function assembleCandidates(
     ])];
     const hasHighlights = graph.highlightedParents.has(parentId);
     if (!parent && (hasHighlights || exportIdsByParent.has(parentId))) {
-      parent = await resolveAndSaveReadwiseApiCandidateParent({
-        connectionRef, id: parentId, includeContent: includeParentContent,
+      parent = await resolveAndSaveReadwiseApiCandidateParent({ connectionRef, id: parentId, includeContent: includeParentContent,
         onResolved: () => reportIndexProgress(connectionRef, onProgress), request,
         runStartedAt: run.roundStartedAt, settings
       });

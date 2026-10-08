@@ -1,5 +1,5 @@
 import { createOpaqueVersionRef } from '../../../../../lib/core/sync/opaqueSyncRefs';
-import { loadTopicTextBody } from '../../../../../lib/core/sync/topicTextBodies';
+import { readTopicTextSnapshot } from '../../../../../lib/core/sync/topicTextBodies';
 import { expireTopicText } from '../../../../../lib/core/sync/topicTextExpiry';
 import { mutateTopicText } from '../../../../../lib/core/sync/topicTextMutation';
 import { textAlternativesSchema, type TopicTextAlternative } from '../../../../../lib/core/sync/topicTextState';
@@ -21,22 +21,22 @@ export interface CompanionNodeTextAlternative {
   updated_at: string;
 }
 
-export async function loadCompanionNodeTextAlternative(nodeId: string, alternativeId?: string,
-  bodyStorage: 'continuous' | 'chunked' = 'continuous') {
+export async function loadCompanionNodeTextAlternative(nodeId: string, alternativeId?: string) {
   if (!isAvailableNativeCompanionRuntime()) return null;
   return writeIosCompanionDatabase(async (db) => {
     const now = new Date().toISOString();
     await expireTopicText(db, nodeId, now);
-    const [record] = await db.query<{ alternatives: string | null; version_id: string; updated_at: string }>(
-      `SELECT json_extract(v.snapshot_json, '$.text_alternatives') AS alternatives, v.version_id, n.updated_at
+    const [record] = await db.query<{ snapshot_json: string; version_id: string; updated_at: string }>(
+      `SELECT v.snapshot_json, v.version_id, n.updated_at
        FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id
        WHERE n.id = ? AND n.deleted_at IS NULL`, [nodeId]);
     if (!record) return null;
-    const alternatives = textAlternativesSchema.parse(JSON.parse(record.alternatives ?? '[]'))
+    const stored = readTopicTextSnapshot(record.snapshot_json);
+    const alternatives = textAlternativesSchema.parse(stored.snapshot.text_alternatives ?? [])
       .filter((entry) => entry.expires_at > now);
     const selected = alternatives.find((entry) => entry.id === alternativeId) ?? alternatives[0];
     if (!selected) return null;
-    const body = await loadTopicTextBody(db, selected, bodyStorage);
+    const body = stored.bodies.find((entry) => entry.hash === selected.body_blob_hash)!;
     return { alternative_id: selected.id, alternatives, body_text: body.text,
       created_at: selected.created_at, node_id: nodeId, source_host_name: selected.source_host_name,
       source_version_id: record.version_id!, status: 'available' as const, updated_at: record.updated_at };

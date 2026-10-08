@@ -180,12 +180,10 @@ export async function loadCompanionPendingSyncSummary() {
     loadCompanionSyncNodeVersionPushCursor(),
     loadCompanionSyncReviewLogPushCursor()
   ]);
-  const [stateChanges, nodeVersions, reviewLog] = await Promise.all([
-    loadCompanionSyncStateChanges(peerId, stateCursor, 1),
-    loadCompanionSyncNodeVersions(peerId, nodeCursor, 1),
-    loadCompanionSyncReviewLog(peerId, reviewCursor, 1)
-  ]);
-  return { pendingCount: stateChanges.length + nodeVersions.length + reviewLog.length };
+  const pendingCount = getNativeCompanionSyncbackPlatform() === null ? 0
+    : await getIosCompanionSyncbackStore().loadPendingCount(peerId,
+      { state: stateCursor, node: nodeCursor, review: reviewCursor });
+  return { pendingCount };
 }
 
 function usesSharedOwner() {

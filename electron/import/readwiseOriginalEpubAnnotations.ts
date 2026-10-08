@@ -35,7 +35,7 @@ export function mergeRetainedReadwiseAnnotations(
        WHERE n.id = ? AND n.deleted_at IS NULL`, [state.nodeId]
     );
     if (!stored) continue;
-    const row = { ...stored, content: requireResolvedNodeBody(stored, state.nodeId).content };
+    const row = { ...stored, content: requireResolvedNodeBody(stored).content };
     if (!row.content.trim()) continue;
     byRemoteId.set(state.remoteId, {
       content: row.content,

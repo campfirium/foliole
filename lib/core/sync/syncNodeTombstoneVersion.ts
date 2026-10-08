@@ -7,16 +7,14 @@ import { nodeSyncSnapshotHashMetadata } from '../database/nodeSyncSnapshotMetada
 
 import { FRAMED_SYNC_NODE_VERSION_FACT } from './framedSyncNodeFactContract.js';
 
-export type NodeVersionBodyStorage = 'continuous' | 'chunked';
-
-export function matchingTombstoneVersionSql(version: string, tomb: string, bodyStorage: NodeVersionBodyStorage = 'continuous') {
+export function matchingTombstoneVersionSql(version: string, tomb: string) {
   const fields = FRAMED_SYNC_NODE_VERSION_FACT.snapshotFields.filter((field) =>
     !['body_blob_hash', 'position'].includes(field));
   return `${version}.version_id = ${tomb}.version_id AND ${version}.object_id = ${tomb}.node_id
     AND ${version}.content_hash = ${tomb}.content_hash
     AND ${version}.parent_version_id IS ${tomb}.parent_version_id
     AND ${version}.host_name = ${tomb}.host_name AND ${version}.created_at = ${tomb}.created_at
-    AND ${bodyStorage === 'chunked' ? `${version}.body_state = 'readable'` : `${version}.body_text IS NOT NULL`} AND ${fields.map((field) =>
+    AND ${version}.body_text IS NOT NULL AND ${fields.map((field) =>
     `json_extract(${version}.snapshot_json, '$.${field}') IS json_extract(${tomb}.snapshot_json, '$.${field}')`).join(' AND ')}`;
 }
 

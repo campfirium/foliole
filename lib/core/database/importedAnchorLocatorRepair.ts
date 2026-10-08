@@ -13,7 +13,7 @@ interface CandidateRow extends NodeBodyRow {
 
 export interface ImportedAnchorLocatorRepairResult {
   repairedNodeIds: string[];
-  skipped: Array<{ nodeId: string; reason: 'ambiguous' | 'body_unavailable' | 'invalid_anchor_link' | 'non_imported' | 'non_text_locator' | 'no_locator' }>;
+  skipped: Array<{ nodeId: string; reason: 'ambiguous' | 'invalid_anchor_link' | 'non_imported' | 'non_text_locator' | 'no_locator' }>;
   write: boolean;
 }
 
@@ -43,11 +43,9 @@ function isTextLocatorGroup(locator: unknown): locator is { ranges: TextAnchorLo
 
 function readRepairCandidates(driver: DatabaseDriver, parentNodeId?: string) {
   return driver.queryAll<CandidateRow>(
-    `SELECT child.id, child.anchor_link, parent.content, parent.body_blob_hash,
-            cbd.data AS body_blob_data
+    `SELECT child.id, child.anchor_link, parent.content, parent.body_blob_hash
      FROM nodes child
      INNER JOIN nodes parent ON parent.id = child.parent_id AND parent.deleted_at IS NULL
-     LEFT JOIN content_blob_data cbd ON cbd.hash = parent.body_blob_hash
      WHERE child.deleted_at IS NULL
        AND child.anchor_link IS NOT NULL
        AND (? IS NULL OR child.parent_id = ?)`,
@@ -101,10 +99,6 @@ export function repairImportedAnchorLocators(input: {
       return;
     }
     const body = resolveNodeBody(row);
-    if (body.status === 'unavailable') {
-      skipped.push({ nodeId: row.id, reason: 'body_unavailable' });
-      return;
-    }
     const repaired = repairRawAnchorLink(row.anchor_link, body.content);
     if (!('value' in repaired)) {
       skipped.push({ nodeId: row.id, reason: repaired.reason });

@@ -1,7 +1,7 @@
 import { parseStoredAnchorLink, type StoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { applyImportedHighlightAnchors } from '../../lib/core/database/importHighlightAnchors.js';
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
 import type { ReadwiseApiAnnotationState } from '../../lib/core/readwise/readwiseApiImportState.js';
 import { buildReadwiseUnlocatedNodeId } from '../../lib/core/readwise/readwiseBookUnlocated.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -11,12 +11,15 @@ import {
   placeReadwiseUnlocatedNodeLast
 } from './readwiseBookUnlocated.js';
 
-interface LocalAnchorRow extends DatabaseRow {
+interface LocalAnchorMetadata extends DatabaseRow {
   anchor_link: string | null;
-  content: string;
   id: string;
   is_title_manual: number;
   title: string;
+}
+
+interface LocalAnchorRow extends LocalAnchorMetadata {
+  content: string;
 }
 
 function originalText(anchor: StoredAnchorLink) {
@@ -73,8 +76,7 @@ export function relocateReadwiseBookLocalAnchors(input: {
     return { anchor, located: locateAnchor(input.bodies, row, anchor, text), row };
   });
   const unlocatedNodeId = placements.some((placement) => !placement.located)
-    ? ensureReadwiseUnlocatedNode({
-      connectionRef: input.connectionRef,
+    ? ensureReadwiseUnlocatedNode({ connectionRef: input.connectionRef,
       documentId: input.documentId,
       driver,
       importedAt: input.importedAt,
@@ -108,13 +110,16 @@ export function captureReadwiseBookRootTexts(rootNodeId: string) {
 }
 
 function readLocalAnchorRows(rootNodeId: string) {
-  return openDatabaseConnection().driver.queryAll<LocalAnchorRow & NodeBodyRow>(
-    `SELECT n.id, n.title, n.content, n.body_blob_hash, cbd.data AS body_blob_data,
-       n.anchor_link, n.is_title_manual FROM nodes n
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-     WHERE n.parent_id = ? AND n.deleted_at IS NULL
-       AND (n.anchor_link IS NOT NULL OR n.is_title_manual = 0)`, [rootNodeId]
-  ).map((row) => ({ ...row, content: requireResolvedNodeBody(row, row.id).content }));
+  const driver = openDatabaseConnection().driver;
+  return driver.queryAll<LocalAnchorMetadata>(
+    `SELECT id, title, anchor_link, is_title_manual FROM nodes
+     WHERE parent_id = ? AND deleted_at IS NULL
+       AND (anchor_link IS NOT NULL OR is_title_manual = 0)`, [rootNodeId]
+  ).map((row) => {
+    const body = loadNodeBodyResolution(driver, row.id);
+    if (!body) throw new NodeBodyUnavailableError([row.id]);
+    return { ...row, content: body.content };
+  });
 }
 
 function legacyAnchor(row: LocalAnchorRow): StoredAnchorLink {

@@ -3,6 +3,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import type { DbPort, DbRow } from './dbPort.js';
 import { enqueueAppliedNodeDeleteSearchInvalidation } from './syncNodeSearchInvalidations.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
+import { serializeTopicTextSnapshot } from './topicTextBodies.js';
 
 interface NodeTombstoneRow extends DbRow {
   deleted_at: string;
@@ -60,7 +61,7 @@ export async function applyRemoteNodeTombstone(
       record.parent_version_id,
       record.host_name,
       record.content_hash,
-      JSON.stringify(record.snapshot),
+      serializeTopicTextSnapshot(record),
       record.snapshot.deleted_at,
       createdAt
     ]

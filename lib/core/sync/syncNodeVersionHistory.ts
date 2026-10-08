@@ -3,10 +3,12 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import type { DbPort } from './dbPort.js';
 import { upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
 import { buildRemoteNodeVersionUpsert } from './syncNodeApplyStatements.js';
+import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
 import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
 import { includeLegacyVersionParents, validateStoredVersionDependencies } from './syncPackNodeVersionDependencyValidation.js';
 
-export function isNodeVersionIdentityOnly(record: NativeSyncNodeRecord) {
+export function isNodeVersionIdentityOnly(record: SyncNodeRecordMetadata & { body_text?: string | null;
+  snapshot: SyncNodeRecordMetadata['snapshot'] & { content?: string | null } }) {
   return !record.is_tombstone && record.body_text === null && record.snapshot.content === null;
 }
 
@@ -38,11 +40,16 @@ export function orderNodeVersionHistory<T extends VersionParentMetadata>(records
   return ordered;
 }
 
-export async function prepareIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {
-  const eligible: NativeSyncNodeRecord[] = [];
-  for (const record of records) {
+export function prepareIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {
+  return prepareIncomingNodeVersionSource(port, arraySyncNodeRecordSource(records));
+}
+
+export async function prepareIncomingNodeVersionSource<M extends SyncNodeRecordMetadata>(port: DbPort, source: SyncNodeRecordSource<M>) {
+  const eligible: M[] = [];
+  for (const metadata of source.records) {
+    const record = await source.load(port, metadata);
     if (!buildRemoteNodeVersionUpsert(record) || record.is_tombstone && !hasCompleteTombstoneVersion(record)) continue;
-    eligible.push(record);
+    eligible.push(metadata);
   }
   const ordered = orderNodeVersionHistory(eligible);
   const identities = ordered.map((record) => ({ object_id: record.object_id,
@@ -52,6 +59,11 @@ export async function prepareIncomingNodeVersionHistory(port: DbPort, records: N
   })));
   await validateStoredVersionDependencies(port, identities, includeLegacyVersionParents(identities, parents));
   return ordered;
+}
+
+export async function retainIncomingNodeVersionSource<M extends SyncNodeRecordMetadata>(port: DbPort,
+  source: SyncNodeRecordSource<M>, records: readonly M[]) {
+  for (const metadata of records) await upsertRemoteVersion(port, await source.load(port, metadata));
 }
 
 export async function retainIncomingNodeVersionHistory(port: DbPort, records: NativeSyncNodeRecord[]) {

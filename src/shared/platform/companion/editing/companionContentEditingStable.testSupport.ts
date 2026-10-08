@@ -4,10 +4,7 @@ import { join } from 'node:path';
 
 import Database from 'better-sqlite3';
 
-import { migrateBodyContentStorage } from '../../../../../lib/core/database/bodyContentMigration.js';
-import { migrateBodyContentOwners } from '../../../../../lib/core/database/bodyContentOwnerMigration.js';
 import { migrateCompanionFramedSyncInventory } from '../../../../../lib/core/database/framedSyncInventoryMigration.js';
-import { migrateVerifiedBodyInventory } from '../../../../../lib/core/database/verifiedBodyInventoryMigration.js';
 import { toWorkspaceNativeNodeVersion } from '../../../../../lib/core/database/workspaceNodeSyncVersion.js';
 import type { WorkspaceNodeSnapshot } from '../../../../../lib/core/database/workspaceSnapshotHelpers.js';
 import { applySyncNodesWithDbPort } from '../../../../../lib/core/sync/syncNodeApplyExecutor.js';
@@ -44,14 +41,6 @@ export async function stableEditingHost(platform: 'android' | 'ios') {
       const record = await toWorkspaceNativeNodeVersion(node, 'remote', version);
       await owner.runWriter((db) => applySyncNodesWithDbPort(db, [record], { enqueueSearchInvalidations: false }));
     },
-    async migrate() {
-      await owner.runWriter((db) => db.transaction(async (tx) => {
-        await migrateBodyContentStorage(tx);
-        await migrateBodyContentOwners(tx, 'companion');
-        await migrateVerifiedBodyInventory(tx);
-        await tx.run('DROP TABLE content_blob_data');
-      }));
-    },
     async reopen() {
       await owner.close();
       sqlite.close();
@@ -60,11 +49,4 @@ export async function stableEditingHost(platform: 'android' | 'ios') {
     },
     async close() { await owner.close(); sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
   };
-}
-
-export function editingDatabaseState(sqlite: Database.Database) {
-  return Object.fromEntries(['nodes', 'node_sync_versions', 'node_sync_version_parents',
-    'node_version_local_holds', 'content_bodies', 'content_body_chunks', 'content_blobs',
-    'node_version_local_proof_state', 'sync_object_state'].map((table) =>
-    [table, sqlite.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()]));
 }

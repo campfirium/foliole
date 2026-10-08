@@ -1,52 +1,47 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
 import type { DbPort } from './dbPort.js';
-import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { reviveDeletedFoldersForLaterChildren } from './syncFolderChildRevival.js';
-import { resolveFolderConflict } from './syncFolderResolution.js';
-import { resolveItemConflict } from './syncItemResolution.js';
-import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
-import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
-import { selectNodeOperationValue } from './syncNodeOperationValue.js';
-import {
-  buildResolutionRecord,
-  chooseEvidenceProjection,
-  chooseProjection
-} from './syncNodeResolution.js';
-import { loadTopicTextBodies } from './topicTextBodies.js';
-import { loadTopicTextConflictMetadata, selectChangedTopicMain } from './topicTextConflictMetadata.js';
+import { resolveFolderSourceConflict } from './syncFolderResolution.js';
+import { resolveItemSourceConflict } from './syncItemResolution.js';
+import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
+import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
+import { resolveTopicSourceConflict } from './syncTopicConflict.js';
 import { expireTopicText } from './topicTextExpiry.js';
-import { mergeTopicTextAttachments } from './topicTextMerge.js';
 
-export async function applyConvergentSyncNodesWithDbPort(
-  port: DbPort,
-  records: NativeSyncNodeRecord[]
-) {
+export function applyConvergentSyncNodesWithDbPort(port: DbPort, records: NativeSyncNodeRecord[],
+  options: { collectVersionPayloads?: boolean } = {}) {
+  return applyConvergentSyncNodeSource(port, arraySyncNodeRecordSource(records), options);
+}
+
+export async function applyConvergentSyncNodeSource<M extends SyncNodeRecordMetadata>(port: DbPort,
+  source: SyncNodeRecordSource<M>, options: { collectVersionPayloads?: boolean } = {}) {
+  const records = source.records;
   const knownNodeIds = await loadKnownNodeStateIds(port, records);
-  const result = await applySyncNodesWithDbPort(port, records, {
+  const result = await applySyncNodeSourceWithDbPort(port, source, {
     enqueueSearchInvalidations: false
   });
   const conflicts = groupByObjectId(result.conflictNodes);
   const resolvedNodeIds: string[] = [];
   for (const group of conflicts) {
     if (group.every((record) => record.snapshot.kind === 'folder')) {
-      resolvedNodeIds.push((await resolveFolderConflict(port, group)).object_id);
+      resolvedNodeIds.push((await resolveFolderSourceConflict(port, { ...source, records: group })).object_id);
       continue;
     }
     if (group.every((record) => record.snapshot.kind === 'item')) {
-      resolvedNodeIds.push((await resolveItemConflict(port, group)).object_id);
+      resolvedNodeIds.push((await resolveItemSourceConflict(port, { ...source, records: group })).object_id);
       continue;
     }
     if (group.some((record) => record.snapshot.kind !== 'topic')) {
       throw new Error(`sync_node_conflict_kind_mismatch:${group[0]!.object_id}`);
     }
-    resolvedNodeIds.push((await resolveTopicConflict(port, group)).object_id);
+    resolvedNodeIds.push((await resolveTopicSourceConflict(port, { ...source, records: group }, options.collectVersionPayloads !== false)).object_id);
   }
   if (result.blockedIds.length > 0) {
     throw new Error(`sync_node_apply_blocked:${result.blockedIds.join(',')}`);
   }
   for (const nodeId of new Set(records.map((record) => record.object_id))) {
-    await expireTopicText(port, nodeId, new Date().toISOString());
+    await expireTopicText(port, nodeId, new Date().toISOString(), options.collectVersionPayloads !== false);
   }
   await reviveDeletedFoldersForLaterChildren(
     port, records, new Set([...result.appliedIds, ...resolvedNodeIds])
@@ -64,7 +59,7 @@ export async function applyConvergentSyncNodesWithDbPort(
   };
 }
 
-async function loadKnownNodeStateIds(port: DbPort, records: NativeSyncNodeRecord[]) {
+async function loadKnownNodeStateIds(port: DbPort, records: readonly SyncNodeRecordMetadata[]) {
   const ids = [...new Set(records.map((record) => record.object_id))];
   if (ids.length === 0) return new Set<string>();
   const rows = await port.query<{ object_id: string }>(
@@ -75,71 +70,12 @@ async function loadKnownNodeStateIds(port: DbPort, records: NativeSyncNodeRecord
   return new Set(rows.map((row) => row.object_id));
 }
 
-export async function resolveTopicConflict(
-  port: DbPort,
-  incomingRecords: NativeSyncNodeRecord[]
-) {
-  let ordered = [...incomingRecords].sort((left, right) =>
-    (left.version_id ?? '').localeCompare(right.version_id ?? ''));
-  const local = await loadCurrentSyncNodeRecord(port, ordered[0]!.object_id);
-  if (!local?.version_id || ordered.some((record) => !record.version_id)) {
-    throw new Error(`sync_topic_conflict_version_missing:${ordered[0]!.object_id}`);
-  }
-  ordered = ordered.filter((record) => record.version_id !== local.version_id &&
-    !local.ancestor_version_ids.includes(record.version_id!));
-  if (!ordered.length) return local;
-  const { body, winner, parent, deletion } = await selectTopicState(port, local, ordered);
-  const currentSnapshot = { ...winner.snapshot };
-  delete currentSnapshot.position;
-  const resolution = buildResolutionRecord([local, ...ordered], winner, body, {
-    ...currentSnapshot,
-    deleted_at: deletion.value,
-    parent_id: parent.value,
-    text_selection: winner.snapshot.text_selection ?? {
-      version_id: winner.version_id!, created_at: winner.version_created_at!
-    },
-    text_alternatives: []
-  });
-  resolution.snapshot.text_alternatives = resolution.snapshot.deleted_at ? [] :
-    await mergeTopicTextAttachments(port, [local, ...ordered], winner, new Date().toISOString());
-  const complete = buildResolutionRecord([local, ...ordered], winner, body, resolution.snapshot);
-  complete.alternative_bodies = await loadTopicTextBodies(port, complete);
-  const applied = await applySyncNodesWithDbPort(port, [complete], {
-    enqueueSearchInvalidations: false,
-    includeAlreadyApplied: true,
-    operation: 'local_mutation'
-  });
-  if (!applied.appliedIds.includes(local.object_id)) {
-    throw new Error(`sync_topic_resolution_not_applied:${local.object_id}`);
-  }
-  await collectNodeVersionPayloads(port, local.object_id, Number.MAX_SAFE_INTEGER);
-  return complete;
+export function resolveTopicConflict(port: DbPort, incomingRecords: NativeSyncNodeRecord[], collectVersionPayloads = true) {
+  return resolveTopicSourceConflict(port, arraySyncNodeRecordSource(incomingRecords), collectVersionPayloads);
 }
 
-async function selectTopicState(port: DbPort, local: NativeSyncNodeRecord, ordered: NativeSyncNodeRecord[]) {
-  let body = local.body_text ?? local.snapshot.content ?? '';
-  let winner = local;
-  let parent = { value: local.snapshot.parent_id, source: local };
-  let deletion = { value: local.snapshot.deleted_at, source: local };
-  for (const incoming of ordered) {
-    const baseSnapshot = await loadTopicTextConflictMetadata(port, local, incoming);
-    parent = selectNodeOperationValue(baseSnapshot?.parent_id, parent, incoming.snapshot.parent_id, incoming);
-    deletion = selectNodeOperationValue(baseSnapshot?.deleted_at, deletion, incoming.snapshot.deleted_at, incoming);
-    if (body === (incoming.body_text ?? incoming.snapshot.content ?? '')) {
-      winner = chooseProjection(winner, incoming, '', 0, 0);
-      continue;
-    }
-    const changed = await selectChangedTopicMain(port, winner, incoming);
-    const projection = changed ? { winner: changed, body: changed.body_text ?? changed.snapshot.content ?? '' }
-      : await chooseEvidenceProjection(port, winner, incoming, '');
-    body = projection.body;
-    winner = projection.winner;
-  }
-  return { body, winner, parent, deletion };
-}
-
-function groupByObjectId(records: NativeSyncNodeRecord[]) {
-  const groups = new Map<string, NativeSyncNodeRecord[]>();
+function groupByObjectId<M extends SyncNodeRecordMetadata>(records: readonly M[]) {
+  const groups = new Map<string, M[]>();
   for (const record of records) {
     groups.set(record.object_id, [...groups.get(record.object_id) ?? [], record]);
   }

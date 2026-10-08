@@ -4,9 +4,6 @@ import path from 'node:path';
 import type { DatabaseRow } from '../../lib/core/database/driver.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
-import { clearIncomingChunkedBody, collectReplacedIncomingBody, incomingBodyColumns, readIncomingBody, withIncomingBodyWrite,
-  type IncomingBodyStorage } from './incomingUpdateBodyPersistence.js';
-
 export const INCOMING_UPDATE_SOURCE_TYPE_IMPORT_FILE = 'import_file';
 export const INCOMING_UPDATE_STATUS_PENDING = 'pending';
 
@@ -22,7 +19,6 @@ export interface IncomingUpdateRecord {
 }
 
 interface IncomingUpdateRow extends DatabaseRow {
-  body_blob_hash?: string | null;
   created_at: string;
   id: string;
   source_path: string;
@@ -145,11 +141,11 @@ export function upsertPendingIncomingUpdate(args: {
   sourcePath: string;
   topicId: string;
   updatedContent: string;
-}, bodyStorage: IncomingBodyStorage = 'continuous') {
+}) {
   const driver = openDatabaseConnection().driver;
-  return withIncomingBodyWrite(driver, args.updatedContent, args.importedAt, bodyStorage, (tx, content, hash) => {
-    const existing = tx.queryOne<{ created_at: string; id: string; body_blob_hash?: string | null }>(
-      `SELECT id, created_at${bodyStorage === 'chunked' ? ', body_blob_hash' : ''}
+  return driver.transaction((tx) => {
+    const existing = tx.queryOne<{ created_at: string; id: string }>(
+      `SELECT id, created_at
        FROM incoming_updates
        WHERE topic_id = ?
          AND source_type = ?
@@ -160,31 +156,29 @@ export function upsertPendingIncomingUpdate(args: {
     const id = existing?.id ?? createIncomingUpdateId(args.topicId, args.sourcePath);
     tx.execute(
       `INSERT INTO incoming_updates (
-         id, topic_id, source_type, source_path, updated_content, status, created_at, updated_at${hash ? ', body_blob_hash' : ''}
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?${hash ? ', ?' : ''})
+         id, topic_id, source_type, source_path, updated_content, status, created_at, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(topic_id, source_type, source_path, status) DO UPDATE SET
          updated_content = excluded.updated_content,
-         updated_at = excluded.updated_at${hash ? ', body_blob_hash = excluded.body_blob_hash' : ''}`,
+         updated_at = excluded.updated_at`,
       [
         id,
         args.topicId,
         INCOMING_UPDATE_SOURCE_TYPE_IMPORT_FILE,
         args.sourcePath,
-        content,
+        args.updatedContent,
         INCOMING_UPDATE_STATUS_PENDING,
         existing?.created_at ?? args.importedAt,
-        args.importedAt,
-        ...(hash ? [hash] : [])
+        args.importedAt
       ]
     );
-    collectReplacedIncomingBody(tx, existing?.body_blob_hash, hash);
     return id;
   });
 }
 
-export function loadPendingIncomingUpdate(topicId: string, bodyStorage: IncomingBodyStorage = 'continuous'): IncomingUpdateRecord | null {
+export function loadPendingIncomingUpdate(topicId: string): IncomingUpdateRecord | null {
   const row = openDatabaseConnection().driver.queryOne<IncomingUpdateRow>(
-    `SELECT id, topic_id, source_type, source_path, ${incomingBodyColumns(bodyStorage)}, status, created_at, updated_at
+    `SELECT id, topic_id, source_type, source_path, updated_content, status, created_at, updated_at
      FROM incoming_updates
      WHERE topic_id = ?
        AND status = ?
@@ -192,11 +186,10 @@ export function loadPendingIncomingUpdate(topicId: string, bodyStorage: Incoming
     LIMIT 1`,
     [topicId, INCOMING_UPDATE_STATUS_PENDING]
   );
-  return row ? toIncomingUpdateRecord(row, bodyStorage) : null;
+  return row ? toIncomingUpdateRecord(row) : null;
 }
 
-export function clearPendingIncomingUpdate(id: string, bodyStorage: IncomingBodyStorage = 'continuous') {
-  if (bodyStorage === 'chunked') return clearIncomingChunkedBody(openDatabaseConnection().driver, id, INCOMING_UPDATE_STATUS_PENDING);
+export function clearPendingIncomingUpdate(id: string) {
   openDatabaseConnection().driver.execute(
     `DELETE FROM incoming_updates
      WHERE id = ?
@@ -205,7 +198,7 @@ export function clearPendingIncomingUpdate(id: string, bodyStorage: IncomingBody
   );
 }
 
-function toIncomingUpdateRecord(row: IncomingUpdateRow, bodyStorage: IncomingBodyStorage): IncomingUpdateRecord {
+function toIncomingUpdateRecord(row: IncomingUpdateRow): IncomingUpdateRecord {
   return {
     createdAt: row.created_at,
     id: row.id,
@@ -214,17 +207,17 @@ function toIncomingUpdateRecord(row: IncomingUpdateRow, bodyStorage: IncomingBod
     status: row.status,
     topicId: row.topic_id,
     updatedAt: row.updated_at,
-    updatedContent: readIncomingBody(openDatabaseConnection().driver, row, bodyStorage)
+    updatedContent: row.updated_content
   };
 }
 
-export function loadPendingIncomingUpdateById(id: string, bodyStorage: IncomingBodyStorage = 'continuous'): IncomingUpdateRecord | null {
+export function loadPendingIncomingUpdateById(id: string): IncomingUpdateRecord | null {
   const row = openDatabaseConnection().driver.queryOne<IncomingUpdateRow>(
-    `SELECT id, topic_id, source_type, source_path, ${incomingBodyColumns(bodyStorage)}, status, created_at, updated_at
+    `SELECT id, topic_id, source_type, source_path, updated_content, status, created_at, updated_at
      FROM incoming_updates
      WHERE id = ?
        AND status = ?`,
     [id, INCOMING_UPDATE_STATUS_PENDING]
   );
-  return row ? toIncomingUpdateRecord(row, bodyStorage) : null;
+  return row ? toIncomingUpdateRecord(row) : null;
 }

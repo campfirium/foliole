@@ -50,7 +50,7 @@ export async function previewReadwiseApiImport(
       settings: settingsInput ? normalizeImportManagerSettings(settingsInput) : loadImportManagerSettings()
     };
   });
-  const candidates = await ensureReadwiseApiCandidateIndex(settings, connectionRef, dependencies);
+  const candidates = await ensureReadwiseApiCandidateIndex(settings, connectionRef, dependencies, 'api', undefined);
   return runWithDatabaseConnectionOwner(() => buildReadwiseApiCandidatePreview(settings, connectionRef, candidates));
 }
 

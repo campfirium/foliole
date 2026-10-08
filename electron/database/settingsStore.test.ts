@@ -20,6 +20,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { initializeDatabase } from './migrate.js';
 import { loadJsonSetting, saveJsonSetting } from './settingsStore.js';
 
@@ -28,7 +29,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-settings-store-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
+  await initializeDatabase();
 });
 
 afterEach(async () => {
@@ -68,20 +69,21 @@ it('overwrites existing key with upsert and keeps a single row', () => {
 });
 
 it('does not assign a new sync sequence when a saved setting is unchanged', () => {
-  saveJsonSetting('host_name', 'Maci');
+  const host = loadOrCreateDesktopHostName();
   saveJsonSetting('app_settings', { theme: 'dark' });
   const sqlite = openDatabaseConnection().sqlite;
   const sequence = () => sqlite.prepare(`SELECT state_seq FROM sync_object_state
-    WHERE object_type = 'setting' AND object_id = 'user_space:windows:desktop:*:app_settings'`)
-    .pluck().get();
+    WHERE object_type = 'setting' AND object_id = ?`)
+    .pluck().get(`host:windows:desktop:${host}:app_settings`);
   const before = sequence();
+  expect(before).toBeTypeOf('number');
   saveJsonSetting('app_settings', { theme: 'dark' });
   expect(sequence()).toBe(before);
 });
 
 
 it('mirrors syncable settings into setting records and sync object state', () => {
-  saveJsonSetting('host_name', 'Maci', '2026-03-06T00:00:00.000Z');
+  const host = loadOrCreateDesktopHostName();
   saveJsonSetting('app_settings', { theme: 'dark' }, '2026-03-06T00:01:00.000Z');
   saveJsonSetting('watch_import_cursor_state', { cursor: 'local' }, '2026-03-06T00:02:00.000Z');
   saveJsonSetting('remote-image-learned-sources-v1', { entries: {} }, '2026-03-06T00:03:00.000Z');
@@ -99,7 +101,7 @@ it('mirrors syncable settings into setting records and sync object state', () =>
       `SELECT object_type, object_id, last_modified_by_host_name, sync_dirty
        FROM sync_object_state WHERE object_type = 'setting' AND object_id = ?`
     )
-    .get('user_space:windows:desktop:*:app_settings') as Record<string, unknown>;
+    .get(`host:windows:desktop:${host}:app_settings`) as Record<string, unknown>;
   const localOnlyCount = connection.sqlite
     .prepare('SELECT COUNT(*) AS count FROM setting_records WHERE key = ?')
     .get('watch_import_cursor_state') as { count: number };
@@ -115,19 +117,19 @@ it('mirrors syncable settings into setting records and sync object state', () =>
        FROM sync_change_log
        WHERE object_type = 'setting' AND object_id = ?`
     )
-    .get('user_space:windows:desktop:*:app_settings') as { count: number };
+    .get(`host:windows:desktop:${host}:app_settings`) as { count: number };
 
   expect(settingRecord).toMatchObject({
-    host_name: '*',
+    host_name: host,
     form_factor: 'desktop',
     key: 'app_settings',
     platform: 'windows',
-    scope: 'user_space',
+    scope: 'host',
     value_json: '{"theme":"dark"}'
   });
   expect(syncState).toMatchObject({
-    last_modified_by_host_name: 'Maci',
-    object_id: 'user_space:windows:desktop:*:app_settings',
+    last_modified_by_host_name: host,
+    object_id: `host:windows:desktop:${host}:app_settings`,
     object_type: 'setting',
     sync_dirty: 1
   });
@@ -154,7 +156,8 @@ it('keeps Foliole Aide BYOK settings out of canonical sync projection', () => {
   ).pluck().get('%:foliole_aide_byok_settings')).toBe(0);
 });
 
-it('stores full-text search index strategy inside the user-space app settings record', () => {
+it('stores full-text search index strategy inside the current Host app settings record', () => {
+  const host = loadOrCreateDesktopHostName();
   saveJsonSetting('device_id', 'device-test', '2026-03-06T00:00:00.000Z');
   saveJsonSetting(
     'app_settings',
@@ -176,24 +179,25 @@ it('stores full-text search index strategy inside the user-space app settings re
        FROM sync_object_state
        WHERE object_type = 'setting' AND object_id = ?`
     )
-    .get('user_space:windows:desktop:*:app_settings') as Record<string, unknown>;
+    .get(`host:windows:desktop:${host}:app_settings`) as Record<string, unknown>;
   const parsedValue = JSON.parse(String(settingRecord.value_json)) as Record<string, unknown>;
 
   expect(settingRecord).toMatchObject({
-    host_name: '*',
+    host_name: host,
     form_factor: 'desktop',
     platform: 'windows',
-    scope: 'user_space'
+    scope: 'host'
   });
   expect(parsedValue[FULL_TEXT_SEARCH_INDEX_STRATEGY_SETTING_KEY]).toBe('cjk-trigram');
   expect(syncState).toMatchObject({
-    object_id: 'user_space:windows:desktop:*:app_settings',
+    object_id: `host:windows:desktop:${host}:app_settings`,
     object_type: 'setting',
     sync_dirty: 1
   });
 });
 
-it('mirrors backup and library path settings as user-space setting records', () => {
+it('mirrors backup and library path settings as current Host setting records', () => {
+  const host = loadOrCreateDesktopHostName();
   saveJsonSetting('device_id', 'device-test', '2026-03-06T00:00:00.000Z');
   saveJsonSetting('backup_settings', { daily_max_count: 7 }, '2026-03-06T00:01:00.000Z');
   saveJsonSetting('library_path_settings', { mirror: '/library/Mirror' }, '2026-03-06T00:02:00.000Z');
@@ -209,7 +213,7 @@ it('mirrors backup and library path settings as user-space setting records', () 
     .all() as Array<Record<string, unknown>>;
 
   expect(rows).toEqual([
-    { host_name: '*', key: 'backup_settings', scope: 'user_space' },
-    { host_name: '*', key: 'library_path_settings', scope: 'user_space' }
+    { host_name: host, key: 'backup_settings', scope: 'host' },
+    { host_name: host, key: 'library_path_settings', scope: 'host' }
   ]);
 });

@@ -1,0 +1,1 @@
+export const BODY_READ_CHUNK_BYTES = 512 * 1024;

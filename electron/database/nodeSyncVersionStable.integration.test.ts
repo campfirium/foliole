@@ -1,78 +1,55 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
-import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
-import { migrateBodyContentOwners } from '../../lib/core/database/bodyContentOwnerMigration.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { loadVerifiedBodyRefWithDriver, readBodyTextWithDriver } from '../../lib/core/database/verifiedBodyWithDriver.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
-import { observeDriver } from './bodyContentDriver.testSupport.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 import { branches } from './syncNodeVerifiedTopicConflict.testSupport.js';
 import { textDevice } from './topicTextState.testSupport.js';
 
 const now = '2026-10-07T12:00:00.000Z';
 
-it.each(['', '\ufeff中😀\0"\\\n'.repeat(250000)])('flushes the original local version identity from bounded body ranges', async (body) => {
-  const old = textDevice(); const stable = textDevice();
+it.each(['', '\ufeff中😀\0"\\\n'.repeat(80000)])('flushes exact node text with the same identity regardless of obsolete shared data', async (body) => {
+  const left = textDevice();
+  const right = textDevice();
   try {
     const { base, local } = branches(body, 'Remote');
-    for (const host of [old, stable]) {
+    for (const host of [left, right]) {
       await host.receive([base, local]);
-      host.sqlite.exec("UPDATE nodes SET sync_dirty = 1 WHERE id = 'topic'");
+      host.sqlite.exec("UPDATE nodes SET sync_dirty = 1 WHERE id='topic'");
     }
-    await stable.db.transaction(async (tx) => {
-      await migrateBodyContentStorage(tx); await migrateBodyContentOwners(tx, 'desktop');
-    });
-    stable.sqlite.exec('DROP TABLE content_blob_data');
-    const oldDriver = createBetterSqlite3Driver(old.sqlite);
-    const stableDriver = createBetterSqlite3Driver(stable.sqlite);
-    const reads = observeDriver(stableDriver);
-    expect(flushNodeSyncVersionWithDriver(oldDriver, 'topic', 'host', now, 'successor')).toBe('successor');
-    expect(flushNodeSyncVersionWithDriver(reads.driver, 'topic', 'host', now, 'successor', 'chunked')).toBe('successor');
-    const original = oldDriver.queryOne<{ content_hash: string; snapshot_json: string }>(
-      "SELECT content_hash, snapshot_json FROM node_sync_versions WHERE version_id = 'successor'")!;
-    const current = stableDriver.queryOne<{ content_hash: string; snapshot_json: string; body_text: null;
-      body_state: string; body_blob_hash: string }>(
-      "SELECT content_hash, snapshot_json, body_text, body_state, body_blob_hash FROM node_sync_versions WHERE version_id = 'successor'")!;
-    expect(current.content_hash).toBe(original.content_hash);
-    expect(JSON.parse(current.snapshot_json)).toEqual({ ...JSON.parse(original.snapshot_json), content: null });
-    expect(current).toMatchObject({ body_text: null, body_state: 'readable' });
-    expect(readBodyTextWithDriver(stableDriver, loadVerifiedBodyRefWithDriver(stableDriver, current.body_blob_hash)!)).toBe(body);
-    for (const sql of ['SELECT version_id, parent_version_id, ordinal FROM node_sync_version_parents ORDER BY version_id, ordinal',
-      'SELECT current_version_id, sync_dirty FROM nodes', 'SELECT * FROM node_version_local_origins ORDER BY version_id']) {
-      expect(stableDriver.queryAll(sql)).toEqual(oldDriver.queryAll(sql));
+    upsertTextBodyBlob(createBetterSqlite3Driver(left.sqlite), body, now);
+    left.sqlite.exec("UPDATE content_blob_data SET data = CAST('obsolete copy' AS BLOB)");
+    for (const host of [left, right]) {
+      const driver = createBetterSqlite3Driver(host.sqlite);
+      expect(flushNodeSyncVersionWithDriver(driver, 'topic', 'host', now, 'successor')).toBe('successor');
+      expect(host.sqlite.prepare("SELECT body_text = ? AS exact FROM node_sync_versions WHERE version_id='successor'").get(body))
+        .toEqual({ exact: 1 });
+      expect(host.sqlite.prepare("SELECT content = ? AS exact FROM nodes WHERE id='topic'").get(body)).toEqual({ exact: 1 });
+      expect(flushNodeSyncVersionWithDriver(driver, 'topic', 'host', now)).toBeNull();
     }
-    expect(flushNodeSyncVersionWithDriver(reads.driver, 'topic', 'host', now, undefined, 'chunked')).toBeNull();
-  } finally { old.sqlite.close(); stable.sqlite.close(); }
+    for (const sql of ["SELECT version_id, object_id, content_hash, snapshot_json FROM node_sync_versions WHERE version_id='successor'",
+      'SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal',
+      'SELECT current_version_id, sync_dirty FROM nodes']) {
+      expect(left.sqlite.prepare(sql).all()).toEqual(right.sqlite.prepare(sql).all());
+    }
+  } finally { left.sqlite.close(); right.sqlite.close(); }
 });
 
-it('keeps unavailable stable bodies dirty without creating a version', async () => {
+it('rolls back the version, edges and head together when publication fails and permits the same retry', async () => {
   const host = textDevice();
   try {
-    const { base } = branches('Body', 'Remote'); await host.receive([base]);
-    await host.db.transaction(migrateBodyContentStorage);
-    host.sqlite.exec("DELETE FROM content_bodies; UPDATE nodes SET sync_dirty = 1");
+    const { base } = branches('Body', 'Remote');
+    await host.receive([base]);
+    host.sqlite.exec("UPDATE nodes SET sync_dirty=1; CREATE TRIGGER reject_version BEFORE INSERT ON node_sync_versions BEGIN SELECT RAISE(ABORT, 'version_failure'); END");
     const driver = createBetterSqlite3Driver(host.sqlite);
-    expect(flushNodeSyncVersionWithDriver(driver, 'topic', 'host', now, 'missing', 'chunked')).toBeNull();
-    expect(driver.queryOne('SELECT sync_dirty FROM nodes')).toEqual({ sync_dirty: 1 });
-    expect(driver.queryOne("SELECT 1 FROM node_sync_versions WHERE version_id = 'missing'")).toBeUndefined();
-  } finally { host.sqlite.close(); }
-});
-
-it('writes only stable body bytes and rolls back staging when manifest adoption fails', async () => {
-  const host = textDevice();
-  try {
-    await host.db.transaction(migrateBodyContentStorage);
-    const driver = createBetterSqlite3Driver(host.sqlite);
-    const body = '\ufeffStored中😀\0'.repeat(100000);
-    const hash = upsertTextBodyBlob(driver, body, now, 'chunked');
-    expect(readBodyTextWithDriver(driver, loadVerifiedBodyRefWithDriver(driver, hash)!)).toBe(body);
-    expect(driver.queryOne('SELECT 1 FROM content_blob_data WHERE hash = ?', [hash])).toBeUndefined();
-    host.sqlite.exec(`CREATE TRIGGER reject_manifest BEFORE INSERT ON content_blobs
-      BEGIN SELECT RAISE(ABORT, 'manifest_failure'); END`);
-    expect(() => upsertTextBodyBlob(driver, 'Rejected body', now, 'chunked')).toThrow('manifest_failure');
-    expect(driver.queryOne('SELECT count(*) AS total FROM content_bodies')).toEqual({ total: 1 });
+    const before = host.sqlite.prepare('SELECT * FROM nodes').all();
+    expect(() => flushNodeSyncVersionWithDriver(driver, 'topic', 'host', now, 'retry')).toThrow('version_failure');
+    expect(host.sqlite.prepare('SELECT * FROM nodes').all()).toEqual(before);
+    expect(host.sqlite.prepare("SELECT 1 FROM node_sync_versions WHERE version_id='retry'").get()).toBeUndefined();
+    host.sqlite.exec('DROP TRIGGER reject_version');
+    expect(flushNodeSyncVersionWithDriver(driver, 'topic', 'host', now, 'retry')).toBe('retry');
+    expect(host.sqlite.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
   } finally { host.sqlite.close(); }
 });

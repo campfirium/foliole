@@ -121,7 +121,7 @@ it('keeps a topic body edit while the later move chooses its single parent folde
 
   await applyConvergentSyncNodesWithDbPort(port, [record]);
 
-  expect(driver.queryOne(`SELECT n.parent_id, ${buildNodeBodyContentSql('n', 'bd')} AS content
+  expect(driver.queryOne(`SELECT n.parent_id, ${buildNodeBodyContentSql('n')} AS content
     FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash WHERE n.id = ?`, ['article']))
     .toEqual({ parent_id: 'right-parent', content: 'Base local' });
 });

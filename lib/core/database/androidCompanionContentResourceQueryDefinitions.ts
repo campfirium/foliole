@@ -1,18 +1,10 @@
-import type { NodeVersionBodyStorage } from '../sync/syncNodeTombstoneVersion.js';
-
 import { ANDROID_COMPANION_RESOURCE_STATUSES } from './androidCompanionSyncProtocolDefinitions.js';
 import { VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
 const RESOURCE_STATUS = ANDROID_COMPANION_RESOURCE_STATUSES;
 
-function bodyStorageJoin(bodyStorage: NodeVersionBodyStorage) {
-  return bodyStorage === 'chunked'
-    ? 'LEFT JOIN content_bodies cbd ON cbd.hash = cb.hash AND cbd.verified = 1 '
-    : 'LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash ';
-}
-
-function missingHashes(bodyStorage: NodeVersionBodyStorage) {
-  const bodyJoin = bodyStorageJoin(bodyStorage);
+function missingHashes() {
+  const bodyJoin = 'LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash ';
   return {
     resultKey: 'blobs',
     sql:
@@ -45,8 +37,8 @@ function missingHashes(bodyStorage: NodeVersionBodyStorage) {
   };
 }
 
-function missingSummary(bodyStorage: NodeVersionBodyStorage) {
-  const bodyJoin = bodyStorageJoin(bodyStorage);
+function missingSummary() {
+  const bodyJoin = 'LEFT JOIN content_blob_data cbd ON cbd.hash = cb.hash ';
   return {
     resultKey: 'blobs',
     sql:
@@ -66,10 +58,10 @@ function missingSummary(bodyStorage: NodeVersionBodyStorage) {
   };
 }
 
-function contentResourceQueries(bodyStorage: NodeVersionBodyStorage) {
+function contentResourceQueries() {
   return {
-    contentBlobMissingHashes: missingHashes(bodyStorage),
-    contentBlobMissingSummaryRows: missingSummary(bodyStorage),
+    contentBlobMissingHashes: missingHashes(),
+    contentBlobMissingSummaryRows: missingSummary(),
     contentBlobManifestByHash: {
       resultKey: 'blobs',
       sql:
@@ -85,9 +77,7 @@ function contentResourceQueries(bodyStorage: NodeVersionBodyStorage) {
     },
     contentBlobDataExisting: {
       resultKey: 'blobs',
-      sql: bodyStorage === 'chunked'
-        ? 'SELECT hash FROM content_bodies WHERE hash = ? AND verified = 1 LIMIT 1'
-        : 'SELECT hash FROM content_blob_data WHERE hash = ? LIMIT 1',
+      sql: 'SELECT hash FROM content_blob_data WHERE hash = ? LIMIT 1',
       columns: [{ key: 'hash', source: 'hash', type: 'string' }]
     },
     contentBlobManifestsByHashes: {
@@ -107,11 +97,10 @@ function contentResourceQueries(bodyStorage: NodeVersionBodyStorage) {
   };
 }
 
-export const ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS = contentResourceQueries('continuous');
+export const ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS = contentResourceQueries();
 
 export function companionContentResourceQueryDefinition(
-  name: keyof typeof ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS,
-  bodyStorage: NodeVersionBodyStorage = 'continuous'
+  name: keyof typeof ANDROID_COMPANION_CONTENT_RESOURCE_QUERY_DEFINITIONS
 ) {
-  return contentResourceQueries(bodyStorage)[name];
+  return contentResourceQueries()[name];
 }

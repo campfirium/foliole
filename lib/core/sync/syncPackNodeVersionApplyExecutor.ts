@@ -15,7 +15,7 @@ import {
 } from './syncPackNodeVersions.js';
 import { loadVerifiedExistingSyncPackVersions, rehydrateStoredVersionBodies } from './syncPackStoredVersionFacts.js';
 import { eligiblePackVersion } from './syncPackVersionEligibility.js';
-import { retainTopicTextPackSnapshot } from './topicTextPackPayload.js';
+import { readTopicTextSnapshot } from './topicTextBodies.js';
 
 // Assembled dependency history can exceed a transport page; read one body at a time.
 const VERSION_BATCH_SIZE = 1;
@@ -52,8 +52,7 @@ export async function applySyncPackNodeVersionsWithDbPort(
 async function storeIncomingVersions(port: DbPort, alias: string, replays: Set<string>) {
   await port.run(
     `INSERT INTO main.node_sync_versions (${SYNC_PACK_NODE_VERSION_COLUMNS.join(', ')})
-     SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.map((column) => column === 'snapshot_json'
-       ? `json_remove(incoming.snapshot_json, '$.text_alternative_bodies')` : `incoming.${column}`).join(', ')}
+     SELECT ${SYNC_PACK_NODE_VERSION_COLUMNS.map((column) => `incoming.${column}`).join(', ')}
      FROM ${alias}.node_sync_versions incoming
      WHERE ${eligiblePackVersion('incoming', alias)}
      ON CONFLICT(version_id) DO NOTHING`
@@ -92,7 +91,7 @@ async function validateIncomingBodies(port: DbPort, alias: string, ordered: Vers
     for (const identity of identities) {
       const row = byId.get(identity.version_id);
       if (!row) throw new Error(`sync_pack_node_version_missing:${identity.version_id}`);
-      await retainTopicTextPackSnapshot(port, row.snapshot_json, row.body_text, row.created_at);
+      readTopicTextSnapshot(row.snapshot_json, row.body_text !== null);
     }
   }
 }

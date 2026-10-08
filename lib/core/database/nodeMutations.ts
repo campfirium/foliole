@@ -1,11 +1,11 @@
 import { stringifyManualChildOrder } from '../nodes/manualChildOrder.js';
 import { resolveNodeOpeningText } from '../nodes/nodeOpeningPreview.js';
+import { assertNodeAnchorTextWithinBudget, assertNodeTextFieldsWithinBudget } from '../nodes/nodeTextBudget.js';
+import { normalizeNodeTitle } from '../nodes/nodeTitleBudget.js';
 import { stringifyVirtualNodeFilter } from '../nodes/virtualNodeFilter.js';
 
-import { upsertTextBodyBlob } from './contentBodyBlobs.js';
 import type { DatabaseDriver } from './driver.js';
 import { serializeImageSources } from './imageSources.js';
-import { projectNodeInlineContent } from './nodeInlineProjection.js';
 import type {
   NodeAnchorLinkPayload,
   NodeImageRegionGroupPayload,
@@ -31,6 +31,7 @@ import {
   enqueueWorkspaceSearchRestoreInvalidationForSubtreeRootIds
 } from './searchIndexInvalidations.js';
 import { collectTextBodyBlobCandidates } from './textBodyBlobCollection.js';
+import { hashTextBody } from './textBodyHash.js';
 import { bumpUntitledSequenceByParent } from './workspaceUntitledSequence.js';
 
 export type { RestoreNodesResult } from './nodeRestoreConflicts.js';
@@ -79,8 +80,7 @@ function resolveStoredOpeningText(input: Pick<UpsertNodeSnapshotInput, 'content'
 function runNodeTableUpsert(
   run: ReturnType<typeof createUpsertNodeStatement>['run'],
   input: UpsertNodeSnapshotInput,
-  bodyBlobHash: string | null,
-  storage: 'continuous' | 'chunked'
+  bodyBlobHash: string | null
 ) {
   run([
     input.nodeId,
@@ -95,7 +95,7 @@ function runNodeTableUpsert(
     input.title,
     input.isTitleManual ? 1 : 0,
     input.hideTitleHeading === true ? 1 : 0,
-    storage === 'chunked' ? '' : projectNodeInlineContent(input.content),
+    input.content,
     bodyBlobHash,
     resolveStoredOpeningText(input),
     stringifyVirtualNodeFilter(input.virtualFilter ?? null),
@@ -111,7 +111,6 @@ function runNodeTableUpsert(
 
 export interface UpsertNodeSnapshotOptions {
   searchInvalidation?: NodeSearchInvalidationOptions;
-  bodyStorage?: 'continuous' | 'chunked';
 }
 
 function createUpsertNodeSnapshotStatements(driver: DatabaseDriver) {
@@ -148,6 +147,9 @@ export function upsertNodeSnapshot(
   input: UpsertNodeSnapshotInput,
   options: UpsertNodeSnapshotOptions = {}
 ): void {
+  const previousTitle = driver.queryOne<{ title: string }>('SELECT title FROM nodes WHERE id = ?', [input.nodeId]);
+  if (previousTitle?.title !== input.title) input = { ...input, title: normalizeNodeTitle(input.title) };
+  assertNodeTextFieldsWithinBudget(input);
   const statements = getUpsertNodeSnapshotStatements(driver);
 
   driver.transaction(() => {
@@ -156,11 +158,11 @@ export function upsertNodeSnapshot(
       && input.title.trim() === 'Untitled'
       && !driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', [input.nodeId]);
     const enqueueSearchInvalidation = prepareNodeSearchInvalidationForUpsert(driver, input, options.searchInvalidation);
-    ensureSpecialRootNodesForInput(driver, input, options.bodyStorage);
+    ensureSpecialRootNodesForInput(driver, input);
     const previousBody = driver.queryOne<{ body_blob_hash: string | null }>(
       'SELECT body_blob_hash FROM nodes WHERE id = ?', [input.nodeId]);
-    const bodyBlobHash = upsertTextBodyBlob(driver, input.content, input.updatedAt, options.bodyStorage);
-    runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash, options.bodyStorage ?? 'continuous');
+    const bodyBlobHash = hashTextBody(input.content);
+    runNodeTableUpsert(statements.upsertNode.run, input, bodyBlobHash);
     ensureNodeParentMembership(driver, input.nodeId);
     writeNodeReadingSnapshotWithSync(driver, input, {
       deleteDeviceState: statements.deleteNodeReadingHostState.run,
@@ -179,12 +181,13 @@ export function upsertNodeSnapshot(
     });
     enqueueSearchInvalidation();
     if (previousBody?.body_blob_hash && previousBody.body_blob_hash !== bodyBlobHash) {
-      collectTextBodyBlobCandidates(driver, [previousBody.body_blob_hash], options.bodyStorage);
+      collectTextBodyBlobCandidates(driver, [previousBody.body_blob_hash]);
     }
   });
 }
 
 export function updateNodeAnchorLinks(driver: DatabaseDriver, inputs: UpdateNodeAnchorLinkInput[]): void {
+  for (const input of inputs) assertNodeAnchorTextWithinBudget(input.anchorLink);
   const updateNodeAnchorLinkStatement = createUpdateNodeAnchorLinkStatement(driver);
 
   driver.transaction(() => {

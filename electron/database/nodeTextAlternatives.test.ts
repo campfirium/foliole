@@ -88,7 +88,6 @@ it('promotes the alternate body through a new formal child version', async () =>
   const source = loadNodeSyncVersionSourceFromDriver(driver, 'topic-1');
   if (!source) throw new Error('Promoted node source is missing');
   const body = resolveNodeBody(source);
-  if (body.status === 'unavailable') throw new Error('Promoted node body is unavailable');
   const canonicalHash = computeNodeSyncVersionHashFromDriver(
     driver, { ...source, content: body.content }, 'topic-1'
   );
@@ -117,16 +116,18 @@ it('inherits alternative membership and expiry through a normal desktop edit', (
   );
   expect(row).toMatchObject({ body_text: 'Edited main', parent_version_id: 'desktop#1' });
   expect(JSON.parse(row!.snapshot_json).text_alternatives).toEqual(references);
+  expect(JSON.parse(row!.snapshot_json).text_alternative_bodies).toEqual(
+    JSON.parse(before!.snapshot_json).text_alternative_bodies);
 });
 
-it('previews Blob-only authority and hides an alternative while the Blob is unavailable', async () => {
+it('previews owned current and alternative text after the shared copy is removed', async () => {
   const driver = openDatabaseConnection().driver;
   const hash = upsertTextBodyBlob(driver, 'Blob current body', '2026-07-25T00:00:00.000Z');
-  driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ? WHERE id = ?', ['', hash, 'topic-1']);
+  driver.execute('UPDATE nodes SET content = ?, body_blob_hash = ? WHERE id = ?', ['Blob current body', hash, 'topic-1']);
   expect((await loadNodeTextAlternativePreview('topic-1'))?.current_content).toBe('Blob current body');
 
   driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
-  expect(await loadNodeTextAlternativePreview('topic-1')).toBeNull();
+  expect(await loadNodeTextAlternativePreview('topic-1')).toMatchObject({ current_content: 'Blob current body', updated_content: 'Other body' });
 });
 
 function seedAlternative() {
@@ -134,6 +135,7 @@ function seedAlternative() {
   const now = new Date().toISOString();
   const otherHash = upsertTextBodyBlob(driver, 'Other body', now);
   const snapshot = JSON.stringify({
+    text_alternative_bodies: [{ hash: otherHash, text: 'Other body' }],
     text_alternatives: [{ id: 'alternative-1', body_blob_hash: otherHash, source_host_name: 'android-device',
       created_at: now, expires_at: new Date(Date.now() + 30 * 86400000).toISOString() }],
     anchor_link: null, attachments: [], content: 'Current body', created_at: '2026-07-25T00:00:00.000Z',

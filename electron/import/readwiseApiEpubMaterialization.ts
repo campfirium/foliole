@@ -1,4 +1,5 @@
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import type { DatabaseRow } from '../../lib/core/database/driver.js';
+import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
 import { createReadwiseApiEpubProjectionProof } from '../../lib/core/readwise/readwiseApiEpubProjection.js';
 import {
   type PreparedReadwiseApiAnnotation,
@@ -26,7 +27,7 @@ import type { PreparedReadwiseApiEpubCover } from './readwiseApiEpubCover.js';
 import { replaceReadwiseApiEpubImageLinks } from './readwiseApiEpubImageLinks.js';
 import type { PreparedReadwiseApiEpubImages } from './readwiseApiEpubImages.js';
 
-interface BodyNode extends NodeBodyRow {
+interface BodyNode extends DatabaseRow {
   created_at: string;
   id: string;
 }
@@ -60,8 +61,7 @@ export function materializeReadwiseApiEpub(input: {
     const rootNodeId = input.rootNodeId && !input.rebuildRoot ? input.rootNodeId : createBookTree(input);
     const bodies = readReadwiseApiEpubBookBodies(rootNodeId);
     const relocatable = filterRelocatableAnnotations(input.newAnnotations, input.annotationStates);
-    const placed = placeReadwiseApiEpubAnnotations({
-      annotations: relocatable, annotationStates: input.annotationStates, bodies,
+    const placed = placeReadwiseApiEpubAnnotations({ annotations: relocatable, annotationStates: input.annotationStates, bodies,
       connectionRef: input.connectionRef, documentId: input.document.id,
       importedAt: input.importedAt, relocationPolicy: input.relocationPolicy, rootNodeId
     });
@@ -128,11 +128,13 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
   if (input.existingSourceFingerprint) preparedRoot.sourceFingerprint = input.existingSourceFingerprint;
   const root = runPreparedImport(
     preparedRoot,
-    input.rootNodeId ? {
+    {
+      ...(input.rootNodeId ? {
       forceUpdateExistingNodeId: input.rootNodeId,
       preserveExistingHighlightNodes: true,
       resetImportedStructure: true
-    } : undefined
+      } : {})
+    }
   );
   if (!root.nodeId) throw new Error('readwise_epub_root_missing');
   replaceReadwiseApiEpubImageLinks(
@@ -151,20 +153,21 @@ function createBookTree(input: Parameters<typeof materializeReadwiseApiEpub>[0])
 }
 
 export function readReadwiseApiEpubBookBodies(rootNodeId: string) {
-  const rows = openDatabaseConnection().driver.queryAll<BodyNode>(
-    `WITH RECURSIVE descendants(id, content, body_blob_hash, created_at) AS (
-       SELECT id, content, body_blob_hash, created_at FROM nodes WHERE id = ? AND deleted_at IS NULL
-       UNION ALL SELECT child.id, child.content, child.body_blob_hash, child.created_at FROM nodes child
+  const driver = openDatabaseConnection().driver;
+  const rows = driver.queryAll<BodyNode>(
+    `WITH RECURSIVE descendants(id, created_at) AS (
+       SELECT id, created_at FROM nodes WHERE id = ? AND deleted_at IS NULL
+       UNION ALL SELECT child.id, child.created_at FROM nodes child
        JOIN descendants ON child.parent_id = descendants.id WHERE child.deleted_at IS NULL
-     ) SELECT d.id, d.content, d.body_blob_hash, d.created_at, cbd.data body_blob_data
-     FROM descendants d LEFT JOIN content_blob_data cbd ON cbd.hash = d.body_blob_hash
-     ORDER BY CASE WHEN d.id = ? THEN 0 ELSE 1 END, d.created_at, d.id`, [rootNodeId, rootNodeId]
+     ) SELECT id, created_at FROM descendants
+     WHERE id = ? OR substr(id, 1, 10) = 'node-epub-'
+     ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, created_at, id`, [rootNodeId, rootNodeId, rootNodeId]
   );
-  return rows.filter((row) => (
-    row.id === rootNodeId
-    || row.id.startsWith('node-epub-')
-  ))
-    .map((row) => ({ id: row.id, content: requireResolvedNodeBody(row, row.id).content }));
+  return rows.map((row) => {
+    const body = loadNodeBodyResolution(driver, row.id);
+    if (!body) throw new NodeBodyUnavailableError([row.id]);
+    return { id: row.id, content: body.content };
+  });
 }
 
 function buildRootContent(document: PreparedReadwiseApiDocument, rootBody = document.epubStructure?.rootBody) {

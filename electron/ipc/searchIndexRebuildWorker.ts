@@ -42,13 +42,13 @@ function runWorker(input: SearchIndexWorkerInput): WorkerOutput {
       const status = rebuildWorkspaceSearchSidecar(connection, {
         strategy: input.strategy, source: input.source, retirePending: false,
         onCoveredId: (id) => { coveredId = id; },
-        rebuildWorkspaceSearchIndexes: (driver) => rebuildWorkspaceSearchIndexes(driver, input.bodyStorage)
+        rebuildWorkspaceSearchIndexes: (driver) => rebuildWorkspaceSearchIndexes(driver)
       });
       return { ok: true, status, coveredId };
     }
     const status = readWorkspaceSearchSidecarRebuildStatus(sqlite);
     if (!status || status.status !== 'ready') throw new Error(status?.error ?? 'Search index is not ready.');
-    processClaimedInvalidationRows(connection.driver, input.rows, input.bodyStorage);
+    processClaimedInvalidationRows(connection.driver, input.rows);
     return { ok: true, status };
   } catch (error) {
     return toWorkerError(error);

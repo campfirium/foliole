@@ -36,8 +36,8 @@ afterEach(async () => {
   closeDatabaseConnection();
   await fs.rm(appRoot, { recursive: true, force: true });
 });
-function previousLibrary() {
-  const connection = initializeDatabase();
+async function previousLibrary() {
+  const connection = await initializeDatabase();
   connection.sqlite.exec(`INSERT INTO keep_import_item_cache VALUES
     ('orphan', '/unavailable', 'Old title', 'Unique historical body', 'Preview', 1, 2, 'then', NULL);
     PRAGMA user_version = 126;`);
@@ -45,10 +45,10 @@ function previousLibrary() {
 }
 
 it('actual startup preserves deleted content in a verified recoverable safety snapshot before upgrading', async () => {
-  const previous = previousLibrary();
+  const previous = await previousLibrary();
   const before = previous.sqlite.prepare('SELECT * FROM keep_import_item_cache').all();
   closeDatabaseConnection();
-  const upgraded = initializeDatabase();
+  const upgraded = await initializeDatabase();
   expect(upgraded.sqlite.prepare('SELECT * FROM keep_import_item_cache').all()).toEqual([]);
   await waitForManagedSafetySnapshotSettlements();
   const snapshots = (await listApplicationDatabaseBackups()).filter((row) => row.kind === 'snapshot');
@@ -63,19 +63,19 @@ it('actual startup preserves deleted content in a verified recoverable safety sn
     } finally { db.close(); }
   } finally { await snapshot.cleanup(); }
   closeDatabaseConnection();
-  initializeDatabase();
+  await initializeDatabase();
   await waitForManagedSafetySnapshotSettlements();
   expect((await listApplicationDatabaseBackups()).filter((row) => row.kind === 'snapshot')).toHaveLength(1);
 });
 
 it('a real snapshot filesystem failure blocks startup without deleting caches or advancing the version', async () => {
-  const previous = previousLibrary();
+  const previous = await previousLibrary();
   const databasePath = previous.dbPath;
   const backupDir = resolveManagedBackupDirectory();
   closeDatabaseConnection();
   await fs.rm(backupDir, { recursive: true, force: true });
   await fs.writeFile(backupDir, 'blocked directory');
-  expect(() => initializeDatabase(undefined, { recovery: 'fail' })).toThrow('snapshot');
+  await expect(async () => initializeDatabase(undefined, { recovery: 'fail' })).rejects.toThrow('snapshot');
   const db = new BetterSqlite3(databasePath, { readonly: true });
   try {
     expect(db.pragma('user_version', { simple: true })).toBe(126);
@@ -83,12 +83,12 @@ it('a real snapshot filesystem failure blocks startup without deleting caches or
       .toEqual([{ content: 'Unique historical body' }]);
   } finally { db.close(); }
   await fs.rm(backupDir);
-  initializeDatabase(undefined, { recovery: 'fail' });
+  await initializeDatabase(undefined, { recovery: 'fail' });
   expect(openDatabaseConnection().sqlite.pragma('user_version', { simple: true })).toBe(DATABASE_SCHEMA_VERSION);
 });
 
 it('keeps Removed readable and restorable through production import after the actual upgrade', async () => {
-  initializeDatabase();
+  await initializeDatabase();
   const sourceDir = path.join(appRoot, 'watch');
   await fs.mkdir(sourceDir);
   await fs.writeFile(path.join(sourceDir, 'entry.md'), '# Entry\n\nPreserved source body.');
@@ -103,7 +103,7 @@ it('keeps Removed readable and restorable through production import after the ac
   const before = (await loadRemovedSources()).entries;
   expect(before).toHaveLength(1);
   closeDatabaseConnection();
-  initializeDatabase();
+  await initializeDatabase();
   expect((await loadRemovedSources()).entries).toEqual(before);
   expect((await loadRemovedSources()).entries[0]!.content).toContain('Preserved source body.');
   const restored = await restoreRemovedSource('rule', 'entry.md');

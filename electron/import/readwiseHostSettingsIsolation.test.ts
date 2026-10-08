@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
+import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 import { initializeDatabase } from '../database/migrate.js';
 
 import { saveImportManagerSettings } from './importManagerSettings.js';
@@ -26,7 +27,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-readwise-host-isolation-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
+  await initializeDatabase();
 });
 
 afterEach(async () => {
@@ -71,7 +72,9 @@ it('keeps another Host Readwise config and Source reference independent', () => 
     }
   });
   expect(driver.queryOne(`SELECT scope, host_name FROM setting_records
-    WHERE key = 'import_manager_settings'`)).toEqual({ host_name: '*', scope: 'user_space' });
+    WHERE key = 'import_manager_settings'`)).toEqual({
+    host_name: loadOrCreateDesktopHostName(), scope: 'host'
+  });
   expect(driver.queryAll(`SELECT scope, host_name FROM setting_records
     WHERE key = 'readwise_import_settings'`)).toEqual([
     expect.objectContaining({ scope: 'host' })

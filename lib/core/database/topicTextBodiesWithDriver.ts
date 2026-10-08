@@ -1,21 +1,14 @@
+import { readTopicTextSnapshot, validateTopicTextBodies } from '../sync/topicTextBodies.js';
 import type { TopicTextAlternative } from '../sync/topicTextState.js';
 
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
-import { hashTextBody } from './textBodyHash.js';
-import { loadVerifiedBodyRefWithDriver, readBodyTextWithDriver } from './verifiedBodyWithDriver.js';
 
-export function loadTopicTextBodiesWithDriver(driver: DatabaseDriver, entries: readonly TopicTextAlternative[], storage: 'continuous' | 'chunked' = 'continuous') {
-  return entries.map((entry) => {
-    if (storage === 'chunked') {
-      const ref = loadVerifiedBodyRefWithDriver(driver, entry.body_blob_hash);
-      if (!ref) throw new Error(`text_alternative_body_unavailable:${entry.id}`);
-      return { hash: entry.body_blob_hash, text: readBodyTextWithDriver(driver, ref) };
-    }
-    const row = driver.queryOne<DatabaseRow & { data: Uint8Array | string }>(
-      'SELECT data FROM content_blob_data WHERE hash = ?', [entry.body_blob_hash]);
-    if (!row) throw new Error(`text_alternative_body_unavailable:${entry.id}`);
-    const text = typeof row.data === 'string' ? row.data : new TextDecoder('utf-8', { fatal: true }).decode(row.data);
-    if (hashTextBody(text) !== entry.body_blob_hash) throw new Error('text_alternative_body_hash_mismatch');
-    return { hash: entry.body_blob_hash, text };
-  });
+export function loadTopicTextBodiesWithDriver(driver: DatabaseDriver, nodeId: string,
+  entries: readonly TopicTextAlternative[]) {
+  if (!entries.length) return [];
+  const row = driver.queryOne<DatabaseRow & { snapshot_json: string }>(
+    `SELECT v.snapshot_json FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id
+     WHERE n.id = ?`, [nodeId]);
+  if (!row) throw new Error(`text_alternative_version_unavailable:${nodeId}`);
+  return validateTopicTextBodies(entries, readTopicTextSnapshot(row.snapshot_json).bodies);
 }

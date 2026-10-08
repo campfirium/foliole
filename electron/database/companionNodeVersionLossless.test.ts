@@ -24,6 +24,7 @@ import { ANDROID_COMPANION_SYNC_SCHEMA_STATEMENTS } from '../../lib/core/databas
 import { requireResolvedNodeBody } from '../../lib/core/database/nodeBodyResolution.js';
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { projectNodeResourceLinks, serializeNodeResourceReferences } from '../../lib/core/database/nodeResourceReferences.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 
@@ -41,7 +42,7 @@ const pdfHash = 'a'.repeat(64);
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-node-version-lossless-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
+  await initializeDatabase();
   seedSourceFolder('Version one', '2026-07-11T01:00:00.000Z');
   openDatabaseConnection().sqlite
     .prepare('UPDATE nodes SET current_version_id = ?, sync_dirty = 0 WHERE id = ?')
@@ -68,12 +69,13 @@ it('rebuilds and fast-forwards complete producer versions through the BetterSQLi
 
   expect(versionTwo.parent_version_id).toBe(versionOne.version_id);
   expect(readPersistedSourceVersion(versionTwo.version_id!)).toEqual({
+    body_blob_hash: hashTextBody('Version two'),
     content_hash: versionTwo.content_hash,
     snapshot_json: JSON.stringify(versionTwo.snapshot),
     state_hash: versionTwo.content_hash
   });
   const storedSource = loadNodeSyncVersionSource('folder-1')!;
-  const resolvedBody = requireResolvedNodeBody(storedSource, 'folder-1');
+  const resolvedBody = requireResolvedNodeBody(storedSource);
   expect(computeNodeSyncVersionHash({ ...storedSource, content: resolvedBody.content }, 'folder-1'))
     .toBe(versionTwo.content_hash);
 
@@ -131,8 +133,10 @@ async function applyToSource(version: Awaited<ReturnType<typeof produceSourceVer
 function readPersistedSourceVersion(versionId: string) {
   const sqlite = openDatabaseConnection().sqlite;
   const version = sqlite.prepare(
-    'SELECT content_hash, snapshot_json FROM node_sync_versions WHERE version_id = ?'
-  ).get(versionId) as { content_hash: string; snapshot_json: string };
+    `SELECT content_hash, json_extract(snapshot_json, '$.body_blob_hash') AS body_blob_hash,
+     json_remove(snapshot_json, '$.body_blob_hash') AS snapshot_json
+     FROM node_sync_versions WHERE version_id = ?`
+  ).get(versionId) as { content_hash: string; body_blob_hash: string; snapshot_json: string };
   const state = sqlite.prepare(
     `SELECT content_hash AS state_hash FROM sync_object_state
      WHERE object_type = 'node' AND object_id = 'folder-1'`

@@ -1,16 +1,25 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
+  configureFramedSyncPayloadBudget: vi.fn(async () => undefined),
+  closeFramedSyncPayloadBudget: vi.fn(async () => undefined),
   maintainAttachmentFiles: vi.fn(async () => ({ files: [] }))
 } }));
 
 import { ANDROID_COMPANION_MIGRATION_PLAN } from '../../../../../lib/core/database/androidCompanionMigrationSchemaStatements';
 import {
   COMPANION_DATABASE_VERSION,
+  COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
   type NativeCompanionBootstrapPayload
 } from '../../../../../lib/platform/nativeCompanionContract';
+import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 
-import { initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from './iosCompanionDatabaseBootstrap';
+import {
+  closeIosCompanionDatabase, getIosCompanionDatabaseOwner,
+  initializeIosCompanionDatabase, type IosCompanionDatabaseManager
+} from './iosCompanionDatabaseBootstrap';
+
+afterEach(() => closeIosCompanionDatabase());
 
 function nativeState(): NativeCompanionBootstrapPayload {
   return {
@@ -87,7 +96,8 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      Math.max(...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
+      Math.max(COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
+        ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
   });
 });
@@ -106,6 +116,9 @@ describe('iosCompanionDatabaseBootstrap', () => {
     expect(manager.createConnection).toHaveBeenCalledWith(
       'foliole-companion', false, 'no-encryption', COMPANION_DATABASE_VERSION, false
     );
+    expect(FolioleCompanionSync.configureFramedSyncPayloadBudget).toHaveBeenLastCalledWith({
+      library_key: result.database_path, generation_id: expect.any(String)
+    });
     expect(connection.query).toHaveBeenCalledWith('PRAGMA busy_timeout = 5000', []);
     expect(connection.beginTransaction).toHaveBeenCalledTimes(1);
     expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
@@ -124,6 +137,41 @@ describe('iosCompanionDatabaseBootstrap', () => {
     expect(connection.run).not.toHaveBeenCalledWith(expect.stringContaining('INSERT INTO companion_meta'), expect.anything(), false);
     expect(connection.commitTransaction).toHaveBeenCalledTimes(1);
   });
+});
+
+it('closes native grants before queued database reads finish and the connection closes', async () => {
+  const { manager } = harness();
+  await initializeIosCompanionDatabase(nativeState(), manager);
+  const owner = getIosCompanionDatabaseOwner();
+  let finishRead!: () => void;
+  let readStarted!: () => void;
+  const started = new Promise<void>((resolve) => { readStarted = resolve; });
+  const pending = owner.read(async () => {
+    readStarted();
+    await new Promise<void>((resolve) => { finishRead = resolve; });
+  });
+  await started;
+  const closeCount = vi.mocked(FolioleCompanionSync.closeFramedSyncPayloadBudget).mock.calls.length;
+  const closing = closeIosCompanionDatabase();
+  await vi.waitFor(() => expect(FolioleCompanionSync.closeFramedSyncPayloadBudget)
+    .toHaveBeenCalledTimes(closeCount + 1));
+  expect(manager.closeConnection).not.toHaveBeenCalled();
+  finishRead();
+  await Promise.all([pending, closing]);
+  expect(manager.closeConnection).toHaveBeenCalledOnce();
+});
+
+it('drains the previous owner before opening a new generation of the same library', async () => {
+  const first = harness();
+  await initializeIosCompanionDatabase(nativeState(), first.manager);
+  const identity = vi.mocked(FolioleCompanionSync.configureFramedSyncPayloadBudget).mock.calls.at(-1)![0];
+  const second = harness();
+  await initializeIosCompanionDatabase(nativeState(), second.manager);
+  const next = vi.mocked(FolioleCompanionSync.configureFramedSyncPayloadBudget).mock.calls.at(-1)![0];
+  expect(FolioleCompanionSync.closeFramedSyncPayloadBudget).toHaveBeenLastCalledWith(identity);
+  expect(first.manager.closeConnection).toHaveBeenCalledOnce();
+  expect(next.library_key).toBe(identity.library_key);
+  expect(next.generation_id).not.toBe(identity.generation_id);
 });
 
 describe('iosCompanionDatabaseBootstrap host profile migration', () => {

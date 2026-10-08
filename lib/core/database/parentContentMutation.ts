@@ -1,6 +1,6 @@
 import type { DatabaseDriver } from './driver.js';
 import { writeNodeBody } from './nodeBodyMutation.js';
-import { loadNodeBodyResolution, NodeBodyUnavailableError } from './nodeBodyResolution.js';
+import { loadNodeBodyResolution } from './nodeBodyResolution.js';
 import { enqueueWorkspaceSearchInvalidationForNodeIds } from './searchIndexInvalidations.js';
 import {
   remapRawStoredAnchorLink,
@@ -41,10 +41,9 @@ function readParentNode(driver: DatabaseDriver, nodeId: string) {
   ) ?? null;
 }
 
-function readParentBody(driver: DatabaseDriver, parent: ParentNodeRow | null, bodyStorage?: 'continuous' | 'chunked') {
+function readParentBody(driver: DatabaseDriver, parent: ParentNodeRow | null) {
   if (!parent) return null;
-  const resolution = loadNodeBodyResolution(driver, parent.id, bodyStorage);
-  if (resolution?.status === 'unavailable') throw new NodeBodyUnavailableError([parent.id]);
+  const resolution = loadNodeBodyResolution(driver, parent.id);
   return resolution;
 }
 
@@ -76,7 +75,6 @@ function writeUpdatedParent(
   title: string
 ) {
   writeNodeBody({
-    ...(input.bodyStorage ? { bodyStorage: input.bodyStorage } : {}),
     content: input.nextContent,
     driver: input.driver,
     nodeId: input.nodeId,
@@ -86,7 +84,6 @@ function writeUpdatedParent(
 }
 
 export function applyParentContentChange(input: {
-  bodyStorage?: 'continuous' | 'chunked';
   driver: DatabaseDriver;
   nextContent: string;
   nodeId: string;
@@ -95,7 +92,7 @@ export function applyParentContentChange(input: {
   updatedAt: string;
 }): ParentContentChangeResult {
   const parent = readParentNode(input.driver, input.nodeId);
-  const resolvedParent = readParentBody(input.driver, parent, input.bodyStorage);
+  const resolvedParent = readParentBody(input.driver, parent);
   const previousContent = input.previousContent ?? resolvedParent?.content ?? '';
   const title = input.title ?? parent?.title ?? '';
   if (previousContent === input.nextContent) {

@@ -83,20 +83,22 @@ it('prefers the pdf import source when a node also has a markdown source', () =>
   expect(details?.importSource?.pdf_index_status).toBe('ready');
 });
 
-it('exposes Blob authority and represents missing Blob data as unavailable', () => {
+it('exposes complete owned text even when an obsolete shared cache disagrees or is missing', () => {
   const connection = openDatabaseConnection();
-  const hash = upsertTextBodyBlob(connection.driver, 'Blob authority', '2026-04-24T00:00:00.000Z');
+  const content = '\ufeffOwned 中😀\0 body';
+  const hash = upsertTextBodyBlob(connection.driver, content, '2026-04-24T00:00:00.000Z');
   connection.driver.execute(
     `INSERT INTO nodes (id, kind, title, content, body_blob_hash, created_at, updated_at)
-     VALUES ('node-blob', 'topic', 'Blob', 'stale inline', ?, ?, ?)`,
-    [hash, '2026-04-24T00:00:00.000Z', '2026-04-24T00:00:00.000Z']
+     VALUES ('node-blob', 'topic', 'Article', ?, ?, ?, ?)`,
+    [content, hash, '2026-04-24T00:00:00.000Z', '2026-04-24T00:00:00.000Z']
   );
 
+  connection.driver.execute('UPDATE content_blob_data SET data = ? WHERE hash = ?', [Buffer.from('Obsolete copy'), hash]);
   expect(loadNodeSourceDetails(connection.driver, 'node-blob')).toMatchObject({
-    sourceNodeBodyStatus: 'resolved', sourceNodeContent: 'Blob authority'
+    sourceNodeBodyStatus: 'resolved', sourceNodeContent: content
   });
   connection.driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
   expect(loadNodeSourceDetails(connection.driver, 'node-blob')).toMatchObject({
-    sourceNodeBodyStatus: 'unavailable', sourceNodeContent: null
+    sourceNodeBodyStatus: 'resolved', sourceNodeContent: content
   });
 });

@@ -7,8 +7,8 @@ import { expect, it } from 'vitest';
 import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 
-import { BODY_CONTENT_CHUNK_BYTES } from './bodyContentSchema.js';
 import { bodyJsonHolderContainsBody, type BodyJsonHolder } from './bodyHolderScalarHash.js';
+import { BODY_READ_CHUNK_BYTES } from './bodyReadBudget.js';
 
 const holder = { table: 'node_sync_conflicts', column: 'snapshot_json' } as const;
 const identity = (body: string) => ({ hash: createHash('sha256').update(body).digest('hex'),
@@ -27,7 +27,7 @@ function fixture() {
       for (const row of rows) for (const value of Object.values(row)) {
         expect(typeof value).not.toBe('string');
         if (value instanceof Uint8Array) {
-          expect(value.byteLength).toBeLessThanOrEqual(BODY_CONTENT_CHUNK_BYTES);
+          expect(value.byteLength).toBeLessThanOrEqual(BODY_READ_CHUNK_BYTES);
           observed.maximumBytes = Math.max(observed.maximumBytes, value.byteLength);
           observed.reads += 1;
         }
@@ -52,7 +52,7 @@ it.each(['value', 'key'] as const)('hashes a nested 3 MiB %s without returning J
     test.put(-2, field === 'value' ? { nested: [other] } : { nested: [{ [other]: false }] });
     test.put(3, field === 'value' ? { nested: [{ original: body }] } : { nested: [{ [body]: 1 }] });
     expect(await test.contains(body)).toBe(true);
-    expect(test.observed.maximumBytes).toBe(BODY_CONTENT_CHUNK_BYTES);
+    expect(test.observed.maximumBytes).toBe(BODY_READ_CHUNK_BYTES);
     expect(test.observed.reads).toBeGreaterThan(6);
     expect(test.sqlite.prepare('SELECT count(*) FROM node_sync_conflicts').pluck().get()).toBe(2);
   } finally { test.sqlite.close(); }
@@ -100,30 +100,16 @@ it('rejects table/column combinations outside the existing JSON holder whitelist
   } finally { test.sqlite.close(); }
 });
 
-it('filters version scalars by readable state only when explicitly requested', async () => {
+it('hashes retained version JSON without requiring a physical body-state column', async () => {
   const test = fixture();
   const versionHolder = { table: 'node_sync_versions', column: 'snapshot_json' } as const;
   const body = '\ufeff' + '中😀\0文'.repeat(310_000);
   try {
-    test.sqlite.exec('CREATE TABLE node_sync_versions (body_state TEXT NOT NULL, snapshot_json TEXT NOT NULL)');
-    const put = test.sqlite.prepare('INSERT INTO node_sync_versions VALUES (?, ?)');
-    put.run('retired', JSON.stringify({ nested: [body] }));
-    put.run('unavailable', JSON.stringify({ nested: { [body]: false } }));
-    const contains = (options?: { readableVersionsOnly?: boolean }) => test.db.transaction(() =>
-      bodyJsonHolderContainsBody(test.db, versionHolder, identity(body), options));
-    expect(await contains()).toBe(true);
-    expect(await contains({ readableVersionsOnly: false })).toBe(true);
-    expect(await contains({ readableVersionsOnly: true })).toBe(false);
-    put.run('readable', JSON.stringify({ nested: [body] }));
-    expect(await contains({ readableVersionsOnly: true })).toBe(true);
-    expect(test.observed.maximumBytes).toBe(BODY_CONTENT_CHUNK_BYTES);
-  } finally { test.sqlite.close(); }
-});
-
-it.each([true, false])('rejects the version-only filter %s for other holders', async (readableVersionsOnly) => {
-  const test = fixture();
-  try {
-    await expect(bodyJsonHolderContainsBody(test.db, holder, identity('body'), { readableVersionsOnly }))
-      .rejects.toThrow('body_holder_filter_invalid');
+    test.sqlite.exec('CREATE TABLE node_sync_versions (body_text TEXT, snapshot_json TEXT NOT NULL)');
+    test.sqlite.prepare('INSERT INTO node_sync_versions VALUES (?, ?)')
+      .run(null, JSON.stringify({ nested: [body] }));
+    expect(await test.db.transaction(() =>
+      bodyJsonHolderContainsBody(test.db, versionHolder, identity(body)))).toBe(true);
+    expect(test.observed.maximumBytes).toBe(BODY_READ_CHUNK_BYTES);
   } finally { test.sqlite.close(); }
 });

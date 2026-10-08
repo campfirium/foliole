@@ -1,9 +1,9 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
-import { BODY_CONTENT_CHUNK_BYTES } from './bodyContentSchema.js';
 import { holderSource, scalarPositionQuery, scalarRangeQuery, type BodyIdentity, type BodyJsonHolder,
-  type ScalarHashOptions, type ScalarPosition } from './bodyHolderScalarQueries.js';
+  type ScalarPosition } from './bodyHolderScalarQueries.js';
+import { BODY_READ_CHUNK_BYTES } from './bodyReadBudget.js';
 import type { DatabaseDriver } from './driver.js';
 
 export type { BodyJsonHolder } from './bodyHolderScalarQueries.js';
@@ -12,8 +12,8 @@ function scalarMatches(db: DatabaseDriver, source: string, field: 'value' | 'key
   position: ScalarPosition, target: BodyIdentity) {
   const digest = sha256.create();
   try {
-    for (let offset = 0; offset < target.byteLength; offset += BODY_CONTENT_CHUNK_BYTES) {
-      const length = Math.min(BODY_CONTENT_CHUNK_BYTES, target.byteLength - offset);
+    for (let offset = 0; offset < target.byteLength; offset += BODY_READ_CHUNK_BYTES) {
+      const length = Math.min(BODY_READ_CHUNK_BYTES, target.byteLength - offset);
       const query = scalarRangeQuery(source, field, position, offset, length);
       const row = db.queryOne<{ data: Uint8Array }>(query.sql, query.params);
       if (!row || !(row.data instanceof Uint8Array) || row.data.byteLength !== length) {
@@ -39,9 +39,8 @@ function fieldContainsBody(db: DatabaseDriver, source: string, field: 'value' | 
 }
 
 /** Call inside the owner's transaction. Only scalar ranges cross the database boundary. */
-export function bodyJsonHolderContainsBodyWithDriver(db: DatabaseDriver, holder: BodyJsonHolder, target: BodyIdentity,
-  options: ScalarHashOptions = {}) {
-  const source = holderSource(holder, options);
+export function bodyJsonHolderContainsBodyWithDriver(db: DatabaseDriver, holder: BodyJsonHolder, target: BodyIdentity) {
+  const source = holderSource(holder);
   return fieldContainsBody(db, source, 'value', target) ||
     fieldContainsBody(db, source, 'key', target);
 }

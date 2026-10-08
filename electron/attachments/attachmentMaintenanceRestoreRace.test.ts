@@ -22,12 +22,11 @@ vi.mock('./attachmentTrashFiles.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./attachmentTrashFiles.js')>();
   return {
     ...actual,
-    async inventoryAttachmentDirectory(directoryPath: string) {
-      if (scanGate.active) {
-        scanGate.entered?.();
-        await new Promise<void>((resolve) => { scanGate.release = resolve; });
-      }
-      return actual.inventoryAttachmentDirectory(directoryPath);
+    inventoryAttachmentDirectory(directoryPath: string) {
+      const inventory = () => actual.inventoryAttachmentDirectory(directoryPath);
+      if (!scanGate.active) return inventory();
+      scanGate.entered?.();
+      return new Promise<void>((resolve) => { scanGate.release = resolve; }).then(inventory);
     }
   };
 });
@@ -38,12 +37,12 @@ import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
 import { runDesktopAttachmentMaintenance } from './attachmentMaintenanceService.js';
 
-beforeEach(() => {
+beforeEach(async () => {
   appData = fs.mkdtempSync(path.join(os.tmpdir(), 'attachment-restore-race-'));
   scanGate.active = false;
   scanGate.entered = null;
   scanGate.release = null;
-  initializeDatabase();
+  await initializeDatabase();
 });
 
 afterEach(() => {
@@ -71,7 +70,7 @@ it('reopens the current connection and rejects a scan that crossed database repl
   closeDatabaseConnection();
   fs.copyFileSync(databasePath, `${databasePath}.replacement`);
   fs.renameSync(`${databasePath}.replacement`, databasePath);
-  initializeDatabase();
+  await initializeDatabase();
   scanGate.active = false;
   scanGate.release?.();
 

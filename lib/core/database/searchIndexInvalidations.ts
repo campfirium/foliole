@@ -1,5 +1,3 @@
-import type { NodeVersionBodyStorage } from '../sync/syncNodeTombstoneVersion.js';
-
 import type { DatabaseDriver } from './driver.js';
 import { NODE_PDF_RESOURCES_SQL } from './nodePdfResourcesSql.js';
 import { requestSearchIndexInvalidationProcessing } from './searchIndexInvalidationRuntime.js';
@@ -133,13 +131,12 @@ export function enqueuePdfSearchInvalidationForAttachmentIds(driver: DatabaseDri
   enqueueSearchIndexInvalidations(driver, attachmentIds.map((targetId) => ({ targetId, type: 'attachment_pdf' })));
 }
 
-export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 500,
-  storage: NodeVersionBodyStorage = 'continuous') {
+export function processSearchIndexInvalidations(driver: DatabaseDriver, limit = 500) {
   const rows = claimSearchIndexInvalidations(driver, limit);
   if (rows.length === 0) return { failed: 0, processed: 0 };
 
   try {
-    processClaimedInvalidationRows(driver, rows, storage);
+    processClaimedInvalidationRows(driver, rows);
     completeInvalidations(driver, rows.map((row) => row.id));
     return { failed: 0, processed: rows.length };
   } catch (error) {
@@ -183,8 +180,7 @@ export function readSearchIndexInvalidationBacklog(driver: DatabaseDriver) {
   ) ?? { failed_count: 0, pending_count: 0, running_count: 0, total_count: 0 };
 }
 
-export function processClaimedInvalidationRows(driver: DatabaseDriver, rows: SearchIndexInvalidationRow[],
-  storage: NodeVersionBodyStorage = 'continuous') {
+export function processClaimedInvalidationRows(driver: DatabaseDriver, rows: SearchIndexInvalidationRow[]) {
   const sources = rows.flatMap((row) => row.invalidation_type === 'stored_source_external' ||
     row.invalidation_type === 'stored_source_removed'
     ? [{ type: row.invalidation_type, targetId: row.target_id }] : []);
@@ -198,7 +194,7 @@ export function processClaimedInvalidationRows(driver: DatabaseDriver, rows: Sea
     row.invalidation_type !== 'stored_source_external' && row.invalidation_type !== 'stored_source_removed')
     .map((row) => row.target_id);
   deleteWorkspaceSearchIndexForSubtreeRootIds(driver, nodeIds);
-  syncWorkspaceSearchIndexForNodeIds(driver, nodeIds, storage);
+  syncWorkspaceSearchIndexForNodeIds(driver, nodeIds);
 }
 
 export function completeInvalidations(driver: DatabaseDriver, ids: number[]) {

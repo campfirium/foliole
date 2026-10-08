@@ -25,6 +25,7 @@ vi.mock('../database/pdfIndexing.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import {
   clearAttachmentLibraryPathSnapshot,
   publishAttachmentLibraryPathSnapshot
@@ -64,7 +65,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('refreshes an S3 URL without forwarding the token and persists one verified PDF attachment', async () => {
+it('persists one verified PDF attachment without forwarding the token', async () => {
   const bytes = Buffer.from('%PDF-1.7\nverified original\n%%EOF');
   fetchRawSource.mockResolvedValue({
     category: 'pdf', id: 'document-1', rawSourceUrl: 'https://bucket.s3.amazonaws.com/signed.pdf?secret=gone'
@@ -94,6 +95,8 @@ it('refreshes an S3 URL without forwarding the token and persists one verified P
   const owner = driver.queryOne<{ resource_references: string }>("SELECT resource_references FROM nodes WHERE id = 'node-1'")!;
   expect(JSON.parse(owner.resource_references)).toEqual([{ storage_key: `${prepared.state.contentHash}.pdf`,
     role: 'reference', original_name: 'Remote PDF.pdf' }]);
+  expect(loadNodeBodyResolution(driver, 'node-1')).toMatchObject({ content: 'Body', status: 'resolved' });
+  expect(await fs.readFile(path.join(mockedAppDataDir, 'assets', `${prepared.state.contentHash}.pdf`))).toEqual(bytes);
 });
 
 it('uses the paged raw URL and refreshes only that document when the URL has expired', async () => {

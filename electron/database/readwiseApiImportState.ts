@@ -1,5 +1,5 @@
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
-import type { NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadNodeBodyResolution, NodeBodyUnavailableError, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import type { ExportBookContract, ReaderDocumentContract } from '../../lib/core/readwise/readwiseApiContract.js';
 import {
@@ -130,20 +130,24 @@ export function completeReadwiseApiImportRun(run: ReadwiseApiImportRunState, now
 }
 
 export function loadReadwiseApiImportSource(connectionRef: string, documentId: string) {
-  const row = openDatabaseConnection().driver.queryOne<RemoteImportSourceRow>(
+  const driver = openDatabaseConnection().driver;
+  const row = driver.queryOne<RemoteImportSourceRow>(
     `SELECT i.source_fingerprint, i.latest_node_id, i.remote_annotations_json, i.remote_import_state_json,
-       n.id node_id, n.title node_title, n.content, n.body_blob_hash, cbd.data body_blob_data, n.deleted_at node_deleted_at
+       n.id node_id, n.title node_title, n.content, n.body_blob_hash, n.deleted_at node_deleted_at
      FROM import_sources i LEFT JOIN nodes n ON n.id = i.latest_node_id
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      WHERE i.remote_provider = 'readwise' AND i.remote_connection_ref = ? AND i.remote_document_id = ?`,
     [connectionRef, documentId]
   );
   if (!row) return null;
   let parsed: unknown = null;
   try { parsed = JSON.parse(row.remote_import_state_json); } catch { /* defaults below */ }
+  const body = row.node_id && !row.node_deleted_at ? loadNodeBodyResolution(driver, row.node_id) : null;
+  if (row.node_id && !row.node_deleted_at && (!body)) {
+    throw new NodeBodyUnavailableError([row.node_id]);
+  }
   return {
     annotations: normalizeRemoteAnnotationBindings(parseJson(row.remote_annotations_json)),
-    body: row.node_id && !row.node_deleted_at ? readPartitionedNodeBody(openDatabaseConnection().driver, row.node_id) : null,
+    body: body?.status === 'resolved' && row.node_id ? readPartitionedNodeBody(driver, row.node_id) : null,
     nodeDeleted: Boolean(row.latest_node_id && (!row.node_id || row.node_deleted_at)),
     nodeId: row.latest_node_id,
     sourceFingerprint: row.source_fingerprint,

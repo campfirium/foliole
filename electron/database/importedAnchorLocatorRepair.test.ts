@@ -128,7 +128,7 @@ it('skips ambiguous imported locators', () => {
   });
 });
 
-it('repairs from Blob-only content and skips an unavailable parent', () => {
+it('repairs from complete owned text without a shared cache and remains idempotent', () => {
   seedNode({ content: 'Lead Target', nodeId: 'node-parent', parentNodeId: null });
   seedNode({
     anchorLink: {
@@ -137,18 +137,14 @@ it('repairs from Blob-only content and skips an unavailable parent', () => {
     content: 'Target', nodeId: 'node-child', parentNodeId: 'node-parent'
   });
   const connection = openDatabaseConnection();
-  connection.driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', 'node-parent']);
+  connection.driver.execute('DELETE FROM content_blob_data');
   expect(repairImportedAnchorLocators({
     driver: connection.driver, repairedAt: '2026-05-13T00:00:01.000Z', write: true
   }).repairedNodeIds).toEqual(['node-child']);
 
-  const hash = connection.driver.queryOne<{ body_blob_hash: string }>(
-    'SELECT body_blob_hash FROM nodes WHERE id = ?', ['node-parent']
-  )?.body_blob_hash ?? '';
-  connection.driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
   const before = readAnchorLink('node-child').anchor_link;
   expect(repairImportedAnchorLocators({
     driver: connection.driver, repairedAt: '2026-05-13T00:00:02.000Z', write: true
-  }).skipped).toEqual([{ nodeId: 'node-child', reason: 'body_unavailable' }]);
+  }).repairedNodeIds).toEqual([]);
   expect(readAnchorLink('node-child').anchor_link).toBe(before);
 });

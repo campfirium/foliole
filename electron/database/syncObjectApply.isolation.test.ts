@@ -43,7 +43,7 @@ afterEach(async () => {
 it('skips malformed records without blocking later valid records', async () => {
   const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
   const validPayload = {
-    key: 'sync_reminder', scope: 'user_space', platform: 'android',
+    key: 'search_aliases_document', scope: 'user_space', platform: 'android',
     form_factor: 'phone', host_name: '*', value_json: '{"enabled":true}'
   };
   const records = [{
@@ -62,20 +62,20 @@ it('skips malformed records without blocking later valid records', async () => {
   }, {
     content_hash: computeSyncContentHash('setting', validPayload),
     deleted_at: null,
-    object_id: 'user_space:android:phone:*:sync_reminder',
+    object_id: 'user_space:android:phone:*:search_aliases_document',
     object_type: 'setting',
     payload_json: JSON.stringify(validPayload),
     updated_at: '2026-04-21T16:01:00.000Z'
   }] as unknown as NativeSyncObjectRecord[];
 
   await expect(applySyncObjectsAsync(records)).resolves.toEqual([
-    'setting:user_space:android:phone:*:sync_reminder'
+    'setting:user_space:android:phone:*:search_aliases_document'
   ]);
   expect(warn).toHaveBeenCalled();
 
   const driver = openDatabaseConnection().driver;
   expect(driver.queryOne('SELECT object_id FROM sync_object_state WHERE object_id = ?', ['bad-setting'])).toBeUndefined();
   expect(driver.queryOne('SELECT key FROM setting_records WHERE key = ?', ['missing_object_id'])).toBeUndefined();
-  expect(driver.queryOne<{ value_json: string }>('SELECT value_json FROM setting_records WHERE key = ?', ['sync_reminder']))
+  expect(driver.queryOne<{ value_json: string }>('SELECT value_json FROM setting_records WHERE key = ?', ['search_aliases_document']))
     .toEqual({ value_json: '{"enabled":true}' });
 });

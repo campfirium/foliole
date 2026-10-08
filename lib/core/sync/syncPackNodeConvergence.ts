@@ -57,7 +57,8 @@ export async function applySyncPackVersionedNodesWithDbPort(
     return { appliedNodeCount: 0, handledConflictCount: 0, newNodeIds: [],
       processedNodeIds: [...SPECIAL_ROOT_NODE_IDS, ...skippedNodeIds] };
   }
-  const result = await applyConvergentSyncNodesWithDbPort(port, records);
+  // The pack owner collects after it commits delivery proofs and member positions.
+  const result = await applyConvergentSyncNodesWithDbPort(port, records, { collectVersionPayloads: false });
   const pairs = records.map((record) => [record.object_id, record.version_id]);
   await port.run(`UPDATE sync_object_state SET last_modified_by_host_name = ?
     WHERE object_type = 'node' AND (object_id, current_version_id) IN

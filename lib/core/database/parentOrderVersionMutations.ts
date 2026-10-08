@@ -11,7 +11,11 @@ interface HeadRow extends DatabaseRow {
   version_id: string;
 }
 
-function saveBaseline(driver: DatabaseDriver, parentId: string,
+type OrderMutationDriver = Pick<DatabaseDriver, 'queryOne' | 'queryAll'> & {
+  execute(...args: Parameters<DatabaseDriver['execute']>): void;
+};
+
+function saveBaseline(driver: OrderMutationDriver, parentId: string,
   order: readonly string[]) {
   const id = parentOrderBaselineVersionId(parentId, order);
   const json = JSON.stringify(order);
@@ -29,7 +33,7 @@ function saveBaseline(driver: DatabaseDriver, parentId: string,
 }
 
 /** Record a local order edit while preserving any legacy or v15-received current snapshot. */
-export function recordLocalParentOrderVersion(driver: DatabaseDriver, args: {
+export function recordLocalParentOrderVersion(driver: OrderMutationDriver, args: {
   before: readonly string[];
   createdAt: string;
   kind: 'membership' | 'user';

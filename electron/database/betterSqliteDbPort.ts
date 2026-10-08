@@ -4,6 +4,7 @@ import type BetterSqlite3 from 'better-sqlite3';
 
 import type { DbParams, DbPort, DbRow, DbRunResult } from '../../lib/core/sync/dbPort.js';
 
+import { bindFramedSyncPayloadBudget, readFramedSyncPayloadBudget } from './framedSyncPayloadBudgetOwner.js';
 import {
   getSqliteConnectionCoordinator,
   SqliteConnectionOwnerError,
@@ -32,6 +33,8 @@ export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: Better
       ));
     }
   };
+  const payloadBudget = readFramedSyncPayloadBudget(sqlite);
+  if (payloadBudget) bindFramedSyncPayloadBudget(port, payloadBudget);
   return port;
 }
 
@@ -81,6 +84,8 @@ async function runScopedTransaction<T>(
       return port.transaction(run);
     }
   };
+  const payloadBudget = readFramedSyncPayloadBudget(port);
+  if (payloadBudget) bindFramedSyncPayloadBudget(scopedPort, payloadBudget);
   try {
     return await execute(scopedPort);
   } finally {

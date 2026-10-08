@@ -35,9 +35,10 @@ function declaration(parentId: string, head: string, owner: Owner, rows: Row[], 
 
 /** Arrangement adoption uses the article position owner, revisions and immutable declarations. */
 export async function publishParentOrderPosition(db: DbPort, parentId: string) {
-  const [owner] = await db.query<Owner & DbRow>(LOCAL_NODE_POSITION_OWNER_SQL);
   const [head] = await db.query<{ version_id: string }>(HEAD_SQL, [parentId]);
-  if (!owner || !head) return;
+  if (!head) return;
+  const [owner] = await db.query<Owner & DbRow>(LOCAL_NODE_POSITION_OWNER_SQL);
+  if (!owner) return;
   const [known] = await db.query(KNOWN_SQL, [nodePositionFactId({ ...owner, object_id: parentId }, 'parent_child_order')]);
   const payload = declaration(parentId, head.version_id, owner,
     await db.query<Row>(PARENT_ORDER_BODY_ROWS_SQL, [parentId]), known);
@@ -46,10 +47,15 @@ export async function publishParentOrderPosition(db: DbPort, parentId: string) {
   for (const statement of nodePositionWriteStatements(payload, 'parent_child_order')) await db.run(statement.sql, statement.params);
 }
 
-export function publishParentOrderPositionWithDriver(driver: DatabaseDriver, parentId: string) {
-  const owner = driver.queryOne<Owner>(LOCAL_NODE_POSITION_OWNER_SQL);
+export function publishParentOrderPositionWithDriver(
+  driver: Pick<DatabaseDriver, 'queryOne' | 'queryAll'> & {
+    execute(...args: Parameters<DatabaseDriver['execute']>): void;
+  }, parentId: string
+) {
   const head = driver.queryOne<{ version_id: string }>(HEAD_SQL, [parentId]);
-  if (!owner || !head) return;
+  if (!head) return;
+  const owner = driver.queryOne<Owner>(LOCAL_NODE_POSITION_OWNER_SQL);
+  if (!owner) return;
   const known = driver.queryOne(KNOWN_SQL, [nodePositionFactId({ ...owner, object_id: parentId }, 'parent_child_order')]);
   const payload = declaration(parentId, head.version_id, owner,
     driver.queryAll<Row>(PARENT_ORDER_BODY_ROWS_SQL, [parentId]), known);

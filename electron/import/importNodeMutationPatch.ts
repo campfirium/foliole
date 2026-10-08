@@ -14,7 +14,6 @@ import { openDatabaseConnection } from '../database/connection.js';
 
 interface ImportedNodeRow extends DatabaseRow, NodeBodyRow {
   anchor_link: string | null;
-  body_blob_data: Uint8Array | string | null;
   body_blob_hash: string | null;
   body_status: string | null;
   content: string;
@@ -86,7 +85,6 @@ function readImportedNodeRows(driver: DatabaseDriver, nodeIds: string[]) {
        n.hide_title_heading,
        n.virtual_filter,
        n.body_blob_hash,
-       cbd.data AS body_blob_data,
        n.opening_text,
        ${WORKSPACE_BODY_STATUS_SQL} AS body_status,
        n.content,
@@ -114,8 +112,6 @@ function readImportedNodeRows(driver: DatabaseDriver, nodeIds: string[]) {
        nr.reps AS review_reps,
        nr.lapses AS review_lapses
      FROM nodes n
-     LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
      LEFT JOIN node_reading rd ON rd.node_id = n.id
      LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ?
      LEFT JOIN node_review nr ON nr.node_id = n.id
@@ -130,9 +126,6 @@ function readNodeOrder(driver: DatabaseDriver) {
 
 function toNodeMutationSnapshot(row: ImportedNodeRow, nodeOrder: string[]): NativeNodeSnapshotArgs {
   const body = resolveNodeBody(row);
-  if (body.status === 'unavailable') {
-    throw new Error(`node_body_unavailable:${row.id}`);
-  }
   const node = buildWorkspaceSnapshotNode({
     ...row,
     content: body.content

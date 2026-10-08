@@ -36,8 +36,10 @@ it('delivers every alternative body to an empty library through a real built SQL
   const restored = await target.current();
   expect(restored.version_id).toBe(whole.version_id);
   expect(wholeBodies(restored)).toEqual(new Set(['Main longest body', 'B', 'C']));
-  expect(target.sqlite.prepare("SELECT json_extract(snapshot_json, '$.text_alternative_bodies') AS bodies FROM node_sync_versions").all())
-    .toEqual(expect.arrayContaining([{ bodies: null }]));
+  const storedBodies = target.sqlite.prepare(
+    "SELECT json_extract(snapshot_json, '$.text_alternative_bodies') FROM node_sync_versions WHERE version_id = ?"
+  ).pluck().get(whole.version_id) as string;
+  expect(JSON.parse(storedBodies).map((body: { text: string }) => body.text).sort()).toEqual(['B', 'C']);
   expect(restored.snapshot).not.toHaveProperty('text_alternative_bodies');
   const rejected = textDevice(); devices.push(rejected);
   await rejected.db.run('ATTACH DATABASE ? AS inc', [path.join(directory, 'read-incoming.db')]);

@@ -64,14 +64,14 @@ it('applies payload and state atomically and retires the obsolete accepted setti
     await port.run('DETACH DATABASE inc');
   }
 
-  const contentHash = settingPayloadHash(appSettingsPayload());
+  const contentHash = settingPayloadHash(searchAliasesPayload());
   expect(sqlite.prepare(
     `SELECT value_json, content_hash FROM setting_records
-     WHERE key = 'app_settings' AND scope = 'user_space'`
-  ).get()).toEqual({ content_hash: contentHash, value_json: '{"theme":"light"}' });
+     WHERE key = 'search_aliases_document' AND scope = 'user_space'`
+  ).get()).toEqual({ content_hash: contentHash, value_json: '{"version":1,"text":"source | shared"}' });
   expect(sqlite.prepare(
     `SELECT content_hash, sync_dirty FROM sync_object_state
-     WHERE object_type = 'setting' AND object_id = 'user_space:all:all:*:app_settings'`
+     WHERE object_type = 'setting' AND object_id = 'user_space:all:all:*:search_aliases_document'`
   ).get()).toEqual({ content_hash: contentHash, sync_dirty: 0 });
   expect(sqlite.prepare(
     `SELECT status FROM sync_delivery_receipts WHERE peer_id = 'peer-b'`
@@ -113,19 +113,19 @@ it('converges a newer Readwise owner despite a pending local receipt and rejects
 
 function seedLocalAcceptedSetting() {
   const sqlite = openDatabaseConnection().sqlite;
-  const payload = { ...appSettingsPayload(), value_json: '{"theme":"dark"}' };
+  const payload = { ...searchAliasesPayload(), value_json: '{"version":1,"text":"local | shared"}' };
   const contentHash = settingPayloadHash(payload);
   sqlite.prepare(`INSERT INTO setting_records (key, scope, platform, form_factor, host_name,
-    value_json, content_hash, updated_at) VALUES ('app_settings', 'user_space', 'all', 'all', '*',
-    '{"theme":"dark"}', ?, '2026-09-07T07:00:00.000Z')`).run(contentHash);
+    value_json, content_hash, updated_at) VALUES ('search_aliases_document', 'user_space', 'all', 'all', '*',
+    '{"version":1,"text":"local | shared"}', ?, '2026-09-07T07:00:00.000Z')`).run(contentHash);
   sqlite.prepare(`INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash,
     last_modified_by_host_name, updated_at, sync_dirty, deleted_at) VALUES
-    ('setting', 'user_space:all:all:*:app_settings', 4, ?, 'Local Host',
+    ('setting', 'user_space:all:all:*:search_aliases_document', 4, ?, 'Local Host',
     '2026-09-07T07:00:00.000Z', 1, NULL)`).run(contentHash);
   sqlite.prepare(`INSERT INTO sync_delivery_receipts (peer_id, stream_name, operation_id,
     object_type, object_id, payload_identity, local_position, status, remote_position,
-    issue_reason, created_at, updated_at) VALUES ('peer-b', 'state', 'setting:app_settings:4',
-    'setting', 'user_space:all:all:*:app_settings', ?, '4', 'accepted', '7', NULL,
+    issue_reason, created_at, updated_at) VALUES ('peer-b', 'state', 'setting:search_aliases_document:4',
+    'setting', 'user_space:all:all:*:search_aliases_document', ?, '4', 'accepted', '7', NULL,
     '2026-09-07T07:00:00.000Z', '2026-09-07T07:00:00.000Z')`).run(contentHash);
 }
 
@@ -137,14 +137,14 @@ function createIncomingSettingPack(filePath: string) {
       'manifest_json', JSON.stringify({ source_epoch: 'source-test', frontier_state_seq: 7,
         from_state_seq: 0, to_state_seq: 7 })
     );
-    const payload = appSettingsPayload();
+    const payload = searchAliasesPayload();
     const contentHash = settingPayloadHash(payload);
     db.prepare(`INSERT INTO sync_object_state (object_type, object_id, state_seq, content_hash,
       last_modified_by_host_name, updated_at, deleted_at) VALUES
-      ('setting', 'user_space:all:all:*:app_settings', 7, ?, 'Peer B',
+      ('setting', 'user_space:all:all:*:search_aliases_document', 7, ?, 'Peer B',
       '2026-09-07T08:00:00.000Z', NULL)`).run(contentHash);
     db.prepare(`INSERT INTO sync_objects (object_type, object_id, content_hash, payload_json,
-      updated_at, deleted_at) VALUES ('setting', 'user_space:all:all:*:app_settings', ?, ?,
+      updated_at, deleted_at) VALUES ('setting', 'user_space:all:all:*:search_aliases_document', ?, ?,
       '2026-09-07T08:00:00.000Z', NULL)`).run(contentHash, JSON.stringify(payload));
   } finally {
     db.close();
@@ -160,12 +160,12 @@ function ownerPayload(valueJson: string) {
     platform: 'windows', form_factor: 'desktop', host_name: '*', value_json: valueJson });
 }
 
-function appSettingsPayload() {
-  return { key: 'app_settings', scope: 'user_space', platform: 'all',
-    form_factor: 'all', host_name: '*', value_json: '{"theme":"light"}' };
+function searchAliasesPayload() {
+  return { key: 'search_aliases_document', scope: 'user_space', platform: 'all',
+    form_factor: 'all', host_name: '*', value_json: '{"version":1,"text":"source | shared"}' };
 }
 
-function settingPayloadHash(payload: string | ReturnType<typeof appSettingsPayload>) {
+function settingPayloadHash(payload: string | ReturnType<typeof searchAliasesPayload>) {
   return computeSyncContentHash('setting', typeof payload === 'string' ? JSON.parse(payload) : payload);
 }
 

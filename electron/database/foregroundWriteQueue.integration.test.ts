@@ -109,7 +109,7 @@ it('saves during real worker indexing and retains a newer dirty generation acros
     closeDatabaseConnection();
     const reopened = openDatabaseConnection();
     expect(reopened.driver.queryOne(
-      'SELECT CAST(c.data AS TEXT) AS body FROM nodes n JOIN content_blob_data c ON c.hash = n.body_blob_hash WHERE n.id = ?',
+      'SELECT content AS body FROM nodes WHERE id = ?',
       ['t288-edit']
     )).toEqual({ body: 'After' });
     expect(await runWorkspaceSearchMaintenanceInWorker(500)).toEqual({ failed: 0, processed: 1 });

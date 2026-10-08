@@ -6,6 +6,7 @@ import path from 'node:path';
 
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 
 let mockedAppDataDir = '/tmp/foliole-node-mutations-tests';
@@ -87,19 +88,15 @@ it('marks and restores deleted_at through transactional node trash mutations', (
   expect(getNodeRow('node-child')?.deleted_at).toBeNull();
 });
 
-it('writes node body blob metadata when storing node content', () => {
+it('stores the complete node-owned body and its exact hash without a permanent body cache', () => {
   seedNode('node-root', null, 0);
 
   const row = getNodeRow('node-root');
 
-  expect(row?.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
-  expect(getContentBlobRow(row?.body_blob_hash ?? '')).toEqual({
-    availability: 'local',
-    hash: row?.body_blob_hash,
-    kind: 'text_body',
-    mime_type: 'text/plain'
-  });
-  expect(Buffer.from(getContentBlobData(row?.body_blob_hash ?? '')?.data ?? []).toString('utf8')).toBe('# node-root');
+  expect(row?.content).toBe('# node-root');
+  expect(row?.body_blob_hash).toBe(hashTextBody('# node-root'));
+  expect(getContentBlobRow(row?.body_blob_hash ?? '')).toBeUndefined();
+  expect(getContentBlobData(row?.body_blob_hash ?? '')).toBeUndefined();
 });
 
 function seedFolderNode(nodeId: string, position: number) {

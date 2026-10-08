@@ -80,7 +80,6 @@ export async function buildJpegBodyRepairPlan(input: {
   const candidates: JpegBodyRepairCandidate[] = [];
   for (const row of readNodes(input.driver)) {
     const body = resolveNodeBody(row);
-    if (body.status === 'unavailable') throw new Error(`node_body_unavailable:${row.id}`);
     const keys = jpegKeys(body.content);
     if (!keys.length) continue;
     candidates.push({

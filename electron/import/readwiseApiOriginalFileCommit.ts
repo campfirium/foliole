@@ -20,8 +20,7 @@ export async function persistPreparedOriginalFile(input: {
   let finalState = input.prepared.state;
   if (input.prepared.bytes && input.prepared.state.status === 'localized' && input.nodeId) {
     try {
-      await persistReadwiseApiOriginalFile({
-        bytes: input.prepared.bytes, category: input.category, nodeId: input.nodeId,
+      await persistReadwiseApiOriginalFile({ bytes: input.prepared.bytes, category: input.category, nodeId: input.nodeId,
         state: input.prepared.state, title: input.document.title
       });
     } catch {

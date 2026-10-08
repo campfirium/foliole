@@ -44,7 +44,7 @@ const EXTERNAL_DOCUMENT_PACK_TABLES = [
   { name: 'node_sync_tombstones', row_count: 0 },
   { name: 'node_sync_version_parents', row_count: 0 },
   { name: 'external_documents', row_count: 1 },
-  { name: 'content_blobs', row_count: 1 },
+  { name: 'content_blobs', row_count: 0 },
   { name: 'review_log', row_count: 0 }
 ];
 
@@ -174,7 +174,7 @@ function expectNodePackRows(packPath: string) {
   });
 }
 
-it('packs external document structure with body blob manifests but no body bytes', async () => {
+it('packs complete external document text with its original identity', async () => {
   const folder: NativeExternalSearchFolder = {
     attachment_mode: 'document_relative',
     attachment_root_path: null,
@@ -190,7 +190,7 @@ it('packs external document structure with body blob manifests but no body bytes
   };
   upsertExternalDocuments(folder, [{
     absolutePath: '/library/doc.md',
-    content: '# External Doc\n\nExternal body must stay out of pack',
+    content: '# External Doc\n\nOwned external body',
     extension: 'md',
     fileName: 'doc.md',
     modifiedAt: '2026-04-27T00:00:00.000Z',
@@ -208,18 +208,18 @@ it('packs external document structure with body blob manifests but no body bytes
   });
 
   expect(result).toMatchObject({
-    bodyBlobCount: 1,
+    bodyBlobCount: 0,
     objectCount: 1,
     packId: 'pack-external-1'
   });
   expect(readPackRows(packPath)).toMatchObject({
     blobDataTable: undefined,
-    blobs: [expect.objectContaining({ kind: 'text_body' })],
+    blobs: [],
     externalDocuments: [expect.objectContaining({
       body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
-      content: '',
+      content: '# External Doc\n\nOwned external body',
       document_id: 'folder-1:doc.md',
-      opening_text: expect.stringContaining('External body')
+      opening_text: expect.stringContaining('Owned external body')
     })],
     manifest: expect.objectContaining({
       compression: 'zlib',

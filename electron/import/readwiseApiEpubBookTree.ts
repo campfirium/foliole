@@ -41,7 +41,7 @@ export function persistReadwiseApiEpubBookNodes(input: {
       reveal: null,
       title: node.title,
       updatedAt: input.importedAt
-    });
+    }, {  });
     replaceReadwiseApiEpubImageLinks(nodeId, node.resourceReferences ?? []);
     registerNodeImageSources(nodeId, node.imageSources ?? {});
   });

@@ -3,7 +3,7 @@ import {
   runPreparedImport as runPreparedImportViaDriver,
   type RunPreparedImportOptions
 } from '../../lib/core/database/index.js';
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadNodeBodyResolution, NodeBodyUnavailableError } from '../../lib/core/database/nodeBodyResolution.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
 import { expandPartitionedNodeForImport, partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
@@ -30,14 +30,16 @@ function appendDegradedReason(currentReason: string | null, nextReason: string |
 }
 
 function readImportNodeContent(nodeId: string) {
-  const row = openDatabaseConnection().driver.queryOne<NodeBodyRow & { id: string; title: string }>(
-    `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data, n.title
-     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+  const driver = openDatabaseConnection().driver;
+  const row = driver.queryOne<{ id: string; title: string }>(
+    `SELECT n.id, n.title FROM nodes n
      WHERE n.id = ? AND n.deleted_at IS NULL`,
     [nodeId]
   );
   if (!row) return null;
-  return { content: requireResolvedNodeBody(row, row.id).content, title: row.title };
+  const body = loadNodeBodyResolution(driver, row.id);
+  if (!body) throw new NodeBodyUnavailableError([row.id]);
+  return { content: body.content, title: row.title };
 }
 
 const SMALL_IMAGE_MAX_SIDE = 128;

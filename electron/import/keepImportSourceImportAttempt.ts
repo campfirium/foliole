@@ -82,6 +82,8 @@ export async function runKeepImportSourceImportAttempt(
       sourceSignature
     }));
   } catch (error) {
+    if (error instanceof Error && ['source_not_owned_by_current_host', 'readwise_host_not_active']
+      .includes(error.message)) throw error;
     if (isKeepImportAbortError(error)) {
       throw error;
     }

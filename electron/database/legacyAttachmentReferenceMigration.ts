@@ -39,12 +39,11 @@ export function migrateLegacyAttachmentReferences(connection: DatabaseConnection
   if (!targets.size) return;
   const { driver } = connection;
   const rows = driver.queryAll<NodeBodyRow & { id: string; resource_references: string }>(
-    `SELECT n.id, n.content, n.body_blob_hash, n.resource_references, d.data AS body_blob_data
-     FROM nodes n LEFT JOIN content_blob_data d ON d.hash = n.body_blob_hash WHERE n.deleted_at IS NULL`);
+    `SELECT n.id, n.content, n.body_blob_hash, n.resource_references
+     FROM nodes n WHERE n.deleted_at IS NULL`);
   const now = new Date().toISOString();
   for (const row of rows) {
     const body = resolveNodeBody(row);
-    if (body.status !== 'resolved') continue;
     const content = rewriteCanonicalAssetMarkdownTargets(body.content, targets);
     const references = serializeNodeResourceReferences(parseNodeResourceReferences(row.resource_references)
       .map((reference) => ({ ...reference, storage_key: targets.get(reference.storage_key) ?? reference.storage_key })));

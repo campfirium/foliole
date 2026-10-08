@@ -39,31 +39,18 @@ const UNTITLED_TITLE = 'Untitled';
 const PDF_PLACEHOLDER_TEXT = 'Linked PDF source ready for the reader surface.';
 const PDF_TEXT_SEPARATOR = "char(10) || char(10)";
 const READABLE_ARTICLE_TITLE_EXPRESSION = `COALESCE(NULLIF(TRIM(n.title), ''), ${androidSqlString(UNTITLED_TITLE)})`;
-const READABLE_ARTICLE_INLINE_CONTENT = 'n.content';
-const READABLE_ARTICLE_BODY_BLOB_DATA = 'CAST(cbd.data AS TEXT)';
-const READABLE_ARTICLE_CONTENT = androidResolvedContentExpression(
-  READABLE_ARTICLE_INLINE_CONTENT,
-  READABLE_ARTICLE_BODY_BLOB_DATA
-);
+const READABLE_ARTICLE_CONTENT = 'n.content';
 const READABLE_ARTICLE_PDF_ATTACHMENT_ID = androidReadableArticleReferencePdfAttachmentSql();
 const READABLE_ARTICLE_PDF_TEXT = androidReadableArticlePdfTextSql(READABLE_ARTICLE_PDF_ATTACHMENT_ID);
-export function androidReadableArticleSql(whereClause: string, body?: Readonly<{
-  dataExpression: string;
-  contentExpression: string;
-  join: string;
-}>) {
-  const data = body?.dataExpression ?? READABLE_ARTICLE_BODY_BLOB_DATA;
-  const content = body?.contentExpression ?? READABLE_ARTICLE_CONTENT;
-  const status = androidBodyStatusExpression({ availabilityExpression: 'cb.availability',
-    bodyBlobDataExpression: data, bodyBlobHashExpression: 'n.body_blob_hash',
-    contentExpression: content, emptyWhenBlank: true });
+export function androidReadableArticleSql(whereClause: string) {
+  const content = READABLE_ARTICLE_CONTENT;
+  const status = `CASE WHEN TRIM(n.content) = '' THEN 'empty' ELSE 'ready' END`;
   return (
     'SELECT n.id, ' +
     `${READABLE_ARTICLE_TITLE_EXPRESSION} AS title, n.body_blob_hash, n.reveal, ` +
     `${readableArticleContentSql(content)} AS content, ${status} AS content_status, ` +
     `(${READABLE_ARTICLE_PDF_ATTACHMENT_ID}) AS pdf_attachment_id ` +
-    'FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
-    (body?.join ?? 'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ') +
+    'FROM nodes n ' +
     whereClause
   );
 }

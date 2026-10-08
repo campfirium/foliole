@@ -1,3 +1,5 @@
+import type { DataRecovery } from '../database/settingDataPolicy.js';
+
 export type SyncScope = 'cache' | 'device' | 'event' | 'host' | 'workspace';
 export type SyncPolicyCategory =
   | 'activity'
@@ -19,15 +21,21 @@ export interface SyncObjectPolicy {
   pushIssue: 'diagnostic' | 'review_required';
   storage: readonly string[];
   userVisible: boolean;
+  recovery: DataRecovery;
+  ownership: 'workspace' | 'device' | 'source';
+  ownerVia?: 'watched_folder';
 }
 
 export const SYNC_OBJECT_POLICIES: readonly SyncObjectPolicy[] = [
   policy('node', 'node', 'structure', 'workspace', 'lww', ['nodes'], true),
   policy('parent_child_order', 'parent_child_order', 'structure', 'workspace', 'lww', ['parent_child_order'], true),
   policy('external_document', 'external_document', 'structure', 'workspace', 'lww', ['external_documents'], true),
-  policy('external_folder', 'external_folder', 'structure', 'workspace', 'lww', ['external_search_folders'], true),
-  policy('import_source', 'import_source', 'structure', 'workspace', 'lww', ['import_sources'], true),
-  policy('watched_folder', 'watched_folder', 'structure', 'workspace', 'lww', ['watched_folder_bindings'], true),
+  { ...policy('external_folder', 'external_folder', 'structure', 'workspace', 'lww', ['external_search_folders'], true),
+    ownership: 'device' },
+  { ...policy('import_source', 'import_source', 'structure', 'workspace', 'lww', ['import_sources'], true),
+    ownership: 'source', ownerVia: 'watched_folder' },
+  { ...policy('watched_folder', 'watched_folder', 'structure', 'workspace', 'lww', ['watched_folder_bindings'], true),
+    ownership: 'device' },
   policy('pdf_page_text', 'pdf_page_text', 'content', 'workspace', 'lww', ['pdf_page_text'], true),
   policy('content_blobs', null, 'resource', 'cache', 'cache_refresh', ['content_blobs', 'content_blob_data'], true, 'diagnostic'),
   policy(
@@ -86,7 +94,9 @@ function policy(
   userVisible: boolean,
   pushIssue: SyncObjectPolicy['pushIssue'] = 'review_required'
 ): SyncObjectPolicy {
-  return { category, conflict, scope, key, objectType, pushIssue, storage, userVisible };
+  return { category, conflict, scope, key, objectType, pushIssue, storage, userVisible,
+    ownership: scope === 'device' || scope === 'host' ? 'device' : 'workspace',
+    recovery: category === 'diagnostic' ? 'regenerated' : 'saved' };
 }
 
 function uniqueObjectTypes(items: readonly SyncObjectPolicy[]) {

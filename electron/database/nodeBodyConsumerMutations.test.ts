@@ -17,17 +17,13 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
-import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
-import { migrateBodyContentOwners } from '../../lib/core/database/bodyContentOwnerMigration.js';
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
-import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
 import { PDF_READER_PLACEHOLDER_TEXT } from '../../lib/core/nodes/nodeOpeningPreview.js';
 import { buildReadwiseBookPlaceholderNodeId } from '../import/readwiseBookNodes.js';
 import { refreshReadwiseBookPlaceholderNode } from '../import/readwiseBookPlaceholderRefresh.js';
 import type { ReadwiseBookInventoryItem } from '../import/readwiseBooksInventory.js';
 import { applyEpubSequentialReadingMode } from '../ipc/epubSequentialReading.js';
 
-import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
@@ -56,24 +52,11 @@ function seedNode(nodeId: string, content: string) {
 }
 
 function readBody(nodeId: string) {
-  return openDatabaseConnection().driver.queryOne<{ blob: string; content: string; sync_dirty: number }>(
-    `SELECT CAST(cbd.data AS TEXT) AS blob, ${buildNodeBodyContentSql()} AS content, n.sync_dirty
-     FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`,
-    [nodeId]
-  );
+  return openDatabaseConnection().driver.queryOne<{ content: string; sync_dirty: number }>(
+    'SELECT content, sync_dirty FROM nodes WHERE id = ?', [nodeId]);
 }
 
-async function prepareConsumerStorage(bodyStorage: 'continuous' | 'chunked') {
-  if (bodyStorage === 'continuous') return;
-  const { sqlite } = openDatabaseConnection();
-  await createBetterSqliteDbPort(sqlite).transaction(async (tx) => {
-    await migrateBodyContentStorage(tx);
-    await migrateBodyContentOwners(tx, 'desktop');
-  });
-  sqlite.exec('DROP TABLE content_blob_data');
-}
-
-it.each(['continuous', 'chunked'] as const)('normalizes a Readwise placeholder through the %s writer', async (bodyStorage) => {
+it('normalizes a Readwise placeholder using its complete owned body', () => {
   const book = {
     annotationStatus: 'has_highlights', bodyState: 'unloaded', bookKey: 'book-one', downloadUrl: null,
     epubPath: null, epubStatus: 'missing', fullDocumentMarkdownPath: null,
@@ -84,30 +67,25 @@ it.each(['continuous', 'chunked'] as const)('normalizes a Readwise placeholder t
   seedNode(book.generatedNodeId, 'Old placeholder');
   openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', book.generatedNodeId]);
 
-  await prepareConsumerStorage(bodyStorage);
-  refreshReadwiseBookPlaceholderNode(book, bodyStorage);
+  openDatabaseConnection().sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
+  refreshReadwiseBookPlaceholderNode(book);
 
-  const body = loadNodeBodyResolution(openDatabaseConnection().driver, book.generatedNodeId, bodyStorage);
+  const body = loadNodeBodyResolution(openDatabaseConnection().driver, book.generatedNodeId);
   expect(body?.status).toBe('resolved');
   if (body?.status !== 'resolved') throw new Error('placeholder body unavailable');
   expect(body.content).toContain('## Current status');
   expect(openDatabaseConnection().driver.queryOne<{ sync_dirty: number }>(
     'SELECT sync_dirty FROM nodes WHERE id = ?', [book.generatedNodeId])?.sync_dirty).toBe(1);
-  if (bodyStorage === 'continuous') expect(readBody(book.generatedNodeId)?.blob).toBe(body.content);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM content_blob_data')).toEqual([]);
+  refreshReadwiseBookPlaceholderNode({ ...book, annotationStatus: 'no_highlights' });
+  expect(readBody(book.generatedNodeId)?.content).toContain('## Current status');
 
-  const hash = openDatabaseConnection().driver.queryOne<{ body_blob_hash: string }>(
-    'SELECT body_blob_hash FROM nodes WHERE id = ?', [book.generatedNodeId]
-  )?.body_blob_hash ?? '';
-  openDatabaseConnection().driver.execute(`DELETE FROM ${bodyStorage === 'chunked' ? 'content_bodies' : 'content_blob_data'} WHERE hash = ?`, [hash]);
-  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['stale inline', book.generatedNodeId]);
-  expect(() => refreshReadwiseBookPlaceholderNode({ ...book, annotationStatus: 'no_highlights' }, bodyStorage))
-    .toThrow(`node_body_unavailable:${book.generatedNodeId}`);
 });
 
-it('refreshes a Blob-only PDF placeholder with matching Blob and inline projection', () => {
+it('refreshes an owned PDF placeholder and preserves the resulting version', () => {
   seedNode('pdf-node', `# PDF\n\n${PDF_READER_PLACEHOLDER_TEXT}`);
   persistNodeResourceReference('pdf-node', { storage_key: `${'a'.repeat(64)}.pdf`, role: 'reference', original_name: 'paper.pdf' });
-  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', 'pdf-node']);
+  openDatabaseConnection().sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
 
   expect(syncPdfBodyBlobsForReferenceNodes(
     'a'.repeat(64), [{ page: 1, text: 'Page body', pageHeight: null, pageWidth: null }],
@@ -115,7 +93,7 @@ it('refreshes a Blob-only PDF placeholder with matching Blob and inline projecti
   )).toEqual(['pdf-node']);
   const body = readBody('pdf-node');
   expect(body?.content).toContain('Page body');
-  expect(body?.blob).toBe(body?.content);
+  expect(openDatabaseConnection().driver.queryAll('SELECT * FROM content_blob_data')).toEqual([]);
   expect(body?.sync_dirty).toBe(0);
   const connection = openDatabaseConnection();
   const head = connection.sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').pluck().get('pdf-node');
@@ -137,42 +115,35 @@ it('refreshes a Blob-only PDF placeholder with matching Blob and inline projecti
     .toContain('Page body');
 });
 
-it.each(['continuous', 'chunked'] as const)('uses %s EPUB bodies and aborts all writes for unavailable bodies', async (bodyStorage) => {
+it('uses complete owned EPUB bodies for free and sequential reading', () => {
   seedNode('epub-source', 'Source');
   seedNode('epub-section', 'Section body');
   seedNode('epub-second', 'Second section body');
   const driver = openDatabaseConnection().driver;
-  driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', 'epub-section']);
-  await prepareConsumerStorage(bodyStorage);
+  openDatabaseConnection().sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
   applyEpubSequentialReadingMode({
-    bodyStorage,
     driver, importedAt: '2026-08-01T00:01:00.000Z', mode: 'free',
     nodeIds: ['epub-second', 'epub-section'], sourceNodeId: 'epub-source'
   });
   expect(driver.queryOne<{ state: string }>('SELECT state FROM node_reading WHERE node_id = ?', ['epub-section']))
     .toEqual({ state: 'active' });
 
-  const hash = driver.queryOne<{ body_blob_hash: string }>(
-    'SELECT body_blob_hash FROM nodes WHERE id = ?', ['epub-section']
-  )?.body_blob_hash ?? '';
-  driver.execute(`DELETE FROM ${bodyStorage === 'chunked' ? 'content_bodies' : 'content_blob_data'} WHERE hash = ?`, [hash]);
-  driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['stale inline', 'epub-section']);
-  const readingBefore = driver.queryAll('SELECT * FROM node_reading');
-  expect(() => applyEpubSequentialReadingMode({
-    bodyStorage,
+  applyEpubSequentialReadingMode({
     driver, importedAt: '2026-08-01T00:02:00.000Z', mode: 'sequential',
     nodeIds: ['epub-second', 'epub-section'], sourceNodeId: 'epub-source'
-  })).toThrow('node_body_unavailable:epub-section');
-  expect(driver.queryAll('SELECT * FROM node_reading')).toEqual(readingBefore);
+  });
+  expect(readBody('epub-section')?.content).toBe('Section body');
+  expect(readBody('epub-second')?.content).toBe('Second section body');
   expect(driver.queryOne<{ sequential_reading_enabled: number | null }>(
     'SELECT sequential_reading_enabled FROM nodes WHERE id = ?', ['epub-source']
-  )).toEqual({ sequential_reading_enabled: 0 });
+  )).toEqual({ sequential_reading_enabled: 1 });
+
 });
 
-it('preserves PDF selection and version hashes with explicit per-article chunked reads', async () => {
+it('preserves PDF selection and version hashes after legacy body caches are removed', () => {
   const attachmentId = 'b'.repeat(64);
   const bodies = [PDF_READER_PLACEHOLDER_TEXT.toUpperCase(),
-    `large ${'中😀'.repeat(200_000)} ${PDF_READER_PLACEHOLDER_TEXT}`,
+    `large ${'中😀'.repeat(100_000)} ${PDF_READER_PLACEHOLDER_TEXT}`,
     `Before\0${PDF_READER_PLACEHOLDER_TEXT}`, 'Already extracted', PDF_READER_PLACEHOLDER_TEXT];
   const { driver, sqlite } = openDatabaseConnection();
   for (const [index, body] of bodies.entries()) {
@@ -197,40 +168,27 @@ it('preserves PDF selection and version hashes with explicit per-article chunked
     expected = states();
     throw rollback;
   })).toThrow(rollback);
-  await createBetterSqliteDbPort(sqlite).transaction(async (tx) => {
-    await migrateBodyContentStorage(tx);
-    await migrateBodyContentOwners(tx, 'desktop');
-  });
-  sqlite.exec('DROP TABLE content_blob_data');
-  expect(syncPdfBodyBlobsForReferenceNodes(attachmentId, [], 'test-host', now, 'chunked')).toEqual([]);
-  expect(syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, 'test-host', now, 'chunked')).toEqual(['pdf-0', 'pdf-1']);
+  sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
+  expect(syncPdfBodyBlobsForReferenceNodes(attachmentId, [], 'test-host', now)).toEqual([]);
+  expect(syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, 'test-host', now)).toEqual(['pdf-0', 'pdf-1']);
   expect(states()).toEqual(expected);
   for (const id of ['pdf-0', 'pdf-1']) {
-    expect(loadNodeBodyResolution(driver, id, 'chunked')).toMatchObject({ status: 'resolved', content: `# ${id}\n\nFirst\n\nSecond` });
+    expect(loadNodeBodyResolution(driver, id)).toMatchObject({ status: 'resolved', content: `# ${id}\n\nFirst\n\nSecond` });
   }
-  const hash = states()[0]?.body_blob_hash;
-  sqlite.prepare('DELETE FROM content_bodies WHERE hash = ?').run(hash);
-  driver.execute("UPDATE nodes SET content = ? WHERE id = 'pdf-0'", [PDF_READER_PLACEHOLDER_TEXT]);
-  expect(syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, 'test-host', now, 'chunked')).toEqual([]);
+  expect(syncPdfBodyBlobsForReferenceNodes(attachmentId, pages, 'test-host', now)).toEqual([]);
   expect(states()).toEqual(expected);
+
 });
 
-it('skips an unavailable large PDF body without using a stale inline placeholder', async () => {
+it('preserves a complete extracted PDF body and its current version', () => {
   const attachmentId = 'c'.repeat(64);
-  seedNode('pdf-large-missing', `${'中😀'.repeat(200_000)} ${PDF_READER_PLACEHOLDER_TEXT}`);
-  persistNodeResourceReference('pdf-large-missing', { storage_key: `${attachmentId}.pdf`, role: 'reference', original_name: 'paper.pdf' });
+  seedNode('pdf-large-extracted', 'Already extracted 中文😀'.repeat(20_000));
+  persistNodeResourceReference('pdf-large-extracted', { storage_key: `${attachmentId}.pdf`, role: 'reference', original_name: 'paper.pdf' });
   const { driver, sqlite } = openDatabaseConnection();
-  await createBetterSqliteDbPort(sqlite).transaction(async (tx) => {
-    await migrateBodyContentStorage(tx);
-    await migrateBodyContentOwners(tx, 'desktop');
-  });
-  sqlite.exec('DROP TABLE content_blob_data');
-  const before = driver.queryOne<{ body_blob_hash: string; current_version_id: string }>(
-    "SELECT body_blob_hash, current_version_id FROM nodes WHERE id = 'pdf-large-missing'");
-  sqlite.prepare('DELETE FROM content_bodies WHERE hash = ?').run(before?.body_blob_hash);
-  driver.execute("UPDATE nodes SET content = ? WHERE id = 'pdf-large-missing'", [PDF_READER_PLACEHOLDER_TEXT]);
+  sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
+  const read = () => driver.queryOne('SELECT content, body_blob_hash, current_version_id FROM nodes WHERE id = ?', ['pdf-large-extracted']);
+  const before = read();
   expect(syncPdfBodyBlobsForReferenceNodes(attachmentId,
-    [{ page: 1, text: 'Replacement', pageHeight: null, pageWidth: null }], 'test-host', 'now', 'chunked')).toEqual([]);
-  expect(driver.queryOne("SELECT body_blob_hash, current_version_id FROM nodes WHERE id = 'pdf-large-missing'"))
-    .toEqual(before);
+    [{ page: 1, text: 'Replacement', pageHeight: null, pageWidth: null }], 'test-host', 'now')).toEqual([]);
+  expect(read()).toEqual(before);
 });

@@ -1,50 +1,11 @@
-export type DesktopSettingScope = 'host' | 'local_only' | 'session_resume' | 'user_space';
+import { DECLARED_SETTING_KEYS, resolveSettingDataPolicy, type SettingScope } from './settingDataPolicy.js';
+
+export type DesktopSettingScope = SettingScope;
 
 export const DESKTOP_SETTING_PLATFORM = 'windows';
 export const DESKTOP_SETTING_FORM_FACTOR = 'desktop';
 
-const USER_SPACE_KEYS = new Set([
-  'app_settings',
-  'backup_settings',
-  'import_manager_settings',
-  'library_path_settings',
-  'readwise_active_host',
-  'readwise_api_import_state',
-  'readwise_remote_source',
-  'readwise_source_mode',
-  'readwise_source_mode_conflict',
-  'readwise_source_cutover',
-  'readwise_source_cutover_v2',
-  'review_scheduler_settings',
-  'search_aliases_document',
-  'system_entry_display_names'
-]);
-const SESSION_RESUME_KEYS = new Set(['readwise_book_epub_picker_state', 'window_state']);
-const LOCAL_ONLY_KEYS = new Set([
-  'backup_restore_pending_sync',
-  'host_name',
-  'device_id',
-  'desktop_device_id',
-  'foliole_aide_byok_settings',
-  'remote-image-learned-sources-v1',
-  'readwise_books_inventory_state',
-  'sync_group_last_trigger_result',
-  'sync_group_activity',
-  'watch_import_cursor_state'
-]);
-const HOST_KEYS = new Set([
-  'discourse_publish_settings',
-  'foliole_publish_settings',
-  'readwise_import_settings',
-  'wordpress_publish_settings'
-]);
-
-export const DESKTOP_DECLARED_SETTING_KEYS = [
-  ...USER_SPACE_KEYS,
-  ...SESSION_RESUME_KEYS,
-  ...LOCAL_ONLY_KEYS,
-  ...HOST_KEYS
-].sort();
+export const DESKTOP_DECLARED_SETTING_KEYS = DECLARED_SETTING_KEYS;
 
 export const DESKTOP_INTERNAL_SETTINGS_KEYS = [
   'workspace_search_queued_revision',
@@ -68,11 +29,8 @@ export interface DesktopSettingIdentity {
 }
 
 export function resolveDesktopSettingPolicy(key: string): DesktopSettingPolicy {
-  if (LOCAL_ONLY_KEYS.has(key)) return { canonical: false, declared: true, scope: 'local_only' };
-  if (USER_SPACE_KEYS.has(key)) return { canonical: true, declared: true, scope: 'user_space' };
-  if (SESSION_RESUME_KEYS.has(key)) return { canonical: true, declared: true, scope: 'session_resume' };
-  if (HOST_KEYS.has(key)) return { canonical: true, declared: true, scope: 'host' };
-  return { canonical: true, declared: false, scope: 'host' };
+  const { declared, scope } = resolveSettingDataPolicy(key);
+  return { canonical: scope !== 'local_only', declared, scope };
 }
 
 export function resolveDesktopSettingIdentity(key: string, currentHostName: string | null): DesktopSettingIdentity | null {

@@ -33,7 +33,6 @@ import {
 import { restoreDatabaseBackupInMaintenance } from './databaseBackupRestoration.js';
 import { beginApplicationDatabaseRestore } from './databaseRestoreSettlement.js';
 import { copyExtraBackup, disabledExtraBackupResult, type ExtraBackupCopyResult } from './extraBackupCopies.js';
-import { startLegacyBodyCollectionTask } from './legacyBodyCollectionTask.js';
 import { waitForManagedSafetySnapshotSettlements } from './managedSafetySnapshots.js';
 import { initializeDatabase } from './migrate.js';
 import { cleanupOrphanedBackupSidecars } from './orphanedBackupSidecars.js';
@@ -216,7 +215,6 @@ export async function restoreApplicationDatabaseBackup(
     resumeLibraryTasks?.();
     finishRestore();
     if (completed) {
-      void startLegacyBodyCollectionTask().catch((error) => console.error('[backup] restored body collection failed', error));
       void requestDesktopHighValueSync()?.catch(() => undefined);
     }
   }

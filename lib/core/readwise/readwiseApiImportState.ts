@@ -36,6 +36,7 @@ export interface ReadwiseApiDocumentImportState {
 }
 
 export interface ReadwiseApiSourceUpdateState {
+  content: string;
   contentHash: string;
   sourceUpdatedAt: string | null;
   status: 'pending';
@@ -71,8 +72,8 @@ function normalizeEpubProjection(value: unknown): ReadwiseApiEpubProjectionProof
 function normalizeSourceUpdate(value: unknown): ReadwiseApiSourceUpdateState | null {
   const row = record(value);
   const contentHash = text(row.contentHash);
-  if (row.status !== 'pending' || !contentHash) return null;
-  return { contentHash, sourceUpdatedAt: text(row.sourceUpdatedAt), status: 'pending' };
+  if (row.status !== 'pending' || !contentHash || typeof row.content !== 'string') return null;
+  return { content: row.content, contentHash, sourceUpdatedAt: text(row.sourceUpdatedAt), status: 'pending' };
 }
 
 function normalizeOriginalFileState(value: unknown): ReadwiseApiOriginalFileState | null {

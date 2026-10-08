@@ -130,7 +130,6 @@ export async function buildCanonicalBodyRepairPlan(input: {
   const candidates: RepairCandidate[] = [];
   for (const row of readActiveNodes(input.driver)) {
     const body = resolveNodeBody(row);
-    if (body.status === 'unavailable') throw new Error(`node_body_unavailable:${row.id}`);
     const matches = [...body.content.matchAll(ADDRESS)];
     if (!matches.length) continue;
     const mappings = [] as RepairCandidate['mappings'];

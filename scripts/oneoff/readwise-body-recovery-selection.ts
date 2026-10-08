@@ -84,10 +84,6 @@ export function buildRecoveryPlan(driver: DatabaseDriver, generatedAt = new Date
   const partial: Omit<RecoveryPlan, 'generatedAt' | 'planHash'> = { apply: [], manualReview: [], noRepair: [] };
   for (const row of readArticles(driver)) {
     const body = resolveNodeBody(row);
-    if (body.status === 'unavailable') {
-      partial.manualReview.push({ nodeId: row.id, reason: 'current_body_unavailable', title: row.title });
-      continue;
-    }
     if (!isFrontmatterOnly(body.content)) {
       const history = recoveryVersion(driver, row.id, body.content);
       partial[history ? 'manualReview' : 'noRepair'].push({

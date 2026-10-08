@@ -18,7 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
-import { NodeBodyUnavailableError, loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { createPreparedDesktopTextImport } from '../../lib/core/import/fingerprint.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -66,7 +66,7 @@ function readState(nodeId: string) {
   };
 }
 
-it('keeps Blob-only Readwise bodies and local edits across update and duplicate imports', () => {
+it('keeps complete owned Readwise bodies and local edits across update and duplicate imports', () => {
   const first = runPreparedImport(createReadwiseImport(
     ['---', 'author: One', '---', '# Article', '', 'Alpha sentence.', '', 'Beta sentence.'].join('\n'),
     ['Alpha sentence.'],
@@ -81,7 +81,6 @@ it('keeps Blob-only Readwise bodies and local edits across update and duplicate 
     title: 'Article',
     updatedAt: '2026-09-04T01:01:00.000Z'
   });
-  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', nodeId]);
 
   const prepared = createReadwiseImport(
     ['---', 'author: Two', '---', '# Article', '', 'Alpha sentence.', '', 'Beta sentence.'].join('\n'),
@@ -95,32 +94,35 @@ it('keeps Blob-only Readwise bodies and local edits across update and duplicate 
 
   expect(updated.duplicateSemantic).toBe('updated');
   expect(duplicate.duplicateSemantic).toBe('duplicate');
-  expect(afterUpdate.body).toMatchObject({ source: 'blob', status: 'resolved' });
+  expect(afterUpdate.body).toMatchObject({ source: 'node', status: 'resolved' });
   expect(afterUpdate.body?.status === 'resolved' ? afterUpdate.body.content : '').toContain('author: Two');
   expect(afterUpdate.body?.status === 'resolved' ? afterUpdate.body.content : '').toContain('Local appendix.');
-  expect(afterUpdate.node?.content).not.toContain('Local appendix.');
+  expect(afterUpdate.node?.content).toContain('Local appendix.');
   expect(afterUpdate.node?.content).toContain('author: Two');
   expect(afterUpdate.children).toHaveLength(2);
   expect(afterDuplicate.body).toEqual(afterUpdate.body);
   expect(afterDuplicate.children).toEqual(afterUpdate.children);
 });
 
-it('rolls back Readwise updates when the authoritative body Blob is unavailable', () => {
+it('updates complete Readwise text without relying on shared body cache', () => {
   const first = runPreparedImport(createReadwiseImport('# Article\n\nAlpha sentence.', ['Alpha sentence.'], '2026-09-04T02:00:00.000Z'));
   const nodeId = first.nodeId as string;
   const before = readState(nodeId);
   openDatabaseConnection().driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [before.node!.body_blob_hash]);
   const unavailable = readState(nodeId);
 
-  expect(() => runPreparedImport(createReadwiseImport(
+  expect(runPreparedImport(createReadwiseImport(
     '# Article\n\nAlpha sentence.\n\nBeta sentence.',
     ['Alpha sentence.', 'Beta sentence.'],
     '2026-09-04T02:01:00.000Z'
-  ))).toThrow(NodeBodyUnavailableError);
+  ))).toMatchObject({ nodeId, duplicateSemantic: 'updated' });
 
   const after = readState(nodeId);
-  expect(after.body).toEqual(unavailable.body);
-  expect(after.node).toEqual(unavailable.node);
-  expect(after.children).toEqual(unavailable.children);
-  expect(after.runCount).toBe(unavailable.runCount);
+  expect(unavailable.body).toEqual(before.body);
+  expect(after.body).toMatchObject({ source: 'node', content: after.node?.content });
+  expect(after.node?.content).toBe(before.node?.content);
+  expect(after.children).toHaveLength(2);
+  expect(after.children.some((child) => child.content === 'Beta sentence.')).toBe(true);
+  expect(after.runCount).toBe(unavailable.runCount + 1);
+  expect(openDatabaseConnection().driver.queryAll('SELECT hash FROM content_blob_data')).toEqual([]);
 });

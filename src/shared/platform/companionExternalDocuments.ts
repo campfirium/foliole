@@ -1,24 +1,19 @@
-import { APP_SETTINGS_STORAGE_KEYS } from '../config/appSettings';
-
 import {
   loadIosExternalDirectory,
   loadIosExternalDocument,
-  loadIosSyncIndex,
-  loadIosSyncObjects,
   searchIosExternalDocuments
 } from './companion/runtime/iosCompanionActiveDatabaseReads';
 import {
   isNativeCompanionExternalDirectoryRuntime,
   isNativeCompanionExternalDocumentReadRuntime,
-  isNativeCompanionExternalDocumentSearchRuntime,
-  isNativeCompanionSyncObjectReadRuntime
+  isNativeCompanionExternalDocumentSearchRuntime
 } from './companionWorkspaceRuntimeRepository';
 import type {
   ExternalLibraryBrowseEntry,
   ExternalLibraryFolder
 } from './externalLibraryBrowseModel';
 import {
-  parseExternalLibraryFolderOrder,
+  loadExternalLibraryFolderOrder,
   sortExternalLibraryFolders
 } from './externalLibraryFolderOrder';
 
@@ -59,11 +54,6 @@ type NativeExternalDocumentSearchResult = Omit<CompanionExternalDocumentSearchRe
   content_status?: 'failed' | 'fetching' | 'missing' | 'ready';
 };
 
-interface SyncSettingPayload {
-  key?: string;
-  value_json?: string;
-}
-
 export async function loadCompanionExternalDocument(documentId: string) {
   if (!isNativeCompanionExternalDocumentReadRuntime()) {
     return null as CompanionExternalDocument | null;
@@ -99,38 +89,7 @@ export async function loadCompanionExternalDirectory() {
 }
 
 async function loadCompanionExternalFolderOrder() {
-  if (!isNativeCompanionSyncObjectReadRuntime()) return [];
-  const index = { entries: await loadIosSyncIndex() };
-  const settingObjectIds = index.entries
-    .filter((entry) => entry.object_type === 'setting' && entry.object_id.endsWith(':app_settings'))
-    .map((entry) => entry.object_id);
-  if (settingObjectIds.length === 0) return [];
-  const objects = { objects: await loadIosSyncObjects(settingObjectIds, ['setting']) };
-  const settings = objects.objects
-    .map((object) => parseSettingPayload(object.payload_json))
-    .filter((payload): payload is SyncSettingPayload => Boolean(payload?.key === 'app_settings' && payload.value_json))
-    .at(-1);
-  return parseExternalLibraryFolderOrder(parseAppSettingValue(settings?.value_json));
-}
-
-function parseSettingPayload(payloadJson: string | null): SyncSettingPayload | null {
-  if (!payloadJson) return null;
-  try {
-    return JSON.parse(payloadJson) as SyncSettingPayload;
-  } catch {
-    return null;
-  }
-}
-
-function parseAppSettingValue(valueJson: string | undefined) {
-  if (!valueJson) return null;
-  try {
-    const settings = JSON.parse(valueJson) as Record<string, unknown>;
-    const value = settings[APP_SETTINGS_STORAGE_KEYS.externalLibraryFolderOrder];
-    return typeof value === 'string' ? value : null;
-  } catch {
-    return null;
-  }
+  return loadExternalLibraryFolderOrder();
 }
 
 export async function searchCompanionExternalDocuments(query: string, limit?: number, offset = 0) {

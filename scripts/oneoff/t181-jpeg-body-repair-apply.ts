@@ -25,7 +25,7 @@ export function applyJpegBodyRepairPlan(input: {
         updated_at: string;
       }>('SELECT body_blob_hash, current_version_id, updated_at FROM nodes WHERE id = ?', [candidate.nodeId]);
       const body = loadNodeBodyResolution(input.driver, candidate.nodeId);
-      if (!state || !body || body.status === 'unavailable' || body.content !== candidate.previousContent ||
+      if (!state || !body || body.content !== candidate.previousContent ||
           state.body_blob_hash !== candidate.bodyHash || state.current_version_id !== candidate.currentVersionId ||
           state.updated_at !== candidate.updatedAt) throw new Error(`repair_candidate_drifted:${candidate.nodeId}`);
       const updatedAt = new Date(Date.parse(input.now) + index).toISOString();

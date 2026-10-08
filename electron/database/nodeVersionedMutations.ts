@@ -33,11 +33,11 @@ export function upsertVersionedNodeSnapshot(
   });
 }
 
-export function upsertVersionedNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, nodeOrder: string[]) {
+export function upsertVersionedNodeSnapshotWithOrder(input: UpsertNodeSnapshotInput, nodeOrder: string[], options: UpsertNodeSnapshotOptions = {}) {
   const driver = openDatabaseConnection().driver;
   const hostName = loadOrCreateDesktopHostName(input.updatedAt);
   return withTransaction(driver, () => {
-    upsertNodeSnapshotWithOrder(input, nodeOrder);
+    upsertNodeSnapshotWithOrder(input, nodeOrder, options);
     return flushVersion(driver, input.nodeId, hostName, input.updatedAt);
   });
 }

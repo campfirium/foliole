@@ -1,29 +1,20 @@
 import type { DbPort } from './dbPort.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
-import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
-import { loadVerifiedBodyRef } from './verifiedBody.js';
 
 /** The editor may use a version after a later sync has moved the node head. */
 export async function retainLocalEditBase(port: DbPort, args: {
   holdId: string;
   nodeId: string;
   versionId: string;
-  bodyStorage?: NodeVersionBodyStorage;
 }) {
   if (!args.holdId || !args.nodeId || !args.versionId) throw new Error('content_edit_hold_invalid');
-  const chunked = args.bodyStorage === 'chunked';
-  const [version] = await port.query<{ version_id: string; body_blob_hash?: string }>(
-    `SELECT version_id${chunked ? ', body_blob_hash' : ''} FROM node_sync_versions WHERE object_id = ? AND version_id = ?
-       AND ${chunked ? `body_state = 'readable' AND EXISTS (SELECT 1 FROM content_bodies body
-         WHERE body.hash = node_sync_versions.body_blob_hash AND body.verified = 1)`
-      : `(body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text'
-         OR json_type(snapshot_json, '$.content') IS NULL)`}`,
+  const [version] = await port.query<{ version_id: string }>(
+    `SELECT version_id FROM node_sync_versions WHERE object_id = ? AND version_id = ?
+       AND (body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text'
+         OR json_type(snapshot_json, '$.content') IS NULL)`,
     [args.nodeId, args.versionId]
   );
   if (!version) throw new Error('content_edit_base_unavailable');
-  if (chunked && (!version.body_blob_hash || !await loadVerifiedBodyRef(port, version.body_blob_hash))) {
-    throw new Error('content_edit_base_unavailable');
-  }
   const [held] = await port.query<{ object_id: string }>(
     'SELECT object_id FROM node_version_local_holds WHERE hold_id = ?', [args.holdId]
   );
@@ -37,12 +28,11 @@ export async function retainLocalEditBase(port: DbPort, args: {
   );
 }
 
-export async function releaseLocalEditBase(port: DbPort, holdId: string, nodeId: string,
-  bodyStorage: NodeVersionBodyStorage = 'continuous') {
+export async function releaseLocalEditBase(port: DbPort, holdId: string, nodeId: string) {
   await port.transaction(async (tx) => {
     await tx.run(`DELETE FROM node_version_local_holds WHERE object_id = ?
       AND (hold_id = ? OR substr(hold_id, 1, ?) = ?)`, [nodeId, holdId, holdId.length + 6, holdId + ':edit:']);
-    await collectNodeVersionPayloads(tx, nodeId, Number.MAX_SAFE_INTEGER, false, bodyStorage);
+    await collectNodeVersionPayloads(tx, nodeId, Number.MAX_SAFE_INTEGER, false);
   });
 }
 

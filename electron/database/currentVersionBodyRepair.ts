@@ -25,7 +25,7 @@ export function repairCurrentVersionBodyWithDriver(driver: DatabaseDriver, input
   return driver.transaction(() => {
     const row = loadNodeSyncVersionSourceFromDriver(driver, input.nodeId);
     if (!row?.current_version_id) throw new Error('current_body_repair_node_unavailable');
-    const body = requireResolvedNodeBody(row, row.id);
+    const body = requireResolvedNodeBody(row);
     if (!body.bodyBlobHash || hashTextBody(body.content) !== body.bodyBlobHash) {
       throw new Error('current_body_repair_blob_invalid');
     }

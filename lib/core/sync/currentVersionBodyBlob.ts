@@ -1,11 +1,8 @@
 import { CONTENT_BLOB_BATCH_MAX_BYTES } from '../../platform/resourceAvailabilityContract.js';
 
-import { materializeCurrentVerifiedBodyBlobs } from './currentVersionVerifiedBodyBlob.js';
 import type { DbPort, DbParams } from './dbPort.js';
 import { hashSqliteByteChunks } from './hashSqliteByteChunks.js';
-import { refreshNodeInlineBodiesForHashes } from './nodeInlineBodyProjection.js';
 import { hashTextBodyContent } from './syncNodeTextBodyBlobs.js';
-import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 
 export type BodyScope = { hashes: readonly string[] } | { incomingAlias: string };
 interface CurrentBodyRow {
@@ -30,9 +27,7 @@ function scopeFilter(scope: BodyScope): { sql: string; params: DbParams } {
 }
 
 /** Caller owns the transaction: publish verified bytes and availability together. */
-export async function materializeCurrentVersionBodyBlobs(port: DbPort, scope: BodyScope,
-  bodyStorage: NodeVersionBodyStorage = 'continuous') {
-  if (bodyStorage === 'chunked') return materializeCurrentVerifiedBodyBlobs(port, scope);
+export async function materializeCurrentVersionBodyBlobs(port: DbPort, scope: BodyScope) {
   const filter = scopeFilter(scope);
   let after = '';
   let count = 0;
@@ -97,7 +92,6 @@ async function publishCurrentBodyCache(port: DbPort, row: CurrentBodyRow, byteLe
        AND kind = 'text_body' AND mime_type = 'text/plain' AND compression = 'none'`,
     [now, now, row.hash, row.hash, row.hash, byteLength, byteLength]);
   if (updated.changes !== 1) throw new Error('sync_current_body_manifest_changed');
-  await refreshNodeInlineBodiesForHashes(port, [row.hash]);
   return 1;
 }
 

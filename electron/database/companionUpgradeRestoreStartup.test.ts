@@ -18,7 +18,7 @@ const request = { allowCreate: false, expectedHostName: 'Mobile', now };
 it('upgrades the previous mobile library and retains pending restore state across two cold opens', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-restore-upgrade-'));
   const databasePath = path.join(root, 'library.db');
-  let db = previousLibrary(databasePath);
+  let db = await previousLibrary(databasePath);
   try {
     for (let restart = 0; restart < 2; restart++) {
       db.close();
@@ -38,7 +38,7 @@ it('upgrades the previous mobile library and retains pending restore state acros
 
 it('rolls back a failed upgrade and leaves the prior library ready for a clean restart', async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-restore-upgrade-failure-'));
-  const db = previousLibrary(path.join(root, 'library.db'));
+  const db = await previousLibrary(path.join(root, 'library.db'));
   try {
     await expect(bootstrapCompanionDatabase(createBetterSqliteDbPort(db), {
       ...request, beforeVersionCommit: () => { throw new Error('upgrade interrupted'); }

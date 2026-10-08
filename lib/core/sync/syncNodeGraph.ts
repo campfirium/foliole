@@ -3,7 +3,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 import type { DbPort, DbRow } from './dbPort.js';
 import { cachedSyncNodeParents, loadAncestorDistances, loadSyncNodeVersionAncestors, loadSyncNodeVersionParents } from './syncNodeLineage.js';
 import { matchingTombstoneVersionSql } from './syncNodeTombstoneVersion.js';
-import { loadTopicTextBodies } from './topicTextBodies.js';
+import { readTopicTextSnapshot } from './topicTextBodies.js';
 
 export interface StoredSyncNodeVersionRow extends DbRow {
   body_text: string | null;
@@ -164,10 +164,10 @@ async function storedVersionToRecord(
   knownParents?: string[],
   requireBody = true
 ): Promise<NativeSyncNodeRecord> {
-  const snapshot = JSON.parse(row.snapshot_json) as NativeSyncNodeRecord['snapshot'];
   const isTombstone = row.is_tombstone === 1;
   const body = isTombstone ? row.body_text ?? '' : storedSyncNodeVersionBody(row);
   if (body === null && requireBody) throw new Error(`sync_node_version_body_unavailable:${row.version_id}`);
+  const { snapshot, bodies } = readTopicTextSnapshot(row.snapshot_json, body !== null);
   const parents = knownParents ?? await loadSyncNodeVersionParents(port, row.version_id);
   const record: NativeSyncNodeRecord = {
     ancestor_version_ids: includeAncestors ? await loadSyncNodeVersionAncestors(port, row.version_id) : [],
@@ -185,7 +185,7 @@ async function storedVersionToRecord(
     version_id: row.version_id
   };
   if (body !== null && snapshot.text_alternatives?.length) {
-    record.alternative_bodies = await loadTopicTextBodies(port, record);
+    record.alternative_bodies = bodies;
   }
   return record;
 }

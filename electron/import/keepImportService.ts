@@ -50,7 +50,7 @@ export async function runKeepImportRule(config: KeepImportRuleConfig) {
 }
 
 async function runKeepImportRuleNow(config: KeepImportRuleConfig) {
-  await runWithDatabaseConnectionOwner(() => assertReadwiseCanRun(config));
+  await runWithDatabaseConnectionOwner(() => assertConfiguredSourceCanRun(config));
   throwIfKeepImportAborted(config.signal);
   const discoveredSources = await discoverKeepImportSources(config);
   throwIfKeepImportAborted(config.signal);
@@ -61,7 +61,7 @@ async function runKeepImportRuleNow(config: KeepImportRuleConfig) {
     }))
   );
   throwIfKeepImportAborted(config.signal);
-  await runWithDatabaseConnectionOwner(() => assertReadwiseCanRun(config));
+  await runWithDatabaseConnectionOwner(() => assertConfiguredSourceCanRun(config));
   await reconcileKeepImportCatalog(config, discoveredSources);
   const runEntries: KeepImportRunEntry[] = [];
   for (const [index, planned] of sourcePlan.entries()) {
@@ -91,7 +91,7 @@ async function runPlannedKeepImportSource(
   index: number,
   sourceTotalCount: number
 ) {
-  await runWithDatabaseConnectionOwner(() => assertReadwiseCanRun(config));
+  await runWithDatabaseConnectionOwner(() => assertConfiguredSourceCanRun(config));
   const { source } = planned;
   await yieldKeepImportRunner(config.signal);
   config.onProgress?.({
@@ -125,12 +125,12 @@ async function runPlannedKeepImportSource(
   return entry;
 }
 
-function assertReadwiseCanRun(config: KeepImportRuleConfig) {
-  if (config.sourceType === 'readwise') {
+function assertConfiguredSourceCanRun(config: KeepImportRuleConfig) {
+  if (config.sourceType) {
     assertKeepImportSourceCanRun({
       directoryPath: config.directoryPath,
       ruleId: config.ruleId,
-      sourceType: 'readwise'
+      sourceType: config.sourceType
     });
   }
 }

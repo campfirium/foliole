@@ -85,6 +85,7 @@ async function syncExternalSearchFolder(
     });
     await options.taskContext?.yieldIfNeeded?.();
   }
+  assertExternalSearchFolderConfigured(folder);
   const indexedAt = await applyFolderDocumentChanges({
     db,
     deletedAbsolutePaths,
@@ -93,6 +94,7 @@ async function syncExternalSearchFolder(
     ...(options.documentChunkSize === undefined ? {} : { documentChunkSize: options.documentChunkSize }),
     ...(options.taskContext === undefined ? {} : { context: options.taskContext })
   });
+  assertExternalSearchFolderConfigured(folder);
   upsertExternalDocuments(folder, documentsToUpsert, indexedAt);
   markExternalDocumentsMissing(
     deletedRows.map((row) => ({ relativePath: row.relative_path })),
@@ -122,6 +124,7 @@ export async function rebuildExternalSearchIndexes(folderId?: string) {
     try {
       const documents: ScannedDocument[] = [];
       await scanFolder(folder, folder.folder_path, folder.folder_path, defaultExcludedNames, documents, autoExcludedPaths);
+      assertExternalSearchFolderConfigured(folder);
       const indexedAt = replaceFolderDocuments(openExternalSearchCacheDatabase(), folder, documents);
       replaceExternalDocumentsForFolder(folder, documents, indexedAt);
       updateExternalSearchFolderIndexState({
@@ -142,6 +145,13 @@ export async function rebuildExternalSearchIndexes(folderId?: string) {
     }
   }
   return [...loadExternalSearchFolders(), ...loadReadwiseExternalSearchFolders()];
+}
+
+function assertExternalSearchFolderConfigured(folder: ReturnType<typeof loadExternalSearchFolders>[number]) {
+  if (!loadRefreshableExternalSearchFolders().some((current) =>
+    current.id === folder.id && current.folder_path === folder.folder_path)) {
+    throw new Error('source_configuration_changed');
+  }
 }
 
 export async function refreshExternalSearchIndexes(folderId?: string, options: ExternalSearchRefreshOptions = {}) {

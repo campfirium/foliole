@@ -3,10 +3,11 @@ import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
 import { applySyncNodesWithDbPort } from './syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord } from './syncNodeGraph.js';
 import { buildResolutionRecord } from './syncNodeResolution.js';
+import { validateTopicTextBodies } from './topicTextBodies.js';
 import { availableTextAlternatives, textAlternatives } from './topicTextState.js';
 
 /** Expiration changes the whole version, so stale peers cannot restore removed attachments. */
-export async function expireTopicText(db: DbPort, nodeId: string, now: string) {
+export async function expireTopicText(db: DbPort, nodeId: string, now: string, collectVersionPayloads = true) {
   return db.transaction(async (tx) => {
     const [expired] = await tx.query<{ id: string }>(
       `SELECT n.id FROM nodes n JOIN node_sync_versions v ON v.version_id = n.current_version_id,
@@ -20,8 +21,9 @@ export async function expireTopicText(db: DbPort, nodeId: string, now: string) {
     const record = buildResolutionRecord([current], current, current.body_text ?? '', {
       ...current.snapshot, text_alternatives: retained
     });
+    record.alternative_bodies = validateTopicTextBodies(retained, current.alternative_bodies ?? []);
     const result = await applySyncNodesWithDbPort(tx, [record], { operation: 'local_mutation' });
     if (!result.appliedIds.includes(nodeId)) throw new Error('text_alternative_expiry_not_applied');
-    await collectNodeVersionPayloads(tx, nodeId, Number.MAX_SAFE_INTEGER);
+    if (collectVersionPayloads) await collectNodeVersionPayloads(tx, nodeId, Number.MAX_SAFE_INTEGER);
   });
 }

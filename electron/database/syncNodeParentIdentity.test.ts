@@ -55,14 +55,14 @@ it('retains both identities when the same batch contains a parent and its newer 
   await applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record('parent'), record('child', 'parent')]);
   expect(persisted()).toEqual([{ version_id: 'child', parent_version_id: 'parent' },
     { version_id: 'parent', parent_version_id: null }]);
-  expect(db.prepare(`SELECT ${buildNodeBodyContentSql('n', 'bd')} AS content,n.current_version_id
+  expect(db.prepare(`SELECT ${buildNodeBodyContentSql('n')} AS content,n.current_version_id
     FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash WHERE n.id = ?`).get('topic'))
     .toEqual({ content: 'child', current_version_id: 'child' });
 });
 it('retains a missing historical parent reference without inventing its identity', async () => {
   await applySyncNodesWithDbPort(createBetterSqliteDbPort(db), [record('child', 'missing')]);
   expect(persisted()).toEqual([{ version_id: 'child', parent_version_id: 'missing' }]);
-  expect(db.prepare(`SELECT ${buildNodeBodyContentSql('n', 'bd')} AS content,n.current_version_id
+  expect(db.prepare(`SELECT ${buildNodeBodyContentSql('n')} AS content,n.current_version_id
     FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash WHERE n.id = 'topic'`).get())
     .toEqual({ content: 'child', current_version_id: 'child' });
 });

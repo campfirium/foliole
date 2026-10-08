@@ -3,6 +3,7 @@ import type { PreparedImportHighlightRecord, PreparedImportRecord } from '../imp
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes, toImportedAnchorLink } from './importDerivedHighlights.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
+import { filterImportHighlightsWithinBudget } from './importHighlightTextBudget.js';
 import { readExistingChildHighlights } from './importPipelineHighlightNodes.js';
 import { updateExistingNode } from './importPipelineNodes.js';
 import { resolveReadwiseHighlightUpdate } from './importReadwiseHighlightUpdates.js';
@@ -42,6 +43,7 @@ export function persistReadwiseHighlightUpdates(input: {
   importedAt: string;
   parentContent: string;
   parentNodeId: string;
+  budgetFailures?: string[];
 }) {
   if (input.highlights.length === 0) {
     return 0;
@@ -51,7 +53,8 @@ export function persistReadwiseHighlightUpdates(input: {
   const highlightsToInsert: Array<PreparedImportHighlightRecord | AnchoredImportedHighlightRecord> = [];
   let repairedCount = 0;
 
-  input.highlights.forEach((highlight) => {
+  const bounded = filterImportHighlightsWithinBudget(input.highlights, input.parentContent, input.budgetFailures);
+  bounded.highlights.forEach((highlight) => {
     const repairTarget = !highlight.nodeId && isAnchoredHighlight(highlight)
       ? findUnanchoredChildByContent(existingChildren, usedChildIds, highlight.content)
       : null;
@@ -73,6 +76,7 @@ export function persistReadwiseHighlightUpdates(input: {
     insertImportedHighlightNodes({
       driver: input.driver,
       highlights: highlightsToInsert,
+      ...(input.budgetFailures ? { budgetFailures: input.budgetFailures } : {}),
       importedAt: input.importedAt,
       parentContent: input.parentContent,
       parentNodeId: input.parentNodeId
@@ -86,6 +90,7 @@ export function updateExistingReadwiseNode(input: {
   hideTitleHeading: boolean;
   importedAt: string;
   prepared: PreparedImportRecord;
+  budgetFailures?: string[];
 }) {
   const existingChildren = readExistingChildHighlights(input.driver, input.existingNode.id);
   const readwiseUpdate = resolveReadwiseHighlightUpdate({
@@ -100,11 +105,13 @@ export function updateExistingReadwiseNode(input: {
     existingNode: input.existingNode,
     hideTitleHeading: input.hideTitleHeading,
     importedAt: input.importedAt,
-    title: input.prepared.nodeTitle
+    title: input.prepared.nodeTitle,
+    ...(input.budgetFailures ? { budgetFailures: input.budgetFailures } : {})
   });
   persistReadwiseHighlightUpdates({
     driver: input.driver,
     highlights: readwiseUpdate.highlights,
+    ...(input.budgetFailures ? { budgetFailures: input.budgetFailures } : {}),
     importedAt: input.importedAt,
     parentContent: readwiseUpdate.content,
     parentNodeId: nodeId

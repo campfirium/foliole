@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { DatabaseBindValue, DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { NEXT_SYNC_STATE_SEQ_SQL } from '../../lib/core/database/syncStateSequenceSchemaStatements.js';
 import type { SyncGroupRestoreEvent } from '../../lib/platform/syncGroupRestoreContract.js';
 import { APP_SETTINGS_STORAGE_KEYS } from '../../src/shared/config/appSettings.js';
 
@@ -93,7 +94,7 @@ export function resetSyncGeneration(driver: DatabaseDriver, restoreId: string) {
     'node_version_inbound_receipts', 'node_version_device_bases',
     'node_version_device_revisions', 'node_version_local_source_revisions',
     'sync_delivery_receipts', 'sync_peer_cursors',
-    'sync_pack_receive_progress', 'sync_pack_resource_articles',
+    'sync_pack_receive_progress', 'sync_pack_resource_articles', 'framed_sync_resource_demands',
     'sync_pack_dependency_rows', 'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims'
   ]) driver.execute(`DELETE FROM ${table}`);
   driver.execute(`UPDATE node_version_local_proof_state
@@ -126,5 +127,13 @@ export function applyBackupRestoreHostSettings(tx: DatabaseDriver, snapshot: Ret
     insertRow(tx, 'settings', row);
   }
   tx.execute("DELETE FROM sync_object_state WHERE object_type = 'setting' AND object_id LIKE 'host:%'");
-  for (const row of snapshot.hostObjectStates) insertRow(tx, 'sync_object_state', row);
+  for (const row of snapshot.hostObjectStates) insertRestoredHostObjectState(tx, row);
+}
+
+function insertRestoredHostObjectState(driver: DatabaseDriver, row: DatabaseRow) {
+  const columns = Object.keys(row);
+  const values = columns.map((column) => column === 'state_seq' ? NEXT_SYNC_STATE_SEQ_SQL : '?');
+  driver.execute(`INSERT INTO sync_object_state (${columns.join(', ')}) VALUES (${values.join(', ')})`,
+    columns.filter((column) => column !== 'state_seq')
+      .map((column) => row[column] as DatabaseBindValue));
 }

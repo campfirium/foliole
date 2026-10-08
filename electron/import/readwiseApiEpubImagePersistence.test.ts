@@ -15,7 +15,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
-import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { createDefaultReadwiseReaderConfig } from '../../lib/core/import/readwiseReaderSettings.js';
 import type { PreparedReadwiseApiDocument } from '../../lib/core/readwise/readwiseApiImport.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -38,10 +38,10 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('persists owning-topic image links and replaces stale links on explicit rebuild', () => {
+it('persists owned EPUB images and replaces stale links on explicit rebuild', async () => {
+  openDatabaseConnection().sqlite.exec('DELETE FROM content_blob_data; DELETE FROM content_blobs');
   const document = documentFixture();
   const sqlite = openDatabaseConnection().sqlite;
-  sqlite.pragma('foreign_keys = OFF');
   expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'attachments'").all()).toEqual([]);
   const preparedEpubImages = preparedImages(document);
   const preparedEpubCover = {
@@ -58,14 +58,12 @@ it('persists owning-topic image links and replaces stale links on explicit rebui
   const source = driver.queryOne<{ latest_node_id: string }>(
     "SELECT latest_node_id FROM import_sources WHERE remote_document_id = 'epub-1'"
   )!;
-  const root = driver.queryOne<{ id: string; content: string }>(
-    `SELECT id, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = ?`, [source.latest_node_id]
+  const root = { id: source.latest_node_id };
+  const section = driver.queryOne<{ id: string }>(
+    "SELECT id FROM nodes WHERE title = 'Section'"
   )!;
-  const section = driver.queryOne<{ id: string; content: string }>(
-    `SELECT id, ${buildNodeBodyContentSql('nodes')} AS content FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE title = 'Section'`
-  )!;
-  expect(root.content).toContain(`asset://${'a'.repeat(64)}.png`);
-  expect(section.content).toContain(`asset://${'b'.repeat(64)}.png`);
+  expect(loadNodeBodyResolution(driver, root.id)).toMatchObject({ content: expect.stringContaining(`asset://${'a'.repeat(64)}.png`) });
+  expect(loadNodeBodyResolution(driver, section.id)).toMatchObject({ content: expect.stringContaining(`asset://${'b'.repeat(64)}.png`) });
   for (const nodeId of [root.id, section.id]) persistNodeResourceReference(nodeId, {
     storage_key: `${'c'.repeat(64)}.png`, original_name: 'Stale.png', role: 'image'
   });

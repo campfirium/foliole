@@ -5,7 +5,7 @@ import {
   type SyncPackNodeVersionParentRow,
   type SyncPackNodeVersionRow
 } from '../../lib/core/sync/syncPackNodeVersions.js';
-import { projectTopicTextPackSnapshot } from '../../lib/core/sync/topicTextPackPayload.js';
+import { readTopicTextSnapshot } from '../../lib/core/sync/topicTextBodies.js';
 
 import type { VersionHead } from './syncPackVersionHeads.js';
 
@@ -101,7 +101,8 @@ function* loadVersionLineage(
      FROM node_sync_versions WHERE version_id = ?`, [versionId]);
   if (!row) throw new Error(`sync_pack_node_version_missing:${versionId}`);
   assertValidNodeVersionSnapshot(row);
-  yield { ...row, snapshot_json: projectTopicTextPackSnapshot(driver, row.snapshot_json, row.body_text) };
+  readTopicTextSnapshot(row.snapshot_json, row.body_text !== null);
+  yield row;
 }
 
 function loadParentVersionIds(driver: DatabaseDriver,

@@ -91,7 +91,7 @@ it('preserves dirty local content without creating a duplicate topic before an a
   await expect(applySyncNodesAsync([remoteRecord()])).resolves.toEqual([]);
 
   const connection = openDatabaseConnection();
-  expect(connection.sqlite.prepare(`SELECT n.current_version_id, ${buildNodeBodyContentSql('n', 'bd')} AS content,
+  expect(connection.sqlite.prepare(`SELECT n.current_version_id, ${buildNodeBodyContentSql('n')} AS content,
     n.sync_dirty, n.deleted_at FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash
     WHERE n.id = ?`).get('node-1'))
     .toEqual({
@@ -122,7 +122,7 @@ it('preserves dirty local content without creating a duplicate topic before an a
     })
   ])).resolves.toEqual(['node-1']);
 
-  expect(connection.sqlite.prepare(`SELECT n.current_version_id, ${buildNodeBodyContentSql('n', 'bd')} AS content,
+  expect(connection.sqlite.prepare(`SELECT n.current_version_id, ${buildNodeBodyContentSql('n')} AS content,
     n.sync_dirty, n.deleted_at FROM nodes n LEFT JOIN content_blob_data bd ON bd.hash = n.body_blob_hash
     WHERE n.id = ?`).get('node-1'))
     .toEqual({

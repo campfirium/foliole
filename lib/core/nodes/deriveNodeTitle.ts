@@ -1,13 +1,14 @@
 import { projectImageOnlyMarkdownLabel } from '../import/markdownImageLabel.js';
 
+import { normalizeNodeTitle } from './nodeTitleBudget.js';
+
 export const UNTITLED_NODE_TITLE = 'Untitled';
-const NODE_TITLE_MAX_CHARS = 100;
 const MARKDOWN_HEADING_PATTERN = /^\s{0,3}#{1,6}\s+(.+)$/;
 const UNTITLED_NODE_TITLE_PATTERN = /^Untitled(?: (\d+))?$/;
 
 export function deriveNodeTitleFromContent(content: string) {
   const imageOnlyTitle = projectImageOnlyMarkdownLabel(content);
-  if (imageOnlyTitle) return imageOnlyTitle;
+  if (imageOnlyTitle) return normalizeNodeTitle(imageOnlyTitle);
   const headingTitle = pickHeadingTitle(content);
   if (headingTitle) return headingTitle;
   return pickFirstTextTitle(content) || UNTITLED_NODE_TITLE;
@@ -50,7 +51,7 @@ function pickFirstTextTitle(content: string) {
 }
 
 function sanitizeTitleCandidate(value: string) {
-  return value.trim().replace(/\s+/g, ' ').slice(0, NODE_TITLE_MAX_CHARS);
+  return normalizeNodeTitle(value.trim().replace(/\s+/g, ' '));
 }
 
 function stripMarkdownPrefixes(value: string) {

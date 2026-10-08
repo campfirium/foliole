@@ -189,7 +189,7 @@ function resolveAnnotations(
        n.is_title_manual, n.created_at, n.updated_at FROM nodes n
     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
     WHERE n.parent_id = ? AND n.deleted_at IS NULL`, [artifact.latest_node_id])
-    .map((row) => ({ ...row, content: requireResolvedNodeBody(row, row.id).content }));
+    .map((row) => ({ ...row, content: requireResolvedNodeBody(row).content }));
   return highlights.flatMap((highlight, index) => {
     const remote = documents.get(artifact.ids[index]!);
     const matches = children.filter((child) => child.is_title_manual === 0 && child.created_at === child.updated_at &&

@@ -45,14 +45,14 @@ afterEach(async () => {
 
 function settingRecord(index: number, payloadJson?: string): NativeSyncObjectRecord {
   const payload = payloadJson ?? JSON.stringify({
-    form_factor: '*', host_name: '*', key: `batch_${index}`, platform: '*',
+    form_factor: `batch-${index}`, host_name: '*', key: 'search_aliases_document', platform: '*',
     scope: 'user_space', value_json: `{"index":${index}}`
   });
   return {
     content_hash: payloadJson === '{' ? 'invalid-payload-hash'
       : computeSyncContentHash('setting', JSON.parse(payload)),
     deleted_at: null,
-    object_id: `user_space:*:*:*:batch_${index}`,
+    object_id: `user_space:*:batch-${index}:*:search_aliases_document`,
     object_type: 'setting',
     payload_json: payload,
     updated_at: `2026-04-21T16:${String(index).padStart(2, '0')}:00.000Z`
@@ -97,17 +97,17 @@ it('rolls back a failed batch and retries records individually', async () => {
   const counting = createCountingPort();
 
   await expect(applySyncObjectsWithDbPort(counting.port, records, { onSkippedRecord: skipped }))
-    .resolves.toEqual(['setting:user_space:*:*:*:batch_1', 'setting:user_space:*:*:*:batch_3']);
+    .resolves.toEqual(['setting:user_space:*:batch-1:*:search_aliases_document', 'setting:user_space:*:batch-3:*:search_aliases_document']);
 
   expect(skipped).toHaveBeenCalledTimes(1);
   expect(counting.transactionCount).toBeGreaterThan(1);
   expect(openDatabaseConnection().driver.queryOne<{ value_json: string }>(
-    'SELECT value_json FROM setting_records WHERE key = ?',
-    ['batch_1']
+    'SELECT value_json FROM setting_records WHERE key = ? AND form_factor = ?',
+    ['search_aliases_document', 'batch-1']
   )).toEqual({ value_json: '{"index":1}' });
   expect(openDatabaseConnection().driver.queryOne(
     'SELECT object_id FROM sync_object_state WHERE object_id = ?',
-    ['user_space:*:*:*:batch_2']
+    ['user_space:*:batch-2:*:search_aliases_document']
   )).toBeUndefined();
 });
 
@@ -118,14 +118,16 @@ it('rolls back canonical payload and state when the transaction callback fails',
 
   await expect(applySyncObjectsWithDbPort(counting.port, records, {
     onPayloadAppliedInTransaction: async (_port, record) => {
-      if (record.object_id.endsWith('batch_2')) throw new Error('materialization failed');
+      if (record.object_id === 'user_space:*:batch-2:*:search_aliases_document') throw new Error('materialization failed');
     },
     onSkippedRecord: skipped
-  })).resolves.toEqual(['setting:user_space:*:*:*:batch_1', 'setting:user_space:*:*:*:batch_3']);
+  })).resolves.toEqual(['setting:user_space:*:batch-1:*:search_aliases_document', 'setting:user_space:*:batch-3:*:search_aliases_document']);
 
   expect(skipped).toHaveBeenCalledTimes(1);
-  expect(openDatabaseConnection().driver.queryOne('SELECT key FROM setting_records WHERE key = ?', ['batch_2']))
+  expect(openDatabaseConnection().driver.queryOne('SELECT key FROM setting_records WHERE key = ? AND form_factor = ?',
+    ['search_aliases_document', 'batch-2']))
     .toBeUndefined();
-  expect(openDatabaseConnection().driver.queryOne('SELECT object_id FROM sync_object_state WHERE object_id LIKE ?', ['%batch_2']))
+  expect(openDatabaseConnection().driver.queryOne('SELECT object_id FROM sync_object_state WHERE object_id = ?',
+    ['user_space:*:batch-2:*:search_aliases_document']))
     .toBeUndefined();
 });

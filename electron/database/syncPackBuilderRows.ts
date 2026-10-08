@@ -140,7 +140,7 @@ function writeDocumentPackRows(db: import('better-sqlite3').Database, rows: Writ
     rows: rows.externalDocuments,
     values: (row) => [row.document_id, row.folder_id, row.relative_path, row.file_name, row.extension,
       row.source_size_bytes, row.source_modified_at, row.source_modified_ms, row.content_hash, row.title,
-      row.opening_text, row.body_blob_hash, '', row.reference_kind, row.reference_json, row.indexed_at,
+      row.opening_text, row.body_blob_hash, row.content, row.reference_kind, row.reference_json, row.indexed_at,
       row.is_present, row.missing_at,
       row.created_at, row.updated_at]
   });

@@ -1,10 +1,9 @@
 import { remapRawStoredAnchorLink } from '../../../../../lib/core/database/storedAnchorLinkRemap';
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { loadCurrentEditorSyncNode } from '../../../../../lib/core/sync/localContentEditBody';
 import { applyEditorSyncNodeRecord } from '../../../../../lib/core/sync/localContentEditBranch';
 import { createOpaqueVersionRef } from '../../../../../lib/core/sync/opaqueSyncRefs';
+import { loadCurrentSyncNodeRecord } from '../../../../../lib/core/sync/syncNodeGraph';
 import { hashText } from '../../../../../lib/core/sync/syncNodeResolution';
-import type { NodeVersionBodyStorage } from '../../../../../lib/core/sync/syncNodeTombstoneVersion';
 import { createCompanionUuid } from '../../companionUuid';
 
 interface ChildAnchor extends DbRow {
@@ -27,7 +26,6 @@ export async function remapCompanionContentAnchors(args: {
   nextContent: string;
   hostName: string;
   updatedAt: string;
-  bodyStorage?: NodeVersionBodyStorage;
 }) {
   if (args.previousContent === args.nextContent) return;
   for (const child of args.children) {
@@ -37,7 +35,7 @@ export async function remapCompanionContentAnchors(args: {
     });
     if (!('value' in remapped)) continue;
     if (remapped.value === child.anchor_link && remapped.imageRegions === child.image_regions) continue;
-    const base = await loadCurrentEditorSyncNode(args.db, child.id, false, args.bodyStorage);
+    const base = await loadCurrentSyncNodeRecord(args.db, child.id, false);
     if (!base?.version_id) throw new Error('Topic edit anchor remap requires synced child base versions.');
     const snapshot = { ...base.snapshot, anchor_link: remapped.value,
       image_regions: remapped.imageRegions, updated_at: args.updatedAt };
@@ -46,7 +44,7 @@ export async function remapCompanionContentAnchors(args: {
       ancestor_version_ids: [base.version_id], parent_version_id: base.version_id,
       parent_version_ids: [base.version_id], version_id: createOpaqueVersionRef(createCompanionUuid()),
       host_name: args.hostName, updated_at: args.updatedAt, version_created_at: args.updatedAt
-    }, { bodyStorage: args.bodyStorage ?? 'continuous', enqueueSearchInvalidations: false });
+    }, { enqueueSearchInvalidations: false });
     if (result.conflictNodes.length || result.blockedIds.length || result.tombstoneBlockedIds.length) {
       throw new Error('content_edit_anchor_remap_failed');
     }

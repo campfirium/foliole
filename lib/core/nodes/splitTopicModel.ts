@@ -1,3 +1,5 @@
+import { normalizeNodeTitle } from './nodeTitleBudget.js';
+
 export interface SplitTopicPreviewInput {
   content: string;
   delimiter: string;
@@ -17,13 +19,12 @@ export interface SplitTopicOrderInput {
   sourceNodeId: string;
 }
 
-const NODE_TITLE_MAX_CHARS = 100;
 const UNTITLED_NODE_TITLE = 'Untitled';
 const MARKDOWN_HEADING_PATTERN = /^( {0,3})(#{1,6})(?:[ \t]+(.*)|[ \t]*)$/;
 const MARKDOWN_FENCE_PATTERN = /^( {0,3})(`{3,}|~{3,})(.*)$/;
 
 function sanitizeTitleCandidate(value: string) {
-  return value.trim().replace(/\s+/g, ' ').slice(0, NODE_TITLE_MAX_CHARS);
+  return normalizeNodeTitle(value.trim().replace(/\s+/g, ' '));
 }
 
 function stripMarkdownPrefixes(value: string) {

@@ -1,12 +1,14 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { projectNodeResourceLinks } from '../database/nodeResourceReferences.js';
+import { assertNodeTextFieldsWithinBudget } from '../nodes/nodeTextBudget.js';
+import { normalizeNodeTitle } from '../nodes/nodeTitleBudget.js';
 
 import type { DbPort } from './dbPort.js';
-import { loadCurrentEditorSyncNode, loadEditorSyncNodeVersion } from './localContentEditBody.js';
 import { applyLocalContentEditBranch, type LocalContentEditOptions } from './localContentEditBranch.js';
 import { retainSubmittedLocalEdit } from './nodeVersionLocalEditHold.js';
 import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
+import { loadCurrentSyncNodeRecord, loadStoredSyncNodeVersionRecord } from './syncNodeGraph.js';
 import { hashText } from './syncNodeResolution.js';
 import { normalizeTextAlternatives } from './topicTextState.js';
 
@@ -24,17 +26,17 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
   title: string;
   updatedAt: string;
 }, applyFastForward?: () => void, options: LocalContentEditOptions = {}) {
-  const storage = options.bodyStorage ?? 'continuous';
-  if (storage === 'chunked' && applyFastForward) throw new Error('content_edit_fast_forward_storage_mismatch');
   return port.transaction(async (tx) => {
     const [live] = await tx.query<{ deleted_at: string | null }>(
       'SELECT deleted_at FROM nodes WHERE id = ?', [input.nodeId]
     );
     if (!live || live.deleted_at) throw new Error('content_edit_node_unavailable');
-    const base = await loadEditorSyncNodeVersion(tx, input.baseVersionId, false, storage);
+    const base = await loadStoredSyncNodeVersionRecord(tx, input.baseVersionId, false);
     if (!base || base.object_id !== input.nodeId) throw new Error('content_edit_base_unavailable');
-    const stored = await loadEditorSyncNodeVersion(tx, input.versionId, false, storage);
-    const current = await loadCurrentEditorSyncNode(tx, input.nodeId, Boolean(stored), storage);
+    if (input.title !== base.snapshot.title) input = { ...input, title: normalizeNodeTitle(input.title) };
+    assertNodeTextFieldsWithinBudget(input);
+    const stored = await loadStoredSyncNodeVersionRecord(tx, input.versionId, false);
+    const current = await loadCurrentSyncNodeRecord(tx, input.nodeId, Boolean(stored));
     if (!current) throw new Error('content_edit_current_version_unavailable');
     if (input.content === base.body_text) return { current, submittedVersionId: base.version_id! };
     const record = createEditRecord(base, input, current.snapshot.resource_references);
@@ -48,8 +50,8 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
     else await applyLocalContentEditBranch(tx, stored ?? record, options);
     await tx.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
     await publishLocalNodePosition(tx, input.nodeId);
-    await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER, false, storage);
-    const applied = await loadCurrentEditorSyncNode(tx, input.nodeId, false, storage);
+    await collectNodeVersionPayloads(tx, input.nodeId, Number.MAX_SAFE_INTEGER, false);
+    const applied = await loadCurrentSyncNodeRecord(tx, input.nodeId, false);
     if (!applied) throw new Error('content_edit_result_unavailable');
     return { current: applied, submittedVersionId: input.versionId };
   });

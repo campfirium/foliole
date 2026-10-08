@@ -24,8 +24,10 @@ async function fixture() {
   host = await stableEditingHost('ios');
   state.owner = host.owner;
   await host.seed(editableNode({ content: '' }), 'empty');
-  await host.seed(editableNode({ id: 'large', content: '\ufeff中😀\0'.repeat(400_000) }), 'large');
-  await host.migrate();
+  await host.seed(editableNode({ id: 'large', content: '\ufeff中😀\0'.repeat(70_000) }), 'large');
+  for (const row of host.sqlite.prepare('SELECT content FROM nodes').all() as Array<{ content: string }>) {
+    missingBody(host, row.content);
+  }
   return host;
 }
 
@@ -40,9 +42,9 @@ function missingBody(host: Awaited<ReturnType<typeof fixture>>, body: string, av
   return { hash, bytes };
 }
 
-it('recognizes verified empty and giant headers without reading chunks or restoring inline projections', async () => {
+it('materializes legacy caches from complete owned empty and Unicode bodies without changing versions', async () => {
   const host = await fixture();
-  const hashes = host.sqlite.prepare('SELECT hash FROM content_bodies ORDER BY hash').pluck().all() as string[];
+  const hashes = host.sqlite.prepare('SELECT hash FROM content_blobs ORDER BY hash').pluck().all() as string[];
   const before = host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
   const observed: string[] = [];
   const original = host.owner.runWriter.bind(host.owner);
@@ -50,48 +52,46 @@ it('recognizes verified empty and giant headers without reading chunks or restor
     query: (sql, params) => { observed.push(sql); return db.query(sql, params); }
   })));
   try {
-    expect(await loadCompanionMissingContentBlobBatch(1, 'chunked')).toMatchObject({ hashes: [], total: 0, totalBytes: 0 });
-    expect(await materializeCompanionCurrentBodies(hashes, 'chunked')).toBe(2);
-    expect(await materializeCompanionCurrentBodies(hashes, 'chunked')).toBe(0);
+    expect(await materializeCompanionCurrentBodies(hashes)).toBe(2);
+    expect(await loadCompanionMissingContentBlobBatch(1)).toMatchObject({ hashes: [], total: 0, totalBytes: 0 });
+    expect(await materializeCompanionCurrentBodies(hashes)).toBe(0);
   } finally { spy.mockRestore(); }
-  expect(observed.every((sql) => !sql.includes('content_body_chunks') && !sql.includes('content_blob_data'))).toBe(true);
+  expect(observed.every((sql) => !sql.includes('content_body_chunks'))).toBe(true);
   expect(isDeepStrictEqual(host.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all(), before)).toBe(true);
   expect(host.sqlite.prepare("SELECT count(*) FROM content_blobs WHERE availability = 'cached'").pluck().get()).toBe(2);
-  expect(host.sqlite.prepare("SELECT 1 FROM sqlite_master WHERE name = 'content_blob_data'").get()).toBeUndefined();
+  expect(host.sqlite.prepare("SELECT name FROM sqlite_master WHERE name IN ('content_bodies', 'content_body_chunks')").all()).toEqual([]);
 });
 
-it('preserves the legacy priority, failed status, limit and summary with absent and unverified headers', async () => {
+it('preserves legacy cache demand priority, failed status, limit and summary', async () => {
   const host = await fixture();
   const active = missingBody(host, 'Active', 'failed', 'active');
   const root = missingBody(host, 'Root', 'missing', 'root');
   const failed = missingBody(host, 'Failed', 'failed');
   host.sqlite.prepare("INSERT INTO workspace_meta VALUES ('active_node_id', 'active', 'now')").run();
-  host.sqlite.prepare('INSERT INTO content_bodies (hash, byte_length, verified) VALUES (?, ?, 0)').run(root.hash, root.bytes);
-  // Equivalent legacy bytes presence is explicit fixture data, removed before the stable production query.
-  host.sqlite.exec('CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)');
-  const oldData = host.sqlite.prepare('INSERT INTO content_blob_data VALUES (?, ?)');
-  for (const body of ['', '\ufeff中😀\0'.repeat(400_000)]) oldData.run(hashTextBody(body), Buffer.from(body));
+  const hashes = host.sqlite.prepare("SELECT hash FROM content_blobs WHERE hash NOT IN (?, ?, ?)")
+    .pluck().all(active.hash, root.hash, failed.hash) as string[];
+  expect(await materializeCompanionCurrentBodies(hashes)).toBe(2);
   const oldRows = host.sqlite.prepare(queryDefinition('contentBlobMissingHashes').sql).all(2);
   const oldSummary = host.sqlite.prepare(queryDefinition('contentBlobMissingSummaryRows').sql).all();
-  host.sqlite.exec('DROP TABLE content_blob_data');
-  const result = await loadCompanionMissingContentBlobBatch(2, 'chunked');
+  const result = await loadCompanionMissingContentBlobBatch(2);
   expect(result.blobs).toEqual(oldRows);
   expect(result.hashes).toEqual([active.hash, root.hash]);
   expect(result).toMatchObject({ total: 3, totalBytes: active.bytes + root.bytes + failed.bytes,
     failedCount: 2, failedBytes: active.bytes + failed.bytes });
-  expect(host.sqlite.prepare(queryDefinition('contentBlobMissingSummaryRows', 'chunked').sql).all()).toEqual(oldSummary);
-  expect(host.sqlite.prepare(queryDefinition('contentBlobDataExisting', 'chunked').sql).get(root.hash)).toBeUndefined();
-  expect(await materializeCompanionCurrentBodies([active.hash, root.hash], 'chunked')).toBe(0);
+  expect(host.sqlite.prepare(queryDefinition('contentBlobMissingSummaryRows').sql).all()).toEqual(oldSummary);
+  expect(host.sqlite.prepare(queryDefinition('contentBlobDataExisting').sql).get(root.hash)).toBeUndefined();
+  expect(await materializeCompanionCurrentBodies([active.hash, root.hash])).toBe(0);
 });
 
-it('rejects inconsistent manifests atomically while missing demand still follows header presence', async () => {
+it('leaves contradictory legacy cache manifests missing without changing owned bodies or versions', async () => {
   const host = await fixture();
-  const rows = host.sqlite.prepare('SELECT hash FROM content_bodies ORDER BY hash').pluck().all() as string[];
+  const rows = host.sqlite.prepare('SELECT hash FROM content_blobs ORDER BY hash').pluck().all() as string[];
   const invalid = hashTextBody('');
   host.sqlite.prepare('UPDATE content_blobs SET stored_size_bytes = stored_size_bytes + 1 WHERE hash = ?').run(invalid);
   const before = host.sqlite.prepare('SELECT * FROM content_blobs ORDER BY hash').all();
-  expect(await loadCompanionMissingContentBlobBatch(1, 'chunked')).toMatchObject({ hashes: [], total: 0 });
-  await expect(materializeCompanionCurrentBodies(rows, 'chunked')).rejects.toThrow('body_manifest_identity_conflict');
+  expect(await materializeCompanionCurrentBodies([invalid])).toBe(0);
   expect(host.sqlite.prepare('SELECT * FROM content_blobs ORDER BY hash').all()).toEqual(before);
-  expect(host.sqlite.prepare(queryDefinition('contentBlobDataExisting', 'chunked').sql).get(invalid)).toEqual({ hash: invalid });
+  expect(host.sqlite.prepare(queryDefinition('contentBlobDataExisting').sql).get(invalid)).toBeUndefined();
+  expect((await loadCompanionMissingContentBlobBatch(1)).hashes).toEqual([invalid]);
+  expect(rows).toContain(invalid);
 });

@@ -15,9 +15,10 @@ import {
 } from './syncNodeApplyStatements.js';
 import { enqueueAppliedNodeSearchInvalidations, type LocalSyncNodeSearchInvalidationState } from './syncNodeSearchInvalidations.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
-import { hashTextBodyContent, upsertTextBodyBlob } from './syncNodeTextBodyBlobs.js';
+import { hashTextBodyContent } from './syncNodeTextBodyBlobs.js';
+import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
 import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
-import { retainTopicTextBodies } from './topicTextBodies.js';
+import { validateTopicTextBodies } from './topicTextBodies.js';
 
 export interface AcceptedRemoteNodeResult {
   appliedIds: string[];
@@ -32,7 +33,6 @@ export interface AcceptedRemoteNodeOptions {
 async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
   const statement = buildRemoteNodeVersionUpsert(record);
   if (!statement) return;
-  if (record.body_text !== null) await retainTopicTextBodies(port, record);
   const [existing] = await port.query<DbRow>('SELECT * FROM node_sync_versions WHERE version_id = ?', [record.version_id]);
   if (existing) {
     const incomingBody = record.body_text ?? record.snapshot.content;
@@ -44,11 +44,12 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
     if (existing.body_text === null && hasCompleteTombstoneVersion(record)) {
       const body = record.body_text!;
       const bodyHash = await hashTextBodyContent(body, {});
+      const alternatives = validateTopicTextBodies(record.snapshot.text_alternatives ?? [], record.alternative_bodies ?? []);
       await port.run(
         `UPDATE node_sync_versions SET body_text = ?,
-         snapshot_json = json_set(snapshot_json, '$.body_blob_hash', ?)
+         snapshot_json = json_set(snapshot_json, '$.body_blob_hash', ?, '$.text_alternative_bodies', json(?))
          WHERE version_id = ? AND body_text IS NULL`,
-        [body, bodyHash, record.version_id]
+        [body, bodyHash, JSON.stringify(alternatives), record.version_id]
       );
     }
     return;
@@ -73,13 +74,12 @@ async function upsertRemoteNode(
   nodeExists: boolean,
   syncDirty: number
 ) {
-  const content = record.snapshot.content ?? '';
   const preparedHash = preparedTextBodyHashes.get(record);
   if (!record.snapshot.body_blob_hash && !preparedHash) {
     throw new Error('sync_text_body_hash_not_prepared');
   }
   const bodyBlobHash = record.snapshot.body_blob_hash
-    ?? await upsertTextBodyBlob(port, content, record.snapshot.updated_at, preparedHash!);
+    ?? preparedHash!;
   const statement = nodeExists
     ? buildRemoteNodeUpdate(record, bodyBlobHash, syncDirty)
     : buildRemoteNodeUpsert(record, bodyBlobHash, syncDirty);
@@ -108,6 +108,7 @@ export async function applyAcceptedRemoteNode(input: {
   result: AcceptedRemoteNodeResult;
   tx: DbPort;
 }) {
+  assertSyncNodeTextWithinBudget(input.record.snapshot);
   const syncState = await loadAppliedNodeMutationState(input.tx, input.record.object_id, input.operation);
   await applyRemoteNode(
     input.tx,

@@ -1,14 +1,9 @@
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { openDatabaseConnection } from '../database/connection.js';
 
+import { readSourceNode } from './nodeSourcePreviewBody.js';
 import type { NodeSourceUpdatePreview } from './nodeSourceUpdatePreview.js';
 import { normalizeNodeSourcePreviewContent } from './nodeSourceUpdatePreviewContent.js';
 import { loadReadwiseApiSourceUpdate } from './readwiseApiSourceUpdate.js';
-
-interface SourceNodeRow extends NodeBodyRow {
-  content: string;
-  id: string;
-}
 
 export function loadReadwiseApiUpdatePreview(nodeId: string): NodeSourceUpdatePreview | null {
   const remoteUpdate = loadReadwiseApiSourceUpdate(nodeId);
@@ -26,17 +21,6 @@ export function loadReadwiseApiUpdatePreview(nodeId: string): NodeSourceUpdatePr
     updated_highlight_count: highlightCount,
     updated_content: normalizeNodeSourcePreviewContent(remoteUpdate.content)
   };
-}
-
-function readSourceNode(nodeId: string) {
-  const row = openDatabaseConnection().driver.queryOne<SourceNodeRow>(
-    `SELECT n.id, n.content, n.body_blob_hash, cbd.data AS body_blob_data
-     FROM nodes n
-     LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-     WHERE n.id = ?`,
-    [nodeId]
-  );
-  return row ? { ...row, content: requireResolvedNodeBody(row, row.id).content } : null;
 }
 
 function countCurrentHighlights(nodeId: string) {

@@ -121,7 +121,7 @@ function insertExternalDocumentSyncState() {
   };
   upsertExternalDocuments(folder, [{
     absolutePath: '/library/doc.md',
-    content: '# External Doc\n\nExternal body must stay out of pack',
+    content: '# External Doc\n\nOwned external body',
     extension: 'md',
     fileName: 'doc.md',
     modifiedAt: '2026-04-27T00:02:00.000Z',
@@ -178,7 +178,7 @@ it('keeps the Android sync pack contract fixture deterministic', async () => {
   await buildContractFixturePack(generatedPath);
   const generatedBytes = await fs.readFile(generatedPath);
   const expectedRows = {
-    externalDocuments: [expect.objectContaining({ content: '', document_id: 'folder-1:doc.md' })],
+    externalDocuments: [expect.objectContaining({ content: '# External Doc\n\nOwned external body', document_id: 'folder-1:doc.md' })],
     manifest: expect.objectContaining({
       pack_id: 'sync-pack-contract-v1',
       tables: SYNC_PACK_CONTRACT_TABLES
