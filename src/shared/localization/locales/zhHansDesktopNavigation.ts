@@ -1,6 +1,10 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_NAVIGATION_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.bodyOverflow.title': '拆分长正文',
+  'desktop.bodyOverflow.description': '编辑后的正文超过 1 MiB。可以将完整正文拆分为当前主题下的多个主题并保存；取消则保留原文。',
+  'desktop.bodyOverflow.confirm': '拆分并保存',
+  'desktop.bodyOverflow.failed': '拆分保存失败，原文仍然保留。请重试或取消。',
   'desktop.navigation.back': '后退',
   'desktop.navigation.forward': '前进',
   'desktop.navigation.parent': '返回上级',

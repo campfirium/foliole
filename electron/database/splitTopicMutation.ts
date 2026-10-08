@@ -8,10 +8,11 @@ import { assertFoliolePublishedDeleteAllowed } from '../foliolePublish/foliolePu
 import { openDatabaseConnection } from './connection.js';
 import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersions.js';
+import { partitionEditedBody } from './partitionEditedBody.js';
 import { recordNodeSourceDispositionWithDriver } from './sourceDispositionStates.js';
 import { withTransaction } from './transaction.js';
 
-function assertSourceNodeMatches(input: NativeSplitTopicMutationArgs) {
+function assertSourceNodeMatches(input: Exclude<NativeSplitTopicMutationArgs, { disposition: 'partition-body' }>) {
   const row = openDatabaseConnection().driver.queryOne<{ id: string; parent_id: string | null }>(
     'SELECT id, parent_id FROM nodes WHERE id = ?',
     [input.sourceNodeId]
@@ -23,6 +24,7 @@ function assertSourceNodeMatches(input: NativeSplitTopicMutationArgs) {
 }
 
 export function splitTopic(input: NativeSplitTopicMutationArgs) {
+  if (input.disposition === 'partition-body') return partitionEditedBody(input);
   if (input.disposition === 'replace') assertFoliolePublishedDeleteAllowed([input.sourceNodeId]);
   assertSourceNodeMatches(input);
   const expectedParentNodeId = input.disposition === 'replace' ? input.sourceParentNodeId : input.sourceNodeId;

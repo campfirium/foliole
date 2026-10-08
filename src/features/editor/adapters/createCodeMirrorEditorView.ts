@@ -1,4 +1,4 @@
-import { type Compartment, EditorState } from '@codemirror/state';
+import { type Compartment, EditorState, type Extension } from '@codemirror/state';
 import { EditorView, type ViewUpdate } from '@codemirror/view';
 
 import { createCodeMirrorEditorExtensions } from './codeMirrorEditorAdapterConfig';
@@ -8,6 +8,7 @@ import {
 } from './codeMirrorEditorAdapterSupport';
 
 export function createCodeMirrorEditorView(args: {
+  bodyBudgetExtension?: Extension;
   diffDecorationsCompartment: Compartment;
   textAnchorDecorations: readonly import('./EditorAdapter').EditorTextAnchorDecoration[];
   hideTitleHeading: boolean;
@@ -29,7 +30,7 @@ export function createCodeMirrorEditorView(args: {
     parent: args.host,
     state: EditorState.create({
       doc: args.options.initialContent,
-      extensions: createCodeMirrorEditorExtensions({
+      extensions: [args.bodyBudgetExtension ?? [], ...createCodeMirrorEditorExtensions({
         diffDecorationsCompartment: args.diffDecorationsCompartment,
         textAnchorDecorations: args.textAnchorDecorations,
         hideTitleHeading: args.hideTitleHeading,
@@ -45,7 +46,7 @@ export function createCodeMirrorEditorView(args: {
         readOnlyCompartment: args.readOnlyCompartment,
         searchDecorationsCompartment: args.searchDecorationsCompartment,
         textAnchorDecorationsCompartment: args.textAnchorDecorationsCompartment
-      })
+      })]
     })
   });
 }

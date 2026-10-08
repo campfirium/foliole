@@ -1,3 +1,4 @@
+import { assertTextBodyWithinBudget } from '../../lib/core/nodes/textBodyBudget.js';
 import { isReadingState, type ReadingState } from '../../lib/core/review/readingState.js';
 
 import { asAnchorLink } from './commandParserAnchorLink.js';
@@ -87,6 +88,8 @@ function asReviewProfile(value: unknown, field: string): ReviewProfilePayload | 
 }
 
 export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
+  const content = asString(args.content, 'content');
+  assertTextBodyWithinBudget(content);
   return {
     nodeId: asString(args.nodeId, 'nodeId'),
     parentNodeId: asNullableString(args.parentNodeId, 'parentNodeId'),
@@ -106,7 +109,7 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     title: asString(args.title, 'title'),
     isTitleManual: asBoolean(args.isTitleManual, 'isTitleManual'),
     hideTitleHeading: args.hideTitleHeading === undefined ? false : asBoolean(args.hideTitleHeading, 'hideTitleHeading'),
-    content: asString(args.content, 'content'),
+    content,
     virtualFilter: asVirtualNodeFilterValue(args.virtualFilter, 'virtualFilter'),
     reveal: asNullableString(args.reveal, 'reveal'),
     anchorLink: asAnchorLink(args.anchorLink, 'anchorLink'),

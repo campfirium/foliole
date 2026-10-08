@@ -1,4 +1,8 @@
 export const EN_DESKTOP_NAVIGATION_TRANSLATIONS = {
+  'desktop.bodyOverflow.title': 'Split long text',
+  'desktop.bodyOverflow.description': 'The resulting text exceeds 1 MiB. Split and save the complete text as topics under this topic. Cancel to keep the original text.',
+  'desktop.bodyOverflow.confirm': 'Split and save',
+  'desktop.bodyOverflow.failed': 'Could not save the split text. The original text is unchanged. Try again or cancel.',
   'desktop.navigation.back': 'Go back',
   'desktop.navigation.forward': 'Go forward',
   'desktop.navigation.parent': 'Go to parent',

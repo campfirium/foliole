@@ -33,6 +33,12 @@ function assertUniqueNodeIds(nodeIds: string[], field: string) {
 }
 
 export function parseSplitTopicArgs(args: Record<string, unknown>): NativeSplitTopicMutationArgs {
+  if (args.disposition === 'partition-body') {
+    const sourceNodeId = asString(args.sourceNodeId, 'sourceNodeId');
+    if (!sourceNodeId) throw new Error('invalid argument: sourceNodeId');
+    return { disposition: 'partition-body', sourceNodeId,
+      expectedContent: asString(args.expectedContent, 'expectedContent'), content: asString(args.content, 'content') };
+  }
   const generatedNodes = parseGeneratedNodes(args.generatedNodes);
   const generatedNodeIds = generatedNodes.map((node) => node.nodeId);
   const activeNodeId = asString(args.activeNodeId, 'activeNodeId');

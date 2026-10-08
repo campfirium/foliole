@@ -38,7 +38,14 @@ interface NativeSplitTopicMutationBaseArgs {
   sourceParentNodeId: string | null;
 }
 
-export type NativeSplitTopicMutationArgs = NativeSplitTopicMutationBaseArgs & (
+export interface NativePartitionBodyMutationArgs {
+  disposition: 'partition-body';
+  sourceNodeId: string;
+  expectedContent: string;
+  content: string;
+}
+
+export type NativeSplitTopicMutationArgs = NativePartitionBodyMutationArgs | NativeSplitTopicMutationBaseArgs & (
   | { deletedAt: string; disposition: 'replace' }
   | { disposition: 'keep-as-parent' }
 );

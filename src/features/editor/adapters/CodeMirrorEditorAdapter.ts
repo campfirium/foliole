@@ -50,10 +50,12 @@ import {
   type EditorSelection,
   type EditorTextAnchorDecoration
 } from './EditorAdapter';
+import { EditorBodyOverflowSignal } from './editorBodyOverflowSignal';
 import { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
 import { clearRetainedRemoteImageSources } from './retainedRemoteImageDisplay';
 
 export class CodeMirrorEditorAdapter implements EditorAdapter {
+  private bodyOverflow = new EditorBodyOverflowSignal();
   private diffDecorationsCompartment = new Compartment();
   private isApplyingExternalContent = false;
   private imageClozePresentationVersion = 0;
@@ -95,6 +97,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
       isApplyingExternalContent: () => this.isApplyingExternalContent
     });
     const runtime = createCodeMirrorEditorAdapterRuntime({
+      hasBodyOverflowListener: () => this.bodyOverflow.hasListeners(),
+      onBodyOverflow: (request) => this.bodyOverflow.emit(request),
       diffDecorationsCompartment: this.diffDecorationsCompartment,
       getContent: () => this.getContent(),
       getNodeId: () => this.nodeId,
@@ -129,6 +133,7 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     this.view = runtime.view;
   }
   destroy() {
+    this.bodyOverflow.clear();
     this.externalChangeBuffer.destroy();
     this.remoteImageLocalization.destroy();
     delete this.host.dataset.paragraphMarkerActive;
@@ -251,5 +256,8 @@ export class CodeMirrorEditorAdapter implements EditorAdapter {
     };
   }
   onScroll(listener: Parameters<typeof subscribeToEditorScroll>[1]) { return subscribeToEditorScroll(this.view, listener); }
+  onBodyOverflow(listener: (request: import('./EditorAdapter').EditorBodyOverflow) => void) {
+    return this.bodyOverflow.subscribe(listener);
+  }
   private reconfigureLiveMarkdown() { reconfigureCodeMirrorLiveMarkdown({ liveMarkdownStateCompartment: this.liveMarkdownStateCompartment, textAnchorDecorations: this.textAnchorDecorations, hideTitleHeading: this.hideTitleHeading, imageClozePresentationVersion: this.imageClozePresentationVersion, localDocumentPath: this.localDocumentPath, nodeId: this.nodeId, onMissingAttachmentResource: this.onMissingAttachmentResource, onOpenExternalLink: this.onOpenExternalLink, onOpenNodeLink: this.onOpenNodeLink, onPreviewNodeLink: this.onPreviewNodeLink, onPastedAnchors: this.onPastedAnchors, view: this.view }); }
 }

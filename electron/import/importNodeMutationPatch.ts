@@ -1,6 +1,7 @@
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
 import { resolveNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { loadDerivedNodeOrder } from '../../lib/core/database/parentChildOrder.js';
+import { readBodyPartIds } from '../../lib/core/database/partitionedNodeBody.js';
 import { requireDatabaseHostName } from '../../lib/core/database/syncHostIdentity.js';
 import { WORKSPACE_BODY_STATUS_SQL } from '../../lib/core/database/workspaceBodyStatus.js';
 import { buildWorkspaceSnapshotNode } from '../../lib/core/database/workspaceSnapshotHelpers.js';
@@ -163,6 +164,13 @@ function toNodeMutationSnapshot(row: ImportedNodeRow, nodeOrder: string[]): Nati
   };
 }
 
+export function buildPersistedNodeMutationPatch(driver: DatabaseDriver, nodeIds: string[]): NativeNodeMutationPatchResult {
+  const nodeOrder = readNodeOrder(driver);
+  const rows = readImportedNodeRows(driver, nodeIds);
+  if (rows.length !== nodeIds.length) throw new Error('node_mutation_snapshot_missing');
+  return { nodeOrder, nodes: rows.map((row) => toNodeMutationSnapshot(row, nodeOrder)) };
+}
+
 export function buildImportNodeMutationPatch(
   results: Array<NativeTextImportResult | null | undefined>
 ): NativeNodeMutationPatchResult | null {
@@ -179,6 +187,7 @@ export function buildImportNodeMutationPatch(
     return null;
   }
   const nodeOrder = readNodeOrder(driver);
+  if (nodeIds.some((id) => readBodyPartIds(driver, id).length > 0)) return null;
   const nodeRows = readImportedNodeRows(driver, nodeIds);
   let nodes: NativeNodeSnapshotArgs[];
   try {

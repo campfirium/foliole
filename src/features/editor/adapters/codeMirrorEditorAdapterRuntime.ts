@@ -3,17 +3,20 @@ import type { EditorView } from '@codemirror/view';
 
 import type { EditorNodeLinkPreviewRequest } from '../model/nodeLinkPreview';
 
+import { createBodyBudgetExtension } from './codeMirrorBodyBudget';
 import type {
   CodeMirrorEditorAdapterOptions
 } from './codeMirrorEditorAdapterSupport';
 import { createCodeMirrorEditorControllers } from './codeMirrorEditorControllers';
 import { collectCodeMirrorTextHistoryEntries } from './codeMirrorTextHistory';
 import { createCodeMirrorEditorView } from './createCodeMirrorEditorView';
-import type { EditorContentChangeMeta, EditorTextAnchorDecoration } from './EditorAdapter';
+import type { EditorBodyOverflow, EditorContentChangeMeta, EditorTextAnchorDecoration } from './EditorAdapter';
 import type { EditorExternalChangeBuffer } from './editorExternalChangeBuffer';
 import type { LocalizedImageChange } from './localizeRemoteMarkdownImages';
 
 interface CodeMirrorEditorAdapterRuntimeArgs {
+  hasBodyOverflowListener: () => boolean;
+  onBodyOverflow: (request: EditorBodyOverflow) => void;
   diffDecorationsCompartment: Compartment;
   getContent: () => string;
   getNodeId: () => string | null;
@@ -74,6 +77,12 @@ function createEditorViewRuntime(
   externalChangeBuffer: EditorExternalChangeBuffer
 ) {
   return createCodeMirrorEditorView({
+    bodyBudgetExtension: createBodyBudgetExtension((transaction) => {
+      const nodeId = args.getNodeId();
+      if (!nodeId) return;
+      const request = { nodeId, previousContent: transaction.startState.doc.toString(), content: transaction.newDoc.toString() };
+      queueMicrotask(() => args.onBodyOverflow(request));
+    }, () => args.hasBodyOverflowListener() && Boolean(args.getNodeId()) && !args.isApplyingExternalContent()),
     diffDecorationsCompartment: args.diffDecorationsCompartment,
     hideTitleHeading: args.hideTitleHeading,
     host: args.host,

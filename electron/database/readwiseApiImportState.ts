@@ -1,5 +1,6 @@
 import { recordImportSourceSync } from '../../lib/core/database/importPipelineRecords.js';
-import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import type { NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
+import { readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import type { ExportBookContract, ReaderDocumentContract } from '../../lib/core/readwise/readwiseApiContract.js';
 import {
   normalizeReadwiseApiDocumentImportState,
@@ -142,7 +143,7 @@ export function loadReadwiseApiImportSource(connectionRef: string, documentId: s
   try { parsed = JSON.parse(row.remote_import_state_json); } catch { /* defaults below */ }
   return {
     annotations: normalizeRemoteAnnotationBindings(parseJson(row.remote_annotations_json)),
-    body: row.node_id && !row.node_deleted_at ? requireResolvedNodeBody(row, row.node_id).content : null,
+    body: row.node_id && !row.node_deleted_at ? readPartitionedNodeBody(openDatabaseConnection().driver, row.node_id) : null,
     nodeDeleted: Boolean(row.latest_node_id && (!row.node_id || row.node_deleted_at)),
     nodeId: row.latest_node_id,
     sourceFingerprint: row.source_fingerprint,

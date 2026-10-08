@@ -1,4 +1,5 @@
 import type { NodeKind } from '../../../lib/core/nodes/nodeKind';
+import { assertTextBodyWithinBudget } from '../../../lib/core/nodes/textBodyBudget';
 import { NATIVE_COMMANDS } from '../../../lib/platform/nativeCommands';
 
 import { getRuntimeInvoke } from './runtimeInvoke';
@@ -28,6 +29,7 @@ export function createWorkspaceRuntimeNodeSnapshot(
   node: WorkspaceRuntimeNode,
   position?: number | null
 ): WorkspaceRuntimeNodeSnapshot {
+  assertTextBodyWithinBudget(node.content);
   return {
     nodeId: node.id,
     parentNodeId: node.parentNodeId,

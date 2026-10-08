@@ -5,6 +5,7 @@ import {
 } from '../../lib/core/database/index.js';
 import { requireResolvedNodeBody, type NodeBodyRow } from '../../lib/core/database/nodeBodyResolution.js';
 import { applyParentContentChange } from '../../lib/core/database/parentContentMutation.js';
+import { expandPartitionedNodeForImport, partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import type { PersistedImportRecord, PreparedImportRecord } from '../../lib/core/import/contract.js';
 import { collectMarkdownImageReferences, parseMarkdownImageTarget } from '../../lib/core/import/markdownImageReferences.js';
 import { buildAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl.js';
@@ -166,17 +167,28 @@ function linkPreparedLocalizedImages(record: PersistedImportRecord, prepared: Pr
 export function runPreparedImport(input: PreparedImportRecord, options?: RunPreparedImportOptions) {
   const { driver, sqlite } = openDatabaseConnection();
   // Reserve the SQLite writer before import lookups establish a read snapshot.
-  const imported = sqlite.transaction(() => runPreparedImportViaDriver(driver, input, {
-    ...options, prepareDeletionVersions: (nodeIds, deletedAt) => prepareImportedNodeDeletionVersions(driver, nodeIds, deletedAt)
-  })).immediate();
-  const record = rewriteMarkdownLocalImages(imported, input);
-  linkPreparedLocalizedImages(record, input);
-  if (input.sourceKind !== 'pdf' || !record.nodeId || record.resultStatus === 'failed') {
+  return sqlite.transaction(() => {
+    const existing = driver.queryOne<{ id: string }>(
+      options?.forceUpdateExistingNodeId
+        ? 'SELECT id FROM nodes WHERE id = ? AND deleted_at IS NULL'
+        : `SELECT n.id FROM import_sources source JOIN nodes n ON n.id = source.latest_node_id
+           WHERE source.source_fingerprint = ? AND n.deleted_at IS NULL`,
+      [options?.forceUpdateExistingNodeId ?? input.sourceFingerprint]
+    );
+    if (existing) expandPartitionedNodeForImport(driver, existing.id, input.importedAt);
+    const imported = runPreparedImportViaDriver(driver, input, {
+      ...options, prepareDeletionVersions: (nodeIds, deletedAt) => prepareImportedNodeDeletionVersions(driver, nodeIds, deletedAt)
+    });
+    const record = rewriteMarkdownLocalImages(imported, input);
+    linkPreparedLocalizedImages(record, input);
+    if (input.sourceKind === 'pdf' && record.nodeId && record.resultStatus !== 'failed') {
+      importPdfSourceAttachment(record.nodeId, input.sourceLocator);
+    }
+    if (record.nodeId && record.resultStatus !== 'failed') {
+      partitionStoredNodeBody(driver, record.nodeId, record.importedAt);
+    }
     return record;
-  }
-
-  importPdfSourceAttachment(record.nodeId, input.sourceLocator);
-  return record;
+  }).immediate();
 }
 
 export function recordPreparedImportFailure(input: PreparedImportRecord, failureReason: string) {

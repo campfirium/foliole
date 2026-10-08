@@ -16,6 +16,12 @@ export interface EditorContentChangeMeta {
   textTransactions?: readonly import('../model/editorOperationHistory').EditorTextEditOperationEntry[];
 }
 
+export interface EditorBodyOverflow {
+  nodeId: string;
+  previousContent: string;
+  content: string;
+}
+
 export interface EditorSearchDecorations {
   activeIndex: number;
   matches: EditorSelection[];
@@ -50,6 +56,7 @@ export interface EditorReplaceRangeOptions {
 export type { EditorDiffDecorations } from './lineDiffDecorations';
 
 export interface EditorAdapter {
+  onBodyOverflow?(listener: (request: EditorBodyOverflow) => void): () => void;
   destroy(): void;
   focus(): void;
   getContent(): string;

@@ -87,7 +87,7 @@ function handlePermanentDeleteNodeCommand(args: Record<string, unknown>, originW
 function handleSplitTopicCommand(args: Record<string, unknown>, originWindow: OriginWindow) {
   const parsed = parseSplitTopicArgs(args);
   const result = splitTopic(parsed);
-  scheduleMirrorSync([parsed.sourceNodeId, ...parsed.generatedNodes.map((node) => node.nodeId)]);
+  scheduleMirrorSync([parsed.sourceNodeId, ...(result.createdNodeIds ?? []), ...('updatedNodeIds' in result ? result.updatedNodeIds : [])]);
   return completeWorkspaceMutation(result, originWindow);
 }
 

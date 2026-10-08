@@ -1,3 +1,4 @@
+import { bodyPartPrefix } from './bodyPartitionIdentity.js';
 import type { DatabaseDriver } from './driver.js';
 import { insertImportedHighlightNodes } from './importDerivedHighlights.js';
 import type { AnchoredImportedHighlightRecord } from './importHighlightAnchors.js';
@@ -31,8 +32,8 @@ export function readExistingChildHighlights(driver: DatabaseDriver, parentNodeId
   return driver.queryAll<ExistingChildHighlightRow>(
     `SELECT id, content, anchor_link, is_title_manual
      FROM nodes
-     WHERE parent_id = ? AND deleted_at IS NULL`,
-    [parentNodeId]
+     WHERE parent_id = ? AND deleted_at IS NULL AND id NOT LIKE ?`,
+    [parentNodeId, `${bodyPartPrefix(parentNodeId)}%`]
   );
 }
 

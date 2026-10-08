@@ -1,6 +1,7 @@
-import type { MutableRefObject } from 'react';
+import { useEffect, type MutableRefObject } from 'react';
 
 import { definedProps } from '../../../shared/lib/definedProps';
+import { requestBodyOverflow } from '../../../shared/ui/bodyOverflowRequest';
 import { CodeMirrorEditorAdapter } from '../adapters/CodeMirrorEditorAdapter';
 
 import { useEditorAppearanceEffects, useEditorLayoutEffects } from './markdownEditorLifecycle';
@@ -13,6 +14,17 @@ export function useMarkdownEditorModelEffects(args: {
   rootRef: MutableRefObject<HTMLDivElement | null>;
 }) {
   const { adapterRef, props, rootRef } = args;
+  useEffect(() => adapterRef.current?.onBodyOverflow((request) => {
+    if (request.nodeId !== props.nodeId) return;
+    requestBodyOverflow({ ...request,
+      prepare: () => {
+        if (adapterRef.current?.getContent() !== request.previousContent) return false;
+        props.onChange(request.previousContent, { nodeId: request.nodeId });
+        return true;
+      },
+      cancel: () => adapterRef.current?.focus()
+    });
+  }), [adapterRef, props.nodeId, props.onChange]);
   useEditorAppearanceEffects(adapterRef, props.hideTitleHeading ?? false, props.nodeId);
   useEditorLayoutEffects(
     adapterRef,
