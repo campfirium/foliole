@@ -14,7 +14,8 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         let databaseURL = directory.appendingPathComponent("outbound.db")
         let database = try FolioleFramedSyncTransferDatabase(url: databaseURL)
         let staging = try FolioleFramedSyncOutboundSQLite(database: database)
-        let body = Data("outbound body".utf8)
+        var body = Data("\u{FEFF}outbound body 🌿\r\n".utf8)
+        body.append(Data(repeating: 0x61, count: 1_048_576 - body.count))
         let fact = makeFact(body: body)
         let attempt = try FolioleFramedSyncTransferWriter.prepare(
             groupKey: groupKey, context: context(), facts: [fact],
@@ -39,9 +40,21 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
                 groupKey: groupKey, preamble: preamble, frame: frame,
                 expectedSequence: UInt64(sequence)
             )
-            _ = try FolioleFramedSyncCodec.decode(plaintext, authenticatedFrameType: type.rawValue)
+            let decoded = try FolioleFramedSyncCodec.decode(plaintext, authenticatedFrameType: type.rawValue)
+            if case .blobChunk(let chunk) = decoded.payload {
+                XCTAssertEqual(chunk.offset, 0)
+                XCTAssertEqual(chunk.data, body)
+            }
         }
         XCTAssertNil(try reader.nextFrame())
+        let receiverURL = directory.appendingPathComponent("receiver.db")
+        let receiver = FolioleFramedSyncTransferReceiver(database: try .init(url: receiverURL), resourceRoot: directory)
+        XCTAssertEqual(try receiver.receive(replay, groupKey: groupKey, context: context()).transferID, attempt.transferID)
+        let received = try FolioleFramedSyncTransferDatabase(url: receiverURL)
+        XCTAssertEqual(try received.rows("SELECT data FROM framed_sync_ios_available_blobs").first?[0] as? Data, body)
+        let replayReceiver = FolioleFramedSyncTransferReceiver(database: received, resourceRoot: directory)
+        XCTAssertEqual(try replayReceiver.receive(replay, groupKey: groupKey, context: context()).transferID, attempt.transferID)
+        XCTAssertEqual(try received.rows("SELECT data FROM framed_sync_ios_available_blobs").first?[0] as? Data, body)
         XCTAssertEqual(try database.rows(
             "SELECT state FROM framed_sync_ios_outbound_attempts"
         ).first?[0] as? String, "replayable")
@@ -142,7 +155,7 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         XCTAssertEqual(trailer?.blobCount, 1)
     }
 
-    func testPreparedOutboundRequiresTheNewFactListAndBlobListContract() throws {
+    func testPreparedOutboundRequiresHeaderMetadataAndBlobListContract() throws {
         let fact = bloblessFact(kind: .review, id: "review-1")
         var message = Foliole_Sync_V22_ProtocolMessage(); message.payload = .fact(fact)
         let validated = try FolioleFramedSyncCodec.validateOutbound(
@@ -152,10 +165,11 @@ final class FolioleFramedSyncOutboundTests: XCTestCase {
         let digest = Data(repeating: 9, count: 32).hex
         let decoded = try FolioleCompanionFramedSyncPreparedOutbound.decode([
             "blobs": [[String: Any]](), "content_id": digest,
-            "fact_message_bytes_list": [Array(bytes)], "manifest_hash": digest,
+            "header_message_bytes": try FramedSyncPreparedOutboundFixture.headerBytes(facts: [fact],
+                contentID: Data(repeating: 9, count: 32), transferID: Data(repeating: 8, count: 32)), "manifest_hash": digest,
             "transfer_id": Data(repeating: 8, count: 32).hex
         ])
-        XCTAssertEqual(decoded.facts.map(\.identity.factID), ["review-1"])
+        XCTAssertEqual(decoded.header.manifest.facts.map(\.identity.factID), ["review-1"])
         XCTAssertTrue(decoded.blobs.isEmpty)
         XCTAssertThrowsError(try FolioleCompanionFramedSyncPreparedOutbound.decode([
             "blob": [String: Any](), "content_id": digest,

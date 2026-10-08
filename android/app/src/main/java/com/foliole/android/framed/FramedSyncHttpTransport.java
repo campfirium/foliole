@@ -31,6 +31,8 @@ public final class FramedSyncHttpTransport {
         T read(InputStream input) throws Exception;
     }
 
+    public interface RawRequestBody { void write(OutputStream output) throws Exception; }
+
     private FramedSyncHttpTransport() {}
 
     public static <T> T post(
@@ -56,6 +58,13 @@ public final class FramedSyncHttpTransport {
         RequestBody requestBody,
         RawResponseBody<T> responseBody
     ) throws Exception {
+        return postRawStream(url, groupId, expectedRemoteDeviceId, expectedRemoteLibraryEpoch,
+            memberAuthHeaders, output -> requestBody.write(new FramedSyncStreamWriter(output)), responseBody);
+    }
+
+    public static <T> T postRawStream(URL url, String groupId, String expectedRemoteDeviceId,
+        String expectedRemoteLibraryEpoch, Map<String, String> memberAuthHeaders,
+        RawRequestBody requestBody, RawResponseBody<T> responseBody) throws Exception {
         requireText(groupId, "sync_group_id_required");
         requireText(expectedRemoteDeviceId, "remote_device_id_required");
         requireText(expectedRemoteLibraryEpoch, "remote_library_epoch_required");
@@ -74,9 +83,8 @@ public final class FramedSyncHttpTransport {
         connection.setRequestProperty("X-Sync-Group-Id", groupId);
         try {
             try (OutputStream output = connection.getOutputStream()) {
-                FramedSyncStreamWriter writer = new FramedSyncStreamWriter(output);
-                requestBody.write(writer);
-                writer.flush();
+                requestBody.write(output);
+                output.flush();
             }
             int status = connection.getResponseCode();
             if (status != 200) {
@@ -105,10 +113,16 @@ public final class FramedSyncHttpTransport {
             String prefix = "{\"error\":\"";
             if (!body.startsWith(prefix) || !body.endsWith("\"}")) return null;
             String error = body.substring(prefix.length(), body.length() - 2);
-            if (SOURCE_CHANGED.equals(error) || DIFFERENCE_SOURCE_CHANGED.equals(error)) return error;
-            if (!error.startsWith(MISSING_PARENT)) return null;
-            String parentId = error.substring(MISSING_PARENT.length());
-            return parentId.matches("[A-Za-z0-9_-]{1,128}") ? error : null;
+            if (SOURCE_CHANGED.equals(error) || DIFFERENCE_SOURCE_CHANGED.equals(error) ||
+                "framed_sync_resource_source_unavailable".equals(error)) return error;
+            for (String dependency : new String[] { MISSING_PARENT, "node_position_lineage_unproven:",
+                "parent_order_position_lineage_unproven:", "sync_parent_order_body_unavailable:",
+            "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:" }) {
+                if (!error.startsWith(dependency)) continue;
+                String identity = error.substring(dependency.length());
+                return identity.matches("[A-Za-z0-9_-]{1,128}") ? error : null;
+            }
+            return null;
         } catch (Exception ignored) {
             return null;
         }

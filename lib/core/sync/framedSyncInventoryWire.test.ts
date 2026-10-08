@@ -2,7 +2,7 @@
 
 import { expect, it } from 'vitest';
 
-import { FRAMED_SYNC_FRAME_TYPES } from './framedSyncContract.js';
+import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import {
   decodeFramedSyncInventory,
   encodeFramedSyncInventory
@@ -79,4 +79,35 @@ it('rejects missing chunks and an inventory hash mismatch', async () => {
   )];
   await expect(decodeFramedSyncInventory(corrupted))
     .rejects.toThrow('inventory_exchange_incomplete');
+});
+
+it.each([{ count: 7, lengths: [6, 1] }, { count: 18, lengths: [6, 6, 6] }])(
+  'packs the largest ordered prefixes for $count entries and immediately sends the tail', async ({ count, lengths }) => {
+  const input = entries(count).map(entry => ({ ...entry,
+    frontierFactIds: Array.from({ length: 900 }, (_, index) => `version-${index}-${'v'.repeat(125)}`)
+  }));
+  const messages = await encodeFramedSyncInventory({ entries: input, roundId });
+  const chunks = messages.filter(message => message.payloadCase === 'inventory_chunk');
+  expect(chunks.map(message => (message.payload as { entries: unknown[] }).entries.length))
+    .toEqual(lengths);
+  for (const message of chunks) {
+    expect(encodeValidatedProtocolMessage(message.payloadCase, message.payload).byteLength)
+      .toBeLessThanOrEqual(FRAMED_SYNC_LIMITS.maxControlMessageBytes);
+  }
+  await expect(decodeFramedSyncInventory(validate(messages))).resolves.toEqual({ entries: input, roundId });
+});
+
+it('keeps the largest stable prefixes when tiny entries precede near-limit entries', async () => {
+  const input = entries(8).map((entry, index) => ({ ...entry,
+    frontierFactIds: index < 4 ? entry.frontierFactIds :
+      Array.from({ length: 1800 }, (_, id) => `version-${id}-${'v'.repeat(390)}`)
+  }));
+  const messages = await encodeFramedSyncInventory({ entries: input, roundId });
+  const chunks = messages.filter(message => message.payloadCase === 'inventory_chunk');
+  expect(chunks.map(message => (message.payload as { entries: unknown[] }).entries.length)).toEqual([5, 1, 1, 1]);
+  for (const message of chunks) {
+    expect(encodeValidatedProtocolMessage(message.payloadCase, message.payload).byteLength)
+      .toBeLessThanOrEqual(FRAMED_SYNC_LIMITS.maxControlMessageBytes);
+  }
+  await expect(decodeFramedSyncInventory(validate(messages))).resolves.toEqual({ entries: input, roundId });
 });

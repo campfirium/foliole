@@ -14,9 +14,9 @@ final class FolioleFramedSyncOutboundSQLite: FolioleFramedSyncOutboundStaging {
     private let database: FolioleFramedSyncTransferDatabase
     private let frames: FolioleFramedSyncOutboundFrameFiles
 
-    init(database: FolioleFramedSyncTransferDatabase) throws {
+    init(database: FolioleFramedSyncTransferDatabase, owner: FolioleFramedSyncPayloadBudget? = nil) throws {
         self.database = database
-        frames = try .init(database: database)
+        frames = try .init(database: database, owner: owner)
     }
 
     func discard(transferID: Data) throws {

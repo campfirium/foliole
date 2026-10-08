@@ -1,42 +1,37 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import {
-  decodeFramedSyncDifferenceRequest,
-  projectFramedSyncDifferenceRequest,
-  resolveFramedSyncDifferenceRequest
-} from '../../lib/core/sync/framedSyncDifferenceRequest.js';
-import type { FramedSyncInventoryDifference } from '../../lib/core/sync/framedSyncInventory.js';
+import { FRAMED_SYNC_BATCH_LIMITS } from '../../lib/core/sync/framedSyncBatchLimits.js';
+import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
+import type { FramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventory.js';
 import {
   decodeFramedSyncInventory,
-  encodeFramedSyncInventory
+  iterateFramedSyncInventory
 } from '../../lib/core/sync/framedSyncInventoryWire.js';
 import type {
   FramedSyncSessionContext,
   FramedSyncSessionNoncePort
 } from '../../lib/core/sync/framedSyncSession.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
-import type { NodeVersionBodyStorage } from '../../lib/core/sync/syncNodeTombstoneVersion.js';
-import { publishDesktopFramedSyncNodeOutbound } from '../database/desktopFramedSyncOutboundSelection.js';
+import { readFramedSyncPayloadBudget } from '../database/framedSyncPayloadBudgetOwner.js';
 
+import { respondDesktopFramedSyncDifferenceRequests } from './desktopFramedSyncDifferenceReplies.js';
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
 import { resumeDesktopFramedSyncPendingPublications } from './desktopFramedSyncPendingPublications.js';
-import { loadDesktopFramedSyncPreparedTransferBody } from './desktopFramedSyncPreparedTransferBody.js';
-import { prepareDesktopFramedSyncPublishedTransfer } from './desktopFramedSyncProcessOutbound.js';
+import { runDesktopFramedSyncResourceRound } from './desktopFramedSyncResourceRound.js';
+import { readDesktopFramedSyncRoundInventory } from './desktopFramedSyncRoundInventory.js';
 import {
-  readDesktopFramedSyncRoundInventory,
-  readDesktopFramedSyncRoundInventoryEntry
-} from './desktopFramedSyncRoundInventory.js';
-import {
-  decodeDesktopFramedSyncSession,
-  encodeDesktopFramedSyncSession
+  encodeDesktopFramedSyncSession,
+  readDesktopFramedSyncSession
 } from './desktopFramedSyncSessionWire.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
 import { desktopSyncGroupMemberStateReadiness } from './desktopSyncGroupMemberStateReadiness.js';
 import { loadDesktopSyncGroupRoutes } from './desktopSyncGroupRoutes.js';
 
+export { requestDesktopFramedSyncDifferenceHttp, requestDesktopFramedSyncResourcesHttp }
+  from './desktopFramedSyncDifferenceHttp.js';
+
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
 
 export async function respondDesktopFramedSyncInventory(args: {
-  bodyStorage?: NodeVersionBodyStorage;
   context: AuthenticatedContext;
   db: DbPort;
   groupKey: Uint8Array;
@@ -45,76 +40,70 @@ export async function respondDesktopFramedSyncInventory(args: {
   staging: FramedSyncStagingPort;
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
 }) {
-  const request = await decodeDesktopFramedSyncSession({
+  let plaintextBytes = 0;
+  const incoming = readDesktopFramedSyncSession({
     authenticatedContext: args.context,
     authorDeviceId: args.context.initiatorDeviceId,
-    frames: args.stream.frames,
-    groupKey: args.groupKey,
-    preamble: args.stream.preamble
+    frames: args.stream.frames, groupKey: args.groupKey, preamble: args.stream.preamble,
+    onPlaintextBytes: bytes => { plaintextBytes += bytes; }
   });
-  if (request[0]?.payloadCase === 'difference_request') {
-    return respondDesktopFramedSyncDifferenceRequest({ ...args, request });
+  const first = await incoming.next();
+  if (first.done) throw new Error('inventory_exchange_incomplete');
+  if (first.value.payloadCase === 'difference_request') {
+    const requests = [first.value];
+    try {
+      for await (const request of incoming) {
+        requests.push(request);
+        if (requests.length > FRAMED_SYNC_BATCH_LIMITS.maxItems || plaintextBytes > FRAMED_SYNC_LIMITS.maxControlMessageBytes) {
+          throw new Error('framed_sync_difference_request_limit_exceeded');
+        }
+      }
+      if (plaintextBytes > FRAMED_SYNC_LIMITS.maxControlMessageBytes) throw new Error('framed_sync_difference_request_limit_exceeded');
+      return respondDesktopFramedSyncDifferenceRequests({ ...args, requests });
+    } finally { await incoming.return(undefined); }
   }
-  const { roundId, entries: remoteInventory } = await decodeFramedSyncInventory(request);
+  const { roundId, entries: remoteInventory } = await decodeFramedSyncInventory((async function* () {
+    try { yield first.value; yield* incoming; }
+    finally { await incoming.return(undefined); }
+  })());
   const route = loadDesktopSyncGroupRoutes(args.context.groupId).find((peer) =>
     peer.peer_device_id === args.context.initiatorDeviceId);
   if (route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') await resumeDesktopFramedSyncPendingPublications({
-    bodyStorage: args.bodyStorage ?? 'continuous',
     db: args.db, groupId: args.context.groupId, groupSecret: args.groupSecret,
     local: { deviceId: args.context.responderDeviceId, libraryEpoch: args.context.responderLibraryEpoch },
     peer: { deviceId: args.context.initiatorDeviceId, libraryEpoch: args.context.initiatorLibraryEpoch },
     peerOrigin: route.endpoint_url, staging: args.staging, remoteInventory
   });
-  const entries = await readDesktopFramedSyncRoundInventory(args.db, args.bodyStorage ?? 'continuous');
-  const messages = await encodeFramedSyncInventory({ entries, roundId });
+  if (route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') {
+    await reconcileResponderResources(args, route.endpoint_url, roundId, remoteInventory);
+  }
+  const entries = await readDesktopFramedSyncRoundInventory(args.db);
+  const messages = iterateFramedSyncInventory({ entries, roundId });
   return encodeDesktopFramedSyncSession({
     authenticatedContext: args.context,
     groupKey: args.groupKey,
     messages,
-    noncePort: args.noncePort
+    noncePort: args.noncePort,
+    payloadBudget: readFramedSyncPayloadBudget(args.db)
   });
 }
 
-async function respondDesktopFramedSyncDifferenceRequest(args: Parameters<
-  typeof respondDesktopFramedSyncInventory
->[0] & { request: Awaited<ReturnType<typeof decodeDesktopFramedSyncSession>> }) {
-  if (args.request.length !== 1) throw new Error('framed_sync_difference_request_count_invalid');
-  const request = decodeFramedSyncDifferenceRequest(args.request[0]!);
-  const first = request.facts[0];
-  if (!first) throw new Error('framed_sync_difference_request_fact_required');
-  const current = await readDesktopFramedSyncRoundInventoryEntry(args.db, first, args.bodyStorage ?? 'continuous');
-  if (!current) throw new Error('framed_sync_difference_request_source_missing');
-  const difference = resolveFramedSyncDifferenceRequest(current, request);
-  const selection = await publishDesktopFramedSyncNodeOutbound({
-    bodyStorage: args.bodyStorage ?? 'continuous',
-    context: {
-      groupId: args.context.groupId,
-      protocolVersion: args.context.protocolVersion,
-      receiverDeviceId: args.context.initiatorDeviceId,
-      receiverLibraryEpoch: args.context.initiatorLibraryEpoch,
-      senderDeviceId: args.context.responderDeviceId,
-      senderLibraryEpoch: args.context.responderLibraryEpoch
-    },
-    difference,
-    port: args.db,
-    readCurrentInventoryEntry: (tx, key) =>
-      readDesktopFramedSyncRoundInventoryEntry(tx, key, args.bodyStorage ?? 'continuous')
-  });
-  if (selection.kind === 'deferred') throw new Error('framed_sync_source_changed');
-  const attempt = await prepareDesktopFramedSyncPublishedTransfer({
-    bodyStorage: args.bodyStorage ?? 'continuous',
-    db: args.db,
-    groupSecret: args.groupSecret,
-    publication: selection.publication,
-    staging: args.staging
-  });
-  return loadDesktopFramedSyncPreparedTransferBody({
-    attempt, publication: selection.publication, staging: args.staging
-  });
+async function reconcileResponderResources(args: Parameters<typeof respondDesktopFramedSyncInventory>[0],
+  endpointUrl: string, roundId: Uint8Array, inventory: readonly FramedSyncInventoryEntry[]) {
+  function* nodes() {
+    for (const entry of inventory) if (entry.objectType === 'node') yield entry.globalId;
+  }
+  await runDesktopFramedSyncResourceRound({ ...args, endpointUrl, roundId,
+    context: { ...args.context,
+      initiatorDeviceId: args.context.responderDeviceId,
+      initiatorLibraryEpoch: args.context.responderLibraryEpoch,
+      responderDeviceId: args.context.initiatorDeviceId,
+      responderLibraryEpoch: args.context.initiatorLibraryEpoch }
+  }, nodes());
 }
 
 export async function exchangeDesktopFramedSyncInventoryHttp(args: {
-  bodyStorage?: NodeVersionBodyStorage;
+  localInventory?: readonly FramedSyncInventoryEntry[];
   context: AuthenticatedContext;
   db: DbPort;
   endpointUrl: string;
@@ -123,16 +112,18 @@ export async function exchangeDesktopFramedSyncInventoryHttp(args: {
   noncePort: FramedSyncSessionNoncePort;
 }) {
   const roundId = crypto.getRandomValues(new Uint8Array(16));
-  const local = await readDesktopFramedSyncRoundInventory(args.db, args.bodyStorage ?? 'continuous');
-  const messages = await encodeFramedSyncInventory({ entries: local, roundId });
+  const local = args.localInventory ?? await readDesktopFramedSyncRoundInventory(args.db);
+  const messages = iterateFramedSyncInventory({ entries: local, roundId });
   const body = await encodeDesktopFramedSyncSession({
     authenticatedContext: args.context,
     groupKey: args.groupKey,
     messages,
-    noncePort: args.noncePort
+    noncePort: args.noncePort,
+    payloadBudget: readFramedSyncPayloadBudget(args.db)
   });
   const response = await postDesktopFramedSync({
     body,
+    payloadBudget: readFramedSyncPayloadBudget(args.db),
     endpointUrl: args.endpointUrl,
     groupId: args.context.groupId,
     localDeviceId: args.context.initiatorDeviceId,
@@ -142,7 +133,7 @@ export async function exchangeDesktopFramedSyncInventoryHttp(args: {
     remoteLibraryEpoch: args.context.responderLibraryEpoch,
     secret: args.groupSecret
   });
-  const decoded = await decodeDesktopFramedSyncSession({
+  const decoded = readDesktopFramedSyncSession({
     authenticatedContext: args.context,
     authorDeviceId: args.context.responderDeviceId,
     frames: response.stream.frames,
@@ -154,36 +145,6 @@ export async function exchangeDesktopFramedSyncInventoryHttp(args: {
   return { local, remote: remote.entries, roundId };
 }
 
-export async function requestDesktopFramedSyncDifferenceHttp(args: {
-  context: AuthenticatedContext;
-  difference: FramedSyncInventoryDifference;
-  endpointUrl: string;
-  groupKey: Uint8Array;
-  groupSecret: string;
-  noncePort: FramedSyncSessionNoncePort;
-  roundId: Uint8Array;
-}) {
-  const projected = projectFramedSyncDifferenceRequest({
-    difference: args.difference, roundId: args.roundId
-  });
-  const body = await encodeDesktopFramedSyncSession({
-    authenticatedContext: args.context,
-    groupKey: args.groupKey,
-    messages: [{ payload: projected.payload, payloadCase: 'difference_request' }],
-    noncePort: args.noncePort
-  });
-  return (await postDesktopFramedSync({
-    body,
-    endpointUrl: args.endpointUrl,
-    groupId: args.context.groupId,
-    localDeviceId: args.context.initiatorDeviceId,
-    localLibraryEpoch: args.context.initiatorLibraryEpoch,
-    pathWithQuery: '/companion/framed-sync',
-    remoteDeviceId: args.context.responderDeviceId,
-    remoteLibraryEpoch: args.context.responderLibraryEpoch,
-    secret: args.groupSecret
-  })).stream;
-}
 
 function sameBytes(left: Uint8Array, right: Uint8Array) {
   return left.byteLength === right.byteLength && left.every((byte, index) => right[index] === byte);

@@ -19,6 +19,7 @@ import {
   createSyncGroupDeviceIdentity,
   devicePathFlavorFromCanonicalLibraryPath
 } from '../../../../../lib/platform/syncGroupUnifiedContract';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, evaluateSyncProtocolCompatibility } from '../../../../../lib/platform/syncProtocolContract';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
@@ -34,10 +35,11 @@ export function loadCompanionSyncGroupMemberState() {
   });
 }
 
-export function applyCompanionSyncGroupMemberState(
+export async function applyCompanionSyncGroupMemberState(
   incoming: SyncGroupMemberStatePayload,
   authenticatedDeviceId: string
 ) {
+  assertIncomingProtocolCompatible(incoming);
   return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter(
     (db) => db.transaction(async (tx) => {
       const context = await loadContext(tx);
@@ -94,6 +96,13 @@ export function applyCompanionSyncGroupMemberState(
   ));
 }
 
+function assertIncomingProtocolCompatible(incoming: SyncGroupMemberStatePayload) {
+  const compatibility = evaluateSyncProtocolCompatibility(incoming.protocol);
+  if (compatibility.status !== 'compatible') {
+    throw new Error(`sync_group_peer_incompatible:${compatibility.reason ?? 'unknown'}`);
+  }
+}
+
 export async function isCompanionSyncGroupDeviceBlocked(groupId: string, deviceId: string) {
   return getIosCompanionDatabaseOwner().read(async (db) => Boolean((await db.query<DbRow>(
     `SELECT 1 AS blocked FROM sync_group_removal_decisions
@@ -116,6 +125,7 @@ async function loadState(db: DbPort, context: Context): Promise<SyncGroupMemberS
   const adoptedFrom = !adoption && completedSyncGroupAdoptionSource(completed?.value, context.groupId, proof.library_epoch);
   return {
     contract_version: SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION,
+    protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
     ...(adoption ? { adopting_from: adoption.providerDeviceId } : {}),
     ...(adoptedFrom ? { adopted_from: adoptedFrom } : {}),
     devices: await loadDevices(db, context.groupId),

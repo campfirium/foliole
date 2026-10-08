@@ -1,3 +1,6 @@
+import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
+
+import { isBodyDescriptor } from './framedSyncBlobContract.js';
 import {
   assertFramedSyncDigest,
   FRAMED_SYNC_LIMITS,
@@ -112,7 +115,7 @@ export function unique(values: readonly string[], name: string) {
   if (new Set(values).size !== values.length) throw new Error(`${name}_duplicate`);
 }
 
-function factIdentity(value: unknown) {
+export function factIdentity(value: unknown) {
   const identity = row(value);
   enumValue(identity.kind, 8, 'fact_kind');
   const parts = ['objectType', 'globalId', 'factId'].map((key) => text(identity[key], key));
@@ -123,7 +126,8 @@ export function blobReference(value: unknown) {
   const blob = row(value);
   const hash = digest(blob.sha256, 'blob_hash');
   enumValue(blob.role, 5, 'blob_role');
-  if (unsigned(blob.byteLength, 'blob_byte_length') > BigInt(FRAMED_SYNC_LIMITS.maxBlobBytes)) {
+  const limit = isBodyDescriptor({ role: Number(blob.role) }) ? TEXT_BODY_MAX_BYTES : FRAMED_SYNC_LIMITS.maxBlobBytes;
+  if (unsigned(blob.byteLength, 'blob_byte_length') > BigInt(limit)) {
     throw new Error('blob_byte_length_limit_exceeded');
   }
   return hex(hash);

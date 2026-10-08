@@ -16,6 +16,7 @@ final class FramedSyncContractTests: XCTestCase {
         "missing_blob_set": "missing-blob-set",
         "transfer_header": "transfer-header",
         "fact": "fact",
+        "fact_fragment": "fact-fragment",
         "blob_chunk": "blob-chunk",
         "transfer_trailer": "transfer-trailer",
         "transfer_receipt": "transfer-receipt",
@@ -46,7 +47,7 @@ final class FramedSyncContractTests: XCTestCase {
         let fixture = try FramedSyncFixture.load()
         let fields = try FramedSyncProtoContract.payloadFields(in: fixture.proto)
         let declaredMessages = try FramedSyncProtoContract.declaredMessages(in: fixture.proto)
-        XCTAssertEqual(fields.map(\.fieldNumber), Array(1...17))
+        XCTAssertEqual(fields.map(\.fieldNumber), Array(1...18))
         XCTAssertTrue(fields.allSatisfy { declaredMessages.contains($0.messageType) })
 
         let fieldsByName = Dictionary(uniqueKeysWithValues: fields.map { ($0.fieldName, $0) })
@@ -105,6 +106,7 @@ private extension Foliole_Sync_V22_ProtocolMessage.OneOf_Payload {
         case .missingBlobSet: "missing_blob_set"
         case .transferHeader: "transfer_header"
         case .fact: "fact"
+        case .factFragment: "fact_fragment"
         case .blobChunk: "blob_chunk"
         case .transferTrailer: "transfer_trailer"
         case .transferReceipt: "transfer_receipt"

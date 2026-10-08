@@ -12,6 +12,8 @@ import {
   frameAad,
   frameNonce
 } from '../../lib/core/sync/framedSyncFraming.js';
+import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
+import { leaseFramedSyncPayloads } from '../../lib/core/sync/framedSyncPayloadLease.js';
 import { encodeValidatedProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
 export {
   blobToWire,
@@ -39,9 +41,10 @@ export async function* processFrameStream(
     ciphertext: Uint8Array;
     frameHeader?: Uint8Array;
     headerBytes?: Uint8Array;
-  }>>
+  }>>,
+  payloadBudget?: FramedSyncPayloadBudget
 ) {
-  for await (const frame of frames) {
+  for await (const frame of leaseFramedSyncPayloads(frames, payloadBudget, 'outbound')) {
     const headerBytes = frame.headerBytes ?? frame.frameHeader;
     if (!headerBytes) throw new Error('framed_sync_frame_header_missing');
     yield { ciphertext: frame.ciphertext, headerBytes };
@@ -56,9 +59,9 @@ export async function encryptProtocolFrame(input: {
   payloadCase: Parameters<typeof encodeValidatedProtocolMessage>[0];
   sequence: bigint;
   transferId: Uint8Array;
-}): Promise<StoredEncryptedFrame> {
+}, encode = encodeValidatedProtocolMessage): Promise<StoredEncryptedFrame> {
   const { deriveTransferFrameKey } = await import('../../lib/core/sync/framedSyncCrypto.js');
-  const plaintext = encodeValidatedProtocolMessage(input.payloadCase, input.payload);
+  const plaintext = encode(input.payloadCase, input.payload);
   const frameHeader = encodeFrameHeader({ ciphertextBytes: plaintext.byteLength + 16,
     flags: 0, frameType: input.frameType, sequence: input.sequence });
   const key = await deriveTransferFrameKey({ attemptId: input.attempt.attemptId,

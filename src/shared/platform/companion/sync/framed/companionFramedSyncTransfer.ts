@@ -1,7 +1,7 @@
 import type { NativeCompanionFramedSyncTransferReceipt } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
 
-interface SendCompanionFramedSyncObjectArgs {
+export interface SendCompanionFramedSyncObjectArgs {
   endpointUrl: string;
   groupId: string;
   includeCurrentNode: boolean;
@@ -16,8 +16,8 @@ interface SendCompanionFramedSyncObjectArgs {
 
 const HEX_DIGEST = /^[a-f0-9]{64}$/u;
 
-function assertReceipt(
-  args: SendCompanionFramedSyncObjectArgs,
+export function assertCompanionFramedSyncReceipt(
+  args: Pick<SendCompanionFramedSyncObjectArgs, 'receiverDeviceId' | 'receiverLibraryEpoch'>,
   receipt: NativeCompanionFramedSyncTransferReceipt
 ) {
   if (receipt.receiver_device_id !== args.receiverDeviceId ||
@@ -42,6 +42,6 @@ export async function sendCompanionFramedSyncObject(args: SendCompanionFramedSyn
     state_fact_ids: args.stateFactIds,
     sync_group_id: args.groupId
   });
-  assertReceipt(args, receipt);
+  assertCompanionFramedSyncReceipt(args, receipt);
   return receipt;
 }

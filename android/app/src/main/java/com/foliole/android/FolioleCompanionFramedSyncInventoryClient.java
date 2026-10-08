@@ -3,18 +3,20 @@ package com.foliole.android;
 import android.content.Context;
 import android.util.Base64;
 import com.foliole.android.framed.FramedSyncHttpTransport;
+import com.foliole.android.framed.FramedSyncPayloadBudget;
+import com.foliole.android.framed.FramedSyncPayloadBudgetRegistry;
 import com.foliole.android.framed.FramedSyncInventoryWire;
+import com.foliole.android.framed.FramedSyncInventoryReader;
 import com.foliole.android.framed.FramedSyncSessionContext;
 import com.foliole.android.framed.FramedSyncSessionNonceSQLite;
 import com.foliole.android.framed.FramedSyncSessionReader;
-import com.foliole.android.framed.FramedSyncSessionWriter;
+import com.foliole.android.framed.FramedSyncSessionFile;
 import com.foliole.sync.v22.InventoryEntry;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.List;
 import org.json.JSONArray;
@@ -27,6 +29,7 @@ final class FolioleCompanionFramedSyncInventoryClient {
     private FolioleCompanionFramedSyncInventoryClient() {}
 
     static JSObject read(Context context, PluginCall call) throws Exception {
+        var budget = FramedSyncPayloadBudgetRegistry.current();
         String groupId = required(call, "sync_group_id");
         String endpointUrl = required(call, "endpoint_url");
         String receiverDeviceId = required(call, "receiver_device_id");
@@ -34,28 +37,31 @@ final class FolioleCompanionFramedSyncInventoryClient {
         FolioleCompanionCurrentGroupCredential credential =
             FolioleCompanionCurrentGroupCredential.load(groupId);
         FolioleCompanionSyncGroupDataBridge bridge = FolioleCompanionSyncGroupDataBridge.current();
-        String senderEpoch = localEpoch(bridge);
-        List<InventoryEntry> localEntries = FolioleCompanionFramedSyncInventory.read(
-            bridge.request("read_framed_inventory", new JSONObject()));
+        String senderEpoch = localEpoch(bridge, budget);
+        List<InventoryEntry> localEntries = FolioleCompanionFramedSyncInventory.readLeased(bridge, new JSONObject(), budget);
         byte[] groupKey = groupKey(credential.workgroupKey);
         byte[] roundId = random(16);
         FramedSyncSessionContext sessionContext = new FramedSyncSessionContext(
             groupId, credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
-        byte[] request;
-        try (FramedSyncSessionNonceSQLite nonces = new FramedSyncSessionNonceSQLite(context)) {
-            request = FramedSyncSessionWriter.encode(groupKey, sessionContext,
-                FramedSyncInventoryWire.encode(localEntries, roundId), nonces);
+        try (FramedSyncSessionNonceSQLite nonces = new FramedSyncSessionNonceSQLite(context);
+             FramedSyncSessionFile request = FramedSyncSessionFile.create(context.getCacheDir(),
+                groupKey, sessionContext,
+                consumer -> FramedSyncInventoryWire.emit(localEntries, roundId, consumer), nonces, budget)) {
+            String path = path(credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
+            List<InventoryEntry> entries = FramedSyncHttpTransport.post(
+                new URL(join(endpointUrl, path)), groupId, receiverDeviceId, receiverEpoch,
+                FolioleCompanionSyncGroupSigning.framedHeaders(
+                    credential, groupId, path, request.sha256()),
+                request::replay,
+                reader -> {
+                    FramedSyncInventoryReader inventory = new FramedSyncInventoryReader(true);
+                    FramedSyncSessionReader.readEach(reader.budgeted(budget,
+                        FramedSyncPayloadBudget.Direction.INBOUND, FramedSyncPayloadBudget.Lane.PAYLOAD), groupKey, sessionContext,
+                        FramedSyncInventoryWire.MAX_SESSION_FRAMES, inventory::accept);
+                    return inventory.entries(roundId);
+                });
+            return json(entries, roundId);
         }
-        String path = path(credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
-        List<InventoryEntry> entries = FramedSyncHttpTransport.post(
-            new URL(join(endpointUrl, path)), groupId, receiverDeviceId, receiverEpoch,
-            FolioleCompanionSyncGroupSigning.framedHeaders(
-                credential, groupId, path, sha256(request)),
-            writer -> FramedSyncSessionWriter.replay(request, writer),
-            reader -> FramedSyncInventoryWire.decodeEntries(
-                FramedSyncSessionReader.read(reader, groupKey, sessionContext,
-                    FramedSyncInventoryWire.MAX_SESSION_FRAMES).messages(), roundId));
-        return json(entries, roundId);
     }
 
     private static JSObject json(List<InventoryEntry> entries, byte[] roundId) {
@@ -101,9 +107,9 @@ final class FolioleCompanionFramedSyncInventoryClient {
         return URLEncoder.encode(value, "UTF-8");
     }
 
-    private static String localEpoch(FolioleCompanionSyncGroupDataBridge bridge) throws Exception {
+    private static String localEpoch(FolioleCompanionSyncGroupDataBridge bridge, com.foliole.android.framed.FramedSyncPayloadBudget budget) throws Exception {
         String value = bridge.request(
-            "load_member_state", new JSONObject()).optString("library_epoch", null);
+            "load_member_state", new JSONObject(), budget).optString("library_epoch", null);
         if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException("library_epoch_required");
         }
@@ -114,10 +120,6 @@ final class FolioleCompanionFramedSyncInventoryClient {
         byte[] result = Base64.decode(value, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
         if (result.length != 32) throw new SecurityException("sync_group_key_invalid");
         return result;
-    }
-
-    private static String sha256(byte[] value) throws Exception {
-        return hex(MessageDigest.getInstance("SHA-256").digest(value));
     }
 
     private static byte[] random(int length) {

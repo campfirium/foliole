@@ -84,6 +84,22 @@ it('accepts the exact reversible node-version shape', () => {
   expect(() => assertNodeVersionFactShape(fact())).not.toThrow();
 });
 
+it('keeps attachment references in a database fact without requiring attachment bytes', () => {
+  const value = fact();
+  const snapshotValue = value.body.find((field) => field.name === 'snapshot')!.value;
+  if (snapshotValue.kind !== 'object') throw new Error('test_snapshot_required');
+  const references = JSON.stringify([
+    { original_name: 'Cover.png', role: 'image', storage_key: `${'3'.repeat(64)}.png` },
+    { original_name: 'Document.pdf', role: 'reference', storage_key: `${'4'.repeat(64)}.pdf` }
+  ]);
+  const databaseFact = replaceBodyField(value, 'snapshot', {
+    kind: 'object', value: snapshotValue.value.map((field) => field.name === 'resource_references'
+      ? { ...field, value: string(references) } : field)
+  });
+  expect(databaseFact.blobs.map((blob) => blob.role)).toEqual([1]);
+  expect(() => assertNodeVersionFactShape(databaseFact)).not.toThrow();
+});
+
 it('rejects incomplete, nullable, or mistyped top-level fields', () => {
   expect(() => assertNodeVersionFactShape({ ...fact(), body: fact().body.slice(1) }))
     .toThrow('node_version_fact_body_shape_invalid');

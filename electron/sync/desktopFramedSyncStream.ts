@@ -1,14 +1,18 @@
 import { createHash } from 'node:crypto';
 
+
 import {
-  FRAMED_SYNC_LIMITS,
-  FRAMED_SYNC_PREAMBLE
+  FRAMED_SYNC_LIMITS
 } from '../../lib/core/sync/framedSyncContract.js';
 import {
   decodeFrameHeader,
   decodeFramedSyncPreamble,
   type FramedSyncFrameHeader
 } from '../../lib/core/sync/framedSyncFraming.js';
+import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
+
+import { FramedSyncExactByteReader, type FramedSyncBinaryChunk } from './framedSyncExactByteReader.js';
+import { readFramedSyncWireFrames } from './framedSyncWireFrameReader.js';
 
 export type FramedSyncWireFrame = Readonly<{
   ciphertext: Uint8Array;
@@ -24,104 +28,58 @@ export type FramedSyncEncodedFrame = Readonly<{
 export type FramedSyncStreamBody<Frame extends FramedSyncEncodedFrame = FramedSyncEncodedFrame> = Readonly<{
   frames: AsyncIterable<Frame>;
   preamble: Uint8Array;
+  /** Already validated wire bytes, borrowed until the HTTP consumer requests the next chunk. */
+  encodedBytes?: AsyncIterable<Uint8Array>;
 }>;
 
 export type FramedSyncWritableBody = FramedSyncStreamBody & Readonly<{
   bodySha256: string;
   contentLength: number;
+  uncompressedMessageBytes?: number | undefined;
+  dispose?: () => Promise<void>;
 }>;
 
-type BinaryChunk = Uint8Array | string;
-
-class ExactByteReader {
-  private buffered: Uint8Array = new Uint8Array();
-  private offset = 0;
-
-  constructor(private readonly iterator: AsyncIterator<BinaryChunk>) {}
-
-  async read(length: number, truncatedError: string, allowCleanEnd?: false): Promise<Uint8Array>;
-  async read(length: number, truncatedError: string, allowCleanEnd: true): Promise<Uint8Array | null>;
-  async read(length: number, truncatedError: string,
-    allowCleanEnd = false): Promise<Uint8Array | null> {
-    const result = new Uint8Array(length);
-    let written = 0;
-    while (written < length) {
-      if (this.offset === this.buffered.byteLength) {
-        const next = await this.iterator.next();
-        if (next.done) {
-          if (allowCleanEnd && written === 0) return null;
-          throw new Error(truncatedError);
-        }
-        this.buffered = typeof next.value === 'string' ? Buffer.from(next.value) : next.value;
-        this.offset = 0;
-        if (this.buffered.byteLength === 0) continue;
-      }
-      const count = Math.min(length - written, this.buffered.byteLength - this.offset);
-      result.set(this.buffered.subarray(this.offset, this.offset + count), written);
-      written += count;
-      this.offset += count;
-    }
-    return result;
-  }
-
-  async close() {
-    this.buffered = new Uint8Array();
-    this.offset = 0;
-    await this.iterator.return?.();
-  }
-}
-
 export async function readFramedSyncStream(
-  source: AsyncIterable<BinaryChunk>
+  source: AsyncIterable<FramedSyncBinaryChunk>,
+  payloadBudget?: FramedSyncPayloadBudget,
+  /** Borrowed ciphertext remains valid until the consumer requests the next frame. */
+  options?: Readonly<{ reuseCiphertext: true }>
 ): Promise<FramedSyncStreamBody<FramedSyncWireFrame>> {
-  const reader = new ExactByteReader(source[Symbol.asyncIterator]());
+  const reader = new FramedSyncExactByteReader(source[Symbol.asyncIterator]());
   try {
     const preamble = await reader.read(
       FRAMED_SYNC_LIMITS.preambleBytes,
       'framed_sync_preamble_truncated'
     );
     decodeFramedSyncPreamble(preamble);
-    return { preamble, frames: readFrames(reader) };
+    return { preamble, frames: readFrames(reader, payloadBudget, options?.reuseCiphertext === true) };
   } catch (error) {
     await reader.close();
     throw error;
   }
 }
 
-async function* readFrames(reader: ExactByteReader): AsyncGenerator<FramedSyncWireFrame> {
-  try {
-    for (;;) {
-      const headerBytes = await reader.read(
-        FRAMED_SYNC_PREAMBLE.frameHeaderBytes,
-        'framed_sync_frame_header_truncated',
-        true
-      );
-      if (!headerBytes) return;
-      const header = decodeFrameHeader(headerBytes);
-      const ciphertext = await reader.read(
-        header.ciphertextBytes,
-        'framed_sync_frame_body_truncated'
-      );
-      yield { ciphertext, header, headerBytes };
-    }
-  } finally {
-    await reader.close();
-  }
+async function* readFrames(reader: FramedSyncExactByteReader, payloadBudget?: FramedSyncPayloadBudget,
+  reuseCiphertext = false): AsyncGenerator<FramedSyncWireFrame> {
+  try { yield* readFramedSyncWireFrames({ reader, payloadBudget, reuseCiphertext }); }
+  finally { await reader.close(); }
 }
 
 export async function* encodeFramedSyncStream(
-  body: FramedSyncStreamBody
+  body: FramedSyncStreamBody & { dispose?: () => Promise<void> }
 ): AsyncGenerator<Uint8Array> {
-  decodeFramedSyncPreamble(body.preamble);
-  yield body.preamble;
-  for await (const frame of body.frames) {
-    const header = decodeFrameHeader(frame.headerBytes);
-    if (frame.ciphertext.byteLength !== header.ciphertextBytes) {
-      throw new Error('framed_sync_frame_body_length_mismatch');
+  try {
+    decodeFramedSyncPreamble(body.preamble);
+    yield body.preamble;
+    for await (const frame of body.frames) {
+      const header = decodeFrameHeader(frame.headerBytes);
+      if (frame.ciphertext.byteLength !== header.ciphertextBytes) {
+        throw new Error('framed_sync_frame_body_length_mismatch');
+      }
+      yield frame.headerBytes;
+      yield frame.ciphertext;
     }
-    yield frame.headerBytes;
-    yield frame.ciphertext;
-  }
+  } finally { await body.dispose?.(); }
 }
 
 export function framedSyncEncodedLength(

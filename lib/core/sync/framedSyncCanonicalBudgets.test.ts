@@ -20,6 +20,16 @@ it('bounds canonical strings by UTF-8 bytes independently of the header budget',
     .toThrow('canonical_string_limit_exceeded');
 });
 
+it.each([1, 5])('limits body role %s in canonical identity input before hashing', (role) => {
+  const blob = { byteLength: 1_048_576n, required: false, role, sha256: new Uint8Array(32).fill(8) };
+  const manifest = (value: typeof blob) => ({ facts: [{ ...fact('bounded'), blobs: [value] }], blobs: [value] });
+  expect(() => canonicalManifestBytes(manifest(blob))).not.toThrow();
+  expect(() => canonicalManifestBytes(manifest({ ...blob, byteLength: 1_048_577n })))
+    .toThrow('canonical_blob_size_limit_exceeded');
+  expect(() => canonicalManifestBytes(manifest({ ...blob,
+    byteLength: BigInt(FRAMED_SYNC_LIMITS.maxBlobBytes), role: 2 }))).not.toThrow();
+});
+
 it('accepts bounded multi-fact history above the wire header budget and rejects excessive cumulative bodies', () => {
   const facts = Array.from({ length: 80 }, (_, index) => fact('x'.repeat(96 * 1024), index));
   expect(canonicalManifestBytes({ facts, blobs: [] }).byteLength)

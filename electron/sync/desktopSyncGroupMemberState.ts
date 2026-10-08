@@ -1,5 +1,6 @@
 import { parseSyncGroupMemberState } from '../../lib/platform/syncGroupMemberStateContract.js';
 import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
+import { evaluateSyncProtocolCompatibility } from '../../lib/platform/syncProtocolContract.js';
 import { runWithDatabaseConnectionOwner } from '../database/connection.js';
 import {
   applyDesktopSyncGroupMemberState,
@@ -21,7 +22,7 @@ import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 export const SYNC_GROUP_MEMBER_STATE_PATH = '/sync-group/member-state';
 
 export function acceptDesktopSyncGroupMemberState(bodyText: string, authenticatedDeviceId: string) {
-  const incoming = parseSyncGroupMemberState(JSON.parse(bodyText));
+  const incoming = readCompatibleMemberState(JSON.parse(bodyText), authenticatedDeviceId);
   const applied = applyMemberStateWithDecisionChange(incoming, authenticatedDeviceId);
   const restore = applied.state.restore;
   const canSupplyRestore = Boolean(restore?.applied &&
@@ -84,7 +85,7 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
     secret: request.secret
   });
   const result = await runWithDatabaseConnectionOwner(() => {
-    const incoming = parseSyncGroupMemberState(payload);
+    const incoming = readCompatibleMemberState(payload, peer.peer_device_id);
     const applied = applyMemberStateWithDecisionChange(
       incoming, peer.peer_device_id
     );
@@ -107,6 +108,20 @@ export async function exchangeDesktopSyncGroupMemberState(peer: DesktopSyncGroup
   if (result.watchedDecisionReceived && !result.localExited) scheduleWatchedDecisionSync();
   await refreshKeepImportMonitorFromSettings();
   return result;
+}
+
+function readCompatibleMemberState(value: unknown, deviceId: string) {
+  try {
+    const incoming = parseSyncGroupMemberState(value);
+    const compatibility = evaluateSyncProtocolCompatibility(incoming.protocol);
+    if (compatibility.status !== 'compatible') {
+      throw new Error(`sync_group_peer_incompatible:${compatibility.reason ?? 'unknown'}`);
+    }
+    return incoming;
+  } catch (error) {
+    revokeDesktopSyncGroupMemberStateReadiness(deviceId);
+    throw error;
+  }
 }
 
 export async function publishDesktopSyncGroupMemberState(

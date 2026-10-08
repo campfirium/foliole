@@ -6,10 +6,10 @@ import com.getcapacitor.JSObject;
 
 import org.json.JSONObject;
 
-import java.util.Map;
+import com.foliole.android.framed.FramedSyncPayloadBudget;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
+
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -19,7 +19,7 @@ final class FolioleCompanionSyncGroupDataBridge {
     private static Object activeOwner;
     private final Context context;
     private volatile Dispatcher dispatcher;
-    private final Map<String, CompletableFuture<JSONObject>> pending = new ConcurrentHashMap<>();
+    private final FolioleCompanionSyncGroupDataPending pending = new FolioleCompanionSyncGroupDataPending();
 
     FolioleCompanionSyncGroupDataBridge(Context context, Dispatcher dispatcher) {
         this.context = context.getApplicationContext();
@@ -49,15 +49,18 @@ final class FolioleCompanionSyncGroupDataBridge {
     }
 
     JSONObject request(String operation, JSONObject payload) throws Exception {
+        return request(operation, payload, null);
+    }
+
+    JSONObject request(String operation, JSONObject payload, FramedSyncPayloadBudget owner) throws Exception {
         String id = UUID.randomUUID().toString();
-        CompletableFuture<JSONObject> future = new CompletableFuture<>();
-        pending.put(id, future);
+        CompletableFuture<JSONObject> future = pending.register(id, owner);
         try {
             JSObject event = new JSObject();
             event.put(requestKey("requestId"), id);
             event.put(requestKey("operation"), operation);
             event.put(requestKey("payload"), payload);
-            dispatcher.dispatch(event);
+            if (pending.contains(id)) dispatcher.dispatch(event);
             return future.get(60, TimeUnit.SECONDS);
         } catch (ExecutionException error) {
             Throwable cause = error.getCause();
@@ -70,7 +73,7 @@ final class FolioleCompanionSyncGroupDataBridge {
 
     void resolve(JSONObject response) throws Exception {
         String id = response.getString(responseKey("requestId"));
-        CompletableFuture<JSONObject> future = pending.get(id);
+        CompletableFuture<JSONObject> future = pending.future(id);
         if (future == null) throw new IllegalArgumentException("sync_group_data_request_not_found");
         String error = response.optString(responseKey("error"), "");
         if (!error.isEmpty()) future.completeExceptionally(new IllegalStateException(error));
@@ -78,11 +81,10 @@ final class FolioleCompanionSyncGroupDataBridge {
             ? new JSONObject() : response.getJSONObject(responseKey("result")));
     }
 
-    void close() {
-        pending.values().forEach((future) -> future.completeExceptionally(
-            new IllegalStateException("sync_group_data_owner_stopped")));
-        pending.clear();
-    }
+    void close() { pending.close(); }
+    void cancelOwnerPending(FramedSyncPayloadBudget owner) { pending.cancelOwner(owner); }
+    boolean canDispatch(String id) { return pending.contains(id); }
+    String eventId(JSObject event) throws Exception { return event.getString(requestKey("requestId")); }
 
     private String requestKey(String key) throws Exception {
         return FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderDataRequestKey(context, key);

@@ -69,7 +69,7 @@ final class FolioleFramedSyncInboundStagingAdapter {
         case .blobChunk(let value): transferID = value.transferID
         case .transferTrailer(let value): transferID = value.transferID
         case .transferReceipt(let value): transferID = value.transferID
-        case .fact: return
+        case .fact, .factFragment: return
         default: throw FolioleFramedSyncValidationError("transfer_frame_payload_required")
         }
         guard transferID == frame.transferID else {

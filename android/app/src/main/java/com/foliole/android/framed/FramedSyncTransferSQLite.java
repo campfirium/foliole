@@ -20,7 +20,7 @@ public final class FramedSyncTransferSQLite implements AutoCloseable {
         FramedSyncCompletedInboundCleanup.recover(database);
     }
 
-    public synchronized FramedSyncTransferReader.Result receive(
+    public FramedSyncTransferReader.Result receive(
         InputStream input,
         byte[] groupKey,
         FramedSyncTransferContext context
@@ -28,23 +28,41 @@ public final class FramedSyncTransferSQLite implements AutoCloseable {
         return FramedSyncTransferReader.receive(input, groupKey, context, staging);
     }
 
-    public synchronized byte[] receipt(byte[] groupKey, TransferReceipt receipt) throws Exception {
-        byte[] encoded = FramedSyncReceiptWriter.encode(groupKey, receipt, staging);
-        FramedSyncCompletedInboundCleanup.retire(database, receipt.getTransferId().toByteArray());
-        return encoded;
+    public FramedSyncTransferReader.Result receive(InputStream input, byte[] groupKey,
+        FramedSyncTransferContext context, FramedSyncPayloadBudget budget) throws Exception {
+        return FramedSyncTransferReader.receive(input, groupKey, context, staging, budget);
+    }
+
+    public FramedSyncTransferReader.Result receive(InputStream input, byte[] groupKey,
+        FramedSyncTransferContext context, FramedSyncPayloadBudget budget,
+        FramedSyncTransferReader.HeaderGuard guard) throws Exception {
+        return FramedSyncTransferReader.receive(input, groupKey, context, staging, budget, guard);
+    }
+
+    public byte[] receipt(byte[] groupKey, TransferReceipt receipt) throws Exception {
+        synchronized (staging) {
+            byte[] encoded = FramedSyncReceiptWriter.encode(groupKey, receipt, staging);
+            FramedSyncCompletedInboundCleanup.retire(database, receipt.getTransferId().toByteArray());
+            return encoded;
+        }
+    }
+
+    public FramedSyncReceiptBody receiptBody(byte[] groupKey, TransferReceipt receipt,
+        FramedSyncPayloadBudget budget) throws Exception {
+        return FramedSyncReceiptBody.create(budget, () -> receipt(groupKey, receipt));
     }
 
     public String path() {
         return file.getAbsolutePath();
     }
 
-    public synchronized FramedSyncResourcePublication publishResources(byte[] transferId)
+    public FramedSyncResourcePublication publishResources(byte[] transferId)
         throws Exception {
-        return staging.publishResources(transferId);
+        synchronized (staging) { return staging.publishResources(transferId); }
     }
 
     @Override
-    public synchronized void close() {
-        database.close();
+    public void close() {
+        synchronized (staging) { database.close(); }
     }
 }

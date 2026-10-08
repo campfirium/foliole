@@ -1,109 +1,45 @@
-import { recordFramedSyncResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
+import { recordFramedSyncPinnedResourceAvailability } from '../../lib/core/database/framedSyncResourceAvailability.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { assertFramedSyncNodeParentDependencies } from '../../lib/core/sync/framedSyncNodeParentDependencies.js';
-import { readFramedSyncNodeResources } from '../../lib/core/sync/framedSyncNodeResources.js';
-import { applyFramedSyncObjectStateRecord } from '../../lib/core/sync/framedSyncObjectStateFact.js';
-import { assertSyncGroupLocalPublicationAllowed, finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
-import {
-  loadLatestSyncGroupRestoreEvent,
-  markSyncGroupRestoreApplied
-} from '../../lib/core/sync/syncGroupRestoreEvents.js';
-import { clearWorkgroupSyncDataForRestore } from '../../lib/core/sync/syncGroupRestoreReset.js';
-import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
+import { assertSyncGroupLocalPublicationAllowed } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { assertSyncGroupOverwriteInbound } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../lib/core/sync/syncNodeConvergence.js';
-import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
-import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 import { applyDesktopFramedSyncRelationReviewFactsWithDbPort } from '../database/desktopFramedSyncRelationReviewApply.js';
-import { materializeDesktopSettingRecord, readDesktopHostName } from '../database/desktopSettingMaterializer.js';
 
 import { createDesktopFramedReceipt as createReceipt, recordDesktopFramedSourceProgress as recordSourceProgress } from './desktopFramedSyncApplyLifecycle.js';
-import type { PreparedDesktopFramedSyncInbound } from './desktopFramedSyncPreparedInbound.js';
-import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
+import { commitDesktopFramedResourceInbound } from './desktopFramedSyncResourceApply.js';
+import { applyDesktopFramedSyncInboundStates, type DesktopFramedSyncApplyInbound } from './desktopFramedSyncStateInbound.js';
 
 export async function applyPreparedDesktopFramedSyncInbound(input: {
   db: DbPort;
-  adoption?: SyncGroupLocalAdoption;
-  restore?: Readonly<{ groupId: string; restoreId: string }>;
-  transfers: readonly PreparedDesktopFramedSyncInbound[];
+  transfers: readonly DesktopFramedSyncApplyInbound[];
 }) {
   const applied = await input.db.transaction(async (tx) => {
-    if (!input.adoption && !input.restore) await assertSyncGroupLocalPublicationAllowed(tx);
-    const removedNodes = input.adoption || input.restore
-      ? await tx.query<{ id: string }>('SELECT id FROM nodes') : [];
-    if (input.adoption) await clearWorkgroupSyncDataForRestore(tx, input.adoption.libraryEpoch);
-    const restore = input.restore ? await prepareRestore(tx, input.restore) : null;
-    const records = input.transfers.flatMap((transfer) => transfer.records);
-    await recordFramedSyncResourceAvailability(tx, records.filter((record) => !isNodeVersionIdentityOnly(record)).flatMap((record) =>
-      readFramedSyncNodeResources(record.snapshot.resource_references).map((resource) => resource.contentHash)), true);
+    if (!input.transfers.length) await assertSyncGroupLocalPublicationAllowed(tx);
+    for (const transfer of input.transfers) {
+      if (!await assertSyncGroupOverwriteInbound(tx, transfer.context)) await assertSyncGroupLocalPublicationAllowed(tx);
+    }
+    const databaseTransfers = input.transfers.filter((transfer) => !('resourceFacts' in transfer && transfer.resourceFacts?.length));
+    const records = databaseTransfers.flatMap((transfer) => transfer.records);
+    await recordFramedSyncPinnedResourceAvailability(tx, databaseTransfers.map((transfer) => transfer.transferId));
     let generatedChanges = false;
     await assertFramedSyncNodeParentDependencies(tx, records);
     if (records.length) {
-      await promoteFramedNodeBodies(tx, records);
-      if (restore || input.adoption) {
-        await applySyncNodesWithDbPort(tx, records, { operation: 'local_restore' });
-      } else {
-        const result = await applyConvergentSyncNodesWithDbPort(tx, records);
-        generatedChanges = result.handledConflictCount > 0;
-      }
+      const result = await applyConvergentSyncNodesWithDbPort(tx, records);
+      generatedChanges = result.handledConflictCount > 0;
     }
     await applyDesktopFramedSyncRelationReviewFactsWithDbPort(
-      tx, input.transfers.flatMap((transfer) => transfer.relationReviewFacts)
+      tx, databaseTransfers.flatMap((transfer) => transfer.relationReviewFacts)
     );
-    for (const body of input.transfers.flatMap((transfer) => transfer.externalBodies ?? [])) {
-      await upsertTextBodyBlob(tx, body.text, new Date().toISOString(), body.hash);
-    }
-    const stateRecords = input.transfers.flatMap((transfer) => transfer.stateRecords);
-    const hostName = stateRecords.some((record) => record.object_type === 'setting')
-      ? await readDesktopHostName(tx) : null;
-    for (const record of stateRecords) {
-      await applyFramedSyncObjectStateRecord(tx, record, {
-        ...(hostName ? { hostName } : {}),
-        onPayloadAppliedInTransaction: materializeDesktopSettingRecord
-      });
-    }
-    await recordSourceProgress(tx, input.transfers);
-    if (restore) await markSyncGroupRestoreApplied(tx, restore.event);
-    if (input.adoption) await finishSyncGroupLocalAdoption(tx, input.adoption);
+    await applyDesktopFramedSyncInboundStates(tx, databaseTransfers);
+    await recordSourceProgress(tx, databaseTransfers);
     const receipts = await Promise.all(input.transfers.map((transfer) =>
-      createReceipt(tx, transfer)));
-    return { generatedChanges, receipts, removedNodeIds: removedNodes.map((node) => node.id) };
-  });
-  if (input.adoption || input.restore) notifyWorkspaceSyncApplied({
-    appliedNodeIds: [...new Set([...applied.removedNodeIds,
-      ...input.transfers.filter((transfer) => transfer.objectType === 'node').map((transfer) => transfer.globalId)])],
-    appliedObjectIds: input.transfers.filter((transfer) => transfer.objectType !== 'node')
-      .map((transfer) => `${transfer.objectType}:${transfer.globalId}`),
-    appliedReviewOpIds: input.transfers.flatMap((transfer) => transfer.relationReviewFacts)
-      .filter((fact) => fact.kind === 4).map((fact) => fact.factId)
+      'resourceFacts' in transfer && transfer.resourceFacts?.length
+        ? commitDesktopFramedResourceInbound(tx, { ...transfer, facts: transfer.resourceFacts })
+        : createReceipt(tx, transfer)));
+    return { generatedChanges, receipts };
   });
   await Promise.all(input.transfers.map((transfer) =>
     transfer.staging.releasePins(transfer.transferId, 'business_reference_committed')));
   return applied;
-}
-
-async function prepareRestore(
-  tx: DbPort,
-  restore: Readonly<{ groupId: string; restoreId: string }>
-) {
-  const latest = await loadLatestSyncGroupRestoreEvent(tx, restore.groupId);
-  if (!latest || latest.event.restore_id !== restore.restoreId || latest.applied) {
-    throw new Error('framed_sync_restore_state_invalid');
-  }
-  await clearWorkgroupSyncDataForRestore(tx, restore.restoreId);
-  return latest;
-}
-
-async function promoteFramedNodeBodies(
-  db: DbPort,
-  records: readonly NativeSyncNodeRecord[]
-) {
-  for (const record of records) {
-    if (isNodeVersionIdentityOnly(record)) continue;
-    const hash = record.snapshot.body_blob_hash;
-    if (!hash || typeof record.body_text !== 'string') {
-      throw new Error('framed_sync_node_body_projection_missing');
-    }
-    await upsertTextBodyBlob(db, record.body_text, record.updated_at, hash);
-  }
 }

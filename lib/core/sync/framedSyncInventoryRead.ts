@@ -3,12 +3,13 @@ import { z } from 'zod';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import { expireFramedSyncCompletions } from './framedSyncCompletionRetention.js';
+import type { FramedSyncContext } from './framedSyncContract.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInventory.js';
 import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
-import { loadSyncGroupLocalAdoption } from './syncGroupLocalAdoption.js';
+import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
+import { assertSyncGroupOverwriteInbound } from './syncGroupOverwriteProgress.js';
 import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
-import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
 interface InventoryRow extends DbRow {
@@ -38,30 +39,38 @@ function entry(row: InventoryRow): FramedSyncInventoryEntry {
   };
 }
 
-async function read(port: DbPort, key: InventoryKey | undefined, storage: NodeVersionBodyStorage) {
-  if (key && key.objectType !== 'node') return readFramedSyncObjectStateInventory(port, key, storage);
+async function read(port: DbPort, key: InventoryKey | undefined) {
+  if (key && key.objectType !== 'node') return readFramedSyncObjectStateInventory(port, key);
   const rows = await port.query<InventoryRow>(`SELECT * FROM framed_sync_inventory
     WHERE object_type = 'node' ${key ? 'AND object_id = ?' : ''} ORDER BY object_id`,
   key ? [key.globalId] : []);
   const nodes = rows.map(entry);
-  const states = key ? [] : await readFramedSyncObjectStateInventory(port, undefined, storage);
+  const states = key ? [] : await readFramedSyncObjectStateInventory(port);
   return [...nodes, ...states].sort((left, right) =>
     compareSyncIdentityText(left.objectType, right.objectType) ||
     compareSyncIdentityText(left.globalId, right.globalId));
 }
 
-export function readFramedSyncInventory(port: DbPort, storage: NodeVersionBodyStorage = 'continuous') {
+export function readFramedSyncInventory(port: DbPort) {
   return port.transaction(async (tx) => {
-    if (await loadSyncGroupLocalAdoption(tx)) return [];
+    if (await syncGroupLocalPublicationBlockReason(tx)) return [];
     await expireFramedSyncCompletions(tx);
     for (const row of await tx.query<{ parent_id: string }>('SELECT parent_id FROM parent_order_heads')) {
       await publishParentOrderPosition(tx, row.parent_id);
     }
-    return read(tx, undefined, storage);
+    return read(tx, undefined);
   });
 }
 
-export async function readFramedSyncInventoryEntry(port: DbPort, key: InventoryKey, storage: NodeVersionBodyStorage = 'continuous') {
-  const values = await port.transaction((tx) => read(tx, key, storage));
+/** Partial inventory is visible only to the fixed recovery source, without publishing local work. */
+export function readFramedSyncOverwriteInventory(port: DbPort, context: FramedSyncContext) {
+  return port.transaction(async (tx) => {
+    if (!await assertSyncGroupOverwriteInbound(tx, context)) throw new Error('sync_group_overwrite_missing');
+    return read(tx, undefined);
+  });
+}
+
+export async function readFramedSyncInventoryEntry(port: DbPort, key: InventoryKey) {
+  const values = await port.transaction((tx) => read(tx, key));
   return values[0] ?? null;
 }

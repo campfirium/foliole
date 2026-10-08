@@ -9,9 +9,9 @@ import {
 } from './framedSyncContract.js';
 import { buildFramedSyncTransferPayloads } from './framedSyncTransferPayloads.js';
 
-function fixture() {
+function fixture(role = 2) {
   const data = new Uint8Array(FRAMED_SYNC_LIMITS.blobChunkBytes + 1).fill(7);
-  const blob = { byteLength: BigInt(data.byteLength), required: true, role: 1, sha256: sha256(data) };
+  const blob = { byteLength: BigInt(data.byteLength), required: true, role, sha256: sha256(data) };
   const manifest: CanonicalManifest = { blobs: [blob], facts: [{
     blobs: [blob], body: [], factId: 'version-1', globalId: 'node-1', kind: 2,
     objectType: 'node', sharedStateHash: new Uint8Array(32).fill(8)
@@ -43,6 +43,22 @@ it('builds one ordered transfer stream and chunks blob content at the shared lim
     FRAMED_SYNC_LIMITS.blobChunkBytes
   );
   expect((payloads[3]!.payload as { data: Uint8Array }).data).toHaveLength(1);
+});
+
+it.each([1, 5])('sends role %i as one complete body with the original identity', (role) => {
+  const value = fixture(role);
+  const payloads = buildFramedSyncTransferPayloads({
+    attemptId: new Uint8Array(16).fill(3),
+    blobContents: [{ data: value.data, sha256: value.blob.sha256 }],
+    manifest: value.manifest, published: value.published
+  });
+  expect(payloads.map((payload) => payload.payloadCase)).toEqual([
+    'transfer_header', 'fact', 'blob_chunk', 'transfer_trailer'
+  ]);
+  expect(payloads[2]!.payload).toMatchObject({
+    blobHash: value.blob.sha256, data: value.data, transferId: value.published.transferId
+  });
+  expect(String((payloads[2]!.payload as { offset: unknown }).offset)).toBe('0');
 });
 
 it('rejects blob bytes that do not match the published manifest', () => {

@@ -19,6 +19,7 @@ enum FolioleFramedSyncPayloadValidator {
         case .missingBlobSet(let value): try missingBlobs(value); return .missingBlobSet(value)
         case .transferHeader(let value): try header(value); return .transferHeader(value)
         case .fact(let value): try Value.fact(value); return .fact(value)
+        case .factFragment(let value): try factFragment(value); return .factFragment(value)
         case .blobChunk(let value): try blobChunk(value); return .blobChunk(value)
         case .transferTrailer(let value): try trailer(value); return .transferTrailer(value)
         case .transferReceipt(let value): try receipt(value); return .transferReceipt(value)
@@ -112,11 +113,25 @@ enum FolioleFramedSyncPayloadValidator {
         try Value.manifest(value.manifest)
     }
 
+    private static func factFragment(_ value: Foliole_Sync_V22_FactFragment) throws {
+        guard value.hasIdentity else { throw FolioleFramedSyncValidationError("protocol_object_required") }
+        _ = try Value.identity(value.identity)
+        try Value.digest(value.sharedStateHash, "shared_state_hash")
+        try Value.digest(value.encodedSha256, "encoded_sha256")
+        guard value.totalByteLength > UInt64(FolioleFramedSyncLimits.maxFrameMessageBytes),
+              value.totalByteLength <= UInt64(FolioleFramedSyncLimits.maxFragmentedFactBytes),
+              !value.data.isEmpty, value.data.count <= FolioleFramedSyncLimits.blobChunkBytes,
+              value.offset < value.totalByteLength,
+              UInt64(value.data.count) <= value.totalByteLength - value.offset else {
+            throw FolioleFramedSyncValidationError("fact_fragment_range_invalid")
+        }
+    }
+
     private static func blobChunk(_ value: Foliole_Sync_V22_BlobChunk) throws {
         try Value.digest(value.transferID, "transfer_id")
         try Value.digest(value.blobHash, "blob_hash")
         let count = UInt64(value.data.count)
-        guard count <= UInt64(FolioleFramedSyncLimits.blobChunkBytes),
+        guard count <= 1_048_576,
               value.offset <= FolioleFramedSyncLimits.maxBlobBytes,
               count <= FolioleFramedSyncLimits.maxBlobBytes - value.offset else {
             throw FolioleFramedSyncValidationError("blob_chunk_range_invalid")

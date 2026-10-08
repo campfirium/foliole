@@ -13,8 +13,10 @@ import { restoreFramedSyncNodeIdentityFact, restoreFramedSyncNodeRecord } from '
 import { restoreFramedSyncObjectStateFact } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 
 import { blob, sameBlob, uniqueRows, validateResources } from './companionFramedSyncDescriptorValidation.js';
+import { companionFramedResourceUnit } from './companionFramedSyncResourceApply.js';
 
 export type DecodedCompanionTransfer = Readonly<{
+  resourceFacts?: readonly CanonicalFact[];
   externalBodies?: readonly Readonly<{ hash: string; text: string }>[];
   globalId: string;
   objectType: string;
@@ -36,7 +38,7 @@ function decodeNode(fact: CanonicalFact, bodies: ReadonlyMap<string, DbRow>) {
     alternativeBodies: fact.blobs.filter((entry) => entry.role === 1 && entry !== descriptors[0]).map((entry) => {
       const body = bodies.get(bytesToHex(entry.sha256));
       if (!body || !sameBlob(entry, blob(body))) throw new Error('text_alternative_body_blob_invalid');
-      return { hash: bytesToHex(entry.sha256), text: new TextDecoder('utf-8', { fatal: true })
+      return { hash: bytesToHex(entry.sha256), text: new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
         .decode(framedSyncBytes(body, 'data')) };
     }) });
 }
@@ -47,6 +49,9 @@ export function decodeCompanionFramedSyncTransfer(input: {
   resourceRows: DbRow[];
   resourceStorageKeys: readonly string[];
 }): DecodedCompanionTransfer {
+  const resources = companionFramedResourceUnit(input.facts);
+  if (resources) return { resourceFacts: input.facts, globalId: input.facts[0]!.globalId,
+    objectType: input.facts[0]!.objectType, nodes: [], relationReviewFacts: [], readingStates: [] };
   const nodeFacts = input.facts.filter((fact) => fact.kind === 2);
   const relationReviewFacts = input.facts.filter((fact) => fact.kind === 3 || fact.kind === 4);
   const readingStates = input.facts.filter((fact) => fact.kind === 1)

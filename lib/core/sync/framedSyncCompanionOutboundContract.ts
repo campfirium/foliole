@@ -1,36 +1,39 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
+
 import type { CanonicalBlob } from './framedSyncCanonicalManifest.js';
 import { assertFramedSyncDigest, FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
-import type { VerifiedBodyRef } from './verifiedBody.js';
 
 export type CompanionFramedSyncOutboundValue = Readonly<{
+  batch_ready?: boolean;
   blobs: readonly Readonly<{
     byte_length: string;
     data_text?: string;
-    body_source?: 'verified_chunks';
+    body_source?: 'frozen_body';
     required: boolean;
     role: number;
     sha256: string;
     storage_key?: string;
   }>[];
   content_id: string;
-  fact_message_bytes_list: readonly (readonly number[])[];
+  header_message_bytes: readonly number[];
   manifest_hash: string;
   publication_state: 'created' | 'identical';
   transfer_id: string;
 }>;
 
 type OutboundValueInput = Readonly<{
+  batchReady?: boolean;
   blobs: readonly Readonly<{
     blob: CanonicalBlob;
     dataText?: string;
-    bodyRef?: VerifiedBodyRef;
+    frozenBody?: boolean;
     storageKey?: string;
   }>[];
   contentId: Uint8Array;
-  factMessageBytesList: readonly Uint8Array[];
+  headerMessageBytes: Uint8Array;
   manifestHash: Uint8Array;
   publicationState: CompanionFramedSyncOutboundValue['publication_state'];
   transferId: Uint8Array;
@@ -43,11 +46,10 @@ function sameBytes(left: Uint8Array, right: Uint8Array) {
 }
 
 function assertBlob(input: OutboundValueInput['blobs'][number]) {
-  if (input.bodyRef !== undefined) {
-    if (input.dataText !== undefined || input.storageKey !== undefined ||
-        (input.blob.role !== 1 && input.blob.role !== 5) ||
-        input.bodyRef.hash !== bytesToHex(input.blob.sha256) ||
-        BigInt(input.bodyRef.byteLength) !== input.blob.byteLength) {
+  if (input.frozenBody !== undefined) {
+    if (input.frozenBody !== true || input.dataText !== undefined ||
+        input.storageKey !== undefined || (input.blob.role !== 1 && input.blob.role !== 5) ||
+        input.blob.byteLength < 0n || input.blob.byteLength > BigInt(TEXT_BODY_MAX_BYTES)) {
       throw new Error('framed_sync_companion_blob_mismatch');
     }
     return;
@@ -69,9 +71,9 @@ function assertBlob(input: OutboundValueInput['blobs'][number]) {
   }
 }
 
-function assertFactMessage(bytes: Uint8Array) {
-  if (bytes.byteLength === 0 || bytes.byteLength > FRAMED_SYNC_LIMITS.maxDecompressedFrameBytes) {
-    throw new Error('framed_sync_companion_fact_message_invalid');
+function assertHeaderMessage(bytes: Uint8Array) {
+  if (bytes.byteLength === 0 || bytes.byteLength > FRAMED_SYNC_LIMITS.maxManifestBytes) {
+    throw new Error('framed_sync_companion_header_message_invalid');
   }
 }
 
@@ -88,20 +90,18 @@ export function createCompanionFramedSyncOutboundValue(
     assertFramedSyncDigest(blob.blob.sha256, 'blob_sha256');
     assertBlob(blob);
   }
-  if (input.factMessageBytesList.length === 0) {
-    throw new Error('framed_sync_companion_fact_message_invalid');
-  }
-  for (const bytes of input.factMessageBytesList) assertFactMessage(bytes);
+  assertHeaderMessage(input.headerMessageBytes);
   return {
-    blobs: input.blobs.map(({ blob, dataText, storageKey, bodyRef }) => ({
+    ...(input.batchReady === undefined ? {} : { batch_ready: input.batchReady }),
+    blobs: input.blobs.map(({ blob, dataText, storageKey, frozenBody }) => ({
       byte_length: blob.byteLength.toString(),
       ...(dataText === undefined ? {} : { data_text: dataText }),
-      ...(bodyRef === undefined ? {} : { body_source: 'verified_chunks' as const }),
+      ...(frozenBody === undefined ? {} : { body_source: 'frozen_body' as const }),
       required: blob.required, role: blob.role, sha256: bytesToHex(blob.sha256),
       ...(storageKey === undefined ? {} : { storage_key: storageKey })
     })),
     content_id: bytesToHex(input.contentId),
-    fact_message_bytes_list: input.factMessageBytesList.map((bytes) => Array.from(bytes)),
+    header_message_bytes: Array.from(input.headerMessageBytes),
     manifest_hash: bytesToHex(input.manifestHash),
     publication_state: input.publicationState,
     transfer_id: bytesToHex(input.transferId)

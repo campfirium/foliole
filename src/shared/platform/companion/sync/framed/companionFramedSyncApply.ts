@@ -3,9 +3,10 @@ import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { canonicalFactFromValidatedMessage } from '../../../../../../lib/core/sync/framedSyncWireFact.js';
 
-import { applyPreparedCompanionFramedSyncTransfers } from './companionFramedSyncApplyPrepared.js';
 import { decodeCompanionFramedSyncTransfer } from './companionFramedSyncDecode.js';
+import { companionFramedResourceUnit } from './companionFramedSyncResourceApply.js';
 import { STAGING_TABLES } from './companionFramedSyncStagingTables.js';
+import { applyVerifiedCompanionFramedSyncTransfer } from './companionFramedSyncVerifiedApply.js';
 
 export interface CompanionFramedSyncApplyInput {
   receiverDeviceId: string;
@@ -45,6 +46,9 @@ async function loadTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
   const facts = factFrames.map((row) => canonicalFactFromValidatedMessage(
     decodeAndValidateProtocolMessage(framedSyncBytes(row, 'authenticated_plaintext'), Number(row.frame_type))
   ));
+  if (companionFramedResourceUnit(facts)) {
+    return { bodyRows: [], contentId: framedSyncBytes(transfer, 'content_id'), facts, resourceRows: [] };
+  }
   const bodyRows = await db.query<DbRow>(`SELECT pin.sha256, pin.byte_length, pin.role, pin.required, available.data
     FROM ${tables.alias}.${tables.prefix}_blob_pins pin
     JOIN ${tables.alias}.${tables.prefix}_available_blobs available ON available.sha256 = pin.sha256
@@ -74,8 +78,6 @@ export async function prepareCompanionFramedSyncTransfer(db: DbPort, input: Comp
   }
 }
 
-export async function applyCompanionFramedSyncTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
-  const prepared = await prepareCompanionFramedSyncTransfer(db, input);
-  const result = await applyPreparedCompanionFramedSyncTransfers(db, [prepared]);
-  return result[0]!;
+export function applyCompanionFramedSyncTransfer(db: DbPort, input: CompanionFramedSyncApplyInput) {
+  return applyVerifiedCompanionFramedSyncTransfer(db, input);
 }

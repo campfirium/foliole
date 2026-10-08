@@ -16,10 +16,12 @@ import {
   saveChangeCursor,
   saveNumberCursor
 } from './companionSyncbackCursorStore';
+import { loadCompanionPendingCount, type CompanionPendingSyncCursors } from './companionSyncbackPendingCount';
 import { savePeerPushAcksWithinTransaction, stagePushDeliveries } from './companionSyncDeliveryStore';
 import { rekeyNodeObject } from './companionSyncNodeRekey';
 
 export interface CompanionSyncbackDbStore {
+  loadPendingCount(peerId: string, cursors: CompanionPendingSyncCursors): Promise<number>;
   loadNodeVersions(peerId: string, cursor: NativeSyncChangeCursor | null, limit?: number): Promise<NativeSyncNodeRecord[]>;
   loadNodeVersionPushCursor(): Promise<NativeSyncChangeCursor | null>;
   loadReviewLog(peerId: string, cursor: NativeSyncChangeCursor | null, limit?: number): Promise<NativeSyncReviewLogRecord[]>;
@@ -35,6 +37,7 @@ export interface CompanionSyncbackDbStore {
 
 export function createCompanionSyncbackDbStore(port: DbPort): CompanionSyncbackDbStore {
   return {
+    loadPendingCount: (peerId, cursors) => loadCompanionPendingCount(port, peerId, cursors),
     loadNodeVersions: (peerId, cursor, limit) => loadNodeVersions(port, peerId, cursor, limit),
     loadNodeVersionPushCursor: () => loadChangeCursor(port, CONTRACT.cursors.nodeVersionPush, 'node_version'),
     loadReviewLog: (peerId, cursor, limit) => loadReviewLog(port, peerId, cursor, limit),

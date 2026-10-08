@@ -7,6 +7,8 @@ import com.foliole.android.framed.FramedSyncOutboundSQLite;
 import com.foliole.android.framed.FramedSyncReceiptReader;
 import com.foliole.android.framed.FramedSyncTransferContext;
 import com.foliole.android.framed.FramedSyncTransferWriter;
+import com.foliole.android.framed.FramedSyncPayloadBudget;
+import com.foliole.android.framed.FramedSyncPayloadBudgetRegistry;
 import com.foliole.sync.v22.TransferReceipt;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
@@ -26,6 +28,7 @@ final class FolioleCompanionFramedSyncOutbound {
     private FolioleCompanionFramedSyncOutbound() {}
 
     static JSObject send(Context context, PluginCall call) throws Exception {
+        FramedSyncPayloadBudget budget = FramedSyncPayloadBudgetRegistry.current();
         String groupId = required(call, "sync_group_id");
         String endpointUrl = required(call, "endpoint_url");
         FolioleCompanionFramedSyncOutboundInput.Request input =
@@ -34,7 +37,7 @@ final class FolioleCompanionFramedSyncOutbound {
         String receiverEpoch = required(call, "receiver_library_epoch");
         FolioleCompanionCurrentGroupCredential credential =
             FolioleCompanionCurrentGroupCredential.load(groupId);
-        String senderEpoch = requiredMemberState("library_epoch");
+        String senderEpoch = requiredMemberState("library_epoch", budget);
         FramedSyncTransferContext transferContext = new FramedSyncTransferContext(
             groupId, credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
         JSONObject selection = selection(groupId, input.objectId, input.includeCurrentNode,
@@ -43,17 +46,15 @@ final class FolioleCompanionFramedSyncOutbound {
         selection.put("object_type", call.getString("object_type"));
         String publishedTransferId = call.getString("transfer_id");
         if (publishedTransferId != null) selection.put("transfer_id", publishedTransferId);
-        JSONObject inspected = FolioleCompanionSyncGroupDataBridge.current().request(
-            "inspect_framed_outbound", selection);
-        JSONObject prepared = FolioleCompanionSyncGroupDataBridge.current().request(
-            "prepare_framed_outbound", new JSONObject(selection.toString()).put("resource_files",
-                FolioleCompanionFramedSyncResources.describe(context, inspected)));
-        return sendPrepared(context, credential, transferContext, endpointUrl, selection, prepared);
+        var prepared = FolioleCompanionFramedSyncPreparedOutbound.load(context,
+            FolioleCompanionSyncGroupDataBridge.current(), selection, budget);
+        return sendPrepared(context, credential, transferContext, endpointUrl, selection,
+            prepared.metadata, prepared.source, budget);
     }
 
     private static JSObject sendPrepared(Context context, FolioleCompanionCurrentGroupCredential credential,
         FramedSyncTransferContext transferContext, String endpointUrl, JSONObject selection,
-        JSONObject prepared) throws Exception {
+        JSONObject prepared, FolioleCompanionFramedSyncOutboundSource source, FramedSyncPayloadBudget budget) throws Exception {
         String groupId = selection.getString("group_id");
         String senderEpoch = selection.getString("sender_library_epoch");
         String receiverDeviceId = selection.getString("receiver_device_id");
@@ -63,18 +64,10 @@ final class FolioleCompanionFramedSyncOutbound {
         requireSame(contentId, digest(prepared.getString("manifest_hash")),
             "framed_sync_manifest_identity_mismatch");
         byte[] expectedTransferId = digest(prepared.getString("transfer_id"));
-        var facts = FolioleCompanionFramedSyncOutboundInput.facts(prepared);
-        try (var bodyFiles = new FolioleCompanionFramedSyncBodyFiles(context, selection,
-                prepared.getString("transfer_id"));
-             FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context)) {
-            var blobs = FolioleCompanionFramedSyncOutboundInput.blobs(context, prepared, facts, bodyFiles::resolve);
-            staging.discardOutboundAttempts(expectedTransferId);
+        try (FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context, budget)) {
             try {
-                FramedSyncTransferWriter.Attempt replayable =
-                    staging.loadLatestReplayableAttempt(expectedTransferId);
-                final FramedSyncTransferWriter.Attempt attempt = replayable != null ? replayable :
-                    FramedSyncTransferWriter.prepare(groupKey, transferContext, facts, blobs, staging);
-                requireSame(expectedTransferId, attempt.transferId(), "framed_sync_transfer_identity_mismatch");
+                var attempt = FolioleCompanionFramedSyncAttempt.prepare(context, selection, prepared, source,
+                    groupKey, transferContext, staging, budget);
                 String path = path(credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
                 Map<String, String> headers = signedHeaders(
                     credential, groupId, path, bodySha256(attempt, staging));
@@ -82,14 +75,14 @@ final class FolioleCompanionFramedSyncOutbound {
                     new URL(join(endpointUrl, path)), groupId, receiverDeviceId, receiverEpoch, headers,
                     writer -> FramedSyncTransferWriter.replay(attempt, staging, writer),
                     reader -> FramedSyncReceiptReader.read(reader, groupKey, attempt.transferId(),
-                        contentId, receiverDeviceId, receiverEpoch));
-                complete(receipt);
+                        contentId, receiverDeviceId, receiverEpoch, budget));
+                complete(receipt, budget);
                 return result(receipt);
             } finally { staging.discardOutboundAttempts(expectedTransferId); }
         }
     }
 
-    private static JSONObject selection(
+    static JSONObject selection(
         String groupId, String objectId, boolean includeCurrentNode,
         List<String> requiredRelationIds, List<String> reviewFactIds, List<String> stateFactIds,
         String senderDeviceId, String senderEpoch,
@@ -106,14 +99,14 @@ final class FolioleCompanionFramedSyncOutbound {
                 .put("receiver_library_epoch", receiverEpoch);
     }
 
-    private static void complete(TransferReceipt receipt) throws Exception {
+    static void complete(TransferReceipt receipt, FramedSyncPayloadBudget budget) throws Exception {
         FolioleCompanionSyncGroupDataBridge.current().request(
             "complete_framed_outbound", new JSONObject()
                 .put("applied_state_hash", hex(receipt.getAppliedStateHash().toByteArray()))
                 .put("content_id", hex(receipt.getContentId().toByteArray()))
                 .put("receiver_device_id", receipt.getReceiverDeviceId())
                 .put("receiver_library_epoch", receipt.getReceiverLibraryEpoch())
-                .put("transfer_id", hex(receipt.getTransferId().toByteArray())));
+                .put("transfer_id", hex(receipt.getTransferId().toByteArray())), budget);
     }
 
     private static Map<String, String> signedHeaders(
@@ -137,14 +130,14 @@ final class FolioleCompanionFramedSyncOutbound {
         return hex(digest.digest());
     }
 
-    private static OutputStream discardingOutput() {
+    static OutputStream discardingOutput() {
         return new OutputStream() {
             @Override public void write(int value) {}
             @Override public void write(byte[] value, int offset, int length) {}
         };
     }
 
-    private static JSObject result(TransferReceipt receipt) {
+    static JSObject result(TransferReceipt receipt) {
         return new JSObject()
             .put("applied_state_hash", hex(receipt.getAppliedStateHash().toByteArray()))
             .put("content_id", hex(receipt.getContentId().toByteArray()))
@@ -153,7 +146,7 @@ final class FolioleCompanionFramedSyncOutbound {
             .put("transfer_id", hex(receipt.getTransferId().toByteArray()));
     }
 
-    private static String path(
+    static String path(
         String senderDeviceId, String senderEpoch, String receiverDeviceId, String receiverEpoch
     ) throws Exception {
         return PATH + "?initiator_device_id=" + encode(senderDeviceId) +
@@ -162,7 +155,7 @@ final class FolioleCompanionFramedSyncOutbound {
             "&responder_library_epoch=" + encode(receiverEpoch);
     }
 
-    private static String join(String endpointUrl, String path) {
+    static String join(String endpointUrl, String path) {
         return endpointUrl.replaceAll("/+$", "") + path;
     }
 
@@ -170,9 +163,9 @@ final class FolioleCompanionFramedSyncOutbound {
         return URLEncoder.encode(value, "UTF-8");
     }
 
-    private static String requiredMemberState(String key) throws Exception {
+    static String requiredMemberState(String key, FramedSyncPayloadBudget budget) throws Exception {
         String value = FolioleCompanionSyncGroupDataBridge.current().request(
-            "load_member_state", new JSONObject()).optString(key, null);
+            "load_member_state", new JSONObject(), budget).optString(key, null);
         if (value == null || value.trim().isEmpty()) throw new IllegalArgumentException(key + "_required");
         return value.trim();
     }
@@ -184,13 +177,13 @@ final class FolioleCompanionFramedSyncOutbound {
     }
 
 
-    private static byte[] decodeGroupKey(String value) {
+    static byte[] decodeGroupKey(String value) {
         byte[] result = Base64.decode(value, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
         if (result.length != 32) throw new SecurityException("sync_group_key_invalid");
         return result;
     }
 
-    private static byte[] digest(String value) {
+    static byte[] digest(String value) {
         if (value == null || !value.matches("[a-f0-9]{64}")) {
             throw new IllegalArgumentException("framed_sync_digest_invalid");
         }
@@ -201,11 +194,11 @@ final class FolioleCompanionFramedSyncOutbound {
         return result;
     }
 
-    private static void requireSame(byte[] expected, byte[] actual, String error) {
+    static void requireSame(byte[] expected, byte[] actual, String error) {
         if (!MessageDigest.isEqual(expected, actual)) throw new IllegalArgumentException(error);
     }
 
-    private static String hex(byte[] value) {
+    static String hex(byte[] value) {
         StringBuilder result = new StringBuilder(value.length * 2);
         for (byte item : value) result.append(String.format("%02x", Byte.toUnsignedInt(item)));
         return result.toString();

@@ -5,50 +5,57 @@ import FolioleFramedSyncRuntime
 struct FolioleCompanionFramedSyncPreparedOutbound {
     let contentID: Data
     let transferID: Data
-    let facts: [Foliole_Sync_V22_FactRecord]
+    let header: Foliole_Sync_V22_TransferHeader
     let blobs: [FolioleFramedSyncOutboundBlob]
 
     static func decode(
         _ value: [String: Any], resourceFiles: [String: URL] = [:],
-        verifiedBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)? = nil
+        frozenBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)? = nil
     ) throws -> Self {
+        let header = try decodeHeader(value)
+        return try decodeMetadata(value, header: header, resourceFiles: resourceFiles, frozenBodyFile: frozenBodyFile)
+    }
+
+    static func decodeHeader(_ value: [String: Any]) throws -> Foliole_Sync_V22_TransferHeader {
         let contentID = try digest(value, "content_id")
         guard try digest(value, "manifest_hash") == contentID else {
             throw invalid("framed_sync_manifest_identity_mismatch")
         }
-        let facts = try decodeFacts(value)
-        return .init(
-            contentID: contentID, transferID: try digest(value, "transfer_id"), facts: facts,
-            blobs: try decodeBlobs(value, facts: facts, resourceFiles: resourceFiles, verifiedBodyFile: verifiedBodyFile)
-        )
+        let message = try FolioleFramedSyncCodec.decode(messageBytes(value, "header_message_bytes"), authenticatedFrameType: 2)
+        guard case .transferHeader(let header) = message.payload,
+              header.attemptID == Data(repeating: 0, count: 16), header.manifest.contentID == contentID,
+              header.transferID == (try digest(value, "transfer_id")) else {
+            throw invalid("framed_sync_transfer_identity_mismatch")
+        }
+        return header
     }
 
-    private static func decodeFacts(_ value: [String: Any]) throws -> [Foliole_Sync_V22_FactRecord] {
-        guard let encoded = value["fact_message_bytes_list"] as? [Any], !encoded.isEmpty else {
+    static func decodeMetadata(_ value: [String: Any], header: Foliole_Sync_V22_TransferHeader,
+        resourceFiles: [String: URL], frozenBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)?) throws -> Self {
+        .init(contentID: header.manifest.contentID, transferID: header.transferID, header: header,
+            blobs: try decodeBlobs(value, references: header.manifest.blobs,
+                                  resourceFiles: resourceFiles, frozenBodyFile: frozenBodyFile))
+    }
+
+    static func messageBytes(_ value: [String: Any], _ key: String) throws -> Data {
+        guard let raw = value[key] as? [Any], !raw.isEmpty,
+              raw.count <= FolioleFramedSyncLimits.maxFrameMessageBytes else {
             throw invalid("framed_sync_fact_bytes_required")
         }
-        return try encoded.map { raw in
-            guard let raw = raw as? [Any] else { throw invalid("framed_sync_fact_bytes_invalid") }
-            let numbers = raw.compactMap { $0 as? NSNumber }
-            guard numbers.count == raw.count, numbers.allSatisfy(validByte) else {
-                throw invalid("framed_sync_fact_bytes_invalid")
-            }
-            let message = try FolioleFramedSyncCodec.decode(
-                Data(numbers.map(\.uint8Value)),
-                authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue
-            )
-            guard case .fact(let fact) = message.payload else { throw invalid("framed_sync_fact_required") }
-            return fact
+        let numbers = raw.compactMap { $0 as? NSNumber }
+        guard numbers.count == raw.count, numbers.allSatisfy(validByte) else {
+            throw invalid("framed_sync_fact_bytes_invalid")
         }
+        return Data(numbers.map(\.uint8Value))
     }
 
     private static func decodeBlobs(
-        _ value: [String: Any], facts: [Foliole_Sync_V22_FactRecord], resourceFiles: [String: URL],
-        verifiedBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)?
+        _ value: [String: Any], references: [Foliole_Sync_V22_BlobReference], resourceFiles: [String: URL],
+        frozenBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)?
     ) throws -> [FolioleFramedSyncOutboundBlob] {
         guard let encoded = value["blobs"] as? [Any] else { throw invalid("framed_sync_blobs_required") }
         var declared = [Data: Foliole_Sync_V22_BlobReference]()
-        for reference in facts.flatMap(\.blobs) {
+        for reference in references {
             if let existing = declared[reference.sha256], !sameBlob(existing, reference) {
                 throw invalid("framed_sync_blob_identity_conflict")
             }
@@ -69,20 +76,20 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
                 throw invalid("framed_sync_blob_identity_mismatch")
             }
             return try decodeSource(blob, reference: reference, resourceFiles: resourceFiles,
-                                    verifiedBodyFile: verifiedBodyFile)
+                                    frozenBodyFile: frozenBodyFile)
         }
     }
 
     private static func decodeSource(
         _ blob: [String: Any], reference: Foliole_Sync_V22_BlobReference, resourceFiles: [String: URL],
-        verifiedBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)?
+        frozenBodyFile: ((Foliole_Sync_V22_BlobReference) throws -> URL)?
     ) throws -> FolioleFramedSyncOutboundBlob {
         let isBody = reference.role == .nodeBody || reference.role == .externalDocument
         if blob["body_source"] != nil {
-            guard blob["body_source"] as? String == "verified_chunks", isBody,
+            guard blob["body_source"] as? String == "frozen_body", isBody,
                   blob["data_text"] == nil, blob["storage_key"] == nil,
-                  let verifiedBodyFile else { throw invalid("framed_sync_blob_identity_mismatch") }
-            return .init(reference: reference, source: .file(try verifiedBodyFile(reference)))
+                  let frozenBodyFile else { throw invalid("framed_sync_blob_identity_mismatch") }
+            return .init(reference: reference, source: .file(try frozenBodyFile(reference)))
         }
         if isBody {
             guard let text = blob["data_text"] as? String,
@@ -97,7 +104,7 @@ struct FolioleCompanionFramedSyncPreparedOutbound {
         return .init(reference: reference, source: .file(file))
     }
 
-    private static func digest(_ value: [String: Any], _ key: String) throws -> Data {
+    static func digest(_ value: [String: Any], _ key: String) throws -> Data {
         guard let text = value[key] as? String,
               text.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil else {
             throw invalid("framed_sync_digest_invalid")

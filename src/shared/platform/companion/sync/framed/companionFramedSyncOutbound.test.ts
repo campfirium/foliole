@@ -1,8 +1,8 @@
 import { expect, it, vi } from 'vitest';
 
+import { decodeFramedSyncManifest } from '../../../../../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
-import { canonicalFactFromValidatedMessage } from '../../../../../../lib/core/sync/framedSyncWireFact.js';
 
 import {
   inspectCompanionFramedSyncOutbound,
@@ -22,11 +22,12 @@ const snapshot = {
   virtual_filter: null
 };
 
-function versionRow(versionId: string, bodyText = 'Outbound body', parentVersionId: string | null = null) {
+function versionRow(versionId: string, bodyText = 'Outbound body', parentVersionId: string | null = null,
+  position: number | null = 0) {
   return {
     body_text: bodyText, content_hash: '44'.repeat(32), created_at: time,
     host_name: 'sender', object_id: 'node-1', parent_version_id: parentVersionId,
-    snapshot_json: JSON.stringify({ ...snapshot, body_blob_hash: null, content: bodyText }),
+    snapshot_json: JSON.stringify({ ...snapshot, body_blob_hash: null, content: bodyText, position }),
     version_id: versionId
   };
 }
@@ -38,13 +39,14 @@ function inventoryRow(resources: string[] = [], relations: string[] = [], review
     resources_json: JSON.stringify(['45d3ac1a76e0116aed14599baa78ba59b7c8a43212c0821bebf7d94913965c0e', ...resources]) };
 }
 
-it('freezes a current node fact and durable hold before returning native wire input', async () => {
+it.each([0, null])('freezes a current node fact and allows database batching for position %s', async position => {
   const run = vi.fn(async () => ({ changes: 1, lastInsertRowId: null }));
   const port = {
-    query: vi.fn(async (sql: string): Promise<DbRow[]> => {
+    query: vi.fn(async (sql: string, params?: readonly unknown[]): Promise<DbRow[]> => {
+      if (sql.includes('SELECT object_id, version_id FROM node_sync_versions')) return [versionRow(String(params?.[0]), undefined, undefined, position)];
       if (sql.includes('FROM framed_sync_inventory')) return [inventoryRow()];
       if (sql.includes('FROM node_sync_versions WHERE version_id IN')) {
-        return [versionRow('version-1')];
+        return [versionRow('version-1', undefined, undefined, position)];
       }
       return [];
     }),
@@ -58,9 +60,11 @@ it('freezes a current node fact and durable hold before returning native wire in
     sender_library_epoch: 'sender-epoch'
   });
   expect(result.publication_state).toBe('created');
-  expect(result.blobs[0]?.data_text).toBe('Outbound body');
-  expect(decodeAndValidateProtocolMessage(Uint8Array.from(result.fact_message_bytes_list[0]!), 3).payloadCase)
-    .toBe('fact');
+  expect(result.batch_ready).toBe(true);
+  expect(result.blobs[0]).toMatchObject({ body_source: 'frozen_body', byte_length: '13' });
+  expect(result.blobs[0]).not.toHaveProperty('data_text');
+  expect(decodeAndValidateProtocolMessage(Uint8Array.from(result.header_message_bytes), 2).payloadCase)
+    .toBe('transfer_header');
   expect(run).toHaveBeenCalledWith('INSERT INTO framed_sync_outbound_holds VALUES (?, ?)', [
     expect.any(Uint8Array), 'receiver'
   ]);
@@ -75,7 +79,8 @@ it('prepares the exact version chain with its parent and review facts', async ()
   const parent = { object_id: 'node-1', ordinal: 0,
     parent_version_id: 'parent-1', version_id: 'version-1' };
   const port = {
-    query: vi.fn(async (sql: string): Promise<DbRow[]> => {
+    query: vi.fn(async (sql: string, params?: readonly unknown[]): Promise<DbRow[]> => {
+      if (sql.includes('SELECT object_id, version_id FROM node_sync_versions')) return [versionRow(String(params?.[0]))];
       if (sql.includes('FROM framed_sync_inventory')) return [inventoryRow([], [relationId], ['review-1'])];
       if (sql.includes('FROM node_sync_versions WHERE version_id IN')) return [
         versionRow('parent-1', 'Parent body'), versionRow('version-1', 'Child body', 'parent-1')
@@ -96,20 +101,21 @@ it('prepares the exact version chain with its parent and review facts', async ()
     required_relation_ids: [relationId], review_fact_ids: ['review-1'], state_fact_ids: [],
     sender_device_id: 'sender', sender_library_epoch: 'sender-epoch'
   });
-  expect(result.blobs.map((blob) => blob.data_text)).toEqual(['Parent body', 'Child body']);
-  expect(result.fact_message_bytes_list.map((bytes) =>
-    decodeAndValidateProtocolMessage(Uint8Array.from(bytes), 3).payloadCase))
-    .toEqual(['fact', 'fact', 'fact', 'fact']);
+  expect(result.blobs.map((blob) => blob.body_source)).toEqual(['frozen_body', 'frozen_body']);
+  expect(result.blobs.every((blob) => blob.data_text === undefined)).toBe(true);
+  const header = decodeAndValidateProtocolMessage(Uint8Array.from(result.header_message_bytes), 2);
+  expect((header.payload.manifest as { facts: unknown[] }).facts).toHaveLength(4);
 });
 
-it('inspects and freezes canonical resource files without returning data_text', async () => {
+it('freezes database facts with retained resource references and only the necessary body', async () => {
   const hash = 'ab'.repeat(32);
   const storageKey = `${hash}.pdf`;
   const resourceReferences = JSON.stringify([
     { original_name: 'Paper.pdf', role: 'reference', storage_key: storageKey }
   ]);
   const port = {
-    query: vi.fn(async (sql: string): Promise<DbRow[]> => {
+    query: vi.fn(async (sql: string, params?: readonly unknown[]): Promise<DbRow[]> => {
+      if (sql.includes('SELECT object_id, version_id FROM node_sync_versions')) return [versionRow(String(params?.[0]))];
       if (sql.includes('FROM framed_sync_inventory')) return [inventoryRow([hash])];
       if (sql.includes('FROM node_sync_versions WHERE version_id IN')) return [{
         ...versionRow('version-1'),
@@ -128,17 +134,20 @@ it('inspects and freezes canonical resource files without returning data_text', 
   };
 
   await expect(inspectCompanionFramedSyncOutbound(port, payload)).resolves.toEqual({
-    resource_storage_keys: [storageKey]
+    resource_storage_keys: []
   });
   const result = await prepareCompanionFramedSyncOutbound(port, {
     ...payload, resource_files: [{ byte_length: '17', storage_key: storageKey }]
   });
 
-  expect(result.blobs).toContainEqual({
-    byte_length: '17', required: true, role: 3, sha256: hash, storage_key: storageKey
-  });
-  expect(result.blobs.find((blob) => blob.storage_key === storageKey)).not.toHaveProperty('data_text');
-  const fact = canonicalFactFromValidatedMessage(decodeAndValidateProtocolMessage(
-    Uint8Array.from(result.fact_message_bytes_list[0]!), 3));
-  expect(fact.blobs.map((blob) => blob.role)).toEqual([1, 3]);
+  expect(result.blobs.every((blob) => blob.role === 1 && blob.storage_key === undefined)).toBe(true);
+  const publication = vi.mocked(port.run).mock.calls.find(([sql]) => sql.includes('INSERT INTO framed_sync_outbound_publications'));
+  const fact = decodeFramedSyncManifest(String(publication?.[1]?.[4])).facts[0]!;
+  expect(fact.blobs.map((blob) => blob.role)).toEqual([1]);
+  const projectedSnapshot = fact.body.find((field) => field.name === 'snapshot')?.value;
+  expect(projectedSnapshot?.kind).toBe('object');
+  if (projectedSnapshot?.kind === 'object') {
+    expect(projectedSnapshot.value.find((field) => field.name === 'resource_references')?.value)
+      .toEqual({ kind: 'string', value: resourceReferences });
+  }
 });

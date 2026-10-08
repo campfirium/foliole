@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
+import { bytes as decodedBytes } from './framedSyncDecodedValues.js';
 import {
+  createFramedSyncProtocolEncoder,
   decodeAndValidateProtocolMessage,
   encodeValidatedProtocolMessage
 } from './framedSyncProtocolCodec.js';
@@ -21,6 +23,23 @@ function nestedValue(depth: number): Record<string, unknown> {
     ? { stringValue: 'leaf' }
     : { listValue: { values: [nestedValue(depth - 1)] } };
 }
+
+it('preserves wire bytes across sequential payloads and independent encoders', () => {
+  const left = createFramedSyncProtocolEncoder();
+  const right = createFramedSyncProtocolEncoder();
+  for (const size of [1_048_576, 3, 512 * 1024]) {
+    const payload = { blobHash: bytes(2), data: bytes(7, size), offset: 0, transferId: bytes(1) };
+    const encoded = left('blob_chunk', payload);
+    right('fact', fact());
+    expect(encoded).toEqual(encodeValidatedProtocolMessage('blob_chunk', payload));
+    const decoded = decodeAndValidateProtocolMessage(encoded, FRAMED_SYNC_FRAME_TYPES.blobChunk).payload;
+    expect(decoded.offset).toBe('0');
+    expect(Buffer.from(decodedBytes(decoded.data, 'blob_data')).equals(Buffer.from(payload.data))).toBe(true);
+  }
+  expect(() => left('blob_chunk', { blobHash: bytes(2), data: bytes(7), offset: -1, transferId: bytes(1) }))
+    .toThrow('blob_offset_invalid');
+  expect(left('fact', fact())).toEqual(encodeValidatedProtocolMessage('fact', fact()));
+});
 
 describe('framed sync production protobuf codec', () => {
   it('round-trips a validated fact and binds the authenticated frame type', () => {

@@ -6,7 +6,7 @@ import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
 import { encodeValidatedProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
 import { factToWire } from '../../lib/core/sync/framedSyncWireProjection.js';
 
-import { loadDesktopFramedSyncReadyFacts } from './desktopFramedSyncReadyFacts.js';
+import { loadLegacyDesktopFramedSyncReadyFacts } from './desktopFramedSyncLegacyReadyFacts.testSupport.js';
 import { reopenedReadyFixture } from './desktopFramedSyncReadyFacts.testSupport.js';
 
 it.each([1, 13])('recovers %i ordered facts after SQLite restart without reading body bytes', async (factCount) => {
@@ -26,14 +26,14 @@ it.each([1, 13])('recovers %i ordered facts after SQLite restart without reading
         return rows;
       }
     };
-    const ready = await loadDesktopFramedSyncReadyFacts(metadata, host.published);
+    const ready = await loadLegacyDesktopFramedSyncReadyFacts(metadata, host.published);
     expect(ready?.facts).toEqual(host.facts);
     expect(ready?.blobs).toEqual([host.descriptor]);
     expect(ready?.context).toEqual(host.published.context);
     expect(ready?.globalId).toBe('node');
     expect(queries.some((sql) => /FROM framed_sync_inbound_frames/u.test(sql))).toBe(true);
     expect(queries.every((sql) => !/available_blobs|content_body_chunks|content_blob_data/u.test(sql))).toBe(true);
-    expect(host.sqlite.prepare('SELECT length(data) FROM framed_sync_available_blobs').pluck().get()).toBeGreaterThan(3 * 1024 * 1024);
+    expect(host.sqlite.prepare('SELECT length(data) FROM framed_sync_available_blobs').pluck().get()).toBe(1048576);
   } finally { host.close(); }
 });
 
@@ -43,13 +43,13 @@ it('keeps ready metadata available after caller transaction failure and rejects 
     let expired: DbPort | undefined;
     await expect(host.db.transaction(async (tx) => {
       expired = tx;
-      expect((await loadDesktopFramedSyncReadyFacts(tx, host.published))?.facts).toEqual([host.fact]);
+      expect((await loadLegacyDesktopFramedSyncReadyFacts(tx, host.published))?.facts).toEqual([host.fact]);
       await tx.run("UPDATE framed_sync_inbound_transfers SET state = 'applied'");
       throw new Error('business_failure');
     })).rejects.toThrow('business_failure');
     expect(host.sqlite.prepare('SELECT state FROM framed_sync_inbound_transfers').pluck().get()).toBe('ready_to_apply');
-    await expect(loadDesktopFramedSyncReadyFacts(expired!, host.published)).rejects.toThrow();
-    expect((await host.db.transaction((tx) => loadDesktopFramedSyncReadyFacts(tx, host.published)))?.facts).toEqual([host.fact]);
+    await expect(loadLegacyDesktopFramedSyncReadyFacts(expired!, host.published)).rejects.toThrow();
+    expect((await host.db.transaction((tx) => loadLegacyDesktopFramedSyncReadyFacts(tx, host.published)))?.facts).toEqual([host.fact]);
     expect(host.sqlite.prepare('SELECT count(*) FROM framed_sync_blob_pins').pluck().get()).toBe(1);
   } finally { host.close(); }
 });
@@ -80,7 +80,7 @@ it.each([
         header.facts[0].factId = 'other';
         host.sqlite.prepare('UPDATE framed_sync_inbound_transfers SET header_json = ?').run(JSON.stringify(header));
       }
-      await expect(loadDesktopFramedSyncReadyFacts(host.db, published)).rejects.toThrow(error);
+      await expect(loadLegacyDesktopFramedSyncReadyFacts(host.db, published)).rejects.toThrow(error);
       expect(host.sqlite.prepare('SELECT state FROM framed_sync_inbound_transfers').pluck().get()).toBe('ready_to_apply');
       expect(host.sqlite.prepare('SELECT count(*) FROM framed_sync_blob_pins').pluck().get()).toBe(1);
     } finally { host.close(); }
@@ -90,6 +90,6 @@ it('returns null when the durable transfer is not ready', async () => {
   const host = await reopenedReadyFixture();
   try {
     host.sqlite.exec("UPDATE framed_sync_inbound_transfers SET state = 'receiving'");
-    expect(await loadDesktopFramedSyncReadyFacts(host.db, host.published)).toBeNull();
+    expect(await loadLegacyDesktopFramedSyncReadyFacts(host.db, host.published)).toBeNull();
   } finally { host.close(); }
 });

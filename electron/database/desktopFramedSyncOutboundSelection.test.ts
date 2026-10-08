@@ -8,6 +8,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
 import { FRAMED_SYNC_INVENTORY_TABLES } from '../../lib/core/database/framedSyncInventorySchema.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
+import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_METADATA_SCHEMA } from '../../lib/core/database/syncGroupSchemaStatements.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
@@ -16,6 +17,7 @@ import {
   type FramedSyncInventoryEntry
 } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { reconcileFramedSyncPublication } from '../../lib/core/sync/framedSyncPublicationReconciliation.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import { publishDesktopFramedSyncNodeOutbound } from './desktopFramedSyncOutboundSelection.js';
@@ -89,12 +91,38 @@ beforeEach(() => {
   for (const sql of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter((value) =>
     value.startsWith('CREATE TABLE IF NOT EXISTS content_blob'))) sqlite.exec(sql);
   sqlite.exec(SYNC_GROUP_METADATA_SCHEMA);
+  for (const sql of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(sql);
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   for (const sql of FRAMED_SYNC_INVENTORY_TABLES) sqlite.exec(sql);
   port = createBetterSqliteDbPort(sqlite);
 });
 
 afterEach(() => sqlite.close());
+
+it('finishes a database publication after its body arrives while the image remains missing', async () => {
+  const contentHash = '7'.repeat(64);
+  const body = 'Body with a missing image';
+  const image = hash('missing image');
+  insertVersion('version-1', body, contentHash);
+  sqlite.prepare("INSERT INTO nodes VALUES ('node-1', 'version-1')").run();
+  const stored = JSON.parse(snapshot('version-1', contentHash, body));
+  stored.resource_references = JSON.stringify([{ role: 'image', original_name: 'Image.png',
+    storage_key: `${hex(image)}.png` }]);
+  sqlite.prepare('UPDATE node_sync_versions SET snapshot_json = ? WHERE version_id = ?')
+    .run(JSON.stringify(stored), 'version-1');
+  const source = { ...entry('version-1', body, contentHash), resourceHashes: [hash(body), image] };
+  const [difference] = compareFramedSyncInventories({ local: [source], remote: [] });
+  if (!difference) throw new Error('difference_missing');
+  const selected = await publishDesktopFramedSyncNodeOutbound({
+    context: context('receiver-a'), difference, port, readCurrentInventoryEntry: async () => source
+  });
+  if (selected.kind !== 'published') throw new Error('publication_missing');
+  expect(selected.publication.manifest.blobs.map((blob) => hex(blob.sha256))).toEqual([hex(hash(body))]);
+  expect(await reconcileFramedSyncPublication(port, selected.publication.transferId,
+    [{ ...source, resourceHashes: [hash(body)] }])).toBe('satisfied');
+  expect(sqlite.prepare('SELECT * FROM framed_sync_outbound_holds').all()).toEqual([]);
+  expect(sqlite.prepare('SELECT * FROM framed_sync_receipts').all()).toEqual([]);
+});
 
 it('defers only the Node when its selected body blob is unavailable', async () => {
   const contentHash = '8'.repeat(64);

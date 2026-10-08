@@ -1,5 +1,3 @@
-import type { NodeVersionBodyStorage } from '../sync/syncNodeTombstoneVersion.js';
-
 import {
   framedSyncNodeInventorySql,
   framedSyncResourceVersionSql,
@@ -42,7 +40,7 @@ export const FRAMED_SYNC_INVENTORY_TABLES = [
   )`
 ] as const;
 
-function nodeVersionTriggers(bodyStorage: NodeVersionBodyStorage) {
+function nodeVersionTriggers() {
   return [
     ...triggers('sync_object_state', (ref) =>
     framedSyncNodeInventorySql(`${ref}.object_id`)),
@@ -51,13 +49,13 @@ function nodeVersionTriggers(bodyStorage: NodeVersionBodyStorage) {
       AND json_extract(fact_id, '$[0]') = ${ref}.version_id
       AND NOT EXISTS (SELECT 1 FROM node_sync_versions WHERE version_id = ${ref}.version_id);
     DELETE FROM framed_sync_version_summary WHERE version_id = ${ref}.version_id;
-    ${framedSyncVersionSummarySql(`version_id = ${ref}.version_id`, bodyStorage)}
-    ${framedSyncTombstoneSummarySql(`version_id = ${ref}.version_id`, bodyStorage)}
+    ${framedSyncVersionSummarySql(`version_id = ${ref}.version_id`)}
+    ${framedSyncTombstoneSummarySql(`version_id = ${ref}.version_id`)}
     ${framedSyncNodeInventorySql(`${ref}.object_id`)}`),
     ...triggers('node_sync_tombstones', (ref) => `
     DELETE FROM framed_sync_version_summary WHERE version_id = ${ref}.version_id;
-    ${framedSyncVersionSummarySql(`version_id = ${ref}.version_id`, bodyStorage)}
-    ${framedSyncTombstoneSummarySql(`version_id = ${ref}.version_id`, bodyStorage)}
+    ${framedSyncVersionSummarySql(`version_id = ${ref}.version_id`)}
+    ${framedSyncTombstoneSummarySql(`version_id = ${ref}.version_id`)}
     ${framedSyncNodeInventorySql(`${ref}.node_id`)}`),
     ...triggers('nodes', (ref) => framedSyncNodeInventorySql(`${ref}.id`)),
     `CREATE TRIGGER IF NOT EXISTS trg_framed_inventory_node_head_body
@@ -67,16 +65,16 @@ function nodeVersionTriggers(bodyStorage: NodeVersionBodyStorage) {
       WHERE version_id = NEW.current_version_id AND body_hash IS NULL
         AND NEW.body_blob_hash IS NOT NULL
         AND EXISTS (SELECT 1 FROM node_sync_versions version
-          WHERE version.version_id = NEW.current_version_id AND ${bodyStorage === 'chunked' ? "version.body_state = 'readable'" : 'version.body_text IS NOT NULL'});
+          WHERE version.version_id = NEW.current_version_id AND version.body_text IS NOT NULL);
       ${framedSyncNodeInventorySql('NEW.id')}
     END`
   ];
 }
 
-/** Select the representation once during a formal schema upgrade. */
-export function createFramedSyncInventoryTriggers(bodyStorage: NodeVersionBodyStorage) {
+/** Inventory triggers read the full bodies owned by business versions. */
+export function createFramedSyncInventoryTriggers() {
   return [
-    ...nodeVersionTriggers(bodyStorage),
+    ...nodeVersionTriggers(),
     ...triggers('node_sync_version_parents', (ref) => `
     DELETE FROM framed_sync_fact_summary WHERE kind = 3
       AND fact_id = json_array(${ref}.version_id, ${ref}.parent_version_id, ${ref}.ordinal);
@@ -101,7 +99,7 @@ export function createFramedSyncInventoryTriggers(bodyStorage: NodeVersionBodySt
   ];
 }
 
-export const FRAMED_SYNC_INVENTORY_TRIGGERS = createFramedSyncInventoryTriggers('continuous');
+export const FRAMED_SYNC_INVENTORY_TRIGGERS = createFramedSyncInventoryTriggers();
 
 export const FRAMED_SYNC_INVENTORY_SCHEMA = [
   ...FRAMED_SYNC_INVENTORY_TABLES, ...FRAMED_SYNC_INVENTORY_TRIGGERS

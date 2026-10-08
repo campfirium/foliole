@@ -1,9 +1,12 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
-import { createReadStream, type ReadStream } from 'node:fs';
 import { mkdtemp, open, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { finished } from 'node:stream/promises';
+
+import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
+import { leaseFramedSyncPayloads } from '../../lib/core/sync/framedSyncPayloadLease.js';
+
+import { readFramedSyncFileChunks } from './framedSyncFileChunks.js';
 
 const READ_BYTES = 64 * 1024;
 
@@ -12,21 +15,19 @@ export async function withVerifiedFramedHttpBody<T>(input: {
   body: AsyncIterable<Uint8Array>;
   expectedSha256: string;
   contentLength?: string;
-}, consume: (stream: ReadStream) => Promise<T>): Promise<T> {
+  payloadBudget?: FramedSyncPayloadBudget | undefined;
+}, consume: (stream: AsyncIterable<Uint8Array> & Readonly<{ path: string }>) => Promise<T>): Promise<T> {
   if (!/^[0-9a-f]{64}$/u.test(input.expectedSha256)) throw new Error('invalid_signature');
   const expectedLength = parseLength(input.contentLength);
   const root = await mkdtemp(join(tmpdir(), 'foliole-framed-http-'));
   const path = join(root, 'request.body');
-  let stream: ReadStream | undefined;
+  let stream: ReturnType<typeof readFramedSyncFileChunks> | undefined;
   try {
-    await spool(input.body, path, input.expectedSha256, expectedLength);
-    stream = createReadStream(path, { highWaterMark: READ_BYTES });
-    return await consume(stream);
+    await spool(leaseFramedSyncPayloads(input.body, input.payloadBudget, 'inbound'), path, input.expectedSha256, expectedLength);
+    stream = readFramedSyncFileChunks(path);
+    return await consume(Object.assign(stream, { path }));
   } finally {
-    if (stream) {
-      stream.destroy();
-      await finished(stream).catch(() => {});
-    }
+    await stream?.return(undefined);
     await rm(root, { recursive: true, force: true });
   }
 }

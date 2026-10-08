@@ -3,9 +3,10 @@ package com.foliole.android;
 import android.content.Context;
 import android.util.Base64;
 import com.foliole.android.framed.FramedSyncHttpTransport;
+import com.foliole.android.framed.FramedSyncPayloadBudgetRegistry;
+import com.foliole.android.framed.FramedSyncSessionFile;
 import com.foliole.android.framed.FramedSyncSessionContext;
 import com.foliole.android.framed.FramedSyncSessionNonceSQLite;
-import com.foliole.android.framed.FramedSyncSessionWriter;
 import com.foliole.android.framed.FramedSyncTransferContext;
 import com.foliole.android.framed.FramedSyncTransferReader;
 import com.foliole.android.framed.FramedSyncTransferSQLite;
@@ -14,8 +15,6 @@ import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.security.MessageDigest;
-import java.util.Map;
 import org.json.JSONObject;
 
 final class FolioleCompanionFramedSyncPull {
@@ -24,6 +23,7 @@ final class FolioleCompanionFramedSyncPull {
     private FolioleCompanionFramedSyncPull() {}
 
     static JSObject pull(Context context, PluginCall call) throws Exception {
+        var budget = FramedSyncPayloadBudgetRegistry.current();
         String groupId = required(call, "sync_group_id");
         String endpointUrl = required(call, "endpoint_url");
         String remoteDeviceId = required(call, "receiver_device_id");
@@ -33,35 +33,36 @@ final class FolioleCompanionFramedSyncPull {
         FolioleCompanionCurrentGroupCredential credential =
             FolioleCompanionCurrentGroupCredential.load(groupId);
         FolioleCompanionSyncGroupDataBridge bridge = FolioleCompanionSyncGroupDataBridge.current();
-        String localEpoch = localEpoch(bridge);
+        String localEpoch = localEpoch(bridge, budget);
         byte[] groupKey = groupKey(credential.workgroupKey);
         FramedSyncSessionContext sessionContext = new FramedSyncSessionContext(
             groupId, credential.deviceId, localEpoch, remoteDeviceId, remoteEpoch);
-        byte[] request;
-        try (FramedSyncSessionNonceSQLite nonces = new FramedSyncSessionNonceSQLite(context)) {
-            request = FramedSyncSessionWriter.encode(groupKey, sessionContext,
-                FolioleCompanionFramedSyncPullInput.messages(input), nonces);
-        }
         String path = path(credential.deviceId, localEpoch, remoteDeviceId, remoteEpoch);
         URL url = new URL(join(endpointUrl, path));
         FramedSyncTransferContext transferContext = new FramedSyncTransferContext(
             groupId, remoteDeviceId, remoteEpoch, credential.deviceId, localEpoch);
-        try (FramedSyncTransferSQLite staging = new FramedSyncTransferSQLite(context)) {
+        try (FramedSyncTransferSQLite staging = new FramedSyncTransferSQLite(context);
+             FramedSyncSessionNonceSQLite nonces = new FramedSyncSessionNonceSQLite(context);
+             FramedSyncSessionFile request = FramedSyncSessionFile.create(context.getCacheDir(), groupKey,
+                sessionContext, consumer -> {
+                    for (var message : FolioleCompanionFramedSyncPullInput.messages(input)) consumer.accept(message);
+                }, nonces, budget)) {
             FramedSyncTransferReader.Result received = FramedSyncHttpTransport.postStream(
                 url, groupId, remoteDeviceId, remoteEpoch,
-                signedHeaders(credential, groupId, path, request),
-                writer -> FramedSyncSessionWriter.replay(request, writer),
-                response -> staging.receive(response, groupKey, transferContext));
+                FolioleCompanionSyncGroupSigning.framedHeaders(credential, groupId, path, request.sha256()),
+                request::replay,
+                response -> staging.receive(response, groupKey, transferContext, budget));
             if (Boolean.TRUE.equals(call.getBoolean("stage_only", false))) {
                 return FolioleCompanionFramedSyncApply.stage(staging, received.transferId(), transferContext, credential.deviceId, localEpoch);
             }
             TransferReceipt receipt = FolioleCompanionFramedSyncApply.apply(
-                bridge, staging, received.transferId(), transferContext, credential.deviceId, localEpoch);
-            byte[] encodedReceipt = staging.receipt(groupKey, receipt);
-            FramedSyncHttpTransport.postNoResponse(
-                url, groupId, remoteDeviceId, remoteEpoch,
-                signedHeaders(credential, groupId, path, encodedReceipt),
-                writer -> FramedSyncSessionWriter.replay(encodedReceipt, writer));
+                bridge, staging, received.transferId(), transferContext, credential.deviceId, localEpoch, budget);
+            try (var body = staging.receiptBody(groupKey, receipt, budget)) {
+                FramedSyncHttpTransport.postNoResponse(
+                    url, groupId, remoteDeviceId, remoteEpoch,
+                    FolioleCompanionSyncGroupSigning.framedHeaders(credential, groupId, path, body.sha256()),
+                    body::replay);
+            }
             return result(receipt);
         }
     }
@@ -75,16 +76,6 @@ final class FolioleCompanionFramedSyncPull {
             .put("transfer_id", hex(receipt.getTransferId().toByteArray()));
     }
 
-    private static Map<String, String> signedHeaders(
-        FolioleCompanionCurrentGroupCredential credential,
-        String groupId,
-        String path,
-        byte[] body
-    ) throws Exception {
-        return FolioleCompanionSyncGroupSigning.framedHeaders(
-            credential, groupId, path, sha256(body));
-    }
-
     private static String path(
         String localDeviceId, String localEpoch, String remoteDeviceId, String remoteEpoch
     ) throws Exception {
@@ -94,9 +85,9 @@ final class FolioleCompanionFramedSyncPull {
             "&responder_library_epoch=" + encode(remoteEpoch);
     }
 
-    private static String localEpoch(FolioleCompanionSyncGroupDataBridge bridge) throws Exception {
+    private static String localEpoch(FolioleCompanionSyncGroupDataBridge bridge, com.foliole.android.framed.FramedSyncPayloadBudget budget) throws Exception {
         String value = bridge.request(
-            "load_member_state", new JSONObject()).optString("library_epoch", null);
+            "load_member_state", new JSONObject(), budget).optString("library_epoch", null);
         if (value == null || value.trim().isEmpty()) {
             throw new IllegalArgumentException("library_epoch_required");
         }
@@ -107,10 +98,6 @@ final class FolioleCompanionFramedSyncPull {
         byte[] result = Base64.decode(value, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
         if (result.length != 32) throw new SecurityException("sync_group_key_invalid");
         return result;
-    }
-
-    private static String sha256(byte[] value) throws Exception {
-        return hex(MessageDigest.getInstance("SHA-256").digest(value));
     }
 
     private static String required(PluginCall call, String key) {

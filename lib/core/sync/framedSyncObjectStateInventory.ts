@@ -1,8 +1,9 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
 
+import { isWorkspaceSettingObject } from '../database/settingDataPolicy.js';
+
 import type { DbPort, DbRow } from './dbPort.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
-import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 import { SYNC_POLICY_HOST_PRIVATE_OBJECT_TYPES } from './syncObjectPolicy.js';
 
 /** Existing write-maintained object identities, matching the native identity copy surface. */
@@ -20,7 +21,7 @@ const sharedSettingPrefix = 'user_space:';
 
 export function isFramedSyncSharedStateObject(type: string, objectId: string) {
   return sharedTypes.some((candidate) => candidate === type)
-    && (type !== 'setting' || objectId.startsWith(sharedSettingPrefix));
+    && (type !== 'setting' || isWorkspaceSettingObject(objectId));
 }
 
 interface StateRow extends DbRow {
@@ -32,15 +33,14 @@ interface StateRow extends DbRow {
 }
 
 export async function readFramedSyncObjectStateInventory(
-  port: DbPort, key?: Readonly<{ globalId: string; objectType: string }>, storage: NodeVersionBodyStorage = 'continuous'
+  port: DbPort, key?: Readonly<{ globalId: string; objectType: string }>
 ): Promise<FramedSyncInventoryEntry[]> {
   const types = sharedTypes.map((type) => `'${type}'`).join(',');
   const rows = await port.query<StateRow>(`SELECT object_type, object_id, content_hash, current_version_id,
     CASE WHEN object_type = 'external_document' AND deleted_at IS NULL THEN
       (SELECT body_blob_hash FROM external_documents WHERE document_id = object_id
-        AND EXISTS (${storage === 'chunked'
-    ? 'SELECT 1 FROM content_bodies WHERE hash = body_blob_hash AND verified = 1'
-    : 'SELECT 1 FROM content_blob_data WHERE hash = body_blob_hash'}))
+        AND (CAST(content AS BLOB) <> X'' OR body_blob_hash =
+          'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'))
       ELSE NULL END AS body_blob_hash
     FROM sync_object_state WHERE object_type IN (${types})
       AND (object_type != 'setting' OR object_id LIKE '${sharedSettingPrefix}%')
@@ -48,7 +48,7 @@ export async function readFramedSyncObjectStateInventory(
         (SELECT 1 FROM nodes WHERE id = object_id))
       ${key ? 'AND object_type = ? AND object_id = ?' : ''}
     ORDER BY object_type, object_id`, key ? [key.objectType, key.globalId] : []);
-  return rows.map((row) => {
+  return rows.filter((row) => isFramedSyncSharedStateObject(row.object_type, row.object_id)).map((row) => {
     if (!/^[a-f0-9]{64}$/u.test(row.content_hash)) {
       throw new Error('framed_sync_inventory_state_hash_invalid');
     }

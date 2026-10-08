@@ -1,7 +1,8 @@
 import type { DbPort } from './dbPort.js';
+import { clearRestoreWorkspaceSettings } from './syncGroupRestoreSettings.js';
 
-// Materialized Sync Pack data is removed before the winning full pack is applied.
-// The caller owns a transaction that covers both operations and the restore receipt.
+// An explicit overwrite replaces library data while keeping ordinary device preferences.
+// The caller commits this reset together with its durable clear-once progress marker.
 const CLEAR_TABLES = [
   'framed_sync_receipts',
   'node_version_local_origins', 'node_version_outbound_payload_holds', 'node_version_outbound_holds',
@@ -13,19 +14,22 @@ const CLEAR_TABLES = [
   'sync_identity_pack_receipts', 'sync_identity_peer_baselines',
   'sync_identity_fact_staging', 'sync_identity_fact_sections',
   'sync_identity_index_rows', 'sync_identity_partition_digest',
-  'sync_pack_receive_progress', 'sync_pack_resource_articles',
+  'sync_pack_receive_progress', 'sync_pack_resource_articles', 'framed_sync_resource_demands',
   'sync_pack_dependency_rows', 'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims',
   'sync_change_log', 'node_text_alternatives',
   'node_sync_conflicts', 'node_sync_version_parents', 'node_sync_versions',
   'node_sync_tombstones', 'node_review', 'node_reading', 'node_open_state',
   'node_reading_host_state', 'node_view_state', 'review_log',
   'parent_order_heads', 'parent_order_versions', 'parent_child_order', 'pdf_page_text', 'external_documents',
-  'external_search_folders', 'import_sources', 'watched_folder_bindings',
-  'sync_objects', 'sync_object_state', 'content_blob_data', 'content_blobs',
+  'external_search_folders', 'external_folder_host_preferences', 'import_sources', 'watched_folder_bindings',
+  'keep_import_items', 'keep_import_item_cache', 'watched_folder_conflict_decisions',
+  'source_disposition_states', 'readwise_api_import_stage', 'readwise_api_import_runs',
+  'readwise_api_reconcile_stage', 'readwise_api_reconcile_runs', 'import_runs', 'stored_import_locators',
+  'sync_objects', 'sync_object_state', 'desktop_sources', 'content_blob_data', 'content_blobs',
   'pdf_index_state'
 ] as const;
 
-export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: string, bodyStorage: 'continuous' | 'chunked' = 'continuous') {
+export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: string) {
   if (!restoreId.trim()) throw new Error('sync_group_restore_id_invalid');
   const tableNames = new Set((await port.query<{ name: string }>(
     "SELECT name FROM sqlite_master WHERE type = 'table'"
@@ -36,9 +40,11 @@ export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: 
   await port.run('PRAGMA defer_foreign_keys = ON');
   for (const table of CLEAR_TABLES) {
     if (!tableNames.has(table)) continue;
-    if (bodyStorage === 'chunked' && table === 'content_blob_data') continue;
-    await port.run(`DELETE FROM main.${table}${bodyStorage === 'chunked' && table === 'content_blobs'
-      ? " WHERE kind != 'text_body'" : ''}`);
+    if (table === 'sync_objects' || table === 'sync_object_state') {
+      await port.run(`DELETE FROM main.${table} WHERE object_type != 'setting'`);
+      continue;
+    }
+    await port.run(`DELETE FROM main.${table}`);
   }
   if (tableNames.has('sync_identity_dirty_keys')) {
     await port.run('DELETE FROM main.sync_identity_dirty_keys');
@@ -47,13 +53,7 @@ export async function clearWorkgroupSyncDataForRestore(port: DbPort, restoreId: 
     await port.run(`UPDATE main.sync_identity_index_meta SET backfill_complete = 0,
       last_object_type = NULL, last_object_id = NULL WHERE singleton_id = 1`);
   }
-  if (tableNames.has('setting_records')) {
-    if (tableNames.has('settings')) {
-      await port.run(`DELETE FROM main.settings WHERE key IN
-        (SELECT key FROM main.setting_records WHERE scope = 'user_space')`);
-    }
-    await port.run("DELETE FROM main.setting_records WHERE scope = 'user_space'");
-  }
+  await clearRestoreWorkspaceSettings(port, tableNames);
   if (tableNames.has('nodes')) {
     await port.run(`DELETE FROM main.nodes
       WHERE id NOT IN ('special-inbox', 'special-virtual-root')`);

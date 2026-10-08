@@ -14,6 +14,7 @@ import { retireFramedSyncAppliedInbound } from '../../lib/core/sync/framedSyncAp
 import {
   acceptBlobChunk,
   assertRequiredBlobsAvailable,
+  isBodyDescriptor,
   selectMissingBlobs,
   validateBlobOffer,
   verifyCompleteBlob,
@@ -22,7 +23,6 @@ import {
 import { retireFramedSyncReadyPayloads } from '../../lib/core/sync/framedSyncReadyPayloadCleanup.js';
 import type { BlobChunkInput, BlobOfferTransactionInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 
-import { verifyDesktopFramedSyncChunkedBlob } from './desktopFramedSyncChunkedBlobAvailability.js';
 
 function assertAvailableBlobMatches(row: DbRow, byteLength: bigint, data?: Uint8Array) {
   if (framedSyncBigInt(row, 'byte_length') !== byteLength ||
@@ -92,7 +92,7 @@ function createBlobTransferStaging(db: DbPort) {
           WHERE transfer_id = ? AND attempt_id = ? AND sha256 = ? AND byte_offset = ?`,
         [input.transferId, input.attemptId, input.sha256, input.offset]);
         const accepted = acceptBlobChunk({
-          byteLength: framedSyncBigInt(descriptor, 'byte_length'), sha256: input.sha256
+          byteLength: framedSyncBigInt(descriptor, 'byte_length'), role: Number(descriptor.role), sha256: input.sha256
         }, rows.map((row) => ({
           data: framedSyncBytes(row, 'data'), offset: framedSyncBigInt(row, 'byte_offset')
         })), { data: input.data, offset: input.offset });
@@ -105,7 +105,7 @@ function createBlobTransferStaging(db: DbPort) {
   };
 }
 
-function createBlobAvailabilityStaging(db: DbPort, storage: 'continuous' | 'chunked') {
+function createBlobAvailabilityStaging(db: DbPort) {
   return {
     async verifyAndMarkBlobAvailable(transferId: Uint8Array, attemptId: Uint8Array, sha256: Uint8Array) {
       return db.transaction(async (tx) => {
@@ -116,13 +116,6 @@ function createBlobAvailabilityStaging(db: DbPort, storage: 'continuous' | 'chun
           WHERE transfer_id = ? AND attempt_id = ?`, [transferId, attemptId]);
         if (!attempt || framedSyncText(attempt, 'state') !== 'receiving') {
           failFramedSync('blob_attempt_not_receiving');
-        }
-        if (storage === 'chunked') {
-          const blob = { byteLength: framedSyncBigInt(descriptor, 'byte_length'), sha256,
-            required: Number(descriptor.required) === 1, role: Number(descriptor.role) };
-          const result = await verifyDesktopFramedSyncChunkedBlob(tx, transferId, attemptId, blob);
-          await pinAvailableBlob(tx, transferId, blob);
-          return result;
         }
         const current = await readFramedSyncRow(tx,
           'SELECT * FROM framed_sync_blob_pins WHERE transfer_id = ? AND sha256 = ?', [transferId, sha256]);
@@ -141,9 +134,12 @@ function createBlobAvailabilityStaging(db: DbPort, storage: 'continuous' | 'chun
         const chunks = rows.map((row) => ({
           data: framedSyncBytes(row, 'data'), offset: framedSyncBigInt(row, 'byte_offset')
         }));
-        const data = Buffer.concat(chunks.map((chunk) => chunk.data));
-        verifyCompleteBlob({ byteLength: framedSyncBigInt(descriptor, 'byte_length'), sha256 }, chunks,
+        const blob = { byteLength: framedSyncBigInt(descriptor, 'byte_length'), role: Number(descriptor.role), sha256 };
+        const data = isBodyDescriptor(blob) ? chunks[0]?.data ?? new Uint8Array() :
+          Buffer.concat(chunks.map((chunk) => chunk.data));
+        verifyCompleteBlob(blob, chunks,
           new Uint8Array(createHash('sha256').update(data).digest()));
+        if (isBodyDescriptor(blob)) new TextDecoder('utf-8', { fatal: true }).decode(data);
         const available = await readFramedSyncRow(tx,
           'SELECT * FROM framed_sync_available_blobs WHERE sha256 = ?', [sha256]);
         if (available) assertAvailableBlobMatches(available, BigInt(data.byteLength), data);
@@ -209,10 +205,10 @@ function createBlobPromotionStaging(db: DbPort) {
   };
 }
 
-export function createDesktopFramedSyncBlobStaging(db: DbPort, storage: 'continuous' | 'chunked' = 'continuous') {
+export function createDesktopFramedSyncBlobStaging(db: DbPort) {
   return {
     ...createBlobTransferStaging(db),
-    ...createBlobAvailabilityStaging(db, storage),
+    ...createBlobAvailabilityStaging(db),
     ...createBlobPromotionStaging(db)
   };
 }

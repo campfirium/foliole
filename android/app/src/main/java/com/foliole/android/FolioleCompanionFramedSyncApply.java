@@ -19,7 +19,7 @@ final class FolioleCompanionFramedSyncApply {
         byte[] transferId,
         FramedSyncTransferContext context,
         String localDeviceId,
-        String localEpoch
+        String localEpoch, com.foliole.android.framed.FramedSyncPayloadBudget budget
     ) throws Exception {
         try (FramedSyncResourcePublication resources = staging.publishResources(transferId)) {
             JSONObject applied = bridge.request("apply_framed_transfer", new JSONObject()
@@ -29,7 +29,7 @@ final class FolioleCompanionFramedSyncApply {
                 .put("sender_library_epoch", context.senderLibraryEpoch())
                 .put("receiver_device_id", localDeviceId)
                 .put("receiver_library_epoch", localEpoch)
-                .put("resource_storage_keys", new JSONArray(resources.storageKeys())));
+                .put("resource_storage_keys", new JSONArray(resources.storageKeys())), budget);
             TransferReceipt receipt = receipt(applied, transferId, localDeviceId, localEpoch);
             resources.commit();
             return receipt;

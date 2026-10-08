@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES as capacity, FramedSyncPayloadBudget,
+import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES as capacity, FRAMED_SYNC_RECEIPT_SLOT_BYTES, FramedSyncPayloadBudget,
   type FramedSyncPayloadDirection } from './framedSyncPayloadBudget.js';
 
 function gate() {
@@ -8,6 +8,23 @@ function gate() {
   const promise = new Promise<void>((done) => { resolve = done; });
   return { promise, resolve };
 }
+
+it('cancels queued receipts on library close and drains only after the active receipt is released', async () => {
+  const budget = new FramedSyncPayloadBudget();
+  const active = await budget.acquireReceipt({ direction: 'outbound', bytes: FRAMED_SYNC_RECEIPT_SLOT_BYTES });
+  const waiting = budget.acquireReceipt({ direction: 'outbound', bytes: 1 });
+  const rejected = expect(waiting).rejects.toMatchObject({ name: 'AbortError' });
+  let drained = false;
+  void budget.drained.then(() => { drained = true; });
+  budget.close();
+  await rejected;
+  expect(drained).toBe(false);
+  active.release();
+  await budget.drained;
+  expect(drained).toBe(true);
+  await expect(budget.acquireReceipt({ direction: 'inbound', bytes: 1 }))
+    .rejects.toThrow('framed_sync_payload_budget_closed');
+});
 
 it('shares a 4 MiB payload maximum across connections and database/resource lines', async () => {
   const budget = new FramedSyncPayloadBudget();

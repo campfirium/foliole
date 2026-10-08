@@ -8,6 +8,7 @@ import { SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../lib/core/database/s
 import type { DbParams, DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
 import { finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncGroupUnifiedContract';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY } from '../../../../../lib/platform/syncProtocolContract';
 
 const database = vi.hoisted(() => ({ driver: null as unknown as DbPort }));
 
@@ -71,6 +72,20 @@ beforeEach(async () => {
 });
 
 afterEach(() => sqlite.close());
+
+it.each(['missing', 'legacy'] as const)('rejects %s protocol before any companion database mutation', async kind => {
+  const state = await loadCompanionSyncGroupMemberState();
+  expect(state.protocol).toEqual(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
+  const incoming = { ...state, sender_device_identity_key: provider.identity_key };
+  if (kind === 'missing') delete incoming.protocol;
+  else incoming.protocol = { ...CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
+    capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities.filter(value => value !== FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY) };
+  const writer = vi.spyOn(database.driver, 'run');
+  await expect(applyCompanionSyncGroupMemberState(incoming, provider.identity_key))
+    .rejects.toThrow('sync_group_peer_incompatible');
+  expect(writer).not.toHaveBeenCalled();
+  writer.mockRestore();
+});
 
 it('rejects an older proof revision from a restored provider database', async () => {
   sqlite.prepare(`INSERT INTO node_version_device_revisions

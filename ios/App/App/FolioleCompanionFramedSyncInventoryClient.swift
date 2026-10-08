@@ -20,6 +20,8 @@ extension FolioleCompanionSyncPlugin {
     }
 
     private func readRemoteFramedInventory(_ call: CAPPluginCall) async throws -> [String: Any] {
+        let owner = try FolioleFramedSyncPayloadBudgetRegistry.shared.requireCurrent()
+        let groupData = FolioleFramedSyncOwnedBridge(bridge: self.groupData, owner: owner)
         let groupID = try framedRequired(call, "sync_group_id")
         let receiverDeviceID = try framedRequired(call, "receiver_device_id")
         let receiverEpoch = try framedRequired(call, "receiver_library_epoch")
@@ -35,39 +37,46 @@ extension FolioleCompanionSyncPlugin {
             initiatorLibraryEpoch: senderEpoch, responderDeviceID: receiverDeviceID,
             responderLibraryEpoch: receiverEpoch
         )
-        let local = try FolioleCompanionFramedSyncInventory.read(
-            groupData.request("read_framed_inventory", [:])
-        )
+        let local = try await FolioleFramedSyncPayloadWorker.run {
+            try FolioleFramedSyncBridgeFactSource.metadata("read_framed_inventory", payload: [:], bridge: groupData, owner: owner,
+                consume: FolioleCompanionFramedSyncInventory.read)
+        }
         let roundID = withUnsafeBytes(of: UUID().uuid) { Data($0) }
-        let body = try FolioleFramedSyncSessionWriter.encode(
-            groupKey: groupKey, context: context,
-            messages: try FolioleFramedSyncInventoryWire.encode(entries: local, roundID: roundID)
-        )
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("foliole-framed-session-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let bodyURL = directory.appendingPathComponent("request.bin")
+        try await FolioleFramedSyncPayloadWorker.run {
+            try FolioleFramedSyncSessionWriter.writeFile(to: bodyURL, groupKey: groupKey, context: context, owner: owner) { emit in
+                try FolioleFramedSyncInventoryWire.emit(entries: local, roundID: roundID, consume: emit)
+            }
+        }
         let path = try framedPath(senderDeviceID, senderEpoch, receiverDeviceID, receiverEpoch)
-        let response = try await framedPost(
+        let headers = try await FolioleFramedSyncPayloadWorker.run {
+            try self.framedHeaders(groupID: groupID, deviceID: senderDeviceID,
+                workgroupKey: workgroupKey, path: path, bodyURL: bodyURL, owner: owner)
+        }
+        let entries = try await withFramedPostResponseFile(
             endpoint: try framedRequired(call, "endpoint_url"), path: path,
-            peer: .init(
-                groupID: groupID, deviceID: receiverDeviceID, libraryEpoch: receiverEpoch,
-                memberAuthHeaders: framedHeaders(
-                    groupID: groupID, deviceID: senderDeviceID,
-                    workgroupKey: workgroupKey, path: path, body: body
-                )
-            ), body: body
-        )
-        let session = try FolioleFramedSyncSessionReader.read(
-            response, groupKey: groupKey, context: context,
-            maximumFrames: FolioleFramedSyncInventoryWire.maximumSessionFrames
-        )
-        guard try FolioleFramedSyncInventoryWire.decodeRoundID(session.messages) == roundID else {
-            throw invalid("inventory_round_identity_mismatch")
+            peer: .init(groupID: groupID, deviceID: receiverDeviceID,
+                libraryEpoch: receiverEpoch, memberAuthHeaders: headers), bodyURL: bodyURL, owner: owner
+        ) { responseURL in
+            guard let input = InputStream(url: responseURL) else { throw self.invalid("framed_sync_response_body_missing") }
+            let inventory = FolioleFramedSyncInventoryWire.Reader(retainEntries: true)
+            _ = try FolioleFramedSyncSessionReader.readEach(input, groupKey: groupKey, context: context,
+                maximumFrames: FolioleFramedSyncInventoryWire.maximumSessionFrames, owner: owner, consume: inventory.accept)
+            return try inventory.result(expectedRoundID: roundID)
         }
         return [
-            "entries": try FolioleFramedSyncInventoryWire.decodeEntries(session.messages).map(project),
+            "entries": entries.map(project),
             "round_id": roundID.hex
         ]
     }
 
     private func pullRemoteFramedObject(_ call: CAPPluginCall) async throws -> [String: Any] {
+        let owner = try FolioleFramedSyncPayloadBudgetRegistry.shared.requireCurrent()
+        let groupData = FolioleFramedSyncOwnedBridge(bridge: self.groupData, owner: owner)
         let groupID = try framedRequired(call, "sync_group_id")
         let endpoint = try framedRequired(call, "endpoint_url")
         let remoteDeviceID = try framedRequired(call, "receiver_device_id")
@@ -91,23 +100,32 @@ extension FolioleCompanionSyncPlugin {
             requiredRelationIDs: framedArray(call, "required_relation_ids"),
             resourceHashes: framedDigests(call, "resource_hashes"),
             reviewFactIDs: framedArray(call, "review_fact_ids"),
-            stateFactIDs: framedArray(call, "state_fact_ids"), objectType: framedRequired(call, "object_type")
+            stateFactIDs: framedArray(call, "state_fact_ids"), objectType: framedRequired(call, "object_type"),
+            resources: FolioleCompanionFramedSyncResourceRequest.read(call.options["resources"])
         )
-        let requestBody = try FolioleFramedSyncSessionWriter.encode(
-            groupKey: groupKey, context: sessionContext, messages: [request]
-        )
+        let requestDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("foliole-framed-pull-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: requestDirectory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: requestDirectory) }
+        let requestURL = requestDirectory.appendingPathComponent("request.bin")
+        try await FolioleFramedSyncPayloadWorker.run {
+            try FolioleFramedSyncSessionWriter.writeFile(to: requestURL, groupKey: groupKey, context: sessionContext, owner: owner) { emit in try emit(request) }
+        }
         let path = try framedPath(localDeviceID, localEpoch, remoteDeviceID, remoteEpoch)
         let transferContext = FolioleFramedSyncTransferContext(
             groupID: groupID, senderDeviceID: remoteDeviceID, senderLibraryEpoch: remoteEpoch,
             receiverDeviceID: localDeviceID, receiverLibraryEpoch: localEpoch
         )
         let receiver = try FolioleFramedSyncTransferReceiver(
-            database: FolioleFramedSyncTransferDatabase(url: framedInboundDatabaseURL())
+            database: FolioleFramedSyncTransferDatabase(url: framedInboundDatabaseURL()), owner: owner
         )
+        let requestHeaders = try await FolioleFramedSyncPayloadWorker.run {
+            try self.framedHeaders(groupID: groupID, deviceID: localDeviceID, workgroupKey: workgroupKey,
+                path: path, bodyURL: requestURL, owner: owner)
+        }
         let received = try await withFramedPostResponseFile(
             endpoint: endpoint, path: path,
-            peer: framedPeer(groupID, remoteDeviceID, remoteEpoch, localDeviceID, workgroupKey, path, requestBody),
-            body: requestBody
+            peer: .init(groupID: groupID, deviceID: remoteDeviceID, libraryEpoch: remoteEpoch, memberAuthHeaders: requestHeaders),
+            bodyURL: requestURL, owner: owner
         ) { responseURL in
             try receiver.receive(responseURL, groupKey: groupKey, context: transferContext)
         }
@@ -132,11 +150,15 @@ extension FolioleCompanionSyncPlugin {
             ])
         }
         try requireReceipt(applied, transferID: received.transferID, receiver: localDeviceID, epoch: localEpoch)
+        let receiptLoan = try await FolioleFramedSyncPayloadWorker.run {
+            try FolioleFramedSyncPayloadWorker.borrow(owner, direction: .outbound, lane: .receipt)
+        }
+        defer { receiptLoan.release() }
         let receiptBody = try receiver.receipt(groupKey: groupKey, value: applied)
         _ = try await framedPost(
             endpoint: endpoint, path: path,
             peer: framedPeer(groupID, remoteDeviceID, remoteEpoch, localDeviceID, workgroupKey, path, receiptBody),
-            body: receiptBody
+            body: receiptBody, owner: owner, requestLoan: receiptLoan
         )
         return applied
     }
@@ -158,46 +180,6 @@ extension FolioleCompanionSyncPlugin {
               value["receiver_library_epoch"] as? String == epoch else {
             throw invalid("framed_sync_receipt_identity_mismatch")
         }
-    }
-
-    private func framedArray(_ call: CAPPluginCall, _ key: String) throws -> [String] {
-        guard let raw = call.getArray(key) else { throw invalid("\(key)_required") }
-        let result = raw.compactMap { ($0 as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) }
-        guard result.count == raw.count, result.allSatisfy({ !$0.isEmpty }), Set(result).count == result.count
-        else { throw invalid("\(key)_invalid") }
-        return result
-    }
-
-    private func framedDigests(_ call: CAPPluginCall, _ key: String) throws -> [Data] {
-        try framedArray(call, key).map { try framedHex($0, key, byteCount: 32) }
-    }
-
-    private func framedHex(_ call: CAPPluginCall, _ key: String, byteCount: Int) throws -> Data {
-        try framedHex(framedRequired(call, key), key, byteCount: byteCount)
-    }
-
-    private func framedHex(_ value: String, _ key: String, byteCount: Int) throws -> Data {
-        guard value.count == byteCount * 2,
-              value.range(of: "^[a-f0-9]+$", options: .regularExpression) != nil else {
-            throw invalid("\(key)_invalid")
-        }
-        var result = Data(capacity: byteCount)
-        for offset in stride(from: 0, to: value.count, by: 2) {
-            let start = value.index(value.startIndex, offsetBy: offset)
-            guard let byte = UInt8(value[start..<value.index(start, offsetBy: 2)], radix: 16) else {
-                throw invalid("\(key)_invalid")
-            }
-            result.append(byte)
-        }
-        return result
-    }
-
-    private func framedInboundDatabaseURL() throws -> URL {
-        let root = try FileManager.default.url(
-            for: .applicationSupportDirectory, in: .userDomainMask,
-            appropriateFor: nil, create: true
-        )
-        return root.appendingPathComponent("Foliole/framed-sync/ios-transfer.db")
     }
 
     private func project(_ entry: Foliole_Sync_V22_InventoryEntry) -> [String: Any] {

@@ -1,5 +1,6 @@
 import CryptoKit
 import Foundation
+import FolioleFramedSyncRuntime
 
 struct FolioleCompanionHttpHead {
     let headers: [String: String]
@@ -92,6 +93,19 @@ final class FolioleCompanionHttpBodyFile {
 }
 
 final class FolioleCompanionHttpRequestReader {
+    let payloadBudget: FolioleFramedSyncPayloadBudget?
+    let payloadCancellation = FolioleFramedSyncPayloadCancellation()
+    private var framedPrefix = Data()
+    private var firstLane: FolioleFramedSyncPayloadBudget.Lane?
+    var networkLane: FolioleFramedSyncPayloadBudget.Lane? {
+        guard let head else { return nil }
+        return head.framed ? firstLane : .payload
+    }
+    var networkReadBytes: Int {
+        if head == nil { return max(1, 16 * 1024 + 4 - pending.count) }
+        if head?.framed == true && firstLane == nil { return max(1, 112 - framedPrefix.count) }
+        return 64 * 1024
+    }
     private var pending = Data()
     private var head: FolioleCompanionHttpHead?
     private var file: FolioleCompanionHttpBodyFile?
@@ -100,8 +114,9 @@ final class FolioleCompanionHttpRequestReader {
     private var finished = false
     private let directory: URL
 
-    init(directory: URL = FileManager.default.temporaryDirectory.appendingPathComponent("Foliole-http")) {
-        self.directory = directory
+    init(directory: URL = FileManager.default.temporaryDirectory.appendingPathComponent("Foliole-http"),
+         payloadBudget: FolioleFramedSyncPayloadBudget? = nil) {
+        self.directory = directory; self.payloadBudget = payloadBudget
     }
 
     func append(_ data: Data) throws -> FolioleCompanionHttpMessage? {
@@ -122,11 +137,23 @@ final class FolioleCompanionHttpRequestReader {
         guard let head, data.count <= head.bodyLength - received else {
             throw FolioleCompanionHttpHead.invalid("http_body_length_exceeded")
         }
+        if head.framed && firstLane == nil {
+            framedPrefix.append(data.prefix(112 - framedPrefix.count))
+            if framedPrefix.count == 112 {
+                let header = try FolioleFramedSyncWireHeader(decoding: Data(framedPrefix.suffix(16)))
+                firstLane = header.frameType == .transferReceipt ? .receipt : .payload
+                if firstLane == .receipt && header.ciphertextBytes > 1_048_576 {
+                    throw FolioleCompanionHttpHead.invalid("framed_sync_receipt_limit_exceeded")
+                }
+                framedPrefix.removeAll(keepingCapacity: false)
+            }
+        }
         if let file { try file.append(data) } else { body.append(data) }
         received += data.count
         guard received == head.bodyLength else { return nil }
         try file?.finish()
-        let request = try FolioleCompanionHttpMessage.from(head: head, data: body, file: file)
+        var request = try FolioleCompanionHttpMessage.from(head: head, data: body, file: file)
+        request.payloadBudget = payloadBudget; request.payloadCancellation = payloadCancellation
         finished = true
         self.file = nil
         return request

@@ -13,7 +13,7 @@ import org.junit.Test;
 
 public class FramedSyncGoldenCorpusTest {
     @Test
-    public void consumesTheUniqueSchemaAndAllSeventeenGoldenMessages() throws Exception {
+    public void consumesTheUniqueSchemaAndAllGoldenMessages() throws Exception {
         String proto = FramedSyncContractSource.proto();
         assertTrue(proto.startsWith("syntax = \"proto3\";"));
         assertTrue(proto.contains("option java_package = \"com.foliole.sync.v22\";"));
@@ -21,8 +21,8 @@ public class FramedSyncGoldenCorpusTest {
 
         Map<Integer, String> schemaPayloads = FramedSyncContractSource.protocolPayloads();
         List<FramedSyncContractSource.MessageVector> messages = FramedSyncContractSource.messages();
-        assertEquals(17, schemaPayloads.size());
-        assertEquals(17, messages.size());
+        assertEquals(18, schemaPayloads.size());
+        assertEquals(18, messages.size());
 
         Set<Integer> consumedTags = new HashSet<>();
         Set<String> consumedNames = new HashSet<>();

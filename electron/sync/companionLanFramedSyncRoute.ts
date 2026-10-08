@@ -38,6 +38,7 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     if (!group) throw new Error('sync_group_not_available');
     const bodySha256 = readHeader(args.request, FRAMED_SYNC_BODY_SHA256_HEADER);
     return {
+      payloadBudget: connection.framedSyncPayloadBudget,
       auth: authenticateCompanionRequest({
         ...(bodySha256 === undefined ? {} : { bodySha256 }),
         request: args.request,
@@ -52,6 +53,7 @@ export async function handleProductionCompanionFramedSyncPost(args: {
   const noncePort = createDesktopFramedSyncSessionNoncePort(runtime.db);
   await handleCompanionLanFramedSyncPost({
     authenticate: () => runtime.auth,
+    payloadBudget: runtime.payloadBudget,
     localIdentity: { deviceId: args.deviceId, libraryEpoch: runtime.libraryEpoch },
     onStream: async ({ context, stream }) => {
       const preamble = decodeFramedSyncPreamble(stream.preamble);
@@ -114,12 +116,14 @@ async function inspectFirstFrame(stream: FramedSyncStreamBody<FramedSyncWireFram
   if (next.done) throw new Error('framed_sync_frame_missing');
   const first = next.value;
   async function* frames() {
-    yield first;
-    for (;;) {
-      const value = await iterator.next();
-      if (value.done) return;
-      yield value.value;
-    }
+    try {
+      yield first;
+      for (;;) {
+        const value = await iterator.next();
+        if (value.done) return;
+        yield value.value;
+      }
+    } finally { await iterator.return?.(); }
   }
   return { first, stream: { frames: frames(), preamble: stream.preamble } };
 }

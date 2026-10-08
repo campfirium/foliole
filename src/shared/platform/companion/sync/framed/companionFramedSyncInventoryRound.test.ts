@@ -1,3 +1,7 @@
+vi.mock('./companionFramedSyncResourceRound', () => ({
+  runCompanionFramedSyncResourceRound: vi.fn(async () => ({ pending: 0, scanned: 0, transferred: 0, unavailable: 0 }))
+}));
+
 import { beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('./companionFramedSyncPeerRoutes', () => ({
@@ -9,12 +13,12 @@ vi.mock('./companionFramedSyncPendingPublications', () => ({
 }));
 
 const mocks = vi.hoisted(() => ({
-  localEntry: vi.fn(), localInventory: vi.fn(), pull: vi.fn(), remoteInventory: vi.fn(), send: vi.fn()
+  batch: vi.fn(), pullBatch: vi.fn(), localEntry: vi.fn(), localInventory: vi.fn(), pull: vi.fn(), remoteInventory: vi.fn(), send: vi.fn()
 }));
 
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: {
-    pullFramedSyncObject: mocks.pull, readFramedSyncInventory: mocks.remoteInventory
+    pullFramedSyncObject: mocks.pull, pullFramedSyncObjects: mocks.pullBatch, readFramedSyncInventory: mocks.remoteInventory
   }
 }));
 vi.mock('../../runtime/iosCompanionDatabaseBootstrap', () => ({
@@ -27,14 +31,18 @@ vi.mock('./companionFramedSyncInventory', () => ({
 vi.mock('./companionFramedSyncTransfer', () => ({
   sendCompanionFramedSyncObject: mocks.send
 }));
+vi.mock('./companionFramedSyncTransferBatch', () => ({ sendCompanionFramedSyncObjects: mocks.batch }));
 
 import { sendCompanionFramedSyncInventoryDifferences } from './companionFramedSyncInventoryRound.js';
 import { resumeCompanionFramedSyncPendingPublications } from './companionFramedSyncPendingPublications.js';
+import { runCompanionFramedSyncResourceRound } from './companionFramedSyncResourceRound.js';
 
 const request = {
   endpoint_url: 'http://desktop:43110', receiver_device_id: 'desktop-1',
   receiver_library_epoch: 'desktop-epoch', sync_group_id: 'group-1'
 };
+const pullReceipt = (transfer_id = 'b'.repeat(64)) => ({ transfer_id, content_id: 'd'.repeat(64),
+  applied_state_hash: 'e'.repeat(64), receiver_device_id: 'local', receiver_library_epoch: 'local-epoch' });
 const entry = (id: string, state = '1', relations: string[] = []) => ({
   frontier_fact_ids: [`version-${id}`], global_id: id, object_type: 'node',
   required_relation_ids: relations, resource_hashes: ['2'.repeat(64)], review_fact_ids: [], state_fact_ids: [],
@@ -43,16 +51,23 @@ const entry = (id: string, state = '1', relations: string[] = []) => ({
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(runCompanionFramedSyncResourceRound).mockResolvedValue({ pending: 0, scanned: 0, transferred: 0, unavailable: 0 });
   mocks.remoteInventory.mockResolvedValue({ entries: [], round_id: '8'.repeat(32) });
   mocks.localInventory.mockResolvedValue({ entries: [entry('node-a'), entry('node-b')] });
   mocks.localEntry.mockImplementation(async (_db, key: { globalId: string }) =>
     key.globalId === 'node-a' ? entry('node-a') : entry('node-b', '3'));
   mocks.send.mockResolvedValue({ transfer_id: 'a'.repeat(64) });
-  mocks.pull.mockResolvedValue({ transfer_id: 'b'.repeat(64) });
+  mocks.pull.mockResolvedValue(pullReceipt());
+  mocks.pullBatch.mockImplementation(async (value) => {
+    const selected = value.requests[0];
+    return { received: [{ object_id: selected.object_id, object_type: selected.object_type,
+      receipt: await mocks.pull({ ...value, ...selected }) }] };
+  });
 });
 
+
 it('revalidates each selected current node before invoking the native sender', async () => {
-  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
     deferredObjects: [{ globalId: 'node-b', objectType: 'node' }],
     received: [],
     sent: [{ objectId: 'node-a', receipt: { transfer_id: 'a'.repeat(64) } }]
@@ -90,7 +105,7 @@ it('sends exact relation ids without redundantly including the current node', as
   mocks.localInventory.mockResolvedValue({ entries: [entry('node-c', '1', ['relation-1'])] });
   mocks.remoteInventory.mockResolvedValue({ entries: [entry('node-c')], round_id: '8'.repeat(32) });
   mocks.localEntry.mockResolvedValue(entry('node-c', '1', ['relation-1']));
-  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
     deferredObjects: [],
     received: [],
     sent: [{ objectId: 'node-c', receipt: { transfer_id: 'a'.repeat(64) } }]
@@ -107,7 +122,7 @@ it('pulls a remote-only Node with the same inventory round identity', async () =
     entries: [entry('remote-node')], round_id: '8'.repeat(32)
   });
 
-  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
     deferredObjects: [], received: [{
       objectId: 'remote-node', receipt: { transfer_id: 'b'.repeat(64) }
     }], sent: []
@@ -128,22 +143,23 @@ it('pulls a missing parent before retrying a child that arrived first', async ()
   mocks.remoteInventory.mockResolvedValue({
     entries: [entry('child'), entry('parent')], round_id: '8'.repeat(32)
   });
-  let childAttempts = 0;
+  let parentReceived = false;
   mocks.pull.mockImplementation(async ({ object_id: objectId }: { object_id: string }) => {
-    if (objectId === 'child' && childAttempts++ === 0) {
+    if (objectId === 'child' && !parentReceived) {
       throw new Error('Failed to pull framed Sync object. Cause: framed_sync_node_parent_missing:parent');
     }
-    return { transfer_id: objectId === 'parent' ? 'c'.repeat(64) : 'b'.repeat(64) };
+    if (objectId === 'parent') parentReceived = true;
+    return pullReceipt(objectId === 'parent' ? 'c'.repeat(64) : 'b'.repeat(64));
   });
 
-  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
     deferredObjects: [], received: [
       { objectId: 'parent', receipt: { transfer_id: 'c'.repeat(64) } },
       { objectId: 'child', receipt: { transfer_id: 'b'.repeat(64) } }
     ], sent: []
   });
   expect(mocks.pull.mock.calls.map(([value]) => value.object_id))
-    .toEqual(['child', 'parent', 'child']);
+    .toEqual(['child', 'child', 'parent', 'child']);
 });
 
 it('defers a source changed during publication and continues the inventory round', async () => {
@@ -155,10 +171,10 @@ it('defers a source changed during publication and continues the inventory round
     if (objectId === 'changed') {
       throw new Error('framed_sync_http_400:framed_sync_difference_request_source_changed');
     }
-    return { transfer_id: 'b'.repeat(64) };
+    return pullReceipt();
   });
 
-  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
     deferredObjects: [{ globalId: 'changed', objectType: 'node' }],
     received: [{ objectId: 'stable', receipt: { transfer_id: 'b'.repeat(64) } }],
     sent: []
@@ -177,10 +193,10 @@ it('defers a child when its missing parent changed during publication', async ()
     if (objectId === 'parent') {
       throw new Error('framed_sync_http_400:framed_sync_source_changed');
     }
-    return { transfer_id: 'b'.repeat(64) };
+    return pullReceipt();
   });
 
-  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
     deferredObjects: [
       { globalId: 'parent', objectType: 'node' },
       { globalId: 'child', objectType: 'node' }
@@ -189,7 +205,7 @@ it('defers a child when its missing parent changed during publication', async ()
     sent: []
   });
   expect(mocks.pull.mock.calls.map(([value]) => value.object_id))
-    .toEqual(['child', 'parent', 'stable']);
+    .toEqual(['child', 'child', 'parent', 'stable']);
 });
 
 it('pulls a divergent Node before revalidating and deferring its stale outbound side', async () => {
@@ -199,7 +215,7 @@ it('pulls a divergent Node before revalidating and deferring its stale outbound 
   });
   mocks.localEntry.mockResolvedValue(entry('node-a', '5'));
 
-  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
     deferredObjects: [{ globalId: 'node-a', objectType: 'node' }],
     received: [{ objectId: 'node-a', receipt: { transfer_id: 'b'.repeat(64) } }],
     sent: []
@@ -216,17 +232,17 @@ it('defers a body-missing local Node without failing the rest of the round', asy
   mocks.localInventory.mockResolvedValue({ entries: [missing] });
   mocks.localEntry.mockResolvedValue(missing);
 
-  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toEqual({
+  await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
     deferredObjects: [{ globalId: 'node-a', objectType: 'node' }], received: [], sent: []
   });
   expect(mocks.send).not.toHaveBeenCalled();
 });
 
-it.each(['continuous', 'chunked'] as const)('uses the explicit %s storage for discovery, replay and source revalidation', async (bodyStorage) => {
-  await sendCompanionFramedSyncInventoryDifferences(request, bodyStorage);
-  expect(mocks.localInventory).toHaveBeenCalledWith(expect.anything(), bodyStorage);
+it('replays pending publications before revalidating the selected source', async () => {
+  await sendCompanionFramedSyncInventoryDifferences(request);
+  expect(mocks.localInventory).toHaveBeenCalledWith(expect.anything());
   expect(mocks.localEntry).toHaveBeenCalledWith(expect.anything(),
-    expect.objectContaining({ globalId: 'node-a' }), bodyStorage);
-  expect(resumeCompanionFramedSyncPendingPublications).toHaveBeenCalledWith(request, [], bodyStorage);
+    expect.objectContaining({ globalId: 'node-a' }));
+  expect(resumeCompanionFramedSyncPendingPublications).toHaveBeenCalledWith(request, []);
   expect(mocks.send).toHaveBeenCalledOnce();
 });

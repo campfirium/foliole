@@ -1,3 +1,5 @@
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { expect, it, vi } from 'vitest';
 
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
@@ -9,11 +11,15 @@ import {
 
 it('carries only a native pack path through the Web contract before shared content commit', async () => {
   const { owner, port } = fakeOwner();
+  const bytes = new TextEncoder().encode('Validated body');
+  const hash = bytesToHex(sha256(bytes));
   port.query = vi.fn(async (sql: string) => {
     if (sql.includes('quick_check')) return [{ quick_check: 'ok' }];
     if (sql.includes('table_info')) return ['hash', 'size_bytes', 'data'].map((name) => ({ name }));
     if (sql.includes('COUNT(*)')) return [{ count: 0 }];
-    if (sql.includes('INNER JOIN')) return [{ hash: 'a'.repeat(64) }];
+    if (sql.includes('INNER JOIN')) return [{ hash }];
+    if (sql.startsWith('SELECT size_bytes')) return [{ size_bytes: bytes.byteLength }];
+    if (sql.includes('hex(substr')) return [{ bytes: bytesToHex(bytes) }];
     return [];
   }) as DbPort['query'];
   const plugin = {
@@ -22,11 +28,11 @@ it('carries only a native pack path through the Web contract before shared conte
 
   const download = {
     batch_token: 'native-token', failed_hashes: [], pack_path: '/native/cache/content.db',
-    synced_hashes: ['a'.repeat(64)]
+    synced_hashes: [hash]
   };
   await expect(commitStagedCompanionContentBatch(
     owner, plugin as never, download, '2026-08-06T00:00:00.000Z'
-  )).resolves.toEqual({ failedHashes: [], syncedHashes: ['a'.repeat(64)] });
+  )).resolves.toEqual({ failedHashes: [], syncedHashes: [hash] });
 
   expect(port.run).toHaveBeenCalledWith("ATTACH DATABASE '/native/cache/content.db' AS content_batch");
   expect(plugin.finishContentBlobBatch).toHaveBeenCalledWith({ batch_token: 'native-token', committed: true });

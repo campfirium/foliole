@@ -146,7 +146,7 @@ describe('framed sync production protobuf codec range boundaries', () => {
   });
 
   it('accepts the exact blob reference byte length and rejects +1', () => {
-    const blob = { byteLength: FRAMED_SYNC_LIMITS.maxBlobBytes, required: true, role: 1,
+    const blob = { byteLength: FRAMED_SYNC_LIMITS.maxBlobBytes, required: true, role: 2,
       sha256: digest(2) };
     expect(() => encodeValidatedProtocolMessage('fact', {
       ...fact({ stringValue: 'value' }), blobs: [blob]
@@ -157,13 +157,21 @@ describe('framed sync production protobuf codec range boundaries', () => {
     })).toThrow('blob_byte_length_limit_exceeded');
   });
 
-  it('accepts the exact chunk byte count and rejects +1', () => {
+  it.each([1, 5])('limits declared body role %s to one MiB even when optional', (role) => {
+    const blob = { byteLength: 1_048_576, required: false, role, sha256: digest(2) };
+    const exact = { ...fact({ stringValue: 'value' }), blobs: [blob] };
+    expect(() => encodeValidatedProtocolMessage('fact', exact)).not.toThrow();
+    expect(() => encodeValidatedProtocolMessage('fact', { ...exact,
+      blobs: [{ ...blob, byteLength: 1_048_577 }] })).toThrow('blob_byte_length_limit_exceeded');
+  });
+
+  it('accepts the complete body byte count and rejects +1 before descriptor admission', () => {
     const payload = { blobHash: digest(2), offset: 0, transferId: digest(1) };
     expect(() => encodeValidatedProtocolMessage('blob_chunk', {
-      ...payload, data: new Uint8Array(FRAMED_SYNC_LIMITS.blobChunkBytes)
+      ...payload, data: new Uint8Array(1_048_576)
     })).not.toThrow();
     expect(() => encodeValidatedProtocolMessage('blob_chunk', {
-      ...payload, data: new Uint8Array(FRAMED_SYNC_LIMITS.blobChunkBytes + 1)
+      ...payload, data: new Uint8Array(1_048_577)
     })).toThrow('blob_chunk_range_invalid');
   });
 });

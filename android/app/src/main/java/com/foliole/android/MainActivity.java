@@ -29,6 +29,12 @@ public class MainActivity extends BridgeActivity {
     private static final String WEB_ASSET_PREFS = "foliole_companion_web_assets";
     private static final String WEB_ASSET_SIGNATURE_KEY = "web_asset_signature";
 
+    @Override public void onDetachedFromWindow() {
+        var handle = getBridge() == null ? null : getBridge().getPlugin("FolioleCompanionSync");
+        super.onDetachedFromWindow();
+        if (handle != null) ((FolioleCompanionSyncPlugin) handle.getInstance()).payloadBudget.webViewDestroyed();
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         String webAssetSignature = getWebAssetSignature();

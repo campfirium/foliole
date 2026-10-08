@@ -1,7 +1,8 @@
 import type { PluginListenerHandle } from '@capacitor/core';
 
 import type { DbPort, DbRow } from '../../../../../lib/core/sync/dbPort';
-import { readFramedSyncPublishedBodyRangeOperation } from '../../../../../lib/core/sync/framedSyncPublishedBodyRangeOperation';
+import { readFramedSyncPublishedBodyOperation } from '../../../../../lib/core/sync/framedSyncPublishedBodyOperation';
+import { readFramedSyncPublishedFactOperation } from '../../../../../lib/core/sync/framedSyncPublishedFactOperation';
 import { assertSyncGroupJoinAdmission } from '../../../../../lib/core/sync/syncGroupJoinAdmission';
 import {
   COMPANION_SYNC_GROUP_DATA_CONTRACT as CONTRACT,
@@ -12,6 +13,7 @@ import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncG
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { FolioleCompanionSync } from '../../companionWorkspaceRuntimeRepository';
 import { handleCompanionAttachmentCheckpoint } from '../runtime/companionAttachmentCheckpoint';
+import { withCompanionFramedPayload } from '../runtime/companionFramedPayloadBudget';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import * as framedSyncData from './framed/companionFramedSyncDataOperation';
@@ -32,6 +34,11 @@ import { createCompanionSyncGroupSourceSnapshot } from './syncGroupSourceSnapsho
 import { confirmVersionPack, stageVersionPack } from './syncGroupVersionPackDataOwner';
 
 let listenerReady: Promise<void> | null = null;
+const PAYLOAD_OPERATIONS = new Set<string>([
+  CONTRACT.operations.readFramedBody, CONTRACT.operations.readFramedOutboundFact,
+  CONTRACT.operations.prepareFramedOutbound, CONTRACT.operations.inspectFramedOutbound,
+  CONTRACT.operations.readFramedInventory
+]);
 
 function dataPlugin() {
   return FolioleCompanionSync as typeof FolioleCompanionSync & {
@@ -48,16 +55,33 @@ export function ensureCompanionSyncGroupDataOwner() {
 }
 
 async function handleRequest(request: CompanionSyncGroupDataRequest) {
+  const receiptOnly = request.operation === CONTRACT.operations.inspectFramedOutbound &&
+    request.payload.receipt_only === true && request.payload.transfer_id !== undefined;
+  if (PAYLOAD_OPERATIONS.has(request.operation) && !receiptOnly) {
+    try {
+      await withCompanionFramedPayload(getIosCompanionDatabaseOwner(), request.payload,
+        () => respondRequest(request), (error) => replyFailure(request, error));
+    } catch (error) { await replyFailure(request, error); }
+    return;
+  }
+  await respondRequest(request);
+}
+
+async function respondRequest(request: CompanionSyncGroupDataRequest) {
   try {
     const result = await dispatch(request.operation, request.payload);
     await dataPlugin().resolveSyncGroupDataRequest({
       request_id: request.request_id, result: { ...result }
     });
   } catch (error) {
-    await dataPlugin().resolveSyncGroupDataRequest({
-      error: error instanceof Error ? error.message : String(error), request_id: request.request_id
-    });
+    await replyFailure(request, error);
   }
+}
+
+function replyFailure(request: CompanionSyncGroupDataRequest, error: unknown) {
+  return dataPlugin().resolveSyncGroupDataRequest({
+    error: error instanceof Error ? error.message : String(error), request_id: request.request_id
+  });
 }
 
 function dispatch(operation: string, payload: Record<string, unknown>) {
@@ -90,8 +114,10 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
   if (operation === CONTRACT.operations.prepareFramedOutbound)
     return writer((db) => prepareCompanionFramedSyncOutbound(db, payload));
   if (operation === CONTRACT.operations.readFramedInventory) return readFramedInventory(payload);
-  if (operation === CONTRACT.operations.readFramedBodyRange) return getIosCompanionDatabaseOwner()
-    .read((db) => readFramedSyncPublishedBodyRangeOperation(db, payload));
+  if (operation === CONTRACT.operations.readFramedBody) return getIosCompanionDatabaseOwner()
+    .read((db) => readFramedSyncPublishedBodyOperation(db, payload));
+  if (operation === CONTRACT.operations.readFramedOutboundFact) return getIosCompanionDatabaseOwner()
+    .read((db) => readFramedSyncPublishedFactOperation(db, payload));
   if (operation === CONTRACT.operations.applyMemberState) {
     return applyCompanionSyncGroupMemberState(
       parseSyncGroupMemberState(payload.state),

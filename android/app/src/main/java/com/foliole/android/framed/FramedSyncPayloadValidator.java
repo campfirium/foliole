@@ -49,6 +49,9 @@ final class FramedSyncPayloadValidator {
             case FACT:
                 FramedSyncValueValidator.fact(message.getFact());
                 return payload(FramedSyncPayload.Case.FACT, message.getFact());
+            case FACT_FRAGMENT:
+                FramedSyncFactFragments.validate(message.getFactFragment());
+                return payload(FramedSyncPayload.Case.FACT_FRAGMENT, message.getFactFragment());
             case BLOB_CHUNK:
                 blobChunk(message.getBlobChunk());
                 return payload(FramedSyncPayload.Case.BLOB_CHUNK, message.getBlobChunk());
@@ -75,14 +78,7 @@ final class FramedSyncPayloadValidator {
     }
 
     static FramedSyncFrameType frameType(FramedSyncPayload.Case payloadCase) {
-        switch (payloadCase) {
-            case TRANSFER_HEADER: return FramedSyncFrameType.TRANSFER_HEADER;
-            case FACT: return FramedSyncFrameType.FACT;
-            case BLOB_CHUNK: return FramedSyncFrameType.BLOB_CHUNK;
-            case TRANSFER_TRAILER: return FramedSyncFrameType.TRANSFER_TRAILER;
-            case TRANSFER_RECEIPT: return FramedSyncFrameType.TRANSFER_RECEIPT;
-            default: return FramedSyncFrameType.SESSION_CONTROL;
-        }
+        return FramedSyncPayloadFrameType.of(payloadCase);
     }
 
     private static void handshake(com.foliole.sync.v22.Handshake value)
@@ -164,7 +160,7 @@ final class FramedSyncPayloadValidator {
         FramedSyncValueValidator.digest(value.getTransferId(), "transfer_id");
         FramedSyncValueValidator.digest(value.getBlobHash(), "blob_hash");
         long size = value.getData().size();
-        if (size > FramedSyncContract.BLOB_CHUNK_BYTES ||
+        if (size > 1_048_576 ||
             Long.compareUnsigned(value.getOffset(), FramedSyncContract.MAX_BLOB_BYTES) > 0 ||
             Long.compareUnsigned(value.getOffset(), FramedSyncContract.MAX_BLOB_BYTES - size) > 0) {
             throw invalid("blob_chunk_range_invalid");

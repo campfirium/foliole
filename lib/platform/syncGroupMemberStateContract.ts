@@ -1,5 +1,6 @@
 import type { SyncGroupDevicePayload } from './syncGroupContract.js';
 import { parseSyncGroupRestoreEvent, type SyncGroupRestoreState } from './syncGroupRestoreContract.js';
+import { parseSyncProtocolDescriptor, type SyncProtocolDescriptor } from './syncProtocolContract.js';
 import type {
   WatchedFolderConflictDecision,
   WatchedFolderGroupSource
@@ -33,6 +34,7 @@ export interface SyncGroupMemberStatePayload {
   group_id: string;
   library_epoch: string;
   proof_revision: number;
+  protocol?: SyncProtocolDescriptor;
   source_proof_revisions: Record<string, number>;
   removals: SyncGroupRemovalDecisionPayload[];
   restore: SyncGroupRestoreState | null;
@@ -44,6 +46,7 @@ export interface SyncGroupMemberStatePayload {
 export function parseSyncGroupMemberState(value: unknown): SyncGroupMemberStatePayload {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return invalid();
   const raw = value as Partial<SyncGroupMemberStatePayload>;
+  if (raw.protocol !== undefined && !parseSyncProtocolDescriptor(raw.protocol)) return invalid();
   if (raw.contract_version !== SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION ||
       !text(raw.group_id) || !text(raw.sender_device_identity_key) ||
       (raw.adopting_from !== undefined && (!text(raw.adopting_from) || raw.adopting_from === raw.sender_device_identity_key)) ||

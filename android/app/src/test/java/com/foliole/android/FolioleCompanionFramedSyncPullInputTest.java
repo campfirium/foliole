@@ -7,6 +7,8 @@ import com.foliole.android.framed.FramedSyncPayload;
 import com.foliole.android.framed.FramedSyncValidatedMessage;
 import com.foliole.sync.v22.DifferenceRequest;
 import com.foliole.sync.v22.FactKind;
+import com.foliole.sync.v22.ResourceDemand;
+import com.google.protobuf.ByteString;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -52,6 +54,20 @@ public final class FolioleCompanionFramedSyncPullInputTest {
         assertEquals("external_document", request.getFacts(0).getObjectType());
         assertEquals("original-document", request.getFacts(0).getGlobalId());
         assertEquals(1, request.getBlobHashesCount());
+    }
+
+    @Test public void projectsAnIndependentAttachmentDemandWithoutDatabaseFactsOrBodyBlobs() throws Exception {
+        ResourceDemand demand = ResourceDemand.newBuilder().setDemandId("demand-1").setGlobalId("node-1")
+            .setVersionId("version-1").setBodyHash("a".repeat(64)).setStorageKey("b".repeat(64) + ".png")
+            .setSharedStateHash(ByteString.copyFrom(bytes(32, 3))).build();
+        var input = new FolioleCompanionFramedSyncPullInput.Request("node-1", "node", bytes(16, 1),
+            Collections.emptyList(), Collections.emptyList(), Collections.emptyList(),
+            Collections.emptyList(), Collections.emptyList(), Collections.singletonList(demand));
+        DifferenceRequest request = (DifferenceRequest) FolioleCompanionFramedSyncPullInput.messages(input)
+            .get(0).payload().value();
+        assertEquals(0, request.getFactsCount());
+        assertEquals(0, request.getBlobHashesCount());
+        assertEquals(Collections.singletonList(demand), request.getResourcesList());
     }
 
     private static byte[] bytes(int length, int value) {

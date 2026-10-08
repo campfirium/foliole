@@ -56,7 +56,9 @@ enum FolioleFramedSyncValueValidator {
         guard (1...5).contains(value.role.rawValue) else {
             throw FolioleFramedSyncValidationError("blob_role_invalid")
         }
-        guard value.byteLength <= FolioleFramedSyncLimits.maxBlobBytes else {
+        let limit = [1, 5].contains(value.role.rawValue)
+            ? FolioleFramedSyncLimits.maxBodyBytes : FolioleFramedSyncLimits.maxBlobBytes
+        guard value.byteLength <= limit else {
             throw FolioleFramedSyncValidationError("blob_byte_length_limit_exceeded")
         }
         return value.sha256

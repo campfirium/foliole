@@ -7,6 +7,7 @@ import {
   encodeValidatedProtocolMessage,
   type ValidatedProtocolMessage
 } from './framedSyncProtocolCodec.js';
+import { readFramedSyncRequestedResources } from './framedSyncResourceRequest.js';
 
 export type FramedSyncRequestedFact = Readonly<{
   factId: string;
@@ -38,6 +39,7 @@ export function projectFramedSyncDifferenceRequest(input: {
   const payload = {
     blobHashes: difference.sourceSnapshot.resourceHashes,
     facts,
+    resources: [],
     roundId: input.roundId
   };
   return {
@@ -69,6 +71,7 @@ export function decodeFramedSyncDifferenceRequest(message: ValidatedProtocolMess
   return {
     blobHashes: list(payload.blobHashes).map((value) => bytes(value, 'blob_hash').slice()),
     facts,
+    resources: readFramedSyncRequestedResources(payload.resources),
     roundId: bytes(payload.roundId, 'round_id').slice()
   };
 }
@@ -77,6 +80,7 @@ export function resolveFramedSyncDifferenceRequest(
   current: FramedSyncInventoryEntry,
   request: ReturnType<typeof decodeFramedSyncDifferenceRequest>
 ): FramedSyncInventoryDifference {
+  if (request.resources.length) throw new Error('framed_sync_database_request_required');
   if (request.facts.some((fact) =>
     fact.objectType !== current.objectType || fact.globalId !== current.globalId)) {
     throw new Error('framed_sync_difference_request_identity_mismatch');

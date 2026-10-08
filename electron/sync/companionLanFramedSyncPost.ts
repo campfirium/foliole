@@ -1,18 +1,19 @@
 import type http from 'node:http';
-import { Readable } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
+import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import type { FramedSyncSessionContext } from '../../lib/core/sync/framedSyncSession.js';
 
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { withVerifiedFramedHttpBody } from './desktopFramedSyncHttpBody.js';
+import { encodeFramedSyncHttpBody, writeDesktopFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
+import { spoolDesktopFramedSyncSequence } from './desktopFramedSyncSequenceSpool.js';
 import {
-  encodeFramedSyncStream,
-  readFramedSyncStream,
   type FramedSyncStreamBody,
   type FramedSyncWireFrame
 } from './desktopFramedSyncStream.js';
+import { readFramedSyncStreamSequence } from './desktopFramedSyncStreamSequence.js';
 
 export const FRAMED_SYNC_PATH = '/companion/framed-sync';
 export const FRAMED_SYNC_CONTENT_TYPE = 'application/vnd.foliole.framed-sync';
@@ -31,6 +32,7 @@ type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
 
 export async function handleCompanionLanFramedSyncPost(args: {
   authenticate?: Authenticator;
+  payloadBudget?: FramedSyncPayloadBudget | undefined;
   localIdentity: Readonly<{ deviceId: string; libraryEpoch: string }>;
   onStream: (input: Readonly<{
     context: AuthenticatedContext;
@@ -54,17 +56,28 @@ export async function handleCompanionLanFramedSyncPost(args: {
   try {
     await withVerifiedFramedHttpBody({
       body: request,
+      payloadBudget: args.payloadBudget,
       expectedSha256: readHeader(request, FRAMED_SYNC_BODY_SHA256_HEADER)!,
       ...(contentLength === null ? {} : { contentLength })
     }, async (body) => {
-      const stream = await readFramedSyncStream(body);
-      const reply = await args.onStream({ context, stream });
+      const units = readFramedSyncStreamSequence(body, args.payloadBudget);
+      const first = await units.next();
+      if (first.done) throw new Error('framed_sync_preamble_truncated');
+      const lane = decodeFramedSyncPreamble(first.value.preamble).contextKind === 'transfer' ? 'receipt' : 'payload';
+      const reply = await spoolDesktopFramedSyncSequence({ lane, payloadBudget: args.payloadBudget,
+        bodies: (async function* () {
+          try {
+            yield await args.onStream({ context, stream: first.value });
+            for await (const stream of units) yield await args.onStream({ context, stream });
+          } finally { await units.return(undefined); }
+        })()
+      });
       response.writeHead(200, {
         'Content-Type': FRAMED_SYNC_CONTENT_TYPE,
         [FRAMED_SYNC_DEVICE_ID_HEADER]: args.localIdentity.deviceId,
         [FRAMED_SYNC_LIBRARY_EPOCH_HEADER]: args.localIdentity.libraryEpoch
       });
-      await pipeline(Readable.from(encodeFramedSyncStream(reply)), response);
+      await writeDesktopFramedSyncHttpBody(response, encodeFramedSyncHttpBody(reply));
     });
   } catch (error) {
     if (response.headersSent) {

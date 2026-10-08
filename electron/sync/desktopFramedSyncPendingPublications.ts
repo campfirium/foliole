@@ -7,11 +7,11 @@ import { reconcileFramedSyncPublication } from '../../lib/core/sync/framedSyncPu
 import { completeFramedSyncRecoveredPublication, selectFramedSyncRecoveryPublication } from '../../lib/core/sync/framedSyncPublicationRecoverySelection.js';
 import { sendWithRequiredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyDelivery.js';
 import { collectDeliveredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyRetention.js';
-import { loadSyncGroupLocalAdoption, isSyncGroupPeerAdopting } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { isSyncGroupPeerAdopting, syncGroupLocalPublicationBlockReason } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
 
 import { exchangeDesktopFramedSyncInventoryHttp } from './desktopFramedSyncInventoryHttp.js';
-import { prepareDesktopFramedSyncPublishedTransfer,
+import { prepareDesktopFramedSyncPublishedDelivery,
   sendDesktopFramedSyncPublishedTransfer } from './desktopFramedSyncProcessOutbound.js';
 import { createDesktopFramedSyncRoundEndpoint } from './desktopFramedSyncRoundEndpoint.js';
 
@@ -19,7 +19,7 @@ type EndpointInput = Parameters<typeof createDesktopFramedSyncRoundEndpoint>[0];
 
 /** Reconnect checks the original missing set before retrying durable deliveries. */
 export async function resumeDesktopFramedSyncPendingPublications(input: EndpointInput & { remoteInventory?: readonly FramedSyncInventoryEntry[] }) {
-  if (await loadSyncGroupLocalAdoption(input.db) ||
+  if (await syncGroupLocalPublicationBlockReason(input.db) ||
       await isSyncGroupPeerAdopting(input.db, input.groupId, input.peer.deviceId)) return 0;
   const rows = await input.db.query<DbRow>(`SELECT publication.transfer_id, publication.state
     FROM framed_sync_outbound_publications publication
@@ -32,7 +32,6 @@ export async function resumeDesktopFramedSyncPendingPublications(input: Endpoint
     input.peer.deviceId, input.peer.libraryEpoch]);
   if (!rows.length) return 0;
   const remoteInventory = input.remoteInventory ?? (await exchangeDesktopFramedSyncInventoryHttp({
-    bodyStorage: input.bodyStorage ?? 'continuous',
     context: { protocolVersion: 22, groupId: input.groupId,
       initiatorDeviceId: input.local.deviceId, initiatorLibraryEpoch: input.local.libraryEpoch,
       responderDeviceId: input.peer.deviceId, responderLibraryEpoch: input.peer.libraryEpoch },
@@ -55,9 +54,11 @@ export async function resumeDesktopFramedSyncPendingPublications(input: Endpoint
     }
     const publication = await selectFramedSyncRecoveryPublication(input.db, transferId, remoteInventory);
     if (!publication) throw new Error('framed_sync_outbound_publication_missing');
-    const attempt = await prepareDesktopFramedSyncPublishedTransfer({ ...input, publication });
     await sendWithRequiredParentOrderBodies(
-      () => sendDesktopFramedSyncPublishedTransfer({ ...input, attempt, publication }),
+      async () => {
+        const delivery = await prepareDesktopFramedSyncPublishedDelivery({ ...input, publication });
+        await sendDesktopFramedSyncPublishedTransfer({ ...input, ...delivery, publication });
+      },
       (versionId) => supplyOrderBody(input, versionId));
     await completeFramedSyncRecoveredPublication(input.db, transferId, publication.transferId);
     await retireFramedSyncCompletedPublication(input.db, publication.transferId);

@@ -1,111 +1,92 @@
-import {
-  FRAMED_SYNC_PROTOCOL_VERSION,
-  type FramedSyncContext,
-  type TransferReceiptStage
-} from '../../lib/core/sync/framedSyncContract.js';
-import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
-import type { SyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
+import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
+import { readFramedSyncOverwriteInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { finishSyncGroupOverwriteProgress, loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { loadLatestSyncGroupRestoreEvent, markSyncGroupRestoreApplied } from '../../lib/core/sync/syncGroupRestoreEvents.js';
+import { clearReadwiseDeviceConnection } from '../database/readwiseDeviceConnection.js';
 
-import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
-import {
-  exchangeDesktopFramedSyncInventoryHttp,
-  requestDesktopFramedSyncDifferenceHttp
-} from './desktopFramedSyncInventoryHttp.js';
-import type { InboundRound } from './desktopFramedSyncInventoryRound.js';
-import { buildReceiptStream, readReceipt } from './desktopFramedSyncProcessReceipt.js';
-import { applyVerifiedDesktopFramedSyncInbound, type DesktopFramedVerifiedInbound } from './desktopFramedSyncVerifiedApply.js';
-import { stageVerifiedDesktopFramedSyncTransfer } from './desktopFramedSyncVerifiedReceiver.js';
+import { createDesktopFramedSyncInboundBatchDelivery } from './desktopFramedSyncInboundBatchRound.js';
+import type { InboundRound } from './desktopFramedSyncInboundRound.js';
+import { exchangeDesktopFramedSyncInventoryHttp } from './desktopFramedSyncInventoryHttp.js';
+import { runDesktopFramedSyncResourceRound } from './desktopFramedSyncResourceRound.js';
 import { preserveDesktopIdentityRestore } from './preserveDesktopGroupRestore.js';
+import { notifyWorkspaceSyncApplied } from './workspaceSyncAppliedEvents.js';
 
-export async function runVerifiedDesktopFramedSyncRestoreRound(input: {
+type Inventory = Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>>;
+type RestoreRound = {
   exchange: Parameters<typeof exchangeDesktopFramedSyncInventoryHttp>[0];
-  inbound: InboundRound;
-  inventories: Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>>;
-  restoreId?: string;
-  adoption?: SyncGroupLocalAdoption;
-}) {
-  const differences = compareFramedSyncInventories({
-    local: [], remote: input.inventories.remote
-  });
-  const prepared: DesktopFramedVerifiedInbound[] = [];
-  for (const difference of differences) {
-    const stream = await requestDesktopFramedSyncDifferenceHttp({
-      ...input.inbound, difference
-    });
-    prepared.push(await stageVerifiedDesktopFramedSyncTransfer({
-      context: reverseTransferContext(input.inbound.context),
-      db: input.inbound.db,
-      groupKey: input.inbound.groupKey,
-      staging: input.inbound.staging,
-      stream
-    }));
+  inbound: InboundRound; inventories: Inventory; restoreId?: string; adoption?: SyncGroupLocalAdoption;
+};
+
+/** An explicit overwrite clears once, then uses the ordinary per-unit receive and receipt path. */
+export async function runVerifiedDesktopFramedSyncRestoreRound(input: RestoreRound) {
+  const { db } = input.inbound;
+  const overwriteId = input.adoption?.libraryEpoch ?? input.restoreId;
+  if (!overwriteId) throw new Error('sync_group_overwrite_missing');
+  const current = await loadSyncGroupOverwriteProgress(db);
+  if (current?.groupId === input.inbound.context.groupId && current.overwriteId === overwriteId &&
+      current.receiverLibraryEpoch !== input.inbound.context.initiatorLibraryEpoch) {
+    throw new Error('sync_group_overwrite_source_changed');
   }
-  const confirmed = await exchangeDesktopFramedSyncInventoryHttp(input.exchange);
-  if (compareFramedSyncInventories({
-    local: input.inventories.remote,
-    remote: confirmed.remote
-  }).length !== 0) throw new Error('framed_sync_source_changed');
-  if (input.restoreId) await preserveDesktopIdentityRestore(input.inbound.context.groupId, input.restoreId);
-  const applied = await applyVerifiedDesktopFramedSyncInbound({
-    db: input.inbound.db,
-    ...(input.adoption ? { adoption: input.adoption } : {}),
-    ...(input.restoreId ? { restore: { groupId: input.inbound.context.groupId, restoreId: input.restoreId } } : {}),
-    transfers: prepared
-  });
-  for (const [index, transfer] of prepared.entries()) {
-    await postReceipt(input.inbound, transfer.context, applied.receipts[index]!);
+  const context = { ...input.inbound.context, initiatorLibraryEpoch: overwriteId };
+  input = { ...input, inbound: { ...input.inbound, context }, exchange: { ...input.exchange, context } };
+  const progress = { groupId: context.groupId, overwriteId,
+    providerDeviceId: context.responderDeviceId, providerLibraryEpoch: context.responderLibraryEpoch,
+    receiverDeviceId: context.initiatorDeviceId, receiverLibraryEpoch: context.initiatorLibraryEpoch };
+  if (input.restoreId && (current?.groupId !== progress.groupId || current.overwriteId !== overwriteId)) {
+    await preserveDesktopIdentityRestore(context.groupId, input.restoreId);
   }
-  return { complete: true, pending: 0, transferred: prepared.length };
-}
-
-async function postReceipt(
-  input: InboundRound,
-  context: FramedSyncContext,
-  receipt: TransferReceiptStage
-) {
-  const body = await buildReceiptStream({
-    db: input.db, groupKey: input.groupKey, receipt, staging: input.staging
+  const reset = await prepareSyncGroupOverwrite(db, progress);
+  clearReadwiseDeviceConnection();
+  if (reset.cleared) notifyWorkspaceSyncApplied({ appliedNodeIds: reset.removedNodeIds,
+    appliedObjectIds: [], appliedReviewOpIds: [] });
+  const inventories = await exchangePartialInventory(input);
+  let transferred = 0;
+  const differences = compareFramedSyncDatabaseInventories(inventories)
+    .filter((difference) => difference.direction === 'remote_to_local');
+  const deliver = createDesktopFramedSyncInboundBatchDelivery(differences,
+    { ...input.inbound, roundId: inventories.roundId });
+  const deferred = await deliverFramedSyncDifferencesInDependencyOrder(
+    differences,
+    async (difference) => {
+      const result = await deliver(difference);
+      if (result.sent) transferred += 1;
+      return result.state;
+    }, framedSyncOrderBodyDependencies(inventories));
+  const confirmed = await exchangePartialInventory(input);
+  const pending = compareFramedSyncDatabaseInventories(confirmed)
+    .filter((difference) => difference.direction === 'remote_to_local').length;
+  if (pending || deferred.length) return { complete: false, pending: Math.max(pending, deferred.length), transferred };
+  const complete = await db.transaction(async (tx) => {
+    const currentInventory = await readFramedSyncOverwriteInventory(tx, inboundContext(input));
+    if (compareFramedSyncDatabaseInventories({ local: currentInventory, remote: confirmed.remote })
+      .some((difference) => difference.direction === 'remote_to_local')) return false;
+    await finishSyncGroupOverwriteProgress(tx, progress);
+    if (input.adoption) await finishSyncGroupLocalAdoption(tx, input.adoption);
+    else {
+      const restore = await loadLatestSyncGroupRestoreEvent(tx, context.groupId);
+      if (!restore || restore.event.restore_id !== overwriteId) throw new Error('framed_sync_restore_state_invalid');
+      await markSyncGroupRestoreApplied(tx, restore.event);
+    }
+    return true;
   });
-  const response = await postDesktopFramedSync({
-    body,
-    endpointUrl: input.endpointUrl,
-    groupId: input.context.groupId,
-    localDeviceId: input.context.initiatorDeviceId,
-    localLibraryEpoch: input.context.initiatorLibraryEpoch,
-    pathWithQuery: '/companion/framed-sync',
-    remoteDeviceId: input.context.responderDeviceId,
-    remoteLibraryEpoch: input.context.responderLibraryEpoch,
-    secret: input.groupSecret
-  });
-  const acknowledged = await readReceipt({
-    groupKey: input.groupKey,
-    published: receiptPublication(context, receipt),
-    stream: response.stream
-  });
-  if (!sameBytes(acknowledged.appliedStateHash, receipt.appliedStateHash)) {
-    throw new Error('framed_sync_receipt_ack_mismatch');
-  }
+  const resources = complete ? await runDesktopFramedSyncResourceRound(
+    { ...input.inbound, roundId: confirmed.roundId },
+    confirmed.local.filter((entry) => entry.objectType === 'node').map((entry) => entry.globalId)) : undefined;
+  return { complete, pending: complete ? 0 : 1, transferred, resources };
 }
 
-function reverseTransferContext(context: InboundRound['context']): FramedSyncContext {
-  return {
-    groupId: context.groupId,
-    protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
-    receiverDeviceId: context.initiatorDeviceId,
-    receiverLibraryEpoch: context.initiatorLibraryEpoch,
-    senderDeviceId: context.responderDeviceId,
-    senderLibraryEpoch: context.responderLibraryEpoch
-  };
+async function exchangePartialInventory(input: RestoreRound) {
+  const localInventory = await readFramedSyncOverwriteInventory(input.inbound.db,
+    inboundContext(input));
+  return exchangeDesktopFramedSyncInventoryHttp({ ...input.exchange, localInventory });
 }
 
-function receiptPublication(context: FramedSyncContext, receipt: TransferReceiptStage) {
-  return {
-    blobCount: 0n, contentId: receipt.contentId, context, factCount: 0n,
-    manifestHash: receipt.contentId, totalBlobBytes: 0n, transferId: receipt.transferId
-  };
-}
-
-function sameBytes(left: Uint8Array, right: Uint8Array) {
-  return left.byteLength === right.byteLength &&
-    left.every((byte, index) => byte === right[index]);
+function inboundContext(input: RestoreRound): FramedSyncContext {
+  const context = input.inbound.context;
+  return { groupId: context.groupId, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    senderDeviceId: context.responderDeviceId, senderLibraryEpoch: context.responderLibraryEpoch,
+    receiverDeviceId: context.initiatorDeviceId, receiverLibraryEpoch: context.initiatorLibraryEpoch };
 }

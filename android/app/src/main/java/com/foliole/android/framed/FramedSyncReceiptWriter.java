@@ -37,7 +37,7 @@ public final class FramedSyncReceiptWriter {
         for (FramedSyncAuthenticatedFrame frame :
             staging.loadReplayableReceiptFrames(transferId, attemptId)) {
             output.write(frame.frameHeader());
-            output.write(frame.ciphertext());
+            output.write(frame.borrowedCiphertext());
         }
         return output.toByteArray();
     }

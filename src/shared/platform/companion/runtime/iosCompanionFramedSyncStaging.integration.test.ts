@@ -6,6 +6,8 @@ import Database from 'better-sqlite3';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
+  configureFramedSyncPayloadBudget: vi.fn(async () => undefined),
+  closeFramedSyncPayloadBudget: vi.fn(async () => undefined),
   maintainAttachmentFiles: vi.fn(async () => ({ files: [] }))
 } }));
 

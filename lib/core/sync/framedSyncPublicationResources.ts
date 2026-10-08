@@ -1,11 +1,21 @@
 import type { CanonicalManifest } from './framedSyncCanonicalManifest.js';
 import { isFramedSyncNodeIdentityFact } from './framedSyncNodeFactContract.js';
 import { readFramedSyncNodeResources } from './framedSyncNodeResources.js';
+import { FRAMED_SYNC_RESOURCE_FACT_KIND, restoreFramedSyncResourceFact } from './framedSyncResourceFact.js';
 
 /** Resource addresses come from the immutable publication, never the current Node. */
 export function framedSyncPublicationResources(manifest: CanonicalManifest) {
   const resources = new Map<string, ReturnType<typeof readFramedSyncNodeResources>[number]>();
   for (const fact of manifest.facts) {
+    if (fact.kind === FRAMED_SYNC_RESOURCE_FACT_KIND) {
+      const { resource } = restoreFramedSyncResourceFact(fact);
+      const prior = resources.get(resource.contentHash);
+      if (prior && prior.storageKey !== resource.storageKey) {
+        throw new Error('framed_sync_outbound_resource_identity_conflict');
+      }
+      resources.set(resource.contentHash, resource);
+      continue;
+    }
     if (isFramedSyncNodeIdentityFact(fact)) continue;
     const snapshot = fact.body.find((field) => field.name === 'snapshot')?.value;
     if (snapshot?.kind !== 'object') continue;

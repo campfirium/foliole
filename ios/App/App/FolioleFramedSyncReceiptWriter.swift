@@ -18,6 +18,7 @@ enum FolioleFramedSyncReceiptWriter {
             message, authenticatedFrameType: FolioleFramedSyncFrameType.transferReceipt.rawValue
         )
         let plaintext = try FolioleFramedSyncCodec.encode(validated)
+        guard plaintext.count + 16 <= 1_048_576 else { throw invalid("framed_sync_receipt_limit_exceeded") }
         let preamble = try makePreamble(transferID: receipt.transferID)
         let header = try FolioleFramedSyncWireHeader(
             ciphertextBytes: plaintext.count + 16, sequence: 0, frameType: .transferReceipt

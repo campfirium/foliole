@@ -8,6 +8,7 @@ import { afterEach, expect, it } from 'vitest';
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
 import { migrateFramedSyncInventory } from '../../lib/core/database/framedSyncInventoryMigration.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
+import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../lib/core/database/syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_METADATA_SCHEMA } from '../../lib/core/database/syncGroupSchemaStatements.js';
 import { SYNC_SCHEMA_STATEMENTS } from '../../lib/core/database/syncSchemaStatements.js';
 import {
@@ -63,8 +64,10 @@ afterEach(async () => {
 function peer(nodeId: string, body: string, hashByte: string) {
   const sqlite = new Database(':memory:');
   databases.push(sqlite);
-  sqlite.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT NOT NULL, body_blob_hash TEXT);
-    CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT);
+  sqlite.exec(`CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT NOT NULL,
+      body_blob_hash TEXT, content TEXT NOT NULL DEFAULT '');
+    CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT,
+      content TEXT NOT NULL DEFAULT '');
     CREATE TABLE node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL,
       parent_version_id TEXT, host_name TEXT NOT NULL, created_at TEXT NOT NULL,
       body_text TEXT, content_hash TEXT NOT NULL, snapshot_json TEXT NOT NULL);
@@ -79,6 +82,7 @@ function peer(nodeId: string, body: string, hashByte: string) {
   for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   for (const statement of PARENT_ORDER_VERSION_SCHEMA) sqlite.exec(statement);
   sqlite.exec(SYNC_GROUP_METADATA_SCHEMA);
+  for (const statement of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(statement);
   sqlite.exec(SYNC_SCHEMA_STATEMENTS[0]!);
   sqlite.prepare('INSERT INTO nodes (id, current_version_id) VALUES (?, ?)').run(nodeId, `version-${nodeId}`);
   sqlite.prepare('INSERT INTO node_sync_versions VALUES (?, ?, ?, ?, ?, ?, ?, ?)')

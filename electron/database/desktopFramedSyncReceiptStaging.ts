@@ -13,6 +13,7 @@ import type {
   StoredEncryptedFrame,
   TransferReceiptStage
 } from '../../lib/core/sync/framedSyncContract.js';
+import { retireFramedSyncFrozenBodies } from '../../lib/core/sync/framedSyncFrozenBody.js';
 import {
   createFramedSyncOutboundReceiptStaging,
   framedSyncReceiptMatches
@@ -125,6 +126,7 @@ function createReceiptAttemptStaging(db: DbPort) {
         await tx.run('DELETE FROM framed_sync_outbound_holds WHERE transfer_id = ? AND member_id = ?',
           [transferId, memberId]);
         await tx.run('DELETE FROM framed_sync_blob_pins WHERE transfer_id = ?', [transferId]);
+        await retireFramedSyncFrozenBodies(tx, transferId);
       });
     }
   };

@@ -70,12 +70,37 @@ final class FolioleCompanionSyncGroupJoinServer {
 
     private func receive(_ connection: NWConnection) {
         connection.start(queue: queue)
-        read(connection, FolioleCompanionHttpRequestReader())
+        do {
+            let owner = try dataBridge.map { _ in try FolioleFramedSyncPayloadBudgetRegistry.shared.requireCurrent() }
+            let reader = FolioleCompanionHttpRequestReader(payloadBudget: owner)
+            connection.stateUpdateHandler = { state in
+                if case .cancelled = state { reader.payloadCancellation.cancel() }
+                if case .failed = state { reader.payloadCancellation.cancel() }
+            }
+            read(connection, reader)
+        } catch { respondError(connection, error) }
     }
 
     private func read(_ connection: NWConnection, _ reader: FolioleCompanionHttpRequestReader) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) {
+        guard let owner = reader.payloadBudget, let lane = reader.networkLane else { return readGranted(connection, reader, loan: nil) }
+        let id = owner.acquire(.inbound, lane: lane) { result in
+            self.queue.async {
+                do {
+                    let loan = try result.get()
+                    reader.payloadCancellation.remove(loan.requestID)
+                    guard !reader.payloadCancellation.isCancelled else { loan.release(); return }
+                    self.readGranted(connection, reader, loan: loan)
+                } catch { self.respondError(connection, error) }
+            }
+        }
+        reader.payloadCancellation.register(id) { owner.cancel(id) }
+    }
+
+    private func readGranted(_ connection: NWConnection, _ reader: FolioleCompanionHttpRequestReader,
+                             loan: FolioleFramedSyncPayloadBudget.Loan?) {
+        connection.receive(minimumIncompleteLength: 1, maximumLength: reader.networkReadBytes) {
             [weak self] data, _, complete, error in
+            defer { loan?.release() }
             guard let self else { connection.cancel(); return }
             do {
                 if let data, let request = try reader.append(data) {
@@ -102,13 +127,29 @@ final class FolioleCompanionSyncGroupJoinServer {
     func respondFramedSync(
         _ connection: NWConnection, _ request: FolioleCompanionHttpMessage
     ) throws {
+        guard let owner = request.payloadBudget else { throw Self.invalid("framed_sync_payload_budget_not_configured") }
+        let cancellation = request.payloadCancellation
+        FolioleFramedSyncPayloadWorker.queue.async {
+            do {
+                try FolioleFramedSyncPayloadWorker.withCancellation(cancellation) {
+                    try self.processFramedSync(connection, request, owner: owner)
+                }
+            }
+            catch { self.respondError(connection, error) }
+        }
+    }
+
+    private func processFramedSync(_ connection: NWConnection, _ request: FolioleCompanionHttpMessage,
+                                   owner: FolioleFramedSyncPayloadBudget) throws {
+        try owner.requireActive()
         let contentType = request.header("content-type")?.split(separator: ";", maxSplits: 1).first?
             .trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard contentType == FolioleFramedSyncHTTPTransport.contentType else {
             return try send(connection, 415, ["error": "framed_sync_content_type_required"])
         }
-        guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
-        let peer = try authenticate(request)
+        guard let rawBridge = dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
+        let dataBridge = FolioleFramedSyncOwnedBridge(bridge: rawBridge, owner: owner)
+        let peer = try authenticate(request, bridge: dataBridge)
         let initiator = try framedIdentity(request, "initiator_device_id")
         guard initiator == peer else { throw Self.invalid("framed_sync_initiator_identity_mismatch") }
         let initiatorEpoch = try framedIdentity(request, "initiator_library_epoch")
@@ -127,7 +168,7 @@ final class FolioleCompanionSyncGroupJoinServer {
             return try respondFramedTransfer(
                 connection, request, peer: peer, localDevice: localDevice, localEpoch: localEpoch,
                 initiator: initiator, initiatorEpoch: initiatorEpoch,
-                groupKey: Base64URL.decode(provider.workgroupKey)
+                groupKey: Base64URL.decode(provider.workgroupKey), owner: owner
             )
         }
         let context = try FolioleFramedSyncSessionContext(
@@ -136,26 +177,9 @@ final class FolioleCompanionSyncGroupJoinServer {
             responderLibraryEpoch: responderEpoch
         )
         let groupKey = try Base64URL.decode(provider.workgroupKey)
-        let session = try FolioleFramedSyncSessionReader.read(
-            try request.bodyStream(), groupKey: groupKey, context: context,
-            maximumFrames: FolioleFramedSyncInventoryWire.maximumSessionFrames
-        )
-        let roundID = try FolioleFramedSyncInventoryWire.decodeRoundID(session.messages)
-        let inventory = try dataBridge.request("read_framed_inventory", [
-            "group_id": provider.groupId, "peer_device_id": initiator,
-            "peer_library_epoch": initiatorEpoch
-        ])
-        let response = try FolioleFramedSyncSessionWriter.encode(
-            groupKey: groupKey, context: context,
-            messages: FolioleFramedSyncInventoryWire.encode(
-                entries: try FolioleCompanionFramedSyncInventory.read(inventory), roundID: roundID
-            )
-        )
-        let wire = FolioleCompanionHttpMessage.response(
-            status: 200, contentType: FolioleFramedSyncHTTPTransport.contentType, body: response,
-            headers: ["X-Foliole-Device-Id": localDevice, "X-Foliole-Library-Epoch": localEpoch]
-        )
-        connection.send(content: wire, completion: .contentProcessed { _ in connection.cancel() })
+        try respondFramedSession(connection, request, groupKey: groupKey, context: context,
+            peer: initiator, peerEpoch: initiatorEpoch, localDevice: localDevice, localEpoch: localEpoch, owner: owner)
+
     }
 
     private func framedIdentity(_ request: FolioleCompanionHttpMessage, _ name: String) throws -> String {

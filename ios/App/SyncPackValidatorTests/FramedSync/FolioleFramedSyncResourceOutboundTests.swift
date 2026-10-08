@@ -8,10 +8,6 @@ final class FolioleFramedSyncResourceOutboundTests: XCTestCase {
     func testPreparedResourceUsesStorageKeyInsteadOfInlineText() throws {
         let resource = Data([1, 2, 3])
         let fact = makeFact(resource)
-        var message = Foliole_Sync_V22_ProtocolMessage(); message.payload = .fact(fact)
-        let bytes = try FolioleFramedSyncCodec.encode(try FolioleFramedSyncCodec.validateOutbound(
-            message, authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue
-        ))
         let hash = Data(SHA256.hash(data: resource)).map { String(format: "%02x", $0) }.joined()
         let key = hash + ".png"
         let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -21,7 +17,8 @@ final class FolioleFramedSyncResourceOutboundTests: XCTestCase {
         let value: [String: Any] = [
             "blobs": [["byte_length": "3", "required": true, "role": 2,
                        "sha256": hash, "storage_key": key]],
-            "content_id": identity, "fact_message_bytes_list": [Array(bytes)],
+            "content_id": identity, "header_message_bytes": try FramedSyncPreparedOutboundFixture.headerBytes(
+                facts: [fact], contentID: Data(repeating: 9, count: 32), transferID: Data(repeating: 9, count: 32)),
             "manifest_hash": identity, "transfer_id": identity
         ]
 

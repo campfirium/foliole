@@ -10,10 +10,22 @@ public final class FramedSyncStreamReader {
 
     private final InputStream input;
     private boolean preambleRead;
+    private FramedSyncPayloadBudget budget;
+    private FramedSyncPayloadBudget.Direction direction = FramedSyncPayloadBudget.Direction.INBOUND;
+    private FramedSyncPayloadBudget.Lane lane = FramedSyncPayloadBudget.Lane.PAYLOAD;
 
     public FramedSyncStreamReader(InputStream input) {
         if (input == null) throw new NullPointerException("input");
         this.input = input;
+    }
+
+    public FramedSyncStreamReader budgeted(FramedSyncPayloadBudget owner,
+        FramedSyncPayloadBudget.Direction direction, FramedSyncPayloadBudget.Lane lane) {
+        if (preambleRead || budget != null || owner == null) throw new IllegalStateException("framed_sync_reader_owner_invalid");
+        this.budget = owner;
+        this.direction = direction;
+        this.lane = lane;
+        return this;
     }
 
     public FramedSyncPreamble readPreamble() throws Exception {
@@ -29,9 +41,20 @@ public final class FramedSyncStreamReader {
             FramedSyncWireHeader.BYTES, "framed_sync_frame_header_truncated", true);
         if (headerBytes == null) return null;
         FramedSyncWireHeader header = FramedSyncWireHeader.decode(headerBytes);
-        byte[] ciphertext = readExact(
-            header.ciphertextBytes(), "framed_sync_frame_body_truncated", false);
-        return new FramedSyncWireFrame(headerBytes, header, ciphertext);
+        if (lane == FramedSyncPayloadBudget.Lane.RECEIPT &&
+            (header.ciphertextBytes() > FramedSyncPayloadBudget.RECEIPT_BYTES ||
+                header.frameType() != FramedSyncFrameType.TRANSFER_RECEIPT.wireValue())) {
+            throw new IllegalArgumentException("framed_sync_receipt_frame_limit_exceeded");
+        }
+        var loan = FramedSyncPayloadBudget.borrow(budget, direction, lane);
+        try {
+            byte[] ciphertext = readExact(
+                header.ciphertextBytes(), "framed_sync_frame_body_truncated", false);
+            return new FramedSyncWireFrame(headerBytes, header, ciphertext, loan);
+        } catch (Exception error) {
+            if (loan != null) loan.close();
+            throw error;
+        }
     }
 
     static TransportInterruption interrupted(String code) {

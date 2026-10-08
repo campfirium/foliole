@@ -8,6 +8,8 @@ import {
   type CanonicalManifest
 } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
+import { loadFramedExternalDocumentBody } from '../../lib/core/sync/framedSyncExternalDocumentBody.js';
+import { stageFramedSyncFrozenBody } from '../../lib/core/sync/framedSyncFrozenBody.js';
 import {
   revalidateFramedSyncInventorySource,
   requiredFramedSyncNodeVersionIds,
@@ -24,13 +26,9 @@ import {
   type OutboundPublishInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
 import { assertSyncGroupLocalPublicationAllowed } from '../../lib/core/sync/syncGroupLocalAdoption.js';
-import { loadRetainedSyncNodeVersionRecords } from '../../lib/core/sync/syncNodeGraph.js';
-import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import type { NodeVersionBodyStorage } from '../../lib/core/sync/syncNodeTombstoneVersion.js';
-import { isNodeVersionIdentityOnly, orderNodeVersionHistory } from '../../lib/core/sync/syncNodeVersionHistory.js';
+import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
+import { streamRetainedNodeVersions } from '../../lib/core/sync/syncNodeVersionSelection.js';
 import { projectDesktopFramedSyncNodeRecord } from '../sync/desktopFramedSyncNodeProjection.js';
-import { resolveDesktopFramedSyncNodeResources } from '../sync/desktopFramedSyncNodeResources.js';
-import { selectDesktopFramedSyncVerifiedOutboundNodeFacts } from '../sync/desktopFramedSyncVerifiedOutboundNodeFacts.js';
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
 
@@ -47,7 +45,6 @@ export type DesktopFramedSyncOutboundInput = Readonly<{
   context: FramedSyncContext;
   difference: FramedSyncInventoryDifference;
   port: DbPort;
-  bodyStorage?: NodeVersionBodyStorage;
   readCurrentInventoryEntry: (
     tx: DbPort,
     key: InventoryKey
@@ -61,8 +58,7 @@ function sameBlob(left: CanonicalBlob, right: CanonicalBlob) {
 
 export async function selectDesktopFramedSyncNodeManifest(
   tx: DbPort,
-  difference: FramedSyncInventoryDifference,
-  bodyStorage: NodeVersionBodyStorage = 'continuous'
+  difference: FramedSyncInventoryDifference
 ): Promise<CanonicalManifest> {
   if (difference.direction !== 'local_to_remote') {
     throw new Error('framed_sync_outbound_node_difference_invalid');
@@ -70,13 +66,15 @@ export async function selectDesktopFramedSyncNodeManifest(
   if (difference.objectType !== 'node') {
     const facts = await Promise.all((difference.need.stateFactIds?.length ? difference.need.stateFactIds :
       difference.sourceSnapshot.stateFactIds ?? []).map((factId) =>
-      selectFramedSyncObjectStateFact(tx, difference, factId, bodyStorage)));
+      selectFramedSyncObjectStateFact(tx, difference, factId)));
+    for (const fact of facts) for (const blob of fact.blobs) {
+      if (blob.role !== 5) continue;
+      await stageFramedSyncFrozenBody(tx, blob, await loadFramedExternalDocumentBody(tx, fact.globalId, blob));
+    }
     return { blobs: facts.flatMap((fact) => fact.blobs), facts };
   }
   const versionIds = requiredFramedSyncNodeVersionIds(difference);
-  const projections = bodyStorage === 'chunked'
-    ? await selectDesktopFramedSyncVerifiedOutboundNodeFacts(tx, versionIds, difference.globalId)
-    : await selectContinuousNodeProjections(tx, versionIds, difference.globalId);
+  const projections = await selectContinuousNodeProjections(tx, versionIds, difference.globalId);
   const related = await selectFramedSyncRelationReviewFactsWithDbPort(tx, difference);
   if (related.kind === 'deferred') throw new Error('framed_sync_source_changed');
   const stateFacts = await Promise.all((difference.need.stateFactIds ?? []).map((factId) =>
@@ -88,9 +86,6 @@ export async function selectDesktopFramedSyncNodeManifest(
     if (prior && !sameBlob(prior, blob)) throw new Error('framed_sync_outbound_blob_identity_conflict');
     blobs.set(key, blob);
   }
-  for (const required of difference.need.resourceHashes) {
-    if (!blobs.has(bytesToHex(required))) throw new Error('framed_sync_outbound_resource_unavailable');
-  }
   const facts = [
     ...projections.flatMap((value) => value.manifest.facts),
     ...stateFacts,
@@ -101,26 +96,20 @@ export async function selectDesktopFramedSyncNodeManifest(
 }
 
 async function selectContinuousNodeProjections(tx: DbPort, versionIds: readonly string[], globalId: string) {
-  const records = await loadRetainedSyncNodeVersionRecords(tx, [...versionIds]);
-  const selectedRecords = versionIds.map((versionId) => {
-    const record = records.get(versionId);
-    if (!record || record.object_id !== globalId) {
-      throw new Error(`framed_sync_outbound_node_fact_unavailable:${versionId}`);
+  const projections: { manifest: CanonicalManifest }[] = [];
+  for await (const record of streamRetainedNodeVersions(tx, versionIds, globalId)) {
+    if (isNodeVersionIdentityOnly(record)) {
+      projections.push({ manifest: { blobs: [], facts: [projectFramedSyncNodeIdentityFact(record)] } });
+      continue;
     }
-    return record;
-  });
-  const projections = orderNodeVersionHistory(selectedRecords).map((record) =>
-    isNodeVersionIdentityOnly(record) ? { manifest: { blobs: [], facts: [projectFramedSyncNodeIdentityFact(record)] } } :
-    projectDesktopFramedSyncNodeRecord(
-      record,
-      resolveDesktopFramedSyncNodeResources(record).map((resource) => resource.blob)
-    ));
-  for (const projection of projections) {
-    if (!('bodyBlob' in projection)) continue;
+    const projection = projectDesktopFramedSyncNodeRecord(record);
     const blob = projection.manifest.blobs.find((value) => value.role === 1);
     if (!blob) throw new Error('framed_sync_body_descriptor_missing');
-    await upsertTextBodyBlob(tx, new TextDecoder('utf-8', { ignoreBOM: true }).decode(projection.bodyBlob),
-      new Date().toISOString(), bytesToHex(blob.sha256));
+    await stageFramedSyncFrozenBody(tx, blob, projection.bodyBlob);
+    for (const alternative of projection.alternativeBodyBlobs ?? []) {
+      await stageFramedSyncFrozenBody(tx, alternative.blob, alternative.data);
+    }
+    projections.push({ manifest: projection.manifest });
   }
   return projections;
 }
@@ -148,21 +137,14 @@ export async function publishDesktopFramedSyncNodeOutbound(
       return { deferredObjects: [{ globalId: difference.globalId, objectType: 'node' }],
         kind: 'deferred' };
     }
-    let manifest: CanonicalManifest;
-    try {
-      manifest = await selectDesktopFramedSyncNodeManifest(tx, difference, input.bodyStorage);
-    } catch (error) {
-      if (error instanceof Error && error.message === 'framed_sync_outbound_resource_unavailable') {
-        return { deferredObjects: [{ globalId: difference.globalId, objectType: 'node' }],
-          kind: 'deferred' };
-      }
-      throw error;
-    }
+    const manifest = await selectDesktopFramedSyncNodeManifest(tx, difference);
     const contentId = await canonicalContentId(manifest);
     const transferId = await canonicalTransferId(input.context, contentId);
+    const publishedHashes = new Set(manifest.blobs.map((blob) => bytesToHex(blob.sha256)));
     const publication: OutboundPublishInput = {
       contentId,
-      inventoryDifference: difference,
+      inventoryDifference: { ...difference, need: { ...difference.need,
+        resourceHashes: difference.need.resourceHashes.filter((hash) => publishedHashes.has(bytesToHex(hash))) } },
       context: input.context,
       manifest,
       manifestHash: contentId.slice(),

@@ -25,23 +25,20 @@ final class FolioleFramedSyncExternalDocumentTests: XCTestCase {
         fact.sharedStateHash = Data(repeating: 1, count: 32)
         fact.body = .init()
         fact.blobs = [reference]
-        var message = Foliole_Sync_V22_ProtocolMessage()
-        message.payload = .fact(fact)
-        let bytes = try FolioleFramedSyncCodec.encode(try FolioleFramedSyncCodec.validateOutbound(
-            message, authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue))
         let digest = Data(repeating: 2, count: 32).hex
         let prepared = try FolioleCompanionFramedSyncPreparedOutbound.decode([
             "blobs": [["sha256": reference.sha256.hex, "byte_length": String(body.count),
                        "role": 5, "required": true, "data_text": String(decoding: body, as: UTF8.self)]],
             "content_id": digest, "manifest_hash": digest,
-            "transfer_id": digest, "fact_message_bytes_list": [Array(bytes)]
+            "transfer_id": digest, "header_message_bytes": try FramedSyncPreparedOutboundFixture.headerBytes(
+                facts: [fact], contentID: Data(repeating: 2, count: 32), transferID: Data(repeating: 2, count: 32))
         ])
         let context = FolioleFramedSyncTransferContext(groupID: "group", senderDeviceID: "sender",
             senderLibraryEpoch: "sender-epoch", receiverDeviceID: "receiver", receiverLibraryEpoch: "receiver-epoch")
         let sender = try FolioleFramedSyncOutboundSQLite(database: .init(url: root.appendingPathComponent("sender.db")))
         let key = Data(repeating: 0, count: 32)
         let attempt = try FolioleFramedSyncTransferWriter.prepare(groupKey: key, context: context,
-            facts: prepared.facts, blobs: prepared.blobs, staging: sender)
+            facts: [fact], blobs: prepared.blobs, staging: sender)
         let wire = try FolioleFramedSyncTransferWriter.replay(attempt, staging: sender)
         let url = root.appendingPathComponent("receiver.db")
         let receiver = FolioleFramedSyncTransferReceiver(database: try .init(url: url), resourceRoot: root)

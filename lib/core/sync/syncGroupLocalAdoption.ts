@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { DbPort } from './dbPort.js';
+import { loadSyncGroupOverwriteProgress } from './syncGroupOverwriteProgress.js';
 import { loadLatestSyncGroupRestoreEvent, markSyncGroupRestoreApplied } from './syncGroupRestoreEvents.js';
 
 export const SYNC_GROUP_LOCAL_ADOPTION_KEY = 'sync_group_local_adoption';
@@ -37,8 +38,19 @@ export async function beginSyncGroupLocalAdoption(db: DbPort, value: SyncGroupLo
     WHERE singleton_id = 1`, [adoption.libraryEpoch]);
 }
 
+export async function syncGroupLocalPublicationBlockReason(db: DbPort) {
+  if (await loadSyncGroupLocalAdoption(db)) return 'sync_group_local_adoption_pending';
+  if (await loadSyncGroupOverwriteProgress(db)) return 'sync_group_overwrite_pending';
+  const [restore] = await db.query(`SELECT 1 FROM sync_group_restore_events event
+    WHERE event.applied_at IS NULL AND NOT EXISTS (SELECT 1 FROM sync_group_restore_events newer
+      WHERE newer.group_id = event.group_id AND (newer.restored_at > event.restored_at OR
+        (newer.restored_at = event.restored_at AND newer.restore_id > event.restore_id))) LIMIT 1`);
+  return restore ? 'sync_group_restore_pending' : null;
+}
+
 export async function assertSyncGroupLocalPublicationAllowed(db: DbPort) {
-  if (await loadSyncGroupLocalAdoption(db)) throw new Error('sync_group_local_adoption_pending');
+  const reason = await syncGroupLocalPublicationBlockReason(db);
+  if (reason) throw new Error(reason);
 }
 
 export async function finishSyncGroupLocalAdoption(db: DbPort, expected: SyncGroupLocalAdoption) {

@@ -1,13 +1,13 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 
-import { loadWorkspaceSnapshot as loadWorkspaceSnapshotWithDriver } from '../../lib/core/database/workspaceSnapshot.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
 import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
-import { fixtureBodyStorage, fixtureInitializationPhase, initializeChunkedFixtureBodies, initializeFixtureDatabase } from './desktopFramedSyncChunkedFixtureInitialization.js';
+import { initializeFixtureDatabase } from './desktopFramedSyncFixtureInitialization.js';
 import { runIdentityRestoreFixtureCommand } from './desktopFramedSyncIdentityRestore.fixture.js';
+import { seedLargeOverwriteFixture } from './desktopFramedSyncLargeOverwrite.fixture.js';
 import { runDesktopFramedSyncOrderCommand } from './desktopFramedSyncOrder.fixture.js';
 import { collectDesktopFramedSyncFixtureContent } from './desktopFramedSyncRecovery.fixture.js';
 import { seedDesktopFramedSyncRelationReviewScenario } from './desktopFramedSyncRelationReviewProcessScenario.js';
@@ -29,8 +29,6 @@ type Command = Readonly<{
 
 const stateRoot = requiredEnvironment('FOLIOLE_ELECTRON_TEST_STATE_ROOT');
 const deviceId = requiredEnvironment('FOLIOLE_FRAMED_SYNC_DEVICE_ID');
-let bodyStorage: 'continuous' | 'chunked' = fixtureBodyStorage();
-const initializationPhase = fixtureInitializationPhase();
 let origin = '';
 let portPromise: Promise<ProcessPort> | null = null;
 
@@ -83,7 +81,6 @@ async function loadProcessPort() {
     }
     const port: unknown = await loaded.createDesktopFramedSyncProcessPort({
       databasePath: openDatabaseConnection().dbPath,
-      bodyStorage,
       deviceId,
       localOrigin: origin
     });
@@ -146,15 +143,13 @@ function snapshot() {
     origin,
     pid: process.pid,
     stateRoot,
-    workspace: bodyStorage === 'chunked'
-      ? loadWorkspaceSnapshotWithDriver(openDatabaseConnection().driver, { includeBody: false }, 'chunked')
-      : loadWorkspaceSnapshot({ includeBody: true })
+    workspace: loadWorkspaceSnapshot({ includeBody: true })
   };
 }
 
 async function run(command: Command) {
   if (command.action === 'init') {
-    await initializeFixtureDatabase(bodyStorage, initializationPhase, deviceId);
+    await initializeFixtureDatabase(deviceId);
     await new Promise<void>((resolve, reject) => {
       server.once('error', reject);
       server.listen(0, '127.0.0.1', resolve);
@@ -165,12 +160,12 @@ async function run(command: Command) {
     return snapshot();
   }
   if (command.action === 'seed') return seed(command.args);
-  if (command.action === 'activate_chunked') return activateChunkedSource();
   if (['begin_identity_restore', 'identity_restore_round'].includes(command.action)) {
-    return runIdentityRestoreFixtureCommand(command.action, command.args, { bodyStorage, deviceId, stateRoot });
+    return runIdentityRestoreFixtureCommand(command.action, command.args, { deviceId, stateRoot });
   }
   if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
   if (command.action === 'seedBatch') return seedBatch(command.args);
+  if (command.action === 'seed_large_overwrite') return seedLargeOverwriteFixture();
   if (['reorder', 'restore_order', 'standalone_edit', 'rejoin', 'register_order_member'].includes(command.action)) {
     return runDesktopFramedSyncOrderCommand(command.action, command.args);
   }
@@ -210,13 +205,6 @@ async function run(command: Command) {
     return null;
   }
   throw new Error(`fixture_action_unknown:${command.action}`);
-}
-
-async function activateChunkedSource() {
-  if (bodyStorage !== 'continuous' || portPromise) throw new Error('fixture_source_upgrade_requires_unopened_port');
-  await initializeChunkedFixtureBodies();
-  bodyStorage = 'chunked';
-  return snapshot();
 }
 
 function writeHttpError(response: ServerResponse, error: unknown) {

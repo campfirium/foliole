@@ -17,6 +17,7 @@ import type {
 
 import type { DesktopFramedSyncInboundResourceStore } from './desktopFramedSyncInboundResourceStore.js';
 import { restoreDesktopFramedSyncNodeRecord } from './desktopFramedSyncNodeProjection.js';
+import { desktopFramedResourceUnit } from './desktopFramedSyncResourceApply.js';
 
 export type PreparedDesktopFramedSyncInbound = Readonly<{
   context: FramedSyncContext;
@@ -26,6 +27,7 @@ export type PreparedDesktopFramedSyncInbound = Readonly<{
   manifestHash: Uint8Array;
   records: readonly NativeSyncNodeRecord[];
   relationReviewFacts: readonly CanonicalFact[];
+  resourceFacts?: readonly CanonicalFact[];
   stateRecords: readonly NativeSyncObjectRecord[];
   staging: FramedSyncStagingPort;
   transferId: Uint8Array;
@@ -56,7 +58,8 @@ export async function prepareDesktopFramedSyncInbound(input: {
     manifestHash: input.manifestHash,
     transferId: input.frame.transferId
   });
-  await input.resources.complete(prepared.records);
+  await input.resources.complete(prepared.records,
+    (desktopFramedResourceUnit(prepared.resourceFacts ?? []) ?? []).map((entry) => entry.resource));
   await input.staging.markReadyToApply(input.frame.transferId);
   return {
     ...prepared,
@@ -71,6 +74,12 @@ export function prepareInboundApply(
   facts: readonly CanonicalFact[],
   blobs: readonly FramedSyncBlobContent[]
 ) {
+  const resources = desktopFramedResourceUnit(facts);
+  if (resources) {
+    if (blobs.length) throw new Error('framed_sync_blob_content_set_mismatch');
+    return { globalId: facts[0]!.globalId, objectType: 'node', records: [],
+      relationReviewFacts: [], resourceFacts: facts, stateRecords: [] };
+  }
   const nodeFacts = facts.filter((fact) => fact.kind === 2);
   const stateFacts = facts.filter((fact) => fact.kind === 1);
   const relationReviewFacts = facts.filter((fact) => fact.kind === 3 || fact.kind === 4);

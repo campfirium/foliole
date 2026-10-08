@@ -7,9 +7,11 @@ import type {
 import { deriveTransferFrameKey } from '../../lib/core/sync/framedSyncCrypto.js';
 import { assertTransferEnvelopeBinding } from '../../lib/core/sync/framedSyncEnvelopeContract.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
+import { FRAMED_SYNC_RECEIPT_SLOT_BYTES } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import { decodeAndValidateProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
 import { receiveFramedSyncFrame } from '../../lib/core/sync/framedSyncReceiver.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
+import { readFramedSyncPayloadBudget } from '../database/framedSyncPayloadBudgetOwner.js';
 
 import {
   encryptProtocolFrame,
@@ -26,12 +28,27 @@ import {
 
 const bytes = (value: unknown) => new Uint8Array(value as Uint8Array);
 
-export async function buildReceiptStream(input: {
+type ReceiptInput = {
   db: DbPort;
   groupKey: Uint8Array;
   receipt: TransferReceiptStage;
   staging: FramedSyncStagingPort;
-}) {
+};
+
+export async function buildReceiptStream(input: ReceiptInput) {
+  const lease = await readFramedSyncPayloadBudget(input.db)?.acquireReceipt({
+    direction: 'outbound', bytes: FRAMED_SYNC_RECEIPT_SLOT_BYTES
+  });
+  try {
+    const body = await buildReceiptBody(input);
+    return { ...body, dispose: async () => { lease?.release(); }, frames: (async function* () {
+      try { yield* body.frames; }
+      finally { lease?.release(); }
+    })() };
+  } catch (error) { lease?.release(); throw error; }
+}
+
+async function buildReceiptBody(input: ReceiptInput) {
   const replay = await replayableReceiptAttempt(input.db, input.receipt.transferId);
   if (replay) {
     const frames = await input.staging.loadReplayableReceiptFrames(
@@ -57,6 +74,9 @@ export async function buildReceiptStream(input: {
 }
 
 function receiptBody(preamble: Uint8Array, frames: readonly StoredEncryptedFrame[]) {
+  if (frames.length !== 1 || frames[0]!.ciphertext.byteLength > FRAMED_SYNC_RECEIPT_SLOT_BYTES) {
+    throw new Error('framed_sync_receipt_frame_limit_exceeded');
+  }
   return {
     bodySha256: framedSyncEncodedSha256(preamble, frames),
     contentLength: framedSyncEncodedLength(preamble, frames),

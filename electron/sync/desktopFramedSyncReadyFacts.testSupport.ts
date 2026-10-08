@@ -16,7 +16,9 @@ import { stageDesktopFramedSyncFact } from './desktopFramedSyncProcessInbound.js
 
 async function readyFixture(factCount: number) {
   const host = textDevice();
-  const data = new TextEncoder().encode('\ufeff中😀\0文'.repeat(350000));
+  const unit = '\ufeff中😀\0文';
+  const prefix = unit.repeat(Math.floor(1048576 / Buffer.byteLength(unit)));
+  const data = new TextEncoder().encode(prefix + 'x'.repeat(1048576 - Buffer.byteLength(prefix)));
   const descriptor = { sha256: sha256(data), byteLength: BigInt(data.length), role: 1, required: true };
   const fact = { blobs: [descriptor], body: [], factId: 'body-fact', globalId: 'node',
     kind: 1, objectType: 'node', sharedStateHash: descriptor.sha256 };
@@ -40,10 +42,8 @@ async function readyFixture(factCount: number) {
     ciphertext: Uint8Array.of(1, 2), frameHeader: new Uint8Array(16), frameType: 3,
     preamble: new Uint8Array(96), sequence: BigInt(index) } });
   await staging.commitBlobOfferAndMissingSet({ blobs: [descriptor], transferId: published.transferId });
-  for (let offset = 0; offset < data.length; offset += 512 * 1024) {
-    await staging.writeBlobChunk({ attemptId, transferId: published.transferId, sha256: descriptor.sha256,
-      offset: BigInt(offset), data: data.slice(offset, offset + 512 * 1024) });
-  }
+  await staging.writeBlobChunk({ attemptId, transferId: published.transferId, sha256: descriptor.sha256,
+    offset: 0n, data });
   await staging.finalizeInboundAttempt({ attemptId, blobCount: 1n, factCount: BigInt(factCount),
     manifestHash: contentId, transferId: published.transferId });
   await staging.verifyAndMarkBlobAvailable(published.transferId, attemptId, descriptor.sha256);

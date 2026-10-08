@@ -17,32 +17,27 @@ public final class FramedSyncSQLiteStaging implements FramedSyncDurableStaging {
     }
 
     public FramedSyncSQLiteStaging(SQLiteDatabase database, File resourceDirectory) {
-        this(database, resourceDirectory, false);
-    }
-
-    public FramedSyncSQLiteStaging(SQLiteDatabase database, File resourceDirectory, boolean chunkedBodies) {
         if (database == null) throw new NullPointerException("database");
         if (!database.isOpen() || database.isReadOnly()) {
             throw new IllegalArgumentException("framed_sync_database_not_writable");
         }
         FramedSyncSQLiteSchema.install(database);
-        FramedSyncCompletedInboundCleanup.migratePayloads(database);
-        inbound = new FramedSyncSQLiteInboundFrames(database, resourceDirectory, chunkedBodies);
+        inbound = new FramedSyncSQLiteInboundFrames(database, resourceDirectory);
         receipts = new FramedSyncSQLiteReceipts(database);
         receiptReplay = new FramedSyncSQLiteReceiptReplay(database, receipts);
     }
 
     @Override
-    public FramedSyncStageOutcome admitInboundTransfer(TransferProposal proposal) throws Exception {
+    public synchronized FramedSyncStageOutcome admitInboundTransfer(TransferProposal proposal) throws Exception {
         return inbound.admit(proposal);
     }
 
     @Override
-    public FramedSyncStageOutcome commitInboundFrame(
+    public synchronized FramedSyncStageOutcome commitInboundFrame(
         FramedSyncAuthenticatedFrame frame,
         FramedSyncValidatedMessage message
     ) throws Exception {
-        if (!Arrays.equals(FramedSyncCodec.encode(message), frame.plaintext())) {
+        if (!Arrays.equals(FramedSyncCodec.encode(message), frame.borrowedPlaintext())) {
             throw new FramedSyncValidationException("framed_sync_stage_plaintext_mismatch");
         }
         if (message.payload().payloadCase() == FramedSyncPayload.Case.TRANSFER_RECEIPT) {
@@ -52,17 +47,17 @@ public final class FramedSyncSQLiteStaging implements FramedSyncDurableStaging {
     }
 
     @Override
-    public void invalidateInboundAttempt(byte[] transferId, byte[] attemptId) throws Exception {
+    public synchronized void invalidateInboundAttempt(byte[] transferId, byte[] attemptId) throws Exception {
         inbound.invalidate(transferId, attemptId);
     }
 
     @Override
-    public FramedSyncStageOutcome commitReceipt(TransferReceipt receipt) throws Exception {
+    public synchronized FramedSyncStageOutcome commitReceipt(TransferReceipt receipt) throws Exception {
         return receipts.commit(receipt);
     }
 
     @Override
-    public FramedSyncStageOutcome prepareReceiptAttempt(
+    public synchronized FramedSyncStageOutcome prepareReceiptAttempt(
         byte[] transferId,
         byte[] attemptId,
         byte[] preamble
@@ -71,20 +66,20 @@ public final class FramedSyncSQLiteStaging implements FramedSyncDurableStaging {
     }
 
     @Override
-    public FramedSyncStageOutcome finalizeReceiptAttempt(byte[] transferId, byte[] attemptId)
+    public synchronized FramedSyncStageOutcome finalizeReceiptAttempt(byte[] transferId, byte[] attemptId)
         throws Exception {
         return receiptReplay.finalizeAttempt(transferId, attemptId);
     }
 
     @Override
-    public List<FramedSyncAuthenticatedFrame> loadReplayableReceiptFrames(
+    public synchronized List<FramedSyncAuthenticatedFrame> loadReplayableReceiptFrames(
         byte[] transferId,
         byte[] attemptId
     ) throws Exception {
         return receiptReplay.load(transferId, attemptId);
     }
 
-    FramedSyncResourcePublication publishResources(byte[] transferId) throws Exception {
+    synchronized FramedSyncResourcePublication publishResources(byte[] transferId) throws Exception {
         return inbound.publishResources(transferId);
     }
 }

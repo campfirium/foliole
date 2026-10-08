@@ -16,11 +16,12 @@ vi.mock('../database/connection.js', async (original) => ({
   runWithDatabaseConnectionOwner: <T>(task: () => T | Promise<T>) => Promise.resolve().then(task)
 }));
 
-it('directly resolves a missing giant current body from its original before applying the network byte budget', async () => {
+it('preserves complete current text while preparing a missing legacy resource cache', async () => {
   const db = new Database(':memory:');
   fixture.db = db;
-  const body = '中😀'.repeat(900_000);
+  const body = '中😀'.repeat(149_796) + 'abcd';
   const { hash, bytes } = seedCurrentBody(db, body);
+  db.prepare("UPDATE nodes SET content = ? WHERE id = 'article'").run(body);
   const fetch = vi.fn(async () => { throw new Error('retained_original_must_not_request_network'); });
   vi.stubGlobal('fetch', fetch);
   const before = db.prepare('SELECT * FROM node_sync_versions').all();
@@ -37,7 +38,7 @@ it('directly resolves a missing giant current body from its original before appl
     const resolution = loadNodeBodyResolution(createBetterSqlite3Driver(db), 'article');
     expect(resolution?.status).toBe('resolved');
     if (resolution?.status !== 'resolved') throw new Error('giant_original_body_unavailable');
-    expect(resolution.source).toBe('blob');
+    expect(resolution.source).toBe('node');
     expect(resolution.content === body).toBe(true);
     expect(db.prepare('SELECT * FROM node_sync_versions').all()).toEqual(before);
   } finally {

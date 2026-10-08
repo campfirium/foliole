@@ -41,8 +41,14 @@ it('routes inventory and transfers through the framed session boundary', async (
   const apply = await readJava('FolioleCompanionFramedSyncApply.java');
   expect(server).toContain('new FramedSyncSessionNonceSQLite(this.context)');
   expect(server).toContain('new FramedSyncTransferSQLite(this.context)');
-  expect(route).toContain('FramedSyncSessionReader.read(');
-  expect(route).toContain('bridge.request("read_framed_inventory", peerContext)');
+  expect(route).toContain('FramedSyncSessionRequest.read(');
+  const session = await readJava('framed/FramedSyncSessionRequest.java');
+  expect(session).toContain('FramedSyncSessionReader.readEachEncoded(');
+  expect(route).toContain('FolioleCompanionFramedSyncInventory.readLeased(bridge, peerContext, budget)');
+  const inventory = await readJava('FolioleCompanionFramedSyncInventory.java');
+  expect(inventory).toContain('bridge.request("read_framed_inventory"');
+  expect(inventory).toContain('budget.acquire(');
+  expect(inventory).toContain('description(loan)), budget)');
   expect(route).toContain('FramedSyncTransferReader.Result received = store.receive(');
   expect(route).toMatch(/FolioleCompanionFramedSyncApply\.apply[\s\S]*store\.receipt/u);
   expect(apply).toContain('bridge.request("apply_framed_transfer"');

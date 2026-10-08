@@ -1,6 +1,7 @@
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.js';
+import { isWorkspaceSettingObject } from '../database/settingDataPolicy.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import type { CanonicalFact, CanonicalValue } from './framedSyncCanonicalManifest.js';
@@ -10,8 +11,8 @@ import { readFramedSyncObjectPayload } from './framedSyncObjectStatePayload.js';
 import { applyNodeMemberPosition, applyVersionMemberPosition } from './nodeVersionMemberPositionApply.js';
 import { collectParentOrderBodies } from './parentOrderBodyRetention.js';
 import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
+import { loadSyncGroupOverwriteProgress } from './syncGroupOverwriteProgress.js';
 import { persistSyncIdentityParentOrderMerges, stageSyncIdentityParentOrderRecordMerge } from './syncIdentityParentOrderApply.js';
-import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
 import { applySyncObjectInTransaction, type ApplySyncObjectsWithDbPortOptions } from './syncObjectApplyExecutor.js';
 import { applyParentOrderFactObject } from './syncParentOrderFactApply.js';
 
@@ -25,8 +26,7 @@ const nullable = (value: string | null): CanonicalValue => value === null
   ? { kind: 'null' } : { kind: 'string', value };
 
 export async function selectFramedSyncObjectStateFact(
-  db: DbPort, key: { globalId: string; objectType: string }, factId: string,
-  bodyStorage: NodeVersionBodyStorage = 'continuous'
+  db: DbPort, key: { globalId: string; objectType: string }, factId: string
 ): Promise<CanonicalFact> {
   assertType(key.objectType, key.globalId);
   const [state] = await db.query<StateRow>(`SELECT content_hash, current_version_id, deleted_at, updated_at
@@ -35,7 +35,7 @@ export async function selectFramedSyncObjectStateFact(
   const payload = state.deleted_at ? null : await readFramedSyncObjectPayload(db, key);
   if (!state.deleted_at && !payload) throw new Error('framed_sync_source_changed');
   const blobs = key.objectType === 'external_document'
-    ? await selectFramedExternalDocumentBody(db, payload, bodyStorage) : [];
+    ? await selectFramedExternalDocumentBody(db, payload) : [];
   return { blobs, body: [
     { name: 'content_hash', value: nullable(state.content_hash) },
     { name: 'current_version_id', value: nullable(state.current_version_id) },
@@ -74,6 +74,10 @@ export function restoreFramedSyncObjectStateFact(fact: CanonicalFact): NativeSyn
 export async function applyFramedSyncObjectStateRecord(db: DbPort,
   record: NativeSyncObjectRecord & { current_version_id?: string | null },
   options: ApplySyncObjectsWithDbPortOptions = {}) {
+  if (record.object_type === 'setting' && !isWorkspaceSettingObject(record.object_id) &&
+      await loadSyncGroupOverwriteProgress(db)) {
+    throw new Error('sync_group_overwrite_settings_excluded');
+  }
   if (record.object_type === 'order_version') return applyParentOrderFactObject(db, record);
   if (record.object_type === 'node_position') return applyNodeMemberPosition(db, record);
   if (record.object_type === 'parent_order_position') {

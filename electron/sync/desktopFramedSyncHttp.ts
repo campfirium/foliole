@@ -1,8 +1,8 @@
-import { once } from 'node:events';
 import http, { type ClientRequest, type IncomingMessage } from 'node:http';
 import https from 'node:https';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import type { FramedSyncSessionContext } from '../../lib/core/sync/framedSyncSession.js';
 
 import {
@@ -12,15 +12,16 @@ import {
   FRAMED_SYNC_LIBRARY_EPOCH_HEADER,
   framedSyncPathWithIdentity
 } from './companionLanFramedSyncPost.js';
+import { encodeFramedSyncHttpBody, writeDesktopFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
 import {
-  encodeFramedSyncStream,
   readFramedSyncStream,
   type FramedSyncWritableBody
 } from './desktopFramedSyncStream.js';
 import { createDesktopSyncGroupSignedHeaders } from './desktopSyncGroupSignedHeaders.js';
 
-export async function postDesktopFramedSync(args: {
+type PostInput = {
   body: FramedSyncWritableBody;
+  payloadBudget?: FramedSyncPayloadBudget | undefined;
   endpointUrl: string;
   groupId: string;
   localDeviceId: string;
@@ -29,7 +30,22 @@ export async function postDesktopFramedSync(args: {
   remoteDeviceId: string;
   remoteLibraryEpoch: string;
   secret: string;
-}) {
+};
+
+export async function postDesktopFramedSync(args: PostInput) {
+  const response = await postDesktopFramedSyncBytes(args);
+  try {
+    const stream = await readFramedSyncStream(response.response, args.payloadBudget, { reuseCiphertext: true });
+    return { context: response.context, stream };
+  } catch (error) { response.response.destroy(); throw error; }
+}
+
+export async function postDesktopFramedSyncBytes(args: PostInput) {
+  try { return await postOwnedBody(args); }
+  finally { await args.body.dispose?.(); }
+}
+
+async function postOwnedBody(args: PostInput) {
   const pathWithQuery = framedSyncPathWithIdentity({
     initiatorDeviceId: args.localDeviceId,
     initiatorLibraryEpoch: args.localLibraryEpoch,
@@ -55,10 +71,13 @@ export async function postDesktopFramedSync(args: {
   const transport = url.protocol === 'https:' ? https : http;
   const request = transport.request(url, { headers, method: 'POST' });
   const responsePromise = waitForResponse(request);
-  const sendPromise = writeBody(request, encodeFramedSyncStream(args.body));
-  const [response] = await Promise.all([responsePromise, sendPromise]);
+  const sendPromise = writeDesktopFramedSyncHttpBody(request, encodeFramedSyncHttpBody(args.body));
+  const [response] = await Promise.all([responsePromise, sendPromise]).catch(async (error: unknown) => {
+    request.destroy(error instanceof Error ? error : undefined);
+    await Promise.allSettled([responsePromise, sendPromise]);
+    throw error;
+  });
   await assertSuccessfulResponse(response, args);
-  const stream = await readFramedSyncStream(response);
   const context: Omit<FramedSyncSessionContext, 'sessionId'> = {
     groupId: args.groupId,
     initiatorDeviceId: args.localDeviceId,
@@ -67,7 +86,7 @@ export async function postDesktopFramedSync(args: {
     responderDeviceId: args.remoteDeviceId,
     responderLibraryEpoch: args.remoteLibraryEpoch
   };
-  return { context, stream };
+  return { context, response };
 }
 
 function ensureTrailingSlash(value: string) {
@@ -79,18 +98,6 @@ function waitForResponse(request: ClientRequest) {
     request.once('response', resolve);
     request.once('error', reject);
   });
-}
-
-async function writeBody(request: ClientRequest, body: AsyncIterable<Uint8Array>) {
-  try {
-    for await (const chunk of body) {
-      if (!request.write(chunk)) await once(request, 'drain');
-    }
-    request.end();
-  } catch (error) {
-    request.destroy(error instanceof Error ? error : undefined);
-    throw error;
-  }
 }
 
 async function assertSuccessfulResponse(response: IncomingMessage, args: {

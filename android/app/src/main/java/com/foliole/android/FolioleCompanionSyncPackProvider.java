@@ -101,7 +101,6 @@ final class FolioleCompanionSyncPackProvider {
                 }
                 else pack.execSQL(copies.getString(index));
             }
-            FolioleCompanionSyncPackPayloadWriter.copyTopicTextBodies(pack);
             pack.execSQL("COMMIT");
         } catch (Exception error) {
             if (pack.inTransaction()) pack.execSQL("ROLLBACK");

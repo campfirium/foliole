@@ -38,7 +38,7 @@ function stage(database: Database.Database, prefix: string, fact: CanonicalFact,
 
 async function seedPrivateSetting(receiver: DbPort, kind: 'android' | 'ios') {
   const payload = buildCanonicalSettingSyncPayload({ form_factor: 'phone', host_name: 'receiver',
-    key: 'app_settings', platform: kind, scope: 'user_space', value_json: '{"local":true}' });
+    key: 'discourse_publish_settings', platform: kind, scope: 'host', value_json: '{"local":true}' });
   await applySyncObjectInTransaction(receiver, { object_type: 'setting',
     object_id: `host:${kind}:phone:receiver:discourse_publish_settings`,
     content_hash: computeSyncContentHash('setting', payload), deleted_at: null,
@@ -60,9 +60,9 @@ it.each(['android', 'ios'] as const)('applies shared settings and tombstones whi
     installCompanionFramedSyncStaging(staging, prefix);
     const privatePayload = await seedPrivateSetting(receiver, kind);
     for (const host of ['*']) {
-      const id = `user_space:${kind}:phone:${host}:app_settings`;
+      const id = `user_space:${kind}:phone:${host}:search_aliases_document`;
       const payload = buildCanonicalSettingSyncPayload({ form_factor: 'phone', host_name: host,
-        key: 'app_settings', platform: kind, scope: 'user_space', value_json: '{"server":"original.example"}' });
+        key: 'search_aliases_document', platform: kind, scope: 'user_space', value_json: '{"server":"original.example"}' });
       const hash = computeSyncContentHash('setting', payload);
       const record = { object_type: 'setting' as const, object_id: id, content_hash: hash,
         deleted_at: null, payload_json: JSON.stringify(payload), updated_at: '2026-10-06' };

@@ -12,6 +12,7 @@ import {
   processFrameStream,
   TRANSFER_FRAME_TYPES
 } from './desktopFramedSyncProcessWire.js';
+import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { framedSyncEncodedLength, framedSyncEncodedSha256 } from './desktopFramedSyncStream.js';
 import {
   createDesktopFramedSyncTwoProcessFixture,
@@ -64,7 +65,7 @@ it('owns two independent Electron Node processes, HTTP ports, and SQLite librari
   });
   expect(readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath)).toMatchObject({
     journalMode: 'wal',
-    nodes: [{ content: '', id: 't326-one-object', title: 'One object' }],
+    nodes: [{ content: 'Body from desktop A', id: 't326-one-object', title: 'One object' }],
     versions: [expect.objectContaining({
       body_text: 'Body from desktop A',
       object_id: 't326-one-object'
@@ -78,8 +79,10 @@ it('owns two independent Electron Node processes, HTTP ports, and SQLite librari
 
 it('moves one object and version body through the production framed-sync process port', async () => {
   const fixture = await setup();
+  const prefix = '\uFEFFBody from desktop A 🌿\r\n';
+  const content = prefix + 'a'.repeat(1_048_576 - Buffer.byteLength(prefix));
   await fixture.left.seed({
-    content: 'Body from desktop A',
+    content,
     nodeId: 't326-one-object',
     title: 'One object'
   });
@@ -111,10 +114,10 @@ it('moves one object and version body through the production framed-sync process
     resourceChunks: 0
   });
   expect(received.nodes).toEqual([
-    expect.objectContaining({ content: '', id: 't326-one-object', title: 'One object' })
+    expect.objectContaining({ content, id: 't326-one-object', title: 'One object' })
   ]);
   expect(received.versions).toEqual([
-    expect.objectContaining({ body_text: 'Body from desktop A', object_id: 't326-one-object' })
+    expect.objectContaining({ body_text: content, object_id: 't326-one-object' })
   ]);
   expect(sent.versions).toEqual(received.versions);
   const receivedNode = received.nodes[0] as { current_version_id: string };
@@ -131,7 +134,7 @@ it('moves one object and version body through the production framed-sync process
   expect(reopened.versions).toEqual(received.versions);
 });
 
-it('streams a Node image into the receiver Assets store before committing its receipt', async () => {
+it('commits the Node independently and fills its image in the ordinary resource phase', async () => {
   const fixture = await setup();
   const bytes = Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
@@ -139,6 +142,7 @@ it('streams a Node image into the receiver Assets store before committing its re
   ]);
   const seeded = await fixture.left.seedResource({
     bytes,
+    includeImageInBody: true,
     nodeId: 't326-binary-resource'
   });
 
@@ -146,7 +150,7 @@ it('streams a Node image into the receiver Assets store before committing its re
 
   const target = path.join(fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets',
     seeded.storageKey);
-  await expect(fs.readFile(target)).resolves.toEqual(bytes);
+  await expect(fs.readFile(target)).rejects.toMatchObject({ code: 'ENOENT' });
   const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(received.nodes).toEqual([expect.objectContaining({
     id: 't326-binary-resource',
@@ -157,12 +161,17 @@ it('streams a Node image into the receiver Assets store before committing its re
     receipts: 1,
     resourceChunks: 0
   });
+  expect(await reconnectFixturePeer(fixture.right, fixture.leftSnapshot)).toMatchObject({ complete: true });
+  await expect(fs.readFile(target)).resolves.toEqual(bytes);
+  const completed = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
+  expect(completed.framedSync).toMatchObject({ availableResources: 0, resourceChunks: 0 });
+  expect(completed.framedSync.receipts).toBeGreaterThan(received.framedSync.receipts);
   expect(await fs.readdir(path.dirname(target))).toEqual([seeded.storageKey]);
   const restarted = await fixture.restartRight();
   processes.push(restarted.process);
   await expect(fs.readFile(target)).resolves.toEqual(bytes);
   expect(readDesktopFramedSyncLibraryEvidence(restarted.snapshot.databasePath).nodes).toEqual(received.nodes);
-});
+}, 60_000);
 
 it('rejects an unauthenticated framed-sync request before staging any bytes', async () => {
   const fixture = await setup();

@@ -1,3 +1,5 @@
+import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
+
 import {
   assertFramedSyncDigest,
   FRAMED_SYNC_LIMITS
@@ -10,6 +12,7 @@ export type BlobChunk = Readonly<{
 
 export type BlobDescriptor = Readonly<{
   byteLength: bigint;
+  role?: number;
   sha256: Uint8Array;
 }>;
 
@@ -50,16 +53,25 @@ function compareHashes(left: Uint8Array, right: Uint8Array) {
 export function assertBlobDescriptor(descriptor: BlobDescriptor) {
   assertFramedSyncDigest(descriptor.sha256, 'blob_hash');
   if (descriptor.byteLength < 0n ||
-      descriptor.byteLength > BigInt(FRAMED_SYNC_LIMITS.maxBlobBytes)) {
+      descriptor.byteLength > BigInt(isBodyDescriptor(descriptor)
+        ? TEXT_BODY_MAX_BYTES : FRAMED_SYNC_LIMITS.maxBlobBytes)) {
     throw new Error('blob_size_limit_exceeded');
   }
   return descriptor;
 }
 
+export function isBodyDescriptor(descriptor: Pick<BlobDescriptor, 'role'>) {
+  return descriptor.role === 1 || descriptor.role === 5;
+}
+
+function payloadBytes(descriptor: BlobDescriptor) {
+  return isBodyDescriptor(descriptor) ? TEXT_BODY_MAX_BYTES : FRAMED_SYNC_LIMITS.blobChunkBytes;
+}
+
 export function expectedBlobChunkCount(descriptor: BlobDescriptor) {
   assertBlobDescriptor(descriptor);
   if (descriptor.byteLength === 0n) return 0;
-  const chunkBytes = BigInt(FRAMED_SYNC_LIMITS.blobChunkBytes);
+  const chunkBytes = BigInt(payloadBytes(descriptor));
   return Number((descriptor.byteLength + chunkBytes - 1n) / chunkBytes);
 }
 
@@ -78,10 +90,10 @@ export function acceptBlobChunk(
 ): BlobChunkAcceptance {
   assertBlobDescriptor(descriptor);
   if (incoming.offset < 0n || incoming.data.byteLength === 0 ||
-      incoming.data.byteLength > FRAMED_SYNC_LIMITS.blobChunkBytes) {
+      incoming.data.byteLength > payloadBytes(descriptor)) {
     throw new Error('blob_chunk_invalid');
   }
-  const chunkBytes = BigInt(FRAMED_SYNC_LIMITS.blobChunkBytes);
+  const chunkBytes = BigInt(payloadBytes(descriptor));
   if (incoming.offset % chunkBytes !== 0n) throw new Error('blob_chunk_offset_invalid');
   const incomingEnd = incoming.offset + BigInt(incoming.data.byteLength);
   if (incomingEnd > descriptor.byteLength) throw new Error('blob_chunk_out_of_bounds');
@@ -112,7 +124,7 @@ export function hasCompleteBlobCoverage(descriptor: BlobDescriptor, chunks: read
   assertBlobDescriptor(descriptor);
   if (descriptor.byteLength === 0n) return chunks.length === 0;
   let nextOffset = 0n;
-  const chunkBytes = BigInt(FRAMED_SYNC_LIMITS.blobChunkBytes);
+  const chunkBytes = BigInt(payloadBytes(descriptor));
   for (const chunk of [...chunks].sort((left, right) => left.offset < right.offset ? -1 : 1)) {
     const remaining = descriptor.byteLength - chunk.offset;
     const expectedBytes = Number(remaining < chunkBytes ? remaining : chunkBytes);

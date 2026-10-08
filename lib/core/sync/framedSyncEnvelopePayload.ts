@@ -36,7 +36,7 @@ export type SessionBoundPayload =
   }>);
 
 const TRANSFER_CASES = new Set([
-  'blob_chunk', 'fact', 'transfer_header', 'transfer_receipt', 'transfer_trailer'
+  'blob_chunk', 'fact', 'fact_fragment', 'transfer_header', 'transfer_receipt', 'transfer_trailer'
 ]);
 
 const bytes = (value: unknown) => value as Uint8Array;
@@ -51,7 +51,9 @@ export function transferPayload(
   published: PublishedTransfer
 ): TransferBoundPayload {
   const payload = message.payload;
-  if (message.payloadCase === 'fact') return { case: 'fact', transferId: published.transferId };
+  if (message.payloadCase === 'fact' || message.payloadCase === 'fact_fragment') {
+    return { case: 'fact', transferId: published.transferId };
+  }
   if (message.payloadCase === 'blob_chunk') {
     return { case: 'blob_chunk', transferId: bytes(payload.transferId) };
   }

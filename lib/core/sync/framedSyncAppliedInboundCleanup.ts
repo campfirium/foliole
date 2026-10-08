@@ -1,6 +1,7 @@
 import { readFramedSyncRow } from '../database/framedSyncStagingSerialization.js';
 
 import type { DbPort } from './dbPort.js';
+import { UNOWNED_FRAMED_BODY } from './framedSyncFrozenBody.js';
 
 /** Called after business references have committed, never for receiving or ready input. */
 export async function retireFramedSyncAppliedInbound(tx: DbPort, transferId: Uint8Array) {
@@ -12,8 +13,7 @@ export async function retireFramedSyncAppliedInbound(tx: DbPort, transferId: Uin
     throw new Error('framed_sync_cleanup_requires_released_pins');
   }
   await tx.run(`DELETE FROM framed_sync_available_blobs WHERE sha256 IN
-    (SELECT sha256 FROM framed_sync_blob_offers WHERE transfer_id = ?) AND NOT EXISTS
-    (SELECT 1 FROM framed_sync_blob_pins pin WHERE pin.sha256 = framed_sync_available_blobs.sha256)`, [transferId]);
+    (SELECT sha256 FROM framed_sync_blob_offers WHERE transfer_id = ?) AND ${UNOWNED_FRAMED_BODY}`, [transferId]);
   await tx.run(`DELETE FROM framed_sync_available_resources WHERE sha256 IN
     (SELECT sha256 FROM framed_sync_blob_offers WHERE transfer_id = ?) AND NOT EXISTS
     (SELECT 1 FROM framed_sync_resource_pins pin WHERE pin.sha256 = framed_sync_available_resources.sha256)`, [transferId]);

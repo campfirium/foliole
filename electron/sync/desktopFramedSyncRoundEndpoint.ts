@@ -11,13 +11,14 @@ import type {
   FramedSyncRoundSelection
 } from '../../lib/core/sync/framedSyncInventoryRoundCoordinator.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
-import type { NodeVersionBodyStorage } from '../../lib/core/sync/syncNodeTombstoneVersion.js';
 import { publishDesktopFramedSyncNodeOutbound } from '../database/desktopFramedSyncOutboundSelection.js';
 
+import type { DesktopFramedSyncBatchDeliveryResult } from './desktopFramedSyncBatchDependencyRecovery.js';
 import {
-  prepareDesktopFramedSyncPublishedTransfer,
+  prepareDesktopFramedSyncPublishedDelivery,
   sendDesktopFramedSyncPublishedTransfer
 } from './desktopFramedSyncProcessOutbound.js';
+import { sendDesktopFramedSyncRoundBatch } from './desktopFramedSyncRoundBatch.js';
 import {
   readDesktopFramedSyncRoundInventory,
   readDesktopFramedSyncRoundInventoryEntry
@@ -29,7 +30,6 @@ export type DesktopFramedSyncRoundIdentity = Readonly<{
 }>;
 
 type EndpointInput = Readonly<{
-  bodyStorage?: NodeVersionBodyStorage;
   db: DbPort;
   groupId: string;
   groupSecret: string;
@@ -55,12 +55,11 @@ function transferContext(input: EndpointInput): FramedSyncContext {
 async function selectOutbound(input: EndpointState, difference: FramedSyncInventoryDifference):
 Promise<FramedSyncRoundSelection> {
   const result = await publishDesktopFramedSyncNodeOutbound({
-    bodyStorage: input.bodyStorage ?? 'continuous',
     context: transferContext(input),
     difference,
     port: input.db,
     readCurrentInventoryEntry: (tx, key) =>
-      readDesktopFramedSyncRoundInventoryEntry(tx, key, input.bodyStorage ?? 'continuous')
+      readDesktopFramedSyncRoundInventoryEntry(tx, key)
   });
   if (result.kind === 'deferred') {
     return { deferredObjects: result.deferredObjects, kind: 'deferred' };
@@ -71,13 +70,12 @@ Promise<FramedSyncRoundSelection> {
 async function sendPublishedTransfer(input: EndpointState, args: Readonly<{
   publication: Parameters<FramedSyncStagingPort['publishOutbound']>[0];
 }>) {
-  const attempt = await prepareDesktopFramedSyncPublishedTransfer({
-    bodyStorage: input.bodyStorage ?? 'continuous',
+  const delivery = await prepareDesktopFramedSyncPublishedDelivery({
     db: input.db, groupSecret: input.groupSecret, publication: args.publication, staging: input.staging
   });
   await sendDesktopFramedSyncPublishedTransfer({
     db: input.db,
-    attempt,
+    ...delivery,
     groupSecret: input.groupSecret,
     peerOrigin: input.peerOrigin,
     publication: args.publication,
@@ -89,15 +87,20 @@ async function sendPublishedTransfer(input: EndpointState, args: Readonly<{
 
 export function createDesktopFramedSyncRoundEndpoint(
   input: EndpointInput
-): FramedSyncRoundEndpoint {
+): FramedSyncRoundEndpoint & {
+  sendPublishedTransfers(publications: AsyncIterable<Parameters<FramedSyncStagingPort['publishOutbound']>[0]> |
+    readonly Parameters<FramedSyncStagingPort['publishOutbound']>[0][]):
+    Promise<DesktopFramedSyncBatchDeliveryResult[]>;
+} {
   const state = input;
   return {
     deviceId: input.local.deviceId,
     libraryEpoch: input.local.libraryEpoch,
-    readInventory: () => readDesktopFramedSyncRoundInventory(input.db, input.bodyStorage ?? 'continuous'),
-    readInventoryEntry: (key) => readDesktopFramedSyncRoundInventoryEntry(input.db, key, input.bodyStorage ?? 'continuous'),
+    readInventory: () => readDesktopFramedSyncRoundInventory(input.db),
+    readInventoryEntry: (key) => readDesktopFramedSyncRoundInventoryEntry(input.db, key),
     selectOutbound: (difference) => selectOutbound(state, difference),
     sendPublishedTransfer: ({ publication }) => sendPublishedTransfer(state, { publication }),
+    sendPublishedTransfers: publications => sendDesktopFramedSyncRoundBatch(input, publications),
     staging: input.staging
   };
 }

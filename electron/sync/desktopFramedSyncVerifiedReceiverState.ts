@@ -4,6 +4,8 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { ManifestBlobDescriptor } from '../../lib/core/sync/framedSyncBlobContract.js';
 import type { CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { TransferReceiptStage } from '../../lib/core/sync/framedSyncContract.js';
+import { FramedSyncFactFragmentProgress } from '../../lib/core/sync/framedSyncFactFragmentProgress.js';
+import type { FramedSyncFactFragmentDecoder } from '../../lib/core/sync/framedSyncFactFrameReader.js';
 import { restoreFramedSyncNodeReadingFact } from '../../lib/core/sync/framedSyncNodeReadingFact.js';
 import { restoreFramedSyncNodeMetadata } from '../../lib/core/sync/framedSyncNodeRestore.js';
 import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
@@ -13,16 +15,17 @@ import type { AuthenticatedTransferFrame } from './desktopFramedSyncAuthenticate
 import { DesktopFramedSyncInboundResourceStore } from './desktopFramedSyncInboundResourceStore.js';
 import { headerFromWire } from './desktopFramedSyncProcessHeader.js';
 import { admitDesktopFramedSyncTransfer } from './desktopFramedSyncProcessInbound.js';
-import { loadDesktopFramedSyncReadyFacts } from './desktopFramedSyncReadyFacts.js';
-import type { DesktopFramedVerifiedInbound } from './desktopFramedSyncVerifiedApply.js';
+import { loadDesktopFramedSyncReadySource, type DesktopFramedSyncReadySource } from './desktopFramedSyncReadySource.js';
 
 export class DesktopFramedVerifiedReceiverState {
   attemptAdmitted = false;
   readonly bodies = new Map<string, ManifestBlobDescriptor>();
   readonly facts: CanonicalFact[] = [];
+  readonly factFragments = new FramedSyncFactFragmentProgress();
+  replayedFactFragment: FramedSyncFactFragmentDecoder | null = null;
   existingReceipt: TransferReceiptStage | null = null;
   published: AuthenticatedTransferFrame['published'] | null = null;
-  ready: DesktopFramedVerifiedInbound | null = null;
+  ready: DesktopFramedSyncReadySource | null = null;
   resources: DesktopFramedSyncInboundResourceStore | null = null;
 
   async admit(input: { db: DbPort; event: AuthenticatedTransferFrame; staging: FramedSyncStagingPort }) {
@@ -39,7 +42,7 @@ export class DesktopFramedVerifiedReceiverState {
     if (this.existingReceipt && await staging.loadInboundProposal(event.published.transferId)) {
       await staging.releasePins(event.published.transferId, 'business_reference_committed');
     }
-    if (!this.existingReceipt) this.ready = await loadDesktopFramedSyncReadyFacts(input.db, event.published);
+    if (!this.existingReceipt) this.ready = await loadDesktopFramedSyncReadySource(input.db, event.published);
     if (!this.existingReceipt && !this.ready) await admitDesktopFramedSyncTransfer({
       attemptId: event.frame.attemptId, firstFrame: event.frame, header, staging
     });

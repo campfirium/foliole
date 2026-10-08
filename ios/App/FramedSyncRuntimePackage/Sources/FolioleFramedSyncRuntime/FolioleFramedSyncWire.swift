@@ -98,7 +98,7 @@ public final class FolioleFramedSyncStreamReader {
         return try FolioleFramedSyncPreamble(decoding: data)
     }
 
-    public func nextFrame() throws -> FolioleFramedSyncWireFrame? {
+    public func nextFrame(maximumCiphertextBytes: Int = FolioleFramedSyncLimits.maxFrameMessageBytes + 16) throws -> FolioleFramedSyncWireFrame? {
         guard readPreamble else {
             throw FolioleFramedSyncValidationError("framed_sync_preamble_required")
         }
@@ -107,6 +107,9 @@ public final class FolioleFramedSyncStreamReader {
             truncated: "framed_sync_frame_header_truncated"
         ) else { return nil }
         let header = try FolioleFramedSyncWireHeader(decoding: headerBytes)
+        guard header.ciphertextBytes <= maximumCiphertextBytes else {
+            throw FolioleFramedSyncValidationError("framed_sync_frame_ciphertext_limit_exceeded")
+        }
         let ciphertext = try readExact(
             header.ciphertextBytes,
             truncated: "framed_sync_frame_body_truncated"

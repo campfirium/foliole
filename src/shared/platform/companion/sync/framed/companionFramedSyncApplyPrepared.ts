@@ -3,29 +3,28 @@ import { readFramedSyncReceipt, sameFramedSyncBytes } from '../../../../../../li
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort.js';
 import { markFramedSyncCompletion } from '../../../../../../lib/core/sync/framedSyncCompletionRetention.js';
 import type { TransferReceiptStage } from '../../../../../../lib/core/sync/framedSyncContract.js';
+import { withFramedExternalDocumentBody } from '../../../../../../lib/core/sync/framedSyncExternalDocumentBody.js';
 import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { assertFramedSyncNodeParentDependencies } from '../../../../../../lib/core/sync/framedSyncNodeParentDependencies.js';
 import { applyFramedSyncObjectStateRecord } from '../../../../../../lib/core/sync/framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from '../../../../../../lib/core/sync/framedSyncRelationReviewApply.js';
 import { replayRetiredParentOrderBodies } from '../../../../../../lib/core/sync/parentOrderBodyReplay.js';
-import { assertSyncGroupLocalPublicationAllowed, finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
-import { clearWorkgroupSyncDataForRestore } from '../../../../../../lib/core/sync/syncGroupRestoreReset.js';
-import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
 import { applyConvergentSyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeConvergence.js';
-import { upsertTextBodyBlob } from '../../../../../../lib/core/sync/syncNodeTextBodyBlobs.js';
-import { isNodeVersionIdentityOnly } from '../../../../../../lib/core/sync/syncNodeVersionHistory.js';
 import { iosCompanionHostName } from '../../runtime/iosCompanionMutationState.js';
 
 import type { prepareCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
+import { assertCompanionFramedSyncInboundAllowed } from './companionFramedSyncInboundGate.js';
 
 type Prepared = Awaited<ReturnType<typeof prepareCompanionFramedSyncTransfer>>;
 
 export function applyPreparedCompanionFramedSyncTransfers(
-  db: DbPort, transfers: readonly Prepared[], adoption?: SyncGroupLocalAdoption
+  db: DbPort, transfers: readonly Prepared[]
 ) {
+  if (transfers.some((transfer) => transfer.decoded.resourceFacts)) {
+    throw new Error('framed_sync_resource_verified_apply_required');
+  }
   return db.transaction(async (tx) => {
-    if (adoption) await clearWorkgroupSyncDataForRestore(tx, adoption.libraryEpoch);
-    else await assertSyncGroupLocalPublicationAllowed(tx);
+    await assertCompanionFramedSyncInboundAllowed(tx, transfers.map((transfer) => transfer.input));
     const pending = [];
     for (const transfer of transfers) {
       const [existing] = await tx.query<DbRow>('SELECT * FROM framed_sync_receipts WHERE transfer_id = ?',
@@ -33,36 +32,26 @@ export function applyPreparedCompanionFramedSyncTransfers(
       if (!existing) pending.push(transfer);
       else await replayRetiredParentOrderBodies(tx, transfer.decoded.readingStates);
     }
-    await applyFacts(tx, pending, Boolean(adoption));
+    await applyFacts(tx, pending);
     const receipts = await Promise.all(transfers.map((transfer) => commitReceipt(tx, transfer)));
-    if (adoption) await finishSyncGroupLocalAdoption(tx, adoption);
     return receipts;
   });
 }
 
-async function applyFacts(db: DbPort, transfers: readonly Prepared[], replacing: boolean) {
+async function applyFacts(db: DbPort, transfers: readonly Prepared[]) {
   const nodes = transfers.flatMap((transfer) => transfer.decoded.nodes);
   await recordFramedSyncResourceAvailability(db, transfers.flatMap((transfer) =>
     (transfer.input.resourceStorageKeys ?? []).map((key) => key.slice(0, 64))), true);
   await assertFramedSyncNodeParentDependencies(db, nodes);
-  for (const node of nodes) {
-    if (isNodeVersionIdentityOnly(node)) continue;
-    await upsertTextBodyBlob(db, node.body_text ?? '', node.snapshot.updated_at, node.snapshot.body_blob_hash!);
-  }
-  if (nodes.length) {
-    if (replacing) await applySyncNodesWithDbPort(db, nodes, {
-      enqueueSearchInvalidations: false, operation: 'local_restore'
-    });
-    else await applyConvergentSyncNodesWithDbPort(db, nodes);
-  }
+  if (nodes.length) await applyConvergentSyncNodesWithDbPort(db, nodes);
   await applyFramedSyncRelationReviewFactsWithDbPort(db, transfers.flatMap((transfer) => transfer.decoded.relationReviewFacts));
-  for (const body of transfers.flatMap((transfer) => transfer.decoded.externalBodies ?? [])) {
-    await upsertTextBodyBlob(db, body.text, new Date().toISOString(), body.hash);
-  }
   const records = transfers.flatMap((transfer) => transfer.decoded.readingStates);
   const hostName = records.some((record) => record.object_type === 'setting')
     ? await iosCompanionHostName(db) : undefined;
-  for (const record of records) await applyFramedSyncObjectStateRecord(db, record, hostName ? { hostName } : {});
+  for (const transfer of transfers) for (const record of transfer.decoded.readingStates) {
+    await applyFramedSyncObjectStateRecord(db,
+      withFramedExternalDocumentBody(record, transfer.decoded.externalBodies ?? []), hostName ? { hostName } : {});
+  }
 }
 
 async function commitReceipt(db: DbPort, transfer: Prepared): Promise<TransferReceiptStage> {

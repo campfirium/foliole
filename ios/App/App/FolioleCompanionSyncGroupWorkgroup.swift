@@ -3,6 +3,7 @@ import Foundation
 
 protocol FolioleCompanionSyncGroupDataRequesting {
     func request(_ operation: String, _ payload: [String: Any]) throws -> [String: Any]
+    func request(_ operation: String, _ payload: [String: Any], documentOwner: FolioleFramedSyncPayloadBudget) throws -> [String: Any]
 }
 
 enum FolioleCompanionSyncGroupWorkgroup {

@@ -174,9 +174,9 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
     throw new Error('node_version_fact_body_blob_invalid');
   }
   if (retired) return;
-  if (resources.length !== references.length || references.some((reference) =>
+  if (resources.length > 0 && (resources.length !== references.length || references.some((reference) =>
     !resources.some((blob) => hex(blob.sha256) === reference.contentHash &&
-      blob.role === reference.role))) {
+      blob.role === reference.role)))) {
     throw new Error('node_version_fact_resource_blobs_invalid');
   }
 }

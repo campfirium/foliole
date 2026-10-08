@@ -1,10 +1,9 @@
-import type { DbPort } from '../../../../../../lib/core/sync/dbPort';
-import type { FramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventory';
+import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
+import type { FramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import {
   readFramedSyncInventory,
   readFramedSyncInventoryEntry
-} from '../../../../../../lib/core/sync/framedSyncInventoryRead';
-import type { NodeVersionBodyStorage } from '../../../../../../lib/core/sync/syncNodeTombstoneVersion.js';
+} from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 
 const hex = (value: Uint8Array) => Array.from(value, (item) => item.toString(16).padStart(2, '0')).join('');
 
@@ -21,16 +20,15 @@ function serialize(entry: FramedSyncInventoryEntry) {
   };
 }
 
-export async function readCompanionFramedSyncInventory(db: DbPort, bodyStorage: NodeVersionBodyStorage = 'continuous') {
-  const entries = await readFramedSyncInventory(db, bodyStorage);
+export async function readCompanionFramedSyncInventory(db: DbPort) {
+  const entries = await readFramedSyncInventory(db);
   return { entries: entries.map(serialize) };
 }
 
 export async function readCompanionFramedSyncInventoryEntry(
   db: DbPort,
-  key: Readonly<{ globalId: string; objectType: string }>,
-  bodyStorage: NodeVersionBodyStorage = 'continuous'
+  key: Readonly<{ globalId: string; objectType: string }>
 ) {
-  const entry = await readFramedSyncInventoryEntry(db, key, bodyStorage);
+  const entry = await readFramedSyncInventoryEntry(db, key);
   return entry ? serialize(entry) : null;
 }

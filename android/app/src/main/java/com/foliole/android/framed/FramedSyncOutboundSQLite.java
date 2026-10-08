@@ -13,12 +13,14 @@ public final class FramedSyncOutboundSQLite implements AutoCloseable, FramedSync
     private final SQLiteDatabase database;
     private final FramedSyncOutboundFrameFiles frames;
 
-    public FramedSyncOutboundSQLite(Context context) {
+    public FramedSyncOutboundSQLite(Context context) { this(context, null); }
+
+    public FramedSyncOutboundSQLite(Context context, FramedSyncPayloadBudget budget) {
         File file = context.getApplicationContext().getDatabasePath(DATABASE_NAME);
         database = SQLiteDatabase.openOrCreateDatabase(file, null);
         install();
         frames = new FramedSyncOutboundFrameFiles(database,
-            new File(context.getApplicationContext().getFilesDir(), "framed-sync/outbound"));
+            new File(context.getApplicationContext().getFilesDir(), "framed-sync/outbound"), budget);
     }
 
     @Override public synchronized FramedSyncStageOutcome prepareOutboundAttempt(
@@ -65,7 +67,7 @@ public final class FramedSyncOutboundSQLite implements AutoCloseable, FramedSync
         } finally { database.endTransaction(); }
     }
 
-    @Override public synchronized void replayOutboundFrames(
+    @Override public void replayOutboundFrames(
         byte[] transferId, byte[] attemptId, FramedSyncStreamWriter writer
     ) throws Exception {
         frames.replay(transferId, attemptId, writer);

@@ -1,15 +1,16 @@
 // @vitest-environment node
 import { expect, it } from 'vitest';
 
-import { loadCurrentVerifiedSyncNode } from '../../lib/core/sync/syncNodeVerifiedGraph.js';
-import { readBodyText } from '../../lib/core/sync/verifiedBody.js';
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 
 import { readReceipt } from './desktopFramedSyncProcessReceipt.js';
 import { encodeFramedSyncStream, readFramedSyncStream } from './desktopFramedSyncStream.js';
 import { receiveVerifiedDesktopFramedSyncTransfer } from './desktopFramedSyncVerifiedReceiver.js';
 import { receiverBusinessRows, verifiedReceiverFixture } from './desktopFramedSyncVerifiedReceiver.testSupport.js';
 
-const body = '\ufeff中😀\0文'.repeat(350000);
+const unicode = '\ufeff中😀\0文';
+const prefix = unicode.repeat(Math.floor(1_048_576 / Buffer.byteLength(unicode)));
+const body = prefix + 'a'.repeat(1_048_576 - Buffer.byteLength(prefix));
 
 async function receive(fixture: Awaited<ReturnType<typeof verifiedReceiverFixture>>, tamper = false) {
   return receiveVerifiedDesktopFramedSyncTransfer({ ...fixture.receiver, context: fixture.context,
@@ -21,13 +22,12 @@ async function assertCommitted(fixture: Awaited<ReturnType<typeof verifiedReceiv
     stream: await readFramedSyncStream(encodeFramedSyncStream(result)) });
   expect(receipt).toEqual(await fixture.receiver.staging.loadReceipt(fixture.published.transferId));
   expect(receipt.transferId).toEqual(fixture.published.transferId);
-  const current = await loadCurrentVerifiedSyncNode(fixture.receiver.db, fixture.record.object_id);
-  expect(current?.metadata.version_id).toBe(fixture.record.version_id);
-  expect(current?.metadata.content_hash).toBe(fixture.record.content_hash);
-  if (current?.body.kind !== 'readable') throw new Error('readable_receiver_result_required');
-  expect(await readBodyText(fixture.receiver.db, current.body.ref)).toBe(body);
+  const current = await loadCurrentSyncNodeRecord(fixture.receiver.db, fixture.record.object_id);
+  expect(current?.version_id).toBe(fixture.record.version_id);
+  expect(current?.content_hash).toBe(fixture.record.content_hash);
+  expect(current?.body_text).toBe(body);
   expect(fixture.receiver.sqlite.prepare('SELECT count(*) FROM framed_sync_blob_pins').pluck().get()).toBe(0);
-  expect(fixture.receiver.sqlite.prepare('SELECT count(*) FROM framed_sync_available_blob_chunks').pluck().get()).toBe(0);
+  expect(fixture.receiver.sqlite.prepare('SELECT count(*) FROM framed_sync_blob_chunks').pluck().get()).toBe(0);
 }
 
 it('receives large Unicode through production encrypted sender frames and returns an authenticated receipt', async () => {
@@ -48,12 +48,13 @@ it('keeps durable ready after receipt rollback and retries the same authenticate
     const pins = fixture.receiver.sqlite.prepare('SELECT * FROM framed_sync_blob_pins').all();
     expect(pins.length).toBeGreaterThan(0);
     const available = fixture.receiver.sqlite.prepare('SELECT * FROM framed_sync_available_blobs').all();
-    const chunks = fixture.receiver.sqlite.prepare('SELECT sha256, byte_offset, length(data) AS byte_length FROM framed_sync_available_blob_chunks ORDER BY byte_offset').all();
-    expect(chunks.length).toBeGreaterThan(1);
+    const chunks = fixture.receiver.sqlite.prepare('SELECT sha256, byte_offset, length(data) AS byte_length FROM framed_sync_blob_chunks ORDER BY byte_offset').all();
+    expect(chunks).toEqual([]);
+    expect(available).toContainEqual(expect.objectContaining({ data: Buffer.from(body) }));
     fixture.reopen();
     expect(fixture.receiver.sqlite.prepare('SELECT * FROM framed_sync_blob_pins').all()).toEqual(pins);
     expect(fixture.receiver.sqlite.prepare('SELECT * FROM framed_sync_available_blobs').all()).toEqual(available);
-    expect(fixture.receiver.sqlite.prepare('SELECT sha256, byte_offset, length(data) AS byte_length FROM framed_sync_available_blob_chunks ORDER BY byte_offset').all()).toEqual(chunks);
+    expect(fixture.receiver.sqlite.prepare('SELECT sha256, byte_offset, length(data) AS byte_length FROM framed_sync_blob_chunks ORDER BY byte_offset').all()).toEqual(chunks);
     fixture.receiver.sqlite.exec('DROP TRIGGER reject_stream_receipt');
     await assertCommitted(fixture, await receive(fixture));
   } finally { fixture.close(); }

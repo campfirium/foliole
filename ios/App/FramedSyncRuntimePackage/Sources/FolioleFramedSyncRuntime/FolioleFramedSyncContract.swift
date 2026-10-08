@@ -6,6 +6,7 @@ public enum FolioleFramedSyncLimits {
     static let identifierBytes = 16
     static let blobChunkBytes = 512 * 1024
     static let maxBlobBytes: UInt64 = 8 * 1024 * 1024 * 1024
+    public static let maxBodyBytes: UInt64 = 1_048_576
     static let maxTransferBytes: UInt64 = 32 * 1024 * 1024 * 1024
     static let maxBlobsPerTransfer = 4_096
     static let maxCanonicalDepth = 32
@@ -24,6 +25,7 @@ public enum FolioleFramedSyncLimits {
     public static let maxControlMessageBytes = 768 * 1024
     static let maxManifestBytes = 768 * 1024
     public static let maxFrameMessageBytes = 2 * 1024 * 1024
+    public static let maxFragmentedFactBytes = 2 * maxCanonicalManifestBytes
 }
 
 public enum FolioleFramedSyncFrameType: UInt16, Sendable {
@@ -57,6 +59,7 @@ public enum FolioleFramedSyncPayload: Sendable {
     case missingBlobSet(Foliole_Sync_V22_MissingBlobSet)
     case transferHeader(Foliole_Sync_V22_TransferHeader)
     case fact(Foliole_Sync_V22_FactRecord)
+    case factFragment(Foliole_Sync_V22_FactFragment)
     case blobChunk(Foliole_Sync_V22_BlobChunk)
     case transferTrailer(Foliole_Sync_V22_TransferTrailer)
     case transferReceipt(Foliole_Sync_V22_TransferReceipt)
@@ -77,6 +80,7 @@ public enum FolioleFramedSyncPayload: Sendable {
         case .missingBlobSet: "missing_blob_set"
         case .transferHeader: "transfer_header"
         case .fact: "fact"
+        case .factFragment: "fact_fragment"
         case .blobChunk: "blob_chunk"
         case .transferTrailer: "transfer_trailer"
         case .transferReceipt: "transfer_receipt"

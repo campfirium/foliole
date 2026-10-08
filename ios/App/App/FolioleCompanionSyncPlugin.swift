@@ -30,7 +30,13 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "resolveSyncGroupDataRequest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readFramedSyncInventory", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "pullFramedSyncObject", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "pullFramedSyncObjects", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "configureFramedSyncPayloadBudget", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "closeFramedSyncPayloadBudget", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "releaseFramedSyncPayloadLoan", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "validateFramedSyncPayloadLoan", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "sendFramedSyncTransfer", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "sendFramedSyncTransfers", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncEnabled", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setSyncPaused", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "signCompanionSyncRequest", returnType: CAPPluginReturnPromise),
@@ -40,8 +46,11 @@ public class FolioleCompanionSyncPlugin: CAPPlugin, CAPBridgedPlugin {
     private let discoveries = FolioleCompanionBonjourDiscoveryPool()
     let attachmentResourceSessions = FolioleCompanionAttachmentResourceSessions()
     private let contentBlobSessions = FolioleCompanionContentBlobSessions()
-    lazy var groupData = FolioleCompanionSyncGroupDataBridge { [weak self] event in
-        DispatchQueue.main.async { self?.notifyListeners("syncGroupDataRequest", data: event) }
+    lazy var groupData: FolioleCompanionSyncGroupDataBridge = FolioleCompanionSyncGroupDataBridge { [weak self] event in
+        DispatchQueue.main.async {
+            guard let self, self.groupData.shouldDispatch(event) else { return }
+            self.notifyListeners("syncGroupDataRequest", data: event)
+        }
     }
 
     @objc func downloadContentBlobBatch(_ call: CAPPluginCall) {

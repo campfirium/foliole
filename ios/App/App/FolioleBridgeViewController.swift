@@ -5,9 +5,17 @@ import WebKit
 #endif
 
 final class FolioleBridgeViewController: CAPBridgeViewController {
+    private var framedLifecycle: FolioleFramedSyncWebViewLifecycle?
+
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(FolioleCompanionBootstrapPlugin())
-        bridge?.registerPluginInstance(FolioleCompanionSyncPlugin())
+        let sync = FolioleCompanionSyncPlugin()
+        bridge?.registerPluginInstance(sync)
+        if let original = webView?.navigationDelegate {
+            let observer = FolioleFramedSyncWebViewLifecycle(original: original, plugin: sync)
+            framedLifecycle = observer
+            webView?.navigationDelegate = observer
+        }
         bridge?.registerPluginInstance(FolioleCompanionSyncPackTransferPlugin())
         bridge?.registerPluginInstance(FolioleCompanionShareInboxPlugin())
 #if FOLIOLE_IOS_BRIDGE_ACCEPTANCE && targetEnvironment(simulator)

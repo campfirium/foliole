@@ -46,6 +46,26 @@ export interface NativeCompanionFramedSyncInventoryRequest {
   sync_group_id: string;
 }
 
+export type NativeCompanionFramedSyncTransferBatchRequest = NativeCompanionFramedSyncInventoryRequest & {
+  transfers: readonly Omit<NativeCompanionFramedSyncTransferRequest, keyof NativeCompanionFramedSyncInventoryRequest>[];
+};
+
+export type NativeCompanionFramedSyncTransferBatchOutcome = {
+  kind: 'committed';
+  object_id: string;
+  object_type: string;
+  receipt: NativeCompanionFramedSyncTransferReceipt;
+} | {
+  kind: 'deferred';
+  object_id: string;
+  object_type: string;
+  error: string;
+};
+
+export interface NativeCompanionFramedSyncTransferBatchResult {
+  outcomes: readonly NativeCompanionFramedSyncTransferBatchOutcome[];
+}
+
 export interface NativeCompanionFramedSyncInventoryEntry {
   frontier_fact_ids: readonly string[];
   global_id: string;
@@ -71,6 +91,32 @@ export interface NativeCompanionFramedSyncPullRequest extends NativeCompanionFra
   review_fact_ids: readonly string[];
   state_fact_ids: readonly string[];
   round_id: string;
+  resources?: readonly NativeCompanionFramedSyncResourceDemand[];
+}
+
+export type NativeCompanionFramedSyncPullSelection = Omit<NativeCompanionFramedSyncPullRequest,
+  keyof NativeCompanionFramedSyncInventoryRequest | 'round_id' | 'resources'>;
+
+export interface NativeCompanionFramedSyncPullBatchRequest extends NativeCompanionFramedSyncInventoryRequest {
+  round_id: string;
+  requests: readonly NativeCompanionFramedSyncPullSelection[];
+}
+
+export interface NativeCompanionFramedSyncPullBatchResult {
+  received: readonly {
+    object_id: string;
+    object_type: string;
+    receipt: NativeCompanionFramedSyncTransferReceipt;
+  }[];
+}
+
+export interface NativeCompanionFramedSyncResourceDemand {
+  demand_id: string;
+  global_id: string;
+  version_id: string;
+  body_hash: string;
+  storage_key: string;
+  shared_state_hash: string;
 }
 
 export interface NativeCompanionSyncEvent {

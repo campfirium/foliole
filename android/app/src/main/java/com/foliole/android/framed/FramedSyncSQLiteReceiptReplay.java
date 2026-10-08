@@ -119,8 +119,8 @@ final class FramedSyncSQLiteReceiptReplay {
                 Long.toUnsignedString(header.sequence())), null, null, null)) {
             if (row.moveToFirst()) {
                 boolean same = Arrays.equals(row.getBlob(0), frame.frameHeader()) &&
-                    Arrays.equals(row.getBlob(1), frame.ciphertext()) &&
-                    Arrays.equals(row.getBlob(2), frame.plaintext());
+                    Arrays.equals(row.getBlob(1), frame.borrowedCiphertext()) &&
+                    Arrays.equals(row.getBlob(2), frame.borrowedPlaintext());
                 if (!same) throw invalid("receipt_frame_identity_conflict");
                 return FramedSyncStageOutcome.IDENTICAL;
             }
@@ -130,8 +130,8 @@ final class FramedSyncSQLiteReceiptReplay {
         values.put("attempt_id", frame.attemptId());
         values.put("sequence", Long.toUnsignedString(header.sequence()));
         values.put("frame_header", frame.frameHeader());
-        values.put("ciphertext", frame.ciphertext());
-        values.put("authenticated_plaintext", frame.plaintext());
+        values.put("ciphertext", frame.borrowedCiphertext());
+        values.put("authenticated_plaintext", frame.borrowedPlaintext());
         database.insertOrThrow("framed_sync_android_receipt_frames", null, values);
         return FramedSyncStageOutcome.CREATED;
     }

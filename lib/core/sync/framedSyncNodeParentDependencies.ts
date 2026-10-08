@@ -1,11 +1,10 @@
-import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
-
 import type { DbPort, DbRow } from './dbPort.js';
+import type { SyncNodeRecordMetadata } from './syncNodeRecordSource.js';
 import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
 
 export async function assertFramedSyncNodeParentDependencies(
   db: DbPort,
-  nodes: readonly NativeSyncNodeRecord[]
+  nodes: readonly SyncNodeRecordMetadata[]
 ) {
   const incomingIds = new Set(nodes.map((node) => node.object_id));
   for (const node of nodes) {

@@ -29,7 +29,8 @@ public final class FramedSyncTransferWriterTest {
     private static final byte[] GROUP_KEY = new byte[32];
 
     @Test public void persistsBeforeEncryptionAndReplaysOneBoundTransfer() throws Exception {
-        byte[] body = "outbound body".getBytes(StandardCharsets.UTF_8);
+        byte[] body = new byte[1_048_576];
+        Arrays.fill(body, (byte) 'a');
         FactRecord fact = fact(body);
         MemoryStaging staging = new MemoryStaging();
         FramedSyncTransferContext context = new FramedSyncTransferContext(
@@ -56,6 +57,11 @@ public final class FramedSyncTransferWriterTest {
             assertEquals(expectedTypes[sequence], FramedSyncPayloadValidator.frameType(
                 FramedSyncCodec.decode(plaintext, expectedTypes[sequence]).payload().payloadCase()
             ).wireValue());
+            if (expectedTypes[sequence] == 4) {
+                var chunk = (com.foliole.sync.v22.BlobChunk) FramedSyncCodec.decode(plaintext, 4).payload().value();
+                assertEquals(0, chunk.getOffset());
+                assertArrayEquals(body, chunk.getData().toByteArray());
+            }
         }
         assertEquals(null, reader.readFrame());
     }

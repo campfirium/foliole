@@ -1,18 +1,31 @@
 import { compareFramedSyncInventories, type FramedSyncInventoryEntry, type FramedSyncInventoryDifference } from './framedSyncInventory.js';
 
-const MISSING_DEPENDENCIES = ['framed_sync_node_parent_missing:', 'node_position_lineage_unproven:', 'parent_order_position_lineage_unproven:', 'sync_parent_order_body_unavailable:'];
+const MISSING_DEPENDENCIES = {
+  'framed_sync_node_parent_missing:': 'node',
+  'node_position_lineage_unproven:': 'node',
+  'framed_sync_review_node_missing:': 'node',
+  'framed_sync_parent_relation_version_missing:': 'node_version',
+  'parent_order_position_lineage_unproven:': 'order_version',
+  'sync_parent_order_body_unavailable:': 'order_version'
+} as const;
 export type FramedSyncDifferenceDelivery = 'delivered' | 'deferred';
 
 function key(value: Pick<FramedSyncInventoryDifference, 'direction' | 'globalId' | 'objectType'>) {
   return `${value.direction}\0${value.objectType}\0${value.globalId}`;
 }
 
-function missingParentId(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  const prefix = MISSING_DEPENDENCIES.find((candidate) => message.includes(candidate));
+export function readFramedSyncMissingDependency(error: unknown) {
+  const detail = error instanceof Error ? error.message : String(error);
+  const raw = detail.startsWith('round: Error: ')
+    ? detail.slice('round: Error: '.length).split('\n', 1)[0]!
+    : detail;
+  const message = raw.replace(/^(?:framed_sync_http_400:|Failed to pull framed Sync object\. Cause: )/u, '');
+  const prefix = (Object.keys(MISSING_DEPENDENCIES) as (keyof typeof MISSING_DEPENDENCIES)[])
+    .find((candidate) => message.startsWith(candidate));
+  const globalId = prefix ? message.slice(prefix.length) : '';
+  if (!globalId || globalId.length > 128 || /[^A-Za-z0-9_-]/u.test(globalId)) return null;
   return prefix
-    ? { globalId: message.slice(message.indexOf(prefix) + prefix.length).trim().split(/\s/u, 1)[0]!,
-      objectType: prefix === 'node_position_lineage_unproven:' || prefix === 'framed_sync_node_parent_missing:' ? 'node' : 'order_version' }
+    ? { code: prefix, globalId, objectType: MISSING_DEPENDENCIES[prefix] }
     : null;
 }
 
@@ -38,9 +51,16 @@ export async function deliverFramedSyncDifferencesInDependencyOrder(
           result = await deliver(difference);
           break;
         } catch (error) {
-          const dependency = missingParentId(error);
+          const dependency = readFramedSyncMissingDependency(error);
           const parent = dependency ? available.get(key({ ...difference, ...dependency })) : null;
-          if (!parent || delivered.has(key(parent))) throw error;
+          if (!dependency) throw error;
+          if (parent && key(parent) === differenceKey && dependency.code !== 'framed_sync_review_node_missing:') {
+            throw new Error('framed_sync_node_parent_cycle');
+          }
+          if (!parent || key(parent) === differenceKey || delivered.has(key(parent))) {
+            deferred.set(differenceKey, difference);
+            return false;
+          }
           if (!await visit(parent)) {
             deferred.set(differenceKey, difference);
             return false;

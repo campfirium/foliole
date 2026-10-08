@@ -3,6 +3,8 @@ import Foundation
 
 struct FolioleCompanionHttpMessage {
     static let maximumBytes = 256 * 1024
+    var payloadBudget: FolioleFramedSyncPayloadBudget?
+    var payloadCancellation: FolioleFramedSyncPayloadCancellation?
     let body: [String: Any]
     let bodyData: Data
     let bodyFile: FolioleCompanionHttpBodyFile?

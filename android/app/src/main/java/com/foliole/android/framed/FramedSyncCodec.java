@@ -1,6 +1,7 @@
 package com.foliole.android.framed;
 
 import com.foliole.sync.v22.ProtocolMessage;
+import com.foliole.sync.v22.FactRecord;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 public final class FramedSyncCodec {
@@ -29,6 +30,25 @@ public final class FramedSyncCodec {
             throw new FramedSyncValidationException("frame_payload_type_mismatch");
         }
         return new FramedSyncValidatedMessage(payload, message);
+    }
+
+    /** Only a complete, digest-verified fragment owner may decode one larger original fact. */
+    static FactRecord decodeAssembledFact(byte[] encoded) throws FramedSyncValidationException {
+        if (encoded.length <= FramedSyncContract.MAX_FRAME_MESSAGE_BYTES ||
+            encoded.length > FramedSyncFactFragments.MAX_ENCODED_BYTES) {
+            throw new FramedSyncValidationException("fact_fragment_range_invalid");
+        }
+        try {
+            ProtocolMessage wire = ProtocolMessage.parseFrom(encoded);
+            if (!wire.hasFact()) throw new FramedSyncValidationException("fact_fragment_payload_invalid");
+            FactRecord fact = (FactRecord) validateOutbound(wire, FramedSyncFrameType.FACT.wireValue())
+                .payload().value();
+            FramedSyncCanonicalManifest.contentId(java.util.Collections.singletonList(fact),
+                java.util.Collections.emptyList());
+            return fact;
+        } catch (InvalidProtocolBufferException error) {
+            throw new FramedSyncValidationException("protocol_decode_invalid");
+        }
     }
 
     public static byte[] encode(FramedSyncValidatedMessage message) {

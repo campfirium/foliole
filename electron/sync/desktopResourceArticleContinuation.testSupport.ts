@@ -5,6 +5,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { openDatabaseConnection, type DatabaseConnection } from '../database/connection.js';
 import { resolveSyncPackPath } from '../database/syncPackBuilderTestSupport.js';
@@ -14,7 +15,8 @@ import { writeAttachmentFixture } from './desktopAttachmentRanges.http.testSuppo
 
 export function openContinuationReceiver(dbPath: string): DatabaseConnection {
   const sqlite = new Database(dbPath);
-  return { sqlite, driver: createBetterSqlite3Driver(sqlite), dbPath, searchDbPath: dbPath + '.search' };
+  return { sqlite, driver: createBetterSqlite3Driver(sqlite), dbPath, searchDbPath: dbPath + '.search',
+    framedSyncPayloadBudget: new FramedSyncPayloadBudget() };
 }
 
 function seedBody(body: Buffer, hash: string) {

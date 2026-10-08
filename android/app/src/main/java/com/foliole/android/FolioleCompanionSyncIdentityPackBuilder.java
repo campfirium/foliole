@@ -110,7 +110,6 @@ final class FolioleCompanionSyncIdentityPackBuilder {
                     }
                 }
             }
-            FolioleCompanionSyncPackPayloadWriter.copyTopicTextBodies(pack);
             try (Cursor missing = pack.rawQuery(definitions.identityMissingOriginalHeadSql(), null)) {
                 if (missing.moveToFirst()) throw new IllegalArgumentException("sync_pack_fact_body_unavailable:" + missing.getString(0));
             }

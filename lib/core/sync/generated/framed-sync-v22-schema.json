@@ -187,6 +187,37 @@
                     }
                   }
                 },
+                "FactFragment": {
+                  "fields": {
+                    "identity": {
+                      "type": "FactIdentity",
+                      "id": 1
+                    },
+                    "sharedStateHash": {
+                      "type": "bytes",
+                      "id": 2,
+                      "protoName": "shared_state_hash"
+                    },
+                    "encodedSha256": {
+                      "type": "bytes",
+                      "id": 3,
+                      "protoName": "encoded_sha256"
+                    },
+                    "totalByteLength": {
+                      "type": "uint64",
+                      "id": 4,
+                      "protoName": "total_byte_length"
+                    },
+                    "offset": {
+                      "type": "uint64",
+                      "id": 5
+                    },
+                    "data": {
+                      "type": "bytes",
+                      "id": 6
+                    }
+                  }
+                },
                 "InventoryEntry": {
                   "fields": {
                     "objectType": {
@@ -402,6 +433,45 @@
                       "type": "bytes",
                       "id": 3,
                       "protoName": "blob_hashes"
+                    },
+                    "resources": {
+                      "rule": "repeated",
+                      "type": "ResourceDemand",
+                      "id": 4
+                    }
+                  }
+                },
+                "ResourceDemand": {
+                  "fields": {
+                    "demandId": {
+                      "type": "string",
+                      "id": 1,
+                      "protoName": "demand_id"
+                    },
+                    "globalId": {
+                      "type": "string",
+                      "id": 2,
+                      "protoName": "global_id"
+                    },
+                    "versionId": {
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "version_id"
+                    },
+                    "bodyHash": {
+                      "type": "string",
+                      "id": 4,
+                      "protoName": "body_hash"
+                    },
+                    "storageKey": {
+                      "type": "string",
+                      "id": 5,
+                      "protoName": "storage_key"
+                    },
+                    "sharedStateHash": {
+                      "type": "bytes",
+                      "id": 6,
+                      "protoName": "shared_state_hash"
                     }
                   }
                 },
@@ -698,7 +768,8 @@
                         "transferReceipt",
                         "roundReceipt",
                         "transferTermination",
-                        "error"
+                        "error",
+                        "factFragment"
                       ]
                     }
                   },
@@ -784,6 +855,11 @@
                     "error": {
                       "type": "ProtocolError",
                       "id": 17
+                    },
+                    "factFragment": {
+                      "type": "FactFragment",
+                      "id": 18,
+                      "protoName": "fact_fragment"
                     }
                   }
                 }

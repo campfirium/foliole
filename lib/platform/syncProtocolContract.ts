@@ -15,6 +15,7 @@ export const NODE_VERSION_FRONTIER_RETENTION_CAPABILITY = 'dynamic-node-version-
 export const WORKGROUP_RESTORE_CAPABILITY = 'workgroup-restore-v1';
 export const BOUNDED_SYNC_PACK_PAGE_CAPABILITY = 'bounded-sync-pack-pages-v1';
 export const SYNC_PACK_FACT_PROBE_CAPABILITY = 'sync-pack-fact-probe-v1';
+export const FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY = 'framed-sync-transfer-sequences-v1';
 
 export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
   capabilities: Object.freeze([
@@ -32,6 +33,7 @@ export const CURRENT_SYNC_PROTOCOL_DESCRIPTOR = Object.freeze({
     DESKTOP_SOFT_ANCHOR_CAPABILITY,
     'device-sync-groups-v1',
     'framed-sync-v22',
+    FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY,
     'topic-text-attachments-v1',
     'group-key-routing-v1',
     'lan-sync-v1',

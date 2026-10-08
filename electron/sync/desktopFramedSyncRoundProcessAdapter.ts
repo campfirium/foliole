@@ -85,7 +85,6 @@ type CachedSelection = Readonly<{
 }>;
 
 type AdapterInput = Readonly<{
-  bodyStorage?: 'continuous' | 'chunked';
   db: DbPort;
   groupId: string;
   groupSecret: string;
@@ -105,13 +104,12 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
       peer_device_id: request.peer.deviceId, peer_device_name: request.peer.deviceId, peer_platform: 'desktop'
     });
     if (request.kind === 'reconcile') return runDesktopFramedSyncInventoryRound({
-      bodyStorage: input.bodyStorage ?? 'continuous',
       localLibraryEpoch: input.local.libraryEpoch, remoteLibraryEpoch: request.peer.libraryEpoch,
       peer: { endpoint_url: request.peerOrigin, group_id: input.groupId,
         local_device_id: input.local.deviceId, peer_device_id: request.peer.deviceId,
         peer_device_name: request.peer.deviceId, peer_platform: 'desktop' }
     });
-    const read = readFixtureCommand(request, input.db, input.bodyStorage ?? 'continuous');
+    const read = readFixtureCommand(request, input.db);
     if (read) return read;
     if (request.kind === 'select') {
       const endpoint = createDesktopFramedSyncRoundEndpoint({
@@ -153,10 +151,10 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
   };
 }
 
-function readFixtureCommand(request: z.infer<typeof command>, db: DbPort, storage: 'continuous' | 'chunked') {
+function readFixtureCommand(request: z.infer<typeof command>, db: DbPort) {
   if (request.kind === 'expire_completions') return expireFramedSyncCompletions(db, request.now);
-  if (request.kind === 'read_inventory') return readDesktopFramedSyncRoundInventory(db, storage);
-  if (request.kind === 'read_entry') return readDesktopFramedSyncRoundInventoryEntry(db, request, storage);
+  if (request.kind === 'read_inventory') return readDesktopFramedSyncRoundInventory(db);
+  if (request.kind === 'read_entry') return readDesktopFramedSyncRoundInventoryEntry(db, request);
   return undefined;
 }
 

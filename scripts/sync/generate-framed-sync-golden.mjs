@@ -143,6 +143,10 @@ function messageCases() {
     encodeCase('fact', { fact: { blobs: [blob], body: { fields: [{ name: 'title', value: {
       stringValue: 'Article'
     } }] }, identity, sharedStateHash: contentId } }),
+    encodeCase('fact-fragment', { factFragment: {
+      identity, sharedStateHash: contentId, encodedSha256: blobHash,
+      totalByteLength: 2 * 1024 * 1024 + 1, offset: 0, data: Uint8Array.of(0)
+    } }),
     encodeCase('blob-chunk', { blobChunk: {
       blobHash, data: Uint8Array.of(0), offset: 524_288, transferId
     } }),

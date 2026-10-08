@@ -19,7 +19,10 @@ import {
 export type AttemptPurpose = 'receipt' | 'transfer';
 
 function storedFrame(row: DbRow): StoredEncryptedFrame {
-  return { ciphertext: framedSyncBytes(row, 'ciphertext'), frameHeader: framedSyncBytes(row, 'frame_header'),
+  const ciphertext = row.ciphertext;
+  if (!(ciphertext instanceof Uint8Array)) throw new Error('framed_sync_invalid_ciphertext');
+  return { ciphertext: new Uint8Array(ciphertext.buffer, ciphertext.byteOffset, ciphertext.byteLength),
+    frameHeader: framedSyncBytes(row, 'frame_header'),
     frameType: Number(row.frame_type), sequence: framedSyncBigInt(row, 'sequence') };
 }
 

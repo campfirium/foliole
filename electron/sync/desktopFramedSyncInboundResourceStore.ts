@@ -5,7 +5,7 @@ import path from 'node:path';
 import { bytesToHex } from '@noble/hashes/utils.js';
 
 import type { ManifestBlobDescriptor } from '../../lib/core/sync/framedSyncBlobContract.js';
-import { readFramedSyncNodeResources } from '../../lib/core/sync/framedSyncNodeResources.js';
+import { readFramedSyncNodeResources, type FramedSyncNodeResource } from '../../lib/core/sync/framedSyncNodeResources.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -74,8 +74,8 @@ export class DesktopFramedSyncInboundResourceStore {
     } finally { await handle.close(); }
   }
 
-  async complete(records: readonly ResourceRecord[]) {
-    const keys = resourceStorageKeys(records);
+  async complete(records: readonly ResourceRecord[], resources: readonly FramedSyncNodeResource[] = []) {
+    const keys = resourceStorageKeys(records, resources);
     for (const [hash, entry] of this.#entries) {
       const storageKey = keys.get(hash);
       if (!storageKey) throw new Error('framed_sync_resource_storage_key_missing');
@@ -114,10 +114,10 @@ export class DesktopFramedSyncInboundResourceStore {
   }
 }
 
-function resourceStorageKeys(records: readonly ResourceRecord[]) {
+function resourceStorageKeys(records: readonly ResourceRecord[], resources: readonly FramedSyncNodeResource[]) {
   const result = new Map<string, string>();
-  for (const record of records) for (const resource of
-    readFramedSyncNodeResources(record.snapshot.resource_references)) {
+  for (const resource of [...resources, ...records.flatMap((record) =>
+    readFramedSyncNodeResources(record.snapshot.resource_references))]) {
     const prior = result.get(resource.contentHash);
     if (prior && prior !== resource.storageKey) throw new Error('node_resource_blob_identity_conflict');
     result.set(resource.contentHash, resource.storageKey);

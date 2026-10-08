@@ -8,6 +8,8 @@ import {
   frameAad,
   frameNonce
 } from '../../lib/core/sync/framedSyncFraming.js';
+import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
+import { leaseFramedSyncPayloads } from '../../lib/core/sync/framedSyncPayloadLease.js';
 import {
   decodeAndValidateProtocolMessage,
   encodeValidatedProtocolMessage,
@@ -21,13 +23,8 @@ import {
   type FramedSyncSessionNoncePort
 } from '../../lib/core/sync/framedSyncSession.js';
 
-import {
-  framedSyncEncodedLength,
-  framedSyncEncodedSha256,
-  type FramedSyncEncodedFrame,
-  type FramedSyncWireFrame,
-  type FramedSyncWritableBody
-} from './desktopFramedSyncStream.js';
+import { spoolDesktopFramedSyncBody } from './desktopFramedSyncBodySpool.js';
+import type { FramedSyncEncodedFrame, FramedSyncWireFrame, FramedSyncWritableBody } from './desktopFramedSyncStream.js';
 
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
 
@@ -43,7 +40,8 @@ function randomBytes(length: number) {
 export async function encodeDesktopFramedSyncSession(args: {
   authenticatedContext: AuthenticatedContext;
   groupKey: Uint8Array;
-  messages: readonly FramedSyncSessionMessage[];
+  messages: Iterable<FramedSyncSessionMessage> | AsyncIterable<FramedSyncSessionMessage>;
+  payloadBudget?: FramedSyncPayloadBudget | undefined;
   noncePort: FramedSyncSessionNoncePort;
 }): Promise<FramedSyncWritableBody> {
   const sessionId = randomBytes(16);
@@ -59,46 +57,41 @@ export async function encodeDesktopFramedSyncSession(args: {
   const key = await deriveSessionFrameKey({
     groupKey: args.groupKey, sessionContextId: contextId, sessionId
   });
-  const frames: FramedSyncEncodedFrame[] = [];
+  return spoolDesktopFramedSyncBody({ preamble, payloadBudget: args.payloadBudget,
+    frames: leaseFramedSyncPayloads(encodeSessionFrames(args.messages, key, preamble, noncePrefix),
+      args.payloadBudget, 'outbound') });
+}
+
+async function* encodeSessionFrames(messages: Iterable<FramedSyncSessionMessage> | AsyncIterable<FramedSyncSessionMessage>,
+  key: Uint8Array, preamble: Uint8Array, noncePrefix: Uint8Array): AsyncGenerator<FramedSyncEncodedFrame> {
   let sessionBytes = preamble.byteLength;
-  if (args.messages.length > FRAMED_SYNC_LIMITS.maxSessionFrames) throw new Error('session_frame_limit_exceeded');
-  for (let index = 0; index < args.messages.length; index += 1) {
-    const message = args.messages[index]!;
+  let index = 0;
+  for await (const message of messages) {
+    if (index >= FRAMED_SYNC_LIMITS.maxSessionFrames) throw new Error('session_frame_limit_exceeded');
     const plaintext = encodeValidatedProtocolMessage(message.payloadCase, message.payload);
     sessionBytes += plaintext.byteLength + 32;
     if (sessionBytes > FRAMED_SYNC_LIMITS.maxSessionBytes) throw new Error('session_byte_limit_exceeded');
-    const sequence = BigInt(index);
+    const sequence = BigInt(index++);
     const headerBytes = encodeFrameHeader({
-      ciphertextBytes: plaintext.byteLength + 16,
-      flags: 0,
-      frameType: FRAMED_SYNC_FRAME_TYPES.sessionControl,
-      sequence
+      ciphertextBytes: plaintext.byteLength + 16, flags: 0,
+      frameType: FRAMED_SYNC_FRAME_TYPES.sessionControl, sequence
     });
     const ciphertext = await encryptFrame({
       aad: frameAad(preamble, headerBytes), key,
       nonce: frameNonce(noncePrefix, sequence), plaintext
     });
-    frames.push({ ciphertext, headerBytes });
+    yield { ciphertext, headerBytes };
   }
-  return {
-    bodySha256: framedSyncEncodedSha256(preamble, frames),
-    contentLength: framedSyncEncodedLength(preamble, frames),
-    frames: asyncFrames(frames),
-    preamble
-  };
 }
 
-async function* asyncFrames(frames: readonly FramedSyncEncodedFrame[]) {
-  yield* frames;
-}
-
-export async function decodeDesktopFramedSyncSession(args: {
+export async function* readDesktopFramedSyncSession(args: {
   authenticatedContext: AuthenticatedContext;
   authorDeviceId: string;
   frames: AsyncIterable<FramedSyncWireFrame>;
   groupKey: Uint8Array;
   preamble: Uint8Array;
-}): Promise<readonly ValidatedProtocolMessage[]> {
+  onPlaintextBytes?: (bytes: number) => void;
+}): AsyncGenerator<ValidatedProtocolMessage> {
   const decodedPreamble = decodeFramedSyncPreamble(args.preamble);
   const context = await assertAuthenticatedSessionBootstrap(
     args.authenticatedContext, decodedPreamble
@@ -108,12 +101,12 @@ export async function decodeDesktopFramedSyncSession(args: {
     sessionContextId: decodedPreamble.contextId,
     sessionId: context.sessionId
   });
-  const messages: ValidatedProtocolMessage[] = [];
+  let frameCount = 0;
   let expectedSequence = 0n;
   let sessionBytes = args.preamble.byteLength;
   for await (const frame of args.frames) {
     sessionBytes += frame.headerBytes.byteLength + frame.ciphertext.byteLength;
-    if (messages.length >= FRAMED_SYNC_LIMITS.maxSessionFrames) throw new Error('session_frame_limit_exceeded');
+    if (frameCount++ >= FRAMED_SYNC_LIMITS.maxSessionFrames) throw new Error('session_frame_limit_exceeded');
     if (sessionBytes > FRAMED_SYNC_LIMITS.maxSessionBytes) throw new Error('session_byte_limit_exceeded');
     const received = await receiveFramedSyncFrame({
       ciphertext: frame.ciphertext, expectedSequence, frameHeader: frame.headerBytes,
@@ -123,8 +116,14 @@ export async function decodeDesktopFramedSyncSession(args: {
     await assertSessionEnvelopeBinding(
       args.authenticatedContext, decodedPreamble, message, args.authorDeviceId
     );
-    messages.push(message);
+    args.onPlaintextBytes?.(received.plaintext.byteLength);
+    yield message;
     expectedSequence = received.nextSequence;
   }
+}
+
+export async function decodeDesktopFramedSyncSession(args: Parameters<typeof readDesktopFramedSyncSession>[0]) {
+  const messages: ValidatedProtocolMessage[] = [];
+  for await (const message of readDesktopFramedSyncSession(args)) messages.push(message);
   return messages;
 }

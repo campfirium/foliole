@@ -4,6 +4,7 @@ import {
   CURRENT_SYNC_PROTOCOL_DESCRIPTOR,
   evaluateSyncProtocolCompatibility,
   evaluateSyncProtocolVersionHint,
+  FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY,
   parseSyncProtocolDescriptor,
   parseSyncProtocolTxt,
   serializeSyncProtocolTxt,
@@ -16,6 +17,16 @@ function descriptor(overrides: Partial<SyncProtocolDescriptor> = {}) {
 }
 
 const REQUIRED_CAPABILITIES = [...CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities];
+
+it('rejects a same-version peer lacking original transfer sequence support', () => {
+  const legacy = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities
+    .filter(value => value !== FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY) });
+  expect(evaluateSyncProtocolCompatibility(legacy)).toMatchObject({
+    status: 'incompatible', reason: 'required_capability_missing',
+    missing_capabilities: [FRAMED_SYNC_TRANSFER_SEQUENCE_CAPABILITY]
+  });
+  expect(evaluateSyncProtocolCompatibility(CURRENT_SYNC_PROTOCOL_DESCRIPTOR).status).toBe('compatible');
+});
 
 it('rejects peers that cannot retain the whole body and its alternatives', () => {
   const oldPeer = descriptor({ capabilities: CURRENT_SYNC_PROTOCOL_DESCRIPTOR.capabilities

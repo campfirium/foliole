@@ -4,7 +4,6 @@ import {
   type CompanionAttachmentManifestEntry
 } from '../../../../../lib/core/sync/companionBatchDataPlane';
 import type { DbPort } from '../../../../../lib/core/sync/dbPort';
-import type { NodeVersionBodyStorage } from '../../../../../lib/core/sync/syncNodeTombstoneVersion';
 import type { CompanionAttachmentResourceSyncPlugin } from '../../companionAttachmentResourceSyncPluginTypes';
 import type { CompanionContentBlobSyncPlugin } from '../../companionContentBlobSyncPluginTypes';
 
@@ -16,14 +15,13 @@ export async function commitStagedCompanionContentBatch(
   owner: CapacitorCompanionDatabaseOwner,
   plugin: CompanionContentBlobSyncPlugin,
   download: ContentDownload,
-  now = new Date().toISOString(),
-  bodyStorage: NodeVersionBodyStorage = 'continuous'
+  now = new Date().toISOString()
 ) {
   if (!download.pack_path) throw new Error('Native content batch did not return a temporary pack path.');
   let committed = false;
   try {
     const result = await owner.runWriter((db) => applyCompanionContentPack(db, {
-      bodyStorage, failedHashes: download.failed_hashes ?? [], now, packPath: download.pack_path!
+      failedHashes: download.failed_hashes ?? [], now, packPath: download.pack_path!
     }));
     committed = true;
     return result;

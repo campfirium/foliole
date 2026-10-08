@@ -1,26 +1,35 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
+import type { NativeSyncObjectRecord } from '../../platform/nativeSyncContract.js';
+import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
+
 import type { DbPort } from './dbPort.js';
 import type { CanonicalBlob, CanonicalFact } from './framedSyncCanonicalManifest.js';
+import { validateFramedSyncFrozenBody } from './framedSyncFrozenBody.js';
 import type { FramedSyncBlobContent } from './framedSyncTransferPayloads.js';
-import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
-import { loadVerifiedBodyRef } from './verifiedBody.js';
 
-export async function selectFramedExternalDocumentBody(db: DbPort, payload: string | null,
-  bodyStorage: NodeVersionBodyStorage = 'continuous'): Promise<CanonicalBlob[]> {
-  const hash = payload === null ? null : JSON.parse(payload).body_blob_hash as unknown;
-  if (typeof hash !== 'string') return [];
-  if (bodyStorage === 'chunked') {
-    const ref = await loadVerifiedBodyRef(db, hash);
-    return ref ? [{ byteLength: BigInt(ref.byteLength), required: true, role: 5, sha256: hexToBytes(ref.hash) }] : [];
+export async function loadFramedExternalDocumentBody(db: DbPort, documentId: string, blob: CanonicalBlob) {
+  const [row] = await db.query<{ content: string }>(
+    'SELECT content FROM external_documents WHERE document_id = ?', [documentId]);
+  if (!row || blob.role !== 5 || !blob.required || blob.byteLength > BigInt(TEXT_BODY_MAX_BYTES)) {
+    throw new Error('framed_sync_external_document_body_invalid');
   }
-  const [row] = await db.query<{ data_hex: string }>(
-    'SELECT hex(data) AS data_hex FROM content_blob_data WHERE hash = ?', [hash]);
-  if (!row) return [];
-  const data = hexToBytes(row.data_hex);
-  if (bytesToHex(sha256(data)) !== hash) throw new Error('framed_sync_external_document_body_invalid');
-  return [{ byteLength: BigInt(data.byteLength), required: true, role: 5, sha256: hexToBytes(hash) }];
+  return validateFramedSyncFrozenBody(blob, new TextEncoder().encode(row.content));
+}
+
+export async function selectFramedExternalDocumentBody(db: DbPort, payload: string | null): Promise<CanonicalBlob[]> {
+  const document = payload === null ? null : JSON.parse(payload) as { body_blob_hash?: unknown; document_id?: unknown };
+  if (!document || typeof document.body_blob_hash !== 'string') return [];
+  if (typeof document.document_id !== 'string') throw new Error('framed_sync_external_document_body_invalid');
+  const [row] = await db.query<{ content: string }>(
+    'SELECT content FROM external_documents WHERE document_id = ?', [document.document_id]);
+  if (!row) throw new Error('framed_sync_external_document_body_invalid');
+  const data = new TextEncoder().encode(row.content);
+  if (data.byteLength > TEXT_BODY_MAX_BYTES || bytesToHex(sha256(data)) !== document.body_blob_hash) {
+    throw new Error('framed_sync_external_document_body_invalid');
+  }
+  return [{ byteLength: BigInt(data.byteLength), required: true, role: 5, sha256: hexToBytes(document.body_blob_hash) }];
 }
 
 export function assertFramedExternalDocumentBody(fact: CanonicalFact, payload: string | null) {
@@ -45,10 +54,25 @@ export function decodeFramedExternalDocumentBodies(
   return descriptors.map((descriptor) => {
     const hash = bytesToHex(descriptor.sha256);
     const content = byHash.get(hash);
-    if (!content || descriptor.role !== 5 || !descriptor.required ||
+    if (!content || descriptor.role !== 5 || !descriptor.required || descriptor.byteLength > BigInt(TEXT_BODY_MAX_BYTES) ||
         descriptor.byteLength !== BigInt(content.data.byteLength) || bytesToHex(sha256(content.data)) !== hash) {
       throw new Error('framed_sync_external_document_body_invalid');
     }
-    return { hash, text: new TextDecoder('utf-8', { fatal: true }).decode(content.data) };
+    return { hash, text: new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(content.data) };
   });
+}
+
+/** Complete the existing external-document payload before its ordinary business writer runs. */
+export function withFramedExternalDocumentBody<T extends NativeSyncObjectRecord>(record: T,
+  bodies: readonly { hash: string; text: string }[]): T {
+  if (record.object_type !== 'external_document' || record.deleted_at || !record.payload_json) return record;
+  const payload = JSON.parse(record.payload_json) as { body_blob_hash?: unknown };
+  if (typeof payload.body_blob_hash !== 'string') return record;
+  const body = bodies.find((entry) => entry.hash === payload.body_blob_hash);
+  if (!body) throw new Error('framed_sync_external_document_body_invalid');
+  const data = new TextEncoder().encode(body.text);
+  if (data.byteLength > TEXT_BODY_MAX_BYTES || bytesToHex(sha256(data)) !== body.hash) {
+    throw new Error('framed_sync_external_document_body_invalid');
+  }
+  return { ...record, payload_json: JSON.stringify({ ...payload, content: body.text }) };
 }

@@ -23,6 +23,7 @@ import { wireToFact } from './desktopFramedSyncProcessWire.js';
 import { handleDesktopFramedSyncReceiverHeader, handleDesktopFramedSyncReceiverBlob, type DesktopFramedSyncReceiverState }
   from './desktopFramedSyncReceiverHeader.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+import { receiveVerifiedDesktopFramedSyncTransfer } from './desktopFramedSyncVerifiedReceiver.js';
 
 type Db = ReturnType<typeof createBetterSqliteDbPort>;
 type ReceiverInput = Readonly<{
@@ -31,6 +32,7 @@ type ReceiverInput = Readonly<{
   groupKey: Uint8Array;
   staging: FramedSyncStagingPort;
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
+  acceptHeader?: NonNullable<Parameters<typeof receiveVerifiedDesktopFramedSyncTransfer>[0]['acceptHeader']>;
 }>;
 
 const bytes = (value: unknown) => new Uint8Array(value as Uint8Array);
@@ -46,7 +48,7 @@ type TransferPreamble = Extract<
 >;
 
 export function receiveDesktopFramedSyncTransfer(input: ReceiverInput): Promise<ReceiptBody> {
-  return processDesktopFramedSyncTransfer(input, false) as Promise<ReceiptBody>;
+  return receiveVerifiedDesktopFramedSyncTransfer(input);
 }
 
 export function stageDesktopFramedSyncTransfer(

@@ -8,6 +8,8 @@ public final class FramedSyncTransferReader {
         (int) (FramedSyncContract.MAX_TRANSFER_BYTES / FramedSyncContract.BLOB_CHUNK_BYTES) +
             FramedSyncContract.MAX_FACTS_PER_TRANSFER + 2;
 
+    public interface HeaderGuard { void accept(TransferHeader header) throws Exception; }
+
     private FramedSyncTransferReader() {}
 
     public static Result receive(
@@ -16,7 +18,30 @@ public final class FramedSyncTransferReader {
         FramedSyncTransferContext context,
         FramedSyncDurableStaging staging
     ) throws Exception {
-        FramedSyncStreamReader stream = new FramedSyncStreamReader(input);
+        return receive(new FramedSyncStreamReader(input), groupKey, context, staging);
+    }
+
+    public static Result receive(InputStream input, byte[] groupKey, FramedSyncTransferContext context,
+        FramedSyncDurableStaging staging, FramedSyncPayloadBudget budget) throws Exception {
+        return receive(new FramedSyncStreamReader(input).budgeted(budget,
+            FramedSyncPayloadBudget.Direction.INBOUND, FramedSyncPayloadBudget.Lane.PAYLOAD),
+            groupKey, context, staging);
+    }
+
+    public static Result receive(InputStream input, byte[] groupKey, FramedSyncTransferContext context,
+        FramedSyncDurableStaging staging, FramedSyncPayloadBudget budget, HeaderGuard guard) throws Exception {
+        return receive(new FramedSyncStreamReader(input).budgeted(budget,
+            FramedSyncPayloadBudget.Direction.INBOUND, FramedSyncPayloadBudget.Lane.PAYLOAD),
+            groupKey, context, staging, guard);
+    }
+
+    private static Result receive(FramedSyncStreamReader stream, byte[] groupKey,
+        FramedSyncTransferContext context, FramedSyncDurableStaging staging) throws Exception {
+        return receive(stream, groupKey, context, staging, header -> {});
+    }
+
+    private static Result receive(FramedSyncStreamReader stream, byte[] groupKey,
+        FramedSyncTransferContext context, FramedSyncDurableStaging staging, HeaderGuard guard) throws Exception {
         FramedSyncPreamble preamble = stream.readPreamble();
         if (preamble.contextKind() != 2) throw invalid("transfer_preamble_required");
         if (preamble.startingSequence() != 0) throw invalid("transfer_starting_sequence_invalid");
@@ -28,27 +53,30 @@ public final class FramedSyncTransferReader {
         long sequence = 0;
         try {
             for (FramedSyncWireFrame wire = stream.readFrame(); wire != null; wire = stream.readFrame()) {
-                if (sequence >= MAX_TRANSFER_FRAMES) throw invalid("transfer_frame_limit_exceeded");
-                if (trailerSeen) throw invalid("transfer_trailer_not_final");
-                byte[] plaintext = FramedSyncFrameCrypto.decrypt(groupKey, preamble, wire, sequence);
-                FramedSyncValidatedMessage message = FramedSyncCodec.decode(
-                    plaintext, wire.header().frameType());
-                if (sequence == 0) {
-                    if (message.payload().payloadCase() != FramedSyncPayload.Case.TRANSFER_HEADER) {
-                        throw invalid("transfer_header_required");
+                try (var consumed = wire) {
+                    if (sequence >= MAX_TRANSFER_FRAMES) throw invalid("transfer_frame_limit_exceeded");
+                    if (trailerSeen) throw invalid("transfer_trailer_not_final");
+                    byte[] plaintext = FramedSyncFrameCrypto.decrypt(groupKey, preamble, wire, sequence);
+                    FramedSyncValidatedMessage message = FramedSyncCodec.decode(
+                        plaintext, wire.header().frameType());
+                    if (sequence == 0) {
+                        if (message.payload().payloadCase() != FramedSyncPayload.Case.TRANSFER_HEADER) {
+                            throw invalid("transfer_header_required");
+                        }
+                        guard.accept((TransferHeader) message.payload().value());
+                        staging.admitInboundTransfer(context.proposal(
+                            preamble, (TransferHeader) message.payload().value()));
+                        admitted = true;
+                    } else if (message.payload().payloadCase() == FramedSyncPayload.Case.TRANSFER_HEADER) {
+                        throw invalid("transfer_header_repeated");
                     }
-                    staging.admitInboundTransfer(context.proposal(
-                        preamble, (TransferHeader) message.payload().value()));
-                    admitted = true;
-                } else if (message.payload().payloadCase() == FramedSyncPayload.Case.TRANSFER_HEADER) {
-                    throw invalid("transfer_header_repeated");
+                    FramedSyncAuthenticatedFrame frame = new FramedSyncAuthenticatedFrame(
+                        transferId, attemptId, preamble.encoded(), wire.headerBytes(),
+                        wire.borrowedCiphertext(), plaintext);
+                    adapter.commitAuthenticatedFrame(frame);
+                    trailerSeen = message.payload().payloadCase() == FramedSyncPayload.Case.TRANSFER_TRAILER;
+                    sequence += 1;
                 }
-                FramedSyncAuthenticatedFrame frame = new FramedSyncAuthenticatedFrame(
-                    transferId, attemptId, preamble.encoded(), wire.headerBytes(),
-                    wire.ciphertext(), plaintext);
-                adapter.commitAuthenticatedFrame(frame);
-                trailerSeen = message.payload().payloadCase() == FramedSyncPayload.Case.TRANSFER_TRAILER;
-                sequence += 1;
             }
             if (!trailerSeen) throw FramedSyncStreamReader.interrupted("transfer_trailer_missing");
             return new Result(transferId, attemptId);

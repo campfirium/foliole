@@ -44,6 +44,20 @@ public final class FramedSyncReceiptReaderTest {
         }
     }
 
+    @Test public void productionReceiptDecryptsWhileBothPayloadDirectionsAreOccupied() throws Exception {
+        var owner = new FramedSyncPayloadBudget("business.sqlite", "generation-1");
+        byte[] transfer = filled(32, 1);
+        byte[] content = filled(32, 2);
+        var receipt = TransferReceipt.newBuilder().setTransferId(ByteString.copyFrom(transfer))
+            .setContentId(ByteString.copyFrom(content)).setReceiverDeviceId("receiver")
+            .setReceiverLibraryEpoch("epoch").setAppliedStateHash(ByteString.copyFrom(filled(32, 3))).build();
+        try (var outgoing = owner.acquire(FramedSyncPayloadBudget.Direction.OUTBOUND, FramedSyncPayloadBudget.Lane.PAYLOAD);
+             var incoming = owner.acquire(FramedSyncPayloadBudget.Direction.INBOUND, FramedSyncPayloadBudget.Lane.PAYLOAD)) {
+            assertEquals(receipt, FramedSyncReceiptReader.read(new ByteArrayInputStream(response(new byte[32], transfer, receipt)),
+                new byte[32], transfer, content, "receiver", "epoch", owner));
+        } finally { owner.cancel(); owner.drain(); }
+    }
+
     private static byte[] response(byte[] key, byte[] transferId, TransferReceipt receipt) throws Exception {
         FramedSyncPreamble preamble = FramedSyncPreamble.transfer(transferId, filled(16, 4), filled(4, 5));
         ProtocolMessage message = ProtocolMessage.newBuilder().setTransferReceipt(receipt).build();

@@ -1,5 +1,8 @@
 import { sha256 as hashSha256 } from '@noble/hashes/sha2.js';
 
+import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
+
+import { isBodyDescriptor } from './framedSyncBlobContract.js';
 import { CanonicalWriter as Writer } from './framedSyncCanonicalWriter.js';
 import {
   assertFramedSyncDigest,
@@ -109,6 +112,15 @@ function compareFacts(left: CanonicalFact, right: CanonicalFact) {
     compareText(left.globalId, right.globalId) || compareText(left.factId, right.factId);
 }
 
+function writeFact(writer: Writer, fact: CanonicalFact) {
+  assertCanonicalFactIdentity(fact);
+  writer.u32(fact.kind); writer.string(fact.objectType); writer.string(fact.globalId); writer.string(fact.factId);
+  writer.data(assertFramedSyncDigest(fact.sharedStateHash, 'shared_state_hash')); writeObject(writer, fact.body);
+  const blobs = sortedBlobs(fact.blobs);
+  writer.u32(blobs.length);
+  for (const blob of blobs) writeBlob(writer, blob);
+}
+
 function writeBlob(writer: Writer, blob: CanonicalBlob) {
   writer.data(assertFramedSyncDigest(blob.sha256, 'blob_hash'));
   writer.u64(blob.byteLength);
@@ -121,7 +133,8 @@ function sortedBlobs(blobs: readonly CanonicalBlob[]) {
   let total = 0n;
   for (let index = 0; index < sorted.length; index += 1) {
     const blob = sorted[index]!;
-    if (blob.byteLength < 0n || blob.byteLength > BigInt(FRAMED_SYNC_LIMITS.maxBlobBytes)) {
+    const limit = isBodyDescriptor(blob) ? TEXT_BODY_MAX_BYTES : FRAMED_SYNC_LIMITS.maxBlobBytes;
+    if (blob.byteLength < 0n || blob.byteLength > BigInt(limit)) {
       throw new Error('canonical_blob_size_limit_exceeded');
     }
     total += blob.byteLength;
@@ -142,13 +155,7 @@ function writeCanonicalManifest(manifest: CanonicalManifest, writer: Writer) {
   const facts = [...manifest.facts].sort(compareFacts);
   assertUniqueCanonicalFacts(facts);
   writer.u32(facts.length);
-  for (const fact of facts) {
-    assertCanonicalFactIdentity(fact);
-    writer.u32(fact.kind); writer.string(fact.objectType); writer.string(fact.globalId); writer.string(fact.factId);
-    writer.data(assertFramedSyncDigest(fact.sharedStateHash, 'shared_state_hash')); writeObject(writer, fact.body);
-    const factBlobs = sortedBlobs(fact.blobs); writer.u32(factBlobs.length);
-    for (const blob of factBlobs) writeBlob(writer, blob);
-  }
+  for (const fact of facts) writeFact(writer, fact);
   const blobs = sortedBlobs(manifest.blobs);
   assertManifestBlobGraph(facts, blobs);
   writer.u32(blobs.length);
@@ -173,6 +180,46 @@ export async function canonicalContentId(manifest: CanonicalManifest) {
   } finally {
     hash.destroy();
   }
+}
+
+/** Descriptors are bounded metadata; the loader returns one fixed-source fact at a time. */
+export async function canonicalContentIdFromSource<L>(entries: readonly {
+  locator: L; descriptor: Omit<CanonicalFact, 'body'>;
+}[], blobs: readonly CanonicalBlob[], load: (locator: L) => Promise<CanonicalFact>) {
+  if (entries.length > FRAMED_SYNC_LIMITS.maxFactsPerTransfer || blobs.length > FRAMED_SYNC_LIMITS.maxBlobsPerTransfer) {
+    throw new Error('canonical_manifest_item_limit_exceeded');
+  }
+  const sorted = [...entries].sort((left, right) => compareFacts(
+    { ...left.descriptor, body: [] }, { ...right.descriptor, body: [] }));
+  const descriptors = sorted.map((entry) => entry.descriptor);
+  assertUniqueCanonicalFacts(descriptors);
+  const manifestBlobs = sortedBlobs(blobs);
+  assertManifestBlobGraph(descriptors, manifestBlobs);
+  const hash = hashSha256.create();
+  try {
+    const writer = new Writer((bytes) => hash.update(bytes));
+    writer.string(CONTENT_DOMAIN); writer.u32(sorted.length);
+    for (const entry of sorted) {
+      const fact = await load(entry.locator);
+      const descriptor = entry.descriptor;
+      if (compareFacts({ ...descriptor, body: [] }, fact) !== 0 ||
+          compareBytes(descriptor.sharedStateHash, fact.sharedStateHash) !== 0 ||
+          !sameBlobDescriptors(descriptor.blobs, fact.blobs)) throw new Error('canonical_fact_source_changed');
+      writeFact(writer, fact);
+    }
+    writer.u32(manifestBlobs.length);
+    for (const blob of manifestBlobs) writeBlob(writer, blob);
+    return hash.digest();
+  } finally { hash.destroy(); }
+}
+
+function sameBlobDescriptors(left: readonly CanonicalBlob[], right: readonly CanonicalBlob[]) {
+  const a = sortedBlobs(left), b = sortedBlobs(right);
+  return a.length === b.length && a.every((blob, index) => {
+    const other = b[index]!;
+    return compareBytes(blob.sha256, other.sha256) === 0 && blob.byteLength === other.byteLength &&
+      blob.required === other.required && blob.role === other.role;
+  });
 }
 
 export async function canonicalTransferId(context: FramedSyncContext, contentId: Uint8Array) {

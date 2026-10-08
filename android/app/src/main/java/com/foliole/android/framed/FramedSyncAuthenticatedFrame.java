@@ -31,6 +31,10 @@ public final class FramedSyncAuthenticatedFrame {
     public byte[] ciphertext() { return ciphertext.clone(); }
     public byte[] plaintext() { return plaintext.clone(); }
 
+    // Synchronous core processing borrows immutable frame-owned payloads.
+    byte[] borrowedCiphertext() { return ciphertext; }
+    byte[] borrowedPlaintext() { return plaintext; }
+
     private static byte[] copy(byte[] value, String name) {
         if (value == null) throw new NullPointerException(name);
         return value.clone();

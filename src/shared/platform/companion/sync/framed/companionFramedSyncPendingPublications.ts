@@ -8,8 +8,7 @@ import { reconcileFramedSyncPublication } from '../../../../../../lib/core/sync/
 import { completeFramedSyncRecoveredPublication, selectFramedSyncRecoveryPublication } from '../../../../../../lib/core/sync/framedSyncPublicationRecoverySelection.js';
 import { sendWithRequiredParentOrderBodies } from '../../../../../../lib/core/sync/parentOrderBodyDelivery.js';
 import { collectDeliveredParentOrderBodies } from '../../../../../../lib/core/sync/parentOrderBodyRetention.js';
-import { loadSyncGroupLocalAdoption, isSyncGroupPeerAdopting } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
-import type { NodeVersionBodyStorage } from '../../../../../../lib/core/sync/syncNodeTombstoneVersion.js';
+import { isSyncGroupPeerAdopting, syncGroupLocalPublicationBlockReason } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
@@ -43,11 +42,10 @@ export function readCompanionFramedSyncPendingPublications(
 /** Failed delivery is compared again before the native sender is invoked. */
 export async function resumeCompanionFramedSyncPendingPublications(
   args: NativeCompanionFramedSyncInventoryRequest,
-  remoteInventory?: readonly FramedSyncInventoryEntry[],
-  bodyStorage: NodeVersionBodyStorage = 'continuous'
+  remoteInventory?: readonly FramedSyncInventoryEntry[]
 ) {
   const owner = getIosCompanionDatabaseOwner();
-  if (await owner.read(loadSyncGroupLocalAdoption) || await owner.read((db) =>
+  if (await owner.read(syncGroupLocalPublicationBlockReason) || await owner.read((db) =>
     isSyncGroupPeerAdopting(db, args.sync_group_id, args.receiver_device_id))) return 0;
   const pending = await owner.read((db) => readCompanionFramedSyncPendingPublications(db, args));
   if (!pending.length) return 0;
@@ -77,7 +75,7 @@ export async function resumeCompanionFramedSyncPendingPublications(
       const receipt = await sendWithRequiredParentOrderBodies(() => FolioleCompanionSync.sendFramedSyncTransfer({ ...args,
         include_current_node: false, object_id: publication.object_id, object_type: publication.object_type,
         required_relation_ids: [], review_fact_ids: [], state_fact_ids: [],
-        transfer_id: recoveryId }), (versionId) => supplyOrderBody(args, versionId, bodyStorage));
+        transfer_id: recoveryId }), (versionId) => supplyOrderBody(args, versionId));
       if (receipt.transfer_id !== recoveryId ||
           receipt.receiver_device_id !== args.receiver_device_id ||
           receipt.receiver_library_epoch !== args.receiver_library_epoch) {
@@ -94,9 +92,9 @@ export async function resumeCompanionFramedSyncPendingPublications(
   return pending.length;
 }
 
-async function supplyOrderBody(args: NativeCompanionFramedSyncInventoryRequest, versionId: string, bodyStorage: NodeVersionBodyStorage) {
+async function supplyOrderBody(args: NativeCompanionFramedSyncInventoryRequest, versionId: string) {
   const entry = await getIosCompanionDatabaseOwner().read((db) => readCompanionFramedSyncInventoryEntry(db,
-    { globalId: versionId, objectType: 'order_version' }, bodyStorage));
+    { globalId: versionId, objectType: 'order_version' }));
   if (!entry) throw new Error(`sync_parent_order_body_unavailable:${versionId}`);
   await sendCompanionFramedSyncObject({ endpointUrl: args.endpoint_url, groupId: args.sync_group_id,
     includeCurrentNode: true, objectId: versionId, objectType: 'order_version',

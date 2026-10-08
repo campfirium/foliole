@@ -14,12 +14,14 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     private FolioleCompanionNsdDiscoverySession discoverySession;
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService framedSendExecutor = Executors.newSingleThreadExecutor();
+    final FolioleCompanionFramedSyncPayloadBudgetActions payloadBudget = new FolioleCompanionFramedSyncPayloadBudgetActions();
     private boolean lifecycleActive = true;
 
     @Override public void load() {
         super.load();
         try {
             FolioleCompanionSyncGroupDataBridge.install(getContext(), this, this::dispatchDataRequest);
+            payloadBudget.attach(getBridge());
         } catch (Exception error) {
             android.util.Log.w("FolioleSyncDiscovery", "Monitor unavailable", error);
         }
@@ -124,6 +126,22 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         }
     }
 
+    @PluginMethod public void configureFramedSyncPayloadBudget(PluginCall call) {
+        payloadBudget.configureAsync(call);
+    }
+
+    @PluginMethod public void closeFramedSyncPayloadBudget(PluginCall call) {
+        payloadBudget.closeAsync(call);
+    }
+
+    @PluginMethod public void validateFramedSyncPayloadLoan(PluginCall call) {
+        payloadBudget.validateNow(call);
+    }
+
+    @PluginMethod public void releaseFramedSyncPayloadLoan(PluginCall call) {
+        payloadBudget.releaseNow(call);
+    }
+
     @PluginMethod public void signCompanionSyncRequest(PluginCall call) {
         async(call, "Failed to sign Sync Group request.", () ->
             FolioleCompanionSyncGroupSigning.sign(getContext(), call));
@@ -134,6 +152,11 @@ public class FolioleCompanionSyncPlugin extends Plugin {
             FolioleCompanionFramedSyncOutbound.send(getContext(), call));
     }
 
+    @PluginMethod public void sendFramedSyncTransfers(PluginCall call) {
+        FolioleCompanionSyncAsync.run(framedSendExecutor, call, "Failed to send framed Sync transfers.", () ->
+            FolioleCompanionFramedSyncBatchOutbound.send(getContext(), call));
+    }
+
     @PluginMethod public void readFramedSyncInventory(PluginCall call) {
         async(call, "Failed to read framed Sync inventory.", () ->
             FolioleCompanionFramedSyncInventoryClient.read(getContext(), call));
@@ -142,6 +165,11 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     @PluginMethod public void pullFramedSyncObject(PluginCall call) {
         async(call, "Failed to pull framed Sync object.", () ->
             FolioleCompanionFramedSyncPull.pull(getContext(), call));
+    }
+
+    @PluginMethod public void pullFramedSyncObjects(PluginCall call) {
+        async(call, "Failed to pull framed Sync objects.", () ->
+            FolioleCompanionFramedSyncPullBatch.pull(getContext(), call));
     }
 
     @PluginMethod public void downloadAttachmentResourceBatch(PluginCall call) {
@@ -188,30 +216,16 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     private void dispatchDataRequest(JSObject event) throws Exception {
-        String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderDataRequestEvent(getContext());
-        getActivity().runOnUiThread(() -> notifyListeners(name, event));
+        FolioleCompanionSyncPluginEvents.dataRequest(getContext(), getActivity(), event, this::notifyListeners);
     }
 
     private void dispatchProviderState() {
-        try {
-            String name = FolioleCompanionHostBridgeContractDefinitions.syncGroupProviderStateEvent(getContext());
-            JSObject event = withParticipation(FolioleCompanionSyncGroupProvider.state());
-            getActivity().runOnUiThread(() -> notifyListeners(name, event));
-        } catch (Exception error) {
-            android.util.Log.w("FolioleSyncProvider", "State dispatch failed", error);
-        }
+        FolioleCompanionSyncPluginEvents.providerState(getContext(), getActivity(), lifecycleActive, this::notifyListeners);
     }
 
     private void setParticipation(PluginCall call, String name) {
         async(call, "Failed to update Sync participation.", () -> {
-            String key = FolioleCompanionSyncParticipationContractDefinitions.requestKey(getContext(), name);
-            if (!call.getData().has(key)) throw new IllegalArgumentException(key + " is required.");
-            boolean value = call.getBoolean(key, false);
-            if ("syncEnabled".equals(name)) {
-                FolioleCompanionSyncParticipationStore.setSyncEnabled(getContext(), value);
-            } else {
-                FolioleCompanionSyncParticipationStore.setSyncPaused(getContext(), value);
-            }
+            FolioleCompanionSyncParticipationActions.set(getContext(), call, name, lifecycleActive);
             FolioleCompanionSyncGroupProvider.reconcile(this, getActivity(), isParticipating());
             return FolioleCompanionSyncParticipationStore.state(getContext(), lifecycleActive);
         });
@@ -222,16 +236,12 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     }
 
     private JSObject withParticipation(JSObject result) throws Exception {
-        JSObject participation = FolioleCompanionSyncParticipationStore.state(getContext(), lifecycleActive);
-        for (java.util.Iterator<String> keys = participation.keys(); keys.hasNext();) {
-            String key = keys.next();
-            result.put(key, participation.get(key));
-        }
-        return result;
+        return FolioleCompanionSyncPluginEvents.withParticipation(getContext(), lifecycleActive, result);
     }
 
     @Override protected void handleOnDestroy() {
         lifecycleActive = false;
+        payloadBudget.destroy();
         fileExecutor.execute(() -> {
             FolioleCompanionSyncGroupProvider.pause(this);
             FolioleCompanionSyncGroupDataBridge.uninstall(this);

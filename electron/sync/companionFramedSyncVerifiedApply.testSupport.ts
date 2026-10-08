@@ -5,12 +5,8 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect } from 'vitest';
 
-import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
-import { migrateBodyContentOwners } from '../../lib/core/database/bodyContentOwnerMigration.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
-import { migrateFramedSyncAvailableBlobs } from '../../lib/core/database/framedSyncAvailableBlobMigration.js';
 import { migrateCompanionFramedSyncInventory } from '../../lib/core/database/framedSyncInventoryMigration.js';
-import { migrateVerifiedBodyInventory } from '../../lib/core/database/verifiedBodyInventoryMigration.js';
 import type { DbParams, DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import { canonicalContentId } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
@@ -60,7 +56,7 @@ function assertBoundedValues(values: readonly unknown[], sizes: number[]) {
   for (const value of values) {
     const size = typeof value === 'string' ? Buffer.byteLength(value) : value instanceof Uint8Array ? value.length : 0;
     sizes.push(size);
-    expect(size).toBeLessThanOrEqual(512 * 1024);
+    expect(size).toBeLessThanOrEqual(1048576 + 65536);
   }
 }
 
@@ -69,9 +65,6 @@ async function initializeMain(main: Database.Database) {
   const db = createBetterSqliteDbPort(main);
   await db.transaction(async (tx) => {
     await migrateCompanionFramedSyncInventory(tx);
-    await migrateBodyContentStorage(tx);
-    await migrateBodyContentOwners(tx, 'companion');
-    await migrateVerifiedBodyInventory(tx);
     await tx.run('DROP TABLE content_blob_data');
   });
 }
@@ -107,9 +100,6 @@ export async function verifiedCompanionFixture(kind: Kind, body: string) {
   native.prepare(`INSERT INTO ${prefix}_available_blobs VALUES (?, ?, ?)`).run(descriptor.sha256,
     Number(descriptor.byteLength), projection.bodyBlob);
   native.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, 1, 1)`).run(transferId, descriptor.sha256, Number(descriptor.byteLength));
-  main.prepare(`ATTACH DATABASE ? AS ${tables.alias}`).run(stagingPath);
-  await createBetterSqliteDbPort(main).transaction((tx) => migrateFramedSyncAvailableBlobs(tx, kind));
-  main.exec(`DETACH DATABASE ${tables.alias}`);
   native.close();
   native = new Database(stagingPath);
   native.pragma('foreign_keys = ON');

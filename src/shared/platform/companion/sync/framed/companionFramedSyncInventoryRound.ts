@@ -1,15 +1,13 @@
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
+import { hexToBytes } from '@noble/hashes/utils.js';
 
 import {
   compareFramedSyncInventories,
-  revalidateFramedSyncInventorySource,
   type FramedSyncDeferredObject,
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
-import type { NodeVersionBodyStorage } from '../../../../../../lib/core/sync/syncNodeTombstoneVersion.js';
 import type {
   NativeCompanionFramedSyncInventoryEntry,
   NativeCompanionFramedSyncInventoryRequest,
@@ -19,73 +17,25 @@ import type {
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
+import { createCompanionFramedSyncDifferenceBatchDelivery } from './companionFramedSyncDifferenceBatchDelivery.js';
 import {
-  readCompanionFramedSyncInventory,
-  readCompanionFramedSyncInventoryEntry
+  readCompanionFramedSyncInventory
 } from './companionFramedSyncInventory.js';
+import { decodeCompanionInventoryEntry } from './companionFramedSyncInventoryEntryDecode.js';
 import { rememberCompanionFramedSyncPeerRoute } from './companionFramedSyncPeerRoutes.js';
 import { resumeCompanionFramedSyncPendingPublications } from './companionFramedSyncPendingPublications.js';
-import { sendCompanionFramedSyncObject } from './companionFramedSyncTransfer.js';
+import { createCompanionFramedSyncPullBatchDelivery } from './companionFramedSyncPullBatch.js';
+import { runCompanionFramedSyncResourceRound } from './companionFramedSyncResourceRound.js';
 import { adoptCompanionSyncGroupData } from './companionSyncGroupLocalAdoption.js';
 
-const HEX_DIGEST = /^[a-f0-9]{64}$/u;
+export { decodeCompanionInventoryEntry } from './companionFramedSyncInventoryEntryDecode.js';
 
-function strings(value: unknown, name: string) {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || !item)) {
-    throw new Error(`framed_sync_inventory_${name}_invalid`);
-  }
-  return value as string[];
-}
-
-function digest(value: unknown, name: string) {
-  if (typeof value !== 'string' || !HEX_DIGEST.test(value)) {
-    throw new Error(`framed_sync_inventory_${name}_invalid`);
-  }
-  return hexToBytes(value);
-}
-
-export function decodeCompanionInventoryEntry(value: NativeCompanionFramedSyncInventoryEntry): FramedSyncInventoryEntry {
-  if (!value || typeof value !== 'object' || typeof value.object_type !== 'string' || !value.global_id ||
-      (value.object_type !== 'node' && (value.frontier_fact_ids.length > 0 || value.required_relation_ids.length > 0 || value.review_fact_ids.length > 0))) {
-    throw new Error('framed_sync_inventory_identity_invalid');
-  }
-  return {
-    frontierFactIds: strings(value.frontier_fact_ids, 'frontier_fact_ids'),
-    globalId: value.global_id,
-    objectType: value.object_type,
-    requiredRelationIds: strings(value.required_relation_ids, 'required_relation_ids'),
-    resourceHashes: strings(value.resource_hashes, 'resource_hashes')
-      .map((hash) => digest(hash, 'resource_hash')),
-    reviewFactIds: strings(value.review_fact_ids, 'review_fact_ids'),
-    stateFactIds: strings(value.state_fact_ids, 'state_fact_ids'),
-    sharedStateHash: digest(value.shared_state_hash, 'shared_state_hash')
-  };
-}
-
-function decodeOptionalEntry(value: NativeCompanionFramedSyncInventoryEntry | null) {
-  return value ? decodeCompanionInventoryEntry(value) : null;
-}
-
-async function pullDifference(args: NativeCompanionFramedSyncInventoryRequest,
-  difference: FramedSyncInventoryDifference, roundId: Uint8Array) {
-  return FolioleCompanionSync.pullFramedSyncObject({
-    ...args,
-    frontier_fact_ids: difference.sourceSnapshot.frontierFactIds,
-    object_id: difference.globalId,
-    object_type: difference.objectType,
-    required_relation_ids: difference.sourceSnapshot.requiredRelationIds,
-    resource_hashes: difference.sourceSnapshot.resourceHashes.map(bytesToHex),
-    review_fact_ids: difference.sourceSnapshot.reviewFactIds,
-    state_fact_ids: difference.sourceSnapshot.stateFactIds ?? [],
-    round_id: bytesToHex(roundId)
-  });
-}
-
-async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventoryRequest,
+export async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventoryRequest,
   differences: readonly FramedSyncInventoryDifference[], roundId: Uint8Array,
   dependencies: readonly FramedSyncInventoryDifference[]) {
   const received = new Map<string, { objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }>();
   const deferredObjects = new Map<string, FramedSyncDeferredObject>();
+  const deliver = createCompanionFramedSyncPullBatchDelivery(args, differences, roundId, received);
   const defer = (difference: Pick<FramedSyncInventoryDifference, 'globalId' | 'objectType'>) =>
     deferredObjects.set(`${difference.objectType}\0${difference.globalId}`, {
       globalId: difference.globalId, objectType: difference.objectType
@@ -93,9 +43,7 @@ async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventory
   const dependencyDeferred = await deliverFramedSyncDifferencesInDependencyOrder(
     differences, async (difference) => {
     try {
-      received.set(`${difference.objectType}\0${difference.globalId}`, { objectId: difference.globalId,
-        receipt: await pullDifference(args, difference, roundId) });
-      return 'delivered';
+      return await deliver(difference);
     } catch (error) {
       const message = String(error instanceof Error ? error.message : error);
       if (!['framed_sync_difference_request_source_changed', 'framed_sync_source_changed']
@@ -143,19 +91,26 @@ export function selectCompanionFramedSyncCurrentNodes(args: {
 }
 
 export async function sendCompanionFramedSyncInventoryDifferences(
-  args: NativeCompanionFramedSyncInventoryRequest,
-  bodyStorage: NodeVersionBodyStorage = 'continuous'
+  args: NativeCompanionFramedSyncInventoryRequest, resourcesOnly = false
 ) {
   const adoption = await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption);
-  if (adoption) return adoptCompanionSyncGroupData(args, adoption, bodyStorage);
+  if (adoption && !resourcesOnly) return adoptCompanionSyncGroupData(args, adoption);
+  if (adoption && (adoption.groupId !== args.sync_group_id || adoption.providerDeviceId !== args.receiver_device_id)) {
+    throw new Error('sync_group_local_adoption_source_mismatch');
+  }
   const owner = getIosCompanionDatabaseOwner();
   let [localValue, remoteResult] = await Promise.all([
-    owner.read((db) => readCompanionFramedSyncInventory(db, bodyStorage)),
+    owner.read((db) => readCompanionFramedSyncInventory(db)),
     readCompanionRemoteFramedSyncInventory(args)
   ]);
-  if (await resumeCompanionFramedSyncPendingPublications(args, remoteResult.entries, bodyStorage)) {
+  if (resourcesOnly) {
+    const resources = await runCompanionFramedSyncResourceRound(args, remoteResult.roundId,
+      inventoryNodeIds(localValue.entries, remoteResult.entries));
+    return { deferredObjects: [], received: [], sent: [], resources };
+  }
+  if (await resumeCompanionFramedSyncPendingPublications(args, remoteResult.entries)) {
     [localValue, remoteResult] = await Promise.all([
-      owner.read((db) => readCompanionFramedSyncInventory(db, bodyStorage)), readCompanionRemoteFramedSyncInventory(args)
+      owner.read((db) => readCompanionFramedSyncInventory(db)), readCompanionRemoteFramedSyncInventory(args)
     ]);
   }
   const local = localValue.entries.map(decodeCompanionInventoryEntry);
@@ -166,35 +121,18 @@ export async function sendCompanionFramedSyncInventoryDifferences(
     dependencies.filter((difference) => difference.direction === 'remote_to_local'));
   deferredObjects.push(...pulled.deferredObjects);
   const sent: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
-  const sendDeferred = await deliverFramedSyncDifferencesInDependencyOrder(selection.sendable, async (difference) => {
-    const currentValue = await owner.read((db) =>
-      readCompanionFramedSyncInventoryEntry(db, difference, bodyStorage));
-    const current = decodeOptionalEntry(currentValue);
-    const revalidated = revalidateFramedSyncInventorySource({
-      currentSource: current ? [current] : [], differences: [difference],
-      direction: 'local_to_remote'
-    });
-    if (revalidated.deferredObjects.length) {
-      return 'deferred';
-    }
-    if (difference.objectType === 'node' && current && current.resourceHashes.length === 0 &&
-        (difference.need.sharedState || difference.need.frontierFactIds.length > 0 ||
-          difference.need.requiredRelationIds.length > 0)) {
-      return 'deferred';
-    }
-    const receipt = await sendCompanionFramedSyncObject({
-      endpointUrl: args.endpoint_url, groupId: args.sync_group_id,
-      includeCurrentNode: difference.need.sharedState ||
-        difference.need.frontierFactIds.length > 0 || difference.need.resourceHashes.length > 0,
-      objectId: difference.globalId, objectType: difference.objectType, receiverDeviceId: args.receiver_device_id,
-      receiverLibraryEpoch: args.receiver_library_epoch,
-      requiredRelationIds: difference.need.requiredRelationIds,
-      reviewFactIds: difference.need.reviewFactIds,
-      stateFactIds: difference.need.stateFactIds ?? []
-    });
-    sent.push({ objectId: difference.globalId, receipt });
-    return 'delivered';
-  }, dependencies.filter((difference) => difference.direction === 'local_to_remote'));
+  const deliver = createCompanionFramedSyncDifferenceBatchDelivery(args, selection.sendable, sent);
+  const sendDeferred = await deliverFramedSyncDifferencesInDependencyOrder(selection.sendable,
+    deliver,
+    dependencies.filter((difference) => difference.direction === 'local_to_remote'));
   deferredObjects.push(...sendDeferred.map(({ globalId, objectType }) => ({ globalId, objectType })));
-  return { deferredObjects, received: pulled.received, sent };
+  const nodes = inventoryNodeIds(localValue.entries, remoteResult.entries);
+  const resources = await runCompanionFramedSyncResourceRound(args, remoteResult.roundId, nodes);
+  return { deferredObjects, received: pulled.received, sent, resources };
+}
+
+function inventoryNodeIds(local: readonly NativeCompanionFramedSyncInventoryEntry[],
+  remote: readonly FramedSyncInventoryEntry[]) {
+  return new Set([...local.filter(entry => entry.object_type === 'node').map(entry => entry.global_id),
+    ...remote.filter(entry => entry.objectType === 'node').map(entry => entry.globalId)]);
 }

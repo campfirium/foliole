@@ -15,6 +15,7 @@ public final class FramedSyncPayload {
         MISSING_BLOB_SET,
         TRANSFER_HEADER,
         FACT,
+        FACT_FRAGMENT,
         BLOB_CHUNK,
         TRANSFER_TRAILER,
         TRANSFER_RECEIPT,

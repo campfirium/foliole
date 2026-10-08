@@ -1,6 +1,7 @@
 import { readFramedSyncPublication, readFramedSyncRow } from '../database/framedSyncStagingSerialization.js';
 
 import type { DbPort } from './dbPort.js';
+import { retireFramedSyncFrozenBodies } from './framedSyncFrozenBody.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { recoverLegacyPublicationInventory } from './framedSyncLegacyPublicationInventory.js';
 import { recheckPublicationInventory } from './framedSyncPublicationInventory.js';
@@ -18,6 +19,7 @@ export async function reconcileFramedSyncPublication(db: DbPort, transferId: Uin
     await tx.run(`UPDATE framed_sync_outbound_publications SET state = 'receipt_committed'
       WHERE transfer_id = ? AND state = 'published'`, [transferId]);
     await tx.run('DELETE FROM framed_sync_outbound_holds WHERE transfer_id = ?', [transferId]);
+    await retireFramedSyncFrozenBodies(tx, transferId);
     await tx.run(`DELETE FROM framed_sync_outbound_attempts
       WHERE transfer_id = ? AND purpose = 'transfer'`, [transferId]);
     return 'satisfied' as const;

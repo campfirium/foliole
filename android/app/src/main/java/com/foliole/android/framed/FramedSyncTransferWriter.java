@@ -1,6 +1,5 @@
 package com.foliole.android.framed;
 
-import com.foliole.sync.v22.BlobChunk;
 import com.foliole.sync.v22.BlobReference;
 import com.foliole.sync.v22.FactDescriptor;
 import com.foliole.sync.v22.FactRecord;
@@ -9,9 +8,8 @@ import com.foliole.sync.v22.TransferHeader;
 import com.foliole.sync.v22.TransferManifest;
 import com.foliole.sync.v22.TransferTrailer;
 import com.google.protobuf.ByteString;
-import java.io.InputStream;
 import java.io.OutputStream;
-import java.security.MessageDigest;
+import java.io.File;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -39,6 +37,13 @@ public final class FramedSyncTransferWriter {
 
     private FramedSyncTransferWriter() {}
 
+    public static Attempt prepare(byte[] groupKey, FramedSyncTransferContext context,
+        FramedSyncOutboundFactSource source, List<FramedSyncBlobContent> blobs,
+        FramedSyncOutboundStaging staging, File temporaryDirectory) throws Exception {
+        return FramedSyncSourceTransferWriter.prepare(groupKey, context, source, blobs, staging,
+            temporaryDirectory);
+    }
+
     public static Attempt prepare(
         byte[] groupKey,
         FramedSyncTransferContext context,
@@ -62,50 +67,17 @@ public final class FramedSyncTransferWriter {
             sequence = persist(groupKey, preamble, transferId, attemptId, sequence,
                 FramedSyncFrameType.FACT, ProtocolMessage.newBuilder().setFact(fact).build(), staging);
         }
-        for (FramedSyncBlobContent content : contents) {
-            sequence = persistBlob(groupKey, preamble, transferId, attemptId, sequence,
-                content, staging);
+        for (int index = 0; index < contents.size(); index++) {
+            sequence = FramedSyncTransferBlobWriter.write(transferId, sequence,
+                contents.get(index), blobs.get(index), (next, message) -> persist(
+                    groupKey, preamble, transferId, attemptId, next,
+                    FramedSyncFrameType.BLOB_CHUNK, message, staging));
         }
         persist(groupKey, preamble, transferId, attemptId, sequence,
             FramedSyncFrameType.TRANSFER_TRAILER,
             trailer(contentId, transferId, orderedFacts.size(), blobs.size()), staging);
         staging.finalizeOutboundAttempt(transferId, attemptId);
         return new Attempt(transferId, attemptId, preamble.encoded());
-    }
-
-    private static long persistBlob(
-        byte[] groupKey, FramedSyncPreamble preamble, byte[] transferId, byte[] attemptId,
-        long sequence, FramedSyncBlobContent content, FramedSyncOutboundStaging staging
-    ) throws Exception {
-        MessageDigest digest = MessageDigest.getInstance("SHA-256");
-        byte[] buffer = new byte[FramedSyncContract.BLOB_CHUNK_BYTES];
-        long offset = 0;
-        try (InputStream input = content.open()) {
-            for (int length; (length = readChunk(input, buffer)) > 0;) {
-                digest.update(buffer, 0, length);
-                ProtocolMessage chunk = ProtocolMessage.newBuilder().setBlobChunk(BlobChunk.newBuilder()
-                    .setTransferId(ByteString.copyFrom(transferId))
-                    .setBlobHash(ByteString.copyFrom(content.sha256())).setOffset(offset)
-                    .setData(ByteString.copyFrom(buffer, 0, length))).build();
-                sequence = persist(groupKey, preamble, transferId, attemptId, sequence,
-                    FramedSyncFrameType.BLOB_CHUNK, chunk, staging);
-                offset += length;
-            }
-        }
-        if (offset != content.byteLength() || !MessageDigest.isEqual(content.sha256(), digest.digest())) {
-            throw new FramedSyncValidationException("framed_sync_blob_content_mismatch");
-        }
-        return sequence;
-    }
-
-    private static int readChunk(InputStream input, byte[] buffer) throws Exception {
-        int offset = 0;
-        while (offset < buffer.length) {
-            int count = input.read(buffer, offset, buffer.length - offset);
-            if (count < 0) break;
-            if (count > 0) offset += count;
-        }
-        return offset;
     }
 
     public static void replay(Attempt attempt, FramedSyncOutboundStaging staging, OutputStream output)
@@ -123,7 +95,7 @@ public final class FramedSyncTransferWriter {
         writer.flush();
     }
 
-    private static long persist(
+    static long persist(
         byte[] groupKey, FramedSyncPreamble preamble, byte[] transferId, byte[] attemptId,
         long sequence, FramedSyncFrameType type, ProtocolMessage message,
         FramedSyncOutboundStaging staging
@@ -157,7 +129,7 @@ public final class FramedSyncTransferWriter {
             .setManifest(manifest)).build();
     }
 
-    private static ProtocolMessage trailer(
+    static ProtocolMessage trailer(
         byte[] contentId, byte[] transferId, int factCount, int blobCount
     ) {
         return ProtocolMessage.newBuilder().setTransferTrailer(TransferTrailer.newBuilder()
@@ -199,7 +171,7 @@ public final class FramedSyncTransferWriter {
         return FramedSyncCanonicalManifest.sortedBlobs(new ArrayList<>(blobs.values()));
     }
 
-    private static List<FramedSyncBlobContent> verifiedBlobContents(
+    static List<FramedSyncBlobContent> verifiedBlobContents(
         List<BlobReference> blobs,
         List<FramedSyncBlobContent> contents
     ) throws Exception {
@@ -230,7 +202,7 @@ public final class FramedSyncTransferWriter {
         return result.toString();
     }
 
-    private static byte[] random(int length) {
+    static byte[] random(int length) {
         byte[] result = new byte[length];
         RANDOM.nextBytes(result);
         return result;

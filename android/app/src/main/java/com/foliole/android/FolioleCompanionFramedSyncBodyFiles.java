@@ -1,8 +1,9 @@
 package com.foliole.android;
 
 import android.content.Context;
-import com.foliole.android.framed.FramedSyncBodyRangeResponse;
-import com.foliole.android.framed.FramedSyncVerifiedBodySpool;
+import com.foliole.android.framed.FramedSyncBodyResponse;
+import com.foliole.android.framed.FramedSyncPayloadBudget;
+import com.foliole.android.framed.FramedSyncFrozenBodySpool;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,8 +13,11 @@ final class FolioleCompanionFramedSyncBodyFiles implements AutoCloseable {
     private final Path directory;
     private final JSONObject selection;
     private final String transferId;
+    private final FramedSyncPayloadBudget budget;
 
-    FolioleCompanionFramedSyncBodyFiles(Context context, JSONObject selection, String transferId) throws Exception {
+    FolioleCompanionFramedSyncBodyFiles(Context context, JSONObject selection, String transferId,
+        FramedSyncPayloadBudget budget) throws Exception {
+        this.budget = budget;
         this.selection = new JSONObject();
         for (String key : new String[] {"group_id", "sender_device_id", "sender_library_epoch",
                 "receiver_device_id", "receiver_library_epoch"}) {
@@ -24,13 +28,16 @@ final class FolioleCompanionFramedSyncBodyFiles implements AutoCloseable {
     }
 
     File resolve(byte[] hash, long length) throws Exception {
-        return FramedSyncVerifiedBodySpool.write(hash, length, directory.toFile(), (offset, size) -> {
-            JSONObject request = new JSONObject(selection.toString()).put("transfer_id", transferId)
-                .put("sha256", hex(hash)).put("offset", Long.toString(offset)).put("max_bytes", size);
-            JSONObject response = FolioleCompanionSyncGroupDataBridge.current().request(
-                "read_framed_body_range", request);
-            return FramedSyncBodyRangeResponse.decode(response, hash, offset, size);
-        });
+        try (var loan = budget.acquire(FramedSyncPayloadBudget.Direction.OUTBOUND, FramedSyncPayloadBudget.Lane.PAYLOAD)) {
+            return FramedSyncFrozenBodySpool.write(hash, length, directory.toFile(), () -> {
+                JSONObject request = new JSONObject(selection.toString()).put("transfer_id", transferId)
+                    .put("sha256", hex(hash)).put("byte_length", Long.toString(length))
+                    .put("payload_loan", FolioleCompanionFramedSyncPayloadBudgetActions.description(loan));
+                JSONObject response = FolioleCompanionSyncGroupDataBridge.current().request(
+                    "read_framed_body", request, budget);
+                return FramedSyncBodyResponse.decode(response, hash, length);
+            });
+        }
     }
 
     @Override public void close() throws Exception {

@@ -6,23 +6,18 @@ import android.database.sqlite.SQLiteDatabase;
 import com.foliole.sync.v22.BlobChunk;
 import com.foliole.sync.v22.BlobReference;
 import com.foliole.sync.v22.TransferHeader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
 
 final class FramedSyncSQLiteBlobs {
     private final SQLiteDatabase database;
-    private final FramedSyncSQLiteChunkedBodies chunkedBodies;
     private final FramedSyncSQLiteResourceBlobs resources;
 
     FramedSyncSQLiteBlobs(SQLiteDatabase database, File resourceDirectory) {
-        this(database, resourceDirectory, false);
-    }
-
-    FramedSyncSQLiteBlobs(SQLiteDatabase database, File resourceDirectory, boolean useChunkedBodies) {
         this.database = database;
-        chunkedBodies = useChunkedBodies ? new FramedSyncSQLiteChunkedBodies(database) : null;
         resources = new FramedSyncSQLiteResourceBlobs(database, resourceDirectory);
     }
 
@@ -52,7 +47,8 @@ final class FramedSyncSQLiteBlobs {
             return resources.stage(transferId, attemptId, descriptor, chunk);
         }
         long length = chunk.getData().size();
-        if (chunk.getOffset() < 0 || chunk.getOffset() > descriptor.getByteLength() - length) {
+        if (descriptor.getByteLength() > 1_048_576 || chunk.getOffset() != 0 ||
+            length == 0 || length != descriptor.getByteLength()) {
             throw invalid("blob_chunk_range_invalid");
         }
         ContentValues values = new ContentValues();
@@ -87,24 +83,14 @@ final class FramedSyncSQLiteBlobs {
                         transferId, attemptId, hash, byteLength, role, required)) return false;
                     continue;
                 }
-                if (chunkedBodies != null) {
-                    FramedSyncBodyChunkStream.Result result = chunkedBodies.verifyAndPromote(
-                        transferId, attemptId, hash, byteLength);
-                    if (result == FramedSyncBodyChunkStream.Result.INVALID) return false;
-                    if (result == FramedSyncBodyChunkStream.Result.MISSING) {
-                        if (required) return false;
-                        continue;
-                    }
-                    pin(transferId, hash, byteLength, role, required);
-                    continue;
-                }
                 byte[] data = available(hash, byteLength);
-                if (data == null) data = assemble(transferId, attemptId, hash, byteLength);
+                if (data == null) data = readBody(transferId, attemptId, hash, byteLength);
                 if (data == null) {
                     if (required) return false;
                     continue;
                 }
                 if (!Arrays.equals(hash, sha256(data))) return false;
+                StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(data));
                 storeAvailable(hash, byteLength, data);
                 pin(transferId, hash, byteLength, role, required);
             }
@@ -125,23 +111,19 @@ final class FramedSyncSQLiteBlobs {
         return descriptor != null && !FramedSyncBodyRoles.isBody(descriptor.getRoleValue());
     }
 
-    private byte[] assemble(byte[] transferId, byte[] attemptId, byte[] hash, long byteLength)
+    private byte[] readBody(byte[] transferId, byte[] attemptId, byte[] hash, long byteLength)
         throws FramedSyncValidationException {
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        long expectedOffset = 0;
+        if (byteLength < 0 || byteLength > 1_048_576) throw invalid("blob_size_limit_exceeded");
         try (Cursor chunks = database.query(
             "framed_sync_android_blob_chunks", new String[] {"byte_offset", "data"},
             "hex(transfer_id) = ? AND hex(attempt_id) = ? AND hex(sha256) = ?",
             FramedSyncSQLiteValues.blobArgs(transferId, attemptId, hash), null, null, "byte_offset"
         )) {
-            while (chunks.moveToNext()) {
-                if (chunks.getLong(0) != expectedOffset) return null;
-                byte[] data = chunks.getBlob(1);
-                output.write(data, 0, data.length);
-                expectedOffset += data.length;
-            }
+            if (!chunks.moveToFirst()) return byteLength == 0 ? new byte[0] : null;
+            if (chunks.getLong(0) != 0) return null;
+            byte[] data = chunks.getBlob(1);
+            return data.length == byteLength && !chunks.moveToNext() ? data : null;
         }
-        return expectedOffset == byteLength ? output.toByteArray() : null;
     }
 
     private byte[] available(byte[] hash, long byteLength) throws FramedSyncValidationException {

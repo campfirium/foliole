@@ -1,6 +1,7 @@
 package com.foliole.android.framed;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.fail;
 
 import com.foliole.sync.v22.CanonicalField;
@@ -16,6 +17,26 @@ import java.util.List;
 import org.junit.Test;
 
 public class FramedSyncCanonicalBudgetTest {
+    @Test public void incrementalSourcePreservesTheCanonicalDigestAndRejectsWrongOrder() throws Exception {
+        byte[] stateHash = new byte[32];
+        java.util.Arrays.fill(stateHash, (byte) 7);
+        List<FactRecord> values = new ArrayList<>();
+        for (FactRecord fact : facts(80)) values.add(fact.toBuilder()
+            .setSharedStateHash(ByteString.copyFrom(stateHash)).build());
+        List<FactRecord> ordered = FramedSyncCanonicalManifest.sortedFacts(values);
+        byte[] result = FramedSyncCanonicalManifest.contentId(ordered.size(), Collections.emptyList(), ordered::get);
+        assertArrayEquals(FramedSyncCanonicalManifest.contentId(values, Collections.emptyList()), result);
+        StringBuilder hex = new StringBuilder();
+        for (byte value : result) hex.append(String.format("%02x", Byte.toUnsignedInt(value)));
+        assertEquals("ea7658d2172436539039daac91f9daef8198ea9bcfaaee0081ec53d12020b0d0", hex.toString());
+        try {
+            FramedSyncCanonicalManifest.contentId(2, Collections.emptyList(), (index) -> ordered.get(1 - index));
+            fail("accepted unsorted durable source");
+        } catch (FramedSyncValidationException error) {
+            assertEquals("canonical_fact_source_order_invalid", error.code());
+        }
+    }
+
     @Test public void cumulativeFactBodiesHaveAnIndependentBound() throws Exception {
         assertEquals(32, FramedSyncCanonicalManifest.contentId(facts(80), Collections.emptyList()).length);
         try {

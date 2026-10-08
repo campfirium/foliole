@@ -12,12 +12,11 @@ import { createDesktopFramedSyncResourceStaging } from './desktopFramedSyncResou
 
 export type DesktopFramedSyncStagingPort = FramedSyncStagingPort & DesktopFramedSyncTerminationPort;
 
-export function createDesktopFramedSyncStaging(db: DbPort,
-  bodyStorage: 'continuous' | 'chunked' = 'continuous'): DesktopFramedSyncStagingPort {
+export function createDesktopFramedSyncStaging(db: DbPort): DesktopFramedSyncStagingPort {
   return {
     ...createDesktopFramedSyncOutboundStaging(db),
     ...createDesktopFramedSyncInboundStaging(db),
-    ...createDesktopFramedSyncBlobStaging(db, bodyStorage),
+    ...createDesktopFramedSyncBlobStaging(db),
     ...createDesktopFramedSyncResourceStaging(db),
     ...createDesktopFramedSyncReceiptStaging(db)
   };

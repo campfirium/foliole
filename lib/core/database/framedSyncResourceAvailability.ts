@@ -13,6 +13,17 @@ export async function recordFramedSyncResourceAvailability(
   }
 }
 
+/** Ready resource pins exist only after the attachment bytes have been verified and promoted. */
+export async function recordFramedSyncPinnedResourceAvailability(
+  db: DbPort, transferIds: readonly Uint8Array[]
+) {
+  for (const transferId of transferIds) {
+    const rows = await db.query<{ hash: string }>(`SELECT lower(hex(sha256)) AS hash
+      FROM framed_sync_resource_pins WHERE transfer_id = ? AND role IN (2, 3, 4)`, [transferId]);
+    await recordFramedSyncResourceAvailability(db, rows.map((row) => row.hash), true);
+  }
+}
+
 /** Called only by the formal index migration, after the host inventories its existing files. */
 export async function initializeFramedSyncResourceAvailability(db: DbPort, storageKeys: readonly string[]) {
   const hashes = storageKeys.map((key) => {

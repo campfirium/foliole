@@ -1,6 +1,6 @@
 import { sha256 } from '@noble/hashes/sha2.js';
 
-import { framedSyncBytes, readFramedSyncRow } from '../database/framedSyncStagingSerialization.js';
+import { readFramedSyncRow } from '../database/framedSyncStagingSerialization.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
 
@@ -30,8 +30,10 @@ export async function retireFramedSyncReadyPayloads(db: DbPort, transferId: Uint
     [transferId, after]);
     if (!frame) return;
     if (typeof frame.frame_row !== 'number') throw new Error('framed_sync_cleanup_frame_invalid');
+    const plaintext = frame.authenticated_plaintext;
+    if (!(plaintext instanceof Uint8Array)) throw new Error('framed_sync_invalid_authenticated_plaintext');
     await db.run('UPDATE framed_sync_inbound_frames SET authenticated_plaintext = ? WHERE rowid = ?',
-      [sha256(framedSyncBytes(frame, 'authenticated_plaintext')), frame.frame_row]);
+      [sha256(plaintext), frame.frame_row]);
     after = frame.frame_row;
   }
 }

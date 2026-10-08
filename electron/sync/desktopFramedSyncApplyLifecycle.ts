@@ -26,13 +26,12 @@ export async function recordDesktopFramedSourceProgress(tx: DbPort, transfers: r
   }
 }
 
-export async function createDesktopFramedReceipt(tx: DbPort, transfer: DesktopFramedInboundIdentity,
-  storage: 'continuous' | 'chunked' = 'continuous'): Promise<TransferReceiptStage> {
+export async function createDesktopFramedReceipt(tx: DbPort, transfer: DesktopFramedInboundIdentity): Promise<TransferReceiptStage> {
   const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
     globalId: transfer.globalId, objectType: transfer.objectType
-  }, storage))?.sharedStateHash;
+  }))?.sharedStateHash;
   if (!appliedStateHash) throw new Error(`framed_sync_process_inventory_missing:${transfer.objectType}:${transfer.globalId}`);
-  return createDesktopFramedSyncStaging(tx, storage).commitApplyAndReceipt({
+  return createDesktopFramedSyncStaging(tx).commitApplyAndReceipt({
     appliedStateHash,
     contentId: transfer.manifestHash,
     receiverDeviceId: transfer.context.receiverDeviceId,

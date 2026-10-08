@@ -1,94 +1,58 @@
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
-
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
-import { compareFramedSyncInventories } from '../../../../../../lib/core/sync/framedSyncInventory.js';
-import { loadSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
-import type { NodeVersionBodyStorage } from '../../../../../../lib/core/sync/syncNodeTombstoneVersion.js';
-import type { NativeCompanionFramedSyncInventoryRequest, NativeCompanionFramedSyncStagedTransfer } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
+import { compareFramedSyncDatabaseInventories } from '../../../../../../lib/core/sync/framedSyncDatabaseDifference.js';
+import { readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
+import { framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
+import { finishSyncGroupOverwriteProgress, prepareSyncGroupOverwrite,
+  type SyncGroupOverwriteProgress } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
+import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
-import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 import { loadCompanionSyncGroup } from '../syncGroupStore.js';
 
-import { prepareCompanionFramedSyncTransfer, type CompanionFramedSyncApplyInput } from './companionFramedSyncApply.js';
-import { applyPreparedCompanionFramedSyncTransfers } from './companionFramedSyncApplyPrepared.js';
-import { readCompanionRemoteFramedSyncInventory } from './companionFramedSyncInventoryRound.js';
-import { applyVerifiedCompanionFramedSyncTransfers } from './companionFramedSyncVerifiedApply.js';
+import { pullInventoryDifferences,
+  readCompanionRemoteFramedSyncInventory } from './companionFramedSyncInventoryRound.js';
+import { runCompanionFramedSyncResourceRound } from './companionFramedSyncResourceRound.js';
+
+function localInventory(db: DbPort, progress: SyncGroupOverwriteProgress) {
+  return readFramedSyncOverwriteInventory(db, { groupId: progress.groupId, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    senderDeviceId: progress.providerDeviceId, senderLibraryEpoch: progress.providerLibraryEpoch,
+    receiverDeviceId: progress.receiverDeviceId, receiverLibraryEpoch: progress.receiverLibraryEpoch });
+}
 
 export async function adoptCompanionSyncGroupData(
-  args: NativeCompanionFramedSyncInventoryRequest, adoption: SyncGroupLocalAdoption,
-  bodyStorage: NodeVersionBodyStorage = 'continuous'
+  args: NativeCompanionFramedSyncInventoryRequest, adoption: SyncGroupLocalAdoption
 ) {
   if (args.sync_group_id !== adoption.groupId || args.receiver_device_id !== adoption.providerDeviceId) {
     throw new Error('sync_group_local_adoption_source_mismatch');
   }
   const group = await loadCompanionSyncGroup();
   if (!group || group.group_id !== adoption.groupId) throw new Error('sync_group_local_adoption_source_mismatch');
-  const inventory = await readCompanionRemoteFramedSyncInventory(args);
-  const differences = compareFramedSyncInventories({ local: [], remote: inventory.entries });
-  const staged: NativeCompanionFramedSyncStagedTransfer[] = [];
-  for (const difference of differences) {
-    const transfer = await FolioleCompanionSync.pullFramedSyncObject({ ...args, stage_only: true,
-      frontier_fact_ids: difference.sourceSnapshot.frontierFactIds,
-      object_id: difference.globalId, object_type: difference.objectType,
-      required_relation_ids: difference.sourceSnapshot.requiredRelationIds,
-      resource_hashes: difference.sourceSnapshot.resourceHashes.map(bytesToHex),
-      review_fact_ids: difference.sourceSnapshot.reviewFactIds,
-      state_fact_ids: difference.sourceSnapshot.stateFactIds ?? [], round_id: bytesToHex(inventory.roundId) });
-    if (transfer.sender_device_id !== adoption.providerDeviceId ||
-        transfer.sender_library_epoch !== args.receiver_library_epoch ||
-        transfer.receiver_library_epoch !== adoption.libraryEpoch ||
-        transfer.receiver_device_id !== group.local_device_identity_key) {
-      throw new Error('sync_group_local_adoption_transfer_mismatch');
-    }
-    staged.push(transfer);
-  }
-  const confirmed = await readCompanionRemoteFramedSyncInventory(args);
-  if (compareFramedSyncInventories({ local: inventory.entries, remote: confirmed.entries }).length) {
-    throw new Error('framed_sync_source_changed');
-  }
+  const progress: SyncGroupOverwriteProgress = { groupId: adoption.groupId, overwriteId: adoption.libraryEpoch,
+    providerDeviceId: adoption.providerDeviceId, providerLibraryEpoch: args.receiver_library_epoch,
+    receiverDeviceId: group.local_device_identity_key, receiverLibraryEpoch: adoption.libraryEpoch };
   const owner = getIosCompanionDatabaseOwner();
-  const receipts = await runCompanionSyncWriterTask(() => owner.runWriter(async (db) => {
-    const current = await loadSyncGroupLocalAdoption(db);
-    if (!current || current.libraryEpoch !== adoption.libraryEpoch) throw new Error('sync_group_local_adoption_changed');
-    return applyStagedAdoption(db, staged, adoption, bodyStorage);
-  }));
-  for (const difference of differences) await FolioleCompanionSync.pullFramedSyncObject({
-    ...args, frontier_fact_ids: difference.sourceSnapshot.frontierFactIds,
-    object_id: difference.globalId, object_type: difference.objectType,
-    required_relation_ids: difference.sourceSnapshot.requiredRelationIds,
-    resource_hashes: difference.sourceSnapshot.resourceHashes.map(bytesToHex),
-    review_fact_ids: difference.sourceSnapshot.reviewFactIds,
-    state_fact_ids: difference.sourceSnapshot.stateFactIds ?? [], round_id: bytesToHex(inventory.roundId)
-  });
-  return adoptionResult(receipts, differences.map((difference) => difference.globalId));
-}
-
-function adoptionResult(
-  receipts: Awaited<ReturnType<typeof applyPreparedCompanionFramedSyncTransfers>>, objectIds: readonly string[]
-) {
-  return {
-    deferredObjects: [], sent: [], received: receipts.map((receipt, index) => ({
-      objectId: objectIds[index]!,
-      receipt: { transfer_id: bytesToHex(receipt.transferId), content_id: bytesToHex(receipt.contentId),
-        applied_state_hash: bytesToHex(receipt.appliedStateHash), receiver_device_id: receipt.receiverDeviceId,
-        receiver_library_epoch: receipt.receiverLibraryEpoch }
-    }))
-  };
-}
-
-async function applyStagedAdoption(db: DbPort, staged: readonly NativeCompanionFramedSyncStagedTransfer[],
-  adoption: SyncGroupLocalAdoption, bodyStorage: NodeVersionBodyStorage) {
-  const inputs = staged.map(stagedApplyInput);
-  if (bodyStorage === 'chunked') return applyVerifiedCompanionFramedSyncTransfers(db, inputs, adoption);
-  const prepared = [];
-  for (const input of inputs) prepared.push(await prepareCompanionFramedSyncTransfer(db, input));
-  return applyPreparedCompanionFramedSyncTransfers(db, prepared, adoption);
-}
-
-function stagedApplyInput(transfer: NativeCompanionFramedSyncStagedTransfer): CompanionFramedSyncApplyInput {
-  return { stagingKind: transfer.staging_kind, stagingPath: transfer.staging_path,
-    transferId: hexToBytes(transfer.transfer_id), senderDeviceId: transfer.sender_device_id,
-    senderLibraryEpoch: transfer.sender_library_epoch, receiverDeviceId: transfer.receiver_device_id,
-    receiverLibraryEpoch: transfer.receiver_library_epoch, resourceStorageKeys: transfer.resource_storage_keys };
+  await runCompanionSyncWriterTask(() => owner.runWriter((db) => prepareSyncGroupOverwrite(db, progress)));
+  const [local, inventory] = await Promise.all([
+    owner.read((db) => localInventory(db, progress)), readCompanionRemoteFramedSyncInventory(args)
+  ]);
+  const remote = inventory.entries;
+  const differences = compareFramedSyncDatabaseInventories({ local, remote })
+    .filter((difference) => difference.direction === 'remote_to_local');
+  const dependencies = framedSyncOrderBodyDependencies({ local, remote })
+    .filter((difference) => difference.direction === 'remote_to_local');
+  const pulled = await pullInventoryDifferences(args, differences, inventory.roundId, dependencies);
+  const confirmed = await readCompanionRemoteFramedSyncInventory(args);
+  const confirmedRemote = confirmed.entries;
+  await runCompanionSyncWriterTask(() => owner.runWriter((db) => db.transaction(async (tx) => {
+    const current = await localInventory(tx, progress);
+    if (compareFramedSyncDatabaseInventories({ local: current, remote: confirmedRemote })
+      .some((difference) => difference.direction === 'remote_to_local')) return;
+    await finishSyncGroupOverwriteProgress(tx, progress);
+    await finishSyncGroupLocalAdoption(tx, adoption);
+  })));
+  const resources = await runCompanionFramedSyncResourceRound(args, confirmed.roundId,
+    confirmedRemote.filter(entry => entry.objectType === 'node').map(entry => entry.globalId));
+  return { ...pulled, sent: [], resources };
 }

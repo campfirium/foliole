@@ -9,6 +9,8 @@ import { createBetterSqliteDbPort } from '../../../../../../electron/database/be
 import { closeLibraries, createPeer, edit, root, startLibraries } from '../../../../../../electron/database/syncEmptyLibraryTestSupport.js';
 import { bootstrapCompanionDatabase } from '../../../../../../lib/core/database/companionDatabaseLifecycle.js';
 import type { CompanionFramedSyncOutboundValue } from '../../../../../../lib/core/sync/framedSyncCompanionOutboundContract.js';
+import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
+import { readFramedSyncPublishedFactOperation } from '../../../../../../lib/core/sync/framedSyncPublishedFactOperation.js';
 import { collectNodeVersionPayloads } from '../../../../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { applySyncNodesWithDbPort } from '../../../../../../lib/core/sync/syncNodeApplyExecutor.js';
 import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionRecords } from '../../../../../../lib/core/sync/syncNodeGraph.js';
@@ -20,23 +22,32 @@ import { prepareCompanionFramedSyncOutbound } from './companionFramedSyncOutboun
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
-function stage(db: Database.Database, prefix: string, value: CompanionFramedSyncOutboundValue) {
+async function stage(db: Database.Database, prefix: string, value: CompanionFramedSyncOutboundValue, source: Database.Database) {
   installCompanionFramedSyncStaging(db, prefix);
   const transfer = hexToBytes(value.transfer_id);
   const attempt = new Uint8Array(16).fill(2);
   db.prepare(`INSERT INTO ${prefix}_transfers VALUES
     (?, ?, 'sender', 'sender-epoch', 'receiver', 'receiver-epoch', ?, 'ready_to_apply')`)
     .run(transfer, hexToBytes(value.content_id), attempt);
-  value.fact_message_bytes_list.forEach((bytes, index) => {
+  const header = decodeAndValidateProtocolMessage(Uint8Array.from(value.header_message_bytes), 2);
+  const count = (header.payload.manifest as { facts: unknown[] }).facts.length;
+  for (let index = 0; index < count; index += 1) {
+    const result = await readFramedSyncPublishedFactOperation(createBetterSqliteDbPort(source), {
+      group_id: 'group', sender_device_id: 'sender', sender_library_epoch: 'sender-epoch',
+      receiver_device_id: 'receiver', receiver_library_epoch: 'receiver-epoch',
+      transfer_id: value.transfer_id, fact_index: index, fragment_index: 0
+    });
     db.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, ?, 3, ?)`)
-      .run(transfer, attempt, String(index), new Uint8Array(bytes));
-  });
+      .run(transfer, attempt, String(index), new Uint8Array(result.message_bytes));
+  }
   for (const blob of value.blobs) {
-    expect(blob.data_text).toBeTypeOf('string');
+    const data = source.prepare('SELECT data FROM framed_sync_available_blobs WHERE sha256 = ?')
+      .pluck().get(hexToBytes(blob.sha256)) as Uint8Array;
+    expect(data.byteLength).toBe(Number(blob.byte_length));
     db.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, ?, ?)`)
       .run(transfer, hexToBytes(blob.sha256), Number(blob.byte_length), blob.role, Number(blob.required));
     db.prepare(`INSERT INTO ${prefix}_available_blobs VALUES (?, ?, ?)`)
-      .run(hexToBytes(blob.sha256), Number(blob.byte_length), Buffer.from(blob.data_text!));
+      .run(hexToBytes(blob.sha256), Number(blob.byte_length), data);
   }
 }
 
@@ -62,7 +73,10 @@ it.each(['android', 'ios'] as const)('recovers %s atomic business apply after re
     receiver_device_id: 'receiver', receiver_library_epoch: 'receiver-epoch',
     transfer_id: value.transfer_id
   });
-  expect(restored).toEqual({ ...value, publication_state: 'identical' });
+  const { batch_ready, ...immutable } = value;
+  expect(batch_ready).toBe(true);
+  expect(restored).not.toHaveProperty('batch_ready');
+  expect(restored).toEqual({ ...immutable, publication_state: 'identical' });
   const file = path.join(root, `${kind}-business.db`);
   const stagingPath = path.join(root, `${kind}-staging.db`);
   let receiver = new Database(file);
@@ -70,7 +84,7 @@ it.each(['android', 'ios'] as const)('recovers %s atomic business apply after re
   try {
     await bootstrapCompanionDatabase(createBetterSqliteDbPort(receiver),
       { allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06' });
-    stage(staging, `framed_sync_${kind}`, value);
+    await stage(staging, `framed_sync_${kind}`, value, source.db);
     const input = { receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch',
       senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch', stagingKind: kind,
       stagingPath, transferId: hexToBytes(value.transfer_id) };
@@ -89,7 +103,8 @@ it.each(['android', 'ios'] as const)('recovers %s atomic business apply after re
     expect(receiver.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(original)).toBeNull();
     expect(receiver.prepare('SELECT COUNT(*) FROM node_sync_version_parents').pluck().get()).toBe(1);
     expect(receiver.prepare('SELECT COUNT(*) FROM framed_sync_receipts').pluck().get()).toBe(1);
-    expect(receiver.prepare('SELECT CAST(data AS TEXT) FROM content_blob_data').pluck().all()).toEqual(['Current body']);
+    expect(receiver.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic')).toBe('Current body');
+    expect(receiver.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
   } finally { receiver.close(); staging.close(); }
 });
 
@@ -112,7 +127,7 @@ it.each(['android', 'ios'] as const)('preserves a %s receiver original body when
   const stagingPath = path.join(root, `${kind}-preserve.db`);
   const staging = new Database(stagingPath);
   try {
-    stage(staging, `framed_sync_${kind}`, value);
+    await stage(staging, `framed_sync_${kind}`, value, source.db);
     await applyCompanionFramedSyncTransfer(receiver.port, {
       receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch',
       senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch', stagingKind: kind,

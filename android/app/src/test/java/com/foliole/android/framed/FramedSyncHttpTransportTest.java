@@ -93,6 +93,11 @@ public final class FramedSyncHttpTransportTest {
     @Test
     public void preservesRecoverableDetailsNeededForRoundContinuation() throws Exception {
         assertPreservedError("framed_sync_node_parent_missing:parent-1");
+        assertPreservedError("node_position_lineage_unproven:node-1");
+        assertPreservedError("parent_order_position_lineage_unproven:version-1");
+        assertPreservedError("sync_parent_order_body_unavailable:version-1");
+        assertPreservedError("framed_sync_review_node_missing:node-1");
+        assertPreservedError("framed_sync_parent_relation_version_missing:version-1");
         assertPreservedError("framed_sync_source_changed");
         assertPreservedError("framed_sync_difference_request_source_changed");
     }
@@ -115,7 +120,7 @@ public final class FramedSyncHttpTransportTest {
         }
     }
 
-    private static Map<String, String> memberAuth() {
+    static Map<String, String> memberAuth() {
         Map<String, String> result = new LinkedHashMap<>();
         result.put("X-Sync-Group-Id", "group-a");
         result.put("X-Device-Id", "device-a");
@@ -125,7 +130,7 @@ public final class FramedSyncHttpTransportTest {
         return result;
     }
 
-    private static void serveOne(
+    static void serveOne(
         ServerSocket server,
         AtomicReference<byte[]> body,
         AtomicReference<String> group,

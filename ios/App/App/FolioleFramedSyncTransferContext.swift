@@ -34,7 +34,7 @@ enum FolioleFramedSyncDifferenceRequest {
     static func make(
         roundID: Data, objectID: String, frontierFactIDs: [String],
         requiredRelationIDs: [String], resourceHashes: [Data], reviewFactIDs: [String],
-        stateFactIDs: [String], objectType: String = "node"
+        stateFactIDs: [String], objectType: String = "node", resources: [Foliole_Sync_V22_ResourceDemand] = []
     ) throws -> FolioleFramedSyncValidatedMessage {
         var value = Foliole_Sync_V22_DifferenceRequest()
         value.roundID = roundID
@@ -43,6 +43,7 @@ enum FolioleFramedSyncDifferenceRequest {
             + reviewFactIDs.map { identity(.review, objectID, $0, objectType) }
             + stateFactIDs.map { identity(.objectState, objectID, $0, objectType) }
         value.blobHashes = resourceHashes
+        value.resources = resources
         var message = Foliole_Sync_V22_ProtocolMessage()
         message.payload = .differenceRequest(value)
         return try FolioleFramedSyncCodec.validateOutbound(

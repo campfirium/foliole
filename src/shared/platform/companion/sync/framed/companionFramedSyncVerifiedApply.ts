@@ -1,5 +1,4 @@
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
-import type { SyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 
 import type { CompanionFramedSyncApplyInput } from './companionFramedSyncApply.js';
 import { STAGING_TABLES } from './companionFramedSyncStagingTables.js';
@@ -23,12 +22,12 @@ function stagingOwner(inputs: readonly CompanionFramedSyncApplyInput[]) {
 
 /** Explicit stable-storage candidate. Native staging retains pins until receipts are acknowledged. */
 export async function applyVerifiedCompanionFramedSyncTransfers(db: DbPort,
-  inputs: readonly CompanionFramedSyncApplyInput[], adoption?: SyncGroupLocalAdoption) {
+  inputs: readonly CompanionFramedSyncApplyInput[]) {
   const owner = stagingOwner(inputs);
-  if (!owner) return applyVerifiedCompanionBatchInTransaction(db, inputs, adoption);
+  if (!owner) return applyVerifiedCompanionBatchInTransaction(db, inputs);
   await db.run(`ATTACH DATABASE ${owner.path} AS ${owner.alias}`);
   try {
-    return await applyVerifiedCompanionBatchInTransaction(db, inputs, adoption);
+    return await applyVerifiedCompanionBatchInTransaction(db, inputs);
   } finally {
     await db.run(`DETACH DATABASE ${owner.alias}`);
   }

@@ -68,7 +68,8 @@ function sameManifestDescriptor(
 }
 
 function copyDescriptor(descriptor: BlobDescriptor): BlobDescriptor {
-  return { byteLength: descriptor.byteLength, sha256: descriptor.sha256.slice() };
+  return { byteLength: descriptor.byteLength, sha256: descriptor.sha256.slice(),
+    ...(descriptor.role === undefined ? {} : { role: descriptor.role }) };
 }
 
 function copyManifestDescriptor(descriptor: ManifestBlobDescriptor): ManifestBlobDescriptor {

@@ -7,7 +7,7 @@ import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncSta
 import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 import { loadDesktopWorkgroupKey } from './workgroupKeyStore.js';
 
-export function loadRoundRuntime(peer: DesktopSyncGroupPeer, bodyStorage: 'continuous' | 'chunked') {
+export function loadRoundRuntime(peer: DesktopSyncGroupPeer) {
   return runWithDatabaseConnectionOwner(async () => {
     const workgroup = loadDesktopWorkgroupKey(peer.group_id);
     if (!workgroup) throw new Error('sync_group_workgroup_key_missing');
@@ -20,7 +20,7 @@ export function loadRoundRuntime(peer: DesktopSyncGroupPeer, bodyStorage: 'conti
       groupKey: new Uint8Array(Buffer.from(workgroup.group_key, 'base64url')),
       groupSecret: workgroup.group_key,
       noncePort: createDesktopFramedSyncSessionNoncePort(db),
-      staging: createDesktopFramedSyncStaging(db, bodyStorage)
+      staging: createDesktopFramedSyncStaging(db)
     };
   });
 }

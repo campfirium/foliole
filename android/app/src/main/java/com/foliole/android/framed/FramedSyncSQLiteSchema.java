@@ -53,6 +53,8 @@ final class FramedSyncSQLiteSchema {
             "framed_sync_android_available_blobs(sha256))");
         installResources(database);
         installReceipts(database);
+        FramedSyncCompletedInboundCleanup.migratePayloads(database);
+        FramedSyncSQLiteFactLocators.upgrade(database);
     }
 
     private static void installResources(SQLiteDatabase database) {

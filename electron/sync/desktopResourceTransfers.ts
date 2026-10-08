@@ -4,7 +4,6 @@ import { recordFramedSyncResourceAvailability } from '../../lib/core/database/fr
 import type { ArticleAttachmentNeed } from '../../lib/core/sync/articleAttachmentNeeds.js';
 import { createAttachmentReceiveCheckpoint } from '../../lib/core/sync/attachmentReceiveCheckpoint.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
-import { refreshNodeInlineBodiesForHashes } from '../../lib/core/sync/nodeInlineBodyProjection.js';
 import type { ResourceTransfer } from '../../lib/core/sync/resourceProviderPass.js';
 import { classifyResourceFailure, resourceKey, type ResourceNeed } from '../../lib/platform/resourceAvailabilityContract.js';
 import { resolveAttachmentStoragePath } from '../attachments/resourceResolver.js';
@@ -69,7 +68,6 @@ async function transferBlobs(peer: DesktopResourceProvider, needs: ResourceNeed[
         await tx.run('INSERT OR REPLACE INTO content_blob_data (hash, data) VALUES (?, ?)', [blob.hash, body]);
         await tx.run("UPDATE content_blobs SET availability = 'cached', cached_at = ?, last_verified_at = ? WHERE hash = ?",
           [now, now, blob.hash]);
-        await refreshNodeInlineBodiesForHashes(tx, [blob.hash]);
       }));
       result.ready.push(key);
     } catch { result.errors[key] = 'protocol_error'; }

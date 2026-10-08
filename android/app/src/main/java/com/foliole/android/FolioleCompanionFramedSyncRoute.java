@@ -1,12 +1,16 @@
 package com.foliole.android;
 
 import android.util.Base64;
+import android.content.Context;
 import com.foliole.android.framed.FramedSyncInventoryWire;
 import com.foliole.android.framed.FramedSyncPreamble;
+import com.foliole.android.framed.FramedSyncPayloadBudget;
+import com.foliole.android.framed.FramedSyncReceiptBody;
+import com.foliole.android.framed.FramedSyncPayloadBudgetRegistry;
 import com.foliole.android.framed.FramedSyncSessionContext;
 import com.foliole.android.framed.FramedSyncSessionNonceStore;
-import com.foliole.android.framed.FramedSyncSessionReader;
-import com.foliole.android.framed.FramedSyncSessionWriter;
+import com.foliole.android.framed.FramedSyncSessionRequest;
+import com.foliole.android.framed.FramedSyncSessionFile;
 import com.foliole.android.framed.FramedSyncTransferContext;
 import com.foliole.android.framed.FramedSyncTransferReader;
 import com.foliole.android.framed.FramedSyncTransferSQLite;
@@ -27,7 +31,7 @@ final class FolioleCompanionFramedSyncRoute {
     private FolioleCompanionFramedSyncRoute() {}
 
     static void handle(
-        JSONObject config,
+        Context hostContext, JSONObject config,
         FolioleCompanionSyncGroupDataBridge bridge,
         FolioleCompanionHttpRequest request,
         OutputStream output,
@@ -41,10 +45,11 @@ final class FolioleCompanionFramedSyncRoute {
                 output, 415, new JSONObject().put("error", "framed_sync_content_type_required"));
             return;
         }
+        var budget = FramedSyncPayloadBudgetRegistry.current();
         String groupId = config.getJSONObject("sync_group").getString("group_id");
         String localDeviceId = config.getString("device_id");
         String localEpoch = required(
-            bridge.request("load_member_state", new JSONObject()).optString("library_epoch", null));
+            bridge.request("load_member_state", new JSONObject(), budget).optString("library_epoch", null));
         Map<String, String> identity = identity(request.path);
         if (!authenticatedPeer.equals(identity.get("initiator_device_id"))) {
             throw new SecurityException("framed_sync_initiator_identity_mismatch");
@@ -57,56 +62,81 @@ final class FolioleCompanionFramedSyncRoute {
         }
         String senderEpoch = identity.get("initiator_library_epoch");
         byte[] groupKey = groupKey(groupId);
-        byte[] response;
         try (FolioleCompanionFramedHttpBody body = FolioleCompanionFramedHttpBody.spool(
-                request.bodyStream(), requestDirectory, request.signatureBodySha256());
+                request.bodyStream(), requestDirectory, request.signatureBodySha256(), budget);
              BufferedInputStream input = new BufferedInputStream(body.open(), FramedSyncPreamble.BYTES)) {
             FramedSyncPreamble preamble = peekPreamble(input);
-            response = preamble.contextKind() == 1
-                ? inventory(input, groupKey, new FramedSyncSessionContext(groupId,
+            if (preamble.contextKind() == 1) {
+                inventory(hostContext, input, groupKey, new FramedSyncSessionContext(groupId,
                     authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge, nonceStore, new JSONObject()
                     .put("group_id", groupId).put("peer_device_id", authenticatedPeer)
-                    .put("peer_library_epoch", senderEpoch))
-                : transfer(input, groupKey, new FramedSyncTransferContext(groupId,
-                    authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge,
-                    transferStore, localDeviceId, localEpoch);
+                    .put("peer_library_epoch", senderEpoch), requestDirectory, output, localDeviceId, localEpoch, budget);
+                return;
+            }
+            FolioleCompanionFramedSyncSequenceRoute.respond(body.file, requestDirectory, output,
+                localDeviceId, localEpoch, budget, unit -> {
+                    if (unit.isReceipt()) {
+                        FolioleCompanionFramedSyncServerOutbound.receipt(hostContext, bridge, unit.input(), groupKey,
+                            unit.preamble().contextId(), new JSONObject().put("group_id", groupId)
+                                .put("sender_device_id", localDeviceId).put("sender_library_epoch", localEpoch)
+                                .put("receiver_device_id", authenticatedPeer).put("receiver_library_epoch", senderEpoch), budget);
+                        return null;
+                    }
+                    return transfer(unit.input(), groupKey, new FramedSyncTransferContext(groupId,
+                        authenticatedPeer, senderEpoch, localDeviceId, localEpoch), bridge,
+                        transferStore, localDeviceId, localEpoch, budget);
+                });
         } catch (FramedSyncValidationException error) {
             throw new IllegalArgumentException(error.code());
         }
-        FolioleCompanionHttpResponse.framed(output, response, localDeviceId, localEpoch);
     }
 
-    private static byte[] inventory(
-        InputStream input,
+    private static void inventory(
+        Context hostContext, InputStream input,
         byte[] groupKey,
         FramedSyncSessionContext context,
         FolioleCompanionSyncGroupDataBridge bridge,
         FramedSyncSessionNonceStore nonceStore,
-        JSONObject peerContext
+        JSONObject peerContext, File directory, OutputStream output, String deviceId, String epoch,
+        FramedSyncPayloadBudget budget
     ) throws Exception {
-        FramedSyncSessionReader.Result requestSession = FramedSyncSessionReader.read(
-            input, groupKey, context, FramedSyncInventoryWire.MAX_SESSION_FRAMES);
-        byte[] roundId = FramedSyncInventoryWire.decodeRoundId(requestSession.messages());
-        JSONObject inventory = bridge.request("read_framed_inventory", peerContext);
-        return FramedSyncSessionWriter.encode(groupKey, context, FramedSyncInventoryWire.encode(
-            FolioleCompanionFramedSyncInventory.read(inventory), roundId), nonceStore);
+        FramedSyncSessionRequest request = FramedSyncSessionRequest.read(input, groupKey, context, budget);
+        if (request.isDifference()) {
+            JSONObject selection = new JSONObject().put("group_id", peerContext.getString("group_id"))
+                .put("sender_device_id", deviceId).put("sender_library_epoch", epoch)
+                .put("receiver_device_id", peerContext.getString("peer_device_id"))
+                .put("receiver_library_epoch", peerContext.getString("peer_library_epoch"));
+            if (request.differenceCount() > 1) {
+                FolioleCompanionFramedSyncServerBatch.respond(hostContext, bridge, request, selection, groupKey, directory, output, budget);
+                return;
+            }
+            selection.put("difference_request_hex", FolioleCompanionFramedSyncOutbound.hex(request.differenceBytes()));
+            FolioleCompanionFramedSyncServerOutbound.respond(
+                hostContext, bridge, selection, groupKey, directory, output, budget);
+            return;
+        }
+        byte[] roundId = request.roundId();
+        var inventory = FolioleCompanionFramedSyncInventory.readLeased(bridge, peerContext, budget);
+        try (FramedSyncSessionFile response = FramedSyncSessionFile.create(directory, groupKey, context,
+            consumer -> FramedSyncInventoryWire.emit(inventory,
+                roundId, consumer), nonceStore, budget)) {
+            FolioleCompanionHttpResponse.framed(output, response, deviceId, epoch);
+        }
     }
 
-    private static byte[] transfer(
+    private static FramedSyncReceiptBody transfer(
         InputStream input,
         byte[] groupKey,
         FramedSyncTransferContext context,
         FolioleCompanionSyncGroupDataBridge bridge,
         FramedSyncTransferSQLite store,
         String localDeviceId,
-        String localEpoch
+        String localEpoch, FramedSyncPayloadBudget budget
     ) throws Exception {
-        synchronized (store) {
-            FramedSyncTransferReader.Result received = store.receive(input, groupKey, context);
-            TransferReceipt receipt = FolioleCompanionFramedSyncApply.apply(
-                bridge, store, received.transferId(), context, localDeviceId, localEpoch);
-            return store.receipt(groupKey, receipt);
-        }
+        FramedSyncTransferReader.Result received = store.receive(input, groupKey, context, budget);
+        TransferReceipt receipt = FolioleCompanionFramedSyncApply.apply(
+            bridge, store, received.transferId(), context, localDeviceId, localEpoch, budget);
+        return store.receiptBody(groupKey, receipt, budget);
     }
 
     private static FramedSyncPreamble peekPreamble(BufferedInputStream input) throws Exception {
@@ -120,12 +150,6 @@ final class FolioleCompanionFramedSyncRoute {
         }
         input.reset();
         return FramedSyncPreamble.decode(encoded);
-    }
-
-    private static String hex(byte[] value) {
-        StringBuilder result = new StringBuilder(value.length * 2);
-        for (byte item : value) result.append(String.format("%02x", Byte.toUnsignedInt(item)));
-        return result.toString();
     }
 
     private static boolean contentType(FolioleCompanionHttpRequest request) {

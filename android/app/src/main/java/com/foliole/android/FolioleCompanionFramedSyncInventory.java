@@ -1,6 +1,7 @@
 package com.foliole.android;
 
 import com.foliole.android.framed.FramedSyncContract;
+import com.foliole.android.framed.FramedSyncPayloadBudget;
 import com.foliole.sync.v22.InventoryEntry;
 import com.google.protobuf.ByteString;
 import java.util.ArrayList;
@@ -10,6 +11,14 @@ import org.json.JSONObject;
 
 final class FolioleCompanionFramedSyncInventory {
     private FolioleCompanionFramedSyncInventory() {}
+
+    static List<InventoryEntry> readLeased(FolioleCompanionSyncGroupDataBridge bridge, JSONObject context,
+        FramedSyncPayloadBudget budget) throws Exception {
+        try (var loan = budget.acquire(FramedSyncPayloadBudget.Direction.OUTBOUND, FramedSyncPayloadBudget.Lane.PAYLOAD)) {
+            return read(bridge.request("read_framed_inventory", new JSONObject(context.toString())
+                .put("payload_loan", FolioleCompanionFramedSyncPayloadBudgetActions.description(loan)), budget));
+        }
+    }
 
     static List<InventoryEntry> read(JSONObject value) throws Exception {
         JSONArray encoded = value.getJSONArray("entries");

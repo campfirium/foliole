@@ -6,7 +6,6 @@ import { expect, it } from 'vitest';
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
-import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
@@ -29,8 +28,8 @@ it.each([false, true])('fills missing external document bytes with original iden
       try {
         const port = createBetterSqliteDbPort(db);
         await port.transaction(async (tx) => {
-          if (snapshot === fixture.leftSnapshot) await upsertTextBodyBlob(tx, body, record.updated_at, hash);
-          await applySyncObjectInTransaction(tx, record);
+          await applySyncObjectInTransaction(tx, { ...record, payload_json: JSON.stringify({ ...payload,
+            ...(snapshot === fixture.leftSnapshot ? { content: body } : {}) }) });
         });
       } finally { db.close(); }
     }
@@ -54,7 +53,7 @@ it.each([false, true])('fills missing external document bytes with original iden
     expect(await reconnectFixturePeer(fixture.left, receiver)).toMatchObject({ complete: true });
     const db = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
     try {
-      expect(db.prepare('SELECT CAST(data AS TEXT) FROM content_blob_data WHERE hash = ?').pluck().get(hash)).toBe(body);
+      expect(db.prepare('SELECT content FROM external_documents WHERE body_blob_hash = ?').pluck().get(hash)).toBe(body);
       expect(db.prepare("SELECT object_id, content_hash FROM sync_object_state WHERE object_type = 'external_document'").get())
         .toEqual({ object_id: record.object_id, content_hash: record.content_hash });
       expect(db.prepare('SELECT body_blob_hash FROM external_documents WHERE document_id = ?').pluck().get(record.object_id)).toBe(hash);

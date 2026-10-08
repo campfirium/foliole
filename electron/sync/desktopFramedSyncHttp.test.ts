@@ -33,6 +33,17 @@ async function* requestFrames() {
   yield { ciphertext: Uint8Array.of(0, 255, 7), headerBytes: header };
 }
 
+it('disposes the owned body when request setup fails before consuming it', async () => {
+  let disposed = false;
+  const body = { ...requestBody(), dispose: async () => { disposed = true; } };
+  await expect(postDesktopFramedSync({
+    body, endpointUrl: 'invalid endpoint', groupId: 'group-a',
+    localDeviceId: 'device-a', localLibraryEpoch: 'epoch-a', pathWithQuery: FRAMED_SYNC_PATH,
+    remoteDeviceId: 'device-b', remoteLibraryEpoch: 'epoch-b', secret
+  })).rejects.toThrow();
+  expect(disposed).toBe(true);
+});
+
 describe('desktop framed sync HTTP client', () => {
   it('streams binary bytes with member auth and validates responder identity', async () => {
     let received = Buffer.alloc(0);

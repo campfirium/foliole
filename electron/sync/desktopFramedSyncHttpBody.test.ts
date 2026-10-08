@@ -43,7 +43,7 @@ it('authenticates a deterministic 50 MiB HTTP body on disk and reads bounded byt
       expect(bytes.byteLength).toBeLessThanOrEqual(64 * 1024);
       total += bytes.byteLength;
       digest.update(bytes);
-      tail = bytes[bytes.byteLength - 1];
+      tail = bytes[bytes.byteLength - 1]!;
     }
     let expectedTail = 0;
     for await (const bytes of fixtureBytes(size)) expectedTail = bytes[bytes.byteLength - 1]!;

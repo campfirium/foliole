@@ -54,6 +54,14 @@ message FactRecord {
   CanonicalObject body = 3;
   repeated BlobReference blobs = 4;
 }
+message FactFragment {
+  FactIdentity identity = 1;
+  bytes shared_state_hash = 2;
+  bytes encoded_sha256 = 3;
+  uint64 total_byte_length = 4;
+  uint64 offset = 5;
+  bytes data = 6;
+}
 message InventoryEntry {
   string object_type = 1;
   string global_id = 2;
@@ -127,6 +135,15 @@ message DifferenceRequest {
   bytes round_id = 1;
   repeated FactIdentity facts = 2;
   repeated bytes blob_hashes = 3;
+  repeated ResourceDemand resources = 4;
+}
+message ResourceDemand {
+  string demand_id = 1;
+  string global_id = 2;
+  string version_id = 3;
+  string body_hash = 4;
+  string storage_key = 5;
+  bytes shared_state_hash = 6;
 }
 message FactDescriptor {
   FactIdentity identity = 1;
@@ -217,5 +234,6 @@ message ProtocolMessage {
     RoundReceipt round_receipt = 15;
     TransferTermination transfer_termination = 16;
     ProtocolError error = 17;
+    FactFragment fact_fragment = 18;
   }
 }

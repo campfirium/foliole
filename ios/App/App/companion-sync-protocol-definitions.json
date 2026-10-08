@@ -10,6 +10,7 @@
       "device-delivery-receipts-v1",
       "device-sync-groups-v1",
       "dynamic-node-version-chains-v1",
+      "framed-sync-transfer-sequences-v1",
       "framed-sync-v22",
       "global-object-identity-v2",
       "group-key-routing-v1",
@@ -495,7 +496,9 @@
         "storage": [
           "nodes"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "structure",
@@ -507,7 +510,9 @@
         "storage": [
           "parent_child_order"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "structure",
@@ -519,7 +524,9 @@
         "storage": [
           "external_documents"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "structure",
@@ -531,7 +538,9 @@
         "storage": [
           "external_search_folders"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "device",
+        "recovery": "saved"
       },
       {
         "category": "structure",
@@ -543,7 +552,10 @@
         "storage": [
           "import_sources"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "source",
+        "recovery": "saved",
+        "ownerVia": "watched_folder"
       },
       {
         "category": "structure",
@@ -555,7 +567,9 @@
         "storage": [
           "watched_folder_bindings"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "device",
+        "recovery": "saved"
       },
       {
         "category": "content",
@@ -567,7 +581,9 @@
         "storage": [
           "pdf_page_text"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "resource",
@@ -580,7 +596,9 @@
           "content_blobs",
           "content_blob_data"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "activity",
@@ -592,7 +610,9 @@
         "storage": [
           "node_open_state"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "reading",
@@ -604,7 +624,9 @@
         "storage": [
           "node_reading"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "reading",
@@ -616,7 +638,9 @@
         "storage": [
           "node_reading_host_state"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "device",
+        "recovery": "saved"
       },
       {
         "category": "reading",
@@ -628,7 +652,9 @@
         "storage": [
           "node_reading_host_state"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "device",
+        "recovery": "saved"
       },
       {
         "category": "review",
@@ -640,7 +666,9 @@
         "storage": [
           "node_review"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "content",
@@ -652,7 +680,9 @@
         "storage": [
           "node_text_alternatives"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "review",
@@ -664,7 +694,9 @@
         "storage": [
           "review_log"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "activity",
@@ -676,7 +708,9 @@
         "storage": [
           "foreground_daily_time"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "review",
@@ -689,7 +723,9 @@
           "topic_daily_count_entries",
           "topic_daily_counts"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "settings",
@@ -701,7 +737,9 @@
         "storage": [
           "setting_records"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "workspace",
+        "recovery": "saved"
       },
       {
         "category": "settings",
@@ -713,7 +751,9 @@
         "storage": [
           "setting_records"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "device",
+        "recovery": "saved"
       },
       {
         "category": "ui_session",
@@ -725,7 +765,9 @@
         "storage": [
           "workspace_meta"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "device",
+        "recovery": "saved"
       },
       {
         "category": "ui_session",
@@ -737,7 +779,9 @@
         "storage": [
           "node_view_state"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "device",
+        "recovery": "saved"
       },
       {
         "category": "ui_session",
@@ -749,7 +793,9 @@
         "storage": [
           "node_view_state"
         ],
-        "userVisible": true
+        "userVisible": true,
+        "ownership": "device",
+        "recovery": "saved"
       },
       {
         "category": "diagnostic",
@@ -761,7 +807,9 @@
         "storage": [
           "sync_delivery_receipts"
         ],
-        "userVisible": false
+        "userVisible": false,
+        "ownership": "device",
+        "recovery": "regenerated"
       }
     ],
     "reviewRequiredPushIssueObjectTypes": [

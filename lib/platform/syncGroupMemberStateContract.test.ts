@@ -4,6 +4,7 @@ import {
   parseSyncGroupMemberState,
   SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION
 } from './syncGroupMemberStateContract.js';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from './syncProtocolContract.js';
 
 it('requires the version frontier proof and restore state in member state v3', () => {
   const current = {
@@ -13,6 +14,10 @@ it('requires the version frontier proof and restore state in member state v3', (
     source_proof_revisions: {}
   };
   expect(parseSyncGroupMemberState(current)).toEqual(current);
+  expect(parseSyncGroupMemberState({ ...current, protocol: CURRENT_SYNC_PROTOCOL_DESCRIPTOR }).protocol)
+    .toEqual(CURRENT_SYNC_PROTOCOL_DESCRIPTOR);
+  expect(() => parseSyncGroupMemberState({ ...current, protocol: {} }))
+    .toThrow('sync_group_member_state_invalid');
   expect(() => parseSyncGroupMemberState({ ...current, contract_version: 1 }))
     .toThrow('sync_group_member_state_invalid');
   expect(() => parseSyncGroupMemberState({ ...current, library_epoch: undefined }))

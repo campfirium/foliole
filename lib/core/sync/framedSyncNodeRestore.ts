@@ -19,7 +19,7 @@ import {
 import { restoreTopicTextBodyBlobs } from './topicTextFramedBodies.js';
 import { textAlternativesSchema, type TopicTextBody } from './topicTextState.js';
 
-const decoder = new TextDecoder('utf-8', { fatal: true });
+const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true });
 
 function fieldsByName(fields: readonly CanonicalField[], expected: readonly string[], error: string) {
   const result = new Map(fields.map((entry) => [entry.name, entry.value]));
@@ -152,9 +152,7 @@ export function restoreFramedSyncNodeIdentityFact(fact: CanonicalFact): NativeSy
   return restoreNodeFields(fact, null, null);
 }
 
-export type FramedSyncNodeMetadata = Omit<NativeSyncNodeRecord, 'body_text' | 'alternative_bodies' | 'snapshot'> & {
-  snapshot: Omit<NativeSyncNodeRecord['snapshot'], 'content'>;
-};
+export type FramedSyncNodeMetadata = import('./syncNodeRecordSource.js').SyncNodeRecordMetadata;
 
 /** Restore only the signed node/version fields. Body ownership is verified independently. */
 export function restoreFramedSyncNodeMetadata(fact: CanonicalFact): FramedSyncNodeMetadata {
@@ -192,7 +190,7 @@ function restoreNodeFields(fact: CanonicalFact, body: string | null, bodyHash: s
     object_type: 'node',
     parent_version_id: readString(get('parent_version_id'), true),
     parent_version_ids: readStringList(get('parent_version_ids')),
-    snapshot: body === null ? { ...snapshot, content: null } : snapshot,
+    snapshot: { ...snapshot, content: body },
     updated_at: readString(get('updated_at'))!,
     version_created_at: readString(get('version_created_at'), true),
     version_id: fact.factId

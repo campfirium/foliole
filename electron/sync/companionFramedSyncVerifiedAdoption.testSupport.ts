@@ -1,19 +1,18 @@
-import { stageTextBodyContent, adoptVerifiedBody } from '../../lib/core/sync/bodyContentWrite.js';
 import { canonicalContentId } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { restoreFramedSyncNodeMetadata } from '../../lib/core/sync/framedSyncNodeRestore.js';
 import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
-import { applyVerifiedFramedFactUnit } from '../../lib/core/sync/framedSyncVerifiedFactApply.js';
 import { canonicalFactFromValidatedMessage } from '../../lib/core/sync/framedSyncWireFact.js';
 import { factToWire } from '../../lib/core/sync/framedSyncWireProjection.js';
 import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { verifiedCompanionFixture, type Kind } from './companionFramedSyncVerifiedApply.testSupport.js';
 
 export const adoption = { endpointUrl: 'http://localhost:38641', groupId: 'group-1',
   libraryEpoch: 'receiver-epoch', providerDeviceId: 'sender', providerDeviceName: 'Sender', providerPlatform: 'darwin' };
-export const largeBody = '\ufeff---\r\nkey: 中文😀\0\r\n---\r\n' + '中😀'.repeat(600_000);
+export const largeBody = '\ufeff---\r\nkey: 中文😀\0\r\n---\r\n' + '中😀'.repeat(100_000);
 type Host = Awaited<ReturnType<typeof verifiedCompanionFixture>>;
 type Projection = ReturnType<typeof projectFramedSyncNodeRecord>;
 
@@ -31,12 +30,8 @@ function rename(record: NativeSyncNodeRecord, id: string, body: string, parent: 
 }
 
 async function seedLocal(host: Host, record: NativeSyncNodeRecord) {
-  const projection = projectFramedSyncNodeRecord(rename(record, 'old-local', 'Original local body', null));
-  await host.port().transaction(async (tx) => {
-    const ref = await stageTextBodyContent(tx, 'Original local body');
-    await adoptVerifiedBody(tx, ref, record.updated_at);
-    await applyVerifiedFramedFactUnit(tx, projection.manifest.facts, { enqueueSearchInvalidations: false });
-  });
+  await applySyncNodesWithDbPort(host.port(), [rename(record, 'old-local', 'Original local body', null)],
+    { enqueueSearchInvalidations: false });
 }
 
 async function appendParent(host: Host, projection: Projection) {
@@ -51,7 +46,7 @@ async function appendParent(host: Host, projection: Projection) {
   host.native.prepare(`INSERT INTO ${host.prefix}_frames VALUES (?, ?, '0', 3, ?, ?, ?, ?)`)
     .run(transferId, attemptId, new Uint8Array(96), new Uint8Array(16), Uint8Array.of(1),
       encodeValidatedProtocolMessage('fact', factToWire(projection.manifest.facts[0]!)));
-  host.native.prepare(`INSERT INTO ${host.prefix}_available_blobs VALUES (?, 0)`).run(descriptor.sha256);
+  host.native.prepare(`INSERT INTO ${host.prefix}_available_blobs VALUES (?, 0, X'')`).run(descriptor.sha256);
   host.native.prepare(`INSERT INTO ${host.prefix}_blob_pins VALUES (?, ?, 0, 1, 1)`).run(transferId, descriptor.sha256);
   return input;
 }
@@ -74,7 +69,7 @@ export async function verifiedAdoptionFixture(kind: Kind) {
 }
 
 const businessTables = ['nodes', 'node_sync_versions', 'node_sync_version_parents', 'sync_object_state',
-  'content_bodies', 'content_body_chunks', 'content_blobs', 'framed_sync_receipts', 'sync_group_metadata',
+  'content_blobs', 'framed_sync_receipts', 'sync_group_metadata',
   'node_version_local_proof_state', 'node_version_local_source_revisions', 'framed_sync_inventory',
   'framed_sync_version_summary', 'sync_state_sequence'];
 
@@ -84,7 +79,7 @@ export function businessState(host: Host) {
 }
 
 export function nativeState(host: Host) {
-  return Object.fromEntries(['transfers', 'frames', 'blob_pins', 'available_blobs', 'available_blob_chunks']
+  return Object.fromEntries(['transfers', 'frames', 'blob_pins', 'available_blobs']
     .map((suffix) => [suffix, host.native.prepare(`SELECT * FROM ${host.prefix}_${suffix} ORDER BY rowid`).all()]));
 }
 

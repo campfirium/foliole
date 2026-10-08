@@ -15,8 +15,13 @@ final class FolioleCompanionCurrentGroupCredential {
     }
 
     static FolioleCompanionCurrentGroupCredential load(String groupId) throws Exception {
+        return load(groupId, null);
+    }
+
+    static FolioleCompanionCurrentGroupCredential load(String groupId,
+        com.foliole.android.framed.FramedSyncPayloadBudget budget) throws Exception {
         JSONObject result = FolioleCompanionSyncGroupDataBridge.current().request(
-            "load_current_credential", new JSONObject().put("group_id", groupId.trim())
+            "load_current_credential", new JSONObject().put("group_id", groupId.trim()), budget
         );
         String deviceId = result.optString("device_id", null);
         String workgroupKey = result.optString("workgroup_key", null);

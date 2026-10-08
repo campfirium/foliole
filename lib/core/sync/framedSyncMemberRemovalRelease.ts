@@ -15,6 +15,11 @@ export function framedSyncMemberRemovalReleaseStatements(groupId: string, sender
         WHERE EXISTS (SELECT 1 FROM framed_sync_outbound_publications publication
           WHERE publication.transfer_id = framed_sync_outbound_holds.transfer_id
             AND publication.receiver_device_id = framed_sync_outbound_holds.member_id
-            AND ${removedReceiver})`, params }
+            AND ${removedReceiver})`, params },
+    { sql: `DELETE FROM framed_sync_available_blobs WHERE sha256 IN (
+        SELECT ref.sha256 FROM framed_sync_outbound_blob_refs ref
+          JOIN framed_sync_outbound_publications publication ON publication.transfer_id = ref.transfer_id
+        WHERE ${removedReceiver}) AND ${UNOWNED_FRAMED_BODY}`, params }
   ];
 }
+import { UNOWNED_FRAMED_BODY } from './framedSyncFrozenBody.js';

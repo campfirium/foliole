@@ -19,6 +19,11 @@ enum FolioleCompanionSyncGroupMemberStateEndpoint {
             request, groupId: groupId, workgroupKey: workgroupKey,
             dataBridge: bridge, allowUnknownDevice: true
         )
+        return try apply(request, peer: peer, bridge: bridge, groupTag: groupTag, workgroupKey: workgroupKey)
+    }
+
+    static func apply(_ request: FolioleCompanionHttpMessage, peer: String,
+        bridge: FolioleCompanionSyncGroupDataRequesting, groupTag: String, workgroupKey: String) throws -> Accepted {
         let plaintext = try FolioleCompanionSyncGroupWorkgroup.decryptRequest(
             request, groupTag: groupTag, workgroupKey: workgroupKey
         )

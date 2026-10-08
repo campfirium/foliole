@@ -54,15 +54,17 @@ describe('Android Java SQL surface', () => {
       .map((match) => match[1]).sort();
     expect(methods).toEqual([
       'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest',
+      'configureFramedSyncPayloadBudget', 'closeFramedSyncPayloadBudget',
+      'validateFramedSyncPayloadLoan', 'releaseFramedSyncPayloadLoan',
       'downloadAttachmentResourceBatch',
       'downloadContentBlobBatch', 'finishAttachmentResourceBatch', 'finishContentBlobBatch',
       'loadDiscoveryCandidates', 'loadSyncGroupDeviceIdentity', 'loadSyncGroupProviderState', 'loadSyncParticipationState',
       'maintainAttachmentFiles',
-      'pullFramedSyncObject',
+      'pullFramedSyncObject', 'pullFramedSyncObjects',
       'readFramedSyncInventory',
       'readRemoteImageResponse', 'rejectSyncGroupJoinRequest',
       'resolveAttachmentResource', 'resolveSyncGroupDataRequest',
-      'sendFramedSyncTransfer',
+      'sendFramedSyncTransfer', 'sendFramedSyncTransfers',
       'setSyncEnabled', 'setSyncPaused', 'signCompanionSyncRequest',
       'stageAttachmentResourceBatch', 'startDiscoverySession', 'startSyncGroupProvider',
       'stopDiscoverySession', 'stopSyncGroupProvider', 'writeImageAttachment'

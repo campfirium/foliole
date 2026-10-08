@@ -138,6 +138,12 @@
       "payload_case": "fact"
     },
     {
+      "base64": "kgFpChsIAhIEbm9kZRoGbm9kZS0xIgl2ZXJzaW9uLTcSICIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiGiAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMyCBgIABMgEA",
+      "byte_length": 108,
+      "name": "fact-fragment",
+      "payload_case": "fact_fragment"
+    },
+    {
       "base64": "YksKIBEREREREREREREREREREREREREREREREREREREREREREiAzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMxiAgCAiAQA=",
       "byte_length": 77,
       "name": "blob-chunk",
@@ -175,5 +181,5 @@
     }
   ],
   "protocol_version": 22,
-  "schema_sha256": "3bf92bbb9c6f1d2fc5b3851f0a095cbf3993f58510f80da505c9b08fcd7c69c7"
+  "schema_sha256": "41425deec7797d690a91906a2c6dedf9c475a49f7971b71d5aa882756028e74e"
 }

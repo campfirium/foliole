@@ -6,6 +6,7 @@ public final class FramedSyncContract {
     public static final int IDENTIFIER_BYTES = 16;
     public static final int BLOB_CHUNK_BYTES = 512 * 1024;
     public static final long MAX_BLOB_BYTES = 8L * 1024 * 1024 * 1024;
+    public static final int MAX_BODY_BYTES = 1_048_576;
     public static final long MAX_TRANSFER_BYTES = 32L * 1024 * 1024 * 1024;
     public static final int MAX_BLOBS_PER_TRANSFER = 4_096;
     public static final int MAX_CANONICAL_DEPTH = 32;

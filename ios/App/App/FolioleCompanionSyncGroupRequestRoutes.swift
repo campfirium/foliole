@@ -34,18 +34,7 @@ extension FolioleCompanionSyncGroupJoinServer {
         }
         if request.method == "POST" && route == "/sync-group/member-state" {
             guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
-            let accepted = try FolioleCompanionSyncGroupMemberStateEndpoint.accept(
-                request,
-                bridge: dataBridge,
-                groupId: provider.groupId,
-                groupTag: try Self.requiredDiscovery(discovery, "group_tag"),
-                workgroupKey: provider.workgroupKey
-            )
-            if accepted.normalSyncReady {
-                memberStateReady[accepted.peer] = accepted.restoreId
-            } else {
-                memberStateReady.removeValue(forKey: accepted.peer)
-            }
+            let accepted = try acceptMemberState(request, bridge: dataBridge)
             try sendWorkgroup(
                 connection,
                 request,
@@ -61,8 +50,26 @@ extension FolioleCompanionSyncGroupJoinServer {
         try send(connection, 404, ["error": "not_found"])
     }
 
-    func authenticate(_ request: FolioleCompanionHttpMessage) throws -> String {
-        guard let dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
+    func acceptMemberState(_ request: FolioleCompanionHttpMessage,
+        bridge: FolioleCompanionSyncGroupDataRequesting) throws -> FolioleCompanionSyncGroupMemberStateEndpoint.Accepted {
+        let peer = try FolioleCompanionSyncGroupWorkgroup.authenticate(request,
+            groupId: provider.groupId, workgroupKey: provider.workgroupKey,
+            dataBridge: bridge, allowUnknownDevice: true)
+        do {
+            let accepted = try FolioleCompanionSyncGroupMemberStateEndpoint.apply(request, peer: peer,
+                bridge: bridge, groupTag: Self.requiredDiscovery(discovery, "group_tag"),
+                workgroupKey: provider.workgroupKey)
+            if accepted.normalSyncReady { memberStateReady[peer] = accepted.restoreId }
+            else { memberStateReady.removeValue(forKey: peer) }
+            return accepted
+        } catch {
+            memberStateReady.removeValue(forKey: peer)
+            throw error
+        }
+    }
+
+    func authenticate(_ request: FolioleCompanionHttpMessage, bridge: FolioleCompanionSyncGroupDataRequesting? = nil) throws -> String {
+        guard let dataBridge = bridge ?? dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
         let peer = try FolioleCompanionSyncGroupWorkgroup.authenticate(
             request,
             groupId: provider.groupId,

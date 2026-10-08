@@ -8,6 +8,9 @@ import {
 const encoder = new TextEncoder();
 
 function cryptoBytes(value: Uint8Array) {
+  if (value.buffer instanceof ArrayBuffer) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
   return new Uint8Array(value);
 }
 

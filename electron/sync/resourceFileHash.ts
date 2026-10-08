@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
+
+import { readFramedSyncFileChunks } from './framedSyncFileChunks.js';
 
 export async function hashResourceFile(filePath: string) {
   const digest = createHash('sha256');
-  for await (const chunk of createReadStream(filePath)) digest.update(chunk);
+  for await (const bytes of readFramedSyncFileChunks(filePath)) digest.update(bytes);
   return digest.digest('hex');
 }

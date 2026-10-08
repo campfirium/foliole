@@ -11,7 +11,9 @@ import { wireToFact } from './desktopFramedSyncProcessWire.js';
 
 /** A verified transfer awaiting apply remains authoritative after a receiver restart. */
 export async function loadDesktopFramedSyncReadyInbound(input: {
-  db: DbPort; published: PublishedTransfer; staging: FramedSyncStagingPort;
+  db: DbPort;
+  published: Pick<PublishedTransfer, 'context' | 'contentId' | 'manifestHash' | 'transferId'>;
+  staging: FramedSyncStagingPort;
 }) {
   const row = await readFramedSyncRow(input.db, `SELECT * FROM framed_sync_inbound_transfers
     WHERE transfer_id = ? AND state = 'ready_to_apply'`, [input.published.transferId]);

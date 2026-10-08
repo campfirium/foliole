@@ -14,6 +14,7 @@ import type { DbPort, DbRow } from '../../lib/core/sync/dbPort.js';
 import {
   assertInboundHeaderMatchesProposal,
   assertInboundProposalLimits,
+  sameFramedSyncContext,
   type InboundFactInput,
   type InboundFinalizeInput,
   type InboundFrameInput,
@@ -21,27 +22,7 @@ import {
   type InboundProposalInput
 } from '../../lib/core/sync/framedSyncStagingContract.js';
 
-const MANIFEST_DOMAIN = new TextEncoder().encode('foliole-framed-sync-content-v1');
-function u32(value: number) { const result = Buffer.alloc(4); result.writeUInt32BE(value); return result; }
-function u64(value: bigint) { const result = Buffer.alloc(8); result.writeBigUInt64BE(value); return result; }
-function data(value: Uint8Array) { return Buffer.concat([u32(value.byteLength), value]); }
-function compareBytes(left: Uint8Array, right: Uint8Array) { return Buffer.compare(left, right); }
-function compareText(left: unknown, right: unknown) {
-  return compareBytes(new TextEncoder().encode(String(left)), new TextEncoder().encode(String(right)));
-}
-function compareFactRows(left: DbRow, right: DbRow) {
-  return Number(left.fact_kind) - Number(right.fact_kind) || compareText(left.object_type, right.object_type) ||
-    compareText(left.global_id, right.global_id) || compareText(left.fact_id, right.fact_id);
-}
-function manifestBytes(facts: readonly DbRow[], declaration: InboundHeaderDeclarationInput) {
-  const chunks: Uint8Array[] = [data(MANIFEST_DOMAIN), u32(facts.length)];
-  for (const fact of [...facts].sort(compareFactRows)) chunks.push(framedSyncBytes(fact, 'canonical_bytes'));
-  const blobs = [...declaration.blobs].sort((left, right) => compareBytes(left.sha256, right.sha256));
-  chunks.push(u32(blobs.length));
-  for (const item of blobs) chunks.push(data(item.sha256), u64(item.byteLength), u32(item.role),
-    Uint8Array.of(item.required ? 1 : 0));
-  return new Uint8Array(Buffer.concat(chunks));
-}
+import { hashDesktopFramedSyncInboundManifest } from './desktopFramedSyncInboundManifestHash.js';
 
 export async function clearInboundAttempt(tx: DbPort, transferId: Uint8Array, attemptId: Uint8Array) {
   await tx.run(`UPDATE framed_sync_inbound_attempts SET state = 'invalidated' WHERE transfer_id = ? AND attempt_id = ?`,
@@ -70,13 +51,11 @@ async function finalizeInbound(db: DbPort, input: InboundFinalizeInput) {
       return 'invalid' as const;
     }
     const declaration = readFramedSyncHeader(value);
-    const facts = await tx.query<DbRow>(`SELECT * FROM framed_sync_inbound_facts
+    const { factCount, manifestHash: rebuiltHash } = await hashDesktopFramedSyncInboundManifest(
+      tx, input.transferId, input.attemptId, declaration);
+    const [offers] = await tx.query<{ count: number }>(`SELECT count(*) AS count FROM framed_sync_blob_offers
       WHERE transfer_id = ? AND attempt_id = ?`, [input.transferId, input.attemptId]);
-    const offers = await tx.query<DbRow>(`SELECT * FROM framed_sync_blob_offers
-      WHERE transfer_id = ? AND attempt_id = ?`, [input.transferId, input.attemptId]);
-    const rebuilt = manifestBytes(facts, declaration);
-    const rebuiltHash = new Uint8Array(createHash('sha256').update(rebuilt).digest());
-    if (BigInt(facts.length) !== input.factCount || BigInt(offers.length) !== input.blobCount ||
+    if (BigInt(factCount) !== input.factCount || BigInt(offers?.count ?? 0) !== input.blobCount ||
       input.factCount !== declaration.proposal.factCount || input.blobCount !== declaration.proposal.blobCount ||
       !sameFramedSyncBytes(rebuiltHash, input.manifestHash) ||
       !sameFramedSyncBytes(rebuiltHash, declaration.proposal.contentId)) {
@@ -101,7 +80,7 @@ function createInboundAdmissionStaging(db: DbPort) {
         if (existing) {
           const old = readFramedSyncProposal(existing);
           if (!sameFramedSyncBytes(old.contentId, input.contentId) ||
-            JSON.stringify(old.context) !== JSON.stringify(input.context) || old.factCount !== input.factCount ||
+            !sameFramedSyncContext(old.context, input.context) || old.factCount !== input.factCount ||
             old.blobCount !== input.blobCount || old.totalBlobBytes !== input.totalBlobBytes) {
             failFramedSync('inbound_proposal_conflict');
           }
@@ -174,7 +153,9 @@ function createInboundAttemptStaging(db: DbPort) {
           WHERE transfer_id = ? AND attempt_id = ? AND sequence = ?`,
         [input.transferId, input.attemptId, input.sequence.toString()]);
         const ciphertextDigest = new Uint8Array(createHash('sha256').update(input.ciphertext).digest());
-        const plaintext = transfer.state === 'ready_to_apply' && input.frameType === 4
+        const compacted = input.frameType === 4 && (transfer.state === 'ready_to_apply' ||
+          (existing?.authenticated_plaintext instanceof Uint8Array && existing.authenticated_plaintext.byteLength === 32));
+        const plaintext = compacted
           ? new Uint8Array(createHash('sha256').update(input.authenticatedPlaintext).digest())
           : input.authenticatedPlaintext;
         if (existing) return sameFramedSyncBytes(framedSyncBytes(existing, 'ciphertext'), ciphertextDigest) &&

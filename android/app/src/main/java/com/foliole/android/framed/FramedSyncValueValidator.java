@@ -82,7 +82,9 @@ final class FramedSyncValueValidator {
     static ByteString blob(BlobReference value) throws FramedSyncValidationException {
         digest(value.getSha256(), "blob_hash");
         if (value.getRoleValue() < 1 || value.getRoleValue() > 5) throw invalid("blob_role_invalid");
-        if (Long.compareUnsigned(value.getByteLength(), FramedSyncContract.MAX_BLOB_BYTES) > 0) {
+        long limit = FramedSyncBodyRoles.isBody(value.getRoleValue())
+            ? FramedSyncContract.MAX_BODY_BYTES : FramedSyncContract.MAX_BLOB_BYTES;
+        if (Long.compareUnsigned(value.getByteLength(), limit) > 0) {
             throw invalid("blob_byte_length_limit_exceeded");
         }
         return value.getSha256();

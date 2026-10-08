@@ -12,7 +12,7 @@ import {
 } from './framedSyncFraming.js';
 
 export type ProtocolPayloadCase =
-  | 'blob_chunk' | 'blob_offer' | 'difference_request' | 'error' | 'fact'
+  | 'blob_chunk' | 'blob_offer' | 'difference_request' | 'error' | 'fact' | 'fact_fragment'
   | 'handshake' | 'handshake_acceptance' | 'inventory_begin' | 'inventory_chunk'
   | 'inventory_end' | 'missing_blob_set' | 'round_receipt' | 'transfer_header'
   | 'transfer_proposal' | 'transfer_receipt' | 'transfer_termination' | 'transfer_trailer';
@@ -26,7 +26,7 @@ const SESSION_PAYLOADS = new Set<ProtocolPayloadCase>([
 export function frameTypeForPayload(payload: ProtocolPayloadCase) {
   if (SESSION_PAYLOADS.has(payload)) return FRAMED_SYNC_FRAME_TYPES.sessionControl;
   if (payload === 'transfer_header') return FRAMED_SYNC_FRAME_TYPES.transferHeader;
-  if (payload === 'fact') return FRAMED_SYNC_FRAME_TYPES.fact;
+  if (payload === 'fact' || payload === 'fact_fragment') return FRAMED_SYNC_FRAME_TYPES.fact;
   if (payload === 'blob_chunk') return FRAMED_SYNC_FRAME_TYPES.blobChunk;
   if (payload === 'transfer_trailer') return FRAMED_SYNC_FRAME_TYPES.transferTrailer;
   if (payload === 'transfer_receipt') return FRAMED_SYNC_FRAME_TYPES.transferReceipt;

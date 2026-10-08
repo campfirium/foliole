@@ -27,6 +27,7 @@ const EXPECTED_STAGING_TABLES = [
   'framed_sync_receipts',
   'framed_sync_resource_availability',
   'framed_sync_resource_blob_chunks',
+  'framed_sync_resource_demands',
   'framed_sync_resource_pins',
   'framed_sync_session_send_states',
   'framed_sync_termination_acks',

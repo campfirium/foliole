@@ -6,6 +6,8 @@ import { afterEach, expect, it } from 'vitest';
 import { z } from 'zod';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { readFramedSyncPublishedBody } from '../../lib/core/sync/framedSyncPublishedBody.js';
 import { inspectCompanionFramedSyncOutbound, prepareCompanionFramedSyncOutbound }
   from '../../src/shared/platform/companion/sync/framed/companionFramedSyncOutbound.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -49,8 +51,15 @@ it('restores native input after normal collection and restart without current ob
       include_current_node: false, required_relation_ids: [], review_fact_ids: [], state_fact_ids: [] };
     const restored = await prepareCompanionFramedSyncOutbound(db, input);
     expect(restored.transfer_id).toBe(transferId);
-    expect(restored.blobs.map((blob) => blob.data_text)).toContain('Original body');
-    expect(restored.blobs.map((blob) => blob.data_text)).not.toContain('Latest body');
+    expect(restored.blobs.every((blob) => blob.body_source === 'frozen_body' && blob.data_text === undefined)).toBe(true);
+    const texts = [];
+    for (const blob of restored.blobs) texts.push(new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(
+      await readFramedSyncPublishedBody(db, { groupId: context.group_id, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+        receiverDeviceId: context.receiver_device_id, receiverLibraryEpoch: context.receiver_library_epoch,
+        senderDeviceId: context.sender_device_id, senderLibraryEpoch: context.sender_library_epoch },
+      { transferId, hash: blob.sha256, byteLength: Number(blob.byte_length) })));
+    expect(texts).toContain('Original body');
+    expect(texts).not.toContain('Latest body');
     await expect(inspectCompanionFramedSyncOutbound(db, input)).resolves.toEqual({
       resource_storage_keys: [] });
     await expect(prepareCompanionFramedSyncOutbound(db, {

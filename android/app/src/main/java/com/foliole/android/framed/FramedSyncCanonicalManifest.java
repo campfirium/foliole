@@ -5,8 +5,8 @@ import com.foliole.sync.v22.CanonicalField;
 import com.foliole.sync.v22.CanonicalObject;
 import com.foliole.sync.v22.CanonicalValue;
 import com.foliole.sync.v22.FactRecord;
+import com.foliole.sync.v22.FactIdentity;
 import com.google.protobuf.ByteString;
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -19,25 +19,36 @@ final class FramedSyncCanonicalManifest {
 
     private FramedSyncCanonicalManifest() {}
 
+    interface FactSource {
+        FactRecord read(int index) throws FramedSyncValidationException;
+    }
+
     static byte[] contentId(List<FactRecord> facts, List<BlobReference> blobs)
+        throws FramedSyncValidationException {
+        List<FactRecord> sortedFacts = sortedFacts(facts);
+        return contentId(sortedFacts.size(), blobs, sortedFacts::get);
+    }
+
+    static byte[] contentId(int factCount, List<BlobReference> blobs, FactSource source)
         throws FramedSyncValidationException {
         Writer writer = new Writer();
         writer.data(DOMAIN);
-        List<FactRecord> sortedFacts = sortedFacts(facts);
-        writer.u32(sortedFacts.size());
-        for (FactRecord fact : sortedFacts) {
+        writer.u32(factCount);
+        FactIdentity previous = null;
+        for (int index = 0; index < factCount; index++) {
+            FactRecord fact = source.read(index);
+            if (previous != null && compareIdentities(fact.getIdentity(), previous) < 0) {
+                throw invalid("canonical_fact_source_order_invalid");
+            }
             writeFact(writer, fact);
             writer.assertBudget();
+            previous = fact.getIdentity();
         }
         List<BlobReference> sortedBlobs = sortedBlobs(blobs);
         writer.u32(sortedBlobs.size());
         for (BlobReference blob : sortedBlobs) writeBlob(writer, blob);
         writer.assertBudget();
-        try {
-            return MessageDigest.getInstance("SHA-256").digest(writer.bytes());
-        } catch (java.security.NoSuchAlgorithmException error) {
-            throw new IllegalStateException(error);
-        }
+        return writer.digest();
     }
 
     static byte[] transferId(FramedSyncTransferContext context, byte[] contentId)
@@ -54,11 +65,7 @@ final class FramedSyncCanonicalManifest {
         writer.string(context.receiverDeviceId());
         writer.string(context.receiverLibraryEpoch());
         writer.data(contentId);
-        try {
-            return MessageDigest.getInstance("SHA-256").digest(writer.bytes());
-        } catch (java.security.NoSuchAlgorithmException error) {
-            throw new IllegalStateException(error);
-        }
+        return writer.digest();
     }
 
     private static void writeFact(Writer writer, FactRecord fact)
@@ -75,7 +82,8 @@ final class FramedSyncCanonicalManifest {
         for (BlobReference blob : blobs) writeBlob(writer, blob);
     }
 
-    private static void writeBlob(Writer writer, BlobReference blob) {
+    private static void writeBlob(Writer writer, BlobReference blob) throws FramedSyncValidationException {
+        FramedSyncValueValidator.blob(blob);
         writer.data(blob.getSha256().toByteArray());
         writer.u64(blob.getByteLength());
         writer.u32(blob.getRoleValue());
@@ -150,13 +158,17 @@ final class FramedSyncCanonicalManifest {
     }
 
     private static int compareFacts(FactRecord left, FactRecord right) {
-        int kind = Integer.compare(left.getIdentity().getKindValue(), right.getIdentity().getKindValue());
+        return compareIdentities(left.getIdentity(), right.getIdentity());
+    }
+
+    static int compareIdentities(FactIdentity left, FactIdentity right) {
+        int kind = Integer.compare(left.getKindValue(), right.getKindValue());
         if (kind != 0) return kind;
-        int object = compareText(left.getIdentity().getObjectType(), right.getIdentity().getObjectType());
+        int object = compareText(left.getObjectType(), right.getObjectType());
         if (object != 0) return object;
-        int global = compareText(left.getIdentity().getGlobalId(), right.getIdentity().getGlobalId());
+        int global = compareText(left.getGlobalId(), right.getGlobalId());
         return global != 0 ? global : compareText(
-            left.getIdentity().getFactId(), right.getIdentity().getFactId());
+            left.getFactId(), right.getFactId());
     }
 
     private static int compareText(String left, String right) {
@@ -177,11 +189,17 @@ final class FramedSyncCanonicalManifest {
     }
 
     private static final class Writer {
-        private final ByteArrayOutputStream output = new ByteArrayOutputStream();
+        private final MessageDigest hash;
+        private long byteCount;
         private int nodeCount;
 
-        void byteValue(int value) { output.write(value); }
-        void data(byte[] value) { u32(value.length); output.write(value, 0, value.length); }
+        Writer() {
+            try { hash = MessageDigest.getInstance("SHA-256"); }
+            catch (java.security.NoSuchAlgorithmException error) { throw new IllegalStateException(error); }
+        }
+
+        void byteValue(int value) { byteCount++; hash.update((byte) value); }
+        void data(byte[] value) { u32(value.length); byteCount += value.length; hash.update(value); }
         void string(String value) { data(value.getBytes(StandardCharsets.UTF_8)); }
         void u32(long value) {
             for (int shift = 24; shift >= 0; shift -= 8) byteValue((int) (value >>> shift));
@@ -195,9 +213,9 @@ final class FramedSyncCanonicalManifest {
                 throw invalid("canonical_node_limit_exceeded");
             }
         }
-        byte[] bytes() { return output.toByteArray(); }
+        byte[] digest() { return hash.digest(); }
         void assertBudget() throws FramedSyncValidationException {
-            if (output.size() > FramedSyncContract.MAX_CANONICAL_MANIFEST_BYTES) {
+            if (byteCount > FramedSyncContract.MAX_CANONICAL_MANIFEST_BYTES) {
                 throw invalid("canonical_manifest_limit_exceeded");
             }
         }

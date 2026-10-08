@@ -1,8 +1,12 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
+import { setImmediate } from 'node:timers/promises';
+
 import { expect, it } from 'vitest';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
+import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES, FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import type { FramedSyncSessionNoncePort } from '../../lib/core/sync/framedSyncSession.js';
 
 import {
@@ -101,4 +105,48 @@ it('does not encrypt when durable nonce persistence fails', async () => {
   await expect(encodeDesktopFramedSyncSession({
     authenticatedContext: context, groupKey, messages, noncePort
   })).rejects.toThrow('durable_write_failed');
+});
+
+it('streams signed session encoding and replay under the same library outbound capacity', async () => {
+  const payloadBudget = new FramedSyncPayloadBudget();
+  const held = await payloadBudget.acquire({ direction: 'outbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
+  let reads = 0;
+  let persisted = false;
+  async function* sessionMessages() {
+    for (const message of messages) { reads += 1; yield message; }
+  }
+  const encoding = encodeDesktopFramedSyncSession({ authenticatedContext: context, groupKey,
+    messages: sessionMessages(), noncePort: memoryNoncePort(() => { persisted = true; }), payloadBudget });
+  while (!persisted) await setImmediate();
+  await setImmediate();
+  const readsBeforeCapacity = reads;
+  held.release();
+  const body = await encoding;
+  const chunks = await collect(encodeFramedSyncStream(body));
+  expect(readsBeforeCapacity).toBe(0);
+  expect(reads).toBe(messages.length);
+  const hash = createHash('sha256');
+  for (const chunk of chunks) hash.update(chunk);
+  expect(body.bodySha256).toBe(hash.digest('hex'));
+  expect(body.contentLength).toBe(chunks.reduce((sum, chunk) => sum + chunk.byteLength, 0));
+  const wire = await source(chunks);
+  const decoded = await decodeDesktopFramedSyncSession({ authenticatedContext: context,
+    authorDeviceId: 'device-a', groupKey, ...wire });
+  expect(decoded.map(message => message.payloadCase)).toEqual(messages.map(message => message.payloadCase));
+  payloadBudget.close();
+  await payloadBudget.drained;
+});
+
+it('releases a replay lease and its request-owned source when the consumer stops early', async () => {
+  const payloadBudget = new FramedSyncPayloadBudget();
+  const body = await encodeDesktopFramedSyncSession({ authenticatedContext: context, groupKey,
+    messages, noncePort: memoryNoncePort(), payloadBudget });
+  const iterator = body.frames[Symbol.asyncIterator]();
+  expect((await iterator.next()).done).toBe(false);
+  await iterator.return?.();
+  const lease = await payloadBudget.acquire({ direction: 'outbound', bytes: FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES });
+  lease.release();
+  await body.dispose?.();
+  payloadBudget.close();
+  await payloadBudget.drained;
 });

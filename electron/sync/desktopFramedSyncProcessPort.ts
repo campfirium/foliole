@@ -12,30 +12,29 @@ import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.j
 import { createDesktopFramedSyncFixtureReceiver } from './desktopFramedSyncFixtureReceiver.js';
 import { synchronizeDesktopFramedSync } from './desktopFramedSyncProcessOutbound.js';
 import { createDesktopFramedSyncRoundProcessAdapter } from './desktopFramedSyncRoundProcessAdapter.js';
-import { synchronizeVerifiedDesktopFramedSync } from './desktopFramedSyncVerifiedProcessOutbound.js';
 import { saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
 
-type FactoryInput = Readonly<{ databasePath: string; deviceId: string; localOrigin: string; bodyStorage?: 'continuous' | 'chunked' }>;
+type FactoryInput = Readonly<{ databasePath: string; deviceId: string; localOrigin: string }>;
 
 export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
   const connection = openDatabaseConnection();
   if (connection.dbPath !== input.databasePath) throw new Error('framed_sync_database_path_mismatch');
   for (const statement of FRAMED_SYNC_STAGING_SCHEMA) connection.sqlite.exec(statement);
   const db = createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-framed-sync-process' });
-  const staging = createDesktopFramedSyncStaging(db, input.bodyStorage);
+  const staging = createDesktopFramedSyncStaging(db);
   const identity = { deviceId: input.deviceId, libraryEpoch: `${input.deviceId}-epoch` };
   const group = loadDesktopSyncGroupInfo();
   if (!group) throw new Error('sync_group_not_available');
   const groupKey = new Uint8Array(Buffer.from(group.workgroup_key, 'base64url'));
   const round = createDesktopFramedSyncRoundProcessAdapter({
-    db, groupId: group.group_id, groupSecret: group.workgroup_key, local: identity, staging,
-    bodyStorage: input.bodyStorage ?? 'continuous'
+    db, groupId: group.group_id, groupSecret: group.workgroup_key, local: identity, staging
   });
   const receiver = createDesktopFramedSyncFixtureReceiver({ db, groupKey,
-    groupSecret: group.workgroup_key, staging, bodyStorage: input.bodyStorage ?? 'continuous' });
+    groupSecret: group.workgroup_key, staging });
   return {
     handleHttpRequest: (request: IncomingMessage, response: ServerResponse) =>
       handleCompanionLanFramedSyncPost({
+        payloadBudget: connection.framedSyncPayloadBudget,
         localIdentity: identity,
         onStream: receiver.receive,
         request,
@@ -53,9 +52,7 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
       saveDesktopSyncGroupRoute({ endpoint_url: peerOrigin, group_id: group.group_id,
         local_device_id: identity.deviceId, peer_device_id: remoteDeviceId,
         peer_device_name: remoteDeviceId, peer_platform: 'desktop' });
-      const synchronize = input.bodyStorage === 'chunked'
-        ? synchronizeVerifiedDesktopFramedSync : synchronizeDesktopFramedSync;
-      return synchronize({
+      return synchronizeDesktopFramedSync({
         db,
         groupId: group.group_id,
         groupSecret: group.workgroup_key,

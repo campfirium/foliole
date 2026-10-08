@@ -2,11 +2,13 @@ import { readFramedSyncPublication, readFramedSyncRow } from '../database/framed
 
 import type { DbPort } from './dbPort.js';
 import { canonicalContentId, canonicalTransferId, type CanonicalManifest } from './framedSyncCanonicalManifest.js';
+import { retireFramedSyncFrozenBodies } from './framedSyncFrozenBody.js';
 import { requiredFramedSyncNodeVersionIds, type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { recoverLegacyPublicationInventory } from './framedSyncLegacyPublicationInventory.js';
 import { publishFramedSyncOutboundWithDbPort } from './framedSyncOutboundStaging.js';
 import { recheckPublicationInventory } from './framedSyncPublicationInventory.js';
+import { FRAMED_SYNC_RESOURCE_FACT_KIND, restoreFramedSyncResourceFact } from './framedSyncResourceFact.js';
 import type { OutboundPublishInput } from './framedSyncStagingContract.js';
 
 export function selectFramedSyncRecoveryManifest(publication: OutboundPublishInput,
@@ -14,9 +16,17 @@ export function selectFramedSyncRecoveryManifest(publication: OutboundPublishInp
   const versions = difference.objectType === 'node' ? requiredFramedSyncNodeVersionIds(difference) : [];
   const selected = new Set([...versions, ...difference.need.requiredRelationIds,
     ...difference.need.reviewFactIds, ...(difference.need.stateFactIds ?? [])]);
-  const facts = publication.manifest.facts.filter((fact) => selected.has(fact.factId) ||
-    (difference.objectType !== 'node' && difference.need.sharedState && fact.kind === 1 &&
-      fact.objectType === difference.objectType && fact.globalId === difference.globalId));
+  const requiredResources = new Set(difference.need.resourceHashes.map(key));
+  const facts = publication.manifest.facts.filter((fact) => {
+    if (fact.objectType !== difference.objectType || fact.globalId !== difference.globalId) return false;
+    if (fact.kind === FRAMED_SYNC_RESOURCE_FACT_KIND) {
+      return requiredResources.has(key(restoreFramedSyncResourceFact(fact).blob.sha256));
+    }
+    return (difference.objectType === 'external_document' && fact.kind === 1 &&
+      fact.blobs.some((blob) => blob.role === 5 && requiredResources.has(key(blob.sha256)))) ||
+      selected.has(fact.factId) ||
+      (difference.objectType !== 'node' && difference.need.sharedState && fact.kind === 1);
+  });
   if (!facts.length) throw new Error('framed_sync_recovery_fact_unavailable');
   const hashes = new Set(facts.flatMap((fact) => fact.blobs.map((blob) => key(blob.sha256))));
   const blobs = publication.manifest.blobs.filter((blob) => hashes.has(key(blob.sha256)));
@@ -54,6 +64,7 @@ export function completeFramedSyncRecoveredPublication(db: DbPort, originalId: U
     await tx.run(`UPDATE framed_sync_outbound_publications SET state = 'receipt_committed'
       WHERE transfer_id = ? AND state = 'published'`, [originalId]);
     await tx.run('DELETE FROM framed_sync_outbound_holds WHERE transfer_id = ?', [originalId]);
+    await retireFramedSyncFrozenBodies(tx, originalId);
   });
 }
 

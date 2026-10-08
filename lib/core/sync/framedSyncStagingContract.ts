@@ -120,7 +120,7 @@ function sameBytes(left: Uint8Array, right: Uint8Array) {
   return left.byteLength === right.byteLength && left.every((byte, index) => right[index] === byte);
 }
 
-function sameContext(left: FramedSyncContext, right: FramedSyncContext) {
+export function sameFramedSyncContext(left: FramedSyncContext, right: FramedSyncContext) {
   return left.protocolVersion === right.protocolVersion && left.groupId === right.groupId &&
     left.senderDeviceId === right.senderDeviceId &&
     left.senderLibraryEpoch === right.senderLibraryEpoch &&
@@ -171,7 +171,7 @@ export async function assertInboundManifestMatchesProposal(input: InboundManifes
   if (input.proposal.factCount !== BigInt(manifest.facts.length) ||
       input.proposal.blobCount !== BigInt(manifest.blobs.length) ||
       input.proposal.totalBlobBytes !== totalBlobBytes ||
-      !sameContext(input.proposal.context, input.publication.context) ||
+      !sameFramedSyncContext(input.proposal.context, input.publication.context) ||
       !sameBytes(input.proposal.contentId, input.publication.contentId) ||
       !sameBytes(input.proposal.transferId, input.publication.transferId)) {
     throw new Error('inbound_manifest_proposal_mismatch');
@@ -198,7 +198,7 @@ export function assertInboundHeaderMatchesProposal(input: InboundHeaderDeclarati
   if (input.facts.length !== Number(published.factCount) ||
       input.blobs.length !== Number(published.blobCount) ||
       totalBlobBytes !== published.totalBlobBytes ||
-      !sameContext(input.proposal.context, published.context) ||
+      !sameFramedSyncContext(input.proposal.context, published.context) ||
       input.proposal.factCount !== published.factCount ||
       input.proposal.blobCount !== published.blobCount ||
       input.proposal.totalBlobBytes !== published.totalBlobBytes ||

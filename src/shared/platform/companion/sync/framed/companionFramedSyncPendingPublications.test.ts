@@ -7,7 +7,8 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../../../../../lib/core/database/framedSyncStagingSchema.js';
-import { SYNC_GROUP_METADATA_SCHEMA } from '../../../../../../lib/core/database/syncGroupSchemaStatements.js';
+import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/syncGroupRestoreSchemaStatements.js';
+import { SYNC_GROUP_METADATA_SCHEMA, SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/syncGroupSchemaStatements.js';
 import { canonicalContentId, canonicalTransferId } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { publishFramedSyncOutboundWithDbPort } from '../../../../../../lib/core/sync/framedSyncOutboundStaging.js';
 import { PARENT_ORDER_VERSION_SCHEMA } from '../../../../../../lib/core/sync/syncParentOrderVersionStore.js';
@@ -61,6 +62,9 @@ function database(persistent = false) {
   }
   sqlite = new Database(persistent ? path.join(directory, 'route.db') : ':memory:');
   sqlite.exec(SYNC_GROUP_METADATA_SCHEMA);
+  sqlite.exec(SYNC_GROUP_SCHEMA_STATEMENTS[1]!);
+  sqlite.exec("INSERT INTO sync_groups VALUES ('group', 'Group', 'key', '2026-10-07', '2026-10-07')");
+  for (const sql of SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS) sqlite.exec(sql);
   for (const sql of [...FRAMED_SYNC_STAGING_SCHEMA, ...PARENT_ORDER_VERSION_SCHEMA]) sqlite.exec(sql);
   sqlite.exec(`CREATE TABLE sync_group_local_state (singleton_id INTEGER, state TEXT,
     group_id TEXT, local_device_identity_key TEXT);
@@ -72,7 +76,7 @@ function database(persistent = false) {
   mocks.inventory.mockResolvedValue({ entries: [], round_id: '0'.repeat(32) });
 }
 
-it.each(['continuous', 'chunked'] as const)('drains only the current peer publication with %s storage even without a new inventory difference', async (bodyStorage) => {
+it('drains only the current peer publication even without a new inventory difference', async () => {
   database();
   const id = await publish();
   await publish('C');
@@ -82,7 +86,7 @@ it.each(['continuous', 'chunked'] as const)('drains only the current peer public
     sqlite.prepare("UPDATE framed_sync_outbound_publications SET state = 'receipt_committed' WHERE hex(transfer_id) = ?").run(id.toUpperCase());
     return { transfer_id: id, receiver_device_id: 'B', receiver_library_epoch: 'B-epoch' };
   });
-  await expect(resumeCompanionFramedSyncPendingPublications(request, undefined, bodyStorage)).resolves.toBe(1);
+  await expect(resumeCompanionFramedSyncPendingPublications(request)).resolves.toBe(1);
   expect(mocks.send).toHaveBeenCalledExactlyOnceWith({ ...request, transfer_id: id,
     include_current_node: false, object_id: 'node', object_type: 'node', required_relation_ids: [],
     review_fact_ids: [], state_fact_ids: [] });
@@ -122,4 +126,22 @@ it('resumes a responding peer after reloading its exact verified route', async (
     peer_device_id: 'B', peer_library_epoch: 'B-epoch' });
   expect(mocks.send).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
     endpoint_url: request.endpoint_url, transfer_id: id }));
+});
+
+it.each(['restore', 'progress'] as const)('keeps durable outgoing work unsent during pending %s', async (phase) => {
+  database();
+  await publish();
+  if (phase === 'restore') sqlite.prepare(`INSERT INTO sync_group_restore_events
+    (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
+    VALUES ('restore', 'group', '2026-10-07', 'B', NULL, '2026-10-07')`).run();
+  else sqlite.prepare('INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)').run(
+    'sync_group_overwrite_progress', JSON.stringify({ groupId: 'group', overwriteId: 'restore',
+      providerDeviceId: 'B', providerLibraryEpoch: 'B-epoch', receiverDeviceId: 'A',
+      receiverLibraryEpoch: 'A-epoch' }), '2026-10-07');
+  const before = sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all();
+  await expect(resumeCompanionFramedSyncPendingPublications(request)).resolves.toBe(0);
+  expect(mocks.send).not.toHaveBeenCalled();
+  expect(mocks.inventory).not.toHaveBeenCalled();
+  expect(sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all()).toEqual(before);
+  expect(sqlite.prepare('SELECT member_id FROM framed_sync_outbound_holds').all()).toEqual([{ member_id: 'B' }]);
 });

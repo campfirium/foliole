@@ -10,23 +10,20 @@ import com.foliole.sync.v22.TransferTrailer;
 import java.io.File;
 import java.security.MessageDigest;
 import java.util.Arrays;
-import java.util.List;
 
 final class FramedSyncSQLiteInboundFrames {
     private final SQLiteDatabase database;
     private final FramedSyncSQLiteTransfers transfers;
     private final FramedSyncSQLiteFacts facts;
     private final FramedSyncSQLiteBlobs blobs;
+    private final FramedSyncSQLiteFactFragments fragments;
 
     FramedSyncSQLiteInboundFrames(SQLiteDatabase database, File resourceDirectory) {
-        this(database, resourceDirectory, false);
-    }
-
-    FramedSyncSQLiteInboundFrames(SQLiteDatabase database, File resourceDirectory, boolean chunkedBodies) {
         this.database = database;
         transfers = new FramedSyncSQLiteTransfers(database);
         facts = new FramedSyncSQLiteFacts(database, transfers);
-        blobs = new FramedSyncSQLiteBlobs(database, resourceDirectory, chunkedBodies);
+        blobs = new FramedSyncSQLiteBlobs(database, resourceDirectory);
+        fragments = new FramedSyncSQLiteFactFragments(database);
     }
 
     FramedSyncStageOutcome admit(TransferProposal proposal) throws Exception {
@@ -49,9 +46,12 @@ final class FramedSyncSQLiteInboundFrames {
                 return existing;
             }
             preparePayload(frame, message);
+            fragments.requireContinuation(frame, message);
             insertFrame(frame, wireHeader, message);
             if (message.payload().payloadCase() == FramedSyncPayload.Case.FACT) {
                 facts.stage(frame, (FactRecord) message.payload().value());
+            } else if (message.payload().payloadCase() == FramedSyncPayload.Case.FACT_FRAGMENT) {
+                fragments.stage(frame, (com.foliole.sync.v22.FactFragment) message.payload().value(), facts);
             } else if (message.payload().payloadCase() == FramedSyncPayload.Case.BLOB_CHUNK) {
                 blobs.stageChunk(frame.transferId(), frame.attemptId(),
                     (com.foliole.sync.v22.BlobChunk) message.payload().value());
@@ -87,6 +87,7 @@ final class FramedSyncSQLiteInboundFrames {
             return;
         }
         if (message.payload().payloadCase() != FramedSyncPayload.Case.FACT &&
+            message.payload().payloadCase() != FramedSyncPayload.Case.FACT_FRAGMENT &&
             message.payload().payloadCase() != FramedSyncPayload.Case.BLOB_CHUNK &&
             message.payload().payloadCase() != FramedSyncPayload.Case.TRANSFER_TRAILER) {
             throw invalid("transfer_frame_payload_required");
@@ -97,15 +98,14 @@ final class FramedSyncSQLiteInboundFrames {
     private String finalizeAttempt(FramedSyncAuthenticatedFrame frame, TransferTrailer trailer)
         throws Exception {
         TransferHeader header = transfers.loadHeader(frame.transferId(), frame.attemptId());
-        List<FactRecord> storedFacts = facts.load(frame.transferId(), frame.attemptId());
-        if (header == null || !framesAreContinuous(frame) || trailer.getFactCount() != storedFacts.size() ||
+        int factCount = facts.count(frame.transferId(), frame.attemptId());
+        if (header == null || !framesAreContinuous(frame) || trailer.getFactCount() != factCount ||
             trailer.getFactCount() != header.getManifest().getFactsCount() ||
             trailer.getBlobCount() != header.getManifest().getBlobsCount()) {
             clearAttempt(frame.transferId(), frame.attemptId());
             return "inbound_attempt_manifest_mismatch";
         }
-        byte[] contentId = FramedSyncCanonicalManifest.contentId(
-            storedFacts, header.getManifest().getBlobsList());
+        byte[] contentId = facts.contentId(frame.transferId(), frame.attemptId(), header.getManifest().getBlobsList());
         if (!Arrays.equals(contentId, trailer.getManifestHash().toByteArray()) ||
             !Arrays.equals(contentId, header.getManifest().getContentId().toByteArray()) ||
             !blobs.verifyAndPromote(frame.transferId(), frame.attemptId())) {
@@ -179,20 +179,20 @@ final class FramedSyncSQLiteInboundFrames {
         FramedSyncValidatedMessage message
     ) {
         if (message.payload().payloadCase() != FramedSyncPayload.Case.BLOB_CHUNK) {
-            return new byte[][] {sha256(frame.ciphertext()), frame.plaintext()};
+            return new byte[][] {sha256(frame.borrowedCiphertext()), frame.borrowedPlaintext()};
         }
         com.foliole.sync.v22.BlobChunk chunk =
             (com.foliole.sync.v22.BlobChunk) message.payload().value();
         try (var row = database.rawQuery("SELECT 1 FROM framed_sync_android_transfers " +
             "WHERE hex(transfer_id) = ? AND state = 'ready_to_apply'",
             FramedSyncSQLiteValues.blobArgs(frame.transferId()))) {
-            if (row.moveToFirst()) return new byte[][] {sha256(frame.ciphertext()), sha256(frame.plaintext())};
+            if (row.moveToFirst()) return new byte[][] {sha256(frame.borrowedCiphertext()), sha256(frame.borrowedPlaintext())};
         }
         if (!blobs.isResourceChunk(frame.transferId(), frame.attemptId(),
             chunk.getBlobHash().toByteArray())) {
-            return new byte[][] {sha256(frame.ciphertext()), frame.plaintext()};
+            return new byte[][] {sha256(frame.borrowedCiphertext()), frame.borrowedPlaintext()};
         }
-        return new byte[][] {sha256(frame.ciphertext()), sha256(frame.plaintext())};
+        return new byte[][] {sha256(frame.borrowedCiphertext()), sha256(frame.borrowedPlaintext())};
     }
 
     private static byte[] sha256(byte[] value) {

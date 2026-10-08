@@ -112,7 +112,11 @@ final class FolioleFramedSyncHTTPTransportTests: XCTestCase {
         ))
     }
 
-    func testResponsePreservesOnlyRecoverableProtocolErrors() {
+    func testResponsePreservesOnlyRecoverableProtocolErrors() throws {
+        for detail in ["framed_sync_review_node_missing:node-1", "framed_sync_parent_relation_version_missing:version-1"] {
+            XCTAssertEqual(FolioleFramedSyncHTTPTransport.httpErrorCode(statusCode: 400,
+                body: try JSONSerialization.data(withJSONObject: ["error": detail])), "framed_sync_http_400:" + detail)
+        }
         XCTAssertEqual(FolioleFramedSyncHTTPTransport.httpErrorCode(
             statusCode: 400,
             body: Data(#"{"error":"framed_sync_source_changed"}"#.utf8)

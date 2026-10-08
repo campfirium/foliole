@@ -92,6 +92,27 @@ public final class FramedSyncStreamTest {
             "framed_sync_frame_body_length_mismatch");
     }
 
+    @Test
+    public void callerMutationCannotChangeStreamReplayBytes() throws Exception {
+        byte[] header = FramedSyncWireHeader.encode(4, 0, 1);
+        byte[] ciphertext = {0, (byte) 255, 1, (byte) 254};
+        ByteArrayOutputStream encoded = new ByteArrayOutputStream();
+        encoded.write(preamble());
+        encoded.write(header);
+        encoded.write(ciphertext);
+        FramedSyncStreamReader reader = new FramedSyncStreamReader(
+            new ByteArrayInputStream(encoded.toByteArray()));
+        byte[] preamble = reader.readPreamble().encoded();
+        FramedSyncWireFrame frame = reader.readFrame();
+        frame.ciphertext()[0] = 99;
+        frame.headerBytes()[0] = 99;
+        ByteArrayOutputStream replay = new ByteArrayOutputStream();
+        FramedSyncStreamWriter writer = new FramedSyncStreamWriter(replay);
+        writer.writePreamble(preamble);
+        writer.writeFrame(frame.headerBytes(), frame.ciphertext());
+        assertArrayEquals(encoded.toByteArray(), replay.toByteArray());
+    }
+
     static byte[] preamble() {
         byte[] result = new byte[FramedSyncPreamble.BYTES];
         ByteBuffer value = ByteBuffer.wrap(result).order(ByteOrder.BIG_ENDIAN);

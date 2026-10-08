@@ -26,7 +26,7 @@ type FixtureReply = Readonly<{ error?: string; id: number; result?: unknown }>;
 
 export type DesktopFramedSyncFixtureProcess = ReturnType<typeof startFixtureProcess>;
 
-export async function createDesktopFramedSyncTwoProcessFixture(options: { rightBodyStorage?: 'continuous' | 'chunked' } = {}) {
+export async function createDesktopFramedSyncTwoProcessFixture() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-framed-sync-two-process-'));
   await fs.symlink(
     path.resolve('node_modules'),
@@ -36,7 +36,7 @@ export async function createDesktopFramedSyncTwoProcessFixture(options: { rightB
   const script = path.join(root, 'desktop-framed-sync-fixture.mjs');
   await buildFixture(script);
   let left = startFixtureProcess({ deviceId: 'desktop-a', root: path.join(root, 'a'), script });
-  let right = startFixtureProcess({ deviceId: 'desktop-b', root: path.join(root, 'b'), script, bodyStorage: options.rightBodyStorage ?? 'continuous' });
+  let right = startFixtureProcess({ deviceId: 'desktop-b', root: path.join(root, 'b'), script });
   try {
     const [leftSnapshot, rightSnapshot] = await Promise.all([left.init(), right.init()]);
     return {
@@ -54,10 +54,9 @@ export async function createDesktopFramedSyncTwoProcessFixture(options: { rightB
         const third = startFixtureProcess({ deviceId: 'desktop-c', root: path.join(root, 'c'), script });
         return { process: third, snapshot: await third.init() };
       },
-      async restartRight(bodyStorage: 'continuous' | 'chunked' = options.rightBodyStorage ?? 'continuous') {
+      async restartRight() {
         await right.close();
-        right = startFixtureProcess({ deviceId: 'desktop-b', root: path.join(root, 'b'), script,
-          bodyStorage, initializationPhase: 'reopen' });
+        right = startFixtureProcess({ deviceId: 'desktop-b', root: path.join(root, 'b'), script });
         return { process: right, snapshot: await right.init() };
       }
     };
@@ -106,8 +105,7 @@ async function buildFixture(outputPath: string) {
   });
 }
 
-type FixtureProcessInput = Readonly<{ deviceId: string; root: string; script: string;
-  bodyStorage?: 'continuous' | 'chunked'; initializationPhase?: 'fresh' | 'reopen' }>;
+type FixtureProcessInput = Readonly<{ deviceId: string; root: string; script: string }>;
 
 function startFixtureProcess(input: FixtureProcessInput) {
   const child = fork(input.script, [], {
@@ -153,7 +151,7 @@ function startFixtureProcess(input: FixtureProcessInput) {
       content: string; nodeId: string; parentNodeId?: string; title: string
     }>) =>
       parseSnapshot(await send('seed', args)),
-    seedResource: (args: Readonly<{ bytes: Uint8Array; nodeId: string }>) => seedResource(send, args),
+    seedResource: (args: Readonly<{ bytes: Uint8Array; includeImageInBody?: boolean; nodeId: string }>) => seedResource(send, args),
     seedRelationReview: async (role: 'receiver' | 'receiver_conflict' | 'sender') =>
       parseSnapshot(await send('seed_relation_review', { role })),
     seedBatch: (itemCount: number) => send('seedBatch', { itemCount }),
@@ -173,14 +171,12 @@ function fixtureEnvironment(input: FixtureProcessInput) {
     ELECTRON_RUN_AS_NODE: '1',
     FOLIOLE_ELECTRON_TEST_STATE_ROOT: input.root,
     FOLIOLE_FRAMED_SYNC_DEVICE_ID: input.deviceId,
-    FOLIOLE_FRAMED_SYNC_FIXTURE_BODY_STORAGE: input.bodyStorage ?? 'continuous',
-    FOLIOLE_FRAMED_SYNC_FIXTURE_INIT_PHASE: input.initializationPhase ?? 'fresh',
     FOLIOLE_DESKTOP_FRAMED_SYNC_PROCESS_MODULE: pathToFileURL(input.script).href
   };
 }
 
 async function seedResource(send: (action: string, args?: Readonly<Record<string, unknown>>) => Promise<unknown>,
-  args: Readonly<{ bytes: Uint8Array; nodeId: string }>) {
+  args: Readonly<{ bytes: Uint8Array; includeImageInBody?: boolean; nodeId: string }>) {
   const value = await send('seed_resource', args);
   if (!isRecord(value) || typeof value.hash !== 'string' || typeof value.storageKey !== 'string') {
     throw new Error('fixture_resource_seed_invalid');

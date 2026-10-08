@@ -42,6 +42,22 @@ public enum FolioleFramedSyncCodec {
         return FolioleFramedSyncValidatedMessage(payload: payload, wireMessage: message)
     }
 
+    public static func decodeCompletedFact(_ data: Data) throws -> FolioleFramedSyncValidatedMessage {
+        guard data.count > FolioleFramedSyncLimits.maxFrameMessageBytes,
+              data.count <= FolioleFramedSyncLimits.maxFragmentedFactBytes else {
+            throw FolioleFramedSyncValidationError("fact_fragment_range_invalid")
+        }
+        var options = BinaryDecodingOptions()
+        options.messageDepthLimit = 128
+        let message: Foliole_Sync_V22_ProtocolMessage
+        do { message = try .init(serializedBytes: data, options: options) }
+        catch { throw FolioleFramedSyncValidationError("protocol_decode_invalid") }
+        guard case .fact = message.payload else {
+            throw FolioleFramedSyncValidationError("fact_fragment_payload_invalid")
+        }
+        return try validateOutbound(message, authenticatedFrameType: 3)
+    }
+
     public static func encode(_ message: FolioleFramedSyncValidatedMessage) throws -> Data {
         do {
             return try message.wireMessage.serializedData()
@@ -73,7 +89,7 @@ private extension FolioleFramedSyncPayload {
              .missingBlobSet, .roundReceipt, .transferTermination, .protocolError:
             .sessionControl
         case .transferHeader: .transferHeader
-        case .fact: .fact
+        case .fact, .factFragment: .fact
         case .blobChunk: .blobChunk
         case .transferTrailer: .transferTrailer
         case .transferReceipt: .transferReceipt

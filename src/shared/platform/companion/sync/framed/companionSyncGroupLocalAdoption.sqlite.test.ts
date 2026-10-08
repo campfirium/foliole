@@ -8,11 +8,12 @@ import { afterEach, expect, it } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { bootstrapCompanionDatabase } from '../../../../../../lib/core/database/companionDatabaseLifecycle.js';
-import { readFramedSyncInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
+import { readFramedSyncInventory, readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 import { encodeValidatedProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { factToWire } from '../../../../../../lib/core/sync/framedSyncWireProjection.js';
-import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
+import { beginSyncGroupLocalAdoption, finishSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
+import { finishSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
 import type { NativeSyncNodeRecord } from '../../../../../../lib/platform/nativeSyncContract.js';
 import type { SyncGroupMemberStatePayload } from '../../../../../../lib/platform/syncGroupMemberStateContract.js';
 import { assertCompanionPeerProofFresh } from '../nodeVersionCompanionPeerProof.js';
@@ -26,6 +27,8 @@ const roots: string[] = [];
 const adoption = { endpointUrl: 'http://localhost:38641', groupId: 'group-1',
   libraryEpoch: 'adoption-epoch', providerDeviceId: 'sender',
   providerDeviceName: 'Sender', providerPlatform: 'darwin' };
+const progress = { groupId: adoption.groupId, overwriteId: adoption.libraryEpoch, providerDeviceId: 'sender',
+  providerLibraryEpoch: 'sender-epoch', receiverDeviceId: 'receiver', receiverLibraryEpoch: adoption.libraryEpoch };
 afterEach(() => {
   databases.splice(0).forEach((db) => db.close());
   roots.splice(0).forEach((root) => fs.rmSync(root, { recursive: true, force: true }));
@@ -66,7 +69,7 @@ async function setup(kind: 'android' | 'ios') {
   return { main, port, prepare };
 }
 
-it.each(['android', 'ios'] as const)('stages all %s objects before atomically replacing local data', async (kind) => {
+it.each(['android', 'ios'] as const)('clears once and commits %s objects independently', async (kind) => {
   const { main, port, prepare } = await setup(kind);
   const first = await prepare(nodeRecord('group-a'));
   const second = await prepare(nodeRecord('group-b'));
@@ -76,7 +79,17 @@ it.each(['android', 'ios'] as const)('stages all %s objects before atomically re
   await expect(applyCompanionFramedSyncTransfer(port, first.input)).rejects.toThrow('sync_group_local_adoption_pending');
   expect(await loadSyncGroupLocalAdoption(port)).toEqual(adoption);
 
-  await applyPreparedCompanionFramedSyncTransfers(port, [first, second], adoption);
+  expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(true);
+  await applyPreparedCompanionFramedSyncTransfers(port, [first]);
+  expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(false);
+  expect(await readFramedSyncOverwriteInventory(port, { groupId: progress.groupId, protocolVersion: 22,
+    senderDeviceId: progress.providerDeviceId, senderLibraryEpoch: progress.providerLibraryEpoch,
+    receiverDeviceId: progress.receiverDeviceId, receiverLibraryEpoch: progress.receiverLibraryEpoch })).toHaveLength(1);
+  await applyPreparedCompanionFramedSyncTransfers(port, [second]);
+  await port.transaction(async (tx) => {
+    await finishSyncGroupOverwriteProgress(tx, progress);
+    await finishSyncGroupLocalAdoption(tx, adoption);
+  });
 
   expect(main.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%' ORDER BY id").all())
     .toEqual([{ id: 'group-a' }, { id: 'group-b' }]);
@@ -87,26 +100,34 @@ it.each(['android', 'ios'] as const)('stages all %s objects before atomically re
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 2 });
 });
 
-it.each(['android', 'ios'] as const)('rolls back the whole %s adoption when one object is invalid', async (kind) => {
+it.each(['android', 'ios'] as const)('preserves committed %s units when the next object is invalid', async (kind) => {
   const { main, port, prepare } = await setup(kind);
   const valid = await prepare(nodeRecord('group-a'));
   const invalidRecord = nodeRecord('group-b');
   invalidRecord.snapshot.parent_id = 'missing-parent';
   const invalid = await prepare(invalidRecord);
 
-  await expect(applyPreparedCompanionFramedSyncTransfers(port, [valid, invalid], adoption))
+  await prepareSyncGroupOverwrite(port, progress);
+  await applyPreparedCompanionFramedSyncTransfers(port, [valid]);
+  await expect(applyPreparedCompanionFramedSyncTransfers(port, [invalid]))
     .rejects.toThrow('framed_sync_node_parent_missing:missing-parent');
 
-  expect(main.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%'").all()).toEqual([{ id: 'local' }]);
+  expect(main.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%'").all()).toEqual([{ id: 'group-a' }]);
   expect(await loadSyncGroupLocalAdoption(port)).toEqual(adoption);
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 1 });
-  await applyPreparedCompanionFramedSyncTransfers(port, [valid], adoption);
+  expect(main.prepare("SELECT version_id FROM node_sync_versions WHERE object_id = 'group-b'").all()).toEqual([]);
+  expect((await prepareSyncGroupOverwrite(port, progress)).cleared).toBe(false);
+  await applyPreparedCompanionFramedSyncTransfers(port, [valid]);
   expect(main.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%'").all()).toEqual([{ id: 'group-a' }]);
 });
 
 it.each(['android', 'ios'] as const)('adopts an empty %s group without publishing a restore event', async (kind) => {
   const { main, port } = await setup(kind);
-  await applyPreparedCompanionFramedSyncTransfers(port, [], adoption);
+  await prepareSyncGroupOverwrite(port, progress);
+  await port.transaction(async (tx) => {
+    await finishSyncGroupOverwriteProgress(tx, progress);
+    await finishSyncGroupLocalAdoption(tx, adoption);
+  });
   expect(main.prepare("SELECT id FROM nodes WHERE id NOT LIKE 'special-%'").all()).toEqual([]);
   expect(main.prepare('SELECT * FROM sync_group_restore_events').all()).toEqual([]);
   expect(await loadSyncGroupLocalAdoption(port)).toBeNull();

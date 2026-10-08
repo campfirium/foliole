@@ -606,6 +606,15 @@
         }
       ],
       "beforeVersion": 77
+    },
+    {
+      "actions": [
+        {
+          "errorMessage": "Failed to install durable attachment demands.",
+          "type": "installSchema"
+        }
+      ],
+      "beforeVersion": 78
     }
   ],
   "planKeys": {

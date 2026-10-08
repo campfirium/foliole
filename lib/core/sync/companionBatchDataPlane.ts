@@ -1,9 +1,7 @@
 import { isCanonicalAttachmentStorageKey } from '../../platform/attachmentResource.js';
 
-import { adoptCompanionContentPackBodies } from './companionContentPackBody.js';
 import type { DbPort } from './dbPort.js';
-import { refreshNodeInlineBodiesForHashes } from './nodeInlineBodyProjection.js';
-import type { NodeVersionBodyStorage } from './syncNodeTombstoneVersion.js';
+import { hashSqliteByteChunks } from './hashSqliteByteChunks.js';
 
 const CONTENT_PACK_ALIAS = 'content_batch';
 const SHA256_PATTERN = /^[a-f0-9]{64}$/;
@@ -18,7 +16,7 @@ export interface CompanionAttachmentManifestEntry {
 
 export async function applyCompanionContentPack(
   port: DbPort,
-  args: { bodyStorage?: NodeVersionBodyStorage; failedHashes: string[]; now: string; packPath: string }
+  args: { failedHashes: string[]; now: string; packPath: string }
 ) {
   await port.run(`ATTACH DATABASE ${sqlString(args.packPath)} AS ${CONTENT_PACK_ALIAS}`);
   try {
@@ -27,9 +25,8 @@ export async function applyCompanionContentPack(
     const acceptedHashes = accepted.map(({ hash }) => hash);
     const failedHashes = uniqueHashes([...args.failedHashes, ...(await loadRejectedContentHashes(port))]);
     await port.transaction(async (tx) => {
-      if (args.bodyStorage === 'chunked') {
-        await adoptCompanionContentPackBodies(tx, acceptedHashes, args.now);
-      } else await tx.run(`INSERT OR REPLACE INTO content_blob_data (hash, data)
+      for (const hash of acceptedHashes) await verifyContentPackBody(tx, hash);
+      await tx.run(`INSERT OR REPLACE INTO content_blob_data (hash, data)
         SELECT pack.hash, pack.data
         FROM ${CONTENT_PACK_ALIAS}.content_blob_batch pack
         INNER JOIN content_blobs manifest ON manifest.hash = pack.hash
@@ -47,12 +44,24 @@ export async function applyCompanionContentPack(
       for (const hash of failedHashes) {
         await tx.run("UPDATE content_blobs SET availability = 'failed' WHERE hash = ?", [hash]);
       }
-      if (args.bodyStorage !== 'chunked') await refreshNodeInlineBodiesForHashes(tx, acceptedHashes);
     });
     return { failedHashes, syncedHashes: acceptedHashes };
   } finally {
     await port.run(`DETACH DATABASE ${CONTENT_PACK_ALIAS}`);
   }
+}
+
+async function verifyContentPackBody(port: DbPort, expectedHash: string) {
+  const [row] = await port.query<{ size_bytes: number }>(
+    `SELECT size_bytes FROM ${CONTENT_PACK_ALIAS}.content_blob_batch WHERE hash = ?`, [expectedHash]);
+  if (!row) throw new Error('content_pack_body_missing');
+  const hash = await hashSqliteByteChunks(row.size_bytes, async (offset, limit) => {
+    const [chunk] = await port.query<{ bytes: string }>(
+      `SELECT hex(substr(data, ?, ?)) AS bytes FROM ${CONTENT_PACK_ALIAS}.content_blob_batch WHERE hash = ?`,
+      [offset + 1, limit, expectedHash]);
+    return chunk?.bytes ?? '';
+  });
+  if (hash !== expectedHash) throw new Error('content_pack_body_hash_mismatch');
 }
 
 export async function applyCompanionAttachmentManifest(

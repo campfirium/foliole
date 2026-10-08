@@ -16,7 +16,8 @@ beforeEach(() => {
   runtime.framed.mockResolvedValue({
     deferredObjects: [{ globalId: 'later', objectType: 'node' }],
     received: [{ objectId: 'pulled' }],
-    sent: [{ objectId: 'pushed' }]
+    sent: [{ objectId: 'pushed' }],
+    resources: { pending: 2, scanned: 4, transferred: 1, unavailable: 1 }
   });
 });
 
@@ -46,10 +47,15 @@ it('rejects a peer without an exact framed v22 negotiation', async () => {
   expect(runtime.framed).not.toHaveBeenCalled();
 });
 
-it('rejects the retired out-of-band resource continuation', async () => {
-  await expect(syncCompanionIdentityObjects('http://peer', {
-    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 22 },
-    resourcesOnly: true
-  })).rejects.toThrow('framed_sync_resources_are_in_band');
-  expect(runtime.framed).not.toHaveBeenCalled();
+it('continues attachment demands through framed transport without replaying database changes', async () => {
+  runtime.framed.mockResolvedValueOnce({ deferredObjects: [], received: [], sent: [],
+    resources: { pending: 1, scanned: 4, transferred: 1, unavailable: 0 } });
+  const result = await syncCompanionIdentityObjects('http://peer', {
+    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 22 }, resourcesOnly: true
+  });
+  expect(runtime.framed).toHaveBeenCalledWith({ endpoint_url: 'http://peer', receiver_device_id: 'desktop',
+    receiver_library_epoch: 'epoch', sync_group_id: 'group' }, true);
+  expect(result.appliedObjectIds).toEqual([]);
+  expect(result.pushedObjectIds).toEqual([]);
+  expect(result.remainingAttachmentResourceCount).toBe(1);
 });

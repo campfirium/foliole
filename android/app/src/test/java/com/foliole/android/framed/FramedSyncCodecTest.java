@@ -7,13 +7,37 @@ import static org.junit.Assert.fail;
 import com.foliole.sync.v22.CanonicalField;
 import com.foliole.sync.v22.CanonicalObject;
 import com.foliole.sync.v22.CanonicalValue;
+import com.foliole.sync.v22.BlobReference;
 import com.foliole.sync.v22.ProtocolMessage;
+import com.google.protobuf.ByteString;
 import java.util.EnumMap;
 import java.util.Map;
 import org.junit.Test;
 
 public class FramedSyncCodecTest {
     private static final Map<FramedSyncPayload.Case, String> CORPUS_NAMES = corpusNames();
+
+    @Test
+    public void optionalBodyDescriptorsHaveTheSameOneMiBLimitAsRequiredBodies() throws Exception {
+        ProtocolMessage message = ProtocolMessage.parseFrom(golden("fact").bytes);
+        for (int role : new int[] {1, 5}) {
+            BlobReference exact = BlobReference.newBuilder().setRoleValue(role)
+                .setSha256(ByteString.copyFrom(new byte[32])).setByteLength(1_048_576).build();
+            ProtocolMessage valid = message.toBuilder().setFact(message.getFact().toBuilder()
+                .clearBlobs().addBlobs(exact)).build();
+            FramedSyncCodec.validateOutbound(valid, FramedSyncFrameType.FACT.wireValue());
+            try {
+                FramedSyncCodec.validateOutbound(valid.toBuilder().setFact(valid.getFact().toBuilder()
+                    .setBlobs(0, exact.toBuilder().setByteLength(1_048_577))).build(),
+                    FramedSyncFrameType.FACT.wireValue());
+                fail("accepted oversized body descriptor");
+            } catch (FramedSyncValidationException error) {
+                assertEquals("blob_byte_length_limit_exceeded", error.code());
+            }
+        }
+        FramedSyncValueValidator.blob(BlobReference.newBuilder().setRoleValue(2)
+            .setSha256(ByteString.copyFrom(new byte[32])).setByteLength(FramedSyncContract.MAX_BLOB_BYTES).build());
+    }
 
     @Test
     public void stagesNodeAndExternalDocumentRolesAsBodiesAndKeepsResourceRolesSeparate() {
@@ -49,7 +73,7 @@ public class FramedSyncCodecTest {
 
     @Test
     public void runtimeCodecValidatesAndReencodesAllGoldenMessages() throws Exception {
-        assertEquals(17, FramedSyncContractSource.messages().size());
+        assertEquals(18, FramedSyncContractSource.messages().size());
         for (FramedSyncContractSource.MessageVector vector : FramedSyncContractSource.messages()) {
             int frameType = frameType(vector.payloadCase).wireValue();
             FramedSyncValidatedMessage validated = FramedSyncCodec.decode(vector.bytes, frameType);
@@ -144,7 +168,7 @@ public class FramedSyncCodecTest {
 
     private static FramedSyncFrameType frameType(String payloadCase) {
         if (payloadCase.equals("transfer_header")) return FramedSyncFrameType.TRANSFER_HEADER;
-        if (payloadCase.equals("fact")) return FramedSyncFrameType.FACT;
+        if (payloadCase.equals("fact") || payloadCase.equals("fact_fragment")) return FramedSyncFrameType.FACT;
         if (payloadCase.equals("blob_chunk")) return FramedSyncFrameType.BLOB_CHUNK;
         if (payloadCase.equals("transfer_trailer")) return FramedSyncFrameType.TRANSFER_TRAILER;
         if (payloadCase.equals("transfer_receipt")) return FramedSyncFrameType.TRANSFER_RECEIPT;

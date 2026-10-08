@@ -2,6 +2,15 @@ import Foundation
 import FolioleFramedSyncRuntime
 
 final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
+    private let owner: FolioleFramedSyncPayloadBudget?
+    private let receiptSequence: Bool
+    private let responseLane: FolioleFramedSyncPayloadBudget.Lane
+    private let delegateQueue = OperationQueue()
+    private var payloadLoan: FolioleFramedSyncPayloadBudget.Loan?
+    private var receiptPrefix = Data()
+    private var outgoingLoan: FolioleFramedSyncPayloadBudget.Loan?
+    private var receivedBytes = 0
+    private var waitingLoan: UUID?
     private let responseURL: URL
     private let partialURL: URL
     private let expectedDeviceID: String
@@ -12,7 +21,9 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     private var output: OutputStream?
     private var session: URLSession?
 
-    init(responseURL: URL, expectedDeviceID: String, expectedLibraryEpoch: String) {
+    init(responseURL: URL, expectedDeviceID: String, expectedLibraryEpoch: String,
+         owner: FolioleFramedSyncPayloadBudget? = nil, responseLane: FolioleFramedSyncPayloadBudget.Lane = .payload, receiptSequence: Bool = false) {
+        self.owner = owner; self.responseLane = responseLane; self.receiptSequence = receiptSequence
         self.responseURL = responseURL
         partialURL = responseURL.deletingLastPathComponent()
             .appendingPathComponent(".\(responseURL.lastPathComponent).\(UUID().uuidString).partial")
@@ -23,19 +34,26 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     func upload(
         request: URLRequest,
         bodyURL: URL,
-        configuration: URLSessionConfiguration
+        configuration: URLSessionConfiguration, outgoingLoan: FolioleFramedSyncPayloadBudget.Loan? = nil
     ) async throws -> URL {
+        self.outgoingLoan = outgoingLoan
         try FileManager.default.createDirectory(
             at: responseURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
-            let queue = OperationQueue()
-            queue.maxConcurrentOperationCount = 1
-            let session = URLSession(configuration: configuration, delegate: self, delegateQueue: queue)
+            delegateQueue.maxConcurrentOperationCount = 1
+            let session = URLSession(configuration: configuration, delegate: self, delegateQueue: delegateQueue)
             self.session = session
             session.uploadTask(with: request, fromFile: bodyURL).resume()
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64,
+                    totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+        if totalBytesExpectedToSend >= 0 && totalBytesSent >= totalBytesExpectedToSend {
+            outgoingLoan?.release(); outgoingLoan = nil
         }
     }
 
@@ -74,7 +92,19 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
             }
             output.open()
             self.output = output
-            completionHandler(.allow)
+            if let owner {
+                waitingLoan = owner.acquire(.inbound, lane: responseLane) { outcome in
+                    self.delegateQueue.addOperation {
+                        self.waitingLoan = nil
+                        guard self.continuation != nil else {
+                            if case .success(let loan) = outcome { loan.release() }
+                            completionHandler(.cancel); return
+                        }
+                        do { self.payloadLoan = try outcome.get(); completionHandler(.allow) }
+                        catch { completionHandler(.cancel); self.finish(.failure(error)) }
+                    }
+                }
+            } else { completionHandler(.allow) }
         } catch {
             completionHandler(.cancel)
             finish(.failure(error))
@@ -87,7 +117,25 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
             else { errorBody = Data(repeating: 0, count: 4 * 1024 + 1) }
             return
         }
-        do { try write(data) } catch { dataTask.cancel(); finish(.failure(error)) }
+        do {
+            if responseLane == .receipt {
+                let maximum = receiptSequence ? 2_097_152 + 128 * 32 : 1_048_576 + 112
+                guard data.count <= maximum - receivedBytes else {
+                    throw FolioleFramedSyncValidationError("framed_sync_receipt_limit_exceeded")
+                }
+                receivedBytes += data.count
+                if receiptPrefix.count < 112 {
+                    receiptPrefix.append(data.prefix(112 - receiptPrefix.count))
+                    if receiptPrefix.count == 112 {
+                        let header = try FolioleFramedSyncWireHeader(decoding: Data(receiptPrefix.suffix(16)))
+                        guard header.ciphertextBytes <= 1_048_576 else {
+                            throw FolioleFramedSyncValidationError("framed_sync_receipt_limit_exceeded")
+                        }
+                    }
+                }
+            }
+            try write(data)
+        } catch { dataTask.cancel(); finish(.failure(error)) }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
@@ -128,64 +176,14 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
     private func finish(_ result: Result<URL, Error>) {
         guard let continuation else { return }
         self.continuation = nil
+        outgoingLoan?.release(); outgoingLoan = nil
+        if let waitingLoan { owner?.cancel(waitingLoan); self.waitingLoan = nil }
+        payloadLoan?.release(); payloadLoan = nil
         output?.close()
         output = nil
         if case .failure = result { try? FileManager.default.removeItem(at: partialURL) }
         continuation.resume(with: result)
         session?.finishTasksAndInvalidate()
         session = nil
-    }
-}
-
-struct FolioleFramedSyncSessionReadResult {
-    let sessionID: Data
-    let messages: [FolioleFramedSyncValidatedMessage]
-}
-
-enum FolioleFramedSyncSessionReader {
-    static func read(
-        _ data: Data, groupKey: Data, context: FolioleFramedSyncSessionContext,
-        maximumFrames: Int
-    ) throws -> FolioleFramedSyncSessionReadResult {
-        guard (1...FolioleFramedSyncLimits.maxSessionFrames).contains(maximumFrames) else {
-            throw FolioleFramedSyncValidationError("session_frame_limit_invalid")
-        }
-        guard data.count <= FolioleFramedSyncLimits.maxSessionBytes else {
-            throw FolioleFramedSyncValidationError("session_byte_limit_exceeded")
-        }
-        return try read(InputStream(data: data), groupKey: groupKey, context: context, maximumFrames: maximumFrames)
-    }
-
-    static func read(
-        _ stream: InputStream, groupKey: Data, context: FolioleFramedSyncSessionContext,
-        maximumFrames: Int
-    ) throws -> FolioleFramedSyncSessionReadResult {
-        guard (1...FolioleFramedSyncLimits.maxSessionFrames).contains(maximumFrames) else {
-            throw FolioleFramedSyncValidationError("session_frame_limit_invalid")
-        }
-        let reader = FolioleFramedSyncStreamReader(input: stream)
-        let preamble = try reader.nextPreamble()
-        let sessionID = try context.validate(preamble)
-        var messages = [FolioleFramedSyncValidatedMessage]()
-        var sequence: UInt64 = 0
-        var bytes = FolioleFramedSyncPreamble.byteCount
-        while let frame = try reader.nextFrame() {
-            bytes += FolioleFramedSyncWireHeader.byteCount + frame.ciphertext.count
-            guard bytes <= FolioleFramedSyncLimits.maxSessionBytes else {
-                throw FolioleFramedSyncValidationError("session_byte_limit_exceeded")
-            }
-            guard messages.count < maximumFrames else {
-                throw FolioleFramedSyncValidationError("session_frame_limit_exceeded")
-            }
-            let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
-                groupKey: groupKey, preamble: preamble,
-                frame: frame, expectedSequence: sequence
-            )
-            messages.append(try FolioleFramedSyncCodec.decode(
-                plaintext, authenticatedFrameType: frame.header.frameType.rawValue
-            ))
-            sequence += 1
-        }
-        return .init(sessionID: sessionID, messages: messages)
     }
 }

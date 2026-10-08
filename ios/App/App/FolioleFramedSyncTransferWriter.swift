@@ -102,7 +102,7 @@ enum FolioleFramedSyncTransferWriter {
         )
     }
 
-    private static func persist(
+    static func persist(
         _ message: Foliole_Sync_V22_ProtocolMessage, type: FolioleFramedSyncFrameType,
         sequence: UInt64, groupKey: Data, preamble: FolioleFramedSyncPreamble,
         transferID: Data, attemptID: Data, staging: FolioleFramedSyncOutboundStaging
@@ -111,18 +111,8 @@ enum FolioleFramedSyncTransferWriter {
             message, authenticatedFrameType: type.rawValue
         )
         let plaintext = try FolioleFramedSyncCodec.encode(validated)
-        let header = try FolioleFramedSyncWireHeader(
-            ciphertextBytes: plaintext.count + 16, sequence: sequence, frameType: type
-        ).encode()
-        let ciphertext = try FolioleFramedSyncFrameCrypto.encrypt(
-            groupKey: groupKey, preamble: preamble, header: header,
-            plaintext: plaintext, sequence: sequence
-        )
-        _ = try staging.commit(.init(
-            transferID: transferID, attemptID: attemptID, preamble: preamble.encoded,
-            header: header, ciphertext: ciphertext, plaintext: plaintext
-        ))
-        return sequence + 1
+        return try persistEncoded(plaintext, type: type, sequence: sequence, groupKey: groupKey,
+            preamble: preamble, transferID: transferID, attemptID: attemptID, staging: staging)
     }
 
     private static func header(
@@ -156,13 +146,18 @@ enum FolioleFramedSyncTransferWriter {
         return message
     }
 
-    private static func persistBlob(
+    static func persistBlob(
         _ blob: FolioleFramedSyncOutboundBlob, sequence: UInt64, groupKey: Data,
         preamble: FolioleFramedSyncPreamble, transferID: Data, attemptID: Data,
-        staging: FolioleFramedSyncOutboundStaging
+        staging: FolioleFramedSyncOutboundStaging, owner: FolioleFramedSyncPayloadBudget? = nil
     ) throws -> UInt64 {
         var next = sequence, offset: UInt64 = 0
-        try forEachChunk(blob.source) { data in
+        let body = blob.reference.role == .nodeBody || blob.reference.role == .externalDocument
+        guard !body || blob.reference.byteLength <= 1_048_576 else { throw invalid("blob_size_limit_exceeded") }
+        try forEachChunk(blob.source, chunkBytes: body ? 1_048_576 : blobChunkBytes, owner: owner) { data in
+            guard !body || (offset == 0 && UInt64(data.count) == blob.reference.byteLength) else {
+                throw invalid("framed_sync_blob_content_mismatch")
+            }
             var chunk = Foliole_Sync_V22_BlobChunk()
             chunk.transferID = transferID; chunk.blobHash = blob.reference.sha256
             chunk.offset = offset; chunk.data = data
@@ -177,25 +172,29 @@ enum FolioleFramedSyncTransferWriter {
     }
 
     private static func forEachChunk(
-        _ source: FolioleFramedSyncOutboundBlob.Source, _ consume: (Data) throws -> Void
+        _ source: FolioleFramedSyncOutboundBlob.Source, chunkBytes: Int, owner: FolioleFramedSyncPayloadBudget?, _ consume: (Data) throws -> Void
     ) throws {
         switch source {
         case .data(let data):
             var offset = 0
             while offset < data.count {
-                let end = min(offset + blobChunkBytes, data.count)
-                try consume(data[offset..<end]); offset = end
+                let end = min(offset + chunkBytes, data.count)
+                try FolioleFramedSyncPayloadWorker.withLoan(owner, direction: .outbound) { _ in
+                    try consume(data[offset..<end])
+                }
+                offset = end
             }
         case .file(let url):
             let handle = try FileHandle(forReadingFrom: url)
             defer { try? handle.close() }
-            while let data = try handle.read(upToCount: blobChunkBytes), !data.isEmpty {
-                try consume(data)
-            }
+            while try FolioleFramedSyncPayloadWorker.withLoan(owner, direction: .outbound, { _ in
+                guard let data = try handle.read(upToCount: chunkBytes), !data.isEmpty else { return false }
+                try consume(data); return true
+            }) {}
         }
     }
 
-    private static func makePreamble(
+    static func makePreamble(
         transferID: Data, attemptID: Data, noncePrefix: Data
     ) throws -> FolioleFramedSyncPreamble {
         var bytes = Data(repeating: 0, count: FolioleFramedSyncPreamble.byteCount)
@@ -207,7 +206,7 @@ enum FolioleFramedSyncTransferWriter {
         return try .init(decoding: bytes)
     }
 
-    private static func randomBytes(count: Int) -> Data {
+    static func randomBytes(count: Int) -> Data {
         Data((0..<count).map { _ in UInt8.random(in: .min ... .max) })
     }
 

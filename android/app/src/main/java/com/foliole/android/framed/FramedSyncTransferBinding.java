@@ -26,6 +26,7 @@ final class FramedSyncTransferBinding {
                 transferId = ((com.foliole.sync.v22.TransferReceipt) payload.value()).getTransferId();
                 break;
             case FACT:
+            case FACT_FRAGMENT:
                 return;
             default:
                 throw invalid("transfer_frame_payload_required");

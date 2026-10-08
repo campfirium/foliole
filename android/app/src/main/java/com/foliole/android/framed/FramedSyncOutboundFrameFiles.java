@@ -12,9 +12,11 @@ final class FramedSyncOutboundFrameFiles {
     private static final String TABLE = "framed_sync_android_outbound_file_frames";
     private final SQLiteDatabase database;
     private final File directory;
+    private final FramedSyncPayloadBudget budget;
 
-    FramedSyncOutboundFrameFiles(SQLiteDatabase database, File directory) {
+    FramedSyncOutboundFrameFiles(SQLiteDatabase database, File directory, FramedSyncPayloadBudget budget) {
         this.database = database;
+        this.budget = budget;
         this.directory = directory;
         directory.mkdirs();
         database.execSQL("CREATE TABLE IF NOT EXISTS " + TABLE + " (" +
@@ -27,8 +29,8 @@ final class FramedSyncOutboundFrameFiles {
 
     FramedSyncStageOutcome commit(FramedSyncAuthenticatedFrame frame, FramedSyncWireHeader header)
         throws Exception {
-        byte[] ciphertextHash = sha256(frame.ciphertext());
-        byte[] plaintextHash = sha256(frame.plaintext());
+        byte[] ciphertextHash = sha256(frame.borrowedCiphertext());
+        byte[] plaintextHash = sha256(frame.borrowedPlaintext());
         String[] where = FramedSyncSQLiteValues.blobArgs(frame.transferId(), frame.attemptId(),
             Long.toUnsignedString(header.sequence()));
         try (Cursor row = database.query(TABLE, new String[] {"frame_header", "wire_offset",
@@ -37,24 +39,24 @@ final class FramedSyncOutboundFrameFiles {
             null, null, null)) {
             if (row.moveToFirst()) {
                 boolean same = Arrays.equals(row.getBlob(0), frame.frameHeader()) &&
-                    row.getLong(2) == frame.ciphertext().length &&
+                    row.getLong(2) == frame.borrowedCiphertext().length &&
                     Arrays.equals(row.getBlob(3), ciphertextHash) &&
                     Arrays.equals(row.getBlob(4), plaintextHash) &&
                     Arrays.equals(read(wireFile(frame.transferId(), frame.attemptId()),
-                        row.getLong(1), row.getLong(2)), frame.ciphertext());
+                        row.getLong(1), row.getLong(2)), frame.borrowedCiphertext());
                 if (!same) throw invalid("outbound_frame_identity_conflict");
                 return FramedSyncStageOutcome.IDENTICAL;
             }
         }
         long offset = nextOffset(frame.transferId(), frame.attemptId());
-        write(wireFile(frame.transferId(), frame.attemptId()), offset, frame.ciphertext());
+        write(wireFile(frame.transferId(), frame.attemptId()), offset, frame.borrowedCiphertext());
         ContentValues values = new ContentValues();
         values.put("transfer_id", frame.transferId());
         values.put("attempt_id", frame.attemptId());
         values.put("sequence", Long.toUnsignedString(header.sequence()));
         values.put("frame_header", frame.frameHeader());
         values.put("wire_offset", offset);
-        values.put("ciphertext_length", frame.ciphertext().length);
+        values.put("ciphertext_length", frame.borrowedCiphertext().length);
         values.put("ciphertext_sha256", ciphertextHash);
         values.put("plaintext_sha256", plaintextHash);
         database.insertOrThrow(TABLE, null, values);
@@ -70,11 +72,14 @@ final class FramedSyncOutboundFrameFiles {
             "ORDER BY length(f.sequence), f.sequence",
             FramedSyncSQLiteValues.blobArgs(transferId, attemptId))) {
             while (rows.moveToNext()) {
-                byte[] ciphertext = read(file, rows.getLong(1), rows.getLong(2));
-                if (!MessageDigest.isEqual(sha256(ciphertext), rows.getBlob(3))) {
-                    throw invalid("outbound_frame_file_invalid");
+                try (var loan = FramedSyncPayloadBudget.borrow(budget,
+                    FramedSyncPayloadBudget.Direction.OUTBOUND, FramedSyncPayloadBudget.Lane.PAYLOAD)) {
+                    byte[] ciphertext = read(file, rows.getLong(1), rows.getLong(2));
+                    if (!MessageDigest.isEqual(sha256(ciphertext), rows.getBlob(3))) {
+                        throw invalid("outbound_frame_file_invalid");
+                    }
+                    writer.writeFrame(rows.getBlob(0), ciphertext);
                 }
-                writer.writeFrame(rows.getBlob(0), ciphertext);
             }
         }
     }

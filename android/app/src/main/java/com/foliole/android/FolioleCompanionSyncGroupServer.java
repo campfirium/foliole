@@ -80,7 +80,7 @@ final class FolioleCompanionSyncGroupServer {
         else if (request.method.equals("POST") && path.equals("/sync-group/join-acceptance")) collectAcceptance(request, output);
         else if (request.method.equals("POST") && path.equals("/sync-group/member-state")) memberState(request, output);
         else if (request.method.equals("POST") && path.equals("/companion/framed-sync"))
-            FolioleCompanionFramedSyncRoute.handle(config, dataBridge,
+            FolioleCompanionFramedSyncRoute.handle(context, config, dataBridge,
                 request, output, auth.authenticate(request), framedSyncNonces, framedSyncTransfers,
                 new java.io.File(context.getCacheDir(), "framed-http-requests"));
         else FolioleCompanionHttpResponse.json(output, 404, error("not_found"));
@@ -123,6 +123,7 @@ final class FolioleCompanionSyncGroupServer {
 
     private void memberState(FolioleCompanionHttpRequest request, java.io.OutputStream output) throws Exception {
         String peer = auth.authenticate(request, true);
+        auth.update(peer, null);
         JSONObject incoming = new JSONObject(decryptRequest(request));
         JSONObject applied = dataBridge.request("apply_member_state", new JSONObject()
             .put("authenticated_device_id", peer).put("state", incoming));

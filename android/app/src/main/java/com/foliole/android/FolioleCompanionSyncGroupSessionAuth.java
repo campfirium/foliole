@@ -43,7 +43,7 @@ final class FolioleCompanionSyncGroupSessionAuth {
     }
 
     void update(String peer, JSONObject applied) {
-        if (applied.optBoolean("normal_sync_ready", false)) {
+        if (applied != null && applied.optBoolean("normal_sync_ready", false)) {
             ready.put(peer, restoreToken(applied.optJSONObject("state")));
         } else {
             ready.remove(peer);

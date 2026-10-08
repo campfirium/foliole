@@ -13,11 +13,11 @@ public final class FramedSyncInboundStagingAdapter {
     ) throws Exception {
         FramedSyncPreamble.decode(frame.preamble());
         FramedSyncWireHeader header = FramedSyncWireHeader.decode(frame.frameHeader());
-        if (header.ciphertextBytes() != frame.ciphertext().length) {
+        if (header.ciphertextBytes() != frame.borrowedCiphertext().length) {
             throw new FramedSyncValidationException("framed_sync_frame_body_length_mismatch");
         }
         FramedSyncValidatedMessage validated = FramedSyncCodec.decode(
-            frame.plaintext(), header.frameType());
+            frame.borrowedPlaintext(), header.frameType());
         FramedSyncTransferBinding.require(validated.payload(), frame);
         return staging.commitInboundFrame(frame, validated);
     }

@@ -2,7 +2,6 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import { expect, it } from 'vitest';
 
 import { createCompanionFramedSyncOutboundValue } from './framedSyncCompanionOutboundContract.js';
-import { verifiedBodyRefFromHeader } from './verifiedBody.js';
 
 const body = 'Companion body 🌿';
 const data = new TextEncoder().encode(body);
@@ -13,7 +12,7 @@ function input() {
     blobs: [{ blob: { byteLength: BigInt(data.byteLength), required: true, role: 1,
       sha256: sha256(data) }, dataText: body }],
     contentId: digest(1),
-    factMessageBytesList: [new Uint8Array([10, 20, 30])],
+    headerMessageBytes: new Uint8Array([10, 20, 30]),
     manifestHash: digest(1),
     publicationState: 'created' as const,
     transferId: digest(2)
@@ -27,11 +26,18 @@ it('creates the exact JSON-safe value consumed by native companion senders', () 
       sha256: Buffer.from(sha256(data)).toString('hex')
     }],
     content_id: '01'.repeat(32),
-    fact_message_bytes_list: [[10, 20, 30]],
+    header_message_bytes: [10, 20, 30],
     manifest_hash: '01'.repeat(32),
     publication_state: 'created',
     transfer_id: '02'.repeat(32)
   });
+});
+
+it.each([false, true])('includes explicit batch eligibility %s without changing original identities', batchReady => {
+  const original = createCompanionFramedSyncOutboundValue(input());
+  expect(original).not.toHaveProperty('batch_ready');
+  expect(createCompanionFramedSyncOutboundValue({ ...input(), batchReady }))
+    .toEqual({ ...original, batch_ready: batchReady });
 });
 
 it('rejects a body that does not match the published blob', () => {
@@ -65,15 +71,15 @@ it('preserves an external document text body in the original role and rejects fi
     .toThrow('framed_sync_companion_blob_mismatch');
 });
 
-it.each([1, 5])('projects a verified body source without text or an attachment surrogate for role %s', (role) => {
-  const hash = Buffer.from(sha256(data)).toString('hex');
-  const bodyRef = verifiedBodyRefFromHeader({ hash, byte_length: data.byteLength,
-    utf16_length: body.length, frontmatter_end: null });
+it.each([1, 5])('projects a complete frozen-body locator and rejects mixed or oversized sources for role %s', (role) => {
   const blob = { ...input().blobs[0]!.blob, role };
-  expect(createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob, bodyRef }] }).blobs)
-    .toEqual([{ byte_length: String(data.byteLength), body_source: 'verified_chunks', required: true, role, sha256: hash }]);
-  expect(() => createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob, bodyRef, dataText: body }] }))
-    .toThrow('framed_sync_companion_blob_mismatch');
-  expect(() => createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob: { ...blob, role: 3 }, bodyRef }] }))
+  expect(createCompanionFramedSyncOutboundValue({ ...input(), blobs: [{ blob, frozenBody: true }] }).blobs)
+    .toEqual([{ byte_length: String(data.byteLength), body_source: 'frozen_body', required: true, role,
+      sha256: Buffer.from(blob.sha256).toString('hex') }]);
+  for (const candidate of [
+    { blob, frozenBody: true, dataText: body },
+    { blob: { ...blob, role: 3 }, frozenBody: true },
+    { blob: { ...blob, byteLength: 1_048_577n }, frozenBody: true }
+  ]) expect(() => createCompanionFramedSyncOutboundValue({ ...input(), blobs: [candidate] }))
     .toThrow('framed_sync_companion_blob_mismatch');
 });

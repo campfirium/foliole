@@ -19,95 +19,81 @@ public final class FramedSyncInventoryWire {
 
     public static byte[] decodeRoundId(List<FramedSyncValidatedMessage> messages)
         throws Exception {
-        if (messages.size() < 2 || messages.size() > MAX_SESSION_FRAMES ||
-            messages.get(0).payload().payloadCase() != FramedSyncPayload.Case.INVENTORY_BEGIN ||
-            messages.get(messages.size() - 1).payload().payloadCase() !=
-                FramedSyncPayload.Case.INVENTORY_END) {
-            throw invalid("inventory_exchange_incomplete");
-        }
-        InventoryBegin begin = (InventoryBegin) messages.get(0).payload().value();
-        byte[] roundId = begin.getRoundId().toByteArray();
-        long entries = 0;
-        MessageDigest chunks = MessageDigest.getInstance("SHA-256");
-        long bytes = 0;
-        for (int index = 1; index < messages.size() - 1; index++) {
-            FramedSyncValidatedMessage message = messages.get(index);
-            if (message.payload().payloadCase() != FramedSyncPayload.Case.INVENTORY_CHUNK) {
-                throw invalid("inventory_exchange_incomplete");
-            }
-            InventoryChunk chunk = (InventoryChunk) message.payload().value();
-            if (!MessageDigest.isEqual(roundId, chunk.getRoundId().toByteArray()) ||
-                Integer.toUnsignedLong(chunk.getChunkIndex()) != index - 1L) {
-                throw invalid("inventory_chunk_sequence_invalid");
-            }
-            entries += chunk.getEntriesCount();
-            if (entries > begin.getEntryCount() || entries > FramedSyncContract.MAX_INVENTORY_ENTRIES) {
-                throw invalid("inventory_entry_limit_exceeded");
-            }
-            byte[] encoded = FramedSyncCodec.encode(message);
-            bytes += encoded.length + 32;
-            if (bytes > FramedSyncContract.MAX_SESSION_BYTES) throw invalid("inventory_session_limit_exceeded");
-            chunks.update(encoded);
-        }
-        InventoryEnd end = (InventoryEnd) messages.get(messages.size() - 1).payload().value();
-        byte[] hash = chunks.digest();
-        if (!MessageDigest.isEqual(roundId, end.getRoundId().toByteArray()) ||
-            !MessageDigest.isEqual(hash, end.getInventoryHash().toByteArray()) ||
-            entries != begin.getEntryCount()) throw invalid("inventory_exchange_incomplete");
-        return roundId;
+        FramedSyncInventoryReader reader = new FramedSyncInventoryReader(false);
+        for (FramedSyncValidatedMessage message : messages) reader.accept(message);
+        return reader.roundId();
     }
 
     public static List<InventoryEntry> decodeEntries(
-        List<FramedSyncValidatedMessage> messages,
-        byte[] expectedRoundId
+        List<FramedSyncValidatedMessage> messages, byte[] expectedRoundId
     ) throws Exception {
-        byte[] roundId = decodeRoundId(messages);
-        if (!MessageDigest.isEqual(roundId, expectedRoundId)) {
-            throw invalid("inventory_round_identity_mismatch");
-        }
-        List<InventoryEntry> entries = new ArrayList<>();
-        for (int index = 1; index < messages.size() - 1; index++) {
-            InventoryChunk chunk = (InventoryChunk) messages.get(index).payload().value();
-            entries.addAll(chunk.getEntriesList());
-        }
-        return Collections.unmodifiableList(entries);
+        FramedSyncInventoryReader reader = new FramedSyncInventoryReader(true);
+        for (FramedSyncValidatedMessage message : messages) reader.accept(message);
+        return reader.entries(expectedRoundId);
     }
 
     public static List<FramedSyncValidatedMessage> encode(
         List<InventoryEntry> entries, byte[] roundId
     ) throws Exception {
+        List<FramedSyncValidatedMessage> result = new ArrayList<>();
+        emit(entries, roundId, result::add);
+        return Collections.unmodifiableList(result);
+    }
+
+    public static void emit(List<InventoryEntry> entries, byte[] roundId,
+        FramedSyncSessionWriter.MessageConsumer consumer) throws Exception {
         if (entries.size() > FramedSyncContract.MAX_INVENTORY_ENTRIES ||
             roundId == null || roundId.length != FramedSyncContract.IDENTIFIER_BYTES) {
             throw new IllegalArgumentException("inventory_input_invalid");
         }
-        List<FramedSyncValidatedMessage> result = new ArrayList<>();
-        result.add(validated(ProtocolMessage.newBuilder().setInventoryBegin(
+        consumer.accept(validated(ProtocolMessage.newBuilder().setInventoryBegin(
             InventoryBegin.newBuilder().setRoundId(ByteString.copyFrom(roundId))
                 .setEntryCount(entries.size())).build()));
         MessageDigest chunks = MessageDigest.getInstance("SHA-256");
         long bytes = 0;
         for (int offset = 0, index = 0; offset < entries.size(); index++) {
-            int count = Math.min(CHUNK_SIZE, entries.size() - offset);
+            int count = pageCount(entries, roundId, offset, index);
             ProtocolMessage wire = chunk(entries, roundId, offset, count, index);
-            while (wire.getSerializedSize() > FramedSyncContract.MAX_CONTROL_MESSAGE_BYTES && count > 1) {
-                count = Math.max(1, count / 2);
-                wire = chunk(entries, roundId, offset, count, index);
-            }
             FramedSyncValidatedMessage message = validated(wire);
             byte[] encoded = FramedSyncCodec.encode(message);
             bytes += encoded.length + 32;
-            if (bytes > FramedSyncContract.MAX_SESSION_BYTES || result.size() + 2 > MAX_SESSION_FRAMES) {
+            if (bytes > FramedSyncContract.MAX_SESSION_BYTES || index + 3 > MAX_SESSION_FRAMES) {
                 throw invalid("inventory_session_limit_exceeded");
             }
             chunks.update(encoded);
-            result.add(message);
+            consumer.accept(message);
             offset += count;
         }
         byte[] hash = chunks.digest();
-        result.add(validated(ProtocolMessage.newBuilder().setInventoryEnd(
+        consumer.accept(validated(ProtocolMessage.newBuilder().setInventoryEnd(
             InventoryEnd.newBuilder().setRoundId(ByteString.copyFrom(roundId))
                 .setInventoryHash(ByteString.copyFrom(hash))).build()));
-        return Collections.unmodifiableList(result);
+    }
+
+    private static int pageCount(List<InventoryEntry> entries, byte[] roundId, int offset, int index)
+        throws FramedSyncValidationException {
+        int maximum = Math.min(CHUNK_SIZE, entries.size() - offset);
+        if (fits(entries, roundId, offset, maximum, index)) return maximum;
+        int low = 1;
+        int high = maximum - 1;
+        int accepted = 0;
+        while (low <= high) {
+            int count = low + (high - low) / 2;
+            if (fits(entries, roundId, offset, count, index)) {
+                accepted = count;
+                low = count + 1;
+            } else {
+                high = count - 1;
+            }
+        }
+        if (accepted == 0) throw invalid("inventory_frame_limit_exceeded");
+        return accepted;
+    }
+
+    private static boolean fits(List<InventoryEntry> entries, byte[] roundId, int offset,
+        int count, int index) {
+        return chunk(entries, roundId, offset, count, index).getSerializedSize() <=
+            FramedSyncContract.MAX_CONTROL_MESSAGE_BYTES;
     }
 
     private static ProtocolMessage chunk(

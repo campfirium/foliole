@@ -1,7 +1,6 @@
 import { loadSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { reconcileVersionedInlineBodies } from '../database/syncBodyProjectionReconcile.js';
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadPendingWatchedFolderConflicts } from '../database/watchedFolderConflictDecisions.js';
 
@@ -86,8 +85,6 @@ async function continuePeerSync(
       activity
     );
   }
-  await runWithDatabaseConnectionOwner(() =>
-    reconcileVersionedInlineBodies(openDatabaseConnection().driver));
   return { complete: result.complete };
 }
 

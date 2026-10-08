@@ -4,10 +4,12 @@ import FolioleFramedSyncRuntime
 
 final class FolioleFramedSyncOutboundFrameFiles {
     static let table = "framed_sync_ios_outbound_file_frames"
+    private let owner: FolioleFramedSyncPayloadBudget?
     private let database: FolioleFramedSyncTransferDatabase
     private let directory: URL
 
-    init(database: FolioleFramedSyncTransferDatabase) throws {
+    init(database: FolioleFramedSyncTransferDatabase, owner: FolioleFramedSyncPayloadBudget? = nil) throws {
+        self.owner = owner
         self.database = database
         directory = database.url.deletingLastPathComponent()
             .appendingPathComponent("outbound-frames", isDirectory: true)
@@ -68,9 +70,14 @@ final class FolioleFramedSyncOutboundFrameFiles {
                   let length = row[2] as? Int, let expected = row[3] as? Data else {
                 throw invalid("outbound_frame_storage_invalid")
             }
-            let ciphertext = try read(file, offset: offset, length: length)
-            guard digest(ciphertext) == expected else { throw invalid("outbound_frame_file_invalid") }
-            try writer.write(header: header, ciphertext: ciphertext)
+            try FolioleFramedSyncPayloadWorker.withLoan(owner, direction: .outbound) { _ in
+                guard length <= FolioleFramedSyncLimits.maxFrameMessageBytes + 16 else {
+                    throw invalid("outbound_frame_file_invalid")
+                }
+                let ciphertext = try read(file, offset: offset, length: length)
+                guard digest(ciphertext) == expected else { throw invalid("outbound_frame_file_invalid") }
+                try writer.write(header: header, ciphertext: ciphertext)
+            }
         }
     }
 

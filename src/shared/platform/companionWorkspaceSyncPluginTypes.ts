@@ -1,8 +1,13 @@
 import type { AttachmentMaintenanceHostPlugin } from '../../../lib/platform/attachmentMaintenanceHostContract';
+import type { NativeCompanionFramedPayloadBudgetPlugin } from '../../../lib/platform/nativeCompanionFramedPayloadBudgetContract';
 import type {
   NativeCompanionFramedSyncInventoryRequest,
   NativeCompanionFramedSyncInventoryResult,
+  NativeCompanionFramedSyncPullBatchRequest,
+  NativeCompanionFramedSyncPullBatchResult,
   NativeCompanionFramedSyncPullRequest,
+  NativeCompanionFramedSyncTransferBatchRequest,
+  NativeCompanionFramedSyncTransferBatchResult,
   NativeCompanionFramedSyncTransferReceipt,
   NativeCompanionFramedSyncStagedTransfer,
   NativeCompanionFramedSyncTransferRequest,
@@ -45,7 +50,8 @@ export interface CompanionSyncGroupProviderState {
 export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
-  extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin, CompanionAttachmentResourceSyncPlugin, CompanionContentBlobSyncPlugin {
+  extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin, CompanionAttachmentResourceSyncPlugin,
+  CompanionContentBlobSyncPlugin, NativeCompanionFramedPayloadBudgetPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;
@@ -85,6 +91,9 @@ export interface CompanionWorkspaceSyncPlugin
   sendFramedSyncTransfer(
     args: NativeCompanionFramedSyncTransferRequest
   ): Promise<NativeCompanionFramedSyncTransferReceipt>;
+  sendFramedSyncTransfers(
+    args: NativeCompanionFramedSyncTransferBatchRequest
+  ): Promise<NativeCompanionFramedSyncTransferBatchResult>;
   readFramedSyncInventory(
     args: NativeCompanionFramedSyncInventoryRequest
   ): Promise<NativeCompanionFramedSyncInventoryResult>;
@@ -94,6 +103,9 @@ export interface CompanionWorkspaceSyncPlugin
   pullFramedSyncObject(
     args: NativeCompanionFramedSyncPullRequest
   ): Promise<NativeCompanionFramedSyncTransferReceipt>;
+  pullFramedSyncObjects(
+    args: NativeCompanionFramedSyncPullBatchRequest
+  ): Promise<NativeCompanionFramedSyncPullBatchResult>;
   signCompanionSyncRequest(args: {
     body?: string;
     body_hash: string;

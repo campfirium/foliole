@@ -10,6 +10,7 @@ import {
 import type { DbPort } from './dbPort.js';
 import { markFramedSyncCompletion } from './framedSyncCompletionRetention.js';
 import type { TransferReceiptStage } from './framedSyncContract.js';
+import { retireFramedSyncFrozenBodies } from './framedSyncFrozenBody.js';
 
 export function framedSyncReceiptInputMatches(left: TransferReceiptStage, right: TransferReceiptStage) {
   return sameFramedSyncBytes(left.transferId, right.transferId) &&
@@ -65,6 +66,7 @@ export function createFramedSyncOutboundReceiptStaging(db: DbPort) {
           failFramedSync('receipt_required_for_hold_release');
         }
         await tx.run('DELETE FROM framed_sync_outbound_holds WHERE transfer_id = ?', [transferId]);
+        await retireFramedSyncFrozenBodies(tx, transferId);
         await tx.run("DELETE FROM framed_sync_outbound_attempts WHERE transfer_id = ? AND purpose = 'transfer'", [transferId]);
         await tx.run('UPDATE framed_sync_outbound_publications SET canonical_manifest = ? WHERE transfer_id = ?',
           [new Uint8Array(), transferId]);

@@ -5,6 +5,7 @@ import com.foliole.android.framed.FramedSyncCodec;
 import com.foliole.android.framed.FramedSyncBlobContent;
 import com.foliole.android.framed.FramedSyncFrameType;
 import com.foliole.sync.v22.FactRecord;
+import com.foliole.sync.v22.BlobReference;
 import com.getcapacitor.PluginCall;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -59,6 +60,13 @@ final class FolioleCompanionFramedSyncOutboundInput {
     static List<FramedSyncBlobContent> blobs(
         Context context, JSONObject prepared, List<FactRecord> facts, BodyFileResolver bodyFiles
     ) throws Exception {
+        List<BlobReference> declared = new ArrayList<>();
+        for (FactRecord fact : facts) declared.addAll(fact.getBlobsList());
+        return declaredBlobs(context, prepared, declared, bodyFiles);
+    }
+
+    static List<FramedSyncBlobContent> declaredBlobs(Context context, JSONObject prepared,
+        List<BlobReference> declared, BodyFileResolver bodyFiles) throws Exception {
         JSONArray encoded = prepared.getJSONArray("blobs");
         List<FramedSyncBlobContent> result = new ArrayList<>();
         for (int index = 0; index < encoded.length(); index++) {
@@ -71,13 +79,13 @@ final class FolioleCompanionFramedSyncOutboundInput {
             if (!Long.toUnsignedString(length).equals(lengthText) ||
                 !(roleValue instanceof Number) || ((Number) roleValue).doubleValue() !=
                     ((Number) roleValue).intValue() || !(requiredValue instanceof Boolean) ||
-                !descriptorMatches(facts, hash, length, ((Number) roleValue).intValue(),
+                !descriptorMatches(declared, hash, length, ((Number) roleValue).intValue(),
                     (Boolean) requiredValue)) {
                 throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
             }
             int role = ((Number) roleValue).intValue();
             if (blob.has("body_source")) {
-                if (!"verified_chunks".equals(blob.get("body_source")) ||
+                if (!"frozen_body".equals(blob.get("body_source")) ||
                     blob.has("data_text") || blob.has("storage_key") ||
                     (role != 1 && role != 5) || bodyFiles == null) {
                     throw new IllegalArgumentException("framed_sync_blob_content_mismatch");
@@ -102,9 +110,9 @@ final class FolioleCompanionFramedSyncOutboundInput {
     }
 
     private static boolean descriptorMatches(
-        List<FactRecord> facts, byte[] hash, long length, int role, boolean required
+        List<BlobReference> declared, byte[] hash, long length, int role, boolean required
     ) {
-        for (FactRecord fact : facts) for (var blob : fact.getBlobsList()) {
+        for (var blob : declared) {
             if (MessageDigest.isEqual(hash, blob.getSha256().toByteArray()) &&
                 length == blob.getByteLength() && role == blob.getRoleValue() &&
                 required == blob.getRequired()) return true;

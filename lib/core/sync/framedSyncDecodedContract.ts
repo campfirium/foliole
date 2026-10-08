@@ -1,3 +1,5 @@
+import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
+
 import {
   assertAttemptId,
   assertFramedSyncDigest,
@@ -12,6 +14,7 @@ import {
   digest,
   enumValue,
   factRecord,
+  factIdentity,
   fixedBytes,
   hex,
   list,
@@ -23,12 +26,27 @@ import {
   validateIdentityList,
   walk
 } from './framedSyncDecodedValues.js';
+import { FRAMED_SYNC_FACT_FRAGMENT_BYTES, FRAMED_SYNC_MAX_ENCODED_FACT_BYTES } from './framedSyncFactFragmentContract.js';
 import type { ProtocolPayloadCase } from './framedSyncReceiver.js';
+import { readFramedSyncRequestedResources } from './framedSyncResourceRequest.js';
 
 export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, value: unknown) {
   walk(value, 0, { fields: 0 });
   const payload = row(value);
   if (payloadCase === 'fact') factRecord(payload);
+  else if (payloadCase === 'fact_fragment') {
+    factIdentity(payload.identity);
+    digest(payload.sharedStateHash, 'shared_state_hash');
+    digest(payload.encodedSha256, 'encoded_sha256');
+    const total = unsigned(payload.totalByteLength, 'fact_total_byte_length');
+    const offset = unsigned(payload.offset, 'fact_offset');
+    const data = bytes(payload.data, 'fact_fragment_data');
+    if (total <= BigInt(FRAMED_SYNC_LIMITS.maxDecompressedFrameBytes) ||
+        total > BigInt(FRAMED_SYNC_MAX_ENCODED_FACT_BYTES) || !data.byteLength ||
+        data.byteLength > FRAMED_SYNC_FACT_FRAGMENT_BYTES || offset + BigInt(data.byteLength) > total) {
+      throw new Error('fact_fragment_range_invalid');
+    }
+  }
   else if (payloadCase === 'transfer_header') {
     digest(payload.transferId, 'transfer_id'); assertAttemptId(bytes(payload.attemptId, 'attempt_id'));
     transferManifest(payload.manifest);
@@ -45,6 +63,10 @@ export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, v
     const hashes = list(payload.blobHashes, FRAMED_SYNC_LIMITS.maxBlobsPerTransfer)
       .map((hash) => hex(digest(hash, 'blob_hash')));
     unique(hashes, 'blob_hash');
+    const resources = readFramedSyncRequestedResources(payload.resources);
+    if (resources.length && (hashes.length || list(payload.facts).length)) {
+      throw new Error('framed_sync_resource_request_mixed');
+    }
   } else if (payloadCase === 'blob_offer') {
     digest(payload.transferId, 'transfer_id');
     unique(list(payload.blobs, FRAMED_SYNC_LIMITS.maxBlobsPerTransfer).map(blobReference), 'blob_offer');
@@ -80,7 +102,7 @@ function validateRemainingPayload(payloadCase: ProtocolPayloadCase, payload: Rec
   } else if (payloadCase === 'blob_chunk') {
     digest(payload.transferId, 'transfer_id'); digest(payload.blobHash, 'blob_hash');
     const data = bytes(payload.data, 'blob_data');
-    if (data.byteLength > FRAMED_SYNC_LIMITS.blobChunkBytes ||
+    if (data.byteLength > TEXT_BODY_MAX_BYTES ||
         unsigned(payload.offset, 'blob_offset') + BigInt(data.byteLength) > BigInt(FRAMED_SYNC_LIMITS.maxBlobBytes)) {
       throw new Error('blob_chunk_range_invalid');
     }

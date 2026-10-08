@@ -14,19 +14,21 @@ export async function syncCompanionIdentityObjects(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions
 ): Promise<CompanionDesktopSyncResult> {
-  if (options.resourcesOnly) throw new Error('framed_sync_resources_are_in_band');
   if (options.framedPeer?.protocolVersion !== FRAMED_SYNC_PROTOCOL_VERSION) {
     throw new Error('framed_sync_peer_required');
   }
   const startedAt = Date.now();
   const group = await loadCompanionSyncGroup();
   if (!group) throw new Error('sync_group_not_joined');
-  const round = await sendCompanionFramedSyncInventoryDifferences({
+  const request = {
     endpoint_url: endpointUrl,
     receiver_device_id: options.framedPeer.deviceId,
     receiver_library_epoch: options.framedPeer.libraryEpoch,
     sync_group_id: group.group_id
-  });
+  };
+  const round = options.resourcesOnly
+    ? await sendCompanionFramedSyncInventoryDifferences(request, true)
+    : await sendCompanionFramedSyncInventoryDifferences(request);
   await options.onStructureSynced?.();
   const receivedIds = round.received.map((value) => value.objectId);
   const sentIds = round.sent.map((value) => value.objectId);
@@ -43,6 +45,7 @@ export async function syncCompanionIdentityObjects(
     requestedObjectIds: receivedIds,
     ...createSkippedResourceSummary(),
     ...createEmptyResourceStages(),
+    remainingAttachmentResourceCount: round.resources.pending + round.resources.unavailable,
     localDirtyCount: round.deferredObjects.length,
     pushConflictCount: 0,
     pushError: null,

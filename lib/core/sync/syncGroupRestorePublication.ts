@@ -20,7 +20,7 @@ export async function publishSyncGroupRestoreEvent(port: DbPort, value: SyncGrou
     'sync_identity_receive_rounds', 'sync_identity_retired_views',
     'sync_identity_pack_receipts', 'sync_identity_peer_baselines',
     'sync_identity_fact_staging', 'sync_identity_fact_sections',
-    'sync_pack_receive_progress', 'sync_pack_resource_articles',
+    'sync_pack_receive_progress', 'sync_pack_resource_articles', 'framed_sync_resource_demands',
     'sync_pack_dependency_rows', 'sync_pack_dependency_transfers', 'sync_pack_known_fact_claims'
   ]) {
     if (tables.has(table)) await port.run(`DELETE FROM ${table}`);

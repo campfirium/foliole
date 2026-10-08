@@ -4,9 +4,7 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
-import { migrateBodyContentStorage } from '../../lib/core/database/bodyContentMigration.js';
-import { migrateBodyContentOwners } from '../../lib/core/database/bodyContentOwnerMigration.js';
-import { migrateFramedSyncAvailableBlobs } from '../../lib/core/database/framedSyncAvailableBlobMigration.js';
+import { migrateStoredSourceSearchQueue } from '../../lib/core/database/storedSourceSearchQueueMigration.js';
 import { canonicalContentId, canonicalTransferId } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -23,8 +21,7 @@ async function createReceiverFile(filename: string) {
   const host = textDevice();
   try {
     await host.db.transaction(async (tx) => {
-      await migrateBodyContentStorage(tx); await migrateBodyContentOwners(tx, 'desktop');
-      await migrateFramedSyncAvailableBlobs(tx, 'desktop');
+      await migrateStoredSourceSearchQueue(tx);
     });
     host.sqlite.exec('DROP TABLE content_blob_data');
     await host.sqlite.backup(filename);
@@ -35,16 +32,18 @@ function openReceiver(filename: string) {
   const sqlite = new Database(filename);
   sqlite.pragma('foreign_keys = ON');
   const db = createBetterSqliteDbPort(sqlite);
-  return { sqlite, db, staging: createDesktopFramedSyncStaging(db, 'chunked') };
+  return { sqlite, db, staging: createDesktopFramedSyncStaging(db) };
 }
 
-export async function verifiedReceiverFixture(text: string) {
-  const sender = textDevice();
+export async function verifiedReceiverFixture(text: string, objectId = 'topic', sharedSender?: ReturnType<typeof textDevice>) {
+  const sender = sharedSender ?? textDevice();
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-verified-receiver-'));
   const filename = path.join(directory, 'receiver.sqlite');
   await createReceiverFile(filename);
   let receiver = openReceiver(filename);
-  const record = textBranch('verified-stream-version', text, undefined, '2026-10-07T00:00:00.000Z');
+  const record = textBranch(objectId === 'topic' ? 'verified-stream-version' : `verified-stream-${objectId}`, text, undefined, '2026-10-07T00:00:00.000Z');
+  record.object_id = objectId;
+  record.snapshot.id = objectId;
   await sender.receive([record]);
   const { manifest } = projectFramedSyncNodeRecord(record);
   const context = { groupId: 'group', protocolVersion: 22 as const, receiverDeviceId: 'receiver',
@@ -62,9 +61,9 @@ export async function verifiedReceiverFixture(text: string) {
   await writeDesktopFramedSyncTransferFrames({ attempt, groupKey, manifest, published,
     sources: loadDesktopFramedSyncBlobSources([record], manifest), staging });
   await staging.finalizeOutboundAttempt(published.transferId, attempt.attemptId);
-  return { record, published, context, groupKey, get receiver() { return receiver; },
+  return { record, published, publication, attempt, sender, staging, context, groupKey, get receiver() { return receiver; },
     reopen() { receiver.sqlite.close(); receiver = openReceiver(filename); },
-    close() { sender.sqlite.close(); receiver.sqlite.close(); fs.rmSync(directory, { recursive: true, force: true }); },
+    close() { if (!sharedSender) sender.sqlite.close(); receiver.sqlite.close(); fs.rmSync(directory, { recursive: true, force: true }); },
     async stream(tamper = false) {
       const body = await loadDesktopFramedSyncPreparedTransferBody({ attempt, publication, staging });
       async function* frames() {
@@ -82,7 +81,7 @@ export async function verifiedReceiverFixture(text: string) {
 }
 
 export function receiverBusinessRows(fixture: Awaited<ReturnType<typeof verifiedReceiverFixture>>) {
-  return ['nodes', 'node_sync_versions', 'sync_object_state', 'content_bodies', 'content_body_chunks', 'content_blobs',
+  return ['nodes', 'node_sync_versions', 'sync_object_state', 'content_blobs',
     'node_sync_version_parents', 'node_version_local_proof_state', 'node_version_local_source_revisions',
     'node_version_device_revisions', 'framed_sync_inventory', 'framed_sync_version_summary',
     'framed_sync_fact_summary', 'framed_sync_resource_availability', 'framed_sync_receipts'].map((table) =>

@@ -33,14 +33,26 @@ export function validateResources(
   nodes: readonly Readonly<{ snapshot: Pick<NativeSyncNodeRecord['snapshot'], 'resource_references'> }>[],
   rows: DbRow[], storageKeys: readonly string[]
 ) {
+  return validateResourceEntries(facts.map((fact, index) => ({ blobs: fact.blobs,
+    identityOnly: isFramedSyncNodeIdentityFact(fact), snapshot: nodes[index]!.snapshot })), rows, storageKeys);
+}
+
+export type CompanionResourceEntry = Readonly<{
+  blobs: CanonicalFact['blobs']; identityOnly: boolean;
+  snapshot: Pick<NativeSyncNodeRecord['snapshot'], 'resource_references'>;
+}>;
+
+export function validateResourceEntries(entries: readonly CompanionResourceEntry[], rows: DbRow[],
+  storageKeys: readonly string[]) {
   const byHash = uniqueRows(rows);
   const expectedKeys = new Set<string>();
-  facts.forEach((fact, index) => {
-    if (isFramedSyncNodeIdentityFact(fact)) return;
-    const resourceDescriptors = fact.blobs.filter((entry) => entry.role !== 1 && entry.role !== 5);
+  entries.forEach((entry) => {
+    if (entry.identityOnly) return;
+    const resourceDescriptors = entry.blobs.filter((entry) => entry.role !== 1 && entry.role !== 5);
     const descriptors = new Map(resourceDescriptors
       .map((entry) => [bytesToHex(entry.sha256), entry]));
-    const resources = readFramedSyncNodeResources(nodes[index]!.snapshot.resource_references);
+    const resources = readFramedSyncNodeResources(entry.snapshot.resource_references);
+    if (resourceDescriptors.length === 0) return;
     if (descriptors.size !== resourceDescriptors.length || descriptors.size !== resources.length) {
       throw new Error('framed_sync_android_resource_identity_mismatch');
     }

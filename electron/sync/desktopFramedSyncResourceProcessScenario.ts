@@ -8,20 +8,27 @@ import { persistNodeResourceReference } from '../database/nodeResources.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
 
+import { hashResourceFile } from './resourceFileHash.js';
+
 export async function seedDesktopFramedSyncResourceScenario(input: Readonly<{
-  bytes: Uint8Array;
+  bytes?: Uint8Array;
+  filePath?: string;
+  includeImageInBody?: boolean;
   nodeId: string;
 }>) {
   const now = '2026-10-05T00:00:00.000Z';
-  const hash = createHash('sha256').update(input.bytes).digest('hex');
+  if ((input.bytes === undefined) === (input.filePath === undefined)) throw new Error('fixture_resource_source_invalid');
+  const hash = input.filePath === undefined
+    ? createHash('sha256').update(input.bytes!).digest('hex') : await hashResourceFile(input.filePath);
   const storageKey = buildCanonicalAttachmentStorageKey(hash, 'image/png');
   if (!storageKey) throw new Error('fixture_resource_storage_key_invalid');
   const assetsDir = resolveRuntimeDataPaths().assetsDir;
   await fs.mkdir(assetsDir, { recursive: true });
-  await fs.writeFile(path.join(assetsDir, storageKey), input.bytes);
+  if (input.filePath !== undefined) await fs.copyFile(input.filePath, path.join(assetsDir, storageKey));
+  else await fs.writeFile(path.join(assetsDir, storageKey), input.bytes!);
   upsertNodeSnapshot({
     anchorLink: null,
-    content: 'Node with a binary resource',
+    content: input.includeImageInBody ? `Article with an image\n\n![Cover](asset://${storageKey})` : 'Node with a binary resource',
     createdAt: now,
     isTitleManual: true,
     kind: 'item',
@@ -40,6 +47,9 @@ export async function seedDesktopFramedSyncResourceScenario(input: Readonly<{
 }
 
 export function seedDesktopFramedSyncResourceCommand(args: Readonly<Record<string, unknown>>) {
-  if (!(args.bytes instanceof Uint8Array)) throw new Error('fixture_resource_bytes_invalid');
-  return seedDesktopFramedSyncResourceScenario({ bytes: args.bytes, nodeId: String(args.nodeId) });
+  const source = typeof args.filePath === 'string' ? { filePath: args.filePath }
+    : args.bytes instanceof Uint8Array ? { bytes: args.bytes } : null;
+  if (!source) throw new Error('fixture_resource_bytes_invalid');
+  return seedDesktopFramedSyncResourceScenario({ ...source,
+    includeImageInBody: args.includeImageInBody === true, nodeId: String(args.nodeId) });
 }

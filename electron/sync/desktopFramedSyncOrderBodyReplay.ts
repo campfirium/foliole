@@ -5,6 +5,7 @@ import type { PublishedTransfer, TransferReceiptStage } from '../../lib/core/syn
 import { restoreFramedSyncObjectStateFact } from '../../lib/core/sync/framedSyncObjectStateFact.js';
 import { replayRetiredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyReplay.js';
 import { assertSyncGroupLocalPublicationAllowed } from '../../lib/core/sync/syncGroupLocalAdoption.js';
+import { assertSyncGroupOverwriteInbound } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
 
 export async function replayDesktopFramedSyncOrderBody(input: {
   db: DbPort;
@@ -25,7 +26,7 @@ export async function replayDesktopFramedSyncOrderBody(input: {
   }
   const record = restoreFramedSyncObjectStateFact(facts[0]!);
   await input.db.transaction(async (tx) => {
-    await assertSyncGroupLocalPublicationAllowed(tx);
+    if (!await assertSyncGroupOverwriteInbound(tx, published.context)) await assertSyncGroupLocalPublicationAllowed(tx);
     await replayRetiredParentOrderBodies(tx, [record]);
   });
 }

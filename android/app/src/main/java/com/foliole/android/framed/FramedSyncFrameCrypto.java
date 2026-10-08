@@ -53,7 +53,7 @@ public final class FramedSyncFrameCrypto {
             cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(frameKey(groupKey, preamble), "AES"),
                 new GCMParameterSpec(128, nonce(preamble.noncePrefix(), frame.header().sequence())));
             cipher.updateAAD(concat(preamble.encoded(), frame.headerBytes()));
-            byte[] plaintext = cipher.doFinal(frame.ciphertext());
+            byte[] plaintext = cipher.doFinal(frame.borrowedCiphertext());
             if (plaintext.length > payloadLimit(frame.header().frameType())) {
                 throw invalid("frame_payload_limit_exceeded");
             }

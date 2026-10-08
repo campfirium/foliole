@@ -7,6 +7,7 @@ import {
   type CanonicalManifest
 } from './framedSyncCanonicalManifest.js';
 import {
+  FRAMED_SYNC_LIMITS,
   FRAMED_SYNC_PROTOCOL_VERSION,
   type FramedSyncContext
 } from './framedSyncContract.js';
@@ -18,6 +19,7 @@ import {
   type FramedSyncRoundSelection,
   type FramedSyncRoundSessionPort
 } from './framedSyncInventoryRoundCoordinator.js';
+import { decodeFramedSyncInventory } from './framedSyncInventoryWire.js';
 import { decodeAndValidateProtocolMessage } from './framedSyncProtocolCodec.js';
 import {
   deriveSessionContextId,
@@ -205,4 +207,29 @@ it('does not converge when an outbound adapter returns an empty deferred selecti
   const roundReceipts = messages.filter((message) => message.payloadCase === 'round_receipt');
   expect(roundReceipts).toHaveLength(2);
   expect(roundReceipts.every((message) => message.payload.result === 1)).toBe(true);
+});
+
+it('exchanges large valid inventory entries in bounded frames without losing the tail', async () => {
+  const inventory = Array.from({ length: 131 }, (_, index) => ({
+    ...entry(`node-${String(index).padStart(3, '0')}`, 'version', hash(11)),
+    frontierFactIds: Array.from({ length: 256 }, (_, fact) => `fact-${fact}-${'x'.repeat(40)}`)
+  }));
+  const local = createEndpoint({ deviceId: 'device-a', inventory, peerDeviceId: 'device-b' });
+  const remote = createEndpoint({ deviceId: 'device-b', inventory, peerDeviceId: 'device-a' });
+  const { session } = await createSession();
+  const received = new Map<string, ReturnType<typeof decodeAndValidateProtocolMessage>[]>();
+  const result = await coordinateFramedSyncInventoryRound({ local: local.endpoint,
+    remote: remote.endpoint, roundId: roundId(6), session: { ...session, send: async (message) => {
+      expect(message.encodedMessage.byteLength).toBeLessThanOrEqual(FRAMED_SYNC_LIMITS.maxControlMessageBytes);
+      const decoded = decodeAndValidateProtocolMessage(message.encodedMessage, message.frameType);
+      if (!decoded.payloadCase.startsWith('inventory_')) return;
+      const messages = received.get(message.authorDeviceId) ?? [];
+      messages.push(decoded); received.set(message.authorDeviceId, messages);
+    } } });
+  expect(result).toMatchObject({ result: 'converged', transfers: [], deferredObjects: [] });
+  for (const author of ['device-a', 'device-b']) {
+    const messages = received.get(author) ?? [];
+    expect(messages.filter(message => message.payloadCase === 'inventory_chunk').length).toBeGreaterThan(2);
+    expect((await decodeFramedSyncInventory(messages)).entries).toEqual(inventory);
+  }
 });

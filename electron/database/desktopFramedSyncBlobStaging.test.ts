@@ -59,13 +59,14 @@ it('restores attempt coverage and accepts an identical chunk replay after SQLite
   const filePath = path.join(root, 'blob.db');
   let database = openBlobDatabase(filePath);
   const value = blob(`${'x'.repeat(FRAMED_SYNC_LIMITS.blobChunkBytes)}tail`);
-  const transfer = await prepareBlobTransfer({ attemptSeed: 5, blobs: [value.descriptor],
+  const descriptor = { ...value.descriptor, role: 2 };
+  const transfer = await prepareBlobTransfer({ attemptSeed: 5, blobs: [descriptor],
     database, seed: 'restart' });
   await database.blobStaging.commitBlobOfferAndMissingSet({
-    blobs: [value.descriptor], transferId: transfer.transferId
+    blobs: [descriptor], transferId: transfer.transferId
   });
   const tail = { ...transfer, data: value.data.slice(FRAMED_SYNC_LIMITS.blobChunkBytes),
-    offset: BigInt(FRAMED_SYNC_LIMITS.blobChunkBytes), sha256: value.descriptor.sha256 };
+    offset: BigInt(FRAMED_SYNC_LIMITS.blobChunkBytes), sha256: descriptor.sha256 };
   expect(await database.blobStaging.writeBlobChunk(tail)).toBe('created');
   database.close();
 
@@ -73,14 +74,14 @@ it('restores attempt coverage and accepts an identical chunk replay after SQLite
   cleanups.push(database.close);
   expect(await database.blobStaging.writeBlobChunk(tail)).toBe('identical');
   await expect(database.blobStaging.verifyAndMarkBlobAvailable(
-    transfer.transferId, transfer.attemptId, value.descriptor.sha256
+    transfer.transferId, transfer.attemptId, descriptor.sha256
   )).rejects.toThrow('blob_coverage_incomplete');
   expect(await database.blobStaging.writeBlobChunk({ ...transfer,
     data: value.data.slice(0, FRAMED_SYNC_LIMITS.blobChunkBytes), offset: 0n,
-    sha256: value.descriptor.sha256
+    sha256: descriptor.sha256
   })).toBe('created');
   expect(await database.blobStaging.verifyAndMarkBlobAvailable(
-    transfer.transferId, transfer.attemptId, value.descriptor.sha256
+    transfer.transferId, transfer.attemptId, descriptor.sha256
   )).toBe('available');
 });
 

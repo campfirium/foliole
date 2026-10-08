@@ -23,31 +23,6 @@ final class FolioleCompanionSyncPackPayloadWriter {
         }
     }
 
-    static void copyTopicTextBodies(SQLiteDatabase pack) throws Exception {
-        try (Cursor versions = pack.rawQuery(
-            "SELECT version_id, snapshot_json FROM node_sync_versions WHERE body_text IS NOT NULL", null
-        )) {
-            while (versions.moveToNext()) {
-                JSONObject snapshot = new JSONObject(versions.getString(1));
-                JSONArray entries = snapshot.optJSONArray("text_alternatives");
-                if (entries == null || entries.length() == 0) continue;
-                JSONArray bodies = new JSONArray();
-                for (int index = 0; index < entries.length(); index++) {
-                    String hash = entries.getJSONObject(index).getString("body_blob_hash");
-                    try (Cursor data = pack.rawQuery("SELECT data FROM source.content_blob_data WHERE hash = ?", new String[] { hash })) {
-                        if (!data.moveToFirst()) throw new IllegalArgumentException("text_alternative_body_unavailable");
-                        bodies.put(new JSONObject().put("hash", hash).put("text",
-                            new String(data.getBlob(0), java.nio.charset.StandardCharsets.UTF_8)));
-                    }
-                }
-                snapshot.put("text_alternative_bodies", bodies);
-                ContentValues values = new ContentValues();
-                values.put("snapshot_json", snapshot.toString());
-                pack.update("node_sync_versions", values, "version_id = ?", new String[] { versions.getString(0) });
-            }
-        }
-    }
-
     private static Map<String, String> loadPayloads(SQLiteDatabase pack, JSONArray plans) throws Exception {
         Map<String, String> payloads = new HashMap<>();
         for (int index = 0; index < plans.length(); index++) {

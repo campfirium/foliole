@@ -1,5 +1,4 @@
 import { FRAMED_SYNC_FRAME_TYPES } from './framedSyncContract.js';
-import { bytes, list, row, text } from './framedSyncDecodedValues.js';
 import { assertSessionEnvelopeBinding } from './framedSyncEnvelopeContract.js';
 import type { FramedSyncPreamble } from './framedSyncFraming.js';
 import {
@@ -12,6 +11,7 @@ import {
 } from './framedSyncInventory.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from './framedSyncInventoryRoundDelivery.js';
 import { deferUnresolvedBidirectionalObjects } from './framedSyncInventoryRoundResolution.js';
+import { decodeFramedSyncInventory, iterateFramedSyncInventory } from './framedSyncInventoryWire.js';
 import {
   decodeAndValidateProtocolMessage,
   encodeValidatedProtocolMessage
@@ -69,42 +69,6 @@ export type FramedSyncRoundReceipt = Readonly<{
   transfers: readonly TransferResult[];
 }>;
 
-const sameBytes = (left: Uint8Array, right: Uint8Array) =>
-  left.byteLength === right.byteLength && left.every((byte, index) => byte === right[index]);
-
-function concat(values: readonly Uint8Array[]) {
-  const result = new Uint8Array(values.reduce((total, value) => total + value.byteLength, 0));
-  let offset = 0;
-  for (const value of values) { result.set(value, offset); offset += value.byteLength; }
-  return result;
-}
-
-function inventoryEntryToWire(entry: FramedSyncInventoryEntry) {
-  return {
-    frontierFactIds: entry.frontierFactIds, globalId: entry.globalId,
-    objectType: entry.objectType, requiredRelationIds: entry.requiredRelationIds,
-    resourceHashes: entry.resourceHashes, reviewFactIds: entry.reviewFactIds,
-    sharedStateHash: entry.sharedStateHash, stateFactIds: entry.stateFactIds ?? []
-  };
-}
-
-function decodedInventoryEntries(value: unknown): readonly FramedSyncInventoryEntry[] {
-  return list(row(value).entries).map((item) => {
-    const entry = row(item);
-    const strings = (key: string) => list(entry[key]).map((part) => text(part, key));
-    const stateFactIds = strings('stateFactIds');
-    return {
-      frontierFactIds: strings('frontierFactIds'), globalId: text(entry.globalId, 'global_id'),
-      objectType: text(entry.objectType, 'object_type'),
-      requiredRelationIds: strings('requiredRelationIds'),
-      resourceHashes: list(entry.resourceHashes).map((hash) => bytes(hash, 'resource_hash').slice()),
-      reviewFactIds: strings('reviewFactIds'),
-      sharedStateHash: bytes(entry.sharedStateHash, 'shared_state_hash').slice(),
-      ...(stateFactIds.length ? { stateFactIds } : {})
-    };
-  });
-}
-
 async function sendControl(session: FramedSyncRoundSessionPort, authorDeviceId: string,
   recipientDeviceId: string, payloadCase: 'inventory_begin' | 'inventory_chunk' |
   'inventory_end' | 'round_receipt', payload: unknown) {
@@ -128,25 +92,13 @@ async function exchangeInventory(args: {
   roundId: Uint8Array;
   session: FramedSyncRoundSessionPort;
 }) {
-  await sendControl(args.session, args.author.deviceId, args.recipient.deviceId,
-    'inventory_begin', { entryCount: args.entries.length, roundId: args.roundId });
-  const encodedChunks: Uint8Array[] = [];
-  const received: FramedSyncInventoryEntry[] = [];
-  for (let offset = 0, chunkIndex = 0; offset < args.entries.length;
-    offset += 128, chunkIndex += 1) {
-    const decoded = await sendControl(args.session, args.author.deviceId, args.recipient.deviceId,
-      'inventory_chunk', { chunkIndex, entries: args.entries.slice(offset, offset + 128)
-        .map(inventoryEntryToWire), roundId: args.roundId });
-    const encoded = encodeValidatedProtocolMessage(decoded.payloadCase, decoded.payload);
-    encodedChunks.push(encoded);
-    received.push(...decodedInventoryEntries(decoded.payload));
+  async function* messages() {
+    for (const message of iterateFramedSyncInventory(args)) {
+      yield await sendControl(args.session, args.author.deviceId, args.recipient.deviceId,
+        message.payloadCase, message.payload);
+    }
   }
-  const inventoryHash = new Uint8Array(await crypto.subtle.digest('SHA-256', concat(encodedChunks)));
-  const end = await sendControl(args.session, args.author.deviceId, args.recipient.deviceId,
-    'inventory_end', { inventoryHash, roundId: args.roundId });
-  if (!sameBytes(bytes(end.payload.inventoryHash, 'inventory_hash'), inventoryHash) ||
-      received.length !== args.entries.length) throw new Error('inventory_exchange_incomplete');
-  return received;
+  return (await decodeFramedSyncInventory(messages())).entries;
 }
 
 function sourceFor(direction: Direction, local: FramedSyncRoundEndpoint,

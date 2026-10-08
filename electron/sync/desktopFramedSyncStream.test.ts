@@ -45,6 +45,24 @@ async function drain(source: AsyncIterable<unknown>) {
   for await (const value of source) void value;
 }
 
+it('fully consumes reused ciphertext across large frames and a short tail', async () => {
+  const payloads = [new Uint8Array(512 * 1024).fill(7), new Uint8Array(1024 * 1024).fill(8),
+    Uint8Array.of(0, 255, 9)];
+  const input = Buffer.concat([Buffer.from(preamble), ...payloads.flatMap((data, index) => [
+    Buffer.from(encodeFrameHeader({ ciphertextBytes: data.byteLength, flags: 0,
+      frameType: 1, sequence: BigInt(index) })), Buffer.from(data)
+  ])]);
+  const stream = await readFramedSyncStream(chunks(input, [64 * 1024]), undefined, { reuseCiphertext: true });
+  let count = 0;
+  for await (const frame of stream.frames) {
+    const expected = payloads[count]!;
+    expect(frame.header.sequence).toBe(BigInt(count));
+    expect(Buffer.from(frame.ciphertext).equals(Buffer.from(expected))).toBe(true);
+    count += 1;
+  }
+  expect(count).toBe(payloads.length);
+});
+
 describe('desktop framed sync stream', () => {
   it('reads a fragmented preamble, header, and binary body without text conversion', async () => {
     const body = Uint8Array.of(0, 255, 1, 254);

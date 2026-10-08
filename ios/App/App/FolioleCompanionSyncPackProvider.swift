@@ -163,7 +163,6 @@ enum FolioleCompanionSyncPackProvider {
                     try database.execute(sql)
                 }
             }
-            try FolioleCompanionSyncPackPayloadWriter.copyTopicTextBodies(database)
             let tables = try tableManifest(database, definitions.tableNames)
             let inner = try JSONSerialization.data(withJSONObject: [
                 "source_epoch": epoch, "frontier_state_seq": frontier,

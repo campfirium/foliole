@@ -17,7 +17,6 @@ import {
 } from './framedSyncNodeFactContract.js';
 import { restoreFramedSyncNodeRecord } from './framedSyncNodeRestore.js';
 import type { FramedSyncNodeMetadata } from './framedSyncNodeRestore.js';
-import type { VerifiedFramedSyncNode } from './framedSyncVerifiedNode.js';
 import { isNodeVersionIdentityOnly } from './syncNodeVersionHistory.js';
 import { projectTopicTextBodyBlobs } from './topicTextFramedBodies.js';
 
@@ -135,20 +134,6 @@ function projectNodeFact(record: FramedSyncNodeMetadata, bodyHash: string | null
   return result;
 }
 
-/** The formal body identity supplies the descriptor without reading or encoding its bytes. */
-export function projectVerifiedFramedSyncNode(node: VerifiedFramedSyncNode,
-  resourceBlobs: readonly CanonicalBlob[] = []): CanonicalFact {
-  if (node.body.kind === 'retired') {
-    return projectNodeFact(node.metadata, node.metadata.snapshot.body_blob_hash ?? null, [], true);
-  }
-  const ref = node.body.ref;
-  if (node.metadata.snapshot.body_blob_hash !== ref.hash) throw new Error('node_version_projection_identity_invalid');
-  const blobs = [ref, ...node.alternativeBodies].map((body): CanonicalBlob => ({
-    byteLength: BigInt(body.byteLength), required: true, role: 1, sha256: hexToBytes(body.hash)
-  }));
-  return projectNodeFact(node.metadata, ref.hash, [...blobs, ...resourceBlobs]);
-}
-
 export function projectFramedSyncNodeIdentityFact(record: NativeSyncNodeRecord) {
   if (!isNodeVersionIdentityOnly(record)) throw new Error('node_version_identity_only_required');
   return projectNodeFact(record, record.snapshot.body_blob_hash ?? null, [], true);
@@ -168,7 +153,7 @@ export function restoreFramedSyncProjectedNodeRecord(
     fact,
     manifestBlob,
     alternativeBodies: (projection.alternativeBodyBlobs ?? []).map((value) => ({
-      hash: bytesToHex(value.blob.sha256), text: new TextDecoder().decode(value.data)
+      hash: bytesToHex(value.blob.sha256), text: new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(value.data)
     }))
   });
 }

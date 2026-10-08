@@ -3,6 +3,30 @@ import XCTest
 @testable import FolioleFramedSyncRuntime
 
 final class FolioleFramedSyncCodecTests: XCTestCase {
+    func testOptionalBodyDescriptorsHaveTheSameOneMiBLimitAsRequiredBodies() throws {
+        let golden = try XCTUnwrap(try FramedSyncFixture.load().corpus.messages.first { $0.payloadCase == "fact" })
+        var message = try Foliole_Sync_V22_ProtocolMessage(
+            serializedBytes: XCTUnwrap(Data(base64Encoded: golden.base64)))
+        for role in [1, 5] {
+            var blob = Foliole_Sync_V22_BlobReference()
+            blob.sha256 = Data(repeating: 0, count: 32)
+            blob.role = try XCTUnwrap(Foliole_Sync_V22_BlobRole(rawValue: role))
+            blob.byteLength = 1_048_576
+            message.fact.blobs = [blob]
+            XCTAssertNoThrow(try FolioleFramedSyncCodec.validateOutbound(message,
+                authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue))
+            message.fact.blobs[0].byteLength += 1
+            XCTAssertThrowsError(try FolioleFramedSyncCodec.validateOutbound(message,
+                authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue)) { error in
+                XCTAssertEqual((error as? FolioleFramedSyncValidationError)?.code, "blob_byte_length_limit_exceeded")
+            }
+        }
+        message.fact.blobs[0].role = try XCTUnwrap(Foliole_Sync_V22_BlobRole(rawValue: 2))
+        message.fact.blobs[0].byteLength = FolioleFramedSyncLimits.maxBlobBytes
+        XCTAssertNoThrow(try FolioleFramedSyncCodec.validateOutbound(message,
+            authenticatedFrameType: FolioleFramedSyncFrameType.fact.rawValue))
+    }
+
     func testCanonicalPayloadUsesItsOwnStringBudget() throws {
         let golden = try XCTUnwrap(try FramedSyncFixture.load().corpus.messages.first {
             $0.payloadCase == "fact"
@@ -34,7 +58,7 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
 
     func testGoldenCorpusDecodesToValidatedCasesAndReencodesExactly() throws {
         let corpus = try FramedSyncFixture.load().corpus
-        XCTAssertEqual(corpus.messages.count, 17)
+        XCTAssertEqual(corpus.messages.count, 18)
         for golden in corpus.messages {
             let data = try XCTUnwrap(Data(base64Encoded: golden.base64), golden.name)
             let frameType = try frameType(for: golden.payloadCase)
@@ -154,7 +178,7 @@ final class FolioleFramedSyncCodecTests: XCTestCase {
     private func frameType(for payloadCase: String) throws -> FolioleFramedSyncFrameType {
         switch payloadCase {
         case "transfer_header": .transferHeader
-        case "fact": .fact
+        case "fact", "fact_fragment": .fact
         case "blob_chunk": .blobChunk
         case "transfer_trailer": .transferTrailer
         case "transfer_receipt": .transferReceipt

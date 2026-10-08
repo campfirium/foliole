@@ -15,7 +15,8 @@ export async function existingVerifiedCompanionReceipt(db: DbPort, input: Compan
   if (!row) return null;
   const stored = readFramedSyncReceipt(row);
   if (!sameFramedSyncBytes(stored.contentId, ready.contentId) || stored.receiverDeviceId !== input.receiverDeviceId ||
-      stored.receiverLibraryEpoch !== input.receiverLibraryEpoch) throw new Error('receipt_identity_conflict');
+      stored.receiverLibraryEpoch !== input.receiverLibraryEpoch ||
+      (ready.resourceUnit && !sameFramedSyncBytes(stored.appliedStateHash, ready.contentId))) throw new Error('receipt_identity_conflict');
   return stored;
 }
 
@@ -23,11 +24,12 @@ export async function commitVerifiedCompanionReceipt(db: DbPort, input: Companio
   ready: Ready): Promise<TransferReceiptStage> {
   const existing = await existingVerifiedCompanionReceipt(db, input, ready);
   if (existing) return existing;
-  const current = await readFramedSyncInventoryEntry(db,
-    { globalId: ready.globalId, objectType: ready.objectType }, 'chunked');
-  if (!current) throw new Error('framed_sync_applied_state_missing');
+  const current = ready.resourceUnit ? null : await readFramedSyncInventoryEntry(db,
+    { globalId: ready.globalId, objectType: ready.objectType });
+  if (!ready.resourceUnit && !current) throw new Error('framed_sync_applied_state_missing');
   const receipt = { contentId: ready.contentId, receiverDeviceId: input.receiverDeviceId,
-    receiverLibraryEpoch: input.receiverLibraryEpoch, transferId: input.transferId, appliedStateHash: current.sharedStateHash };
+    receiverLibraryEpoch: input.receiverLibraryEpoch, transferId: input.transferId,
+    appliedStateHash: ready.resourceUnit ? ready.contentId : current!.sharedStateHash };
   await db.run('INSERT INTO framed_sync_receipts VALUES (?, ?, ?, ?, ?)', [receipt.transferId,
     receipt.contentId, receipt.receiverDeviceId, receipt.receiverLibraryEpoch, receipt.appliedStateHash]);
   await markFramedSyncCompletion(db, receipt.transferId);

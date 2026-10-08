@@ -29,6 +29,26 @@ function descriptor(value: string) {
 }
 
 describe('framed sync blob contract', () => {
+  it.each([1, 5])('receives role %i as one complete body while attachments stay chunked', (role) => {
+    const data = new Uint8Array(1_048_576).fill(0x61);
+    const body = { ...bytesDescriptor(data), role };
+    const whole = { data, offset: 0n };
+    expect(expectedBlobChunkCount(body)).toBe(1);
+    expect(acceptBlobChunk(body, [], whole).result).toBe('created');
+    expect(verifyCompleteBlob(body, [whole], body.sha256)).toBe(true);
+    expect(() => acceptBlobChunk(body, [], { data: data.slice(0, 512 * 1024), offset: 0n }))
+      .toThrow('blob_chunk_length_invalid');
+    expect(hasCompleteBlobCoverage(body, [
+      { data: data.slice(0, 512 * 1024), offset: 0n },
+      { data: data.slice(512 * 1024), offset: 512n * 1024n }
+    ])).toBe(false);
+    expect(() => acceptBlobChunk({ ...body, role: 2 }, [], whole)).toThrow('blob_chunk_invalid');
+    expect(() => expectedBlobChunkCount({ ...body, byteLength: 1_048_577n }))
+      .toThrow('blob_size_limit_exceeded');
+  });
+});
+
+describe('framed sync attachment chunks', () => {
   it('accepts out-of-order chunks and treats an exact replay as identical', () => {
     const headBytes = new Uint8Array(512 * 1024).fill(0x61);
     const tailBytes = new TextEncoder().encode('tail');
