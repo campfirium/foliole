@@ -5,7 +5,9 @@ import { unlinkSync } from 'node:fs';
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
-vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({}) }));
+vi.mock('@capacitor/core', () => ({ Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({
+  configureFramedSyncPayloadBudget: async () => {}, closeFramedSyncPayloadBudget: async () => {}
+}) }));
 
 import { createBetterSqlite3Driver } from '../../electron/database/betterSqlite3Driver';
 import { createBetterSqliteDbPort } from '../../electron/database/betterSqliteDbPort';

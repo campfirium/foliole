@@ -4,6 +4,7 @@ import {
 } from '../features/nodes/model/deriveNodeTitle';
 import { INBOX_NODE_ID } from '../features/nodes/model/specialNodes';
 import { normalizePushQueuePriority } from '../features/review/model/unifiedPushQueueRules';
+import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import { createNewItemReviewProfiles } from './newItemReviewSlots';
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
@@ -159,6 +160,7 @@ export function createRootNodeAction(
 
     set((state) => {
       const prepared = prepareRootNodeCreation({ content, kind, nodeId, options, state, timestamp });
+      if (!canSaveNodeText(prepared.node)) return state;
       ({ historyEntryId, node: createdNode, nodeOrder: nextNodeOrder } = prepared);
       return prepared.patch;
     });

@@ -35,7 +35,7 @@ let tempRoot = '';
 beforeEach(async () => {
   tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-versioned-node-mutation-'));
   mockedAppDataDir = path.join(tempRoot, 'app-data');
-  initializeDatabase();
+  await initializeDatabase();
 });
 
 afterEach(async () => {
@@ -73,7 +73,12 @@ it('returns the persisted projection and both confirmation identities through th
     affectedAnchors: [],
     edit: { baseVersionId: base.current_version_id, versionId: 'ver_local' }
   }, null) as { nodes: Array<{ content: string }>; contentEdit: { submittedVersionId: string; currentVersionId: string } };
-  expect(result.nodes[0]?.content).toBe('Local first\nMiddle\nRemote last\n');
+  expect(result.nodes[0]?.content).toBe('First\nMiddle\nRemote last\n');
+  expect(openDatabaseConnection().sqlite.prepare(`SELECT json_extract(body.value, '$.text') AS body_text FROM nodes n
+    JOIN node_sync_versions version ON version.version_id = n.current_version_id,
+    json_each(version.snapshot_json, '$.text_alternative_bodies') body
+    WHERE n.id = 'node-1'`).all())
+    .toEqual([{ body_text: 'Local first\nMiddle\nLast\n' }]);
   expect(result.contentEdit.submittedVersionId).toBe('ver_local');
   expect(result.contentEdit.currentVersionId).not.toBe('ver_local');
 });

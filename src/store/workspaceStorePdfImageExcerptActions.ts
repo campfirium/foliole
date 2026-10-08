@@ -1,6 +1,7 @@
 import { buildCanonicalAssetMarkdownUrl } from '../../lib/platform/assetMarkdownUrl';
 import type { NodeImageRegionGroup, PdfAnchorLocator, TextAnchorLocator } from '../features/nodes/model/nodeTypes';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import type { WorkspaceState } from './workspaceStore';
 import { applyCreatedNode, buildAnnotationCreatePatch } from './workspaceStoreCreateActions';
@@ -71,6 +72,7 @@ export function createPdfImageExcerptAction(
         timestamp,
         title: titleState.title
       });
+      if (!node || !canSaveNodeText(node)) { node = null; return state; }
       const next = buildAnnotationCreatePatch({
         createdNode: node,
         parentNodeId,

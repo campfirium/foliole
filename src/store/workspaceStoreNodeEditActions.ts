@@ -1,8 +1,10 @@
+import { isNodeTitleTruncated, normalizeNodeTitle } from '../../lib/core/nodes/nodeTitleBudget';
 import {
   replaceUniqueArticleTitleHeading
 } from '../features/nodes/model/articleTitleHeading';
 import { UNTITLED_NODE_TITLE } from '../features/nodes/model/deriveNodeTitle';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
+import { canSaveNodeText, showNodeTitleShortenedNotice } from '../shared/ui/nodeTextSaveBudget';
 
 import { resolveNodeDerivedTitle } from './workspaceNodeDerivedTitle';
 import { syncWorkspaceNodeDocumentCacheFromNode } from './workspaceNodeDocumentCache';
@@ -42,8 +44,11 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
       if (!node || isProtectedRootNode(node)) {
         return state;
       }
-      const nextTitle = title.trim() || UNTITLED_NODE_TITLE;
-      if (node.title === nextTitle) return state;
+      const nextTitle = normalizeNodeTitle(title.trim()) || UNTITLED_NODE_TITLE;
+      if (node.title === nextTitle) {
+        if (isNodeTitleTruncated(title.trim())) showNodeTitleShortenedNotice();
+        return state;
+      }
       beforeTitle = node.title;
       const nextContent = syncUniqueArticleHeadingFromTitle(node, nextTitle);
       const nextNode = {
@@ -55,6 +60,7 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
         isTitleManual: true,
         updatedAt: new Date().toISOString()
       };
+      if (!canSaveNodeText(nextNode)) return state;
       nextNodeForSync = nextNode;
       localPatch = {
         nodesById: {
@@ -81,6 +87,7 @@ export function createUpdateNodeTitleAction(set: WorkspaceSet): WorkspaceState['
     });
     if (applied) {
       nodesToCache.forEach(syncWorkspaceNodeDocumentCacheFromNode);
+      if (isNodeTitleTruncated(title.trim())) showNodeTitleShortenedNotice();
     }
     return applied;
   };
@@ -104,6 +111,7 @@ export function createUpdateNodeDerivedTitleAction(set: WorkspaceSet): Workspace
         title: nextTitle,
         updatedAt: new Date().toISOString()
       };
+      if (!canSaveNodeText(nextNode)) return state;
       nextNodeForSync = nextNode;
       localPatch = {
         nodesById: {
@@ -150,6 +158,7 @@ export function createUpdateNodeRevealAction(set: WorkspaceSet): WorkspaceState[
         reveal,
         updatedAt: new Date().toISOString()
       };
+      if (!canSaveNodeText(nextNode)) return state;
       nextNodeForSync = nextNode;
       localPatch = {
         nodesById: {

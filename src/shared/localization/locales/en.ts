@@ -78,6 +78,8 @@ export const EN_TRANSLATIONS = {
   'language.system': 'System',
   'language.en': 'English',
   'language.zhHans': 'Simplified Chinese',
+  'shared.textLimit.exceeded': 'This change exceeds the 1 MiB (UTF-8) limit for a single text field and was not saved. Shorten the text and try again.',
+  'shared.titleLimit.shortened': 'Title shortened to 100 characters and saved.',
   'common.cancel': 'Cancel',
   ...EN_SHARED_UI_TRANSLATIONS,
   ...EN_COMPANION_TRANSLATIONS,

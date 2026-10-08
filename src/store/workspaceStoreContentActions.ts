@@ -1,5 +1,6 @@
 import { extractUniqueArticleTitleHeading } from '../features/nodes/model/articleTitleHeading';
 import { isProtectedRootNode } from '../features/nodes/model/specialNodes';
+import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import {
   isEditorInputDiagnosticEnabled,
@@ -69,6 +70,7 @@ function prepareNodeContentLocalState(args: {
   args.metrics.guardMs = args.diagnosticsEnabled ? readEditorInputDiagnosticTime() - guardStartedAt : 0;
   const timestamp = new Date().toISOString();
   const nextNode = prepareNextContentNode(node, args.content, timestamp, args);
+  if (!canSaveNodeText(nextNode)) return args.state;
   if (args.baseVersionId !== undefined) nextNode.currentVersionId = args.baseVersionId;
   args.localState.nextNodeForSync = nextNode;
   args.localState.nodeOrderForSync = args.state.nodeOrder;

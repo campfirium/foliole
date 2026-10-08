@@ -1,5 +1,6 @@
 import type { NodeKind } from '../../lib/core/nodes/nodeKind';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
 import { canCreateChildUnderParent } from './workspaceNodeKindRules';
@@ -91,6 +92,7 @@ export function createChildNodeAction(
         timestamp,
         options && 'priority' in options ? options.priority : undefined
       );
+      if (!canSaveNodeText(nextChildState.nextNode)) return state;
       createdNode = nextChildState.nextNode;
       nextNodeOrder = nextChildState.nextNodeOrder;
       localPatch = nextChildState.patch;

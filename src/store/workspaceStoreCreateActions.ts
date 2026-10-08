@@ -3,6 +3,7 @@ import {
   deriveNodeTitleFromContent
 } from '../features/nodes/model/deriveNodeTitle';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
 import { markNodeCreatePending } from './workspaceNodeContentVersionGuard';
@@ -122,6 +123,7 @@ export function createHighlightFromSelectionAction(
   get?: () => WorkspaceState
 ): WorkspaceState['createHighlightNodeFromSelection'] {
   return async (parentNodeId, content, anchorId, anchorLink, imageRegions) => {
+    if (!canSaveNodeText({ content, kind: 'item', ...(anchorLink ? { anchorLink } : {}) })) return null;
     const normalizedContent = content.trim();
     if (!normalizedContent) {
       return null;
@@ -151,6 +153,7 @@ export function createHighlightFromSelectionAction(
         timestamp,
         title: untitledState.title
       });
+      if (!canSaveNodeText(createdNode)) { createdNode = null; return state; }
       const next = buildAnnotationCreatePatch({
         createdNode,
         parentNodeId,
@@ -178,6 +181,7 @@ export function createQAFromSelectionAction(
   get?: () => WorkspaceState
 ): WorkspaceState['createQANodeFromSelection'] {
   return async (parentNodeId, promptContent, answerContent, anchorId, anchorLink) => {
+    if (!canSaveNodeText({ content: promptContent, reveal: answerContent, kind: 'item', ...(anchorLink ? { anchorLink } : {}) })) return null;
     const normalizedPrompt = promptContent.trim();
     const normalizedAnswer = answerContent.trim();
     if (!normalizedPrompt || !normalizedAnswer) {
@@ -203,7 +207,9 @@ export function createQAFromSelectionAction(
         state,
         timestamp
       });
+      if (!canSaveNodeText(created.node)) return state;
       createdNode = created.node;
+      if (!canSaveNodeText(createdNode)) { createdNode = null; return state; }
       const next = buildAnnotationCreatePatch({
         createdNode: created.node,
         parentNodeId,

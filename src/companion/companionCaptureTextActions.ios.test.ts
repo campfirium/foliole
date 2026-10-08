@@ -118,7 +118,7 @@ function expectPersistedCapture(db: Database.Database, result: Awaited<ReturnTyp
     title: 'iPhone note'
   });
   expect(db.prepare(`
-    SELECT ${buildNodeBodyContentSql('n', 'body')} AS content,
+    SELECT ${buildNodeBodyContentSql('n')} AS content,
       n.last_modified_by_host_name, n.parent_id, n.title FROM nodes n
       LEFT JOIN content_blob_data body ON body.hash = n.body_blob_hash WHERE n.id = ?
   `).get(result.nodeId)).toEqual({

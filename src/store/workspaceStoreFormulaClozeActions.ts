@@ -6,6 +6,7 @@ import {
 } from '../features/formula-cloze/model/formulaCloze';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
 import { createImageClozeReviewProfile } from './workspaceImageClozeReview';
@@ -181,6 +182,7 @@ export function createFormulaClozeNodeAction(
         timestamp,
         untitledSequenceByParent: state.untitledSequenceByParent
       });
+      if (!canSaveNodeText(nextNode.createdNode)) return state;
       createdNode = nextNode.createdNode;
       nextNodeOrder = [...state.nodeOrder, nextNode.createdNode.id];
       const nextNodesById = {

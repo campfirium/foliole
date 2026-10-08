@@ -1,1 +1,1 @@
-export const NODE_TITLE_MAX_CHARS = 100;
+export { NODE_TITLE_MAX_CHARS } from '../../../lib/core/nodes/nodeTitleBudget';

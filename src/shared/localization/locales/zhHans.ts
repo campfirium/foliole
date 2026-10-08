@@ -80,6 +80,8 @@ export const ZH_HANS_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'language.system': '跟随系统',
   'language.en': '英文',
   'language.zhHans': '简体中文',
+  'shared.textLimit.exceeded': '这项内容超过单项文本的 1 MiB（UTF-8）上限，未保存。请缩短内容后重试。',
+  'shared.titleLimit.shortened': '标题已保留前 100 个字符并保存。',
   'common.cancel': '取消',
   ...ZH_HANS_SHARED_UI_TRANSLATIONS,
   ...ZH_HANS_COMPANION_TRANSLATIONS,

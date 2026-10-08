@@ -5,6 +5,7 @@ import {
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
 import { createOpaqueVersionRef } from '../../lib/core/sync/opaqueSyncRefs';
 import { createCompanionUuid } from '../shared/platform/companionUuid';
+import { assertNodeTextForSave } from '../shared/ui/nodeTextSaveBudget';
 
 export const canonicalCompanionNodePayload = canonicalWorkspaceNodePayload;
 
@@ -13,6 +14,7 @@ export function toCompanionNativeNodeVersion(
   hostName: string,
   versionId?: string
 ) {
+  if (!node.deletedAt) assertNodeTextForSave(node);
   return toWorkspaceNativeNodeVersion(
     node,
     hostName,

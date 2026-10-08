@@ -2,6 +2,7 @@ import { pushEditorOperationEntry } from '../features/editor/model/editorOperati
 import type { ImageClozeDraftRegion, ImageClozeSourcePayload } from '../features/image-cloze/model/imageCloze';
 import { deriveNodeTitleForCloze } from '../features/nodes/model/deriveNodeTitle';
 import type { WorkspaceNodeMutationPatchResult } from '../shared/platform/workspaceRuntimeTypes';
+import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import { createEditorAnnotationCreateEntry } from './workspaceEditorAnnotationOperationEntry';
 import {
@@ -215,6 +216,7 @@ export function createImageClozeNodesAction(
       if (!('createdNodes' in nextResult)) {
         return state;
       }
+      if (!nextResult.createdNodes.every(node => canSaveNodeText(node))) return state;
       createdNodes.push(...nextResult.createdNodes);
       updatedParentNode = nextResult.updatedParentNode;
       nextNodeOrder = nextResult.nextNodeOrder;

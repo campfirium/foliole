@@ -4,9 +4,18 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { savePartitionedWorkspaceBody } from '../../shared/platform/desktop/workspaceBodyPartition';
 import { AppButton, AppDialog, AppDialogActions, AppDialogBody, AppDialogContent, AppDialogOverlay, AppDialogPortal, AppDialogTitle } from '../../shared/ui';
 import { listenForBodyOverflow, type BodyOverflowRequest } from '../../shared/ui/bodyOverflowRequest';
+import { isPartitionableNodeBody, showNodeTextLimitNotice } from '../../shared/ui/nodeTextSaveBudget';
 import { createWorkspaceNodeMutationPatch } from '../../store/workspaceNodeMutationPatch';
 import { useWorkspaceStore } from '../../store/workspaceStore';
 import { drainPendingNodeContentRuntimePersists } from '../../store/workspaceStoreContentRuntimePersist';
+
+function rejectNonBodyOverflow(request: BodyOverflowRequest) {
+  const node = useWorkspaceStore.getState().nodesById[request.nodeId];
+  if (!node || isPartitionableNodeBody(node)) return false;
+  showNodeTextLimitNotice();
+  request.cancel();
+  return true;
+}
 
 export function BodyOverflowDialogHost() {
   const t = useTranslation();
@@ -14,6 +23,7 @@ export function BodyOverflowDialogHost() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   useEffect(() => listenForBodyOverflow((next) => {
+    if (rejectNonBodyOverflow(next)) return;
     setRequest((current) => current ?? next);
     setError(false);
   }), []);

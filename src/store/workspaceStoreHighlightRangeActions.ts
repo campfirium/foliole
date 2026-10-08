@@ -1,4 +1,5 @@
 import { isTextAnchorLocator, type Node, type TextAnchorLocator } from '../features/nodes/model/nodeTypes';
+import { canSaveNodeText } from '../shared/ui/nodeTextSaveBudget';
 
 import {
   readCachedWorkspaceNodeDocument,
@@ -48,6 +49,7 @@ export function createUpdateHighlightAnchorRangeAction(set: WorkspaceSet) {
       if (!nextNode) {
         return state;
       }
+      if (!canSaveNodeText(nextNode)) return state;
       nextNodeForSync = nextNode;
       if (!isNodeDocumentLoaded(documentNode)) {
         unloadedSyncArgs = node.anchorLink?.locator && isTextAnchorLocator(node.anchorLink.locator)

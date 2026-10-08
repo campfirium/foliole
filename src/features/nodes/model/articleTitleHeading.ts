@@ -1,4 +1,4 @@
-import { NODE_TITLE_MAX_CHARS } from '../../../shared/config/nodeTitleConfig';
+import { normalizeNodeTitle } from '../../../../lib/core/nodes/nodeTitleBudget';
 
 const FENCE_PATTERN = /^\s{0,3}(```|~~~)/;
 const FRONTMATTER_DELIMITER_PATTERN = /^\s*---\s*$/;
@@ -10,13 +10,12 @@ export interface ArticleTitleHeading {
 }
 
 function stripInlineMarkdown(value: string) {
-  return value
+  return normalizeNodeTitle(value
     .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/[*_~`]+/g, '')
     .trim()
-    .replace(/\s+/g, ' ')
-    .slice(0, NODE_TITLE_MAX_CHARS);
+    .replace(/\s+/g, ' '));
 }
 
 function collectArticleTitleHeadings(content: string) {

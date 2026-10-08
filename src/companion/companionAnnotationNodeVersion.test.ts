@@ -1,12 +1,18 @@
+
 import { expect, it, vi } from 'vitest';
+
 
 import { computeNodeSyncHash } from '../../lib/core/database/nodeSyncHash';
 import type { WorkspaceNodeSnapshot } from '../../lib/core/database/workspaceSnapshotHelpers';
+import { NODE_TEXT_MAX_BYTES } from '../../lib/core/nodes/nodeTextBudget';
+import { showAppRuntimeNotice } from '../shared/ui/AppRuntimeNotice';
 
 import {
   canonicalCompanionNodePayload,
   toCompanionNativeNodeVersion
 } from './companionAnnotationNodeVersion';
+
+vi.mock('../shared/ui/AppRuntimeNotice', () => ({ showAppRuntimeNotice: vi.fn() }));
 
 function folderNode(): WorkspaceNodeSnapshot {
   return {
@@ -160,4 +166,21 @@ it('fails instead of persisting a non-SHA fallback hash', async () => {
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it('rejects oversized companion item text before producing a version and preserves the snapshot', () => {
+  vi.mocked(showAppRuntimeNotice).mockClear();
+  const node = { ...folderNode(), kind: 'item' as const, content: '雪'.repeat(Math.floor(NODE_TEXT_MAX_BYTES / 3) + 1) };
+  const before = structuredClone(node);
+  expect(() => toCompanionNativeNodeVersion(node, 'device')).toThrow('node_text_too_large:content');
+  expect(node).toEqual(before);
+  expect(showAppRuntimeNotice).toHaveBeenCalledOnce();
+});
+it('rejects the combined referenced text and accepts the exact UTF-8 field boundary', () => {
+  const node = { ...folderNode(), kind: 'topic' as const, content: 'quote', anchorLink: { id: 'link', kind: 'highlight' as const,
+    locator: { ranges: [{ from: 0, to: 600000, originalText: 'x'.repeat(600000) },
+      { from: 600000, to: 1200000, originalText: 'x'.repeat(600000) }] } } };
+  expect(() => toCompanionNativeNodeVersion(node, 'device')).toThrow('node_text_too_large:anchorText');
+  const item = { ...folderNode(), kind: 'item' as const, content: 'x'.repeat(NODE_TEXT_MAX_BYTES) };
+  expect(() => toCompanionNativeNodeVersion(item, 'device')).not.toThrow();
 });

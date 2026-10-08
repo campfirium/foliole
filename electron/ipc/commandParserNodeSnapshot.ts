@@ -1,3 +1,5 @@
+import { assertNodeTextFieldsWithinBudget } from '../../lib/core/nodes/nodeTextBudget.js';
+import { normalizeNodeTitle } from '../../lib/core/nodes/nodeTitleBudget.js';
 import { assertTextBodyWithinBudget } from '../../lib/core/nodes/textBodyBudget.js';
 import { isReadingState, type ReadingState } from '../../lib/core/review/readingState.js';
 
@@ -90,7 +92,7 @@ function asReviewProfile(value: unknown, field: string): ReviewProfilePayload | 
 export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
   const content = asString(args.content, 'content');
   assertTextBodyWithinBudget(content);
-  return {
+  const parsed = {
     nodeId: asString(args.nodeId, 'nodeId'),
     parentNodeId: asNullableString(args.parentNodeId, 'parentNodeId'),
     kind: asNodeKind(args.kind, 'kind'),
@@ -120,6 +122,8 @@ export function parseNodeSnapshotArgs(args: Record<string, unknown>) {
     createdAt: asString(args.createdAt, 'createdAt'),
     updatedAt: asString(args.updatedAt, 'updatedAt')
   };
+  assertNodeTextFieldsWithinBudget({ ...parsed, title: normalizeNodeTitle(parsed.title) });
+  return parsed;
 }
 
 function parseNodeCreationArgs(

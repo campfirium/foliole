@@ -3,12 +3,14 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 import { savePartitionedWorkspaceBody } from '../../shared/platform/desktop/workspaceBodyPartition';
+import { showAppRuntimeNotice } from '../../shared/ui/AppRuntimeNotice';
 import { requestBodyOverflow } from '../../shared/ui/bodyOverflowRequest';
 import { createInitialWorkspaceState, useWorkspaceStore } from '../../store/workspaceStore';
 import { drainPendingNodeContentRuntimePersists } from '../../store/workspaceStoreContentRuntimePersist';
 
 import { BodyOverflowDialogHost } from './BodyOverflowDialogHost';
 
+vi.mock('../../shared/ui/AppRuntimeNotice', () => ({ showAppRuntimeNotice: vi.fn() }));
 vi.mock('../../shared/platform/desktop/workspaceBodyPartition', () => ({ savePartitionedWorkspaceBody: vi.fn() }));
 vi.mock('../../store/workspaceStoreContentRuntimePersist', () => ({ drainPendingNodeContentRuntimePersists: vi.fn() }));
 
@@ -58,4 +60,17 @@ it('keeps the candidate available for retry or cancellation when persistence fai
   await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   expect(screen.getByRole('button', { name: 'Split and save' })).toBeEnabled();
   expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+});
+
+it.each(['item', 'annotation'])('rejects %s overflow without showing the body split dialog', (kind) => {
+  const seed = useWorkspaceStore.getState().nodesById['node-1']!;
+  useWorkspaceStore.setState({ nodesById: { source: { ...seed, id: 'source', kind: kind === 'item' ? 'item' : 'topic',
+    anchorLink: kind === 'annotation' ? { id: 'link', kind: 'highlight', locator: { from: 0, to: 3, originalText: 'abc' } } : null } } });
+  const before = useWorkspaceStore.getState().nodesById;
+  const request = openRequest();
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(request.cancel).toHaveBeenCalledOnce();
+  expect(savePartitionedWorkspaceBody).not.toHaveBeenCalled();
+  expect(useWorkspaceStore.getState().nodesById).toBe(before);
+  expect(showAppRuntimeNotice).toHaveBeenCalled();
 });
