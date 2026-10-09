@@ -14,7 +14,7 @@ extension FoliolePhysicalSyncGroupUITests {
         XCTAssertTrue(editor.waitForExistence(timeout: 30), "The public topic editor is unavailable on Fri.")
         editor.tap()
         prepareLatinKeyboard(in: app)
-        editor.typeText("\n\n\(text)")
+        typeOnSoftwareKeyboard("\n\n\(text)", in: app)
         let submittedBody = editor.value as? String ?? ""
         XCTAssertTrue(submittedBody.contains(existingText), "Editing must preserve the existing text.")
         XCTAssertTrue(submittedBody.contains(text), "Editing must receive the complete new text.")
@@ -25,6 +25,28 @@ extension FoliolePhysicalSyncGroupUITests {
         tapButton(named: "Exit", in: app, timeout: 30)
         if ProcessInfo.processInfo.environment["FOLIOLE_PHYSICAL_VERIFY_BODY_RELAUNCH"] == "1" {
             verifyCompleteBodyAfterRelaunch(submittedBody, prefix: prefix, matching: text, in: app)
+        }
+    }
+
+    private func typeOnSoftwareKeyboard(_ text: String, in app: XCUIApplication) {
+        for character in text {
+            let label = String(character)
+            if character == "\n" || character == " " {
+                let control = app.keyboards.descendants(matching: .any).matching(
+                    NSPredicate(format: "label ==[c] %@", character == "\n" ? "return" : "space")
+                ).firstMatch
+                XCTAssertTrue(control.waitForExistence(timeout: 5), "Missing software keyboard control: \(label)")
+                control.tap()
+                continue
+            }
+            let key = app.keys[label]
+            if !key.exists {
+                let shift = app.keyboards.buttons.matching(NSPredicate(format: "label ==[c] %@", "shift")).firstMatch
+                XCTAssertTrue(shift.exists, "The requested letter case is unavailable: \(label)")
+                shift.tap()
+            }
+            XCTAssertTrue(key.waitForExistence(timeout: 5), "Missing software keyboard letter: \(label)")
+            key.tap()
         }
     }
 
