@@ -13,6 +13,8 @@ export async function applyNodeOpenStateObject(port: DbPort, record: SyncPackSyn
   if (!lastOpenedAt || !Number.isFinite(Date.parse(lastOpenedAt))) {
     throw new Error('Invalid node open state timestamp');
   }
+  const [node] = await port.query('SELECT 1 FROM nodes WHERE id = ? LIMIT 1', [nodeId]);
+  if (!node) throw new Error(`sync_node_open_state_node_missing:${nodeId}`);
   await port.run(
     `INSERT INTO node_open_state (node_id, last_opened_at) VALUES (?, ?)
      ON CONFLICT(node_id) DO UPDATE SET last_opened_at = excluded.last_opened_at

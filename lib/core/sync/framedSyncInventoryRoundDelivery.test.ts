@@ -31,7 +31,8 @@ it('accepts the original dependency wrappers and rejects trailing data', () => {
 
 it.each(['framed_sync_node_parent_missing:', 'node_position_lineage_unproven:',
   'parent_order_position_lineage_unproven:', 'sync_parent_order_body_unavailable:',
-  'framed_sync_review_node_missing:', 'framed_sync_parent_relation_version_missing:'])('defers unavailable %s dependency while later independent units still deliver', async prefix => {
+  'framed_sync_review_node_missing:', 'sync_node_open_state_node_missing:',
+  'framed_sync_parent_relation_version_missing:'])('defers unavailable %s dependency while later independent units still deliver', async prefix => {
   const child = difference('child');
   const independent = difference('independent');
   const calls: string[] = [];
