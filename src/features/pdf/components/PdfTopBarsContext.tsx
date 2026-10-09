@@ -11,12 +11,16 @@ import {
 type Surface = { id: string; enabled: boolean };
 const RegistrationContext = createContext<((surface: Surface) => () => void) | null>(null);
 const StateContext = createContext<{
+  titleHost: HTMLDivElement | null;
+  setTitleHost: (host: HTMLDivElement | null) => void;
   floating: boolean;
   visible: boolean;
   revealHovered: boolean;
   setRevealHovered: (hovered: boolean) => void;
   setActivity: (id: string, active: boolean) => void;
 }>({
+  titleHost: null,
+  setTitleHost: () => {},
   floating: false,
   visible: true,
   revealHovered: false,
@@ -44,6 +48,7 @@ function useVisibility(surface: Surface | null, protectedDisplay: boolean, suspe
 }
 
 export function PdfTopBarsProvider(props: { children: ReactNode; suspended: boolean }) {
+  const [titleHost, setTitleHost] = useState<HTMLDivElement | null>(null);
   const [revealHovered, setRevealHovered] = useState(false);
   const [surface, setSurface] = useState<Surface | null>(null);
   const [activities, setActivities] = useState<Set<string>>(() => new Set());
@@ -63,7 +68,7 @@ export function PdfTopBarsProvider(props: { children: ReactNode; suspended: bool
   const visibility = useVisibility(surface, activities.size > 0 || revealHovered, props.suspended);
   return (
     <RegistrationContext.Provider value={register}>
-      <StateContext.Provider value={{ ...visibility, setActivity, revealHovered: visibility.floating && revealHovered, setRevealHovered }}>
+      <StateContext.Provider value={{ ...visibility, titleHost, setTitleHost, setActivity, revealHovered: visibility.floating && revealHovered, setRevealHovered }}>
         {props.children}
       </StateContext.Provider>
     </RegistrationContext.Provider>

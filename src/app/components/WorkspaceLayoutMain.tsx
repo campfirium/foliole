@@ -2,6 +2,7 @@ import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { NodeAnchorLink } from '../../features/nodes/model/nodeTypes';
+import { usePdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
 import { ReviewCalendarDialog } from '../../features/review/components/ReviewCalendarDialog';
 import { definedProps } from '../../shared/lib/definedProps';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -99,6 +100,7 @@ export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
 function WorkspaceMainContent(props: WorkspaceLayoutProps) {
   const t = useTranslation();
   const { imports, layoutChrome, navigation, settings, trash } = props;
+  const pdfTopBars = usePdfTopBars();
   useWorkspaceShellBridges();
   const [activeRightPanelId, setActiveRightPanelId] = useState<WorkspaceRightPanelId>(() =>
     loadWorkspaceRightPanelPreference()
@@ -119,7 +121,6 @@ function WorkspaceMainContent(props: WorkspaceLayoutProps) {
     onOpenTrashView: trash.onOpenTrashView,
     onSelectNode: navigation.onSelectNode
   });
-  const workspaceGridStyle = buildWorkspaceGridStyle(layoutChrome);
 
   useEffect(() => {
     saveWorkspaceRightPanelPreference(activeRightPanelId);
@@ -135,7 +136,7 @@ function WorkspaceMainContent(props: WorkspaceLayoutProps) {
   useEffect(() => subscribeWorkspaceRightPanelRequests(handleSelectRightPanel), [handleSelectRightPanel]);
 
   return (
-    <main aria-label={t('desktop.workspace.main')} data-floating-sidebar={layoutChrome.compactSidebars?.openSide ?? undefined} className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={workspaceGridStyle}>
+    <main data-pdf-top-bars-floating={pdfTopBars.floating} aria-label={t('desktop.workspace.main')} data-floating-sidebar={layoutChrome.compactSidebars?.openSide ?? undefined} className="workspace-responsive-shell relative flex h-dvh flex-col overflow-hidden p-0" style={buildWorkspaceGridStyle(layoutChrome)}>
       <WorkspaceMainChrome
         activeRightPanelId={activeRightPanelId}
         onOpenTrashView={handleOpenTrashView}

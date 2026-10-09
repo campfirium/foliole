@@ -23,6 +23,7 @@ import {
   WINDOW_TITLEBAR_RIGHT_ZONE_CONTROL_GAP
 } from './windowTitleBarLayout';
 import { WindowTitleBarRightSidebarAnchor } from './WindowTitleBarRightSidebarAnchor';
+import { PdfWindowTitle } from './WorkspacePdfTopBars';
 import { WorkspaceSurfaceRowOverlay, WorkspaceTitlebarDividers } from './WorkspaceSurfaceRowOverlay';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
@@ -208,11 +209,12 @@ export const WindowTitleBar = memo(function WindowTitleBar(props: WindowTitleBar
         isRightSidebarCollapsed={props.isRightSidebarCollapsed}
       />
       <WindowLeadingActions {...props} />
-      <WindowCenterTitle
+      <PdfWindowTitle><WindowCenterTitle
         onDoubleClick={handleToggleMaximize}
         title={props.centerTitle}
         {...definedProps({ icon: props.centerTitleIcon })}
       />
+      </PdfWindowTitle>
       {renderRightSidebarAnchor(props, controlsWidth)}
       {isDemo || nativeMacOSControls ? null : (
         <WindowControlButtons

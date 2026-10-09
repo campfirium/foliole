@@ -4,7 +4,7 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { PanelScaleSurface as SharedPanelScaleSurface } from '../../shared/ui';
 
 import type { CentralPanelKind } from './documentPanelSectionModel';
-import { PdfTopBar } from './WorkspacePdfTopBars';
+import { PdfTopBar, PdfTopBarsTitleHost, PdfTopBarsRevealZone } from './WorkspacePdfTopBars';
 
 export function DocumentPanelScaleSurface(props: {
   children: ReactNode;
@@ -21,9 +21,11 @@ export function DocumentPanelScaleSurface(props: {
     <section aria-label={label} className="workspace-region-main-document relative flex h-full min-h-0 flex-1 flex-col text-foreground">
       <SharedPanelScaleSurface enabled={!props.isPdfSurface} label={label} panelId={panelId}>
         <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
+          <PdfTopBarsTitleHost />
           {props.overlay}
           <PdfTopBar kind="document">{props.chrome}</PdfTopBar>
           {props.children}
+          <PdfTopBarsRevealZone />
         </div>
       </SharedPanelScaleSurface>
     </section>

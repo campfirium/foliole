@@ -8,6 +8,7 @@
 @import "./styles/window-titlebar-controls.css";
 @import "./styles/workspace-floating-sidebars.css";
 @import "./styles/pdf-selection.css";
+@import "./styles/pdf-top-bars.css";
 
 * {
   box-sizing: border-box;

@@ -6,7 +6,6 @@ import type { ExternalLibraryBrowseEntry } from '../../shared/platform/externalL
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { WindowTitleBar } from './WindowTitleBar';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
-import { PdfTopBar } from './WorkspacePdfTopBars';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export type WorkspaceTitleBarSource = Pick<
@@ -76,7 +75,6 @@ export function WorkspaceMainTitleBar({
   }
   const externalTitle = resolveExternalTitleBarTitle(externalLibrary);
   return (
-    <PdfTopBar kind="window">
       <WindowTitleBar
         activeRightPanelId={activeRightPanelId}
         centerTitle={externalTitle ?? resolveReviewTitleBarTitle(review, t) ?? resolveWindowTitleBarTitle(
@@ -95,6 +93,5 @@ export function WorkspaceMainTitleBar({
         rightSidebarWidth={layoutChrome.rightSidebarWidth}
         {...definedProps({ centerTitleIcon: externalTitle ? ('external' as const) : undefined })}
       />
-    </PdfTopBar>
   );
 }

@@ -15,7 +15,7 @@ import {
 } from '../../shared/ui';
 
 import { PdfTopBarsToggle } from './PdfTopBarsToggle';
-import { PdfTopBar, WorkspacePdfTopBars } from './WorkspacePdfTopBars';
+import { PdfTopBar, PdfTopBarsRevealZone, WorkspacePdfTopBars } from './WorkspacePdfTopBars';
 
 const backend = vi.hoisted(() => ({
   fingerprint: 'one',
@@ -62,6 +62,7 @@ function Reader(props: { pdf: boolean; immersive?: boolean }) {
         </PdfTopBarsDocument>
       ) : null}
       <button>Reading area</button>
+      <PdfTopBarsRevealZone />
     </WorkspacePdfTopBars>
   );
 }
@@ -97,7 +98,7 @@ it('shows on entry, reveals immediately, waits after leaving, and restores non-P
   expectVisible(true);
   advance(3000);
   expectVisible(false);
-  expect(backend.nativeControls).toHaveBeenLastCalledWith(false);
+  expect(backend.nativeControls).toHaveBeenLastCalledWith(true);
   const reveal = screen.getByTestId('pdf-top-bars-reveal-zone');
   fireEvent.mouseEnter(reveal);
   expectVisible(true);

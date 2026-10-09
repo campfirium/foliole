@@ -24,6 +24,9 @@ async function openPdf(app: ElectronApplication, page: Page) {
     'data-pdf-page-state',
     'ready'
   );
+  await revealToolbar(page);
+  await page.getByRole('button', { name: /Set zoom level|设置缩放级别/ }).click();
+  await page.getByRole('menuitem', { name: '100%', exact: true }).click();
   return nodeId;
 }
 
@@ -56,6 +59,7 @@ test('PDF top bars @pdf float, protect navigation, restore space, and remember t
   await revealToolbar(page);
   await expect(toggle).toBeEnabled();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  const otherRegions = await measureOtherRegions(page);
   const floatingHeight = await scroll.evaluate((element) => element.clientHeight);
   await moveToReading(page);
   await expect(title).toHaveAttribute('data-visible', 'false');
@@ -67,11 +71,13 @@ test('PDF top bars @pdf float, protect navigation, restore space, and remember t
   expect(await scroll.evaluate((element) => element.clientHeight)).toBe(floatingHeight);
   await screenshot(page, 'revealed');
   await protectNavigationMenu(page);
+  await verifyFixedSideControls(page);
   await revealToolbar(page);
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
   await expect(title).toHaveAttribute('data-floating', 'false');
   expect(await scroll.evaluate((element) => element.clientHeight)).toBeLessThan(floatingHeight);
+  expect(await measureOtherRegions(page)).toEqual(otherRegions);
   await screenshot(page, 'disabled');
   await page.reload();
   await expect(page.locator(`[role="treeitem"][data-node-id="${nodeId}"]`)).toBeVisible();
@@ -103,4 +109,27 @@ async function protectNavigationMenu(page: Page) {
   await expect(page.getByTestId('pdf-document-top-bar')).toHaveAttribute('data-visible', 'true');
   await moveToReading(page);
   await expect(page.getByTestId('pdf-window-top-bar')).toHaveAttribute('data-visible', 'false');
+}
+
+async function measureOtherRegions(page: Page) {
+  const regions = [
+    page.getByRole('region', { name: /Left toolbar|左侧工具栏/ }),
+    page.getByRole('complementary', { name: /Current folder content|当前文件夹内容/ }),
+    page.locator('.workspace-region-main-sidebar')
+  ];
+  return Promise.all(regions.map(async (region) => {
+    const box = await region.boundingBox();
+    if (!box) throw new Error('A workspace side region is unavailable');
+    return Object.fromEntries(Object.entries(box).map(([key, value]) => [key, Math.round(value)]));
+  }));
+}
+
+async function verifyFixedSideControls(page: Page) {
+  const toggle = page.getByRole('button', { name: /Toggle right sidebar|切换右侧栏/ });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await page.getByTestId('pdf-toolbar-reveal-zone').hover();
+  await expect(page.getByTestId('pdf-window-top-bar')).toHaveAttribute('data-visible', 'true');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
 }

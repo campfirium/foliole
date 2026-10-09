@@ -3,8 +3,10 @@ import { useEffect } from 'react';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { useRegisterPdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
+import { DisplayScaleProvider } from '../../features/settings/context/DisplayScaleProvider';
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
+import { DocumentPanelScaleSurface } from './DocumentPanelScaleSurface';
 import { ToolbarVisibilityHarness, setScrollTopAndScroll } from './PdfDocumentViewport.toolbarVisibility.testSupport';
 import { WorkspacePdfTopBars } from './WorkspacePdfTopBars';
 
@@ -15,7 +17,9 @@ vi.mock('../../shared/platform/windowControls', () => ({
 function ActivePdf() {
   const register = useRegisterPdfTopBars();
   useEffect(() => register?.({ id: 'pdf-one', enabled: true }), [register]);
-  return <ToolbarVisibilityHarness />;
+  return <DisplayScaleProvider><DocumentPanelScaleSurface isPdfSurface panelKind="document" overlay={null} chrome={<button>Document navigation</button>}>
+    <ToolbarVisibilityHarness />
+  </DocumentPanelScaleSurface></DisplayScaleProvider>;
 }
 
 afterEach(() => {
@@ -39,4 +43,10 @@ it('reveals and protects the PDF toolbar from the shared window edge, then resum
   fireEvent.mouseLeave(edge);
   act(() => vi.advanceTimersByTime(3000));
   expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
+});
+
+it('keeps the shared reveal edge inside the document surface', async () => {
+  renderWithLocalization(<WorkspacePdfTopBars isImmersiveMode={false}><ActivePdf /></WorkspacePdfTopBars>);
+  await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
+  expect(screen.getByRole('region', { name: 'Document panel' })).toContainElement(screen.getByTestId('pdf-top-bars-reveal-zone'));
 });

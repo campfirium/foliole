@@ -1,0 +1,26 @@
+.workspace-responsive-shell[data-pdf-top-bars-floating='true'] .window-titlebar {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  z-index: var(--z-workspace-overlay);
+  clip-path: polygon(
+    0 0,
+    var(--window-titlebar-left-width) 0,
+    var(--window-titlebar-left-width) 100%,
+    calc(100% - var(--window-titlebar-right-width)) 100%,
+    calc(100% - var(--window-titlebar-right-width)) 0,
+    100% 0,
+    100% 100%,
+    0 100%
+  );
+}
+
+.workspace-responsive-shell[data-pdf-top-bars-floating='true'] .workspace-region-main-rail,
+.workspace-responsive-shell[data-pdf-top-bars-floating='true']
+  [data-workspace-side-column]:not(.workspace-floating-sidebar) {
+  padding-top: var(--workspace-top-toolbar-height);
+}
+
+.workspace-responsive-shell[data-pdf-top-bars-floating='true'] .workspace-floating-sidebar {
+  top: var(--workspace-top-toolbar-height);
+}

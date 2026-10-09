@@ -45,6 +45,7 @@ function renderListColumns(
 ) {
   return [
     <div
+      data-workspace-side-column="list"
       aria-hidden={args.isListCollapsed}
       hidden={args.compactSidebars?.leftFloating && args.isListCollapsed}
       className={args.compactSidebars?.leftFloating
@@ -75,6 +76,7 @@ function renderRightSidebarColumns(
       <WorkspaceRightSidebarSplitter {...args.rightSidebarSplitterProps} />
     </div>,
     <div
+      data-workspace-side-column="right"
       aria-hidden={args.isRightSidebarCollapsed}
       hidden={args.compactSidebars?.rightFloating && args.isRightSidebarCollapsed}
       className={args.compactSidebars?.rightFloating

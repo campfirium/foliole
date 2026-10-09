@@ -78,12 +78,12 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
       data-testid="pdf-document-toolbar"
       data-toolbar-visible={props.isVisible ? 'true' : 'false'}
     >
-      <div
-        className={`absolute inset-x-0 h-3 pointer-events-auto ${topBars.floating && !topBars.visible ? 'top-3' : 'top-0'}`}
+      {topBars.floating ? null : <div
+        className="absolute inset-x-0 top-0 h-3 pointer-events-auto"
         data-testid="pdf-toolbar-reveal-zone"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-      />
+      />}
       <div
         className={resolveToolbarPanelClassName(props.isVisible)}
         ref={panelRef}
