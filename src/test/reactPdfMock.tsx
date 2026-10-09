@@ -1,6 +1,8 @@
 import * as React from 'react';
 import { vi } from 'vitest';
 
+vi.mock('../app/components/PdfOfficialTextLayer', () => ({ PdfOfficialTextLayer: () => null }));
+
 export const mockPdfWorkerOptions = {
   workerSrc: ''
 };

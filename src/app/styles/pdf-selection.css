@@ -1,0 +1,9 @@
+.pdf-document-surface .textLayer :is(span, br)::selection {
+  background: var(--app-selection-surface-color);
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.pdf-document-surface:has([data-pdf-selection-overlay]) .textLayer ::selection {
+  background: transparent;
+}

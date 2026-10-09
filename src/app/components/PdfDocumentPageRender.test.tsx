@@ -1,6 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 
+vi.mock('./PdfOfficialTextLayer', () => ({ PdfOfficialTextLayer: () => null }));
+
 vi.mock('../../features/pdf/model/pdfAutoCrop', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../features/pdf/model/pdfAutoCrop')>();
   return {

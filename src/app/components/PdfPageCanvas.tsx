@@ -3,6 +3,7 @@ import { Page } from 'react-pdf';
 
 import { definedProps } from '../../shared/lib/definedProps';
 
+import { PdfOfficialTextLayer } from './PdfOfficialTextLayer';
 import { resolvePdfPageDimensions, type PdfPageDimensions } from './pdfPageDimensions';
 import { resolvePageText, type PdfPageTextEntry } from './pdfPageText';
 import { useOptionalPdfVisualExcerptRuntime } from './PdfVisualExcerptRuntime';
@@ -46,13 +47,15 @@ export const PdfPageCanvas = memo(
         }}
         pageNumber={props.pageNumber}
         renderAnnotationLayer
-        renderTextLayer
+        renderTextLayer={false}
         rotate={props.rotate}
         {...definedProps({
           scale: props.zoomMode === 'fit-width' ? undefined : (props.zoom ?? 100) / 100,
           width: props.zoomMode === 'fit-width' ? props.fitWidthTargetWidth ?? undefined : undefined
         })}
-      />
+      >
+        <PdfOfficialTextLayer />
+      </Page>
     );
   },
   (previous, next) =>

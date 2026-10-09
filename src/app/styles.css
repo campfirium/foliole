@@ -7,6 +7,7 @@
 @import "./tokens/z-index.css";
 @import "./styles/window-titlebar-controls.css";
 @import "./styles/workspace-floating-sidebars.css";
+@import "./styles/pdf-selection.css";
 
 * {
   box-sizing: border-box;
@@ -1244,12 +1245,6 @@ b {
   height: 0;
 }
 
-
-.pdf-document-surface .textLayer :is(span, br)::selection {
-  background: var(--app-selection-surface-color);
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
 
 .pdf-visual-excerpt-page {
   cursor: default;

@@ -1,5 +1,6 @@
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import { renderPdfOverlayMarker, renderPdfOverlayRects } from './pdfOverlayRender';
+import { PdfSelectionOverlay } from './PdfSelectionOverlay';
 
 export interface PdfPageOverlayLocator {
   id: string;
@@ -63,17 +64,5 @@ export function renderSelectionOverlay(
   if (!selectionLocator) {
     return null;
   }
-  return (
-    renderPdfOverlayRects(
-      selectionLocator,
-      'pointer-events-none absolute z-surface-overlay rounded-[3px] bg-[var(--app-selection-surface-color)] ring-1 ring-[var(--app-selection-surface-color)]',
-      'pdf-selection-rect'
-    ) ??
-    renderPdfOverlayMarker(
-      selectionLocator,
-      markerSize,
-      'pointer-events-none absolute z-surface-overlay -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--app-selection-surface-color)] shadow-marker ring-1 ring-[var(--app-selection-surface-color)]',
-      'pdf-selection-marker'
-    )
-  );
+  return <PdfSelectionOverlay locator={selectionLocator} markerSize={markerSize} />;
 }

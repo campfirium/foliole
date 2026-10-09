@@ -1,122 +1,56 @@
-import { describe, expect, it, vi } from 'vitest';
+import { renderHook, fireEvent } from '@testing-library/react';
+import { afterEach, expect, it, vi } from 'vitest';
 
-import { createTestSelection } from '../../test/domGeometryTestSupport';
+import { createTestDomRectList } from '../../test/domGeometryTestSupport';
 
-import { stabilizePdfTextSelectionToClosestRow } from './pdfSelectionRuntime';
+import { resolveContextMenuSelection, useTrackPdfSelection, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
 
-function mockRect(left: number, top: number, width: number, height: number): DOMRect {
-  return {
-    bottom: top + height,
-    height,
-    left,
-    right: left + width,
-    toJSON: () => ({}),
-    top,
-    width,
-    x: left,
-    y: top
-  } as DOMRect;
-}
-
-function defineRect(element: HTMLElement, rect: DOMRect) {
-  Object.defineProperty(element, 'getBoundingClientRect', {
-    configurable: true,
-    value: () => rect
-  });
-}
-
-function defineCaretRange(startNode: Node, startOffset: number) {
-  const range = document.createRange();
-  range.setStart(startNode, startOffset);
-  range.collapse(true);
-  Object.defineProperty(document, 'caretRangeFromPoint', {
-    configurable: true,
-    value: vi.fn(() => range)
-  });
-  return range;
-}
-
-describe('stabilizePdfTextSelectionToClosestRow', () => {
-  it('clamps drag selection to the nearest row edge when the pointer moves beyond the row width', () => {
-    const { leftText, rightText, selection, surface, textLayer } = createTwoSpanSelectionFixture();
-    defineCaretRange(rightText, 4);
-
-    const stabilized = stabilizePdfTextSelectionToClosestRow(surface, selection, textLayer, 180, 48);
-
-    expect(stabilized).toBe(true);
-    expect(selection.setBaseAndExtent).toHaveBeenCalledWith(leftText, 0, rightText, 4);
-
-    surface.remove();
-  });
-
-  it('does nothing while the pointer stays inside the current text row bounds', () => {
-    const { selection, surface, textLayer } = createSingleSpanSelectionFixture();
-    Object.defineProperty(document, 'caretRangeFromPoint', {
-      configurable: true,
-      value: vi.fn()
-    });
-
-    const stabilized = stabilizePdfTextSelectionToClosestRow(surface, selection, textLayer, 60, 48);
-
-    expect(stabilized).toBe(false);
-    expect(selection.setBaseAndExtent).not.toHaveBeenCalled();
-
-    surface.remove();
-  });
+afterEach(() => {
+  vi.useRealTimers();
+  window.getSelection()?.removeAllRanges();
+  document.body.replaceChildren();
 });
 
-function createTwoSpanSelectionFixture() {
-    const surface = document.createElement('div');
-    const textLayer = document.createElement('div');
-    textLayer.className = 'textLayer';
-    const leftText = document.createTextNode('Alpha');
-    const rightText = document.createTextNode('Beta');
-    const leftSpan = document.createElement('span');
-    const rightSpan = document.createElement('span');
-    leftSpan.appendChild(leftText);
-    rightSpan.appendChild(rightText);
-    textLayer.append(leftSpan, rightSpan);
-    surface.appendChild(textLayer);
-    document.body.appendChild(surface);
-
-    defineRect(leftSpan, mockRect(20, 40, 44, 16));
-    defineRect(rightSpan, mockRect(68, 40, 36, 16));
-
-    const selection = createTestSelection({
-      anchorNode: leftText,
-      anchorOffset: 0,
-      focusNode: rightText,
-      focusOffset: 1,
-      isCollapsed: false,
-      rangeCount: 1,
-      setBaseAndExtent: vi.fn()
-    });
-
-    return { leftText, rightText, selection, surface, textLayer };
+function selectedSurface() {
+  const surface = document.createElement('div');
+  surface.dataset.pdfPageNumber = '1';
+  const text = document.createTextNode('Both selected columns');
+  surface.append(text);
+  document.body.append(surface);
+  surface.getBoundingClientRect = () => new DOMRect(0, 0, 600, 800);
+  const selection = window.getSelection();
+  if (!selection) throw new Error('Selection unavailable');
+  selection.setBaseAndExtent(text, 0, text, text.length);
+  const range = selection.getRangeAt(0);
+  Object.defineProperty(range, 'getClientRects', { value: () => createTestDomRectList([new DOMRect(40, 700, 100, 14), new DOMRect(330, 60, 160, 14)]) });
+  Object.defineProperty(range, 'getBoundingClientRect', { value: () => new DOMRect(40, 60, 450, 654) });
+  return { surface, selection };
 }
 
-function createSingleSpanSelectionFixture() {
-    const surface = document.createElement('div');
-    const textLayer = document.createElement('div');
-    textLayer.className = 'textLayer';
-    const text = document.createTextNode('Alpha beta');
-    const span = document.createElement('span');
-    span.appendChild(text);
-    textLayer.appendChild(span);
-    surface.appendChild(textLayer);
-    document.body.appendChild(surface);
+it('captures both columns on release without rewriting the native selection during dragging', () => {
+  const { surface, selection } = selectedSurface();
+  const snapshot: { current: PdfSelectionSnapshot | null } = { current: null };
+  const { unmount } = renderHook(() => useTrackPdfSelection({ current: surface }, snapshot));
+  const changeSelection = vi.spyOn(selection, 'setBaseAndExtent');
+  fireEvent.mouseDown(surface, { button: 0 });
+  fireEvent.mouseMove(document, { buttons: 1, clientX: 1000, clientY: 700 });
+  fireEvent.mouseUp(document, { button: 0 });
+  expect(changeSelection).not.toHaveBeenCalled();
+  expect(snapshot.current?.selectionText).toBe('Both selected columns');
+  expect(snapshot.current?.locator.rects).toHaveLength(2);
+  unmount();
+  snapshot.current = null;
+  fireEvent.mouseUp(document, { button: 0 });
+  expect(snapshot.current).toBeNull();
+});
 
-    defineRect(span, mockRect(20, 40, 84, 16));
-
-    const selection = createTestSelection({
-      anchorNode: text,
-      anchorOffset: 0,
-      focusNode: text,
-      focusOffset: 3,
-      isCollapsed: false,
-      rangeCount: 1,
-      setBaseAndExtent: vi.fn()
-    });
-
-    return { selection, surface, textLayer };
-}
+it('preserves a recent selection for a right-click menu but expires stale fallback text', () => {
+  vi.useFakeTimers();
+  const { surface } = selectedSurface();
+  const snapshot = resolveContextMenuSelection(surface, null);
+  expect(snapshot?.selectionText).toBe('Both selected columns');
+  window.getSelection()?.removeAllRanges();
+  expect(resolveContextMenuSelection(surface, snapshot)).toEqual(snapshot);
+  vi.advanceTimersByTime(1001);
+  expect(resolveContextMenuSelection(surface, snapshot)).toBeNull();
+});

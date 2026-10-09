@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { MutableRefObject } from 'react';
 
 import { resolvePdfSelectionSnapshot, type PdfSelectionSnapshot } from './pdfSelectionRuntime';
@@ -23,6 +23,7 @@ export function usePdfSelectionToolbar(input: {
   onOpen: (snapshot: PdfSelectionSnapshot, position: { left: number; top: number }) => void;
   surfaceRef: MutableRefObject<HTMLElement | null>;
 }) {
+  const dragStartedInSurface = useRef(false);
   useEffect(() => {
     const surface = input.surfaceRef.current;
     if (!surface) return undefined;
@@ -31,12 +32,16 @@ export function usePdfSelectionToolbar(input: {
       if (snapshot) input.onOpen(snapshot, resolveToolbarPosition(event));
     };
     const handleMouseUp = (event: MouseEvent) => {
-      if (event.button === 0 && event.target instanceof Node && surface.contains(event.target)) {
+      if (event.button !== 0) return;
+      const completedPdfDrag = dragStartedInSurface.current;
+      dragStartedInSurface.current = false;
+      if (completedPdfDrag || (event.target instanceof Node && surface.contains(event.target))) {
         openFromCompletedSelection(event);
       }
     };
     const handleMouseDown = (event: MouseEvent) => {
       if (event.button === 0 && !(event.target instanceof Element && event.target.closest('[data-annotation-toolbar="true"]'))) {
+        dragStartedInSurface.current = event.target instanceof Node && surface.contains(event.target);
         input.onClose();
       }
     };

@@ -32,12 +32,13 @@ function usePdfSelectionMenuState() {
     selectionText: string;
     top: number;
   } | null>(null);
-  const [selectionOverlayLocator, setSelectionOverlayLocator] = useState<PdfAnchorLocator | undefined>(undefined);
+  const [liveSelectionOverlayLocator, setSelectionOverlayLocator] = useState<PdfAnchorLocator | undefined>(undefined);
+  const selectionOverlayLocator = liveSelectionOverlayLocator ?? selectionMenuState?.locator;
   const surfaceRef = useRef<HTMLElement | null>(null);
   const preservedSelectionRef = useRef<PdfSelectionSnapshot | null>(null);
   const closeSelectionMenu = () => {
     setSelectionMenuState(null);
-    setSelectionOverlayLocator(undefined);
+    setSelectionOverlayLocator(resolvePdfSelectionSnapshot(surfaceRef.current)?.locator);
     setNoteOpen(false);
     setNoteDraft('');
   };
@@ -52,7 +53,7 @@ function usePdfSelectionMenuState() {
     });
     setSelectionOverlayLocator(selection.locator);
   };
-  useTrackPdfSelection(surfaceRef, preservedSelectionRef);
+  useTrackPdfSelection(surfaceRef, preservedSelectionRef, setSelectionOverlayLocator);
   usePdfSelectionToolbar({ onClose: closeSelectionMenu, onOpen: openSelectionToolbar, surfaceRef });
   const handleContextMenu = (event: ReactMouseEvent<HTMLDivElement>) => {
     const fallbackSelection = resolveContextMenuSelection(surfaceRef.current, preservedSelectionRef.current);
