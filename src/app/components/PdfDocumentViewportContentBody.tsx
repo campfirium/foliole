@@ -115,7 +115,7 @@ function useViewportPageLoadingState(
 }
 
 export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContentBodyProps) {
-  const fitWidthTargetWidth = useFitWidthTargetWidth(props.scrollContainerRef);
+  const fitWidthTargetWidth = useFitWidthTargetWidth(props.scrollContainerRef, props.rotation);
   const { displayedZoom, handlePageLoadSuccess } = useDisplayedPdfZoom({
     fitWidthTargetWidth,
     visiblePage: props.visiblePage,

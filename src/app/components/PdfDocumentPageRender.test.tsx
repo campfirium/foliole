@@ -239,7 +239,7 @@ it('renders a placeholder shell for pages outside the active render window', () 
   expect(container.querySelector('[data-pdf-page-state="placeholder"]')).not.toBeNull();
 });
 
-it('crops rendered pdf page side gutters after the text layer renders', async () => {
+it('keeps the full page until a document-wide view range is available', async () => {
   const { container } = render(
     renderPdfPage({
       highlightLocators: [],
@@ -259,8 +259,8 @@ it('crops rendered pdf page side gutters after the text layer renders', async ()
   );
 
   await waitFor(() => {
-    expect(container.querySelector('[data-testid="pdf-document-page-crop-frame"]')).toHaveStyle({ width: '752px' });
+    expect(container.querySelector('[data-testid="pdf-document-page-crop-frame"]')).toHaveStyle({ width: '800px', height: '1131px' });
   });
 
-  expect(container.querySelector('.pdf-document-page-crop-content')).toHaveStyle({ marginLeft: '-24px' });
+  expect(container.querySelector('.pdf-document-page-crop-content')).toHaveStyle({ marginLeft: '0px', marginTop: '0px' });
 });

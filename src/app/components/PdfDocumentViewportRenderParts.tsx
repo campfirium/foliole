@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { Document } from 'react-pdf';
 
+import { usePdfReadingView } from '../../features/pdf/components/PdfReadingViewContext';
 import { PDF_DOCUMENT_OPTIONS } from '../../features/pdf/model/pdfDocumentOptions';
 import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -10,6 +11,7 @@ import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import type { PdfPageDimensions } from './pdfPageDimensions';
 import type { PdfPageTextEntry } from './pdfPageText';
+import { PdfReadingViewDocument } from './PdfReadingViewDocument';
 import { collectPdfPageDimensions, renderDocumentPages } from './pdfViewportPageLayout';
 import { resolveRenderablePageNumbers } from './pdfViewportPageNumbers';
 import { PdfViewportPlaceholderStack } from './pdfViewportPlaceholderStack';
@@ -49,6 +51,7 @@ interface PdfViewportDocumentProps {
 
 export function PdfViewportDocument(props: PdfViewportDocumentProps) {
   const t = useTranslation();
+  const readingView = usePdfReadingView();
   const persistedPageDimensions = props.persistedPageDimensions ?? {};
   const [pageDimensionsByNumber, setPageDimensionsByNumber] = useState<Record<number, PdfPageDimensions>>(persistedPageDimensions);
   const [isDocumentLoaded, setIsDocumentLoaded] = useState(false);
@@ -56,7 +59,7 @@ export function PdfViewportDocument(props: PdfViewportDocumentProps) {
   const totalPages = props.totalPages ?? props.persistedPageCount;
   const totalPageCount = totalPages ?? 0;
   const hasCompletePageMetrics = totalPageCount > 0 && Object.keys(pageDimensionsByNumber).length >= totalPageCount;
-  const isLayoutReady = isDocumentLoaded && hasCompletePageMetrics;
+  const isLayoutReady = isDocumentLoaded && hasCompletePageMetrics && (!readingView || readingView.ready);
   const persistedPageDimensionsKey = Object.entries(persistedPageDimensions)
     .sort(([left], [right]) => Number(left) - Number(right))
     .map(([pageNumber, dimensions]) => `${pageNumber}:${dimensions.width}x${dimensions.height}`)
@@ -126,6 +129,7 @@ function renderPdfDocument(
         onLoadSuccess={handleDocumentLoadSuccess}
         options={PDF_DOCUMENT_OPTIONS}
       >
+        <PdfReadingViewDocument />
         <PdfDocumentPages
           fitWidthTargetWidth={props.fitWidthTargetWidth}
           highlightLocators={props.highlightLocators}

@@ -1,5 +1,7 @@
 import type { MutableRefObject } from 'react';
 
+import { resolvePdfPagePositionGeometry } from './pdfPagePositionGeometry';
+
 const PDF_PAGE_MIN = 1;
 
 type PdfPageElementsRef = MutableRefObject<Record<number, HTMLDivElement | null>>;
@@ -26,5 +28,6 @@ export function resolveVisiblePositionY(container: HTMLDivElement, pageElement: 
     return 0;
   }
   const anchor = container.scrollTop + container.clientHeight * 0.35;
-  return Math.max(0, Math.min(1, (anchor - pageElement.offsetTop) / Math.max(pageElement.clientHeight, 1)));
+  const page = resolvePdfPagePositionGeometry(pageElement);
+  return Math.max(0, Math.min(1, (anchor - page.top) / page.height));
 }

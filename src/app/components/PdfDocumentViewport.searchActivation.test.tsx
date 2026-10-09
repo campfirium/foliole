@@ -74,6 +74,8 @@ vi.mock('react-pdf', async () => {
   };
 });
 
+vi.mock('./PdfOfficialTextLayer', () => ({ PdfOfficialTextLayer: () => null }));
+
 vi.mock('./pdfSearchTextSegments', () => ({
   collectTextSegments: collectTextSegmentsSpy
 }));

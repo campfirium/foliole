@@ -1,53 +1,27 @@
-import { useRef, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
-import { measurePdfTextLayerCropBox, resolvePdfCropScale, type PdfCropBox } from '../../features/pdf/model/pdfAutoCrop';
+import { usePdfReadingView } from '../../features/pdf/components/PdfReadingViewContext';
+import { FULL_PDF_VIEW } from '../../features/pdf/model/pdfReadingView';
 
 import type { PdfPageDimensions } from './pdfPageDimensions';
-
-function measureCropBoxAfterTextLayout(element: HTMLElement | null, onCropBoxChange: (cropBox: PdfCropBox | null) => void) {
-  if (!element) {
-    onCropBoxChange(null);
-    return;
-  }
-  window.requestAnimationFrame(() => {
-    const cropBox = measurePdfTextLayerCropBox(element);
-    if (cropBox) {
-      onCropBoxChange(cropBox);
-      return;
-    }
-    window.setTimeout(() => onCropBoxChange(measurePdfTextLayerCropBox(element)), 80);
-  });
-}
+import { rotatePdfNormalizedRect } from './pdfVisualExcerptGeometry';
 
 export function PdfPageCropFrame(props: {
   children: (args: { onTextLayerRender: () => void; pageRef: (element: HTMLDivElement | null) => void }) => ReactNode;
   pageDimensions: PdfPageDimensions;
+  rotation?: number;
 }) {
-  const [cropBox, setCropBox] = useState<PdfCropBox | null>(null);
-  const pageElementRef = useRef<HTMLDivElement | null>(null);
-  const cropScale = cropBox ? resolvePdfCropScale(props.pageDimensions.width, cropBox) : 1;
-  const frameStyle = cropBox
-    ? {
-        width: (cropBox.right - cropBox.left) * cropScale
-      }
-    : undefined;
-  const pageStyle = cropBox
-    ? {
-        marginLeft: -cropBox.left * cropScale,
-        transform: `scale(${cropScale})`,
-        transformOrigin: 'top left'
-      }
-    : undefined;
-
+  const runtime = usePdfReadingView();
+  const crop = rotatePdfNormalizedRect(runtime?.crop ?? FULL_PDF_VIEW, props.rotation ?? 0);
+  const width = props.pageDimensions.width, height = props.pageDimensions.height;
   return (
-    <div className="pdf-document-page-crop-frame overflow-hidden" data-testid="pdf-document-page-crop-frame" style={frameStyle}>
-      <div className="pdf-document-page-crop-content relative inline-block" style={pageStyle}>
-        {props.children({
-          onTextLayerRender: () => measureCropBoxAfterTextLayout(pageElementRef.current, setCropBox),
-          pageRef: (element) => {
-            pageElementRef.current = element;
-          }
-        })}
+    <div className="pdf-document-page-crop-frame shrink-0 overflow-hidden"
+      data-testid="pdf-document-page-crop-frame"
+      data-pdf-view-mode={runtime?.view.mode ?? 'auto'}
+      style={{ width: width * crop.width, height: height * crop.height }}>
+      <div className="pdf-document-page-crop-content relative inline-block"
+        style={{ marginLeft: -width * crop.x, marginTop: -height * crop.y }}>
+        {props.children({ onTextLayerRender: () => undefined, pageRef: () => undefined })}
       </div>
     </div>
   );

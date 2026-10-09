@@ -128,7 +128,7 @@ function renderCroppedPdfPage(props: Omit<PdfPageContentProps, 'onTextLayerRende
   pageDimensions: PdfPageDimensions;
 }) {
   return (
-    <PdfPageCropFrame pageDimensions={props.pageDimensions}>
+    <PdfPageCropFrame pageDimensions={resolveRenderedPageDimensions(props.pageDimensions, props.fitWidthTargetWidth, props.rotation, props.zoomMode, props.zoom)} rotation={props.rotation}>
       {({ onTextLayerRender, pageRef }) =>
         renderPdfPageContent({
           ...props,
@@ -201,7 +201,9 @@ export function renderPdfPagePlaceholder(
         args.pageElementsRef.current[args.pageNumber] = element;
       }}
     >
-      <div aria-hidden="true" className="pdf-document-page-placeholder rounded-sm bg-bg-panel/20 shadow-page" style={{ height, width }} />
+      <PdfPageCropFrame pageDimensions={{ height, width }} rotation={args.rotation}>
+        {() => <div aria-hidden="true" className="pdf-document-page-placeholder rounded-sm bg-bg-panel/20 shadow-page" style={{ height, width }} />}
+      </PdfPageCropFrame>
     </div>
   );
 }

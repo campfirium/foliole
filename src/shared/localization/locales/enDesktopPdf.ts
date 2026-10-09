@@ -1,4 +1,11 @@
 export const EN_DESKTOP_PDF_TRANSLATIONS = {
+  'desktop.pdf.view.automatic': 'Automatic view',
+  'desktop.pdf.view.manual': 'Manual view',
+  'desktop.pdf.view.adjust': 'Adjust range',
+  'desktop.pdf.view.selectHint': 'Drag to select a range. Move the selection or drag its corners to adjust it. This range applies to every page.',
+  'desktop.pdf.view.cancel': 'Cancel',
+  'desktop.pdf.view.confirm': 'Confirm',
+  'desktop.pdf.view.failed': 'Could not prepare or save the PDF view. Try again.',
   'desktop.pdf.search.aria': 'PDF search',
   'desktop.pdf.search.placeholder': 'Search PDF...',
   'desktop.pdf.search.noMatches': 'No matches',

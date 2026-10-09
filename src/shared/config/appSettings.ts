@@ -35,6 +35,7 @@ export const APP_SETTINGS_STORAGE_KEYS = {
   monospaceFont: 'foliole-monospace-font-preset',
   baseColor: 'foliole-base-color',
   pdfReadingMode: 'foliole-pdf-reading-mode',
+  pdfDocumentViews: 'foliole-pdf-document-views',
   immersiveDoubleClickEditEnabled: 'foliole-immersive-double-click-edit-enabled',
   readingLineHeight: 'foliole-reading-line-height',
   readingParagraphSpacing: 'foliole-reading-paragraph-spacing',

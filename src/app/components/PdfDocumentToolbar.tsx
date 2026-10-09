@@ -4,6 +4,7 @@ import { appFloatingToolbarClassName } from '../../shared/ui';
 
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfPageControls, PdfSearchControls, PdfZoomControls } from './PdfDocumentToolbarControls';
+import { PdfReadingViewControls } from './PdfReadingViewControls';
 import { PdfVisualExcerptToolbarControls } from './PdfVisualExcerptToolbarControls';
 
 interface PdfDocumentToolbarProps {
@@ -37,7 +38,9 @@ function resolveToolbarShellClassName() {
 }
 
 function resolveToolbarPanelClassName(isVisible: boolean) {
-  const visibilityClassName = isVisible ? 'translate-y-0 opacity-100' : '-translate-y-3 opacity-0 pointer-events-none';
+  const visibilityClassName = isVisible
+    ? 'translate-y-0 opacity-100'
+    : '-translate-y-3 opacity-0 pointer-events-none';
   return appFloatingToolbarClassName(visibilityClassName);
 }
 
@@ -45,7 +48,9 @@ function ToolbarDivider() {
   return <div className="h-5 w-px bg-border/30" />;
 }
 
-function useToolbarActivity(onToolbarActiveChange: PdfDocumentToolbarProps['onToolbarActiveChange']) {
+function useToolbarActivity(
+  onToolbarActiveChange: PdfDocumentToolbarProps['onToolbarActiveChange']
+) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -59,9 +64,15 @@ function useToolbarActivity(onToolbarActiveChange: PdfDocumentToolbarProps['onTo
 }
 
 export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
-  const { panelRef, setIsHovered, setIsFocused, setIsMenuOpen } = useToolbarActivity(props.onToolbarActiveChange);
+  const { panelRef, setIsHovered, setIsFocused, setIsMenuOpen } = useToolbarActivity(
+    props.onToolbarActiveChange
+  );
   return (
-    <div className={resolveToolbarShellClassName()} data-testid="pdf-document-toolbar" data-toolbar-visible={props.isVisible ? 'true' : 'false'}>
+    <div
+      className={resolveToolbarShellClassName()}
+      data-testid="pdf-document-toolbar"
+      data-toolbar-visible={props.isVisible ? 'true' : 'false'}
+    >
       <div
         className="absolute inset-x-0 top-0 h-3 pointer-events-auto"
         data-testid="pdf-toolbar-reveal-zone"
@@ -72,7 +83,11 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
         className={resolveToolbarPanelClassName(props.isVisible)}
         ref={panelRef}
         onBlurCapture={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget instanceof Node ? event.relatedTarget : null)) {
+          if (
+            !event.currentTarget.contains(
+              event.relatedTarget instanceof Node ? event.relatedTarget : null
+            )
+          ) {
             setIsFocused(false);
           }
         }}
@@ -80,17 +95,7 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        <PdfZoomControls
-          onMenuOpenChange={setIsMenuOpen}
-          onRotateClockwise={props.onRotateClockwise}
-          onSetFitWidth={props.onSetFitWidth}
-          onSetZoom={props.onSetZoom}
-          onToolbarInteraction={props.onToolbarInteraction}
-          onZoomIn={props.onZoomIn}
-          onZoomOut={props.onZoomOut}
-          zoomMode={props.zoomMode}
-          zoom={props.zoom}
-        />
+        {renderViewControls(props, setIsMenuOpen)}
         <ToolbarDivider />
         <PdfPageControls
           displayPage={props.displayPage}
@@ -116,5 +121,27 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
         />
       </div>
     </div>
+  );
+}
+
+function renderViewControls(
+  props: PdfDocumentToolbarProps,
+  setIsMenuOpen: (open: boolean) => void
+) {
+  return (
+    <>
+      <PdfZoomControls
+        onMenuOpenChange={setIsMenuOpen}
+        onRotateClockwise={props.onRotateClockwise}
+        onSetFitWidth={props.onSetFitWidth}
+        onSetZoom={props.onSetZoom}
+        onToolbarInteraction={props.onToolbarInteraction}
+        onZoomIn={props.onZoomIn}
+        onZoomOut={props.onZoomOut}
+        zoomMode={props.zoomMode}
+        zoom={props.zoom}
+      />
+      <PdfReadingViewControls onInteraction={props.onToolbarInteraction} />
+    </>
   );
 }

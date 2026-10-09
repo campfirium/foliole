@@ -175,7 +175,8 @@ const RENDERER_PREFERENCE_APP_SETTING_NAMES = [
   'feedbackRememberedContact'
 ] as const satisfies readonly AppSettingsStorageName[];
 const DESKTOP_RUNTIME_APP_SETTING_NAMES = [
-  'manualComparisonDrafts'
+  'manualComparisonDrafts',
+  'pdfDocumentViews'
 ] as const satisfies readonly AppSettingsStorageName[];
 const CROSS_HOST_SYNC_APP_SETTING_NAMES = [
   'desktopDeviceSyncEnabled',

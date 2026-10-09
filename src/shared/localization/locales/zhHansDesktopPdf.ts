@@ -1,6 +1,13 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_PDF_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.pdf.view.automatic': '自动视图',
+  'desktop.pdf.view.manual': '手动视图',
+  'desktop.pdf.view.adjust': '调整范围',
+  'desktop.pdf.view.selectHint': '拖动框选范围，可移动选框或拖动四角调整。此范围应用于所有页面。',
+  'desktop.pdf.view.cancel': '取消',
+  'desktop.pdf.view.confirm': '确认',
+  'desktop.pdf.view.failed': '无法准备或保存 PDF 视图，请重试。',
   'desktop.pdf.search.aria': 'PDF 搜索',
   'desktop.pdf.search.placeholder': '搜索 PDF...',
   'desktop.pdf.search.noMatches': '没有匹配项',
