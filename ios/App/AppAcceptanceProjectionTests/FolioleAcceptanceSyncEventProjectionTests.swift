@@ -23,16 +23,36 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
         let events = try source.filter { $0["kind"] as? String == "run_finished" }.map {
             try project($0, identity: identity)
         }
-        let projection: [String: Any] = [
-            "build_identity": build,
-            "conflict_versions": try conflictVersions(connection, peer: desktopForkLabel()),
-            "container_identity": bundle, "events": events
-        ]
+        var projection = try persistentSyncFacts(connection)
+        projection["build_identity"] = build
+        projection["conflict_versions"] = try conflictVersions(connection, peer: desktopForkLabel())
+        projection["container_identity"] = bundle
+        projection["events"] = events
         let data = try JSONSerialization.data(withJSONObject: projection, options: [.prettyPrinted])
         let attachment = XCTAttachment(data: data, uniformTypeIdentifier: "public.json")
         attachment.name = "foliole-acceptance-sync-events.json"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private func persistentSyncFacts(_ connection: OpaquePointer?) throws -> [String: Any] {
+        [
+            "inventory": try json(connection, """
+                SELECT json_group_array(json_object(
+                  'object_type', object_type, 'object_id', object_id, 'content_hash', content_hash,
+                  'frontier', json(frontier_json), 'relations', json(relations_json),
+                  'reviews', json(reviews_json), 'states', json(states_json), 'resources', json(resources_json)))
+                FROM framed_sync_inventory
+                """),
+            "acceptance_document": try json(connection, """
+                SELECT json_group_array(json_object('id', id, 'content', content,
+                  'current_version_id', current_version_id)) FROM nodes
+                WHERE id = 't333-physical-body-20261009'
+                """),
+            "overwrite_pending": try json(connection, """
+                SELECT COUNT(*) FROM sync_group_metadata WHERE key = 'sync_group_overwrite_progress'
+                """)
+        ]
     }
 
     private func database() throws -> URL {
@@ -49,6 +69,10 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
         defer { sqlite3_finalize(statement) }
         XCTAssertEqual(sqlite3_step(statement), SQLITE_ROW)
         return String(cString: try XCTUnwrap(sqlite3_column_text(statement, 0)))
+    }
+
+    private func json(_ database: OpaquePointer?, _ sql: String) throws -> Any {
+        try JSONSerialization.jsonObject(with: Data(scalar(database, sql).utf8), options: [.fragmentsAllowed])
     }
 
     private func desktopForkLabel() -> String {

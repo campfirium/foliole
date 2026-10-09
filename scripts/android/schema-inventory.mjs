@@ -96,6 +96,8 @@ export function loadDesktopFreshSchemaStatements(repoRoot = REPO_ROOT) {
     readRepoFile(repoRoot, 'lib/core/database/nodeVersionConfirmationSchema.ts'), arrays));
   statements.push(...extractStatementsFromBody(
     readRepoFile(repoRoot, 'lib/core/database/framedSyncCompletionSchema.ts'), arrays));
+  statements.push(...extractStatementsFromBody(
+    readRepoFile(repoRoot, 'lib/core/database/framedSyncResourceDemandSchema.ts'), arrays));
   statements.push(extractStatementsFromBody(
     readRepoFile(repoRoot, DESKTOP_SCHEMA_FILES.SYNC_GROUP_SCHEMA_STATEMENTS), arrays)[0]);
   return statements.filter((statement) =>
