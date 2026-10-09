@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react';
+
 import { appFloatingToolbarClassName } from '../../shared/ui';
 
 import type { PdfSearchStatus } from './PdfDocumentSearch';
@@ -43,21 +45,43 @@ function ToolbarDivider() {
   return <div className="h-5 w-px bg-border/30" />;
 }
 
+function useToolbarActivity(onToolbarActiveChange: PdfDocumentToolbarProps['onToolbarActiveChange']) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!isMenuOpen) setIsFocused(panelRef.current?.contains(document.activeElement) ?? false);
+  }, [isMenuOpen]);
+  const active = isHovered || isFocused || isMenuOpen;
+  useEffect(() => onToolbarActiveChange(active), [active, onToolbarActiveChange]);
+  return { panelRef, setIsHovered, setIsFocused, setIsMenuOpen };
+}
+
 export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
+  const { panelRef, setIsHovered, setIsFocused, setIsMenuOpen } = useToolbarActivity(props.onToolbarActiveChange);
   return (
     <div className={resolveToolbarShellClassName()} data-testid="pdf-document-toolbar" data-toolbar-visible={props.isVisible ? 'true' : 'false'}>
       <div
+        className="absolute inset-x-0 top-0 h-3 pointer-events-auto"
+        data-testid="pdf-toolbar-reveal-zone"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      />
+      <div
         className={resolveToolbarPanelClassName(props.isVisible)}
+        ref={panelRef}
         onBlurCapture={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-            props.onToolbarActiveChange(false);
+          if (!event.currentTarget.contains(event.relatedTarget instanceof Node ? event.relatedTarget : null)) {
+            setIsFocused(false);
           }
         }}
-        onFocusCapture={() => props.onToolbarActiveChange(true)}
-        onMouseEnter={() => props.onToolbarActiveChange(true)}
-        onMouseLeave={() => props.onToolbarActiveChange(false)}
+        onFocusCapture={() => setIsFocused(true)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
       >
         <PdfZoomControls
+          onMenuOpenChange={setIsMenuOpen}
           onRotateClockwise={props.onRotateClockwise}
           onSetFitWidth={props.onSetFitWidth}
           onSetZoom={props.onSetZoom}

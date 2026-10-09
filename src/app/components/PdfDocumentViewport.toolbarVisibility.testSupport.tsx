@@ -50,6 +50,8 @@ vi.mock('react-pdf', async () => {
   };
 });
 
+vi.mock('pdfjs-dist/web/pdf_viewer.mjs', () => ({ TextLayerBuilder: vi.fn() }));
+
 vi.mock('./pdfSearchTextSegments', () => ({
   collectTextSegments: collectTextSegmentsSpy
 }));

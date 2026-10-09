@@ -7,6 +7,7 @@ import { AppIconButton, appFloatingItemClassName, appFloatingSurfaceClassName } 
 const PDF_ZOOM_OPTIONS = [100, 125, 150, 175, 200];
 
 interface ZoomControlsProps {
+  onMenuOpenChange?: (open: boolean) => void;
   onRotateClockwise: () => void;
   onSetFitWidth: () => void;
   onSetZoom: (value: number) => void;
@@ -85,6 +86,11 @@ export function PdfZoomControls(props: ZoomControlsProps) {
   const t = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const { onMenuOpenChange } = props;
+  useEffect(() => {
+    onMenuOpenChange?.(isMenuOpen);
+  }, [isMenuOpen, onMenuOpenChange]);
 
   useEffect(() => {
     if (!isMenuOpen) {

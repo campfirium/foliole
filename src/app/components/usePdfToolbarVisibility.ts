@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
+const TOOLBAR_IDLE_DELAY = 3000;
+
 const TOOLBAR_SHOW_SCROLL_DELTA = 16;
 const TOOLBAR_HIDE_SCROLL_DELTA = 24;
 const TOOLBAR_TOP_VISIBILITY_OFFSET = 12;
@@ -134,6 +136,7 @@ export function usePdfToolbarVisibility(searchQuery: string, scrollContainerRef:
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isToolbarActive, setIsToolbarActive] = useState(false);
+  const [activityRevision, setActivityRevision] = useState(0);
   const hasObservedInitialScrollRef = useRef(false);
   const lastScrollTopRef = useRef(0);
   const suppressScrollTrackingRef = useRef(false);
@@ -144,6 +147,12 @@ export function usePdfToolbarVisibility(searchQuery: string, scrollContainerRef:
   useToolbarVisibilityReset(scrollContainerRef, lastScrollTopRef, scrollDirectionRef, scrollDistanceRef, hasObservedInitialScrollRef, setIsToolbarVisible);
   useToolbarPersistentVisibility(hasPersistentSearch || isToolbarActive, isSearchFocused, setIsToolbarVisible);
 
+  useEffect(() => {
+    if (!isToolbarVisible || hasPersistentSearch || isSearchFocused || isToolbarActive) return;
+    const timeout = window.setTimeout(() => setIsToolbarVisible(false), TOOLBAR_IDLE_DELAY);
+    return () => window.clearTimeout(timeout);
+  }, [activityRevision, hasPersistentSearch, isSearchFocused, isToolbarActive, isToolbarVisible]);
+
   return {
     handleSearchFocusChange: (focused: boolean) => handleSearchFocusChange(setIsSearchFocused, setIsToolbarVisible, focused),
     handleToolbarActiveChange: (active: boolean) => {
@@ -152,8 +161,12 @@ export function usePdfToolbarVisibility(searchQuery: string, scrollContainerRef:
         setIsToolbarVisible(true);
       }
     },
-    handleToolbarInteraction: () => handleToolbarInteraction(scrollDirectionRef, scrollDistanceRef, setIsToolbarVisible, suppressScrollTrackingRef),
+    handleToolbarInteraction: () => {
+      setActivityRevision((current) => current + 1);
+      handleToolbarInteraction(scrollDirectionRef, scrollDistanceRef, setIsToolbarVisible, suppressScrollTrackingRef);
+    },
     handleToolbarScroll: () => {
+      setActivityRevision((current) => current + 1);
       onScrollBase();
       const container = scrollContainerRef.current;
       if (!container) {

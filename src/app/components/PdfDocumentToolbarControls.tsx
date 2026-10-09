@@ -22,6 +22,7 @@ interface SearchControlsProps {
 }
 
 interface ZoomControlsProps {
+  onMenuOpenChange?: (open: boolean) => void;
   onRotateClockwise: () => void;
   onSetFitWidth: () => void;
   onSetZoom: (value: number) => void;
@@ -74,6 +75,7 @@ function resolveSearchStatusLabel(status: PdfSearchStatus, indexingHint: string 
 }
 
 export function PdfZoomControls({
+  onMenuOpenChange,
   onRotateClockwise,
   onSetFitWidth,
   onSetZoom,
@@ -84,7 +86,7 @@ export function PdfZoomControls({
   zoom
 }: ZoomControlsProps) {
   return (
-    <PdfZoomControlsInner onRotateClockwise={onRotateClockwise} onSetFitWidth={onSetFitWidth} onSetZoom={onSetZoom} onToolbarInteraction={onToolbarInteraction} onZoomIn={onZoomIn} onZoomOut={onZoomOut} zoom={zoom} zoomMode={zoomMode} />
+    <PdfZoomControlsInner {...(onMenuOpenChange ? { onMenuOpenChange } : {})} onRotateClockwise={onRotateClockwise} onSetFitWidth={onSetFitWidth} onSetZoom={onSetZoom} onToolbarInteraction={onToolbarInteraction} onZoomIn={onZoomIn} onZoomOut={onZoomOut} zoom={zoom} zoomMode={zoomMode} />
   );
 }
 
