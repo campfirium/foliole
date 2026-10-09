@@ -102,7 +102,7 @@ extension FoliolePhysicalSyncGroupUITests {
 
     func waitForSyncNowCompletion(in app: XCUIApplication, timeout: TimeInterval = 180) {
         let completed = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "enabled == true"), object: app.buttons["Sync Now"]
+            predicate: NSPredicate(format: "enabled == true"), object: localizedButton(named: "Sync Now", in: app)
         )
         XCTAssertEqual(XCTWaiter.wait(for: [completed], timeout: timeout), .completed,
                        "The public Sync Now action did not finish.")

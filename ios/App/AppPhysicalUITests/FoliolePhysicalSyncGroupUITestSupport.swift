@@ -10,19 +10,19 @@ extension FoliolePhysicalSyncGroupUITests {
 
     func openSyncSettings(in app: XCUIApplication) {
         resolveOptionalCellularDataDecision()
-        let attention = app.buttons["Sync needs attention"]
+        let attention = localizedButton(named: "Sync needs attention", in: app)
         if attention.waitForExistence(timeout: 60) {
             attention.tap()
-            XCTAssertTrue(app.buttons["Sync Now"].waitForExistence(timeout: 30),
+            XCTAssertTrue(localizedButton(named: "Sync Now", in: app).waitForExistence(timeout: 30),
                           "Sync attention did not open the public Sync settings page.")
             return
         }
-        if app.buttons["Exit"].waitForExistence(timeout: 3) {
-            app.buttons["Exit"].tap()
+        if localizedButton(named: "Exit", in: app).waitForExistence(timeout: 3) {
+            localizedButton(named: "Exit", in: app).tap()
         }
         tapButton(named: "Settings", in: app, timeout: 45)
         let sync = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH %@", "Sync ")
+            NSPredicate(format: "label BEGINSWITH %@ OR label BEGINSWITH %@", "Sync ", "同步 ")
         ).firstMatch
         XCTAssertTrue(sync.waitForExistence(timeout: 30), "Sync settings row is unavailable.")
         sync.tap()
@@ -151,7 +151,8 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func visibleTopics(prefix: String, in app: XCUIApplication) -> XCUIElementQuery {
-        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Open topic \(prefix)"))
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@ OR label BEGINSWITH %@",
+                                        "Open topic \(prefix)", "打开主题 \(prefix)"))
     }
 
     func waitForDisappearance(_ element: XCUIElement, timeout: TimeInterval, message: String) {
@@ -179,14 +180,22 @@ extension FoliolePhysicalSyncGroupUITests {
                       "The isolated physical acceptance Sync Group was not reset.")
     }
 
+    func localizedButton(named name: String, in app: XCUIApplication) -> XCUIElement {
+        let chinese = ["Exit": "退出", "Browse": "浏览", "Directory": "目录",
+                       "Settings": "设置", "Sync Now": "立即同步",
+                       "Sync needs attention": "同步需要处理", "Sync in progress": "同步进行中"]
+        return app.buttons.matching(NSPredicate(format: "label IN %@",
+                                                [name, chinese[name] ?? name])).firstMatch
+    }
+
     func tapButton(named name: String, in app: XCUIApplication, timeout: TimeInterval) {
-        let button = app.buttons[name].firstMatch
+        let button = localizedButton(named: name, in: app)
         XCTAssertTrue(button.waitForExistence(timeout: timeout), "Missing button: \(name)")
         button.tap()
     }
 
     func tapEnabledButton(named name: String, in app: XCUIApplication, timeout: TimeInterval) {
-        let button = app.buttons[name]
+        let button = localizedButton(named: name, in: app)
         XCTAssertTrue(button.waitForExistence(timeout: timeout), "Missing button: \(name)")
         let enabled = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "enabled == true"), object: button
