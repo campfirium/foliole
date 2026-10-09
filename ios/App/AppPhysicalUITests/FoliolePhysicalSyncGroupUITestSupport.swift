@@ -150,7 +150,7 @@ extension FoliolePhysicalSyncGroupUITests {
         ProcessInfo.processInfo.environment["FOLIOLE_T152_TWO_DEVICE"] == "1"
     }
 
-    private func visibleTopics(prefix: String, in app: XCUIApplication) -> XCUIElementQuery {
+    func visibleTopics(prefix: String, in app: XCUIApplication) -> XCUIElementQuery {
         app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Open topic \(prefix)"))
     }
 
