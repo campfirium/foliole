@@ -3,6 +3,7 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/fr
 import { compareFramedSyncDatabaseInventories } from '../../../../../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { pendingFramedSyncOverwriteDifferences } from '../../../../../../lib/core/sync/framedSyncOverwriteCompletion.js';
 import { finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { finishSyncGroupOverwriteProgress, prepareSyncGroupOverwrite,
   type SyncGroupOverwriteProgress } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
@@ -45,14 +46,18 @@ export async function adoptCompanionSyncGroupData(
   const pulled = await pullInventoryDifferences(args, differences, inventory.roundId, dependencies);
   const confirmed = await readCompanionRemoteFramedSyncInventory(args);
   const confirmedRemote = confirmed.entries;
-  await runCompanionSyncWriterTask(() => owner.runWriter((db) => db.transaction(async (tx) => {
+  const pending = await runCompanionSyncWriterTask(() => owner.runWriter((db) => db.transaction(async (tx) => {
     const current = await localInventory(tx, progress);
-    if (compareFramedSyncDatabaseInventories({ local: current, remote: confirmedRemote })
-      .some((difference) => difference.direction === 'remote_to_local')) return;
+    const remaining = pendingFramedSyncOverwriteDifferences({ local: current, remote: confirmedRemote,
+      deliveredDifferences: pulled.deliveredDifferences });
+    if (remaining.length || pulled.deferredObjects.length) return remaining;
     await finishSyncGroupOverwriteProgress(tx, progress);
     await finishSyncGroupLocalAdoption(tx, adoption);
+    return [];
   })));
   const resources = await runCompanionFramedSyncResourceRound(args, confirmed.roundId,
     confirmedRemote.filter(entry => entry.objectType === 'node').map(entry => entry.globalId));
-  return { ...pulled, sent: [], resources };
+  const deferred = new Map([...pulled.deferredObjects, ...pending]
+    .map(({ globalId, objectType }) => [`${objectType}\0${globalId}`, { globalId, objectType }]));
+  return { received: pulled.received, deferredObjects: [...deferred.values()], sent: [], resources };
 }

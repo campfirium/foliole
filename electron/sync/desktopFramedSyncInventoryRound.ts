@@ -26,7 +26,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
 }) {
   const runtime = await loadRoundRuntime(args.peer);
   const { adoption } = runtime;
-  const local = { deviceId: args.peer.local_device_id, libraryEpoch: args.localLibraryEpoch };
+  const local = { deviceId: args.peer.local_device_id, libraryEpoch: adoption?.libraryEpoch ?? args.restoreId ?? args.localLibraryEpoch };
   const remote = { deviceId: args.peer.peer_device_id, libraryEpoch: args.remoteLibraryEpoch };
   if (!args.restoreId && !adoption) await resumeDesktopFramedSyncPendingPublications({
     db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
@@ -41,20 +41,24 @@ export async function runDesktopFramedSyncInventoryRound(args: {
     groupSecret: runtime.groupSecret,
     noncePort: runtime.noncePort
   };
-  const inventories = await exchangeDesktopFramedSyncInventoryHttp(exchange);
+  let inventories = await exchangeDesktopFramedSyncInventoryHttp(exchange);
   const inbound = {
     ...exchange,
     roundId: inventories.roundId,
     staging: runtime.staging
   };
+  let restored = 0;
   if (args.restoreId || adoption) {
-    return runVerifiedDesktopFramedSyncRestoreRound({
+    const restore = await runVerifiedDesktopFramedSyncRestoreRound({
       ...(adoption ? { adoption } : {}),
       ...(args.restoreId && !adoption ? { restoreId: args.restoreId } : {}),
       inventories,
       inbound,
       exchange
     });
+    if (!restore.complete) return restore;
+    restored = restore.transferred;
+    inventories = await exchangeDesktopFramedSyncInventoryHttp(exchange);
   }
   const endpoint = createDesktopFramedSyncRoundEndpoint({
     db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
@@ -63,7 +67,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
   const { database, inventories: confirmed } = await reconcileDatabaseRounds(exchange, inventories, endpoint, inbound);
   const resources = await runDesktopFramedSyncResourceRound(
     { ...inbound, roundId: confirmed.roundId }, resourceScope(confirmed));
-  return { ...database, databaseComplete: database.complete, resources,
+  return { ...database, transferred: restored + database.transferred, databaseComplete: database.complete, resources,
     complete: database.complete && resources.pending === 0 };
 }
 

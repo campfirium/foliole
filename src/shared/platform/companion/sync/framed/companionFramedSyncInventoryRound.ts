@@ -34,6 +34,7 @@ export { decodeCompanionInventoryEntry } from './companionFramedSyncInventoryEnt
 export async function pullInventoryDifferences(args: NativeCompanionFramedSyncInventoryRequest,
   differences: readonly FramedSyncInventoryDifference[], roundId: Uint8Array,
   dependencies: readonly FramedSyncInventoryDifference[]) {
+  const deliveredDifferences: FramedSyncInventoryDifference[] = [];
   const received = new Map<string, { objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }>();
   const deferredObjects = new Map<string, FramedSyncDeferredObject>();
   const deliver = createCompanionFramedSyncPullBatchDelivery(args, differences, roundId, received);
@@ -44,7 +45,9 @@ export async function pullInventoryDifferences(args: NativeCompanionFramedSyncIn
   const dependencyDeferred = await deliverFramedSyncDifferencesInDependencyOrder(
     differences, async (difference) => {
     try {
-      return await deliver(difference);
+      const state = await deliver(difference);
+      if (state === 'delivered') deliveredDifferences.push(difference);
+      return state;
     } catch (error) {
       const message = String(error instanceof Error ? error.message : error);
       if (!['framed_sync_difference_request_source_changed', 'framed_sync_source_changed']
@@ -55,6 +58,7 @@ export async function pullInventoryDifferences(args: NativeCompanionFramedSyncIn
   }, dependencies);
   for (const difference of dependencyDeferred) defer(difference);
   return {
+    deliveredDifferences,
     deferredObjects: [...deferredObjects.values()],
     received: [...received.values()]
   };
@@ -95,7 +99,12 @@ export async function sendCompanionFramedSyncInventoryDifferences(
   args: NativeCompanionFramedSyncInventoryRequest, resourcesOnly = false
 ) {
   const adoption = await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption);
-  if (adoption && !resourcesOnly) return adoptCompanionSyncGroupData(args, adoption);
+  const adoptionReceived: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
+  if (adoption && !resourcesOnly) {
+    const adopted = await adoptCompanionSyncGroupData(args, adoption);
+    if (await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption)) return adopted;
+    adoptionReceived.push(...adopted.received);
+  }
   if (adoption && (adoption.groupId !== args.sync_group_id || adoption.providerDeviceId !== args.receiver_device_id)) {
     throw new Error('sync_group_local_adoption_source_mismatch');
   }
@@ -117,7 +126,7 @@ export async function sendCompanionFramedSyncInventoryDifferences(
   const result = await reconcileDatabaseRounds(args, { localValue, remoteResult });
   const nodes = inventoryNodeIds(result.inventory.localValue.entries, result.inventory.remoteResult.entries);
   const resources = await runCompanionFramedSyncResourceRound(args, result.inventory.remoteResult.roundId, nodes);
-  return { deferredObjects: result.deferredObjects, received: result.received, sent: result.sent, resources };
+  return { deferredObjects: result.deferredObjects, received: [...adoptionReceived, ...result.received], sent: result.sent, resources };
 }
 
 type RoundInventory = {

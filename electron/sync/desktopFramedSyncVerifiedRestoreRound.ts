@@ -1,7 +1,9 @@
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
+import type { FramedSyncInventoryDifference } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncOverwriteInventory } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { pendingFramedSyncOverwriteDifferences } from '../../lib/core/sync/framedSyncOverwriteCompletion.js';
 import { finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { finishSyncGroupOverwriteProgress, loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { loadLatestSyncGroupRestoreEvent, markSyncGroupRestoreApplied } from '../../lib/core/sync/syncGroupRestoreEvents.js';
@@ -44,6 +46,7 @@ export async function runVerifiedDesktopFramedSyncRestoreRound(input: RestoreRou
     appliedObjectIds: [], appliedReviewOpIds: [] });
   const inventories = await exchangePartialInventory(input);
   let transferred = 0;
+  const deliveredDifferences: FramedSyncInventoryDifference[] = [];
   const differences = compareFramedSyncDatabaseInventories(inventories)
     .filter((difference) => difference.direction === 'remote_to_local');
   const deliver = createDesktopFramedSyncInboundBatchDelivery(differences,
@@ -53,16 +56,16 @@ export async function runVerifiedDesktopFramedSyncRestoreRound(input: RestoreRou
     async (difference) => {
       const result = await deliver(difference);
       if (result.sent) transferred += 1;
+      if (result.state === 'delivered') deliveredDifferences.push(difference);
       return result.state;
     }, framedSyncOrderBodyDependencies(inventories));
   const confirmed = await exchangePartialInventory(input);
-  const pending = compareFramedSyncDatabaseInventories(confirmed)
-    .filter((difference) => difference.direction === 'remote_to_local').length;
+  const pending = pendingFramedSyncOverwriteDifferences({ ...confirmed, deliveredDifferences }).length;
   if (pending || deferred.length) return { complete: false, pending: Math.max(pending, deferred.length), transferred };
   const complete = await db.transaction(async (tx) => {
     const currentInventory = await readFramedSyncOverwriteInventory(tx, inboundContext(input));
-    if (compareFramedSyncDatabaseInventories({ local: currentInventory, remote: confirmed.remote })
-      .some((difference) => difference.direction === 'remote_to_local')) return false;
+    if (pendingFramedSyncOverwriteDifferences({ local: currentInventory, remote: confirmed.remote,
+      deliveredDifferences }).length) return false;
     await finishSyncGroupOverwriteProgress(tx, progress);
     if (input.adoption) await finishSyncGroupLocalAdoption(tx, input.adoption);
     else {
