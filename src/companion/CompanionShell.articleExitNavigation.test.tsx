@@ -2,6 +2,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { CompanionReadingActivity } from './companionReadingActivity';
+
 const useCompanionWorkspaceSync = vi.fn();
 const useCompanionArticleSurface = vi.fn();
 const useFloatingBarVisibility = vi.fn();
@@ -118,6 +120,22 @@ async function renderShellWithSurface(surface: unknown) {
 }
 
 describe('CompanionShell article exit navigation', () => {
+  it('exposes only the revealed reading controls while a review article covers the shell', async () => {
+    const surface = {
+      ...createReadableSurface(),
+      activeAction: 'review',
+      readingActivity: new CompanionReadingActivity('topic-1', vi.fn()),
+      effectiveReviewSession: { currentCard: { nodeId: 'topic-1', itemKind: 'reading' } }
+    };
+    await renderShellWithSurface(surface);
+
+    expect(screen.queryByRole('button', { name: 'Exit' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('companion-article-document'));
+    expect(screen.getAllByRole('button', { name: 'Exit' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
+    expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
+  });
+
   it('restores bottom navigation after readable article exit clears detail state', async () => {
     const surface = createReadableSurface();
     const { CompanionShell, rendered } = await renderShellWithSurface(surface);

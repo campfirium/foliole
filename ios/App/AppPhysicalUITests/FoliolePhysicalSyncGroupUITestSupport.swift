@@ -28,27 +28,6 @@ extension FoliolePhysicalSyncGroupUITests {
         sync.tap()
     }
 
-    func openBrowse(in app: XCUIApplication) {
-        let syncing = app.buttons["Sync in progress"]
-        if syncing.exists {
-            waitForDisappearance(syncing, timeout: 180,
-                                 message: "Fri Sync was still running before Browse navigation.")
-        }
-        let exit = app.buttons["Exit"]
-        if exit.waitForExistence(timeout: 3) {
-            exit.tap()
-            waitForDisappearance(exit, timeout: 30,
-                                 message: "Fri did not exit the active topic before Browse navigation.")
-        }
-        if app.buttons["Directory"].firstMatch.waitForExistence(timeout: 3) {
-            app.buttons["Directory"].firstMatch.tap()
-        } else {
-            tapButton(named: "Browse", in: app, timeout: 30)
-        }
-        let inbox = app.buttons["Open folder Inbox"]
-        if inbox.waitForExistence(timeout: 3) { inbox.tap() }
-    }
-
     func enableAutomaticSync(in app: XCUIApplication) {
         if app.buttons["Pause Sync"].exists { return }
         if app.buttons["Resume Sync"].exists {

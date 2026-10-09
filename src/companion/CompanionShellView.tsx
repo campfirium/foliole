@@ -41,11 +41,11 @@ function renderCompanionMainContent(model: CompanionShellModel) {
   }
   return (
     <div className={`mx-auto flex min-h-full w-full max-w-[760px] flex-col ${companionMobileRailClassName} pt-0 ${bottomInsetClassName}`}>
-      <CompanionShellTopBar
+      {!hasImmersiveReadingContent(model) && <CompanionShellTopBar
         onOpenSyncSettings={() => openCompanionSyncSettings(model)}
         topBarProps={model.topBarProps}
         workspaceSync={model.workspaceSync}
-      />
+      />}
       {renderCompanionShellContent({
         hasSnapshot: Boolean(model.workspaceSync.state.workspace_snapshot),
         browseSortDirection: model.browseSortDirection,
@@ -89,6 +89,11 @@ function isReadableArticleImmersive(model: CompanionShellModel) {
     && Boolean(model.surface.readableArticle)
     && Boolean(model.surface.selectedBrowseNodeId)
     && !model.surface.browsedFolder);
+}
+
+function hasImmersiveReadingContent(model: CompanionShellModel): boolean {
+  return isReadableArticleImmersive(model) || Boolean(model.surface.activeAction === 'review'
+    && model.surface.effectiveReviewSession.currentCard && model.surface.readableArticle);
 }
 
 export function CompanionShellView(props: { model: CompanionShellModel }) {

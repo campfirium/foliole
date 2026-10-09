@@ -180,18 +180,22 @@ function expectRepeatedHighlightSelectionCreatesNewCommand() {
   expect(screen.getByTestId('companion-article-document').getAttribute('data-reading-command-id')).not.toBe(firstCommandId);
 }
 
+async function verifyReviewExitNavigation() {
+  const surface = createSurface('review');
+  await renderShellWithSurface(surface);
+
+  expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId('companion-article-document'));
+  expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Later')).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
+  expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
+}
+
 describe('CompanionShell navigation', () => {
-  it('replaces bottom navigation with review actions during a review task', async () => {
-    const surface = createSurface('review');
-    await renderShellWithSurface(surface);
-
-    expect(screen.queryByTestId('companion-bottom-tab-bar')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Later')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Exit' }));
-    expect(surface.handleTabAction).toHaveBeenCalledWith('recent');
-  }, RELEASE_GATE_TEST_TIMEOUT_MS);
+  it('replaces bottom navigation with review actions during a review task',
+    verifyReviewExitNavigation, RELEASE_GATE_TEST_TIMEOUT_MS);
 
   it('shows bottom navigation outside review tasks', async () => {
     await renderShellWithSurface(createSurface('recent'));
