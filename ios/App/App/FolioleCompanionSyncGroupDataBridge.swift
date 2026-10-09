@@ -24,7 +24,7 @@ final class FolioleCompanionSyncGroupDataBridge: FolioleCompanionSyncGroupDataRe
         dispatch(["operation": operation, "payload": payload, "request_id": requestId])
         guard semaphore.wait(timeout: .now() + 60) == .success else {
             lock.withLock { pending.removeValue(forKey: requestId) }
-            throw invalid("sync_group_data_request_timed_out")
+            throw invalid("sync_group_data_request_timed_out:\(operation)")
         }
         let result = lock.withLock { pending.removeValue(forKey: requestId)?.result }
         guard let result else { throw invalid("sync_group_data_response_missing") }
