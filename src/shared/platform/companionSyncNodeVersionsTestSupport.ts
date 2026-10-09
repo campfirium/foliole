@@ -26,6 +26,18 @@ export function createFakeCapacitorConnection(database: Database.Database) {
       const row = database.prepare('SELECT changes() AS count').get() as { count: number };
       return { changes: { changes: row.count } };
     },
+    executeSet: async (set: { statement: string; values: unknown[][] }[]) => {
+      let changes = 0;
+      let lastId = 0;
+      for (const entry of set) for (const values of entry.values) {
+        const prepared = prepareStatement(database, entry.statement, values.map((value) =>
+          Array.isArray(value) ? Uint8Array.from(value) : value));
+        const info = prepared.statement.run(...prepared.params);
+        changes += info.changes;
+        lastId = Number(info.lastInsertRowid);
+      }
+      return { changes: { changes, lastId } };
+    },
     isDBOpen: async () => ({ result: false }),
     open: async () => undefined,
     query: async (sql: string, params: unknown[] = []) => {

@@ -6,6 +6,7 @@ interface FakeConnection {
   beginTransaction: ReturnType<typeof vi.fn>;
   commitTransaction: ReturnType<typeof vi.fn>;
   execute: ReturnType<typeof vi.fn>;
+  executeSet: ReturnType<typeof vi.fn>;
   query: ReturnType<typeof vi.fn>;
   rollbackTransaction: ReturnType<typeof vi.fn>;
   run: ReturnType<typeof vi.fn>;
@@ -78,14 +79,14 @@ it('encodes Android blob values with the native plugin Buffer contract', async (
   expect(Array.from(rows[0]!.body)).toEqual([1, 2, 3]);
 });
 
-it('keeps the iOS native dictionary blob contract', async () => {
+it('binds iOS bytes through an explicit native batch row', async () => {
   const connection = createFakeConnection();
   const db = createCapacitorSqliteDbPort(connection as never, 'ios');
 
   await db.run('INSERT INTO items (body) VALUES (?)', [new Uint8Array([4, 5, 6])]);
 
-  expect(connection.run).toHaveBeenCalledWith('INSERT INTO items (body) VALUES (?)', [
-    { 0: 4, 1: 5, 2: 6 }
+  expect(connection.executeSet).toHaveBeenCalledWith([
+    { statement: 'INSERT INTO items (body) VALUES (?)', values: [[[4, 5, 6]]] }
   ], false);
 });
 
@@ -151,6 +152,7 @@ function createFakeConnection(queryResult: { values?: unknown[] } = {}): FakeCon
     beginTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
     commitTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
     execute: vi.fn(async () => ({ changes: { changes: 7, lastId: 9 } })),
+    executeSet: vi.fn(async () => ({ changes: { changes: 1, lastId: 2 } })),
     query: vi.fn(async () => queryResult),
     rollbackTransaction: vi.fn(async () => ({ changes: { changes: 0 } })),
     run: vi.fn(async () => ({ changes: { changes: 1, lastId: 2 } }))

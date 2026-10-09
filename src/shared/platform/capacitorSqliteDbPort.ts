@@ -100,6 +100,11 @@ export function createCapacitorSqliteDbPort(
 }
 
 async function runStatement(connection: SQLiteDBConnection, sql: string, params: DbParams, platform: string) {
+  if (platform === 'ios' && params.some((value) => value instanceof Uint8Array)) {
+    const values = params.map((value) => value instanceof Uint8Array ? Array.from(value) : normalizeValue(value, platform));
+    // One explicit row avoids executeSet treating a leading BLOB as a batch of rows.
+    return connection.executeSet([{ statement: sql, values: [values] }], false);
+  }
   return connection.run(sql, normalizeParams(params, platform), false);
 }
 
