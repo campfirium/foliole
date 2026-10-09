@@ -65,6 +65,10 @@ vi.mock('./useImmersiveReadableArticleState', () => ({
   useImmersiveReadableArticleState: () => ({
     handleSelectOutlineItem: vi.fn(),
     handleSurfaceClick: vi.fn(),
+    handleSurfacePointerDown: vi.fn(),
+    handleSurfacePointerMove: vi.fn(),
+    handleSurfacePointerUp: vi.fn(),
+    handleSurfacePointerCancel: vi.fn(),
     isActionsSheetOpen: false,
     isChromeVisible: chromeVisible,
     isContentEditing: contentEditing,

@@ -1,5 +1,6 @@
-import type { MouseEvent as ReactMouseEvent } from 'react';
 import { useRef, useState } from 'react';
+
+import { useImmersiveReadingSurfaceTap } from './useImmersiveReadingSurfaceTap';
 
 import type { EditorSelection } from '@/features/editor/adapters/EditorAdapter';
 
@@ -13,12 +14,7 @@ export function useImmersiveReadableArticleState(initialSelection: EditorSelecti
   const [readingTarget, setReadingTarget] = useState<{ selection: EditorSelection; commandId: string } | null>(null);
   const nextReadingCommandId = useRef(0);
 
-  function handleSurfaceClick(event: ReactMouseEvent<HTMLElement>) {
-    if ((event.target as HTMLElement).closest('button, a, input, textarea, select')) {
-      return;
-    }
-    setIsChromeVisible((visible) => !visible);
-  }
+  const surfaceTap = useImmersiveReadingSurfaceTap(isContentEditing, setIsChromeVisible);
 
   function handleSelectOutlineItem(item: { from: number; to: number }) {
     nextReadingCommandId.current += 1;
@@ -49,7 +45,7 @@ export function useImmersiveReadableArticleState(initialSelection: EditorSelecti
     enterContentEditing,
     exitContentEditing,
     handleSelectOutlineItem,
-    handleSurfaceClick,
+    ...surfaceTap,
     isActionsSheetOpen,
     isChromeVisible,
     isContentEditing,

@@ -119,6 +119,69 @@ async function renderShellWithSurface(surface: unknown) {
   };
 }
 
+function touchArticle(type: string, body: HTMLElement, x = 10, y = 10) {
+  const event = new MouseEvent(type, { bubbles: true, clientX: x, clientY: y });
+  Object.defineProperties(event, {
+    pointerId: { value: 1 }, pointerType: { value: 'touch' }, isPrimary: { value: true }
+  });
+  fireEvent(body, event);
+}
+
+describe('CompanionShell article touch controls', () => {
+  it('reveals reading controls after a short touch without a compatibility click', async () => {
+    await renderShellWithSurface(createReadableSurface());
+    const body = screen.getByTestId('companion-article-document');
+    touchArticle('pointerdown', body);
+    touchArticle('pointerup', body);
+    expect(screen.getByRole('button', { name: 'Outline' })).toBeInTheDocument();
+  });
+
+  it('toggles reading controls once when a short touch also emits a compatibility click', async () => {
+    await renderShellWithSurface(createReadableSurface());
+    const body = screen.getByTestId('companion-article-document');
+    touchArticle('pointerdown', body);
+    touchArticle('pointerup', body);
+    fireEvent.click(body, { detail: 1 });
+    expect(screen.getByRole('button', { name: 'Outline' })).toBeInTheDocument();
+    touchArticle('pointerdown', body);
+    touchArticle('pointerup', body);
+    fireEvent.click(body, { detail: 1 });
+    expect(screen.queryByRole('button', { name: 'Outline' })).not.toBeInTheDocument();
+  });
+
+  it.each(['pointermove', 'pointercancel'])('keeps controls hidden after a touch %s', async (eventType) => {
+    await renderShellWithSurface(createReadableSurface());
+    const body = screen.getByTestId('companion-article-document');
+    touchArticle('pointerdown', body);
+    touchArticle(eventType, body, 10, 30);
+    touchArticle('pointerup', body, 10, 30);
+    expect(screen.queryByRole('button', { name: 'Outline' })).not.toBeInTheDocument();
+  });
+
+  it('keeps controls hidden after a long touch used for text selection', async () => {
+    await renderShellWithSurface(createReadableSurface());
+    const body = screen.getByTestId('companion-article-document');
+    const now = vi.spyOn(Date, 'now').mockReturnValue(1000);
+    try {
+      touchArticle('pointerdown', body);
+      now.mockReturnValue(1600);
+      touchArticle('pointerup', body);
+    } finally { now.mockRestore(); }
+    expect(screen.queryByRole('button', { name: 'Outline' })).not.toBeInTheDocument();
+  });
+
+  it('still accepts a mouse click after a touch that emitted no compatibility click', async () => {
+    await renderShellWithSurface(createReadableSurface());
+    const body = screen.getByTestId('companion-article-document');
+    touchArticle('pointerdown', body);
+    touchArticle('pointerup', body);
+    fireEvent.pointerDown(body);
+    fireEvent.click(body, { detail: 1 });
+    expect(screen.queryByRole('button', { name: 'Outline' })).not.toBeInTheDocument();
+  });
+
+});
+
 describe('CompanionShell article exit navigation', () => {
   it('exposes only the revealed reading controls while a review article covers the shell', async () => {
     const surface = {

@@ -53,7 +53,10 @@ interface ImmersiveReadableArticleProps {
   syncEndpointUrl?: string | null;
 }
 
-function createArticleToolbarEvents(toolbar: ReturnType<typeof useCompanionSelectionAnnotationToolbar>) {
+function createArticleToolbarEvents(
+  toolbar: ReturnType<typeof useCompanionSelectionAnnotationToolbar>,
+  reading: ReturnType<typeof useImmersiveReadableArticleState>
+) {
   function closeToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
     if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.closeSelectionToolbar();
   }
@@ -61,9 +64,18 @@ function createArticleToolbarEvents(toolbar: ReturnType<typeof useCompanionSelec
     if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.closeSelectionToolbar();
   }
   function openToolbarFromArticlePointer(event: ReactPointerEvent<HTMLElement>) {
+    reading.handleSurfacePointerUp(event);
     if (!isCompanionArticleInteractiveTarget(event.target)) toolbar.openSelectionToolbar(event);
   }
-  return { closeToolbarFromArticlePointer, closeToolbarFromArticleTouch, openToolbarFromArticlePointer };
+  function handleSurfacePointerDown(event: ReactPointerEvent<HTMLElement>) {
+    reading.handleSurfacePointerDown(event);
+    closeToolbarFromArticlePointer(event);
+  }
+  function handleSurfacePointerMove(event: ReactPointerEvent<HTMLElement>) {
+    reading.handleSurfacePointerMove(event);
+    closeToolbarFromArticlePointer(event);
+  }
+  return { handleSurfacePointerDown, handleSurfacePointerMove, closeToolbarFromArticleTouch, openToolbarFromArticlePointer };
 }
 
 function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) {
@@ -102,7 +114,7 @@ function useImmersiveReadableArticleModel(props: ImmersiveReadableArticleProps) 
     reading.handleSelectOutlineItem(item);
     toolbar.closeSelectionToolbar();
   }
-  const toolbarEvents = createArticleToolbarEvents(toolbar);
+  const toolbarEvents = createArticleToolbarEvents(toolbar, reading);
   const chromeReservedSpacing = 'pt-14 supports-[padding-top:calc(0px)]:[padding-top:calc(env(safe-area-inset-top)+3.5rem)] pb-20 supports-[padding-bottom:max(0px)]:pb-[max(env(safe-area-inset-bottom),80px)]';
   const surfaceClassName = `fixed top-0 right-0 bottom-0 left-0 z-surface-raised overflow-y-auto bg-companion-base ${companionMobileRailClassName} ${chromeReservedSpacing} ${props.flow ? companionReviewBottomInsetClassName : ''} text-foreground`;
   const cloze = findCompanionClozeTarget(snapshot, props.readableArticle.nodeId);
@@ -171,9 +183,10 @@ export function ImmersiveReadableArticle(props: ImmersiveReadableArticleProps) {
     <section
       className={model.surfaceClassName}
       onClick={model.reading.handleSurfaceClick}
-      onPointerDown={model.closeToolbarFromArticlePointer}
-      onPointerMove={model.closeToolbarFromArticlePointer}
+      onPointerDown={model.handleSurfacePointerDown}
+      onPointerMove={model.handleSurfacePointerMove}
       onPointerUp={model.openToolbarFromArticlePointer}
+      onPointerCancel={model.reading.handleSurfacePointerCancel}
       onScroll={scrollPosition.handleScroll}
       onTouchMove={model.closeToolbarFromArticleTouch}
       ref={scrollPosition.surfaceRef}
