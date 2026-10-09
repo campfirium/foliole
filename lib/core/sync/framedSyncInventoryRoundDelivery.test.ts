@@ -16,7 +16,8 @@ it.each(['receipt_identity_conflict:', 'aead_authentication_failure:', 'framed_s
   });
 
 it('accepts the original dependency wrappers and rejects trailing data', () => {
-  for (const prefix of ['', 'framed_sync_http_400:', 'Failed to pull framed Sync object. Cause: ']) {
+  for (const prefix of ['', 'framed_sync_http_400:', 'Failed to pull framed Sync object. Cause: ',
+    'Failed to pull framed Sync object: ', 'Failed to pull framed Sync objects: ']) {
     expect(readFramedSyncMissingDependency(new Error(`${prefix}framed_sync_node_parent_missing:parent`)))
       .toMatchObject({ globalId: 'parent', objectType: 'node' });
   }

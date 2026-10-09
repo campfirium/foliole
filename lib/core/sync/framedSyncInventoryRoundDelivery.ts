@@ -19,7 +19,7 @@ export function readFramedSyncMissingDependency(error: unknown) {
   const raw = detail.startsWith('round: Error: ')
     ? detail.slice('round: Error: '.length).split('\n', 1)[0]!
     : detail;
-  const message = raw.replace(/^(?:framed_sync_http_400:|Failed to pull framed Sync object\. Cause: )/u, '');
+  const message = raw.replace(/^(?:framed_sync_http_400:|Failed to pull framed Sync object\. Cause: |Failed to pull framed Sync objects?: )/u, '');
   const prefix = (Object.keys(MISSING_DEPENDENCIES) as (keyof typeof MISSING_DEPENDENCIES)[])
     .find((candidate) => message.startsWith(candidate));
   const globalId = prefix ? message.slice(prefix.length) : '';
