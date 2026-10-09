@@ -141,14 +141,14 @@ extension FoliolePhysicalSyncGroupUITests {
     }
 
     func revealReadingChrome(in app: XCUIApplication, matching text: String? = nil) {
-        if app.buttons["Edit topic"].exists { return }
+        if app.buttons["Outline"].exists { return }
         let articleText = text.map {
             app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", $0)).firstMatch
         } ?? app.descendants(matching: .any).matching(identifier: "Topic body")
             .firstMatch.staticTexts.firstMatch
         XCTAssertTrue(articleText.waitForExistence(timeout: 30), "The readable topic body is unavailable.")
         articleText.tap()
-        XCTAssertTrue(app.buttons["Edit topic"].waitForExistence(timeout: 30),
+        XCTAssertTrue(app.buttons["Outline"].waitForExistence(timeout: 30),
                       "Tapping the readable topic did not reveal its controls.")
     }
 

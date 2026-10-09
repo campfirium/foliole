@@ -18,6 +18,9 @@ describe('ReadingChrome', () => {
   it('groups reading navigation and centers the title in the toolbar', () => {
     renderChrome();
 
+    expect(screen.getByRole('button', { name: 'Outline' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Edit topic' })).not.toBeInTheDocument();
+
     const navigation = screen.getByRole('button', { name: 'Exit' }).parentElement;
     expect(navigation).toContainElement(screen.getByRole('button', { name: 'Outline' }));
     expect(navigation?.className).not.toContain('gap-');
