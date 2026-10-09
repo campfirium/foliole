@@ -118,7 +118,7 @@ function buildBaseToolbarHarnessProps() {
   };
 }
 
-function ToolbarVisibilityHarness() {
+export function ToolbarVisibilityHarness() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchStatus, setSearchStatus] = useState({ current: 0, hasQuery: false, total: 0 });
   const [page, setPage] = useState(1);

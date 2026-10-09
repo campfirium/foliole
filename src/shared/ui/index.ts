@@ -71,3 +71,4 @@ export { SettingsSegmentedControl, SettingsSegmentedRow } from './SettingsSegmen
 export { SettingsChoiceMatrix } from './SettingsChoiceMatrix';
 export { SettingsEmptyState, SettingsErrorState, SettingsLoadingState, SettingsStateAction } from './SettingsStateSurface';
 export { settingsDialogSurfaceClassName, settingsNestedDialogSurfaceClassName, settingsPopoverSurfaceClassName } from './SettingsDialogSurface';
+export { FloatingBar } from './FloatingBar';

@@ -17,6 +17,7 @@ import { WorkspaceActivityNotice } from './WorkspaceActivityNotice';
 import { WorkspaceLayoutGrid, type WorkspaceLayoutGridSource } from './WorkspaceLayoutGrid';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
 import { WorkspaceMainTitleBar, type WorkspaceTitleBarSource } from './WorkspaceMainTitleBar';
+import { WorkspacePdfTopBars } from './WorkspacePdfTopBars';
 import { WorkspacePublishDialogHosts } from './WorkspacePublishDialogHosts';
 import {
   loadWorkspaceRightPanelPreference,
@@ -90,6 +91,12 @@ function useWorkspaceImportNoticeController(imports: WorkspaceLayoutProps['impor
 }
 
 export function WorkspaceLayoutMain(props: WorkspaceLayoutProps) {
+  return <WorkspacePdfTopBars isImmersiveMode={props.layoutChrome.isImmersiveMode}>
+    <WorkspaceMainContent {...props} />
+  </WorkspacePdfTopBars>;
+}
+
+function WorkspaceMainContent(props: WorkspaceLayoutProps) {
   const t = useTranslation();
   const { imports, layoutChrome, navigation, settings, trash } = props;
   useWorkspaceShellBridges();

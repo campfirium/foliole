@@ -1,4 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import '../../test/reactPdfMock';
@@ -7,6 +8,10 @@ import {
   defaultImportSource,
   renderSection
 } from './DocumentPanelSection.pdf.testSupport';
+vi.mock('../../features/pdf/components/PdfReadingViewContext', () => ({
+  usePdfReadingView: () => null,
+  PdfReadingViewProvider: ({ children }: { children: ReactNode }) => children
+}));
 const appearanceMocks = vi.hoisted(() => ({
   setDimImagesInDarkMode: vi.fn()
 }));

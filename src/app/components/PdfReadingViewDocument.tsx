@@ -2,12 +2,16 @@ import { useEffect } from 'react';
 import { useDocumentContext } from 'react-pdf';
 
 import { usePdfReadingView } from '../../features/pdf/components/PdfReadingViewContext';
+import { PdfTopBarsDocumentConnection } from '../../features/pdf/components/PdfTopBarsDocument';
 
 import { PdfReadingViewEditor } from './PdfReadingViewEditor';
 
 export function PdfReadingViewDocument() {
   const runtime = usePdfReadingView();
-  return runtime ? <ReadingViewDocument /> : null;
+  return <>
+    {runtime ? <ReadingViewDocument /> : null}
+    <PdfTopBarsDocumentConnection />
+  </>;
 }
 function ReadingViewDocument() {
   const context = useDocumentContext();

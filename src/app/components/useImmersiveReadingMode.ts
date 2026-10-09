@@ -18,7 +18,6 @@ import {
   useReadingSelectionState
 } from './immersiveReadingScrollSync';
 import { useImmersiveSelectionRestoreSuppression } from './useImmersiveSelectionRestoreSuppression';
-import { useImmersiveWindowChrome } from './useImmersiveWindowChrome';
 
 function useImmersiveLifecycleReset(
   props: Pick<
@@ -181,7 +180,6 @@ export function useImmersiveReadingMode(props: ImmersiveReadingModeSource) {
   const exitImmersiveModeRef = useRef(props.onExitImmersiveMode);
   const shouldSkipNextScrollSyncRef = useRef(false);
   const wasImmersiveModeRef = useRef(props.isImmersiveMode);
-  useImmersiveWindowChrome(props.isImmersiveMode);
   const selectionRestoreSuppression = useImmersiveSelectionRestoreSuppression(props);
   const readableNodeIds = useMemo(
     () =>

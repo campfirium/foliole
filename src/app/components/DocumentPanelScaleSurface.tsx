@@ -4,6 +4,7 @@ import { useTranslation } from '../../shared/localization/LocalizationProvider';
 import { PanelScaleSurface as SharedPanelScaleSurface } from '../../shared/ui';
 
 import type { CentralPanelKind } from './documentPanelSectionModel';
+import { PdfTopBar } from './WorkspacePdfTopBars';
 
 export function DocumentPanelScaleSurface(props: {
   children: ReactNode;
@@ -21,7 +22,7 @@ export function DocumentPanelScaleSurface(props: {
       <SharedPanelScaleSurface enabled={!props.isPdfSurface} label={label} panelId={panelId}>
         <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
           {props.overlay}
-          {props.chrome}
+          <PdfTopBar kind="document">{props.chrome}</PdfTopBar>
           {props.children}
         </div>
       </SharedPanelScaleSurface>

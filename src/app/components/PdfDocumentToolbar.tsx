@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { usePdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
 import { appFloatingToolbarClassName } from '../../shared/ui';
 
 import type { PdfSearchStatus } from './PdfDocumentSearch';
 import { PdfPageControls, PdfSearchControls, PdfZoomControls } from './PdfDocumentToolbarControls';
 import { PdfReadingViewControls } from './PdfReadingViewControls';
+import { PdfTopBarsToggle } from './PdfTopBarsToggle';
 import { PdfVisualExcerptToolbarControls } from './PdfVisualExcerptToolbarControls';
 
 interface PdfDocumentToolbarProps {
@@ -49,7 +51,8 @@ function ToolbarDivider() {
 }
 
 function useToolbarActivity(
-  onToolbarActiveChange: PdfDocumentToolbarProps['onToolbarActiveChange']
+  onToolbarActiveChange: PdfDocumentToolbarProps['onToolbarActiveChange'],
+  revealHovered: boolean
 ) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -58,23 +61,25 @@ function useToolbarActivity(
   useEffect(() => {
     if (!isMenuOpen) setIsFocused(panelRef.current?.contains(document.activeElement) ?? false);
   }, [isMenuOpen]);
-  const active = isHovered || isFocused || isMenuOpen;
+  const active = revealHovered || isHovered || isFocused || isMenuOpen;
   useEffect(() => onToolbarActiveChange(active), [active, onToolbarActiveChange]);
   return { panelRef, setIsHovered, setIsFocused, setIsMenuOpen };
 }
 
 export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
+  const topBars = usePdfTopBars();
   const { panelRef, setIsHovered, setIsFocused, setIsMenuOpen } = useToolbarActivity(
-    props.onToolbarActiveChange
+    props.onToolbarActiveChange, topBars.revealHovered
   );
   return (
     <div
       className={resolveToolbarShellClassName()}
+      style={{ top: topBars.floating && topBars.visible ? 'calc(var(--workspace-top-toolbar-height) + 32px)' : undefined }}
       data-testid="pdf-document-toolbar"
       data-toolbar-visible={props.isVisible ? 'true' : 'false'}
     >
       <div
-        className="absolute inset-x-0 top-0 h-3 pointer-events-auto"
+        className={`absolute inset-x-0 h-3 pointer-events-auto ${topBars.floating && !topBars.visible ? 'top-3' : 'top-0'}`}
         data-testid="pdf-toolbar-reveal-zone"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
@@ -96,6 +101,7 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
         onMouseLeave={() => setIsHovered(false)}
       >
         {renderViewControls(props, setIsMenuOpen)}
+        <PdfTopBarsToggle onInteraction={props.onToolbarInteraction} />
         <ToolbarDivider />
         <PdfPageControls
           displayPage={props.displayPage}
@@ -108,17 +114,7 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
         <ToolbarDivider />
         <PdfVisualExcerptToolbarControls onToolbarInteraction={props.onToolbarInteraction} />
         <ToolbarDivider />
-        <PdfSearchControls
-          onClearSearch={props.onClearSearch}
-          onFindNext={props.onFindNext}
-          onFindPrevious={props.onFindPrevious}
-          onSearchFocusChange={props.onSearchFocusChange}
-          onSearchQueryChange={props.onSearchQueryChange}
-          onToolbarInteraction={props.onToolbarInteraction}
-          searchIndexingHint={props.searchIndexingHint}
-          searchQuery={props.searchQuery}
-          searchStatus={props.searchStatus}
-        />
+        {renderSearchControls(props)}
       </div>
     </div>
   );
@@ -143,5 +139,21 @@ function renderViewControls(
       />
       <PdfReadingViewControls onInteraction={props.onToolbarInteraction} onMenuOpenChange={setIsMenuOpen} />
     </>
+  );
+}
+
+function renderSearchControls(props: PdfDocumentToolbarProps) {
+  return (
+    <PdfSearchControls
+      onClearSearch={props.onClearSearch}
+      onFindNext={props.onFindNext}
+      onFindPrevious={props.onFindPrevious}
+      onSearchFocusChange={props.onSearchFocusChange}
+      onSearchQueryChange={props.onSearchQueryChange}
+      onToolbarInteraction={props.onToolbarInteraction}
+      searchIndexingHint={props.searchIndexingHint}
+      searchQuery={props.searchQuery}
+      searchStatus={props.searchStatus}
+    />
   );
 }

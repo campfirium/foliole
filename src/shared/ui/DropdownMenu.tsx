@@ -5,14 +5,12 @@ import { createPortal } from 'react-dom';
 
 import { useTranslation } from '../localization/LocalizationProvider';
 
+import { AppDropdownMenu } from './DropdownMenuRoot';
 import { appFloatingSurfaceClassName } from './FloatingSurface';
 
 import { cn } from '@/shared/lib/utils';
 import { onWindowEscape } from '@/shared/platform/keyboard';
 
-function AppDropdownMenu(props: React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root modal={false} {...props} />;
-}
 const AppDropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
 
 interface AppSelectionDropdownMenuProps {

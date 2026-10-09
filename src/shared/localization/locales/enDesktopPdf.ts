@@ -1,4 +1,6 @@
 export const EN_DESKTOP_PDF_TRANSLATIONS = {
+  'desktop.pdf.topBars.autoHide': 'Auto-hide top bars',
+  'desktop.pdf.topBars.failed': 'Could not load or save the top bar preference. Try again.',
   'desktop.pdf.view.automatic': 'Automatic view',
   'desktop.pdf.view.manualOptions': 'Manual view options',
   'desktop.pdf.view.manual': 'Manual view',

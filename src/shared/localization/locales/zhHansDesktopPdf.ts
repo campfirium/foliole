@@ -1,6 +1,8 @@
 import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_PDF_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
+  'desktop.pdf.topBars.autoHide': '自动隐藏顶部栏',
+  'desktop.pdf.topBars.failed': '无法读取或保存顶部栏选项，请重试。',
   'desktop.pdf.view.automatic': '自动视图',
   'desktop.pdf.view.manualOptions': '手动视图选项',
   'desktop.pdf.view.manual': '手动视图',

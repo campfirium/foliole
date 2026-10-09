@@ -4,6 +4,7 @@ import 'react-pdf/dist/Page/TextLayer.css';
 
 import type { PdfAnchorLocator } from '../../features/nodes/model/nodeTypes';
 import { PdfReadingViewProvider } from '../../features/pdf/components/PdfReadingViewContext';
+import { PdfTopBarsDocument } from '../../features/pdf/components/PdfTopBarsDocument';
 import { configurePdfWorker } from '../../features/pdf/model/pdfWorker';
 import { usePdfSystemController } from '../../features/pdf/model/usePdfSystemController';
 import { useTranslation } from '../../shared/localization/LocalizationProvider';
@@ -92,15 +93,17 @@ export function PdfDocumentSurface({
 
   return (
     <PdfReadingViewProvider key={sourceHint} page={pdfSystem.state.page}>
-      <PdfVisualExcerptRuntimeProvider
-        currentPage={pdfSystem.state.page}
-        locators={highlightLocators}
-        nodeId={nodeId}
-        rotation={pdfSystem.state.rotation}
-        source={pdfSystem.state.pdfSource}
-      >
-        <PdfDocumentSurfaceLayout {...layoutProps} />
-      </PdfVisualExcerptRuntimeProvider>
+      <PdfTopBarsDocument isVisible={isVisible}>
+        <PdfVisualExcerptRuntimeProvider
+          currentPage={pdfSystem.state.page}
+          locators={highlightLocators}
+          nodeId={nodeId}
+          rotation={pdfSystem.state.rotation}
+          source={pdfSystem.state.pdfSource}
+        >
+          <PdfDocumentSurfaceLayout {...layoutProps} />
+        </PdfVisualExcerptRuntimeProvider>
+      </PdfTopBarsDocument>
     </PdfReadingViewProvider>
   );
 }

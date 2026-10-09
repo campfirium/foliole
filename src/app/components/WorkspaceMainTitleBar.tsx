@@ -6,6 +6,7 @@ import type { ExternalLibraryBrowseEntry } from '../../shared/platform/externalL
 import type { ExternalLibrarySelection } from './externalLibraryBrowseModel';
 import { WindowTitleBar } from './WindowTitleBar';
 import type { WorkspaceLayoutProps } from './workspaceLayoutGroupedProps';
+import { PdfTopBar } from './WorkspacePdfTopBars';
 import type { WorkspaceRightPanelId } from './WorkspaceTopToolbar';
 
 export type WorkspaceTitleBarSource = Pick<
@@ -75,23 +76,25 @@ export function WorkspaceMainTitleBar({
   }
   const externalTitle = resolveExternalTitleBarTitle(externalLibrary);
   return (
-    <WindowTitleBar
-      activeRightPanelId={activeRightPanelId}
-      centerTitle={externalTitle ?? resolveReviewTitleBarTitle(review, t) ?? resolveWindowTitleBarTitle(
-        trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId,
-        nodeList.nodesById,
-        t
-      )}
-      isListCollapsed={layoutChrome.isListCollapsed}
-      isRightSidebarCollapsed={layoutChrome.isRightSidebarCollapsed}
-      isTrashViewOpen={trash.isTrashViewOpen}
-      listWidth={layoutChrome.listWidth}
-      onOpenTrashView={onOpenTrashView}
-      onSelectRightPanel={onSelectRightPanel}
-      onToggleListVisibility={layoutChrome.onToggleListVisibility}
-      onToggleRightSidebarVisibility={layoutChrome.onToggleRightSidebarVisibility}
-      rightSidebarWidth={layoutChrome.rightSidebarWidth}
-      {...definedProps({ centerTitleIcon: externalTitle ? ('external' as const) : undefined })}
-    />
+    <PdfTopBar kind="window">
+      <WindowTitleBar
+        activeRightPanelId={activeRightPanelId}
+        centerTitle={externalTitle ?? resolveReviewTitleBarTitle(review, t) ?? resolveWindowTitleBarTitle(
+          trash.isViewingTrashNode ? trash.selectedTrashNodeId : navigation.activeNodeId,
+          nodeList.nodesById,
+          t
+        )}
+        isListCollapsed={layoutChrome.isListCollapsed}
+        isRightSidebarCollapsed={layoutChrome.isRightSidebarCollapsed}
+        isTrashViewOpen={trash.isTrashViewOpen}
+        listWidth={layoutChrome.listWidth}
+        onOpenTrashView={onOpenTrashView}
+        onSelectRightPanel={onSelectRightPanel}
+        onToggleListVisibility={layoutChrome.onToggleListVisibility}
+        onToggleRightSidebarVisibility={layoutChrome.onToggleRightSidebarVisibility}
+        rightSidebarWidth={layoutChrome.rightSidebarWidth}
+        {...definedProps({ centerTitleIcon: externalTitle ? ('external' as const) : undefined })}
+      />
+    </PdfTopBar>
   );
 }

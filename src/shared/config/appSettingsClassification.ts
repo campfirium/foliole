@@ -176,7 +176,8 @@ const RENDERER_PREFERENCE_APP_SETTING_NAMES = [
 ] as const satisfies readonly AppSettingsStorageName[];
 const DESKTOP_RUNTIME_APP_SETTING_NAMES = [
   'manualComparisonDrafts',
-  'pdfDocumentViews'
+  'pdfDocumentViews',
+  'pdfTopBarsPreferences'
 ] as const satisfies readonly AppSettingsStorageName[];
 const CROSS_HOST_SYNC_APP_SETTING_NAMES = [
   'desktopDeviceSyncEnabled',
