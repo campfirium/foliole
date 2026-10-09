@@ -1,5 +1,7 @@
 import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
+import { PdfHighlightOverlay } from './PdfHighlightOverlay';
 import { renderPdfOverlayMarker, renderPdfOverlayRects } from './pdfOverlayRender';
+import type { PdfPageDimensions } from './pdfPageDimensions';
 import { PdfSelectionOverlay } from './PdfSelectionOverlay';
 
 export interface PdfPageOverlayLocator {
@@ -12,11 +14,8 @@ export interface PdfPageOverlayLocator {
   y: number | null;
 }
 
-export function renderPdfHighlightMarkers(pageHighlights: PdfPageOverlayLocator[], markerSize: number) {
-  return pageHighlights.map((locator) => {
-    const highlightRects = renderPdfOverlayRects(locator);
-    return highlightRects ?? renderPdfOverlayMarker(locator, markerSize);
-  });
+export function renderPdfHighlightMarkers(pageHighlights: PdfPageOverlayLocator[], markerSize: number, pageDimensions?: PdfPageDimensions, rotation = 0) {
+  return pageHighlights.map((locator) => <PdfHighlightOverlay key={locator.id} locator={locator} markerSize={markerSize} pageDimensions={pageDimensions} rotation={rotation} />);
 }
 
 export function renderSearchHighlightsOnPage(pageNumber: number, pageSearchHighlights: PdfSearchVisualHighlight[], markerSize: number) {

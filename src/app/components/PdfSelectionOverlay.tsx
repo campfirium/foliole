@@ -1,16 +1,7 @@
+import { pdfOverlayPath } from './pdfOverlayPath';
 import { renderPdfOverlayMarker, type renderPdfOverlayRects } from './pdfOverlayRender';
 
 type SelectionLocator = Parameters<typeof renderPdfOverlayRects>[0];
-
-function selectionPath(rects: NonNullable<SelectionLocator['rects']>) {
-  return rects.map(({ x, y, width, height }) => {
-    const left = Math.max(0, Math.min(1, x));
-    const top = Math.max(0, Math.min(1, y));
-    const w = Math.max(0, Math.min(1, width));
-    const h = Math.max(0, Math.min(1, height));
-    return `M${left} ${top}h${w}v${h}h${-w}Z`;
-  }).join('');
-}
 
 export function PdfSelectionOverlay({ locator, markerSize }: { locator: SelectionLocator; markerSize: number }) {
   if (!locator.rects?.length) {
@@ -30,7 +21,7 @@ export function PdfSelectionOverlay({ locator, markerSize }: { locator: Selectio
       preserveAspectRatio="none"
       viewBox="0 0 1 1"
     >
-      <path d={selectionPath(locator.rects)} data-testid="pdf-selection-rect" fill="var(--app-selection-surface-color)" fillRule="nonzero" />
+      <path d={pdfOverlayPath(locator.rects)} data-testid="pdf-selection-rect" fill="var(--app-selection-surface-color)" fillRule="nonzero" />
     </svg>
   );
 }

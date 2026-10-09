@@ -169,7 +169,8 @@ function renderPdfPageContent(props: PdfPageContentProps) {
         zoomMode={props.zoomMode}
         zoom={props.zoom}
       />
-      {renderPdfHighlightMarkers(props.pageHighlights, props.markerSize)}
+      {renderPdfHighlightMarkers(props.pageHighlights, props.markerSize,
+        resolveRenderedPageDimensions(props.pageDimensions, props.fitWidthTargetWidth, props.rotation, props.zoomMode, props.zoom), props.rotation)}
       {renderSearchHighlightsOnPage(props.pageNumber, props.pageSearchHighlights, props.markerSize)}
       {renderSelectionOverlay(props.pdfSelectionLocator, props.markerSize)}
       <PdfVisualExcerptPageLayer pageNumber={props.pageNumber} />
