@@ -23,11 +23,17 @@ enum FolioleFramedSyncReceiptWriter {
         let header = try FolioleFramedSyncWireHeader(
             ciphertextBytes: plaintext.count + 16, sequence: 0, frameType: .transferReceipt
         ).encode()
-        try prepare(receipt, preamble: preamble, database: database)
         let ciphertext = try FolioleFramedSyncFrameCrypto.encrypt(
             groupKey: groupKey, preamble: preamble, header: header, plaintext: plaintext, sequence: 0
         )
+        let output = OutputStream.toMemory()
+        let writer = FolioleFramedSyncStreamWriter(output: output)
+        try writer.write(preamble: preamble.encoded); try writer.write(header: header, ciphertext: ciphertext)
+        guard let data = output.property(forKey: .dataWrittenToMemoryStreamKey) as? Data else {
+            throw FolioleFramedSyncValidationError("framed_sync_stream_write_failed")
+        }
         try database.transaction {
+            try prepare(receipt, preamble: preamble, database: database)
             try database.execute("""
                 INSERT INTO framed_sync_ios_receipt_frames VALUES (?, ?, '0', ?, ?, ?)
                 """, [receipt.transferID, preamble.identifier, header, ciphertext, plaintext])
@@ -35,14 +41,8 @@ enum FolioleFramedSyncReceiptWriter {
                 UPDATE framed_sync_ios_receipt_attempts SET state = 'replayable'
                 WHERE transfer_id = ? AND attempt_id = ?
                 """, [receipt.transferID, preamble.identifier])
+            try FolioleFramedSyncCompletedInboundCleanup.retireInTransaction(database: database, transferID: receipt.transferID)
         }
-        let output = OutputStream.toMemory()
-        let writer = FolioleFramedSyncStreamWriter(output: output)
-        try writer.write(preamble: preamble.encoded); try writer.write(header: header, ciphertext: ciphertext)
-        guard let data = output.property(forKey: .dataWrittenToMemoryStreamKey) as? Data else {
-            throw FolioleFramedSyncValidationError("framed_sync_stream_write_failed")
-        }
-        try FolioleFramedSyncCompletedInboundCleanup.retire(database: database, transferID: receipt.transferID)
         return data
     }
 
@@ -50,28 +50,26 @@ enum FolioleFramedSyncReceiptWriter {
         _ receipt: Foliole_Sync_V22_TransferReceipt, preamble: FolioleFramedSyncPreamble,
         database: FolioleFramedSyncTransferDatabase
     ) throws {
-        try database.transaction {
-            let rows = try database.rows("""
-                SELECT content_id, receiver_device_id, receiver_library_epoch, applied_state_hash
-                FROM framed_sync_ios_receipts WHERE transfer_id = ?
-                """, [receipt.transferID])
-            if let row = rows.first {
-                guard row[0] as? Data == receipt.contentID,
-                      row[1] as? String == receipt.receiverDeviceID,
-                      row[2] as? String == receipt.receiverLibraryEpoch,
-                      row[3] as? Data == receipt.appliedStateHash else {
-                    throw invalid("receipt_identity_conflict")
-                }
-            } else {
-                try database.execute("""
-                    INSERT INTO framed_sync_ios_receipts VALUES (?, ?, ?, ?, ?)
-                    """, [receipt.transferID, receipt.contentID, receipt.receiverDeviceID,
-                            receipt.receiverLibraryEpoch, receipt.appliedStateHash])
+        let rows = try database.rows("""
+            SELECT content_id, receiver_device_id, receiver_library_epoch, applied_state_hash
+            FROM framed_sync_ios_receipts WHERE transfer_id = ?
+            """, [receipt.transferID])
+        if let row = rows.first {
+            guard row[0] as? Data == receipt.contentID,
+                  row[1] as? String == receipt.receiverDeviceID,
+                  row[2] as? String == receipt.receiverLibraryEpoch,
+                  row[3] as? Data == receipt.appliedStateHash else {
+                throw invalid("receipt_identity_conflict")
             }
+        } else {
             try database.execute("""
-                INSERT INTO framed_sync_ios_receipt_attempts VALUES (?, ?, ?, 'prepared')
-                """, [receipt.transferID, preamble.identifier, preamble.encoded])
+                INSERT INTO framed_sync_ios_receipts VALUES (?, ?, ?, ?, ?)
+                """, [receipt.transferID, receipt.contentID, receipt.receiverDeviceID,
+                        receipt.receiverLibraryEpoch, receipt.appliedStateHash])
         }
+        try database.execute("""
+            INSERT INTO framed_sync_ios_receipt_attempts VALUES (?, ?, ?, 'prepared')
+            """, [receipt.transferID, preamble.identifier, preamble.encoded])
     }
 
     private static func makePreamble(transferID: Data) throws -> FolioleFramedSyncPreamble {

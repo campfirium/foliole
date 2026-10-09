@@ -102,7 +102,8 @@ final class FolioleFramedSyncOutboundBatchSender {
         let code = detail.hasPrefix(prefix) ? String(detail.dropFirst(prefix.count)) : detail
         let dependencies = ["framed_sync_node_parent_missing:", "node_position_lineage_unproven:",
                             "parent_order_position_lineage_unproven:", "sync_parent_order_body_unavailable:",
-            "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:"]
+            "framed_sync_review_node_missing:", "sync_node_open_state_node_missing:",
+            "framed_sync_parent_relation_version_missing:"]
         guard let dependency = dependencies.first(where: code.hasPrefix) else { return nil }
         let identity = String(code.dropFirst(dependency.count))
         guard (1...128).contains(identity.count),

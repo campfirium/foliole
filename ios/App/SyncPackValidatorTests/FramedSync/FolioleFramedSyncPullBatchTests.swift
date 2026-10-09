@@ -18,7 +18,8 @@ final class FolioleFramedSyncPullBatchTests: XCTestCase {
     func testDependencyReturnsOnlyAcknowledgedPrefixAndFirstFailureStillThrows() async throws {
         for prefix in ["framed_sync_node_parent_missing:", "node_position_lineage_unproven:",
                        "parent_order_position_lineage_unproven:", "sync_parent_order_body_unavailable:",
-            "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:"] {
+            "framed_sync_review_node_missing:", "sync_node_open_state_node_missing:",
+            "framed_sync_parent_relation_version_missing:"] {
             let fixture = try PullBatchFixture(); defer { fixture.close() }
             let first = try fixture.transfer("a"), second = try fixture.transfer("b")
             fixture.applyErrorAt = 1; fixture.applyError = prefix + "parent"

@@ -6,6 +6,27 @@ import XCTest
 final class FolioleFramedSyncCleanupPagingTests: XCTestCase {
     private let transferID = Data(repeating: 1, count: 32)
 
+    func testCleanupAfterAnotherConnectionRecoversTheCommittedReceiptIsIdempotent() throws {
+        try withDatabase { database in
+            try database.execute("INSERT INTO framed_sync_ios_receipts VALUES (?, ?, ?, ?, ?)",
+                                 [transferID, Data(repeating: 2, count: 32), "receiver", "epoch", Data(repeating: 3, count: 32)])
+            _ = try insert(database, id: 1, type: 3, plaintext: Data("Committed fact".utf8))
+            let recovered = try FolioleFramedSyncTransferDatabase(url: database.url)
+            XCTAssertTrue(try recovered.rows("SELECT 1 FROM framed_sync_ios_receipts").isEmpty)
+            try FolioleFramedSyncCompletedInboundCleanup.retire(database: database, transferID: transferID)
+            XCTAssertTrue(try database.rows("SELECT 1 FROM framed_sync_ios_frames").isEmpty)
+        }
+    }
+
+    func testMissingReceiptStillProtectsPendingFacts() throws {
+        try withDatabase { database in
+            let original = Data("Pending fact".utf8)
+            _ = try insert(database, id: 1, type: 3, plaintext: original)
+            XCTAssertThrowsError(try FolioleFramedSyncCompletedInboundCleanup.retire(database: database, transferID: transferID))
+            XCTAssertEqual(try database.rows("SELECT authenticated_plaintext FROM framed_sync_ios_frames").first?[0] as? Data, original)
+        }
+    }
+
     private func withDatabase(_ operation: (FolioleFramedSyncTransferDatabase) throws -> Void) throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("foliole-cleanup-paging-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }

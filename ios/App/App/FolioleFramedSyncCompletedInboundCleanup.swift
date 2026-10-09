@@ -63,26 +63,41 @@ enum FolioleFramedSyncCompletedInboundCleanup {
 
     static func retire(database: FolioleFramedSyncTransferDatabase, transferID: Data) throws {
         try database.transaction {
-            guard !(try database.rows("SELECT 1 FROM framed_sync_ios_receipts WHERE transfer_id = ?", [transferID])).isEmpty else {
-                throw FolioleFramedSyncValidationError("framed_sync_cleanup_receipt_missing")
-            }
-            try database.execute("DELETE FROM framed_sync_ios_blob_pins WHERE transfer_id = ?", [transferID])
-            try database.execute("DELETE FROM framed_sync_ios_resource_pins WHERE transfer_id = ?", [transferID])
-            try database.execute("""
-                DELETE FROM framed_sync_ios_available_blobs WHERE sha256 IN
-                  (SELECT sha256 FROM framed_sync_ios_blob_offers WHERE transfer_id = ?) AND NOT EXISTS
-                  (SELECT 1 FROM framed_sync_ios_blob_pins p WHERE p.sha256 = framed_sync_ios_available_blobs.sha256)
-                """, [transferID])
-            try database.execute("""
-                DELETE FROM framed_sync_ios_available_resources WHERE sha256 IN
-                  (SELECT sha256 FROM framed_sync_ios_blob_offers WHERE transfer_id = ?) AND NOT EXISTS
-                  (SELECT 1 FROM framed_sync_ios_resource_pins p WHERE p.sha256 = framed_sync_ios_available_resources.sha256)
-                """, [transferID])
-            for table in ["frames", "blob_offers", "resource_blob_chunks", "receipt_frames", "receipt_attempts"] {
-                try database.execute("DELETE FROM framed_sync_ios_\(table) WHERE transfer_id = ?", [transferID])
-            }
-            try database.execute("DELETE FROM framed_sync_ios_transfers WHERE transfer_id = ?", [transferID])
-            try database.execute("DELETE FROM framed_sync_ios_receipts WHERE transfer_id = ?", [transferID])
+            try retireInTransaction(database: database, transferID: transferID)
         }
+    }
+
+    static func retireInTransaction(database: FolioleFramedSyncTransferDatabase, transferID: Data) throws {
+        guard !(try database.rows("SELECT 1 FROM framed_sync_ios_receipts WHERE transfer_id = ?", [transferID])).isEmpty else {
+            if try !hasPendingInput(database: database, transferID: transferID) { return }
+            throw FolioleFramedSyncValidationError("framed_sync_cleanup_receipt_missing")
+        }
+        try database.execute("DELETE FROM framed_sync_ios_blob_pins WHERE transfer_id = ?", [transferID])
+        try database.execute("DELETE FROM framed_sync_ios_resource_pins WHERE transfer_id = ?", [transferID])
+        try database.execute("""
+            DELETE FROM framed_sync_ios_available_blobs WHERE sha256 IN
+              (SELECT sha256 FROM framed_sync_ios_blob_offers WHERE transfer_id = ?) AND NOT EXISTS
+              (SELECT 1 FROM framed_sync_ios_blob_pins p WHERE p.sha256 = framed_sync_ios_available_blobs.sha256)
+            """, [transferID])
+        try database.execute("""
+            DELETE FROM framed_sync_ios_available_resources WHERE sha256 IN
+              (SELECT sha256 FROM framed_sync_ios_blob_offers WHERE transfer_id = ?) AND NOT EXISTS
+              (SELECT 1 FROM framed_sync_ios_resource_pins p WHERE p.sha256 = framed_sync_ios_available_resources.sha256)
+            """, [transferID])
+        for table in ["frames", "blob_offers", "resource_blob_chunks", "receipt_frames", "receipt_attempts"] {
+            try database.execute("DELETE FROM framed_sync_ios_\(table) WHERE transfer_id = ?", [transferID])
+        }
+        try database.execute("DELETE FROM framed_sync_ios_transfers WHERE transfer_id = ?", [transferID])
+        try database.execute("DELETE FROM framed_sync_ios_receipts WHERE transfer_id = ?", [transferID])
+    }
+
+    private static func hasPendingInput(database: FolioleFramedSyncTransferDatabase, transferID: Data) throws -> Bool {
+        for table in ["transfers", "frames", "blob_pins", "resource_pins", "blob_offers",
+                      "resource_blob_chunks", "receipt_frames", "receipt_attempts"] {
+            if !(try database.rows("SELECT 1 FROM framed_sync_ios_\(table) WHERE transfer_id = ? LIMIT 1", [transferID])).isEmpty {
+                return true
+            }
+        }
+        return false
     }
 }
