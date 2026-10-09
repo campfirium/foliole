@@ -37,6 +37,22 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
 
     private func persistentSyncFacts(_ connection: OpaquePointer?) throws -> [String: Any] {
         [
+            "frozen_body_metadata": try json(connection, """
+                SELECT json_group_array(json_object('sha256', lower(hex(sha256)),
+                  'declared_bytes', byte_length, 'actual_bytes', length(data), 'data_type', typeof(data)))
+                FROM framed_sync_available_blobs
+                """),
+            "outbound_body_metadata": try json(connection, """
+                SELECT json_group_array(json_object('transfer_id', lower(hex(ref.transfer_id)),
+                  'sha256', lower(hex(ref.sha256)), 'declared_bytes', ref.byte_length,
+                  'role', ref.role, 'state', publication.state,
+                  'available_bytes', available.byte_length, 'actual_bytes', length(available.data),
+                  'data_type', typeof(available.data)))
+                FROM framed_sync_outbound_blob_refs ref
+                JOIN framed_sync_outbound_publications publication ON publication.transfer_id = ref.transfer_id
+                LEFT JOIN framed_sync_available_blobs available ON available.sha256 = ref.sha256
+                WHERE ref.role IN (1, 5)
+                """),
             "inventory": try json(connection, """
                 SELECT json_group_array(json_object(
                   'object_type', object_type, 'object_id', object_id, 'content_hash', content_hash,

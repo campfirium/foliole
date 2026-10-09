@@ -16,11 +16,9 @@ export function validateFramedSyncFrozenBody(blob: Pick<CanonicalBlob, 'sha256' 
 /** Caller owns the transaction that publishes the corresponding frozen input and hold. */
 export async function stageFramedSyncFrozenBody(db: DbPort, blob: CanonicalBlob, data: Uint8Array) {
   validateFramedSyncFrozenBody(blob, data);
-  const [prior] = await db.query<{ byte_length: number; data: Uint8Array }>(
-    'SELECT byte_length, data FROM framed_sync_available_blobs WHERE sha256 = ?', [blob.sha256]);
-  if (prior) {
-    if (BigInt(prior.byte_length) !== blob.byteLength) throw new Error('framed_sync_published_body_unavailable');
-    validateFramedSyncFrozenBody(blob, prior.data);
+  const prior = await readFrozenBody(db, blob);
+  if (prior !== undefined) {
+    validateFramedSyncFrozenBody(blob, prior);
     return;
   }
   await db.run('INSERT INTO framed_sync_available_blobs VALUES (?, ?, ?)',
@@ -28,10 +26,24 @@ export async function stageFramedSyncFrozenBody(db: DbPort, blob: CanonicalBlob,
 }
 
 export async function loadFramedSyncFrozenBody(db: DbPort, blob: CanonicalBlob) {
-  const [row] = await db.query<{ byte_length: number; data: Uint8Array }>(
-    'SELECT byte_length, data FROM framed_sync_available_blobs WHERE sha256 = ?', [blob.sha256]);
-  if (!row || BigInt(row.byte_length) !== blob.byteLength) throw new Error('framed_sync_published_body_unavailable');
-  return validateFramedSyncFrozenBody(blob, row.data);
+  const data = await readFrozenBody(db, blob);
+  if (data === undefined) throw new Error('framed_sync_published_body_unavailable');
+  return validateFramedSyncFrozenBody(blob, data);
+}
+
+async function readFrozenBody(db: DbPort, blob: CanonicalBlob) {
+  const [row] = await db.query<{ byte_length: number; data: Uint8Array | null;
+    data_type: string; actual_byte_length: number | null }>(
+    `SELECT byte_length, data, typeof(data) AS data_type, length(data) AS actual_byte_length
+     FROM framed_sync_available_blobs WHERE sha256 = ?`, [blob.sha256]);
+  if (!row) return undefined;
+  if (BigInt(row.byte_length) !== blob.byteLength) throw new Error('framed_sync_published_body_unavailable');
+  // iOS SQLite exposes a genuine zero-length BLOB pointer as JSON null.
+  if (row.data === null && blob.byteLength === 0n && row.data_type === 'blob' && row.actual_byte_length === 0) {
+    return new Uint8Array();
+  }
+  if (row.data === null) throw new Error('framed_sync_published_body_unavailable');
+  return row.data;
 }
 
 export const UNOWNED_FRAMED_BODY = `NOT EXISTS (SELECT 1 FROM framed_sync_blob_pins pin
