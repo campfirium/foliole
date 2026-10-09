@@ -39,7 +39,7 @@ afterEach(async () => {
   await fs.rm(tempRoot, { recursive: true, force: true });
 });
 
-it('loads node content from body blob data before inline content', () => {
+it('reads the complete current body without consulting an obsolete shared blob', () => {
   const connection = openDatabaseConnection();
   const bodyBlobHash = upsertTextBodyBlob(connection.driver, 'blob body', '2026-04-27T00:00:00.000Z');
   connection.driver.execute(
@@ -50,10 +50,10 @@ it('loads node content from body blob data before inline content', () => {
     [bodyBlobHash, '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
 
-  expect(loadWorkspaceNodeDocument('node-1')?.content).toBe('blob body');
+  expect(loadWorkspaceNodeDocument('node-1')?.content).toBe('inline body');
 });
 
-it('does not expose stale inline content when Blob data is unavailable', () => {
+it('keeps the direct current body readable when an obsolete shared blob is unavailable', () => {
   const connection = openDatabaseConnection();
   connection.driver.execute(
     `INSERT INTO nodes (
@@ -63,7 +63,7 @@ it('does not expose stale inline content when Blob data is unavailable', () => {
     ['2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
 
-  expect(loadWorkspaceNodeDocument('node-1')).toBeNull();
+  expect(loadWorkspaceNodeDocument('node-1')?.content).toBe('stale inline');
 });
 
 it('includes the node updated timestamp in loaded documents', () => {

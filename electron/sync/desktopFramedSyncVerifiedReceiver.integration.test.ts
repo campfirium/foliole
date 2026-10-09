@@ -71,3 +71,26 @@ it('rejects tampered authenticated ciphertext before any staging or business wri
     expect(fixture.receiver.sqlite.prepare('SELECT count(*) FROM framed_sync_available_blobs').pluck().get()).toBe(0);
   } finally { fixture.close(); }
 });
+
+it('keeps the complete received body durable before the trailer without retaining a second frame plaintext', async () => {
+  const fixture = await verifiedReceiverFixture(body);
+  let checked = false;
+  try {
+    const stream = await fixture.stream();
+    const result = await receiveVerifiedDesktopFramedSyncTransfer({ ...fixture.receiver, context: fixture.context,
+      groupKey: fixture.groupKey, stream: { ...stream, frames: (async function* () {
+        for await (const frame of stream.frames) {
+          yield frame;
+          if (frame.header.frameType !== 4) continue;
+          expect(fixture.receiver.sqlite.prepare('SELECT data FROM framed_sync_blob_chunks').pluck().get())
+            .toEqual(Buffer.from(body));
+          expect(fixture.receiver.sqlite.prepare(`SELECT length(authenticated_plaintext)
+            FROM framed_sync_inbound_frames WHERE frame_type = 4`).pluck().get()).toBe(32);
+          expect(fixture.receiver.sqlite.prepare('SELECT count(*) FROM nodes WHERE id = ?').pluck().get('topic')).toBe(0);
+          checked = true;
+        }
+      })() } });
+    expect(checked).toBe(true);
+    await assertCommitted(fixture, result);
+  } finally { fixture.close(); }
+});

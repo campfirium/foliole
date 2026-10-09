@@ -35,7 +35,7 @@ export function largeOverwriteAttachmentIdentity(index: number) {
 export async function seedLargeOverwriteFixture() {
   const connection = openDatabaseConnection(), db = createBetterSqliteDbPort(connection.sqlite);
   for (let pass = 0; pass < 3; pass++) {
-    const now = pass === 0 ? '2026-10-08T00:00:00.000Z' : `2026-10-09T00:00:0${pass}.000Z`;
+    const now = new Date().toISOString();
     for (let index = 0; index < 1000; index++) {
       const nodeId = largeOverwriteNodeId(index);
       upsertNodeSnapshot({ anchorLink: null, content: largeOverwriteBody(index, pass), createdAt: now,

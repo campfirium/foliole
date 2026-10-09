@@ -25,20 +25,21 @@ function assertMetadata(peer: Peer) {
   });
 }
 
-function assertNoFullInlineDuplicate(peer: Peer, body: string) {
+function assertDirectBody(peer: Peer, body: string) {
   const inline = peer.db.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('topic');
-  expect(inline).not.toBe(body);
+  expect(inline).toBe(body);
+  expect(peer.db.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
 }
 
-it('creates readable complete bodies without retaining a second full node body', () => {
+it('creates readable complete bodies in its business record without a permanent shared blob', () => {
   const source = createPeer('source');
   const version = edit(source, INITIAL);
   assertPersisted(source, INITIAL, version);
   assertMetadata(source);
-  assertNoFullInlineDuplicate(source, INITIAL);
+  assertDirectBody(source, INITIAL);
 });
 
-it('keeps edited body and list metadata after reopening without duplicating the full body', () => {
+it('keeps edited body and list metadata after reopening through direct business records', () => {
   const source = createPeer('source');
   edit(source, INITIAL);
   source.driver.transaction((driver) => writeNodeBody({
@@ -48,10 +49,10 @@ it('keeps edited body and list metadata after reopening without duplicating the 
   expect(version).not.toBeNull();
   assertPersisted(source, NEXT, version!);
   assertMetadata(source);
-  assertNoFullInlineDuplicate(source, NEXT);
+  assertDirectBody(source, NEXT);
 });
 
-it('preserves both peers complete bodies and metadata without a received inline duplicate', async () => {
+it('preserves both peers complete bodies and metadata with direct readable current records', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -61,20 +62,16 @@ it('preserves both peers complete bodies and metadata without a received inline 
   assertPersisted(target, INITIAL, version);
   assertMetadata(source);
   assertMetadata(target);
-  assertNoFullInlineDuplicate(target, INITIAL);
+  assertDirectBody(target, INITIAL);
 });
 
-it('imports a complete article while retaining only its list metadata beside the body', () => {
+it('imports a complete article with a direct body and lightweight list projection', () => {
   const source = createPeer('source');
   const id = source.driver.transaction((driver) => writeNewNode({
     driver, content: INITIAL, hideTitleHeading: false, title: 'Imported', importedAt: NOW
   }));
-  const body = source.db.prepare(`SELECT n.content, CAST(data.data AS TEXT) AS body FROM nodes n
-    JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`).get(id) as {
-      content: string; body: string;
-    };
-  expect(body.body).toBe(INITIAL);
-  expect(body.content).not.toContain('Original complete article.');
+  expect(loadWorkspaceNodeDocument(source.driver, id)?.content).toBe(INITIAL);
+  expect(source.db.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
   expect(loadWorkspaceListSnapshot(source.driver)?.nodesById[id]).toMatchObject({
     authorText: 'Ada', collections: ['Guide'], hasContent: true
   });
@@ -86,7 +83,7 @@ it('preserves CRLF frontmatter metadata and an empty body across production writ
   const version = edit(source, crlf);
   assertPersisted(source, crlf, version);
   assertMetadata(source);
-  assertNoFullInlineDuplicate(source, crlf);
+  assertDirectBody(source, crlf);
   const emptyVersion = edit(source, '');
   assertPersisted(source, '', emptyVersion);
   expect(loadWorkspaceListSnapshot(source.driver)?.nodesById.topic).toMatchObject({
@@ -94,19 +91,15 @@ it('preserves CRLF frontmatter metadata and an empty body across production writ
   });
 });
 
-it('reads an unhashed legacy body and refuses stale inline when the authoritative blob is missing', () => {
+it('reads direct current bodies independently of obsolete shared blob availability', () => {
   const source = createPeer('source');
   edit(source, INITIAL);
-  source.db.prepare('UPDATE nodes SET body_blob_hash = NULL, content = ? WHERE id = ?').run(INITIAL, 'topic');
   expect(loadWorkspaceNodeDocument(source.driver, 'topic')?.content).toBe(INITIAL);
   assertMetadata(source);
   edit(source, NEXT);
-  const before = source.db.prepare('SELECT current_version_id, body_blob_hash FROM nodes WHERE id = ?')
-    .get('topic') as { current_version_id: string; body_blob_hash: string };
-  source.db.prepare('UPDATE nodes SET content = ? WHERE id = ?').run('Stale inline body', 'topic');
-  source.db.prepare('DELETE FROM content_blob_data WHERE hash = ?').run(before.body_blob_hash);
-  expect(loadWorkspaceNodeDocument(source.driver, 'topic')).toBeNull();
-  source.db.prepare("UPDATE content_blobs SET availability = 'missing' WHERE hash = ?").run(before.body_blob_hash);
-  expect(loadWorkspaceListSnapshot(source.driver)?.nodesById.topic?.bodyStatus).toBe('missing');
+  source.db.prepare('UPDATE nodes SET body_blob_hash = ? WHERE id = ?').run('obsolete-missing-hash', 'topic');
+  const before = source.db.prepare('SELECT current_version_id, body_blob_hash FROM nodes WHERE id = ?').get('topic');
+  expect(loadWorkspaceNodeDocument(source.driver, 'topic')?.content).toBe(NEXT);
+  expect(loadWorkspaceListSnapshot(source.driver)?.nodesById.topic?.bodyStatus).toBe('ready');
   expect(source.db.prepare('SELECT current_version_id, body_blob_hash FROM nodes WHERE id = ?').get('topic')).toEqual(before);
 });

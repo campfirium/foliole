@@ -5,6 +5,7 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
+import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
 import { initializeFixtureDatabase } from './desktopFramedSyncFixtureInitialization.js';
 import { runIdentityRestoreFixtureCommand } from './desktopFramedSyncIdentityRestore.fixture.js';
 import { seedLargeOverwriteFixture } from './desktopFramedSyncLargeOverwrite.fixture.js';
@@ -147,6 +148,15 @@ function snapshot() {
   };
 }
 
+function seedRelationReview(args: Readonly<Record<string, unknown>>) {
+  const role = args.role;
+  if (role !== 'sender' && role !== 'receiver' && role !== 'receiver_conflict') {
+    throw new Error('fixture_relation_review_role_invalid');
+  }
+  seedDesktopFramedSyncRelationReviewScenario(role);
+  return snapshot();
+}
+
 async function run(command: Command) {
   if (command.action === 'init') {
     await initializeFixtureDatabase(deviceId);
@@ -160,6 +170,8 @@ async function run(command: Command) {
     return snapshot();
   }
   if (command.action === 'seed') return seed(command.args);
+  if (['retain_edit', 'release_edit', 'local_content_edit'].includes(command.action))
+    return runDesktopFramedSyncEditCommand(command.action, command.args);
   if (['begin_identity_restore', 'identity_restore_round'].includes(command.action)) {
     return runIdentityRestoreFixtureCommand(command.action, command.args, { deviceId, stateRoot });
   }
@@ -172,14 +184,7 @@ async function run(command: Command) {
   if (command.action === 'collect_content') return collectDesktopFramedSyncFixtureContent();
   if (command.action === 'snapshot') return snapshot();
   if (command.action === 'round') return (await loadProcessPort()).round(command.args.input);
-  if (command.action === 'seed_relation_review') {
-    const role = command.args.role;
-    if (role !== 'sender' && role !== 'receiver' && role !== 'receiver_conflict') {
-      throw new Error('fixture_relation_review_role_invalid');
-    }
-    seedDesktopFramedSyncRelationReviewScenario(role);
-    return snapshot();
-  }
+  if (command.action === 'seed_relation_review') return seedRelationReview(command.args);
   if (command.action === 'sync') {
     const peerOrigin = command.args.peerOrigin;
     if (typeof peerOrigin !== 'string') throw new Error('fixture_peer_origin_invalid');

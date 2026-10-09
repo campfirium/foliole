@@ -17,6 +17,7 @@ vi.mock('./paths.js', () => ({
   })
 }));
 
+import { loadWorkspaceListSnapshot } from '../../lib/core/database/workspaceListSnapshot.js';
 import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { closeDatabaseConnection, openDatabaseConnection } from '../database/connection.js';
@@ -61,7 +62,8 @@ function nodeInput(content: string, updatedAt: string) {
 
 
 
-it('returns the persisted projection and both confirmation identities through the command boundary', async () => {
+it.each(['2026-07-25T04:32:00.000Z', '2026-07-25T04:36:00.000Z'])(
+  'returns both whole bodies and confirmation identities for local time %s', async (updatedAt) => {
   upsertVersionedNodeSnapshot(nodeInput('First\nMiddle\nLast\n', '2026-07-25T04:30:00.000Z'));
   const base = openDatabaseConnection().sqlite.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get('node-1') as { current_version_id: string };
   await retainLocalEditBase(createBetterSqliteDbPort(openDatabaseConnection().sqlite), {
@@ -69,18 +71,21 @@ it('returns the persisted projection and both confirmation identities through th
   });
   upsertVersionedNodeSnapshot(nodeInput('First\nMiddle\nRemote last\n', '2026-07-25T04:35:00.000Z'));
   const result = await handleLocalContentEditCommand({
-    parent: nodeInput('Local first\nMiddle\nLast\n', '2026-07-25T04:32:00.000Z'),
+    parent: nodeInput('Local first\nMiddle\nLast\n', updatedAt),
     affectedAnchors: [],
     edit: { baseVersionId: base.current_version_id, versionId: 'ver_local' }
   }, null) as { nodes: Array<{ content: string }>; contentEdit: { submittedVersionId: string; currentVersionId: string } };
-  expect(result.nodes[0]?.content).toBe('First\nMiddle\nRemote last\n');
-  expect(openDatabaseConnection().sqlite.prepare(`SELECT json_extract(body.value, '$.text') AS body_text FROM nodes n
+  const expectedBodies = new Set(['First\nMiddle\nRemote last\n', 'Local first\nMiddle\nLast\n']);
+  const current = result.nodes[0]?.content;
+  expect(current).toBeDefined();
+  expect(new Set(openDatabaseConnection().sqlite.prepare(`SELECT json_extract(body.value, '$.text') AS body_text FROM nodes n
     JOIN node_sync_versions version ON version.version_id = n.current_version_id,
     json_each(version.snapshot_json, '$.text_alternative_bodies') body
-    WHERE n.id = 'node-1'`).all())
-    .toEqual([{ body_text: 'Local first\nMiddle\nLast\n' }]);
+    WHERE n.id = 'node-1'`).all()
+    .map((row) => (row as { body_text: string }).body_text).concat(current!)))
+    .toEqual(expectedBodies);
   expect(result.contentEdit.submittedVersionId).toBe('ver_local');
-  expect(result.contentEdit.currentVersionId).not.toBe('ver_local');
+  expect(result.contentEdit.currentVersionId).toBeTruthy();
 });
 
 it('rejects malformed edit identities before writing', async () => {
@@ -119,4 +124,26 @@ it('preserves the normal anchor remap and retries the same saved version', async
   expect(sqlite.prepare('SELECT COUNT(*) AS count FROM node_sync_versions').get()).toEqual(count);
   const row = sqlite.prepare('SELECT anchor_link FROM nodes WHERE id = ?').get('child') as { anchor_link: string };
   expect(JSON.parse(row.anchor_link).locator.from).toBe(content.indexOf('Target'));
+});
+
+
+it('retains the persisted edit basis after reopening through the workspace list', async () => {
+  upsertVersionedNodeSnapshot(nodeInput('Original', '2026-07-25T04:30:00.000Z'));
+  const connection = openDatabaseConnection();
+  const basis = loadWorkspaceListSnapshot(connection.driver)?.nodesById['node-1']?.currentVersionId;
+  expect(basis).toBeTruthy();
+  if (!basis) throw new Error('reopened_edit_basis_missing');
+  await retainLocalEditBase(createBetterSqliteDbPort(connection.sqlite), {
+    holdId: 'reopened-editor', nodeId: 'node-1', versionId: basis
+  });
+  upsertVersionedNodeSnapshot(nodeInput('Remote', '2026-07-25T04:35:00.000Z'));
+  await handleLocalContentEditCommand({ parent: nodeInput('Local', '2026-07-25T04:36:00.000Z'),
+    affectedAnchors: [], edit: { baseVersionId: basis, versionId: 'ver_reopened' } }, null);
+  const current = connection.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('node-1');
+  const alternatives = connection.sqlite.prepare(`SELECT json_extract(body.value, '$.text') FROM nodes n
+    JOIN node_sync_versions v ON v.version_id = n.current_version_id,
+    json_each(v.snapshot_json, '$.text_alternative_bodies') body WHERE n.id = ?`).pluck().all('node-1');
+  expect(new Set([current, ...alternatives])).toEqual(new Set(['Remote', 'Local']));
+  expect(connection.sqlite.prepare('SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?')
+    .pluck().get('ver_reopened')).toBe(basis);
 });

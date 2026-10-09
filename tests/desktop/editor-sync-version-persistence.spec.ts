@@ -4,7 +4,7 @@ import { expectWorkspaceShell } from './harness/settings';
 type WindowPage = DesktopSession['firstWindow'];
 const BASE = 'Apples\nBread\nMilk\n';
 const REMOTE = 'Apples\nBread\nMilk and coffee\n';
-const MERGED = 'Fresh Apples\nBread\nMilk and coffee\n';
+const LOCAL = `Fresh ${BASE}`;
 
 async function insertText(page: WindowPage, text: string, position: number) {
   await page.locator('.prompt-editor-host .cm-content').click();
@@ -22,15 +22,46 @@ async function persistedContent(page: WindowPage, nodeId: string) {
     (await window.electronAPI?.invoke('load_node_document', { nodeId: id }))?.content, nodeId);
 }
 
-test('merges late editor input with a competing persisted version and survives reload', async ({ desktopWindow }, testInfo) => {
+async function openEditor(page: WindowPage, nodeId: string) {
+  const exitFlow = page.getByRole('button', { name: /Exit Flow|退出 Flow/ });
+  if (await exitFlow.isVisible()) await exitFlow.click();
+  await page.evaluate((id) => window.__folioleWorkspaceDebug?.openNode(id), nodeId);
+  await expect(page.locator('.prompt-editor-host .cm-content')).toHaveAttribute('contenteditable', 'true');
+}
+
+async function alternativeBodies(page: WindowPage, nodeId: string) {
+  return page.evaluate(async (id) => {
+    const preview = await window.electronAPI?.invoke('load_node_text_alternative_preview', { node_id: id });
+    return preview ? [preview.current_content, preview.updated_content].sort() : [];
+  }, nodeId);
+}
+
+async function persistedBranches(session: DesktopSession, nodeId: string) {
+  return session.electronApp.evaluate(async (_, id) => {
+    const require = process.getBuiltinModule('module')!.createRequire(`${process.cwd()}/package.json`);
+    const connection = require(`${process.cwd()}/dist/electron/database/connection.js`);
+    return connection.runWithDatabaseConnectionOwner(() => {
+      const { sqlite: db, dbPath } = connection.openDatabaseConnection();
+      if (!dbPath.includes('foliole-playwright')) throw new Error('Expected an isolated test library');
+      return { node: db.prepare('SELECT current_version_id, content FROM nodes WHERE id = ?').get(id),
+        versions: db.prepare('SELECT version_id, parent_version_id, body_text, snapshot_json FROM node_sync_versions WHERE object_id = ?').all(id),
+        holds: db.prepare('SELECT * FROM node_version_local_holds').all() };
+    });
+  }, nodeId);
+}
+
+test('preserves late editor input as a whole alternative and survives continued editing and reload', async ({ desktopWindow, desktopSession }, testInfo) => {
   await expectWorkspaceShell(desktopWindow);
   await desktopWindow.waitForFunction(() => window.__folioleWorkspaceDebug?.isHydrated());
-  const previous = await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId());
-  await desktopWindow.getByRole('button', { name: /^(Create topic|创建主题)$/ }).click();
-  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId())).not.toBe(previous);
-  const nodeId = await desktopWindow.evaluate(() => window.__folioleWorkspaceDebug!.getActiveNodeId()!);
-  await insertText(desktopWindow, BASE, 0);
-  await flush(desktopWindow);
+  const nodeId = 'playwright-concurrent-editor';
+  await desktopWindow.evaluate(async (id) => {
+    await window.__folioleWorkspaceDebug?.seedNodes([{ id, content: 'Apples\nBread\nMilk\n', kind: 'topic', title: 'Concurrent editor' }], { persist: true });
+  }, nodeId);
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await openEditor(desktopWindow, nodeId);
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId())).toBe(nodeId);
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleDebug?.getEditorContent?.('prompt-editor'))).toBe(BASE);
   await expect.poll(() => persistedContent(desktopWindow, nodeId)).toBe(BASE);
 
   await insertText(desktopWindow, 'Fresh ', 0);
@@ -49,17 +80,41 @@ test('merges late editor input with a competing persisted version and survives r
       updatedAt: new Date().toISOString()
     });
   }, { id: nodeId, content: REMOTE });
+  await expect.poll(() => persistedContent(desktopWindow, nodeId)).toBe(REMOTE);
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleWorkspaceDebug?.getActiveNodeId())).toBe(nodeId);
   await flush(desktopWindow);
-  await expect.poll(() => persistedContent(desktopWindow, nodeId)).toBe(MERGED);
-  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleDebug?.getEditorContent?.('prompt-editor'))).toBe(MERGED);
+  await testInfo.attach('saved-version-branches', { body: JSON.stringify(await persistedBranches(desktopSession, nodeId)), contentType: 'application/json' });
+  await expect.poll(() => alternativeBodies(desktopWindow, nodeId)).toEqual([REMOTE, LOCAL].sort());
+  const current = await persistedContent(desktopWindow, nodeId);
+  if (typeof current !== 'string') throw new Error('Expected a saved current body');
+  await expect.poll(() => desktopWindow.evaluate(() => window.__folioleDebug?.getEditorContent?.('prompt-editor'))).toBe(current);
 
-  await insertText(desktopWindow, 'Continued\n', MERGED.length);
+  await insertText(desktopWindow, 'Continued\n', current.length);
   await flush(desktopWindow);
-  const expected = `${MERGED}Continued\n`;
+  const expected = `${current}Continued\n`;
   await expect.poll(() => persistedContent(desktopWindow, nodeId)).toBe(expected);
   await desktopWindow.reload();
   await expectWorkspaceShell(desktopWindow);
-  await desktopWindow.evaluate((id) => window.__folioleWorkspaceDebug?.openNode(id), nodeId);
+  await openEditor(desktopWindow, nodeId);
   await expect.poll(() => desktopWindow.evaluate(() => window.__folioleDebug?.getEditorContent?.('prompt-editor'))).toBe(expected);
+  const other = current === REMOTE ? LOCAL : REMOTE;
+  await expect.poll(() => alternativeBodies(desktopWindow, nodeId)).toEqual([expected, other].sort());
   await testInfo.attach('confirmed-edit-after-reload', { body: Buffer.from(expected), contentType: 'text/plain' });
+});
+
+
+test('reopens a complete BOM and CRLF article with its author and collection metadata', async ({ desktopWindow }) => {
+  await expectWorkspaceShell(desktopWindow);
+  const nodeId = 'playwright-crlf-article';
+  const body = '\ufeff---\r\nauthor: Ada\r\ncollections:\r\n  - "Guide"\r\n---\r\nComplete article 中😀\r\n';
+  await desktopWindow.evaluate(async ({ id, content }) => {
+    await window.__folioleWorkspaceDebug?.seedNodes([{ id, content, kind: 'topic', title: 'CRLF article' }], { persist: true });
+  }, { id: nodeId, content: body });
+  await desktopWindow.reload();
+  await expectWorkspaceShell(desktopWindow);
+  await openEditor(desktopWindow, nodeId);
+  await expect.poll(() => persistedContent(desktopWindow, nodeId)).toBe(body);
+  const snapshot = await desktopWindow.evaluate(() => window.electronAPI?.invoke('load_workspace_list_snapshot'));
+  expect(snapshot?.nodesById[nodeId]).toMatchObject({ authorText: 'Ada', collections: ['Guide'] });
+  expect(snapshot?.nodesById[nodeId]?.currentVersionId).toBeTruthy();
 });

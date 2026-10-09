@@ -24,9 +24,24 @@ import { retireFramedSyncReadyPayloads } from '../../lib/core/sync/framedSyncRea
 import type { BlobChunkInput, BlobOfferTransactionInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 
 
+/** Better SQLite rows own their bytes throughout the enclosing staging transaction. */
+function borrowBlobChunkData(row: DbRow) {
+  const data = row.data;
+  if (!(data instanceof Uint8Array)) throw new Error('framed_sync_invalid_data');
+  return data;
+}
+
+function assertUtf8BodyBytes(data: Uint8Array) {
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  for (let offset = 0; offset < data.byteLength; offset += 16 * 1024) {
+    decoder.decode(data.subarray(offset, offset + 16 * 1024), { stream: true });
+  }
+  decoder.decode();
+}
+
 function assertAvailableBlobMatches(row: DbRow, byteLength: bigint, data?: Uint8Array) {
   if (framedSyncBigInt(row, 'byte_length') !== byteLength ||
-      (data && !sameFramedSyncBytes(framedSyncBytes(row, 'data'), data))) {
+      (data && !sameFramedSyncBytes(borrowBlobChunkData(row), data))) {
     failFramedSync('blob_available_identity_conflict');
   }
 }
@@ -65,7 +80,7 @@ function createBlobTransferStaging(db: DbPort) {
         const pins: DurableBlobPin[] = [];
         for (const blob of input.blobs) {
           const available = await readFramedSyncRow(tx,
-            'SELECT * FROM framed_sync_available_blobs WHERE sha256 = ?', [blob.sha256]);
+            'SELECT byte_length FROM framed_sync_available_blobs WHERE sha256 = ?', [blob.sha256]);
           await tx.run('INSERT OR IGNORE INTO framed_sync_blob_offers VALUES (?, ?, ?, ?, ?, ?)',
             [input.transferId, attemptId, blob.sha256, blob.byteLength, blob.role, blob.required ? 1 : 0]);
           if (available) {
@@ -94,7 +109,7 @@ function createBlobTransferStaging(db: DbPort) {
         const accepted = acceptBlobChunk({
           byteLength: framedSyncBigInt(descriptor, 'byte_length'), role: Number(descriptor.role), sha256: input.sha256
         }, rows.map((row) => ({
-          data: framedSyncBytes(row, 'data'), offset: framedSyncBigInt(row, 'byte_offset')
+          data: borrowBlobChunkData(row), offset: framedSyncBigInt(row, 'byte_offset')
         })), { data: input.data, offset: input.offset });
         if (accepted.result === 'created') await tx.run(
           'INSERT INTO framed_sync_blob_chunks VALUES (?, ?, ?, ?, ?)',
@@ -132,14 +147,14 @@ function createBlobAvailabilityStaging(db: DbPort) {
           WHERE transfer_id = ? AND attempt_id = ? AND sha256 = ? ORDER BY byte_offset`,
         [transferId, attemptId, sha256]);
         const chunks = rows.map((row) => ({
-          data: framedSyncBytes(row, 'data'), offset: framedSyncBigInt(row, 'byte_offset')
+          data: borrowBlobChunkData(row), offset: framedSyncBigInt(row, 'byte_offset')
         }));
         const blob = { byteLength: framedSyncBigInt(descriptor, 'byte_length'), role: Number(descriptor.role), sha256 };
         const data = isBodyDescriptor(blob) ? chunks[0]?.data ?? new Uint8Array() :
           Buffer.concat(chunks.map((chunk) => chunk.data));
         verifyCompleteBlob(blob, chunks,
           new Uint8Array(createHash('sha256').update(data).digest()));
-        if (isBodyDescriptor(blob)) new TextDecoder('utf-8', { fatal: true }).decode(data);
+        if (isBodyDescriptor(blob)) assertUtf8BodyBytes(data);
         const available = await readFramedSyncRow(tx,
           'SELECT * FROM framed_sync_available_blobs WHERE sha256 = ?', [sha256]);
         if (available) assertAvailableBlobMatches(available, BigInt(data.byteLength), data);

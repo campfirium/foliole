@@ -31,6 +31,7 @@ function queryWorkspaceRows(driver: DatabaseDriver) {
   return driver.queryAll<WorkspaceNodeRow>(
     `SELECT
        n.id,
+       n.current_version_id,
        n.parent_id,
        n.kind,
        n.priority,

@@ -11,6 +11,8 @@ import { compareFramedSyncInventories, type FramedSyncInventoryEntry } from '../
 import { createFramedSyncOutboundReceiptStaging } from '../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
 import { readFramedSyncPublishedBody } from '../../lib/core/sync/framedSyncPublishedBody.js';
 import { loadFramedSyncPublishedOutboundValue } from '../../lib/core/sync/framedSyncPublishedOutboundValue.js';
+import { releaseLocalEditBase, retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
+import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { loadDesktopFramedSyncPublishedBlobSources } from '../sync/desktopFramedSyncBlobSources.js';
 
@@ -99,6 +101,40 @@ it('releases temporary bytes only after all receiver holds and inbound pins fini
   await retireFramedSyncFrozenBodies(host.db, second.transferId);
   expect(host.sqlite.prepare('SELECT count(*) FROM framed_sync_available_blobs').pluck().get()).toBe(0);
   expect((await host.current()).body_text).toBe('\ufeffOriginal\r\n😀\u0000end');
+});
+
+it('releases each receiver independently while an editor keeps its original basis readable', async () => {
+  const { host, record, publish } = await fixture();
+  await retainLocalEditBase(host.db, { nodeId: 'topic', versionId: 'original', holdId: 'editor' });
+  const first = await publish('first');
+  const second = await publish('second');
+  const parents = host.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all();
+  await host.receive([textBranch('edited', 'Later complete body', record)]);
+  const expectedParents = [...parents, { version_id: 'edited', parent_version_id: 'original', ordinal: 0 }];
+  const staging = createFramedSyncOutboundReceiptStaging(host.db);
+  const release = async (publication: typeof first) => {
+    await staging.commitOutboundReceipt({ transferId: publication.transferId, contentId: publication.contentId,
+      receiverDeviceId: publication.context.receiverDeviceId, receiverLibraryEpoch: publication.context.receiverLibraryEpoch,
+      appliedStateHash: publication.contentId });
+    await staging.releaseOutboundHolds(publication.transferId);
+    await collectNodeVersionPayloads(host.db, 'topic', Number.MAX_SAFE_INTEGER, true);
+  };
+  const originalBody = () => host.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id='original'").pluck().get();
+  await release(first);
+  expect(originalBody()).toBe(record.body_text);
+  expect(host.sqlite.prepare(`SELECT p.receiver_device_id FROM framed_sync_outbound_holds h
+    JOIN framed_sync_outbound_publications p ON p.transfer_id = h.transfer_id`).pluck().all()).toEqual(['second']);
+  await loadFramedSyncPublishedOutboundValue(host.db, context('second'), bytesToHex(second.transferId));
+  await release(second);
+  expect(originalBody()).toBe(record.body_text);
+  expect(host.sqlite.prepare('SELECT count(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(0);
+  await releaseLocalEditBase(host.db, 'editor', 'topic');
+  await collectNodeVersionPayloads(host.db, 'topic', Number.MAX_SAFE_INTEGER, true);
+  expect(originalBody()).toBeNull();
+  expect((await host.current()).body_text).toBe('Later complete body');
+  expect(host.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual(expectedParents);
+  expect(host.sqlite.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').pluck().all())
+    .toEqual(['edited', 'original']);
 });
 
 async function legacyPublication() {

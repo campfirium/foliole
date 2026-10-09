@@ -21,6 +21,7 @@ export type FramedSyncStagingTable =
 
 export type ProductionBenchmarkDatabaseSnapshot = Readonly<{
   appliedItems: number;
+  readableItems: number;
   stagingRows: Readonly<Record<FramedSyncStagingTable, number>>;
   pendingTransferIds: readonly string[];
   publicationIds: readonly string[];
@@ -63,6 +64,10 @@ export function readProductionBenchmarkDatabase(
     ).pluck().get()) : 0;
     return {
       appliedItems,
+      readableItems: Number(sqlite.prepare(`SELECT COUNT(*) FROM nodes n
+        JOIN node_sync_versions v ON v.version_id = n.current_version_id
+        WHERE n.id LIKE 't326-benchmark-%' AND v.body_text = n.content
+          AND length(CAST(v.body_text AS BLOB)) > 0`).pluck().get()),
       stagingRows,
       pendingTransferIds: sqlite.prepare("SELECT lower(hex(transfer_id)) FROM framed_sync_outbound_publications WHERE state = 'published'").pluck().all().map(String),
       publicationIds: sqlite.prepare('SELECT lower(hex(transfer_id)) FROM framed_sync_outbound_publications').pluck().all().map(String),

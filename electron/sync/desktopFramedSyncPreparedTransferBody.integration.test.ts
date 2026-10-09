@@ -66,3 +66,33 @@ it('captures the same fixed wire bytes as durable replay before the source close
     await rm(source.root, { recursive: true, force: true });
   }
 });
+
+it('keeps the second simultaneous signed reader intact after the first releases and staging is removed', async () => {
+  const source = await desktopResourceReadyFixture();
+  const publication = { ...source.published, manifest: { facts: [source.fact], blobs: source.fact.blobs } };
+  const bodies: Awaited<ReturnType<typeof loadDesktopFramedSyncPreparedTransferBody>>[] = [];
+  let closed = false;
+  try {
+    await source.staging.publishOutbound(publication);
+    const deliveries = await Promise.all([0, 1].map(() => prepareDesktopFramedSyncPublishedDelivery({
+      db: source.db, publication, groupSecret: Buffer.alloc(32, 5).toString('base64url'), staging: source.staging
+    })));
+    bodies.push(...deliveries.map(delivery => delivery.body));
+    expect(bodies[0]!.bodySha256).toBe(bodies[1]!.bodySha256);
+    await bodies[0]!.dispose?.();
+    await source.db.run('DELETE FROM framed_sync_outbound_attempts');
+    source.sqlite.close(); closed = true;
+    const hash = createHash('sha256');
+    let length = 0;
+    for await (const chunk of encodeFramedSyncHttpBody(bodies[1]!)) {
+      hash.update(chunk); length += chunk.byteLength;
+    }
+    expect(length).toBe(bodies[1]!.contentLength);
+    expect(hash.digest('hex')).toBe(bodies[1]!.bodySha256);
+  } finally {
+    await Promise.all(bodies.map(body => body.dispose?.()));
+    if (!closed) source.sqlite.close();
+    clearAttachmentLibraryPathSnapshot();
+    await rm(source.root, { recursive: true, force: true });
+  }
+});

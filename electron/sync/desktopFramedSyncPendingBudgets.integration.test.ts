@@ -20,6 +20,8 @@ import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwo
 import { createDesktopFramedSyncFaultProxy } from './desktopFramedSyncTwoProcessFaultProxy.js';
 
 const QUERY_BUDGET = 2 * 1024 * 1024;
+const SETTING_KEYS = ['search_aliases_document', 'readwise_source_mode_conflict', 'review_scheduler_settings',
+  'readwise_source_mode', 'readwise_active_host', 'readwise_remote_source'] as const;
 
 function resultBytes(rows: readonly DbRow[]) {
   return rows.reduce((total, row) => total + Object.values(row).reduce<number>((size, value) =>
@@ -41,12 +43,12 @@ function boundedResults(db: DbPort): DbPort {
 }
 
 async function seedSettings(db: DbPort) {
-  for (let index = 0; index < 6; index += 1) {
+  for (const key of SETTING_KEYS) {
     const payload = buildCanonicalSettingSyncPayload({ form_factor: 'desktop', host_name: '*',
-      key: `pending-budget-${index}`, platform: 'windows', scope: 'user_space',
+      key, platform: 'windows', scope: 'user_space',
       value_json: JSON.stringify('x'.repeat(600 * 1024)) });
     await db.transaction((tx) => applySyncObjectInTransaction(tx, {
-      object_type: 'setting', object_id: `user_space:windows:desktop:*:pending-budget-${index}`,
+      object_type: 'setting', object_id: `user_space:windows:desktop:*:${key}`,
       content_hash: computeSyncContentHash('setting', payload), deleted_at: null,
       payload_json: JSON.stringify(payload), updated_at: '2026-10-07'
     }, { hostName: 'Provider', onPayloadAppliedInTransaction: materializeDesktopSettingRecord }));
@@ -101,8 +103,9 @@ it('resumes multiple large immutable deliveries within a bounded body read after
       WHERE receipt.content_id != publication.content_id OR receipt.receiver_device_id != publication.receiver_device_id
         OR receipt.receiver_library_epoch != publication.receiver_library_epoch`).pluck().get()).toBe(0);
     expect(source.prepare('SELECT COUNT(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(0);
-    const settings = "SELECT value_json, content_hash FROM setting_records WHERE key LIKE 'pending-budget-%' ORDER BY key";
-    expect(target.prepare(settings).all()).toEqual(source.prepare(settings).all());
+    const settings = `SELECT key, value_json, content_hash FROM setting_records
+      WHERE key IN (${SETTING_KEYS.map(() => '?').join(',')}) ORDER BY key`;
+    expect(target.prepare(settings).all(...SETTING_KEYS)).toEqual(source.prepare(settings).all(...SETTING_KEYS));
   } finally {
     await proxy.close();
     source.close();

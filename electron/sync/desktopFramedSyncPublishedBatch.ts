@@ -25,7 +25,13 @@ export async function sendDesktopFramedSyncPublishedBatch(input: {
     const first = assertBatch(input.items);
     const budget = readFramedSyncPayloadBudget(input.db);
     const body = await spoolDesktopFramedSyncSequence({ payloadBudget: budget, lane: 'payload',
-      bodies: (async function* () { for (const item of input.items) yield item.body; })() });
+      bodies: (async function* () {
+        for (const item of input.items) {
+          const body = { ...item.body };
+          delete body.dispose;
+          yield body;
+        }
+      })() });
     const context = first.published.context;
     const response = await postDesktopFramedSyncBytes({ body, payloadBudget: budget,
       endpointUrl: input.peerOrigin, groupId: context.groupId, localDeviceId: context.senderDeviceId,

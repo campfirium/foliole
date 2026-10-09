@@ -65,7 +65,7 @@ it('builds the canonical remote node upsert params', () => {
     'Remote Node',
     1,
     1,
-    '',
+    'remote body',
     'body-hash',
     'remote opening',
     null,
@@ -126,4 +126,10 @@ it('builds remote version upsert only for complete version metadata', () => {
     expect.stringContaining('"sequential_reading_enabled":false')
   ]);
   expect(buildRemoteNodeVersionUpsert(createNodeRecord({ version_id: null }))).toBeNull();
+});
+
+it('stores a complete incoming body once alongside its metadata snapshot', () => {
+  const statement = buildRemoteNodeVersionUpsert(createNodeRecord());
+  expect(statement?.params[6]).toBe('remote body');
+  expect(JSON.parse(String(statement?.params[7]))).toMatchObject({ content: null });
 });

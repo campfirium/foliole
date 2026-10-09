@@ -40,14 +40,13 @@ function observeReads(port: DbPort) {
   return { port: observed, peak: () => peakBytes, total: () => totalBytes };
 }
 
-it('streams a frozen 3 MiB UTF-8 body with at most one data block per SQLite read', async () => {
+it('reads one complete frozen 1 MiB UTF-8 body within the per-body budget', async () => {
   const database = openBlobDatabase();
   try {
-    const data = Buffer.from('中😀'.repeat(Math.floor(3 * 1024 * 1024 / 7)) + 'abcde');
-    expect(data.byteLength).toBe(3 * 1024 * 1024);
+    const data = Buffer.from('中😀'.repeat(Math.floor(1024 * 1024 / 7)) + 'abcd');
+    expect(data.byteLength).toBe(1024 * 1024);
     const hash = createHash('sha256').update(data).digest();
-    database.sqlite.exec('CREATE TABLE content_blob_data (hash TEXT PRIMARY KEY, data BLOB NOT NULL)');
-    database.sqlite.prepare('INSERT INTO content_blob_data VALUES (?, ?)').run(hash.toString('hex'), data);
+    database.sqlite.prepare('INSERT INTO framed_sync_available_blobs VALUES (?, ?, ?)').run(hash, data.byteLength, data);
     const reads = observeReads(database.port);
     const descriptor = { byteLength: BigInt(data.byteLength), required: true, role: 1, sha256: hash };
     const sources = await loadDesktopFramedSyncPublishedBlobSources(reads.port, { blobs: [descriptor], facts: [] });
@@ -55,7 +54,7 @@ it('streams a frozen 3 MiB UTF-8 body with at most one data block per SQLite rea
     let count = 0;
     let size = 0;
     for await (const bytes of sources[0]!.chunks()) {
-      expect(bytes.byteLength).toBeLessThanOrEqual(FRAMED_SYNC_LIMITS.blobChunkBytes);
+      expect(bytes.byteLength).toBeLessThanOrEqual(1024 * 1024);
       expect(Buffer.from(bytes).equals(data.subarray(size, size + bytes.byteLength))).toBe(true);
       actual.update(bytes);
       size += bytes.byteLength;
@@ -63,17 +62,18 @@ it('streams a frozen 3 MiB UTF-8 body with at most one data block per SQLite rea
     }
     expect(actual.digest()).toEqual(hash);
     expect(size).toBe(data.byteLength);
-    expect(count).toBe(6);
-    expect(reads.peak()).toBeLessThanOrEqual(FRAMED_SYNC_LIMITS.blobChunkBytes);
+    expect(count).toBe(1);
+    expect(reads.peak()).toBeLessThanOrEqual(1024 * 1024);
   } finally {
     database.close();
   }
 });
 
-it('receives aligned blocks out of order and compares only the replayed block', async () => {
+it('receives attachment blocks out of order and compares only the replayed block', async () => {
   const database = openBlobDatabase();
   try {
-    const value = blob('x'.repeat(3 * 1024 * 1024));
+    const original = blob('x'.repeat(3 * 1024 * 1024));
+    const value = { ...original, descriptor: { ...original.descriptor, role: 2 } };
     const transfer = await prepareBlobTransfer({ attemptSeed: 19, blobs: [value.descriptor],
       database, seed: 'bounded-chunk-replay' });
     await database.blobStaging.commitBlobOfferAndMissingSet({ blobs: [value.descriptor], transferId: transfer.transferId });

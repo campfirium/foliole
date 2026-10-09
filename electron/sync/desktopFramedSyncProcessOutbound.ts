@@ -14,6 +14,7 @@ import { readFramedSyncPayloadBudget } from '../database/framedSyncPayloadBudget
 
 import { loadDesktopFramedSyncBlobSources, loadDesktopFramedSyncPublishedBlobSources } from './desktopFramedSyncBlobSources.js';
 import { spoolDesktopFramedSyncProducedBody } from './desktopFramedSyncBodySpool.js';
+import { retainDesktopFramedSyncPublishedDelivery } from './desktopFramedSyncDeliveryOwner.js';
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
 import { loadDesktopFramedSyncPreparedTransferBody } from './desktopFramedSyncPreparedTransferBody.js';
 import { readReceipt } from './desktopFramedSyncProcessReceipt.js';
@@ -61,7 +62,12 @@ export function prepareDesktopFramedSyncPublishedTransfer(input: PreparationInpu
 }
 
 /** The caller owns the sealed HTTP body; fixed frames still belong to durable staging. */
-export async function prepareDesktopFramedSyncPublishedDelivery(input: PreparationInput) {
+export function prepareDesktopFramedSyncPublishedDelivery(input: PreparationInput) {
+  return retainDesktopFramedSyncPublishedDelivery(input.db, input.publication.transferId,
+    () => sealPublishedDelivery(input));
+}
+
+async function sealPublishedDelivery(input: PreparationInput) {
   let body: Awaited<ReturnType<typeof spoolDesktopFramedSyncProducedBody>> | undefined;
   try {
     const attempt = await preparePublishedAttempt(input, async (frames) => {
@@ -90,8 +96,6 @@ async function preparePublishedAttempt(input: PreparationInput,
     preamble: framedSyncBytes(replayable, 'preamble'),
     state: 'prepared' as const
   };
-  await input.db.run(`UPDATE framed_sync_outbound_attempts SET state = 'abandoned'
-    WHERE transfer_id = ? AND purpose = 'transfer' AND state = 'prepared'`, [stored.transferId]);
   return persistDesktopFramedSyncAttempt({
     db: input.db,
     blobSources: await loadDesktopFramedSyncPublishedBlobSources(input.db, stored.manifest),
@@ -155,7 +159,8 @@ async function transmitDesktopFramedSyncPublication(input: {
   staging: FramedSyncStagingPort;
 }) {
   const published = publishedTransfer(input.publication);
-  const body = input.body;
+  const body = { ...input.body };
+  delete body.dispose;
   const context = published.context;
   try {
     const response = await postDesktopFramedSync({

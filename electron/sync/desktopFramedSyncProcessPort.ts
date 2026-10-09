@@ -4,11 +4,12 @@ import { z } from 'zod';
 
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../lib/core/database/framedSyncStagingSchema.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
-import { openDatabaseConnection } from '../database/connection.js';
+import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 
 import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.js';
+import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { createDesktopFramedSyncFixtureReceiver } from './desktopFramedSyncFixtureReceiver.js';
 import { synchronizeDesktopFramedSync } from './desktopFramedSyncProcessOutbound.js';
 import { createDesktopFramedSyncRoundProcessAdapter } from './desktopFramedSyncRoundProcessAdapter.js';
@@ -32,14 +33,20 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
   const receiver = createDesktopFramedSyncFixtureReceiver({ db, groupKey,
     groupSecret: group.workgroup_key, staging });
   return {
-    handleHttpRequest: (request: IncomingMessage, response: ServerResponse) =>
-      handleCompanionLanFramedSyncPost({
+    handleHttpRequest: async (request: IncomingMessage, response: ServerResponse) => {
+      const header = request.headers['x-foliole-body-sha256'];
+      const auth = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequest({
+        ...(typeof header === 'string' ? { bodySha256: header } : {}), request, requireMemberState: true
+      }));
+      return handleCompanionLanFramedSyncPost({
+        authenticate: () => auth,
         payloadBudget: connection.framedSyncPayloadBudget,
         localIdentity: identity,
         onStream: receiver.receive,
         request,
         response
-      }),
+      });
+    },
     round: async (value: unknown) => {
       if (z.object({ kind: z.literal('pause_before_apply') }).safeParse(value).success) {
         receiver.pauseBeforeApply();

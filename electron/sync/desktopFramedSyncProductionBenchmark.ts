@@ -174,11 +174,14 @@ function assertCompletedWork(input: Readonly<{
 }>) {
   const counts = productionBenchmarkStageCounts(input);
   if (counts.appliedItems !== input.itemCount ||
-      counts.stagedFacts !== counts.publishedFacts ||
-      counts.receipts !== input.sender.stagingRows.framed_sync_outbound_publications ||
-      counts.availableBlobs < input.itemCount ||
+      input.receiver.readableItems !== input.itemCount ||
+      counts.stagedFacts !== 0 ||
+      input.receiver.stagingRows.framed_sync_blob_pins !== 0 ||
       input.sender.pendingTransferIds.length || input.receiver.pendingTransferIds.length) {
-    throw new Error('production_benchmark_work_incomplete');
+    throw new Error(`production_benchmark_work_incomplete:${JSON.stringify({ counts,
+      readableItems: input.receiver.readableItems, publications: input.sender.stagingRows.framed_sync_outbound_publications,
+      pins: input.receiver.stagingRows.framed_sync_blob_pins,
+      pendingSender: input.sender.pendingTransferIds.length, pendingReceiver: input.receiver.pendingTransferIds.length })}`);
   }
   for (const transfer of input.sender.publicationIds) {
     if (!input.sender.receiptIds.includes(transfer) || !input.receiver.receiptIds.includes(transfer)) {

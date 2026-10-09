@@ -116,7 +116,7 @@ it('applies a node, parent relation, review, and receipt through one production 
     grade: 3, node_id: 't326-relation-review', op_id: 't326-review-op'
   }]);
   expect(received.framedSync).toMatchObject({
-    inboundFacts: 3, inboundFrames: 6, inboundStates: [{ state: 'applied' }], receipts: 1
+    inboundFacts: 0, inboundFrames: 0, inboundStates: [{ state: 'applied' }], receipts: 1
   });
 });
 
@@ -156,6 +156,6 @@ it('applies a review-only zero-blob transfer and commits its receipt atomically'
     grade: 3, node_id: 't326-relation-review', op_id: 't326-review-only-op'
   }]);
   expect(received.framedSync).toMatchObject({
-    availableBlobs: 0, inboundFacts: 1, inboundStates: [{ state: 'applied' }], receipts: 1
+    availableBlobs: 0, inboundFacts: 0, inboundFrames: 0, inboundStates: [{ state: 'applied' }], receipts: 1
   });
 });

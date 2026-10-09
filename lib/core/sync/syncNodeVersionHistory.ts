@@ -2,8 +2,8 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 
 import type { DbPort } from './dbPort.js';
 import { upsertRemoteVersion } from './syncNodeApplyAcceptedRemote.js';
-import { buildRemoteNodeVersionUpsert } from './syncNodeApplyStatements.js';
 import { arraySyncNodeRecordSource, type SyncNodeRecordMetadata, type SyncNodeRecordSource } from './syncNodeRecordSource.js';
+import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
 import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
 import { includeLegacyVersionParents, validateStoredVersionDependencies } from './syncPackNodeVersionDependencyValidation.js';
 
@@ -48,7 +48,9 @@ export async function prepareIncomingNodeVersionSource<M extends SyncNodeRecordM
   const eligible: M[] = [];
   for (const metadata of source.records) {
     const record = await source.load(port, metadata);
-    if (!buildRemoteNodeVersionUpsert(record) || record.is_tombstone && !hasCompleteTombstoneVersion(record)) continue;
+    assertSyncNodeTextWithinBudget(record.snapshot);
+    if (!record.version_id || !record.host_name || !record.version_created_at ||
+        record.is_tombstone && !hasCompleteTombstoneVersion(record)) continue;
     eligible.push(metadata);
   }
   const ordered = orderNodeVersionHistory(eligible);

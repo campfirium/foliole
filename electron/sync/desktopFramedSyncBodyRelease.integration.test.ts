@@ -4,8 +4,6 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
-import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
-
 import { reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
@@ -17,7 +15,7 @@ function readBodies(databasePath: string) {
   try {
     return {
       blobs: db.prepare<[], { hash: string }>('SELECT hash FROM content_blob_data').all().map((row) => row.hash),
-      nodes: db.prepare(`SELECT id, current_version_id, body_blob_hash FROM nodes ORDER BY id`).all(),
+      nodes: db.prepare(`SELECT id, current_version_id, content FROM nodes ORDER BY id`).all(),
       versions: db.prepare(`SELECT version_id, parent_version_id, body_text,
         json_extract(snapshot_json, '$.body_blob_hash') AS body_blob_hash
         FROM node_sync_versions ORDER BY version_id`).all(),
@@ -29,7 +27,6 @@ function readBodies(databasePath: string) {
 it('releases replaced bytes across real processes, preserves another node holder and survives restart', async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture();
   try {
-    const shared = hashTextBody(SHARED);
     await fixture.left.seed({ content: SHARED, nodeId: 'article', title: 'Article' });
     await fixture.left.seed({ content: SHARED, nodeId: 'holder', title: 'Holder' });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
@@ -39,8 +36,12 @@ it('releases replaced bytes across real processes, preserves another node holder
     for (const process of [fixture.left, fixture.right]) await process.invoke('collect_content');
     for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) {
       const retained = readBodies(snapshot.databasePath);
-      expect(retained.blobs).toContain(shared);
-      expect(retained.blobs).not.toContain(hashTextBody(INTERMEDIATE));
+      expect(retained.blobs).toEqual([]);
+      expect(retained.nodes).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'holder', content: SHARED }),
+        expect.objectContaining({ id: 'article', content: 'Current body' })
+      ]));
+      expect(retained.versions).not.toContainEqual(expect.objectContaining({ body_text: INTERMEDIATE }));
       expect(retained.versions).toContainEqual(expect.objectContaining({ body_text: null, body_blob_hash: null }));
     }
     await fixture.left.seed({ content: 'Holder replaced', nodeId: 'holder', title: 'Holder' });
@@ -48,8 +49,12 @@ it('releases replaced bytes across real processes, preserves another node holder
     for (const process of [fixture.left, fixture.right]) await process.invoke('collect_content');
     const before = [readBodies(fixture.leftSnapshot.databasePath), readBodies(fixture.rightSnapshot.databasePath)];
     for (const evidence of before) {
-      expect(evidence.blobs).not.toContain(shared);
-      expect(evidence.blobs).toEqual(expect.arrayContaining([hashTextBody('Current body'), hashTextBody('Holder replaced')]));
+      expect(evidence.blobs).toEqual([]);
+      expect(evidence.nodes).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: 'article', content: 'Current body' }),
+        expect.objectContaining({ id: 'holder', content: 'Holder replaced' })
+      ]));
+      expect(evidence.versions).not.toContainEqual(expect.objectContaining({ body_text: SHARED }));
     }
     const left = await fixture.restartLeft();
     const right = await fixture.restartRight();

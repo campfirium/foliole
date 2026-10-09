@@ -5,11 +5,9 @@ import { join } from 'node:path';
 
 import { decodeFrameHeader, decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
-import { leaseFramedSyncPayloads } from '../../lib/core/sync/framedSyncPayloadLease.js';
 
-import { readFramedSyncStream, type FramedSyncEncodedFrame,
-  type FramedSyncWritableBody } from './desktopFramedSyncStream.js';
-import { readFramedSyncFileChunks } from './framedSyncFileChunks.js';
+import { createDesktopFramedSyncSealedBody } from './desktopFramedSyncSealedBody.js';
+import type { FramedSyncEncodedFrame, FramedSyncWritableBody } from './desktopFramedSyncStream.js';
 
 /** The signed request is immutable on disk before its HTTP producer starts. */
 export async function spoolDesktopFramedSyncBody(input: {
@@ -61,22 +59,10 @@ export async function spoolDesktopFramedSyncProducedBody(input: {
         await write(frame.ciphertext);
       });
     } finally { await file.close(); }
-    return { bodySha256: hash.digest('hex'), contentLength, dispose, uncompressedMessageBytes,
-      encodedBytes: leaseFramedSyncPayloads(readFramedSyncFileChunks(path), input.payloadBudget, 'outbound'),
-      frames: replay(path, dispose, input.payloadBudget), preamble: input.preamble };
+    return createDesktopFramedSyncSealedBody({ root, path, bodySha256: hash.digest('hex'), contentLength,
+      uncompressedMessageBytes, payloadBudget: input.payloadBudget, preamble: input.preamble });
   } catch (error) {
     await dispose();
     throw error;
-  }
-}
-
-async function* replay(path: string, dispose: () => Promise<void>, budget?: FramedSyncPayloadBudget) {
-  const source = readFramedSyncFileChunks(path);
-  try {
-    const stream = await readFramedSyncStream(source);
-    yield* leaseFramedSyncPayloads(stream.frames, budget, 'outbound');
-  } finally {
-    await source.return(undefined);
-    await dispose();
   }
 }

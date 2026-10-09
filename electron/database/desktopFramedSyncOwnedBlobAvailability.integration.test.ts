@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
+
 import { afterEach, expect, it } from 'vitest';
 
 import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
@@ -103,3 +105,25 @@ it.each(['overlap', 'empty-extra', 'end-extra'] as const)('rejects %s persisted 
   expect(value.sqlite.prepare('SELECT COUNT(*) FROM framed_sync_blob_chunks').pluck().get())
     .toBe(fault === 'empty-extra' ? 1 : 2);
 });
+
+it.each(['complete', 'truncated', 'bad-continuation'] as const)(
+  'strictly verifies UTF-8 %s across a validation segment boundary', async (fault) => {
+    const value = await host();
+    const original = blob('x'.repeat(16 * 1024 - 1) + '😀');
+    const data = fault === 'truncated' ? original.data.slice(0, -1) : original.data.slice();
+    if (fault === 'bad-continuation') data[16 * 1024] = 0x41;
+    const descriptor = { ...original.descriptor, byteLength: BigInt(data.byteLength),
+      sha256: new Uint8Array(createHash('sha256').update(data).digest()) };
+    const transfer = await prepareBlobTransfer({ database: value, blobs: [descriptor], attemptSeed: 7, seed: fault });
+    await value.blobStaging.commitBlobOfferAndMissingSet({ blobs: [descriptor], transferId: transfer.transferId });
+    await value.blobStaging.writeBlobChunk({ ...transfer, data, offset: 0n, sha256: descriptor.sha256 });
+    const verify = value.blobStaging.verifyAndMarkBlobAvailable(transfer.transferId, transfer.attemptId, descriptor.sha256);
+    if (fault === 'complete') {
+      expect(await verify).toBe('available');
+      expect(value.sqlite.prepare('SELECT data FROM framed_sync_available_blobs').pluck().get()).toEqual(Buffer.from(data));
+    } else {
+      await expect(verify).rejects.toThrow();
+      expect(value.sqlite.prepare('SELECT count(*) FROM framed_sync_available_blobs').pluck().get()).toBe(0);
+      expect(value.sqlite.prepare('SELECT count(*) FROM framed_sync_blob_pins').pluck().get()).toBe(0);
+    }
+  });

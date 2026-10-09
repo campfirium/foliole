@@ -9,6 +9,15 @@ import {
 } from './topicCollectionsFrontmatter.js';
 
 describe('topic collections frontmatter', () => {
+  it('reads and updates BOM frontmatter without changing its prefix or complete body', () => {
+    const content = '\ufeff---\r\nauthor: Ada\r\ncollections:\r\n  - "Guide"\r\n---\r\nComplete article 中😀\r\n';
+    expect(readTopicCollections(content)).toEqual(['Guide']);
+    const updated = addTopicCollection(content, 'Next');
+    expect(readTopicCollections(updated)).toEqual(['Guide', 'Next']);
+    expect(updated).toBe(content.replace('  - "Guide"', '  - "Guide"\r\n  - "Next"'));
+    expect(removeTopicCollection(updated, 'Next')).toBe(content);
+  });
+
   it('creates, merges, removes and replaces collections without changing other content', () => {
     const created = addTopicCollection('Body', '英国公司注册流程');
     expect(created).toBe('---\ncollections:\n  - "英国公司注册流程"\n---\nBody');

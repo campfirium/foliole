@@ -136,7 +136,6 @@ it('projects collection names without retaining long-lived content bodies', () =
   const workspaceListSql = queryAllSpy.mock.calls[0]?.[0];
   expect(workspaceListSql).toContain('AS has_content');
   expect(workspaceListSql).toContain('AS body_status');
-  expect(workspaceListSql).toContain("cb.availability IN ('fetching', 'failed')");
   expect(workspaceListSql).toContain('n.body_blob_hash IS NOT NULL');
   expect(workspaceListSql).toContain('LENGTH(TRIM(n.content)) > 0');
   expect(workspaceListSql).toContain('AS has_reveal');

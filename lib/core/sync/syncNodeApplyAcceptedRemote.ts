@@ -19,6 +19,7 @@ import { hashTextBodyContent } from './syncNodeTextBodyBlobs.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
 import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
 import { validateTopicTextBodies } from './topicTextBodies.js';
+import { textAlternativesSchema } from './topicTextState.js';
 
 export interface AcceptedRemoteNodeResult {
   appliedIds: string[];
@@ -31,17 +32,22 @@ export interface AcceptedRemoteNodeOptions {
 }
 
 async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
-  const statement = buildRemoteNodeVersionUpsert(record);
-  if (!statement) return;
-  const [existing] = await port.query<DbRow>('SELECT * FROM node_sync_versions WHERE version_id = ?', [record.version_id]);
+  assertSyncNodeTextWithinBudget(record.snapshot);
+  if (!record.version_id || !record.host_name || !record.version_created_at) return;
+  const incomingBody = record.body_text ?? record.snapshot.content ?? null;
+  const [existing] = await port.query<DbRow>(`SELECT object_id, content_hash, host_name, created_at,
+    body_text IS NOT NULL AS has_body,
+    body_text IS NOT NULL AND ? IS NOT NULL AND body_text IS NOT ? AS body_mismatch
+    FROM node_sync_versions WHERE version_id = ?`, [incomingBody, incomingBody, record.version_id]);
   if (existing) {
-    const incomingBody = record.body_text ?? record.snapshot.content;
+    if (record.body_text !== null) validateTopicTextBodies(
+      textAlternativesSchema.parse(record.snapshot.text_alternatives ?? []), record.alternative_bodies ?? []);
     if (existing.object_id !== record.object_id || existing.content_hash !== record.content_hash ||
         existing.host_name !== record.host_name || existing.created_at !== record.version_created_at ||
-        (existing.body_text !== null && incomingBody !== null && existing.body_text !== incomingBody)) {
+        Number(existing.body_mismatch) !== 0) {
       throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
     }
-    if (existing.body_text === null && hasCompleteTombstoneVersion(record)) {
+    if (Number(existing.has_body) === 0 && hasCompleteTombstoneVersion(record)) {
       const body = record.body_text!;
       const bodyHash = await hashTextBodyContent(body, {});
       const alternatives = validateTopicTextBodies(record.snapshot.text_alternatives ?? [], record.alternative_bodies ?? []);
@@ -54,6 +60,7 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
     }
     return;
   }
+  const statement = buildRemoteNodeVersionUpsert(record)!;
   await port.run(statement.sql, statement.params);
   const parentIds = record.parent_version_ids
     ?? (record.parent_version_id ? [record.parent_version_id] : []);

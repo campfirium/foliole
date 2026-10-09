@@ -1,11 +1,14 @@
 // @vitest-environment node
+import { createHash } from 'node:crypto';
 import http from 'node:http';
 
 import { expect, it } from 'vitest';
 
 import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.js';
+import { encodeFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
 import { desktopFramedSyncPreparedBatchItem } from './desktopFramedSyncPreparedBatchItem.js';
 import { loadDesktopFramedSyncPreparedTransferBody } from './desktopFramedSyncPreparedTransferBody.js';
+import { prepareDesktopFramedSyncPublishedDelivery } from './desktopFramedSyncProcessOutbound.js';
 import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
 import { sendDesktopFramedSyncPublishedBatch } from './desktopFramedSyncPublishedBatch.js';
 import { sendDesktopFramedSyncRoundBatch } from './desktopFramedSyncRoundBatch.js';
@@ -80,3 +83,44 @@ async function preparedItems(a: Awaited<ReturnType<typeof verifiedReceiverFixtur
     return item;
   });
 }
+
+it('keeps a signed delivery readable while another path acknowledges and clears its SQL frames', async () => {
+  const a = await verifiedReceiverFixture('Complete concurrent delivery 😀', 'pending-receipt');
+  const groupSecret = Buffer.from(a.groupKey).toString('base64url');
+  let checked = false;
+  const server = http.createServer((request, response) => {
+    void handleCompanionLanFramedSyncPost({ request, response,
+      authenticate: () => ({ ok: true, device_id: 'sender', device_name: 'Sender', group_id: 'group' }),
+      localIdentity: { deviceId: 'receiver', libraryEpoch: 'receiver-epoch' },
+      onStream: async ({ stream }) => {
+        const reply = await receiveDesktopFramedSyncTransfer({ stream, context: a.context,
+          db: a.receiver.db, staging: a.receiver.staging, groupKey: a.groupKey });
+        const receipt = await a.receiver.staging.loadReceipt(a.publication.transferId);
+        if (!receipt) throw new Error('test_receipt_missing');
+        await a.staging.commitOutboundReceipt(receipt);
+        await a.staging.releaseOutboundHolds(a.publication.transferId);
+        const replay = await prepareDesktopFramedSyncPublishedDelivery({ db: a.sender.db,
+          staging: a.staging, publication: a.publication, groupSecret });
+        try {
+          const hash = createHash('sha256');
+          for await (const chunk of encodeFramedSyncHttpBody(replay.body)) hash.update(chunk);
+          expect(hash.digest('hex')).toBe(replay.body.bodySha256);
+          checked = true;
+        } finally { await replay.body.dispose?.(); }
+        return reply;
+      } });
+  });
+  try {
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('test_server_address_missing');
+    await sendDesktopFramedSyncRoundBatch({ db: a.sender.db, staging: a.staging,
+      groupSecret, peerOrigin: `http://127.0.0.1:${address.port}` }, [a.publication]);
+    expect(checked).toBe(true);
+    expect(a.receiver.sqlite.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get('pending-receipt'))
+      .toBe('Complete concurrent delivery 😀');
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    a.close();
+  }
+});

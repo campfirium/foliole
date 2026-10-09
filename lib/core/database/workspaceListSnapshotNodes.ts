@@ -7,6 +7,7 @@ import { buildWorkspaceSnapshotNode, type WorkspaceNodeSnapshot } from './worksp
 
 export interface WorkspaceNodeRow extends DatabaseRow {
   id: string;
+  current_version_id?: string | null;
   parent_id: string | null;
   kind: string | null;
   priority: number | null;

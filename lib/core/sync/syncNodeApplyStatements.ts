@@ -154,7 +154,7 @@ export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): Sync
       record.content_hash ?? '',
       record.body_text === null && record.snapshot.content === null
         ? null : record.body_text ?? record.snapshot.content ?? '',
-      serializeTopicTextSnapshot({ ...record, snapshot: { ...record.snapshot,
+      serializeTopicTextSnapshot({ ...record, snapshot: { ...record.snapshot, content: null,
         body_blob_hash: record.snapshot.body_blob_hash ??
           (record.body_text !== null ? hashTextBody(record.body_text ?? record.snapshot.content ?? '') : null) } })
     ],

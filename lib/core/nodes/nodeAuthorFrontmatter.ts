@@ -8,7 +8,7 @@ function normalizeAuthorValue(value: string) {
 }
 
 function readFrontmatterLines(content: string) {
-  const lines = content.split('\n');
+  const lines = content.split(/\r?\n/);
   if (lines.length < 3 || !FRONTMATTER_DELIMITER_PATTERN.test(lines[0] ?? '')) {
     return [];
   }

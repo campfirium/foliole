@@ -5,6 +5,7 @@ import type { FramedSyncContext } from '../../lib/core/sync/framedSyncContract.j
 import { deriveTransferFrameKey } from '../../lib/core/sync/framedSyncCrypto.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
+import { retireDesktopFramedSyncBodyFrame } from '../database/desktopFramedSyncBodyFrameRetirement.js';
 import { retireDesktopFramedSyncResourceFrame } from '../database/desktopFramedSyncResourceFrameRetirement.js';
 
 import { authenticatedDesktopFramedSyncTransferFrames, type AuthenticatedTransferFrame } from './desktopFramedSyncAuthenticatedTransferFrames.js';
@@ -51,7 +52,34 @@ export async function receiveVerifiedDesktopFramedSyncTransfer(input: ReceiverIn
   }
 }
 
-async function handleVerifiedFrame(input: FrameInput) {
+function handleVerifiedFrame(input: FrameInput) {
+  if (input.event.decoded.payloadCase === 'transfer_trailer') return handleVerifiedTrailer(input);
+  return input.db.transaction(async () => {
+    const receipt = await input.staging.loadReceipt(input.event.published.transferId);
+    if (receipt) {
+      input.state.existingReceipt = receipt;
+      input.state.ready = null;
+    }
+    return handleVerifiedFrameOwned(input);
+  });
+}
+
+async function handleVerifiedTrailer(input: FrameInput) {
+  assertDesktopFramedSyncFactFragmentsComplete(input.state);
+  await input.db.transaction(async () => {
+    const receipt = await input.staging.loadReceipt(input.event.published.transferId);
+    if (receipt) input.state.existingReceipt = receipt;
+    else if (!input.state.ready) await finishVerifiedTransfer(input);
+  });
+  if (input.state.existingReceipt) {
+    await replayDesktopFramedSyncOrderBody({ ...input, facts: input.state.facts,
+      published: input.event.published, receipt: input.state.existingReceipt, trailer: input.event.decoded.payload });
+    return { ...await buildReceiptStream({ ...input, receipt: input.state.existingReceipt }), generatedChanges: false };
+  }
+  return applyReady(input);
+}
+
+async function handleVerifiedFrameOwned(input: FrameInput) {
   const { decoded, frame, published } = input.event;
   const { state } = input;
   if (decoded.payloadCase !== 'fact_fragment') assertDesktopFramedSyncFactFragmentsComplete(state);
@@ -59,11 +87,7 @@ async function handleVerifiedFrame(input: FrameInput) {
     input.acceptHeader?.(headerFromWire(decoded.payload, published));
     await state.admit({ db: input.db, event: input.event, staging: input.staging });
   } else if (state.ready) {
-    if (decoded.payloadCase === 'transfer_trailer') return applyReady(input);
-  } else if (state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
-    await replayDesktopFramedSyncOrderBody({ db: input.db, facts: state.facts, published,
-      receipt: state.existingReceipt, trailer: decoded.payload });
-    return { ...await buildReceiptStream({ ...input, receipt: state.existingReceipt }), generatedChanges: false };
+    return null;
   } else if (decoded.payloadCase === 'fact_fragment') {
     await stageDesktopFramedSyncFactFragment({ db: input.db, event: input.event, staging: input.staging, state });
   } else if (decoded.payloadCase === 'fact') {
@@ -78,6 +102,7 @@ async function handleVerifiedFrame(input: FrameInput) {
     const data = decoded.payload.data as Uint8Array;
     if (state.bodies.has(bytesToHex(sha256))) {
       await stageDesktopFramedSyncBlob({ data, frame, offset, sha256, staging: input.staging });
+      await retireDesktopFramedSyncBodyFrame({ db: input.db, frame, chunk: { data, offset, sha256 } });
     } else {
       if (!state.resources?.has(sha256)) throw new Error('framed_sync_blob_content_set_mismatch');
       await state.resources.append(sha256, offset, data);
@@ -86,9 +111,6 @@ async function handleVerifiedFrame(input: FrameInput) {
         await retireDesktopFramedSyncResourceFrame({ db: input.db, frame, chunk: { sha256, offset, data } });
       });
     }
-  } else if (!state.existingReceipt && decoded.payloadCase === 'transfer_trailer') {
-    await finishVerifiedTransfer(input);
-    return applyReady(input);
   }
   return null;
 }
@@ -115,9 +137,13 @@ async function finishVerifiedTransfer(input: FrameInput) {
 }
 
 async function applyReady(input: FrameInput) {
-  const source = input.state.ready;
-  if (!source) throw new Error('framed_sync_ready_transfer_missing');
-  const applied = await applyVerifiedDesktopFramedSyncInbound({ db: input.db, transfers: [source] });
+  const applied = await input.db.transaction(async () => {
+    const receipt = await input.staging.loadReceipt(input.event.published.transferId);
+    if (receipt) return { generatedChanges: false, receipts: [receipt] };
+    const source = await loadDesktopFramedSyncReadySource(input.db, input.event.published);
+    if (!source) throw new Error('framed_sync_ready_transfer_missing');
+    return applyVerifiedDesktopFramedSyncInbound({ db: input.db, transfers: [source] });
+  });
   const receipt = applied.receipts[0];
   if (!receipt) throw new Error('framed_sync_ready_receipt_missing');
   input.state.existingReceipt = receipt;

@@ -20,7 +20,7 @@ it('interrupts an unfinished delivery discovered by the ordinary inventory round
     await adapter.stageUntilRestartBoundary({ fixture, itemCount: 4 });
     const pending = readProductionBenchmarkDatabase(fixture.rightSnapshot.databasePath);
     expect(pending.appliedItems).toBe(0);
-    expect(pending.stagingRows.framed_sync_inbound_facts).toBeGreaterThan(0);
+    expect(pending.stagingRows.framed_sync_inbound_frames).toBeGreaterThan(0);
     expect(pending.stagingRows.framed_sync_receipts).toBe(0);
     expect(pending.readyTransferIds.length).toBeGreaterThan(0);
   } finally {
