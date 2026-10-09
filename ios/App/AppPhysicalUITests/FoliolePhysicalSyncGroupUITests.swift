@@ -202,7 +202,11 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
 
     func testPullsRequestedFactWithSyncNow() throws {
         let app = acceptanceApplication()
-        app.launch()
+        if ProcessInfo.processInfo.environment["FOLIOLE_ATTACH_TO_RUNNING_APP"] == "1" {
+            app.activate()
+        } else {
+            app.launch()
+        }
         openBrowse(in: app)
         openSyncSettings(in: app)
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
