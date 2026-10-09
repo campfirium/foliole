@@ -1,6 +1,7 @@
 import { FRAMED_SYNC_BATCH_LIMITS } from '../../../../../../lib/core/sync/framedSyncBatchLimits.js';
 import { FRAMED_SYNC_LIMITS } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { revalidateFramedSyncInventorySource, type FramedSyncInventoryDifference } from '../../../../../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncMissingDependency } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import type { NativeCompanionFramedSyncInventoryRequest, NativeCompanionFramedSyncTransferBatchRequest,
   NativeCompanionFramedSyncTransferReceipt } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
@@ -39,8 +40,7 @@ export function createCompanionFramedSyncDifferenceBatchDelivery(args: NativeCom
     }
     if (!selected.length) return 'deferred';
     const outcomes = selected.length === 1
-      ? [{ kind: 'committed' as const, object_id: selected[0]!.input.object_id,
-        object_type: selected[0]!.input.object_type, receipt: await sendIndividual(args, selected[0]!.input) }]
+      ? [await sendSingleOutcome(args, selected[0]!.input)]
       : await sendCompanionFramedSyncObjects({ ...args, transfers: selected.map(item => item.input) });
     let currentError: string | undefined;
     for (const [offset, outcome] of outcomes.entries()) {
@@ -65,6 +65,17 @@ async function selectCurrent(difference: FramedSyncInventoryDifference): Promise
   return { include_current_node: difference.need.sharedState || !!difference.need.frontierFactIds.length || !!difference.need.resourceHashes.length,
     object_id: difference.globalId, object_type: difference.objectType, required_relation_ids: difference.need.requiredRelationIds,
     review_fact_ids: difference.need.reviewFactIds, state_fact_ids: difference.need.stateFactIds ?? [] };
+}
+
+async function sendSingleOutcome(args: NativeCompanionFramedSyncInventoryRequest, input: Selected) {
+  try {
+    return { kind: 'committed' as const, object_id: input.object_id, object_type: input.object_type,
+      receipt: await sendIndividual(args, input) };
+  } catch (error) {
+    if (!readFramedSyncMissingDependency(error)) throw error;
+    return { kind: 'deferred' as const, object_id: input.object_id, object_type: input.object_type,
+      error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 function sendIndividual(args: NativeCompanionFramedSyncInventoryRequest, input: Selected) {

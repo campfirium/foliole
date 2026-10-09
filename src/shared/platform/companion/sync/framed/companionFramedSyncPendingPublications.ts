@@ -3,6 +3,7 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { retireFramedSyncCompletedPublication } from '../../../../../../lib/core/sync/framedSyncCompletedPublication.js';
 import type { FramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncMissingDependency } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { createFramedSyncOutboundReceiptStaging } from '../../../../../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
 import { reconcileFramedSyncPublication } from '../../../../../../lib/core/sync/framedSyncPublicationReconciliation.js';
 import { completeFramedSyncRecoveredPublication, selectFramedSyncRecoveryPublication } from '../../../../../../lib/core/sync/framedSyncPublicationRecoverySelection.js';
@@ -15,7 +16,7 @@ import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeReposito
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
 import { readCompanionFramedSyncInventoryEntry } from './companionFramedSyncInventory.js';
-import { decodeCompanionInventoryEntry } from './companionFramedSyncInventoryRound.js';
+import { decodeCompanionInventoryEntry } from './companionFramedSyncInventoryEntryDecode.js';
 import { sendCompanionFramedSyncObject } from './companionFramedSyncTransfer.js';
 
 export function readCompanionFramedSyncPendingPublications(
@@ -72,10 +73,8 @@ export async function resumeCompanionFramedSyncPendingPublications(
       const recovery = await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
         selectFramedSyncRecoveryPublication(db, hexToBytes(publication.transfer_id), remote)));
       const recoveryId = bytesToHex(recovery.transferId);
-      const receipt = await sendWithRequiredParentOrderBodies(() => FolioleCompanionSync.sendFramedSyncTransfer({ ...args,
-        include_current_node: false, object_id: publication.object_id, object_type: publication.object_type,
-        required_relation_ids: [], review_fact_ids: [], state_fact_ids: [],
-        transfer_id: recoveryId }), (versionId) => supplyOrderBody(args, versionId));
+      const receipt = await sendRecovery(args, publication, recoveryId);
+      if (!receipt) continue;
       if (receipt.transfer_id !== recoveryId ||
           receipt.receiver_device_id !== args.receiver_device_id ||
           receipt.receiver_library_epoch !== args.receiver_library_epoch) {
@@ -90,6 +89,19 @@ export async function resumeCompanionFramedSyncPendingPublications(
     }
   }
   return pending.length;
+}
+
+async function sendRecovery(args: NativeCompanionFramedSyncInventoryRequest,
+  publication: { object_id: string; object_type: string }, transferId: string) {
+  try {
+    return await sendWithRequiredParentOrderBodies(() => FolioleCompanionSync.sendFramedSyncTransfer({ ...args,
+      include_current_node: false, object_id: publication.object_id, object_type: publication.object_type,
+      required_relation_ids: [], review_fact_ids: [], state_fact_ids: [], transfer_id: transferId }),
+    versionId => supplyOrderBody(args, versionId));
+  } catch (error) {
+    if (readFramedSyncMissingDependency(error)) return null;
+    throw error;
+  }
 }
 
 async function supplyOrderBody(args: NativeCompanionFramedSyncInventoryRequest, versionId: string) {

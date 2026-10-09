@@ -1,5 +1,6 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
 
+import { compareFramedSyncDatabaseInventories } from '../../../../../../lib/core/sync/framedSyncDatabaseDifference.js';
 import {
   compareFramedSyncInventories,
   type FramedSyncDeferredObject,
@@ -113,22 +114,67 @@ export async function sendCompanionFramedSyncInventoryDifferences(
       owner.read((db) => readCompanionFramedSyncInventory(db)), readCompanionRemoteFramedSyncInventory(args)
     ]);
   }
-  const local = localValue.entries.map(decodeCompanionInventoryEntry);
-  const selection = selectCompanionFramedSyncCurrentNodes({ local, remote: remoteResult.entries });
-  const deferredObjects = [...selection.deferredObjects];
-  const dependencies = framedSyncOrderBodyDependencies({ local, remote: remoteResult.entries });
-  const pulled = await pullInventoryDifferences(args, selection.pullable, remoteResult.roundId,
-    dependencies.filter((difference) => difference.direction === 'remote_to_local'));
-  deferredObjects.push(...pulled.deferredObjects);
+  const result = await reconcileDatabaseRounds(args, { localValue, remoteResult });
+  const nodes = inventoryNodeIds(result.inventory.localValue.entries, result.inventory.remoteResult.entries);
+  const resources = await runCompanionFramedSyncResourceRound(args, result.inventory.remoteResult.roundId, nodes);
+  return { deferredObjects: result.deferredObjects, received: result.received, sent: result.sent, resources };
+}
+
+type RoundInventory = {
+  localValue: Awaited<ReturnType<typeof readCompanionFramedSyncInventory>>;
+  remoteResult: Awaited<ReturnType<typeof readCompanionRemoteFramedSyncInventory>>;
+};
+
+async function captureInventory(args: NativeCompanionFramedSyncInventoryRequest): Promise<RoundInventory> {
+  const [localValue, remoteResult] = await Promise.all([
+    getIosCompanionDatabaseOwner().read(readCompanionFramedSyncInventory),
+    readCompanionRemoteFramedSyncInventory(args)
+  ]);
+  return { localValue, remoteResult };
+}
+
+function decodedInventory(inventory: RoundInventory) {
+  return { local: inventory.localValue.entries.map(decodeCompanionInventoryEntry),
+    remote: inventory.remoteResult.entries };
+}
+
+async function reconcileDatabaseRounds(args: NativeCompanionFramedSyncInventoryRequest, initial: RoundInventory) {
+  let inventory = initial;
+  const received: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
+  const sent: typeof received = [];
+  for (;;) {
+    const before = decodedInventory(inventory);
+    const selection = selectCompanionFramedSyncCurrentNodes(before);
+    if (!selection.pullable.length && !selection.sendable.length) {
+      return { inventory, received, sent, deferredObjects: [] };
+    }
+    const round = await transferDatabaseRound(args, inventory.remoteResult.roundId, before, selection);
+    received.push(...round.received);
+    sent.push(...round.sent);
+    inventory = await captureInventory(args);
+    const after = decodedInventory(inventory);
+    const changed = compareFramedSyncDatabaseInventories({ local: before.local, remote: after.local }).length > 0 ||
+      compareFramedSyncDatabaseInventories({ local: before.remote, remote: after.remote }).length > 0;
+    if (!changed) {
+      const remaining = compareFramedSyncDatabaseInventories(after);
+      const deferred = new Map([...round.deferredObjects, ...remaining]
+        .map(({ globalId, objectType }) => [`${objectType}\0${globalId}`, { globalId, objectType }]));
+      return { inventory, received, sent, deferredObjects: [...deferred.values()] };
+    }
+  }
+}
+
+async function transferDatabaseRound(args: NativeCompanionFramedSyncInventoryRequest, roundId: Uint8Array,
+  inventory: ReturnType<typeof decodedInventory>, selection: ReturnType<typeof selectCompanionFramedSyncCurrentNodes>) {
+  const dependencies = framedSyncOrderBodyDependencies(inventory);
+  const pulled = await pullInventoryDifferences(args, selection.pullable, roundId,
+    dependencies.filter(difference => difference.direction === 'remote_to_local'));
   const sent: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
   const deliver = createCompanionFramedSyncDifferenceBatchDelivery(args, selection.sendable, sent);
-  const sendDeferred = await deliverFramedSyncDifferencesInDependencyOrder(selection.sendable,
-    deliver,
-    dependencies.filter((difference) => difference.direction === 'local_to_remote'));
-  deferredObjects.push(...sendDeferred.map(({ globalId, objectType }) => ({ globalId, objectType })));
-  const nodes = inventoryNodeIds(localValue.entries, remoteResult.entries);
-  const resources = await runCompanionFramedSyncResourceRound(args, remoteResult.roundId, nodes);
-  return { deferredObjects, received: pulled.received, sent, resources };
+  const sendDeferred = await deliverFramedSyncDifferencesInDependencyOrder(selection.sendable, deliver,
+    dependencies.filter(difference => difference.direction === 'local_to_remote'));
+  return { received: pulled.received, sent, deferredObjects: [...pulled.deferredObjects,
+    ...sendDeferred.map(({ globalId, objectType }) => ({ globalId, objectType }))] };
 }
 
 function inventoryNodeIds(local: readonly NativeCompanionFramedSyncInventoryEntry[],

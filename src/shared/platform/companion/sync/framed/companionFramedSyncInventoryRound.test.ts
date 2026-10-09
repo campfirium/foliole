@@ -49,6 +49,7 @@ const entry = (id: string, state = '1', relations: string[] = []) => ({
   shared_state_hash: state.repeat(64)
 });
 
+// Transport stubs leave inventory unchanged, so committed receipts alone cannot prove convergence.
 beforeEach(() => {
   vi.resetAllMocks();
   vi.mocked(runCompanionFramedSyncResourceRound).mockResolvedValue({ pending: 0, scanned: 0, transferred: 0, unavailable: 0 });
@@ -68,7 +69,7 @@ beforeEach(() => {
 
 it('revalidates each selected current node before invoking the native sender', async () => {
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
-    deferredObjects: [{ globalId: 'node-b', objectType: 'node' }],
+    deferredObjects: [{ globalId: 'node-b', objectType: 'node' }, { globalId: 'node-a', objectType: 'node' }],
     received: [],
     sent: [{ objectId: 'node-a', receipt: { transfer_id: 'a'.repeat(64) } }]
   });
@@ -106,7 +107,7 @@ it('sends exact relation ids without redundantly including the current node', as
   mocks.remoteInventory.mockResolvedValue({ entries: [entry('node-c')], round_id: '8'.repeat(32) });
   mocks.localEntry.mockResolvedValue(entry('node-c', '1', ['relation-1']));
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
-    deferredObjects: [],
+    deferredObjects: [{ globalId: 'node-c', objectType: 'node' }],
     received: [],
     sent: [{ objectId: 'node-c', receipt: { transfer_id: 'a'.repeat(64) } }]
   });
@@ -123,7 +124,7 @@ it('pulls a remote-only Node with the same inventory round identity', async () =
   });
 
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
-    deferredObjects: [], received: [{
+    deferredObjects: [{ globalId: 'remote-node', objectType: 'node' }], received: [{
       objectId: 'remote-node', receipt: { transfer_id: 'b'.repeat(64) }
     }], sent: []
   });
@@ -153,7 +154,7 @@ it('pulls a missing parent before retrying a child that arrived first', async ()
   });
 
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
-    deferredObjects: [], received: [
+    deferredObjects: [{ globalId: 'child', objectType: 'node' }, { globalId: 'parent', objectType: 'node' }], received: [
       { objectId: 'parent', receipt: { transfer_id: 'c'.repeat(64) } },
       { objectId: 'child', receipt: { transfer_id: 'b'.repeat(64) } }
     ], sent: []
@@ -175,7 +176,7 @@ it('defers a source changed during publication and continues the inventory round
   });
 
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
-    deferredObjects: [{ globalId: 'changed', objectType: 'node' }],
+    deferredObjects: [{ globalId: 'changed', objectType: 'node' }, { globalId: 'stable', objectType: 'node' }],
     received: [{ objectId: 'stable', receipt: { transfer_id: 'b'.repeat(64) } }],
     sent: []
   });
@@ -199,7 +200,8 @@ it('defers a child when its missing parent changed during publication', async ()
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
     deferredObjects: [
       { globalId: 'parent', objectType: 'node' },
-      { globalId: 'child', objectType: 'node' }
+      { globalId: 'child', objectType: 'node' },
+      { globalId: 'stable', objectType: 'node' }
     ],
     received: [{ objectId: 'stable', receipt: { transfer_id: 'b'.repeat(64) } }],
     sent: []

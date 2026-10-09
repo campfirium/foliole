@@ -126,3 +126,12 @@ it('caps a lookahead at 128 units and sends the remaining tail on its callback',
   expect(mocks.single).toHaveBeenCalledWith(expect.objectContaining({ objectId: differences[128]!.globalId }));
   expect(mocks.batch).toHaveBeenCalledOnce();
 });
+
+it('keeps a singleton neighbor dependency failure attached to that neighbor when the requested source changed', async () => {
+  const { differences, sent, deliver } = setup();
+  mocks.entry.mockImplementation(async (_db, value) => entry(value.globalId, value.globalId === 'child' ? '3' : '1'));
+  mocks.single.mockRejectedValue(new Error('framed_sync_node_parent_missing:missing'));
+  await expect(deliverFramedSyncDifferencesInDependencyOrder(differences, deliver)).resolves.toEqual(differences);
+  expect(sent).toEqual([]);
+  expect(mocks.single.mock.calls.map(([input]) => input.objectId)).toEqual(['parent', 'parent']);
+});

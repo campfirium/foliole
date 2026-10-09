@@ -145,3 +145,17 @@ it.each(['restore', 'progress'] as const)('keeps durable outgoing work unsent du
   expect(sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all()).toEqual(before);
   expect(sqlite.prepare('SELECT member_id FROM framed_sync_outbound_holds').all()).toEqual([{ member_id: 'B' }]);
 });
+
+it.each(['authenticated_resource_hash_mismatch', 'framed_sync_publication_context_missing',
+  'fetch failed', 'untrusted framed_sync_review_node_missing:node'])(
+  'keeps %s fatal and preserves the original publication', async error => {
+    database();
+    const id = await publish();
+    const before = sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all();
+    mocks.send.mockRejectedValue(new Error(error));
+    await expect(resumeCompanionFramedSyncPendingPublications(request, [])).rejects.toThrow(error);
+    expect(sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all()).toEqual(before);
+    expect(sqlite.prepare('SELECT lower(hex(transfer_id)) AS id, member_id FROM framed_sync_outbound_holds').all())
+      .toEqual([{ id, member_id: 'B' }]);
+  }
+);
