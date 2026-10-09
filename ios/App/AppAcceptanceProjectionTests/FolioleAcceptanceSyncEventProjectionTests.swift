@@ -131,7 +131,7 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
             "trigger_reason": try required(event, "trigger_reason"),
             "status": try required(event, "status")
         ]
-        for key in ["result", "started_at", "occurred_at"] where event[key] != nil {
+        for key in ["result", "message", "summary", "started_at", "occurred_at"] where event[key] != nil {
             value[key] = event[key]
         }
         XCTAssertTrue(value["started_at"] != nil || value["occurred_at"] != nil)
