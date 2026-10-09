@@ -65,9 +65,15 @@ export async function applyVerifiedCompanionBatchInTransaction(db: DbPort,
 function readyBodyLoader(input: CompanionFramedSyncApplyInput): FramedBodyLoader {
   const tables = STAGING_TABLES[input.stagingKind];
   return async (db, descriptor) => {
-    const [row] = await db.query<{ data: Uint8Array; byte_length: number }>(
-      `SELECT data, byte_length FROM ${tables.alias}.${tables.prefix}_available_blobs WHERE sha256 = ?`, [descriptor.sha256]);
+    const [row] = await db.query<{ data: Uint8Array | null; byte_length: number;
+      data_type: string; actual_byte_length: number | null }>(
+      `SELECT data, byte_length, typeof(data) AS data_type, length(data) AS actual_byte_length
+       FROM ${tables.alias}.${tables.prefix}_available_blobs WHERE sha256 = ?`, [descriptor.sha256]);
     if (!row || BigInt(row.byte_length) !== descriptor.byteLength) throw new Error('framed_sync_published_body_unavailable');
-    return validateFramedSyncFrozenBody(descriptor, row.data);
+    // iOS SQLite returns null for a genuine zero-length BLOB pointer.
+    const data = row.data === null && descriptor.byteLength === 0n &&
+      row.data_type === 'blob' && row.actual_byte_length === 0 ? new Uint8Array() : row.data;
+    if (data === null) throw new Error('framed_sync_published_body_unavailable');
+    return validateFramedSyncFrozenBody(descriptor, data);
   };
 }
