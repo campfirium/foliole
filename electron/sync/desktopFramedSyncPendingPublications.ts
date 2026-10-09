@@ -3,6 +3,7 @@ import type { DbRow } from '../../lib/core/sync/dbPort.js';
 import { retireFramedSyncCompletedPublication } from '../../lib/core/sync/framedSyncCompletedPublication.js';
 import type { FramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventory.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { readFramedSyncMissingDependency } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { reconcileFramedSyncPublication } from '../../lib/core/sync/framedSyncPublicationReconciliation.js';
 import { completeFramedSyncRecoveredPublication, selectFramedSyncRecoveryPublication } from '../../lib/core/sync/framedSyncPublicationRecoverySelection.js';
 import { sendWithRequiredParentOrderBodies } from '../../lib/core/sync/parentOrderBodyDelivery.js';
@@ -54,12 +55,17 @@ export async function resumeDesktopFramedSyncPendingPublications(input: Endpoint
     }
     const publication = await selectFramedSyncRecoveryPublication(input.db, transferId, remoteInventory);
     if (!publication) throw new Error('framed_sync_outbound_publication_missing');
-    await sendWithRequiredParentOrderBodies(
-      async () => {
-        const delivery = await prepareDesktopFramedSyncPublishedDelivery({ ...input, publication });
-        await sendDesktopFramedSyncPublishedTransfer({ ...input, ...delivery, publication });
-      },
-      (versionId) => supplyOrderBody(input, versionId));
+    try {
+      await sendWithRequiredParentOrderBodies(
+        async () => {
+          const delivery = await prepareDesktopFramedSyncPublishedDelivery({ ...input, publication });
+          await sendDesktopFramedSyncPublishedTransfer({ ...input, ...delivery, publication });
+        },
+        (versionId) => supplyOrderBody(input, versionId));
+    } catch (error) {
+      if (readFramedSyncMissingDependency(error)) continue;
+      throw error;
+    }
     await completeFramedSyncRecoveredPublication(input.db, transferId, publication.transferId);
     await retireFramedSyncCompletedPublication(input.db, publication.transferId);
     await collectDeliveredParentOrderBodies(input.db, transferId);

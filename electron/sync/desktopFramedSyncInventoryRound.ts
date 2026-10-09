@@ -1,7 +1,7 @@
 import {
   FRAMED_SYNC_PROTOCOL_VERSION
 } from '../../lib/core/sync/framedSyncContract.js';
-import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
+import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { compareSyncIdentityText } from '../../lib/core/sync/syncIdentityKeyOrder.js';
 
@@ -56,15 +56,41 @@ export async function runDesktopFramedSyncInventoryRound(args: {
       exchange
     });
   }
-  const differences = compareFramedSyncInventories(inventories);
   const endpoint = createDesktopFramedSyncRoundEndpoint({
     db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
     local, peer: remote, peerOrigin: args.peer.endpoint_url, staging: runtime.staging
   });
-  const database = await transferDifferences(differences, endpoint, inbound, framedSyncOrderBodyDependencies(inventories));
-  const resources = await runDesktopFramedSyncResourceRound(inbound, resourceScope(inventories));
+  const { database, inventories: confirmed } = await reconcileDatabaseRounds(exchange, inventories, endpoint, inbound);
+  const resources = await runDesktopFramedSyncResourceRound(
+    { ...inbound, roundId: confirmed.roundId }, resourceScope(confirmed));
   return { ...database, databaseComplete: database.complete, resources,
     complete: database.complete && resources.pending === 0 };
+}
+
+async function reconcileDatabaseRounds(
+  exchange: Parameters<typeof exchangeDesktopFramedSyncInventoryHttp>[0],
+  initial: Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>>,
+  endpoint: ReturnType<typeof createDesktopFramedSyncRoundEndpoint>,
+  inbound: InboundRound
+) {
+  let inventories = initial;
+  let transferred = 0;
+  for (;;) {
+    const differences = compareFramedSyncDatabaseInventories(inventories);
+    if (!differences.length) return { database: { complete: true, pending: 0, transferred }, inventories };
+    const result = await transferDifferences(differences, endpoint,
+      { ...inbound, roundId: inventories.roundId }, framedSyncOrderBodyDependencies(inventories));
+    transferred += result.transferred;
+    const next = await exchangeDesktopFramedSyncInventoryHttp(exchange);
+    const changed = compareFramedSyncDatabaseInventories({ local: inventories.local, remote: next.local }).length > 0
+      || compareFramedSyncDatabaseInventories({ local: inventories.remote, remote: next.remote }).length > 0;
+    inventories = next;
+    if (!changed) {
+      const remaining = compareFramedSyncDatabaseInventories(inventories);
+      return { database: { complete: remaining.length === 0 && result.complete,
+        pending: Math.max(remaining.length, result.pending), transferred }, inventories };
+    }
+  }
 }
 
 function* resourceScope(inventories: Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>>) {
@@ -82,7 +108,7 @@ function* resourceScope(inventories: Awaited<ReturnType<typeof exchangeDesktopFr
 }
 
 async function transferDifferences(
-  differences: ReturnType<typeof compareFramedSyncInventories>,
+  differences: ReturnType<typeof compareFramedSyncDatabaseInventories>,
   endpoint: ReturnType<typeof createDesktopFramedSyncRoundEndpoint>,
   inbound: InboundRound,
   dependencies: ReturnType<typeof framedSyncOrderBodyDependencies>

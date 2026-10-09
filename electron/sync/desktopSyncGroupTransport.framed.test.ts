@@ -2,15 +2,14 @@ import { beforeEach, expect, it, vi } from 'vitest';
 
 const runtime = vi.hoisted(() => ({
   exchangeMemberState: vi.fn(), framedRound: vi.fn(),
-  pendingConflicts: vi.fn(), reconcileBodies: vi.fn()
+  pendingConflicts: vi.fn()
 }));
 vi.mock('../database/connection.js', () => ({
   openDatabaseConnection: () => ({ driver: {} }),
   runWithDatabaseConnectionOwner: async (task: () => unknown) => task()
 }));
-vi.mock('../database/syncBodyProjectionReconcile.js', () => ({
-  reconcileVersionedInlineBodies: runtime.reconcileBodies
-}));
+vi.mock('../database/betterSqliteDbPort.js', () => ({ createBetterSqliteDbPort: () => ({}) }));
+vi.mock('../../lib/core/sync/syncGroupLocalAdoption.js', () => ({ loadSyncGroupLocalAdoption: async () => null }));
 vi.mock('../database/syncGroupStore.js', () => ({ loadDesktopSyncGroup: vi.fn() }));
 vi.mock('../database/watchedFolderConflictDecisions.js', () => ({
   loadPendingWatchedFolderConflicts: runtime.pendingConflicts
@@ -53,7 +52,6 @@ it('routes a normal compatible peer through the framed inventory round', async (
     localLibraryEpoch: 'epoch-a', peer, remoteLibraryEpoch: 'epoch-b'
   });
   expect(runtime.exchangeMemberState).toHaveBeenCalledTimes(2);
-  expect(runtime.reconcileBodies).toHaveBeenCalledOnce();
 });
 
 it('does not start the framed round while a watched conflict is pending', async () => {
