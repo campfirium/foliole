@@ -70,6 +70,7 @@ test('PDF top bars @pdf float, protect navigation, restore space, and remember t
   await expect(navigation).toHaveAttribute('data-visible', 'true');
   expect(await scroll.evaluate((element) => element.clientHeight)).toBe(floatingHeight);
   await screenshot(page, 'revealed');
+  await transferToPdfToolbar(page);
   await protectNavigationMenu(page);
   await verifyFixedSideControls(page);
   await revealToolbar(page);
@@ -132,4 +133,30 @@ async function verifyFixedSideControls(page: Page) {
   await expect(page.getByTestId('pdf-window-top-bar')).toHaveAttribute('data-visible', 'true');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+}
+
+async function transferToPdfToolbar(page: Page) {
+  const title = page.getByTestId('pdf-window-top-bar');
+  const navigation = page.getByTestId('pdf-document-top-bar');
+  const toolbar = page.getByTestId('pdf-document-toolbar');
+  const gap = page.getByTestId('pdf-toolbar-transfer-zone');
+  const originalTop = await toolbar.evaluate((element) => element.getBoundingClientRect().top);
+  await navigation.hover();
+  await gap.hover();
+  await page.waitForTimeout(1000);
+  await expect(title).toHaveAttribute('data-visible', 'true');
+  await page.getByRole('button', { name: /Set zoom level|设置缩放级别/ }).hover();
+  await page.waitForTimeout(3300);
+  await expect(title).toHaveAttribute('data-visible', 'true');
+  await expect(navigation).toHaveAttribute('data-visible', 'true');
+  await expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
+  expect(await toolbar.evaluate((element) => element.getBoundingClientRect().top)).toBe(originalTop);
+  const divider = await title.evaluate((element) => {
+    const style = getComputedStyle(element, '::after');
+    return { content: style.content, height: style.height, opacity: Number(style.opacity) };
+  });
+  expect(divider.content).toBe('""');
+  expect(divider.height).toBe('1px');
+  expect(divider.opacity).toBeGreaterThan(0);
+  await screenshot(page, 'linked-toolbar');
 }

@@ -24,3 +24,19 @@
 .workspace-responsive-shell[data-pdf-top-bars-floating='true'] .workspace-floating-sidebar {
   top: var(--workspace-top-toolbar-height);
 }
+
+.pdf-floating-window-title::after {
+  background: color-mix(
+    in oklab,
+    var(--workspace-region-titlebar-document-bg) var(--workspace-divider-subtle-surface-weight),
+    var(--workspace-region-titlebar-document-divider-mix-target, var(--workspace-divider-mix-target))
+  );
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 1px;
+  pointer-events: none;
+  opacity: var(--workspace-divider-opacity);
+  z-index: var(--z-local-feedback);
+}

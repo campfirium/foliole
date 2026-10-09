@@ -15,6 +15,8 @@ const StateContext = createContext<{
   setTitleHost: (host: HTMLDivElement | null) => void;
   floating: boolean;
   visible: boolean;
+  groupActive: boolean;
+  setToolbarVisible: (visible: boolean | null) => void;
   revealHovered: boolean;
   setRevealHovered: (hovered: boolean) => void;
   setActivity: (id: string, active: boolean) => void;
@@ -23,6 +25,8 @@ const StateContext = createContext<{
   setTitleHost: () => {},
   floating: false,
   visible: true,
+  groupActive: false,
+  setToolbarVisible: () => {},
   revealHovered: false,
   setRevealHovered: () => {},
   setActivity: () => {}
@@ -48,6 +52,7 @@ function useVisibility(surface: Surface | null, protectedDisplay: boolean, suspe
 }
 
 export function PdfTopBarsProvider(props: { children: ReactNode; suspended: boolean }) {
+  const [toolbarVisible, setToolbarVisible] = useState<boolean | null>(null);
   const [titleHost, setTitleHost] = useState<HTMLDivElement | null>(null);
   const [revealHovered, setRevealHovered] = useState(false);
   const [surface, setSurface] = useState<Surface | null>(null);
@@ -65,10 +70,12 @@ export function PdfTopBarsProvider(props: { children: ReactNode; suspended: bool
       return next;
     });
   }, []);
-  const visibility = useVisibility(surface, activities.size > 0 || revealHovered, props.suspended);
+  const groupActive = activities.size > 0 || revealHovered;
+  const visibility = useVisibility(surface, groupActive, props.suspended);
+  const visible = !visibility.floating || groupActive || (toolbarVisible ?? visibility.visible);
   return (
     <RegistrationContext.Provider value={register}>
-      <StateContext.Provider value={{ ...visibility, titleHost, setTitleHost, setActivity, revealHovered: visibility.floating && revealHovered, setRevealHovered }}>
+      <StateContext.Provider value={{ ...visibility, visible, groupActive: visibility.floating && groupActive, setToolbarVisible, titleHost, setTitleHost, setActivity, revealHovered: visibility.floating && revealHovered, setRevealHovered }}>
         {props.children}
       </StateContext.Provider>
     </RegistrationContext.Provider>

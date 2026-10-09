@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
+import { usePdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
+
 const TOOLBAR_IDLE_DELAY = 3000;
 
 const TOOLBAR_SHOW_SCROLL_DELTA = 16;
@@ -132,10 +134,18 @@ function useToolbarPersistentVisibility(forceVisible: boolean, isSearchFocused: 
   }, [forceVisible, isSearchFocused, setIsToolbarVisible]);
 }
 
+function useLinkedToolbarVisibility(visible: boolean, active: boolean) {
+  const { groupActive, setToolbarVisible } = usePdfTopBars();
+  useEffect(() => setToolbarVisible(visible), [visible, setToolbarVisible]);
+  useEffect(() => () => setToolbarVisible(null), [setToolbarVisible]);
+  return active || groupActive;
+}
+
 export function usePdfToolbarVisibility(searchQuery: string, scrollContainerRef: MutableRefObject<HTMLDivElement | null>, onScrollBase: () => void) {
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [isToolbarActive, setIsToolbarActive] = useState(false);
+  const [toolbarActive, setIsToolbarActive] = useState(false);
+  const isToolbarActive = useLinkedToolbarVisibility(isToolbarVisible, toolbarActive);
   const [activityRevision, setActivityRevision] = useState(0);
   const hasObservedInitialScrollRef = useRef(false);
   const lastScrollTopRef = useRef(0);

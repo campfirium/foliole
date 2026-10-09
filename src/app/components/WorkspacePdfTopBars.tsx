@@ -41,7 +41,7 @@ export function PdfTopBar(props: { children: ReactNode; kind: 'window' | 'docume
   const bars = usePdfTopBars();
   const position =
     props.kind === 'window'
-      ? 'top-0 h-[var(--workspace-top-toolbar-height)] bg-[var(--workspace-region-titlebar-document-bg)] [&>div]:h-full'
+      ? 'pdf-floating-window-title top-0 h-[var(--workspace-top-toolbar-height)] bg-[var(--workspace-region-titlebar-document-bg)] [&>div]:h-full'
       : 'top-[var(--workspace-top-toolbar-height)] bg-[var(--workspace-region-main-document-bg)]';
   return (
     <FloatingBar
@@ -49,7 +49,7 @@ export function PdfTopBar(props: { children: ReactNode; kind: 'window' | 'docume
       floating={bars.floating}
       visible={bars.visible}
       onActiveChange={bars.setActivity}
-      className={bars.floating ? `${position} z-surface-raised` : ''}
+      className={bars.floating ? `${position} z-surface-raised shadow-none` : ''}
     >
       {props.children}
     </FloatingBar>
