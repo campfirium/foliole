@@ -138,6 +138,8 @@ for (const reverse of [false, true]) {
     await expect(exitFlow).toBeVisible();
     await exitFlow.click();
     await importPdf(desktopApp, desktopWindow, fixture);
+    await desktopWindow.getByRole('button', { name: /^(Manual view|手动视图)$/ }).click();
+    await desktopWindow.getByRole('button', { name: /^(Confirm|确认)$/ }).click();
     await desktopWindow.getByRole('button', { name: /Set zoom level|设置缩放级别/ }).click();
     await desktopWindow.getByRole('menuitem', { name: '100%' }).click();
     await expect(desktopWindow.locator('.textLayer')).toContainText(RIGHT_TEXT);

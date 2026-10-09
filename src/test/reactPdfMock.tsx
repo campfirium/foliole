@@ -83,6 +83,7 @@ vi.mock('react-pdf', () => {
   return {
     Document: MockDocument,
     Page: MockPage,
+    useDocumentContext: () => null,
     pdfjs: {
       version: '5.4.296',
       GlobalWorkerOptions: mockPdfWorkerOptions
