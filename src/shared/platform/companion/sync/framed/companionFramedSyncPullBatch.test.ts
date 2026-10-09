@@ -63,13 +63,12 @@ it('retries an unreturned suffix through the original single request', async () 
   expect([...received.values()].map(item => item.objectId)).toEqual(['child', 'parent']);
 });
 
-it.each(['', 'Failed to pull framed Sync objects: '])(
+it.each(['', 'Failed to pull framed Sync objects: ',
+  'Failed to pull framed Sync objects. Cause: IllegalStateException: '])(
   'keeps the missing-parent retry and stable suffix through %s', async prefix => {
   const { differences, received, deliver } = setup(['child', 'parent', 'stable']);
   mocks.batch.mockRejectedValueOnce(new Error(`${prefix}framed_sync_node_parent_missing:parent`));
-  mocks.single.mockRejectedValueOnce(new Error(prefix
-    ? 'Failed to pull framed Sync object: framed_sync_node_parent_missing:parent'
-    : 'framed_sync_node_parent_missing:parent'));
+  mocks.single.mockRejectedValueOnce(new Error(`${prefix.replace('objects', 'object')}framed_sync_node_parent_missing:parent`));
   mocks.batch.mockResolvedValueOnce({ received: [outcome('parent', 'd'), outcome('stable', 'e')] });
   await expect(deliverFramedSyncDifferencesInDependencyOrder(differences, deliver)).resolves.toEqual([]);
   expect([...received.values()].map(item => item.objectId)).toEqual(['parent', 'stable', 'child']);

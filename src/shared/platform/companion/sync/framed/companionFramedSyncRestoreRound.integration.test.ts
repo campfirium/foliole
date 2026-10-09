@@ -73,8 +73,9 @@ it('receives an authenticated restore before ordinary companion synchronization'
   const { fixture, bridge } = await setup();
   const restoreId = `restore-${fixture.leftSnapshot.deviceId}`;
   await fixture.left.seed({ content: 'Old library', nodeId: 't326-old-library', title: 'Old' });
-  await fixture.right.seed({ content: 'Restored complete body 中😀', nodeId: 't326-restored-body', title: 'Restored' });
   await fixture.right.seed({ content: 'Second restored body', nodeId: 't326-restored-second', title: 'Second' });
+  await fixture.right.seed({ content: 'Restored complete body 中😀', nodeId: 't326-restored-body',
+    parentNodeId: 't326-restored-second', title: 'Restored' });
   await bridge.db.run(`INSERT INTO sync_group_restore_events
     (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
     VALUES (?, ?, ?, ?, NULL, ?)`, [restoreId, bridge.request.sync_group_id,
@@ -89,7 +90,11 @@ it('receives an authenticated restore before ordinary companion synchronization'
     .toContainEqual(expect.objectContaining({ id: 't326-old-library', content: 'Old library' }));
   let interrupted = false;
   native.pull.mockImplementation(async (input: NativeCompanionFramedSyncPullRequest) => {
-    const receipt = await bridge.pull(input);
+    const receipt = await bridge.pull(input).catch((error: unknown) => {
+      const dependency = readFramedSyncMissingDependency(error);
+      if (!dependency) throw error;
+      throw new Error(`Failed to pull framed Sync object. Cause: IllegalStateException: ${dependency.code}${dependency.globalId}`);
+    });
     if (!interrupted && input.object_id === 't326-restored-body') {
       interrupted = true;
       throw new Error('receipt_interrupted');

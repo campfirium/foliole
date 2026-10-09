@@ -13,6 +13,9 @@ function difference(globalId: string, objectType = 'node'): FramedSyncInventoryD
 it.each(['receipt_identity_conflict:', 'aead_authentication_failure:', 'framed_sync_http_401:'])(
   'does not reinterpret %s containing a dependency code', prefix => {
     expect(readFramedSyncMissingDependency(new Error(`${prefix}framed_sync_node_parent_missing:parent`))).toBeNull();
+    expect(readFramedSyncMissingDependency(new Error(
+      `Failed to pull framed Sync objects. Cause: IllegalStateException: ${prefix}framed_sync_node_parent_missing:parent`
+    ))).toBeNull();
   });
 
 it('accepts the original dependency wrappers and rejects trailing data', () => {
@@ -58,7 +61,9 @@ it('defers a review-only unit missing its own node instead of retrying itself as
   expect(calls).toEqual(['reviewed-node', 'independent']);
 });
 
-it('still delivers an available parent then retries the child before continuing in stable order', async () => {
+it.each(['', 'Failed to pull framed Sync object. Cause: IllegalStateException: ',
+  'Failed to pull framed Sync objects. Cause: IllegalStateException: '])(
+  'delivers an available parent before its child through %s', async prefix => {
   const child = difference('child');
   const parent = difference('parent');
   const independent = difference('independent');
@@ -66,7 +71,7 @@ it('still delivers an available parent then retries the child before continuing 
   let parentDelivered = false;
   const deferred = await deliverFramedSyncDifferencesInDependencyOrder([child, parent, independent], async item => {
     calls.push(item.globalId);
-    if (item === child && !parentDelivered) throw new Error('framed_sync_node_parent_missing:parent');
+    if (item === child && !parentDelivered) throw new Error(`${prefix}framed_sync_node_parent_missing:parent`);
     if (item === parent) parentDelivered = true;
     return 'delivered';
   });
