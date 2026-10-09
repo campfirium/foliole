@@ -5,6 +5,7 @@ import { measurePdfAutomaticView } from '../model/measurePdfAutomaticView';
 import {
   DEFAULT_PDF_READING_VIEW,
   FULL_PDF_VIEW,
+  PDF_AUTOMATIC_VIEW_VERSION,
   type PdfReadingView
 } from '../model/pdfReadingView';
 import { loadPdfReadingView, savePdfReadingView } from '../model/pdfReadingViewRepository';
@@ -60,11 +61,13 @@ function initializeView(state: State) {
     state.fingerprint.current = id;
     try {
       const saved = await loadPdfReadingView(id);
-      const next = saved.automatic
+      if (state.alive.current) state.setView(saved);
+      const current = saved.automatic && saved.automaticVersion === PDF_AUTOMATIC_VIEW_VERSION;
+      const next = current
         ? saved
-        : { ...saved, automatic: await measurePdfAutomaticView(pdf) };
+        : { ...saved, automatic: await measurePdfAutomaticView(pdf), automaticVersion: PDF_AUTOMATIC_VIEW_VERSION };
       if (!state.alive.current) return;
-      if (!saved.automatic) await savePdfReadingView(id, next);
+      if (!current) await savePdfReadingView(id, next);
       if (state.alive.current) {
         state.setView(next);
         state.setReady(true);
@@ -115,6 +118,7 @@ export function usePdfReadingViewRuntime(page: number) {
     page,
     fitPage: state.fitPage,
     revision: state.revision,
+    fitToPage: state.setFitPage,
     chooseFree: () => persist({ ...state.view, mode: 'free' }),
     ready: state.ready,
     busy: state.busy,
@@ -122,7 +126,7 @@ export function usePdfReadingViewRuntime(page: number) {
     editing: state.editing,
     initialize,
     chooseAutomatic: () => {
-      if (!state.view.automatic && state.pdfRef.current) {
+      if ((!state.view.automatic || state.view.automaticVersion !== PDF_AUTOMATIC_VIEW_VERSION) && state.pdfRef.current) {
         state.fingerprint.current = '';
         void initialize(state.pdfRef.current);
       } else void persist({ ...state.view, mode: 'auto' });

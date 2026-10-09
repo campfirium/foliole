@@ -6,6 +6,7 @@ import type { PdfJumpRequest } from '../../features/pdf/model/pdfSystemApi';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import { alignPdfHeightFit, resolvePdfHeightFit } from './pdfHeightFitGeometry';
 import type { PdfPageDimensions } from './pdfPageDimensions';
+import { usePdfViewPaging } from './usePdfViewPaging';
 
 interface HeightFitProps {
   scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
@@ -19,6 +20,8 @@ interface HeightFitProps {
   onSetFitWidth: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
+  onNextPage: () => void;
+  onPreviousPage: () => void;
 }
 
 function useViewportHeight(ref: MutableRefObject<HTMLDivElement | null>) {
@@ -38,13 +41,14 @@ function useViewportHeight(ref: MutableRefObject<HTMLDivElement | null>) {
 
 export function usePdfHeightFitView<T extends HeightFitProps>(props: T, ready: boolean) {
   const view = usePdfReadingView();
+  usePdfViewPaging(props);
   const height = useViewportHeight(props.scrollContainerRef);
   const [dimensions, setDimensions] = useState(props.persistedPageDimensions);
   const page = view?.fitPage ?? 1;
   const size = dimensions[page] ?? props.persistedPageDimensions[page];
   const fit = view && view.ready && view.view.mode !== 'free' && size && height > 16
     ? resolvePdfHeightFit(size, view.range, height, props.rotation) : null;
-  const key = fit ? `${view?.revision}:${props.rotation}:${height}:${fit.zoom}` : '';
+  const key = fit ? `${page}:${view?.revision}:${props.rotation}:${height}:${fit.zoom}` : '';
   useFitAlignment(props, fit, page, key, ready);
   const release = (action: () => void) => {
     if (!view || view.view.mode === 'free') action();

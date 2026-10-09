@@ -10,10 +10,12 @@ export const pdfViewRectSchema = z
   .refine((rect) => rect.x + rect.width <= 1.000001 && rect.y + rect.height <= 1.000001);
 export type PdfViewRect = z.infer<typeof pdfViewRectSchema>;
 export const FULL_PDF_VIEW: PdfViewRect = { x: 0, y: 0, width: 1, height: 1 };
+export const PDF_AUTOMATIC_VIEW_VERSION = 1;
 export const pdfReadingViewSchema = z
   .object({
     mode: z.enum(['auto', 'manual', 'free']),
     automatic: pdfViewRectSchema.nullable(),
+    automaticVersion: z.number().int().nonnegative().optional(),
     manual: pdfViewRectSchema.nullable()
   })
   .refine((view) => view.mode !== 'manual' || view.manual !== null);

@@ -10,14 +10,15 @@ async function pageNumberCandidates(page: PDFPageProxy): Promise<PdfViewRect[]> 
     if (!('str' in item) || !item.str.trim()) return [];
     const [a, b, c, d, x, baseline] = item.transform;
     if (b !== 0 || c !== 0 || a <= 0 || d <= 0) return [];
-    const y = viewport.height - baseline - item.height;
+    const height = Math.max(item.height, Math.hypot(c, d));
+    const y = viewport.height - baseline - height;
     return [
       {
         text: item.str.trim(),
         x: x / viewport.width,
         y: y / viewport.height,
         width: item.width / viewport.width,
-        height: item.height / viewport.height
+        height: height / viewport.height
       }
     ];
   });

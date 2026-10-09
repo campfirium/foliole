@@ -86,7 +86,7 @@ it('starts in automatic view, cancels selection without saving, then remembers m
   fireEvent.click(screen.getByRole('button', { name: 'Manual view' }));
   fireEvent.click(screen.getByText('Save selection'));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-  expect(stored).toEqual({ mode: 'manual', automatic, manual });
+  expect(stored).toEqual({ mode: 'manual', automatic, manual, automaticVersion: 1 });
   mounted.unmount();
   render(reader);
   await waitFor(() =>
@@ -149,4 +149,12 @@ it('shows mode names on hover instead of taking toolbar space with text buttons'
   expect(screen.getByRole('button', { name: 'Automatic view' })).toHaveTextContent('');
   expect(screen.getByRole('button', { name: 'Manual view' })).toHaveTextContent('');
   expect(screen.queryByText('Adjust range')).not.toBeInTheDocument();
+});
+it('replaces a stale automatic range without losing the saved manual range or mode', async () => {
+  stored = { mode: 'manual', automatic: { x: 0, y: 0, width: 1, height: 1 }, manual };
+  render(reader);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Manual view' })).toBeEnabled());
+  expect(stored.automatic).toEqual(automatic);
+  expect(stored.manual).toEqual(manual);
+  expect(stored.mode).toBe('manual');
 });

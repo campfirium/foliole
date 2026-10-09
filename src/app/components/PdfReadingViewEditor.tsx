@@ -13,15 +13,17 @@ import {
   AppDialogTitle
 } from '../../shared/ui';
 
+import { collectPdfViewContentGuides } from './pdfViewContentGuides';
 import { PdfViewRangeSelection } from './PdfViewRangeSelection';
+import type { PdfRangeGuides } from './pdfViewRangeSnap';
 
 export function PdfReadingViewEditor(props: { pdf: PDFDocumentProxy }) {
   const runtime = usePdfReadingView();
   const t = useTranslation();
-  const [rect, setRect] = useState(runtime?.view.manual ?? FULL_PDF_VIEW);
-  const [hasSelection, setHasSelection] = useState(Boolean(runtime?.view.manual));
+  const [rect, setRect] = useState(runtime?.view.manual ?? runtime?.view.automatic ?? FULL_PDF_VIEW);
+  const [hasSelection, setHasSelection] = useState(Boolean(runtime?.view.manual ?? runtime?.view.automatic));
   const pageNumber = runtime?.page ?? 1;
-  const size = useEditorPageSize(props.pdf, pageNumber);
+  const size = useEditorPageSize(props.pdf, pageNumber, runtime?.view.automatic ?? FULL_PDF_VIEW);
   if (!runtime) return null;
   return (
     <AppDialog
@@ -34,7 +36,7 @@ export function PdfReadingViewEditor(props: { pdf: PDFDocumentProxy }) {
         <AppDialogTitle>{t('desktop.pdf.view.adjust')}</AppDialogTitle>
         <AppDialogDescription>{t('desktop.pdf.view.selectHint')}</AppDialogDescription>
         {size.width > 0 ? (
-          <div className="relative mx-auto" style={size}>
+          <div className="relative mx-auto" style={{ width: size.width, height: size.height }}>
             <Page
               pageNumber={pageNumber}
               width={size.width}
@@ -44,6 +46,7 @@ export function PdfReadingViewEditor(props: { pdf: PDFDocumentProxy }) {
             />
             <PdfViewRangeSelection
               rect={rect}
+              guides={size.guides}
               drawOnBody={!hasSelection}
               onChange={(value) => {
                 setRect(value);
@@ -63,8 +66,9 @@ export function PdfReadingViewEditor(props: { pdf: PDFDocumentProxy }) {
   );
 }
 
-function useEditorPageSize(pdf: PDFDocumentProxy, pageNumber: number) {
+function useEditorPageSize(pdf: PDFDocumentProxy, pageNumber: number, body: PdfViewRect) {
   const [size, setSize] = useState({ width: 0, height: 0 });
+  const [guides, setGuides] = useState<PdfRangeGuides>({ x: [], y: [] });
   useEffect(() => {
     let active = true;
     const measure = async () => {
@@ -80,6 +84,8 @@ function useEditorPageSize(pdf: PDFDocumentProxy, pageNumber: number) {
           width: Math.floor(viewport.width * scale),
           height: Math.floor(viewport.height * scale)
         });
+      const nextGuides = await collectPdfViewContentGuides(page, body);
+      if (active) setGuides(nextGuides);
     };
     void measure();
     window.addEventListener('resize', measure);
@@ -87,8 +93,8 @@ function useEditorPageSize(pdf: PDFDocumentProxy, pageNumber: number) {
       active = false;
       window.removeEventListener('resize', measure);
     };
-  }, [pageNumber, pdf]);
-  return size;
+  }, [body, pageNumber, pdf]);
+  return { ...size, guides };
 }
 
 function EditorActions(props: { rect: PdfViewRect }) {

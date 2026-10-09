@@ -1,7 +1,8 @@
-import { useRef, type PointerEvent } from 'react';
+import { useRef, useState, type PointerEvent } from 'react';
 
 import type { PdfViewRect } from '../../features/pdf/model/pdfReadingView';
 
+import { snapPdfViewRange, type PdfRangeGuides } from './pdfViewRangeSnap';
 import { clampPdfNormalizedRect, rectFromPointerDrag } from './pdfVisualExcerptGeometry';
 
 type Handle = 'move' | 'nw' | 'ne' | 'sw' | 'se' | 'draw';
@@ -27,11 +28,13 @@ export function resolveViewRangeDrag(drag: Drag, x: number, y: number): PdfViewR
 interface RangeSelectionProps {
   rect: PdfViewRect;
   drawOnBody?: boolean;
+  guides?: PdfRangeGuides;
   onChange: (rect: PdfViewRect) => void;
 }
 const corners: Handle[] = ['nw', 'ne', 'sw', 'se'];
 function useRangePointerHandlers(props: RangeSelectionProps) {
   const drag = useRef<Drag | null>(null);
+  const [alignment, setAlignment] = useState<{ vertical: number | undefined; horizontal: number | undefined }>({ vertical: undefined, horizontal: undefined });
   const pointer = (event: PointerEvent<HTMLDivElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     return {
@@ -40,6 +43,7 @@ function useRangePointerHandlers(props: RangeSelectionProps) {
     };
   };
   return {
+    alignment,
     onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
       if (event.button !== 0) return;
       event.preventDefault();
@@ -53,25 +57,34 @@ function useRangePointerHandlers(props: RangeSelectionProps) {
     onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
       if (!drag.current) return;
       const point = pointer(event);
-      props.onChange(resolveViewRangeDrag(drag.current, point.x, point.y));
+      const rect = resolveViewRangeDrag(drag.current, point.x, point.y);
+      const snapped = props.guides ? snapPdfViewRange(rect, props.guides,
+        event.currentTarget.getBoundingClientRect(), drag.current.kind) : null;
+      setAlignment({ vertical: snapped?.vertical, horizontal: snapped?.horizontal });
+      props.onChange(clampPdfNormalizedRect(snapped?.rect ?? rect));
     },
     onPointerUp: () => {
       drag.current = null;
+      setAlignment({ vertical: undefined, horizontal: undefined });
     },
     onPointerCancel: () => {
       drag.current = null;
+      setAlignment({ vertical: undefined, horizontal: undefined });
     }
   };
 }
 export function PdfViewRangeSelection(props: RangeSelectionProps) {
   const handlers = useRangePointerHandlers(props);
+  const { alignment, ...pointerHandlers } = handlers;
   const rect = clampPdfNormalizedRect(props.rect);
   return (
     <div
       className="absolute inset-0 touch-none overflow-hidden"
       data-testid="pdf-view-range-selection"
-      {...handlers}
+      {...pointerHandlers}
     >
+      {alignment.vertical !== undefined ? <div data-testid="pdf-range-snap-vertical" className="pointer-events-none absolute inset-y-0 border-l border-dashed border-selection-blue" style={{ left: `${alignment.vertical * 100}%` }} /> : null}
+      {alignment.horizontal !== undefined ? <div data-testid="pdf-range-snap-horizontal" className="pointer-events-none absolute inset-x-0 border-t border-dashed border-selection-blue" style={{ top: `${alignment.horizontal * 100}%` }} /> : null}
       <div
         data-handle="move"
         className="absolute cursor-move border-2 border-selection-blue bg-selection-blue/5"

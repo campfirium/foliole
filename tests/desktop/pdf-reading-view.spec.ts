@@ -1,6 +1,8 @@
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import type { ElectronApplication, Page } from '@playwright/test';
+import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 
 import type { PdfReadingView, PdfViewRect } from '../../src/features/pdf/model/pdfReadingView';
 
@@ -10,6 +12,7 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
   desktopApp,
   desktopWindow
 }) => {
+  await seedObsoleteRange(desktopWindow);
   await openPdf(desktopApp, desktopWindow);
   const surface = desktopWindow.getByTestId('pdf-document-surface');
   const reveal = () => surface.getByTestId('pdf-toolbar-reveal-zone').hover();
@@ -20,7 +23,7 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
   await expect(automatic).toHaveAttribute('aria-pressed', 'true');
   const autoRecord = await readView();
   expect(autoRecord).toMatchObject({ mode: 'auto', manual: null, automatic: expect.any(Object) });
-  await assertHeightFit(desktopWindow, autoRecord?.automatic);
+  await verifyAutomaticView(desktopWindow, autoRecord);
   await reveal();
   await manual.click();
   const dialog = desktopWindow.getByRole('dialog');
@@ -40,6 +43,7 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
     manual: { x: expect.any(Number), y: expect.any(Number) }
   });
   await assertHeightFit(desktopWindow, manualRecord?.manual);
+  await verifyViewPaging(desktopWindow, manualRecord?.manual);
   await surface.screenshot({ path: path.resolve('.tmp/artifacts/pdf-view-manual-native.png') });
   await reveal();
   await automatic.click();
@@ -118,19 +122,22 @@ async function selectManualRange(desktopWindow: Page) {
   const dialog = desktopWindow.getByRole('dialog');
   const selection = dialog.getByTestId('pdf-view-range-selection');
   const bounds = await selection.boundingBox();
-  if (!bounds) throw new Error('Range editor is unavailable.');
-  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.1, bounds.y + bounds.height * 0.12);
+  const corner = await selection.locator('[data-handle="se"]').boundingBox();
+  const automatic = (await readSavedView(desktopWindow))?.automatic;
+  if (!bounds || !corner || !automatic) throw new Error('Range editor is unavailable.');
+  await desktopWindow.mouse.move(corner.x + corner.width / 2, corner.y + corner.height / 2);
   await desktopWindow.mouse.down();
-  await desktopWindow.mouse.move(bounds.x + bounds.width * 0.9, bounds.y + bounds.height * 0.88, {
-    steps: 8
-  });
+  await desktopWindow.mouse.move(bounds.x + bounds.width * (automatic.x + automatic.width) + 2,
+    bounds.y + bounds.height * (automatic.y + automatic.height) + 2, { steps: 8 });
+  await expect(selection.getByTestId('pdf-range-snap-vertical')).toBeVisible();
+  await dialog.screenshot({ path: path.resolve('.tmp/artifacts/pdf-view-snap-native.png') });
   await desktopWindow.mouse.up();
   await dialog.getByRole('button', { name: /^(Confirm|确认)$/ }).click();
 }
 
-async function assertHeightFit(page: Page, rect: PdfViewRect | null | undefined) {
+async function assertHeightFit(page: Page, rect: PdfViewRect | null | undefined, number = 1) {
   if (!rect) throw new Error('PDF view range is missing.');
-  const shell = page.locator('[data-pdf-page-number="1"]');
+  const shell = page.locator(`[data-pdf-page-number="${number}"]`);
   await expect.poll(async () => {
     const frame = await shell.getByTestId('pdf-document-page-frame').boundingBox();
     const canvas = await shell.locator('.react-pdf__Page canvas').boundingBox();
@@ -152,4 +159,45 @@ async function readSavedView(page: Page) {
     if (typeof raw !== 'string') return null;
     return Object.values(JSON.parse(raw) as Record<string, PdfReadingView>)[0] ?? null;
   });
+}
+
+async function seedObsoleteRange(page: Page) {
+  const file = process.env.FOLIOLE_PDF_VIEW_FIXTURE ?? path.resolve('tests/desktop/fixtures/pdf-user-journey.pdf');
+  const pdf = await getDocument({ data: new Uint8Array(await readFile(file)) }).promise;
+  const fingerprint = pdf.fingerprints[0];
+  await pdf.destroy();
+  if (!fingerprint) throw new Error('PDF fingerprint is missing.');
+  await page.evaluate(async (id) => {
+    const settings = await window.electronAPI?.invoke('load_app_settings_state', {});
+    if (!settings) throw new Error('Settings are unavailable.');
+    await window.electronAPI?.invoke('save_app_settings_state', { settings: { ...settings,
+      'foliole-pdf-document-views': JSON.stringify({ [id]: {
+        mode: 'auto', automatic: { x: 0, y: 0, width: 1, height: 1 }, manual: null
+      } }) } });
+  }, fingerprint);
+}
+async function verifyViewPaging(page: Page, rect: PdfViewRect | null | undefined) {
+  const surface = page.getByTestId('pdf-document-surface');
+  const scroller = surface.getByTestId('pdf-scroll-container');
+  await scroller.evaluate((element) => { element.scrollTop += 65; });
+  await scroller.click({ position: { x: 30, y: 250 } });
+  await page.keyboard.press('Space');
+  await assertHeightFit(page, rect, 2);
+  await page.keyboard.press('Shift+Space');
+  await assertHeightFit(page, rect, 1);
+  await surface.getByTestId('pdf-toolbar-reveal-zone').hover();
+  await surface.getByRole('button', { name: /^(Next page|下一页)$/ }).click();
+  await assertHeightFit(page, rect, 2);
+  await surface.getByTestId('pdf-toolbar-reveal-zone').hover();
+  await surface.getByRole('button', { name: /^(Previous page|上一页)$/ }).click();
+  await assertHeightFit(page, rect, 1);
+}
+
+async function verifyAutomaticView(page: Page, record: PdfReadingView | null) {
+  expect(record?.automaticVersion).toBe(1);
+  if (process.env.FOLIOLE_PDF_VIEW_FIXTURE?.includes('deep-residual-learning')) {
+    expect((record?.automatic?.y ?? 1) + (record?.automatic?.height ?? 1)).toBeLessThan(.915);
+  }
+  await assertHeightFit(page, record?.automatic);
+  await verifyViewPaging(page, record?.automatic);
 }

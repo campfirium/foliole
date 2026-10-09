@@ -44,3 +44,18 @@ it('measures only the available page in a one-page PDF', async () => {
   await measurePdfAutomaticView(pdf);
   expect(getPage.mock.calls).toEqual([[1]]);
 });
+it('excludes an isolated page number when PDF text reports zero item height', async () => {
+  const data = new Uint8ClampedArray(100 * 100 * 4).fill(255);
+  for (let y = 20; y < 60; y++) for (let x = 10; x < 90; x++) {
+    const i = (y * 100 + x) * 4; data[i] = data[i + 1] = data[i + 2] = 0;
+  }
+  for (let y = 84; y < 92; y++) for (let x = 48; x < 53; x++) {
+    const i = (y * 100 + x) * 4; data[i] = data[i + 1] = data[i + 2] = 0;
+  }
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({ getImageData: () => ({ data }) } as unknown as CanvasRenderingContext2D);
+  const page = { getViewport: () => ({ width: 100, height: 100 }), render: () => ({ promise: Promise.resolve() }),
+    getTextContent: async () => ({ items: [{ str: '1', transform: [12, 0, 0, 12, 48, 5], width: 6, height: 0 }] }) };
+  const pdf = { numPages: 1, getPage: async () => page } as unknown as PDFDocumentProxy;
+  const view = await measurePdfAutomaticView(pdf);
+  expect(view.y + view.height).toBeLessThan(.8);
+});
