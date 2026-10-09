@@ -203,6 +203,7 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
     func testPullsRequestedFactWithSyncNow() throws {
         let app = acceptanceApplication()
         app.launch()
+        openBrowse(in: app)
         openSyncSettings(in: app)
         tapEnabledButton(named: "Sync Now", in: app, timeout: 120)
         waitForSyncNowCompletion(in: app, timeout: 3600)

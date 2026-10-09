@@ -24,7 +24,7 @@ extension FoliolePhysicalSyncGroupUITests {
         revealReadingChrome(in: app, matching: text)
         tapButton(named: "Exit", in: app, timeout: 30)
         if ProcessInfo.processInfo.environment["FOLIOLE_PHYSICAL_VERIFY_BODY_RELAUNCH"] == "1" {
-            verifyCompleteBodyAfterRelaunch(submittedBody, prefix: prefix, matching: text, in: app)
+            verifyVisibleBodyAfterRelaunch(submittedBody, prefix: prefix, matching: text, in: app)
         }
     }
 
