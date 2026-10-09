@@ -1,16 +1,20 @@
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
 
+import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
+import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { companionContinuationBridge } from '../../../../../../electron/sync/companionFramedSyncContinuation.testSupport.js';
 import { readFixtureInventory } from '../../../../../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
   from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
+import { computeSyncContentHash } from '../../../../../../lib/core/database/syncState.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { readFramedSyncMissingDependency } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { beginSyncGroupLocalAdoption, loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
+import { applySyncObjectInTransaction } from '../../../../../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeCompanionFramedSyncPullRequest, NativeCompanionFramedSyncTransferRequest }
   from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 
@@ -120,4 +124,47 @@ it('keeps adoption protected when the source changes after its acknowledged deli
     .toEqual([expect.objectContaining({ content: 'Saved local edit😀' })]);
   expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
     .toEqual([expect.objectContaining({ content: 'Source changed' })]);
+}, 15_000);
+
+
+it('finishes verified state reception while retaining a newer local open state', async () => {
+  const { fixture, bridge } = await adopt();
+  async function opened(db: DbPort, time: string) {
+    const payload = { node_id: 't326-adoption-article', last_opened_at: time };
+    await db.transaction(tx => applySyncObjectInTransaction(tx, {
+      object_id: payload.node_id, object_type: 'node_open_state', deleted_at: null,
+      updated_at: time, payload_json: JSON.stringify(payload),
+      content_hash: computeSyncContentHash('node_open_state', payload)
+    }));
+  }
+  const source = new Database(fixture.rightSnapshot.databasePath);
+  try { await opened(createBetterSqliteDbPort(source), '2030-01-01T00:00:00.000Z'); }
+  finally { source.close(); }
+  await opened(bridge.db, '2031-01-01T00:00:00.000Z');
+  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  expect(await loadSyncGroupLocalAdoption(bridge.db)).toBeNull();
+  expect(await loadSyncGroupOverwriteProgress(bridge.db)).toBeNull();
+  expect(result.deferredObjects).toEqual([]);
+  expect(bridge.sqlite.prepare('SELECT last_opened_at FROM node_open_state WHERE node_id = ?')
+    .pluck().get('t326-adoption-article')).toBe('2031-01-01T00:00:00.000Z');
+  expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
+}, 15_000);
+
+
+it('finishes reception after parent ordering merges with a local addition', async () => {
+  const { fixture, bridge } = await adopt();
+  await fixture.left.seed({ content: 'Local addition', nodeId: 't326-second-article', title: 'Local addition' });
+  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  expect(await loadSyncGroupLocalAdoption(bridge.db)).toBeNull();
+  expect(await loadSyncGroupOverwriteProgress(bridge.db)).toBeNull();
+  expect(result.deferredObjects).toEqual([]);
+  for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) {
+    const nodes = readDesktopFramedSyncLibraryEvidence(snapshot.databasePath).nodes;
+    expect(nodes).toHaveLength(2);
+    expect(nodes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ content: 'Local addition' }),
+      expect.objectContaining({ content: 'Saved local edit😀' })
+    ]));
+  }
+  expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
 }, 15_000);

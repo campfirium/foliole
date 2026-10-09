@@ -38,3 +38,23 @@ it('does not use a node receipt to complete another object type with the same ID
     local: [{ ...local, objectType: 'external_document' }], remote: [{ ...source, objectType: 'external_document' }] }))
     .toHaveLength(1);
 });
+
+
+it.each(['node_open_state', 'node_review', 'node_position', 'parent_child_order'])(
+  'finishes consumed %s state without replacing a newer local result', objectType => {
+    const remote = [{ ...source, objectType }];
+    const current = [{ ...local, objectType, stateFactIds: ['local-newer'] }];
+    const delivered = compareFramedSyncDatabaseInventories({ local: current, remote });
+    expect(pendingFramedSyncOverwriteDifferences({ local: current, remote, deliveredDifferences: delivered })).toEqual([]);
+    expect(pendingFramedSyncOverwriteDifferences({ local: current, remote, deliveredDifferences: [] })).toHaveLength(1);
+    expect(pendingFramedSyncOverwriteDifferences({ local: [], remote, deliveredDifferences: delivered })).toHaveLength(1);
+    expect(pendingFramedSyncOverwriteDifferences({ local: current,
+      remote: [{ ...source, objectType, stateFactIds: ['source-changed'] }], deliveredDifferences: delivered })).toHaveLength(1);
+  });
+
+it('retains missing immutable order versions after a delivery receipt', () => {
+  const remote = [{ ...source, objectType: 'order_version' }];
+  const current = [{ ...local, objectType: 'order_version', stateFactIds: ['different'] }];
+  expect(pendingFramedSyncOverwriteDifferences({ local: current, remote,
+    deliveredDifferences: compareFramedSyncDatabaseInventories({ local: current, remote }) })).toHaveLength(1);
+});
