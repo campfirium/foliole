@@ -5,7 +5,6 @@ export * from './migrations.js';
 export * from './numberedMigrations.js';
 export * from './nodeMutations.js';
 export * from './reviewMutations.js';
-export * from './schema.js';
 export * from './syncState.js';
 export * from './workspaceSnapshot.js';
 export * from './workspaceListSnapshot.js';

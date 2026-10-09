@@ -35,7 +35,7 @@ async function prepared(kind: 'android' | 'ios') {
       payload: parentOrderFactPayload(ROOT_CHILD_ORDER_ID, version, PARENT_ORDER_BASELINE_TIME) },
     { type: 'parent_child_order', id: ROOT_CHILD_ORDER_ID,
       payload: { child_ids_json: JSON.stringify(ids), parent_id: ROOT_CHILD_ORDER_ID } }
-  ];
+  ] as const;
   const facts = [];
   for (const { type, id, payload } of payloads) {
     const hash = computeSyncContentHash(type, payload);
