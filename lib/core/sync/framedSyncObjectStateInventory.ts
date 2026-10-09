@@ -45,7 +45,8 @@ export async function readFramedSyncObjectStateInventory(
     FROM sync_object_state WHERE object_type IN (${types})
       AND (object_type != 'setting' OR object_id LIKE '${sharedSettingPrefix}%')
       AND (object_type != 'node_review' OR deleted_at IS NOT NULL OR EXISTS
-        (SELECT 1 FROM nodes WHERE id = object_id))
+        (SELECT 1 FROM nodes JOIN node_review review ON review.node_id = nodes.id
+          WHERE nodes.id = sync_object_state.object_id))
       ${key ? 'AND object_type = ? AND object_id = ?' : ''}
     ORDER BY object_type, object_id`, key ? [key.objectType, key.globalId] : []);
   return rows.filter((row) => isFramedSyncSharedStateObject(row.object_type, row.object_id)).map((row) => {

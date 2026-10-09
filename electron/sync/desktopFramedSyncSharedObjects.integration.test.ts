@@ -6,6 +6,7 @@ import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
+import { pruneLearningRowsWithoutVisibleNodes } from '../../lib/core/sync/syncNodeVisibilityPruning.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import type { NativeSyncObjectRecord } from '../../lib/platform/nativeSyncContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -72,6 +73,42 @@ it.each(cases)('discovers and persists the original $type payload through a norm
     finally { target.close(); }
     expect((await readFixtureInventory(fixture.right))
       .find((entry) => entry.objectType === sample.type && entry.globalId === sample.id)).toEqual(original);
+  } finally {
+    await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
+    await fs.rm(fixture.root, { force: true, recursive: true });
+  }
+}, 60_000);
+
+it('keeps a retired dirty review out of inventory and transfers unrelated live state', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  try {
+    await fixture.left.seed({ content: 'Live body', nodeId: 'topic', title: 'Live' });
+    await fixture.left.seed({ content: 'Deleted body', nodeId: 'retired-topic', title: 'Retired' });
+    const source = new Database(fixture.leftSnapshot.databasePath);
+    try {
+      const db = createBetterSqliteDbPort(source);
+      const sample = cases.find(item => item.type === 'node_review')!;
+      const payload = { ...sample.payload, node_id: 'retired-topic' };
+      await applySyncObjectInTransaction(db, { object_type: 'node_review', object_id: 'retired-topic',
+        content_hash: computeSyncContentHash('node_review', payload), deleted_at: null,
+        payload_json: JSON.stringify(payload), updated_at: now });
+      source.prepare("UPDATE sync_object_state SET sync_dirty = 1 WHERE object_type = 'node_review'").run();
+      source.prepare("UPDATE nodes SET deleted_at = ? WHERE id = 'retired-topic'").run(now);
+      await pruneLearningRowsWithoutVisibleNodes(db);
+      expect(source.prepare("SELECT node_id FROM node_review WHERE node_id = 'retired-topic'").get()).toBeUndefined();
+      expect(source.prepare("SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node_review'").pluck().get()).toBe(1);
+      await applySyncObjectInTransaction(db, { object_type: 'node_open_state', object_id: 'topic',
+        content_hash: computeSyncContentHash('node_open_state', { node_id: 'topic', last_opened_at: now }),
+        deleted_at: null, payload_json: JSON.stringify({ node_id: 'topic', last_opened_at: now }), updated_at: now });
+    } finally { source.close(); }
+    expect(await readFixtureInventory(fixture.left)).not.toContainEqual(
+      expect.objectContaining({ objectType: 'node_review', globalId: 'retired-topic' }));
+    expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true });
+    const target = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
+    try {
+      expect(target.prepare("SELECT last_opened_at FROM node_open_state WHERE node_id = 'topic'").pluck().get()).toBe(now);
+      expect(target.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get()).toBe('Live body');
+    } finally { target.close(); }
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
     await fs.rm(fixture.root, { force: true, recursive: true });

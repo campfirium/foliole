@@ -50,6 +50,7 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
                   'content_hash', state.content_hash, 'current_version_id', state.current_version_id,
                   'deleted_at', state.deleted_at,
                   'node_exists', EXISTS(SELECT 1 FROM nodes WHERE id = state.object_id),
+                  'review_exists', EXISTS(SELECT 1 FROM node_review WHERE node_id = state.object_id),
                   'body_blob_hash', CASE WHEN state.object_type = 'external_document'
                     AND state.deleted_at IS NULL THEN (SELECT body_blob_hash FROM external_documents
                       WHERE document_id = state.object_id AND (CAST(content AS BLOB) <> X'' OR
