@@ -17,7 +17,7 @@ import {
   savePdfReadingView
 } from '../../features/pdf/model/pdfReadingViewRepository';
 
-import { PdfPageCropFrame } from './PdfPageCropFrame';
+import { PdfPageFrame } from './PdfPageFrame';
 import { PdfReadingViewControls } from './PdfReadingViewControls';
 
 vi.mock('../../features/pdf/model/pdfReadingViewRepository', () => ({
@@ -48,9 +48,9 @@ function Reader() {
   return (
     <>
       <PdfReadingViewControls onInteraction={() => undefined} />
-      <PdfPageCropFrame pageDimensions={{ width: 600, height: 800 }}>
-        {() => <span>Body and footnote</span>}
-      </PdfPageCropFrame>
+      <PdfPageFrame pageDimensions={{ width: 600, height: 800 }}>
+        <span>Body and footnote</span>
+      </PdfPageFrame>
       {runtime?.editing ? (
         <div role="dialog">
           <button onClick={runtime.cancel}>Cancel selection</button>
@@ -74,9 +74,9 @@ const reader = (
 it('starts in automatic view, cancels selection without saving, then remembers manual view after reopening', async () => {
   const mounted = render(reader);
   await waitFor(() => expect(screen.getByRole('button', { name: 'Manual view' })).toBeEnabled());
-  expect(screen.getByTestId('pdf-document-page-crop-frame')).toHaveStyle({
-    width: '480px',
-    height: '600px'
+  expect(screen.getByTestId('pdf-document-page-frame')).toHaveStyle({
+    width: '600px',
+    height: '800px'
   });
   const writes = vi.mocked(savePdfReadingView).mock.calls.length;
   fireEvent.click(screen.getByRole('button', { name: 'Manual view' }));
@@ -96,9 +96,9 @@ it('starts in automatic view, cancels selection without saving, then remembers m
     )
   );
   expect(vi.mocked(measurePdfAutomaticView)).toHaveBeenCalledTimes(1);
-  expect(screen.getByTestId('pdf-document-page-crop-frame')).toHaveStyle({
-    width: '360px',
-    height: '480px'
+  expect(screen.getByTestId('pdf-document-page-frame')).toHaveStyle({
+    width: '600px',
+    height: '800px'
   });
 });
 it('switches modes without losing the saved manual range and allows adjusting it', async () => {
@@ -113,6 +113,8 @@ it('switches modes without losing the saved manual range and allows adjusting it
     )
   );
   expect(stored.manual).toEqual(manual);
+  expect(screen.getByTestId('pdf-document-page-frame')).toHaveStyle({ width: '600px', height: '800px' });
+  expect(document.querySelector('.pdf-document-page-crop-content')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Manual view' }));
   await waitFor(() =>
     expect(screen.getByRole('button', { name: 'Manual view' })).toHaveAttribute(
@@ -121,7 +123,10 @@ it('switches modes without losing the saved manual range and allows adjusting it
     )
   );
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Adjust range' }));
+  expect(screen.getByTestId('pdf-document-page-frame')).toHaveStyle({ width: '600px', height: '800px' });
+  expect(screen.queryByRole('button', { name: 'Adjust range' })).not.toBeInTheDocument();
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Manual view options' }), { key: 'ArrowDown' });
+  fireEvent.click(await screen.findByRole('menuitem', { name: 'Adjust range' }));
   expect(screen.getByRole('dialog')).toBeInTheDocument();
 });
 it('reports a failed save while retaining the previous view and the open selection', async () => {
@@ -136,4 +141,12 @@ it('reports a failed save while retaining the previous view and the open selecti
     'aria-pressed',
     'true'
   );
+});
+
+it('shows mode names on hover instead of taking toolbar space with text buttons', async () => {
+  render(reader);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Manual view' })).toBeEnabled());
+  expect(screen.getByRole('button', { name: 'Automatic view' })).toHaveTextContent('');
+  expect(screen.getByRole('button', { name: 'Manual view' })).toHaveTextContent('');
+  expect(screen.queryByText('Adjust range')).not.toBeInTheDocument();
 });

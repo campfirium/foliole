@@ -141,7 +141,7 @@ function renderViewControls(
         zoomMode={props.zoomMode}
         zoom={props.zoom}
       />
-      <PdfReadingViewControls onInteraction={props.onToolbarInteraction} />
+      <PdfReadingViewControls onInteraction={props.onToolbarInteraction} onMenuOpenChange={setIsMenuOpen} />
     </>
   );
 }

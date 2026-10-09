@@ -9,7 +9,9 @@ import {
 } from '../model/pdfReadingView';
 import { loadPdfReadingView, savePdfReadingView } from '../model/pdfReadingViewRepository';
 
-function useViewState() {
+function useViewState(page: number) {
+  const [fitPage, setFitPage] = useState(page);
+  const [revision, setRevision] = useState(0);
   const [view, setView] = useState(DEFAULT_PDF_READING_VIEW);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -27,6 +29,10 @@ function useViewState() {
   return {
     view,
     setView,
+    fitPage,
+    setFitPage,
+    revision,
+    setRevision,
     ready,
     setReady,
     busy,
@@ -74,7 +80,7 @@ function initializeView(state: State) {
 }
 function persistView(state: State) {
   return async (next: PdfReadingView) => {
-    if (!state.fingerprint.current || state.busy) return;
+    if (!state.fingerprint.current || state.busy) return false;
     state.setBusy(true);
     state.setError(false);
     try {
@@ -82,23 +88,34 @@ function persistView(state: State) {
       if (state.alive.current) {
         state.setView(next);
         state.setEditing(false);
+        state.setRevision((value) => value + 1);
+        return true;
       }
     } catch {
       if (state.alive.current) state.setError(true);
+      return false;
     } finally {
       if (state.alive.current) state.setBusy(false);
     }
   };
 }
 export function usePdfReadingViewRuntime(page: number) {
-  const state = useViewState();
+  const state = useViewState(page);
   const initialize = initializeView(state);
-  const persist = persistView(state);
+  const save = persistView(state);
+  const persist = async (next: PdfReadingView) => {
+    const saved = await save(next);
+    if (saved) state.setFitPage(page);
+    return saved;
+  };
   return {
-    crop:
+    range:
       (state.view.mode === 'manual' ? state.view.manual : state.view.automatic) ?? FULL_PDF_VIEW,
     view: state.view,
     page,
+    fitPage: state.fitPage,
+    revision: state.revision,
+    chooseFree: () => persist({ ...state.view, mode: 'free' }),
     ready: state.ready,
     busy: state.busy,
     error: state.error,

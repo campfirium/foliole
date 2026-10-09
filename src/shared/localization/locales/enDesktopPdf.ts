@@ -1,5 +1,6 @@
 export const EN_DESKTOP_PDF_TRANSLATIONS = {
   'desktop.pdf.view.automatic': 'Automatic view',
+  'desktop.pdf.view.manualOptions': 'Manual view options',
   'desktop.pdf.view.manual': 'Manual view',
   'desktop.pdf.view.adjust': 'Adjust range',
   'desktop.pdf.view.selectHint': 'Drag to select a range. Move the selection or drag its corners to adjust it. This range applies to every page.',

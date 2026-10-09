@@ -259,8 +259,8 @@ it('keeps the full page until a document-wide view range is available', async ()
   );
 
   await waitFor(() => {
-    expect(container.querySelector('[data-testid="pdf-document-page-crop-frame"]')).toHaveStyle({ width: '800px', height: '1131px' });
+    expect(container.querySelector('[data-testid="pdf-document-page-frame"]')).toHaveStyle({ width: '800px', height: '1131px' });
   });
 
-  expect(container.querySelector('.pdf-document-page-crop-content')).toHaveStyle({ marginLeft: '0px', marginTop: '0px' });
+  expect(container.querySelector('.pdf-document-page-crop-content')).toBeNull();
 });

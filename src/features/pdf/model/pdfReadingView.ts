@@ -12,7 +12,7 @@ export type PdfViewRect = z.infer<typeof pdfViewRectSchema>;
 export const FULL_PDF_VIEW: PdfViewRect = { x: 0, y: 0, width: 1, height: 1 };
 export const pdfReadingViewSchema = z
   .object({
-    mode: z.enum(['auto', 'manual']),
+    mode: z.enum(['auto', 'manual', 'free']),
     automatic: pdfViewRectSchema.nullable(),
     manual: pdfViewRectSchema.nullable()
   })

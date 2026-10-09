@@ -6,8 +6,8 @@ import type { PdfSearchVisualHighlight } from './PdfDocumentSearch';
 import type { PdfPageElementsRef } from './PdfDocumentViewportParts';
 import { resolvePdfOverlayMarkerSize } from './pdfOverlayRender';
 import { PdfPageCanvas } from './PdfPageCanvas';
-import { PdfPageCropFrame } from './PdfPageCropFrame';
 import { resolveRenderedPageDimensions, type PdfPageDimensions } from './pdfPageDimensions';
+import { PdfPageFrame } from './PdfPageFrame';
 import { renderPdfHighlightMarkers, renderSearchHighlightsOnPage, renderSelectionOverlay, type PdfPageOverlayLocator } from './PdfPageOverlays';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { PdfVisualExcerptPageLayer } from './PdfVisualExcerptPageLayer';
@@ -117,32 +117,27 @@ function PdfPageShell(props: {
       }}
     >
       {pageDimensions
-        ? renderCroppedPdfPage({ ...props, handlePageRenderReady, pageDimensions })
-        : renderUncroppedPdfPage({ ...props, handlePageRenderReady, placeholderDimensions })}
+        ? renderSizedPdfPage({ ...props, handlePageRenderReady, pageDimensions })
+        : renderLoadingPdfPage({ ...props, handlePageRenderReady, placeholderDimensions })}
     </div>
   );
 }
 
-function renderCroppedPdfPage(props: Omit<PdfPageContentProps, 'onTextLayerRender'> & {
+function renderSizedPdfPage(props: Omit<PdfPageContentProps, 'onTextLayerRender'> & {
   onTextLayerRender: (pageNumber: number) => void;
   pageDimensions: PdfPageDimensions;
 }) {
   return (
-    <PdfPageCropFrame pageDimensions={resolveRenderedPageDimensions(props.pageDimensions, props.fitWidthTargetWidth, props.rotation, props.zoomMode, props.zoom)} rotation={props.rotation}>
-      {({ onTextLayerRender, pageRef }) =>
-        renderPdfPageContent({
-          ...props,
-          onTextLayerRender: () => {
-            props.onTextLayerRender(props.pageNumber);
-            onTextLayerRender();
-          },
-          pageRef
-        })}
-    </PdfPageCropFrame>
+    <PdfPageFrame pageDimensions={resolveRenderedPageDimensions(props.pageDimensions, props.fitWidthTargetWidth, props.rotation, props.zoomMode, props.zoom)}>
+      {renderPdfPageContent({
+        ...props,
+        onTextLayerRender: () => props.onTextLayerRender(props.pageNumber)
+      })}
+    </PdfPageFrame>
   );
 }
 
-function renderUncroppedPdfPage(props: Omit<PdfPageContentProps, 'onTextLayerRender'> & {
+function renderLoadingPdfPage(props: Omit<PdfPageContentProps, 'onTextLayerRender'> & {
   onTextLayerRender: (pageNumber: number) => void;
   placeholderDimensions: PdfPageDimensions;
 }) {
@@ -201,9 +196,9 @@ export function renderPdfPagePlaceholder(
         args.pageElementsRef.current[args.pageNumber] = element;
       }}
     >
-      <PdfPageCropFrame pageDimensions={{ height, width }} rotation={args.rotation}>
-        {() => <div aria-hidden="true" className="pdf-document-page-placeholder rounded-sm bg-bg-panel/20 shadow-page" style={{ height, width }} />}
-      </PdfPageCropFrame>
+      <PdfPageFrame pageDimensions={{ height, width }}>
+        <div aria-hidden="true" className="pdf-document-page-placeholder rounded-sm bg-bg-panel/20 shadow-page" style={{ height, width }} />
+      </PdfPageFrame>
     </div>
   );
 }

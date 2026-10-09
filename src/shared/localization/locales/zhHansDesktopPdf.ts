@@ -2,6 +2,7 @@ import type { TranslationKey } from '../translations';
 
 export const ZH_HANS_DESKTOP_PDF_TRANSLATIONS: Partial<Record<TranslationKey, string>> = {
   'desktop.pdf.view.automatic': '自动视图',
+  'desktop.pdf.view.manualOptions': '手动视图选项',
   'desktop.pdf.view.manual': '手动视图',
   'desktop.pdf.view.adjust': '调整范围',
   'desktop.pdf.view.selectHint': '拖动框选范围，可移动选框或拖动四角调整。此范围应用于所有页面。',

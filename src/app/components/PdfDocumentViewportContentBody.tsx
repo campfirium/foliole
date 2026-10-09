@@ -10,6 +10,7 @@ import { useDisplayedPdfZoom, useFitWidthTargetWidth } from './PdfDocumentViewpo
 import type { PdfPageDimensions } from './pdfPageDimensions';
 import type { PdfPageTextEntry } from './pdfPageText';
 import { PdfViewportToolbar } from './PdfViewportToolbar';
+import { usePdfHeightFitView } from './usePdfHeightFitView';
 
 interface PdfDocumentViewportContentBodyProps {
   handleContextMenu: (event: ReactMouseEvent<HTMLDivElement>) => void;
@@ -115,17 +116,24 @@ function useViewportPageLoadingState(
 }
 
 export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContentBodyProps) {
-  const fitWidthTargetWidth = useFitWidthTargetWidth(props.scrollContainerRef, props.rotation);
-  const { displayedZoom, handlePageLoadSuccess } = useDisplayedPdfZoom({
-    fitWidthTargetWidth,
-    visiblePage: props.visiblePage,
-    zoom: props.zoom,
-    zoomMode: props.zoomMode
-  });
+  const fitWidthTargetWidth = useFitWidthTargetWidth(props.scrollContainerRef);
   const [isInitialRenderReady, setIsInitialRenderReady] = useState(false);
   const [isLayoutReady, setIsLayoutReady] = useState(false);
   const isViewportPageLoading = useViewportPageLoadingState(props.pageJumpRequest, props.pageElementsRef, props.scrollContainerRef);
   const previousPdfSourceRef = useRef(props.pdfSource);
+  const heightView = usePdfHeightFitView(props, isLayoutReady && isInitialRenderReady);
+  const adapted = heightView.props;
+  const { displayedZoom, handlePageLoadSuccess } = useDisplayedPdfZoom({
+    fitWidthTargetWidth,
+    visiblePage: adapted.visiblePage,
+    zoom: adapted.zoom,
+    zoomMode: adapted.zoomMode
+  });
+  const registerDimensions = (page: number, dimensions: PdfPageDimensions) => {
+    handlePageLoadSuccess(page, dimensions);
+    heightView.registerDimensions(page, dimensions);
+  };
+
 
   useEffect(() => {
     if (previousPdfSourceRef.current === props.pdfSource) {
@@ -146,8 +154,8 @@ export function PdfDocumentViewportContentBody(props: PdfDocumentViewportContent
         data-testid="pdf-scroll-container"
         ref={props.scrollContainerRef}
       >
-        {isLayoutReady && props.totalPages ? renderViewportToolbar(props, displayedZoom) : null}
-        {renderViewportDocument(props, fitWidthTargetWidth, handlePageLoadSuccess, setIsInitialRenderReady, setIsLayoutReady)}
+        {isLayoutReady && props.totalPages ? renderViewportToolbar(adapted, displayedZoom) : null}
+        {renderViewportDocument(adapted, fitWidthTargetWidth, registerDimensions, setIsInitialRenderReady, setIsLayoutReady)}
       </div>
     </div>
   );
