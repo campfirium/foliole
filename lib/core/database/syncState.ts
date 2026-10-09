@@ -1,9 +1,8 @@
-import { createHash } from 'node:crypto';
-
 import type { DatabaseDriver, DatabaseRow } from './driver.js';
 import type { NodeSyncHashInput } from './nodeSyncHash.js';
 import { computeNodeSyncHash } from './nodeSyncHash.js';
 import { NEXT_SYNC_STATE_SEQ_SQL } from './syncStateSequenceSchemaStatements.js';
+import { hashTextBody } from './textBodyHash.js';
 
 export type SyncObjectType =
   | 'attachment'
@@ -82,7 +81,7 @@ export function computeSyncContentHash(objectType: SyncObjectType, payload: Json
   if (objectType === 'node') {
     return computeNodeSyncHash(payload as NodeSyncHashInput);
   }
-  return createHash('sha256').update(stableJson(payload as JsonValue)).digest('hex');
+  return hashTextBody(stableJson(payload as JsonValue));
 }
 
 export function upsertSyncObjectState(driver: DatabaseDriver, input: SyncObjectStateInput): void {
