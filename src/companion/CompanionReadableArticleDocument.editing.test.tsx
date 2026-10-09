@@ -118,6 +118,7 @@ describe('ReadableArticleDocument editing', () => {
     expect(screen.getByText('Waiting for topic body.')).toBeInTheDocument();
   });
 
+
   it('keeps a legacy hidden body H1 available to the shared editor', () => {
     renderReadableArticleDocument({
       readableArticle: createReadableArticle({
@@ -130,6 +131,15 @@ describe('ReadableArticleDocument editing', () => {
     expect(markdownEditorMock.props?.hideTitleHeading).toBe(true);
   });
 });
+
+  it('does not start editing a body that has never finished loading', () => {
+    const save = createContentSaveMock();
+    renderReadableArticleDocument({ allowContentEditing: true, onSaveContent: save,
+      readableArticle: createReadableArticle({ bodyStatus: 'fetching', content: '' }) });
+    expect(screen.queryByLabelText('Topic body')).not.toBeInTheDocument();
+    expect(screen.getByText('Loading topic body.')).toBeInTheDocument();
+    expect(save).not.toHaveBeenCalled();
+  });
 
 it('ignores historical Readwise lifecycle values while rendering the same topic body', () => {
   renderReadableArticleDocument({

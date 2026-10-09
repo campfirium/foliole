@@ -1,4 +1,4 @@
-import { lazy, Suspense, type CSSProperties, useCallback, useEffect } from 'react';
+import { lazy, Suspense, type CSSProperties, useCallback, useEffect, useRef } from 'react';
 
 import type { CompanionContentSaveHandler } from '../shared/platform/companion/editing/companionContentEditContract';
 
@@ -96,10 +96,14 @@ function useReadableArticleEditorState(props: {
   readableArticle: ReadableArticle;
 }) {
   const saveContent = props.onSaveContent;
+  const editableNode = useRef<string | null>(null);
+  const bodyReady = !props.readableArticle.bodyStatus || props.readableArticle.bodyStatus === 'ready';
+  if (bodyReady && props.allowContentEditing && saveContent) editableNode.current = props.readableArticle.nodeId;
+  if (!props.allowContentEditing || editableNode.current !== props.readableArticle.nodeId) editableNode.current = null;
   const canEdit = Boolean(
     props.allowContentEditing === true &&
     saveContent &&
-    (!props.readableArticle.bodyStatus || props.readableArticle.bodyStatus === 'ready')
+    (bodyReady || (props.readableArticle.bodyStatus === 'fetching' && editableNode.current === props.readableArticle.nodeId))
   );
   const editorState = useCompanionTopicEditAutosave({
     canEdit: canEdit && !props.isViewingPdfOriginal,
@@ -188,7 +192,7 @@ export function ReadableArticleDocument(props: {
       pdfReading.hasReadableText ? pdfReading.onBackToText : undefined
     );
   }
-  if (props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
+  if (!canEdit && props.readableArticle.bodyStatus && props.readableArticle.bodyStatus !== 'ready') {
     return <CompanionArticleBodyStatusFallback bodyStatus={props.readableArticle.bodyStatus} title={props.readableArticle.title} />;
   }
 
