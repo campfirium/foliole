@@ -102,6 +102,7 @@ export const controlledSyncSqliteTests = [
   'src/shared/platform/companion/sync/framed/companionFramedSyncApply.resources.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncApply.test.ts',
   'src/shared/platform/companion/sync/framed/companionSyncGroupLocalAdoption.sqlite.test.ts',
+  'src/shared/platform/companion/sync/completeCompanionSyncGroupAdoption.sqlite.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncInventory.test.ts',
   'src/shared/platform/companion/sync/pack-apply/companionSyncIdentityRestoreApply.test.ts',
   'src/shared/platform/companion/sync/syncGroupIdentityCandidateStore.test.ts',

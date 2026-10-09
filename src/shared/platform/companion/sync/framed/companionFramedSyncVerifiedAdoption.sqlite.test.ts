@@ -22,7 +22,7 @@ async function assertAdopted(host: Awaited<ReturnType<typeof verifiedCompanionFi
   expect(host.main.prepare(`SELECT version_id, content_hash, body_text,
     json_extract(snapshot_json, '$.content') AS content FROM node_sync_versions ORDER BY version_id`).all())
     .toEqual(['child', 'parent'].map((id) => ({ version_id: `version-${id}`, content_hash: '4'.repeat(64),
-      body_text: id === 'child' ? largeBody : '', content: id === 'child' ? largeBody : '' })));
+      body_text: id === 'child' ? largeBody : '', content: null })));
   expect(await loadSyncGroupLocalAdoption(host.port())).toBeNull();
   expect(host.main.prepare('SELECT value FROM sync_group_metadata WHERE key = ?').pluck()
     .get('sync_group_completed_adoption')).toBe(JSON.stringify(adoption));

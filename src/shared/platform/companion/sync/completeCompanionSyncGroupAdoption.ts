@@ -3,10 +3,12 @@ import { exchangeCompanionSyncGroupMemberState } from '../network/companionSyncG
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { adoptCompanionSyncGroupData } from './framed/companionSyncGroupLocalAdoption';
+import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
 
-export async function completeCompanionSyncGroupAdoption() {
+export async function completeCompanionSyncGroupAdoption(): Promise<void> {
   const adoption = await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption);
   if (!adoption) return;
+  await ensureCompanionSyncGroupDataOwner();
   const state = await exchangeCompanionSyncGroupMemberState({ endpointUrl: adoption.endpointUrl,
     deviceId: adoption.providerDeviceId, groupId: adoption.groupId });
   if (state.localExited || state.peerRemoved || !state.normalSyncReady || !state.peerLibraryEpoch) {
