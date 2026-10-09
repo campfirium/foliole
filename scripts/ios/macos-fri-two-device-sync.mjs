@@ -2,6 +2,7 @@
 /* global AbortController, clearTimeout, console, process, setTimeout */
 
 import fs from 'node:fs';
+import { assertFriRunSucceeded } from './fri-run-result.mjs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -124,7 +125,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
       FOLIOLE_T152_EXPECTED_GROUP_ID: ready.groupId,
       FOLIOLE_T152_EXPECTED_GROUP_TAG: ready.groupTag, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 60 * 60_000, host: 'ios-b', stage: 'macos-fri-two-device' });
-    if (fri.code !== 0) throw new Error('Fri physical two-Device XCUITest failed.');
+    assertFriRunSucceeded(fri, 'Fri physical two-Device XCUITest');
     preserveFriBatch(evidenceRoot, 'join');
     await signals.waitFor('conflict-fork-ready', 12 * 60_000);
     const conflictFork = await execute('bash', [FRI_RUNNER,
@@ -136,7 +137,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     ], { action: 'fri-two-device-conflict', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 45 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-fork' });
-    if (conflictFork.code !== 0) throw new Error('Fri conflict fork XCUITest failed.');
+    assertFriRunSucceeded(conflictFork, 'Fri conflict fork XCUITest');
     preserveFriBatch(evidenceRoot, 'conflict-fork');
     releaseGate.release('consumer_complete');
     const conflictPublish = await execute('bash', [FRI_RUNNER,
@@ -148,7 +149,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     ], { action: 'fri-two-device-conflict-publish', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 15 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-publish' });
-    if (conflictPublish.code !== 0) throw new Error('Fri conflict publish XCUITest failed.');
+    assertFriRunSucceeded(conflictPublish, 'Fri conflict publish XCUITest');
     preserveFriBatch(evidenceRoot, 'conflict-publish');
     await signals.waitFor('automatic-converged', 5 * 60_000);
     const conflictPull = await execute('bash', [FRI_RUNNER,
@@ -160,7 +161,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     ], { action: 'fri-two-device-conflict-pull', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 15 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-pull' });
-    if (conflictPull.code !== 0) throw new Error('Fri conflict pull XCUITest failed.');
+    assertFriRunSucceeded(conflictPull, 'Fri conflict pull XCUITest');
     preserveFriBatch(evidenceRoot, 'conflict-pull');
     fri.conflictProjection = await runFriSyncEventProjection({ buildIdentity: acceptedTip,
       evidenceRoot: path.join(evidenceRoot, 'fri-conflict-projection'), execute, repoRoot, bundle,
@@ -175,7 +176,7 @@ export async function runMacosFriTwoDeviceSync({ acceptedTip, evidenceRoot,
     ], { action: 'fri-two-device-conflict-verify', cwd: repoRoot, env: { ...process.env,
       FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix, FOLIOLE_T152_TWO_DEVICE: '1' },
     hardDeadlineMs: 15 * 60_000, host: 'ios-b', stage: 'macos-fri-conflict-verify' });
-    if (conflictVerify.code !== 0) throw new Error('Fri conflict/restart XCUITest failed.');
+    assertFriRunSucceeded(conflictVerify, 'Fri conflict/restart XCUITest');
     preserveFriBatch(evidenceRoot, 'conflict-verify');
     fri = { ...fri, syncEvents: await runFriSyncEventProjection({ buildIdentity: acceptedTip,
       evidenceRoot: path.join(evidenceRoot, 'fri-sync-events'), execute, repoRoot, bundle,

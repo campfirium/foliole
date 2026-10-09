@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /* global console, process */
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { createFriPhysicalReadinessAdapter } from './fri-physical-readiness.mjs';
 import { retainFriDevelopmentApps } from './fri-app-retention.mjs';
+import { assertFriRunSucceeded } from './fri-run-result.mjs';
 
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
 export const FRI_DEV_APP_ID = 'com.campfirium.foliole.ios.dev';
@@ -26,11 +27,31 @@ function timestamp() {
   return new Date().toISOString().replaceAll(/[-:.TZ]/gu, '');
 }
 
+function executeFriRunner(command, args, options) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd: options.cwd,
+      env: options.env ?? process.env, stdio: ['inherit', 'pipe', 'pipe'] });
+    let output = '';
+    for (const [source, destination] of [[child.stdout, process.stdout], [child.stderr, process.stderr]]) {
+      source.setEncoding('utf8');
+      source.on('data', (chunk) => { output += chunk; destination.write(chunk); });
+    }
+    child.on('error', reject);
+    child.on('close', (code, signal) => {
+      try {
+        assertFriRunSucceeded({ code, signal, output }, options.stage);
+        resolve();
+      } catch (error) { reject(error); }
+    });
+  });
+}
+
 function execute(command, args, options = {}) {
+  if (command === 'bash' && options.stage?.startsWith('fri-dev-xcuitest-')) {
+    return executeFriRunner(command, args, options);
+  }
   const result = spawnSync(command, args, {
-    cwd: options.cwd,
-    env: options.env ?? process.env,
-    stdio: 'inherit'
+    cwd: options.cwd, env: options.env ?? process.env, stdio: 'inherit'
   });
   if (result.error) throw result.error;
   if (result.status !== 0) {

@@ -120,3 +120,23 @@ it('prepares the physical control plane outside the readiness probe', async () =
   expect(calls[0][1][0]).toBe('build-for-testing');
   expect(fs.existsSync(path.join(cacheRoot, 'prepared.json'))).toBe(true);
 });
+
+it('keeps readiness blocked when only post-test foreground restoration fails', async () => {
+  const artifactRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-readiness-'));
+  const cacheRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fri-cache-'));
+  fs.writeFileSync(path.join(cacheRoot, 'prepared.json'), '{}\n');
+  const execute = async (command) => {
+    if (command === 'xcodebuild') return "Test Case '-[Probe.Tests testUI]' started.\n";
+    throw new Error('foreground launch failed');
+  };
+  try {
+    await expect(runFriControlPlaneProbe({ artifactRoot, cacheRoot, execute })).resolves
+      .toMatchObject({ status: 'blocked', missingFact: 'fri_idle_timer_guard_failed',
+        lastSuccessfulAction: 'fri_xcuitest_control_plane_ready',
+        diagnosis: { statuses: { xcodeStatus: 0, keepStatus: 1 },
+          failures: [expect.objectContaining({ kind: 'foreground-restore' })] } });
+  } finally {
+    fs.rmSync(artifactRoot, { recursive: true, force: true });
+    fs.rmSync(cacheRoot, { recursive: true, force: true });
+  }
+});

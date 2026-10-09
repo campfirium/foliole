@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { promisify } from 'node:util';
+import { inspectFriXCTest } from './fri-xctest-diagnosis.mjs';
 
 const exec = promisify(execFile);
 export const FRI_COREDEVICE_ID = 'CB302BF0-6B5B-5737-8DA8-21F8081E19E7';
@@ -68,6 +69,7 @@ export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded,
   fsApi = fs, cacheRoot } = {}) {
   fsApi.mkdirSync(artifactRoot, { recursive: true });
   const evidencePath = path.join(artifactRoot, 'fri-control-plane.log');
+  const resultPath = path.join(artifactRoot, 'fri-control-plane.xcresult');
   if (!fsApi.existsSync(path.join(cacheRoot, PREPARED_MARKER))) {
     return { evidencePath: null, lastSuccessfulAction: 'fri_xcode_destination_ready',
       missingFact: 'fri_control_plane_not_prepared', status: 'blocked' };
@@ -76,12 +78,15 @@ export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded,
   const args = ['test-without-building', '-project', project, '-scheme', 'FriXCUITestProbe',
     '-destination', `platform=iOS,id=${FRI_UDID}`, '-destination-timeout', '5',
     '-derivedDataPath', cacheRoot,
-    '-resultBundlePath', path.join(artifactRoot, 'fri-control-plane.xcresult'),
+    '-resultBundlePath', resultPath,
     '-allowProvisioningUpdates'];
+  let testPassed = false;
+  let testOutput = '';
   try {
-    const testOutput = await execute('xcodebuild', args, {
+    testOutput = await execute('xcodebuild', args, {
       cwd: PROBE_ROOT, timeout: FRI_XCUITEST_TIMEOUT_MS
     });
+    testPassed = true;
     const launchOutput = await execute('xcrun', ['devicectl', 'device', 'process', 'launch',
       '--device', FRI_COREDEVICE_ID, '--terminate-existing', '--timeout', '30', PROBE_APP_ID], {
       cwd: PROBE_ROOT, timeout: 40_000
@@ -91,12 +96,16 @@ export async function runFriControlPlaneProbe({ artifactRoot, execute = bounded,
     return { facts: ['fri_xcuitest_control_plane_ready', 'fri_idle_timer_guard_foreground'],
       output, status: 'passed' };
   } catch (error) {
-    const detail = `${error.stdout || ''}${error.stderr || ''}${error.message || ''}`;
+    const detail = `${testOutput}${error.stdout || ''}${error.stderr || ''}${error.message || ''}`;
     fsApi.writeFileSync(evidencePath, detail, 'utf8');
     const locked = /Unlock Fri to Continue/u.test(detail);
     return { evidencePath,
-      lastSuccessfulAction: 'fri_xcode_destination_ready',
-      missingFact: locked ? 'fri_current_unlock_required' : 'fri_xcuitest_control_plane_failed',
+      diagnosis: inspectFriXCTest({ logPath: evidencePath, resultPath,
+        xcodeStatus: testPassed ? 0 : Number.isInteger(error.code) ? error.code : 1,
+        keepStatus: testPassed ? 1 : -1 }),
+      lastSuccessfulAction: testPassed ? 'fri_xcuitest_control_plane_ready' : 'fri_xcode_destination_ready',
+      missingFact: testPassed ? 'fri_idle_timer_guard_failed' :
+        locked ? 'fri_current_unlock_required' : 'fri_xcuitest_control_plane_failed',
       status: 'blocked' };
   }
 }

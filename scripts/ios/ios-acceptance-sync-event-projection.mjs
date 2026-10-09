@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { assertFriRunSucceeded } from './fri-run-result.mjs';
 
 /* global process */
 
@@ -87,7 +88,7 @@ export async function runFriSyncEventProjection({ buildIdentity, evidenceRoot, e
     ...(desktopForkLabel ? { FOLIOLE_T152_DESKTOP_FORK_LABEL: desktopForkLabel } : {}),
     FOLIOLE_T152_BUILD_IDENTITY: buildIdentity }, hardDeadlineMs: 30 * 60_000,
   host: 'ios-b', stage: 'fri-sync-event-projection' });
-  if (result.code !== 0) throw new Error('Fri acceptance sync event projection failed.');
+  assertFriRunSucceeded(result, 'Fri acceptance sync event projection');
   const projection = loadProjection(resolveFriEvidenceRoot(result, evidenceRoot),
     buildIdentity, bundle.applicationId);
   return persistFriProjection(projection, evidenceRoot);

@@ -13,6 +13,7 @@ import {
 } from './ios-acceptance-sync-event-projection.mjs';
 import { writeFriTwoDeviceCellReceipt } from './fri-two-device-cell-receipt.mjs';
 import { buildFriRunTimeline } from './fri-two-device-run-proof.mjs';
+import { assertFriRunSucceeded } from './fri-run-result.mjs';
 
 const FRI_RUNNER = '/Users/roamer/.codex/skills/ios-physical-acceptance/scripts/run-fri-xcuitest.sh';
 
@@ -41,7 +42,7 @@ async function runFriBatch({ bundle, evidenceRoot, extraEnv = {}, name, repoRoot
     FOLIOLE_ACCEPTANCE_BUNDLE_SUFFIX: bundle.suffix,
     FOLIOLE_T152_DESKTOP_FORK_LABEL: 'windows', FOLIOLE_T152_TWO_DEVICE: '1', ...extraEnv },
   hardDeadlineMs: 60 * 60_000, host: 'ios-b', stage: `windows-fri-${name}` });
-  if (result.code !== 0) throw new Error(`Fri ${name} XCUITest failed.`);
+  assertFriRunSucceeded(result, `Fri ${name} XCUITest`);
   preserveFriBatch(evidenceRoot, name);
   return result;
 }
