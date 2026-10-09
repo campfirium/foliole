@@ -1286,6 +1286,7 @@ b {
 :root[data-resolved-base-color='dark'][data-pdf-reading-mode='inverted'] .pdf-document-surface :is(.pdf-document-scroll-container, .pdf-document-page-stack) {
   --app-scrollbar-track-bg: var(--pdf-reading-inverted-surface-color);
   background: var(--pdf-reading-inverted-surface-color);
+  --shadow-page: none;
 }
 
 :root[data-resolved-base-color='dark'][data-pdf-reading-mode='inverted'] .pdf-document-surface .pdf-document-page-placeholder {
