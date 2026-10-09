@@ -44,6 +44,18 @@ final class FolioleAcceptanceSyncEventProjectionTests: XCTestCase {
                   'reviews', json(reviews_json), 'states', json(states_json), 'resources', json(resources_json)))
                 FROM framed_sync_inventory
                 """),
+            "state_inventory_rows": try json(connection, """
+                SELECT json_group_array(json_object(
+                  'object_type', state.object_type, 'object_id', state.object_id,
+                  'content_hash', state.content_hash, 'current_version_id', state.current_version_id,
+                  'deleted_at', state.deleted_at,
+                  'node_exists', EXISTS(SELECT 1 FROM nodes WHERE id = state.object_id),
+                  'body_blob_hash', CASE WHEN state.object_type = 'external_document'
+                    AND state.deleted_at IS NULL THEN (SELECT body_blob_hash FROM external_documents
+                      WHERE document_id = state.object_id AND (CAST(content AS BLOB) <> X'' OR
+                        body_blob_hash = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'))
+                    ELSE NULL END)) FROM sync_object_state state
+                """),
             "acceptance_document": try json(connection, """
                 SELECT json_group_array(json_object('id', id, 'content', content,
                   'current_version_id', current_version_id)) FROM nodes
