@@ -20,8 +20,9 @@ export async function loadParentOrderMembers(port: DbPort, parentId: string,
         AND object_id IN (SELECT value FROM json_each(?))`,
     [JSON.stringify(missing), JSON.stringify(missing)]);
     const retiredIds = new Set(retired.map((row) => row.object_id));
-    if (missing.some((id) => !retiredIds.has(id))) {
-      throw new Error('sync_parent_order_member_missing');
+    const missingMember = missing.find((id) => !retiredIds.has(id));
+    if (missingMember) {
+      throw new Error(`sync_parent_order_member_missing:${missingMember}`);
     }
   }
   const names = new Map(rows.filter((row) => !row.deleted_at &&

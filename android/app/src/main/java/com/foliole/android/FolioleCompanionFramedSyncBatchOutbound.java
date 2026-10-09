@@ -130,7 +130,8 @@ final class FolioleCompanionFramedSyncBatchOutbound {
         if (message.startsWith("framed_sync_http_400:")) message = message.substring("framed_sync_http_400:".length());
         for (String prefix : new String[] { "framed_sync_node_parent_missing:", "node_position_lineage_unproven:",
             "parent_order_position_lineage_unproven:", "sync_parent_order_body_unavailable:",
-            "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:" }) {
+            "framed_sync_review_node_missing:", "sync_node_open_state_node_missing:",
+            "sync_parent_order_member_missing:", "framed_sync_parent_relation_version_missing:" }) {
             if (message.startsWith(prefix) && message.substring(prefix.length()).matches("[A-Za-z0-9_-]{1,128}")) return true;
         }
         return false;

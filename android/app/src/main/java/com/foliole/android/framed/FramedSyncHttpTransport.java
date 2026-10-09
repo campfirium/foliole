@@ -117,7 +117,8 @@ public final class FramedSyncHttpTransport {
                 "framed_sync_resource_source_unavailable".equals(error)) return error;
             for (String dependency : new String[] { MISSING_PARENT, "node_position_lineage_unproven:",
                 "parent_order_position_lineage_unproven:", "sync_parent_order_body_unavailable:",
-            "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:" }) {
+                "framed_sync_review_node_missing:", "sync_node_open_state_node_missing:",
+                "sync_parent_order_member_missing:", "framed_sync_parent_relation_version_missing:" }) {
                 if (!error.startsWith(dependency)) continue;
                 String identity = error.substring(dependency.length());
                 return identity.matches("[A-Za-z0-9_-]{1,128}") ? error : null;

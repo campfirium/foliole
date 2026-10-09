@@ -97,6 +97,8 @@ public final class FramedSyncHttpTransportTest {
         assertPreservedError("parent_order_position_lineage_unproven:version-1");
         assertPreservedError("sync_parent_order_body_unavailable:version-1");
         assertPreservedError("framed_sync_review_node_missing:node-1");
+        assertPreservedError("sync_node_open_state_node_missing:node-1");
+        assertPreservedError("sync_parent_order_member_missing:node-1");
         assertPreservedError("framed_sync_parent_relation_version_missing:version-1");
         assertPreservedError("framed_sync_source_changed");
         assertPreservedError("framed_sync_difference_request_source_changed");

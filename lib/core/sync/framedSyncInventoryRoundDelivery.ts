@@ -5,6 +5,7 @@ const MISSING_DEPENDENCIES = {
   'node_position_lineage_unproven:': 'node',
   'framed_sync_review_node_missing:': 'node',
   'sync_node_open_state_node_missing:': 'node',
+  'sync_parent_order_member_missing:': 'node',
   'framed_sync_parent_relation_version_missing:': 'node_version',
   'parent_order_position_lineage_unproven:': 'order_version',
   'sync_parent_order_body_unavailable:': 'order_version'
