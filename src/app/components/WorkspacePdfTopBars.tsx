@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type ReactNode, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 
 import { PdfTopBarsProvider, usePdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
@@ -20,19 +20,29 @@ function PdfWindowChrome(props: { isImmersiveMode: boolean }) {
   return null;
 }
 
-export function PdfTopBarsRevealZone() {
+function isSideWhitespace(event: MouseEvent<HTMLDivElement>) {
+  if (event.buttons !== 0) return false;
+  const pages = Array.from(event.currentTarget.querySelectorAll('.pdf-document-page-frame'))
+    .map((page) => page.getBoundingClientRect())
+    .filter((box) => box.width > 0);
+  const distance = (box: DOMRect) => Math.max(box.top - event.clientY, event.clientY - box.bottom, 0);
+  const nearest = pages.reduce<DOMRect | null>((chosen, box) =>
+    !chosen || distance(box) < distance(chosen) ? box : chosen, null);
+  return Boolean(nearest && (event.clientX < nearest.left || event.clientX > nearest.right));
+}
+
+export function PdfTopBarsRevealZone(props: { children?: ReactNode }) {
   const bars = usePdfTopBars();
   const { setRevealHovered } = bars;
   useEffect(() => () => setRevealHovered(false), [setRevealHovered]);
-  if (!bars.floating) return null;
   return (
     <div
-      className="absolute inset-x-0 top-0 z-surface-raised h-3 [-webkit-app-region:no-drag]"
-      data-testid="pdf-top-bars-reveal-zone"
-      onMouseEnter={() => setRevealHovered(true)}
+      className="relative flex h-full min-h-0 w-full flex-1 flex-col"
+      data-testid={bars.floating ? 'pdf-top-bars-reveal-zone' : undefined}
+      onMouseMove={(event) => setRevealHovered(bars.floating && isSideWhitespace(event))}
       onMouseLeave={() => setRevealHovered(false)}
     >
-      <div className="absolute inset-0" data-testid="pdf-toolbar-reveal-zone" />
+      {props.children}
     </div>
   );
 }

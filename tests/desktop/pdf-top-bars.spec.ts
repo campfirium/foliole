@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import { revealPdfBars } from './pdf-top-bars-interaction';
 
 async function openPdf(app: ElectronApplication, page: Page) {
   await page.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ }).click();
@@ -20,18 +21,22 @@ async function openPdf(app: ElectronApplication, page: Page) {
     .toBe(nodeId);
   await page.evaluate((id) => window.__folioleWorkspaceDebug?.openNode?.(id), nodeId);
   await page.locator(`[role="treeitem"][data-node-id="${nodeId}"]`).click();
+  await page.getByRole('button', { name: /Set zoom level|设置缩放级别/ }).click();
+  await page.getByRole('menuitem', { name: '100%', exact: true }).click();
+  await expect.poll(() => page.getByTestId('pdf-scroll-container').evaluate((container) => {
+    const paper = container.querySelector('.pdf-document-page-frame')?.getBoundingClientRect();
+    return Boolean(paper && paper.width > 0 && paper.width < container.clientWidth);
+  })).toBe(true);
   await expect(page.getByTestId('pdf-document-page-shell').first()).toHaveAttribute(
     'data-pdf-page-state',
     'ready'
   );
   await revealToolbar(page);
-  await page.getByRole('button', { name: /Set zoom level|设置缩放级别/ }).click();
-  await page.getByRole('menuitem', { name: '100%', exact: true }).click();
   return nodeId;
 }
 
 async function revealToolbar(page: Page) {
-  await page.getByTestId('pdf-toolbar-reveal-zone').hover();
+  await revealPdfBars(page);
   await expect(page.getByTestId('pdf-document-toolbar')).toHaveAttribute(
     'data-toolbar-visible',
     'true'
@@ -65,12 +70,14 @@ test('PDF top bars @pdf float, protect navigation, restore space, and remember t
   await expect(title).toHaveAttribute('data-visible', 'false');
   await expect(navigation).toHaveAttribute('data-visible', 'false');
   await screenshot(page, 'hidden');
-  await page.getByTestId('pdf-top-bars-reveal-zone').hover();
+  await revealPdfBars(page);
   await expect(title).toHaveAttribute('data-visible', 'true');
   await expect(navigation).toHaveAttribute('data-visible', 'true');
   expect(await scroll.evaluate((element) => element.clientHeight)).toBe(floatingHeight);
   await screenshot(page, 'revealed');
   await transferToPdfToolbar(page);
+  await verifyTopTextSelection(desktopApp, page);
+  await revealToolbar(page);
   await protectNavigationMenu(page);
   await verifyFixedSideControls(page);
   await revealToolbar(page);
@@ -129,7 +136,7 @@ async function verifyFixedSideControls(page: Page) {
   const toggle = page.getByRole('button', { name: /Toggle right sidebar|切换右侧栏/ });
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'false');
-  await page.getByTestId('pdf-toolbar-reveal-zone').hover();
+  await revealPdfBars(page);
   await expect(page.getByTestId('pdf-window-top-bar')).toHaveAttribute('data-visible', 'true');
   await toggle.click();
   await expect(toggle).toHaveAttribute('aria-pressed', 'true');
@@ -159,4 +166,40 @@ async function transferToPdfToolbar(page: Page) {
   expect(divider.height).toBe('1px');
   expect(divider.opacity).toBeGreaterThan(0);
   await screenshot(page, 'linked-toolbar');
+}
+
+async function verifyTopTextSelection(app: ElectronApplication, page: Page) {
+  const scroll = page.getByTestId('pdf-scroll-container');
+  await scroll.evaluate((container) => {
+    const text = container.querySelector('.textLayer span');
+    if (!text) throw new Error('PDF text unavailable');
+    container.scrollTop += text.getBoundingClientRect().top - container.getBoundingClientRect().top - 6;
+  });
+  await moveToReading(page);
+  const title = page.getByTestId('pdf-window-top-bar');
+  await expect(title).toHaveAttribute('data-visible', 'false');
+  const dragRegion = title.locator('.window-titlebar-drag-fill');
+  expect(await dragRegion.evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('no-drag');
+  expect(await page.locator('.window-titlebar').evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('no-drag');
+  const bounds = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getBounds());
+  const text = page.locator('.textLayer span').first();
+  const box = await text.boundingBox();
+  if (!box) throw new Error('PDF text bounds unavailable');
+  await page.mouse.move(box.x + 1, box.y + box.height / 2);
+  await expect(title).toHaveAttribute('data-visible', 'false');
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 12 });
+  await page.mouse.up();
+  await expect.poll(() => page.evaluate(() => window.getSelection()?.toString().trim())).not.toBe('');
+  expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.getBounds())).toEqual(bounds);
+  await screenshot(page, 'top-text-selection');
+  const highlight = page.getByRole('button', { name: /^(Highlight|高亮)$/ });
+  await expect(highlight).toBeVisible();
+  await highlight.click();
+  await expect(page.getByTestId('pdf-highlight-rect').first()).toBeVisible();
+  await screenshot(page, 'top-text-highlight');
+  await scroll.click({ position: { x: 80, y: 220 } });
+  await revealPdfBars(page, 'right');
+  await expect(title).toHaveAttribute('data-visible', 'true');
+  expect(await dragRegion.evaluate((element) => getComputedStyle(element).getPropertyValue('-webkit-app-region'))).toBe('drag');
 }

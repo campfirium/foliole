@@ -3,6 +3,7 @@
   inset-inline: 0;
   top: 0;
   z-index: var(--z-workspace-overlay);
+  -webkit-app-region: no-drag;
   clip-path: polygon(
     0 0,
     var(--window-titlebar-left-width) 0,
@@ -13,6 +14,14 @@
     100% 100%,
     0 100%
   );
+}
+
+.workspace-responsive-shell[data-pdf-top-bars-floating='true'] .window-titlebar-left-zone {
+  -webkit-app-region: drag;
+}
+
+.pdf-floating-window-title[data-visible='false'] .window-titlebar-drag-fill {
+  -webkit-app-region: no-drag;
 }
 
 .workspace-responsive-shell[data-pdf-top-bars-floating='true'] .workspace-region-main-rail,

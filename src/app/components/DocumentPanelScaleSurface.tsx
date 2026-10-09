@@ -20,13 +20,12 @@ export function DocumentPanelScaleSurface(props: {
   return (
     <section aria-label={label} className="workspace-region-main-document relative flex h-full min-h-0 flex-1 flex-col text-foreground">
       <SharedPanelScaleSurface enabled={!props.isPdfSurface} label={label} panelId={panelId}>
-        <div className="relative flex h-full min-h-0 w-full flex-1 flex-col">
+        <PdfTopBarsRevealZone>
           <PdfTopBarsTitleHost />
           {props.overlay}
           <PdfTopBar kind="document">{props.chrome}</PdfTopBar>
           {props.children}
-          <PdfTopBarsRevealZone />
-        </div>
+        </PdfTopBarsRevealZone>
       </SharedPanelScaleSurface>
     </section>
   );

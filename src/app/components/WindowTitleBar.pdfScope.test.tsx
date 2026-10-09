@@ -18,7 +18,7 @@ vi.mock('../../shared/platform/windowControls', async (importOriginal) => ({
 function ActivePdf() {
   const register = useRegisterPdfTopBars()
   useEffect(() => register?.({ id: 'one', enabled: true }), [register])
-  return <p>PDF content</p>
+  return <p className="pdf-document-page-frame">PDF content</p>
 }
 
 afterEach(() => {
@@ -67,7 +67,8 @@ it('floats only the document title and navigation while keeping window controls 
   expect(screen.getByRole('button', { name: 'Toggle left panel' })).toBeVisible()
   expect(screen.getByRole('button', { name: 'Toggle right sidebar' })).toBeVisible()
   expect(controls.visible).toHaveBeenLastCalledWith(true)
-  fireEvent.mouseEnter(screen.getByTestId('pdf-toolbar-reveal-zone'))
+  vi.spyOn(screen.getByText('PDF content'), 'getBoundingClientRect').mockReturnValue(new DOMRect(200, 0, 600, 1000))
+  fireEvent.mouseMove(screen.getByTestId('pdf-top-bars-reveal-zone'), { clientX: 100, clientY: 500 })
   expect(title).toHaveAttribute('data-visible', 'true')
   expect(navigation).toHaveAttribute('data-visible', 'true')
 })

@@ -41,6 +41,8 @@ vi.mock('../../shared/platform/windowControls', () => ({
 function Reader(props: { pdf: boolean; immersive?: boolean }) {
   return (
     <WorkspacePdfTopBars isImmersiveMode={props.immersive ?? false}>
+      <PdfTopBarsRevealZone>
+      <div className="pdf-document-page-frame" data-testid="reading-page">PDF text</div>
       <PdfTopBar kind="window">
         <button>Window control</button>
       </PdfTopBar>
@@ -62,7 +64,7 @@ function Reader(props: { pdf: boolean; immersive?: boolean }) {
         </PdfTopBarsDocument>
       ) : null}
       <button>Reading area</button>
-      <PdfTopBarsRevealZone />
+      </PdfTopBarsRevealZone>
     </WorkspacePdfTopBars>
   );
 }
@@ -100,7 +102,8 @@ it('shows on entry, reveals immediately, waits after leaving, and restores non-P
   expectVisible(false);
   expect(backend.nativeControls).toHaveBeenLastCalledWith(true);
   const reveal = screen.getByTestId('pdf-top-bars-reveal-zone');
-  fireEvent.mouseEnter(reveal);
+  vi.spyOn(screen.getByTestId('reading-page'), 'getBoundingClientRect').mockReturnValue(new DOMRect(200, 0, 600, 1000));
+  fireEvent.mouseMove(reveal, { clientX: 100, clientY: 500 });
   expectVisible(true);
   fireEvent.mouseLeave(reveal);
   advance(299);
