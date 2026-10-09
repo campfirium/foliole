@@ -108,6 +108,13 @@ function normalizeParams(params: DbParams, platform: string) {
 }
 
 function normalizeValue(value: DbValue, platform: string): DbValue | IosBlobValue | AndroidBlobValue {
+  if (typeof value === 'bigint') {
+    const integer = Number(value);
+    if (!Number.isSafeInteger(integer)) {
+      throw new DbPortError('Capacitor SQLite parameter exceeds the safe integer range');
+    }
+    return integer;
+  }
   if (value instanceof Uint8Array) {
     if (platform === 'android') {
       return { type: 'Buffer', data: Array.from(value) };

@@ -11,6 +11,29 @@ interface FakeConnection {
   run: ReturnType<typeof vi.fn>;
 }
 
+it.each(['ios', 'android'])('binds exact bigint parameters through the %s JSON bridge', async (platform) => {
+  const connection = createFakeConnection();
+  const db = createCapacitorSqliteDbPort(connection as never, platform);
+  const values = [0n, 1048533n, -1n, BigInt(Number.MAX_SAFE_INTEGER), BigInt(Number.MIN_SAFE_INTEGER)];
+
+  await db.run('INSERT INTO integers VALUES (?, ?, ?, ?, ?)', values);
+  await db.query('SELECT ? AS bytes', [1048533n]);
+
+  expect(connection.run.mock.calls[0]?.[1]).toEqual(values.map(Number));
+  expect(connection.query.mock.calls[0]?.[1]).toEqual([1048533]);
+});
+
+it.each(['ios', 'android'])('rejects lossy bigint parameters before calling the %s bridge', async (platform) => {
+  const connection = createFakeConnection();
+  const db = createCapacitorSqliteDbPort(connection as never, platform);
+  for (const value of [BigInt(Number.MAX_SAFE_INTEGER) + 1n, BigInt(Number.MIN_SAFE_INTEGER) - 1n]) {
+    await expect(db.run('INSERT INTO integers VALUES (?)', [value])).rejects.toThrow('safe integer');
+    await expect(db.query('SELECT ?', [value])).rejects.toThrow('safe integer');
+  }
+  expect(connection.run).not.toHaveBeenCalled();
+  expect(connection.query).not.toHaveBeenCalled();
+});
+
 it('maps parameterless DbPort writes to the prepared Capacitor runner', async () => {
   const connection = createFakeConnection();
   const db = createCapacitorSqliteDbPort(connection as never);
