@@ -51,3 +51,36 @@ it('returns pending for an unchanged unavailable body while committing neighbors
     await fs.rm(fixture.root, { force: true, recursive: true });
   }
 }, 15_000);
+
+it('delivers complete current text and retired oversized ancestry to a new member over HTTP', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  let restarted: Awaited<ReturnType<typeof fixture.restartRight>> | undefined;
+  try {
+    const nodeId = 'oversize-history';
+    await fixture.left.seed({ content: 'Legacy ancestor', nodeId, title: 'History' });
+    const source = new Database(fixture.leftSnapshot.databasePath);
+    const base = String(source.prepare('SELECT current_version_id FROM nodes WHERE id = ?').pluck().get(nodeId));
+    source.close();
+    await fixture.left.seed({ content: 'Complete current text 中文😀', nodeId, title: 'History' });
+    const legacy = new Database(fixture.leftSnapshot.databasePath);
+    legacy.prepare('UPDATE node_sync_versions SET body_text = ? WHERE version_id = ?')
+      .run('雪'.repeat(350000), base);
+    const identities = legacy.prepare('SELECT version_id, parent_version_id, content_hash FROM node_sync_versions WHERE object_id = ? ORDER BY version_id').all(nodeId);
+    legacy.close();
+
+    expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot)).toMatchObject({ complete: true, pending: 0 });
+    restarted = await fixture.restartRight();
+    for (const snapshot of [fixture.leftSnapshot, restarted.snapshot]) {
+      const db = new Database(snapshot.databasePath, { readonly: true });
+      try {
+        expect(db.prepare('SELECT content FROM nodes WHERE id = ?').pluck().get(nodeId)).toBe('Complete current text 中文😀');
+        expect(db.prepare('SELECT body_text IS NULL FROM node_sync_versions WHERE version_id = ?').pluck().get(base)).toBe(1);
+        expect(db.prepare('SELECT version_id, parent_version_id, content_hash FROM node_sync_versions WHERE object_id = ? ORDER BY version_id').all(nodeId)).toEqual(identities);
+      } finally { db.close(); }
+    }
+    expect(await reconnectFixturePeer(fixture.left, restarted.snapshot)).toMatchObject({ complete: true, pending: 0 });
+  } finally {
+    await Promise.allSettled([fixture.left.close(), restarted?.process.close() ?? fixture.right.close()]);
+    await fs.rm(fixture.root, { force: true, recursive: true });
+  }
+}, 15_000);

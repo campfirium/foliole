@@ -1,3 +1,5 @@
+import { retireOversizeNodeVersionBodies } from '../database/oversizeVersionBodyMigration.js';
+
 import type { DbPort } from './dbPort.js';
 import { loadRetainedSyncNodeVersionRecords } from './syncNodeGraph.js';
 import { loadSyncNodeVersionParents } from './syncNodeLineage.js';
@@ -19,6 +21,7 @@ export async function selectRetainedNodeVersionOrder(db: DbPort, versionIds: rea
 }
 
 export async function* streamRetainedNodeVersions(db: DbPort, versionIds: readonly string[], objectId: string) {
+  await retireOversizeNodeVersionBodies(db, objectId);
   for (const metadata of await selectRetainedNodeVersionOrder(db, versionIds, objectId)) {
     const record = (await loadRetainedSyncNodeVersionRecords(db, [metadata.version_id])).get(metadata.version_id);
     if (!record || record.object_id !== objectId) {

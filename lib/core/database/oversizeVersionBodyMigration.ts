@@ -8,17 +8,20 @@ import type { DatabaseMigrationTarget } from './migrationTypes.js';
 
 const AVAILABLE = `(body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text'
   OR json_type(snapshot_json, '$.content') IS NULL)`;
-const OVERSIZE = `${AVAILABLE} AND (
+const OWNED_OVERSIZE = `
   length(CAST(body_text AS BLOB)) > ${TEXT_BODY_MAX_BYTES}
   OR length(CAST(json_extract(snapshot_json, '$.content') AS BLOB)) > ${TEXT_BODY_MAX_BYTES}
   OR EXISTS (SELECT 1 FROM json_each(snapshot_json, '$.text_alternative_bodies') body
-    WHERE length(CAST(json_extract(body.value, '$.text') AS BLOB)) > ${TEXT_BODY_MAX_BYTES})
+    WHERE length(CAST(json_extract(body.value, '$.text') AS BLOB)) > ${TEXT_BODY_MAX_BYTES})`;
+const OVERSIZE = `${AVAILABLE} AND (${OWNED_OVERSIZE}
   OR EXISTS (SELECT 1 FROM json_each(snapshot_json, '$.text_alternatives') alternative
     JOIN content_blob_data blob ON blob.hash = json_extract(alternative.value, '$.body_blob_hash')
     WHERE length(blob.data) > ${TEXT_BODY_MAX_BYTES}))`;
 const NEXT = `SELECT object_id FROM node_sync_versions WHERE object_id > ? AND ${OVERSIZE}
   ORDER BY object_id LIMIT 1`;
 const CANDIDATES = `SELECT version_id FROM node_sync_versions WHERE object_id = ? AND ${OVERSIZE}`;
+const OWNED_CANDIDATES = `SELECT version_id FROM node_sync_versions WHERE object_id = ?
+  AND ${AVAILABLE} AND (${OWNED_OVERSIZE})`;
 interface Head extends DbRow { current_version_id: string | null; sync_dirty: number }
 interface Reference extends DbRow { version_id: string | null; frozen: number }
 interface Identity extends DbRow { version_id: string }
@@ -43,7 +46,7 @@ export function migrateOversizeVersionBodies(sqlite: DatabaseMigrationTarget) {
     after = node.object_id;
     const [head] = sqlite.prepare(CHAIN_HEAD_SQL).all(after) as Head[];
     if (!head?.current_version_id || head.sync_dirty !== 0) continue;
-    const query = chainReferencesQuery(after);
+    const query = chainReferencesQuery(after, true);
     const statements = retirementStatements(head, sqlite.prepare(query.sql).all(...query.params) as Reference[],
       sqlite.prepare(CHAIN_VERSION_METADATA_SQL).all(after) as ChainVersionMetadata[],
       sqlite.prepare(CHAIN_EDGES_SQL).all(after) as ChainEdge[],
@@ -58,12 +61,21 @@ export async function migrateCompanionOversizeVersionBodies(db: DbPort) {
     const [node] = await db.query<{ object_id: string }>(NEXT, [after]);
     if (!node) return;
     after = node.object_id;
-    const [head] = await db.query<Head>(CHAIN_HEAD_SQL, [after]);
-    if (!head?.current_version_id || head.sync_dirty !== 0) continue;
-    const query = chainReferencesQuery(after);
-    const statements = retirementStatements(head, await db.query<Reference>(query.sql, query.params),
-      await db.query<ChainVersionMetadata>(CHAIN_VERSION_METADATA_SQL, [after]),
-      await db.query<ChainEdge>(CHAIN_EDGES_SQL, [after]), await db.query<Identity>(CANDIDATES, [after]));
-    for (const statement of statements) await db.run(statement.sql, statement.params);
+    await retireOversizeNodeVersionBodies(db, after, true);
   }
+}
+
+/** The caller owns the transaction before freezing a new outbound source. */
+export async function retireOversizeNodeVersionBodies(db: DbPort, nodeId: string, legacyStorage = false) {
+  const candidates = await db.query<Identity>(legacyStorage ? CANDIDATES : OWNED_CANDIDATES, [nodeId]);
+  if (!candidates.length) return;
+  const [head] = await db.query<Head>(CHAIN_HEAD_SQL, [nodeId]);
+  if (!head?.current_version_id || head.sync_dirty !== 0) return;
+  // Blanket retention for a new member cannot require unsupported oversize history.
+  // Explicit editor, peer-base, fork and frozen-delivery requirements still apply.
+  const query = chainReferencesQuery(nodeId, true);
+  const statements = retirementStatements(head, await db.query<Reference>(query.sql, query.params),
+    await db.query<ChainVersionMetadata>(CHAIN_VERSION_METADATA_SQL, [nodeId]),
+    await db.query<ChainEdge>(CHAIN_EDGES_SQL, [nodeId]), candidates);
+  for (const statement of statements) await db.run(statement.sql, statement.params);
 }

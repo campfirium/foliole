@@ -4,6 +4,10 @@ import { afterEach, expect, it } from 'vitest';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
+import { canonicalContentId, type CanonicalBlob, type CanonicalFact } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
+import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
+import { streamRetainedNodeVersions } from '../../lib/core/sync/syncNodeVersionSelection.js';
 
 import { textBranch, textDevice } from './topicTextState.testSupport.js';
 
@@ -84,4 +88,56 @@ it.each([false, true])('preserves an oversize version referenced by an unretired
   expect(host.sqlite.prepare("SELECT length(CAST(body_text AS BLOB)) AS bytes FROM node_sync_versions WHERE version_id='base'").get())
     .toEqual({ bytes: 1050000 });
   expect(host.sqlite.prepare('SELECT * FROM framed_sync_outbound_fact_refs').all()).toEqual(facts);
+});
+
+function addNewMember(host: ReturnType<typeof textDevice>) {
+  host.sqlite.exec(`INSERT INTO sync_groups VALUES ('group', 'Group', 'key', 'now', 'now');
+    INSERT INTO sync_group_local_state VALUES (1, 'group', 'local', 'active', 'now');
+    INSERT INTO sync_group_devices (group_id, device_identity_key, device_anchor, canonical_library_path,
+      device_name, platform, state, joined_at, updated_at)
+    VALUES ('group', 'new-peer', 'peer-anchor', '/peer', 'peer', 'ios', 'active', 'now', 'now')`);
+}
+
+it.each([false, true])('retires only oversize history despite a new member without a base companion=%s', async (companion) => {
+  const host = await fixture(false);
+  addNewMember(host);
+  await upgrade(host, companion);
+  expect(host.sqlite.prepare("SELECT body_text IS NULL AS retired FROM node_sync_versions WHERE version_id='base'").get())
+    .toEqual({ retired: 1 });
+  expect(host.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id='small'").get())
+    .toEqual({ body_text: 'Small historical text' });
+});
+
+it('publishes previously protected oversize history as identity after the current head becomes ready', async () => {
+  const host = await fixture(false);
+  addNewMember(host);
+  const identities = host.sqlite.prepare('SELECT version_id, parent_version_id, content_hash FROM node_sync_versions ORDER BY version_id').all();
+  const facts: CanonicalFact[] = [];
+  const blobs: CanonicalBlob[] = [];
+  await host.db.transaction(async (tx) => {
+    for await (const record of streamRetainedNodeVersions(tx, ['head', 'small', 'base'], 'topic')) {
+      const projection = isNodeVersionIdentityOnly(record)
+        ? { facts: [projectFramedSyncNodeIdentityFact(record)], blobs: [] }
+        : projectFramedSyncNodeRecord(record).manifest;
+      facts.push(...projection.facts);
+      blobs.push(...projection.blobs);
+    }
+  });
+  await expect(canonicalContentId({ facts, blobs })).resolves.toHaveLength(32);
+  expect(facts.find((fact) => fact.factId === 'base')?.blobs).toEqual([]);
+  expect(host.sqlite.prepare('SELECT version_id, parent_version_id, content_hash FROM node_sync_versions ORDER BY version_id').all()).toEqual(identities);
+  expect((await host.current()).body_text).toBe('Current text');
+});
+
+it('keeps an explicit editor hold when selecting oversize history for a new member', async () => {
+  const host = await fixture(true);
+  addNewMember(host);
+  await host.db.transaction(async (tx) => {
+    for await (const record of streamRetainedNodeVersions(tx, ['base'], 'topic')) {
+      expect(isNodeVersionIdentityOnly(record)).toBe(false);
+    }
+  });
+  expect(host.sqlite.prepare("SELECT length(CAST(body_text AS BLOB)) AS bytes FROM node_sync_versions WHERE version_id='base'").get())
+    .toEqual({ bytes: 1050000 });
+  expect(host.sqlite.prepare('SELECT version_id FROM node_version_local_holds').all()).toEqual([{ version_id: 'base' }]);
 });
