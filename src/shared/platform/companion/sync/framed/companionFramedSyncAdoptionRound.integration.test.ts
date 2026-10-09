@@ -1,12 +1,13 @@
 // @vitest-environment node
 import { promises as fs } from 'node:fs';
+import path from 'node:path';
 
 import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
 import { companionContinuationBridge } from '../../../../../../electron/sync/companionFramedSyncContinuation.testSupport.js';
-import { readFixtureInventory } from '../../../../../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport.js';
+import { readFixtureInventory, reconnectFixturePeer } from '../../../../../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
   from '../../../../../../electron/sync/desktopFramedSyncTwoProcess.testSupport.js';
 import { computeSyncContentHash } from '../../../../../../lib/core/database/syncState.js';
@@ -22,9 +23,9 @@ import { sendCompanionFramedSyncInventoryDifferences }
   from './companionFramedSyncInventoryRound.js';
 
 
-const native = vi.hoisted(() => ({ db: null as DbPort | null, inventory: vi.fn(), pull: vi.fn(), send: vi.fn() }));
+const native = vi.hoisted(() => ({ db: null as DbPort | null, inventory: vi.fn(), pull: vi.fn(), resolve: vi.fn(), send: vi.fn() }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
-  readFramedSyncInventory: native.inventory, pullFramedSyncObject: native.pull, sendFramedSyncTransfer: native.send,
+  resolveAttachmentResource: native.resolve, readFramedSyncInventory: native.inventory, pullFramedSyncObject: native.pull, sendFramedSyncTransfer: native.send,
   pullFramedSyncObjects: async (input: { requests: NativeCompanionFramedSyncPullRequest[] }) => {
     const received = [];
     for (const request of input.requests) received.push({ ...request,
@@ -168,3 +169,45 @@ it('finishes reception after parent ordering merges with a local addition', asyn
   }
   expect(await readFixtureInventory(fixture.left)).toEqual(await readFixtureInventory(fixture.right));
 }, 15_000);
+
+
+it('keeps missing attachments pending without retransmitting converged database bodies', async () => {
+  const { fixture, bridge } = await adopt();
+  await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  const id = 'resource-only-article';
+  const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
+  const seeded = await fixture.right.seedResource({ bytes, nodeId: id, includeImageInBody: true });
+  const source = path.join(fixture.rightSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey);
+  await fs.rm(source);
+  expect(await reconnectFixturePeer(fixture.left, fixture.rightSnapshot))
+    .toMatchObject({ databaseComplete: true, resources: { pending: 1, transferred: 0 } });
+  const file = path.join(fixture.leftSnapshot.stateRoot, 'documents', 'Foliole', 'Assets', seeded.storageKey);
+  await expect(fs.stat(file)).rejects.toMatchObject({ code: 'ENOENT' });
+  const before = bridge.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all();
+  // The physical missing-file snapshot has identical database facts but lacks resource availability.
+  bridge.sqlite.prepare("UPDATE framed_sync_inventory SET resources_json = '[]' WHERE object_id = ?").run(id);
+  native.resolve.mockImplementation(async ({ storage_key }: { storage_key: string }) => ({
+    status: await fs.stat(path.join(path.dirname(file), storage_key)).then(() => 'ready', () => 'missing_file')
+  }));
+  native.pull.mockClear();
+  native.send.mockClear();
+  native.pull.mockImplementation(async (input: NativeCompanionFramedSyncPullRequest) => {
+    if (!input.resources?.length) return bridge.pull(input);
+    // The unavailable native file boundary consumes the same authenticated HTTP production receiver.
+    const result = await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+    expect(result).toMatchObject({ databaseComplete: true, resources: { transferred: 0, pending: 1 } });
+    throw new Error('framed_sync_resource_source_unavailable');
+  });
+  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  expect(result.received).toEqual([]);
+  expect(result.sent).toEqual([]);
+  expect(native.send).not.toHaveBeenCalled();
+  expect(native.pull.mock.calls.every(([input]) => input.resources?.length === 1)).toBe(true);
+  expect(result.resources).toMatchObject({ transferred: 0, pending: 1 });
+  await expect(fs.stat(file)).rejects.toMatchObject({ code: 'ENOENT' });
+  expect(bridge.sqlite.prepare('SELECT * FROM node_sync_versions ORDER BY version_id').all()).toEqual(before);
+  const reopened = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
+  try {
+    expect(reopened.prepare("SELECT count(*) FROM framed_sync_resource_demands WHERE state = 'pending'").pluck().get()).toBeGreaterThan(0);
+  } finally { reopened.close(); }
+}, 20_000);

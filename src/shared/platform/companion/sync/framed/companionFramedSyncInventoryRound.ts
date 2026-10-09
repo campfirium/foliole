@@ -2,7 +2,6 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 
 import { compareFramedSyncDatabaseInventories } from '../../../../../../lib/core/sync/framedSyncDatabaseDifference.js';
 import {
-  compareFramedSyncInventories,
   type FramedSyncDeferredObject,
   type FramedSyncInventoryDifference,
   type FramedSyncInventoryEntry
@@ -87,7 +86,7 @@ export function selectCompanionFramedSyncCurrentNodes(args: {
   local: readonly FramedSyncInventoryEntry[];
   remote: readonly FramedSyncInventoryEntry[];
 }) {
-  const differences = compareFramedSyncInventories(args);
+  const differences = compareFramedSyncDatabaseInventories(args);
   return {
     deferredObjects: [] as FramedSyncDeferredObject[],
     pullable: differences.filter((difference) => difference.direction === 'remote_to_local'),
