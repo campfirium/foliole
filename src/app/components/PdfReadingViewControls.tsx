@@ -23,11 +23,11 @@ export function PdfReadingViewControls(props: {
   return (
     <>
       <ViewIcon label={t('desktop.pdf.view.automatic')} active={runtime.view.mode === 'auto'}
-        disabled={disabled} onClick={act(runtime.chooseAutomatic)}
+        hint={t('desktop.pdf.view.automaticHint')} disabled={disabled} onClick={act(runtime.chooseAutomatic)}
         icon={<ScanLine aria-hidden="true" size={15} strokeWidth={2.1} />} />
       <div className="flex items-center">
         <ViewIcon label={t('desktop.pdf.view.manual')} active={runtime.view.mode === 'manual'}
-          disabled={disabled} onClick={act(runtime.chooseManual)}
+          hint={t('desktop.pdf.view.manualHint')} disabled={disabled} onClick={act(runtime.chooseManual)}
           icon={<Crop aria-hidden="true" size={15} strokeWidth={2.1} />} />
         <AppDropdownMenu onOpenChange={(open) => props.onMenuOpenChange?.(open)}>
           <AppDropdownMenuTrigger asChild>
@@ -51,6 +51,7 @@ export function PdfReadingViewControls(props: {
 
 function ViewIcon(props: {
   label: string;
+  hint: string;
   active: boolean;
   disabled: boolean;
   onClick: () => void;
@@ -63,7 +64,7 @@ function ViewIcon(props: {
           className="aria-pressed:bg-foreground/[0.035] aria-pressed:text-foreground"
           icon={props.icon} onClick={props.onClick} />
       </AppTooltipTrigger>
-      <AppTooltipContent>{props.label}</AppTooltipContent>
+      <AppTooltipContent>{props.label}<br />{props.hint}</AppTooltipContent>
     </AppTooltip>
   );
 }

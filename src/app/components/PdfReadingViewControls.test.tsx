@@ -73,24 +73,24 @@ const reader = (
 );
 it('starts in automatic view, cancels selection without saving, then remembers manual view after reopening', async () => {
   const mounted = render(reader);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Manual view' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Custom fit' })).toBeEnabled());
   expect(screen.getByTestId('pdf-document-page-frame')).toHaveStyle({
     width: '600px',
     height: '800px'
   });
   const writes = vi.mocked(savePdfReadingView).mock.calls.length;
-  fireEvent.click(screen.getByRole('button', { name: 'Manual view' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Custom fit' }));
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   fireEvent.click(screen.getByText('Cancel selection'));
   expect(vi.mocked(savePdfReadingView).mock.calls.length).toBe(writes);
-  fireEvent.click(screen.getByRole('button', { name: 'Manual view' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Custom fit' }));
   fireEvent.click(screen.getByText('Save selection'));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   expect(stored).toEqual({ mode: 'manual', automatic, manual, automaticVersion: 1 });
   mounted.unmount();
   render(reader);
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Manual view' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Custom fit' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
@@ -104,10 +104,10 @@ it('starts in automatic view, cancels selection without saving, then remembers m
 it('switches modes without losing the saved manual range and allows adjusting it', async () => {
   stored = { mode: 'manual', automatic, manual };
   render(reader);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Automatic view' })).toBeEnabled());
-  fireEvent.click(screen.getByRole('button', { name: 'Automatic view' }));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Auto fit' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Auto fit' }));
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Automatic view' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Auto fit' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
@@ -115,9 +115,9 @@ it('switches modes without losing the saved manual range and allows adjusting it
   expect(stored.manual).toEqual(manual);
   expect(screen.getByTestId('pdf-document-page-frame')).toHaveStyle({ width: '600px', height: '800px' });
   expect(document.querySelector('.pdf-document-page-crop-content')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Manual view' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Custom fit' }));
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Manual view' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Custom fit' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
@@ -125,19 +125,19 @@ it('switches modes without losing the saved manual range and allows adjusting it
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   expect(screen.getByTestId('pdf-document-page-frame')).toHaveStyle({ width: '600px', height: '800px' });
   expect(screen.queryByRole('button', { name: 'Adjust range' })).not.toBeInTheDocument();
-  fireEvent.keyDown(screen.getByRole('button', { name: 'Manual view options' }), { key: 'ArrowDown' });
+  fireEvent.keyDown(screen.getByRole('button', { name: 'Custom fit options' }), { key: 'ArrowDown' });
   fireEvent.click(await screen.findByRole('menuitem', { name: 'Adjust range' }));
   expect(screen.getByRole('dialog')).toBeInTheDocument();
 });
 it('reports a failed save while retaining the previous view and the open selection', async () => {
   render(reader);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Manual view' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Custom fit' })).toBeEnabled());
   vi.mocked(savePdfReadingView).mockRejectedValueOnce(new Error('storage failed'));
-  fireEvent.click(screen.getByRole('button', { name: 'Manual view' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Custom fit' }));
   fireEvent.click(screen.getByText('Save selection'));
   await waitFor(() => expect(screen.getByRole('alert')).toBeInTheDocument());
   expect(screen.getByRole('dialog')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Automatic view' })).toHaveAttribute(
+  expect(screen.getByRole('button', { name: 'Auto fit' })).toHaveAttribute(
     'aria-pressed',
     'true'
   );
@@ -145,15 +145,15 @@ it('reports a failed save while retaining the previous view and the open selecti
 
 it('shows mode names on hover instead of taking toolbar space with text buttons', async () => {
   render(reader);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Manual view' })).toBeEnabled());
-  expect(screen.getByRole('button', { name: 'Automatic view' })).toHaveTextContent('');
-  expect(screen.getByRole('button', { name: 'Manual view' })).toHaveTextContent('');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Custom fit' })).toBeEnabled());
+  expect(screen.getByRole('button', { name: 'Auto fit' })).toHaveTextContent('');
+  expect(screen.getByRole('button', { name: 'Custom fit' })).toHaveTextContent('');
   expect(screen.queryByText('Adjust range')).not.toBeInTheDocument();
 });
 it('replaces a stale automatic range without losing the saved manual range or mode', async () => {
   stored = { mode: 'manual', automatic: { x: 0, y: 0, width: 1, height: 1 }, manual };
   render(reader);
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Manual view' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Custom fit' })).toBeEnabled());
   expect(stored.automatic).toEqual(automatic);
   expect(stored.manual).toEqual(manual);
   expect(stored.mode).toBe('manual');

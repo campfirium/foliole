@@ -16,8 +16,8 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
   await openPdf(desktopApp, desktopWindow);
   const surface = desktopWindow.getByTestId('pdf-document-surface');
   const reveal = () => surface.getByTestId('pdf-toolbar-reveal-zone').hover();
-  const automatic = surface.getByRole('button', { name: /^(Automatic view|自动视图)$/ });
-  const manual = surface.getByRole('button', { name: /^(Manual view|手动视图)$/ });
+  const automatic = surface.getByRole('button', { name: /^(Auto fit|自动适配)$/ });
+  const manual = surface.getByRole('button', { name: /^(Custom fit|自定义适配)$/ });
   const readView = () => readSavedView(desktopWindow);
   await expect(automatic).toBeEnabled({ timeout: 45000 });
   await expect(automatic).toHaveAttribute('aria-pressed', 'true');
@@ -56,7 +56,7 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
   await expect(manual).toHaveAttribute('aria-pressed', 'true', { timeout: 45000 });
   expect(await readView()).toEqual(manualRecord);
   await reveal();
-  await surface.getByRole('button', { name: /^(Manual view options|手动视图选项)$/ }).click();
+  await surface.getByRole('button', { name: /^(Custom fit options|自定义适配选项)$/ }).click();
   await desktopWindow.getByRole('menuitem', { name: /^(Adjust range|调整范围)$/ }).click();
   await expect(dialog).toBeVisible();
   await dialog.screenshot({ path: path.resolve('.tmp/artifacts/pdf-view-editor-native.png') });
@@ -69,12 +69,28 @@ test('PDF automatic and manual views preserve ranges across reload @pdf', async 
   await verifyFreeZoom(desktopWindow, autoRecord, manualRecord);
 });
 
+async function verifyFitTooltips(desktopWindow: Page) {
+  const surface = desktopWindow.getByTestId('pdf-document-surface');
+  const automatic = surface.getByRole('button', { name: /^(Auto fit|自动适配)$/ });
+  const manual = surface.getByRole('button', { name: /^(Custom fit|自定义适配)$/ });
+  await automatic.hover();
+  await expect(desktopWindow.getByRole('tooltip')).toContainText(
+    /Automatically detect the content range and fit it to the reading area height\.|自动识别内容范围并适配阅读区高度。/
+  );
+  await surface.screenshot({ path: path.resolve('.tmp/artifacts/pdf-auto-fit-tooltip-native.png') });
+  await manual.hover();
+  await expect(desktopWindow.getByRole('tooltip')).toContainText(
+    /Fit your selected range to the reading area height\.|按你框选的范围适配阅读区高度。/
+  );
+  await surface.screenshot({ path: path.resolve('.tmp/artifacts/pdf-custom-fit-tooltip-native.png') });
+}
+
 async function verifyFreeZoom(desktopWindow: Page, autoRecord: PdfReadingView | null,
   manualRecord: PdfReadingView | null) {
   const surface = desktopWindow.getByTestId('pdf-document-surface');
   const reveal = () => surface.getByTestId('pdf-toolbar-reveal-zone').hover();
-  const automatic = surface.getByRole('button', { name: /^(Automatic view|自动视图)$/ });
-  const manual = surface.getByRole('button', { name: /^(Manual view|手动视图)$/ });
+  const automatic = surface.getByRole('button', { name: /^(Auto fit|自动适配)$/ });
+  const manual = surface.getByRole('button', { name: /^(Custom fit|自定义适配)$/ });
   const scroller = surface.getByTestId('pdf-scroll-container');
   await scroller.evaluate((element) => { element.scrollTop += 80; });
   const scrolled = await scroller.evaluate((element) => element.scrollTop);
@@ -194,6 +210,7 @@ async function verifyViewPaging(page: Page, rect: PdfViewRect | null | undefined
 }
 
 async function verifyAutomaticView(page: Page, record: PdfReadingView | null) {
+  await verifyFitTooltips(page);
   expect(record?.automaticVersion).toBe(1);
   if (process.env.FOLIOLE_PDF_VIEW_FIXTURE?.includes('deep-residual-learning')) {
     expect((record?.automatic?.y ?? 1) + (record?.automatic?.height ?? 1)).toBeLessThan(.915);
