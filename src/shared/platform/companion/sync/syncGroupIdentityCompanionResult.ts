@@ -26,7 +26,9 @@ export async function syncCompanionIdentityObjects(
     receiver_library_epoch: options.framedPeer.libraryEpoch,
     sync_group_id: group.group_id
   };
-  const round = options.resourcesOnly
+  const round = options.restoreId
+    ? await sendCompanionFramedSyncInventoryDifferences(request, Boolean(options.resourcesOnly), options.restoreId)
+    : options.resourcesOnly
     ? await sendCompanionFramedSyncInventoryDifferences(request, true)
     : await sendCompanionFramedSyncInventoryDifferences(request);
   await options.onStructureSynced?.();

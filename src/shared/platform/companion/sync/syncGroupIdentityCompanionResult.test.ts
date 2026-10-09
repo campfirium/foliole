@@ -47,6 +47,15 @@ it('rejects a peer without an exact framed v22 negotiation', async () => {
   expect(runtime.framed).not.toHaveBeenCalled();
 });
 
+it('keeps an authenticated restore request ahead of a resource-only continuation', async () => {
+  await syncCompanionIdentityObjects('http://peer', {
+    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 22 },
+    restoreId: 'restore-1', resourcesOnly: true
+  });
+  expect(runtime.framed).toHaveBeenCalledWith({ endpoint_url: 'http://peer', receiver_device_id: 'desktop',
+    receiver_library_epoch: 'epoch', sync_group_id: 'group' }, true, 'restore-1');
+});
+
 it('continues attachment demands through framed transport without replaying database changes', async () => {
   runtime.framed.mockResolvedValueOnce({ deferredObjects: [], received: [], sent: [],
     resources: { pending: 1, scanned: 4, transferred: 1, unavailable: 0 } });

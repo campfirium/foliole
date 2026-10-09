@@ -148,6 +148,7 @@ export const controlledSyncSqliteTests = [
   'src/shared/platform/capacitorSqliteDbPort.frozenBody.test.ts',
   'src/shared/platform/capacitorSqliteDbPort.largeBody.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncAdoptionRound.integration.test.ts',
+  'src/shared/platform/companion/sync/framed/companionFramedSyncRestoreRound.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncContinuation.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncExternalDocument.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncPendingPublications.test.ts',

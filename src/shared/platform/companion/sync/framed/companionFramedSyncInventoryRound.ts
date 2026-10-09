@@ -8,6 +8,7 @@ import {
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
+import { loadLatestSyncGroupRestoreEvent } from '../../../../../../lib/core/sync/syncGroupRestoreEvents.js';
 import type {
   NativeCompanionFramedSyncInventoryEntry,
   NativeCompanionFramedSyncInventoryRequest,
@@ -26,7 +27,7 @@ import { rememberCompanionFramedSyncPeerRoute } from './companionFramedSyncPeerR
 import { resumeCompanionFramedSyncPendingPublications } from './companionFramedSyncPendingPublications.js';
 import { createCompanionFramedSyncPullBatchDelivery } from './companionFramedSyncPullBatch.js';
 import { runCompanionFramedSyncResourceRound } from './companionFramedSyncResourceRound.js';
-import { adoptCompanionSyncGroupData } from './companionSyncGroupLocalAdoption.js';
+import { adoptCompanionSyncGroupData, restoreCompanionSyncGroupData } from './companionSyncGroupLocalAdoption.js';
 
 export { decodeCompanionInventoryEntry } from './companionFramedSyncInventoryEntryDecode.js';
 
@@ -95,10 +96,19 @@ export function selectCompanionFramedSyncCurrentNodes(args: {
 }
 
 export async function sendCompanionFramedSyncInventoryDifferences(
-  args: NativeCompanionFramedSyncInventoryRequest, resourcesOnly = false
+  args: NativeCompanionFramedSyncInventoryRequest, resourcesOnly = false, restoreId?: string
 ) {
   const adoption = await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption);
   const adoptionReceived: Array<{ objectId: string; receipt: NativeCompanionFramedSyncTransferReceipt }> = [];
+  if (restoreId) {
+    if (adoption) throw new Error('framed_sync_restore_state_invalid');
+    const restored = await restoreCompanionSyncGroupData(args, restoreId);
+    if (restored) {
+      const restore = await getIosCompanionDatabaseOwner().read((db) => loadLatestSyncGroupRestoreEvent(db, args.sync_group_id));
+      if (!restore?.applied) return restored;
+      adoptionReceived.push(...restored.received);
+    }
+  }
   if (adoption && !resourcesOnly) {
     const adopted = await adoptCompanionSyncGroupData(args, adoption);
     if (await getIosCompanionDatabaseOwner().read(loadSyncGroupLocalAdoption)) return adopted;
@@ -115,7 +125,7 @@ export async function sendCompanionFramedSyncInventoryDifferences(
   if (resourcesOnly) {
     const resources = await runCompanionFramedSyncResourceRound(args, remoteResult.roundId,
       inventoryNodeIds(localValue.entries, remoteResult.entries));
-    return { deferredObjects: [], received: [], sent: [], resources };
+    return { deferredObjects: [], received: adoptionReceived, sent: [], resources };
   }
   if (await resumeCompanionFramedSyncPendingPublications(args, remoteResult.entries)) {
     [localValue, remoteResult] = await Promise.all([

@@ -36,11 +36,13 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
   const request = { endpoint_url: remote.origin, receiver_device_id: remote.deviceId,
     receiver_library_epoch: `${remote.deviceId}-epoch`, sync_group_id: 't326-group' };
   async function readInventory() {
+    context.initiatorLibraryEpoch = readLocalEpoch(sqlite);
     const inventory = await exchangeDesktopFramedSyncInventoryHttp(exchange);
     remoteEntries = inventory.remote;
     return { round_id: bytesToHex(inventory.roundId), entries: remoteEntries.map(serialize) };
   }
   async function pull(input: NativeCompanionFramedSyncPullRequest) {
+    context.initiatorLibraryEpoch = readLocalEpoch(sqlite);
     const sourceSnapshot = remoteEntries.find(entry => entry.globalId === input.object_id && entry.objectType === input.object_type);
     if (!sourceSnapshot) throw new Error('fixture_remote_entry_missing');
     const difference = { direction: 'remote_to_local' as const, globalId: input.object_id,
@@ -54,8 +56,9 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
     return nativeReceipt(decodeFramedSyncPreamble(stream.preamble).contextId);
   }
   async function send(input: NativeCompanionFramedSyncTransferRequest) {
+    context.initiatorLibraryEpoch = readLocalEpoch(sqlite);
     const prepared = await prepareCompanionFramedSyncOutbound(db, { ...input, group_id: input.sync_group_id,
-      sender_device_id: local.deviceId, sender_library_epoch: `${local.deviceId}-epoch` });
+      sender_device_id: local.deviceId, sender_library_epoch: context.initiatorLibraryEpoch });
     const publication = await staging.loadOutboundPublication(hexToBytes(prepared.transfer_id));
     if (!publication) throw new Error('fixture_publication_missing');
     const delivery = await prepareDesktopFramedSyncPublishedDelivery({ db, staging, groupSecret, publication });
@@ -71,6 +74,13 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
       receiver_library_epoch: receipt.receiverLibraryEpoch };
   }
   return { db, sqlite, request, readInventory, pull, send };
+}
+
+function readLocalEpoch(sqlite: Database.Database) {
+  const epoch = sqlite.prepare('SELECT library_epoch FROM node_version_local_proof_state WHERE singleton_id = 1')
+    .pluck().get();
+  if (typeof epoch !== 'string') throw new Error('fixture_local_epoch_missing');
+  return epoch;
 }
 
 function serialize(entry: Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>>['remote'][number]) {
