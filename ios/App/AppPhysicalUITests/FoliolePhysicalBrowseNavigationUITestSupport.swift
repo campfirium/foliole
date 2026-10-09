@@ -10,33 +10,37 @@ extension FoliolePhysicalSyncGroupUITests {
         let body = app.descendants(matching: .any).matching(
             NSPredicate(format: "label == %@ OR identifier == %@", "Topic body", "Topic body")
         ).firstMatch
-        let navigationReady = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in
-                body.exists || app.buttons["Browse"].exists || app.buttons["Directory"].exists
-            }, object: app
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [navigationReady], timeout: 45), .completed,
-                       "Fri did not restore its reading or navigation surface.")
-        if body.exists && !app.buttons["Exit"].exists {
-            let passage = body.staticTexts.firstMatch
-            XCTAssertTrue(passage.waitForExistence(timeout: 30), "The active topic text is unavailable.")
-            passage.tap()
-            XCTAssertTrue(app.buttons["Exit"].waitForExistence(timeout: 30),
-                          "Tapping the active topic did not expose its exit control.")
-        }
-        let exit = app.buttons["Exit"]
-        if exit.waitForExistence(timeout: 3) {
-            exit.tap()
-            waitForDisappearance(exit, timeout: 30,
-                                 message: "Fri did not exit the active topic before Browse navigation.")
-        }
-        if app.buttons["Directory"].firstMatch.waitForExistence(timeout: 3) {
-            app.buttons["Directory"].firstMatch.tap()
-        } else {
-            tapButton(named: "Browse", in: app, timeout: 30)
-        }
+        navigateToBrowseDirectory(in: app, body: body)
         let inbox = app.buttons["Open folder Inbox"]
         if inbox.waitForExistence(timeout: 3) { inbox.tap() }
     }
 
+    private func navigateToBrowseDirectory(in app: XCUIApplication, body: XCUIElement) {
+        let deadline = Date().addingTimeInterval(60)
+        while Date() < deadline {
+            let directory = app.buttons["Directory"].firstMatch
+            let browse = app.buttons["Browse"].firstMatch
+            let ready = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                body.exists || directory.isHittable || browse.isHittable
+            }, object: app)
+            guard XCTWaiter.wait(for: [ready], timeout: max(0, deadline.timeIntervalSinceNow)) == .completed
+            else { break }
+            if body.exists {
+                if !app.buttons["Exit"].exists {
+                    let passage = body.staticTexts.firstMatch
+                    XCTAssertTrue(passage.waitForExistence(timeout: 30), "The active topic text is unavailable.")
+                    passage.tap()
+                }
+                tapButton(named: "Exit", in: app, timeout: 30)
+                waitForDisappearance(body, timeout: 30,
+                                     message: "Fri did not leave its restored topic.")
+            } else if directory.isHittable {
+                directory.tap()
+                return
+            } else if browse.isHittable {
+                browse.tap()
+            }
+        }
+        XCTFail("Fri did not reach Browse directory from its restored surface.")
+    }
 }
