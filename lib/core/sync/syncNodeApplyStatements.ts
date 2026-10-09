@@ -136,7 +136,7 @@ export function buildRemoteNodeMetadataParams(record: FramedSyncNodeMetadata, bo
 }
 
 function buildRemoteNodeParams(record: NativeSyncNodeRecord, bodyBlobHash: string, syncDirty: number): DbParams {
-  return buildRemoteNodeMetadataParams(record, bodyBlobHash, syncDirty, record.snapshot.content ?? '');
+  return buildRemoteNodeMetadataParams(record, bodyBlobHash, syncDirty, record.body_text ?? record.snapshot.content ?? '');
 }
 
 export function buildRemoteNodeVersionUpsert(record: NativeSyncNodeRecord): SyncNodeStatement | null {

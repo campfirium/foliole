@@ -12,7 +12,7 @@ export async function prepareSyncNodeTextBodyHashes(
   const prepared = new Map<NativeSyncNodeRecord, string>();
   for (const record of records) {
     if (record.snapshot.body_blob_hash) continue;
-    prepared.set(record, await hashTextBodyContent(record.snapshot.content ?? '', options));
+    prepared.set(record, await hashTextBodyContent(record.body_text ?? record.snapshot.content ?? '', options));
   }
   return prepared;
 }

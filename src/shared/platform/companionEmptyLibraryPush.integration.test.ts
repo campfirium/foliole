@@ -1,9 +1,12 @@
 // @vitest-environment node
+import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
+import { createBetterSqliteDbPort } from '../../../electron/database/betterSqliteDbPort.js';
 import { applyCompanionStateSyncPushWithDbPort } from '../../../electron/database/companionSyncPushWithDbPort.js';
 import type { Peer } from '../../../electron/database/syncEmptyLibraryTestSupport.js';
 import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, sync } from '../../../electron/database/syncEmptyLibraryTestSupport.js';
+import { wholeBodies } from '../../../electron/database/topicTextState.testSupport.js';
 import { applyLocalContentEdit } from '../../../lib/core/sync/localContentEdit.js';
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { isStoredAncestorVersion, loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
@@ -117,10 +120,7 @@ it.each([false, true])('keeps shared highlight history and later edits across a 
   expect(await isStoredAncestorVersion(desktop.port, a, resolved!.version_id!)).toBe(true);
   expect(await isStoredAncestorVersion(desktop.port, d, resolved!.version_id!)).toBe(true);
   expect(await isStoredAncestorVersion(desktop.port, 'mobile-B', resolved!.version_id!)).toBe(true);
-  if (overlap) {
-    const alternatives = desktop.db.prepare('SELECT body_text FROM node_text_alternatives').pluck().all();
-    expect([resolved!.body_text, ...alternatives]).toEqual(expect.arrayContaining(['023\nx=0\n', mobileBody]));
-  } else expect(resolved!.body_text).toBe('023\nx=1\n');
+  expect(await persistedBodies(desktop)).toEqual(new Set(['023\nx=0\n', mobileBody]));
   const later = `${mobileBody}tail\n`;
   await mobileEdit(mobile, 'mobile-B', later, 'mobile-C', 2);
   await store.savePushAcks(desktop.id, JSON.parse(JSON.stringify(response.acks)) as SyncPushAck[]);
@@ -136,8 +136,18 @@ it.each([false, true])('keeps shared highlight history and later edits across a 
   const final = await loadCurrentSyncNodeRecord(desktop.port, 'topic');
   assertPersisted(desktop, final!.body_text!, final!.version_id!);
   assertPersisted(mobile, final!.body_text!, final!.version_id!);
-  if (!overlap) expect(final!.body_text).toBe('023\nx=1\ntail\n');
+  expect(await persistedBodies(desktop)).toContain(later);
+  expect(await persistedBodies(mobile)).toEqual(await persistedBodies(desktop));
 });
+
+async function persistedBodies(peer: Peer) {
+  const reopened = new Database(peer.file, { readonly: true });
+  try {
+    const record = await loadCurrentSyncNodeRecord(createBetterSqliteDbPort(reopened), 'topic');
+    if (!record) throw new Error('fixture_current_topic_missing');
+    return wholeBodies(record);
+  } finally { reopened.close(); }
+}
 
 it.each(['folder', 'item'] as const)('keeps shared %s identity and ancestry during concurrent edits', async (kind) => {
   const desktop = createPeer('desktop');

@@ -126,13 +126,12 @@ it.each([false, true])('keeps converged heads across staged sender reload, forwa
   for (const peer of [left, right]) reopen(peer);
   for (const [source, target] of [[left, right], [right, left]] as const) {
     const items = await outgoing(source, target);
-    const alternatives = () => target.db.prepare(`SELECT body_text FROM node_text_alternatives
-      WHERE node_id = 'topic' AND status = 'available' ORDER BY body_text`).pluck().all();
-    const beforeAlternatives = alternatives();
+    const alternatives = async () => (await loadCurrentSyncNodeRecord(target.port, 'topic'))?.alternative_bodies;
+    const beforeAlternatives = await alternatives();
     const result = await receivePush(target, source, items);
     expect(result.acks.every(ack => ack.status === 'accepted')).toBe(true);
     assertPersisted(target, 'Shared final body', final.version_id!);
-    expect(alternatives()).toEqual(beforeAlternatives);
+    expect(await alternatives()).toEqual(beforeAlternatives);
     await store(source).savePushAcks(target.id, result.acks as SyncPushAck[]);
   }
   await sync(left, right);

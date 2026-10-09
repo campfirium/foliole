@@ -24,6 +24,7 @@ import { buildDesktopSyncPack } from '../../../electron/database/syncPackBuilder
 import { initializeDatabaseConnection } from '../../../lib/core/database/index.js';
 import { retainLocalEditBase } from '../../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from '../../../lib/core/sync/nodeVersionPayloadCollector.js';
+import { loadCurrentSyncNodeRecord } from '../../../lib/core/sync/syncNodeGraph.js';
 import { applySyncPackNodeSurfaceWithDbPort } from '../../../lib/core/sync/syncPackNodeApplyExecutor.js';
 import { createSyncGroupDeviceIdentity } from '../../../lib/platform/syncGroupUnifiedContract.js';
 
@@ -84,10 +85,11 @@ it.each(['desktop', 'companion'] as const)(
   await expect(applyIncoming(mode, port, incomingPath, 'offline-device',
     onlineIdentity.identity_key, offlineIdentity.identity_key))
     .resolves.toMatchObject({ applied: true, toStateSeq: 1 });
-  const current = offline.sqlite.prepare(`SELECT CAST(data.data AS TEXT) AS content, n.current_version_id
-    FROM nodes n JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`)
+  const current = offline.sqlite.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
     .get(nodeId) as { content: string; current_version_id: string };
-  expect(current.content).toBe('left edited\nright edited');
+  const chosen = await loadCurrentSyncNodeRecord(port, nodeId);
+  expect(new Set([chosen?.body_text, ...chosen?.alternative_bodies?.map(body => body.text) ?? []]))
+    .toEqual(new Set(['left edited\nright one', 'left one\nright edited']));
   expect(current.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
   expect(versionBodies()).toEqual([['A', 'left one\nright one'],
     ['B', null], ['C', null], ['D', null], ['E', 'left edited\nright one'],
@@ -98,7 +100,7 @@ it.each(['desktop', 'companion'] as const)(
   expect(offline.sqlite.prepare(`SELECT body_text,
     json_extract(snapshot_json, '$.content') AS snapshot_content
     FROM node_sync_versions WHERE version_id = ?`).get(current.current_version_id))
-    .toEqual({ body_text: current.content, snapshot_content: current.content });
+    .toEqual({ body_text: current.content, snapshot_content: null });
   await replayMergedVersionToOnline(current, mode);
 });
 
@@ -113,8 +115,7 @@ async function replayMergedVersionToOnline(current: { content: string; current_v
   await expect(applyIncoming(mode, returnPort, returnPath, 'online-device',
     offlineIdentity.identity_key, onlineIdentity.identity_key))
     .resolves.toMatchObject({ applied: true });
-  expect(returned.sqlite.prepare(`SELECT CAST(data.data AS TEXT) AS content, n.current_version_id
-    FROM nodes n JOIN content_blob_data data ON data.hash = n.body_blob_hash WHERE n.id = ?`)
+  expect(returned.sqlite.prepare(`SELECT content, current_version_id FROM nodes WHERE id = ?`)
     .get(nodeId)).toEqual(current);
 }
 

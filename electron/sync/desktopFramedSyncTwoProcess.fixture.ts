@@ -107,7 +107,7 @@ function seed(args: Readonly<Record<string, unknown>>) {
     updatedAt: now
   });
   flushDirtyNodeSyncVersions();
-  return snapshot();
+  return args.includeWorkspace === false ? { nodeId: String(args.nodeId) } : snapshot();
 }
 
 function seedBatch(args: Readonly<Record<string, unknown>>) {

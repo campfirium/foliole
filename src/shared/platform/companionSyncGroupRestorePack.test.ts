@@ -51,7 +51,7 @@ function assertIdentityEvidenceReset(target: Database.Database) {
   expect(target.prepare('SELECT * FROM sync_identity_peer_baselines').all()).toEqual([]);
 }
 
-it('replaces B-only data atomically with the chosen backup snapshot', async () => {
+it('replaces the workspace from the chosen backup while retaining local settings', async () => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-restore-pack-'));
   const source = database(sourceId);
   const target = database(targetId);
@@ -74,6 +74,8 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
       .run(at);
     target.prepare(`INSERT INTO settings (key, value, updated_at)
       VALUES ('b_only_setting', 'true', ?)`).run(at);
+    target.prepare(`INSERT INTO settings (key, value, updated_at)
+      VALUES ('search_aliases_document', '[]', ?)`).run(at);
     seedStaleIdentityEvidence(target);
     seedRestore(source, at);
     seedRestore(target, null);
@@ -92,8 +94,7 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
       ORDER BY id`).all()).toEqual([{ id: 'backup-node' }]);
     expect(target.prepare('SELECT applied_at FROM sync_group_restore_events').get())
       .toMatchObject({ applied_at: expect.any(String) });
-    expect(target.prepare("SELECT key FROM settings WHERE key = 'b_only_setting'").get())
-      .toBeUndefined();
+    assertRestoredSettingOwnership(target);
     expect(target.prepare("SELECT object_id FROM sync_object_state WHERE object_id = 'b-only-node'").get())
       .toBeUndefined();
     expect(target.prepare('SELECT * FROM node_version_device_revisions').all()).toEqual([]);
@@ -110,6 +111,13 @@ it('replaces B-only data atomically with the chosen backup snapshot', async () =
     await fs.rm(root, { force: true, recursive: true });
   }
 });
+
+function assertRestoredSettingOwnership(target: Database.Database) {
+  expect(target.prepare("SELECT key FROM settings WHERE key = 'b_only_setting'").get())
+    .toEqual({ key: 'b_only_setting' });
+  expect(target.prepare("SELECT key FROM settings WHERE key = 'search_aliases_document'").get())
+    .toBeUndefined();
+}
 
 function assertRestoredPeerBase(source: Database.Database, target: Database.Database) {
   const sourceProof = source.prepare(`SELECT library_epoch, proof_revision

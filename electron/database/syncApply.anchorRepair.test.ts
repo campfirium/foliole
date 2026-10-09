@@ -18,6 +18,7 @@ vi.mock('../ipc/paths.js', () => ({
 }));
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
@@ -60,6 +61,29 @@ it('warns when parent apply cannot remap a local child text anchor', async () =>
     reason: 'ambiguous_text'
   });
   warnSpy.mockRestore();
+});
+
+it('persists a separate full body and remaps child anchors without inline snapshot content', async () => {
+  insertLocalNode({ id: 'parent-1', content: 'Alpha Beta Gamma', versionId: 'desktop#parent-v1' });
+  insertLocalNode({ id: 'child-1', parentId: 'parent-1', anchorLink: JSON.stringify({
+    id: 'anchor-1', kind: 'highlight', locator: { from: 6, originalText: 'Beta', to: 10 }
+  }) });
+  const db = openDatabaseConnection().sqlite;
+  seedNodeVersion(db, 'parent-1', 'desktop#parent-v1');
+  const content = 'Prefix Alpha Beta Gamma';
+  const record = parentRecord(content);
+  record.snapshot.content = null;
+  record.body_text = content;
+  await expect(applySyncNodesAsync([record])).resolves.toEqual(['parent-1']);
+  expect(db.prepare('SELECT content, body_blob_hash FROM nodes WHERE id = ?').get('parent-1'))
+    .toEqual({ content, body_blob_hash: hashTextBody(content) });
+  expect(db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('phone#parent-v2'))
+    .toEqual({ body_text: content });
+  expect(db.prepare(`SELECT json_extract(anchor_link, '$.locator.from') AS start,
+    json_extract(anchor_link, '$.locator.to') AS end, anchor_source_version_id,
+    anchor_resolution_status FROM nodes WHERE id = ?`).get('child-1'))
+    .toEqual({ start: 13, end: 17, anchor_source_version_id: 'phone#parent-v2',
+      anchor_resolution_status: 'resolved' });
 });
 
 function insertLocalNode(args: {

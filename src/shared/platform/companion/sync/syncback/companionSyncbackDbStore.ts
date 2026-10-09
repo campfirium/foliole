@@ -1,6 +1,7 @@
 import { COMPANION_SYNCBACK_HOST_CONTRACT as CONTRACT } from '../../../../../../lib/core/database/companionSyncbackHostContractDefinitions';
 import type { DbPort, DbRow } from '../../../../../../lib/core/sync/dbPort';
 import { includeRetainedNodePushHistory } from '../../../../../../lib/core/sync/nodeVersionPushHistory';
+import { readTopicTextSnapshot } from '../../../../../../lib/core/sync/topicTextBodies';
 import type {
   NativeSyncChangeCursor,
   NativeSyncNodeRecord,
@@ -69,13 +70,16 @@ async function loadNodeVersions(
     hostName, peerId, createdAt, changeId, createdAt, createdAt, changeId, normalizeNodeVersionLimit(limit)
   ]);
   const records = await Promise.all(rows.map(async (row) => {
-    const snapshot = parseNodeSnapshot(row.snapshot) as NativeSyncNodeRecord['snapshot'];
+    const stored = parseNodeSnapshot(row.snapshot) as NativeSyncNodeRecord['snapshot'];
+    const body = row.body_text === null && stored.content === null
+      ? null : typeof row.body_text === 'string' ? row.body_text : stored.content ?? '';
+    const { snapshot, bodies } = readTopicTextSnapshot(JSON.stringify(stored), body !== null);
     const parentVersionIds = await loadDirectParentVersionIds(port, String(row.version_id));
     return {
       ...row,
       ancestor_version_ids: await loadAncestorVersionIds(port, parentVersionIds),
-      body_text: row.body_text === null && snapshot.content === null
-        ? null : typeof row.body_text === 'string' ? row.body_text : snapshot.content ?? '',
+      body_text: body,
+      alternative_bodies: bodies,
       is_tombstone: Number(row.is_tombstone) === 1,
       parent_version_ids: parentVersionIds,
       snapshot

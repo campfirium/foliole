@@ -125,9 +125,10 @@ export async function applyAcceptedRemoteNode(input: {
     0
   );
   await recordAppliedNodeLocalOrigin(input.tx, input.record.version_id, input.operation);
-  if (!input.record.snapshot.deleted_at && typeof input.record.snapshot.content === 'string') {
+  const content = input.record.body_text ?? input.record.snapshot.content;
+  if (!input.record.snapshot.deleted_at && typeof content === 'string') {
     const repairResult = await repairDirectChildAnchorsForAppliedParent({
-      content: input.record.snapshot.content,
+      content,
       excludedNodeIds: input.remoteNodeIdsInBatch,
       parentNodeId: input.record.object_id,
       port: input.tx,

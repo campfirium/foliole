@@ -25,10 +25,10 @@ it('applies state objects through the Capacitor DbPort adapter and shared core',
 
   await expect(applyCompanionSyncObjectsWithSharedCore(createFakeCapacitorConnection(db) as never, [
     settingObject()
-  ])).resolves.toEqual(['setting:user_space:android:mobile:*:app_settings']);
+  ])).resolves.toEqual(['setting:user_space:android:mobile:*:review_scheduler_settings']);
 
   expect(db.prepare('SELECT key, value_json FROM setting_records').get() as unknown).toEqual({
-    key: 'app_settings',
+    key: 'review_scheduler_settings',
     value_json: '{"theme":"dark"}'
   });
   expect(db.prepare('SELECT content_hash, sync_dirty FROM sync_object_state').get() as unknown).toEqual({
@@ -64,7 +64,7 @@ it('opens the Android companion database before applying state objects', async (
   };
 
   await expect(applyCompanionSyncObjectsWithSharedCoreOnDevice([settingObject()], manager as never))
-    .resolves.toEqual(['setting:user_space:android:mobile:*:app_settings']);
+    .resolves.toEqual(['setting:user_space:android:mobile:*:review_scheduler_settings']);
 
   expect(manager.createConnection).toHaveBeenCalledWith('foliole-companion', false, 'no-encryption', COMPANION_DATABASE_VERSION, false);
   expect(connection.open).toHaveBeenCalled();
@@ -74,7 +74,7 @@ function settingObject(): NativeSyncObjectRecord {
   const payload = buildCanonicalSettingSyncPayload({
     host_name: '*',
     form_factor: 'mobile',
-    key: 'app_settings',
+    key: 'review_scheduler_settings',
     platform: 'android',
     scope: 'user_space',
     value_json: '{"theme":"dark"}'
@@ -82,7 +82,7 @@ function settingObject(): NativeSyncObjectRecord {
   return {
     content_hash: computeSyncContentHash('setting', payload),
     deleted_at: null,
-    object_id: 'user_space:android:mobile:*:app_settings',
+    object_id: 'user_space:android:mobile:*:review_scheduler_settings',
     object_type: 'setting',
     payload_json: JSON.stringify(payload),
     updated_at: '2026-05-04T01:00:00.000Z'
