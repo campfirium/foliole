@@ -81,3 +81,25 @@ it('rolls back the restored body and its published declaration when the transact
   expect(localDeclaration()).toEqual(old);
   expect(sqlite.prepare('SELECT * FROM node_version_local_proof_state').get()).toEqual(proof);
 });
+
+it('keeps inventory readable without claiming adoption across unrelated arrangement roots', async () => {
+  await insertParentOrderVersion(port, 'folder', { versionId: 'held-base', kind: 'baseline',
+    order: ['a', 'b'], parentVersionIds: [] }, 'now');
+  await advanceParentOrderHead(port, 'folder', 'held-base');
+  await publishParentOrderPosition(port, 'folder');
+  const before = localDeclaration();
+  const proof = sqlite.prepare('SELECT * FROM node_version_local_proof_state').get();
+  await insertParentOrderVersion(port, 'folder', { versionId: 'unrelated-base', kind: 'baseline',
+    order: ['b', 'a'], parentVersionIds: [] }, 'now');
+  const versions = sqlite.prepare('SELECT * FROM parent_order_versions ORDER BY version_id').all();
+  const head = sqlite.prepare('SELECT * FROM parent_order_heads').all();
+
+  const inventory = await readFramedSyncInventory(port);
+
+  expect(inventory.filter(entry => entry.objectType === 'order_version').map(entry => entry.globalId))
+    .toEqual(['held-base', 'unrelated-base']);
+  expect(localDeclaration()).toEqual(before);
+  expect(sqlite.prepare('SELECT * FROM node_version_local_proof_state').get()).toEqual(proof);
+  expect(sqlite.prepare('SELECT * FROM parent_order_versions ORDER BY version_id').all()).toEqual(versions);
+  expect(sqlite.prepare('SELECT * FROM parent_order_heads').all()).toEqual(head);
+});

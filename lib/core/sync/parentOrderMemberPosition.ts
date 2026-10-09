@@ -22,7 +22,10 @@ function declaration(parentId: string, head: string, owner: Owner, rows: Row[], 
   const graph = createParentOrderLineageGraph(lineage, [head]);
   const pending = graph.maximal(lineage.map((row) => row.versionId))
     .filter((id) => !graph.reachable.has(id)).sort();
-  const required = planParentOrderResolution(lineage, [head, ...pending]).requiredVersionIds;
+  const heads = [head, ...pending];
+  if (![...graph.ancestors(head)].some((id) =>
+    pending.every((tip) => graph.ancestors(tip).has(id)))) return null;
+  const required = planParentOrderResolution(lineage, heads).requiredVersionIds;
   if ([...required].some((id) => !rows.some((row) => row.version_id === id && row.available === 1))) return null;
   const pendingJson = JSON.stringify(pending);
   if (known?.adopted_version_id === head && known.pending_version_ids_json === pendingJson &&
