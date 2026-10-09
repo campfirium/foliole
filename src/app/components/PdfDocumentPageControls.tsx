@@ -64,7 +64,7 @@ export function PdfPageControls({ displayPage, maxPage, onNextPage, onPageChange
       </label>
       <AppInput
         aria-label={t('desktop.pdf.page.input')}
-        className="h-8 w-14 appearance-none border-transparent bg-transparent px-2 text-center text-sm focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="h-8 w-10 appearance-none border-transparent bg-transparent px-1 text-center text-sm focus-visible:ring-0 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         id="pdf-page-input"
         inputMode="numeric"
         onBlur={handlePageInputBlur}
@@ -75,7 +75,7 @@ export function PdfPageControls({ displayPage, maxPage, onNextPage, onPageChange
         type="text"
         value={pageInputValue}
       />
-      <p className="min-w-16 text-xs text-foreground/55" data-testid="pdf-page-count">
+      <p className="whitespace-nowrap text-xs text-foreground/55" data-testid="pdf-page-count">
         / {pageCountLabel}
       </p>
       <PdfPageButtons

@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { ElectronApplication, Page } from '@playwright/test';
 
 import { expect, test } from './harness/fixtures';
+import { verifyFlatPdfBars, verifyScrollRevealsOnlyToolbar, verifyUpperSideReveal } from './pdf-top-bars-behavior';
 import { revealPdfBars } from './pdf-top-bars-interaction';
 
 async function openPdf(app: ElectronApplication, page: Page) {
@@ -75,7 +76,12 @@ test('PDF top bars @pdf float, protect navigation, restore space, and remember t
   await expect(navigation).toHaveAttribute('data-visible', 'true');
   expect(await scroll.evaluate((element) => element.clientHeight)).toBe(floatingHeight);
   await screenshot(page, 'revealed');
+  await verifyFlatPdfBars(page);
+  await verifyScrollRevealsOnlyToolbar(page);
+  await verifyUpperSideReveal(page);
   await transferToPdfToolbar(page);
+  await dismissFromReading(page);
+  await revealToolbar(page);
   await verifyTopTextSelection(desktopApp, page);
   await revealToolbar(page);
   await protectNavigationMenu(page);
@@ -102,6 +108,15 @@ test('PDF top bars @pdf float, protect navigation, restore space, and remember t
     'false'
   );
 });
+
+async function dismissFromReading(page: Page) {
+  const frame = page.getByTestId('pdf-document-page-frame').first();
+  await frame.click({ position: { x: 20, y: 250 } });
+  await expect(page.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'false', { timeout: 1000 });
+  await expect(page.getByTestId('pdf-document-top-bar')).toHaveAttribute('data-visible', 'false', { timeout: 1000 });
+  await expect(page.getByTestId('pdf-window-top-bar')).toHaveAttribute('data-visible', 'false', { timeout: 1000 });
+  await screenshot(page, 'click-dismissed');
+}
 
 async function protectNavigationMenu(page: Page) {
   const button = page.getByRole('button', { name: /More editor options|更多编辑器选项/ });

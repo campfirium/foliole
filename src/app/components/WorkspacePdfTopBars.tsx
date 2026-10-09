@@ -22,6 +22,13 @@ function PdfWindowChrome(props: { isImmersiveMode: boolean }) {
 
 function isSideWhitespace(event: MouseEvent<HTMLDivElement>) {
   if (event.buttons !== 0) return false;
+  const toolbar = event.currentTarget.querySelector<HTMLElement>('[data-pdf-reading-toolbar]');
+  const shell = event.currentTarget.querySelector<HTMLElement>('[data-pdf-toolbar-shell]');
+  if (toolbar && shell) {
+    const bounds = toolbar.getBoundingClientRect();
+    const bottom = shell.getBoundingClientRect().top + toolbar.offsetTop + toolbar.offsetHeight;
+    if (bounds.width > 0 && event.clientY <= bottom && (event.clientX < bounds.left || event.clientX > bounds.right)) return true;
+  }
   const pages = Array.from(event.currentTarget.querySelectorAll('.pdf-document-page-frame'))
     .map((page) => page.getBoundingClientRect())
     .filter((box) => box.width > 0);

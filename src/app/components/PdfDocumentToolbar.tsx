@@ -43,7 +43,7 @@ function resolveToolbarPanelClassName(isVisible: boolean) {
   const visibilityClassName = isVisible
     ? 'translate-y-0 opacity-100'
     : '-translate-y-3 opacity-0 pointer-events-none';
-  return appFloatingToolbarClassName(visibilityClassName);
+  return appFloatingToolbarClassName(visibilityClassName, 'reading');
 }
 
 function ToolbarDivider() {
@@ -54,6 +54,9 @@ function useToolbarActivity(
   onToolbarActiveChange: PdfDocumentToolbarProps['onToolbarActiveChange'],
   revealHovered: boolean
 ) {
+  const topBars = usePdfTopBars();
+  const topBarsVisibleRef = useRef(topBars.visible);
+  topBarsVisibleRef.current = topBars.visible;
   const panelRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -62,6 +65,11 @@ function useToolbarActivity(
     if (!isMenuOpen) setIsFocused(panelRef.current?.contains(document.activeElement) ?? false);
   }, [isMenuOpen]);
   const active = revealHovered || isHovered || isFocused || isMenuOpen;
+  const { setActivity } = topBars;
+  useEffect(() => {
+    setActivity('pdf-toolbar', active && topBarsVisibleRef.current);
+    return () => setActivity('pdf-toolbar', false);
+  }, [active, setActivity]);
   useEffect(() => onToolbarActiveChange(active), [active, onToolbarActiveChange]);
   return { panelRef, setIsHovered, setIsFocused, setIsMenuOpen };
 }
@@ -76,16 +84,18 @@ export function PdfDocumentToolbar(props: PdfDocumentToolbarProps) {
       className={resolveToolbarShellClassName()}
       style={{ top: topBars.floating ? 'calc(var(--workspace-top-toolbar-height) + 32px)' : undefined }}
       data-testid="pdf-document-toolbar"
-      data-toolbar-visible={(topBars.floating ? topBars.visible : props.isVisible) ? 'true' : 'false'}
+      data-toolbar-visible={props.isVisible ? 'true' : 'false'}
+      data-pdf-toolbar-shell="true"
     >
       <div
-        className={`absolute inset-x-0 top-0 h-3 ${!topBars.floating || topBars.visible ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        className={`absolute inset-x-0 top-0 h-3 ${!topBars.floating || props.isVisible ? 'pointer-events-auto' : 'pointer-events-none'}`}
         data-testid={topBars.floating ? 'pdf-toolbar-transfer-zone' : 'pdf-toolbar-reveal-zone'}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       />
       <div
-        className={resolveToolbarPanelClassName(topBars.floating ? topBars.visible : props.isVisible)}
+        className={resolveToolbarPanelClassName(props.isVisible)}
+        data-pdf-reading-toolbar="true"
         ref={panelRef}
         onBlurCapture={(event) => {
           if (

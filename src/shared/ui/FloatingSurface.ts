@@ -104,8 +104,12 @@ export function appFloatingMetaBadgeClassName(className?: string) {
   return cn(floatingMetaBadgeBaseClassName, className);
 }
 
-export function appFloatingToolbarClassName(className?: string) {
-  return cn(appFloatingSurfaceClassName('popover'), floatingToolbarBaseClassName, className);
+export function appFloatingToolbarClassName(className?: string, purpose: 'default' | 'reading' = 'default') {
+  return cn(
+    appFloatingSurfaceClassName('popover'), floatingToolbarBaseClassName,
+    purpose === 'reading' && 'gap-2 rounded-md bg-[var(--workspace-region-main-document-bg)] px-2 py-1 shadow-none',
+    className
+  );
 }
 
 export function appFloatingWorkspaceClassName(className?: string) {

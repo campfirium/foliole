@@ -23,8 +23,75 @@ function ActivePdf() {
 }
 
 afterEach(() => {
+  window.getSelection()?.removeAllRanges();
   cleanup();
   vi.useRealTimers();
+});
+
+it('dismisses the floating bars immediately on a page click and allows margin reveal again', async () => {
+  renderWithLocalization(<WorkspacePdfTopBars isImmersiveMode={false}><ActivePdf /></WorkspacePdfTopBars>);
+  await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
+  const toolbar = screen.getByTestId('pdf-document-toolbar');
+  const navigation = screen.getByTestId('pdf-document-top-bar');
+  const frame = screen.getAllByTestId('pdf-document-page-frame')[0]!;
+  vi.spyOn(frame, 'getBoundingClientRect').mockReturnValue(new DOMRect(200, 0, 600, 1000));
+  const edge = screen.getByTestId('pdf-top-bars-reveal-zone');
+  fireEvent.mouseMove(edge, { clientX: 100, clientY: 500 });
+  fireEvent.mouseMove(edge, { clientX: 500, clientY: 500 });
+  fireEvent.click(frame);
+  expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
+  expect(navigation).toHaveAttribute('data-visible', 'false');
+  fireEvent.click(frame);
+  expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
+  fireEvent.mouseMove(edge, { clientX: 100, clientY: 500 });
+  expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
+});
+
+it('keeps a drag or excerpt gesture from dismissing the floating bars', async () => {
+  renderWithLocalization(<WorkspacePdfTopBars isImmersiveMode={false}><ActivePdf /></WorkspacePdfTopBars>);
+  await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
+  const frame = screen.getAllByTestId('pdf-document-page-frame')[0]!;
+  fireEvent.mouseDown(frame, { clientX: 200, clientY: 200 });
+  fireEvent.mouseMove(frame, { clientX: 250, clientY: 200, buttons: 1 });
+  fireEvent.click(frame, { clientX: 250, clientY: 200 });
+  expect(screen.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'true');
+  fireEvent.click(frame, { altKey: true });
+  expect(screen.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Region excerpt' }));
+  fireEvent.click(frame);
+  expect(screen.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'true');
+});
+
+it('dismisses during a persistent search without clearing the query or consuming a link click', async () => {
+  renderWithLocalization(<WorkspacePdfTopBars isImmersiveMode={false}><ActivePdf /></WorkspacePdfTopBars>);
+  await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
+  const input = screen.getByLabelText('PDF search');
+  fireEvent.change(input, { target: { value: 'keyword' } });
+  const link = document.createElement('a');
+  link.textContent = 'PDF link';
+  const activated = vi.fn();
+  link.addEventListener('click', activated);
+  screen.getAllByTestId('pdf-document-page-frame')[0]!.append(link);
+  fireEvent.click(link);
+  expect(activated).toHaveBeenCalledOnce();
+  expect(input).toHaveValue('keyword');
+  expect(screen.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'false');
+});
+
+it('leaves text selections and crop controls visible', async () => {
+  renderWithLocalization(<WorkspacePdfTopBars isImmersiveMode={false}><ActivePdf /></WorkspacePdfTopBars>);
+  await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
+  const frame = screen.getAllByTestId('pdf-document-page-frame')[0]!;
+  const crop = document.createElement('div');
+  crop.dataset.pdfViewRangeSelection = 'true';
+  frame.append(crop);
+  fireEvent.click(crop);
+  expect(screen.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'true');
+  const range = document.createRange();
+  range.selectNodeContents(frame.querySelector('.textLayer span')!);
+  window.getSelection()?.addRange(range);
+  fireEvent.click(frame);
+  expect(screen.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'true');
 });
 
 it('reveals and protects the PDF toolbar from the side whitespace, then resumes idle hiding', async () => {
@@ -32,6 +99,7 @@ it('reveals and protects the PDF toolbar from the side whitespace, then resumes 
   await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
   vi.useFakeTimers();
   const toolbar = screen.getByTestId('pdf-document-toolbar');
+  fireEvent.click(screen.getAllByTestId('pdf-document-page-frame')[0]!);
   setScrollTopAndScroll(screen.getByTestId('pdf-scroll-container'), 300);
   setScrollTopAndScroll(screen.getByTestId('pdf-scroll-container'), 360);
   expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
@@ -54,6 +122,43 @@ it('keeps margin interaction inside the document surface', async () => {
   expect(screen.getByRole('region', { name: 'Document panel' })).toContainElement(screen.getByTestId('pdf-top-bars-reveal-zone'));
 });
 
+it('reveals only the PDF toolbar when scrolling upward', async () => {
+  renderWithLocalization(<WorkspacePdfTopBars isImmersiveMode={false}><ActivePdf /></WorkspacePdfTopBars>);
+  await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
+  vi.useFakeTimers();
+  fireEvent.click(screen.getAllByTestId('pdf-document-page-frame')[0]!);
+  const scroll = screen.getByTestId('pdf-scroll-container');
+  setScrollTopAndScroll(scroll, 300);
+  setScrollTopAndScroll(scroll, 360);
+  setScrollTopAndScroll(scroll, 320);
+  expect(screen.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'true');
+  expect(screen.getByTestId('pdf-document-top-bar')).toHaveAttribute('data-visible', 'false');
+  fireEvent.mouseEnter(screen.getByLabelText('Set zoom level').parentElement!);
+  expect(screen.getByTestId('pdf-document-top-bar')).toHaveAttribute('data-visible', 'false');
+});
+
+it('reveals from both upper sides even when the PDF fills the whole viewport', async () => {
+  renderWithLocalization(<WorkspacePdfTopBars isImmersiveMode={false}><ActivePdf /></WorkspacePdfTopBars>);
+  await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
+  vi.useFakeTimers();
+  const edge = screen.getByTestId('pdf-top-bars-reveal-zone');
+  const toolbar = screen.getByTestId('pdf-document-toolbar');
+  const panel = toolbar.lastElementChild!;
+  fireEvent.click(screen.getAllByTestId('pdf-document-page-frame')[0]!);
+  vi.spyOn(panel, 'getBoundingClientRect').mockReturnValue(new DOMRect(150, 76, 700, 40));
+  vi.spyOn(toolbar, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 64, 1000, 0));
+  Object.defineProperty(panel, 'offsetTop', { configurable: true, value: 12 });
+  Object.defineProperty(panel, 'offsetHeight', { configurable: true, value: 40 });
+  vi.spyOn(screen.getAllByTestId('pdf-document-page-frame')[0]!, 'getBoundingClientRect').mockReturnValue(new DOMRect(-100, 0, 1200, 1000));
+  for (const clientX of [100, 900]) for (const clientY of [10, 45, 100]) {
+    fireEvent.mouseLeave(edge);
+    act(() => vi.advanceTimersByTime(3000));
+    expect(screen.getByTestId('pdf-document-top-bar')).toHaveAttribute('data-visible', 'false');
+    fireEvent.mouseMove(edge, { clientX, clientY });
+    expect(screen.getByTestId('pdf-document-top-bar')).toHaveAttribute('data-visible', 'true');
+  }
+});
+
 it('keeps all bars visible while crossing the gap and operating the PDF toolbar', async () => {
   renderWithLocalization(<WorkspacePdfTopBars isImmersiveMode={false}><ActivePdf /></WorkspacePdfTopBars>);
   await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
@@ -74,7 +179,7 @@ it('keeps all bars visible while crossing the gap and operating the PDF toolbar'
   expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
 });
 
-it('links the upper bars to PDF menu and persistent search protection', async () => {
+it('keeps PDF search protected without revealing the upper bars', async () => {
   renderWithLocalization(<WorkspacePdfTopBars isImmersiveMode={false}><ActivePdf /></WorkspacePdfTopBars>);
   await waitFor(() => expect(screen.queryByTestId('pdf-document-loading-overlay')).not.toBeInTheDocument());
   vi.useFakeTimers();
@@ -91,7 +196,8 @@ it('links the upper bars to PDF menu and persistent search protection', async ()
   fireEvent.change(search, { target: { value: 'keyword' } });
   fireEvent.blur(search);
   act(() => vi.advanceTimersByTime(5000));
-  expect(navigation).toHaveAttribute('data-visible', 'true');
+  expect(navigation).toHaveAttribute('data-visible', 'false');
+  expect(screen.getByTestId('pdf-document-toolbar')).toHaveAttribute('data-toolbar-visible', 'true');
   fireEvent.change(search, { target: { value: '' } });
   act(() => vi.advanceTimersByTime(3000));
   expect(navigation).toHaveAttribute('data-visible', 'false');

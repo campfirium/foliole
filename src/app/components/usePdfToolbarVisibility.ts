@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 
 import { usePdfTopBars } from '../../features/pdf/components/PdfTopBarsContext';
 
+import { usePdfToolbarDismiss } from './usePdfToolbarDismiss';
+
 const TOOLBAR_IDLE_DELAY = 3000;
 
 const TOOLBAR_SHOW_SCROLL_DELTA = 16;
@@ -134,18 +136,13 @@ function useToolbarPersistentVisibility(forceVisible: boolean, isSearchFocused: 
   }, [forceVisible, isSearchFocused, setIsToolbarVisible]);
 }
 
-function useLinkedToolbarVisibility(visible: boolean, active: boolean) {
-  const { groupActive, setToolbarVisible } = usePdfTopBars();
-  useEffect(() => setToolbarVisible(visible), [visible, setToolbarVisible]);
-  useEffect(() => () => setToolbarVisible(null), [setToolbarVisible]);
-  return active || groupActive;
-}
-
 export function usePdfToolbarVisibility(searchQuery: string, scrollContainerRef: MutableRefObject<HTMLDivElement | null>, onScrollBase: () => void) {
   const [isToolbarVisible, setIsToolbarVisible] = useState(true);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [toolbarActive, setIsToolbarActive] = useState(false);
-  const isToolbarActive = useLinkedToolbarVisibility(isToolbarVisible, toolbarActive);
+  const { floating, groupActive } = usePdfTopBars();
+  const isToolbarActive = toolbarActive || groupActive;
+  const dismissal = usePdfToolbarDismiss({ active: isToolbarActive, floating, scrollContainerRef });
   const [activityRevision, setActivityRevision] = useState(0);
   const hasObservedInitialScrollRef = useRef(false);
   const lastScrollTopRef = useRef(0);
@@ -168,10 +165,12 @@ export function usePdfToolbarVisibility(searchQuery: string, scrollContainerRef:
     handleToolbarActiveChange: (active: boolean) => {
       setIsToolbarActive(active);
       if (active) {
+        dismissal.restore();
         setIsToolbarVisible(true);
       }
     },
     handleToolbarInteraction: () => {
+      dismissal.restore();
       setActivityRevision((current) => current + 1);
       handleToolbarInteraction(scrollDirectionRef, scrollDistanceRef, setIsToolbarVisible, suppressScrollTrackingRef);
     },
@@ -182,6 +181,7 @@ export function usePdfToolbarVisibility(searchQuery: string, scrollContainerRef:
       if (!container) {
         return;
       }
+      if (container.scrollTop < lastScrollTopRef.current - 2) dismissal.restore();
       syncToolbarWithObservedScroll({
         currentScrollTop: container.scrollTop,
         hasObservedInitialScrollRef,
@@ -195,6 +195,6 @@ export function usePdfToolbarVisibility(searchQuery: string, scrollContainerRef:
         suppressScrollTrackingRef
       });
     },
-    isToolbarVisible
+    isToolbarVisible: isToolbarVisible && !dismissal.dismissed
   };
 }

@@ -88,3 +88,9 @@ it('releases focus protection when choosing a focused menu item removes it', asy
   advance();
   expect(toolbar).toHaveAttribute('data-toolbar-visible', 'false');
 });
+
+it('does not dismiss the toolbar on a page click when top bars are pinned', async () => {
+  const { toolbar } = await renderToolbarVisibilityHarness();
+  fireEvent.click(screen.getAllByTestId('pdf-document-page-frame')[0]!);
+  expect(toolbar).toHaveAttribute('data-toolbar-visible', 'true');
+});

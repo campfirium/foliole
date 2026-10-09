@@ -136,7 +136,7 @@ export function PdfSearchControls(props: SearchControlsProps) {
       <Search aria-hidden="true" className="ml-1 text-foreground/55" size={15} strokeWidth={2.1} />
       <PdfSearchInput {...props} canNavigateMatches={canNavigateMatches} />
       <PdfSearchActionButtons {...props} canNavigateMatches={canNavigateMatches} hasSearchQuery={hasSearchQuery} />
-      <p aria-live="polite" className="min-w-16 text-center text-xs text-foreground/70" data-testid="pdf-search-status">
+      <p aria-live="polite" className="whitespace-nowrap text-center text-xs text-foreground/70" data-testid="pdf-search-status">
         {resolveSearchStatusLabel(props.searchStatus, props.searchIndexingHint, t)}
       </p>
     </div>

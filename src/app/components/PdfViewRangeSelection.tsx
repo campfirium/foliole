@@ -81,6 +81,7 @@ export function PdfViewRangeSelection(props: RangeSelectionProps) {
     <div
       className="absolute inset-0 touch-none overflow-hidden"
       data-testid="pdf-view-range-selection"
+      data-pdf-view-range-selection="true"
       {...pointerHandlers}
     >
       {alignment.vertical !== undefined ? <div data-testid="pdf-range-snap-vertical" className="pointer-events-none absolute inset-y-0 border-l border-dashed border-selection-blue" style={{ left: `${alignment.vertical * 100}%` }} /> : null}

@@ -16,7 +16,7 @@ const StateContext = createContext<{
   floating: boolean;
   visible: boolean;
   groupActive: boolean;
-  setToolbarVisible: (visible: boolean | null) => void;
+  dismiss: () => void;
   revealHovered: boolean;
   setRevealHovered: (hovered: boolean) => void;
   setActivity: (id: string, active: boolean) => void;
@@ -26,7 +26,7 @@ const StateContext = createContext<{
   floating: false,
   visible: true,
   groupActive: false,
-  setToolbarVisible: () => {},
+  dismiss: () => {},
   revealHovered: false,
   setRevealHovered: () => {},
   setActivity: () => {}
@@ -48,11 +48,11 @@ function useVisibility(surface: Surface | null, protectedDisplay: boolean, suspe
     const timer = window.setTimeout(() => setShown(false), entering ? 3000 : 300);
     return () => window.clearTimeout(timer);
   }, [floating, protectedDisplay, surface]);
-  return { floating, visible: !floating || protectedDisplay || shown };
+  const dismiss = useCallback(() => setShown(false), []);
+  return { floating, visible: !floating || protectedDisplay || shown, dismiss };
 }
 
 export function PdfTopBarsProvider(props: { children: ReactNode; suspended: boolean }) {
-  const [toolbarVisible, setToolbarVisible] = useState<boolean | null>(null);
   const [titleHost, setTitleHost] = useState<HTMLDivElement | null>(null);
   const [revealHovered, setRevealHovered] = useState(false);
   const [surface, setSurface] = useState<Surface | null>(null);
@@ -72,10 +72,9 @@ export function PdfTopBarsProvider(props: { children: ReactNode; suspended: bool
   }, []);
   const groupActive = activities.size > 0 || revealHovered;
   const visibility = useVisibility(surface, groupActive, props.suspended);
-  const visible = !visibility.floating || groupActive || (toolbarVisible ?? visibility.visible);
   return (
     <RegistrationContext.Provider value={register}>
-      <StateContext.Provider value={{ ...visibility, visible, groupActive: visibility.floating && groupActive, setToolbarVisible, titleHost, setTitleHost, setActivity, revealHovered: visibility.floating && revealHovered, setRevealHovered }}>
+      <StateContext.Provider value={{ ...visibility, groupActive: visibility.floating && groupActive, titleHost, setTitleHost, setActivity, revealHovered: visibility.floating && revealHovered, setRevealHovered }}>
         {props.children}
       </StateContext.Provider>
     </RegistrationContext.Provider>
