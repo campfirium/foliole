@@ -8,10 +8,10 @@ import { LocalizationProvider } from '../shared/localization/LocalizationProvide
 import { createContentSaveMock } from './companionContentEditingTestSupport';
 import { ReadableArticleDocument } from './CompanionReadableArticleDocument';
 
-it('keeps the focused editor and continued input while its saved body is reloaded', async () => {
+it.each(['missing', 'fetching'] as const)('keeps focused editing while a saved body is %s in the catalog', async (pendingStatus) => {
   const save = createContentSaveMock();
   let editor: EditorAdapter | null = null;
-  const renderDocument = (bodyStatus: 'ready' | 'fetching', content: string) => (
+  const renderDocument = (bodyStatus: 'ready' | 'fetching' | 'missing', content: string) => (
     <LocalizationProvider initialLanguagePreference="en"><MouseGestureSettingsProvider>
       <ReadableArticleDocument allowContentEditing onSaveContent={save}
         onEditorReady={(adapter) => { editor = adapter; }}
@@ -28,7 +28,7 @@ it('keeps the focused editor and continued input while its saved body is reloade
   const focusedBody = screen.getByRole('textbox', { name: 'Topic body' });
   expect(focusedBody).toHaveFocus();
   await waitFor(() => expect(save).toHaveBeenCalled(), { timeout: 3000 });
-  view.rerender(renderDocument('fetching', ''));
+  view.rerender(renderDocument(pendingStatus, ''));
   expect(screen.getByRole('textbox', { name: 'Topic body' })).toBe(focusedBody);
   expect(focusedBody).toHaveFocus();
   act(() => activeEditor.replaceRange(1, 1, 'ri saved edit'));

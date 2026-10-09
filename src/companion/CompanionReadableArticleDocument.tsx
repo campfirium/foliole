@@ -103,7 +103,7 @@ function useReadableArticleEditorState(props: {
   const canEdit = Boolean(
     props.allowContentEditing === true &&
     saveContent &&
-    (bodyReady || (props.readableArticle.bodyStatus === 'fetching' && editableNode.current === props.readableArticle.nodeId))
+    (bodyReady || (['missing', 'fetching'].includes(props.readableArticle.bodyStatus ?? '') && editableNode.current === props.readableArticle.nodeId))
   );
   const editorState = useCompanionTopicEditAutosave({
     canEdit: canEdit && !props.isViewingPdfOriginal,

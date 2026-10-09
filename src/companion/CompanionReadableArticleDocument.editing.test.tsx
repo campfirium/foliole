@@ -132,12 +132,12 @@ describe('ReadableArticleDocument editing', () => {
   });
 });
 
-  it('does not start editing a body that has never finished loading', () => {
+  it.each(['missing', 'fetching'] as const)('does not start editing an unopened %s body', (bodyStatus) => {
     const save = createContentSaveMock();
     renderReadableArticleDocument({ allowContentEditing: true, onSaveContent: save,
-      readableArticle: createReadableArticle({ bodyStatus: 'fetching', content: '' }) });
+      readableArticle: createReadableArticle({ bodyStatus, content: '' }) });
     expect(screen.queryByLabelText('Topic body')).not.toBeInTheDocument();
-    expect(screen.getByText('Loading topic body.')).toBeInTheDocument();
+    expect(screen.getByText(bodyStatus === 'missing' ? 'Waiting for topic body.' : 'Loading topic body.')).toBeInTheDocument();
     expect(save).not.toHaveBeenCalled();
   });
 
