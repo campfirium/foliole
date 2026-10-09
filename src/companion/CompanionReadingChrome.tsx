@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from '../shared/localization/LocalizationProvider';
 
 import { companionFlexRowGap2ClassName, companionMobileChromeHitRailClassName } from './companionCssCompatibility';
+import { useCompanionTouchClick } from './useCompanionTouchClick';
 
 function ReadingChromeButton(props: {
   disabled?: boolean | undefined;
@@ -13,6 +14,7 @@ function ReadingChromeButton(props: {
   testId?: string | undefined;
 }) {
   const Icon = props.icon;
+  const activation = useCompanionTouchClick(() => props.onClick?.(), { disabled: props.disabled === true });
   return (
     <button
       aria-disabled={props.disabled ? 'true' : undefined}
@@ -20,7 +22,7 @@ function ReadingChromeButton(props: {
       className="inline-flex h-11 w-11 items-center justify-center rounded-md text-companion-text-secondary transition hover:text-foreground disabled:text-companion-text-tertiary"
       data-testid={props.testId}
       disabled={props.disabled}
-      onClick={props.onClick}
+      {...activation}
       type="button"
     >
       <Icon className="h-5 w-5" />
@@ -34,13 +36,14 @@ function ReadingChromeTextButton(props: {
   primary?: boolean | undefined;
   testId?: string | undefined;
 }) {
+  const activation = useCompanionTouchClick(() => props.onClick?.());
   return (
     <button
       aria-label={props.label}
       className={props.primary
         ? 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md border border-companion-divider bg-companion-content/80 px-3 text-sm font-medium text-foreground transition'
         : 'inline-flex h-9 min-w-[56px] items-center justify-center rounded-md px-3 text-sm font-medium text-companion-text-secondary transition hover:text-foreground'}
-      onClick={props.onClick}
+      {...activation}
       data-testid={props.testId}
       type="button"
     >
