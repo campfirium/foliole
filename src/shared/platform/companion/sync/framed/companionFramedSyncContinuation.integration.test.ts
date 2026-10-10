@@ -98,6 +98,40 @@ it('recaptures inventory after a pull supersedes its stale outbound side and ret
   expect(native.inventory.mock.calls.length).toBeGreaterThan(1);
 }, 15_000);
 
+it('converges a companion fork after its shared ancestor body was deleted', async () => {
+  const { fixture, bridge } = await setup();
+  const nodeId = 't339-deleted-ancestor-fork';
+  await fixture.left.seed({ content: 'Shared original', nodeId, title: 'Shared' });
+  await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+  await fixture.left.seed({ content: 'Companion complete input', nodeId, title: 'Shared' });
+  await fixture.right.seed({ content: 'Desktop advanced input', nodeId, title: 'Shared' });
+  await fixture.right.invoke('collect_content');
+  const source = new Database(fixture.rightSnapshot.databasePath);
+  try {
+    expect(source.prepare(`UPDATE node_sync_versions SET body_text = NULL,
+      snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_deleted', json('true'))
+      WHERE object_id = ? AND body_text = 'Shared original'`).run(nodeId).changes).toBe(1);
+  } finally { source.close(); }
+  native.send.mockImplementation(async (input: NativeCompanionFramedSyncTransferRequest) => {
+    try { return await bridge.send(input); }
+    catch (error) {
+      throw new Error(`Failed to send framed Sync transfer. Cause: IllegalStateException: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+  const result = await sendCompanionFramedSyncInventoryDifferences(bridge.request);
+  expect(result.deferredObjects).toEqual([]);
+  const left = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
+  const right = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
+  try {
+    const versions = 'SELECT version_id, parent_version_id, content_hash, body_text FROM node_sync_versions WHERE object_id = ? ORDER BY version_id';
+    expect(right.prepare(versions).all(nodeId)).toEqual(left.prepare(versions).all(nodeId));
+    expect(left.prepare(versions).all(nodeId)).toContainEqual(expect.objectContaining({ body_text: 'Companion complete input' }));
+    expect(left.prepare(versions).all(nodeId)).toContainEqual(expect.objectContaining({ body_text: null }));
+    expect(right.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get(nodeId))
+      .toEqual(left.prepare('SELECT current_version_id FROM nodes WHERE id = ?').get(nodeId));
+  } finally { left.close(); right.close(); }
+}, 15_000);
+
 it('completes another finite round for an edit made after the selected input was fixed', async () => {
   const { fixture, bridge } = await setup();
   const nodeId = 't326-companion-frozen-edit';

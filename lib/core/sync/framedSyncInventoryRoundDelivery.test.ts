@@ -32,6 +32,16 @@ it('accepts the original dependency wrappers and rejects trailing data', () => {
   }
 });
 
+it.each(['Failed to send framed Sync transfer. Cause: IllegalStateException: ',
+  'Failed to send framed Sync transfers. Cause: IllegalStateException: ',
+  'Failed to send framed Sync transfer: ', 'Failed to pull framed Sync object. Cause: '])(
+  'recognizes a missing dependency through native wrapper %s and HTTP 400', wrapper => {
+    expect(readFramedSyncMissingDependency(new Error(`${wrapper}framed_sync_http_400:node_position_lineage_unproven:topic`)))
+      .toMatchObject({ globalId: 'topic', objectType: 'node' });
+    expect(readFramedSyncMissingDependency(new Error(`${wrapper}framed_sync_http_401:node_position_lineage_unproven:topic`)))
+      .toBeNull();
+  });
+
 it.each(['framed_sync_node_parent_missing:', 'node_position_lineage_unproven:',
   'parent_order_position_lineage_unproven:', 'sync_parent_order_body_unavailable:',
   'framed_sync_review_node_missing:', 'sync_node_open_state_node_missing:',
