@@ -4,7 +4,7 @@ import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { applyLocalContentEdit } from '../../../../../lib/core/sync/localContentEdit';
 import { releaseLocalEditBase, retainLocalEditBase } from '../../../../../lib/core/sync/nodeVersionLocalEditHold';
 import { collectNodeVersionPayloads } from '../../../../../lib/core/sync/nodeVersionPayloadCollector';
-import { loadCurrentSyncNodeRecord, loadStoredSyncNodeVersionRecord } from '../../../../../lib/core/sync/syncNodeGraph';
+import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact } from '../../../../../lib/core/sync/syncNodeGraph';
 import { assertNodeTextForSave } from '../../../ui/nodeTextSaveBudget';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { isNativeCompanionNodeVersionWriteRuntime } from '../../companionWorkspaceRuntimeRepository';
@@ -45,7 +45,7 @@ export async function saveCompanionContentEdit(edit: CompanionContentEdit) {
   return runCompanionHighValueMutationTask(async () => {
     const result = await writeIosCompanionDatabase((port) => port.transaction(async (db) => {
       await requireEditableTopic(db, edit.nodeId);
-      const base = await loadStoredSyncNodeVersionRecord(db, edit.baseVersionId, false);
+      const base = await loadRetainedSyncNodeVersionFact(db, edit.baseVersionId);
       if (!base || base.snapshot.kind !== 'topic') throw new Error('content_edit_base_unavailable');
       assertNodeTextForSave({ content: edit.content, kind: base.snapshot.kind, title: base.snapshot.title,
         anchorLink: parseStoredAnchorLink(base.snapshot.anchor_link) });

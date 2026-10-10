@@ -56,6 +56,6 @@ function hasBody(row: ChainVersion) {
 }
 
 function hasBodyBlobReference(row: ChainVersion) {
-  const snapshot: { body_blob_hash?: unknown } = JSON.parse(row.snapshot_json);
-  return typeof snapshot.body_blob_hash === 'string';
+  const snapshot: { body_blob_hash?: unknown; body_deleted?: unknown } = JSON.parse(row.snapshot_json);
+  return snapshot.body_deleted !== true && typeof snapshot.body_blob_hash === 'string';
 }

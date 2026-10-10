@@ -91,6 +91,8 @@ it('replays an uncertain acknowledgement without creating another input version'
   await readCompanionContentSource('topic', 'unacknowledged-input');
   const request = edit('Apples tea\nBread\nMilk\n');
   const first = await saveCompanionContentEdit(request);
+  expect(database.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted FROM node_sync_versions WHERE version_id = 'base'")
+    .get()).toEqual({ body_text: null, deleted: 1 });
   const replay = await saveCompanionContentEdit(request);
   expect(replay).toEqual(first);
   expect(database.prepare('SELECT COUNT(*) AS n FROM node_sync_versions WHERE object_id = ?').get('topic')).toEqual({ n: 2 });

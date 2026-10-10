@@ -65,6 +65,10 @@ it('retires the same planned bodies while retaining current, frozen, held versio
     expect(retired).toEqual([{ version_id: 'base', parent_version_id: null, body_text: null,
       content: null, snapshot_hash: '88d759ea02cef4b82885c6c620473162757c75522805707c20e2be76a40a2825' }]);
     expect(await stable.db.query('SELECT * FROM node_sync_version_parents')).toEqual(edges);
+    const after = await stable.db.query<ChainVersion>('SELECT * FROM node_sync_versions');
+    expect(planNodeVersionChain(after, edges, protectedIds, new Set(), 100, new Set(['head'])).removed).toEqual([]);
+    const afterMetadata = await stable.db.query<ChainVersionMetadata>(nodeVersionChainMetadataSql(), ['topic']);
+    expect(planNodeVersionMetadataChain(afterMetadata, edges, protectedIds, new Set(), 100, new Set(['head'])).removed).toEqual([]);
     expect(await stable.db.query("SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL ORDER BY version_id"))
       .toEqual([{ version_id: 'head' }, { version_id: 'held' }]);
     expect(await old.db.query('SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL ORDER BY version_id'))
