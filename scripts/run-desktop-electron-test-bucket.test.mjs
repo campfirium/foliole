@@ -50,6 +50,18 @@ it('builds the expected desktop Electron buckets with explicit chunk bounds', ()
   expect(buckets.find((bucket) => bucket.label === 'ipc-epub-01')?.targets.length).toBeLessThanOrEqual(3);
 });
 
+it('runs only isolated large sync fixtures together in two native fork workers', () => {
+  const buckets = buildDesktopElectronBuckets();
+  const parallel = buckets.filter((bucket) => bucket.fileParallelism);
+  expect(parallel).toHaveLength(1);
+  expect(parallel[0].targets).toEqual([
+    'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts',
+    'electron/sync/desktopFramedSyncLargeOverwrite.integration.test.ts'
+  ]);
+  expect(parallel[0].workers).toBe(2);
+  expect(buildDesktopElectronShardBuckets('services', buckets)).toContain(parallel[0]);
+});
+
 it('collects every Electron test exactly once', () => {
   expect(() => assertDesktopElectronBucketCoverage(
     collectElectronTestFiles(),

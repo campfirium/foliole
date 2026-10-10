@@ -20,6 +20,10 @@ const IPC_CHUNK_SIZE = 10;
 const EPUB_IPC_CHUNK_SIZE = 3;
 const MISSING_REPORT_RETRY_LIMIT = 3;
 export const DESKTOP_ELECTRON_SHARDS = ['database', 'import', 'ipc', 'services'];
+const LARGE_SYNC_TESTS = [
+  'electron/sync/desktopFramedSyncCompleteInventory.integration.test.ts',
+  'electron/sync/desktopFramedSyncLargeOverwrite.integration.test.ts'
+];
 const SINGLE_FILE_IMPORT_BUCKETS = new Set([
   'electron/import/importManagerSettings.test.ts',
   'electron/import/importNodeMutationPatch.test.ts'
@@ -96,7 +100,9 @@ export function buildDesktopElectronBuckets() {
     ...chunkFiles('ipc-epub', epubIpcFiles, EPUB_IPC_CHUNK_SIZE),
     ...chunkFiles('ipc', chunkedIpcFiles, IPC_CHUNK_SIZE),
     { label: 'attachments', report: '.tmp/vitest/desktop-electron-attachments.json', targets: collectTestFiles('electron/attachments') },
-    ...chunkFiles('sync', collectTestFiles('electron/sync'), SYNC_CHUNK_SIZE),
+    { label: 'sync-large', report: '.tmp/vitest/desktop-electron-sync-large.json',
+      targets: LARGE_SYNC_TESTS, workers: 2, fileParallelism: true },
+    ...chunkFiles('sync', collectTestFiles('electron/sync').filter((file) => !LARGE_SYNC_TESTS.includes(file)), SYNC_CHUNK_SIZE),
     { label: 'mirror', report: '.tmp/vitest/desktop-electron-mirror.json', targets: collectTestFiles('electron/mirror') },
     { label: 'diagnostics', report: '.tmp/vitest/desktop-electron-diagnostics.json', targets: collectTestFiles('electron/diagnostics') },
     { label: 'agentControl', report: '.tmp/vitest/desktop-electron-agent-control.json', targets: collectTestFiles('electron/agentControl') },
@@ -154,7 +160,7 @@ export function assertDesktopElectronBucketCoverage(allFiles, buckets) {
   }
 }
 
-function runVitest(reportPath, targets, workers = 2) {
+function runVitest(reportPath, targets, workers = 2, fileParallelism = false) {
   const args = [
     'scripts/electron-sqlite-runner.mjs',
     'scripts/run-vitest-with-summary.mjs',
@@ -164,7 +170,7 @@ function runVitest(reportPath, targets, workers = 2) {
     '--pool=forks',
     '--disableConsoleIntercept',
     `--maxWorkers=${workers}`,
-    '--no-file-parallelism',
+    fileParallelism ? '--fileParallelism' : '--no-file-parallelism',
     '--testTimeout=30000',
     ...targets
   ];
@@ -175,7 +181,7 @@ function runVitest(reportPath, targets, workers = 2) {
 }
 
 async function runBucket(bucket) {
-  let code = await runVitest(bucket.report, bucket.targets, bucket.workers);
+  let code = await runVitest(bucket.report, bucket.targets, bucket.workers, bucket.fileParallelism);
   for (let attempt = 1; code !== 0 && !readReport(bucket.report) && attempt <= MISSING_REPORT_RETRY_LIMIT; attempt += 1) {
     console.log(`[desktop-electron-test-bucket] retrying ${bucket.label} after missing report (${attempt}/${MISSING_REPORT_RETRY_LIMIT})`);
     rmSync(bucket.report, { force: true });
