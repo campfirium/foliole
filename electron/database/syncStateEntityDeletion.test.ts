@@ -10,6 +10,7 @@ import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/worksp
 import { ANDROID_SYNC_PACK_PROVIDER_DEFINITIONS as definitions } from '../../lib/core/sync/androidSyncPackProviderDefinitions.js';
 
 import { copyPayloads } from './androidSyncPackProviderDefinitions.testSupport.js';
+import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 import { prepareImportedNodeDeletionVersions } from './importedNodeDeletionVersions.js';
 import { buildPack, closeLibraries, createPeer, edit, joinPeers, receivePack, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
 
@@ -54,6 +55,7 @@ it('preserves production version delivery proofs and retained bodies while upgra
   expect(before[0]!.length).toBeGreaterThan(0);
   upsertSyncObjectState(source.driver, { objectType: 'node_review', objectId: 'legacy-orphan',
     contentHash: 'old', lastModifiedByHostName: 'source', updatedAt: 'now', syncDirty: false });
+  removeCurrentInventoryFixtureTriggers(source.db);
   source.db.pragma('user_version = 120');
   initializeDatabaseSchema(source.db);
   expect(proofTables.map((table) => source.db.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all())).toEqual(before);

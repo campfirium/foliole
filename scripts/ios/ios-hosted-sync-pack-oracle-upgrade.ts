@@ -26,6 +26,12 @@ export function upgradeHostedOracleResources(database: SqliteDatabase) {
   for (const [nodeId, references] of resources) database.prepare(
     'UPDATE oracle_seed.nodes SET resource_references = ? WHERE id = ?'
   ).run(serializeNodeResourceReferences(references), nodeId);
+  database.exec(`INSERT OR IGNORE INTO oracle_seed.node_sync_version_parents
+    (version_id, parent_version_id, ordinal)
+    SELECT version_id, parent_version_id, 0 FROM oracle_seed.node_sync_versions
+    WHERE parent_version_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM oracle_seed.node_sync_version_parents parent
+      WHERE parent.version_id = node_sync_versions.version_id)`);
   upgradeVersionResources(database, resources);
   upgradeBodyAddresses(database);
   for (const table of ['sync_objects', 'sync_object_state']) database.prepare(
