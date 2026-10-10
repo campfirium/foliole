@@ -72,9 +72,12 @@ async () => {
   expect(receipt.result).toBe('converged');
   const received = readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath);
   expect(received.nodes).toEqual([
-    expect.objectContaining({ content: '', id: nodeId, title: 'Child' })
+    expect.objectContaining({ content: 'Child body', id: nodeId, title: 'Child' })
   ]);
   expect(received.versions).toHaveLength(3);
+  expect(received.versions).toEqual(expect.arrayContaining(
+    edits.map(([, body_text]) => expect.objectContaining({ body_text }))
+  ));
   expect(received.parents).toHaveLength(2);
   const byVersion = new Map(received.versions.map((version) => [
     (version as { version_id: string }).version_id,
