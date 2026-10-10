@@ -4,7 +4,7 @@ import path from 'node:path';
 
 import Database from 'better-sqlite3';
 
-import { createFakeCapacitorConnection } from '../../companionSyncNodeVersionsTestSupport';
+import { createFakeCapacitorConnection, installCompanionNodeSchema } from '../../companionSyncNodeVersionsTestSupport';
 
 import { closeIosCompanionDatabase, initializeIosCompanionDatabase, type IosCompanionDatabaseManager } from './iosCompanionDatabaseBootstrap';
 
@@ -12,6 +12,7 @@ export async function createSearchLibrary(count = 125, bodySize = 4096) {
   const root = mkdtempSync(path.join(os.tmpdir(), 'search-snapshot-'));
   const file = path.join(root, 'library.db');
   const database = new Database(file);
+  database.transaction(() => installCompanionNodeSchema(database))();
   const base = createFakeCapacitorConnection(database);
   const connection = { ...base, getUrl: async () => ({ url: file }) };
   const manager = {
