@@ -8,7 +8,8 @@ import { clearAttachmentLibraryPathSnapshot } from '../attachments/attachmentLib
 
 import { encodeFramedSyncHttpBody } from './desktopFramedSyncHttpWriter.js';
 import { loadDesktopFramedSyncPreparedTransferBody } from './desktopFramedSyncPreparedTransferBody.js';
-import { prepareDesktopFramedSyncPublishedDelivery, prepareDesktopFramedSyncPublishedTransfer } from './desktopFramedSyncProcessOutbound.js';
+import { prepareDesktopFramedSyncPublishedDelivery, prepareDesktopFramedSyncPublishedTransfer,
+  prepareDesktopFramedSyncRequestedDelivery } from './desktopFramedSyncProcessOutbound.js';
 import { desktopResourceReadyFixture } from './desktopFramedSyncResourceReady.testSupport.js';
 
 it('sends the exact prepared signed body after the source library closes', async () => {
@@ -67,16 +68,19 @@ it('captures the same fixed wire bytes as durable replay before the source close
   }
 });
 
-it('keeps the second simultaneous signed reader intact after the first releases and staging is removed', async () => {
+it.each(['published', 'requested', 'mixed', 'requested-first'])('keeps concurrent signed readers intact across removed staging: %s', async mode => {
   const source = await desktopResourceReadyFixture();
   const publication = { ...source.published, manifest: { facts: [source.fact], blobs: source.fact.blobs } };
   const bodies: Awaited<ReturnType<typeof loadDesktopFramedSyncPreparedTransferBody>>[] = [];
   let closed = false;
   try {
     await source.staging.publishOutbound(publication);
-    const deliveries = await Promise.all([0, 1].map(() => prepareDesktopFramedSyncPublishedDelivery({
-      db: source.db, publication, groupSecret: Buffer.alloc(32, 5).toString('base64url'), staging: source.staging
-    })));
+    const deliveries = await Promise.all([0, 1].map(index => {
+      const prepare = mode === 'requested' || (mode === 'mixed' && index === 1) || (mode === 'requested-first' && index === 0)
+        ? prepareDesktopFramedSyncRequestedDelivery : prepareDesktopFramedSyncPublishedDelivery;
+      return prepare({ db: source.db, publication,
+        groupSecret: Buffer.alloc(32, 5).toString('base64url'), staging: source.staging });
+    }));
     bodies.push(...deliveries.map(delivery => delivery.body));
     expect(bodies[0]!.bodySha256).toBe(bodies[1]!.bodySha256);
     await bodies[0]!.dispose?.();

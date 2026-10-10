@@ -8,7 +8,7 @@ import { publishDesktopFramedSyncNodeOutbound } from '../database/desktopFramedS
 import { readFramedSyncPayloadBudget } from '../database/framedSyncPayloadBudgetOwner.js';
 
 import type { respondDesktopFramedSyncInventory } from './desktopFramedSyncInventoryHttp.js';
-import { prepareDesktopFramedSyncPublishedDelivery } from './desktopFramedSyncProcessOutbound.js';
+import { prepareDesktopFramedSyncRequestedDelivery } from './desktopFramedSyncProcessOutbound.js';
 import { publishDesktopFramedSyncResourceOutbound } from './desktopFramedSyncResourceOutbound.js';
 import { readDesktopFramedSyncRoundInventoryEntry } from './desktopFramedSyncRoundInventory.js';
 import { spoolDesktopFramedSyncSequence } from './desktopFramedSyncSequenceSpool.js';
@@ -98,7 +98,7 @@ async function selectPublication(args: Args, difference: FramedSyncInventoryDiff
 }
 
 function prepareReply(args: Args, publication: OutboundPublishInput) {
-  return prepareDesktopFramedSyncPublishedDelivery({
+  return prepareDesktopFramedSyncRequestedDelivery({
     db: args.db, groupSecret: args.groupSecret, publication, staging: args.staging
   });
 }

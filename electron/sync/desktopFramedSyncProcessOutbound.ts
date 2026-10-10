@@ -67,6 +67,20 @@ export function prepareDesktopFramedSyncPublishedDelivery(input: PreparationInpu
     () => sealPublishedDelivery(input));
 }
 
+/** A new requested delivery must also work after the receiver invalidated its previous attempt. */
+export function prepareDesktopFramedSyncRequestedDelivery(input: PreparationInput) {
+  return retainDesktopFramedSyncPublishedDelivery(input.db, input.publication.transferId, async () => {
+    const previous = await input.db.query<{ attempt_id: Uint8Array }>(
+      `SELECT attempt_id FROM framed_sync_outbound_attempts
+       WHERE transfer_id = ? AND purpose = 'transfer' AND state = 'replayable'`,
+      [input.publication.transferId]);
+    for (const attempt of previous) {
+      await input.staging.abandonOutboundAttempt(input.publication.transferId, attempt.attempt_id);
+    }
+    return sealPublishedDelivery(input);
+  });
+}
+
 async function sealPublishedDelivery(input: PreparationInput) {
   let body: Awaited<ReturnType<typeof spoolDesktopFramedSyncProducedBody>> | undefined;
   try {
