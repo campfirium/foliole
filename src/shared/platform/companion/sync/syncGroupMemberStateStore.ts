@@ -13,17 +13,15 @@ import type {
 } from '../../../../../lib/platform/syncGroupMemberStateContract';
 import { SYNC_GROUP_MEMBER_STATE_CONTRACT_VERSION } from '../../../../../lib/platform/syncGroupMemberStateContract';
 import {
-  syncGroupRestorePeersReady
-} from '../../../../../lib/platform/syncGroupRestoreContract';
-import {
   createSyncGroupDeviceIdentity,
   devicePathFlavorFromCanonicalLibraryPath
 } from '../../../../../lib/platform/syncGroupUnifiedContract';
-import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR, evaluateSyncProtocolCompatibility } from '../../../../../lib/platform/syncProtocolContract';
+import { CURRENT_SYNC_PROTOCOL_DESCRIPTOR } from '../../../../../lib/platform/syncProtocolContract';
 import { runCompanionSyncWriterTask } from '../../companionSyncWriterQueue';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import { assertCompanionPeerProofFresh, loadCompanionLocalNodeProof } from './nodeVersionCompanionPeerProof';
+import { assertIncomingProtocolCompatible, canMergeRestoreSourceMembers, companionMemberStateReady } from './syncGroupMemberStateGuards.js';
 
 type Context = { groupId: string; localDeviceId: string };
 
@@ -58,12 +56,13 @@ export async function applyCompanionSyncGroupMemberState(
         localRestore = await receiveSyncGroupRestoreEvent(tx, incoming.restore.event);
       }
       const adoption = await loadSyncGroupLocalAdoption(tx);
-      const normalSyncReady = adoption
-        ? adoption.providerDeviceId === authenticatedDeviceId && !incoming.adopting_from && incoming.restore?.applied !== false
-        : incoming.adopting_from === context.localDeviceId || syncGroupRestorePeersReady(localRestore, incoming.restore);
-      if (!normalSyncReady) return {
-        local_exited: false, normal_sync_ready: false, state: await loadState(tx, context)
-      };
+      const normalSyncReady = companionMemberStateReady(incoming, adoption, localRestore, context.localDeviceId);
+      if (!normalSyncReady) {
+        if (!adoption && await canMergeRestoreSourceMembers(tx, incoming, localRestore, context.localDeviceId)) {
+          await mergeMemberMetadata(tx, incoming, context.localDeviceId);
+        }
+        return { local_exited: false, normal_sync_ready: false, state: await loadState(tx, context) };
+      }
       if (!adoption && incoming.adopting_from !== context.localDeviceId) {
         await assertCompanionPeerProofFresh(tx, incoming, context.localDeviceId);
       }
@@ -72,8 +71,7 @@ export async function applyCompanionSyncGroupMemberState(
           [incoming.group_id, authenticatedDeviceId]);
         for (const statement of retirePeerPositionStatements(incoming)) await tx.run(statement.sql, statement.params);
       }
-      for (const removal of incoming.removals) await mergeRemoval(tx, incoming.group_id, removal);
-      for (const device of incoming.devices) await mergeDevice(tx, incoming.group_id, device, context.localDeviceId);
+      await mergeMemberMetadata(tx, incoming, context.localDeviceId);
       const now = new Date().toISOString();
       let localExited = false;
       for (const removal of await loadRemovals(tx, incoming.group_id)) {
@@ -96,19 +94,17 @@ export async function applyCompanionSyncGroupMemberState(
   ));
 }
 
-function assertIncomingProtocolCompatible(incoming: SyncGroupMemberStatePayload) {
-  const compatibility = evaluateSyncProtocolCompatibility(incoming.protocol);
-  if (compatibility.status !== 'compatible') {
-    throw new Error(`sync_group_peer_incompatible:${compatibility.reason ?? 'unknown'}`);
-  }
-}
-
 export async function isCompanionSyncGroupDeviceBlocked(groupId: string, deviceId: string) {
   return getIosCompanionDatabaseOwner().read(async (db) => Boolean((await db.query<DbRow>(
     `SELECT 1 AS blocked FROM sync_group_removal_decisions
      WHERE group_id = ? AND target_device_identity_key = ? AND superseded_at IS NULL LIMIT 1`,
     [groupId, deviceId]
   ))[0]));
+}
+
+async function mergeMemberMetadata(db: DbPort, incoming: SyncGroupMemberStatePayload, localId: string) {
+  for (const removal of incoming.removals) await mergeRemoval(db, incoming.group_id, removal);
+  for (const device of incoming.devices) await mergeDevice(db, incoming.group_id, device, localId);
 }
 
 async function loadContext(db: DbPort): Promise<Context | null> {

@@ -148,3 +148,23 @@ it('persists a target exit and returns its confirmation before the provider stop
   }));
   expect(await loadCompanionSyncGroup()).toBeNull();
 });
+
+it('receives source members needed by a pending restore without opening ordinary synchronization', async () => {
+  const state = await loadCompanionSyncGroupMemberState();
+  const event = { group_id: 'group-1', restore_id: 'restore-1', restored_at: '2026-10-10T00:00:00.000Z',
+    source_device_identity_key: provider.identity_key };
+  sqlite.prepare(`INSERT INTO sync_group_restore_events
+    (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
+    VALUES (?, ?, ?, ?, NULL, ?)`).run(event.restore_id, event.group_id, event.restored_at,
+    event.source_device_identity_key, event.restored_at);
+  const windows = createSyncGroupDeviceIdentity({ device_anchor: 'c3333333-3333-4333-8333-333333333333',
+    group_id: 'group-1', library_path: 'd:\\c\\foliole\\data\\foliole.db', path_flavor: 'windows' });
+  const result = await applyCompanionSyncGroupMemberState({ ...state, restore: { event, applied: true },
+    devices: [...state.devices, { ...state.devices[0]!, device_anchor: windows.device_anchor,
+      canonical_library_path: windows.canonical_library_path, device_identity_key: windows.identity_key,
+      device_name: 'Windows', platform: 'Windows' }], sender_device_identity_key: provider.identity_key }, provider.identity_key);
+  expect(result.normal_sync_ready).toBe(false);
+  expect(result.local_exited).toBe(false);
+  expect(result.state.restore).toEqual({ event, applied: false });
+  expect(result.state.devices).toContainEqual(expect.objectContaining({ device_identity_key: windows.identity_key }));
+});
