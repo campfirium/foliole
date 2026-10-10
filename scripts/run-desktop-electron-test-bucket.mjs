@@ -14,7 +14,8 @@ import {
 
 const TEST_FILE_PATTERN = /\.test\.(mjs|mts|ts|tsx)$/u;
 const DATABASE_CHUNK_SIZE = 20;
-const IMPORT_CHUNK_SIZE = 2;
+const IMPORT_CHUNK_SIZE = 20;
+const SYNC_CHUNK_SIZE = 20;
 const IPC_CHUNK_SIZE = 10;
 const EPUB_IPC_CHUNK_SIZE = 3;
 const MISSING_REPORT_RETRY_LIMIT = 3;
@@ -95,7 +96,7 @@ export function buildDesktopElectronBuckets() {
     ...chunkFiles('ipc-epub', epubIpcFiles, EPUB_IPC_CHUNK_SIZE),
     ...chunkFiles('ipc', chunkedIpcFiles, IPC_CHUNK_SIZE),
     { label: 'attachments', report: '.tmp/vitest/desktop-electron-attachments.json', targets: collectTestFiles('electron/attachments') },
-    { label: 'sync', report: '.tmp/vitest/desktop-electron-sync.json', targets: collectTestFiles('electron/sync') },
+    ...chunkFiles('sync', collectTestFiles('electron/sync'), SYNC_CHUNK_SIZE),
     { label: 'mirror', report: '.tmp/vitest/desktop-electron-mirror.json', targets: collectTestFiles('electron/mirror') },
     { label: 'diagnostics', report: '.tmp/vitest/desktop-electron-diagnostics.json', targets: collectTestFiles('electron/diagnostics') },
     { label: 'agentControl', report: '.tmp/vitest/desktop-electron-agent-control.json', targets: collectTestFiles('electron/agentControl') },

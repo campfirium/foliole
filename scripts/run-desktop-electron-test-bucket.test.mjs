@@ -22,7 +22,7 @@ it('builds the expected desktop Electron buckets with explicit chunk bounds', ()
   expect(labels).toContain('ipc-epub-01');
   expect(labels).toContain('ipc-01');
   expect(labels).toContain('attachments');
-  expect(labels).toContain('sync');
+  expect(labels).toContain('sync-01');
   expect(labels).toContain('mirror');
   expect(labels).toContain('diagnostics');
   expect(labels).toContain('agentControl');
@@ -36,6 +36,8 @@ it('builds the expected desktop Electron buckets with explicit chunk bounds', ()
   expect(labels).toContain('scripts');
   expect(buckets.every((bucket) => bucket.targets.length > 0)).toBe(true);
   expect(buckets.find((bucket) => bucket.label === 'database-01')?.targets.length).toBeLessThanOrEqual(20);
+  expect(buckets.filter((bucket) => /^(import|sync)-\d+$/u.test(bucket.label))
+    .every((bucket) => bucket.targets.length <= 20)).toBe(true);
   expect(buckets.find((bucket) => bucket.label === 'ipc-01')?.targets.length).toBeLessThanOrEqual(10);
   expect(buckets.find((bucket) => bucket.label === 'import-importManagerSettings')?.targets).toEqual([
     'electron/import/importManagerSettings.test.ts'
