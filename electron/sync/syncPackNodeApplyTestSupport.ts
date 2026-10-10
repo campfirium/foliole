@@ -41,9 +41,9 @@ export function createIncomingPack(filePath: string) {
     ).run('node-1', 'Packed answer', 'desktop#1', '2026-05-04T01:00:00.000Z', '2026-05-04T01:00:00.000Z');
     db.prepare(
       `INSERT INTO node_sync_versions (
-         version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+         version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
        ) VALUES ('desktop#1', 'node-1', NULL, 'desktop',
-         '2026-05-04T01:00:00.000Z', 'hash-node-1', '{"id":"node-1","title":"Packed Node"}')`
+         '2026-05-04T01:00:00.000Z', 'hash-node-1', '', '{"id":"node-1","title":"Packed Node"}')`
     ).run();
     db.prepare('UPDATE nodes SET resource_references = ? WHERE id = ?').run(JSON.stringify([
       { storage_key: `${'a'.repeat(64)}.pdf`, original_name: 'Original.pdf', role: 'reference' }

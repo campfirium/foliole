@@ -21,5 +21,5 @@ function initializeSyncGroup(deviceId: string) {
   }
   driver.execute(`INSERT OR IGNORE INTO sync_group_local_state VALUES (1, 't326-group', ?, 'active', ?)`,
     [deviceId, now]);
-  markDesktopSyncGroupMemberStateReady(deviceId === 'desktop-a' ? 'desktop-b' : 'desktop-a');
+  for (const peer of ['desktop-a', 'desktop-b']) if (peer !== deviceId) markDesktopSyncGroupMemberStateReady(peer);
 }

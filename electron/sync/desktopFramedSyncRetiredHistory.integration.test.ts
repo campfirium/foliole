@@ -32,8 +32,7 @@ it.each([false, true])('synchronizes retired history after restart with receiver
     const right = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
     try {
       const versions = 'SELECT version_id, object_id, content_hash, body_text, parent_version_id FROM node_sync_versions ORDER BY version_id';
-      const expected = left.prepare<[], { body_text: string | null }>(versions).all().map((row) =>
-        receivedOriginal && row.body_text === null ? { ...row, body_text: 'Original body' } : row);
+      const expected = left.prepare(versions).all();
       expect(right.prepare(versions).all()).toEqual(expected);
       expect(right.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all())
         .toEqual(left.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all());

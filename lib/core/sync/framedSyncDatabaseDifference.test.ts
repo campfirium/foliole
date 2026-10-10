@@ -26,3 +26,8 @@ it('keeps original fact duties and source revalidation when files are handled se
   expect(revalidateFramedSyncInventorySource({ currentSource: [{ ...source, sharedStateHash: new Uint8Array(32) }],
     differences, direction: 'local_to_remote' }).deferredObjects).toEqual([{ globalId: 'article', objectType: 'node' }]);
 });
+
+it('ends node database comparison at an equal complete state hash', () => {
+  const remote = { ...source, frontierFactIds: [], requiredRelationIds: [], reviewFactIds: [], stateFactIds: [] };
+  expect(compareFramedSyncDatabaseInventories({ local: [source], remote: [remote] })).toEqual([]);
+});

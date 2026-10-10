@@ -46,7 +46,9 @@ final class FolioleCompanionFramedSyncInventoryClient {
         try (FramedSyncSessionNonceSQLite nonces = new FramedSyncSessionNonceSQLite(context);
              FramedSyncSessionFile request = FramedSyncSessionFile.create(context.getCacheDir(),
                 groupKey, sessionContext,
-                consumer -> FramedSyncInventoryWire.emit(localEntries, roundId, consumer), nonces, budget)) {
+                consumer -> FramedSyncInventoryWire.emit(localEntries, roundId,
+                    call.getArray("detail_global_ids", new JSArray()).toList().stream().map(Object::toString).toList(),
+                    call.getBoolean("summary_only", false), consumer), nonces, budget)) {
             String path = path(credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
             List<InventoryEntry> entries = FramedSyncHttpTransport.post(
                 new URL(join(endpointUrl, path)), groupId, receiverDeviceId, receiverEpoch,
@@ -74,6 +76,9 @@ final class FolioleCompanionFramedSyncInventoryClient {
             .put("resource_hashes", hashes(entry.getResourceHashesList()))
             .put("review_fact_ids", strings(entry.getReviewFactIdsList()))
             .put("state_fact_ids", strings(entry.getStateFactIdsList()))
+            .put("version_states", strings(entry.getVersionStatesList()))
+            .put("current_version_id", entry.getCurrentVersionId())
+            .put("unready", entry.getUnready())
             .put("shared_state_hash", hex(entry.getSharedStateHash().toByteArray())));
         return new JSObject().put("entries", values).put("round_id", hex(roundId));
     }

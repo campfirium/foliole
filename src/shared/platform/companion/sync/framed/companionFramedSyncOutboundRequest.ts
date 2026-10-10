@@ -28,6 +28,7 @@ export async function resolveCompanionFramedSyncOutboundRequest(db: DbPort, payl
   const difference = resolveFramedSyncDifferenceRequest(current, request);
   return { ...payload, object_id: difference.globalId, object_type: difference.objectType,
     include_current_node: difference.need.sharedState,
+    frontier_fact_ids: difference.need.frontierFactIds,
     required_relation_ids: difference.need.requiredRelationIds,
     review_fact_ids: difference.need.reviewFactIds, state_fact_ids: difference.need.stateFactIds ?? [] };
 }

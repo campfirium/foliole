@@ -115,30 +115,29 @@ it('holds every full payload in a pack until its exact node receipt', async () =
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C')).toEqual({ body_text: null });
 });
 
-it('keeps a pending edit base and a conflict reference', async () => {
+it('keeps submitted input and conflict references without retaining its historical editor base', async () => {
   proveBase('A');
   sqlite.prepare(`INSERT INTO node_version_local_holds VALUES ('editor-1', 'node', 'B', 'now')`).run();
   sqlite.prepare(`INSERT INTO node_sync_conflicts
     (conflict_version_id, object_id, snapshot_json, detected_at)
     VALUES ('D', 'node', '{}', 'now')`).run();
 
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 1, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
   expect(payloads().filter((row) => (row as { body_text: string | null }).body_text !== null)
-    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'B', 'D', 'E']);
+    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'D', 'E']);
 });
 
-it('protects an editor base until its hold is released', async () => {
+it('keeps editor parent identity after collecting its historical body', async () => {
   proveBase('A');
   await port.transaction((tx) => retainLocalEditBase(tx, {
     holdId: 'editor-1', nodeId: 'node', versionId: 'B'
   }));
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('B'))
-    .toEqual({ body_text: 'body-B' });
+    .toEqual({ body_text: null });
   await releaseLocalEditBase(port, 'editor-1', 'node');
   expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
-  await expect(retainLocalEditBase(port, { holdId: 'late-editor', nodeId: 'node', versionId: 'B' }))
-    .rejects.toThrow('content_edit_base_unavailable');
+  await retainLocalEditBase(port, { holdId: 'late-editor', nodeId: 'node', versionId: 'B' });
 });
 
 it('protects a version referenced by another node anchor', async () => {

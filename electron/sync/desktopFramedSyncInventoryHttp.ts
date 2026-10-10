@@ -2,6 +2,7 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_BATCH_LIMITS } from '../../lib/core/sync/framedSyncBatchLimits.js';
 import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
 import type { FramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventory.js';
+import { differingNodeIds, framedSyncInventorySummary } from '../../lib/core/sync/framedSyncInventorySummary.js';
 import {
   decodeFramedSyncInventory,
   iterateFramedSyncInventory
@@ -62,7 +63,7 @@ export async function respondDesktopFramedSyncInventory(args: {
       return respondDesktopFramedSyncDifferenceRequests({ ...args, requests });
     } finally { await incoming.return(undefined); }
   }
-  const { roundId, entries: remoteInventory } = await decodeFramedSyncInventory((async function* () {
+  const { roundId, entries: remoteInventory, detailGlobalIds = [], summaryOnly = false } = await decodeFramedSyncInventory((async function* () {
     try { yield first.value; yield* incoming; }
     finally { await incoming.return(undefined); }
   })());
@@ -74,11 +75,13 @@ export async function respondDesktopFramedSyncInventory(args: {
     peer: { deviceId: args.context.initiatorDeviceId, libraryEpoch: args.context.initiatorLibraryEpoch },
     peerOrigin: route.endpoint_url, staging: args.staging, remoteInventory
   });
-  if (route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') {
+  if (!detailGlobalIds.length && route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') {
     await reconcileResponderResources(args, route.endpoint_url, roundId, remoteInventory);
   }
   const entries = await readDesktopFramedSyncRoundInventory(args.db);
-  const messages = iterateFramedSyncInventory({ entries, roundId });
+  const messages = iterateFramedSyncInventory({ entries: detailGlobalIds.length ?
+    entries.filter(entry => entry.objectType === 'node' && detailGlobalIds.includes(entry.globalId)) :
+    summaryOnly ? framedSyncInventorySummary(entries) : entries, roundId });
   return encodeDesktopFramedSyncSession({
     authenticatedContext: args.context,
     groupKey: args.groupKey,
@@ -110,10 +113,12 @@ export async function exchangeDesktopFramedSyncInventoryHttp(args: {
   groupKey: Uint8Array;
   groupSecret: string;
   noncePort: FramedSyncSessionNoncePort;
-}) {
+  detailGlobalIds?: readonly string[];
+}): Promise<{ local: readonly FramedSyncInventoryEntry[]; remote: readonly FramedSyncInventoryEntry[]; roundId: Uint8Array }> {
   const roundId = crypto.getRandomValues(new Uint8Array(16));
   const local = args.localInventory ?? await readDesktopFramedSyncRoundInventory(args.db);
-  const messages = iterateFramedSyncInventory({ entries: local, roundId });
+  const messages = iterateFramedSyncInventory({ entries: framedSyncInventorySummary(local), roundId,
+    detailGlobalIds: args.detailGlobalIds ?? [], summaryOnly: true });
   const body = await encodeDesktopFramedSyncSession({
     authenticatedContext: args.context,
     groupKey: args.groupKey,
@@ -142,6 +147,15 @@ export async function exchangeDesktopFramedSyncInventoryHttp(args: {
   });
   const remote = await decodeFramedSyncInventory(decoded);
   if (!sameBytes(remote.roundId, roundId)) throw new Error('inventory_round_identity_mismatch');
+  if (!args.detailGlobalIds) {
+    const detailGlobalIds = differingNodeIds(local, remote.entries);
+    if (detailGlobalIds.length) {
+      const details = await exchangeDesktopFramedSyncInventoryHttp({ ...args, localInventory: local, detailGlobalIds });
+      const byId = new Map(details.remote.map(entry => [entry.globalId, entry]));
+      return { local, remote: remote.entries.map(entry => entry.objectType === 'node' ? byId.get(entry.globalId) ?? entry : entry),
+        roundId: details.roundId };
+    }
+  }
   return { local, remote: remote.entries, roundId };
 }
 

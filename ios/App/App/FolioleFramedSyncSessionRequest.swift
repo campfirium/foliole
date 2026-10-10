@@ -2,7 +2,7 @@ import Foundation
 import FolioleFramedSyncRuntime
 
 enum FolioleFramedSyncSessionRequest {
-    case inventory(roundID: Data)
+    case inventory(begin: Foliole_Sync_V22_InventoryBegin)
     case difference(encoded: Data)
     case differences(encoded: [Data])
 
@@ -39,7 +39,7 @@ enum FolioleFramedSyncSessionRequest {
         }
         if differences.count == 1 { return .difference(encoded: differences[0]) }
         if !differences.isEmpty { return .differences(encoded: differences) }
-        return .inventory(roundID: try inventory.roundID())
+        return .inventory(begin: try inventory.requestBegin())
     }
 
     private static func invalid() -> FolioleFramedSyncValidationError {

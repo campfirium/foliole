@@ -17,6 +17,7 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { retainLocalEditBase, releaseLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 
@@ -87,7 +88,7 @@ it('retains complete delayed edits using their real parent and preserves both br
     .toEqual([{ body_text: 'Apples and tea\nBread\nMilk\n' }]);
   const originalGraph = () => sqlite.prepare(`SELECT version_id, object_id, parent_version_id,
     host_name, created_at, content_hash,
-    json_remove(snapshot_json, '$.content', '$.body_blob_hash', '$.text_alternative_bodies') AS snapshot_metadata
+    json_remove(snapshot_json, '$.content', '$.body_blob_hash', '$.text_alternative_bodies', '$.body_deleted') AS snapshot_metadata
     FROM node_sync_versions WHERE object_id = ? ORDER BY version_id`).all('node-1');
   const originalEdges = () => sqlite.prepare(`SELECT version_id, parent_version_id, ordinal
     FROM node_sync_version_parents WHERE version_id IN
@@ -102,7 +103,7 @@ it('retains complete delayed edits using their real parent and preserves both br
   const heldBodies = sqlite.prepare(`SELECT version_id, body_text FROM node_sync_versions
     WHERE version_id IN (?, ?) ORDER BY version_id`).all(base, 'ver_local-edit');
   expect(heldBodies).toEqual([
-    { version_id: base, body_text: 'Apples\nBread\nMilk\n' },
+    { version_id: base, body_text: null },
     { version_id: 'ver_local-edit', body_text: 'Apples and tea\nBread\nMilk\n' }
   ].sort((left, right) => left.version_id.localeCompare(right.version_id)));
   const graph = originalGraph();
@@ -114,7 +115,9 @@ it('retains complete delayed edits using their real parent and preserves both br
       json_extract(snapshot_json, '$.body_blob_hash') AS body_blob_hash
     FROM node_sync_versions WHERE version_id IN (?, ?, ?) ORDER BY version_id`)
     .all(base, remote, 'ver_local-edit')).toEqual([base, remote, 'ver_local-edit'].sort()
-      .map((version_id) => ({ version_id, body_text: null, content: null, body_blob_hash: null })));
+      .map((version_id) => ({ version_id, body_text: null, content: null, body_blob_hash: hashTextBody(
+        version_id === base ? 'Apples\nBread\nMilk\n' : version_id === remote ?
+          'Apples\nBread\nMilk and coffee\n' : 'Apples and tea\nBread\nMilk\n') })));
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
     .get(result.current.version_id)).toEqual({ body_text: 'Apples\nBread\nMilk and coffee\n' });
 });

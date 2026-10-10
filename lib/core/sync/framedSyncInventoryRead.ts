@@ -1,3 +1,4 @@
+import { sha256 } from '@noble/hashes/sha2.js';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { z } from 'zod';
 
@@ -25,16 +26,22 @@ const ids = z.array(z.string().min(1));
 const hashes = z.array(z.string().regex(/^[a-f0-9]{64}$/u));
 
 function entry(row: InventoryRow): FramedSyncInventoryEntry {
-  if (!/^[a-f0-9]{64}$/u.test(row.content_hash)) {
-    throw new Error('framed_sync_inventory_state_hash_invalid');
-  }
+  const state = row.content_hash.startsWith('[') ? z.tuple([z.string(), z.string().nullable(),
+    z.array(z.tuple([z.string(), z.string(), z.string(), z.string(), z.string().nullable(),
+      z.enum(['deleted', 'available', 'missing']), z.string().nullable()]))]).parse(JSON.parse(row.content_hash)) : null;
+  const versionStates = state?.[2].map(value => JSON.stringify(value));
+  const unready = state?.[2].some(value => value[5] === 'missing') ?? false;
+  const hash = state ? sha256(new TextEncoder().encode(JSON.stringify([
+    state, JSON.parse(row.relations_json), JSON.parse(row.reviews_json), JSON.parse(row.states_json)
+  ]))) : hexToBytes(row.content_hash);
   return {
     frontierFactIds: ids.parse(JSON.parse(row.frontier_json)),
     globalId: row.object_id, objectType: 'node',
     requiredRelationIds: ids.parse(JSON.parse(row.relations_json)),
     resourceHashes: hashes.parse(JSON.parse(row.resources_json)).map(hexToBytes),
     reviewFactIds: ids.parse(JSON.parse(row.reviews_json)),
-    sharedStateHash: hexToBytes(row.content_hash),
+    sharedStateHash: unready ? new Uint8Array(32) : hash,
+    ...(state ? { currentVersionId: state[1] ?? '', versionStates, unready } : {}),
     stateFactIds: ids.parse(JSON.parse(row.states_json))
   };
 }

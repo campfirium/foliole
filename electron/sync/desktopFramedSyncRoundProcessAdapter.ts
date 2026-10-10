@@ -35,6 +35,7 @@ const entry = z.object({
   resourceHashes: z.array(bytes),
   reviewFactIds: z.array(z.string().min(1)),
   stateFactIds: z.array(z.string().min(1)).default([]),
+  versionStates: z.array(z.string()).optional(), currentVersionId: z.string().optional(), unready: z.boolean().optional(),
   sharedStateHash: bytes
 });
 const need = z.object({

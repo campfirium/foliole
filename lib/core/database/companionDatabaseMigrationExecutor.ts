@@ -35,6 +35,7 @@ import { migrateCompanionFramedSyncPermanentDeleteHistory } from './framedSyncPe
 import { migrateCompanionFramedSyncTombstoneInventory } from './framedSyncTombstoneInventoryMigration.js';
 import { migrateCompanionIndependentNodeVersions } from './independentNodeVersionMigration.js';
 import { retireCompanionLegacyStorage } from './legacyStorageRetirementMigration.js';
+import { migrateCompanionNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { migrateCompanionNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
 import { migrateCompanionParentOrderVersions } from './parentOrderVersionMigration.js';
 import { SYNC_IDENTITY_ENTITY_TRIGGER_STATEMENTS } from './syncIdentityEntityTriggerStatements.js';
@@ -108,6 +109,7 @@ export async function migrateCompanionDatabase(
   if (currentVersion < COMPANION_TEXT_BODY_OWNERSHIP_VERSION && targetVersion >= COMPANION_TEXT_BODY_OWNERSHIP_VERSION) {
     await migrateCompanionTextBodyOwnership(db);
   }
+  if (currentVersion < 80 && targetVersion >= 80) await migrateCompanionNodeHistoryState(db);
   await beforeVersionCommit?.();
   await db.run(`PRAGMA user_version = ${targetVersion}`);
 }

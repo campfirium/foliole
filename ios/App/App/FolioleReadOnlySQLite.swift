@@ -80,6 +80,9 @@ enum FolioleCompanionFramedSyncInventory {
             entry.requiredRelationIds = try strings(row, "required_relation_ids")
             entry.reviewFactIds = try strings(row, "review_fact_ids")
             entry.stateFactIds = try strings(row, "state_fact_ids")
+            entry.versionStates = row["version_states"] as? [String] ?? []
+            entry.currentVersionID = row["current_version_id"] as? String ?? ""
+            entry.unready = row["unready"] as? Bool ?? false
             entry.resourceHashes = try strings(row, "resource_hashes").map(digest)
             return entry
         }

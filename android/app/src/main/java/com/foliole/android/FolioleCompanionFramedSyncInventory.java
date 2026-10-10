@@ -35,7 +35,10 @@ final class FolioleCompanionFramedSyncInventory {
                 .addAllFrontierFactIds(strings(entry.getJSONArray("frontier_fact_ids")))
                 .addAllRequiredRelationIds(strings(entry.getJSONArray("required_relation_ids")))
                 .addAllReviewFactIds(strings(entry.getJSONArray("review_fact_ids")))
-                .addAllStateFactIds(strings(entry.getJSONArray("state_fact_ids")));
+                .addAllStateFactIds(strings(entry.getJSONArray("state_fact_ids")))
+                .addAllVersionStates(strings(entry.optJSONArray("version_states") == null ? new JSONArray() : entry.getJSONArray("version_states")))
+                .setCurrentVersionId(entry.optString("current_version_id", ""))
+                .setUnready(entry.optBoolean("unready", false));
             JSONArray hashes = entry.getJSONArray("resource_hashes");
             for (int hash = 0; hash < hashes.length(); hash++) {
                 builder.addResourceHashes(ByteString.copyFrom(digest(hashes.getString(hash))));

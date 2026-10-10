@@ -75,9 +75,9 @@ function insertNodeSyncState() {
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
      ) VALUES ('ver_contract-v1', 'node-1', NULL, 'desktop',
-       '2026-04-27T00:00:00.000Z', 'node-hash', '{"id":"node-1","title":"Node 1"}')`
+       '2026-04-27T00:00:00.000Z', 'node-hash', '', '{"id":"node-1","title":"Node 1"}')`
   );
   driver.execute(
     'INSERT INTO parent_child_order (parent_id, child_ids_json, updated_at) VALUES (?, ?, ?)',

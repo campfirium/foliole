@@ -63,7 +63,7 @@ it('retires the same planned bodies while retaining current, frozen, held versio
       json_extract(snapshot_json, '$.content') AS content, json_extract(snapshot_json, '$.body_blob_hash') AS snapshot_hash
       FROM node_sync_versions WHERE version_id = 'base'`);
     expect(retired).toEqual([{ version_id: 'base', parent_version_id: null, body_text: null,
-      content: null, snapshot_hash: null }]);
+      content: null, snapshot_hash: '88d759ea02cef4b82885c6c620473162757c75522805707c20e2be76a40a2825' }]);
     expect(await stable.db.query('SELECT * FROM node_sync_version_parents')).toEqual(edges);
     expect(await stable.db.query("SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL ORDER BY version_id"))
       .toEqual([{ version_id: 'head' }, { version_id: 'held' }]);

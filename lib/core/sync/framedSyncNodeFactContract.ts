@@ -141,10 +141,12 @@ export function assertNodeVersionFactShape(fact: CanonicalFact) {
     throw new Error('node_version_fact_body_blob_invalid');
   }
   const fields = exactFields(
-    fact.body, retired ? [...FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'body_retired'] :
+    fact.body, retired ? [...FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'body_retired',
+      ...fact.body.some(field => field.name === 'body_deleted') ? ['body_deleted'] : []] :
       FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'node_version_fact_body_shape_invalid'
   );
   const get = (name: string) => required(fields, name);
+  if (fields.has('body_deleted')) boolValue(get('body_deleted'));
   stringList(get('ancestor_version_ids'));
   stringList(get('parent_version_ids'));
   for (const name of ['host_name', 'parent_version_id', 'version_created_at']) {

@@ -11,7 +11,8 @@ const entries = z.array(z.object({
   frontierFactIds: z.array(z.string()), globalId: z.string(), objectType: z.string(),
   requiredRelationIds: z.array(z.string()), resourceHashes: z.array(bytes),
   reviewFactIds: z.array(z.string()), sharedStateHash: bytes,
-  stateFactIds: z.array(z.string()).default([])
+  stateFactIds: z.array(z.string()).default([]), versionStates: z.array(z.string()).optional(),
+  currentVersionId: z.string().optional(), unready: z.boolean().optional()
 }));
 
 export async function readFixtureInventory(process: DesktopFramedSyncFixtureProcess) {

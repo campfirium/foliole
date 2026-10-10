@@ -11,13 +11,22 @@ export async function loadVerifiedExistingSyncPackVersions(port: DbPort, alias: 
 }
 
 export async function rehydrateStoredVersionBodies(port: DbPort, alias: string) {
+  await port.run(`UPDATE main.node_sync_versions AS stored SET body_text = NULL,
+    snapshot_json = json_remove(json_set(stored.snapshot_json, '$.content', NULL,
+      '$.body_deleted', json('true')), '$.text_alternative_bodies')
+    FROM ${alias}.node_sync_versions incoming WHERE stored.version_id = incoming.version_id
+      AND ${eligiblePackVersion('incoming', alias)}
+      AND json_extract(incoming.snapshot_json, '$.body_deleted') = 1
+      AND NOT EXISTS (SELECT 1 FROM main.nodes WHERE current_version_id = stored.version_id)
+      AND NOT EXISTS (SELECT 1 FROM main.sync_object_state WHERE object_type = 'node' AND current_version_id = stored.version_id)`);
   await port.run(
     `UPDATE main.node_sync_versions AS stored SET
        body_text = ${versionBodySql('incoming')}, snapshot_json = incoming.snapshot_json
      FROM ${alias}.node_sync_versions AS incoming
      WHERE stored.version_id = incoming.version_id
        AND ${eligiblePackVersion('incoming', alias)}
-       AND json_type(stored.snapshot_json, '$.content') = 'null'
+       AND COALESCE(json_extract(stored.snapshot_json, '$.body_deleted'), 0) = 0
+       AND (stored.body_text IS NULL OR json_type(stored.snapshot_json, '$.content') = 'null')
        AND ${versionBodySql('incoming')} IS NOT NULL`
   );
 }
@@ -27,8 +36,8 @@ async function assertExistingVersionsMatch(port: DbPort, alias: string) {
     !['version_id', 'parent_version_id', 'body_text', 'snapshot_json'].includes(column));
   const mismatch = [
     ...immutableColumns.map((column) => `existing.${column} IS NOT incoming.${column}`),
-    `json_remove(existing.snapshot_json, '$.content', '$.body_blob_hash', '$.text_alternative_bodies') IS NOT
-      json_remove(incoming.snapshot_json, '$.content', '$.body_blob_hash', '$.text_alternative_bodies')`,
+    `json_remove(existing.snapshot_json, '$.content', '$.body_blob_hash', '$.text_alternative_bodies', '$.body_deleted') IS NOT
+      json_remove(incoming.snapshot_json, '$.content', '$.body_blob_hash', '$.text_alternative_bodies', '$.body_deleted')`,
     `(${versionBodySql('existing')} IS NOT NULL AND ${versionBodySql('incoming')} IS NOT NULL
       AND ${versionBodySql('existing')} IS NOT ${versionBodySql('incoming')})`
   ].join(' OR ');
@@ -43,7 +52,7 @@ async function assertExistingVersionsMatch(port: DbPort, alias: string) {
 function versionBodySql(table: string) {
   return `CASE WHEN ${table}.body_text IS NOT NULL THEN ${table}.body_text
     WHEN json_type(${table}.snapshot_json, '$.content') = 'null' THEN NULL
-    WHEN json_type(${table}.snapshot_json, '$.content') IS NULL THEN ''
+    WHEN json_type(${table}.snapshot_json, '$.content') IS NULL THEN NULL
     WHEN json_type(${table}.snapshot_json, '$.content') = 'text'
       THEN json_extract(${table}.snapshot_json, '$.content')
     ELSE NULL END`;

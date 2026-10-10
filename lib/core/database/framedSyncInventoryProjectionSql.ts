@@ -32,7 +32,16 @@ export function framedSyncNodeInventorySql(id: string) {
   return `DELETE FROM framed_sync_inventory WHERE object_type = 'node' AND object_id IN (${id});
     INSERT INTO framed_sync_inventory
       (object_type, object_id, content_hash, frontier_json, relations_json, reviews_json, states_json, resources_json)
-    SELECT 'node', state.object_id, state.content_hash,
+    SELECT 'node', state.object_id, json_array(state.content_hash, ${framedSyncResourceVersionSql('state')},
+      json(COALESCE((SELECT json_group_array(json(value)) FROM (
+        SELECT json_array(version_id, content_hash, host_name, created_at,
+          json_extract(snapshot_json, '$.body_blob_hash'),
+          CASE WHEN json_extract(snapshot_json, '$.body_deleted') = 1 THEN 'deleted'
+            WHEN body_text IS NOT NULL AND
+              json_array_length(COALESCE(json_extract(snapshot_json, '$.text_alternatives'), '[]')) =
+              json_array_length(COALESCE(json_extract(snapshot_json, '$.text_alternative_bodies'), '[]'))
+              THEN 'available' ELSE 'missing' END, parent_version_id) AS value
+        FROM node_sync_versions WHERE object_id = state.object_id ORDER BY version_id)), '[]'))),
       COALESCE((SELECT json_group_array(version_id) FROM (
         SELECT version_id FROM framed_sync_version_summary WHERE object_id = state.object_id
         ORDER BY version_id)), '[]'),

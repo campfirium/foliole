@@ -132,6 +132,7 @@ export interface NativeSyncNodeRecord {
     attachments: NativeSyncNodeAttachmentRef[];
     resource_references?: string;
     body_blob_hash?: string | null;
+    body_deleted?: boolean;
     content?: string | null;
     created_at: string;
     deleted_at: string | null;

@@ -71,6 +71,9 @@ message InventoryEntry {
   repeated string review_fact_ids = 6;
   repeated bytes resource_hashes = 7;
   repeated string state_fact_ids = 8;
+  repeated string version_states = 9;
+  string current_version_id = 10;
+  bool unready = 11;
 }
 enum Compression {
   COMPRESSION_NONE = 0;
@@ -121,6 +124,8 @@ message HandshakeAcceptance {
 message InventoryBegin {
   bytes round_id = 1;
   uint64 entry_count = 2;
+  repeated string detail_global_ids = 3;
+  bool summary_only = 4;
 }
 message InventoryChunk {
   bytes round_id = 1;
@@ -136,6 +141,7 @@ message DifferenceRequest {
   repeated FactIdentity facts = 2;
   repeated bytes blob_hashes = 3;
   repeated ResourceDemand resources = 4;
+  bytes source_state_hash = 5;
 }
 message ResourceDemand {
   string demand_id = 1;

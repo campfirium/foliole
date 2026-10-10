@@ -46,6 +46,9 @@ enum FolioleFramedSyncPayloadValidator {
 
     private static func inventoryBegin(_ value: Foliole_Sync_V22_InventoryBegin) throws {
         try roundID(value.roundID)
+        try Value.list(value.detailGlobalIds, limit: FolioleFramedSyncLimits.maxInventoryEntries)
+        for id in value.detailGlobalIds { try Value.text(id, "detail_global_id") }
+        try Value.unique(value.detailGlobalIds, "detail_global_id")
         guard value.entryCount <= UInt64(FolioleFramedSyncLimits.maxInventoryEntries) else {
             throw FolioleFramedSyncValidationError("inventory_entry_limit_exceeded")
         }
@@ -63,6 +66,7 @@ enum FolioleFramedSyncPayloadValidator {
             try stringList(entry.requiredRelationIds, "requiredRelationIds")
             try stringList(entry.reviewFactIds, "reviewFactIds")
             try stringList(entry.stateFactIds, "stateFactIds")
+            try stringList(entry.versionStates, "versionStates")
             try digestList(entry.resourceHashes, "resource_hash", FolioleFramedSyncLimits.maxBlobsPerTransfer)
             keys.append("\(entry.objectType)\0\(entry.globalID)")
         }
@@ -77,6 +81,7 @@ enum FolioleFramedSyncPayloadValidator {
     private static func difference(_ value: Foliole_Sync_V22_DifferenceRequest) throws {
         try roundID(value.roundID)
         try Value.identities(value.facts)
+        if !value.sourceStateHash.isEmpty { try Value.digest(value.sourceStateHash, "source_state_hash") }
         try digestList(value.blobHashes, "blob_hash", FolioleFramedSyncLimits.maxBlobsPerTransfer)
     }
 

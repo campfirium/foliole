@@ -1,4 +1,6 @@
 export const controlledSyncSqliteTests = [
+  'electron/sync/desktopFramedSyncHistoryState.integration.test.ts',
+  'lib/core/sync/nodeHistoryState.integration.test.ts',
   'electron/database/readwiseSourceUpdateBodyOwnershipMigration.integration.test.ts',
   'lib/core/sync/framedSyncNodeRecordSource.integration.test.ts',
   'electron/database/externalDocumentBodyOwnershipMigration.integration.test.ts',

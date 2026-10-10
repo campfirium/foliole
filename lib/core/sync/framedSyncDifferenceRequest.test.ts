@@ -16,12 +16,12 @@ FramedSyncInventoryDifference {
   return {
     direction, globalId: 'node-1', objectType: 'node',
     need: {
-      frontierFactIds: ['version-2'], requiredRelationIds: ['relation-1'],
+      frontierFactIds: ['version-2'], requiredRelationIds: [JSON.stringify(['version-2', 'version-1', 0])],
       resourceHashes: [hash(3)], reviewFactIds: ['review-1'], sharedState: true
     },
     sourceSnapshot: {
-      frontierFactIds: ['version-2'], globalId: 'node-1', objectType: 'node',
-      requiredRelationIds: ['relation-1'], resourceHashes: [hash(3)],
+      frontierFactIds: ['version-2', 'version-1'], globalId: 'node-1', objectType: 'node',
+      requiredRelationIds: [JSON.stringify(['version-2', 'version-1', 0])], resourceHashes: [hash(3)],
       reviewFactIds: ['review-1'], sharedStateHash: hash(4)
     }
   };
@@ -35,30 +35,31 @@ it('projects one remote Node difference into exact requested fact identities and
 
   expect(decoded.facts).toEqual([
     { factId: 'version-2', globalId: 'node-1', kind: 2, objectType: 'node' },
-    { factId: 'relation-1', globalId: 'node-1', kind: 3, objectType: 'node' },
+    { factId: 'version-1', globalId: 'node-1', kind: 2, objectType: 'node' },
+    { factId: JSON.stringify(['version-2', 'version-1', 0]), globalId: 'node-1', kind: 3, objectType: 'node' },
     { factId: 'review-1', globalId: 'node-1', kind: 4, objectType: 'node' }
   ]);
   expect(decoded.blobHashes).toEqual([hash(3)]);
   expect(decoded.roundId).toEqual(hash(8, 16));
   expect(resolveFramedSyncDifferenceRequest(difference().sourceSnapshot, decoded)).toMatchObject({
     direction: 'local_to_remote', globalId: 'node-1', need: {
-      frontierFactIds: ['version-2'], requiredRelationIds: ['relation-1'],
+      frontierFactIds: ['version-2', 'version-1'], requiredRelationIds: [JSON.stringify(['version-2', 'version-1', 0])],
       reviewFactIds: ['review-1'], sharedState: true
     }
   });
 });
 
-it('echoes the complete observed Node snapshot instead of only the missing subset', () => {
+it('requests only the differences from the observed Node snapshot', () => {
   const base = difference();
   const input = { ...base, sourceSnapshot: { ...base.sourceSnapshot,
-    requiredRelationIds: ['relation-1', 'relation-already-local'] } };
+    requiredRelationIds: [JSON.stringify(['version-2', 'version-1', 0]), 'relation-already-local'] } };
   const decoded = decodeFramedSyncDifferenceRequest(decodeAndValidateProtocolMessage(
     projectFramedSyncDifferenceRequest({ difference: input, roundId: hash(8, 16) }).encoded,
     FRAMED_SYNC_FRAME_TYPES.sessionControl
   ));
 
   expect(decoded.facts.filter((fact) => fact.kind === 3).map((fact) => fact.factId))
-    .toEqual(['relation-1', 'relation-already-local']);
+    .toEqual([JSON.stringify(['version-2', 'version-1', 0])]);
 });
 
 it('rejects when the Node inventory changes after the requester observed it', () => {
@@ -74,7 +75,7 @@ it('rejects when the Node inventory changes after the requester observed it', ()
   }, decoded)).toThrow('framed_sync_difference_request_source_changed');
   expect(() => resolveFramedSyncDifferenceRequest({
     ...difference().sourceSnapshot,
-    requiredRelationIds: ['relation-1', 'relation-added-after-inventory']
+    sharedStateHash: hash(9), requiredRelationIds: [JSON.stringify(['version-2', 'version-1', 0]), 'relation-added-after-inventory']
   }, decoded)).toThrow('framed_sync_difference_request_source_changed');
 });
 

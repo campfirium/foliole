@@ -9,6 +9,7 @@ export type { NativeCompanionSignedRequestHeaders } from './nativeCompanionSigne
 export interface NativeCompanionFramedSyncTransferRequest {
   endpoint_url: string;
   include_current_node: boolean;
+  frontier_fact_ids?: readonly string[];
   object_id: string;
   object_type: string;
   receiver_device_id: string;
@@ -40,6 +41,8 @@ export interface NativeCompanionFramedSyncStagedTransfer {
 }
 
 export interface NativeCompanionFramedSyncInventoryRequest {
+  summary_only?: boolean;
+  detail_global_ids?: readonly string[];
   endpoint_url: string;
   receiver_device_id: string;
   receiver_library_epoch: string;
@@ -75,6 +78,9 @@ export interface NativeCompanionFramedSyncInventoryEntry {
   review_fact_ids: readonly string[];
   state_fact_ids: readonly string[];
   shared_state_hash: string;
+  version_states?: readonly string[];
+  current_version_id?: string;
+  unready?: boolean;
 }
 
 export interface NativeCompanionFramedSyncInventoryResult {

@@ -129,7 +129,8 @@ function projectNodeFact(record: FramedSyncNodeMetadata, bodyHash: string | null
     sharedStateHash: hexToBytes(record.content_hash)
   };
   const result = retired ? { ...fact, body: [...fact.body,
-    field('body_retired', { kind: 'bool', value: true })] } : fact;
+    field('body_retired', { kind: 'bool', value: true }),
+    field('body_deleted', { kind: 'bool', value: record.snapshot.body_deleted === true })] } : fact;
   assertNodeVersionFactShape(result);
   return result;
 }

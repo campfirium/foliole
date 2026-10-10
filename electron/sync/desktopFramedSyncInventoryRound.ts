@@ -86,8 +86,8 @@ async function reconcileDatabaseRounds(
       { ...inbound, roundId: inventories.roundId }, framedSyncOrderBodyDependencies(inventories));
     transferred += result.transferred;
     const next = await exchangeDesktopFramedSyncInventoryHttp(exchange);
-    const changed = compareFramedSyncDatabaseInventories({ local: inventories.local, remote: next.local }).length > 0
-      || compareFramedSyncDatabaseInventories({ local: inventories.remote, remote: next.remote }).length > 0;
+    const changed = JSON.stringify(inventories.local) !== JSON.stringify(next.local)
+      || JSON.stringify(inventories.remote) !== JSON.stringify(next.remote);
     inventories = next;
     if (!changed) {
       const remaining = compareFramedSyncDatabaseInventories(inventories);

@@ -42,7 +42,7 @@ it('updates durable inventory metadata in the production edit transaction', () =
     parent_version_id: z.string(), ordinal: z.number() }).parse(row))).sort());
 });
 
-it('records reading-only state without changing the Node hash', () => {
+it('records reading-only state and changes the complete Node hash', () => {
   const peer = createPeer('reader');
   edit(peer, 'body');
   const query = peer.db.prepare("SELECT * FROM framed_sync_inventory WHERE object_type = 'node' AND object_id = 'topic'");
@@ -79,7 +79,7 @@ it('reads an unchanged production library without loading body, resource JSON or
 });
 
 
-it('discovers independently applied parent and review facts without changing the Node hash', async () => {
+it('discovers independently applied parent and review facts and changes the complete Node hash', async () => {
   const peer = createPeer('independent-writer');
   const first = edit(peer, 'first');
   edit(peer, 'second');
@@ -94,7 +94,7 @@ it('discovers independently applied parent and review facts without changing the
     difficulty_before: 2, difficulty_after: 3 });
   await peer.port.transaction((tx) => applyDesktopFramedSyncRelationReviewFactsWithDbPort(tx, [relation, review]));
   const after = await read();
-  expect(after.sharedStateHash).toEqual(before.sharedStateHash);
+  expect(after.sharedStateHash).not.toEqual(before.sharedStateHash);
   expect(after.requiredRelationIds).toContain(relation.factId);
   expect(after.reviewFactIds).toContain(review.factId);
   expect(before.requiredRelationIds).not.toContain(relation.factId);

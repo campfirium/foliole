@@ -15,7 +15,7 @@ let sqlite: Database.Database;
 afterEach(() => sqlite?.close());
 const hash = new Uint8Array(32).fill(1);
 const source: FramedSyncInventoryEntry = { globalId: 'n', objectType: 'node',
-  frontierFactIds: ['a', 'b'], requiredRelationIds: [], reviewFactIds: [],
+  currentVersionId: 'b', frontierFactIds: ['a', 'b'], requiredRelationIds: [], reviewFactIds: [],
   resourceHashes: [], stateFactIds: [], sharedStateHash: hash };
 
 async function publish() {
@@ -29,7 +29,7 @@ async function publish() {
   const contentId = await canonicalContentId(manifest);
   const transferId = await canonicalTransferId(context, contentId);
   const inventoryDifference = compareFramedSyncInventories({ local: [source],
-    remote: [{ ...source, frontierFactIds: [] }] })[0]!;
+    remote: [{ ...source, frontierFactIds: [], sharedStateHash: new Uint8Array(32).fill(2) }] })[0]!;
   await publishFramedSyncOutboundWithDbPort(db, { context, contentId, transferId,
     manifest, manifestHash: contentId, inventoryDifference });
   return { db, transferId };
@@ -46,7 +46,7 @@ it('writes off present input atomically without inventing a receiver receipt', a
 
 it('transmits only the missing subset and protects the original until durable completion', async () => {
   const { db, transferId } = await publish();
-  const remote = [{ ...source, frontierFactIds: ['a'] }];
+  const remote = [{ ...source, frontierFactIds: ['a'], sharedStateHash: new Uint8Array(32).fill(2) }];
   expect(await reconcileFramedSyncPublication(db, transferId, remote)).toBe('missing');
   const recovered = await selectFramedSyncRecoveryPublication(db, transferId, remote);
   expect(recovered.manifest.facts.map((fact) => fact.factId)).toEqual(['b']);

@@ -77,6 +77,8 @@ public final class FramedSyncSessionRequest {
         return differenceBytes(0);
     }
 
+    public com.foliole.sync.v22.InventoryBegin inventoryBegin() throws Exception { return inventory.begin(); }
+
     public byte[] roundId() throws Exception { return inventory.roundId(); }
 
     private static FramedSyncValidationException invalid() {

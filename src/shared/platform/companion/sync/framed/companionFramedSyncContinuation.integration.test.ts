@@ -161,7 +161,7 @@ it('returns pending without spinning when a local body is unavailable while comm
     expect.objectContaining({ id: 't326-neighbor', content: 'Independent edit' }),
     expect.objectContaining({ id: 't326-unavailable', content: 'Initial body' })
   ]);
-  expect(native.inventory.mock.calls.length).toBeLessThanOrEqual(3);
+  expect(native.inventory.mock.calls.filter(([request]) => !request.detail_global_ids?.length).length).toBeLessThanOrEqual(3);
   const source = new Database(fixture.leftSnapshot.databasePath);
   try {
     source.prepare("UPDATE node_sync_versions SET body_text = ? WHERE version_id = (SELECT current_version_id FROM nodes WHERE id = 't326-unavailable')").run('Unavailable edit');

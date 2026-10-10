@@ -36,7 +36,7 @@ function view(difference: ReturnType<typeof compareFramedSyncInventories>[number
   };
 }
 
-it('finds independent facts and resources even when shared state hashes match', () => {
+it('ends the node comparison at equal hashes and preserves independent resources', () => {
   const local = entry('shared', {
     frontierFactIds: ['frontier-common', 'frontier-local'],
     requiredRelationIds: ['relation-local'],
@@ -52,12 +52,12 @@ it('finds independent facts and resources even when shared state hashes match', 
 
   expect(compareFramedSyncInventories({ local: [local], remote: [remote] }).map(view)).toEqual([
     {
-      direction: 'local_to_remote', frontier: ['frontier-local'],
-      relations: ['relation-local'], resources: [4], reviews: [], sharedState: false
+      direction: 'local_to_remote', frontier: [],
+      relations: [], resources: [4], reviews: [], sharedState: false
     },
     {
-      direction: 'remote_to_local', frontier: [], relations: ['relation-remote'],
-      resources: [5], reviews: ['review-remote'], sharedState: false
+      direction: 'remote_to_local', frontier: [], relations: [],
+      resources: [5], reviews: [], sharedState: false
     }
   ]);
 });

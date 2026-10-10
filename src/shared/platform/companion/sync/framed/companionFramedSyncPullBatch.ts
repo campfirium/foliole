@@ -1,8 +1,10 @@
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+
 import { FRAMED_SYNC_BATCH_LIMITS } from '../../../../../../lib/core/sync/framedSyncBatchLimits.js';
 import { FRAMED_SYNC_LIMITS } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { projectFramedSyncDifferenceRequest } from '../../../../../../lib/core/sync/framedSyncDifferenceRequest.js';
+import { requiredFramedSyncNodeVersionIds } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import type { FramedSyncInventoryDifference } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncMissingDependency } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import type { NativeCompanionFramedSyncInventoryRequest, NativeCompanionFramedSyncPullBatchResult,
@@ -62,10 +64,9 @@ function prefix(differences: readonly FramedSyncInventoryDifference[], completed
 }
 
 function selection(difference: FramedSyncInventoryDifference) {
-  const source = difference.sourceSnapshot;
-  return { frontier_fact_ids: source.frontierFactIds, object_id: difference.globalId, object_type: difference.objectType,
-    required_relation_ids: source.requiredRelationIds, resource_hashes: source.resourceHashes.map(bytesToHex),
-    review_fact_ids: source.reviewFactIds, state_fact_ids: source.stateFactIds ?? [] };
+  return { frontier_fact_ids: difference.objectType === 'node' ? requiredFramedSyncNodeVersionIds(difference) : [], object_id: difference.globalId, object_type: difference.objectType,
+    required_relation_ids: difference.need.requiredRelationIds, resource_hashes: difference.need.resourceHashes.map(bytesToHex),
+    review_fact_ids: difference.need.reviewFactIds, state_fact_ids: difference.need.stateFactIds ?? [] };
 }
 
 function assertPrefix(result: NativeCompanionFramedSyncPullBatchResult, requested: readonly FramedSyncInventoryDifference[]) {

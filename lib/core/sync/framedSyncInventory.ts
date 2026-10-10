@@ -1,4 +1,5 @@
 import { assertFramedSyncDigest } from './framedSyncContract.js';
+import { changedNodeVersionIds } from './framedSyncNodeInventoryState.js';
 import { parseFramedSyncParentRelationFactId } from './framedSyncRelationReviewFact.js';
 import { compareSyncIdentityText } from './syncIdentityKeyOrder.js';
 
@@ -11,6 +12,9 @@ export type FramedSyncInventoryEntry = Readonly<{
   reviewFactIds: readonly string[];
   sharedStateHash: Uint8Array;
   stateFactIds?: readonly string[];
+  currentVersionId?: string | undefined;
+  versionStates?: readonly string[] | undefined;
+  unready?: boolean | undefined;
 }>;
 
 export type FramedSyncInventoryNeed = Readonly<{
@@ -39,7 +43,8 @@ export function requiredFramedSyncNodeVersionIds(difference: FramedSyncInventory
   if (difference.objectType !== 'node') throw new Error('framed_sync_inventory_identity_invalid');
   const ids = new Set(difference.need.frontierFactIds);
   if (difference.need.sharedState || difference.need.resourceHashes.length > 0) {
-    for (const id of difference.sourceSnapshot.frontierFactIds) ids.add(id);
+    if (difference.sourceSnapshot.currentVersionId) ids.add(difference.sourceSnapshot.currentVersionId);
+    else if (!difference.sourceSnapshot.versionStates) for (const id of difference.sourceSnapshot.frontierFactIds) ids.add(id);
   }
   for (const relationId of difference.need.requiredRelationIds) {
     const relation = parseFramedSyncParentRelationFactId(relationId);
@@ -102,14 +107,16 @@ function missingHashes(source: readonly Uint8Array[], destination: readonly Uint
 }
 
 function needFrom(source: FramedSyncInventoryEntry, destination?: FramedSyncInventoryEntry) {
+  const versionIds = source.versionStates ? changedNodeVersionIds(source, destination) :
+    missingStrings(source.frontierFactIds, destination?.frontierFactIds ?? []);
   return {
-    frontierFactIds: missingStrings(source.frontierFactIds, destination?.frontierFactIds ?? []),
+    frontierFactIds: versionIds,
     requiredRelationIds: missingStrings(
       source.requiredRelationIds, destination?.requiredRelationIds ?? []),
     resourceHashes: missingHashes(source.resourceHashes, destination?.resourceHashes ?? []),
     reviewFactIds: missingStrings(source.reviewFactIds, destination?.reviewFactIds ?? []),
     stateFactIds: missingStrings(source.stateFactIds ?? [], destination?.stateFactIds ?? []),
-    sharedState: !destination || !sameBytes(source.sharedStateHash, destination.sharedStateHash)
+    sharedState: Boolean(source.unready || destination?.unready) || !destination || !sameBytes(source.sharedStateHash, destination.sharedStateHash)
   } satisfies FramedSyncInventoryNeed;
 }
 
@@ -122,6 +129,7 @@ function hasNeed(need: FramedSyncInventoryNeed) {
 
 function cloneEntry(entry: FramedSyncInventoryEntry): FramedSyncInventoryEntry {
   return {
+    ...entry,
     frontierFactIds: [...entry.frontierFactIds],
     globalId: entry.globalId,
     objectType: entry.objectType,
@@ -136,6 +144,13 @@ function cloneEntry(entry: FramedSyncInventoryEntry): FramedSyncInventoryEntry {
 function appendDifference(result: FramedSyncInventoryDifference[],
   direction: FramedSyncInventoryDifference['direction'], source: FramedSyncInventoryEntry,
   destination?: FramedSyncInventoryEntry) {
+  if (destination && !source.unready && !destination.unready &&
+      sameBytes(source.sharedStateHash, destination.sharedStateHash) && source.objectType === 'node') {
+    const resources = missingHashes(source.resourceHashes, destination.resourceHashes);
+    if (!resources.length) return null;
+    return { direction, globalId: source.globalId, objectType: source.objectType, sourceSnapshot: cloneEntry(source),
+      need: { frontierFactIds: [], requiredRelationIds: [], reviewFactIds: [], stateFactIds: [], sharedState: false, resourceHashes: resources } };
+  }
   const need = needFrom(source, destination);
   if (!hasNeed(need)) return;
   result.push({
@@ -192,6 +207,8 @@ function sameHashes(left: readonly Uint8Array[], right: readonly Uint8Array[]) {
 
 function sameEntry(left: FramedSyncInventoryEntry, right: FramedSyncInventoryEntry) {
   return compareKey(left, right) === 0 && sameBytes(left.sharedStateHash, right.sharedStateHash) &&
+    left.currentVersionId === right.currentVersionId && Boolean(left.unready) === Boolean(right.unready) &&
+    sameStrings(left.versionStates ?? [], right.versionStates ?? []) &&
     sameStrings(left.frontierFactIds, right.frontierFactIds) &&
     sameStrings(left.requiredRelationIds, right.requiredRelationIds) &&
     sameStrings(left.reviewFactIds, right.reviewFactIds) &&

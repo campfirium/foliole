@@ -54,7 +54,7 @@ it.each(['driver', 'port'] as const)('retires historical body copies and all rel
     expect(sqlite.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(hash)).toBeUndefined();
   }
   expect(sqlite.prepare('SELECT body_text, snapshot_json FROM node_sync_versions WHERE version_id = ?').get('B'))
-    .toEqual({ body_text: null, snapshot_json: JSON.stringify({ ...snapshot, content: null, body_blob_hash: null }) });
+    .toEqual({ body_text: null, snapshot_json: JSON.stringify({ ...snapshot, content: null, body_deleted: true }) });
   expect(sqlite.prepare('SELECT parent_version_id FROM node_sync_versions WHERE version_id = ?').get('B'))
     .toEqual({ parent_version_id: 'A' });
 });

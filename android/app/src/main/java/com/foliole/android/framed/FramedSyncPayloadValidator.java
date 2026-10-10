@@ -101,6 +101,9 @@ final class FramedSyncPayloadValidator {
     private static void inventoryBegin(com.foliole.sync.v22.InventoryBegin value)
         throws FramedSyncValidationException {
         fixedRound(value.getRoundId());
+        FramedSyncValueValidator.list(value.getDetailGlobalIdsList(), FramedSyncContract.MAX_INVENTORY_ENTRIES);
+        for (var id : value.getDetailGlobalIdsList()) FramedSyncValueValidator.text(id, "detail_global_id");
+        FramedSyncValueValidator.unique(value.getDetailGlobalIdsList(), "detail_global_id");
         if (Long.compareUnsigned(value.getEntryCount(), FramedSyncContract.MAX_INVENTORY_ENTRIES) > 0) {
             throw invalid("inventory_entry_limit_exceeded");
         }
@@ -119,6 +122,7 @@ final class FramedSyncPayloadValidator {
             stringList(entry.getRequiredRelationIdsList(), "requiredRelationIds");
             stringList(entry.getReviewFactIdsList(), "reviewFactIds");
             stringList(entry.getStateFactIdsList(), "stateFactIds");
+            stringList(entry.getVersionStatesList(), "versionStates");
             digestList(entry.getResourceHashesList(), "resource_hash", FramedSyncContract.MAX_BLOBS_PER_TRANSFER);
             keys.add(entry.getObjectType() + "\0" + entry.getGlobalId());
         }
@@ -129,6 +133,7 @@ final class FramedSyncPayloadValidator {
         throws FramedSyncValidationException {
         fixedRound(value.getRoundId());
         FramedSyncValueValidator.identities(value.getFactsList());
+        if (!value.getSourceStateHash().isEmpty()) FramedSyncValueValidator.digest(value.getSourceStateHash(), "source_state_hash");
         digestList(value.getBlobHashesList(), "blob_hash", FramedSyncContract.MAX_BLOBS_PER_TRANSFER);
     }
 

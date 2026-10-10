@@ -73,11 +73,11 @@ it('revalidates each selected current node before invoking the native sender', a
     received: [],
     sent: [{ objectId: 'node-a', receipt: { transfer_id: 'a'.repeat(64) } }]
   });
-  expect(mocks.remoteInventory).toHaveBeenCalledWith(request);
+  expect(mocks.remoteInventory).toHaveBeenCalledWith({ ...request, summary_only: true });
   expect(mocks.send).toHaveBeenCalledOnce();
   expect(mocks.send).toHaveBeenCalledWith({
     endpointUrl: request.endpoint_url, groupId: request.sync_group_id,
-    includeCurrentNode: true, objectId: 'node-a', objectType: 'node',
+    includeCurrentNode: true, frontierFactIds: ['version-node-a'], objectId: 'node-a', objectType: 'node',
     receiverDeviceId: request.receiver_device_id,
     receiverLibraryEpoch: request.receiver_library_epoch,
     requiredRelationIds: [], reviewFactIds: [], stateFactIds: []
@@ -102,19 +102,13 @@ it('rejects legacy non-node inventory identities', async () => {
   expect(mocks.send).not.toHaveBeenCalled();
 });
 
-it('sends exact relation ids without redundantly including the current node', async () => {
+it('ends node comparison at an equal complete hash without selecting relation details', async () => {
   mocks.localInventory.mockResolvedValue({ entries: [entry('node-c', '1', ['relation-1'])] });
   mocks.remoteInventory.mockResolvedValue({ entries: [entry('node-c')], round_id: '8'.repeat(32) });
-  mocks.localEntry.mockResolvedValue(entry('node-c', '1', ['relation-1']));
   await expect(sendCompanionFramedSyncInventoryDifferences(request)).resolves.toMatchObject({
-    deferredObjects: [{ globalId: 'node-c', objectType: 'node' }],
-    received: [],
-    sent: [{ objectId: 'node-c', receipt: { transfer_id: 'a'.repeat(64) } }]
+    deferredObjects: [], received: [], sent: []
   });
-  expect(mocks.send).toHaveBeenCalledWith(expect.objectContaining({
-    includeCurrentNode: false, objectId: 'node-c', objectType: 'node', requiredRelationIds: ['relation-1'],
-    reviewFactIds: [], stateFactIds: []
-  }));
+  expect(mocks.send).not.toHaveBeenCalled();
 });
 
 it('pulls a remote-only Node with the same inventory round identity', async () => {
@@ -133,7 +127,7 @@ it('pulls a remote-only Node with the same inventory round identity', async () =
     frontier_fact_ids: ['version-remote-node'],
     object_id: 'remote-node', object_type: 'node',
     required_relation_ids: [],
-    resource_hashes: ['2'.repeat(64)],
+    resource_hashes: [],
     review_fact_ids: [], state_fact_ids: [],
     round_id: '8'.repeat(32)
   });

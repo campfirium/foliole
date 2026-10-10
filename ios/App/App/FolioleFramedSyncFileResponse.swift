@@ -5,14 +5,14 @@ import Network
 enum FolioleFramedSyncFileResponse {
     static func inventory(_ connection: NWConnection, groupKey: Data,
         context: FolioleFramedSyncSessionContext, entries: [Foliole_Sync_V22_InventoryEntry],
-        roundID: Data, deviceID: String, epoch: String, owner: FolioleFramedSyncPayloadBudget? = nil) throws {
+        roundID: Data, summaryOnly: Bool = false, deviceID: String, epoch: String, owner: FolioleFramedSyncPayloadBudget? = nil) throws {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("foliole-framed-session-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let url = directory.appendingPathComponent("response.body")
         do {
             try FolioleFramedSyncSessionWriter.writeFile(to: url, groupKey: groupKey, context: context, owner: owner) { emit in
-                try FolioleFramedSyncInventoryWire.emit(entries: entries, roundID: roundID, consume: emit)
+                try FolioleFramedSyncInventoryWire.emit(entries: entries, roundID: roundID, summaryOnly: summaryOnly, consume: emit)
             }
             try sendFile(connection, url: url, directory: directory, deviceID: deviceID, epoch: epoch, owner: owner)
         } catch {

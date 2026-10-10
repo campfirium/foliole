@@ -1,5 +1,6 @@
 import { hexToBytes } from '@noble/hashes/utils.js';
 
+
 import { compareFramedSyncDatabaseInventories } from '../../../../../../lib/core/sync/framedSyncDatabaseDifference.js';
 import {
   type FramedSyncDeferredObject,
@@ -7,6 +8,7 @@ import {
   type FramedSyncInventoryEntry
 } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { deliverFramedSyncDifferencesInDependencyOrder, framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
+import { differingNodeIds } from '../../../../../../lib/core/sync/framedSyncInventorySummary.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import { loadLatestSyncGroupRestoreEvent } from '../../../../../../lib/core/sync/syncGroupRestoreEvents.js';
 import type {
@@ -78,7 +80,16 @@ export function decodeCompanionFramedSyncInventory(
 export async function readCompanionRemoteFramedSyncInventory(
   args: NativeCompanionFramedSyncInventoryRequest
 ) {
-  const result = decodeCompanionFramedSyncInventory(await FolioleCompanionSync.readFramedSyncInventory(args));
+  const result = decodeCompanionFramedSyncInventory(await FolioleCompanionSync.readFramedSyncInventory({ ...args, summary_only: true }));
+  const local = await getIosCompanionDatabaseOwner().read(readCompanionFramedSyncInventory);
+  const detailIds = differingNodeIds(local.entries.map(decodeCompanionInventoryEntry), result.entries);
+  if (detailIds.length) {
+    const details = decodeCompanionFramedSyncInventory(await FolioleCompanionSync.readFramedSyncInventory({ ...args,
+      summary_only: true, detail_global_ids: detailIds }));
+    const byId = new Map(details.entries.map(entry => [entry.globalId, entry]));
+    await rememberCompanionFramedSyncPeerRoute(args);
+    return { entries: result.entries.map(entry => entry.objectType === 'node' ? byId.get(entry.globalId) ?? entry : entry), roundId: details.roundId };
+  }
   await rememberCompanionFramedSyncPeerRoute(args);
   return result;
 }
@@ -171,8 +182,7 @@ async function reconcileDatabaseRounds(args: NativeCompanionFramedSyncInventoryR
     sent.push(...round.sent);
     inventory = await captureInventory(args);
     const after = decodedInventory(inventory);
-    const changed = compareFramedSyncDatabaseInventories({ local: before.local, remote: after.local }).length > 0 ||
-      compareFramedSyncDatabaseInventories({ local: before.remote, remote: after.remote }).length > 0;
+    const changed = JSON.stringify(before.local) !== JSON.stringify(after.local) || JSON.stringify(before.remote) !== JSON.stringify(after.remote);
     if (!changed) {
       const remaining = compareFramedSyncDatabaseInventories(after);
       const deferred = new Map([...round.deferredObjects, ...remaining]

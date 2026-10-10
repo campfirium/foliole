@@ -49,7 +49,9 @@ extension FolioleCompanionSyncPlugin {
         let bodyURL = directory.appendingPathComponent("request.bin")
         try await FolioleFramedSyncPayloadWorker.run {
             try FolioleFramedSyncSessionWriter.writeFile(to: bodyURL, groupKey: groupKey, context: context, owner: owner) { emit in
-                try FolioleFramedSyncInventoryWire.emit(entries: local, roundID: roundID, consume: emit)
+                try FolioleFramedSyncInventoryWire.emit(entries: local, roundID: roundID,
+                    detailGlobalIDs: call.getArray("detail_global_ids") as? [String] ?? [],
+                    summaryOnly: call.getBool("summary_only") ?? false, consume: emit)
             }
         }
         let path = try framedPath(senderDeviceID, senderEpoch, receiverDeviceID, receiverEpoch)
@@ -191,6 +193,9 @@ extension FolioleCompanionSyncPlugin {
             "resource_hashes": entry.resourceHashes.map(\.hex),
             "review_fact_ids": entry.reviewFactIds,
             "state_fact_ids": entry.stateFactIds,
+            "version_states": entry.versionStates,
+            "current_version_id": entry.currentVersionID,
+            "unready": entry.unready,
             "shared_state_hash": entry.sharedStateHash.hex
         ]
     }

@@ -65,12 +65,13 @@ export function describeVersionFact(row: {
 }): SyncVersionFact {
   const snapshot = JSON.parse(row.snapshot_json) as Record<string, unknown>;
   const body = row.body_text ?? (typeof snapshot.content === 'string'
-    ? snapshot.content : snapshot.content === undefined ? '' : null);
+    ? snapshot.content : null);
   const metadata: Record<string, unknown> = row.snapshot_metadata === undefined
     ? snapshot : JSON.parse(row.snapshot_metadata);
   delete metadata.content;
   delete metadata.body_blob_hash;
   delete metadata.text_alternative_bodies;
+  delete metadata.body_deleted;
   return {
     body_hash: body === null ? null : hashText(body),
     content_hash: row.content_hash,

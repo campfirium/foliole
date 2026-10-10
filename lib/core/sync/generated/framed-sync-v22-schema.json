@@ -264,6 +264,21 @@
                       "type": "string",
                       "id": 8,
                       "protoName": "state_fact_ids"
+                    },
+                    "versionStates": {
+                      "rule": "repeated",
+                      "type": "string",
+                      "id": 9,
+                      "protoName": "version_states"
+                    },
+                    "currentVersionId": {
+                      "type": "string",
+                      "id": 10,
+                      "protoName": "current_version_id"
+                    },
+                    "unready": {
+                      "type": "bool",
+                      "id": 11
                     }
                   }
                 },
@@ -380,6 +395,17 @@
                       "type": "uint64",
                       "id": 2,
                       "protoName": "entry_count"
+                    },
+                    "detailGlobalIds": {
+                      "rule": "repeated",
+                      "type": "string",
+                      "id": 3,
+                      "protoName": "detail_global_ids"
+                    },
+                    "summaryOnly": {
+                      "type": "bool",
+                      "id": 4,
+                      "protoName": "summary_only"
                     }
                   }
                 },
@@ -438,6 +464,11 @@
                       "rule": "repeated",
                       "type": "ResourceDemand",
                       "id": 4
+                    },
+                    "sourceStateHash": {
+                      "type": "bytes",
+                      "id": 5,
+                      "protoName": "source_state_hash"
                     }
                   }
                 },

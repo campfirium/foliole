@@ -11,12 +11,14 @@ extension FolioleCompanionSyncGroupJoinServer {
         let incoming = try FolioleFramedSyncSessionRequest.read(
             request.bodyStream(), groupKey: groupKey, context: context, owner: owner)
         switch incoming {
-        case .inventory(let roundID):
+        case .inventory(let begin):
             let inventory = try FolioleFramedSyncBridgeFactSource.metadata("read_framed_inventory", payload: [
                 "group_id": provider.groupId, "peer_device_id": peer, "peer_library_epoch": peerEpoch
             ], bridge: dataBridge, owner: owner, consume: FolioleCompanionFramedSyncInventory.read)
             try FolioleFramedSyncFileResponse.inventory(connection, groupKey: groupKey, context: context,
-                entries: inventory, roundID: roundID,
+                entries: begin.detailGlobalIds.isEmpty ? inventory : inventory.filter {
+                    $0.objectType == "node" && begin.detailGlobalIds.contains($0.globalID)
+                }, roundID: begin.roundID, summaryOnly: begin.detailGlobalIds.isEmpty && begin.summaryOnly,
                 deviceID: localDevice, epoch: localEpoch, owner: owner)
         case .difference(let encoded):
             try respondDifferences(connection, encoded: [encoded], bridge: dataBridge, groupKey: groupKey, peer: peer,

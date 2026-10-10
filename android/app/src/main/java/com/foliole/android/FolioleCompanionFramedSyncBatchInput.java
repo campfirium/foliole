@@ -22,6 +22,7 @@ final class FolioleCompanionFramedSyncBatchInput {
                 strings(item, "review_fact_ids"), strings(item, "state_fact_ids"), sender, senderEpoch,
                 required(call, "receiver_device_id"), required(call, "receiver_library_epoch"));
             selection.put("object_type", required(item, "object_type"));
+            if (item.has("frontier_fact_ids")) selection.put("frontier_fact_ids", strings(item, "frontier_fact_ids"));
             if (item.has("transfer_id")) selection.put("transfer_id", required(item, "transfer_id"));
             result.add(selection);
         }

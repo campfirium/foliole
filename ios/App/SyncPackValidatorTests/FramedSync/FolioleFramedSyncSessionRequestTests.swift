@@ -38,10 +38,10 @@ final class FolioleFramedSyncSessionRequestTests: XCTestCase {
 
     func testRequiresCompleteInventoryAndPreservesItsRound() throws {
         let messages = try FolioleFramedSyncInventoryWire.encode(entries: [], roundID: round)
-        guard case .inventory(let roundID) = try read(encode(messages)) else {
+        guard case .inventory(let begin) = try read(encode(messages)) else {
             return XCTFail("expected inventory")
         }
-        XCTAssertEqual(roundID, round)
+        XCTAssertEqual(begin.roundID, round)
         XCTAssertThrowsError(try read(encode(Array(messages.prefix(1)))))
         XCTAssertThrowsError(try read(encode([])))
     }

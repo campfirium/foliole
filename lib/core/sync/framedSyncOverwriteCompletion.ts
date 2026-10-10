@@ -22,7 +22,8 @@ export function pendingFramedSyncOverwriteDifferences(args: {
       return difference.objectType === 'order_version' ||
         !isFramedSyncSharedStateObject(difference.objectType, difference.globalId);
     }
-    return need.frontierFactIds.length > 0 || need.requiredRelationIds.length > 0 ||
+    return Boolean(difference.sourceSnapshot.unready || args.local.find(entry => key(entry) === key(difference))?.unready) ||
+      need.frontierFactIds.length > 0 || need.requiredRelationIds.length > 0 ||
       need.reviewFactIds.length > 0 || (need.stateFactIds?.length ?? 0) > 0;
   });
 }

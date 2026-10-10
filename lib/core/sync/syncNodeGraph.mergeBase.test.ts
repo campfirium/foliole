@@ -49,7 +49,7 @@ it('keeps a bodyless version available for ancestry without inventing its text',
   expect(storedSyncNodeVersionBody(base!)).toBeNull();
 });
 
-it('reads a legacy missing content field as an empty body', () => {
+it('keeps a legacy missing content field missing without inventing empty text', () => {
   expect(storedSyncNodeVersionBody({
     body_text: null,
     content_hash: '',
@@ -58,5 +58,5 @@ it('reads a legacy missing content field as an empty body', () => {
     object_id: 'node',
     snapshot_json: '{}',
     version_id: 'legacy'
-  })).toBe('');
+  })).toBeNull();
 });

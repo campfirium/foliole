@@ -48,24 +48,14 @@ UNION SELECT payload.version_id, 1 FROM node_version_outbound_payload_holds payl
   JOIN sync_group_local_state local ON local.group_id = hold.group_id AND local.state = 'active'
   JOIN sync_group_devices peer ON peer.group_id = hold.group_id
     AND peer.device_identity_key = hold.device_identity_key AND peer.state = 'active'
-  WHERE payload.object_id = ? AND peer.device_identity_key <> local.local_device_identity_key
-UNION SELECT ref.fact_id, 0 FROM framed_sync_outbound_fact_refs ref
-  JOIN framed_sync_outbound_holds hold ON hold.transfer_id = ref.transfer_id
-  WHERE ref.fact_kind = 2 AND ref.object_type = 'node' AND ref.global_id = ?
-    AND NOT EXISTS (SELECT 1 FROM framed_sync_outbound_publications publication,
-      json_each(publication.manifest_json, '$.facts') fact, json_each(fact.value, '$.body') field
-      WHERE publication.transfer_id = ref.transfer_id
-        AND json_extract(fact.value, '$.factId') = ref.fact_id
-        AND json_extract(field.value, '$.name') = 'body_retired'
-        AND json_extract(field.value, '$.value.kind') = 'bool'
-        AND json_extract(field.value, '$.value.value') = 1)`;
+  WHERE payload.object_id = ? AND peer.device_identity_key <> local.local_device_identity_key`;
 
 const LOCAL_REFERENCES_SQL = `SELECT version.version_id, 0 FROM node_sync_versions version
       WHERE version.object_id = ? AND NOT EXISTS (
         SELECT 1 FROM node_sync_version_parents edge WHERE edge.parent_version_id = version.version_id)
         AND NOT EXISTS (SELECT 1 FROM node_sync_versions child
           WHERE child.parent_version_id = version.version_id)
-    UNION SELECT version_id, 0 FROM node_version_local_holds WHERE object_id = ?
+    UNION SELECT version_id, 0 FROM node_version_local_holds WHERE object_id = ? AND instr(hold_id, ':edit:') > 0
     UNION SELECT base_version_id, 0 FROM sync_change_log
       WHERE object_type = 'node' AND object_id = ? AND applied_at IS NULL
     UNION SELECT result_version_id, 0 FROM sync_change_log
@@ -120,7 +110,7 @@ export function chainReferencesQuery(nodeId: string, retireLegacyHistory = false
     UNION ${MEMBER_POSITIONS_SQL}
     UNION ${OUTBOUND_REFERENCES_SQL}
     UNION ${LOCAL_REFERENCES_SQL}`, schema),
-    params: Array<string>(17).fill(nodeId)
+    params: Array<string>(16).fill(nodeId)
   };
 }
 
@@ -131,7 +121,7 @@ export function chainMutationStatements(
   if (plan.skipped || !plan.removed?.length) return statements;
   for (const id of plan.removed) statements.push({
     sql: `UPDATE node_sync_versions SET body_text = NULL,
-      snapshot_json = json_remove(json_set(snapshot_json, '$.content', NULL, '$.body_blob_hash', NULL), '$.text_alternative_bodies')
+      snapshot_json = json_remove(json_set(snapshot_json, '$.content', NULL, '$.body_deleted', json('true')), '$.text_alternative_bodies')
       WHERE version_id = ?`,
     params: [id]
   });

@@ -14,6 +14,7 @@ import { migrateIndependentNodeVersions } from './independentNodeVersionMigratio
 import { initializeLegacyBodyMigrationSchema } from './legacyBodyMigrationSchema.js';
 import { retireLegacyStorage } from './legacyStorageRetirementMigration.js';
 import type { DatabaseMigrationTarget } from './migrationTypes.js';
+import { migrateNodeHistoryState } from './nodeHistoryStateMigration.js';
 import { migrateNodeVersionConfirmations } from './nodeVersionConfirmationMigration.js';
 import { NODE_VERSION_MEMBER_POSITION_SCHEMA } from './nodeVersionMemberPositionSchema.js';
 import { NODE_VERSION_RETENTION_INDEX_SCHEMA } from './nodeVersionRetentionIndexSchema.js';
@@ -247,5 +248,6 @@ export const LATEST_NUMBERED_SCHEMA_MIGRATIONS: NumberedSchemaMigration[] = [
     migrateDesktopFramedSyncPayloads(sqlite);
   } },
   { version: 149, migrate: (sqlite) => sqlite.exec(FRAMED_SYNC_RESOURCE_DEMAND_SCHEMA) },
-  { version: 150, migrate: migrateTextBodyOwnership }
+  { version: 150, migrate: migrateTextBodyOwnership },
+  { version: 151, migrate: migrateNodeHistoryState }
 ];

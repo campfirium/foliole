@@ -63,6 +63,7 @@ async function selectCurrent(difference: FramedSyncInventoryDifference): Promise
   if (validated.deferredObjects.length || (difference.objectType === 'node' && current && !current.resourceHashes.length &&
       (difference.need.sharedState || difference.need.frontierFactIds.length || difference.need.requiredRelationIds.length))) return null;
   return { include_current_node: difference.need.sharedState || !!difference.need.frontierFactIds.length || !!difference.need.resourceHashes.length,
+    frontier_fact_ids: difference.need.frontierFactIds,
     object_id: difference.globalId, object_type: difference.objectType, required_relation_ids: difference.need.requiredRelationIds,
     review_fact_ids: difference.need.reviewFactIds, state_fact_ids: difference.need.stateFactIds ?? [] };
 }
@@ -80,6 +81,7 @@ async function sendSingleOutcome(args: NativeCompanionFramedSyncInventoryRequest
 
 function sendIndividual(args: NativeCompanionFramedSyncInventoryRequest, input: Selected) {
   return sendCompanionFramedSyncObject({ endpointUrl: args.endpoint_url, groupId: args.sync_group_id,
+    ...(input.frontier_fact_ids ? { frontierFactIds: input.frontier_fact_ids } : {}),
     includeCurrentNode: input.include_current_node, objectId: input.object_id, objectType: input.object_type,
     receiverDeviceId: args.receiver_device_id, receiverLibraryEpoch: args.receiver_library_epoch,
     requiredRelationIds: input.required_relation_ids, reviewFactIds: input.review_fact_ids, stateFactIds: input.state_fact_ids });

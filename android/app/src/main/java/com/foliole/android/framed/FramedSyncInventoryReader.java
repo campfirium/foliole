@@ -69,6 +69,8 @@ public final class FramedSyncInventoryReader {
         return begin.getRoundId().toByteArray();
     }
 
+    public InventoryBegin begin() throws Exception { roundId(); return begin; }
+
     public List<InventoryEntry> entries(byte[] expectedRoundId) throws Exception {
         if (!retainEntries || !MessageDigest.isEqual(roundId(), expectedRoundId)) {
             throw invalid("inventory_round_identity_mismatch");

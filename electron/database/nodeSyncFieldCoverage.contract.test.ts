@@ -29,6 +29,7 @@ const WIRE_SNAPSHOT_FIELDS = expectCompleteWireSnapshotFields([
   'anchor_source_version_id',
   'attachments',
   'body_blob_hash',
+  'body_deleted',
   'content',
   'created_at',
   'deleted_at',
@@ -146,7 +147,7 @@ function desktopSnapshotFields() {
 }
 
 function wireSnapshotFields() {
-  return WIRE_SNAPSHOT_FIELDS.filter((field) => field !== 'position' && field !== 'text_alternatives' && field !== 'text_selection').sort();
+  return WIRE_SNAPSHOT_FIELDS.filter((field) => field !== 'position' && field !== 'text_alternatives' && field !== 'text_selection' && field !== 'body_deleted').sort();
 }
 
 function remoteNodeUpsertColumns() {

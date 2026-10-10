@@ -5,6 +5,7 @@ export interface SendCompanionFramedSyncObjectArgs {
   endpointUrl: string;
   groupId: string;
   includeCurrentNode: boolean;
+  frontierFactIds?: readonly string[];
   objectId: string;
   objectType: string;
   receiverDeviceId: string;
@@ -33,6 +34,7 @@ export async function sendCompanionFramedSyncObject(args: SendCompanionFramedSyn
   const receipt = await FolioleCompanionSync.sendFramedSyncTransfer({
     endpoint_url: args.endpointUrl,
     include_current_node: args.includeCurrentNode,
+    ...(args.frontierFactIds ? { frontier_fact_ids: args.frontierFactIds } : {}),
     object_id: args.objectId,
     object_type: args.objectType,
     receiver_device_id: args.receiverDeviceId,

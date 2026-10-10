@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { expect, it } from 'vitest';
 
+import { readFixtureInventory } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 import { assertReceiverRestoreSourcesCleared, seedReceiverRestoreSources } from './desktopFramedSyncVerifiedRestoreSources.testSupport.js';
 import { assertOverwriteGlobalSettings, assertOverwriteSettingsPreserved, continueAfterReceiptFailure, installReceiptFailure, overwriteProgressRow, preservedRestoreArticle, receiptCountForStateHash, restoreIdentityState, seedOverwriteGlobalSettings, seedOverwriteSettings } from './desktopFramedSyncVerifiedRestoreTwoProcess.testSupport.js';
@@ -25,6 +26,7 @@ it.each(['restore', 'adoption'] as const)(
       const sources = seedReceiverRestoreSources(fixture.rightSnapshot.databasePath, oldId, fixture.rightSnapshot.stateRoot);
       const expected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, nodeId);
       const secondExpected = sourceArticleIdentity(fixture.leftSnapshot.databasePath, secondId);
+      const [firstHash, secondHash] = await sourceStateHashes(fixture.left, nodeId, secondId);
       const previous = sourceArticleIdentity(fixture.rightSnapshot.databasePath, oldId);
       const args = { mode, peerOrigin: fixture.leftSnapshot.origin, peerDeviceId: 'desktop-a', restoreId: 't326-restore-round' };
       const directory = path.join(fixture.rightSnapshot.stateRoot, 'identity-restore-backups');
@@ -60,8 +62,8 @@ it.each(['restore', 'adoption'] as const)(
       const committed = verifiedReceiverEvidence(restarted.snapshot.databasePath, nodeId);
       expect(committed.node).toMatchObject({ content });
       expect(committed.receipts.length).toBeGreaterThanOrEqual(2);
-      expect(receiptCountForStateHash(restarted.snapshot.databasePath, expected.contentHash)).toBe(1);
-      expect(receiptCountForStateHash(restarted.snapshot.databasePath, secondExpected.contentHash)).toBe(1);
+      expect(receiptCountForStateHash(restarted.snapshot.databasePath, firstHash)).toBe(1);
+      expect(receiptCountForStateHash(restarted.snapshot.databasePath, secondHash)).toBe(1);
       expect(committed.receipts[0]).toEqual(failed.receipts[0]);
       expect(committed.pins).toEqual([]);
       expect(committed.frames).toEqual([]);
@@ -129,4 +131,10 @@ function assertOverwriteFinished(databasePath: string, mode: 'restore' | 'adopti
     expect(identity.metadata).not.toEqual(expect.arrayContaining([expect.objectContaining({ key: 'sync_group_local_adoption' })]));
     expect(identity.metadata).toEqual(expect.arrayContaining([expect.objectContaining({ key: 'sync_group_completed_adoption' })]));
   }
+}
+
+async function sourceStateHashes(process: Parameters<typeof readFixtureInventory>[0], firstId: string, secondId: string) {
+  const entries = await readFixtureInventory(process);
+  const hash = (id: string) => Buffer.from(entries.find(entry => entry.globalId === id)!.sharedStateHash).toString('hex');
+  return [hash(firstId), hash(secondId)] as const;
 }

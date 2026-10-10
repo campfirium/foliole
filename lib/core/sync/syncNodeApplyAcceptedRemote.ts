@@ -15,9 +15,8 @@ import {
 } from './syncNodeApplyStatements.js';
 import { enqueueAppliedNodeSearchInvalidations, type LocalSyncNodeSearchInvalidationState } from './syncNodeSearchInvalidations.js';
 import { upsertAppliedNodeSyncState } from './syncNodeStateApplyExecutor.js';
-import { hashTextBodyContent } from './syncNodeTextBodyBlobs.js';
 import { assertSyncNodeTextWithinBudget } from './syncNodeTextBudget.js';
-import { hasCompleteTombstoneVersion } from './syncNodeTombstoneVersion.js';
+import { applyStoredNodeVersionBodyState } from './syncNodeVersionBodyState.js';
 import { validateTopicTextBodies } from './topicTextBodies.js';
 import { textAlternativesSchema } from './topicTextState.js';
 
@@ -47,21 +46,16 @@ async function upsertRemoteVersion(port: DbPort, record: NativeSyncNodeRecord) {
         Number(existing.body_mismatch) !== 0) {
       throw new Error(`sync_pack_node_version_immutable_mismatch:${record.version_id}`);
     }
-    if (Number(existing.has_body) === 0 && hasCompleteTombstoneVersion(record)) {
-      const body = record.body_text!;
-      const bodyHash = await hashTextBodyContent(body, {});
-      const alternatives = validateTopicTextBodies(record.snapshot.text_alternatives ?? [], record.alternative_bodies ?? []);
-      await port.run(
-        `UPDATE node_sync_versions SET body_text = ?,
-         snapshot_json = json_set(snapshot_json, '$.body_blob_hash', ?, '$.text_alternative_bodies', json(?))
-         WHERE version_id = ? AND body_text IS NULL`,
-        [body, bodyHash, JSON.stringify(alternatives), record.version_id]
-      );
-    }
+    await applyStoredNodeVersionBodyState(port, record);
+    await retainVersionParents(port, record);
     return;
   }
   const statement = buildRemoteNodeVersionUpsert(record)!;
   await port.run(statement.sql, statement.params);
+  await retainVersionParents(port, record);
+}
+
+async function retainVersionParents(port: DbPort, record: NativeSyncNodeRecord) {
   const parentIds = record.parent_version_ids
     ?? (record.parent_version_id ? [record.parent_version_id] : []);
   for (const [ordinal, parentId] of parentIds.entries()) {

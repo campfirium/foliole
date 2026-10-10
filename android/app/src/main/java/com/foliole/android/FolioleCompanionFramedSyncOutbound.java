@@ -44,6 +44,7 @@ final class FolioleCompanionFramedSyncOutbound {
             input.requiredRelationIds, input.reviewFactIds, input.stateFactIds, credential.deviceId, senderEpoch,
             receiverDeviceId, receiverEpoch);
         selection.put("object_type", call.getString("object_type"));
+        if (call.getArray("frontier_fact_ids") != null) selection.put("frontier_fact_ids", call.getArray("frontier_fact_ids"));
         String publishedTransferId = call.getString("transfer_id");
         if (publishedTransferId != null) selection.put("transfer_id", publishedTransferId);
         var prepared = FolioleCompanionFramedSyncPreparedOutbound.load(context,

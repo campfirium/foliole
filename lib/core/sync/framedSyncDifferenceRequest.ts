@@ -3,6 +3,7 @@ import type {
   FramedSyncInventoryDifference,
   FramedSyncInventoryEntry
 } from './framedSyncInventory.js';
+import { requiredFramedSyncNodeVersionIds } from './framedSyncInventory.js';
 import {
   encodeValidatedProtocolMessage,
   type ValidatedProtocolMessage
@@ -28,18 +29,19 @@ export function projectFramedSyncDifferenceRequest(input: {
   if (difference.direction !== 'remote_to_local') {
     throw new Error('framed_sync_difference_request_direction_invalid');
   }
-  const versionIds = new Set(difference.sourceSnapshot.frontierFactIds);
+  const versionIds = new Set(difference.objectType === 'node' ? requiredFramedSyncNodeVersionIds(difference) : []);
   const facts = [
-    ...(difference.sourceSnapshot.stateFactIds ?? [])
+    ...(difference.need.stateFactIds ?? [])
       .map((id) => identity(difference.globalId, id, 1, difference.objectType)),
     ...[...versionIds].map((id) => identity(difference.globalId, id, 2, difference.objectType)),
-    ...difference.sourceSnapshot.requiredRelationIds.map((id) => identity(difference.globalId, id, 3, difference.objectType)),
-    ...difference.sourceSnapshot.reviewFactIds.map((id) => identity(difference.globalId, id, 4, difference.objectType))
+    ...difference.need.requiredRelationIds.map((id) => identity(difference.globalId, id, 3, difference.objectType)),
+    ...difference.need.reviewFactIds.map((id) => identity(difference.globalId, id, 4, difference.objectType))
   ];
   const payload = {
-    blobHashes: difference.sourceSnapshot.resourceHashes,
+    blobHashes: difference.need.resourceHashes,
     facts,
     resources: [],
+    sourceStateHash: difference.sourceSnapshot.sharedStateHash,
     roundId: input.roundId
   };
   return {
@@ -72,7 +74,9 @@ export function decodeFramedSyncDifferenceRequest(message: ValidatedProtocolMess
     blobHashes: list(payload.blobHashes).map((value) => bytes(value, 'blob_hash').slice()),
     facts,
     resources: readFramedSyncRequestedResources(payload.resources),
-    roundId: bytes(payload.roundId, 'round_id').slice()
+    roundId: bytes(payload.roundId, 'round_id').slice(),
+    ...(bytes(payload.sourceStateHash ?? new Uint8Array(), 'source_state_hash').length ?
+      { sourceStateHash: bytes(payload.sourceStateHash, 'source_state_hash').slice() } : {})
   };
 }
 
@@ -81,6 +85,9 @@ export function resolveFramedSyncDifferenceRequest(
   request: ReturnType<typeof decodeFramedSyncDifferenceRequest>
 ): FramedSyncInventoryDifference {
   if (request.resources.length) throw new Error('framed_sync_database_request_required');
+  if (request.sourceStateHash?.length && hex(request.sourceStateHash) !== hex(current.sharedStateHash)) {
+    throw new Error('framed_sync_difference_request_source_changed');
+  }
   if (request.facts.some((fact) =>
     fact.objectType !== current.objectType || fact.globalId !== current.globalId)) {
     throw new Error('framed_sync_difference_request_identity_mismatch');
@@ -114,7 +121,7 @@ export function resolveFramedSyncDifferenceRequest(
 
 function assertSame(requested: readonly string[], current: readonly string[]) {
   const values = new Set(current);
-  if (requested.length !== current.length || requested.some((value) => !values.has(value))) {
+  if (new Set(requested).size !== requested.length || requested.some((value) => !values.has(value))) {
     throw new Error('framed_sync_difference_request_source_changed');
   }
 }

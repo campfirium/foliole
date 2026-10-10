@@ -9,9 +9,7 @@ export async function retainLocalEditBase(port: DbPort, args: {
 }) {
   if (!args.holdId || !args.nodeId || !args.versionId) throw new Error('content_edit_hold_invalid');
   const [version] = await port.query<{ version_id: string }>(
-    `SELECT version_id FROM node_sync_versions WHERE object_id = ? AND version_id = ?
-       AND (body_text IS NOT NULL OR json_type(snapshot_json, '$.content') = 'text'
-         OR json_type(snapshot_json, '$.content') IS NULL)`,
+    'SELECT version_id FROM node_sync_versions WHERE object_id = ? AND version_id = ?',
     [args.nodeId, args.versionId]
   );
   if (!version) throw new Error('content_edit_base_unavailable');

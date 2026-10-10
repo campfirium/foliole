@@ -21,7 +21,7 @@ export function storedSyncNodeVersionBody<T extends Pick<StoredSyncNodeVersionRo
   if (row.body_text !== null) return row.body_text;
   const snapshot = JSON.parse(row.snapshot_json) as { content?: unknown };
   if (snapshot?.content === null) return null;
-  return typeof snapshot?.content === 'string' ? snapshot.content : '';
+  return typeof snapshot?.content === 'string' ? snapshot.content : null;
 }
 
 export async function loadCurrentSyncNodeRecord(

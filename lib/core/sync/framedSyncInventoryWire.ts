@@ -55,7 +55,8 @@ function entryToWire(entry: FramedSyncInventoryEntry) {
     frontierFactIds: entry.frontierFactIds, globalId: entry.globalId,
     objectType: entry.objectType, requiredRelationIds: entry.requiredRelationIds,
     resourceHashes: entry.resourceHashes, reviewFactIds: entry.reviewFactIds,
-    sharedStateHash: entry.sharedStateHash, stateFactIds: entry.stateFactIds ?? []
+    sharedStateHash: entry.sharedStateHash, stateFactIds: entry.stateFactIds ?? [],
+    versionStates: entry.versionStates ?? [], currentVersionId: entry.currentVersionId ?? '', unready: entry.unready ?? false
   };
 }
 
@@ -72,6 +73,10 @@ function entriesFromWire(value: unknown): readonly FramedSyncInventoryEntry[] {
       resourceHashes: list(entry.resourceHashes).map((hash) => bytes(hash, 'resource_hash').slice()),
       reviewFactIds: strings('reviewFactIds'),
       sharedStateHash: bytes(entry.sharedStateHash, 'shared_state_hash').slice(),
+      ...(entry.currentVersionId || entry.unready || (Array.isArray(entry.versionStates) && entry.versionStates.length) ? {
+        currentVersionId: String(entry.currentVersionId ?? ''), unready: entry.unready === true,
+        versionStates: list(entry.versionStates).map(value => text(value, 'version_state'))
+      } : {}),
       ...(stateFactIds.length ? { stateFactIds } : {})
     };
   });
@@ -98,12 +103,14 @@ function inventoryPageCount(entries: readonly FramedSyncInventoryEntry[], offset
 export function* iterateFramedSyncInventory(args: {
   entries: readonly FramedSyncInventoryEntry[];
   roundId: Uint8Array;
+  detailGlobalIds?: readonly string[];
+  summaryOnly?: boolean;
 }): Generator<InventorySessionMessage> {
   encodeValidatedProtocolMessage('inventory_begin', {
     entryCount: args.entries.length, roundId: args.roundId
   });
   yield {
-    payload: { entryCount: args.entries.length, roundId: args.roundId },
+    payload: { entryCount: args.entries.length, roundId: args.roundId, detailGlobalIds: args.detailGlobalIds ?? [], summaryOnly: args.summaryOnly ?? false },
     payloadCase: 'inventory_begin'
   };
   const session = budget();
@@ -131,6 +138,8 @@ export async function decodeFramedSyncInventory(
   let chunkIndex = 0;
   let ended = false;
   let frames = 0;
+  let detailGlobalIds: string[] = [];
+  let summaryOnly = false;
   for await (const message of messages) {
     if (++frames > FRAMED_SYNC_LIMITS.maxSessionFrames) throw new Error('inventory_session_limit_exceeded');
     const payload = row(message.payload);
@@ -138,6 +147,8 @@ export async function decodeFramedSyncInventory(
       if (message.payloadCase !== 'inventory_begin') throw new Error('inventory_exchange_incomplete');
       roundId = bytes(payload.roundId, 'round_id').slice();
       expectedCount = unsigned(payload.entryCount, 'entry_count');
+      detailGlobalIds = list(payload.detailGlobalIds ?? []).map(value => text(value, 'detail_global_id'));
+      summaryOnly = payload.summaryOnly === true;
       if (expectedCount > BigInt(FRAMED_SYNC_LIMITS.maxInventoryEntries)) throw new Error('inventory_entry_limit_exceeded');
       continue;
     }
@@ -160,5 +171,5 @@ export async function decodeFramedSyncInventory(
     entries.push(...incoming);
   }
   if (!roundId || !ended) throw new Error('inventory_exchange_incomplete');
-  return { entries, roundId };
+  return { entries, roundId, ...(detailGlobalIds.length ? { detailGlobalIds } : {}), ...(summaryOnly ? { summaryOnly } : {}) };
 }

@@ -50,7 +50,7 @@ async function saveEdit(receiver: Receiver) {
     version_id: 'phone-saved-edit', parent_version_id: parent.version_id, parent_version_ids: [parent.version_id!],
     content_hash: hashText('phone-saved-edit\nEdited body'), host_name: 'Phone', body_text: 'Edited body',
     updated_at: time, version_created_at: time, snapshot: { ...parent.snapshot,
-      title: 'Edited', content: 'Edited body', updated_at: time,
+      title: 'Edited', content: 'Edited body', body_blob_hash: null, updated_at: time,
       text_selection: { version_id: 'phone-saved-edit', created_at: time } } };
   await applySyncNodesWithDbPort(receiver.db, [edit], { operation: 'local_mutation', enqueueSearchInvalidations: false });
 }

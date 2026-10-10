@@ -37,13 +37,13 @@ it('holds readable empty and exact 1 MiB UTF-8 versions without loading their te
     .toEqual([{ hold_id: 'A', version_id: 'A' }, { hold_id: 'B', version_id: 'B' }]);
 });
 
-it('rejects a wrong node, a retired body or an absent version before acquiring a hold', async () => {
+it('retains parent identity after body deletion while rejecting a wrong node or absent version', async () => {
   await expect(hold('A', 'editor', 'other')).rejects.toThrow('content_edit_base_unavailable');
   sqlite.prepare('UPDATE node_sync_versions SET body_text = NULL, snapshot_json = ? WHERE version_id = ?')
     .run(JSON.stringify({ id: 'node', content: null }), 'A');
-  await expect(hold('A')).rejects.toThrow('content_edit_base_unavailable');
+  await hold('A');
   await expect(hold('missing')).rejects.toThrow('content_edit_base_unavailable');
-  expect(sqlite.prepare('SELECT count(*) FROM node_version_local_holds').pluck().get()).toBe(0);
+  expect(sqlite.prepare('SELECT version_id FROM node_version_local_holds').pluck().get()).toBe('A');
 });
 
 it('updates one editor hold and releases its submitted prefix while preserving another holder and device base', async () => {
@@ -60,7 +60,7 @@ it('updates one editor hold and releases its submitted prefix while preserving a
   expect(sqlite.prepare('SELECT hold_id, version_id FROM node_version_local_holds').all())
     .toEqual([{ hold_id: 'other-editor', version_id: 'B' }]);
   expect(sqlite.prepare('SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL ORDER BY version_id').pluck().all())
-    .toEqual(['A', 'B', 'E']);
+    .toEqual(['A', 'E']);
   expect(sqlite.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').pluck().all())
     .toEqual(['A', 'B', 'C', 'D', 'E']);
   expect(sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual(edges);

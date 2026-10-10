@@ -40,6 +40,7 @@ struct FolioleFramedSyncOutboundRequest {
             "include_current_node": include, "sender_device_id": context.senderDeviceID,
             "sender_library_epoch": context.senderLibraryEpoch, "receiver_device_id": context.receiverDeviceID,
             "receiver_library_epoch": context.receiverLibraryEpoch]
+        if let ids = value["frontier_fact_ids"] as? [String] { result["frontier_fact_ids"] = ids }
         for key in ["required_relation_ids", "review_fact_ids", "state_fact_ids"] {
             guard let raw = value[key] as? [String] else { throw Self.invalid("\(key)_required") }
             let ids = raw.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }

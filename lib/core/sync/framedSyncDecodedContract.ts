@@ -60,6 +60,8 @@ export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, v
   } else if (payloadCase === 'difference_request') {
     fixedBytes(payload.roundId, 16, 'round_id');
     validateIdentityList(payload.facts);
+    const sourceHash = bytes(payload.sourceStateHash ?? new Uint8Array(), 'source_state_hash');
+    if (sourceHash.byteLength) assertFramedSyncDigest(sourceHash, 'source_state_hash');
     const hashes = list(payload.blobHashes, FRAMED_SYNC_LIMITS.maxBlobsPerTransfer)
       .map((hash) => hex(digest(hash, 'blob_hash')));
     unique(hashes, 'blob_hash');
@@ -81,6 +83,8 @@ export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, v
 function validateRemainingPayload(payloadCase: ProtocolPayloadCase, payload: Record<string, unknown>) {
   if (payloadCase === 'inventory_begin') {
     fixedBytes(payload.roundId, 16, 'round_id');
+    unique(list(payload.detailGlobalIds ?? [], FRAMED_SYNC_LIMITS.maxInventoryEntries)
+      .map(id => text(id, 'detail_global_id')), 'detail_global_id');
     if (unsigned(payload.entryCount, 'entry_count') > BigInt(FRAMED_SYNC_LIMITS.maxInventoryEntries)) {
       throw new Error('inventory_entry_limit_exceeded');
     }
@@ -134,9 +138,9 @@ function validateInventoryEntries(value: unknown) {
     const entry = row(item); text(entry.objectType, 'object_type'); text(entry.globalId, 'global_id');
     digest(entry.sharedStateHash, 'shared_state_hash');
     for (const key of [
-      'frontierFactIds', 'requiredRelationIds', 'reviewFactIds', 'stateFactIds'
+      'frontierFactIds', 'requiredRelationIds', 'reviewFactIds', 'stateFactIds', 'versionStates'
     ]) {
-      unique(list(entry[key], FRAMED_SYNC_LIMITS.maxInventoryFactIdsPerEntry)
+      unique(list(entry[key] ?? [], FRAMED_SYNC_LIMITS.maxInventoryFactIdsPerEntry)
         .map((id) => text(id, key)), key);
     }
     unique(list(entry.resourceHashes, FRAMED_SYNC_LIMITS.maxBlobsPerTransfer)

@@ -33,6 +33,8 @@ export function decodeCompanionInventoryEntry(value: NativeCompanionFramedSyncIn
       .map((hash) => digest(hash, 'resource_hash')),
     reviewFactIds: strings(value.review_fact_ids, 'review_fact_ids'),
     stateFactIds: strings(value.state_fact_ids, 'state_fact_ids'),
-    sharedStateHash: digest(value.shared_state_hash, 'shared_state_hash')
+    sharedStateHash: digest(value.shared_state_hash, 'shared_state_hash'),
+    ...(value.version_states ? { versionStates: strings(value.version_states, 'version_states'),
+      currentVersionId: value.current_version_id ?? '', unready: value.unready ?? false } : value.unready ? { unready: true } : {})
   };
 }

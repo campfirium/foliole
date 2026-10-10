@@ -12,9 +12,9 @@ function request(objectType = 'node') {
   return difference;
 }
 
-it('binds the full requested source even when the local missing subset is smaller', () => {
+it('binds only requested differences while rejecting extra source facts', () => {
   const difference = request();
-  const current = { ...difference, need: { ...difference.need, frontierFactIds: [], sharedState: false } };
+  const current = { ...difference, sourceSnapshot: { ...difference.sourceSnapshot, currentVersionId: 'version', versionStates: [], frontierFactIds: ['version', 'already-local'] } };
   expect(() => assertFramedSyncRequestedTransferFacts(current,
     [{ kind: 2, factId: 'version', globalId: 'requested', objectType: 'node' }])).not.toThrow();
   expect(() => assertFramedSyncRequestedTransferFacts(current, [])).toThrow('framed_sync_requested_fact_set_mismatch');
@@ -33,7 +33,7 @@ it('rejects wrong objects, wrong kinds, extra facts and duplicates before admiss
 it('requires the original relation endpoint versions as well as the frontier', () => {
   const original = request();
   const relation = framedSyncParentRelationFactId({ ordinal: 0, version_id: 'version', parent_version_id: 'parent' });
-  const difference = { ...original, sourceSnapshot: { ...original.sourceSnapshot, requiredRelationIds: [relation] } };
+  const difference = { ...original, need: { ...original.need, requiredRelationIds: [relation] }, sourceSnapshot: { ...original.sourceSnapshot, requiredRelationIds: [relation] } };
   const facts = [{ kind: 2, factId: 'version', globalId: 'requested', objectType: 'node' },
     { kind: 3, factId: relation, globalId: 'requested', objectType: 'node' }];
   expect(() => assertFramedSyncRequestedTransferFacts(difference, facts)).toThrow('framed_sync_requested_fact_set_mismatch');

@@ -22,7 +22,7 @@ describe('publication recovery uses discovery comparison', () => {
   it('does not add previously unselected facts to the outstanding list', () => {
     const partial = { ...original, need: { ...original.need, sharedState: false,
       frontierFactIds: [], requiredRelationIds: [], stateFactIds: [], resourceHashes: [] } };
-    expect(recheckPublicationInventory(partial, [{ ...source, reviewFactIds: [] }])?.need)
+    expect(recheckPublicationInventory(partial, [{ ...source, reviewFactIds: [], sharedStateHash: hash(3) }])?.need)
       .toEqual(partial.need);
     expect(recheckPublicationInventory(partial, [{ ...source, frontierFactIds: [],
       sharedStateHash: hash(3) }])).toBeNull();

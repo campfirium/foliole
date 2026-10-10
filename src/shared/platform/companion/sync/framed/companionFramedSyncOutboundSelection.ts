@@ -45,7 +45,7 @@ export async function selectOutboundFacts<T>(db: DbPort, payload: Record<string,
   if (!current) throw new Error('framed_sync_source_empty');
   const difference: FramedSyncInventoryDifference = {
     direction: 'local_to_remote', globalId: objectId, objectType, sourceSnapshot: current,
-    need: { frontierFactIds: includeCurrentNode ? current.frontierFactIds : [],
+    need: { frontierFactIds: payload.frontier_fact_ids === undefined ? (includeCurrentNode ? current.frontierFactIds : []) : requiredStrings(payload.frontier_fact_ids, 'frontier_fact_ids'),
       requiredRelationIds, resourceHashes: [],
       reviewFactIds, stateFactIds, sharedState: includeCurrentNode }
   };

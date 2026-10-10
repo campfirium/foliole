@@ -61,6 +61,11 @@ enum FolioleFramedSyncInventoryWire {
             return begin.roundID
         }
 
+        func requestBegin() throws -> Foliole_Sync_V22_InventoryBegin {
+            _ = try roundID()
+            return begin!
+        }
+
         func result(expectedRoundID: Data) throws -> [Foliole_Sync_V22_InventoryEntry] {
             guard retainEntries, try roundID() == expectedRoundID else {
                 throw invalid("inventory_round_identity_mismatch")
@@ -92,12 +97,22 @@ enum FolioleFramedSyncInventoryWire {
     }
 
     static func emit(entries: [Foliole_Sync_V22_InventoryEntry], roundID: Data,
+        detailGlobalIDs: [String] = [], summaryOnly: Bool = false,
         consume: (FolioleFramedSyncValidatedMessage) throws -> Void) throws {
         guard entries.count <= FolioleFramedSyncLimits.maxInventoryEntries, roundID.count == 16 else {
             throw FolioleFramedSyncValidationError("inventory_input_invalid")
         }
+        let entries = summaryOnly ? entries.map { value in
+            var entry = value
+            if entry.objectType == "node" {
+                entry.frontierFactIds = []; entry.requiredRelationIds = []; entry.reviewFactIds = []
+                entry.resourceHashes = []; entry.stateFactIds = []; entry.versionStates = []; entry.currentVersionID = ""
+            }
+            return entry
+        } : entries
         var begin = Foliole_Sync_V22_InventoryBegin()
         begin.roundID = roundID; begin.entryCount = UInt64(entries.count)
+        begin.detailGlobalIds = detailGlobalIDs; begin.summaryOnly = summaryOnly
         try consume(validated { $0.inventoryBegin = begin })
         var index = 0
         var chunkHash = SHA256()

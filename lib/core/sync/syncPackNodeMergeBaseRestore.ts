@@ -15,10 +15,10 @@ export async function restoreIncomingNodeMergeBases(port: DbPort, alias: string)
        AND EXISTS (SELECT 1 FROM main.node_sync_versions stored
          JOIN ${alias}.node_sync_versions available ON available.version_id = stored.version_id
          WHERE stored.object_id = incoming.id
+           AND COALESCE(json_extract(stored.snapshot_json, '$.body_deleted'), 0) = 0
            AND json_type(stored.snapshot_json, '$.content') = 'null'
            AND (available.body_text IS NOT NULL
-             OR json_type(available.snapshot_json, '$.content') = 'text'
-             OR json_type(available.snapshot_json, '$.content') IS NULL))`);
+             OR json_type(available.snapshot_json, '$.content') = 'text'))`);
   for (const head of heads) {
     const bases = await loadMergeBaseCandidates(port, head.local_version_id, head.incoming_version_id);
     for (const baseId of bases) {
@@ -30,13 +30,14 @@ export async function restoreIncomingNodeMergeBases(port: DbPort, alias: string)
            body_text = CASE WHEN incoming.body_text IS NOT NULL THEN incoming.body_text
              WHEN json_type(incoming.snapshot_json, '$.content') = 'text'
                THEN json_extract(incoming.snapshot_json, '$.content')
-             WHEN json_type(incoming.snapshot_json, '$.content') IS NULL THEN '' ELSE NULL END,
+             ELSE NULL END,
            snapshot_json = incoming.snapshot_json
          FROM ${alias}.node_sync_versions AS incoming
          WHERE stored.version_id = ? AND incoming.version_id = stored.version_id
+           AND COALESCE(json_extract(stored.snapshot_json, '$.body_deleted'), 0) = 0
+           AND COALESCE(json_extract(incoming.snapshot_json, '$.body_deleted'), 0) = 0
            AND (incoming.body_text IS NOT NULL
-             OR json_type(incoming.snapshot_json, '$.content') = 'text'
-             OR json_type(incoming.snapshot_json, '$.content') IS NULL)`,
+             OR json_type(incoming.snapshot_json, '$.content') = 'text')`,
         [baseId]
       );
     }

@@ -89,8 +89,8 @@ function insertInboxChild() {
     '2026-08-11T02:00:00.000Z', '2026-08-11T02:00:00.000Z'
   ]);
   driver.execute(`INSERT INTO node_sync_versions (
-    version_id, object_id, host_name, created_at, content_hash, snapshot_json
-  ) VALUES ('desktop-a#1', 'child-1', 'desktop-a', ?, 'child-hash', ?)`, [
+    version_id, object_id, host_name, created_at, content_hash, body_text, snapshot_json
+  ) VALUES ('desktop-a#1', 'child-1', 'desktop-a', ?, 'child-hash', '', ?)`, [
     '2026-08-11T02:00:00.000Z', '{"id":"child-1","parent_id":"special-inbox","title":"Child"}'
   ]);
   driver.execute(`INSERT INTO sync_object_state (

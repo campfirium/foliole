@@ -4,15 +4,12 @@ import type { InboundFactDescriptor } from './framedSyncStagingContract.js';
 /** Match the full original wire request, including relation endpoint versions, before staging. */
 export function assertFramedSyncRequestedTransferFacts(difference: FramedSyncInventoryDifference,
   actual: readonly Pick<InboundFactDescriptor, 'factId' | 'kind' | 'globalId' | 'objectType'>[]) {
-  const source = difference.sourceSnapshot;
-  const need = { frontierFactIds: source.frontierFactIds, requiredRelationIds: source.requiredRelationIds,
-    resourceHashes: source.resourceHashes, reviewFactIds: source.reviewFactIds,
-    stateFactIds: source.stateFactIds ?? [], sharedState: source.frontierFactIds.length > 0 || source.objectType !== 'node' };
+  const need = difference.need;
   const versions = difference.objectType === 'node'
     ? requiredFramedSyncNodeVersionIds({ ...difference, direction: 'local_to_remote', need }) : [];
   const expected = new Set([
-    ...(source.stateFactIds ?? []).map(id => key(1, id)), ...versions.map(id => key(2, id)),
-    ...source.requiredRelationIds.map(id => key(3, id)), ...source.reviewFactIds.map(id => key(4, id))
+    ...(need.stateFactIds ?? []).map(id => key(1, id)), ...versions.map(id => key(2, id)),
+    ...need.requiredRelationIds.map(id => key(3, id)), ...need.reviewFactIds.map(id => key(4, id))
   ]);
   if (!expected.size || actual.length !== expected.size) throw new Error('framed_sync_requested_fact_set_mismatch');
   const received = new Set<string>();

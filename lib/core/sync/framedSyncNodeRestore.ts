@@ -170,7 +170,9 @@ export function restoreFramedSyncNodeMetadata(fact: CanonicalFact): FramedSyncNo
 }
 
 function restoreNodeFields(fact: CanonicalFact, body: string | null, bodyHash: string | null): NativeSyncNodeRecord {
-  const values = fieldsByName(fact.body, body === null ? [...FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'body_retired'] :
+  const deleted = fact.body.find(field => field.name === 'body_deleted')?.value;
+  const values = fieldsByName(fact.body, body === null ? [...FRAMED_SYNC_NODE_VERSION_FACT.bodyFields, 'body_retired',
+    ...deleted ? ['body_deleted'] : []] :
       FRAMED_SYNC_NODE_VERSION_FACT.bodyFields,
     'node_version_fact_body_shape_invalid');
   const get = (name: string) => requiredValue(values, name);
@@ -190,7 +192,7 @@ function restoreNodeFields(fact: CanonicalFact, body: string | null, bodyHash: s
     object_type: 'node',
     parent_version_id: readString(get('parent_version_id'), true),
     parent_version_ids: readStringList(get('parent_version_ids')),
-    snapshot: { ...snapshot, content: body },
+    snapshot: { ...snapshot, content: body, ...(deleted?.kind === 'bool' && deleted.value ? { body_deleted: true } : {}) },
     updated_at: readString(get('updated_at'))!,
     version_created_at: readString(get('version_created_at'), true),
     version_id: fact.factId

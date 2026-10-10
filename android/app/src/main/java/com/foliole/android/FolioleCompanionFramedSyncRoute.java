@@ -116,10 +116,13 @@ final class FolioleCompanionFramedSyncRoute {
             return;
         }
         byte[] roundId = request.roundId();
-        var inventory = FolioleCompanionFramedSyncInventory.readLeased(bridge, peerContext, budget);
+        var begin = request.inventoryBegin();
+        var all = FolioleCompanionFramedSyncInventory.readLeased(bridge, peerContext, budget);
+        var inventory = begin.getDetailGlobalIdsCount() == 0 ? all : all.stream()
+            .filter(entry -> entry.getObjectType().equals("node") && begin.getDetailGlobalIdsList().contains(entry.getGlobalId())).toList();
         try (FramedSyncSessionFile response = FramedSyncSessionFile.create(directory, groupKey, context,
             consumer -> FramedSyncInventoryWire.emit(inventory,
-                roundId, consumer), nonceStore, budget)) {
+                roundId, java.util.List.of(), begin.getDetailGlobalIdsCount() == 0 && begin.getSummaryOnly(), consumer), nonceStore, budget)) {
             FolioleCompanionHttpResponse.framed(output, response, deviceId, epoch);
         }
     }

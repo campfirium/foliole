@@ -42,13 +42,21 @@ public final class FramedSyncInventoryWire {
 
     public static void emit(List<InventoryEntry> entries, byte[] roundId,
         FramedSyncSessionWriter.MessageConsumer consumer) throws Exception {
+        emit(entries, roundId, List.of(), false, consumer);
+    }
+
+    public static void emit(List<InventoryEntry> entries, byte[] roundId, List<String> detailGlobalIds,
+        boolean summaryOnly, FramedSyncSessionWriter.MessageConsumer consumer) throws Exception {
+        if (summaryOnly) entries = entries.stream().map(entry -> entry.getObjectType().equals("node") ?
+            entry.toBuilder().clearFrontierFactIds().clearRequiredRelationIds().clearReviewFactIds()
+                .clearResourceHashes().clearStateFactIds().clearVersionStates().clearCurrentVersionId().build() : entry).toList();
         if (entries.size() > FramedSyncContract.MAX_INVENTORY_ENTRIES ||
             roundId == null || roundId.length != FramedSyncContract.IDENTIFIER_BYTES) {
             throw new IllegalArgumentException("inventory_input_invalid");
         }
         consumer.accept(validated(ProtocolMessage.newBuilder().setInventoryBegin(
             InventoryBegin.newBuilder().setRoundId(ByteString.copyFrom(roundId))
-                .setEntryCount(entries.size())).build()));
+                .setEntryCount(entries.size()).addAllDetailGlobalIds(detailGlobalIds).setSummaryOnly(summaryOnly)).build()));
         MessageDigest chunks = MessageDigest.getInstance("SHA-256");
         long bytes = 0;
         for (int offset = 0, index = 0; offset < entries.size(); index++) {

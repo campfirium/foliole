@@ -1,5 +1,6 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 import { projectNodeResourceLinks } from '../database/nodeResourceReferences.js';
+import { hashTextBody } from '../database/textBodyHash.js';
 import { assertNodeTextFieldsWithinBudget } from '../nodes/nodeTextBudget.js';
 import { normalizeNodeTitle } from '../nodes/nodeTitleBudget.js';
 
@@ -8,7 +9,7 @@ import { applyLocalContentEditBranch, type LocalContentEditOptions } from './loc
 import { retainSubmittedLocalEdit } from './nodeVersionLocalEditHold.js';
 import { publishLocalNodePosition } from './nodeVersionMemberPositionPublish.js';
 import { collectNodeVersionPayloads } from './nodeVersionPayloadCollector.js';
-import { loadCurrentSyncNodeRecord, loadStoredSyncNodeVersionRecord } from './syncNodeGraph.js';
+import { loadCurrentSyncNodeRecord, loadRetainedSyncNodeVersionFact, loadStoredSyncNodeVersionRecord } from './syncNodeGraph.js';
 import { hashText } from './syncNodeResolution.js';
 import { normalizeTextAlternatives } from './topicTextState.js';
 
@@ -31,14 +32,14 @@ export async function applyLocalContentEdit(port: DbPort, input: LocalContentEdi
       'SELECT deleted_at FROM nodes WHERE id = ?', [input.nodeId]
     );
     if (!live || live.deleted_at) throw new Error('content_edit_node_unavailable');
-    const base = await loadStoredSyncNodeVersionRecord(tx, input.baseVersionId, false);
+    const base = await loadRetainedSyncNodeVersionFact(tx, input.baseVersionId);
     if (!base || base.object_id !== input.nodeId) throw new Error('content_edit_base_unavailable');
     if (input.title !== base.snapshot.title) input = { ...input, title: normalizeNodeTitle(input.title) };
     assertNodeTextFieldsWithinBudget(input);
     const stored = await loadStoredSyncNodeVersionRecord(tx, input.versionId, false);
     const current = await loadCurrentSyncNodeRecord(tx, input.nodeId, Boolean(stored));
     if (!current) throw new Error('content_edit_current_version_unavailable');
-    if (input.content === base.body_text) return { current, submittedVersionId: base.version_id! };
+    if (input.content === base.body_text || hashTextBody(input.content) === base.snapshot.body_blob_hash) return { current, submittedVersionId: base.version_id! };
     const record = createEditRecord(base, input, current.snapshot.resource_references);
     if (stored && !matchesEdit(stored, record)) throw new Error('content_edit_version_mismatch');
     if (current.version_id === record.version_id || current.ancestor_version_ids.includes(input.versionId)) {
@@ -69,8 +70,9 @@ function createEditRecord(base: NativeSyncNodeRecord, input: LocalContentEdit & 
     title: input.title,
     updated_at: input.updatedAt,
     text_selection: { version_id: input.versionId, created_at: input.updatedAt },
-    text_alternatives: normalizeTextAlternatives(base.snapshot.text_alternatives ?? [], input.content, input.updatedAt)
+    text_alternatives: normalizeTextAlternatives(base.body_text === null ? [] : base.snapshot.text_alternatives ?? [], input.content, input.updatedAt)
   };
+  delete snapshot.body_deleted;
   return {
     ...base,
     ancestor_version_ids: [input.baseVersionId, ...base.ancestor_version_ids],

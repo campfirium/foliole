@@ -16,7 +16,8 @@ function serialize(entry: FramedSyncInventoryEntry) {
     resource_hashes: entry.resourceHashes.map(hex),
     review_fact_ids: entry.reviewFactIds,
     state_fact_ids: entry.stateFactIds ?? [],
-    shared_state_hash: hex(entry.sharedStateHash)
+    shared_state_hash: hex(entry.sharedStateHash),
+    ...(entry.versionStates ? { version_states: entry.versionStates, current_version_id: entry.currentVersionId ?? '', unready: entry.unready ?? false } : {})
   };
 }
 
