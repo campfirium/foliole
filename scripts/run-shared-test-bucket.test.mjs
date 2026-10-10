@@ -148,6 +148,16 @@ describe('run-shared-test-bucket', () => {
     expect(native.args).toContain('--pool=forks');
   });
 
+  it('keeps native store integration outside parallel renderer workers', async () => {
+    const { SHARED_TEST_BUCKETS } = await import('./shared-test-bucket-config.mjs');
+    const native = SHARED_TEST_BUCKETS.find(({ label }) => label === 'store-native');
+    const renderer = SHARED_TEST_BUCKETS.find(({ label }) => label === 'store');
+    expect(native.pool).toBeUndefined();
+    expect(renderer.pool).toBe('threads');
+    expect(renderer.fileParallelism).toBe(true);
+    expect(renderer.targets.some((target) => native.targets.includes(target))).toBe(false);
+  });
+
   it('leaves the shared bucket total timeout disabled unless explicitly configured', () => {
     expect(resolveTotalTimeoutMs({})).toBeNull();
     expect(resolveTotalTimeoutMs({ SHARED_TEST_BUCKET_TOTAL_TIMEOUT_SECONDS: '42' })).toBe(42000);

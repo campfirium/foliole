@@ -49,6 +49,11 @@ const platformCompanionTests = platformRootTests.filter(
 const platformCoreTests = platformRootTests.filter(
   (target) => !platformCompanionTests.includes(target)
 );
+const nativeStoreTests = [
+  'src/store/workspaceContentEditSync.integration.test.ts',
+  'src/store/workspaceFlowSession.sync.integration.test.ts',
+  'src/store/workspaceSequentialReadingBatchMove.integration.test.ts'
+];
 
 export const SHARED_TEST_BUCKETS = [
   { label: 'lib', report: '.tmp/vitest/shared-lib.json', targets: ['--exclude=src/**', '--exclude=electron/**', '--exclude=scripts/**'] },
@@ -100,7 +105,12 @@ export const SHARED_TEST_BUCKETS = [
     report: '.tmp/vitest/shared-src-features-guided.json',
     targets: ['src/features/guidedSample', 'src/features/help']
   },
-  { label: 'store', report: '.tmp/vitest/shared-src-store.json', targets: ['src/store'] },
+  { label: 'store-native', report: '.tmp/vitest/shared-src-store-native.json', targets: nativeStoreTests },
+  { label: 'store', pool: 'threads', fileParallelism: true, report: '.tmp/vitest/shared-src-store.json',
+    targets: [
+      ...immediateTestTargets('src/store').filter((target) => !nativeStoreTests.includes(target)),
+      ...immediateDirectoryTargets('src/store')
+    ] },
   {
     label: 'scripts',
     report: '.tmp/vitest/shared-scripts.json',
