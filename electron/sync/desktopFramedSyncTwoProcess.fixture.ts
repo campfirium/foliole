@@ -5,6 +5,7 @@ import { upsertNodeSnapshot } from '../database/nodeMutations.js';
 import { flushDirtyNodeSyncVersions } from '../database/nodeSyncVersions.js';
 import { loadWorkspaceSnapshot } from '../database/workspaceSnapshot.js';
 
+import { seedCompleteInventoryFixture } from './desktopFramedSyncCompleteInventory.fixture.js';
 import { runDesktopFramedSyncEditCommand } from './desktopFramedSyncEdit.fixture.js';
 import { initializeFixtureDatabase } from './desktopFramedSyncFixtureInitialization.js';
 import { runIdentityRestoreFixtureCommand } from './desktopFramedSyncIdentityRestore.fixture.js';
@@ -177,6 +178,7 @@ async function run(command: Command) {
   }
   if (command.action === 'seed_resource') return seedDesktopFramedSyncResourceCommand(command.args);
   if (command.action === 'seedBatch') return seedBatch(command.args);
+  if (command.action === 'seed_complete_inventory') return seedCompleteInventoryFixture(Number(command.args.count));
   if (command.action === 'seed_large_overwrite') return seedLargeOverwriteFixture();
   if (['reorder', 'restore_order', 'standalone_edit', 'rejoin', 'register_order_member'].includes(command.action)) {
     return runDesktopFramedSyncOrderCommand(command.action, command.args);

@@ -13,14 +13,8 @@ it.each([1000, 10000])('persists %i complete 8 KiB bodies through peer reconcili
   const fixture = await createDesktopFramedSyncTwoProcessFixture();
   let passed = false;
   try {
-    for (let index = 0; index < count; index += 1) {
-      const id = (value: number) => `t326-complete-${String(value).padStart(5, '0')}`;
-      const prefix = `Body ${index}\n`;
-      const content = prefix + 'x'.repeat(8192 - Buffer.byteLength(prefix));
-      await fixture.left.invoke('seed', { content, nodeId: id(index), includeWorkspace: false,
-        ...(index % 100 === 0 ? {} : { parentNodeId: id(Math.floor(index / 100) * 100) }),
-        title: `Complete inventory ${index}` });
-    }
+    expect(await fixture.left.invoke('seed_complete_inventory', { count }))
+      .toEqual({ nodeCount: count, bodyBytes: 8192 });
     const before = await readFixtureInventory(fixture.left);
     expect(before.filter((entry) => entry.objectType === 'node')).toHaveLength(count);
     await expect(reconnectFixturePeer(fixture.left, fixture.rightSnapshot))

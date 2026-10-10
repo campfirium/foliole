@@ -34,24 +34,26 @@ export function largeOverwriteAttachmentIdentity(index: number) {
 /** Disposable fixed workload, using the same upsert/flush path as seedBatch. */
 export async function seedLargeOverwriteFixture() {
   const connection = openDatabaseConnection(), db = createBetterSqliteDbPort(connection.sqlite);
-  for (let pass = 0; pass < 3; pass++) {
-    const now = new Date().toISOString();
-    for (let index = 0; index < 1000; index++) {
-      const nodeId = largeOverwriteNodeId(index);
-      upsertNodeSnapshot({ anchorLink: null, content: largeOverwriteBody(index, pass), createdAt: now,
-        isTitleManual: true, kind: 'topic', nodeId, parentNodeId: null, position: index,
-        reveal: null, title: `Large overwrite ${index}`, updatedAt: now });
-      if (pass === 0 && index < 100) await seedAttachment(index);
+  await db.transaction(async () => {
+    for (let pass = 0; pass < 3; pass++) {
+      const now = new Date().toISOString();
+      for (let index = 0; index < 1000; index++) {
+        const nodeId = largeOverwriteNodeId(index);
+        upsertNodeSnapshot({ anchorLink: null, content: largeOverwriteBody(index, pass), createdAt: now,
+          isTitleManual: true, kind: 'topic', nodeId, parentNodeId: null, position: index,
+          reveal: null, title: `Large overwrite ${index}`, updatedAt: now });
+        if (pass === 0 && index < 100) await seedAttachment(index);
+      }
+      flushDirtyNodeSyncVersions(now);
+      if (pass < 2) for (let index = 0; index < 1000; index++) {
+        const nodeId = largeOverwriteNodeId(index);
+        const row = connection.driver.queryOne<{ current_version_id: string }>(
+          'SELECT current_version_id FROM nodes WHERE id = ?', [nodeId]);
+        if (!row) throw new Error('fixture_node_missing');
+        await retainLocalEditBase(db, { nodeId, versionId: row.current_version_id, holdId: `large:${index}:${pass}` });
+      }
     }
-    flushDirtyNodeSyncVersions(now);
-    if (pass < 2) for (let index = 0; index < 1000; index++) {
-      const nodeId = largeOverwriteNodeId(index);
-      const row = connection.driver.queryOne<{ current_version_id: string }>(
-        'SELECT current_version_id FROM nodes WHERE id = ?', [nodeId]);
-      if (!row) throw new Error('fixture_node_missing');
-      await retainLocalEditBase(db, { nodeId, versionId: row.current_version_id, holdId: `large:${index}:${pass}` });
-    }
-  }
+  });
   assertLargeSeed();
   return { nodeCount: 1000, readableVersions: 3000, bodyBytes: 8192, attachmentCount: 100, attachmentBytes: 65536 };
 }
