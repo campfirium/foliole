@@ -11,6 +11,7 @@ import {
   encodeFrameHeader,
   encodeFramedSyncPreamble
 } from '../../lib/core/sync/framedSyncFraming.js';
+import { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 
 import {
   FRAMED_SYNC_BODY_SHA256_HEADER,
@@ -20,6 +21,11 @@ import {
 } from './companionLanFramedSyncPost.js';
 import type { authenticateCompanionRequest } from './companionRequestAuth.js';
 import type { FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+
+const diagnostics = vi.hoisted(() => ({ append: vi.fn() }));
+vi.mock('../diagnostics/mainProcessDiagnostics.js', () => ({
+  appendMainProcessDiagnosticLog: diagnostics.append
+}));
 
 const servers: http.Server[] = [];
 const preamble = encodeFramedSyncPreamble({
@@ -31,13 +37,26 @@ const binaryBody = Buffer.concat([Buffer.from(preamble), Buffer.from(header), Bu
 
 afterEach(async () => {
   await Promise.all(servers.splice(0).map((server) => new Promise<void>((resolve) => server.close(() => resolve()))));
+  diagnostics.append.mockClear();
 });
 
 async function startHandler(authenticate: typeof authenticateCompanionRequest,
-  capture: (value: unknown) => void) {
+  capture: (value: unknown) => void,
+  fault?: FramedSyncPayloadBudget) {
   const server = http.createServer((request, response) => {
+    if (fault) {
+      const writeHead = response.writeHead;
+      response.writeHead = function (...args: [number,
+        (string | http.OutgoingHttpHeaders | http.OutgoingHttpHeader[])?,
+        (http.OutgoingHttpHeaders | http.OutgoingHttpHeader[])?]) {
+        const result = Reflect.apply(writeHead, this, args);
+        if (args[0] === 200) fault.close();
+        return result;
+      };
+    }
     void handleCompanionLanFramedSyncPost({
       authenticate,
+      payloadBudget: fault,
       localIdentity: { deviceId: 'desktop-b', libraryEpoch: 'epoch-b' },
       onStream: async ({ context, stream }) => {
         capture(context);
@@ -84,6 +103,7 @@ describe('companion LAN framed sync POST', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toBe(FRAMED_SYNC_CONTENT_TYPE);
     expect(Buffer.from(await response.arrayBuffer())).toEqual(binaryBody);
+    expect(diagnostics.append).not.toHaveBeenCalled();
     expect(authenticate).toHaveBeenCalledWith(expect.objectContaining({ requireMemberState: true }));
     expect(context).toEqual({
       groupId: 'group-a', initiatorDeviceId: 'device-a', initiatorLibraryEpoch: 'epoch-a',
@@ -121,6 +141,20 @@ describe('companion LAN framed sync POST', () => {
     await expect(response.json()).resolves.toEqual({ error: 'invalid_signature' });
     expect(dispatched).not.toHaveBeenCalled();
   });
+});
+
+it('records the original failure when a response closes before its first bytes', async () => {
+  const budget = new FramedSyncPayloadBudget();
+  const origin = await startHandler(() => ({
+    device_id: 'device-a', device_name: 'Device A', ok: true
+  }), () => {}, budget);
+  await expect(fetch(`${origin}${requestPath}`, {
+    body: binaryBody, headers: requestHeaders(), method: 'POST'
+  })).rejects.toThrow();
+  await vi.waitFor(() => expect(diagnostics.append).toHaveBeenCalledExactlyOnceWith(
+    'companion_framed_response_failed', {
+      error: expect.objectContaining({ message: 'framed_sync_payload_budget_closed' })
+    }));
 });
 
 function oversizedStream() {

@@ -4,6 +4,7 @@ import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncCont
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import type { FramedSyncSessionContext } from '../../lib/core/sync/framedSyncSession.js';
+import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
 
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { withVerifiedFramedHttpBody } from './desktopFramedSyncHttpBody.js';
@@ -81,6 +82,7 @@ export async function handleCompanionLanFramedSyncPost(args: {
     });
   } catch (error) {
     if (response.headersSent) {
+      appendMainProcessDiagnosticLog('companion_framed_response_failed', { error });
       response.destroy(error instanceof Error ? error : undefined);
       return;
     }
