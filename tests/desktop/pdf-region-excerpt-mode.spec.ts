@@ -27,6 +27,12 @@ async function dragFromTextToVisualArea(desktopWindow: Page) {
   await desktopWindow.mouse.up();
 }
 
+test.beforeEach(async ({ desktopWindow }) => {
+  const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+  await expect(exitFlow).toBeVisible();
+  await exitFlow.click();
+});
+
 for (const scenario of [
   { name: 'mixed', text: 'Mixed PDF text layer' },
   { name: 'scanned', text: null }

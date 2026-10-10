@@ -1,5 +1,6 @@
 // @vitest-environment node
 
+import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -76,14 +77,13 @@ it('imports embedded chapter images and rewrites relative epub image paths to st
   const database = openDatabaseConnection().sqlite;
   const child = database
     .prepare(
-      `SELECT n.id, ${buildNodeBodyContentSql()} AS content, n.body_blob_hash, CAST(cbd.data AS TEXT) AS body_blob_data
+      `SELECT n.id, ${buildNodeBodyContentSql()} AS content, n.body_blob_hash
        FROM nodes n
-       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.parent_id = ?
        ORDER BY n.title ASC
        LIMIT 1`
     )
-    .get(imported.nodeId) as { body_blob_data: string; body_blob_hash: string; content: string; id: string };
+    .get(imported.nodeId) as { body_blob_hash: string; content: string; id: string };
   const attachments = listNodeAttachments(child.id);
 
   expect(imported.resultStatus).toBe('imported');
@@ -95,7 +95,7 @@ it('imports embedded chapter images and rewrites relative epub image paths to st
   expect(child.content).toMatch(/asset:\/\/[a-f0-9]{64}\.jpg/u);
   expect(child.content).not.toContain('[EPUB image not imported:');
   expect(child.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
-  expect(child.body_blob_data).toBe(child.content);
+  expect(child.body_blob_hash).toBe(createHash('sha256').update(child.content).digest('hex'));
   expect(attachments).toHaveLength(1);
   expect(attachments[0]?.attachment.mimeType).toBe('image/jpeg');
   expect(attachments[0]?.attachment.originalName).toBe('00006.png');

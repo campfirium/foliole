@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -7,6 +7,10 @@ import { renderWithLocalization } from '../../shared/localization/testLocalizati
 import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
 
+vi.mock('../../features/pdf/components/PdfReadingViewContext', () => ({
+  usePdfReadingView: () => null,
+  PdfReadingViewProvider: ({ children }: { children: ReactNode }) => children
+}));
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
     editorDisplayMode: 'preview' as const,
@@ -45,7 +49,10 @@ const baseNode = {
   kind: 'topic' as const,
   title: 'Node 1',
   parentNodeId: null,
-  content: '',
+  bodyStatus: 'ready' as const,
+  hasContent: true,
+  hasReveal: false,
+  content: '# Node 1',
   anchorLink: null,
   reveal: '',
   review: null,

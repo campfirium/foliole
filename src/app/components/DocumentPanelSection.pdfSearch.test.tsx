@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import type { ComponentProps } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
@@ -8,6 +8,10 @@ import '../../test/reactPdfMock';
 import { DocumentPanelSection } from './DocumentPanelSection';
 import { DOCUMENT_TOPIC_SEARCH_OPEN_EVENT } from './documentTopicSearchEvents';
 
+vi.mock('../../features/pdf/components/PdfReadingViewContext', () => ({
+  usePdfReadingView: () => null,
+  PdfReadingViewProvider: ({ children }: { children: ReactNode }) => children
+}));
 vi.mock('../../features/settings/context/AppearanceSettingsProvider', () => ({
   useAppearanceSettings: () => ({
     editorDisplayMode: 'preview' as const,
@@ -61,7 +65,7 @@ const defaultProps: ComponentProps<typeof DocumentPanelSection> = {
   nodeOrder: ['node-1'],
   trashedNodeIds: [],
   nodesById: {
-    'node-1': { anchorLink: null, content: '', createdAt: '', id: 'node-1', kind: 'topic', parentNodeId: null, reveal: '', review: null, title: 'Node 1', updatedAt: '' }
+    'node-1': { bodyStatus: 'ready', hasContent: true, hasReveal: false, anchorLink: null, content: '# Node 1', createdAt: '', id: 'node-1', kind: 'topic', parentNodeId: null, reveal: '', review: null, title: 'Node 1', updatedAt: '' }
   },
   onAnswerChange: () => undefined,
   onCloseContextMenu: () => undefined,

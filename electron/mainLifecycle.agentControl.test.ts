@@ -38,6 +38,7 @@ vi.mock('./database/backupRestore.js', () => ({ reconcileAutomaticDatabaseBackup
 vi.mock('./database/databaseReadiness.js', () => ({ beginDatabaseStartup: vi.fn(), markDatabaseReady: vi.fn(), markDatabaseStartupFailed: vi.fn() }));
 vi.mock('./database/deviceIdentity.js', () => ({ loadOrCreateDesktopDeviceId: vi.fn(() => 'device-desktop') }));
 vi.mock('./database/migrate.js', () => ({ initializeDatabase: mocks.initializeDatabase }));
+vi.mock('./foregroundTimeRuntime.js', () => ({ startDesktopForegroundTime: vi.fn(), stopDesktopForegroundTime: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./database/searchAliasMirror.js', () => ({ startSearchAliasMirror: vi.fn().mockResolvedValue(undefined), stopSearchAliasMirror: vi.fn() }));
 vi.mock('./database/nodeMutations.js', () => ({ flushAllDirtyNodeSyncVersions: vi.fn() }));
 vi.mock('./database/pdfIndexing.js', () => ({ resumePendingPdfAttachmentIndexing: vi.fn() }));

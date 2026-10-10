@@ -24,6 +24,7 @@ vi.mock('./database/databaseRestoreSettlement.js', () => ({
   waitForApplicationDatabaseRestoreSettlement: mocks.waitForApplicationDatabaseRestoreSettlement
 }));
 vi.mock('./database/nodeMutations.js', () => ({ flushAllDirtyNodeSyncVersions: vi.fn() }));
+vi.mock('./foregroundTimeRuntime.js', () => ({ startDesktopForegroundTime: vi.fn(), stopDesktopForegroundTime: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('./database/searchIndexInvalidationScheduler.js', () => ({ stopSearchIndexInvalidationScheduler: vi.fn() }));
 vi.mock('./devRendererReloadIntent.js', () => ({ installDevRendererReloadIntentWatcher: vi.fn(() => null) }));
 vi.mock('./devRestartIntent.js', () => ({ installDevRestartIntentWatcher: vi.fn(() => null) }));

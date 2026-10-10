@@ -223,7 +223,7 @@ it('imports clipboard image bytes as a topic with an attachment markdown link', 
   );
 });
 
-it('writes a body blob when clipboard image attachment import falls back to an error body', async () => {
+it('persists complete text when clipboard image attachment import falls back to an error body', async () => {
   clipboardImage.isEmpty.mockReturnValue(false);
   runPreparedImport.mockReturnValue(createImportRecord({ sourceKind: 'markdown', sourceName: 'pasted-image.png' }));
   importImageAttachmentBytes.mockResolvedValue({ message: 'Image import failed', status: 'error' });
@@ -236,12 +236,10 @@ it('writes a body blob when clipboard image attachment import falls back to an e
   expect(updateCall).toBeTruthy();
   expect(updateCall?.[1]).toEqual([
     expect.stringMatching(/^[a-f0-9]{64}$/),
-    '',
+    '[Image import failed]',
     expect.stringMatching(/^[a-f0-9]{64}$/),
     '[Image import failed]',
     expect.stringMatching(/^20\d\d-\d\d-\d\dT/),
     'node-1'
   ]);
-  const bodyCall = databaseDriver.execute.mock.calls.find(([sql]) => String(sql).includes('INSERT INTO content_blob_data'));
-  expect(Buffer.from(bodyCall?.[1]?.[1] as Uint8Array).toString()).toBe('[Image import failed]');
 });

@@ -69,6 +69,12 @@ async function expectWorkspaceReady(desktopWindow: Page) {
   await expect(desktopWindow.locator('main[aria-label]').first()).toBeVisible();
 }
 
+test.beforeEach(async ({ desktopWindow }) => {
+  const exitFlow = desktopWindow.getByRole('button', { name: /^(Exit Flow|退出 Flow)$/ });
+  await expect(exitFlow).toBeVisible();
+  await exitFlow.click();
+});
+
 function getPdfReaderRegion(desktopWindow: Page) {
   return desktopWindow.getByRole('region', { name: /PDF reader panel|PDF 阅读器面板/ });
 }
