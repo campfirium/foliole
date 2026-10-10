@@ -43,12 +43,21 @@ final class FramedSyncCompletedInboundCleanup {
         String[] args = FramedSyncSQLiteValues.blobArgs(transferId);
         database.execSQL("DELETE FROM framed_sync_android_facts WHERE hex(transfer_id) = ?", args);
         database.execSQL("DELETE FROM framed_sync_android_blob_chunks WHERE hex(transfer_id) = ?", args);
-        try (var rows = database.rawQuery("SELECT rowid, authenticated_plaintext FROM framed_sync_android_frames " +
-            "WHERE hex(transfer_id) = ? AND frame_type = 4 AND length(authenticated_plaintext) != 32", args)) {
-            while (rows.moveToNext()) {
-                byte[] digest = java.security.MessageDigest.getInstance("SHA-256").digest(rows.getBlob(1));
+        long lastRowId = Long.MIN_VALUE;
+        try {
+            while (true) {
+                long rowId;
+                byte[] digest;
+                try (var row = database.rawQuery("SELECT rowid, authenticated_plaintext FROM framed_sync_android_frames " +
+                    "WHERE hex(transfer_id) = ? AND frame_type = 4 AND length(authenticated_plaintext) != 32 " +
+                    "AND rowid > ? ORDER BY rowid LIMIT 1", FramedSyncSQLiteValues.blobArgs(transferId, lastRowId))) {
+                    if (!row.moveToFirst()) return;
+                    rowId = row.getLong(0);
+                    digest = java.security.MessageDigest.getInstance("SHA-256").digest(row.getBlob(1));
+                }
                 database.execSQL("UPDATE framed_sync_android_frames SET authenticated_plaintext = ? WHERE rowid = ?",
-                    new Object[] {digest, rows.getLong(0)});
+                    new Object[] {digest, rowId});
+                lastRowId = rowId;
             }
         } catch (java.security.NoSuchAlgorithmException error) { throw new IllegalStateException(error); }
     }
