@@ -61,7 +61,7 @@ function assertBoundedValues(values: readonly unknown[], sizes: number[]) {
 }
 
 async function initializeMain(main: Database.Database) {
-  main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+  main.transaction(() => main.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n')))();
   const db = createBetterSqliteDbPort(main);
   await db.transaction(async (tx) => {
     await migrateCompanionFramedSyncInventory(tx);
@@ -83,23 +83,25 @@ export async function verifiedCompanionFixture(kind: Kind, body: string) {
   const input = { receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch', senderDeviceId: 'sender',
     senderLibraryEpoch: 'sender-epoch', stagingKind: kind, stagingPath, transferId };
   await initializeMain(main);
-  for (const suffix of ['transfers', ...(kind === 'android' ? ['attempts'] : []), 'frames',
-    'available_blobs', 'blob_pins', 'available_resources', 'resource_pins']) {
-    const name = `${prefix}_${suffix}`;
-    const sql = nativeStatements(kind).find((statement) => statement.startsWith(`CREATE TABLE IF NOT EXISTS ${name} (`));
-    if (!sql) throw new Error(`native_schema_statement_missing:${name}`);
-    native.exec(sql);
-  }
-  native.prepare(`INSERT INTO ${prefix}_transfers VALUES (?, ?, 1, 1, ?, ?, ?, ?, ?, ?, 'ready_to_apply')`)
-    .run(transferId, contentId, Number(descriptor.byteLength), input.senderDeviceId, input.senderLibraryEpoch,
-      input.receiverDeviceId, input.receiverLibraryEpoch, attemptId);
-  if (kind === 'android') native.prepare(`INSERT INTO ${prefix}_attempts VALUES (?, ?, 'promoted')`).run(transferId, attemptId);
-  native.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, '0', 3, ?, ?, ?, ?)`)
-    .run(transferId, attemptId, new Uint8Array(96), new Uint8Array(16), Uint8Array.of(1),
-      encodeValidatedProtocolMessage('fact', factToWire(projection.manifest.facts[0]!)));
-  native.prepare(`INSERT INTO ${prefix}_available_blobs VALUES (?, ?, ?)`).run(descriptor.sha256,
-    Number(descriptor.byteLength), projection.bodyBlob);
-  native.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, 1, 1)`).run(transferId, descriptor.sha256, Number(descriptor.byteLength));
+  native.transaction(() => {
+    for (const suffix of ['transfers', ...(kind === 'android' ? ['attempts'] : []), 'frames',
+      'available_blobs', 'blob_pins', 'available_resources', 'resource_pins']) {
+      const name = `${prefix}_${suffix}`;
+      const sql = nativeStatements(kind).find((statement) => statement.startsWith(`CREATE TABLE IF NOT EXISTS ${name} (`));
+      if (!sql) throw new Error(`native_schema_statement_missing:${name}`);
+      native.exec(sql);
+    }
+    native.prepare(`INSERT INTO ${prefix}_transfers VALUES (?, ?, 1, 1, ?, ?, ?, ?, ?, ?, 'ready_to_apply')`)
+      .run(transferId, contentId, Number(descriptor.byteLength), input.senderDeviceId, input.senderLibraryEpoch,
+        input.receiverDeviceId, input.receiverLibraryEpoch, attemptId);
+    if (kind === 'android') native.prepare(`INSERT INTO ${prefix}_attempts VALUES (?, ?, 'promoted')`).run(transferId, attemptId);
+    native.prepare(`INSERT INTO ${prefix}_frames VALUES (?, ?, '0', 3, ?, ?, ?, ?)`)
+      .run(transferId, attemptId, new Uint8Array(96), new Uint8Array(16), Uint8Array.of(1),
+        encodeValidatedProtocolMessage('fact', factToWire(projection.manifest.facts[0]!)));
+    native.prepare(`INSERT INTO ${prefix}_available_blobs VALUES (?, ?, ?)`).run(descriptor.sha256,
+      Number(descriptor.byteLength), projection.bodyBlob);
+    native.prepare(`INSERT INTO ${prefix}_blob_pins VALUES (?, ?, ?, 1, 1)`).run(transferId, descriptor.sha256, Number(descriptor.byteLength));
+  })();
   native.close();
   native = new Database(stagingPath);
   native.pragma('foreign_keys = ON');

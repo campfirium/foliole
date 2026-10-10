@@ -4,6 +4,7 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { dependencyResumeUrl } from '../../lib/core/sync/syncPackDependencyResume.js';
 import { encodeSyncPackFactClaims } from '../../lib/core/sync/syncPackFactPresence.js';
 import { stageSyncPackKnownFactClaims } from '../../lib/core/sync/syncPackKnownFactClaims.js';
@@ -41,23 +42,31 @@ vi.mock('./workgroupKeyStore.js', async (original) => ({ ...await original<typeo
 setupSyncPackBuilderTestLifecycle();
 
 function seedSource(count = 129) {
-  insertNodeSyncState();
-  const source = openDatabaseConnection().driver;
-  for (let i = 1; i <= count; i++) {
-    const id = `v${String(i).padStart(4, '0')}`;
-    const parent = i === 1 ? 'desktop#node-1-v1' : `v${String(i - 1).padStart(4, '0')}`;
-    source.execute(`INSERT INTO node_sync_versions
-      (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
-      VALUES (?, 'node-1', ?, 'desktop', 'now', ?, 'body', '{"id":"node-1","content":null}')`,
-    [id, parent, `hash-${id}`]);
-    source.execute('INSERT INTO node_sync_version_parents VALUES (?, ?, 0)', [id, parent]);
-  }
-  source.execute('UPDATE nodes SET current_version_id = ? WHERE id = ?',
-    [`v${String(count).padStart(4, '0')}`, 'node-1']);
-  source.execute(`INSERT OR IGNORE INTO nodes (id, kind, title, created_at, updated_at)
-    VALUES ('special-inbox', 'folder', 'Inbox', 'now', 'now')`);
-  source.execute("UPDATE nodes SET parent_id = 'special-inbox' WHERE id = 'node-1'");
-  source.execute('UPDATE sync_object_state SET sync_dirty = 0');
+  openDatabaseConnection().sqlite.transaction(() => {
+    insertNodeSyncState();
+    const source = openDatabaseConnection().driver;
+    const nodeState = source.queryOne<Record<string, string | number | null>>(
+      "SELECT * FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'")!;
+    source.execute("DELETE FROM sync_object_state WHERE object_type = 'node' AND object_id = 'node-1'");
+    for (let i = 1; i <= count; i++) {
+      const id = `v${String(i).padStart(4, '0')}`;
+      const parent = i === 1 ? 'desktop#node-1-v1' : `v${String(i - 1).padStart(4, '0')}`;
+      source.execute(`INSERT INTO node_sync_versions
+        (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
+        VALUES (?, 'node-1', ?, 'desktop', 'now', ?, 'body', '{"id":"node-1","content":null}')`,
+      [id, parent, `hash-${id}`]);
+      source.execute('INSERT INTO node_sync_version_parents VALUES (?, ?, 0)', [id, parent]);
+    }
+    source.execute('UPDATE nodes SET current_version_id = ?, content = ?, body_blob_hash = ? WHERE id = ?',
+      [`v${String(count).padStart(4, '0')}`, 'body', hashTextBody('body'), 'node-1']);
+    source.execute(`INSERT OR IGNORE INTO nodes (id, kind, title, created_at, updated_at)
+      VALUES ('special-inbox', 'folder', 'Inbox', 'now', 'now')`);
+    source.execute("UPDATE nodes SET parent_id = 'special-inbox' WHERE id = 'node-1'");
+    const columns = Object.keys(nodeState);
+    source.execute(`INSERT INTO sync_object_state (${columns.join(', ')})
+      VALUES (${columns.map(() => '?').join(', ')})`, Object.values(nodeState));
+    source.execute('UPDATE sync_object_state SET sync_dirty = 0');
+  })();
 }
 
 async function applyPack(url: URL, target: Database.Database, name: string,
