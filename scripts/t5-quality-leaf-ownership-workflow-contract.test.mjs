@@ -225,10 +225,10 @@ describe('T5 canonical leaf ownership', () => {
   it('balances every Electron host without changing shard coverage or leaf count', () => {
     expect(electron.jobs['electron-tests'].strategy.matrix.include
       .map(({ bucket, shards }) => ({ bucket, shards }))).toEqual([
-      { bucket: 'database-services', shards: ['database', 'services'] },
-      { bucket: 'import-ipc', shards: ['import', 'ipc'] },
-      { bucket: 'database-services', shards: ['database', 'services'] },
-      { bucket: 'import-ipc', shards: ['import', 'ipc'] }
+      { bucket: 'database-import', shards: ['database', 'import'] },
+      { bucket: 'services-ipc', shards: ['services', 'ipc'] },
+      { bucket: 'database-import', shards: ['database', 'import'] },
+      { bucket: 'services-ipc', shards: ['services', 'ipc'] }
     ]);
   });
 

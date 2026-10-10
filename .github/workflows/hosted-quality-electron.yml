@@ -34,20 +34,20 @@ jobs:
         include:
           - host: Ubuntu
             runner: ubuntu-latest
-            bucket: database-services
-            shards: [database, services]
+            bucket: database-import
+            shards: [database, import]
           - host: Ubuntu
             runner: ubuntu-latest
-            bucket: import-ipc
-            shards: [import, ipc]
+            bucket: services-ipc
+            shards: [services, ipc]
           - host: Windows
             runner: windows-latest
-            bucket: database-services
-            shards: [database, services]
+            bucket: database-import
+            shards: [database, import]
           - host: Windows
             runner: windows-latest
-            bucket: import-ipc
-            shards: [import, ipc]
+            bucket: services-ipc
+            shards: [services, ipc]
     env:
       CI: "true"
       FOLIOLE_DESKTOP_NATIVE_SKIP_BUILD: "1"
