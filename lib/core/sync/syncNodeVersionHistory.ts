@@ -47,10 +47,12 @@ export function prepareIncomingNodeVersionHistory(port: DbPort, records: NativeS
 export async function prepareIncomingNodeVersionSource<M extends SyncNodeRecordMetadata>(port: DbPort, source: SyncNodeRecordSource<M>) {
   const eligible: M[] = [];
   for (const metadata of source.records) {
-    const record = await source.load(port, metadata);
-    assertSyncNodeTextWithinBudget(record.snapshot);
-    if (!record.version_id || !record.host_name || !record.version_created_at ||
-        record.is_tombstone && !hasCompleteTombstoneVersion(record)) continue;
+    assertSyncNodeTextWithinBudget(metadata.snapshot);
+    if (!metadata.version_id || !metadata.host_name || !metadata.version_created_at) {
+      await source.load(port, metadata);
+      continue;
+    }
+    if (metadata.is_tombstone && !hasCompleteTombstoneVersion(await source.load(port, metadata))) continue;
     eligible.push(metadata);
   }
   const ordered = orderNodeVersionHistory(eligible);

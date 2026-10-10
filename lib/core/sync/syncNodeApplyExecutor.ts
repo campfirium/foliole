@@ -168,7 +168,6 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
         result.conflictNodes.push(metadata);
       }
     }
-    await retainIncomingNodeVersionSource(tx, source, history);
     assertLocalRestoreApplied(options.operation, result.appliedIds.length, ordered.length);
     if (result.appliedIds.length > 0) await pruneLearningRowsWithoutVisibleNodes(tx);
   });
