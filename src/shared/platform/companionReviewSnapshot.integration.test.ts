@@ -8,7 +8,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
-  registerPlugin: () => ({})
+  registerPlugin: () => ({
+    configureFramedSyncPayloadBudget: async () => undefined,
+    closeFramedSyncPayloadBudget: async () => undefined
+  })
 }));
 
 import { createBetterSqlite3Driver } from '../../../electron/database/betterSqlite3Driver';

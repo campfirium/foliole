@@ -83,7 +83,7 @@ async function writeHighlights(highlightDir: string, extra: string) {
   );
 }
 
-it('uses the resolved Blob body for keep-import highlights and source preview', async () => {
+it('uses the complete node body for keep-import highlights and source preview', async () => {
   const fixture = await seedReadwiseArticleFixture(tempRoot);
   saveReadwiseKeepImportSettings(fixture);
   await runKeepImportRule(config(fixture.fullDocumentDir));
@@ -94,7 +94,7 @@ it('uses the resolved Blob body for keep-import highlights and source preview', 
   const initial = loadNodeBodyResolution(driver, nodeId);
   const localBody = `${initial?.status === 'resolved' ? initial.content : ''}\n\nLocal appendix.`;
   writeNodeBody({ content: localBody, driver, nodeId, title: 'Sample Article', updatedAt: '2026-09-04T03:00:00.000Z' });
-  driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', nodeId]);
+  driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [readState(nodeId).node!.body_blob_hash]);
 
   await writeHighlights(fixture.highlightDir, 'After the quote.');
   await runKeepImportRule(config(fixture.fullDocumentDir));
@@ -114,7 +114,7 @@ it('uses the resolved Blob body for keep-import highlights and source preview', 
   });
 });
 
-it('reports unavailable bodies without mutating import runs, children, or hashes', async () => {
+it('keeps the complete body available for import and source preview without a cached blob', async () => {
   const fixture = await seedReadwiseArticleFixture(tempRoot);
   saveReadwiseKeepImportSettings(fixture);
   await runKeepImportRule(config(fixture.fullDocumentDir));
@@ -134,13 +134,12 @@ it('reports unavailable bodies without mutating import runs, children, or hashes
   const result = await runKeepImportRule(config(fixture.fullDocumentDir));
   const after = readState(nodeId);
 
-  expect(result).toContainEqual(expect.objectContaining({
-    action: 'skipped',
-    failureReason: `node_body_unavailable:${nodeId}`
-  }));
+  expect(result.every((entry) => entry.failureReason !== `node_body_unavailable:${nodeId}`)).toBe(true);
   expect(after.node).toEqual(before.node);
   expect(after.children).toEqual(before.children);
-  expect(after.runs).toEqual(before.runs);
-  expect(after.body).toMatchObject({ bodyBlobHash: before.node!.body_blob_hash, status: 'unavailable' });
-  await expect(loadNodeSourceUpdatePreview(nodeId)).rejects.toThrow(`node_body_unavailable:${nodeId}`);
+  expect(after.body).toMatchObject({ content: before.node!.content, source: 'node', status: 'resolved' });
+  await expect(loadNodeSourceUpdatePreview(nodeId)).resolves.toMatchObject({
+    current_content: before.node!.content,
+    updated_content: expect.stringContaining('Unavailable replacement.')
+  });
 });

@@ -70,12 +70,12 @@ function readState(nodeId: string) {
   };
 }
 
-it('merges highlights against the resolved Blob body and preserves local edits', async () => {
+it('merges highlights against the complete node body and preserves local edits', async () => {
   const nodeId = createTopic();
   const driver = openDatabaseConnection().driver;
   const localBody = '# Article\n\nAlpha sentence.\n\nBeta sentence.\n\nLocal appendix.';
   writeNodeBody({ content: localBody, driver, nodeId, title: 'Article', updatedAt: '2026-09-04T04:01:00.000Z' });
-  driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', nodeId]);
+  driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [readState(nodeId).node!.body_blob_hash]);
 
   await expect(mergeReadwiseTopicHighlightsFromFile(nodeId, await writeHighlightFile())).resolves.toMatchObject({
     merged_highlight_count: 1,
@@ -89,18 +89,18 @@ it('merges highlights against the resolved Blob body and preserves local edits',
   expect(localBody.slice(locator.from, locator.to)).toBe('Beta sentence.');
 });
 
-it('leaves an unavailable topic unchanged when a manual merge is requested', async () => {
+it('merges a complete topic without a cached body blob', async () => {
   const nodeId = createTopic();
   const before = readState(nodeId);
   openDatabaseConnection().driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [before.node!.body_blob_hash]);
 
   await expect(mergeReadwiseTopicHighlightsFromFile(nodeId, await writeHighlightFile())).resolves.toEqual({
-    merged_highlight_count: 0,
+    merged_highlight_count: 1,
     node_id: nodeId,
-    status: 'error'
+    status: 'merged'
   });
   const after = readState(nodeId);
   expect(after.node).toEqual(before.node);
-  expect(after.children).toEqual(before.children);
-  expect(after.body).toMatchObject({ bodyBlobHash: before.node!.body_blob_hash, status: 'unavailable' });
+  expect(after.children).toHaveLength(1);
+  expect(after.body).toMatchObject({ content: before.node!.content, source: 'node', status: 'resolved' });
 });
