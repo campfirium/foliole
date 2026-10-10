@@ -2,12 +2,14 @@
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { DESKTOP_FRESH_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopFreshSchemaStatements.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 
 function oldDatabase(host: string) {
   const db = new Database(':memory:');
@@ -17,6 +19,7 @@ function oldDatabase(host: string) {
     /CREATE TABLE IF NOT EXISTS node_sync_(versions|conflicts) \(/.test(statement)
       ? statement.replace('object_id TEXT NOT NULL', 'object_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE')
       : statement);
+  removeCurrentInventoryFixtureTriggers(db);
   db.pragma(`user_version = ${host === 'desktop' ? 121 : 58}`);
   db.exec(`INSERT INTO nodes (id, kind, title, created_at, updated_at, current_version_id)
       VALUES ('node', 'topic', 'Node', 'now', 'now', 'head');
@@ -32,7 +35,10 @@ function oldDatabase(host: string) {
 
 function protectedFacts(db: Database.Database) {
   return ['node_sync_versions', 'node_sync_version_parents', 'node_version_local_origins', 'node_sync_conflicts']
-    .map(table => db.prepare(`SELECT * FROM ${table} ORDER BY 1`).all());
+    .map(table => db.prepare(table === 'node_sync_versions'
+      ? `SELECT version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text,
+          json_remove(snapshot_json, '$.content', '$.body_blob_hash') AS metadata FROM node_sync_versions ORDER BY 1`
+      : `SELECT * FROM ${table} ORDER BY 1`).all());
 }
 
 async function upgrade(db: Database.Database, host: string, fail = false) {

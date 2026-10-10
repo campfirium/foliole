@@ -6,11 +6,13 @@ import path from 'node:path';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+
 import { ANDROID_COMPANION_CORE_SCHEMA_STATEMENTS } from '../../lib/core/database/androidCompanionCoreSchemaStatements.js';
 import { bootstrapCompanionDatabase } from '../../lib/core/database/companionDatabaseLifecycle.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 
 it.each([false, true])('migrates canonical v4 attachments or atomically rejects the original fixture: %s', async (canonical) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-v4-upgrade-'));
@@ -60,6 +62,7 @@ it('upgrades the previous mobile schema and preserves attachment relationships a
     const port = createBetterSqliteDbPort(database, { name: 'ios-upgrade-attachment' });
     const request = { allowCreate: true, expectedHostName: 'ios-upgrade-device', now: '2026-09-20T00:00:00.000Z' };
     await bootstrapCompanionDatabase(port, request);
+    removeCurrentInventoryFixtureTriggers(database);
     database.exec('CREATE TABLE IF NOT EXISTS node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);');
     database.exec(`INSERT INTO node_order (node_id, position)
       SELECT value, ROW_NUMBER() OVER (ORDER BY parent_id, CAST(key AS INTEGER)) - 1

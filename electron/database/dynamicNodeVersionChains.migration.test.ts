@@ -2,15 +2,18 @@
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 
 function oldChain(db: Database.Database, group: boolean) {
-  db.exec(`INSERT INTO nodes (id, kind, title, current_version_id, sync_dirty, created_at, updated_at)
-    VALUES ('node', 'topic', 'Node', 'head', 0, 'now', 'now');
+  removeCurrentInventoryFixtureTriggers(db);
+  db.exec(`INSERT INTO nodes (id, kind, title, content, current_version_id, sync_dirty, created_at, updated_at)
+    VALUES ('node', 'topic', 'Node', 'current', 'head', 0, 'now', 'now');
     INSERT INTO node_sync_versions VALUES
       ('base', 'node', NULL, 'local', '1', 'base-hash', 'base', '{"content":"base"}'),
       ('shell', 'node', 'base', 'local', '2', 'shell-hash', NULL, '{"content":null}'),

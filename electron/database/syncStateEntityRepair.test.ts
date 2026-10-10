@@ -2,11 +2,13 @@
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
 
+
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { COMPANION_DATABASE_VERSION } from '../../lib/platform/nativeCompanionContract.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
+import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 
 const databases: Database.Database[] = [];
 afterEach(() => { for (const db of databases.splice(0)) db.close(); });
@@ -15,6 +17,7 @@ function fixture() {
   const db = new Database(':memory:');
   databases.push(db);
   initializeDatabaseSchema(db);
+  removeCurrentInventoryFixtureTriggers(db);
   db.exec(`DROP TRIGGER trg_sync_state_receipt_insert;
     DROP TRIGGER trg_sync_state_receipt_replace;
     DROP TRIGGER trg_sync_state_receipt_delete;

@@ -3,9 +3,12 @@
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
+
 import { DESKTOP_RESOURCE_SCHEMA_STATEMENTS } from '../../lib/core/database/desktopResourceSchemaStatements.js';
 import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { isRetiredAttachmentSchema } from '../../lib/core/database/retiredAttachmentSchema.js';
+
+import { removeCurrentInventoryFixtureTriggers } from './historicalMigration.test-support.js';
 
 it('starts normally while discarding retired desktop Sync Group state', () => {
   const sqlite = retiredDesktopSyncGroupFixture();
@@ -44,6 +47,7 @@ it('rolls back desktop cleanup and schema version on a failed startup', () => {
 function retiredDesktopSyncGroupFixture() {
   const sqlite = new Database(':memory:');
   initializeDatabaseSchema(sqlite);
+  removeCurrentInventoryFixtureTriggers(sqlite);
   for (const statement of DESKTOP_RESOURCE_SCHEMA_STATEMENTS.filter(isRetiredAttachmentSchema)) sqlite.exec(statement);
   sqlite.exec(`
     CREATE TABLE node_order (node_id TEXT PRIMARY KEY, position INTEGER NOT NULL);

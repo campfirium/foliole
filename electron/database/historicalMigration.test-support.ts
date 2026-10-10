@@ -79,3 +79,10 @@ export function createHistoricalImportSourcesTable(sqlite: DatabaseMigrationTarg
     last_imported_at TEXT NOT NULL, last_content_fingerprint TEXT NOT NULL, latest_node_id TEXT
   )`);
 }
+
+/** Current inventory triggers did not exist in these downgraded historical fixtures. */
+export function removeCurrentInventoryFixtureTriggers(sqlite: Database.Database) {
+  const triggers = sqlite.prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name LIKE 'trg_framed_inventory_%'")
+    .all() as { name: string }[];
+  for (const { name } of triggers) sqlite.exec(`DROP TRIGGER "${name.replaceAll('"', '""')}"`);
+}
