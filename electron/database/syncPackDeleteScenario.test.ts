@@ -144,9 +144,9 @@ function insertSourceNode() {
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
      ) VALUES ('desktop#1', 'node-delete', NULL, 'desktop-source',
-       '2026-05-04T08:00:00.000Z', 'node-delete-hash-1', '{"id":"node-delete","title":"Article To Delete"}')`
+       '2026-05-04T08:00:00.000Z', 'node-delete-hash-1', '', '{"id":"node-delete","title":"Article To Delete"}')`
   );
 }
 
@@ -165,9 +165,9 @@ function markSourceNodeDeleted() {
   );
   openDatabaseConnection().driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
      ) VALUES ('desktop#delete', 'node-delete', 'desktop#1', 'desktop-source',
-       '2026-05-04T08:05:00.000Z', 'node-delete-hash-2', '{"id":"node-delete","title":"Deleted Article"}')`
+       '2026-05-04T08:05:00.000Z', 'node-delete-hash-2', '', '{"id":"node-delete","title":"Deleted Article"}')`
   );
 }
 

@@ -112,9 +112,6 @@ it('mirrors indexed external documents into the main sync tables', async () => {
     expect.objectContaining({ object_id: 'folder-sync:beta.txt', sync_dirty: 1 })
   ]);
   const alpha = readMainExternalDocuments().find((document) => document.document_id === 'folder-sync:alpha.md');
-  expect(readContentBlob(String(alpha?.body_blob_hash))).toEqual({
-    availability: 'local',
-    hash: alpha?.body_blob_hash,
-    kind: 'text_body'
-  });
+  expect(alpha?.content).toBe('# Alpha\nMain cache copy');
+  expect(readContentBlob(String(alpha?.body_blob_hash))).toBeUndefined();
 });

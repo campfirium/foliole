@@ -90,7 +90,7 @@ it.each([false, true])('converges matching production heads after independent ov
   const bases = await loadMergeBaseCandidates(left.port, a.version_id!, b.version_id!);
   expect(bases.length).toBeGreaterThan(0);
   for (const id of bases) expect(left.db.prepare(
-    'SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(id)).toBeTypeOf('string');
+    'SELECT version_id FROM node_sync_versions WHERE version_id = ?').pluck().get(id)).toBe(id);
   await receivePack(left, right, toRight);
   for (const [source, target, pack] of [[right, left, toLeft], [left, right, toRight]] as const) {
     const receipt = (await loadPendingNodeVersionReceipts(target.port, source.id))
@@ -130,8 +130,7 @@ it('resolves different production heads while preserving both bodies when their 
   for (const peer of [left, right]) {
     const final = await current(peer);
     assertPersisted(peer, final.body_text!, final.version_id!);
-    const alternatives = peer.db.prepare("SELECT body_text FROM node_text_alternatives WHERE node_id = 'topic' AND status = 'available'")
-      .pluck().all() as string[];
+    const alternatives = (final.alternative_bodies ?? []).map((entry) => entry.text);
     expect(new Set([final.body_text, ...alternatives])).toEqual(new Set(['Left edit', 'Right edit']));
   }
 });

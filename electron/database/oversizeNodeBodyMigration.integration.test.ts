@@ -6,7 +6,7 @@ import { bodyPartNodeId } from '../../lib/core/database/bodyPartitionIdentity.js
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { projectNodeInlineContent } from '../../lib/core/database/nodeInlineProjection.js';
 import { recordLocalParentOrderVersion } from '../../lib/core/database/parentOrderVersionMutations.js';
 import { readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
@@ -114,7 +114,7 @@ it.each([false, true])('migrates oversized legacy blob bodies atomically without
   const host = await fixture(companion);
   await upgrade(host, companion);
   assertPreserved(host);
-  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 79 : 150);
+  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 79 : DATABASE_SCHEMA_VERSION);
   const orders = host.sqlite.prepare('SELECT * FROM parent_order_versions ORDER BY version_id').all();
   const nodes = host.sqlite.prepare('SELECT * FROM nodes ORDER BY id').all();
   await upgrade(host, companion);

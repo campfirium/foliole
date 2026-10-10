@@ -19,6 +19,7 @@ vi.mock('../ipc/paths.js', () => ({
 
 import { initializeDatabaseConnection } from '../../lib/core/database/index.js';
 import { buildNodeBodyContentSql } from '../../lib/core/database/nodeBodySql.js';
+import { readTopicTextSnapshot } from '../../lib/core/sync/topicTextBodies.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { applyCompanionSyncPushAsync } from './companionSyncPushAsyncApply.js';
@@ -93,7 +94,15 @@ function createDivergedTopicPush(body: string, versionId = 'android#branch'): Co
   };
 }
 
-it('creates one multi-parent resolution for non-overlapping text edits', async () => {
+function currentBodies() {
+  const driver = openDatabaseConnection().driver;
+  const row = driver.queryOne<{ body_text: string; snapshot_json: string }>(
+    `SELECT v.body_text, v.snapshot_json FROM node_sync_versions v
+     JOIN nodes n ON n.current_version_id = v.version_id WHERE n.id = 'topic-1'`)!;
+  return new Set([row.body_text, ...readTopicTextSnapshot(row.snapshot_json).bodies.map((body) => body.text)]);
+}
+
+it('preserves both complete non-overlapping edits in one multi-parent resolution', async () => {
   seedDivergedTopic('A1\nB\nC\n');
 
   const result = await applyCompanionSyncPushAsync([createDivergedTopicPush('A\nB\nC1\n')], 'android-device');
@@ -102,7 +111,7 @@ it('creates one multi-parent resolution for non-overlapping text edits', async (
   );
 
   expect(result.acks).toMatchObject([{ status: 'accepted', versionId: 'android#branch' }]);
-  expect(node?.content).toBe('A1\nB\nC1\n');
+  expect(currentBodies()).toEqual(new Set(['A1\nB\nC\n', 'A\nB\nC1\n']));
   expect(node?.updated_at).toBe('2026-05-03T02:00:00.001Z');
   expect(openDatabaseConnection().driver.queryAll(
     `SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ? ORDER BY ordinal`,
@@ -119,37 +128,17 @@ it('keeps one simple alternative when overlapping text edits cannot merge', asyn
 
   await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')], 'android-device');
 
-  expect(openDatabaseConnection().driver.queryAll<{ body_text: string; status: string }>(
-    `SELECT body_text, status FROM node_text_alternatives WHERE node_id = 'topic-1'`
-  )).toEqual([{ body_text: 'banana\nB\nC\n', status: 'available' }]);
+  expect(currentBodies()).toEqual(new Set(['banana\nB\nC\n', 'orange\nB\nC\n']));
 });
 
-it('publishes the superseded alternative before its same-device replacement', async () => {
+it('publishes alternatives as part of the current node version', async () => {
   seedDivergedTopic('banana\nB\nC\n');
-  const driver = openDatabaseConnection().driver;
-  driver.execute(
-    `INSERT INTO node_text_alternatives VALUES
-      ('alternative#old', 'topic-1', 'desktop#old', 'old body', 'desktop',
-       '2026-05-02T03:00:00.000Z', 'available', '2026-05-02T03:00:00.000Z')`
-  );
-  driver.execute(
-    `INSERT INTO sync_object_state
-      (object_type, object_id, state_seq, content_hash, last_modified_by_host_name, updated_at, sync_dirty)
-     VALUES ('node_text_alternative', 'alternative#old', 1, 'old-hash', 'desktop',
-       '2026-05-02T03:00:00.000Z', 0)`
-  );
-
   await applyCompanionSyncPushAsync([createDivergedTopicPush('orange\nB\nC\n')], 'android-device');
-
-  expect(driver.queryAll<{ object_id: string; state_seq: number }>(
-    `SELECT object_id, state_seq FROM sync_object_state WHERE object_type = 'node_text_alternative' ORDER BY state_seq`
-  )).toEqual([
-    { object_id: 'alternative#old', state_seq: 3 },
-    { object_id: expect.stringMatching(/^alternative#/), state_seq: 4 }
-  ]);
-  expect(driver.queryOne<{ status: string }>(
-    `SELECT status FROM node_text_alternatives WHERE alternative_id = 'alternative#old'`
-  )).toEqual({ status: 'superseded' });
+  expect(currentBodies()).toEqual(new Set(['banana\nB\nC\n', 'orange\nB\nC\n']));
+  const driver = openDatabaseConnection().driver;
+  expect(driver.queryAll("SELECT * FROM sync_object_state WHERE object_type = 'node_text_alternative'")).toEqual([]);
+  expect(driver.queryOne("SELECT sync_dirty FROM sync_object_state WHERE object_type = 'node' AND object_id = 'topic-1'"))
+    .toEqual({ sync_dirty: 1 });
 });
 
 it('absorbs multiple same-request branches into one stable resolution', async () => {
@@ -164,7 +153,7 @@ it('absorbs multiple same-request branches into one stable resolution', async ()
     `SELECT ${buildNodeBodyContentSql('nodes')} AS content, current_version_id FROM nodes LEFT JOIN content_blob_data cbd ON cbd.hash = nodes.body_blob_hash WHERE id = 'topic-1'`
   );
   expect(first.acks).toHaveLength(2);
-  expect(node?.content).toBe('A1\nB1\nC1\n');
+  expect(currentBodies()).toEqual(new Set(['A1\nB\nC\n', 'A\nB1\nC\n', 'A\nB\nC1\n']));
   expect(openDatabaseConnection().driver.queryAll(
     `SELECT parent_version_id FROM node_sync_version_parents WHERE version_id = ? ORDER BY parent_version_id`,
     [node!.current_version_id]

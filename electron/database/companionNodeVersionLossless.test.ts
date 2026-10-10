@@ -71,7 +71,7 @@ it('rebuilds and fast-forwards complete producer versions through the BetterSQLi
   expect(readPersistedSourceVersion(versionTwo.version_id!)).toEqual({
     body_blob_hash: hashTextBody('Version two'),
     content_hash: versionTwo.content_hash,
-    snapshot_json: JSON.stringify(versionTwo.snapshot),
+    snapshot_json: JSON.stringify({ ...versionTwo.snapshot, content: null }),
     state_hash: versionTwo.content_hash
   });
   const storedSource = loadNodeSyncVersionSource('folder-1')!;

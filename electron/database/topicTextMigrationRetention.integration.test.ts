@@ -44,7 +44,7 @@ it('uses the same one-time migration through the companion transaction port', as
   expect(host.sqlite.pragma('user_version', { simple: true })).toBe(76);
 });
 
-it('releases dismissed body bytes after whole-version edit holds end while retaining original relations', async () => {
+it('releases dismissed historical body bytes independently of edit holds while retaining original relations', async () => {
   const host = device(); const base = textBranch('base', 'Base');
   await host.receive([base, textBranch('a', 'Main body that is longer than the disposable alternative', base)]);
   const merged = await host.receive([textBranch('b', 'Disposable alternative', base)]);
@@ -53,8 +53,10 @@ it('releases dismissed body bytes after whole-version edit holds end while retai
   await mutateTopicText(host.db, { nodeId: 'topic', alternativeId: entry.id, action: 'dismissed',
     now: new Date().toISOString(), versionId: 'dismiss', hostName: 'Host' });
   await collectNodeVersionPayloads(host.db, 'topic', 100);
-  expect((await loadRetainedSyncNodeVersionFact(host.db, merged.version_id!))?.alternative_bodies)
-    .toContainEqual({ hash: entry.body_blob_hash, text: 'Disposable alternative' });
+  const retained = await loadRetainedSyncNodeVersionFact(host.db, merged.version_id!);
+  expect(retained?.version_id).toBe(merged.version_id);
+  expect(retained?.body_text).toBeNull();
+  expect(retained?.alternative_bodies).toBeUndefined();
   await releaseLocalEditBase(host.db, 'draft', 'topic');
   await collectNodeVersionPayloads(host.db, 'topic', 100);
   expect((await loadRetainedSyncNodeVersionFact(host.db, merged.version_id!))?.alternative_bodies).toBeUndefined();

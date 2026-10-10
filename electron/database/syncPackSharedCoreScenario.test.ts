@@ -146,7 +146,7 @@ function assertTargetRows(
      FROM nodes WHERE id = 'node-1'`
   ).get()).toEqual({
     body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
-    content: '',
+    content: 'Updated article body stays in body pack metadata.',
     current_version_id: expected.currentVersionId,
     sync_dirty: 0,
     title: expected.title
@@ -160,6 +160,7 @@ function assertTargetRows(
     sync_dirty: 0
   });
   expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM content_blobs').get()).toEqual({ count: 2 });
+  expect(connection.sqlite.prepare('SELECT COUNT(*) AS count FROM content_blob_data').get()).toEqual({ count: 0 });
 }
 
 function insertSourceNode() {
@@ -182,9 +183,9 @@ function insertSourceNode() {
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
      ) VALUES ('desktop#1', 'node-1', NULL, 'desktop-source',
-       '2026-05-04T05:00:00.000Z', 'node-hash-1', '{"id":"node-1","title":"Packed Article"}')`
+       '2026-05-04T05:00:00.000Z', 'node-hash-1', 'Article body stays in body pack metadata.', '{"id":"node-1","title":"Packed Article"}')`
   );
 }
 
@@ -206,9 +207,9 @@ function updateSourceNode() {
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
      ) VALUES ('desktop#2', 'node-1', 'desktop#1', 'desktop-source',
-       '2026-05-04T05:05:00.000Z', 'node-hash-2', '{"id":"node-1","title":"Packed Article Updated"}')`
+       '2026-05-04T05:05:00.000Z', 'node-hash-2', 'Updated article body stays in body pack metadata.', '{"id":"node-1","title":"Packed Article Updated"}')`
   );
 }
 

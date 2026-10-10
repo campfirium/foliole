@@ -2,7 +2,7 @@
 import Database from 'better-sqlite3';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
-import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -21,9 +21,9 @@ function restart(peer: Peer) {
 }
 
 function assertBody(peer: Peer, body: string) {
-  const bytes = peer.db.prepare('SELECT data FROM content_blob_data WHERE hash = ?')
-    .pluck().get(hashTextBody(body));
-  expect(bytes).toEqual(Buffer.from(body));
+  const stored = peer.db.prepare('SELECT body_text FROM node_sync_versions WHERE body_text = ?')
+    .pluck().get(body);
+  expect(stored).toBe(body);
 }
 
 it('preserves offline bases and branches, merges across three production libraries and restarts durably', async () => {
@@ -35,7 +35,7 @@ it('preserves offline bases and branches, merges across three production librari
   const baseBody = `left\nright\n${suffix}`;
   const onlineBody = `left-online\nright\n${suffix}`;
   const offlineBody = `left\nright-offline\n${suffix}`;
-  const mergedBody = `left-online\nright-offline\n${suffix}`;
+
   const base = edit(a, baseBody);
   await sync(a, c);
   const online = edit(a, onlineBody);
@@ -49,6 +49,10 @@ it('preserves offline bases and branches, merges across three production librari
   assertBody(a, baseBody);
   assertBody(c, offlineBody);
   await sync(b, c);
+  const selected = (await loadCurrentSyncNodeRecord(c.port, 'topic'))!;
+  const mergedBody = selected.body_text!;
+  expect(new Set([mergedBody, ...(selected.alternative_bodies ?? []).map((entry) => entry.text)]))
+    .toEqual(new Set([onlineBody, offlineBody]));
   assertPersisted(c, mergedBody);
   await sync(c, b);
   await sync(b, a);
@@ -66,7 +70,7 @@ it('preserves offline bases and branches, merges across three production librari
     expect(before.find((row) => row.version_id === online)?.parent_version_id).toBe(base);
     expect(before.find((row) => row.version_id === offline)?.parent_version_id).toBe(base);
     for (const row of before.filter((version) => version.body_text === null)) {
-      expect(JSON.parse(row.snapshot_json)).toMatchObject({ content: null, body_blob_hash: null });
+      expect(JSON.parse(row.snapshot_json)).toMatchObject({ content: null, body_deleted: true });
     }
   }
 });

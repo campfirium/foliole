@@ -45,11 +45,11 @@ it('keeps an actual frozen outbound parent complete through permanent node delet
   expectDeletion(peer, version, true);
 });
 
-it('keeps an active editor base complete through permanent node deletion', async () => {
+it('preserves editor base identity and retires its body through permanent node deletion', async () => {
   const peer = createPeer('local');
   const version = edit(peer, 'body');
   await retainLocalEditBase(peer.port, { holdId: 'draft', nodeId: 'topic', versionId: version });
-  expectDeletion(peer, version, true);
+  expectDeletion(peer, version, false);
 });
 
 it('keeps an unresolved conflict parent complete through permanent node deletion', () => {

@@ -8,6 +8,7 @@ import { buildCanonicalSyncTombstone } from '../../lib/core/sync/canonicalSyncTo
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncInventory, readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
+import { readFramedSyncPublishedBody } from '../../lib/core/sync/framedSyncPublishedBody.js';
 import { loadFramedSyncPublishedOutboundValue } from '../../lib/core/sync/framedSyncPublishedOutboundValue.js';
 import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
@@ -31,7 +32,7 @@ it('protects retired external document text independently for each unfinished re
     await upsertTextBodyBlob(tx, body, now, hash);
     await applySyncObjectInTransaction(tx, { object_type: 'external_document', object_id: 'document',
       content_hash: computeSyncContentHash('external_document', payload), deleted_at: null,
-      payload_json: JSON.stringify(payload), updated_at: now });
+      payload_json: JSON.stringify({ ...payload, content: body }), updated_at: now });
   });
   const difference = compareFramedSyncInventories({ local: await readFramedSyncInventory(peer.port), remote: [] })
     .find((entry) => entry.objectType === 'external_document')!;
@@ -60,7 +61,11 @@ it('protects retired external document text independently for each unfinished re
   const remaining = publications[1]!;
   const frozen = await loadFramedSyncPublishedOutboundValue(peer.port, remaining.context,
     Buffer.from(remaining.transferId).toString('hex'));
-  expect(frozen.blobs).toContainEqual(expect.objectContaining({ data_text: body, role: 5, sha256: hash }));
+  const blob = frozen.blobs.find((value) => value.role === 5 && value.sha256 === hash)!;
+  expect(blob).toBeDefined();
+  const bytes = await readFramedSyncPublishedBody(peer.port, remaining.context, {
+    transferId: frozen.transfer_id, hash, byteLength: Number(blob.byte_length) });
+  expect(new TextDecoder().decode(bytes)).toBe(body);
   await staging.persistTerminationRequest({ authorDeviceId: 'sender', memberId: remaining.context.receiverDeviceId,
     transferId: remaining.transferId });
   await staging.acknowledgeTermination(remaining.transferId, remaining.context.receiverDeviceId);

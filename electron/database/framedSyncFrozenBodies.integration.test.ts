@@ -74,7 +74,7 @@ it('replays the original main and alternative text after business bodies change 
 });
 
 it('releases temporary bytes only after all receiver holds and inbound pins finish', async () => {
-  const { host, publish } = await fixture();
+  const { host, record, publish } = await fixture();
   const first = await publish('first');
   const second = await publish('second');
   const pinned = second.manifest.blobs[0]!;
@@ -94,7 +94,11 @@ it('releases temporary bytes only after all receiver holds and inbound pins fini
   await expect(staging.releaseOutboundHolds(first.transferId)).rejects.toThrow('receipt_required_for_hold_release');
   await release(first);
   expect(host.sqlite.prepare('SELECT count(*) FROM framed_sync_available_blobs').pluck().get()).toBe(2);
-  await loadFramedSyncPublishedOutboundValue(host.db, context('second'), bytesToHex(second.transferId));
+  const frozen = await loadFramedSyncPublishedOutboundValue(host.db, context('second'), bytesToHex(second.transferId));
+  const blob = frozen.blobs[0]!;
+  const bytes = await readFramedSyncPublishedBody(host.db, context('second'), {
+    transferId: frozen.transfer_id, hash: blob.sha256, byteLength: Number(blob.byte_length) });
+  expect(new TextDecoder('utf-8', { ignoreBOM: true }).decode(bytes)).toBe(record.body_text);
   await release(second);
   expect(host.sqlite.prepare('SELECT count(*) FROM framed_sync_available_blobs').pluck().get()).toBe(1);
   host.sqlite.prepare('DELETE FROM framed_sync_blob_pins WHERE transfer_id = ?').run(second.transferId);
@@ -103,7 +107,7 @@ it('releases temporary bytes only after all receiver holds and inbound pins fini
   expect((await host.current()).body_text).toBe('\ufeffOriginal\r\n😀\u0000end');
 });
 
-it('releases each receiver independently while an editor keeps its original basis readable', async () => {
+it('releases each receiver independently while editor basis identity survives historical body retirement', async () => {
   const { host, record, publish } = await fixture();
   await retainLocalEditBase(host.db, { nodeId: 'topic', versionId: 'original', holdId: 'editor' });
   const first = await publish('first');
@@ -121,12 +125,12 @@ it('releases each receiver independently while an editor keeps its original basi
   };
   const originalBody = () => host.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id='original'").pluck().get();
   await release(first);
-  expect(originalBody()).toBe(record.body_text);
+  expect(originalBody()).toBeNull();
   expect(host.sqlite.prepare(`SELECT p.receiver_device_id FROM framed_sync_outbound_holds h
     JOIN framed_sync_outbound_publications p ON p.transfer_id = h.transfer_id`).pluck().all()).toEqual(['second']);
   await loadFramedSyncPublishedOutboundValue(host.db, context('second'), bytesToHex(second.transferId));
   await release(second);
-  expect(originalBody()).toBe(record.body_text);
+  expect(originalBody()).toBeNull();
   expect(host.sqlite.prepare('SELECT count(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(0);
   await releaseLocalEditBase(host.db, 'editor', 'topic');
   await collectNodeVersionPayloads(host.db, 'topic', Number.MAX_SAFE_INTEGER, true);

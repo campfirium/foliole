@@ -1,5 +1,6 @@
 import Database from 'better-sqlite3';
 
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import type { SyncIdentityFactTransfer } from '../../lib/core/sync/syncIdentityFactTransfer.js';
 import { readReadySyncIdentityGlobalPage } from '../../lib/core/sync/syncIdentityGlobalRead.js';
 import { applySyncIdentityPackWithDbPort } from '../../lib/core/sync/syncIdentityPackApply.js';
@@ -31,7 +32,7 @@ function seedHistory(reviewCount: number, body?: string) {
   if (body !== undefined) {
     driver.execute("UPDATE node_sync_versions SET body_text = ?, snapshot_json = ? WHERE version_id = ?",
       [body, JSON.stringify({ id: 'node-1', title: 'Node 1', content: body }), parent]);
-    driver.execute("UPDATE nodes SET content = ? WHERE id = 'node-1'", [body]);
+    driver.execute("UPDATE nodes SET content = ?, body_blob_hash = ? WHERE id = 'node-1'", [body, hashTextBody(body)]);
   }
   for (let index = 0; index < reviewCount; index++) {
     const id = `review-${String(index).padStart(4, '0')}`;

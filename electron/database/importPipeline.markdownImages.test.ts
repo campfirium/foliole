@@ -95,7 +95,7 @@ function expectAttachmentSyncRows(count: number) {
     .get()).toEqual({ count });
 }
 
-function expectImportedMarkdownImageContent(nodeRow: { body_blob_data: string; body_blob_hash: string; content: string }) {
+function expectImportedMarkdownImageContent(nodeRow: { body_blob_data: string | null; body_blob_hash: string; content: string }) {
   expect(nodeRow.content).toContain('![Cover](asset://');
   expect(nodeRow.content).toContain('![Chart](asset://');
   expect(nodeRow.content).toContain('![Absolute](asset://');
@@ -112,7 +112,7 @@ function expectImportedMarkdownImageContent(nodeRow: { body_blob_data: string; b
   expect(nodeRow.content).toContain('.jpg)');
   expect(nodeRow.content).not.toContain('![[Pasted image 2026-03-30 100000.png]]');
   expect(nodeRow.body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
-  expect(nodeRow.body_blob_data).toBe(nodeRow.content);
+  expect(nodeRow.body_blob_data).toBeNull();
 }
 
 async function expectStoredAttachmentFiles(args: {
@@ -156,7 +156,7 @@ it('routes local markdown images into attachments, leaves remote links unchanged
        LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.id = ?`
     )
-    .get(nodeId) as { body_blob_data: string; body_blob_hash: string; content: string };
+    .get(nodeId) as { body_blob_data: string | null; body_blob_hash: string; content: string };
   const persistedRun = openDatabaseConnection().sqlite
     .prepare('SELECT result_status, degraded_reason FROM import_runs WHERE id = ?')
     .get(imported.importId) as { degraded_reason: string | null; result_status: string };

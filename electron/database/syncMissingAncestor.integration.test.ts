@@ -1,6 +1,6 @@
 // @vitest-environment node
 import Database from 'better-sqlite3';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { loadNodeBodyResolution } from '../../lib/core/database/nodeBodyResolution.js';
 import { confirmOutboundNodeVersionPack } from '../../lib/core/sync/nodeVersionDeliveryProof.js';
@@ -16,12 +16,15 @@ import {
   buildPack, closeLibraries, createPeer, edit, joinPeers, receivePack, startLibraries, sync, type Peer
 } from './syncEmptyLibraryTestSupport.js';
 
-beforeEach(startLibraries);
-afterEach(closeLibraries);
+beforeEach(async () => {
+  await startLibraries();
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-10-07T00:00:00.000Z'));
+});
+afterEach(() => { closeLibraries(); vi.useRealTimers(); });
 
 const current = async (peer: Peer) => (await loadCurrentSyncNodeRecord(peer.port, 'topic'))!;
-const alternatives = (peer: Peer) => peer.db.prepare(`SELECT source_version_id, body_text, status
-  FROM node_text_alternatives WHERE node_id = 'topic' ORDER BY source_version_id`).all();
+const alternatives = async (peer: Peer) => ((await current(peer)).alternative_bodies ?? []).map((entry) => entry.text).sort();
 
 async function fork(equal = false, missingOnBoth = true) {
   const left = createPeer('left');
@@ -76,7 +79,7 @@ function assertReopened(peer: Peer, body: string, version: string, missing: stri
 it.each([false, true])('merges missing-base branches and retains available bodies through edit, restart and replay (equal=%s)', async (equal) => {
   const { left, right, fresh, a, b, c } = await fork(equal);
   const originals = [left, right].flatMap((peer) => peer.db.prepare(
-    'SELECT version_id, parent_version_id, body_text FROM node_sync_versions'
+    'SELECT version_id, parent_version_id, content_hash FROM node_sync_versions'
   ).all());
   const fromLeft = await buildPack(left, right);
   const fromRight = await buildPack(right, left);
@@ -84,23 +87,22 @@ it.each([false, true])('merges missing-base branches and retains available bodie
   await receivePack(right, left, fromRight);
   const merged = await current(left);
   expect(await current(right)).toEqual(merged);
-  if (equal) expect([b, c]).toContain(merged.version_id);
-  else expect(new Set(merged.parent_version_ids)).toEqual(new Set([b, c]));
+  expect(new Set(merged.parent_version_ids)).toEqual(new Set([b, c]));
   for (const peer of [left, right]) {
-    expect(peer.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id IN (?, ?)')
-      .pluck().all(b, c).sort()).toEqual(equal ? ['Shared body', 'Shared body'] : ['Left final\nx=0\n', 'Original\nx=1\n']);
+    expect(new Set([merged.body_text, ...await alternatives(peer)]))
+      .toEqual(new Set(equal ? ['Shared body'] : ['Left final\nx=0\n', 'Original\nx=1\n']));
     expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id = ?').get(a)).toBeUndefined();
-    if (equal) expect(alternatives(peer)).toEqual([]);
-    else expect(alternatives(peer)).toEqual([{ source_version_id: c, body_text: 'Original\nx=1\n', status: 'available' }]);
+    if (equal) expect(await alternatives(peer)).toEqual([]);
+    else expect(await alternatives(peer)).toEqual(['Original\nx=1\n']);
     for (const original of originals) expect(peer.db.prepare(
-      'SELECT version_id, parent_version_id, body_text FROM node_sync_versions WHERE version_id = ?'
+      'SELECT version_id, parent_version_id, content_hash FROM node_sync_versions WHERE version_id = ?'
     ).get((original as { version_id: string }).version_id)).toEqual(original);
     assertReopened(peer, merged.body_text!, merged.version_id!, [a]);
     restart(peer);
   }
   await exchange(left, fresh);
   assertReopened(fresh, merged.body_text!, merged.version_id!, [a]);
-  expect(alternatives(fresh)).toEqual(alternatives(left));
+  expect(await alternatives(fresh)).toEqual(await alternatives(left));
   const versionCount = left.db.prepare('SELECT count(*) FROM node_sync_versions').pluck().get();
   await receivePack(left, right, fromLeft);
   await receivePack(right, left, fromRight);
@@ -114,23 +116,24 @@ it.each([false, true])('merges missing-base branches and retains available bodie
   await exchange(left, fresh);
   for (const peer of [left, right, fresh]) {
     assertReopened(peer, 'Edited after merge', edited, [a]);
-    if (!equal) expect(alternatives(peer)).toEqual(alternatives(left));
+    if (!equal) expect(await alternatives(peer)).toEqual(await alternatives(left));
   }
 });
 
-it('restores a genuine base supplied by the peer and uses ordinary three-way text merging', async () => {
+it('restores peer base identity and preserves each complete divergent body', async () => {
   const { left, right, a, c } = await fork(false, false);
   await exchange(right, left);
   const merged = await current(left);
-  expect(merged.body_text).toBe('Left final\nx=1\n');
+  expect(new Set([merged.body_text, ...await alternatives(left)]))
+    .toEqual(new Set(['Left final\nx=0\n', 'Original\nx=1\n']));
   expect(merged.parent_version_ids).toContain(c);
-  expect(alternatives(left)).toEqual([]);
+  expect(await alternatives(left)).toEqual(['Original\nx=1\n']);
   await exchange(left, right);
   expect((await current(right)).version_id).toBe(merged.version_id);
   expect((await current(right)).body_text).toBe(merged.body_text);
   for (const peer of [left, right]) {
-    expect(peer.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(a))
-      .toBe('Original\nx=0\n');
+    expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id = ?').pluck().get(a))
+      .toBe(a);
     assertReopened(peer, merged.body_text!, merged.version_id!, []);
   }
 });
@@ -150,7 +153,7 @@ it('keeps the original anchored topic identity when companion pushes branches wh
   expect(result.acks.every((ack) => ack.canonicalObjectId === undefined)).toBe(true);
   const merged = await current(left);
   expect(new Set(merged.parent_version_ids)).toEqual(new Set([b, c]));
-  expect(alternatives(left)).toEqual([{ source_version_id: c, body_text: 'Original\nx=1\n', status: 'available' }]);
+  expect(await alternatives(left)).toEqual(['Original\nx=1\n']);
   expect((await applyNodePushBatchWithDbPort(left.port, [payload])).acks[0]?.status).toBe('accepted');
   assertReopened(left, merged.body_text!, merged.version_id!, [a]);
 });

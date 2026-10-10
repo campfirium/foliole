@@ -52,11 +52,11 @@ it.each([false, true])('retires only replaceable oversize historical text and pr
   expect((await host.current()).body_text).toBe('Current text');
 });
 
-it.each([false, true])('preserves oversize history still used by an editor companion=%s', async (companion) => {
+it.each([false, true])('retires oversize history while preserving editor basis identity companion=%s', async (companion) => {
   const host = await fixture(true);
   await upgrade(host, companion);
   expect(host.sqlite.prepare("SELECT length(CAST(body_text AS BLOB)) AS bytes FROM node_sync_versions WHERE version_id='base'").get())
-    .toEqual({ bytes: 1050000 });
+    .toEqual({ bytes: null });
   expect(host.sqlite.prepare('SELECT version_id FROM node_version_local_holds').all()).toEqual([{ version_id: 'base' }]);
 });
 
@@ -76,7 +76,7 @@ it.each([false, true])('retires an oversize owned alternative with its replaceab
   expect(row).toEqual({ body_text: null, payload: null, alternatives: JSON.stringify([alternative]) });
 });
 
-it.each([false, true])('preserves an oversize version referenced by an unretired publication companion=%s', async (companion) => {
+it.each([false, true])('retires oversize history while preserving publication fact references companion=%s', async (companion) => {
   const host = await fixture(false);
   host.sqlite.exec(`INSERT INTO framed_sync_outbound_publications VALUES
     (zeroblob(16), zeroblob(32), zeroblob(32), X'', '{"facts":[{"factId":"base","body":[]}]}',
@@ -86,7 +86,7 @@ it.each([false, true])('preserves an oversize version referenced by an unretired
   const facts = host.sqlite.prepare('SELECT * FROM framed_sync_outbound_fact_refs').all();
   await upgrade(host, companion);
   expect(host.sqlite.prepare("SELECT length(CAST(body_text AS BLOB)) AS bytes FROM node_sync_versions WHERE version_id='base'").get())
-    .toEqual({ bytes: 1050000 });
+    .toEqual({ bytes: null });
   expect(host.sqlite.prepare('SELECT * FROM framed_sync_outbound_fact_refs').all()).toEqual(facts);
 });
 
@@ -129,15 +129,15 @@ it('publishes previously protected oversize history as identity after the curren
   expect((await host.current()).body_text).toBe('Current text');
 });
 
-it('keeps an explicit editor hold when selecting oversize history for a new member', async () => {
+it('keeps editor basis identity while selecting retired oversize history for a new member', async () => {
   const host = await fixture(true);
   addNewMember(host);
   await host.db.transaction(async (tx) => {
     for await (const record of streamRetainedNodeVersions(tx, ['base'], 'topic')) {
-      expect(isNodeVersionIdentityOnly(record)).toBe(false);
+      expect(isNodeVersionIdentityOnly(record)).toBe(true);
     }
   });
   expect(host.sqlite.prepare("SELECT length(CAST(body_text AS BLOB)) AS bytes FROM node_sync_versions WHERE version_id='base'").get())
-    .toEqual({ bytes: 1050000 });
+    .toEqual({ bytes: null });
   expect(host.sqlite.prepare('SELECT version_id FROM node_version_local_holds').all()).toEqual([{ version_id: 'base' }]);
 });

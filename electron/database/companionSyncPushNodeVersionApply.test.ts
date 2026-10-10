@@ -123,15 +123,15 @@ function seedDeletedNode() {
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json, body_text
      ) VALUES ('ver_stale', 'node-restored', NULL, 'desktop',
-       '2026-05-03T00:30:00.000Z', 'desktop-stale-hash', '{}')`
+       '2026-05-03T00:30:00.000Z', 'desktop-stale-hash', '{}', '')`
   );
   driver.execute(
     `INSERT INTO node_sync_versions (
-       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
+       version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json, body_text
      ) VALUES ('ver_deleted', 'node-restored', 'ver_stale', 'desktop',
-       '2026-05-03T01:00:00.000Z', 'desktop-deleted-hash', '{}')`
+       '2026-05-03T01:00:00.000Z', 'desktop-deleted-hash', '{}', '')`
   );
   driver.execute(
     `UPDATE nodes SET current_version_id = 'ver_deleted' WHERE id = 'node-restored'`

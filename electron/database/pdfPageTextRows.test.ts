@@ -98,12 +98,11 @@ function readPdfReferenceNodeBody() {
   const database = openDatabaseConnection().sqlite;
   const row = database
     .prepare(
-      `SELECT n.body_blob_hash, n.opening_text, n.sync_dirty, CAST(cbd.data AS TEXT) AS body_blob_data
+      `SELECT n.body_blob_hash, n.opening_text, n.sync_dirty, n.content AS body
        FROM nodes n
-       LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
        WHERE n.id = ?`
     )
-    .get('node-pdf') as { body_blob_data: string; body_blob_hash: string; opening_text: string; sync_dirty: number };
+    .get('node-pdf') as { body: string; body_blob_hash: string; opening_text: string; sync_dirty: number };
   return row;
 }
 
@@ -150,7 +149,7 @@ it('marks removed PDF pages as deleted sync objects', () => {
   expect(countPdfPageTextChanges().count).toBe(0);
 });
 
-it('writes extracted PDF text as the reference node body blob for sync packs', () => {
+it('writes extracted PDF text as the owned reference body for sync packs', () => {
   seedPdfAttachment();
 
   savePdfPageTextRows(
@@ -163,7 +162,7 @@ it('writes extracted PDF text as the reference node body blob for sync packs', (
   );
 
   expect(readPdfReferenceNodeBody()).toMatchObject({
-    body_blob_data: '# Paper\n\nFirst extracted page.\n\nSecond extracted page.',
+    body: '# Paper\n\nFirst extracted page.\n\nSecond extracted page.',
     body_blob_hash: expect.stringMatching(/^[a-f0-9]{64}$/),
     opening_text: 'First extracted page. Second extracted page.',
     sync_dirty: 0

@@ -149,7 +149,7 @@ function expectNodeSnapshotPersistence(runs: ReturnType<typeof createStatementRu
     'Node 1',
     1,
     0,
-    '',
+    '# Node 1',
     'a967b9ba630730788949301bdf9d69edcf76fa157f72ebd013067fca71dd79e6',
     null,
     null,

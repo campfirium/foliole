@@ -109,10 +109,9 @@ async function applyConflictPack(
   const state = JSON.parse(version.snapshot_json);
   expect(state.text_alternatives).toHaveLength(1);
   const reference = state.text_alternatives[0];
-  const bytes = connection.sqlite.prepare(
-    'SELECT data FROM content_blob_data WHERE hash = ?'
-  ).get(reference.body_blob_hash) as { data: Buffer };
-  const alternative = { ...reference, body_text: bytes.data.toString('utf8') };
+  const body = state.text_alternative_bodies.find((entry: { hash: string }) => entry.hash === reference.body_blob_hash);
+  expect(body).toBeDefined();
+  const alternative = { ...reference, body_text: body.text };
   closeDatabaseConnection();
   return { alternative, current_version_id: current.current_version_id, parents, projection,
     snapshot: JSON.parse(version.snapshot_json), contentHash: version.content_hash };

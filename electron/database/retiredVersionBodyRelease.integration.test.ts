@@ -7,6 +7,7 @@ import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 import { describeVersionFact, probeSyncPackFactPresence } from '../../lib/core/sync/syncPackFactPresence.js';
 
+import { runLegacyBodyCollectionBatch } from './legacyBodyCollectionBatch.js';
 import { closeLibraries, createPeer, edit, history, startLibraries } from './syncEmptyLibraryTestSupport.js';
 
 beforeEach(startLibraries);
@@ -25,7 +26,8 @@ it.each(['driver', 'port'] as const)('releases existing retired hash residue thr
   const lineage = history(peer).map(({ version_id, parent_version_id }) => ({ version_id, parent_version_id }));
   const edges = peer.db.prepare('SELECT * FROM node_sync_version_parents').all();
   if (adapter === 'driver') collectNodeVersionChainWithDriver(peer.driver, 'topic');
-  else expect(await collectNodeVersionPayloads(peer.port, 'topic')).toEqual({ released: 1, skipped: null });
+  else expect(await collectNodeVersionPayloads(peer.port, 'topic')).toEqual({ released: 0, skipped: null });
+  while (!runLegacyBodyCollectionBatch({ driver: peer.driver, sqlite: peer.db }, 32).completed) { /* explicit cache collection */ }
   expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(hash)).toBeUndefined();
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash = ?').get(hash)).toBeUndefined();
   expect(history(peer).map(({ version_id, parent_version_id }) => ({ version_id, parent_version_id }))).toEqual(lineage);
@@ -40,7 +42,8 @@ it('retires replaced snapshot hashes during normal edits while retaining the cur
   expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?')
     .get(hashTextBody(ORIGINAL))).toBeUndefined();
   expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?')
-    .get(hashTextBody(CURRENT))).toBeDefined();
+    .get(hashTextBody(CURRENT))).toBeUndefined();
+  expect(peer.db.prepare("SELECT content FROM nodes WHERE id = 'topic'").pluck().get()).toBe(CURRENT);
   expect(history(peer).find((row) => row.version_id === original)).toMatchObject({ body_text: null });
 });
 
@@ -49,8 +52,9 @@ it('rolls back retired reference release when blob deletion fails', async () => 
   const original = edit(peer, ORIGINAL);
   edit(peer, CURRENT);
   const hash = upsertTextBodyBlob(peer.driver, ORIGINAL, 'now');
-  peer.db.prepare(`UPDATE node_sync_versions SET snapshot_json =
-    json_set(snapshot_json, '$.body_blob_hash', ?) WHERE version_id = ?`).run(hash, original);
+  peer.db.prepare(`UPDATE node_sync_versions SET body_text = ?, snapshot_json =
+    json_set(snapshot_json, '$.body_blob_hash', ?, '$.content', ?, '$.body_deleted', json('false'))
+    WHERE version_id = ?`).run(ORIGINAL, hash, ORIGINAL, original);
   const before = history(peer);
   peer.db.exec("CREATE TRIGGER fail_gc BEFORE DELETE ON content_blobs BEGIN SELECT RAISE(ABORT, 'fail'); END");
   await expect(collectNodeVersionPayloads(peer.port, 'topic')).rejects.toThrow('fail');
@@ -68,7 +72,7 @@ it('keeps an effective alternative and its source body intact during normal coll
   edit(peer, CURRENT);
   await collectNodeVersionPayloads(peer.port, 'topic');
   expect(history(peer).find((row) => row.version_id === original)?.body_text).toBe(ORIGINAL);
-  expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(hashTextBody(ORIGINAL))).toBeDefined();
+  expect(peer.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(hashTextBody(ORIGINAL))).toBeUndefined();
   expect(peer.db.prepare('SELECT * FROM node_text_alternatives').all()).toEqual(before);
 });
 

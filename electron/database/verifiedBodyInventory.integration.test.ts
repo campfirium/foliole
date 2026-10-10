@@ -86,9 +86,11 @@ it.each(['', '\ufeffDeleted original 中文😀\r\n' + 'x'.repeat(700_000)])(
       await applySyncNodesWithDbPort(host.db, [record]);
       const before = inventory(host)[0] as { content_hash: string; frontier_json: string };
       host.sqlite.prepare(`UPDATE node_sync_versions SET body_text = NULL,
-        snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_blob_hash', NULL) WHERE version_id = 'deletion'`).run();
+        snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_deleted', json('true')) WHERE version_id = 'deletion'`).run();
       const after = inventory(host)[0] as typeof before;
-      expect(after.content_hash).toBe(before.content_hash);
+      expect(after.content_hash).not.toBe(before.content_hash);
+      expect(host.sqlite.prepare("SELECT content_hash FROM node_sync_versions WHERE version_id = 'deletion'").pluck().get())
+        .toBe(record.content_hash);
       expect(after.frontier_json).toBe(before.frontier_json);
       expect(host.sqlite.prepare("SELECT body_hash FROM framed_sync_version_summary WHERE version_id = 'deletion'").get())
         .toEqual({ body_hash: hashTextBody('') });

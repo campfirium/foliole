@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, expect, it } from 'vitest';
 
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
+import { loadCurrentSyncNodeRecord } from '../../lib/core/sync/syncNodeGraph.js';
 
 import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
 
@@ -43,7 +44,10 @@ it('forwards the complete retained old base and merges a third offline device wi
   expect(b.db.prepare('SELECT device_identity_key FROM node_version_device_bases').pluck().all()).toEqual([a.id]);
   const offline = edit(c, 'left\nright-offline\n');
   await sync(b, c);
-  assertPersisted(c, 'left-online\nright-offline\n');
+  const selected = (await loadCurrentSyncNodeRecord(c.port, 'topic'))!;
+  expect(new Set([selected.body_text, ...(selected.alternative_bodies ?? []).map((entry) => entry.text)]))
+    .toEqual(new Set(['left-online\nright\n', 'left\nright-offline\n']));
+  assertPersisted(c, selected.body_text!);
   await sync(c, b);
   await sync(b, a);
   await sync(a, c);
@@ -51,7 +55,10 @@ it('forwards the complete retained old base and merges a third offline device wi
   await sync(c, a);
   await sync(b, c);
   for (const peer of [a, b, c]) {
-    assertPersisted(peer, 'left-online\nright-offline\n');
+    assertPersisted(peer, selected.body_text!);
+    const current = (await loadCurrentSyncNodeRecord(peer.port, 'topic'))!;
+    expect(new Set([current.body_text, ...(current.alternative_bodies ?? []).map((entry) => entry.text)]))
+      .toEqual(new Set(['left-online\nright\n', 'left\nright-offline\n']));
     const versions = history(peer);
     expect(versions).toHaveLength(4);
     expect(versions.map((row) => row.version_id)).toEqual(expect.arrayContaining([base, online, offline]));

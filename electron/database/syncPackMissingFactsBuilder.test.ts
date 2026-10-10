@@ -58,17 +58,18 @@ async function seedHeldHistory() {
   for (const versionId of ['desktop#node-1-v1', ...Array.from({ length: 22 }, (_, index) => `v${index + 2}`)]) {
     await retainLocalEditBase(port, { holdId: `draft-${versionId}`, nodeId: 'node-1', versionId });
   }
-  expect(await collectNodeVersionPayloads(port, 'node-1')).toEqual({ released: 0, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node-1')).toEqual({ released: 23, skipped: null });
   return port;
 }
 
-it('packs only the new version when the receiver has the earlier 23 still-held bodies and relations', async () => {
+it('packs only the new version when the receiver has the earlier 23 retired identities and relations', async () => {
   const port = await seedHeldHistory();
   const driver = openDatabaseConnection().driver;
   const index = loadDesktopSyncPackFactIndex(driver, { fromStateSeq: 0, frontierStateSeq: 1 });
   expect(index.to_state_seq).toBe(1);
   expect(index.versions).toHaveLength(24);
-  expect(index.versions[0]?.body_hash).toMatch(/^[a-f0-9]{64}$/u);
+  expect(index.versions[0]?.body_hash).toBeNull();
+  expect(index.versions.find((version) => version.version_id === 'v24')?.body_hash).toMatch(/^[a-f0-9]{64}$/u);
   const versions = ['desktop#node-1-v1', ...Array.from({ length: 22 }, (_, index) => `v${index + 2}`)];
   const parents = Array.from({ length: 22 }, (_, index) =>
     JSON.stringify([`v${index + 2}`, index === 0 ? 'desktop#node-1-v1' : `v${index + 1}`, 0]));

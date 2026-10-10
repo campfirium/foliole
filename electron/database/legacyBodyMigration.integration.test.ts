@@ -1,9 +1,10 @@
 // @vitest-environment node
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
 import { readDataMigrationState } from '../../lib/core/database/dataMigrationState.js';
 import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { writeNodeBody } from '../../lib/core/database/nodeBodyMutation.js';
 
 import { runLegacyBodyCollectionBatch } from './legacyBodyCollectionBatch.js';
 import { migrateLegacyBodyConsistency } from './legacyBodyConsistencyMigration.js';
@@ -11,7 +12,7 @@ import { BODY_COLLECTION_ID, BODY_REPAIR_ID } from './legacyBodyMigrationState.j
 import { assertPersisted, closeLibraries, createPeer, edit as editNode, history, joinPeers, startLibraries, sync } from './syncEmptyLibraryTestSupport.js';
 
 beforeEach(startLibraries);
-afterEach(closeLibraries);
+afterEach(() => { closeLibraries(); vi.useRealTimers(); });
 const NOW = '2026-10-01T00:00:00Z';
 function edit(peer: ReturnType<typeof createPeer>, body: string) {
   const version = editNode(peer, body);
@@ -30,9 +31,15 @@ it('upgrades in the schema transaction and publishes repaired facts through prod
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
-  const original = edit(source, 'Full original body');
-  source.db.prepare('UPDATE node_sync_versions SET body_text = ? WHERE version_id = ?').run('', original);
+  const original = edit(source, '');
   await sync(source, target);
+  const repairedAt = '2026-09-30T00:00:01.500Z';
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(repairedAt));
+  writeNodeBody({ driver: source.driver, nodeId: 'topic', title: 'Topic',
+    content: 'Full original body', updatedAt: repairedAt });
+  upsertTextBodyBlob(source.driver, 'Full original body', NOW);
+  source.db.prepare("UPDATE nodes SET sync_dirty = 0 WHERE id = 'topic'").run();
   const old = history(source);
   const garbage = upsertTextBodyBlob(source.driver, 'Unused', NOW);
   source.db.pragma('user_version = 123');

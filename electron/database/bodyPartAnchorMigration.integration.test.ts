@@ -5,7 +5,7 @@ import { afterEach, expect, it } from 'vitest';
 import { parseStoredAnchorLink } from '../../lib/core/database/anchorLinkCodec.js';
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
 import { COMPANION_SCHEMA_STATEMENTS } from '../../lib/core/database/companionSchemaStatements.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { DATABASE_SCHEMA_VERSION, initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
 import { readBodyPartIds, readPartitionedNodeBody } from '../../lib/core/database/partitionedNodeBody.js';
 import { expandPartitionedNodeForImport, partitionStoredNodeBody } from '../../lib/core/database/partitionedNodeBodyMutation.js';
 import { TEXT_BODY_MAX_BYTES } from '../../lib/core/nodes/textBodyBudget.js';
@@ -59,7 +59,7 @@ it.each([false, true])('migrates oversized child content while preserving its or
   expect(host.sqlite.prepare("SELECT parent_id, anchor_link FROM nodes WHERE id='annotation'").get())
     .toEqual({ parent_id: 'topic', anchor_link: host.anchor });
   expect(host.sqlite.prepare('SELECT count(*) FROM nodes WHERE anchor_link IS NOT NULL').pluck().get()).toBe(1);
-  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 79 : 150);
+  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 79 : DATABASE_SCHEMA_VERSION);
 });
 
 it.each([false, true])('keeps a bounded grouped highlight whole by adjusting the split boundary companion=%s', async companion => {
@@ -140,5 +140,5 @@ it.each([false, true])('migrates an ordinary oversized child under its short par
     expect(row.parent_id).toBe('ordinary-child');
     expect(Buffer.byteLength(row.content, 'utf8')).toBeLessThanOrEqual(TEXT_BODY_MAX_BYTES);
   }
-  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 79 : 150);
+  expect(host.sqlite.pragma('user_version', { simple: true })).toBe(companion ? 79 : DATABASE_SCHEMA_VERSION);
 });

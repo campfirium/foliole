@@ -121,7 +121,7 @@ it('accepts Android-exported numeric strings when applying external documents', 
     deleted_at: null,
     object_id: 'document-1',
     object_type: 'external_document',
-    payload_json: JSON.stringify(payload),
+    payload_json: JSON.stringify({ ...payload, content: 'body' }),
     updated_at: '2026-04-25T08:05:00.000Z'
   }]);
 
