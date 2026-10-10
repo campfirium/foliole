@@ -127,6 +127,17 @@ describe('run-shared-test-bucket', () => {
     });
   });
 
+  it('honors the hosted worker pool without changing test budgets', () => {
+    const invocation = buildSharedBucketInvocation(
+      'report.json', ['src/shared'], '/electron', '/repo', { CI: 'true', VITEST_POOL: 'forks' }
+    );
+    expect(invocation.args).toContain('--pool=forks');
+    expect(invocation.args).toContain('--testTimeout=15000');
+    expect(invocation.options.env.VITEST_POOL).toBe('forks');
+    expect(() => buildSharedBucketInvocation('report.json', [], '/electron', '/repo', { VITEST_POOL: 'unknown' }))
+      .toThrow('unsupported VITEST_POOL');
+  });
+
   it('leaves the shared bucket total timeout disabled unless explicitly configured', () => {
     expect(resolveTotalTimeoutMs({})).toBeNull();
     expect(resolveTotalTimeoutMs({ SHARED_TEST_BUCKET_TOTAL_TIMEOUT_SECONDS: '42' })).toBe(42000);

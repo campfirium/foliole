@@ -14,12 +14,14 @@ export function buildSharedBucketInvocation(
   repoRoot = process.cwd(),
   env = process.env
 ) {
+  const pool = env.VITEST_POOL?.trim() || 'threads';
+  if (!['forks', 'threads'].includes(pool)) throw new Error(`[shared-test-bucket] unsupported VITEST_POOL: ${pool}`);
   const scriptArgs = [
     'scripts/run-vitest-with-summary.mjs',
     reportPath,
     '--',
     '--silent=passed-only',
-    '--pool=threads',
+    `--pool=${pool}`,
     '--maxWorkers=2',
     '--no-file-parallelism',
     '--testTimeout=15000',
