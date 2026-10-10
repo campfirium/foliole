@@ -109,7 +109,7 @@ it.each(['ios-capacitor', 'android-capacitor'])('%s rejects the removed merge mo
   await provider.send('joinAccept', { requestId: pending.request_id });
   const joined = await completeCompanionSyncGroupJoin({
     ...args, providerDeviceId: peer.identity, providerDeviceName: 'Provider',
-    providerPlatform: 'darwin', requestId: pending.request_id
+    providerPlatform: process.platform, requestId: pending.request_id
   });
   expect(joined.group_id).toBe(groupId);
   sqlite!.close(); sqlite = new Database(local.database);
