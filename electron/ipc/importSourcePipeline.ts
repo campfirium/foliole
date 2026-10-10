@@ -9,6 +9,7 @@ import { buildRetainedDegradedImportContent } from '../../lib/core/import/contro
 import { convertHtmlToMarkdownCompatible, formatHtmlConversionDegradedReason } from '../../lib/core/import/htmlToMarkdownCompatible.js';
 import { normalizeImportNodeTitleStrategy, type ImportNodeTitleStrategy } from '../../lib/core/import/importManagerSettings.js';
 import type { NativeTextImportArgs } from '../../lib/platform/nativeContract.js';
+import { decodeTextFile } from '../import/decodeTextFile.js';
 
 import { buildPreparedImportRecord, type LoadPreparedImportOptions } from './importPreparedRecord.js';
 export {
@@ -75,7 +76,12 @@ export async function loadPreparedImportRecord(
   const payload =
     source.kind === 'epub' || source.kind === 'pdf'
       ? toImportPayload('', source.kind, source.sourceName)
-      : toImportPayload(await fs.readFile(source.filePath, 'utf8'), source.kind, source.sourceName);
+      : toImportPayload(
+        source.kind === 'text'
+          ? decodeTextFile(await fs.readFile(source.filePath))
+          : await fs.readFile(source.filePath, 'utf8'),
+        source.kind, source.sourceName
+      );
   return buildPreparedImportRecord(source, {
     ...payload,
     ...options,
