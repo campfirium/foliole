@@ -9,7 +9,7 @@ import type { DatabaseConnection } from './connection.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 
 /** Capture names before numbered migrations retire the old registry. No file operations. */
-export function captureLegacyAttachmentTargets(connection: DatabaseConnection) {
+export function captureLegacyAttachmentTargets(connection: Pick<DatabaseConnection, 'driver' | 'sqlite'>) {
   const targets = new Map<string, string>();
   const version = readUserVersion(connection.sqlite);
   if (version < 28 || version >= 119) return targets;
@@ -34,7 +34,7 @@ export function captureLegacyAttachmentTargets(connection: DatabaseConnection) {
 }
 
 /** Uses the same durable body/version path as editing, inside the upgrade transaction. */
-export function migrateLegacyAttachmentReferences(connection: DatabaseConnection,
+export function migrateLegacyAttachmentReferences(connection: Pick<DatabaseConnection, 'driver' | 'sqlite'>,
   targets: ReadonlyMap<string, string>, hostName: string) {
   if (!targets.size) return;
   const { driver } = connection;

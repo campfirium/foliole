@@ -111,7 +111,9 @@ it.each(['canonical', 'bare-hash', 'jpeg'].flatMap((legacyName) => [true, false]
   expect(readBody()).toContain(`asset://${hash}.jpg`);
   const versions = openDatabaseConnection().sqlite.prepare(
     'SELECT body_text FROM node_sync_versions WHERE object_id = ?').all('node-legacy') as Array<{ body_text: string }>;
-  expect(versions.some((row) => row.body_text.includes(`asset://${storageKey}`))).toBe(true);
+  expect(versions.some((row) => row.body_text?.includes(`asset://${hash}.jpg`))).toBe(true);
+  expect(openDatabaseConnection().sqlite.prepare("SELECT count(*) FROM node_sync_versions WHERE object_id = ? AND json_extract(snapshot_json, '$.body_deleted') = 1")
+    .pluck().get('node-legacy')).toBeGreaterThan(0);
   const head = openDatabaseConnection().sqlite.prepare(
     'SELECT v.body_text FROM node_sync_versions v JOIN nodes n ON n.current_version_id = v.version_id WHERE n.id = ?'
   ).get('node-legacy') as { body_text: string };
@@ -183,7 +185,7 @@ it.each([false, true])('rejects unsupported backups even with startup schema ski
   connection.sqlite.pragma(`user_version = ${DATABASE_SCHEMA_VERSION}`);
   if (skipSchema) vi.stubEnv('FOLIOLE_SKIP_STARTUP_SCHEMA_INIT', '1');
   await expect(restoreApplicationDatabaseBackup({ sourcePath: backupPath }))
-    .rejects.toThrow('Your current library has been restored');
+    .rejects.toThrow('Your current library is unchanged');
   expect(openDatabaseConnection().sqlite.prepare('SELECT title FROM nodes WHERE id = ?').get('keep-current'))
     .toEqual({ title: 'Current library' });
 });
@@ -213,7 +215,7 @@ it('rolls back when the required canonical attachment contains different bytes',
   const file = path.join(mockedAppDataDir, 'Foliole', 'Assets', `${hash}.jpg`);
   await fs.writeFile(file, 'different bytes');
   await expect(restoreApplicationDatabaseBackup({ sourcePath: backupPath }))
-    .rejects.toThrow('Your current library has been restored');
+    .rejects.toThrow('Your current library is unchanged');
   expect(openDatabaseConnection().sqlite.prepare('SELECT title FROM nodes WHERE id = ?').get('keep-current'))
     .toEqual({ title: 'Current after backup' });
   await expect(fs.readFile(file, 'utf8')).resolves.toBe('different bytes');
