@@ -15,6 +15,29 @@ interface Request {
   promise: Promise<Article>;
   scope: object;
 }
+interface DisplayedArticle {
+  article: Article;
+  libraryScope: string | undefined;
+  nodeId: string;
+  scope: object;
+}
+
+function useArticleInvalidation(snapshot: WorkspaceSnapshot | null,
+  latestSnapshot: MutableRefObject<WorkspaceSnapshot | null>,
+  current: MutableRefObject<Request | null>, displayed: MutableRefObject<DisplayedArticle | null>,
+  release: () => void) {
+  useLayoutEffect(() => {
+    latestSnapshot.current = snapshot;
+    const visible = displayed.current;
+    if (visible && (visible.libraryScope !== snapshot?.libraryScope ||
+      !companionReadingDemandKey(snapshot, visible.nodeId))) release();
+    const request = current.current;
+    if (request && request.key !== companionReadingDemandKey(snapshot, request.nodeId)) {
+      current.current = null;
+      if (!companionReadingDemandKey(snapshot, request.nodeId)) release();
+    }
+  }, [current, displayed, latestSnapshot, release, snapshot]);
+}
 
 function useReadingLifetime(
   current: MutableRefObject<Request | null>,
@@ -53,16 +76,14 @@ export function useCompanionReadableArticleLoader(
 ) {
   const latestSnapshot = useRef(snapshot);
   const current = useRef<Request | null>(null);
+  const displayed = useRef<DisplayedArticle | null>(null);
   const refreshedKey = useRef<string | null>(null);
   const release = useCallback(() => {
     current.current = null;
+    displayed.current = null;
     setReadableArticle(null);
   }, [setReadableArticle]);
-  useLayoutEffect(() => {
-    latestSnapshot.current = snapshot;
-    const request = current.current;
-    if (request && request.key !== companionReadingDemandKey(snapshot, request.nodeId)) release();
-  }, [release, snapshot]);
+  useArticleInvalidation(snapshot, latestSnapshot, current, displayed, release);
   const mounted = useReadingLifetime(current, release, onSnapshotChanged);
 
   const openReadableArticle = useCallback((nodeId: string | null): Promise<Article> => {
@@ -74,7 +95,8 @@ export function useCompanionReadableArticleLoader(
     }
     const scope = getCompanionReadingScope();
     if (current.current?.key === key && current.current.scope === scope) return current.current.promise;
-    release();
+    if (displayed.current?.nodeId !== nodeId || displayed.current.scope !== scope ||
+      displayed.current.libraryScope !== snapshot?.libraryScope) release();
     const request: Request = { key, nodeId, scope, promise: Promise.resolve(null) };
     current.current = request;
     const isCurrent = () => mounted.current && current.current === request &&
@@ -84,6 +106,7 @@ export function useCompanionReadableArticleLoader(
     ).then((article) => {
       if (!isCurrent()) return null;
       request.article = article;
+      displayed.current = article ? { article, libraryScope: snapshot?.libraryScope, nodeId, scope } : null;
       setReadableArticle(article);
       return article;
     }).catch(async (error: unknown) => {
@@ -99,9 +122,9 @@ export function useCompanionReadableArticleLoader(
     });
     return request.promise;
   }, [onError, onSnapshotChanged, release, setReadableArticle, snapshot]);
-  const currentRequest = current.current;
-  const readableArticle = currentRequest?.scope === getCompanionReadingScope() &&
-    currentRequest.key === companionReadingDemandKey(snapshot, currentRequest.nodeId)
-    ? currentRequest.article ?? null : null;
+  const visible = displayed.current;
+  const readableArticle = visible?.scope === getCompanionReadingScope() &&
+    visible.libraryScope === snapshot?.libraryScope &&
+    companionReadingDemandKey(snapshot, visible.nodeId) ? visible.article : null;
   return { openReadableArticle, readableArticle };
 }

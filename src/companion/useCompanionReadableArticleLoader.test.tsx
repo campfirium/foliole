@@ -113,4 +113,47 @@ describe('current article invalidation', () => {
     await expect(result.current('topic-1')).rejects.toThrow('read failed');
     await expect(result.current('topic-1')).resolves.toEqual({ nodeId: 'topic-1' });
   });
+
+
+});
+
+
+describe('displayed article lifetime', () => {
+  beforeEach(() => { loadArticle.mockReset(); });
+
+  it('keeps the displayed article mounted while its saved version is refreshed', async () => {
+    const initial = { nodeId: 'topic-1', content: 'original body' };
+    const replacement = deferred();
+    loadArticle.mockResolvedValueOnce(initial).mockReturnValueOnce(replacement.promise);
+    const snapshot = createSnapshot();
+    const setArticle = vi.fn();
+    const hook = renderHook(({ value }) => useCompanionReadableArticleLoader(value, setArticle), {
+      initialProps: { value: snapshot }
+    });
+    await act(async () => { await hook.result.current.openReadableArticle('topic-1'); });
+    setArticle.mockClear();
+    hook.rerender({ value: { ...snapshot, nodesById: { ...snapshot.nodesById,
+      'topic-1': { ...snapshot.nodesById['topic-1']!, currentVersionId: 'saved-version' } } } });
+    expect(hook.result.current.readableArticle).toEqual(initial);
+    expect(setArticle).not.toHaveBeenCalledWith(null);
+    const pending = hook.result.current.openReadableArticle('topic-1');
+    await act(async () => { await Promise.resolve(); });
+    expect(setArticle).not.toHaveBeenCalledWith(null);
+    await act(async () => {
+      replacement.resolve({ nodeId: 'topic-1', content: 'saved body' });
+      await pending;
+    });
+    expect(setArticle).toHaveBeenLastCalledWith({ nodeId: 'topic-1', content: 'saved body' });
+    await act(async () => { await hook.result.current.openReadableArticle(null); });
+    expect(setArticle).toHaveBeenLastCalledWith(null);
+  });
+
+  it.each(['library-change', 'node-removed'])('releases a displayed article on %s', async (change) => {
+    loadArticle.mockResolvedValue({ nodeId: 'topic-1', content: 'body' });
+    const { result, rerender, snapshot, setArticle } = setup();
+    await act(async () => { await result.current('topic-1'); });
+    rerender({ value: change === 'library-change' ? { ...snapshot, libraryScope: 'another-library' }
+      : { ...snapshot, nodesById: {}, nodeOrder: [] } });
+    expect(setArticle).toHaveBeenLastCalledWith(null);
+  });
 });
