@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import FolioleFramedSyncRuntime
 
@@ -90,6 +91,10 @@ struct FolioleFramedSyncReceivingTransfer {
             guard reference.byteLength <= 1_048_576, !chunk.data.isEmpty, chunk.offset == 0,
                   UInt64(chunk.data.count) == reference.byteLength,
                   bodyFrames[chunk.blobHash] == nil else { throw invalid("blob_chunk_not_admitted") }
+            guard String(data: chunk.data, encoding: .utf8) != nil,
+                  Data(SHA256.hash(data: chunk.data)) == reference.sha256 else {
+                throw invalid("inbound_attempt_manifest_mismatch")
+            }
             bodyFrames[chunk.blobHash] = .init(offset: 0, sequence: String(sequence), byteCount: chunk.data.count)
         }
     }

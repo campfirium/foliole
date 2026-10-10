@@ -43,6 +43,8 @@ final class FolioleFramedSyncResourceInboundTests: XCTestCase {
             """)
         XCTAssertEqual(resourceFrames.count, 2)
         XCTAssertTrue(resourceFrames.allSatisfy { $0[0] as? Int == 32 && $0[1] as? Int == 32 })
+        try assertReadyRetry(fact, resourceURL: resourceURL, outbound: outbound,
+            database: database, receiver: receiver, original: attempt, key: key)
 
         XCTAssertThrowsError(try receiver.withPublishedResources(
             transferID: received.transferID
@@ -55,6 +57,28 @@ final class FolioleFramedSyncResourceInboundTests: XCTestCase {
             root: attachments, transferID: received.transferID,
             attemptID: attempt.attemptID, hash: fact.blobs[0].sha256
         ).path))
+    }
+
+    private func assertReadyRetry(
+        _ fact: Foliole_Sync_V22_FactRecord, resourceURL: URL, outbound: FolioleFramedSyncOutboundSQLite,
+        database: FolioleFramedSyncTransferDatabase, receiver: FolioleFramedSyncTransferReceiver,
+        original: FolioleFramedSyncOutboundAttempt, key: String
+    ) throws {
+        let retry = try FolioleFramedSyncTransferWriter.prepare(groupKey: Data(repeating: 0, count: 32),
+            context: context(), facts: [fact], blobs: [.init(reference: fact.blobs[0], source: .file(resourceURL))],
+            staging: outbound)
+        let wire = try FolioleFramedSyncTransferWriter.replay(retry, staging: outbound)
+        XCTAssertNotEqual(retry.attemptID, original.attemptID)
+        try database.execute("""
+            CREATE TRIGGER reject_pin BEFORE INSERT ON framed_sync_ios_resource_pins
+            BEGIN SELECT RAISE(ABORT, 'resource_pin_rejected'); END
+            """)
+        XCTAssertThrowsError(try receiver.receive(wire, groupKey: Data(repeating: 0, count: 32), context: context()))
+        XCTAssertEqual(try database.rows("SELECT storage_key FROM framed_sync_ios_resource_pins").first?[0] as? String, key)
+        try database.execute("DROP TRIGGER reject_pin")
+        _ = try receiver.receive(wire, groupKey: Data(repeating: 0, count: 32), context: context())
+        XCTAssertEqual(try database.rows("SELECT active_attempt_id FROM framed_sync_ios_transfers").first?[0] as? Data,
+            original.attemptID)
     }
 
     private func makeFact(_ resource: Data) -> Foliole_Sync_V22_FactRecord {

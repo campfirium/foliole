@@ -74,6 +74,12 @@ final class FolioleFramedSyncInboundResources {
     }
 
     func finish(transferID: Data, attemptID: Data) throws -> Set<Data> {
+        try database.transaction {
+            try finishInTransaction(transferID: transferID, attemptID: attemptID)
+        }
+    }
+
+    private func finishInTransaction(transferID: Data, attemptID: Data) throws -> Set<Data> {
         let offers = try database.rows("""
             SELECT sha256, byte_length, role, required FROM framed_sync_ios_blob_offers
             WHERE transfer_id = ? AND attempt_id = ? AND role NOT IN (1, 5)

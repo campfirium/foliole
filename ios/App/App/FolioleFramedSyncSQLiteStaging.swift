@@ -105,12 +105,28 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
               AND receiver_device_id = ? AND receiver_library_epoch = ?
               AND state IN ('receiving', 'ready_to_apply')
             """, values: [frame.transferID] + Array(values.dropLast()))
-        guard let matched, matched[0] as? String == "receiving" || matched[1] as? Data == frame.attemptID else {
+        guard let matched else {
             throw FolioleFramedSyncValidationError("inbound_header_conflict")
         }
-        if matched[1] as? Data != frame.attemptID {
+        if matched[0] as? String == "ready_to_apply" {
+            try requireReadyManifest(header, transferID: frame.transferID, attemptID: matched[1] as? Data)
+        } else if matched[1] as? Data != frame.attemptID {
             try execute("UPDATE framed_sync_ios_transfers SET active_attempt_id = ? WHERE transfer_id = ?",
                         values: [frame.attemptID, frame.transferID])
+        }
+    }
+
+    private func requireReadyManifest(
+        _ header: Foliole_Sync_V22_TransferHeader, transferID: Data, attemptID: Data?
+    ) throws {
+        guard let attemptID, let stored = try row("""
+            SELECT authenticated_plaintext FROM framed_sync_ios_frames
+            WHERE transfer_id = ? AND attempt_id = ? AND sequence = '0'
+            """, values: [transferID, attemptID])?[0] as? Data,
+              case .transferHeader(let original) = try FolioleFramedSyncCodec.decode(
+                stored, authenticatedFrameType: FolioleFramedSyncFrameType.transferHeader.rawValue
+              ).payload, original.manifest == header.manifest else {
+            throw FolioleFramedSyncValidationError("inbound_header_conflict")
         }
     }
 
@@ -118,11 +134,12 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
         let sql = """
         SELECT 1 FROM framed_sync_ios_transfers t
         JOIN framed_sync_ios_frames first ON first.transfer_id = t.transfer_id
-          AND first.attempt_id = t.active_attempt_id AND first.sequence = '0'
-        WHERE t.transfer_id = ? AND t.active_attempt_id = ? AND t.state IN ('receiving', 'ready_to_apply')
+          AND first.attempt_id = ? AND first.sequence = '0'
+        WHERE t.transfer_id = ? AND (t.active_attempt_id = ? OR t.state = 'ready_to_apply')
+          AND t.state IN ('receiving', 'ready_to_apply')
           AND first.preamble = ?
         """
-        guard try row(sql, values: [frame.transferID, frame.attemptID, frame.preamble]) != nil else {
+        guard try row(sql, values: [frame.attemptID, frame.transferID, frame.attemptID, frame.preamble]) != nil else {
             throw FolioleFramedSyncValidationError("inbound_attempt_unavailable")
         }
     }
@@ -148,8 +165,10 @@ final class FolioleFramedSyncSQLiteStaging: FolioleFramedSyncDurableStaging {
             }
             return .identical
         }
-        guard try row("SELECT 1 FROM framed_sync_ios_transfers WHERE transfer_id = ? AND state = 'receiving'",
-                      values: [frame.transferID]) != nil else {
+        guard try row("""
+            SELECT 1 FROM framed_sync_ios_transfers WHERE transfer_id = ?
+              AND (state = 'receiving' OR (state = 'ready_to_apply' AND active_attempt_id != ?))
+            """, values: [frame.transferID, frame.attemptID]) != nil else {
             throw FolioleFramedSyncValidationError("inbound_ready_frame_missing")
         }
         let ciphertext = Data(SHA256.hash(data: frame.ciphertext))
