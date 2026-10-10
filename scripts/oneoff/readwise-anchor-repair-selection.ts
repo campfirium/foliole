@@ -63,8 +63,8 @@ function withLocators(anchor: RawAnchor, locators: TextLocator[]) {
 
 function readParent(driver: DatabaseDriver, nodeId: string) {
   return driver.queryOne<ParentRow>(
-    `SELECT n.title, n.body_blob_hash, n.current_version_id, CAST(cbd.data AS TEXT) AS body
-     FROM nodes n JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+    `SELECT n.title, n.body_blob_hash, n.current_version_id, n.content AS body
+     FROM nodes n
      WHERE n.id = ? AND n.deleted_at IS NULL`, [nodeId]
   );
 }

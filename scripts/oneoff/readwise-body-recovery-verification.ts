@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 
 import type { DatabaseDriver, DatabaseRow } from '../../lib/core/database/driver.js';
+import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 
 import { validateAnchorInContent } from './readwise-body-recovery-anchors.js';
 import type { RecoveryPlan } from './readwise-body-recovery-selection.js';
@@ -46,16 +47,16 @@ export function verifyRecoveredState(driver: DatabaseDriver, plan: RecoveryPlan,
   if (after.digest !== before.digest) throw new Error('recovery_invariant_digest_changed');
   for (const candidate of plan.apply) {
     const row = driver.queryOne<{
-      blob: string; body_blob_hash: string; body_text: string; content: string; current_version_id: string; version_object_id: string;
+      body_blob_hash: string; body_text: string; content: string; current_version_id: string; version_object_id: string;
       opening_text: string | null; search_content: string; snapshot_json: string;
     }>(
       `SELECT n.content, n.body_blob_hash, n.opening_text, n.current_version_id,
-              CAST(cbd.data AS TEXT) AS blob, v.body_text, v.snapshot_json, v.object_id AS version_object_id,
+              v.body_text, v.snapshot_json, v.object_id AS version_object_id,
               (SELECT content FROM search.node_search WHERE node_id = n.id LIMIT 1) AS search_content
-       FROM nodes n JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+       FROM nodes n
        JOIN node_sync_versions v ON v.version_id = n.current_version_id WHERE n.id = ?`, [candidate.nodeId]
     );
-    if (!row || row.content !== candidate.recoveryContent || row.blob !== candidate.recoveryContent ||
+    if (!row || row.content !== candidate.recoveryContent || row.body_blob_hash !== hashTextBody(candidate.recoveryContent) ||
       row.body_text !== candidate.recoveryContent || row.search_content !== candidate.recoveryContent ||
       row.version_object_id !== candidate.nodeId || !row.opening_text) {
       throw new Error(`recovered_body_verification_failed:${candidate.nodeId}`);
@@ -64,9 +65,9 @@ export function verifyRecoveredState(driver: DatabaseDriver, plan: RecoveryPlan,
     if (snapshot.body_blob_hash !== row.body_blob_hash) throw new Error(`recovered_snapshot_hash_failed:${candidate.nodeId}`);
     for (const anchor of candidate.anchors) {
       const child = driver.queryOne<{ anchor_link: string; body: string; body_text: string; version_object_id: string }>(
-        `SELECT n.anchor_link, COALESCE(CAST(cbd.data AS TEXT), n.content) AS body,
+        `SELECT n.anchor_link, n.content AS body,
                 v.body_text, v.object_id AS version_object_id
-         FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+         FROM nodes n
          JOIN node_sync_versions v ON v.version_id = n.current_version_id WHERE n.id = ?`, [anchor.childId]
       );
       if (!child || child.version_object_id !== anchor.childId || child.body_text !== child.body ||

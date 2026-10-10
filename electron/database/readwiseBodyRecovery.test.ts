@@ -92,8 +92,7 @@ function seedArticle(input: { childHistory?: boolean; childId?: string; nodeId: 
 
 function readResolvedBody(nodeId: string) {
   return openDatabaseConnection().driver.queryOne<{ body: string }>(
-    `SELECT CAST(cbd.data AS TEXT) AS body FROM nodes n
-     JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash WHERE n.id = ?`, [nodeId]
+    `SELECT n.content AS body FROM nodes n WHERE n.id = ?`, [nodeId]
   )?.body;
 }
 
@@ -119,7 +118,7 @@ it('uses unique originalText only when no historical locator snapshot exists', (
   expect(plan.apply[0]?.anchors).toMatchObject([{ source: 'unique_original_text', sourceVersionId: null }]);
 });
 
-it('reports unavailable and non-frontmatter-only records without changing them', () => {
+it('recovers without retired shared cache and reports meaningful current text for review', () => {
   seedArticle({ nodeId: 'article-unavailable' });
   const driver = openDatabaseConnection().driver;
   const hash = driver.queryOne<{ body_blob_hash: string }>('SELECT body_blob_hash FROM nodes WHERE id = ?', ['article-unavailable']);
@@ -133,8 +132,9 @@ it('reports unavailable and non-frontmatter-only records without changing them',
      '/Full Document Contents/Articles/manual.md', '2026-08-01', '2026-08-01', 'content', 'article-manual')`
   );
   const plan = buildRecoveryPlan(driver);
+  expect(plan.apply.map((item) => item.nodeId)).toContain('article-unavailable');
   expect(plan.manualReview.map((item) => item.reason)).toEqual(expect.arrayContaining([
-    'current_body_unavailable', 'non_frontmatter_only_history_is_longer'
+    'non_frontmatter_only_history_is_longer'
   ]));
 });
 

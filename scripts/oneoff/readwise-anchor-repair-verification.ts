@@ -57,12 +57,12 @@ export function verifyAnchorRepairState(
       version_object_id: string;
     }>(
       `SELECT c.anchor_link, c.anchor_resolution_status, c.anchor_source_version_id,
-              COALESCE(CAST(cbd.data AS TEXT), c.content) AS body,
+              c.content AS body,
               cv.body_text, cv.snapshot_json, cv.object_id AS version_object_id,
-              CAST(pbd.data AS TEXT) AS parent_body
-       FROM nodes c LEFT JOIN content_blob_data cbd ON cbd.hash = c.body_blob_hash
+              p.content AS parent_body
+       FROM nodes c
        JOIN node_sync_versions cv ON cv.version_id = c.current_version_id
-       JOIN nodes p ON p.id = c.parent_id JOIN content_blob_data pbd ON pbd.hash = p.body_blob_hash
+       JOIN nodes p ON p.id = c.parent_id
        WHERE c.id = ? AND p.id = ?`, [mutation.childId, mutation.parentId]
     );
     if (!row || row.anchor_link !== mutation.nextAnchorLink || row.anchor_resolution_status !== mutation.nextStatus ||
