@@ -113,6 +113,8 @@ it.each(['publication', 'partial', 'finalised'] as const)(
     expect(after.attempts).toEqual([]);
     expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).versions)
       .toContainEqual(expect.objectContaining({ body_text: 'Frozen body' }));
+    expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
+      .toContainEqual(expect.objectContaining({ id: nodeId, content: 'Latest body' }));
     expect(after.holds).toEqual([]);
   }
 );

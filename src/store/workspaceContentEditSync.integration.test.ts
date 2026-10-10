@@ -104,6 +104,34 @@ function assertVersionBody(databasePath: string, versionId: string, body: string
   expect(persisted(databasePath).versions.find((version) => version.version_id === versionId)?.body_text).toBe(body);
 }
 
+it('returns a saved edit based on the received version without introducing a text alternative', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  let succeeded = false;
+  try {
+    await fixture.left.seed({ nodeId, content: baseBody, title: 'Sequential article' });
+    await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
+    const receivedVersion = persisted(fixture.rightSnapshot.databasePath).node.current_version_id;
+    const versionId = 'ver_sequential_return';
+    await fixture.right.invoke('local_content_edit', { nodeId, baseVersionId: receivedVersion,
+      versionId, content: localBody, hostName: 'desktop-b', updatedAt: timestamp(1) });
+    await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+    for (const snapshot of [fixture.leftSnapshot, fixture.rightSnapshot]) {
+      const state = persisted(snapshot.databasePath);
+      expect(state.node).toEqual({ content: localBody, current_version_id: versionId });
+      expect(state.bodies).toEqual(new Set([localBody]));
+      expect(state.parents).toContainEqual({ version_id: versionId,
+        parent_version_id: receivedVersion, ordinal: 0 });
+    }
+    const restarted = await fixture.restartRight();
+    expect(persisted(restarted.snapshot.databasePath)).toEqual(persisted(fixture.leftSnapshot.databasePath));
+    succeeded = true;
+  } finally {
+    await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
+    if (succeeded) await fs.rm(fixture.root, { recursive: true, force: true });
+    else console.info('Sequential editor fixture:', fixture.root);
+  }
+}, 60_000);
+
 it('continues newer input from its acknowledged branch while independent edit holds survive sync receipts', async () => {
   const fixture = await createDesktopFramedSyncTwoProcessFixture();
   let succeeded = false;
