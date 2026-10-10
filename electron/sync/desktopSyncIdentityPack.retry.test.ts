@@ -1,3 +1,6 @@
+import os from 'node:os';
+import path from 'node:path';
+
 import { expect, it, vi } from 'vitest';
 
 import { buildSyncIdentityPackPage } from '../../lib/core/sync/syncIdentityPackPage.js';
@@ -38,8 +41,8 @@ it('retries a reset archive download with a fresh authenticated request', async 
   mocked.fetch.mockReset().mockRejectedValueOnce(Object.assign(new TypeError('fetch failed'), {
     cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' })
   })).mockImplementation(async (args: { outputPath: string }) => args.outputPath);
-  const archive = await downloadDesktopSyncIdentityArchive({ page, peer, outputRoot: '/tmp' });
-  expect(archive).toBe('/tmp/0.zip');
+  const archive = await downloadDesktopSyncIdentityArchive({ page, peer, outputRoot: os.tmpdir() });
+  expect(archive).toBe(path.join(os.tmpdir(), '0.zip'));
   expect(mocked.fetch).toHaveBeenCalledTimes(2);
   expect(mocked.fetch.mock.calls.map(([args]) => args.headers.nonce)).toEqual(['1', '2']);
   expect(mocked.decrypt).toHaveBeenCalledTimes(1);
@@ -48,13 +51,13 @@ it('retries a reset archive download with a fresh authenticated request', async 
 it('does not retry a rejected pack or silently exhaust more than one reset retry', async () => {
   mocked.posts = 0;
   mocked.fetch.mockReset().mockRejectedValue(new Error('sync_identity_pack_source_changed'));
-  await expect(downloadDesktopSyncIdentityArchive({ page, peer, outputRoot: '/tmp' }))
+  await expect(downloadDesktopSyncIdentityArchive({ page, peer, outputRoot: os.tmpdir() }))
     .rejects.toThrow('sync_identity_pack_source_changed');
   expect(mocked.fetch).toHaveBeenCalledTimes(1);
   mocked.fetch.mockReset().mockRejectedValue(Object.assign(new TypeError('fetch failed'), {
     cause: Object.assign(new Error('read ECONNRESET'), { code: 'ECONNRESET' })
   }));
-  await expect(downloadDesktopSyncIdentityArchive({ page, peer, outputRoot: '/tmp' }))
+  await expect(downloadDesktopSyncIdentityArchive({ page, peer, outputRoot: os.tmpdir() }))
     .rejects.toThrow('fetch failed');
   expect(mocked.fetch).toHaveBeenCalledTimes(2);
 });

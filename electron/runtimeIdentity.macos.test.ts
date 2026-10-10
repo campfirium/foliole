@@ -7,7 +7,7 @@ import { expect, it, vi } from 'vitest';
 import { FOLIOLE_APP_NAME, configureRuntimeAppIdentity } from './runtimeIdentity.js';
 
 it('brands the daily macOS development runtime with its distinct Dock icon', () => {
-  const appDataRoot = '/Users/roamer/Library/Application Support';
+  const appDataRoot = path.resolve('/Users/roamer/Library/Application Support');
   const hide = vi.fn();
   const setIcon = vi.fn();
   const app = {
@@ -30,7 +30,7 @@ it('brands the daily macOS development runtime with its distinct Dock icon', () 
 });
 
 it('keeps other unpackaged macOS runtimes on the standard Dock icon', () => {
-  const appDataRoot = '/Users/roamer/Library/Application Support';
+  const appDataRoot = path.resolve('/Users/roamer/Library/Application Support');
   const setIcon = vi.fn();
   const app = {
     dock: { hide: vi.fn(), setIcon },
@@ -50,7 +50,7 @@ it('keeps other unpackaged macOS runtimes on the standard Dock icon', () => {
 });
 
 it('keeps direct-distribution builds on the existing Foliole container data path', () => {
-  const appDataRoot = '/Users/roamer/Library/Application Support';
+  const appDataRoot = path.resolve('/Users/roamer/Library/Application Support');
   const setPath = vi.fn();
   const app = {
     getName: () => FOLIOLE_APP_NAME,
@@ -77,7 +77,7 @@ it('keeps direct-distribution builds on the existing Foliole container data path
 });
 
 it('keeps a packaged source build out of the official data and library paths', () => {
-  const appDataRoot = '/Users/roamer/Library/Application Support';
+  const appDataRoot = path.resolve('/Users/roamer/Library/Application Support');
   const appPath = fs.mkdtempSync(path.join(os.tmpdir(), 'foliole-source-identity-'));
   fs.writeFileSync(path.join(appPath, 'package.json'), JSON.stringify({ folioleBuildChannel: 'source' }));
   const setPath = vi.fn();

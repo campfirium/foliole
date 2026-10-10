@@ -9,6 +9,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { SyncGroupJoinDeviceFacts } from '../../lib/platform/syncGroupJoinContract.js';
+import { devicePathFlavorFromCanonicalLibraryPath } from '../../lib/platform/syncGroupUnifiedContract.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 
 import { buildRestoreFixture, startRestoreFixture } from './backupRestoreSyncGroup.testSupport.js';
@@ -54,7 +55,7 @@ async function port() {
 async function restoredApplicant(platform: string) {
   await fs.mkdir('.tmp/artifacts/sync-join', { recursive: true });
   root = await fs.mkdtemp(path.resolve('.tmp/artifacts/sync-join/mobile-'));
-  await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
+  await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
   const script = path.join(root, 'fixture.mjs');
   await buildRestoreFixture(script);
   const groupId = `group-${randomUUID()}`;
@@ -88,7 +89,7 @@ async function restoredApplicant(platform: string) {
   sqlite = new Database(local.database);
   mobile.port = createBetterSqliteDbPort(sqlite);
   mobile.facts = { canonical_library_path: local.device.canonical_library_path,
-    device_anchor: local.device.device_anchor, device_name: 'Mobile', path_flavor: 'posix', platform };
+    device_anchor: local.device.device_anchor, device_name: 'Mobile', path_flavor: devicePathFlavorFromCanonicalLibraryPath(local.device.canonical_library_path), platform };
   return { groupId, local, peer, provider };
 }
 
