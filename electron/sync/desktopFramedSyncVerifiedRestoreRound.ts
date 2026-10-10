@@ -65,6 +65,11 @@ async function restoreRound(input: RestoreRound) {
     }
     return true;
   });
+  if (complete) notifyWorkspaceSyncApplied({
+    appliedNodeIds: confirmed.local.filter(entry => entry.objectType === 'node').map(entry => entry.globalId),
+    appliedObjectIds: confirmed.local.filter(entry => entry.objectType !== 'node')
+      .map(entry => `${entry.objectType}:${entry.globalId}`), appliedReviewOpIds: []
+  });
   const resources = complete ? await runDesktopFramedSyncResourceRound(
     { ...input.inbound, roundId: confirmed.roundId },
     confirmed.local.filter((entry) => entry.objectType === 'node').map((entry) => entry.globalId)) : undefined;

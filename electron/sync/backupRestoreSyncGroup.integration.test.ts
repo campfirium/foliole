@@ -135,7 +135,7 @@ for (const pause of [false, true]) {
 }
 
 for (const enabled of [false, true]) {
-  it(`joins a retained group after local-only restore with Sync ${enabled ? 'on' : 'off'}`, async () => {
+  it(`adopts a retained group after local-only restore with Sync ${enabled ? 'on' : 'off'}`, async () => {
     await fs.mkdir(path.resolve('.tmp/artifacts/sync-join'), { recursive: true });
     root = await fs.mkdtemp(path.resolve('.tmp/artifacts/sync-join/multi-'));
     await fs.symlink(path.resolve('node_modules'), path.join(root, 'node_modules'), 'dir');
@@ -156,7 +156,7 @@ for (const enabled of [false, true]) {
     expect(restored.group).toBeUndefined();
     expect(restored.participation).toMatchObject({ sync_enabled: enabled, sync_paused: true, participating: false });
     await joining.send('seed', { id: 'restored-note', content: 'Restored local note' });
-    const pending = await joining.send('joinRequest', { origin: peer.origin }) as unknown as {
+    const pending = await joining.send('joinRequest', { origin: peer.origin, mode: 'use-group' }) as unknown as {
       join_request: { request_id: string }; sync_paused: boolean; sync_group: unknown
     };
     expect(pending.sync_paused).toBe(true);
@@ -165,9 +165,9 @@ for (const enabled of [false, true]) {
     await expect(joining.send('joinComplete')).rejects.toThrow();
     expect((await joining.send('snapshot')).participation).toEqual(restored.participation);
     await joining.send('pendingRestore', { pending: true, groupId });
-    await expect(joining.send('joinRequest', { origin: peer.origin })).rejects.toThrow('backup_restore_sync_confirmation_required');
+    await expect(joining.send('joinRequest', { origin: peer.origin, mode: 'use-group' })).rejects.toThrow('backup_restore_sync_confirmation_required');
     await joining.send('pendingRestore', { pending: false });
-    const retry = await joining.send('joinRequest', { origin: peer.origin }) as unknown as typeof pending;
+    const retry = await joining.send('joinRequest', { origin: peer.origin, mode: 'use-group' }) as unknown as typeof pending;
     await provider.send('joinAccept', { requestId: retry.join_request.request_id });
     await joining.send('pendingRestore', { pending: true, groupId });
     await expect(joining.send('joinComplete')).rejects.toThrow('backup_restore_sync_confirmation_required');
@@ -178,13 +178,12 @@ for (const enabled of [false, true]) {
       { timeout: 20000 }).toBe('Retained remote note').catch((error) => {
         throw new Error(`${String(error)}\nProvider: ${provider.diagnostics()}\nJoining: ${joining.diagnostics()}`);
       });
-    await expect.poll(async () => (await provider.send('snapshot')).library.nodesById['restored-note']?.content,
-      { timeout: 20000 }).toBe('Restored local note');
+    expect((await provider.send('snapshot')).library.nodesById['restored-note']).toBeUndefined();
     const reopened = await joining.send('reopen');
     expect(reopened.group).toBe(groupId);
     expect(reopened.participation).toMatchObject({ sync_enabled: true, sync_paused: false, participating: true });
-    expect(reopened.library.nodesById['restored-note']?.content).toBe('Restored local note');
+    expect(reopened.library.nodesById['restored-note']).toBeUndefined();
     expect((await provider.send('reopen')).library.nodesById['provider-note']?.content).toBe('Retained remote note');
-    await expect(joining.send('joinRequest', { origin: peer.origin })).rejects.toThrow('sync_group_identity_mismatch');
+    await expect(joining.send('joinRequest', { origin: peer.origin, mode: 'use-group' })).rejects.toThrow('sync_group_identity_mismatch');
   }, 90000);
 }
