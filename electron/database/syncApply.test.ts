@@ -149,16 +149,9 @@ it('applies remote sync nodes into state, version table, and attachment links', 
     sync_dirty: 0,
     title: 'Remote Node'
   });
-  expect(
-    Buffer.from(
-      (connection.sqlite.prepare(
-        `SELECT cbd.data
-         FROM nodes n
-         INNER JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
-         WHERE n.id = ?`
-      ).get('node-1') as { data: Uint8Array }).data
-    ).toString('utf8')
-  ).toBe('remote body');
+  expect(connection.sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
+    .pluck().get('phone#1')).toBe('remote body');
+  expect(connection.sqlite.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
   expect(
     connection.sqlite.prepare(
       `SELECT version_id, parent_version_id, host_name, created_at, content_hash, snapshot_json

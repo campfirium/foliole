@@ -11,7 +11,7 @@ import { applyLocalContentEdit } from '../../lib/core/sync/localContentEdit.js';
 import { loadNodeOwnedArticleResourceNeeds } from '../../lib/core/sync/nodeOwnedArticleResourceNeeds.js';
 import { retainLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor.js';
-import { hashTextBodyContent, upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
+import { hashTextBodyContent } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
 
 import { createBetterSqlite3Driver } from './betterSqlite3Driver.js';
@@ -51,16 +51,14 @@ it('persists current node resources through production version creation and remo
   try {
     const body = `![image](asset://${image})`;
     const bodyHash = await hashTextBodyContent(body, {});
-    await upsertTextBodyBlob(source.port, body, 'now', bodyHash);
     source.db.prepare(`INSERT INTO nodes (id, title, content, body_blob_hash, resource_references, sync_dirty, created_at, updated_at)
-      VALUES ('article', 'Article', '', ?, ?, 1, 'now', 'now')`).run(bodyHash, references);
+      VALUES ('article', 'Article', ?, ?, ?, 1, 'now', 'now')`).run(body, bodyHash, references);
     expect(flushNodeSyncVersionWithDriver(source.driver, 'article', 'source')).toBeTruthy();
     const record = currentRecord(source);
     expect((await applySyncNodesWithDbPort(target.port, [record])).appliedIds).toEqual(['article']);
     expect(target.db.prepare('SELECT resource_references FROM nodes WHERE id = ?').get('article'))
       .toEqual({ resource_references: references });
-    expect((await loadNodeOwnedArticleResourceNeeds(target.port, ['article'])).unreadableArticleIds).toEqual(['article']);
-    await upsertTextBodyBlob(target.port, body, 'now', bodyHash);
+    expect((await loadNodeOwnedArticleResourceNeeds(target.port, ['article'])).unreadableArticleIds).toEqual([]);
     expect((await loadNodeOwnedArticleResourceNeeds(target.port, ['article'])).needs.map((need) => need.storageKey).sort())
       .toEqual([image, pdf]);
     const nodes = { article: { id: 'article' } as WorkspaceNodeSnapshot };

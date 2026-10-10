@@ -159,12 +159,19 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
   const remoteNodeIdsInBatch = new Set(ordered.map((record) => record.object_id));
   const invalidatedAt = new Date().toISOString();
   await assertLocalRestoreCanApply(port, options.operation, ordered);
+  const preparedHashes = new Map<M, string>();
+  for (const metadata of ordered) {
+    const record = await source.load(port, metadata);
+    const hash = (await prepareSyncNodeTextBodyHashes([record], options)).get(record);
+    if (hash) preparedHashes.set(metadata, hash);
+  }
   await port.transaction(async (tx) => {
     const history = await prepareIncomingNodeVersionSource(tx, source);
     await retainIncomingNodeVersionSource(tx, source, history);
     for (const metadata of ordered) {
       const record = await source.load(tx, metadata);
-      if (await applyIncomingRecord({ tx, record, result, options, invalidatedAt, remoteNodeIdsInBatch })) {
+      if (await applyIncomingRecord({ tx, record, result, options, invalidatedAt, remoteNodeIdsInBatch,
+        preparedTextBodyHash: preparedHashes.get(metadata) })) {
         result.conflictNodes.push(metadata);
       }
     }
@@ -177,13 +184,15 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
 async function applyIncomingRecord(input: {
   tx: DbPort; record: NativeSyncNodeRecord; result: Omit<ApplySyncNodesWithDbPortResult, 'conflictNodes' | 'conflictRecords'>;
   options: ApplySyncNodesWithDbPortOptions; invalidatedAt: string; remoteNodeIdsInBatch: ReadonlySet<string>;
+  preparedTextBodyHash: string | undefined;
 }) {
   const { tx, record, result, options } = input;
   if (await handleTombstoneGuard({ options, record, result, tx })) return false;
   const localNode = await loadLocalNodeSyncState(tx, record.object_id);
   const decision = await decideNodeApply(tx, localNode, record, options.operation);
   if (decision === 'apply_missing_local' || decision === 'apply_fast_forward') {
-    const preparedTextBodyHashes = await prepareSyncNodeTextBodyHashes([record], options);
+    const preparedTextBodyHashes = new Map<NativeSyncNodeRecord, string>();
+    if (input.preparedTextBodyHash) preparedTextBodyHashes.set(record, input.preparedTextBodyHash);
     await applyAcceptedRemoteNode({ ...input, localNode, preparedTextBodyHashes,
       operation: options.operation ?? 'remote_sync' });
     return false;
