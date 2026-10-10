@@ -9,7 +9,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const native = vi.hoisted(() => ({ loadPendingShares: vi.fn(), acknowledgeShare: vi.fn() }));
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true, isPluginAvailable: () => true },
-  registerPlugin: () => native
+  registerPlugin: () => ({ ...native,
+    configureFramedSyncPayloadBudget: async () => {}, closeFramedSyncPayloadBudget: async () => {}
+  })
 }));
 
 import { readShareOriginalFacts } from '../../electron/database/companionShareRecoveryTestSupport';
@@ -214,10 +216,11 @@ it.each([true, false])('preserves a permanent deletion with receipt present = %s
   expect(database!.prepare(`SELECT version_id, body_text, json_extract(snapshot_json, '$.content') AS content
     FROM node_sync_versions WHERE version_id IN (?, ?) ORDER BY version_id`)
     .all(`ver_share_${deliveryId}`, 'ver_before_delete')).toEqual([
-      { version_id: 'ver_before_delete', body_text: 'Edited before permanent deletion',
-        content: 'Edited before permanent deletion' },
+      { version_id: 'ver_before_delete', body_text: null, content: null },
       { version_id: `ver_share_${deliveryId}`, body_text: null, content: null }
     ]);
+  expect(database!.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
+    .get('ver_deleted')).toEqual({ body_text: 'Edited before permanent deletion' });
   expect(facts().topics).toHaveLength(0);
   expect(database!.prepare('SELECT node_id FROM node_sync_tombstones WHERE node_id = ?').all(topicId)).toHaveLength(1);
   if (!receiptPresent) database!.prepare("DELETE FROM companion_meta WHERE key LIKE 'share-delivery:%'").run();

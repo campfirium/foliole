@@ -44,6 +44,8 @@ it('keeps PDF page text classified as workspace sync content', () => {
     conflict: 'lww',
     scope: 'workspace',
     key: 'pdf_page_text',
+    ownership: 'workspace',
+    recovery: 'saved',
     objectType: 'pdf_page_text',
     pushIssue: 'review_required',
     storage: ['pdf_page_text'],

@@ -145,7 +145,11 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
 
     func testWaitsForRequestedTopicText() throws {
         let app = acceptanceApplication()
-        app.launch()
+        if ProcessInfo.processInfo.environment["FOLIOLE_ATTACH_TO_RUNNING_APP"] == "1" {
+            app.activate()
+        } else {
+            app.launch()
+        }
         openBrowse(in: app)
         waitForVisibleTopicText(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_TOPIC_PREFIX"),
                                 text: requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT"), in: app)
@@ -164,7 +168,11 @@ final class FoliolePhysicalSyncGroupUITests: XCTestCase {
 
     func testAppendsToRequestedTopic() throws {
         let app = acceptanceApplication()
-        app.launch()
+        if ProcessInfo.processInfo.environment["FOLIOLE_ATTACH_TO_RUNNING_APP"] == "1" {
+            app.activate()
+        } else {
+            app.launch()
+        }
         appendToVisibleTopic(prefix: requiredEnvironment("FOLIOLE_PHYSICAL_TOPIC_PREFIX"),
                              existingText: requiredEnvironment("FOLIOLE_PHYSICAL_EXPECTED_TEXT"),
                              text: requiredEnvironment("FOLIOLE_PHYSICAL_APPEND_TEXT"), in: app)

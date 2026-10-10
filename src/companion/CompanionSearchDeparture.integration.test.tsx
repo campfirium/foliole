@@ -8,7 +8,10 @@ import * as searchApi from '../shared/platform/companionFullTextSearch';
 import { CompanionSearchContent } from './CompanionSearchContent';
 
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({})
+  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({
+    configureFramedSyncPayloadBudget: async () => {},
+    closeFramedSyncPayloadBudget: async () => {}
+  })
 }));
 let library: Awaited<ReturnType<typeof createSearchLibrary>> | null = null;
 afterEach(async () => {

@@ -10,7 +10,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 const lifecycle = vi.hoisted(() => ({ background: null as (() => void) | null }));
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
-  registerPlugin: () => ({})
+  registerPlugin: () => ({
+    configureFramedSyncPayloadBudget: async () => {},
+    closeFramedSyncPayloadBudget: async () => {}
+  })
 }));
 vi.mock('../shared/platform/appLifecycle', () => ({
   subscribeNativeAppBackground: async (handler: () => void) => {

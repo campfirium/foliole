@@ -10,7 +10,10 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
-  registerPlugin: () => ({})
+  registerPlugin: () => ({
+    configureFramedSyncPayloadBudget: async () => {},
+    closeFramedSyncPayloadBudget: async () => {}
+  })
 }));
 
 import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';

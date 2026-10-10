@@ -10,7 +10,10 @@ import { useCompanionSearch } from './useCompanionSearch';
 import { useCompanionSearchTopicOpen } from './useCompanionSearchTopicOpen';
 
 vi.mock('@capacitor/core', () => ({
-  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({})
+  Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true }, registerPlugin: () => ({
+    configureFramedSyncPayloadBudget: async () => {},
+    closeFramedSyncPayloadBudget: async () => {}
+  })
 }));
 let library: Awaited<ReturnType<typeof createSearchLibrary>> | null = null;
 afterEach(async () => { await library?.close(); library = null; });

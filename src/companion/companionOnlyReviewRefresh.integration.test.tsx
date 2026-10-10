@@ -23,7 +23,10 @@ import { useCompanionFlowSession } from './useCompanionFlowSession';
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => 'android', isNativePlatform: () => true },
-  registerPlugin: () => ({})
+  registerPlugin: () => ({
+    configureFramedSyncPayloadBudget: async () => {},
+    closeFramedSyncPayloadBudget: async () => {}
+  })
 }));
 
 const past = '2020-01-01T00:00:00.000Z';
