@@ -7,8 +7,17 @@ import { expect, it } from 'vitest';
 
 it('does not load node_modules native binaries before fixed runtime preparation', () => {
   const repoRoot = path.resolve(import.meta.dirname, '../..');
-  const script = "await import('./scripts/windows/windows-dev-build.mjs');"
-    + ' process.stdout.write(JSON.stringify(process.report.getReport().sharedObjects));';
+  const script = `
+    const loaded = [];
+    const originalDlopen = process.dlopen;
+    process.dlopen = function (...args) {
+      const result = Reflect.apply(originalDlopen, this, args);
+      loaded.push(args[1]);
+      return result;
+    };
+    await import('./scripts/windows/windows-dev-build.mjs');
+    process.stdout.write(JSON.stringify(loaded));
+  `;
   const output = execFileSync(process.execPath, ['--input-type=module', '-e', script], {
     cwd: repoRoot, encoding: 'utf8'
   });
