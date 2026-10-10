@@ -17,6 +17,12 @@ import { nodeVersionSyncAdapter, type SyncPushAck } from './companionSyncPushPro
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
+function mobilePeer(id: string) {
+  const peer = createPeer(id);
+  peer.db.pragma('journal_mode = WAL');
+  return peer;
+}
+
 async function mobileEdit(peer: Peer, baseVersionId: string, content: string, versionId: string, second: number) {
   return applyLocalContentEdit(peer.port, { baseVersionId, content, hideTitleHeading: false,
     hostName: peer.name, nodeId: 'topic', title: 'Topic', updatedAt: `2026-09-30T01:00:0${second}.000Z`, versionId },
@@ -41,8 +47,8 @@ function mobileStore(peer: Peer) {
 }
 
 it('pushes each successive production mobile edit when synchronized immediately', async () => {
-  const desktop = createPeer('desktop');
-  const mobile = createPeer('mobile');
+  const desktop = mobilePeer('desktop');
+  const mobile = mobilePeer('mobile');
   joinPeers(desktop, mobile);
   initializeMobileHost(mobile);
   let base = edit(desktop, '123');
@@ -63,8 +69,8 @@ it('pushes each successive production mobile edit when synchronized immediately'
 });
 
 it.each([false, true])('pushes offline edits and retires only the intermediate body (collection=%s)', async (collect) => {
-  const desktop = createPeer('desktop');
-  const mobile = createPeer('mobile');
+  const desktop = mobilePeer('desktop');
+  const mobile = mobilePeer('mobile');
   joinPeers(desktop, mobile);
   initializeMobileHost(mobile);
   const a = edit(desktop, '123');
@@ -98,8 +104,8 @@ it.each([false, true])('pushes offline edits and retires only the intermediate b
 });
 
 it.each([false, true])('keeps shared highlight history and later edits across a delayed branch receipt (overlap=%s)', async (overlap) => {
-  const desktop = createPeer('desktop');
-  const mobile = createPeer('mobile');
+  const desktop = mobilePeer('desktop');
+  const mobile = mobilePeer('mobile');
   joinPeers(desktop, mobile);
   initializeMobileHost(mobile);
   const anchor = { id: 'shared-anchor', kind: 'highlight' as const };
@@ -150,8 +156,8 @@ async function persistedBodies(peer: Peer) {
 }
 
 it.each(['folder', 'item'] as const)('keeps shared %s identity and ancestry during concurrent edits', async (kind) => {
-  const desktop = createPeer('desktop');
-  const mobile = createPeer('mobile');
+  const desktop = mobilePeer('desktop');
+  const mobile = mobilePeer('mobile');
   joinPeers(desktop, mobile);
   initializeMobileHost(mobile);
   const a = edit(desktop, '', 'Original', null, kind);
