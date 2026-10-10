@@ -16,10 +16,13 @@ vi.mock('@capacitor/core', () => ({
   })
 }));
 
+import { toWorkspaceNativeNodeVersion } from '../../lib/core/database/workspaceNodeSyncVersion';
+import { applySyncNodesWithDbPort } from '../../lib/core/sync/syncNodeApplyExecutor';
 import type { NativeCompanionWorkspaceSyncState } from '../../lib/platform/nativeCompanionSyncContract';
 import { renderWithLocalization } from '../shared/localization/testLocalization';
 import * as workspaceRepository from '../shared/platform/companion/companionWorkspaceRepository';
 import { loadCompanionWorkspaceNode } from '../shared/platform/companion/runtime/companionWorkspaceNodeStore';
+import { writeIosCompanionDatabase } from '../shared/platform/companion/runtime/iosCompanionActiveDatabase';
 import {
   closeIosCompanionDatabase, initializeIosCompanionDatabase,
   type IosCompanionDatabaseManager
@@ -87,6 +90,7 @@ function AnnotationSurface({ initial }: { initial: NativeCompanionWorkspaceSyncS
     ...actions, state, bootstrapState: { device_id: 'annotation-device' }
   } as ReturnType<typeof useCompanionWorkspaceSync>);
   return <>
+    <button onClick={async () => setState(await loadCompanionWorkspaceSyncState())}>Refresh workspace</button>
     <button onClick={() => setOpen(false)}>Dismiss</button>
     <button onClick={() => setOpen(true)}>Open selection</button>
     <button onClick={() => setSelection({ ...payload, anchorId: 'another-anchor' })}>Change selection</button>
@@ -99,6 +103,36 @@ function AnnotationSurface({ initial }: { initial: NativeCompanionWorkspaceSyncS
 function savedAnnotations() {
   return database!.prepare("SELECT * FROM nodes WHERE parent_id = 'source'").all();
 }
+
+it.each(['highlight', 'note'])('preserves %s interaction across an incoming saved body and workspace refresh', async (kind) => {
+  const node = { id: 'source', kind: 'topic' as const, title: 'Source', content: 'Alpha Beta Gamma',
+    parentNodeId: null, isTitleManual: true, hideTitleHeading: false, reveal: null, anchorLink: null,
+    reading: null, review: null, createdAt: '2026-10-10T00:00:00Z', updatedAt: '2026-10-10T00:00:00Z' };
+  const base = await toWorkspaceNativeNodeVersion(node, 'remote', 'base');
+  await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [base], { enqueueSearchInvalidations: false }));
+  renderWithLocalization(<AnnotationSurface initial={await loadCompanionWorkspaceSyncState()} />);
+  if (kind === 'note') {
+    fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
+    fireEvent.change(screen.getByPlaceholderText('Add annotation...'), { target: { value: 'Unsaved reader note' } });
+  }
+  const incoming = await toWorkspaceNativeNodeVersion({ ...node, currentVersionId: 'base',
+    content: 'Alpha Beta Gamma remote saved tail', updatedAt: '2026-10-10T00:00:01Z' }, 'remote', 'received');
+  await act(async () => {
+    await writeIosCompanionDatabase(db => applySyncNodesWithDbPort(db, [incoming], { enqueueSearchInvalidations: false }));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh workspace' }));
+  });
+  if (kind === 'note') expect(screen.getByPlaceholderText('Add annotation...')).toHaveValue('Unsaved reader note');
+  expect(screen.getByRole('button', { name: 'Highlight' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: kind === 'note' ? 'Save' : 'Highlight' }));
+  await waitFor(() => expect(savedAnnotations()).toHaveLength(1));
+  await waitFor(() => expect(screen.queryByRole('toolbar')).toBeNull());
+  const saved = savedAnnotations();
+  expect(saved[0]).toMatchObject({ content: kind === 'note' ? 'Beta\n※ Unsaved reader note' : 'Beta' });
+  expect(await loadCompanionWorkspaceNode('source')).toMatchObject({ content: incoming.body_text, currentVersionId: 'received' });
+  await closeIosCompanionDatabase();
+  await openLibrary();
+  expect(savedAnnotations()).toEqual(saved);
+});
 
 it.each(['Highlight', 'Cloze', 'note'])('retries only the refresh after saving %s', async (kind) => {
   const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
