@@ -7,6 +7,7 @@ import { pendingFramedSyncOverwriteDifferences } from '../../lib/core/sync/frame
 import { finishSyncGroupLocalAdoption, type SyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { finishSyncGroupOverwriteProgress, loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../lib/core/sync/syncGroupOverwriteProgress.js';
 import { loadLatestSyncGroupRestoreEvent, markSyncGroupRestoreApplied } from '../../lib/core/sync/syncGroupRestoreEvents.js';
+import { withDesktopForegroundTimeMaintenance } from '../database/foregroundTimeMaintenance.js';
 import { clearReadwiseDeviceConnection } from '../database/readwiseDeviceConnection.js';
 
 import { createDesktopFramedSyncInboundBatchDelivery } from './desktopFramedSyncInboundBatchRound.js';
@@ -24,6 +25,11 @@ type RestoreRound = {
 
 /** An explicit overwrite clears once, then uses the ordinary per-unit receive and receipt path. */
 export async function runVerifiedDesktopFramedSyncRestoreRound(input: RestoreRound) {
+  return withDesktopForegroundTimeMaintenance(() => restoreRound(input),
+    async () => !(await loadSyncGroupOverwriteProgress(input.inbound.db)));
+}
+
+async function restoreRound(input: RestoreRound) {
   const { db } = input.inbound;
   const overwriteId = input.adoption?.libraryEpoch ?? input.restoreId;
   if (!overwriteId) throw new Error('sync_group_overwrite_missing');
@@ -44,23 +50,7 @@ export async function runVerifiedDesktopFramedSyncRestoreRound(input: RestoreRou
   clearReadwiseDeviceConnection();
   if (reset.cleared) notifyWorkspaceSyncApplied({ appliedNodeIds: reset.removedNodeIds,
     appliedObjectIds: [], appliedReviewOpIds: [] });
-  const inventories = await exchangePartialInventory(input);
-  let transferred = 0;
-  const deliveredDifferences: FramedSyncInventoryDifference[] = [];
-  const differences = compareFramedSyncDatabaseInventories(inventories)
-    .filter((difference) => difference.direction === 'remote_to_local');
-  const deliver = createDesktopFramedSyncInboundBatchDelivery(differences,
-    { ...input.inbound, roundId: inventories.roundId });
-  const deferred = await deliverFramedSyncDifferencesInDependencyOrder(
-    differences,
-    async (difference) => {
-      const result = await deliver(difference);
-      if (result.sent) transferred += 1;
-      if (result.state === 'delivered') deliveredDifferences.push(difference);
-      return result.state;
-    }, framedSyncOrderBodyDependencies(inventories));
-  const confirmed = await exchangePartialInventory(input);
-  const pending = pendingFramedSyncOverwriteDifferences({ ...confirmed, deliveredDifferences }).length;
+  const { confirmed, deliveredDifferences, pending, deferred, transferred } = await receiveRestoreDifferences(input);
   if (pending || deferred.length) return { complete: false, pending: Math.max(pending, deferred.length), transferred };
   const complete = await db.transaction(async (tx) => {
     const currentInventory = await readFramedSyncOverwriteInventory(tx, inboundContext(input));
@@ -79,6 +69,25 @@ export async function runVerifiedDesktopFramedSyncRestoreRound(input: RestoreRou
     { ...input.inbound, roundId: confirmed.roundId },
     confirmed.local.filter((entry) => entry.objectType === 'node').map((entry) => entry.globalId)) : undefined;
   return { complete, pending: complete ? 0 : 1, transferred, resources };
+}
+
+async function receiveRestoreDifferences(input: RestoreRound) {
+  const inventories = await exchangePartialInventory(input);
+  let transferred = 0;
+  const deliveredDifferences: FramedSyncInventoryDifference[] = [];
+  const differences = compareFramedSyncDatabaseInventories(inventories)
+    .filter((difference) => difference.direction === 'remote_to_local');
+  const deliver = createDesktopFramedSyncInboundBatchDelivery(differences,
+    { ...input.inbound, roundId: inventories.roundId });
+  const deferred = await deliverFramedSyncDifferencesInDependencyOrder(differences, async (difference) => {
+    const result = await deliver(difference);
+    if (result.sent) transferred += 1;
+    if (result.state === 'delivered') deliveredDifferences.push(difference);
+    return result.state;
+  }, framedSyncOrderBodyDependencies(inventories));
+  const confirmed = await exchangePartialInventory(input);
+  const pending = pendingFramedSyncOverwriteDifferences({ ...confirmed, deliveredDifferences }).length;
+  return { confirmed, deliveredDifferences, pending, deferred, transferred };
 }
 
 async function exchangePartialInventory(input: RestoreRound) {

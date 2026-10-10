@@ -4,5 +4,6 @@ export const foregroundTimeHistoryArgsSchema = z.object({ fromDay: z.string(), t
 export type ForegroundTimeHistoryArgs = z.infer<typeof foregroundTimeHistoryArgsSchema>;
 export interface ForegroundTimeHistory {
   coverageFrom: string;
+  totalDurationMs: number;
   days: { day: string; durationMs: number }[];
 }

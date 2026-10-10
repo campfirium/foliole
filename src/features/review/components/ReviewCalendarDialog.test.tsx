@@ -9,6 +9,9 @@ vi.mock('./useReviewCalendar', () => ({ useReviewCalendar: () => ({
   months: Array.from({ length: 12 }, (_, index) => new Date(2026, 5 + index, 1)),
   today: '2026-06-01', counts: () => ({ items: 0, topics: null }), failed: false, retry: vi.fn()
 }) }));
+vi.mock('./useForegroundTimeHistory', () => ({ useForegroundTimeHistory: () => ({
+  totalDurationMs: 120_000, duration: () => 60_000, failed: false, retry: vi.fn()
+}) }));
 
 import { runAppCommand } from '../../../app/hooks/appCommands';
 import { ReviewShortcutHarness } from '../../../app/hooks/useReviewKeyboardShortcuts.testUtils';
@@ -23,6 +26,7 @@ it('opens all twelve months together with both quantity columns and zero-padded 
   render(<ReviewCalendarDialog />);
   act(() => runAppCommand(APP_COMMAND_IDS.openReviewCalendar, {} as never));
   const table = within(await screen.findByRole('dialog')).getByRole('table');
+  expect(screen.getByRole('status', { name: 'desktop.foregroundTime.total' })).toHaveTextContent('2m');
   expect(within(table).getByRole('columnheader', { name: 'June' })).toBeVisible();
   expect(within(table).getByRole('columnheader', { name: 'May' })).toBeVisible();
   expect(within(table).getAllByRole('columnheader', { name: /Items$/ })).toHaveLength(12);

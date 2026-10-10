@@ -135,3 +135,28 @@ it('upgrades desktop and companion storage while retaining existing reading data
     expect(db.prepare('SELECT started_at FROM foreground_time_coverage').pluck().get()).toBeTruthy();
   }
 });
+
+it('returns a lifetime total independent of the requested calendar window, including each unsaved excess once', async () => {
+  const db = instance(); await save(db, sourceA, 60_000);
+  db.sql.prepare('INSERT INTO foreground_daily_time VALUES (?, ?, ?, ?)')
+    .run(`${sourceB}:2026-09-15`, sourceB, '2026-09-15', 120_000);
+  const pending = { sourceId: sourceB, buckets: [
+    { day: '2026-09-15', durationMs: 130_000 }, { day: '2026-10-04', durationMs: 20_000 }
+  ] };
+  const october = await readForegroundTimeHistory(db.port, { fromDay: '2026-10-01', toDay: '2026-11-01' }, 4, pending);
+  expect(october.totalDurationMs).toBe(210_000);
+  expect(october.days).toEqual([{ day: '2026-10-04', durationMs: 80_000 }]);
+  const september = await readForegroundTimeHistory(db.port, { fromDay: '2026-09-01', toDay: '2026-10-01' }, 4, pending);
+  expect(september.totalDurationMs).toBe(210_000);
+  expect(september.days).toEqual([{ day: '2026-09-15', durationMs: 130_000 }]);
+  const maintenance = await readForegroundTimeHistory(db.port, { fromDay: '2026-10-01', toDay: '2026-11-01' }, 4,
+    { sourceId: sourceB, buckets: [{ day: '2026-09-15', durationMs: 10_000 }], unassigned: true });
+  expect(maintenance.totalDurationMs).toBe(190_000);
+  expect(db.sql.prepare('SELECT SUM(duration_ms) FROM foreground_daily_time').pluck().get()).toBe(180_000);
+});
+
+it('reports a known zero lifetime total for an initialized empty library', async () => {
+  const db = instance();
+  expect(await readForegroundTimeHistory(db.port, { fromDay: '2026-10-01', toDay: '2026-11-01' }, 4))
+    .toMatchObject({ totalDurationMs: 0, days: [] });
+});

@@ -18,6 +18,7 @@ vi.mock('./database/connection.js', () => ({ openDatabaseConnection: () => nativ
   registerDatabaseConnectionCleanup: (callback: () => void) => native.cleanup.push(callback) }));
 vi.mock('./database/desktopDatabaseWriteQueue.js', () => ({ runDesktopDatabaseWrite: async (_: string, execute: () => void) => execute() }));
 vi.mock('./database/hostProfile.js', () => ({ loadOrCreateDesktopHostName: () => 'desktop' }));
+vi.mock('./database/foregroundTimeOwner.js', () => ({ loadDesktopForegroundOwner: () => '11111111-1111-4111-8111-111111111111' }));
 vi.mock('./reviewSchedulerSettings.js', () => ({ loadReviewSchedulerSettings: () => ({ newDayStartsAtHour: native.hour }), subscribeReviewDayBoundary: () => () => {} }));
 vi.mock('./diagnostics/mainProcessDiagnostics.js', () => ({ appendMainProcessDiagnosticLog: vi.fn() }));
 
@@ -57,15 +58,50 @@ it('counts a switch between app windows once and keeps lock and suspension indep
   await runtime.stopDesktopForegroundTime(); expect(total()).toEqual({ total: 30_000 });
 });
 
-it('settles the library before close and gives a reopened recording an independent cumulative identity', async () => {
+it('settles the library before close and continues the same cumulative source after reopening', async () => {
   const runtime = await import('./foregroundTimeRuntime.js'); runtime.startDesktopForegroundTime();
   await vi.advanceTimersByTimeAsync(5_000); native.cleanup[0]!();
-  const originalId = runtime.desktopForegroundTimeSnapshot().sourceId;
+  const originalId = runtime.desktopForegroundTimeSnapshot()!.sourceId;
   expect(total()).toEqual({ total: 5_000 });
   await vi.advanceTimersByTimeAsync(600_000); native.ready[0]!();
-  expect(runtime.desktopForegroundTimeSnapshot().sourceId).not.toBe(originalId);
+  expect(runtime.desktopForegroundTimeSnapshot()!.sourceId).toBe(originalId);
   await vi.advanceTimersByTimeAsync(10_000); await runtime.stopDesktopForegroundTime();
   expect(total()).toEqual({ total: 15_000 });
+  expect(sqlite.prepare('SELECT COUNT(*) count FROM foreground_daily_time').get()).toEqual({ count: 1 });
+});
+
+it('keeps counting foreground maintenance once while withholding candidate writes until settlement', async () => {
+  const runtime = await import('./foregroundTimeRuntime.js'); runtime.startDesktopForegroundTime();
+  const { withDesktopForegroundTimeMaintenance } = await import('./database/foregroundTimeMaintenance.js');
+  await vi.advanceTimersByTimeAsync(5_000);
+  const oldSource = runtime.desktopForegroundTimeSnapshot()!.sourceId;
+  await withDesktopForegroundTimeMaintenance(async () => {
+    expect(total()).toEqual({ total: 5_000 });
+    native.cleanup[0]!(); native.ready[0]!();
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(total()).toEqual({ total: 5_000 });
+    sqlite.prepare('UPDATE workspace_meta SET value = ? WHERE key LIKE ?')
+      .run('22222222-2222-4222-8222-222222222222', 'foreground_time_source:%');
+  });
+  expect(runtime.desktopForegroundTimeSnapshot()!.sourceId).not.toBe(oldSource);
+  expect(total()).toEqual({ total: 125_000 });
+  await vi.advanceTimersByTimeAsync(5_000); await runtime.stopDesktopForegroundTime();
+  expect(total()).toEqual({ total: 130_000 });
+});
+
+it('settles the pre-restore tail before a failing restore and retains foreground time on rollback', async () => {
+  const runtime = await import('./foregroundTimeRuntime.js'); runtime.startDesktopForegroundTime();
+  const { withDesktopForegroundTimeMaintenance } = await import('./database/foregroundTimeMaintenance.js');
+  await vi.advanceTimersByTimeAsync(5_000);
+  const source = runtime.desktopForegroundTimeSnapshot()!.sourceId;
+  await expect(withDesktopForegroundTimeMaintenance(async () => {
+    expect(total()).toEqual({ total: 5_000 });
+    await vi.advanceTimersByTimeAsync(2_000); native.focused = false; emit(native.app, 'browser-window-blur');
+    await vi.advanceTimersByTimeAsync(100_000);
+    throw new Error('restore failed');
+  })).rejects.toThrow('restore failed');
+  expect(runtime.desktopForegroundTimeSnapshot()!.sourceId).toBe(source);
+  expect(total()).toEqual({ total: 7_000 });
 });
 
 it('keeps the cumulative tail and refuses library closure after a storage failure until it can be retried', async () => {
@@ -79,4 +115,44 @@ it('keeps the cumulative tail and refuses library closure after a storage failur
   sqlite.exec('DROP TRIGGER fail_foreground_save');
   native.cleanup[0]!();
   expect(total()).toEqual({ total: 5_000 });
+});
+
+it('withholds writes across interrupted overwrite rounds and reuses the same pending measurement', async () => {
+  const runtime = await import('./foregroundTimeRuntime.js'); runtime.startDesktopForegroundTime();
+  const { withDesktopForegroundTimeMaintenance } = await import('./database/foregroundTimeMaintenance.js');
+  await vi.advanceTimersByTimeAsync(5_000);
+  await expect(withDesktopForegroundTimeMaintenance(async () => {
+    await vi.advanceTimersByTimeAsync(2_000); throw new Error('interrupted');
+  }, async () => false)).rejects.toThrow('interrupted');
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(total()).toEqual({ total: 5_000 });
+  await withDesktopForegroundTimeMaintenance(async () => { await vi.advanceTimersByTimeAsync(3_000); });
+  expect(total()).toEqual({ total: 130_000 });
+});
+
+it('does not begin replacement when settling the foreground tail fails, and retries without adding it twice', async () => {
+  const runtime = await import('./foregroundTimeRuntime.js'); runtime.startDesktopForegroundTime();
+  const { withDesktopForegroundTimeMaintenance } = await import('./database/foregroundTimeMaintenance.js');
+  const replace = vi.fn(async () => { await vi.advanceTimersByTimeAsync(3_000); });
+  await vi.advanceTimersByTimeAsync(5_000);
+  sqlite.exec("CREATE TRIGGER fail_tail BEFORE INSERT ON foreground_daily_time BEGIN SELECT RAISE(ABORT,'tail_failure'); END");
+  await expect(withDesktopForegroundTimeMaintenance(replace)).rejects.toThrow('tail_failure');
+  expect(replace).not.toHaveBeenCalled();
+  sqlite.exec('DROP TRIGGER fail_tail');
+  await vi.advanceTimersByTimeAsync(2_000);
+  await withDesktopForegroundTimeMaintenance(replace);
+  expect(replace).toHaveBeenCalledTimes(1);
+  expect(total()).toEqual({ total: 10_000 });
+});
+
+it('keeps a reopened incomplete overwrite in maintenance rather than writing to the candidate library', async () => {
+  sqlite.prepare('INSERT INTO sync_group_metadata VALUES (?, ?, ?)').run('sync_group_overwrite_progress', '{}', 'now');
+  const runtime = await import('./foregroundTimeRuntime.js'); runtime.startDesktopForegroundTime();
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(total()).toEqual({ total: 0 });
+  const { withDesktopForegroundTimeMaintenance } = await import('./database/foregroundTimeMaintenance.js');
+  await withDesktopForegroundTimeMaintenance(async () => {
+    sqlite.prepare('DELETE FROM sync_group_metadata WHERE key = ?').run('sync_group_overwrite_progress');
+  });
+  expect(total()).toEqual({ total: 120_000 });
 });

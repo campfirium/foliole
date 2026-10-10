@@ -3,6 +3,10 @@ import { controlledSyncSqliteTests } from './native-sqlite-sync-tests.mjs';
 const controlledElectronSqliteTests = [
   ...controlledSyncSqliteTests,
   'electron/foregroundTimeRuntime.test.ts',
+  'electron/database/backupRestore.foregroundTime.test.ts',
+  'electron/database/foregroundTimeOwner.test.ts',
+  'electron/sync/foregroundTimeFramedSync.integration.test.ts',
+  'src/shared/platform/companion/runtime/companionForegroundTimeOwner.sqlite.test.ts',
   'lib/core/database/foregroundTime.integration.test.ts',
   'src/shared/platform/companion/runtime/companionForegroundTime.test.ts',
   'src/shared/platform/companion/runtime/foregroundTimeSync.integration.test.ts',

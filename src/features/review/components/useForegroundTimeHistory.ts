@@ -52,5 +52,6 @@ export function useForegroundTimeHistory(fromDay: string, toDay: string, today: 
     if (!history || failed || day < history.coverageFrom) return null;
     return history.days.find((entry) => entry.day === day)?.durationMs ?? 0;
   }
-  return { duration, failed, retry: () => setRetry((value) => value + 1) };
+  return { duration, totalDurationMs: history && !failed ? history.totalDurationMs : null,
+    failed, retry: () => setRetry((value) => value + 1) };
 }

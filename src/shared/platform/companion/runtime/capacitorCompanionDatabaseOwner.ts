@@ -11,6 +11,8 @@ import type { DbPort } from '../../../../../lib/core/sync/dbPort';
 import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../../../lib/platform/nativeCompanionContract';
 import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
 
+import { loadCompanionForegroundOwner } from './companionForegroundTimeOwner';
+
 export interface CapacitorCompanionDatabaseManager {
   closeConnection(database: string, readonly: boolean): Promise<void>;
   createConnection(
@@ -84,6 +86,12 @@ export class CapacitorCompanionDatabaseOwner {
 
   runWriter<T>(task: (db: DbPort) => Promise<T>): Promise<T> {
     return this.enqueue(() => task(this.requireDb()));
+  }
+
+  foregroundTimeOwnerId() {
+    return this.enqueue(() => loadCompanionForegroundOwner({
+      manager: this.manager, libraryPath: this.databasePath, platform: this.platform
+    }));
   }
 
   close() {

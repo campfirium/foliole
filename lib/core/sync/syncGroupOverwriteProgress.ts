@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { readForegroundTimePreservation, mergeRestoredForegroundTime } from '../database/foregroundTimeRestore.js';
+
 import type { DbPort } from './dbPort.js';
 import type { FramedSyncContext } from './framedSyncContract.js';
 import { loadSyncGroupLocalAdoption } from './syncGroupLocalAdoption.js';
@@ -40,7 +42,9 @@ export async function prepareSyncGroupOverwrite(db: DbPort, value: SyncGroupOver
       if (JSON.stringify(current) !== JSON.stringify(expected)) throw new Error('sync_group_overwrite_source_changed');
       return { removedNodeIds: [] as string[], cleared: false };
     }
+    const foreground = await readForegroundTimePreservation(tx);
     const removedNodeIds = await clearWorkgroupSyncDataForRestore(tx, expected.overwriteId);
+    await mergeRestoredForegroundTime(tx, foreground, expected.receiverDeviceId);
     await tx.run(`INSERT INTO sync_group_metadata (key, value, updated_at) VALUES (?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
     [SYNC_GROUP_OVERWRITE_PROGRESS_KEY, JSON.stringify(expected), new Date().toISOString()]);

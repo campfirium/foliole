@@ -1,6 +1,7 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { applySyncGroupRestorePage } from '../../lib/core/sync/syncGroupRestorePageApply.js';
 import type { applySyncPackNodeSurfaceWithDbPort } from '../../lib/core/sync/syncPackNodeApplyExecutor.js';
+import { withDesktopForegroundTimeMaintenance } from '../database/foregroundTimeMaintenance.js';
 
 export async function applyDesktopRestorePage(args: {
   after: number;
@@ -11,7 +12,7 @@ export async function applyDesktopRestorePage(args: {
   port: DbPort;
   restoreId: string;
 }) {
-  return args.port.transaction(async (tx) => {
+  return withDesktopForegroundTimeMaintenance(() => args.port.transaction(async (tx) => {
     const outcome = await applySyncGroupRestorePage(tx, args);
     if (!outcome.result.restorePending && !outcome.result.dependencyProgress) {
       await tx.run(`INSERT INTO sync_peer_cursors (peer_id, stream_name, cursor_value, updated_at)
@@ -20,5 +21,5 @@ export async function applyDesktopRestorePage(args: {
       [args.peerId, String(outcome.result.toStateSeq), new Date().toISOString()]);
     }
     return outcome;
-  });
+  }));
 }

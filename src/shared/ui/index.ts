@@ -21,6 +21,7 @@ export { AppNoticeDialog } from './AppNoticeDialog';
 export { requestAppConfirmation, requestAppTextInput, type AppConfirmationOptions, type AppTextInputOptions } from './appConfirmation';
 export { AppEmptyState, AppErrorState, AppLoadingState, AppSpinner } from './EmptyState';
 export { AppStatusBadge } from './StatusBadge';
+export { AppStatistic } from './Statistic';
 
 export { type StartupErrorActions, type StartupErrorViewModel, type StartupSurfaceAction, type StartupSurfaceModel } from './StartupSurface';
 

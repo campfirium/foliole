@@ -5,7 +5,7 @@ import { useForegroundTimeHistory } from '../features/review/components/useForeg
 import { formatForegroundTime } from '../features/review/model/formatForegroundTime';
 import { getCurrentReviewSchedulerSettings } from '../features/settings/model/reviewSchedulerSettings';
 import { useLocalization } from '../shared/localization/LocalizationProvider';
-import { AppButton } from '../shared/ui';
+import { AppButton, AppStatistic } from '../shared/ui';
 
 export function CompanionForegroundTimeContent() {
   const { t, locale } = useLocalization();
@@ -19,6 +19,8 @@ export function CompanionForegroundTimeContent() {
     .filter((day) => day <= today).reverse();
   const change = (delta: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + delta, 1));
   return <div className="px-4 py-3">
+    {history.totalDurationMs !== null ? <AppStatistic label={t('desktop.foregroundTime.total')}
+      value={formatForegroundTime(history.totalDurationMs, locale)} /> : null}
     <div className="mb-4 flex items-center justify-between gap-2">
       <AppButton size="sm" onClick={() => change(-1)} aria-label={t('desktop.foregroundTime.previous')}>‹</AppButton>
       <span>{month.toLocaleDateString(locale, { year: 'numeric', month: 'long' })}</span>

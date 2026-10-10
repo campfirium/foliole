@@ -11,6 +11,7 @@ import {
 import type { CompanionSqliteConnectionManager } from '../../../companionSyncNodeVersions';
 import { applyCompanionSyncPackNodesWithDbPort } from '../../../companionSyncPackNodes';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue';
+import { withCompanionForegroundTimeMaintenance } from '../../runtime/companionForegroundTime';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 import { createIosCompanionSyncPackCursorStore } from '../cursor/iosCompanionSyncPackCursorStore';
 
@@ -31,7 +32,7 @@ export async function applyIosCompanionSyncPackPath(
       ...args, ...(args.factClaims ? { expectedFactIndex: args.factClaims.index } : {})
     }, cursorStore, manager));
   }
-  return runCompanionSyncWriterTask(async () => {
+  const apply = () => runCompanionSyncWriterTask(async () => {
     if (args.expectedRestoreId && !cursorStore.loadRestoreCursor) {
       throw new Error('sync_group_restore_cursor_unavailable');
     }
@@ -62,4 +63,5 @@ export async function applyIosCompanionSyncPackPath(
     if (result.to_state_seq > currentCursor) await cursorStore.saveCursor(result.to_state_seq);
     return result;
   });
+  return args.expectedRestoreId ? withCompanionForegroundTimeMaintenance(apply) : apply();
 }

@@ -8,6 +8,7 @@ import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection,
   runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { materializeDesktopSettingRecord } from '../database/desktopSettingMaterializer.js';
+import { withDesktopForegroundTimeMaintenance } from '../database/foregroundTimeMaintenance.js';
 import { loadOrCreateDesktopHostName } from '../database/hostProfile.js';
 
 import type { DesktopIdentityPackPeer } from './desktopSyncIdentityPack.js';
@@ -42,7 +43,7 @@ export async function applyDesktopSyncIdentityRestore(args: {
   const replayPath = path.join(root, 'replay.db');
   try {
     if (staged.pages.length > 0) await fs.copyFile(staged.pages[0]!.databasePath, replayPath);
-    return await runWithDatabaseConnectionOwner(async () => {
+    return await runWithDatabaseConnectionOwner(() => withDesktopForegroundTimeMaintenance(async () => {
       const port = createBetterSqliteDbPort(openDatabaseConnection().sqlite,
         { name: 'desktop-identity-restore-apply' });
       if (staged.pages.length > 0) {
@@ -60,6 +61,6 @@ export async function applyDesktopSyncIdentityRestore(args: {
       } finally {
         if (staged.pages.length > 0) await port.run('DETACH DATABASE inc');
       }
-    });
+    }));
   } finally { await fs.rm(root, { recursive: true, force: true }); }
 }

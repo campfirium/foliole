@@ -2,6 +2,7 @@ import type { SyncGroupDeviceIdentity } from '../../platform/syncGroupUnifiedCon
 import type { DbPort, DbRow } from '../sync/dbPort.js';
 
 import { ANDROID_COMPANION_SYNC_PROTOCOL_DEFINITIONS } from './androidCompanionSyncProtocolDefinitions.js';
+import { renewForegroundSources } from './foregroundTimeSource.js';
 
 export const SYNC_DEVICE_COPY_TRANSPORT_TABLES = [
   'sync_peer_cursors',
@@ -46,6 +47,7 @@ export async function prepareCopiedLibraryForDevice(
         SYNC_DEVICE_COPY_META_KEYS
       )).changes
       : 0;
+    await renewForegroundSources(tx);
     return { changed: true, clearedMetaKeys, clearedTables };
   });
 }

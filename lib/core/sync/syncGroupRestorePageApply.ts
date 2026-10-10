@@ -1,3 +1,5 @@
+import { isolateForegroundTimeForRestore, mergeRestoredForegroundTime } from '../database/foregroundTimeRestore.js';
+
 import type { DbPort } from './dbPort.js';
 import { loadLatestSyncGroupRestoreEvent, markSyncGroupRestoreApplied } from './syncGroupRestoreEvents.js';
 import { loadStoredRestorePage, storeRestorePage } from './syncGroupRestorePageStorage.js';
@@ -40,8 +42,10 @@ export async function applySyncGroupRestorePage(port: DbPort, args: {
     if (cursor.toStateSeq !== cursor.frontierStateSeq) return {
       result: { ...emptyResult(cursor), restorePending: true }, removedNodeIds: [] as string[]
     };
+    const foregroundTime = await isolateForegroundTimeForRestore(tx);
     const removedNodeIds = await clearWorkgroupSyncDataForRestore(tx, args.restoreId);
     const result = await replayRestorePages(tx, args, cursor);
+    await mergeRestoredForegroundTime(tx, foregroundTime, 'restore');
     await markSyncGroupRestoreApplied(tx, latest.event);
     await tx.run('DELETE FROM sync_group_restore_page_rows');
     return { result, removedNodeIds };

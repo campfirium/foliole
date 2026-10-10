@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { readForegroundTimePreservation } from '../../lib/core/database/foregroundTimeRestore.js';
 import { initializeWorkspaceSearchSidecar } from '../../lib/core/database/workspaceSearchSidecar.js';
 import type { BackupRestoreSyncChoice } from '../../lib/platform/backupRestoreSyncContract.js';
 
@@ -11,6 +12,7 @@ import {
   reapplyBackupSettingsAfterRestore,
   resolveManagedBackupDirectory
 } from './backupSettings.js';
+import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
 import {
   clearDatabaseConnectionUnavailable,
   closeDatabaseConnection,
@@ -18,6 +20,9 @@ import {
 } from './connection.js';
 import { createDatabaseRestoreArtifacts, type DatabaseRestoreArtifacts } from './databaseRestoreArtifacts.js';
 import { recoverCurrentDatabaseAfterRestoreFailure } from './databaseRestoreRecovery.js';
+import { prepareForegroundTimeBackupCandidate } from './foregroundTimeBackupCandidate.js';
+import { withDesktopForegroundTimeMaintenance } from './foregroundTimeMaintenance.js';
+import { loadOrCreateDesktopHostName } from './hostProfile.js';
 import {
   createManagedSafetySnapshotWithBackup,
   type ManagedSafetySnapshot
@@ -37,7 +42,12 @@ import {
 export async function restoreDatabaseBackupInMaintenance(
   sourcePath: string, restoredAt = new Date().toISOString(), choice?: BackupRestoreSyncChoice
 ): Promise<SqliteRestoreResult> {
+  return withDesktopForegroundTimeMaintenance(() => restoreBackup(sourcePath, restoredAt, choice));
+}
+
+async function restoreBackup(sourcePath: string, restoredAt: string, choice?: BackupRestoreSyncChoice): Promise<SqliteRestoreResult> {
   const connection = openDatabaseConnection();
+  const foregroundTime = await readForegroundTimePreservation(createBetterSqliteDbPort(connection.sqlite));
   const targetPath = connection.dbPath;
   const wasLocalReadwiseOwner = loadReadwiseHostAssignment().is_active;
   const backupSettings = loadBackupSettings();
@@ -51,6 +61,7 @@ export async function restoreDatabaseBackupInMaintenance(
     verifySqliteDatabaseFile(databasePath);
     const selection = await selectBackupRestoreSync({ sourcePath, databasePath,
       targetPath, current: connection.driver, ...(choice ? { choice } : {}) });
+    await prepareForegroundTimeBackupCandidate(databasePath, foregroundTime, loadOrCreateDesktopHostName());
     safetySnapshot = await createManagedSafetySnapshotWithBackup({
       destinationDirectory: backupDirectory,
       reason: 'pre-restore',

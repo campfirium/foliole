@@ -4,10 +4,11 @@ import { compareFramedSyncDatabaseInventories } from '../../../../../../lib/core
 import { readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { framedSyncOrderBodyDependencies } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { pendingFramedSyncOverwriteDifferences } from '../../../../../../lib/core/sync/framedSyncOverwriteCompletion.js';
-import { finishSyncGroupOverwriteProgress, prepareSyncGroupOverwrite,
+import { finishSyncGroupOverwriteProgress, prepareSyncGroupOverwrite, loadSyncGroupOverwriteProgress,
   type SyncGroupOverwriteProgress } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
 import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
+import { withCompanionForegroundTimeMaintenance } from '../../runtime/companionForegroundTime.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
 import { pullInventoryDifferences, readCompanionRemoteFramedSyncInventory } from './companionFramedSyncInventoryRound.js';
@@ -21,6 +22,12 @@ function localInventory(db: DbPort, progress: SyncGroupOverwriteProgress) {
 
 /** Adoption and restore share the clear-once, durable per-unit receive path. */
 export async function receiveCompanionFramedSyncOverwrite(args: NativeCompanionFramedSyncInventoryRequest,
+  progress: SyncGroupOverwriteProgress, finish: (db: DbPort) => Promise<void>) {
+  return withCompanionForegroundTimeMaintenance(() => receiveOverwrite(args, progress, finish),
+    () => getIosCompanionDatabaseOwner().read(async (db) => !(await loadSyncGroupOverwriteProgress(db))));
+}
+
+async function receiveOverwrite(args: NativeCompanionFramedSyncInventoryRequest,
   progress: SyncGroupOverwriteProgress, finish: (db: DbPort) => Promise<void>) {
   const owner = getIosCompanionDatabaseOwner();
   await runCompanionSyncWriterTask(() => owner.runWriter((db) => prepareSyncGroupOverwrite(db, progress)));

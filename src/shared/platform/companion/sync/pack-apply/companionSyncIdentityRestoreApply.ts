@@ -3,6 +3,7 @@ import { loadSyncIdentityRestorePage } from '../../../../../../lib/core/sync/syn
 import { NativeCompanionCapabilityUnavailableError,
   requireAvailableCompanionRuntime } from '../../../companionRuntimeCapabilities';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue';
+import { withCompanionForegroundTimeMaintenance } from '../../runtime/companionForegroundTime';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap';
 import { stageCompanionSyncIdentityRestore } from '../syncGroupIdentityRestoreStage';
 import { withCompanionSyncIdentitySnapshot } from '../syncGroupIdentitySourceRead';
@@ -23,7 +24,7 @@ export async function applyCompanionSyncIdentityRestore(args: {
   if (args.staged.pages.length > 0 && !args.staged.replayPackPath) {
     throw new Error('sync_identity_restore_replay_missing');
   }
-  return runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((port) =>
+  return withCompanionForegroundTimeMaintenance(() => runCompanionSyncWriterTask(() => getIosCompanionDatabaseOwner().runWriter((port) =>
     withCompanionSyncIdentitySnapshot(port, args.snapshotPath, async (db) => {
       if (args.staged.replayPackPath) {
         await db.run(`ATTACH DATABASE '${args.staged.replayPackPath.replaceAll("'", "''")}' AS inc`);
@@ -40,5 +41,5 @@ export async function applyCompanionSyncIdentityRestore(args: {
       } finally {
         if (args.staged.replayPackPath) await db.run('DETACH DATABASE inc');
       }
-    })));
+    }))));
 }

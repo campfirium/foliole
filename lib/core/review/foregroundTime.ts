@@ -10,7 +10,9 @@ export class ForegroundTimeCounter {
   private offset = 0;
   private totals = new Map<string, number>();
 
-  constructor(private readonly clock: () => ForegroundClock) {}
+  constructor(private readonly clock: () => ForegroundClock, baseline: readonly ForegroundTimeBucket[] = []) {
+    this.totals = new Map(baseline.map((bucket) => [bucket.day, bucket.durationMs]));
+  }
 
   setActive(active: boolean, hour: number) {
     if (this.start && (!active || hour !== this.hour)) this.checkpoint();

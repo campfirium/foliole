@@ -1,20 +1,17 @@
-import { randomUUID } from 'node:crypto';
-
 import { app, BrowserWindow, powerMonitor } from 'electron';
 
-import { computeSyncContentHash, upsertSyncObjectState } from '../lib/core/database/syncState.js';
-import { ForegroundTimeCounter } from '../lib/core/review/foregroundTime.js';
-import { foregroundTimeId } from '../lib/core/sync/syncForegroundDailyTime.js';
+import { ForegroundTimeRecording } from '../lib/core/review/foregroundTimeRecording.js';
+import { SYNC_GROUP_OVERWRITE_PROGRESS_KEY } from '../lib/core/sync/syncGroupOverwriteProgress.js';
 
 import { openDatabaseConnection, registerDatabaseConnectionCleanup, registerDatabaseConnectionReady, type DatabaseConnection } from './database/connection.js';
 import { runDesktopDatabaseWrite } from './database/desktopDatabaseWriteQueue.js';
-import { loadOrCreateDesktopHostName } from './database/hostProfile.js';
+import { registerDesktopForegroundTimeMaintenance } from './database/foregroundTimeMaintenance.js';
+import { readDesktopForegroundSource, saveDesktopForegroundSnapshot } from './database/foregroundTimePersistence.js';
 import { appendMainProcessDiagnosticLog } from './diagnostics/mainProcessDiagnostics.js';
 import { loadReviewSchedulerSettings, subscribeReviewDayBoundary } from './reviewSchedulerSettings.js';
 
 let connection: DatabaseConnection | null = null;
-let sourceId = randomUUID();
-let counter = createCounter();
+let recording: ForegroundTimeRecording | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 let locked = false;
 let suspended = false;
@@ -22,35 +19,18 @@ let quitting = false;
 let active = false;
 let failure: unknown = null;
 let installed = false;
-
-function createCounter() {
-  return new ForegroundTimeCounter(() => ({ wallMs: Date.now(), monotonicMs: performance.now() }));
-}
+let dayBoundaryHour = 4;
 
 export function desktopForegroundTimeSnapshot() {
   if (failure) throw new Error('Foreground time could not be saved');
-  return { sourceId, buckets: counter.snapshot() };
+  return recording?.snapshot();
 }
 
 function save() {
-  if (!connection) return;
-  counter.setActive(active, loadReviewSchedulerSettings().newDayStartsAtHour);
-  const driver = connection.driver;
-  const buckets = counter.checkpoint();
-  driver.transaction(() => {
-    for (const bucket of buckets) {
-      if (bucket.durationMs <= 0) continue;
-      const id = foregroundTimeId(sourceId, bucket.day);
-      const previous = driver.queryOne<{ duration_ms: number }>('SELECT duration_ms FROM foreground_daily_time WHERE id = ?', [id]);
-      if (previous && previous.duration_ms >= bucket.durationMs) continue;
-      driver.execute(`INSERT INTO foreground_daily_time(id, source_id, day_key, duration_ms) VALUES (?, ?, ?, ?)
-        ON CONFLICT(id) DO UPDATE SET duration_ms = excluded.duration_ms`, [id, sourceId, bucket.day, bucket.durationMs]);
-      upsertSyncObjectState(driver, { objectType: 'foreground_daily_time', objectId: id,
-        contentHash: computeSyncContentHash('foreground_daily_time', {
-          source_id: sourceId, day_key: bucket.day, duration_ms: bucket.durationMs
-        }), lastModifiedByHostName: loadOrCreateDesktopHostName(), updatedAt: new Date().toISOString(), syncDirty: true });
-    }
-  });
+  if (!connection || !recording || recording.maintaining) return;
+  dayBoundaryHour = loadReviewSchedulerSettings().newDayStartsAtHour;
+  recording.setActive(active, dayBoundaryHour);
+  saveDesktopForegroundSnapshot(connection, { sourceId: recording.sourceId, buckets: recording.checkpoint() });
   failure = null;
 }
 
@@ -64,11 +44,11 @@ function queueSave() {
 }
 
 function update() {
-  if (!connection) return;
+  if (!connection && !recording?.maintaining) return;
   const focused = !locked && !suspended && !quitting && Boolean(BrowserWindow.getFocusedWindow());
   active = focused;
-  const hour = loadReviewSchedulerSettings().newDayStartsAtHour;
-  counter.setActive(focused, hour);
+  if (connection) dayBoundaryHour = loadReviewSchedulerSettings().newDayStartsAtHour;
+  recording?.setActive(focused, dayBoundaryHour);
   if (focused && !timer) timer = setInterval(queueSave, 60_000);
   if (!focused && timer) { clearInterval(timer); timer = null; }
   if (!focused) queueSave();
@@ -79,16 +59,17 @@ export function startDesktopForegroundTime() {
   if (connection === next) return;
   connection = next;
   failure = null;
-  sourceId = randomUUID();
-  counter = createCounter();
+  if (recording?.maintaining) { update(); return; }
+  const source = readDesktopForegroundSource(next);
+  recording = new ForegroundTimeRecording(() => ({ wallMs: Date.now(), monotonicMs: performance.now() }), source.sourceId, source.baseline);
   active = false;
   quitting = false;
   if (!installed) {
     installed = true;
     registerDatabaseConnectionReady(startDesktopForegroundTime);
     subscribeReviewDayBoundary((hour) => {
-      if (!connection) return;
-      counter.setActive(active, hour);
+      dayBoundaryHour = hour;
+      recording?.setActive(active, hour);
       queueSave();
     });
     app.on('browser-window-focus', update);
@@ -98,21 +79,43 @@ export function startDesktopForegroundTime() {
     powerMonitor.on('unlock-screen', () => { locked = false; update(); });
     powerMonitor.on('resume', () => { suspended = false; update(); });
     registerDatabaseConnectionCleanup(() => {
+      if (recording?.maintaining) { connection = null; return; }
       active = false;
-      counter.setActive(false, loadReviewSchedulerSettings().newDayStartsAtHour);
+      recording?.setActive(false, dayBoundaryHour);
       try { save(); } catch (error) { report(error); throw error; }
       connection = null;
       if (timer) clearInterval(timer);
       timer = null;
     });
   }
+  registerDesktopForegroundTimeMaintenance({ begin: beginMaintenance, finish: finishMaintenance });
+  if (next.driver.queryOne('SELECT value FROM sync_group_metadata WHERE key = ?', [SYNC_GROUP_OVERWRITE_PROGRESS_KEY])) {
+    beginMaintenance();
+  }
   update();
+}
+
+function beginMaintenance() {
+  if (!recording || !connection || recording.maintaining) return;
+  const snapshot = recording.beginMaintenance();
+  try { saveDesktopForegroundSnapshot(connection, snapshot); }
+  catch (error) { recording.cancelMaintenance(); report(error); throw error; }
+}
+
+function finishMaintenance() {
+  if (!recording?.maintaining) return;
+  try {
+    connection = openDatabaseConnection();
+    const source = readDesktopForegroundSource(connection);
+    recording.finishMaintenance(source.sourceId, source.baseline);
+    save();
+  } catch (error) { report(error); throw error; }
 }
 
 export async function stopDesktopForegroundTime() {
   quitting = true;
   active = false;
-  counter.setActive(false, loadReviewSchedulerSettings().newDayStartsAtHour);
+  recording?.setActive(false, dayBoundaryHour);
   if (timer) clearInterval(timer);
   timer = null;
   await runDesktopDatabaseWrite('foreground', save);

@@ -1,3 +1,5 @@
+import { isolateForegroundTimeForRestore, mergeRestoredForegroundTime } from '../database/foregroundTimeRestore.js';
+
 import type { DbPort } from './dbPort.js';
 import { loadLatestSyncGroupRestoreEvent,
   markSyncGroupRestoreApplied } from './syncGroupRestoreEvents.js';
@@ -81,6 +83,7 @@ export async function applySyncIdentityRestoreWithDbPort(port: DbPort, args: {
     const set = args.set;
     const latest = await assertRestoreSource(tx, set);
     if (latest.applied) return { applied: false, removedNodeIds: [] as string[] };
+    const foregroundTime = await isolateForegroundTimeForRestore(tx);
     const removedNodeIds = await clearWorkgroupSyncDataForRestore(tx, set.restore_id);
     for (const [index, manifest] of args.pages.entries()) {
       await args.loadPage(tx, index, manifest);
@@ -114,6 +117,7 @@ export async function applySyncIdentityRestoreWithDbPort(port: DbPort, args: {
       await recordSyncIdentityPackReceipt(tx, receipt);
     }
     await assertRestoredResult(tx, set);
+    await mergeRestoredForegroundTime(tx, foregroundTime, args.hostName);
     await markSyncGroupRestoreApplied(tx, latest.event);
     return { applied: true, removedNodeIds };
   });
