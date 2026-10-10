@@ -12,9 +12,9 @@
 
 - 当前仓库是 `Electron + React + TypeScript + Vite + Capacitor` 多平台单仓；`electron/`、`android/`、`ios/` 只承载薄宿主，`src/app/` 与 `src/companion/` 承载 renderer shell，跨宿主业务、状态与稳定调用面归 `src/features/`、`src/store/`、`src/shared/`。
 - 默认直接在 `dev` 连续小步推进，不创建 feature branch / worktree，除非用户明确要求。Windows 与 LAN Git 日常只消费 Mac `dev` 的精确镜像；用户明确建立的长期专项 branch 只能使用隔离 checkout，不得占用或决定日常源码现场。Windows 不向 Mac 提供、合并或决定源码候选。
-- 临时 PR、冻结候选或验收 worktree 必须由 `node scripts/diagnostics/transient-worktree-lifecycle.mjs create --path <path> --kind <development|acceptance> --target <branch>` 创建并登记；development 同时传 `--branch <branch>`。结果进入目标分支或证据收口后，同一流程调用 `finish --path <path>`。异常遗留由正常生产维护触发该入口的 7 天 `sweep`，不得直接删除目录或让 lock 永久保留。
+- 临时 PR、冻结候选或验收 worktree 必须由 `node scripts/diagnostics/transient-worktree-lifecycle.mjs create --path <path> --kind <development|acceptance> --target <branch>` 创建并登记；development 同时传 `--branch <branch>`。结果进入目标分支或证据收口后，同一流程调用 `finish --path <path>`。异常遗留在显式本地维护时调用该入口的 7 天 `sweep`，不得直接删除目录或让 lock 永久保留。
 - 正式发布只使用短期 `release` 分支，并按 `foliole-release` skill 执行；禁止版本化 release 分支、cherry-pick、rebase、force-push 和人类 SHA 编排。每个 release 只由一个 pinned 发布主任务持有，公开必须由用户确认。
-- 人工创建或交接 Foliole Codex 任务时，使用 saved project 的 local environment；有正式编号时，标题必须原样使用当前工作单元的编号并按实际结果命名，不得退化为 owning plan 总标题；没有正式编号时不得编造编号，直接按实际工作内容命名。非会审任务在同一编号与阶段已有未归档任务时继续原任务，不重复创建；会审任务的新建与续用按 `astra-review` 执行。完整提示可读且活动回合已建立后才算交付。自动 monitor 的 paused handoff 只按 `codex-desktop-handoff` skill 执行，根不复述其传输协议。
+- 人工创建或交接 Foliole Codex 任务时，使用 saved project 的 local environment；聊天编号、标题和改名统一按 `codex-task-lookup/references/task-identity.md` 执行，方案/闭环编号不能替代唯一聊天身份；按编号或关键词定位先用 `codex-task-lookup`，不用最近聊天列表猜任务。非会审任务在用户只要求继续时沿用已核实的原聊天，另开任务须有用户授权；会审任务的新建与续用按 `astra-review` 执行。完整提示可读且活动回合已建立后才算交付。自动 monitor 的 paused handoff 只按 `codex-desktop-handoff` skill 执行，根不复述其传输协议。
 - 单次交付一个可运行、可验证、可回退的能力闭环；闭环按用户结果、数据语义或迁移语义划分，不按文件、测试、平台、提交数或耗时拆分，也不混入无关重构。
 - 产品任务不附带控制面建设。控制面按用途指管理开发、验证、验收或代理执行的 validator、controller、orchestrator、gate、monitor、协议、扫描器与通用工作流，不包括产品运行必需的输入校验、业务控制器或 bridge。新增或扩展控制面，须由用户当次明确要求，或已批准方案明确列为可独立命名、说明收益和验收的交付结果；“完善验证、保证闭环”等泛称不构成授权。本条由根统一拥有，来源为用户对产品与控制面授权的分离；主要成本是控制面缺口可能使验收待完成，明确授权该结果后按其范围执行。
 - 产品闭环可运行已有入口、补充最小行为测试及必要 fixture，并修复本轮引入的工具回归以恢复原合同；不借修复扩展工具职责。若删除拟新增的控制机制仍不影响产品目标及数据/安全不变量，其收益应独立说明，不能借“必要实现”带入。每项改动须直接服务用户结果、必要实现或最小行为验证，无须另建归因台账。未授权控制面缺口只作独立待办，需落库时使用 task-seed；可继续的产品工作继续，确实阻断验收时报告待验与具体缺口，不擅建控制面或宣称通过。
@@ -68,7 +68,7 @@
 - **真机验收前，本轮全部适用本地行为测试必须通过。** Agent 主动从本轮验收目标确定场景，不等待用户指定测试方法；所有可本地复现的场景须覆盖初始状态、操作序列和结果断言。涉及多实例交互时，使用独立实例与临时数据运行生产链路的确定性集成测试，断言各端最终持久化结果；不得用 mock 替掉本次待验证链路。单元测试、lint、构建或独立原型通过不能替代该集成覆盖。存在未覆盖、失败或跳过的适用场景时，不得进入真机产品验收；“全部”限本轮验收范围，不要求每次全仓测试。进入前在当前任务列明场景对应的测试、执行命令与通过结果；已有有效证据可复用，受影响证据随源码或判据变化失效。本条由根统一拥有，各宿主和技能只引用此前置条件。
 - 真机发现非平台专属 bug，先补本地失败回归、修复并通过上述门槛，再继续验收；不得以“预览、试跑、探索”名义重放产品场景验证修复。现场取证可先行，但限于取得构造复现或区分根因所需的证据，不替代修复后的本地验证。仅真实 OS、硬件、权限或网络栈才能验证的部分，以及无稳定自动化断言的纯视觉检查，可说明具体依赖与本地无法证明的原因后按宿主规则验证；未写测试、搭建困难或根因未知不构成平台专属证据。例外只豁免该部分，仍须完成可本地覆盖部分；取得本地可复现证据后转回本地。
 - 运行时或用户可见行为改动按上述测试前置要求及局部规则完成受影响宿主的可见验收。文档、agent 规则、只读诊断、测试或脚本内部改动且不改变运行时行为时可跳过宿主验收，并在最终汇报说明。
-- 本机开发、诊断和提交前宿主试跑可消费当前工作区。最终验收若方案或宿主入口要求冻结候选，必须绑定精确 revision；多宿主结论绑定同一 accepted tip，不得拼接不同 revision 的局部证据。源码、成功判据或会影响结论的基线变化，只使受影响证据失效并从新基线复验；具体方案可明确要求整轮重跑。
+- 本机开发、诊断和提交前宿主试跑可消费当前工作区。最终验收若方案或宿主入口要求冻结候选，必须绑定精确 revision；候选 revision 是验证输入，整体 accepted revision 是本轮适用的产品行为、质量检查与必要人工确认通过后的结论。单入口报告的 accepted tip 只证明该入口的验收范围。最终多宿主结论绑定同一 accepted tip，不得拼接不同 revision 的局部证据；此要求不构成开始产品验证前等待 hosted quality 完成的条件。源码、成功判据或会影响结论的基线变化，只使受影响证据失效并从新基线复验；具体方案可明确要求整轮重跑。
 - 改 sync-pack 相关 manifest/schema/apply 或登记路径时先跑 `npm run test:sync-pack`。新增/拆分文件或修复规模问题时先跑 `node scripts/check-file-budget.mjs <files>` 再跑窄 lint。新增/升级依赖由 hosted `deps:hardening:check` 覆盖；已点名漏洞可定向绕过 release-age 窗口并用 `npm ls` 与 `npm audit --omit=dev` 复验。
 - `it.skip` / `test.skip` 必须紧邻 `// SKIP: <reason> | <date YYYY-MM-DD> | revive: <condition>`，超过 30 天复查。E2E 不进入质量闸，按宿主局部规则单独执行。
 - 长命令返回非终态、heartbeat 或仍在运行时使用 `quiet-wait`，不得用 agent 回合轮询。
@@ -81,6 +81,7 @@
 - 每个文件只承载一个核心职责；不得用压缩格式、合并语句或删留白规避规模约束。
 - 代码、注释、提交信息、UI 文案与配置键使用英文；对外沟通默认中文。`.lab/specs/**` 文件名用英文 slug、正文默认中文；其他落库文档默认中文。
 - Markdown 工作文档默认放 `.lab/atlas/0active/`，临时 HTML、截图、样例、日志与一次性产物放 `.tmp/artifacts/`。只有 Foliole 自管且可重建的跨运行缓存可放根 `.cache/`；不得枚举或清理不属于当前任务的缓存。
+- 全仓临时产物与缓存清理独立于 DEV 启动、构建、缓存准备和验收。仅在没有构建或验收运行时按需显式执行：普通临时产物先运行 `node scripts/diagnostics/cleanup-local-artifacts.mjs --dry-run`，核对候选后用 `--apply` 替换 `--dry-run`；缓存及验收产物先运行 `node scripts/diagnostics/local-artifact-cache-retention.mjs`，核对候选后加 `--apply`。临时 worktree 仍使用登记入口的 `sweep`，不由普通目录清理代替。
 - `.lab/**` 是本地工作文档，默认忽略且不提交。重要且持久的产品边界决策才写入对应 `.lab/specs/**`；不要把背景、施工历史或临时争论写入 AGENTS。
 - 用户要求提交时必须使用 `commit-note` skill。
 
