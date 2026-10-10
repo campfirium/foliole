@@ -5,11 +5,13 @@ import { COMPANION_SCHEMA_STATEMENTS } from '../../../lib/core/database/companio
 import type { DbPort, DbRow } from '../../../lib/core/sync/dbPort';
 
 export function installCompanionNodeSchema(database: Database.Database) {
-  database.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
-  const columnExists = database.prepare('SELECT name FROM pragma_table_info(?) WHERE name = ? LIMIT 1');
-  for (const repair of COMPANION_CURRENT_SCHEMA_REPAIRS) {
-    if (!columnExists.get(repair.tableName, repair.columnName)) database.exec(repair.statement);
-  }
+  database.transaction(() => {
+    database.exec(COMPANION_SCHEMA_STATEMENTS.join(';\n'));
+    const columnExists = database.prepare('SELECT name FROM pragma_table_info(?) WHERE name = ? LIMIT 1');
+    for (const repair of COMPANION_CURRENT_SCHEMA_REPAIRS) {
+      if (!columnExists.get(repair.tableName, repair.columnName)) database.exec(repair.statement);
+    }
+  })();
 }
 
 export function createFakeCapacitorConnection(database: Database.Database) {
