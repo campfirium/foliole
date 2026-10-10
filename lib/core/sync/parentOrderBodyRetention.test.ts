@@ -1,7 +1,13 @@
 import { expect, it } from 'vitest';
 
+import { createBetterSqlite3Driver } from '../../../electron/database/betterSqlite3Driver.js';
 import { port, setupVersionCollectionFixture, sqlite } from '../../../electron/database/nodeVersionPayloadCollector.testSupport.js';
+import { computeSyncContentHash, upsertSyncObjectState } from '../database/syncState.js';
 
+import { canonicalContentId, canonicalTransferId } from './framedSyncCanonicalManifest.js';
+import { selectFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
+import { framedSyncObjectStateFactId } from './framedSyncObjectStateInventory.js';
+import { publishFramedSyncOutboundWithDbPort } from './framedSyncOutboundStaging.js';
 import { applyVersionMemberPosition } from './nodeVersionMemberPositionApply.js';
 import { nodePositionFactId, type NodePositionPayload } from './nodeVersionMemberPositionFact.js';
 import { collectParentOrderBodies } from './parentOrderBodyRetention.js';
@@ -13,6 +19,31 @@ import { readParentOrderResolutionHistory, readParentOrderResolutionSnapshots } 
 import { advanceParentOrderHead, insertParentOrderVersion } from './syncParentOrderVersionStore.js';
 
 setupVersionCollectionFixture();
+
+async function freezeArrangement(objectType: 'order_version' | 'parent_child_order') {
+  const globalId = objectType === 'order_version' ? 'ob' : 'folder';
+  if (objectType === 'parent_child_order') {
+    const payload = { parent_id: 'folder', child_ids_json: '["a","b"]' };
+    sqlite.prepare('INSERT INTO parent_child_order VALUES (?, ?, ?)').run('folder', payload.child_ids_json, 'now');
+    upsertSyncObjectState(createBetterSqlite3Driver(sqlite), { objectType, objectId: globalId,
+      currentVersionId: 'ob', contentHash: computeSyncContentHash(objectType, payload),
+      lastModifiedByHostName: 'local', updatedAt: 'now', syncDirty: false });
+  }
+  const state = sqlite.prepare<[string, string], { content_hash: string; current_version_id: string | null }>(
+    'SELECT content_hash, current_version_id FROM sync_object_state WHERE object_type = ? AND object_id = ?'
+  ).get(objectType, globalId);
+  if (!state) throw new Error('fixture_arrangement_state_missing');
+  const fact = await selectFramedSyncObjectStateFact(port, { objectType, globalId },
+    framedSyncObjectStateFactId(objectType, state.content_hash, state.current_version_id));
+  const context = { groupId: 'group', protocolVersion: 22 as const, senderDeviceId: 'local',
+    senderLibraryEpoch: 'local-epoch', receiverDeviceId: 'remote', receiverLibraryEpoch: 'original-epoch' };
+  const manifest = { blobs: [], facts: [fact] };
+  const contentId = await canonicalContentId(manifest);
+  const transferId = await canonicalTransferId(context, contentId);
+  await port.transaction((tx) => publishFramedSyncOutboundWithDbPort(tx,
+    { context, contentId, manifest, manifestHash: contentId, transferId }));
+  return transferId;
+}
 
 async function chain() {
   for (const [index, id] of ['oa', 'ob', 'oc', 'od'].entries()) {
@@ -47,6 +78,31 @@ it('protects an unknown offline member, then releases only bodies outside its ad
   expect(body('od')).toBe('["a","b"]');
   expect((await collectParentOrderBodies(port, 'folder')).released).toBe(0);
 });
+
+it.each(['order_version', 'parent_child_order'] as const)(
+  'retains the complete arrangement frozen in %s until its delivery hold is released', async (objectType) => {
+    await insertParentOrderVersion(port, 'folder', { versionId: 'oa', kind: 'baseline',
+      order: ['a', 'b'], parentVersionIds: [] }, 'now');
+    await insertParentOrderVersion(port, 'folder', { versionId: 'ob', kind: 'membership',
+      order: ['a', 'b'], parentVersionIds: ['oa'] }, 'now');
+    await advanceParentOrderHead(port, 'folder', 'ob');
+    const transferId = await freezeArrangement(objectType);
+    for (const [id, parent] of [['oc', 'ob'], ['od', 'oc']] as const) {
+      await insertParentOrderVersion(port, 'folder', { versionId: id, kind: 'membership',
+        order: ['a', 'b'], parentVersionIds: [parent] }, 'now');
+    }
+    await advanceParentOrderHead(port, 'folder', 'od');
+    await adopt(position({ adopted_version_id: 'od' }));
+    await collectParentOrderBodies(port, 'folder');
+    expect(body('oa')).toBe('null');
+    expect(body('ob')).toBe('["a","b"]');
+    expect(body('oc')).toBe('null');
+    expect(body('od')).toBe('["a","b"]');
+    await port.run('DELETE FROM framed_sync_outbound_holds WHERE transfer_id = ?', [transferId]);
+    await collectParentOrderBodies(port, 'folder');
+    expect(body('ob')).toBe('null');
+    expect(body('od')).toBe('["a","b"]');
+  });
 
 it('retains a true sibling base and valid losing arrangements through collection', async () => {
   await chain();

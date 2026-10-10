@@ -32,22 +32,26 @@ const POSITIONS_SQL = `SELECT position.adopted_version_id AS version_id FROM par
   JOIN sync_group_local_state local ON local.group_id = position.group_id AND local.state = 'active'
   JOIN json_each(position.pending_version_ids_json) pending
   WHERE position.object_id = ? AND position.resolved_revision IS NULL`;
-const HELD_SQL = `SELECT ref.global_id AS version_id FROM framed_sync_outbound_fact_refs ref
-  JOIN framed_sync_outbound_holds hold ON hold.transfer_id = ref.transfer_id
-  JOIN framed_sync_outbound_publications publication ON publication.transfer_id = ref.transfer_id
-  JOIN json_each(publication.manifest_json, '$.facts') fact
-    ON json_extract(fact.value, '$.objectType') = 'order_version'
-      AND json_extract(fact.value, '$.globalId') = ref.global_id
-  JOIN json_each(fact.value, '$.body') field ON json_extract(field.value, '$.name') = 'payload_json'
+// Start from live holds so completed manifests do not get scanned during every collection.
+const HELD_SQL = `WITH frozen_order_facts AS MATERIALIZED (
+  SELECT publication.transfer_id, fact.value AS fact_json
+  FROM framed_sync_outbound_holds hold
+  CROSS JOIN framed_sync_outbound_publications publication ON hold.transfer_id = publication.transfer_id,
+    json_each(publication.manifest_json, '$.facts') fact
+  WHERE json_extract(fact.value, '$.objectType') IN ('order_version', 'parent_child_order'))
+  SELECT ref.global_id AS version_id FROM frozen_order_facts fact
+  CROSS JOIN framed_sync_outbound_fact_refs ref ON fact.transfer_id = ref.transfer_id
+    AND json_extract(fact.fact_json, '$.objectType') = 'order_version'
+    AND json_extract(fact.fact_json, '$.globalId') = ref.global_id
+  JOIN json_each(fact.fact_json, '$.body') field ON json_extract(field.value, '$.name') = 'payload_json'
   JOIN parent_order_versions version ON version.version_id = ref.global_id
   WHERE ref.object_type = 'order_version' AND version.parent_id = ?
     AND CASE WHEN json_extract(field.value, '$.name') = 'payload_json'
       THEN json_extract(json_extract(field.value, '$.value.value'), '$.child_ids_json') END != 'null'
-  UNION SELECT json_extract(field.value, '$.value.value') FROM framed_sync_outbound_publications publication
-  JOIN framed_sync_outbound_holds hold ON hold.transfer_id = publication.transfer_id,
-    json_each(publication.manifest_json, '$.facts') fact, json_each(fact.value, '$.body') field
-  WHERE json_extract(fact.value, '$.objectType') = 'parent_child_order'
-    AND json_extract(fact.value, '$.globalId') = ?
+  UNION SELECT json_extract(field.value, '$.value.value') FROM frozen_order_facts fact,
+    json_each(fact.fact_json, '$.body') field
+  WHERE json_extract(fact.fact_json, '$.objectType') = 'parent_child_order'
+    AND json_extract(fact.fact_json, '$.globalId') = ?
     AND json_extract(field.value, '$.name') = 'current_version_id'`;
 
 function plan(rows: ArrangementRow[], head: string, refs: string[], unknown: boolean) {
