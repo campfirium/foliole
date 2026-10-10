@@ -1,10 +1,16 @@
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../../shared/localization/testLocalization';
 import type { HotkeySettingItem } from '../model/hotkeySettings';
 
 import { HotkeySettingsSection } from './HotkeySettingsSection';
+
+beforeEach(() => {
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('Win32');
+  vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Windows');
+});
+afterEach(() => { vi.restoreAllMocks(); });
 
 const ITEMS: HotkeySettingItem[] = [
   {

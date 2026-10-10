@@ -1,5 +1,5 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 
 import type { NativeInvoke } from '../../../../lib/platform/nativeContract';
 import type { DesktopHostCapabilities } from '../../../shared/platform/desktopHostCapabilities';
@@ -8,6 +8,11 @@ import type { HotkeySettingItem } from '../model/hotkeySettings';
 
 import { SettingsPanel } from './SettingsPanel';
 import { createProps, renderWithMouseGestureProvider } from './SettingsPanel.testUtils';
+
+beforeEach(() => {
+  vi.spyOn(window.navigator, 'platform', 'get').mockReturnValue('Win32');
+  vi.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue('Windows');
+});
 
 afterEach(() => {
   delete window.electronAPI;
