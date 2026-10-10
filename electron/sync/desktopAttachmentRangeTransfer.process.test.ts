@@ -15,6 +15,9 @@ import { ATTACHMENT_RANGE_BYTES } from '../../lib/platform/resourceAvailabilityC
 import { hashResourceFile } from './resourceFileHash.js';
 
 const run = promisify(execFile);
+const forcedExit = process.platform === 'win32'
+  ? { code: 1, signal: null, stderr: '', stdout: '' }
+  : { code: null, signal: 'SIGKILL', stderr: '', stdout: '' };
 const worker = `
 import { promises as fs } from 'node:fs';
 import Database from ${JSON.stringify(pathToFileURL(path.join(process.cwd(), 'node_modules/better-sqlite3/lib/index.js')).href)};
@@ -106,7 +109,7 @@ it.each([['prefix', 3], ['tail', 3], ['aligned', 3], ['short', 3], ['prefix', 30
     const args = [path.join(root, 'worker.mjs'), sourcePath, filePath, hash];
     const options = { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, timeout: 60_000 };
     await expect(run(process.execPath, [...args, mode], options))
-      .rejects.toMatchObject({ signal: 'SIGKILL', stderr: '' });
+      .rejects.toMatchObject(forcedExit);
     expect((await fs.stat(`${filePath}.unverified`)).size)
       .toBe(mode === 'short' ? ATTACHMENT_RANGE_BYTES
         : ATTACHMENT_RANGE_BYTES * (mode === 'aligned' ? 3 : 2) + (mode === 'tail' ? 13 : 0));
@@ -136,7 +139,7 @@ it('recovers in a new process when killed after publication before checkpoint cl
     const args = [path.join(root, 'worker.mjs'), sourcePath, filePath, hash];
     const options = { env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }, timeout: 15_000 };
     await expect(run(process.execPath, [...args, 'published'], options))
-      .rejects.toMatchObject({ signal: 'SIGKILL', stderr: '' });
+      .rejects.toMatchObject(forcedExit);
     expect(await hashResourceFile(filePath)).toBe(hash);
     const resumed = await run(process.execPath, [...args, 'resume'], options);
     expect(JSON.parse(resumed.stdout).offsets).toEqual([]);
