@@ -200,10 +200,15 @@ interface LegacySettingIdentity {
   scope: 'device' | 'session_resume' | 'user_space';
 }
 
+// Version 54 predates the device preference classification; keep its original identities.
+const LEGACY_WORKSPACE_KEYS = new Set([
+  'app_settings', 'backup_settings', 'import_manager_settings', 'library_path_settings', 'readwise_api_import_state'
+]);
+
 function resolveLegacySettingIdentity(key: string, currentDeviceId: string): LegacySettingIdentity | null {
   const policy = resolveDesktopSettingPolicy(key);
   if (!policy.canonical || policy.scope === 'local_only') return null;
-  const scope = policy.scope === 'host' ? 'device' : policy.scope;
+  const scope = LEGACY_WORKSPACE_KEYS.has(key) ? 'user_space' : policy.scope === 'host' ? 'device' : policy.scope;
   const deviceId = scope === 'user_space' ? '*' : currentDeviceId;
   return {
     deviceId,

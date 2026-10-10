@@ -104,16 +104,16 @@ function createReviewLogPush(opId = 'op-1'): SyncPushPayload {
 async function verifyDesktopWorkspaceSettingPush() {
   const result = await applyCompanionSyncPushAsync([createSettingPush({
     base: { baseContentHash: null, kind: 'content_hash' },
-    clientOpId: 'setting:user_space:windows:desktop:*:app_settings:14',
-    identity: { objectId: 'user_space:windows:desktop:*:app_settings', objectType: 'setting', scope: 'user_space' },
+    clientOpId: 'setting:user_space:windows:desktop:*:review_scheduler_settings:14',
+    identity: { objectId: 'user_space:windows:desktop:*:review_scheduler_settings', objectType: 'setting', scope: 'user_space' },
     payloadJson: JSON.stringify({
-      host_name: '*', form_factor: 'desktop', key: 'app_settings', platform: 'windows',
+      host_name: '*', form_factor: 'desktop', key: 'review_scheduler_settings', platform: 'windows',
       scope: 'user_space', value_json: '{"theme":"dark"}'
     })
   })], 'android-device');
 
   expect(result.acks).toMatchObject([{ status: 'accepted' }]);
-  expect(loadJsonSetting('app_settings')).toEqual({ theme: 'dark' });
+  expect(loadJsonSetting('review_scheduler_settings')).toEqual({ theme: 'dark' });
 }
 
 describe('companion sync push async apply', () => {

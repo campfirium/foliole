@@ -44,8 +44,8 @@ afterEach(async () => {
 
 it('uses the same canonical setting payload for local state and outbound sync', () => {
   const driver = openDatabaseConnection().driver;
-  const objectId = 'user_space:windows:desktop:*:app_settings';
-  writeSettingRecord(driver, { key: 'app_settings', updatedAt: firstTime, valueJson: '{"theme":"dark"}' });
+  const objectId = 'user_space:windows:desktop:*:review_scheduler_settings';
+  writeSettingRecord(driver, { key: 'review_scheduler_settings', updatedAt: firstTime, valueJson: '{"theme":"dark"}' });
   const before = readState('setting', objectId);
   const payload = readPayload(objectId, 'setting');
 
@@ -54,7 +54,7 @@ it('uses the same canonical setting payload for local state and outbound sync', 
     'form_factor', 'host_name', 'key', 'platform', 'scope', 'value_json'
   ]);
 
-  writeSettingRecord(driver, { key: 'app_settings', updatedAt: secondTime, valueJson: '{"theme":"dark"}' });
+  writeSettingRecord(driver, { key: 'review_scheduler_settings', updatedAt: secondTime, valueJson: '{"theme":"dark"}' });
   expect(readState('setting', objectId)).toEqual(before);
 });
 
