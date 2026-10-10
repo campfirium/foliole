@@ -147,7 +147,7 @@ extension FoliolePhysicalSyncGroupUITests {
         } ?? app.descendants(matching: .any).matching(identifier: "Topic body")
             .firstMatch.staticTexts.firstMatch
         XCTAssertTrue(articleText.waitForExistence(timeout: 30), "The readable topic body is unavailable.")
-        articleText.tap()
+        articleText.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(localizedButton(named: "Outline", in: app).waitForExistence(timeout: 30),
                       "Tapping the readable topic did not reveal its controls.")
     }

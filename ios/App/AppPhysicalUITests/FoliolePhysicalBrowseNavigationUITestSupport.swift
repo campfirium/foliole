@@ -30,7 +30,7 @@ extension FoliolePhysicalSyncGroupUITests {
                 if !localizedButton(named: "Exit", in: app).exists {
                     let passage = body.staticTexts.firstMatch
                     XCTAssertTrue(passage.waitForExistence(timeout: 30), "The active topic text is unavailable.")
-                    passage.tap()
+                    passage.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
                 }
                 tapButton(named: "Exit", in: app, timeout: 30)
                 waitForDisappearance(body, timeout: 30,
