@@ -79,6 +79,17 @@ test('shows only other devices above local watched-folder settings', async ({
   await fs.mkdir(path.dirname(screenshot), { recursive: true });
   await dialog.screenshot({ path: screenshot });
   await testInfo.attach('watched-workgroup-connections', { path: screenshot, contentType: 'image/png' });
+
+  await groupList.getByRole('button', { name: /More actions for|更多操作/ }).click();
+  await desktopWindow.getByRole('menuitem', { name: /Remove source|移除源/ }).click();
+  const removal = desktopWindow.getByRole('dialog', { name: /Remove watched folder|移除监听文件夹/ });
+  await expect(removal).toBeVisible();
+  const removalScreenshot = path.join(path.dirname(screenshot), 'watched-source-removal.png');
+  await removal.screenshot({ path: removalScreenshot });
+  await testInfo.attach('watched-source-removal', { path: removalScreenshot, contentType: 'image/png' });
+  await removal.getByRole('button', { name: /^(Remove|移除)$/ }).click();
+  await expect(removal).toHaveCount(0);
+  await expect(groupList).toHaveCount(0);
 });
 
 test('shows one conflict dialog and saves the selected source in the native client', async ({

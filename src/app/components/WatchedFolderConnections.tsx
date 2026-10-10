@@ -41,18 +41,6 @@ function groupBindings(bindings: NativeWatchedFolderBinding[], waitingLabel: str
   return [...groups.entries()].map(([key, group]) => ({ key, ...group }));
 }
 
-function MenuButton(props: { label: string }) {
-  return (
-    <button
-      aria-label={props.label}
-      className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
-      type="button"
-    >
-      <MoreHorizontal aria-hidden="true" size={18} strokeWidth={1.8} />
-    </button>
-  );
-}
-
 function SourceActions(props: {
   binding: NativeWatchedFolderBinding;
   onReconnect: () => void;
@@ -62,9 +50,15 @@ function SourceActions(props: {
   return (
     <AppDropdownMenu>
       <AppDropdownMenuTrigger asChild>
-        <MenuButton label={t('desktop.watchedFolder.connections.folderActions', {
-          path: props.binding.primary_path || t('desktop.watchedFolder.source')
-        })} />
+        <button
+          aria-label={t('desktop.watchedFolder.connections.folderActions', {
+            path: props.binding.primary_path || t('desktop.watchedFolder.source')
+          })}
+          className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-foreground/55 transition-colors hover:bg-settings-control-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-border-strong"
+          type="button"
+        >
+          <MoreHorizontal aria-hidden="true" size={18} strokeWidth={1.8} />
+        </button>
       </AppDropdownMenuTrigger>
       <AppDropdownMenuContent align="end" sideOffset={4}>
         <AppDropdownMenuItem onSelect={props.onReconnect}>

@@ -1,11 +1,18 @@
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { beforeEach, expect, it, vi } from 'vitest';
 
 import { renderWithLocalization } from '../../shared/localization/testLocalization';
 
 import { WatchedFolderConnections } from './WatchedFolderConnections';
 
-const { activeGroup, load } = vi.hoisted(() => ({ activeGroup: vi.fn(), load: vi.fn() }));
+const { activeGroup, load, remove } = vi.hoisted(() => ({
+  activeGroup: vi.fn(), load: vi.fn(), remove: vi.fn()
+}));
+
+vi.mock('./watchedSourceManagementActions', () => ({
+  reconnectWatchedSource: vi.fn(),
+  removeWatchedSource: remove
+}));
 
 vi.mock('../../shared/platform/import/watchedFolderRuntimeRepository', () => ({
   confirmWatchedFolderReconnectInRuntime: vi.fn(),
@@ -81,4 +88,21 @@ it('does not add an empty workgroup block before local watched-folder settings',
   renderWithLocalization(<WatchedFolderConnections />);
 
   expect(await screen.findByRole('region', { name: 'Other devices' }).catch(() => null)).toBeNull();
+});
+
+it('opens remote folder actions and removes the selected source', async () => {
+  load.mockResolvedValue({
+    bindings: [binding('remote', {
+      host_name: 'Office PC', owner_device_identity_key: 'remote-device'
+    })],
+    current_host_name: 'This Mac', current_device_identity_key: 'local-device'
+  });
+  renderWithLocalization(<WatchedFolderConnections />);
+
+  fireEvent(await screen.findByRole('button', { name: 'More actions for /source/remote' }),
+    new MouseEvent('pointerdown', { bubbles: true, button: 0, ctrlKey: false }));
+  expect(await screen.findByRole('menuitem', { name: 'Change source…' })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Remove source' }));
+
+  expect(remove).toHaveBeenCalledWith('watched:remote', expect.any(Function), expect.any(Function));
 });
