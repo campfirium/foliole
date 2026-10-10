@@ -91,9 +91,11 @@ it.each(['desktop', 'companion'] as const)(
   expect(new Set([chosen?.body_text, ...chosen?.alternative_bodies?.map(body => body.text) ?? []]))
     .toEqual(new Set(['left edited\nright one', 'left one\nright edited']));
   expect(current.current_version_id).toMatch(/^ver_[a-f0-9]{24}$/);
-  expect(versionBodies()).toEqual([['A', 'left one\nright one'],
+  expect(versionBodies()).toEqual([['A', null],
     ['B', null], ['C', null], ['D', null], ['E', 'left edited\nright one'],
-    ['F', 'left one\nright edited'], [current.current_version_id, current.content]]);
+    ['F', null], [current.current_version_id, current.content]]);
+  expect(offline.sqlite.prepare("SELECT version_id FROM node_sync_versions WHERE version_id IN ('A', 'F') AND json_extract(snapshot_json, '$.body_deleted') = 1 ORDER BY version_id")
+    .all()).toEqual([{ version_id: 'A' }, { version_id: 'F' }]);
   expect(offline.sqlite.prepare(`SELECT parent_version_id FROM node_sync_version_parents
     WHERE version_id = ? ORDER BY ordinal`).all(current.current_version_id))
     .toEqual([{ parent_version_id: 'E' }, { parent_version_id: 'F' }]);

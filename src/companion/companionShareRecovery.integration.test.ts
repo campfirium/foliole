@@ -213,11 +213,12 @@ it.each([true, false])('preserves a permanent deletion with receipt present = %s
   await writeIosCompanionDatabase((db) => collectNodeVersionPayloads(db, topicId, Number.MAX_SAFE_INTEGER));
   expect(readShareOriginalFacts(database!, topicId).versions).toEqual(expect.arrayContaining(originals.versions));
   expect(readShareOriginalFacts(database!, topicId).edges).toEqual(expect.arrayContaining(originals.edges));
-  expect(database!.prepare(`SELECT version_id, body_text, json_extract(snapshot_json, '$.content') AS content
+  expect(database!.prepare(`SELECT version_id, body_text, json_extract(snapshot_json, '$.content') AS content,
+    json_extract(snapshot_json, '$.body_deleted') AS body_deleted
     FROM node_sync_versions WHERE version_id IN (?, ?) ORDER BY version_id`)
     .all(`ver_share_${deliveryId}`, 'ver_before_delete')).toEqual([
-      { version_id: 'ver_before_delete', body_text: null, content: null },
-      { version_id: `ver_share_${deliveryId}`, body_text: null, content: null }
+      { version_id: 'ver_before_delete', body_text: null, content: null, body_deleted: 1 },
+      { version_id: `ver_share_${deliveryId}`, body_text: null, content: null, body_deleted: 1 }
     ]);
   expect(database!.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?')
     .get('ver_deleted')).toEqual({ body_text: 'Edited before permanent deletion' });

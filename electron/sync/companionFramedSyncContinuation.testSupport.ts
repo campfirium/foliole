@@ -2,7 +2,7 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import Database from 'better-sqlite3';
 
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
-import type { NativeCompanionFramedSyncPullRequest, NativeCompanionFramedSyncTransferRequest }
+import type { NativeCompanionFramedSyncInventoryRequest, NativeCompanionFramedSyncPullRequest, NativeCompanionFramedSyncTransferRequest }
   from '../../lib/platform/nativeCompanionSyncContract.js';
 import { prepareCompanionFramedSyncOutbound } from '../../src/shared/platform/companion/sync/framed/companionFramedSyncOutbound.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -15,6 +15,8 @@ import { exchangeDesktopFramedSyncInventoryHttp, requestDesktopFramedSyncDiffere
 import { prepareDesktopFramedSyncPublishedDelivery, sendDesktopFramedSyncPublishedTransfer }
   from './desktopFramedSyncProcessOutbound.js';
 import type { DesktopFramedSyncFixtureSnapshot } from './desktopFramedSyncTwoProcess.testSupport.js';
+
+type InventoryEntries = Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>>['remote'];
 
 /** Replace the unavailable OS bridge with production authenticated HTTP and SQLite transports. */
 export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnapshot,
@@ -32,14 +34,15 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
     responderDeviceId: remote.deviceId, responderLibraryEpoch: `${remote.deviceId}-epoch` };
   const exchange = { context, db, endpointUrl: remote.origin, groupKey, groupSecret,
     noncePort: createDesktopFramedSyncSessionNoncePort(db) };
-  let remoteEntries: Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>>['remote'] = [];
+  let remoteEntries: InventoryEntries = [];
   const request = { endpoint_url: remote.origin, receiver_device_id: remote.deviceId,
     receiver_library_epoch: `${remote.deviceId}-epoch`, sync_group_id: 't326-group' };
-  async function readInventory() {
+  async function readInventory(input?: NativeCompanionFramedSyncInventoryRequest) {
     context.initiatorLibraryEpoch = readLocalEpoch(sqlite);
-    const inventory = await exchangeDesktopFramedSyncInventoryHttp(exchange);
-    remoteEntries = inventory.remote;
-    return { round_id: bytesToHex(inventory.roundId), entries: remoteEntries.map(serialize) };
+    const inventory = await exchangeDesktopFramedSyncInventoryHttp({ ...exchange,
+      ...(input?.detail_global_ids ? { detailGlobalIds: input.detail_global_ids } : {}) });
+    remoteEntries = mergeInventoryDetails(remoteEntries, inventory.remote, input?.detail_global_ids);
+    return { round_id: bytesToHex(inventory.roundId), entries: inventory.remote.map(serialize) };
   }
   async function pull(input: NativeCompanionFramedSyncPullRequest) {
     context.initiatorLibraryEpoch = readLocalEpoch(sqlite);
@@ -76,6 +79,11 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
   return { db, sqlite, request, readInventory, pull, send };
 }
 
+function mergeInventoryDetails(previous: InventoryEntries, incoming: InventoryEntries, detailIds?: readonly string[]) {
+  if (!detailIds) return incoming;
+  return [...previous.filter(entry => entry.objectType !== 'node' || !detailIds.includes(entry.globalId)), ...incoming];
+}
+
 function readLocalEpoch(sqlite: Database.Database) {
   const epoch = sqlite.prepare('SELECT library_epoch FROM node_version_local_proof_state WHERE singleton_id = 1')
     .pluck().get();
@@ -86,5 +94,6 @@ function readLocalEpoch(sqlite: Database.Database) {
 function serialize(entry: Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>>['remote'][number]) {
   return { frontier_fact_ids: entry.frontierFactIds, global_id: entry.globalId, object_type: entry.objectType,
     required_relation_ids: entry.requiredRelationIds, resource_hashes: entry.resourceHashes.map(bytesToHex),
-    review_fact_ids: entry.reviewFactIds, state_fact_ids: entry.stateFactIds ?? [], shared_state_hash: bytesToHex(entry.sharedStateHash) };
+    review_fact_ids: entry.reviewFactIds, state_fact_ids: entry.stateFactIds ?? [], shared_state_hash: bytesToHex(entry.sharedStateHash),
+    ...(entry.versionStates ? { version_states: entry.versionStates, current_version_id: entry.currentVersionId ?? '', unready: entry.unready ?? false } : {}) };
 }

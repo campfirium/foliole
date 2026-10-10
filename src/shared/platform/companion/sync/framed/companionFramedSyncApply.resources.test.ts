@@ -67,10 +67,10 @@ it.each(['android', 'ios'] as const)(
   expect(JSON.parse(applied.resource_references)).toEqual(
     JSON.parse(record.snapshot.resource_references));
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 1 });
-  expect(bytesToHex(receipt.appliedStateHash)).toBe('4'.repeat(64));
-  expect((await readFramedSyncInventory(createBetterSqliteDbPort(main)))
-    .find((entry) => entry.objectType === 'node' && entry.globalId === 'node-1')!
-    .resourceHashes.map(bytesToHex)).toContain(bytesToHex(resourceHash));
+  const inventory = (await readFramedSyncInventory(createBetterSqliteDbPort(main)))
+    .find((entry) => entry.objectType === 'node' && entry.globalId === 'node-1')!;
+  expect(receipt.appliedStateHash).toEqual(inventory.sharedStateHash);
+  expect(inventory.resourceHashes.map(bytesToHex)).toContain(bytesToHex(resourceHash));
   }
 );
 

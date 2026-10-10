@@ -1,10 +1,10 @@
 // @vitest-environment node
 
-import { bytesToHex } from '@noble/hashes/utils.js';
 import { afterEach, expect, it } from 'vitest';
 
 import { closeApplyHarnesses, harness, input, nodeRecord, reviewFact, stage } from '../../../../../../electron/database/companionFramedSyncApplyHarness.testSupport.js';
 import type { CanonicalBlob, CanonicalFact } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { readFramedSyncInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
 
 import { applyCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
@@ -38,7 +38,8 @@ it.each(['android', 'ios'] as const)(
   expect(main.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
   expect(main.prepare('SELECT op_id FROM review_log').all()).toEqual([{ op_id: 'review-1' }]);
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 1 });
-  expect(bytesToHex(receipt.appliedStateHash)).toBe('4'.repeat(64));
+  expect(receipt.appliedStateHash).toEqual((await readFramedSyncInventory(port))
+    .find((entry) => entry.objectType === 'node' && entry.globalId === 'node-1')!.sharedStateHash);
 });
 
 it.each(['android', 'ios'] as const)('persists a complete one-MiB Unicode body on its %s node and original version', async (kind) => {
@@ -77,7 +78,8 @@ it.each(['android', 'ios'] as const)(
 
   expect(main.prepare('SELECT op_id FROM review_log ORDER BY op_id').all())
     .toEqual([{ op_id: 'review-only-1' }, { op_id: 'review-only-2' }]);
-  expect(bytesToHex(receipt.appliedStateHash)).toBe('4'.repeat(64));
+  expect(receipt.appliedStateHash).toEqual((await readFramedSyncInventory(port))
+    .find((entry) => entry.objectType === 'node' && entry.globalId === 'node-1')!.sharedStateHash);
   expect(main.prepare('SELECT COUNT(*) AS count FROM framed_sync_receipts').get()).toEqual({ count: 2 });
 });
 

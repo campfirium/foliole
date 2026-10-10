@@ -96,7 +96,8 @@ function updateMeta(sql: string, values: unknown[], meta: Map<string, string>) {
 describe('iosCompanionDatabaseBootstrap version contract', () => {
   it('tracks the latest shared companion migration independently of the desktop schema', () => {
     expect(COMPANION_DATABASE_VERSION).toBe(
-      Math.max(COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
+      // Version 80 installs the shared node history state migration.
+      Math.max(80, COMPANION_TEXT_BODY_OWNERSHIP_VERSION,
         ...ANDROID_COMPANION_MIGRATION_PLAN.map((migration) => migration.beforeVersion))
     );
   });
