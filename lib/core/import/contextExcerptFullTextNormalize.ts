@@ -1,16 +1,23 @@
 import { normalizeChineseVariants } from './chineseVariantNormalization.js';
 import { normalizeLineEndings } from './contextExcerptQuoteLocator.js';
 
-function appendCompactWhitespace(state: { normalized: string; rawIndexes: number[] }, rawIndex: number) {
-  if (state.normalized.length === 0 || state.normalized.endsWith(' ')) {
+interface NormalizedTextState {
+  normalized: string;
+  rawIndexes: number[];
+  endsInWhitespace: boolean;
+}
+
+function appendCompactWhitespace(state: NormalizedTextState, rawIndex: number) {
+  if (state.rawIndexes.length === 0 || state.endsInWhitespace) {
     return;
   }
   state.normalized += ' ';
+  state.endsInWhitespace = true;
   state.rawIndexes.push(rawIndex);
 }
 
 function appendNormalizedCharacter(
-  state: { normalized: string; rawIndexes: number[] },
+  state: NormalizedTextState,
   character: string,
   rawIndex: number
 ) {
@@ -19,6 +26,7 @@ function appendNormalizedCharacter(
     return;
   }
   state.normalized += normalizeChineseVariants(character);
+  state.endsInWhitespace = false;
   state.rawIndexes.push(rawIndex);
 }
 
@@ -34,7 +42,7 @@ function shouldAppendLinkBoundarySpace(raw: string, linkEnd: number) {
   return next.length === 0 || !/[\s\p{P}\p{S}]/u.test(next);
 }
 
-function tryConsumeMarkdownLink(raw: string, index: number, state: { normalized: string; rawIndexes: number[] }) {
+function tryConsumeMarkdownLink(raw: string, index: number, state: NormalizedTextState) {
   const isImage = raw[index] === '!' && raw[index + 1] === '[';
   const labelStart = isImage ? index + 2 : raw[index] === '[' ? index + 1 : -1;
   if (labelStart < 0) {
@@ -61,7 +69,7 @@ function tryConsumeMarkdownLink(raw: string, index: number, state: { normalized:
   return linkEnd - index + 1;
 }
 
-function tryConsumeWikiLink(raw: string, index: number, state: { normalized: string; rawIndexes: number[] }) {
+function tryConsumeWikiLink(raw: string, index: number, state: NormalizedTextState) {
   if (raw[index] !== '[' || raw[index + 1] !== '[') {
     return 0;
   }
@@ -93,7 +101,7 @@ function consumeInlineMarkerAfterMarkdown(raw: string, index: number) {
 
 export function normalizeFullTextWithMap(value: string) {
   const raw = normalizeLineEndings(value);
-  const state = { normalized: '', rawIndexes: [] as number[] };
+  const state: NormalizedTextState = { normalized: '', rawIndexes: [], endsInWhitespace: false };
   let lineStart = true;
   for (let index = 0; index < raw.length; index += 1) {
     if (lineStart) {
