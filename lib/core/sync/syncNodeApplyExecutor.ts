@@ -161,6 +161,7 @@ export async function applySyncNodeSourceWithDbPort<M extends SyncNodeRecordMeta
   await assertLocalRestoreCanApply(port, options.operation, ordered);
   const preparedHashes = new Map<M, string>();
   for (const metadata of ordered) {
+    if (metadata.snapshot.body_blob_hash) continue;
     const record = await source.load(port, metadata);
     const hash = (await prepareSyncNodeTextBodyHashes([record], options)).get(record);
     if (hash) preparedHashes.set(metadata, hash);
