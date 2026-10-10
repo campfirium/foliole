@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import {
   combineReports,
   resolveTotalTimeoutMs,
+  sharedBucketEnvironment,
   SHARED_TEST_BUCKETS,
   writeBucketFailureReport
 } from './run-shared-test-bucket.mjs';
@@ -140,14 +141,20 @@ describe('run-shared-test-bucket', () => {
       .toThrow('unsupported VITEST_POOL');
   });
 
-  it('keeps native buckets serial while renderer workers remain independently isolated', () => {
-    const env = { VITEST_POOL: 'threads', SHARED_TEST_FILE_PARALLELISM: 'true' };
+  it('forwards configured parallelism independently of the hosted pool', () => {
+    const hosted = { VITEST_POOL: 'forks' };
+    const env = sharedBucketEnvironment({ pool: 'threads', fileParallelism: true }, hosted);
     const renderer = buildSharedBucketInvocation('report.json', ['src/features/editor'], '/electron', '/repo', env);
     expect(renderer.args).toContain('--fileParallelism');
     expect(renderer.args).toContain('--maxWorkers=2');
-    const native = buildSharedBucketInvocation('report.json', ['src/shared/platform'], '/electron', '/repo', { VITEST_POOL: 'forks' });
-    expect(native.args).toContain('--no-file-parallelism');
+    expect(renderer.args).toContain('--pool=threads');
+    const bucket = SHARED_TEST_BUCKETS.find(({ label }) => label === 'store-native');
+    const native = buildSharedBucketInvocation('report.json', bucket.targets, '/electron', '/repo', sharedBucketEnvironment(bucket, hosted));
+    expect(native.args).toContain('--fileParallelism');
+    expect(native.args).toContain('--maxWorkers=2');
     expect(native.args).toContain('--pool=forks');
+    const serial = buildSharedBucketInvocation('report.json', [], '/electron', '/repo', sharedBucketEnvironment({}, hosted));
+    expect(serial.args).toContain('--no-file-parallelism');
   });
 
   it('keeps native store integration outside parallel renderer workers', async () => {

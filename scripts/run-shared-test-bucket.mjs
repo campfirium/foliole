@@ -115,6 +115,14 @@ export function writeBucketFailureReport(bucket, message) {
   writeFileSync(bucket.report, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
 }
 
+export function sharedBucketEnvironment(bucket, env = process.env) {
+  return {
+    ...env,
+    ...(bucket.pool ? { VITEST_POOL: bucket.pool } : {}),
+    SHARED_TEST_FILE_PARALLELISM: String(bucket.fileParallelism === true)
+  };
+}
+
 async function main() {
   const [reportPath] = process.argv.slice(2);
   if (!reportPath) {
@@ -145,8 +153,7 @@ async function main() {
       remainingMs,
       electronPath,
       repoRoot,
-      bucket.pool ? { ...process.env, VITEST_POOL: bucket.pool,
-        SHARED_TEST_FILE_PARALLELISM: String(bucket.fileParallelism === true) } : process.env
+      sharedBucketEnvironment(bucket)
     );
     if (code !== 0) {
       exitCode = code;
