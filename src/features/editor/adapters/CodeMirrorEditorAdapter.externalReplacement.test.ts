@@ -17,6 +17,13 @@ function withAdapter(run: (adapter: CodeMirrorEditorAdapter, view: EditorView) =
 }
 
 describe('external replacement of a longer editor document', () => {
+  it('opens a complete bounded body part containing a long Unicode paragraph', () => {
+    const content = '中文😀'.repeat(104_857);
+    withAdapter((adapter) => {
+      expect(adapter.getContent()).toBe(content);
+    }, content);
+  });
+
   it('keeps a search match on its text when content is inserted before it', () => {
     withAdapter((adapter, view) => {
       adapter.setSearchDecorations({ activeIndex: 0, matches: [{ from: 6, to: 12 }] });

@@ -8,7 +8,7 @@ export function isLikelyPdfSourceReference(content: string) {
     return true;
   }
   const withoutOptionalTitle = normalized.replace(/^# .+\n+/, '').trim();
-  return /^(?:https?:\/\/|file:\/\/|[A-Za-z]:[\\/]|\/|\.{1,2}\/|[^:\n]+)[^\n]*[.][Pp][Dd][Ff](?:[?#][^\n\s)]*)?$/.test(
+  return /^(?:https?:\/\/|file:\/\/|[A-Za-z]:[\\/]|\/|\.{1,2}\/|[^:\n])[^\n]*[.][Pp][Dd][Ff](?:[?#][^\n\s)]*)?$/.test(
     withoutOptionalTitle
   );
 }
