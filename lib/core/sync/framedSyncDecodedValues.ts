@@ -1,4 +1,6 @@
-import { TEXT_BODY_MAX_BYTES } from '../nodes/textBodyBudget.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
+
+import { TEXT_BODY_MAX_BYTES, utf8ByteLength } from '../nodes/textBodyBudget.js';
 
 import { isBodyDescriptor } from './framedSyncBlobContract.js';
 import {
@@ -9,7 +11,6 @@ import {
 
 type Row = Record<string, unknown>;
 type Budget = { fields: number };
-const encoder = new TextEncoder();
 // One canonical object level expands into four decoded protobuf containers. The extra
 // envelope allows canonical validation to own both the exact limit and its +1 case.
 const MAX_PROTOBUF_CONTAINER_DEPTH = FRAMED_SYNC_LIMITS.maxCanonicalDepth * 4 + 8;
@@ -43,7 +44,7 @@ export function fixedBytes(value: unknown, size: number, name: string) {
 }
 
 export function hex(value: Uint8Array) {
-  return [...value].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return bytesToHex(value);
 }
 
 export function protocolString(value: unknown) {
@@ -61,7 +62,7 @@ function boundedString(value: unknown, limit: number, error: string) {
       index += 1;
     } else if (unit >= 0xdc00 && unit <= 0xdfff) throw new Error('protocol_unicode_invalid');
   }
-  if (encoder.encode(value).byteLength > limit) {
+  if (utf8ByteLength(value) > limit) {
     throw new Error(error);
   }
   return value;
@@ -101,10 +102,12 @@ export function walk(value: unknown, depth: number, budget: Budget): void {
     for (const item of value) walk(item, depth + 1, budget);
     return;
   }
-  const entries = Object.entries(value as Row);
-  budget.fields += entries.length;
+  const object = value as Row;
+  for (const key in object) if (Object.hasOwn(object, key)) budget.fields += 1;
   if (budget.fields > FRAMED_SYNC_LIMITS.maxDecodedFields) throw new Error('protocol_field_limit_exceeded');
-  for (const [key, item] of entries) {
+  for (const key in object) {
+    if (!Object.hasOwn(object, key)) continue;
+    const item = object[key];
     if (key === 'stringValue') {
       boundedString(item, FRAMED_SYNC_LIMITS.maxCanonicalStringBytes, 'canonical_string_limit_exceeded');
     } else walk(item, depth + 1, budget);

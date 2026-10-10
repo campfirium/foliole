@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import type { DbPort, DbRow } from './dbPort.js';
 import { expireFramedSyncCompletions } from './framedSyncCompletionRetention.js';
-import type { FramedSyncContext } from './framedSyncContract.js';
+import { FRAMED_SYNC_LIMITS, type FramedSyncContext } from './framedSyncContract.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInventory.js';
 import { publishParentOrderPosition } from './parentOrderMemberPosition.js';
@@ -48,14 +48,26 @@ function entry(row: InventoryRow): FramedSyncInventoryEntry {
 
 async function read(port: DbPort, key: InventoryKey | undefined) {
   if (key && key.objectType !== 'node') return readFramedSyncObjectStateInventory(port, key);
-  const rows = await port.query<InventoryRow>(`SELECT * FROM framed_sync_inventory
-    WHERE object_type = 'node' ${key ? 'AND object_id = ?' : ''} ORDER BY object_id`,
-  key ? [key.globalId] : []);
-  const nodes = rows.map(entry);
+  const nodes = await readNodes(port, key);
   const states = key ? [] : await readFramedSyncObjectStateInventory(port);
   return [...nodes, ...states].sort((left, right) =>
     compareSyncIdentityText(left.objectType, right.objectType) ||
     compareSyncIdentityText(left.globalId, right.globalId));
+}
+
+async function readNodes(port: DbPort, key: InventoryKey | undefined) {
+  if (key) return (await port.query<InventoryRow>(`SELECT * FROM framed_sync_inventory
+    WHERE object_type = 'node' AND object_id = ?`, [key.globalId])).map(entry);
+  const nodes: FramedSyncInventoryEntry[] = [];
+  let after: string | undefined;
+  for (;;) {
+    const rows = await port.query<InventoryRow>(`SELECT * FROM framed_sync_inventory
+      WHERE object_type = 'node' ${after === undefined ? '' : 'AND object_id > ?'} ORDER BY object_id LIMIT ?`,
+    [...(after === undefined ? [] : [after]), FRAMED_SYNC_LIMITS.maxInventoryEntriesPerFrame]);
+    for (const row of rows) nodes.push(entry(row));
+    if (rows.length < FRAMED_SYNC_LIMITS.maxInventoryEntriesPerFrame) return nodes;
+    after = rows[rows.length - 1]!.object_id;
+  }
 }
 
 export function readFramedSyncInventory(port: DbPort) {

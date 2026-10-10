@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
-import { bytes as decodedBytes } from './framedSyncDecodedValues.js';
+import { bytes as decodedBytes, walk } from './framedSyncDecodedValues.js';
 import {
   createFramedSyncProtocolEncoder,
   decodeAndValidateProtocolMessage,
@@ -10,6 +10,35 @@ import {
 
 const bytes = (value: number, size = 32) => new Uint8Array(size).fill(value);
 const identity = { factId: 'version-1', globalId: 'node-1', kind: 2, objectType: 'node' };
+
+it.each(['a', 'Aé中😀'])('keeps exact UTF-8 boundaries for protocol and canonical text using %s', token => {
+  const fill = (limit: number) => token.repeat(Math.floor(limit / Buffer.byteLength(token))) +
+    'x'.repeat(limit % Buffer.byteLength(token));
+  const protocol = fill(FRAMED_SYNC_LIMITS.maxProtocolStringBytes);
+  const canonical = fill(FRAMED_SYNC_LIMITS.maxCanonicalStringBytes);
+  const payload = fact({ identity: { ...identity, factId: protocol },
+    body: { fields: [{ name: 'content', value: { stringValue: canonical } }] } });
+  const encoded = encodeValidatedProtocolMessage('fact', payload);
+  const decoded = decodeAndValidateProtocolMessage(encoded, FRAMED_SYNC_FRAME_TYPES.fact).payload;
+  expect(decoded.identity).toEqual(payload.identity);
+  expect(decoded.body).toEqual(payload.body);
+  expect(Buffer.from(decodedBytes(decoded.sharedStateHash, 'shared_state_hash')))
+    .toEqual(Buffer.from(payload.sharedStateHash));
+  expect(() => encodeValidatedProtocolMessage('fact', fact({ identity: { ...identity, factId: protocol + 'x' } })))
+    .toThrow('protocol_string_limit_exceeded');
+  expect(() => encodeValidatedProtocolMessage('fact', fact({
+    body: { fields: [{ name: 'content', value: { stringValue: canonical + 'x' } }] }
+  }))).toThrow('canonical_string_limit_exceeded');
+});
+
+it('counts only own enumerable fields at the validation boundary', () => {
+  const value = Object.create({ inherited: 'x'.repeat(FRAMED_SYNC_LIMITS.maxProtocolStringBytes + 1) });
+  Object.defineProperty(value, 'hidden', { value: 'x'.repeat(FRAMED_SYNC_LIMITS.maxProtocolStringBytes + 1) });
+  value.own = { content: 'valid' };
+  const budget = { fields: 0 };
+  walk(value, 0, budget);
+  expect(budget.fields).toBe(2);
+});
 
 function fact(overrides: Record<string, unknown> = {}) {
   return {

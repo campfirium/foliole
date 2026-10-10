@@ -18,11 +18,14 @@ import { createDesktopFramedSyncRoundEndpoint } from './desktopFramedSyncRoundEn
 
 type EndpointInput = Parameters<typeof createDesktopFramedSyncRoundEndpoint>[0];
 
-/** Reconnect checks the original missing set before retrying durable deliveries. */
-export async function resumeDesktopFramedSyncPendingPublications(input: EndpointInput & { remoteInventory?: readonly FramedSyncInventoryEntry[] }) {
+export async function hasDesktopFramedSyncPendingPublications(input: EndpointInput) {
   if (await syncGroupLocalPublicationBlockReason(input.db) ||
-      await isSyncGroupPeerAdopting(input.db, input.groupId, input.peer.deviceId)) return 0;
-  const rows = await input.db.query<DbRow>(`SELECT publication.transfer_id, publication.state
+      await isSyncGroupPeerAdopting(input.db, input.groupId, input.peer.deviceId)) return false;
+  return (await pendingPublications(input)).length > 0;
+}
+
+function pendingPublications(input: EndpointInput) {
+  return input.db.query<DbRow>(`SELECT publication.transfer_id, publication.state
     FROM framed_sync_outbound_publications publication
     JOIN framed_sync_outbound_holds hold ON hold.transfer_id = publication.transfer_id
     WHERE publication.state IN ('published', 'receipt_committed') AND publication.group_id = ?
@@ -31,6 +34,13 @@ export async function resumeDesktopFramedSyncPendingPublications(input: Endpoint
       AND hold.member_id = publication.receiver_device_id ORDER BY publication.rowid`,
   [input.groupId, input.local.deviceId, input.local.libraryEpoch,
     input.peer.deviceId, input.peer.libraryEpoch]);
+}
+
+/** Reconnect checks the original missing set before retrying durable deliveries. */
+export async function resumeDesktopFramedSyncPendingPublications(input: EndpointInput & { remoteInventory?: readonly FramedSyncInventoryEntry[] }) {
+  if (await syncGroupLocalPublicationBlockReason(input.db) ||
+      await isSyncGroupPeerAdopting(input.db, input.groupId, input.peer.deviceId)) return 0;
+  const rows = await pendingPublications(input);
   if (!rows.length) return 0;
   const remoteInventory = input.remoteInventory ?? (await exchangeDesktopFramedSyncInventoryHttp({
     context: { protocolVersion: 22, groupId: input.groupId,

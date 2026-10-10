@@ -11,6 +11,8 @@ const MISSING_DEPENDENCIES = {
   'sync_parent_order_body_unavailable:': 'order_version'
 } as const;
 export type FramedSyncDifferenceDelivery = 'delivered' | 'deferred';
+export type FramedSyncDependencyResolver = (key: Pick<FramedSyncInventoryDifference,
+  'direction' | 'globalId' | 'objectType'>) => FramedSyncInventoryDifference | undefined;
 
 function key(value: Pick<FramedSyncInventoryDifference, 'direction' | 'globalId' | 'objectType'>) {
   return `${value.direction}\0${value.objectType}\0${value.globalId}`;
@@ -33,11 +35,12 @@ export function readFramedSyncMissingDependency(error: unknown) {
 }
 
 export async function deliverFramedSyncDifferencesInDependencyOrder(
-  differences: readonly FramedSyncInventoryDifference[],
+  differences: Iterable<FramedSyncInventoryDifference>,
   deliver: (difference: FramedSyncInventoryDifference) => Promise<FramedSyncDifferenceDelivery>,
-  dependencies: readonly FramedSyncInventoryDifference[] = []
+  dependencies: readonly FramedSyncInventoryDifference[] | FramedSyncDependencyResolver = []
 ) {
-  const available = new Map([...dependencies, ...differences].map((difference) => [key(difference), difference]));
+  const pending = typeof dependencies === 'function' ? differences : Array.from(differences);
+  const resolve = typeof dependencies === 'function' ? dependencies : dependencyResolver(pending, dependencies);
   const active = new Set<string>();
   const delivered = new Set<string>();
   const deferred = new Map<string, FramedSyncInventoryDifference>();
@@ -55,7 +58,7 @@ export async function deliverFramedSyncDifferencesInDependencyOrder(
           break;
         } catch (error) {
           const dependency = readFramedSyncMissingDependency(error);
-          const parent = dependency ? available.get(key({ ...difference, ...dependency })) : null;
+          const parent = dependency ? resolve({ ...difference, ...dependency }) : null;
           if (!dependency) throw error;
           if (parent && key(parent) === differenceKey && dependency.code !== 'framed_sync_review_node_missing:') {
             throw new Error('framed_sync_node_parent_cycle');
@@ -80,8 +83,16 @@ export async function deliverFramedSyncDifferencesInDependencyOrder(
       active.delete(differenceKey);
     }
   }
-  for (const difference of differences) await visit(difference);
+  for (const difference of pending) await visit(difference);
   return [...deferred.values()];
+}
+
+function dependencyResolver(differences: Iterable<FramedSyncInventoryDifference>,
+  dependencies: readonly FramedSyncInventoryDifference[]): FramedSyncDependencyResolver {
+  const available = new Map<string, FramedSyncInventoryDifference>();
+  for (const difference of dependencies) available.set(key(difference), difference);
+  for (const difference of differences) available.set(key(difference), difference);
+  return identity => available.get(key(identity));
 }
 
 /** Equal identities can still be missing a body needed by a newly discovered branch. */

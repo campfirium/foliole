@@ -4,7 +4,7 @@ import { expect, it } from 'vitest';
 import { canonicalManifestBytes, type CanonicalFact, type CanonicalValue } from './framedSyncCanonicalManifest.js';
 import { streamFactProtocolEncoding } from './framedSyncFactEncoding.js';
 import { assertNodeVersionFactShape, FRAMED_SYNC_NODE_VERSION_FACT } from './framedSyncNodeFactContract.js';
-import { encodeValidatedProtocolMessage, streamValidatedFactProtocolMessage } from './framedSyncProtocolCodec.js';
+import { encodeValidatedProtocolMessage, streamValidatedFactProtocolMessage, validatedFactProtocolByteLength } from './framedSyncProtocolCodec.js';
 import { factToWire } from './framedSyncWireProjection.js';
 
 const string = (value: string): CanonicalValue => ({ kind: 'string', value });
@@ -42,6 +42,7 @@ function payload(values: readonly Record<string, unknown>[]) {
 
 function assertExactEncoding(value: unknown) {
   const parts = [...streamValidatedFactProtocolMessage(value)];
+  expect(validatedFactProtocolByteLength(value)).toBe(parts.reduce((sum, part) => sum + part.byteLength, 0));
   expect(parts.every((part) => part.byteLength <= 64 * 1024)).toBe(true);
   expect(Buffer.concat(parts)).toEqual(Buffer.from(encodeValidatedProtocolMessage('fact', value)));
   return parts;

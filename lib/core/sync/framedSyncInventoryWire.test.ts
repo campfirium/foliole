@@ -45,6 +45,26 @@ it('roundtrips a multi-chunk inventory with one stable round identity', async ()
   });
 });
 
+it('validates all inventory pages while retaining only observed node identities', async () => {
+  const input = entries(257);
+  const messages = await encodeFramedSyncInventory({ entries: input, roundId });
+  const ids: string[] = [];
+  const decoded = await decodeFramedSyncInventory(validate(messages), {
+    retainEntries: false,
+    observeEntries: page => { ids.push(...page.map(entry => entry.globalId)); }
+  });
+  expect(decoded).toEqual({ entries: [], roundId });
+  expect(ids).toEqual(input.map(entry => entry.globalId));
+  const incomplete = validate(messages.filter((_message, index) => index !== 2));
+  await expect(decodeFramedSyncInventory(incomplete, { retainEntries: false }))
+    .rejects.toThrow('inventory_chunk_sequence_invalid');
+  const corruptEnd = validate([...messages.slice(0, -1), {
+    payloadCase: 'inventory_end', payload: { roundId, inventoryHash: new Uint8Array(32) }
+  }]);
+  await expect(decodeFramedSyncInventory(corruptEnd, { retainEntries: false }))
+    .rejects.toThrow('inventory_exchange_incomplete');
+});
+
 it.each([4097, 10000])('exchanges every entry in a %i object inventory', async (count) => {
   const input = entries(count);
   const encoded = await encodeFramedSyncInventory({ entries: input, roundId });

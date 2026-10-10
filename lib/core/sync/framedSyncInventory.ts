@@ -1,3 +1,5 @@
+import { bytesToHex } from '@noble/hashes/utils.js';
+
 import { assertFramedSyncDigest } from './framedSyncContract.js';
 import { changedNodeVersionIds } from './framedSyncNodeInventoryState.js';
 import { parseFramedSyncParentRelationFactId } from './framedSyncRelationReviewFact.js';
@@ -34,6 +36,8 @@ export type FramedSyncInventoryDifference = Readonly<{
   sourceSnapshot: FramedSyncInventoryEntry;
 }>;
 
+type Inventories = { local: readonly FramedSyncInventoryEntry[]; remote: readonly FramedSyncInventoryEntry[] };
+
 export type FramedSyncDeferredObject = Readonly<{
   globalId: string;
   objectType: string;
@@ -60,7 +64,7 @@ function compareKey(left: FramedSyncInventoryEntry, right: FramedSyncInventoryEn
 }
 
 function bytesKey(value: Uint8Array) {
-  return [...value].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return bytesToHex(value);
 }
 
 function sameBytes(left: Uint8Array, right: Uint8Array) {
@@ -141,7 +145,7 @@ function cloneEntry(entry: FramedSyncInventoryEntry): FramedSyncInventoryEntry {
   };
 }
 
-function appendDifference(result: FramedSyncInventoryDifference[],
+function differenceFrom(
   direction: FramedSyncInventoryDifference['direction'], source: FramedSyncInventoryEntry,
   destination?: FramedSyncInventoryEntry) {
   if (destination && !source.unready && !destination.unready &&
@@ -152,34 +156,37 @@ function appendDifference(result: FramedSyncInventoryDifference[],
       need: { frontierFactIds: [], requiredRelationIds: [], reviewFactIds: [], stateFactIds: [], sharedState: false, resourceHashes: resources } };
   }
   const need = needFrom(source, destination);
-  if (!hasNeed(need)) return;
-  result.push({
+  if (!hasNeed(need)) return null;
+  return {
     direction, globalId: source.globalId, need,
     objectType: source.objectType, sourceSnapshot: cloneEntry(source)
-  });
+  } satisfies FramedSyncInventoryDifference;
 }
 
-export function compareFramedSyncInventories(args: {
-  local: readonly FramedSyncInventoryEntry[];
-  remote: readonly FramedSyncInventoryEntry[];
-}) {
+export function compareFramedSyncInventories(args: Inventories): FramedSyncInventoryDifference[] {
+  return Array.from(iterateFramedSyncInventoryDifferences(args));
+}
+
+export function* iterateFramedSyncInventoryDifferences(args: Inventories): Generator<FramedSyncInventoryDifference> {
   assertInventory(args.local);
   assertInventory(args.remote);
-  const result: FramedSyncInventoryDifference[] = [];
   let localIndex = 0;
   let remoteIndex = 0;
   while (localIndex < args.local.length || remoteIndex < args.remote.length) {
     const local = args.local[localIndex];
     const remote = args.remote[remoteIndex];
     const order = local === undefined ? 1 : remote === undefined ? -1 : compareKey(local, remote);
-    if (local && order <= 0) appendDifference(result, 'local_to_remote', local,
-      order === 0 ? remote : undefined);
-    if (remote && order >= 0) appendDifference(result, 'remote_to_local', remote,
-      order === 0 ? local : undefined);
+    if (local && order <= 0) {
+      const difference = differenceFrom('local_to_remote', local, order === 0 ? remote : undefined);
+      if (difference) yield difference;
+    }
+    if (remote && order >= 0) {
+      const difference = differenceFrom('remote_to_local', remote, order === 0 ? local : undefined);
+      if (difference) yield difference;
+    }
     if (order <= 0) localIndex += 1;
     if (order >= 0) remoteIndex += 1;
   }
-  return result;
 }
 
 function inventoryMap(entries: readonly FramedSyncInventoryEntry[]) {

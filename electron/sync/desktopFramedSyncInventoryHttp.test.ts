@@ -68,6 +68,8 @@ function peer(nodeId: string, body: string, hashByte: string) {
       body_blob_hash TEXT, content TEXT NOT NULL DEFAULT '');
     CREATE TABLE external_documents (document_id TEXT PRIMARY KEY, body_blob_hash TEXT,
       content TEXT NOT NULL DEFAULT '');
+    CREATE TABLE node_review (node_id TEXT PRIMARY KEY);
+    CREATE TABLE node_open_state (node_id TEXT PRIMARY KEY);
     CREATE TABLE node_sync_versions (version_id TEXT PRIMARY KEY, object_id TEXT NOT NULL,
       parent_version_id TEXT, host_name TEXT NOT NULL, created_at TEXT NOT NULL,
       body_text TEXT, content_hash TEXT NOT NULL, snapshot_json TEXT NOT NULL);

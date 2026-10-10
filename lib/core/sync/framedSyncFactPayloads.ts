@@ -3,7 +3,7 @@ import { sha256 } from '@noble/hashes/sha2.js';
 import type { CanonicalFact } from './framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import { FRAMED_SYNC_FACT_FRAGMENT_BYTES, FRAMED_SYNC_MAX_ENCODED_FACT_BYTES } from './framedSyncFactFragmentContract.js';
-import { streamValidatedFactProtocolMessage } from './framedSyncProtocolCodec.js';
+import { streamValidatedFactProtocolMessage, validatedFactProtocolByteLength } from './framedSyncProtocolCodec.js';
 import { factToWire, wireUint64 } from './framedSyncWireProjection.js';
 
 type FactPayload = Readonly<{ frameType: number; payloadCase: 'fact' | 'fact_fragment'; payload: unknown }>;
@@ -11,16 +11,18 @@ type FactPayload = Readonly<{ frameType: number; payloadCase: 'fact' | 'fact_fra
 /** Hash and emit the same frozen fact without materializing its complete protobuf bytes. */
 export function* iterateFramedSyncFactPayloads(fact: CanonicalFact): Generator<FactPayload> {
   const wire = factToWire(fact);
+  const measured = validatedFactProtocolByteLength(wire);
+  if (measured > FRAMED_SYNC_MAX_ENCODED_FACT_BYTES) throw new Error('fact_encoded_limit_exceeded');
+  if (measured <= FRAMED_SYNC_LIMITS.maxDecompressedFrameBytes) {
+    yield { frameType: FRAMED_SYNC_FRAME_TYPES.fact, payloadCase: 'fact', payload: wire };
+    return;
+  }
   const hash = sha256.create();
   let totalByteLength = 0;
   for (const bytes of streamValidatedFactProtocolMessage(wire)) {
     totalByteLength += bytes.byteLength;
     if (totalByteLength > FRAMED_SYNC_MAX_ENCODED_FACT_BYTES) throw new Error('fact_encoded_limit_exceeded');
     hash.update(bytes);
-  }
-  if (totalByteLength <= FRAMED_SYNC_LIMITS.maxDecompressedFrameBytes) {
-    yield { frameType: FRAMED_SYNC_FRAME_TYPES.fact, payloadCase: 'fact', payload: wire };
-    return;
   }
   const encodedSha256 = hash.digest();
   let data = new Uint8Array(FRAMED_SYNC_FACT_FRAGMENT_BYTES);

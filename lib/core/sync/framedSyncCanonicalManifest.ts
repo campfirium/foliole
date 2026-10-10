@@ -14,6 +14,7 @@ import {
   assertManifestBlobGraph,
   assertUniqueCanonicalFacts
 } from './framedSyncManifestGraph.js';
+import { compareUtf8Text } from './syncIdentityKeyOrder.js';
 
 export type CanonicalValue =
   | Readonly<{ kind: 'bool'; value: boolean }>
@@ -51,7 +52,6 @@ export type CanonicalManifest = Readonly<{
 
 const CONTENT_DOMAIN = 'foliole-framed-sync-content-v1';
 const TRANSFER_DOMAIN = 'foliole-framed-sync-transfer-v1';
-const textEncoder = new TextEncoder();
 
 
 function compareBytes(left: Uint8Array, right: Uint8Array) {
@@ -64,7 +64,7 @@ function compareBytes(left: Uint8Array, right: Uint8Array) {
 }
 
 function compareText(left: string, right: string) {
-  return compareBytes(textEncoder.encode(left), textEncoder.encode(right));
+  return compareUtf8Text(left, right);
 }
 
 

@@ -16,7 +16,7 @@ import { readFramedSyncPayloadBudget } from '../database/framedSyncPayloadBudget
 
 import { respondDesktopFramedSyncDifferenceRequests } from './desktopFramedSyncDifferenceReplies.js';
 import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
-import { resumeDesktopFramedSyncPendingPublications } from './desktopFramedSyncPendingPublications.js';
+import { hasDesktopFramedSyncPendingPublications, resumeDesktopFramedSyncPendingPublications } from './desktopFramedSyncPendingPublications.js';
 import { runDesktopFramedSyncResourceRound } from './desktopFramedSyncResourceRound.js';
 import { readDesktopFramedSyncRoundInventory } from './desktopFramedSyncRoundInventory.js';
 import {
@@ -63,21 +63,10 @@ export async function respondDesktopFramedSyncInventory(args: {
       return respondDesktopFramedSyncDifferenceRequests({ ...args, requests });
     } finally { await incoming.return(undefined); }
   }
-  const { roundId, entries: remoteInventory, detailGlobalIds = [], summaryOnly = false } = await decodeFramedSyncInventory((async function* () {
+  const { roundId, detailGlobalIds = [], summaryOnly = false } = await consumeRemoteInventory(args, (async function* () {
     try { yield first.value; yield* incoming; }
     finally { await incoming.return(undefined); }
   })());
-  const route = loadDesktopSyncGroupRoutes(args.context.groupId).find((peer) =>
-    peer.peer_device_id === args.context.initiatorDeviceId);
-  if (route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') await resumeDesktopFramedSyncPendingPublications({
-    db: args.db, groupId: args.context.groupId, groupSecret: args.groupSecret,
-    local: { deviceId: args.context.responderDeviceId, libraryEpoch: args.context.responderLibraryEpoch },
-    peer: { deviceId: args.context.initiatorDeviceId, libraryEpoch: args.context.initiatorLibraryEpoch },
-    peerOrigin: route.endpoint_url, staging: args.staging, remoteInventory
-  });
-  if (!detailGlobalIds.length && route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') {
-    await reconcileResponderResources(args, route.endpoint_url, roundId, remoteInventory);
-  }
   const entries = await readDesktopFramedSyncRoundInventory(args.db);
   const messages = iterateFramedSyncInventory({ entries: detailGlobalIds.length ?
     entries.filter(entry => entry.objectType === 'node' && detailGlobalIds.includes(entry.globalId)) :
@@ -91,18 +80,42 @@ export async function respondDesktopFramedSyncInventory(args: {
   });
 }
 
-async function reconcileResponderResources(args: Parameters<typeof respondDesktopFramedSyncInventory>[0],
-  endpointUrl: string, roundId: Uint8Array, inventory: readonly FramedSyncInventoryEntry[]) {
-  function* nodes() {
-    for (const entry of inventory) if (entry.objectType === 'node') yield entry.globalId;
+async function consumeRemoteInventory(args: Parameters<typeof respondDesktopFramedSyncInventory>[0],
+  messages: Parameters<typeof decodeFramedSyncInventory>[0]) {
+  const route = loadDesktopSyncGroupRoutes(args.context.groupId).find((peer) =>
+    peer.peer_device_id === args.context.initiatorDeviceId);
+  const endpoint = route ? {
+    db: args.db, groupId: args.context.groupId, groupSecret: args.groupSecret,
+    local: { deviceId: args.context.responderDeviceId, libraryEpoch: args.context.responderLibraryEpoch },
+    peer: { deviceId: args.context.initiatorDeviceId, libraryEpoch: args.context.initiatorLibraryEpoch },
+    peerOrigin: route.endpoint_url, staging: args.staging
+  } : undefined;
+  const resume = endpoint && await hasDesktopFramedSyncPendingPublications(endpoint);
+  const nodeIds: string[] = [];
+  const { roundId, entries: remoteInventory, detailGlobalIds = [], summaryOnly = false } = await decodeFramedSyncInventory(messages, {
+    retainEntries: Boolean(resume),
+    observeEntries(entries) {
+      if (route) for (const entry of entries) if (entry.objectType === 'node') nodeIds.push(entry.globalId);
+    }
+  });
+  if (resume && endpoint && route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') {
+    await resumeDesktopFramedSyncPendingPublications({ ...endpoint, remoteInventory });
   }
+  if (!detailGlobalIds.length && route && desktopSyncGroupMemberStateReadiness(route.peer_device_id) !== 'restore') {
+    await reconcileResponderResources(args, route.endpoint_url, roundId, nodeIds);
+  }
+  return { roundId, detailGlobalIds, summaryOnly };
+}
+
+async function reconcileResponderResources(args: Parameters<typeof respondDesktopFramedSyncInventory>[0],
+  endpointUrl: string, roundId: Uint8Array, nodeIds: readonly string[]) {
   await runDesktopFramedSyncResourceRound({ ...args, endpointUrl, roundId,
     context: { ...args.context,
       initiatorDeviceId: args.context.responderDeviceId,
       initiatorLibraryEpoch: args.context.responderLibraryEpoch,
       responderDeviceId: args.context.initiatorDeviceId,
       responderLibraryEpoch: args.context.initiatorLibraryEpoch }
-  }, nodes());
+  }, nodeIds);
 }
 
 export async function exchangeDesktopFramedSyncInventoryHttp(args: {

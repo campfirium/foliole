@@ -90,11 +90,25 @@ function inventoryPageCount(entries: readonly FramedSyncInventoryEntry[], offset
   roundId: Uint8Array, chunkIndex: number, encode: ReturnType<typeof createFramedSyncProtocolEncoder>) {
   const maximum = Math.min(CHUNK_SIZE, entries.length - offset);
   let accepted = 0;
-  // The current protobuf writer materializes bytes, so stop at the first oversized prefix.
-  for (let count = 1; count <= maximum; count += 1) {
+  let upper = maximum;
+  // Bound materialized probes by growing from the previous fitting prefix.
+  for (let count = 1; count <= maximum; count = Math.min(maximum, count * 2)) {
     const encoded = encode('inventory_chunk', chunk(entries.slice(offset, offset + count), roundId, chunkIndex));
-    if (encoded.byteLength > FRAMED_SYNC_LIMITS.maxControlMessageBytes) break;
+    if (encoded.byteLength > FRAMED_SYNC_LIMITS.maxControlMessageBytes) {
+      upper = count - 1;
+      break;
+    }
     accepted = count;
+    if (count === maximum) break;
+  }
+  let lower = accepted + 1;
+  while (lower <= upper) {
+    const count = Math.floor((lower + upper) / 2);
+    const encoded = encode('inventory_chunk', chunk(entries.slice(offset, offset + count), roundId, chunkIndex));
+    if (encoded.byteLength <= FRAMED_SYNC_LIMITS.maxControlMessageBytes) {
+      accepted = count;
+      lower = count + 1;
+    } else upper = count - 1;
   }
   if (!accepted) throw new Error('inventory_frame_limit_exceeded');
   return accepted;
@@ -129,7 +143,8 @@ export function* iterateFramedSyncInventory(args: {
 }
 
 export async function decodeFramedSyncInventory(
-  messages: Iterable<ValidatedProtocolMessage> | AsyncIterable<ValidatedProtocolMessage>
+  messages: Iterable<ValidatedProtocolMessage> | AsyncIterable<ValidatedProtocolMessage>,
+  options: { retainEntries?: boolean; observeEntries?: (entries: readonly FramedSyncInventoryEntry[]) => void } = {}
 ) {
   const entries: FramedSyncInventoryEntry[] = [];
   const session = budget();
@@ -138,6 +153,7 @@ export async function decodeFramedSyncInventory(
   let chunkIndex = 0;
   let ended = false;
   let frames = 0;
+  let receivedCount = 0;
   let detailGlobalIds: string[] = [];
   let summaryOnly = false;
   for await (const message of messages) {
@@ -156,7 +172,7 @@ export async function decodeFramedSyncInventory(
     if (message.payloadCase === 'inventory_end') {
       if (!sameBytes(bytes(payload.roundId, 'round_id'), roundId) ||
           !sameBytes(bytes(payload.inventoryHash, 'inventory_hash'), session.finish()) ||
-          BigInt(entries.length) !== expectedCount) throw new Error('inventory_exchange_incomplete');
+          BigInt(receivedCount) !== expectedCount) throw new Error('inventory_exchange_incomplete');
       ended = true;
       continue;
     }
@@ -167,8 +183,10 @@ export async function decodeFramedSyncInventory(
     }
     const incoming = entriesFromWire(payload);
     session.add(encodedChunk(chunk(incoming, roundId, chunkIndex++)));
-    if (BigInt(entries.length + incoming.length) > expectedCount) throw new Error('inventory_entry_limit_exceeded');
-    entries.push(...incoming);
+    receivedCount += incoming.length;
+    if (BigInt(receivedCount) > expectedCount) throw new Error('inventory_entry_limit_exceeded');
+    options.observeEntries?.(incoming);
+    if (options.retainEntries !== false) entries.push(...incoming);
   }
   if (!roundId || !ended) throw new Error('inventory_exchange_incomplete');
   return { entries, roundId, ...(detailGlobalIds.length ? { detailGlobalIds } : {}), ...(summaryOnly ? { summaryOnly } : {}) };

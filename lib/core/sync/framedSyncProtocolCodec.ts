@@ -1,7 +1,7 @@
 import protobuf from 'protobufjs';
 
 import { assertDecodedProtocolPayload } from './framedSyncDecodedContract.js';
-import { streamFactProtocolEncoding } from './framedSyncFactEncoding.js';
+import { factProtocolByteLength, streamFactProtocolEncoding } from './framedSyncFactEncoding.js';
 import {
   assertDecodedPayloadType,
   type ProtocolPayloadCase
@@ -86,6 +86,10 @@ export function createFramedSyncProtocolEncoder() {
 /** Yields standard protobuf bytes without allocating the complete fact encoding. */
 export function* streamValidatedFactProtocolMessage(payload: unknown): Generator<Uint8Array> {
   yield* streamFactProtocolEncoding(protocolMessage, protocolValue('fact', payload));
+}
+
+export function validatedFactProtocolByteLength(payload: unknown) {
+  return factProtocolByteLength(protocolMessage, protocolValue('fact', payload));
 }
 
 function protocolValue(payloadCase: ProtocolPayloadCase, payload: unknown) {

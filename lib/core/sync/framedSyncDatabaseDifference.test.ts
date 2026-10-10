@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 
-import { compareFramedSyncDatabaseInventories } from './framedSyncDatabaseDifference.js';
+import { compareFramedSyncDatabaseInventories, hasFramedSyncDatabaseDifference } from './framedSyncDatabaseDifference.js';
 import { compareFramedSyncInventories, revalidateFramedSyncInventorySource } from './framedSyncInventory.js';
 
 const source = { globalId: 'article', objectType: 'node', frontierFactIds: ['v1'],
@@ -10,9 +10,27 @@ const source = { globalId: 'article', objectType: 'node', frontierFactIds: ['v1'
 it('finishes unchanged database facts with a missing file while preserving the independent resource difference', () => {
   const inventories = { local: [source], remote: [{ ...source, resourceHashes: [] }] };
   expect(compareFramedSyncDatabaseInventories(inventories)).toEqual([]);
+  expect(hasFramedSyncDatabaseDifference(inventories)).toBe(false);
   expect(compareFramedSyncInventories(inventories)).toMatchObject([
     { direction: 'local_to_remote', need: { resourceHashes: source.resourceHashes } }
   ]);
+});
+
+it.each(['local', 'remote'] as const)('ends database comparison on %s when complete state hashes match', side => {
+  const complete = { ...source, globalId: 'later' };
+  const missing = { ...complete, frontierFactIds: [] };
+  expect(hasFramedSyncDatabaseDifference({
+    local: [source, side === 'local' ? complete : missing],
+    remote: [source, side === 'remote' ? complete : missing]
+  })).toBe(false);
+});
+
+it('validates the entire inventory before accepting an early database difference', () => {
+  expect(() => hasFramedSyncDatabaseDifference({ local: [source,
+    { ...source, globalId: 'later', sharedStateHash: new Uint8Array(31) }], remote: [] }))
+    .toThrow('shared_state_hash');
+  expect(() => hasFramedSyncDatabaseDifference({ local: [{ ...source, globalId: 'later' }, source], remote: [] }))
+    .toThrow('inventory_order_invalid');
 });
 
 it('keeps original fact duties and source revalidation when files are handled separately', () => {
@@ -25,9 +43,4 @@ it('keeps original fact duties and source revalidation when files are handled se
     .toEqual({ readyDifferences: differences, deferredObjects: [] });
   expect(revalidateFramedSyncInventorySource({ currentSource: [{ ...source, sharedStateHash: new Uint8Array(32) }],
     differences, direction: 'local_to_remote' }).deferredObjects).toEqual([{ globalId: 'article', objectType: 'node' }]);
-});
-
-it('ends node database comparison at an equal complete state hash', () => {
-  const remote = { ...source, frontierFactIds: [], requiredRelationIds: [], reviewFactIds: [], stateFactIds: [] };
-  expect(compareFramedSyncDatabaseInventories({ local: [source], remote: [remote] })).toEqual([]);
 });

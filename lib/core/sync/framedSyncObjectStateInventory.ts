@@ -3,6 +3,7 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 import { isWorkspaceSettingObject } from '../database/settingDataPolicy.js';
 
 import type { DbPort, DbRow } from './dbPort.js';
+import { FRAMED_SYNC_LIMITS } from './framedSyncContract.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { SYNC_POLICY_HOST_PRIVATE_OBJECT_TYPES } from './syncObjectPolicy.js';
 
@@ -36,7 +37,7 @@ export async function readFramedSyncObjectStateInventory(
   port: DbPort, key?: Readonly<{ globalId: string; objectType: string }>
 ): Promise<FramedSyncInventoryEntry[]> {
   const types = sharedTypes.map((type) => `'${type}'`).join(',');
-  const rows = await port.query<StateRow>(`SELECT object_type, object_id, content_hash, current_version_id,
+  const sql = `SELECT object_type, object_id, content_hash, current_version_id,
     CASE WHEN object_type = 'external_document' AND deleted_at IS NULL THEN
       (SELECT body_blob_hash FROM external_documents WHERE document_id = object_id
         AND (CAST(content AS BLOB) <> X'' OR body_blob_hash =
@@ -50,17 +51,30 @@ export async function readFramedSyncObjectStateInventory(
       AND (object_type != 'node_open_state' OR deleted_at IS NOT NULL OR EXISTS
         (SELECT 1 FROM nodes JOIN node_open_state opened ON opened.node_id = nodes.id
           WHERE nodes.id = sync_object_state.object_id))
-      ${key ? 'AND object_type = ? AND object_id = ?' : ''}
-    ORDER BY object_type, object_id`, key ? [key.objectType, key.globalId] : []);
-  return rows.filter((row) => isFramedSyncSharedStateObject(row.object_type, row.object_id)).map((row) => {
-    if (!/^[a-f0-9]{64}$/u.test(row.content_hash)) {
-      throw new Error('framed_sync_inventory_state_hash_invalid');
-    }
-    return { frontierFactIds: [], globalId: row.object_id, objectType: row.object_type,
-      requiredRelationIds: [], resourceHashes: row.body_blob_hash ? [hexToBytes(row.body_blob_hash)] : [], reviewFactIds: [],
-      sharedStateHash: hexToBytes(row.content_hash),
-      stateFactIds: [framedSyncObjectStateFactId(row.object_type, row.content_hash, row.current_version_id)] };
-  });
+      ${key ? 'AND object_type = ? AND object_id = ?' :
+    'AND (object_type > ? OR (object_type = ? AND object_id > ?))'}
+    ORDER BY object_type, object_id ${key ? '' : 'LIMIT ?'}`;
+  const entries: FramedSyncInventoryEntry[] = [];
+  let afterType = '';
+  let afterId = '';
+  for (;;) {
+    const rows = await port.query<StateRow>(sql, key ? [key.objectType, key.globalId] :
+      [afterType, afterType, afterId, FRAMED_SYNC_LIMITS.maxInventoryEntriesPerFrame]);
+    for (const row of rows) if (isFramedSyncSharedStateObject(row.object_type, row.object_id)) entries.push(stateEntry(row));
+    if (key || rows.length < FRAMED_SYNC_LIMITS.maxInventoryEntriesPerFrame) return entries;
+    afterType = rows[rows.length - 1]!.object_type;
+    afterId = rows[rows.length - 1]!.object_id;
+  }
+}
+
+function stateEntry(row: StateRow): FramedSyncInventoryEntry {
+  if (!/^[a-f0-9]{64}$/u.test(row.content_hash)) {
+    throw new Error('framed_sync_inventory_state_hash_invalid');
+  }
+  return { frontierFactIds: [], globalId: row.object_id, objectType: row.object_type,
+    requiredRelationIds: [], resourceHashes: row.body_blob_hash ? [hexToBytes(row.body_blob_hash)] : [], reviewFactIds: [],
+    sharedStateHash: hexToBytes(row.content_hash),
+    stateFactIds: [framedSyncObjectStateFactId(row.object_type, row.content_hash, row.current_version_id)] };
 }
 
 export function framedSyncObjectStateFactId(type: string, hash: string, head: string | null) {
