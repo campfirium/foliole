@@ -57,11 +57,13 @@ import { closeDatabaseConnection, openDatabaseConnection } from './connection.js
 import { markDatabaseReady } from './databaseReadiness.js';
 import { runDesktopDatabaseWrite } from './desktopDatabaseWriteQueue.js';
 import { initializeDatabase } from './migrate.js';
+import { flushCoalescedWorkspaceSearchInvalidations, resetSearchInvalidationCoalescerForTests } from './searchIndexInvalidationCoalescer.js';
 
 const BetterSqlite3 = createRequire(import.meta.url)('better-sqlite3') as typeof import('better-sqlite3');
 let root = '';
 
 beforeEach(async () => {
+  resetSearchInvalidationCoalescerForTests();
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-t288-queue-'));
   appDataDir = path.join(root, 'app');
   initializeDatabase();
@@ -152,6 +154,7 @@ it('runs waiting foreground creation before the next background write', async ()
 });
 
 afterEach(async () => {
+  resetSearchInvalidationCoalescerForTests();
   closeDatabaseConnection();
   await fs.rm(root, { force: true, recursive: true, maxRetries: 5, retryDelay: 100 });
 });
@@ -168,15 +171,17 @@ it('rebuilds missing indexes in a real worker and settles the matching persisted
 
 it('retains interrupted work and resumes it after reopening the database', async () => {
   await handleInvokeRequest({ command: 'create_topic', args: nodeArgs('t288-resume', 'Recoverable body') });
+  await flushCoalescedWorkspaceSearchInvalidations();
   const controller = new AbortController();
   workerStarted = () => controller.abort();
   await expect(runWorkspaceSearchMaintenanceInWorker(500, controller.signal)).rejects.toThrow();
-  expect(openDatabaseConnection().driver.queryOne(
-    'SELECT target_id FROM search_index_invalidations WHERE target_id = ?', ['t288-resume']
-  )).toEqual({ target_id: 't288-resume' });
+  expect(openDatabaseConnection().driver.queryAll('SELECT target_id FROM search_index_invalidations'))
+    .toEqual([{ target_id: 't288-resume' }]);
   workerStarted = null;
   closeDatabaseConnection();
   expect(await runWorkspaceSearchMaintenanceInWorker(500)).toEqual({ failed: 0, processed: 1 });
+  expect(openDatabaseConnection().driver.queryOne('SELECT COUNT(*) AS count FROM search_index_invalidations'))
+    .toEqual({ count: 0 });
   expect(openDatabaseConnection().driver.queryOne('SELECT content FROM search.node_search WHERE node_id = ?', ['t288-resume']))
     .toEqual({ content: 'Recoverable body' });
 });
