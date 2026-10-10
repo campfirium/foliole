@@ -84,17 +84,19 @@ export const SHARED_TEST_BUCKETS = [
       ...immediateDirectoryTargets('src/shared/platform', ['companion'])
     ]
   },
-  { label: 'shared-ui', report: '.tmp/vitest/shared-src-ui.json', targets: ['src/shared/ui'] },
-  { label: 'features-editor', report: '.tmp/vitest/shared-src-features-editor.json', targets: ['src/features/editor'] },
-  { label: 'features-nodes', report: '.tmp/vitest/shared-src-features-nodes.json', targets: ['src/features/nodes'] },
-  { label: 'features-settings', report: '.tmp/vitest/shared-src-features-settings.json', targets: ['src/features/settings'] },
+  { label: 'shared-ui', pool: 'threads', report: '.tmp/vitest/shared-src-ui.json', targets: ['src/shared/ui'] },
+  { label: 'features-editor', pool: 'threads', report: '.tmp/vitest/shared-src-features-editor.json', targets: ['src/features/editor'] },
+  { label: 'features-nodes', pool: 'threads', report: '.tmp/vitest/shared-src-features-nodes.json', targets: ['src/features/nodes'] },
+  { label: 'features-settings', pool: 'threads', report: '.tmp/vitest/shared-src-features-settings.json', targets: ['src/features/settings'] },
   {
     label: 'features-review-docs',
+    pool: 'threads',
     report: '.tmp/vitest/shared-src-features-review-docs.json',
     targets: ['src/features/review', 'src/features/pdf', 'src/features/image-cloze', 'src/features/formula-cloze']
   },
   {
     label: 'features-guided',
+    pool: 'threads',
     report: '.tmp/vitest/shared-src-features-guided.json',
     targets: ['src/features/guidedSample', 'src/features/help']
   },

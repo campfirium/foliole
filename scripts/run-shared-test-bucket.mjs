@@ -144,7 +144,8 @@ async function main() {
       bucket.targets,
       remainingMs,
       electronPath,
-      repoRoot
+      repoRoot,
+      bucket.pool ? { ...process.env, VITEST_POOL: bucket.pool } : process.env
     );
     if (code !== 0) {
       exitCode = code;

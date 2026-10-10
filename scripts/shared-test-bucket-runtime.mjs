@@ -54,12 +54,13 @@ function terminateChildTree(child) {
   globalThis.setTimeout(() => child.kill('SIGKILL'), 1000).unref();
 }
 
-export function runSharedBucketVitest(reportPath, targets, timeoutMs, electronPath, repoRoot) {
+export function runSharedBucketVitest(reportPath, targets, timeoutMs, electronPath, repoRoot, env = process.env) {
   const invocation = buildSharedBucketInvocation(
     reportPath,
     targets,
     electronPath,
-    repoRoot
+    repoRoot,
+    env
   );
   const child = spawn(invocation.electronPath, invocation.args, invocation.options);
   return new Promise((resolve) => {
