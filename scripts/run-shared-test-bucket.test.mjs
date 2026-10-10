@@ -56,12 +56,13 @@ async function expandSharedBucketTargets() {
 }
 
 describe('run-shared-test-bucket', () => {
-  it('keeps lib tests in their own shared bucket', () => {
-    expect(SHARED_TEST_BUCKETS).toContainEqual({
-      label: 'lib',
-      report: '.tmp/vitest/shared-lib.json',
-      targets: ['--exclude=src/**', '--exclude=electron/**', '--exclude=scripts/**']
-    });
+  it('keeps every library test once in isolated native or renderer buckets', async () => {
+    const buckets = SHARED_TEST_BUCKETS.filter(({ label }) => label.startsWith('lib'));
+    const targets = buckets.flatMap(({ targets }) => targets).sort();
+    expect(targets).toEqual(await collectTests('lib'));
+    expect(new Set(targets).size).toBe(targets.length);
+    expect(buckets.find(({ label }) => label === 'lib-native').pool).toBeUndefined();
+    expect(buckets.find(({ label }) => label === 'lib').pool).toBe('threads');
   });
 
   it('keeps split feature buckets covering every top-level feature directory', async () => {

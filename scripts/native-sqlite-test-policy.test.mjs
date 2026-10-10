@@ -15,7 +15,7 @@ const SQLITE_PATTERN = /\b(?:import\b[\s\S]*?\bfrom\s+|require\s*\()\s*['"]bette
 const RELEASE_GATE_TEST_TIMEOUT_MS = 30_000;
 
 async function testFiles() {
-  return collectTestFiles(['electron', 'src', 'scripts']);
+  return collectTestFiles(['electron', 'src', 'lib', 'scripts']);
 }
 
 async function collectTestFiles(roots) {

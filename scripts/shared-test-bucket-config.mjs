@@ -1,6 +1,8 @@
 import { readdirSync } from 'node:fs';
 import path from 'node:path';
 
+import { controlledElectronSqliteTests } from './native-sqlite-test-policy.mjs';
+
 const TEST_FILE_PATTERN = /\.test\.(?:mjs|mts|ts|tsx)$/u;
 
 function immediateTestTargets(directory) {
@@ -16,6 +18,11 @@ function immediateDirectoryTargets(directory, excludedNames = []) {
     .filter((entry) => entry.isDirectory() && !excluded.has(entry.name))
     .map((entry) => path.posix.join(directory, entry.name))
     .sort();
+}
+
+function recursiveTestTargets(directory) {
+  return [...immediateTestTargets(directory),
+    ...immediateDirectoryTargets(directory).flatMap(recursiveTestTargets)].sort();
 }
 
 function directoryBuckets(directory, labelPrefix, reportPrefix) {
@@ -43,6 +50,8 @@ function fileBuckets(targets, labelPrefix, reportPrefix, maximumFiles) {
 }
 
 const platformRootTests = immediateTestTargets('src/shared/platform');
+const libraryTests = recursiveTestTargets('lib');
+const nativeTests = new Set(controlledElectronSqliteTests);
 const platformCompanionTests = platformRootTests.filter(
   (target) => path.posix.basename(target).startsWith('companion')
 );
@@ -56,9 +65,13 @@ const nativeStoreTests = [
 ];
 
 export const SHARED_TEST_BUCKETS = [
-  { label: 'lib', report: '.tmp/vitest/shared-lib.json', targets: ['--exclude=src/**', '--exclude=electron/**', '--exclude=scripts/**'] },
+  { label: 'lib-native', report: '.tmp/vitest/shared-lib-native.json',
+    targets: libraryTests.filter((target) => nativeTests.has(target)) },
+  { label: 'lib', pool: 'threads', fileParallelism: true, report: '.tmp/vitest/shared-lib.json',
+    targets: libraryTests.filter((target) => !nativeTests.has(target)) },
   {
     label: 'shared-core',
+    pool: 'threads', fileParallelism: true,
     report: '.tmp/vitest/shared-src-core.json',
     targets: [
       ...immediateTestTargets('src/shared'),

@@ -61,7 +61,7 @@ function sharedFiles() {
   return SHARED_TEST_BUCKETS.flatMap(({ targets }) => targets.flatMap((target) => {
     if (target.startsWith('--exclude=')) return [];
     return fs.statSync(target).isDirectory() ? collectTests(target) : [target];
-  })).concat(collectTests('lib')).sort();
+  })).sort();
 }
 
 function localWorkflowCalls(file) {
