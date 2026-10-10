@@ -132,10 +132,8 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       `${SNAPSHOT_VISIBLE_NODES_CTE_SQL} ` +
       'SELECT n.id, n.parent_id, n.kind, n.priority, n.desired_retention, n.enable_short_term, n.sequential_reading_enabled, n.shelved_at, n.manual_child_order, n.title, n.is_title_manual, ' +
       "n.hide_title_heading, '' AS content, n.opening_text, " +
-      "CASE WHEN n.body_blob_hash IS NOT NULL AND cb.availability IN ('fetching', 'failed') THEN cb.availability " +
-      "WHEN n.body_blob_hash IS NOT NULL AND (cb.hash IS NULL OR cb.availability = 'missing') THEN 'missing' " +
-      "WHEN n.body_blob_hash IS NOT NULL THEN 'ready' WHEN TRIM(n.content) = '' THEN 'empty' ELSE 'ready' END AS body_status, " +
-      'CASE WHEN n.body_blob_hash IS NOT NULL OR LENGTH(TRIM(n.content)) > 0 THEN 1 ELSE 0 END AS has_content, ' +
+      "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END AS body_status, " +
+      "CASE WHEN LENGTH(TRIM(COALESCE(n.content, ''))) > 0 THEN 1 ELSE 0 END AS has_content, " +
       "CASE WHEN substr(replace(n.content, char(13) || char(10), char(10)), 1, 4) = '---' || char(10) " +
       "THEN substr(replace(n.content, char(13) || char(10), char(10)), 1, " +
       "instr(substr(replace(n.content, char(13) || char(10), char(10)), 5), char(10) || '---' || char(10)) + 8) " +
@@ -149,7 +147,7 @@ export const ANDROID_COMPANION_NODE_RESOURCE_QUERY_DEFINITIONS = {
       'rd.interval_duration_ms, rd.interval_growth_factor, rd.last_handled_at, rd.next_at, rd.priority AS reading_priority, ' +
       'rds.reading_position, rd.repetition_count, rd.state AS reading_state, nr.due, nr.last_review_at, nr.state AS review_state, ' +
       'nr.stability, nr.difficulty, nr.elapsed_days, nr.scheduled_days, nr.reps, nr.lapses, n.body_blob_hash ' +
-      'FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
+      'FROM nodes n LEFT JOIN visible_nodes visible ON visible.id = n.id ' +
       'LEFT JOIN node_reading rd ON rd.node_id = n.id AND visible.id IS NOT NULL ' +
       'LEFT JOIN node_reading_host_state rds ON rds.node_id = n.id AND rds.host_name = ? AND visible.id IS NOT NULL ' +
       'LEFT JOIN node_review nr ON nr.node_id = n.id AND visible.id IS NOT NULL ' +

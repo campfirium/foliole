@@ -1,20 +1,10 @@
 import {
-  androidBodyStatusExpression,
   androidSearchExcerptExpression
 } from './androidCompanionDerivedReadSql.js';
 import { SNAPSHOT_VISIBLE_NODES_CTE_SQL as VISIBLE_NODES_CTE_SQL } from './workspaceVisibleNodesSql.js';
 
-const INLINE_CONTENT = 'n.content';
-const BLOB_DATA = 'CAST(cbd.data AS TEXT)';
-const HAS_BODY_BLOB = "n.body_blob_hash IS NOT NULL AND TRIM(n.body_blob_hash) <> ''";
-const CONTENT = `CASE WHEN ${HAS_BODY_BLOB} THEN ${BLOB_DATA} ELSE ${INLINE_CONTENT} END`;
-const STATUS = androidBodyStatusExpression({
-  availabilityExpression: 'cb.availability',
-  bodyBlobDataExpression: BLOB_DATA,
-  bodyBlobHashExpression: 'n.body_blob_hash',
-  contentExpression: CONTENT,
-  emptyWhenBlank: true
-});
+const CONTENT = 'n.content';
+const STATUS = "CASE WHEN TRIM(COALESCE(n.content, '')) = '' THEN 'empty' ELSE 'ready' END";
 
 export const COMPANION_TOPIC_SEARCH_RULES = {
   defaultSearchLimit: 20,
@@ -51,8 +41,7 @@ export const COMPANION_TOPIC_SEARCH_QUERY = {
     `${STATUS} AS content_status, n.updated_at, ` +
     `max(0, instr(lower(${CONTENT}), ?) - 1) AS match_start, ` +
     `${androidSearchExcerptExpression(CONTENT, '?', COMPANION_TOPIC_SEARCH_RULES.excerptRadius)} AS excerpt ` +
-    'FROM nodes n LEFT JOIN content_blobs cb ON cb.hash = n.body_blob_hash ' +
-    'LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash ' +
+    'FROM nodes n ' +
     'INNER JOIN visible_nodes visible ON visible.id = n.id ' +
     "WHERE (instr(lower(COALESCE(n.title, '')), ?) > 0 OR instr(lower(COALESCE(n.opening_text, '')), ?) > 0 " +
     `OR instr(lower(${CONTENT}), ?) > 0) ` +
