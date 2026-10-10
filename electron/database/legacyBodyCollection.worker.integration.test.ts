@@ -21,7 +21,7 @@ import { assertPersisted, closeLibraries, createPeer, edit, history, joinPeers, 
 beforeEach(startLibraries);
 afterEach(async () => { onWorkerOnline = null; await closeLibraries(); });
 
-it('rechecks newly saved and in-flight pack holders in real workers while two instances save and transmit bodies', async () => {
+it('collects retired shared cache in real workers while two instances preserve owned bodies', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   source.db.pragma('journal_mode = WAL');
@@ -47,6 +47,6 @@ it('rechecks newly saved and in-flight pack holders in real workers while two in
   assertPersisted(target, 'Saved while worker is starting');
   expect(source.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(soonHeld)).toBeDefined();
   expect(source.db.prepare('SELECT hash FROM content_blob_data WHERE hash = ?').get(garbage)).toBeUndefined();
-  expect(history(source).some((row) => row.body_text === 'Initial fact')).toBe(true);
-  expect(history(target).some((row) => row.body_text === 'Initial fact')).toBe(true);
+  expect(history(source).some((row) => row.version_id === oldVersion)).toBe(true);
+  expect(history(target).some((row) => row.version_id === oldVersion)).toBe(true);
 });

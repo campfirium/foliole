@@ -182,14 +182,14 @@ it('keeps moved files recoverable when orphan metadata cleanup rolls back', asyn
   await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });
 
-it('keeps an inline attachment referenced by a Blob-only active node', async () => {
+it('keeps an inline attachment referenced by an owned active body without shared cache', async () => {
   const markdown = `![Shared](asset://${BLOB_SHARED_IMAGE_ID}.png)`;
   seedNode('node-delete', markdown);
   seedNode('node-keep', markdown);
   const filePath = await seedAttachment({
     attachmentId: BLOB_SHARED_IMAGE_ID, mimeType: 'image/png', nodeIds: ['node-delete'], originalName: 'shared.png', role: 'image'
   });
-  openDatabaseConnection().driver.execute('UPDATE nodes SET content = ? WHERE id = ?', ['', 'node-keep']);
+  openDatabaseConnection().driver.execute('DELETE FROM content_blob_data');
 
   deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-keep'] });
 
@@ -197,7 +197,7 @@ it('keeps an inline attachment referenced by a Blob-only active node', async () 
   await expect(fs.stat(filePath)).resolves.toBeDefined();
 });
 
-it('aborts permanent deletion before mutation when any retained Blob body is unavailable', async () => {
+it('deletes an unreferenced attachment without requiring unrelated retired body cache', async () => {
   seedNode('node-delete', `![Shared](asset://${UNAVAILABLE_IMAGE_ID}.png)`);
   seedNode('node-missing', 'Other body');
   const filePath = await seedAttachment({
@@ -209,10 +209,11 @@ it('aborts permanent deletion before mutation when any retained Blob body is una
   )?.body_blob_hash ?? '';
   connection.driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
 
-  expect(() => deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-missing'] }))
-    .toThrow('node_body_unavailable:node-missing');
+  deleteNodesPermanently({ nodeIds: ['node-delete'], nodeOrder: ['node-missing'] });
   expect(connection.driver.queryOne<{ id: string }>('SELECT id FROM nodes WHERE id = ?', ['node-delete']))
-    .toEqual({ id: 'node-delete' });
-  expect(readCounts(UNAVAILABLE_IMAGE_ID).linkRows).toBe(1);
-  await expect(fs.stat(filePath)).resolves.toBeDefined();
+    .toBeUndefined();
+  expect(connection.driver.queryOne('SELECT content FROM nodes WHERE id = ?', ['node-missing']))
+    .toEqual({ content: 'Other body' });
+  expect(readCounts(UNAVAILABLE_IMAGE_ID).linkRows).toBe(0);
+  await expect(fs.stat(filePath)).rejects.toMatchObject({ code: 'ENOENT' });
 });

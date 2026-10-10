@@ -24,7 +24,8 @@ it('reclaims the unversioned import body after image localization while keeping 
   const final = '# Article\n![Cover](asset://' + 'a'.repeat(64) + ')';
   writeNodeBody({ driver: peer.driver, nodeId: 'topic', title: 'Article', content: final, updatedAt: NOW });
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody(original))).toBeUndefined();
-  expect(peer.db.prepare('SELECT data FROM content_blob_data WHERE hash=?').get(hashTextBody(final))).toEqual({ data: Buffer.from(final) });
+  expect(peer.db.prepare("SELECT content FROM nodes WHERE id='topic'").get()).toEqual({ content: final });
+  expect(peer.db.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
 });
 
 it('keeps a cached original when image localization replaces the node body', () => {
@@ -35,10 +36,11 @@ it('keeps a cached original when image localization replaces the node body', () 
     (rule_id,source_path,title,content,source_mtime_ms,source_size_bytes,refreshed_at) VALUES ('rule','file','Article',?,0,0,?)`).run(original, NOW);
   writeNodeBody({ driver: peer.driver, nodeId: 'topic', title: 'Article', content: original, updatedAt: NOW });
   writeNodeBody({ driver: peer.driver, nodeId: 'topic', title: 'Article', content: 'Localized body', updatedAt: NOW });
-  expect(peer.db.prepare('SELECT data FROM content_blob_data WHERE hash=?').get(hashTextBody(original))).toEqual({ data: Buffer.from(original) });
+  expect(peer.db.prepare("SELECT content FROM keep_import_item_cache WHERE rule_id='rule'").get()).toEqual({ content: original });
+  expect(peer.db.prepare("SELECT content FROM nodes WHERE id='topic'").get()).toEqual({ content: 'Localized body' });
 });
 
-it('keeps an editor base as durable history after the last hold exits', async () => {
+it('keeps editor version identities after the last hold exits', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -50,15 +52,15 @@ it('keeps an editor base as durable history after the last hold exits', async ()
   edit(source, 'Current body');
   await sync(source, target);
   for (const peer of [source, target]) {
-    expect(peer.db.prepare('SELECT data FROM content_blob_data WHERE hash=?').get(hashTextBody('Previous body'))).toBeDefined();
+    expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(old)).toBeDefined();
     await releaseLocalEditBase(peer.port, 'editor', 'topic');
     expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(old)).toBeDefined();
-    expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Previous body'))).toBeDefined();
+    expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Previous body'))).toBeUndefined();
     assertPersisted(peer, 'Current body');
   }
 });
 
-it('keeps released bodies through the synchronous host chain collector too', () => {
+it('keeps version identities after the synchronous host collector retires body bytes', () => {
   const peer = createPeer('source');
   const old = edit(peer, 'Old local body');
   peer.db.prepare('INSERT INTO node_version_local_holds VALUES (?,?,?,?)').run('editor','topic',old,NOW);
@@ -66,7 +68,8 @@ it('keeps released bodies through the synchronous host chain collector too', () 
   peer.db.prepare('DELETE FROM node_version_local_holds WHERE hold_id=?').run('editor');
   collectNodeVersionChainWithDriver(peer.driver, 'topic');
   expect(peer.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(old)).toBeDefined();
-  expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Old local body'))).toBeDefined();
+  expect(peer.db.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted FROM node_sync_versions WHERE version_id=?").get(old))
+    .toEqual({ body_text: null, deleted: 1 });
   assertPersisted(peer, 'Current local body');
 });
 
@@ -77,20 +80,20 @@ it('does not create an unused body when its target node has disappeared', () => 
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('No target'))).toBeUndefined();
 });
 
-it('rolls back a body replacement when holder facts cannot be checked safely', () => {
+it('rolls back an owned body replacement when retained holder facts are invalid', () => {
   const peer = createPeer('source');
   peer.db.prepare("INSERT INTO nodes (id,kind,title,created_at,updated_at) VALUES ('topic','topic','Article',?,?)").run(NOW, NOW);
   writeNodeBody({ driver: peer.driver, nodeId: 'topic', title: 'Article', content: 'Original fact', updatedAt: NOW });
   peer.db.prepare('INSERT INTO editor_operation_history VALUES (1,?,?)').run('invalid json', NOW);
-  expect(() => writeNodeBody({ driver: peer.driver, nodeId: 'topic', title: 'Article',
-    content: 'Replacement fact', updatedAt: NOW })).toThrow();
+  expect(() => writeNodeBody({ driver: peer.driver, nodeId: 'topic', title: 'Article', content: 'Replacement fact', updatedAt: NOW })).toThrow();
   expect(peer.db.prepare('SELECT body_blob_hash FROM nodes WHERE id=?').get('topic'))
     .toEqual({ body_blob_hash: hashTextBody('Original fact') });
-  expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Original fact'))).toBeDefined();
+  expect(peer.db.prepare("SELECT content FROM nodes WHERE id='topic'").get()).toEqual({ content: 'Original fact' });
+  expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Original fact'))).toBeUndefined();
   expect(peer.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Replacement fact'))).toBeUndefined();
 });
 
-it('keeps the replaced body after the sync page releases its temporary fact claims', async () => {
+it('keeps version identities after the sync page releases its temporary fact claims', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -112,5 +115,5 @@ it('keeps the replaced body after the sync page releases its temporary fact clai
   assertPersisted(target, 'Current synced body');
   expect(target.db.prepare('SELECT * FROM sync_pack_known_fact_claims').all()).toEqual([]);
   expect(target.db.prepare('SELECT version_id FROM node_sync_versions WHERE version_id=?').get(oldVersion)).toBeDefined();
-  expect(target.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Previous synced body'))).toBeDefined();
+  expect(target.db.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(hashTextBody('Previous synced body'))).toBeUndefined();
 });

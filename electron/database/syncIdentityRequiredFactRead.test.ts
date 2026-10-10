@@ -57,7 +57,7 @@ it('uses a local hold to expose a missing required ancestor relation', async () 
     contracted.prepare("UPDATE node_sync_versions SET parent_version_id = NULL WHERE version_id = 'middle'").run();
     contracted.prepare("DELETE FROM node_sync_version_parents WHERE version_id = 'middle'").run();
     for (const db of [full, contracted]) db.prepare(`INSERT INTO node_version_local_holds
-      (hold_id, object_id, version_id, created_at) VALUES ('editor', 'topic', 'base', 'now')`).run();
+      (hold_id, object_id, version_id, created_at) VALUES ('session:edit:topic', 'topic', 'base', 'now')`).run();
     const left = await readSyncIdentityRequiredFacts(createBetterSqliteDbPort(full), 'topic');
     const right = await readSyncIdentityRequiredFacts(createBetterSqliteDbPort(contracted), 'topic');
     expect(left?.protectedIds).toEqual(['base', 'restored']);
@@ -72,7 +72,7 @@ it('reads every protection reference from the selected attached source view', as
   const viewPath = path.join(root, 'view.db');
   try {
     main.prepare(`INSERT INTO node_version_local_holds
-      (hold_id, object_id, version_id, created_at) VALUES ('editor', 'topic', 'base', 'now')`).run();
+      (hold_id, object_id, version_id, created_at) VALUES ('session:edit:topic', 'topic', 'base', 'now')`).run();
     await view.backup(viewPath);
     main.prepare('ATTACH DATABASE ? AS identity_view').run(viewPath);
     const port = createBetterSqliteDbPort(main);
@@ -101,7 +101,7 @@ it('changes the proof root when a hold changes but retained rows do not', async 
     const rootBefore = await readSyncIdentityNodeFactProofRoot(port);
     db.prepare(`INSERT INTO node_version_local_holds
       (hold_id, object_id, version_id, created_at)
-      VALUES ('editor', 'topic', 'base', 'now')`).run();
+      VALUES ('session:edit:topic', 'topic', 'base', 'now')`).run();
     await buildSyncIdentityNodeFactIndex(port);
     const after = await readSyncIdentityNodeFactSummary(port);
     expect(db.prepare(`SELECT digest FROM sync_identity_node_fact_summary
@@ -123,7 +123,7 @@ it('discovers a changed hold even when both sides retain identical version rows'
     }
     receiver.prepare(`INSERT INTO node_version_local_holds
       (hold_id, object_id, version_id, created_at)
-      VALUES ('editor', 'topic', 'base', 'now')`).run();
+      VALUES ('session:edit:topic', 'topic', 'base', 'now')`).run();
     const sourcePort = createBetterSqliteDbPort(source);
     const receiverPort = createBetterSqliteDbPort(receiver);
     await buildSyncIdentityNodeFactIndex(sourcePort);

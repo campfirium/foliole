@@ -146,14 +146,12 @@ it('keeps the pending state when a full rebuild fails', () => {
   expect(states()[0]).toMatchObject({ status: 'pending' });
 });
 
-it('keeps an unavailable body pending instead of declaring an empty search body updated', () => {
+it('indexes owned text without requiring obsolete shared body bytes', () => {
   const driver = openDatabaseConnection().driver;
-  driver.execute("UPDATE nodes SET body_blob_hash = ? WHERE id = 'special-inbox'", ['b'.repeat(64)]);
+  driver.execute("UPDATE nodes SET content = 'OwnedSearchBody', body_blob_hash = ? WHERE id = 'special-inbox'", ['b'.repeat(64)]);
   enqueueWorkspaceSearchInvalidationForNodeIds(driver, ['special-inbox']);
-  expect(processSearchIndexInvalidations(driver)).toEqual({ failed: 1, processed: 0 });
-  expect(states()).toHaveLength(1);
-  expect(states()[0]).toMatchObject({ status: 'pending', last_error: expect.stringContaining('node_body_unavailable') });
-  driver.execute("UPDATE nodes SET body_blob_hash = NULL WHERE id = 'special-inbox'");
   expect(processSearchIndexInvalidations(driver)).toEqual({ failed: 0, processed: 1 });
   expect(states()).toEqual([]);
+  expect(driver.queryOne("SELECT node_id FROM search.node_search WHERE node_search MATCH 'OwnedSearchBody'"))
+    .toEqual({ node_id: 'special-inbox' });
 });

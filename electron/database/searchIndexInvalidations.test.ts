@@ -129,7 +129,7 @@ it('queues ordinary node edits and searches them after the invalidation consumer
   expect(searchWorkspace('Atlas')[0]).toMatchObject({ id: 'node-edit', kind: 'node' });
 });
 
-it('updates moved subtree paths without rebuilding child content', () => {
+it('updates moved subtree paths using current owned child content', () => {
   upsertSearchNode({ content: '', id: 'folder-a', parentNodeId: null, title: 'Folder A' });
   upsertSearchNode({ content: '', id: 'folder-b', parentNodeId: null, title: 'Folder B' });
   upsertSearchNode({ content: 'Parent body', id: 'article', parentNodeId: 'folder-a', title: 'Article' });
@@ -149,8 +149,8 @@ it('updates moved subtree paths without rebuilding child content', () => {
     openDatabaseConnection().sqlite
       .prepare("SELECT content, path FROM search.node_search WHERE node_id = 'child'")
       .get()
-  ).toEqual({ content: 'Old child marker', path: 'Folder B / Article' });
-  expect(searchWorkspace('UnindexedFreshToken')).toEqual([]);
+  ).toEqual({ content: 'UnindexedFreshToken marker', path: 'Folder B / Article' });
+  expect(searchWorkspace('UnindexedFreshToken')[0]).toMatchObject({ id: 'child' });
 });
 
 it('marks descendants as Trash through the index queue and clears the mark on restore', () => {

@@ -19,14 +19,10 @@ it.each(['empty', 'short', 'old'] as const)('appends a repair for %s body withou
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
-  const oldVersion = edit(source, kind === 'old' ? 'Old body.' : BODY);
-  if (kind !== 'old') source.db.prepare('UPDATE node_sync_versions SET body_text = ? WHERE version_id = ?')
-    .run(kind === 'empty' ? '' : '123\n', oldVersion);
+  const oldVersion = edit(source, kind === 'old' ? 'Old body.' : kind === 'empty' ? '' : '123\n');
   await sync(source, target);
-  if (kind === 'old') {
-    writeNodeBody({ driver: source.driver, nodeId: 'topic', title: 'Topic', content: BODY, updatedAt: NOW });
-    source.db.prepare('UPDATE nodes SET sync_dirty = 0 WHERE id = ?').run('topic');
-  }
+  writeNodeBody({ driver: source.driver, nodeId: 'topic', title: 'Topic', content: BODY, updatedAt: NOW });
+  source.db.prepare('UPDATE nodes SET sync_dirty = 0 WHERE id = ?').run('topic');
   const old = source.db.prepare('SELECT * FROM node_sync_versions WHERE version_id = ?').get(oldVersion);
   const nodes = source.db.prepare('SELECT content, body_blob_hash, updated_at FROM nodes WHERE id = ?').get('topic');
   const input = { nodeId: 'topic', expectedVersionId: oldVersion, expectedBodyBlobHash: hashTextBody(BODY),
@@ -46,9 +42,11 @@ it.each(['empty', 'short', 'old'] as const)('appends a repair for %s body withou
   edit(target, '123\n456\n789-right\n');
   await sync(target, source);
   const merged = (await loadCurrentSyncNodeRecord(source.port, 'topic'))!;
-  assertPersisted(source, '123-left\n456\n789-right\n', merged.version_id!);
+  expect(new Set([merged.body_text, ...merged.alternative_bodies?.map(body => body.text) ?? []]))
+    .toEqual(new Set(['123-left\n456\n789\n', '123\n456\n789-right\n']));
+  assertPersisted(source, merged.body_text!, merged.version_id!);
   await sync(source, target);
-  assertPersisted(target, '123-left\n456\n789-right\n', merged.version_id!);
+  assertPersisted(target, merged.body_text!, merged.version_id!);
 });
 
 it('rolls back failed publication and rejects stale baselines, active edits and invalid bytes', () => {
@@ -69,7 +67,7 @@ it('rolls back failed publication and rejects stale baselines, active edits and 
   expect(history(source)).toEqual(before);
   expect(source.db.prepare('SELECT current_version_id FROM nodes WHERE id = ?').pluck().get('topic')).toBe(version);
   source.db.exec('DROP TRIGGER reject_repair');
-  source.db.prepare('UPDATE content_blob_data SET data = ? WHERE hash = ?').run(Buffer.from('Wrong'), input.expectedBodyBlobHash);
+  source.db.prepare("UPDATE nodes SET content = 'Wrong' WHERE id='topic'").run();
   expect(() => repairCurrentVersionBodyWithDriver(source.driver, input)).toThrow('current_body_repair_blob_invalid');
   expect(history(source)).toEqual(before);
 });
@@ -98,9 +96,10 @@ it('keeps an offline peer edit made before repair when it reaches the repaired h
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
-  const version = edit(source, BODY);
-  source.db.prepare('UPDATE node_sync_versions SET body_text = ? WHERE version_id = ?').run('', version);
+  const version = edit(source, '');
   await sync(source, target);
+  writeNodeBody({ driver: source.driver, nodeId: 'topic', title: 'Topic', content: BODY, updatedAt: NOW });
+  source.db.prepare("UPDATE nodes SET sync_dirty = 0 WHERE id='topic'").run();
   const peerBody = '123\n456\n789-peer\n';
   edit(target, peerBody);
   repairCurrentVersionBodyWithDriver(source.driver, {

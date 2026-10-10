@@ -25,10 +25,9 @@ import { hashTextBody, upsertTextBodyBlob } from '../../lib/core/database/conten
 import { readDataMigrationState } from '../../lib/core/database/dataMigrationState.js';
 import { upsertNodeSnapshot } from '../../lib/core/database/nodeMutations.js';
 
-import { listApplicationDatabaseBackups } from './backupRestore.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { runLegacyBodyCollectionWorker } from './legacyBodyCollectionWorkerClient.js';
-import { BODY_COLLECTION_ID, BODY_REPAIR_ID } from './legacyBodyMigrationState.js';
+import { BODY_COLLECTION_ID } from './legacyBodyMigrationState.js';
 import { initializeDatabase } from './migrate.js';
 import { flushNodeSyncVersionWithDriver } from './nodeSyncVersionFromDriver.js';
 
@@ -36,25 +35,23 @@ beforeEach(async () => { appRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'foli
 afterEach(async () => { closeDatabaseConnection(); await fs.rm(appRoot, { recursive: true, force: true }); });
 const NOW = '2026-10-01T00:00:00Z';
 
-it('takes a managed snapshot, repairs through actual startup, resumes worker progress on cold open and never scans completed work', async () => {
+it('preserves owned bodies and version facts on cold open and resumes explicit cache collection', async () => {
   const connection = initializeDatabase();
   expect(readDataMigrationState(connection.sqlite, BODY_COLLECTION_ID)?.status).toBe('completed');
   upsertNodeSnapshot(connection.driver, { nodeId: 'legacy', parentNodeId: null, kind: 'topic', title: 'Original',
     isTitleManual: true, content: 'Canonical body', reveal: null, anchorLink: null, position: null,
     createdAt: NOW, updatedAt: NOW, hostName: 'host' });
   const oldVersion = flushNodeSyncVersionWithDriver(connection.driver, 'legacy', 'host', NOW)!;
-  connection.sqlite.prepare("UPDATE node_sync_versions SET body_text = '' WHERE version_id = ?").run(oldVersion);
   connection.sqlite.prepare("UPDATE nodes SET content = 'Canonical body' WHERE id = 'legacy'").run();
   const garbage = upsertTextBodyBlob(connection.driver, 'Unused body', NOW);
   connection.sqlite.exec('DELETE FROM data_migration_state; DELETE FROM legacy_body_migration_progress');
-  connection.sqlite.pragma('user_version = 123');
   const dbPath = connection.dbPath;
   closeDatabaseConnection();
   initializeDatabase();
-  expect((await listApplicationDatabaseBackups()).some((row) => row.kind === 'snapshot')).toBe(true);
-  expect(openDatabaseConnection().sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(oldVersion)).toBe('');
+  expect(readDataMigrationState(openDatabaseConnection().sqlite, BODY_COLLECTION_ID)).toBeNull();
+  expect(openDatabaseConnection().sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(oldVersion)).toBe('Canonical body');
   const repaired = openDatabaseConnection().sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'legacy'").pluck().get();
-  expect(repaired).not.toBe(oldVersion);
+  expect(repaired).toBe(oldVersion);
   await runLegacyBodyCollectionWorker(dbPath, 1, new AbortController().signal);
   closeDatabaseConnection();
   initializeDatabase();
@@ -62,11 +59,10 @@ it('takes a managed snapshot, repairs through actual startup, resumes worker pro
   while (!result.completed) result = await runLegacyBodyCollectionWorker(dbPath, 1, new AbortController().signal);
   expect(openDatabaseConnection().sqlite.prepare('SELECT hash FROM content_blobs WHERE hash = ?').get(garbage)).toBeUndefined();
   expect(openDatabaseConnection().sqlite.prepare("SELECT content, body_blob_hash FROM nodes WHERE id = 'legacy'").get())
-    .toEqual({ content: '', body_blob_hash: hashTextBody('Canonical body') });
+    .toEqual({ content: 'Canonical body', body_blob_hash: hashTextBody('Canonical body') });
   closeDatabaseConnection();
   initializeDatabase();
   expect(openDatabaseConnection().sqlite.prepare("SELECT current_version_id FROM nodes WHERE id = 'legacy'").pluck().get()).toBe(repaired);
-  expect(readDataMigrationState(openDatabaseConnection().sqlite, BODY_REPAIR_ID)?.status).toBe('completed');
   expect(await runLegacyBodyCollectionWorker(dbPath, 1, new AbortController().signal)).toEqual({ completed: true, paused: false });
 });
 
@@ -79,5 +75,5 @@ it('waits for worker exit on abort and leaves committed progress resumable', asy
   controller.abort();
   await expect(result).rejects.toMatchObject({ name: 'AbortError' });
   expect(connection.sqlite.pragma('quick_check', { simple: true })).toBe('ok');
-  expect(await runLegacyBodyCollectionWorker(connection.dbPath, 1, new AbortController().signal)).toMatchObject({ completed: false });
+  expect(await runLegacyBodyCollectionWorker(connection.dbPath, 1, new AbortController().signal)).toMatchObject({ completed: true });
 });

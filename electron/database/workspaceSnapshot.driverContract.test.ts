@@ -121,10 +121,8 @@ it('loads workspace snapshot through query helpers only', () => {
 });
 
 it('can opt in to full body content for internal snapshot callers', () => {
-  queryAllSpy.mockReturnValueOnce([]);
+  queryAllSpy.mockReturnValue([]).mockReturnValueOnce([{ ...workspaceSnapshotRow, content: 'Owned body' }]);
   queryOneSpy.mockReturnValueOnce({ value: '"desktop-test"' });
 
-  expect(loadWorkspaceSnapshot(driver, { includeBody: true })).toBeNull();
-
-  expect(queryAllSpy.mock.calls[0]?.[0]).toContain('content_blob_data');
+  expect(loadWorkspaceSnapshot(driver, { includeBody: true })?.nodesById['node-1']?.content).toBe('Owned body');
 });

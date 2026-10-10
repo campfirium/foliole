@@ -26,7 +26,7 @@ function originalFacts(peer: Peer) {
   return {
     versions: peer.db.prepare(`SELECT version_id, object_id, parent_version_id,
       host_name, created_at, content_hash,
-      json_remove(snapshot_json, '$.content', '$.body_blob_hash') AS metadata
+      json_remove(snapshot_json, '$.content', '$.body_blob_hash', '$.body_deleted') AS metadata
       FROM node_sync_versions WHERE object_id = 'topic' ORDER BY version_id`).all(),
     parents: peer.db.prepare(`SELECT edge.* FROM node_sync_version_parents edge
       JOIN node_sync_versions version ON version.version_id = edge.version_id
@@ -84,7 +84,7 @@ it('releases a persisted editor base after the node entity has been permanently 
   const original = originalFacts(peer);
   expect(tomb.parent_version_id).toBe(base);
   restartDeletedPeer(peer);
-  expectBody(peer, base, 'body');
+  expectBody(peer, base, null);
   expect(history(peer)).toHaveLength(2);
   await releaseLocalEditBase(peer.port, 'draft', 'topic');
   expect(originalFacts(peer)).toEqual(original);

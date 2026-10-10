@@ -114,17 +114,17 @@ it('keeps path updates and delete restore visibility symmetric', () => {
   expect(searchWorkspace('contract marker').map((result) => result.id)).toContain('node-child');
 });
 
-it('keeps rebuild idempotent and indexes body blobs before inline content', () => {
+it('keeps rebuild idempotent and indexes owned bodies despite obsolete cached bytes', () => {
   const connection = openDatabaseConnection();
   const bodyBlobHash = upsertTextBodyBlob(
     connection.driver,
-    'canonical blob atlas marker',
+    'inline atlas should not be indexed',
     '2026-05-25T00:00:00.000Z'
   );
   upsertSearchNode({
     id: 'node-blob-contract',
     title: 'Blob Contract',
-    content: 'inline atlas should not be indexed'
+    content: 'canonical blob atlas marker'
   });
   connection.driver.execute('UPDATE nodes SET body_blob_hash = ? WHERE id = ?', [
     bodyBlobHash,

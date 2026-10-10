@@ -25,6 +25,7 @@ import { readDataMigrationState } from '../../lib/core/database/dataMigrationSta
 import { restoreApplicationDatabaseBackup } from './backupRestore.js';
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { closeExternalSearchCacheDatabase } from './externalSearchCacheDatabase.js';
+import { runLegacyBodyCollectionWorker } from './legacyBodyCollectionWorkerClient.js';
 import { BODY_COLLECTION_ID, BODY_RECLAIM_ID, initialBodyMigrationProgress, saveBodyMigrationProgress } from './legacyBodyMigrationState.js';
 import { initializeDatabase } from './migrate.js';
 
@@ -35,7 +36,7 @@ beforeEach(async () => {
 });
 afterEach(async () => { closeExternalSearchCacheDatabase(); closeDatabaseConnection(); await fs.rm(root, { recursive: true, force: true }); });
 
-it.each([false, true])('restores and collects without restarting the app, with prior legacy completion=%s', async (completed) => {
+it.each([false, true])('restores and explicitly collects retired cache with prior legacy completion=%s', async (completed) => {
   const connection = openDatabaseConnection();
   const garbage = upsertTextBodyBlob(connection.driver, '12', '2026-01-01');
   connection.sqlite.prepare('DELETE FROM data_migration_state WHERE migration_id=?').run(BODY_RECLAIM_ID);
@@ -51,9 +52,10 @@ it.each([false, true])('restores and collects without restarting the app, with p
   const backup = path.join(root, 'old.db');
   await connection.sqlite.backup(backup);
   await restoreApplicationDatabaseBackup({ sourcePath: backup });
-  await vi.waitFor(() => {
-    expect(readDataMigrationState(openDatabaseConnection().sqlite, BODY_RECLAIM_ID)?.status).toBe('completed');
-  }, { timeout: 2500 });
+  expect(readDataMigrationState(openDatabaseConnection().sqlite, BODY_RECLAIM_ID)).toBeNull();
+  let result = await runLegacyBodyCollectionWorker(openDatabaseConnection().dbPath, 32, new AbortController().signal);
+  while (!result.completed) result = await runLegacyBodyCollectionWorker(openDatabaseConnection().dbPath, 32, new AbortController().signal);
+  expect(readDataMigrationState(openDatabaseConnection().sqlite, BODY_RECLAIM_ID)?.status).toBe('completed');
   expect(openDatabaseConnection().sqlite.prepare('SELECT hash FROM content_blobs WHERE hash=?').get(garbage)).toBeUndefined();
   expect(readDataMigrationState(openDatabaseConnection().sqlite, BODY_COLLECTION_ID)?.status).toBe('completed');
 });

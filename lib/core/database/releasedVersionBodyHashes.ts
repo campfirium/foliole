@@ -25,10 +25,10 @@ function rangeSql(source: Source) {
 }
 
 function checkedBytes(row: { data: Uint8Array } | undefined, length: number) {
-  if (!row || !(row.data instanceof Uint8Array) || row.data.byteLength !== length) {
+  if (!row || !ArrayBuffer.isView(row.data) || row.data.BYTES_PER_ELEMENT !== 1 || row.data.byteLength !== length) {
     throw new Error('released_version_body_unavailable');
   }
-  return row.data;
+  return new Uint8Array(row.data.buffer, row.data.byteOffset, row.data.byteLength);
 }
 
 function sources(row: Descriptor) {

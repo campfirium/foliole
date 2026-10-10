@@ -59,7 +59,9 @@ it.each([false, true])('writes, versions and remaps an opened article without sh
   const sqlite = openDatabaseConnection().sqlite;
   expect(sqlite.prepare('SELECT count(*) FROM content_blob_data').pluck().get()).toBe(0);
   expect(sqlite.prepare("SELECT content FROM nodes WHERE id = 'parent'").get()).toEqual({ content: next });
-  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(first)).toBe(original);
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(first)).toBeNull();
+  expect(sqlite.prepare("SELECT json_extract(snapshot_json, '$.body_deleted') FROM node_sync_versions WHERE version_id = ?")
+    .pluck().get(first)).toBe(1);
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get('edited-parent')).toBe(next);
   expect(sqlite.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
 });

@@ -60,7 +60,7 @@ it('restores a clean current-version body during automatic sync without creating
 
   expect(reconcileVersionedInlineBodies(driver)).toBe(1);
   expect(loadNodeBodyResolution(driver, 'stale')).toMatchObject({
-    content: 'Authoritative body', source: 'blob', status: 'resolved'
+    content: 'Authoritative body', source: 'node', status: 'resolved'
   });
   expect(driver.queryOne('SELECT current_version_id, updated_at FROM nodes WHERE id = ?', ['stale']))
     .toEqual(before);

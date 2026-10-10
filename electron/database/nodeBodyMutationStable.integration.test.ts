@@ -33,7 +33,8 @@ it('creates roots and preserves complete edited text and original version relati
     expect(loadNodeBodyResolution(driver, 'article')?.status).toBe('resolved');
     expect(host.sqlite.prepare("SELECT content = ? AS exact FROM nodes WHERE id='article'").get(content)).toEqual({ exact: 1 });
     expect(flushNodeSyncVersionWithDriver(driver, 'article', 'host', '2026-10-07T01:00:00.000Z', 'second')).toBe('second');
-    expect(host.sqlite.prepare("SELECT body_text = ? AS exact FROM node_sync_versions WHERE version_id='first'").get(original)).toEqual({ exact: 1 });
+    expect(host.sqlite.prepare("SELECT body_text, json_extract(snapshot_json, '$.body_deleted') AS deleted FROM node_sync_versions WHERE version_id='first'").get())
+      .toEqual({ body_text: null, deleted: 1 });
     expect(host.sqlite.prepare("SELECT body_text = ? AS exact FROM node_sync_versions WHERE version_id='second'").get(content)).toEqual({ exact: 1 });
     expect(host.sqlite.prepare('SELECT * FROM node_sync_version_parents').all())
       .toEqual([{ version_id: 'second', parent_version_id: 'first', ordinal: 0 }]);

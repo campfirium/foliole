@@ -17,6 +17,8 @@ vi.mock('../ipc/paths.js', () => ({
   })
 }));
 
+import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
+
 import { closeDatabaseConnection, openDatabaseConnection } from './connection.js';
 import { initializeDatabase } from './migrate.js';
 import { upsertNodeSnapshot } from './nodeMutations.js';
@@ -40,27 +42,30 @@ afterEach(async () => {
   await fs.rm(tempRoot, { force: true, recursive: true });
 });
 
-it('flushes Blob-only authority instead of the empty inline projection', () => {
+it('flushes an intentional empty owned body without resurrecting obsolete shared cache', () => {
   const connection = openDatabaseConnection();
+  upsertTextBodyBlob(connection.driver, 'Hello world', 'now');
   connection.driver.execute('UPDATE nodes SET content = ?, sync_dirty = 1 WHERE id = ?', ['', 'node-1']);
   const versionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z');
   const version = connection.driver.queryOne<{ body_text: string; snapshot_json: string }>(
     'SELECT body_text, snapshot_json FROM node_sync_versions WHERE version_id = ?', [versionId ?? '']
   );
-  expect(version?.body_text).toBe('Hello world');
+  expect(version?.body_text).toBe('');
   expect(JSON.parse(version?.snapshot_json ?? '{}').body_blob_hash).toMatch(/^[a-f0-9]{64}$/);
 });
 
-it('keeps an unavailable Blob node dirty without creating a version', () => {
+it('flushes the full owned body without shared cache bytes', () => {
   const connection = openDatabaseConnection();
   const hash = connection.driver.queryOne<{ body_blob_hash: string }>(
     'SELECT body_blob_hash FROM nodes WHERE id = ?', ['node-1']
   )?.body_blob_hash ?? '';
   connection.driver.execute('DELETE FROM content_blob_data WHERE hash = ?', [hash]);
-  expect(flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z')).toBeNull();
+  const versionId = flushNodeSyncVersion('node-1', '2026-04-21T10:01:00.000Z');
+  expect(connection.driver.queryOne('SELECT body_text FROM node_sync_versions WHERE version_id = ?', [versionId!]))
+    .toEqual({ body_text: 'Hello world' });
   expect(connection.driver.queryOne<{ sync_dirty: number }>('SELECT sync_dirty FROM nodes WHERE id = ?', ['node-1']))
-    .toEqual({ sync_dirty: 1 });
+    .toEqual({ sync_dirty: 0 });
   expect(connection.driver.queryOne<{ count: number }>(
     'SELECT COUNT(*) AS count FROM node_sync_versions WHERE object_id = ?', ['node-1']
-  )).toEqual({ count: 0 });
+  )).toEqual({ count: 1 });
 });

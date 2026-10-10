@@ -99,10 +99,10 @@ it('indexes high-fanout child nodes with constant path CTE executions', () => {
   ).toEqual({ count: 200 });
 });
 
-it('keeps batch node indexing equivalent for blobs, inline fallback, and deleted nodes', () => {
+it('keeps batch indexing equivalent for owned bodies and deleted nodes', () => {
   const connection = openDatabaseConnection();
-  const bodyBlobHash = upsertTextBodyBlob(connection.driver, 'blob batch atlas marker', '2026-05-16T00:00:00.000Z');
-  insertNode({ id: 'node-blob', title: 'Blob Batch', content: 'inline should not win', bodyBlobHash });
+  const bodyBlobHash = upsertTextBodyBlob(connection.driver, 'Obsolete cached text', '2026-05-16T00:00:00.000Z');
+  insertNode({ id: 'node-blob', title: 'Blob Batch', content: 'blob batch atlas marker', bodyBlobHash });
   insertNode({ id: 'node-inline', title: 'Inline Batch', content: 'inline batch atlas marker' });
   insertNode({
     id: 'node-deleted',

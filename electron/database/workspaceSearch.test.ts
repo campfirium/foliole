@@ -119,14 +119,14 @@ it('searches titles and content from sqlite without needing renderer-side conten
   expect(results[2]).toMatchObject({ id: 'node-deleted', isTrashed: true });
 });
 
-it('searches node body blob data before inline content', () => {
+it('searches owned node text despite obsolete cached bytes', () => {
   const connection = openDatabaseConnection();
-  const bodyBlobHash = upsertTextBodyBlob(connection.driver, 'Bodyblob atlas marker zz', '2026-04-27T00:00:00.000Z');
+  const bodyBlobHash = upsertTextBodyBlob(connection.driver, 'Obsolete cached text', '2026-04-27T00:00:00.000Z');
   connection.driver.execute(
     `INSERT INTO nodes (
        id, parent_id, kind, title, is_title_manual, hide_title_heading,
        content, body_blob_hash, created_at, updated_at
-     ) VALUES ('node-blob-search', NULL, 'topic', 'Blob Search', 1, 0, '', ?, ?, ?)`,
+     ) VALUES ('node-blob-search', NULL, 'topic', 'Blob Search', 1, 0, 'Bodyblob atlas marker zz', ?, ?, ?)`,
     [bodyBlobHash, '2026-04-27T00:00:00.000Z', '2026-04-27T00:00:00.000Z']
   );
   syncNodeSearchIndexForNodeIds(connection.driver, ['node-blob-search']);
