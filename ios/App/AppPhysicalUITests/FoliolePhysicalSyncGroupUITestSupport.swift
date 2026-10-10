@@ -183,6 +183,7 @@ extension FoliolePhysicalSyncGroupUITests {
     func localizedButton(named name: String, in app: XCUIApplication) -> XCUIElement {
         let chinese = ["Exit": "退出", "Browse": "浏览", "Directory": "目录",
                        "Settings": "设置", "Sync Now": "立即同步",
+                       "Outline": "大纲", "Edit topic": "编辑主题", "Done": "完成",
                        "Sync needs attention": "同步需要处理", "Sync in progress": "同步进行中"]
         return app.buttons.matching(NSPredicate(format: "label IN %@",
                                                 [name, chinese[name] ?? name])).firstMatch
