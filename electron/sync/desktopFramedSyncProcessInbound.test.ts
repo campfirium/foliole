@@ -118,7 +118,7 @@ it('atomically applies multiple versions of the same node', async () => {
     expect.objectContaining({ version_id: first.factId }),
     expect.objectContaining({ version_id: second.factId })
   ]);
-  expect(mocks.upsertBody).toHaveBeenCalledTimes(2);
+  expect(mocks.upsertBody).not.toHaveBeenCalled();
   expect(mocks.advanceRevision).toHaveBeenCalledWith(expect.anything(), 'sender');
   expect(mocks.recordPeerEpoch).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
     groupId: 'group', libraryEpoch: 'epoch-s', peerDeviceId: 'sender'

@@ -64,12 +64,15 @@ it('invalidates old orphan conclusions when the database file is replaced', asyn
   expect(fs.existsSync(path.join(resolveRuntimeDataPaths().assetsDir, key))).toBe(true);
 });
 
-it('does not count when a retained content blob is unreadable', async () => {
+it('observes owned body references after retired shared caches are removed', async () => {
   file('orphan');
   node('unreadable', 'Original body');
   openDatabaseConnection().sqlite.prepare('DELETE FROM content_blob_data').run();
-  await expect(runDesktopAttachmentMaintenance({ action: 'observe' })).rejects.toThrow('body_unreadable');
-  expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ lastObservationDay: null, eligibleBytes: 0 });
+  const observed = await runDesktopAttachmentMaintenance({ action: 'observe' });
+  expect(observed.lastObservationDay).not.toBeNull();
+  expect(openDatabaseConnection().sqlite.prepare("SELECT content FROM nodes WHERE id = 'unreadable'").pluck().get())
+    .toBe('Original body');
+  expect(await runDesktopAttachmentMaintenance({ action: 'status' })).toMatchObject({ lastObservationDay: observed.lastObservationDay });
 });
 
 it('keeps recoverable files available through trash and removes availability only after physical retirement', async () => {

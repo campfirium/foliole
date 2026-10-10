@@ -68,7 +68,7 @@ it('validates a changed later source before preparing an earlier reply', async (
     const second = selected.find(item => item.globalId === 'second')!;
     const baseline = a.sender.sqlite.prepare('SELECT count(*) FROM framed_sync_outbound_publications').pluck().get();
     await expect(request(a, [first, { ...second, sourceSnapshot: {
-      ...second.sourceSnapshot, frontierFactIds: ['changed-version']
+      ...second.sourceSnapshot, sharedStateHash: new Uint8Array(32).fill(255)
     } }])).rejects.toThrow('framed_sync_difference_request_source_changed');
     expect(a.sender.sqlite.prepare('SELECT count(*) FROM framed_sync_outbound_publications').pluck().get()).toBe(baseline);
   } finally { b.close(); a.close(); }

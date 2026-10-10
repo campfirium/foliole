@@ -49,9 +49,9 @@ it('requests a stable remote difference and converges through the inbound authen
     expect(await fixture.left.invoke('round', { input })).toMatchObject({ complete: true, pending: 0 });
     expect(await verifiedReceiverArticle(fixture.leftSnapshot.databasePath, nodeId))
       .toMatchObject({ ...expected, content });
-    // Applying the node publishes its local parent-order fact, which the next round exchanges.
+    // The completed round already exchanges the adopted node and its member position.
     expect(await fixture.left.invoke('round', { input }))
-      .toMatchObject({ complete: true, databaseComplete: true, pending: 0, transferred: 1 });
+      .toMatchObject({ complete: true, databaseComplete: true, pending: 0, transferred: 0 });
     const read = { input: { kind: 'read_inventory' } };
     expect(await fixture.left.invoke('round', read)).toEqual(await fixture.right.invoke('round', read));
     expect(await fixture.left.invoke('round', { input }))
@@ -77,7 +77,7 @@ function registerReceiveTest() {
       expect(evidence.pins).toEqual([]);
       expect(evidence.available).toEqual([]);
       expect(evidence.chunks).toEqual([]);
-      expect(evidence.versions).toEqual([expect.objectContaining({ body_text: content, content })]);
+      expect(evidence.versions).toEqual([expect.objectContaining({ body_text: content, content: null })]);
       succeeded = true;
     } finally { await closeFixture(fixture, succeeded); }
   });

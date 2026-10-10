@@ -7,7 +7,6 @@ import { z } from 'zod';
 
 import { computeSyncContentHash } from '../../lib/core/database/syncState.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
-import { upsertTextBodyBlob } from '../../lib/core/sync/syncNodeTextBodyBlobs.js';
 import { applySyncObjectInTransaction } from '../../lib/core/sync/syncObjectApplyExecutor.js';
 import { createBetterSqlite3Driver } from '../database/betterSqlite3Driver.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
@@ -73,12 +72,11 @@ async function seedFolder(databasePath: string) {
       extension: 'md', file_name: 'original.md', folder_id: folder.id, reference_json: null,
       reference_kind: 'local_path', relative_path: 'original.md', title: 'Original' };
     await port.transaction(async (tx) => {
-      await upsertTextBodyBlob(tx, body, '2026-07-01T00:00:00.000Z', bodyHash);
       for (const [type, id, payload] of [
         ['external_folder', folder.id, folder], ['external_document', documentId, document]
       ] as const) await applySyncObjectInTransaction(tx, { object_type: type, object_id: id,
         content_hash: computeSyncContentHash(type, payload), deleted_at: null,
-        payload_json: JSON.stringify(payload), updated_at: '2026-07-01T00:00:00.000Z' });
+        payload_json: JSON.stringify({ ...payload, ...(type === 'external_document' ? { content: body } : {}) }), updated_at: '2026-07-01T00:00:00.000Z' });
     });
   } finally { db.close(); }
 }

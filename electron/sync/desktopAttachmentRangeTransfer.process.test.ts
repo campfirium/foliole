@@ -63,7 +63,7 @@ process.stdout.write(JSON.stringify({ offsets, startingRss, peakRss,
 
 async function compileReceiver(root: string) {
   for (const relative of ['electron/sync/desktopAttachmentRangeTransfer.ts',
-    'electron/sync/resourceFileHash.ts', 'lib/platform/resourceAvailabilityContract.ts',
+    'electron/sync/resourceFileHash.ts', 'electron/sync/framedSyncFileChunks.ts', 'lib/platform/resourceAvailabilityContract.ts',
     'lib/platform/attachmentResource.ts',
     'lib/core/sync/attachmentReceiveCheckpoint.ts', 'lib/core/database/syncPackProgressSchemaStatements.ts']) {
     const source = await fs.readFile(path.join(process.cwd(), relative), 'utf8');

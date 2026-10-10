@@ -57,8 +57,7 @@ function persisted(peer: Peer) {
   const db = new Database(peer.database, { readonly: true, fileMustExist: true });
   try {
     return {
-      node: db.prepare(`SELECT CAST(cbd.data AS TEXT) AS content, n.current_version_id
-        FROM nodes n LEFT JOIN content_blob_data cbd ON cbd.hash = n.body_blob_hash
+      node: db.prepare(`SELECT n.content, n.current_version_id FROM nodes n
         WHERE n.id = 'topic'`).get(),
       alternatives: db.prepare(`SELECT body_text FROM node_text_alternatives
         WHERE node_id = 'topic' AND status = 'available' ORDER BY body_text`).pluck().all()

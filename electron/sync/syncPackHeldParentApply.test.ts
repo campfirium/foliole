@@ -48,16 +48,16 @@ it('applies a new head when the pack omits an already held parent body', async (
     UPDATE sync_object_state SET current_version_id = 'desktop#1'
       WHERE object_type = 'node' AND object_id = 'node-1';
     INSERT INTO node_sync_versions
-    (version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json)
+    (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
     VALUES ('desktop#1', 'node-1', NULL, 'desktop', '2026-05-04T01:00:00.000Z',
-      'hash-node-1', '{"id":"node-1","title":"Packed Node"}')`);
+      'hash-node-1', '', '{"id":"node-1","title":"Packed Node"}')`);
   const incoming = new Database(incomingPath);
   try {
     incoming.exec(`DELETE FROM node_sync_versions WHERE version_id = 'desktop#1';
       INSERT INTO node_sync_versions
-      (version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json)
+      (version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json)
       VALUES ('desktop#2', 'node-1', 'desktop#1', 'desktop', '2026-05-04T02:00:00.000Z',
-        'hash-node-2', '{"id":"node-1","title":"Packed Node"}');
+        'hash-node-2', '', '{"id":"node-1","title":"Packed Node"}');
       INSERT INTO node_sync_version_parents VALUES ('desktop#2', 'desktop#1', 0);
       UPDATE nodes SET current_version_id = 'desktop#2' WHERE id = 'node-1';`);
   } finally { incoming.close(); }

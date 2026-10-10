@@ -162,8 +162,8 @@ function createIncomingLearningDependencyPack(filePath: string) {
     );
     db.prepare(
       `INSERT INTO node_sync_versions (
-         version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
-       ) VALUES (?, ?, NULL, ?, ?, ?, ?)`
+         version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
+       ) VALUES (?, ?, NULL, ?, ?, ?, '', ?)`
     ).run(
       'desktop#reading-1',
       'node-reading-1',
@@ -207,8 +207,8 @@ function createIncomingDeletedNodePack(filePath: string) {
     );
     db.prepare(
       `INSERT INTO node_sync_versions (
-         version_id, object_id, parent_version_id, host_name, created_at, content_hash, snapshot_json
-       ) VALUES (?, ?, NULL, ?, ?, ?, ?)`
+         version_id, object_id, parent_version_id, host_name, created_at, content_hash, body_text, snapshot_json
+       ) VALUES (?, ?, NULL, ?, ?, ?, '', ?)`
     ).run(
       'desktop#deleted-1',
       'node-deleted-1',

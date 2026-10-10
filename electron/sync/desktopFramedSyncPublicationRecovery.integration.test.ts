@@ -100,7 +100,8 @@ it.each(['publication', 'partial', 'finalised'] as const)(
     await fixture.left.seed({ content: 'Latest body', nodeId, title: 'Latest' });
     await fixture.left.invoke('collect_content');
     const retained = readDesktopFramedSyncLibraryEvidence(fixture.leftSnapshot.databasePath);
-    expect(retained.versions).toContainEqual(expect.objectContaining({ body_text: 'Frozen body' }));
+    expect(retained.versions).not.toContainEqual(expect.objectContaining({ body_text: 'Frozen body' }));
+    expect(retained.versions).toContainEqual(expect.objectContaining({ body_text: null }));
     const restarted = await fixture.restartLeft();
     processes.push(restarted.process);
     await reconnectFixturePeer(restarted.process, fixture.rightSnapshot);
@@ -112,7 +113,7 @@ it.each(['publication', 'partial', 'finalised'] as const)(
     expect(after.frames).toEqual([]);
     expect(after.attempts).toEqual([]);
     expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).versions)
-      .toContainEqual(expect.objectContaining({ body_text: 'Frozen body' }));
+      .not.toContainEqual(expect.objectContaining({ body_text: 'Frozen body' }));
     expect(readDesktopFramedSyncLibraryEvidence(fixture.rightSnapshot.databasePath).nodes)
       .toContainEqual(expect.objectContaining({ id: nodeId, content: 'Latest body' }));
     expect(after.holds).toEqual([]);

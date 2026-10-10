@@ -74,7 +74,7 @@ it('accepts an empty version body as valid topic text', async () => {
 it('imports lightweight ancestry and rehydrates a current version from a later full replay', async () => {
   const incoming = new Database(incomingPath);
   try {
-    incoming.prepare('UPDATE node_sync_versions SET snapshot_json = ? WHERE version_id = ?')
+    incoming.prepare('UPDATE node_sync_versions SET body_text = NULL, snapshot_json = ? WHERE version_id = ?')
       .run('{"id":"node-1","title":"Packed Node","content":null}', 'desktop#1');
   } finally {
     incoming.close();
@@ -106,7 +106,7 @@ it('imports lightweight ancestry and rehydrates a current version from a later f
 it('keeps a full local body when a replay only carries ancestry', async () => {
   const incoming = new Database(incomingPath);
   try {
-    incoming.prepare('UPDATE node_sync_versions SET snapshot_json = ? WHERE version_id = ?')
+    incoming.prepare('UPDATE node_sync_versions SET body_text = NULL, snapshot_json = ? WHERE version_id = ?')
       .run('{"id":"node-1","title":"Packed Node","content":null}', 'desktop#1');
   } finally {
     incoming.close();

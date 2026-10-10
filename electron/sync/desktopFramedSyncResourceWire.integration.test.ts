@@ -106,9 +106,9 @@ it('repairs the same attachment after a second loss and replays each demand betw
         { ...source.published.context, ...demand }, demandId, demand.sharedStateHash);
       const publication = await publishDesktopFramedSyncResourceOutbound({ db: source.db,
         context: source.published.context, resources: [demand] });
+      const reply = await requestResourceReply(source, receiver, demand, groupKey);
       const attempt = await prepareDesktopFramedSyncPublishedTransfer({ db: source.db,
         groupSecret: Buffer.from(groupKey).toString('base64url'), publication, staging: source.staging });
-      const reply = await requestResourceReply(source, receiver, demand, groupKey);
       await assertStartedDemandRemainsPending(receiver, demandId);
       publishAttachmentLibraryPathSnapshot({ assetsDir, libraryScope: path.dirname(assetsDir) });
       const published = { ...publication, factCount: 1n, blobCount: 1n,

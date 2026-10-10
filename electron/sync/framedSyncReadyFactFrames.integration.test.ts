@@ -36,9 +36,13 @@ it.each(sources)('reads %s attached ready facts in numeric sequence order with o
         const rows = await host.db.query<T>(sql, params);
         expect(rows.length).toBeLessThanOrEqual(1);
         for (const row of rows) {
-          expect(Object.keys(row).sort()).toEqual(['authenticated_plaintext', 'sequence']);
-          expect((row.authenticated_plaintext as Uint8Array).byteLength).toBeLessThan(4096);
-          seen.push(String(row.sequence));
+          if ('sequence' in row) {
+            expect(Object.keys(row)).toEqual(['sequence']);
+            seen.push(String(row.sequence));
+          } else {
+            expect(Object.keys(row)).toEqual(['authenticated_plaintext']);
+            expect((row.authenticated_plaintext as Uint8Array).byteLength).toBeLessThan(4096);
+          }
         }
         return rows;
       }
@@ -109,7 +113,7 @@ it.each(sources)('stops %s payload queries immediately on return and rejects the
       async query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
         const rows = await host.db.query<T>(sql, params);
         expect(rows.length).toBeLessThanOrEqual(1);
-        seen.push(...rows.map((row) => String(row.sequence)));
+        if (rows.some(row => 'authenticated_plaintext' in row)) seen.push(String(params[2]));
         return rows;
       }
     };

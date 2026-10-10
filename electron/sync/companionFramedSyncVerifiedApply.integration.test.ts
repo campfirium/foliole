@@ -6,6 +6,7 @@ import { expect, it } from 'vitest';
 
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { canonicalContentId } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
+import { readFramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventoryRead.js';
 import { projectFramedSyncNodeRecord } from '../../lib/core/sync/framedSyncNodeProjection.js';
 import { restoreFramedSyncNodeMetadata } from '../../lib/core/sync/framedSyncNodeRestore.js';
 import { decodeAndValidateProtocolMessage, encodeValidatedProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
@@ -60,7 +61,7 @@ it.each(kinds)('applies %s ordinary data requests through owned full node and ve
       sender_library_epoch: host.input.senderLibraryEpoch, staging_kind: kind,
       staging_path: host.input.stagingPath, transfer_id: bytesToHex(host.input.transferId) };
     const receipt = await applyCompanionFramedSyncDataOperation(host.port(), payload);
-    expect(receipt).toEqual({ applied_state_hash: '4'.repeat(64), content_id: bytesToHex(host.contentId),
+    expect(receipt).toEqual({ applied_state_hash: bytesToHex((await readFramedSyncInventoryEntry(host.port(), { globalId: 'node-1', objectType: 'node' }))!.sharedStateHash), content_id: bytesToHex(host.contentId),
       receiver_device_id: 'receiver', receiver_library_epoch: 'receiver-epoch',
       transfer_id: bytesToHex(host.input.transferId) });
     host.reopen();
@@ -107,7 +108,8 @@ it.each(kinds)('applies exact owned %s empty and long Unicode bodies with origin
         .toEqual([{ version_id: 'version-1', content_hash: '4'.repeat(64), body_text: body }]);
       expect(receipt).toMatchObject({ receiverDeviceId: 'receiver', receiverLibraryEpoch: 'receiver-epoch',
         transferId: host.input.transferId, contentId: host.contentId });
-      expect(bytesToHex(receipt.appliedStateHash)).toBe('4'.repeat(64));
+      expect(receipt.appliedStateHash).toEqual((await readFramedSyncInventoryEntry(host.port(),
+        { globalId: 'node-1', objectType: 'node' }))!.sharedStateHash);
       expect(host.main.prepare('SELECT count(*) FROM framed_sync_receipts').pluck().get()).toBe(1);
       expect(host.main.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('settings', 'search_index_invalidations')").all())
         .toEqual([]);

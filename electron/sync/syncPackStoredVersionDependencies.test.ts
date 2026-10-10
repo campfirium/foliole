@@ -150,6 +150,7 @@ function createFixture(parentSnapshot: string) {
     );
     CREATE TABLE node_sync_tombstones (node_id TEXT PRIMARY KEY, version_id TEXT);
     CREATE TABLE nodes (id TEXT PRIMARY KEY, current_version_id TEXT);
+    CREATE TABLE sync_object_state (object_type TEXT, current_version_id TEXT);
     ATTACH DATABASE ':memory:' AS inc;
     CREATE TABLE inc.node_sync_versions (
       version_id TEXT PRIMARY KEY, object_id TEXT, parent_version_id TEXT,

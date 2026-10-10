@@ -118,7 +118,7 @@ function expectRoundTripProjection(
   expect(() => canonicalManifestBytes(projection.manifest)).not.toThrow();
   expect(restoreDesktopFramedSyncNodeRecord(projection)).toEqual({
     ...source,
-    snapshot: { ...source.snapshot, body_blob_hash: bytesToHex(blob.sha256) }
+    snapshot: { ...source.snapshot, content: source.body_text, body_blob_hash: bytesToHex(blob.sha256) }
   });
 }
 

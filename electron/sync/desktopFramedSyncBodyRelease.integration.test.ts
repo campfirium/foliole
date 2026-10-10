@@ -17,7 +17,7 @@ function readBodies(databasePath: string) {
       blobs: db.prepare<[], { hash: string }>('SELECT hash FROM content_blob_data').all().map((row) => row.hash),
       nodes: db.prepare(`SELECT id, current_version_id, content FROM nodes ORDER BY id`).all(),
       versions: db.prepare(`SELECT version_id, parent_version_id, body_text,
-        json_extract(snapshot_json, '$.body_blob_hash') AS body_blob_hash
+        json_extract(snapshot_json, '$.body_deleted') AS body_deleted
         FROM node_sync_versions ORDER BY version_id`).all(),
       edges: db.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id, ordinal').all()
     };
@@ -42,7 +42,7 @@ it('releases replaced bytes across real processes, preserves another node holder
         expect.objectContaining({ id: 'article', content: 'Current body' })
       ]));
       expect(retained.versions).not.toContainEqual(expect.objectContaining({ body_text: INTERMEDIATE }));
-      expect(retained.versions).toContainEqual(expect.objectContaining({ body_text: null, body_blob_hash: null }));
+      expect(retained.versions).toContainEqual(expect.objectContaining({ body_text: null, body_deleted: 1 }));
     }
     await fixture.left.seed({ content: 'Holder replaced', nodeId: 'holder', title: 'Holder' });
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);

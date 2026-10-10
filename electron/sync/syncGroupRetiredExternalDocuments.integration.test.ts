@@ -43,7 +43,7 @@ it('resumes a blocked use-group adoption after provider migration without anothe
       await applicant!.send('joinRequest', { origin: peers[1]!.origin, mode: 'use-group' })
     );
     await provider!.send('joinAccept', { requestId: request.join_request.request_id });
-    await expect(applicant!.send('joinComplete')).rejects.toThrow('framed_sync_source_changed');
+    await expect(applicant!.send('joinComplete')).rejects.toThrow('sync_group_sync_incomplete');
     const before = readAdoption(peers[0]!.database);
     expect(before).not.toBeNull();
     const identity = localIdentity(peers[0]!.database);
