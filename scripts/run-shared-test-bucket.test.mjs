@@ -62,6 +62,7 @@ describe('run-shared-test-bucket', () => {
     expect(targets).toEqual(await collectTests('lib'));
     expect(new Set(targets).size).toBe(targets.length);
     expect(buckets.find(({ label }) => label === 'lib-native').pool).toBeUndefined();
+    expect(buckets.find(({ label }) => label === 'lib-native').fileParallelism).toBe(true);
     expect(buckets.find(({ label }) => label === 'lib').pool).toBe('threads');
   });
 

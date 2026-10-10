@@ -30,6 +30,7 @@ function directoryBuckets(directory, labelPrefix, reportPrefix) {
     const name = path.posix.basename(target);
     return {
       label: `${labelPrefix}-${name}`,
+      fileParallelism: true,
       report: `.tmp/vitest/${reportPrefix}-${name}.json`,
       targets: [target]
     };
@@ -42,6 +43,7 @@ function fileBuckets(targets, labelPrefix, reportPrefix, maximumFiles) {
     const suffix = Math.floor(index / maximumFiles) + 1;
     buckets.push({
       label: `${labelPrefix}-${suffix}`,
+      fileParallelism: true,
       report: `.tmp/vitest/${reportPrefix}-${suffix}.json`,
       targets: targets.slice(index, index + maximumFiles)
     });
@@ -65,7 +67,7 @@ const nativeStoreTests = [
 ];
 
 export const SHARED_TEST_BUCKETS = [
-  { label: 'lib-native', report: '.tmp/vitest/shared-lib-native.json',
+  { label: 'lib-native', fileParallelism: true, report: '.tmp/vitest/shared-lib-native.json',
     targets: libraryTests.filter((target) => nativeTests.has(target)) },
   { label: 'lib', pool: 'threads', fileParallelism: true, report: '.tmp/vitest/shared-lib.json',
     targets: libraryTests.filter((target) => !nativeTests.has(target)) },
@@ -91,11 +93,13 @@ export const SHARED_TEST_BUCKETS = [
   ),
   {
     label: 'shared-platform-companion-top',
+    fileParallelism: true,
     report: '.tmp/vitest/shared-src-platform-companion-top.json',
     targets: immediateTestTargets('src/shared/platform/companion')
   },
   {
     label: 'shared-platform-core',
+    fileParallelism: true,
     report: '.tmp/vitest/shared-src-platform-core.json',
     targets: [
       ...platformCoreTests,
@@ -118,7 +122,7 @@ export const SHARED_TEST_BUCKETS = [
     report: '.tmp/vitest/shared-src-features-guided.json',
     targets: ['src/features/guidedSample', 'src/features/help']
   },
-  { label: 'store-native', report: '.tmp/vitest/shared-src-store-native.json', targets: nativeStoreTests },
+  { label: 'store-native', fileParallelism: true, report: '.tmp/vitest/shared-src-store-native.json', targets: nativeStoreTests },
   { label: 'store', pool: 'threads', fileParallelism: true, report: '.tmp/vitest/shared-src-store.json',
     targets: [
       ...immediateTestTargets('src/store').filter((target) => !nativeStoreTests.includes(target)),
