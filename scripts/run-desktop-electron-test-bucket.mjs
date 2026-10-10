@@ -13,7 +13,7 @@ import {
 } from './desktop-electron-test-bucket-report.mjs';
 
 const TEST_FILE_PATTERN = /\.test\.(mjs|mts|ts|tsx)$/u;
-const DATABASE_CHUNK_SIZE = 5;
+const DATABASE_CHUNK_SIZE = 20;
 const IMPORT_CHUNK_SIZE = 2;
 const IPC_CHUNK_SIZE = 10;
 const EPUB_IPC_CHUNK_SIZE = 3;

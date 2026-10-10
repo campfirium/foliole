@@ -35,7 +35,7 @@ it('builds the expected desktop Electron buckets with explicit chunk bounds', ()
   expect(labels).toContain('root');
   expect(labels).toContain('scripts');
   expect(buckets.every((bucket) => bucket.targets.length > 0)).toBe(true);
-  expect(buckets.find((bucket) => bucket.label === 'database-01')?.targets.length).toBeLessThanOrEqual(5);
+  expect(buckets.find((bucket) => bucket.label === 'database-01')?.targets.length).toBeLessThanOrEqual(20);
   expect(buckets.find((bucket) => bucket.label === 'ipc-01')?.targets.length).toBeLessThanOrEqual(10);
   expect(buckets.find((bucket) => bucket.label === 'import-importManagerSettings')?.targets).toEqual([
     'electron/import/importManagerSettings.test.ts'
