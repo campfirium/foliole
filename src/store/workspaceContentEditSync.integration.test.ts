@@ -3,13 +3,16 @@ import { promises as fs } from 'node:fs';
 
 import Database from 'better-sqlite3';
 import { afterEach, expect, it } from 'vitest';
+import { z } from 'zod';
 
 import { readFixtureInventory, reconnectFixturePeer } from '../../electron/sync/desktopFramedSyncPublicationRecovery.testSupport';
 import { createDesktopFramedSyncTwoProcessFixture } from '../../electron/sync/desktopFramedSyncTwoProcess.testSupport';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference';
 import type { Node } from '../features/nodes/model/nodeTypes';
+import { createWorkspaceRuntimeNodeSnapshot } from '../shared/platform/workspaceRuntimeNodeRepository';
 
-import { captureContentEdit, resetContentEditAcknowledgementsForTests } from './workspaceContentEditAcknowledgements';
+import { acknowledgeContentEdit, captureContentEdit, continueContentEdit,
+  resetContentEditAcknowledgementsForTests } from './workspaceContentEditAcknowledgements';
 import { mergeHydratedNode } from './workspaceHydrateObjectMerge';
 import { markNodeContentEdited, resetNodeContentVersionGuardForTests } from './workspaceNodeContentVersionGuard';
 
@@ -96,3 +99,66 @@ it.each(['saved-before-receive', 'unsaved-during-receive'] as const)(
       else console.info('Concurrent editor fixture:', fixture.root);
     }
   }, 60_000);
+
+function assertVersionBody(databasePath: string, versionId: string, body: string) {
+  expect(persisted(databasePath).versions.find((version) => version.version_id === versionId)?.body_text).toBe(body);
+}
+
+it('continues newer input from its acknowledged branch while independent edit holds survive sync receipts', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  let succeeded = false;
+  try {
+    await fixture.left.seed({ nodeId, content: baseBody, title: 'Concurrent article' });
+    await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
+    const databasePath = fixture.rightSnapshot.databasePath;
+    const baseId = persisted(databasePath).node.current_version_id;
+    for (const holdId of ['editor', 'other-editor']) {
+      await fixture.right.invoke('retain_edit', { nodeId, holdId, versionId: baseId });
+    }
+    const draft = rendererNode(baseId, localBody, timestamp(1));
+    const version = markNodeContentEdited(nodeId);
+    const edit = captureContentEdit(draft);
+    const next = captureContentEdit(draft);
+    if (!edit || !next) throw new Error('concurrent_edit_basis_missing');
+    await fixture.left.invoke('local_content_edit', { nodeId, baseVersionId: baseId,
+      versionId: 'ver_remote', content: remoteBody, hostName: 'desktop-a', updatedAt: timestamp(2) });
+    await reconnectFixturePeer(fixture.right, fixture.leftSnapshot);
+    expect(mergeHydratedNode(draft, rendererNode(persisted(databasePath).node.current_version_id,
+      remoteBody, timestamp(2))).content).toBe(localBody);
+    const result = z.object({ submittedVersionId: z.string(), current: z.object({ version_id: z.string() }) })
+      .parse(await fixture.right.invoke('local_content_edit', { ...edit, nodeId,
+        content: localBody, hostName: 'desktop-b', updatedAt: timestamp(1) }));
+    markNodeContentEdited(nodeId);
+    const saved = persisted(databasePath).node;
+    acknowledgeContentEdit({ edit, node: draft, version, set: () => undefined, result: {
+      contentEdit: { currentVersionId: result.current.version_id, submittedVersionId: result.submittedVersionId },
+      nodes: [createWorkspaceRuntimeNodeSnapshot(rendererNode(saved.current_version_id, saved.content, timestamp(2)), 0)]
+    } });
+    continueContentEdit(nodeId, next);
+    expect(next.baseVersionId).toBe(edit.versionId);
+    await fixture.right.invoke('retain_edit', { nodeId, holdId: 'editor', versionId: next.baseVersionId });
+    await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+    await fixture.right.invoke('collect_content');
+    assertVersionBody(databasePath, baseId, baseBody);
+    assertVersionBody(databasePath, edit.versionId, localBody);
+    await fixture.right.invoke('release_edit', { nodeId, holdId: 'other-editor' });
+    assertVersionBody(databasePath, edit.versionId, localBody);
+    const continued = localBody.replace('Last', 'Continued last');
+    await fixture.right.invoke('local_content_edit', { ...next, nodeId,
+      content: continued, hostName: 'desktop-b', updatedAt: timestamp(3) });
+    await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
+    await fixture.right.invoke('release_edit', { nodeId, holdId: 'editor' });
+    await fixture.right.invoke('collect_content');
+    const right = persisted(databasePath);
+    expect([...right.bodies]).toEqual(expect.arrayContaining([continued, remoteBody]));
+    expect(right.parents).toContainEqual({ version_id: next.versionId, parent_version_id: edit.versionId, ordinal: 0 });
+    expect(persisted(fixture.leftSnapshot.databasePath).bodies).toEqual(right.bodies);
+    const restarted = await fixture.restartRight();
+    expect(persisted(restarted.snapshot.databasePath)).toEqual(right);
+    succeeded = true;
+  } finally {
+    await Promise.allSettled([fixture.left.close(), fixture.right.close()]);
+    if (succeeded) await fs.rm(fixture.root, { recursive: true, force: true });
+    else console.info('Editor acknowledgement fixture:', fixture.root);
+  }
+}, 60_000);
