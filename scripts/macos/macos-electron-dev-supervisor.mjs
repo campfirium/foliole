@@ -13,7 +13,6 @@ import {
   writeElectronDevClientState
 } from '../desktop/electron-dev-control-state.mjs';
 import { withResourceGate } from '../lib/resource-gate.mjs';
-import { maintainBeforeProduction } from '../diagnostics/local-artifact-cache-production.mjs';
 import { requestMacosElectronShellExit } from './macos-electron-dev-actions.mjs';
 import { createMacosDailyEnvironment } from './macos-electron-dev-environment.mjs';
 import { prepareMacosElectronDevSignature } from './macos-electron-dev-signature.mjs';
@@ -172,7 +171,6 @@ export async function runMacosElectronDevSupervisor(options = {}) {
   if (existing.supervisorAlive || existing.shellAlive) {
     throw new Error(`macOS Electron daily debug still owned supervisor=${existing.client.supervisorPid} shell=${existing.client.shellPid}`);
   }
-  (options.maintain ?? maintainBeforeProduction)({ rootDir: paths.appRoot });
   await (options.prepareSignature ?? prepareMacosElectronDevSignature)({
     appRoot: paths.appRoot,
     platform

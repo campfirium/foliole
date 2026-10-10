@@ -46,11 +46,6 @@ describe('macOS Electron dev entry', () => {
     expect(resolveMacosElectronDevOpenMode({ running: false, supervisorAlive: false })).toBe('start');
   });
 
-  it('maintains repository-local storage before starting daily production', () => {
-    const source = fs.readFileSync('scripts/macos/macos-electron-dev-supervisor.mjs', 'utf8');
-    expect(source).toContain('maintainBeforeProduction)({ rootDir: paths.appRoot })');
-  });
-
   it('resolves a persistent explicit Demo library without changing the isolated runtime root', () => {
     const paths = resolveMacosElectronDevPaths('/repo/foliole');
     const libraryHome = resolveMacosElectronDevLibraryHome([

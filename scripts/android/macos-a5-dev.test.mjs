@@ -72,12 +72,11 @@ describe('macOS fixed A5 development entry', () => {
     expect(dispatcher).toContain('runMacosA5HiddenDesktopStatusEntry');
   });
 
-  it('maintains local storage and reuses one hidden Electron cache entry', () => {
+  it('reuses one hidden Electron cache entry', () => {
     const lifecycle = fs.readFileSync('scripts/android/macos-a5-formal-lifecycle.mjs', 'utf8');
     const source = fs.readFileSync('scripts/android/macos-a5-dev.mjs', 'utf8');
     expect(lifecycle).toContain("prepareCacheEntry({ entryName: 'native-hidden-electron'");
     expect(source).toContain('FOLIOLE_SHARED_CACHE_ROOT: sharedCacheRoot');
-    expect(lifecycle).toContain('maintainBeforeProduction({ rootDir: repoRoot })');
   });
 
   it('rejects a missing formal retention task before production setup', async () => {

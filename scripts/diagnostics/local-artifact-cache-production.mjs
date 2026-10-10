@@ -5,53 +5,17 @@ import {
   ARTIFACT_ROOT,
   CACHE_ROOT,
   refreshArtifactRun,
-  refreshCacheEntry,
-  runRetention
+  refreshCacheEntry
 } from './local-artifact-cache-retention.mjs';
-import { runCleanup } from './cleanup-local-artifacts.mjs';
-import { sweepTransientWorktrees } from './transient-worktree-lifecycle.mjs';
 
-function maintainTransientWorktrees(options) {
-  if (options.rootDir && !existsSync(path.join(options.rootDir, '.git'))) {
-    return { failures: [], ok: true, removed: [] };
-  }
-  return sweepTransientWorktrees({
-    days: 7,
-    nowMs: options.nowMs ?? Date.now(),
-    ...(options.rootDir ? { repoRoot: options.rootDir } : {})
-  });
-}
-
-function requireSuccessfulMaintenance(result) {
-  if (result.ok) return result;
-  const failedPaths = result.failures.map((failure) => failure.path).join(', ');
-  throw new Error(`Local artifact/cache maintenance failed: ${failedPaths}`);
-}
-
-export function maintainBeforeProduction(options = {}) {
-  const cleanup = runCleanup({
-    apply: true, days: 7, dryRun: false,
-    nowMs: options.nowMs ?? Date.now(), rootDir: options.rootDir
-  });
-  const retention = requireSuccessfulMaintenance(
-    runRetention({ ...options, apply: true, scope: 'all' })
-  );
-  const transientWorktrees = maintainTransientWorktrees(options);
-  return { cleanup, retention, transientWorktrees };
-}
-
-export function prepareCacheEntry({ entryName, nowMs = Date.now(), rootDir, ...options }) {
+export function prepareCacheEntry({ entryName, nowMs = Date.now(), rootDir }) {
   const entryPath = path.join(rootDir, CACHE_ROOT, entryName);
   mkdirSync(entryPath, { recursive: true });
   refreshCacheEntry({ entryName, nowMs, rootDir });
-  maintainBeforeProduction({ ...options, nowMs, rootDir });
   return entryPath;
 }
 
-export async function withArtifactRun({
-  categoryName, nowMs = Date.now(), rootDir, runName, ...options
-}, produce) {
-  maintainBeforeProduction({ ...options, nowMs, rootDir });
+export async function withArtifactRun({ categoryName, rootDir, runName }, produce) {
   try {
     return await produce();
   } finally {

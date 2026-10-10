@@ -13,9 +13,7 @@ import {
 import {
   completeFormalA5Receipt, failFormalA5Receipt, formalA5AcceptedTipLine, openFormalA5Receipt
 } from './macos-a5-formal-receipt.mjs';
-import {
-  maintainBeforeProduction, prepareCacheEntry
-} from '../diagnostics/local-artifact-cache-production.mjs';
+import { prepareCacheEntry } from '../diagnostics/local-artifact-cache-production.mjs';
 
 function reportRetentionFailures(result) {
   for (const failure of result?.failures ?? []) {
@@ -35,8 +33,6 @@ export function openMacosA5Lifecycle({ action, actionContract, formal, repoRoot 
   const sharedCacheRoot = path.join(path.resolve(repoRoot), '.cache');
   if (actionContract.requiresHiddenDesktopRuntime) {
     prepareCacheEntry({ entryName: 'native-hidden-electron', rootDir: repoRoot });
-  } else {
-    maintainBeforeProduction({ rootDir: repoRoot });
   }
   const candidate = formal && actionContract.formalSourceClass === 'frozen-build'
     ? beginFormalA5Candidate(repoRoot) : null;

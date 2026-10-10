@@ -1,15 +1,13 @@
 // @vitest-environment node
-/* global process */
 
 import {
-  existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, utimesSync, writeFileSync
+  mkdirSync, mkdtempSync, readFileSync, statSync, utimesSync, writeFileSync
 } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
 
 import { ARTIFACT_ROOT, CACHE_ROOT } from './local-artifact-cache-retention.mjs';
 import {
@@ -35,17 +33,13 @@ function makeOldArtifact(rootDir, name, nowMs) {
   return entry;
 }
 
-function git(cwd, ...args) {
-  return execFileSync('git', ['-C', cwd, ...args], { encoding: 'utf8' }).trim();
-}
-
 afterEach(async () => {
   for (const root of fixtureRoots.splice(0)) {
     await rm(root, { force: true, maxRetries: 20, recursive: true, retryDelay: 250 });
   }
 });
 
-it('refreshes the active cache entry before maintaining other local storage', () => {
+it('refreshes the requested cache while preserving unrelated old storage', () => {
   const rootDir = makeFixture();
   const nowMs = Date.UTC(2026, 7, 5);
   const oldArtifact = makeOldArtifact(rootDir, 'expired', nowMs);
@@ -61,21 +55,22 @@ it('refreshes the active cache entry before maintaining other local storage', ()
 
   expect(entryPath).toBe(path.join(rootDir, CACHE_ROOT, 'ios-runtime-contract'));
   expect(statSync(entryPath).mtimeMs).toBe(nowMs);
-  expect(() => statSync(oldArtifact)).toThrow();
-  expect(() => statSync(oldTmp)).toThrow();
+  expect(readFileSync(path.join(oldArtifact, 'payload'), 'utf8')).toBe('old');
+  expect(statSync(oldTmp).isDirectory()).toBe(true);
 });
 
-it('blocks production when maintenance cannot delete a candidate', async () => {
+it('produces artifacts without deleting an unrelated build cache', async () => {
   const rootDir = makeFixture();
   const nowMs = Date.UTC(2026, 7, 5);
-  makeOldArtifact(rootDir, 'blocked', nowMs);
-  const produce = vi.fn();
+  const cache = path.join(rootDir, CACHE_ROOT, 'ios-physical-acceptance');
+  mkdirSync(cache, { recursive: true });
+  writeFileSync(path.join(cache, 'build.db'), 'active build');
+  utimesSync(cache, new Date(nowMs - 31 * DAY_MS), new Date(nowMs - 31 * DAY_MS));
 
-  await expect(withArtifactRun({
-    categoryName: 'fixture', runName: 'next-run', nowMs,
-    removeEntry: () => { throw new Error('permission denied'); }, rootDir
-  }, produce)).rejects.toThrow('maintenance failed');
-  expect(produce).not.toHaveBeenCalled();
+  await withArtifactRun({ categoryName: 'fixture', runName: 'next', nowMs, rootDir }, async () => {
+    expect(readFileSync(path.join(cache, 'build.db'), 'utf8')).toBe('active build');
+  });
+  expect(readFileSync(path.join(cache, 'build.db'), 'utf8')).toBe('active build');
 });
 
 it('refreshes an artifact batch after successful or failed production', async () => {
@@ -92,7 +87,7 @@ it('refreshes an artifact batch after successful or failed production', async ()
   expect(Date.now() - statSync(entryPath).mtimeMs).toBeLessThan(5_000);
 });
 
-it('keeps one shared cache while two production runs expire older storage', async () => {
+it('keeps shared caches and prior evidence across production runs', async () => {
   const rootDir = makeFixture();
   const nowMs = Date.UTC(2026, 7, 5);
   const oldRun = makeOldArtifact(rootDir, 'old-run', nowMs);
@@ -104,40 +99,9 @@ it('keeps one shared cache while two production runs expire older storage', asyn
     mkdirSync(path.join(rootDir, ARTIFACT_ROOT, 'fixture', 'second'), { recursive: true });
   });
 
-  expect(() => statSync(oldRun)).toThrow();
+  expect(readFileSync(path.join(oldRun, 'payload'), 'utf8')).toBe('old');
   expect(statSync(cacheEntry).isDirectory()).toBe(true);
   expect(path.dirname(cacheEntry)).toBe(path.join(rootDir, CACHE_ROOT));
-});
-
-it('sweeps eligible transient worktrees on repeated production maintenance', () => {
-  const rootDir = makeFixture();
-  execFileSync('git', ['init', '--initial-branch=dev', rootDir]);
-  git(rootDir, 'config', 'core.fsmonitor', 'false');
-  expect(git(rootDir, 'config', '--local', '--get', 'core.fsmonitor')).toBe('false');
-  git(rootDir, 'config', 'user.email', 'test@example.com');
-  git(rootDir, 'config', 'user.name', 'Test');
-  writeFileSync(path.join(rootDir, 'README.md'), 'base\n');
-  git(rootDir, 'add', 'README.md');
-  git(rootDir, 'commit', '-m', 'base');
-  const transient = path.join(path.dirname(rootDir), `${path.basename(rootDir)}-acceptance`);
-  fixtureRoots.push(transient);
-  const createdAt = '2026-08-01T00:00:00.000Z';
-  execFileSync(process.execPath, [
-    path.resolve('scripts/diagnostics/transient-worktree-lifecycle.mjs'), 'create',
-    '--repo', rootDir, '--path', transient, '--kind', 'acceptance', '--target', 'dev'
-  ], { env: { ...process.env, TZ: 'UTC' } });
-  const marker = path.join(git(transient, 'rev-parse', '--absolute-git-dir'),
-    'foliole-transient-worktree.json');
-  const value = JSON.parse(readFileSync(marker, 'utf8'));
-  writeFileSync(marker, `${JSON.stringify({ ...value, createdAt }, null, 2)}\n`);
-
-  const nowMs = Date.parse('2026-08-10T00:00:00.000Z');
-  const first = prepareCacheEntry({ entryName: 'shared-runtime', nowMs, rootDir });
-  const second = prepareCacheEntry({ entryName: 'shared-runtime', nowMs, rootDir });
-
-  expect(first).toBe(second);
-  expect(existsSync(transient)).toBe(false);
-  expect(git(rootDir, 'worktree', 'list', '--porcelain')).not.toContain(transient);
 });
 
 it('keeps the generic resource gate free of retention side effects', () => {
