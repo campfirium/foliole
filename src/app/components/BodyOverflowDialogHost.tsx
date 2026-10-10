@@ -33,7 +33,7 @@ export function BodyOverflowDialogHost() {
     setRequest(null);
     request.cancel();
   };
-  const confirm = async () => {
+  const handleConfirm = async () => {
     setBusy(true);
     setError(false);
     try {
@@ -68,7 +68,7 @@ export function BodyOverflowDialogHost() {
           </AppDialogBody>
           <AppDialogActions>
             <AppButton variant="subtle" disabled={busy} onClick={close}>{t('common.cancel')}</AppButton>
-            <AppButton disabled={busy} loading={busy} onClick={() => void confirm()}>{t('desktop.bodyOverflow.confirm')}</AppButton>
+            <AppButton disabled={busy} loading={busy} onClick={() => void handleConfirm()}>{t('desktop.bodyOverflow.confirm')}</AppButton>
           </AppDialogActions>
         </AppDialogContent>
       </AppDialogPortal>

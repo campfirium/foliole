@@ -34,6 +34,8 @@ vi.mock('./pdfSearchTextSegments', () => ({
   collectTextSegments: vi.fn(() => [])
 }));
 
+vi.mock('./PdfOfficialTextLayer', () => ({ PdfOfficialTextLayer: () => null }));
+
 import { PdfDocumentErrorState } from './PdfDocumentErrorState';
 import { PdfDocumentViewport } from './PdfDocumentViewport';
 import { PdfVisualExcerptRuntimeProvider } from './PdfVisualExcerptRuntime';

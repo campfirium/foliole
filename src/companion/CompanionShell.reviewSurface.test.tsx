@@ -94,7 +94,7 @@ function mockWorkspaceSync() {
   });
 }
 
-async function renderShellWithSurface(surface: Record<string, unknown>) {
+async function renderShellWithSurface(surface: ReturnType<typeof reviewSurface>) {
   useFloatingBarVisibility.mockReturnValue({
     handleContainerScroll: vi.fn(),
     handleTouchEnd: vi.fn(),
@@ -104,7 +104,13 @@ async function renderShellWithSurface(surface: Record<string, unknown>) {
     revealBar: vi.fn()
   });
   mockWorkspaceSync();
-  useCompanionArticleSurface.mockReturnValue(surface);
+  useCompanionArticleSurface.mockImplementation((_workspace, _bar, _sort, options) => {
+    const session = options?.isOnlyReviewOpen ? surface.onlyReviewSession : surface.reviewSession;
+    const card = session.currentCard;
+    return { ...surface, effectiveReviewSession: session,
+      readableArticle: card ? { content: card.content, nodeId: card.nodeId,
+        title: card.title, textAnchorDecorations: [] } : surface.readableArticle };
+  });
   const { CompanionShell } = await import('./CompanionShell');
   renderWithLocalization(
     <CompanionShell
@@ -146,11 +152,11 @@ function reviewSurface(currentCard: Record<string, unknown> | null, onlyReviewCa
     isSubmittingReadingAction: false,
     readingActivity: new CompanionReadingActivity(currentCard?.nodeId as string ?? null, vi.fn()),
     handleSoonReviewTopic: vi.fn(),
-    readableArticle: currentCard ? { content: currentCard.content, nodeId: currentCard.nodeId, title: currentCard.title, textAnchorDecorations: [] } : { content: '# Readable article', nodeId: 'topic-1', title: 'Readable article' },
+    readableArticle: currentCard ? { content: currentCard.content, nodeId: currentCard.nodeId, title: currentCard.title, textAnchorDecorations: [] } : { content: '# Readable article', nodeId: 'topic-1', title: 'Readable article', textAnchorDecorations: [] },
     recentArticles: [],
     readingError: null,
     reviewError: null,
-    effectiveReviewSession: onlyReviewSession,
+    effectiveReviewSession: reviewSession,
     onlyReviewSession,
     reviewSession,
     selectedBrowseNodeId: null
@@ -204,9 +210,11 @@ describe('CompanionShell review surfaces', () => {
   });
 
   it('uses the FSRS-only card for Only Review content and footer actions', async () => {
-    await renderShellWithSurface(reviewSurface(fsrsReviewCard));
+    await renderShellWithSurface(reviewSurface(null, fsrsReviewCard));
+    expect(screen.queryByLabelText('Again')).not.toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', { name: 'Only Review' })[0]!);
 
+    expect(screen.getByText('Question prompt')).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Companion review toolbar' })).toHaveAttribute('data-review-item-kind', 'fsrs');
     expect(screen.getByLabelText('Again')).toBeInTheDocument();
     expect(screen.queryByLabelText('Read')).not.toBeInTheDocument();

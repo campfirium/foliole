@@ -14,7 +14,7 @@ export function useMarkdownEditorModelEffects(args: {
   rootRef: MutableRefObject<HTMLDivElement | null>;
 }) {
   const { adapterRef, props, rootRef } = args;
-  useEffect(() => adapterRef.current?.onBodyOverflow((request) => {
+  useEffect(() => adapterRef.current?.onBodyOverflow?.((request) => {
     if (request.nodeId !== props.nodeId) return;
     requestBodyOverflow({ ...request,
       prepare: () => {
