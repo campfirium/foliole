@@ -12,6 +12,26 @@ import {
 } from './sqliteConnectionCoordinator.js';
 
 type SqliteDatabase = BetterSqlite3.Database;
+const statementCaches = new WeakMap<SqliteDatabase, Map<string, BetterSqlite3.Statement>>();
+const MAX_CACHED_STATEMENTS = 128;
+
+function prepareStatement(sqlite: SqliteDatabase, sql: string) {
+  let cache = statementCaches.get(sqlite);
+  if (!cache) {
+    cache = new Map();
+    statementCaches.set(sqlite, cache);
+  }
+  const existing = cache.get(sql);
+  if (existing) {
+    cache.delete(sql);
+    cache.set(sql, existing);
+    return existing;
+  }
+  const statement = sqlite.prepare(sql);
+  if (cache.size === MAX_CACHED_STATEMENTS) cache.delete(cache.keys().next().value!);
+  cache.set(sql, statement);
+  return statement;
+}
 
 export interface BetterSqliteDbPortOptions {
   name?: string;
@@ -22,10 +42,10 @@ export function createBetterSqliteDbPort(sqlite: SqliteDatabase, options: Better
   const port: DbPort & { readonly __dbPortName?: string } = {
     ...(options.name ? { __dbPortName: options.name } : {}),
     async run(sql, params = []) {
-      return coordinator.runExclusive(() => normalizeRunResult(() => sqlite.prepare(sql).run(...params)));
+      return coordinator.runExclusive(() => normalizeRunResult(() => prepareStatement(sqlite, sql).run(...params)));
     },
     async query<T extends DbRow = DbRow>(sql: string, params: DbParams = []) {
-      return coordinator.runExclusive(() => sqlite.prepare(sql).all(...params) as T[]);
+      return coordinator.runExclusive(() => prepareStatement(sqlite, sql).all(...params) as T[]);
     },
     async transaction<T>(execute: (tx: DbPort) => Promise<T>) {
       return coordinator.runExclusive(async (owner, nested) => (
@@ -52,10 +72,10 @@ async function runTransaction<T>(input: {
   if (!input.nested && input.sqlite.inTransaction) {
     throw new SqliteConnectionOwnerError('sqlite connection has an uncoordinated active transaction');
   }
-  input.sqlite.prepare('BEGIN IMMEDIATE').run();
+  prepareStatement(input.sqlite, 'BEGIN IMMEDIATE').run();
   try {
     const result = await runScopedTransaction(input.coordinator, input.owner, input.port, input.execute);
-    input.sqlite.prepare('COMMIT').run();
+    prepareStatement(input.sqlite, 'COMMIT').run();
     return result;
   } catch (error) {
     rollbackPreservingOriginalError(input.sqlite, error);
@@ -96,7 +116,7 @@ async function runScopedTransaction<T>(
 function rollbackPreservingOriginalError(sqlite: SqliteDatabase, originalError: unknown) {
   if (!sqlite.inTransaction) return;
   try {
-    sqlite.prepare('ROLLBACK').run();
+    prepareStatement(sqlite, 'ROLLBACK').run();
   } catch (rollbackError) {
     if (originalError && typeof originalError === 'object') {
       try {
