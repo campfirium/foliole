@@ -98,7 +98,8 @@ async function acknowledgeCanonicalAdditiveReplay(
   result: CompanionSyncPushResult
 ) {
   if (!isAdditiveNode(entry.record) || !entry.record.version_id) return false;
-  const suffix = hashText(`${entry.record.object_id}\n${semanticSnapshot(entry.record.snapshot)}`).slice(0, 12);
+  const semantics = semanticSnapshot(entry.record.snapshot, entry.record.body_text ?? entry.record.snapshot.content);
+  const suffix = hashText(`${entry.record.object_id}\n${semantics}`).slice(0, 12);
   const canonicalId = `${entry.record.object_id}~${suffix}`;
   const [stored] = await port.query<{ object_id: string }>(
     'SELECT object_id FROM node_sync_versions WHERE version_id = ?', [entry.record.version_id]);
@@ -155,11 +156,12 @@ async function resolveAdditiveObject(
   result: CompanionSyncPushResult
 ) {
   const local = await loadCurrentSyncNodeRecord(port, entry.record.object_id);
-  if (local && semanticSnapshot(local.snapshot) === semanticSnapshot(entry.record.snapshot)) {
+  const semantics = semanticSnapshot(entry.record.snapshot, entry.record.body_text ?? entry.record.snapshot.content);
+  if (local && semanticSnapshot(local.snapshot, local.body_text ?? local.snapshot.content) === semantics) {
     appendNodeAck(result, entry, true);
     return;
   }
-  const suffix = hashText(`${entry.record.object_id}\n${semanticSnapshot(entry.record.snapshot)}`).slice(0, 12);
+  const suffix = hashText(`${entry.record.object_id}\n${semantics}`).slice(0, 12);
   const canonicalId = `${entry.record.object_id}~${suffix}`;
   const derived: NativeSyncNodeRecord = {
     ...entry.record,

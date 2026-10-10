@@ -80,10 +80,10 @@ export function buildResolutionRecord(
   };
 }
 
-export function semanticSnapshot(snapshot: NativeSyncNodeRecord['snapshot']) {
-  const transientKeys = new Set(['created_at', 'updated_at', 'id']);
-  return JSON.stringify(Object.fromEntries(
-    Object.entries(snapshot).filter(([key]) => !transientKeys.has(key))
+export function semanticSnapshot(snapshot: NativeSyncNodeRecord['snapshot'], body = snapshot.content) {
+  const transientKeys = new Set(['created_at', 'updated_at', 'id', 'body_blob_hash']);
+  return canonicalResolutionJson(Object.fromEntries(
+    Object.entries({ ...snapshot, content: body }).filter(([key]) => !transientKeys.has(key))
   ));
 }
 
