@@ -113,13 +113,16 @@ function missingHashes(source: readonly Uint8Array[], destination: readonly Uint
 function needFrom(source: FramedSyncInventoryEntry, destination?: FramedSyncInventoryEntry) {
   const versionIds = source.versionStates ? changedNodeVersionIds(source, destination) :
     missingStrings(source.frontierFactIds, destination?.frontierFactIds ?? []);
+  const resourceHashes = missingHashes(source.resourceHashes, destination?.resourceHashes ?? []);
   return {
     frontierFactIds: versionIds,
     requiredRelationIds: missingStrings(
       source.requiredRelationIds, destination?.requiredRelationIds ?? []),
-    resourceHashes: missingHashes(source.resourceHashes, destination?.resourceHashes ?? []),
+    resourceHashes,
     reviewFactIds: missingStrings(source.reviewFactIds, destination?.reviewFactIds ?? []),
-    stateFactIds: missingStrings(source.stateFactIds ?? [], destination?.stateFactIds ?? []),
+    stateFactIds: source.objectType === 'external_document' && resourceHashes.length > 0
+      ? [...source.stateFactIds ?? []]
+      : missingStrings(source.stateFactIds ?? [], destination?.stateFactIds ?? []),
     sharedState: Boolean(source.unready || destination?.unready) || !destination || !sameBytes(source.sharedStateHash, destination.sharedStateHash)
   } satisfies FramedSyncInventoryNeed;
 }
