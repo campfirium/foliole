@@ -93,7 +93,7 @@ function expectCurrentBody(deletedAt: string | null = null) {
   expect(target.prepare(`SELECT n.current_version_id, n.content AS inline, n.deleted_at,
     ${buildNodeBodyContentSql()} AS body FROM nodes n
     LEFT JOIN content_blob_data cbd ON cbd.hash=n.body_blob_hash WHERE n.id='node-1'`).get())
-    .toEqual({ current_version_id: 'v23', inline: '', deleted_at: deletedAt, body: 'b'.repeat(741 * 1024) });
+    .toEqual({ current_version_id: 'v23', inline: 'b'.repeat(741 * 1024), deleted_at: deletedAt, body: 'b'.repeat(741 * 1024) });
   expect(target.prepare(`SELECT COUNT(*) AS count, SUM(parent_version_id IS NULL) AS roots,
     MAX(CASE WHEN version_id = 'v23' THEN parent_version_id END) AS head_parent FROM node_sync_versions`).get())
     .toEqual({ count: 23, roots: 1, head_parent: 'v22' });
@@ -129,7 +129,7 @@ it('publishes a heavy node only after every dependency is staged and cleans stag
   expectCurrentBody();
   expect(target.prepare(`SELECT length(data) AS bytes FROM content_blob_data
     WHERE hash = (SELECT body_blob_hash FROM nodes WHERE id = 'node-1')`).get())
-    .toEqual({ bytes: 741 * 1024 });
+    .toBeUndefined();
   expect(target.prepare('SELECT cursor_state_seq FROM sync_pack_receive_progress').get()).toEqual({ cursor_state_seq: 1 });
   expect(target.prepare('SELECT count(*) AS count FROM sync_pack_dependency_rows').get()).toEqual({ count: 0 });
   expect(target.prepare("SELECT source_view_id FROM sync_pack_retired_source_views WHERE source_view_id = 'stale-view'").get())

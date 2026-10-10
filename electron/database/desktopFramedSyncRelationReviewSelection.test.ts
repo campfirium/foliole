@@ -84,7 +84,8 @@ async function readEntry(tx: DbPort): Promise<FramedSyncInventoryEntry> {
 
 async function frozenDifference() {
   const local = await port.transaction(readEntry);
-  const remote = { ...local, requiredRelationIds: [], reviewFactIds: [] };
+  const remote = { ...local, requiredRelationIds: [], reviewFactIds: [],
+    sharedStateHash: await canonicalContentId({ blobs: [], facts: [] }) };
   const [difference] = compareFramedSyncInventories({ local: [local], remote: [remote] });
   if (!difference) throw new Error('difference_missing');
   return { difference, local };

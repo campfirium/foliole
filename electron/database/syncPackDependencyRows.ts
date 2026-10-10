@@ -75,7 +75,7 @@ export function readSyncPackDependencyPage(driver: DatabaseDriver, args: {
     : `${factKey} NOT IN (SELECT value FROM json_each(?))`;
   const kind = table === 'node_sync_versions' ? 'versions' :
     table === 'node_sync_version_parents' ? 'parents' : 'reviews';
-  const json = `json_object(${query.columns.map((column) => `'${column}', ${table === 'node_sync_versions' && `row.${column}`}`).join(', ')})`;
+  const json = `json_object(${query.columns.map((column) => `'${column}', row.${column}`).join(', ')})`;
   const lengths = driver.queryAll<{ row_key: string; ordinal: number; payload_bytes: number }>(
     `${query.prefix} SELECT ${query.key} AS row_key, ${query.ordinal} AS ordinal,
        length(CAST(${json} AS BLOB)) AS payload_bytes FROM ${query.from}

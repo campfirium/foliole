@@ -14,6 +14,7 @@ export async function reconcileSyncPackInlineBodies(port: DbPort, incomingAlias:
        JOIN main.node_sync_versions version ON version.version_id = n.current_version_id
          AND version.object_id = n.id
        WHERE n.id > ? AND n.id IN (SELECT id FROM ${alias}.nodes) AND n.sync_dirty = 0
+         AND (n.body_blob_hash IS NOT NULL OR n.content = '')
          AND version.body_text IS NOT NULL AND n.content IS NOT version.body_text
        ORDER BY n.id LIMIT 1`, [after]);
     if (!row) return;
