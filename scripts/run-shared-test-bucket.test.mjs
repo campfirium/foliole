@@ -138,6 +138,16 @@ describe('run-shared-test-bucket', () => {
       .toThrow('unsupported VITEST_POOL');
   });
 
+  it('keeps native buckets serial while renderer workers remain independently isolated', () => {
+    const env = { VITEST_POOL: 'threads', SHARED_TEST_FILE_PARALLELISM: 'true' };
+    const renderer = buildSharedBucketInvocation('report.json', ['src/features/editor'], '/electron', '/repo', env);
+    expect(renderer.args).toContain('--fileParallelism');
+    expect(renderer.args).toContain('--maxWorkers=2');
+    const native = buildSharedBucketInvocation('report.json', ['src/shared/platform'], '/electron', '/repo', { VITEST_POOL: 'forks' });
+    expect(native.args).toContain('--no-file-parallelism');
+    expect(native.args).toContain('--pool=forks');
+  });
+
   it('leaves the shared bucket total timeout disabled unless explicitly configured', () => {
     expect(resolveTotalTimeoutMs({})).toBeNull();
     expect(resolveTotalTimeoutMs({ SHARED_TEST_BUCKET_TOTAL_TIMEOUT_SECONDS: '42' })).toBe(42000);

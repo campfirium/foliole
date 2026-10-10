@@ -23,7 +23,7 @@ export function buildSharedBucketInvocation(
     '--silent=passed-only',
     `--pool=${pool}`,
     '--maxWorkers=2',
-    '--no-file-parallelism',
+    env.SHARED_TEST_FILE_PARALLELISM === 'true' ? '--fileParallelism' : '--no-file-parallelism',
     '--testTimeout=15000',
     ...targets
   ];

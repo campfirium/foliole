@@ -145,7 +145,8 @@ async function main() {
       remainingMs,
       electronPath,
       repoRoot,
-      bucket.pool ? { ...process.env, VITEST_POOL: bucket.pool } : process.env
+      bucket.pool ? { ...process.env, VITEST_POOL: bucket.pool,
+        SHARED_TEST_FILE_PARALLELISM: String(bucket.fileParallelism === true) } : process.env
     );
     if (code !== 0) {
       exitCode = code;
