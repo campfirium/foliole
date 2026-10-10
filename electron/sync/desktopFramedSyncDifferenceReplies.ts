@@ -31,7 +31,7 @@ export async function respondDesktopFramedSyncDifferenceRequests(args: Args & {
     const first = request.facts[0];
     if (!first) throw new Error('framed_sync_difference_request_fact_required');
     const current = await readDesktopFramedSyncRoundInventoryEntry(args.db, first);
-    if (!current) throw new Error('framed_sync_difference_request_source_missing');
+    if (!current) throw new Error('framed_sync_difference_request_source_changed');
     differences.push(resolveFramedSyncDifferenceRequest(current, request));
   }
   const first = requests[0]!;
