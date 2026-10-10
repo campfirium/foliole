@@ -17,6 +17,12 @@ extension FoliolePhysicalSyncGroupUITests {
                           "Sync attention did not open the public Sync settings page.")
             return
         }
+        let body = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label == %@ OR identifier == %@", "Topic body", "Topic body")
+        ).firstMatch
+        if body.exists && !localizedButton(named: "Settings", in: app).exists {
+            openBrowse(in: app)
+        }
         if localizedButton(named: "Exit", in: app).waitForExistence(timeout: 3) {
             localizedButton(named: "Exit", in: app).tap()
         }
