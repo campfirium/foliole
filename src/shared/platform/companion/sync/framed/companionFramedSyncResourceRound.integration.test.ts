@@ -7,11 +7,15 @@ import Database from 'better-sqlite3';
 import { expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
-import { FRAMED_SYNC_RESOURCE_DEMAND_SCHEMA } from '../../../../../../lib/core/database/framedSyncResourceDemandSchema.js';
+import { createDesktopFramedSyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
+import { listFramedSyncFileResourceDemands, readFramedSyncFileResourceDemand } from '../../../../../../lib/core/sync/framedSyncFileResourceDemands.js';
 import { buildAssetMarkdownUrl } from '../../../../../../lib/platform/assetMarkdownUrl.js';
 
-const native = vi.hoisted(() => ({ db: null as DbPort | null, pull: vi.fn(), resolve: vi.fn() }));
+const native = vi.hoisted(() => ({ db: null as DbPort | null, files: null as FramedSyncFilePort | null,
+  pull: vi.fn(), resolve: vi.fn() }));
+vi.mock('./companionFramedSyncFiles.js', () => ({ currentCompanionFramedSyncFiles: () => native.files! }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
   pullFramedSyncObject: native.pull, resolveAttachmentResource: native.resolve
 } }));
@@ -29,9 +33,10 @@ const request = { endpoint_url: 'http://desktop:43110', receiver_device_id: 'des
 const hash = 'a'.repeat(64);
 const key = `${'b'.repeat(64)}.png`;
 const roundId = new Uint8Array(16).fill(7);
+const demandKey = { groupId: 'group', receiverDeviceId: 'mobile', receiverLibraryEpoch: 'mobile-epoch',
+  globalId: 'article', versionId: 'version', bodyHash: hash, storageKey: key };
 
 function seed(sqlite: Database.Database) {
-  sqlite.exec(FRAMED_SYNC_RESOURCE_DEMAND_SCHEMA);
   sqlite.exec(`CREATE TABLE sync_group_local_state (singleton_id INTEGER, state TEXT, group_id TEXT,
       local_device_identity_key TEXT);
     INSERT INTO sync_group_local_state VALUES (1, 'active', 'group', 'mobile');
@@ -54,10 +59,11 @@ it('persists the exact resource request before native I/O and retries it after S
   try {
     seed(sqlite);
     native.db = createBetterSqliteDbPort(sqlite);
+    native.files = createDesktopFramedSyncFiles(path.join(root, 'sync-files'));
     native.resolve.mockResolvedValue({ status: 'missing' });
     native.pull.mockImplementation(async () => {
-      expect(sqlite.prepare('SELECT state, request_started FROM framed_sync_resource_demands').get())
-        .toEqual({ state: 'pending', request_started: 1 });
+      expect(await readFramedSyncFileResourceDemand(native.files!, demandKey))
+        .toMatchObject({ state: 'pending', requestStarted: true });
       throw new Error('framed_sync_http_409:framed_sync_resource_source_unavailable');
     });
     expect(await runCompanionFramedSyncResourceRound(request, roundId, ['article']))
@@ -69,6 +75,7 @@ it('persists the exact resource request before native I/O and retries it after S
     sqlite.close();
     sqlite = new Database(file);
     native.db = createBetterSqliteDbPort(sqlite);
+    native.files = createDesktopFramedSyncFiles(path.join(root, 'sync-files'));
     sqlite.exec("UPDATE node_sync_versions SET content_hash = 'invalid' WHERE version_id = 'version'");
     expect(await runCompanionFramedSyncResourceRound(request, roundId, ['article']))
       .toEqual({ pending: 1, scanned: 1, transferred: 0, unavailable: 0 });
@@ -76,9 +83,13 @@ it('persists the exact resource request before native I/O and retries it after S
     native.pull.mockRejectedValueOnce(new Error('authenticated_resource_hash_mismatch'));
     await expect(runCompanionFramedSyncResourceRound(request, roundId, ['article']))
       .rejects.toThrow('authenticated_resource_hash_mismatch');
-    expect(sqlite.prepare('SELECT count(*) FROM framed_sync_resource_demands').pluck().get()).toBe(1);
+    expect(await listFramedSyncFileResourceDemands(native.files!, demandKey)).toHaveLength(1);
+    expect(await readFramedSyncFileResourceDemand(native.files!, demandKey))
+      .toMatchObject({ demandId: sent.resources[0].demand_id, state: 'pending', requestStarted: true });
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name='framed_sync_resource_demands'").all()).toEqual([]);
   } finally {
     native.db = null;
+    native.files = null;
     if (sqlite.open) sqlite.close();
     await rm(root, { recursive: true, force: true });
   }

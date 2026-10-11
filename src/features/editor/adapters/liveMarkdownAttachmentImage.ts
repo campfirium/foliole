@@ -1,14 +1,16 @@
+import { parseAssetMarkdownUrl } from '../../../../lib/platform/assetMarkdownUrl';
 import {
   invalidateAttachmentResourceResolution,
   resolveRuntimeAttachmentResource
 } from '../../../shared/platform/attachmentResources';
+import { subscribeAttachmentResourceAvailable } from '../../../shared/platform/runtime/attachmentResourceAvailability';
 import type { MarkdownImageMatch } from '../model/markdownImageMatches';
 import type { MarkdownImageRenderPlan } from '../model/markdownImagePresentation';
 
 import type { EditorMissingAttachmentResourceHandler } from './EditorAdapter';
 import { closeActiveRemoteImageFailureMenu } from './liveMarkdownImageContextMenu';
 import { finalizeLoadedMarkdownImageDisplay } from './liveMarkdownImageDisplay';
-import { isMarkdownImageWidgetDomDisposed } from './liveMarkdownImageDisposal';
+import { isMarkdownImageWidgetDomDisposed, registerMarkdownImageWidgetCleanup } from './liveMarkdownImageDisposal';
 import type { RequestEditorMeasure } from './liveMarkdownImageElement';
 import { createImageStatusElement } from './liveMarkdownImageStatus';
 import { createImageSurface } from './liveMarkdownImageSurface';
@@ -115,5 +117,10 @@ export function appendResolvedAttachmentImage(args: {
     wrapper: args.wrapper
   };
   args.wrapper.append(createImageStatusElement('loading', args.renderPlan.display));
-  void resolveAttachmentImage(context);
+  let pending = resolveAttachmentImage(context);
+  const storageKey = parseAssetMarkdownUrl(args.imageMatch.source);
+  if (storageKey) registerMarkdownImageWidgetCleanup(args.wrapper,
+    subscribeAttachmentResourceAvailable(storageKey, () => {
+      pending = pending.then(() => resolveAttachmentImage(context));
+    }));
 }

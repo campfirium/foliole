@@ -187,6 +187,7 @@ export const controlledSyncSqliteTests = [
   'src/shared/platform/companion/sync/framed/companionFramedSyncPendingPublications.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncReading.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncResourceRound.integration.test.ts',
+  'src/shared/platform/companion/sync/framed/companionResourceImageRecovery.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncRetiredHistory.integration.test.ts',
   'src/shared/platform/companion/sync/framed/companionFramedSyncSetting.integration.test.ts',
   'src/shared/platform/companion/sync/framedSyncMemberRemoval.integration.test.ts',

@@ -22,6 +22,7 @@ vi.mock('../../../shared/platform/attachmentResources', () => ({
 import { createMarkdownImageWidgetDom, disposeMarkdownImageWidgetDom } from './liveMarkdownImages';
 
 afterEach(() => {
+  for (const widget of document.querySelectorAll<HTMLElement>('.cm-md-image-widget')) disposeMarkdownImageWidgetDom(widget);
   vi.clearAllMocks();
   document.body.innerHTML = '';
 });
@@ -75,4 +76,39 @@ it('ignores an attachment resolution that arrives after the widget is disposed',
 
   expect(widget.querySelector('.cm-md-image-element')).toBeNull();
   expect(requestMeasure).not.toHaveBeenCalled();
+});
+
+it('refreshes only the restored resource and unsubscribes when the widget is disposed', async () => {
+  const { notifyAttachmentResourceAvailable } = await import('../../../shared/platform/runtime/attachmentResourceAvailability');
+  const hash = 'c'.repeat(64);
+  const key = `${hash}.png`;
+  attachmentMock.resolve.mockResolvedValue({ status: 'missing_file' });
+  const widget = createMarkdownImageWidgetDom({ alt: 'recovering', attachmentId: hash,
+    display: 'block', from: 0, source: `asset://${key}`, to: 90 });
+  document.body.append(widget);
+  await waitFor(() => expect(widget.querySelector('[data-md-image-status="unavailable"]')).not.toBeNull());
+  attachmentMock.resolve.mockClear();
+  notifyAttachmentResourceAvailable(`${'d'.repeat(64)}.png`);
+  await Promise.resolve();
+  expect(attachmentMock.resolve).not.toHaveBeenCalled();
+  disposeMarkdownImageWidgetDom(widget);
+  notifyAttachmentResourceAvailable(key);
+  await Promise.resolve();
+  expect(attachmentMock.resolve).not.toHaveBeenCalled();
+});
+
+it('rechecks after an in-flight missing result when resource bytes arrive during resolution', async () => {
+  const { notifyAttachmentResourceAvailable } = await import('../../../shared/platform/runtime/attachmentResourceAvailability');
+  const hash = 'e'.repeat(64);
+  const key = `${hash}.png`;
+  let finish: (value: unknown) => void = () => undefined;
+  attachmentMock.resolve.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }))
+    .mockResolvedValue({ status: 'ready', resource_url: 'file:///restored.png', mime_type: 'image/png' });
+  const widget = createMarkdownImageWidgetDom({ alt: 'recovering', attachmentId: hash,
+    display: 'block', from: 0, source: `asset://${key}`, to: 90 });
+  document.body.append(widget);
+  notifyAttachmentResourceAvailable(key);
+  finish({ status: 'missing_file' });
+  await waitFor(() => expect(widget.querySelector('.cm-md-image-element')).toHaveAttribute('src', 'file:///restored.png'));
+  disposeMarkdownImageWidgetDom(widget);
 });

@@ -7,6 +7,7 @@ import { parseCanonicalAttachmentStorageKey } from '../../../../../../lib/platfo
 import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
+import { notifyAttachmentResourceAvailable } from '../../../runtime/attachmentResourceAvailability.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
 import { currentCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
@@ -55,6 +56,7 @@ export async function runCompanionFramedSyncResourceRound(args: NativeCompanionF
               body_hash: resource.bodyHash, storage_key: resource.storageKey, shared_state_hash: bytesToHex(resource.sharedStateHash)
             }] });
           result.transferred += 1;
+          notifyAttachmentResourceAvailable(resource.storageKey);
         } catch (error) {
           if (!(error instanceof Error) || !error.message.includes('framed_sync_resource_source_unavailable')) throw error;
           result.pending += 1;
