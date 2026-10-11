@@ -1,7 +1,18 @@
-const readyDeviceIds = new Map<string, 'normal' | 'restore'>();
+import type { SyncGroupMemberStatePayload } from '../../lib/platform/syncGroupMemberStateContract.js';
 
-export function markDesktopSyncGroupMemberStateReady(deviceId: string, mode: 'normal' | 'restore' = 'normal') {
+const readyDeviceIds = new Map<string, 'normal' | 'restore'>();
+const verifiedStates = new Map<string, SyncGroupMemberStatePayload>();
+
+export function markDesktopSyncGroupMemberStateReady(deviceId: string, mode: 'normal' | 'restore' = 'normal',
+  state?: SyncGroupMemberStatePayload) {
   readyDeviceIds.set(deviceId, mode);
+  if (state) verifiedStates.set(deviceId, structuredClone(state));
+}
+
+export function readDesktopVerifiedMemberState(deviceId: string) {
+  const state = verifiedStates.get(deviceId);
+  if (!state || !readyDeviceIds.has(deviceId)) throw new Error('sync_group_member_state_required');
+  return structuredClone(state);
 }
 
 export function isDesktopSyncGroupMemberStateReady(deviceId: string) {
@@ -14,8 +25,10 @@ export function desktopSyncGroupMemberStateReadiness(deviceId: string) {
 
 export function revokeDesktopSyncGroupMemberStateReadiness(deviceId: string) {
   readyDeviceIds.delete(deviceId);
+  verifiedStates.delete(deviceId);
 }
 
 export function clearDesktopSyncGroupMemberStateReadiness() {
   readyDeviceIds.clear();
+  verifiedStates.clear();
 }

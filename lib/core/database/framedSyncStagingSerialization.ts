@@ -66,8 +66,8 @@ export async function readFramedSyncRow<T extends DbRow = DbRow>(
   db: DbPort, sql: string, params: readonly (string | number | bigint | Uint8Array | null)[] = []
 ) { return (await db.query<T>(sql, params))[0] ?? null; }
 export function readFramedSyncContext(row: DbRow): FramedSyncContext {
-  if (row.protocol_version !== 23) throw new Error('framed_sync_protocol_version_unsupported');
-  return { groupId: framedSyncText(row, 'group_id'), protocolVersion: 23,
+  if (row.protocol_version !== 24) throw new Error('framed_sync_protocol_version_unsupported');
+  return { groupId: framedSyncText(row, 'group_id'), protocolVersion: 24,
     receiverDeviceId: framedSyncText(row, 'receiver_device_id'),
     receiverLibraryEpoch: framedSyncText(row, 'receiver_library_epoch'),
     senderDeviceId: framedSyncText(row, 'sender_device_id'),

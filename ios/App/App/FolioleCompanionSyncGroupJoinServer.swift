@@ -154,6 +154,13 @@ final class FolioleCompanionSyncGroupJoinServer {
               responder == localDevice, responderEpoch == localEpoch else {
             return try send(connection, 409, ["error": "framed_sync_responder_identity_mismatch"])
         }
+        if let mode = Self.query(request.path, "request") {
+            return try respondRequestSync(connection, request, mode: mode, context: [
+                "group_id": provider.groupId, "initiator_device_id": initiator,
+                "initiator_library_epoch": initiatorEpoch, "responder_device_id": responder,
+                "responder_library_epoch": responderEpoch
+            ], bridge: dataBridge, owner: owner)
+        }
         let preamble = try FolioleFramedSyncPreamble(
             decoding: request.bodyPrefix(FolioleFramedSyncPreamble.byteCount)
         )

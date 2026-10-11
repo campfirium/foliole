@@ -1,8 +1,9 @@
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../lib/core/sync/framedSyncContract.js';
 import { loadSyncGroupLocalAdoption } from '../../../../../lib/core/sync/syncGroupLocalAdoption';
 import { exchangeCompanionSyncGroupMemberState } from '../network/companionSyncGroupMemberState';
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
-import { adoptCompanionSyncGroupData } from './framed/companionSyncGroupLocalAdoption';
+import { syncCompanionIdentityObjects } from './syncGroupIdentityCompanionResult';
 import { ensureCompanionSyncGroupDataOwner } from './syncGroupProviderDataOwner';
 
 export async function completeCompanionSyncGroupAdoption(): Promise<void> {
@@ -14,7 +15,8 @@ export async function completeCompanionSyncGroupAdoption(): Promise<void> {
   if (state.localExited || state.peerRemoved || !state.normalSyncReady || !state.peerLibraryEpoch) {
     throw new Error('sync_group_local_adoption_source_unavailable');
   }
-  await adoptCompanionSyncGroupData({ endpoint_url: adoption.endpointUrl,
-    receiver_device_id: adoption.providerDeviceId, receiver_library_epoch: state.peerLibraryEpoch,
-    sync_group_id: adoption.groupId }, adoption);
+  await syncCompanionIdentityObjects(adoption.endpointUrl, { framedPeer: {
+    deviceId: adoption.providerDeviceId, libraryEpoch: state.peerLibraryEpoch,
+    protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION
+  } });
 }

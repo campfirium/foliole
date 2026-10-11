@@ -107,7 +107,7 @@ describe('companion LAN framed sync POST', () => {
     expect(authenticate).toHaveBeenCalledWith(expect.objectContaining({ requireMemberState: true }));
     expect(context).toEqual({
       groupId: 'group-a', initiatorDeviceId: 'device-a', initiatorLibraryEpoch: 'epoch-a',
-      protocolVersion: 23, responderDeviceId: 'desktop-b', responderLibraryEpoch: 'epoch-b'
+      protocolVersion: 24, responderDeviceId: 'desktop-b', responderLibraryEpoch: 'epoch-b'
     });
   });
 

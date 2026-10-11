@@ -86,7 +86,13 @@ enum FolioleFramedSyncHTTPTransport {
         guard body.count <= 4 * 1024,
               let object = try? JSONSerialization.jsonObject(with: body) as? [String: String],
               let detail = object["error"] else { return fallback }
-        if detail == "framed_sync_source_changed" || detail == "framed_sync_resource_source_unavailable" { return "\(fallback):\(detail)" }
+        if ["framed_sync_source_changed", "framed_sync_difference_request_source_changed",
+            "framed_sync_resource_source_unavailable", "node_version_graph_cycle"].contains(detail) { return "\(fallback):\(detail)" }
+        for prefix in ["node_version_missing_parents:", "node_version_parent_identity_mismatch:"] where detail.hasPrefix(prefix) {
+            let identities = String(detail.dropFirst(prefix.count))
+            return identities.range(of: "^[A-Za-z0-9_,:-]{1,3000}$", options: .regularExpression) != nil
+                ? "\(fallback):\(detail)" : fallback
+        }
         let prefixes = ["framed_sync_node_parent_missing:", "node_position_lineage_unproven:",
             "framed_sync_review_node_missing:", "framed_sync_parent_relation_version_missing:"]
         guard let prefix = prefixes.first(where: detail.hasPrefix) else { return fallback }

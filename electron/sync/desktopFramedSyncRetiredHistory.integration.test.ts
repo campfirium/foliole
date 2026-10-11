@@ -7,13 +7,16 @@ import { expect, it } from 'vitest';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it.each([false, true])('synchronizes retired history after restart with receiver body present=%s', async (receivedOriginal) => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Original body', nodeId: 'retired-history', title: 'History' });
-    if (receivedOriginal) await fixture.left.invoke('round', { input: { kind: 'reconcile',
-      peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: 'desktop-b-epoch' },
+    if (receivedOriginal) await fixture.left.invoke('round', { input: { kind: 'request_reconcile',
+      peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: fixture.rightSnapshot.origin } });
     await fixture.left.seed({ content: 'Current body', nodeId: 'retired-history', title: 'History' });
+    await fixture.left.invoke('round', { input: { kind: 'request_reconcile',
+      peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
+      peerOrigin: fixture.rightSnapshot.origin } });
     await fixture.left.invoke('collect_content');
     const db = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
     try {
@@ -24,9 +27,10 @@ it.each([false, true])('synchronizes retired history after restart with receiver
     } finally {
       db.close();
     }
-    const roundInput = { input: { kind: 'reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
-      libraryEpoch: 'desktop-b-epoch' }, peerOrigin: fixture.rightSnapshot.origin } };
-    await expect(fixture.left.invoke('round', roundInput)).resolves.toMatchObject({ transferred: expect.any(Number) });
+    const roundInput = { input: { kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
+      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` }, peerOrigin: fixture.rightSnapshot.origin } };
+    const result = await fixture.left.invoke('round', roundInput);
+    expect(result).toMatchObject({ complete: true });
     await expect(fixture.left.invoke('round', roundInput)).resolves.toMatchObject({ complete: true });
     const left = new Database(fixture.leftSnapshot.databasePath, { readonly: true });
     const right = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
@@ -39,8 +43,8 @@ it.each([false, true])('synchronizes retired history after restart with receiver
     } finally { left.close(); right.close(); }
     await fixture.restartLeft();
     const restarted = await fixture.restartRight();
-    await expect(fixture.left.invoke('round', { input: { kind: 'reconcile',
-      peer: { deviceId: restarted.snapshot.deviceId, libraryEpoch: 'desktop-b-epoch' },
+    await expect(fixture.left.invoke('round', { input: { kind: 'request_reconcile',
+      peer: { deviceId: restarted.snapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: restarted.snapshot.origin } })).resolves.toMatchObject({ complete: true });
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);

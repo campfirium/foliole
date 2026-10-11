@@ -11,6 +11,7 @@ import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPaylo
 import { permanentlyDelete, restartDeletedPeer } from './dynamicNodeVersionChains.delete.testSupport.js';
 import { buildPack, closeLibraries, createPeer, edit, history, joinPeers, receivePack,
   startLibraries, type Peer } from './syncEmptyLibraryTestSupport.js';
+import { receiveMemberPosition } from './syncMemberPosition.testSupport.js';
 
 beforeEach(startLibraries);
 afterEach(closeLibraries);
@@ -20,6 +21,9 @@ async function confirm(source: Peer, target: Peer, packId: string) {
   expect(receipt.results).toHaveLength(1);
   expect(receipt.results[0]?.result).toBe('applied');
   await confirmOutboundNodeVersionPack(source.port, { ...receipt, confirmedAt: 'confirmed' });
+  await receiveMemberPosition(source, target);
+  await collectNodeVersionPayloads(source.port, 'topic');
+  await collectNodeVersionPayloads(target.port, 'topic');
 }
 
 function originalFacts(peer: Peer) {
@@ -84,7 +88,7 @@ it('releases a persisted editor base after the node entity has been permanently 
   const original = originalFacts(peer);
   expect(tomb.parent_version_id).toBe(base);
   restartDeletedPeer(peer);
-  expectBody(peer, base, null);
+  expectBody(peer, base, 'body');
   expect(history(peer)).toHaveLength(2);
   await releaseLocalEditBase(peer.port, 'draft', 'topic');
   expect(originalFacts(peer)).toEqual(original);

@@ -1,3 +1,5 @@
+import { bytesToHex } from '@noble/hashes/utils.js';
+
 import type { DbPort } from './dbPort.js';
 
 export async function recordFramedSyncPeerEpoch(port: DbPort, input: {
@@ -20,6 +22,6 @@ export async function recordFramedSyncPeerEpoch(port: DbPort, input: {
        proof_revision = excluded.proof_revision, pack_id = excluded.pack_id,
        updated_at = excluded.updated_at`,
     [input.groupId, input.peerDeviceId, input.libraryEpoch, 0,
-      Buffer.from(input.transferId).toString('hex'), new Date().toISOString()]
+      bytesToHex(input.transferId), new Date().toISOString()]
   );
 }

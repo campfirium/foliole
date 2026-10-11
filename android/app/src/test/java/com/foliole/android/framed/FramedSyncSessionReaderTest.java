@@ -44,7 +44,7 @@ public final class FramedSyncSessionReaderTest {
     }
 
     private static byte[] preamble(byte[] contextId, byte[] sessionId) {
-        return concat("FOLSYNC2".getBytes(StandardCharsets.US_ASCII), hex("0060001601000000"),
+        return concat("FOLSYNC2".getBytes(StandardCharsets.US_ASCII), hex("0060001801000000"),
             contextId, sessionId, hex("0506070800000000000000000000000000000000000000000000000000000000"));
     }
 

@@ -11,17 +11,17 @@ public final class FramedSyncFrameCryptoTest {
     private static final byte[] GROUP_KEY = hex(
         "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f");
     private static final byte[] PREAMBLE = hex(
-        "464f4c53594e43320060001601000000b91385f313c79240f0d205a2c74a2e23c18773b07a39c6e016c57aef8d000baf" +
+        "464f4c53594e43320060001801000000f554ef43cd78aa425c355712432d4e8b5145bf1549832b9f5fc06672a2160933" +
         "00112233445566778899aabbccddeeff0506070800000000000000000000000000000000000000000000000000000000");
     private static final byte[] HEADER = hex("0000001e000000000000000000010000");
     private static final byte[] CIPHERTEXT = hex(
-        "88f392bc50b6f68cdfff1040146ef627cbdf6c05ca8b1be83a40fa1309f1");
+        "9e3510772b473c139ecde9dfc3476881fbc7cfb9ac11e0d15cce1fd1e4c5");
 
     @Test public void decryptsTheFrozenSessionVector() throws Exception {
         FramedSyncPreamble preamble = FramedSyncPreamble.decode(PREAMBLE);
         FramedSyncWireFrame frame = frame(CIPHERTEXT);
 
-        assertArrayEquals(hex("aa2f5ab7291a764391908ec6a01c85dd3c96b70b2dfbb2dad0d708926a2dd140"),
+        assertArrayEquals(hex("31a6b4f56d45cff41955f52b850dfb1aca4e590194c6a41640e5edc7db0f44e9"),
             FramedSyncFrameCrypto.frameKey(GROUP_KEY, preamble));
         assertArrayEquals("session-vector".getBytes(java.nio.charset.StandardCharsets.UTF_8),
             FramedSyncFrameCrypto.decrypt(GROUP_KEY, preamble, frame, 0));

@@ -16,7 +16,7 @@ import { readFixtureInventory } from './desktopFramedSyncPublicationRecovery.tes
 import { createDesktopFramedSyncTwoProcessFixture, readDesktopFramedSyncLibraryEvidence }
   from './desktopFramedSyncTwoProcess.testSupport.js';
 
-const context = { groupId: 't326-group', protocolVersion: 23 as const,
+const context = { groupId: 't326-group', protocolVersion: 24 as const,
   initiatorDeviceId: 'desktop-a', initiatorLibraryEpoch: 'desktop-a-epoch',
   responderDeviceId: 'desktop-b', responderLibraryEpoch: 'desktop-b-epoch' };
 const transferContext = { groupId: context.groupId, protocolVersion: context.protocolVersion,

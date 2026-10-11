@@ -33,6 +33,17 @@ import { readFramedSyncRequestedResources } from './framedSyncResourceRequest.js
 export function assertDecodedProtocolPayload(payloadCase: ProtocolPayloadCase, value: unknown) {
   walk(value, 0, { fields: 0 });
   const payload = row(value);
+  if (payloadCase.startsWith('request_object_')) {
+    fixedBytes(payload.requestId, 16, 'request_id');
+    if (payloadCase === 'request_object_header') {
+      text(payload.objectType, 'object_type'); text(payload.globalId, 'global_id');
+      digest(payload.sourceStateHash, 'source_state_hash');
+    } else {
+      digest(payload.streamHash, 'stream_hash');
+      unsigned(payload.factCount, 'fact_count'); unsigned(payload.bodyCount, 'body_count');
+    }
+    return;
+  }
   if (payloadCase === 'fact') factRecord(payload);
   else if (payloadCase === 'fact_fragment') {
     factIdentity(payload.identity);

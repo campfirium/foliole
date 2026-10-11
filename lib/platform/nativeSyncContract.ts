@@ -109,7 +109,7 @@ export interface NativeSyncNodeAttachmentRef {
 
 export interface NativeSyncNodeRecord {
   alternative_bodies?: Array<{ hash: string; text: string }>;
-  ancestor_version_ids: string[];
+  ancestor_version_ids: import('../core/sync/nodeVersionAncestry.js').NodeVersionAncestry;
   body_text?: string | null;
   content_hash: string | null;
   host_name: string | null;

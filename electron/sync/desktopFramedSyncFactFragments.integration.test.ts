@@ -40,7 +40,7 @@ async function prepareLargeFact(source: ReturnType<typeof textDevice>) {
   record.snapshot.opening_text = 'O'.repeat(1_048_576);
   const { manifest } = projectFramedSyncNodeRecord(record, []);
   for (const blob of manifest.blobs) await stageFramedSyncFrozenBody(source.db, blob, new TextEncoder().encode(record.body_text!));
-  const context = { groupId: 'group', protocolVersion: 23 as const, senderDeviceId: 'sender', senderLibraryEpoch: 's',
+  const context = { groupId: 'group', protocolVersion: 24 as const, senderDeviceId: 'sender', senderLibraryEpoch: 's',
     receiverDeviceId: 'receiver', receiverLibraryEpoch: 'r' };
   const contentId = await canonicalContentId(manifest);
   const publication = { context, manifest, contentId, manifestHash: contentId,

@@ -50,7 +50,7 @@ function encodedChunk(payload: ReturnType<typeof chunk>) {
   return encoded;
 }
 
-function entryToWire(entry: FramedSyncInventoryEntry) {
+export function entryToWire(entry: FramedSyncInventoryEntry) {
   return {
     frontierFactIds: entry.frontierFactIds, globalId: entry.globalId,
     objectType: entry.objectType, requiredRelationIds: entry.requiredRelationIds,
@@ -60,7 +60,7 @@ function entryToWire(entry: FramedSyncInventoryEntry) {
   };
 }
 
-function entriesFromWire(value: unknown): readonly FramedSyncInventoryEntry[] {
+export function entriesFromWire(value: unknown): readonly FramedSyncInventoryEntry[] {
   return list(row(value).entries).map((item) => {
     const entry = row(item);
     const strings = (key: string) => list(entry[key]).map((part) => text(part, key));

@@ -17,7 +17,7 @@ import { projectFramedSyncResourceFact } from './framedSyncResourceFact.js';
 
 const key = { groupId: 'group', receiverDeviceId: 'B', receiverLibraryEpoch: 'b',
   globalId: 'article', versionId: 'version', bodyHash: 'a'.repeat(64), storageKey: `${'b'.repeat(64)}.png` };
-const context = { ...key, protocolVersion: 23 as const, senderDeviceId: 'A', senderLibraryEpoch: 'a' };
+const context = { ...key, protocolVersion: 24 as const, senderDeviceId: 'A', senderLibraryEpoch: 'a' };
 const factFor = (demandId: string) => projectFramedSyncResourceFact({ ...key, demandId,
   sharedStateHash: new Uint8Array(32).fill(3) },
 { storageKey: key.storageKey, contentHash: 'b'.repeat(64), role: 2 }, 123n);

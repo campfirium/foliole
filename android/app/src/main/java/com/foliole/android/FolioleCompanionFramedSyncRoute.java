@@ -65,6 +65,10 @@ final class FolioleCompanionFramedSyncRoute {
         try (FolioleCompanionFramedHttpBody body = FolioleCompanionFramedHttpBody.spool(
                 request.bodyStream(), requestDirectory, request.signatureBodySha256(), budget);
              BufferedInputStream input = new BufferedInputStream(body.open(), FramedSyncPreamble.BYTES)) {
+            if (identity.containsKey("request")) {
+                FolioleRequestSyncRoute.respond(hostContext, bridge, input, output, identity, groupId, requestDirectory, budget);
+                return;
+            }
             FramedSyncPreamble preamble = peekPreamble(input);
             if (preamble.contextKind() == 1) {
                 inventory(hostContext, input, groupKey, new FramedSyncSessionContext(groupId,

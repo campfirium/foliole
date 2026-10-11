@@ -57,7 +57,7 @@ function branch(version: string, title: string): NativeSyncNodeRecord {
 async function push(record: NativeSyncNodeRecord) {
   const result = await applyCompanionSyncPushAsync([{
     authorHostName: record.host_name!,
-    base: { ancestorVersionIds: record.ancestor_version_ids, kind: 'node_version',
+    base: { ancestorVersionIds: [...record.ancestor_version_ids], kind: 'node_version',
       parentVersionId: record.parent_version_id, parentVersionIds: record.parent_version_ids! },
     clientOpId: `node:${record.version_id}`, contentHash: record.content_hash!,
     identity: { objectId: record.object_id, objectType: 'node', scope: 'workspace' },

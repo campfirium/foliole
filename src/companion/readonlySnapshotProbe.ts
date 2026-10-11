@@ -2,7 +2,7 @@ import { CapacitorSQLite as sqlite, SQLiteDBConnection } from '@capacitor-commun
 
 import { requireValue } from './capacityAcceptanceSafety';
 
-const tables = ['snapshot_inventory', 'snapshot_versions', 'snapshot_bodies'];
+const tables = ['snapshot_inventory', 'snapshot_versions', 'snapshot_bodies'] as const;
 
 function connection(database: string, readonly: boolean) {
   return { database, readonly };

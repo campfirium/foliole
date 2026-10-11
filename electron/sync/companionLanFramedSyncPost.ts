@@ -2,6 +2,9 @@ import type http from 'node:http';
 
 import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../lib/core/sync/framedSyncContract.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
+import { FRAMED_SYNC_PATH, FRAMED_SYNC_CONTENT_TYPE, FRAMED_SYNC_BODY_SHA256_HEADER,
+  FRAMED_SYNC_LIBRARY_EPOCH_HEADER, FRAMED_SYNC_DEVICE_ID_HEADER, FRAMED_SYNC_IDENTITY_PARAMS
+} from '../../lib/core/sync/framedSyncHttpContract.js';
 import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import type { FramedSyncSessionContext } from '../../lib/core/sync/framedSyncSession.js';
 import { appendMainProcessDiagnosticLog } from '../diagnostics/mainProcessDiagnostics.js';
@@ -16,17 +19,10 @@ import {
 } from './desktopFramedSyncStream.js';
 import { readFramedSyncStreamSequence } from './desktopFramedSyncStreamSequence.js';
 
-export const FRAMED_SYNC_PATH = '/companion/framed-sync';
-export const FRAMED_SYNC_CONTENT_TYPE = 'application/vnd.foliole.framed-sync';
-export const FRAMED_SYNC_BODY_SHA256_HEADER = 'x-foliole-body-sha256';
-export const FRAMED_SYNC_LIBRARY_EPOCH_HEADER = 'x-foliole-library-epoch';
-export const FRAMED_SYNC_DEVICE_ID_HEADER = 'x-foliole-device-id';
-const IDENTITY_PARAMS = Object.freeze({
-  initiatorDeviceId: 'initiator_device_id',
-  initiatorLibraryEpoch: 'initiator_library_epoch',
-  responderDeviceId: 'responder_device_id',
-  responderLibraryEpoch: 'responder_library_epoch'
-});
+
+export { FRAMED_SYNC_PATH, FRAMED_SYNC_CONTENT_TYPE, FRAMED_SYNC_BODY_SHA256_HEADER,
+  FRAMED_SYNC_LIBRARY_EPOCH_HEADER, FRAMED_SYNC_DEVICE_ID_HEADER, framedSyncPathWithIdentity
+} from '../../lib/core/sync/framedSyncHttpContract.js';
 
 type Authenticator = typeof authenticateCompanionRequest;
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
@@ -142,20 +138,6 @@ function authenticateContext(args: {
   };
 }
 
-export function framedSyncPathWithIdentity(args: Readonly<{
-  initiatorDeviceId: string;
-  initiatorLibraryEpoch: string;
-  pathWithQuery?: string;
-  responderDeviceId: string;
-  responderLibraryEpoch: string;
-}>) {
-  const url = new URL(args.pathWithQuery ?? FRAMED_SYNC_PATH, 'http://127.0.0.1');
-  url.searchParams.set(IDENTITY_PARAMS.initiatorDeviceId, args.initiatorDeviceId);
-  url.searchParams.set(IDENTITY_PARAMS.initiatorLibraryEpoch, args.initiatorLibraryEpoch);
-  url.searchParams.set(IDENTITY_PARAMS.responderDeviceId, args.responderDeviceId);
-  url.searchParams.set(IDENTITY_PARAMS.responderLibraryEpoch, args.responderLibraryEpoch);
-  return `${url.pathname}${url.search}`;
-}
 
 function pathname(request: http.IncomingMessage) {
   return new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
@@ -168,10 +150,10 @@ function hasContentType(request: http.IncomingMessage, expected: string) {
 
 function readIdentity(url: URL) {
   const read = (name: string) => url.searchParams.get(name)?.trim() || null;
-  const initiatorDeviceId = read(IDENTITY_PARAMS.initiatorDeviceId);
-  const initiatorLibraryEpoch = read(IDENTITY_PARAMS.initiatorLibraryEpoch);
-  const responderDeviceId = read(IDENTITY_PARAMS.responderDeviceId);
-  const responderLibraryEpoch = read(IDENTITY_PARAMS.responderLibraryEpoch);
+  const initiatorDeviceId = read(FRAMED_SYNC_IDENTITY_PARAMS.initiatorDeviceId);
+  const initiatorLibraryEpoch = read(FRAMED_SYNC_IDENTITY_PARAMS.initiatorLibraryEpoch);
+  const responderDeviceId = read(FRAMED_SYNC_IDENTITY_PARAMS.responderDeviceId);
+  const responderLibraryEpoch = read(FRAMED_SYNC_IDENTITY_PARAMS.responderLibraryEpoch);
   if (!initiatorDeviceId || !initiatorLibraryEpoch || !responderDeviceId ||
       !responderLibraryEpoch) return null;
   return { initiatorDeviceId, initiatorLibraryEpoch, responderDeviceId, responderLibraryEpoch };

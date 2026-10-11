@@ -9,7 +9,7 @@ export async function collectDesktopFramedSyncFixtureContent() {
   const connection = openDatabaseConnection();
   const db = createBetterSqliteDbPort(connection.sqlite);
   for (const row of await db.query<{ id: string }>('SELECT id FROM nodes')) {
-    await collectNodeVersionPayloads(db, row.id, 32, true);
+    await collectNodeVersionPayloads(db, row.id, 32);
   }
   const hashes = connection.driver.queryAll<{ hash: string }>(
     "SELECT hash FROM content_blobs WHERE kind = 'text_body'").map((row) => row.hash);

@@ -66,7 +66,7 @@ it('keeps the common merge base when a peer base is on a sibling branch', async 
 
 it('keeps the inherited complete chain until direct device dependencies are known', async () => {
   sqlite.exec('DELETE FROM node_version_local_origins');
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: 'active_member_position_unknown' });
   expect(payloads().every((row) => (row as { body_text: string }).body_text !== null)).toBe(true);
 });
 
@@ -86,25 +86,25 @@ it('keeps an unabsorbed sibling and its base without a direct member declaration
   expect((await loadMergeBase(port, 'hidden', 'E'))?.version_id).toBe('B');
 });
 
-it('keeps an in-flight version alongside the device base and current head', async () => {
+it('ignores obsolete outbound holds when all active member positions are known', async () => {
   proveBase('A');
   sqlite.prepare(`INSERT INTO node_version_outbound_holds VALUES
     ('pack-2', 'group', 'remote', 'node', 'C', 'now')`).run();
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 1, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
   expect(payloads().filter((row) => (row as { body_text: string | null }).body_text !== null)
-    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'B', 'C', 'E']);
+    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'E']);
 });
 
-it('holds every full payload in a pack until its exact node receipt', async () => {
+it('does not make obsolete pack receipts a prerequisite for body collection', async () => {
   proveBase('A');
   await stageOutboundNodeVersionHolds(port, {
     createdAt: 'now', deviceId: 'remote', groupId: 'group',
     heads: [{ objectId: 'node', versionId: 'E' }],
     packId: 'pack-2', payloads: [{ objectId: 'node', versionId: 'C' }]
   });
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C'))
-    .toEqual({ body_text: 'body-C' });
+    .toEqual({ body_text: null });
 
   await confirmOutboundNodeVersionPack(port, {
     confirmedAt: 'later', deviceId: 'remote', groupId: 'group', libraryEpoch: 'epoch',
@@ -115,28 +115,29 @@ it('holds every full payload in a pack until its exact node receipt', async () =
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('C')).toEqual({ body_text: null });
 });
 
-it('keeps submitted input and conflict references without retaining its historical editor base', async () => {
+it('keeps the editor base, conflict and its parent bodies', async () => {
   proveBase('A');
   sqlite.prepare(`INSERT INTO node_version_local_holds VALUES ('editor-1', 'node', 'B', 'now')`).run();
   sqlite.prepare(`INSERT INTO node_sync_conflicts
     (conflict_version_id, object_id, snapshot_json, detected_at)
     VALUES ('D', 'node', '{}', 'now')`).run();
 
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
   expect(payloads().filter((row) => (row as { body_text: string | null }).body_text !== null)
-    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'D', 'E']);
+    .map((row) => (row as { version_id: string }).version_id)).toEqual(['A', 'B', 'C', 'D', 'E']);
 });
 
-it('keeps editor parent identity after collecting its historical body', async () => {
+it('keeps an editor base body until its hold is released', async () => {
   proveBase('A');
   await port.transaction((tx) => retainLocalEditBase(tx, {
     holdId: 'editor-1', nodeId: 'node', versionId: 'B'
   }));
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 3, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 2, skipped: null });
   expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('B'))
-    .toEqual({ body_text: null });
+    .toEqual({ body_text: 'body-B' });
   await releaseLocalEditBase(port, 'editor-1', 'node');
   expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+  expect(sqlite.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get('B')).toEqual({ body_text: null });
   await retainLocalEditBase(port, { holdId: 'late-editor', nodeId: 'node', versionId: 'B' });
 });
 
@@ -192,7 +193,7 @@ it('advances a peer base only from an exact applied pack receipt', async () => {
 
   expect(sqlite.prepare(`SELECT version_id, pack_id FROM node_version_device_bases`).all())
     .toEqual([{ version_id: 'A', pack_id: 'pack-1' }]);
-  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: null });
+  expect(await collectNodeVersionPayloads(port, 'node')).toEqual({ released: 0, skipped: 'active_member_position_unknown' });
 });
 
 it('does not infer a peer base from a tombstone-blocked node in an acknowledged pack', async () => {

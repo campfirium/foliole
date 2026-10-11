@@ -1,0 +1,91 @@
+// @vitest-environment node
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
+import { createFramedSyncFileSessionNoncePort } from '../../../../../../lib/core/sync/framedSyncFileSession.js';
+import { prepareRequestSyncWire, readRequestSyncWire } from '../../../../../../lib/core/sync/requestSyncWire.js';
+import type { NativeRequestSyncHttpRequest } from '../../../../../../lib/platform/nativeRequestSyncHttpContract.js';
+
+const native = vi.hoisted(() => ({ post: vi.fn(), sign: vi.fn(), cancel: vi.fn() }));
+vi.mock('../../../companionWorkspaceRuntimeRepository.js', () => ({ FolioleCompanionSync: {
+  postRequestSyncHttp: native.post, signCompanionSyncRequest: native.sign, cancelRequestSyncHttp: native.cancel
+} }));
+vi.mock('../../runtime/companionFramedPayloadBudget.js', () => ({
+  companionFramedFileOwner: () => ({ library_key: 'test-library', generation_id: 'test-generation' })
+}));
+vi.mock('../../runtime/iosCompanionDatabaseBootstrap.js', () => ({ getIosCompanionDatabaseOwner: () => ({}) }));
+
+import { withCompanionRequestSyncHttp } from './companionRequestSyncHttp.js';
+
+const context = { groupId: 'group', protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+  initiatorDeviceId: 'local', initiatorLibraryEpoch: 'local-epoch', responderDeviceId: 'peer', responderLibraryEpoch: 'peer-epoch' } as const;
+const groupKey = new Uint8Array(32).fill(7);
+beforeEach(() => { vi.resetAllMocks(); native.sign.mockResolvedValue({ headers: { 'X-Authorization-Id': 'group:local' } }); });
+
+function storage() {
+  const values = new Map<string, Uint8Array>();
+  const files: FramedSyncFilePort = {
+    read: async key => values.get(key) ?? null,
+    write: async (key, bytes) => { values.set(key, bytes.slice()); },
+    remove: async key => { for (const name of values.keys()) if (name === key || name.startsWith(`${key}/`)) values.delete(name); },
+    list: async () => [], exclusive: async (_key, run) => run()
+  };
+  return { files, values };
+}
+
+async function body(files: FramedSyncFilePort) {
+  return prepareRequestSyncWire({ context, groupKey, noncePort: createFramedSyncFileSessionNoncePort(files),
+    messages: async function* () { yield { payloadCase: 'round_receipt', payload: {
+      roundId: new Uint8Array(16).fill(3), result: 1, deferredFacts: []
+    } }; } });
+}
+
+it('signs the exact bounded file stream and authenticated endpoint identity, then cleans temporary bytes', async () => {
+  const { files, values } = storage();
+  native.post.mockImplementation(async (request: NativeRequestSyncHttpRequest) => {
+    const parts = Array.from({ length: request.request_chunk_count }, (_, index) => values.get(`${request.directory}/http-out-${index}`)!);
+    const bytes = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+    let offset = 0;
+    for (const part of parts) { bytes.set(part, offset); offset += part.length; expect(part.length).toBeLessThanOrEqual(512 * 1024); }
+    const signature = native.sign.mock.calls[0]![0];
+    expect(signature.body_hash).toBe(bytesToHex(sha256(bytes)));
+    const url = new URL(request.url);
+    expect(signature.path_with_query).toBe(`${url.pathname}${url.search}`);
+    expect(url.searchParams.get('initiator_library_epoch')).toBe('local-epoch');
+    expect(url.searchParams.get('responder_device_id')).toBe('peer');
+    await files.write(`${request.directory}/http-in-0`, bytes);
+    return { response_chunk_count: 1, response_byte_length: bytes.length };
+  });
+  const received = await withCompanionRequestSyncHttp(files, { context, endpointUrl: 'http://127.0.0.1:1',
+    pathWithQuery: '/companion/framed-sync?request=inventory', body: await body(files) }, async stream => {
+    const decoded = [];
+    for await (const item of readRequestSyncWire({ context, groupKey, ...stream })) decoded.push(item.message.payloadCase);
+    return decoded;
+  });
+  expect(received).toEqual(['round_receipt']);
+  expect([...values.keys()].filter(key => key.startsWith('requests/'))).toEqual([]);
+});
+
+it('waits for native cancellation before deleting files owned by the request', async () => {
+  const { files, values } = storage();
+  const controller = new AbortController();
+  let reject!: (error: Error) => void;
+  let directory = '';
+  native.post.mockImplementation((request: NativeRequestSyncHttpRequest) => {
+    directory = request.directory;
+    queueMicrotask(() => controller.abort(new Error('cancelled')));
+    return new Promise((_resolve, fail) => { reject = fail; });
+  });
+  native.cancel.mockImplementation(async () => {
+    expect([...values.keys()].some(key => key.startsWith(directory))).toBe(true);
+    reject(new Error('request_sync_http_cancelled'));
+  });
+  await expect(withCompanionRequestSyncHttp(files, { context, endpointUrl: 'http://127.0.0.1:1',
+    pathWithQuery: '/companion/framed-sync?request=inventory', body: await body(files), signal: controller.signal },
+  async () => { throw new Error('unexpected_response'); })).rejects.toThrow('request_sync_http_cancelled');
+  expect(native.cancel).toHaveBeenCalledOnce();
+  expect([...values.keys()].filter(key => key.startsWith('requests/'))).toEqual([]);
+});

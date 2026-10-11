@@ -61,17 +61,17 @@ const hex = (value: Uint8Array) => Buffer.from(value).toString('hex');
 
 async function corpus() {
   return JSON.parse(await readFile(
-    path.resolve('lib/core/sync/fixtures/framed-sync-v23-golden.json'), 'utf8'
+    path.resolve('lib/core/sync/fixtures/framed-sync-v24-golden.json'), 'utf8'
   )) as Corpus;
 }
 
 async function maliciousCorpus() {
   return JSON.parse(await readFile(
-    path.resolve('lib/core/sync/fixtures/framed-sync-v23-malicious.json'), 'utf8'
+    path.resolve('lib/core/sync/fixtures/framed-sync-v24-malicious.json'), 'utf8'
   )) as MaliciousCorpus;
 }
 
-describe('framed sync v23 golden corpus', () => {
+describe('framed sync v24 golden corpus', () => {
   it('decodes and re-encodes every protobuf message byte-for-byte', async () => {
     const root = await protobuf.load(path.resolve(
       'lib/core/sync/proto/foliole/sync/v22/framed_sync.proto'
@@ -95,7 +95,7 @@ describe('framed sync v23 golden corpus', () => {
 
   it('rejects every language-neutral malicious protobuf message', async () => {
     const malicious = await maliciousCorpus();
-    expect(malicious).toMatchObject({ corpus_version: 1, protocol_version: 23 });
+    expect(malicious).toMatchObject({ corpus_version: 1, protocol_version: 24 });
     expect(malicious.messages.map(({ name }) => name)).toEqual([
       'unspecified-fact-kind', 'empty-fact-id', 'short-shared-state-hash',
       'long-shared-state-hash', 'unknown-blob-role', 'duplicate-canonical-field',
@@ -127,13 +127,13 @@ describe('framed sync v23 golden corpus', () => {
   });
 });
 
-describe('framed sync v23 golden crypto and blob vectors', () => {
+describe('framed sync v24 golden crypto and blob vectors', () => {
   it('decrypts the frozen session and transfer frames', async () => {
     const vectors = (await corpus()).crypto;
     const sessionId = fromHex(vectors.session.session_id_hex);
     const sessionContextId = await deriveSessionContextId({
       groupId: 'group-a', initiatorDeviceId: 'device-a', initiatorLibraryEpoch: 'epoch-a',
-      protocolVersion: 23, responderDeviceId: 'device-b', responderLibraryEpoch: 'epoch-b', sessionId
+      protocolVersion: 24, responderDeviceId: 'device-b', responderLibraryEpoch: 'epoch-b', sessionId
     });
     const sessionKey = await deriveSessionFrameKey({
       groupKey: fromHex(vectors.transfer.group_key_hex), sessionContextId, sessionId

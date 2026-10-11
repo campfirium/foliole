@@ -15,7 +15,7 @@ import { readFramedSyncPublishedFactOperation } from './framedSyncPublishedFactO
 import { loadFramedSyncPublishedOutboundValue } from './framedSyncPublishedOutboundValue.js';
 import { factToWire } from './framedSyncWireProjection.js';
 
-const context: FramedSyncContext = { protocolVersion: 23, groupId: 'group', senderDeviceId: 'sender',
+const context: FramedSyncContext = { protocolVersion: 24, groupId: 'group', senderDeviceId: 'sender',
   senderLibraryEpoch: 'source', receiverDeviceId: 'receiver', receiverLibraryEpoch: 'target' };
 
 function operationPayload(transferId: string) {

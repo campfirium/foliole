@@ -24,6 +24,8 @@ export async function configureCompanionFramedPayloadBudget(owner: CapacitorComp
   if (owners.has(owner)) throw new Error('framed_sync_payload_budget_already_configured');
   const identity = { library_key: owner.databasePath, generation_id: createCompanionUuid() };
   await FolioleCompanionSync.configureFramedSyncPayloadBudget(identity);
+  // A new database generation has no active requests; only abandoned request files are disposable.
+  await FolioleCompanionSync.accessFramedSyncFile({ ...identity, key: 'requests', operation: 'remove' });
   owners.set(owner, { identity, closing: false });
 }
 

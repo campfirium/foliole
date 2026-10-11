@@ -5,6 +5,7 @@ import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js'
 
 
 import type { DbPort } from './dbPort.js';
+import { unionNodeVersionAncestors } from './nodeVersionAncestry.js';
 import { createOpaqueVersionRef } from './opaqueSyncRefs.js';
 import type { SyncNodeRecordMetadata } from './syncNodeRecordSource.js';
 import {
@@ -65,7 +66,8 @@ export function buildResolutionRecord(
   const contentHash = hashText(canonicalResolutionJson({ body, snapshot }));
   const identity = hashText(`${winner.object_id}\n${parents.join('\n')}\n${contentHash}`);
   return {
-    ancestor_version_ids: [...new Set([...parents, ...records.flatMap((record) => record.ancestor_version_ids)])].sort(),
+    ancestor_version_ids: [...new Set([...parents,
+      ...unionNodeVersionAncestors(records.map(record => record.ancestor_version_ids))])].sort(),
     body_text: body,
     content_hash: contentHash,
     host_name: 'desktop-resolution',

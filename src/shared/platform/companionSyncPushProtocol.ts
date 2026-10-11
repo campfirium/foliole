@@ -209,7 +209,7 @@ export const nodeVersionSyncAdapter: SyncableObjectAdapter<SyncableNodeVersionRo
       return { kind: 'blocked', reason: 'missing_base_reference' };
     }
     return {
-      ancestorVersionIds: row.ancestor_version_ids,
+      ancestorVersionIds: [...row.ancestor_version_ids],
       kind: 'node_version',
       parentVersionId: row.parent_version_id,
       parentVersionIds: row.parent_version_ids ?? (row.parent_version_id ? [row.parent_version_id] : [])

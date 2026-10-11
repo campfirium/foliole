@@ -4,6 +4,7 @@ import { openDatabaseConnection } from '../database/connection.js';
 import { captureBackupRestoreHostSettings } from '../database/syncGroupBackupRestore.js';
 import { joinDesktopSyncGroup, leaveDesktopSyncGroupDevice, loadDesktopSyncGroupInfo, registerSyncGroupDevice } from '../database/syncGroupStore.js';
 
+import { requestSyncFixtureIdentity } from './desktopRequestSyncFixtureIdentity.js';
 import { markDesktopSyncGroupMemberStateReady } from './desktopSyncGroupMemberStateReadiness.js';
 
 export function runDesktopFramedSyncOrderCommand(action: string, args: Readonly<Record<string, unknown>>) {
@@ -15,7 +16,9 @@ export function runDesktopFramedSyncOrderCommand(action: string, args: Readonly<
   if (action === 'register_order_member') {
     const id = String(args.deviceId);
     markDesktopSyncGroupMemberStateReady(id);
-    return registerSyncGroupDevice({ device: { contract_version: 1, group_id: 't326-group',
+    const identity = (['desktop-a', 'desktop-b', 'desktop-c'] as const)
+      .map(requestSyncFixtureIdentity).find(value => value.identity_key === id);
+    return registerSyncGroupDevice({ device: identity ?? { contract_version: 1, group_id: 't326-group',
       identity_key: id, device_anchor: `${id}-anchor`, canonical_library_path: `/t326/${id}` },
     deviceName: id, platform: 'desktop' });
   }

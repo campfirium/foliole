@@ -14,6 +14,7 @@ import type {
   NativeCompanionFramedSyncTransferRequest,
   NativeCompanionSignedRequestHeaders
 } from '../../../lib/platform/nativeCompanionSyncContract';
+import type { NativeRequestSyncHttpPlugin } from '../../../lib/platform/nativeRequestSyncHttpContract';
 import type { RemoteImageResourcePlugin } from '../../../lib/platform/remoteImageResourceContract';
 import type { SyncParticipationSnapshot } from '../../../lib/platform/syncParticipationContract';
 import type { SyncTriggerReason } from '../../../lib/platform/syncTriggerContract';
@@ -52,7 +53,7 @@ export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
   extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin, CompanionAttachmentResourceSyncPlugin,
-  CompanionContentBlobSyncPlugin, NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin {
+  CompanionContentBlobSyncPlugin, NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin, NativeRequestSyncHttpPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;

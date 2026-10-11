@@ -1,70 +1,50 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const runtime = vi.hoisted(() => ({ framed: vi.fn() }));
-
-vi.mock('./framed/companionFramedSyncInventoryRound', () => ({
-  sendCompanionFramedSyncInventoryDifferences: runtime.framed
-}));
-vi.mock('./syncGroupStore', () => ({
-  loadCompanionSyncGroup: async () => ({ group_id: 'group' })
-}));
+const runtime = vi.hoisted(() => ({ database: vi.fn(), resources: vi.fn() }));
+vi.mock('./framed/companionRequestSyncDatabaseRound.js', () => ({ runCompanionRequestSyncDatabaseRound: runtime.database }));
+vi.mock('./framed/companionRequestSyncResources.js', () => ({ continueCompanionRequestSyncResources: runtime.resources }));
+vi.mock('./framed/companionRequestSyncPeerState.js', () => ({ requireCompanionRequestSyncPeerState:
+  (_group: string, device: string, epoch: string) => ({ sender_device_identity_key: device, library_epoch: epoch }) }));
+vi.mock('./syncGroupMemberStateStore.js', () => ({ loadCompanionSyncGroupMemberState: async () => ({ library_epoch: 'local-epoch' }) }));
+vi.mock('./syncGroupStore', () => ({ loadCompanionSyncGroup: async () => ({ group_id: 'group', local_device_identity_key: 'local' }) }));
 
 import { syncCompanionIdentityObjects } from './syncGroupIdentityCompanionResult';
 
+const framedPeer = { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: 24 };
 beforeEach(() => {
   vi.clearAllMocks();
-  runtime.framed.mockResolvedValue({
-    deferredObjects: [{ globalId: 'later', objectType: 'node' }],
-    received: [{ objectId: 'pulled' }],
-    sent: [{ objectId: 'pushed' }],
-    resources: { pending: 2, scanned: 4, transferred: 1, unavailable: 1 }
-  });
+  runtime.database.mockResolvedValue({ pending: 1, received: ['pulled'], sent: ['pushed'] });
+  runtime.resources.mockResolvedValue({ pending: 2, scanned: 4, transferred: 1, unavailable: 1 });
 });
 
-it('routes a negotiated v22 peer through the only companion data plane', async () => {
+it('reports request-scoped database changes and keeps attachment progress separate', async () => {
   const refreshed = vi.fn();
-  const result = await syncCompanionIdentityObjects('http://peer', {
-    framedPeer: { deviceId: 'desktop', libraryEpoch: 'desktop-epoch', protocolVersion: 23 },
-    onStructureSynced: refreshed
-  });
-  expect(runtime.framed).toHaveBeenCalledWith({
-    endpoint_url: 'http://peer', receiver_device_id: 'desktop',
-    receiver_library_epoch: 'desktop-epoch', sync_group_id: 'group'
-  });
+  const result = await syncCompanionIdentityObjects('http://peer', { framedPeer, onStructureSynced: refreshed });
+  expect(runtime.database).toHaveBeenCalledWith(expect.objectContaining({ endpointUrl: 'http://peer', groupId: 'group',
+    localLibraryEpoch: 'local-epoch', peerState: { sender_device_identity_key: 'desktop', library_epoch: 'desktop-epoch' } }));
   expect(refreshed).toHaveBeenCalledOnce();
-  expect(result).toMatchObject({
-    appliedNodeIds: ['pulled'], pushedNodeIds: ['pushed'],
-    localDirtyCount: 1, remainingStructureChangeCount: 1
-  });
+  expect(result).toMatchObject({ appliedNodeIds: ['pulled'], pushedNodeIds: ['pushed'],
+    localDirtyCount: 1, remainingStructureChangeCount: 1, remainingAttachmentResourceCount: 3 });
 });
 
-it('rejects a peer without an exact framed v22 negotiation', async () => {
-  await expect(syncCompanionIdentityObjects('http://peer', {}))
+it('rejects missing negotiation and the incompatible previous protocol', async () => {
+  await expect(syncCompanionIdentityObjects('http://peer', {})).rejects.toThrow('framed_sync_peer_required');
+  await expect(syncCompanionIdentityObjects('http://peer', { framedPeer: { ...framedPeer, protocolVersion: 23 } }))
     .rejects.toThrow('framed_sync_peer_required');
-  await expect(syncCompanionIdentityObjects('http://peer', {
-    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 21 }
-  })).rejects.toThrow('framed_sync_peer_required');
-  expect(runtime.framed).not.toHaveBeenCalled();
+  expect(runtime.database).not.toHaveBeenCalled();
 });
 
-it('keeps an authenticated restore request ahead of a resource-only continuation', async () => {
-  await syncCompanionIdentityObjects('http://peer', {
-    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 23 },
-    restoreId: 'restore-1', resourcesOnly: true
-  });
-  expect(runtime.framed).toHaveBeenCalledWith({ endpoint_url: 'http://peer', receiver_device_id: 'desktop',
-    receiver_library_epoch: 'epoch', sync_group_id: 'group' }, true, 'restore-1');
+it('finishes an authenticated restore before a resource-only continuation', async () => {
+  await syncCompanionIdentityObjects('http://peer', { framedPeer, restoreId: 'restore-1', resourcesOnly: true });
+  expect(runtime.database).toHaveBeenCalledWith(expect.objectContaining({ restoreId: 'restore-1' }));
+  expect(runtime.resources).toHaveBeenCalledOnce();
 });
 
-it('continues attachment demands through framed transport without replaying database changes', async () => {
-  runtime.framed.mockResolvedValueOnce({ deferredObjects: [], received: [], sent: [],
-    resources: { pending: 1, scanned: 4, transferred: 1, unavailable: 0 } });
-  const result = await syncCompanionIdentityObjects('http://peer', {
-    framedPeer: { deviceId: 'desktop', libraryEpoch: 'epoch', protocolVersion: 23 }, resourcesOnly: true
-  });
-  expect(runtime.framed).toHaveBeenCalledWith({ endpoint_url: 'http://peer', receiver_device_id: 'desktop',
-    receiver_library_epoch: 'epoch', sync_group_id: 'group' }, true);
+it('continues attachments without replaying database changes', async () => {
+  const result = await syncCompanionIdentityObjects('http://peer', { framedPeer, resourcesOnly: true });
+  expect(runtime.database).not.toHaveBeenCalled();
+  expect(runtime.resources).toHaveBeenCalledOnce();
   expect(result.appliedObjectIds).toEqual([]);
   expect(result.pushedObjectIds).toEqual([]);
-  expect(result.remainingAttachmentResourceCount).toBe(1);
+  expect(result.remainingAttachmentResourceCount).toBe(3);
 });

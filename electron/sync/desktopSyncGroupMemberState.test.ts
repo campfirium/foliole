@@ -93,7 +93,7 @@ it('rejects a missing peer descriptor in an exchange reply before apply and revo
 it('allows the restore source to supply a new member with no restore state', () => {
   acceptDesktopSyncGroupMemberState(JSON.stringify(memberState()), receiverDeviceId);
 
-  expect(mocks.markReady).toHaveBeenCalledWith(receiverDeviceId, 'restore');
+  expect(mocks.markReady).toHaveBeenCalledWith(receiverDeviceId, 'restore', memberState());
   expect(mocks.revokeReady).not.toHaveBeenCalled();
 });
 

@@ -2,6 +2,7 @@ syntax = "proto3";
 package foliole.sync.v22;
 option java_package = "com.foliole.sync.v22";
 option java_multiple_files = true;
+import "request_sync.proto";
 enum FactKind {
   FACT_KIND_UNSPECIFIED = 0;
   FACT_KIND_OBJECT_STATE = 1;
@@ -131,6 +132,8 @@ message InventoryChunk {
   bytes round_id = 1;
   uint32 chunk_index = 2;
   repeated InventoryEntry entries = 3;
+  uint32 entry_part_index = 4;
+  bool entry_continues = 5;
 }
 message InventoryEnd {
   bytes round_id = 1;
@@ -241,5 +244,7 @@ message ProtocolMessage {
     TransferTermination transfer_termination = 16;
     ProtocolError error = 17;
     FactFragment fact_fragment = 18;
+    RequestObjectHeader request_object_header = 19;
+    RequestObjectEnd request_object_end = 20;
   }
 }

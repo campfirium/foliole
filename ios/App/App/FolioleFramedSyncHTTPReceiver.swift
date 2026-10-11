@@ -41,12 +41,18 @@ final class FolioleFramedSyncHTTPReceiver: NSObject, URLSessionDataDelegate {
             at: responseURL.deletingLastPathComponent(),
             withIntermediateDirectories: true
         )
-        return try await withCheckedThrowingContinuation { continuation in
+        return try await withTaskCancellationHandler {
+          try Task.checkCancellation()
+          return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
             delegateQueue.maxConcurrentOperationCount = 1
             let session = URLSession(configuration: configuration, delegate: self, delegateQueue: delegateQueue)
             self.session = session
             session.uploadTask(with: request, fromFile: bodyURL).resume()
+            if Task.isCancelled { session.invalidateAndCancel() }
+          }
+        } onCancel: {
+            self.delegateQueue.addOperation { self.session?.invalidateAndCancel() }
         }
     }
 

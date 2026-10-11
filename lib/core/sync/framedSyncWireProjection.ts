@@ -93,6 +93,6 @@ export function manifestToWire(manifest: CanonicalManifest, groupId: string, con
       requiredBlobHashes: fact.blobs.filter((blob) => blob.required).map((blob) => blob.sha256),
       sharedStateHash: fact.sharedStateHash
     })),
-    groupId, protocolVersion: 23
+    groupId, protocolVersion: 24
   };
 }

@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { beginSyncGroupLocalAdoption } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { receiveSyncGroupRestoreEvent } from '../../lib/core/sync/syncGroupRestoreEvents.js';
+import { publishSyncGroupRestoreEvent } from '../../lib/core/sync/syncGroupRestorePublication.js';
 import { saveBackupSettings } from '../database/backupSettings.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection } from '../database/connection.js';
@@ -18,6 +19,14 @@ export async function runIdentityRestoreFixtureCommand(action: string,
     throw new Error('fixture_identity_restore_input_invalid');
   }
   const groupId = 't326-group';
+  if (action === 'publish_identity_restore') {
+    const db = createBetterSqliteDbPort(openDatabaseConnection().sqlite);
+    await db.transaction(tx => publishSyncGroupRestoreEvent(tx, {
+      group_id: groupId, restore_id: String(args.restoreId), restored_at: '2026-10-07T08:00:00.000Z',
+      source_device_identity_key: context.deviceId
+    }));
+    return { restoreId: args.restoreId };
+  }
   if (action === 'begin_identity_restore') {
     const directory = path.join(context.stateRoot, 'identity-restore-backups');
     saveBackupSettings({ backup_dir: directory });

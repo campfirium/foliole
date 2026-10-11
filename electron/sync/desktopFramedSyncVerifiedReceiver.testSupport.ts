@@ -46,7 +46,7 @@ export async function verifiedReceiverFixture(text: string, objectId = 'topic', 
   record.snapshot.id = objectId;
   await sender.receive([record]);
   const { manifest } = projectFramedSyncNodeRecord(record);
-  const context = { groupId: 'group', protocolVersion: 23 as const, receiverDeviceId: 'receiver',
+  const context = { groupId: 'group', protocolVersion: 24 as const, receiverDeviceId: 'receiver',
     receiverLibraryEpoch: 'receiver-epoch', senderDeviceId: 'sender', senderLibraryEpoch: 'sender-epoch' };
   const contentId = await canonicalContentId(manifest);
   const published = { context, contentId, manifestHash: contentId, transferId: await canonicalTransferId(context, contentId),

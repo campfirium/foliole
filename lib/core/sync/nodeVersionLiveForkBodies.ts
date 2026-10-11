@@ -2,7 +2,8 @@
 export function preserveLiveForkBodies(keep: Set<string>,
   ancestors: ReadonlyMap<string, ReadonlySet<string>>, localHeads: ReadonlySet<string>,
   parents: (id: string) => readonly string[]) {
-  const live = new Set([...keep].flatMap((id) => [...ancestors.get(id) ?? []]));
+  const live = new Set<string>();
+  for (const id of keep) for (const ancestor of ancestors.get(id) ?? []) live.add(ancestor);
   for (const localId of localHeads) {
     const local = ancestors.get(localId);
     if (!local) continue;

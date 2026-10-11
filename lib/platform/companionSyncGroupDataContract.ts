@@ -1,6 +1,7 @@
 export const COMPANION_SYNC_GROUP_DATA_CONTRACT = Object.freeze({
   eventName: 'syncGroupDataRequest',
   operations: Object.freeze({
+    respondRequestSync: 'respond_request_sync',
     createSnapshot: 'create_snapshot',
     readIdentitySource: 'read_identity_source',
     prepareIdentityPack: 'prepare_identity_pack',

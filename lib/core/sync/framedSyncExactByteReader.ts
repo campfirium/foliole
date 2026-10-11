@@ -19,7 +19,7 @@ export class FramedSyncExactByteReader {
           if (allowCleanEnd && written === 0) return null;
           throw new Error(error);
         }
-        this.buffered = typeof next.value === 'string' ? Buffer.from(next.value) : next.value;
+        this.buffered = typeof next.value === 'string' ? new TextEncoder().encode(next.value) : next.value;
         this.offset = 0;
         if (this.buffered.byteLength === 0) continue;
       }

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, it, vi } from 'vitest';
 
 import { upsertTextBodyBlob } from '../../lib/core/database/contentBodyBlobs.js';
-import { retainLocalEditBase, releaseLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
+import { releaseLocalEditBase } from '../../lib/core/sync/nodeVersionLocalEditHold.js';
 import { collectNodeVersionPayloads } from '../../lib/core/sync/nodeVersionPayloadCollector.js';
 
 import { createBetterSqliteDbPort } from './betterSqliteDbPort.js';
@@ -55,9 +55,6 @@ async function seedHeldHistory() {
     WHERE id = 'node-1'`, [bodyHash]);
   driver.execute(`UPDATE sync_object_state SET current_version_id = 'v24', content_hash = 'hash-24', sync_dirty = 0
     WHERE object_type = 'node' AND object_id = 'node-1'`);
-  for (const versionId of ['desktop#node-1-v1', ...Array.from({ length: 22 }, (_, index) => `v${index + 2}`)]) {
-    await retainLocalEditBase(port, { holdId: `draft-${versionId}`, nodeId: 'node-1', versionId });
-  }
   expect(await collectNodeVersionPayloads(port, 'node-1')).toEqual({ released: 23, skipped: null });
   return port;
 }

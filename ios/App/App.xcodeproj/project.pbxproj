@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		89FECD10EF4A4E16B6EA5756 /* FolioleRequestSyncRoute.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */; };
 		F10000000000000000000001 /* FoliolePhysicalReadonlySnapshotUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* FoliolePhysicalReadonlySnapshotUITests.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
@@ -168,6 +169,8 @@
 		341B00000000000000000005 /* FolioleFramedSyncFileBlobs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000005 /* FolioleFramedSyncFileBlobs.swift */; };
 		341B00000000000000000006 /* FolioleFramedSyncFileReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000006 /* FolioleFramedSyncFileReceiver.swift */; };
 		341B00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift */; };
+		15AA332B58A9435F804AE1B3 /* FolioleCompanionRequestSyncHTTP.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCEDDE6636F941FA84BC69C6 /* FolioleCompanionRequestSyncHTTP.swift */; };
+		7A2A126298AE4935B29CA44C /* FolioleRequestSyncHTTPChunks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 780C45E0E5A7444BA96F0B48 /* FolioleRequestSyncHTTPChunks.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -209,6 +212,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncRoute.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* FoliolePhysicalReadonlySnapshotUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoliolePhysicalReadonlySnapshotUITests.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
@@ -380,6 +384,8 @@
 		341A00000000000000000005 /* FolioleFramedSyncFileBlobs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncFileBlobs.swift; sourceTree = "<group>"; };
 		341A00000000000000000006 /* FolioleFramedSyncFileReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncFileReceiver.swift; sourceTree = "<group>"; };
 		341A00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncOutboundFiles.swift; sourceTree = "<group>"; };
+		CCEDDE6636F941FA84BC69C6 /* FolioleCompanionRequestSyncHTTP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionRequestSyncHTTP.swift; sourceTree = "<group>"; };
+		780C45E0E5A7444BA96F0B48 /* FolioleRequestSyncHTTPChunks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleRequestSyncHTTPChunks.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -505,6 +511,9 @@
 				341A00000000000000000005 /* FolioleFramedSyncFileBlobs.swift */,
 				341A00000000000000000006 /* FolioleFramedSyncFileReceiver.swift */,
 				341A00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift */,
+				CCEDDE6636F941FA84BC69C6 /* FolioleCompanionRequestSyncHTTP.swift */,
+				780C45E0E5A7444BA96F0B48 /* FolioleRequestSyncHTTPChunks.swift */,
+				B6AA406AD5824E1DB7779A8A /* FolioleRequestSyncRoute.swift */,
 				341A00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift */,
 				341A00000000000000000001 /* FolioleFramedSyncFiles.swift */,
 				326A00000000000000000023 /* FolioleFramedSyncPayloadWorker.swift */,
@@ -876,6 +885,9 @@
 				341B00000000000000000005 /* FolioleFramedSyncFileBlobs.swift in Sources */,
 				341B00000000000000000006 /* FolioleFramedSyncFileReceiver.swift in Sources */,
 				341B00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift in Sources */,
+				15AA332B58A9435F804AE1B3 /* FolioleCompanionRequestSyncHTTP.swift in Sources */,
+				7A2A126298AE4935B29CA44C /* FolioleRequestSyncHTTPChunks.swift in Sources */,
+				89FECD10EF4A4E16B6EA5756 /* FolioleRequestSyncRoute.swift in Sources */,
 				341B00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift in Sources */,
 				341B00000000000000000001 /* FolioleFramedSyncFiles.swift in Sources */,
 				326B00000000000000000023 /* FolioleFramedSyncPayloadWorker.swift in Sources */,

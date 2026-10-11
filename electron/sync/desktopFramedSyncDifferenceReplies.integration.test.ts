@@ -16,7 +16,7 @@ import { verifiedReceiverFixture } from './desktopFramedSyncVerifiedReceiver.tes
 
 type Fixture = Awaited<ReturnType<typeof verifiedReceiverFixture>>;
 const roundId = new Uint8Array(16).fill(4);
-const context = { groupId: 'group', protocolVersion: 23 as const,
+const context = { groupId: 'group', protocolVersion: 24 as const,
   initiatorDeviceId: 'receiver', initiatorLibraryEpoch: 'receiver-epoch',
   responderDeviceId: 'sender', responderLibraryEpoch: 'sender-epoch' };
 

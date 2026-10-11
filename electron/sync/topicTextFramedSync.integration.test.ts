@@ -29,7 +29,7 @@ async function write(databasePath: string, records: NativeSyncNodeRecord[]) {
 }
 
 it('converges forks and an adopted attachment over authenticated production HTTP across restart', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const base = textBranch('base', 'Base');
     const a = textBranch('a', 'Main longer body', base);
@@ -95,7 +95,7 @@ function children(databasePath: string) {
 }
 
 it('preserves both body forks and their highlight and cloze anchors while order sources converge', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     const base = textBranch('base', 'Alpha Beta');
     const a = textBranch('a', 'Alpha Beta with A', base);

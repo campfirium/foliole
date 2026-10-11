@@ -29,7 +29,7 @@ export function companionContinuationBridge(local: DesktopFramedSyncFixtureSnaps
   const staging = createDesktopFramedSyncStaging(db);
   const groupKey = new Uint8Array(32).fill(7);
   const groupSecret = Buffer.from(groupKey).toString('base64url');
-  const context = { groupId: 't326-group', protocolVersion: 23 as const,
+  const context = { groupId: 't326-group', protocolVersion: 24 as const,
     initiatorDeviceId: local.deviceId, initiatorLibraryEpoch: `${local.deviceId}-epoch`,
     responderDeviceId: remote.deviceId, responderLibraryEpoch: `${remote.deviceId}-epoch` };
   const exchange = { context, db, endpointUrl: remote.origin, groupKey, groupSecret,

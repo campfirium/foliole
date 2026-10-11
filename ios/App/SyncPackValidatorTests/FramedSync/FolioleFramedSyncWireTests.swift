@@ -68,7 +68,7 @@ final class FolioleFramedSyncWireTests: XCTestCase {
         value[8] = 0
         value[9] = UInt8(FolioleFramedSyncPreamble.byteCount)
         value[10] = 0
-        value[11] = 23
+        value[11] = 24
         value[12] = 1
         return value
     }

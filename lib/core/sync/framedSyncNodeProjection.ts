@@ -110,7 +110,7 @@ function projectNodeFact(record: FramedSyncNodeMetadata, bodyHash: string | null
   const fact: CanonicalFact = {
     blobs,
     body: [
-      field('ancestor_version_ids', stringList(record.ancestor_version_ids)),
+      field('ancestor_version_ids', stringList([...record.ancestor_version_ids])),
       field('content_hash', scalarValue(record.content_hash)),
       field('host_name', scalarValue(record.host_name)),
       field('is_tombstone', scalarValue(record.is_tombstone ?? false)),

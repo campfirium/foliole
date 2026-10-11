@@ -6,10 +6,13 @@ import type {
   CompanionDesktopSyncResult
 } from '../../companionDesktopSyncTypes';
 
-import { sendCompanionFramedSyncInventoryDifferences } from './framed/companionFramedSyncInventoryRound';
+import { runCompanionRequestSyncDatabaseRound } from './framed/companionRequestSyncDatabaseRound.js';
+import { requireCompanionRequestSyncPeerState } from './framed/companionRequestSyncPeerState.js';
+import { continueCompanionRequestSyncResources } from './framed/companionRequestSyncResources.js';
+import { loadCompanionSyncGroupMemberState } from './syncGroupMemberStateStore.js';
 import { loadCompanionSyncGroup } from './syncGroupStore';
 
-/** Run the only supported companion data plane: framed Sync v22. */
+/** Request-scoped database exchange; attachment transfer is an independent stage. */
 export async function syncCompanionIdentityObjects(
   endpointUrl: string,
   options: CompanionDesktopSyncOptions
@@ -20,20 +23,22 @@ export async function syncCompanionIdentityObjects(
   const startedAt = Date.now();
   const group = await loadCompanionSyncGroup();
   if (!group) throw new Error('sync_group_not_joined');
-  const request = {
-    endpoint_url: endpointUrl,
-    receiver_device_id: options.framedPeer.deviceId,
-    receiver_library_epoch: options.framedPeer.libraryEpoch,
-    sync_group_id: group.group_id
-  };
-  const round = options.restoreId
-    ? await sendCompanionFramedSyncInventoryDifferences(request, Boolean(options.resourcesOnly), options.restoreId)
-    : options.resourcesOnly
-    ? await sendCompanionFramedSyncInventoryDifferences(request, true)
-    : await sendCompanionFramedSyncInventoryDifferences(request);
+  const local = await loadCompanionSyncGroupMemberState();
+  const peerState = requireCompanionRequestSyncPeerState(group.group_id, options.framedPeer.deviceId, options.framedPeer.libraryEpoch);
+  const round = options.resourcesOnly && !options.restoreId ? { pending: 0, received: [], sent: [] } : await runCompanionRequestSyncDatabaseRound({ endpointUrl, groupId: group.group_id,
+    localLibraryEpoch: local.library_epoch, peerState,
+    ...(options.restoreId ? { restoreId: options.restoreId } : {}),
+    reportObjectError: (difference, error) => console.error('[request-sync] object rejected', {
+      objectId: difference.globalId, objectType: difference.objectType,
+      sourceDeviceId: difference.direction === 'local_to_remote' ? group.local_device_identity_key : peerState.sender_device_identity_key,
+      error: error instanceof Error ? error.message : String(error)
+    }) });
   await options.onStructureSynced?.();
-  const receivedIds = round.received.map((value) => value.objectId);
-  const sentIds = round.sent.map((value) => value.objectId);
+  const resources = await continueCompanionRequestSyncResources({ endpoint_url: endpointUrl,
+    sync_group_id: group.group_id, receiver_device_id: options.framedPeer.deviceId,
+    receiver_library_epoch: options.framedPeer.libraryEpoch });
+  const receivedIds = round.received;
+  const sentIds = round.sent;
   return {
     appliedNodeIds: receivedIds,
     appliedObjectIds: receivedIds,
@@ -47,12 +52,12 @@ export async function syncCompanionIdentityObjects(
     requestedObjectIds: receivedIds,
     ...createSkippedResourceSummary(),
     ...createEmptyResourceStages(),
-    remainingAttachmentResourceCount: round.resources.pending + round.resources.unavailable,
-    localDirtyCount: round.deferredObjects.length,
+    remainingAttachmentResourceCount: resources.pending + resources.unavailable,
+    localDirtyCount: round.pending,
     pushConflictCount: 0,
     pushError: null,
     pushRejectedCount: 0,
-    remainingStructureChangeCount: round.deferredObjects.length,
+    remainingStructureChangeCount: round.pending,
     syncedStructureElapsedMs: Date.now() - startedAt
   };
 }

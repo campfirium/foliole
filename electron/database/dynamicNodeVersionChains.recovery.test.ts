@@ -25,7 +25,7 @@ async function receipt(source: Peer, target: Peer, packId: string) {
   return (await loadPendingNodeVersionReceipts(target.port, source.id)).find((item) => item.packId === packId)!;
 }
 
-it('preserves a concrete in-flight send across edits and restart, then releases it after exact confirmation', async () => {
+it('preserves a frozen legacy payload across restart while collection depends on member positions', async () => {
   const source = createPeer('source');
   const target = createPeer('target');
   joinPeers(source, target);
@@ -38,12 +38,13 @@ it('preserves a concrete in-flight send across edits and restart, then releases 
   restart(source);
   const originals = [base, sent, unsent, head];
   expect(history(source).map((row) => row.version_id)).toEqual(originals);
-  expect(history(source).map((row) => row.body_text)).toEqual(['base', 'sent', null, 'current']);
+  expect(history(source).map((row) => row.body_text)).toEqual(['base', null, null, 'current']);
   await receivePack(source, target, pack);
   const ack = await receipt(source, target, pack.packId);
-  await confirmOutboundNodeVersionPack(source.port, { ...ack, confirmedAt: 'later' });
+  await expect(confirmOutboundNodeVersionPack(source.port, { ...ack, confirmedAt: 'later' }))
+    .rejects.toThrow('node_version_proof_base_unavailable');
   expect(history(source).map((row) => row.version_id)).toEqual(originals);
-  expect(history(source).map((row) => row.body_text)).toEqual([null, 'sent', null, 'current']);
+  expect(history(source).map((row) => row.body_text)).toEqual(['base', null, null, 'current']);
   await sync(source, target);
   expect(history(source).map((row) => row.body_text)).toEqual([null, null, null, 'current']);
   await confirmOutboundNodeVersionPack(source.port, { ...ack, confirmedAt: 'retry' });

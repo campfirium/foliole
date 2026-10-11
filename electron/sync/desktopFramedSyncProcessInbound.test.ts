@@ -55,7 +55,7 @@ function finish(facts: readonly CanonicalFact[], blobs: Parameters<typeof finish
   return finishDesktopFramedSyncTransfer({
     blobs, blobCount: BigInt(blobs.length),
     context: {
-      groupId: 'group', protocolVersion: 23, receiverDeviceId: 'receiver',
+      groupId: 'group', protocolVersion: 24, receiverDeviceId: 'receiver',
       receiverLibraryEpoch: 'epoch-r', senderDeviceId: 'sender', senderLibraryEpoch: 'epoch-s'
     },
     db: { transaction: vi.fn() } as unknown as DbPort,
@@ -102,7 +102,7 @@ it('atomically applies multiple versions of the same node', async () => {
       { data: Uint8Array.of(2), sha256: secondDescriptor.sha256 }
     ], blobCount: 2n,
     context: {
-      groupId: 'group', protocolVersion: 23, receiverDeviceId: 'receiver',
+      groupId: 'group', protocolVersion: 24, receiverDeviceId: 'receiver',
       receiverLibraryEpoch: 'epoch-r', senderDeviceId: 'sender', senderLibraryEpoch: 'epoch-s'
     },
     db, facts: [first, second], factCount: 2n,
@@ -154,7 +154,7 @@ it('writes the actual post-apply node state hash into the receipt', async () => 
   await finishDesktopFramedSyncTransfer({
     blobs: [{ data: Uint8Array.of(1), sha256: descriptor.sha256 }], blobCount: 1n,
     context: {
-      groupId: 'group', protocolVersion: 23, receiverDeviceId: 'receiver',
+      groupId: 'group', protocolVersion: 24, receiverDeviceId: 'receiver',
       receiverLibraryEpoch: 'epoch-r', senderDeviceId: 'sender', senderLibraryEpoch: 'epoch-s'
     },
     db, facts: [incoming], factCount: 1n,

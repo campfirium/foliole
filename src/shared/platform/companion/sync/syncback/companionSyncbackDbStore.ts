@@ -66,7 +66,9 @@ async function loadNodeVersions(
   const hostName = await loadRequiredMeta(port, CONTRACT.hostNameMetaKey);
   const createdAt = cursor?.created_at ?? '';
   const changeId = cursor?.change_id ?? '';
-  const rows = await port.query(CONTRACT.sql.nodeVersions, [
+  const rows = await port.query<DbRow & Pick<NativeSyncNodeRecord,
+    'content_hash' | 'host_name' | 'object_id' | 'object_type' | 'parent_version_id' |
+    'updated_at' | 'version_created_at' | 'version_id'>>(CONTRACT.sql.nodeVersions, [
     hostName, peerId, createdAt, changeId, createdAt, createdAt, changeId, normalizeNodeVersionLimit(limit)
   ]);
   const records = await Promise.all(rows.map(async (row) => {
@@ -84,7 +86,7 @@ async function loadNodeVersions(
       parent_version_ids: parentVersionIds,
       snapshot
     };
-  })) as NativeSyncNodeRecord[];
+  }));
   return includeRetainedNodePushHistory(port, records);
 }
 

@@ -42,6 +42,7 @@ import {
 import { migrateOrphanedInactiveReadingState, needsOrphanedReadingStateSnapshot } from './orphanedReadingStateMigration.js';
 import { migrateLegacyReadwiseDeviceConnection } from './readwiseDeviceConnection.js';
 import { ensureReadwiseSourceModeInitialized } from './readwiseSourceMode.js';
+import { cleanAbandonedRequestSyncFiles } from './requestSyncTemporaryCleanup.js';
 import { resolveRuntimeDataPaths } from './runtimeDataPaths.js';
 import { seedInitialWorkspace } from './workspaceBootstrap.js';
 
@@ -205,6 +206,7 @@ function initializeDatabaseInternal(reportStage?: DatabaseInitStageReporter, opt
 
 export function initializeDatabase(reportStage?: DatabaseInitStageReporter, options: { deferSearchIndex?: boolean; recovery?: 'startup' | 'fail' } = {}) {
   const connection = initializeDatabaseInternal(reportStage, options);
+  cleanAbandonedRequestSyncFiles(connection);
   notifyDatabaseConnectionReady();
   return connection;
 }

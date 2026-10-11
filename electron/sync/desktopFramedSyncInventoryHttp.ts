@@ -4,7 +4,7 @@ import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
 import { expireFramedSyncFileCompletions } from '../../lib/core/sync/framedSyncFileCompletionRetention.js';
 import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { FramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventory.js';
-import { differingNodeIds, framedSyncInventorySummary } from '../../lib/core/sync/framedSyncInventorySummary.js';
+import { framedSyncInventorySummary } from '../../lib/core/sync/framedSyncInventorySummary.js';
 import {
   decodeFramedSyncInventory,
   iterateFramedSyncInventory
@@ -17,7 +17,7 @@ import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagin
 import { readFramedSyncPayloadBudget } from '../database/framedSyncPayloadBudgetOwner.js';
 
 import { respondDesktopFramedSyncDifferenceRequests } from './desktopFramedSyncDifferenceReplies.js';
-import { postDesktopFramedSync } from './desktopFramedSyncHttp.js';
+import { exchangeDesktopFramedSyncInventorySnapshotHttp } from './desktopFramedSyncInventoryExchange.js';
 import { hasDesktopFramedSyncPendingPublications, resumeDesktopFramedSyncPendingPublications } from './desktopFramedSyncPendingPublications.js';
 import { runDesktopFramedSyncResourceRound } from './desktopFramedSyncResourceRound.js';
 import { readDesktopFramedSyncRoundInventory } from './desktopFramedSyncRoundInventory.js';
@@ -133,52 +133,8 @@ export async function exchangeDesktopFramedSyncInventoryHttp(args: {
   groupSecret: string;
   noncePort: FramedSyncSessionNoncePort;
   detailGlobalIds?: readonly string[];
-}): Promise<{ local: readonly FramedSyncInventoryEntry[]; remote: readonly FramedSyncInventoryEntry[]; roundId: Uint8Array }> {
-  const roundId = crypto.getRandomValues(new Uint8Array(16));
-  const local = args.localInventory ?? await readDesktopFramedSyncRoundInventory(args.db, args.files);
-  const messages = iterateFramedSyncInventory({ entries: framedSyncInventorySummary(local), roundId,
-    detailGlobalIds: args.detailGlobalIds ?? [], summaryOnly: true });
-  const body = await encodeDesktopFramedSyncSession({
-    authenticatedContext: args.context,
-    groupKey: args.groupKey,
-    messages,
-    noncePort: args.noncePort,
-    payloadBudget: readFramedSyncPayloadBudget(args.db)
-  });
-  const response = await postDesktopFramedSync({
-    body,
-    payloadBudget: readFramedSyncPayloadBudget(args.db),
-    endpointUrl: args.endpointUrl,
-    groupId: args.context.groupId,
-    localDeviceId: args.context.initiatorDeviceId,
-    localLibraryEpoch: args.context.initiatorLibraryEpoch,
-    pathWithQuery: '/companion/framed-sync',
-    remoteDeviceId: args.context.responderDeviceId,
-    remoteLibraryEpoch: args.context.responderLibraryEpoch,
-    secret: args.groupSecret
-  });
-  const decoded = readDesktopFramedSyncSession({
-    authenticatedContext: args.context,
-    authorDeviceId: args.context.responderDeviceId,
-    frames: response.stream.frames,
-    groupKey: args.groupKey,
-    preamble: response.stream.preamble
-  });
-  const remote = await decodeFramedSyncInventory(decoded);
-  if (!sameBytes(remote.roundId, roundId)) throw new Error('inventory_round_identity_mismatch');
-  if (!args.detailGlobalIds) {
-    const detailGlobalIds = differingNodeIds(local, remote.entries);
-    if (detailGlobalIds.length) {
-      const details = await exchangeDesktopFramedSyncInventoryHttp({ ...args, localInventory: local, detailGlobalIds });
-      const byId = new Map(details.remote.map(entry => [entry.globalId, entry]));
-      return { local, remote: remote.entries.map(entry => entry.objectType === 'node' ? byId.get(entry.globalId) ?? entry : entry),
-        roundId: details.roundId };
-    }
-  }
-  return { local, remote: remote.entries, roundId };
-}
-
-
-function sameBytes(left: Uint8Array, right: Uint8Array) {
-  return left.byteLength === right.byteLength && left.every((byte, index) => right[index] === byte);
+}) {
+  const localInventory = args.localInventory ?? await readDesktopFramedSyncRoundInventory(args.db, args.files);
+  return exchangeDesktopFramedSyncInventorySnapshotHttp({ ...args, localInventory,
+    payloadBudget: readFramedSyncPayloadBudget(args.db) });
 }

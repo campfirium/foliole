@@ -25,6 +25,14 @@ export function projectFramedSyncDifferenceRequest(input: {
   difference: FramedSyncInventoryDifference;
   roundId: Uint8Array;
 }) {
+  const payload = projectFramedSyncDifferenceRequestPayload(input);
+  return { encoded: encodeValidatedProtocolMessage('difference_request', payload), payload };
+}
+
+export function projectFramedSyncDifferenceRequestPayload(input: {
+  difference: FramedSyncInventoryDifference;
+  roundId: Uint8Array;
+}) {
   const { difference } = input;
   if (difference.direction !== 'remote_to_local') {
     throw new Error('framed_sync_difference_request_direction_invalid');
@@ -44,10 +52,7 @@ export function projectFramedSyncDifferenceRequest(input: {
     sourceStateHash: difference.sourceSnapshot.sharedStateHash,
     roundId: input.roundId
   };
-  return {
-    encoded: encodeValidatedProtocolMessage('difference_request', payload),
-    payload
-  };
+  return payload;
 }
 
 export function decodeFramedSyncDifferenceRequest(message: ValidatedProtocolMessage) {

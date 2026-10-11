@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
-import type http from 'node:http';
+import http from 'node:http';
+import { Socket } from 'node:net';
 
 import { expect, it, vi } from 'vitest';
 
@@ -63,7 +64,7 @@ it('verifies the production framed request against its declared binary body hash
   const signature = createHmac('sha256', 'android-production-secret').update([
     'POST', pathWithQuery, timestamp, nonce, bodySha256
   ].join('\n')).digest('hex');
-  const request = {
+  const request = Object.assign(new http.IncomingMessage(new Socket()), {
     headers: {
       'x-device-id': 'android-a',
       'x-foliole-body-sha256': bodySha256,
@@ -74,10 +75,10 @@ it('verifies the production framed request against its declared binary body hash
     },
     method: 'POST',
     url: pathWithQuery
-  } as unknown as http.IncomingMessage;
+  });
 
   await handleProductionCompanionFramedSyncPost({
-    deviceId: 'desktop-a', request, response: {} as http.ServerResponse
+    deviceId: 'desktop-a', request, response: new http.ServerResponse(request)
   });
 
   const handlerArgs = mocks.handle.mock.calls[0]?.[0];

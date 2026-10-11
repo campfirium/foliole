@@ -25,6 +25,16 @@ enum FolioleFramedSyncPayloadValidator {
         case .transferReceipt(let value): try receipt(value); return .transferReceipt(value)
         case .roundReceipt(let value): try roundReceipt(value); return .roundReceipt(value)
         case .transferTermination(let value): try termination(value); return .transferTermination(value)
+        case .requestObjectHeader(let value):
+            try Value.fixed(value.requestID, count: FolioleFramedSyncLimits.identifierBytes, "request_id")
+            try Value.text(value.objectType, "object_type")
+            try Value.text(value.globalID, "global_id")
+            try Value.digest(value.sourceStateHash, "source_state_hash")
+            return .requestObjectHeader(value)
+        case .requestObjectEnd(let value):
+            try Value.fixed(value.requestID, count: FolioleFramedSyncLimits.identifierBytes, "request_id")
+            try Value.digest(value.streamHash, "stream_hash")
+            return .requestObjectEnd(value)
         case .error(let value): try protocolError(value); return .protocolError(value)
         }
     }

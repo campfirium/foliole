@@ -23,6 +23,8 @@ import {
   prepareCompanionFramedSyncOutbound
 } from './framed/companionFramedSyncOutbound';
 import { resumeCompanionFramedSyncRespondingPeer } from './framed/companionFramedSyncPeerRoutes';
+import { rememberCompanionRequestSyncProviderState } from './framed/companionRequestSyncPeerState';
+import { respondCompanionRequestSync } from './framed/companionRequestSyncResponse';
 import { applyCompanionSyncIdentityPackWithDbPort } from './pack-apply/companionSyncIdentityPackApply';
 import { prepareCompanionSyncIdentityPack } from './syncGroupIdentityPackPrepare';
 import { readCompanionSyncIdentitySource } from './syncGroupIdentitySourceRead';
@@ -70,6 +72,12 @@ async function handleRequest(request: CompanionSyncGroupDataRequest) {
 
 async function respondRequest(request: CompanionSyncGroupDataRequest) {
   try {
+    if (request.operation === CONTRACT.operations.respondRequestSync) {
+      await respondCompanionRequestSync(request.payload, result => dataPlugin().resolveSyncGroupDataRequest({
+        request_id: request.request_id, result
+      }));
+      return;
+    }
     const result = await dispatch(request.operation, request.payload);
     await dataPlugin().resolveSyncGroupDataRequest({
       request_id: request.request_id, result: { ...result }
@@ -86,6 +94,7 @@ function replyFailure(request: CompanionSyncGroupDataRequest, error: unknown) {
 }
 
 function dispatch(operation: string, payload: Record<string, unknown>) {
+  if (operation === CONTRACT.operations.respondRequestSync) return respondCompanionRequestSync(payload);
   if (operation === CONTRACT.operations.validateJoin) return getIosCompanionDatabaseOwner().read(async (db) => {
     await assertSyncGroupJoinAdmission(db, payload);
     return { allowed: true };
@@ -121,10 +130,11 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
   if (operation === CONTRACT.operations.readFramedOutboundFact) return getIosCompanionDatabaseOwner()
     .read((db) => readFramedSyncPublishedFactOperation(db, payload, currentCompanionFramedSyncFiles()));
   if (operation === CONTRACT.operations.applyMemberState) {
-    return applyCompanionSyncGroupMemberState(
-      parseSyncGroupMemberState(payload.state),
-      requiredText(payload.authenticated_device_id)
-    );
+    const state = parseSyncGroupMemberState(payload.state);
+    return applyCompanionSyncGroupMemberState(state, requiredText(payload.authenticated_device_id)).then(result => {
+      rememberCompanionRequestSyncProviderState(state, result);
+      return result;
+    });
   }
   if (operation === CONTRACT.operations.loadCurrentCredential) return loadCurrentCredential(payload);
   if (operation === CONTRACT.operations.loadGroup) return loadGroupPayload();

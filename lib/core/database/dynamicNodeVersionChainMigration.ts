@@ -35,10 +35,20 @@ export async function migrateCompanionDynamicNodeVersionChains(db: DbPort) {
     SELECT version.version_id FROM node_sync_versions version
     WHERE version.host_name IN (SELECT value FROM companion_meta WHERE key = 'host_name')`);
   await db.run('UPDATE node_version_local_proof_state SET proof_revision = proof_revision + 1 WHERE singleton_id = 1');
-  await collectAllNodeVersionChains(db, true);
+  const nodes = await db.query<{ id: string; current_version_id: string }>(
+    'SELECT id, current_version_id FROM nodes WHERE current_version_id IS NOT NULL AND sync_dirty = 0');
+  for (const node of nodes) {
+    const query = chainReferencesQuery(node.id, true);
+    const refs = await db.query<{ version_id: string | null; frozen: number }>(query.sql, query.params);
+    const keep = new Set([node.current_version_id, ...refs.flatMap(ref => ref.version_id ? [ref.version_id] : [])]);
+    const frozen = new Set(refs.filter(ref => ref.frozen && ref.version_id).map(ref => ref.version_id!));
+    const plan = planNodeVersionMetadataChain(await db.query<ChainVersionMetadata>(CHAIN_VERSION_METADATA_SQL, [node.id]),
+      await db.query<ChainEdge>(CHAIN_EDGES_SQL, [node.id]), keep, frozen, Number.MAX_SAFE_INTEGER, new Set([node.current_version_id]));
+    for (const statement of chainMutationStatements(plan)) await db.run(statement.sql, statement.params);
+  }
 }
 
-export async function collectAllNodeVersionChains(db: DbPort, retireLegacyHistory = false) {
+export async function collectAllNodeVersionChains(db: DbPort) {
   const nodes = await db.query<{ id: string }>('SELECT id FROM nodes WHERE current_version_id IS NOT NULL UNION SELECT node_id AS id FROM node_sync_tombstones');
-  for (const node of nodes) await collectNodeVersionPayloads(db, node.id, Number.MAX_SAFE_INTEGER, retireLegacyHistory);
+  for (const node of nodes) await collectNodeVersionPayloads(db, node.id, Number.MAX_SAFE_INTEGER);
 }

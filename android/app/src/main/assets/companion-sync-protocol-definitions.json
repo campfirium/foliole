@@ -12,7 +12,7 @@
       "device-sync-groups-v1",
       "dynamic-node-version-chains-v1",
       "framed-sync-transfer-sequences-v1",
-      "framed-sync-v23",
+      "framed-sync-v24",
       "global-object-identity-v2",
       "group-key-routing-v1",
       "independent-node-fact-pages-v1",
@@ -35,9 +35,9 @@
       "workgroup-aead-v1",
       "workgroup-restore-v1"
     ],
-    "max_supported_version": 23,
-    "min_supported_version": 23,
-    "version": 23
+    "max_supported_version": 24,
+    "min_supported_version": 24,
+    "version": 24
   },
   "pushAck": {
     "clientOpIdKeys": [

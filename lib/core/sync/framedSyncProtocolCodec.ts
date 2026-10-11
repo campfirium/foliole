@@ -6,7 +6,7 @@ import {
   assertDecodedPayloadType,
   type ProtocolPayloadCase
 } from './framedSyncReceiver.js';
-import schema from './generated/framed-sync-v23-schema.json' with { type: 'json' };
+import schema from './generated/framed-sync-v24-schema.json' with { type: 'json' };
 
 const root = protobuf.Root.fromJSON(schema as protobuf.INamespace);
 const protocolMessage = root.lookupType('foliole.sync.v22.ProtocolMessage');
@@ -25,6 +25,8 @@ const PAYLOAD_PROPERTIES = Object.freeze({
   inventory_end: 'inventoryEnd',
   missing_blob_set: 'missingBlobSet',
   round_receipt: 'roundReceipt',
+  request_object_header: 'requestObjectHeader',
+  request_object_end: 'requestObjectEnd',
   transfer_header: 'transferHeader',
   transfer_proposal: 'transferProposal',
   transfer_receipt: 'transferReceipt',

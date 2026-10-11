@@ -38,7 +38,7 @@ export async function publishFixtureDelivery(process: DesktopFramedSyncFixturePr
 
 export function reconnectFixturePeer(process: DesktopFramedSyncFixtureProcess,
   peer: DesktopFramedSyncFixtureSnapshot) {
-  return process.invoke('round', { input: { kind: 'reconcile',
+  return process.invoke('round', { input: { kind: peer.deviceId.startsWith('[') ? 'request_reconcile' : 'reconcile',
     peer: { deviceId: peer.deviceId, libraryEpoch: `${peer.deviceId}-epoch` }, peerOrigin: peer.origin
   } });
 }

@@ -65,6 +65,15 @@ public final class FramedSyncHttpTransport {
     public static <T> T postRawStream(URL url, String groupId, String expectedRemoteDeviceId,
         String expectedRemoteLibraryEpoch, Map<String, String> memberAuthHeaders,
         RawRequestBody requestBody, RawResponseBody<T> responseBody) throws Exception {
+        return postRawStream(url, groupId, expectedRemoteDeviceId, expectedRemoteLibraryEpoch,
+            memberAuthHeaders, requestBody, responseBody, connection -> {});
+    }
+
+    public interface ConnectionOwner { void opened(HttpURLConnection connection) throws Exception; }
+
+    public static <T> T postRawStream(URL url, String groupId, String expectedRemoteDeviceId,
+        String expectedRemoteLibraryEpoch, Map<String, String> memberAuthHeaders,
+        RawRequestBody requestBody, RawResponseBody<T> responseBody, ConnectionOwner owner) throws Exception {
         requireText(groupId, "sync_group_id_required");
         requireText(expectedRemoteDeviceId, "remote_device_id_required");
         requireText(expectedRemoteLibraryEpoch, "remote_library_epoch_required");
@@ -82,6 +91,7 @@ public final class FramedSyncHttpTransport {
         }
         connection.setRequestProperty("X-Sync-Group-Id", groupId);
         try {
+            owner.opened(connection);
             try (OutputStream output = connection.getOutputStream()) {
                 requestBody.write(output);
                 output.flush();
@@ -114,7 +124,10 @@ public final class FramedSyncHttpTransport {
             if (!body.startsWith(prefix) || !body.endsWith("\"}")) return null;
             String error = body.substring(prefix.length(), body.length() - 2);
             if (SOURCE_CHANGED.equals(error) || DIFFERENCE_SOURCE_CHANGED.equals(error) ||
-                "framed_sync_resource_source_unavailable".equals(error)) return error;
+                "framed_sync_resource_source_unavailable".equals(error) || "node_version_graph_cycle".equals(error)) return error;
+            for (String graph : new String[] { "node_version_missing_parents:", "node_version_parent_identity_mismatch:" }) {
+                if (error.startsWith(graph)) return error.substring(graph.length()).matches("[A-Za-z0-9_,:-]{1,3000}") ? error : null;
+            }
             for (String dependency : new String[] { MISSING_PARENT, "node_position_lineage_unproven:",
                 "framed_sync_review_node_missing:", "sync_node_open_state_node_missing:",
                 "framed_sync_parent_relation_version_missing:" }) {

@@ -11,13 +11,13 @@ final class FolioleFramedSyncSessionTests: XCTestCase {
         )
         let sessionID = try Data(hex: "00112233445566778899aabbccddeeff")
         XCTAssertEqual(context.deriveContextID(sessionID: sessionID).hex,
-                       "e008efb9a007453c39eaea9bdcdba82e396ae5f1560ce5ef4b8aa74eecf5e3a3")
+                       "f554ef43cd78aa425c355712432d4e8b5145bf1549832b9f5fc06672a2160933")
         let preamble = try FolioleFramedSyncPreamble(decoding: Data(hex:
-            "464f4c53594e43320060001701000000e008efb9a007453c39eaea9bdcdba82e396ae5f1560ce5ef4b8aa74eecf5e3a300112233445566778899aabbccddeeff0506070800000000000000000000000000000000000000000000000000000000"))
+            "464f4c53594e43320060001801000000f554ef43cd78aa425c355712432d4e8b5145bf1549832b9f5fc06672a216093300112233445566778899aabbccddeeff0506070800000000000000000000000000000000000000000000000000000000"))
         let headerBytes = try Data(hex: "0000001e000000000000000000010000")
         let frame = FolioleFramedSyncWireFrame(
             header: try .init(decoding: headerBytes), headerBytes: headerBytes,
-            ciphertext: try Data(hex: "fba60820e2e07c3e009486a6fda5a5452cec924d2996369e76fa9937d53f")
+            ciphertext: try Data(hex: "9e3510772b473c139ecde9dfc3476881fbc7cfb9ac11e0d15cce1fd1e4c5")
         )
         let plaintext = try FolioleFramedSyncFrameCrypto.decrypt(
             groupKey: Data(0...31), preamble: preamble, frame: frame, expectedSequence: 0

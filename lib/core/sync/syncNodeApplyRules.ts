@@ -1,5 +1,7 @@
 import type { NativeSyncNodeRecord } from '../../platform/nativeSyncContract.js';
 
+import { unionNodeVersionAncestors } from './nodeVersionAncestry.js';
+
 export const CONFLICT_COPY_NODE_ID_PREFIX = 'conflict-copy-';
 
 export interface LocalSyncNodeState {
@@ -29,8 +31,11 @@ export type SyncNodeApplyMetadata = NodeVersionMetadata & {
 
 export function latestBranchHeadRecords<T extends BranchMetadata>(records: T[]): T[] {
   const versions = new Map(records.map((record) => [record.version_id, record]));
-  const ancestors = new Set(records.flatMap((record) => [...record.ancestor_version_ids, ...record.parent_version_ids ?? [],
-    ...(record.parent_version_id ? [record.parent_version_id] : [])]));
+  const ancestors = unionNodeVersionAncestors(records.map(record => record.ancestor_version_ids));
+  for (const record of records) {
+    for (const parent of record.parent_version_ids ?? []) ancestors.add(parent);
+    if (record.parent_version_id) ancestors.add(record.parent_version_id);
+  }
   return [...versions.values()].filter((record) => !record.version_id || !ancestors.has(record.version_id));
 }
 

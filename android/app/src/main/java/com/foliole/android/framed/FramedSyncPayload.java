@@ -21,6 +21,8 @@ public final class FramedSyncPayload {
         TRANSFER_RECEIPT,
         ROUND_RECEIPT,
         TRANSFER_TERMINATION,
+        REQUEST_OBJECT_HEADER,
+        REQUEST_OBJECT_END,
         ERROR
     }
 

@@ -73,8 +73,11 @@ it('requests a necessary body from its legitimate holder and never publishes mis
   edit(source, 'Head');
   await sync(source, target);
   await sync(target, source);
-  // Use the production migration policy to retire blanket legacy-history retention.
-  await collectNodeVersionPayloads(target.port, 'topic', 32, true);
+  expect((await collectNodeVersionPayloads(target.port, 'topic')).skipped).toBe('active_member_position_unknown');
+  // Simulate a historical retired body before the offline declaration arrives.
+  target.db.prepare(`UPDATE node_sync_versions SET body_text = NULL,
+    snapshot_json = json_set(snapshot_json, '$.content', NULL, '$.body_blob_hash', NULL, '$.body_deleted', 1)
+    WHERE version_id = ?`).run(base);
   expect(history(source).find((row) => row.version_id === base)?.body_text).toBe('Original base');
   expect(history(target).find((row) => row.version_id === base)?.body_text).toBeNull();
   // Relay the offline library's actual original declaration, captured before later edits.
@@ -88,7 +91,7 @@ it('requests a necessary body from its legitimate holder and never publishes mis
   expect(target.db.prepare('SELECT * FROM node_version_member_positions WHERE device_identity_key = ?').get(target.id))
     .toEqual(before);
   expect(before).toBeTruthy();
-  expect((await collectNodeVersionPayloads(target.port, 'topic')).skipped).toBe('protected_body_unavailable');
+  expect((await collectNodeVersionPayloads(target.port, 'topic')).skipped).toBe('active_member_position_unknown');
 });
 
 it('preserves the original offline owner revision across indirect and late production relays', async () => {

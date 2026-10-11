@@ -7,7 +7,7 @@ enum FramedSyncPreparedOutboundFixture {
                             transferID: Data, groupID: String = "fixture-group") throws -> [UInt8] {
         var header = Foliole_Sync_V22_TransferHeader()
         header.transferID = transferID; header.attemptID = Data(repeating: 0, count: 16)
-        header.manifest.protocolVersion = 23; header.manifest.groupID = groupID
+        header.manifest.protocolVersion = 24; header.manifest.groupID = groupID
         header.manifest.contentID = contentID
         header.manifest.facts = facts.map { fact in
             var descriptor = Foliole_Sync_V22_FactDescriptor()

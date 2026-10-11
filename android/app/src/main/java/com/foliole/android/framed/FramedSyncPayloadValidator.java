@@ -68,6 +68,18 @@ final class FramedSyncPayloadValidator {
                 FramedSyncValueValidator.digest(message.getTransferTermination().getTransferId(), "transfer_id");
                 FramedSyncValueValidator.text(message.getTransferTermination().getMemberId(), "member_id");
                 return payload(FramedSyncPayload.Case.TRANSFER_TERMINATION, message.getTransferTermination());
+            case REQUEST_OBJECT_HEADER:
+                var header = message.getRequestObjectHeader();
+                FramedSyncValueValidator.fixed(header.getRequestId(), FramedSyncContract.IDENTIFIER_BYTES, "request_id");
+                FramedSyncValueValidator.text(header.getObjectType(), "object_type");
+                FramedSyncValueValidator.text(header.getGlobalId(), "global_id");
+                FramedSyncValueValidator.digest(header.getSourceStateHash(), "source_state_hash");
+                return payload(FramedSyncPayload.Case.REQUEST_OBJECT_HEADER, header);
+            case REQUEST_OBJECT_END:
+                var end = message.getRequestObjectEnd();
+                FramedSyncValueValidator.fixed(end.getRequestId(), FramedSyncContract.IDENTIFIER_BYTES, "request_id");
+                FramedSyncValueValidator.digest(end.getStreamHash(), "stream_hash");
+                return payload(FramedSyncPayload.Case.REQUEST_OBJECT_END, end);
             case ERROR:
                 protocolError(message.getError());
                 return payload(FramedSyncPayload.Case.ERROR, message.getError());

@@ -60,7 +60,7 @@ it('updates one editor hold and releases its submitted prefix while preserving a
   expect(sqlite.prepare('SELECT hold_id, version_id FROM node_version_local_holds').all())
     .toEqual([{ hold_id: 'other-editor', version_id: 'B' }]);
   expect(sqlite.prepare('SELECT version_id FROM node_sync_versions WHERE body_text IS NOT NULL ORDER BY version_id').pluck().all())
-    .toEqual(['A', 'E']);
+    .toEqual(['A', 'B', 'E']);
   expect(sqlite.prepare('SELECT version_id FROM node_sync_versions ORDER BY version_id').pluck().all())
     .toEqual(['A', 'B', 'C', 'D', 'E']);
   expect(sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual(edges);

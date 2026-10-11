@@ -47,7 +47,7 @@ const request = { endpoint_url: 'http://desktop', receiver_device_id: 'B',
 async function publish(receiver = 'B', senderEpoch = 'A-epoch', receiverEpoch = `${receiver}-epoch`) {
   const manifest = { blobs: [], facts: [{ blobs: [], body: [], factId: 'version-1',
     globalId: 'node', kind: 2, objectType: 'node', sharedStateHash: new Uint8Array(32).fill(1) }] };
-  const context = { groupId: 'group', protocolVersion: 23 as const,
+  const context = { groupId: 'group', protocolVersion: 24 as const,
     receiverDeviceId: receiver, receiverLibraryEpoch: receiverEpoch,
     senderDeviceId: 'A', senderLibraryEpoch: senderEpoch };
   const contentId = await canonicalContentId(manifest);

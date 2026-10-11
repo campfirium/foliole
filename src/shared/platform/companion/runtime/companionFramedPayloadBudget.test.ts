@@ -1,7 +1,8 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 
-const native = vi.hoisted(() => ({ configure: vi.fn(), close: vi.fn(), validate: vi.fn(), release: vi.fn() }));
+const native = vi.hoisted(() => ({ files: vi.fn(), configure: vi.fn(), close: vi.fn(), validate: vi.fn(), release: vi.fn() }));
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSync: {
+  accessFramedSyncFile: native.files,
   configureFramedSyncPayloadBudget: native.configure,
   closeFramedSyncPayloadBudget: native.close,
   validateFramedSyncPayloadLoan: native.validate,
@@ -14,6 +15,7 @@ import {
 } from './companionFramedPayloadBudget';
 
 beforeEach(() => {
+  native.files.mockReset().mockResolvedValue(undefined);
   native.configure.mockReset().mockResolvedValue(undefined);
   native.close.mockReset().mockResolvedValue(undefined);
   native.validate.mockReset().mockResolvedValue({ valid: true });

@@ -3,7 +3,7 @@ import { hexToBytes, bytesToHex } from '@noble/hashes/utils.js';
 import { afterEach, expect, it } from 'vitest';
 
 import { migrateCompanionDatabase } from '../../lib/core/database/companionDatabaseMigrationExecutor.js';
-import { initializeDatabaseSchema } from '../../lib/core/database/migrations.js';
+import { applyNumberedSchemaMigrations } from '../../lib/core/database/numberedMigrations.js';
 import { hashTextBody } from '../../lib/core/database/textBodyHash.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
 import { retireFramedSyncFrozenBodies } from '../../lib/core/sync/framedSyncFrozenBody.js';
@@ -107,7 +107,7 @@ it('releases temporary bytes only after all receiver holds and inbound pins fini
   expect((await host.current()).body_text).toBe('\ufeffOriginal\r\n😀\u0000end');
 });
 
-it('releases each receiver independently while editor basis identity survives historical body retirement', async () => {
+it('releases each receiver independently while an editor hold preserves its original body', async () => {
   const { host, record, publish } = await fixture();
   await retainLocalEditBase(host.db, { nodeId: 'topic', versionId: 'original', holdId: 'editor' });
   const first = await publish('first');
@@ -121,19 +121,19 @@ it('releases each receiver independently while editor basis identity survives hi
       receiverDeviceId: publication.context.receiverDeviceId, receiverLibraryEpoch: publication.context.receiverLibraryEpoch,
       appliedStateHash: publication.contentId });
     await staging.releaseOutboundHolds(publication.transferId);
-    await collectNodeVersionPayloads(host.db, 'topic', Number.MAX_SAFE_INTEGER, true);
+    await collectNodeVersionPayloads(host.db, 'topic', Number.MAX_SAFE_INTEGER);
   };
   const originalBody = () => host.sqlite.prepare("SELECT body_text FROM node_sync_versions WHERE version_id='original'").pluck().get();
   await release(first);
-  expect(originalBody()).toBeNull();
+  expect(originalBody()).toBe(record.body_text);
   expect(host.sqlite.prepare(`SELECT p.receiver_device_id FROM framed_sync_outbound_holds h
     JOIN framed_sync_outbound_publications p ON p.transfer_id = h.transfer_id`).pluck().all()).toEqual(['second']);
   await loadFramedSyncPublishedOutboundValue(host.db, context('second'), bytesToHex(second.transferId));
   await release(second);
-  expect(originalBody()).toBeNull();
+  expect(originalBody()).toBe(record.body_text);
   expect(host.sqlite.prepare('SELECT count(*) FROM framed_sync_outbound_holds').pluck().get()).toBe(0);
   await releaseLocalEditBase(host.db, 'editor', 'topic');
-  await collectNodeVersionPayloads(host.db, 'topic', Number.MAX_SAFE_INTEGER, true);
+  await collectNodeVersionPayloads(host.db, 'topic', Number.MAX_SAFE_INTEGER);
   expect(originalBody()).toBeNull();
   expect((await host.current()).body_text).toBe('Later complete body');
   expect(host.sqlite.prepare('SELECT * FROM node_sync_version_parents ORDER BY version_id').all()).toEqual(expectedParents);
@@ -154,10 +154,12 @@ async function legacyPublication() {
 async function upgrade(host: ReturnType<typeof textDevice>, companion: boolean) {
   host.sqlite.pragma(`user_version = ${companion ? 78 : 149}`);
   if (companion) await host.db.transaction((tx) => migrateCompanionDatabase(tx, 78, 79));
-  else initializeDatabaseSchema(host.sqlite);
+  else host.sqlite.transaction(() => applyNumberedSchemaMigrations({ sqlite: host.sqlite,
+    currentVersion: host.sqlite.pragma('user_version', { simple: true }) as number, targetVersion: 150,
+    legacyMessage: 'fixture_legacy_schema', setUserVersion: version => host.sqlite.pragma(`user_version = ${version}`) }))();
 }
 
-it.each([false, true])('preserves legacy pending publications through the normal upgrade companion=%s', async (companion) => {
+it.each([false, true])('preserves legacy pending publications through the numbered body-ownership upgrade companion=%s', async (companion) => {
   const { host, record, alternative, publication } = await legacyPublication();
   const holds = host.sqlite.prepare('SELECT * FROM framed_sync_outbound_holds').all();
   await upgrade(host, companion);
@@ -172,7 +174,9 @@ it.each([false, true])('preserves legacy pending publications through the normal
   expect(value.transfer_id).toBe(bytesToHex(publication.transferId));
   expect(host.sqlite.prepare('SELECT * FROM framed_sync_outbound_holds').all()).toEqual(holds);
   if (companion) await host.db.transaction((tx) => migrateCompanionDatabase(tx, 79, 79));
-  else initializeDatabaseSchema(host.sqlite);
+  else host.sqlite.transaction(() => applyNumberedSchemaMigrations({ sqlite: host.sqlite,
+    currentVersion: host.sqlite.pragma('user_version', { simple: true }) as number, targetVersion: 150,
+    legacyMessage: 'fixture_legacy_schema', setUserVersion: version => host.sqlite.pragma(`user_version = ${version}`) }))();
 });
 
 it.each([false, true])('rolls back a legacy upgrade with corrupted frozen input companion=%s', async (companion) => {

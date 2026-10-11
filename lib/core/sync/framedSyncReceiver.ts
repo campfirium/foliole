@@ -15,12 +15,14 @@ export type ProtocolPayloadCase =
   | 'blob_chunk' | 'blob_offer' | 'difference_request' | 'error' | 'fact' | 'fact_fragment'
   | 'handshake' | 'handshake_acceptance' | 'inventory_begin' | 'inventory_chunk'
   | 'inventory_end' | 'missing_blob_set' | 'round_receipt' | 'transfer_header'
-  | 'transfer_proposal' | 'transfer_receipt' | 'transfer_termination' | 'transfer_trailer';
+  | 'transfer_proposal' | 'transfer_receipt' | 'transfer_termination' | 'transfer_trailer'
+  | 'request_object_header' | 'request_object_end';
 
 const SESSION_PAYLOADS = new Set<ProtocolPayloadCase>([
   'blob_offer', 'difference_request', 'error', 'handshake', 'handshake_acceptance',
   'inventory_begin', 'inventory_chunk', 'inventory_end', 'missing_blob_set',
-  'round_receipt', 'transfer_proposal', 'transfer_termination'
+  'round_receipt', 'transfer_proposal', 'transfer_termination',
+  'request_object_header', 'request_object_end'
 ]);
 
 export function frameTypeForPayload(payload: ProtocolPayloadCase) {
@@ -91,9 +93,23 @@ export async function receiveFramedSyncFrame(args: {
   key: Uint8Array;
   preamble: Uint8Array;
 }) {
+  return receiveAuthenticatedFrame(args, false);
+}
+
+/** Request streams use session keys for both control and object data frames. */
+export async function receiveFramedSyncRequestFrame(args: Parameters<typeof receiveFramedSyncFrame>[0]) {
+  return receiveAuthenticatedFrame(args, true);
+}
+
+async function receiveAuthenticatedFrame(args: Parameters<typeof receiveFramedSyncFrame>[0], request: boolean) {
   const preamble = decodeFramedSyncPreamble(args.preamble);
   const header = decodeFrameHeader(args.frameHeader);
-  assertContextFrameType(preamble.contextKind, header.frameType);
+  if (request) {
+    if (preamble.contextKind !== 'session' || !new Set<number>([FRAMED_SYNC_FRAME_TYPES.sessionControl,
+      FRAMED_SYNC_FRAME_TYPES.fact, FRAMED_SYNC_FRAME_TYPES.blobChunk]).has(header.frameType)) {
+      throw new Error('request_sync_frame_type_invalid');
+    }
+  } else assertContextFrameType(preamble.contextKind, header.frameType);
   const expectedSequence = args.expectedSequence ?? preamble.startingSequence;
   if (header.sequence !== expectedSequence) throw new Error('frame_sequence_not_contiguous');
   if (header.ciphertextBytes !== args.ciphertext.byteLength) throw new Error('frame_length_mismatch');

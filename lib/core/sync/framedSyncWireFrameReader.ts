@@ -1,10 +1,9 @@
-import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_PREAMBLE } from '../../lib/core/sync/framedSyncContract.js';
-import { decodeFrameHeader, type FramedSyncFrameHeader } from '../../lib/core/sync/framedSyncFraming.js';
-import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES, FRAMED_SYNC_RECEIPT_SLOT_BYTES,
-  type FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
-
-import type { FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+import type { FramedSyncWireFrame } from './framedSyncBinaryStream.js';
+import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_PREAMBLE } from './framedSyncContract.js';
 import type { FramedSyncExactByteReader } from './framedSyncExactByteReader.js';
+import { decodeFrameHeader, type FramedSyncFrameHeader } from './framedSyncFraming.js';
+import { FRAMED_SYNC_DIRECTION_PAYLOAD_BYTES, FRAMED_SYNC_RECEIPT_SLOT_BYTES,
+  type FramedSyncPayloadBudget } from './framedSyncPayloadBudget.js';
 
 export async function* readFramedSyncWireFrames(input: {
   reader: FramedSyncExactByteReader;

@@ -55,6 +55,7 @@ describe('Android Java SQL surface', () => {
     expect(methods).toEqual([
       'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest',
       'accessFramedSyncFile',
+      'cancelRequestSyncHttp', 'postRequestSyncHttp',
       'configureFramedSyncPayloadBudget', 'closeFramedSyncPayloadBudget',
       'validateFramedSyncPayloadLoan', 'releaseFramedSyncPayloadLoan',
       'downloadAttachmentResourceBatch',

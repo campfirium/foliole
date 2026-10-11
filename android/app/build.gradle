@@ -38,7 +38,7 @@ android {
     }
     sourceSets {
         main {
-            proto.srcDir "$rootDir/../lib/core/sync/proto"
+            proto.srcDir "$rootDir/../lib/core/sync/proto/foliole/sync/v22"
         }
     }
 }

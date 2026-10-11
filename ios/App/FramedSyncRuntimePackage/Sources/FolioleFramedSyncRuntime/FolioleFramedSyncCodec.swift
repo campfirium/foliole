@@ -86,7 +86,8 @@ private extension FolioleFramedSyncPayload {
         switch self {
         case .handshake, .handshakeAcceptance, .inventoryBegin, .inventoryChunk,
              .inventoryEnd, .differenceRequest, .transferProposal, .blobOffer,
-             .missingBlobSet, .roundReceipt, .transferTermination, .protocolError:
+             .missingBlobSet, .roundReceipt, .transferTermination, .protocolError,
+             .requestObjectHeader, .requestObjectEnd:
             .sessionControl
         case .transferHeader: .transferHeader
         case .fact, .factFragment: .fact

@@ -41,7 +41,7 @@ function record(version: string, parent: string | null = null): NativeSyncNodeRe
   };
 }
 function push(node: NativeSyncNodeRecord): CompanionSyncPushPayload {
-  return { authorHostName: 'V', base: { ancestorVersionIds: node.ancestor_version_ids, kind: 'node_version',
+  return { authorHostName: 'V', base: { ancestorVersionIds: [...node.ancestor_version_ids], kind: 'node_version',
     parentVersionId: node.parent_version_id }, clientOpId: `node:${node.version_id}`, contentHash: node.content_hash!,
     identity: { objectId: node.object_id, objectType: 'node', scope: 'workspace' },
     payloadJson: JSON.stringify(node), updatedAt: node.updated_at };

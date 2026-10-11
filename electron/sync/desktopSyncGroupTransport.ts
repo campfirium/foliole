@@ -4,7 +4,8 @@ import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../datab
 import { loadDesktopSyncGroup } from '../database/syncGroupStore.js';
 import { loadPendingWatchedFolderConflicts } from '../database/watchedFolderConflictDecisions.js';
 
-import { runDesktopFramedSyncInventoryRound } from './desktopFramedSyncInventoryRound.js';
+import { runDesktopRequestSyncDatabaseRound } from './desktopRequestSyncDatabaseRound.js';
+import { continueDesktopRequestSyncResources } from './desktopRequestSyncResources.js';
 import { recordDesktopSyncActivity, type DesktopSyncActivityContext } from './desktopSyncActivityStore.js';
 import { exchangeDesktopSyncGroupMemberState } from './desktopSyncGroupMemberState.js';
 import { assertDesktopSyncGroupPeerCompatible } from './desktopSyncGroupPeerCompatibility.js';
@@ -71,12 +72,14 @@ async function continuePeerSync(
   );
   const adoption = await loadSyncGroupLocalAdoption(createBetterSqliteDbPort(openDatabaseConnection().sqlite));
   if (pendingConflicts.length && !adoption) return skipPeerSync(target, activity, 'watched_conflict');
-  const result = await runPeerSyncStage('sync_pack', () => runDesktopFramedSyncInventoryRound({
+  const input = {
     localLibraryEpoch: memberState.localLibraryEpoch,
     peer: target,
+    peerState: memberState.peerState,
     remoteLibraryEpoch: memberState.remoteLibraryEpoch,
     ...(memberState.restoreFromPeer ? { restoreId: memberState.restoreFromPeer } : {})
-  }), target, activity);
+  };
+  const result = await runPeerSyncStage('sync_pack', () => continueDatabaseAndResources(input), target, activity);
   if (result.complete) {
     await runPeerSyncStage(
       'member_state',
@@ -86,6 +89,13 @@ async function continuePeerSync(
     );
   }
   return { complete: result.complete };
+}
+
+async function continueDatabaseAndResources(input: Parameters<typeof runDesktopRequestSyncDatabaseRound>[0]) {
+  const database = await runDesktopRequestSyncDatabaseRound(input);
+  if (!database.complete) return database;
+  const resources = await continueDesktopRequestSyncResources(input);
+  return { ...database, complete: resources.pending === 0 };
 }
 
 async function skipPeerSync(

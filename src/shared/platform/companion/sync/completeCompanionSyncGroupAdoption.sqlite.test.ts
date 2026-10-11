@@ -30,8 +30,8 @@ vi.mock('../runtime/iosCompanionDatabaseBootstrap', () => ({
 vi.mock('../network/companionSyncGroupMemberState', () => ({
   exchangeCompanionSyncGroupMemberState: native.exchange
 }));
-vi.mock('./framed/companionSyncGroupLocalAdoption', () => ({
-  adoptCompanionSyncGroupData: native.adopt
+vi.mock('./syncGroupIdentityCompanionResult', () => ({
+  syncCompanionIdentityObjects: native.adopt
 }));
 
 import { completeCompanionSyncGroupAdoption } from './completeCompanionSyncGroupAdoption';

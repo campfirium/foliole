@@ -24,40 +24,37 @@ import { respondDesktopFramedSyncInventory } from './desktopFramedSyncInventoryH
 import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
 import { receiveDesktopFramedSyncReceipt } from './desktopFramedSyncReceiptReceiver.js';
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
+import { createDesktopRequestSyncDatabaseHost } from './desktopRequestSyncDatabaseHost.js';
+import { respondDesktopRequestSyncHttp } from './desktopRequestSyncHttpRoute.js';
 
 export async function handleProductionCompanionFramedSyncPost(args: {
   deviceId: string;
   request: http.IncomingMessage;
   response: http.ServerResponse;
 }) {
-  const pathname = new URL(args.request.url ?? '/', 'http://127.0.0.1').pathname;
-  if (args.request.method !== 'POST' || pathname !== FRAMED_SYNC_PATH) return false;
+  const url = new URL(args.request.url ?? '/', 'http://127.0.0.1');
+  if (args.request.method !== 'POST' || url.pathname !== FRAMED_SYNC_PATH) return false;
 
-  const runtime = await runWithDatabaseConnectionOwner(() => {
-    const connection = openDatabaseConnection();
-    const group = loadDesktopSyncGroupInfo();
-    if (!group) throw new Error('sync_group_not_available');
-    const bodySha256 = readHeader(args.request, FRAMED_SYNC_BODY_SHA256_HEADER);
-    return {
-      files: createDesktopLibrarySyncFiles(connection.dbPath),
-      payloadBudget: connection.framedSyncPayloadBudget,
-      auth: authenticateCompanionRequest({
-        ...(bodySha256 === undefined ? {} : { bodySha256 }),
-        request: args.request,
-        requireMemberState: true
-      }),
-      db: createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-framed-sync-lan' }),
-      groupKey: new Uint8Array(Buffer.from(group.workgroup_key, 'base64url')),
-      libraryEpoch: loadDesktopLocalNodeProof().library_epoch
-    };
-  });
+  const runtime = await loadInboundRuntime(args.request);
   const staging = createFramedSyncFileStaging(runtime.files);
   const noncePort = createFramedSyncFileSessionNoncePort(runtime.files);
-  await handleCompanionLanFramedSyncPost({
+  const controller = new AbortController();
+  const disconnected = () => {
+    if (!args.response.writableFinished) controller.abort(new Error('request_sync_peer_disconnected'));
+  };
+  args.request.once('aborted', disconnected);
+  args.response.once('close', disconnected);
+  if (args.request.aborted || args.response.destroyed) disconnected();
+  try { await handleCompanionLanFramedSyncPost({
     authenticate: () => runtime.auth,
     payloadBudget: runtime.payloadBudget,
     localIdentity: { deviceId: args.deviceId, libraryEpoch: runtime.libraryEpoch },
     onStream: async ({ context, stream }) => {
+      if (url.searchParams.has('request')) {
+        return respondDesktopRequestSyncHttp(createDesktopRequestSyncDatabaseHost(runtime.databasePath), {
+          context, stream, url, groupKey: runtime.groupKey, signal: controller.signal
+        });
+      }
       const preamble = decodeFramedSyncPreamble(stream.preamble);
       if (preamble.contextKind === 'session') return respondDesktopFramedSyncInventory({
         files: runtime.files, context, db: runtime.db, groupKey: runtime.groupKey,
@@ -82,7 +79,10 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     },
     request: args.request,
     response: args.response
-  });
+  }); } finally {
+    args.request.off('aborted', disconnected);
+    args.response.off('close', disconnected);
+  }
   return true;
 }
 
@@ -128,4 +128,26 @@ async function inspectFirstFrame(stream: FramedSyncStreamBody<FramedSyncWireFram
     } finally { await iterator.return?.(); }
   }
   return { first, stream: { frames: frames(), preamble: stream.preamble } };
+}
+
+function loadInboundRuntime(request: http.IncomingMessage) {
+  return runWithDatabaseConnectionOwner(() => {
+    const connection = openDatabaseConnection();
+    const group = loadDesktopSyncGroupInfo();
+    if (!group) throw new Error('sync_group_not_available');
+    const bodySha256 = readHeader(request, FRAMED_SYNC_BODY_SHA256_HEADER);
+    return {
+      databasePath: connection.dbPath,
+      files: createDesktopLibrarySyncFiles(connection.dbPath),
+      payloadBudget: connection.framedSyncPayloadBudget,
+      auth: authenticateCompanionRequest({
+        ...(bodySha256 === undefined ? {} : { bodySha256 }),
+        request: request,
+        requireMemberState: true
+      }),
+      db: createBetterSqliteDbPort(connection.sqlite, { name: 'desktop-framed-sync-lan' }),
+      groupKey: new Uint8Array(Buffer.from(group.workgroup_key, 'base64url')),
+      libraryEpoch: loadDesktopLocalNodeProof().library_epoch
+    };
+  });
 }

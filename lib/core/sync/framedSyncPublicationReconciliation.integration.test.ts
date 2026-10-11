@@ -22,7 +22,7 @@ async function publish() {
   sqlite = new Database(':memory:');
   for (const statement of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(statement);
   const db = createBetterSqliteDbPort(sqlite);
-  const context = { protocolVersion: 23 as const, groupId: 'g', senderDeviceId: 'A',
+  const context = { protocolVersion: 24 as const, groupId: 'g', senderDeviceId: 'A',
     senderLibraryEpoch: 'a', receiverDeviceId: 'B', receiverLibraryEpoch: 'b' };
   const manifest = { blobs: [], facts: ['a', 'b'].map((factId) => ({ factId, blobs: [],
     body: [], kind: 2, objectType: 'node', globalId: 'n', sharedStateHash: hash })) };

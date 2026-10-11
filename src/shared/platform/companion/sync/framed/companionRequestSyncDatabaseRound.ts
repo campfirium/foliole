@@ -1,0 +1,72 @@
+import { FRAMED_SYNC_PROTOCOL_VERSION } from '../../../../../../lib/core/sync/framedSyncContract.js';
+import { readFramedSyncOverwriteInventory } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
+import { exchangeRequestSyncInventory, pullRequestSyncObject, pushRequestSyncObject } from '../../../../../../lib/core/sync/requestSyncDatabaseExchange.js';
+import { runRequestSyncDatabaseRound, type RequestSyncDatabaseRoundPort } from '../../../../../../lib/core/sync/requestSyncDatabaseRound.js';
+import { runRequestSyncOverwriteRound } from '../../../../../../lib/core/sync/requestSyncOverwriteRound.js';
+import { loadSyncGroupLocalAdoption } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
+import { loadSyncGroupOverwriteProgress, prepareSyncGroupOverwrite } from '../../../../../../lib/core/sync/syncGroupOverwriteProgress.js';
+import type { SyncGroupMemberStatePayload } from '../../../../../../lib/platform/syncGroupMemberStateContract.js';
+import { withCompanionForegroundTimeMaintenance } from '../../runtime/companionForegroundTime.js';
+import { loadCurrentCredential } from '../syncGroupProviderCredentialStore.js';
+
+import { currentCompanionRequestSyncDatabaseHost } from './companionRequestSyncDatabaseHost.js';
+import { createCompanionRequestSyncExchange } from './companionRequestSyncExchange.js';
+import { withCompanionRequestSyncLifecycle } from './companionRequestSyncLifecycle.js';
+
+type RoundInput = {
+  endpointUrl: string;
+  groupId: string;
+  localLibraryEpoch: string;
+  peerState: SyncGroupMemberStatePayload;
+  restoreId?: string;
+  signal?: AbortSignal;
+  reportObjectError: RequestSyncDatabaseRoundPort['reportObjectError'];
+};
+
+export function runCompanionRequestSyncDatabaseRound(input: RoundInput) {
+  return withCompanionRequestSyncLifecycle(signal => runRound({ ...input, signal }), input.signal);
+}
+
+async function runRound(input: RoundInput) {
+  const host = await currentCompanionRequestSyncDatabaseHost();
+  const credential = await loadCurrentCredential({ group_id: input.groupId });
+  const adoption = await host.readSnapshot(loadSyncGroupLocalAdoption, input.signal);
+  const peerDeviceId = input.peerState.sender_device_identity_key;
+  if (adoption && (adoption.groupId !== input.groupId || adoption.providerDeviceId !== peerDeviceId)) {
+    throw new Error('sync_group_local_adoption_source_mismatch');
+  }
+  const overwriteId = adoption?.libraryEpoch ?? input.restoreId;
+  const context = { groupId: input.groupId, protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION,
+    initiatorDeviceId: credential.device_id, initiatorLibraryEpoch: overwriteId ?? input.localLibraryEpoch,
+    responderDeviceId: peerDeviceId, responderLibraryEpoch: input.peerState.library_epoch } as const;
+  const encodedKey = credential.workgroup_key.replaceAll('-', '+').replaceAll('_', '/');
+  const groupKey = Uint8Array.from(atob(encodedKey), character => character.charCodeAt(0));
+  const exchange = createCompanionRequestSyncExchange(host, { context, groupKey,
+    endpointUrl: input.endpointUrl, ...(input.signal ? { signal: input.signal } : {}) });
+  const progress = { groupId: context.groupId, overwriteId: overwriteId ?? '', providerDeviceId: peerDeviceId,
+    providerLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
+    receiverLibraryEpoch: context.initiatorLibraryEpoch };
+  const received = new Set<string>();
+  const sent = new Set<string>();
+  const port: RequestSyncDatabaseRoundPort = {
+    exchangeInventory: async () => exchangeRequestSyncInventory(host, exchange, overwriteId
+      ? await host.readSnapshot(db => readFramedSyncOverwriteInventory(db, { groupId: context.groupId,
+        protocolVersion: context.protocolVersion, senderDeviceId: peerDeviceId,
+        senderLibraryEpoch: context.responderLibraryEpoch, receiverDeviceId: context.initiatorDeviceId,
+        receiverLibraryEpoch: context.initiatorLibraryEpoch }), input.signal) : undefined),
+    transferObject: async difference => {
+      const result = await (difference.direction === 'local_to_remote'
+        ? pushRequestSyncObject(host, exchange, difference)
+        : pullRequestSyncObject(host, exchange, difference, { peerState: input.peerState }));
+      (difference.direction === 'local_to_remote' ? sent : received).add(difference.globalId);
+      return result;
+    },
+    reportObjectError: input.reportObjectError
+  };
+  if (!overwriteId) return { ...await runRequestSyncDatabaseRound(port, input.signal), received: [...received], sent: [...sent] };
+  const result = await withCompanionForegroundTimeMaintenance(async () => {
+    await host.write(db => prepareSyncGroupOverwrite(db, progress));
+    return runRequestSyncOverwriteRound(host, progress, port, input.signal);
+  }, async () => !await host.readSnapshot(loadSyncGroupOverwriteProgress));
+  return { ...result, received: [...received], sent: [...sent] };
+}

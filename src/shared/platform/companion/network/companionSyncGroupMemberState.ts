@@ -3,11 +3,13 @@ import {
   type SyncGroupMemberStatePayload
 } from '../../../../../lib/platform/syncGroupMemberStateContract';
 import { FolioleCompanionSync, isNativeCompanionNetworkRuntime } from '../../companionWorkspaceRuntimeRepository';
+import { rememberCompanionRequestSyncPeerState } from '../sync/framed/companionRequestSyncPeerState.js';
 import {
   applyCompanionSyncGroupMemberState,
   isCompanionSyncGroupDeviceBlocked,
   loadCompanionSyncGroupMemberState
 } from '../sync/syncGroupMemberStateStore';
+
 
 import type { CompanionWorkspaceSyncTarget } from './companionWorkspaceEndpoint';
 import { prepareNativeCompanionWorkgroupRequest } from './signedRequest';
@@ -17,7 +19,7 @@ export const COMPANION_SYNC_GROUP_MEMBER_STATE_PATH = '/sync-group/member-state'
 export async function exchangeCompanionSyncGroupMemberState(target: CompanionWorkspaceSyncTarget) {
   if (!isNativeCompanionNetworkRuntime()) return {
     localExited: false, normalSyncReady: true, peerLibraryEpoch: null,
-    peerRemoved: false, restoreFromPeer: null
+    peerRemoved: false, restoreFromPeer: null, peerState: null
   };
   if (!target.deviceId || !target.groupId) throw new Error('sync_group_member_state_target_missing');
   const state = await loadCompanionSyncGroupMemberState();
@@ -30,7 +32,8 @@ export async function exchangeCompanionSyncGroupMemberState(target: CompanionWor
   const incoming = parseSyncGroupMemberState(JSON.parse(response.body)) as SyncGroupMemberStatePayload;
   const applied = await applyCompanionSyncGroupMemberState(incoming, target.deviceId);
   const localRestore = applied.state.restore;
-  return {
+  const result = {
+    peerState: incoming,
     localExited: applied.local_exited,
     normalSyncReady: applied.normal_sync_ready && !incoming.adopting_from,
     peerLibraryEpoch: incoming.library_epoch,
@@ -40,6 +43,8 @@ export async function exchangeCompanionSyncGroupMemberState(target: CompanionWor
       localRestore.event.source_device_identity_key === target.deviceId
       ? localRestore.event.restore_id : null
   };
+  rememberCompanionRequestSyncPeerState(incoming, result.normalSyncReady || Boolean(result.restoreFromPeer));
+  return result;
 }
 
 async function post(endpointUrl: string, headers: Record<string, string>, body: string) {

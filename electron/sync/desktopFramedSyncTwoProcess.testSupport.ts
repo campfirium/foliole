@@ -17,6 +17,8 @@ export type DesktopFramedSyncFixtureSnapshot = Readonly<{
   workspace: unknown;
 }>;
 
+import { requestSyncFixtureIdentity } from './desktopRequestSyncFixtureIdentity.js';
+
 type PendingReply = Readonly<{
   reject(error: Error): void;
   resolve(value: unknown): void;
@@ -26,7 +28,7 @@ type FixtureReply = Readonly<{ error?: string; id: number; result?: unknown }>;
 
 export type DesktopFramedSyncFixtureProcess = ReturnType<typeof startFixtureProcess>;
 
-export async function createDesktopFramedSyncTwoProcessFixture(compiledScript?: string, fileStorage = false) {
+export async function createDesktopFramedSyncTwoProcessFixture(compiledScript?: string, fileStorage = false, requestMembership = false) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'foliole-framed-sync-two-process-'));
   await fs.symlink(
     path.resolve('node_modules'),
@@ -36,8 +38,9 @@ export async function createDesktopFramedSyncTwoProcessFixture(compiledScript?: 
   const script = path.join(root, 'desktop-framed-sync-fixture.mjs');
   if (compiledScript) await fs.copyFile(compiledScript, script);
   else await buildDesktopFramedSyncFixture(script);
-  let left = startFixtureProcess({ fileStorage, deviceId: 'desktop-a', root: path.join(root, 'a'), script });
-  let right = startFixtureProcess({ fileStorage, deviceId: 'desktop-b', root: path.join(root, 'b'), script });
+  const memberId = (name: 'desktop-a' | 'desktop-b' | 'desktop-c') => requestMembership ? requestSyncFixtureIdentity(name).identity_key : name;
+  let left = startFixtureProcess({ fileStorage, deviceId: memberId('desktop-a'), root: path.join(root, 'a'), script });
+  let right = startFixtureProcess({ fileStorage, deviceId: memberId('desktop-b'), root: path.join(root, 'b'), script });
   try {
     const [leftSnapshot, rightSnapshot] = await Promise.all([left.init(), right.init()]);
     return {
@@ -45,19 +48,19 @@ export async function createDesktopFramedSyncTwoProcessFixture(compiledScript?: 
       leftSnapshot,
       async restartLeft() {
         await left.close();
-        left = startFixtureProcess({ fileStorage, deviceId: 'desktop-a', root: path.join(root, 'a'), script });
+        left = startFixtureProcess({ fileStorage, deviceId: memberId('desktop-a'), root: path.join(root, 'a'), script });
         return { process: left, snapshot: await left.init() };
       },
       get right() { return right; },
       rightSnapshot,
       root,
       async startThird() {
-        const third = startFixtureProcess({ fileStorage, deviceId: 'desktop-c', root: path.join(root, 'c'), script });
+        const third = startFixtureProcess({ fileStorage, deviceId: memberId('desktop-c'), root: path.join(root, 'c'), script });
         return { process: third, snapshot: await third.init() };
       },
       async restartRight() {
         await right.close();
-        right = startFixtureProcess({ fileStorage, deviceId: 'desktop-b', root: path.join(root, 'b'), script });
+        right = startFixtureProcess({ fileStorage, deviceId: memberId('desktop-b'), root: path.join(root, 'b'), script });
         return { process: right, snapshot: await right.init() };
       }
     };

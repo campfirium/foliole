@@ -30,7 +30,7 @@ export async function releaseLocalEditBase(port: DbPort, holdId: string, nodeId:
   await port.transaction(async (tx) => {
     await tx.run(`DELETE FROM node_version_local_holds WHERE object_id = ?
       AND (hold_id = ? OR substr(hold_id, 1, ?) = ?)`, [nodeId, holdId, holdId.length + 6, holdId + ':edit:']);
-    await collectNodeVersionPayloads(tx, nodeId, Number.MAX_SAFE_INTEGER, false);
+    await collectNodeVersionPayloads(tx, nodeId, Number.MAX_SAFE_INTEGER);
   });
 }
 

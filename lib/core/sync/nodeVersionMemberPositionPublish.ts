@@ -62,7 +62,7 @@ export async function publishLocalNodePositionPage(port: DbPort, nodeIds: string
 }
 
 /** Publish only after the complete adopted and pending bodies are durably available. */
-export async function publishLocalNodePosition(port: DbPort, nodeId: string) {
+export async function publishLocalNodePosition(port: DbPort, nodeId: string, isReady = nodePositionReady) {
   if (['special-inbox', 'special-virtual-root'].includes(nodeId)) return;
   const [owner] = await port.query<Owner & DbRow>(LOCAL_NODE_POSITION_OWNER_SQL);
   if (!owner) return;
@@ -70,7 +70,7 @@ export async function publishLocalNodePosition(port: DbPort, nodeId: string) {
     [nodePositionFactId({ ...owner, object_id: nodeId })]);
   const rows = await port.query<PositionRow>(LOCAL_NODE_POSITION_SQL, [nodeId, nodeId]);
   const payload = declaration(nodeId, owner, rows, known);
-  if (!payload || !await nodePositionReady(port, nodeId, payload.adopted_version_id)) return;
+  if (!payload || !await isReady(port, nodeId, payload.adopted_version_id)) return;
   await port.run(ADVANCE_REVISION_SQL);
   for (const statement of nodePositionWriteStatements(payload)) await port.run(statement.sql, statement.params);
 }

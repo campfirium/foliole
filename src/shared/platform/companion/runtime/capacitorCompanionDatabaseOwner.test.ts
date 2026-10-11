@@ -147,6 +147,32 @@ it('does not let a failed read or writer strand subsequent work', async () => {
   await owner.close();
 });
 
+it('allows writers during a readonly snapshot and drains cancellation before closing the writer', async () => {
+  const { owner, manager } = harness('wal');
+  await owner.open({ expectedHostName: 'device', now: '2026-08-06T00:00:00Z' });
+  let entered!: () => void;
+  let release!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; });
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const read = owner.readSnapshot(async db => {
+    await db.query('SELECT 1');
+    entered();
+    await gate;
+    await db.query('SELECT 2');
+  });
+  await started;
+  expect(await owner.runWriter(async () => 'written')).toBe('written');
+  const rejected = expect(read).rejects.toThrow('owner_closed');
+  const close = owner.close();
+  await Promise.resolve();
+  expect(manager.closeConnection).not.toHaveBeenCalled();
+  release();
+  await Promise.all([rejected, close]);
+  expect(vi.mocked(manager.closeConnection).mock.calls).toEqual([
+    ['foliole-companion', true], ['foliole-companion', false]
+  ]);
+});
+
 it('serializes concurrent opening and closing without leaking the connection', async () => {
   const { owner, manager } = harness();
   const request = { expectedHostName: 'device', now: '2026-08-06T00:00:00Z' };

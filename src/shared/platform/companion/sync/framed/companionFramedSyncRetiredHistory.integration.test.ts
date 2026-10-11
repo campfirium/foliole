@@ -61,7 +61,7 @@ it.each(['android', 'ios'] as const)('recovers %s atomic business apply after re
   const source = historyPeer('history-source');
   const original = edit(source, 'Original history body');
   edit(source, 'Current body');
-  await collectNodeVersionPayloads(source.port, 'topic', 32, true);
+  await collectNodeVersionPayloads(source.port, 'topic', 32);
   expect(source.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(original)).toBeNull();
   const value = await prepareCompanionFramedSyncOutbound(source.port, {
     group_id: 'group', sender_device_id: 'sender', sender_library_epoch: 'sender-epoch',
@@ -71,7 +71,7 @@ it.each(['android', 'ios'] as const)('recovers %s atomic business apply after re
   });
   expect(value.blobs).toHaveLength(1);
   edit(source, 'Later unpublished body');
-  expect(await collectNodeVersionPayloads(source.port, 'topic', 32, true)).toMatchObject({ skipped: null });
+  expect(await collectNodeVersionPayloads(source.port, 'topic', 32)).toMatchObject({ skipped: null });
   source.db.close(); source.db = new Database(source.file);
   source.port = createBetterSqliteDbPort(source.db);
   const restored = await prepareCompanionFramedSyncOutbound(source.port, {
@@ -123,7 +123,7 @@ it.each(['android', 'ios'] as const)('preserves a %s receiver original body when
   expect(record).not.toBeNull();
   await applySyncNodesWithDbPort(receiver.port, [record!]);
   edit(source, 'New body');
-  await collectNodeVersionPayloads(source.port, 'topic', 32, true);
+  await collectNodeVersionPayloads(source.port, 'topic', 32);
   expect(source.db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').pluck().get(original)).toBeNull();
   const value = await prepareCompanionFramedSyncOutbound(source.port, {
     group_id: 'group', sender_device_id: 'sender', sender_library_epoch: 'sender-epoch',

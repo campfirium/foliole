@@ -110,7 +110,7 @@ function nodePushPayload(record: NativeSyncNodeRecord): CompanionSyncPushPayload
   return {
     authorHostName: record.host_name ?? '',
     base: {
-      ancestorVersionIds: record.ancestor_version_ids,
+      ancestorVersionIds: [...record.ancestor_version_ids],
       kind: 'node_version',
       parentVersionId: record.parent_version_id,
       ...(record.parent_version_ids ? { parentVersionIds: record.parent_version_ids } : {})

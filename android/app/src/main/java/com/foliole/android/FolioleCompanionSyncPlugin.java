@@ -18,6 +18,15 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     final FolioleCompanionFramedSyncPayloadBudgetActions payloadBudget = new FolioleCompanionFramedSyncPayloadBudgetActions();
     private boolean lifecycleActive = true;
 
+    @PluginMethod public void postRequestSyncHttp(PluginCall call) {
+        FolioleCompanionRequestSyncHttp.post(getContext(), call, framedSendExecutor);
+    }
+
+    @PluginMethod public void cancelRequestSyncHttp(PluginCall call) {
+        try { FolioleCompanionRequestSyncHttp.cancel(call); }
+        catch (Exception error) { call.reject(error.getMessage(), error); }
+    }
+
     @PluginMethod public void accessFramedSyncFile(PluginCall call) {
         FolioleCompanionSyncAsync.run(syncFileExecutor, call, "Failed to access Sync file.", () ->
             FolioleCompanionFramedSyncFileActions.access(getContext(), call));

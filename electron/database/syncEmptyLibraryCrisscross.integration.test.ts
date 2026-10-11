@@ -22,7 +22,7 @@ afterEach(closeLibraries);
 function payload(record: NativeSyncNodeRecord): CompanionSyncPushPayload {
   return {
     authorHostName: record.host_name!,
-    base: { kind: 'node_version', ancestorVersionIds: record.ancestor_version_ids,
+    base: { kind: 'node_version', ancestorVersionIds: [...record.ancestor_version_ids],
       parentVersionId: record.parent_version_id,
       parentVersionIds: record.parent_version_ids ?? (record.parent_version_id ? [record.parent_version_id] : []) },
     clientOpId: `node:${record.version_id}`, contentHash: record.content_hash!,

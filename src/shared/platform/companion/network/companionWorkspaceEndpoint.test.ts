@@ -64,14 +64,14 @@ it('routes only active remote Devices discovered in the same Sync Group', async 
 
 it('keeps the protocol version negotiated with each discovered desktop', async () => {
   runtime.discover.mockResolvedValue([{
-    compatibility: { negotiated_version: 23, status: 'compatible' }, endpointUrl: 'http://mac:38641',
+    compatibility: { negotiated_version: 24, status: 'compatible' }, endpointUrl: 'http://mac:38641',
     discovery: { group_id: 'group-1', provider_device_id: 'device-mac',
       provider_device_name: 'Mac', provider_platform: 'darwin' }
   }]);
 
   await expect(resolveReachableCompanionWorkspaceSyncEndpoints('http://old:38641')).resolves.toEqual([{
     deviceId: 'device-mac', deviceName: 'Mac', endpointUrl: 'http://mac:38641',
-    groupId: 'group-1', protocolVersion: 23
+    groupId: 'group-1', protocolVersion: 24
   }]);
 });
 

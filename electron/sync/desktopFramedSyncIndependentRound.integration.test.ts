@@ -7,11 +7,11 @@ import { expect, it } from 'vitest';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it('converges original order facts and current order through a normal production peer round', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   try {
     await fixture.left.seed({ content: 'Body', nodeId: 'independent-order', title: 'Ordered' });
-    await fixture.left.invoke('round', { input: { kind: 'reconcile',
-      peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: 'desktop-b-epoch' },
+    await fixture.left.invoke('round', { input: { kind: 'request_reconcile',
+      peer: { deviceId: fixture.rightSnapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
       peerOrigin: fixture.rightSnapshot.origin } });
     const read = (file: string) => {
       const db = new Database(file, { readonly: true });

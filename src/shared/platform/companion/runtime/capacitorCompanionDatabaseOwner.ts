@@ -12,6 +12,7 @@ import { COMPANION_DATABASE_NAME, COMPANION_DATABASE_VERSION } from '../../../..
 import { createCapacitorSqliteDbPort } from '../../capacitorSqliteDbPort';
 
 import { loadCompanionForegroundOwner } from './companionForegroundTimeOwner';
+import { CompanionRequestSyncSnapshots } from './companionRequestSyncSnapshot';
 
 export interface CapacitorCompanionDatabaseManager {
   closeConnection(database: string, readonly: boolean): Promise<void>;
@@ -37,6 +38,7 @@ export class CapacitorCompanionDatabaseOwner {
   private journalMode: CompanionDatabaseBootstrapResult['journalMode'] | null = null;
   private path: string | null = null;
   private operationTail: Promise<void> = Promise.resolve();
+  private snapshots: CompanionRequestSyncSnapshots | null = null;
 
   constructor(
     private readonly manager: CapacitorCompanionDatabaseManager,
@@ -68,6 +70,7 @@ export class CapacitorCompanionDatabaseOwner {
       this.db = db;
       this.journalMode = result.journalMode;
       this.path = databasePath;
+      this.snapshots = new CompanionRequestSyncSnapshots(this.manager, this.platform);
       return { ...result, databasePath } satisfies CapacitorCompanionOpenResult;
     } catch (error) {
       await this.manager.closeConnection(COMPANION_DATABASE_NAME, false).catch(() => undefined);
@@ -77,6 +80,14 @@ export class CapacitorCompanionDatabaseOwner {
 
   read<T>(task: (db: DbPort) => Promise<T>) {
     return this.enqueue(() => task(this.requireDb()));
+  }
+
+  async readSnapshot<T>(task: (db: DbPort) => Promise<T>, signal?: AbortSignal): Promise<T> {
+    const registered = await this.enqueue(() => {
+      this.requireDb();
+      return Promise.resolve({ result: this.snapshots!.read(task, signal) });
+    });
+    return registered.result;
   }
 
   get databasePath() {
@@ -100,12 +111,14 @@ export class CapacitorCompanionDatabaseOwner {
 
   private async closeDatabase() {
     if (!this.connection || !this.db || !this.journalMode) return;
+    await this.snapshots?.close();
     await checkpointCompanionDatabase(this.db, this.journalMode);
     await this.manager.closeConnection(COMPANION_DATABASE_NAME, false);
     this.connection = null;
     this.db = null;
     this.journalMode = null;
     this.path = null;
+    this.snapshots = null;
   }
 
   // Keep the complete operation on the single connection, including asynchronous reads.

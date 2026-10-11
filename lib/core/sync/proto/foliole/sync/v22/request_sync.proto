@@ -1,0 +1,16 @@
+syntax = "proto3";
+package foliole.sync.v22;
+option java_package = "com.foliole.sync.v22";
+option java_multiple_files = true;
+message RequestObjectHeader {
+  bytes request_id = 1;
+  string object_type = 2;
+  string global_id = 3;
+  bytes source_state_hash = 4;
+}
+message RequestObjectEnd {
+  bytes request_id = 1;
+  bytes stream_hash = 2;
+  uint64 fact_count = 3;
+  uint64 body_count = 4;
+}

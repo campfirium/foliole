@@ -30,6 +30,7 @@ type PostInput = {
   remoteDeviceId: string;
   remoteLibraryEpoch: string;
   secret: string;
+  signal?: AbortSignal;
 };
 
 export async function postDesktopFramedSync(args: PostInput) {
@@ -69,7 +70,8 @@ async function postOwnedBody(args: PostInput) {
     [FRAMED_SYNC_BODY_SHA256_HEADER]: args.body.bodySha256,
   };
   const transport = url.protocol === 'https:' ? https : http;
-  const request = transport.request(url, { headers, method: 'POST' });
+  const request = transport.request(url, { headers, method: 'POST',
+    ...(args.signal ? { signal: args.signal } : {}) });
   const responsePromise = waitForResponse(request);
   const sendPromise = writeDesktopFramedSyncHttpBody(request, encodeFramedSyncHttpBody(args.body));
   const [response] = await Promise.all([responsePromise, sendPromise]).catch(async (error: unknown) => {

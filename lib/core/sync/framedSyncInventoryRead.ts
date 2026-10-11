@@ -80,6 +80,12 @@ export function readFramedSyncInventory(port: DbPort, files?: FramedSyncFilePort
   });
 }
 
+/** Flush writer projections before opening this independent readonly snapshot. */
+export async function readRequestSyncInventorySnapshot(port: DbPort) {
+  if (await syncGroupLocalPublicationBlockReason(port)) return [];
+  return read(port, undefined);
+}
+
 /** Partial inventory is visible only to the fixed recovery source, without publishing local work. */
 export function readFramedSyncOverwriteInventory(port: DbPort, context: FramedSyncContext) {
   return port.transaction(async (tx) => {

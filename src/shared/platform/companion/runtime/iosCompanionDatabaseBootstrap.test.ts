@@ -4,6 +4,7 @@ vi.mock('../../companionWorkspaceRuntimeRepository', () => ({ FolioleCompanionSy
   loadSyncGroupDeviceIdentity: vi.fn(async () => ({
     device_anchor: 'test-ios-anchor', canonical_library_path: '/Library/CapacitorDatabase/foliole-companionSQLite.db'
   })),
+  accessFramedSyncFile: vi.fn(async () => undefined),
   configureFramedSyncPayloadBudget: vi.fn(async () => undefined),
   closeFramedSyncPayloadBudget: vi.fn(async () => undefined),
   maintainAttachmentFiles: vi.fn(async () => ({ files: [] }))

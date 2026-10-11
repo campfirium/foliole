@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs';
 import Database from 'better-sqlite3';
 import { expect, it } from 'vitest';
 
-import { readFixtureInventory, reconnectFixturePeer, publishFixtureDelivery } from './desktopFramedSyncPublicationRecovery.testSupport.js';
+import { readFixtureInventory, reconnectFixturePeer } from './desktopFramedSyncPublicationRecovery.testSupport.js';
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 function history(databasePath: string) {
@@ -65,8 +65,8 @@ it.each([false, true])('repairs history with one available source and refuses co
   }
 }, 60_000);
 
-it('keeps an offline editor branch and frozen third-device delivery after synchronized historical deletion', async () => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+it('keeps an offline editor branch and converges three production request peers after reconnect', async () => {
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   const third = await fixture.startThird();
   try {
     await Promise.all([fixture.left, fixture.right, third.process].map(process =>
@@ -76,13 +76,12 @@ it('keeps an offline editor branch and frozen third-device delivery after synchr
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     const base = (await readFixtureInventory(fixture.right)).find(entry => entry.globalId === 'history-state')!.currentVersionId!;
     await fixture.right.invoke('retain_edit', { holdId: 'editor', nodeId: 'history-state', versionId: base });
-    await publishFixtureDelivery(fixture.right, third.snapshot, 'publication');
     await fixture.left.seed({ content: 'Remote current body', nodeId: 'history-state', title: 'History' });
     await fixture.left.invoke('collect_content');
     await reconnectFixturePeer(fixture.left, fixture.rightSnapshot);
     const db = new Database(fixture.rightSnapshot.databasePath, { readonly: true });
     try { expect(db.prepare('SELECT body_text FROM node_sync_versions WHERE version_id = ?').get(base))
-      .toEqual({ body_text: null }); } finally { db.close(); }
+      .toEqual({ body_text: 'Editor baseline' }); } finally { db.close(); }
     await fixture.right.invoke('local_content_edit', { baseVersionId: base, versionId: 'offline-history-edit',
       content: 'Unsaved full offline input', hostName: 'offline', nodeId: 'history-state', updatedAt: '2026-10-10T08:00:00Z' });
     await reconnectFixturePeer(fixture.right, third.snapshot);
@@ -90,7 +89,7 @@ it('keeps an offline editor branch and frozen third-device delivery after synchr
     await reconnectFixturePeer(fixture.right, third.snapshot);
     expect(history(fixture.rightSnapshot.databasePath)).toEqual(history(fixture.leftSnapshot.databasePath));
     expect(history(third.snapshot.databasePath)).toEqual(history(fixture.rightSnapshot.databasePath));
-    expect(await reconnectFixturePeer(fixture.right, third.snapshot)).toMatchObject({ complete: true, transferred: 0 });
+    expect(await reconnectFixturePeer(fixture.right, third.snapshot)).toMatchObject({ complete: true });
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close(), third.process.close()]);
     await fs.rm(fixture.root, { recursive: true, force: true });

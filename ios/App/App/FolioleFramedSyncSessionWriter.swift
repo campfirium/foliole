@@ -94,7 +94,7 @@ enum FolioleFramedSyncSessionWriter {
         var bytes = Data(repeating: 0, count: FolioleFramedSyncPreamble.byteCount)
         bytes.replaceSubrange(0..<8, with: Data("FOLSYNC2".utf8))
         bytes[8] = 0; bytes[9] = UInt8(FolioleFramedSyncPreamble.byteCount)
-        bytes[10] = 0; bytes[11] = 23; bytes[12] = 1
+        bytes[10] = 0; bytes[11] = 24; bytes[12] = 1
         bytes.replaceSubrange(16..<48, with: contextID)
         bytes.replaceSubrange(48..<64, with: sessionID)
         bytes.replaceSubrange(64..<68, with: noncePrefix)

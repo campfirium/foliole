@@ -12,6 +12,7 @@ import { restoreFramedSyncNodeReadingFact } from './framedSyncNodeReadingFact.js
 import { framedSyncNodeRecordSource, type FramedBodyLoader } from './framedSyncNodeRecordSource.js';
 import { applyFramedSyncObjectStateRecord, restoreFramedSyncObjectStateFact } from './framedSyncObjectStateFact.js';
 import { applyFramedSyncRelationReviewFactsWithDbPort } from './framedSyncRelationReviewApply.js';
+import { requestSyncNodeSource } from './requestSyncNodeGraph.js';
 import { applySyncNodeSourceWithDbPort } from './syncNodeApplyExecutor.js';
 import { applyConvergentSyncNodeSource } from './syncNodeConvergence.js';
 import { enqueueAppliedNodeBodySearchInvalidation } from './syncNodeSearchInvalidations.js';
@@ -23,6 +24,7 @@ export type FramedFactSource = (db: DbPort) => AsyncIterable<CanonicalFact>;
 export async function applyFramedFactSources(db: DbPort, sources: readonly FramedFactSource[], options: {
   operation?: 'local_restore'; objectOptions?: ApplySyncObjectsWithDbPortOptions; loadBody?: FramedBodyLoader;
   enqueueSearchInvalidations?: boolean;
+  requireCompleteVersionGraph?: boolean;
 } = {}) {
   return db.transaction(async (tx) => {
     const nodes: CanonicalFact[] = [];
@@ -36,7 +38,9 @@ export async function applyFramedFactSources(db: DbPort, sources: readonly Frame
       }
       if (!identity) throw new Error('framed_sync_process_fact_set_invalid');
     }
-    const nodeSource = framedSyncNodeRecordSource(nodes, options.loadBody);
+    const restoredSource = framedSyncNodeRecordSource(nodes, options.loadBody);
+    const nodeSource = options.requireCompleteVersionGraph
+      ? await requestSyncNodeSource(tx, restoredSource) : restoredSource;
     await assertFramedSyncNodeParentDependencies(tx, nodeSource.records.filter((node) => !nodeSource.isIdentityOnly(node)));
     let generatedChanges = false;
     if (nodes.length) {

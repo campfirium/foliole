@@ -1,11 +1,11 @@
 import { FRAMED_SYNC_BATCH_LIMITS } from '../../lib/core/sync/framedSyncBatchLimits.js';
 import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS, FRAMED_SYNC_PREAMBLE } from '../../lib/core/sync/framedSyncContract.js';
+import { FramedSyncExactByteReader, type FramedSyncBinaryChunk } from '../../lib/core/sync/framedSyncExactByteReader.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import type { FramedSyncPayloadBudget } from '../../lib/core/sync/framedSyncPayloadBudget.js';
+import { readFramedSyncWireFrames } from '../../lib/core/sync/framedSyncWireFrameReader.js';
 
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
-import { FramedSyncExactByteReader, type FramedSyncBinaryChunk } from './framedSyncExactByteReader.js';
-import { readFramedSyncWireFrames } from './framedSyncWireFrameReader.js';
 
 /** Only framing boundaries are recognized here. Each unit's existing consumer authenticates its envelope and trailer. */
 export async function* readFramedSyncStreamSequence(source: AsyncIterable<FramedSyncBinaryChunk>,

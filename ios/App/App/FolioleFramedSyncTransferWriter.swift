@@ -121,7 +121,7 @@ enum FolioleFramedSyncTransferWriter {
         transferID: Data, attemptID: Data
     ) -> Foliole_Sync_V22_ProtocolMessage {
         var manifest = Foliole_Sync_V22_TransferManifest()
-        manifest.protocolVersion = 23; manifest.groupID = context.groupID
+        manifest.protocolVersion = 24; manifest.groupID = context.groupID
         manifest.contentID = contentID; manifest.blobs = blobs
         manifest.facts = facts.map { fact in
             var descriptor = Foliole_Sync_V22_FactDescriptor()
@@ -199,7 +199,7 @@ enum FolioleFramedSyncTransferWriter {
     ) throws -> FolioleFramedSyncPreamble {
         var bytes = Data(repeating: 0, count: FolioleFramedSyncPreamble.byteCount)
         bytes.replaceSubrange(0..<8, with: Data("FOLSYNC2".utf8)); bytes[9] = 96
-        bytes[11] = 23; bytes[12] = 2
+        bytes[11] = 24; bytes[12] = 2
         bytes.replaceSubrange(16..<48, with: transferID)
         bytes.replaceSubrange(48..<64, with: attemptID)
         bytes.replaceSubrange(64..<68, with: noncePrefix)

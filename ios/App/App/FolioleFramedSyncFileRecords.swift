@@ -41,7 +41,7 @@ enum FolioleFramedSyncFileRecords {
         }
         return ["transferId": Array(header.transferID), "contentId": Array(header.manifest.contentID),
                 "factCount": String(header.manifest.facts.count), "blobCount": String(header.manifest.blobs.count),
-                "totalBlobBytes": String(total), "context": ["protocolVersion": 23, "groupId": context.groupID,
+                "totalBlobBytes": String(total), "context": ["protocolVersion": 24, "groupId": context.groupID,
                 "senderDeviceId": context.senderDeviceID, "senderLibraryEpoch": context.senderLibraryEpoch,
                 "receiverDeviceId": context.receiverDeviceID, "receiverLibraryEpoch": context.receiverLibraryEpoch]]
     }

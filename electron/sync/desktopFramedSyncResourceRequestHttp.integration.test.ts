@@ -16,7 +16,7 @@ it('commits request intent before HTTP and retains it after failure, without sen
   const sqlite = new Database(':memory:');
   for (const sql of FRAMED_SYNC_STAGING_SCHEMA) sqlite.exec(sql);
   const db = createBetterSqliteDbPort(sqlite);
-  const context = { groupId: 'group', protocolVersion: 23 as const,
+  const context = { groupId: 'group', protocolVersion: 24 as const,
     initiatorDeviceId: 'B', initiatorLibraryEpoch: 'b', responderDeviceId: 'A', responderLibraryEpoch: 'a' };
   const resource = { demandId: 'demand', globalId: 'article', versionId: 'version',
     bodyHash: 'a'.repeat(64), storageKey: `${'b'.repeat(64)}.png`, sharedStateHash: new Uint8Array(32).fill(3) };

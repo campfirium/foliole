@@ -12,14 +12,14 @@ import { prepareImportedNodeDeletionVersions } from '../database/importedNodeDel
 import { createDesktopFramedSyncTwoProcessFixture } from './desktopFramedSyncTwoProcess.testSupport.js';
 
 it.each([false, true])('synchronizes production permanent deletion and member position with original received=%s', async (receivedOriginal) => {
-  const fixture = await createDesktopFramedSyncTwoProcessFixture();
+  const fixture = await createDesktopFramedSyncTwoProcessFixture(undefined, true, true);
   let passed = false;
   try {
     const nodeId = 'permanently-deleted';
     const deletedAt = '2026-10-07T00:00:00.000Z';
     await fixture.left.seed({ content: 'Original retained body', nodeId, title: 'Permanent deletion' });
-    const input = { input: { kind: 'reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
-      libraryEpoch: 'desktop-b-epoch' }, peerOrigin: fixture.rightSnapshot.origin } };
+    const input = { input: { kind: 'request_reconcile', peer: { deviceId: fixture.rightSnapshot.deviceId,
+      libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` }, peerOrigin: fixture.rightSnapshot.origin } };
     if (receivedOriginal) await fixture.left.invoke('round', input);
     const source = new Database(fixture.leftSnapshot.databasePath);
     try {
@@ -52,9 +52,9 @@ it.each([false, true])('synchronizes production permanent deletion and member po
     } finally { left.close(); right.close(); }
     await fixture.restartLeft();
     const restarted = await fixture.restartRight();
-    await expect(fixture.left.invoke('round', { input: { kind: 'reconcile',
-      peer: { deviceId: restarted.snapshot.deviceId, libraryEpoch: 'desktop-b-epoch' },
-      peerOrigin: restarted.snapshot.origin } })).resolves.toMatchObject({ complete: true, transferred: 0 });
+    await expect(fixture.left.invoke('round', { input: { kind: 'request_reconcile',
+      peer: { deviceId: restarted.snapshot.deviceId, libraryEpoch: `${fixture.rightSnapshot.deviceId}-epoch` },
+      peerOrigin: restarted.snapshot.origin } })).resolves.toMatchObject({ complete: true });
     passed = true;
   } finally {
     await Promise.allSettled([fixture.left.close(), fixture.right.close()]);

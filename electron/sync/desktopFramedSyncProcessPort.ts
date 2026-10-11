@@ -10,6 +10,7 @@ import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncSta
 import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 
 import { handleCompanionLanFramedSyncPost } from './companionLanFramedSyncPost.js';
+import { createLanWorkspaceSyncRequestHandler } from './companionLanRequestHandler.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
 import { createDesktopLibrarySyncFiles } from './desktopFramedSyncFiles.js';
 import { createDesktopFramedSyncFixtureReceiver } from './desktopFramedSyncFixtureReceiver.js';
@@ -36,20 +37,15 @@ export async function createDesktopFramedSyncProcessPort(input: FactoryInput) {
   });
   const receiver = createDesktopFramedSyncFixtureReceiver({ ...storage, db, groupKey,
     groupSecret: group.workgroup_key, staging });
+  const productionHttp = createLanWorkspaceSyncRequestHandler({ appVersion: '0.7.14', deviceId: input.deviceId,
+    onJoinRequestCreated: null, updateGroupStatus: () => undefined });
   return {
     handleHttpRequest: async (request: IncomingMessage, response: ServerResponse) => {
-      const header = request.headers['x-foliole-body-sha256'];
-      const auth = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequest({
-        ...(typeof header === 'string' ? { bodySha256: header } : {}), request, requireMemberState: true
-      }));
-      return handleCompanionLanFramedSyncPost({
-        authenticate: () => auth,
-        payloadBudget: connection.framedSyncPayloadBudget,
-        localIdentity: identity,
-        onStream: receiver.receive,
-        request,
-        response
-      });
+      const url = new URL(request.url ?? '/', input.localOrigin);
+      if (url.pathname === '/companion/discovery' || url.pathname === '/sync-group/member-state' || url.searchParams.has('request')) {
+        return productionHttp(request, response);
+      }
+      return receiveLegacyFixtureRequest(request, response, connection, identity, receiver);
     },
     round: async (value: unknown) => {
       if (z.object({ kind: z.literal('pause_before_apply') }).safeParse(value).success) {
@@ -86,4 +82,22 @@ async function fetchFixturePeerDeviceId(peerOrigin: string) {
     throw new Error('framed_sync_fixture_peer_identity_missing');
   }
   return payload.deviceId;
+}
+
+async function receiveLegacyFixtureRequest(request: IncomingMessage, response: ServerResponse,
+  connection: ReturnType<typeof openDatabaseConnection>, identity: { deviceId: string; libraryEpoch: string },
+  receiver: ReturnType<typeof createDesktopFramedSyncFixtureReceiver>) {
+      const header = request.headers['x-foliole-body-sha256'];
+      const auth = await runWithDatabaseConnectionOwner(() => authenticateCompanionRequest({
+        ...(typeof header === 'string' ? { bodySha256: header } : {}), request, requireMemberState: true
+      }));
+      return handleCompanionLanFramedSyncPost({
+        authenticate: () => auth,
+        payloadBudget: connection.framedSyncPayloadBudget,
+        localIdentity: identity,
+        onStream: receiver.receive,
+        request,
+        response
+      });
+
 }

@@ -26,6 +26,7 @@ import {
   readDesktopFramedSyncRoundInventoryEntry
 } from './desktopFramedSyncRoundInventory.js';
 import { saveDesktopSyncGroupRoute } from './desktopSyncGroupRoutes.js';
+import { continueDesktopSyncGroupSync } from './desktopSyncGroupTransport.js';
 
 const bytes = z.instanceof(Uint8Array);
 const identity = z.object({ deviceId: z.string().min(1), libraryEpoch: z.string().min(1) });
@@ -65,6 +66,7 @@ const authenticatedContext = z.object({
 });
 const command = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('remember_peer'), peer: identity, peerOrigin: z.string().url() }),
+  z.object({ kind: z.literal('request_reconcile'), peer: identity, peerOrigin: z.string().url() }),
   z.object({ kind: z.literal('reconcile'), peer: identity, peerOrigin: z.string().url() }),
   z.object({ kind: z.literal('expire_completions'), now: z.number().int().nonnegative() }),
   z.object({ kind: z.literal('read_inventory') }),
@@ -108,11 +110,13 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
       peer_device_id: request.peer.deviceId, peer_device_name: request.peer.deviceId, peer_platform: 'desktop'
     });
     if (request.kind === 'reconcile') return runDesktopFramedSyncInventoryRound({
-      files: input.files ?? null,
-      localLibraryEpoch: input.local.libraryEpoch, remoteLibraryEpoch: request.peer.libraryEpoch,
-      peer: { endpoint_url: request.peerOrigin, group_id: input.groupId,
+      files: input.files ?? null, localLibraryEpoch: input.local.libraryEpoch, remoteLibraryEpoch: request.peer.libraryEpoch,
+      peer: { endpoint_url: request.peerOrigin, group_id: input.groupId, local_device_id: input.local.deviceId,
+        peer_device_id: request.peer.deviceId, peer_device_name: request.peer.deviceId, peer_platform: 'desktop' }
+    });
+    if (request.kind === 'request_reconcile') return continueDesktopSyncGroupSync({ endpoint_url: request.peerOrigin, group_id: input.groupId,
         local_device_id: input.local.deviceId, peer_device_id: request.peer.deviceId,
-        peer_device_name: request.peer.deviceId, peer_platform: 'desktop' }
+        peer_device_name: request.peer.deviceId, peer_platform: 'desktop'
     });
     const read = readFixtureCommand(request, input.db, input.files);
     if (read) return read;
