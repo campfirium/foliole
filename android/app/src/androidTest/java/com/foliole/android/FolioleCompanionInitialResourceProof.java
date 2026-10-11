@@ -39,27 +39,25 @@ final class FolioleCompanionInitialResourceProof {
                 "AND l.local_device_identity_key=p.device_identity_key " +
                 "WHERE n.id=? AND p.group_id=? AND n.deleted_at IS NULL " +
                 "AND p.pending_version_ids_json='[]' AND l.state='active'", nodeId, groupId) == 1;
-            bodyReady = count(db, "SELECT COUNT(*) FROM nodes n LEFT JOIN content_blob_data cbd " +
-                "ON cbd.hash=n.body_blob_hash WHERE n.id=? AND n.deleted_at IS NULL " +
-                "AND (cbd.hash IS NOT NULL OR (n.body_blob_hash IS NULL AND " +
-                "instr(n.content, 'Resource LAN body remains readable.')>0))", nodeId) == 1;
+            bodyReady = count(db, "SELECT COUNT(*) FROM nodes n WHERE n.id=? " +
+                "AND n.deleted_at IS NULL " +
+                "AND instr(n.content, 'Resource LAN body remains readable.')>0", nodeId) == 1;
             collectMissing(db, attachmentDir, nodeId, fixtureKeys, missing);
         }
         boolean availableReady = available.isFile() && availableHash.equals(
             FolioleCompanionResourceAvailability.digest(Files.readAllBytes(available.toPath())));
         boolean recoveringAbsent = !recovering.exists();
-        boolean clean = projection.getJSONArray("dirty_objects").length() == 0
-            && projection.getJSONArray("unconfirmed_deliveries").length() == 0
-            && projection.getJSONArray("push_issues").length() == 0;
+        // Legacy dirty flags and delivery receipts are not request-sync completion evidence.
+        // Foreground usage can also create new facts after the initial round has finished.
         JSONObject proof = new JSONObject().put("nodeId", nodeId)
             .put("availableHash", availableHash).put("recoveringHash", recoveringHash)
             .put("nodeCommitted", nodeCommitted).put("fixtureKeys", new JSONArray(fixtureKeys))
             .put("bodyReady", bodyReady).put("availableReady", availableReady)
             .put("recoveringAbsent", recoveringAbsent).put("missingAttachmentHashes", missing)
-            .put("clean", clean);
+            .put("legacyDirtyObjects", projection.getJSONArray("dirty_objects"));
         if (!nodeCommitted || fixtureKeys.size() != 2
             || !fixtureKeys.contains(availableHash + ".png") || !fixtureKeys.contains(recoveringHash + ".png")
-            || !bodyReady || !availableReady || !recoveringAbsent || !clean
+            || !bodyReady || !availableReady || !recoveringAbsent
             || (partial && (missing.length() != 1
                 || !recoveringHash.equals(missing.optString(0))))
             || (!partial && missing.length() != 0)) {

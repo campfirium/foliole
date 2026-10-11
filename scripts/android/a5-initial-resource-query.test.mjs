@@ -46,3 +46,20 @@ it('requires the local member to adopt the current version with no pending branc
     expect(count()).toBe(0);
   } finally { db.close(); }
 });
+
+it('accepts readable inline body text even when its content-addressed hash is retained', () => {
+  const source = fs.readFileSync(new globalThis.URL('../../android/app/src/androidTest/java/com/foliole/android/FolioleCompanionInitialResourceProof.java', import.meta.url), 'utf8');
+  const expression = source.match(/bodyReady = count\(db, ([\s\S]*?), nodeId\)/u)?.[1];
+  if (!expression) throw new Error('Body proof query not found');
+  const sql = [...expression.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/gu)]
+    .map((match) => JSON.parse(`"${match[1]}"`)).join('');
+  const db = new DatabaseSync(':memory:');
+  try {
+    db.exec(`CREATE TABLE nodes (id TEXT, content TEXT, body_blob_hash TEXT, deleted_at TEXT);
+      CREATE TABLE content_blob_data (hash TEXT);
+      INSERT INTO nodes VALUES ('node', 'Resource LAN body remains readable.', 'body-hash', NULL);`);
+    expect(Object.values(db.prepare(sql).get('node'))[0]).toBe(1);
+    db.exec('UPDATE nodes SET content=NULL');
+    expect(Object.values(db.prepare(sql).get('node'))[0]).toBe(0);
+  } finally { db.close(); }
+});
