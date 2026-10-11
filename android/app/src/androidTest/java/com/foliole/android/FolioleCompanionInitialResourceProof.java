@@ -9,6 +9,8 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.util.HashSet;
+import java.util.Set;
 
 final class FolioleCompanionInitialResourceProof {
     private FolioleCompanionInitialResourceProof() {}
@@ -23,31 +25,25 @@ final class FolioleCompanionInitialResourceProof {
         File available = new File(attachmentDir, availableHash + ".png");
         File recovering = new File(attachmentDir, recoveringHash + ".png");
         JSONArray missing = new JSONArray();
-        boolean demanded;
-        boolean structureComplete;
+        boolean nodeCommitted;
+        Set<String> fixtureKeys = new HashSet<>();
         boolean bodyReady;
         try (SQLiteDatabase db = SQLiteDatabase.openDatabase(
             context.getDatabasePath("foliole-companionSQLite.db").getPath(), null,
             SQLiteDatabase.OPEN_READONLY
         )) {
-            demanded = count(db, "SELECT COUNT(*) FROM sync_pack_resource_articles " +
-                "WHERE group_id=? AND article_id=?", groupId, nodeId) > 0;
-            structureComplete = count(db, "SELECT COUNT(*) FROM sync_pack_receive_progress " +
-                "WHERE group_id=? AND completed=1 AND cursor_state_seq=frontier_state_seq",
-                groupId) > 0;
+            nodeCommitted = count(db, "SELECT COUNT(*) FROM nodes n " +
+                "JOIN node_version_member_positions p ON p.object_id=n.id " +
+                "AND p.adopted_version_id=n.current_version_id " +
+                "JOIN sync_group_local_state l ON l.group_id=p.group_id " +
+                "AND l.local_device_identity_key=p.device_identity_key " +
+                "WHERE n.id=? AND p.group_id=? AND n.deleted_at IS NULL " +
+                "AND p.pending_version_ids_json='[]' AND l.state='active'", nodeId, groupId) == 1;
             bodyReady = count(db, "SELECT COUNT(*) FROM nodes n LEFT JOIN content_blob_data cbd " +
                 "ON cbd.hash=n.body_blob_hash WHERE n.id=? AND n.deleted_at IS NULL " +
                 "AND (cbd.hash IS NOT NULL OR (n.body_blob_hash IS NULL AND " +
                 "instr(n.content, 'Resource LAN body remains readable.')>0))", nodeId) == 1;
-            try (Cursor rows = db.rawQuery("SELECT DISTINCT a.id FROM attachments a " +
-                "JOIN node_attachments na ON na.attachment_id=a.id " +
-                "JOIN nodes n ON n.id=na.node_id WHERE n.deleted_at IS NULL", null)) {
-                while (rows.moveToNext()) {
-                    String hash = rows.getString(0);
-                    File[] files = attachmentDir.listFiles((dir, name) -> name.startsWith(hash + "."));
-                    if (files == null || files.length == 0) missing.put(hash);
-                }
-            }
+            collectMissing(db, attachmentDir, nodeId, fixtureKeys, missing);
         }
         boolean availableReady = available.isFile() && availableHash.equals(
             FolioleCompanionResourceAvailability.digest(Files.readAllBytes(available.toPath())));
@@ -57,17 +53,40 @@ final class FolioleCompanionInitialResourceProof {
             && projection.getJSONArray("push_issues").length() == 0;
         JSONObject proof = new JSONObject().put("nodeId", nodeId)
             .put("availableHash", availableHash).put("recoveringHash", recoveringHash)
-            .put("demanded", demanded).put("structureComplete", structureComplete)
+            .put("nodeCommitted", nodeCommitted).put("fixtureKeys", new JSONArray(fixtureKeys))
             .put("bodyReady", bodyReady).put("availableReady", availableReady)
             .put("recoveringAbsent", recoveringAbsent).put("missingAttachmentHashes", missing)
             .put("clean", clean);
-        if (!structureComplete || !bodyReady || !availableReady || !recoveringAbsent || !clean
-            || (partial && (!demanded || missing.length() != 1
+        if (!nodeCommitted || fixtureKeys.size() != 2
+            || !fixtureKeys.contains(availableHash + ".png") || !fixtureKeys.contains(recoveringHash + ".png")
+            || !bodyReady || !availableReady || !recoveringAbsent || !clean
+            || (partial && (missing.length() != 1
                 || !recoveringHash.equals(missing.optString(0))))
-            || (!partial && demanded)) {
+            || (!partial && missing.length() != 0)) {
             throw new IllegalStateException("Initial resource attribution failed: " + proof);
         }
         return proof;
+    }
+
+    private static void collectMissing(SQLiteDatabase db, File attachmentDir, String nodeId,
+        Set<String> fixtureKeys, JSONArray missing) throws Exception {
+        Set<String> missingKeys = new HashSet<>();
+        try (Cursor rows = db.rawQuery("SELECT id, resource_references FROM nodes " +
+            "WHERE deleted_at IS NULL", null)) {
+            while (rows.moveToNext()) {
+                JSONArray references = new JSONArray(rows.getString(1));
+                for (int index = 0; index < references.length(); index++) {
+                    String key = references.getJSONObject(index).getString("storage_key");
+                    if (!FolioleCompanionCanonicalAttachmentKey.valid(key)) {
+                        throw new IllegalStateException("Invalid current resource key: " + key);
+                    }
+                    if (nodeId.equals(rows.getString(0))) fixtureKeys.add(key);
+                    if (!new File(attachmentDir, key).isFile() && missingKeys.add(key)) {
+                        missing.put(key.substring(0, 64));
+                    }
+                }
+            }
+        }
     }
 
     private static int count(SQLiteDatabase db, String sql, String... args) {
