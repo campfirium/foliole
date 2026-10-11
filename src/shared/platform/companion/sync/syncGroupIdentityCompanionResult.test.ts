@@ -48,3 +48,15 @@ it('continues attachments without replaying database changes', async () => {
   expect(result.pushedObjectIds).toEqual([]);
   expect(result.remainingAttachmentResourceCount).toBe(3);
 });
+
+it.each([
+  { databasePending: 0, resourcePending: 0, outcome: 'completed' },
+  { databasePending: 1, resourcePending: 0, outcome: 'skipped' },
+  { databasePending: 0, resourcePending: 1, outcome: 'skipped' }
+])('reports the completed request round without a phantom body stage: %j', async ({ databasePending, resourcePending, outcome }) => {
+  const { describeCompanionSyncPassResult } = await import('../../../../companion/companionSyncPassResult');
+  runtime.database.mockResolvedValue({ pending: databasePending, received: [], sent: [] });
+  runtime.resources.mockResolvedValue({ pending: resourcePending, scanned: 1, transferred: 0, unavailable: 0 });
+  const result = await syncCompanionIdentityObjects('http://peer', { framedPeer });
+  expect(describeCompanionSyncPassResult(result).outcome).toBe(outcome);
+});

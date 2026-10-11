@@ -52,6 +52,8 @@ export async function syncCompanionIdentityObjects(
     requestedObjectIds: receivedIds,
     ...createSkippedResourceSummary(),
     ...createEmptyResourceStages(),
+    // Bodies commit with their database objects; no separate body download stage remains.
+    remainingContentBlobCount: 0,
     remainingAttachmentResourceCount: resources.pending + resources.unavailable,
     localDirtyCount: round.pending,
     pushConflictCount: 0,
