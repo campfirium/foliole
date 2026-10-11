@@ -87,6 +87,7 @@ export async function handleCompanionLanFramedSyncPost(args: {
       return;
     }
     const message = error instanceof Error ? error.message : 'framed_sync_request_invalid';
+    appendMainProcessDiagnosticLog('companion_framed_request_failed', { error });
     writeError(response, message === 'invalid_signature' ? 401 : message === 'wire_frame_limit_exceeded' ? 413 : 400, message);
   }
 }
