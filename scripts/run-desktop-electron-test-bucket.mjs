@@ -102,7 +102,8 @@ export function buildDesktopElectronBuckets() {
     { label: 'attachments', report: '.tmp/vitest/desktop-electron-attachments.json', targets: collectTestFiles('electron/attachments') },
     { label: 'sync-large', report: '.tmp/vitest/desktop-electron-sync-large.json',
       targets: LARGE_SYNC_TESTS, workers: 2, fileParallelism: true },
-    ...chunkFiles('sync', collectTestFiles('electron/sync').filter((file) => !LARGE_SYNC_TESTS.includes(file)), SYNC_CHUNK_SIZE),
+    ...chunkFiles('sync', collectTestFiles('electron/sync').filter((file) => !LARGE_SYNC_TESTS.includes(file)), SYNC_CHUNK_SIZE)
+      .map((bucket) => ({ ...bucket, fileParallelism: true })),
     { label: 'mirror', report: '.tmp/vitest/desktop-electron-mirror.json', targets: collectTestFiles('electron/mirror') },
     { label: 'diagnostics', report: '.tmp/vitest/desktop-electron-diagnostics.json', targets: collectTestFiles('electron/diagnostics') },
     { label: 'agentControl', report: '.tmp/vitest/desktop-electron-agent-control.json', targets: collectTestFiles('electron/agentControl') },
