@@ -22,6 +22,12 @@ import { prepareCompanionFramedSyncOutbound } from './companionFramedSyncOutboun
 beforeEach(startLibraries);
 afterEach(closeLibraries);
 
+function historyPeer(id: string) {
+  const peer = createPeer(id);
+  peer.db.pragma('journal_mode = WAL');
+  return peer;
+}
+
 async function stage(db: Database.Database, prefix: string, value: CompanionFramedSyncOutboundValue, source: Database.Database) {
   installCompanionFramedSyncStaging(db, prefix);
   const transfer = hexToBytes(value.transfer_id);
@@ -52,7 +58,7 @@ async function stage(db: Database.Database, prefix: string, value: CompanionFram
 }
 
 it.each(['android', 'ios'] as const)('recovers %s atomic business apply after receipt failure and lost acknowledgement', async (kind) => {
-  const source = createPeer('history-source');
+  const source = historyPeer('history-source');
   const original = edit(source, 'Original history body');
   edit(source, 'Current body');
   await collectNodeVersionPayloads(source.port, 'topic', 32, true);
@@ -81,6 +87,7 @@ it.each(['android', 'ios'] as const)('recovers %s atomic business apply after re
   const stagingPath = path.join(root, `${kind}-staging.db`);
   let receiver = new Database(file);
   const staging = new Database(stagingPath);
+  staging.pragma('journal_mode = WAL');
   try {
     await bootstrapCompanionDatabase(createBetterSqliteDbPort(receiver),
       { allowCreate: true, expectedHostName: 'receiver', now: '2026-10-06' });
@@ -109,8 +116,8 @@ it.each(['android', 'ios'] as const)('recovers %s atomic business apply after re
 });
 
 it.each(['android', 'ios'] as const)('preserves a %s receiver original body when the sender forwards retired metadata', async (kind) => {
-  const source = createPeer('retired-source');
-  const receiver = createPeer('complete-receiver');
+  const source = historyPeer('retired-source');
+  const receiver = historyPeer('complete-receiver');
   const original = edit(source, 'Original body');
   const record = await loadCurrentSyncNodeRecord(source.port, 'topic');
   expect(record).not.toBeNull();
@@ -126,6 +133,7 @@ it.each(['android', 'ios'] as const)('preserves a %s receiver original body when
   });
   const stagingPath = path.join(root, `${kind}-preserve.db`);
   const staging = new Database(stagingPath);
+  staging.pragma('journal_mode = WAL');
   try {
     await stage(staging, `framed_sync_${kind}`, value, source.db);
     await applyCompanionFramedSyncTransfer(receiver.port, {
@@ -140,7 +148,7 @@ it.each(['android', 'ios'] as const)('preserves a %s receiver original body when
 });
 
 it('rejects a missing current body instead of publishing it as retired history', async () => {
-  const source = createPeer('missing-current');
+  const source = historyPeer('missing-current');
   const version = edit(source, 'Required current body');
   source.db.prepare(`UPDATE node_sync_versions SET body_text = NULL,
     snapshot_json = json_set(snapshot_json, '$.content', NULL) WHERE version_id = ?`).run(version);
