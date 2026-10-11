@@ -3,6 +3,7 @@ import {
   FRAMED_SYNC_PROTOCOL_VERSION,
   type FramedSyncContext
 } from '../../lib/core/sync/framedSyncContract.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type {
   FramedSyncInventoryDifference
 } from '../../lib/core/sync/framedSyncInventory.js';
@@ -30,6 +31,7 @@ export type DesktopFramedSyncRoundIdentity = Readonly<{
 }>;
 
 type EndpointInput = Readonly<{
+  files?: FramedSyncFilePort;
   db: DbPort;
   groupId: string;
   groupSecret: string;
@@ -55,6 +57,7 @@ function transferContext(input: EndpointInput): FramedSyncContext {
 async function selectOutbound(input: EndpointState, difference: FramedSyncInventoryDifference):
 Promise<FramedSyncRoundSelection> {
   const result = await publishDesktopFramedSyncNodeOutbound({
+    ...(input.files ? { files: input.files } : {}),
     context: transferContext(input),
     difference,
     port: input.db,
@@ -71,9 +74,11 @@ async function sendPublishedTransfer(input: EndpointState, args: Readonly<{
   publication: Parameters<FramedSyncStagingPort['publishOutbound']>[0];
 }>) {
   const delivery = await prepareDesktopFramedSyncPublishedDelivery({
+    ...(input.files ? { files: input.files } : {}),
     db: input.db, groupSecret: input.groupSecret, publication: args.publication, staging: input.staging
   });
   await sendDesktopFramedSyncPublishedTransfer({
+    ...(input.files ? { files: input.files } : {}),
     db: input.db,
     ...delivery,
     groupSecret: input.groupSecret,
@@ -96,7 +101,7 @@ export function createDesktopFramedSyncRoundEndpoint(
   return {
     deviceId: input.local.deviceId,
     libraryEpoch: input.local.libraryEpoch,
-    readInventory: () => readDesktopFramedSyncRoundInventory(input.db),
+    readInventory: () => readDesktopFramedSyncRoundInventory(input.db, input.files),
     readInventoryEntry: (key) => readDesktopFramedSyncRoundInventoryEntry(input.db, key),
     selectOutbound: (difference) => selectOutbound(state, difference),
     sendPublishedTransfer: ({ publication }) => sendPublishedTransfer(state, { publication }),

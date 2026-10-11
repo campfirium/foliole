@@ -8,7 +8,7 @@ import com.foliole.android.framed.FramedSyncPayloadBudgetRegistry;
 import com.foliole.android.framed.FramedSyncInventoryWire;
 import com.foliole.android.framed.FramedSyncInventoryReader;
 import com.foliole.android.framed.FramedSyncSessionContext;
-import com.foliole.android.framed.FramedSyncSessionNonceSQLite;
+import com.foliole.android.framed.FramedSyncSessionNonceFiles;
 import com.foliole.android.framed.FramedSyncSessionReader;
 import com.foliole.android.framed.FramedSyncSessionFile;
 import com.foliole.sync.v22.InventoryEntry;
@@ -43,7 +43,7 @@ final class FolioleCompanionFramedSyncInventoryClient {
         byte[] roundId = random(16);
         FramedSyncSessionContext sessionContext = new FramedSyncSessionContext(
             groupId, credential.deviceId, senderEpoch, receiverDeviceId, receiverEpoch);
-        try (FramedSyncSessionNonceSQLite nonces = new FramedSyncSessionNonceSQLite(context);
+        try (FramedSyncSessionNonceFiles nonces = new FramedSyncSessionNonceFiles(context);
              FramedSyncSessionFile request = FramedSyncSessionFile.create(context.getCacheDir(),
                 groupKey, sessionContext,
                 consumer -> FramedSyncInventoryWire.emit(localEntries, roundId,

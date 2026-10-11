@@ -13,7 +13,7 @@ import com.foliole.android.framed.FramedSyncSessionRequest;
 import com.foliole.android.framed.FramedSyncSessionFile;
 import com.foliole.android.framed.FramedSyncTransferContext;
 import com.foliole.android.framed.FramedSyncTransferReader;
-import com.foliole.android.framed.FramedSyncTransferSQLite;
+import com.foliole.android.framed.FramedSyncTransferFiles;
 import com.foliole.android.framed.FramedSyncValidationException;
 import com.foliole.sync.v22.TransferReceipt;
 import java.io.BufferedInputStream;
@@ -37,7 +37,7 @@ final class FolioleCompanionFramedSyncRoute {
         OutputStream output,
         String authenticatedPeer,
         FramedSyncSessionNonceStore nonceStore,
-        FramedSyncTransferSQLite transferStore,
+        FramedSyncTransferFiles transferStore,
         File requestDirectory
     ) throws Exception {
         if (!contentType(request)) {
@@ -132,7 +132,7 @@ final class FolioleCompanionFramedSyncRoute {
         byte[] groupKey,
         FramedSyncTransferContext context,
         FolioleCompanionSyncGroupDataBridge bridge,
-        FramedSyncTransferSQLite store,
+        FramedSyncTransferFiles store,
         String localDeviceId,
         String localEpoch, FramedSyncPayloadBudget budget
     ) throws Exception {

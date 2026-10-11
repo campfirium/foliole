@@ -6,6 +6,8 @@ import type {
 } from '../../lib/core/sync/framedSyncContract.js';
 import { deriveTransferFrameKey } from '../../lib/core/sync/framedSyncCrypto.js';
 import { assertTransferEnvelopeBinding } from '../../lib/core/sync/framedSyncEnvelopeContract.js';
+import { createFramedSyncFileAttempts } from '../../lib/core/sync/framedSyncFileAttempts.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { FRAMED_SYNC_RECEIPT_SLOT_BYTES } from '../../lib/core/sync/framedSyncPayloadBudget.js';
 import { decodeAndValidateProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
@@ -29,6 +31,7 @@ import {
 const bytes = (value: unknown) => new Uint8Array(value as Uint8Array);
 
 type ReceiptInput = {
+  files?: FramedSyncFilePort;
   db: DbPort;
   groupKey: Uint8Array;
   receipt: TransferReceiptStage;
@@ -41,7 +44,7 @@ export async function buildReceiptStream(input: ReceiptInput) {
   });
   try {
     const body = await buildReceiptBody(input);
-    return { ...body, dispose: async () => { lease?.release(); }, frames: (async function* () {
+    return { ...body, receipt: input.receipt, dispose: async () => { lease?.release(); }, frames: (async function* () {
       try { yield* body.frames; }
       finally { lease?.release(); }
     })() };
@@ -49,7 +52,8 @@ export async function buildReceiptStream(input: ReceiptInput) {
 }
 
 async function buildReceiptBody(input: ReceiptInput) {
-  const replay = await replayableReceiptAttempt(input.db, input.receipt.transferId);
+  const replay = input.files ? (await createFramedSyncFileAttempts(input.files, 'receipt')
+    .listReplayable(input.receipt.transferId))[0] : await replayableReceiptAttempt(input.db, input.receipt.transferId);
   if (replay) {
     const frames = await input.staging.loadReplayableReceiptFrames(
       input.receipt.transferId,
@@ -88,7 +92,7 @@ function receiptBody(preamble: Uint8Array, frames: readonly StoredEncryptedFrame
 export async function readReceipt(input: {
   groupKey: Uint8Array;
   published: PublishedTransfer;
-  stream: FramedSyncStreamBody<FramedSyncWireFrame>;
+  stream: FramedSyncStreamBody<Pick<FramedSyncWireFrame, 'ciphertext' | 'headerBytes'>>;
 }) {
   const preamble = decodeFramedSyncPreamble(input.stream.preamble);
   if (preamble.contextKind !== 'transfer') throw new Error('receipt_preamble_invalid');

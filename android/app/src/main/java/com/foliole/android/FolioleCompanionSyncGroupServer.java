@@ -10,8 +10,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import com.foliole.android.framed.FramedSyncSessionNonceSQLite;
-import com.foliole.android.framed.FramedSyncTransferSQLite;
+import com.foliole.android.framed.FramedSyncSessionNonceFiles;
+import com.foliole.android.framed.FramedSyncTransferFiles;
 
 final class FolioleCompanionSyncGroupServer {
     private static final int SYNC_PORT = BuildConfig.FOLIOLE_COMPANION_SYNC_PORT;
@@ -22,8 +22,8 @@ final class FolioleCompanionSyncGroupServer {
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final FolioleCompanionJoinRequestProvider joins;
     private final ServerSocket server;
-    private final FramedSyncSessionNonceSQLite framedSyncNonces;
-    private final FramedSyncTransferSQLite framedSyncTransfers;
+    private final FramedSyncSessionNonceFiles framedSyncNonces;
+    private final FramedSyncTransferFiles framedSyncTransfers;
     private final Runnable stateChanged;
     private volatile boolean running = true;
 
@@ -35,8 +35,8 @@ final class FolioleCompanionSyncGroupServer {
         this.joins = joins; this.dataBridge = dataBridge; this.stateChanged = stateChanged;
         auth = new FolioleCompanionSyncGroupSessionAuth(this.context,
             config.getJSONObject("sync_group").getString("group_id"), dataBridge);
-        framedSyncNonces = new FramedSyncSessionNonceSQLite(this.context);
-        framedSyncTransfers = new FramedSyncTransferSQLite(this.context);
+        framedSyncNonces = new FramedSyncSessionNonceFiles(this.context);
+        framedSyncTransfers = new FramedSyncTransferFiles(this.context);
         server = new ServerSocket(SYNC_PORT); executor.execute(this::acceptLoop);
     }
 

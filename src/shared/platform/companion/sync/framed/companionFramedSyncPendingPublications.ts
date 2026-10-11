@@ -1,23 +1,27 @@
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
-import { retireFramedSyncCompletedPublication } from '../../../../../../lib/core/sync/framedSyncCompletedPublication.js';
+import { expireFramedSyncFileCompletions } from '../../../../../../lib/core/sync/framedSyncFileCompletionRetention.js';
+import { releaseFramedSyncFilePublication } from '../../../../../../lib/core/sync/framedSyncFileOutbound.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
+import { discardFramedSyncFilePreparations } from '../../../../../../lib/core/sync/framedSyncFilePreparation.js';
+import { streamFramedSyncFilePublications, loadFramedSyncFileTask } from '../../../../../../lib/core/sync/framedSyncFilePublication.js';
+import { reconcileFramedSyncFilePublication, selectFramedSyncFileRecoveryPublication, completeFramedSyncFileRecovery } from '../../../../../../lib/core/sync/framedSyncFileRecovery.js';
 import type { FramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { readFramedSyncMissingDependency } from '../../../../../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
-import { createFramedSyncOutboundReceiptStaging } from '../../../../../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
-import { reconcileFramedSyncPublication } from '../../../../../../lib/core/sync/framedSyncPublicationReconciliation.js';
-import { completeFramedSyncRecoveredPublication, selectFramedSyncRecoveryPublication } from '../../../../../../lib/core/sync/framedSyncPublicationRecoverySelection.js';
 import { isSyncGroupPeerAdopting, syncGroupLocalPublicationBlockReason } from '../../../../../../lib/core/sync/syncGroupLocalAdoption.js';
 import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
+import { currentCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 import { decodeCompanionInventoryEntry } from './companionFramedSyncInventoryEntryDecode.js';
 
 export function readCompanionFramedSyncPendingPublications(
-  db: DbPort, args: NativeCompanionFramedSyncInventoryRequest
+  db: DbPort, args: NativeCompanionFramedSyncInventoryRequest, files?: FramedSyncFilePort
 ) {
+  if (files) return readFilePublications(db, args, files);
   return db.query<{ object_id: string; object_type: string; state: string; transfer_id: string }>(
     `SELECT lower(hex(p.transfer_id)) AS transfer_id, p.state,
        (SELECT global_id FROM framed_sync_outbound_fact_refs f
@@ -36,35 +40,56 @@ export function readCompanionFramedSyncPendingPublications(
     [args.sync_group_id, args.receiver_device_id, args.receiver_library_epoch]);
 }
 
+async function readFilePublications(db: DbPort, args: NativeCompanionFramedSyncInventoryRequest, files: FramedSyncFilePort) {
+  const [local] = await db.query<{ device: string; epoch: string }>(`SELECT state.local_device_identity_key AS device,
+    proof.library_epoch AS epoch FROM sync_group_local_state state JOIN node_version_local_proof_state proof
+    ON proof.singleton_id = 1 WHERE state.singleton_id = 1 AND state.state = 'active' AND state.group_id = ?`, [args.sync_group_id]);
+  if (!local) return [];
+  const result = [];
+  for await (const publication of streamFramedSyncFilePublications(files)) {
+    const context = publication.context;
+    if (context.groupId !== args.sync_group_id || context.senderDeviceId !== local.device || context.senderLibraryEpoch !== local.epoch ||
+        context.receiverDeviceId !== args.receiver_device_id || context.receiverLibraryEpoch !== args.receiver_library_epoch) continue;
+    const first = publication.manifest.facts[0];
+    if (!first) throw new Error('framed_sync_outbound_fact_set_empty');
+    const task = await loadFramedSyncFileTask(files, publication.transferId);
+    result.push({ object_id: first.globalId, object_type: first.objectType,
+      transfer_id: bytesToHex(publication.transferId), state: task?.state === 'confirmed' ? 'receipt_committed' : 'published' });
+  }
+  return result;
+}
+
 /** Failed delivery is compared again before the native sender is invoked. */
 export async function resumeCompanionFramedSyncPendingPublications(
   args: NativeCompanionFramedSyncInventoryRequest,
   remoteInventory?: readonly FramedSyncInventoryEntry[]
 ) {
   const owner = getIosCompanionDatabaseOwner();
+  const files = currentCompanionFramedSyncFiles();
+  await discardFramedSyncFilePreparations(files);
+  await expireFramedSyncFileCompletions(files);
   if (await owner.read(syncGroupLocalPublicationBlockReason) || await owner.read((db) =>
     isSyncGroupPeerAdopting(db, args.sync_group_id, args.receiver_device_id))) return 0;
-  const pending = await owner.read((db) => readCompanionFramedSyncPendingPublications(db, args));
+  const pending = await owner.read((db) => readCompanionFramedSyncPendingPublications(db, args, files));
   if (!pending.length) return 0;
   const remote = remoteInventory ?? (await FolioleCompanionSync.readFramedSyncInventory(args))
     .entries.map(decodeCompanionInventoryEntry);
   for (const publication of pending) {
     if (publication.state === 'receipt_committed') {
-      await runCompanionSyncWriterTask(() => owner.runWriter(async (db) => {
+      await runCompanionSyncWriterTask(() => owner.runWriter(async () => {
         const transferId = hexToBytes(publication.transfer_id);
-        await createFramedSyncOutboundReceiptStaging(db).releaseOutboundHolds(transferId);
-        await retireFramedSyncCompletedPublication(db, transferId);
+        await releaseFramedSyncFilePublication(files, transferId);
       }));
     } else {
-      const state = await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
-        reconcileFramedSyncPublication(db, hexToBytes(publication.transfer_id), remote)));
+      const state = await runCompanionSyncWriterTask(() => owner.runWriter(() =>
+        reconcileFramedSyncFilePublication(files, hexToBytes(publication.transfer_id), remote)));
       if (state === 'satisfied') {
-        await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
-          retireFramedSyncCompletedPublication(db, hexToBytes(publication.transfer_id))));
+        await runCompanionSyncWriterTask(() => owner.runWriter(() =>
+          releaseFramedSyncFilePublication(files, hexToBytes(publication.transfer_id))));
         continue;
       }
-      const recovery = await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
-        selectFramedSyncRecoveryPublication(db, hexToBytes(publication.transfer_id), remote)));
+      const recovery = await runCompanionSyncWriterTask(() => owner.runWriter(() =>
+        selectFramedSyncFileRecoveryPublication(files, hexToBytes(publication.transfer_id), remote)));
       const recoveryId = bytesToHex(recovery.transferId);
       const receipt = await sendRecovery(args, publication, recoveryId);
       if (!receipt) continue;
@@ -73,10 +98,10 @@ export async function resumeCompanionFramedSyncPendingPublications(
           receipt.receiver_library_epoch !== args.receiver_library_epoch) {
         throw new Error('framed_sync_transfer_receipt_invalid');
       }
-      await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
-        completeFramedSyncRecoveredPublication(db, hexToBytes(publication.transfer_id), recovery.transferId)));
-      await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
-        retireFramedSyncCompletedPublication(db, hexToBytes(publication.transfer_id))));
+      await runCompanionSyncWriterTask(() => owner.runWriter(() =>
+        completeFramedSyncFileRecovery(files, hexToBytes(publication.transfer_id), recovery.transferId)));
+      await runCompanionSyncWriterTask(() => owner.runWriter(() =>
+        releaseFramedSyncFilePublication(files, hexToBytes(publication.transfer_id))));
     }
   }
   return pending.length;

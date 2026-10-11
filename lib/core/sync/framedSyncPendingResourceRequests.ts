@@ -2,19 +2,23 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort } from './dbPort.js';
 import type { FramedSyncContext } from './framedSyncContract.js';
+import { readFramedSyncFilePendingResourceRows } from './framedSyncFilePendingResources.js';
+import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import { readFramedSyncRequestedResources } from './framedSyncResourceRequest.js';
 
 type Receiver = Pick<FramedSyncContext, 'groupId' | 'receiverDeviceId' | 'receiverLibraryEpoch'>;
 export const FRAMED_SYNC_RESOURCE_REQUEST_PAGE = 64;
 
-type DemandVersionRow = {
+export type DemandVersionRow = {
   demand_id: string; global_id: string; version_id: string; body_hash: string; storage_key: string;
   version_body_hash: string | null; content_hash: string | null;
 };
 
 /** Started requests use their saved summary; unsent work uses immutable version metadata, never body text. */
-export async function loadFramedSyncPendingResourceRequests(db: DbPort, receiver: Receiver, afterId = '', globalId?: string) {
-  const rows = await db.query<DemandVersionRow>(`SELECT demand.demand_id, demand.global_id,
+export async function loadFramedSyncPendingResourceRequests(db: DbPort, receiver: Receiver, afterId = '', globalId?: string, files?: FramedSyncFilePort) {
+  if (files && globalId === undefined) throw new Error('framed_sync_resource_demand_scope_required');
+  const rows = files ? await readFramedSyncFilePendingResourceRows(db, files, { ...receiver, globalId: globalId! }, afterId, FRAMED_SYNC_RESOURCE_REQUEST_PAGE) :
+    await db.query<DemandVersionRow>(`SELECT demand.demand_id, demand.global_id,
     demand.version_id, demand.body_hash, demand.storage_key,
     CASE WHEN demand.request_started = 1 THEN lower(hex(demand.shared_state_hash))
       ELSE version.content_hash END AS content_hash,

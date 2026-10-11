@@ -29,10 +29,17 @@ enum FolioleFramedSyncSessionWriter {
         let preamble = try makePreamble(
             contextID: contextID, sessionID: sessionID, noncePrefix: noncePrefix
         )
-        try persistNonceState(
-            sessionID: sessionID, contextID: contextID,
-            noncePrefix: noncePrefix, directory: nonceDirectory
-        )
+        if let owner {
+            try owner.requireActive()
+            let files = try FolioleFramedSyncFiles(libraryKey: owner.libraryKey)
+            try FolioleFramedSyncFileRecords.write(files, "sessions/\(sessionID.hex).json", [
+                "sessionId": Array(sessionID), "contextId": Array(contextID), "noncePrefix": Array(noncePrefix),
+                "startingSequence": "0", "state": "prepared"
+            ])
+        } else {
+            try persistNonceState(sessionID: sessionID, contextID: contextID,
+                noncePrefix: noncePrefix, directory: nonceDirectory)
+        }
         let writer = FolioleFramedSyncStreamWriter(output: output)
         try writer.write(preamble: preamble.encoded)
         var sessionBytes = FolioleFramedSyncPreamble.byteCount

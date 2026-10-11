@@ -5,6 +5,10 @@ import { decodeFramedSyncManifest } from '../database/framedSyncStagingSerializa
 import type { DbPort } from './dbPort.js';
 import { canonicalTransferId } from './framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_LIMITS, FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext } from './framedSyncContract.js';
+import type { FramedSyncFilePort } from './framedSyncFilePort.js';
+import { framedSyncPublicationDirectory, loadFramedSyncFileTask } from './framedSyncFilePublication.js';
+import { readFramedSyncFilePublicationFact } from './framedSyncFilePublicationFacts.js';
+import { sameFramedSyncContext } from './framedSyncStagingContract.js';
 
 const contextWhere = `hex(transfer_id) = ? AND group_id = ? AND sender_device_id = ?
   AND sender_library_epoch = ? AND receiver_device_id = ? AND receiver_library_epoch = ?
@@ -26,7 +30,11 @@ async function assertIdentity(context: FramedSyncContext, transferId: string, co
 }
 
 /** Only identities and blob descriptors leave SQLite; fact bodies remain in their frozen owner. */
-export async function loadFramedSyncPublishedMetadata(db: DbPort, context: FramedSyncContext, transferId: string) {
+export async function loadFramedSyncPublishedMetadata(db: DbPort, context: FramedSyncContext, transferId: string, files?: FramedSyncFilePort) {
+  if (files) {
+    const task = await fileTask(files, context, transferId);
+    return { manifest: decodeFramedSyncManifest(task.manifest!), contentId: task.contentId };
+  }
   const [row] = await db.query<{ content_id: string; manifest_hash: string; metadata_json: string }>(`SELECT
     lower(hex(content_id)) AS content_id, lower(hex(manifest_hash)) AS manifest_hash,
     json_object('blobs', json_extract(manifest_json, '$.blobs'), 'facts', json((SELECT
@@ -48,9 +56,13 @@ export async function loadFramedSyncPublishedMetadata(db: DbPort, context: Frame
 
 /** Select one immutable fact instead of materializing the publication's entire fact array. */
 export async function readFramedSyncPublishedFact(db: DbPort, context: FramedSyncContext,
-  transferId: string, factIndex: number) {
+  transferId: string, factIndex: number, files?: FramedSyncFilePort) {
   if (!Number.isSafeInteger(factIndex) || factIndex < 0 || factIndex >= FRAMED_SYNC_LIMITS.maxFactsPerTransfer) {
     throw new Error('framed_sync_fact_index_invalid');
+  }
+  if (files) {
+    const task = await fileTask(files, context, transferId);
+    return readFramedSyncFilePublicationFact(files, framedSyncPublicationDirectory(task.transferId), factIndex, task.factDigests!);
   }
   const [row] = await db.query<{ content_id: string; manifest_hash: string; fact_json: string | null }>(`SELECT
     lower(hex(content_id)) AS content_id, lower(hex(manifest_hash)) AS manifest_hash,
@@ -62,4 +74,13 @@ export async function readFramedSyncPublishedFact(db: DbPort, context: FramedSyn
   const [fact] = decodeFramedSyncManifest(`{"blobs":[],"facts":[${row.fact_json}]}`).facts;
   if (!fact) throw new Error('framed_sync_fact_index_invalid');
   return fact;
+}
+
+async function fileTask(files: FramedSyncFilePort, context: FramedSyncContext, transferId: string) {
+  bindings(context, transferId);
+  const task = await loadFramedSyncFileTask(files, hexToBytes(transferId));
+  if (!task?.manifest || !task.factDigests || task.state !== 'published' || !sameFramedSyncContext(task.context, context)) {
+    throw new Error('framed_sync_publication_context_missing');
+  }
+  return task;
 }

@@ -1,16 +1,18 @@
 import { readFramedSyncPublication } from '../database/framedSyncStagingSerialization.js';
 import type { DbPort, DbRow } from '../sync/dbPort.js';
+import type { FramedSyncFilePort } from '../sync/framedSyncFilePort.js';
+import { readFramedSyncFileResourceReferences } from '../sync/framedSyncFileResourceReferences.js';
 import { framedSyncPublicationResources } from '../sync/framedSyncPublicationResources.js';
 import { loadNodeOwnedArticleResourceNeeds } from '../sync/nodeOwnedArticleResourceNeeds.js';
 
-export async function attachmentDatabaseRevision(port: DbPort) {
+export async function attachmentDatabaseRevision(port: DbPort, files?: FramedSyncFilePort) {
   const data = await port.query('PRAGMA data_version');
   const changes = await port.query('SELECT total_changes() AS changes');
-  return JSON.stringify([data, changes]);
+  return JSON.stringify([data, changes, ...(files ? [(await readFramedSyncFileResourceReferences(files)).revision] : [])]);
 }
 
-export async function readAttachmentReferenceSnapshot(port: DbPort, signal?: AbortSignal) {
-  const revision = await attachmentDatabaseRevision(port);
+export async function readAttachmentReferenceSnapshot(port: DbPort, signal?: AbortSignal, files?: FramedSyncFilePort) {
+  const revision = await attachmentDatabaseRevision(port, files);
   const articles = await port.query<{ id: string }>('SELECT id FROM nodes ORDER BY id');
   const storageKeys = new Set<string>();
   for (const article of articles) {
@@ -19,6 +21,14 @@ export async function readAttachmentReferenceSnapshot(port: DbPort, signal?: Abo
     if (result.unreadableArticleIds.length) throw new Error('attachment_scan_body_unreadable');
     for (const need of result.needs) storageKeys.add(need.storageKey);
   }
+  if (files) {
+    for (const key of (await readFramedSyncFileResourceReferences(files)).storageKeys) storageKeys.add(key);
+  } else await addLegacyTransportReferences(port, storageKeys);
+  if (revision !== await attachmentDatabaseRevision(port, files)) throw new Error('attachment_scan_database_changed');
+  return { revision, storageKeys: [...storageKeys] };
+}
+
+async function addLegacyTransportReferences(port: DbPort, storageKeys: Set<string>) {
   const tables = await port.query<{ name: string }>(
     "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'framed_sync_outbound_holds'");
   if (tables.length) {
@@ -37,6 +47,4 @@ export async function readAttachmentReferenceSnapshot(port: DbPort, signal?: Abo
     for (const pin of await port.query<{ storage_key: string }>(
       'SELECT storage_key FROM framed_sync_resource_pins')) storageKeys.add(pin.storage_key);
   }
-  if (revision !== await attachmentDatabaseRevision(port)) throw new Error('attachment_scan_database_changed');
-  return { revision, storageKeys: [...storageKeys] };
 }

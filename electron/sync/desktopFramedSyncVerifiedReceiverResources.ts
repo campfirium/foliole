@@ -1,5 +1,7 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { readFramedSyncFactFrame } from '../../lib/core/sync/framedSyncFactFrameReader.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
+import { readFramedSyncFileFact, streamFramedSyncFileFacts } from '../../lib/core/sync/framedSyncFileReadyFacts.js';
 import { restoreFramedSyncNodeReadingFact } from '../../lib/core/sync/framedSyncNodeReadingFact.js';
 import type { FramedSyncNodeResource } from '../../lib/core/sync/framedSyncNodeResources.js';
 import { restoreFramedSyncNodeMetadata } from '../../lib/core/sync/framedSyncNodeRestore.js';
@@ -12,11 +14,13 @@ import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract
 type ResourceNode = Readonly<{ snapshot: Pick<NativeSyncNodeRecord['snapshot'], 'resource_references'> }>;
 
 /** Preserve business-unit, all state, then node validation without retaining fact payloads. */
-export async function readVerifiedReceiverResourceNodes(db: DbPort, transferId: Uint8Array, attemptId: Uint8Array) {
+export async function readVerifiedReceiverResourceNodes(db: DbPort, transferId: Uint8Array, attemptId: Uint8Array, files?: FramedSyncFilePort) {
+  const stream = () => files ? streamFramedSyncFileFacts(files, { transferId, attemptId }) :
+    streamFramedSyncReadyFactFrames(db, transferId, attemptId, 'desktop');
   let identity: { globalId: string; objectType: string } | undefined;
   let resourceUnit: boolean | undefined;
   const resources: FramedSyncNodeResource[] = [];
-  for await (const { fact } of streamFramedSyncReadyFactFrames(db, transferId, attemptId, 'desktop')) {
+  for await (const { fact } of stream()) {
     identity ??= { globalId: fact.globalId, objectType: fact.objectType };
     resourceUnit ??= fact.kind === FRAMED_SYNC_RESOURCE_FACT_KIND;
     if (fact.globalId !== identity.globalId || fact.objectType !== identity.objectType ||
@@ -28,16 +32,16 @@ export async function readVerifiedReceiverResourceNodes(db: DbPort, transferId: 
   }
   if (!identity) throw new Error('framed_sync_process_fact_set_invalid');
   const nodeSequences: string[] = [];
-  for await (const { sequence, fact } of streamFramedSyncReadyFactFrames(db, transferId, attemptId, 'desktop')) {
+  for await (const { sequence, fact } of stream()) {
     if (fact.kind === 1) {
       if (fact.objectType === 'node') restoreFramedSyncNodeReadingFact(fact);
       else restoreFramedSyncObjectStateFact(fact);
-    } else if (fact.kind === 2) nodeSequences.push(sequence);
+    } else if (fact.kind === 2) nodeSequences.push(sequence.toString());
   }
   const nodes: ResourceNode[] = [];
   for (const sequence of nodeSequences) {
-    const decoded = await readFramedSyncFactFrame(db, transferId, attemptId, sequence, 'desktop');
-    const fact = canonicalFactFromValidatedMessage(decoded.message);
+    const fact = files ? (await readFramedSyncFileFact(files, { transferId, attemptId }, BigInt(sequence))).fact :
+      canonicalFactFromValidatedMessage((await readFramedSyncFactFrame(db, transferId, attemptId, sequence, 'desktop')).message);
     const node = restoreFramedSyncNodeMetadata(fact);
     nodes.push({ snapshot: node.snapshot.resource_references === undefined ? {} :
       { resource_references: node.snapshot.resource_references } });

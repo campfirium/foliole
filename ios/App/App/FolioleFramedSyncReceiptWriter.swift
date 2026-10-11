@@ -3,6 +3,38 @@ import Foundation
 import FolioleFramedSyncRuntime
 
 enum FolioleFramedSyncReceiptWriter {
+    static func encode(groupKey: Data, value: [String: Any], files: FolioleFramedSyncFiles) throws -> Data {
+        var receipt = Foliole_Sync_V22_TransferReceipt()
+        receipt.transferID = try digest(value, "transfer_id")
+        receipt.contentID = try digest(value, "content_id")
+        receipt.appliedStateHash = try digest(value, "applied_state_hash")
+        receipt.receiverDeviceID = try text(value, "receiver_device_id")
+        receipt.receiverLibraryEpoch = try text(value, "receiver_library_epoch")
+        let expected: [String: Any] = ["transferId": Array(receipt.transferID), "contentId": Array(receipt.contentID),
+            "appliedStateHash": Array(receipt.appliedStateHash), "receiverDeviceId": receipt.receiverDeviceID,
+            "receiverLibraryEpoch": receipt.receiverLibraryEpoch]
+        guard let record = try FolioleFramedSyncFileRecords.read(files,
+            FolioleFramedSyncFileRecords.directory(receipt.transferID) + "/transfer.json"),
+              let stored = record["receipt"] as? [String: Any], FolioleFramedSyncFileRecords.same(stored, expected) else {
+            throw invalid("receipt_identity_conflict")
+        }
+        var message = Foliole_Sync_V22_ProtocolMessage()
+        message.payload = .transferReceipt(receipt)
+        let validated = try FolioleFramedSyncCodec.validateOutbound(message, authenticatedFrameType: 6)
+        let plaintext = try FolioleFramedSyncCodec.encode(validated)
+        let preamble = try makePreamble(transferID: receipt.transferID)
+        let staging = FolioleFramedSyncOutboundFiles(files: files, purpose: "receipt")
+        _ = try staging.prepare(transferID: receipt.transferID, attemptID: preamble.identifier, preamble: preamble.encoded)
+        let header = try FolioleFramedSyncWireHeader(ciphertextBytes: plaintext.count + 16,
+            sequence: 0, frameType: .transferReceipt).encode()
+        let ciphertext = try FolioleFramedSyncFrameCrypto.encrypt(groupKey: groupKey, preamble: preamble,
+            header: header, plaintext: plaintext, sequence: 0)
+        _ = try staging.commit(.init(transferID: receipt.transferID, attemptID: preamble.identifier,
+            preamble: preamble.encoded, header: header, ciphertext: ciphertext, plaintext: plaintext))
+        _ = try staging.finalize(transferID: receipt.transferID, attemptID: preamble.identifier)
+        return preamble.encoded + header + ciphertext
+    }
+
     static func encode(
         groupKey: Data, value: [String: Any], database: FolioleFramedSyncTransferDatabase
     ) throws -> Data {

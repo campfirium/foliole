@@ -27,15 +27,19 @@ export async function recordDesktopFramedSourceProgress(tx: DbPort, transfers: r
 }
 
 export async function createDesktopFramedReceipt(tx: DbPort, transfer: DesktopFramedInboundIdentity): Promise<TransferReceiptStage> {
+  return createDesktopFramedSyncStaging(tx).commitApplyAndReceipt(await readDesktopFramedReceipt(tx, transfer));
+}
+
+export async function readDesktopFramedReceipt(tx: DbPort, transfer: DesktopFramedInboundIdentity): Promise<TransferReceiptStage> {
   const appliedStateHash = (await readFramedSyncInventoryEntry(tx, {
     globalId: transfer.globalId, objectType: transfer.objectType
   }))?.sharedStateHash;
   if (!appliedStateHash) throw new Error(`framed_sync_process_inventory_missing:${transfer.objectType}:${transfer.globalId}`);
-  return createDesktopFramedSyncStaging(tx).commitApplyAndReceipt({
+  return {
     appliedStateHash,
     contentId: transfer.manifestHash,
     receiverDeviceId: transfer.context.receiverDeviceId,
     receiverLibraryEpoch: transfer.context.receiverLibraryEpoch,
     transferId: transfer.transferId
-  });
+  };
 }

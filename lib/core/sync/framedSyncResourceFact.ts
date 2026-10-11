@@ -75,3 +75,17 @@ export function restoreFramedSyncResourceFact(fact: CanonicalFact): FramedSyncRe
     resource: { contentHash: parsed.contentHash, role, storageKey: parsed.storageKey }
   };
 }
+
+export function framedSyncResourceUnit(facts: readonly CanonicalFact[]) {
+  if (!facts.some((fact) => fact.kind === FRAMED_SYNC_RESOURCE_FACT_KIND)) return null;
+  const first = facts[0]!;
+  if (facts.some((fact) => fact.kind !== FRAMED_SYNC_RESOURCE_FACT_KIND ||
+      fact.globalId !== first.globalId || fact.objectType !== first.objectType)) {
+    throw new Error('framed_sync_resource_unit_invalid');
+  }
+  const resources = facts.map(restoreFramedSyncResourceFact);
+  if (new Set(resources.map((entry) => entry.resource.contentHash)).size !== resources.length) {
+    throw new Error('framed_sync_resource_unit_invalid');
+  }
+  return resources;
+}

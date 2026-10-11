@@ -3,6 +3,7 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_FRAME_TYPES, FRAMED_SYNC_LIMITS } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { decodeFramedSyncDifferenceRequest, resolveFramedSyncDifferenceRequest } from '../../../../../../lib/core/sync/framedSyncDifferenceRequest.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
 import { readFramedSyncInventoryEntry } from '../../../../../../lib/core/sync/framedSyncInventoryRead.js';
 import { decodeAndValidateProtocolMessage } from '../../../../../../lib/core/sync/framedSyncProtocolCodec.js';
 import { publishFramedSyncResourceOutbound } from '../../../../../../lib/core/sync/framedSyncResourceOutbound.js';
@@ -33,7 +34,7 @@ export async function resolveCompanionFramedSyncOutboundRequest(db: DbPort, payl
     review_fact_ids: difference.need.reviewFactIds, state_fact_ids: difference.need.stateFactIds ?? [] };
 }
 
-export async function publishCompanionFramedSyncRequestedResources(db: DbPort, payload: Record<string, unknown>) {
+export async function publishCompanionFramedSyncRequestedResources(db: DbPort, payload: Record<string, unknown>, storage?: FramedSyncFilePort) {
   const request = readCompanionFramedSyncOutboundRequest(payload);
   const files = payload.resource_files;
   if (!Array.isArray(files)) throw new Error('framed_sync_resource_files_invalid');
@@ -53,6 +54,6 @@ export async function publishCompanionFramedSyncRequestedResources(db: DbPort, p
   if (required.size !== lengths.size || [...required].some((key) => !lengths.has(key))) {
     throw new Error('framed_sync_outbound_resource_unavailable');
   }
-  return publishFramedSyncResourceOutbound({ context: context(payload), db,
+  return publishFramedSyncResourceOutbound({ context: context(payload), db, ...(storage ? { files: storage } : {}),
     sources: request.resources.map((demand) => ({ demand, byteLength: lengths.get(demand.storageKey)! })) });
 }

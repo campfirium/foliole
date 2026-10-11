@@ -155,7 +155,7 @@ private final class PullBatchFixture: FolioleCompanionSyncGroupDataRequesting {
     }
     func receive(_ bytes: Data, requests: [String]) async throws -> [[String: Any]] {
         let url = root.appendingPathComponent("response"); try bytes.write(to: url)
-        let receiver = try FolioleFramedSyncTransferReceiver(database: .init(url: root.appendingPathComponent("inbound.db")), resourceRoot: root, owner: owner)
+        let receiver = FolioleFramedSyncFileReceiver(files: .init(root: root.appendingPathComponent("transport")), resourceRoot: root)
         let requested = try FolioleFramedSyncPullBatchRequest.decode(Self.input(requests))
         return try await FolioleFramedSyncPullBatchReceiver(receiver: receiver, context: context,
             groupKey: key, owner: owner, bridge: self).receive(url, requested: requested) { bytes, _ in
@@ -175,6 +175,15 @@ private final class PullBatchFixture: FolioleCompanionSyncGroupDataRequesting {
         XCTAssertEqual(operation, "apply_framed_transfer")
         if applyErrorAt == applied.count { throw FolioleFramedSyncValidationError(applyError) }
         let id = try XCTUnwrap(value["transfer_id"] as? String); applied.append(id)
+        let files = FolioleFramedSyncFiles(root: root.appendingPathComponent("transport"))
+        let key = "inbound/\(id)/transfer.json"
+        var record = try XCTUnwrap(FolioleFramedSyncFileRecords.read(files, key))
+        let transferID = try FolioleCompanionFramedSyncPreparedOutbound.digest(["transfer_id": id], "transfer_id")
+        record["receipt"] = ["transferId": Array(transferID), "contentId": Array(try XCTUnwrap(content[id])),
+            "appliedStateHash": Array(Data(repeating: 9, count: 32)),
+            "receiverDeviceId": context.receiverDeviceID, "receiverLibraryEpoch": context.receiverLibraryEpoch]
+        record["state"] = "applied"
+        try FolioleFramedSyncFileRecords.write(files, key, record)
         return ["transfer_id": id, "content_id": try XCTUnwrap(content[id]).hex,
             "applied_state_hash": Data(repeating: 9, count: 32).hex,
             "receiver_device_id": context.receiverDeviceID, "receiver_library_epoch": context.receiverLibraryEpoch]

@@ -6,10 +6,10 @@ import com.foliole.android.framed.FramedSyncHttpTransport;
 import com.foliole.android.framed.FramedSyncPayloadBudgetRegistry;
 import com.foliole.android.framed.FramedSyncSessionFile;
 import com.foliole.android.framed.FramedSyncSessionContext;
-import com.foliole.android.framed.FramedSyncSessionNonceSQLite;
+import com.foliole.android.framed.FramedSyncSessionNonceFiles;
 import com.foliole.android.framed.FramedSyncTransferContext;
 import com.foliole.android.framed.FramedSyncTransferReader;
-import com.foliole.android.framed.FramedSyncTransferSQLite;
+import com.foliole.android.framed.FramedSyncTransferFiles;
 import com.foliole.sync.v22.TransferReceipt;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.PluginCall;
@@ -41,8 +41,8 @@ final class FolioleCompanionFramedSyncPull {
         URL url = new URL(join(endpointUrl, path));
         FramedSyncTransferContext transferContext = new FramedSyncTransferContext(
             groupId, remoteDeviceId, remoteEpoch, credential.deviceId, localEpoch);
-        try (FramedSyncTransferSQLite staging = new FramedSyncTransferSQLite(context);
-             FramedSyncSessionNonceSQLite nonces = new FramedSyncSessionNonceSQLite(context);
+        try (FramedSyncTransferFiles staging = new FramedSyncTransferFiles(context);
+             FramedSyncSessionNonceFiles nonces = new FramedSyncSessionNonceFiles(context);
              FramedSyncSessionFile request = FramedSyncSessionFile.create(context.getCacheDir(), groupKey,
                 sessionContext, consumer -> {
                     for (var message : FolioleCompanionFramedSyncPullInput.messages(input)) consumer.accept(message);
@@ -53,7 +53,7 @@ final class FolioleCompanionFramedSyncPull {
                 request::replay,
                 response -> staging.receive(response, groupKey, transferContext, budget));
             if (Boolean.TRUE.equals(call.getBoolean("stage_only", false))) {
-                return FolioleCompanionFramedSyncApply.stage(staging, received.transferId(), transferContext, credential.deviceId, localEpoch);
+                return FolioleCompanionFramedSyncApply.stage(staging, received.transferId(), transferContext, credential.deviceId, localEpoch, budget);
             }
             TransferReceipt receipt = FolioleCompanionFramedSyncApply.apply(
                 bridge, staging, received.transferId(), transferContext, credential.deviceId, localEpoch, budget);

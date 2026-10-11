@@ -12,7 +12,7 @@ final class FolioleCompanionSyncGroupJoinServer {
     let stateChanged: () -> Void
     private(set) var port: UInt16?
     let runtimeInstanceId: String
-    let framedTransfers: FolioleFramedSyncTransferReceiver?
+    let framedTransfers: FolioleFramedSyncFileReceiver?
 
     init(
         discovery: [String: Any], provider: FolioleCompanionSyncGroupJoinProvider,
@@ -22,14 +22,7 @@ final class FolioleCompanionSyncGroupJoinServer {
         self.discovery = discovery
         self.provider = provider
         self.dataBridge = dataBridge
-        if dataBridge != nil {
-            let support = try FileManager.default.url(
-                for: .applicationSupportDirectory, in: .userDomainMask,
-                appropriateFor: nil, create: true
-            )
-            let url = support.appendingPathComponent("Foliole/framed-sync/ios-transfer.db")
-            framedTransfers = try .init(database: FolioleFramedSyncTransferDatabase(url: url))
-        } else { framedTransfers = nil }
+        framedTransfers = dataBridge != nil ? .init() : nil
         self.stateChanged = stateChanged
         runtimeInstanceId = discovery["runtime_instance_id"] as? String ?? ""
         listener = try NWListener(using: .tcp, on: .any)

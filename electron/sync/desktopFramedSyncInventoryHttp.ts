@@ -1,6 +1,8 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_BATCH_LIMITS } from '../../lib/core/sync/framedSyncBatchLimits.js';
 import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
+import { expireFramedSyncFileCompletions } from '../../lib/core/sync/framedSyncFileCompletionRetention.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { FramedSyncInventoryEntry } from '../../lib/core/sync/framedSyncInventory.js';
 import { differingNodeIds, framedSyncInventorySummary } from '../../lib/core/sync/framedSyncInventorySummary.js';
 import {
@@ -33,6 +35,7 @@ export { requestDesktopFramedSyncDifferenceHttp, requestDesktopFramedSyncResourc
 type AuthenticatedContext = Omit<FramedSyncSessionContext, 'sessionId'>;
 
 export async function respondDesktopFramedSyncInventory(args: {
+  files?: FramedSyncFilePort;
   context: AuthenticatedContext;
   db: DbPort;
   groupKey: Uint8Array;
@@ -41,6 +44,7 @@ export async function respondDesktopFramedSyncInventory(args: {
   staging: FramedSyncStagingPort;
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
 }) {
+  if (args.files) await expireFramedSyncFileCompletions(args.files);
   let plaintextBytes = 0;
   const incoming = readDesktopFramedSyncSession({
     authenticatedContext: args.context,
@@ -67,7 +71,7 @@ export async function respondDesktopFramedSyncInventory(args: {
     try { yield first.value; yield* incoming; }
     finally { await incoming.return(undefined); }
   })());
-  const entries = await readDesktopFramedSyncRoundInventory(args.db);
+  const entries = await readDesktopFramedSyncRoundInventory(args.db, args.files);
   const messages = iterateFramedSyncInventory({ entries: detailGlobalIds.length ?
     entries.filter(entry => entry.objectType === 'node' && detailGlobalIds.includes(entry.globalId)) :
     summaryOnly ? framedSyncInventorySummary(entries) : entries, roundId });
@@ -85,6 +89,7 @@ async function consumeRemoteInventory(args: Parameters<typeof respondDesktopFram
   const route = loadDesktopSyncGroupRoutes(args.context.groupId).find((peer) =>
     peer.peer_device_id === args.context.initiatorDeviceId);
   const endpoint = route ? {
+    ...(args.files ? { files: args.files } : {}),
     db: args.db, groupId: args.context.groupId, groupSecret: args.groupSecret,
     local: { deviceId: args.context.responderDeviceId, libraryEpoch: args.context.responderLibraryEpoch },
     peer: { deviceId: args.context.initiatorDeviceId, libraryEpoch: args.context.initiatorLibraryEpoch },
@@ -119,6 +124,7 @@ async function reconcileResponderResources(args: Parameters<typeof respondDeskto
 }
 
 export async function exchangeDesktopFramedSyncInventoryHttp(args: {
+  files?: FramedSyncFilePort;
   localInventory?: readonly FramedSyncInventoryEntry[];
   context: AuthenticatedContext;
   db: DbPort;
@@ -129,7 +135,7 @@ export async function exchangeDesktopFramedSyncInventoryHttp(args: {
   detailGlobalIds?: readonly string[];
 }): Promise<{ local: readonly FramedSyncInventoryEntry[]; remote: readonly FramedSyncInventoryEntry[]; roundId: Uint8Array }> {
   const roundId = crypto.getRandomValues(new Uint8Array(16));
-  const local = args.localInventory ?? await readDesktopFramedSyncRoundInventory(args.db);
+  const local = args.localInventory ?? await readDesktopFramedSyncRoundInventory(args.db, args.files);
   const messages = iterateFramedSyncInventory({ entries: framedSyncInventorySummary(local), roundId,
     detailGlobalIds: args.detailGlobalIds ?? [], summaryOnly: true });
   const body = await encodeDesktopFramedSyncSession({

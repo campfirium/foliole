@@ -9,7 +9,7 @@ final class FolioleCompanionFramedSyncAttempt {
     private FolioleCompanionFramedSyncAttempt() {}
     static FramedSyncTransferWriter.Attempt prepare(Context host, JSONObject selection, JSONObject metadata,
         FolioleCompanionFramedSyncOutboundSource source, byte[] key, FramedSyncTransferContext context,
-        FramedSyncOutboundSQLite staging, FramedSyncPayloadBudget budget) throws Exception {
+        FramedSyncOutboundFiles staging, FramedSyncPayloadBudget budget) throws Exception {
         byte[] expected = FolioleCompanionFramedSyncOutbound.digest(metadata.getString("transfer_id"));
         try (var bodies = new FolioleCompanionFramedSyncBodyFiles(host, selection, metadata.getString("transfer_id"), budget)) {
             var blobs = FolioleCompanionFramedSyncOutboundInput.declaredBlobs(host, metadata,

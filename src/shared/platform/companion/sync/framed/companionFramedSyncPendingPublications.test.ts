@@ -6,13 +6,17 @@ import Database from 'better-sqlite3';
 import { afterEach, expect, it, vi } from 'vitest';
 
 import { createBetterSqliteDbPort } from '../../../../../../electron/database/betterSqliteDbPort.js';
+import { createDesktopFramedSyncFiles } from '../../../../../../electron/sync/desktopFramedSyncFiles.js';
 import { FRAMED_SYNC_STAGING_SCHEMA } from '../../../../../../lib/core/database/framedSyncStagingSchema.js';
 import { SYNC_GROUP_RESTORE_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/syncGroupRestoreSchemaStatements.js';
 import { SYNC_GROUP_METADATA_SCHEMA, SYNC_GROUP_SCHEMA_STATEMENTS } from '../../../../../../lib/core/database/syncGroupSchemaStatements.js';
 import { canonicalContentId, canonicalTransferId } from '../../../../../../lib/core/sync/framedSyncCanonicalManifest.js';
-import { publishFramedSyncOutboundWithDbPort } from '../../../../../../lib/core/sync/framedSyncOutboundStaging.js';
+import { createFramedSyncFileOutboundStaging } from '../../../../../../lib/core/sync/framedSyncFileOutbound.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
+import { loadFramedSyncFileTask, publishFramedSyncFileOutbound } from '../../../../../../lib/core/sync/framedSyncFilePublication.js';
 
-const mocks = vi.hoisted(() => ({ db: undefined as unknown, send: vi.fn(), inventory: vi.fn() }));
+const mocks = vi.hoisted(() => ({ db: undefined as unknown, files: undefined as unknown, send: vi.fn(), inventory: vi.fn() }));
+vi.mock('./companionFramedSyncFiles.js', () => ({ currentCompanionFramedSyncFiles: () => mocks.files }));
 vi.mock('../../../companionWorkspaceRuntimeRepository', () => ({
   FolioleCompanionSync: { sendFramedSyncTransfer: mocks.send, readFramedSyncInventory: mocks.inventory }
 }));
@@ -48,17 +52,30 @@ async function publish(receiver = 'B', senderEpoch = 'A-epoch', receiverEpoch = 
     senderDeviceId: 'A', senderLibraryEpoch: senderEpoch };
   const contentId = await canonicalContentId(manifest);
   const transferId = await canonicalTransferId(context, contentId);
-  await publishFramedSyncOutboundWithDbPort(createBetterSqliteDbPort(sqlite), {
+  await publishFramedSyncFileOutbound(files(), {
     contentId, context, manifest, manifestHash: contentId, transferId });
   return Buffer.from(transferId).toString('hex');
 }
 
+function files() { return mocks.files as FramedSyncFilePort; }
+function task(id: string) { return loadFramedSyncFileTask(files(), Buffer.from(id, 'hex')); }
+async function confirm(id: string) {
+  const publication = (await task(id))!;
+  await createFramedSyncFileOutboundStaging(files()).commitOutboundReceipt({
+    transferId: publication.transferId, contentId: publication.contentId,
+    receiverDeviceId: publication.context.receiverDeviceId,
+    receiverLibraryEpoch: publication.context.receiverLibraryEpoch,
+    appliedStateHash: publication.contentId
+  });
+}
+
 function database(persistent = false) {
-  if (persistent) {
-    const root = path.resolve('.tmp/artifacts/T328');
+  {
+    const root = path.resolve('.tmp/artifacts/T341');
     mkdirSync(root, { recursive: true });
     directory = mkdtempSync(path.join(root, 'peer-route-'));
   }
+  mocks.files = createDesktopFramedSyncFiles(path.join(directory, 'transport'));
   sqlite = new Database(persistent ? path.join(directory, 'route.db') : ':memory:');
   sqlite.exec(SYNC_GROUP_METADATA_SCHEMA);
   sqlite.exec(SYNC_GROUP_SCHEMA_STATEMENTS[1]!);
@@ -82,7 +99,7 @@ it('drains only the current peer publication even without a new inventory differ
   await publish('B', 'old-epoch');
   await publish('B', 'A-epoch', 'old-peer-epoch');
   mocks.send.mockImplementation(async () => {
-    sqlite.prepare("UPDATE framed_sync_outbound_publications SET state = 'receipt_committed' WHERE hex(transfer_id) = ?").run(id.toUpperCase());
+    await confirm(id);
     return { transfer_id: id, receiver_device_id: 'B', receiver_library_epoch: 'B-epoch' };
   });
   await expect(resumeCompanionFramedSyncPendingPublications(request)).resolves.toBe(1);
@@ -94,23 +111,20 @@ it('drains only the current peer publication even without a new inventory differ
 it('finishes receipt-backed hold release without resending or releasing C', async () => {
   database();
   const id = await publish();
-  await publish('C');
-  sqlite.prepare(`INSERT INTO framed_sync_receipts
-    SELECT transfer_id, content_id, receiver_device_id, receiver_library_epoch, content_id
-    FROM framed_sync_outbound_publications WHERE hex(transfer_id) = ?`).run(id.toUpperCase());
-  sqlite.prepare(`UPDATE framed_sync_outbound_publications SET state = 'receipt_committed'
-    WHERE hex(transfer_id) = ?`).run(id.toUpperCase());
-  await expect(resumeCompanionFramedSyncPendingPublications(request)).resolves.toBe(1);
+  const other = await publish('C');
+  await confirm(id);
+  await expect(resumeCompanionFramedSyncPendingPublications(request)).resolves.toBe(0);
   expect(mocks.send).not.toHaveBeenCalled();
-  expect(sqlite.prepare('SELECT member_id FROM framed_sync_outbound_holds').all())
-    .toEqual([{ member_id: 'C' }]);
+  expect((await task(id))?.state).toBe('retired');
+  expect((await task(other))?.state).toBe('published');
+  expect(sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all()).toEqual([]);
 });
 
 it('resumes a responding peer after reloading its exact verified route', async () => {
   database(true);
   const id = await publish();
   mocks.send.mockImplementation(async () => {
-    sqlite.prepare("UPDATE framed_sync_outbound_publications SET state = 'receipt_committed' WHERE hex(transfer_id) = ?").run(id.toUpperCase());
+    await confirm(id);
     return { transfer_id: id, receiver_device_id: 'B', receiver_library_epoch: 'B-epoch' };
   });
   await rememberCompanionFramedSyncPeerRoute(request);
@@ -129,7 +143,7 @@ it('resumes a responding peer after reloading its exact verified route', async (
 
 it.each(['restore', 'progress'] as const)('keeps durable outgoing work unsent during pending %s', async (phase) => {
   database();
-  await publish();
+  const id = await publish();
   if (phase === 'restore') sqlite.prepare(`INSERT INTO sync_group_restore_events
     (restore_id, group_id, restored_at, source_device_identity_key, applied_at, created_at)
     VALUES ('restore', 'group', '2026-10-07', 'B', NULL, '2026-10-07')`).run();
@@ -137,12 +151,12 @@ it.each(['restore', 'progress'] as const)('keeps durable outgoing work unsent du
     'sync_group_overwrite_progress', JSON.stringify({ groupId: 'group', overwriteId: 'restore',
       providerDeviceId: 'B', providerLibraryEpoch: 'B-epoch', receiverDeviceId: 'A',
       receiverLibraryEpoch: 'A-epoch' }), '2026-10-07');
-  const before = sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all();
+  const before = await task(id);
   await expect(resumeCompanionFramedSyncPendingPublications(request)).resolves.toBe(0);
   expect(mocks.send).not.toHaveBeenCalled();
   expect(mocks.inventory).not.toHaveBeenCalled();
-  expect(sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all()).toEqual(before);
-  expect(sqlite.prepare('SELECT member_id FROM framed_sync_outbound_holds').all()).toEqual([{ member_id: 'B' }]);
+  expect(await task(id)).toEqual(before);
+  expect((await task(id))?.state).toBe('published');
 });
 
 it.each(['authenticated_resource_hash_mismatch', 'framed_sync_publication_context_missing',
@@ -150,11 +164,10 @@ it.each(['authenticated_resource_hash_mismatch', 'framed_sync_publication_contex
   'keeps %s fatal and preserves the original publication', async error => {
     database();
     const id = await publish();
-    const before = sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all();
+    const before = await task(id);
     mocks.send.mockRejectedValue(new Error(error));
     await expect(resumeCompanionFramedSyncPendingPublications(request, [])).rejects.toThrow(error);
-    expect(sqlite.prepare('SELECT * FROM framed_sync_outbound_publications').all()).toEqual(before);
-    expect(sqlite.prepare('SELECT lower(hex(transfer_id)) AS id, member_id FROM framed_sync_outbound_holds').all())
-      .toEqual([{ id, member_id: 'B' }]);
+    expect(await task(id)).toEqual(before);
+    expect((await task(id))?.state).toBe('published');
   }
 );

@@ -117,9 +117,7 @@ extension FolioleCompanionSyncPlugin {
             groupID: groupID, senderDeviceID: remoteDeviceID, senderLibraryEpoch: remoteEpoch,
             receiverDeviceID: localDeviceID, receiverLibraryEpoch: localEpoch
         )
-        let receiver = try FolioleFramedSyncTransferReceiver(
-            database: FolioleFramedSyncTransferDatabase(url: framedInboundDatabaseURL()), owner: owner
-        )
+        let receiver = FolioleFramedSyncFileReceiver(owner: owner)
         let requestHeaders = try await FolioleFramedSyncPayloadWorker.run {
             try self.framedHeaders(groupID: groupID, deviceID: localDeviceID, workgroupKey: workgroupKey,
                 path: path, bodyURL: requestURL, owner: owner)
@@ -133,7 +131,7 @@ extension FolioleCompanionSyncPlugin {
         }
         if call.getBool("stage_only") == true {
             return try receiver.withPublishedResources(transferID: received.transferID) { resourceKeys in
-                ["staging_kind": "ios", "staging_path": receiver.databaseURL.path,
+                ["staging_format": "files", "staging_kind": "ios", "staging_path": receiver.databaseURL.path,
                  "transfer_id": received.transferID.hex,
                  "sender_device_id": remoteDeviceID, "sender_library_epoch": remoteEpoch,
                  "receiver_device_id": localDeviceID, "receiver_library_epoch": localEpoch,
@@ -144,7 +142,7 @@ extension FolioleCompanionSyncPlugin {
             transferID: received.transferID
         ) { resourceKeys in
             try groupData.request("apply_framed_transfer", [
-                "staging_kind": "ios", "staging_path": receiver.databaseURL.path,
+                "staging_format": "files", "staging_kind": "ios", "staging_path": receiver.databaseURL.path,
                 "transfer_id": received.transferID.hex,
                 "sender_device_id": remoteDeviceID, "sender_library_epoch": remoteEpoch,
                 "receiver_device_id": localDeviceID, "receiver_library_epoch": localEpoch,

@@ -54,6 +54,7 @@ describe('Android Java SQL surface', () => {
       .map((match) => match[1]).sort();
     expect(methods).toEqual([
       'acceptSyncGroupJoinRequest', 'beginSyncRun', 'desktopHttpRequest',
+      'accessFramedSyncFile',
       'configureFramedSyncPayloadBudget', 'closeFramedSyncPayloadBudget',
       'validateFramedSyncPayloadLoan', 'releaseFramedSyncPayloadLoan',
       'downloadAttachmentResourceBatch',

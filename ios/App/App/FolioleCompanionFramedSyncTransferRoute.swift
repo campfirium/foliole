@@ -8,7 +8,7 @@ extension FolioleCompanionSyncGroupJoinServer {
         peer: String, localDevice: String, localEpoch: String,
         initiator: String, initiatorEpoch: String, groupKey: Data, owner: FolioleFramedSyncPayloadBudget
     ) throws {
-        guard let prototype = framedTransfers, let rawBridge = dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
+        guard framedTransfers != nil, let rawBridge = dataBridge else { throw Self.invalid("sync_group_data_owner_unavailable") }
         let dataBridge = FolioleFramedSyncOwnedBridge(bridge: rawBridge, owner: owner)
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("foliole-framed-receipts-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -34,8 +34,7 @@ extension FolioleCompanionSyncGroupJoinServer {
                     context: original, groupKey: groupKey, transferID: unit.preamble.contextID, owner: owner)
                 try FolioleFramedSyncTransferSequence.appendReceipt(unit.url, to: output, owner: owner)
             } else {
-                let receiver = try FolioleFramedSyncTransferReceiver(
-                    database: FolioleFramedSyncTransferDatabase(url: prototype.databaseURL), owner: owner)
+                let receiver = FolioleFramedSyncFileReceiver(owner: owner)
                 try appendFramedTransferReceipt(unit.url, receiver: receiver, bridge: dataBridge, output: output,
                     peer: peer, localDevice: localDevice, localEpoch: localEpoch,
                     initiator: initiator, initiatorEpoch: initiatorEpoch, groupKey: groupKey, owner: owner)
@@ -47,7 +46,7 @@ extension FolioleCompanionSyncGroupJoinServer {
         handedOff = true
     }
 
-    private func appendFramedTransferReceipt(_ file: URL, receiver framedTransfers: FolioleFramedSyncTransferReceiver,
+    private func appendFramedTransferReceipt(_ file: URL, receiver framedTransfers: FolioleFramedSyncFileReceiver,
         bridge dataBridge: FolioleCompanionSyncGroupDataRequesting, output: FileHandle,
         peer: String, localDevice: String, localEpoch: String, initiator: String, initiatorEpoch: String,
         groupKey: Data, owner: FolioleFramedSyncPayloadBudget) throws {
@@ -61,7 +60,7 @@ extension FolioleCompanionSyncGroupJoinServer {
             transferID: received.transferID
         ) { resourceKeys in
             try dataBridge.request("apply_framed_transfer", [
-                "staging_kind": "ios", "staging_path": framedTransfers.databaseURL.path,
+                "staging_format": "files", "staging_kind": "ios", "staging_path": framedTransfers.databaseURL.path,
                 "transfer_id": received.transferID.hex,
                 "sender_device_id": peer, "sender_library_epoch": initiatorEpoch,
                 "receiver_device_id": localDevice, "receiver_library_epoch": localEpoch,

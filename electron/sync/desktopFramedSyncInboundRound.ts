@@ -1,6 +1,6 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION, type FramedSyncContext, type TransferReceiptStage } from '../../lib/core/sync/framedSyncContract.js';
-import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { assertFramedSyncRequestedTransferFacts } from '../../lib/core/sync/framedSyncRequestedTransferFacts.js';
 import type { FramedSyncSessionNoncePort } from '../../lib/core/sync/framedSyncSession.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
@@ -13,6 +13,7 @@ import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessRece
 import type { FramedSyncStreamBody, FramedSyncWireFrame } from './desktopFramedSyncStream.js';
 
 export type InboundRound = Readonly<{
+  files?: FramedSyncFilePort;
   context: Parameters<typeof requestDesktopFramedSyncDifferenceHttp>[0]['context'];
   db: DbPort;
   endpointUrl: string;
@@ -41,12 +42,11 @@ export async function receiveDesktopFramedSyncRoundStream(input: InboundRound,
   difference?: Parameters<typeof requestDesktopFramedSyncDifferenceHttp>[0]['difference']) {
   const context = reverseTransferContext(input.context);
   const receiptBody = await receiveDesktopFramedSyncTransfer({
+    ...(input.files ? { files: input.files } : {}),
     context, db: input.db, groupKey: input.groupKey, staging: input.staging, stream,
     ...(difference ? { acceptHeader: header => assertFramedSyncRequestedTransferFacts(difference, header.facts) } : {})
   });
-  const transferId = decodeFramedSyncPreamble(receiptBody.preamble).contextId;
-  const receipt = await input.staging.loadReceipt(transferId);
-  if (!receipt) throw new Error('framed_sync_inbound_receipt_missing');
+  const receipt = receiptBody.receipt;
   await postInboundReceipt(input, context, receipt, receiptBody);
   return receiptBody.generatedChanges ? 'pending' as const : 'committed' as const;
 }
@@ -64,6 +64,7 @@ async function postInboundReceipt(
   body?: Awaited<ReturnType<typeof buildReceiptStream>>
 ) {
   const receiptBody = body ?? await buildReceiptStream({
+    ...(input.files ? { files: input.files } : {}),
     db: input.db, groupKey: input.groupKey, receipt, staging: input.staging
   });
   const response = await postDesktopFramedSync({

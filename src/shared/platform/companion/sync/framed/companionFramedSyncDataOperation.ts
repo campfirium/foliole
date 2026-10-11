@@ -2,10 +2,13 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
 import type { DbPort } from '../../../../../../lib/core/sync/dbPort.js';
 import { retireFramedSyncCompletedPublication } from '../../../../../../lib/core/sync/framedSyncCompletedPublication.js';
+import { createFramedSyncFileOutboundStaging } from '../../../../../../lib/core/sync/framedSyncFileOutbound.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
 import { createFramedSyncOutboundReceiptStaging } from '../../../../../../lib/core/sync/framedSyncOutboundReceiptStaging.js';
 import { parseCanonicalAttachmentStorageKey } from '../../../../../../lib/platform/attachmentResource.js';
 
 import { applyCompanionFramedSyncTransfer } from './companionFramedSyncApply.js';
+import { applyCompanionFramedSyncFileTransfers } from './companionFramedSyncFileApply.js';
 
 export { readCompanionFramedSyncInventory } from './companionFramedSyncInventory.js';
 
@@ -38,16 +41,22 @@ function resourceStorageKeys(value: unknown) {
 
 export async function applyCompanionFramedSyncDataOperation(
   db: DbPort,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  files?: FramedSyncFilePort
 ) {
-  const receipt = await applyCompanionFramedSyncTransfer(db, {
+  const identity = {
     receiverDeviceId: requiredText(payload.receiver_device_id),
     receiverLibraryEpoch: requiredText(payload.receiver_library_epoch),
     senderDeviceId: requiredText(payload.sender_device_id),
     senderLibraryEpoch: requiredText(payload.sender_library_epoch),
+    transferId: requiredDigest(payload.transfer_id)
+  };
+  if (payload.staging_format === 'files' && !files) throw new Error('framed_sync_file_owner_unavailable');
+  if (files && payload.staging_format !== 'files') throw new Error('framed_sync_file_staging_required');
+  const receipt = files ? (await applyCompanionFramedSyncFileTransfers(db, files, [identity]))[0]! : await applyCompanionFramedSyncTransfer(db, {
+    ...identity,
     stagingKind: stagingKind(payload.staging_kind),
     stagingPath: requiredText(payload.staging_path),
-    transferId: requiredDigest(payload.transfer_id),
     resourceStorageKeys: resourceStorageKeys(payload.resource_storage_keys)
   });
   return {
@@ -61,7 +70,8 @@ export async function applyCompanionFramedSyncDataOperation(
 
 export async function completeCompanionFramedSyncOutbound(
   db: DbPort,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  files?: FramedSyncFilePort
 ) {
   const receipt = {
     appliedStateHash: requiredDigest(payload.applied_state_hash),
@@ -70,9 +80,9 @@ export async function completeCompanionFramedSyncOutbound(
     receiverLibraryEpoch: requiredText(payload.receiver_library_epoch),
     transferId: requiredDigest(payload.transfer_id)
   };
-  const staging = createFramedSyncOutboundReceiptStaging(db);
+  const staging = files ? createFramedSyncFileOutboundStaging(files) : createFramedSyncOutboundReceiptStaging(db);
   const state = await staging.commitOutboundReceipt(receipt);
   await staging.releaseOutboundHolds(receipt.transferId);
-  await retireFramedSyncCompletedPublication(db, receipt.transferId);
+  if (!files) await retireFramedSyncCompletedPublication(db, receipt.transferId);
   return { receipt_state: state, transfer_id: bytesToHex(receipt.transferId) };
 }

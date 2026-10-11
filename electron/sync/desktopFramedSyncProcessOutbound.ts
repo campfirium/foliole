@@ -5,6 +5,8 @@ import {
   type PreparedTransferAttempt,
   type PublishedTransfer
 } from '../../lib/core/sync/framedSyncContract.js';
+import { createFramedSyncFileAttempts } from '../../lib/core/sync/framedSyncFileAttempts.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { compareFramedSyncInventories } from '../../lib/core/sync/framedSyncInventory.js';
 import { FRAMED_SYNC_RESOURCE_FACT_KIND } from '../../lib/core/sync/framedSyncResourceFact.js';
 import type { OutboundPublishInput } from '../../lib/core/sync/framedSyncStagingContract.js';
@@ -24,6 +26,7 @@ import { writeDesktopFramedSyncTransferFrames } from './desktopFramedSyncTransfe
 type Identity = Readonly<{ deviceId: string; libraryEpoch: string }>;
 
 export async function synchronizeDesktopFramedSync(input: {
+  files?: FramedSyncFilePort;
   db: DbPort;
   groupId: string;
   groupSecret: string;
@@ -50,6 +53,7 @@ export async function synchronizeDesktopFramedSync(input: {
 }
 
 type PreparationInput = {
+  files?: FramedSyncFilePort;
   db: DbPort;
   groupSecret: string;
   publication: OutboundPublishInput;
@@ -69,7 +73,9 @@ export function prepareDesktopFramedSyncPublishedDelivery(input: PreparationInpu
 /** A new requested delivery must also work after the receiver invalidated its previous attempt. */
 export function prepareDesktopFramedSyncRequestedDelivery(input: PreparationInput) {
   return retainDesktopFramedSyncPublishedDelivery(input.db, input.publication.transferId, async () => {
-    const previous = await input.db.query<{ attempt_id: Uint8Array }>(
+    const previous = input.files ? (await createFramedSyncFileAttempts(input.files, 'transfer')
+      .listReplayable(input.publication.transferId)).map((attempt) => ({ attempt_id: attempt.attemptId })) :
+      await input.db.query<{ attempt_id: Uint8Array }>(
       `SELECT attempt_id FROM framed_sync_outbound_attempts
        WHERE transfer_id = ? AND purpose = 'transfer' AND state = 'replayable'`,
       [input.publication.transferId]);
@@ -100,7 +106,11 @@ async function preparePublishedAttempt(input: PreparationInput,
   writeFrames: typeof writeDesktopFramedSyncTransferFrames) {
   const stored = await input.staging.loadOutboundPublication(input.publication.transferId);
   if (!stored) throw new Error('framed_sync_outbound_publication_missing');
-  const replayable = await readFramedSyncRow(input.db, `SELECT * FROM framed_sync_outbound_attempts
+  if (input.files) {
+    const replay = (await createFramedSyncFileAttempts(input.files, 'transfer').listReplayable(stored.transferId))[0];
+    if (replay) return replay;
+  }
+  const replayable = input.files ? null : await readFramedSyncRow(input.db, `SELECT * FROM framed_sync_outbound_attempts
     WHERE transfer_id = ? AND purpose = 'transfer' AND state = 'replayable' ORDER BY rowid LIMIT 1`,
   [stored.transferId]);
   if (replayable) return {
@@ -111,7 +121,7 @@ async function preparePublishedAttempt(input: PreparationInput,
   };
   return persistDesktopFramedSyncAttempt({
     db: input.db,
-    blobSources: await loadDesktopFramedSyncPublishedBlobSources(input.db, stored.manifest),
+    blobSources: await loadDesktopFramedSyncPublishedBlobSources(input.db, stored.manifest, input.files),
     groupSecret: input.groupSecret,
     publication: stored,
     staging: input.staging
@@ -147,6 +157,7 @@ async function persistDesktopFramedSyncAttempt(input: {
 }
 
 export async function sendDesktopFramedSyncPublishedTransfer(input: {
+  files?: FramedSyncFilePort;
   db: DbPort;
   attempt: PreparedTransferAttempt;
   body: Awaited<ReturnType<typeof loadDesktopFramedSyncPreparedTransferBody>>;
@@ -163,6 +174,7 @@ export async function sendDesktopFramedSyncPublishedTransfer(input: {
 }
 
 async function transmitDesktopFramedSyncPublication(input: {
+  files?: FramedSyncFilePort;
   db: DbPort;
   attempt: PreparedTransferAttempt;
   body: Awaited<ReturnType<typeof loadDesktopFramedSyncPreparedTransferBody>>;
@@ -199,7 +211,7 @@ async function transmitDesktopFramedSyncPublication(input: {
     }
     await input.staging.commitOutboundReceipt(receipt);
     await input.staging.releaseOutboundHolds(published.transferId);
-    await retireFramedSyncCompletedPublication(input.db, published.transferId);
+    if (!input.files) await retireFramedSyncCompletedPublication(input.db, published.transferId);
   } catch (error) {
     await input.staging.abandonOutboundAttempt(published.transferId, input.attempt.attemptId);
     throw error;

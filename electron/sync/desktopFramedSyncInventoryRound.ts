@@ -2,6 +2,7 @@ import {
   FRAMED_SYNC_PROTOCOL_VERSION
 } from '../../lib/core/sync/framedSyncContract.js';
 import { compareFramedSyncDatabaseInventories } from '../../lib/core/sync/framedSyncDatabaseDifference.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { createFramedSyncInventoryDependencyLookup } from '../../lib/core/sync/framedSyncInventoryDependencyLookup.js';
 import { deliverFramedSyncDifferencesInDependencyOrder } from '../../lib/core/sync/framedSyncInventoryRoundDelivery.js';
 import { compareSyncIdentityText } from '../../lib/core/sync/syncIdentityKeyOrder.js';
@@ -21,21 +22,24 @@ import type { DesktopSyncGroupPeer } from './desktopSyncGroupRoutes.js';
 type InventoryRoundState = { inventories: Awaited<ReturnType<typeof exchangeDesktopFramedSyncInventoryHttp>> };
 
 export async function runDesktopFramedSyncInventoryRound(args: {
+  files?: FramedSyncFilePort | null;
   localLibraryEpoch: string;
   peer: DesktopSyncGroupPeer;
   remoteLibraryEpoch: string;
   restoreId?: string;
 }) {
-  const runtime = await loadRoundRuntime(args.peer);
+  const runtime = await loadRoundRuntime(args.peer, args.files);
   const { adoption } = runtime;
   const local = { deviceId: args.peer.local_device_id, libraryEpoch: adoption?.libraryEpoch ?? args.restoreId ?? args.localLibraryEpoch };
   const remote = { deviceId: args.peer.peer_device_id, libraryEpoch: args.remoteLibraryEpoch };
   if (!args.restoreId && !adoption) await resumeDesktopFramedSyncPendingPublications({
+    ...(runtime.files ? { files: runtime.files } : {}),
     db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
     local, peer: remote, peerOrigin: args.peer.endpoint_url, staging: runtime.staging
   });
   const context = roundContext(args.peer.group_id, local, remote);
   const exchange = {
+    ...(runtime.files ? { files: runtime.files } : {}),
     context,
     db: runtime.db,
     endpointUrl: args.peer.endpoint_url,
@@ -63,6 +67,7 @@ export async function runDesktopFramedSyncInventoryRound(args: {
     round.inventories = await exchangeDesktopFramedSyncInventoryHttp(exchange);
   }
   const endpoint = createDesktopFramedSyncRoundEndpoint({
+    ...(runtime.files ? { files: runtime.files } : {}),
     db: runtime.db, groupId: args.peer.group_id, groupSecret: runtime.groupSecret,
     local, peer: remote, peerOrigin: args.peer.endpoint_url, staging: runtime.staging
   });

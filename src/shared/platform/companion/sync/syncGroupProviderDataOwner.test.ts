@@ -5,9 +5,17 @@ import { createSyncGroupDeviceIdentity } from '../../../../../lib/platform/syncG
 const mocks = vi.hoisted(() => ({
   listener: null as null | ((event: Record<string, unknown>) => void),
   query: vi.fn(),
+  commitFileReceipt: vi.fn(), releaseFileHold: vi.fn(),
   resolve: vi.fn(),
   run: vi.fn(),
   writer: vi.fn()
+}));
+
+vi.mock('./framed/companionFramedSyncFiles', () => ({ currentCompanionFramedSyncFiles: () => ({}) }));
+vi.mock('../../../../../lib/core/sync/framedSyncFileOutbound.js', () => ({
+  createFramedSyncFileOutboundStaging: () => ({
+    commitOutboundReceipt: mocks.commitFileReceipt, releaseOutboundHolds: mocks.releaseFileHold
+  })
 }));
 
 vi.mock('../../companionWorkspaceRuntimeRepository', () => ({
@@ -50,6 +58,8 @@ it.each([['group-1', true], ['other-group', false]])('validates group admission 
 
 beforeEach(async () => {
   mocks.query.mockReset().mockResolvedValue([]);
+  mocks.commitFileReceipt.mockReset().mockResolvedValue('committed');
+  mocks.releaseFileHold.mockReset().mockResolvedValue(undefined);
   mocks.resolve.mockReset().mockResolvedValue(undefined);
   mocks.run.mockReset().mockResolvedValue({ changes: 0, lastInsertRowId: null });
   mocks.writer.mockReset().mockImplementation((task: () => Promise<unknown>) => task());
@@ -70,14 +80,9 @@ it('runs provider live-database writes through the shared writer queue', async (
   expect(mocks.resolve).toHaveBeenCalledWith({ request_id: 'request-1', result: { recorded: true } });
 });
 
-it('commits a matching framed receipt before releasing its outbound hold', async () => {
+it('routes receipt completion through the file owner and releases its hold after commit', async () => {
   const transferId = '11'.repeat(32);
   const contentId = '22'.repeat(32);
-  mocks.query.mockResolvedValueOnce([{
-    content_id: Uint8Array.from({ length: 32 }, () => 0x22),
-    receiver_device_id: 'peer-1',
-    receiver_library_epoch: 'epoch-1'
-  }]).mockResolvedValueOnce([]).mockResolvedValueOnce([{ present: 1 }]);
   mocks.listener?.({
     operation: 'complete_framed_outbound',
     payload: {
@@ -90,10 +95,9 @@ it('commits a matching framed receipt before releasing its outbound hold', async
     request_id: 'framed-receipt', result: { receipt_state: 'committed', transfer_id: transferId }
   }));
   expect(mocks.writer).toHaveBeenCalledOnce();
-  expect(mocks.run).toHaveBeenCalledWith(
-    'DELETE FROM framed_sync_outbound_holds WHERE transfer_id = ?',
-    [Uint8Array.from({ length: 32 }, () => 0x11)]
-  );
+  expect(mocks.releaseFileHold).toHaveBeenCalledWith(Uint8Array.from({ length: 32 }, () => 0x11));
+  expect(mocks.commitFileReceipt.mock.invocationCallOrder[0]).toBeLessThan(mocks.releaseFileHold.mock.invocationCallOrder[0]!);
+  expect(mocks.run).not.toHaveBeenCalled();
 });
 
 it('creates provider read snapshots through the Capacitor database owner', async () => {

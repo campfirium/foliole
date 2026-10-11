@@ -1,5 +1,6 @@
 import type { DbPort } from './dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
+import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import { readFramedSyncPublishedBody } from './framedSyncPublishedBody.js';
 import { encodeIdentityFactChunk } from './syncIdentityFactChunk.js';
 
@@ -14,7 +15,7 @@ function digest(value: unknown) {
   return text;
 }
 
-export async function readFramedSyncPublishedBodyOperation(db: DbPort, payload: Record<string, unknown>) {
+export async function readFramedSyncPublishedBodyOperation(db: DbPort, payload: Record<string, unknown>, files?: FramedSyncFilePort) {
   const length = payload.byte_length;
   if (typeof length !== 'string' || !/^(0|[1-9][0-9]*)$/u.test(length) ||
       payload.offset !== undefined || payload.max_bytes !== undefined) {
@@ -28,6 +29,6 @@ export async function readFramedSyncPublishedBodyOperation(db: DbPort, payload: 
     senderLibraryEpoch: requiredText(payload.sender_library_epoch),
     receiverDeviceId: requiredText(payload.receiver_device_id),
     receiverLibraryEpoch: requiredText(payload.receiver_library_epoch)
-  }, { transferId: digest(payload.transfer_id), hash, byteLength: Number(length) });
+  }, { transferId: digest(payload.transfer_id), hash, byteLength: Number(length) }, files);
   return { sha256: hash, byte_length: String(bytes.length), data_base64: encodeIdentityFactChunk(bytes) };
 }

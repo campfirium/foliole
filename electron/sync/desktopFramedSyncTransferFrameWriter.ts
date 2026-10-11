@@ -26,7 +26,7 @@ export async function writeDesktopFramedSyncTransferFrames(input: {
   manifest: CanonicalManifest;
   published: PublishedTransfer;
   sources: readonly DesktopFramedSyncBlobSource[];
-  staging: FramedSyncStagingPort;
+  staging: Pick<FramedSyncStagingPort, 'commitOutboundFrame'>;
   payloadBudget?: FramedSyncPayloadBudget | undefined;
   onCommittedFrame?: (frame: Awaited<ReturnType<typeof encryptProtocolFrame>>) => Promise<void>;
 }) {

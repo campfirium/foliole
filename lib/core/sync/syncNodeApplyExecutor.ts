@@ -97,6 +97,12 @@ async function handleTombstoneGuard(input: {
 }) {
   const localTombstone = await loadNodeSyncTombstone(input.tx, input.record.object_id);
   if (input.record.is_tombstone) {
+    if (localTombstone && input.record.version_id &&
+        (input.record.version_id === localTombstone.version_id ||
+         (localTombstone.parent_version_id &&
+          await isStoredAncestorVersion(input.tx, input.record.version_id, localTombstone.parent_version_id)))) {
+      return true;
+    }
     if (await applyRemoteNodeTombstone(
       input.tx, input.record, input.options.enqueueSearchInvalidations !== false
     )) {

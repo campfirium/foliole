@@ -17,6 +17,7 @@ import { withCompanionFramedPayload } from '../runtime/companionFramedPayloadBud
 import { getIosCompanionDatabaseOwner } from '../runtime/iosCompanionDatabaseBootstrap';
 
 import * as framedSyncData from './framed/companionFramedSyncDataOperation';
+import { currentCompanionFramedSyncFiles } from './framed/companionFramedSyncFiles';
 import {
   inspectCompanionFramedSyncOutbound,
   prepareCompanionFramedSyncOutbound
@@ -106,18 +107,19 @@ function dispatch(operation: string, payload: Record<string, unknown>) {
     return { applied: result.applied, pageId: requiredText(page.page_id) };
   });
   if (operation === CONTRACT.operations.applyFramedTransfer)
-    return writer((db) => framedSyncData.applyCompanionFramedSyncDataOperation(db, payload));
+    return writer((db) => framedSyncData.applyCompanionFramedSyncDataOperation(db, payload,
+      currentCompanionFramedSyncFiles()));
   if (operation === CONTRACT.operations.completeFramedOutbound)
-    return writer((db) => framedSyncData.completeCompanionFramedSyncOutbound(db, payload));
+    return writer((db) => framedSyncData.completeCompanionFramedSyncOutbound(db, payload, currentCompanionFramedSyncFiles()));
   if (operation === CONTRACT.operations.inspectFramedOutbound)
-    return getIosCompanionDatabaseOwner().read((db) => inspectCompanionFramedSyncOutbound(db, payload));
+    return getIosCompanionDatabaseOwner().read((db) => inspectCompanionFramedSyncOutbound(db, payload, currentCompanionFramedSyncFiles()));
   if (operation === CONTRACT.operations.prepareFramedOutbound)
-    return writer((db) => prepareCompanionFramedSyncOutbound(db, payload));
+    return writer((db) => prepareCompanionFramedSyncOutbound(db, payload, currentCompanionFramedSyncFiles()));
   if (operation === CONTRACT.operations.readFramedInventory) return readFramedInventory(payload);
   if (operation === CONTRACT.operations.readFramedBody) return getIosCompanionDatabaseOwner()
-    .read((db) => readFramedSyncPublishedBodyOperation(db, payload));
+    .read((db) => readFramedSyncPublishedBodyOperation(db, payload, currentCompanionFramedSyncFiles()));
   if (operation === CONTRACT.operations.readFramedOutboundFact) return getIosCompanionDatabaseOwner()
-    .read((db) => readFramedSyncPublishedFactOperation(db, payload));
+    .read((db) => readFramedSyncPublishedFactOperation(db, payload, currentCompanionFramedSyncFiles()));
   if (operation === CONTRACT.operations.applyMemberState) {
     return applyCompanionSyncGroupMemberState(
       parseSyncGroupMemberState(payload.state),
@@ -229,5 +231,6 @@ function requiredObject(value: unknown): Record<string, unknown> {
 
 async function readFramedInventory(payload: Record<string, unknown>) {
   await resumeCompanionFramedSyncRespondingPeer(payload);
-  return getIosCompanionDatabaseOwner().read(framedSyncData.readCompanionFramedSyncInventory);
+  return getIosCompanionDatabaseOwner().read((db) =>
+    framedSyncData.readCompanionFramedSyncInventory(db, currentCompanionFramedSyncFiles()));
 }

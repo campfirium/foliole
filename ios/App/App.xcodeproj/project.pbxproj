@@ -160,6 +160,13 @@
 		326B00000000000000000036 /* FolioleFramedSyncPullBatchRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000036 /* FolioleFramedSyncPullBatchRequest.swift */; };
 		326B00000000000000000037 /* FolioleFramedSyncPullBatchReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000037 /* FolioleFramedSyncPullBatchReceiver.swift */; };
 		326B00000000000000000038 /* FolioleCompanionFramedSyncPullBatch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 326A00000000000000000038 /* FolioleCompanionFramedSyncPullBatch.swift */; };
+		341B00000000000000000001 /* FolioleFramedSyncFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000001 /* FolioleFramedSyncFiles.swift */; };
+		341B00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift */; };
+		341B00000000000000000003 /* FolioleFramedSyncFileRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000003 /* FolioleFramedSyncFileRecords.swift */; };
+		341B00000000000000000004 /* FolioleFramedSyncFileFrames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000004 /* FolioleFramedSyncFileFrames.swift */; };
+		341B00000000000000000005 /* FolioleFramedSyncFileBlobs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000005 /* FolioleFramedSyncFileBlobs.swift */; };
+		341B00000000000000000006 /* FolioleFramedSyncFileReceiver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000006 /* FolioleFramedSyncFileReceiver.swift */; };
+		341B00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 341A00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -364,6 +371,13 @@
 		326A00000000000000000036 /* FolioleFramedSyncPullBatchRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncPullBatchRequest.swift; sourceTree = "<group>"; };
 		326A00000000000000000037 /* FolioleFramedSyncPullBatchReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncPullBatchReceiver.swift; sourceTree = "<group>"; };
 		326A00000000000000000038 /* FolioleCompanionFramedSyncPullBatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionFramedSyncPullBatch.swift; sourceTree = "<group>"; };
+		341A00000000000000000001 /* FolioleFramedSyncFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncFiles.swift; sourceTree = "<group>"; };
+		341A00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleCompanionFramedSyncFiles.swift; sourceTree = "<group>"; };
+		341A00000000000000000003 /* FolioleFramedSyncFileRecords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncFileRecords.swift; sourceTree = "<group>"; };
+		341A00000000000000000004 /* FolioleFramedSyncFileFrames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncFileFrames.swift; sourceTree = "<group>"; };
+		341A00000000000000000005 /* FolioleFramedSyncFileBlobs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncFileBlobs.swift; sourceTree = "<group>"; };
+		341A00000000000000000006 /* FolioleFramedSyncFileReceiver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncFileReceiver.swift; sourceTree = "<group>"; };
+		341A00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FolioleFramedSyncOutboundFiles.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -484,6 +498,13 @@
 				326A00000000000000000026 /* FolioleFramedSyncSessionReader.swift */,
 				326A00000000000000000025 /* FolioleFramedSyncPayloadCancellation.swift */,
 				326A00000000000000000024 /* FolioleCompanionFramedSyncPayloadBudget.swift */,
+				341A00000000000000000003 /* FolioleFramedSyncFileRecords.swift */,
+				341A00000000000000000004 /* FolioleFramedSyncFileFrames.swift */,
+				341A00000000000000000005 /* FolioleFramedSyncFileBlobs.swift */,
+				341A00000000000000000006 /* FolioleFramedSyncFileReceiver.swift */,
+				341A00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift */,
+				341A00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift */,
+				341A00000000000000000001 /* FolioleFramedSyncFiles.swift */,
 				326A00000000000000000023 /* FolioleFramedSyncPayloadWorker.swift */,
 				326A00000000000000000022 /* FolioleFramedSyncPayloadBudgetRegistry.swift */,
 				326A00000000000000000021 /* FolioleFramedSyncPayloadBudget.swift */,
@@ -847,6 +868,13 @@
 				326B00000000000000000026 /* FolioleFramedSyncSessionReader.swift in Sources */,
 				326B00000000000000000025 /* FolioleFramedSyncPayloadCancellation.swift in Sources */,
 				326B00000000000000000024 /* FolioleCompanionFramedSyncPayloadBudget.swift in Sources */,
+				341B00000000000000000003 /* FolioleFramedSyncFileRecords.swift in Sources */,
+				341B00000000000000000004 /* FolioleFramedSyncFileFrames.swift in Sources */,
+				341B00000000000000000005 /* FolioleFramedSyncFileBlobs.swift in Sources */,
+				341B00000000000000000006 /* FolioleFramedSyncFileReceiver.swift in Sources */,
+				341B00000000000000000007 /* FolioleFramedSyncOutboundFiles.swift in Sources */,
+				341B00000000000000000002 /* FolioleCompanionFramedSyncFiles.swift in Sources */,
+				341B00000000000000000001 /* FolioleFramedSyncFiles.swift in Sources */,
 				326B00000000000000000023 /* FolioleFramedSyncPayloadWorker.swift in Sources */,
 				326B00000000000000000022 /* FolioleFramedSyncPayloadBudgetRegistry.swift in Sources */,
 				326B00000000000000000021 /* FolioleFramedSyncPayloadBudget.swift in Sources */,

@@ -9,6 +9,7 @@ import {
 } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import type { FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
 import { loadFramedExternalDocumentBody } from '../../lib/core/sync/framedSyncExternalDocumentBody.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { stageFramedSyncFrozenBody } from '../../lib/core/sync/framedSyncFrozenBody.js';
 import {
   revalidateFramedSyncInventorySource,
@@ -28,7 +29,10 @@ import {
 import { assertSyncGroupLocalPublicationAllowed } from '../../lib/core/sync/syncGroupLocalAdoption.js';
 import { isNodeVersionIdentityOnly } from '../../lib/core/sync/syncNodeVersionHistory.js';
 import { streamRetainedNodeVersions } from '../../lib/core/sync/syncNodeVersionSelection.js';
+import { freezeDesktopFramedSyncFilePublication } from '../sync/desktopFramedSyncFilePublication.js';
 import { projectDesktopFramedSyncNodeRecord } from '../sync/desktopFramedSyncNodeProjection.js';
+
+export type DesktopFramedBodyWriter = (blob: CanonicalBlob, data: Uint8Array) => Promise<void>;
 
 type InventoryKey = Readonly<{ globalId: string; objectType: string }>;
 
@@ -42,6 +46,7 @@ export type DesktopFramedSyncOutboundResult =
   }>;
 
 export type DesktopFramedSyncOutboundInput = Readonly<{
+  files?: FramedSyncFilePort;
   context: FramedSyncContext;
   difference: FramedSyncInventoryDifference;
   port: DbPort;
@@ -58,7 +63,8 @@ function sameBlob(left: CanonicalBlob, right: CanonicalBlob) {
 
 export async function selectDesktopFramedSyncNodeManifest(
   tx: DbPort,
-  difference: FramedSyncInventoryDifference
+  difference: FramedSyncInventoryDifference,
+  freezeBody: DesktopFramedBodyWriter = (blob, data) => stageFramedSyncFrozenBody(tx, blob, data)
 ): Promise<CanonicalManifest> {
   if (difference.direction !== 'local_to_remote') {
     throw new Error('framed_sync_outbound_node_difference_invalid');
@@ -69,12 +75,12 @@ export async function selectDesktopFramedSyncNodeManifest(
       selectFramedSyncObjectStateFact(tx, difference, factId)));
     for (const fact of facts) for (const blob of fact.blobs) {
       if (blob.role !== 5) continue;
-      await stageFramedSyncFrozenBody(tx, blob, await loadFramedExternalDocumentBody(tx, fact.globalId, blob));
+      await freezeBody(blob, await loadFramedExternalDocumentBody(tx, fact.globalId, blob));
     }
     return { blobs: facts.flatMap((fact) => fact.blobs), facts };
   }
   const versionIds = requiredFramedSyncNodeVersionIds(difference);
-  const projections = await selectContinuousNodeProjections(tx, versionIds, difference.globalId);
+  const projections = await selectContinuousNodeProjections(tx, versionIds, difference.globalId, freezeBody);
   const related = await selectFramedSyncRelationReviewFactsWithDbPort(tx, difference);
   if (related.kind === 'deferred') throw new Error('framed_sync_source_changed');
   const stateFacts = await Promise.all((difference.need.stateFactIds ?? []).map((factId) =>
@@ -95,7 +101,8 @@ export async function selectDesktopFramedSyncNodeManifest(
   return { blobs: [...blobs.values()], facts };
 }
 
-async function selectContinuousNodeProjections(tx: DbPort, versionIds: readonly string[], globalId: string) {
+async function selectContinuousNodeProjections(tx: DbPort, versionIds: readonly string[], globalId: string,
+  freezeBody: DesktopFramedBodyWriter) {
   const projections: { manifest: CanonicalManifest }[] = [];
   for await (const record of streamRetainedNodeVersions(tx, versionIds, globalId)) {
     if (isNodeVersionIdentityOnly(record)) {
@@ -105,9 +112,9 @@ async function selectContinuousNodeProjections(tx: DbPort, versionIds: readonly 
     const projection = projectDesktopFramedSyncNodeRecord(record);
     const blob = projection.manifest.blobs.find((value) => value.role === 1);
     if (!blob) throw new Error('framed_sync_body_descriptor_missing');
-    await stageFramedSyncFrozenBody(tx, blob, projection.bodyBlob);
+    await freezeBody(blob, projection.bodyBlob);
     for (const alternative of projection.alternativeBodyBlobs ?? []) {
-      await stageFramedSyncFrozenBody(tx, alternative.blob, alternative.data);
+      await freezeBody(alternative.blob, alternative.data);
     }
     projections.push({ manifest: projection.manifest });
   }
@@ -137,7 +144,7 @@ export async function publishDesktopFramedSyncNodeOutbound(
       return { deferredObjects: [{ globalId: difference.globalId, objectType: 'node' }],
         kind: 'deferred' };
     }
-    const manifest = await selectDesktopFramedSyncNodeManifest(tx, difference);
+    const manifest = await selectDesktopFramedSyncNodeManifest(tx, difference, input.files ? async () => {} : undefined);
     const contentId = await canonicalContentId(manifest);
     const transferId = await canonicalTransferId(input.context, contentId);
     const publishedHashes = new Set(manifest.blobs.map((blob) => bytesToHex(blob.sha256)));
@@ -150,7 +157,9 @@ export async function publishDesktopFramedSyncNodeOutbound(
       manifestHash: contentId.slice(),
       transferId
     };
-    const stagingResult = await publishFramedSyncOutboundWithDbPort(tx, publication);
+    const stagingResult = input.files ? await freezeDesktopFramedSyncFilePublication({ files: input.files, publication,
+      freeze: (write) => selectDesktopFramedSyncNodeManifest(tx, difference, write) }) :
+      await publishFramedSyncOutboundWithDbPort(tx, publication);
     return { deferredObjects: [], kind: 'published', publication, stagingResult };
   });
 }

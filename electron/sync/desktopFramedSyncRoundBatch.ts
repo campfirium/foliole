@@ -1,6 +1,7 @@
 import { sameFramedSyncBytes } from '../../lib/core/database/framedSyncStagingSerialization.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { packFramedSyncTransfers } from '../../lib/core/sync/framedSyncBatchPacking.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import type { OutboundPublishInput } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 
@@ -9,6 +10,7 @@ import { desktopFramedSyncPreparedBatchItem, type DesktopFramedSyncBatchItem } f
 import { prepareDesktopFramedSyncPublishedDelivery } from './desktopFramedSyncProcessOutbound.js';
 
 export async function sendDesktopFramedSyncRoundBatch(input: {
+  files?: FramedSyncFilePort;
   db: DbPort;
   groupSecret: string;
   peerOrigin: string;

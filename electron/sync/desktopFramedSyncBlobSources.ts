@@ -3,6 +3,8 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { CanonicalBlob, CanonicalManifest } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
 import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
+import { loadFramedSyncFileBody } from '../../lib/core/sync/framedSyncFileBodies.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { loadFramedSyncFrozenBody } from '../../lib/core/sync/framedSyncFrozenBody.js';
 import { framedSyncPublicationResources } from '../../lib/core/sync/framedSyncPublicationResources.js';
 import type { NativeSyncNodeRecord } from '../../lib/platform/nativeSyncContract.js';
@@ -28,9 +30,9 @@ function fileChunks(filePath: string) {
   return () => readFramedSyncFileChunks(filePath, FRAMED_SYNC_LIMITS.blobChunkBytes);
 }
 
-function storedBodyChunks(db: DbPort, blob: CanonicalBlob) {
+function storedBodyChunks(db: DbPort, blob: CanonicalBlob, files?: FramedSyncFilePort) {
   return async function* chunks() {
-    yield* byteChunks(await loadFramedSyncFrozenBody(db, blob))();
+    yield* byteChunks(files ? await loadFramedSyncFileBody(files, blob) : await loadFramedSyncFrozenBody(db, blob))();
   };
 }
 
@@ -74,18 +76,21 @@ function addSource(sources: Map<string, DesktopFramedSyncBlobSource>, source: De
   if (!prior) sources.set(key, source);
 }
 
-export async function loadDesktopFramedSyncPublishedBlobSources(db: DbPort, manifest: CanonicalManifest) {
+export async function loadDesktopFramedSyncPublishedBlobSources(db: DbPort, manifest: CanonicalManifest, files?: FramedSyncFilePort) {
   const resources = framedSyncPublicationResources(manifest);
   const sources: DesktopFramedSyncBlobSource[] = [];
   for (const blob of manifest.blobs) {
     const hash = bytesToHex(blob.sha256);
     if ((blob.role === 1 || blob.role === 5)) {
+      if (files) await loadFramedSyncFileBody(files, blob);
+      else {
       const [row] = await db.query<{ size: number }>(
         'SELECT byte_length AS size FROM framed_sync_available_blobs WHERE sha256 = ?', [blob.sha256]);
       if (!row || BigInt(row.size) !== blob.byteLength) {
         throw new Error('framed_sync_published_body_unavailable');
       }
-      sources.push({ blob, chunks: storedBodyChunks(db, blob) });
+      }
+      sources.push({ blob, chunks: storedBodyChunks(db, blob, files) });
     } else {
       const resource = resources.get(hash);
       const resolved = resource && resolveAttachmentFileForSync(resource.storageKey);

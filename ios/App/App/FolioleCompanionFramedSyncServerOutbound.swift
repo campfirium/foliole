@@ -9,8 +9,7 @@ enum FolioleCompanionFramedSyncServerOutbound {
             .appendingPathComponent("foliole-framed-response-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         do {
-            let database = try FolioleFramedSyncTransferDatabase(url: FolioleFramedSyncOutboundSQLite.applicationDatabaseURL())
-            let staging = try FolioleFramedSyncOutboundSQLite(database: database, owner: owner)
+            let staging = try FolioleFramedSyncOutboundFiles(owner: owner)
             let url = try build(requests, bridge: bridge, context: context, groupKey: groupKey,
                 directory: directory, owner: owner, staging: staging)
             try FolioleFramedSyncFileResponse.sendFile(connection, url: url, directory: directory,
@@ -23,7 +22,7 @@ enum FolioleCompanionFramedSyncServerOutbound {
 
     static func build(_ requests: [Data], bridge: FolioleCompanionSyncGroupDataRequesting,
         context: FolioleFramedSyncTransferContext, groupKey: Data, directory: URL,
-        owner: FolioleFramedSyncPayloadBudget, staging: FolioleFramedSyncOutboundSQLite) throws -> URL {
+        owner: FolioleFramedSyncPayloadBudget, staging: FolioleFramedSyncOutboundFiles) throws -> URL {
         return try FolioleFramedSyncServerBatchResponse.write(requests,
                 to: directory.appendingPathComponent("response.body"), owner: owner, inspect: { encoded in
                     var payload = selection(context)
@@ -38,7 +37,7 @@ enum FolioleCompanionFramedSyncServerOutbound {
 
     private static func seal(_ encoded: Data, index: Int, bridge: FolioleCompanionSyncGroupDataRequesting,
         context: FolioleFramedSyncTransferContext, groupKey: Data, directory: URL,
-        owner: FolioleFramedSyncPayloadBudget, staging: FolioleFramedSyncOutboundSQLite) throws -> FolioleFramedSyncServerBatchResponse.Unit {
+        owner: FolioleFramedSyncPayloadBudget, staging: FolioleFramedSyncOutboundFiles) throws -> FolioleFramedSyncServerBatchResponse.Unit {
         try autoreleasepool {
             var payload = selection(context)
             payload["difference_request_hex"] = encoded.hex
@@ -59,7 +58,7 @@ enum FolioleCompanionFramedSyncServerOutbound {
 
     private static func responseFile(_ value: [String: Any], header: Foliole_Sync_V22_TransferHeader, selection: [String: Any], resources: [String: URL],
         bridge: FolioleCompanionSyncGroupDataRequesting, context: FolioleFramedSyncTransferContext,
-        groupKey: Data, directory: URL, owner: FolioleFramedSyncPayloadBudget, staging: FolioleFramedSyncOutboundSQLite) throws -> URL {
+        groupKey: Data, directory: URL, owner: FolioleFramedSyncPayloadBudget, staging: FolioleFramedSyncOutboundFiles) throws -> URL {
         let transferID = try FolioleCompanionFramedSyncPreparedOutbound.digest(value, "transfer_id")
         let prepared = try FolioleCompanionFramedSyncPreparedOutbound.decodeMetadata(value, header: header, resourceFiles: resources, frozenBodyFile: {
             try FolioleFramedSyncBodyResponse.writeFrozen($0, selection: selection,
@@ -83,8 +82,7 @@ enum FolioleCompanionFramedSyncServerOutbound {
     static func receipt(_ input: InputStream, bridge: FolioleCompanionSyncGroupDataRequesting,
         context: FolioleFramedSyncTransferContext, groupKey: Data, transferID: Data, owner: FolioleFramedSyncPayloadBudget) throws {
         try completeReceipt(input, bridge: bridge, context: context, groupKey: groupKey, transferID: transferID, owner: owner)
-        let database = try FolioleFramedSyncTransferDatabase(url: FolioleFramedSyncOutboundSQLite.applicationDatabaseURL())
-        try FolioleFramedSyncOutboundSQLite(database: database, owner: owner).discard(transferID: transferID)
+        try FolioleFramedSyncOutboundFiles(owner: owner).discard(transferID: transferID)
     }
 
     static func completeReceipt(_ input: InputStream, bridge: FolioleCompanionSyncGroupDataRequesting,

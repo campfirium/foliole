@@ -7,6 +7,39 @@ final class FolioleFramedSyncResourcePublication {
     private var created = [URL]()
     private var partials = [URL]()
 
+    init(files: FolioleFramedSyncFiles, root: URL, transferID: Data) throws {
+        committed = true
+        guard let record = try FolioleFramedSyncFileRecords.read(files,
+            FolioleFramedSyncFileRecords.directory(transferID) + "/transfer.json") else {
+            throw Self.invalid("framed_sync_transfer_not_ready")
+        }
+        if record["receipt"] != nil { return }
+        guard record["state"] as? String == "ready_to_apply",
+              let header = record["header"] as? [String: Any] else { throw Self.invalid("framed_sync_transfer_not_ready") }
+        let attempt = try FolioleFramedSyncFileRecords.bytes(header["attemptId"])
+        let directory = try FolioleFramedSyncFileRecords.attempt(transferID, attempt) + "/pins"
+        for entry in try files.list(directory) {
+            guard let pin = try FolioleFramedSyncFileRecords.read(files, directory + "/" + entry),
+                  let key = pin["storageKey"] as? String else { continue }
+            let hash = try FolioleFramedSyncFileRecords.bytes(pin["sha256"])
+            guard let rawLength = pin["byteLength"] as? String, let length = UInt64(rawLength),
+                  let role = pin["role"] as? Int, key.hasPrefix(hash.hex), !key.contains("/"), !key.contains("..") else {
+                throw Self.invalid("resource_pin_invalid")
+            }
+            let target = root.appendingPathComponent(key)
+            let partial = FolioleFramedSyncResourceFiles.partial(root: root, transferID: transferID, attemptID: attempt, hash: hash)
+            if FileManager.default.fileExists(atPath: target.path) {
+                try Self.requireValid(target, hash: hash, length: length, role: role, key: key)
+            } else {
+                try Self.requireValid(partial, hash: hash, length: length, role: role, key: key)
+                try FileManager.default.linkItem(at: partial, to: target)
+            }
+            try files.syncDirectory(root)
+            storageKeys.append(key)
+            if FileManager.default.fileExists(atPath: partial.path) { partials.append(partial) }
+        }
+    }
+
     init(
         database: FolioleFramedSyncTransferDatabase, root: URL, transferID: Data
     ) throws {

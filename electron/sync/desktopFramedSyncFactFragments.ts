@@ -1,5 +1,7 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FramedSyncFactFragmentDecoder, readFramedSyncFactFrame } from '../../lib/core/sync/framedSyncFactFrameReader.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
+import { readFramedSyncFileFact } from '../../lib/core/sync/framedSyncFileReadyFacts.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 import { canonicalFactFromValidatedMessage } from '../../lib/core/sync/framedSyncWireFact.js';
 
@@ -9,6 +11,7 @@ import type { DesktopFramedVerifiedReceiverState } from './desktopFramedSyncVeri
 
 export async function stageDesktopFramedSyncFactFragment(input: {
   db: DbPort;
+  files?: FramedSyncFilePort;
   event: AuthenticatedTransferFrame;
   staging: FramedSyncStagingPort;
   state: DesktopFramedVerifiedReceiverState;
@@ -25,10 +28,10 @@ export async function stageDesktopFramedSyncFactFragment(input: {
   await staging.commitAuthenticatedFrame(event.frame);
   const completed = state.factFragments.accept(event.decoded, event.frame.sequence);
   if (!completed) return;
-  const decoded = await readFramedSyncFactFrame(db, event.frame.transferId, event.frame.attemptId,
-    completed.firstSequence.toString(), 'desktop');
-  await stageDesktopFramedSyncFact({ frame: event.frame, staging,
-    fact: canonicalFactFromValidatedMessage(decoded.message) });
+  const fact = input.files ? (await readFramedSyncFileFact(input.files, event.frame, completed.firstSequence)).fact :
+    canonicalFactFromValidatedMessage((await readFramedSyncFactFrame(db, event.frame.transferId, event.frame.attemptId,
+      completed.firstSequence.toString(), 'desktop')).message);
+  await stageDesktopFramedSyncFact({ frame: event.frame, staging, fact });
 }
 
 export function assertDesktopFramedSyncFactFragmentsComplete(state: DesktopFramedVerifiedReceiverState) {

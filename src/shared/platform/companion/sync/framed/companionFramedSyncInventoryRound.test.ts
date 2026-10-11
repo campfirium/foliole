@@ -4,6 +4,8 @@ vi.mock('./companionFramedSyncResourceRound', () => ({
 
 import { beforeEach, expect, it, vi } from 'vitest';
 
+vi.mock('./companionFramedSyncFiles', () => ({ currentCompanionFramedSyncFiles: () => ({}) }));
+
 vi.mock('./companionFramedSyncPeerRoutes', () => ({
   rememberCompanionFramedSyncPeerRoute: vi.fn(async () => undefined)
 }));

@@ -10,7 +10,12 @@ protocol FolioleFramedSyncOutboundStaging {
     ) throws
 }
 
-final class FolioleFramedSyncOutboundSQLite: FolioleFramedSyncOutboundStaging {
+protocol FolioleFramedSyncOutboundPublicationStaging: FolioleFramedSyncOutboundStaging {
+    func discard(transferID: Data) throws
+    func loadLatestReplayableAttempt(transferID: Data) throws -> FolioleFramedSyncOutboundAttempt?
+}
+
+final class FolioleFramedSyncOutboundSQLite: FolioleFramedSyncOutboundPublicationStaging {
     private let database: FolioleFramedSyncTransferDatabase
     private let frames: FolioleFramedSyncOutboundFrameFiles
 

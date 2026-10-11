@@ -16,7 +16,7 @@ struct FolioleFramedSyncOutboundUnit {
 
 enum FolioleFramedSyncOutboundPreparation {
     static func prepare(_ selection: [String: Any], index: Int, request: FolioleFramedSyncOutboundRequest,
-        bridge: FolioleCompanionSyncGroupDataRequesting, staging: FolioleFramedSyncOutboundSQLite,
+        bridge: FolioleCompanionSyncGroupDataRequesting, staging: FolioleFramedSyncOutboundPublicationStaging,
         root: URL, owner: FolioleFramedSyncPayloadBudget) throws -> FolioleFramedSyncOutboundUnit {
         try autoreleasepool {
             let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -59,7 +59,7 @@ enum FolioleFramedSyncOutboundPreparation {
 
     private static func replay(_ prepared: FolioleCompanionFramedSyncPreparedOutbound, selection: [String: Any],
         request: FolioleFramedSyncOutboundRequest, bridge: FolioleCompanionSyncGroupDataRequesting,
-        staging: FolioleFramedSyncOutboundSQLite, directory: URL, url: URL, owner: FolioleFramedSyncPayloadBudget) throws {
+        staging: FolioleFramedSyncOutboundPublicationStaging, directory: URL, url: URL, owner: FolioleFramedSyncPayloadBudget) throws {
         try staging.discard(transferID: prepared.transferID)
         let source = FolioleFramedSyncBridgeFactSource.make(prepared: prepared, selection: selection,
             bridge: bridge, directory: directory, owner: owner)

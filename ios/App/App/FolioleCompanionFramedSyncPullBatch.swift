@@ -41,7 +41,7 @@ extension FolioleCompanionSyncPlugin {
         _ = try await FolioleFramedSyncHTTPTransport.post(endpoint: url.absoluteURL,
             peer: .init(groupID: local.groupID, deviceID: local.receiverDeviceID, libraryEpoch: local.receiverLibraryEpoch,
                 memberAuthHeaders: headers), requestBodyURL: body, responseBodyURL: response, owner: owner)
-        let receiver = try FolioleFramedSyncTransferReceiver(database: .init(url: framedInboundDatabaseURL()), owner: owner)
+        let receiver = FolioleFramedSyncFileReceiver(owner: owner)
         return try await FolioleFramedSyncPullBatchReceiver(receiver: receiver, context: inbound,
             groupKey: request.groupKey, owner: owner, bridge: bridge).receive(response, requested: requested) { receipt, loan in
                 try await self.framedPost(endpoint: request.endpoint, path: path,

@@ -22,12 +22,12 @@ export async function runDesktopFramedSyncResourceRound(input: InboundRound,
     receiverLibraryEpoch: input.context.initiatorLibraryEpoch };
   const result = { scanned: 0, unavailable: 0, pending: 0, transferred: 0 };
   for await (const globalId of globalIds) {
-    const scanned = await scanFramedSyncResourceNeeds({ db: input.db, receiver, globalIds: [globalId], isPresent, createId: randomUUID });
+    const scanned = await scanFramedSyncResourceNeeds({ ...(input.files ? { files: input.files } : {}), db: input.db, receiver, globalIds: [globalId], isPresent, createId: randomUUID });
     result.scanned += scanned.scanned; result.unavailable += scanned.unavailable;
     result.pending += scanned.unavailable;
     let after = '';
     for (;;) {
-      const page = await loadFramedSyncPendingResourceRequests(input.db, receiver, after, globalId);
+      const page = await loadFramedSyncPendingResourceRequests(input.db, receiver, after, globalId, input.files);
       result.pending += page.unavailableDemandIds.length;
       for (const resource of page.resources) {
         try {

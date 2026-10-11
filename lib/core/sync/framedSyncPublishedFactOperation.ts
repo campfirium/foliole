@@ -1,6 +1,7 @@
 import type { DbPort } from './dbPort.js';
 import { FRAMED_SYNC_PROTOCOL_VERSION } from './framedSyncContract.js';
 import { iterateFramedSyncFactPayloads } from './framedSyncFactPayloads.js';
+import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import { encodeValidatedProtocolMessage } from './framedSyncProtocolCodec.js';
 import { readFramedSyncPublishedFact } from './framedSyncPublishedFactSource.js';
 
@@ -17,14 +18,14 @@ function index(value: unknown) {
 }
 
 /** A caller requests one bounded transport payload belonging to the original frozen fact. */
-export async function readFramedSyncPublishedFactOperation(db: DbPort, payload: Record<string, unknown>) {
+export async function readFramedSyncPublishedFactOperation(db: DbPort, payload: Record<string, unknown>, files?: FramedSyncFilePort) {
   const factIndex = index(payload.fact_index);
   const fragmentIndex = index(payload.fragment_index);
   const fact = await readFramedSyncPublishedFact(db, {
     protocolVersion: FRAMED_SYNC_PROTOCOL_VERSION, groupId: requiredText(payload.group_id),
     senderDeviceId: requiredText(payload.sender_device_id), senderLibraryEpoch: requiredText(payload.sender_library_epoch),
     receiverDeviceId: requiredText(payload.receiver_device_id), receiverLibraryEpoch: requiredText(payload.receiver_library_epoch)
-  }, requiredText(payload.transfer_id), factIndex);
+  }, requiredText(payload.transfer_id), factIndex, files);
   let current = 0;
   for (const value of iterateFramedSyncFactPayloads(fact)) {
     if (current++ !== fragmentIndex) continue;

@@ -1,7 +1,7 @@
 package com.foliole.android;
 
 import android.content.Context;
-import com.foliole.android.framed.FramedSyncOutboundSQLite;
+import com.foliole.android.framed.FramedSyncOutboundFiles;
 import com.foliole.android.framed.FramedSyncReceiptReader;
 import com.foliole.android.framed.FramedSyncTransferContext;
 import com.foliole.android.framed.FramedSyncTransferWriter;
@@ -26,7 +26,7 @@ final class FolioleCompanionFramedSyncServerOutbound {
             FolioleCompanionFramedSyncOutbound.digest(prepared.getString("manifest_hash")),
             "framed_sync_manifest_identity_mismatch");
         try (var bodies = new FolioleCompanionFramedSyncBodyFiles(host, selection, transferId, budget);
-             var staging = new FramedSyncOutboundSQLite(host, budget)) {
+             var staging = new FramedSyncOutboundFiles(host, budget)) {
             var attempt = staging.loadLatestReplayableAttempt(expected);
             if (attempt == null) {
                 var source = preparedOwner.source;
@@ -59,6 +59,6 @@ final class FolioleCompanionFramedSyncServerOutbound {
         var receipt = FramedSyncReceiptReader.read(input, groupKey, transferId, contentId,
             selection.getString("receiver_device_id"), selection.getString("receiver_library_epoch"), budget);
         bridge.request("complete_framed_outbound", FolioleCompanionFramedSyncOutbound.result(receipt), budget);
-        try (var staging = new FramedSyncOutboundSQLite(host)) { staging.discardOutboundAttempts(transferId); }
+        try (var staging = new FramedSyncOutboundFiles(host)) { staging.discardOutboundAttempts(transferId); }
     }
 }

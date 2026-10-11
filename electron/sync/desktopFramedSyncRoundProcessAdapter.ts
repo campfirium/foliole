@@ -7,6 +7,8 @@ import {
   FRAMED_SYNC_PROTOCOL_VERSION
 } from '../../lib/core/sync/framedSyncContract.js';
 import { assertSessionEnvelopeBinding } from '../../lib/core/sync/framedSyncEnvelopeContract.js';
+import { expireFramedSyncFileCompletions } from '../../lib/core/sync/framedSyncFileCompletionRetention.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import type { FramedSyncInventoryDifference } from '../../lib/core/sync/framedSyncInventory.js';
 import { decodeAndValidateProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
@@ -86,6 +88,7 @@ type CachedSelection = Readonly<{
 }>;
 
 type AdapterInput = Readonly<{
+  files?: FramedSyncFilePort;
   db: DbPort;
   groupId: string;
   groupSecret: string;
@@ -105,12 +108,13 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
       peer_device_id: request.peer.deviceId, peer_device_name: request.peer.deviceId, peer_platform: 'desktop'
     });
     if (request.kind === 'reconcile') return runDesktopFramedSyncInventoryRound({
+      files: input.files ?? null,
       localLibraryEpoch: input.local.libraryEpoch, remoteLibraryEpoch: request.peer.libraryEpoch,
       peer: { endpoint_url: request.peerOrigin, group_id: input.groupId,
         local_device_id: input.local.deviceId, peer_device_id: request.peer.deviceId,
         peer_device_name: request.peer.deviceId, peer_platform: 'desktop' }
     });
-    const read = readFixtureCommand(request, input.db);
+    const read = readFixtureCommand(request, input.db, input.files);
     if (read) return read;
     if (request.kind === 'select') {
       const endpoint = createDesktopFramedSyncRoundEndpoint({
@@ -152,9 +156,9 @@ export function createDesktopFramedSyncRoundProcessAdapter(input: AdapterInput) 
   };
 }
 
-function readFixtureCommand(request: z.infer<typeof command>, db: DbPort) {
-  if (request.kind === 'expire_completions') return expireFramedSyncCompletions(db, request.now);
-  if (request.kind === 'read_inventory') return readDesktopFramedSyncRoundInventory(db);
+function readFixtureCommand(request: z.infer<typeof command>, db: DbPort, files?: FramedSyncFilePort) {
+  if (request.kind === 'expire_completions') return files ? expireFramedSyncFileCompletions(files, request.now) : expireFramedSyncCompletions(db, request.now);
+  if (request.kind === 'read_inventory') return readDesktopFramedSyncRoundInventory(db, files);
   if (request.kind === 'read_entry') return readDesktopFramedSyncRoundInventoryEntry(db, request);
   return undefined;
 }

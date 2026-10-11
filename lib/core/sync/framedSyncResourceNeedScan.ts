@@ -1,11 +1,14 @@
 import type { DbPort } from './dbPort.js';
+import { obsoleteFramedSyncFileResourceReferences } from './framedSyncFilePendingResources.js';
+import type { FramedSyncFilePort } from './framedSyncFilePort.js';
+import { ensureFramedSyncFileResourceDemand } from './framedSyncFileResourceDemands.js';
 import { ensureFramedSyncMissingResourceDemand, type FramedSyncResourceDemandKey } from './framedSyncResourceDemands.js';
 import { loadNodeOwnedArticleResourceNeeds } from './nodeOwnedArticleResourceNeeds.js';
 
 type Receiver = Pick<FramedSyncResourceDemandKey, 'groupId' | 'receiverDeviceId' | 'receiverLibraryEpoch'>;
 type Current = { version_id: string | null; body_hash: string | null; version_body_hash: string | null;
   deleted_at: string | null };
-type Input = { db: DbPort; receiver: Receiver; globalIds: Iterable<string> | AsyncIterable<string>;
+type Input = { files?: FramedSyncFilePort; db: DbPort; receiver: Receiver; globalIds: Iterable<string> | AsyncIterable<string>;
   isPresent: (storageKey: string) => Promise<boolean>; createId: () => string };
 const identity = (receiver: Receiver, globalId: string) =>
   [receiver.groupId, receiver.receiverDeviceId, receiver.receiverLibraryEpoch, globalId];
@@ -17,7 +20,8 @@ async function scanNode(tx: DbPort, input: Input, globalId: string) {
     n.deleted_at FROM nodes n LEFT JOIN node_sync_versions v
       ON v.version_id = n.current_version_id AND v.object_id = n.id WHERE n.id = ?`, [globalId]);
   if (!node || node.deleted_at) {
-    await tx.run(`UPDATE framed_sync_resource_demands SET state = 'no_longer_required'
+    if (input.files) await obsoleteFramedSyncFileResourceReferences(input.files, { ...input.receiver, globalId });
+    else await tx.run(`UPDATE framed_sync_resource_demands SET state = 'no_longer_required'
       WHERE ${scope} AND state = 'pending' AND request_started = 0`, identity(input.receiver, globalId));
     return { scanned: 0, missing: 0, unavailable: 0 };
   }
@@ -30,7 +34,9 @@ async function scanNode(tx: DbPort, input: Input, globalId: string) {
     const remember = async (key: string) => { await tx.run(
       'INSERT OR IGNORE INTO temp.framed_sync_current_resource_keys VALUES (?)', [key]); };
     for (const resource of resources.needs) await remember(resource.storageKey);
-    await tx.run(`UPDATE framed_sync_resource_demands SET state = 'no_longer_required'
+    if (input.files) await obsoleteFramedSyncFileResourceReferences(input.files, { ...input.receiver, globalId },
+      { versionId: node.version_id, bodyHash: node.body_hash, storageKeys: new Set(resources.needs.map((resource) => resource.storageKey)) });
+    else await tx.run(`UPDATE framed_sync_resource_demands SET state = 'no_longer_required'
       WHERE ${scope} AND state = 'pending' AND request_started = 0 AND
         (version_id != ? OR body_hash != ? OR NOT EXISTS (SELECT 1
           FROM temp.framed_sync_current_resource_keys keys WHERE keys.storage_key = framed_sync_resource_demands.storage_key))`,
@@ -49,7 +55,8 @@ async function checkFiles(tx: DbPort, input: Input, binding: Omit<FramedSyncReso
     if (!row) return missing;
     after = row.storage_key;
     if (await input.isPresent(after)) continue;
-    await ensureFramedSyncMissingResourceDemand(tx, { ...binding, storageKey: after }, input.createId);
+    if (input.files) await ensureFramedSyncFileResourceDemand(input.files, { ...binding, storageKey: after }, input.createId);
+    else await ensureFramedSyncMissingResourceDemand(tx, { ...binding, storageKey: after }, input.createId);
     missing += 1;
   }
 }

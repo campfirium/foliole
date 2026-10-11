@@ -3,6 +3,8 @@ import { parseCanonicalAttachmentStorageKey } from '../../platform/attachmentRes
 import type { DbPort } from './dbPort.js';
 import { canonicalContentId, canonicalTransferId } from './framedSyncCanonicalManifest.js';
 import type { FramedSyncContext } from './framedSyncContract.js';
+import type { FramedSyncFilePort } from './framedSyncFilePort.js';
+import { publishFramedSyncFileOutbound } from './framedSyncFilePublication.js';
 import { publishFramedSyncOutboundWithDbPort } from './framedSyncOutboundStaging.js';
 import { projectFramedSyncResourceFact } from './framedSyncResourceFact.js';
 import type { FramedSyncRequestedResource } from './framedSyncResourceRequest.js';
@@ -10,6 +12,7 @@ import { assertSyncGroupLocalPublicationAllowed } from './syncGroupLocalAdoption
 
 /** Hosts verify their files; the shared owner freezes the requested identities and publication. */
 export async function publishFramedSyncResourceOutbound(input: Readonly<{
+  files?: FramedSyncFilePort;
   context: FramedSyncContext;
   db: DbPort;
   sources: readonly Readonly<{ demand: FramedSyncRequestedResource; byteLength: bigint }>[];
@@ -31,7 +34,7 @@ export async function publishFramedSyncResourceOutbound(input: Readonly<{
     transferId: await canonicalTransferId(input.context, contentId) };
   const state = await input.db.transaction(async (tx) => {
     await assertSyncGroupLocalPublicationAllowed(tx);
-    return publishFramedSyncOutboundWithDbPort(tx, publication);
+    return input.files ? publishFramedSyncFileOutbound(input.files, publication) : publishFramedSyncOutboundWithDbPort(tx, publication);
   });
   return { publication, state };
 }

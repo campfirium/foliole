@@ -6,6 +6,7 @@ import { flushCurrentParentOrderProjectionsWithDbPort } from './currentParentOrd
 import type { DbPort, DbRow } from './dbPort.js';
 import { expireFramedSyncCompletions } from './framedSyncCompletionRetention.js';
 import { FRAMED_SYNC_LIMITS, type FramedSyncContext } from './framedSyncContract.js';
+import type { FramedSyncFilePort } from './framedSyncFilePort.js';
 import type { FramedSyncInventoryEntry } from './framedSyncInventory.js';
 import { readFramedSyncObjectStateInventory } from './framedSyncObjectStateInventory.js';
 import { syncGroupLocalPublicationBlockReason } from './syncGroupLocalAdoption.js';
@@ -70,10 +71,10 @@ async function readNodes(port: DbPort, key: InventoryKey | undefined) {
   }
 }
 
-export function readFramedSyncInventory(port: DbPort) {
+export function readFramedSyncInventory(port: DbPort, files?: FramedSyncFilePort) {
   return port.transaction(async (tx) => {
     if (await syncGroupLocalPublicationBlockReason(tx)) return [];
-    await expireFramedSyncCompletions(tx);
+    if (!files) await expireFramedSyncCompletions(tx);
     await flushCurrentParentOrderProjectionsWithDbPort(tx);
     return read(tx, undefined);
   });

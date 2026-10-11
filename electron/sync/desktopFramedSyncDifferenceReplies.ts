@@ -37,6 +37,7 @@ export async function respondDesktopFramedSyncDifferenceRequests(args: Args & {
   const first = requests[0]!;
   if (first.resources.length) {
     const publication = await publishDesktopFramedSyncResourceOutbound({
+      ...(args.files ? { files: args.files } : {}),
       db: args.db, resources: first.resources, context: outboundContext(args)
     });
     return (await prepareReply(args, publication)).body;
@@ -90,6 +91,7 @@ async function* replyPrefix(args: Args, differences: readonly FramedSyncInventor
 
 async function selectPublication(args: Args, difference: FramedSyncInventoryDifference) {
   const selection = await publishDesktopFramedSyncNodeOutbound({
+    ...(args.files ? { files: args.files } : {}),
     context: outboundContext(args), difference, port: args.db,
     readCurrentInventoryEntry: (tx, key) => readDesktopFramedSyncRoundInventoryEntry(tx, key)
   });
@@ -99,6 +101,7 @@ async function selectPublication(args: Args, difference: FramedSyncInventoryDiff
 
 function prepareReply(args: Args, publication: OutboundPublishInput) {
   return prepareDesktopFramedSyncRequestedDelivery({
+    ...(args.files ? { files: args.files } : {}),
     db: args.db, groupSecret: args.groupSecret, publication, staging: args.staging
   });
 }

@@ -1,4 +1,5 @@
 import type { AttachmentMaintenanceHostPlugin } from '../../../lib/platform/attachmentMaintenanceHostContract';
+import type { NativeCompanionFramedFilesPlugin } from '../../../lib/platform/nativeCompanionFramedFilesContract';
 import type { NativeCompanionFramedPayloadBudgetPlugin } from '../../../lib/platform/nativeCompanionFramedPayloadBudgetContract';
 import type {
   NativeCompanionFramedSyncInventoryRequest,
@@ -51,7 +52,7 @@ export type CompanionSyncParticipationState = SyncParticipationSnapshot;
 
 export interface CompanionWorkspaceSyncPlugin
   extends AttachmentMaintenanceHostPlugin, RemoteImageResourcePlugin, CompanionAttachmentResourceSyncPlugin,
-  CompanionContentBlobSyncPlugin, NativeCompanionFramedPayloadBudgetPlugin {
+  CompanionContentBlobSyncPlugin, NativeCompanionFramedPayloadBudgetPlugin, NativeCompanionFramedFilesPlugin {
   desktopHttpRequest(args: {
     body?: string;
     headers?: Record<string, string>;

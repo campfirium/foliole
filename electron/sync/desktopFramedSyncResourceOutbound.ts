@@ -1,5 +1,6 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { publishFramedSyncResourceOutbound } from '../../lib/core/sync/framedSyncResourceOutbound.js';
 import { readFramedSyncRequestedResources, type FramedSyncRequestedResource } from '../../lib/core/sync/framedSyncResourceRequest.js';
 import { parseCanonicalAttachmentStorageKey } from '../../lib/platform/attachmentResource.js';
@@ -9,6 +10,7 @@ import { hashResourceFile } from './resourceFileHash.js';
 
 /** Authenticated members request bytes for their own adopted content, independently of database differences. */
 export async function publishDesktopFramedSyncResourceOutbound(input: {
+  files?: FramedSyncFilePort;
   context: FramedSyncContext; db: DbPort; resources: readonly FramedSyncRequestedResource[];
 }) {
   const resources = readFramedSyncRequestedResources(input.resources);

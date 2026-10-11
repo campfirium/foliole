@@ -2,7 +2,7 @@ import Foundation
 import FolioleFramedSyncRuntime
 
 struct FolioleFramedSyncPullBatchReceiver {
-    let receiver: FolioleFramedSyncTransferReceiver
+    let receiver: FolioleFramedSyncFileReceiver
     let context: FolioleFramedSyncTransferContext
     let groupKey: Data
     let owner: FolioleFramedSyncPayloadBudget
@@ -20,7 +20,7 @@ struct FolioleFramedSyncPullBatchReceiver {
                     acceptHeader: request.accept)
                 let applied = try receiver.withPublishedResources(transferID: transfer.transferID) { keys in
                     try bridge.request("apply_framed_transfer", [
-                        "staging_kind": "ios", "staging_path": receiver.databaseURL.path,
+                        "staging_format": "files", "staging_kind": "ios", "staging_path": receiver.databaseURL.path,
                         "transfer_id": transfer.transferID.hex,
                         "sender_device_id": context.senderDeviceID, "sender_library_epoch": context.senderLibraryEpoch,
                         "receiver_device_id": context.receiverDeviceID, "receiver_library_epoch": context.receiverLibraryEpoch,

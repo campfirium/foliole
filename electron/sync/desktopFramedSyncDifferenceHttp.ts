@@ -2,6 +2,8 @@ import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_BATCH_LIMITS } from '../../lib/core/sync/framedSyncBatchLimits.js';
 import { FRAMED_SYNC_LIMITS } from '../../lib/core/sync/framedSyncContract.js';
 import { projectFramedSyncDifferenceRequest } from '../../lib/core/sync/framedSyncDifferenceRequest.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
+import { startFramedSyncFileResourceDemand } from '../../lib/core/sync/framedSyncFileResourceDemands.js';
 import type { FramedSyncInventoryDifference } from '../../lib/core/sync/framedSyncInventory.js';
 import { startFramedSyncResourceDemandRequest } from '../../lib/core/sync/framedSyncResourceDemands.js';
 import { projectFramedSyncResourceRequest, readFramedSyncRequestedResources,
@@ -38,6 +40,7 @@ export async function requestDesktopFramedSyncDifferencesHttp(args:
 }
 
 export async function requestDesktopFramedSyncDifferenceHttp(args: {
+  files?: FramedSyncFilePort;
   context: AuthenticatedContext;
   db?: DbPort;
   difference: FramedSyncInventoryDifference;
@@ -60,12 +63,16 @@ export async function requestDesktopFramedSyncResourcesHttp(args:
   }) {
   const resources = readFramedSyncRequestedResources(args.resources);
   const payload = projectFramedSyncResourceRequest(resources, args.roundId);
-  await args.db.transaction(async (tx) => {
-    for (const resource of resources) await startFramedSyncResourceDemandRequest(tx, {
-      ...resource, groupId: args.context.groupId, receiverDeviceId: args.context.initiatorDeviceId,
-      receiverLibraryEpoch: args.context.initiatorLibraryEpoch
-    }, resource.demandId, resource.sharedStateHash);
-  });
+  const start = async (db: DbPort) => {
+    for (const resource of resources) {
+      const key = { ...resource, groupId: args.context.groupId, receiverDeviceId: args.context.initiatorDeviceId,
+        receiverLibraryEpoch: args.context.initiatorLibraryEpoch };
+      if (args.files) await startFramedSyncFileResourceDemand(args.files, key, resource.demandId, resource.sharedStateHash);
+      else await startFramedSyncResourceDemandRequest(db, key, resource.demandId, resource.sharedStateHash);
+    }
+  };
+  if (args.files) await start(args.db);
+  else await args.db.transaction(start);
   return postDifferenceRequest(args, payload);
 }
 

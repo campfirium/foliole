@@ -2,6 +2,7 @@ import { sameFramedSyncBytes } from '../../lib/core/database/framedSyncStagingSe
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_BATCH_LIMITS } from '../../lib/core/sync/framedSyncBatchLimits.js';
 import { retireFramedSyncCompletedPublication } from '../../lib/core/sync/framedSyncCompletedPublication.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { sameFramedSyncContext } from '../../lib/core/sync/framedSyncStagingContract.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
@@ -14,6 +15,7 @@ import { spoolDesktopFramedSyncSequence } from './desktopFramedSyncSequenceSpool
 import { readFramedSyncStreamSequence } from './desktopFramedSyncStreamSequence.js';
 
 export async function sendDesktopFramedSyncPublishedBatch(input: {
+  files?: FramedSyncFilePort;
   db: DbPort;
   items: readonly DesktopFramedSyncBatchItem[];
   groupSecret: string;
@@ -84,7 +86,7 @@ async function commitBatchReceipts(input: Parameters<typeof sendDesktopFramedSyn
         !sameFramedSyncBytes(receipt.appliedStateHash, published.contentId)) throw new Error('framed_sync_resource_receipt_mismatch');
     await input.staging.commitOutboundReceipt(receipt);
     await input.staging.releaseOutboundHolds(published.transferId);
-    await retireFramedSyncCompletedPublication(input.db, published.transferId);
+    if (!input.files) await retireFramedSyncCompletedPublication(input.db, published.transferId);
     pending.delete(id);
   }
   if (pending.size) throw new Error('framed_sync_batch_receipt_missing');

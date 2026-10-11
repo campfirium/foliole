@@ -13,6 +13,24 @@ public final class FramedSyncResourcePublication implements AutoCloseable {
     private final List<String> storageKeys = new ArrayList<>();
     private boolean committed;
 
+    FramedSyncResourcePublication(FramedSyncFiles files, File directory, byte[] transferId) throws Exception {
+        var record = FramedSyncFileRecords.read(files, FramedSyncFileRecords.directory(transferId) + "/transfer.json");
+        if (record == null) throw new FramedSyncValidationException("framed_sync_transfer_not_ready");
+        if (record.has("receipt")) { committed = true; return; }
+        if (!record.getString("state").equals("ready_to_apply")) throw new FramedSyncValidationException("framed_sync_transfer_not_ready");
+        byte[] attempt = FramedSyncFileRecords.bytes(record.getJSONObject("header").getJSONArray("attemptId"));
+        String pins = FramedSyncFileRecords.attempt(transferId, attempt) + "/pins";
+        for (String name : files.list(pins)) {
+            var pin = FramedSyncFileRecords.read(files, pins + "/" + name);
+            if (pin == null || !pin.has("storageKey")) continue;
+            publish(directory, transferId, attempt, FramedSyncFileRecords.bytes(pin.getJSONArray("sha256")),
+                Long.parseUnsignedLong(pin.getString("byteLength")), pin.getInt("role"), pin.getString("storageKey"));
+            FramedSyncFiles.syncDirectory(directory);
+        }
+        // A bridge failure can follow a committed business transaction. Ready pins own these files until recovery.
+        committed = true;
+    }
+
     FramedSyncResourcePublication(
         SQLiteDatabase database, File directory, byte[] transferId
     ) throws Exception {
@@ -50,6 +68,11 @@ public final class FramedSyncResourcePublication implements AutoCloseable {
         long length = row.getLong(1);
         int role = row.getInt(2);
         String key = row.getString(3);
+        publish(directory, transferId, attemptId, hash, length, role, key);
+    }
+
+    private void publish(File directory, byte[] transferId, byte[] attemptId,
+        byte[] hash, long length, int role, String key) throws Exception {
         File target = new File(directory, key);
         File partial = FramedSyncResourceFiles.partial(directory, transferId, attemptId, hash);
         if (target.exists()) {

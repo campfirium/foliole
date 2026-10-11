@@ -3,7 +3,7 @@ package com.foliole.android;
 import android.content.Context;
 import android.util.Base64;
 import com.foliole.android.framed.FramedSyncHttpTransport;
-import com.foliole.android.framed.FramedSyncOutboundSQLite;
+import com.foliole.android.framed.FramedSyncOutboundFiles;
 import com.foliole.android.framed.FramedSyncReceiptReader;
 import com.foliole.android.framed.FramedSyncTransferContext;
 import com.foliole.android.framed.FramedSyncTransferWriter;
@@ -65,7 +65,7 @@ final class FolioleCompanionFramedSyncOutbound {
         requireSame(contentId, digest(prepared.getString("manifest_hash")),
             "framed_sync_manifest_identity_mismatch");
         byte[] expectedTransferId = digest(prepared.getString("transfer_id"));
-        try (FramedSyncOutboundSQLite staging = new FramedSyncOutboundSQLite(context, budget)) {
+        try (FramedSyncOutboundFiles staging = new FramedSyncOutboundFiles(context, budget)) {
             try {
                 var attempt = FolioleCompanionFramedSyncAttempt.prepare(context, selection, prepared, source,
                     groupKey, transferContext, staging, budget);
@@ -122,7 +122,7 @@ final class FolioleCompanionFramedSyncOutbound {
 
     private static String bodySha256(
         FramedSyncTransferWriter.Attempt attempt,
-        FramedSyncOutboundSQLite staging
+        FramedSyncOutboundFiles staging
     ) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-256");
         try (DigestOutputStream output = new DigestOutputStream(discardingOutput(), digest)) {

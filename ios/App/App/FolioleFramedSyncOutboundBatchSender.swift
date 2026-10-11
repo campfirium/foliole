@@ -7,13 +7,13 @@ final class FolioleFramedSyncOutboundBatchSender {
     private let request: FolioleFramedSyncOutboundRequest
     private let owner: FolioleFramedSyncPayloadBudget
     private let bridge: FolioleCompanionSyncGroupDataRequesting
-    private let staging: FolioleFramedSyncOutboundSQLite
+    private let staging: FolioleFramedSyncOutboundPublicationStaging
     private let directory: URL
     private let upload: Upload
     private var outcomes = [Int: [String: Any]]()
 
     init(request: FolioleFramedSyncOutboundRequest, owner: FolioleFramedSyncPayloadBudget,
-        bridge: FolioleCompanionSyncGroupDataRequesting, staging: FolioleFramedSyncOutboundSQLite,
+        bridge: FolioleCompanionSyncGroupDataRequesting, staging: FolioleFramedSyncOutboundPublicationStaging,
         directory: URL, upload: @escaping Upload) {
         self.request = request; self.owner = owner; self.bridge = bridge
         self.staging = staging; self.directory = directory; self.upload = upload

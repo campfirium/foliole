@@ -1,5 +1,7 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import { FRAMED_SYNC_FRAME_TYPES } from '../../lib/core/sync/framedSyncContract.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
+import { createFramedSyncFileSessionNoncePort } from '../../lib/core/sync/framedSyncFileSession.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
@@ -9,7 +11,7 @@ import { respondDesktopFramedSyncInventory } from './desktopFramedSyncInventoryH
 import { receiveDesktopFramedSyncTransfer, stageDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
 import { receiveDesktopFramedSyncReceipt } from './desktopFramedSyncReceiptReceiver.js';
 
-type Input = Readonly<{ db: DbPort; groupKey: Uint8Array; groupSecret: string; staging: FramedSyncStagingPort }>;
+type Input = Readonly<{ files?: FramedSyncFilePort; db: DbPort; groupKey: Uint8Array; groupSecret: string; staging: FramedSyncStagingPort }>;
 type StreamInput = Parameters<Parameters<typeof handleCompanionLanFramedSyncPost>[0]['onStream']>[0];
 
 export function createDesktopFramedSyncFixtureReceiver(input: Input) {
@@ -26,7 +28,7 @@ export function createDesktopFramedSyncFixtureReceiver(input: Input) {
       };
       if (decodeFramedSyncPreamble(stream.preamble).contextKind === 'session') {
         return respondDesktopFramedSyncInventory({ ...input, context, stream,
-          noncePort: createDesktopFramedSyncSessionNoncePort(input.db) });
+          noncePort: input.files ? createFramedSyncFileSessionNoncePort(input.files) : createDesktopFramedSyncSessionNoncePort(input.db) });
       }
       const inspected = await inspectFixtureStream(stream);
       if (inspected.first.header.frameType === FRAMED_SYNC_FRAME_TYPES.transferReceipt) {

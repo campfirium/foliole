@@ -1,6 +1,6 @@
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
+import { canonicalFramedSyncFactBytes } from '../../lib/core/sync/framedSyncCanonicalFactBytes.js';
 import {
-  canonicalManifestBytes,
   type CanonicalFact,
   type CanonicalManifest
 } from '../../lib/core/sync/framedSyncCanonicalManifest.js';
@@ -65,7 +65,7 @@ export async function stageDesktopFramedSyncFact(input: {
   await input.staging.commitAuthenticatedFrame(input.frame);
   await input.staging.stageInboundFact({
     attemptId: input.frame.attemptId,
-    canonicalBytes: canonicalFactBytes(input.fact),
+    canonicalBytes: canonicalFramedSyncFactBytes(input.fact),
     factId: input.fact.factId,
     factKind: input.fact.kind,
     globalId: input.fact.globalId,
@@ -109,15 +109,4 @@ export async function finishDesktopFramedSyncTransfer(input: {
     transfers: [prepared]
   });
   return { generatedChanges: applied.generatedChanges, receipt: applied.receipts[0]! };
-}
-
-const MANIFEST_PREFIX_BYTES = 4 + new TextEncoder().encode('foliole-framed-sync-content-v1').byteLength + 4;
-
-function canonicalFactBytes(fact: CanonicalFact) {
-  const manifest = canonicalManifestBytes({ blobs: fact.blobs, facts: [fact] });
-  const blobSuffixBytes = 4 + fact.blobs.reduce(
-    (size, blob) => size + 4 + blob.sha256.byteLength + 8 + 4 + 1,
-    0
-  );
-  return manifest.slice(MANIFEST_PREFIX_BYTES, manifest.byteLength - blobSuffixBytes);
 }

@@ -5,11 +5,11 @@ import {
   FRAMED_SYNC_PROTOCOL_VERSION,
   type FramedSyncContext
 } from '../../lib/core/sync/framedSyncContract.js';
+import { createFramedSyncFileSessionNoncePort } from '../../lib/core/sync/framedSyncFileSession.js';
+import { createFramedSyncFileStaging } from '../../lib/core/sync/framedSyncFileStaging.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
-import { createDesktopFramedSyncSessionNoncePort } from '../database/desktopFramedSyncSessionStaging.js';
-import { createDesktopFramedSyncStaging } from '../database/desktopFramedSyncStaging.js';
 import { loadDesktopLocalNodeProof } from '../database/nodeVersionPeerProof.js';
 import { loadDesktopSyncGroupInfo } from '../database/syncGroupStore.js';
 
@@ -19,6 +19,7 @@ import {
   handleCompanionLanFramedSyncPost
 } from './companionLanFramedSyncPost.js';
 import { authenticateCompanionRequest } from './companionRequestAuth.js';
+import { createDesktopLibrarySyncFiles } from './desktopFramedSyncFiles.js';
 import { respondDesktopFramedSyncInventory } from './desktopFramedSyncInventoryHttp.js';
 import { receiveDesktopFramedSyncTransfer } from './desktopFramedSyncProcessReceiver.js';
 import { receiveDesktopFramedSyncReceipt } from './desktopFramedSyncReceiptReceiver.js';
@@ -38,6 +39,7 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     if (!group) throw new Error('sync_group_not_available');
     const bodySha256 = readHeader(args.request, FRAMED_SYNC_BODY_SHA256_HEADER);
     return {
+      files: createDesktopLibrarySyncFiles(connection.dbPath),
       payloadBudget: connection.framedSyncPayloadBudget,
       auth: authenticateCompanionRequest({
         ...(bodySha256 === undefined ? {} : { bodySha256 }),
@@ -49,8 +51,8 @@ export async function handleProductionCompanionFramedSyncPost(args: {
       libraryEpoch: loadDesktopLocalNodeProof().library_epoch
     };
   });
-  const staging = createDesktopFramedSyncStaging(runtime.db);
-  const noncePort = createDesktopFramedSyncSessionNoncePort(runtime.db);
+  const staging = createFramedSyncFileStaging(runtime.files);
+  const noncePort = createFramedSyncFileSessionNoncePort(runtime.files);
   await handleCompanionLanFramedSyncPost({
     authenticate: () => runtime.auth,
     payloadBudget: runtime.payloadBudget,
@@ -58,20 +60,20 @@ export async function handleProductionCompanionFramedSyncPost(args: {
     onStream: async ({ context, stream }) => {
       const preamble = decodeFramedSyncPreamble(stream.preamble);
       if (preamble.contextKind === 'session') return respondDesktopFramedSyncInventory({
-        context, db: runtime.db, groupKey: runtime.groupKey,
+        files: runtime.files, context, db: runtime.db, groupKey: runtime.groupKey,
         groupSecret: Buffer.from(runtime.groupKey).toString('base64url'), noncePort, staging, stream
       });
       const inspected = await inspectFirstFrame(stream);
       const transferContext = toTransferContext(context);
       if (inspected.first.header.frameType === FRAMED_SYNC_FRAME_TYPES.transferReceipt) {
         return receiveDesktopFramedSyncReceipt({
-          context: transferContext,
+          files: runtime.files, context: transferContext,
           db: runtime.db, groupKey: runtime.groupKey, staging,
           stream: inspected.stream, transferId: preamble.contextId
         });
       }
       return receiveDesktopFramedSyncTransfer({
-        context: transferContext,
+        files: runtime.files, context: transferContext,
         db: runtime.db,
         groupKey: runtime.groupKey,
         staging,

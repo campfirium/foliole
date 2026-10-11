@@ -12,6 +12,8 @@ import {
 import { createCompanionFramedSyncOutboundValue } from '../../../../../../lib/core/sync/framedSyncCompanionOutboundContract.js';
 import type { FramedSyncContext } from '../../../../../../lib/core/sync/framedSyncContract.js';
 import { loadFramedExternalDocumentBody } from '../../../../../../lib/core/sync/framedSyncExternalDocumentBody.js';
+import { freezeFramedSyncFilePublication } from '../../../../../../lib/core/sync/framedSyncFileFreeze.js';
+import type { FramedSyncFilePort } from '../../../../../../lib/core/sync/framedSyncFilePort.js';
 import { stageFramedSyncFrozenBody } from '../../../../../../lib/core/sync/framedSyncFrozenBody.js';
 import type { FramedSyncInventoryDifference } from '../../../../../../lib/core/sync/framedSyncInventory.js';
 import { projectFramedSyncNodeIdentityFact, projectFramedSyncNodeRecord } from '../../../../../../lib/core/sync/framedSyncNodeProjection.js';
@@ -42,13 +44,14 @@ async function selectOutbound(db: DbPort, payload: Record<string, unknown>) {
 
 export async function inspectCompanionFramedSyncOutbound(
   db: DbPort,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  files?: FramedSyncFilePort
 ) {
   if (payload.transfer_id !== undefined) {
     if (payload.receipt_only === true) return inspectFramedSyncPublishedReceipt(
-      db, context(payload), requiredText(payload.transfer_id));
+      db, context(payload), requiredText(payload.transfer_id), files);
     const published = await loadFramedSyncPublishedOutboundValue(
-      db, context(payload), requiredText(payload.transfer_id));
+      db, context(payload), requiredText(payload.transfer_id), files);
     return { resource_storage_keys: published.blobs.flatMap((blob) => blob.storage_key ? [blob.storage_key] : []) };
   }
   if (payload.difference_request_hex !== undefined) {
@@ -64,49 +67,66 @@ export async function inspectCompanionFramedSyncOutbound(
 /** Freeze one current node version and return the host-neutral bytes needed by a native sender. */
 export async function prepareCompanionFramedSyncOutbound(
   db: DbPort,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  files?: FramedSyncFilePort
 ) {
   return db.transaction(async (tx) => {
     await assertSyncGroupLocalPublicationAllowed(tx);
     if (payload.transfer_id !== undefined) return loadFramedSyncPublishedOutboundValue(
-      tx, context(payload), requiredText(payload.transfer_id));
+      tx, context(payload), requiredText(payload.transfer_id), files);
     if (payload.difference_request_hex !== undefined && readCompanionFramedSyncOutboundRequest(payload).resources.length) {
-      const { publication, state } = await publishCompanionFramedSyncRequestedResources(tx, payload);
-      const value = await loadFramedSyncPublishedOutboundValue(tx, context(payload), bytesToHex(publication.transferId));
+      const { publication, state } = await publishCompanionFramedSyncRequestedResources(tx, payload, files);
+      const value = await loadFramedSyncPublishedOutboundValue(tx, context(payload), bytesToHex(publication.transferId), files);
       return { ...value, publication_state: state };
     }
-    const selection = await selectOutbound(tx, payload);
-    const projections: { manifest: CanonicalManifest }[] = [];
-    const blobs = new Map<string, { blob: CanonicalBlob; frozenBody: boolean }>();
-    const ids = selection.nodes.map((node) => node.version_id);
-    for await (const record of streamRetainedNodeVersions(tx, ids, selection.difference.globalId)) {
-      const projection = isNodeVersionIdentityOnly(record)
-        ? { manifest: { blobs: [], facts: [projectFramedSyncNodeIdentityFact(record)] } }
-        : projectFramedSyncNodeRecord(record, []);
-      projections.push({ manifest: projection.manifest });
-      for (const blob of projection.manifest.blobs) {
-        const key = bytesToHex(blob.sha256);
-        const prior = blobs.get(key);
-        if (prior && !sameBlob(prior.blob, blob)) throw new Error('framed_sync_outbound_blob_identity_conflict');
-        const alternative = record.alternative_bodies?.find((value) => value.hash === key);
-        const text = alternative?.text ?? record.body_text ?? '';
-        await stageFramedSyncFrozenBody(tx, blob, new TextEncoder().encode(text));
-        blobs.set(key, { blob, frozenBody: true });
-      }
-    }
-    await addStateBodies(tx, selection.stateFacts, blobs);
-    const manifest = { blobs: [...blobs.values()].map((value) => value.blob),
-      facts: [...projections.flatMap((value) => value.manifest.facts),
-        ...selection.selected.facts, ...selection.stateFacts] };
-    if (!manifest.facts.length) throw new Error('framed_sync_outbound_fact_set_empty');
-    return publishSelection(tx, context(payload), manifest, [...blobs.values()], selection.difference);
+    const write = files ? async () => {} : (blob: CanonicalBlob, data: Uint8Array) => stageFramedSyncFrozenBody(tx, blob, data);
+    const selected = await buildSelection(tx, payload, write);
+    if (!files) return publishSelection(tx, context(payload), selected.manifest, selected.blobs, selected.difference);
+    const contentId = await canonicalContentId(selected.manifest);
+    const transferId = await canonicalTransferId(context(payload), contentId);
+    const publication = { context: context(payload), contentId, manifestHash: contentId, transferId,
+      manifest: selected.manifest, inventoryDifference: selected.difference };
+    const state = await freezeFramedSyncFilePublication({ files, publication,
+      freeze: async writer => (await buildSelection(tx, payload, writer)).manifest });
+    const value = await loadFramedSyncPublishedOutboundValue(tx, context(payload), bytesToHex(transferId), files);
+    return { ...value, publication_state: state, batch_ready: isFramedSyncPublicationBatchReady({ manifest: selected.manifest }) };
   });
 }
 
+type BodyWriter = (blob: CanonicalBlob, data: Uint8Array) => Promise<void>;
+
+async function buildSelection(db: DbPort, payload: Record<string, unknown>, write: BodyWriter) {
+  const selection = await selectOutbound(db, payload);
+  const projections: { manifest: CanonicalManifest }[] = [];
+  const blobs = new Map<string, { blob: CanonicalBlob; frozenBody: boolean }>();
+  const ids = selection.nodes.map((node) => node.version_id);
+  for await (const record of streamRetainedNodeVersions(db, ids, selection.difference.globalId)) {
+    const projection = isNodeVersionIdentityOnly(record)
+      ? { manifest: { blobs: [], facts: [projectFramedSyncNodeIdentityFact(record)] } }
+      : projectFramedSyncNodeRecord(record, []);
+    projections.push({ manifest: projection.manifest });
+    for (const blob of projection.manifest.blobs) {
+      const key = bytesToHex(blob.sha256);
+      const prior = blobs.get(key);
+      if (prior && !sameBlob(prior.blob, blob)) throw new Error('framed_sync_outbound_blob_identity_conflict');
+      const alternative = record.alternative_bodies?.find((value) => value.hash === key);
+      const text = alternative?.text ?? record.body_text ?? '';
+      await write(blob, new TextEncoder().encode(text));
+      blobs.set(key, { blob, frozenBody: true });
+    }
+  }
+  await addStateBodies(db, selection.stateFacts, blobs, write);
+  const manifest = { blobs: [...blobs.values()].map((value) => value.blob),
+    facts: [...projections.flatMap((value) => value.manifest.facts),
+      ...selection.selected.facts, ...selection.stateFacts] };
+  if (!manifest.facts.length) throw new Error('framed_sync_outbound_fact_set_empty');
+  return { manifest, blobs: [...blobs.values()], difference: selection.difference };
+}
+
 async function addStateBodies(db: DbPort, facts: readonly CanonicalFact[],
-  blobs: Map<string, { blob: CanonicalBlob; frozenBody: boolean }>) {
+  blobs: Map<string, { blob: CanonicalBlob; frozenBody: boolean }>, write: BodyWriter) {
   for (const fact of facts) for (const blob of fact.blobs) {
-    await stageFramedSyncFrozenBody(db, blob, await loadFramedExternalDocumentBody(db, fact.globalId, blob));
+    await write(blob, await loadFramedExternalDocumentBody(db, fact.globalId, blob));
     blobs.set(bytesToHex(blob.sha256), { blob, frozenBody: true });
   }
 }

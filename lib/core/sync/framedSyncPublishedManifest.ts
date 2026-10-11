@@ -5,11 +5,19 @@ import { decodeFramedSyncManifest } from '../database/framedSyncStagingSerializa
 import type { DbPort } from './dbPort.js';
 import { canonicalContentId, canonicalTransferId } from './framedSyncCanonicalManifest.js';
 import type { FramedSyncContext } from './framedSyncContract.js';
+import type { FramedSyncFilePort } from './framedSyncFilePort.js';
+import { loadFramedSyncFilePublication, loadFramedSyncFileTask } from './framedSyncFilePublication.js';
+import { sameFramedSyncContext } from './framedSyncStagingContract.js';
 
 /** Receipt retries need only the retained identity, even after transport payloads retire. */
-export async function inspectFramedSyncPublishedReceipt(db: DbPort, context: FramedSyncContext, transferId: string)
+export async function inspectFramedSyncPublishedReceipt(db: DbPort, context: FramedSyncContext, transferId: string, files?: FramedSyncFilePort)
   : Promise<{ content_id: string; resource_storage_keys: string[] }> {
   if (!/^[a-f0-9]{64}$/u.test(transferId)) throw new Error('framed_sync_transfer_id_invalid');
+  if (files) {
+    const task = await loadFramedSyncFileTask(files, hexToBytes(transferId));
+    if (!task || !sameFramedSyncContext(task.context, context)) throw new Error('framed_sync_publication_context_missing');
+    return { content_id: bytesToHex(task.contentId), resource_storage_keys: [] };
+  }
   const [row] = await db.query<{ content_id: string }>(
     `SELECT lower(hex(content_id)) AS content_id FROM framed_sync_outbound_publications
      WHERE hex(transfer_id) = ? AND group_id = ? AND sender_device_id = ?
@@ -25,8 +33,14 @@ export async function inspectFramedSyncPublishedReceipt(db: DbPort, context: Fra
 }
 
 /** The frozen publication, never a new business projection, defines bytes supplied after restart. */
-export async function loadFramedSyncPublishedManifest(db: DbPort, context: FramedSyncContext, transferId: string) {
+export async function loadFramedSyncPublishedManifest(db: DbPort, context: FramedSyncContext, transferId: string, files?: FramedSyncFilePort) {
   if (!/^[a-f0-9]{64}$/u.test(transferId)) throw new Error('framed_sync_transfer_id_invalid');
+  if (files) {
+    const task = await loadFramedSyncFileTask(files, hexToBytes(transferId));
+    const publication = task?.state === 'published' ? await loadFramedSyncFilePublication(files, hexToBytes(transferId)) : null;
+    if (!publication || !sameFramedSyncContext(publication.context, context)) throw new Error('framed_sync_publication_context_missing');
+    return { manifest: publication.manifest, contentId: publication.contentId };
+  }
   const [row] = await db.query<{ content_id: string; manifest_json: string }>(
     `SELECT lower(hex(content_id)) AS content_id, manifest_json FROM framed_sync_outbound_publications
      WHERE hex(transfer_id) = ? AND group_id = ? AND sender_device_id = ?

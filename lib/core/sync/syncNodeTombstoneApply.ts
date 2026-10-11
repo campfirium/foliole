@@ -7,12 +7,13 @@ import { serializeTopicTextSnapshot } from './topicTextBodies.js';
 
 interface NodeTombstoneRow extends DbRow {
   deleted_at: string;
+  parent_version_id: string | null;
   version_id: string;
 }
 
 export async function loadNodeSyncTombstone(port: DbPort, nodeId: string) {
   const rows = await port.query<NodeTombstoneRow>(
-    `SELECT version_id, deleted_at
+    `SELECT version_id, parent_version_id, deleted_at
      FROM node_sync_tombstones
      WHERE node_id = ?
      LIMIT 1`,

@@ -20,7 +20,7 @@ extension FolioleCompanionSyncPlugin {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("foliole-framed-send-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: directory) }
-        let staging = try FolioleFramedSyncOutboundSQLite(database: .init(url: FolioleFramedSyncOutboundSQLite.applicationDatabaseURL()), owner: owner)
+        let staging = try FolioleFramedSyncOutboundFiles(owner: owner)
         let sender = FolioleFramedSyncOutboundBatchSender(request: request, owner: owner, bridge: bridge,
             staging: staging, directory: directory) { body, response, sequence in
             try await self.uploadFramedBatch(request, body: body, response: response, sequence: sequence, owner: owner)

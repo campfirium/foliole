@@ -14,6 +14,12 @@ interface BudgetState {
 }
 const owners = new WeakMap<CapacitorCompanionDatabaseOwner, BudgetState>();
 
+export function companionFramedFileOwner(owner: CapacitorCompanionDatabaseOwner) {
+  const state = owners.get(owner);
+  if (!state || state.closing) throw new Error('framed_sync_file_owner_unavailable');
+  return { ...state.identity };
+}
+
 export async function configureCompanionFramedPayloadBudget(owner: CapacitorCompanionDatabaseOwner) {
   if (owners.has(owner)) throw new Error('framed_sync_payload_budget_already_configured');
   const identity = { library_key: owner.databasePath, generation_id: createCompanionUuid() };

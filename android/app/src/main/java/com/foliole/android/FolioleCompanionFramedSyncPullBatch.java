@@ -29,8 +29,8 @@ final class FolioleCompanionFramedSyncPullBatch {
         byte[] key = FolioleCompanionFramedSyncOutbound.decodeGroupKey(credential.workgroupKey);
         var context = new FramedSyncTransferContext(group, remote, remoteEpoch, credential.deviceId, epoch);
         var session = new FramedSyncSessionContext(group, credential.deviceId, epoch, remote, remoteEpoch);
-        try (var staging = new FramedSyncTransferSQLite(host);
-             var nonces = new FramedSyncSessionNonceSQLite(host);
+        try (var staging = new FramedSyncTransferFiles(host);
+             var nonces = new FramedSyncSessionNonceFiles(host);
              var body = FramedSyncSessionFile.create(host.getCacheDir(), key, session, consumer -> {
                  for (var message : FolioleCompanionFramedSyncPullBatchInput.messages(requests)) consumer.accept(message);
              }, nonces, budget)) {

@@ -21,6 +21,7 @@ import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeReposito
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
 
 import { createCompanionFramedSyncDifferenceBatchDelivery } from './companionFramedSyncDifferenceBatchDelivery.js';
+import { currentCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 import {
   readCompanionFramedSyncInventory
 } from './companionFramedSyncInventory.js';
@@ -129,8 +130,9 @@ export async function sendCompanionFramedSyncInventoryDifferences(
     throw new Error('sync_group_local_adoption_source_mismatch');
   }
   const owner = getIosCompanionDatabaseOwner();
+  const files = await currentCompanionFramedSyncFiles();
   let [localValue, remoteResult] = await Promise.all([
-    owner.read((db) => readCompanionFramedSyncInventory(db)),
+    owner.read((db) => readCompanionFramedSyncInventory(db, files)),
     readCompanionRemoteFramedSyncInventory(args)
   ]);
   if (resourcesOnly) {
@@ -140,7 +142,7 @@ export async function sendCompanionFramedSyncInventoryDifferences(
   }
   if (await resumeCompanionFramedSyncPendingPublications(args, remoteResult.entries)) {
     [localValue, remoteResult] = await Promise.all([
-      owner.read((db) => readCompanionFramedSyncInventory(db)), readCompanionRemoteFramedSyncInventory(args)
+      owner.read((db) => readCompanionFramedSyncInventory(db, files)), readCompanionRemoteFramedSyncInventory(args)
     ]);
   }
   const result = await reconcileDatabaseRounds(args, { localValue, remoteResult });

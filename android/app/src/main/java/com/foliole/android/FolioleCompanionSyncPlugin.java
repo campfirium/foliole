@@ -14,8 +14,14 @@ public class FolioleCompanionSyncPlugin extends Plugin {
     private FolioleCompanionNsdDiscoverySession discoverySession;
     private final ExecutorService fileExecutor = Executors.newSingleThreadExecutor();
     private final ExecutorService framedSendExecutor = Executors.newSingleThreadExecutor();
+    private final ExecutorService syncFileExecutor = Executors.newSingleThreadExecutor();
     final FolioleCompanionFramedSyncPayloadBudgetActions payloadBudget = new FolioleCompanionFramedSyncPayloadBudgetActions();
     private boolean lifecycleActive = true;
+
+    @PluginMethod public void accessFramedSyncFile(PluginCall call) {
+        FolioleCompanionSyncAsync.run(syncFileExecutor, call, "Failed to access Sync file.", () ->
+            FolioleCompanionFramedSyncFileActions.access(getContext(), call));
+    }
 
     @Override public void load() {
         super.load();
@@ -249,6 +255,7 @@ public class FolioleCompanionSyncPlugin extends Plugin {
         super.handleOnDestroy();
         fileExecutor.shutdown();
         framedSendExecutor.shutdown();
+        syncFileExecutor.shutdown();
     }
 
     @Override protected void handleOnPause() {

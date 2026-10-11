@@ -39,9 +39,16 @@ struct FolioleFramedSyncReceivingTransfer {
     }
 
     mutating func completeFragment(database: FolioleFramedSyncTransferDatabase) throws {
+        let transferID = preamble.contextID, attemptID = preamble.identifier
+        try completeFragment { sequence in
+            try FolioleFramedSyncDurableFactReader.read(database: database,
+                transferID: transferID, attemptID: attemptID, firstSequence: sequence)
+        }
+    }
+
+    mutating func completeFragment(read: (UInt64) throws -> Foliole_Sync_V22_FactRecord) throws {
         guard let fragmentedFact, fragmentedFact.complete else { return }
-        let fact = try FolioleFramedSyncDurableFactReader.read(database: database,
-            transferID: transferID, attemptID: attemptID, firstSequence: fragmentedFact.firstSequence)
+        let fact = try read(fragmentedFact.firstSequence)
         try append(fact, sequence: fragmentedFact.firstSequence)
         self.fragmentedFact = nil
     }
@@ -54,6 +61,14 @@ struct FolioleFramedSyncReceivingTransfer {
     }
 
     mutating func finish(resourceHashes: Set<Data>, database: FolioleFramedSyncTransferDatabase) throws {
+        let transferID = preamble.contextID, attemptID = preamble.identifier
+        try finish(resourceHashes: resourceHashes) { sequence in
+            try FolioleFramedSyncDurableFactReader.read(database: database,
+                transferID: transferID, attemptID: attemptID, firstSequence: sequence)
+        }
+    }
+
+    mutating func finish(resourceHashes: Set<Data>, read: (UInt64) throws -> Foliole_Sync_V22_FactRecord) throws {
         guard fragmentedFact == nil, let header, let trailer,
               trailer.transferID == transferID,
               Int(trailer.factCount) == facts.count,
@@ -67,8 +82,7 @@ struct FolioleFramedSyncReceivingTransfer {
               resourceHashes.isSubset(of: Set(header.manifest.blobs.map(\.sha256))) else {
             throw invalid("inbound_attempt_manifest_mismatch")
         }
-        let contentID = try facts.contentID(database: database, transferID: transferID,
-            attemptID: attemptID, blobs: header.manifest.blobs)
+        let contentID = try facts.contentID(blobs: header.manifest.blobs, read: read)
         guard contentID == header.manifest.contentID, contentID == trailer.manifestHash else {
             throw invalid("inbound_attempt_manifest_mismatch")
         }

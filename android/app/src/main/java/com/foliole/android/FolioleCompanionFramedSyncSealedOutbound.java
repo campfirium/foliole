@@ -40,7 +40,7 @@ final class FolioleCompanionFramedSyncSealedOutbound implements AutoCloseable, F
         var prepared = FolioleCompanionFramedSyncPreparedOutbound.load(host, bridge, selection, budget);
         File file = File.createTempFile("foliole-framed-sealed-", ".body", host.getCacheDir());
         byte[] transfer = FolioleCompanionFramedSyncOutbound.digest(prepared.metadata.getString("transfer_id"));
-        try (var staging = new FramedSyncOutboundSQLite(host, budget)) {
+        try (var staging = new FramedSyncOutboundFiles(host, budget)) {
             try {
                 var attempt = FolioleCompanionFramedSyncAttempt.prepare(host, selection, prepared.metadata,
                     prepared.source, key, context, staging, budget);

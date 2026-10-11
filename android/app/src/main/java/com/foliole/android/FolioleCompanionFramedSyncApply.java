@@ -2,7 +2,7 @@ package com.foliole.android;
 
 import com.foliole.android.framed.FramedSyncResourcePublication;
 import com.foliole.android.framed.FramedSyncTransferContext;
-import com.foliole.android.framed.FramedSyncTransferSQLite;
+import com.foliole.android.framed.FramedSyncTransferFiles;
 import com.foliole.sync.v22.TransferReceipt;
 import com.google.protobuf.ByteString;
 import com.getcapacitor.JSObject;
@@ -15,15 +15,15 @@ final class FolioleCompanionFramedSyncApply {
 
     static TransferReceipt apply(
         FolioleCompanionSyncGroupDataBridge bridge,
-        FramedSyncTransferSQLite staging,
+        FramedSyncTransferFiles staging,
         byte[] transferId,
         FramedSyncTransferContext context,
         String localDeviceId,
         String localEpoch, com.foliole.android.framed.FramedSyncPayloadBudget budget
     ) throws Exception {
-        try (FramedSyncResourcePublication resources = staging.publishResources(transferId)) {
+        try (FramedSyncResourcePublication resources = staging.publishResources(transferId, budget)) {
             JSONObject applied = bridge.request("apply_framed_transfer", new JSONObject()
-                .put("staging_kind", "android").put("staging_path", staging.path())
+                .put("staging_kind", "android").put("staging_path", staging.path()).put("staging_format", "files")
                 .put("transfer_id", hex(transferId))
                 .put("sender_device_id", context.senderDeviceId())
                 .put("sender_library_epoch", context.senderLibraryEpoch())
@@ -36,11 +36,12 @@ final class FolioleCompanionFramedSyncApply {
         }
     }
 
-    static JSObject stage(FramedSyncTransferSQLite staging, byte[] transferId,
-        FramedSyncTransferContext context, String localDeviceId, String localEpoch) throws Exception {
-        try (FramedSyncResourcePublication resources = staging.publishResources(transferId)) {
+    static JSObject stage(FramedSyncTransferFiles staging, byte[] transferId,
+        FramedSyncTransferContext context, String localDeviceId, String localEpoch,
+        com.foliole.android.framed.FramedSyncPayloadBudget budget) throws Exception {
+        try (FramedSyncResourcePublication resources = staging.publishResources(transferId, budget)) {
             JSObject value = new JSObject().put("staging_kind", "android")
-                .put("staging_path", staging.path()).put("transfer_id", hex(transferId))
+                .put("staging_path", staging.path()).put("staging_format", "files").put("transfer_id", hex(transferId))
                 .put("sender_device_id", context.senderDeviceId())
                 .put("sender_library_epoch", context.senderLibraryEpoch())
                 .put("receiver_device_id", localDeviceId)

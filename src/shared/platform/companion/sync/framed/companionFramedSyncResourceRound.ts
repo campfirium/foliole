@@ -1,13 +1,15 @@
 import { bytesToHex } from '@noble/hashes/utils.js';
 
+import { startFramedSyncFileResourceDemand } from '../../../../../../lib/core/sync/framedSyncFileResourceDemands.js';
 import { loadFramedSyncPendingResourceRequests } from '../../../../../../lib/core/sync/framedSyncPendingResourceRequests.js';
-import { startFramedSyncResourceDemandRequest } from '../../../../../../lib/core/sync/framedSyncResourceDemands.js';
 import { scanFramedSyncResourceNeeds } from '../../../../../../lib/core/sync/framedSyncResourceNeedScan.js';
 import { parseCanonicalAttachmentStorageKey } from '../../../../../../lib/platform/attachmentResource.js';
 import type { NativeCompanionFramedSyncInventoryRequest } from '../../../../../../lib/platform/nativeCompanionSyncContract.js';
 import { runCompanionSyncWriterTask } from '../../../companionSyncWriterQueue.js';
 import { FolioleCompanionSync } from '../../../companionWorkspaceRuntimeRepository.js';
 import { getIosCompanionDatabaseOwner } from '../../runtime/iosCompanionDatabaseBootstrap.js';
+
+import { currentCompanionFramedSyncFiles } from './companionFramedSyncFiles.js';
 
 async function isPresent(storageKey: string) {
   const parsed = parseCanonicalAttachmentStorageKey(storageKey);
@@ -23,6 +25,7 @@ async function isPresent(storageKey: string) {
 export async function runCompanionFramedSyncResourceRound(args: NativeCompanionFramedSyncInventoryRequest,
   roundId: Uint8Array, globalIds: Iterable<string>) {
   const owner = getIosCompanionDatabaseOwner();
+  const files = currentCompanionFramedSyncFiles();
   const [identity] = await owner.read((db) => db.query<{ device_id: string; library_epoch: string }>(
     `SELECT state.local_device_identity_key AS device_id, proof.library_epoch
      FROM sync_group_local_state state JOIN node_version_local_proof_state proof ON proof.singleton_id = 1
@@ -33,17 +36,17 @@ export async function runCompanionFramedSyncResourceRound(args: NativeCompanionF
   const result = { pending: 0, scanned: 0, transferred: 0, unavailable: 0 };
   for (const globalId of globalIds) {
     const scanned = await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
-      scanFramedSyncResourceNeeds({ db, receiver, globalIds: [globalId], isPresent,
+      scanFramedSyncResourceNeeds({ db, files, receiver, globalIds: [globalId], isPresent,
         createId: () => bytesToHex(crypto.getRandomValues(new Uint8Array(16))) })));
     result.scanned += scanned.scanned;
     result.unavailable += scanned.unavailable;
     let after = '';
     for (;;) {
-      const page = await owner.read((db) => loadFramedSyncPendingResourceRequests(db, receiver, after, globalId));
+      const page = await owner.read((db) => loadFramedSyncPendingResourceRequests(db, receiver, after, globalId, files));
       result.unavailable += page.unavailableDemandIds.length;
       for (const resource of page.resources) {
-        await runCompanionSyncWriterTask(() => owner.runWriter((db) =>
-          startFramedSyncResourceDemandRequest(db, { ...receiver, ...resource }, resource.demandId, resource.sharedStateHash)));
+        await runCompanionSyncWriterTask(() => owner.runWriter(() =>
+          startFramedSyncFileResourceDemand(files, { ...receiver, ...resource }, resource.demandId, resource.sharedStateHash)));
         try {
           await FolioleCompanionSync.pullFramedSyncObject({ ...args, round_id: bytesToHex(roundId),
             object_id: globalId, object_type: 'node', frontier_fact_ids: [], required_relation_ids: [],

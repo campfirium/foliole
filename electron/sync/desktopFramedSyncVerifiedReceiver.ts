@@ -3,6 +3,8 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import type { DbPort } from '../../lib/core/sync/dbPort.js';
 import type { FramedSyncContext } from '../../lib/core/sync/framedSyncContract.js';
 import { deriveTransferFrameKey } from '../../lib/core/sync/framedSyncCrypto.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
+import { createFramedSyncFileStaging } from '../../lib/core/sync/framedSyncFileStaging.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
 import { retireDesktopFramedSyncBodyFrame } from '../database/desktopFramedSyncBodyFrameRetirement.js';
@@ -10,6 +12,8 @@ import { retireDesktopFramedSyncResourceFrame } from '../database/desktopFramedS
 
 import { authenticatedDesktopFramedSyncTransferFrames, type AuthenticatedTransferFrame } from './desktopFramedSyncAuthenticatedTransferFrames.js';
 import { assertDesktopFramedSyncFactFragmentsComplete, stageDesktopFramedSyncFactFragment } from './desktopFramedSyncFactFragments.js';
+import { applyDesktopFramedSyncFileInbound } from './desktopFramedSyncFileApply.js';
+import { loadDesktopFramedSyncFileReadySource } from './desktopFramedSyncFileReadySource.js';
 import { headerFromWire } from './desktopFramedSyncProcessHeader.js';
 import { stageDesktopFramedSyncBlob, stageDesktopFramedSyncFact } from './desktopFramedSyncProcessInbound.js';
 import { buildReceiptStream } from './desktopFramedSyncProcessReceipt.js';
@@ -21,6 +25,7 @@ import { readVerifiedReceiverResourceNodes } from './desktopFramedSyncVerifiedRe
 import { DesktopFramedVerifiedReceiverState } from './desktopFramedSyncVerifiedReceiverState.js';
 
 type ReceiverInput = Readonly<{
+  files?: FramedSyncFilePort;
   context: FramedSyncContext; db: DbPort; groupKey: Uint8Array; staging: FramedSyncStagingPort;
   stream: FramedSyncStreamBody<FramedSyncWireFrame>;
   acceptHeader?: (header: ReturnType<typeof headerFromWire>) => void;
@@ -29,6 +34,12 @@ type FrameInput = ReceiverInput & { event: AuthenticatedTransferFrame; state: De
 
 /** Explicit candidate for ordinary receive; production activation follows owner migration. */
 export async function receiveVerifiedDesktopFramedSyncTransfer(input: ReceiverInput) {
+  const id = decodeFramedSyncPreamble(input.stream.preamble).contextId;
+  return input.files ? input.files.exclusive(`receiver/${bytesToHex(id)}`, () => receiveOwnedTransfer(input)) :
+    receiveOwnedTransfer(input);
+}
+
+async function receiveOwnedTransfer(input: ReceiverInput) {
   const preamble = decodeFramedSyncPreamble(input.stream.preamble);
   if (preamble.contextKind !== 'transfer') throw new Error('transfer_preamble_required');
   const key = await deriveTransferFrameKey({
@@ -53,7 +64,7 @@ export async function receiveVerifiedDesktopFramedSyncTransfer(input: ReceiverIn
 
 function handleVerifiedFrame(input: FrameInput) {
   if (input.event.decoded.payloadCase === 'transfer_trailer') return handleVerifiedTrailer(input);
-  return input.db.transaction(async () => {
+  return ownReceiver(input, async () => {
     const receipt = await input.staging.loadReceipt(input.event.published.transferId);
     if (receipt) {
       input.state.existingReceipt = receipt;
@@ -65,7 +76,7 @@ function handleVerifiedFrame(input: FrameInput) {
 
 async function handleVerifiedTrailer(input: FrameInput) {
   assertDesktopFramedSyncFactFragmentsComplete(input.state);
-  await input.db.transaction(async () => {
+  await ownReceiver(input, async () => {
     const receipt = await input.staging.loadReceipt(input.event.published.transferId);
     if (receipt) input.state.existingReceipt = receipt;
     else if (!input.state.ready) await finishVerifiedTransfer(input);
@@ -82,11 +93,11 @@ async function handleVerifiedFrameOwned(input: FrameInput) {
   if (decoded.payloadCase !== 'fact_fragment') assertDesktopFramedSyncFactFragmentsComplete(state);
   if (decoded.payloadCase === 'transfer_header') {
     input.acceptHeader?.(headerFromWire(decoded.payload, published));
-    await state.admit({ db: input.db, event: input.event, staging: input.staging });
+    await state.admit({ ...input, event: input.event });
   } else if (state.ready) {
     return null;
   } else if (decoded.payloadCase === 'fact_fragment') {
-    await stageDesktopFramedSyncFactFragment({ db: input.db, event: input.event, staging: input.staging, state });
+    await stageDesktopFramedSyncFactFragment({ ...input, state });
   } else if (decoded.payloadCase === 'fact') {
     const fact = wireToFact(decoded.payload);
     if (!state.existingReceipt) {
@@ -98,13 +109,15 @@ async function handleVerifiedFrameOwned(input: FrameInput) {
     const data = decoded.payload.data as Uint8Array;
     if (state.bodies.has(bytesToHex(sha256))) {
       await stageDesktopFramedSyncBlob({ data, frame, offset, sha256, staging: input.staging });
-      await retireDesktopFramedSyncBodyFrame({ db: input.db, frame, chunk: { data, offset, sha256 } });
+      if (input.files) await createFramedSyncFileStaging(input.files).compactBodyFrame(frame);
+      else await retireDesktopFramedSyncBodyFrame({ db: input.db, frame, chunk: { data, offset, sha256 } });
     } else {
       if (!state.resources?.has(sha256)) throw new Error('framed_sync_blob_content_set_mismatch');
       await state.resources.append(sha256, offset, data);
-      await input.db.transaction(async () => {
+      await ownReceiver(input, async () => {
         await input.staging.commitAuthenticatedFrame(frame);
-        await retireDesktopFramedSyncResourceFrame({ db: input.db, frame, chunk: { sha256, offset, data } });
+        if (input.files) await createFramedSyncFileStaging(input.files).compactBodyFrame(frame);
+        else await retireDesktopFramedSyncResourceFrame({ db: input.db, frame, chunk: { sha256, offset, data } });
       });
     }
   }
@@ -115,7 +128,7 @@ async function finishVerifiedTransfer(input: FrameInput) {
   const { decoded, frame, published } = input.event;
   const { state, staging } = input;
   if (!state.resources || decoded.payloadCase !== 'transfer_trailer') throw new Error('transfer_payload_incomplete');
-  const { nodes, resources } = await readVerifiedReceiverResourceNodes(input.db, frame.transferId, frame.attemptId);
+  const { nodes, resources } = await readVerifiedReceiverResourceNodes(input.db, frame.transferId, frame.attemptId, input.files);
   await staging.commitAuthenticatedFrame(frame);
   for (const descriptor of state.bodies.values()) {
     await staging.verifyAndMarkBlobAvailable(frame.transferId, frame.attemptId, descriptor.sha256);
@@ -128,20 +141,30 @@ async function finishVerifiedTransfer(input: FrameInput) {
   await state.resources.complete(nodes, resources);
   await staging.markReadyToApply(frame.transferId);
   state.attemptAdmitted = false;
-  state.ready = await loadDesktopFramedSyncReadySource(input.db, published);
+  state.ready = await loadReady(input, published);
   if (!state.ready) throw new Error('framed_sync_ready_transfer_missing');
 }
 
 async function applyReady(input: FrameInput) {
-  const applied = await input.db.transaction(async () => {
+  const applied = await ownReceiver(input, async () => {
     const receipt = await input.staging.loadReceipt(input.event.published.transferId);
     if (receipt) return { generatedChanges: false, receipts: [receipt] };
-    const source = await loadDesktopFramedSyncReadySource(input.db, input.event.published);
+    const source = await loadReady(input, input.event.published);
     if (!source) throw new Error('framed_sync_ready_transfer_missing');
-    return applyVerifiedDesktopFramedSyncInbound({ db: input.db, transfers: [source] });
-  });
+    return input.files ? applyDesktopFramedSyncFileInbound({ db: input.db, files: input.files, transfers: [source] }) :
+      applyVerifiedDesktopFramedSyncInbound({ db: input.db, transfers: [source] });
+  }, true);
   const receipt = applied.receipts[0];
   if (!receipt) throw new Error('framed_sync_ready_receipt_missing');
   input.state.existingReceipt = receipt;
   return { ...await buildReceiptStream({ ...input, receipt }), generatedChanges: applied.generatedChanges };
+}
+
+function ownReceiver<T>(input: ReceiverInput, execute: () => Promise<T>, commitBusiness = false) {
+  return input.files && commitBusiness ? execute() : input.db.transaction(execute);
+}
+
+function loadReady(input: ReceiverInput, published: AuthenticatedTransferFrame['published']) {
+  return input.files ? loadDesktopFramedSyncFileReadySource(input.files, published) :
+    loadDesktopFramedSyncReadySource(input.db, published);
 }

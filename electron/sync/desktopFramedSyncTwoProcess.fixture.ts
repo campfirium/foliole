@@ -85,6 +85,7 @@ async function loadProcessPort() {
     const port: unknown = await loaded.createDesktopFramedSyncProcessPort({
       databasePath: openDatabaseConnection().dbPath,
       deviceId,
+      fileStorage: process.env.FOLIOLE_TEST_FRAMED_FILE_STORAGE === '1',
       localOrigin: origin
     });
     if (!isProcessPort(port)) throw new Error('desktop_framed_sync_process_port_invalid');

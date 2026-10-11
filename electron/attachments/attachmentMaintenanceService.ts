@@ -5,6 +5,7 @@ import type { AttachmentMaintenanceRequest } from '../../lib/platform/attachment
 import { createBetterSqliteDbPort } from '../database/betterSqliteDbPort.js';
 import { openDatabaseConnection, runWithDatabaseConnectionOwner } from '../database/connection.js';
 import { resolveRuntimeDataPaths } from '../database/runtimeDataPaths.js';
+import { createDesktopLibrarySyncFiles } from '../sync/desktopFramedSyncFiles.js';
 
 import { attachmentDatabaseGeneration, readAttachmentObservationState, writeAttachmentObservationState } from './attachmentMaintenanceState.js';
 import { attachmentFileAvailable, attachmentTrashDirectory, inventoryAttachmentDirectory, moveAttachmentToTrash,
@@ -21,7 +22,8 @@ export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRe
     references: () => runWithDatabaseConnectionOwner(() => {
       const connection = openDatabaseConnection();
       return readAttachmentReferenceSnapshot(
-        createBetterSqliteDbPort(connection.sqlite, { name: 'attachment-maintenance-snapshot' }), signal);
+        createBetterSqliteDbPort(connection.sqlite, { name: 'attachment-maintenance-snapshot' }), signal,
+        createDesktopLibrarySyncFiles(connection.dbPath));
     }),
     inventory: async (trash) => inventoryAttachmentDirectory(trash ? attachmentTrashDirectory(assetsDir) : assetsDir),
     readState: () => runWithDatabaseConnectionOwner(() =>
@@ -34,7 +36,7 @@ export function runDesktopAttachmentMaintenance(request: AttachmentMaintenanceRe
       const connection = openDatabaseConnection();
       const db = createBetterSqliteDbPort(connection.sqlite, { name: 'attachment-maintenance-commit' });
       return db.transaction(async (tx) => {
-        if (revision !== await attachmentDatabaseRevision(tx)) throw new Error('attachment_scan_database_changed');
+        if (revision !== await attachmentDatabaseRevision(tx, createDesktopLibrarySyncFiles(connection.dbPath))) throw new Error('attachment_scan_database_changed');
         signal?.throwIfAborted();
         return action();
       });

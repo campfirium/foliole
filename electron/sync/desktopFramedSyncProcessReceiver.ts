@@ -3,6 +3,7 @@ import type {
   TransferReceiptStage
 } from '../../lib/core/sync/framedSyncContract.js';
 import { deriveTransferFrameKey } from '../../lib/core/sync/framedSyncCrypto.js';
+import type { FramedSyncFilePort } from '../../lib/core/sync/framedSyncFilePort.js';
 import { decodeFramedSyncPreamble } from '../../lib/core/sync/framedSyncFraming.js';
 import { decodeAndValidateProtocolMessage } from '../../lib/core/sync/framedSyncProtocolCodec.js';
 import type { FramedSyncStagingPort } from '../../lib/core/sync/framedSyncStagingPort.js';
@@ -26,6 +27,7 @@ import { receiveVerifiedDesktopFramedSyncTransfer } from './desktopFramedSyncVer
 
 type Db = ReturnType<typeof createBetterSqliteDbPort>;
 type ReceiverInput = Readonly<{
+  files?: FramedSyncFilePort;
   context: FramedSyncContext;
   db: Db;
   groupKey: Uint8Array;

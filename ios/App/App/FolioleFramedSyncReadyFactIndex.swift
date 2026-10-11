@@ -19,13 +19,20 @@ final class FolioleFramedSyncReadyFactIndex {
 
     func contentID(database: FolioleFramedSyncTransferDatabase, transferID: Data, attemptID: Data,
                    blobs: [Foliole_Sync_V22_BlobReference]) throws -> Data {
+        try contentID(blobs: blobs) { sequence in
+            try FolioleFramedSyncDurableFactReader.read(database: database, transferID: transferID,
+                attemptID: attemptID, firstSequence: sequence)
+        }
+    }
+
+    func contentID(blobs: [Foliole_Sync_V22_BlobReference],
+                   read: (UInt64) throws -> Foliole_Sync_V22_FactRecord) throws -> Data {
         let ordered = entries.sorted {
             FolioleFramedSyncCanonicalManifest.identityOrder($0.identity, $1.identity)
         }
         return try FolioleFramedSyncCanonicalManifest.contentID(orderedFactCount: ordered.count, blobs: blobs) { index in
             let entry = ordered[index]
-            let fact = try FolioleFramedSyncDurableFactReader.read(database: database, transferID: transferID,
-                attemptID: attemptID, firstSequence: UInt64(entry.sequence)!)
+            let fact = try read(UInt64(entry.sequence)!)
             guard fact.identity == entry.identity else { throw invalid() }
             return fact
         }
@@ -39,10 +46,7 @@ final class FolioleFramedSyncReadyFactIndex {
 enum FolioleFramedSyncDurableFactReader {
     static func read(database: FolioleFramedSyncTransferDatabase, transferID: Data, attemptID: Data,
                      firstSequence: UInt64) throws -> Foliole_Sync_V22_FactRecord {
-        var sequence = firstSequence
-        var tracker: FolioleFramedSyncFactFragmentTracker?
-        var bytes = Data()
-        while true {
+        try read(firstSequence: firstSequence) { sequence in
             let row = try database.rows("""
                 SELECT CASE WHEN typeof(authenticated_plaintext) = 'blob'
                   AND length(authenticated_plaintext) <= \(FolioleFramedSyncLimits.maxFrameMessageBytes)
@@ -50,6 +54,16 @@ enum FolioleFramedSyncDurableFactReader {
                 WHERE transfer_id = ? AND attempt_id = ? AND frame_type = 3 AND sequence = ? LIMIT 1
                 """, [transferID, attemptID, String(sequence)]).first
             guard let plaintext = row?[0] as? Data else { throw invalid() }
+            return plaintext
+        }
+    }
+
+    static func read(firstSequence: UInt64, plaintextAt: (UInt64) throws -> Data) throws -> Foliole_Sync_V22_FactRecord {
+        var sequence = firstSequence
+        var tracker: FolioleFramedSyncFactFragmentTracker?
+        var bytes = Data()
+        while true {
+            let plaintext = try plaintextAt(sequence)
             let message = try FolioleFramedSyncCodec.decode(plaintext, authenticatedFrameType: 3)
             if case .fact(let fact) = message.payload {
                 guard tracker == nil else { throw invalid() }
